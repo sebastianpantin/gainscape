@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchSkills, type Skill } from '../../lib/catalog.ts';
 import { formatLoad } from '../../lib/format.ts';
+import { isUuid } from '../../lib/history-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { cardProfileOf, standingOfView } from '../../lib/profile-view.ts';
 import {
@@ -63,12 +64,20 @@ function RecordsCard({ exercise, weightsHidden }: { exercise: CollectionViewExer
 
 export function FriendProfileScreen() {
   const { friendId = '' } = useParams();
+  return <FriendProfile key={friendId} friendId={friendId} />;
+}
+
+function FriendProfile({ friendId }: { friendId: string }) {
   const navigate = useNavigate();
-  const [state, setState] = useState<ViewState>({ status: 'loading' });
+  const [state, setState] = useState<ViewState>(() =>
+    isUuid(friendId) ? { status: 'loading' } : { status: 'missing' },
+  );
+  const [removing, setRemoving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isUuid(friendId)) return;
     let active = true;
     Promise.all([fetchSkills(), fetchProfileView(friendId), fetchCollectionView(friendId)]).then(
       ([skills, profile, collection]) => {
@@ -83,12 +92,15 @@ export function FriendProfileScreen() {
   }, [friendId]);
 
   const remove = async () => {
+    if (removing) return;
     setProblem(null);
+    setRemoving(true);
     try {
       await removeFriend(friendId);
       navigate('/friends', { replace: true });
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not remove this friend.');
+      setRemoving(false);
     }
   };
 
@@ -165,7 +177,7 @@ export function FriendProfileScreen() {
                   {confirming ? (
                     <>
                       <p>Remove {state.profile.displayName} from your friends?</p>
-                      <button className="button danger" type="button" onClick={remove}>
+                      <button className="button danger" type="button" disabled={removing} onClick={remove}>
                         Remove for good
                       </button>
                       <button className="button" type="button" onClick={() => setConfirming(false)}>

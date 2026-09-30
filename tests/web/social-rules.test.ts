@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { minutesUntil, retryAfterSeconds, tryAgainIn } from '../../web/src/lib/rate-limit.ts';
+import { minutesUntil, retryAfterSeconds, tryAgainIn, waitText } from '../../web/src/lib/rate-limit.ts';
 import {
   collectionPercent,
   type FeedItem,
+  feedBadge,
   feedCursor,
   feedText,
   type HiscoreRow,
   rankHiscores,
   relativeTime,
   sendRequestText,
+  skillMetric,
   socialErrorMessage,
 } from '../../web/src/lib/social-rules.ts';
 
@@ -74,6 +76,23 @@ describe('feedText', () => {
     );
   });
 
+  it('copes with missing fields', () => {
+    expect(feedText(item('pr', { weightsHidden: false }), 'kg').headline).toBe('New exercise record');
+    expect(feedText(item('level_up', {}), 'kg').headline).toBe('Levelled up a skill');
+    expect(feedText(item('level_99', { to: 99 }), 'kg').headline).toBe('Reached level 99!');
+    expect(feedText(item('drop', {}), 'kg')).toEqual({ headline: 'Found an item' });
+    expect(feedBadge(item('drop', {}))).toBe('DROP');
+    expect(feedBadge(item('level_up', {}))).toBe('LVL');
+  });
+
+  it('labels badges', () => {
+    expect(feedBadge(item('pr', {}))).toBe('PR');
+    expect(feedBadge(item('drop', { rarity: 'legendary' }))).toBe('LEG');
+    expect(feedBadge(item('drop', { rarity: 'rare' }))).toBe('RARE');
+    expect(feedBadge(item('level_up', { to: 70 }))).toBe('70');
+    expect(feedBadge(item('level_99', { to: 99 }))).toBe('99');
+  });
+
   it('writes drops with their rarity', () => {
     expect(feedText(item('drop', { itemName: 'Titan gloves', rarity: 'rare' }), 'kg')).toEqual({
       headline: 'Found Titan gloves',
@@ -103,7 +122,7 @@ describe('rankHiscores', () => {
     const ranked = rankHiscores(
       [row('cara', { legs: 1300 }), row('abe', { legs: 1200 }), row('bea', { legs: 1200 }), row('dan', { legs: 0 })],
       skills,
-      'legs',
+      skillMetric('legs'),
     );
     expect(ranked.map((entry) => entry.row.username)).toEqual(['cara', 'abe', 'bea', 'dan']);
     expect(ranked[0].value).toBe(ranked[1].value);
@@ -164,5 +183,8 @@ describe('social helpers', () => {
     expect(minutesUntil(5)).toBe(1);
     expect(tryAgainIn(90)).toBe('Try again in 2 min.');
     expect(tryAgainIn(null)).toBe('Try again in a few minutes.');
+    expect(tryAgainIn(90 * 60)).toBe('Try again in 90 min.');
+    expect(tryAgainIn(3 * 3600)).toBe('Try again in 3 hours.');
+    expect(waitText(91 * 60)).toBe('2 hours');
   });
 });

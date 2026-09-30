@@ -4,7 +4,7 @@ import { type Exercise, fetchExercises, type LoadType, saveBodyweight } from '..
 import { type ExerciseStrengthView, fetchExerciseStrength } from '../../lib/collection-data.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
-import { minutesUntil, RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
+import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
 import { formatWeight } from '../../lib/units.ts';
 import type { SessionSummary } from '@domain/types.ts';
 import {
@@ -38,10 +38,13 @@ const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_e
 const LONG_SYNC_WAIT_MS = 60_000;
 
 function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
-  if (lastProblem === RATE_LIMITED_CODE && waitMs !== undefined && waitMs > LONG_SYNC_WAIT_MS) {
-    return `Sync limit reached; this workout will sync in ${minutesUntil(waitMs / 1000)} min. It's saved on this device.`;
+  if (lastProblem !== RATE_LIMITED_CODE) {
+    return `Couldn't reach the server (${lastProblem}). Retrying — your workout is saved on this device.`;
   }
-  return `Couldn't reach the server (${lastProblem}). Retrying — your workout is saved on this device.`;
+  if (waitMs !== undefined && waitMs > LONG_SYNC_WAIT_MS) {
+    return `Sync limit reached; this workout will sync in ${waitText(waitMs / 1000)}. It's saved on this device.`;
+  }
+  return "Sync limit reached; retrying shortly. It's saved on this device.";
 }
 
 interface WorkoutScreenProps {

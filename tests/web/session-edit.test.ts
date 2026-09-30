@@ -21,7 +21,7 @@ import {
   withNewSetIds,
   withoutBodyweightLoads,
 } from '../../web/src/features/history/session-edit.ts';
-import { isSessionId, nextPageFilter, type StoredSetRow, transientReason } from '../../web/src/lib/history-rules.ts';
+import { isUuid, nextPageFilter, type StoredSetRow, transientReason } from '../../web/src/lib/history-rules.ts';
 
 const benchId = 'aaaaaaaa-0000-4000-8000-000000000001';
 const pullUpId = 'aaaaaaaa-0000-4000-8000-000000000002';
@@ -166,10 +166,10 @@ describe('editability and paging', () => {
   });
 
   it('recognises session ids before querying', () => {
-    expect(isSessionId('bbbbbbbb-0000-4000-8000-000000000001')).toBe(true);
-    expect(isSessionId('BBBBBBBB-0000-4000-8000-000000000001')).toBe(true);
-    expect(isSessionId('not-a-uuid')).toBe(false);
-    expect(isSessionId('')).toBe(false);
+    expect(isUuid('bbbbbbbb-0000-4000-8000-000000000001')).toBe(true);
+    expect(isUuid('BBBBBBBB-0000-4000-8000-000000000001')).toBe(true);
+    expect(isUuid('not-a-uuid')).toBe(false);
+    expect(isUuid('')).toBe(false);
   });
 
   it('builds the keyset filter for the next page', () => {

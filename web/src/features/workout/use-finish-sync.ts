@@ -54,10 +54,11 @@ export function useFinishSync({
     let attempt = 0;
     let requestInFlight = false;
     let settled = false;
+    let notBefore = 0;
     const show = (next: FinishStatus) => setStatus({ key: finishKey, status: next });
 
     const attemptSync = async () => {
-      if (requestInFlight || controller.signal.aborted || settled) return;
+      if (requestInFlight || controller.signal.aborted || settled || Date.now() < notBefore) return;
       requestInFlight = true;
       clearTimeout(retryTimer);
       show({ kind: 'syncing', attempt, lastProblem: null });
@@ -86,6 +87,7 @@ export function useFinishSync({
             retryDelayMs(attempt++),
             ('retryAfterMs' in outcome ? outcome.retryAfterMs : undefined) ?? 0,
           );
+          notBefore = 'retryAfterMs' in outcome && outcome.retryAfterMs ? Date.now() + outcome.retryAfterMs : 0;
           show({ kind: 'syncing', attempt, lastProblem: outcome.reason, waitMs: delayMs });
           retryTimer = setTimeout(attemptSync, delayMs);
           return;

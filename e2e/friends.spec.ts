@@ -17,8 +17,10 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   const stamp = Date.now().toString(36);
   const aliceName = `fa_${stamp}`;
   const bobName = `fb_${stamp}`;
-  const alice = await (await browser.newContext()).newPage();
-  const bob = await (await browser.newContext()).newPage();
+  const aliceContext = await browser.newContext();
+  const bobContext = await browser.newContext();
+  const alice = await aliceContext.newPage();
+  const bob = await bobContext.newPage();
   await register(alice, aliceName);
   await register(bob, bobName);
 
@@ -39,7 +41,9 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await alice.reload();
   const pr = feedItem(alice, 'New 5RM Barbell Bench Press: 80 kg');
   await expect(pr).toBeVisible();
+  const gzSaved = alice.waitForResponse((response) => response.url().includes('/rpc/set_gz') && response.ok());
   await pr.getByRole('button', { name: /Say gz to/ }).click();
+  await gzSaved;
   await expect(pr.getByRole('button', { name: /Remove gz from .*, 1 so far/ })).toBeVisible();
 
   await openTab(bob, 'Friends');
@@ -51,6 +55,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   const showWeights = bob.getByRole('switch', { name: 'Show my weights to friends' });
   await showWeights.click();
   await expect(showWeights).toHaveAttribute('aria-checked', 'false');
+  await expect(showWeights).toBeEnabled();
 
   await alice.reload();
   const hidden = feedItem(alice, 'New 5RM Barbell Bench Press');
@@ -84,4 +89,6 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await alice.getByRole('link', { name: 'Preview what friends see' }).click();
   await expect(alice.getByTestId('profile-total')).toHaveText(total ?? '');
   await expect(alice.getByTestId('profile-collection')).toHaveText(collection ?? '');
+  await aliceContext.close();
+  await bobContext.close();
 });

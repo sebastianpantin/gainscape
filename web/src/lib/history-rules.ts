@@ -87,7 +87,7 @@ interface SetRow {
   xp_awarded: number;
 }
 
-export function isSessionId(value: string): boolean {
+export function isUuid(value: string): boolean {
   return UUID_PATTERN.test(value);
 }
 

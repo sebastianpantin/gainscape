@@ -5,7 +5,7 @@ import { type Exercise, fetchExercises, saveBodyweight } from '../../lib/catalog
 import { formatLoad } from '../../lib/format.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
 import { tryAgainIn } from '../../lib/rate-limit.ts';
-import { type HistorySession, isSessionId, type StoredSetRow } from '../../lib/history-rules.ts';
+import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/history-rules.ts';
 import { type CatalogItem, describeDrops } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
@@ -136,7 +136,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   useEffect(() => {
     const controller = new AbortController();
     controllerRef.current = controller;
-    if (!isSessionId(sessionId)) {
+    if (!isUuid(sessionId)) {
       goBackGone();
       return () => controller.abort();
     }
