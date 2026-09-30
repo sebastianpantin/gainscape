@@ -1,15 +1,18 @@
 import { levelProgress } from '@domain/index.ts';
-import type { PersonalRecordSummary, SessionSummary } from '@domain/types.ts';
+import type { DropSummary, PersonalRecordSummary, SessionSummary } from '@domain/types.ts';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { TrophyIcon } from '../../components/PixelArt.tsx';
+import { ItemIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { type Exercise, fetchExercises, fetchSkills, fetchSkillXp, type Skill } from '../../lib/catalog.ts';
 import { formatLoad } from '../../lib/format.ts';
+import { fetchSession } from '../../lib/history.ts';
+import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
+import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import type { UnitPref } from '../../lib/profile.ts';
 import { monogramFor } from '../../lib/standing.ts';
 import { formatXp } from '../workout/xp-preview.ts';
-import { recallLastSummary } from './last-summary.ts';
+import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
 
 interface DescribedRecord {
   headline: string;
@@ -70,6 +73,42 @@ function GainBar({ skillName, xpAfter, gain, delaySeconds }: GainBarProps) {
   );
 }
 
+type LoadedItems = CatalogItem[] | 'loading' | 'failed';
+
+function LootPanel({ drops, items }: { drops: readonly DropSummary[]; items: LoadedItems }) {
+  return (
+    <section className="panel stack rise" aria-label="Loot" style={{ animationDelay: '2s' }}>
+      <div className="row spread">
+        <h2>Loot</h2>
+        <Link className="tiny" to="/collection/items">
+          See items
+        </Link>
+      </div>
+      {drops.length === 0 ? (
+        <p className="muted">No loot this time</p>
+      ) : items === 'loading' ? (
+        <p className="muted">Loading loot…</p>
+      ) : items === 'failed' ? (
+        <p className="muted">Couldn't load the loot names. See items for what dropped.</p>
+      ) : (
+        <ul className="record-list" aria-label="Loot drops">
+          {drops.map((drop) => {
+            const item = items.find((candidate) => candidate.id === drop.itemId);
+            return (
+              <li key={drop.dropId}>
+                <ItemIcon kind={item?.icon ?? 'scraps'} color={item ? colorFor(item) : colorFor({ tier: null })} />
+                <span style={{ flex: 1 }}>{item?.name ?? 'Unknown item'}</span>
+                <span className="pixel">×{drop.quantity}</span>
+                {drop.source === 'pr' && <span className="accent-text tiny">PR</span>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 interface RevealScreenProps {
   userId: string;
 }
@@ -81,12 +120,36 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [xpBySkillId, setXpBySkillId] = useState<Map<string, number> | null>(null);
+  const [items, setItems] = useState<LoadedItems>('loading');
+  const [freshDrops, setFreshDrops] = useState<DropSummary[] | null>(null);
+  const sessionId = summary?.sessionId;
 
   useEffect(() => {
     fetchSkills().then(setSkills, () => setSkills([]));
     fetchExercises({ includeArchived: true }).then(setExercises, () => setExercises([]));
     fetchSkillXp(userId).then(setXpBySkillId, () => setXpBySkillId(null));
+    fetchItemCatalog().then(
+      (catalog) => setItems(catalog.items),
+      () => setItems('failed'),
+    );
   }, [userId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    let active = true;
+    fetchSession(sessionId).then(
+      (stored) => {
+        if (!active || !stored) return;
+        setFreshDrops(stored.summary.drops ?? []);
+        const cached = recallLastSummary();
+        if (cached?.sessionId === sessionId) rememberLastSummary({ ...cached, drops: stored.summary.drops ?? [] });
+      },
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [sessionId]);
 
   if (!summary) {
     return (
@@ -94,6 +157,20 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         <p className="panel">No finished workout to show yet.</p>
         <Link className="button" to="/">
           Back to workout
+        </Link>
+      </main>
+    );
+  }
+
+  if (summary.historyOnly) {
+    return (
+      <main className="screen stack">
+        <h1 className="title">Workout saved</h1>
+        <p className="panel" role="status">
+          Saved to history (older than 7 days, no XP)
+        </p>
+        <Link className="button" to="/">
+          Done
         </Link>
       </main>
     );
@@ -177,6 +254,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           })}
         </ul>
       )}
+      <LootPanel drops={freshDrops ?? summary.drops ?? []} items={items} />
       <Link className="button primary big" to="/skills">
         See skills
       </Link>

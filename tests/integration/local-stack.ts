@@ -11,6 +11,7 @@ import {
   type LootEntry,
   type LootTables,
   lootSeedMessage,
+  type RevokedDrop,
   type Rng,
   type RollKind,
   type SessionSummary,
@@ -90,7 +91,7 @@ export interface FunctionResponseBody extends Partial<SessionSummary> {
   summary?: SessionSummary;
   revision?: number;
   replayedSessionIds?: string[];
-  revokedDrops?: DropSummary[];
+  revokedDrops?: RevokedDrop[];
   deleted?: boolean;
   error?: string;
   details?: unknown;

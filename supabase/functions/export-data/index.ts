@@ -58,6 +58,7 @@ async function exportFor(userId: string) {
     const itemLedger = await tx`select * from public.item_ledger where user_id = ${userId} order by created_at, id`;
     const userUnlocks = await tx`
       select * from public.user_unlocks where user_id = ${userId} order by unlocked_at, exercise_id`;
+    const crafts = await tx`select * from public.crafts where user_id = ${userId} order by created_at, id`;
     const events = await tx`select * from public.events where user_id = ${userId} order by occurred_at, id`;
     const friendships = await tx`
       select case when f.requester_id = ${userId} then f.addressee_id else f.requester_id end as "otherUserId",
@@ -94,6 +95,7 @@ async function exportFor(userId: string) {
       userItems,
       itemLedger,
       userUnlocks,
+      crafts,
       events,
       friendships,
     };

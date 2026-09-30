@@ -197,7 +197,12 @@ describe('delete-session', () => {
       values (${user.id}, ${first.itemId}, -2, 'craft_out', ${randomUUID()})`;
     await db`update public.user_items set quantity = 5 where user_id = ${user.id} and item_id = ${first.itemId}`;
 
-    expect((await postFunction('delete-session', user.accessToken, { sessionId: payload.id })).status).toBe(200);
+    const response = await postFunction('delete-session', user.accessToken, { sessionId: payload.id });
+    expect(response.status).toBe(200);
+    expect(response.body.revokedDrops?.map((entry) => [entry.dropId, entry.quantity, entry.revokedQuantity])).toEqual([
+      [first.dropId, 3, 3],
+      [second.dropId, 4, 2],
+    ]);
     expect((await dropRow(first.dropId)).revoked_quantity).toBe(3);
     expect((await dropRow(second.dropId)).revoked_quantity).toBe(2);
     expect(await heldQuantity(user.id, first.itemId)).toBe(0);
@@ -213,7 +218,9 @@ describe('delete-session', () => {
     await db`update public.user_items set quantity = 0 where user_id = ${user.id} and item_id = ${drop.itemId}`;
 
     const response = await postFunction('delete-session', user.accessToken, { sessionId: payload.id });
-    expect(response.body.revokedDrops?.map((entry) => entry.dropId)).toEqual([drop.dropId]);
+    expect(response.body.revokedDrops?.map((entry) => [entry.dropId, entry.revokedQuantity])).toEqual([
+      [drop.dropId, 0],
+    ]);
     expect(await dropRow(drop.dropId)).toMatchObject({ revoke_reason: 'session_deleted', revoked_quantity: 0 });
     expect(await db`select * from public.item_ledger where ref_id = ${drop.dropId} and reason = 'revoke'`).toEqual([]);
   });

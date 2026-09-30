@@ -3,7 +3,7 @@ import {
   type BalanceConfig,
   type Catalog,
   DEFAULT_STEPS,
-  type DropSummary,
+  type RevokedDrop,
   type LootCandidate,
   lootCandidates,
   NO_RECORDS,
@@ -18,7 +18,7 @@ import {
 import { HttpError } from '../http.ts';
 import { loadCatalog } from './catalog.ts';
 import { syncSessionEvents } from './events.ts';
-import { type ActiveDrop, revokeDisqualifiedDrops } from './loot.ts';
+import { revokeDisqualifiedDrops, type RevokedActiveDrop } from './loot.ts';
 import {
   hasLaterSessions,
   hasStaleDerivedSessions,
@@ -39,7 +39,7 @@ export interface ReplayOutcome {
   setsRewritten: number;
   replayedSessionIds: string[];
   sets: ReplayedSet[];
-  revokedDrops: DropSummary[];
+  revokedDrops: RevokedDrop[];
 }
 
 interface PriorState {
@@ -106,24 +106,25 @@ async function replaceSkillXp(tx: Transaction, userId: string, skillXp: Readonly
 }
 
 function inReplayOrder(
-  drops: readonly ActiveDrop[],
+  drops: readonly RevokedActiveDrop[],
   sets: readonly ReplayedSet[],
   replayedSessionIds: readonly string[],
 ) {
   const sessionRank = new Map(replayedSessionIds.map((id, index) => [id, index]));
   const positionOf = new Map(sets.map((set) => [set.setId, set.position]));
-  const rank = (drop: ActiveDrop) => sessionRank.get(drop.sessionId) ?? -1;
-  const position = (drop: ActiveDrop) => positionOf.get(drop.setId) ?? Number.MAX_SAFE_INTEGER;
-  const sourceOrder = (drop: ActiveDrop) => (drop.source === 'regular' ? 0 : 1);
+  const rank = (drop: RevokedActiveDrop) => sessionRank.get(drop.sessionId) ?? -1;
+  const position = (drop: RevokedActiveDrop) => positionOf.get(drop.setId) ?? Number.MAX_SAFE_INTEGER;
+  const sourceOrder = (drop: RevokedActiveDrop) => (drop.source === 'regular' ? 0 : 1);
   return [...drops]
     .sort((a, b) => rank(a) - rank(b) || position(a) - position(b) || sourceOrder(a) - sourceOrder(b))
-    .map((drop): DropSummary => ({
+    .map((drop): RevokedDrop => ({
       dropId: drop.dropId,
       setId: drop.setId,
       itemId: drop.itemId,
       itemKey: drop.itemKey,
       quantity: drop.quantity,
       source: drop.source,
+      revokedQuantity: drop.revokedQuantity,
     }));
 }
 

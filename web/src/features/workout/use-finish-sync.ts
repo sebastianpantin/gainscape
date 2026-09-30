@@ -1,7 +1,9 @@
 import type { SessionSummary } from '@domain/types.ts';
 import { useEffect, useEffectEvent, useState } from 'react';
 import type { WorkoutDraft } from '../../offline/draft-format.ts';
+import type { SyncedChange } from '../../offline/draft-session.ts';
 import type { DraftStore } from '../../offline/draft-store.ts';
+import { retryDelayMs } from '../../lib/function-client.ts';
 import { attemptFinish } from '../../offline/finish-lock.ts';
 import { signOutKeepingDrafts, syncFinishedWorkout } from '../../offline/sync-workout.ts';
 
@@ -15,20 +17,25 @@ interface FinishSyncOptions {
   draft: WorkoutDraft | null;
   store: DraftStore | null;
   flush: () => Promise<void>;
-  markSynced: (sessionId: string) => Promise<void>;
+  markSynced: (sessionId: string, change?: SyncedChange) => Promise<void>;
   onSynced: (summary: SessionSummary) => void;
   onSuperseded: (sessionId: string) => void;
+  onDeleted: () => void;
 }
 
-const MAX_RETRY_DELAY_MS = 30_000;
 const IDLE: FinishStatus = { kind: 'idle' };
 const FIRST_ATTEMPT: FinishStatus = { kind: 'syncing', attempt: 0, lastProblem: null };
 
-function retryDelayMs(attempt: number): number {
-  return Math.min(MAX_RETRY_DELAY_MS, 1000 * 2 ** attempt);
-}
-
-export function useFinishSync({ userId, draft, store, flush, markSynced, onSynced, onSuperseded }: FinishSyncOptions): {
+export function useFinishSync({
+  userId,
+  draft,
+  store,
+  flush,
+  markSynced,
+  onSynced,
+  onSuperseded,
+  onDeleted,
+}: FinishSyncOptions): {
   status: FinishStatus;
   retryNow: () => void;
 } {
@@ -38,6 +45,7 @@ export function useFinishSync({ userId, draft, store, flush, markSynced, onSynce
   const finishKey = draft?.finishedAt ? `${draft.sessionId}:${draft.finishedAt}:${retryNonce}` : null;
   const reportSynced = useEffectEvent(onSynced);
   const reportSuperseded = useEffectEvent(onSuperseded);
+  const reportDeleted = useEffectEvent(onDeleted);
 
   useEffect(() => {
     if (!sessionId || !finishKey || !store) return;
@@ -81,6 +89,7 @@ export function useFinishSync({ userId, draft, store, flush, markSynced, onSynce
         settled = true;
         if (outcome.kind === 'synced') reportSynced(outcome.summary);
         else if (outcome.kind === 'rejected') show({ kind: 'rejected', reason: outcome.reason });
+        else if (outcome.kind === 'deleted') reportDeleted();
         else if (outcome.kind === 'needs_sign_in') await signOutKeepingDrafts();
       } finally {
         requestInFlight = false;
