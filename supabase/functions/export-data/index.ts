@@ -66,14 +66,16 @@ async function exportFor(userId: string) {
              case when f.requester_id = ${userId} then 'outgoing' else 'incoming' end as direction,
              case when f.requester_id = ${userId} and f.status = 'declined' then 'pending' else f.status::text end
                as status,
-             f.created_at as "createdAt",
+             case when f.requester_id = ${userId} then f.requested_at else f.created_at end as "createdAt",
              case when f.requester_id = ${userId} and f.status = 'declined' then null else f.responded_at end
                as "respondedAt"
       from public.friendships f
       join public.profiles p on p.id = case when f.requester_id = ${userId} then f.addressee_id else f.requester_id end
       where ${userId} in (f.requester_id, f.addressee_id)
         and not (f.requester_id = ${userId} and f.withdrawn_at is not null)
-      order by f.created_at, p.username`;
+      order by "createdAt", p.username`;
+    const reactionsGiven = await tx`
+      select event_id, created_at from public.reactions where user_id = ${userId} order by created_at, event_id`;
 
     return {
       format: 'gainscape-export',
@@ -103,6 +105,7 @@ async function exportFor(userId: string) {
       crafts,
       events,
       friendships,
+      reactionsGiven,
     };
   });
 }
