@@ -34,6 +34,7 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'user_items', column: 'user_id' },
   { table: 'item_ledger', column: 'user_id' },
   { table: 'user_unlocks', column: 'user_id' },
+  { table: 'events', column: 'user_id' },
 ];
 
 async function post(name: string, accessToken: string | null, body: unknown) {
@@ -49,7 +50,7 @@ async function post(name: string, accessToken: string | null, body: unknown) {
   return { status: response.status, body: await response.json() };
 }
 
-async function logOneSession(user: TestUser): Promise<string> {
+async function logOneSession(user: TestUser, weightKg = 60): Promise<string> {
   const sessionId = randomUUID();
   const endedAt = new Date();
   const response = await postCompleteSession(user.accessToken, {
@@ -61,7 +62,7 @@ async function logOneSession(user: TestUser): Promise<string> {
         id: randomUUID(),
         exerciseId: await builtInExerciseId('barbell_bench_press'),
         position: 0,
-        weightKg: 60,
+        weightKg,
         reps: 8,
         effort: { type: 'rpe', value: 8 },
       },
@@ -73,6 +74,7 @@ async function logOneSession(user: TestUser): Promise<string> {
 
 async function giveUserEverything(user: TestUser): Promise<void> {
   const keptSessionId = await logOneSession(user);
+  await logOneSession(user, 80);
   const scroll = await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
   await db`
     insert into public.user_unlocks (user_id, exercise_id, item_id, source_drop_id)
@@ -121,6 +123,11 @@ async function rowCounts(userId: string): Promise<Record<string, number>> {
   return counts;
 }
 
+async function rateLimitRows(userId: string): Promise<number> {
+  const [row] = await db`select count(*)::int as count from private.rate_limit_hits where subject = ${userId}`;
+  return row.count;
+}
+
 async function orphanedRows(exerciseIds: string[], programIds: string[]): Promise<number> {
   const [shares] =
     await db`select count(*)::int as count from public.exercise_skills where exercise_id = any(${exerciseIds})`;
@@ -165,9 +172,9 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.sessions).toHaveLength(1);
+    expect(exported.sessions).toHaveLength(2);
     expect(exported.deletedSessions).toHaveLength(1);
-    expect(exported.sets).toHaveLength(1);
+    expect(exported.sets).toHaveLength(2);
     expect(exported.sets[0].effort_input_type).toBe('rpe');
     expect(exported.pinnedExercises).toHaveLength(1);
     expect(exported.customExercises).toHaveLength(1);
@@ -180,7 +187,10 @@ describe('export-data', () => {
     expect(exported.dropLuck).toHaveLength(counts.drop_luck);
     expect(exported.userItems).toHaveLength(counts.user_items);
     expect(exported.itemLedger).toHaveLength(counts.item_ledger);
-    expect(exported.userUnlocks).toHaveLength(1);
+    expect(exported.userUnlocks).toHaveLength(counts.user_unlocks);
+    expect(counts.user_unlocks).toBeGreaterThan(0);
+    expect(exported.events).toHaveLength(counts.events);
+    expect(exported.events.some((event: { type: string }) => event.type === 'pr')).toBe(true);
     expect(exported.drops.some((drop: { source: string }) => drop.source === 'pr')).toBe(true);
     const everyUserId = JSON.stringify(exported).match(new RegExp(bystander.id, 'g'));
     expect(everyUserId).toBeNull();
@@ -197,7 +207,7 @@ describe('delete-account', () => {
     expect(response.body.error).toBe('confirmation_mismatch');
     const counts = await rowCounts(owner.id);
     expect(counts.profiles).toBe(1);
-    expect(counts.sessions).toBe(1);
+    expect(counts.sessions).toBe(2);
   });
 
   it('refuses when the password is wrong', async () => {
@@ -227,9 +237,10 @@ describe('delete-account', () => {
     expect(ownedExerciseIds).toHaveLength(1);
     expect(ownedProgramIds.length).toBeGreaterThan(0);
     const ownerBefore = await rowCounts(owner.id);
-    for (const table of ['loot_rolls', 'drops', 'drop_luck', 'user_items', 'item_ledger', 'user_unlocks']) {
+    for (const table of ['loot_rolls', 'drops', 'drop_luck', 'user_items', 'item_ledger', 'user_unlocks', 'events']) {
       expect(ownerBefore[table], table).toBeGreaterThan(0);
     }
+    expect(await rateLimitRows(owner.id)).toBeGreaterThan(0);
     const response = await post('delete-account', owner.accessToken, {
       confirmUsername: owner.username.toUpperCase(),
       password: TEST_PASSWORD,
@@ -241,6 +252,7 @@ describe('delete-account', () => {
     expect(Object.values(counts).every((count) => count === 0)).toBe(true);
     const [authRow] = await db`select count(*)::int as count from auth.users where id = ${owner.id}`;
     expect(authRow.count).toBe(0);
+    expect(await rateLimitRows(owner.id)).toBe(0);
     const lookup = await admin.auth.admin.getUserById(owner.id);
     expect(lookup.data.user).toBeNull();
     expect(await rowCounts(bystander.id)).toEqual(bystanderBefore);

@@ -12,6 +12,7 @@ import {
 } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
 import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { loadCatalog } from '../_shared/stores/catalog.ts';
 import { rollNewSessionLoot } from '../_shared/stores/loot.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
@@ -146,6 +147,8 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       notes: payload.notes,
     };
 
+    await takeRateLimit(tx, 'session_create_hour', userId);
+    await takeRateLimit(tx, 'session_create_day', userId);
     if (!isWithinEditWindow(payload.startedAt, now.getTime())) {
       return await storeHistoryOnly(tx, row, session, catalog);
     }

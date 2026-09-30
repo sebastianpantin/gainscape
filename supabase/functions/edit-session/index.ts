@@ -12,6 +12,7 @@ import {
 } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
 import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+import { takeRateLimit } from '../_shared/rate-limit.ts';
 import type { SetPayload } from '../_shared/session-payload.ts';
 import { loadCatalog } from '../_shared/stores/catalog.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
@@ -159,6 +160,7 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
       return { ...set, effectiveLoadKg };
     });
 
+    await takeRateLimit(tx, 'session_edit_hour', userId);
     await writeSets(tx, userId, payload.sessionId, storedSets, requested);
     const [updated] = await tx`
       update public.sessions
