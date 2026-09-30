@@ -41,9 +41,22 @@ export async function loadUserState(tx: Transaction, userId: string): Promise<Us
   };
 }
 
+export async function ownedProgramDayId(
+  tx: Transaction,
+  userId: string,
+  programDayId: string | null,
+): Promise<string | null> {
+  if (programDayId === null) return null;
+  const [row] = await tx`
+    select d.id from public.program_days d join public.programs p on p.id = d.program_id
+    where d.id = ${programDayId} and p.owner_user_id = ${userId}`;
+  return row?.id ?? null;
+}
+
 export interface NewSession {
   userId: string;
   payload: CompleteSessionPayload;
+  programDayId: string | null;
   timezone: string;
   balanceVersion: number;
   summary: SessionSummary;
@@ -55,9 +68,9 @@ export async function insertCompletedSession(tx: Transaction, session: NewSessio
   const { userId, payload } = session;
   const [inserted] = await tx`
     insert into public.sessions
-      (id, user_id, started_at, ended_at, local_date, timezone, balance_version, derived_balance_version, summary, notes)
+      (id, user_id, program_day_id, started_at, ended_at, local_date, timezone, balance_version, derived_balance_version, summary, notes)
     values
-      (${payload.id}, ${userId}, ${payload.startedAt}, ${payload.endedAt},
+      (${payload.id}, ${userId}, ${session.programDayId}, ${payload.startedAt}, ${payload.endedAt},
        (${payload.startedAt}::timestamptz at time zone ${session.timezone})::date, ${session.timezone},
        ${session.balanceVersion}, ${session.balanceVersion}, ${tx.json(session.summary as unknown as JsonValue)}, ${payload.notes})
     returning summary`;

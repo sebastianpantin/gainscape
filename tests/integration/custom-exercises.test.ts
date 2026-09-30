@@ -190,7 +190,7 @@ describe('custom exercise names', () => {
     const original = customExercise({ name: 'My Press' });
     expect((await save(user, original)).error).toBeNull();
     expect((await save(user, customExercise({ name: '\tmy press\n' }))).error?.message).toBe('name_taken');
-    const padded = customExercise({ name: '\n Cable Press\t' });
+    const padded = customExercise({ name: '\uFEFF\n Cable Press\t\u200B' });
     expect((await save(user, padded)).error).toBeNull();
     const [row] = await db`select name from public.exercises where id = ${padded.id}`;
     expect(row.name).toBe('Cable Press');

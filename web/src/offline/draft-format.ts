@@ -166,3 +166,109 @@ export function withCurrentLoadTypes(
   });
   return { draft: changedNames.length > 0 ? { ...draft, exercises } : draft, changedNames };
 }
+
+export interface PlannedExercise {
+  exerciseId: string;
+  targetSets: number;
+  targetRepsMin: number;
+  targetRepsMax: number;
+}
+
+export interface StartableDay {
+  id: string;
+  name: string;
+  programName: string;
+  exercises: PlannedExercise[];
+}
+
+export interface CatalogEntry {
+  name: string;
+  loadType: LoadType;
+  archived: boolean;
+}
+
+export interface LastLoggedSet {
+  weightKg: number;
+  reps: number;
+}
+
+function defaultWeightKg(loadType: LoadType): number {
+  return loadType === 'external' ? STARTING_EXTERNAL_LOAD_KG : 0;
+}
+
+export function programLabelFor(programName: string, dayName: string): string {
+  return `${programName} — ${dayName}`;
+}
+
+export function startDraftFromDay(
+  day: StartableDay,
+  exercisesById: ReadonlyMap<string, CatalogEntry>,
+  lastSets: ReadonlyMap<string, LastLoggedSet>,
+  now: Date,
+): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
+  const skippedExerciseIds: string[] = [];
+  const exercises = day.exercises.flatMap((planned): DraftExercise[] => {
+    const exercise = exercisesById.get(planned.exerciseId);
+    if (!exercise) {
+      skippedExerciseIds.push(planned.exerciseId);
+      return [];
+    }
+    const last = lastSets.get(planned.exerciseId);
+    const weightKg = exercise.loadType === 'bodyweight' ? 0 : (last?.weightKg ?? defaultWeightKg(exercise.loadType));
+    return [
+      {
+        exerciseId: planned.exerciseId,
+        name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
+        loadType: exercise.loadType,
+        target: { sets: planned.targetSets, repsMin: planned.targetRepsMin, repsMax: planned.targetRepsMax },
+        sets: Array.from({ length: planned.targetSets }, () => ({
+          id: crypto.randomUUID(),
+          weightKg,
+          reps: planned.targetRepsMin,
+          effortLevel: null,
+          done: false,
+        })),
+      },
+    ];
+  });
+  return {
+    draft: {
+      sessionId: crypto.randomUUID(),
+      startedAt: now.toISOString(),
+      finishedAt: null,
+      programDayId: day.id,
+      programLabel: programLabelFor(day.programName, day.name),
+      exercises,
+    },
+    skippedExerciseIds,
+  };
+}
+
+export function toggleSetDone(draft: WorkoutDraft, exerciseIndex: number, setId: string): WorkoutDraft {
+  const set = draft.exercises[exerciseIndex]?.sets.find((candidate) => candidate.id === setId);
+  return set ? updateSet(draft, exerciseIndex, setId, { done: !set.done }) : draft;
+}
+
+export function notDoneSetCount(draft: WorkoutDraft): number {
+  return draft.exercises.reduce((count, exercise) => count + exercise.sets.filter((set) => !set.done).length, 0);
+}
+
+export function canSwapExercise(draft: WorkoutDraft, exerciseIndex: number): boolean {
+  const exercise = draft.exercises[exerciseIndex];
+  return exercise !== undefined && exercise.sets.every((set) => !set.done);
+}
+
+export function swapExercise(
+  draft: WorkoutDraft,
+  exerciseIndex: number,
+  replacement: { id: string; name: string; loadType: LoadType },
+): WorkoutDraft | null {
+  if (!canSwapExercise(draft, exerciseIndex)) return null;
+  return updateExercise(draft, exerciseIndex, (exercise) => ({
+    ...exercise,
+    exerciseId: replacement.id,
+    name: replacement.name,
+    loadType: replacement.loadType,
+    sets: exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) })),
+  }));
+}

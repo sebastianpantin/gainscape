@@ -148,7 +148,7 @@ describe('draft session', () => {
     const { session, draft } = sessionOver(store);
     await session.ready;
     await store.put(userId, Date.now() + 60_000, workout('finished-elsewhere', finishedAt));
-    await session.startWorkout(() => workout('fresh'));
+    expect(await session.startWorkout(() => workout('fresh'))).toBe(false);
     await session.flush();
     expect(draft()).toMatchObject({ sessionId: 'finished-elsewhere', finishedAt });
     expect(await store.get(userId)).toMatchObject({ draft: { sessionId: 'finished-elsewhere' } });
@@ -161,7 +161,7 @@ describe('draft session', () => {
     await store.markSynced(userId, 'old', 2);
     const { session, draft } = sessionOver(store);
     await session.ready;
-    await session.startWorkout(() => workout('fresh'));
+    expect(await session.startWorkout(() => workout('fresh'))).toBe(true);
     await session.flush();
     expect(draft()?.sessionId).toBe('fresh');
     expect(await store.get(userId)).toEqual(draftRecord(userId, expect.any(Number), workout('fresh')));

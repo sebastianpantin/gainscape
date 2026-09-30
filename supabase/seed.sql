@@ -142,4 +142,60 @@ insert into public.exercise_skills (exercise_id, skill_id, share_bp) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'weighted_push_up'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'shoulders'), 2000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'weighted_push_up'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'arms'), 1500);
 
+insert into public.programs (id, key, owner_user_id, name) values
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl'), 'ppl', null, 'Push / Pull / Legs'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower'), 'upper_lower', null, 'Upper / Lower'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x'), 'full_body_2x', null, 'Full Body 2x')
+on conflict (id) do update set key = excluded.key, name = excluded.name, updated_at = now();
+
+delete from public.program_days where program_id in (select id from public.programs where owner_user_id is null);
+
+insert into public.program_days (id, program_id, position, name) values
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:push'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl'), 0, 'Push'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:pull'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl'), 1, 'Pull'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:legs'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl'), 2, 'Legs'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:upper'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower'), 0, 'Upper'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:lower'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower'), 1, 'Lower'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:a'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x'), 0, 'Day A'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x'), 1, 'Day B');
+
+insert into public.program_day_exercises (day_id, position, exercise_id, target_sets, target_reps_min, target_reps_max) values
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:push'), 0, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_bench_press'), 4, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:push'), 1, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'overhead_press'), 3, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:push'), 2, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'incline_dumbbell_press'), 3, 8, 12),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:push'), 3, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'lateral_raise'), 3, 12, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:push'), 4, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cable_triceps_pushdown'), 3, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:pull'), 0, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_row'), 4, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:pull'), 1, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'lat_pulldown'), 3, 8, 12),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:pull'), 2, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'seated_cable_row'), 3, 8, 12),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:pull'), 3, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'face_pull'), 3, 12, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:pull'), 4, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_curl'), 3, 8, 12),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:legs'), 0, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'back_squat'), 4, 5, 8),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:legs'), 1, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'romanian_deadlift'), 3, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:legs'), 2, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'leg_press'), 3, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:legs'), 3, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'leg_curl'), 3, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:legs'), 4, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'standing_calf_raise'), 3, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:upper'), 0, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_bench_press'), 4, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:upper'), 1, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_row'), 4, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:upper'), 2, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'overhead_press'), 3, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:upper'), 3, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'lat_pulldown'), 3, 8, 12),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:upper'), 4, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_curl'), 2, 8, 12),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:upper'), 5, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cable_triceps_pushdown'), 2, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:lower'), 0, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'back_squat'), 4, 5, 8),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:lower'), 1, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'romanian_deadlift'), 3, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:lower'), 2, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'leg_press'), 3, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:lower'), 3, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'leg_curl'), 3, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:lower'), 4, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'standing_calf_raise'), 3, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:lower'), 5, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cable_crunch'), 3, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:a'), 0, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'back_squat'), 3, 5, 8),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:a'), 1, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_bench_press'), 3, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:a'), 2, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_row'), 3, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:a'), 3, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'lateral_raise'), 2, 12, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:a'), 4, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cable_crunch'), 2, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 0, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'deadlift'), 3, 3, 6),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 1, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'overhead_press'), 3, 6, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 2, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'pull_up'), 3, 5, 10),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 3, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'leg_press'), 3, 10, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 4, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'hanging_leg_raise'), 2, 8, 12);
+
 commit;

@@ -5,19 +5,26 @@ import type { SessionSummary } from '@domain/types.ts';
 import {
   addExercise,
   addSet,
+  canSwapExercise,
   doneSetCount,
+  notDoneSetCount,
   removeExercise,
   removeSet,
   startDraft,
+  startDraftFromDay,
+  swapExercise,
+  toggleSetDone,
   updateSet,
   withCurrentLoadTypes,
   type WorkoutDraft,
 } from '../../offline/draft-format.ts';
+import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
+import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
 
@@ -57,6 +64,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
   const [finishProblem, setFinishProblem] = useState<string | null>(null);
   const [checkingFinish, setCheckingFinish] = useState(false);
+  const [startingDay, setStartingDay] = useState(false);
+  const [startNotice, setStartNotice] = useState<string | null>(null);
+  const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
   const draft = state.status === 'ready' ? state.draft : null;
 
   useEffect(() => {
@@ -95,6 +105,29 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     </>
   );
 
+  const startFromDay = async (program: Program, day: ProgramDay) => {
+    setStartingDay(true);
+    const exerciseIds = [...new Set(day.exercises.map((planned) => planned.exerciseId))];
+    const [catalog, lastSets] = await Promise.all([
+      fetchExercises({ includeArchived: true }).catch(() => exercises),
+      fetchLastLoggedSets(exerciseIds).catch(() => new Map()),
+    ]);
+    const started = startDraftFromDay(
+      { id: day.id, name: day.name, programName: program.name, exercises: day.exercises },
+      new Map(catalog.map((exercise) => [exercise.id, exercise])),
+      lastSets,
+      new Date(),
+    );
+    const skipped = started.skippedExerciseIds.length;
+    const startedFresh = await startWorkout(() => started.draft);
+    setStartingDay(false);
+    setStartNotice(
+      startedFresh && skipped > 0
+        ? `${skipped} exercise(s) in this day are no longer available and were skipped.`
+        : null,
+    );
+  };
+
   if (!draft) {
     return (
       <main className="screen stack">
@@ -105,9 +138,18 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             This workout was saved in another tab.
           </p>
         )}
-        <button className="button primary big" type="button" onClick={() => startWorkout(startDraft)}>
+        <button
+          className="button primary big"
+          type="button"
+          disabled={startingDay}
+          onClick={() => {
+            setStartNotice(null);
+            void startWorkout(startDraft);
+          }}
+        >
           Start workout
         </button>
+        <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
       </main>
     );
   }
@@ -161,6 +203,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   }
 
   const finish = async () => {
+    const skippedSets = notDoneSetCount(draft);
+    if (skippedSets > 0 && !window.confirm(`${skippedSets} planned sets not done will be skipped`)) return;
     setCheckingFinish(true);
     setFinishProblem(null);
     const loadTypes = await currentLoadTypes(draft, exercises);
@@ -180,7 +224,13 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   return (
     <main className="screen stack">
       <h1 className="title">Workout</h1>
+      {draft.programLabel && <p className="muted">{draft.programLabel}</p>}
       {deviceNotices}
+      {startNotice && (
+        <p className="panel" role="status">
+          {startNotice}
+        </p>
+      )}
       {loadProblem && (
         <p className="problem" role="alert">
           {loadProblem}
@@ -190,14 +240,40 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <section className="panel stack" key={`${exercise.exerciseId}-${exerciseIndex}`}>
           <header className="row spread">
             <h2>{exercise.name}</h2>
-            <button
-              className="button link"
-              type="button"
-              onClick={() => changeDraft(removeExercise(draft, exerciseIndex))}
-            >
-              Remove
-            </button>
+            <span className="row">
+              {canSwapExercise(draft, exerciseIndex) && (
+                <button
+                  className="button link"
+                  type="button"
+                  onClick={() => setSwappingIndex(swappingIndex === exerciseIndex ? null : exerciseIndex)}
+                >
+                  Swap
+                </button>
+              )}
+              <button
+                className="button link"
+                type="button"
+                onClick={() => changeDraft(removeExercise(draft, exerciseIndex))}
+              >
+                Remove
+              </button>
+            </span>
           </header>
+          {exercise.target && (
+            <p className="muted">
+              Target {exercise.target.sets} × {exercise.target.repsMin}–{exercise.target.repsMax}
+            </p>
+          )}
+          {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
+            <ExercisePicker
+              exercises={exercises}
+              onPick={(replacement) => {
+                const swapped = swapExercise(draft, exerciseIndex, replacement);
+                if (swapped) changeDraft(swapped);
+                setSwappingIndex(null);
+              }}
+            />
+          )}
           <ol className="set-list">
             {exercise.sets.map((set, setIndex) => (
               <SetRow
@@ -207,6 +283,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                 set={set}
                 onChange={(changes) => changeDraft(updateSet(draft, exerciseIndex, set.id, changes))}
                 onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
+                onToggleDone={() => changeDraft(toggleSetDone(draft, exerciseIndex, set.id))}
               />
             ))}
           </ol>

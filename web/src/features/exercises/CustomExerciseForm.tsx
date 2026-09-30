@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { EQUIPMENT, type Equipment, type Exercise, LOAD_TYPES, type LoadType, type Skill } from '../../lib/catalog.ts';
 import { fetchExerciseShares, hasLoggedSet, saveCustomExercise, type SkillShare } from '../../lib/custom-exercises.ts';
+import { nameProblem, trimmedName } from '../../lib/names.ts';
 import { percentsFromShares, shareTotal, sharesToSave } from './share-form.ts';
 
 const LOAD_TYPE_LABELS: Record<LoadType, string> = {
@@ -49,7 +50,8 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
   const shareForm = { skillIds: skills.map((skill) => skill.id), percents, locked, storedShares };
   const total = shareTotal(shareForm);
   const shares = sharesToSave(shareForm);
-  const canSave = !loading && !saving && name.trim() !== '' && shares !== null;
+  const nameIssue = nameProblem(name, 60);
+  const canSave = !loading && !saving && nameIssue === null && shares !== null;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -59,7 +61,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
     try {
       await saveCustomExercise({
         id,
-        name: name.trim(),
+        name: trimmedName(name),
         loadType,
         equipment,
         shares: shares!,
@@ -78,6 +80,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
         Name
         <input value={name} maxLength={60} onChange={(event) => setName(event.target.value)} required />
       </label>
+      {name !== '' && nameIssue && <p className="problem">{nameIssue}</p>}
       <label className="field">
         Load type
         <select value={loadType} disabled={locked} onChange={(event) => setLoadType(event.target.value as LoadType)}>

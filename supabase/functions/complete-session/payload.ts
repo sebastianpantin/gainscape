@@ -33,6 +33,11 @@ const sessionSchema = z.object({
   startedAt: z.iso.datetime({ offset: true }).transform(toMillisecondIsoString),
   endedAt: z.iso.datetime({ offset: true }).transform(toMillisecondIsoString),
   notes: z.string().max(2000).nullable().default(null),
+  programDayId: z
+    .uuid()
+    .transform((id) => id.toLowerCase())
+    .nullable()
+    .default(null),
   sets: z.array(setSchema).min(1).max(MAX_SETS_PER_SESSION),
 });
 
