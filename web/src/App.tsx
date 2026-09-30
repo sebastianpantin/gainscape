@@ -7,6 +7,8 @@ import { ItemsScreen } from './features/collection/ItemsScreen.tsx';
 import { ExercisesScreen } from './features/exercises/ExercisesScreen.tsx';
 import { FriendsScreen } from './features/friends/FriendsScreen.tsx';
 import { HiscoresScreen } from './features/friends/HiscoresScreen.tsx';
+import { HistoryScreen } from './features/history/HistoryScreen.tsx';
+import { SessionDetailScreen } from './features/history/SessionDetailScreen.tsx';
 import { EditProfileScreen } from './features/profile/EditProfileScreen.tsx';
 import { FriendPreviewScreen } from './features/profile/FriendPreviewScreen.tsx';
 import { ProfileScreen } from './features/profile/ProfileScreen.tsx';
@@ -55,6 +57,8 @@ export function App() {
           <Route path="/skills" element={<SkillsScreen userId={userId} />} />
           <Route path="/collection" element={<CollectionScreen userId={userId} />} />
           <Route path="/collection/items" element={<ItemsScreen />} />
+          <Route path="/collection/history" element={<HistoryScreen />} />
+          <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
           <Route path="/friends" element={<FriendsScreen />} />
           <Route path="/friends/hiscores" element={<HiscoresScreen userId={userId} />} />
           <Route path="/profile" element={<ProfileScreen userId={userId} />} />

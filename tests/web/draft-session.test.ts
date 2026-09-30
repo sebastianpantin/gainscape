@@ -143,6 +143,40 @@ describe('draft session', () => {
     expect(await store.get(userId)).toBeNull();
   });
 
+  it('tells other tabs a workout was deleted, not saved, when its sync came back deleted', async () => {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const openChannel = channelHub();
+    const first = sessionOver(store, { channel: openChannel() });
+    const second = sessionOver(store, { channel: openChannel() });
+    await Promise.all([first.session.ready, second.session.ready]);
+
+    first.session.changeDraft(workout('session-a', finishedAt));
+    await vi.waitFor(() => expect(second.draft()?.sessionId).toBe('session-a'));
+    await first.session.markSynced('session-a', 'deleted');
+    await vi.waitFor(() => expect(second.draft()).toBeNull());
+    expect(second.latest().state).toMatchObject({ notice: 'deleted' });
+
+    await second.session.reload();
+    expect(second.latest().state).toMatchObject({ notice: 'deleted' });
+    await first.session.reload('deleted');
+    expect(first.latest().state).toMatchObject({ draft: null, notice: 'deleted' });
+    expect(await store.get(userId)).toMatchObject({ kind: 'synced', syncedSessionId: 'session-a' });
+  });
+
+  it('still says saved elsewhere after a normal sync in another tab', async () => {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const openChannel = channelHub();
+    const first = sessionOver(store, { channel: openChannel() });
+    const second = sessionOver(store, { channel: openChannel() });
+    await Promise.all([first.session.ready, second.session.ready]);
+
+    first.session.changeDraft(workout('session-a', finishedAt));
+    await vi.waitFor(() => expect(second.draft()?.sessionId).toBe('session-a'));
+    await first.session.markSynced('session-a');
+    await vi.waitFor(() => expect(second.draft()).toBeNull());
+    expect(second.latest().state).toMatchObject({ notice: 'saved_elsewhere' });
+  });
+
   it('resumes an unsynced finished draft instead of starting over it', async () => {
     const store = createLocalDraftStore(new MemoryStorage());
     const { session, draft } = sessionOver(store);

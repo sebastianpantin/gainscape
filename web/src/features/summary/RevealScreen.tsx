@@ -99,6 +99,20 @@ export function RevealScreen({ userId }: RevealScreenProps) {
     );
   }
 
+  if (summary.historyOnly) {
+    return (
+      <main className="screen stack">
+        <h1 className="title">Workout saved</h1>
+        <p className="panel" role="status">
+          Saved to history (older than 7 days, no XP)
+        </p>
+        <Link className="button" to="/">
+          Done
+        </Link>
+      </main>
+    );
+  }
+
   const nameOf = (skillKey: string) => skills.find((skill) => skill.key === skillKey)?.name ?? skillKey;
   const skillsWithXp = skills.filter((skill) => summary.xpBySkill[skill.key]);
   const totalXp = Object.values(summary.xpBySkill).reduce((sum, xp) => sum + xp, 0);
