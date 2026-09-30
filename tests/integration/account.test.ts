@@ -7,6 +7,7 @@ import {
   db,
   env,
   postCompleteSession,
+  postFunction,
   type TestUser,
 } from './local-stack.ts';
 
@@ -25,6 +26,7 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'pinned_exercises', column: 'user_id' },
   { table: 'exercises', column: 'owner_user_id' },
   { table: 'programs', column: 'owner_user_id' },
+  { table: 'deleted_sessions', column: 'user_id' },
 ];
 
 async function post(name: string, accessToken: string | null, body: unknown) {
@@ -64,6 +66,8 @@ async function logOneSession(user: TestUser): Promise<string> {
 
 async function giveUserEverything(user: TestUser): Promise<void> {
   await logOneSession(user);
+  const removed = await postFunction('delete-session', user.accessToken, { sessionId: await logOneSession(user) });
+  expect(removed.status).toBe(200);
   const benchId = await builtInExerciseId('barbell_bench_press');
   const pin = await user.client.from('pinned_exercises').insert({ exercise_id: benchId, position: 0 });
   expect(pin.error).toBeNull();
@@ -147,6 +151,7 @@ describe('export-data', () => {
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
     expect(exported.sessions).toHaveLength(1);
+    expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(1);
     expect(exported.sets[0].effort_input_type).toBe('rpe');
     expect(exported.pinnedExercises).toHaveLength(1);

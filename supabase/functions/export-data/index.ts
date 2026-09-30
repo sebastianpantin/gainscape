@@ -18,6 +18,8 @@ async function exportFor(userId: string) {
       from public.profile_private where user_id = ${userId}`;
     const sessions = await tx`select * from public.sessions where user_id = ${userId} order by started_at, id`;
     const sets = await tx`select * from public.sets where user_id = ${userId} order by session_id, position`;
+    const deletedSessions = await tx`
+      select id, started_at, deleted_at from public.deleted_sessions where user_id = ${userId} order by deleted_at`;
     const setSkillXp = await tx`
       select x.set_id, s.key as skill, x.xp
       from public.set_skill_xp x join public.skills s on s.id = x.skill_id
@@ -57,6 +59,7 @@ async function exportFor(userId: string) {
       privateProfile,
       sessions,
       sets,
+      deletedSessions,
       setSkillXp,
       skills,
       exerciseMaxes,
