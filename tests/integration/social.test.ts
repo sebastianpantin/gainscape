@@ -98,19 +98,18 @@ describe('get_profile', () => {
 });
 
 describe('username_available', () => {
-  it('limits each signed-in caller and the shared anonymous bucket', async () => {
+  it('limits each signed-in caller on their own', async () => {
     const user = await createTestUser();
     await seedRateLimitHits('username_check_minute', user.id, 120);
     const limited = await user.client.rpc('username_available', { candidate: 'free_name_here' });
     expect(limited.status).toBe(429);
     expect(limited.error?.message).toBe('rate_limited');
 
-    const fine = await anon.rpc('username_available', { candidate: 'free_name_here' });
+    const other = await createTestUser();
+    const fine = await other.client.rpc('username_available', { candidate: 'free_name_here' });
     expect(fine.error).toBeNull();
-    await seedRateLimitHits('username_check_minute', null, 120);
-    const anonLimited = await anon.rpc('username_available', { candidate: 'free_name_here' });
-    expect(anonLimited.status).toBe(429);
-    await db`delete from private.rate_limit_hits where bucket = 'username_check_minute' and subject is null`;
+    const anonymous = await anon.rpc('username_available', { candidate: 'free_name_here' });
+    expect(anonymous.error).toBeNull();
   });
 });
 

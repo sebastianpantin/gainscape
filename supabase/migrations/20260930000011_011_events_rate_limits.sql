@@ -17,10 +17,10 @@ insert into private.rate_limit_rules (bucket, max_hits, window_seconds) values
 
 create table private.rate_limit_hits (
   bucket text not null references private.rate_limit_rules (bucket) on delete cascade,
-  subject uuid references public.profiles (id) on delete cascade,
+  subject uuid not null references public.profiles (id) on delete cascade,
   window_start timestamptz not null,
   hits int not null check (hits > 0),
-  constraint rate_limit_hits_one_per_window unique nulls not distinct (bucket, subject, window_start)
+  primary key (bucket, subject, window_start)
 );
 
 alter table private.rate_limit_rules enable row level security;
@@ -53,7 +53,7 @@ begin
 
   delete from private.rate_limit_hits h
   where h.bucket = take_rate_limit.bucket_name
-    and h.subject is not distinct from take_rate_limit.subject_id
+    and h.subject = take_rate_limit.subject_id
     and h.window_start < window_begin;
 
   if taken > rule_max_hits then

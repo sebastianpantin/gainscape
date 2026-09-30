@@ -472,7 +472,7 @@ export async function eventIds(userId: string): Promise<Map<string, string>> {
 
 const SEED_MARGIN_SECONDS = 10;
 
-export async function seedRateLimitHits(bucket: string, userId: string | null, hits: number): Promise<void> {
+export async function seedRateLimitHits(bucket: string, userId: string, hits: number): Promise<void> {
   const [rule] = await db`
     select window_seconds,
            window_seconds - mod(extract(epoch from clock_timestamp())::numeric, window_seconds)::float as remaining

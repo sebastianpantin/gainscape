@@ -81,7 +81,8 @@ async function giveUserEverything(user: TestUser): Promise<void> {
   const scroll = await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
   await db`
     insert into public.user_unlocks (user_id, exercise_id, item_id, source_drop_id)
-    select ${user.id}, grants_exercise_id, id, ${scroll.dropId} from public.items where key = 'scroll_pause_squat'`;
+    select ${user.id}, grants_exercise_id, id, ${scroll.dropId} from public.items where key = 'scroll_pause_squat'
+    on conflict (user_id, exercise_id) do nothing`;
   await db`
     insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
     select ${user.id}, id, 3 from public.drop_tables where key = 'regular'
@@ -217,6 +218,37 @@ describe('export-data', () => {
     expect(exported.drops.some((drop: { source: string }) => drop.source === 'pr')).toBe(true);
     const everyUserId = JSON.stringify(exported).match(new RegExp(bystander.id, 'g'));
     expect(everyUserId).toBeNull();
+  });
+});
+
+describe('export-data and declined requests', () => {
+  it('shows a declined outgoing request as pending and leaves out a withdrawn one', async () => {
+    const [requester, addressee] = await Promise.all([createTestUser(), createTestUser()]);
+    await requester.client.rpc('send_friend_request', { username: addressee.username });
+    const declined = await addressee.client.rpc('respond_friend_request', {
+      requester_id: requester.id,
+      accept: false,
+    });
+    expect(declined.data).toMatchObject({ status: 'declined' });
+
+    const exported = await post('export-data', requester.accessToken, {});
+    expect(exported.status).toBe(200);
+    expect(exported.body.friendships).toEqual([
+      expect.objectContaining({
+        otherUserId: addressee.id,
+        direction: 'outgoing',
+        status: 'pending',
+        respondedAt: null,
+      }),
+    ]);
+    const addresseeExport = await post('export-data', addressee.accessToken, {});
+    expect(addresseeExport.body.friendships).toEqual([
+      expect.objectContaining({ otherUserId: requester.id, direction: 'incoming', status: 'declined' }),
+    ]);
+
+    expect((await requester.client.rpc('remove_friend', { other_id: addressee.id })).error).toBeNull();
+    const afterWithdraw = await post('export-data', requester.accessToken, {});
+    expect(afterWithdraw.body.friendships).toEqual([]);
   });
 });
 

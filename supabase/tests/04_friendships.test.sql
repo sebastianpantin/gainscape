@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(40);
+select plan(55);
 
 select tests.create_user('fr_alpha') as a \gset
 select tests.create_user('b_name') as b \gset
@@ -107,11 +107,85 @@ select throws_ok(
 );
 reset role;
 
+select tests.authenticate_as(:'b');
+select public.remove_friend(:'a');
+reset role;
+select ok(
+  (select f.status = 'declined' and f.withdrawn_at is null from public.friendships f
+   where f.requester_id = :'a' and f.addressee_id = :'b'),
+  'the addressee removing a declined request leaves it looking pending'
+);
+select tests.authenticate_as(:'a');
+select public.remove_friend(:'b');
+reset role;
+select ok(
+  (select f.withdrawn_at is not null from public.friendships f where f.requester_id = :'a' and f.addressee_id = :'b'),
+  'cancelling a declined request withdraws it instead of deleting it'
+);
+select tests.authenticate_as(:'a');
+select results_eq(
+  'select user_id from public.list_friends()',
+  format('values (%L::uuid)', :'c'),
+  'a withdrawn request leaves the requester list'
+);
+select is(public.send_friend_request('b_name') ->> 'status', 'already_pending', 're-sending a withdrawn request stays quiet');
+reset role;
+select ok(
+  (select f.status = 'declined' and f.withdrawn_at is null from public.friendships f
+   where f.requester_id = :'a' and f.addressee_id = :'b'),
+  're-sending restores the declined row without notifying'
+);
+select tests.authenticate_as(:'a');
+select public.remove_friend(:'b');
+reset role;
+select tests.authenticate_as(:'b');
+select is(public.send_friend_request('fr_alpha') ->> 'status', 'sent', 'the addressee can still ask after a withdrawal');
+reset role;
+select ok(
+  exists (select 1 from public.friendships f where f.requester_id = :'b' and f.addressee_id = :'a' and f.status = 'pending')
+  and not exists (select 1 from public.friendships f where f.requester_id = :'a' and f.addressee_id = :'b'),
+  'the withdrawn row is replaced by a fresh request'
+);
+
+insert into public.friendships (requester_id, addressee_id) values (:'banned', :'c');
+insert into public.friendships (requester_id, addressee_id, status, responded_at) values (:'banned', :'b', 'accepted', now());
+select tests.authenticate_as(:'c');
+select throws_ok(
+  format('select public.respond_friend_request(%L, true)', :'banned'),
+  'P0002',
+  'request_not_found',
+  'a banned requester cannot be accepted'
+);
+select ok(
+  not exists (select 1 from public.list_friends() l where l.user_id = :'banned'),
+  'an incoming request from a banned user is hidden'
+);
+reset role;
+select tests.authenticate_as(:'b');
+select ok(
+  not exists (select 1 from public.list_friends() l where l.user_id = :'banned'),
+  'a banned friend is hidden'
+);
+select is(public.get_profile(:'banned'), null, 'a banned friend profile is hidden');
+reset role;
+select tests.authenticate_as(:'banned');
+select throws_ok('select public.send_friend_request(''fr_charlie'')', '42501', 'not_authenticated', 'a banned caller cannot send');
+select throws_ok(
+  format('select public.respond_friend_request(%L, true)', :'b'),
+  '42501',
+  'not_authenticated',
+  'a banned caller cannot accept'
+);
+reset role;
+
 select tests.create_user('fr_many') as many \gset
 insert into public.friendships (requester_id, addressee_id)
-select :'many', tests.create_user('fr_out_' || n) from generate_series(1, 50) n;
+select :'many', tests.create_user('fr_out_' || n) from generate_series(1, 49) n;
+insert into public.friendships (requester_id, addressee_id, status, responded_at, withdrawn_at)
+values (:'many', tests.create_user('fr_out_withdrawn'), 'declined', now(), now());
 select tests.authenticate_as(:'many');
-select is(public.send_friend_request('fr_charlie') ->> 'status', 'limit_reached', 'the 51st outgoing request is refused');
+select is(public.send_friend_request('fr_charlie') ->> 'status', 'sent', 'a withdrawn request does not count toward the cap');
+select is(public.send_friend_request('b_name') ->> 'status', 'limit_reached', 'the 51st outgoing request is refused');
 reset role;
 
 select tests.create_user('fr_popular') as popular \gset
@@ -124,6 +198,11 @@ select throws_ok(
   '23514',
   'friend_limit_reached',
   'accepting a 201st friend is refused'
+);
+select is(
+  public.send_friend_request('fr_charlie') ->> 'status',
+  'limit_reached',
+  'a crossed request is refused at the friend cap'
 );
 reset role;
 

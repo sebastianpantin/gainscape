@@ -7,13 +7,17 @@ type Mode = 'sign-in' | 'register';
 
 const USERNAME_PATTERN = '^[a-z0-9_]{3,20}$';
 const SIGNUP_TRIGGER_FAILURE = 'Database error saving new user';
+const RATE_LIMITED_STATUS = 429;
 
 async function register(username: string, email: string, password: string): Promise<string | null> {
-  const { data: available, error: availabilityError } = await supabase.rpc('username_available', {
-    candidate: username,
-  });
-  if (availabilityError) return availabilityError.message;
-  if (!available) return 'That username is taken.';
+  const {
+    data: available,
+    error: availabilityError,
+    status: availabilityStatus,
+  } = await supabase.rpc('username_available', { candidate: username });
+  const availabilityRateLimited = availabilityStatus === RATE_LIMITED_STATUS;
+  if (availabilityError && !availabilityRateLimited) return availabilityError.message;
+  if (!availabilityError && !available) return 'That username is taken.';
 
   const { error } = await supabase.auth.signUp({
     email,

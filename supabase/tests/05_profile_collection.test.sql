@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(25);
 
 select tests.create_user('pc_owner') as a \gset
 select tests.create_user('pc_friend') as b \gset
@@ -141,6 +141,19 @@ reset role;
 select tests.authenticate_as(:'p');
 select is(public.get_profile(:'a'), null, 'a pending requester gets no profile');
 select is(public.get_profile(gen_random_uuid()), null, 'a random id gets no profile');
+reset role;
+
+select tests.create_user('pc_asked') as asked \gset
+select tests.create_user('pc_declined') as declined \gset
+insert into public.friendships (requester_id, addressee_id) values (:'a', :'asked');
+insert into public.friendships (requester_id, addressee_id, status, responded_at) values (:'declined', :'a', 'declined', now());
+select tests.authenticate_as(:'asked');
+select is(public.get_profile(:'a'), null, 'a pending addressee gets no profile');
+select is(public.get_collection(:'a'), null, 'a pending addressee gets no collection');
+reset role;
+select tests.authenticate_as(:'declined');
+select is(public.get_profile(:'a'), null, 'a declined requester gets no profile');
+select is(public.get_collection(:'a'), null, 'a declined requester gets no collection');
 reset role;
 
 select tests.authenticate_as(:'b');

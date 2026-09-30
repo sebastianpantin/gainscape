@@ -6,9 +6,11 @@ create table public.friendships (
   status public.friendship_status not null default 'pending',
   created_at timestamptz not null default now(),
   responded_at timestamptz,
+  withdrawn_at timestamptz,
   primary key (requester_id, addressee_id),
   constraint friendship_not_self check (requester_id <> addressee_id),
-  constraint responded_unless_pending check ((status = 'pending') = (responded_at is null))
+  constraint responded_unless_pending check ((status = 'pending') = (responded_at is null)),
+  constraint withdrawn_only_when_declined check (withdrawn_at is null or status = 'declined')
 );
 
 create unique index friendships_one_per_pair
@@ -18,7 +20,78 @@ create index friendships_by_addressee on public.friendships (addressee_id, statu
 alter table public.friendships enable row level security;
 
 insert into private.rate_limit_rules (bucket, max_hits, window_seconds) values
-  ('username_check_minute', 120, 60);
+  ('username_check_minute', 120, 60),
+  ('username_check_anon_minute', 120, 60),
+  ('username_check_anon_global_minute', 5000, 60);
+
+create table private.anon_rate_limit_hits (
+  bucket text not null references private.rate_limit_rules (bucket) on delete cascade,
+  client_key bytea not null,
+  window_start timestamptz not null,
+  hits int not null check (hits > 0),
+  primary key (bucket, client_key, window_start)
+);
+
+alter table private.anon_rate_limit_hits enable row level security;
+
+create function private.request_client_ip()
+returns text
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  forwarded text := nullif(current_setting('request.headers', true), '')::jsonb ->> 'x-forwarded-for';
+  hops text[];
+begin
+  if forwarded is null then
+    return null;
+  end if;
+  hops := string_to_array(forwarded, ',');
+  return nullif(trim(hops[cardinality(hops)]), '');
+end;
+$$;
+
+create function private.take_anon_rate_limit()
+returns void
+language plpgsql
+set search_path = ''
+as $$
+declare
+  client_ip text := private.request_client_ip();
+  bucket_name text := case when client_ip is null then 'username_check_anon_global_minute'
+                           else 'username_check_anon_minute' end;
+  key bytea := pg_catalog.sha256(convert_to(coalesce(client_ip, ''), 'UTF8'));
+  rule_max_hits int;
+  rule_window_seconds int;
+  window_begin timestamptz;
+  taken int;
+begin
+  select r.max_hits, r.window_seconds into rule_max_hits, rule_window_seconds
+  from private.rate_limit_rules r
+  where r.bucket = bucket_name;
+
+  window_begin := to_timestamp(floor(extract(epoch from now()) / rule_window_seconds) * rule_window_seconds);
+
+  insert into private.anon_rate_limit_hits as h (bucket, client_key, window_start, hits)
+  values (bucket_name, key, window_begin, 1)
+  on conflict (bucket, client_key, window_start) do update set hits = h.hits + 1
+  returning h.hits into taken;
+
+  delete from private.anon_rate_limit_hits h
+  where h.bucket = bucket_name and h.client_key = key and h.window_start < window_begin;
+
+  if taken > rule_max_hits then
+    raise exception 'rate_limited' using
+      errcode = 'PT429',
+      detail = json_build_object(
+        'bucket', bucket_name,
+        'retryAfterSeconds', greatest(1, ceil(extract(epoch from
+          (window_begin + make_interval(secs => rule_window_seconds) - clock_timestamp()))))::int
+      )::text;
+  end if;
+end;
+$$;
 
 create function private.max_friends()
 returns int
@@ -104,7 +177,9 @@ stable
 set search_path = ''
 as $$
   select can_view_user.viewer is not null
-     and (can_view_user.viewer = can_view_user.target or private.are_friends(can_view_user.viewer, can_view_user.target));
+     and (can_view_user.viewer = can_view_user.target
+          or (private.are_friends(can_view_user.viewer, can_view_user.target)
+              and private.account_active(can_view_user.target)));
 $$;
 
 create function private.collection_counts(target uuid)
@@ -177,6 +252,16 @@ as $$
   where f.status = 'accepted' and accepted_friend_count.target in (f.requester_id, f.addressee_id);
 $$;
 
+create function private.outgoing_request_count(target uuid)
+returns int
+language sql
+stable
+set search_path = ''
+as $$
+  select count(*)::int from public.friendships f
+  where f.requester_id = outgoing_request_count.target and f.status <> 'accepted' and f.withdrawn_at is null;
+$$;
+
 create or replace function private.create_profile_for_new_user()
 returns trigger
 language plpgsql
@@ -212,7 +297,11 @@ security definer
 set search_path = ''
 as $$
 begin
-  perform private.take_rate_limit('username_check_minute', auth.uid());
+  if auth.uid() is null then
+    perform private.take_anon_rate_limit();
+  else
+    perform private.take_rate_limit('username_check_minute', auth.uid());
+  end if;
   return username_available.candidate ~ '^[a-z0-9_]{3,20}$'
      and not exists (
        select 1 from public.profiles p join auth.users u on u.id = p.id
@@ -234,7 +323,7 @@ declare
   target uuid;
   existing public.friendships%rowtype;
 begin
-  if caller is null then
+  if caller is null or not private.account_active(caller) then
     raise exception 'not_authenticated' using errcode = 'insufficient_privilege';
   end if;
   perform private.take_rate_limit('friend_request_minute', caller);
@@ -261,22 +350,35 @@ begin
   if found and existing.status = 'accepted' then
     return jsonb_build_object('status', 'already_friends');
   end if;
-  if found and existing.requester_id = caller then
+  if found and existing.requester_id = caller and existing.withdrawn_at is null then
     return jsonb_build_object('status', 'already_pending');
   end if;
-  if found then
+  if found and existing.requester_id = caller then
+    if private.outgoing_request_count(caller) >= private.max_outgoing_requests() then
+      return jsonb_build_object('status', 'limit_reached');
+    end if;
+    update public.friendships f
+    set withdrawn_at = null
+    where f.requester_id = caller and f.addressee_id = target;
+    return jsonb_build_object('status', 'already_pending');
+  end if;
+  if found and existing.withdrawn_at is not null then
+    delete from public.friendships f where f.requester_id = target and f.addressee_id = caller;
+  elsif found then
     if private.accepted_friend_count(caller) >= private.max_friends()
        or private.accepted_friend_count(target) >= private.max_friends() then
       return jsonb_build_object('status', 'limit_reached');
     end if;
     update public.friendships f
     set status = 'accepted', responded_at = now()
-    where f.requester_id = target and f.addressee_id = caller;
+    where f.requester_id = target and f.addressee_id = caller and f.status <> 'accepted';
+    if not found then
+      raise exception 'request_not_found' using errcode = 'no_data_found';
+    end if;
     return jsonb_build_object('status', 'accepted', 'friend', private.public_card(target));
   end if;
 
-  if (select count(*) from public.friendships f where f.requester_id = caller and f.status <> 'accepted')
-       >= private.max_outgoing_requests()
+  if private.outgoing_request_count(caller) >= private.max_outgoing_requests()
      or private.accepted_friend_count(caller) >= private.max_friends()
      or private.accepted_friend_count(target) >= private.max_friends() then
     return jsonb_build_object('status', 'limit_reached');
@@ -297,7 +399,7 @@ declare
   caller uuid := auth.uid();
   requester uuid := respond_friend_request.requester_id;
 begin
-  if caller is null then
+  if caller is null or not private.account_active(caller) then
     raise exception 'not_authenticated' using errcode = 'insufficient_privilege';
   end if;
   perform private.lock_pair(caller, requester);
@@ -316,13 +418,19 @@ begin
     end if;
     update public.friendships f
     set status = 'accepted', responded_at = now()
-    where f.requester_id = requester and f.addressee_id = caller;
+    where f.requester_id = requester and f.addressee_id = caller and f.status = 'pending';
+    if not found then
+      raise exception 'request_not_found' using errcode = 'no_data_found';
+    end if;
     return jsonb_build_object('status', 'accepted', 'friend', private.public_card(requester));
   end if;
 
   update public.friendships f
   set status = 'declined', responded_at = now()
-  where f.requester_id = requester and f.addressee_id = caller;
+  where f.requester_id = requester and f.addressee_id = caller and f.status = 'pending';
+  if not found then
+    raise exception 'request_not_found' using errcode = 'no_data_found';
+  end if;
   return jsonb_build_object('status', 'declined', 'friend', private.public_card(requester));
 end;
 $$;
@@ -339,9 +447,14 @@ begin
   if caller is null then
     raise exception 'not_authenticated' using errcode = 'insufficient_privilege';
   end if;
+  perform private.lock_pair(caller, remove_friend.other_id);
+  update public.friendships f
+  set withdrawn_at = coalesce(f.withdrawn_at, now())
+  where f.requester_id = caller and f.addressee_id = remove_friend.other_id and f.status = 'declined';
   delete from public.friendships f
-  where (f.requester_id = caller and f.addressee_id = remove_friend.other_id)
-     or (f.requester_id = remove_friend.other_id and f.addressee_id = caller);
+  where ((f.requester_id = caller and f.addressee_id = remove_friend.other_id)
+      or (f.requester_id = remove_friend.other_id and f.addressee_id = caller))
+    and f.status <> 'declined';
 end;
 $$;
 
@@ -379,9 +492,10 @@ begin
     union all
     select f.addressee_id, 'outgoing'::text, f.created_at, 2
     from public.friendships f
-    where f.requester_id = caller and f.status <> 'accepted'
+    where f.requester_id = caller and f.status <> 'accepted' and f.withdrawn_at is null
   ) x
   join public.profiles p on p.id = x.other_id
+  where private.account_active(p.id)
   order by x.rank, p.username;
 end;
 $$;
@@ -535,6 +649,9 @@ revoke execute on function private.collection_counts(uuid) from public, anon, au
 revoke execute on function private.public_card(uuid) from public, anon, authenticated;
 revoke execute on function private.lock_pair(uuid, uuid) from public, anon, authenticated;
 revoke execute on function private.accepted_friend_count(uuid) from public, anon, authenticated;
+revoke execute on function private.outgoing_request_count(uuid) from public, anon, authenticated;
+revoke execute on function private.request_client_ip() from public, anon, authenticated;
+revoke execute on function private.take_anon_rate_limit() from public, anon, authenticated;
 
 revoke execute on function public.send_friend_request(text) from public, anon;
 revoke execute on function public.respond_friend_request(uuid, boolean) from public, anon;
