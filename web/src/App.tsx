@@ -4,8 +4,16 @@ import { CollectionScreen } from './features/collection/CollectionScreen.tsx';
 import { SkillsScreen } from './features/skills/SkillsScreen.tsx';
 import { RevealScreen } from './features/summary/RevealScreen.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
-import { supabase } from './lib/supabase.ts';
 import { useAuthSession } from './lib/use-auth-session.ts';
+import { openDraftStoreAndReconcile } from './offline/draft-boot.ts';
+import { signOutKeepingDrafts } from './offline/sync-workout.ts';
+
+async function signOut(userId: string): Promise<void> {
+  const store = await openDraftStoreAndReconcile();
+  const hasDraft = (await store.userIdsWithDrafts()).includes(userId);
+  if (hasDraft && !window.confirm('Sign out? Your workout stays on this device.')) return;
+  await signOutKeepingDrafts();
+}
 
 export function App() {
   const auth = useAuthSession();
@@ -31,7 +39,7 @@ export function App() {
         <NavLink to="/collection" className="tab">
           Collection
         </NavLink>
-        <button type="button" className="tab" onClick={() => supabase.auth.signOut()}>
+        <button type="button" className="tab" onClick={() => signOut(userId)}>
           Sign out
         </button>
       </nav>

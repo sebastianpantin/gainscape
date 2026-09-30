@@ -18,7 +18,7 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | --------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `make reset`                | Recreate the local database from migrations and seed                                                      |
 | `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc`, `deno check`                |
-| `make test`                 | `make check`, then domain tests and integration/RLS tests against the local stack                         |
+| `make test`                 | `make check`, then domain tests, web draft/sync tests and integration/RLS tests against the local stack   |
 | `make sim-check`            | Balance band test (about 15 s)                                                                            |
 | `make sim`                  | Full balance tuning report (about 2 min)                                                                  |
 | `make e2e`                  | Playwright end-to-end flow in a headless phone-sized browser                                              |

@@ -139,4 +139,13 @@ describe('function execution rights', () => {
       where n.nspname in ('public', 'private') and has_function_privilege('anon', p.oid, 'execute')`;
     expect(rows.map((row) => row.name)).toEqual(['public.username_available']);
   });
+
+  it('grants authenticated execute only on the allowlisted functions', async () => {
+    const rows = await db`
+      select p.proname as name
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname in ('public', 'private') and has_function_privilege('authenticated', p.oid, 'execute')
+      order by p.proname`;
+    expect(rows.map((row) => row.name)).toEqual(['username_available']);
+  });
 });

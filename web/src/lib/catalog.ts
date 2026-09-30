@@ -8,6 +8,8 @@ export interface Skill {
   combatWeight: number;
 }
 
+const LOAD_TYPE_CHECK_TIMEOUT_MS = 5000;
+
 export type LoadType = 'external' | 'bodyweight' | 'bodyweight_plus';
 
 export interface Exercise {
@@ -41,6 +43,16 @@ export async function fetchBuiltInExercises(): Promise<Exercise[]> {
     .order('name');
   if (error) throw error;
   return data.map((row) => ({ id: row.id, name: row.name, equipment: row.equipment, loadType: row.load_type }));
+}
+
+export async function fetchLoadTypes(exerciseIds: string[]): Promise<Map<string, LoadType>> {
+  const { data, error } = await supabase
+    .from('exercises')
+    .select('id, load_type')
+    .in('id', exerciseIds)
+    .abortSignal(AbortSignal.timeout(LOAD_TYPE_CHECK_TIMEOUT_MS));
+  if (error) throw error;
+  return new Map(data.map((row) => [row.id, row.load_type]));
 }
 
 export async function saveBodyweight(userId: string, bodyweightKg: number): Promise<void> {

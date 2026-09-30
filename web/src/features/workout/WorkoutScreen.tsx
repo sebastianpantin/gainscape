@@ -1,91 +1,144 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { type Exercise, fetchBuiltInExercises, saveBodyweight } from '../../lib/catalog.ts';
+import { type Exercise, fetchBuiltInExercises, fetchLoadTypes, saveBodyweight } from '../../lib/catalog.ts';
 import type { SessionSummary } from '@domain/types.ts';
 import {
   addExercise,
   addSet,
-  discardDraft,
-  loadDraft,
-  loggedSetCount,
+  doneSetCount,
   removeExercise,
   removeSet,
-  saveDraft,
   startDraft,
   updateSet,
+  withCurrentLoadTypes,
   type WorkoutDraft,
-} from '../../offline/workout-draft.ts';
-import { rememberLastSummary } from '../summary/last-summary.ts';
+} from '../../offline/draft-format.ts';
+import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
+import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
+import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
+
+const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
 
 interface WorkoutScreenProps {
   userId: string;
 }
 
+async function currentLoadTypes(draft: WorkoutDraft, builtIns: Exercise[]) {
+  const builtInIds = new Set(builtIns.map((exercise) => exercise.id));
+  const customIds = [...new Set(draft.exercises.map((exercise) => exercise.exerciseId))].filter(
+    (exerciseId) => !builtInIds.has(exerciseId),
+  );
+  if (customIds.length === 0 || navigator.onLine === false) return new Map();
+  return fetchLoadTypes(customIds).catch(() => new Map());
+}
+
 export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const navigate = useNavigate();
-  const [draft, setDraft] = useState<WorkoutDraft | null>(() => loadDraft(userId));
+  const { state, store, saveProblem, changeDraft, updateDraft, startWorkout, discardDraft, markSynced, reload, flush } =
+    useWorkoutDraft(userId);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
+  const [finishProblem, setFinishProblem] = useState<string | null>(null);
+  const [checkingFinish, setCheckingFinish] = useState(false);
+  const draft = state.status === 'ready' ? state.draft : null;
 
   useEffect(() => {
     fetchBuiltInExercises().then(setExercises, (error: Error) => setLoadProblem(error.message));
   }, []);
 
-  const changeDraft = (next: WorkoutDraft | null) => {
-    setDraft(next);
-    if (next) saveDraft(userId, next);
-    else discardDraft(userId);
-  };
-
-  const finishStatus = useFinishSync(draft, (summary: SessionSummary) => {
-    changeDraft(null);
-    rememberLastSummary(summary);
-    navigate('/reveal', { state: summary });
+  const { status: finishStatus, retryNow } = useFinishSync({
+    userId,
+    draft,
+    store,
+    flush,
+    markSynced,
+    onSynced: (summary: SessionSummary) => navigate('/reveal', { state: summary }),
+    onSuperseded: (sessionId: string) => {
+      if (recallLastSummary()?.sessionId === sessionId) navigate('/reveal');
+      else void reload();
+    },
   });
+
+  if (state.status === 'loading') {
+    return (
+      <main className="screen">
+        <p>Loading…</p>
+      </main>
+    );
+  }
+
+  const deviceNotices = (
+    <>
+      {saveProblem && (
+        <p className="problem" role="alert">
+          Couldn't save on this device
+        </p>
+      )}
+      {store && <OtherAccountDraftNotice store={store} userId={userId} />}
+    </>
+  );
 
   if (!draft) {
     return (
       <main className="screen stack">
         <h1 className="title">Workout</h1>
-        <button className="button primary big" type="button" onClick={() => changeDraft(startDraft())}>
+        {deviceNotices}
+        {state.notice === 'saved_elsewhere' && (
+          <p className="panel" role="status">
+            This workout was saved in another tab.
+          </p>
+        )}
+        <button className="button primary big" type="button" onClick={() => startWorkout(startDraft)}>
           Start workout
         </button>
       </main>
     );
   }
 
+  const backToEditing = () => changeDraft({ ...draft, finishedAt: null }, { reopen: true });
+
   if (draft.finishedAt) {
     return (
       <main className="screen stack">
         <h1 className="title">Saving workout…</h1>
+        {deviceNotices}
         {finishStatus.kind === 'syncing' && (
-          <p className="panel">
-            {finishStatus.lastProblem
-              ? `Couldn't reach the server (${finishStatus.lastProblem}). Retrying — your workout is saved on this device.`
-              : 'Sending your workout…'}
-          </p>
+          <div className="panel stack">
+            <p>
+              {finishStatus.lastProblem
+                ? `Couldn't reach the server (${finishStatus.lastProblem}). Retrying — your workout is saved on this device.`
+                : 'Sending your workout…'}
+            </p>
+            {finishStatus.lastProblem && (
+              <button className="button" type="button" onClick={retryNow}>
+                Retry now
+              </button>
+            )}
+          </div>
         )}
         {finishStatus.kind === 'rejected' && finishStatus.reason === 'bodyweight_required' && (
           <BodyweightPrompt
             onSave={async (bodyweightKg) => {
               await saveBodyweight(userId, bodyweightKg);
-              changeDraft({ ...draft });
+              retryNow();
             }}
           />
         )}
         {finishStatus.kind === 'rejected' && finishStatus.reason !== 'bodyweight_required' && (
           <div className="panel stack">
             <p className="problem" role="alert">
-              The server rejected this workout: {finishStatus.reason}
+              {EXERCISE_CHANGED_REASONS.has(finishStatus.reason)
+                ? 'Load type of an exercise changed; check the weights'
+                : `The server rejected this workout: ${finishStatus.reason}`}
             </p>
-            <button className="button" type="button" onClick={() => changeDraft({ ...draft, finishedAt: null })}>
+            <button className="button" type="button" onClick={backToEditing}>
               Back to editing
             </button>
-            <button className="button danger" type="button" onClick={() => changeDraft(null)}>
+            <button className="button danger" type="button" onClick={() => discardDraft(draft.sessionId)}>
               Discard workout
             </button>
           </div>
@@ -94,11 +147,27 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     );
   }
 
-  const canFinish = loggedSetCount(draft) > 0;
+  const finish = async () => {
+    setCheckingFinish(true);
+    setFinishProblem(null);
+    const loadTypes = await currentLoadTypes(draft, exercises);
+    setCheckingFinish(false);
+    let changedNames: string[] = [];
+    updateDraft((latest) => {
+      if (latest.sessionId !== draft.sessionId || latest.finishedAt) return latest;
+      const checked = withCurrentLoadTypes(latest, loadTypes);
+      changedNames = checked.changedNames;
+      return changedNames.length > 0 ? checked.draft : { ...checked.draft, finishedAt: new Date().toISOString() };
+    });
+    if (changedNames.length > 0) setFinishProblem(`Load type of ${changedNames.join(', ')} changed; check the weights`);
+  };
+
+  const canFinish = doneSetCount(draft) > 0 && !checkingFinish;
 
   return (
     <main className="screen stack">
       <h1 className="title">Workout</h1>
+      {deviceNotices}
       {loadProblem && (
         <p className="problem" role="alert">
           {loadProblem}
@@ -139,12 +208,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           changeDraft(addSet(addExercise(draft, exercise.id, exercise.name, exercise.loadType), draft.exercises.length))
         }
       />
-      <button
-        className="button primary big"
-        type="button"
-        disabled={!canFinish}
-        onClick={() => changeDraft({ ...draft, finishedAt: new Date().toISOString() })}
-      >
+      {finishProblem && (
+        <p className="problem" role="alert">
+          {finishProblem}
+        </p>
+      )}
+      <button className="button primary big" type="button" disabled={!canFinish} onClick={finish}>
         Finish workout
       </button>
     </main>

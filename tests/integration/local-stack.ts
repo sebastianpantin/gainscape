@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import type { Catalog, ExerciseDef, SessionSummary } from '@domain/index.ts';
@@ -112,4 +112,11 @@ export async function setBodyweight(user: TestUser, bodyweightKg: number): Promi
     .update({ bodyweight_kg: bodyweightKg })
     .eq('user_id', user.id);
   if (error) throw error;
+}
+
+export function resignedWithAnotherKey(accessToken: string): string {
+  const [, claims] = accessToken.split('.');
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const signature = createHmac('sha256', randomBytes(32)).update(`${header}.${claims}`).digest('base64url');
+  return `${header}.${claims}.${signature}`;
 }
