@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(47);
+select plan(48);
 
 select tests.create_user('fd_owner') as a \gset
 select tests.create_user('fd_friend') as b \gset
@@ -238,7 +238,11 @@ select is(
   'a stranger only ranks themself'
 );
 select is(public.set_gz(:'bench_event', true), '{"status": "not_found"}'::jsonb, 'a stranger cannot gz');
-select is(public.set_gz(:'bench_event', false), '{"status": "not_found"}'::jsonb, 'a stranger cannot read a gz count');
+select is(
+  public.set_gz(:'bench_event', false),
+  jsonb_build_object('status', 'ok', 'eventId', :'bench_event'::uuid, 'given', false),
+  'a stranger ungiving gets no gz count'
+);
 reset role;
 select is(
   (select sum(h.hits)::int from private.rate_limit_hits h where h.subject = :'c' and h.bucket = 'gz_minute'),
@@ -253,9 +257,15 @@ select is(public.set_gz(:'bench_event', true) ->> 'status', 'ok', 'a friend give
 select public.remove_friend(:'a');
 select is(public.set_gz(:'bench_event', true), '{"status": "not_found"}'::jsonb, 'an ex-friend cannot give gz');
 select is(
-  public.set_gz(:'bench_event', false) - 'eventId',
-  '{"status": "ok", "given": false, "gzCount": 0}'::jsonb,
-  'an ex-friend can take back their gz'
+  public.set_gz(:'bench_event', false),
+  jsonb_build_object('status', 'ok', 'eventId', :'bench_event'::uuid, 'given', false),
+  'an ex-friend can take back their gz without seeing the count'
+);
+reset role;
+select is(
+  (select count(*)::int from public.reactions r where r.event_id = :'bench_event' and r.user_id = :'x'),
+  0,
+  'the ex-friend gz is gone'
 );
 reset role;
 select tests.authenticate_as(:'p');
