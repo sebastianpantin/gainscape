@@ -288,8 +288,8 @@ begin
     on conflict on constraint reactions_pkey do nothing;
   else
     delete from public.reactions r where r.event_id = set_gz.event_id and r.user_id = caller;
-    if not found and not visible then
-      return jsonb_build_object('status', 'not_found');
+    if not visible then
+      return jsonb_build_object('status', 'ok', 'eventId', set_gz.event_id, 'given', false);
     end if;
   end if;
 

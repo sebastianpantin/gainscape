@@ -149,7 +149,7 @@ export async function fetchFeedPage(cursor: FeedCursor | null): Promise<FeedItem
   }));
 }
 
-export type GzResult = { status: 'ok'; eventId: string; given: boolean; gzCount: number } | { status: 'not_found' };
+export type GzResult = { status: 'ok'; eventId: string; given: boolean; gzCount?: number } | { status: 'not_found' };
 
 export function setGz(eventId: string, given: boolean): Promise<GzResult> {
   return call('set_gz', { event_id: eventId, given });

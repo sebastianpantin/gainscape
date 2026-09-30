@@ -198,7 +198,11 @@ export function FriendsScreen() {
     try {
       const result = await setGz(item.eventId, given);
       if (result.status === 'ok') {
-        replaceItem(item.eventId, (current) => ({ ...current, gzGiven: result.given, gzCount: result.gzCount }));
+        replaceItem(item.eventId, (current) => ({
+          ...current,
+          gzGiven: result.given,
+          gzCount: result.gzCount ?? current.gzCount,
+        }));
       } else {
         replaceItem(item.eventId, rollBack);
         setProblem(GONE_POST);
