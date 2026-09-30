@@ -51,3 +51,19 @@ export async function heightOf(username: string): Promise<number | null> {
     where p.username = ${username}`;
   return row?.height_cm ?? null;
 }
+
+export async function editElsewhere(sessionId: string, reps: number): Promise<void> {
+  await db`update public.sets set reps = ${reps} where session_id = ${sessionId}`;
+  await db`update public.sessions set revision = revision + 1, notes = 'edited elsewhere' where id = ${sessionId}`;
+}
+
+export async function setsOf(sessionId: string) {
+  return db`
+    select reps, effort_input_type, effort_value::float as effort_value
+    from public.sets where session_id = ${sessionId} order by position`;
+}
+
+export async function sessionNotes(sessionId: string): Promise<string | null> {
+  const [row] = await db`select notes from public.sessions where id = ${sessionId}`;
+  return row?.notes ?? null;
+}

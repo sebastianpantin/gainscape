@@ -3,7 +3,7 @@ import type { DraftStore, PutOptions } from './draft-store.ts';
 
 export const DRAFT_CHANNEL_NAME = 'gainscape.drafts';
 
-export type DraftNotice = 'saved_elsewhere';
+export type DraftNotice = 'saved_elsewhere' | 'deleted';
 
 export type WorkoutDraftState =
   { status: 'loading' } | { status: 'ready'; draft: WorkoutDraft | null; notice: DraftNotice | null };
@@ -14,7 +14,9 @@ export interface DraftSnapshot {
   saveProblem: boolean;
 }
 
-export type DraftChange = 'written' | 'synced' | 'discarded';
+export type SyncedChange = 'synced' | 'deleted';
+
+export type DraftChange = 'written' | 'discarded' | SyncedChange;
 
 export interface DraftMessage {
   userId: string;
@@ -45,11 +47,18 @@ export interface DraftSession {
   updateDraft: (update: (current: WorkoutDraft) => WorkoutDraft | null) => WorkoutDraft | null;
   startWorkout: (fresh: () => WorkoutDraft) => Promise<boolean>;
   discardDraft: (sessionId: string) => void;
-  markSynced: (sessionId: string) => Promise<void>;
-  reload: () => Promise<void>;
+  markSynced: (sessionId: string, change?: SyncedChange) => Promise<void>;
+  reload: (noticeWhenGone?: DraftNotice | null) => Promise<void>;
   flush: () => Promise<void>;
   close: () => void;
 }
+
+const NOTICE_FOR_CHANGE: Record<DraftChange, DraftNotice | null> = {
+  written: 'saved_elsewhere',
+  synced: 'saved_elsewhere',
+  discarded: null,
+  deleted: 'deleted',
+};
 
 function isDraftMessage(data: unknown): data is DraftMessage {
   const message = data as Partial<DraftMessage> | null;
@@ -67,6 +76,7 @@ export function createDraftSession({
   let snapshot: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: false };
   let active = true;
   let lastSeen = 0;
+  const deletedSessionIds = new Set<string>();
   let chain: Promise<void> = Promise.resolve();
   let usingFallback = false;
   let persistenceRequested = false;
@@ -91,6 +101,7 @@ export function createDraftSession({
   const adopt = (record: StoredDraft | null, noticeWhenGone: DraftNotice | null = 'saved_elsewhere') => {
     if (record) seen(record.updatedAt);
     if (record?.kind === 'draft') showDraft(record.draft);
+    else if (record?.kind === 'synced' && deletedSessionIds.has(record.syncedSessionId)) showDraft(null, 'deleted');
     else showDraft(null, noticeWhenGone);
   };
 
@@ -154,8 +165,12 @@ export function createDraftSession({
   if (channel)
     channel.onmessage = (event) => {
       const message = event.data;
-      if (!isDraftMessage(message) || message.userId !== userId || message.updatedAt <= lastSeen) return;
-      const noticeWhenGone = message.change === 'discarded' ? null : 'saved_elsewhere';
+      if (!isDraftMessage(message) || message.userId !== userId) return;
+      if (message.change === 'deleted') deletedSessionIds.add(message.sessionId);
+      if (message.updatedAt <= lastSeen) return;
+      const noticeWhenGone = Object.hasOwn(NOTICE_FOR_CHANGE, message.change)
+        ? NOTICE_FOR_CHANGE[message.change]
+        : 'saved_elsewhere';
       void enqueue(async (store) => adopt(await store.get(userId), noticeWhenGone));
     };
 
@@ -208,17 +223,19 @@ export function createDraftSession({
     });
   };
 
-  const markSynced = (sessionId: string) => {
+  const markSynced = (sessionId: string, change: SyncedChange = 'synced') => {
     const updatedAt = claimUpdatedAt();
+    if (change === 'deleted') deletedSessionIds.add(sessionId);
     return enqueue(async (store) => {
       await store.markSynced(userId, sessionId, updatedAt);
       const record = await store.get(userId);
       if (record) seen(record.updatedAt);
-      announce(sessionId, record?.updatedAt ?? updatedAt, 'synced');
+      announce(sessionId, record?.updatedAt ?? updatedAt, change);
     });
   };
 
-  const reload = () => enqueue(async (store) => adopt(await store.get(userId)));
+  const reload = (noticeWhenGone: DraftNotice | null = 'saved_elsewhere') =>
+    enqueue(async (store) => adopt(await store.get(userId), noticeWhenGone));
 
   const flush = async () => {
     let drained: Promise<void>;
