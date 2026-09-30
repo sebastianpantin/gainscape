@@ -21,9 +21,10 @@ export function replayHistory(
   cfg: BalanceConfig,
   initialState: UserState = { skillXp: {}, bodyweightKg: null },
   steps: readonly Step[] = DEFAULT_STEPS,
+  priorStrength: readonly StrengthHistoryRow[] = [],
 ): ReplayResult {
   const ordered = [...sessions].sort(compareSessionKeys);
-  const history: StrengthHistoryRow[] = [];
+  const history: StrengthHistoryRow[] = [...priorStrength];
   const replayed: ReplayedSession[] = [];
   let state = initialState;
 
@@ -35,4 +36,8 @@ export function replayHistory(
     state = nextState;
   }
   return { sessions: replayed, finalState: state };
+}
+
+export function priorSkillXp(sums: Readonly<Record<string, number>>, cfg: BalanceConfig): Record<string, number> {
+  return Object.fromEntries(Object.entries(sums).map(([skillId, xp]) => [skillId, Math.min(cfg.maxXp, xp)]));
 }

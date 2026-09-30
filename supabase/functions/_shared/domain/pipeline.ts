@@ -16,8 +16,9 @@ import type {
   UserState,
 } from './types.ts';
 import { NO_RECORDS } from './types.ts';
+import { BodyweightLoadNotZeroError, BodyweightRequiredError, UnknownExerciseError } from './errors.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
-import { trackStrength } from './strength.ts';
+import { roundTo, trackStrength } from './strength.ts';
 import { effectiveReps, setXp, splitXp } from './xp.ts';
 
 export interface PipelineDeps {
@@ -42,21 +43,6 @@ export interface SessionOutputs extends Omit<SessionSummary, 'sessionId'> {
   sets: SetResult[];
 }
 
-export class UnknownExerciseError extends Error {
-  readonly exerciseId: string;
-
-  constructor(exerciseId: string) {
-    super(`unknown exercise: ${exerciseId}`);
-    this.exerciseId = exerciseId;
-  }
-}
-
-export class BodyweightRequiredError extends Error {
-  constructor() {
-    super('bodyweight required');
-  }
-}
-
 function skillsInDisplayOrder(catalog: Catalog): SkillDef[] {
   return [...catalog.skills].sort((a, b) => a.sortOrder - b.sortOrder);
 }
@@ -67,18 +53,44 @@ function exerciseFor(set: SetInput, catalog: Catalog): ExerciseDef {
   return exercise;
 }
 
-export class BodyweightLoadNotZeroError extends Error {
-  constructor() {
-    super('pure bodyweight sets carry no added load');
+function assertNoAddedLoadOnPureBodyweight(set: Pick<SetInput, 'weightKg'>, exercise: ExerciseDef): void {
+  if (exercise.loadType === 'bodyweight' && set.weightKg > 0) throw new BodyweightLoadNotZeroError();
+}
+
+export function effectiveLoadForNewSet(
+  set: Pick<SetInput, 'weightKg'>,
+  exercise: ExerciseDef,
+  bodyweightKg: number | null,
+): number {
+  assertNoAddedLoadOnPureBodyweight(set, exercise);
+  if (exercise.loadType === 'external') return set.weightKg;
+  if (bodyweightKg === null) throw new BodyweightRequiredError();
+  return bodyweightKg + set.weightKg;
+}
+
+export interface StoredSetLoad {
+  exerciseId: string;
+  weightKg: number;
+  effectiveLoadKg: number;
+}
+
+export function carriedEffectiveLoadKg(
+  stored: StoredSetLoad,
+  next: Pick<SetInput, 'exerciseId' | 'weightKg'>,
+  exercise: ExerciseDef,
+  bodyweightKg: number | null,
+): number {
+  assertNoAddedLoadOnPureBodyweight(next, exercise);
+  if (exercise.loadType === 'external') return roundTo(2, next.weightKg);
+  if (stored.exerciseId === next.exerciseId) {
+    return roundTo(2, stored.effectiveLoadKg - stored.weightKg + next.weightKg);
   }
+  return roundTo(2, effectiveLoadForNewSet(next, exercise, bodyweightKg));
 }
 
 function effectiveLoadKg(set: SetInput, exercise: ExerciseDef, state: UserState): number {
-  if (exercise.loadType === 'bodyweight' && set.weightKg > 0) throw new BodyweightLoadNotZeroError();
-  if (set.recordedEffectiveLoadKg !== undefined) return set.recordedEffectiveLoadKg;
-  if (exercise.loadType === 'external') return set.weightKg;
-  if (state.bodyweightKg === null) throw new BodyweightRequiredError();
-  return state.bodyweightKg + set.weightKg;
+  assertNoAddedLoadOnPureBodyweight(set, exercise);
+  return set.recordedEffectiveLoadKg ?? effectiveLoadForNewSet(set, exercise, state.bodyweightKg);
 }
 
 export const resolveSets: Step = (ctx) => {
@@ -153,6 +165,8 @@ export const DEFAULT_STEPS: readonly Step[] = Object.freeze([
   applyXp,
   detectLevelUps,
 ]);
+
+export const HISTORY_ONLY_STEPS: readonly Step[] = Object.freeze([resolveSets]);
 
 function xpGainedBySkillKey(sets: readonly SetResult[], catalog: Catalog): Record<string, number> {
   const xpBySkill: Record<string, number> = {};

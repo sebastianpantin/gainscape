@@ -1,5 +1,19 @@
 import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import postgres from 'postgres';
+
+const stackEnvPath = join(import.meta.dirname, '../.stack.env');
+if (existsSync(stackEnvPath)) {
+  const expected = /^SUPABASE_PROJECT_ID=(.*)$/m.exec(readFileSync(stackEnvPath, 'utf8'))?.[1]?.trim();
+  if (expected && process.env.SUPABASE_PROJECT_ID !== expected) {
+    console.error(
+      `.stack.env sets SUPABASE_PROJECT_ID=${expected} but the environment has ${process.env.SUPABASE_PROJECT_ID ?? 'none'}; ` +
+        'run through make, or `set -a; . ./.stack.env; set +a` first',
+    );
+    process.exit(1);
+  }
+}
 
 const statusOutput = execFileSync('npx', ['supabase', 'status', '-o', 'json'], {
   encoding: 'utf8',
