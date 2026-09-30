@@ -1,6 +1,8 @@
 import type { LoadType } from './catalog.ts';
+import type { UnitPref } from './profile.ts';
+import { formatWeight } from './units.ts';
 
-export function formatLoad(loadKg: number, loadType: LoadType): string {
-  const kilograms = `${Number.isInteger(loadKg) ? loadKg : loadKg.toFixed(1)} kg`;
-  return loadType === 'bodyweight_plus' ? `+${kilograms}` : kilograms;
+export function formatLoad(loadKg: number, loadType: LoadType, unit: UnitPref = 'kg'): string {
+  const weight = formatWeight(loadKg, unit);
+  return loadType === 'bodyweight_plus' ? `+${weight}` : weight;
 }

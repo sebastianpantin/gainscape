@@ -31,8 +31,8 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
         loadType: 'external',
         target: null,
         sets: [
-          { id: 'set-a', weightKg: 60, reps: 8, effortLevel: 'hard', done: true },
-          { id: 'set-b', weightKg: 60, reps: 8, effortLevel: null, done: false },
+          { id: 'set-a', weightKg: 60, reps: 8, effort: { type: 'level', level: 'hard' }, done: true },
+          { id: 'set-b', weightKg: 60, reps: 8, effort: null, done: false },
         ],
       },
       {
@@ -41,9 +41,9 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
         loadType: 'external',
         target: { sets: 3, repsMin: 8, repsMax: 12 },
         sets: [
-          { id: 'set-c', weightKg: 50, reps: 10, effortLevel: null, done: false },
-          { id: 'set-d', weightKg: 50, reps: 10, effortLevel: 'easy', done: true },
-          { id: 'set-e', weightKg: 55, reps: 9, effortLevel: null, done: true },
+          { id: 'set-c', weightKg: 50, reps: 10, effort: null, done: false },
+          { id: 'set-d', weightKg: 50, reps: 10, effort: { type: 'level', level: 'easy' }, done: true },
+          { id: 'set-e', weightKg: 55, reps: 9, effort: null, done: true },
         ],
       },
     ],
@@ -52,18 +52,83 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
 }
 
 describe('parseStoredDraft', () => {
-  it('accepts a v2 draft for the same user', () => {
-    const raw = { v: 2, kind: 'draft', userId, updatedAt: 5, draft: workout() };
+  it('accepts a v3 draft for the same user', () => {
+    const raw = { v: 3, kind: 'draft', userId, updatedAt: 5, draft: workout() };
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
   });
 
-  it('accepts a v2 tombstone for the same user', () => {
-    const raw = { v: 2, kind: 'synced', userId, updatedAt: 6, syncedSessionId: workout().sessionId };
+  it('accepts a v3 tombstone for the same user', () => {
+    const raw = { v: 3, kind: 'synced', userId, updatedAt: 6, syncedSessionId: workout().sessionId };
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
+  });
+
+  it('upgrades a v2 draft, turning effortLevel into an effort input', () => {
+    const v2Sets = [
+      { id: 'set-a', weightKg: 60, reps: 8, effortLevel: 'hard', done: true },
+      { id: 'set-b', weightKg: 60, reps: 8, effortLevel: null, done: false },
+    ];
+    const v2Draft = { ...workout(), exercises: [{ ...workout().exercises[0], sets: v2Sets }] };
+    const upgraded = parseStoredDraft({ v: 2, kind: 'draft', userId, updatedAt: 5, draft: v2Draft }, userId);
+    expect(upgraded).toEqual({
+      v: 3,
+      kind: 'draft',
+      userId,
+      updatedAt: 5,
+      draft: { ...workout(), exercises: [workout().exercises[0]] },
+    });
+  });
+
+  it('upgrades a v2 tombstone', () => {
+    const raw = { v: 2, kind: 'synced', userId, updatedAt: 6, syncedSessionId: workout().sessionId };
+    expect(parseStoredDraft(raw, userId)).toEqual({ ...raw, v: 3 });
+  });
+
+  it('drops an unknown v2 effort level instead of inventing one', () => {
+    const v2Draft = {
+      ...workout(),
+      exercises: [
+        { ...workout().exercises[0], sets: [{ id: 'x', weightKg: 60, reps: 8, effortLevel: 'max', done: true }] },
+      ],
+    };
+    const upgraded = parseStoredDraft({ v: 2, kind: 'draft', userId, updatedAt: 5, draft: v2Draft }, userId);
+    expect(upgraded?.kind === 'draft' && upgraded.draft.exercises[0].sets[0].effort).toBeNull();
+  });
+
+  it.each([
+    [{ type: 'rir', value: 11 }],
+    [{ type: 'rpe', value: 4 }],
+    [{ type: 'rpe', value: 8.25 }],
+    [{ type: 'level', level: 'max' }],
+    [{ type: 'mystery' }],
+    ['hard'],
+  ])('replaces a malformed stored effort %j with no effort instead of crashing', (effort) => {
+    const broken = {
+      ...workout(),
+      exercises: [{ ...workout().exercises[0], sets: [{ id: 'x', weightKg: 60, reps: 8, effort, done: true }] }],
+    };
+    const parsed = parseStoredDraft({ v: 3, kind: 'draft', userId, updatedAt: 5, draft: broken }, userId);
+    expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets[0].effort).toBeNull();
+  });
+
+  it('keeps valid RIR and RPE efforts', () => {
+    const sets = [
+      { id: 'r', weightKg: 60, reps: 8, effort: { type: 'rir', value: 2 }, done: true },
+      { id: 'p', weightKg: 60, reps: 8, effort: { type: 'rpe', value: 8.5 }, done: true },
+    ];
+    const draft = { ...workout(), exercises: [{ ...workout().exercises[0], sets }] };
+    const parsed = parseStoredDraft({ v: 3, kind: 'draft', userId, updatedAt: 5, draft }, userId);
+    expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets.map((set) => set.effort)).toEqual([
+      { type: 'rir', value: 2 },
+      { type: 'rpe', value: 8.5 },
+    ]);
+  });
+
+  it('rejects unknown future versions', () => {
+    expect(parseStoredDraft({ v: 4, kind: 'draft', userId, updatedAt: 5, draft: workout() }, userId)).toBeNull();
   });
 
   it('rejects a record that belongs to another user', () => {
-    const raw = { v: 2, kind: 'draft', userId: 'someone-else', updatedAt: 5, draft: workout() };
+    const raw = { v: 3, kind: 'draft', userId: 'someone-else', updatedAt: 5, draft: workout() };
     expect(parseStoredDraft(raw, userId)).toBeNull();
   });
 
