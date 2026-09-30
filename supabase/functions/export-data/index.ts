@@ -64,10 +64,15 @@ async function exportFor(userId: string) {
       select case when f.requester_id = ${userId} then f.addressee_id else f.requester_id end as "otherUserId",
              p.username as "otherUsername",
              case when f.requester_id = ${userId} then 'outgoing' else 'incoming' end as direction,
-             f.status, f.created_at as "createdAt", f.responded_at as "respondedAt"
+             case when f.requester_id = ${userId} and f.status = 'declined' then 'pending' else f.status::text end
+               as status,
+             f.created_at as "createdAt",
+             case when f.requester_id = ${userId} and f.status = 'declined' then null else f.responded_at end
+               as "respondedAt"
       from public.friendships f
       join public.profiles p on p.id = case when f.requester_id = ${userId} then f.addressee_id else f.requester_id end
       where ${userId} in (f.requester_id, f.addressee_id)
+        and not (f.requester_id = ${userId} and f.withdrawn_at is not null)
       order by f.created_at, p.username`;
 
     return {

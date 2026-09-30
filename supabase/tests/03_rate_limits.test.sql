@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(19);
 
 insert into private.rate_limit_rules (bucket, max_hits, window_seconds) values ('test_five', 5, 3600);
 
@@ -84,6 +84,52 @@ select ok(
 select ok(
   not has_table_privilege('authenticated', 'private.rate_limit_rules', 'select, insert, update, delete'),
   'authenticated has no privilege on rate_limit_rules'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'private.anon_rate_limit_hits', 'select, insert, update, delete'),
+  'authenticated has no privilege on anon_rate_limit_hits'
+);
+
+select set_config('request.jwt.claims', '', true);
+set local role anon;
+select set_config('request.headers', '{"x-forwarded-for": "203.0.113.9, 10.0.0.1"}', true);
+select lives_ok(
+  $$ select public.username_available('free_' || n) from generate_series(1, 120) n $$,
+  '120 anonymous checks from one client pass'
+);
+select throws_ok(
+  $$ select public.username_available('free_121') $$,
+  'PT429',
+  'rate_limited',
+  'the 121st check from that client is limited'
+);
+select set_config('request.headers', '{"x-forwarded-for": "198.51.100.7, 10.0.0.1"}', true);
+select throws_ok(
+  $$ select public.username_available('free_122') $$,
+  'PT429',
+  'rate_limited',
+  'a different left-most hop does not escape the limit of the proxy-added hop'
+);
+select set_config('request.headers', '{"x-forwarded-for": "203.0.113.9, 10.0.0.2"}', true);
+select lives_ok($$ select public.username_available('free_123') $$, 'another client keeps its own bucket');
+select set_config('request.headers', '{}', true);
+select lives_ok($$ select public.username_available('free_124') $$, 'a request without a client address still passes');
+reset role;
+
+select is(
+  (select count(distinct h.client_key)::int from private.anon_rate_limit_hits h
+   where h.bucket = 'username_check_anon_minute'
+     and h.client_key in (sha256(convert_to('10.0.0.1', 'UTF8')), sha256(convert_to('10.0.0.2', 'UTF8')))),
+  2,
+  'two clients are counted apart'
+);
+select is(
+  (select h.hits from private.anon_rate_limit_hits h
+   where h.bucket = 'username_check_anon_global_minute' and h.client_key = sha256(convert_to('', 'UTF8'))
+     and h.window_start = to_timestamp(floor(extract(epoch from now()) / 60) * 60)),
+  1,
+  'a request without a client address counts against the global backstop'
 );
 
 select * from finish();
