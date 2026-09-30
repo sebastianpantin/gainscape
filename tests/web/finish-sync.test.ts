@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { draftRecord, type StoredDraft, syncedRecord, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import type { DraftStore } from '../../web/src/offline/draft-store.ts';
-import { attemptFinish, finishLockName, type SendOutcome } from '../../web/src/offline/finish-lock.ts';
+import { attemptFinish, finishLockName, type SendOutcome, sendOutcomeFrom } from '../../web/src/offline/finish-lock.ts';
 import { workout } from './draft-store.contract.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -34,8 +34,13 @@ function slowWriteStore(initial: StoredDraft | null) {
   return { store, current: () => record };
 }
 
-function attemptWith(store: DraftStore, flush: () => Promise<void> = async () => undefined, signal?: AbortSignal) {
-  const send = vi.fn<(draft: WorkoutDraft) => Promise<SendOutcome>>(async () => synced);
+function attemptWith(
+  store: DraftStore,
+  flush: () => Promise<void> = async () => undefined,
+  signal?: AbortSignal,
+  outcome: SendOutcome = synced,
+) {
+  const send = vi.fn<(draft: WorkoutDraft) => Promise<SendOutcome>>(async () => outcome);
   const markSynced = vi.fn((syncedSessionId: string) => store.markSynced(userId, syncedSessionId, 99));
   const result = attemptFinish({
     userId,
@@ -60,7 +65,7 @@ describe('attemptFinish', () => {
     expect(await result).toEqual({ kind: 'sent', outcome: synced });
     expect(send).toHaveBeenCalledOnce();
     expect(send.mock.calls[0][0]).toMatchObject({ sessionId, finishedAt });
-    expect(markSynced).toHaveBeenCalledWith(sessionId);
+    expect(markSynced).toHaveBeenCalledWith(sessionId, 'synced');
     expect(current()).toMatchObject({ kind: 'synced', syncedSessionId: sessionId });
   });
 
@@ -105,5 +110,51 @@ describe('attemptFinish', () => {
     const freeLock = await navigator.locks.request(finishLockName(userId), { ifAvailable: true }, (lock) => lock);
     expect(freeLock).not.toBeNull();
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it('treats a 410 session_deleted as terminal and tombstones the draft so it never comes back', async () => {
+    const { store, current } = slowWriteStore(draftRecord(userId, 5, workout(sessionId, finishedAt)));
+    const { result, send, markSynced } = attemptWith(store, undefined, undefined, { kind: 'deleted' });
+    expect(await result).toEqual({ kind: 'sent', outcome: { kind: 'deleted' } });
+    expect(send).toHaveBeenCalledOnce();
+    expect(markSynced).toHaveBeenCalledWith(sessionId, 'deleted');
+    expect(current()).toMatchObject({ kind: 'synced', syncedSessionId: sessionId });
+
+    const retry = attemptWith(store);
+    expect(await retry.result).toEqual({ kind: 'superseded' });
+    expect(retry.send).not.toHaveBeenCalled();
+  });
+
+  it('keeps the draft after a rejection', async () => {
+    const { store, current } = slowWriteStore(draftRecord(userId, 5, workout(sessionId, finishedAt)));
+    const { result, markSynced } = attemptWith(store, undefined, undefined, { kind: 'rejected', reason: 'x' });
+    expect(await result).toEqual({ kind: 'sent', outcome: { kind: 'rejected', reason: 'x' } });
+    expect(markSynced).not.toHaveBeenCalled();
+    expect(current()).toMatchObject({ kind: 'draft' });
+  });
+});
+
+describe('sendOutcomeFrom', () => {
+  const summary = { sessionId, xpBySkill: {}, levelUps: [], prs: [], drops: [] };
+
+  it('maps complete-session responses to finish outcomes', () => {
+    expect(sendOutcomeFrom({ kind: 'ok', data: summary })).toEqual({ kind: 'synced', summary });
+    expect(sendOutcomeFrom({ kind: 'http_error', status: 410, code: 'session_deleted', details: undefined })).toEqual({
+      kind: 'deleted',
+    });
+    expect(sendOutcomeFrom({ kind: 'http_error', status: 503, code: 'rebuild_required', details: undefined })).toEqual({
+      kind: 'retryable',
+      reason: 'rebuild_required',
+    });
+    expect(
+      sendOutcomeFrom({ kind: 'http_error', status: 409, code: 'session_id_conflict', details: undefined }),
+    ).toEqual({ kind: 'rejected', reason: 'session_id_conflict' });
+    expect(sendOutcomeFrom({ kind: 'needs_sign_in' })).toEqual({ kind: 'needs_sign_in' });
+    expect(sendOutcomeFrom({ kind: 'retryable', reason: 'offline' })).toEqual({ kind: 'retryable', reason: 'offline' });
+  });
+
+  it('keeps a history-only summary as a successful sync', () => {
+    const historyOnly = { ...summary, historyOnly: true as const };
+    expect(sendOutcomeFrom({ kind: 'ok', data: historyOnly })).toEqual({ kind: 'synced', summary: historyOnly });
   });
 });

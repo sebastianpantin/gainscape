@@ -49,6 +49,8 @@ export interface SessionInput {
 
 export const REP_MAX_SLOT_COUNT = 10;
 
+export const MAX_SETS_PER_SESSION = 200;
+
 export interface RepMaxSlot {
   loadKg: number;
   setId: string;
