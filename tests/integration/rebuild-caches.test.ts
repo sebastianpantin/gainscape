@@ -6,6 +6,7 @@ import {
   db,
   normalizedSnapshot,
   postCompleteSession,
+  postFunction,
   rebuildCaches,
   setBodyweight,
   type TestUser,
@@ -112,6 +113,52 @@ describe('rebuild-caches', () => {
       ]),
     ];
     for (const session of sessions) expect((await postCompleteSession(user.accessToken, session)).status).toBe(200);
+    const incremental = await normalizedSnapshot(user.id);
+    expect((await rebuildCaches(user.id)).status).toBe(200);
+    expect(await normalizedSnapshot(user.id)).toEqual(incremental);
+  });
+
+  it('rebuild equals the incremental state after edits and deletes', async () => {
+    const user = await createTestUser();
+    await setBodyweight(user, 80);
+    const hard = { type: 'level', level: 'hard' } as const;
+    const sessions = [
+      sessionStartedHoursAgo(2, [workingSet(benchId, 0, 90, 5, null), workingSet(pullUpId, 1, 0, 10, null)]),
+      sessionStartedHoursAgo(8, [workingSet(benchId, 0, 80, 5, hard), workingSet(squatId, 1, 100, 5, hard)]),
+      sessionStartedHoursAgo(4, [workingSet(squatId, 0, 110, 3, null), workingSet(pullUpId, 1, 0, 8, hard)]),
+      sessionStartedHoursAgo(6, [workingSet(benchId, 0, 85, 4, hard)]),
+    ];
+    for (const session of sessions) expect((await postCompleteSession(user.accessToken, session)).status).toBe(200);
+    const edit = (body: unknown) => postFunction('edit-session', user.accessToken, body);
+    const [, earliest, middle, secondEarliest] = sessions;
+    expect(
+      (
+        await edit({
+          sessionId: earliest.id,
+          ifRevision: 0,
+          notes: 'lighter',
+          sets: [
+            { ...earliest.sets[0], weightKg: 75, effort: { type: 'level', level: 'near_failure' } },
+            earliest.sets[1],
+          ],
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await edit({
+          sessionId: middle.id,
+          ifRevision: 0,
+          notes: null,
+          sets: [
+            { ...middle.sets[1], position: 0 },
+            { ...middle.sets[0], position: 1, exerciseId: benchId, weightKg: 95 },
+          ],
+        })
+      ).status,
+    ).toBe(200);
+    expect((await postFunction('delete-session', user.accessToken, { sessionId: secondEarliest.id })).status).toBe(200);
+
     const incremental = await normalizedSnapshot(user.id);
     expect((await rebuildCaches(user.id)).status).toBe(200);
     expect(await normalizedSnapshot(user.id)).toEqual(incremental);

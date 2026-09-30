@@ -1,10 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { anon, builtInExerciseId, createTestUser, db, postCompleteSession, type TestUser } from './local-stack.ts';
+import {
+  anon,
+  builtInExerciseId,
+  createTestUser,
+  db,
+  postCompleteSession,
+  postFunction,
+  type TestUser,
+} from './local-stack.ts';
 
 let owner: TestUser;
 let stranger: TestUser;
 let ownerSessionId: string;
+let deletedSessionId: string;
 let benchId: string;
 
 beforeAll(async () => {
@@ -29,6 +38,17 @@ beforeAll(async () => {
     ],
   });
   expect(response.status).toBe(200);
+
+  deletedSessionId = randomUUID();
+  const doomedEnd = new Date(endedAt.getTime() - 60 * 60 * 1000);
+  const doomed = await postCompleteSession(owner.accessToken, {
+    id: deletedSessionId,
+    startedAt: new Date(doomedEnd.getTime() - 30 * 60 * 1000).toISOString(),
+    endedAt: doomedEnd.toISOString(),
+    sets: [{ id: randomUUID(), exerciseId: benchId, position: 0, weightKg: 50, reps: 8, effort: null }],
+  });
+  expect(doomed.status).toBe(200);
+  expect((await postFunction('delete-session', owner.accessToken, { sessionId: deletedSessionId })).status).toBe(200);
 });
 
 afterAll(async () => {
@@ -76,7 +96,55 @@ describe('game tables reject client writes', () => {
   });
 });
 
+describe('session edit tables reject client writes', () => {
+  async function tombstones() {
+    return await db`select id, user_id, started_at, deleted_at from public.deleted_sessions where user_id = ${owner.id}`;
+  }
+
+  it('insert into deleted_sessions is denied', async () => {
+    const before = await tombstones();
+    const { error } = await owner.client
+      .from('deleted_sessions')
+      .insert({ id: randomUUID(), user_id: owner.id, started_at: new Date().toISOString() });
+    expect(error).not.toBeNull();
+    expect(await tombstones()).toEqual(before);
+  });
+
+  it('update of deleted_sessions is denied', async () => {
+    const before = await tombstones();
+    const { error } = await owner.client
+      .from('deleted_sessions')
+      .update({ started_at: new Date(0).toISOString() })
+      .eq('id', deletedSessionId);
+    expect(error).not.toBeNull();
+    expect(await tombstones()).toEqual(before);
+  });
+
+  it('delete from deleted_sessions is denied', async () => {
+    const before = await tombstones();
+    const { error } = await owner.client.from('deleted_sessions').delete().eq('id', deletedSessionId);
+    expect(error).not.toBeNull();
+    expect(await tombstones()).toEqual(before);
+    expect(before).toHaveLength(1);
+  });
+
+  it('update of sessions.revision is denied', async () => {
+    const { error } = await owner.client.from('sessions').update({ revision: 99 }).eq('id', ownerSessionId);
+    expect(error).not.toBeNull();
+    const [row] = await db`select revision from public.sessions where id = ${ownerSessionId}`;
+    expect(row.revision).toBe(0);
+  });
+});
+
 describe('users only see their own data', () => {
+  it("hides another user's deleted sessions", async () => {
+    const { data, error } = await stranger.client.from('deleted_sessions').select('id');
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+    const own = await owner.client.from('deleted_sessions').select('id');
+    expect(own.data).toEqual([{ id: deletedSessionId }]);
+  });
+
   it("hides another user's sets", async () => {
     const { data, error } = await stranger.client.from('sets').select('id').eq('user_id', owner.id);
     expect(error).toBeNull();

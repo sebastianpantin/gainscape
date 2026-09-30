@@ -74,6 +74,10 @@ export async function builtInExerciseId(key: string): Promise<string> {
 }
 
 export interface FunctionResponseBody extends Partial<SessionSummary> {
+  summary?: SessionSummary;
+  revision?: number;
+  replayedSessionIds?: string[];
+  deleted?: boolean;
   error?: string;
   details?: unknown;
 }

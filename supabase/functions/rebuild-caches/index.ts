@@ -13,6 +13,9 @@ async function rebuildUser(userId: string) {
     await tx`delete from public.rep_maxes where user_id = ${userId}`;
     await tx`delete from public.bodyweight_rep_records where user_id = ${userId}`;
     const { sessionsReplayed, setsRewritten } = await replayFrom(tx, userId, null, [], DEFAULT_BALANCE);
+    await tx`
+      update public.sessions set derived_balance_version = ${DEFAULT_BALANCE.version}
+      where user_id = ${userId} and not history_only and derived_balance_version <> ${DEFAULT_BALANCE.version}`;
 
     return { userId, sessionsReplayed, setsRewritten, balanceVersion: DEFAULT_BALANCE.version };
   });
