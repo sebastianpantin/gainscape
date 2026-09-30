@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { combatLevel, DEFAULT_BALANCE, levelForXp, processSession, roundTo } from '@domain/index.ts';
 import {
+  activeDropSummaries,
   builtInExerciseId,
   createTestUser,
   db,
@@ -84,8 +85,9 @@ describe('complete-session with the fixture workout', () => {
     expect(firstResponse.body.levelUps).toEqual(expected.levelUps);
   });
 
-  it('reports the session id and no drops', () => {
-    expect(firstResponse.body).toMatchObject({ sessionId: fixture.id, drops: [] });
+  it('reports the session id and its active drops', async () => {
+    expect(firstResponse.body.sessionId).toBe(fixture.id);
+    expect(firstResponse.body.drops).toEqual(await activeDropSummaries(fixture.id));
   });
 
   it('stores derived strength columns on the sets', async () => {
