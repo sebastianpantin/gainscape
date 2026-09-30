@@ -59,6 +59,15 @@ async function exportFor(userId: string) {
     const userUnlocks = await tx`
       select * from public.user_unlocks where user_id = ${userId} order by unlocked_at, exercise_id`;
     const events = await tx`select * from public.events where user_id = ${userId} order by occurred_at, id`;
+    const friendships = await tx`
+      select case when f.requester_id = ${userId} then f.addressee_id else f.requester_id end as "otherUserId",
+             p.username as "otherUsername",
+             case when f.requester_id = ${userId} then 'outgoing' else 'incoming' end as direction,
+             f.status, f.created_at as "createdAt", f.responded_at as "respondedAt"
+      from public.friendships f
+      join public.profiles p on p.id = case when f.requester_id = ${userId} then f.addressee_id else f.requester_id end
+      where ${userId} in (f.requester_id, f.addressee_id)
+      order by f.created_at, p.username`;
 
     return {
       format: 'gainscape-export',
@@ -86,6 +95,7 @@ async function exportFor(userId: string) {
       itemLedger,
       userUnlocks,
       events,
+      friendships,
     };
   });
 }

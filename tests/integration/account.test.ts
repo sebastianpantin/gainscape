@@ -35,6 +35,8 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'item_ledger', column: 'user_id' },
   { table: 'user_unlocks', column: 'user_id' },
   { table: 'events', column: 'user_id' },
+  { table: 'friendships', column: 'requester_id' },
+  { table: 'friendships', column: 'addressee_id' },
 ];
 
 async function post(name: string, accessToken: string | null, body: unknown) {
@@ -103,13 +105,21 @@ async function giveUserEverything(user: TestUser): Promise<void> {
   const [template] = await db`select id from public.programs where owner_user_id is null limit 1`;
   const copy = await user.client.rpc('copy_program', { source_program_id: template.id, new_program_id: randomUUID() });
   expect(copy.error).toBeNull();
+  const [requested, friend] = await Promise.all([createTestUser(), createTestUser()]);
+  const outgoing = await user.client.rpc('send_friend_request', { username: requested.username });
+  expect(outgoing.data).toMatchObject({ status: 'sent' });
+  const incoming = await friend.client.rpc('send_friend_request', { username: user.username });
+  expect(incoming.data).toMatchObject({ status: 'sent' });
+  const accepted = await user.client.rpc('respond_friend_request', { requester_id: friend.id, accept: true });
+  expect(accepted.data).toMatchObject({ status: 'accepted' });
 }
 
 async function rowCounts(userId: string): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
   for (const { table, column } of USER_TABLES) {
     const [row] = await db`select count(*)::int as count from ${db('public.' + table)} where ${db(column)} = ${userId}`;
-    counts[table] = row.count;
+    const shared = USER_TABLES.filter((entry) => entry.table === table).length > 1;
+    counts[shared ? `${table}.${column}` : table] = row.count;
   }
   const [days] = await db`
     select count(*)::int as count from public.program_days d
@@ -190,6 +200,12 @@ describe('export-data', () => {
     expect(exported.userUnlocks).toHaveLength(counts.user_unlocks);
     expect(counts.user_unlocks).toBeGreaterThan(0);
     expect(exported.events).toHaveLength(counts.events);
+    expect(
+      exported.friendships.map((row: { direction: string; status: string }) => `${row.direction}:${row.status}`).sort(),
+    ).toEqual(['incoming:accepted', 'outgoing:pending']);
+    expect(Object.keys(exported.friendships[0]).sort()).toEqual(
+      ['createdAt', 'direction', 'otherUserId', 'otherUsername', 'respondedAt', 'status'].sort(),
+    );
     expect(exported.events.some((event: { type: string }) => event.type === 'pr')).toBe(true);
     expect(exported.drops.some((drop: { source: string }) => drop.source === 'pr')).toBe(true);
     const everyUserId = JSON.stringify(exported).match(new RegExp(bystander.id, 'g'));
@@ -237,7 +253,17 @@ describe('delete-account', () => {
     expect(ownedExerciseIds).toHaveLength(1);
     expect(ownedProgramIds.length).toBeGreaterThan(0);
     const ownerBefore = await rowCounts(owner.id);
-    for (const table of ['loot_rolls', 'drops', 'drop_luck', 'user_items', 'item_ledger', 'user_unlocks', 'events']) {
+    for (const table of [
+      'loot_rolls',
+      'drops',
+      'drop_luck',
+      'user_items',
+      'item_ledger',
+      'user_unlocks',
+      'events',
+      'friendships.requester_id',
+      'friendships.addressee_id',
+    ]) {
       expect(ownerBefore[table], table).toBeGreaterThan(0);
     }
     expect(await rateLimitRows(owner.id)).toBeGreaterThan(0);

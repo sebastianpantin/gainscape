@@ -212,6 +212,39 @@ describe('events', () => {
   });
 });
 
+describe('friendships', () => {
+  async function pairRows() {
+    return await db`
+      select * from public.friendships
+      where requester_id in (${owner.id}, ${stranger.id}) or addressee_id in (${owner.id}, ${stranger.id})
+      order by requester_id`;
+  }
+
+  it('denies client insert, update and delete, even of own rows', async () => {
+    const sent = await owner.client.rpc('send_friend_request', { username: stranger.username });
+    expect(sent.error).toBeNull();
+    const before = await pairRows();
+    expect(before).toHaveLength(1);
+
+    const inserted = await stranger.client
+      .from('friendships')
+      .insert({ requester_id: stranger.id, addressee_id: owner.id, status: 'accepted' });
+    expect(inserted.error?.code).toBe('42501');
+    const updated = await stranger.client
+      .from('friendships')
+      .update({ status: 'accepted', responded_at: new Date().toISOString() })
+      .eq('requester_id', owner.id);
+    expect(updated.error?.code).toBe('42501');
+    const deleted = await owner.client.from('friendships').delete().eq('requester_id', owner.id);
+    expect(deleted.error?.code).toBe('42501');
+    const read = await owner.client.from('friendships').select('*');
+    expect(read.error?.code).toBe('42501');
+    expect(await pairRows()).toEqual(before);
+
+    expect((await owner.client.rpc('remove_friend', { other_id: stranger.id })).error).toBeNull();
+  });
+});
+
 describe('function execution rights', () => {
   it('lets anonymous visitors check username availability', async () => {
     const { data, error } = await anon.rpc('username_available', { candidate: 'nobody_has_this' });
@@ -252,10 +285,16 @@ describe('function execution rights', () => {
     expect(rows.map((row) => row.name)).toEqual([
       'copy_program',
       'delete_program',
+      'get_collection',
+      'get_profile',
       'last_logged_sets',
+      'list_friends',
+      'remove_friend',
       'reorder_pins',
+      'respond_friend_request',
       'save_custom_exercise',
       'save_program',
+      'send_friend_request',
       'set_custom_exercise_archived',
       'set_timezone',
       'username_available',

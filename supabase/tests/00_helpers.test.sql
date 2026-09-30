@@ -75,11 +75,22 @@ as $$
   returning id;
 $$;
 
+create or replace function tests.make_friends(a uuid, b uuid)
+returns void
+language sql
+security invoker
+set search_path = ''
+as $$
+  insert into public.friendships (requester_id, addressee_id, status, responded_at)
+  values (make_friends.a, make_friends.b, 'accepted', now());
+$$;
+
 revoke all on all functions in schema tests from public, anon, authenticated;
 
-select plan(4);
+select plan(5);
 select has_function('tests', 'create_user', array['text', 'boolean']);
 select has_function('tests', 'authenticate_as', array['uuid']);
 select has_function('tests', 'add_session', array['uuid', 'timestamp with time zone']);
 select has_function('tests', 'add_event', array['uuid', 'uuid', 'text', 'public.event_type', 'jsonb']);
+select has_function('tests', 'make_friends', array['uuid', 'uuid']);
 select * from finish();
