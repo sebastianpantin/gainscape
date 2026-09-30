@@ -58,17 +58,25 @@ export function strengthStateAt(
   cfg: BalanceConfig,
 ): StrengthState {
   const windowStartMs = Date.parse(session.startedAt) - cfg.e1rmWindowDays * MS_PER_DAY;
-  const earlierRows = history.filter((row) => isBefore(row.session, session));
+  const rowsByExercise = new Map<string, StrengthHistoryRow[]>();
+  for (const row of history) {
+    if (!isBefore(row.session, session)) continue;
+    const rows = rowsByExercise.get(row.exerciseId) ?? [];
+    rows.push(row);
+    rowsByExercise.set(row.exerciseId, rows);
+  }
   const state: Record<string, ExerciseStrength> = {};
 
-  for (const exerciseId of new Set(earlierRows.map((row) => row.exerciseId))) {
-    const rows = earlierRows.filter((row) => row.exerciseId === exerciseId);
+  for (const [exerciseId, rows] of rowsByExercise) {
+    if (rows.every((row) => row.isWarmup)) continue;
     const withCandidates = rows.filter((row) => row.strengthCandidate !== null);
     const inWindow = withCandidates.filter((row) => Date.parse(row.session.startedAt) >= windowStartMs);
     const mostRecentSession = withCandidates
       .map((row) => row.session)
-      .sort(compareSessionKeys)
-      .at(-1);
+      .reduce<SessionKey | null>(
+        (latest, candidate) => (latest === null || compareSessionKeys(candidate, latest) > 0 ? candidate : latest),
+        null,
+      );
     const fromMostRecentSession = withCandidates.filter(
       (row) => mostRecentSession && row.session.id === mostRecentSession.id,
     );
@@ -76,7 +84,7 @@ export function strengthStateAt(
     state[exerciseId] = {
       windowMax: maxOrNull(...inWindow.map((row) => row.strengthCandidate)),
       fallbackMax: maxOrNull(...fromMostRecentSession.map((row) => row.strengthCandidate)),
-      hasPriorSession: rows.some((row) => !row.isWarmup),
+      hasPriorSession: true,
     };
   }
   return state;
@@ -236,18 +244,24 @@ export interface CurrentStrength {
   sourceSetId: string | null;
 }
 
-export function strengthAfterSession(
-  strength: StrengthState,
-  sets: readonly SetResult[],
+export interface StrengthCandidate {
+  exerciseId: string;
+  setId: string;
+  value: number | null;
+}
+
+export function currentStrength(
+  strengthAtStart: StrengthState,
+  candidates: readonly StrengthCandidate[],
 ): Record<string, CurrentStrength> {
   const current: Record<string, CurrentStrength> = {};
-  for (const exerciseId of new Set(sets.map((result) => result.set.exerciseId))) {
-    const known = strength[exerciseId] ?? NO_STRENGTH;
-    const candidates = sets
-      .filter((result) => result.set.exerciseId === exerciseId)
-      .map((result) => ({ setId: result.set.id, value: result.e1rmCandidateKg ?? result.repsCapacityCandidate }))
-      .filter((candidate): candidate is { setId: string; value: number } => candidate.value !== null);
-    const bestThisSession = candidates.reduce<{ setId: string; value: number } | null>(
+  for (const exerciseId of new Set(candidates.map((candidate) => candidate.exerciseId))) {
+    const known = strengthAtStart[exerciseId] ?? NO_STRENGTH;
+    const present = candidates.filter(
+      (candidate): candidate is StrengthCandidate & { value: number } =>
+        candidate.exerciseId === exerciseId && candidate.value !== null,
+    );
+    const bestThisSession = present.reduce<{ setId: string; value: number } | null>(
       (best, candidate) => (best === null || candidate.value > best.value ? candidate : best),
       null,
     );
@@ -258,4 +272,18 @@ export function strengthAfterSession(
     current[exerciseId] = { value, sourceSetId: setsItsOwnValue ? bestThisSession.setId : null };
   }
   return current;
+}
+
+export function strengthAfterSession(
+  strength: StrengthState,
+  sets: readonly SetResult[],
+): Record<string, CurrentStrength> {
+  return currentStrength(
+    strength,
+    sets.map((result) => ({
+      exerciseId: result.set.exerciseId,
+      setId: result.set.id,
+      value: result.e1rmCandidateKg ?? result.repsCapacityCandidate,
+    })),
+  );
 }

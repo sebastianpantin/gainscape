@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { combatLevel, DEFAULT_BALANCE, levelForXp, processSession } from '@domain/index.ts';
+import { combatLevel, DEFAULT_BALANCE, levelForXp, processSession, roundTo } from '@domain/index.ts';
 import {
   builtInExerciseId,
   createTestUser,
@@ -48,6 +48,14 @@ async function rowCountsFor(userId: string) {
       (select count(*) from public.set_skill_xp where user_id = ${userId})::int as set_skill_xp,
       (select count(*) from public.user_skills where user_id = ${userId})::int as user_skills`;
   return counts;
+}
+
+async function derivedCachesFor(userId: string) {
+  return {
+    userSkills: await db`select skill_id, xp from public.user_skills where user_id = ${userId} order by skill_id`,
+    exerciseMaxes: await db`select * from public.exercise_maxes where user_id = ${userId} order by exercise_id`,
+    repMaxes: await db`select * from public.rep_maxes where user_id = ${userId} order by exercise_id, reps`,
+  };
 }
 
 let benchId: string;
@@ -272,17 +280,84 @@ describe('complete-session edge cases', () => {
     expect(statuses).toEqual([200, 409]);
   });
 
-  it('rejects a new session that started more than 7 days ago', async () => {
+  it('stores a session that started more than 7 days ago as history only', async () => {
     const user = await createTestUser();
     const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
     const payload = {
-      ...sessionPayload(threeSets(benchId, 0, 60, 'hard')),
+      ...sessionPayload([...threeSets(benchId, 0, 100, 'hard'), ...threeSets(benchId, 3, 100, null)]),
+      startedAt: eightDaysAgo.toISOString(),
+      endedAt: new Date(eightDaysAgo.getTime() + 3_600_000).toISOString(),
+    };
+    const derivedBefore = await derivedCachesFor(user.id);
+
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      sessionId: payload.id,
+      xpBySkill: {},
+      levelUps: [],
+      prs: [],
+      drops: [],
+      historyOnly: true,
+    });
+    const [session] = await db`select history_only from public.sessions where id = ${payload.id}`;
+    expect(session.history_only).toBe(true);
+    const sets = await db`
+      select rir::float, rir_source, xp_awarded, e1rm_candidate_kg from public.sets
+      where session_id = ${payload.id} order by position`;
+    expect(sets.map((row) => [row.rir, row.rir_source])).toEqual([
+      [3, 'logged'],
+      [3, 'logged'],
+      [3, 'logged'],
+      [null, 'cold_start'],
+      [null, 'cold_start'],
+      [null, 'cold_start'],
+    ]);
+    for (const row of sets) expect(row).toMatchObject({ xp_awarded: 0, e1rm_candidate_kg: null });
+    expect((await rowCountsFor(user.id)).set_skill_xp).toBe(0);
+    expect(await derivedCachesFor(user.id)).toEqual(derivedBefore);
+
+    const retry = await postCompleteSession(user.accessToken, payload);
+    expect(retry.status).toBe(200);
+    expect(retry.rawBody).toBe(response.rawBody);
+
+    const following = sessionPayload(threeSets(benchId, 0, 60, null));
+    expect((await postCompleteSession(user.accessToken, following)).status).toBe(200);
+    const followingSets = await db`select rir_source, xp_awarded from public.sets where session_id = ${following.id}`;
+    for (const row of followingSets) {
+      expect(row).toEqual({ rir_source: 'cold_start', xp_awarded: DEFAULT_BALANCE.coldStartXpPerSet });
+    }
+  });
+
+  it('a history-only session still requires bodyweight for a bodyweight exercise', async () => {
+    const user = await createTestUser();
+    const pullUpId = await builtInExerciseId('pull_up');
+    const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    const payload = {
+      ...sessionPayload(threeSets(pullUpId, 0, 0, 'hard')),
       startedAt: eightDaysAgo.toISOString(),
       endedAt: new Date(eightDaysAgo.getTime() + 3_600_000).toISOString(),
     };
     const response = await postCompleteSession(user.accessToken, payload);
-    expect(response.status).toBe(422);
-    expect(response.body.error).toBe('session_too_old');
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('bodyweight_required');
+    expect(await rowCountsFor(user.id)).toMatchObject({ sessions: 0, sets: 0 });
+  });
+
+  it('stores weightKg rounded to 2 dp', async () => {
+    const user = await createTestUser();
+    const payload = sessionPayload([
+      { ...threeSets(benchId, 0, 62.505, 'hard')[0] },
+      { ...threeSets(benchId, 1, 64.085, 'hard')[0] },
+    ]);
+    expect((await postCompleteSession(user.accessToken, payload)).status).toBe(200);
+    const rows = await db`
+      select weight_kg::float, effective_load_kg::float from public.sets
+      where session_id = ${payload.id} order by position`;
+    expect(rows).toEqual([
+      { weight_kg: roundTo(2, 62.505), effective_load_kg: roundTo(2, 62.505) },
+      { weight_kg: 64.08, effective_load_kg: 64.08 },
+    ]);
   });
 });
 
@@ -329,17 +404,6 @@ describe('complete-session review regressions', () => {
     const set = { ...threeSets(pullUpId, 0, 0, 'hard')[0], reps: 10, effort: { type: 'rpe', value: 8.5 } };
     const response = await postCompleteSession(user.accessToken, sessionPayload([set]));
     expect(response.status).toBe(200);
-  });
-
-  it('keeps the latest e1RM when an earlier session syncs late', async () => {
-    const user = await createTestUser();
-    const heavyRecent = sessionPayload([{ ...threeSets(benchId, 0, 100, 'hard')[0], reps: 5 }], 1);
-    const lightEarlier = sessionPayload([{ ...threeSets(benchId, 0, 60, 'hard')[0], reps: 5 }], 5);
-    expect((await postCompleteSession(user.accessToken, heavyRecent)).status).toBe(200);
-    expect((await postCompleteSession(user.accessToken, lightEarlier)).status).toBe(200);
-    const [row] =
-      await db`select e1rm_kg::float from public.exercise_maxes where user_id = ${user.id} and exercise_id = ${benchId}`;
-    expect(row.e1rm_kg).toBe(123.33);
   });
 });
 

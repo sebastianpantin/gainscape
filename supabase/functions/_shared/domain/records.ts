@@ -1,12 +1,16 @@
 import type { BalanceConfig } from './balance.ts';
+import { UnknownExerciseError } from './errors.ts';
 import type { SessionContext, Step } from './pipeline.ts';
 import {
-  type BodyweightRepRecord,
+  type Catalog,
+  type LoadType,
   NO_RECORDS,
   type PersonalRecordSummary,
   REP_MAX_SLOT_COUNT,
   type RecordState,
   type RepMaxSlot,
+  type SessionKey,
+  type SetInput,
   type SetPersonalRecord,
   type SetResult,
 } from './types.ts';
@@ -26,67 +30,132 @@ interface RepMaxOutcome {
 
 function applyRepMaxSet(
   slots: readonly (RepMaxSlot | null)[],
-  result: SetResult,
+  set: SetInput,
   achievedAt: string,
   cfg: BalanceConfig,
 ): RepMaxOutcome {
-  const loadKg = result.set.weightKg;
+  const loadKg = set.weightKg;
   const next = [...slots];
   const improvedReps: number[] = [];
-  for (let reps = 1; reps <= Math.min(result.set.reps, REP_MAX_SLOT_COUNT); reps++) {
+  for (let reps = 1; reps <= Math.min(set.reps, REP_MAX_SLOT_COUNT); reps++) {
     const slot = next[reps - 1];
-    const exactSetId = result.set.reps === reps ? result.set.id : (slot?.exactSetId ?? null);
+    const exactSetId = set.reps === reps ? set.id : (slot?.exactSetId ?? null);
     if (improvesSlot(slot, loadKg, cfg)) {
-      next[reps - 1] = { loadKg, setId: result.set.id, achievedAt, exactSetId };
+      next[reps - 1] = { loadKg, setId: set.id, achievedAt, exactSetId };
       improvedReps.push(reps);
-    } else if (slot && slot.exactSetId === null && result.set.reps === reps) {
-      next[reps - 1] = { ...slot, exactSetId: result.set.id };
+    } else if (slot && slot.exactSetId === null && set.reps === reps) {
+      next[reps - 1] = { ...slot, exactSetId: set.id };
     }
   }
   return { slots: next, improvedReps };
 }
 
+export interface RecordUpdate {
+  records: RecordState;
+  personalRecord: SetPersonalRecord | null;
+}
+
+export function applySetToRecords(
+  records: RecordState,
+  set: SetInput,
+  loadType: LoadType,
+  achievedAt: string,
+  cfg: BalanceConfig,
+): RecordUpdate {
+  if (loadType === 'bodyweight') {
+    const previous = records.bodyweightReps[set.exerciseId] ?? null;
+    if (previous !== null && set.reps <= previous.maxReps) return { records, personalRecord: null };
+    return {
+      records: {
+        ...records,
+        bodyweightReps: {
+          ...records.bodyweightReps,
+          [set.exerciseId]: { maxReps: set.reps, setId: set.id, achievedAt },
+        },
+      },
+      personalRecord: { kind: 'bodyweight_reps', reps: set.reps, previousReps: previous?.maxReps ?? null },
+    };
+  }
+
+  const before = records.repMaxes[set.exerciseId] ?? emptySlots();
+  const { slots, improvedReps } = applyRepMaxSet(before, set, achievedAt, cfg);
+  const highestImproved = improvedReps.at(-1);
+  return {
+    records: { ...records, repMaxes: { ...records.repMaxes, [set.exerciseId]: slots } },
+    personalRecord:
+      highestImproved === undefined
+        ? null
+        : {
+            kind: 'rep_max',
+            reps: highestImproved,
+            loadKg: set.weightKg,
+            previousLoadKg: before[highestImproved - 1]?.loadKg ?? null,
+          },
+  };
+}
+
 export const detectPersonalRecords: Step = (ctx: SessionContext) => {
-  const repMaxes: Record<string, readonly (RepMaxSlot | null)[]> = { ...(ctx.state.records ?? NO_RECORDS).repMaxes };
-  const bodyweightReps: Record<string, BodyweightRepRecord> = { ...(ctx.state.records ?? NO_RECORDS).bodyweightReps };
+  let records = ctx.state.records ?? NO_RECORDS;
 
   const sets = ctx.sets.map((result): SetResult => {
     if (result.set.isWarmup) return result;
     const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
     const isBaselineSession = !(ctx.deps.strength?.[exercise.id]?.hasPriorSession ?? false);
-
-    if (exercise.loadType === 'bodyweight') {
-      const previous = bodyweightReps[exercise.id] ?? null;
-      if (previous !== null && result.set.reps <= previous.maxReps) return result;
-      bodyweightReps[exercise.id] = {
-        maxReps: result.set.reps,
-        setId: result.set.id,
-        achievedAt: ctx.session.startedAt,
-      };
-      const personalRecord: SetPersonalRecord = {
-        kind: 'bodyweight_reps',
-        reps: result.set.reps,
-        previousReps: previous?.maxReps ?? null,
-      };
-      return isBaselineSession ? result : { ...result, personalRecord };
-    }
-
-    const before = repMaxes[exercise.id] ?? emptySlots();
-    const { slots, improvedReps } = applyRepMaxSet(before, result, ctx.session.startedAt, ctx.cfg);
-    repMaxes[exercise.id] = slots;
-    const highestImproved = improvedReps.at(-1);
-    if (isBaselineSession || highestImproved === undefined) return result;
-    const personalRecord: SetPersonalRecord = {
-      kind: 'rep_max',
-      reps: highestImproved,
-      loadKg: result.set.weightKg,
-      previousLoadKg: before[highestImproved - 1]?.loadKg ?? null,
-    };
-    return { ...result, personalRecord };
+    const update = applySetToRecords(records, result.set, exercise.loadType, ctx.session.startedAt, ctx.cfg);
+    records = update.records;
+    if (isBaselineSession || update.personalRecord === null) return result;
+    return { ...result, personalRecord: update.personalRecord };
   });
 
-  return { ...ctx, sets, state: { ...ctx.state, records: { repMaxes, bodyweightReps } } };
+  return {
+    ...ctx,
+    sets,
+    state: {
+      ...ctx.state,
+      records: { repMaxes: { ...records.repMaxes }, bodyweightReps: { ...records.bodyweightReps } },
+    },
+  };
 };
+
+export interface RecordHistoryRow {
+  exerciseId: string;
+  session: SessionKey;
+  setId: string;
+  position: number;
+  weightKg: number;
+  reps: number;
+}
+
+export function recordsFromHistory(
+  rows: readonly RecordHistoryRow[],
+  catalog: Catalog,
+  cfg: BalanceConfig,
+): RecordState {
+  const ordered = rows
+    .map((row) => ({ row, startedAtMs: Date.parse(row.session.startedAt) }))
+    .sort(
+      (a, b) =>
+        a.startedAtMs - b.startedAtMs ||
+        (a.row.session.id < b.row.session.id ? -1 : a.row.session.id > b.row.session.id ? 1 : 0) ||
+        a.row.position - b.row.position,
+    );
+  let records: RecordState = { repMaxes: {}, bodyweightReps: {} };
+  for (const { row } of ordered) {
+    const exercise = catalog.exercises.get(row.exerciseId);
+    if (!exercise) throw new UnknownExerciseError(row.exerciseId);
+    const set: SetInput = {
+      id: row.setId,
+      exerciseId: row.exerciseId,
+      position: row.position,
+      weightKg: row.weightKg,
+      reps: row.reps,
+      isWarmup: false,
+      effort: null,
+    };
+    records = applySetToRecords(records, set, exercise.loadType, row.session.startedAt, cfg).records;
+  }
+  return records;
+}
 
 export function summarizePersonalRecords(
   sets: readonly SetResult[],

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { BodyweightRequiredError, processSession, type SessionInput, UnknownExerciseError } from '@domain/index.ts';
+import {
+  BodyweightLoadNotZeroError,
+  BodyweightRequiredError,
+  carriedEffectiveLoadKg,
+  type ExerciseDef,
+  HISTORY_ONLY_STEPS,
+  processSession,
+  REP_MAX_SLOT_COUNT,
+  type SessionInput,
+  UnknownExerciseError,
+} from '@domain/index.ts';
 import { aSet, catalog, freshUser, hard, nearFailure, TEST_BALANCE } from './fixtures.ts';
 
 const threeSets = (exerciseId: string, weightKg: number, effort: typeof hard | typeof nearFailure) =>
@@ -73,5 +83,81 @@ describe('processSession', () => {
   it('lets callers replace the step list', () => {
     const { outputs } = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog }, []);
     expect(outputs.sets).toEqual([]);
+  });
+});
+
+describe('HISTORY_ONLY_STEPS', () => {
+  const lightRecords = {
+    repMaxes: {
+      bench: Array.from({ length: REP_MAX_SLOT_COUNT }, () => ({
+        loadKg: 40,
+        setId: 'old',
+        achievedAt: '2026-01-01T00:00:00.000Z',
+        exactSetId: null,
+      })),
+    },
+    bodyweightReps: {},
+  };
+  const heavy = { ...fixtureSession, sets: [aSet('bench', 100, 5, hard), aSet('bench', 100, 5, null)] };
+  const strength = { bench: { windowMax: 90, fallbackMax: 90, hasPriorSession: true } };
+
+  it('keeps the logged effort, pays no XP and reports no records', () => {
+    const { outputs } = processSession(
+      { skillXp: {}, bodyweightKg: null, records: lightRecords },
+      heavy,
+      TEST_BALANCE,
+      { catalog, strength },
+      HISTORY_ONLY_STEPS,
+    );
+    expect(outputs.sets.map((result) => [result.rir, result.rirSource])).toEqual([
+      [3, 'logged'],
+      [null, 'cold_start'],
+    ]);
+    for (const result of outputs.sets) {
+      expect(result).toMatchObject({ xp: 0, effectiveReps: 0, e1rmCandidateKg: null, repsCapacityCandidate: null });
+    }
+    expect(outputs.xpBySkill).toEqual({});
+    expect(outputs.levelUps).toEqual([]);
+    expect(outputs.prs).toEqual([]);
+  });
+});
+
+describe('carriedEffectiveLoadKg', () => {
+  const external: ExerciseDef = catalog.exercises.get('bench')!;
+  const pullUp: ExerciseDef = catalog.exercises.get('pull-up')!;
+  const weightedDip: ExerciseDef = { id: 'weighted-dip', loadType: 'bodyweight_plus', builtIn: true, shares: [] };
+
+  it('uses the new weight for an external exercise', () => {
+    const stored = { exerciseId: 'bench', weightKg: 60, effectiveLoadKg: 60 };
+    expect(carriedEffectiveLoadKg(stored, { exerciseId: 'bench', weightKg: 62.5 }, external, 80)).toBe(62.5);
+  });
+
+  it('keeps the logged bodyweight when only the added load changes', () => {
+    const stored = { exerciseId: 'weighted-dip', weightKg: 10, effectiveLoadKg: 90 };
+    expect(carriedEffectiveLoadKg(stored, { exerciseId: 'weighted-dip', weightKg: 20 }, weightedDip, 85)).toBe(100);
+  });
+
+  it('rounds the carried load to 2 decimals', () => {
+    const stored = { exerciseId: 'weighted-dip', weightKg: 0.2, effectiveLoadKg: 80.3 };
+    expect(carriedEffectiveLoadKg(stored, { exerciseId: 'weighted-dip', weightKg: 0.1 }, weightedDip, 85)).toBe(80.2);
+  });
+
+  it('uses the current bodyweight when the exercise changes', () => {
+    const stored = { exerciseId: 'weighted-dip', weightKg: 10, effectiveLoadKg: 90 };
+    expect(carriedEffectiveLoadKg(stored, { exerciseId: 'pull-up', weightKg: 0 }, pullUp, 85)).toBe(85);
+  });
+
+  it('requires a bodyweight when the exercise changes to a bodyweight one', () => {
+    const stored = { exerciseId: 'bench', weightKg: 60, effectiveLoadKg: 60 };
+    expect(() => carriedEffectiveLoadKg(stored, { exerciseId: 'pull-up', weightKg: 0 }, pullUp, null)).toThrow(
+      BodyweightRequiredError,
+    );
+  });
+
+  it('rejects added load on a pure bodyweight exercise', () => {
+    const stored = { exerciseId: 'pull-up', weightKg: 0, effectiveLoadKg: 80 };
+    expect(() => carriedEffectiveLoadKg(stored, { exerciseId: 'pull-up', weightKg: 5 }, pullUp, 80)).toThrow(
+      BodyweightLoadNotZeroError,
+    );
   });
 });
