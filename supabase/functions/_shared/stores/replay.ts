@@ -3,6 +3,8 @@ import {
   type BalanceConfig,
   type Catalog,
   DEFAULT_STEPS,
+  type LootCandidate,
+  lootCandidates,
   NO_RECORDS,
   priorSkillXp,
   type RecordState,
@@ -27,10 +29,13 @@ import { derivedSetColumns, setSkillXpRows } from './set-columns.ts';
 import { writeSummaries } from './sessions.ts';
 import { loadStrengthHistory, refreshStrengthCache } from './strength.ts';
 
+export type ReplayedSet = LootCandidate & { sessionId: string };
+
 export interface ReplayOutcome {
   sessionsReplayed: number;
   setsRewritten: number;
   replayedSessionIds: string[];
+  sets: ReplayedSet[];
 }
 
 interface PriorState {
@@ -146,5 +151,8 @@ export async function replayFrom(
     sessionsReplayed: replay.sessions.length,
     setsRewritten: results.length,
     replayedSessionIds: replay.sessions.map((entry) => entry.session.id),
+    sets: replay.sessions.flatMap((entry) =>
+      lootCandidates(entry.outputs.sets, catalog).map((candidate) => ({ ...candidate, sessionId: entry.session.id })),
+    ),
   };
 }

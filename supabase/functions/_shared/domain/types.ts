@@ -146,11 +146,22 @@ export interface Rng {
   next(): number;
 }
 
+export type RevokeReason = 'set_removed' | 'session_deleted' | 'no_longer_qualifies';
+
+export interface DropSummary {
+  dropId: string;
+  setId: string;
+  itemId: string;
+  itemKey: string;
+  quantity: number;
+  source: RollKind;
+}
+
 export interface SessionSummary {
   sessionId: string;
   xpBySkill: Record<string, number>;
   levelUps: LevelUp[];
   prs: PersonalRecordSummary[];
-  drops: never[];
+  drops: DropSummary[];
   historyOnly?: true;
 }

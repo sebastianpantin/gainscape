@@ -1,5 +1,6 @@
 .functions-serve.pid
 .functions-serve.log
+.functions-serve.stamp
 .stack.env
 node_modules/
 dist/

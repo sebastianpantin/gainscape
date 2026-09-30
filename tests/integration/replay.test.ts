@@ -215,7 +215,7 @@ describe('out-of-order sync', () => {
 
     const after = await storedSummary(later.id);
     expect(after.extra).toEqual({ k: 1 });
-    expect(after.drops).toEqual([]);
+    expect(after.drops).toEqual(before.drops);
     expect(after.sessionId).toBe(later.id);
     expect(after.xpBySkill).not.toEqual(before.xpBySkill);
   });

@@ -5,6 +5,7 @@ import {
   builtInExerciseId,
   createTestUser,
   db,
+  grantDrop,
   postCompleteSession,
   postFunction,
   type TestUser,
@@ -358,5 +359,101 @@ describe('item catalog tables', () => {
     const [{ count }] =
       await db`select count(*)::int as count from public.exercises where owner_user_id is null and not requires_unlock`;
     expect(data).toHaveLength(count);
+  });
+});
+
+describe('loot tables', () => {
+  const lootTables = ['loot_rolls', 'drops', 'drop_luck', 'user_items', 'item_ledger'];
+  let granted: Awaited<ReturnType<typeof grantDrop>>;
+  let regularTableId: string;
+
+  beforeAll(async () => {
+    granted = await grantDrop(owner.id, ownerSessionId, randomUUID(), 'grinder_scraps', 3);
+    [{ id: regularTableId }] = await db`select id from public.drop_tables where key = 'regular'`;
+    await db`
+      insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
+      select ${owner.id}, id, 2 from public.drop_tables where key = 'regular'
+      on conflict (user_id, drop_table_id) do nothing`;
+  });
+
+  async function ownerRows(table: string) {
+    return await db.unsafe(`select * from public.${table} where user_id = $1 order by 1, 2`, [owner.id]);
+  }
+
+  function rowFor(table: string): object {
+    const rows: Record<string, object> = {
+      loot_rolls: {
+        user_id: owner.id,
+        session_id: ownerSessionId,
+        set_id: randomUUID(),
+        kind: 'pr',
+        local_date: '2026-09-28',
+        roll_index: 50,
+        drop_table_id: regularTableId,
+        chance: 1,
+        hit: true,
+        loot_version: 1,
+      },
+      drops: {
+        user_id: owner.id,
+        loot_roll_id: granted.lootRollId,
+        session_id: ownerSessionId,
+        set_id: randomUUID(),
+        item_id: granted.itemId,
+        quantity: 1000,
+        source: 'pr',
+      },
+      drop_luck: { user_id: owner.id, drop_table_id: regularTableId, dry_rolls: 0 },
+      user_items: { user_id: owner.id, item_id: granted.itemId, quantity: 1000 },
+      item_ledger: { user_id: owner.id, item_id: granted.itemId, delta: 1000, reason: 'drop', ref_id: randomUUID() },
+    };
+    return rows[table];
+  }
+
+  const updates: Record<string, object> = {
+    loot_rolls: { hit: false },
+    drops: { quantity: 1000 },
+    drop_luck: { dry_rolls: 0 },
+    user_items: { quantity: 1000 },
+    item_ledger: { delta: 1000 },
+  };
+
+  it.each(lootTables)('insert into %s is denied', async (table) => {
+    const before = await ownerRows(table);
+    const { error } = await owner.client.from(table).insert(rowFor(table));
+    expect(error).not.toBeNull();
+    expect(await ownerRows(table)).toEqual(before);
+  });
+
+  it.each(lootTables)('update of %s is denied', async (table) => {
+    const before = await ownerRows(table);
+    const { error } = await owner.client.from(table).update(updates[table]).eq('user_id', owner.id);
+    expect(error?.code).toBe('42501');
+    expect(await ownerRows(table)).toEqual(before);
+    expect(before.length).toBeGreaterThan(0);
+  });
+
+  it.each(lootTables)('delete from %s is denied', async (table) => {
+    const before = await ownerRows(table);
+    const { error } = await owner.client.from(table).delete().eq('user_id', owner.id);
+    expect(error?.code).toBe('42501');
+    expect(await ownerRows(table)).toEqual(before);
+  });
+
+  it.each(lootTables.filter((table) => table !== 'drop_luck'))("hides another user's %s", async (table) => {
+    const theirs = await stranger.client.from(table).select('user_id').eq('user_id', owner.id);
+    expect(theirs.error).toBeNull();
+    expect(theirs.data).toEqual([]);
+    const own = await owner.client.from(table).select('user_id');
+    expect(own.error).toBeNull();
+    expect((own.data ?? []).length).toBe((await ownerRows(table)).length);
+    expect((own.data ?? []).length).toBeGreaterThan(0);
+  });
+
+  it('grants nobody a read of drop_luck', async () => {
+    for (const user of [owner, stranger]) {
+      const { error } = await user.client.from('drop_luck').select('dry_rolls');
+      expect(error?.code).toBe('42501');
+    }
   });
 });

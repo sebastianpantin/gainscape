@@ -48,6 +48,14 @@ async function exportFor(userId: string) {
          order by d.position)
          from public.program_days d where d.program_id = p.id), '[]'::json) as days
       from public.programs p where p.owner_user_id = ${userId} order by p.created_at`;
+    const lootRolls = await tx`select * from public.loot_rolls where user_id = ${userId} order by created_at, id`;
+    const drops = await tx`select * from public.drops where user_id = ${userId} order by created_at, id`;
+    const dropLuck = await tx`select * from public.drop_luck where user_id = ${userId} order by drop_table_id`;
+    const userItems = await tx`
+      select * from public.user_items where user_id = ${userId} order by first_obtained_at, item_id`;
+    const itemLedger = await tx`select * from public.item_ledger where user_id = ${userId} order by created_at, id`;
+    const userUnlocks = await tx`
+      select * from public.user_unlocks where user_id = ${userId} order by unlocked_at, exercise_id`;
 
     return {
       format: 'gainscape-export',
@@ -68,6 +76,12 @@ async function exportFor(userId: string) {
       pinnedExercises,
       customExercises,
       programs,
+      lootRolls,
+      drops,
+      dropLuck,
+      userItems,
+      itemLedger,
+      userUnlocks,
     };
   });
 }

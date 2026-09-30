@@ -4,7 +4,18 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
-import type { Catalog, ExerciseDef, SessionSummary } from '@domain/index.ts';
+import {
+  type Catalog,
+  type DropSummary,
+  type ExerciseDef,
+  type LootEntry,
+  type LootTables,
+  lootSeedMessage,
+  type Rng,
+  type RollKind,
+  type SessionSummary,
+  sfc32FromSeed,
+} from '@domain/index.ts';
 
 interface LocalStackEnv {
   API_URL: string;
@@ -15,6 +26,7 @@ interface LocalStackEnv {
 }
 
 const stackEnvPath = join(import.meta.dirname, '../../.stack.env');
+const functionsEnvPath = join(import.meta.dirname, '../../supabase/functions/.env.local');
 
 function assertStackEnvLoaded(): void {
   if (!existsSync(stackEnvPath)) return;
@@ -153,13 +165,16 @@ export async function normalizedSnapshot(userId: string) {
       }
       return 0;
     });
-  const summaryOf = (summary: Record<string, unknown>) => ({
-    ...summary,
-    ...(summary.sessionId === undefined ? {} : { sessionId: sessionOrdinal.get(summary.sessionId as string) }),
-    ...(Array.isArray(summary.prs)
-      ? { prs: summary.prs.map((pr) => ({ ...pr, exerciseId: exercise(pr.exerciseId) })) }
-      : {}),
-  });
+  const summaryOf = (stored: Record<string, unknown>) => {
+    const summary = Object.fromEntries(Object.entries(stored).filter(([key]) => key !== 'drops'));
+    return {
+      ...summary,
+      ...(summary.sessionId === undefined ? {} : { sessionId: sessionOrdinal.get(summary.sessionId as string) }),
+      ...(Array.isArray(summary.prs)
+        ? { prs: summary.prs.map((pr) => ({ ...pr, exerciseId: exercise(pr.exerciseId) })) }
+        : {}),
+    };
+  };
 
   return {
     sessions: sessions.map((session) => ({
@@ -257,4 +272,133 @@ export function resignedWithAnotherKey(accessToken: string): string {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const signature = createHmac('sha256', randomBytes(32)).update(`${header}.${claims}`).digest('base64url');
   return `${header}.${claims}.${signature}`;
+}
+
+export function lootSecret(): string {
+  const secret = /^LOOT_SECRET=(.*)$/m.exec(readFileSync(functionsEnvPath, 'utf8'))?.[1]?.trim();
+  if (!secret) throw new Error('supabase/functions/.env.local has no LOOT_SECRET; run make functions');
+  return secret;
+}
+
+export function hmacRngFor(userId: string): (setId: string, kind: RollKind) => Rng {
+  const secret = lootSecret();
+  return (setId, kind) =>
+    sfc32FromSeed(
+      new Uint8Array(
+        createHmac('sha256', secret)
+          .update(lootSeedMessage(userId, setId, kind))
+          .digest(),
+      ),
+    );
+}
+
+export async function lootTablesFromDb(): Promise<LootTables> {
+  const rows = await db`
+    select t.id as table_id, t.key as table_key, i.id as item_id, i.key as item_key,
+           e.weight, e.min_quantity, e.max_quantity
+    from public.drop_tables t
+    join public.drop_entries e on e.drop_table_id = t.id
+    join public.items i on i.id = e.item_id
+    where t.retired_at is null and i.retired_at is null
+    order by t.key, i.key`;
+  const tableOf = (key: string) => {
+    const entries: LootEntry[] = rows
+      .filter((row) => row.table_key === key)
+      .map((row) => ({
+        itemId: row.item_id,
+        itemKey: row.item_key,
+        weight: row.weight,
+        minQuantity: row.min_quantity,
+        maxQuantity: row.max_quantity,
+      }));
+    return { id: rows.find((row) => row.table_key === key)!.table_id as string, key, entries };
+  };
+  return { regular: tableOf('regular'), rare: tableOf('rare') };
+}
+
+export async function activeDropSummaries(sessionId: string): Promise<DropSummary[]> {
+  const rows = await db`
+    select d.id, d.set_id, d.item_id, i.key as item_key, d.quantity, d.source
+    from public.drops d
+    join public.items i on i.id = d.item_id
+    left join public.sets st on st.id = d.set_id
+    where d.session_id = ${sessionId} and d.revoked_at is null
+    order by st.position nulls last, d.source, d.id`;
+  return rows.map((row) => ({
+    dropId: row.id,
+    setId: row.set_id,
+    itemId: row.item_id,
+    itemKey: row.item_key,
+    quantity: row.quantity,
+    source: row.source,
+  }));
+}
+
+export async function ledgerMismatches(userId: string) {
+  return await db`
+    select coalesce(u.item_id, l.item_id) as item_id, u.quantity, l.total
+    from (select item_id, quantity from public.user_items where user_id = ${userId}) u
+    full join (
+      select item_id, sum(delta)::int as total from public.item_ledger where user_id = ${userId} group by item_id
+    ) l on l.item_id = u.item_id
+    where u.quantity is distinct from l.total or u.quantity < 0`;
+}
+
+export async function lootSnapshot(userId: string) {
+  const [lootRolls, drops, dropLuck, userItems, itemLedger, userUnlocks] = await Promise.all([
+    db`select session_id, set_id, kind, local_date::text, roll_index, drop_table_id, chance::float, hit, loot_version
+       from public.loot_rolls where user_id = ${userId} order by set_id, kind`,
+    db`select d.session_id, d.set_id, d.item_id, d.quantity, d.source, d.revoked_at, d.revoke_reason,
+              d.revoked_quantity, r.kind as roll_kind
+       from public.drops d join public.loot_rolls r on r.id = d.loot_roll_id
+       where d.user_id = ${userId} order by d.set_id, d.source`,
+    db`select drop_table_id, dry_rolls, updated_at from public.drop_luck where user_id = ${userId} order by drop_table_id`,
+    db`select item_id, quantity, first_obtained_at, updated_at from public.user_items
+       where user_id = ${userId} order by item_id`,
+    db`select item_id, delta, reason, created_at from public.item_ledger where user_id = ${userId} order by id`,
+    db`select exercise_id, item_id, unlocked_at from public.user_unlocks where user_id = ${userId} order by exercise_id`,
+  ]);
+  return { lootRolls, drops, dropLuck, userItems, itemLedger, userUnlocks };
+}
+
+export interface GrantedDrop {
+  dropId: string;
+  lootRollId: string;
+  itemId: string;
+}
+
+export async function grantDrop(
+  userId: string,
+  sessionId: string,
+  setId: string,
+  itemKey: string,
+  quantity: number,
+  source: RollKind = 'regular',
+  localDate?: string,
+): Promise<GrantedDrop> {
+  return await db.begin(async (tx) => {
+    const [session] = await tx`select local_date::text as local_date from public.sessions where id = ${sessionId}`;
+    const date = localDate ?? session.local_date;
+    const [table] = await tx`
+      select id from public.drop_tables where key = ${source === 'pr' ? 'rare' : 'regular'}`;
+    const [item] = await tx`select id from public.items where key = ${itemKey}`;
+    const [roll] = await tx`
+      insert into public.loot_rolls
+        (user_id, session_id, set_id, kind, local_date, roll_index, drop_table_id, chance, hit, loot_version)
+      select ${userId}, ${sessionId}, ${setId}, ${source}, ${date}::date, coalesce(max(roll_index) + 1, 0),
+             ${table.id}, ${source === 'pr' ? 1 : 0.1}, true, 1
+      from public.loot_rolls where user_id = ${userId} and local_date = ${date}::date and kind = ${source}
+      returning id`;
+    const [drop] = await tx`
+      insert into public.drops (user_id, loot_roll_id, session_id, set_id, item_id, quantity, source)
+      values (${userId}, ${roll.id}, ${sessionId}, ${setId}, ${item.id}, ${quantity}, ${source})
+      returning id`;
+    await tx`
+      insert into public.item_ledger (user_id, item_id, delta, reason, ref_id)
+      values (${userId}, ${item.id}, ${quantity}, 'drop', ${drop.id})`;
+    await tx`
+      insert into public.user_items (user_id, item_id, quantity) values (${userId}, ${item.id}, ${quantity})
+      on conflict (user_id, item_id) do update set quantity = public.user_items.quantity + excluded.quantity`;
+    return { dropId: drop.id, lootRollId: roll.id, itemId: item.id };
+  });
 }

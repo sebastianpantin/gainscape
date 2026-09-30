@@ -1,6 +1,8 @@
 SUPABASE := npx supabase
 FUNCTIONS_PID := .functions-serve.pid
 FUNCTIONS_LOG := .functions-serve.log
+FUNCTIONS_STAMP := .functions-serve.stamp
+FUNCTIONS_ENV := supabase/functions/.env.local
 
 ifneq ($(wildcard .stack.env),)
 include .stack.env
@@ -14,15 +16,23 @@ start:
 	$(MAKE) functions
 
 functions:
-	@if [ -f $(FUNCTIONS_PID) ] && kill -0 $$(cat $(FUNCTIONS_PID)) 2>/dev/null; then \
+	@node scripts/ensure-loot-secret.mjs
+	@stamp="$$(sha256sum $(FUNCTIONS_ENV) | cut -d' ' -f1)"; \
+	if [ -f $(FUNCTIONS_PID) ] && kill -0 $$(cat $(FUNCTIONS_PID)) 2>/dev/null && [ "$$(cat $(FUNCTIONS_STAMP) 2>/dev/null)" = "$$stamp" ]; then \
 		echo "Edge functions already served (pid $$(cat $(FUNCTIONS_PID)))."; \
 	else \
-		nohup $(SUPABASE) functions serve > $(FUNCTIONS_LOG) 2>&1 & echo $$! > $(FUNCTIONS_PID); \
+		if [ -f $(FUNCTIONS_PID) ] && kill -0 $$(cat $(FUNCTIONS_PID)) 2>/dev/null; then \
+			echo "Restarting edge functions: $(FUNCTIONS_ENV) changed since they started."; \
+			stale=$$(cat $(FUNCTIONS_PID)); kill $$stale; \
+			while kill -0 $$stale 2>/dev/null; do sleep 0.2; done; \
+		fi; \
+		nohup $(SUPABASE) functions serve --env-file $(FUNCTIONS_ENV) > $(FUNCTIONS_LOG) 2>&1 & echo $$! > $(FUNCTIONS_PID); \
+		echo "$$stamp" > $(FUNCTIONS_STAMP); \
 	fi
 	@node scripts/wait-for-functions.mjs
 
 stop:
-	@if [ -f $(FUNCTIONS_PID) ]; then kill $$(cat $(FUNCTIONS_PID)) 2>/dev/null || true; rm -f $(FUNCTIONS_PID); fi
+	@if [ -f $(FUNCTIONS_PID) ]; then kill $$(cat $(FUNCTIONS_PID)) 2>/dev/null || true; rm -f $(FUNCTIONS_PID) $(FUNCTIONS_STAMP); fi
 	$(SUPABASE) stop
 
 reset:
