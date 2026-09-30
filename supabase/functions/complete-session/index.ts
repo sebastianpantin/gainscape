@@ -1,35 +1,34 @@
 import { authenticatedUserId } from '../_shared/auth.ts';
 import { sql, type Transaction } from '../_shared/db.ts';
 import {
-  BodyweightLoadNotZeroError,
-  BodyweightRequiredError,
+  type Catalog,
   DEFAULT_BALANCE,
+  effectiveLoadForNewSet,
+  HISTORY_ONLY_STEPS,
+  isWithinEditWindow,
   processSession,
   type SessionInput,
   type SessionSummary,
-  strengthAfterSession,
-  strengthStateAt,
-  UnknownExerciseError,
 } from '../_shared/domain/index.ts';
+import { asHttpError } from '../_shared/http-errors.ts';
 import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
 import { loadCatalog } from '../_shared/stores/catalog.ts';
-import { loadRecords, saveRecords } from '../_shared/stores/records.ts';
-import { exercisesTrainedAfter, loadStrengthHistory, saveCurrentStrength } from '../_shared/stores/strength.ts';
-import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
+import { replayFrom } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
   findSession,
-  insertCompletedSession,
-  isUniqueViolation,
-  loadUserState,
+  insertSession,
+  loadProfileSettings,
   lockUser,
+  type NewSessionRow,
   ownedProgramDayId,
+  placeholderSetRow,
   type StoredSession,
-} from './session-store.ts';
-
-function toSessionInput(payload: CompleteSessionPayload): SessionInput {
-  return { id: payload.id, startedAt: payload.startedAt, sets: payload.sets };
-}
+  storedSummary,
+  tombstoneOwner,
+} from '../_shared/stores/sessions.ts';
+import { newSetRow } from '../_shared/stores/set-columns.ts';
+import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
 
 function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessionPayload): void {
   const resubmittedSetIds = payload.sets.map((set) => set.id).sort();
@@ -39,55 +38,52 @@ function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessi
   if (!sameSets) console.warn(`session ${payload.id} re-submitted with different sets; returning the stored summary`);
 }
 
-async function processNewSession(
-  tx: Transaction,
-  userId: string,
-  payload: CompleteSessionPayload,
-): Promise<SessionSummary> {
-  const session = toSessionInput(payload);
+async function loadKnownCatalog(tx: Transaction, userId: string, payload: CompleteSessionPayload): Promise<Catalog> {
   const exerciseIds = [...new Set(payload.sets.map((set) => set.exerciseId))];
   const catalog = await loadCatalog(tx, userId, exerciseIds, true);
   const unknownExerciseIds = exerciseIds.filter((id) => !catalog.exercises.has(id));
   if (unknownExerciseIds.length > 0) throw new HttpError(422, 'unknown_exercise', { exerciseIds: unknownExerciseIds });
+  return catalog;
+}
 
-  const { timezone, ...skillsAndBodyweight } = await loadUserState(tx, userId);
-  const userState = { ...skillsAndBodyweight, records: await loadRecords(tx, userId, exerciseIds) };
-  const history = await loadStrengthHistory(tx, userId, exerciseIds, session, DEFAULT_BALANCE);
-  const strength = strengthStateAt(history, session, DEFAULT_BALANCE);
-
-  const { nextState, outputs } = processSession(userState, session, DEFAULT_BALANCE, { catalog, strength });
+async function storeHistoryOnly(
+  tx: Transaction,
+  row: NewSessionRow,
+  session: SessionInput,
+  catalog: Catalog,
+): Promise<SessionSummary> {
+  const { outputs } = processSession(
+    { skillXp: {}, bodyweightKg: null },
+    session,
+    DEFAULT_BALANCE,
+    { catalog },
+    HISTORY_ONLY_STEPS,
+  );
   const summary: SessionSummary = {
-    sessionId: payload.id,
-    xpBySkill: outputs.xpBySkill,
-    levelUps: outputs.levelUps,
-    prs: outputs.prs,
-    drops: outputs.drops,
+    sessionId: session.id,
+    xpBySkill: {},
+    levelUps: [],
+    prs: [],
+    drops: [],
+    historyOnly: true,
   };
+  return await insertSession(
+    tx,
+    { ...row, historyOnly: true, summary },
+    outputs.sets.map((result) => newSetRow(result, session.id, row.userId)),
+  );
+}
 
-  const storedSummary = await insertCompletedSession(tx, {
-    userId,
-    payload,
-    programDayId: await ownedProgramDayId(tx, userId, payload.programDayId),
-    timezone,
-    balanceVersion: DEFAULT_BALANCE.version,
-    summary,
-    sets: outputs.sets,
-    nextSkillXp: nextState.skillXp,
-  });
-  await saveRecords(tx, userId, nextState.records!, exerciseIds);
-  const supersededByLaterSessions = await exercisesTrainedAfter(tx, userId, exerciseIds, session);
-  const currentStrength = Object.fromEntries(
-    Object.entries(strengthAfterSession(strength, outputs.sets)).filter(
-      ([exerciseId]) => !supersededByLaterSessions.has(exerciseId),
+async function storeAndReplay(tx: Transaction, row: NewSessionRow, session: SessionInput): Promise<SessionSummary> {
+  await insertSession(
+    tx,
+    row,
+    session.sets.map((set) =>
+      placeholderSetRow(set, set.recordedEffectiveLoadKg!, session.id, row.userId, DEFAULT_BALANCE),
     ),
   );
-  await saveCurrentStrength(
-    tx,
-    userId,
-    currentStrength,
-    (exerciseId) => catalog.exercises.get(exerciseId)?.loadType === 'bodyweight',
-  );
-  return storedSummary;
+  await replayFrom(tx, row.userId, { id: session.id, startedAt: session.startedAt }, [], DEFAULT_BALANCE);
+  return await storedSummary(tx, session.id);
 }
 
 async function completeSession(userId: string, payload: CompleteSessionPayload): Promise<SessionSummary> {
@@ -100,23 +96,48 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       warnIfResubmissionDiffers(existing, payload);
       return existing.summary;
     }
+    const deletedBy = await tombstoneOwner(tx, payload.id);
+    if (deletedBy === userId) throw new HttpError(410, 'session_deleted');
+    if (deletedBy !== null) throw new HttpError(409, 'session_id_conflict');
 
-    assertPlausibleTiming(payload, new Date());
+    const now = new Date();
+    assertPlausibleTiming(payload, now);
     await assertSetIdsUnused(
       tx,
       payload.sets.map((set) => set.id),
     );
-    return await processNewSession(tx, userId, payload);
-  });
-}
+    const catalog = await loadKnownCatalog(tx, userId, payload);
+    const profile = await loadProfileSettings(tx, userId);
+    const session: SessionInput = {
+      id: payload.id,
+      startedAt: payload.startedAt,
+      sets: payload.sets.map((set) => ({
+        ...set,
+        recordedEffectiveLoadKg: effectiveLoadForNewSet(
+          set,
+          catalog.exercises.get(set.exerciseId)!,
+          profile.bodyweightKg,
+        ),
+      })),
+    };
+    const row: NewSessionRow = {
+      id: payload.id,
+      userId,
+      programDayId: await ownedProgramDayId(tx, userId, payload.programDayId),
+      startedAt: payload.startedAt,
+      endedAt: payload.endedAt,
+      timezone: profile.timezone,
+      historyOnly: false,
+      balanceVersion: DEFAULT_BALANCE.version,
+      summary: { sessionId: payload.id, drops: [] },
+      notes: payload.notes,
+    };
 
-function asHttpError(error: unknown): unknown {
-  if (isUniqueViolation(error)) return new HttpError(409, 'id_conflict');
-  if (error instanceof BodyweightRequiredError) return new HttpError(409, 'bodyweight_required');
-  if (error instanceof BodyweightLoadNotZeroError) return new HttpError(422, 'bodyweight_load_not_zero');
-  if (error instanceof UnknownExerciseError)
-    return new HttpError(422, 'unknown_exercise', { exerciseIds: [error.exerciseId] });
-  return error;
+    if (!isWithinEditWindow(payload.startedAt, now.getTime())) {
+      return await storeHistoryOnly(tx, row, session, catalog);
+    }
+    return await storeAndReplay(tx, row, session);
+  });
 }
 
 Deno.serve(async (request) => {

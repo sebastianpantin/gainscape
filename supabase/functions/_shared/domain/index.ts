@@ -1,4 +1,5 @@
 export * from './types.ts';
+export * from './errors.ts';
 export * from './balance.ts';
 export * from './levels.ts';
 export * from './combat.ts';
@@ -10,3 +11,4 @@ export * from './strength.ts';
 export * from './replay.ts';
 export * from './records.ts';
 export * from './collection.ts';
+export * from './edit-window.ts';

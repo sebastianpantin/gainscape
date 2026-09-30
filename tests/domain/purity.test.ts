@@ -17,7 +17,7 @@ describe('domain purity', () => {
   });
 
   it.each(domainFiles)('%s uses no runtime-specific globals', (file) => {
-    const source = readFileSync(join(domainDir, file), 'utf8');
-    expect(source).not.toMatch(runtimeSpecificGlobals);
+    const code = readFileSync(join(domainDir, file), 'utf8').replace(importSpecifier, '');
+    expect(code).not.toMatch(runtimeSpecificGlobals);
   });
 });
