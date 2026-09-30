@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const localAppUrl = 'https://localhost:5173';
+const localAppUrl = `https://localhost:${process.env.GAINSCAPE_WEB_PORT ?? 5173}`;
 
 export default defineConfig({
   testDir: 'e2e',
