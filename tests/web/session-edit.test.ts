@@ -232,6 +232,13 @@ describe('mapping failures to client actions', () => {
     expect(failureAction({ kind: 'retryable', reason: 'offline' })).toEqual({ kind: 'retry', reason: 'offline' });
   });
 
+  it('keeps the edit and waits on a rate limit instead of retrying', () => {
+    const details = { bucket: 'session_edit_hour', retryAfterSeconds: 150 };
+    expect(transientReason({ kind: 'http_error', status: 429, code: 'rate_limited', details })).toBe(null);
+    expect(http(429, 'rate_limited', details)).toEqual({ kind: 'rate_limited', retryAfterSeconds: 150 });
+    expect(http(429, 'rate_limited')).toEqual({ kind: 'rate_limited', retryAfterSeconds: null });
+  });
+
   it('maps auth problems', () => {
     expect(failureAction({ kind: 'needs_sign_in' })).toEqual({ kind: 'sign_out' });
     expect(failureAction({ kind: 'wrong_account' })).toEqual({ kind: 'wrong_account' });

@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Switch } from '../../components/Switch.tsx';
+import { fetchSkills, type Skill } from '../../lib/catalog.ts';
+import { formatLoad } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { updatePublicProfile } from '../../lib/profile.ts';
 import { formatWeight } from '../../lib/units.ts';
+import { cardProfileOf, standingOfView } from '../../lib/profile-view.ts';
+import { fetchProfileView, type ProfileView } from '../../lib/social.ts';
+import { collectionPercent } from '../../lib/social-rules.ts';
 import { monogramFor } from '../../lib/standing.ts';
 import { ProfileCard } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
@@ -19,6 +24,18 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
   const { unitPref } = usePreferences();
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [view, setView] = useState<{ skills: Skill[]; profile: ProfileView } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([fetchSkills(), fetchProfileView(userId)]).then(
+      ([skills, profile]) => active && profile && setView({ skills, profile }),
+      (error: Error) => active && setProblem(error.message),
+    );
+    return () => {
+      active = false;
+    };
+  }, [userId]);
 
   return (
     <main className="screen stack">
@@ -35,9 +52,11 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
         </p>
       )}
       {state.status === 'ready' &&
+        view &&
         (() => {
-          const { profile, standing, collectionPercent } = state.bundle;
-          const topSkills = [...(standing?.skills ?? [])]
+          const { profile } = state.bundle;
+          const standing = standingOfView(view.skills, view.profile);
+          const topSkills = [...standing.skills]
             .sort((a, b) => b.progress.xp - a.progress.xp)
             .slice(0, TOP_SKILL_COUNT);
           const toggleWeights = async (showWeights: boolean) => {
@@ -68,10 +87,13 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
                 </p>
               )}
               <ProfileCard
-                profile={profile}
-                totalLevel={standing?.totalLevel ?? null}
-                combatLevel={standing?.combatLevel ?? null}
-                collectionPercent={collectionPercent}
+                profile={cardProfileOf(view.profile)}
+                totalLevel={standing.totalLevel}
+                combatLevel={standing.combatLevel}
+                collectionPercent={collectionPercent(
+                  view.profile.collection.filledSlots,
+                  view.profile.collection.totalSlots,
+                )}
               />
               <section className="panel stack" aria-labelledby="top-skills-heading">
                 <h2 id="top-skills-heading">Top skills</h2>
@@ -91,6 +113,13 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
                 <h2 id="record-heading">How your records appear</h2>
                 <span className="pixel" data-testid="preview-record">
                   {profile.showWeights ? `New 8RM Back Squat: ${formatWeight(110, unitPref)}` : 'New 8RM Back Squat'}
+                </span>
+                <span className="pixel" data-testid="preview-bodyweight-record">
+                  {!profile.showWeights
+                    ? 'New 5RM Weighted Dip'
+                    : profile.showBodyweight
+                      ? `New 5RM Weighted Dip: ${formatLoad(20, 'bodyweight_plus', unitPref)} (${formatWeight(100, unitPref)} total)`
+                      : `New 5RM Weighted Dip: ${formatLoad(20, 'bodyweight_plus', unitPref)}`}
                 </span>
                 <span className="hint">
                   An example. Your height, age and bodyweight entries are never shown to friends.

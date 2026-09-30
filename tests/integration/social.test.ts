@@ -2,7 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { webCollectionCounts } from './collection-support.ts';
 import { aSet, HOUR_MS, payloadAt, postSession } from './loot-support.ts';
-import { admin, anon, builtInExerciseId, createTestUser, db, seedRateLimitHits, type TestUser } from './local-stack.ts';
+import {
+  admin,
+  anon,
+  builtInExerciseId,
+  createTestUser,
+  db,
+  postFunction,
+  seedRateLimitHits,
+  type TestUser,
+} from './local-stack.ts';
 
 let benchId: string;
 
@@ -170,5 +179,60 @@ describe('unconfirmed usernames', () => {
     expect(data).toEqual({ status: 'not_found' });
     const [stale] = await db`select count(*)::int as count from auth.users where id = ${staleId}`;
     expect(stale.count).toBe(0);
+  });
+});
+
+interface FeedRow {
+  event_id: string;
+  user_id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  gz_count: number;
+  gz_given: boolean;
+  is_own: boolean;
+}
+
+async function feedOf(user: TestUser): Promise<FeedRow[]> {
+  const { data, error } = await user.client.rpc('get_feed', {});
+  expect(error).toBeNull();
+  return data as FeedRow[];
+}
+
+describe('feed end to end', () => {
+  it('posts a friend PR, hides loads on request, keeps gz across edits and drops it on delete', async () => {
+    const [viewer, lifter] = await Promise.all([createTestUser(), createTestUser()]);
+    await viewer.client.rpc('send_friend_request', { username: lifter.username });
+    await lifter.client.rpc('respond_friend_request', { requester_id: viewer.id, accept: true });
+    await postSession(lifter, payloadAt(new Date(Date.now() - 3 * HOUR_MS), [aSet(benchId, 0, 60)]));
+    const heavier = payloadAt(new Date(Date.now() - HOUR_MS), [aSet(benchId, 0, 80)]);
+    await postSession(lifter, heavier);
+
+    const prOf = (rows: FeedRow[]) => rows.find((row) => row.user_id === lifter.id && row.type === 'pr')!;
+    const pr = prOf(await feedOf(viewer));
+    expect(pr.payload).toMatchObject({ exerciseName: 'Barbell Bench Press', loadKg: 80, weightsHidden: false });
+
+    expect((await lifter.client.from('profiles').update({ show_weights: false }).eq('id', lifter.id)).error).toBeNull();
+    const hidden = prOf(await feedOf(viewer));
+    expect(hidden.payload.weightsHidden).toBe(true);
+    expect(hidden.payload).not.toHaveProperty('loadKg');
+
+    const gz = await viewer.client.rpc('set_gz', { event_id: pr.event_id, given: true });
+    expect(gz.data).toEqual({ eventId: pr.event_id, given: true, gzCount: 1 });
+    expect(prOf(await feedOf(lifter))).toMatchObject({ gz_count: 1, is_own: true, gz_given: false });
+
+    const edited = await postFunction('edit-session', lifter.accessToken, {
+      sessionId: heavier.id,
+      ifRevision: 0,
+      notes: 'felt strong',
+      sets: heavier.sets,
+    });
+    expect(edited.status, edited.rawBody).toBe(200);
+    expect(prOf(await feedOf(viewer))).toMatchObject({ event_id: pr.event_id, gz_count: 1, gz_given: true });
+
+    const deleted = await postFunction('delete-session', lifter.accessToken, { sessionId: heavier.id });
+    expect(deleted.status).toBe(200);
+    expect((await feedOf(viewer)).find((row) => row.event_id === pr.event_id)).toBeUndefined();
+    const [left] = await db`select count(*)::int as count from public.reactions where event_id = ${pr.event_id}`;
+    expect(left.count).toBe(0);
   });
 });

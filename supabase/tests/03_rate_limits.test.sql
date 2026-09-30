@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(30);
 
 insert into private.rate_limit_rules (bucket, max_hits, window_seconds) values ('test_five', 5, 3600);
 
@@ -159,6 +159,23 @@ select set_config('request.headers', '{"x-forwarded-for": "198.51.100.1, 10.0.0.
 select is(private.request_client_ip(), '203.0.113.44', 'another header is taken as it is');
 select set_config('request.headers', '{"x-forwarded-for": "198.51.100.1"}', true);
 select is(private.request_client_ip(), null, 'a missing configured header gives no address');
+
+select ok(
+  not has_table_privilege('anon', 'private.client_key_pepper', 'select, insert, update, delete'),
+  'anon has no privilege on client_key_pepper'
+);
+select ok(
+  not has_table_privilege('authenticated', 'private.client_key_pepper', 'select, insert, update, delete'),
+  'authenticated has no privilege on client_key_pepper'
+);
+select ok(
+  not has_table_privilege('anon', 'private.client_ip_config', 'select, insert, update, delete'),
+  'anon has no privilege on client_ip_config'
+);
+select ok(
+  not has_table_privilege('authenticated', 'private.client_ip_config', 'select, insert, update, delete'),
+  'authenticated has no privilege on client_ip_config'
+);
 
 select * from finish();
 rollback;

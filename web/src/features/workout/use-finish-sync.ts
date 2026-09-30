@@ -9,7 +9,7 @@ import { signOutKeepingDrafts, syncFinishedWorkout } from '../../offline/sync-wo
 
 export type FinishStatus =
   | { kind: 'idle' }
-  | { kind: 'syncing'; attempt: number; lastProblem: string | null }
+  | { kind: 'syncing'; attempt: number; lastProblem: string | null; waitMs?: number }
   | { kind: 'rejected'; reason: string };
 
 interface FinishSyncOptions {
@@ -82,8 +82,12 @@ export function useFinishSync({
         }
         const outcome = result.outcome;
         if (outcome.kind === 'retryable') {
-          show({ kind: 'syncing', attempt, lastProblem: outcome.reason });
-          retryTimer = setTimeout(attemptSync, retryDelayMs(attempt++));
+          const delayMs = Math.max(
+            retryDelayMs(attempt++),
+            ('retryAfterMs' in outcome ? outcome.retryAfterMs : undefined) ?? 0,
+          );
+          show({ kind: 'syncing', attempt, lastProblem: outcome.reason, waitMs: delayMs });
+          retryTimer = setTimeout(attemptSync, delayMs);
           return;
         }
         settled = true;
