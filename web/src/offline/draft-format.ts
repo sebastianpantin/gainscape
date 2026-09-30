@@ -1,14 +1,15 @@
-import type { EffortLevel } from '@domain/types.ts';
+import type { EffortInput, EffortLevel } from '@domain/types.ts';
 import type { LoadType } from '../lib/catalog.ts';
 
-const DRAFT_FORMAT_VERSION = 2;
+const DRAFT_FORMAT_VERSION = 3;
+const UPGRADABLE_FORMAT_VERSION = 2;
 const STARTING_EXTERNAL_LOAD_KG = 20;
 
 export interface DraftSet {
   id: string;
   weightKg: number;
   reps: number;
-  effortLevel: EffortLevel | null;
+  effort: EffortInput;
   done: boolean;
 }
 
@@ -53,8 +54,44 @@ function looksLikeDraft(value: unknown): value is WorkoutDraft {
   );
 }
 
+const EFFORT_LEVELS: readonly EffortLevel[] = ['easy', 'hard', 'near_failure', 'failure'];
+
+function isHalfStepBetween(value: unknown, lowest: number, highest: number): boolean {
+  return typeof value === 'number' && Number.isInteger(value * 2) && value >= lowest && value <= highest;
+}
+
+export function isEffortInput(value: unknown): value is NonNullable<EffortInput> {
+  if (!isRecord(value)) return false;
+  if (value.type === 'level') return EFFORT_LEVELS.some((level) => level === value.level);
+  if (value.type === 'rir') return isHalfStepBetween(value.value, 0, 10);
+  if (value.type === 'rpe') return isHalfStepBetween(value.value, 5, 10);
+  return false;
+}
+
+function normalisedSet(set: unknown, fromV2: boolean): unknown {
+  if (!isRecord(set)) return set;
+  if (fromV2 && !('effort' in set)) {
+    const { effortLevel, ...rest } = set;
+    const level = EFFORT_LEVELS.find((candidate) => candidate === effortLevel);
+    return { ...rest, effort: level ? { type: 'level', level } : null };
+  }
+  return isEffortInput(set.effort) ? set : { ...set, effort: null };
+}
+
+function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
+  return {
+    ...draft,
+    exercises: draft.exercises.map((exercise) =>
+      isRecord(exercise) && Array.isArray(exercise.sets)
+        ? { ...exercise, sets: exercise.sets.map((set) => normalisedSet(set, fromV2) as DraftSet) }
+        : exercise,
+    ),
+  };
+}
+
 export function parseStoredDraft(raw: unknown, userId: string): StoredDraft | null {
-  if (!isRecord(raw) || raw.v !== DRAFT_FORMAT_VERSION || raw.userId !== userId) return null;
+  if (!isRecord(raw) || raw.userId !== userId) return null;
+  if (raw.v !== DRAFT_FORMAT_VERSION && raw.v !== UPGRADABLE_FORMAT_VERSION) return null;
   if (typeof raw.updatedAt !== 'number' || !Number.isFinite(raw.updatedAt)) return null;
   if (raw.kind === 'synced' && typeof raw.syncedSessionId === 'string')
     return {
@@ -65,7 +102,13 @@ export function parseStoredDraft(raw: unknown, userId: string): StoredDraft | nu
       syncedSessionId: raw.syncedSessionId,
     };
   if (raw.kind === 'draft' && looksLikeDraft(raw.draft))
-    return { v: DRAFT_FORMAT_VERSION, kind: 'draft', userId, updatedAt: raw.updatedAt, draft: raw.draft };
+    return {
+      v: DRAFT_FORMAT_VERSION,
+      kind: 'draft',
+      userId,
+      updatedAt: raw.updatedAt,
+      draft: normalisedDraft(raw.draft, raw.v === UPGRADABLE_FORMAT_VERSION),
+    };
   return null;
 }
 
@@ -111,7 +154,7 @@ export function addSet(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft
       id: crypto.randomUUID(),
       weightKg: previous?.weightKg ?? (exercise.loadType === 'external' ? STARTING_EXTERNAL_LOAD_KG : 0),
       reps: previous?.reps ?? 8,
-      effortLevel: null,
+      effort: null,
       done: true,
     };
     return { ...exercise, sets: [...exercise.sets, newSet] };
@@ -225,7 +268,7 @@ export function startDraftFromDay(
           id: crypto.randomUUID(),
           weightKg,
           reps: planned.targetRepsMin,
-          effortLevel: null,
+          effort: null,
           done: false,
         })),
       },

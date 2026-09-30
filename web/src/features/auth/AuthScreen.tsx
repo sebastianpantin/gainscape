@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
+import { LogoMark } from '../../components/PixelArt.tsx';
 import { supabase } from '../../lib/supabase.ts';
 import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
 
@@ -64,14 +65,18 @@ export function AuthScreen() {
 
   return (
     <main className="screen auth-screen">
-      <h1 className="title">Gainscape</h1>
+      <div className="brand">
+        <LogoMark size={48} />
+        <h1>GAINSCAPE</h1>
+        <p>A lifting log where every hard set earns XP.</p>
+      </div>
       {keptWorkout && (
-        <p className="panel" role="status">
+        <p className="notice" role="status">
           Your unsynced workout is saved on this device. Sign in to sync it.
         </p>
       )}
       <form className="panel stack" onSubmit={submit}>
-        <h2>{mode === 'sign-in' ? 'Sign in' : 'Create account'}</h2>
+        <h2 className="accent-text">{mode === 'sign-in' ? 'Sign in' : 'Create account'}</h2>
         {mode === 'register' && (
           <label className="field">
             Username
@@ -84,6 +89,9 @@ export function AuthScreen() {
               autoComplete="username"
               required
             />
+            <span className="hint">
+              3–20 characters: a–z, 0–9 and _. Friends find you by it, and it can't be changed.
+            </span>
           </label>
         )}
         <label className="field">
@@ -112,7 +120,7 @@ export function AuthScreen() {
             {problem}
           </p>
         )}
-        <button className="button primary" type="submit" disabled={busy}>
+        <button className="button primary big" type="submit" disabled={busy}>
           {mode === 'sign-in' ? 'Sign in' : 'Create account'}
         </button>
         {mode === 'sign-in' ? (

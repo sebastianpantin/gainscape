@@ -27,7 +27,23 @@ export async function signIn(page: Page, username: string) {
   await page.getByLabel('Email').fill(`${username}@example.test`);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
+}
+
+export type Tab = 'Train' | 'Skills' | 'Log' | 'Friends' | 'Profile';
+
+export async function openTab(page: Page, tab: Tab) {
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: tab, exact: true }).click();
+}
+
+export async function openFromProfile(page: Page, name: 'Programs' | 'Exercises' | 'Settings') {
+  await openTab(page, 'Profile');
+  await page.getByRole('main').getByRole('link', { name, exact: true }).click();
+}
+
+export async function signOut(page: Page) {
+  await openFromProfile(page, 'Settings');
+  await page.getByRole('button', { name: 'Sign out' }).click();
 }
 
 export async function logExercise(
@@ -61,7 +77,7 @@ export async function writeSession(page: Page, changes: Partial<StoredAuthSessio
 }
 
 export interface StoredDraftRecord {
-  v: 2;
+  v: number;
   kind: 'draft' | 'synced';
   userId: string;
   updatedAt: number;
@@ -70,7 +86,7 @@ export interface StoredDraftRecord {
 }
 
 export async function writeStoredDraft(page: Page, userId: string, draft: object): Promise<void> {
-  const record = { v: 2, kind: 'draft', userId, updatedAt: Date.now(), draft };
+  const record = { v: 3, kind: 'draft', userId, updatedAt: Date.now(), draft };
   await page.evaluate(
     ({ database, record }) =>
       new Promise<void>((resolve, reject) => {

@@ -1,12 +1,26 @@
 :root {
-  --color-background: #2b2118;
+  --color-backdrop: #1a130d;
+  --color-background: #241b13;
+  --color-background-dots: #2f2419;
+  --color-chrome: #2e251c;
   --color-panel: #3e3529;
   --color-panel-border: #5c4f3d;
+  --color-panel-highlight: #5c4f3d;
+  --color-panel-shade: #2a2219;
+  --color-well: #1d160f;
   --color-parchment: #d8c8a8;
+  --color-parchment-shade: #b3a58c;
   --color-text: #f0e6d0;
   --color-text-muted: #b3a58c;
+  --color-text-faint: #8a7d66;
+  --color-ink: #1d160f;
   --color-accent: #ffb000;
+  --color-accent-light: #ffd166;
+  --color-accent-dark: #b87d00;
   --color-xp: #7fd46a;
+  --color-xp-light: #b5f0a4;
+  --color-xp-dark: #4e8f3f;
+  --color-rare: #6fa8dc;
   --color-danger: #e0554b;
   --color-focus: #ffe27a;
 
@@ -16,12 +30,20 @@
   --space-4: 16px;
   --space-6: 24px;
 
-  --font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-display: 'Pixelify Sans', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-size-tiny: 0.75rem;
   --font-size-small: 0.85rem;
   --font-size-body: 1rem;
-  --font-size-title: 1.5rem;
+  --font-size-heading: 1.25rem;
+  --font-size-title: 2rem;
 
   --border-width: 2px;
-  --radius: 2px;
+  --radius: 0;
   --tap-target: 44px;
+
+  --bevel: inset 2px 2px 0 var(--color-panel-highlight), inset -2px -2px 0 var(--color-panel-shade);
+  --bevel-accent: inset 2px 2px 0 var(--color-accent-light), inset -3px -3px 0 var(--color-accent-dark);
+  --bevel-sunken: inset 2px 2px 0 #000;
+  --text-shadow: 2px 2px 0 #000;
 }

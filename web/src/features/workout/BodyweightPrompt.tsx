@@ -1,13 +1,13 @@
 import { type FormEvent, useState } from 'react';
-
-const LOWEST_BODYWEIGHT_KG = 20;
-const HIGHEST_BODYWEIGHT_KG = 400;
+import { HIGHEST_BODYWEIGHT_KG, LOWEST_BODYWEIGHT_KG, type UnitPref } from '../../lib/profile.ts';
+import { kgToUnit, unitToKg } from '../../lib/units.ts';
 
 interface BodyweightPromptProps {
+  unit: UnitPref;
   onSave: (bodyweightKg: number) => Promise<void>;
 }
 
-export function BodyweightPrompt({ onSave }: BodyweightPromptProps) {
+export function BodyweightPrompt({ unit, onSave }: BodyweightPromptProps) {
   const [bodyweight, setBodyweight] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -17,7 +17,7 @@ export function BodyweightPrompt({ onSave }: BodyweightPromptProps) {
     setSaving(true);
     setProblem(null);
     try {
-      await onSave(Number(bodyweight));
+      await onSave(unitToKg(Number(bodyweight), unit));
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not save your bodyweight.');
       setSaving(false);
@@ -28,12 +28,12 @@ export function BodyweightPrompt({ onSave }: BodyweightPromptProps) {
     <form className="panel stack" onSubmit={submit}>
       <p>Bodyweight exercises count your bodyweight as the load. It stays private.</p>
       <label className="field">
-        Bodyweight (kg)
+        Bodyweight ({unit})
         <input
           type="number"
           inputMode="decimal"
-          min={LOWEST_BODYWEIGHT_KG}
-          max={HIGHEST_BODYWEIGHT_KG}
+          min={Math.ceil(kgToUnit(LOWEST_BODYWEIGHT_KG, unit))}
+          max={Math.floor(kgToUnit(HIGHEST_BODYWEIGHT_KG, unit))}
           step={0.1}
           value={bodyweight}
           onChange={(event) => setBodyweight(event.target.value)}

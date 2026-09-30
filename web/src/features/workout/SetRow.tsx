@@ -1,12 +1,19 @@
-import type { EffortLevel } from '@domain/types.ts';
+import type { EffortInput } from '@domain/types.ts';
+import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog.ts';
+import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
+import { highestWeightInUnit, shownWeight, unitToKg, WEIGHT_INPUT_STEP } from '../../lib/units.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
+import { formatXp, type SetPreview } from './xp-preview.ts';
 
 interface SetRowProps {
   setNumber: number;
   loadType: LoadType;
   set: DraftSet;
+  preview: SetPreview;
+  unit: UnitPref;
+  effortMode: EffortInputMode;
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   onRemove: () => void;
   onToggleDone: () => void;
@@ -18,35 +25,65 @@ function clampedNumber(raw: string, fallback: number, lowest: number, highest: n
   return Math.min(highest, Math.max(lowest, value));
 }
 
+const HIGHEST_LOAD_KG = 2000;
+
 interface WeightFieldProps {
   loadType: LoadType;
   weightKg: number;
+  unit: UnitPref;
   onChange: (weightKg: number) => void;
 }
 
-function WeightField({ loadType, weightKg, onChange }: WeightFieldProps) {
-  if (loadType === 'bodyweight') return <span className="compact-field muted">bodyweight</span>;
+function WeightField({ loadType, weightKg, unit, onChange }: WeightFieldProps) {
+  if (loadType === 'bodyweight') return <span className="compact-field set-number">bodyweight</span>;
+  const shown = shownWeight(weightKg, unit);
+  const highest = highestWeightInUnit(HIGHEST_LOAD_KG, unit);
   return (
     <label className="compact-field">
-      {loadType === 'bodyweight_plus' ? '+kg' : 'kg'}
+      {loadType === 'bodyweight_plus' ? `+${unit}` : unit}
       <input
         type="number"
         inputMode="decimal"
         min={0}
-        max={2000}
-        step={0.5}
-        value={weightKg}
-        onChange={(event) => onChange(clampedNumber(event.target.value, weightKg, 0, 2000))}
+        max={highest}
+        step={WEIGHT_INPUT_STEP}
+        value={shown}
+        onChange={(event) => onChange(unitToKg(clampedNumber(event.target.value, shown, 0, highest), unit))}
       />
     </label>
   );
 }
 
-export function SetRow({ setNumber, loadType, set, onChange, onRemove, onToggleDone }: SetRowProps) {
+const NO_XP_RIR = 6;
+
+function previewNote(preview: SetPreview): string {
+  if (preview.basis === 'logged' && preview.rir !== null && preview.rir >= NO_XP_RIR) return 'counts for e1RM';
+  if (preview.basis === 'estimated') return `est. RIR ${preview.rir}`;
+  if (preview.basis === 'cold_start') return 'first time';
+  return '';
+}
+
+export function SetRow({
+  setNumber,
+  loadType,
+  set,
+  preview,
+  unit,
+  effortMode,
+  onChange,
+  onRemove,
+  onToggleDone,
+}: SetRowProps) {
+  const xpLabel = preview.basis === 'unknown' ? '~?' : `~${formatXp(preview.xp)}`;
   return (
     <li className={set.done ? 'set-row' : 'set-row planned'}>
       <span className="set-number">{setNumber}</span>
-      <WeightField loadType={loadType} weightKg={set.weightKg} onChange={(weightKg) => onChange({ weightKg })} />
+      <WeightField
+        loadType={loadType}
+        weightKg={set.weightKg}
+        unit={unit}
+        onChange={(weightKg) => onChange({ weightKg })}
+      />
       <label className="compact-field">
         reps
         <input
@@ -59,6 +96,10 @@ export function SetRow({ setNumber, loadType, set, onChange, onRemove, onToggleD
           onChange={(event) => onChange({ reps: Math.round(clampedNumber(event.target.value, set.reps, 1, 100)) })}
         />
       </label>
+      <span className={set.done ? 'set-xp earned' : 'set-xp'}>
+        {xpLabel}
+        <span className="tiny">{previewNote(preview)}</span>
+      </span>
       <button
         type="button"
         className={`button done-toggle ${set.done ? 'selected' : ''}`}
@@ -66,16 +107,15 @@ export function SetRow({ setNumber, loadType, set, onChange, onRemove, onToggleD
         aria-label={`Done set ${setNumber}`}
         onClick={onToggleDone}
       >
-        Done
+        <Icon name="check" size={20} strokeWidth={3} />
       </button>
       <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
         ✕
       </button>
       <EffortSelector
-        selected={set.effortLevel}
-        onSelect={(effortLevel: EffortLevel | null) =>
-          onChange(effortLevel === null ? { effortLevel } : { effortLevel, done: true })
-        }
+        mode={effortMode}
+        selected={set.effort}
+        onSelect={(effort: EffortInput) => onChange(effort === null ? { effort } : { effort, done: true })}
       />
     </li>
   );
