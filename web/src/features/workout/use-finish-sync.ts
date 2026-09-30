@@ -1,52 +1,87 @@
 import type { SessionSummary } from '@domain/types.ts';
 import { useEffect, useEffectEvent, useState } from 'react';
-import { syncFinishedWorkout } from '../../offline/sync-workout.ts';
-import type { WorkoutDraft } from '../../offline/workout-draft.ts';
+import type { WorkoutDraft } from '../../offline/draft-format.ts';
+import type { DraftStore } from '../../offline/draft-store.ts';
+import { attemptFinish } from '../../offline/finish-lock.ts';
+import { signOutKeepingDrafts, syncFinishedWorkout } from '../../offline/sync-workout.ts';
 
 export type FinishStatus =
   | { kind: 'idle' }
   | { kind: 'syncing'; attempt: number; lastProblem: string | null }
   | { kind: 'rejected'; reason: string };
 
+interface FinishSyncOptions {
+  userId: string;
+  draft: WorkoutDraft | null;
+  store: DraftStore | null;
+  flush: () => Promise<void>;
+  markSynced: (sessionId: string) => Promise<void>;
+  onSynced: (summary: SessionSummary) => void;
+  onSuperseded: (sessionId: string) => void;
+}
+
 const MAX_RETRY_DELAY_MS = 30_000;
 const IDLE: FinishStatus = { kind: 'idle' };
+const FIRST_ATTEMPT: FinishStatus = { kind: 'syncing', attempt: 0, lastProblem: null };
 
 function retryDelayMs(attempt: number): number {
   return Math.min(MAX_RETRY_DELAY_MS, 1000 * 2 ** attempt);
 }
 
-export function useFinishSync(draft: WorkoutDraft | null, onSynced: (summary: SessionSummary) => void): FinishStatus {
-  const [status, setStatus] = useState<{ draft: WorkoutDraft; status: FinishStatus } | null>(null);
-  const finishedDraft = draft?.finishedAt ? draft : null;
+export function useFinishSync({ userId, draft, store, flush, markSynced, onSynced, onSuperseded }: FinishSyncOptions): {
+  status: FinishStatus;
+  retryNow: () => void;
+} {
+  const [retryNonce, setRetryNonce] = useState(0);
+  const [status, setStatus] = useState<{ key: string; status: FinishStatus } | null>(null);
+  const sessionId = draft?.finishedAt ? draft.sessionId : null;
+  const finishKey = draft?.finishedAt ? `${draft.sessionId}:${draft.finishedAt}:${retryNonce}` : null;
   const reportSynced = useEffectEvent(onSynced);
+  const reportSuperseded = useEffectEvent(onSuperseded);
 
   useEffect(() => {
-    if (!finishedDraft) return;
-    let cancelled = false;
+    if (!sessionId || !finishKey || !store) return;
+    const controller = new AbortController();
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
     let requestInFlight = false;
     let settled = false;
-    const show = (next: FinishStatus) => setStatus({ draft: finishedDraft, status: next });
+    const show = (next: FinishStatus) => setStatus({ key: finishKey, status: next });
 
     const attemptSync = async () => {
-      if (requestInFlight || cancelled || settled) return;
+      if (requestInFlight || controller.signal.aborted || settled) return;
       requestInFlight = true;
       clearTimeout(retryTimer);
       show({ kind: 'syncing', attempt, lastProblem: null });
       try {
-        const outcome = await syncFinishedWorkout(finishedDraft);
-        if (cancelled) return;
-        if (outcome.kind === 'synced') {
+        const result = await attemptFinish({
+          userId,
+          sessionId,
+          store,
+          flush,
+          markSynced,
+          send: (storedDraft) => syncFinishedWorkout(userId, storedDraft),
+          signal: controller.signal,
+        }).catch((error: unknown) => ({
+          kind: 'sent' as const,
+          outcome: { kind: 'retryable' as const, reason: error instanceof Error ? error.message : 'storage_error' },
+        }));
+        if (controller.signal.aborted || result.kind === 'aborted') return;
+        if (result.kind !== 'sent') {
           settled = true;
-          return reportSynced(outcome.summary);
+          if (result.kind === 'superseded') reportSuperseded(sessionId);
+          return;
         }
-        if (outcome.kind === 'rejected') {
-          settled = true;
-          return show({ kind: 'rejected', reason: outcome.reason });
+        const outcome = result.outcome;
+        if (outcome.kind === 'retryable') {
+          show({ kind: 'syncing', attempt, lastProblem: outcome.reason });
+          retryTimer = setTimeout(attemptSync, retryDelayMs(attempt++));
+          return;
         }
-        show({ kind: 'syncing', attempt, lastProblem: outcome.reason });
-        retryTimer = setTimeout(attemptSync, retryDelayMs(attempt++));
+        settled = true;
+        if (outcome.kind === 'synced') reportSynced(outcome.summary);
+        else if (outcome.kind === 'rejected') show({ kind: 'rejected', reason: outcome.reason });
+        else if (outcome.kind === 'needs_sign_in') await signOutKeepingDrafts();
       } finally {
         requestInFlight = false;
       }
@@ -55,14 +90,14 @@ export function useFinishSync(draft: WorkoutDraft | null, onSynced: (summary: Se
     window.addEventListener('online', attemptSync);
     const firstAttempt = setTimeout(attemptSync, 0);
     return () => {
-      cancelled = true;
+      controller.abort();
       clearTimeout(firstAttempt);
       clearTimeout(retryTimer);
       window.removeEventListener('online', attemptSync);
     };
-  }, [finishedDraft]);
+  }, [userId, sessionId, finishKey, store, flush, markSynced]);
 
-  if (!finishedDraft || status?.draft !== finishedDraft)
-    return finishedDraft ? { kind: 'syncing', attempt: 0, lastProblem: null } : IDLE;
-  return status.status;
+  const retryNow = () => setRetryNonce((nonce) => nonce + 1);
+  if (!finishKey) return { status: IDLE, retryNow };
+  return { status: status?.key === finishKey ? status.status : FIRST_ATTEMPT, retryNow };
 }

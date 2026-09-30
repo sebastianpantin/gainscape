@@ -1,35 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
-
-const password = 'correct-horse-battery';
-
-async function register(page: Page, username: string) {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'New here? Create an account' }).click();
-  await page.getByLabel('Username').fill(username);
-  await page.getByLabel('Email').fill(`${username}@example.test`);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
-}
-
-async function logExercise(
-  page: Page,
-  search: string,
-  exerciseName: string,
-  sets: { weightKg?: number; reps: number }[],
-) {
-  await page.getByLabel('Search exercises').fill(search);
-  await page.getByRole('button', { name: new RegExp(`^${exerciseName}\\b`) }).click();
-  const card = page.locator('section', { has: page.getByRole('heading', { name: exerciseName, exact: true }) });
-  for (let index = 1; index < sets.length; index++) await card.getByRole('button', { name: '+ Add set' }).click();
-  const rows = card.locator('li.set-row');
-  for (const [index, set] of sets.entries()) {
-    const row = rows.nth(index);
-    if (set.weightKg !== undefined) await row.getByLabel(/kg/).fill(String(set.weightKg));
-    await row.getByLabel('reps').fill(String(set.reps));
-    await row.getByRole('radio', { name: 'Hard' }).click();
-  }
-}
+import { expect, test } from '@playwright/test';
+import { logExercise, register } from './support/app.ts';
 
 test('bodyweight prompt, records and the collection log', async ({ page }) => {
   await register(page, `e2e_${Date.now().toString(36)}`);

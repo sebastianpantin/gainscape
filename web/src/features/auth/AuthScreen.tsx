@@ -1,5 +1,6 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase.ts';
+import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
 
 type Mode = 'sign-in' | 'register';
 
@@ -34,6 +35,18 @@ export function AuthScreen() {
   const [password, setPassword] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [keptWorkout, setKeptWorkout] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    openDraftStoreAndReconcile()
+      .then((store) => store.userIdsWithDrafts())
+      .then((userIds) => active && setKeptWorkout(userIds.length > 0))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -52,6 +65,11 @@ export function AuthScreen() {
   return (
     <main className="screen auth-screen">
       <h1 className="title">Gainscape</h1>
+      {keptWorkout && (
+        <p className="panel" role="status">
+          Your unsynced workout is saved on this device. Sign in to sync it.
+        </p>
+      )}
       <form className="panel stack" onSubmit={submit}>
         <h2>{mode === 'sign-in' ? 'Sign in' : 'Create account'}</h2>
         {mode === 'register' && (

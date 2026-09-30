@@ -1,6 +1,6 @@
 import type { EffortLevel } from '@domain/types.ts';
 import type { LoadType } from '../../lib/catalog.ts';
-import type { DraftSet } from '../../offline/workout-draft.ts';
+import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 
 interface SetRowProps {

@@ -7,6 +7,7 @@ import {
   db,
   domainCatalogFor,
   postCompleteSession,
+  resignedWithAnotherKey,
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
@@ -219,6 +220,15 @@ describe('complete-session rejections', () => {
   it('returns 401 without a user token', async () => {
     const response = await postCompleteSession('not-a-token', sessionPayload(threeSets(benchId, 0, 50, 'hard')));
     expect(response.status).toBe(401);
+  });
+
+  it('returns 401 invalid token for a token signed with another secret', async () => {
+    const user = await createTestUser();
+    const payload = sessionPayload(threeSets(benchId, 0, 50, 'hard'));
+    const response = await postCompleteSession(resignedWithAnotherKey(user.accessToken), payload);
+    expect(response.status).toBe(401);
+    expect(response.rawBody).toMatch(/invalid/i);
+    expect(await rowCountsFor(user.id)).toMatchObject({ sessions: 0, sets: 0 });
   });
 });
 

@@ -2,7 +2,7 @@ SUPABASE := npx supabase
 FUNCTIONS_PID := .functions-serve.pid
 FUNCTIONS_LOG := .functions-serve.log
 
-.PHONY: start stop reset functions dev types test typecheck lint format format-check check check-functions test-domain test-integration rebuild-caches sim sim-check e2e
+.PHONY: start stop reset functions dev types test typecheck lint format format-check check check-functions test-domain test-web test-integration rebuild-caches sim sim-check e2e
 
 start:
 	$(SUPABASE) start
@@ -56,6 +56,9 @@ rebuild-caches: functions
 test-domain:
 	npx vitest run tests/domain
 
+test-web:
+	npx vitest run tests/web
+
 test-integration: functions
 	npx vitest run tests/integration
 
@@ -70,4 +73,4 @@ sim:
 sim-check:
 	npx vitest run tests/balance
 
-test: check test-domain test-integration
+test: check test-domain test-web test-integration
