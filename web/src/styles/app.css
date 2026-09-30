@@ -327,3 +327,17 @@ fieldset {
   margin: 0;
   padding: 0;
 }
+
+.set-row.planned {
+  opacity: 0.6;
+}
+
+.done-toggle.selected {
+  background: var(--color-accent);
+  color: #000;
+}
+
+.program-exercise {
+  border-top: var(--border-width) solid var(--color-panel-border);
+  padding-top: var(--space-2);
+}

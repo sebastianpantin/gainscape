@@ -147,8 +147,12 @@ describe('function execution rights', () => {
       where n.nspname in ('public', 'private') and has_function_privilege('authenticated', p.oid, 'execute')
       order by p.proname`;
     expect(rows.map((row) => row.name)).toEqual([
+      'copy_program',
+      'delete_program',
+      'last_logged_sets',
       'reorder_pins',
       'save_custom_exercise',
+      'save_program',
       'set_custom_exercise_archived',
       'username_available',
     ]);

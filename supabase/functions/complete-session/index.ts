@@ -23,6 +23,7 @@ import {
   isUniqueViolation,
   loadUserState,
   lockUser,
+  ownedProgramDayId,
   type StoredSession,
 } from './session-store.ts';
 
@@ -66,6 +67,7 @@ async function processNewSession(
   const storedSummary = await insertCompletedSession(tx, {
     userId,
     payload,
+    programDayId: await ownedProgramDayId(tx, userId, payload.programDayId),
     timezone,
     balanceVersion: DEFAULT_BALANCE.version,
     summary,

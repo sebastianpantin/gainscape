@@ -3,6 +3,15 @@ alter function private.check_shares_after_exercise_skills_change() set search_pa
 alter function private.check_shares_after_exercise_insert() security definer;
 alter function private.check_shares_after_exercise_insert() set search_path = '';
 
+create function private.trimmed_name(raw text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select regexp_replace(raw, '^[\s\uFEFF\u200B]+|[\s\uFEFF\u200B]+$', '', 'g');
+$$;
+
 create function private.invalid_exercise()
 returns void
 language plpgsql
@@ -71,7 +80,7 @@ begin
   end loop;
 
   requested_id := (exercise ->> 'id')::uuid;
-  requested_name := regexp_replace(exercise ->> 'name', '^\s+|\s+$', '', 'g');
+  requested_name := private.trimmed_name(exercise ->> 'name');
   requested_load_type := (exercise ->> 'loadType')::public.load_type;
   requested_equipment := (exercise ->> 'equipment')::public.equipment;
   requested_shares := exercise -> 'shares';
@@ -209,6 +218,7 @@ revoke execute on function public.save_custom_exercise(jsonb) from public, anon;
 revoke execute on function public.set_custom_exercise_archived(uuid, boolean) from public, anon;
 revoke execute on function public.reorder_pins(uuid[]) from public, anon;
 revoke execute on function private.invalid_exercise() from public, anon, authenticated;
+revoke execute on function private.trimmed_name(text) from public, anon, authenticated;
 grant execute on function public.save_custom_exercise(jsonb) to authenticated;
 grant execute on function public.set_custom_exercise_archived(uuid, boolean) to authenticated;
 grant execute on function public.reorder_pins(uuid[]) to authenticated;

@@ -9,6 +9,7 @@ interface SetRowProps {
   set: DraftSet;
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   onRemove: () => void;
+  onToggleDone: () => void;
 }
 
 function clampedNumber(raw: string, fallback: number, lowest: number, highest: number): number {
@@ -41,9 +42,9 @@ function WeightField({ loadType, weightKg, onChange }: WeightFieldProps) {
   );
 }
 
-export function SetRow({ setNumber, loadType, set, onChange, onRemove }: SetRowProps) {
+export function SetRow({ setNumber, loadType, set, onChange, onRemove, onToggleDone }: SetRowProps) {
   return (
-    <li className="set-row">
+    <li className={set.done ? 'set-row' : 'set-row planned'}>
       <span className="set-number">{setNumber}</span>
       <WeightField loadType={loadType} weightKg={set.weightKg} onChange={(weightKg) => onChange({ weightKg })} />
       <label className="compact-field">
@@ -58,12 +59,23 @@ export function SetRow({ setNumber, loadType, set, onChange, onRemove }: SetRowP
           onChange={(event) => onChange({ reps: Math.round(clampedNumber(event.target.value, set.reps, 1, 100)) })}
         />
       </label>
+      <button
+        type="button"
+        className={`button done-toggle ${set.done ? 'selected' : ''}`}
+        aria-pressed={set.done}
+        aria-label={`Done set ${setNumber}`}
+        onClick={onToggleDone}
+      >
+        Done
+      </button>
       <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
         ✕
       </button>
       <EffortSelector
         selected={set.effortLevel}
-        onSelect={(effortLevel: EffortLevel | null) => onChange({ effortLevel })}
+        onSelect={(effortLevel: EffortLevel | null) =>
+          onChange(effortLevel === null ? { effortLevel } : { effortLevel, done: true })
+        }
       />
     </li>
   );

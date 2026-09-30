@@ -43,7 +43,7 @@ export interface DraftSession {
   ready: Promise<void>;
   changeDraft: (next: WorkoutDraft, options?: PutOptions) => void;
   updateDraft: (update: (current: WorkoutDraft) => WorkoutDraft | null) => WorkoutDraft | null;
-  startWorkout: (fresh: () => WorkoutDraft) => Promise<void>;
+  startWorkout: (fresh: () => WorkoutDraft) => Promise<boolean>;
   discardDraft: (sessionId: string) => void;
   markSynced: (sessionId: string) => Promise<void>;
   reload: () => Promise<void>;
@@ -188,12 +188,16 @@ export function createDraftSession({
     return next;
   };
 
-  const startWorkout = (fresh: () => WorkoutDraft) =>
-    enqueue(async (store) => {
+  const startWorkout = async (fresh: () => WorkoutDraft) => {
+    let startedFresh = false;
+    await enqueue(async (store) => {
       const record = await store.get(userId);
       if (record?.kind === 'draft') return adopt(record);
       changeDraft(fresh());
+      startedFresh = true;
     });
+    return startedFresh;
+  };
 
   const discardDraft = (sessionId: string) => {
     showDraft(null);

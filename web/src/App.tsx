@@ -2,6 +2,8 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-do
 import { AuthScreen } from './features/auth/AuthScreen.tsx';
 import { CollectionScreen } from './features/collection/CollectionScreen.tsx';
 import { ExercisesScreen } from './features/exercises/ExercisesScreen.tsx';
+import { ProgramEditor } from './features/programs/ProgramEditor.tsx';
+import { ProgramsScreen } from './features/programs/ProgramsScreen.tsx';
 import { SkillsScreen } from './features/skills/SkillsScreen.tsx';
 import { RevealScreen } from './features/summary/RevealScreen.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
@@ -40,6 +42,9 @@ export function App() {
         <NavLink to="/collection" className="tab">
           Collection
         </NavLink>
+        <NavLink to="/programs" className="tab">
+          Programs
+        </NavLink>
         <NavLink to="/exercises" className="tab">
           Exercises
         </NavLink>
@@ -53,6 +58,8 @@ export function App() {
         <Route path="/skills" element={<SkillsScreen userId={userId} />} />
         <Route path="/collection" element={<CollectionScreen userId={userId} />} />
         <Route path="/exercises" element={<ExercisesScreen />} />
+        <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
+        <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
