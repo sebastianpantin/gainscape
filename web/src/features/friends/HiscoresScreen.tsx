@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchSkills, type Skill } from '../../lib/catalog.ts';
 import { fetchHiscores } from '../../lib/social.ts';
-import { type HiscoreMetric, type HiscoreRow, rankHiscores } from '../../lib/social-rules.ts';
+import { type HiscoreMetric, type HiscoreRow, rankHiscores, skillMetric } from '../../lib/social-rules.ts';
 import { FriendsTabs } from './FriendsTabs.tsx';
 
 export function HiscoresScreen() {
@@ -29,7 +29,7 @@ export function HiscoresScreen() {
     { key: 'total', label: 'Total' },
     { key: 'combat', label: 'Combat' },
     { key: 'collection', label: 'Collection' },
-    ...(skills ?? []).map((skill) => ({ key: skill.key, label: skill.name })),
+    ...(skills ?? []).map((skill) => ({ key: skillMetric(skill.key), label: skill.name })),
   ];
   const ranked = skills && rows ? rankHiscores(rows, skills, metric) : [];
   const metricLabel = metrics.find((entry) => entry.key === metric)?.label ?? 'Total';

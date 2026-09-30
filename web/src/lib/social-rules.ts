@@ -58,7 +58,15 @@ export interface HiscoreSkill {
   combatWeight: number;
 }
 
-export type HiscoreMetric = 'total' | 'combat' | 'collection' | string;
+export type HiscoreMetric = 'total' | 'combat' | 'collection' | `skill:${string}`;
+
+export function skillMetric(skillKey: string): HiscoreMetric {
+  return `skill:${skillKey}`;
+}
+
+function metricSkillKey(metric: HiscoreMetric): string | null {
+  return metric.startsWith('skill:') ? metric.slice('skill:'.length) : null;
+}
 
 export interface RankedHiscore {
   row: HiscoreRow;
@@ -113,12 +121,16 @@ function capitalized(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+const UNKNOWN_EXERCISE = 'exercise';
+
 function prText(item: FeedItem, unit: UnitPref): FeedText {
   const { payload } = item;
-  const name = textOf(payload.exerciseName);
-  const reps = numberOf(payload.reps) ?? 0;
-  if (payload.kind === 'bodyweight_reps') return { headline: `New ${name} record: ${reps} reps` };
-  const title = `New ${reps}RM ${name}`;
+  const name = textOf(payload.exerciseName) || UNKNOWN_EXERCISE;
+  const reps = numberOf(payload.reps);
+  if (payload.kind === 'bodyweight_reps') {
+    return { headline: reps === null ? `New ${name} record` : `New ${name} record: ${reps} reps` };
+  }
+  const title = reps === null ? `New ${name} record` : `New ${reps}RM ${name}`;
   const loadKg = numberOf(payload.loadKg);
   if (payload.weightsHidden === true || loadKg === null) {
     return { headline: title, detail: `Weights hidden by ${item.username}` };
@@ -138,18 +150,32 @@ export function feedText(item: FeedItem, unit: UnitPref): FeedText {
     case 'pr':
       return prText(item, unit);
     case 'level_up':
-      return { headline: `Reached level ${numberOf(payload.to)} ${textOf(payload.skillName)}` };
     case 'level_99':
-      return { headline: `Reached level ${numberOf(payload.to)} ${textOf(payload.skillName)}!` };
-    case 'drop':
-      return { headline: `Found ${textOf(payload.itemName)}`, detail: `${capitalized(textOf(payload.rarity))} drop` };
+      return { headline: levelHeadline(item.type, numberOf(payload.to), textOf(payload.skillName)) };
+    case 'drop': {
+      const rarity = textOf(payload.rarity);
+      const headline = textOf(payload.itemName) ? `Found ${textOf(payload.itemName)}` : 'Found an item';
+      return rarity ? { headline, detail: `${capitalized(rarity)} drop` } : { headline };
+    }
   }
 }
 
+function levelHeadline(type: 'level_up' | 'level_99', to: number | null, skillName: string): string {
+  const mark = type === 'level_99' ? '!' : '';
+  if (to === null) return `Levelled up ${skillName || 'a skill'}${mark}`;
+  return skillName ? `Reached level ${to} ${skillName}${mark}` : `Reached level ${to}${mark}`;
+}
+
+const RARITY_BADGES: Record<string, string> = { common: 'COM', uncommon: 'UNC', rare: 'RARE', legendary: 'LEG' };
+const LEVEL_99_BADGE = '99';
+const LEVEL_BADGE = 'LVL';
+
 export function feedBadge(item: FeedItem): string {
   if (item.type === 'pr') return 'PR';
-  if (item.type === 'drop') return textOf(item.payload.rarity).slice(0, 4).toUpperCase();
-  return String(numberOf(item.payload.to) ?? '');
+  if (item.type === 'drop') return RARITY_BADGES[textOf(item.payload.rarity)] ?? 'DROP';
+  if (item.type === 'level_99') return LEVEL_99_BADGE;
+  const to = numberOf(item.payload.to);
+  return to === null ? LEVEL_BADGE : String(to);
 }
 
 export function feedCursor(lastItem: FeedItem): FeedCursor {
@@ -188,13 +214,13 @@ export function hiscoreValue(row: HiscoreRow, skills: readonly HiscoreSkill[], m
     return combatLevel(skills.map((skill, index) => ({ level: levels[index], weight: skill.combatWeight })));
   }
   if (metric === 'collection') return collectionPercent(row.collectionFilled, row.collectionTotal);
-  return levelForXp(row.skillXp[metric] ?? 0);
+  return levelForXp(row.skillXp[metricSkillKey(metric) ?? ''] ?? 0);
 }
 
 function tiebreakXp(row: HiscoreRow, skills: readonly HiscoreSkill[], metric: HiscoreMetric): number {
   if (metric === 'total' || metric === 'combat') return totalXp(row, skills);
   if (metric === 'collection') return row.collectionFilled;
-  return row.skillXp[metric] ?? 0;
+  return row.skillXp[metricSkillKey(metric) ?? ''] ?? 0;
 }
 
 export function rankHiscores(

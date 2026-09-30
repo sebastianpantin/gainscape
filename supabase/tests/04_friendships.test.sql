@@ -129,7 +129,8 @@ select results_eq(
   'a withdrawn request leaves the requester list'
 );
 reset role;
-update public.friendships f set created_at = now() - interval '1 hour'
+update public.friendships f
+set created_at = now() - interval '1 hour', requested_at = now() - interval '1 hour'
 where f.requester_id = :'a' and f.addressee_id in (:'b', :'c');
 select tests.authenticate_as(:'a');
 select public.remove_friend(:'c');

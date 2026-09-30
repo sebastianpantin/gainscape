@@ -1,12 +1,18 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(47);
 
 select tests.create_user('fd_owner') as a \gset
 select tests.create_user('fd_friend') as b \gset
 select tests.create_user('fd_stranger') as c \gset
 select tests.create_user('fd_pending') as p \gset
 select tests.create_user('fd_banned') as z \gset
+select tests.create_user('fd_declined') as d \gset
+select tests.create_user('fd_unconfirmed', false) as u \gset
+select tests.create_user('fd_former') as x \gset
+select tests.make_friends(:'u', :'b');
+select tests.make_friends(:'x', :'a');
+insert into public.friendships (requester_id, addressee_id, status, responded_at) values (:'d', :'a', 'declined', now());
 select tests.make_friends(:'a', :'b');
 select tests.make_friends(:'z', :'b');
 insert into public.friendships (requester_id, addressee_id) values (:'p', :'a');
@@ -27,6 +33,15 @@ select tests.add_event(:'a', :'s1', 'level:legs', 'level_up', '{"skill": "legs",
 select tests.add_event(:'a', :'s2', 'level:core', 'level_up', '{"skill": "core", "from": 9, "to": 10}');
 select tests.add_event(:'a', :'s2', 'level:chest', 'level_up', '{"skill": "chest", "from": 19, "to": 20}');
 select tests.add_event(:'z', :'zs', 'level:legs', 'level_up', '{"skill": "legs", "from": 9, "to": 10}');
+select tests.add_session(:'u', now() - interval '1 hour') as us \gset
+select tests.add_event(:'u', :'us', 'level:legs', 'level_up', '{"skill": "legs", "from": 9, "to": 10}');
+select id as titan from public.items where key = 'titan_scraps' \gset
+select tests.add_event(:'a', :'s2', 'drop:' || gen_random_uuid(), 'drop', jsonb_build_object(
+  'dropId', gen_random_uuid(), 'itemId', :'titan', 'itemKey', 'titan_scraps', 'quantity', 2, 'source', 'pr')) as drop_event \gset
+
+create function pg_temp.keys_of(payload jsonb) returns text language sql as $$
+  select string_agg(k, ',' order by k) from jsonb_object_keys(payload) k;
+$$;
 update auth.users set banned_until = now() + interval '1 day' where id = :'z';
 
 create temporary table feed_page (event_id uuid, occurred_at timestamptz) on commit drop;
@@ -56,8 +71,28 @@ $$;
 select tests.authenticate_as(:'b');
 select is(
   (select count(*)::int from public.get_feed() f where f.user_id = :'a'),
-  5,
+  6,
   'a friend sees the owner events'
+);
+select is(
+  (select count(*)::int from public.get_feed() f where f.user_id = :'u'),
+  0,
+  'an unconfirmed friend events are hidden'
+);
+select is(
+  (select pg_temp.keys_of(f.payload) from public.get_feed() f where f.event_id = :'bench_event'),
+  'exerciseId,exerciseName,kind,loadKg,loadType,previousLoadKg,previousReps,reps,weightsHidden',
+  'a friend sees exactly the PR keys while weights are shown'
+);
+select is(
+  (select pg_temp.keys_of(f.payload) from public.get_feed() f where f.event_id = :'level_event'),
+  'from,skill,skillName,to',
+  'a friend sees exactly the level keys'
+);
+select is(
+  (select pg_temp.keys_of(f.payload) from public.get_feed() f where f.event_id = :'drop_event'),
+  'dropId,iconKey,itemId,itemKey,itemName,quantity,rarity,source,tier',
+  'a friend sees exactly the drop keys'
 );
 select is(
   (select count(*)::int from public.get_feed() f where f.user_id = :'z'),
@@ -101,6 +136,11 @@ select is(
   100::numeric,
   'the bodyweight-plus total is shown while bodyweight is shown'
 );
+select is(
+  (select pg_temp.keys_of(f.payload) from public.get_feed() f where f.event_id = :'dip_event'),
+  'exerciseId,exerciseName,kind,loadKg,loadType,previousLoadKg,previousReps,reps,totalLoadKg,weightsHidden',
+  'a friend sees exactly the PR keys with the total while bodyweight is shown'
+);
 reset role;
 
 update public.profiles set show_weights = false, show_bodyweight = false where id = :'a';
@@ -115,6 +155,11 @@ select ok(
 select ok(
   (select (f.payload ->> 'weightsHidden')::boolean from public.get_feed() f where f.event_id = :'bench_event'),
   'weightsHidden is set'
+);
+select is(
+  (select pg_temp.keys_of(f.payload) from public.get_feed() f where f.event_id = :'bench_event'),
+  'exerciseId,exerciseName,kind,loadType,previousReps,reps,weightsHidden',
+  'a friend sees exactly the PR keys while weights are hidden'
 );
 reset role;
 update public.profiles set show_bodyweight = true where id = :'a';
@@ -147,12 +192,17 @@ select ok(
   and (select (f.payload ->> 'totalLoadKg')::numeric = 100 from public.get_feed() f where f.event_id = :'dip_event'),
   'the owner always sees every load'
 );
-select throws_ok(
-  format('select public.set_gz(%L, true)', :'bench_event'),
-  'P0002',
-  'event_not_found',
-  'nobody can gz their own event'
+select is(
+  (select pg_temp.keys_of(f.payload) from public.get_feed() f where f.event_id = :'dip_event'),
+  'exerciseId,exerciseName,kind,loadKg,loadType,previousLoadKg,previousReps,reps,totalLoadKg,weightsHidden',
+  'the owner sees exactly the PR keys with every load'
 );
+select is(
+  (select pg_temp.keys_of(f.payload) from public.get_feed() f where f.event_id = :'drop_event'),
+  'dropId,iconKey,itemId,itemKey,itemName,quantity,rarity,source,tier',
+  'the owner sees exactly the drop keys'
+);
+select is(public.set_gz(:'bench_event', true), '{"status": "not_found"}'::jsonb, 'nobody can gz their own event');
 reset role;
 
 select tests.authenticate_as(:'b');
@@ -187,11 +237,25 @@ select is(
   array[:'c'::uuid],
   'a stranger only ranks themself'
 );
-select throws_ok(
-  format('select public.set_gz(%L, true)', :'bench_event'),
-  'P0002',
-  'event_not_found',
-  'a stranger cannot gz'
+select is(public.set_gz(:'bench_event', true), '{"status": "not_found"}'::jsonb, 'a stranger cannot gz');
+select is(public.set_gz(:'bench_event', false), '{"status": "not_found"}'::jsonb, 'a stranger cannot read a gz count');
+reset role;
+select is(
+  (select sum(h.hits)::int from private.rate_limit_hits h where h.subject = :'c' and h.bucket = 'gz_minute'),
+  2,
+  'gz misses count against the limit'
+);
+select tests.authenticate_as(:'d');
+select is((select count(*)::int from public.get_feed() f where f.user_id = :'a'), 0, 'a declined requester sees no events');
+reset role;
+select tests.authenticate_as(:'x');
+select is(public.set_gz(:'bench_event', true) ->> 'status', 'ok', 'a friend gives gz');
+select public.remove_friend(:'a');
+select is(public.set_gz(:'bench_event', true), '{"status": "not_found"}'::jsonb, 'an ex-friend cannot give gz');
+select is(
+  public.set_gz(:'bench_event', false) - 'eventId',
+  '{"status": "ok", "given": false, "gzCount": 0}'::jsonb,
+  'an ex-friend can take back their gz'
 );
 reset role;
 select tests.authenticate_as(:'p');

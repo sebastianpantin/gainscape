@@ -266,6 +266,7 @@ as $$
 declare
   caller uuid := auth.uid();
   owner_id uuid;
+  visible boolean;
   total int;
 begin
   if caller is null or not private.account_active(caller) then
@@ -274,22 +275,26 @@ begin
   perform private.take_rate_limit('gz_minute', caller);
 
   select e.user_id into owner_id from public.events e where e.id = set_gz.event_id;
-  if owner_id is null
-     or owner_id = caller
-     or not private.are_friends(caller, owner_id)
-     or not private.account_active(owner_id) then
-    raise exception 'event_not_found' using errcode = 'no_data_found';
-  end if;
+  visible := owner_id is not null
+    and owner_id <> caller
+    and private.are_friends(caller, owner_id)
+    and private.account_active(owner_id);
 
   if set_gz.given then
+    if not visible then
+      return jsonb_build_object('status', 'not_found');
+    end if;
     insert into public.reactions (event_id, user_id) values (set_gz.event_id, caller)
     on conflict on constraint reactions_pkey do nothing;
   else
     delete from public.reactions r where r.event_id = set_gz.event_id and r.user_id = caller;
+    if not found and not visible then
+      return jsonb_build_object('status', 'not_found');
+    end if;
   end if;
 
   select count(*)::int into total from public.reactions r where r.event_id = set_gz.event_id;
-  return jsonb_build_object('eventId', set_gz.event_id, 'given', set_gz.given, 'gzCount', total);
+  return jsonb_build_object('status', 'ok', 'eventId', set_gz.event_id, 'given', set_gz.given, 'gzCount', total);
 end;
 $$;
 

@@ -19,23 +19,40 @@ interface FriendPreviewScreenProps {
 
 const TOP_SKILL_COUNT = 3;
 
+type ViewState =
+  | { status: 'loading' }
+  | { status: 'failed'; problem: string }
+  | { status: 'ready'; skills: Skill[]; profile: ProfileView };
+
 export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
   const { state, replace } = useProfile(userId);
   const { unitPref } = usePreferences();
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [view, setView] = useState<{ skills: Skill[]; profile: ProfileView } | null>(null);
+  const [view, setView] = useState<ViewState>({ status: 'loading' });
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
     let active = true;
     Promise.all([fetchSkills(), fetchProfileView(userId)]).then(
-      ([skills, profile]) => active && profile && setView({ skills, profile }),
-      (error: Error) => active && setProblem(error.message),
+      ([skills, profile]) =>
+        active &&
+        setView(
+          profile
+            ? { status: 'ready', skills, profile }
+            : { status: 'failed', problem: 'Your profile could not be loaded.' },
+        ),
+      (error: Error) => active && setView({ status: 'failed', problem: error.message }),
     );
     return () => {
       active = false;
     };
-  }, [userId]);
+  }, [userId, reloadNonce]);
+
+  const retryView = () => {
+    setView({ status: 'loading' });
+    setReloadNonce((nonce) => nonce + 1);
+  };
 
   return (
     <main className="screen stack">
@@ -45,14 +62,24 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
         </Link>
         <h1 className="title">What friends see</h1>
       </div>
-      {state.status === 'loading' && <p>Loading…</p>}
+      {(state.status === 'loading' || (state.status === 'ready' && view.status === 'loading')) && <p>Loading…</p>}
       {state.status === 'failed' && (
         <p className="problem" role="alert">
           {state.problem}
         </p>
       )}
+      {view.status === 'failed' && (
+        <section className="panel stack">
+          <p className="problem" role="alert">
+            {view.problem}
+          </p>
+          <button className="button" type="button" onClick={retryView}>
+            Retry
+          </button>
+        </section>
+      )}
       {state.status === 'ready' &&
-        view &&
+        view.status === 'ready' &&
         (() => {
           const { profile } = state.bundle;
           const standing = standingOfView(view.skills, view.profile);
@@ -114,6 +141,11 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
                 <span className="pixel" data-testid="preview-record">
                   {profile.showWeights ? `New 8RM Back Squat: ${formatWeight(110, unitPref)}` : 'New 8RM Back Squat'}
                 </span>
+                {!profile.showWeights && (
+                  <span className="muted tiny" data-testid="preview-hidden-detail">
+                    Weights hidden by {profile.username}
+                  </span>
+                )}
                 <span className="pixel" data-testid="preview-bodyweight-record">
                   {!profile.showWeights
                     ? 'New 5RM Weighted Dip'

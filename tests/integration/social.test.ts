@@ -217,7 +217,7 @@ describe('feed end to end', () => {
     expect(hidden.payload).not.toHaveProperty('loadKg');
 
     const gz = await viewer.client.rpc('set_gz', { event_id: pr.event_id, given: true });
-    expect(gz.data).toEqual({ eventId: pr.event_id, given: true, gzCount: 1 });
+    expect(gz.data).toEqual({ status: 'ok', eventId: pr.event_id, given: true, gzCount: 1 });
     expect(prOf(await feedOf(lifter))).toMatchObject({ gz_count: 1, is_own: true, gz_given: false });
 
     const edited = await postFunction('edit-session', lifter.accessToken, {
