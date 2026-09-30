@@ -25,6 +25,7 @@ import {
   placeholderSetRow,
   type StoredSession,
   storedSummary,
+  tombstoneOwner,
 } from '../_shared/stores/sessions.ts';
 import { newSetRow } from '../_shared/stores/set-columns.ts';
 import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
@@ -95,6 +96,9 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       warnIfResubmissionDiffers(existing, payload);
       return existing.summary;
     }
+    const deletedBy = await tombstoneOwner(tx, payload.id);
+    if (deletedBy === userId) throw new HttpError(410, 'session_deleted');
+    if (deletedBy !== null) throw new HttpError(409, 'session_id_conflict');
 
     const now = new Date();
     assertPlausibleTiming(payload, now);

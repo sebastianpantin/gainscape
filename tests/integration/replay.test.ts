@@ -140,6 +140,11 @@ describe('out-of-order sync', () => {
     expect((await storedSummary(late.id)).prs).toEqual([
       { exerciseId: benchId, kind: 'rep_max', reps: 5, loadKg: 100, previousLoadKg: 60, previousReps: null },
     ]);
+
+    const retry = await sync(user, late);
+    expect(retry.body).toEqual(await storedSummary(late.id));
+    expect(retry.body.prs).toHaveLength(1);
+    expect(retry.rawBody).not.toBe(lateResponse.rawBody);
   });
 
   it('judges records against earlier sessions only', async () => {

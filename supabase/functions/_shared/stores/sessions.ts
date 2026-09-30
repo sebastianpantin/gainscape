@@ -1,5 +1,12 @@
 import type { JsonValue, Transaction } from '../db.ts';
-import { type BalanceConfig, resolveEffort, type SessionSummary, type SetInput } from '../domain/index.ts';
+import {
+  type BalanceConfig,
+  type EffortInputType,
+  resolveEffort,
+  type SessionKey,
+  type SessionSummary,
+  type SetInput,
+} from '../domain/index.ts';
 import { HttpError } from '../http.ts';
 
 export interface StoredSession {
@@ -39,6 +46,68 @@ export async function findSession(tx: Transaction, sessionId: string): Promise<S
     where s.id = ${sessionId}
     group by s.id`;
   return row ? { userId: row.user_id, summary: row.summary, setIds: row.set_ids } : null;
+}
+
+export interface OwnedSession {
+  userId: string;
+  key: SessionKey;
+  historyOnly: boolean;
+  revision: number;
+  notes: string | null;
+  summary: SessionSummary;
+}
+
+export async function loadOwnedSession(
+  tx: Transaction,
+  userId: string,
+  sessionId: string,
+): Promise<OwnedSession | null> {
+  const [row] = await tx`
+    select user_id, started_at, history_only, revision, notes, summary
+    from public.sessions where id = ${sessionId}`;
+  if (!row || row.user_id !== userId) return null;
+  return {
+    userId: row.user_id,
+    key: { id: sessionId, startedAt: new Date(row.started_at).toISOString() },
+    historyOnly: row.history_only,
+    revision: row.revision,
+    notes: row.notes,
+    summary: row.summary,
+  };
+}
+
+export interface StoredSet {
+  id: string;
+  exerciseId: string;
+  position: number;
+  weightKg: number;
+  effectiveLoadKg: number;
+  reps: number;
+  isWarmup: boolean;
+  effortInputType: EffortInputType | null;
+  effortValue: number | null;
+}
+
+export async function loadStoredSets(tx: Transaction, sessionId: string): Promise<StoredSet[]> {
+  const rows = await tx`
+    select id, exercise_id, position, weight_kg, effective_load_kg, reps, is_warmup, effort_input_type, effort_value
+    from public.sets where session_id = ${sessionId} order by position`;
+  return rows.map((row) => ({
+    id: row.id,
+    exerciseId: row.exercise_id,
+    position: row.position,
+    weightKg: Number(row.weight_kg),
+    effectiveLoadKg: Number(row.effective_load_kg),
+    reps: row.reps,
+    isWarmup: row.is_warmup,
+    effortInputType: row.effort_input_type,
+    effortValue: row.effort_value === null ? null : Number(row.effort_value),
+  }));
+}
+
+export async function tombstoneOwner(tx: Transaction, sessionId: string): Promise<string | null> {
+  const [row] = await tx`select user_id from public.deleted_sessions where id = ${sessionId}`;
+  return row?.user_id ?? null;
 }
 
 export async function assertSetIdsUnused(tx: Transaction, setIds: string[]): Promise<void> {
