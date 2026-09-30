@@ -250,6 +250,36 @@ describe('export-data and declined requests', () => {
     const afterWithdraw = await post('export-data', requester.accessToken, {});
     expect(afterWithdraw.body.friendships).toEqual([]);
   });
+
+  it('exports a re-sent request the same way whether it was declined or still pending', async () => {
+    const [requester, decliner, ignorer] = await Promise.all([createTestUser(), createTestUser(), createTestUser()]);
+    for (const target of [decliner, ignorer]) {
+      await requester.client.rpc('send_friend_request', { username: target.username });
+    }
+    await decliner.client.rpc('respond_friend_request', { requester_id: requester.id, accept: false });
+    const [first] = await db`select created_at from public.friendships where requester_id = ${requester.id} limit 1`;
+    for (const target of [decliner, ignorer]) {
+      expect((await requester.client.rpc('remove_friend', { other_id: target.id })).error).toBeNull();
+      const resent = await requester.client.rpc('send_friend_request', { username: target.username });
+      expect(resent.data).toMatchObject({ status: 'sent', friend: { userId: target.id } });
+    }
+
+    const exported = await post('export-data', requester.accessToken, {});
+    const shape = (row: Record<string, unknown>) => ({
+      ...row,
+      otherUserId: null,
+      otherUsername: null,
+      createdAt: null,
+    });
+    const byTarget = new Map(
+      exported.body.friendships.map((row: Record<string, unknown>) => [row.otherUserId as string, row]),
+    );
+    const declinedRow = byTarget.get(decliner.id) as Record<string, unknown>;
+    const pendingRow = byTarget.get(ignorer.id) as Record<string, unknown>;
+    expect(shape(declinedRow)).toEqual(shape(pendingRow));
+    expect(declinedRow).toMatchObject({ direction: 'outgoing', status: 'pending', respondedAt: null });
+    expect(Date.parse(declinedRow.createdAt as string)).toBeGreaterThan(new Date(first.created_at).getTime());
+  });
 });
 
 describe('delete-account', () => {

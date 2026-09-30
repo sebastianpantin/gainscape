@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(55);
+select plan(61);
 
 select tests.create_user('fr_alpha') as a \gset
 select tests.create_user('b_name') as b \gset
@@ -128,12 +128,42 @@ select results_eq(
   format('values (%L::uuid)', :'c'),
   'a withdrawn request leaves the requester list'
 );
-select is(public.send_friend_request('b_name') ->> 'status', 'already_pending', 're-sending a withdrawn request stays quiet');
+reset role;
+update public.friendships f set created_at = now() - interval '1 hour'
+where f.requester_id = :'a' and f.addressee_id in (:'b', :'c');
+select tests.authenticate_as(:'a');
+select public.remove_friend(:'c');
+create temporary table resent (target text primary key, result jsonb) on commit drop;
+grant all on resent to authenticated;
+insert into resent values
+  ('declined', public.send_friend_request('b_name')),
+  ('pending', public.send_friend_request('fr_charlie'));
+select is(
+  (select r.result - 'friend' from resent r where r.target = 'declined'),
+  (select r.result - 'friend' from resent r where r.target = 'pending'),
+  're-sending after cancelling a declined request answers like after cancelling a pending one'
+);
+select is(
+  (select r.result from resent r where r.target = 'declined'),
+  jsonb_build_object('status', 'sent', 'friend', jsonb_build_object(
+    'userId', :'b'::uuid, 'username', 'b_name', 'displayName', 'b_name', 'badgeColor', 'gold')),
+  're-sending a withdrawn request returns sent with the card'
+);
+select is(
+  (select r.result ->> 'status' from resent r where r.target = 'pending'),
+  'sent',
+  're-sending a cancelled pending request returns sent'
+);
+select results_eq(
+  'select relation, since > now() - interval ''1 minute'' from public.list_friends() order by username',
+  $$ values ('outgoing'::text, true), ('outgoing'::text, true) $$,
+  'both re-sent requests list as fresh outgoing requests'
+);
 reset role;
 select ok(
   (select f.status = 'declined' and f.withdrawn_at is null from public.friendships f
    where f.requester_id = :'a' and f.addressee_id = :'b'),
-  're-sending restores the declined row without notifying'
+  're-sending restores the declined row without notifying the addressee'
 );
 select tests.authenticate_as(:'a');
 select public.remove_friend(:'b');
@@ -170,6 +200,14 @@ select is(public.get_profile(:'banned'), null, 'a banned friend profile is hidde
 reset role;
 select tests.authenticate_as(:'banned');
 select throws_ok('select public.send_friend_request(''fr_charlie'')', '42501', 'not_authenticated', 'a banned caller cannot send');
+select throws_ok('select * from public.list_friends()', '42501', 'not_authenticated', 'a banned caller cannot list');
+select throws_ok(format('select public.get_profile(%L)', :'b'), '42501', 'not_authenticated', 'a banned caller cannot read profiles');
+select throws_ok(
+  format('select public.get_collection(%L)', :'b'),
+  '42501',
+  'not_authenticated',
+  'a banned caller cannot read collections'
+);
 select throws_ok(
   format('select public.respond_friend_request(%L, true)', :'b'),
   '42501',

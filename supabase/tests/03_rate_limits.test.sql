@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(26);
 
 insert into private.rate_limit_rules (bucket, max_hits, window_seconds) values ('test_five', 5, 3600);
 
@@ -120,17 +120,45 @@ reset role;
 select is(
   (select count(distinct h.client_key)::int from private.anon_rate_limit_hits h
    where h.bucket = 'username_check_anon_minute'
-     and h.client_key in (sha256(convert_to('10.0.0.1', 'UTF8')), sha256(convert_to('10.0.0.2', 'UTF8')))),
+     and h.client_key in (private.client_key('10.0.0.1'), private.client_key('10.0.0.2'))),
   2,
   'two clients are counted apart'
 );
 select is(
   (select h.hits from private.anon_rate_limit_hits h
-   where h.bucket = 'username_check_anon_global_minute' and h.client_key = sha256(convert_to('', 'UTF8'))
+   where h.bucket = 'username_check_anon_global_minute' and h.client_key = private.client_key(null)
      and h.window_start = to_timestamp(floor(extract(epoch from now()) / 60) * 60)),
   1,
   'a request without a client address counts against the global backstop'
 );
+
+select isnt(private.client_key('10.0.0.1'), sha256(convert_to('10.0.0.1', 'UTF8')), 'client keys are peppered');
+
+insert into private.anon_rate_limit_hits (bucket, client_key, window_start, hits)
+values ('username_check_anon_minute', private.client_key('192.0.2.50'), now() - interval '10 minutes', 7);
+select set_config('request.jwt.claims', '', true);
+set local role anon;
+select set_config('request.headers', '{"x-forwarded-for": "192.0.2.51"}', true);
+select public.username_available('free_125');
+reset role;
+select is(
+  (select count(*)::int from private.anon_rate_limit_hits h
+   where h.bucket = 'username_check_anon_minute' and h.window_start < to_timestamp(floor(extract(epoch from now()) / 60) * 60)),
+  0,
+  'a take clears stale windows of every client in the bucket'
+);
+
+select set_config('request.headers', '{"x-forwarded-for": "198.51.100.1, 203.0.113.7, 10.0.0.9"}', true);
+select is(private.request_client_ip(), '10.0.0.9', 'by default the right-most hop is the client');
+update private.client_ip_config set trusted_hops_from_right = 1;
+select is(private.request_client_ip(), '203.0.113.7', 'one trusted hop skips the proxy-added address');
+update private.client_ip_config set trusted_hops_from_right = 3;
+select is(private.request_client_ip(), null, 'skipping past the left-most hop gives no address');
+update private.client_ip_config set header_name = 'cf-connecting-ip', trusted_hops_from_right = 0;
+select set_config('request.headers', '{"x-forwarded-for": "198.51.100.1, 10.0.0.9", "cf-connecting-ip": " 203.0.113.44 "}', true);
+select is(private.request_client_ip(), '203.0.113.44', 'another header is taken as it is');
+select set_config('request.headers', '{"x-forwarded-for": "198.51.100.1"}', true);
+select is(private.request_client_ip(), null, 'a missing configured header gives no address');
 
 select * from finish();
 rollback;

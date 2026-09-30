@@ -32,7 +32,24 @@ create table private.anon_rate_limit_hits (
   primary key (bucket, client_key, window_start)
 );
 
+create index anon_rate_limit_hits_by_window on private.anon_rate_limit_hits (bucket, window_start);
+
+create table private.client_ip_config (
+  id boolean primary key default true check (id),
+  header_name text not null default 'x-forwarded-for' check (header_name ~ '^[a-z0-9-]+$'),
+  trusted_hops_from_right int not null default 0 check (trusted_hops_from_right between 0 and 10)
+);
+insert into private.client_ip_config default values;
+
+create table private.client_key_pepper (
+  id boolean primary key default true check (id),
+  pepper bytea not null check (octet_length(pepper) = 32)
+);
+insert into private.client_key_pepper (pepper) values (extensions.gen_random_bytes(32));
+
 alter table private.anon_rate_limit_hits enable row level security;
+alter table private.client_ip_config enable row level security;
+alter table private.client_key_pepper enable row level security;
 
 create function private.request_client_ip()
 returns text
@@ -41,15 +58,38 @@ stable
 set search_path = ''
 as $$
 declare
-  forwarded text := nullif(current_setting('request.headers', true), '')::jsonb ->> 'x-forwarded-for';
+  config_header text;
+  config_hops int;
+  header_value text;
   hops text[];
+  chosen int;
 begin
-  if forwarded is null then
+  select c.header_name, c.trusted_hops_from_right into config_header, config_hops
+  from private.client_ip_config c;
+  header_value := nullif(current_setting('request.headers', true), '')::jsonb ->> config_header;
+  if header_value is null then
     return null;
   end if;
-  hops := string_to_array(forwarded, ',');
-  return nullif(trim(hops[cardinality(hops)]), '');
+  if config_header <> 'x-forwarded-for' then
+    return nullif(trim(header_value), '');
+  end if;
+  hops := string_to_array(header_value, ',');
+  chosen := cardinality(hops) - config_hops;
+  if chosen < 1 then
+    return null;
+  end if;
+  return nullif(trim(hops[chosen]), '');
 end;
+$$;
+
+create function private.client_key(client_ip text)
+returns bytea
+language sql
+stable
+set search_path = ''
+as $$
+  select extensions.hmac(convert_to(coalesce(client_key.client_ip, ''), 'UTF8'), k.pepper, 'sha256')
+  from private.client_key_pepper k;
 $$;
 
 create function private.take_anon_rate_limit()
@@ -61,7 +101,7 @@ declare
   client_ip text := private.request_client_ip();
   bucket_name text := case when client_ip is null then 'username_check_anon_global_minute'
                            else 'username_check_anon_minute' end;
-  key bytea := pg_catalog.sha256(convert_to(coalesce(client_ip, ''), 'UTF8'));
+  key bytea := private.client_key(client_ip);
   rule_max_hits int;
   rule_window_seconds int;
   window_begin timestamptz;
@@ -79,7 +119,7 @@ begin
   returning h.hits into taken;
 
   delete from private.anon_rate_limit_hits h
-  where h.bucket = bucket_name and h.client_key = key and h.window_start < window_begin;
+  where h.bucket = bucket_name and h.window_start < window_begin;
 
   if taken > rule_max_hits then
     raise exception 'rate_limited' using
@@ -322,6 +362,7 @@ declare
   wanted text := lower(trim(send_friend_request.username));
   target uuid;
   existing public.friendships%rowtype;
+  reviving boolean := false;
 begin
   if caller is null or not private.account_active(caller) then
     raise exception 'not_authenticated' using errcode = 'insufficient_privilege';
@@ -354,15 +395,8 @@ begin
     return jsonb_build_object('status', 'already_pending');
   end if;
   if found and existing.requester_id = caller then
-    if private.outgoing_request_count(caller) >= private.max_outgoing_requests() then
-      return jsonb_build_object('status', 'limit_reached');
-    end if;
-    update public.friendships f
-    set withdrawn_at = null
-    where f.requester_id = caller and f.addressee_id = target;
-    return jsonb_build_object('status', 'already_pending');
-  end if;
-  if found and existing.withdrawn_at is not null then
+    reviving := true;
+  elsif found and existing.withdrawn_at is not null then
     delete from public.friendships f where f.requester_id = target and f.addressee_id = caller;
   elsif found then
     if private.accepted_friend_count(caller) >= private.max_friends()
@@ -384,7 +418,13 @@ begin
     return jsonb_build_object('status', 'limit_reached');
   end if;
 
-  insert into public.friendships (requester_id, addressee_id) values (caller, target);
+  if reviving then
+    update public.friendships f
+    set withdrawn_at = null, created_at = now()
+    where f.requester_id = caller and f.addressee_id = target;
+  else
+    insert into public.friendships (requester_id, addressee_id) values (caller, target);
+  end if;
   return jsonb_build_object('status', 'sent', 'friend', private.public_card(target));
 end;
 $$;
@@ -475,7 +515,7 @@ as $$
 declare
   caller uuid := auth.uid();
 begin
-  if caller is null then
+  if caller is null or not private.account_active(caller) then
     raise exception 'not_authenticated' using errcode = 'insufficient_privilege';
   end if;
   return query
@@ -511,7 +551,7 @@ declare
   caller uuid := auth.uid();
   result jsonb;
 begin
-  if caller is null then
+  if caller is null or not private.account_active(caller) then
     raise exception 'not_authenticated' using errcode = 'insufficient_privilege';
   end if;
   if not private.can_view_user(caller, get_profile.target) then
@@ -559,7 +599,7 @@ declare
   hide_loads boolean;
   result jsonb;
 begin
-  if caller is null then
+  if caller is null or not private.account_active(caller) then
     raise exception 'not_authenticated' using errcode = 'insufficient_privilege';
   end if;
   if not private.can_view_user(caller, get_collection.target) then
@@ -652,6 +692,7 @@ revoke execute on function private.accepted_friend_count(uuid) from public, anon
 revoke execute on function private.outgoing_request_count(uuid) from public, anon, authenticated;
 revoke execute on function private.request_client_ip() from public, anon, authenticated;
 revoke execute on function private.take_anon_rate_limit() from public, anon, authenticated;
+revoke execute on function private.client_key(text) from public, anon, authenticated;
 
 revoke execute on function public.send_friend_request(text) from public, anon;
 revoke execute on function public.respond_friend_request(uuid, boolean) from public, anon;
