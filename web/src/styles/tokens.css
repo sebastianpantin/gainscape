@@ -1,0 +1,27 @@
+:root {
+  --color-background: #2b2118;
+  --color-panel: #3e3529;
+  --color-panel-border: #5c4f3d;
+  --color-parchment: #d8c8a8;
+  --color-text: #f0e6d0;
+  --color-text-muted: #b3a58c;
+  --color-accent: #ffb000;
+  --color-xp: #7fd46a;
+  --color-danger: #e0554b;
+  --color-focus: #ffe27a;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+
+  --font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-size-small: 0.85rem;
+  --font-size-body: 1rem;
+  --font-size-title: 1.5rem;
+
+  --border-width: 2px;
+  --radius: 2px;
+  --tap-target: 44px;
+}

@@ -1,0 +1,8 @@
+node_modules/
+web/dist/
+test-results/
+playwright-report/
+package-lock.json
+supabase/.temp/
+supabase/.branches/
+web/src/lib/database.types.ts

@@ -1,0 +1,11 @@
+.functions-serve.pid
+.functions-serve.log
+node_modules/
+dist/
+web/dist/
+.env*.local
+supabase/.temp/
+supabase/.branches/
+.omc/
+test-results/
+playwright-report/
