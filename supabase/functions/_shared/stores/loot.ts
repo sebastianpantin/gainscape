@@ -1,4 +1,4 @@
-import type { Transaction } from '../db.ts';
+import type { JsonValue, Transaction } from '../db.ts';
 import {
   DEFAULT_LOOT,
   type DropSummary,
@@ -9,6 +9,8 @@ import {
   type LootTable,
   type LootTables,
   qualifies,
+  revocationReason,
+  type RevokeReason,
   rollSessionLoot,
   type RollKind,
 } from '../domain/index.ts';
@@ -181,11 +183,13 @@ export async function rollNewSessionLoot(
   await refreshSummaryDrops(tx, [sessionId]);
 }
 
+export type ActiveDrop = DropSummary & { sessionId: string };
+
 export async function loadActiveDrops(
   tx: Transaction,
   userId: string,
   sessionIds: readonly string[],
-): Promise<(DropSummary & { sessionId: string })[]> {
+): Promise<ActiveDrop[]> {
   if (sessionIds.length === 0) return [];
   const rows = await tx`
     select d.id, d.session_id, d.set_id, d.item_id, i.key as item_key, d.quantity, d.source
@@ -201,4 +205,81 @@ export async function loadActiveDrops(
     quantity: row.quantity,
     source: row.source,
   }));
+}
+
+export interface Revocation {
+  drop: ActiveDrop;
+  reason: RevokeReason;
+}
+
+export async function revokeDrops(tx: Transaction, userId: string, revocations: readonly Revocation[]): Promise<void> {
+  if (revocations.length === 0) return;
+  const itemIds = [...new Set(revocations.map(({ drop }) => drop.itemId))];
+  const held = await tx`
+    select item_id, quantity from public.user_items
+    where user_id = ${userId} and item_id = any(${itemIds}::uuid[])
+    order by item_id
+    for update`;
+  const balance = new Map(held.map((row) => [row.item_id as string, row.quantity as number]));
+  const updates = revocations.map(({ drop, reason }) => {
+    const available = balance.get(drop.itemId) ?? 0;
+    const revokedQuantity = Math.min(drop.quantity, available);
+    balance.set(drop.itemId, available - revokedQuantity);
+    return { id: drop.dropId, item_id: drop.itemId, reason, revoked_quantity: revokedQuantity };
+  });
+  const revoked = await tx`
+    update public.drops as target
+    set revoked_at = now(), revoke_reason = derived.reason, revoked_quantity = derived.revoked_quantity
+    from jsonb_to_recordset(${tx.json(updates as unknown as JsonValue)}) as derived (
+      id uuid,
+      reason public.revoke_reason,
+      revoked_quantity int
+    )
+    where target.id = derived.id and target.user_id = ${userId} and target.revoked_at is null
+    returning target.id`;
+  const revokedIds = new Set(revoked.map((row) => row.id as string));
+  const debited = updates.filter((update) => revokedIds.has(update.id) && update.revoked_quantity > 0);
+  if (debited.length === 0) return;
+  await tx`
+    insert into public.item_ledger ${tx(
+      debited.map((update) => ({
+        user_id: userId,
+        item_id: update.item_id,
+        delta: -update.revoked_quantity,
+        reason: 'revoke',
+        ref_id: update.id,
+      })),
+    )}`;
+  const totals = new Map<string, number>();
+  for (const update of debited) totals.set(update.item_id, (totals.get(update.item_id) ?? 0) + update.revoked_quantity);
+  await tx`
+    update public.user_items as target
+    set quantity = target.quantity - derived.amount, updated_at = now()
+    from jsonb_to_recordset(${tx.json([...totals].map(([item_id, amount]) => ({ item_id, amount })) as unknown as JsonValue)})
+      as derived (item_id uuid, amount int)
+    where target.user_id = ${userId} and target.item_id = derived.item_id`;
+}
+
+export async function revokeDisqualifiedDrops(
+  tx: Transaction,
+  userId: string,
+  current: readonly (LootCandidate & { sessionId: string })[],
+  replayedSessionIds: readonly string[],
+  deletedSessionIds: readonly string[],
+): Promise<ActiveDrop[]> {
+  const active = await loadActiveDrops(tx, userId, [...replayedSessionIds, ...deletedSessionIds]);
+  const currentBySetId = new Map(current.map((candidate) => [`${candidate.sessionId}:${candidate.setId}`, candidate]));
+  const deleted = new Set(deletedSessionIds);
+  const revocations = active.flatMap((drop) => {
+    const reason = revocationReason(
+      drop.source,
+      currentBySetId.get(`${drop.sessionId}:${drop.setId}`),
+      deleted.has(drop.sessionId),
+      DEFAULT_LOOT,
+    );
+    return reason === null ? [] : [{ drop, reason }];
+  });
+  await revokeDrops(tx, userId, revocations);
+  await refreshSummaryDrops(tx, replayedSessionIds);
+  return revocations.map(({ drop }) => drop);
 }

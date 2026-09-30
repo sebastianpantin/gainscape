@@ -9,6 +9,17 @@ import {
   rollSessionLoot,
 } from '@domain/index.ts';
 import {
+  aSet,
+  DAY_MS,
+  HOUR_MS,
+  localDateOf,
+  payloadAt,
+  postSession as post,
+  rollsOf,
+  startsOnOneLocalDay,
+  TIMEZONE,
+} from './loot-support.ts';
+import {
   activeDropSummaries,
   builtInExerciseId,
   createTestUser,
@@ -17,74 +28,10 @@ import {
   ledgerMismatches,
   lootSnapshot,
   lootTablesFromDb,
-  postCompleteSession,
   postFunction,
   rebuildCaches,
   type TestUser,
 } from './local-stack.ts';
-
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
-const TIMEZONE = 'Europe/Stockholm';
-
-type Effort = { type: 'level'; level: 'hard' | 'easy' | 'near_failure' } | null;
-
-interface SetShape {
-  id: string;
-  exerciseId: string;
-  position: number;
-  weightKg: number;
-  reps: number;
-  isWarmup: boolean;
-  effort: Effort;
-}
-
-const hard: Effort = { type: 'level', level: 'hard' };
-
-function aSet(exerciseId: string, position: number, weightKg: number, overrides: Partial<SetShape> = {}): SetShape {
-  return { id: randomUUID(), exerciseId, position, weightKg, reps: 5, isWarmup: false, effort: hard, ...overrides };
-}
-
-function payloadAt(startedAt: Date, sets: SetShape[]) {
-  return {
-    id: randomUUID(),
-    startedAt: startedAt.toISOString(),
-    endedAt: new Date(startedAt.getTime() + 30 * 60 * 1000).toISOString(),
-    notes: null,
-    sets,
-  };
-}
-
-function localDateOf(at: Date): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(at);
-}
-
-function startsOnOneLocalDay(count: number): Date[] {
-  for (let hoursAgo = 2; ; hoursAgo += 1) {
-    const starts = Array.from(
-      { length: count },
-      (_, index) => new Date(Date.now() - (hoursAgo + count - 1 - index) * HOUR_MS),
-    );
-    if (new Set(starts.map(localDateOf)).size === 1) return starts;
-  }
-}
-
-async function post(user: TestUser, payload: ReturnType<typeof payloadAt>) {
-  const response = await postCompleteSession(user.accessToken, payload);
-  expect(response.status, response.rawBody).toBe(200);
-  return response;
-}
-
-async function rollsOf(userId: string) {
-  return await db`
-    select session_id, set_id, kind, local_date::text, roll_index, drop_table_id, chance::float, hit, loot_version
-    from public.loot_rolls where user_id = ${userId} order by local_date, kind, roll_index`;
-}
 
 async function lootCounts(userId: string) {
   const [counts] = await db`
