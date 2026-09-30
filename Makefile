@@ -7,7 +7,7 @@ include .stack.env
 export $(shell sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' .stack.env)
 endif
 
-.PHONY: start stop reset functions dev types test typecheck lint format format-check check check-functions test-domain test-web test-integration rebuild-caches sim sim-check e2e
+.PHONY: start stop reset functions dev types test typecheck lint format format-check check check-functions catalog catalog-check test-catalog test-domain test-web test-integration rebuild-caches sim sim-check e2e
 
 start:
 	$(SUPABASE) start
@@ -48,7 +48,13 @@ format:
 format-check:
 	npx prettier --check --ignore-unknown .
 
-check: format-check lint typecheck check-functions
+check: format-check lint typecheck check-functions catalog-check
+
+catalog:
+	node scripts/catalog/generate.ts
+
+catalog-check:
+	node scripts/catalog/generate.ts --check
 
 check-functions:
 	@for function_dir in supabase/functions/*/; do \
@@ -57,6 +63,9 @@ check-functions:
 
 rebuild-caches: functions
 	node scripts/rebuild-caches.mjs
+
+test-catalog:
+	npx vitest run tests/catalog
 
 test-domain:
 	npx vitest run tests/domain
@@ -78,4 +87,4 @@ sim:
 sim-check:
 	npx vitest run tests/balance
 
-test: check test-domain test-web test-integration
+test: check test-catalog test-domain test-web test-integration

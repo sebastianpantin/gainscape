@@ -1,0 +1,15 @@
+tiers:
+  - { key: rookie, name: Rookie, rarity: common }
+  - { key: grinder, name: Grinder, rarity: common, upgrade_scraps: 8 }
+  - { key: tempered, name: Tempered, rarity: uncommon, upgrade_scraps: 8 }
+  - { key: forged, name: Forged, rarity: uncommon, upgrade_scraps: 6 }
+  - { key: titan, name: Titan, rarity: rare, upgrade_scraps: 6 }
+  - { key: mythic, name: Mythic, rarity: rare, upgrade_scraps: 4 }
+  - { key: ascendant, name: Ascendant, rarity: legendary, upgrade_scraps: 4 }
+slots:
+  - { key: belt, name: belt, icon: belt }
+  - { key: chalk, name: chalk, icon: chalk }
+  - { key: straps, name: straps, icon: straps }
+  - { key: sleeves, name: sleeves, icon: sleeves }
+  - { key: shoes, name: shoes, icon: shoes }
+  - { key: gloves, name: gloves, icon: gloves }

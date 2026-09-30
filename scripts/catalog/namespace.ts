@@ -1,0 +1,1 @@
+export const CATALOG_NAMESPACE = '67cd74e5-e6ca-47c9-831c-1f8d246d8948';

@@ -1,0 +1,67 @@
+- key: ppl
+  name: Push / Pull / Legs
+  days:
+    - key: push
+      name: Push
+      exercises:
+        - { exercise: barbell_bench_press, sets: 4, reps_min: 6, reps_max: 10 }
+        - { exercise: overhead_press, sets: 3, reps_min: 6, reps_max: 10 }
+        - { exercise: incline_dumbbell_press, sets: 3, reps_min: 8, reps_max: 12 }
+        - { exercise: lateral_raise, sets: 3, reps_min: 12, reps_max: 15 }
+        - { exercise: cable_triceps_pushdown, sets: 3, reps_min: 10, reps_max: 15 }
+    - key: pull
+      name: Pull
+      exercises:
+        - { exercise: barbell_row, sets: 4, reps_min: 6, reps_max: 10 }
+        - { exercise: lat_pulldown, sets: 3, reps_min: 8, reps_max: 12 }
+        - { exercise: seated_cable_row, sets: 3, reps_min: 8, reps_max: 12 }
+        - { exercise: face_pull, sets: 3, reps_min: 12, reps_max: 15 }
+        - { exercise: barbell_curl, sets: 3, reps_min: 8, reps_max: 12 }
+    - key: legs
+      name: Legs
+      exercises:
+        - { exercise: back_squat, sets: 4, reps_min: 5, reps_max: 8 }
+        - { exercise: romanian_deadlift, sets: 3, reps_min: 6, reps_max: 10 }
+        - { exercise: leg_press, sets: 3, reps_min: 10, reps_max: 15 }
+        - { exercise: leg_curl, sets: 3, reps_min: 10, reps_max: 15 }
+        - { exercise: standing_calf_raise, sets: 3, reps_min: 10, reps_max: 15 }
+- key: upper_lower
+  name: Upper / Lower
+  days:
+    - key: upper
+      name: Upper
+      exercises:
+        - { exercise: barbell_bench_press, sets: 4, reps_min: 6, reps_max: 10 }
+        - { exercise: barbell_row, sets: 4, reps_min: 6, reps_max: 10 }
+        - { exercise: overhead_press, sets: 3, reps_min: 6, reps_max: 10 }
+        - { exercise: lat_pulldown, sets: 3, reps_min: 8, reps_max: 12 }
+        - { exercise: barbell_curl, sets: 2, reps_min: 8, reps_max: 12 }
+        - { exercise: cable_triceps_pushdown, sets: 2, reps_min: 10, reps_max: 15 }
+    - key: lower
+      name: Lower
+      exercises:
+        - { exercise: back_squat, sets: 4, reps_min: 5, reps_max: 8 }
+        - { exercise: romanian_deadlift, sets: 3, reps_min: 6, reps_max: 10 }
+        - { exercise: leg_press, sets: 3, reps_min: 10, reps_max: 15 }
+        - { exercise: leg_curl, sets: 3, reps_min: 10, reps_max: 15 }
+        - { exercise: standing_calf_raise, sets: 3, reps_min: 10, reps_max: 15 }
+        - { exercise: cable_crunch, sets: 3, reps_min: 10, reps_max: 15 }
+- key: full_body_2x
+  name: Full Body 2x
+  days:
+    - key: a
+      name: Day A
+      exercises:
+        - { exercise: back_squat, sets: 3, reps_min: 5, reps_max: 8 }
+        - { exercise: barbell_bench_press, sets: 3, reps_min: 6, reps_max: 10 }
+        - { exercise: barbell_row, sets: 3, reps_min: 6, reps_max: 10 }
+        - { exercise: lateral_raise, sets: 2, reps_min: 12, reps_max: 15 }
+        - { exercise: cable_crunch, sets: 2, reps_min: 10, reps_max: 15 }
+    - key: b
+      name: Day B
+      exercises:
+        - { exercise: deadlift, sets: 3, reps_min: 3, reps_max: 6 }
+        - { exercise: overhead_press, sets: 3, reps_min: 6, reps_max: 10 }
+        - { exercise: pull_up, sets: 3, reps_min: 5, reps_max: 10 }
+        - { exercise: leg_press, sets: 3, reps_min: 10, reps_max: 15 }
+        - { exercise: hanging_leg_raise, sets: 2, reps_min: 8, reps_max: 12 }
