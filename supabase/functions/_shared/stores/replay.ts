@@ -3,6 +3,7 @@ import {
   type BalanceConfig,
   type Catalog,
   DEFAULT_STEPS,
+  type DropSummary,
   type LootCandidate,
   lootCandidates,
   NO_RECORDS,
@@ -16,6 +17,7 @@ import {
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
 import { loadCatalog } from './catalog.ts';
+import { type ActiveDrop, revokeDisqualifiedDrops } from './loot.ts';
 import {
   hasLaterSessions,
   hasStaleDerivedSessions,
@@ -36,6 +38,7 @@ export interface ReplayOutcome {
   setsRewritten: number;
   replayedSessionIds: string[];
   sets: ReplayedSet[];
+  revokedDrops: DropSummary[];
 }
 
 interface PriorState {
@@ -101,12 +104,35 @@ async function replaceSkillXp(tx: Transaction, userId: string, skillXp: Readonly
   if (rows.length > 0) await tx`insert into public.user_skills ${tx(rows)}`;
 }
 
+function inReplayOrder(
+  drops: readonly ActiveDrop[],
+  sets: readonly ReplayedSet[],
+  replayedSessionIds: readonly string[],
+) {
+  const sessionRank = new Map(replayedSessionIds.map((id, index) => [id, index]));
+  const positionOf = new Map(sets.map((set) => [set.setId, set.position]));
+  const rank = (drop: ActiveDrop) => sessionRank.get(drop.sessionId) ?? -1;
+  const position = (drop: ActiveDrop) => positionOf.get(drop.setId) ?? Number.MAX_SAFE_INTEGER;
+  const sourceOrder = (drop: ActiveDrop) => (drop.source === 'regular' ? 0 : 1);
+  return [...drops]
+    .sort((a, b) => rank(a) - rank(b) || position(a) - position(b) || sourceOrder(a) - sourceOrder(b))
+    .map((drop): DropSummary => ({
+      dropId: drop.dropId,
+      setId: drop.setId,
+      itemId: drop.itemId,
+      itemKey: drop.itemKey,
+      quantity: drop.quantity,
+      source: drop.source,
+    }));
+}
+
 export async function replayFrom(
   tx: Transaction,
   userId: string,
   from: SessionKey | null,
   touchedExerciseIds: readonly string[],
   cfg: BalanceConfig,
+  deletedSessionIds: readonly string[] = [],
 ): Promise<ReplayOutcome> {
   if (from !== null && (await hasStaleDerivedSessions(tx, userId, cfg.version))) {
     throw new HttpError(503, 'rebuild_required');
@@ -147,12 +173,18 @@ export async function replayFrom(
     cfg.version,
   );
 
+  const replayedSessionIds = replay.sessions.map((entry) => entry.session.id);
+  const sets = replay.sessions.flatMap((entry) =>
+    lootCandidates(entry.outputs.sets, catalog).map((candidate) => ({ ...candidate, sessionId: entry.session.id })),
+  );
+  const revoked =
+    from === null ? [] : await revokeDisqualifiedDrops(tx, userId, sets, replayedSessionIds, deletedSessionIds);
+
   return {
     sessionsReplayed: replay.sessions.length,
     setsRewritten: results.length,
-    replayedSessionIds: replay.sessions.map((entry) => entry.session.id),
-    sets: replay.sessions.flatMap((entry) =>
-      lootCandidates(entry.outputs.sets, catalog).map((candidate) => ({ ...candidate, sessionId: entry.session.id })),
-    ),
+    replayedSessionIds,
+    sets,
+    revokedDrops: inReplayOrder(revoked, sets, replayedSessionIds),
   };
 }

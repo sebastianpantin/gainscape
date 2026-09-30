@@ -17,7 +17,7 @@ start:
 
 functions:
 	@node scripts/ensure-loot-secret.mjs
-	@stamp="$$(sha256sum $(FUNCTIONS_ENV) | cut -d' ' -f1)"; \
+	@stamp="$$(cksum < $(FUNCTIONS_ENV))"; \
 	if [ -f $(FUNCTIONS_PID) ] && kill -0 $$(cat $(FUNCTIONS_PID)) 2>/dev/null && [ "$$(cat $(FUNCTIONS_STAMP) 2>/dev/null)" = "$$stamp" ]; then \
 		echo "Edge functions already served (pid $$(cat $(FUNCTIONS_PID)))."; \
 	else \

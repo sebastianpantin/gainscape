@@ -107,6 +107,14 @@ describe('catalog generator', () => {
     expect(retireStatement(statements, 'items')).toContain(plateCrab);
     expect(retireStatement(statements, 'drop_tables')).toContain(regular);
     expect(retireStatement(statements, 'recipes')).toContain(grinderBelt);
+    const catalog = expandCatalog(sources);
+    const listedIds = (table: string) =>
+      retireStatement(statements, table).match(/extensions\.uuid_generate_v5\([^)]*\)/g);
+    expect(listedIds('items')).toEqual(catalog.items.map((item) => idFor(catalogNames.item(item.key)).raw));
+    expect(listedIds('drop_tables')).toEqual(
+      catalog.dropTables.map((table) => idFor(catalogNames.dropTable(table.key)).raw),
+    );
+    expect(listedIds('recipes')).toEqual(catalog.recipes.map((recipe) => idFor(catalogNames.recipe(recipe.key)).raw));
 
     const trimmed = expandCatalog({
       ...sources,

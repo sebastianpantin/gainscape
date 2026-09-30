@@ -89,6 +89,7 @@ export interface FunctionResponseBody extends Partial<SessionSummary> {
   summary?: SessionSummary;
   revision?: number;
   replayedSessionIds?: string[];
+  revokedDrops?: DropSummary[];
   deleted?: boolean;
   error?: string;
   details?: unknown;
@@ -399,6 +400,18 @@ export async function grantDrop(
     await tx`
       insert into public.user_items (user_id, item_id, quantity) values (${userId}, ${item.id}, ${quantity})
       on conflict (user_id, item_id) do update set quantity = public.user_items.quantity + excluded.quantity`;
+    await tx`
+      update public.sessions as target
+      set summary = jsonb_set(target.summary, '{drops}', coalesce((
+        select jsonb_agg(jsonb_build_object(
+                 'dropId', d.id, 'setId', d.set_id, 'itemId', d.item_id, 'itemKey', i.key,
+                 'quantity', d.quantity, 'source', d.source)
+               order by st.position nulls last, d.source, d.id)
+        from public.drops d
+        join public.items i on i.id = d.item_id
+        left join public.sets st on st.id = d.set_id
+        where d.session_id = target.id and d.revoked_at is null), '[]'::jsonb))
+      where target.id = ${sessionId}`;
     return { dropId: drop.id, lootRollId: roll.id, itemId: item.id };
   });
 }

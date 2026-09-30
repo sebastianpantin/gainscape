@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  activeDropSummaries,
   ageSession,
   builtInExerciseId,
   createTestUser,
@@ -76,9 +77,16 @@ describe('delete-session', () => {
     await sync(user, s1);
     await sync(user, s2);
 
+    const activeDrops = await activeDropSummaries(s2.id);
+    expect(activeDrops.some((drop) => drop.source === 'pr')).toBe(true);
     const response = await remove(user, { sessionId: s2.id });
     expect(response.status, response.rawBody).toBe(200);
-    expect(response.body).toEqual({ sessionId: s2.id, deleted: true, replayedSessionIds: [] });
+    expect(response.body).toEqual({
+      sessionId: s2.id,
+      deleted: true,
+      replayedSessionIds: [],
+      revokedDrops: activeDrops,
+    });
 
     const onlyFirst = await createTestUser();
     await sync(onlyFirst, withFreshIds(s1));
@@ -87,6 +95,7 @@ describe('delete-session', () => {
     const retry = await remove(user, { sessionId: s2.id });
     expect(retry.status).toBe(200);
     expect(retry.body.replayedSessionIds).toEqual([]);
+    expect(retry.body.revokedDrops).toEqual([]);
 
     const before = await rowCountsFor(user.id);
     const resync = await postCompleteSession(user.accessToken, s2);
