@@ -5,6 +5,7 @@ import {
   builtInExerciseId,
   createTestUser,
   db,
+  lootSnapshot,
   normalizedSnapshot,
   postCompleteSession,
   rebuildCaches,
@@ -295,13 +296,19 @@ describe('replay guards', () => {
     ]);
     const [concurrent, inOrder] = await Promise.all([createTestUser(), createTestUser()]);
 
-    const responses = await Promise.all([
-      postCompleteSession(concurrent.accessToken, payloadFor(later)),
-      postCompleteSession(concurrent.accessToken, payloadFor(earlier)),
-    ]);
+    const payloads = [payloadFor(later), payloadFor(earlier)];
+    const responses = await Promise.all(
+      payloads.map((payload) => postCompleteSession(concurrent.accessToken, payload)),
+    );
     expect(responses.map((response) => response.status)).toEqual([200, 200]);
     await syncInOrder(inOrder, [earlier, later]);
 
     expect(await normalizedSnapshot(concurrent.id)).toEqual(await normalizedSnapshot(inOrder.id));
+
+    const loot = await lootSnapshot(concurrent.id);
+    expect(loot.lootRolls.length).toBeGreaterThan(0);
+    const retries = await Promise.all(payloads.map((payload) => postCompleteSession(concurrent.accessToken, payload)));
+    expect(retries.map((response) => response.status)).toEqual([200, 200]);
+    expect(await lootSnapshot(concurrent.id)).toEqual(loot);
   });
 });

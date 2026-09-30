@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { ITEM_ICON_KINDS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import { type CatalogData, catalogNames } from './load.ts';
 
 export const DENYLIST_PATH = join(import.meta.dirname, '../../tests/ip-denylist.txt');
@@ -111,13 +112,20 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
   }
   for (const { program, day } of days) {
     for (const entry of day.exercises) {
-      if (!exercisesByKey.has(entry.exercise)) {
+      const exercise = exercisesByKey.get(entry.exercise);
+      if (exercise === undefined) {
         problems.push(`program day "${program.key}:${day.key}" uses unknown exercise "${entry.exercise}"`);
+      } else if (exercise.requiresUnlock) {
+        problems.push(`program day "${program.key}:${day.key}" uses locked exercise "${entry.exercise}"`);
       }
     }
   }
 
   const itemsByKey = new Map(catalog.items.map((item) => [item.key, item]));
+  const iconKinds = new Set<string>(ITEM_ICON_KINDS);
+  for (const item of catalog.items) {
+    if (!iconKinds.has(item.icon)) problems.push(`item "${item.key}" has unknown icon "${item.icon}"`);
+  }
   const scrollsByExercise = new Map<string, string[]>();
   for (const item of catalog.items) {
     if (item.kind !== 'scroll') {
@@ -163,6 +171,7 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
     for (const item of duplicates(table.entries.map((entry) => entry.item))) {
       problems.push(`drop table "${table.key}" lists item "${item}" twice`);
     }
+    if (!table.retired && table.entries.length === 0) problems.push(`drop table "${table.key}" has no entries`);
   }
   for (const key of REQUIRED_TABLES) {
     if (!catalog.dropTables.some((table) => table.key === key && !table.retired)) {

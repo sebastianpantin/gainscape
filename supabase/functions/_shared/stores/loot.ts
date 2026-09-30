@@ -215,8 +215,14 @@ export interface Revocation {
   reason: RevokeReason;
 }
 
-export async function revokeDrops(tx: Transaction, userId: string, revocations: readonly Revocation[]): Promise<void> {
-  if (revocations.length === 0) return;
+export type RevokedActiveDrop = ActiveDrop & { revokedQuantity: number };
+
+export async function revokeDrops(
+  tx: Transaction,
+  userId: string,
+  revocations: readonly Revocation[],
+): Promise<RevokedActiveDrop[]> {
+  if (revocations.length === 0) return [];
   const itemIds = [...new Set(revocations.map(({ drop }) => drop.itemId))];
   const held = await tx`
     select item_id, quantity from public.user_items
@@ -241,8 +247,11 @@ export async function revokeDrops(tx: Transaction, userId: string, revocations: 
     where target.id = derived.id and target.user_id = ${userId} and target.revoked_at is null
     returning target.id`;
   const revokedIds = new Set(revoked.map((row) => row.id as string));
+  const revokedDrops = revocations.flatMap(({ drop }, index) =>
+    revokedIds.has(drop.dropId) ? [{ ...drop, revokedQuantity: updates[index].revoked_quantity }] : [],
+  );
   const debited = updates.filter((update) => revokedIds.has(update.id) && update.revoked_quantity > 0);
-  if (debited.length === 0) return;
+  if (debited.length === 0) return revokedDrops;
   await tx`
     insert into public.item_ledger ${tx(
       debited.map((update) => ({
@@ -261,6 +270,7 @@ export async function revokeDrops(tx: Transaction, userId: string, revocations: 
     from jsonb_to_recordset(${tx.json([...totals].map(([item_id, amount]) => ({ item_id, amount })) as unknown as JsonValue)})
       as derived (item_id uuid, amount int)
     where target.user_id = ${userId} and target.item_id = derived.item_id`;
+  return revokedDrops;
 }
 
 export async function revokeDisqualifiedDrops(
@@ -269,7 +279,7 @@ export async function revokeDisqualifiedDrops(
   current: readonly (LootCandidate & { sessionId: string })[],
   replayedSessionIds: readonly string[],
   deletedSessionIds: readonly string[],
-): Promise<ActiveDrop[]> {
+): Promise<RevokedActiveDrop[]> {
   const active = await loadActiveDrops(tx, userId, [...replayedSessionIds, ...deletedSessionIds]);
   const currentBySetId = new Map(current.map((candidate) => [`${candidate.sessionId}:${candidate.setId}`, candidate]));
   const deleted = new Set(deletedSessionIds);
@@ -282,7 +292,7 @@ export async function revokeDisqualifiedDrops(
     );
     return reason === null ? [] : [{ drop, reason }];
   });
-  await revokeDrops(tx, userId, revocations);
+  const revoked = await revokeDrops(tx, userId, revocations);
   await refreshSummaryDrops(tx, replayedSessionIds);
-  return revocations.map(({ drop }) => drop);
+  return revoked;
 }

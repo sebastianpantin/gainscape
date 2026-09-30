@@ -1,8 +1,8 @@
 import { z } from 'npm:zod@4.6.5';
-import { roundTo } from './domain/index.ts';
+import { MAX_SETS_PER_SESSION, roundTo } from './domain/index.ts';
 import { HttpError } from './http.ts';
 
-export const MAX_SETS_PER_SESSION = 200;
+export { MAX_SETS_PER_SESSION };
 
 export const effortSchema = z
   .discriminatedUnion('type', [

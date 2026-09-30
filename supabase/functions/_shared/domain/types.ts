@@ -49,6 +49,8 @@ export interface SessionInput {
 
 export const REP_MAX_SLOT_COUNT = 10;
 
+export const MAX_SETS_PER_SESSION = 200;
+
 export interface RepMaxSlot {
   loadKg: number;
   setId: string;
@@ -155,6 +157,10 @@ export interface DropSummary {
   itemKey: string;
   quantity: number;
   source: RollKind;
+}
+
+export interface RevokedDrop extends DropSummary {
+  revokedQuantity: number;
 }
 
 export interface SessionSummary {

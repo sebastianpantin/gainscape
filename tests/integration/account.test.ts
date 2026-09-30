@@ -37,6 +37,7 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'events', column: 'user_id' },
   { table: 'friendships', column: 'requester_id' },
   { table: 'friendships', column: 'addressee_id' },
+  { table: 'crafts', column: 'user_id' },
 ];
 
 async function post(name: string, accessToken: string | null, body: unknown) {
@@ -85,6 +86,11 @@ async function giveUserEverything(user: TestUser): Promise<void> {
     insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
     select ${user.id}, id, 3 from public.drop_tables where key = 'regular'
     on conflict (user_id, drop_table_id) do nothing`;
+  await grantDrop(user.id, keptSessionId, randomUUID(), 'rookie_belt', 1);
+  await grantDrop(user.id, keptSessionId, randomUUID(), 'grinder_scraps', 8);
+  const [recipe] = await db`select id from public.recipes where key = 'grinder_belt'`;
+  const crafted = await user.client.rpc('craft', { recipe_id: recipe.id });
+  expect(crafted.error).toBeNull();
   const removed = await postFunction('delete-session', user.accessToken, { sessionId: await logOneSession(user) });
   expect(removed.status).toBe(200);
   const benchId = await builtInExerciseId('barbell_bench_press');
@@ -200,6 +206,7 @@ describe('export-data', () => {
     expect(exported.userUnlocks).toHaveLength(counts.user_unlocks);
     expect(counts.user_unlocks).toBeGreaterThan(0);
     expect(exported.events).toHaveLength(counts.events);
+    expect(exported.crafts).toHaveLength(1);
     expect(
       exported.friendships.map((row: { direction: string; status: string }) => `${row.direction}:${row.status}`).sort(),
     ).toEqual(['incoming:accepted', 'outgoing:pending']);
@@ -261,6 +268,7 @@ describe('delete-account', () => {
       'item_ledger',
       'user_unlocks',
       'events',
+      'crafts',
       'friendships.requester_id',
       'friendships.addressee_id',
     ]) {

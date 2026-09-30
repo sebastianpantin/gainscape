@@ -14,4 +14,5 @@ export * from './collection.ts';
 export * from './edit-window.ts';
 export * from './rng.ts';
 export * from './loot.ts';
+export * from './crafting.ts';
 export * from './events.ts';

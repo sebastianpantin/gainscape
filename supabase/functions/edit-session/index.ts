@@ -4,10 +4,10 @@ import {
   carriedEffectiveLoadKg,
   type Catalog,
   DEFAULT_BALANCE,
-  type DropSummary,
   effectiveLoadForNewSet,
   isWithinEditWindow,
   resolveEffort,
+  type RevokedDrop,
   type SessionSummary,
 } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
@@ -33,7 +33,7 @@ interface EditResponse {
   summary: SessionSummary;
   revision: number;
   replayedSessionIds: string[];
-  revokedDrops: DropSummary[];
+  revokedDrops: RevokedDrop[];
 }
 
 function sameSet(requested: SetPayload, stored: StoredSet): boolean {
