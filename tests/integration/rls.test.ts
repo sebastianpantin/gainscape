@@ -217,6 +217,7 @@ describe('function execution rights', () => {
       order by p.proname`;
     expect(rows.map((row) => row.name)).toEqual([
       'copy_program',
+      'craft',
       'delete_program',
       'last_logged_sets',
       'reorder_pins',
@@ -455,5 +456,57 @@ describe('loot tables', () => {
       const { error } = await user.client.from('drop_luck').select('dry_rolls');
       expect(error?.code).toBe('42501');
     }
+  });
+});
+
+describe('crafts', () => {
+  let recipeId: string;
+
+  beforeAll(async () => {
+    [{ id: recipeId }] = await db`select id from public.recipes where key = 'grinder_belt'`;
+    await grantDrop(owner.id, ownerSessionId, randomUUID(), 'rookie_belt', 1);
+    await grantDrop(owner.id, ownerSessionId, randomUUID(), 'grinder_scraps', 8);
+    const crafted = await owner.client.rpc('craft', { recipe_id: recipeId });
+    expect(crafted.error).toBeNull();
+  });
+
+  async function ownerCrafts() {
+    return await db`select * from public.crafts where user_id = ${owner.id} order by id`;
+  }
+
+  it('insert into crafts is denied', async () => {
+    const before = await ownerCrafts();
+    const { error } = await owner.client.from('crafts').insert({ user_id: owner.id, recipe_id: recipeId });
+    expect(error).not.toBeNull();
+    expect(await ownerCrafts()).toEqual(before);
+  });
+
+  it('update of crafts is denied', async () => {
+    const before = await ownerCrafts();
+    const { error } = await owner.client.from('crafts').update({ recipe_id: recipeId }).eq('user_id', owner.id);
+    expect(error?.code).toBe('42501');
+    expect(await ownerCrafts()).toEqual(before);
+    expect(before.length).toBeGreaterThan(0);
+  });
+
+  it('delete from crafts is denied', async () => {
+    const before = await ownerCrafts();
+    const { error } = await owner.client.from('crafts').delete().eq('user_id', owner.id);
+    expect(error?.code).toBe('42501');
+    expect(await ownerCrafts()).toEqual(before);
+  });
+
+  it("hides another user's crafts", async () => {
+    const theirs = await stranger.client.from('crafts').select('id').eq('user_id', owner.id);
+    expect(theirs.error).toBeNull();
+    expect(theirs.data).toEqual([]);
+    const own = await owner.client.from('crafts').select('id');
+    expect(own.data?.length).toBe((await ownerCrafts()).length);
+  });
+
+  it('refuses anon a craft', async () => {
+    const { error } = await anon.rpc('craft', { recipe_id: recipeId });
+    expect(error).not.toBeNull();
+    expect(await ownerCrafts()).toHaveLength(1);
   });
 });

@@ -148,6 +148,16 @@ describe('catalog validation', () => {
     ],
     ['the rare table exists', (c) => (find(c.dropTables, 'rare').retired = true), /drop table "rare" is required/],
     [
+      'an active drop table has entries',
+      (c) => (find(c.dropTables, 'rare').entries = []),
+      /drop table "rare" has no entries/,
+    ],
+    [
+      'program days never use a locked variation',
+      (c) => (c.programs[0].days[0].exercises[0].exercise = 'pause_bench_press'),
+      /program day "ppl:push" uses locked exercise "pause_bench_press"/,
+    ],
+    [
       'no retired item appears in an active table',
       (c) => (find(c.items, 'plate_crab').retired = true),
       /drop table "rare" uses retired item "plate_crab"/,
@@ -178,6 +188,12 @@ describe('catalog validation', () => {
       problems.some((problem) => expected.test(problem)),
       problems.join('\n'),
     ).toBe(true);
+  });
+
+  it('accepts a retired drop table without entries', () => {
+    expect(
+      problemsAfter((c) => c.dropTables.push({ key: 'old_table', name: 'Old table', retired: true, entries: [] })),
+    ).toEqual([]);
   });
 
   it('matches denylisted terms as whole words only', () => {
