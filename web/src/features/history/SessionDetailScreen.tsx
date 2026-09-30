@@ -73,9 +73,11 @@ async function loadSession(sessionId: string): Promise<Loaded | null> {
   return { session, sets, exercises, original: editFromSession(session, sets, exercisesById) };
 }
 
+const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
+
 function removalText(drops: readonly { itemId: string; quantity: number }[], items: readonly CatalogItem[]): string {
   const described = describeDrops(drops, (itemId) => items.find((item) => item.id === itemId)?.name ?? 'an item');
-  return described && `This removes ${described} from your collection.`;
+  return described && `This may remove ${described} from your collection.`;
 }
 
 function removedText(
@@ -540,10 +542,16 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         </label>
       </fieldset>
       {setCount === 0 && <p className="hint">A workout needs at least one set. Delete it instead to remove it.</p>}
-      {changed && editWarning && (
-        <p className="notice" role="status" data-testid="edit-loot-warning">
-          {editWarning}
-        </p>
+      {changed && (
+        <div
+          className="notice"
+          role="status"
+          data-testid="edit-loot-warning"
+          style={{ flexDirection: 'column', alignItems: 'flex-start' }}
+        >
+          {editWarning && <p>{editWarning}</p>}
+          <p>{LATER_LOOT_NOTE}</p>
+        </div>
       )}
       <button className="button primary big" type="button" disabled={!canSave} onClick={() => void save(edit)}>
         {busy.kind === 'saving' ? 'Saving…' : 'Save changes'}
@@ -567,6 +575,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           <>
             <p>Delete this workout? This can't be undone. XP and records are recalculated without it.</p>
             {deleteWarning && <p data-testid="delete-loot-warning">{deleteWarning}</p>}
+            <p>{LATER_LOOT_NOTE}</p>
             <button className="button danger" type="button" disabled={working} onClick={() => void remove()}>
               {busy.kind === 'deleting' ? 'Deleting…' : 'Delete for good'}
             </button>

@@ -6,6 +6,10 @@ export const GEAR_SLOTS = ['belt', 'chalk', 'straps', 'sleeves', 'shoes', 'glove
 
 export type GearSlot = (typeof GEAR_SLOTS)[number];
 
+export const ITEM_ICON_KINDS = [...GEAR_SLOTS, 'scraps', 'pet', 'scroll'] as const;
+
+export type ItemIconKey = (typeof ITEM_ICON_KINDS)[number];
+
 export interface RecipeInput {
   itemId: string;
   quantity: number;

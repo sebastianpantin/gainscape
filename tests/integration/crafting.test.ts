@@ -182,6 +182,47 @@ describe('craft', () => {
     expect(await lootState(user.id)).toEqual(before);
   });
 
+  it('refuses a recipe whose output item is retired', async () => {
+    const user = await freshUser();
+    const recipe = await loadRecipe('titan_shoes');
+    await grant(user, await quietSession(user), { forged_shoes: 1, titan_scraps: 6 });
+    const before = await lootState(user.id);
+    await db`update public.items set retired_at = now() where id = ${recipe.outputItemId}`;
+    try {
+      expect((await craft(user, recipe.id)).error?.message).toBe('unknown_recipe');
+    } finally {
+      await db`update public.items set retired_at = null where id = ${recipe.outputItemId}`;
+    }
+    expect(await lootState(user.id)).toEqual(before);
+    expect((await craft(user, recipe.id)).error).toBeNull();
+  });
+
+  it('unlocks the exercise of a crafted scroll, once', async () => {
+    const user = await freshUser();
+    const recipe = await loadRecipe('ascendant_shoes');
+    const scrollId = itemIds.get('scroll_spider_curl')!;
+    const spiderCurlId = await builtInExerciseId('spider_curl');
+    await grant(user, await quietSession(user), { mythic_shoes: 2, ascendant_scraps: 8 });
+    const visible = async () =>
+      (await user.client.from('exercises').select('id').eq('id', spiderCurlId)).data?.length ?? 0;
+    expect(await visible()).toBe(0);
+    await db`update public.recipes set output_item_id = ${scrollId} where id = ${recipe.id}`;
+    try {
+      const first = await craft(user, recipe.id);
+      expect(first.error).toBeNull();
+      expect(first.data).toMatchObject({ itemId: scrollId, quantity: 1 });
+      const second = await craft(user, recipe.id);
+      expect(second.error).toBeNull();
+      expect(second.data).toMatchObject({ itemId: scrollId, quantity: 2 });
+    } finally {
+      await db`update public.recipes set output_item_id = ${recipe.outputItemId} where id = ${recipe.id}`;
+    }
+    expect(
+      await db`select exercise_id, item_id, source_drop_id from public.user_unlocks where user_id = ${user.id}`,
+    ).toEqual([{ exercise_id: spiderCurlId, item_id: scrollId, source_drop_id: null }]);
+    expect(await visible()).toBe(1);
+  });
+
   it('is not executable by anon', async () => {
     const { error } = await anon.rpc('craft', { recipe_id: grinderBelt.id });
     expect(error?.code).toBe('42501');

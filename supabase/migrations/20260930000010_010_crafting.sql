@@ -34,8 +34,10 @@ begin
 
   select r.* into chosen
   from public.recipes r
+  join public.items o on o.id = r.output_item_id
   where r.id = craft.recipe_id
     and r.retired_at is null
+    and o.retired_at is null
     and exists (select 1 from public.recipe_inputs i where i.recipe_id = r.id);
   if not found then
     raise exception 'unknown_recipe' using errcode = 'invalid_parameter_value';
@@ -79,6 +81,12 @@ begin
   on conflict (user_id, item_id) do update
   set quantity = held.quantity + excluded.quantity, updated_at = now()
   returning held.quantity into held_after;
+
+  insert into public.user_unlocks (user_id, exercise_id, item_id)
+  select caller, o.grants_exercise_id, o.id
+  from public.items o
+  where o.id = chosen.output_item_id and o.kind = 'scroll'
+  on conflict (user_id, exercise_id) do nothing;
 
   return jsonb_build_object('craftId', new_craft_id, 'itemId', chosen.output_item_id, 'quantity', held_after);
 end;

@@ -1,3 +1,5 @@
+import type { ItemIconKey } from '@domain/crafting.ts';
+
 interface Pixel {
   x: number;
   y: number;
@@ -72,8 +74,7 @@ export function TrophyIcon({ size = 36 }: { size?: number }) {
   return <PixelGrid pixels={TROPHY} cols={12} rows={12} size={size} />;
 }
 
-export type ItemIconKind =
-  'belt' | 'chalk' | 'straps' | 'sleeves' | 'shoes' | 'gloves' | 'scraps' | 'pet' | 'scroll' | 'locked';
+export type ItemIconKind = ItemIconKey | 'locked';
 
 function itemPixels(kind: ItemIconKind, color: string): Pixel[] {
   switch (kind) {
