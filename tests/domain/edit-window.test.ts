@@ -1,0 +1,15 @@
+import { describe, expect, it } from 'vitest';
+import { EDIT_WINDOW_DAYS, isWithinEditWindow } from '@domain/index.ts';
+
+const now = Date.parse('2026-09-30T12:00:00.000Z');
+const windowMs = EDIT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+
+describe('isWithinEditWindow', () => {
+  it('includes a session that started exactly 7 days ago', () => {
+    expect(isWithinEditWindow(new Date(now - windowMs).toISOString(), now)).toBe(true);
+  });
+
+  it('excludes a session that started 7 days and 1 ms ago', () => {
+    expect(isWithinEditWindow(new Date(now - windowMs - 1).toISOString(), now)).toBe(false);
+  });
+});

@@ -38,12 +38,18 @@ export async function loadRecords(
   return { repMaxes, bodyweightReps };
 }
 
-export async function saveRecords(
+export async function replaceRecordsFor(
   tx: Transaction,
   userId: string,
-  records: RecordState,
   exerciseIds: readonly string[],
+  records: RecordState,
 ): Promise<void> {
+  if (exerciseIds.length === 0) return;
+  await tx`delete from public.rep_maxes where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
+  await tx`
+    delete from public.bodyweight_rep_records
+    where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
+
   const repMaxRows = exerciseIds.flatMap((exerciseId) =>
     (records.repMaxes[exerciseId] ?? []).flatMap((slot, index) =>
       slot === null
@@ -61,13 +67,7 @@ export async function saveRecords(
           ],
     ),
   );
-  if (repMaxRows.length > 0) {
-    await tx`
-      insert into public.rep_maxes ${tx(repMaxRows)}
-      on conflict (user_id, exercise_id, reps) do update
-        set load_kg = excluded.load_kg, set_id = excluded.set_id,
-            achieved_at = excluded.achieved_at, exact_set_id = excluded.exact_set_id`;
-  }
+  if (repMaxRows.length > 0) await tx`insert into public.rep_maxes ${tx(repMaxRows)}`;
 
   const bodyweightRows = exerciseIds
     .filter((exerciseId) => records.bodyweightReps[exerciseId])
@@ -81,17 +81,5 @@ export async function saveRecords(
         achieved_at: record.achievedAt,
       };
     });
-  if (bodyweightRows.length > 0) {
-    await tx`
-      insert into public.bodyweight_rep_records ${tx(bodyweightRows)}
-      on conflict (user_id, exercise_id) do update
-        set max_reps = excluded.max_reps, set_id = excluded.set_id, achieved_at = excluded.achieved_at`;
-  }
-}
-
-export async function replaceAllRecords(tx: Transaction, userId: string, records: RecordState): Promise<void> {
-  await tx`delete from public.rep_maxes where user_id = ${userId}`;
-  await tx`delete from public.bodyweight_rep_records where user_id = ${userId}`;
-  const exerciseIds = [...new Set([...Object.keys(records.repMaxes), ...Object.keys(records.bodyweightReps)])];
-  await saveRecords(tx, userId, records, exerciseIds);
+  if (bodyweightRows.length > 0) await tx`insert into public.bodyweight_rep_records ${tx(bodyweightRows)}`;
 }

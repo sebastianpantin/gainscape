@@ -2,6 +2,11 @@ SUPABASE := npx supabase
 FUNCTIONS_PID := .functions-serve.pid
 FUNCTIONS_LOG := .functions-serve.log
 
+ifneq ($(wildcard .stack.env),)
+include .stack.env
+export $(shell sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' .stack.env)
+endif
+
 .PHONY: start stop reset functions dev types test typecheck lint format format-check check check-functions test-domain test-web test-integration rebuild-caches sim sim-check e2e
 
 start:

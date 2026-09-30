@@ -152,4 +152,5 @@ export interface SessionSummary {
   levelUps: LevelUp[];
   prs: PersonalRecordSummary[];
   drops: never[];
+  historyOnly?: true;
 }

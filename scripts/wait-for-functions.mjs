@@ -1,4 +1,4 @@
-const functionUrl = 'http://127.0.0.1:54321/functions/v1/complete-session';
+const functionUrl = `http://127.0.0.1:${process.env.SUPABASE_API_PORT ?? 54321}/functions/v1/complete-session`;
 const deadline = Date.now() + 120_000;
 
 async function functionsAreServed() {
