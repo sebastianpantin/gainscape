@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { AuthScreen } from './features/auth/AuthScreen.tsx';
 import { CollectionScreen } from './features/collection/CollectionScreen.tsx';
+import { ExercisesScreen } from './features/exercises/ExercisesScreen.tsx';
 import { SkillsScreen } from './features/skills/SkillsScreen.tsx';
 import { RevealScreen } from './features/summary/RevealScreen.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
@@ -39,6 +40,9 @@ export function App() {
         <NavLink to="/collection" className="tab">
           Collection
         </NavLink>
+        <NavLink to="/exercises" className="tab">
+          Exercises
+        </NavLink>
         <button type="button" className="tab" onClick={() => signOut(userId)}>
           Sign out
         </button>
@@ -48,6 +52,7 @@ export function App() {
         <Route path="/reveal" element={<RevealScreen />} />
         <Route path="/skills" element={<SkillsScreen userId={userId} />} />
         <Route path="/collection" element={<CollectionScreen userId={userId} />} />
+        <Route path="/exercises" element={<ExercisesScreen />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

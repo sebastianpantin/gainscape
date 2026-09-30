@@ -310,3 +310,20 @@ a:focus-visible {
   border-style: solid;
   color: var(--color-text);
 }
+
+select {
+  font: inherit;
+  min-height: var(--tap-target);
+}
+
+fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.exercise-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

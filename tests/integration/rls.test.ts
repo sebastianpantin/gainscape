@@ -146,6 +146,11 @@ describe('function execution rights', () => {
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname in ('public', 'private') and has_function_privilege('authenticated', p.oid, 'execute')
       order by p.proname`;
-    expect(rows.map((row) => row.name)).toEqual(['username_available']);
+    expect(rows.map((row) => row.name)).toEqual([
+      'reorder_pins',
+      'save_custom_exercise',
+      'set_custom_exercise_archived',
+      'username_available',
+    ]);
   });
 });

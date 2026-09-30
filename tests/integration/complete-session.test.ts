@@ -190,6 +190,22 @@ describe('complete-session rejections', () => {
     expect(response.body.xpBySkill).toEqual({});
   });
 
+  it("accepts the caller's archived custom exercise", async () => {
+    const user = await createTestUser();
+    const customExerciseId = randomUUID();
+    await db.begin(async (tx) => {
+      await tx`insert into public.exercises (id, name, load_type, equipment, owner_user_id, archived_at)
+               values (${customExerciseId}, 'Old Press', 'external', 'machine', ${user.id}, now())`;
+      await tx`insert into public.exercise_skills (exercise_id, skill_id, share_bp)
+               select ${customExerciseId}, id, 10000 from public.skills where key = 'chest'`;
+    });
+    const response = await postCompleteSession(
+      user.accessToken,
+      sessionPayload(threeSets(customExerciseId, 0, 50, 'hard')),
+    );
+    expect(response.status).toBe(200);
+  });
+
   it("returns 422 for someone else's custom exercise", async () => {
     const [owner, other] = await Promise.all([createTestUser(), createTestUser()]);
     const customExerciseId = randomUUID();

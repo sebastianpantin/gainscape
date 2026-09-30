@@ -45,7 +45,7 @@ async function processNewSession(
 ): Promise<SessionSummary> {
   const session = toSessionInput(payload);
   const exerciseIds = [...new Set(payload.sets.map((set) => set.exerciseId))];
-  const catalog = await loadCatalog(tx, userId, exerciseIds);
+  const catalog = await loadCatalog(tx, userId, exerciseIds, true);
   const unknownExerciseIds = exerciseIds.filter((id) => !catalog.exercises.has(id));
   if (unknownExerciseIds.length > 0) throw new HttpError(422, 'unknown_exercise', { exerciseIds: unknownExerciseIds });
 

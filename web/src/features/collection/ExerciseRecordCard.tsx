@@ -1,5 +1,5 @@
 import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
-import type { Exercise } from '../../lib/catalog.ts';
+import { type Exercise, exerciseLabels } from '../../lib/catalog.ts';
 import type { CollectionData } from '../../lib/collection-data.ts';
 import { formatLoad } from '../../lib/format.ts';
 
@@ -8,6 +8,8 @@ interface ExerciseRecordCardProps {
   data: CollectionData;
   pinned: boolean;
   onTogglePin: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
 function StrengthLine({ exercise, data }: { exercise: Exercise; data: CollectionData }) {
@@ -18,7 +20,14 @@ function StrengthLine({ exercise, data }: { exercise: Exercise; data: Collection
   return null;
 }
 
-export function ExerciseRecordCard({ exercise, data, pinned, onTogglePin }: ExerciseRecordCardProps) {
+export function ExerciseRecordCard({
+  exercise,
+  data,
+  pinned,
+  onTogglePin,
+  onMoveUp,
+  onMoveDown,
+}: ExerciseRecordCardProps) {
   const slots = data.repMaxesByExercise.get(exercise.id) ?? Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
   const maxReps = data.maxRepsByExercise.get(exercise.id);
 
@@ -26,9 +35,22 @@ export function ExerciseRecordCard({ exercise, data, pinned, onTogglePin }: Exer
     <section className="panel stack" data-testid={`collection-${exercise.id}`}>
       <header className="row spread">
         <h2>{exercise.name}</h2>
-        <button type="button" className="button link" onClick={onTogglePin}>
-          {pinned ? 'Unpin' : 'Pin'}
-        </button>
+        {exerciseLabels(exercise) && <span className="muted">{exerciseLabels(exercise)}</span>}
+        <div className="row">
+          {pinned && (
+            <>
+              <button type="button" className="button link" onClick={onMoveUp} disabled={!onMoveUp}>
+                Up
+              </button>
+              <button type="button" className="button link" onClick={onMoveDown} disabled={!onMoveDown}>
+                Down
+              </button>
+            </>
+          )}
+          <button type="button" className="button link" onClick={onTogglePin}>
+            {pinned ? 'Unpin' : 'Pin'}
+          </button>
+        </div>
       </header>
       <StrengthLine exercise={exercise} data={data} />
       {exercise.loadType === 'bodyweight' ? (

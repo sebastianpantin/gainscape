@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { PersonalRecordSummary } from '@domain/types.ts';
-import { type Exercise, fetchBuiltInExercises, fetchSkills, type Skill } from '../../lib/catalog.ts';
+import { type Exercise, fetchExercises, fetchSkills, type Skill } from '../../lib/catalog.ts';
 import { formatLoad } from '../../lib/format.ts';
 import type { SessionSummary } from '@domain/types.ts';
 import { recallLastSummary } from './last-summary.ts';
@@ -26,7 +26,7 @@ export function RevealScreen() {
 
   useEffect(() => {
     fetchSkills().then(setSkills, () => setSkills([]));
-    fetchBuiltInExercises().then(setExercises, () => setExercises([]));
+    fetchExercises({ includeArchived: true }).then(setExercises, () => setExercises([]));
   }, []);
 
   if (!summary) {
