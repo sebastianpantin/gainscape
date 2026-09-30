@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { Exercise } from '../../lib/catalog.ts';
+import { type Exercise, exerciseLabels } from '../../lib/catalog.ts';
 
 interface ExercisePickerProps {
   exercises: Exercise[];
@@ -38,7 +38,8 @@ export function ExercisePicker({ exercises, onPick }: ExercisePickerProps) {
                   setQuery('');
                 }}
               >
-                {exercise.name} <span className="muted">{exercise.equipment}</span>
+                {exercise.name}{' '}
+                <span className="muted">{[exercise.equipment, exerciseLabels(exercise)].join(' ').trim()}</span>
               </button>
             </li>
           ))}

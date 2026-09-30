@@ -8,15 +8,21 @@ export interface Skill {
   combatWeight: number;
 }
 
-const LOAD_TYPE_CHECK_TIMEOUT_MS = 5000;
-
 export type LoadType = 'external' | 'bodyweight' | 'bodyweight_plus';
+
+export const LOAD_TYPES: LoadType[] = ['external', 'bodyweight', 'bodyweight_plus'];
+
+export type Equipment = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight' | 'other';
+
+export const EQUIPMENT: Equipment[] = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other'];
 
 export interface Exercise {
   id: string;
   name: string;
   equipment: string;
   loadType: LoadType;
+  custom: boolean;
+  archived: boolean;
 }
 
 export async function fetchSkills(): Promise<Skill[]> {
@@ -34,25 +40,32 @@ export async function fetchSkills(): Promise<Skill[]> {
   }));
 }
 
-export async function fetchBuiltInExercises(): Promise<Exercise[]> {
-  const { data, error } = await supabase
-    .from('exercises')
-    .select('id, name, equipment, load_type')
-    .is('owner_user_id', null)
-    .is('archived_at', null)
-    .order('name');
-  if (error) throw error;
-  return data.map((row) => ({ id: row.id, name: row.name, equipment: row.equipment, loadType: row.load_type }));
+export interface ExerciseQuery {
+  includeArchived: boolean;
+  signal?: AbortSignal;
 }
 
-export async function fetchLoadTypes(exerciseIds: string[]): Promise<Map<string, LoadType>> {
-  const { data, error } = await supabase
+export async function fetchExercises({ includeArchived, signal }: ExerciseQuery): Promise<Exercise[]> {
+  let query = supabase
     .from('exercises')
-    .select('id, load_type')
-    .in('id', exerciseIds)
-    .abortSignal(AbortSignal.timeout(LOAD_TYPE_CHECK_TIMEOUT_MS));
+    .select('id, name, equipment, load_type, owner_user_id, archived_at')
+    .order('name');
+  if (!includeArchived) query = query.is('archived_at', null);
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query;
   if (error) throw error;
-  return new Map(data.map((row) => [row.id, row.load_type]));
+  return data.map((row) => ({
+    id: row.id,
+    name: row.name,
+    equipment: row.equipment,
+    loadType: row.load_type,
+    custom: row.owner_user_id !== null,
+    archived: row.archived_at !== null,
+  }));
+}
+
+export function exerciseLabels(exercise: Exercise): string {
+  return [exercise.custom && '(custom)', exercise.archived && '(archived)'].filter(Boolean).join(' ');
 }
 
 export async function saveBodyweight(userId: string, bodyweightKg: number): Promise<void> {

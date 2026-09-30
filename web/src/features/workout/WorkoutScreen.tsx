@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { type Exercise, fetchBuiltInExercises, fetchLoadTypes, saveBodyweight } from '../../lib/catalog.ts';
+import { Link, useNavigate } from 'react-router-dom';
+import { type Exercise, fetchExercises, type LoadType, saveBodyweight } from '../../lib/catalog.ts';
 import type { SessionSummary } from '@domain/types.ts';
 import {
   addExercise,
@@ -27,13 +27,26 @@ interface WorkoutScreenProps {
   userId: string;
 }
 
-async function currentLoadTypes(draft: WorkoutDraft, builtIns: Exercise[]) {
-  const builtInIds = new Set(builtIns.map((exercise) => exercise.id));
-  const customIds = [...new Set(draft.exercises.map((exercise) => exercise.exerciseId))].filter(
-    (exerciseId) => !builtInIds.has(exerciseId),
-  );
-  if (customIds.length === 0 || navigator.onLine === false) return new Map();
-  return fetchLoadTypes(customIds).catch(() => new Map());
+const LOAD_TYPE_CHECK_TIMEOUT_MS = 5000;
+
+async function currentLoadTypes(draft: WorkoutDraft, exercises: Exercise[]): Promise<Map<string, LoadType>> {
+  const builtInIds = new Set(exercises.filter((exercise) => !exercise.custom).map((exercise) => exercise.id));
+  const hasCustom = draft.exercises.some((exercise) => !builtInIds.has(exercise.exerciseId));
+  if (!hasCustom || navigator.onLine === false) return new Map();
+  try {
+    const catalog = await fetchExercises({
+      includeArchived: true,
+      signal: AbortSignal.timeout(LOAD_TYPE_CHECK_TIMEOUT_MS),
+    });
+    const customIds = new Set(
+      draft.exercises.map((exercise) => exercise.exerciseId).filter((id) => !builtInIds.has(id)),
+    );
+    return new Map(
+      catalog.filter((exercise) => customIds.has(exercise.id)).map((exercise) => [exercise.id, exercise.loadType]),
+    );
+  } catch {
+    return new Map();
+  }
 }
 
 export function WorkoutScreen({ userId }: WorkoutScreenProps) {
@@ -47,7 +60,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const draft = state.status === 'ready' ? state.draft : null;
 
   useEffect(() => {
-    fetchBuiltInExercises().then(setExercises, (error: Error) => setLoadProblem(error.message));
+    fetchExercises({ includeArchived: false }).then(setExercises, (error: Error) => setLoadProblem(error.message));
   }, []);
 
   const { status: finishStatus, retryNow } = useFinishSync({
@@ -208,6 +221,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           changeDraft(addSet(addExercise(draft, exercise.id, exercise.name, exercise.loadType), draft.exercises.length))
         }
       />
+      <Link className="button link" to="/exercises?new=1">
+        Create custom exercise
+      </Link>
       {finishProblem && (
         <p className="problem" role="alert">
           {finishProblem}

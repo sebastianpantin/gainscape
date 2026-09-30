@@ -1,7 +1,13 @@
 import { collectionCompletion, type CollectionExercise } from '@domain/collection.ts';
 import { useCallback, useEffect, useState } from 'react';
-import { type Exercise, fetchBuiltInExercises } from '../../lib/catalog.ts';
-import { type CollectionData, fetchCollectionData, pinExercise, unpinExercise } from '../../lib/collection-data.ts';
+import { type Exercise, fetchExercises } from '../../lib/catalog.ts';
+import {
+  type CollectionData,
+  fetchCollectionData,
+  pinExercise,
+  reorderPins,
+  unpinExercise,
+} from '../../lib/collection-data.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { ExerciseRecordCard } from './ExerciseRecordCard.tsx';
 
@@ -27,7 +33,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
   const [problem, setProblem] = useState<string | null>(null);
 
   const reload = useCallback(() => {
-    Promise.all([fetchBuiltInExercises(), fetchCollectionData(userId)]).then(
+    Promise.all([fetchExercises({ includeArchived: true }), fetchCollectionData(userId)]).then(
       ([loadedExercises, loadedData]) => {
         setExercises(loadedExercises);
         setData(loadedData);
@@ -73,6 +79,22 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     }
   };
 
+  const movePin = async (exercise: Exercise, offset: -1 | 1) => {
+    const order = [...data.pinnedExerciseIds];
+    const from = order.indexOf(exercise.id);
+    const to = from + offset;
+    if (from < 0 || to < 0 || to >= order.length) return;
+    [order[from], order[to]] = [order[to], order[from]];
+    try {
+      await reorderPins(order);
+      reload();
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : 'Could not reorder pins.');
+    }
+  };
+
+  const pinIndex = (exercise: Exercise) => data.pinnedExerciseIds.indexOf(exercise.id);
+
   return (
     <main className="screen stack">
       <h1 className="title">Collection log</h1>
@@ -83,7 +105,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
         </strong>
       </div>
       <ExercisePicker
-        exercises={exercises.filter((exercise) => !data.pinnedExerciseIds.includes(exercise.id))}
+        exercises={exercises.filter((exercise) => !exercise.archived && !data.pinnedExerciseIds.includes(exercise.id))}
         onPick={(exercise) => togglePin(exercise)}
       />
       {counted.length === 0 && (
@@ -96,6 +118,12 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
           data={data}
           pinned={data.pinnedExerciseIds.includes(exercise.id)}
           onTogglePin={() => togglePin(exercise)}
+          onMoveUp={pinIndex(exercise) > 0 ? () => movePin(exercise, -1) : undefined}
+          onMoveDown={
+            pinIndex(exercise) >= 0 && pinIndex(exercise) < data.pinnedExerciseIds.length - 1
+              ? () => movePin(exercise, 1)
+              : undefined
+          }
         />
       ))}
     </main>
