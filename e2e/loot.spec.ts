@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { logExercise, openTab, register } from './support/app.ts';
-import { activeDropCount, activeDropsOfLatestSession, grantItems, grantUnlock } from './support/db.ts';
+import { activeDropCount, activeDropsOfLatestSession, grantItems, grantUnlock, hasUnlock } from './support/db.ts';
 
 function slot(page: Page, name: string, quantity?: number) {
   const label = quantity === undefined ? `^${name}( ×\\d+)?$` : `^${name} ×${quantity}$`;
@@ -59,7 +59,9 @@ test('loot on the reveal, the items screen, crafting and a scroll unlock', async
   await page.getByRole('button', { name: 'Start workout' }).click();
   await page.getByLabel('Search exercises').fill('pause');
   await expect(page.getByRole('button', { name: /^Pause Squat\b/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Pause Bench Press\b/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Pause Bench Press\b/ })).toHaveCount(
+    (await hasUnlock(username, 'pause_bench_press')) ? 1 : 0,
+  );
   await logExercise(page, 'pause squat', 'Pause Squat', [{ weightKg: 60, reps: 5 }]);
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
@@ -71,7 +73,7 @@ test('loot on the reveal, the items screen, crafting and a scroll unlock', async
   const sessionId = page.url().split('/').at(-1)!;
   await page.locator('li.set-row').first().getByLabel('reps').fill('4');
   const editWarning = page.getByTestId('edit-loot-warning');
-  await expect(editWarning).toContainText('This removes');
+  await expect(editWarning).toContainText('This may remove');
   await expect(editWarning).toContainText(drops[0].name);
   await expect(editWarning).toContainText('from your collection');
   await page.getByRole('button', { name: 'Undo my changes' }).click();
@@ -79,7 +81,7 @@ test('loot on the reveal, the items screen, crafting and a scroll unlock', async
 
   await page.getByRole('button', { name: 'Delete workout' }).click();
   const deleteWarning = page.getByTestId('delete-loot-warning');
-  await expect(deleteWarning).toContainText('This removes');
+  await expect(deleteWarning).toContainText('This may remove');
   await expect(deleteWarning).toContainText(drops[0].name);
   await page.getByRole('button', { name: 'Delete for good' }).click();
   await expect(page.getByText('Workout deleted.')).toBeVisible();

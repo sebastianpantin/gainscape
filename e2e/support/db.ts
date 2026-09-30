@@ -116,3 +116,13 @@ export async function activeDropCount(sessionId: string): Promise<number> {
     select count(*)::int as count from public.drops where session_id = ${sessionId} and revoked_at is null`;
   return row.count;
 }
+
+export async function hasUnlock(username: string, exerciseKey: string): Promise<boolean> {
+  const [row] = await db`
+    select count(*)::int as count
+    from public.user_unlocks u
+    join public.profiles p on p.id = u.user_id
+    join public.exercises e on e.id = u.exercise_id
+    where p.username = ${username} and e.key = ${exerciseKey}`;
+  return row.count > 0;
+}

@@ -148,6 +148,11 @@ describe('catalog validation', () => {
     ],
     ['the rare table exists', (c) => (find(c.dropTables, 'rare').retired = true), /drop table "rare" is required/],
     [
+      'icons are known icon kinds',
+      (c) => (find(c.items, 'plate_crab').icon = 'crab'),
+      /item "plate_crab" has unknown icon "crab"/,
+    ],
+    [
       'an active drop table has entries',
       (c) => (find(c.dropTables, 'rare').entries = []),
       /drop table "rare" has no entries/,

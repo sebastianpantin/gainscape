@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { ITEM_ICON_KINDS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import { type CatalogData, catalogNames } from './load.ts';
 
 export const DENYLIST_PATH = join(import.meta.dirname, '../../tests/ip-denylist.txt');
@@ -121,6 +122,10 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
   }
 
   const itemsByKey = new Map(catalog.items.map((item) => [item.key, item]));
+  const iconKinds = new Set<string>(ITEM_ICON_KINDS);
+  for (const item of catalog.items) {
+    if (!iconKinds.has(item.icon)) problems.push(`item "${item.key}" has unknown icon "${item.icon}"`);
+  }
   const scrollsByExercise = new Map<string, string[]>();
   for (const item of catalog.items) {
     if (item.kind !== 'scroll') {

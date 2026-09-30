@@ -73,7 +73,9 @@ function GainBar({ skillName, xpAfter, gain, delaySeconds }: GainBarProps) {
   );
 }
 
-function LootPanel({ drops, items }: { drops: readonly DropSummary[]; items: readonly CatalogItem[] }) {
+type LoadedItems = CatalogItem[] | 'loading' | 'failed';
+
+function LootPanel({ drops, items }: { drops: readonly DropSummary[]; items: LoadedItems }) {
   return (
     <section className="panel stack rise" aria-label="Loot" style={{ animationDelay: '2s' }}>
       <div className="row spread">
@@ -84,6 +86,10 @@ function LootPanel({ drops, items }: { drops: readonly DropSummary[]; items: rea
       </div>
       {drops.length === 0 ? (
         <p className="muted">No loot this time</p>
+      ) : items === 'loading' ? (
+        <p className="muted">Loading loot…</p>
+      ) : items === 'failed' ? (
+        <p className="muted">Couldn't load the loot names. See items for what dropped.</p>
       ) : (
         <ul className="record-list" aria-label="Loot drops">
           {drops.map((drop) => {
@@ -91,7 +97,7 @@ function LootPanel({ drops, items }: { drops: readonly DropSummary[]; items: rea
             return (
               <li key={drop.dropId}>
                 <ItemIcon kind={item?.icon ?? 'scraps'} color={item ? colorFor(item) : colorFor({ tier: null })} />
-                <span style={{ flex: 1 }}>{item?.name ?? drop.itemKey}</span>
+                <span style={{ flex: 1 }}>{item?.name ?? 'Unknown item'}</span>
                 <span className="pixel">×{drop.quantity}</span>
                 {drop.source === 'pr' && <span className="accent-text tiny">PR</span>}
               </li>
@@ -114,7 +120,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [xpBySkillId, setXpBySkillId] = useState<Map<string, number> | null>(null);
-  const [items, setItems] = useState<CatalogItem[]>([]);
+  const [items, setItems] = useState<LoadedItems>('loading');
   const [freshDrops, setFreshDrops] = useState<DropSummary[] | null>(null);
   const sessionId = summary?.sessionId;
 
@@ -124,7 +130,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
     fetchSkillXp(userId).then(setXpBySkillId, () => setXpBySkillId(null));
     fetchItemCatalog().then(
       (catalog) => setItems(catalog.items),
-      () => setItems([]),
+      () => setItems('failed'),
     );
   }, [userId]);
 
