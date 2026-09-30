@@ -222,6 +222,7 @@ describe('function execution rights', () => {
       'save_custom_exercise',
       'save_program',
       'set_custom_exercise_archived',
+      'set_timezone',
       'username_available',
     ]);
   });

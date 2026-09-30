@@ -1,12 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, register } from './support/app.ts';
+import { logExercise, openFromProfile, openTab, register } from './support/app.ts';
 
 function uniqueUsername(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
 }
 
 async function logLandmineSession(page: Page, weightKg: number) {
-  await page.getByRole('link', { name: 'Workout' }).click();
+  await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'landmine', 'Landmine Press', [{ weightKg, reps: 8 }]);
   await page.getByRole('button', { name: 'Finish workout' }).click();
@@ -20,7 +20,7 @@ function collectionHeadings(page: Page) {
 test('create, log, record, pin, reorder and archive a custom exercise', async ({ page }) => {
   await register(page, uniqueUsername('cx'));
 
-  await page.getByRole('link', { name: 'Exercises' }).click();
+  await openFromProfile(page, 'Exercises');
   await page.getByRole('button', { name: 'New custom exercise' }).click();
   await page.getByLabel('Name').fill('Landmine Press');
   await page.getByLabel('Load type').selectOption('external');
@@ -39,7 +39,7 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await logLandmineSession(page, 50);
   await expect(page.getByLabel('New records')).toContainText('Landmine Press: 8RM 50 kg');
 
-  await page.getByRole('link', { name: 'Collection' }).click();
+  await openTab(page, 'Log');
   await page.getByLabel('Search exercises').fill('back squat');
   await page.getByRole('button', { name: /^Back Squat\b/ }).click();
   await expect(collectionHeadings(page)).toHaveText(['Back Squat', 'Landmine Press']);
@@ -52,7 +52,7 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await page.reload();
   await expect(collectionHeadings(page)).toHaveText(['Landmine Press', 'Back Squat']);
 
-  await page.getByRole('link', { name: 'Exercises' }).click();
+  await openFromProfile(page, 'Exercises');
   await page
     .getByRole('listitem')
     .filter({ hasText: 'Landmine Press' })
@@ -62,11 +62,11 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await page.getByLabel('Show archived').check();
   await expect(page.getByRole('listitem').filter({ hasText: 'Landmine Press' })).toContainText('(archived)');
 
-  await page.getByRole('link', { name: 'Workout' }).click();
+  await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   await page.getByLabel('Search exercises').fill('landmine');
   await expect(page.getByRole('button', { name: /^Landmine Press\b/ })).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Collection' }).click();
+  await openTab(page, 'Log');
   await expect(landmine).toContainText('(archived)');
 });

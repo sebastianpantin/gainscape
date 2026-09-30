@@ -75,7 +75,9 @@ test('a workout kept through a forced sign-out syncs after signing in again', as
         name: 'Barbell Bench Press',
         loadType: 'external',
         target: null,
-        sets: [{ id: crypto.randomUUID(), weightKg: 60, reps: 5, effortLevel: 'hard', done: true }],
+        sets: [
+          { id: crypto.randomUUID(), weightKg: 60, reps: 5, effort: { type: 'level', level: 'hard' }, done: true },
+        ],
       },
     ],
   });

@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { type Exercise, fetchExercises, type LoadType, saveBodyweight } from '../../lib/catalog.ts';
+import { type ExerciseStrengthView, fetchExerciseStrength } from '../../lib/collection-data.ts';
+import { usePreferences } from '../../lib/preferences.ts';
+import { useStanding } from '../../lib/standing.ts';
+import { formatWeight } from '../../lib/units.ts';
 import type { SessionSummary } from '@domain/types.ts';
 import {
   addExercise,
@@ -27,6 +31,7 @@ import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
+import { formatXp, previewSet } from './xp-preview.ts';
 
 const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
 
@@ -67,11 +72,25 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [startingDay, setStartingDay] = useState(false);
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
+  const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);
+  const standing = useStanding(userId);
+  const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
 
   useEffect(() => {
     fetchExercises({ includeArchived: false }).then(setExercises, (error: Error) => setLoadProblem(error.message));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetchExerciseStrength(userId).then(
+      (loaded) => active && setStrength(loaded),
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [userId]);
 
   const { status: finishStatus, retryNow } = useFinishSync({
     userId,
@@ -131,13 +150,29 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   if (!draft) {
     return (
       <main className="screen stack">
-        <h1 className="title">Workout</h1>
+        <div className="screen-header">
+          <div className="stack" style={{ gap: 4 }}>
+            <span className="muted">
+              {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+            </span>
+            <h1 className="title">Today</h1>
+          </div>
+          {standing.status === 'ready' && (
+            <Link className="header-stat" to="/skills">
+              <span className="muted tiny">Total · Combat</span>
+              <strong>
+                {standing.standing.totalLevel} · {standing.standing.combatLevel}
+              </strong>
+            </Link>
+          )}
+        </div>
         {deviceNotices}
         {state.notice === 'saved_elsewhere' && (
-          <p className="panel" role="status">
+          <p className="notice" role="status">
             This workout was saved in another tab.
           </p>
         )}
+        <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
         <button
           className="button primary big"
           type="button"
@@ -149,7 +184,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         >
           Start workout
         </button>
-        <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
+        <p className="muted" style={{ textAlign: 'center' }}>
+          Freestyle: add exercises as you go.
+        </p>
       </main>
     );
   }
@@ -162,7 +199,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <h1 className="title">Saving workout…</h1>
         {deviceNotices}
         {finishStatus.kind === 'syncing' && (
-          <div className="panel stack">
+          <div className="panel stack" role="status">
             <p>
               {finishStatus.lastProblem
                 ? `Couldn't reach the server (${finishStatus.lastProblem}). Retrying — your workout is saved on this device.`
@@ -177,6 +214,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         )}
         {finishStatus.kind === 'rejected' && finishStatus.reason === 'bodyweight_required' && (
           <BodyweightPrompt
+            unit={unitPref}
             onSave={async (bodyweightKg) => {
               await saveBodyweight(userId, bodyweightKg);
               retryNow();
@@ -220,14 +258,47 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   };
 
   const canFinish = doneSetCount(draft) > 0 && !checkingFinish;
+  const customIds = new Set(exercises.filter((exercise) => exercise.custom).map((exercise) => exercise.id));
+  const previews = draft.exercises.map((exercise) =>
+    exercise.sets.map((set) =>
+      previewSet(
+        set,
+        {
+          loadType: exercise.loadType,
+          builtIn: !customIds.has(exercise.exerciseId),
+          strength: strength?.get(exercise.exerciseId),
+        },
+        strength !== null,
+      ),
+    ),
+  );
+  const previewTotal = previews
+    .flatMap((sets, exerciseIndex) => sets.filter((_, setIndex) => draft.exercises[exerciseIndex].sets[setIndex].done))
+    .reduce((sum, preview) => sum + preview.xp, 0);
+
+  const strengthLine = (exerciseId: string, loadType: LoadType) => {
+    const known = strength?.get(exerciseId);
+    if (!known) return null;
+    if (loadType === 'bodyweight' && known.repsCapacity !== null) return `capacity ~${known.repsCapacity} reps`;
+    if (known.e1rmKg !== null) return `e1RM ${formatWeight(known.e1rmKg, unitPref)}`;
+    return null;
+  };
 
   return (
     <main className="screen stack">
-      <h1 className="title">Workout</h1>
-      {draft.programLabel && <p className="muted">{draft.programLabel}</p>}
+      <header className="workout-header">
+        <div className="stack" style={{ gap: 4 }}>
+          {draft.programLabel && <span className="muted">{draft.programLabel}</span>}
+          <h1 className="title">Workout</h1>
+        </div>
+        <div className="live-xp" aria-live="polite">
+          <strong>~{formatXp(previewTotal)} XP</strong>
+          <span className="muted tiny">{doneSetCount(draft)} sets done</span>
+        </div>
+      </header>
       {deviceNotices}
       {startNotice && (
-        <p className="panel" role="status">
+        <p className="notice" role="status">
           {startNotice}
         </p>
       )}
@@ -236,62 +307,69 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           {loadProblem}
         </p>
       )}
-      {draft.exercises.map((exercise, exerciseIndex) => (
-        <section className="panel stack" key={`${exercise.exerciseId}-${exerciseIndex}`}>
-          <header className="row spread">
-            <h2>{exercise.name}</h2>
-            <span className="row">
-              {canSwapExercise(draft, exerciseIndex) && (
+      {draft.exercises.map((exercise, exerciseIndex) => {
+        const details = [
+          exercise.target && `${exercise.target.sets} × ${exercise.target.repsMin}–${exercise.target.repsMax}`,
+          strengthLine(exercise.exerciseId, exercise.loadType),
+        ].filter(Boolean);
+        const doneHere = exercise.sets.filter((set) => set.done).length;
+        return (
+          <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
+            <header>
+              <h2>{exercise.name}</h2>
+              <span className="row">
+                {canSwapExercise(draft, exerciseIndex) && (
+                  <button
+                    className="button link"
+                    type="button"
+                    onClick={() => setSwappingIndex(swappingIndex === exerciseIndex ? null : exerciseIndex)}
+                  >
+                    Swap
+                  </button>
+                )}
                 <button
                   className="button link"
                   type="button"
-                  onClick={() => setSwappingIndex(swappingIndex === exerciseIndex ? null : exerciseIndex)}
+                  onClick={() => changeDraft(removeExercise(draft, exerciseIndex))}
                 >
-                  Swap
+                  Remove
                 </button>
-              )}
-              <button
-                className="button link"
-                type="button"
-                onClick={() => changeDraft(removeExercise(draft, exerciseIndex))}
-              >
-                Remove
-              </button>
-            </span>
-          </header>
-          {exercise.target && (
-            <p className="muted">
-              Target {exercise.target.sets} × {exercise.target.repsMin}–{exercise.target.repsMax}
-            </p>
-          )}
-          {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
-            <ExercisePicker
-              exercises={exercises}
-              onPick={(replacement) => {
-                const swapped = swapExercise(draft, exerciseIndex, replacement);
-                if (swapped) changeDraft(swapped);
-                setSwappingIndex(null);
-              }}
-            />
-          )}
-          <ol className="set-list">
-            {exercise.sets.map((set, setIndex) => (
-              <SetRow
-                key={set.id}
-                setNumber={setIndex + 1}
-                loadType={exercise.loadType}
-                set={set}
-                onChange={(changes) => changeDraft(updateSet(draft, exerciseIndex, set.id, changes))}
-                onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
-                onToggleDone={() => changeDraft(toggleSetDone(draft, exerciseIndex, set.id))}
+              </span>
+            </header>
+            <p className="muted">{[...details, `${doneHere}/${exercise.sets.length} sets`].join(' · ')}</p>
+            {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
+              <ExercisePicker
+                exercises={exercises}
+                placeholder="Swap for…"
+                onPick={(replacement) => {
+                  const swapped = swapExercise(draft, exerciseIndex, replacement);
+                  if (swapped) changeDraft(swapped);
+                  setSwappingIndex(null);
+                }}
               />
-            ))}
-          </ol>
-          <button className="button" type="button" onClick={() => changeDraft(addSet(draft, exerciseIndex))}>
-            + Add set
-          </button>
-        </section>
-      ))}
+            )}
+            <ol className="set-list">
+              {exercise.sets.map((set, setIndex) => (
+                <SetRow
+                  key={set.id}
+                  setNumber={setIndex + 1}
+                  loadType={exercise.loadType}
+                  set={set}
+                  preview={previews[exerciseIndex][setIndex]}
+                  unit={unitPref}
+                  effortMode={effortInputMode}
+                  onChange={(changes) => changeDraft(updateSet(draft, exerciseIndex, set.id, changes))}
+                  onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
+                  onToggleDone={() => changeDraft(toggleSetDone(draft, exerciseIndex, set.id))}
+                />
+              ))}
+            </ol>
+            <button className="button dashed" type="button" onClick={() => changeDraft(addSet(draft, exerciseIndex))}>
+              + Add set
+            </button>
+          </section>
+        );
+      })}
       <ExercisePicker
         exercises={exercises}
         onPick={(exercise) =>
@@ -301,14 +379,17 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>
-      {finishProblem && (
-        <p className="problem" role="alert">
-          {finishProblem}
-        </p>
-      )}
-      <button className="button primary big" type="button" disabled={!canFinish} onClick={finish}>
-        Finish workout
-      </button>
+      <div className="finish-bar">
+        {finishProblem && (
+          <p className="problem" role="alert">
+            {finishProblem}
+          </p>
+        )}
+        <button className="button primary big" type="button" disabled={!canFinish} onClick={finish}>
+          Finish workout
+        </button>
+        <span className="muted tiny">~ is a preview. XP is confirmed when the workout syncs.</span>
+      </div>
     </main>
   );
 }

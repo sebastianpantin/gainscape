@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { readSession, readStoredDraft, register } from './support/app.ts';
+import { openFromProfile, openTab, readSession, readStoredDraft, register } from './support/app.ts';
 import { programDayId, sessionRow, setCount } from './support/db.ts';
 
 function uniqueUsername(prefix: string): string {
@@ -15,7 +15,7 @@ test('copy a template, run a program day with planned sets and finish it', async
   await register(page, username);
   const { user } = await readSession(page);
 
-  await page.getByRole('link', { name: 'Programs' }).click();
+  await openFromProfile(page, 'Programs');
   await page
     .getByRole('listitem')
     .filter({ hasText: 'Upper / Lower' })
@@ -30,7 +30,7 @@ test('copy a template, run a program day with planned sets and finish it', async
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Your programs' })).toContainText('My UL');
 
-  await page.getByRole('link', { name: 'Workout' }).click();
+  await openTab(page, 'Train');
   await page.getByRole('button', { name: 'My UL — Upper' }).click();
   await expect(page.locator('main section h2')).toHaveText([
     'Barbell Bench Press',

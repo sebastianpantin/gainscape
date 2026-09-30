@@ -1,33 +1,92 @@
+import { levelProgress } from '@domain/index.ts';
+import type { PersonalRecordSummary, SessionSummary } from '@domain/types.ts';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import type { PersonalRecordSummary } from '@domain/types.ts';
-import { type Exercise, fetchExercises, fetchSkills, type Skill } from '../../lib/catalog.ts';
+import { TrophyIcon } from '../../components/PixelArt.tsx';
+import { type Exercise, fetchExercises, fetchSkills, fetchSkillXp, type Skill } from '../../lib/catalog.ts';
 import { formatLoad } from '../../lib/format.ts';
-import type { SessionSummary } from '@domain/types.ts';
+import { usePreferences } from '../../lib/preferences.ts';
+import type { UnitPref } from '../../lib/profile.ts';
+import { monogramFor } from '../../lib/standing.ts';
+import { formatXp } from '../workout/xp-preview.ts';
 import { recallLastSummary } from './last-summary.ts';
 
-function describeRecord(record: PersonalRecordSummary, exercise: Exercise | undefined): string {
+interface DescribedRecord {
+  headline: string;
+  previous: string;
+}
+
+function describeRecord(
+  record: PersonalRecordSummary,
+  exercise: Exercise | undefined,
+  unit: UnitPref,
+): DescribedRecord {
   const name = exercise?.name ?? 'Exercise';
   if (record.kind === 'bodyweight_reps') {
     const previous = record.previousReps === null ? 'first record' : `was ${record.previousReps}`;
-    return `${name}: ${record.reps} reps (${previous})`;
+    return { headline: `${name}: ${record.reps} reps`, previous: `(${previous})` };
   }
   const loadType = exercise?.loadType ?? 'external';
   const previous =
-    record.previousLoadKg === null ? 'first record' : `was ${formatLoad(record.previousLoadKg, loadType)}`;
-  return `${name}: ${record.reps}RM ${formatLoad(record.loadKg!, loadType)} (${previous})`;
+    record.previousLoadKg === null ? 'first record' : `was ${formatLoad(record.previousLoadKg, loadType, unit)}`;
+  return {
+    headline: `${name}: ${record.reps}RM ${formatLoad(record.loadKg!, loadType, unit)}`,
+    previous: `(${previous})`,
+  };
 }
 
-export function RevealScreen() {
+function percent(fraction: number): string {
+  return `${(Math.min(1, Math.max(0, fraction)) * 100).toFixed(1)}%`;
+}
+
+interface GainBarProps {
+  skillName: string;
+  xpAfter: number;
+  gain: number;
+  delaySeconds: number;
+}
+
+function GainBar({ skillName, xpAfter, gain, delaySeconds }: GainBarProps) {
+  const after = levelProgress(xpAfter);
+  const before = levelProgress(Math.max(0, xpAfter - gain));
+  const startFraction = before.level === after.level ? before.fractionToNextLevel : 0;
+  const endFraction = after.fractionToNextLevel;
+  return (
+    <div
+      className="meter"
+      role="img"
+      aria-label={`${skillName} ${Math.round(endFraction * 100)}% of the way to level ${after.level + 1}`}
+    >
+      <div className="gain-before" style={{ width: percent(startFraction) }} />
+      <div
+        className="gain-added"
+        style={{
+          left: percent(startFraction),
+          width: percent(endFraction - startFraction),
+          animationDelay: `${delaySeconds}s`,
+        }}
+      />
+    </div>
+  );
+}
+
+interface RevealScreenProps {
+  userId: string;
+}
+
+export function RevealScreen({ userId }: RevealScreenProps) {
   const location = useLocation();
   const summary = (location.state as SessionSummary | null) ?? recallLastSummary();
+  const { unitPref } = usePreferences();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [xpBySkillId, setXpBySkillId] = useState<Map<string, number> | null>(null);
 
   useEffect(() => {
     fetchSkills().then(setSkills, () => setSkills([]));
     fetchExercises({ includeArchived: true }).then(setExercises, () => setExercises([]));
-  }, []);
+    fetchSkillXp(userId).then(setXpBySkillId, () => setXpBySkillId(null));
+  }, [userId]);
 
   if (!summary) {
     return (
@@ -42,40 +101,87 @@ export function RevealScreen() {
 
   const nameOf = (skillKey: string) => skills.find((skill) => skill.key === skillKey)?.name ?? skillKey;
   const skillsWithXp = skills.filter((skill) => summary.xpBySkill[skill.key]);
+  const totalXp = Object.values(summary.xpBySkill).reduce((sum, xp) => sum + xp, 0);
+  const leveledUp = new Map(summary.levelUps.map((levelUp) => [levelUp.skill, levelUp]));
 
   return (
     <main className="screen stack">
-      <h1 className="title">Workout complete!</h1>
+      <header className="reveal-header">
+        <h1 className="title">Workout complete!</h1>
+        <span className="reveal-total pop">+{formatXp(totalXp)} XP</span>
+      </header>
       <ul className="panel reveal-list" aria-label="XP gained">
-        {skillsWithXp.map((skill) => (
-          <li key={skill.key}>
-            {skill.name}: <strong>+{summary.xpBySkill[skill.key]} XP</strong>
-          </li>
-        ))}
+        {skillsWithXp.map((skill, index) => {
+          const gain = summary.xpBySkill[skill.key];
+          const levelUp = leveledUp.get(skill.key);
+          const xpAfter = xpBySkillId?.get(skill.id);
+          return (
+            <li key={skill.key} className="skill-gain rise" style={{ animationDelay: `${0.2 + index * 0.2}s` }}>
+              <span className="monogram" aria-hidden="true">
+                {monogramFor(skill.key)}
+              </span>
+              <div className="skill-gain-body">
+                <div className="row spread">
+                  <span>
+                    {skill.name}: <strong>+{formatXp(gain)} XP</strong>
+                  </span>
+                  {levelUp ? (
+                    <span className="accent-text tiny">lvl {levelUp.to} ▲</span>
+                  ) : (
+                    xpAfter !== undefined && <span className="muted tiny">lvl {levelProgress(xpAfter).level}</span>
+                  )}
+                </div>
+                {xpAfter !== undefined && (
+                  <GainBar skillName={skill.name} xpAfter={xpAfter} gain={gain} delaySeconds={0.4 + index * 0.2} />
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
       {summary.levelUps.length > 0 && (
-        <ul className="panel reveal-list level-ups" aria-label="Level ups">
-          {summary.levelUps.map((levelUp) => (
-            <li key={levelUp.skill}>
-              {nameOf(levelUp.skill)}: {levelUp.from} → {levelUp.to}
-            </li>
-          ))}
-        </ul>
+        <section className="panel stack level-ups pop" style={{ animationDelay: '1.2s' }}>
+          <h2>Level up!</h2>
+          <ul className="level-up-grid" aria-label="Level ups">
+            {summary.levelUps.map((levelUp) => (
+              <li key={levelUp.skill}>
+                {nameOf(levelUp.skill)}
+                <span className="pixel">
+                  {levelUp.from} → {levelUp.to}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       {summary.prs.length > 0 && (
-        <ul className="panel reveal-list level-ups" aria-label="New records">
-          {summary.prs.map((record) => (
-            <li key={record.exerciseId}>
-              {describeRecord(
-                record,
-                exercises.find((exercise) => exercise.id === record.exerciseId),
-              )}
-            </li>
-          ))}
+        <ul className="panel record-list rise" aria-label="New records" style={{ animationDelay: '1.6s' }}>
+          {summary.prs.map((record) => {
+            const described = describeRecord(
+              record,
+              exercises.find((exercise) => exercise.id === record.exerciseId),
+              unitPref,
+            );
+            return (
+              <li key={record.exerciseId}>
+                <TrophyIcon size={32} />
+                <span className="stack" style={{ gap: 2 }}>
+                  <span className="muted tiny">New record</span>
+                  <span>
+                    <span className="pixel">{described.headline}</span>{' '}
+                    <span className="muted">{described.previous}</span>
+                  </span>
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
-      <Link className="button primary" to="/skills">
+      <Link className="button primary big" to="/skills">
         See skills
+      </Link>
+      <Link className="button" to="/">
+        Done
       </Link>
     </main>
   );
