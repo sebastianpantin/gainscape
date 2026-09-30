@@ -35,6 +35,7 @@ To run a second stack side by side (for example from a git worktree), put a giti
 
 - `supabase/functions/_shared/domain/`: the pure game engine, shared by the Edge Function and the web app. All tuning constants are in `balance.ts`.
 - `supabase/functions/complete-session/`: the server-authoritative sync endpoint.
+- `supabase/functions/export-data/`, `supabase/functions/delete-account/`: account export (JSON of the caller's rows) and deletion (requires typing your username).
 - `supabase/migrations/`, `supabase/seed.sql`: schema, row-level security and seed data.
 - `web/`: the React PWA (Vite root).
 - `tests/`: Vitest domain tests, plus integration tests against the local stack.

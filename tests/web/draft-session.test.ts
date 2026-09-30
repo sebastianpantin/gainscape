@@ -63,7 +63,7 @@ function withReps(draft: WorkoutDraft, reps: number): WorkoutDraft {
         name: 'Bench',
         loadType: 'external',
         target: null,
-        sets: [{ id: 'set-a', weightKg: 60, reps, effortLevel: null, done: true }],
+        sets: [{ id: 'set-a', weightKg: 60, reps, effort: null, done: true }],
       },
     ],
   };

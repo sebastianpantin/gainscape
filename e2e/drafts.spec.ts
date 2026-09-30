@@ -8,6 +8,7 @@ import {
   register,
   setIndexedDbBroken,
   signIn,
+  signOut,
 } from './support/app.ts';
 import { sessionCount, sessionRow } from './support/db.ts';
 
@@ -56,7 +57,7 @@ test("another account's draft is kept, never sent, and restored for its owner", 
   });
 
   page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await signOut(page);
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
 
   await register(page, other);
@@ -73,7 +74,7 @@ test("another account's draft is kept, never sent, and restored for its owner", 
   await expect(notice).toBeVisible();
   expect(await readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
 
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await signOut(page);
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   await signIn(page, owner);
   await expect(page.getByRole('heading', { name: 'Barbell Bench Press', exact: true })).toBeVisible();

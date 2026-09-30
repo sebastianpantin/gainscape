@@ -12,7 +12,7 @@ export function completeSessionPayload(draft: WorkoutDraft) {
         weightKg: set.weightKg,
         reps: set.reps,
         isWarmup: false,
-        effort: set.effortLevel === null ? null : { type: 'level', level: set.effortLevel },
+        effort: set.effort,
       })),
   );
   return {

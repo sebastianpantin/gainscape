@@ -28,3 +28,26 @@ export async function setCount(sessionId: string): Promise<number> {
   const [row] = await db`select count(*)::int as count from public.sets where session_id = ${sessionId}`;
   return row.count;
 }
+
+export async function latestSetOf(username: string) {
+  const [row] = await db`
+    select s.weight_kg::float as weight_kg, s.reps, s.rir::float as rir, s.effort_input_type, s.effort_value::float
+    from public.sets s join public.profiles p on p.id = s.user_id
+    where p.username = ${username}
+    order by s.created_at desc, s.position desc
+    limit 1`;
+  return row ?? null;
+}
+
+export async function accountRowCount(username: string): Promise<number> {
+  const [row] = await db`select count(*)::int as count from public.profiles where username = ${username}`;
+  return row.count;
+}
+
+export async function heightOf(username: string): Promise<number | null> {
+  const [row] = await db`
+    select pp.height_cm::float as height_cm
+    from public.profile_private pp join public.profiles p on p.id = pp.user_id
+    where p.username = ${username}`;
+  return row?.height_cm ?? null;
+}

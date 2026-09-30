@@ -1,0 +1,81 @@
+import { authenticatedUserId } from '../_shared/auth.ts';
+import { sql } from '../_shared/db.ts';
+import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+
+const EXPORT_FORMAT_VERSION = 1;
+
+async function exportFor(userId: string) {
+  return await sql.begin('read only', async (tx) => {
+    const [account] = await tx`select email, created_at from auth.users where id = ${userId}`;
+    const [profile] = await tx`
+      select username, display_name, bio, training_focus, training_since, badge_color, show_weights, show_bodyweight,
+             created_at, updated_at
+      from public.profiles where id = ${userId}`;
+    if (!profile) throw new HttpError(404, 'profile_not_found');
+    const [privateProfile] = await tx`
+      select bodyweight_kg::float, height_cm::float, birth_year, unit_pref, effort_input_mode, timezone,
+             timezone_changed_at, created_at, updated_at
+      from public.profile_private where user_id = ${userId}`;
+    const sessions = await tx`select * from public.sessions where user_id = ${userId} order by started_at, id`;
+    const sets = await tx`select * from public.sets where user_id = ${userId} order by session_id, position`;
+    const setSkillXp = await tx`
+      select x.set_id, s.key as skill, x.xp
+      from public.set_skill_xp x join public.skills s on s.id = x.skill_id
+      where x.user_id = ${userId} order by x.set_id, s.sort_order`;
+    const skills = await tx`
+      select s.key as skill, u.xp
+      from public.user_skills u join public.skills s on s.id = u.skill_id
+      where u.user_id = ${userId} order by s.sort_order`;
+    const exerciseMaxes = await tx`select * from public.exercise_maxes where user_id = ${userId}`;
+    const repMaxes = await tx`select * from public.rep_maxes where user_id = ${userId} order by exercise_id, reps`;
+    const bodyweightRepRecords = await tx`select * from public.bodyweight_rep_records where user_id = ${userId}`;
+    const pinnedExercises = await tx`select * from public.pinned_exercises where user_id = ${userId} order by position`;
+    const customExercises = await tx`
+      select e.*, coalesce(
+        (select json_agg(json_build_object('skill', k.key, 'share_bp', es.share_bp) order by k.sort_order)
+         from public.exercise_skills es join public.skills k on k.id = es.skill_id
+         where es.exercise_id = e.id), '[]'::json) as shares
+      from public.exercises e where e.owner_user_id = ${userId} order by e.created_at`;
+    const programs = await tx`
+      select p.*, coalesce(
+        (select json_agg(json_build_object(
+           'id', d.id, 'name', d.name, 'position', d.position,
+           'exercises', coalesce(
+             (select json_agg(to_jsonb(x) - 'day_id' order by x.position)
+              from public.program_day_exercises x where x.day_id = d.id), '[]'::json))
+         order by d.position)
+         from public.program_days d where d.program_id = p.id), '[]'::json) as days
+      from public.programs p where p.owner_user_id = ${userId} order by p.created_at`;
+
+    return {
+      format: 'gainscape-export',
+      version: EXPORT_FORMAT_VERSION,
+      exportedAt: new Date().toISOString(),
+      userId,
+      account: { email: account?.email ?? null, createdAt: account?.created_at ?? null },
+      profile,
+      privateProfile,
+      sessions,
+      sets,
+      setSkillXp,
+      skills,
+      exerciseMaxes,
+      repMaxes,
+      bodyweightRepRecords,
+      pinnedExercises,
+      customExercises,
+      programs,
+    };
+  });
+}
+
+Deno.serve(async (request) => {
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
+  try {
+    if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed');
+    const userId = await authenticatedUserId(request);
+    return jsonResponse(await exportFor(userId));
+  } catch (error) {
+    return errorResponse(error);
+  }
+});
