@@ -56,6 +56,7 @@ async function exportFor(userId: string) {
     const itemLedger = await tx`select * from public.item_ledger where user_id = ${userId} order by created_at, id`;
     const userUnlocks = await tx`
       select * from public.user_unlocks where user_id = ${userId} order by unlocked_at, exercise_id`;
+    const crafts = await tx`select * from public.crafts where user_id = ${userId} order by created_at, id`;
 
     return {
       format: 'gainscape-export',
@@ -82,6 +83,7 @@ async function exportFor(userId: string) {
       userItems,
       itemLedger,
       userUnlocks,
+      crafts,
     };
   });
 }

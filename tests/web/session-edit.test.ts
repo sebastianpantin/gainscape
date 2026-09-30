@@ -5,6 +5,7 @@ import {
   addEditExercise,
   addEditSet,
   canAddSet,
+  dropsAtRisk,
   editFromSession,
   editPayload,
   effortLabel,
@@ -15,6 +16,7 @@ import {
   rebaseNotice,
   removeEditSet,
   type SessionEdit,
+  swapEditExercise,
   updateEditSet,
   withNewSetIds,
   withoutBodyweightLoads,
@@ -381,5 +383,35 @@ describe('rebasing local changes onto a newer server copy', () => {
     };
     const fresh = { ...original, revision: 4 };
     expect(ids(rebaseEdit(local, original, fresh).edit)).toEqual(['new-first', 'set-0', 'set-1', 'set-2', 'set-3']);
+  });
+});
+
+describe('drops put at risk by an edit', () => {
+  const original = editFromSession(session, rows, exercisesById);
+  const drops = [{ setId: 'set-1' }, { setId: 'set-2' }, { setId: 'set-3' }, { setId: 'not-in-session' }];
+
+  it('lists nothing for an unchanged edit or a notes-only change', () => {
+    expect(dropsAtRisk(original, original, drops)).toEqual([]);
+    expect(dropsAtRisk({ ...original, notes: 'changed' }, original, drops)).toEqual([]);
+  });
+
+  it('lists the drops of removed sets', () => {
+    expect(dropsAtRisk(removeEditSet(original, 0, 'set-1'), original, drops)).toEqual([{ setId: 'set-1' }]);
+  });
+
+  it('lists the drops of sets whose load, reps, effort or warm-up flag changed', () => {
+    for (const changes of [
+      { weightKg: 70 },
+      { reps: 9 },
+      { isWarmup: true },
+      { effort: { type: 'level' as const, level: 'easy' as const } },
+    ]) {
+      expect(dropsAtRisk(updateEditSet(original, 2, 'set-3', changes), original, drops)).toEqual([{ setId: 'set-3' }]);
+    }
+  });
+
+  it('lists the drops of sets moved to another exercise', () => {
+    const swapped = swapEditExercise(original, 1, { id: benchId, name: 'Barbell Bench Press', loadType: 'external' });
+    expect(dropsAtRisk(swapped, original, drops)).toEqual([{ setId: 'set-2' }]);
   });
 });

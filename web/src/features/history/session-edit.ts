@@ -2,7 +2,13 @@ import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { isWithinEditWindow } from '@domain/edit-window.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
 import { roundTo } from '@domain/strength.ts';
-import { type EffortInput, type EffortLevel, MAX_SETS_PER_SESSION, type SessionSummary } from '@domain/types.ts';
+import {
+  type DropSummary,
+  type EffortInput,
+  type EffortLevel,
+  MAX_SETS_PER_SESSION,
+  type SessionSummary,
+} from '@domain/types.ts';
 import type { LoadType } from '../../lib/catalog.ts';
 import type { InvokeOutcome } from '../../lib/function-client.ts';
 import {
@@ -104,6 +110,24 @@ export function editPayload(edit: SessionEdit): EditSessionPayload {
 export function hasChanges(edit: SessionEdit, original: SessionEdit): boolean {
   const comparable = (candidate: SessionEdit) => JSON.stringify({ ...editPayload(candidate), ifRevision: 0 });
   return comparable(edit) !== comparable(original);
+}
+
+function setsById(edit: SessionEdit): Map<string, string> {
+  return new Map(
+    edit.exercises.flatMap((exercise) =>
+      exercise.sets.map((set) => [set.id, JSON.stringify({ exerciseId: exercise.exerciseId, ...set })] as const),
+    ),
+  );
+}
+
+export function dropsAtRisk<D extends Pick<DropSummary, 'setId'>>(
+  edit: SessionEdit,
+  original: SessionEdit,
+  drops: readonly D[],
+): D[] {
+  const before = setsById(original);
+  const after = setsById(edit);
+  return drops.filter((drop) => before.has(drop.setId) && after.get(drop.setId) !== before.get(drop.setId));
 }
 
 export function editSetCount(edit: SessionEdit): number {

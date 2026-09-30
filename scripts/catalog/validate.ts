@@ -111,8 +111,11 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
   }
   for (const { program, day } of days) {
     for (const entry of day.exercises) {
-      if (!exercisesByKey.has(entry.exercise)) {
+      const exercise = exercisesByKey.get(entry.exercise);
+      if (exercise === undefined) {
         problems.push(`program day "${program.key}:${day.key}" uses unknown exercise "${entry.exercise}"`);
+      } else if (exercise.requiresUnlock) {
+        problems.push(`program day "${program.key}:${day.key}" uses locked exercise "${entry.exercise}"`);
       }
     }
   }
@@ -163,6 +166,7 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
     for (const item of duplicates(table.entries.map((entry) => entry.item))) {
       problems.push(`drop table "${table.key}" lists item "${item}" twice`);
     }
+    if (!table.retired && table.entries.length === 0) problems.push(`drop table "${table.key}" has no entries`);
   }
   for (const key of REQUIRED_TABLES) {
     if (!catalog.dropTables.some((table) => table.key === key && !table.retired)) {
