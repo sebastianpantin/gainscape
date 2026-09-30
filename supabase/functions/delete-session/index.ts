@@ -4,6 +4,7 @@ import { sql } from '../_shared/db.ts';
 import { DEFAULT_BALANCE, type DropSummary, isWithinEditWindow } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
 import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
 import { loadOwnedSession, lockUser, tombstoneOwner } from '../_shared/stores/sessions.ts';
 
@@ -35,6 +36,7 @@ async function deleteSession(userId: string, sessionId: string): Promise<DeleteR
       throw new HttpError(409, 'edit_window_closed');
     }
 
+    await takeRateLimit(tx, 'session_delete_hour', userId);
     const exerciseRows = await tx`select distinct exercise_id from public.sets where session_id = ${sessionId}`;
     await tx`
       insert into public.deleted_sessions (id, user_id, started_at)

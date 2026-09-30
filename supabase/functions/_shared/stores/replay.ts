@@ -17,6 +17,7 @@ import {
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
 import { loadCatalog } from './catalog.ts';
+import { syncSessionEvents } from './events.ts';
 import { type ActiveDrop, revokeDisqualifiedDrops } from './loot.ts';
 import {
   hasLaterSessions,
@@ -179,6 +180,7 @@ export async function replayFrom(
   );
   const revoked =
     from === null ? [] : await revokeDisqualifiedDrops(tx, userId, sets, replayedSessionIds, deletedSessionIds);
+  await syncSessionEvents(tx, userId, replayedSessionIds);
 
   return {
     sessionsReplayed: replay.sessions.length,

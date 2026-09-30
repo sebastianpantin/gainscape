@@ -178,6 +178,40 @@ describe('profile protections', () => {
   });
 });
 
+describe('events', () => {
+  async function ownerEvents() {
+    return await db`select * from public.events where user_id = ${owner.id} order by id`;
+  }
+
+  it('has no client select, even for the owner', async () => {
+    const { error } = await owner.client.from('events').select('id');
+    expect(error?.code).toBe('42501');
+  });
+
+  it('denies client insert, update and delete', async () => {
+    await db`
+      insert into public.events (user_id, session_id, event_key, type, occurred_at, payload)
+      values (${owner.id}, ${ownerSessionId}, 'level:chest', 'level_up', now(), '{"skill": "chest"}')
+      on conflict (session_id, event_key) do nothing`;
+    const before = await ownerEvents();
+    expect(before.length).toBeGreaterThan(0);
+    const inserted = await owner.client.from('events').insert({
+      user_id: owner.id,
+      session_id: ownerSessionId,
+      event_key: 'level:legs',
+      type: 'level_99',
+      occurred_at: new Date().toISOString(),
+      payload: { skill: 'legs', from: 98, to: 99 },
+    });
+    expect(inserted.error?.code).toBe('42501');
+    const updated = await owner.client.from('events').update({ payload: {} }).eq('user_id', owner.id);
+    expect(updated.error?.code).toBe('42501');
+    const deleted = await owner.client.from('events').delete().eq('user_id', owner.id);
+    expect(deleted.error?.code).toBe('42501');
+    expect(await ownerEvents()).toEqual(before);
+  });
+});
+
 describe('function execution rights', () => {
   it('lets anonymous visitors check username availability', async () => {
     const { data, error } = await anon.rpc('username_available', { candidate: 'nobody_has_this' });
