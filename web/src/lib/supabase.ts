@@ -7,12 +7,8 @@ const sameOriginSupabaseProxy = `${window.location.origin}/sb`;
 
 export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? sameOriginSupabaseProxy;
 
-function requestUrl(input: RequestInfo | URL): string {
-  return input instanceof Request ? input.url : String(input);
-}
-
 function fetchWithAuthTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  if (init?.signal || !requestUrl(input).includes(AUTH_PATH)) return fetch(input, init);
+  if (init?.signal || input instanceof Request || !String(input).includes(AUTH_PATH)) return fetch(input, init);
   return fetch(input, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
 }
 

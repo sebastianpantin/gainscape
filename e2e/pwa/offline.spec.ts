@@ -119,10 +119,19 @@ test('every tab renders offline without an uncaught error', async ({ context, pa
   await expect(cold.getByRole('button', { name: 'Start workout' })).toBeVisible();
 
   const main = cold.getByRole('main');
-  const contentOrProblem = main.getByRole('alert').or(main.getByRole('heading').first()).first();
   for (const tab of ['Skills', 'Log', 'Friends', 'Profile', 'Train'] satisfies Tab[]) {
     await openTab(cold, tab);
-    await expect(contentOrProblem).toBeVisible({ timeout: 60_000 });
+    await expect
+      .poll(
+        () =>
+          main.evaluate(
+            (element) =>
+              element.querySelector('[role=alert]') !== null ||
+              (element.querySelector('h1, h2') !== null && !element.textContent?.includes('Loading…')),
+          ),
+        { timeout: 60_000 },
+      )
+      .toBe(true);
   }
   expect((await cold.goto('/profile/settings'))?.fromServiceWorker()).toBe(true);
   await expect(cold.getByRole('heading', { name: 'Settings' })).toBeVisible();

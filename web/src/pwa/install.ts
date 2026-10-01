@@ -85,3 +85,11 @@ export function markInstallCardDue(userId: string): void {
 export function dismissInstallCard(userId: string): string {
   return writeInstallCard(userId, INSTALL_CARD_DISMISSED);
 }
+
+export function forgetInstallCard(userId: string): void {
+  try {
+    localStorage.removeItem(installCardKey(userId));
+  } catch {
+    return;
+  }
+}
