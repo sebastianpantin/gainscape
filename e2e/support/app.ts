@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { confirmAccount } from './db.ts';
 
 export const password = 'correct-horse-battery';
 
@@ -13,18 +14,32 @@ export interface StoredAuthSession {
   user: { id: string };
 }
 
-export async function register(page: Page, username: string) {
+export function emailOf(username: string): string {
+  return `${username}@example.test`;
+}
+
+export async function submitRegistration(page: Page, username: string, email = emailOf(username)) {
   await page.goto('/');
   await page.getByRole('button', { name: 'New here? Create an account' }).click();
   await page.getByLabel('Username').fill(username);
-  await page.getByLabel('Email').fill(`${username}@example.test`);
+  await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+}
+
+export async function register(page: Page, username: string) {
+  await submitRegistration(page, username);
+  await confirmAccount(emailOf(username), password);
+  await page.getByRole('button', { name: 'Back to sign in' }).click();
+  await page.getByLabel('Email').fill(emailOf(username));
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 }
 
 export async function signIn(page: Page, username: string) {
-  await page.getByLabel('Email').fill(`${username}@example.test`);
+  await page.getByLabel('Email').fill(emailOf(username));
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
