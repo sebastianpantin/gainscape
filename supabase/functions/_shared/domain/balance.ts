@@ -41,3 +41,25 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   intensityBonusMax: 1.3,
   prEpsilonKg: 0.05,
 });
+
+export const LOOT_VERSION = 1;
+
+export interface LootConfig {
+  readonly version: number;
+  readonly regularRollsPerDay: number;
+  readonly prRollsPerDay: number;
+  readonly minEffectiveReps: number;
+  readonly baseChance: number;
+  readonly badLuckStep: number;
+  readonly maxChance: number;
+}
+
+export const DEFAULT_LOOT: LootConfig = Object.freeze({
+  version: LOOT_VERSION,
+  regularRollsPerDay: 5,
+  prRollsPerDay: 2,
+  minEffectiveReps: 1,
+  baseChance: 0.1,
+  badLuckStep: 0.03,
+  maxChance: 0.4,
+});

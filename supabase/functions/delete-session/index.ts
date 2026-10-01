@@ -1,7 +1,7 @@
 import { z } from 'npm:zod@4.6.5';
 import { authenticatedUserId } from '../_shared/auth.ts';
 import { sql } from '../_shared/db.ts';
-import { DEFAULT_BALANCE, isWithinEditWindow } from '../_shared/domain/index.ts';
+import { DEFAULT_BALANCE, type DropSummary, isWithinEditWindow } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
 import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
@@ -13,6 +13,7 @@ interface DeleteResponse {
   sessionId: string;
   deleted: true;
   replayedSessionIds: string[];
+  revokedDrops: DropSummary[];
 }
 
 function parseDeleteSessionPayload(body: unknown): string {
@@ -24,7 +25,9 @@ function parseDeleteSessionPayload(body: unknown): string {
 async function deleteSession(userId: string, sessionId: string): Promise<DeleteResponse> {
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId);
-    if ((await tombstoneOwner(tx, sessionId)) === userId) return { sessionId, deleted: true, replayedSessionIds: [] };
+    if ((await tombstoneOwner(tx, sessionId)) === userId) {
+      return { sessionId, deleted: true, replayedSessionIds: [], revokedDrops: [] };
+    }
 
     const session = await loadOwnedSession(tx, userId, sessionId);
     if (!session) throw new HttpError(404, 'session_not_found');
@@ -37,14 +40,15 @@ async function deleteSession(userId: string, sessionId: string): Promise<DeleteR
       insert into public.deleted_sessions (id, user_id, started_at)
       values (${sessionId}, ${userId}, ${session.key.startedAt})`;
     await tx`delete from public.sessions where id = ${sessionId} and user_id = ${userId}`;
-    const { replayedSessionIds } = await replayFrom(
+    const { replayedSessionIds, revokedDrops } = await replayFrom(
       tx,
       userId,
       session.key,
       exerciseRows.map((row) => row.exercise_id),
       DEFAULT_BALANCE,
+      [sessionId],
     );
-    return { sessionId, deleted: true, replayedSessionIds };
+    return { sessionId, deleted: true, replayedSessionIds, revokedDrops };
   });
 }
 

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { combatLevel, DEFAULT_BALANCE, levelForXp, processSession, roundTo } from '@domain/index.ts';
 import {
+  activeDropSummaries,
   builtInExerciseId,
   createTestUser,
   db,
@@ -84,8 +85,9 @@ describe('complete-session with the fixture workout', () => {
     expect(firstResponse.body.levelUps).toEqual(expected.levelUps);
   });
 
-  it('reports the session id and no drops', () => {
-    expect(firstResponse.body).toMatchObject({ sessionId: fixture.id, drops: [] });
+  it('reports the session id and its active drops', async () => {
+    expect(firstResponse.body.sessionId).toBe(fixture.id);
+    expect(firstResponse.body.drops).toEqual(await activeDropSummaries(fixture.id));
   });
 
   it('stores derived strength columns on the sets', async () => {
@@ -229,6 +231,24 @@ describe('complete-session rejections', () => {
     );
     expect(response.status).toBe(422);
     expect(response.body.error).toBe('unknown_exercise');
+  });
+
+  it('returns 422 for a locked scroll variation and writes nothing, then accepts it once unlocked', async () => {
+    const user = await createTestUser();
+    const pauseSquatId = await builtInExerciseId('pause_squat');
+    const locked = await postCompleteSession(user.accessToken, sessionPayload(threeSets(pauseSquatId, 0, 80, 'hard')));
+    expect(locked.status).toBe(422);
+    expect(locked.body).toMatchObject({ error: 'unknown_exercise', details: { exerciseIds: [pauseSquatId] } });
+    expect(await rowCountsFor(user.id)).toEqual({ sessions: 0, sets: 0, set_skill_xp: 0, user_skills: 0 });
+
+    await db`
+      insert into public.user_unlocks (user_id, exercise_id, item_id)
+      select ${user.id}, ${pauseSquatId}, id from public.items where key = 'scroll_pause_squat'`;
+    const unlocked = await postCompleteSession(
+      user.accessToken,
+      sessionPayload(threeSets(pauseSquatId, 0, 80, 'hard')),
+    );
+    expect(unlocked.status).toBe(200);
   });
 
   it('returns 422 for more than 200 sets', async () => {

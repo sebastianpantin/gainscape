@@ -6,6 +6,7 @@ import {
   createTestUser,
   db,
   env,
+  grantDrop,
   postCompleteSession,
   postFunction,
   type TestUser,
@@ -27,6 +28,12 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'exercises', column: 'owner_user_id' },
   { table: 'programs', column: 'owner_user_id' },
   { table: 'deleted_sessions', column: 'user_id' },
+  { table: 'loot_rolls', column: 'user_id' },
+  { table: 'drops', column: 'user_id' },
+  { table: 'drop_luck', column: 'user_id' },
+  { table: 'user_items', column: 'user_id' },
+  { table: 'item_ledger', column: 'user_id' },
+  { table: 'user_unlocks', column: 'user_id' },
 ];
 
 async function post(name: string, accessToken: string | null, body: unknown) {
@@ -65,7 +72,15 @@ async function logOneSession(user: TestUser): Promise<string> {
 }
 
 async function giveUserEverything(user: TestUser): Promise<void> {
-  await logOneSession(user);
+  const keptSessionId = await logOneSession(user);
+  const scroll = await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
+  await db`
+    insert into public.user_unlocks (user_id, exercise_id, item_id, source_drop_id)
+    select ${user.id}, grants_exercise_id, id, ${scroll.dropId} from public.items where key = 'scroll_pause_squat'`;
+  await db`
+    insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
+    select ${user.id}, id, 3 from public.drop_tables where key = 'regular'
+    on conflict (user_id, drop_table_id) do nothing`;
   const removed = await postFunction('delete-session', user.accessToken, { sessionId: await logOneSession(user) });
   expect(removed.status).toBe(200);
   const benchId = await builtInExerciseId('barbell_bench_press');
@@ -159,6 +174,14 @@ describe('export-data', () => {
     expect(exported.customExercises[0].shares).toEqual([{ skill: 'shoulders', share_bp: 10000 }]);
     expect(exported.programs.length).toBeGreaterThan(0);
     expect(exported.programs[0].days.length).toBeGreaterThan(0);
+    const counts = await rowCounts(owner.id);
+    expect(exported.lootRolls).toHaveLength(counts.loot_rolls);
+    expect(exported.drops).toHaveLength(counts.drops);
+    expect(exported.dropLuck).toHaveLength(counts.drop_luck);
+    expect(exported.userItems).toHaveLength(counts.user_items);
+    expect(exported.itemLedger).toHaveLength(counts.item_ledger);
+    expect(exported.userUnlocks).toHaveLength(1);
+    expect(exported.drops.some((drop: { source: string }) => drop.source === 'pr')).toBe(true);
     const everyUserId = JSON.stringify(exported).match(new RegExp(bystander.id, 'g'));
     expect(everyUserId).toBeNull();
   });
@@ -203,6 +226,10 @@ describe('delete-account', () => {
     );
     expect(ownedExerciseIds).toHaveLength(1);
     expect(ownedProgramIds.length).toBeGreaterThan(0);
+    const ownerBefore = await rowCounts(owner.id);
+    for (const table of ['loot_rolls', 'drops', 'drop_luck', 'user_items', 'item_ledger', 'user_unlocks']) {
+      expect(ownerBefore[table], table).toBeGreaterThan(0);
+    }
     const response = await post('delete-account', owner.accessToken, {
       confirmUsername: owner.username.toUpperCase(),
       password: TEST_PASSWORD,

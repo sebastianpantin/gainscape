@@ -4,6 +4,7 @@ import {
   carriedEffectiveLoadKg,
   type Catalog,
   DEFAULT_BALANCE,
+  type DropSummary,
   effectiveLoadForNewSet,
   isWithinEditWindow,
   resolveEffort,
@@ -31,6 +32,7 @@ interface EditResponse {
   summary: SessionSummary;
   revision: number;
   replayedSessionIds: string[];
+  revokedDrops: DropSummary[];
 }
 
 function sameSet(requested: SetPayload, stored: StoredSet): boolean {
@@ -133,7 +135,7 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     if (!session) throw new HttpError(404, 'session_not_found');
     const storedSets = await loadStoredSets(tx, payload.sessionId);
     if (isNoOp(payload, session, storedSets)) {
-      return { summary: session.summary, revision: session.revision, replayedSessionIds: [] };
+      return { summary: session.summary, revision: session.revision, replayedSessionIds: [], revokedDrops: [] };
     }
 
     if (session.historyOnly || !isWithinEditWindow(session.key.startedAt, Date.now())) {
@@ -165,11 +167,18 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
       returning revision`;
 
     const storedExerciseIds = [...new Set(storedSets.map((set) => set.exerciseId))];
-    const { replayedSessionIds } = await replayFrom(tx, userId, session.key, storedExerciseIds, DEFAULT_BALANCE);
+    const { replayedSessionIds, revokedDrops } = await replayFrom(
+      tx,
+      userId,
+      session.key,
+      storedExerciseIds,
+      DEFAULT_BALANCE,
+    );
     return {
       summary: await storedSummary(tx, payload.sessionId),
       revision: updated.revision,
       replayedSessionIds,
+      revokedDrops,
     };
   });
 }

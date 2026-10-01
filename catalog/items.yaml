@@ -1,0 +1,60 @@
+- key: spotter_pup
+  name: Spotter Pup
+  kind: pet
+  rarity: legendary
+  icon: pet
+  description: Watches every rep and never lets the bar fall.
+- key: chalk_sprite
+  name: Chalk Sprite
+  kind: pet
+  rarity: legendary
+  icon: pet
+  description: A puff of chalk that follows you from platform to platform.
+- key: iron_tortoise
+  name: Iron Tortoise
+  kind: pet
+  rarity: legendary
+  icon: pet
+  description: Slow, steady and heavier than it looks.
+- key: plate_crab
+  name: Plate Crab
+  kind: pet
+  rarity: legendary
+  icon: pet
+  description: Carries a spare plate on its back, just in case.
+- key: scroll_pause_bench_press
+  name: 'Scroll: pause bench press'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: pause_bench_press
+- key: scroll_pause_squat
+  name: 'Scroll: pause squat'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: pause_squat
+- key: scroll_deficit_deadlift
+  name: 'Scroll: deficit deadlift'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: deficit_deadlift
+- key: scroll_dead_stop_row
+  name: 'Scroll: dead-stop row'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: dead_stop_row
+- key: scroll_z_press
+  name: 'Scroll: Z press'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: z_press
+- key: scroll_spider_curl
+  name: 'Scroll: spider curl'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: spider_curl
