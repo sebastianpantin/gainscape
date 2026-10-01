@@ -1,4 +1,5 @@
 import type { BalanceConfig } from './balance.ts';
+import { MS_PER_DAY } from './edit-window.ts';
 import { compareSessionKeys, isBefore } from './ordering.ts';
 import type { SessionContext, Step } from './pipeline.ts';
 import type {
@@ -10,7 +11,6 @@ import type {
   StrengthState,
 } from './types.ts';
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const FLOOR_TOLERANCE = 1e-9;
 
 const NO_STRENGTH: ExerciseStrength = Object.freeze({ windowMax: null, fallbackMax: null, hasPriorSession: false });
@@ -272,18 +272,4 @@ export function currentStrength(
     current[exerciseId] = { value, sourceSetId: setsItsOwnValue ? bestThisSession.setId : null };
   }
   return current;
-}
-
-export function strengthAfterSession(
-  strength: StrengthState,
-  sets: readonly SetResult[],
-): Record<string, CurrentStrength> {
-  return currentStrength(
-    strength,
-    sets.map((result) => ({
-      exerciseId: result.set.exerciseId,
-      setId: result.set.id,
-      value: result.e1rmCandidateKg ?? result.repsCapacityCandidate,
-    })),
-  );
 }

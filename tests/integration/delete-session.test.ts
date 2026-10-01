@@ -12,10 +12,10 @@ import {
   rebuildCaches,
   type TestUser,
 } from './local-stack.ts';
+import { HOUR_MS, postSession, withFreshIds } from './loot-support.ts';
 
 type Effort = { type: 'level'; level: 'hard' } | null;
 
-const HOUR_MS = 60 * 60 * 1000;
 const hard = { type: 'level', level: 'hard' } as const;
 
 function sessionAt(hoursAgo: number, sets: { exerciseId: string; weightKg: number; reps: number; effort: Effort }[]) {
@@ -27,17 +27,6 @@ function sessionAt(hoursAgo: number, sets: { exerciseId: string; weightKg: numbe
     notes: null,
     sets: sets.map((set, position) => ({ id: randomUUID(), position, isWarmup: false, ...set })),
   };
-}
-
-type SessionBody = ReturnType<typeof sessionAt>;
-
-function withFreshIds(session: SessionBody): SessionBody {
-  return { ...session, id: randomUUID(), sets: session.sets.map((set) => ({ ...set, id: randomUUID() })) };
-}
-
-async function sync(user: TestUser, session: unknown) {
-  const response = await postCompleteSession(user.accessToken, session);
-  expect(response.status, response.rawBody).toBe(200);
 }
 
 async function remove(user: TestUser, body: unknown) {
@@ -74,8 +63,8 @@ describe('delete-session', () => {
     const user = await createTestUser();
     const s1 = sessionAt(3, [{ exerciseId: benchId, weightKg: 80, reps: 5, effort: hard }]);
     const s2 = sessionAt(1, [{ exerciseId: benchId, weightKg: 100, reps: 3, effort: hard }]);
-    await sync(user, s1);
-    await sync(user, s2);
+    await postSession(user, s1);
+    await postSession(user, s2);
 
     const activeDrops = await activeDropSummaries(s2.id);
     expect(activeDrops.some((drop) => drop.source === 'pr')).toBe(true);
@@ -89,7 +78,7 @@ describe('delete-session', () => {
     });
 
     const onlyFirst = await createTestUser();
-    await sync(onlyFirst, withFreshIds(s1));
+    await postSession(onlyFirst, withFreshIds(s1));
     expect(await cachesOf(user.id)).toEqual(await cachesOf(onlyFirst.id));
 
     const retry = await remove(user, { sessionId: s2.id });
@@ -113,15 +102,15 @@ describe('delete-session', () => {
     const user = await createTestUser();
     const s1 = sessionAt(3, [{ exerciseId: benchId, weightKg: 80, reps: 5, effort: hard }]);
     const s2 = sessionAt(1, [{ exerciseId: benchId, weightKg: 80, reps: 5, effort: null }]);
-    await sync(user, s1);
-    await sync(user, s2);
+    await postSession(user, s1);
+    await postSession(user, s2);
 
     const response = await remove(user, { sessionId: s1.id });
     expect(response.status).toBe(200);
     expect(response.body.replayedSessionIds).toEqual([s2.id]);
 
     const onlySecond = await createTestUser();
-    await sync(onlySecond, withFreshIds(s2));
+    await postSession(onlySecond, withFreshIds(s2));
     expect(await normalizedSnapshot(user.id)).toEqual(await normalizedSnapshot(onlySecond.id));
   });
 
@@ -129,8 +118,8 @@ describe('delete-session', () => {
     const user = await createTestUser();
     const s1 = sessionAt(3, [{ exerciseId: benchId, weightKg: 80, reps: 5, effort: hard }]);
     const s2 = sessionAt(1, [{ exerciseId: squatId, weightKg: 100, reps: 5, effort: hard }]);
-    await sync(user, s1);
-    await sync(user, s2);
+    await postSession(user, s1);
+    await postSession(user, s2);
 
     expect((await remove(user, { sessionId: s2.id })).status).toBe(200);
     const squatRows = await db`
@@ -167,7 +156,7 @@ describe('delete-session guards', () => {
 
   it('refuses a session outside the window', async () => {
     const session = sessionAt(1, [{ exerciseId: benchId, weightKg: 60, reps: 5, effort: hard }]);
-    await sync(owner, session);
+    await postSession(owner, session);
     await ageSession(session.id, '7 days 1 minute');
     expect((await expectRejected(owner, { sessionId: session.id }, 409)).body.error).toBe('edit_window_closed');
   });
@@ -179,13 +168,13 @@ describe('delete-session guards', () => {
       startedAt: startedAt.toISOString(),
       endedAt: new Date(startedAt.getTime() + HOUR_MS).toISOString(),
     };
-    await sync(owner, session);
+    await postSession(owner, session);
     expect((await expectRejected(owner, { sessionId: session.id }, 409)).body.error).toBe('edit_window_closed');
   });
 
   it("returns 404 for someone else's session and for an unknown id", async () => {
     const session = sessionAt(2, [{ exerciseId: benchId, weightKg: 60, reps: 5, effort: hard }]);
-    await sync(owner, session);
+    await postSession(owner, session);
     expect((await expectRejected(stranger, { sessionId: session.id }, 404)).body.error).toBe('session_not_found');
     expect((await expectRejected(owner, { sessionId: randomUUID() }, 404)).body.error).toBe('session_not_found');
   });
@@ -212,7 +201,7 @@ describe('delete-session and custom exercises', () => {
     };
     expect((await user.client.rpc('save_custom_exercise', { exercise })).error).toBeNull();
     const session = sessionAt(1, [{ exerciseId: exercise.id, weightKg: 40, reps: 8, effort: hard }]);
-    await sync(user, session);
+    await postSession(user, session);
     const reshared = { ...exercise, shares: [{ skillId: skills.shoulders, shareBp: 10000 }] };
     expect((await user.client.rpc('save_custom_exercise', { exercise: reshared })).error?.message).toBe(
       'shares_locked',

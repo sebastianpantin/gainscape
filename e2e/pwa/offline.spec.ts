@@ -2,11 +2,13 @@ import { expect, type Page, test } from '@playwright/test';
 import {
   authStorageKey,
   logExercise,
+  nowInSeconds,
   openTab,
   readSession,
   readStoredDraft,
   register,
   type Tab,
+  uniqueUsername,
   writeSession,
 } from '../support/app.ts';
 import { sessionCount, setCount } from '../support/db.ts';
@@ -17,9 +19,7 @@ import {
   cachedPaths,
   fetchOutcome,
   markPageOffline,
-  nowInSeconds,
   OFFLINE_BANNER,
-  uniqueUsername,
   waitForController,
 } from '../support/pwa.ts';
 

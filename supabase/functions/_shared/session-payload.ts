@@ -1,10 +1,16 @@
 import { z } from 'npm:zod@4.6.5';
-import { MAX_SETS_PER_SESSION, roundTo } from './domain/index.ts';
+import { roundTo } from './domain/index.ts';
 import { HttpError } from './http.ts';
 
-export { MAX_SETS_PER_SESSION };
+export const lowerUuid = z.uuid().transform((id) => id.toLowerCase());
 
-export const effortSchema = z
+export function parseOr422<T extends z.ZodType>(schema: T, body: unknown): z.output<T> {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) throw new HttpError(422, 'invalid_payload', z.treeifyError(parsed.error));
+  return parsed.data;
+}
+
+const effortSchema = z
   .discriminatedUnion('type', [
     z.object({ type: z.literal('level'), level: z.enum(['easy', 'hard', 'near_failure', 'failure']) }).strict(),
     z.object({ type: z.literal('rir'), value: z.number().min(0).max(10).multipleOf(0.5) }).strict(),
@@ -14,8 +20,8 @@ export const effortSchema = z
 
 export const setSchema = z
   .object({
-    id: z.uuid().transform((id) => id.toLowerCase()),
-    exerciseId: z.uuid().transform((id) => id.toLowerCase()),
+    id: lowerUuid,
+    exerciseId: lowerUuid,
     position: z.int().min(0).max(999),
     weightKg: z
       .number()
@@ -30,7 +36,7 @@ export const setSchema = z
 
 export type SetPayload = z.infer<typeof setSchema>;
 
-export function hasDuplicates(values: readonly (string | number)[]): boolean {
+function hasDuplicates(values: readonly (string | number)[]): boolean {
   return new Set(values).size !== values.length;
 }
 

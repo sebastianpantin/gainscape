@@ -1,13 +1,13 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { z } from 'npm:zod@4.6.5';
-import { authenticatedUserId } from '../_shared/auth.ts';
+import { authenticatedUserId, clientOptions } from '../_shared/auth.ts';
 import { sql } from '../_shared/db.ts';
-import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+import { HttpError, jsonResponse } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
+import { serve } from '../_shared/serve.ts';
 
 const bodySchema = z.object({ confirmUsername: z.string().min(1).max(40), password: z.string().min(1).max(200) });
 
-const clientOptions = { auth: { persistSession: false, autoRefreshToken: false } };
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, clientOptions);
 
 async function passwordMatches(email: string, password: string): Promise<boolean> {
@@ -30,16 +30,10 @@ async function deleteAccount(userId: string, confirmUsername: string, password: 
   if (error) throw error;
 }
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-  try {
-    if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed');
-    const userId = await authenticatedUserId(request);
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) throw new HttpError(422, 'invalid_body');
-    await deleteAccount(userId, parsed.data.confirmUsername, parsed.data.password);
-    return jsonResponse({ deleted: true });
-  } catch (error) {
-    return errorResponse(error);
-  }
+serve(async (request) => {
+  const userId = await authenticatedUserId(request);
+  const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) throw new HttpError(422, 'invalid_body');
+  await deleteAccount(userId, parsed.data.confirmUsername, parsed.data.password);
+  return jsonResponse({ deleted: true });
 });

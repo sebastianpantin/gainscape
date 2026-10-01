@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-export const FONT_FAMILIES = ['Pixelify Sans', 'IBM Plex Mono'];
+const FONT_FAMILIES = ['Pixelify Sans', 'IBM Plex Mono'];
 
 export async function expectFontsLoaded(page: Page): Promise<void> {
   const results = await page.evaluate(async (families) => {

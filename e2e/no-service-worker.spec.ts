@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { register } from './support/app.ts';
+import { register, uniqueUsername } from './support/app.ts';
 import { expectFontsLoaded } from './support/fonts.ts';
 
 test.use({ serviceWorkers: 'allow' });
@@ -16,7 +16,7 @@ test('the dev server never registers a service worker and still loads the fonts'
       return register(...args);
     };
   });
-  await register(page, `nosw_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`);
+  await register(page, uniqueUsername('nosw'));
   await page.reload();
   await page.waitForLoadState('load');
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();

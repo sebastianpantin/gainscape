@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { logExercise, openTab, readSession, readStoredDraft, register, writeStoredDraft } from './support/app.ts';
+import {
+  finishedBenchDraft,
+  logExercise,
+  openTab,
+  readSession,
+  readStoredDraft,
+  register,
+  writeStoredDraft,
+} from './support/app.ts';
 import { builtInExerciseId, editElsewhere, latestSetOf, sessionCount, sessionNotes, setsOf } from './support/db.ts';
 
 function xpValue(text: string | null): number {
@@ -61,25 +69,7 @@ test('re-sending a workout that was deleted elsewhere shows it as deleted and dr
   await page.getByRole('button', { name: 'Delete for good' }).click();
   await expect(page.getByText('Workout deleted.')).toBeVisible();
 
-  const finishedAt = new Date();
-  await writeStoredDraft(page, user.id, {
-    sessionId,
-    startedAt: new Date(finishedAt.getTime() - 30 * 60 * 1000).toISOString(),
-    finishedAt: finishedAt.toISOString(),
-    programDayId: null,
-    programLabel: null,
-    exercises: [
-      {
-        exerciseId: await builtInExerciseId('barbell_bench_press'),
-        name: 'Barbell Bench Press',
-        loadType: 'external',
-        target: null,
-        sets: [
-          { id: crypto.randomUUID(), weightKg: 60, reps: 5, effort: { type: 'level', level: 'hard' }, done: true },
-        ],
-      },
-    ],
-  });
+  await writeStoredDraft(page, user.id, finishedBenchDraft(sessionId, await builtInExerciseId('barbell_bench_press')));
   await page.goto('/');
   await expect(page.getByText('This workout was deleted')).toBeVisible();
   await expect.poll(async () => (await readStoredDraft(page, user.id))?.kind).toBe('synced');

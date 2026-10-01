@@ -1,14 +1,19 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
 import { MINIMUM_PASSWORD_LENGTH } from '../../lib/account.ts';
-import { authCallbackUrl, authErrorMessage, RESEND_COOLDOWN_SECONDS } from '../../lib/auth-links.ts';
+import {
+  authCallbackUrl,
+  authErrorMessage,
+  RESEND_COOLDOWN_SECONDS,
+  USERNAME_HINT,
+  USERNAME_PATTERN,
+} from '../../lib/auth-links.ts';
 import { signOutSettled } from '../../lib/auth-restore.ts';
 import { supabase } from '../../lib/supabase.ts';
 import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
 
 type Mode = 'sign-in' | 'register' | 'check-email' | 'forgot' | 'reset-sent';
 
-const USERNAME_PATTERN = '^[a-z0-9_]{3,20}$';
 const SIGNUP_TRIGGER_FAILURE = 'Database error saving new user';
 const RATE_LIMITED_STATUS = 429;
 const MILLISECONDS_PER_SECOND = 1000;
@@ -170,7 +175,7 @@ export function AuthScreen() {
   return (
     <main className="screen auth-screen">
       <div className="brand">
-        <LogoMark size={48} />
+        <LogoMark />
         <h1>GAINSCAPE</h1>
         <p>A lifting log where every hard set earns XP.</p>
       </div>
@@ -208,7 +213,7 @@ export function AuthScreen() {
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 pattern={USERNAME_PATTERN}
-                title="3–20 characters: lowercase letters, digits, underscore"
+                title={USERNAME_HINT}
                 autoCapitalize="none"
                 autoComplete="username"
                 required

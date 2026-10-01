@@ -6,18 +6,13 @@ import { formatLoad } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { updatePublicProfile } from '../../lib/profile.ts';
 import { formatWeight } from '../../lib/units.ts';
-import { cardProfileOf, standingOfView } from '../../lib/profile-view.ts';
 import { fetchProfileView, type ProfileView } from '../../lib/social.ts';
-import { collectionPercent } from '../../lib/social-rules.ts';
-import { monogramFor } from '../../lib/standing.ts';
-import { ProfileCard } from './ProfileCard.tsx';
+import { ProfileWithTopSkills } from './ProfileWithTopSkills.tsx';
 import { useProfile } from './use-profile.ts';
 
 interface FriendPreviewScreenProps {
   userId: string;
 }
-
-const TOP_SKILL_COUNT = 3;
 
 type ViewState =
   | { status: 'loading' }
@@ -82,10 +77,6 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
         view.status === 'ready' &&
         (() => {
           const { profile } = state.bundle;
-          const standing = standingOfView(view.skills, view.profile);
-          const topSkills = [...standing.skills]
-            .sort((a, b) => b.progress.xp - a.progress.xp)
-            .slice(0, TOP_SKILL_COUNT);
           const toggleWeights = async (showWeights: boolean) => {
             setProblem(null);
             setPending(true);
@@ -113,29 +104,7 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
                   {problem}
                 </p>
               )}
-              <ProfileCard
-                profile={cardProfileOf(view.profile)}
-                totalLevel={standing.totalLevel}
-                combatLevel={standing.combatLevel}
-                collectionPercent={collectionPercent(
-                  view.profile.collection.filledSlots,
-                  view.profile.collection.totalSlots,
-                )}
-              />
-              <section className="panel stack" aria-labelledby="top-skills-heading">
-                <h2 id="top-skills-heading">Top skills</h2>
-                <ul className="menu-list" style={{ gap: 8 }}>
-                  {topSkills.map(({ skill, progress }) => (
-                    <li className="row" key={skill.id}>
-                      <span className="monogram" aria-hidden="true">
-                        {monogramFor(skill.key)}
-                      </span>
-                      <span style={{ flexGrow: 1 }}>{skill.name}</span>
-                      <span className="skill-level">{progress.level}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              <ProfileWithTopSkills skills={view.skills} profile={view.profile} headingId="top-skills-heading" />
               <section className="panel stack" aria-labelledby="record-heading">
                 <h2 id="record-heading">How your records appear</h2>
                 <span className="pixel" data-testid="preview-record">

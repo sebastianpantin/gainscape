@@ -1,16 +1,18 @@
 import { expect, test } from '@playwright/test';
-import { logExercise, readSession, register, signIn, writeSession, writeStoredDraft } from './support/app.ts';
+import {
+  finishedBenchDraft,
+  logExercise,
+  nowInSeconds,
+  readSession,
+  register,
+  signIn,
+  uniqueUsername,
+  writeSession,
+  writeStoredDraft,
+} from './support/app.ts';
 import { builtInExerciseId, resignedWithAnotherKey, sessionCount } from './support/db.ts';
 
 const completeSession = '/functions/v1/complete-session';
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-}
-
-function nowInSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
 
 test('an expired access token is refreshed before the single POST', async ({ page }) => {
   const username = uniqueUsername('tr_a');
@@ -62,25 +64,11 @@ test('a workout kept through a forced sign-out syncs after signing in again', as
   const username = uniqueUsername('tr_c');
   await register(page, username);
   const { user } = await readSession(page);
-  const finishedAt = new Date();
-  await writeStoredDraft(page, user.id, {
-    sessionId: crypto.randomUUID(),
-    startedAt: new Date(finishedAt.getTime() - 30 * 60 * 1000).toISOString(),
-    finishedAt: finishedAt.toISOString(),
-    programDayId: null,
-    programLabel: null,
-    exercises: [
-      {
-        exerciseId: await builtInExerciseId('barbell_bench_press'),
-        name: 'Barbell Bench Press',
-        loadType: 'external',
-        target: null,
-        sets: [
-          { id: crypto.randomUUID(), weightKg: 60, reps: 5, effort: { type: 'level', level: 'hard' }, done: true },
-        ],
-      },
-    ],
-  });
+  await writeStoredDraft(
+    page,
+    user.id,
+    finishedBenchDraft(crypto.randomUUID(), await builtInExerciseId('barbell_bench_press')),
+  );
   await writeSession(page, { expires_at: nowInSeconds() - 60, refresh_token: 'garbage-refresh-token' });
 
   await page.reload();

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { EDIT_WINDOW_DAYS, isWithinEditWindow } from '@domain/index.ts';
+import { DAY_MS } from './fixtures.ts';
 
 const now = Date.parse('2026-09-30T12:00:00.000Z');
-const windowMs = EDIT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+const windowMs = EDIT_WINDOW_DAYS * DAY_MS;
 
 describe('isWithinEditWindow', () => {
   it('includes a session that started exactly 7 days ago', () => {

@@ -19,11 +19,9 @@ import {
   strengthHistoryRows,
   type StrengthHistoryRow,
 } from '@domain/index.ts';
-import { catalog as fixtureCatalog } from './fixtures.ts';
+import { catalog as fixtureCatalog, DAY_MS, HOUR_MS } from './fixtures.ts';
 
 const cfg = DEFAULT_BALANCE;
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
 const HISTORY_START_MS = Date.parse('2026-01-01T06:00:00.000Z');
 
 const extraExercises: ExerciseDef[] = [
@@ -269,21 +267,9 @@ function startedWithOnlyFallback(replayed: readonly ReplayedSession[]): boolean 
   );
 }
 
-function coverageLabel(history: GeneratedHistory): string {
-  const { sessions, cut } = history;
-  const { suffix, trimmedAway } = replaySuffix(sessions.slice(0, cut), sessions.slice(cut), keyOf(sessions[cut]), true);
-  if (trimmedAway > 0) return 'trim removed prior rows';
-  if (startedWithOnlyFallback(suffix.sessions)) return 'suffix started from fallbackMax';
-  return 'neither';
-}
-
 const RUNS = 300;
 
 describe('replay from a stored prior state', () => {
-  it('logs how often the generator trims or falls back', () => {
-    fc.statistics(historyArb, coverageLabel, { numRuns: RUNS });
-  });
-
   it('replays a suffix exactly like the full history, with the SQL trim applied', () => {
     let hits = 0;
     fc.assert(

@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, describe, expect, it } from 'vitest';
 import { AUTH_MESSAGES, authErrorMessage, parseAuthCallback } from '../../web/src/lib/auth-links.ts';
-import { createTestUser, db, env } from './local-stack.ts';
+import { createTestUser, db, newAnonClient, TEST_PASSWORD } from './local-stack.ts';
 import { authLinkFrom, listEmailsTo, waitForEmail } from './mailbox.ts';
 
 const SITE_ORIGIN = 'https://localhost:5173';
@@ -10,14 +10,7 @@ const CALLBACK = `${SITE_ORIGIN}/auth/confirm`;
 const CONFIRM_SUBJECT = 'Confirm your Gainscape account';
 const RECOVERY_SUBJECT = 'Reset your Gainscape password';
 const EMAIL_CHANGE_SUBJECT = 'Confirm your new Gainscape email';
-const PASSWORD = 'correct-horse-battery';
 const MAX_FREQUENCY_WAIT_MS = 1_500;
-
-const clientOptions = { auth: { persistSession: false, autoRefreshToken: false } };
-
-function freshClient(): SupabaseClient {
-  return createClient(env.API_URL, env.ANON_KEY, clientOptions);
-}
 
 function freshIdentity(prefix = 'ae') {
   const username = `${prefix}_${randomUUID().replaceAll('-', '').slice(0, 14)}`;
@@ -28,7 +21,7 @@ async function signUp(
   client: SupabaseClient,
   identity: { username: string; email: string },
   emailRedirectTo = CALLBACK,
-  password = PASSWORD,
+  password = TEST_PASSWORD,
 ) {
   return await client.auth.signUp({
     email: identity.email,
@@ -53,7 +46,7 @@ describe('signup confirmation', () => {
   it('sends a confirmation link and signs in only after it is verified', async () => {
     const identity = freshIdentity();
     const since = new Date();
-    const client = freshClient();
+    const client = newAnonClient();
     const signedUp = await signUp(client, identity);
     expect(signedUp.error).toBeNull();
     expect(signedUp.data.session).toBeNull();
@@ -64,7 +57,7 @@ describe('signup confirmation', () => {
     expect(tokenOf(link).type).toBe('email');
     expect(await listEmailsTo(identity.email, since, CONFIRM_SUBJECT)).toHaveLength(1);
 
-    const early = await freshClient().auth.signInWithPassword({ email: identity.email, password: PASSWORD });
+    const early = await newAnonClient().auth.signInWithPassword({ email: identity.email, password: TEST_PASSWORD });
     expect(early.error?.code).toBe('email_not_confirmed');
     expect(authErrorMessage(early.error!)).toBe(AUTH_MESSAGES.emailNotConfirmed);
 
@@ -74,7 +67,10 @@ describe('signup confirmation', () => {
     const chosen = await client.auth.updateUser({ password: 'a-chosen-password' });
     expect(chosen.error).toBeNull();
 
-    const later = await freshClient().auth.signInWithPassword({ email: identity.email, password: 'a-chosen-password' });
+    const later = await newAnonClient().auth.signInWithPassword({
+      email: identity.email,
+      password: 'a-chosen-password',
+    });
     expect(later.error).toBeNull();
     const [profile] = await db`select username from public.profiles where id = ${later.data.user!.id}`;
     expect(profile.username).toBe(identity.username);
@@ -83,7 +79,7 @@ describe('signup confirmation', () => {
   it('keeps loopback origins and falls back to site_url for LAN addresses and any other host', async () => {
     const loopback = freshIdentity();
     const loopbackSince = new Date();
-    await signUp(freshClient(), loopback, 'https://127.0.0.1:5173/auth/confirm');
+    await signUp(newAnonClient(), loopback, 'https://127.0.0.1:5173/auth/confirm');
     const loopbackLink = authLinkFrom(
       await waitForEmail(loopback.email, { subject: CONFIRM_SUBJECT, since: loopbackSince }),
     );
@@ -102,7 +98,7 @@ describe('signup confirmation', () => {
     for (const redirect of redirects) {
       const identity = freshIdentity();
       const since = new Date();
-      await signUp(freshClient(), identity, redirect);
+      await signUp(newAnonClient(), identity, redirect);
       const link = authLinkFrom(await waitForEmail(identity.email, { subject: CONFIRM_SUBJECT, since }));
       expect(new URL(link).origin).toBe(SITE_ORIGIN);
       expect(parseAuthCallback(link)?.type).toBe('email');
@@ -111,7 +107,7 @@ describe('signup confirmation', () => {
 
   it('resends a working confirmation link', async () => {
     const identity = freshIdentity();
-    const client = freshClient();
+    const client = newAnonClient();
     const firstSince = new Date();
     await signUp(client, identity);
     await waitForEmail(identity.email, { subject: CONFIRM_SUBJECT, since: firstSince });
@@ -132,7 +128,7 @@ describe('signup confirmation', () => {
 
   it('maps a used or garbage token hash to the invalid-link message', async () => {
     const identity = freshIdentity();
-    const client = freshClient();
+    const client = newAnonClient();
     const since = new Date();
     await signUp(client, identity);
     const { tokenHash } = tokenOf(
@@ -140,9 +136,9 @@ describe('signup confirmation', () => {
     );
     expect((await client.auth.verifyOtp({ token_hash: tokenHash, type: 'email' })).error).toBeNull();
 
-    const reused = await freshClient().auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
+    const reused = await newAnonClient().auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
     expect(authErrorMessage(reused.error!)).toBe(AUTH_MESSAGES.invalidLink);
-    const garbage = await freshClient().auth.verifyOtp({ token_hash: 'not-a-real-token', type: 'recovery' });
+    const garbage = await newAnonClient().auth.verifyOtp({ token_hash: 'not-a-real-token', type: 'recovery' });
     expect(authErrorMessage(garbage.error!)).toBe(AUTH_MESSAGES.invalidLink);
   });
 });
@@ -151,11 +147,11 @@ describe('account pre-hijack', () => {
   it('rotates the squatter password on confirmation and lets the owner pick a username', async () => {
     const victim = freshIdentity('vi');
     const squatter = { username: freshIdentity('sq').username, email: victim.email };
-    const squatted = await signUp(freshClient(), squatter, CALLBACK, 'squatter-password');
+    const squatted = await signUp(newAnonClient(), squatter, CALLBACK, 'squatter-password');
     expect(squatted.error).toBeNull();
     await pause(MAX_FREQUENCY_WAIT_MS);
     const since = new Date();
-    const victimClient = freshClient();
+    const victimClient = newAnonClient();
     const again = await signUp(victimClient, victim, CALLBACK, 'victim-password');
     expect(again.error).toBeNull();
 
@@ -168,7 +164,7 @@ describe('account pre-hijack', () => {
     expect(verified.error).toBeNull();
 
     for (const guess of ['squatter-password', 'victim-password']) {
-      const attempt = await freshClient().auth.signInWithPassword({ email: victim.email, password: guess });
+      const attempt = await newAnonClient().auth.signInWithPassword({ email: victim.email, password: guess });
       expect(attempt.error?.code).toBe('invalid_credentials');
     }
 
@@ -177,7 +173,7 @@ describe('account pre-hijack', () => {
     expect(renamed.error).toBeNull();
     expect(renamed.data).toEqual({ status: 'ok', username: victim.username });
 
-    const signedIn = await freshClient().auth.signInWithPassword({
+    const signedIn = await newAnonClient().auth.signInWithPassword({
       email: victim.email,
       password: 'victim-final-password',
     });
@@ -188,7 +184,7 @@ describe('account pre-hijack', () => {
 
   it('refuses taken, invalid and late username changes', async () => {
     const identity = freshIdentity();
-    const client = freshClient();
+    const client = newAnonClient();
     const since = new Date();
     await signUp(client, identity);
     const { tokenHash } = tokenOf(
@@ -208,13 +204,13 @@ describe('account pre-hijack', () => {
     await db`update auth.users set email_confirmed_at = now() - interval '2 hours' where email = ${identity.email}`;
     const late = await client.rpc('change_username', { candidate: freshIdentity().username });
     expect(late.data).toEqual({ status: 'closed' });
-    expect((await freshClient().rpc('change_username', { candidate: 'anyone_at_all' })).error).not.toBeNull();
+    expect((await newAnonClient().rpc('change_username', { candidate: 'anyone_at_all' })).error).not.toBeNull();
   });
 
   it('keeps the password of users created already confirmed', async () => {
     const user = await createTestUser();
     const [row] = await db`select email from auth.users where id = ${user.id}`;
-    const again = await freshClient().auth.signInWithPassword({ email: row.email, password: PASSWORD });
+    const again = await newAnonClient().auth.signInWithPassword({ email: row.email, password: TEST_PASSWORD });
     expect(again.error).toBeNull();
   });
 });
@@ -223,7 +219,7 @@ describe('password recovery', () => {
   it('sends a reset link that lets the user set a new password', async () => {
     const user = await createTestUser();
     const [{ email }] = await db`select email from auth.users where id = ${user.id}`;
-    const client = freshClient();
+    const client = newAnonClient();
     const since = new Date();
     expect((await client.auth.resetPasswordForEmail(email, { redirectTo: CALLBACK })).error).toBeNull();
 
@@ -234,16 +230,16 @@ describe('password recovery', () => {
     expect(verified.data.session).not.toBeNull();
     expect((await client.auth.updateUser({ password: 'recovered-password' })).error).toBeNull();
 
-    const old = await freshClient().auth.signInWithPassword({ email, password: PASSWORD });
+    const old = await newAnonClient().auth.signInWithPassword({ email, password: TEST_PASSWORD });
     expect(old.error?.code).toBe('invalid_credentials');
-    const fresh = await freshClient().auth.signInWithPassword({ email, password: 'recovered-password' });
+    const fresh = await newAnonClient().auth.signInWithPassword({ email, password: 'recovered-password' });
     expect(fresh.error).toBeNull();
   });
 
   it('answers an unknown email without an error and sends nothing', async () => {
     const { email } = freshIdentity('nobody');
     const since = new Date();
-    expect((await freshClient().auth.resetPasswordForEmail(email, { redirectTo: CALLBACK })).error).toBeNull();
+    expect((await newAnonClient().auth.resetPasswordForEmail(email, { redirectTo: CALLBACK })).error).toBeNull();
     await pause(2_000);
     expect(await listEmailsTo(email, since)).toHaveLength(0);
   });
@@ -254,7 +250,7 @@ describe('secure password change', () => {
     const user = await createTestUser();
     expect((await user.client.auth.updateUser({ password: 'changed-in-session' })).error).toBeNull();
     const [{ email }] = await db`select email from auth.users where id = ${user.id}`;
-    const signedIn = await freshClient().auth.signInWithPassword({ email, password: 'changed-in-session' });
+    const signedIn = await newAnonClient().auth.signInWithPassword({ email, password: 'changed-in-session' });
     expect(signedIn.error).toBeNull();
   });
 });
@@ -273,16 +269,16 @@ describe('email change', () => {
     expect(tokenOf(toOld).type).toBe('email_change');
     expect(tokenOf(toNew).type).toBe('email_change');
 
-    const first = await freshClient().auth.verifyOtp({ token_hash: tokenOf(toOld).tokenHash, type: 'email_change' });
+    const first = await newAnonClient().auth.verifyOtp({ token_hash: tokenOf(toOld).tokenHash, type: 'email_change' });
     expect(first.error).toBeNull();
     const [halfway] = await db`select email from auth.users where id = ${user.id}`;
     expect(halfway.email).toBe(oldEmail);
 
-    const second = await freshClient().auth.verifyOtp({ token_hash: tokenOf(toNew).tokenHash, type: 'email_change' });
+    const second = await newAnonClient().auth.verifyOtp({ token_hash: tokenOf(toNew).tokenHash, type: 'email_change' });
     expect(second.error).toBeNull();
     const [after] = await db`select email from auth.users where id = ${user.id}`;
     expect(after.email).toBe(newEmail);
-    const signedIn = await freshClient().auth.signInWithPassword({ email: newEmail, password: PASSWORD });
+    const signedIn = await newAnonClient().auth.signInWithPassword({ email: newEmail, password: TEST_PASSWORD });
     expect(signedIn.error).toBeNull();
   });
 });

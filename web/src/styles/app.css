@@ -167,6 +167,7 @@ fieldset {
 
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 button:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--color-focus);
@@ -263,15 +264,6 @@ a:focus-visible {
   justify-content: space-between;
 }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
 .screen-header {
   display: flex;
   justify-content: space-between;
@@ -313,7 +305,6 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   min-height: var(--tap-target);
-  font-size: var(--font-size-small);
   color: var(--color-text-muted);
   text-decoration: none;
   border: var(--border-width) solid transparent;
@@ -481,7 +472,10 @@ a:focus-visible {
   font-size: var(--font-size-small);
 }
 
-.day-list {
+.day-list,
+.feed,
+.menu-list,
+.history-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -520,9 +514,6 @@ a:focus-visible {
 
 .live-xp strong {
   white-space: nowrap;
-}
-
-.live-xp strong {
   font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 500;
@@ -619,7 +610,8 @@ a:focus-visible {
   grid-area: effort;
 }
 
-.effort-selector {
+.effort-selector,
+.metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-1);
@@ -707,7 +699,8 @@ a:focus-visible {
   text-shadow: 3px 3px 0 #000;
 }
 
-.reveal-list {
+.reveal-list,
+.record-list {
   list-style: none;
   margin: 0;
   display: flex;
@@ -762,7 +755,8 @@ a:focus-visible {
   font-weight: 700;
 }
 
-.level-up-grid {
+.level-up-grid,
+.skill-grid {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -785,14 +779,6 @@ a:focus-visible {
 .level-up-grid .pixel {
   font-size: 1.6rem;
   font-weight: 600;
-}
-
-.record-list {
-  list-style: none;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
 }
 
 .record-list li {
@@ -862,15 +848,6 @@ a:focus-visible {
   color: var(--color-accent);
   text-shadow: var(--text-shadow);
   line-height: 1.1;
-}
-
-.skill-grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
 }
 
 .skill-card {
@@ -1055,15 +1032,6 @@ a:focus-visible {
   color: var(--color-danger);
 }
 
-.feed {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
 .feed-item {
   display: flex;
   gap: 10px;
@@ -1130,12 +1098,6 @@ a:focus-visible {
   box-shadow: inset 2px 2px 0 var(--color-xp-light);
 }
 
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-1);
-}
-
 .metric-grid .effort-option {
   font-size: var(--font-size-tiny);
 }
@@ -1184,15 +1146,6 @@ a:focus-visible {
   font-size: 1.4rem;
   color: var(--color-accent);
   text-shadow: var(--text-shadow);
-}
-
-.menu-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 
 .menu-list .button {
@@ -1316,20 +1269,6 @@ a:focus-visible {
   color: var(--color-text-muted);
 }
 
-.coming-later {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border: var(--border-width) dashed var(--color-rare);
-}
-
-.coming-later input:disabled,
-.coming-later select:disabled,
-.coming-later button:disabled {
-  opacity: 0.55;
-}
-
 .switch-row {
   display: flex;
   gap: var(--space-3);
@@ -1378,10 +1317,6 @@ a:focus-visible {
 .switch[aria-checked='true'] .switch-knob {
   left: 29px;
   background: var(--color-text);
-}
-
-.segmented.three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .segment:disabled {
@@ -1442,15 +1377,6 @@ a:focus-visible {
   border: var(--border-width) solid var(--color-danger);
 }
 
-.history-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
 .history-item {
   display: flex;
   flex-direction: column;
@@ -1489,11 +1415,6 @@ a:focus-visible {
   box-shadow: inset 2px 2px 0 var(--color-parchment-shade);
   width: 100%;
   resize: vertical;
-}
-
-.notes-field textarea:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 1px;
 }
 
 .stored-set-list {

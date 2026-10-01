@@ -9,10 +9,9 @@ import {
   grantDrop,
   postCompleteSession,
   postFunction,
+  TEST_PASSWORD,
   type TestUser,
 } from './local-stack.ts';
-
-const TEST_PASSWORD = 'correct-horse-battery';
 
 const USER_TABLES: { table: string; column: string }[] = [
   { table: 'profiles', column: 'id' },

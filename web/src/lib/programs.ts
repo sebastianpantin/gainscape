@@ -93,23 +93,23 @@ export function templates(programs: Program[]): Program[] {
   return programs.filter((program) => program.ownerUserId === null);
 }
 
-export async function saveProgram(userId: string, doc: ProgramDoc): Promise<void> {
-  const { error } = await supabase.rpc('save_program', { program: doc });
+async function changeProgramsThenRefresh(userId: string, name: string, args: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.rpc(name, args);
   if (error) throw new Error(error.message);
   await fetchPrograms(userId).catch(() => undefined);
+}
+
+export function saveProgram(userId: string, doc: ProgramDoc): Promise<void> {
+  return changeProgramsThenRefresh(userId, 'save_program', { program: doc });
 }
 
 export async function copyProgram(userId: string, sourceId: string, newId: string): Promise<string> {
-  const { error } = await supabase.rpc('copy_program', { source_program_id: sourceId, new_program_id: newId });
-  if (error) throw new Error(error.message);
-  await fetchPrograms(userId).catch(() => undefined);
+  await changeProgramsThenRefresh(userId, 'copy_program', { source_program_id: sourceId, new_program_id: newId });
   return newId;
 }
 
-export async function deleteProgram(userId: string, programId: string): Promise<void> {
-  const { error } = await supabase.rpc('delete_program', { program_id: programId });
-  if (error) throw new Error(error.message);
-  await fetchPrograms(userId).catch(() => undefined);
+export function deleteProgram(userId: string, programId: string): Promise<void> {
+  return changeProgramsThenRefresh(userId, 'delete_program', { program_id: programId });
 }
 
 export async function fetchLastLoggedSets(exerciseIds: string[]): Promise<Map<string, LastLoggedSet>> {

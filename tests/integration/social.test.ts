@@ -10,6 +10,7 @@ import {
   db,
   postFunction,
   seedRateLimitHits,
+  TEST_PASSWORD,
   type TestUser,
 } from './local-stack.ts';
 
@@ -126,7 +127,7 @@ describe('unconfirmed usernames', () => {
   async function unconfirmedUser(username: string, ageHours: number): Promise<string> {
     const created = await admin.auth.admin.createUser({
       email: `${username}@example.test`,
-      password: 'correct-horse-battery',
+      password: TEST_PASSWORD,
       email_confirm: false,
       user_metadata: { username, timezone: 'UTC' },
     });

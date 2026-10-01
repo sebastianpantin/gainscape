@@ -1,11 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, openFromProfile, openTab, password, register, signOut } from './support/app.ts';
+import { logExercise, openFromProfile, openTab, password, register, signOut, uniqueUsername } from './support/app.ts';
 import { accountRowCount, heightOf, latestSetOf } from './support/db.ts';
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-}
 
 async function pickSetting(page: Page, group: string, option: string) {
   await openFromProfile(page, 'Settings');

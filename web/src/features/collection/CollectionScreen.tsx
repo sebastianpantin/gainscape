@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { type Exercise, fetchExercises } from '../../lib/catalog.ts';
+import { moved } from '../../lib/reorder.ts';
 import {
   type CollectionData,
   countCollection,
@@ -74,13 +75,12 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
   };
 
   const movePin = async (exercise: Exercise, offset: -1 | 1) => {
-    const order = [...data.pinnedExerciseIds];
-    const from = order.indexOf(exercise.id);
+    const pinned = data.pinnedExerciseIds;
+    const from = pinned.indexOf(exercise.id);
     const to = from + offset;
-    if (from < 0 || to < 0 || to >= order.length) return;
-    [order[from], order[to]] = [order[to], order[from]];
+    if (from < 0 || to < 0 || to >= pinned.length) return;
     try {
-      await reorderPins(order);
+      await reorderPins(moved(pinned, from, offset));
       reload();
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not reorder pins.');

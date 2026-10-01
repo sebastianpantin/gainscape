@@ -17,7 +17,7 @@ import {
   type SessionInput,
   sfc32FromSeed,
 } from '@domain/index.ts';
-import { aSet, catalog, hard, TEST_BALANCE } from './fixtures.ts';
+import { aSet, catalog, DAY_MS, hard, TEST_BALANCE } from './fixtures.ts';
 import {
   candidate,
   FIXTURE_TABLES,
@@ -141,7 +141,6 @@ describe('daily caps', () => {
 });
 
 describe('qualification', () => {
-  const DAY_MS = 24 * 60 * 60 * 1000;
   const first = Date.parse('2026-09-01T18:00:00.000Z');
   const sessionAt = (day: number, sets: SessionInput['sets']): SessionInput => ({
     id: `session-${day}`,

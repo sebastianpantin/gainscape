@@ -12,6 +12,10 @@ export function retryDelayMs(attempt: number): number {
   return Math.min(MAX_RETRY_DELAY_MS, 1000 * 2 ** attempt);
 }
 
+export function httpErrorBody(response: Response): Promise<{ error?: string; details?: unknown }> {
+  return response.json().catch(() => ({}));
+}
+
 function boundAccessToken(session: Session | null, userId: string): string | AuthProblem {
   if (!session) return { kind: 'needs_sign_in' };
   if (session.user.id !== userId) return { kind: 'wrong_account' };
@@ -63,7 +67,7 @@ async function invokeOnce<T>(
   if (error instanceof FunctionsHttpError) {
     const response = error.context as Response;
     if (response.status === 401) return { kind: 'unauthorized' };
-    const parsed = await response.json().catch(() => ({}));
+    const parsed = await httpErrorBody(response);
     return {
       kind: 'http_error',
       status: response.status,

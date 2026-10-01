@@ -32,20 +32,20 @@ const projectId =
   process.env.SUPABASE_PROJECT_ID ??
   /^project_id\s*=\s*"([^"]+)"/m.exec(readFileSync(join(import.meta.dirname, '../supabase/config.toml'), 'utf8'))?.[1];
 const container = `supabase_db_${projectId}`;
-let publishedPorts = '';
-try {
-  const running = execFileSync('docker', ['inspect', '-f', '{{.State.Running}}', container], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-  });
-  if (running.trim() === 'true')
-    publishedPorts = execFileSync('docker', ['port', container, '5432'], {
+function publishedPortsOf(name) {
+  try {
+    const running = execFileSync('docker', ['inspect', '-f', '{{.State.Running}}', name], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     });
-} catch {
-  publishedPorts = '';
+    if (running.trim() !== 'true') return '';
+    return execFileSync('docker', ['port', name, '5432'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch {
+    return '';
+  }
 }
+
+const publishedPorts = publishedPortsOf(container);
 const dbPort = new URL(dbUrl).port;
 if (!publishedPorts.split('\n').some((line) => line.trim().endsWith(`:${dbPort}`))) {
   console.error(`Refusing to run pgTAP: no running ${container} container publishes port ${dbPort}.`);

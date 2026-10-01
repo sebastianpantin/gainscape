@@ -1,11 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
-export const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-export const TAP_TARGET_PX = 44;
+const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+const TAP_TARGET_PX = 44;
 const BLOCKING_IMPACTS = new Set(['serious', 'critical']);
 
-export const BETWEEN_SET_CONTROLS = [
+const BETWEEN_SET_CONTROLS = [
   '.tab-bar a[href]',
   'li.set-row input',
   'li.set-row button',

@@ -14,6 +14,14 @@ export interface StoredAuthSession {
   user: { id: string };
 }
 
+export function uniqueUsername(prefix: string): string {
+  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+}
+
+export function nowInSeconds(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
 export function emailOf(username: string): string {
   return `${username}@example.test`;
 }
@@ -98,6 +106,28 @@ export interface StoredDraftRecord {
   updatedAt: number;
   draft?: { sessionId: string; finishedAt: string | null };
   syncedSessionId?: string;
+}
+
+export function finishedBenchDraft(sessionId: string, exerciseId: string) {
+  const finishedAt = new Date();
+  return {
+    sessionId,
+    startedAt: new Date(finishedAt.getTime() - 30 * 60 * 1000).toISOString(),
+    finishedAt: finishedAt.toISOString(),
+    programDayId: null,
+    programLabel: null,
+    exercises: [
+      {
+        exerciseId,
+        name: 'Barbell Bench Press',
+        loadType: 'external',
+        target: null,
+        sets: [
+          { id: crypto.randomUUID(), weightKg: 60, reps: 5, effort: { type: 'level', level: 'hard' }, done: true },
+        ],
+      },
+    ],
+  };
 }
 
 export async function writeStoredDraft(page: Page, userId: string, draft: object): Promise<void> {

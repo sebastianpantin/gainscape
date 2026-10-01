@@ -4,19 +4,11 @@ import { expect, type Page } from '@playwright/test';
 import { shellBuildFor } from '../../web/build/service-worker-plugin.ts';
 import { SERVICE_WORKER_FILE } from '../../web/src/pwa/shell-rules.ts';
 
-export const distDir = join(import.meta.dirname, '../../web/dist');
+const distDir = join(import.meta.dirname, '../../web/dist');
 export const serviceWorkerPath = join(distDir, SERVICE_WORKER_FILE);
 
 export const OFFLINE_BANNER = 'Offline. Your workout is saved on this device.';
 export const UPDATE_READY = 'A new version of Gainscape is ready.';
-
-export function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-}
-
-export function nowInSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
 
 export function builtShell() {
   return shellBuildFor(distDir);

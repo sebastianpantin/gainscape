@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
 
-export const CATALOG_DIR = join(import.meta.dirname, '../../catalog');
+const CATALOG_DIR = join(import.meta.dirname, '../../catalog');
 
 export type ItemKind = 'gear' | 'material' | 'pet' | 'scroll';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
@@ -184,7 +184,7 @@ export function readCatalogSources(dir = CATALOG_DIR): CatalogSources {
   };
 }
 
-export const GEAR_SHORTHAND_PREFIX = 'gear:';
+const GEAR_SHORTHAND_PREFIX = 'gear:';
 
 export function expandCatalog(sources: CatalogSources): CatalogData {
   const gear = gearSchema.parse(sources.gear);
@@ -307,7 +307,7 @@ export function loadCatalogData(dir = CATALOG_DIR): CatalogData {
   return expandCatalog(readCatalogSources(dir));
 }
 
-export function programDayName(programKey: string, dayKey: string): string {
+function programDayName(programKey: string, dayKey: string): string {
   return `program:${programKey}:${dayKey}`;
 }
 

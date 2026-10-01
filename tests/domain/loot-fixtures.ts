@@ -23,7 +23,7 @@ export const REGULAR_FIXTURE: LootTable = {
   entries: [entry('scraps', 30, 2, 5), entry('belt', 5), entry('gem', 1), entry('shards', 14, 1, 3)],
 };
 
-export const RARE_FIXTURE: LootTable = {
+const RARE_FIXTURE: LootTable = {
   id: 'table-rare',
   key: 'rare',
   entries: [entry('scroll', 5), entry('pet', 1), entry('ingot', 20, 2, 4)],
