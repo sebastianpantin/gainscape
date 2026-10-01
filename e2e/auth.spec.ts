@@ -1,0 +1,156 @@
+import { expect, type Page, test } from '@playwright/test';
+import { emailOf, openFromProfile, password, register, signOut, submitRegistration } from './support/app.ts';
+import { usernameOfEmail } from './support/db.ts';
+import { authLinkFrom, waitForEmail } from './support/mailbox.ts';
+
+const CONFIRM_SUBJECT = 'Confirm your Gainscape account';
+const RECOVERY_SUBJECT = 'Reset your Gainscape password';
+const EMAIL_CHANGE_SUBJECT = 'Confirm your new Gainscape email';
+const MAX_FREQUENCY_WAIT_MS = 1_500;
+
+function uniqueUsername(prefix: string): string {
+  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+}
+
+async function linkTo(email: string, subject: string, since: Date): Promise<string> {
+  return authLinkFrom(await waitForEmail(email, { subject, since }));
+}
+
+async function choosePassword(page: Page, newPassword: string) {
+  await page.getByLabel('New password', { exact: true }).fill(newPassword);
+  await page.getByLabel('Repeat new password').fill(newPassword);
+}
+
+async function signInWith(page: Page, email: string, accountPassword: string) {
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(accountPassword);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+}
+
+async function registerThroughEmail(page: Page, username: string): Promise<string> {
+  const since = new Date();
+  await submitRegistration(page, username);
+  const link = await linkTo(emailOf(username), CONFIRM_SUBJECT, since);
+  await page.goto(link);
+  await expect(page.getByRole('heading', { name: 'Account confirmed' })).toBeVisible();
+  await expect(page.getByTestId('confirmed-username')).toHaveText(username);
+  await choosePassword(page, password);
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  return link;
+}
+
+test('register and confirm through the emailed link', async ({ page }) => {
+  await registerThroughEmail(page, uniqueUsername('au_cf'));
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test('an unconfirmed sign-in offers to resend the link', async ({ page }) => {
+  const username = uniqueUsername('au_rs');
+  await submitRegistration(page, username);
+  await page.goto('/');
+  await page.waitForTimeout(MAX_FREQUENCY_WAIT_MS);
+  await signInWith(page, emailOf(username), password);
+  await expect(page.getByText('Confirm your email first. We can send the link again.')).toBeVisible();
+
+  const since = new Date();
+  await page.getByRole('button', { name: 'Resend email' }).click();
+  await expect(page.getByText('We sent the link again.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Resend email \(\d+ s\)/ })).toBeDisabled();
+  await page.goto(await linkTo(emailOf(username), CONFIRM_SUBJECT, since));
+  await choosePassword(page, password);
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+});
+
+test('forgot password sends a reset link that sets a new password', async ({ page }) => {
+  const username = uniqueUsername('au_fp');
+  const email = emailOf(username);
+  await register(page, username);
+  await signOut(page);
+
+  await page.getByRole('button', { name: 'Forgot password?' }).click();
+  await page.getByLabel('Email').fill(email);
+  const since = new Date();
+  await page.getByRole('button', { name: 'Send reset link' }).click();
+  await expect(page.getByText(`If an account exists for ${email}, we sent a reset link.`)).toBeVisible();
+
+  await page.goto(await linkTo(email, RECOVERY_SUBJECT, since));
+  await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeVisible();
+  await choosePassword(page, 'a-reset-password');
+  await page.getByRole('button', { name: 'Set new password' }).click();
+  await expect(page.getByText('Password changed.')).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
+
+  await signOut(page);
+  await signInWith(page, email, password);
+  await expect(page.getByText('Wrong email or password.')).toBeVisible();
+  await signInWith(page, email, 'a-reset-password');
+  await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
+});
+
+test('an email change needs both links', async ({ page }) => {
+  const username = uniqueUsername('au_ec');
+  const newEmail = `${username}.new@example.test`;
+  await register(page, username);
+  await openFromProfile(page, 'Settings');
+  await page.getByRole('button', { name: 'Change email' }).click();
+  await page.getByLabel('New email').fill(newEmail);
+  const since = new Date();
+  await page.getByRole('button', { name: 'Send confirmation' }).click();
+  await expect(page.getByText(`We sent confirmation links to ${emailOf(username)} and ${newEmail}.`)).toBeVisible();
+
+  for (const address of [emailOf(username), newEmail]) {
+    await page.goto(await linkTo(address, EMAIL_CHANGE_SUBJECT, since));
+    await expect(page.getByRole('heading', { name: 'Email change confirmed' })).toBeVisible();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
+  }
+
+  await signOut(page);
+  await signInWith(page, newEmail, password);
+  await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
+  await openFromProfile(page, 'Settings');
+  await expect(page.getByTestId('settings-email')).toHaveText(newEmail);
+});
+
+test('a used confirmation link is invalid', async ({ page }) => {
+  const link = await registerThroughEmail(page, uniqueUsername('au_ex'));
+  await signOut(page);
+  await page.goto(link);
+  await expect(page.getByText('This link is invalid or has expired.')).toBeVisible();
+  await page.getByRole('button', { name: 'Back to sign in' }).click();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test('a squatter loses the account when the owner confirms the email', async ({ browser }) => {
+  const victimName = uniqueUsername('au_vi');
+  const squatterName = uniqueUsername('au_sq');
+  const victimEmail = emailOf(victimName);
+
+  const squatterContext = await browser.newContext();
+  const squatter = await squatterContext.newPage();
+  await submitRegistration(squatter, squatterName, victimEmail);
+  await squatter.waitForTimeout(MAX_FREQUENCY_WAIT_MS);
+
+  const victimContext = await browser.newContext();
+  const victim = await victimContext.newPage();
+  const since = new Date();
+  await submitRegistration(victim, victimName, victimEmail);
+  await victim.goto(await linkTo(victimEmail, CONFIRM_SUBJECT, since));
+  await expect(victim.getByTestId('confirmed-username')).toHaveText(squatterName);
+  await victim.getByLabel('Username').fill(victimName);
+  await choosePassword(victim, 'the-owners-password');
+  await victim.getByRole('button', { name: 'Save and continue' }).click();
+  await expect(victim.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  expect(await usernameOfEmail(victimEmail)).toBe(victimName);
+
+  await squatter.goto('/');
+  await signInWith(squatter, victimEmail, password);
+  await expect(squatter.getByText('Wrong email or password.')).toBeVisible();
+
+  await victimContext.close();
+  await squatterContext.close();
+});

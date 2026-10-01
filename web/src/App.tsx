@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { Icon, type IconName } from './components/Icon.tsx';
 import { PreferencesProvider } from './components/PreferencesProvider.tsx';
+import { AuthCallbackScreen } from './features/auth/AuthCallbackScreen.tsx';
 import { AuthScreen } from './features/auth/AuthScreen.tsx';
 import { CollectionScreen } from './features/collection/CollectionScreen.tsx';
 import { ItemsScreen } from './features/collection/ItemsScreen.tsx';
@@ -19,6 +21,7 @@ import { ProgramsScreen } from './features/programs/ProgramsScreen.tsx';
 import { SkillsScreen } from './features/skills/SkillsScreen.tsx';
 import { RevealScreen } from './features/summary/RevealScreen.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
+import { parseAuthCallback } from './lib/auth-links.ts';
 import { useAuthSession } from './lib/use-auth-session.ts';
 
 const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
@@ -31,7 +34,9 @@ const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
 
 export function App() {
   const auth = useAuthSession();
+  const [callback, setCallback] = useState(() => parseAuthCallback(window.location.href));
 
+  if (callback) return <AuthCallbackScreen callback={callback} onDone={() => setCallback(null)} />;
   if (auth.status === 'loading')
     return (
       <main className="screen">

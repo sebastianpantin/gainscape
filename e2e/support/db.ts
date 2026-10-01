@@ -1,4 +1,4 @@
-import { db } from '../../tests/integration/local-stack.ts';
+import { admin, db } from '../../tests/integration/local-stack.ts';
 
 export { builtInExerciseId, resignedWithAnotherKey } from '../../tests/integration/local-stack.ts';
 
@@ -125,4 +125,18 @@ export async function hasUnlock(username: string, exerciseKey: string): Promise<
     join public.exercises e on e.id = u.exercise_id
     where p.username = ${username} and e.key = ${exerciseKey}`;
   return row.count > 0;
+}
+
+export async function confirmAccount(email: string, accountPassword: string): Promise<void> {
+  const [user] = await db`select id from auth.users where email = ${email}`;
+  const confirmed = await admin.auth.admin.updateUserById(user.id, { email_confirm: true });
+  if (confirmed.error) throw confirmed.error;
+  const withPassword = await admin.auth.admin.updateUserById(user.id, { password: accountPassword });
+  if (withPassword.error) throw withPassword.error;
+}
+
+export async function usernameOfEmail(email: string): Promise<string | null> {
+  const [row] = await db`
+    select p.username from public.profiles p join auth.users u on u.id = p.id where u.email = ${email}`;
+  return row?.username ?? null;
 }
