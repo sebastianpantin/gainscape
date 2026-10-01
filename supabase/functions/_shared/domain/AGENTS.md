@@ -1,0 +1,98 @@
+# Domain
+
+**Parent context:** `../AGENTS.md`
+**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+
+## Purpose
+
+The pure game engine of gainscape. It turns logged sets into effective reps, XP split across skills, levels, strength estimates, personal records, loot drops and friend-feed events. The same files run in Deno inside the Edge Functions (imported through `../domain/index.ts`) and in the browser and Vitest (imported through the `@domain/*` alias defined in `tsconfig.json` and `vitest.config.ts`). The web app uses it for offline XP previews and display rules, the server uses it as the authority when a session completes, is edited, or has its caches rebuilt. Everything here is deterministic: the same inputs and the same `BalanceConfig` always produce the same outputs.
+
+## Key Files
+
+| File             | Description                                                                                                                                                                                                                                                                            |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`       | Barrel that re-exports every module (`ordering`, `collection`, `edit-window` included); all consumers import from here, never from individual files                                                                                                                                    |
+| `types.ts`       | Shared types (`Catalog`, `SessionInput`, `SetInput`, `SetResult`, `UserState`, `RecordState`, `SessionSummary`, `Rng`, `RollKind`) plus the constants `REP_MAX_SLOT_COUNT` (10), `MAX_SETS_PER_SESSION` (200) and `NO_RECORDS`                                                         |
+| `balance.ts`     | Tunable constants: `BALANCE_VERSION`, `DEFAULT_BALANCE` (`BalanceConfig`), `LOOT_VERSION`, `DEFAULT_LOOT` (`LootConfig`), `DEFAULT_FEED` (`FeedConfig`). All frozen objects                                                                                                            |
+| `levels.ts`      | OSRS-style XP table: `xpForLevel`, `levelForXp` (binary search), `levelProgress`, `totalLevel`, `MAX_LEVEL` (99)                                                                                                                                                                       |
+| `combat.ts`      | `combatLevel`: weighted skill levels mapped onto the OSRS-like 3 to 126 combat scale                                                                                                                                                                                                   |
+| `effort.ts`      | `resolveEffort` converts a level, RIR or RPE input to a logged RIR (throws `RangeError` on invalid input); `effortInputFromStored` reverses the stored columns back to an `EffortInput`                                                                                                |
+| `xp.ts`          | `effectiveReps`, `setXp` (rounded to kill float noise), `splitXp` (largest-remainder split in basis points, must sum to 10,000)                                                                                                                                                        |
+| `strength.ts`    | Epley e1RM, `estimateRir`, `intensityBonus`, `strengthStateAt` (rolling window), the `trackStrength` pipeline step, `strengthHistoryRows`, `currentStrength`, `strengthAfterSession`, and the shared `roundTo` helper                                                                  |
+| `records.ts`     | Rep-max slots (1 to 10 reps) and bodyweight rep records: `applySetToRecords`, the `detectPersonalRecords` step, `recordsFromHistory`, `summarizePersonalRecords`                                                                                                                       |
+| `pipeline.ts`    | The session pipeline. `Step` functions (`resolveSets`, `awardXp`, `applyXp`, `detectLevelUps`) composed in `DEFAULT_STEPS` and `HISTORY_ONLY_STEPS`; `processSession` runs them; `effectiveLoadForNewSet` and `carriedEffectiveLoadKg` compute effective load for bodyweight exercises |
+| `replay.ts`      | `replayHistory` re-runs ordered sessions through the pipeline carrying state, strength and records; `priorSkillXp` caps stored sums at `maxXp`                                                                                                                                         |
+| `ordering.ts`    | `compareSessionKeys` and `isBefore`: total order by `startedAt`, ties broken by session id                                                                                                                                                                                             |
+| `collection.ts`  | `collectionCompletion`: filled and total rep-max slots across exercises (bodyweight exercises count one slot)                                                                                                                                                                          |
+| `edit-window.ts` | `EDIT_WINDOW_DAYS` (7) and `isWithinEditWindow`; the clock is passed in as `now`                                                                                                                                                                                                       |
+| `rng.ts`         | `sfc32FromSeed` (needs 16 seed bytes, discards 12 outputs) and `lootSeedMessage` (`userId:setId:kind`)                                                                                                                                                                                 |
+| `loot.ts`        | `lootCandidates`, `qualifies`, `chance` (bad-luck protection), `pickEntry`, `quantityFor`, `rollSessionLoot`, `revocationReason`, `lootRollKey`                                                                                                                                        |
+| `crafting.ts`    | `ITEM_TIERS`, `GEAR_SLOTS`, `ITEM_ICON_KINDS`, `canCraft`, `recipeFor`                                                                                                                                                                                                                 |
+| `events.ts`      | Friend-feed rules: `feedEventsForSession` builds level-up, level 99, PR and drop `FeedEventDraft`s; `isFeedLevelUp`                                                                                                                                                                    |
+| `errors.ts`      | `UnknownExerciseError`, `BodyweightRequiredError`, `BodyweightLoadNotZeroError`, which Edge Functions map to HTTP errors                                                                                                                                                               |
+
+## For AI Agents
+
+### Working In This Directory
+
+- **Purity is non-negotiable.** A domain file may import only sibling files as `./name.ts`. It must not touch `Deno`, `process`, `window`, `document`, `localStorage` or `require`, and must not read the clock, call `Math.random`, or do I/O. Take time as a parameter (see `isWithinEditWindow(startedAt, now)`) and randomness as an `Rng` (see `LootRngFor`). Two things enforce the import and globals rules: `tests/domain/purity.test.ts` (checks every `.ts` file here for non-sibling imports and runtime globals, including `require`) and the ESLint `no-restricted-globals` override in `eslint.config.js` (all of them except `require`). Nothing enforces the clock and `Math.random` rule; reviewers must check it. Anything needing Deno, crypto or the database belongs one level up (`../loot-seeds.ts`) or in `../stores/`.
+- **New modules need an `index.ts` export.** Consumers import from `index.ts` or `@domain/index.ts`. The purity test globs the directory, so a new file is checked automatically.
+- **No comments, ever.** The `gainscape/no-comments` lint rule applies. Name constants (`SFC32_DISCARDED_OUTPUTS`, `CHANCE_DECIMALS`) instead of explaining magic numbers.
+- **The pipeline is a list of `Step`s.** A step is `(ctx: SessionContext) => SessionContext`. `trackStrength` lives in `strength.ts` and `detectPersonalRecords` in `records.ts`; both import the `Step` type from `pipeline.ts`, and `pipeline.ts` imports them back to build `DEFAULT_STEPS`. Step order matters: `resolveSets`, `trackStrength`, `detectPersonalRecords`, `awardXp`, `applyXp`, `detectLevelUps`. History-only sessions run only `resolveSets` and produce no XP, records or loot.
+- **Determinism and loot seeds.** Loot rolls take an injected `LootRngFor`. Production builds it in `../loot-seeds.ts`: HMAC-SHA256 of `lootSeedMessage(userId, setId, kind)` keyed by the `LOOT_SECRET` env var, fed to `sfc32FromSeed`. The same set always rolls the same result, so a replay or edit never re-rolls. Rolls already recorded are skipped through `LootDayState.alreadyRolled` and `lootRollKey`. Do not change `lootSeedMessage`, the sfc32 constants, the order of `rng.next()` calls in `rollSessionLoot`, `pickEntry`'s key-sorted entry order, or `quantityFor`; each silently changes existing players' drops.
+- **Iteration order must be explicit.** Sets sort by `position`, skills by `sortOrder`, sessions through `compareSessionKeys`, loot entries by `itemKey`. Never rely on Map or object key order for results that are persisted.
+- **`balance.ts` is the tuning surface.** `DEFAULT_BALANCE` fields: `xpPerEffectiveRep` (375, the main pacing lever), `effectiveRirWindow`, `effortLevelRir` (easy 6, hard 3, near_failure 1, failure 0), `coldStartXpPerSet`, `rirTrustMargin`, `maxRirForStrength`, `epleyMaxRepsToFailure`, `e1rmWindowDays`, `maxStrengthGainPerSession`, `intensityBonusStart/Full/Max`, `prEpsilonKg`, `maxXp`. `DEFAULT_LOOT` controls daily roll caps, hit chance (`baseChance` + `badLuckStep` per dry roll, capped at `maxChance`). `DEFAULT_FEED` controls which level-ups and drop rarities reach the friends feed.
+- **Changing balance constants has two consequences.**
+  1. **`make sim-check`** runs `tests/balance/balance-bands.test.ts`, which simulates four lifter profiles (`scripts/balance/`) with the committed `DEFAULT_BALANCE` and asserts the design bands in `scripts/balance/bands.ts`: a focused 4x/week lifter takes 5 to 7 years to reach level 99, hypertrophy and strength lifters stay within 15% of each other, and a casual lifter is slowed in proportion to effort. It takes about 15 s and needs no stack. `make sim` prints the report and `scripts/balance/tune.ts` is the tuning helper.
+  2. **`BALANCE_VERSION` must be bumped** whenever a change alters stored derived values (XP, RIR, e1RM, effective reps, records). Sessions store `balance_version` and `derived_balance_version`. After a bump, `replayFrom` in `../stores/replay.ts` throws `HttpError(503, 'rebuild_required')` for any user whose sessions are behind (`hasStaleDerivedSessions`) until the `rebuild-caches` Edge Function replays them. Run **`make rebuild-caches`** (`scripts/rebuild-caches.mjs`) against the local stack to replay every profile with the new constants. Bump `LOOT_VERSION` when loot configuration semantics change.
+- **Rounding.** Use `roundTo` from `strength.ts` for decimal rounding (loads to 2 decimals, chances to 5, intensity bonus to 6). `setXp` and `splitXp` use integer XP only; do not introduce fractional XP.
+- **Types are shared with the web.** `web/src/lib/*-rules.ts`, `web/src/offline/` and workout features import this directory. Changing a type or export here can break the web type-check; run `make typecheck`.
+
+### Testing Requirements
+
+Domain code is covered by `tests/domain/` (run `make test-domain`, or `npx vitest run tests/domain/xp.test.ts` while iterating). No local stack is needed. Write the failing test there first, using `tests/domain/fixtures.ts` (catalog and session builders) and `tests/domain/loot-fixtures.ts` (loot tables and candidates). fast-check is available for property tests.
+
+| Module                              | Test file                                                                                                 |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `levels.ts`                         | `tests/domain/levels.test.ts` (also covers `combatLevel` from `combat.ts`)                                |
+| `xp.ts`                             | `tests/domain/xp.test.ts` (also covers `resolveEffort` from `effort.ts`)                                  |
+| `strength.ts`                       | `tests/domain/strength.test.ts`                                                                           |
+| `records.ts`                        | `tests/domain/records.test.ts` (also covers `collectionCompletion` from `collection.ts`)                  |
+| `pipeline.ts`                       | `tests/domain/pipeline.test.ts` (including `carriedEffectiveLoadKg` and `HISTORY_ONLY_STEPS`)             |
+| `replay.ts`                         | `tests/domain/replay.test.ts` (also covers `compareSessionKeys` and `isBefore` from `ordering.ts`)        |
+| `rng.ts`                            | `tests/domain/rng.test.ts`                                                                                |
+| `loot.ts`                           | `tests/domain/loot.test.ts`; `tests/domain/loot-seeds.test.ts` covers the Deno side in `../loot-seeds.ts` |
+| `crafting.ts`                       | `tests/domain/crafting.test.ts`                                                                           |
+| `events.ts`                         | `tests/domain/events.test.ts`                                                                             |
+| `edit-window.ts`                    | `tests/domain/edit-window.test.ts`                                                                        |
+| `balance.ts`                        | `tests/balance/balance-bands.test.ts` via `make sim-check`; `tests/domain/*` also read `DEFAULT_BALANCE`  |
+| purity of all                       | `tests/domain/purity.test.ts`                                                                             |
+| `types.ts`, `errors.ts`, `index.ts` | exercised indirectly by every suite above                                                                 |
+
+Gaps: `effortInputFromStored` (`effort.ts`) and `effectiveLoadForNewSet` (`pipeline.ts`) have no direct unit test; they are only reached through integration tests such as `tests/integration/complete-session.test.ts` and `edit-session.test.ts`. Add a domain test before changing them. Behaviour that crosses into the database (replay persistence, caches) is covered by `tests/integration/replay.test.ts` and `tests/integration/rebuild-caches.test.ts`, which need the stack (`make test-integration`). Web consumers are covered by `tests/web/` (for example `units.test.ts`, `session-edit.test.ts`).
+
+### Common Patterns
+
+- Functions are small, pure, and exported by name; internal helpers stay unexported (`roundHalfUp`, `slotsFor`, `levelEvents`, `dropFrom`).
+- Config is always an explicit parameter (`cfg: BalanceConfig`, `cfg: LootConfig = ...`); no module reads `DEFAULT_*` implicitly except as a parameter default (`events.ts`).
+- Pipeline state is immutable: each step returns `{ ...ctx, sets }` or `{ ...ctx, state }` rather than mutating.
+- Domain errors are `Error` subclasses in `errors.ts`; invalid numeric ranges throw `RangeError`.
+- Constants carry intent in their name (`FULL_SHARE_BASIS_POINTS`, `FLOAT_NOISE_DECIMALS`, `GUARANTEED_CHANCE`).
+- Skill identity is split: `id` (uuid) for persistence and `key` (string like `legs`) for summaries and feed payloads.
+
+## Dependencies
+
+### Internal
+
+- Imported by `../stores/*.ts`, `../loot-seeds.ts`, `../session-payload.ts` and the Edge Functions (`complete-session`, `edit-session`, `delete-session`, `rebuild-caches`).
+- Imported by `web/src` through `@domain/index.ts`.
+- Imported by `scripts/balance/*` (simulation) and `tests/domain`, `tests/balance`, `tests/web`.
+- `crafting.ts` item tier and gear slot lists are checked against the catalog by the catalog validator in `scripts/catalog/`.
+
+### External
+
+None. The directory has no third-party or runtime dependencies by design.
+
+## Manual Notes
+
+Notes under this heading are written by humans and preserved on regeneration.
