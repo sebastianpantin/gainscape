@@ -84,16 +84,16 @@ describe('game tables reject client writes', () => {
         xp_awarded: 999,
       },
       set_skill_xp: { set_id: randomUUID(), skill_id: randomUUID(), user_id: owner.id, xp: 999 },
-      user_skills: { user_id: owner.id, skill_id: randomUUID(), xp: 13_034_431 },
+      user_skills: { user_id: owner.id, skill_id: randomUUID(), xp: 998_458 },
     };
     const { error } = await owner.client.from(table).insert(rowsByTable[table]);
     expect(error).not.toBeNull();
   });
 
   it('update of user_skills xp is denied', async () => {
-    await owner.client.from('user_skills').update({ xp: 13_034_431 }).eq('user_id', owner.id);
+    await owner.client.from('user_skills').update({ xp: 998_458 }).eq('user_id', owner.id);
     const [row] = await db`select max(xp)::int as xp from public.user_skills where user_id = ${owner.id}`;
-    expect(row.xp).toBeLessThan(13_034_431);
+    expect(row.xp).toBeLessThan(998_458);
   });
 });
 

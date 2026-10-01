@@ -1,11 +1,12 @@
 export const MAX_LEVEL = 99;
+const LEVELS_PER_XP_DOUBLING = 10;
 
 function buildXpRequiredPerLevel(): readonly number[] {
   const xpRequired = new Array<number>(MAX_LEVEL + 1).fill(0);
   let accumulatedPoints = 0;
   for (let level = 2; level <= MAX_LEVEL; level++) {
     const previousLevel = level - 1;
-    accumulatedPoints += Math.floor(previousLevel + 300 * Math.pow(2, previousLevel / 7));
+    accumulatedPoints += Math.floor(previousLevel + 300 * Math.pow(2, previousLevel / LEVELS_PER_XP_DOUBLING));
     xpRequired[level] = Math.floor(accumulatedPoints / 4);
   }
   return xpRequired;

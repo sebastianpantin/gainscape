@@ -9,9 +9,9 @@ A single simulation-backed test that proves the committed balance constants in `
 
 ## Key Files
 
-| File                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `balance-bands.test.ts` | Runs `simulateCommittedConstantsUntilLegsReach99()` once in `beforeAll` (120 s hook timeout), then asserts via `evaluateBands`: legs is the first skill to 99; a focused 4x/week lifter needs the years in `BANDS.focusedLifterYears` for both profiles; hypertrophy vs strength gap is within `BANDS.focusedLifterMaxGap`; casual time scales with effort within `BANDS.casualRatioTolerance`; every profile reaches level 99 within the 40-year horizon. |
+| File                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `balance-bands.test.ts` | Runs `simulateCommittedConstantsUntilLegsReach99()` once in `beforeAll` (120 s hook timeout), then asserts via `evaluateBands`: legs is the first skill to 99; a balanced 3x/week lifter needs the years in `BANDS.balancedLifterYears`; hypertrophy vs strength gap is within `BANDS.focusedLifterMaxGap`; casual time scales with effort within `BANDS.casualRatioTolerance`; the balanced lifter ends week 1 at a legs level within `BANDS.balancedWeekOneLevel`; every profile reaches level 99 within the 40-year horizon. |
 
 ## For AI Agents
 
@@ -29,7 +29,7 @@ A single simulation-backed test that proves the committed balance constants in `
 
 ### Common Patterns
 
-- One expensive `beforeAll` computes `results` and `report`; each `it` asserts a single band, named with the design letter, for example `(a)`, `(b)`, `(d)`.
+- One expensive `beforeAll` computes `results` and `report`; each `it` asserts a single band, named with the design letter, for example `(a)`, `(b)`, `(d)`, `(e)`.
 
 ## Dependencies
 
