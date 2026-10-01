@@ -6,7 +6,7 @@ import {
   effectiveLoadForNewSet,
   HISTORY_ONLY_STEPS,
   isWithinEditWindow,
-  type LiftSetInput,
+  KindMismatchError,
   processSession,
   type SessionInput,
   type SessionSummary,
@@ -31,7 +31,7 @@ import {
   storedSummary,
   tombstoneOwner,
 } from '../_shared/stores/sessions.ts';
-import { newSetRow } from '../_shared/stores/set-columns.ts';
+import { newSetRow, type WritableSet } from '../_shared/stores/set-columns.ts';
 import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
 
 function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessionPayload): void {
@@ -42,12 +42,12 @@ function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessi
   if (!sameSets) console.warn(`session ${payload.id} re-submitted with different sets; returning the stored summary`);
 }
 
-type LiftSession = Omit<SessionInput, 'sets'> & { sets: LiftSetInput[] };
+type WritableSession = Omit<SessionInput, 'sets'> & { sets: WritableSet[] };
 
 async function storeHistoryOnly(
   tx: Transaction,
   row: NewSessionRow,
-  session: LiftSession,
+  session: WritableSession,
   catalog: Catalog,
 ): Promise<SessionSummary> {
   const { outputs } = processSession(
@@ -72,13 +72,11 @@ async function storeHistoryOnly(
   );
 }
 
-async function storeAndReplay(tx: Transaction, row: NewSessionRow, session: LiftSession): Promise<SessionSummary> {
+async function storeAndReplay(tx: Transaction, row: NewSessionRow, session: WritableSession): Promise<SessionSummary> {
   await insertSession(
     tx,
     row,
-    session.sets.map((set) =>
-      placeholderSetRow(set, set.recordedEffectiveLoadKg!, session.id, row.userId, DEFAULT_BALANCE),
-    ),
+    session.sets.map((set) => placeholderSetRow(set, session.id, row.userId, DEFAULT_BALANCE)),
   );
   const outcome = await replayFrom(
     tx,
@@ -118,17 +116,18 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
     );
     const catalog = await loadKnownCatalog(tx, userId, payload.sets);
     const profile = await loadProfileSettings(tx, userId);
-    const session: LiftSession = {
+    const session: WritableSession = {
       id: payload.id,
       startedAt: payload.startedAt,
-      sets: payload.sets.map((set) => ({
-        ...set,
-        recordedEffectiveLoadKg: effectiveLoadForNewSet(
-          set,
-          catalog.exercises.get(set.exerciseId)!,
-          profile.bodyweightKg,
-        ),
-      })),
+      sets: payload.sets.map((set): WritableSet => {
+        const exercise = catalog.exercises.get(set.exerciseId)!;
+        if (set.kind === 'cardio') {
+          if (exercise.modality !== 'cardio') throw new KindMismatchError(exercise.id);
+          return set;
+        }
+        const effectiveLoadKg = effectiveLoadForNewSet(set, exercise, profile.bodyweightKg);
+        return { ...set, effectiveLoadKg, recordedEffectiveLoadKg: effectiveLoadKg };
+      }),
     };
     const row: NewSessionRow = {
       id: payload.id,

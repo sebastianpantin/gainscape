@@ -416,6 +416,24 @@ describe('save_program', () => {
     });
   });
 
+  it('refuses a cardio exercise in a program', async () => {
+    const user = await createTestUser();
+    const runningId = await builtInExerciseId('running');
+    const program = simpleProgram({
+      days: [
+        {
+          id: randomUUID(),
+          name: 'Run day',
+          exercises: [{ exerciseId: runningId, targetSets: 1, targetRepsMin: 1, targetRepsMax: 1 }],
+        },
+      ],
+    });
+    const before = await programRowCounts(user.id);
+    const saved = await saveProgram(user, program);
+    expect(saved.error?.message).toBe('unknown_exercise');
+    expect(await programRowCounts(user.id)).toEqual(before);
+  });
+
   it('refuses a locked variation until the caller has unlocked it', async () => {
     const user = await createTestUser();
     const pauseSquatId = await builtInExerciseId('pause_squat');

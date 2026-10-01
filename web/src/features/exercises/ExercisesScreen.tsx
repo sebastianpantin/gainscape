@@ -20,7 +20,7 @@ export function ExercisesScreen() {
     Promise.all([fetchExercises({ includeArchived: true }), fetchSkills()]).then(
       ([loadedExercises, loadedSkills]) => {
         setExercises(loadedExercises.filter((exercise) => exercise.custom));
-        setSkills(loadedSkills);
+        setSkills(loadedSkills.filter((skill) => skill.modality === 'lift'));
       },
       (error: Error) => setProblem(error.message),
     );

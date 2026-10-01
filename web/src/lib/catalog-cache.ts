@@ -43,7 +43,8 @@ export function readCachedExercises(storage: Storage, userId: string): Exercise[
     const raw = storage.getItem(exerciseCacheKey(userId));
     if (!raw) return null;
     const parsed = cachedExercisesSchema.safeParse(JSON.parse(raw));
-    return parsed.success && parsed.data.userId === userId ? parsed.data.exercises : null;
+    if (!parsed.success || parsed.data.userId !== userId) return null;
+    return parsed.data.exercises.map((exercise) => ({ ...exercise, modality: 'lift' }));
   } catch {
     return null;
   }

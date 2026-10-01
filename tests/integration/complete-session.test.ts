@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { combatLevel, DEFAULT_BALANCE, levelForXp, processSession, roundTo } from '@domain/index.ts';
+import { combatLevel, DEFAULT_BALANCE, levelForXp, processSession, roundTo, type SetInput } from '@domain/index.ts';
 import {
   activeDropSummaries,
   builtInExerciseId,
@@ -12,6 +12,7 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
+import { aBout, anIntervalBout, asCardioSetInput, type BoutShape } from './loot-support.ts';
 
 type EffortLevel = 'hard' | 'near_failure';
 
@@ -23,9 +24,11 @@ function threeSets(exerciseId: string, firstPosition: number, weightKg: number, 
     weightKg,
     reps: 8,
     isWarmup: false,
-    effort: level === null ? null : { type: 'level', level },
+    effort: level === null ? null : { type: 'level' as const, level },
   }));
 }
+
+type LiftSetBody = ReturnType<typeof threeSets>[number];
 
 function sessionPayload<SetShape>(sets: SetShape[], hoursAgo = 1) {
   const endedAt = new Date(Date.now() - (hoursAgo - 1) * 60 * 60 * 1000);
@@ -461,5 +464,161 @@ describe('complete-session with bodyweight exercises', () => {
     const response = await postCompleteSession(user.accessToken, sessionPayload(threeSets(pullUpId, 0, 5, 'hard')));
     expect(response.status).toBe(422);
     expect(response.body.error).toBe('bodyweight_load_not_zero');
+  });
+});
+
+describe('complete-session with cardio bouts', () => {
+  let runningId: string;
+  let sprintsId: string;
+
+  beforeAll(async () => {
+    runningId = await builtInExerciseId('running');
+    sprintsId = await builtInExerciseId('sprint_intervals');
+  });
+
+  function steadyBout(exerciseId: string, position: number, overrides: Partial<BoutShape> = {}): BoutShape {
+    return aBout(exerciseId, position, { distanceM: 5000, ...overrides });
+  }
+
+  function intervalBout(exerciseId: string, position: number, overrides: Partial<BoutShape> = {}): BoutShape {
+    return anIntervalBout(exerciseId, position, { workS: 30, restS: 30, rounds: 10 }, overrides);
+  }
+
+  async function expectedOutputs(payload: { id: string; startedAt: string; sets: (LiftSetBody | BoutShape)[] }) {
+    const catalog = await domainCatalogFor([...new Set(payload.sets.map((set) => set.exerciseId))]);
+    const sets = payload.sets.map((set): SetInput => ('kind' in set ? asCardioSetInput(set) : set));
+    const session = { id: payload.id, startedAt: payload.startedAt, sets };
+    return processSession({ skillXp: {}, bodyweightKg: null }, session, DEFAULT_BALANCE, { catalog }).outputs;
+  }
+
+  it('stores a lift without kind next to steady and interval bouts and pays both skill groups', async () => {
+    const user = await createTestUser();
+    const payload = sessionPayload([
+      threeSets(benchId, 0, 60, 'hard')[0],
+      steadyBout(runningId, 1),
+      intervalBout(sprintsId, 2),
+    ]);
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    const expected = await expectedOutputs(payload);
+    expect(response.body.xpBySkill).toEqual(expected.xpBySkill);
+    expect(Object.keys(response.body.xpBySkill!)).toEqual(expect.arrayContaining(['chest', 'endurance', 'agility']));
+    expect(response.body.xpBySkill!.endurance).toBe(Math.round(30 * DEFAULT_BALANCE.cardioXpPerWorkMinute.endurance));
+
+    const ledger = await db`
+      select s.key, sum(x.xp)::int as xp from public.set_skill_xp x join public.skills s on s.id = x.skill_id
+      where x.user_id = ${user.id} group by s.key`;
+    expect(Object.fromEntries(ledger.map((row) => [row.key, row.xp]))).toEqual(expected.xpBySkill);
+
+    const rows = await db`
+      select position, weight_kg, reps, effective_load_kg, duration_s, distance_m::float, interval_work_s,
+             interval_rest_s, interval_rounds, counted_work_s, pace_flagged, effort_input_type, effort_value::float,
+             rir, effective_reps, is_warmup
+      from public.sets where session_id = ${payload.id} order by position`;
+    expect(rows[0]).toMatchObject({ weight_kg: '60.00', reps: 8, duration_s: null, counted_work_s: null });
+    expect(rows[1]).toMatchObject({
+      weight_kg: null,
+      reps: null,
+      effective_load_kg: null,
+      duration_s: 1800,
+      distance_m: 5000,
+      interval_rounds: null,
+      counted_work_s: 1800,
+      pace_flagged: false,
+      effort_input_type: 'cardio',
+      effort_value: 2,
+      rir: null,
+      effective_reps: 0,
+      is_warmup: false,
+    });
+    expect(rows[2]).toMatchObject({
+      duration_s: 570,
+      distance_m: null,
+      interval_work_s: 30,
+      interval_rest_s: 30,
+      interval_rounds: 10,
+      counted_work_s: 300,
+      effort_input_type: 'cardio',
+      effort_value: 3,
+    });
+  });
+
+  it('flags an implausible pace and still pays duration XP', async () => {
+    const user = await createTestUser();
+    const payload = sessionPayload([steadyBout(runningId, 0, { distanceM: 20000, durationS: 1800 })]);
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.xpBySkill).toEqual((await expectedOutputs(payload)).xpBySkill);
+    const [row] = await db`select pace_flagged from public.sets where session_id = ${payload.id}`;
+    expect(row.pace_flagged).toBe(true);
+  });
+
+  it('stores a cardio bout without effort as the default moderate effort', async () => {
+    const user = await createTestUser();
+    const payload = sessionPayload([steadyBout(runningId, 0, { effort: null, distanceM: null })]);
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    const [row] = await db`select effort_input_type, rir_source from public.sets where session_id = ${payload.id}`;
+    expect(row).toEqual({ effort_input_type: null, rir_source: 'default' });
+    expect(response.body.xpBySkill).toEqual({
+      endurance: Math.round(30 * DEFAULT_BALANCE.cardioXpPerWorkMinute.endurance),
+    });
+  });
+
+  it('returns 422 kind_mismatch for a cardio bout on a lift exercise and writes nothing', async () => {
+    const user = await createTestUser();
+    const response = await postCompleteSession(user.accessToken, sessionPayload([steadyBout(benchId, 0)]));
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe('kind_mismatch');
+    expect((await rowCountsFor(user.id)).sessions).toBe(0);
+  });
+
+  it('returns 422 kind_mismatch for a lift set on a cardio exercise', async () => {
+    const user = await createTestUser();
+    const response = await postCompleteSession(user.accessToken, sessionPayload(threeSets(runningId, 0, 0, 'hard')));
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe('kind_mismatch');
+  });
+
+  it.each([
+    [
+      'a cardio effort on a lift set',
+      () => ({ ...threeSets(benchId, 0, 60, 'hard')[0], effort: { type: 'cardio', level: 'hard' } }),
+    ],
+    [
+      'a lift effort on a cardio bout',
+      () => ({ ...steadyBout(runningId, 0), effort: { type: 'level', level: 'hard' } }),
+    ],
+    ['a duration on an interval bout', () => intervalBout(sprintsId, 0, { durationS: 570 })],
+    ['a steady bout shorter than a minute', () => steadyBout(runningId, 0, { durationS: 59 })],
+    [
+      'an interval bout over 4 hours',
+      () => intervalBout(sprintsId, 0, { interval: { workS: 3600, restS: 0, rounds: 5 } }),
+    ],
+    ['lift fields on a cardio bout', () => ({ ...steadyBout(runningId, 0), reps: 5 })],
+  ])('returns 422 invalid_payload for %s', async (_case, makeSet) => {
+    const user = await createTestUser();
+    const response = await postCompleteSession(user.accessToken, sessionPayload([makeSet()]));
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe('invalid_payload');
+  });
+
+  it('stores a cardio bout older than 7 days as history only', async () => {
+    const user = await createTestUser();
+    const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    const payload = {
+      ...sessionPayload([steadyBout(runningId, 0), intervalBout(sprintsId, 1)]),
+      startedAt: eightDaysAgo.toISOString(),
+      endedAt: new Date(eightDaysAgo.getTime() + 3_600_000).toISOString(),
+    };
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.historyOnly).toBe(true);
+    const rows = await db`
+      select duration_s, counted_work_s, xp_awarded from public.sets where session_id = ${payload.id} order by position`;
+    expect(rows).toEqual([
+      { duration_s: 1800, counted_work_s: 1800, xp_awarded: 0 },
+      { duration_s: 570, counted_work_s: 300, xp_awarded: 0 },
+    ]);
   });
 });

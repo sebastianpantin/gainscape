@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(34);
 
 select tests.create_user('pc_owner') as a \gset
 select tests.create_user('pc_friend') as b \gset
@@ -133,6 +133,66 @@ select results_eq(
   'values (4, 21)',
   'three exact and two inexact slots, an undone pin and a bodyweight record count 4 of 21'
 );
+select id as running from public.exercises where key = 'running' \gset
+insert into public.pinned_exercises (user_id, exercise_id, position) values (:'counted', :'running', 1);
+select results_eq(
+  format('select filled_slots, total_slots from private.collection_counts(%L)', :'counted'),
+  'values (4, 21)',
+  'a pinned cardio exercise leaves the collection counts unchanged'
+);
+select tests.authenticate_as(:'counted');
+select is(
+  (select count(*)::int from jsonb_array_elements(public.get_collection(:'counted') -> 'exercises') e
+   where e ->> 'exerciseId' = :'running'),
+  0,
+  'get_collection lists no cardio exercise'
+);
+select is(
+  public.get_collection(:'counted') -> 'completion',
+  '{"filledSlots": 4, "totalSlots": 21}'::jsonb,
+  'get_collection completion ignores the pinned cardio exercise'
+);
+
+select id as endurance from public.skills where key = 'endurance' \gset
+select id as legs from public.skills where key = 'legs' \gset
+select gen_random_uuid() as custom_cardio \gset
+select lives_ok(
+  format($$select public.save_custom_exercise(jsonb_build_object(
+    'id', %L, 'name', 'Hill walk', 'modality', 'cardio', 'equipment', 'bodyweight',
+    'shares', jsonb_build_array(jsonb_build_object('skillId', %L, 'shareBp', 10000))))$$, :'custom_cardio', :'endurance'),
+  'a custom cardio exercise saves without a load type'
+);
+select results_eq(
+  format('select modality::text, load_type::text, max_effort::text, reference_pace_s_per_km, record_min_distance_m
+          from public.exercises where id = %L', :'custom_cardio'),
+  $$values ('cardio', null::text, 'max', null::int, null::int)$$,
+  'a custom cardio exercise has max effort and no reference pace'
+);
+select throws_ok(
+  format($$select public.save_custom_exercise(jsonb_build_object(
+    'id', gen_random_uuid(), 'name', 'Leg cycle', 'modality', 'cardio', 'equipment', 'machine',
+    'shares', jsonb_build_array(jsonb_build_object('skillId', %L, 'shareBp', 10000))))$$, :'legs'),
+  'P0001', 'invalid_exercise', 'a custom cardio exercise cannot share XP with a lift skill'
+);
+select throws_ok(
+  format($$select public.save_custom_exercise(jsonb_build_object(
+    'id', gen_random_uuid(), 'name', 'Loaded walk', 'modality', 'cardio', 'loadType', 'external', 'equipment', 'other',
+    'shares', jsonb_build_array(jsonb_build_object('skillId', %L, 'shareBp', 10000))))$$, :'endurance'),
+  'P0001', 'invalid_exercise', 'a custom cardio exercise has no load type'
+);
+select throws_ok(
+  format($$select public.save_custom_exercise(jsonb_build_object(
+    'id', %L, 'name', 'Hill walk', 'loadType', 'external', 'equipment', 'other',
+    'shares', jsonb_build_array(jsonb_build_object('skillId', %L, 'shareBp', 10000))))$$, :'custom_cardio', :'legs'),
+  'P0001', 'modality_locked', 'a custom exercise cannot change modality'
+);
+select throws_ok(
+  format($$select public.save_custom_exercise(jsonb_build_object(
+    'id', %L, 'name', 'Hill walk', 'modality', 'lift', 'loadType', 'external', 'equipment', 'other',
+    'shares', jsonb_build_array(jsonb_build_object('skillId', %L, 'shareBp', 10000))))$$, :'custom_cardio', :'endurance'),
+  'P0001', 'modality_locked', 'a modality change is reported as locked before the shares are checked'
+);
+reset role;
 
 select tests.authenticate_as(:'c');
 select is(public.get_profile(:'a'), null, 'a stranger gets no profile');

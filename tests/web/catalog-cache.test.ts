@@ -22,11 +22,20 @@ const exercises: Exercise[] = [
     id: 'bench',
     name: 'Barbell Bench Press',
     equipment: 'barbell',
+    modality: 'lift',
     loadType: 'external',
     custom: false,
     archived: false,
   },
-  { id: 'mine', name: 'My Row', equipment: 'cable', loadType: 'external', custom: true, archived: false },
+  {
+    id: 'mine',
+    name: 'My Row',
+    equipment: 'cable',
+    modality: 'lift',
+    loadType: 'external',
+    custom: true,
+    archived: false,
+  },
 ];
 
 describe('exercise list cache', () => {

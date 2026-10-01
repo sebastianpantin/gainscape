@@ -84,6 +84,8 @@ async function rewriteDerivedSetColumns(tx: Transaction, results: readonly SetRe
         reps_capacity_candidate = derived.reps_capacity_candidate,
         effective_reps = derived.effective_reps,
         xp_awarded = derived.xp_awarded,
+        counted_work_s = derived.counted_work_s,
+        pace_flagged = derived.pace_flagged,
         updated_at = now()
     from jsonb_to_recordset(${tx.json(derivedRows as unknown as JsonValue)}) as derived (
       id uuid,
@@ -94,7 +96,9 @@ async function rewriteDerivedSetColumns(tx: Transaction, results: readonly SetRe
       e1rm_candidate_kg numeric,
       reps_capacity_candidate int,
       effective_reps int,
-      xp_awarded int
+      xp_awarded int,
+      counted_work_s int,
+      pace_flagged boolean
     )
     where target.id = derived.id`;
 }

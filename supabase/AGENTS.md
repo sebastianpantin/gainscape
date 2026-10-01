@@ -19,7 +19,7 @@ Everything the backend consists of: the local Supabase stack configuration, appe
 
 | Directory     | Purpose                                                                         |
 | ------------- | ------------------------------------------------------------------------------- |
-| `migrations/` | Append-only schema history, 001 to 014 (see `migrations/AGENTS.md`)             |
+| `migrations/` | Append-only schema history, 001 to 018 (see `migrations/AGENTS.md`)             |
 | `tests/`      | pgTAP suites run by `make test-db` (see `tests/AGENTS.md`)                      |
 | `templates/`  | GoTrue confirmation, recovery and email-change HTML (see `templates/AGENTS.md`) |
 | `functions/`  | Deno Edge Functions and shared server code (see `functions/AGENTS.md`)          |

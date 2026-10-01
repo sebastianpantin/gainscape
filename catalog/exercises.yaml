@@ -250,3 +250,75 @@
   shares: { arms: 10000 }
   variation_of: dumbbell_curl
   requires_unlock: true
+- key: running
+  name: Running
+  modality: cardio
+  equipment: bodyweight
+  shares: { endurance: 10000 }
+  cardio: { reference_pace_s_per_km: 360, pace_unit: per_km, max_effort: max, record_min_distance_m: 1000 }
+- key: cycling
+  name: Cycling
+  modality: cardio
+  equipment: machine
+  shares: { endurance: 10000 }
+  cardio: { reference_pace_s_per_km: 150, pace_unit: per_km, max_effort: max, record_min_distance_m: 5000 }
+- key: rowing
+  name: Rowing
+  modality: cardio
+  equipment: machine
+  shares: { endurance: 10000 }
+  cardio: { reference_pace_s_per_km: 260, pace_unit: per_km, max_effort: max, record_min_distance_m: 1000 }
+- key: swimming
+  name: Swimming
+  modality: cardio
+  equipment: bodyweight
+  shares: { endurance: 10000 }
+  cardio: { reference_pace_s_per_km: 1200, pace_unit: per_100m, max_effort: max, record_min_distance_m: 100 }
+- key: walking
+  name: Walking
+  modality: cardio
+  equipment: bodyweight
+  shares: { endurance: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate }
+- key: elliptical
+  name: Elliptical
+  modality: cardio
+  equipment: machine
+  shares: { endurance: 10000 }
+  cardio: { pace_unit: per_km, max_effort: max }
+- key: stair_climber
+  name: Stair Climber
+  modality: cardio
+  equipment: machine
+  shares: { endurance: 10000 }
+  cardio: { pace_unit: per_km, max_effort: max }
+- key: sprint_intervals
+  name: Sprint Intervals
+  modality: cardio
+  equipment: bodyweight
+  shares: { agility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: max }
+- key: jump_rope
+  name: Jump Rope
+  modality: cardio
+  equipment: bodyweight
+  shares: { agility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: max }
+- key: hiit_circuit
+  name: HIIT Circuit
+  modality: cardio
+  equipment: bodyweight
+  shares: { agility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: max }
+- key: shuttle_runs
+  name: Shuttle Runs
+  modality: cardio
+  equipment: bodyweight
+  shares: { agility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: max }
+- key: rowing_intervals
+  name: Rowing Intervals
+  modality: cardio
+  equipment: machine
+  shares: { endurance: 5000, agility: 5000 }
+  cardio: { pace_unit: per_km, max_effort: max }

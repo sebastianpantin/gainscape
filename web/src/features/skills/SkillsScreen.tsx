@@ -9,6 +9,11 @@ interface SkillsScreenProps {
   userId: string;
 }
 
+function combatCopy(combatWeight: number): string {
+  if (combatWeight === 0) return 'does not count toward combat';
+  return combatWeight > 1 ? 'counts double toward combat' : 'counts once toward combat';
+}
+
 export function SkillsScreen({ userId }: SkillsScreenProps) {
   const state = useStanding(userId);
   const [pickedKey, setPickedKey] = useState<string | null>(null);
@@ -74,9 +79,7 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
         <section className="panel stack" aria-live="polite">
           <div className="row spread">
             <h2>{picked.skill.name}</h2>
-            <span className="muted">
-              {picked.skill.combatWeight > 1 ? 'counts double toward combat' : 'counts once toward combat'}
-            </span>
+            <span className="muted">{combatCopy(picked.skill.combatWeight)}</span>
           </div>
           <span>
             {formatXp(picked.progress.xp)} XP

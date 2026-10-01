@@ -26,7 +26,7 @@ export async function syncSessionEvents(tx: Transaction, userId: string, session
   const setRows = await tx`
     select id, session_id, exercise_id, position, weight_kg, reps, is_warmup, effective_load_kg
     from public.sets
-    where user_id = ${userId} and session_id = any(${ids}::uuid[]) and not is_warmup`;
+    where user_id = ${userId} and session_id = any(${ids}::uuid[]) and not is_warmup and reps is not null`;
   const summaries = sessions.map((row) => row.summary as SessionSummary);
   const exerciseIds = [...new Set(summaries.flatMap((summary) => (summary.prs ?? []).map((pr) => pr.exerciseId)))];
   const itemIds = [...new Set(summaries.flatMap((summary) => (summary.drops ?? []).map((drop) => drop.itemId)))];

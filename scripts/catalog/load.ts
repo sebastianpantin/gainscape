@@ -8,11 +8,14 @@ const CATALOG_DIR = join(import.meta.dirname, '../../catalog');
 export type ItemKind = 'gear' | 'material' | 'pet' | 'scroll';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
 
+export type CatalogModality = 'lift' | 'cardio';
+
 export interface CatalogSkill {
   key: string;
   name: string;
   sortOrder: number;
   combatWeight: number;
+  modality: CatalogModality;
 }
 
 export interface CatalogShare {
@@ -20,14 +23,23 @@ export interface CatalogShare {
   shareBp: number;
 }
 
+export interface CatalogCardio {
+  referencePaceSPerKm: number | null;
+  paceUnit: 'per_km' | 'per_100m';
+  maxEffort: string;
+  recordMinDistanceM: number | null;
+}
+
 export interface CatalogExercise {
   key: string;
   name: string;
-  loadType: string;
+  modality: CatalogModality;
+  loadType: string | null;
   equipment: string;
   shares: CatalogShare[];
   variationOf: string | null;
   requiresUnlock: boolean;
+  cardio: CatalogCardio | null;
 }
 
 export interface CatalogDayExercise {
@@ -102,19 +114,36 @@ export interface CatalogData {
 
 const rarity = z.enum(['common', 'uncommon', 'rare', 'legendary']);
 
+const modality = z.enum(['lift', 'cardio']);
+
 const skillsSchema = z.array(
-  z.strictObject({ key: z.string(), name: z.string(), sort_order: z.int(), combat_weight: z.number() }),
+  z.strictObject({
+    key: z.string(),
+    name: z.string(),
+    sort_order: z.int(),
+    combat_weight: z.number(),
+    modality: modality.optional(),
+  }),
 );
 
 const exercisesSchema = z.array(
   z.strictObject({
     key: z.string(),
     name: z.string(),
-    load_type: z.enum(['external', 'bodyweight', 'bodyweight_plus']),
+    modality: modality.optional(),
+    load_type: z.enum(['external', 'bodyweight', 'bodyweight_plus']).optional(),
     equipment: z.enum(['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other']),
     shares: z.record(z.string(), z.int()),
     variation_of: z.string().optional(),
     requires_unlock: z.boolean().optional(),
+    cardio: z
+      .strictObject({
+        reference_pace_s_per_km: z.int().optional(),
+        pace_unit: z.enum(['per_km', 'per_100m']),
+        max_effort: z.string(),
+        record_min_distance_m: z.int().optional(),
+      })
+      .optional(),
   }),
 );
 
@@ -271,15 +300,26 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
       name: skill.name,
       sortOrder: skill.sort_order,
       combatWeight: skill.combat_weight,
+      modality: skill.modality ?? 'lift',
     })),
     exercises: exercisesSchema.parse(sources.exercises).map((exercise) => ({
       key: exercise.key,
       name: exercise.name,
-      loadType: exercise.load_type,
+      modality: exercise.modality ?? 'lift',
+      loadType: exercise.load_type ?? null,
       equipment: exercise.equipment,
       shares: Object.entries(exercise.shares).map(([skill, shareBp]) => ({ skill, shareBp })),
       variationOf: exercise.variation_of ?? null,
       requiresUnlock: exercise.requires_unlock ?? false,
+      cardio:
+        exercise.cardio === undefined
+          ? null
+          : {
+              referencePaceSPerKm: exercise.cardio.reference_pace_s_per_km ?? null,
+              paceUnit: exercise.cardio.pace_unit,
+              maxEffort: exercise.cardio.max_effort,
+              recordMinDistanceM: exercise.cardio.record_min_distance_m ?? null,
+            },
     })),
     programs: programsSchema.parse(sources.programs).map((program) => ({
       key: program.key,

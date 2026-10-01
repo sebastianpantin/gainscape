@@ -18,6 +18,9 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
 
   await openFromProfile(page, 'Exercises');
   await page.getByRole('button', { name: 'New custom exercise' }).click();
+  await expect(page.getByLabel('Chest')).toBeVisible();
+  await expect(page.getByLabel('Endurance')).toHaveCount(0);
+  await expect(page.getByLabel('Agility')).toHaveCount(0);
   await page.getByLabel('Name').fill('Landmine Press');
   await page.getByLabel('Load type').selectOption('external');
   await page.getByLabel('Equipment').selectOption('other');
@@ -62,6 +65,8 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await page.getByRole('button', { name: 'Start workout' }).click();
   await page.getByLabel('Search exercises').fill('landmine');
   await expect(page.getByRole('button', { name: /^Landmine Press\b/ })).toHaveCount(0);
+  await page.getByLabel('Search exercises').fill('running');
+  await expect(page.getByRole('button', { name: /^Running\b/ })).toHaveCount(0);
 
   await openTab(page, 'Log');
   await expect(landmine).toContainText('(archived)');

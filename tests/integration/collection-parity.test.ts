@@ -1,13 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { webCollectionCounts } from './collection-support.ts';
-import { aSet, hoursAgo, payloadAt, postSession } from './loot-support.ts';
+import { aBout, aSet, hoursAgo, payloadAt, postSession } from './loot-support.ts';
 import { builtInExerciseId, createTestUser, db, setBodyweight, type TestUser } from './local-stack.ts';
 
 const ids: Record<string, string> = {};
 
 beforeAll(async () => {
-  for (const key of ['barbell_bench_press', 'back_squat', 'weighted_dip', 'pull_up', 'leg_press', 'cable_crunch']) {
+  for (const key of [
+    'barbell_bench_press',
+    'back_squat',
+    'weighted_dip',
+    'pull_up',
+    'leg_press',
+    'cable_crunch',
+    'running',
+  ]) {
     ids[key] = await builtInExerciseId(key);
   }
 });
@@ -85,6 +93,20 @@ describe('collection parity between get_profile and the web rule', () => {
     expect(archive.error).toBeNull();
     await customExercise(user, true);
     await expectParity(user);
+  });
+
+  it('matches and stays unchanged with a pinned and logged cardio exercise', async () => {
+    const user = await createTestUser();
+    await postSession(user, payloadAt(hoursAgo(2), [aSet(ids.barbell_bench_press, 0, 60, { reps: 3 })]));
+    await pin(user, ids.back_squat, 0);
+    const before = await webCollectionCounts(user.id);
+    await pin(user, ids.running, 1);
+    await postSession(
+      user,
+      payloadAt(hoursAgo(1), [aBout(ids.running, 0, { durationS: 1200, distanceM: 4000, effort: null })]),
+    );
+    await expectParity(user);
+    expect(await webCollectionCounts(user.id)).toEqual(before);
   });
 
   it('matches for pins without sessions next to a logged lift', async () => {

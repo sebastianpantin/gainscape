@@ -287,7 +287,7 @@ select throws_ok(
 );
 select is(
   (select count(*)::int from jsonb_object_keys((select h.skill_xp from public.get_hiscores() h where h.user_id = :'a'))),
-  6,
+  (select count(*)::int from public.skills),
   'hiscores list every skill'
 );
 select public.remove_friend(:'a');

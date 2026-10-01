@@ -1,11 +1,14 @@
 import { supabase } from './supabase.ts';
 
+export type Modality = 'lift' | 'cardio';
+
 export interface Skill {
   id: string;
   key: string;
   name: string;
   sortOrder: number;
   combatWeight: number;
+  modality: Modality;
 }
 
 export type LoadType = 'external' | 'bodyweight' | 'bodyweight_plus';
@@ -20,6 +23,7 @@ export interface Exercise {
   id: string;
   name: string;
   equipment: string;
+  modality: Modality;
   loadType: LoadType;
   custom: boolean;
   archived: boolean;
@@ -28,7 +32,7 @@ export interface Exercise {
 export async function fetchSkills(): Promise<Skill[]> {
   const { data, error } = await supabase
     .from('skills')
-    .select('id, key, name, sort_order, combat_weight')
+    .select('id, key, name, sort_order, combat_weight, modality')
     .order('sort_order');
   if (error) throw error;
   return data.map((row) => ({
@@ -37,6 +41,7 @@ export async function fetchSkills(): Promise<Skill[]> {
     name: row.name,
     sortOrder: row.sort_order,
     combatWeight: Number(row.combat_weight),
+    modality: row.modality,
   }));
 }
 
@@ -48,7 +53,8 @@ export interface ExerciseQuery {
 export async function fetchExercises({ includeArchived, signal }: ExerciseQuery): Promise<Exercise[]> {
   let query = supabase
     .from('exercises')
-    .select('id, name, equipment, load_type, owner_user_id, archived_at')
+    .select('id, name, equipment, modality, load_type, owner_user_id, archived_at')
+    .eq('modality', 'lift')
     .order('name');
   if (!includeArchived) query = query.is('archived_at', null);
   if (signal) query = query.abortSignal(signal);
@@ -58,6 +64,7 @@ export async function fetchExercises({ includeArchived, signal }: ExerciseQuery)
     id: row.id,
     name: row.name,
     equipment: row.equipment,
+    modality: row.modality,
     loadType: row.load_type,
     custom: row.owner_user_id !== null,
     archived: row.archived_at !== null,
