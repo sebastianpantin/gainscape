@@ -24,6 +24,7 @@ interface LocalStackEnv {
   FUNCTIONS_URL: string;
   ANON_KEY: string;
   SERVICE_ROLE_KEY: string;
+  MAILPIT_URL: string;
 }
 
 const stackEnvPath = join(import.meta.dirname, '../../.stack.env');
@@ -100,6 +101,7 @@ export interface FunctionResponse {
   status: number;
   body: FunctionResponseBody;
   rawBody: string;
+  headers: Headers;
 }
 
 export async function postFunction(name: string, accessToken: string, body: unknown): Promise<FunctionResponse> {
@@ -109,7 +111,7 @@ export async function postFunction(name: string, accessToken: string, body: unkn
     body: JSON.stringify(body),
   });
   const rawBody = await response.text();
-  return { status: response.status, body: JSON.parse(rawBody), rawBody };
+  return { status: response.status, body: JSON.parse(rawBody), rawBody, headers: response.headers };
 }
 
 export async function postCompleteSession(accessToken: string, payload: unknown): Promise<FunctionResponse> {
@@ -415,4 +417,79 @@ export async function grantDrop(
       where target.id = ${sessionId}`;
     return { dropId: drop.id, lootRollId: roll.id, itemId: item.id };
   });
+}
+
+async function sessionOrdinals(userId: string): Promise<Map<string, number>> {
+  const sessions = await db`select id from public.sessions where user_id = ${userId} order by started_at, id`;
+  return new Map(sessions.map((session, index) => [session.id as string, index]));
+}
+
+export async function eventsSnapshot(userId: string) {
+  const ordinal = await sessionOrdinals(userId);
+  const setKeys = await db`select id, session_id, position from public.sets where user_id = ${userId}`;
+  const setOrdinal = new Map(
+    setKeys.map((row) => [row.id as string, `s${ordinal.get(row.session_id)}.${row.position}`]),
+  );
+  const dropRows = await db`
+    select d.id, d.session_id, st.position, d.source
+    from public.drops d left join public.sets st on st.id = d.set_id
+    where d.user_id = ${userId}`;
+  const dropOrdinal = new Map(
+    [...dropRows]
+      .sort(
+        (a, b) =>
+          (ordinal.get(a.session_id) ?? -1) - (ordinal.get(b.session_id) ?? -1) ||
+          (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER) ||
+          String(a.source).localeCompare(String(b.source)),
+      )
+      .map((row, index) => [row.id as string, `drop:${index}`]),
+  );
+  const events = await db`
+    select session_id, event_key, type, set_id, occurred_at, payload
+    from public.events where user_id = ${userId}`;
+  return events
+    .map((event) => {
+      const dropKey = event.event_key.startsWith('drop:') ? dropOrdinal.get(event.event_key.slice(5)) : undefined;
+      const payload = { ...event.payload };
+      if (typeof payload.dropId === 'string') payload.dropId = dropOrdinal.get(payload.dropId) ?? payload.dropId;
+      return {
+        session: ordinal.get(event.session_id) ?? -1,
+        event_key: dropKey ?? event.event_key,
+        type: event.type,
+        set: event.set_id === null ? null : (setOrdinal.get(event.set_id) ?? `foreign:${event.set_id}`),
+        occurred_at: new Date(event.occurred_at).toISOString(),
+        payload,
+      };
+    })
+    .sort((a, b) => a.session - b.session || a.event_key.localeCompare(b.event_key));
+}
+
+export async function eventIds(userId: string): Promise<Map<string, string>> {
+  const ordinal = await sessionOrdinals(userId);
+  const rows = await db`select id, session_id, event_key from public.events where user_id = ${userId}`;
+  return new Map(rows.map((row) => [`${ordinal.get(row.session_id)}:${row.event_key}`, row.id as string]));
+}
+
+const SEED_MARGIN_SECONDS = 10;
+
+export async function seedRateLimitHits(bucket: string, userId: string, hits: number): Promise<void> {
+  const [rule] = await db`
+    select window_seconds,
+           window_seconds - mod(extract(epoch from clock_timestamp())::numeric, window_seconds)::float as remaining
+    from private.rate_limit_rules where bucket = ${bucket}`;
+  if (rule.remaining < SEED_MARGIN_SECONDS)
+    await new Promise((resolve) => setTimeout(resolve, rule.remaining * 1000 + 50));
+  await db`
+    insert into private.rate_limit_hits (bucket, subject, window_start, hits)
+    select ${bucket}, ${userId},
+           to_timestamp(floor(extract(epoch from clock_timestamp()) / ${rule.window_seconds}) * ${rule.window_seconds}),
+           ${hits}
+    on conflict (bucket, subject, window_start) do update set hits = excluded.hits`;
+}
+
+export async function rateLimitHits(bucket: string, userId: string): Promise<number> {
+  const [row] = await db`
+    select coalesce(sum(hits), 0)::int as hits from private.rate_limit_hits
+    where bucket = ${bucket} and subject = ${userId}`;
+  return row.hits;
 }

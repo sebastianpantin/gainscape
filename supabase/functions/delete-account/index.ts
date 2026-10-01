@@ -3,6 +3,7 @@ import { z } from 'npm:zod@4.6.5';
 import { authenticatedUserId } from '../_shared/auth.ts';
 import { sql } from '../_shared/db.ts';
 import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+import { takeRateLimit } from '../_shared/rate-limit.ts';
 
 const bodySchema = z.object({ confirmUsername: z.string().min(1).max(40), password: z.string().min(1).max(200) });
 
@@ -17,6 +18,7 @@ async function passwordMatches(email: string, password: string): Promise<boolean
 }
 
 async function deleteAccount(userId: string, confirmUsername: string, password: string): Promise<void> {
+  await takeRateLimit(sql, 'delete_account_hour', userId);
   const [account] = await sql`
     select p.username, u.email
     from public.profiles p join auth.users u on u.id = p.id

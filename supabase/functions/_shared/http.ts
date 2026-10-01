@@ -2,6 +2,7 @@ export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Expose-Headers': 'retry-after',
 };
 
 export class HttpError extends Error {
@@ -14,16 +15,22 @@ export class HttpError extends Error {
   }
 }
 
-export function jsonResponse(body: unknown, status = 200): Response {
+export function jsonResponse(body: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...extraHeaders },
   });
+}
+
+function retryAfterHeader(error: HttpError): Record<string, string> {
+  const retryAfterSeconds = (error.details as { retryAfterSeconds?: unknown } | undefined)?.retryAfterSeconds;
+  if (error.status !== 429 || typeof retryAfterSeconds !== 'number') return {};
+  return { 'Retry-After': String(retryAfterSeconds) };
 }
 
 export function errorResponse(error: unknown): Response {
   if (error instanceof HttpError) {
-    return jsonResponse({ error: error.code, details: error.details }, error.status);
+    return jsonResponse({ error: error.code, details: error.details }, error.status, retryAfterHeader(error));
   }
   console.error(error);
   return jsonResponse({ error: 'internal_error' }, 500);

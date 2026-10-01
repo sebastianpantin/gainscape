@@ -9,7 +9,7 @@ include .stack.env
 export $(shell sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' .stack.env)
 endif
 
-.PHONY: start stop reset functions dev types test typecheck lint format format-check check check-functions catalog catalog-check test-catalog test-domain test-web test-integration rebuild-caches sim sim-check e2e
+.PHONY: start stop reset functions dev types test typecheck lint format format-check check check-functions catalog catalog-check test-catalog test-domain test-web test-integration test-db rebuild-caches sim sim-check e2e
 
 start:
 	$(SUPABASE) start
@@ -86,6 +86,9 @@ test-web:
 test-integration: functions
 	npx vitest run tests/integration
 
+test-db:
+	$(SUPABASE) test db
+
 CHROMIUM_PATH ?= $(shell command -v chromium 2>/dev/null)
 
 e2e: functions
@@ -97,4 +100,4 @@ sim:
 sim-check:
 	npx vitest run tests/balance
 
-test: check test-catalog test-domain test-web test-integration
+test: check test-catalog test-domain test-web test-integration test-db

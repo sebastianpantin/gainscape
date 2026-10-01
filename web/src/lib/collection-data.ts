@@ -1,7 +1,9 @@
-import { collectionCompletion, type CollectionExercise } from '@domain/collection.ts';
 import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
-import { type Exercise, fetchExercises } from './catalog.ts';
+import { fetchExercises } from './catalog.ts';
+import { countCollection } from './collection-rules.ts';
 import { supabase } from './supabase.ts';
+
+export { countCollection, type CountedCollection } from './collection-rules.ts';
 
 export interface RepMaxSlotView {
   loadKg: number;
@@ -80,40 +82,6 @@ export async function unpinExercise(exerciseId: string): Promise<void> {
 export async function reorderPins(exerciseIds: string[]): Promise<void> {
   const { error } = await supabase.rpc('reorder_pins', { exercise_ids: exerciseIds });
   if (error) throw error;
-}
-
-function isDone(exercise: Exercise, data: CollectionData): boolean {
-  return data.repMaxesByExercise.has(exercise.id) || data.maxRepsByExercise.has(exercise.id);
-}
-
-function asCollectionExercise(exercise: Exercise, data: CollectionData): CollectionExercise {
-  return {
-    loadType: exercise.loadType,
-    exactRepMaxSlotsFilled: (data.repMaxesByExercise.get(exercise.id) ?? []).filter((slot) => slot?.exact).length,
-    hasBodyweightRecord: data.maxRepsByExercise.has(exercise.id),
-  };
-}
-
-export interface CountedCollection {
-  pinned: Exercise[];
-  counted: Exercise[];
-  completion: ReturnType<typeof collectionCompletion>;
-}
-
-export function countCollection(exercises: Exercise[], data: CollectionData): CountedCollection {
-  const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
-  const pinned = data.pinnedExerciseIds
-    .map((id) => byId.get(id))
-    .filter((exercise): exercise is Exercise => exercise !== undefined);
-  const doneButNotPinned = exercises.filter(
-    (exercise) => isDone(exercise, data) && !data.pinnedExerciseIds.includes(exercise.id),
-  );
-  const counted = [...pinned, ...doneButNotPinned];
-  return {
-    pinned,
-    counted,
-    completion: collectionCompletion(counted.map((exercise) => asCollectionExercise(exercise, data))),
-  };
 }
 
 export async function fetchCollectionPercent(userId: string): Promise<number> {

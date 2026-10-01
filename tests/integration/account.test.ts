@@ -34,6 +34,9 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'user_items', column: 'user_id' },
   { table: 'item_ledger', column: 'user_id' },
   { table: 'user_unlocks', column: 'user_id' },
+  { table: 'events', column: 'user_id' },
+  { table: 'friendships', column: 'requester_id' },
+  { table: 'friendships', column: 'addressee_id' },
   { table: 'crafts', column: 'user_id' },
 ];
 
@@ -50,7 +53,7 @@ async function post(name: string, accessToken: string | null, body: unknown) {
   return { status: response.status, body: await response.json() };
 }
 
-async function logOneSession(user: TestUser): Promise<string> {
+async function logOneSession(user: TestUser, weightKg = 60): Promise<string> {
   const sessionId = randomUUID();
   const endedAt = new Date();
   const response = await postCompleteSession(user.accessToken, {
@@ -62,7 +65,7 @@ async function logOneSession(user: TestUser): Promise<string> {
         id: randomUUID(),
         exerciseId: await builtInExerciseId('barbell_bench_press'),
         position: 0,
-        weightKg: 60,
+        weightKg,
         reps: 8,
         effort: { type: 'rpe', value: 8 },
       },
@@ -74,10 +77,12 @@ async function logOneSession(user: TestUser): Promise<string> {
 
 async function giveUserEverything(user: TestUser): Promise<void> {
   const keptSessionId = await logOneSession(user);
+  await logOneSession(user, 80);
   const scroll = await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
   await db`
     insert into public.user_unlocks (user_id, exercise_id, item_id, source_drop_id)
-    select ${user.id}, grants_exercise_id, id, ${scroll.dropId} from public.items where key = 'scroll_pause_squat'`;
+    select ${user.id}, grants_exercise_id, id, ${scroll.dropId} from public.items where key = 'scroll_pause_squat'
+    on conflict (user_id, exercise_id) do nothing`;
   await db`
     insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
     select ${user.id}, id, 3 from public.drop_tables where key = 'regular'
@@ -107,13 +112,21 @@ async function giveUserEverything(user: TestUser): Promise<void> {
   const [template] = await db`select id from public.programs where owner_user_id is null limit 1`;
   const copy = await user.client.rpc('copy_program', { source_program_id: template.id, new_program_id: randomUUID() });
   expect(copy.error).toBeNull();
+  const [requested, friend] = await Promise.all([createTestUser(), createTestUser()]);
+  const outgoing = await user.client.rpc('send_friend_request', { username: requested.username });
+  expect(outgoing.data).toMatchObject({ status: 'sent' });
+  const incoming = await friend.client.rpc('send_friend_request', { username: user.username });
+  expect(incoming.data).toMatchObject({ status: 'sent' });
+  const accepted = await user.client.rpc('respond_friend_request', { requester_id: friend.id, accept: true });
+  expect(accepted.data).toMatchObject({ status: 'accepted' });
 }
 
 async function rowCounts(userId: string): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
   for (const { table, column } of USER_TABLES) {
     const [row] = await db`select count(*)::int as count from ${db('public.' + table)} where ${db(column)} = ${userId}`;
-    counts[table] = row.count;
+    const shared = USER_TABLES.filter((entry) => entry.table === table).length > 1;
+    counts[shared ? `${table}.${column}` : table] = row.count;
   }
   const [days] = await db`
     select count(*)::int as count from public.program_days d
@@ -125,6 +138,11 @@ async function rowCounts(userId: string): Promise<Record<string, number>> {
   counts.program_days = days.count;
   counts.program_day_exercises = dayExercises.count;
   return counts;
+}
+
+async function rateLimitRows(userId: string): Promise<number> {
+  const [row] = await db`select count(*)::int as count from private.rate_limit_hits where subject = ${userId}`;
+  return row.count;
 }
 
 async function orphanedRows(exerciseIds: string[], programIds: string[]): Promise<number> {
@@ -171,9 +189,9 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.sessions).toHaveLength(1);
+    expect(exported.sessions).toHaveLength(2);
     expect(exported.deletedSessions).toHaveLength(1);
-    expect(exported.sets).toHaveLength(1);
+    expect(exported.sets).toHaveLength(2);
     expect(exported.sets[0].effort_input_type).toBe('rpe');
     expect(exported.pinnedExercises).toHaveLength(1);
     expect(exported.customExercises).toHaveLength(1);
@@ -186,11 +204,81 @@ describe('export-data', () => {
     expect(exported.dropLuck).toHaveLength(counts.drop_luck);
     expect(exported.userItems).toHaveLength(counts.user_items);
     expect(exported.itemLedger).toHaveLength(counts.item_ledger);
-    expect(exported.userUnlocks).toHaveLength(1);
+    expect(exported.userUnlocks).toHaveLength(counts.user_unlocks);
+    expect(counts.user_unlocks).toBeGreaterThan(0);
+    expect(exported.events).toHaveLength(counts.events);
     expect(exported.crafts).toHaveLength(1);
+    expect(
+      exported.friendships.map((row: { direction: string; status: string }) => `${row.direction}:${row.status}`).sort(),
+    ).toEqual(['incoming:accepted', 'outgoing:pending']);
+    expect(Object.keys(exported.friendships[0]).sort()).toEqual(
+      ['createdAt', 'direction', 'otherUserId', 'otherUsername', 'respondedAt', 'status'].sort(),
+    );
+    expect(exported.events.some((event: { type: string }) => event.type === 'pr')).toBe(true);
     expect(exported.drops.some((drop: { source: string }) => drop.source === 'pr')).toBe(true);
     const everyUserId = JSON.stringify(exported).match(new RegExp(bystander.id, 'g'));
     expect(everyUserId).toBeNull();
+  });
+});
+
+describe('export-data and declined requests', () => {
+  it('shows a declined outgoing request as pending and leaves out a withdrawn one', async () => {
+    const [requester, addressee] = await Promise.all([createTestUser(), createTestUser()]);
+    await requester.client.rpc('send_friend_request', { username: addressee.username });
+    const declined = await addressee.client.rpc('respond_friend_request', {
+      requester_id: requester.id,
+      accept: false,
+    });
+    expect(declined.data).toMatchObject({ status: 'declined' });
+
+    const exported = await post('export-data', requester.accessToken, {});
+    expect(exported.status).toBe(200);
+    expect(exported.body.friendships).toEqual([
+      expect.objectContaining({
+        otherUserId: addressee.id,
+        direction: 'outgoing',
+        status: 'pending',
+        respondedAt: null,
+      }),
+    ]);
+    const addresseeExport = await post('export-data', addressee.accessToken, {});
+    expect(addresseeExport.body.friendships).toEqual([
+      expect.objectContaining({ otherUserId: requester.id, direction: 'incoming', status: 'declined' }),
+    ]);
+
+    expect((await requester.client.rpc('remove_friend', { other_id: addressee.id })).error).toBeNull();
+    const afterWithdraw = await post('export-data', requester.accessToken, {});
+    expect(afterWithdraw.body.friendships).toEqual([]);
+  });
+
+  it('exports a re-sent request the same way whether it was declined or still pending', async () => {
+    const [requester, decliner, ignorer] = await Promise.all([createTestUser(), createTestUser(), createTestUser()]);
+    for (const target of [decliner, ignorer]) {
+      await requester.client.rpc('send_friend_request', { username: target.username });
+    }
+    await decliner.client.rpc('respond_friend_request', { requester_id: requester.id, accept: false });
+    const [first] = await db`select created_at from public.friendships where requester_id = ${requester.id} limit 1`;
+    for (const target of [decliner, ignorer]) {
+      expect((await requester.client.rpc('remove_friend', { other_id: target.id })).error).toBeNull();
+      const resent = await requester.client.rpc('send_friend_request', { username: target.username });
+      expect(resent.data).toMatchObject({ status: 'sent', friend: { userId: target.id } });
+    }
+
+    const exported = await post('export-data', requester.accessToken, {});
+    const shape = (row: Record<string, unknown>) => ({
+      ...row,
+      otherUserId: null,
+      otherUsername: null,
+      createdAt: null,
+    });
+    const byTarget = new Map(
+      exported.body.friendships.map((row: Record<string, unknown>) => [row.otherUserId as string, row]),
+    );
+    const declinedRow = byTarget.get(decliner.id) as Record<string, unknown>;
+    const pendingRow = byTarget.get(ignorer.id) as Record<string, unknown>;
+    expect(shape(declinedRow)).toEqual(shape(pendingRow));
+    expect(declinedRow).toMatchObject({ direction: 'outgoing', status: 'pending', respondedAt: null });
+    expect(Date.parse(declinedRow.createdAt as string)).toBeGreaterThan(new Date(first.created_at).getTime());
   });
 });
 
@@ -204,7 +292,7 @@ describe('delete-account', () => {
     expect(response.body.error).toBe('confirmation_mismatch');
     const counts = await rowCounts(owner.id);
     expect(counts.profiles).toBe(1);
-    expect(counts.sessions).toBe(1);
+    expect(counts.sessions).toBe(2);
   });
 
   it('refuses when the password is wrong', async () => {
@@ -234,9 +322,21 @@ describe('delete-account', () => {
     expect(ownedExerciseIds).toHaveLength(1);
     expect(ownedProgramIds.length).toBeGreaterThan(0);
     const ownerBefore = await rowCounts(owner.id);
-    for (const table of ['loot_rolls', 'drops', 'drop_luck', 'user_items', 'item_ledger', 'user_unlocks', 'crafts']) {
+    for (const table of [
+      'loot_rolls',
+      'drops',
+      'drop_luck',
+      'user_items',
+      'item_ledger',
+      'user_unlocks',
+      'events',
+      'crafts',
+      'friendships.requester_id',
+      'friendships.addressee_id',
+    ]) {
       expect(ownerBefore[table], table).toBeGreaterThan(0);
     }
+    expect(await rateLimitRows(owner.id)).toBeGreaterThan(0);
     const response = await post('delete-account', owner.accessToken, {
       confirmUsername: owner.username.toUpperCase(),
       password: TEST_PASSWORD,
@@ -248,6 +348,7 @@ describe('delete-account', () => {
     expect(Object.values(counts).every((count) => count === 0)).toBe(true);
     const [authRow] = await db`select count(*)::int as count from auth.users where id = ${owner.id}`;
     expect(authRow.count).toBe(0);
+    expect(await rateLimitRows(owner.id)).toBe(0);
     const lookup = await admin.auth.admin.getUserById(owner.id);
     expect(lookup.data.user).toBeNull();
     expect(await rowCounts(bystander.id)).toEqual(bystanderBefore);
