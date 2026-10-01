@@ -20,7 +20,7 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc` (app and service worker), `deno check`, catalog and icons checks |
 | `make test`                 | `make check`, then domain tests, web draft/sync tests, integration/RLS tests and `make test-db`                                               |
 | `make test-db`              | pgTAP tests in `supabase/tests/` against the local database (refuses any non-local host)                                                      |
-| `make sim-check`            | Balance band test (about 15 s)                                                                                                                |
+| `make sim-check`            | Balance band test (about 1 s)                                                                                                                 |
 | `make sim`                  | Full balance tuning report (about 2 min)                                                                                                      |
 | `make e2e`                  | Playwright end-to-end flow in a headless phone-sized browser                                                                                  |
 | `make e2e-pwa`              | Builds the production bundle and runs the offline, update and installability tests against `vite preview`                                     |

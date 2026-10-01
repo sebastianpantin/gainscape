@@ -31,7 +31,7 @@ Simulates years of training for four lifter profiles using the real domain engin
 
 ### Testing Requirements
 
-- `tests/balance/balance-bands.test.ts` (`make sim-check`, about 15 s) runs the committed constants through the bands and unit-tests `evaluateBands`. Put a failing band or `yearsToLevel99` case there first.
+- `tests/balance/balance-bands.test.ts` (`make sim-check`, about 1 s) runs the committed constants through the bands. Hypertrophy and strength years are informational except for band (b), the gap between them. Put a failing band or `yearsToLevel99` case there first.
 - `tests/catalog/sim-catalog.test.ts` (`make test-catalog`, no stack) guards catalog drift for shares and skills.
 - `report.ts` is a console report with no test of its own.
 
