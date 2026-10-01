@@ -1,15 +1,16 @@
 import {
   type BalanceConfig,
+  type Catalog,
   DEFAULT_BALANCE,
-  effectiveReps,
-  estimateRir,
-  intensityBonus,
+  type ExerciseDef,
+  effectiveLoadForNewSet,
+  processSession,
   resolveEffort,
-  setXp,
+  type SetInput,
+  type SetResult,
+  type StrengthState,
 } from '@domain/index.ts';
-import type { LoadType } from '../../lib/catalog.ts';
-import type { ExerciseStrengthView } from '../../lib/collection-data.ts';
-import type { DraftSet } from '../../offline/draft-format.ts';
+import type { DraftExercise, DraftSet } from '../../offline/draft-format.ts';
 
 export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'unknown';
 
@@ -19,59 +20,137 @@ export interface SetPreview {
   rir: number | null;
 }
 
-export interface PreviewExercise {
-  loadType: LoadType;
-  builtIn: boolean;
-  strength: ExerciseStrengthView | null | undefined;
+const UNKNOWN_PREVIEW: SetPreview = Object.freeze({ xp: 0, basis: 'unknown', rir: null });
+const PREVIEW_SKILL_ID = 'preview';
+const FULL_SHARE_BASIS_POINTS = 10_000;
+const PREVIEW_SESSION_ID = 'preview';
+const PREVIEW_STARTED_AT = '1970-01-01T00:00:00.000Z';
+const REPS_MODEL_PLACEHOLDER_BODYWEIGHT_KG = 0;
+
+interface PlacedSet {
+  input: SetInput | null;
+  done: boolean;
+  unrated: boolean;
+  hasPriorSession: boolean;
 }
 
-function estimatedRir(set: DraftSet, exercise: PreviewExercise): number | null {
-  const strength = exercise.strength;
-  if (!strength) return null;
-  if (exercise.loadType === 'bodyweight')
-    return strength.repsCapacity === null ? null : Math.max(0, strength.repsCapacity - set.reps);
-  if (exercise.loadType === 'external' && strength.e1rmKg !== null && set.weightKg > 0)
-    return estimateRir(set.weightKg, set.reps, strength.e1rmKg);
-  return null;
-}
-
-function liftsNoLoad(set: DraftSet, exercise: PreviewExercise): boolean {
-  return exercise.loadType === 'external' && set.weightKg <= 0;
-}
-
-function xpAt(set: DraftSet, exercise: PreviewExercise, rir: number, cfg: BalanceConfig): number {
-  if (liftsNoLoad(set, exercise)) return 0;
-  const e1rmKg = exercise.loadType === 'external' ? (exercise.strength?.e1rmKg ?? null) : null;
-  return setXp(effectiveReps(set.reps, rir, false, cfg), intensityBonus(set.reps, set.weightKg, e1rmKg, cfg), cfg);
-}
-
-function loggedRir(set: DraftSet, cfg: BalanceConfig): number | null {
+function hasValidEffort(set: DraftSet, cfg: BalanceConfig): boolean {
   try {
-    return resolveEffort(set.effort, cfg).loggedRir;
+    resolveEffort(set.effort, cfg);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function previewLoadKg(set: DraftSet, exercise: ExerciseDef, bodyweightKg: number | null): number | null {
+  const knownBodyweightKg =
+    exercise.loadType === 'bodyweight' ? (bodyweightKg ?? REPS_MODEL_PLACEHOLDER_BODYWEIGHT_KG) : bodyweightKg;
+  try {
+    return effectiveLoadForNewSet(set, exercise, knownBodyweightKg);
   } catch {
     return null;
   }
 }
 
-export function previewSet(
+function previewInput(
   set: DraftSet,
-  exercise: PreviewExercise,
-  strengthKnown: boolean,
+  exercise: ExerciseDef,
+  position: number,
+  bodyweightKg: number | null,
+  cfg: BalanceConfig,
+): SetInput | null {
+  if (!Number.isInteger(set.reps) || set.reps < 1) return null;
+  if (!Number.isFinite(set.weightKg) || set.weightKg < 0) return null;
+  if (!hasValidEffort(set, cfg)) return null;
+  const effectiveLoadKg = previewLoadKg(set, exercise, bodyweightKg);
+  if (effectiveLoadKg === null) return null;
+  return {
+    id: set.id,
+    exerciseId: exercise.id,
+    position,
+    weightKg: set.weightKg,
+    reps: set.reps,
+    isWarmup: false,
+    effort: set.effort,
+    recordedEffectiveLoadKg: effectiveLoadKg,
+  };
+}
+
+function previewCatalog(exercises: readonly DraftExercise[], isBuiltIn: (exerciseId: string) => boolean): Catalog {
+  const definitions = exercises.map((exercise): ExerciseDef => ({
+    id: exercise.exerciseId,
+    loadType: exercise.loadType,
+    builtIn: isBuiltIn(exercise.exerciseId),
+    shares: [{ skillId: PREVIEW_SKILL_ID, shareBasisPoints: FULL_SHARE_BASIS_POINTS }],
+  }));
+  return {
+    skills: [{ id: PREVIEW_SKILL_ID, key: PREVIEW_SKILL_ID, sortOrder: 0, combatWeight: 0 }],
+    exercises: new Map(definitions.map((definition) => [definition.id, definition])),
+  };
+}
+
+function placeSets(
+  exercises: readonly DraftExercise[],
+  catalog: Catalog,
+  strength: StrengthState | null,
+  bodyweightKg: number | null,
+  cfg: BalanceConfig,
+): PlacedSet[][] {
+  let position = 0;
+  return exercises.map((exercise) => {
+    const definition = catalog.exercises.get(exercise.exerciseId)!;
+    return exercise.sets.map((set): PlacedSet => {
+      const placed = {
+        input: previewInput(set, definition, position, bodyweightKg, cfg),
+        done: set.done,
+        unrated: set.effort === null,
+        hasPriorSession: strength?.[exercise.exerciseId]?.hasPriorSession ?? false,
+      };
+      position += 1;
+      return placed;
+    });
+  });
+}
+
+function toPreview(result: SetResult, hasPriorSession: boolean): SetPreview {
+  if (result.rirSource === 'logged') return { xp: result.xp, basis: 'logged', rir: result.rir };
+  if (result.rirSource === 'estimated') return { xp: result.xp, basis: 'estimated', rir: result.rir };
+  if (hasPriorSession) return { ...UNKNOWN_PREVIEW, xp: result.xp };
+  return { xp: result.xp, basis: 'cold_start', rir: null };
+}
+
+export function previewSession(
+  exercises: readonly DraftExercise[],
+  isBuiltIn: (exerciseId: string) => boolean,
+  strength: StrengthState | null,
+  bodyweightKg: number | null = null,
   cfg: BalanceConfig = DEFAULT_BALANCE,
-): SetPreview {
-  if (set.effort) {
-    const rir = loggedRir(set, cfg);
-    if (rir === null) return { xp: 0, basis: 'unknown', rir: null };
-    return { xp: xpAt(set, exercise, rir, cfg), basis: 'logged', rir };
-  }
-  if (!strengthKnown) return { xp: 0, basis: 'unknown', rir: null };
-  if (!exercise.strength) {
-    const xp = exercise.builtIn && !liftsNoLoad(set, exercise) ? cfg.coldStartXpPerSet : 0;
-    return { xp, basis: 'cold_start', rir: null };
-  }
-  const rir = estimatedRir(set, exercise);
-  if (rir === null) return { xp: 0, basis: 'unknown', rir: null };
-  return { xp: xpAt(set, exercise, rir, cfg), basis: 'estimated', rir };
+): SetPreview[][] {
+  const catalog = previewCatalog(exercises, isBuiltIn);
+  const placed = placeSets(exercises, catalog, strength, bodyweightKg, cfg);
+  const doneInputs = placed.flat().flatMap((entry) => (entry.done && entry.input ? [entry.input] : []));
+
+  const resultsFor = (inputs: SetInput[]): Map<string, SetResult> => {
+    const { outputs } = processSession(
+      { skillXp: {}, bodyweightKg },
+      { id: PREVIEW_SESSION_ID, startedAt: PREVIEW_STARTED_AT, sets: inputs },
+      cfg,
+      { catalog, strength: strength ?? {} },
+    );
+    return new Map(outputs.sets.map((result) => [result.set.id, result]));
+  };
+  const doneResults = resultsFor(doneInputs);
+
+  return placed.map((sets) =>
+    sets.map((entry) => {
+      if (entry.input === null || (strength === null && entry.unrated)) return UNKNOWN_PREVIEW;
+      const result = entry.done
+        ? doneResults.get(entry.input.id)
+        : resultsFor([...doneInputs, entry.input]).get(entry.input.id);
+      return result ? toPreview(result, entry.hasPriorSession) : UNKNOWN_PREVIEW;
+    }),
+  );
 }
 
 export function formatXp(xp: number): string {
