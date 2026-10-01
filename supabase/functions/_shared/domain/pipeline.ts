@@ -16,7 +16,8 @@ import type {
 import { NO_RECORDS } from './types.ts';
 import { BodyweightLoadNotZeroError, BodyweightRequiredError, UnknownExerciseError } from './errors.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
-import { roundTo, trackStrength } from './strength.ts';
+import { checkFatigue } from './fatigue.ts';
+import { liftsNoLoad, roundTo, trackStrength } from './strength.ts';
 import { effectiveReps, setXp, splitXp } from './xp.ts';
 
 export interface PipelineDeps {
@@ -122,15 +123,21 @@ export const resolveSets: Step = (ctx) => {
 
 const awardXp: Step = (ctx) => {
   const sortOrderBySkillId = new Map(ctx.deps.catalog.skills.map((skill) => [skill.id, skill.sortOrder]));
+  const xpSetsSeenByExercise = new Map<string, number>();
   const sets = ctx.sets.map((result) => {
-    const effectiveRepCount =
-      result.rirForXp === null ? 0 : effectiveReps(result.set.reps, result.rirForXp, result.set.isWarmup, ctx.cfg);
+    const exercise = exerciseFor(result.set, ctx.deps.catalog);
+    const earnsNothing = result.rirForXp === null || liftsNoLoad(exercise, result.effectiveLoadKg);
+    const effectiveRepCount = earnsNothing
+      ? 0
+      : effectiveReps(result.set.reps, result.rirForXp!, result.set.isWarmup, ctx.cfg);
     const xp = result.rirForXp === null ? result.coldStartXp : setXp(effectiveRepCount, result.intensityBonus, ctx.cfg);
-    const shares = exerciseFor(result.set, ctx.deps.catalog).shares.map((share) => ({
+    const xpSetOrdinal = xpSetsSeenByExercise.get(exercise.id) ?? 0;
+    if (xp > 0) xpSetsSeenByExercise.set(exercise.id, xpSetOrdinal + 1);
+    const shares = exercise.shares.map((share) => ({
       ...share,
       sortOrder: sortOrderBySkillId.get(share.skillId) ?? Number.MAX_SAFE_INTEGER,
     }));
-    return { ...result, effectiveReps: effectiveRepCount, xp, skillXp: splitXp(xp, shares) };
+    return { ...result, effectiveReps: effectiveRepCount, xp, skillXp: splitXp(xp, shares, xpSetOrdinal) };
   });
   return { ...ctx, sets };
 };
@@ -157,6 +164,7 @@ const detectLevelUps: Step = (ctx) => {
 export const DEFAULT_STEPS: readonly Step[] = Object.freeze([
   resolveSets,
   trackStrength,
+  checkFatigue,
   detectPersonalRecords,
   awardXp,
   applyXp,
@@ -165,13 +173,10 @@ export const DEFAULT_STEPS: readonly Step[] = Object.freeze([
 
 export const HISTORY_ONLY_STEPS: readonly Step[] = Object.freeze([resolveSets]);
 
-function xpGainedBySkillKey(sets: readonly SetResult[], catalog: Catalog): Record<string, number> {
+function xpGainedBySkillKey(before: UserState, after: UserState, catalog: Catalog): Record<string, number> {
   const xpBySkill: Record<string, number> = {};
   for (const skill of skillsInDisplayOrder(catalog)) {
-    const gained = sets
-      .flatMap((result) => result.skillXp)
-      .filter((part) => part.skillId === skill.id)
-      .reduce((sum, part) => sum + part.xp, 0);
+    const gained = (after.skillXp[skill.id] ?? 0) - (before.skillXp[skill.id] ?? 0);
     if (gained > 0) xpBySkill[skill.key] = gained;
   }
   return xpBySkill;
@@ -190,7 +195,7 @@ export function processSession(
     nextState: final.state,
     outputs: {
       sets: [...final.sets],
-      xpBySkill: xpGainedBySkillKey(final.sets, deps.catalog),
+      xpBySkill: xpGainedBySkillKey(state, final.state, deps.catalog),
       levelUps: [...final.levelUps],
       prs: summarizePersonalRecords(final.sets, state.records ?? NO_RECORDS, final.state.records ?? NO_RECORDS),
       drops: [],

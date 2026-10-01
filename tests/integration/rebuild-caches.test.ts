@@ -11,6 +11,7 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
+import { DEFAULT_BALANCE } from '@domain/index.ts';
 import { HOUR_MS } from './loot-support.ts';
 
 type Effort = { type: 'level'; level: 'hard' | 'near_failure' } | null;
@@ -94,7 +95,12 @@ describe('rebuild-caches', () => {
     expect((await rebuildCaches(user.id)).status).toBe(200);
     const [row] = await db`select rir_source, rir, derived_balance_version, balance_version
                            from public.sets st join public.sessions s on s.id = st.session_id where st.id = ${setId}`;
-    expect(row).toEqual({ rir_source: 'cold_start', rir: null, derived_balance_version: 2, balance_version: 1 });
+    expect(row).toEqual({
+      rir_source: 'cold_start',
+      rir: null,
+      derived_balance_version: DEFAULT_BALANCE.version,
+      balance_version: 1,
+    });
     const [{ legacy }] =
       await db`select count(*)::int as legacy from public.sets where rir_source = 'default' and user_id = ${user.id}`;
     expect(legacy).toBe(0);

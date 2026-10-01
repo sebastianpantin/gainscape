@@ -243,7 +243,7 @@ describe('level events', () => {
       event_key: 'level:core',
       type: 'level_up',
       set_id: null,
-      payload: { skill: 'core', from: 9, to: 14 },
+      payload: { skill: 'core', from: 9, to: 13 },
     });
 
     const lateFirst = lateFor();
@@ -251,7 +251,7 @@ describe('level events', () => {
     expect(await storedEvents(outOfOrder.id)).toEqual([]);
     await postSession(outOfOrder, earlyFor());
     const [rederived] = await storedEvents(outOfOrder.id, lateFirst.id);
-    expect(rederived).toMatchObject({ type: 'level_up', payload: { skill: 'core', from: 9, to: 14 } });
+    expect(rederived).toMatchObject({ type: 'level_up', payload: { skill: 'core', from: 9, to: 13 } });
     expect(await eventsSnapshot(outOfOrder.id)).toEqual(await eventsSnapshot(inOrder.id));
   });
 });

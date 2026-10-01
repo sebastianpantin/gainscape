@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { DEFAULT_LOOT } from '@domain/index.ts';
 import {
   ageSession,
   builtInExerciseId,
@@ -15,7 +16,7 @@ import {
 import {
   aSet,
   DAY_MS,
-  easy,
+  beyondEffortWindow,
   HOUR_MS,
   localDateOf,
   payloadAt,
@@ -53,7 +54,7 @@ async function fillCaps(userId: string, localDate: string): Promise<void> {
     drop_table_id: row.tableId,
     chance: row.chance,
     hit: false,
-    loot_version: 1,
+    loot_version: DEFAULT_LOOT.version,
   }));
   await db`insert into public.loot_rolls ${db(rows)}`;
 }
@@ -242,10 +243,10 @@ describe('edit-session', () => {
     expect((await storedDrops(payload.id)).map((drop) => drop.dropId)).toEqual([kept.dropId]);
   });
 
-  it('revokes both drops of a set changed to easy', async () => {
+  it('revokes both drops of a set changed to beyond the effort window', async () => {
     const user = await freshUser();
     const { payload, prSet, regular, pr, other } = await prSessionWithDrops(user);
-    const response = await edit(user, payload, [{ ...prSet, effort: easy }, payload.sets[1]]);
+    const response = await edit(user, payload, [{ ...prSet, effort: beyondEffortWindow }, payload.sets[1]]);
     expect(response.body.revokedDrops?.map((drop) => [drop.dropId, drop.source])).toEqual([
       [regular.dropId, 'regular'],
       [pr.dropId, 'pr'],
@@ -253,6 +254,43 @@ describe('edit-session', () => {
     expect((await dropRow(regular.dropId)).revoke_reason).toBe('no_longer_qualifies');
     expect((await dropRow(pr.dropId)).revoke_reason).toBe('no_longer_qualifies');
     expect((await dropRow(other.dropId)).revoked_at).toBeNull();
+  });
+
+  it('keeps drops rolled under an older loot version that the set no longer qualifies for', async () => {
+    const user = await freshUser();
+    const { payload } = await sessionOnCappedDay(user, [aSet(benchId, 0, 60), aSet(squatId, 1, 100)]);
+    const olderVersion = DEFAULT_LOOT.version - 1;
+    const legacy = await grantDrop(
+      user.id,
+      payload.id,
+      payload.sets[0].id,
+      'grinder_scraps',
+      3,
+      'regular',
+      undefined,
+      olderVersion,
+    );
+    const response = await edit(user, payload, [{ ...payload.sets[0], effort: beyondEffortWindow }, payload.sets[1]]);
+    expect(response.body.revokedDrops).toEqual([]);
+    expect((await dropRow(legacy.dropId)).revoked_at).toBeNull();
+  });
+
+  it('still revokes a drop rolled under an older loot version when its set is removed', async () => {
+    const user = await freshUser();
+    const { payload } = await sessionOnCappedDay(user, [aSet(benchId, 0, 60), aSet(squatId, 1, 100)]);
+    const olderVersion = DEFAULT_LOOT.version - 1;
+    const legacy = await grantDrop(
+      user.id,
+      payload.id,
+      payload.sets[1].id,
+      'rookie_belt',
+      1,
+      'regular',
+      undefined,
+      olderVersion,
+    );
+    await edit(user, payload, [payload.sets[0]]);
+    expect((await dropRow(legacy.dropId)).revoke_reason).toBe('set_removed');
   });
 
   it('revokes only the PR drop when the PR set becomes lighter but stays hard', async () => {
@@ -367,7 +405,7 @@ describe('neighbours and rebuild', () => {
     const [start] = startsOnOneLocalDay(1);
     const later = payloadAt(start, [aSet(benchId, 0, 60)]);
     await postSession(user, later);
-    const response = await edit(user, later, [{ ...later.sets[0], effort: easy }]);
+    const response = await edit(user, later, [{ ...later.sets[0], effort: beyondEffortWindow }]);
     expect(response.body.replayedSessionIds).not.toContain(old.id);
     expect(await dropRow(oldDrop.dropId)).toEqual(before);
     expect(before.revoked_at).toBeNull();
