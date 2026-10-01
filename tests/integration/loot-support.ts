@@ -42,6 +42,14 @@ export function payloadAt(startedAt: Date, sets: SetShape[]) {
 
 export type SessionPayload = ReturnType<typeof payloadAt>;
 
+export function hoursAgo(hours: number): Date {
+  return new Date(Date.now() - hours * HOUR_MS);
+}
+
+export function withFreshIds<T extends { id: string; sets: { id: string }[] }>(session: T): T {
+  return { ...session, id: randomUUID(), sets: session.sets.map((set) => ({ ...set, id: randomUUID() })) };
+}
+
 export function localDateOf(at: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: TIMEZONE,
@@ -61,7 +69,10 @@ export function startsOnOneLocalDay(count: number): Date[] {
   }
 }
 
-export async function postSession(user: TestUser, payload: SessionPayload): Promise<FunctionResponse> {
+export async function postSession(
+  user: TestUser,
+  payload: { id: string; sets: { id: string }[] },
+): Promise<FunctionResponse> {
   const response = await postCompleteSession(user.accessToken, payload);
   expect(response.status, response.rawBody).toBe(200);
   return response;

@@ -1,10 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
-import { openFromProfile, openTab, readSession, readStoredDraft, register } from './support/app.ts';
+import { openFromProfile, openTab, readSession, readStoredDraft, register, uniqueUsername } from './support/app.ts';
 import { programDayId, sessionRow, setCount } from './support/db.ts';
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-}
 
 function exerciseCard(page: Page, name: string) {
   return page.locator('section', { has: page.getByRole('heading', { name, exact: true }) });

@@ -11,10 +11,9 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
+import { HOUR_MS } from './loot-support.ts';
 
 type Effort = { type: 'level'; level: 'hard' | 'near_failure' } | null;
-
-const HOUR_MS = 60 * 60 * 1000;
 
 function workingSet(exerciseId: string, position: number, weightKg: number, reps: number, effort: Effort) {
   return { id: randomUUID(), exerciseId, position, weightKg, reps, isWarmup: false, effort };

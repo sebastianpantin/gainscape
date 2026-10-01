@@ -12,11 +12,6 @@ let report: BandReport;
 beforeAll(() => {
   results = simulateCommittedConstantsUntilLegsReach99();
   report = evaluateBands(results, 'legs', DEFAULT_BALANCE.xpPerEffectiveRep, DEFAULT_BALANCE.xpPerEffectiveRep);
-  console.log(
-    'balance report',
-    JSON.stringify(report.years),
-    `gap ${(report.hypertrophyVsStrengthGap * 100).toFixed(1)}%`,
-  );
 }, SIMULATION_TIMEOUT_MS);
 
 describe('balance bands with the committed constants', () => {

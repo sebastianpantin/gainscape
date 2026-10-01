@@ -1,10 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, muteDraftBroadcasts, register } from './support/app.ts';
+import { logExercise, muteDraftBroadcasts, register, uniqueUsername } from './support/app.ts';
 import { sessionCount } from './support/db.ts';
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-}
 
 function benchHeading(page: Page) {
   return page.getByRole('heading', { name: 'Barbell Bench Press', exact: true });

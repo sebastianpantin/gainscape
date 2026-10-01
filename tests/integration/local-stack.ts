@@ -55,7 +55,13 @@ export const db = postgres(env.DB_URL, { max: 2, onnotice: () => {} });
 
 const clientOptions = { auth: { persistSession: false, autoRefreshToken: false } };
 export const admin = createClient(env.API_URL, env.SERVICE_ROLE_KEY, clientOptions);
-export const anon = createClient(env.API_URL, env.ANON_KEY, clientOptions);
+
+export function newAnonClient(): SupabaseClient {
+  return createClient(env.API_URL, env.ANON_KEY, clientOptions);
+}
+
+export const anon = newAnonClient();
+export const TEST_PASSWORD = 'correct-horse-battery';
 
 export interface TestUser {
   id: string;
@@ -67,17 +73,16 @@ export interface TestUser {
 export async function createTestUser(timezone = 'Europe/Stockholm'): Promise<TestUser> {
   const username = `t_${randomUUID().replaceAll('-', '').slice(0, 16)}`;
   const email = `${username}@example.test`;
-  const password = 'correct-horse-battery';
   const created = await admin.auth.admin.createUser({
     email,
-    password,
+    password: TEST_PASSWORD,
     email_confirm: true,
     user_metadata: { username, timezone },
   });
   if (created.error) throw created.error;
 
-  const client = createClient(env.API_URL, env.ANON_KEY, clientOptions);
-  const signedIn = await client.auth.signInWithPassword({ email, password });
+  const client = newAnonClient();
+  const signedIn = await client.auth.signInWithPassword({ email, password: TEST_PASSWORD });
   if (signedIn.error) throw signedIn.error;
   return { id: created.data.user.id, username, accessToken: signedIn.data.session.access_token, client };
 }

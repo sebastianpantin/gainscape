@@ -12,6 +12,7 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
+import { HOUR_MS, postSession } from './loot-support.ts';
 
 type Effort = { type: 'level'; level: 'hard' | 'near_failure' } | null;
 
@@ -28,7 +29,6 @@ interface SessionSpec {
   sets: SetSpec[];
 }
 
-const HOUR_MS = 60 * 60 * 1000;
 const hard = { type: 'level', level: 'hard' } as const;
 
 function hoursAgo(hours: number): string {
@@ -57,15 +57,9 @@ function payloadFor(spec: SessionSpec) {
   };
 }
 
-async function sync(user: TestUser, payload: ReturnType<typeof payloadFor>) {
-  const response = await postCompleteSession(user.accessToken, payload);
-  expect(response.status, response.rawBody).toBe(200);
-  return response;
-}
-
 async function syncInOrder(user: TestUser, specs: SessionSpec[]) {
   const ordered = [...specs].sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
-  for (const spec of ordered) await sync(user, payloadFor(spec));
+  for (const spec of ordered) await postSession(user, payloadFor(spec));
 }
 
 async function storedSummary(sessionId: string) {
@@ -117,7 +111,7 @@ describe('out-of-order sync', () => {
     const [outOfOrder, inOrder] = await Promise.all([createTestUser(), createTestUser()]);
     await Promise.all([setBodyweight(outOfOrder, 80), setBodyweight(inOrder, 80)]);
 
-    for (const spec of [s3, s1, s2]) await sync(outOfOrder, payloadFor(spec));
+    for (const spec of [s3, s1, s2]) await postSession(outOfOrder, payloadFor(spec));
     await syncInOrder(inOrder, [s1, s2, s3]);
 
     expect(await normalizedSnapshot(outOfOrder.id)).toEqual(await normalizedSnapshot(inOrder.id));
@@ -128,9 +122,9 @@ describe('out-of-order sync', () => {
     const late = payloadFor(sessionSpec(hoursAgo(1), [{ exerciseId: benchId, weightKg: 100, reps: 5, effort: hard }]));
     const early = payloadFor(sessionSpec(hoursAgo(5), [{ exerciseId: benchId, weightKg: 60, reps: 5, effort: hard }]));
 
-    const lateResponse = await sync(user, late);
+    const lateResponse = await postSession(user, late);
     expect(lateResponse.body.prs).toEqual([]);
-    await sync(user, early);
+    await postSession(user, early);
 
     const [row] = await db`
       select e1rm_before_kg::float, e1rm_candidate_kg::float, xp_awarded from public.sets where id = ${late.sets[0].id}`;
@@ -142,7 +136,7 @@ describe('out-of-order sync', () => {
       { exerciseId: benchId, kind: 'rep_max', reps: 5, loadKg: 100, previousLoadKg: 60, previousReps: null },
     ]);
 
-    const retry = await sync(user, late);
+    const retry = await postSession(user, late);
     expect(retry.body).toEqual(await storedSummary(late.id));
     expect(retry.body.prs).toHaveLength(1);
     expect(retry.rawBody).not.toBe(lateResponse.rawBody);
@@ -154,8 +148,8 @@ describe('out-of-order sync', () => {
     const earlier = payloadFor(
       sessionSpec(hoursAgo(3), [{ exerciseId: benchId, weightKg: 100, reps: 5, effort: hard }]),
     );
-    await sync(user, later);
-    const earlierResponse = await sync(user, earlier);
+    await postSession(user, later);
+    const earlierResponse = await postSession(user, earlier);
 
     expect(earlierResponse.body.prs).toEqual([]);
     expect((await storedSummary(later.id)).prs).toEqual([
@@ -174,12 +168,12 @@ describe('out-of-order sync', () => {
     const late = payloadFor(lateSpec);
     const early = payloadFor(earlySpec);
 
-    const lateResponse = await sync(outOfOrder, late);
+    const lateResponse = await postSession(outOfOrder, late);
     expect(lateResponse.body).toMatchObject({
       xpBySkill: { core: 375 },
       levelUps: [{ skill: 'core', from: 1, to: 4 }],
     });
-    const earlyResponse = await sync(outOfOrder, early);
+    const earlyResponse = await postSession(outOfOrder, early);
     expect(earlyResponse.body).toMatchObject({
       xpBySkill: { core: 1125 },
       levelUps: [{ skill: 'core', from: 1, to: 9 }],
@@ -205,11 +199,11 @@ describe('out-of-order sync', () => {
   it('merges the rewritten summary into the stored one', async () => {
     const user = await createTestUser();
     const later = payloadFor(sessionSpec(hoursAgo(1), [{ exerciseId: benchId, weightKg: 80, reps: 5, effort: null }]));
-    await sync(user, later);
+    await postSession(user, later);
     await db`update public.sessions set summary = summary || '{"extra": {"k": 1}}' where id = ${later.id}`;
     const before = await storedSummary(later.id);
 
-    await sync(
+    await postSession(
       user,
       payloadFor(sessionSpec(hoursAgo(3), [{ exerciseId: benchId, weightKg: 80, reps: 5, effort: hard }])),
     );
@@ -236,7 +230,7 @@ describe('prior state loaded from stored rows', () => {
     const recent = payloadFor(
       sessionSpec(hoursAgo(1), [{ exerciseId: pullUpId, weightKg: 0, reps: 10, effort: hard }]),
     );
-    for (const payload of [oldest, older, recent]) await sync(user, payload);
+    for (const payload of [oldest, older, recent]) await postSession(user, payload);
     await ageSession(oldest.id, '130 days');
     await ageSession(older.id, '70 days');
     await ageSession(recent.id, '5 days');
@@ -254,8 +248,8 @@ describe('prior state loaded from stored rows', () => {
         { exerciseId: pullUpId, weightKg: 0, reps: 11, effort: hard },
       ]),
     );
-    await sync(user, newest);
-    await sync(user, middle);
+    await postSession(user, newest);
+    await postSession(user, middle);
 
     const [middleBench] =
       await db`select e1rm_before_kg::float, rir_source from public.sets where id = ${middle.sets[0].id}`;
@@ -271,7 +265,7 @@ describe('replay guards', () => {
   it('refuses to replay over derived rows from an older balance version until a rebuild', async () => {
     const user = await createTestUser();
     const first = payloadFor(sessionSpec(hoursAgo(3), [{ exerciseId: benchId, weightKg: 60, reps: 5, effort: hard }]));
-    await sync(user, first);
+    await postSession(user, first);
     await db`update public.sessions set derived_balance_version = 1 where id = ${first.id}`;
     const before = await rowCountsFor(user.id);
 
