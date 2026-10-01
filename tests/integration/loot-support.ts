@@ -19,7 +19,7 @@ export interface SetShape {
 }
 
 export const hard: Effort = { type: 'level', level: 'hard' };
-export const easy: Effort = { type: 'level', level: 'easy' };
+export const beyondEffortWindow: Effort = { type: 'rir', value: 6 };
 
 export function aSet(
   exerciseId: string,

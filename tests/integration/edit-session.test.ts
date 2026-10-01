@@ -134,18 +134,18 @@ describe('edit-session re-derives history', () => {
     const s2 = sessionAt(ago(DAY_MS), [aSet(benchId, 80, 5, null)]);
     await postSession(user, s1);
     await postSession(user, s2);
-    expect((await storedSets(s1.id))[0].xp_awarded).toBe(1125);
-    expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 3, xp_awarded: 1262 });
+    expect((await storedSets(s1.id))[0].xp_awarded).toBe(1020);
+    expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 3, xp_awarded: 1290 });
 
     const editedSets = [{ ...s1.sets[0], effort: nearFailure }];
     const response = await edit(user, editBody(s1, editedSets));
     expect(response.status, response.rawBody).toBe(200);
     expect(response.body).toMatchObject({ revision: 1, replayedSessionIds: [s1.id, s2.id] });
 
-    expect((await storedSets(s1.id))[0].xp_awarded).toBe(1875);
-    expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 0, e1rm_before_kg: 93.33, xp_awarded: 2277 });
+    expect((await storedSets(s1.id))[0].xp_awarded).toBe(1700);
+    expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 0, e1rm_before_kg: 93.33, xp_awarded: 2150 });
     const [{ total }] = await db`select sum(xp)::int as total from public.user_skills where user_id = ${user.id}`;
-    expect(total).toBe(4152);
+    expect(total).toBe(3850);
     const mismatches = await db`
       select us.skill_id from public.user_skills us
       left join (select skill_id, sum(xp)::bigint as xp from public.set_skill_xp where user_id = ${user.id} group by skill_id) l
@@ -173,11 +173,11 @@ describe('edit-session re-derives history', () => {
     expect((await edit(user, editBody(s1, editedSets))).status).toBe(200);
 
     for (const row of await storedSets(s2.id)) {
-      expect(row).toMatchObject({ rir_source: 'cold_start', rir: null, xp_awarded: 375 });
+      expect(row).toMatchObject({ rir_source: 'cold_start', rir: null, xp_awarded: 340 });
     }
     const { summary } = await storedSummary(s2.id);
     expect(summary.prs).toEqual([]);
-    expect(Object.values(summary.xpBySkill as Record<string, number>).reduce((sum, xp) => sum + xp, 0)).toBe(750);
+    expect(Object.values(summary.xpBySkill as Record<string, number>).reduce((sum, xp) => sum + xp, 0)).toBe(680);
 
     const fresh = await createTestUser();
     await postSession(fresh, withFreshIds({ ...s1, sets: editedSets }));

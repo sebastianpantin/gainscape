@@ -8,6 +8,7 @@ export * from './xp.ts';
 export * from './pipeline.ts';
 export * from './ordering.ts';
 export * from './strength.ts';
+export * from './fatigue.ts';
 export * from './replay.ts';
 export * from './records.ts';
 export * from './collection.ts';

@@ -19,8 +19,10 @@ function emptySlots(): (RepMaxSlot | null)[] {
   return Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
 }
 
+const GAIN_FLOAT_TOLERANCE_KG = 1e-9;
+
 function improvesSlot(slot: RepMaxSlot | null, loadKg: number, cfg: BalanceConfig): boolean {
-  return slot === null || loadKg > slot.loadKg + cfg.prEpsilonKg;
+  return slot === null || loadKg >= slot.loadKg + cfg.prMinGainKg - GAIN_FLOAT_TOLERANCE_KG;
 }
 
 interface RepMaxOutcome {

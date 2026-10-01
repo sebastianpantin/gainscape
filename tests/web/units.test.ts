@@ -42,7 +42,7 @@ describe('weight units', () => {
         expect(Math.abs(stored - pounds * KG_PER_LB)).toBeLessThanOrEqual(STORAGE_TOLERANCE_KG + 1e-9);
       }),
     );
-    expect(STORAGE_TOLERANCE_KG).toBeLessThan(DEFAULT_BALANCE.prEpsilonKg);
+    expect(STORAGE_TOLERANCE_KG).toBeLessThan(DEFAULT_BALANCE.prMinGainKg);
   });
 
   it('turns the same typed pounds into the same kilograms every time, so repeats never look like a record', () => {
@@ -63,7 +63,7 @@ describe('switching an existing kg history to pounds', () => {
       fc.property(fc.integer({ min: 0, max: 200_000 }), (hundredthsOfKg) => {
         const storedKg = hundredthsOfKg / 100;
         const reentered = unitToKg(shownWeight(storedKg, 'lb'), 'lb');
-        expect(Math.abs(reentered - storedKg)).toBeLessThan(DEFAULT_BALANCE.prEpsilonKg);
+        expect(Math.abs(reentered - storedKg)).toBeLessThan(DEFAULT_BALANCE.prMinGainKg);
       }),
     );
   });
