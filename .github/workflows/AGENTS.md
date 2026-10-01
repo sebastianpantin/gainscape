@@ -5,14 +5,14 @@
 
 ## Purpose
 
-GitHub Actions workflow definitions. See `../AGENTS.md` for the full description of `ci.yml` and `stack.yml`.
+GitHub Actions workflow definitions. See `../AGENTS.md` for the full description of `ci.yml` and `e2e.yml`.
 
 ## Key Files
 
-| File        | Description                                                                |
-| ----------- | -------------------------------------------------------------------------- |
-| `ci.yml`    | CI with the `static` job (no stack), on pushes to `main` and pull requests |
-| `stack.yml` | Manual `stack` job (full local stack), started with `workflow_dispatch`    |
+| File      | Description                                                                                              |
+| --------- | -------------------------------------------------------------------------------------------------------- |
+| `ci.yml`  | Pull request and `main` CI: `checks` (no stack) and `backend` (integration and pgTAP on the local stack) |
+| `e2e.yml` | Manual end-to-end and PWA suites on the local stack, started with `workflow_dispatch`                    |
 
 ## For AI Agents
 
@@ -22,7 +22,7 @@ GitHub Actions workflow definitions. See `../AGENTS.md` for the full description
 
 ### Testing Requirements
 
-- None automated. Confirm `ci.yml` with a green pull request run and `stack.yml` with a manual run on the branch.
+- None automated. Confirm `ci.yml` with a green pull request run and `e2e.yml` with a manual run on the branch.
 
 ## Dependencies
 

@@ -24,6 +24,7 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | `make sim`                  | Full balance tuning report (about 2 min)                                                                                                      |
 | `make e2e`                  | Playwright end-to-end flow in a headless phone-sized browser                                                                                  |
 | `make e2e-pwa`              | Builds the production bundle and runs the offline, update and installability tests against `vite preview`                                     |
+| `make build`                | Production build of the web app into `web/dist` (CI runs it in `checks`)                                                                      |
 | `make preview`              | Production build served by `vite preview` (https, preview port = web port - 1000, so 4173 by default)                                         |
 | `make icons`                | Regenerate the app icons and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                    |
 | `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                |
@@ -71,7 +72,7 @@ Before anything goes live, work through [docs/production-auth.md](docs/productio
 
 ## CI
 
-`.github/workflows/ci.yml` runs the `static` job on every pull request and push to `main`. `static` runs `make check`, the catalog, domain and web tests and `make sim-check` without a stack. `.github/workflows/stack.yml` runs the `stack` job only when started by hand (`gh workflow run stack.yml --ref <branch>` or the Actions tab). `stack` runs `make ci-start` (the stack without Studio, storage, realtime and the other services the tests don't use, plus the web env file with the stack's anon key and the functions), then `make test-integration`, `make test-db`, `make e2e` and `make e2e-pwa`. On failure, `make ci-logs` saves every container log to `ci-logs/`, which is uploaded with the Playwright report and traces.
+`.github/workflows/ci.yml` runs two jobs on every pull request and push to `main`. `checks` runs `make check`, the catalog, domain and web tests, `make sim-check` and `make build` without a stack. `backend` runs `make ci-start` (the stack without Studio, storage, realtime and the other services the tests don't use, plus the web env file with the stack's anon key and the functions), then `make test-integration` and `make test-db`. `.github/workflows/e2e.yml` runs `make e2e` and `make e2e-pwa` on the same stack, only when started by hand (`gh workflow run e2e.yml --ref <branch>` or the Actions tab), for example before a release. On failure, `make ci-logs` saves every container log to `ci-logs/`, which is uploaded as an artifact with the Playwright report and traces where present.
 
 ## Layout
 

@@ -8,20 +8,20 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 
 ## Key Files
 
-| File                          | Description                                                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `Makefile`                    | Entry point for every workflow: stack, dev server, checks, every test layer, codegen                                |
-| `package.json`                | npm dependencies; the scripts here are a subset, prefer `make` targets                                              |
-| `eslint.config.js`            | ESLint flat config, including the custom `gainscape/no-comments` rule and domain purity globals ban                 |
-| `tsconfig.json`               | Type-checks app, tests, e2e, scripts and domain; `@domain/*` path alias                                             |
-| `tsconfig.sw.json`            | Separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`                                     |
-| `vitest.config.ts`            | Vitest: `tests/**/*.test.ts`, `@domain` alias, files run serially (`fileParallelism: false`)                        |
-| `playwright.config.ts`        | E2E against `vite web` dev server (https, Pixel 7, service workers blocked)                                         |
-| `playwright.pwa.config.ts`    | PWA E2E against `vite preview` over plain http with service workers allowed                                         |
-| `.prettierrc.json`            | Prettier: single quotes, width 120, trailing commas                                                                 |
-| `README.md`                   | Human-facing run instructions, command table, PWA, loot secret and auth notes                                       |
-| `.github/workflows/ci.yml`    | CI: `static` job (no stack) on every pull request and push to `main`                                                |
-| `.github/workflows/stack.yml` | Manual `stack` workflow (integration, pgTAP, e2e, e2e-pwa), started with `gh workflow run stack.yml --ref <branch>` |
+| File                        | Description                                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `Makefile`                  | Entry point for every workflow: stack, dev server, checks, every test layer, codegen                                       |
+| `package.json`              | npm dependencies; the scripts here are a subset, prefer `make` targets                                                     |
+| `eslint.config.js`          | ESLint flat config, including the custom `gainscape/no-comments` rule and domain purity globals ban                        |
+| `tsconfig.json`             | Type-checks app, tests, e2e, scripts and domain; `@domain/*` path alias                                                    |
+| `tsconfig.sw.json`          | Separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`                                            |
+| `vitest.config.ts`          | Vitest: `tests/**/*.test.ts`, `@domain` alias, files run serially (`fileParallelism: false`)                               |
+| `playwright.config.ts`      | E2E against `vite web` dev server (https, Pixel 7, service workers blocked)                                                |
+| `playwright.pwa.config.ts`  | PWA E2E against `vite preview` over plain http with service workers allowed                                                |
+| `.prettierrc.json`          | Prettier: single quotes, width 120, trailing commas                                                                        |
+| `README.md`                 | Human-facing run instructions, command table, PWA, loot secret and auth notes                                              |
+| `.github/workflows/ci.yml`  | CI on every pull request and push to `main`: `checks` (no stack, includes `make build`) and `backend` (integration, pgTAP) |
+| `.github/workflows/e2e.yml` | Manual `e2e` workflow (e2e, e2e-pwa), started with `gh workflow run e2e.yml --ref <branch>`                                |
 
 ## Subdirectories
 
@@ -91,7 +91,7 @@ Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib
 
 ### Git and delivery
 
-- Work on a branch, open a PR against `main`. Merge only after `static` passes. When the change touches SQL, Edge Functions or UI flows, also run the stack layers locally or start the manual `stack` workflow (`gh workflow run stack.yml --ref <branch>`) and wait for it to pass. `main` has no branch protection, so this rule is manual.
+- Work on a branch, open a PR against `main`. Merge only after both CI jobs (`checks` and `backend`) pass. Run `make e2e` and `make e2e-pwa` locally for UI work; the manual `e2e` workflow (`gh workflow run e2e.yml --ref <branch>`) runs them in CI, for example before a release. `main` has no branch protection, so this rule is manual.
 - Commit subjects are short imperative or slice-prefixed sentences (for example `S7a: web manifest, ...` or `Catalog validator checks gear tiers ...`).
 - Never deploy or push config to a hosted Supabase project. See `docs/production-auth.md`.
 
