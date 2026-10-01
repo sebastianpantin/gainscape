@@ -5,9 +5,10 @@ import { kgToUnit, unitToKg } from '../../lib/units.ts';
 interface BodyweightPromptProps {
   unit: UnitPref;
   onSave: (bodyweightKg: number) => Promise<void>;
+  submitLabel?: string;
 }
 
-export function BodyweightPrompt({ unit, onSave }: BodyweightPromptProps) {
+export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish workout' }: BodyweightPromptProps) {
   const [bodyweight, setBodyweight] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -46,7 +47,7 @@ export function BodyweightPrompt({ unit, onSave }: BodyweightPromptProps) {
         </p>
       )}
       <button className="button primary" type="submit" disabled={saving}>
-        Save and finish workout
+        {submitLabel}
       </button>
     </form>
   );

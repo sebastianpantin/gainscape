@@ -18,3 +18,12 @@ export function recallLastSummary(): SessionSummary | null {
     return null;
   }
 }
+
+export function forgetLastSummary(sessionIds: readonly string[]): void {
+  try {
+    const cached = recallLastSummary();
+    if (cached && sessionIds.includes(cached.sessionId)) sessionStorage.removeItem(LAST_SUMMARY_KEY);
+  } catch {
+    return;
+  }
+}

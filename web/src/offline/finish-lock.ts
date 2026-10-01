@@ -1,10 +1,13 @@
 import type { SessionSummary } from '@domain/types.ts';
+import type { InvokeOutcome } from '../lib/function-client.ts';
 import { rememberLastSummary } from '../features/summary/last-summary.ts';
 import { storedSessionId, type WorkoutDraft } from './draft-format.ts';
+import type { SyncedChange } from './draft-session.ts';
 import type { DraftStore } from './draft-store.ts';
 
 export type SendOutcome =
   | { kind: 'synced'; summary: SessionSummary }
+  | { kind: 'deleted' }
   | { kind: 'retryable'; reason: string }
   | { kind: 'rejected'; reason: string }
   | { kind: 'needs_sign_in' }
@@ -19,8 +22,19 @@ export interface FinishAttempt {
   store: DraftStore;
   flush: () => Promise<void>;
   send: (draft: WorkoutDraft) => Promise<SendOutcome>;
-  markSynced: (sessionId: string) => Promise<void>;
+  markSynced: (sessionId: string, change?: SyncedChange) => Promise<void>;
   signal: AbortSignal;
+}
+
+const SESSION_DELETED_STATUS = 410;
+
+export function sendOutcomeFrom(outcome: InvokeOutcome<SessionSummary>): SendOutcome {
+  if (outcome.kind === 'ok') return { kind: 'synced', summary: outcome.data };
+  if (outcome.kind !== 'http_error') return outcome;
+  if (outcome.status === SESSION_DELETED_STATUS) return { kind: 'deleted' };
+  return outcome.status >= 500
+    ? { kind: 'retryable', reason: outcome.code }
+    : { kind: 'rejected', reason: outcome.code };
 }
 
 export function finishLockName(userId: string): string {
@@ -33,10 +47,9 @@ async function sendStoredDraft(attempt: FinishAttempt): Promise<FinishAttemptRes
   if (storedSessionId(record) !== attempt.sessionId || record.kind === 'synced') return { kind: 'superseded' };
   if (record.draft.finishedAt === null) return { kind: 'not_finished' };
   const outcome = await attempt.send(record.draft);
-  if (outcome.kind === 'synced') {
-    rememberLastSummary(outcome.summary);
-    await attempt.markSynced(attempt.sessionId);
-  }
+  if (outcome.kind === 'synced') rememberLastSummary(outcome.summary);
+  if (outcome.kind === 'synced' || outcome.kind === 'deleted')
+    await attempt.markSynced(attempt.sessionId, outcome.kind);
   return { kind: 'sent', outcome };
 }
 
