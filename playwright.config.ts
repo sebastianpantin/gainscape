@@ -19,11 +19,13 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 90_000,
   fullyParallel: false,
+  retries: 0,
   reporter: 'list',
   use: {
     ...devices['Pixel 7'],
     baseURL: localAppUrl,
     ignoreHTTPSErrors: true,
+    trace: 'retain-on-failure',
     launchOptions: { executablePath: process.env.CHROMIUM_PATH || undefined },
   },
   webServer: {

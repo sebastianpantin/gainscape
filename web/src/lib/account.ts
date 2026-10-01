@@ -1,4 +1,5 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
+import { authCallbackUrl } from './auth-links.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds, tryAgainIn } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
@@ -21,7 +22,10 @@ export async function changePassword(email: string, currentPassword: string, new
 }
 
 export async function requestEmailChange(newEmail: string): Promise<void> {
-  const { error } = await supabase.auth.updateUser({ email: newEmail });
+  const { error } = await supabase.auth.updateUser(
+    { email: newEmail },
+    { emailRedirectTo: authCallbackUrl(window.location.origin) },
+  );
   if (error) throw new Error(error.message);
 }
 

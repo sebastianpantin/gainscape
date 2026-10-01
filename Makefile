@@ -9,11 +9,26 @@ include .stack.env
 export $(shell sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' .stack.env)
 endif
 
-.PHONY: start stop reset functions dev types test typecheck lint format format-check check check-functions catalog catalog-check test-catalog test-domain test-web test-integration test-db rebuild-caches sim sim-check e2e
+PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
+CI_EXCLUDED := studio,imgproxy,vector,logflare,storage-api,realtime,postgres-meta,supavisor
+
+.PHONY: start ci-start ci-logs stop reset functions dev types test typecheck lint format format-check check check-functions catalog catalog-check test-catalog test-domain test-web test-integration test-db rebuild-caches sim sim-check e2e
 
 start:
 	$(SUPABASE) start
 	$(MAKE) functions
+
+ci-start:
+	$(SUPABASE) start -x $(CI_EXCLUDED)
+	node scripts/ci-web-env.mjs
+	$(MAKE) functions
+
+ci-logs:
+	@mkdir -p ci-logs
+	@for container in $$(docker ps -a --format '{{.Names}}' | grep -E '^supabase_.*_$(PROJECT_ID)$$'); do \
+		docker logs "$$container" > "ci-logs/$$container.log" 2>&1; \
+	done
+	@ls ci-logs
 
 functions:
 	@node scripts/ensure-loot-secret.mjs
@@ -87,7 +102,8 @@ test-integration: functions
 	npx vitest run tests/integration
 
 test-db:
-	$(SUPABASE) test db
+	@node scripts/assert-local-db.mjs
+	$(SUPABASE) test db --local
 
 CHROMIUM_PATH ?= $(shell command -v chromium 2>/dev/null)
 
