@@ -67,3 +67,62 @@ export async function sessionNotes(sessionId: string): Promise<string | null> {
   const [row] = await db`select notes from public.sessions where id = ${sessionId}`;
   return row?.notes ?? null;
 }
+
+export async function activeDropsOfLatestSession(username: string) {
+  return db`
+    select i.name, d.quantity, d.source
+    from public.drops d
+    join public.items i on i.id = d.item_id
+    join public.profiles p on p.id = d.user_id
+    where p.username = ${username} and d.revoked_at is null
+      and d.session_id = (
+        select s.id from public.sessions s where s.user_id = p.id order by s.started_at desc limit 1)
+    order by d.created_at, d.id`;
+}
+
+export async function grantItems(username: string, holdings: Record<string, number>): Promise<void> {
+  await db.begin(async (tx) => {
+    const [profile] = await tx`select id from public.profiles where username = ${username}`;
+    for (const [key, quantity] of Object.entries(holdings)) {
+      const [item] = await tx`
+        select i.id, coalesce(u.quantity, 0)::int as held
+        from public.items i
+        left join public.user_items u on u.item_id = i.id and u.user_id = ${profile.id}
+        where i.key = ${key}`;
+      const delta = quantity - item.held;
+      if (delta !== 0) {
+        await tx`
+          insert into public.item_ledger (user_id, item_id, delta, reason, ref_id)
+          values (${profile.id}, ${item.id}, ${delta}, ${delta > 0 ? 'drop' : 'craft_out'}, gen_random_uuid())`;
+      }
+      await tx`
+        insert into public.user_items (user_id, item_id, quantity) values (${profile.id}, ${item.id}, ${quantity})
+        on conflict (user_id, item_id) do update set quantity = excluded.quantity, updated_at = now()`;
+    }
+  });
+}
+
+export async function grantUnlock(username: string, exerciseKey: string): Promise<void> {
+  await db`
+    insert into public.user_unlocks (user_id, exercise_id, item_id)
+    select p.id, e.id, i.id
+    from public.profiles p, public.exercises e join public.items i on i.grants_exercise_id = e.id
+    where p.username = ${username} and e.key = ${exerciseKey}
+    on conflict (user_id, exercise_id) do nothing`;
+}
+
+export async function activeDropCount(sessionId: string): Promise<number> {
+  const [row] = await db`
+    select count(*)::int as count from public.drops where session_id = ${sessionId} and revoked_at is null`;
+  return row.count;
+}
+
+export async function hasUnlock(username: string, exerciseKey: string): Promise<boolean> {
+  const [row] = await db`
+    select count(*)::int as count
+    from public.user_unlocks u
+    join public.profiles p on p.id = u.user_id
+    join public.exercises e on e.id = u.exercise_id
+    where p.username = ${username} and e.key = ${exerciseKey}`;
+  return row.count > 0;
+}

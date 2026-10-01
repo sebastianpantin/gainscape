@@ -159,6 +159,10 @@ export interface DropSummary {
   source: RollKind;
 }
 
+export interface RevokedDrop extends DropSummary {
+  revokedQuantity: number;
+}
+
 export interface SessionSummary {
   sessionId: string;
   xpBySkill: Record<string, number>;

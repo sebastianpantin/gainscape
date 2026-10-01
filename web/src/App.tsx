@@ -56,7 +56,7 @@ export function App() {
           <Route path="/reveal" element={<RevealScreen userId={userId} />} />
           <Route path="/skills" element={<SkillsScreen userId={userId} />} />
           <Route path="/collection" element={<CollectionScreen userId={userId} />} />
-          <Route path="/collection/items" element={<ItemsScreen />} />
+          <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
           <Route path="/collection/history" element={<HistoryScreen />} />
           <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
           <Route path="/friends" element={<FriendsScreen />} />

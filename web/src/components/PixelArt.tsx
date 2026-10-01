@@ -1,3 +1,5 @@
+import type { ItemIconKey } from '@domain/crafting.ts';
+
 interface Pixel {
   x: number;
   y: number;
@@ -72,7 +74,7 @@ export function TrophyIcon({ size = 36 }: { size?: number }) {
   return <PixelGrid pixels={TROPHY} cols={12} rows={12} size={size} />;
 }
 
-export type ItemIconKind = 'belt' | 'chalk' | 'straps' | 'sleeves' | 'shoes' | 'scraps' | 'scroll' | 'locked';
+export type ItemIconKind = ItemIconKey | 'locked';
 
 function itemPixels(kind: ItemIconKind, color: string): Pixel[] {
   switch (kind) {
@@ -110,11 +112,31 @@ function itemPixels(kind: ItemIconKind, color: string): Pixel[] {
         { x: 2, y: 8, w: 9, h: 2, fill: color },
         { x: 2, y: 10, w: 9, h: 1, fill: INK },
       ];
+    case 'gloves':
+      return [
+        { x: 3, y: 5, w: 6, h: 5, fill: color },
+        { x: 3, y: 2, w: 1, h: 3, fill: color },
+        { x: 5, y: 1, w: 1, h: 4, fill: color },
+        { x: 7, y: 2, w: 1, h: 3, fill: color },
+        { x: 9, y: 5, w: 2, h: 2, fill: color },
+        { x: 3, y: 8, w: 6, h: 1, fill: INK, opacity: 0.35 },
+        { x: 3, y: 10, w: 6, h: 1, fill: INK },
+      ];
     case 'scraps':
       return [
         { x: 2, y: 6, w: 3, h: 3, fill: color },
         { x: 5, y: 4, w: 3, h: 4, fill: color, opacity: 0.8 },
         { x: 7, y: 7, w: 3, h: 3, fill: color, opacity: 0.6 },
+      ];
+    case 'pet':
+      return [
+        { x: 2, y: 2, w: 2, h: 2, fill: color },
+        { x: 8, y: 2, w: 2, h: 2, fill: color },
+        { x: 2, y: 4, w: 8, h: 6, fill: color },
+        { x: 4, y: 6, w: 1, h: 1, fill: INK },
+        { x: 7, y: 6, w: 1, h: 1, fill: INK },
+        { x: 5, y: 8, w: 2, h: 1, fill: INK, opacity: 0.5 },
+        { x: 2, y: 10, w: 8, h: 1, fill: INK },
       ];
     case 'scroll':
       return [
