@@ -5,12 +5,10 @@ import type { SyncedChange } from '../../offline/draft-session.ts';
 import type { DraftStore } from '../../offline/draft-store.ts';
 import { retryDelayMs } from '../../lib/function-client.ts';
 import { attemptFinish } from '../../offline/finish-lock.ts';
+import { type FinishStatus, startFinishRetries } from '../../offline/finish-retries.ts';
 import { signOutKeepingDrafts, syncFinishedWorkout } from '../../offline/sync-workout.ts';
 
-export type FinishStatus =
-  | { kind: 'idle' }
-  | { kind: 'syncing'; attempt: number; lastProblem: string | null }
-  | { kind: 'rejected'; reason: string };
+export type { FinishStatus } from '../../offline/finish-retries.ts';
 
 interface FinishSyncOptions {
   userId: string;
@@ -49,60 +47,34 @@ export function useFinishSync({
 
   useEffect(() => {
     if (!sessionId || !finishKey || !store) return;
-    const controller = new AbortController();
-    let retryTimer: ReturnType<typeof setTimeout> | undefined;
-    let attempt = 0;
-    let requestInFlight = false;
-    let settled = false;
     const show = (next: FinishStatus) => setStatus({ key: finishKey, status: next });
-
-    const attemptSync = async () => {
-      if (requestInFlight || controller.signal.aborted || settled) return;
-      requestInFlight = true;
-      clearTimeout(retryTimer);
-      show({ kind: 'syncing', attempt, lastProblem: null });
-      try {
-        const result = await attemptFinish({
+    const retries = startFinishRetries({
+      attemptOnce: (signal) =>
+        attemptFinish({
           userId,
           sessionId,
           store,
           flush,
           markSynced,
           send: (storedDraft) => syncFinishedWorkout(userId, storedDraft),
-          signal: controller.signal,
-        }).catch((error: unknown) => ({
-          kind: 'sent' as const,
-          outcome: { kind: 'retryable' as const, reason: error instanceof Error ? error.message : 'storage_error' },
-        }));
-        if (controller.signal.aborted || result.kind === 'aborted') return;
-        if (result.kind !== 'sent') {
-          settled = true;
-          if (result.kind === 'superseded') reportSuperseded(sessionId);
-          return;
-        }
+          signal,
+        }),
+      retryDelayMs,
+      show,
+      settle: async (result) => {
+        if (result.kind === 'superseded') return reportSuperseded(sessionId);
+        if (result.kind !== 'sent') return;
         const outcome = result.outcome;
-        if (outcome.kind === 'retryable') {
-          show({ kind: 'syncing', attempt, lastProblem: outcome.reason });
-          retryTimer = setTimeout(attemptSync, retryDelayMs(attempt++));
-          return;
-        }
-        settled = true;
         if (outcome.kind === 'synced') reportSynced(outcome.summary);
         else if (outcome.kind === 'rejected') show({ kind: 'rejected', reason: outcome.reason });
         else if (outcome.kind === 'deleted') reportDeleted();
         else if (outcome.kind === 'needs_sign_in') await signOutKeepingDrafts();
-      } finally {
-        requestInFlight = false;
-      }
-    };
-
-    window.addEventListener('online', attemptSync);
-    const firstAttempt = setTimeout(attemptSync, 0);
+      },
+    });
+    window.addEventListener('online', retries.onOnline);
     return () => {
-      controller.abort();
-      clearTimeout(firstAttempt);
-      clearTimeout(retryTimer);
-      window.removeEventListener('online', attemptSync);
+      retries.stop();
+      window.removeEventListener('online', retries.onOnline);
     };
   }, [userId, sessionId, finishKey, store, flush, markSynced]);
 

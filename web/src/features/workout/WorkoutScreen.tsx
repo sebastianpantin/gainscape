@@ -4,6 +4,7 @@ import { type Exercise, fetchExercises, type LoadType, saveBodyweight } from '..
 import { type ExerciseStrengthView, fetchExerciseStrength } from '../../lib/collection-data.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
+import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
 import { formatWeight } from '../../lib/units.ts';
 import type { SessionSummary } from '@domain/types.ts';
 import {
@@ -34,6 +35,17 @@ import { useFinishSync } from './use-finish-sync.ts';
 import { formatXp, previewSet } from './xp-preview.ts';
 
 const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
+const LONG_SYNC_WAIT_MS = 60_000;
+
+function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
+  if (lastProblem !== RATE_LIMITED_CODE) {
+    return `Couldn't reach the server (${lastProblem}). Retrying — your workout is saved on this device.`;
+  }
+  if (waitMs !== undefined && waitMs > LONG_SYNC_WAIT_MS) {
+    return `Sync limit reached; this workout will sync in ${waitText(waitMs / 1000)}. It's saved on this device.`;
+  }
+  return "Sync limit reached; retrying shortly. It's saved on this device.";
+}
 
 interface WorkoutScreenProps {
   userId: string;
@@ -208,10 +220,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           <div className="panel stack" role="status">
             <p>
               {finishStatus.lastProblem
-                ? `Couldn't reach the server (${finishStatus.lastProblem}). Retrying — your workout is saved on this device.`
+                ? syncProblemText(finishStatus.lastProblem, finishStatus.waitMs)
                 : 'Sending your workout…'}
             </p>
-            {finishStatus.lastProblem && (
+            {finishStatus.lastProblem && finishStatus.lastProblem !== RATE_LIMITED_CODE && (
               <button className="button" type="button" onClick={retryNow}>
                 Retry now
               </button>

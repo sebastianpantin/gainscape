@@ -4,7 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { type Exercise, fetchExercises, saveBodyweight } from '../../lib/catalog.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
-import { type HistorySession, isSessionId, type StoredSetRow } from '../../lib/history-rules.ts';
+import { tryAgainIn } from '../../lib/rate-limit.ts';
+import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/history-rules.ts';
 import { type CatalogItem, describeDrops } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
@@ -135,7 +136,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   useEffect(() => {
     const controller = new AbortController();
     controllerRef.current = controller;
-    if (!isSessionId(sessionId)) {
+    if (!isUuid(sessionId)) {
       goBackGone();
       return () => controller.abort();
     }
@@ -226,6 +227,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         return;
       case 'retry':
         setProblem({ kind: 'message', text: `Couldn't reach the server (${action.reason}). Try again.` });
+        return;
+      case 'rate_limited':
+        setProblem({ kind: 'message', text: `Too many changes. ${tryAgainIn(action.retryAfterSeconds)}` });
         return;
       case 'bug':
         setProblem({ kind: 'message', text: `Couldn't ${verb} this workout: ${action.code}` });

@@ -245,6 +245,35 @@ describe('friendships', () => {
   });
 });
 
+describe('reactions', () => {
+  it('denies client select, insert, update and delete', async () => {
+    const [event] = await db`
+      insert into public.events (user_id, session_id, event_key, type, occurred_at, payload)
+      values (${owner.id}, ${ownerSessionId}, 'level:arms', 'level_up', now(), '{"skill": "arms"}')
+      on conflict (session_id, event_key) do update set updated_at = now()
+      returning id`;
+    await db`insert into public.reactions (event_id, user_id) values (${event.id}, ${stranger.id}) on conflict do nothing`;
+    const snapshot = () => db`select * from public.reactions where event_id = ${event.id} order by user_id`;
+    const before = await snapshot();
+    expect(before).toHaveLength(1);
+
+    expect((await stranger.client.from('reactions').select('*')).error?.code).toBe('42501');
+    expect((await owner.client.from('reactions').insert({ event_id: event.id, user_id: owner.id })).error?.code).toBe(
+      '42501',
+    );
+    expect(
+      (
+        await stranger.client
+          .from('reactions')
+          .update({ created_at: new Date(0).toISOString() })
+          .eq('event_id', event.id)
+      ).error?.code,
+    ).toBe('42501');
+    expect((await stranger.client.from('reactions').delete().eq('event_id', event.id)).error?.code).toBe('42501');
+    expect(await snapshot()).toEqual(before);
+  });
+});
+
 describe('function execution rights', () => {
   it('lets anonymous visitors check username availability', async () => {
     const { data, error } = await anon.rpc('username_available', { candidate: 'nobody_has_this' });
@@ -287,6 +316,8 @@ describe('function execution rights', () => {
       'craft',
       'delete_program',
       'get_collection',
+      'get_feed',
+      'get_hiscores',
       'get_profile',
       'last_logged_sets',
       'list_friends',
@@ -297,6 +328,7 @@ describe('function execution rights', () => {
       'save_program',
       'send_friend_request',
       'set_custom_exercise_archived',
+      'set_gz',
       'set_timezone',
       'username_available',
     ]);

@@ -1,7 +1,8 @@
-import { BADGE_COLORS, type BadgeColor, initialsFor, type Profile, TRAINING_FOCUS_LABELS } from '../../lib/profile.ts';
+import { BADGE_COLORS, type BadgeColor, initialsFor, TRAINING_FOCUS_LABELS } from '../../lib/profile.ts';
+import type { CardProfile } from '../../lib/profile-view.ts';
 
 interface ProfileCardProps {
-  profile: Profile;
+  profile: CardProfile;
   totalLevel: number | null;
   combatLevel: number | null;
   collectionPercent: number | null;
@@ -41,7 +42,7 @@ export function ProfileBadge({ color, initials, size = 72 }: { color: BadgeColor
   );
 }
 
-function detailLine(profile: Profile): string {
+function detailLine(profile: CardProfile): string {
   const parts = [
     profile.trainingSince !== null && `Training since ${profile.trainingSince}`,
     profile.trainingFocus !== null && `${TRAINING_FOCUS_LABELS[profile.trainingFocus]} focus`,
