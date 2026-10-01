@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ITEM_ICON_KINDS } from '../../supabase/functions/_shared/domain/crafting.ts';
+import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import { type CatalogData, catalogNames } from './load.ts';
 
 export const DENYLIST_PATH = join(import.meta.dirname, '../../tests/ip-denylist.txt');
@@ -119,6 +119,17 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
         problems.push(`program day "${program.key}:${day.key}" uses locked exercise "${entry.exercise}"`);
       }
     }
+  }
+
+  if (catalog.gearTiers.join() !== ITEM_TIERS.join()) {
+    problems.push(
+      `gear tiers [${catalog.gearTiers.join(', ')}] must match ITEM_TIERS [${ITEM_TIERS.join(', ')}] in order`,
+    );
+  }
+  if (catalog.gearSlots.join() !== GEAR_SLOTS.join()) {
+    problems.push(
+      `gear slots [${catalog.gearSlots.join(', ')}] must match GEAR_SLOTS [${GEAR_SLOTS.join(', ')}] in order`,
+    );
   }
 
   const itemsByKey = new Map(catalog.items.map((item) => [item.key, item]));
