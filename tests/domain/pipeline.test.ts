@@ -24,10 +24,58 @@ const fixtureSession: SessionInput = {
 describe('processSession', () => {
   it('awards XP per skill, with an intensity bonus once an e1RM exists within the session', () => {
     const { nextState, outputs } = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog });
-    expect(outputs.sets.map((result) => result.xp)).toEqual([30, 30, 30, 50, 53, 53]);
-    expect(outputs.xpBySkill).toEqual({ chest: 63, shoulders: 18, arms: 9, legs: 141, core: 15 });
+    expect(outputs.sets.map((result) => result.xp)).toEqual([30, 30, 30, 50, 55, 55]);
+    expect(outputs.xpBySkill).toEqual({ chest: 63, shoulders: 18, arms: 9, legs: 144, core: 16 });
     expect(outputs.levelUps).toEqual([{ skill: 'legs', from: 1, to: 2 }]);
-    expect(nextState.skillXp['skill-legs']).toBe(141);
+    expect(nextState.skillXp['skill-legs']).toBe(144);
+  });
+
+  it('reports only the XP that fits under the XP cap', () => {
+    const nearCap = { skillXp: { 'skill-chest': TEST_BALANCE.maxXp - 5 }, bodyweightKg: null };
+    const session: SessionInput = {
+      id: 'capped',
+      startedAt: '2026-09-28T10:00:00Z',
+      sets: [aSet('bench', 60, 8, hard)],
+    };
+    const { outputs } = processSession(nearCap, session, TEST_BALANCE, { catalog });
+    expect(outputs.xpBySkill.chest).toBe(5);
+  });
+
+  it('rotates tied remainders across sets of the same exercise', () => {
+    const cfg = { ...TEST_BALANCE, xpPerEffectiveRep: 75 };
+    const fiveEffectiveReps = { type: 'rir', value: 1 } as const;
+    const session: SessionInput = {
+      id: 'rotation',
+      startedAt: '2026-09-28T10:00:00Z',
+      sets: [
+        aSet('bench', 20, 11, fiveEffectiveReps),
+        aSet('squat', 100, 5, hard),
+        aSet('bench', 20, 11, fiveEffectiveReps),
+      ],
+    };
+    const { outputs } = processSession(freshUser, session, cfg, { catalog });
+    expect(outputs.sets[0].skillXp).toEqual([
+      { skillId: 'skill-chest', xp: 263 },
+      { skillId: 'skill-shoulders', xp: 75 },
+      { skillId: 'skill-arms', xp: 37 },
+    ]);
+    expect(outputs.sets[2].skillXp).toEqual([
+      { skillId: 'skill-chest', xp: 262 },
+      { skillId: 'skill-shoulders', xp: 75 },
+      { skillId: 'skill-arms', xp: 38 },
+    ]);
+  });
+
+  it('rotates tied remainders only across sets that earn XP', () => {
+    const cfg = { ...TEST_BALANCE, xpPerEffectiveRep: 75 };
+    const fiveEffectiveReps = { type: 'rir', value: 1 } as const;
+    const session: SessionInput = {
+      id: 'rotation-warmup',
+      startedAt: '2026-09-28T10:00:00Z',
+      sets: [aSet('bench', 10, 11, hard, { isWarmup: true }), aSet('bench', 20, 11, fiveEffectiveReps)],
+    };
+    const { outputs } = processSession(freshUser, session, cfg, { catalog });
+    expect(outputs.sets[1].skillXp).toContainEqual({ skillId: 'skill-chest', xp: 263 });
   });
 
   it('is deterministic', () => {

@@ -6,6 +6,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import {
   type Catalog,
+  DEFAULT_LOOT,
   type DropSummary,
   type ExerciseDef,
   type LootEntry,
@@ -384,6 +385,7 @@ export async function grantDrop(
   quantity: number,
   source: RollKind = 'regular',
   localDate?: string,
+  lootVersion: number = DEFAULT_LOOT.version,
 ): Promise<GrantedDrop> {
   return await db.begin(async (tx) => {
     const [session] = await tx`select local_date::text as local_date from public.sessions where id = ${sessionId}`;
@@ -395,7 +397,7 @@ export async function grantDrop(
       insert into public.loot_rolls
         (user_id, session_id, set_id, kind, local_date, roll_index, drop_table_id, chance, hit, loot_version)
       select ${userId}, ${sessionId}, ${setId}, ${source}, ${date}::date, coalesce(max(roll_index) + 1, 0),
-             ${table.id}, ${source === 'pr' ? 1 : 0.1}, true, 1
+             ${table.id}, ${source === 'pr' ? 1 : 0.1}, true, ${lootVersion}
       from public.loot_rolls where user_id = ${userId} and local_date = ${date}::date and kind = ${source}
       returning id`;
     const [drop] = await tx`

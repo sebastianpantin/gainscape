@@ -16,6 +16,7 @@ Fast, stack-free tests of the pure game engine in `supabase/functions/_shared/do
 | `xp.test.ts`          | Effort values, effective reps, XP split across skills.                                                                                                         |
 | `levels.test.ts`      | XP curve and combat level.                                                                                                                                     |
 | `strength.test.ts`    | Epley, predicted max reps, intensity bonus, effort resolution against a known e1RM, cold start in the baseline session (fast-check).                           |
+| `fatigue.test.ts`     | In-session fatigue check: repeated failure claims, honest declining sets, bodyweight, warm-ups, no-load sets.                                                  |
 | `records.test.ts`     | Rep-max records, bodyweight rep records, collection completion.                                                                                                |
 | `pipeline.test.ts`    | `processSession`, `HISTORY_ONLY_STEPS`, `carriedEffectiveLoadKg`.                                                                                              |
 | `replay.test.ts`      | Replaying history from a stored prior state, replay budget, determinism (fast-check).                                                                          |

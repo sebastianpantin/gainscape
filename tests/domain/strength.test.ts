@@ -77,17 +77,35 @@ describe('epley and predicted max reps', () => {
 
 describe('intensity bonus', () => {
   it.each([
-    [75, 1, 50],
-    [85, 1.15, 58],
-    [95, 1.3, 65],
-    [100, 1.3, 65],
-  ])('at %s%% of e1RM the bonus is %s and 5 effective reps give %s XP', (loadKg, bonus, xp) => {
-    expect(intensityBonus(loadKg, 100, TEST_BALANCE)).toBeCloseTo(bonus, 10);
-    expect(setXp(5, intensityBonus(loadKg, 100, TEST_BALANCE), TEST_BALANCE)).toBe(xp);
+    [11, 1],
+    [6, 1.160714],
+    [1, 1.3],
+  ])('gives %i reps at 80 percent of e1RM a bonus of %s', (reps, bonus) => {
+    expect(intensityBonus(reps, 80, 100, TEST_BALANCE)).toBeCloseTo(bonus, 5);
+  });
+
+  it('awards XP for 5 effective reps with the bonus of a heavy triple', () => {
+    expect(setXp(5, intensityBonus(3, 90, 100, TEST_BALANCE), TEST_BALANCE)).toBe(64);
   });
 
   it('is neutral without an e1RM', () => {
-    expect(intensityBonus(100, null, TEST_BALANCE)).toBe(1);
+    expect(intensityBonus(1, 100, null, TEST_BALANCE)).toBe(1);
+  });
+
+  it('is neutral for a light load however few reps it has', () => {
+    expect(intensityBonus(1, 70, 100, TEST_BALANCE)).toBe(1);
+  });
+
+  it('does not grow when a lower logged RIR depresses the e1RM', () => {
+    const [claimedFailure] = runSets([aSet('bench', 100, 6, failure)], knownStrength('bench', epley(100, 6)));
+    const [honest] = runSets([aSet('bench', 100, 6, { type: 'rir', value: 2 })], knownStrength('bench', epley(100, 8)));
+    expect(claimedFailure.intensityBonus).toBe(honest.intensityBonus);
+    expect(honest.intensityBonus).toBeGreaterThan(1);
+  });
+
+  it('is neutral for a flagged set', () => {
+    const [result] = runSets([aSet('bench', 80, 3, failure)], knownStrength('bench', 100));
+    expect(result).toMatchObject({ rirFlagged: true, intensityBonus: 1 });
   });
 });
 
@@ -112,9 +130,26 @@ describe('effort resolution with a known e1RM', () => {
     expect(result.e1rmCandidateKg).toBe(110);
   });
 
-  it('does not cap demonstrated strength from an unrated set', () => {
+  it('caps demonstrated strength from an unrated set at 10% per session', () => {
     const [result] = runSets([aSet('bench', 100, 10, null)], knownStrength('bench', 100));
-    expect(result).toMatchObject({ rir: 0, rirSource: 'estimated', e1rmCandidateKg: 130 });
+    expect(result).toMatchObject({ rir: 0, rirSource: 'estimated', e1rmCandidateKg: 110 });
+  });
+
+  it('caps a mistyped unrated load at 10% over the e1RM at session start', () => {
+    const [result] = runSets([aSet('bench', 1000, 1, null)], knownStrength('bench', 120));
+    expect(result.e1rmCandidateKg).toBe(132);
+  });
+
+  it('anchors growth to the first candidate when earlier sessions left no e1RM', () => {
+    const results = runSets([aSet('bench', 60, 5, failure), aSet('bench', 100, 5, failure)], {
+      bench: { windowMax: null, fallbackMax: null, hasPriorSession: true },
+    });
+    expect(results[1].e1rmCandidateKg).toBe(74.8);
+  });
+
+  it('earns no XP for a zero external load even when failure is logged', () => {
+    const [result] = runSets([aSet('bench', 0, 6, failure)], knownStrength('bench', 100));
+    expect(result).toMatchObject({ effectiveReps: 0, xp: 0 });
   });
 
   it('produces no candidate from an unrated set that does not beat its prediction', () => {
@@ -134,6 +169,29 @@ describe('effort resolution with a known e1RM', () => {
 });
 
 describe('cold start in the baseline session', () => {
+  it('pays the cold-start XP for at most 8 unrated sets per exercise', () => {
+    const results = runSets(Array.from({ length: 10 }, () => aSet('bench', 60, 8, null)));
+    expect(results.map((result) => result.xp)).toEqual([10, 10, 10, 10, 10, 10, 10, 10, 0, 0]);
+  });
+
+  it('counts the cold-start limit separately for each exercise', () => {
+    const results = runSets([
+      ...Array.from({ length: 8 }, () => aSet('bench', 60, 8, null)),
+      aSet('squat', 100, 5, null),
+    ]);
+    expect(results.at(-1)!.xp).toBe(10);
+  });
+
+  it('pays no cold-start XP for a zero external load', () => {
+    const [result] = runSets([aSet('bench', 0, 8, null)]);
+    expect(result.xp).toBe(0);
+  });
+
+  it('leaves the baseline session uncapped by its first set', () => {
+    const results = runSets([aSet('bench', 60, 5, failure), aSet('bench', 100, 5, failure)]);
+    expect(results[1].e1rmCandidateKg).toBe(epley(100, 5));
+  });
+
   it('pays the cold-start XP for every unrated built-in set', () => {
     const results = runSets([aSet('bench', 60, 8, null), aSet('bench', 60, 8, null), aSet('bench', 60, 8, null)]);
     expect(results.map((result) => [result.rirSource, result.xp])).toEqual([

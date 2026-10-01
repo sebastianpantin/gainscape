@@ -130,7 +130,9 @@ describe('the roll pass through the stack', () => {
         hit: roll.hit,
       })),
     );
-    expect(rolls.every((row) => row.local_date === localDateOf(start) && row.loot_version === 1)).toBe(true);
+    expect(
+      rolls.every((row) => row.local_date === localDateOf(start) && row.loot_version === DEFAULT_LOOT.version),
+    ).toBe(true);
 
     const drops = await db`
       select set_id, item_id, quantity, source from public.drops where session_id = ${payload.id} order by set_id`;

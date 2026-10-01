@@ -155,17 +155,22 @@ describe('qualification', () => {
     return { candidates, ...rollSessionLoot(candidates, FIXTURE_TABLES, FRESH_DAY, DEFAULT_LOOT, fixedRngFor('q')) };
   }
 
-  it('gives warm-ups, easy sets and unrated cold-start sets no rolls', () => {
+  it('gives warm-ups, sets beyond the RIR window and unrated cold-start sets no rolls', () => {
     const { candidates, rolls } = rollsFor([
       sessionAt(0, [
         aSet('bench', 40, 10, hard, { isWarmup: true }),
-        aSet('bench', 60, 8, { type: 'level', level: 'easy' }),
         aSet('bench', 60, 8, { type: 'rir', value: 6 }),
         aSet('bench', 60, 8, null),
       ]),
     ]);
-    expect(candidates.map((entry) => entry.effectiveReps)).toEqual([0, 0, 0, 0]);
+    expect(candidates.map((entry) => entry.effectiveReps)).toEqual([0, 0, 0]);
     expect(rolls).toEqual([]);
+  });
+
+  it('gives an easy set one effective rep and a regular roll', () => {
+    const { candidates, rolls } = rollsFor([sessionAt(0, [aSet('bench', 60, 8, { type: 'level', level: 'easy' })])]);
+    expect(candidates.map((entry) => entry.effectiveReps)).toEqual([1]);
+    expect(rolls.map((roll) => roll.kind)).toEqual(['regular']);
   });
 
   it('gives a baseline session regular rolls but no PR rolls', () => {
@@ -355,20 +360,40 @@ describe('revocationReason', () => {
   const qualifying = candidate('s', 0, { personalRecord: true });
 
   it('names why a drop no longer stands, in priority order', () => {
-    expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT)).toBe('session_deleted');
-    expect(revocationReason('regular', undefined, false, DEFAULT_LOOT)).toBe('set_removed');
-    expect(revocationReason('regular', { ...qualifying, effectiveReps: 0 }, false, DEFAULT_LOOT)).toBe(
+    expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT, DEFAULT_LOOT.version)).toBe('session_deleted');
+    expect(revocationReason('regular', undefined, false, DEFAULT_LOOT, DEFAULT_LOOT.version)).toBe('set_removed');
+    expect(
+      revocationReason('regular', { ...qualifying, effectiveReps: 0 }, false, DEFAULT_LOOT, DEFAULT_LOOT.version),
+    ).toBe('no_longer_qualifies');
+    expect(
+      revocationReason('pr', { ...qualifying, personalRecord: false }, false, DEFAULT_LOOT, DEFAULT_LOOT.version),
+    ).toBe('no_longer_qualifies');
+    expect(revocationReason('pr', { ...qualifying, builtIn: false }, false, DEFAULT_LOOT, DEFAULT_LOOT.version)).toBe(
       'no_longer_qualifies',
     );
-    expect(revocationReason('pr', { ...qualifying, personalRecord: false }, false, DEFAULT_LOOT)).toBe(
-      'no_longer_qualifies',
-    );
-    expect(revocationReason('pr', { ...qualifying, builtIn: false }, false, DEFAULT_LOOT)).toBe('no_longer_qualifies');
+  });
+
+  it('keeps drops rolled under an older loot version that would no longer qualify', () => {
+    const olderVersion = DEFAULT_LOOT.version - 1;
+    expect(
+      revocationReason('regular', { ...qualifying, effectiveReps: 0 }, false, DEFAULT_LOOT, olderVersion),
+    ).toBeNull();
+    expect(
+      revocationReason('pr', { ...qualifying, personalRecord: false }, false, DEFAULT_LOOT, olderVersion),
+    ).toBeNull();
+  });
+
+  it('still revokes older drops whose set or session is gone', () => {
+    const olderVersion = DEFAULT_LOOT.version - 1;
+    expect(revocationReason('regular', undefined, false, DEFAULT_LOOT, olderVersion)).toBe('set_removed');
+    expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT, olderVersion)).toBe('session_deleted');
   });
 
   it('keeps drops whose set still qualifies', () => {
-    expect(revocationReason('regular', qualifying, false, DEFAULT_LOOT)).toBeNull();
-    expect(revocationReason('pr', qualifying, false, DEFAULT_LOOT)).toBeNull();
-    expect(revocationReason('regular', { ...qualifying, personalRecord: false }, false, DEFAULT_LOOT)).toBeNull();
+    expect(revocationReason('regular', qualifying, false, DEFAULT_LOOT, DEFAULT_LOOT.version)).toBeNull();
+    expect(revocationReason('pr', qualifying, false, DEFAULT_LOOT, DEFAULT_LOOT.version)).toBeNull();
+    expect(
+      revocationReason('regular', { ...qualifying, personalRecord: false }, false, DEFAULT_LOOT, DEFAULT_LOOT.version),
+    ).toBeNull();
   });
 });
