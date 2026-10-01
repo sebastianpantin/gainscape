@@ -5,7 +5,7 @@
 
 ## Purpose
 
-A single simulation-backed test that proves the committed balance constants in `domain/balance.ts` still meet the progression design bands. It is the test behind `make sim-check` and takes about 15 s.
+A single simulation-backed test that proves the committed balance constants in `domain/balance.ts` still meet the progression design bands. It is the test behind `make sim-check` and takes about 1 s.
 
 ## Key Files
 
@@ -19,7 +19,6 @@ A single simulation-backed test that proves the committed balance constants in `
 
 - The bands live in `scripts/balance/bands.ts`, the simulator in `scripts/balance/simulate.ts` and `scripts/balance/tune.ts`. This test only asserts; change thresholds there, with justification, never by loosening an assertion here.
 - Any edit to constants in `supabase/functions/_shared/domain/balance.ts` must keep this test green. Run `make test-domain` and `make sim-check` together.
-- The test logs a `balance report` line; do not remove it, it is the quickest way to see how far a constant change moved the years.
 
 ### Testing Requirements
 
