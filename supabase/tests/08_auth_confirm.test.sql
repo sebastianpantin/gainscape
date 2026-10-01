@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(13);
 
 select tests.create_user('ac_pending', false) as pending \gset
 select tests.create_user('ac_direct', false) as direct \gset
@@ -37,9 +37,30 @@ select ok(
 );
 
 select tests.authenticate_as(:'pending');
-select is(public.change_username('  AC_Owner '), 'ac_owner', 'a freshly confirmed user can change the username');
-select throws_ok($$select public.change_username('ac_taken')$$, '23505', 'username_taken', 'a taken username is refused');
-select throws_ok($$select public.change_username('no')$$, '22023', 'invalid_username', 'an invalid username is refused');
+select is(
+  public.change_username('  AC_Owner '),
+  jsonb_build_object('status', 'ok', 'username', 'ac_owner'),
+  'a freshly confirmed user can change the username'
+);
+reset role;
+select coalesce(sum(h.hits), 0)::int as hits_before from private.rate_limit_hits h
+where h.bucket = 'username_check_minute' and h.subject = :'pending' \gset
+select tests.authenticate_as(:'pending');
+select is(public.change_username('ac_taken'), '{"status": "taken"}'::jsonb, 'a taken username is reported, not raised');
+reset role;
+select is(
+  (select coalesce(sum(h.hits), 0)::int from private.rate_limit_hits h
+   where h.bucket = 'username_check_minute' and h.subject = :'pending'),
+  :hits_before + 1,
+  'a taken attempt counts toward username_check_minute'
+);
+select tests.authenticate_as(:'pending');
+select is(public.change_username('no'), '{"status": "invalid"}'::jsonb, 'an invalid username is reported');
+select is(
+  public.change_username('ac_owner'),
+  jsonb_build_object('status', 'ok', 'username', 'ac_owner'),
+  'keeping the current username is ok'
+);
 reset role;
 select is(
   (select p.username || '/' || p.display_name from public.profiles p where p.id = :'pending'),
@@ -49,10 +70,9 @@ select is(
 
 update auth.users set email_confirmed_at = now() - interval '2 hours' where id = :'pending';
 select tests.authenticate_as(:'pending');
-select throws_ok(
-  $$select public.change_username('ac_later')$$,
-  '42501',
-  'username_change_closed',
+select is(
+  public.change_username('ac_later'),
+  '{"status": "closed"}'::jsonb,
   'the username is fixed an hour after confirmation'
 );
 reset role;

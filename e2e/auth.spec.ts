@@ -33,6 +33,7 @@ async function registerThroughEmail(page: Page, username: string): Promise<strin
   const link = await linkTo(emailOf(username), CONFIRM_SUBJECT, since);
   await page.goto(link);
   await expect(page.getByRole('heading', { name: 'Account confirmed' })).toBeVisible();
+  await expect(page).not.toHaveURL(/token_hash/);
   await expect(page.getByTestId('confirmed-username')).toHaveText(username);
   await choosePassword(page, password);
   await page.getByRole('button', { name: 'Save and continue' }).click();
@@ -116,7 +117,12 @@ test('an email change needs both links', async ({ page }) => {
 });
 
 test('a used confirmation link is invalid', async ({ page }) => {
-  const link = await registerThroughEmail(page, uniqueUsername('au_ex'));
+  const username = uniqueUsername('au_ex');
+  const link = await registerThroughEmail(page, username);
+  await page.goto(link);
+  await expect(page.getByRole('heading', { name: 'Account confirmed' })).toBeVisible();
+  await expect(page.getByTestId('confirmed-username')).toHaveText(username);
+  await page.goto('/');
   await signOut(page);
   await page.goto(link);
   await expect(page.getByText('This link is invalid or has expired.')).toBeVisible();

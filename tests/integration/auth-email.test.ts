@@ -94,6 +94,10 @@ describe('signup confirmation', () => {
       'https://10.0.0.5:5173/auth/confirm',
       'https://evil.test/x',
       'https://a.b.evil.test:443/x',
+      'https://192.168.evil.test:443/x',
+      'https://10.a.b.evil.test:443/x',
+      'https://localhost:x@3627733341/',
+      'https://localhost.evil.test/x',
     ];
     for (const redirect of redirects) {
       const identity = freshIdentity();
@@ -171,7 +175,7 @@ describe('account pre-hijack', () => {
     expect((await victimClient.auth.updateUser({ password: 'victim-final-password' })).error).toBeNull();
     const renamed = await victimClient.rpc('change_username', { candidate: victim.username });
     expect(renamed.error).toBeNull();
-    expect(renamed.data).toBe(victim.username);
+    expect(renamed.data).toEqual({ status: 'ok', username: victim.username });
 
     const signedIn = await freshClient().auth.signInWithPassword({
       email: victim.email,
@@ -194,13 +198,16 @@ describe('account pre-hijack', () => {
     expect(verified.error).toBeNull();
     const other = await createTestUser();
 
-    expect((await client.rpc('change_username', { candidate: other.username })).error?.message).toBe('username_taken');
-    expect((await client.rpc('change_username', { candidate: 'No Spaces!' })).error?.message).toBe('invalid_username');
-    expect((await client.rpc('change_username', { candidate: identity.username })).data).toBe(identity.username);
+    expect((await client.rpc('change_username', { candidate: other.username })).data).toEqual({ status: 'taken' });
+    expect((await client.rpc('change_username', { candidate: 'No Spaces!' })).data).toEqual({ status: 'invalid' });
+    expect((await client.rpc('change_username', { candidate: identity.username })).data).toEqual({
+      status: 'ok',
+      username: identity.username,
+    });
 
     await db`update auth.users set email_confirmed_at = now() - interval '2 hours' where email = ${identity.email}`;
     const late = await client.rpc('change_username', { candidate: freshIdentity().username });
-    expect(late.error?.message).toBe('username_change_closed');
+    expect(late.data).toEqual({ status: 'closed' });
     expect((await freshClient().rpc('change_username', { candidate: 'anyone_at_all' })).error).not.toBeNull();
   });
 
