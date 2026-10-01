@@ -6,6 +6,7 @@ import {
   createTestUser,
   db,
   env,
+  fetchFunction,
   grantDrop,
   postCompleteSession,
   postFunction,
@@ -42,7 +43,7 @@ const USER_TABLES: { table: string; column: string }[] = [
 ];
 
 async function post(name: string, accessToken: string | null, body: unknown) {
-  const response = await fetch(`${env.FUNCTIONS_URL}/${name}`, {
+  const response = await fetchFunction(name, {
     method: 'POST',
     headers: {
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -51,7 +52,7 @@ async function post(name: string, accessToken: string | null, body: unknown) {
     },
     body: JSON.stringify(body),
   });
-  return { status: response.status, body: await response.json() };
+  return { status: response.status, body: JSON.parse(response.rawBody) };
 }
 
 async function logOneSession(user: TestUser, weightKg = 60): Promise<string> {

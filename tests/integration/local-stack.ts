@@ -110,14 +110,42 @@ export interface FunctionResponse {
   headers: Headers;
 }
 
+const EDGE_RUNTIME_RETRIES = 2;
+
+function isEdgeRuntimeDrop(status: number, rawBody: string): boolean {
+  if (status < 500) return false;
+  try {
+    const body = JSON.parse(rawBody);
+    return typeof body !== 'object' || body === null || !('error' in body);
+  } catch {
+    return true;
+  }
+}
+
+export interface RawFunctionResponse {
+  status: number;
+  rawBody: string;
+  headers: Headers;
+}
+
+export async function fetchFunction(name: string, init: RequestInit): Promise<RawFunctionResponse> {
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(`${env.FUNCTIONS_URL}/${name}`, init);
+    const rawBody = await response.text();
+    if (attempt === EDGE_RUNTIME_RETRIES || !isEdgeRuntimeDrop(response.status, rawBody)) {
+      return { status: response.status, rawBody, headers: response.headers };
+    }
+    console.warn(`retrying ${name}: the edge runtime dropped the request (${response.status} ${rawBody})`);
+  }
+}
+
 export async function postFunction(name: string, accessToken: string, body: unknown): Promise<FunctionResponse> {
-  const response = await fetch(`${env.FUNCTIONS_URL}/${name}`, {
+  const response = await fetchFunction(name, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, apikey: env.ANON_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const rawBody = await response.text();
-  return { status: response.status, body: JSON.parse(rawBody), rawBody, headers: response.headers };
+  return { ...response, body: JSON.parse(response.rawBody) };
 }
 
 export async function postCompleteSession(accessToken: string, payload: unknown): Promise<FunctionResponse> {
@@ -125,12 +153,12 @@ export async function postCompleteSession(accessToken: string, payload: unknown)
 }
 
 export async function rebuildCaches(userId: string, bearer = env.SERVICE_ROLE_KEY) {
-  const response = await fetch(`${env.FUNCTIONS_URL}/rebuild-caches`, {
+  const response = await fetchFunction('rebuild-caches', {
     method: 'POST',
     headers: { Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId }),
   });
-  return { status: response.status, body: await response.json() };
+  return { status: response.status, body: JSON.parse(response.rawBody) };
 }
 
 export async function ageSession(sessionId: string, interval: string): Promise<string> {
