@@ -11,6 +11,7 @@ import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import type { UnitPref } from '../../lib/profile.ts';
 import { monogramFor } from '../../lib/standing.ts';
+import { markInstallCardDue } from '../../pwa/install.ts';
 import { formatXp } from '../workout/xp-preview.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
 
@@ -123,6 +124,10 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const [items, setItems] = useState<LoadedItems>('loading');
   const [freshDrops, setFreshDrops] = useState<DropSummary[] | null>(null);
   const sessionId = summary?.sessionId;
+
+  useEffect(() => {
+    if (sessionId) markInstallCardDue(userId);
+  }, [sessionId, userId]);
 
   useEffect(() => {
     fetchSkills().then(setSkills, () => setSkills([]));

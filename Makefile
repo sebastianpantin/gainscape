@@ -12,7 +12,7 @@ endif
 PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
 CI_EXCLUDED := studio,imgproxy,vector,logflare,storage-api,realtime,postgres-meta,supavisor
 
-.PHONY: start ci-start ci-logs stop reset functions dev types test typecheck lint format format-check check check-functions catalog catalog-check test-catalog test-domain test-web test-integration test-db rebuild-caches sim sim-check e2e
+.PHONY: start ci-start ci-logs stop reset functions dev build-local preview types test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa
 
 start:
 	$(SUPABASE) start
@@ -58,11 +58,19 @@ dev:
 	@node scripts/lan-url.mjs
 	npx vite web --host
 
+build-local:
+	npx vite build web --mode development
+
+preview: build-local
+	@node scripts/lan-url.mjs --preview
+	npx vite preview web --host
+
 types:
 	$(SUPABASE) gen types typescript --local > web/src/lib/database.types.ts
 
 typecheck:
 	npx tsc --noEmit -p tsconfig.json
+	npx tsc --noEmit -p tsconfig.sw.json
 
 lint:
 	npx eslint . --max-warnings 0
@@ -73,13 +81,19 @@ format:
 format-check:
 	npx prettier --check --ignore-unknown .
 
-check: format-check lint typecheck check-functions catalog-check
+check: format-check lint typecheck check-functions catalog-check icons-check
 
 catalog:
 	node scripts/catalog/generate.ts
 
 catalog-check:
 	node scripts/catalog/generate.ts --check
+
+icons:
+	node scripts/icons/build.ts
+
+icons-check:
+	node scripts/icons/build.ts --check
 
 check-functions:
 	@for function_dir in supabase/functions/*/; do \
@@ -109,6 +123,10 @@ CHROMIUM_PATH ?= $(shell command -v chromium 2>/dev/null)
 
 e2e: functions
 	CHROMIUM_PATH="$(CHROMIUM_PATH)" npx playwright test
+
+e2e-pwa: functions
+	$(MAKE) build-local
+	GAINSCAPE_PLAIN_HTTP=1 CHROMIUM_PATH="$(CHROMIUM_PATH)" npx playwright test -c playwright.pwa.config.ts
 
 sim:
 	node scripts/balance/report.ts

@@ -64,7 +64,18 @@ export default tseslint.config(
     },
   },
   {
-    files: ['tests/**/*.ts', 'e2e/**/*.ts', 'scripts/**/*.{ts,mjs}', '*.config.{ts,js}', 'web/vite.config.ts'],
+    files: ['web/src/sw/**/*.ts'],
+    languageOptions: { globals: globals.serviceworker },
+  },
+  {
+    files: [
+      'tests/**/*.ts',
+      'e2e/**/*.ts',
+      'scripts/**/*.{ts,mjs}',
+      '*.config.{ts,js}',
+      'web/vite.config.ts',
+      'web/build/**/*.ts',
+    ],
     languageOptions: { globals: globals.node },
   },
   prettier,

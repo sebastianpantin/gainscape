@@ -19,11 +19,13 @@
   "include": [
     "web/src",
     "web/vite.config.ts",
+    "web/build",
     "tests",
     "e2e",
     "playwright.config.ts",
     "supabase/functions/_shared/domain",
     "vitest.config.ts",
     "scripts"
-  ]
+  ],
+  "exclude": ["web/src/sw"]
 }

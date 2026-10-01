@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { type Exercise, fetchExercises, type LoadType, saveBodyweight } from '../../lib/catalog.ts';
+import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
 import { type ExerciseStrengthView, fetchExerciseStrength } from '../../lib/collection-data.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
+import { REQUEST_TIMEOUT_MS } from '../../lib/supabase.ts';
 import { formatWeight } from '../../lib/units.ts';
 import type { SessionSummary } from '@domain/types.ts';
 import {
@@ -25,6 +27,7 @@ import {
 } from '../../offline/draft-format.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
+import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
@@ -79,6 +82,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     useWorkoutDraft(userId);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
+  const [listNotice, setListNotice] = useState<string | null>(null);
   const [finishProblem, setFinishProblem] = useState<string | null>(null);
   const [checkingFinish, setCheckingFinish] = useState(false);
   const [startingDay, setStartingDay] = useState(false);
@@ -90,8 +94,22 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const draft = state.status === 'ready' ? state.draft : null;
 
   useEffect(() => {
-    fetchExercises({ includeArchived: false }).then(setExercises, (error: Error) => setLoadProblem(error.message));
-  }, []);
+    let active = true;
+    void loadExercisesCacheFirst(
+      localStorage,
+      userId,
+      () => fetchExercises({ includeArchived: false, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
+      (list) => {
+        if (!active) return;
+        setExercises(list.exercises);
+        setListNotice(list.notice);
+        setLoadProblem(list.problem);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [userId]);
 
   useEffect(() => {
     let active = true;
@@ -190,6 +208,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             This workout was saved in another tab.
           </p>
         )}
+        <InstallCard userId={userId} />
         <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
         <button
           className="button primary big"
@@ -318,6 +337,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       {startNotice && (
         <p className="notice" role="status">
           {startNotice}
+        </p>
+      )}
+      {listNotice && (
+        <p className="notice" role="status">
+          {listNotice}
         </p>
       )}
       {loadProblem && (
