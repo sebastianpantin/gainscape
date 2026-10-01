@@ -1,4 +1,3 @@
-import type { EffortInput } from '@domain/types.ts';
 import type { LoadType } from '../../lib/catalog.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
 import { EffortSelector } from '../workout/EffortSelector.tsx';
@@ -54,11 +53,7 @@ export function HistorySetRow({
       <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
         ✕
       </button>
-      <EffortSelector
-        mode={effortMode}
-        selected={set.effort}
-        onSelect={(effort: EffortInput) => onChange({ effort })}
-      />
+      <EffortSelector mode={effortMode} selected={set.effort} onSelect={(effort) => onChange({ effort })} />
     </li>
   );
 }

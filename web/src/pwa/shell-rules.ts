@@ -1,5 +1,5 @@
 export const SHELL_CACHE_PREFIX = 'gainscape-shell-';
-export const SUPABASE_PROXY_PREFIX = '/sb/';
+const SUPABASE_PROXY_PREFIX = '/sb/';
 export const SHELL_INDEX = '/index.html';
 export const SHELL_MANIFEST = '/manifest.webmanifest';
 export const SERVICE_WORKER_FILE = 'sw.js';

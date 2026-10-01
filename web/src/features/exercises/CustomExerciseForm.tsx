@@ -4,6 +4,8 @@ import { fetchExerciseShares, hasLoggedSet, saveCustomExercise, type SkillShare 
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import { percentsFromShares, shareTotal, sharesToSave } from './share-form.ts';
 
+const NAME_MAX_LENGTH = 60;
+
 const LOAD_TYPE_LABELS: Record<LoadType, string> = {
   external: 'External load',
   bodyweight: 'Bodyweight',
@@ -50,7 +52,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
   const shareForm = { skillIds: skills.map((skill) => skill.id), percents, locked, storedShares };
   const total = shareTotal(shareForm);
   const shares = sharesToSave(shareForm);
-  const nameIssue = nameProblem(name, 60);
+  const nameIssue = nameProblem(name, NAME_MAX_LENGTH);
   const canSave = !loading && !saving && nameIssue === null && shares !== null;
 
   async function submit(event: FormEvent) {
@@ -78,7 +80,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
       <h2>{exercise ? `Edit ${exercise.name}` : 'New custom exercise'}</h2>
       <label className="field">
         Name
-        <input value={name} maxLength={60} onChange={(event) => setName(event.target.value)} required />
+        <input value={name} maxLength={NAME_MAX_LENGTH} onChange={(event) => setName(event.target.value)} required />
       </label>
       {name !== '' && nameIssue && <p className="problem">{nameIssue}</p>}
       <label className="field">

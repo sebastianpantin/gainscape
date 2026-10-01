@@ -111,7 +111,7 @@ export function createUpdateFlow(ports: UpdatePorts): UpdateFlow {
     });
     if (acquired) return;
     onWait();
-    await locks.request(name, async () => task());
+    await locks.request(name, task);
   };
 
   const nextControllerChange = (): Promise<boolean> =>
@@ -158,10 +158,7 @@ export function createUpdateFlow(ports: UpdatePorts): UpdateFlow {
     if (passiveReloadStarted) return;
     passiveReloadStarted = true;
     await flushDrafts();
-    await withFinishLock(
-      () => reloadNow(),
-      () => undefined,
-    );
+    await withFinishLock(reloadNow, () => undefined);
   };
 
   serviceWorker.addEventListener('controllerchange', () => {

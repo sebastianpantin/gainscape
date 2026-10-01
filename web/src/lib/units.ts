@@ -1,16 +1,12 @@
+import { roundTo } from '@domain/strength.ts';
 import type { UnitPref } from './profile-rules.ts';
 
 export const KG_PER_LB = 0.45359237;
-export const CM_PER_INCH = 2.54;
-export const INCHES_PER_FOOT = 12;
+const CM_PER_INCH = 2.54;
+const INCHES_PER_FOOT = 12;
 
 const STORED_KG_DECIMALS = 2;
 const SHOWN_DECIMALS = 1;
-
-function roundTo(decimals: number, value: number): number {
-  const factor = 10 ** decimals;
-  return Math.round(value * factor) / factor;
-}
 
 export function kgToUnit(kg: number, unit: UnitPref): number {
   return unit === 'kg' ? kg : kg / KG_PER_LB;

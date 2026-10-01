@@ -1,7 +1,7 @@
 import type { SessionSummary } from '@domain/types.ts';
 import { invokeAsOwner } from '../lib/function-client.ts';
-import { forceSignedOut, signOutOnThisDevice, storedSessionFrom } from '../lib/auth-restore.ts';
-import { AUTH_STORAGE_KEY, REQUEST_TIMEOUT_MS, supabase } from '../lib/supabase.ts';
+import { forceSignedOut, signOutOnThisDevice } from '../lib/auth-restore.ts';
+import { AUTH_STORAGE_KEY, readStoredSession, REQUEST_TIMEOUT_MS, supabase } from '../lib/supabase.ts';
 import type { WorkoutDraft } from './draft-format.ts';
 import { type SendOutcome, sendOutcomeFrom } from './finish-lock.ts';
 import { completeSessionPayload } from './session-payload.ts';
@@ -28,13 +28,7 @@ function forgetStoredSession(): void {
 export async function signOutKeepingDrafts(): Promise<void> {
   await signOutOnThisDevice({
     signOut: () => supabase.auth.signOut({ scope: 'local' }),
-    storedSession: () => {
-      try {
-        return storedSessionFrom(localStorage.getItem(AUTH_STORAGE_KEY));
-      } catch {
-        return null;
-      }
-    },
+    storedSession: readStoredSession,
     isOnline: () => navigator.onLine !== false,
     forget: forgetStoredSession,
   });

@@ -11,6 +11,7 @@ import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import type { UnitPref } from '../../lib/profile.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
+import { sessionXp } from '../history/session-edit.ts';
 import { formatXp } from '../workout/xp-preview.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
 
@@ -182,7 +183,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
 
   const nameOf = (skillKey: string) => skills.find((skill) => skill.key === skillKey)?.name ?? skillKey;
   const skillsWithXp = skills.filter((skill) => summary.xpBySkill[skill.key]);
-  const totalXp = Object.values(summary.xpBySkill).reduce((sum, xp) => sum + xp, 0);
+  const totalXp = sessionXp(summary);
   const leveledUp = new Map(summary.levelUps.map((levelUp) => [levelUp.skill, levelUp]));
 
   return (

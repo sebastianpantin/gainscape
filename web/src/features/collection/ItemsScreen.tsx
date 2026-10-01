@@ -148,11 +148,17 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
     };
   }, [userId, newIds]);
 
+  const header = (
+    <>
+      <h1 className="title">Collection log</h1>
+      <CollectionTabs />
+    </>
+  );
+
   if (loadProblem)
     return (
       <main className="screen stack">
-        <h1 className="title">Collection log</h1>
-        <CollectionTabs />
+        {header}
         <p className="problem" role="alert">
           {loadProblem}
         </p>
@@ -161,8 +167,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   if (!catalog)
     return (
       <main className="screen stack">
-        <h1 className="title">Collection log</h1>
-        <CollectionTabs />
+        {header}
         <p>Loading…</p>
       </main>
     );
@@ -172,8 +177,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
 
   return (
     <main className="screen stack">
-      <h1 className="title">Collection log</h1>
-      <CollectionTabs />
+      {header}
       {groups.map((group) => (
         <div className="panel stack" key={group.title}>
           <div className="row spread">

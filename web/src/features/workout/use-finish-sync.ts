@@ -8,8 +8,6 @@ import { attemptFinish } from '../../offline/finish-lock.ts';
 import { type FinishStatus, startFinishRetries } from '../../offline/finish-retries.ts';
 import { signOutKeepingDrafts, syncFinishedWorkout } from '../../offline/sync-workout.ts';
 
-export type { FinishStatus } from '../../offline/finish-retries.ts';
-
 interface FinishSyncOptions {
   userId: string;
   draft: WorkoutDraft | null;
