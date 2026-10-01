@@ -15,6 +15,7 @@ const CALLBACK_TYPES: readonly string[] = ['email', 'recovery', 'email_change'];
 const FORBIDDEN_STATUS = 403;
 
 export const RESEND_COOLDOWN_SECONDS = 60;
+export const USERNAME_CHANGE_WINDOW_MS = 60 * 60 * 1000;
 
 export const AUTH_MESSAGES = {
   emailNotConfirmed: 'Confirm your email first. We can send the link again.',
@@ -46,4 +47,10 @@ export function authErrorMessage(error: AuthErrorLike): string {
   if (error.code === 'otp_expired' || error.status === FORBIDDEN_STATUS) return AUTH_MESSAGES.invalidLink;
   if (error.code === 'over_email_send_rate_limit') return AUTH_MESSAGES.tooManyEmails;
   return error.message;
+}
+
+export function confirmedRecently(emailConfirmedAt: string | null | undefined, now = Date.now()): boolean {
+  if (!emailConfirmedAt) return false;
+  const confirmedAt = Date.parse(emailConfirmedAt);
+  return Number.isFinite(confirmedAt) && confirmedAt <= now && now - confirmedAt < USERNAME_CHANGE_WINDOW_MS;
 }

@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
 import { MINIMUM_PASSWORD_LENGTH } from '../../lib/account.ts';
-import { type AuthCallback, authErrorMessage } from '../../lib/auth-links.ts';
+import { type AuthCallback, authErrorMessage, confirmedRecently } from '../../lib/auth-links.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
 import { supabase } from '../../lib/supabase.ts';
 
@@ -41,8 +41,10 @@ async function passwordStep(callback: AuthCallback, userId: string): Promise<Ste
 async function verify(callback: AuthCallback): Promise<Step> {
   const { data, error } = await supabase.auth.verifyOtp({ token_hash: callback.tokenHash, type: callback.type });
   if (error) {
-    const { data: current } = await supabase.auth.getSession();
-    if (callback.type !== 'email_change' && current.session) return passwordStep(callback, current.session.user.id);
+    const { data: current } = await supabase.auth.getUser();
+    if (callback.type !== 'email_change' && current.user && confirmedRecently(current.user.email_confirmed_at)) {
+      return passwordStep(callback, current.user.id);
+    }
     return { kind: 'failed', problem: authErrorMessage(error) };
   }
   if (callback.type === 'email_change') return { kind: 'email-changed' };
@@ -217,6 +219,9 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
           )}
           <button className="button primary big" type="submit" disabled={busy || !passwordReady}>
             {step.kind === 'choose-password' ? 'Save and continue' : 'Set new password'}
+          </button>
+          <button className="button link" type="button" onClick={finish}>
+            Not now
           </button>
         </form>
       )}
