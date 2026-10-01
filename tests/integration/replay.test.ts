@@ -133,7 +133,15 @@ describe('out-of-order sync', () => {
       await db`select e1rm_kg::float from public.exercise_maxes where user_id = ${user.id} and exercise_id = ${benchId}`;
     expect(max.e1rm_kg).toBe(81.4);
     expect((await storedSummary(late.id)).prs).toEqual([
-      { exerciseId: benchId, kind: 'rep_max', reps: 5, loadKg: 100, previousLoadKg: 60, previousReps: null },
+      {
+        exerciseId: benchId,
+        kind: 'rep_max',
+        setId: late.sets[0].id,
+        reps: 5,
+        loadKg: 100,
+        previousLoadKg: 60,
+        previousReps: null,
+      },
     ]);
 
     const retry = await postSession(user, late);
@@ -153,7 +161,15 @@ describe('out-of-order sync', () => {
 
     expect(earlierResponse.body.prs).toEqual([]);
     expect((await storedSummary(later.id)).prs).toEqual([
-      { exerciseId: benchId, kind: 'rep_max', reps: 5, loadKg: 105, previousLoadKg: 100, previousReps: null },
+      {
+        exerciseId: benchId,
+        kind: 'rep_max',
+        setId: later.sets[0].id,
+        reps: 5,
+        loadKg: 105,
+        previousLoadKg: 100,
+        previousReps: null,
+      },
     ]);
     const [slot] = await db`
       select load_kg::float, set_id from public.rep_maxes

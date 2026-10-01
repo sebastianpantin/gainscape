@@ -1,12 +1,22 @@
 import type { BalanceConfig } from './balance.ts';
+import { boutPace, countedWorkSeconds } from './cardio.ts';
 import { KindMismatchError, UnknownExerciseError } from './errors.ts';
 import type { SessionContext, Step } from './pipeline.ts';
+import { roundTo } from './strength.ts';
 import {
+  CARDIO_RECORD_KINDS,
+  type CardioExerciseDef,
+  type CardioInterval,
+  type CardioRecordGain,
+  type CardioRecordKind,
+  type CardioRecords,
+  type CardioSetInput,
   type Catalog,
   isLiftResult,
   type LiftSetInput,
   type LoadType,
   NO_RECORDS,
+  type PaceUnit,
   type PersonalRecordSummary,
   REP_MAX_SLOT_COUNT,
   type RecordState,
@@ -20,10 +30,10 @@ function emptySlots(): (RepMaxSlot | null)[] {
   return Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
 }
 
-const GAIN_FLOAT_TOLERANCE_KG = 1e-9;
+const GAIN_FLOAT_TOLERANCE = 1e-9;
 
 function improvesSlot(slot: RepMaxSlot | null, loadKg: number, cfg: BalanceConfig): boolean {
-  return slot === null || loadKg >= slot.loadKg + cfg.prMinGainKg - GAIN_FLOAT_TOLERANCE_KG;
+  return slot === null || loadKg >= slot.loadKg + cfg.prMinGainKg - GAIN_FLOAT_TOLERANCE;
 }
 
 interface RepMaxOutcome {
@@ -51,6 +61,69 @@ function applyRepMaxSet(
     }
   }
   return { slots: next, improvedReps };
+}
+
+const METRES_PER_KM = 1000;
+const PACE_DECIMALS = 1;
+
+function boutRecordValues(
+  bout: CardioSetInput,
+  exercise: CardioExerciseDef,
+  cfg: BalanceConfig,
+): Partial<Record<CardioRecordKind, number>> {
+  const values: Partial<Record<CardioRecordKind, number>> = { duration: countedWorkSeconds(bout) };
+  if (bout.interval !== null || bout.distanceM === null || boutPace(bout, exercise, cfg).paceFlagged) return values;
+  values.distance = bout.distanceM;
+  const minDistanceM = exercise.cardio.recordMinDistanceM;
+  if (exercise.builtIn && minDistanceM !== null && bout.distanceM >= minDistanceM) {
+    values.pace = roundTo(PACE_DECIMALS, (bout.durationS * METRES_PER_KM) / bout.distanceM);
+  }
+  return values;
+}
+
+const PACE_UNITS_PER_KM: Record<PaceUnit, number> = { per_km: 1, per_100m: 10 };
+
+function beatsCardioRecord(
+  kind: CardioRecordKind,
+  value: number,
+  previous: number,
+  exercise: CardioExerciseDef,
+  cfg: BalanceConfig,
+): boolean {
+  if (kind === 'pace') {
+    const minGainSPerKm = cfg.cardioPaceRecordMinGainSPerPaceUnit * PACE_UNITS_PER_KM[exercise.cardio.paceUnit];
+    return value <= previous - minGainSPerKm + GAIN_FLOAT_TOLERANCE;
+  }
+  const minGain = kind === 'distance' ? cfg.cardioRecordMinGainM : cfg.cardioRecordMinGainS;
+  return value >= previous + minGain - GAIN_FLOAT_TOLERANCE;
+}
+
+export interface CardioRecordUpdate {
+  records: RecordState;
+  gains: CardioRecordGain[];
+}
+
+export function applyBoutToRecords(
+  records: RecordState,
+  bout: CardioSetInput,
+  exercise: CardioExerciseDef,
+  achievedAt: string,
+  cfg: BalanceConfig,
+): CardioRecordUpdate {
+  const before: CardioRecords = records.cardio[bout.exerciseId] ?? {};
+  const values = boutRecordValues(bout, exercise, cfg);
+  const next: Partial<Record<CardioRecordKind, CardioRecords[CardioRecordKind]>> = { ...before };
+  const gains: CardioRecordGain[] = [];
+  for (const kind of CARDIO_RECORD_KINDS) {
+    const value = values[kind];
+    if (value === undefined) continue;
+    const previous = before[kind]?.value ?? null;
+    if (previous !== null && !beatsCardioRecord(kind, value, previous, exercise, cfg)) continue;
+    next[kind] = { value, setId: bout.id, achievedAt };
+    gains.push({ kind, value, previous });
+  }
+  if (gains.length === 0) return { records, gains };
+  return { records: { ...records, cardio: { ...records.cardio, [bout.exerciseId]: next } }, gains };
 }
 
 export interface RecordUpdate {
@@ -98,9 +171,19 @@ export function applySetToRecords(
 }
 
 export const detectPersonalRecords: Step = (ctx: SessionContext) => {
-  let records = ctx.state.records ?? NO_RECORDS;
+  const recordsAtStart = ctx.state.records ?? NO_RECORDS;
+  let records = recordsAtStart;
 
   const sets = ctx.sets.map((result): SetResult => {
+    if (result.set.kind === 'cardio' && result.cardio !== null) {
+      const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
+      if (exercise.modality !== 'cardio') return result;
+      const update = applyBoutToRecords(records, result.set, exercise, ctx.session.startedAt, ctx.cfg);
+      records = update.records;
+      const isBaselineSession = recordsAtStart.cardio[exercise.id] === undefined;
+      if (isBaselineSession || update.gains.length === 0) return result;
+      return { ...result, cardio: { ...result.cardio, records: update.gains } };
+    }
     if (!isLiftResult(result) || result.set.isWarmup) return result;
     const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
     if (exercise.modality === 'cardio') return result;
@@ -116,12 +199,17 @@ export const detectPersonalRecords: Step = (ctx: SessionContext) => {
     sets,
     state: {
       ...ctx.state,
-      records: { repMaxes: { ...records.repMaxes }, bodyweightReps: { ...records.bodyweightReps } },
+      records: {
+        repMaxes: { ...records.repMaxes },
+        bodyweightReps: { ...records.bodyweightReps },
+        cardio: { ...records.cardio },
+      },
     },
   };
 };
 
-export interface RecordHistoryRow {
+export interface LiftRecordHistoryRow {
+  kind?: 'lift';
   exerciseId: string;
   session: SessionKey;
   setId: string;
@@ -129,6 +217,19 @@ export interface RecordHistoryRow {
   weightKg: number;
   reps: number;
 }
+
+export interface CardioRecordHistoryRow {
+  kind: 'cardio';
+  exerciseId: string;
+  session: SessionKey;
+  setId: string;
+  position: number;
+  durationS: number;
+  distanceM: number | null;
+  interval: CardioInterval | null;
+}
+
+export type RecordHistoryRow = LiftRecordHistoryRow | CardioRecordHistoryRow;
 
 export function recordsFromHistory(
   rows: readonly RecordHistoryRow[],
@@ -143,10 +244,25 @@ export function recordsFromHistory(
         (a.row.session.id < b.row.session.id ? -1 : a.row.session.id > b.row.session.id ? 1 : 0) ||
         a.row.position - b.row.position,
     );
-  let records: RecordState = { repMaxes: {}, bodyweightReps: {} };
+  let records: RecordState = NO_RECORDS;
   for (const { row } of ordered) {
     const exercise = catalog.exercises.get(row.exerciseId);
     if (!exercise) throw new UnknownExerciseError(row.exerciseId);
+    if (row.kind === 'cardio') {
+      if (exercise.modality !== 'cardio') throw new KindMismatchError(row.exerciseId);
+      const bout: CardioSetInput = {
+        kind: 'cardio',
+        id: row.setId,
+        exerciseId: row.exerciseId,
+        position: row.position,
+        durationS: row.durationS,
+        distanceM: row.distanceM,
+        interval: row.interval,
+        effort: null,
+      };
+      records = applyBoutToRecords(records, bout, exercise, row.session.startedAt, cfg).records;
+      continue;
+    }
     if (exercise.modality === 'cardio') throw new KindMismatchError(row.exerciseId);
     const set: LiftSetInput = {
       id: row.setId,
@@ -162,7 +278,7 @@ export function recordsFromHistory(
   return records;
 }
 
-export function summarizePersonalRecords(
+function liftRecordSummaries(
   sets: readonly SetResult[],
   recordsBefore: RecordState,
   recordsAfter: RecordState,
@@ -173,15 +289,16 @@ export function summarizePersonalRecords(
   ];
 
   for (const exerciseId of exercisesWithRecords) {
-    const records = sets
-      .filter((result) => result.set.exerciseId === exerciseId)
-      .map((result) => result.personalRecord)
-      .filter((record): record is SetPersonalRecord => record !== null);
+    const recordSets = sets.filter((result) => result.set.exerciseId === exerciseId && result.personalRecord !== null);
+    const records = recordSets.map((result) => result.personalRecord as SetPersonalRecord);
+    const lastRecordSetId = recordSets[recordSets.length - 1].set.id;
     if (records[0].kind === 'bodyweight_reps') {
+      const after = recordsAfter.bodyweightReps[exerciseId];
       summaries.push({
         exerciseId,
         kind: 'bodyweight_reps',
-        reps: recordsAfter.bodyweightReps[exerciseId].maxReps,
+        setId: after.setId,
+        reps: after.maxReps,
         loadKg: null,
         previousLoadKg: null,
         previousReps: recordsBefore.bodyweightReps[exerciseId]?.maxReps ?? null,
@@ -189,14 +306,34 @@ export function summarizePersonalRecords(
       continue;
     }
     const highestReps = Math.max(...records.map((record) => record.reps));
+    const slot = recordsAfter.repMaxes[exerciseId][highestReps - 1];
     summaries.push({
       exerciseId,
       kind: 'rep_max',
+      setId: slot?.setId ?? lastRecordSetId,
       reps: highestReps,
-      loadKg: recordsAfter.repMaxes[exerciseId][highestReps - 1]?.loadKg ?? null,
+      loadKg: slot?.loadKg ?? null,
       previousLoadKg: recordsBefore.repMaxes[exerciseId]?.[highestReps - 1]?.loadKg ?? null,
       previousReps: null,
     });
   }
   return summaries;
+}
+
+function cardioRecordSummaries(sets: readonly SetResult[]): PersonalRecordSummary[] {
+  return [...sets]
+    .sort((a, b) => a.set.position - b.set.position)
+    .flatMap((result): PersonalRecordSummary[] =>
+      result.cardio === null || result.cardio.records.length === 0
+        ? []
+        : [{ kind: 'cardio', exerciseId: result.set.exerciseId, setId: result.set.id, records: result.cardio.records }],
+    );
+}
+
+export function summarizePersonalRecords(
+  sets: readonly SetResult[],
+  recordsBefore: RecordState,
+  recordsAfter: RecordState,
+): PersonalRecordSummary[] {
+  return [...liftRecordSummaries(sets, recordsBefore, recordsAfter), ...cardioRecordSummaries(sets)];
 }

@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ItemIcon, LevelUpIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { type Exercise, fetchExercises, fetchSkills, fetchSkillXp, type Skill } from '../../lib/catalog.ts';
+import { describeCardioGains } from '../../lib/cardio-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { fetchSession } from '../../lib/history.ts';
 import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import type { UnitPref } from '../../lib/profile.ts';
+import { distanceUnitFor } from '../../lib/units.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
 import { sessionXp } from '../history/session-edit.ts';
 import { formatXp } from '../workout/xp-preview.ts';
@@ -26,6 +28,10 @@ function describeRecord(
   unit: UnitPref,
 ): DescribedRecord {
   const name = exercise?.name ?? 'Exercise';
+  if (record.kind === 'cardio') {
+    const paceUnit = exercise?.modality === 'cardio' ? exercise.activity.paceUnit : 'per_km';
+    return { headline: `${name}:`, previous: describeCardioGains(record.records, distanceUnitFor(unit, paceUnit)) };
+  }
   if (record.kind === 'bodyweight_reps') {
     const previous = record.previousReps === null ? 'first record' : `was ${record.previousReps}`;
     return { headline: `${name}: ${record.reps} reps`, previous: `(${previous})` };
@@ -239,14 +245,14 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       )}
       {summary.prs.length > 0 && (
         <ul className="panel record-list rise" aria-label="New records" style={{ animationDelay: '1.6s' }}>
-          {summary.prs.map((record) => {
+          {summary.prs.map((record, index) => {
             const described = describeRecord(
               record,
               exercises.find((exercise) => exercise.id === record.exerciseId),
               unitPref,
             );
             return (
-              <li key={record.exerciseId}>
+              <li key={`${record.exerciseId}-${index}`}>
                 <TrophyIcon size={32} />
                 <span className="stack" style={{ gap: 2 }}>
                   <span className="muted tiny">New record</span>

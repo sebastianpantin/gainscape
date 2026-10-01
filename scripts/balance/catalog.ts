@@ -59,15 +59,15 @@ export interface CardioSimExercise {
 
 export const CARDIO_SIM_EXERCISES: Readonly<Record<string, CardioSimExercise>> = {
   running: {
-    cardio: { referencePaceSPerKm: 360, maxEffort: 'max', recordMinDistanceM: 1000 },
+    cardio: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', recordMinDistanceM: 1000 },
     shares: { endurance: 10000 },
   },
   sprint_intervals: {
-    cardio: { referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
+    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
     shares: { agility: 10000 },
   },
   jump_rope: {
-    cardio: { referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
+    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
     shares: { agility: 10000 },
   },
 };

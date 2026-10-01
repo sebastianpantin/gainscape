@@ -26,6 +26,7 @@ function data(pinnedExerciseIds: string[]): CollectionData {
     strengthByExercise: new Map(),
     pinnedExerciseIds,
     nextPinPosition: pinnedExerciseIds.length,
+    cardioRecords: [],
   };
 }
 

@@ -70,23 +70,34 @@ export async function loadRecordHistory(
   before: SessionKey,
 ): Promise<RecordHistoryRow[]> {
   const rows = await tx`
-    select st.exercise_id, s.id as session_id, s.started_at, st.id as set_id, st.position, st.weight_kg, st.reps
+    select st.exercise_id, s.id as session_id, s.started_at, st.id as set_id, st.position, st.weight_kg, st.reps,
+           st.duration_s, st.distance_m, st.interval_work_s, st.interval_rest_s, st.interval_rounds
     from public.sets st
     join public.sessions s on s.id = st.session_id
     where s.user_id = ${userId}
       and not s.history_only
       and not st.is_warmup
-      and st.reps is not null
       and st.exercise_id = any(${exerciseIds as string[]}::uuid[])
       and (s.started_at, s.id) < (${before.startedAt}::timestamptz, ${before.id}::uuid)`;
-  return rows.map((row) => ({
-    exerciseId: row.exercise_id,
-    session: { id: row.session_id, startedAt: new Date(row.started_at).toISOString() },
-    setId: row.set_id,
-    position: row.position,
-    weightKg: Number(row.weight_kg),
-    reps: row.reps,
-  }));
+  return rows.map((row): RecordHistoryRow => {
+    const identity = {
+      exerciseId: row.exercise_id,
+      session: { id: row.session_id, startedAt: new Date(row.started_at).toISOString() },
+      setId: row.set_id,
+      position: row.position,
+    };
+    if (row.duration_s === null) return { ...identity, weightKg: Number(row.weight_kg), reps: row.reps };
+    return {
+      ...identity,
+      kind: 'cardio',
+      durationS: row.duration_s,
+      distanceM: row.distance_m === null ? null : Number(row.distance_m),
+      interval:
+        row.interval_rounds === null
+          ? null
+          : { workS: row.interval_work_s, restS: row.interval_rest_s, rounds: row.interval_rounds },
+    };
+  });
 }
 
 export async function loadPriorSkillXpSums(

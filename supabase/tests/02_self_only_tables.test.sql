@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(21);
 
 create function tests.owned_row_counts(owner uuid, only_granted boolean)
 returns table (table_name text, row_count int)
@@ -90,6 +90,21 @@ select is(
   null,
   'the owner reads their own rows in every client-readable user table'
 );
+select is(
+  (select count(*)::int from public.cardio_records where user_id = :'a'),
+  1,
+  'the owner reads their cardio records'
+);
+select throws_ok(
+  format(
+    'insert into public.cardio_records (user_id, exercise_id, kind, value, achieved_at)
+     select %L, e.id, ''pace'', 300, now() from public.exercises e where e.key = ''running''',
+    :'a'
+  ),
+  '42501',
+  null,
+  'a client cannot write cardio records'
+);
 select throws_ok(
   format(
     'insert into public.sets (id, session_id, user_id, exercise_id, position, weight_kg, effective_load_kg, reps, rir_source, effective_reps, xp_awarded)
@@ -112,6 +127,14 @@ select throws_ok(
   '42501',
   null,
   'a client cannot insert user_items'
+);
+reset role;
+
+select tests.authenticate_as(:'b');
+select is(
+  (select count(*)::int from public.cardio_records where user_id = :'a'),
+  0,
+  'a friend reads none of the owner''s cardio records'
 );
 reset role;
 

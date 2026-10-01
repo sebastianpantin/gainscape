@@ -29,6 +29,7 @@ The ordered, append-only history of the Postgres schema: tables, RLS policies, g
 | `20261001000016_016_exercise_strength_state.sql` | `public.exercise_strength_state(as_of, window_days)`: the caller's per-exercise window max, fallback max and prior-session presence, matching `strengthStateAt`; feeds the workout XP preview                                                                                                                  |
 | `20261001000017_017_cardio_effort.sql`           | Adds `cardio` to `effort_input_type`, alone because a new enum value cannot be used in the transaction that adds it                                                                                                                                                                                            |
 | `20261001000018_018_cardio.sql`                  | Lift/cardio modality on skills and exercises (locked after creation), cardio exercise columns, nullable lift columns and cardio bout columns on `sets` with lift-xor-cardio, bound and effort checks, cross-modality share check, cardio-aware `save_custom_exercise`, lift-only `save_program` and collection |
+| `20261001000019_019_cardio_records.sql`          | `cardio_records` (self-only select) and the cardio branch of `private.feed_payload` (hidden weights hide distance and pace)                                                                                                                                                                                    |
 
 ## For AI Agents
 

@@ -30,6 +30,7 @@ describe('balance sim catalog', () => {
           exercise.key,
           {
             cardio: {
+              paceUnit: exercise.cardio?.paceUnit,
               referencePaceSPerKm: exercise.cardio?.referencePaceSPerKm,
               maxEffort: exercise.cardio?.maxEffort,
               recordMinDistanceM: exercise.cardio?.recordMinDistanceM,

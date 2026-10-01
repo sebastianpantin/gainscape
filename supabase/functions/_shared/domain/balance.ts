@@ -32,6 +32,9 @@ export interface BalanceConfig {
   readonly paceBonusMax: number;
   readonly paceImplausibleRatio: number;
   readonly cardioMaxCountedMinutesPerSession: number;
+  readonly cardioRecordMinGainM: number;
+  readonly cardioRecordMinGainS: number;
+  readonly cardioPaceRecordMinGainSPerPaceUnit: number;
 }
 
 export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
@@ -62,6 +65,9 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   paceBonusMax: 1.3,
   paceImplausibleRatio: 2.5,
   cardioMaxCountedMinutesPerSession: 180,
+  cardioRecordMinGainM: 100,
+  cardioRecordMinGainS: 60,
+  cardioPaceRecordMinGainSPerPaceUnit: 1,
 });
 
 const LOOT_VERSION = 2;
@@ -71,6 +77,8 @@ export interface LootConfig {
   readonly regularRollsPerDay: number;
   readonly prRollsPerDay: number;
   readonly minEffectiveReps: number;
+  readonly minSteadyCardioWorkS: number;
+  readonly minIntervalCardioWorkS: number;
   readonly baseChance: number;
   readonly badLuckStep: number;
   readonly maxChance: number;
@@ -81,6 +89,8 @@ export const DEFAULT_LOOT: LootConfig = Object.freeze({
   regularRollsPerDay: 5,
   prRollsPerDay: 2,
   minEffectiveReps: 1,
+  minSteadyCardioWorkS: 600,
+  minIntervalCardioWorkS: 240,
   baseChance: 0.1,
   badLuckStep: 0.03,
   maxChance: 0.4,

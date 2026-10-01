@@ -1,7 +1,16 @@
 import { CARDIO_BOUNDS, intervalDurationSeconds } from '@domain/cardio.ts';
-import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput } from '@domain/types.ts';
+import {
+  CARDIO_EFFORT_LEVELS,
+  CARDIO_RECORD_KINDS,
+  type CardioInterval,
+  type CardioRecordGain,
+  type CardioRecordKind,
+  type EffortInput,
+} from '@domain/types.ts';
+import type { CardioExercise } from './catalog.ts';
+import type { UnitPref } from './profile-rules.ts';
 import type { BoutValues } from '../offline/draft-format.ts';
-import { type DistanceUnit, formatDistance, formatPace, unitToDistanceM } from './units.ts';
+import { type DistanceUnit, distanceUnitFor, formatDistance, formatPace, unitToDistanceM } from './units.ts';
 
 const SECONDS_PER_MINUTE = 60;
 
@@ -101,4 +110,52 @@ export function describeBout(bout: BoutValues, unit: DistanceUnit): string {
   }
   const pace = bout.distanceM === null ? [] : [formatPace(bout.durationS, bout.distanceM, unit)];
   return [formatDuration(bout.durationS), ...distance, ...pace].join(' · ');
+}
+
+const METRES_PER_KM = 1000;
+
+const RECORD_LABELS: Record<CardioRecordKind, string> = { distance: 'Distance', pace: 'Pace', duration: 'Duration' };
+
+export function formatCardioRecord(kind: CardioRecordKind, value: number, unit: DistanceUnit): string {
+  if (kind === 'distance') return formatDistance(value, unit);
+  if (kind === 'pace') return formatPace(value, METRES_PER_KM, unit);
+  return formatDuration(value);
+}
+
+export function describeCardioGains(gains: readonly CardioRecordGain[], unit: DistanceUnit): string {
+  return gains
+    .map((gain) => {
+      const beaten = gain.previous === null ? 'first' : `was ${formatCardioRecord(gain.kind, gain.previous, unit)}`;
+      return `${formatCardioRecord(gain.kind, gain.value, unit)} (${beaten})`;
+    })
+    .join(' · ');
+}
+
+export interface CardioRecordRow {
+  exerciseId: string;
+  kind: CardioRecordKind;
+  value: number;
+}
+
+export interface CardioRecordCard {
+  exerciseId: string;
+  name: string;
+  lines: string[];
+}
+
+export function cardioRecordCards(
+  rows: readonly CardioRecordRow[],
+  exercises: readonly Pick<CardioExercise, 'id' | 'name' | 'activity'>[],
+  unitPref: UnitPref,
+): CardioRecordCard[] {
+  return exercises
+    .flatMap((exercise): CardioRecordCard[] => {
+      const unit = distanceUnitFor(unitPref, exercise.activity.paceUnit);
+      const lines = CARDIO_RECORD_KINDS.flatMap((kind) => {
+        const row = rows.find((candidate) => candidate.exerciseId === exercise.id && candidate.kind === kind);
+        return row ? [`${RECORD_LABELS[kind]} ${formatCardioRecord(kind, row.value, unit)}`] : [];
+      });
+      return lines.length === 0 ? [] : [{ exerciseId: exercise.id, name: exercise.name, lines }];
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }

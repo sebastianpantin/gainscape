@@ -33,6 +33,48 @@ function item(type: FeedItem['type'], payload: Record<string, unknown>): FeedIte
 const bench = { exerciseName: 'Barbell Bench Press', loadType: 'external', kind: 'rep_max', reps: 5 };
 const dip = { exerciseName: 'Weighted Dip', loadType: 'bodyweight_plus', kind: 'rep_max', reps: 5 };
 
+const run = {
+  exerciseName: 'Running',
+  kind: 'cardio',
+  paceUnit: 'per_km',
+  recordKinds: 'distance,pace,duration',
+  countedWorkS: 2160,
+  previousCountedWorkS: 1800,
+};
+
+describe('feedText for cardio records', () => {
+  it('writes every record kind of a bout in the viewer units', () => {
+    const pr = item('pr', { ...run, distanceM: 6000, paceSPerKm: 300, weightsHidden: false });
+    expect(feedText(pr, 'kg')).toEqual({ headline: 'New Running record: 6 km · 5:00 /km · 36 min' });
+    expect(feedText(pr, 'lb')).toEqual({ headline: 'New Running record: 3.73 mi · 8:03 /mi · 36 min' });
+  });
+
+  it('writes only the kinds the bout set', () => {
+    const pr = item('pr', { ...run, recordKinds: 'duration', distanceM: null, paceSPerKm: null, weightsHidden: false });
+    expect(feedText(pr, 'kg')).toEqual({ headline: 'New Running record: 36 min' });
+  });
+
+  it('writes pool distances in metres or yards', () => {
+    const swim = item('pr', {
+      ...run,
+      exerciseName: 'Swimming',
+      paceUnit: 'per_100m',
+      recordKinds: 'distance',
+      distanceM: 1500,
+      weightsHidden: false,
+    });
+    expect(feedText(swim, 'kg').headline).toBe('New Swimming record: 1500 m');
+    expect(feedText(swim, 'lb').headline).toBe('New Swimming record: 1640 yd');
+  });
+
+  it('says who hid the distance and keeps the duration', () => {
+    expect(feedText(item('pr', { ...run, weightsHidden: true }), 'kg')).toEqual({
+      headline: 'New Running record: 36 min',
+      detail: 'Distance hidden by mira',
+    });
+  });
+});
+
 describe('feedText', () => {
   it('writes rep-max PRs in kg and lb', () => {
     const pr = item('pr', { ...bench, loadKg: 80, weightsHidden: false });

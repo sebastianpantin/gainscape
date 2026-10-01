@@ -9,11 +9,11 @@ The "Log" tab: personal records per exercise, the loot inventory with crafting, 
 
 ## Key Files
 
-| File                     | Description                                                                                                                                                                                                                          |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `CollectionScreen.tsx`   | Records tab at `/collection`. Exports `CollectionScreen({ userId })` and `CollectionTabs` (used by `ItemsScreen` and `HistoryScreen`). Loads exercises and collection data, shows completion, uses `ExercisePicker` to filter        |
-| `ExerciseRecordCard.tsx` | One exercise's records: rep-max slots (`REP_MAX_SLOT_COUNT` from `@domain/types.ts`) via `CollectionData`/`RepMaxSlotView`, formatted with `formatLoad` and `formatWeight` per `usePreferences`                                      |
-| `ItemsScreen.tsx`        | Items tab at `/collection/items`. Inventory (`fetchInventory`), catalog (`fetchItemCatalog`), crafting with `canCraft`/`recipeFor` from `@domain/crafting.ts` and `craftItem`; reads `recallLastSummary` for fresh-drop highlighting |
+| File                     | Description                                                                                                                                                                                                                                                                                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CollectionScreen.tsx`   | Records tab at `/collection`. Exports `CollectionScreen({ userId })` and `CollectionTabs` (used by `ItemsScreen` and `HistoryScreen`). Loads exercises and collection data, shows completion (lifts only; the pin picker lists lifts), a self-only Cardio records card from `cardioRecordCards`, uses `ExercisePicker` to filter |
+| `ExerciseRecordCard.tsx` | One exercise's records: rep-max slots (`REP_MAX_SLOT_COUNT` from `@domain/types.ts`) via `CollectionData`/`RepMaxSlotView`, formatted with `formatLoad` and `formatWeight` per `usePreferences`                                                                                                                                  |
+| `ItemsScreen.tsx`        | Items tab at `/collection/items`. Inventory (`fetchInventory`), catalog (`fetchItemCatalog`), crafting with `canCraft`/`recipeFor` from `@domain/crafting.ts` and `craftItem`; reads `recallLastSummary` for fresh-drop highlighting                                                                                             |
 
 ## For AI Agents
 

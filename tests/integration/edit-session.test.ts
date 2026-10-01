@@ -197,7 +197,15 @@ describe('edit-session re-derives history', () => {
     await postSession(user, s1);
     await postSession(user, s2);
     expect((await storedSummary(s2.id)).summary.prs).toEqual([
-      { exerciseId: benchId, kind: 'rep_max', reps: 3, loadKg: 105, previousLoadKg: 100, previousReps: null },
+      {
+        exerciseId: benchId,
+        kind: 'rep_max',
+        setId: s2.sets[0].id,
+        reps: 3,
+        loadKg: 105,
+        previousLoadKg: 100,
+        previousReps: null,
+      },
     ]);
 
     expect((await edit(user, editBody(s2, [s2.sets[1]]))).status).toBe(200);

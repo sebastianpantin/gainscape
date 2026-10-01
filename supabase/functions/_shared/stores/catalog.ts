@@ -18,6 +18,7 @@ interface ExerciseRow {
   load_type: string | null;
   owner_user_id: string | null;
   reference_pace_s_per_km: number | null;
+  pace_unit: string | null;
   max_effort: string | null;
   record_min_distance_m: number | null;
   skill_id: string;
@@ -31,6 +32,7 @@ function exerciseFromRow(row: ExerciseRow): ExerciseDef {
     ...base,
     modality: 'cardio',
     cardio: {
+      paceUnit: row.pace_unit === 'per_100m' ? 'per_100m' : 'per_km',
       referencePaceSPerKm: row.reference_pace_s_per_km,
       maxEffort: row.max_effort as CardioEffortLevel,
       recordMinDistanceM: row.record_min_distance_m,
@@ -45,7 +47,7 @@ async function loadExercisesVisibleTo(
   includeArchived = false,
 ): Promise<Map<string, ExerciseDef>> {
   const rows = await tx<ExerciseRow[]>`
-    select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.max_effort,
+    select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.pace_unit, e.max_effort,
            e.record_min_distance_m, es.skill_id, es.share_bp
     from public.exercises e
     join public.exercise_skills es on es.exercise_id = e.id

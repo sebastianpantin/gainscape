@@ -17,7 +17,7 @@ import {
   type SessionInput,
   sfc32FromSeed,
 } from '@domain/index.ts';
-import { aSet, catalog, DAY_MS, hard, TEST_BALANCE } from './fixtures.ts';
+import { aBout, aSet, catalog, DAY_MS, hard, TEST_BALANCE } from './fixtures.ts';
 import {
   candidate,
   FIXTURE_TABLES,
@@ -183,6 +183,42 @@ describe('qualification', () => {
     const { candidates, rolls } = rollsFor([
       sessionAt(0, [aSet('bench', 60, 5, hard), aSet('custom-press', 40, 5, hard)]),
       sessionAt(1, [aSet('bench', 80, 5, hard), aSet('custom-press', 60, 5, hard)]),
+    ]);
+    expect(candidates.map((entry) => [entry.personalRecord, entry.builtIn])).toEqual([
+      [true, true],
+      [true, false],
+    ]);
+    expect(rolls.map((roll) => [roll.setId, roll.kind])).toEqual([
+      [candidates[0].setId, 'regular'],
+      [candidates[0].setId, 'pr'],
+      [candidates[1].setId, 'regular'],
+    ]);
+  });
+
+  it('gives a steady bout of 10 counted minutes a regular roll and one of 9 minutes none', () => {
+    const { candidates, rolls } = rollsFor([sessionAt(0, [aBout('run', 600, null), aBout('run', 540, null)])]);
+    expect(candidates.map((entry) => [entry.kind, entry.countedWorkS, entry.interval])).toEqual([
+      ['cardio', 600, false],
+      ['cardio', 540, false],
+    ]);
+    expect(rolls.map((roll) => [roll.setId, roll.kind])).toEqual([[candidates[0].setId, 'regular']]);
+  });
+
+  it('gives an interval bout with 4 work minutes a regular roll and one with less none', () => {
+    const enough = aBout('sprints', 450, null, { interval: { workS: 30, restS: 30, rounds: 8 } });
+    const short = aBout('sprints', 390, null, { interval: { workS: 30, restS: 30, rounds: 7 } });
+    const { candidates, rolls } = rollsFor([sessionAt(0, [enough, short])]);
+    expect(candidates.map((entry) => [entry.countedWorkS, entry.interval])).toEqual([
+      [240, true],
+      [210, true],
+    ]);
+    expect(rolls.map((roll) => roll.setId)).toEqual([enough.id]);
+  });
+
+  it('gives a cardio record on a built-in activity a PR roll and one on a custom activity none', () => {
+    const { candidates, rolls } = rollsFor([
+      sessionAt(0, [aBout('run', 1800, null), aBout('custom-run', 1800, null)]),
+      sessionAt(1, [aBout('run', 2400, null), aBout('custom-run', 2400, null)]),
     ]);
     expect(candidates.map((entry) => [entry.personalRecord, entry.builtIn])).toEqual([
       [true, true],
@@ -387,6 +423,16 @@ describe('revocationReason', () => {
     const olderVersion = DEFAULT_LOOT.version - 1;
     expect(revocationReason('regular', undefined, false, DEFAULT_LOOT, olderVersion)).toBe('set_removed');
     expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT, olderVersion)).toBe('session_deleted');
+  });
+
+  it('revokes a bout edited below the cardio threshold', () => {
+    const shortBout = candidate('bout', 0, { kind: 'cardio', effectiveReps: 0, countedWorkS: 540 });
+    expect(revocationReason('regular', shortBout, false, DEFAULT_LOOT, DEFAULT_LOOT.version)).toBe(
+      'no_longer_qualifies',
+    );
+    expect(
+      revocationReason('regular', { ...shortBout, countedWorkS: 600 }, false, DEFAULT_LOOT, DEFAULT_LOOT.version),
+    ).toBeNull();
   });
 
   it('keeps drops whose set still qualifies', () => {

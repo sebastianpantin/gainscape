@@ -24,9 +24,9 @@ export async function syncSessionEvents(tx: Transaction, userId: string, session
     select id, summary, ended_at from public.sessions
     where user_id = ${userId} and id = any(${ids}::uuid[])`;
   const setRows = await tx`
-    select id, session_id, exercise_id, position, weight_kg, reps, is_warmup, effective_load_kg
+    select id, session_id, effective_load_kg
     from public.sets
-    where user_id = ${userId} and session_id = any(${ids}::uuid[]) and not is_warmup and reps is not null`;
+    where user_id = ${userId} and session_id = any(${ids}::uuid[]) and not is_warmup`;
   const summaries = sessions.map((row) => row.summary as SessionSummary);
   const exerciseIds = [...new Set(summaries.flatMap((summary) => (summary.prs ?? []).map((pr) => pr.exerciseId)))];
   const itemIds = [...new Set(summaries.flatMap((summary) => (summary.drops ?? []).map((drop) => drop.itemId)))];
@@ -40,7 +40,10 @@ export async function syncSessionEvents(tx: Transaction, userId: string, session
     itemIds.length === 0 ? [] : await tx`select id, rarity from public.items where id = any(${itemIds}::uuid[])`;
 
   const exercises = new Map<string, FeedExercise>(
-    exerciseRows.map((row) => [row.id, { builtIn: row.owner_user_id === null, loadType: row.load_type as LoadType }]),
+    exerciseRows.map((row) => [
+      row.id,
+      { builtIn: row.owner_user_id === null, loadType: row.load_type as LoadType | null },
+    ]),
   );
   const itemRarity = new Map<string, ItemRarityRank>(itemRows.map((row) => [row.id, row.rarity as ItemRarityRank]));
   const setsBySession = new Map<string, FeedSourceSet[]>();
@@ -48,12 +51,7 @@ export async function syncSessionEvents(tx: Transaction, userId: string, session
     const sets = setsBySession.get(row.session_id) ?? [];
     sets.push({
       id: row.id,
-      exerciseId: row.exercise_id,
-      position: row.position,
-      weightKg: Number(row.weight_kg),
-      reps: row.reps,
-      isWarmup: row.is_warmup,
-      effectiveLoadKg: Number(row.effective_load_kg),
+      effectiveLoadKg: row.effective_load_kg === null ? null : Number(row.effective_load_kg),
     });
     setsBySession.set(row.session_id, sets);
   }

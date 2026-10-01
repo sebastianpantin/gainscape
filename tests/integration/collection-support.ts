@@ -42,6 +42,7 @@ async function collectionData(userId: string): Promise<CollectionData> {
     strengthByExercise: new Map(),
     pinnedExerciseIds: pins.map((row) => row.exercise_id),
     nextPinPosition: Math.max(-1, ...pins.map((row) => row.position)) + 1,
+    cardioRecords: [],
   };
 }
 

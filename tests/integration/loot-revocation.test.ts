@@ -14,7 +14,9 @@ import {
   type TestUser,
 } from './local-stack.ts';
 import {
+  aBout,
   aSet,
+  type BoutShape,
   DAY_MS,
   beyondEffortWindow,
   HOUR_MS,
@@ -22,7 +24,6 @@ import {
   payloadAt,
   postSession,
   rollsOf,
-  type SessionPayload,
   type SetShape,
   startsOnOneLocalDay,
   TIMEZONE,
@@ -59,7 +60,7 @@ async function fillCaps(userId: string, localDate: string): Promise<void> {
   await db`insert into public.loot_rolls ${db(rows)}`;
 }
 
-async function edit(user: TestUser, session: SessionPayload, sets: SetShape[], ifRevision = 0) {
+async function edit(user: TestUser, session: { id: string }, sets: (SetShape | BoutShape)[], ifRevision = 0) {
   const response = await postFunction('edit-session', user.accessToken, {
     sessionId: session.id,
     ifRevision,
@@ -241,6 +242,19 @@ describe('edit-session', () => {
     expect((await dropRow(kept.dropId)).revoked_at).toBeNull();
     expect(response.body.summary?.drops.map((drop) => drop.dropId)).toEqual([kept.dropId]);
     expect((await storedDrops(payload.id)).map((drop) => drop.dropId)).toEqual([kept.dropId]);
+  });
+
+  it('revokes the drop of a bout edited below the cardio threshold', async () => {
+    const user = await freshUser();
+    const runId = await builtInExerciseId('running');
+    const start = startsOnOneLocalDay(1)[0];
+    await fillCaps(user.id, localDateOf(start));
+    const payload = payloadAt(start, [aBout(runId, 0, { durationS: 600 })]);
+    await postSession(user, payload);
+    const drop = await grantDrop(user.id, payload.id, payload.sets[0].id, 'grinder_scraps', 2);
+    const response = await edit(user, payload, [{ ...payload.sets[0], durationS: 540 }]);
+    expect(response.body.revokedDrops?.map((revoked) => revoked.dropId)).toEqual([drop.dropId]);
+    expect((await dropRow(drop.dropId)).revoke_reason).toBe('no_longer_qualifies');
   });
 
   it('revokes both drops of a set changed to beyond the effort window', async () => {
