@@ -5,13 +5,14 @@
 
 ## Purpose
 
-GitHub configuration. It holds only the CI workflow, `workflows/ci.yml`, which runs on pushes to `main` and on every pull request. `main` has no branch protection, so merge only after both jobs pass.
+GitHub configuration. It holds two workflows. `workflows/ci.yml` runs the `static` job on pushes to `main` and on every pull request. `workflows/stack.yml` runs the `stack` job only when started by hand (`workflow_dispatch`). `main` has no branch protection, so merge only after `static` passes, and after a manual `stack` run when the change touches SQL, Edge Functions or UI flows.
 
 ## Key Files
 
-| File               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workflows/ci.yml` | Two jobs on `ubuntu-24.04`, Node 24, read-only `contents` permission, concurrency group per ref with cancel-in-progress. `static` (20 min): `npm ci`, `make check`, `make test-catalog test-domain test-web`, `make sim-check`; also sets up Deno. `stack` (45 min): Playwright Chromium, `make ci-start`, `make test-integration`, `make test-db`, `make e2e CHROMIUM_PATH=`, `make e2e-pwa CHROMIUM_PATH=`; on failure `make ci-logs` and uploads `stack-logs`; always `make stop`. |
+| File                  | Description                                                                                                                                                                                                                                                                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workflows/ci.yml`    | `static` job on `ubuntu-24.04`, Node 24, read-only `contents` permission, concurrency group per ref with cancel-in-progress (20 min): `npm ci`, `make check`, `make test-catalog test-domain test-web`, `make sim-check`; also sets up Deno. Runs on pushes to `main` and every pull request.                                                        |
+| `workflows/stack.yml` | Manual `stack` job (`workflow_dispatch`, 45 min): Playwright Chromium, `make ci-start`, `make test-integration`, `make test-db`, `make e2e CHROMIUM_PATH=`, `make e2e-pwa CHROMIUM_PATH=`; on failure `make ci-logs` and uploads `stack-logs`; always `make stop`. Start it with `gh workflow run stack.yml --ref <branch>` or from the Actions tab. |
 
 ## Subdirectories
 
@@ -35,7 +36,7 @@ GitHub configuration. It holds only the CI workflow, `workflows/ci.yml`, which r
 
 ### Common Patterns
 
-- Static work and stack work are separate jobs so cheap failures return fast.
+- Static work runs automatically; stack work is a separate manual workflow because it is slow and needs the full local stack.
 
 ## Dependencies
 
