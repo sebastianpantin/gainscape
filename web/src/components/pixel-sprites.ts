@@ -24,6 +24,159 @@ const GOLD = '#ffb000';
 const GOLD_DARK = '#d89400';
 const INK = '#000';
 
+const ACCENT_LIGHT = '#ffd166';
+const ACCENT_DARK = '#b87d00';
+const XP = '#7fd46a';
+const XP_LIGHT = '#b5f0a4';
+const RARE = '#6fa8dc';
+const PARCHMENT = '#d8c8a8';
+const PARCHMENT_SHADE = '#b3a58c';
+const TEXT = '#f0e6d0';
+
+export type SkillKey = 'chest' | 'back' | 'shoulders' | 'arms' | 'legs' | 'core';
+
+function fromRows(rows: readonly string[], palette: Record<string, string>): Sprite {
+  const pixels: Pixel[] = [];
+  rows.forEach((row, y) => {
+    let x = 0;
+    while (x < row.length) {
+      const fill = palette[row[x]];
+      let end = x + 1;
+      while (end < row.length && row[end] === row[x]) end++;
+      if (fill) pixels.push({ x, y, w: end - x, h: 1, fill });
+      x = end;
+    }
+  });
+  return { cols: Math.max(...rows.map((row) => row.length)), rows: rows.length, pixels };
+}
+
+export const SKILL_SPRITES: Record<SkillKey, Sprite> = {
+  chest: fromRows(
+    [
+      '............',
+      '.KKKK..KKKK.',
+      'KBBBBKKBBBBK',
+      'KBAAABBAAABK',
+      'KBAAABBAAABK',
+      'KBBBBBBBBBBK',
+      '.KBBBGGBBBK.',
+      '.KBBBGGBBBK.',
+      '..KBBBBBBK..',
+      '...KBBBBK...',
+      '....KKKK....',
+      '............',
+    ],
+    { K: INK, A: PARCHMENT_SHADE, B: PARCHMENT, G: GOLD },
+  ),
+  back: fromRows(
+    [
+      '............',
+      'K..........K',
+      'KRK......KRK',
+      'KRRK....KRRK',
+      'KRRRK..KRRRK',
+      '.KRRRKKRRRK.',
+      '.KRRRRRRRRK.',
+      '..KRRRRRRK..',
+      '..KRRWWRRK..',
+      '...KRRRRK...',
+      '....KKKK....',
+      '............',
+    ],
+    { K: INK, R: RARE, W: TEXT },
+  ),
+  shoulders: fromRows(
+    [
+      '............',
+      '............',
+      '............',
+      '..KKK..KKK..',
+      '.KGGGKKGGGK.',
+      'KGGLGGGGLGGK',
+      'KGGGGGGGGGGK',
+      'KDGGGKKGGGDK',
+      '.KDDK..KDDK.',
+      '..KK....KK..',
+      '............',
+      '............',
+    ],
+    { K: INK, G: GOLD, L: ACCENT_LIGHT, D: ACCENT_DARK },
+  ),
+  arms: fromRows(
+    [
+      '............',
+      '....KKK.....',
+      '...KXXXK....',
+      '...KXXK.....',
+      '..KXXK......',
+      '.KXXXK..KKK.',
+      '.KXXXXKKXXXK',
+      '.KXXLXXXXXXK',
+      '.KXXXXXXXXK.',
+      '..KXXXXXXK..',
+      '...KKKKKK...',
+      '............',
+    ],
+    { K: INK, X: XP, L: XP_LIGHT },
+  ),
+  legs: fromRows(
+    [
+      '............',
+      '..KKKKKKKK..',
+      '..KLDKKLDK..',
+      '..KLDKKLDK..',
+      '..KLDKKLDK..',
+      '..KLDKKLDK..',
+      '..KLDKKLDK..',
+      '..KLDKKLDK..',
+      '..KLDKKLDK..',
+      '.KLLDKKLLDK.',
+      '.KKKKKKKKKK.',
+      '............',
+    ],
+    { K: INK, L: GOLD, D: ACCENT_DARK },
+  ),
+  core: fromRows(
+    [
+      '............',
+      '...KKKKKK...',
+      '..KLDKKLDK..',
+      '..KDDKKDDK..',
+      '..KKKKKKKK..',
+      '..KLDKKLDK..',
+      '..KDDKKDDK..',
+      '..KKKKKKKK..',
+      '..KLDKKLDK..',
+      '..KDDKKDDK..',
+      '...KKKKKK...',
+      '............',
+    ],
+    { K: INK, L: XP_LIGHT, D: XP },
+  ),
+};
+
+export const LEVEL_UP: Sprite = fromRows(
+  [
+    '.....KK.....',
+    '....KXXK....',
+    '...KXXXXK...',
+    '..KXXXXXXK..',
+    '.KKKKXXKKKK.',
+    '....KXXK....',
+    '....KXXK....',
+    '....KKKK....',
+    '............',
+    '.KKKKKKKKKK.',
+    '.KGGGGGGGGK.',
+    '.KKKKKKKKKK.',
+  ],
+  { K: INK, X: XP, G: TEXT },
+);
+
+export function isSkillKey(key: string): key is SkillKey {
+  return Object.hasOwn(SKILL_SPRITES, key);
+}
+
 export const LOGO: Sprite = {
   cols: 30,
   rows: 12,

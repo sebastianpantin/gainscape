@@ -1,7 +1,8 @@
 import { MAX_LEVEL, xpForLevel } from '@domain/index.ts';
 import { useState } from 'react';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
-import { monogramFor, useStanding } from '../../lib/standing.ts';
+import { SkillIcon } from '../../components/PixelArt.tsx';
+import { useStanding } from '../../lib/standing.ts';
 import { formatXp } from '../workout/xp-preview.ts';
 
 interface SkillsScreenProps {
@@ -54,9 +55,7 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
             >
               <span className="skill-card-top">
                 <span className="row">
-                  <span className="monogram" aria-hidden="true">
-                    {monogramFor(skill.key)}
-                  </span>
+                  <SkillIcon skillKey={skill.key} />
                   <span className="skill-name">{skill.name}</span>
                 </span>
                 <span className="skill-level">{progress.level}</span>
