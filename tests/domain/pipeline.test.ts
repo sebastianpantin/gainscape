@@ -1,13 +1,19 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   BodyweightLoadNotZeroError,
   BodyweightRequiredError,
   carriedEffectiveLoadKg,
+  type CardioSetInput,
+  type EffortInput,
   type ExerciseDef,
   HISTORY_ONLY_STEPS,
+  KindMismatchError,
+  type LiftSetInput,
   processSession,
   REP_MAX_SLOT_COUNT,
   type SessionInput,
+  strengthHistoryRows,
   UnknownExerciseError,
 } from '@domain/index.ts';
 import { aSet, catalog, freshUser, hard, nearFailure, TEST_BALANCE } from './fixtures.ts';
@@ -134,6 +140,83 @@ describe('processSession', () => {
   });
 });
 
+describe('lift results beside cardio bouts', () => {
+  const liftEffort = fc.constantFrom<EffortInput>(
+    null,
+    { type: 'level', level: 'hard' },
+    { type: 'level', level: 'failure' },
+    { type: 'rir', value: 2 },
+    { type: 'rpe', value: 9 },
+  );
+  const cardioEffort = fc.constantFrom<EffortInput>(
+    null,
+    { type: 'cardio', level: 'easy' },
+    { type: 'cardio', level: 'max' },
+  );
+  const lift = fc.record({
+    exerciseId: fc.constantFrom('bench', 'squat', 'pull-up', 'weighted-pull-up', 'custom-press'),
+    weightKg: fc.integer({ min: 0, max: 160 }),
+    reps: fc.integer({ min: 1, max: 20 }),
+    isWarmup: fc.boolean(),
+    effort: liftEffort,
+  });
+  const bout = fc.record({
+    exerciseId: fc.constantFrom('run', 'sprints', 'walk', 'row-intervals', 'custom-run'),
+    durationS: fc.integer({ min: 60, max: 14_400 }),
+    distanceM: fc.option(fc.integer({ min: 1, max: 60_000 }), { nil: null }),
+    interval: fc.option(
+      fc.record({
+        workS: fc.integer({ min: 5, max: 120 }),
+        restS: fc.integer({ min: 0, max: 120 }),
+        rounds: fc.integer({ min: 1, max: 30 }),
+      }),
+      { nil: null },
+    ),
+    effort: cardioEffort,
+    slot: fc.nat(),
+  });
+  const strength = {
+    bench: { windowMax: 90, fallbackMax: 90, hasPriorSession: true },
+    'pull-up': { windowMax: 12, fallbackMax: 12, hasPriorSession: true },
+  };
+
+  it('are identical with or without interleaved cardio bouts', () => {
+    fc.assert(
+      fc.property(fc.array(lift, { minLength: 1, maxLength: 12 }), fc.array(bout, { maxLength: 6 }), (lifts, bouts) => {
+        const liftSets: LiftSetInput[] = lifts.map((entry, index) => {
+          const weightKg = entry.exerciseId === 'pull-up' ? 0 : entry.weightKg;
+          return { ...entry, weightKg, id: `lift-${index}`, position: index * 10 };
+        });
+        const cardioSets: CardioSetInput[] = bouts.map(({ slot, ...entry }, index) => ({
+          ...entry,
+          kind: 'cardio',
+          id: `bout-${index}`,
+          position: (slot % (lifts.length + 1)) * 10 - 5 + index / 10,
+        }));
+        const run = (sets: SessionInput['sets']) =>
+          processSession(
+            { skillXp: {}, bodyweightKg: 80 },
+            { id: 'mixed', startedAt: '2026-09-28T10:00:00.000Z', sets },
+            TEST_BALANCE,
+            { catalog, strength },
+          );
+        const liftOnly = run(liftSets);
+        const mixed = run([...liftSets, ...cardioSets]);
+        const mixedLifts = mixed.outputs.sets.filter((result) => result.cardio === null);
+        expect(mixedLifts).toEqual(liftOnly.outputs.sets);
+        expect({ ...mixed.nextState.records, cardio: {} }).toEqual(liftOnly.nextState.records);
+        expect(mixed.outputs.prs.filter((pr) => pr.kind !== 'cardio')).toEqual(liftOnly.outputs.prs);
+        expect(strengthHistoryRows({ id: 'mixed', startedAt: '2026-09-28T10:00:00.000Z' }, mixed.outputs.sets)).toEqual(
+          strengthHistoryRows({ id: 'mixed', startedAt: '2026-09-28T10:00:00.000Z' }, liftOnly.outputs.sets),
+        );
+        for (const skill of ['chest', 'back', 'shoulders', 'arms', 'legs', 'core']) {
+          expect(mixed.outputs.xpBySkill[skill]).toBe(liftOnly.outputs.xpBySkill[skill]);
+        }
+      }),
+    );
+  });
+});
+
 describe('HISTORY_ONLY_STEPS', () => {
   const lightRecords = {
     repMaxes: {
@@ -145,6 +228,7 @@ describe('HISTORY_ONLY_STEPS', () => {
       })),
     },
     bodyweightReps: {},
+    cardio: {},
   };
   const heavy = { ...fixtureSession, sets: [aSet('bench', 100, 5, hard), aSet('bench', 100, 5, null)] };
   const strength = { bench: { windowMax: 90, fallbackMax: 90, hasPriorSession: true } };
@@ -200,6 +284,13 @@ describe('carriedEffectiveLoadKg', () => {
     expect(() => carriedEffectiveLoadKg(stored, { exerciseId: 'pull-up', weightKg: 0 }, pullUp, null)).toThrow(
       BodyweightRequiredError,
     );
+  });
+
+  it('rejects a cardio exercise, which carries no load', () => {
+    const stored = { exerciseId: 'run', weightKg: 0, effectiveLoadKg: 0 };
+    expect(() =>
+      carriedEffectiveLoadKg(stored, { exerciseId: 'run', weightKg: 0 }, catalog.exercises.get('run')!, 80),
+    ).toThrow(KindMismatchError);
   });
 
   it('rejects added load on a pure bodyweight exercise', () => {

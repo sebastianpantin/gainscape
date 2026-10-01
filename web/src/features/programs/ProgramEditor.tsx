@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { type Exercise, exerciseLabels, fetchExercises } from '../../lib/catalog.ts';
+import { type Exercise, exerciseLabels, fetchExercises, isLiftExercise } from '../../lib/catalog.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import { cachedPrograms, fetchPrograms, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
 import { moved } from '../../lib/reorder.ts';
@@ -66,7 +66,10 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchExercises({ includeArchived: true }).then(setExercises, (error: Error) => setProblem(error.message));
+    fetchExercises({ includeArchived: true }).then(
+      (loaded) => setExercises(loaded.filter(isLiftExercise)),
+      (error: Error) => setProblem(error.message),
+    );
   }, []);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import type { EffortLevel } from './types.ts';
+import type { CardioEffortLevel, EffortLevel } from './types.ts';
 
 const BALANCE_VERSION = 4;
 const XP_PER_EFFECTIVE_REP = 165;
@@ -24,6 +24,18 @@ export interface BalanceConfig {
   readonly prMinGainKg: number;
   readonly fatiguePerHardSet: number;
   readonly fatigueToleranceReps: number;
+  readonly cardioXpPerWorkMinute: Readonly<Record<string, number>>;
+  readonly cardioSteadyFactor: Readonly<Record<string, number>>;
+  readonly cardioEffortFactor: Readonly<Record<CardioEffortLevel, number>>;
+  readonly paceBonusStart: number;
+  readonly paceBonusFull: number;
+  readonly paceBonusMax: number;
+  readonly paceImplausibleRatio: number;
+  readonly cardioMaxCountedMinutesPerSession: number;
+  readonly cardioRecordMinGainM: number;
+  readonly cardioRecordMinGainS: number;
+  readonly cardioPaceRecordMinGainSPerPaceUnit: number;
+  readonly cardioFastestPlausiblePaceSPerKm: number;
 }
 
 export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
@@ -46,6 +58,18 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   prMinGainKg: 1,
   fatiguePerHardSet: 0.02,
   fatigueToleranceReps: 1,
+  cardioXpPerWorkMinute: Object.freeze({ endurance: 126, agility: 213 }),
+  cardioSteadyFactor: Object.freeze({ endurance: 1, agility: 0.5 }),
+  cardioEffortFactor: Object.freeze({ easy: 0.8, moderate: 1, hard: 1.2, max: 1.4 }),
+  paceBonusStart: 1,
+  paceBonusFull: 1.3,
+  paceBonusMax: 1.3,
+  paceImplausibleRatio: 2.5,
+  cardioMaxCountedMinutesPerSession: 180,
+  cardioRecordMinGainM: 100,
+  cardioRecordMinGainS: 60,
+  cardioPaceRecordMinGainSPerPaceUnit: 1,
+  cardioFastestPlausiblePaceSPerKm: 60,
 });
 
 const LOOT_VERSION = 2;
@@ -55,6 +79,8 @@ export interface LootConfig {
   readonly regularRollsPerDay: number;
   readonly prRollsPerDay: number;
   readonly minEffectiveReps: number;
+  readonly minSteadyCardioWorkS: number;
+  readonly minIntervalCardioWorkS: number;
   readonly baseChance: number;
   readonly badLuckStep: number;
   readonly maxChance: number;
@@ -65,6 +91,8 @@ export const DEFAULT_LOOT: LootConfig = Object.freeze({
   regularRollsPerDay: 5,
   prRollsPerDay: 2,
   minEffectiveReps: 1,
+  minSteadyCardioWorkS: 600,
+  minIntervalCardioWorkS: 240,
   baseChance: 0.1,
   badLuckStep: 0.03,
   maxChance: 0.4,

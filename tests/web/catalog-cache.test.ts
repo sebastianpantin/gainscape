@@ -22,12 +22,39 @@ const exercises: Exercise[] = [
     id: 'bench',
     name: 'Barbell Bench Press',
     equipment: 'barbell',
+    modality: 'lift',
     loadType: 'external',
     custom: false,
     archived: false,
   },
-  { id: 'mine', name: 'My Row', equipment: 'cable', loadType: 'external', custom: true, archived: false },
+  {
+    id: 'mine',
+    name: 'My Row',
+    equipment: 'cable',
+    modality: 'lift',
+    loadType: 'external',
+    custom: true,
+    archived: false,
+  },
+  {
+    id: 'run',
+    name: 'Running',
+    equipment: 'bodyweight',
+    modality: 'cardio',
+    activity: {
+      paceUnit: 'per_km',
+      referencePaceSPerKm: 360,
+      maxEffort: 'max',
+      shares: [{ skillKey: 'endurance', shareBasisPoints: 10_000 }],
+    },
+    custom: false,
+    archived: false,
+  },
 ];
+
+function withoutModality(value: object): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'modality'));
+}
 
 describe('exercise list cache', () => {
   it('round-trips the exercise list', () => {
@@ -37,16 +64,40 @@ describe('exercise list cache', () => {
   });
 
   it('uses the per-user key', () => {
-    expect(exerciseCacheKey(userId)).toBe(`gainscape.exercises.v1.${userId}`);
+    expect(exerciseCacheKey(userId)).toBe(`gainscape.exercises.v2.${userId}`);
   });
 
   it('stores only the exercise fields', () => {
     const storage = new MemoryStorage();
-    saveCachedExercises(storage, userId, [{ ...exercises[0], secret: 'x' } as Exercise]);
+    saveCachedExercises(storage, userId, [{ ...exercises[0], secret: 'x' } as unknown as Exercise, exercises[2]]);
     const raw = JSON.parse(storage.getItem(exerciseCacheKey(userId))!);
     expect(Object.keys(raw.exercises[0]).sort()).toEqual(
-      ['archived', 'custom', 'equipment', 'id', 'loadType', 'name'].sort(),
+      ['archived', 'custom', 'equipment', 'id', 'loadType', 'modality', 'name'].sort(),
     );
+    expect(Object.keys(raw.exercises[1]).sort()).toEqual(
+      ['activity', 'archived', 'custom', 'equipment', 'id', 'modality', 'name'].sort(),
+    );
+  });
+
+  it('discards a v1 list, which predates cardio', () => {
+    const storage = new MemoryStorage();
+    const v1Key = `gainscape.exercises.v1.${userId}`;
+    const v1Exercises = exercises.slice(0, 2).map(withoutModality);
+    const v1 = JSON.stringify({ v: 1, savedAt: new Date().toISOString(), userId, exercises: v1Exercises });
+    storage.setItem(v1Key, v1);
+    storage.setItem(exerciseCacheKey(userId), v1);
+    expect(readCachedExercises(storage, userId)).toBeNull();
+    saveCachedExercises(storage, userId, exercises);
+    expect(storage.getItem(v1Key)).toBeNull();
+  });
+
+  it('rejects a cardio entry without its activity', () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    const raw = JSON.parse(storage.getItem(exerciseCacheKey(userId))!);
+    delete raw.exercises[2].activity;
+    storage.setItem(exerciseCacheKey(userId), JSON.stringify(raw));
+    expect(readCachedExercises(storage, userId)).toBeNull();
   });
 
   it('returns null for another user, a wrong version and malformed JSON', () => {
@@ -56,7 +107,7 @@ describe('exercise list cache', () => {
     expect(readCachedExercises(storage, userId)).toBeNull();
     storage.setItem(
       exerciseCacheKey(userId),
-      JSON.stringify({ v: 2, savedAt: new Date().toISOString(), userId, exercises }),
+      JSON.stringify({ v: 3, savedAt: new Date().toISOString(), userId, exercises }),
     );
     expect(readCachedExercises(storage, userId)).toBeNull();
     storage.setItem(exerciseCacheKey(userId), '{not json');

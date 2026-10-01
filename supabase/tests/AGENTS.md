@@ -20,13 +20,14 @@ pgTAP suites for the database layer: grants, RLS policies, rate limiting, friend
 | `06_feed_gz_hiscores.test.sql`   | Feed, gz and hiscores                                                                                                                                                                                                          |
 | `07_account_deletion.test.sql`   | Cascades on user delete                                                                                                                                                                                                        |
 | `08_auth_confirm.test.sql`       | Password rotation on confirm, username change window                                                                                                                                                                           |
+| `09_cardio_schema.test.sql`      | Cardio set checks (lift xor cardio, bounds, effort kind), cross-modality shares, locked modality, lift-only effort mode                                                                                                        |
 
 ## For AI Agents
 
 ### Working In This Directory
 
 - Files run in filename order and `00_helpers` must stay first. New files take the next `NN_` prefix.
-- Suites `01`-`08` are `begin; select plan(N); ... select * from finish(); rollback;`. `00_helpers.test.sql` is different: it creates the helper schema and functions outside a transaction, then runs its own `plan(6)`. Update `plan(N)` when adding assertions.
+- Suites `01`-`09` are `begin; select plan(N); ... select * from finish(); rollback;`. `00_helpers.test.sql` is different: it creates the helper schema and functions outside a transaction, then runs its own `plan(6)`. Update `plan(N)` when adding assertions.
 - Use `tests.create_user` then `tests.authenticate_as(id)` to act as a user; do not insert into `auth.users` by hand.
 - Tests create and delete users. `make test-db` runs `scripts/assert-local-db.mjs` first and passes `--local`. Never run against a hosted project.
 - No skipped or placeholder tests.

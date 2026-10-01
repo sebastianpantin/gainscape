@@ -6,6 +6,7 @@ import {
   createTestUser,
   db,
   env,
+  fetchFunction,
   grantDrop,
   postCompleteSession,
   postFunction,
@@ -23,6 +24,7 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'exercise_maxes', column: 'user_id' },
   { table: 'rep_maxes', column: 'user_id' },
   { table: 'bodyweight_rep_records', column: 'user_id' },
+  { table: 'cardio_records', column: 'user_id' },
   { table: 'pinned_exercises', column: 'user_id' },
   { table: 'exercises', column: 'owner_user_id' },
   { table: 'programs', column: 'owner_user_id' },
@@ -41,7 +43,7 @@ const USER_TABLES: { table: string; column: string }[] = [
 ];
 
 async function post(name: string, accessToken: string | null, body: unknown) {
-  const response = await fetch(`${env.FUNCTIONS_URL}/${name}`, {
+  const response = await fetchFunction(name, {
     method: 'POST',
     headers: {
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -50,7 +52,7 @@ async function post(name: string, accessToken: string | null, body: unknown) {
     },
     body: JSON.stringify(body),
   });
-  return { status: response.status, body: await response.json() };
+  return { status: response.status, body: JSON.parse(response.rawBody) };
 }
 
 async function logOneSession(user: TestUser, weightKg = 60): Promise<string> {
@@ -75,7 +77,30 @@ async function logOneSession(user: TestUser, weightKg = 60): Promise<string> {
   return sessionId;
 }
 
+async function logRun(user: TestUser, hoursAgo: number, durationS: number): Promise<void> {
+  const startedAt = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+  const response = await postCompleteSession(user.accessToken, {
+    id: randomUUID(),
+    startedAt: startedAt.toISOString(),
+    endedAt: new Date(startedAt.getTime() + durationS * 1000).toISOString(),
+    sets: [
+      {
+        kind: 'cardio',
+        id: randomUUID(),
+        exerciseId: await builtInExerciseId('running'),
+        position: 0,
+        durationS,
+        distanceM: 5000,
+        interval: null,
+        effort: null,
+      },
+    ],
+  });
+  expect(response.status).toBe(200);
+}
+
 async function giveUserEverything(user: TestUser): Promise<void> {
+  await logRun(user, 6, 1800);
   const keptSessionId = await logOneSession(user);
   await logOneSession(user, 80);
   const scroll = await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
@@ -197,10 +222,13 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.sessions).toHaveLength(2);
+    expect(exported.version).toBe(2);
+    expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
-    expect(exported.sets).toHaveLength(2);
-    expect(exported.sets[0].effort_input_type).toBe('rpe');
+    expect(exported.sets).toHaveLength(3);
+    expect(exported.sets.filter((set: { effort_input_type: string }) => set.effort_input_type === 'rpe')).toHaveLength(
+      2,
+    );
     expect(exported.pinnedExercises).toHaveLength(1);
     expect(exported.customExercises).toHaveLength(1);
     expect(exported.customExercises[0].shares).toEqual([{ skill: 'shoulders', share_bp: 10000 }]);
@@ -215,6 +243,8 @@ describe('export-data', () => {
     expect(exported.userUnlocks).toHaveLength(counts.user_unlocks);
     expect(counts.user_unlocks).toBeGreaterThan(0);
     expect(exported.events).toHaveLength(counts.events);
+    expect(exported.cardioRecords).toHaveLength(counts.cardio_records);
+    expect(counts.cardio_records).toBeGreaterThan(0);
     expect(exported.crafts).toHaveLength(1);
     expect(exported.reactionsGiven).toHaveLength(1);
     expect(Object.keys(exported.reactionsGiven[0]).sort()).toEqual(['created_at', 'event_id']);
@@ -306,7 +336,7 @@ describe('delete-account', () => {
     expect(response.body.error).toBe('confirmation_mismatch');
     const counts = await rowCounts(owner.id);
     expect(counts.profiles).toBe(1);
-    expect(counts.sessions).toBe(2);
+    expect(counts.sessions).toBe(3);
   });
 
   it('refuses when the password is wrong', async () => {

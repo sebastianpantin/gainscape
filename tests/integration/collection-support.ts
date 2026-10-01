@@ -6,7 +6,7 @@ import { db } from './local-stack.ts';
 
 async function visibleExercises(userId: string): Promise<Exercise[]> {
   const rows = await db`
-    select e.id, e.name, e.equipment, e.load_type, e.owner_user_id, e.archived_at
+    select e.id, e.name, e.equipment, e.modality, e.load_type, e.owner_user_id, e.archived_at
     from public.exercises e
     where e.owner_user_id = ${userId}
        or (e.owner_user_id is null and (not e.requires_unlock or exists (
@@ -16,6 +16,7 @@ async function visibleExercises(userId: string): Promise<Exercise[]> {
     id: row.id,
     name: row.name,
     equipment: row.equipment,
+    modality: row.modality,
     loadType: row.load_type,
     custom: row.owner_user_id !== null,
     archived: row.archived_at !== null,
@@ -41,6 +42,7 @@ async function collectionData(userId: string): Promise<CollectionData> {
     strengthByExercise: new Map(),
     pinnedExerciseIds: pins.map((row) => row.exercise_id),
     nextPinPosition: Math.max(-1, ...pins.map((row) => row.position)) + 1,
+    cardioRecords: [],
   };
 }
 

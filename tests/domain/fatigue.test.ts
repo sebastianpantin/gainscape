@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { epley, type ExerciseStrength, processSession, type SessionInput } from '@domain/index.ts';
-import { aSet, catalog, failure, TEST_BALANCE } from './fixtures.ts';
+import { aBout, aSet, catalog, failure, TEST_BALANCE } from './fixtures.ts';
 
 function runSets(
   sets: SessionInput['sets'],
@@ -65,6 +65,20 @@ describe('fatigue check', () => {
       80,
     );
     expect(results.map((result) => result.rirFlagged)).toEqual([false, false, false, false]);
+  });
+
+  it('builds no fatigue from a hard cardio bout between two sets', () => {
+    const first = aSet('bench', 100, 6, failure);
+    const second = aSet('bench', 100, 6, failure);
+    const bout = aBout('sprints', 1800, { type: 'cardio', level: 'max' });
+    const strength = known('bench', epley(100, 6));
+    const withoutBout = runSets([first, second], strength);
+    const withBout = runSets([first, { ...bout, position: first.position + 0.5 }, second], strength);
+    const lifts = withBout.filter((result) => result.cardio === null);
+    expect(lifts.map((result) => [result.rirForXp, result.intensityBonus])).toEqual(
+      withoutBout.map((result) => [result.rirForXp, result.intensityBonus]),
+    );
+    expect(lifts).toEqual(withoutBout);
   });
 
   it('judges each exercise only by its own later sets', () => {

@@ -65,6 +65,72 @@ describe('catalog ids', () => {
   });
 });
 
+describe('cardio catalog', () => {
+  it('seeds Endurance and Agility as cardio skills outside combat', async () => {
+    const skills = await db`
+      select key, sort_order, combat_weight::float, modality from public.skills
+      where key in ('endurance', 'agility') order by sort_order`;
+    expect(skills).toEqual([
+      { key: 'endurance', sort_order: 7, combat_weight: 0, modality: 'cardio' },
+      { key: 'agility', sort_order: 8, combat_weight: 0, modality: 'cardio' },
+    ]);
+    const [{ count }] = await db`select count(*)::int as count from public.skills`;
+    expect(count).toBe(8);
+  });
+
+  it('seeds cardio exercises without a load type and with their cardio profile', async () => {
+    const rows = await db`
+      select key, load_type, equipment, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m
+      from public.exercises where key in ('running', 'walking', 'rowing_intervals') order by key`;
+    expect(rows).toEqual([
+      {
+        key: 'rowing_intervals',
+        load_type: null,
+        equipment: 'machine',
+        reference_pace_s_per_km: null,
+        pace_unit: 'per_km',
+        max_effort: 'max',
+        record_min_distance_m: null,
+      },
+      {
+        key: 'running',
+        load_type: null,
+        equipment: 'bodyweight',
+        reference_pace_s_per_km: 360,
+        pace_unit: 'per_km',
+        max_effort: 'max',
+        record_min_distance_m: 1000,
+      },
+      {
+        key: 'walking',
+        load_type: null,
+        equipment: 'bodyweight',
+        reference_pace_s_per_km: null,
+        pace_unit: 'per_km',
+        max_effort: 'moderate',
+        record_min_distance_m: null,
+      },
+    ]);
+    const shares = await db`
+      select s.key, es.share_bp from public.exercise_skills es
+      join public.exercises e on e.id = es.exercise_id join public.skills s on s.id = es.skill_id
+      where e.key = 'rowing_intervals' order by s.sort_order`;
+    expect(shares).toEqual([
+      { key: 'endurance', share_bp: 5000 },
+      { key: 'agility', share_bp: 5000 },
+    ]);
+  });
+
+  it('re-applies the seed over itself with the modality lock in place', async () => {
+    const outcome = db.begin(async (tx) => {
+      for (const statement of renderStatements(loadCatalogData())) await tx.unsafe(statement);
+      await tx`set constraints all immediate`;
+      throw new RolledBack();
+    });
+    await expect(outcome).rejects.toBeInstanceOf(RolledBack);
+  });
+});
+
 describe('seed retirement', () => {
   it('retires an item, a drop table and a recipe removed from the YAML, and keeps the rest active', async () => {
     const sources = readCatalogSources();

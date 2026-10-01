@@ -1,10 +1,18 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, openFromProfile, openTab, register } from './support/app.ts';
+import { logCardio, logExercise, openFromProfile, openTab, register } from './support/app.ts';
 
 async function logBench(page: Page, weightKg: number) {
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg, reps: 5 }]);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+}
+
+async function logRun(page: Page, minutes: number, distance: number) {
+  await openTab(page, 'Train');
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]);
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
 }
@@ -37,8 +45,11 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
 
   await logBench(bob, 60);
   await logBench(bob, 80);
+  await logRun(bob, 30, 5);
+  await logRun(bob, 36, 6);
 
   await alice.reload();
+  await expect(feedItem(alice, 'New Running record: 6 km · 36 min')).toBeVisible();
   const pr = feedItem(alice, 'New 5RM Barbell Bench Press: 80 kg');
   await expect(pr).toBeVisible();
   const gzSaved = alice.waitForResponse((response) => response.url().includes('/rpc/set_gz') && response.ok());
@@ -61,6 +72,9 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   const hidden = feedItem(alice, 'New 5RM Barbell Bench Press');
   await expect(hidden).toContainText(`Weights hidden by ${bobName}`);
   await expect(hidden).not.toContainText('80 kg');
+  const hiddenRun = feedItem(alice, 'New Running record: 36 min');
+  await expect(hiddenRun).toContainText(`Distance hidden by ${bobName}`);
+  await expect(hiddenRun).not.toContainText('6 km');
 
   await alice.getByRole('navigation', { name: 'Friends' }).getByRole('link', { name: 'Hiscores' }).click();
   await alice.getByRole('radio', { name: 'Chest' }).click();

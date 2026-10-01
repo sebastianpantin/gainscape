@@ -42,6 +42,21 @@ function retireAllExcept(table: string, names: readonly string[]): string {
   return `update public.${table} set retired_at = coalesce(retired_at, now())\nwhere id <> all(array[\n  ${ids}\n]);`;
 }
 
+const EXERCISE_COLUMNS = [
+  'id',
+  'key',
+  'name',
+  'modality',
+  'load_type',
+  'equipment',
+  'requires_unlock',
+  'variation_of_id',
+  'reference_pace_s_per_km',
+  'pace_unit',
+  'max_effort',
+  'record_min_distance_m',
+] as const;
+
 export function renderStatements(catalog: CatalogData): string[] {
   const exerciseId = (key: string) => idFor(catalogNames.exercise(key));
   const skillId = (key: string) => idFor(catalogNames.skill(key));
@@ -54,23 +69,38 @@ export function renderStatements(catalog: CatalogData): string[] {
   return [
     insert(
       'skills',
-      ['id', 'key', 'name', 'sort_order', 'combat_weight'],
-      catalog.skills.map((skill) => [skillId(skill.key), skill.key, skill.name, skill.sortOrder, skill.combatWeight]),
-      'on conflict (id) do update set name = excluded.name, sort_order = excluded.sort_order, combat_weight = excluded.combat_weight',
+      ['id', 'key', 'name', 'sort_order', 'combat_weight', 'modality'],
+      catalog.skills.map((skill) => [
+        skillId(skill.key),
+        skill.key,
+        skill.name,
+        skill.sortOrder,
+        skill.combatWeight,
+        skill.modality,
+      ]),
+      'on conflict (id) do update set name = excluded.name, sort_order = excluded.sort_order, combat_weight = excluded.combat_weight, modality = excluded.modality',
     ),
     insert(
       'exercises',
-      ['id', 'key', 'name', 'load_type', 'equipment', 'requires_unlock', 'variation_of_id'],
+      [...EXERCISE_COLUMNS],
       catalog.exercises.map((exercise) => [
         exerciseId(exercise.key),
         exercise.key,
         exercise.name,
+        exercise.modality,
         exercise.loadType,
         exercise.equipment,
         exercise.requiresUnlock,
         exercise.variationOf === null ? null : exerciseId(exercise.variationOf),
+        exercise.cardio?.referencePaceSPerKm ?? null,
+        exercise.cardio?.paceUnit ?? null,
+        exercise.cardio?.maxEffort ?? null,
+        exercise.cardio?.recordMinDistanceM ?? null,
       ]),
-      upsertSuffix(['name', 'load_type', 'equipment', 'requires_unlock', 'variation_of_id'], true),
+      upsertSuffix(
+        EXERCISE_COLUMNS.filter((column) => column !== 'id' && column !== 'key'),
+        true,
+      ),
     ),
     'delete from public.exercise_skills where exercise_id in (select id from public.exercises where owner_user_id is null);',
     insert(

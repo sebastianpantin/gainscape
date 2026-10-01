@@ -9,7 +9,7 @@ describe('effort', () => {
     ['near_failure', 1],
     ['failure', 0],
   ] as const)('%s maps to RIR %i', (level, rir) => {
-    expect(resolveEffort({ type: 'level', level }, DEFAULT_BALANCE)).toEqual({
+    expect(resolveEffort({ type: 'level', level }, DEFAULT_BALANCE, 'lift')).toEqual({
       effortInputType: 'level',
       effortValue: rir,
       loggedRir: rir,
@@ -17,7 +17,7 @@ describe('effort', () => {
   });
 
   it('gives an easy set one effective rep', () => {
-    const { loggedRir } = resolveEffort({ type: 'level', level: 'easy' }, DEFAULT_BALANCE);
+    const { loggedRir } = resolveEffort({ type: 'level', level: 'easy' }, DEFAULT_BALANCE, 'lift');
     expect(effectiveReps(10, loggedRir!, false, DEFAULT_BALANCE)).toBe(1);
   });
 
@@ -26,15 +26,19 @@ describe('effort', () => {
   });
 
   it('leaves an unrated set without a logged RIR', () => {
-    expect(resolveEffort(null, DEFAULT_BALANCE)).toEqual({ effortInputType: null, effortValue: null, loggedRir: null });
+    expect(resolveEffort(null, DEFAULT_BALANCE, 'lift')).toEqual({
+      effortInputType: null,
+      effortValue: null,
+      loggedRir: null,
+    });
   });
 
   it('converts RPE to RIR', () => {
-    expect(resolveEffort({ type: 'rpe', value: 8 }, DEFAULT_BALANCE).loggedRir).toBe(2);
+    expect(resolveEffort({ type: 'rpe', value: 8 }, DEFAULT_BALANCE, 'lift').loggedRir).toBe(2);
   });
 
   it('rejects RIR outside half steps', () => {
-    expect(() => resolveEffort({ type: 'rir', value: 1.3 }, DEFAULT_BALANCE)).toThrow(RangeError);
+    expect(() => resolveEffort({ type: 'rir', value: 1.3 }, DEFAULT_BALANCE, 'lift')).toThrow(RangeError);
   });
 });
 

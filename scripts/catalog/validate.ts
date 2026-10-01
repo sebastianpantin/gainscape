@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
-import { type CatalogData, catalogNames } from './load.ts';
+import { CARDIO_EFFORT_LEVELS } from '../../supabase/functions/_shared/domain/types.ts';
+import { type CatalogData, type CatalogExercise, catalogNames } from './load.ts';
 
 const DENYLIST_PATH = join(import.meta.dirname, '../../tests/ip-denylist.txt');
 
@@ -64,6 +65,28 @@ function inRange(value: number, lowest: number, highest: number): boolean {
   return Number.isInteger(value) && value >= lowest && value <= highest;
 }
 
+function checkModalityFields(exercise: CatalogExercise, problems: string[]): void {
+  if (exercise.modality === 'lift') {
+    if (exercise.loadType === null) problems.push(`lift exercise "${exercise.key}" needs a load_type`);
+    if (exercise.cardio !== null) problems.push(`lift exercise "${exercise.key}" has a cardio block`);
+    return;
+  }
+  if (exercise.loadType !== null) problems.push(`cardio exercise "${exercise.key}" has a load_type`);
+  if (exercise.cardio === null) {
+    problems.push(`cardio exercise "${exercise.key}" needs a cardio block`);
+    return;
+  }
+  const levels: readonly string[] = CARDIO_EFFORT_LEVELS;
+  if (!levels.includes(exercise.cardio.maxEffort)) {
+    problems.push(
+      `cardio exercise "${exercise.key}" max_effort "${exercise.cardio.maxEffort}" must be one of ${levels.join(', ')}`,
+    );
+  }
+  if (exercise.cardio.recordMinDistanceM !== null && exercise.cardio.referencePaceSPerKm === null) {
+    problems.push(`cardio exercise "${exercise.key}" has record_min_distance_m but no reference pace`);
+  }
+}
+
 export function catalogProblems(catalog: CatalogData, denylist: readonly string[]): string[] {
   const problems: string[] = [];
   const days = catalog.programs.flatMap((program) => program.days.map((day) => ({ program, day })));
@@ -90,12 +113,16 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
   ];
   for (const name of duplicates(generatedNames)) problems.push(`generated id name "${name}" is not unique`);
 
-  const skillKeys = new Set(catalog.skills.map((skill) => skill.key));
+  const skillsByKey = new Map(catalog.skills.map((skill) => [skill.key, skill]));
   const exercisesByKey = new Map(catalog.exercises.map((exercise) => [exercise.key, exercise]));
   for (const exercise of catalog.exercises) {
+    checkModalityFields(exercise, problems);
     for (const share of exercise.shares) {
-      if (!skillKeys.has(share.skill))
-        problems.push(`exercise "${exercise.key}" shares unknown skill "${share.skill}"`);
+      const skill = skillsByKey.get(share.skill);
+      if (skill === undefined) problems.push(`exercise "${exercise.key}" shares unknown skill "${share.skill}"`);
+      else if (skill.modality !== exercise.modality) {
+        problems.push(`exercise "${exercise.key}" shares skill "${share.skill}" of another modality`);
+      }
     }
     const total = exercise.shares.reduce((sum, share) => sum + share.shareBp, 0);
     if (total !== FULL_SHARE_BP)
@@ -104,6 +131,8 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
       const base = exercisesByKey.get(exercise.variationOf);
       if (base === undefined || base.key === exercise.key) {
         problems.push(`exercise "${exercise.key}" is a variation of unknown exercise "${exercise.variationOf}"`);
+      } else if (base.modality !== exercise.modality) {
+        problems.push(`exercise "${exercise.key}" is a variation of "${base.key}" of another modality`);
       }
     }
     if (exercise.requiresUnlock && exercise.variationOf === null) {
@@ -117,6 +146,8 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
         problems.push(`program day "${program.key}:${day.key}" uses unknown exercise "${entry.exercise}"`);
       } else if (exercise.requiresUnlock) {
         problems.push(`program day "${program.key}:${day.key}" uses locked exercise "${entry.exercise}"`);
+      } else if (exercise.modality === 'cardio') {
+        problems.push(`program day "${program.key}:${day.key}" uses cardio exercise "${entry.exercise}"`);
       }
     }
   }

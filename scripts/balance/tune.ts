@@ -1,7 +1,22 @@
-import { type BalanceConfig, DEFAULT_BALANCE } from '../../supabase/functions/_shared/domain/index.ts';
-import { type BandReport, evaluateBands, type ProfileResults } from './bands.ts';
-import { PROFILES } from './profiles.ts';
-import { firstSkillToLevel99, type SimulationOptions, simulateProfile } from './simulate.ts';
+import { type BalanceConfig, DEFAULT_BALANCE, xpForLevel } from '../../supabase/functions/_shared/domain/index.ts';
+import {
+  type BandReport,
+  CARDIO_BANDS,
+  type CardioBandReport,
+  type CardioProfileResults,
+  evaluateBands,
+  evaluateCardioBands,
+  type ProfileResults,
+} from './bands.ts';
+import {
+  type CardioSimulationOptions,
+  intervalSessionAgilityXp,
+  simulateCardioProfile,
+  steadyAgilityBoutXp,
+} from './cardio-simulate.ts';
+import { CARDIO_SIM_SKILLS } from './catalog.ts';
+import { CARDIO_PROFILES, PROFILES } from './profiles.ts';
+import { firstSkillToLevel99, type SimulationOptions, simulateProfile, WEEKS_PER_YEAR } from './simulate.ts';
 
 const UNIT_XP_PER_EFFECTIVE_REP = 1000;
 const TUNING_YEARS = 8;
@@ -70,4 +85,37 @@ export function tune(): TuningCandidate[] {
       a.report.hypertrophyVsStrengthGap - b.report.hypertrophyVsStrengthGap ||
       a.report.distanceFromTargetYears - b.report.distanceFromTargetYears,
   );
+}
+
+const UNIT_CARDIO_XP_PER_WORK_MINUTE = 1000;
+const CARDIO_TUNING_YEARS = 1;
+
+function simulateCardio(cfg: BalanceConfig, options: CardioSimulationOptions): CardioProfileResults {
+  const profile = CARDIO_PROFILES.cardio_balanced;
+  return {
+    balanced: simulateCardioProfile(profile, cfg, options),
+    steadyAgilityBoutXp: steadyAgilityBoutXp(profile, cfg),
+    intervalSessionAgilityXp: intervalSessionAgilityXp(profile, cfg),
+  };
+}
+
+export function simulateCommittedCardioConstantsUntilBothReach99(): CardioProfileResults {
+  return simulateCardio(DEFAULT_BALANCE, { stopWhenAllSkillsReach99: true });
+}
+
+export function tuneCardio(): CardioBandReport {
+  const unitRates = Object.fromEntries(CARDIO_SIM_SKILLS.map((skill) => [skill.key, UNIT_CARDIO_XP_PER_WORK_MINUTE]));
+  const results = simulateCardio(
+    { ...DEFAULT_BALANCE, cardioXpPerWorkMinute: unitRates },
+    { maxYears: CARDIO_TUNING_YEARS },
+  );
+  const targetWeeklyXp = xpForLevel(99) / (CARDIO_BANDS.balancedTargetYears * WEEKS_PER_YEAR);
+  const rates = Object.fromEntries(
+    CARDIO_SIM_SKILLS.map((skill) => {
+      const weekly = results.balanced.cumulativeXpByWeek[skill.key];
+      const unitWeeklyXp = weekly.at(-1)! / weekly.length;
+      return [skill.key, Math.round((UNIT_CARDIO_XP_PER_WORK_MINUTE * targetWeeklyXp) / unitWeeklyXp)];
+    }),
+  );
+  return evaluateCardioBands(results, rates, unitRates);
 }

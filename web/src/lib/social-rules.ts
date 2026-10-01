@@ -1,10 +1,12 @@
 import { combatLevel, levelForXp, totalLevel } from '@domain/index.ts';
-import type { LoadType } from './catalog.ts';
+import { CARDIO_RECORD_KINDS, type CardioRecordKind } from '@domain/types.ts';
+import { formatCardioRecord } from './cardio-rules.ts';
+import type { LoadType, PaceUnit } from './catalog.ts';
 import { formatLoad } from './format.ts';
 import { capitalized } from './names.ts';
 import type { BadgeColor, UnitPref } from './profile-rules.ts';
 import { RATE_LIMITED_CODE } from './rate-limit.ts';
-import { formatWeight } from './units.ts';
+import { distanceUnitFor, formatWeight } from './units.ts';
 
 export type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop';
 
@@ -120,9 +122,33 @@ function textOf(value: unknown): string {
 
 const UNKNOWN_EXERCISE = 'exercise';
 
+const CARDIO_PAYLOAD_VALUES: Record<CardioRecordKind, string> = {
+  distance: 'distanceM',
+  pace: 'paceSPerKm',
+  duration: 'countedWorkS',
+};
+const DISTANCE_KINDS: readonly CardioRecordKind[] = ['distance', 'pace'];
+
+function cardioPrText(item: FeedItem, name: string, unit: UnitPref): FeedText {
+  const { payload } = item;
+  const paceUnit: PaceUnit = payload.paceUnit === 'per_100m' ? 'per_100m' : 'per_km';
+  const distanceUnit = distanceUnitFor(unit, paceUnit);
+  const kinds = textOf(payload.recordKinds)
+    .split(',')
+    .filter((kind): kind is CardioRecordKind => CARDIO_RECORD_KINDS.some((known) => known === kind));
+  const parts = kinds.flatMap((kind) => {
+    const value = numberOf(payload[CARDIO_PAYLOAD_VALUES[kind]]);
+    return value === null ? [] : [formatCardioRecord(kind, value, distanceUnit)];
+  });
+  const headline = parts.length === 0 ? `New ${name} record` : `New ${name} record: ${parts.join(' · ')}`;
+  const distanceHidden = payload.weightsHidden === true && kinds.some((kind) => DISTANCE_KINDS.includes(kind));
+  return distanceHidden ? { headline, detail: `Distance hidden by ${item.username}` } : { headline };
+}
+
 function prText(item: FeedItem, unit: UnitPref): FeedText {
   const { payload } = item;
   const name = textOf(payload.exerciseName) || UNKNOWN_EXERCISE;
+  if (payload.kind === 'cardio') return cardioPrText(item, name, unit);
   const reps = numberOf(payload.reps);
   if (payload.kind === 'bodyweight_reps') {
     return { headline: reps === null ? `New ${name} record` : `New ${name} record: ${reps} reps` };
@@ -214,8 +240,13 @@ function hiscoreValue(row: HiscoreRow, skills: readonly HiscoreSkill[], metric: 
   return levelForXp(row.skillXp[metricSkillKey(metric) ?? ''] ?? 0);
 }
 
+function combatSkills(skills: readonly HiscoreSkill[]): HiscoreSkill[] {
+  return skills.filter((skill) => skill.combatWeight > 0);
+}
+
 function tiebreakXp(row: HiscoreRow, skills: readonly HiscoreSkill[], metric: HiscoreMetric): number {
-  if (metric === 'total' || metric === 'combat') return totalXp(row, skills);
+  if (metric === 'total') return totalXp(row, skills);
+  if (metric === 'combat') return totalXp(row, combatSkills(skills));
   if (metric === 'collection') return row.collectionFilled;
   return row.skillXp[metricSkillKey(metric) ?? ''] ?? 0;
 }

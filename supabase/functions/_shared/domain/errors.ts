@@ -18,3 +18,12 @@ export class BodyweightLoadNotZeroError extends Error {
     super('pure bodyweight sets carry no added load');
   }
 }
+
+export class KindMismatchError extends Error {
+  readonly exerciseId: string;
+
+  constructor(exerciseId: string) {
+    super(`set kind does not match the modality of exercise ${exerciseId}`);
+    this.exerciseId = exerciseId;
+  }
+}

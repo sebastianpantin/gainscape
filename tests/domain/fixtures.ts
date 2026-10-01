@@ -1,4 +1,12 @@
-import { type Catalog, DEFAULT_BALANCE, type ExerciseDef, type SetInput } from '@domain/index.ts';
+import {
+  type CardioExerciseDef,
+  type CardioSetInput,
+  type Catalog,
+  DEFAULT_BALANCE,
+  type ExerciseDef,
+  type LiftExerciseDef,
+  type LiftSetInput,
+} from '@domain/index.ts';
 
 export const HOUR_MS = 60 * 60 * 1000;
 export const DAY_MS = 24 * HOUR_MS;
@@ -21,15 +29,30 @@ const skill = (key: string, sortOrder: number, combatWeight: number) => ({
 
 const exercise = (
   id: string,
-  loadType: ExerciseDef['loadType'],
+  loadType: LiftExerciseDef['loadType'],
   builtIn: boolean,
   shares: [string, number][],
-): ExerciseDef => ({
+): LiftExerciseDef => ({
   id,
   loadType,
   builtIn,
   shares: shares.map(([skillKey, shareBasisPoints]) => ({ skillId: `skill-${skillKey}`, shareBasisPoints })),
 });
+
+const cardioExercise = (
+  id: string,
+  builtIn: boolean,
+  cardio: Omit<CardioExerciseDef['cardio'], 'paceUnit'> & { paceUnit?: CardioExerciseDef['cardio']['paceUnit'] },
+  shares: [string, number][],
+): CardioExerciseDef => ({
+  id,
+  modality: 'cardio',
+  cardio: { paceUnit: 'per_km', ...cardio },
+  builtIn,
+  shares: shares.map(([skillKey, shareBasisPoints]) => ({ skillId: `skill-${skillKey}`, shareBasisPoints })),
+});
+
+export const RUN_REFERENCE_PACE_S_PER_KM = 360;
 
 export const catalog: Catalog = {
   skills: [
@@ -39,8 +62,10 @@ export const catalog: Catalog = {
     skill('arms', 4, 1),
     skill('legs', 5, 2),
     skill('core', 6, 1),
+    skill('endurance', 7, 0),
+    skill('agility', 8, 0),
   ],
-  exercises: new Map([
+  exercises: new Map<string, ExerciseDef>([
     [
       'bench',
       exercise('bench', 'external', true, [
@@ -71,6 +96,52 @@ export const catalog: Catalog = {
         ['arms', 2500],
       ]),
     ],
+    [
+      'run',
+      cardioExercise(
+        'run',
+        true,
+        { referencePaceSPerKm: RUN_REFERENCE_PACE_S_PER_KM, maxEffort: 'max', recordMinDistanceM: 1000 },
+        [['endurance', 10000]],
+      ),
+    ],
+    [
+      'sprints',
+      cardioExercise('sprints', true, { referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null }, [
+        ['agility', 10000],
+      ]),
+    ],
+    [
+      'walk',
+      cardioExercise('walk', true, { referencePaceSPerKm: null, maxEffort: 'moderate', recordMinDistanceM: null }, [
+        ['endurance', 10000],
+      ]),
+    ],
+    [
+      'row-intervals',
+      cardioExercise('row-intervals', true, { referencePaceSPerKm: 240, maxEffort: 'max', recordMinDistanceM: 1000 }, [
+        ['endurance', 5000],
+        ['agility', 5000],
+      ]),
+    ],
+    [
+      'swim',
+      cardioExercise(
+        'swim',
+        true,
+        { referencePaceSPerKm: 1200, maxEffort: 'max', recordMinDistanceM: 100, paceUnit: 'per_100m' },
+        [['endurance', 10000]],
+      ),
+    ],
+    [
+      'custom-run',
+      cardioExercise(
+        'custom-run',
+        false,
+        { referencePaceSPerKm: RUN_REFERENCE_PACE_S_PER_KM, maxEffort: 'max', recordMinDistanceM: null },
+        [['endurance', 10000]],
+      ),
+    ],
   ]),
 };
 
@@ -80,9 +151,9 @@ export function aSet(
   exerciseId: string,
   weightKg: number,
   reps: number,
-  effort: SetInput['effort'],
-  overrides: Partial<SetInput> = {},
-): SetInput {
+  effort: LiftSetInput['effort'],
+  overrides: Partial<LiftSetInput> = {},
+): LiftSetInput {
   setCounter += 1;
   return {
     id: `set-${setCounter}`,
@@ -91,6 +162,26 @@ export function aSet(
     weightKg,
     reps,
     isWarmup: false,
+    effort,
+    ...overrides,
+  };
+}
+
+export function aBout(
+  exerciseId: string,
+  durationS: number,
+  effort: CardioSetInput['effort'],
+  overrides: Partial<CardioSetInput> = {},
+): CardioSetInput {
+  setCounter += 1;
+  return {
+    kind: 'cardio',
+    id: `set-${setCounter}`,
+    exerciseId,
+    position: setCounter,
+    durationS,
+    distanceM: null,
+    interval: null,
     effort,
     ...overrides,
   };

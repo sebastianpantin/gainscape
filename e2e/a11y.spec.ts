@@ -1,6 +1,15 @@
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
-import { emailOf, logExercise, openFromProfile, openTab, register, signOut, uniqueUsername } from './support/app.ts';
+import {
+  emailOf,
+  logCardio,
+  logExercise,
+  openFromProfile,
+  openTab,
+  register,
+  signOut,
+  uniqueUsername,
+} from './support/app.ts';
 import { grantItems } from './support/db.ts';
 import { authLinkFrom, waitForEmail } from './support/mailbox.ts';
 
@@ -125,6 +134,8 @@ test('every signed-in screen has no serious axe violations and the between-set c
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await logExercise(page, 'pull-up', 'Pull-up', [{ reps: 8 }]);
+  await logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 5, effort: 'Moderate' }]);
+  await logCardio(page, 'sprint', 'Sprint Intervals', [{ rounds: 10, workS: 30, restS: 30, effort: 'Hard' }]);
   await checkScreen(page, 'train (draft)', () =>
     expect(page.getByRole('button', { name: 'Finish workout' })).toBeVisible(),
   );
@@ -206,6 +217,7 @@ test.describe('on a 360x740 phone', () => {
     await register(page, uniqueUsername('a11y_360'));
     await page.getByRole('button', { name: 'Start workout' }).click();
     await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+    await logCardio(page, 'sprint', 'Sprint Intervals', [{ rounds: 10, workS: 30, restS: 30, effort: 'Hard' }]);
     await checkEffortTargets(page);
   });
 });
@@ -226,11 +238,15 @@ test('the reveal runs no animation under reduced motion', async ({ page }) => {
   expect(opacities.every((opacity) => opacity === '1')).toBe(true);
 });
 
-test('the skills screen shows pixel art for the six skills', async ({ page }) => {
+test('the skills screen shows pixel art for the eight skills', async ({ page }) => {
   await register(page, uniqueUsername('a11y_sk'));
   await openTab(page, 'Skills');
   const skills = page.getByRole('list').filter({ has: page.getByTestId('skill-chest') });
-  await expect(skills.locator('li')).toHaveCount(6);
-  await expect(skills.locator('li svg')).toHaveCount(6);
+  await expect(skills.locator('li')).toHaveCount(8);
+  await expect(skills.locator('li svg')).toHaveCount(8);
   await expect(skills.locator('.monogram')).toHaveCount(0);
+  await page.getByTestId('skill-endurance').click();
+  await expect(page.getByText('does not count toward combat')).toBeVisible();
+  await page.getByTestId('skill-chest').click();
+  await expect(page.getByText('counts double toward combat')).toBeVisible();
 });

@@ -1,12 +1,12 @@
 import { collectionCompletion, type CollectionExercise } from '@domain/collection.ts';
-import type { Exercise } from './catalog.ts';
+import type { Exercise, LiftExercise } from './catalog.ts';
 import type { CollectionData } from './collection-data.ts';
 
-function isDone(exercise: Exercise, data: CollectionData): boolean {
+function isDone(exercise: LiftExercise, data: CollectionData): boolean {
   return data.repMaxesByExercise.has(exercise.id) || data.maxRepsByExercise.has(exercise.id);
 }
 
-function asCollectionExercise(exercise: Exercise, data: CollectionData): CollectionExercise {
+function asCollectionExercise(exercise: LiftExercise, data: CollectionData): CollectionExercise {
   return {
     loadType: exercise.loadType,
     exactRepMaxSlotsFilled: (data.repMaxesByExercise.get(exercise.id) ?? []).filter((slot) => slot?.exact).length,
@@ -15,16 +15,17 @@ function asCollectionExercise(exercise: Exercise, data: CollectionData): Collect
 }
 
 export interface CountedCollection {
-  pinned: Exercise[];
-  counted: Exercise[];
+  pinned: LiftExercise[];
+  counted: LiftExercise[];
   completion: ReturnType<typeof collectionCompletion>;
 }
 
-export function countCollection(exercises: Exercise[], data: CollectionData): CountedCollection {
+export function countCollection(allExercises: Exercise[], data: CollectionData): CountedCollection {
+  const exercises = allExercises.filter((exercise): exercise is LiftExercise => exercise.modality === 'lift');
   const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const pinned = data.pinnedExerciseIds
     .map((id) => byId.get(id))
-    .filter((exercise): exercise is Exercise => exercise !== undefined);
+    .filter((exercise): exercise is LiftExercise => exercise !== undefined);
   const doneButNotPinned = exercises.filter(
     (exercise) => isDone(exercise, data) && !data.pinnedExerciseIds.includes(exercise.id),
   );

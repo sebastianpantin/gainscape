@@ -14,7 +14,7 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
-import { DAY_MS, HOUR_MS, postSession, withFreshIds } from './loot-support.ts';
+import { aBout, anIntervalBout, type BoutShape, DAY_MS, HOUR_MS, postSession, withFreshIds } from './loot-support.ts';
 
 type Effort = { type: 'level'; level: 'hard' | 'near_failure' } | { type: 'rir'; value: number } | null;
 
@@ -57,7 +57,12 @@ function ago(ms: number): string {
   return new Date(Date.now() - ms).toISOString();
 }
 
-function editBody(session: SessionBody, sets: SetBody[], ifRevision = 0, notes: string | null = session.notes) {
+function editBody(
+  session: Pick<SessionBody, 'id' | 'notes'>,
+  sets: (SetBody | BoutShape)[],
+  ifRevision = 0,
+  notes: string | null = session.notes,
+) {
   return { sessionId: session.id, ifRevision, notes, sets };
 }
 
@@ -192,7 +197,15 @@ describe('edit-session re-derives history', () => {
     await postSession(user, s1);
     await postSession(user, s2);
     expect((await storedSummary(s2.id)).summary.prs).toEqual([
-      { exerciseId: benchId, kind: 'rep_max', reps: 3, loadKg: 105, previousLoadKg: 100, previousReps: null },
+      {
+        exerciseId: benchId,
+        kind: 'rep_max',
+        setId: s2.sets[0].id,
+        reps: 3,
+        loadKg: 105,
+        previousLoadKg: 100,
+        previousReps: null,
+      },
     ]);
 
     expect((await edit(user, editBody(s2, [s2.sets[1]]))).status).toBe(200);
@@ -446,5 +459,107 @@ describe('edit-session authorization and validation', () => {
     });
     expect(anonymous.status).toBe(401);
     expect(await stateOf(owner.id)).toEqual(before);
+  });
+});
+
+describe('edit-session with cardio bouts', () => {
+  let runningId: string;
+  let sprintsId: string;
+
+  beforeAll(async () => {
+    [runningId, sprintsId] = await Promise.all([builtInExerciseId('running'), builtInExerciseId('sprint_intervals')]);
+  });
+
+  function mixedSessionAt(startedAt: string) {
+    const run = aBout(runningId, 0, { distanceM: 5000 });
+    const sprints = anIntervalBout(sprintsId, 1, { workS: 30, restS: 30, rounds: 10 });
+    const bench: SetBody = {
+      id: randomUUID(),
+      exerciseId: benchId,
+      position: 2,
+      weightKg: 60,
+      reps: 5,
+      isWarmup: false,
+      effort: hard,
+    };
+    return {
+      id: randomUUID(),
+      startedAt,
+      endedAt: new Date(Date.parse(startedAt) + HOUR_MS / 2).toISOString(),
+      notes: null,
+      run,
+      sprints,
+      bench,
+      sets: [run, sprints, bench],
+    };
+  }
+
+  async function xpOf(sessionId: string, skillKey: string): Promise<number> {
+    const [row] = await db`
+      select coalesce(sum(x.xp), 0)::int as xp
+      from public.set_skill_xp x
+      join public.sets st on st.id = x.set_id
+      join public.skills s on s.id = x.skill_id
+      where st.session_id = ${sessionId} and s.key = ${skillKey}`;
+    return row.xp;
+  }
+
+  it('replays a changed distance into more Endurance XP and matches a rebuild', async () => {
+    const user = await createTestUser();
+    const session = mixedSessionAt(ago(2 * HOUR_MS));
+    await postSession(user, session);
+    const enduranceBefore = await xpOf(session.id, 'endurance');
+    const chestBefore = await xpOf(session.id, 'chest');
+
+    const faster = { ...session.run, distanceM: 6000 };
+    const response = await edit(user, editBody(session, [faster, session.sprints, session.bench]));
+    expect(response.status, response.rawBody).toBe(200);
+    expect(await xpOf(session.id, 'endurance')).toBeGreaterThan(enduranceBefore);
+    expect(await xpOf(session.id, 'chest')).toBe(chestBefore);
+    const [row] = await db`select distance_m::float from public.sets where id = ${faster.id}`;
+    expect(row.distance_m).toBe(6000);
+    await expectEqualsRebuild(user.id);
+  });
+
+  it('re-derives the counted work of an edited interval bout', async () => {
+    const user = await createTestUser();
+    const session = mixedSessionAt(ago(2 * HOUR_MS));
+    await postSession(user, session);
+    const longer = { ...session.sprints, interval: { workS: 40, restS: 20, rounds: 12 } };
+    const response = await edit(user, editBody(session, [session.run, longer, session.bench]));
+    expect(response.status, response.rawBody).toBe(200);
+    const [row] = await db`select duration_s, counted_work_s from public.sets where id = ${longer.id}`;
+    expect(row).toEqual({ duration_s: 12 * 40 + 11 * 20, counted_work_s: 12 * 40 });
+  });
+
+  it('treats an identical cardio re-send as a no-op', async () => {
+    const user = await createTestUser();
+    const session = mixedSessionAt(ago(2 * HOUR_MS));
+    await postSession(user, session);
+    const response = await edit(user, editBody(session, session.sets));
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body).toMatchObject({ revision: 0, replayedSessionIds: [] });
+  });
+
+  it('returns 422 kind_changed when a stored set id changes kind and writes nothing', async () => {
+    const user = await createTestUser();
+    const session = mixedSessionAt(ago(2 * HOUR_MS));
+    await postSession(user, session);
+    const before = await stateOf(user.id);
+    const nowCardio = aBout(runningId, session.bench.position, { id: session.bench.id, durationS: 600, effort: null });
+    const response = await edit(user, editBody(session, [session.run, session.sprints, nowCardio]));
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe('kind_changed');
+    expect(await stateOf(user.id)).toEqual(before);
+  });
+
+  it('returns 422 kind_mismatch for a bout moved onto a lift exercise', async () => {
+    const user = await createTestUser();
+    const session = mixedSessionAt(ago(2 * HOUR_MS));
+    await postSession(user, session);
+    const onBench = { ...session.run, exerciseId: benchId };
+    const response = await edit(user, editBody(session, [onBench, session.sprints, session.bench]));
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe('kind_mismatch');
   });
 });
