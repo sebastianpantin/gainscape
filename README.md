@@ -19,7 +19,7 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | `make reset`                | Recreate the local database from migrations and seed                                                                   |
 | `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc`, `deno check`                             |
 | `make test`                 | `make check`, then domain tests, web draft/sync tests, integration/RLS tests and `make test-db`                        |
-| `make test-db`              | pgTAP tests in `supabase/tests/` against the local database                                                            |
+| `make test-db`              | pgTAP tests in `supabase/tests/` against the local database (refuses any non-local host)                               |
 | `make sim-check`            | Balance band test (about 15 s)                                                                                         |
 | `make sim`                  | Full balance tuning report (about 2 min)                                                                               |
 | `make e2e`                  | Playwright end-to-end flow in a headless phone-sized browser                                                           |
@@ -42,6 +42,16 @@ Feed events are derived from session summaries. A database that already held ses
 Loot rolls are seeded with HMAC-SHA256 under `LOOT_SECRET`, which only the Edge Functions see. `make functions` (and so `make start` and `make reset`) creates the gitignored `supabase/functions/.env.local` with a random secret on first use, serves the functions with it, and restarts an already running functions server whose env file changed. A hosted deploy sets its own secret once with `supabase secrets set LOOT_SECRET=$(openssl rand -hex 32)`. Without a secret of at least 32 characters, `complete-session` answers 500 `loot_secret_missing` and the draft retries.
 
 Anonymous username checks are rate limited per client address, read from `private.client_ip_config` (`header_name`, `trusted_hops_from_right`). The default, the right-most `x-forwarded-for` hop, is what local Kong appends. Before production, set it to the hosting platform's trusted client-IP header (or the number of trusted proxy hops) and verify it against live request headers. Addresses are stored only as HMAC-SHA256 under a random pepper that migration 012 generates in `private.client_key_pepper`.
+
+## Email and auth
+
+Signups need email confirmation. Locally every email lands in Mailpit, which `npx supabase status` lists as `MAILPIT_URL` (run it through `make` or with `.stack.env` loaded). Confirm, reset and email-change links open `/auth/confirm` on the origin that asked for them. Links asked for from a LAN IP address fall back to `https://localhost:5173`, because GoTrue accepts only loopback or allowlisted hostnames as redirect hosts.
+
+Before anything goes live, work through [docs/production-auth.md](docs/production-auth.md): production SMTP, the hosted redirect and rate-limit settings (never `supabase config push` the local `config.toml` unchanged), `LOOT_SECRET`, `private.client_ip_config` and the backfill. `make test-db` only runs against the local stack and refuses any other database host.
+
+## CI
+
+`.github/workflows/ci.yml` runs two jobs. `static` runs `make check`, the catalog, domain and web tests and `make sim-check` without a stack. `stack` runs `make ci-start` (the stack without Studio, storage, realtime and the other services the tests don't use, plus the web env file with the stack's anon key and the functions), then `make test-integration`, `make test-db` and `make e2e`. On failure, `make ci-logs` saves every container log to `ci-logs/`, which is uploaded with the Playwright report and traces.
 
 ## Layout
 
