@@ -72,3 +72,4 @@ Migration 014 adds a trigger that gives an account a random password when an ema
 - [ ] `LOOT_SECRET` is set.
 - [ ] `private.client_ip_config` matches the platform's client-IP header.
 - [ ] Feed events are backfilled once: `make rebuild-caches` does this for the local stack, and a hosted project needs the same `rebuild-caches` call (with the service role key) for every user.
+- [ ] Hosting (S1.5): the host serves the build byte for byte. No HTML rewriting (analytics beacon injection, email obfuscation, minification or other "optimisations"), because the service worker checks every precached file against its SHA-256 and a rewritten `index.html` blocks every update.

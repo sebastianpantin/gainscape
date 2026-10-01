@@ -9,9 +9,8 @@ import {
   type StoredSetRow,
   transientReason,
 } from './history-rules.ts';
-import { supabase } from './supabase.ts';
+import { REQUEST_TIMEOUT_MS, supabase } from './supabase.ts';
 
-const FUNCTION_TIMEOUT_MS = 20_000;
 const AUTOMATIC_RETRIES = 4;
 
 export function fetchSessionPage(after: HistorySession | null): Promise<HistorySession[]> {
@@ -61,14 +60,14 @@ async function invokeWithRetries<T>(
   signal: AbortSignal,
   onRetry: (reason: string) => void,
 ): Promise<InvokeOutcome<T>> {
-  let outcome = await invokeAsOwner<T>(userId, name, body, FUNCTION_TIMEOUT_MS, signal);
+  let outcome = await invokeAsOwner<T>(userId, name, body, REQUEST_TIMEOUT_MS, signal);
   for (let attempt = 0; attempt < AUTOMATIC_RETRIES && !signal.aborted; attempt++) {
     const reason = transientReason(outcome);
     if (reason === null) break;
     onRetry(reason);
     await pause(retryDelayMs(attempt), signal);
     if (signal.aborted) break;
-    outcome = await invokeAsOwner<T>(userId, name, body, FUNCTION_TIMEOUT_MS, signal);
+    outcome = await invokeAsOwner<T>(userId, name, body, REQUEST_TIMEOUT_MS, signal);
   }
   return outcome;
 }

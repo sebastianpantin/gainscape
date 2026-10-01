@@ -1,6 +1,6 @@
 import { GEAR_SLOTS, type GearSlot, ITEM_TIERS, type ItemTier, type Recipe } from '@domain/crafting.ts';
 import type { DropSummary } from '@domain/types.ts';
-import type { ItemIconKind } from '../components/PixelArt.tsx';
+import type { ItemIconKind } from '../components/pixel-sprites.ts';
 
 export type ItemKind = 'gear' | 'material' | 'pet' | 'scroll';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary';

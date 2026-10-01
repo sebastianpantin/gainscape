@@ -2,7 +2,7 @@ import { levelProgress } from '@domain/index.ts';
 import type { DropSummary, PersonalRecordSummary, SessionSummary } from '@domain/types.ts';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ItemIcon, TrophyIcon } from '../../components/PixelArt.tsx';
+import { ItemIcon, LevelUpIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { type Exercise, fetchExercises, fetchSkills, fetchSkillXp, type Skill } from '../../lib/catalog.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { fetchSession } from '../../lib/history.ts';
@@ -10,7 +10,7 @@ import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import type { UnitPref } from '../../lib/profile.ts';
-import { monogramFor } from '../../lib/standing.ts';
+import { markInstallCardDue } from '../../pwa/install.ts';
 import { formatXp } from '../workout/xp-preview.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
 
@@ -125,6 +125,10 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const sessionId = summary?.sessionId;
 
   useEffect(() => {
+    if (sessionId) markInstallCardDue(userId);
+  }, [sessionId, userId]);
+
+  useEffect(() => {
     fetchSkills().then(setSkills, () => setSkills([]));
     fetchExercises({ includeArchived: true }).then(setExercises, () => setExercises([]));
     fetchSkillXp(userId).then(setXpBySkillId, () => setXpBySkillId(null));
@@ -194,9 +198,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           const xpAfter = xpBySkillId?.get(skill.id);
           return (
             <li key={skill.key} className="skill-gain rise" style={{ animationDelay: `${0.2 + index * 0.2}s` }}>
-              <span className="monogram" aria-hidden="true">
-                {monogramFor(skill.key)}
-              </span>
+              <SkillIcon skillKey={skill.key} />
               <div className="skill-gain-body">
                 <div className="row spread">
                   <span>
@@ -218,7 +220,10 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       </ul>
       {summary.levelUps.length > 0 && (
         <section className="panel stack level-ups pop" style={{ animationDelay: '1.2s' }}>
-          <h2>Level up!</h2>
+          <h2 className="row">
+            <LevelUpIcon />
+            Level up!
+          </h2>
           <ul className="level-up-grid" aria-label="Level ups">
             {summary.levelUps.map((levelUp) => (
               <li key={levelUp.skill}>

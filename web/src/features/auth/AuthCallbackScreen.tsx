@@ -3,6 +3,7 @@ import { LogoMark } from '../../components/PixelArt.tsx';
 import { MINIMUM_PASSWORD_LENGTH } from '../../lib/account.ts';
 import { type AuthCallback, authErrorMessage, confirmedRecently } from '../../lib/auth-links.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
+import { signOutSettled } from '../../lib/auth-restore.ts';
 import { supabase } from '../../lib/supabase.ts';
 
 type Step =
@@ -39,6 +40,7 @@ async function passwordStep(callback: AuthCallback, userId: string): Promise<Ste
 }
 
 async function verify(callback: AuthCallback): Promise<Step> {
+  await signOutSettled();
   const { data, error } = await supabase.auth.verifyOtp({ token_hash: callback.tokenHash, type: callback.type });
   if (error) {
     const { data: current } = await supabase.auth.getUser();

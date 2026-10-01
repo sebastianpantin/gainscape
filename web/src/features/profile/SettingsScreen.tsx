@@ -10,6 +10,7 @@ import {
   requestEmailChange,
   saveBlob,
 } from '../../lib/account.ts';
+import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import {
   changeTimezone,
@@ -24,6 +25,9 @@ import {
 import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
 import { storedSessionId } from '../../offline/draft-format.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
+import { forgetInstallCard, promptInstall, useInstallState } from '../../pwa/install.ts';
+import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
+import type { UpdateCheck } from '../../pwa/update-flow.ts';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
 
 interface SettingsScreenProps {
@@ -32,6 +36,8 @@ interface SettingsScreenProps {
 }
 
 async function discardLocalDraft(userId: string): Promise<void> {
+  forgetCachedExercises(localStorage, userId);
+  forgetInstallCard(userId);
   const store = await openDraftStoreAndReconcile();
   const record = await store.get(userId);
   if (record) await store.discard(userId, storedSessionId(record));
@@ -295,6 +301,58 @@ function PrivacySection({ userId, profile, onSaved }: SectionProps) {
         </p>
       )}
       <span className="hint">Your height, age and bodyweight entries are never shown to anyone.</span>
+    </section>
+  );
+}
+
+const LICENSES_PAGE = '/licenses/index.html';
+
+const UPDATE_CHECK_TEXT: Record<Exclude<UpdateCheck, 'ready'>, string> = {
+  up_to_date: "You're up to date.",
+  download_failed: "Couldn't download the update. Try again later.",
+};
+
+function AppSection() {
+  const install = useInstallState();
+  const flow = useUpdateFlow();
+  const [checking, setChecking] = useState(false);
+  const [checkText, setCheckText] = useState<string | null>(null);
+
+  const checkForUpdates = async () => {
+    if (!flow) return;
+    setChecking(true);
+    setCheckText('Checking for updates…');
+    try {
+      const result = await flow.checkForUpdates();
+      setCheckText(result === 'ready' ? null : UPDATE_CHECK_TEXT[result]);
+    } catch {
+      setCheckText("Couldn't check for updates.");
+    }
+    setChecking(false);
+  };
+
+  return (
+    <section className="panel stack" aria-labelledby="app-heading">
+      <h2 id="app-heading">App</h2>
+      {install === 'promptable' && (
+        <button className="button primary" type="button" onClick={() => void promptInstall()}>
+          Install Gainscape
+        </button>
+      )}
+      {install === 'ios_manual' && <p className="hint">In Safari, tap Share, then Add to Home Screen.</p>}
+      {install === 'installed' && <p className="hint">Installed on this device.</p>}
+      <span data-testid="app-version">Version {__APP_VERSION__}</span>
+      <button className="button" type="button" disabled={!flow || checking} onClick={checkForUpdates}>
+        Check for updates
+      </button>
+      {checkText && (
+        <p className="muted" role="status">
+          {checkText}
+        </p>
+      )}
+      <a className="button link" href={LICENSES_PAGE}>
+        Licenses
+      </a>
     </section>
   );
 }
@@ -586,6 +644,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
           <PrivacySection userId={userId} profile={state.bundle.profile} onSaved={replace} />
         </>
       )}
+      <AppSection />
       <AccountSection
         userId={userId}
         email={email}

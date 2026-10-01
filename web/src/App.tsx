@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { Icon, type IconName } from './components/Icon.tsx';
 import { PreferencesProvider } from './components/PreferencesProvider.tsx';
@@ -23,6 +23,9 @@ import { RevealScreen } from './features/summary/RevealScreen.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
 import { parseAuthCallback } from './lib/auth-links.ts';
 import { useAuthSession } from './lib/use-auth-session.ts';
+import { OfflineBanner } from './pwa/OfflineBanner.tsx';
+import { setUpdateUser } from './pwa/register-service-worker.ts';
+import { UpdateBanner } from './pwa/UpdateBanner.tsx';
 
 const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'Train', icon: 'train', end: true },
@@ -33,7 +36,19 @@ const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
 ];
 
 export function App() {
+  return (
+    <>
+      <UpdateBanner />
+      <OfflineBanner />
+      <Screens />
+    </>
+  );
+}
+
+function Screens() {
   const auth = useAuthSession();
+  const signedInUserId = auth.status === 'signed-in' ? auth.session.user.id : null;
+  useEffect(() => setUpdateUser(signedInUserId), [signedInUserId]);
   const [callback, setCallback] = useState(() => parseAuthCallback(window.location.href));
 
   if (callback) return <AuthCallbackScreen callback={callback} onDone={() => setCallback(null)} />;
