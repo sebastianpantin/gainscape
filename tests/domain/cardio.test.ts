@@ -36,6 +36,16 @@ function run(sets: SetInput[], cfg: BalanceConfig = CARDIO_BALANCE) {
   return processSession(freshUser, session, cfg, { catalog }).outputs;
 }
 
+describe('walking pace', () => {
+  it('earns no more XP for a 6:00/km bout than the same bout logged as running', () => {
+    const distanceM = (THIRTY_MINUTES_S * 1000) / 360;
+    const asWalk = run([aBout('walk', THIRTY_MINUTES_S, moderate, { distanceM })]);
+    const asRun = run([aBout('run', THIRTY_MINUTES_S, moderate, { distanceM })]);
+    expect(asWalk.sets[0].cardio?.paceBonus).toBe(1);
+    expect(asWalk.sets[0].xp).toBeLessThanOrEqual(asRun.sets[0].xp);
+  });
+});
+
 describe('cardio effort', () => {
   it('resolves a logged cardio level to its stored value', () => {
     expect(resolveEffort({ type: 'cardio', level: 'hard' }, DEFAULT_BALANCE, 'cardio')).toEqual({
@@ -59,7 +69,6 @@ describe('cardio effort', () => {
 
   it('throws when a lift set carries a cardio effort', () => {
     expect(() => resolveEffort({ type: 'cardio', level: 'easy' }, DEFAULT_BALANCE, 'lift')).toThrow(RangeError);
-    expect(() => resolveEffort({ type: 'cardio', level: 'easy' }, DEFAULT_BALANCE)).toThrow(RangeError);
   });
 
   it('throws when a cardio bout carries a lift effort', () => {

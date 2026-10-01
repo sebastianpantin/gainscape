@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect } from 'vitest';
+import type { CardioSetInput } from '@domain/index.ts';
 import { db, type FunctionResponse, postCompleteSession, type TestUser } from './local-stack.ts';
 
 export const HOUR_MS = 60 * 60 * 1000;
@@ -30,7 +31,65 @@ export function aSet(
   return { id: randomUUID(), exerciseId, position, weightKg, reps: 5, isWarmup: false, effort: hard, ...overrides };
 }
 
-export function payloadAt(startedAt: Date, sets: SetShape[]) {
+export type CardioEffort = { type: 'cardio'; level: 'easy' | 'moderate' | 'hard' | 'max' } | null;
+
+export interface BoutInterval {
+  workS: number;
+  restS: number;
+  rounds: number;
+}
+
+export interface BoutShape {
+  kind: 'cardio';
+  id: string;
+  exerciseId: string;
+  position: number;
+  durationS?: number;
+  distanceM: number | null;
+  interval: BoutInterval | null;
+  effort: CardioEffort;
+}
+
+export function aBout(exerciseId: string, position: number, overrides: Partial<BoutShape> = {}): BoutShape {
+  return {
+    kind: 'cardio',
+    id: randomUUID(),
+    exerciseId,
+    position,
+    durationS: 1800,
+    distanceM: null,
+    interval: null,
+    effort: { type: 'cardio', level: 'moderate' },
+    ...overrides,
+  };
+}
+
+export function anIntervalBout(
+  exerciseId: string,
+  position: number,
+  interval: BoutInterval,
+  overrides: Partial<BoutShape> = {},
+): BoutShape {
+  return {
+    kind: 'cardio',
+    id: randomUUID(),
+    exerciseId,
+    position,
+    distanceM: null,
+    interval,
+    effort: { type: 'cardio', level: 'hard' },
+    ...overrides,
+  };
+}
+
+export function asCardioSetInput(bout: BoutShape): CardioSetInput {
+  const { interval } = bout;
+  const durationS =
+    interval === null ? bout.durationS! : interval.rounds * interval.workS + (interval.rounds - 1) * interval.restS;
+  return { ...bout, durationS };
+}
+
+export function payloadAt<S extends SetShape | BoutShape>(startedAt: Date, sets: S[]) {
   return {
     id: randomUUID(),
     startedAt: startedAt.toISOString(),
@@ -40,7 +99,7 @@ export function payloadAt(startedAt: Date, sets: SetShape[]) {
   };
 }
 
-export type SessionPayload = ReturnType<typeof payloadAt>;
+export type SessionPayload = ReturnType<typeof payloadAt<SetShape>>;
 
 export function hoursAgo(hours: number): Date {
   return new Date(Date.now() - hours * HOUR_MS);

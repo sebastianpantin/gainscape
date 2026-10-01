@@ -36,7 +36,7 @@ interface PlacedSet {
 
 function hasValidEffort(set: DraftSet, cfg: BalanceConfig): boolean {
   try {
-    resolveEffort(set.effort, cfg);
+    resolveEffort(set.effort, cfg, 'lift');
     return true;
   } catch {
     return false;

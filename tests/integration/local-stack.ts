@@ -155,7 +155,7 @@ export async function normalizedSnapshot(userId: string) {
   const setRows = await db`
     select id, exercise_id, rir::float, rir_source, rir_flagged, e1rm_before_kg::float, e1rm_candidate_kg::float,
            reps_capacity_candidate, effective_reps, xp_awarded, effective_load_kg::float, weight_kg::float, reps,
-           is_warmup
+           is_warmup, duration_s, distance_m::float, counted_work_s, pace_flagged
     from public.sets where user_id = ${userId}`;
   const customExercises =
     await db`select id from public.exercises where owner_user_id = ${userId} order by created_at, id`;
@@ -244,17 +244,26 @@ export async function normalizedSnapshot(userId: string) {
 export async function domainCatalogFor(exerciseIds: string[]): Promise<Catalog> {
   const skillRows = await db`select id, key, sort_order, combat_weight from public.skills`;
   const shareRows = await db`
-    select e.id, e.load_type, e.owner_user_id, es.skill_id, es.share_bp
+    select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.max_effort,
+           e.record_min_distance_m, es.skill_id, es.share_bp
     from public.exercises e join public.exercise_skills es on es.exercise_id = e.id
     where e.id = any(${exerciseIds}::uuid[])`;
   const exercises = new Map<string, ExerciseDef>();
   for (const row of shareRows) {
-    const exercise: ExerciseDef = exercises.get(row.id) ?? {
-      id: row.id,
-      loadType: row.load_type,
-      builtIn: row.owner_user_id === null,
-      shares: [],
-    };
+    const base = { id: row.id, builtIn: row.owner_user_id === null, shares: [] };
+    const exercise: ExerciseDef =
+      exercises.get(row.id) ??
+      (row.modality === 'cardio'
+        ? {
+            ...base,
+            modality: 'cardio',
+            cardio: {
+              referencePaceSPerKm: row.reference_pace_s_per_km,
+              maxEffort: row.max_effort,
+              recordMinDistanceM: row.record_min_distance_m,
+            },
+          }
+        : { ...base, loadType: row.load_type });
     exercise.shares.push({ skillId: row.skill_id, shareBasisPoints: row.share_bp });
     exercises.set(row.id, exercise);
   }

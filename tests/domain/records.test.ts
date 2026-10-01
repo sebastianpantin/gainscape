@@ -169,6 +169,15 @@ describe('collection completion', () => {
     ).toEqual({ filledSlots: 4, totalSlots: 11, fraction: 4 / 11 });
   });
 
+  it('counts a cardio exercise as no slot', () => {
+    expect(
+      collectionCompletion([
+        { modality: 'cardio' },
+        { loadType: 'external', exactRepMaxSlotsFilled: 3, hasBodyweightRecord: false },
+      ]),
+    ).toEqual({ filledSlots: 3, totalSlots: 10, fraction: 0.3 });
+  });
+
   it('is zero with nothing done or pinned', () => {
     expect(collectionCompletion([])).toEqual({ filledSlots: 0, totalSlots: 0, fraction: 0 });
   });

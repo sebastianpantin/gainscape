@@ -15,7 +15,8 @@ export async function loadReplayableSessions(
 ): Promise<SessionInput[]> {
   const rows = await tx`
     select s.id as session_id, s.started_at, st.id as set_id, st.exercise_id, st.position, st.weight_kg,
-           st.effective_load_kg, st.reps, st.is_warmup, st.effort_input_type, st.effort_value
+           st.effective_load_kg, st.reps, st.is_warmup, st.effort_input_type, st.effort_value, st.duration_s,
+           st.distance_m, st.interval_work_s, st.interval_rest_s, st.interval_rounds
     from public.sessions s
     join public.sets st on st.session_id = s.id
     where s.user_id = ${userId} and not s.history_only
@@ -29,20 +30,34 @@ export async function loadReplayableSessions(
       startedAt: new Date(row.started_at).toISOString(),
       sets: [],
     };
-    session.sets.push({
-      id: row.set_id,
-      exerciseId: row.exercise_id,
-      position: row.position,
-      weightKg: Number(row.weight_kg),
-      reps: row.reps,
-      isWarmup: row.is_warmup,
-      effort: effortInputFromStored(
-        row.effort_input_type,
-        row.effort_value === null ? null : Number(row.effort_value),
-        cfg,
-      ),
-      recordedEffectiveLoadKg: Number(row.effective_load_kg),
-    });
+    const identity = { id: row.set_id, exerciseId: row.exercise_id, position: row.position };
+    const effort = effortInputFromStored(
+      row.effort_input_type,
+      row.effort_value === null ? null : Number(row.effort_value),
+      cfg,
+    );
+    session.sets.push(
+      row.duration_s === null
+        ? {
+            ...identity,
+            weightKg: Number(row.weight_kg),
+            reps: row.reps,
+            isWarmup: row.is_warmup,
+            effort,
+            recordedEffectiveLoadKg: Number(row.effective_load_kg),
+          }
+        : {
+            ...identity,
+            kind: 'cardio',
+            durationS: row.duration_s,
+            distanceM: row.distance_m === null ? null : Number(row.distance_m),
+            interval:
+              row.interval_rounds === null
+                ? null
+                : { workS: row.interval_work_s, restS: row.interval_rest_s, rounds: row.interval_rounds },
+            effort,
+          },
+    );
     sessions.set(row.session_id, session);
   }
   return [...sessions.values()];
@@ -61,6 +76,7 @@ export async function loadRecordHistory(
     where s.user_id = ${userId}
       and not s.history_only
       and not st.is_warmup
+      and st.reps is not null
       and st.exercise_id = any(${exerciseIds as string[]}::uuid[])
       and (s.started_at, s.id) < (${before.startedAt}::timestamptz, ${before.id}::uuid)`;
   return rows.map((row) => ({

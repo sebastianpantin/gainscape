@@ -1,15 +1,15 @@
 import type { JsonValue, Transaction } from '../db.ts';
 import {
   type BalanceConfig,
+  type CardioInterval,
   type EffortInputType,
   isWithinEditWindow,
-  type LiftSetInput,
   resolveEffort,
   type SessionKey,
   type SessionSummary,
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
-import { inputSetColumns } from './set-columns.ts';
+import { inputSetColumns, type WritableSet } from './set-columns.ts';
 
 export interface StoredSession {
   userId: string;
@@ -76,33 +76,65 @@ export function isEditable(session: OwnedSession, nowMs: number): boolean {
   return !session.historyOnly && isWithinEditWindow(session.key.startedAt, nowMs);
 }
 
-export interface StoredSet {
+interface StoredSetBase {
   id: string;
   exerciseId: string;
   position: number;
-  weightKg: number;
-  effectiveLoadKg: number;
-  reps: number;
-  isWarmup: boolean;
   effortInputType: EffortInputType | null;
   effortValue: number | null;
 }
 
+export interface StoredLiftSet extends StoredSetBase {
+  kind: 'lift';
+  weightKg: number;
+  effectiveLoadKg: number;
+  reps: number;
+  isWarmup: boolean;
+}
+
+export interface StoredCardioSet extends StoredSetBase {
+  kind: 'cardio';
+  durationS: number;
+  distanceM: number | null;
+  interval: CardioInterval | null;
+}
+
+export type StoredSet = StoredLiftSet | StoredCardioSet;
+
 export async function loadStoredSets(tx: Transaction, sessionId: string): Promise<StoredSet[]> {
   const rows = await tx`
-    select id, exercise_id, position, weight_kg, effective_load_kg, reps, is_warmup, effort_input_type, effort_value
+    select id, exercise_id, position, weight_kg, effective_load_kg, reps, is_warmup, effort_input_type, effort_value,
+           duration_s, distance_m, interval_work_s, interval_rest_s, interval_rounds
     from public.sets where session_id = ${sessionId} order by position`;
-  return rows.map((row) => ({
-    id: row.id,
-    exerciseId: row.exercise_id,
-    position: row.position,
-    weightKg: Number(row.weight_kg),
-    effectiveLoadKg: Number(row.effective_load_kg),
-    reps: row.reps,
-    isWarmup: row.is_warmup,
-    effortInputType: row.effort_input_type,
-    effortValue: row.effort_value === null ? null : Number(row.effort_value),
-  }));
+  return rows.map((row): StoredSet => {
+    const base = {
+      id: row.id,
+      exerciseId: row.exercise_id,
+      position: row.position,
+      effortInputType: row.effort_input_type,
+      effortValue: row.effort_value === null ? null : Number(row.effort_value),
+    };
+    if (row.duration_s !== null) {
+      return {
+        ...base,
+        kind: 'cardio',
+        durationS: row.duration_s,
+        distanceM: row.distance_m === null ? null : Number(row.distance_m),
+        interval:
+          row.interval_rounds === null
+            ? null
+            : { workS: row.interval_work_s, restS: row.interval_rest_s, rounds: row.interval_rounds },
+      };
+    }
+    return {
+      ...base,
+      kind: 'lift',
+      weightKg: Number(row.weight_kg),
+      effectiveLoadKg: Number(row.effective_load_kg),
+      reps: row.reps,
+      isWarmup: row.is_warmup,
+    };
+  });
 }
 
 export async function tombstoneOwner(tx: Transaction, sessionId: string): Promise<string | null> {
@@ -136,25 +168,21 @@ export async function ownedProgramDayId(
   return row?.id ?? null;
 }
 
-export function placeholderSetRow(
-  set: LiftSetInput,
-  effectiveLoadKg: number,
-  sessionId: string,
-  userId: string,
-  cfg: BalanceConfig,
-) {
+export function placeholderSetRow(set: WritableSet, sessionId: string, userId: string, cfg: BalanceConfig) {
+  const kind = set.kind ?? 'lift';
   return {
-    ...inputSetColumns(set, effectiveLoadKg, resolveEffort(set.effort, cfg)),
+    ...inputSetColumns(set, resolveEffort(set.effort, cfg, kind)),
     session_id: sessionId,
     user_id: userId,
     rir: null,
-    rir_source: 'cold_start',
+    rir_source: kind === 'cardio' ? 'default' : 'cold_start',
     rir_flagged: false,
     e1rm_before_kg: null,
     e1rm_candidate_kg: null,
     reps_capacity_candidate: null,
     effective_reps: 0,
     xp_awarded: 0,
+    pace_flagged: false,
   };
 }
 

@@ -17,7 +17,7 @@ function isHalfStep(value: number): boolean {
   return Number.isFinite(value) && Number.isInteger(value * 2);
 }
 
-export function resolveEffort(input: EffortInput, cfg: BalanceConfig, kind: SetKind = 'lift'): ResolvedEffort {
+export function resolveEffort(input: EffortInput, cfg: BalanceConfig, kind: SetKind): ResolvedEffort {
   if (input === null) {
     return { effortInputType: null, effortValue: null, loggedRir: null };
   }

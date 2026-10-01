@@ -114,7 +114,7 @@ export const catalog: Catalog = {
     ],
     [
       'walk',
-      cardioExercise('walk', true, { referencePaceSPerKm: 720, maxEffort: 'moderate', recordMinDistanceM: 1000 }, [
+      cardioExercise('walk', true, { referencePaceSPerKm: null, maxEffort: 'moderate', recordMinDistanceM: null }, [
         ['endurance', 10000],
       ]),
     ],

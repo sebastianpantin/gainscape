@@ -20,7 +20,8 @@ export interface CountedCollection {
   completion: ReturnType<typeof collectionCompletion>;
 }
 
-export function countCollection(exercises: Exercise[], data: CollectionData): CountedCollection {
+export function countCollection(allExercises: Exercise[], data: CollectionData): CountedCollection {
+  const exercises = allExercises.filter((exercise) => exercise.modality === 'lift');
   const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const pinned = data.pinnedExerciseIds
     .map((id) => byId.get(id))
