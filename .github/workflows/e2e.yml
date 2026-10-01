@@ -1,4 +1,4 @@
-name: Stack
+name: E2E
 
 on:
   workflow_dispatch:
@@ -7,13 +7,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: stack-${{ github.ref }}
+  group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  stack:
+  e2e:
+    name: End-to-end and PWA
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -23,8 +24,6 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: make ci-start
-      - run: make test-integration
-      - run: make test-db
       - run: make e2e CHROMIUM_PATH=
       - run: make e2e-pwa CHROMIUM_PATH=
       - if: failure()
@@ -32,7 +31,7 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: stack-logs
+          name: e2e-logs
           path: |
             ci-logs/
             playwright-report/

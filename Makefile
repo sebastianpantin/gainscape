@@ -58,6 +58,9 @@ dev:
 	@node scripts/lan-url.mjs
 	npx vite web --host
 
+build:
+	npx vite build web
+
 build-local:
 	npx vite build web --mode development
 
