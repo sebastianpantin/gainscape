@@ -1,7 +1,7 @@
 import type { EffortLevel } from './types.ts';
 
-const BALANCE_VERSION = 2;
-const XP_PER_EFFECTIVE_REP = 375;
+const BALANCE_VERSION = 3;
+const XP_PER_EFFECTIVE_REP = 340;
 const EFFECTIVE_RIR_WINDOW = 5;
 
 export interface BalanceConfig {
@@ -11,6 +11,7 @@ export interface BalanceConfig {
   readonly maxXp: number;
   readonly effortLevelRir: Readonly<Record<EffortLevel, number>>;
   readonly coldStartXpPerSet: number;
+  readonly coldStartMaxSetsPerExercise: number;
   readonly coldStartAssumedRir: number;
   readonly rirTrustMargin: number;
   readonly maxRirForStrength: number;
@@ -20,7 +21,9 @@ export interface BalanceConfig {
   readonly intensityBonusStart: number;
   readonly intensityBonusFull: number;
   readonly intensityBonusMax: number;
-  readonly prEpsilonKg: number;
+  readonly prMinGainKg: number;
+  readonly fatiguePerHardSet: number;
+  readonly fatigueToleranceReps: number;
 }
 
 export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
@@ -28,8 +31,9 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   xpPerEffectiveRep: XP_PER_EFFECTIVE_REP,
   effectiveRirWindow: EFFECTIVE_RIR_WINDOW,
   maxXp: 200_000_000,
-  effortLevelRir: Object.freeze({ easy: 6, hard: 3, near_failure: 1, failure: 0 }),
+  effortLevelRir: Object.freeze({ easy: 5, hard: 3, near_failure: 1, failure: 0 }),
   coldStartXpPerSet: XP_PER_EFFECTIVE_REP,
+  coldStartMaxSetsPerExercise: 8,
   coldStartAssumedRir: 2,
   rirTrustMargin: 3,
   maxRirForStrength: 5,
@@ -39,10 +43,12 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   intensityBonusStart: 0.75,
   intensityBonusFull: 0.9,
   intensityBonusMax: 1.3,
-  prEpsilonKg: 0.05,
+  prMinGainKg: 1,
+  fatiguePerHardSet: 0.02,
+  fatigueToleranceReps: 1,
 });
 
-const LOOT_VERSION = 1;
+const LOOT_VERSION = 2;
 
 export interface LootConfig {
   readonly version: number;

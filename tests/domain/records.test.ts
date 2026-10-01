@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { collectionCompletion, replayHistory, type SessionInput, type SetInput } from '@domain/index.ts';
+import {
+  applySetToRecords,
+  collectionCompletion,
+  NO_RECORDS,
+  replayHistory,
+  type SessionInput,
+  type SetInput,
+} from '@domain/index.ts';
 import { aSet, catalog, DAY_MS, hard, TEST_BALANCE } from './fixtures.ts';
 
 const firstDay = Date.parse('2026-09-01T18:00:00.000Z');
@@ -68,11 +75,11 @@ describe('rep-max records', () => {
     ]);
   });
 
-  it('ignores improvements within the 0.05 kg epsilon', () => {
+  it('ignores improvements below the 1 kg minimum gain', () => {
     const { sessions } = replay(
       [aSet('bench', 100, 5, hard)],
-      [aSet('bench', 100.05, 5, hard)],
-      [aSet('bench', 100.1, 5, hard)],
+      [aSet('bench', 100.5, 5, hard)],
+      [aSet('bench', 101, 5, hard)],
     );
     expect(sessions[1].outputs.prs).toEqual([]);
     expect(sessions[2].outputs.prs).toHaveLength(1);
@@ -86,6 +93,41 @@ describe('rep-max records', () => {
   it('treats a warm-up-only first session as not yet the baseline', () => {
     const { sessions } = replay([aSet('bench', 40, 10, null, { isWarmup: true })], [aSet('bench', 90, 5, hard)]);
     expect(sessions[1].outputs.prs).toEqual([]);
+  });
+});
+
+describe('minimum record gain', () => {
+  const achievedAt = '2026-09-01T18:00:00.000Z';
+  const at100 = applySetToRecords(
+    NO_RECORDS,
+    aSet('bench', 100, 1, hard),
+    'external',
+    achievedAt,
+    TEST_BALANCE,
+  ).records;
+
+  it('ignores a gain below 1 kg', () => {
+    const update = applySetToRecords(at100, aSet('bench', 100.06, 1, hard), 'external', achievedAt, TEST_BALANCE);
+    expect(update.personalRecord).toBeNull();
+    expect(update.records.repMaxes.bench[0]?.loadKg).toBe(100);
+  });
+
+  it('counts a gain of exactly 1 kg', () => {
+    const update = applySetToRecords(at100, aSet('bench', 101, 1, hard), 'external', achievedAt, TEST_BALANCE);
+    expect(update.personalRecord).toMatchObject({ kind: 'rep_max', reps: 1, loadKg: 101, previousLoadKg: 100 });
+  });
+
+  it('adds up small gains against the stored record', () => {
+    const afterHalf = applySetToRecords(at100, aSet('bench', 100.5, 1, hard), 'external', achievedAt, TEST_BALANCE);
+    expect(afterHalf.personalRecord).toBeNull();
+    const afterOne = applySetToRecords(
+      afterHalf.records,
+      aSet('bench', 101, 1, hard),
+      'external',
+      achievedAt,
+      TEST_BALANCE,
+    );
+    expect(afterOne.personalRecord).toMatchObject({ loadKg: 101, previousLoadKg: 100 });
   });
 });
 

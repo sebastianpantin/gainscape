@@ -23,21 +23,41 @@ export interface OrderedSkillShare {
   sortOrder: number;
 }
 
-export function splitXp(xp: number, shares: readonly OrderedSkillShare[]): SkillXp[] {
+interface SharePart {
+  skillId: string;
+  sortOrder: number;
+  xp: number;
+  remainder: number;
+}
+
+function rotated<T>(items: readonly T[], rotation: number): T[] {
+  return items.map((_, index) => items[(index + rotation) % items.length]);
+}
+
+function largestRemainderFirst(parts: readonly SharePart[], tieRotation: number): SharePart[] {
+  const tiedGroups = new Map<number, SharePart[]>();
+  for (const part of [...parts].sort((a, b) => a.sortOrder - b.sortOrder)) {
+    tiedGroups.set(part.remainder, [...(tiedGroups.get(part.remainder) ?? []), part]);
+  }
+  return [...tiedGroups].sort(([a], [b]) => b - a).flatMap(([, group]) => rotated(group, tieRotation));
+}
+
+export function splitXp(xp: number, shares: readonly OrderedSkillShare[], tieRotation = 0): SkillXp[] {
   const shareTotal = shares.reduce((sum, share) => sum + share.shareBasisPoints, 0);
   if (shareTotal !== FULL_SHARE_BASIS_POINTS) {
     throw new RangeError(`skill shares sum to ${shareTotal} basis points, expected ${FULL_SHARE_BASIS_POINTS}`);
   }
-  const parts = shares.map((share) => ({
+  const parts: SharePart[] = shares.map((share) => ({
     skillId: share.skillId,
     sortOrder: share.sortOrder,
     xp: Math.floor((xp * share.shareBasisPoints) / FULL_SHARE_BASIS_POINTS),
     remainder: (xp * share.shareBasisPoints) % FULL_SHARE_BASIS_POINTS,
   }));
 
-  const largestRemainderFirst = [...parts].sort((a, b) => b.remainder - a.remainder || a.sortOrder - b.sortOrder);
   const undistributedXp = xp - parts.reduce((sum, part) => sum + part.xp, 0);
-  largestRemainderFirst.slice(0, undistributedXp).forEach((part) => (part.xp += 1));
+  largestRemainderFirst(parts, tieRotation)
+    .slice(0, undistributedXp)
+    .forEach((part) => (part.xp += 1));
 
   return parts
     .filter((part) => part.xp > 0)

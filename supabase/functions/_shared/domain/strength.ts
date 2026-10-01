@@ -1,5 +1,6 @@
 import type { BalanceConfig } from './balance.ts';
 import { MS_PER_DAY } from './edit-window.ts';
+import { fatigueAfterSet, fatiguedStrength } from './fatigue.ts';
 import { compareSessionKeys, isBefore } from './ordering.ts';
 import type { SessionContext, Step } from './pipeline.ts';
 import type {
@@ -32,15 +33,20 @@ export function estimateRir(loadKg: number, reps: number, e1rmKg: number): numbe
   return Math.max(0, Math.floor(predictedMaxReps(loadKg, e1rmKg) - reps + FLOOR_TOLERANCE));
 }
 
-export function intensityBonus(loadKg: number, e1rmKg: number | null, cfg: BalanceConfig): number {
+export function intensityBonus(reps: number, loadKg: number, e1rmKg: number | null, cfg: BalanceConfig): number {
   if (e1rmKg === null || e1rmKg <= 0 || loadKg <= 0) return 1;
-  const relativeIntensity = loadKg / e1rmKg;
-  if (relativeIntensity <= cfg.intensityBonusStart) return 1;
+  if (loadKg / e1rmKg <= cfg.intensityBonusStart) return 1;
+  const intensityIfTakenToFailure = 1 / (1 + (reps - 1) / 30);
+  if (intensityIfTakenToFailure <= cfg.intensityBonusStart) return 1;
   const progress = Math.min(
     1,
-    (relativeIntensity - cfg.intensityBonusStart) / (cfg.intensityBonusFull - cfg.intensityBonusStart),
+    (intensityIfTakenToFailure - cfg.intensityBonusStart) / (cfg.intensityBonusFull - cfg.intensityBonusStart),
   );
   return roundTo(6, 1 + (cfg.intensityBonusMax - 1) * progress);
+}
+
+export function liftsNoLoad(exercise: ExerciseDef, effectiveLoadKg: number): boolean {
+  return !usesRepsCapacity(exercise) && effectiveLoadKg <= 0;
 }
 
 function usesRepsCapacity(exercise: ExerciseDef): boolean {
@@ -94,6 +100,8 @@ interface ExerciseSessionProgress {
   strengthAtSessionStart: number | null;
   bestCandidateThisSession: number | null;
   firstCandidateThisSession: number | null;
+  fatigue: number;
+  coldStartSetsPaid: number;
 }
 
 interface StrengthDecision {
@@ -107,7 +115,9 @@ interface StrengthDecision {
 
 function estimateFor(result: SetResult, exercise: ExerciseDef, strengthBefore: number | null): number | null {
   if (strengthBefore === null || strengthBefore <= 0) return null;
-  if (usesRepsCapacity(exercise)) return Math.max(0, strengthBefore - result.set.reps);
+  if (usesRepsCapacity(exercise)) {
+    return Math.max(0, Math.floor(strengthBefore - result.set.reps + FLOOR_TOLERANCE));
+  }
   if (result.effectiveLoadKg <= 0) return null;
   return estimateRir(result.effectiveLoadKg, result.set.reps, strengthBefore);
 }
@@ -121,10 +131,14 @@ function decideEffort(
   result: SetResult,
   exercise: ExerciseDef,
   strengthBefore: number | null,
+  fatigue: number,
+  coldStartPayable: boolean,
   isBaselineSession: boolean,
   cfg: BalanceConfig,
 ): StrengthDecision {
-  const estimated = estimateFor(result, exercise, strengthBefore);
+  const fatiguedBefore =
+    strengthBefore === null ? null : fatiguedStrength(strengthBefore, fatigue, usesRepsCapacity(exercise));
+  const estimated = estimateFor(result, exercise, fatiguedBefore);
   const logged = result.rir;
 
   if (logged !== null) {
@@ -150,7 +164,7 @@ function decideEffort(
   });
 
   if (isBaselineSession) {
-    return coldStart(exercise.builtIn && !result.set.isWarmup ? cfg.coldStartXpPerSet : 0);
+    return coldStart(coldStartPayable ? cfg.coldStartXpPerSet : 0);
   }
   if (estimated === null) return coldStart(0);
 
@@ -183,6 +197,20 @@ function capGrowth(candidate: number, anchor: number | null, exercise: ExerciseD
   return Math.min(candidate, usesRepsCapacity(exercise) ? Math.ceil(roundTo(6, ceiling)) : roundTo(2, ceiling));
 }
 
+function isColdStartPayable(
+  result: SetResult,
+  exercise: ExerciseDef,
+  progress: ExerciseSessionProgress,
+  cfg: BalanceConfig,
+): boolean {
+  return (
+    exercise.builtIn &&
+    !result.set.isWarmup &&
+    !liftsNoLoad(exercise, result.effectiveLoadKg) &&
+    progress.coldStartSetsPaid < cfg.coldStartMaxSetsPerExercise
+  );
+}
+
 export const trackStrength: Step = (ctx: SessionContext) => {
   const progressByExercise = new Map<string, ExerciseSessionProgress>();
 
@@ -193,25 +221,42 @@ export const trackStrength: Step = (ctx: SessionContext) => {
       strengthAtSessionStart: known.windowMax ?? known.fallbackMax,
       bestCandidateThisSession: null,
       firstCandidateThisSession: null,
+      fatigue: 1,
+      coldStartSetsPaid: 0,
     };
 
     const strengthBefore = maxOrNull(known.windowMax, progress.bestCandidateThisSession) ?? known.fallbackMax;
-    const decision = decideEffort(result, exercise, strengthBefore, !known.hasPriorSession, ctx.cfg);
+    const decision = decideEffort(
+      result,
+      exercise,
+      strengthBefore,
+      progress.fatigue,
+      isColdStartPayable(result, exercise, progress, ctx.cfg),
+      !known.hasPriorSession,
+      ctx.cfg,
+    );
 
     const rawCandidate = uncappedCandidate(result, exercise, decision.rirUsedForStrength, ctx.cfg);
-    const growthAnchor = progress.strengthAtSessionStart ?? progress.firstCandidateThisSession;
-    const candidate =
-      rawCandidate !== null && decision.rirSource === 'logged'
-        ? capGrowth(rawCandidate, growthAnchor, exercise, ctx.cfg)
-        : rawCandidate;
+    const growthAnchor =
+      progress.strengthAtSessionStart ?? (known.hasPriorSession ? progress.firstCandidateThisSession : null);
+    const candidate = rawCandidate === null ? null : capGrowth(rawCandidate, growthAnchor, exercise, ctx.cfg);
+    const buildsFatigue = !result.set.isWarmup && !liftsNoLoad(exercise, result.effectiveLoadKg);
 
     progressByExercise.set(exercise.id, {
       strengthAtSessionStart: progress.strengthAtSessionStart,
       bestCandidateThisSession: maxOrNull(progress.bestCandidateThisSession, candidate),
       firstCandidateThisSession: progress.firstCandidateThisSession ?? candidate,
+      fatigue: buildsFatigue
+        ? progress.fatigue * fatigueAfterSet(decision.rirForXp ?? ctx.cfg.coldStartAssumedRir, ctx.cfg)
+        : progress.fatigue,
+      coldStartSetsPaid: progress.coldStartSetsPaid + (decision.coldStartXp > 0 ? 1 : 0),
     });
 
     const repsModel = usesRepsCapacity(exercise);
+    const bonus =
+      repsModel || decision.rirFlagged
+        ? 1
+        : intensityBonus(result.set.reps, result.effectiveLoadKg, strengthBefore, ctx.cfg);
     return {
       ...result,
       rir: decision.rir,
@@ -219,7 +264,7 @@ export const trackStrength: Step = (ctx: SessionContext) => {
       rirForXp: decision.rirForXp,
       rirFlagged: decision.rirFlagged,
       coldStartXp: decision.coldStartXp,
-      intensityBonus: repsModel ? 1 : intensityBonus(result.effectiveLoadKg, strengthBefore, ctx.cfg),
+      intensityBonus: bonus,
       e1rmBeforeKg: repsModel ? null : strengthBefore,
       repsCapacityBefore: repsModel ? strengthBefore : null,
       e1rmCandidateKg: repsModel ? null : candidate,

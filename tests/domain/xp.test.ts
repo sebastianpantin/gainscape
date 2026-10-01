@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_BALANCE, effectiveReps, resolveEffort, setXp, splitXp } from '@domain/index.ts';
+import { DEFAULT_BALANCE, effectiveReps, effortInputFromStored, resolveEffort, setXp, splitXp } from '@domain/index.ts';
 import { TEST_BALANCE } from './fixtures.ts';
 
 describe('effort', () => {
   it.each([
-    ['easy', 6],
+    ['easy', 5],
     ['hard', 3],
     ['near_failure', 1],
     ['failure', 0],
@@ -14,6 +14,15 @@ describe('effort', () => {
       effortValue: rir,
       loggedRir: rir,
     });
+  });
+
+  it('gives an easy set one effective rep', () => {
+    const { loggedRir } = resolveEffort({ type: 'level', level: 'easy' }, DEFAULT_BALANCE);
+    expect(effectiveReps(10, loggedRir!, false, DEFAULT_BALANCE)).toBe(1);
+  });
+
+  it('reads a stored easy level back from its RIR', () => {
+    expect(effortInputFromStored('level', 5, DEFAULT_BALANCE)).toEqual({ type: 'level', level: 'easy' });
   });
 
   it('leaves an unrated set without a logged RIR', () => {
@@ -82,5 +91,26 @@ describe('xp split', () => {
       { skillId: 'back', shareBasisPoints: 5000, sortOrder: 2 },
     ];
     expect(splitXp(1, evenSplit)).toEqual([{ skillId: 'back', xp: 1 }]);
+  });
+
+  it('rotates tied remainders so no skill loses XP over repeated sets', () => {
+    expect(splitXp(375, benchShares, 0)).toEqual([
+      { skillId: 'chest', xp: 263 },
+      { skillId: 'shoulders', xp: 75 },
+      { skillId: 'arms', xp: 37 },
+    ]);
+    expect(splitXp(375, benchShares, 1)).toEqual([
+      { skillId: 'chest', xp: 262 },
+      { skillId: 'shoulders', xp: 75 },
+      { skillId: 'arms', xp: 38 },
+    ]);
+  });
+
+  it('matches the exact share over a full rotation of tied remainders', () => {
+    const totals = { chest: 0, shoulders: 0, arms: 0 } as Record<string, number>;
+    for (let rotation = 0; rotation < 6; rotation++) {
+      for (const part of splitXp(375, benchShares, rotation)) totals[part.skillId] += part.xp;
+    }
+    expect(totals).toEqual({ chest: 1575, shoulders: 450, arms: 225 });
   });
 });

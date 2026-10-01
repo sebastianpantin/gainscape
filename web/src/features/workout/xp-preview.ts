@@ -35,9 +35,14 @@ function estimatedRir(set: DraftSet, exercise: PreviewExercise): number | null {
   return null;
 }
 
+function liftsNoLoad(set: DraftSet, exercise: PreviewExercise): boolean {
+  return exercise.loadType === 'external' && set.weightKg <= 0;
+}
+
 function xpAt(set: DraftSet, exercise: PreviewExercise, rir: number, cfg: BalanceConfig): number {
+  if (liftsNoLoad(set, exercise)) return 0;
   const e1rmKg = exercise.loadType === 'external' ? (exercise.strength?.e1rmKg ?? null) : null;
-  return setXp(effectiveReps(set.reps, rir, false, cfg), intensityBonus(set.weightKg, e1rmKg, cfg), cfg);
+  return setXp(effectiveReps(set.reps, rir, false, cfg), intensityBonus(set.reps, set.weightKg, e1rmKg, cfg), cfg);
 }
 
 function loggedRir(set: DraftSet, cfg: BalanceConfig): number | null {
@@ -60,7 +65,10 @@ export function previewSet(
     return { xp: xpAt(set, exercise, rir, cfg), basis: 'logged', rir };
   }
   if (!strengthKnown) return { xp: 0, basis: 'unknown', rir: null };
-  if (!exercise.strength) return { xp: exercise.builtIn ? cfg.coldStartXpPerSet : 0, basis: 'cold_start', rir: null };
+  if (!exercise.strength) {
+    const xp = exercise.builtIn && !liftsNoLoad(set, exercise) ? cfg.coldStartXpPerSet : 0;
+    return { xp, basis: 'cold_start', rir: null };
+  }
   const rir = estimatedRir(set, exercise);
   if (rir === null) return { xp: 0, basis: 'unknown', rir: null };
   return { xp: xpAt(set, exercise, rir, cfg), basis: 'estimated', rir };
