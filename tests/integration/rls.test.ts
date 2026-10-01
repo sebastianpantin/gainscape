@@ -316,6 +316,7 @@ describe('function execution rights', () => {
       'copy_program',
       'craft',
       'delete_program',
+      'exercise_strength_state',
       'get_collection',
       'get_feed',
       'get_hiscores',

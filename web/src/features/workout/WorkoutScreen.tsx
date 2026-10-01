@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { DEFAULT_BALANCE, type StrengthState } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { type Exercise, fetchExercises, type LoadType, saveBodyweight } from '../../lib/catalog.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
-import { type ExerciseStrengthView, fetchExerciseStrength } from '../../lib/collection-data.ts';
+import { type ExerciseStrengthView, fetchExerciseStrength, fetchStrengthState } from '../../lib/collection-data.ts';
+import { fetchProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
@@ -34,7 +36,7 @@ import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
-import { formatXp, previewSet } from './xp-preview.ts';
+import { formatXp, previewSession } from './xp-preview.ts';
 
 const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
 const LONG_SYNC_WAIT_MS = 60_000;
@@ -88,6 +90,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
   const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);
+  const [loadedStrength, setLoadedStrength] = useState<{ asOf: string; state: StrengthState } | null>(null);
+  const [bodyweightKg, setBodyweightKg] = useState<number | null>(null);
+  const [onlineSignal, setOnlineSignal] = useState(0);
   const standing = useStanding(userId);
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
@@ -121,6 +126,45 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       active = false;
     };
   }, [userId]);
+
+  useEffect(() => {
+    const signalOnline = () => setOnlineSignal((count) => count + 1);
+    window.addEventListener('online', signalOnline);
+    return () => window.removeEventListener('online', signalOnline);
+  }, []);
+
+  const draftStartedAt = draft?.startedAt ?? null;
+  useEffect(() => {
+    if (draftStartedAt === null) return;
+    let active = true;
+    fetchStrengthState(draftStartedAt, DEFAULT_BALANCE.e1rmWindowDays).then(
+      (state) => active && setLoadedStrength({ asOf: draftStartedAt, state }),
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [userId, draftStartedAt, onlineSignal]);
+  const previewStrength =
+    loadedStrength !== null && loadedStrength.asOf === draftStartedAt ? loadedStrength.state : null;
+
+  useEffect(() => {
+    let active = true;
+    fetchProfile(userId).then(
+      (profile) => active && setBodyweightKg(profile.bodyweightKg),
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [userId, onlineSignal]);
+
+  const draftExercises = draft?.exercises ?? null;
+  const previews = useMemo(() => {
+    if (draftExercises === null) return [];
+    const customIds = new Set(exercises.filter((exercise) => exercise.custom).map((exercise) => exercise.id));
+    return previewSession(draftExercises, (exerciseId) => !customIds.has(exerciseId), previewStrength, bodyweightKg);
+  }, [draftExercises, exercises, previewStrength, bodyweightKg]);
 
   const { status: finishStatus, retryNow } = useFinishSync({
     userId,
@@ -254,6 +298,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             unit={unitPref}
             onSave={async (bodyweightKg) => {
               await saveBodyweight(userId, bodyweightKg);
+              setBodyweightKg(bodyweightKg);
               retryNow();
             }}
           />
@@ -295,20 +340,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   };
 
   const canFinish = doneSetCount(draft) > 0 && !checkingFinish;
-  const customIds = new Set(exercises.filter((exercise) => exercise.custom).map((exercise) => exercise.id));
-  const previews = draft.exercises.map((exercise) =>
-    exercise.sets.map((set) =>
-      previewSet(
-        set,
-        {
-          loadType: exercise.loadType,
-          builtIn: !customIds.has(exercise.exerciseId),
-          strength: strength?.get(exercise.exerciseId),
-        },
-        strength !== null,
-      ),
-    ),
-  );
   const previewTotal = previews
     .flatMap((sets, exerciseIndex) => sets.filter((_, setIndex) => draft.exercises[exerciseIndex].sets[setIndex].done))
     .reduce((sum, preview) => sum + preview.xp, 0);
