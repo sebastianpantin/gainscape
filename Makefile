@@ -10,7 +10,7 @@ export $(shell sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' .stack.env)
 endif
 
 PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
-CI_EXCLUDED := studio,imgproxy,vector,logflare,storage-api,realtime,postgres-meta,supavisor
+CI_EXCLUDED := studio,imgproxy,vector,logflare,postgres-meta,supavisor
 
 .PHONY: start ci-start ci-logs stop reset functions dev build-local preview sw-kill-switch types test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa
 

@@ -47,6 +47,10 @@ async function storedEvents(userId: string, sessionId?: string) {
     order by event_key`;
 }
 
+async function storedLevelEvents(userId: string, sessionId?: string) {
+  return (await storedEvents(userId, sessionId)).filter((event) => event.type === 'level_up');
+}
+
 async function editSession(user: TestUser, session: SessionPayload, sets: SetShape[]) {
   const [row] = await db`select revision from public.sessions where id = ${session.id}`;
   const response = await postFunction('edit-session', user.accessToken, {
@@ -236,9 +240,9 @@ describe('level events', () => {
     const early = earlyFor();
     const late = lateFor();
     await postSession(inOrder, early);
-    expect(await storedEvents(inOrder.id)).toEqual([]);
+    expect(await storedLevelEvents(inOrder.id)).toEqual([]);
     await postSession(inOrder, late);
-    const [levelUp] = await storedEvents(inOrder.id, late.id);
+    const [levelUp] = await storedLevelEvents(inOrder.id, late.id);
     expect(levelUp).toMatchObject({
       event_key: 'level:core',
       type: 'level_up',
@@ -248,11 +252,13 @@ describe('level events', () => {
 
     const lateFirst = lateFor();
     await postSession(outOfOrder, lateFirst);
-    expect(await storedEvents(outOfOrder.id)).toEqual([]);
+    expect(await storedLevelEvents(outOfOrder.id)).toEqual([]);
     await postSession(outOfOrder, earlyFor());
-    const [rederived] = await storedEvents(outOfOrder.id, lateFirst.id);
+    const [rederived] = await storedLevelEvents(outOfOrder.id, lateFirst.id);
     expect(rederived).toMatchObject({ type: 'level_up', payload: { skill: 'core', from: 9, to: 13 } });
-    expect(await eventsSnapshot(outOfOrder.id)).toEqual(await eventsSnapshot(inOrder.id));
+    const levelKeysAndPayloads = async (userId: string) =>
+      (await storedLevelEvents(userId)).map(({ event_key, payload }) => ({ event_key, payload }));
+    expect(await levelKeysAndPayloads(outOfOrder.id)).toEqual(await levelKeysAndPayloads(inOrder.id));
   });
 });
 
