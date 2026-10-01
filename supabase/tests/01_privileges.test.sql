@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(10);
 
 select is(
   (select array_agg(n.nspname || '.' || c.relname order by n.nspname, c.relname)
@@ -90,6 +90,16 @@ select isnt(
    where n.nspname in ('public', 'private') and p.prosecdef),
   0,
   'the definer check sees the definer functions'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.exercise_strength_state(timestamptz, integer)', 'execute'),
+  'anon cannot read strength state'
+);
+
+select ok(
+  has_function_privilege('authenticated', 'public.exercise_strength_state(timestamptz, integer)', 'execute'),
+  'authenticated can read its own strength state'
 );
 
 select * from finish();
