@@ -45,6 +45,7 @@ jobs:
       - run: make test-integration
       - run: make test-db
       - run: make e2e CHROMIUM_PATH=
+      - run: make e2e-pwa CHROMIUM_PATH=
       - if: failure()
         run: make ci-logs
       - if: failure()

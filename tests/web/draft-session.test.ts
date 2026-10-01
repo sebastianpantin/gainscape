@@ -5,6 +5,7 @@ import {
   type DraftChannel,
   type DraftMessage,
   type DraftSnapshot,
+  flushOpenDraftSessions,
 } from '../../web/src/offline/draft-session.ts';
 import { createLocalDraftStore, type DraftStore } from '../../web/src/offline/draft-store.ts';
 import { workout } from './draft-store.contract.ts';
@@ -221,5 +222,48 @@ describe('draft session start-up', () => {
     expect(seenSessions.length).toBeGreaterThan(0);
     expect(seenSessions.every((seen) => seen === session)).toBe(true);
     expect(session.snapshot()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: true });
+  });
+});
+
+describe('flushOpenDraftSessions', () => {
+  function slowStore() {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const releases: (() => void)[] = [];
+    const put: DraftStore['put'] = (...args) =>
+      new Promise((resolve) => releases.push(() => resolve(store.put(...args))));
+    return { store: { ...store, put }, releaseAll: () => releases.splice(0).forEach((release) => release()) };
+  }
+
+  it('awaits the pending writes of every open session', async () => {
+    const first = slowStore();
+    const second = slowStore();
+    const sessions = [sessionOver(first.store), sessionOver(second.store)];
+    await Promise.all(sessions.map(({ session }) => session.ready));
+    sessions[0].session.changeDraft(workout('session-a'));
+    sessions[1].session.changeDraft(workout('session-b'));
+    let flushed = false;
+    const flushing = flushOpenDraftSessions().then(() => {
+      flushed = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(flushed).toBe(false);
+    first.releaseAll();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(flushed).toBe(false);
+    second.releaseAll();
+    await flushing;
+    expect(await first.store.get(userId)).toMatchObject({ draft: { sessionId: 'session-a' } });
+    expect(await second.store.get(userId)).toMatchObject({ draft: { sessionId: 'session-b' } });
+    sessions.forEach(({ session }) => session.close());
+  });
+
+  it('no longer awaits a closed session', async () => {
+    const slow = slowStore();
+    const { session } = sessionOver(slow.store);
+    await session.ready;
+    session.changeDraft(workout('session-a'));
+    session.close();
+    await flushOpenDraftSessions();
+    slow.releaseAll();
   });
 });
