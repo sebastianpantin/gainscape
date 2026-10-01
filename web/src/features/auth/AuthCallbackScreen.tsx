@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
 import { MINIMUM_PASSWORD_LENGTH } from '../../lib/account.ts';
 import { type AuthCallback, authErrorMessage } from '../../lib/auth-links.ts';
+import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
 import { supabase } from '../../lib/supabase.ts';
 
 type Step =
@@ -15,22 +16,37 @@ type Step =
 const USERNAME_PATTERN = '^[a-z0-9_]{3,20}$';
 
 const USERNAME_PROBLEMS: Record<string, string> = {
-  username_taken: 'That username is taken.',
-  invalid_username: 'Use 3–20 characters: a–z, 0–9 and _.',
-  username_change_closed: 'Your username can no longer be changed.',
+  taken: 'That username is taken.',
+  invalid: 'Use 3–20 characters: a–z, 0–9 and _.',
+  closed: 'Your username can no longer be changed.',
 };
+
+async function renameTo(candidate: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('change_username', { candidate });
+  if (error) return error.message === RATE_LIMITED_CODE ? tryAgainIn(retryAfterSeconds(error.details)) : error.message;
+  const status = (data as { status: string }).status;
+  return status === 'ok' ? null : (USERNAME_PROBLEMS[status] ?? status);
+}
 
 async function usernameOf(userId: string): Promise<string> {
   const { data } = await supabase.from('profiles').select('username').eq('id', userId).maybeSingle();
   return data?.username ?? '';
 }
 
+async function passwordStep(callback: AuthCallback, userId: string): Promise<Step> {
+  if (callback.type === 'recovery') return { kind: 'new-password' };
+  return { kind: 'choose-password', username: await usernameOf(userId) };
+}
+
 async function verify(callback: AuthCallback): Promise<Step> {
   const { data, error } = await supabase.auth.verifyOtp({ token_hash: callback.tokenHash, type: callback.type });
-  if (error) return { kind: 'failed', problem: authErrorMessage(error) };
-  if (callback.type === 'recovery') return { kind: 'new-password' };
+  if (error) {
+    const { data: current } = await supabase.auth.getSession();
+    if (callback.type !== 'email_change' && current.session) return passwordStep(callback, current.session.user.id);
+    return { kind: 'failed', problem: authErrorMessage(error) };
+  }
   if (callback.type === 'email_change') return { kind: 'email-changed' };
-  return { kind: 'choose-password', username: data.user ? await usernameOf(data.user.id) : '' };
+  return passwordStep(callback, data.user?.id ?? '');
 }
 
 function PasswordFields({
@@ -88,6 +104,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
   useEffect(() => {
     if (started.current) return;
     started.current = true;
+    window.history.replaceState(null, '', '/');
     verify(callback).then((next) => {
       if (next.kind === 'choose-password') setUsername(next.username);
       setStep(next);
@@ -106,9 +123,9 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
     setBusy(true);
     setProblem(null);
     if (step.kind === 'choose-password' && username.trim().toLowerCase() !== step.username) {
-      const renamed = await supabase.rpc('change_username', { candidate: username.trim().toLowerCase() });
-      if (renamed.error) {
-        setProblem(USERNAME_PROBLEMS[renamed.error.message] ?? renamed.error.message);
+      const renameProblem = await renameTo(username.trim().toLowerCase());
+      if (renameProblem) {
+        setProblem(renameProblem);
         setBusy(false);
         return;
       }

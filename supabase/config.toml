@@ -70,12 +70,7 @@ max_indexes = 5
 [auth]
 enabled = true
 site_url = "https://localhost:5173"
-additional_redirect_urls = [
-  "https://localhost:*/**",
-  "https://127.0.0.1:*/**",
-  "https://192.168.*.*:*/**",
-  "https://10.*.*.*:*/**",
-]
+additional_redirect_urls = ["https://localhost:5173/auth/confirm", "https://127.0.0.1:5173/auth/confirm"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

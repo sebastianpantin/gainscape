@@ -7,7 +7,7 @@
 The local `config.toml` has settings that are only safe on a laptop:
 
 - `site_url = "https://localhost:5173"`
-- redirect globs for `localhost`, `127.0.0.1`, `192.168.*.*` and `10.*.*.*`
+- exact redirect URLs for `https://localhost:5173/auth/confirm` and `https://127.0.0.1:5173/auth/confirm`
 - `[auth.rate_limit]` limits raised to 1000 (`email_sent`, `sign_in_sign_ups`, `token_verifications`) so the test suites never hit them
 
 Before any `supabase config push`, set the hosted values below in a copy of the file (or in the dashboard). Do not run `supabase config push` with the local file as it is.
@@ -41,12 +41,13 @@ sender_name = "Gainscape"
 ## Auth settings for the hosted project
 
 - `site_url` is the production origin, for example `https://gainscape.<domain>`.
-- `additional_redirect_urls` lists the exact callback URLs, with no globs: `https://gainscape.<domain>/auth/confirm`. Every email link goes to `{{ .RedirectTo }}`, so a loose glob hands a login or reset token to whatever host matches it.
+- `additional_redirect_urls` lists exact callback URLs only, for example `["https://gainscape.<domain>/auth/confirm"]`. Never use a glob (`*` or `**`) anywhere in an entry. Every email link goes to `{{ .RedirectTo }}`, and GoTrue's globs match hosts such as `https://192.168.evil.test` or `https://localhost:x@3627733341/`, so any glob can hand a login or reset token to an attacker's host. Confirmation, reset and email change all use the same `/auth/confirm` path.
 - `enable_confirmations = true` and `secure_password_change = true` stay on.
+- `[auth.email] max_frequency = "60s"`, so one address can't be sent a confirmation or reset email more than once a minute. The local file uses `1s` so the tests can resend quickly.
 - `[auth.rate_limit] email_sent = 30` per hour. Keep the other auth limits at the platform defaults.
 - The templates in `supabase/templates/` (`confirmation.html`, `recovery.html`, `email_change.html`) and their subjects ship with `config push`. Check them in the dashboard after the push.
 
-GoTrue only honours redirect hosts that are loopback addresses or names that match an allowlist entry. Links requested from a LAN IP address, such as a phone on `https://192.168.1.20:5173`, fall back to `site_url`. That is fine locally, and it is why production must use a real hostname.
+Locally, GoTrue also accepts any `localhost` or `127.0.0.1` URL on its own (it treats loopback and the `site_url` host as trusted), so a second stack on another `GAINSCAPE_WEB_PORT` works without extra entries. `config.toml` has no `env()` port substitution for these entries, and none is needed. Links requested from a LAN IP address, such as a phone on `https://192.168.1.20:5173`, fall back to `site_url`.
 
 ## Account confirmation and the pre-hijack fix
 
@@ -59,12 +60,12 @@ Migration 014 adds a trigger that gives an account a random password when an ema
 
 ## Tests never run against a hosted database
 
-`make test-db` runs pgTAP, which creates a `tests` schema and inserts and deletes users. It refuses to run unless the database reported by `supabase status` is on `127.0.0.1` or `localhost`, and it always passes `--local`. Never run `supabase test db --linked` or `--db-url` against a hosted project. The same goes for `make test-integration`, `make e2e` and `make reset`: they all assume the local stack.
+`make test-db` runs pgTAP, which creates a `tests` schema and inserts and deletes users. It refuses to run unless the database reported by `supabase status` is on `127.0.0.1` or `localhost` and its port is published by this project's running `supabase_db_<project_id>` container (so a port-forwarded remote database fails the check), and it always passes `--local`. Never run `supabase test db --linked` or `--db-url` against a hosted project. The same goes for `make test-integration`, `make e2e` and `make reset`: they all assume the local stack.
 
 ## Go-live checklist
 
 - [ ] SMTP provider set up, with SPF and DKIM passing for the sender domain.
-- [ ] `site_url`, the exact redirect URL and `email_sent = 30` set on the hosted project.
+- [ ] `site_url`, the exact redirect URL (no globs), `max_frequency = "60s"` and `email_sent = 30` set on the hosted project.
 - [ ] `enable_confirmations` and `secure_password_change` are on.
 - [ ] Templates pushed and checked in the dashboard.
 - [ ] Signup delivers a confirmation email to a non-team address, and its link confirms the account.

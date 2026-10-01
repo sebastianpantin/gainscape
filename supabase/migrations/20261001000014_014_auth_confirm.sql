@@ -31,7 +31,7 @@ as $$
 $$;
 
 create function public.change_username(candidate text)
-returns text
+returns jsonb
 language plpgsql
 security definer
 set search_path = ''
@@ -46,33 +46,35 @@ begin
   end if;
   perform private.take_rate_limit('username_check_minute', caller);
   if wanted is null or wanted !~ '^[a-z0-9_]{3,20}$' then
-    raise exception 'invalid_username' using errcode = 'invalid_parameter_value';
+    return jsonb_build_object('status', 'invalid');
   end if;
   if not exists (
     select 1 from auth.users u
     where u.id = caller and u.email_confirmed_at > now() - private.username_change_window()
   ) then
-    raise exception 'username_change_closed' using errcode = 'insufficient_privilege';
+    return jsonb_build_object('status', 'closed');
   end if;
 
   select p.username into current_name from public.profiles p where p.id = caller for update;
   if current_name = wanted then
-    return wanted;
+    return jsonb_build_object('status', 'ok', 'username', wanted);
   end if;
   perform private.release_stale_username(wanted);
   if exists (select 1 from public.profiles p where p.username = wanted) then
-    raise exception 'username_taken' using errcode = 'unique_violation';
+    return jsonb_build_object('status', 'taken');
   end if;
 
-  update public.profiles p
-  set username = wanted,
-      display_name = case when p.display_name = current_name then wanted else p.display_name end,
-      updated_at = now()
-  where p.id = caller;
-  return wanted;
-exception
-  when unique_violation then
-    raise exception 'username_taken' using errcode = 'unique_violation';
+  begin
+    update public.profiles p
+    set username = wanted,
+        display_name = case when p.display_name = current_name then wanted else p.display_name end,
+        updated_at = now()
+    where p.id = caller;
+  exception
+    when unique_violation then
+      return jsonb_build_object('status', 'taken');
+  end;
+  return jsonb_build_object('status', 'ok', 'username', wanted);
 end;
 $$;
 
