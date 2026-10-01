@@ -17,6 +17,7 @@ import {
   type StoredSetRow,
   transientReason,
 } from '../../lib/history-rules.ts';
+import { RATE_LIMITED_CODE, retryAfterSeconds } from '../../lib/rate-limit.ts';
 import { defaultWeightKg, nextSetValues, updateExerciseAt } from '../../offline/draft-format.ts';
 
 export interface KnownExercise {
@@ -358,6 +359,7 @@ export type FailureAction =
   | { kind: 'ask_bodyweight' }
   | { kind: 'unknown_exercise'; exerciseIds: string[] }
   | { kind: 'fix_bodyweight_load' }
+  | { kind: 'rate_limited'; retryAfterSeconds: number | null }
   | { kind: 'bug'; code: string };
 
 function stringList(details: unknown, key: string): string[] {
@@ -375,6 +377,7 @@ const FAILURE_ACTIONS: Record<string, (details: unknown) => FailureAction> = {
   bodyweight_load_not_zero: () => ({ kind: 'fix_bodyweight_load' }),
   profile_missing: () => ({ kind: 'sign_out' }),
   session_not_found: () => ({ kind: 'gone' }),
+  [RATE_LIMITED_CODE]: (details) => ({ kind: 'rate_limited', retryAfterSeconds: retryAfterSeconds(details) }),
 };
 
 export function failureAction(outcome: Exclude<InvokeOutcome<unknown>, { kind: 'ok' }>): FailureAction {

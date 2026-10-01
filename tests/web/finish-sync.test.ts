@@ -153,6 +153,22 @@ describe('sendOutcomeFrom', () => {
     expect(sendOutcomeFrom({ kind: 'retryable', reason: 'offline' })).toEqual({ kind: 'retryable', reason: 'offline' });
   });
 
+  it('treats a rate limit as transient and waits for Retry-After', () => {
+    expect(
+      sendOutcomeFrom({
+        kind: 'http_error',
+        status: 429,
+        code: 'rate_limited',
+        details: { bucket: 'session_create_hour', retryAfterSeconds: 1200 },
+      }),
+    ).toEqual({ kind: 'retryable', reason: 'rate_limited', retryAfterMs: 1_200_000 });
+    expect(sendOutcomeFrom({ kind: 'http_error', status: 429, code: 'rate_limited', details: undefined })).toEqual({
+      kind: 'retryable',
+      reason: 'rate_limited',
+      retryAfterMs: undefined,
+    });
+  });
+
   it('keeps a history-only summary as a successful sync', () => {
     const historyOnly = { ...summary, historyOnly: true as const };
     expect(sendOutcomeFrom({ kind: 'ok', data: historyOnly })).toEqual({ kind: 'synced', summary: historyOnly });

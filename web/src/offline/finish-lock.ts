@@ -1,5 +1,6 @@
 import type { SessionSummary } from '@domain/types.ts';
 import type { InvokeOutcome } from '../lib/function-client.ts';
+import { RATE_LIMITED_STATUS, retryAfterSeconds } from '../lib/rate-limit.ts';
 import { rememberLastSummary } from '../features/summary/last-summary.ts';
 import { storedSessionId, type WorkoutDraft } from './draft-format.ts';
 import type { SyncedChange } from './draft-session.ts';
@@ -8,7 +9,7 @@ import type { DraftStore } from './draft-store.ts';
 export type SendOutcome =
   | { kind: 'synced'; summary: SessionSummary }
   | { kind: 'deleted' }
-  | { kind: 'retryable'; reason: string }
+  | { kind: 'retryable'; reason: string; retryAfterMs?: number }
   | { kind: 'rejected'; reason: string }
   | { kind: 'needs_sign_in' }
   | { kind: 'wrong_account' };
@@ -32,6 +33,10 @@ export function sendOutcomeFrom(outcome: InvokeOutcome<SessionSummary>): SendOut
   if (outcome.kind === 'ok') return { kind: 'synced', summary: outcome.data };
   if (outcome.kind !== 'http_error') return outcome;
   if (outcome.status === SESSION_DELETED_STATUS) return { kind: 'deleted' };
+  if (outcome.status === RATE_LIMITED_STATUS) {
+    const seconds = retryAfterSeconds(outcome.details);
+    return { kind: 'retryable', reason: outcome.code, retryAfterMs: seconds === null ? undefined : seconds * 1000 };
+  }
   return outcome.status >= 500
     ? { kind: 'retryable', reason: outcome.code }
     : { kind: 'rejected', reason: outcome.code };

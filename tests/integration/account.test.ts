@@ -38,6 +38,7 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'friendships', column: 'requester_id' },
   { table: 'friendships', column: 'addressee_id' },
   { table: 'crafts', column: 'user_id' },
+  { table: 'reactions', column: 'user_id' },
 ];
 
 async function post(name: string, accessToken: string | null, body: unknown) {
@@ -119,6 +120,14 @@ async function giveUserEverything(user: TestUser): Promise<void> {
   expect(incoming.data).toMatchObject({ status: 'sent' });
   const accepted = await user.client.rpc('respond_friend_request', { requester_id: friend.id, accept: true });
   expect(accepted.data).toMatchObject({ status: 'accepted' });
+  const friendSession = await logOneSession(friend);
+  const [friendEvent] = await db`
+    insert into public.events (user_id, session_id, event_key, type, occurred_at, payload)
+    values (${friend.id}, ${friendSession}, 'level:back', 'level_up', now(), '{"skill": "back", "from": 9, "to": 10}')
+    on conflict (session_id, event_key) do update set updated_at = now()
+    returning id`;
+  const gz = await user.client.rpc('set_gz', { event_id: friendEvent.id, given: true });
+  expect(gz.data).toMatchObject({ gzCount: 1 });
 }
 
 async function rowCounts(userId: string): Promise<Record<string, number>> {
@@ -208,6 +217,8 @@ describe('export-data', () => {
     expect(counts.user_unlocks).toBeGreaterThan(0);
     expect(exported.events).toHaveLength(counts.events);
     expect(exported.crafts).toHaveLength(1);
+    expect(exported.reactionsGiven).toHaveLength(1);
+    expect(Object.keys(exported.reactionsGiven[0]).sort()).toEqual(['created_at', 'event_id']);
     expect(
       exported.friendships.map((row: { direction: string; status: string }) => `${row.direction}:${row.status}`).sort(),
     ).toEqual(['incoming:accepted', 'outgoing:pending']);
@@ -258,6 +269,7 @@ describe('export-data and declined requests', () => {
     }
     await decliner.client.rpc('respond_friend_request', { requester_id: requester.id, accept: false });
     const [first] = await db`select created_at from public.friendships where requester_id = ${requester.id} limit 1`;
+    const declinerBefore = await post('export-data', decliner.accessToken, {});
     for (const target of [decliner, ignorer]) {
       expect((await requester.client.rpc('remove_friend', { other_id: target.id })).error).toBeNull();
       const resent = await requester.client.rpc('send_friend_request', { username: target.username });
@@ -279,6 +291,9 @@ describe('export-data and declined requests', () => {
     expect(shape(declinedRow)).toEqual(shape(pendingRow));
     expect(declinedRow).toMatchObject({ direction: 'outgoing', status: 'pending', respondedAt: null });
     expect(Date.parse(declinedRow.createdAt as string)).toBeGreaterThan(new Date(first.created_at).getTime());
+    const declinerAfter = await post('export-data', decliner.accessToken, {});
+    expect(declinerAfter.body.friendships).toEqual(declinerBefore.body.friendships);
+    expect(declinerAfter.body.friendships[0]).toMatchObject({ direction: 'incoming', status: 'declined' });
   });
 });
 
@@ -331,6 +346,7 @@ describe('delete-account', () => {
       'user_unlocks',
       'events',
       'crafts',
+      'reactions',
       'friendships.requester_id',
       'friendships.addressee_id',
     ]) {

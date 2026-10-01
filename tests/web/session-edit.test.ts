@@ -21,7 +21,7 @@ import {
   withNewSetIds,
   withoutBodyweightLoads,
 } from '../../web/src/features/history/session-edit.ts';
-import { isSessionId, nextPageFilter, type StoredSetRow, transientReason } from '../../web/src/lib/history-rules.ts';
+import { isUuid, nextPageFilter, type StoredSetRow, transientReason } from '../../web/src/lib/history-rules.ts';
 
 const benchId = 'aaaaaaaa-0000-4000-8000-000000000001';
 const pullUpId = 'aaaaaaaa-0000-4000-8000-000000000002';
@@ -166,10 +166,10 @@ describe('editability and paging', () => {
   });
 
   it('recognises session ids before querying', () => {
-    expect(isSessionId('bbbbbbbb-0000-4000-8000-000000000001')).toBe(true);
-    expect(isSessionId('BBBBBBBB-0000-4000-8000-000000000001')).toBe(true);
-    expect(isSessionId('not-a-uuid')).toBe(false);
-    expect(isSessionId('')).toBe(false);
+    expect(isUuid('bbbbbbbb-0000-4000-8000-000000000001')).toBe(true);
+    expect(isUuid('BBBBBBBB-0000-4000-8000-000000000001')).toBe(true);
+    expect(isUuid('not-a-uuid')).toBe(false);
+    expect(isUuid('')).toBe(false);
   });
 
   it('builds the keyset filter for the next page', () => {
@@ -230,6 +230,13 @@ describe('mapping failures to client actions', () => {
     expect(http(502, 'http_502')).toEqual({ kind: 'retry', reason: 'http_502' });
     expect(http(409, 'id_conflict')).toEqual({ kind: 'retry', reason: 'id_conflict' });
     expect(failureAction({ kind: 'retryable', reason: 'offline' })).toEqual({ kind: 'retry', reason: 'offline' });
+  });
+
+  it('keeps the edit and waits on a rate limit instead of retrying', () => {
+    const details = { bucket: 'session_edit_hour', retryAfterSeconds: 150 };
+    expect(transientReason({ kind: 'http_error', status: 429, code: 'rate_limited', details })).toBe(null);
+    expect(http(429, 'rate_limited', details)).toEqual({ kind: 'rate_limited', retryAfterSeconds: 150 });
+    expect(http(429, 'rate_limited')).toEqual({ kind: 'rate_limited', retryAfterSeconds: null });
   });
 
   it('maps auth problems', () => {
