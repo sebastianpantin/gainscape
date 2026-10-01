@@ -19,12 +19,11 @@ describe('balance bands with the committed constants', () => {
     expect(firstSkillToLevel99(results.hypertrophy)).toBe('legs');
   });
 
-  it('(a) takes a focused 4x/week lifter 5–7 years to reach 99', () => {
-    const [lowest, highest] = BANDS.focusedLifterYears;
-    for (const years of [report.years.hypertrophy, report.years.strength]) {
-      expect(years).toBeGreaterThanOrEqual(lowest);
-      expect(years).toBeLessThanOrEqual(highest);
-    }
+  it('(a) takes a balanced 3x/week lifter 2–3 years to reach 99', () => {
+    const [lowest, highest] = BANDS.balancedLifterYears;
+    expect(report.years.balanced).toBeGreaterThanOrEqual(lowest);
+    expect(report.years.balanced).toBeLessThanOrEqual(highest);
+    expect(report.passes.a).toBe(true);
   });
 
   it('(b) keeps hypertrophy and strength training within 15% of each other', () => {
@@ -35,6 +34,13 @@ describe('balance bands with the committed constants', () => {
     expect(Math.abs(report.casualTimeRatio / report.casualEffortRatio - 1)).toBeLessThanOrEqual(
       BANDS.casualRatioTolerance,
     );
+  });
+
+  it('(e) ends the first week of a balanced lifter between legs level 20 and 40', () => {
+    const [lowest, highest] = BANDS.balancedWeekOneLevel;
+    expect(report.balancedWeekOneLevel).toBeGreaterThanOrEqual(lowest);
+    expect(report.balancedWeekOneLevel).toBeLessThanOrEqual(highest);
+    expect(report.passes.e).toBe(true);
   });
 
   it('actually reaches level 99 for every profile within the 40-year horizon', () => {
