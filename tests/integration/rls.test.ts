@@ -5,6 +5,7 @@ import {
   builtInExerciseId,
   createTestUser,
   db,
+  grantDrop,
   postCompleteSession,
   postFunction,
   type TestUser,
@@ -225,5 +226,234 @@ describe('function execution rights', () => {
       'set_timezone',
       'username_available',
     ]);
+  });
+});
+
+describe('item catalog tables', () => {
+  const catalogTables = ['items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs', 'user_unlocks'];
+
+  const everyRowColumn: Record<string, string> = {
+    items: 'id',
+    drop_tables: 'id',
+    drop_entries: 'item_id',
+    recipes: 'id',
+    recipe_inputs: 'item_id',
+  };
+
+  async function snapshotOf(table: string) {
+    return await db.unsafe(`select * from public.${table} order by 1, 2`);
+  }
+
+  async function sampleRows() {
+    const [item] = await db`select * from public.items where key = 'plate_crab'`;
+    const [table] = await db`select * from public.drop_tables where key = 'rare'`;
+    const [recipe] = await db`select * from public.recipes where key = 'grinder_belt'`;
+    const [pauseSquat] = await db`select id from public.exercises where key = 'pause_squat'`;
+    const [scroll] = await db`select id from public.items where key = 'scroll_pause_squat'`;
+    return { item, table, recipe, pauseSquatId: pauseSquat.id as string, scrollId: scroll.id as string };
+  }
+
+  it.each(catalogTables)('insert into %s is denied', async (table) => {
+    const { item, table: dropTable, recipe, pauseSquatId, scrollId } = await sampleRows();
+    const rowsByTable: Record<string, object> = {
+      items: { ...item, id: randomUUID(), key: 'forged_crown', name: 'Forged crown' },
+      drop_tables: { id: randomUUID(), key: 'jackpot', name: 'Jackpot' },
+      drop_entries: {
+        drop_table_id: dropTable.id,
+        item_id: recipe.output_item_id,
+        weight: 1000000,
+        min_quantity: 1,
+        max_quantity: 1,
+      },
+      recipes: { id: randomUUID(), key: 'free_crab', output_item_id: item.id, output_quantity: 1 },
+      recipe_inputs: { recipe_id: recipe.id, item_id: item.id, quantity: 1 },
+      user_unlocks: { user_id: owner.id, exercise_id: pauseSquatId, item_id: scrollId },
+    };
+    const before = await snapshotOf(table);
+    const { error } = await owner.client.from(table).insert(rowsByTable[table]);
+    expect(error).not.toBeNull();
+    expect(await snapshotOf(table)).toEqual(before);
+  });
+
+  it.each(catalogTables.filter((table) => table !== 'user_unlocks'))('update of %s is denied', async (table) => {
+    const updates: Record<string, object> = {
+      items: { name: 'Free loot' },
+      drop_tables: { name: 'Free loot' },
+      drop_entries: { weight: 1000000 },
+      recipes: { output_quantity: 1000 },
+      recipe_inputs: { quantity: 1 },
+    };
+    const before = await snapshotOf(table);
+    const { error } = await owner.client.from(table).update(updates[table]).not(everyRowColumn[table], 'is', null);
+    expect(error?.code).toBe('42501');
+    expect(await snapshotOf(table)).toEqual(before);
+    expect(before.length).toBeGreaterThan(0);
+  });
+
+  it.each(catalogTables.filter((table) => table !== 'user_unlocks'))('delete from %s is denied', async (table) => {
+    const before = await snapshotOf(table);
+    const { error } = await owner.client.from(table).delete().not(everyRowColumn[table], 'is', null);
+    expect(error?.code).toBe('42501');
+    expect(await snapshotOf(table)).toEqual(before);
+  });
+
+  it('denies update and delete of an own unlock', async () => {
+    const user = await createTestUser();
+    const { pauseSquatId, scrollId } = await sampleRows();
+    await db`insert into public.user_unlocks (user_id, exercise_id, item_id) values (${user.id}, ${pauseSquatId}, ${scrollId})`;
+    const before = await db`select * from public.user_unlocks where user_id = ${user.id}`;
+    const updated = await user.client
+      .from('user_unlocks')
+      .update({ unlocked_at: new Date(0).toISOString() })
+      .eq('user_id', user.id);
+    expect(updated.error).not.toBeNull();
+    const deleted = await user.client.from('user_unlocks').delete().eq('user_id', user.id);
+    expect(deleted.error).not.toBeNull();
+    expect(await db`select * from public.user_unlocks where user_id = ${user.id}`).toEqual(before);
+    expect(before).toHaveLength(1);
+  });
+
+  it('lets any signed-in user read the catalog tables', async () => {
+    for (const [table, expected] of [
+      ['items', 58],
+      ['drop_tables', 2],
+      ['drop_entries', 32],
+      ['recipes', 36],
+      ['recipe_inputs', 72],
+    ] as const) {
+      const { count, error } = await stranger.client.from(table).select('*', { count: 'exact', head: true });
+      expect(error, table).toBeNull();
+      expect(count, table).toBe(expected);
+    }
+  });
+
+  it('hides a locked variation, its shares and its pin until the user unlocks it', async () => {
+    const [unlocker, outsider] = await Promise.all([createTestUser(), createTestUser()]);
+    const { pauseSquatId, scrollId } = await sampleRows();
+    const visibleTo = async (user: TestUser) => ({
+      exercises: (await user.client.from('exercises').select('id').eq('id', pauseSquatId)).data,
+      shares: (await user.client.from('exercise_skills').select('skill_id').eq('exercise_id', pauseSquatId)).data,
+    });
+
+    expect(await visibleTo(unlocker)).toEqual({ exercises: [], shares: [] });
+    const pin = await unlocker.client.from('pinned_exercises').insert({ exercise_id: pauseSquatId, position: 0 });
+    expect(pin.error).not.toBeNull();
+    expect(await db`select * from public.pinned_exercises where user_id = ${unlocker.id}`).toEqual([]);
+
+    await db`insert into public.user_unlocks (user_id, exercise_id, item_id) values (${unlocker.id}, ${pauseSquatId}, ${scrollId})`;
+    const unlocked = await visibleTo(unlocker);
+    expect(unlocked.exercises).toEqual([{ id: pauseSquatId }]);
+    expect(unlocked.shares).toHaveLength(2);
+    expect((await unlocker.client.from('user_unlocks').select('exercise_id')).data).toEqual([
+      { exercise_id: pauseSquatId },
+    ]);
+    const pinned = await unlocker.client.from('pinned_exercises').insert({ exercise_id: pauseSquatId, position: 0 });
+    expect(pinned.error).toBeNull();
+
+    expect(await visibleTo(outsider)).toEqual({ exercises: [], shares: [] });
+    expect((await outsider.client.from('user_unlocks').select('exercise_id')).data).toEqual([]);
+  });
+
+  it('still shows every unlocked built-in exercise', async () => {
+    const { data } = await stranger.client.from('exercises').select('id').is('owner_user_id', null);
+    const [{ count }] =
+      await db`select count(*)::int as count from public.exercises where owner_user_id is null and not requires_unlock`;
+    expect(data).toHaveLength(count);
+  });
+});
+
+describe('loot tables', () => {
+  const lootTables = ['loot_rolls', 'drops', 'drop_luck', 'user_items', 'item_ledger'];
+  let granted: Awaited<ReturnType<typeof grantDrop>>;
+  let regularTableId: string;
+
+  beforeAll(async () => {
+    granted = await grantDrop(owner.id, ownerSessionId, randomUUID(), 'grinder_scraps', 3);
+    [{ id: regularTableId }] = await db`select id from public.drop_tables where key = 'regular'`;
+    await db`
+      insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
+      select ${owner.id}, id, 2 from public.drop_tables where key = 'regular'
+      on conflict (user_id, drop_table_id) do nothing`;
+  });
+
+  async function ownerRows(table: string) {
+    return await db.unsafe(`select * from public.${table} where user_id = $1 order by 1, 2`, [owner.id]);
+  }
+
+  function rowFor(table: string): object {
+    const rows: Record<string, object> = {
+      loot_rolls: {
+        user_id: owner.id,
+        session_id: ownerSessionId,
+        set_id: randomUUID(),
+        kind: 'pr',
+        local_date: '2026-09-28',
+        roll_index: 50,
+        drop_table_id: regularTableId,
+        chance: 1,
+        hit: true,
+        loot_version: 1,
+      },
+      drops: {
+        user_id: owner.id,
+        loot_roll_id: granted.lootRollId,
+        session_id: ownerSessionId,
+        set_id: randomUUID(),
+        item_id: granted.itemId,
+        quantity: 1000,
+        source: 'pr',
+      },
+      drop_luck: { user_id: owner.id, drop_table_id: regularTableId, dry_rolls: 0 },
+      user_items: { user_id: owner.id, item_id: granted.itemId, quantity: 1000 },
+      item_ledger: { user_id: owner.id, item_id: granted.itemId, delta: 1000, reason: 'drop', ref_id: randomUUID() },
+    };
+    return rows[table];
+  }
+
+  const updates: Record<string, object> = {
+    loot_rolls: { hit: false },
+    drops: { quantity: 1000 },
+    drop_luck: { dry_rolls: 0 },
+    user_items: { quantity: 1000 },
+    item_ledger: { delta: 1000 },
+  };
+
+  it.each(lootTables)('insert into %s is denied', async (table) => {
+    const before = await ownerRows(table);
+    const { error } = await owner.client.from(table).insert(rowFor(table));
+    expect(error).not.toBeNull();
+    expect(await ownerRows(table)).toEqual(before);
+  });
+
+  it.each(lootTables)('update of %s is denied', async (table) => {
+    const before = await ownerRows(table);
+    const { error } = await owner.client.from(table).update(updates[table]).eq('user_id', owner.id);
+    expect(error?.code).toBe('42501');
+    expect(await ownerRows(table)).toEqual(before);
+    expect(before.length).toBeGreaterThan(0);
+  });
+
+  it.each(lootTables)('delete from %s is denied', async (table) => {
+    const before = await ownerRows(table);
+    const { error } = await owner.client.from(table).delete().eq('user_id', owner.id);
+    expect(error?.code).toBe('42501');
+    expect(await ownerRows(table)).toEqual(before);
+  });
+
+  it.each(lootTables.filter((table) => table !== 'drop_luck'))("hides another user's %s", async (table) => {
+    const theirs = await stranger.client.from(table).select('user_id').eq('user_id', owner.id);
+    expect(theirs.error).toBeNull();
+    expect(theirs.data).toEqual([]);
+    const own = await owner.client.from(table).select('user_id');
+    expect(own.error).toBeNull();
+    expect((own.data ?? []).length).toBe((await ownerRows(table)).length);
+    expect((own.data ?? []).length).toBeGreaterThan(0);
+  });
+
+  it('grants nobody a read of drop_luck', async () => {
+    for (const user of [owner, stranger]) {
+      const { error } = await user.client.from('drop_luck').select('dry_rolls');
+      expect(error?.code).toBe('42501');
+    }
   });
 });

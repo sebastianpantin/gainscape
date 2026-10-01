@@ -13,6 +13,7 @@ import {
 import { asHttpError } from '../_shared/http-errors.ts';
 import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
 import { loadCatalog } from '../_shared/stores/catalog.ts';
+import { rollNewSessionLoot } from '../_shared/stores/loot.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
@@ -82,7 +83,19 @@ async function storeAndReplay(tx: Transaction, row: NewSessionRow, session: Sess
       placeholderSetRow(set, set.recordedEffectiveLoadKg!, session.id, row.userId, DEFAULT_BALANCE),
     ),
   );
-  await replayFrom(tx, row.userId, { id: session.id, startedAt: session.startedAt }, [], DEFAULT_BALANCE);
+  const outcome = await replayFrom(
+    tx,
+    row.userId,
+    { id: session.id, startedAt: session.startedAt },
+    [],
+    DEFAULT_BALANCE,
+  );
+  await rollNewSessionLoot(
+    tx,
+    row.userId,
+    session.id,
+    outcome.sets.filter((set) => set.sessionId === session.id),
+  );
   return await storedSummary(tx, session.id);
 }
 

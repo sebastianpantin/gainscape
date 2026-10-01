@@ -25,18 +25,24 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | `make format` / `make lint` | Auto-format the repo / lint it                                                                            |
 | `make rebuild-caches`       | Recompute every user's XP, e1RM and records from their logged sets (run after changing balance constants) |
 | `make types`                | Regenerate `web/src/lib/database.types.ts` from the local schema                                          |
+| `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)        |
 | `make stop`                 | Stop the functions server and the Supabase stack                                                          |
 
 Studio (the database UI) runs at http://127.0.0.1:54323 while the stack is up.
 
 To run a second stack side by side (for example from a git worktree), put a gitignored `.stack.env` at the repo root with a distinct `SUPABASE_PROJECT_ID`, `SUPABASE_*_PORT` overrides (the Supabase CLI reads these in place of `config.toml` values) and `GAINSCAPE_WEB_PORT`. The Makefile exports it to every target. Without the file everything uses the defaults above.
 
+## Loot secret
+
+Loot rolls are seeded with HMAC-SHA256 under `LOOT_SECRET`, which only the Edge Functions see. `make functions` (and so `make start` and `make reset`) creates the gitignored `supabase/functions/.env.local` with a random secret on first use, serves the functions with it, and restarts an already running functions server whose env file changed. A hosted deploy sets its own secret once with `supabase secrets set LOOT_SECRET=$(openssl rand -hex 32)`. Without a secret of at least 32 characters, `complete-session` answers 500 `loot_secret_missing` and the draft retries.
+
 ## Layout
 
 - `supabase/functions/_shared/domain/`: the pure game engine, shared by the Edge Function and the web app. All tuning constants are in `balance.ts`.
 - `supabase/functions/complete-session/`: the server-authoritative sync endpoint.
 - `supabase/functions/export-data/`, `supabase/functions/delete-account/`: account export (JSON of the caller's rows) and deletion (requires typing your username).
-- `supabase/migrations/`, `supabase/seed.sql`: schema, row-level security and seed data.
+- `supabase/migrations/`: schema and row-level security.
+- `catalog/*.yaml`: the single source of seed data (skills, exercises, programs, items, drop tables); `scripts/catalog/generate.ts` writes `supabase/seed.sql` from it.
 - `web/`: the React PWA (Vite root).
 - `tests/`: Vitest domain tests, plus integration tests against the local stack.
 

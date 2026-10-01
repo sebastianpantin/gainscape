@@ -22,7 +22,9 @@ async function loadExercisesVisibleTo(
     from public.exercises e
     join public.exercise_skills es on es.exercise_id = e.id
     where e.id = any(${exerciseIds as string[]}::uuid[])
-      and (e.owner_user_id is null or (e.owner_user_id = ${userId} and (${includeArchived} or e.archived_at is null)))`;
+      and (e.owner_user_id is null or (e.owner_user_id = ${userId} and (${includeArchived} or e.archived_at is null)))
+      and (not e.requires_unlock or exists (
+        select 1 from public.user_unlocks u where u.user_id = ${userId} and u.exercise_id = e.id))`;
 
   const exercises = new Map<string, ExerciseDef>();
   for (const row of rows) {
