@@ -7,6 +7,7 @@ import {
   loadExercisesCacheFirst,
   OFFLINE_EXERCISES_NOTICE,
   readCachedExercises,
+  SAVED_EXERCISES_NOTICE,
   saveCachedExercises,
 } from '../../web/src/lib/catalog-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
@@ -100,6 +101,41 @@ describe('cache-first exercise picker', () => {
       (list) => shown.push(list),
     );
     expect(shown.at(-1)).toEqual({ exercises, notice: OFFLINE_EXERCISES_NOTICE, problem: null });
+  });
+
+  it('uses neutral wording when the server answered with an error while online', async () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    const shown: ExerciseList[] = [];
+    await loadExercisesCacheFirst(
+      storage,
+      userId,
+      () => Promise.reject({ message: 'permission denied for table exercises', code: '42501' }),
+      (list) => shown.push(list),
+      () => false,
+    );
+    expect(shown.at(-1)?.notice).toBe(SAVED_EXERCISES_NOTICE);
+  });
+
+  it('says offline when the browser is offline or the request timed out', async () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    const notices: (string | null)[] = [];
+    await loadExercisesCacheFirst(
+      storage,
+      userId,
+      () => Promise.reject({ message: 'server error' }),
+      (list) => notices.push(list.notice),
+      () => true,
+    );
+    await loadExercisesCacheFirst(
+      storage,
+      userId,
+      () => Promise.reject(new DOMException('signal timed out', 'TimeoutError')),
+      (list) => notices.push(list.notice),
+      () => false,
+    );
+    expect([notices[1], notices[3]]).toEqual([OFFLINE_EXERCISES_NOTICE, OFFLINE_EXERCISES_NOTICE]);
   });
 
   it('reports the load problem when the fetch fails and nothing is cached', async () => {

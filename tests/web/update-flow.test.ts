@@ -4,6 +4,7 @@ import {
   ACTIVATE_TIMEOUT_MS,
   createUpdateFlow,
   type LocksPort,
+  RELOAD_PING,
   UPDATE_CHECK_INTERVAL_MS,
   type UpdatePorts,
   type WorkerPort,
@@ -89,10 +90,23 @@ function setup(
   };
   const locks = options.locks === false ? null : new FakeLocks();
   let clock = 0;
+  const channelListeners: ((event: MessageEvent<unknown>) => void)[] = [];
+  const channel = {
+    sent: [] as unknown[],
+    postMessage(message: unknown) {
+      this.sent.push(message);
+    },
+    addEventListener: (_type: 'message', listener: (event: MessageEvent<unknown>) => void) =>
+      channelListeners.push(listener),
+  };
+  const ping = (data: unknown) => {
+    for (const listener of channelListeners) listener({ data } as MessageEvent<unknown>);
+  };
   const ports: UpdatePorts = {
     registration,
     serviceWorker,
     locks,
+    channel,
     flushDrafts: vi.fn(async () => {
       order.push('flush');
     }),
@@ -133,6 +147,8 @@ function setup(
     locks,
     changeController,
     installUpdate,
+    channel,
+    ping,
     tick: (ms: number) => (clock += ms),
   };
 }
@@ -202,6 +218,23 @@ describe('update detection', () => {
     flow.checkOnVisible();
     flow.checkOnVisible();
     expect(registration.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a download that went redundant', async () => {
+    const { flow, registration } = setup({ waiting: false });
+    const worker = new FakeWorker();
+    worker.state = 'installing';
+    registration.update.mockImplementation(async () => {
+      registration.installing = worker;
+      setTimeout(() => {
+        registration.installing = null;
+        worker.becomes('redundant');
+      }, 100);
+    });
+    const checking = flow.checkForUpdates();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(await checking).toBe('download_failed');
+    expect(flow.state()).toBe('idle');
   });
 
   it('reports the result of a manual check', async () => {
@@ -327,6 +360,25 @@ describe('applying an update', () => {
 });
 
 describe('a passive tab', () => {
+  it('tells other tabs to reload once it applied the update', async () => {
+    const { flow, changeController, channel } = setup();
+    void flow.apply();
+    await settle();
+    changeController();
+    await settle();
+    expect(channel.sent).toEqual([{ type: RELOAD_PING }]);
+  });
+
+  it('reloads an uncontrolled tab on a reload ping, after the flush and its finish lock', async () => {
+    const { ping, order, ports } = setup({ waiting: false, controller: false });
+    ping({ type: 'something-else' });
+    await settle();
+    expect(ports.reload).not.toHaveBeenCalled();
+    ping({ type: RELOAD_PING });
+    await settle();
+    expect(order).toEqual(['flush', 'lock', 'reload']);
+  });
+
   it('flushes, takes its finish lock and reloads on controllerchange', async () => {
     const { changeController, ports, order, locks } = setup({ waiting: false });
     const release = locks!.holdElsewhere(lockName);

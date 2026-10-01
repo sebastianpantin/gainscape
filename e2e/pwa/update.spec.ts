@@ -1,16 +1,22 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { expectNoAxeViolations } from '../support/a11y.ts';
 import { logExercise, openFromProfile, openTab, readSession, register } from '../support/app.ts';
 import {
   builtShell,
   cachedPaths,
   replaceBuildId,
   restoreServiceWorker,
+  swapServiceWorker,
   uniqueUsername,
   UPDATE_READY,
   waitForController,
 } from '../support/pwa.ts';
 import { finishLockName } from '../../web/src/offline/finish-lock.ts';
-import { shellCacheName } from '../../web/src/pwa/shell-rules.ts';
+import { buildKillSwitch } from '../../web/build/service-worker-plugin.ts';
+import { SHELL_CACHE_PREFIX, shellCacheName } from '../../web/src/pwa/shell-rules.ts';
 
 let originalWorker: string | null = null;
 
@@ -48,6 +54,7 @@ test('a new version reloads safely', async ({ context, page }) => {
   await openFromProfile(page, 'Settings');
   await page.getByRole('button', { name: 'Check for updates' }).click();
   await expect(page.getByText(UPDATE_READY)).toBeVisible({ timeout: 30_000 });
+  await expectNoAxeViolations(page, 'update banner');
 
   const other = await context.newPage();
   await other.goto('/');
@@ -109,5 +116,23 @@ test('a new version whose files do not match their hashes never replaces the she
     )
     .toEqual({ installing: false, waiting: false });
   await expect(page.getByText(UPDATE_READY)).toHaveCount(0);
+  await expect(page.getByText("Couldn't download the update. Try again later.")).toBeVisible();
   expect((await cachedPaths(page)).map((cache) => cache.cacheName)).toEqual([shellCacheName(oldId)]);
+});
+
+test('the kill switch retires the worker and reloads the page without a click', async ({ page }) => {
+  const buildDir = mkdtempSync(join(tmpdir(), 'gainscape-kill-switch-'));
+  const killSwitch = await buildKillSwitch(buildDir);
+  rmSync(buildDir, { recursive: true, force: true });
+  await register(page, uniqueUsername('pwa_k'));
+  await waitForController(page);
+  const before = await timeOrigin(page);
+
+  originalWorker = swapServiceWorker(killSwitch);
+  await page.evaluate(() => navigator.serviceWorker.getRegistration().then((registration) => registration?.update()));
+  await expect.poll(() => timeOrigin(page).catch(() => before), { timeout: 30_000 }).not.toBe(before);
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)).toBe(0);
+  expect(await page.evaluate(() => navigator.serviceWorker.controller)).toBeNull();
+  expect((await cachedPaths(page)).filter((cache) => cache.cacheName.startsWith(SHELL_CACHE_PREFIX))).toEqual([]);
 });

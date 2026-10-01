@@ -12,7 +12,7 @@ endif
 PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
 CI_EXCLUDED := studio,imgproxy,vector,logflare,storage-api,realtime,postgres-meta,supavisor
 
-.PHONY: start ci-start ci-logs stop reset functions dev build-local preview types test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa
+.PHONY: start ci-start ci-logs stop reset functions dev build-local preview sw-kill-switch types test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa
 
 start:
 	$(SUPABASE) start
@@ -60,6 +60,9 @@ dev:
 
 build-local:
 	npx vite build web --mode development
+
+sw-kill-switch: build-local
+	node scripts/build-kill-switch.ts
 
 preview: build-local
 	@node scripts/lan-url.mjs --preview

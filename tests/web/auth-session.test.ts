@@ -5,7 +5,11 @@ import {
   type AuthState,
   authStorageKey,
   bootAuth,
+  forceSignedOut,
   type GetSessionResult,
+  needsAuthTimeout,
+  onForcedSignOut,
+  signOutOnThisDevice,
   storedSessionFrom,
 } from '../../web/src/lib/auth-restore.ts';
 
@@ -70,6 +74,13 @@ describe('offline auth restore', () => {
     expect(latest()).toEqual({ status: 'signed-out' });
   });
 
+  it('ignores a stored session whose user id is not a uuid', async () => {
+    const stored = JSON.stringify({ ...JSON.parse(storedRaw), user: { id: 'not-a-uuid', email: 'x@example.test' } });
+    const { latest } = boot(noSession(new AuthRetryableFetchError('Failed to fetch', 0)), { stored });
+    await vi.runAllTimersAsync();
+    expect(latest()).toEqual({ status: 'signed-out' });
+  });
+
   it('ignores a malformed stored session', async () => {
     const { latest } = boot(noSession(new AuthRetryableFetchError('Failed to fetch', 0)), {
       stored: '{"access_token":1}',
@@ -116,5 +127,58 @@ describe('auth fallback on a weak signal', () => {
     const { latest } = boot(new Promise<GetSessionResult>(() => undefined), { stored: null });
     await vi.advanceTimersByTimeAsync(AUTH_FALLBACK_MS);
     expect(latest()).toBeUndefined();
+  });
+});
+
+describe('signing out on this device', () => {
+  it('forgets the stored session when signOut fails, for example offline with an expired token', async () => {
+    const forget = vi.fn();
+    await signOutOnThisDevice({
+      signOut: async () => ({ error: new AuthRetryableFetchError('Failed to fetch', 0) }),
+      forget,
+    });
+    expect(forget).toHaveBeenCalled();
+  });
+
+  it('leaves it to auth-js when signOut succeeds', async () => {
+    const forget = vi.fn();
+    await signOutOnThisDevice({ signOut: async () => ({ error: null }), forget });
+    expect(forget).not.toHaveBeenCalled();
+  });
+
+  it('forgets the session when signOut is still retrying after the fallback time, and again if it then fails', async () => {
+    const forget = vi.fn();
+    let finish: (result: { error: unknown }) => void = () => undefined;
+    const signingOut = signOutOnThisDevice({ signOut: () => new Promise((done) => (finish = done)), forget });
+    await vi.advanceTimersByTimeAsync(AUTH_FALLBACK_MS);
+    await signingOut;
+    expect(forget).toHaveBeenCalledTimes(1);
+    finish({ error: new AuthRetryableFetchError('Failed to fetch', 0) });
+    await vi.runAllTimersAsync();
+    expect(forget).toHaveBeenCalledTimes(2);
+  });
+
+  it('moves a booted session to signed out on a forced sign-out', async () => {
+    const { latest, control } = boot(noSession(new AuthRetryableFetchError('Failed to fetch', 0)));
+    await vi.runAllTimersAsync();
+    expect(latest()).toMatchObject({ status: 'signed-in', offline: true });
+    const stop = onForcedSignOut(() => control.onAuthEvent('SIGNED_OUT', null));
+    forceSignedOut();
+    stop();
+    expect(latest()).toEqual({ status: 'signed-out' });
+  });
+});
+
+describe('auth request timeouts', () => {
+  it.each([
+    ['https://localhost:5173/sb/auth/v1/token?grant_type=password', true],
+    ['https://localhost:5173/sb/auth/v1/user', true],
+    ['https://abc.supabase.co/auth/v1/logout?scope=local', true],
+    ['https://localhost:5173/sb/auth/v1/token?grant_type=refresh_token', false],
+    ['https://abc.supabase.co/auth/v1/token?grant_type=refresh_token', false],
+    ['https://localhost:5173/sb/rest/v1/exercises', false],
+    ['https://localhost:5173/sb/functions/v1/complete-session', false],
+  ])('%s → %s', (url, expected) => {
+    expect(needsAuthTimeout(url)).toBe(expected);
   });
 });

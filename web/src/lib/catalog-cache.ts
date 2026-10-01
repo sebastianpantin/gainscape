@@ -5,6 +5,18 @@ const CACHE_VERSION = 1;
 const CACHE_KEY_PREFIX = 'gainscape.exercises.v1.';
 
 export const OFFLINE_EXERCISES_NOTICE = 'Offline: using your saved exercise list.';
+export const SAVED_EXERCISES_NOTICE = 'Using your saved exercise list.';
+
+const NETWORK_ERROR_NAMES = new Set(['AbortError', 'TimeoutError']);
+const NETWORK_ERROR_MESSAGE = /Failed to fetch|NetworkError|Load failed|AbortError|TimeoutError|aborted/i;
+
+export function isNetworkError(error: unknown): boolean {
+  const { name, message } = (error ?? {}) as { name?: unknown; message?: unknown };
+  return (
+    (typeof name === 'string' && NETWORK_ERROR_NAMES.has(name)) ||
+    (typeof message === 'string' && NETWORK_ERROR_MESSAGE.test(message))
+  );
+}
 
 const cachedExercisesSchema = z.object({
   v: z.literal(CACHE_VERSION),
@@ -77,6 +89,7 @@ export async function loadExercisesCacheFirst(
   userId: string,
   fetchLive: () => Promise<Exercise[]>,
   show: (list: ExerciseList) => void,
+  isOffline: () => boolean = () => false,
 ): Promise<void> {
   const cached = readCachedExercises(storage, userId);
   if (cached) show({ exercises: cached, notice: null, problem: null });
@@ -87,7 +100,11 @@ export async function loadExercisesCacheFirst(
   } catch (error) {
     show(
       cached
-        ? { exercises: cached, notice: OFFLINE_EXERCISES_NOTICE, problem: null }
+        ? {
+            exercises: cached,
+            notice: isOffline() || isNetworkError(error) ? OFFLINE_EXERCISES_NOTICE : SAVED_EXERCISES_NOTICE,
+            problem: null,
+          }
         : { exercises: [], notice: null, problem: (error as Error).message },
     );
   }

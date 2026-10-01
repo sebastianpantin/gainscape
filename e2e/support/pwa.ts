@@ -73,6 +73,12 @@ export function replaceBuildId(fromId: string, toId: string): string {
   return original;
 }
 
+export function swapServiceWorker(replacement: string): string {
+  const original = readFileSync(serviceWorkerPath, 'utf8');
+  writeFileSync(serviceWorkerPath, replacement);
+  return original;
+}
+
 export function restoreServiceWorker(original: string): void {
   writeFileSync(serviceWorkerPath, original);
 }

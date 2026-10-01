@@ -34,11 +34,12 @@ async function verifiedFile(file: ShellFile): Promise<[string, Response]> {
 
 async function installShell(): Promise<void> {
   const verified = await Promise.all(shell.files.map(verifiedFile));
+  const existed = await caches.has(cacheName);
   const cache = await caches.open(cacheName);
   try {
     await Promise.all(verified.map(([path, response]) => cache.put(path, response)));
   } catch (error) {
-    await caches.delete(cacheName);
+    if (!existed) await caches.delete(cacheName);
     throw error;
   }
 }
@@ -53,7 +54,12 @@ async function deleteOldShells(): Promise<void> {
 }
 
 async function fromShell(path: string, request: Request): Promise<Response> {
-  const cached = await (await caches.open(cacheName)).match(path);
+  let cached: Response | undefined;
+  try {
+    cached = await (await caches.open(cacheName)).match(path);
+  } catch {
+    cached = undefined;
+  }
   return cached ?? fetch(request);
 }
 
