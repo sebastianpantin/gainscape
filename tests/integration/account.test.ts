@@ -34,6 +34,7 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'user_items', column: 'user_id' },
   { table: 'item_ledger', column: 'user_id' },
   { table: 'user_unlocks', column: 'user_id' },
+  { table: 'crafts', column: 'user_id' },
 ];
 
 async function post(name: string, accessToken: string | null, body: unknown) {
@@ -81,6 +82,11 @@ async function giveUserEverything(user: TestUser): Promise<void> {
     insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
     select ${user.id}, id, 3 from public.drop_tables where key = 'regular'
     on conflict (user_id, drop_table_id) do nothing`;
+  await grantDrop(user.id, keptSessionId, randomUUID(), 'rookie_belt', 1);
+  await grantDrop(user.id, keptSessionId, randomUUID(), 'grinder_scraps', 8);
+  const [recipe] = await db`select id from public.recipes where key = 'grinder_belt'`;
+  const crafted = await user.client.rpc('craft', { recipe_id: recipe.id });
+  expect(crafted.error).toBeNull();
   const removed = await postFunction('delete-session', user.accessToken, { sessionId: await logOneSession(user) });
   expect(removed.status).toBe(200);
   const benchId = await builtInExerciseId('barbell_bench_press');
@@ -181,6 +187,7 @@ describe('export-data', () => {
     expect(exported.userItems).toHaveLength(counts.user_items);
     expect(exported.itemLedger).toHaveLength(counts.item_ledger);
     expect(exported.userUnlocks).toHaveLength(1);
+    expect(exported.crafts).toHaveLength(1);
     expect(exported.drops.some((drop: { source: string }) => drop.source === 'pr')).toBe(true);
     const everyUserId = JSON.stringify(exported).match(new RegExp(bystander.id, 'g'));
     expect(everyUserId).toBeNull();
@@ -227,7 +234,7 @@ describe('delete-account', () => {
     expect(ownedExerciseIds).toHaveLength(1);
     expect(ownedProgramIds.length).toBeGreaterThan(0);
     const ownerBefore = await rowCounts(owner.id);
-    for (const table of ['loot_rolls', 'drops', 'drop_luck', 'user_items', 'item_ledger', 'user_unlocks']) {
+    for (const table of ['loot_rolls', 'drops', 'drop_luck', 'user_items', 'item_ledger', 'user_unlocks', 'crafts']) {
       expect(ownerBefore[table], table).toBeGreaterThan(0);
     }
     const response = await post('delete-account', owner.accessToken, {

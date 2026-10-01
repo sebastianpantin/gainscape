@@ -85,7 +85,7 @@ describe('delete-session', () => {
       sessionId: s2.id,
       deleted: true,
       replayedSessionIds: [],
-      revokedDrops: activeDrops,
+      revokedDrops: activeDrops.map((drop) => ({ ...drop, revokedQuantity: drop.quantity })),
     });
 
     const onlyFirst = await createTestUser();

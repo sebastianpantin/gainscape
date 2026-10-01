@@ -5,6 +5,8 @@ import { type Exercise, fetchExercises, saveBodyweight } from '../../lib/catalog
 import { formatLoad } from '../../lib/format.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
 import { type HistorySession, isSessionId, type StoredSetRow } from '../../lib/history-rules.ts';
+import { type CatalogItem, describeDrops } from '../../lib/item-rules.ts';
+import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetLastSummary } from '../summary/last-summary.ts';
@@ -16,6 +18,7 @@ import {
   addEditExercise,
   addEditSet,
   canAddSet,
+  dropsAtRisk,
   editFromSession,
   editPayload,
   editSetCount,
@@ -70,6 +73,24 @@ async function loadSession(sessionId: string): Promise<Loaded | null> {
   return { session, sets, exercises, original: editFromSession(session, sets, exercisesById) };
 }
 
+const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
+
+function removalText(drops: readonly { itemId: string; quantity: number }[], items: readonly CatalogItem[]): string {
+  const described = describeDrops(drops, (itemId) => items.find((item) => item.id === itemId)?.name ?? 'an item');
+  return described && `This may remove ${described} from your collection.`;
+}
+
+function removedText(
+  drops: readonly { itemId: string; revokedQuantity: number }[] | undefined,
+  items: readonly CatalogItem[],
+): string {
+  const described = describeDrops(
+    (drops ?? []).map((drop) => ({ itemId: drop.itemId, quantity: drop.revokedQuantity })),
+    (itemId) => items.find((item) => item.id === itemId)?.name ?? 'an item',
+  );
+  return described && `Removed ${described} from your collection.`;
+}
+
 function sameSetValues(a: EditSet, b: EditSet): boolean {
   return JSON.stringify({ ...a, id: '' }) === JSON.stringify({ ...b, id: '' });
 }
@@ -90,7 +111,15 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const [busy, setBusy] = useState<Busy>(IDLE);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [items, setItems] = useState<CatalogItem[]>([]);
   const controllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    fetchItemCatalog().then(
+      (catalog) => setItems(catalog.items),
+      () => setItems([]),
+    );
+  }, []);
 
   const adopt = useCallback((next: Loaded) => {
     setLoaded(next);
@@ -141,7 +170,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
 
   const currentSignal = () => controllerRef.current!.signal;
 
-  const refreshAfterSave = async (signal: AbortSignal): Promise<void> => {
+  const refreshAfterSave = async (signal: AbortSignal, removed = ''): Promise<void> => {
     let fresh: Loaded | null;
     try {
       fresh = await loadSession(sessionId);
@@ -150,7 +179,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       setProblem({
         kind: 'refresh_failed',
         text: "Saved, but couldn't refresh the workout.",
-        retry: () => void refreshAfterSave(signal),
+        retry: () => void refreshAfterSave(signal, removed),
       });
       return;
     }
@@ -158,7 +187,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     if (!fresh) return goBackGone();
     adopt(fresh);
     setProblem(null);
-    setNotice('Changes saved.');
+    setNotice(removed ? `Changes saved. ${removed}` : 'Changes saved.');
   };
 
   const loadConflict = async (signal: AbortSignal): Promise<void> => {
@@ -217,7 +246,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     if (signal.aborted) return;
     setBusy(IDLE);
     if (outcome.kind === 'ok') {
-      const { revision, replayedSessionIds } = outcome.data;
+      const { revision, replayedSessionIds, revokedDrops } = outcome.data;
       forgetLastSummary([sessionId, ...replayedSessionIds]);
       setLoaded(
         (current) =>
@@ -228,7 +257,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           },
       );
       setEdit({ ...toSend, revision });
-      return refreshAfterSave(signal);
+      return refreshAfterSave(signal, removedText(revokedDrops, items));
     }
     const action = failureAction(outcome);
     if (action.kind === 'reid_sets' && setIdRetriesLeft > 0) {
@@ -271,7 +300,11 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     setConfirmingDelete(false);
     if (outcome.kind === 'ok') {
       forgetLastSummary([sessionId, ...outcome.data.replayedSessionIds]);
-      navigate(HISTORY_PATH, { replace: true, state: { notice: 'Workout deleted.' } });
+      const removed = removedText(outcome.data.revokedDrops, items);
+      navigate(HISTORY_PATH, {
+        replace: true,
+        state: { notice: removed ? `Workout deleted. ${removed}` : 'Workout deleted.' },
+      });
       return;
     }
     handleCommonFailure(failureAction(outcome), 'delete');
@@ -297,6 +330,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const askingBodyweight = problem?.kind === 'bodyweight';
   const canSave = changed && !working && !askingBodyweight && setCount > 0 && setCount <= MAX_SETS_PER_SESSION;
   const roomForSets = canAddSet(edit);
+  const activeDrops = session.summary.drops ?? [];
+  const editWarning = removalText(dropsAtRisk(edit, loaded.original, activeDrops), items);
+  const deleteWarning = removalText(activeDrops, items);
 
   const header = (
     <>
@@ -506,6 +542,17 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         </label>
       </fieldset>
       {setCount === 0 && <p className="hint">A workout needs at least one set. Delete it instead to remove it.</p>}
+      {changed && (
+        <div
+          className="notice"
+          role="status"
+          data-testid="edit-loot-warning"
+          style={{ flexDirection: 'column', alignItems: 'flex-start' }}
+        >
+          {editWarning && <p>{editWarning}</p>}
+          <p>{LATER_LOOT_NOTE}</p>
+        </div>
+      )}
       <button className="button primary big" type="button" disabled={!canSave} onClick={() => void save(edit)}>
         {busy.kind === 'saving' ? 'Saving…' : 'Save changes'}
       </button>
@@ -527,6 +574,8 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         {confirmingDelete ? (
           <>
             <p>Delete this workout? This can't be undone. XP and records are recalculated without it.</p>
+            {deleteWarning && <p data-testid="delete-loot-warning">{deleteWarning}</p>}
+            <p>{LATER_LOOT_NOTE}</p>
             <button className="button danger" type="button" disabled={working} onClick={() => void remove()}>
               {busy.kind === 'deleting' ? 'Deleting…' : 'Delete for good'}
             </button>

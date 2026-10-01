@@ -1,4 +1,4 @@
-import type { SessionSummary } from '@domain/types.ts';
+import type { RevokedDrop, SessionSummary } from '@domain/types.ts';
 import { type InvokeOutcome, invokeAsOwner, retryDelayMs } from './function-client.ts';
 import {
   type EditSessionPayload,
@@ -30,12 +30,14 @@ export interface EditSessionResponse {
   summary: SessionSummary;
   revision: number;
   replayedSessionIds: string[];
+  revokedDrops: RevokedDrop[];
 }
 
 export interface DeleteSessionResponse {
   sessionId: string;
   deleted: true;
   replayedSessionIds: string[];
+  revokedDrops: RevokedDrop[];
 }
 
 function pause(ms: number, signal: AbortSignal): Promise<void> {
