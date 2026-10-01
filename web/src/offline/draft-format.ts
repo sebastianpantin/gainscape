@@ -4,6 +4,7 @@ import type { LoadType } from '../lib/catalog.ts';
 const DRAFT_FORMAT_VERSION = 3;
 const UPGRADABLE_FORMAT_VERSION = 2;
 const STARTING_EXTERNAL_LOAD_KG = 20;
+const STARTING_REPS = 8;
 
 export interface DraftSet {
   id: string;
@@ -149,11 +150,9 @@ export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): Work
 
 export function addSet(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
   return updateExercise(draft, exerciseIndex, (exercise) => {
-    const previous = exercise.sets.at(-1);
     const newSet: DraftSet = {
       id: crypto.randomUUID(),
-      weightKg: previous?.weightKg ?? (exercise.loadType === 'external' ? STARTING_EXTERNAL_LOAD_KG : 0),
-      reps: previous?.reps ?? 8,
+      ...nextSetValues(exercise.sets.at(-1), exercise.loadType),
       effort: null,
       done: true,
     };
@@ -180,15 +179,23 @@ export function removeSet(draft: WorkoutDraft, exerciseIndex: number, setId: str
   }));
 }
 
+export function updateExerciseAt<Exercise, Owner extends { exercises: Exercise[] }>(
+  owner: Owner,
+  exerciseIndex: number,
+  update: (exercise: Exercise) => Exercise,
+): Owner {
+  return {
+    ...owner,
+    exercises: owner.exercises.map((exercise, index) => (index === exerciseIndex ? update(exercise) : exercise)),
+  };
+}
+
 function updateExercise(
   draft: WorkoutDraft,
   exerciseIndex: number,
   update: (exercise: DraftExercise) => DraftExercise,
 ): WorkoutDraft {
-  return {
-    ...draft,
-    exercises: draft.exercises.map((exercise, index) => (index === exerciseIndex ? update(exercise) : exercise)),
-  };
+  return updateExerciseAt(draft, exerciseIndex, update);
 }
 
 export function doneSetCount(draft: WorkoutDraft): number {
@@ -235,8 +242,15 @@ export interface LastLoggedSet {
   reps: number;
 }
 
-function defaultWeightKg(loadType: LoadType): number {
+export function defaultWeightKg(loadType: LoadType): number {
   return loadType === 'external' ? STARTING_EXTERNAL_LOAD_KG : 0;
+}
+
+export function nextSetValues(
+  previous: { weightKg: number; reps: number } | undefined,
+  loadType: LoadType,
+): { weightKg: number; reps: number } {
+  return { weightKg: previous?.weightKg ?? defaultWeightKg(loadType), reps: previous?.reps ?? STARTING_REPS };
 }
 
 export function programLabelFor(programName: string, dayName: string): string {

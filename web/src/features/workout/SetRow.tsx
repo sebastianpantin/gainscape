@@ -34,7 +34,7 @@ interface WeightFieldProps {
   onChange: (weightKg: number) => void;
 }
 
-function WeightField({ loadType, weightKg, unit, onChange }: WeightFieldProps) {
+export function WeightField({ loadType, weightKg, unit, onChange }: WeightFieldProps) {
   if (loadType === 'bodyweight') return <span className="compact-field set-number">bodyweight</span>;
   const shown = shownWeight(weightKg, unit);
   const highest = highestWeightInUnit(HIGHEST_LOAD_KG, unit);
@@ -49,6 +49,28 @@ function WeightField({ loadType, weightKg, unit, onChange }: WeightFieldProps) {
         step={WEIGHT_INPUT_STEP}
         value={shown}
         onChange={(event) => onChange(unitToKg(clampedNumber(event.target.value, shown, 0, highest), unit))}
+      />
+    </label>
+  );
+}
+
+interface RepsFieldProps {
+  reps: number;
+  onChange: (reps: number) => void;
+}
+
+export function RepsField({ reps, onChange }: RepsFieldProps) {
+  return (
+    <label className="compact-field">
+      reps
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={100}
+        step={1}
+        value={reps}
+        onChange={(event) => onChange(Math.round(clampedNumber(event.target.value, reps, 1, 100)))}
       />
     </label>
   );
@@ -84,18 +106,7 @@ export function SetRow({
         unit={unit}
         onChange={(weightKg) => onChange({ weightKg })}
       />
-      <label className="compact-field">
-        reps
-        <input
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={100}
-          step={1}
-          value={set.reps}
-          onChange={(event) => onChange({ reps: Math.round(clampedNumber(event.target.value, set.reps, 1, 100)) })}
-        />
-      </label>
+      <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} />
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
         {xpLabel}
         <span className="tiny">{previewNote(preview)}</span>

@@ -23,6 +23,7 @@ export function CollectionTabs() {
       links={[
         { to: '/collection', label: 'Records' },
         { to: '/collection/items', label: 'Items' },
+        { to: '/collection/history', label: 'History' },
       ]}
     />
   );

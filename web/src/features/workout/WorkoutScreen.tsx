@@ -103,6 +103,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       if (recallLastSummary()?.sessionId === sessionId) navigate('/reveal');
       else void reload();
     },
+    onDeleted: () => void reload('deleted'),
   });
 
   if (state.status === 'loading') {
@@ -167,6 +168,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           )}
         </div>
         {deviceNotices}
+        {state.notice === 'deleted' && (
+          <p className="notice" role="status">
+            This workout was deleted
+          </p>
+        )}
         {state.notice === 'saved_elsewhere' && (
           <p className="notice" role="status">
             This workout was saved in another tab.
