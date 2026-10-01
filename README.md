@@ -71,7 +71,7 @@ Before anything goes live, work through [docs/production-auth.md](docs/productio
 
 ## CI
 
-`.github/workflows/ci.yml` runs two jobs. `static` runs `make check`, the catalog, domain and web tests and `make sim-check` without a stack. `stack` runs `make ci-start` (the stack without Studio, storage, realtime and the other services the tests don't use, plus the web env file with the stack's anon key and the functions), then `make test-integration`, `make test-db`, `make e2e` and `make e2e-pwa`. On failure, `make ci-logs` saves every container log to `ci-logs/`, which is uploaded with the Playwright report and traces.
+`.github/workflows/ci.yml` runs the `static` job on every pull request and push to `main`. `static` runs `make check`, the catalog, domain and web tests and `make sim-check` without a stack. `.github/workflows/stack.yml` runs the `stack` job only when started by hand (`gh workflow run stack.yml --ref <branch>` or the Actions tab). `stack` runs `make ci-start` (the stack without Studio, storage, realtime and the other services the tests don't use, plus the web env file with the stack's anon key and the functions), then `make test-integration`, `make test-db`, `make e2e` and `make e2e-pwa`. On failure, `make ci-logs` saves every container log to `ci-logs/`, which is uploaded with the Playwright report and traces.
 
 ## Layout
 
