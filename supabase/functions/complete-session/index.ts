@@ -11,9 +11,10 @@ import {
   type SessionSummary,
 } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
-import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+import { HttpError, jsonResponse, readJsonBody } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
-import { loadCatalog } from '../_shared/stores/catalog.ts';
+import { serve } from '../_shared/serve.ts';
+import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { rollNewSessionLoot } from '../_shared/stores/loot.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
 import {
@@ -38,14 +39,6 @@ function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessi
     resubmittedSetIds.length === stored.setIds.length &&
     resubmittedSetIds.every((id, index) => id === stored.setIds[index]);
   if (!sameSets) console.warn(`session ${payload.id} re-submitted with different sets; returning the stored summary`);
-}
-
-async function loadKnownCatalog(tx: Transaction, userId: string, payload: CompleteSessionPayload): Promise<Catalog> {
-  const exerciseIds = [...new Set(payload.sets.map((set) => set.exerciseId))];
-  const catalog = await loadCatalog(tx, userId, exerciseIds, true);
-  const unknownExerciseIds = exerciseIds.filter((id) => !catalog.exercises.has(id));
-  if (unknownExerciseIds.length > 0) throw new HttpError(422, 'unknown_exercise', { exerciseIds: unknownExerciseIds });
-  return catalog;
 }
 
 async function storeHistoryOnly(
@@ -120,7 +113,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       tx,
       payload.sets.map((set) => set.id),
     );
-    const catalog = await loadKnownCatalog(tx, userId, payload);
+    const catalog = await loadKnownCatalog(tx, userId, payload.sets);
     const profile = await loadProfileSettings(tx, userId);
     const session: SessionInput = {
       id: payload.id,
@@ -156,17 +149,8 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
   });
 }
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-  try {
-    if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed');
-    const userId = await authenticatedUserId(request);
-    const body = await request.json().catch(() => {
-      throw new HttpError(400, 'invalid_json');
-    });
-    const payload = parseCompleteSessionPayload(body);
-    return jsonResponse(await completeSession(userId, payload));
-  } catch (error) {
-    return errorResponse(asHttpError(error));
-  }
-});
+serve(async (request) => {
+  const userId = await authenticatedUserId(request);
+  const payload = parseCompleteSessionPayload(await readJsonBody(request));
+  return jsonResponse(await completeSession(userId, payload));
+}, asHttpError);

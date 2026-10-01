@@ -1,8 +1,8 @@
 import type { EffortLevel } from './types.ts';
 
-export const BALANCE_VERSION = 2;
-export const XP_PER_EFFECTIVE_REP = 375;
-export const EFFECTIVE_RIR_WINDOW = 5;
+const BALANCE_VERSION = 2;
+const XP_PER_EFFECTIVE_REP = 375;
+const EFFECTIVE_RIR_WINDOW = 5;
 
 export interface BalanceConfig {
   readonly version: number;
@@ -42,7 +42,7 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   prEpsilonKg: 0.05,
 });
 
-export const LOOT_VERSION = 1;
+const LOOT_VERSION = 1;
 
 export interface LootConfig {
   readonly version: number;

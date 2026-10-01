@@ -1,4 +1,4 @@
-import { type sql, type Transaction } from './db.ts';
+import { pgErrorCode, type sql, type Transaction } from './db.ts';
 import { HttpError } from './http.ts';
 
 export type RateLimitBucket =
@@ -12,12 +12,8 @@ export type RateLimitBucket =
 const RATE_LIMITED = 'PT429';
 const FOREIGN_KEY_VIOLATION = '23503';
 
-function codeOf(error: unknown): string | undefined {
-  return typeof error === 'object' && error !== null ? (error as { code?: string }).code : undefined;
-}
-
 function isRateLimited(error: unknown): error is { detail: string } {
-  return codeOf(error) === RATE_LIMITED && typeof (error as { detail?: unknown }).detail === 'string';
+  return pgErrorCode(error) === RATE_LIMITED && typeof (error as { detail?: unknown }).detail === 'string';
 }
 
 export async function takeRateLimit(
@@ -29,7 +25,7 @@ export async function takeRateLimit(
     await runner`select private.take_rate_limit(${bucket}, ${userId})`;
   } catch (error) {
     if (isRateLimited(error)) throw new HttpError(429, 'rate_limited', JSON.parse(error.detail));
-    if (codeOf(error) === FOREIGN_KEY_VIOLATION) throw new HttpError(404, 'profile_not_found');
+    if (pgErrorCode(error) === FOREIGN_KEY_VIOLATION) throw new HttpError(404, 'profile_not_found');
     throw error;
   }
 }

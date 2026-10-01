@@ -5,3 +5,7 @@ export const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { prepare: false, 
 export type Transaction = postgres.TransactionSql;
 
 export type JsonValue = postgres.JSONValue;
+
+export function pgErrorCode(error: unknown): string | undefined {
+  return typeof error === 'object' && error !== null ? (error as { code?: string }).code : undefined;
+}
