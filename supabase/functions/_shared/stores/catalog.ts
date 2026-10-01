@@ -1,5 +1,6 @@
 import type { Transaction } from '../db.ts';
 import type { Catalog, ExerciseDef, LoadType, SkillDef } from '../domain/index.ts';
+import { HttpError } from '../http.ts';
 
 async function loadSkills(tx: Transaction): Promise<SkillDef[]> {
   const rows = await tx`select id, key, sort_order, combat_weight from public.skills`;
@@ -50,4 +51,16 @@ export async function loadCatalog(
     skills: await loadSkills(tx),
     exercises: await loadExercisesVisibleTo(tx, userId, exerciseIds, includeArchived),
   };
+}
+
+export async function loadKnownCatalog(
+  tx: Transaction,
+  userId: string,
+  sets: readonly { exerciseId: string }[],
+): Promise<Catalog> {
+  const exerciseIds = [...new Set(sets.map((set) => set.exerciseId))];
+  const catalog = await loadCatalog(tx, userId, exerciseIds, true);
+  const unknownExerciseIds = exerciseIds.filter((id) => !catalog.exercises.has(id));
+  if (unknownExerciseIds.length > 0) throw new HttpError(422, 'unknown_exercise', { exerciseIds: unknownExerciseIds });
+  return catalog;
 }

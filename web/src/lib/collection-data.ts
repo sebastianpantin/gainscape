@@ -3,26 +3,28 @@ import { fetchExercises } from './catalog.ts';
 import { countCollection } from './collection-rules.ts';
 import { supabase } from './supabase.ts';
 
-export { countCollection, type CountedCollection } from './collection-rules.ts';
+export { countCollection } from './collection-rules.ts';
 
 export interface RepMaxSlotView {
   loadKg: number;
   exact: boolean;
 }
 
+export type ExerciseStrengthView = { e1rmKg: number | null; repsCapacity: number | null };
+
 export interface CollectionData {
   repMaxesByExercise: Map<string, (RepMaxSlotView | null)[]>;
   maxRepsByExercise: Map<string, number>;
-  strengthByExercise: Map<string, { e1rmKg: number | null; repsCapacity: number | null }>;
+  strengthByExercise: Map<string, ExerciseStrengthView>;
   pinnedExerciseIds: string[];
   nextPinPosition: number;
 }
 
 export async function fetchCollectionData(userId: string): Promise<CollectionData> {
-  const [repMaxes, bodyweightRecords, strength, pins] = await Promise.all([
+  const [repMaxes, bodyweightRecords, strengthByExercise, pins] = await Promise.all([
     supabase.from('rep_maxes').select('exercise_id, reps, load_kg, exact_set_id').eq('user_id', userId),
     supabase.from('bodyweight_rep_records').select('exercise_id, max_reps').eq('user_id', userId),
-    supabase.from('exercise_maxes').select('exercise_id, e1rm_kg, reps_capacity').eq('user_id', userId),
+    fetchExerciseStrength(userId),
     supabase
       .from('pinned_exercises')
       .select('exercise_id, position')
@@ -30,7 +32,7 @@ export async function fetchCollectionData(userId: string): Promise<CollectionDat
       .order('position')
       .order('created_at'),
   ]);
-  for (const result of [repMaxes, bodyweightRecords, strength, pins]) if (result.error) throw result.error;
+  for (const result of [repMaxes, bodyweightRecords, pins]) if (result.error) throw result.error;
 
   const repMaxesByExercise = new Map<string, (RepMaxSlotView | null)[]>();
   for (const row of repMaxes.data!) {
@@ -42,18 +44,11 @@ export async function fetchCollectionData(userId: string): Promise<CollectionDat
   return {
     repMaxesByExercise,
     maxRepsByExercise: new Map(bodyweightRecords.data!.map((row) => [row.exercise_id, row.max_reps])),
-    strengthByExercise: new Map(
-      strength.data!.map((row) => [
-        row.exercise_id,
-        { e1rmKg: row.e1rm_kg === null ? null : Number(row.e1rm_kg), repsCapacity: row.reps_capacity },
-      ]),
-    ),
+    strengthByExercise,
     pinnedExerciseIds: pins.data!.map((row) => row.exercise_id),
     nextPinPosition: Math.max(-1, ...pins.data!.map((row) => row.position)) + 1,
   };
 }
-
-export type ExerciseStrengthView = { e1rmKg: number | null; repsCapacity: number | null };
 
 export async function fetchExerciseStrength(userId: string): Promise<Map<string, ExerciseStrengthView>> {
   const { data, error } = await supabase

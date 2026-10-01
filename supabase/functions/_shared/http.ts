@@ -15,6 +15,10 @@ export class HttpError extends Error {
   }
 }
 
+export function bearerToken(request: Request): string | undefined {
+  return request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '');
+}
+
 export function jsonResponse(body: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -34,4 +38,10 @@ export function errorResponse(error: unknown): Response {
   }
   console.error(error);
   return jsonResponse({ error: 'internal_error' }, 500);
+}
+
+export async function readJsonBody(request: Request): Promise<unknown> {
+  return await request.json().catch(() => {
+    throw new HttpError(400, 'invalid_json');
+  });
 }

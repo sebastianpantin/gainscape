@@ -1,5 +1,6 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { authCallbackUrl } from './auth-links.ts';
+import { httpErrorBody } from './function-client.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds, tryAgainIn } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
@@ -7,9 +8,10 @@ export const MINIMUM_PASSWORD_LENGTH = 6;
 
 async function functionError(error: unknown): Promise<string> {
   if (error instanceof FunctionsHttpError) {
-    const body = await (error.context as Response).json().catch(() => ({}));
-    if ((error.context as Response).status === RATE_LIMITED_STATUS) return tryAgainIn(retryAfterSeconds(body.details));
-    return body.error ?? `http_${(error.context as Response).status}`;
+    const response = error.context as Response;
+    const body = await httpErrorBody(response);
+    if (response.status === RATE_LIMITED_STATUS) return tryAgainIn(retryAfterSeconds(body.details));
+    return body.error ?? `http_${response.status}`;
   }
   return error instanceof Error ? error.message : 'network_error';
 }

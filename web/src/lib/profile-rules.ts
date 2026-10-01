@@ -1,3 +1,5 @@
+import { CONTROL_CHARACTER } from './names.ts';
+
 export type UnitPref = 'kg' | 'lb';
 export type EffortInputMode = 'level' | 'rir' | 'rpe';
 export type TrainingFocus = 'strength' | 'muscle' | 'powerlifting' | 'general';
@@ -26,11 +28,11 @@ export const DISPLAY_NAME_MAX_LENGTH = 40;
 export const BIO_MAX_LENGTH = 80;
 export const LOWEST_BODYWEIGHT_KG = 20;
 export const HIGHEST_BODYWEIGHT_KG = 400;
-export const LOWEST_HEIGHT_CM = 100;
-export const HIGHEST_HEIGHT_CM = 250;
-export const EARLIEST_BIRTH_YEAR = 1900;
-export const MINIMUM_AGE_YEARS = 13;
-export const EARLIEST_TRAINING_YEAR = 1950;
+const LOWEST_HEIGHT_CM = 100;
+const HIGHEST_HEIGHT_CM = 250;
+const EARLIEST_BIRTH_YEAR = 1900;
+const MINIMUM_AGE_YEARS = 13;
+const EARLIEST_TRAINING_YEAR = 1950;
 export const TIMEZONE_CHANGE_COOLDOWN_DAYS = 7;
 
 export const TRAINING_FOCUS_LABELS: Record<TrainingFocus, string> = {
@@ -53,15 +55,6 @@ function rangeProblem(raw: string, lowest: number, highest: number, message: str
   const value = Number(raw);
   if (!Number.isFinite(value) || value < lowest || value > highest) return message;
   return null;
-}
-
-export function bodyweightProblem(raw: string): string | null {
-  return rangeProblem(
-    raw,
-    LOWEST_BODYWEIGHT_KG,
-    HIGHEST_BODYWEIGHT_KG,
-    `Bodyweight must be between ${LOWEST_BODYWEIGHT_KG} and ${HIGHEST_BODYWEIGHT_KG} kg.`,
-  );
 }
 
 export function heightProblem(raw: string): string | null {
@@ -99,7 +92,7 @@ export function trainingSinceProblem(raw: string, now = new Date()): string | nu
 
 export function bioProblem(raw: string): string | null {
   if (raw.length > BIO_MAX_LENGTH) return `Bio can be at most ${BIO_MAX_LENGTH} characters.`;
-  if (/\p{Cc}/u.test(raw)) return "Bio can't contain line breaks or control characters.";
+  if (CONTROL_CHARACTER.test(raw)) return "Bio can't contain line breaks or control characters.";
   return null;
 }
 

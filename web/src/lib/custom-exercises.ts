@@ -14,8 +14,7 @@ export interface CustomExerciseDoc {
   shares: SkillShare[];
 }
 
-export const NAME_TAKEN_MESSAGE =
-  'You already have an exercise with this name (it may be archived) — unarchive or rename it.';
+const NAME_TAKEN_MESSAGE = 'You already have an exercise with this name (it may be archived) — unarchive or rename it.';
 
 function describeSaveError(message: string): string {
   return message === 'name_taken' ? NAME_TAKEN_MESSAGE : message;

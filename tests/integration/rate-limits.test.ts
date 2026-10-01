@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { aSet, DAY_MS, HOUR_MS, payloadAt, postSession } from './loot-support.ts';
+import { aSet, DAY_MS, hoursAgo, payloadAt, postSession } from './loot-support.ts';
 import {
   builtInExerciseId,
   createTestUser,
@@ -11,16 +11,11 @@ import {
   postFunction,
   rateLimitHits,
   seedRateLimitHits,
+  TEST_PASSWORD,
   type TestUser,
 } from './local-stack.ts';
 
-const TEST_PASSWORD = 'correct-horse-battery';
-
 let benchId: string;
-
-function hoursAgo(hours: number): Date {
-  return new Date(Date.now() - hours * HOUR_MS);
-}
 
 function expectRateLimited(response: FunctionResponse, bucket: string, windowSeconds: number): void {
   expect(response.status, response.rawBody).toBe(429);

@@ -8,7 +8,7 @@ export interface IconLayout {
   frame: boolean;
 }
 
-export const FRAME_INSET_FRACTION = 0.08;
+const FRAME_INSET_FRACTION = 0.08;
 export const MASKABLE_SAFE_RADIUS_FRACTION = 0.4;
 
 export const APP_ICONS: readonly IconLayout[] = [
@@ -49,7 +49,7 @@ function drawFrame(image: RgbaImage, inset: number, thickness: number, color: Rg
   fillRect(image, image.width - inset - thickness, inset, thickness, span, color);
 }
 
-export function renderSprite(sprite: Sprite, size: number, scale: number, frame: boolean): RgbaImage {
+function renderSprite(sprite: Sprite, size: number, scale: number, frame: boolean): RgbaImage {
   const image: RgbaImage = { width: size, height: size, rgba: new Uint8Array(size * size * 4) };
   fillRect(image, 0, 0, size, size, parseColor(APP_ICON_BACKGROUND));
   if (frame) drawFrame(image, Math.round(size * FRAME_INSET_FRACTION), scale, parseColor(APP_ICON_FRAME));
@@ -73,7 +73,7 @@ export function renderAppIcon(layout: IconLayout): RgbaImage {
   return renderSprite(LOGO, layout.size, layout.scale, layout.frame);
 }
 
-export function spriteSvg(sprite: Sprite): string {
+function spriteSvg(sprite: Sprite): string {
   const rects = sprite.pixels.map(
     (pixel) =>
       `  <rect x="${pixel.x}" y="${pixel.y}" width="${pixel.w}" height="${pixel.h}" fill="${pixel.fill}"${

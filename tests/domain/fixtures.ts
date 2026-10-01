@@ -1,5 +1,8 @@
 import { type Catalog, DEFAULT_BALANCE, type ExerciseDef, type SetInput } from '@domain/index.ts';
 
+export const HOUR_MS = 60 * 60 * 1000;
+export const DAY_MS = 24 * HOUR_MS;
+
 export const TEST_BALANCE = Object.freeze({
   ...DEFAULT_BALANCE,
   xpPerEffectiveRep: 10,

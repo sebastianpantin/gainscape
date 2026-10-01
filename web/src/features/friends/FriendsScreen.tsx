@@ -250,9 +250,7 @@ export function FriendsScreen() {
                 initials={initialsFor(friend.displayName, friend.username)}
                 size={REQUEST_BADGE_SIZE}
               />
-              <span className="stack" style={{ gap: 2, flexGrow: 1 }}>
-                <span>{friend.username} wants to be friends</span>
-              </span>
+              <span style={{ flexGrow: 1 }}>{friend.username} wants to be friends</span>
               <button className="button primary" type="button" disabled={busy} onClick={() => respond(friend, true)}>
                 Accept
               </button>
@@ -278,7 +276,7 @@ export function FriendsScreen() {
           {outgoing.length > 0 && (
             <section className="panel stack" aria-labelledby="outgoing-heading">
               <h2 id="outgoing-heading">Sent requests</h2>
-              <ul className="menu-list" style={{ gap: 8 }}>
+              <ul className="menu-list">
                 {outgoing.map((friend) => (
                   <li className="row spread" key={friend.userId}>
                     <span>{friend.username}</span>

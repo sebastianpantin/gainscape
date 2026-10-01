@@ -1,7 +1,7 @@
 import type { BalanceConfig } from './balance.ts';
 import type { SkillXp } from './types.ts';
 
-export const FULL_SHARE_BASIS_POINTS = 10_000;
+const FULL_SHARE_BASIS_POINTS = 10_000;
 
 export function effectiveReps(reps: number, rir: number, isWarmup: boolean, cfg: BalanceConfig): number {
   if (isWarmup) return 0;

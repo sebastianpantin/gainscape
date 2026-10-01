@@ -1,4 +1,3 @@
-import type { EffortInput } from '@domain/types.ts';
 import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
@@ -126,7 +125,7 @@ export function SetRow({
       <EffortSelector
         mode={effortMode}
         selected={set.effort}
-        onSelect={(effort: EffortInput) => onChange(effort === null ? { effort } : { effort, done: true })}
+        onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}
       />
     </li>
   );

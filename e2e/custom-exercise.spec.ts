@@ -1,9 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, openFromProfile, openTab, register } from './support/app.ts';
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-}
+import { logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
 
 async function logLandmineSession(page: Page, weightKg: number) {
   await openTab(page, 'Train');

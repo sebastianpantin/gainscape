@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { collectionCompletion, replayHistory, type SessionInput, type SetInput } from '@domain/index.ts';
-import { aSet, catalog, hard, TEST_BALANCE } from './fixtures.ts';
+import { aSet, catalog, DAY_MS, hard, TEST_BALANCE } from './fixtures.ts';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const firstDay = Date.parse('2026-09-01T18:00:00.000Z');
 
 function sessionsOf(...setsPerSession: SetInput[][]): SessionInput[] {

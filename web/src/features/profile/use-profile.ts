@@ -17,7 +17,7 @@ export type ProfileUpdate = Profile | ((current: Profile) => Profile);
 export function useProfile(userId: string): { state: ProfileState; replace: (update: ProfileUpdate) => void } {
   const [state, setState] = useState<ProfileState>({ status: 'loading' });
 
-  const load = useCallback(() => {
+  useEffect(() => {
     let active = true;
     Promise.all([
       fetchProfile(userId),
@@ -32,8 +32,6 @@ export function useProfile(userId: string): { state: ProfileState; replace: (upd
       active = false;
     };
   }, [userId]);
-
-  useEffect(load, [load]);
 
   const replace = useCallback(
     (update: ProfileUpdate) =>

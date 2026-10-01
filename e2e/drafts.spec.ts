@@ -9,14 +9,11 @@ import {
   setIndexedDbBroken,
   signIn,
   signOut,
+  uniqueUsername,
 } from './support/app.ts';
 import { sessionCount, sessionRow } from './support/db.ts';
 
 const completeSession = '**/functions/v1/complete-session';
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-}
 
 test('a finished workout survives an outage and a reload', async ({ page }) => {
   const username = uniqueUsername('dr_a');

@@ -7,6 +7,7 @@ import {
   fallbackUserIds,
   openDraftDatabase,
   readFallbackRecord,
+  transactionDone,
 } from './draft-store.ts';
 import { parseStoredDraft } from './draft-format.ts';
 
@@ -26,23 +27,18 @@ function deleteV1Drafts(storage: Storage): void {
   for (const key of v1Keys) storage.removeItem(key);
 }
 
-function moveFallbackRecord(database: IDBDatabase, storage: Storage, userId: string): Promise<void> {
+async function moveFallbackRecord(database: IDBDatabase, storage: Storage, userId: string): Promise<void> {
   const fallback = readFallbackRecord(storage, userId);
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction(DRAFT_OBJECT_STORE, 'readwrite');
-    const objectStore = transaction.objectStore(DRAFT_OBJECT_STORE);
-    const request = objectStore.get(userId);
-    request.onsuccess = () => {
-      const stored = parseStoredDraft(request.result, userId);
-      if (fallback && (!stored || fallback.updatedAt > stored.updatedAt)) objectStore.put(fallback);
-    };
-    transaction.oncomplete = () => {
-      storage.removeItem(fallbackKeyFor(userId));
-      resolve();
-    };
-    transaction.onerror = () => reject(transaction.error);
-    transaction.onabort = () => reject(transaction.error ?? new Error('transaction_aborted'));
-  });
+  const transaction = database.transaction(DRAFT_OBJECT_STORE, 'readwrite');
+  const done = transactionDone(transaction);
+  const objectStore = transaction.objectStore(DRAFT_OBJECT_STORE);
+  const request = objectStore.get(userId);
+  request.onsuccess = () => {
+    const stored = parseStoredDraft(request.result, userId);
+    if (fallback && (!stored || fallback.updatedAt > stored.updatedAt)) objectStore.put(fallback);
+  };
+  await done;
+  storage.removeItem(fallbackKeyFor(userId));
 }
 
 export async function openDraftStore(environment: DraftEnvironment): Promise<DraftStore> {

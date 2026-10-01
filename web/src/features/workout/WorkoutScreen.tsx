@@ -8,7 +8,6 @@ import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/supabase.ts';
 import { formatWeight } from '../../lib/units.ts';
-import type { SessionSummary } from '@domain/types.ts';
 import {
   addExercise,
   addSet,
@@ -129,8 +128,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     store,
     flush,
     markSynced,
-    onSynced: (summary: SessionSummary) => navigate('/reveal', { state: summary }),
-    onSuperseded: (sessionId: string) => {
+    onSynced: (summary) => navigate('/reveal', { state: summary }),
+    onSuperseded: (sessionId) => {
       if (recallLastSummary()?.sessionId === sessionId) navigate('/reveal');
       else void reload();
     },

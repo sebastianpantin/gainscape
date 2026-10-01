@@ -23,6 +23,7 @@
     "tests",
     "e2e",
     "playwright.config.ts",
+    "playwright.pwa.config.ts",
     "supabase/functions/_shared/domain",
     "vitest.config.ts",
     "scripts"

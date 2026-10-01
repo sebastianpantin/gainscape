@@ -2,13 +2,12 @@ import type { Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   currentStrength,
+  MS_PER_DAY,
   type SessionKey,
   type StrengthCandidate,
   type StrengthHistoryRow,
   strengthStateAt,
 } from '../domain/index.ts';
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export async function loadStrengthHistory(
   tx: Transaction,

@@ -58,15 +58,9 @@ export interface CollectionView {
   items: { found: { itemId: string; quantity: number; firstObtainedAt: string }[]; catalogCount: number };
 }
 
-export class SocialError extends Error {}
-
-function failure(error: { message?: string }): SocialError {
-  return new SocialError(socialErrorMessage(error));
-}
-
 async function call<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(name, args);
-  if (error) throw failure(error);
+  if (error) throw new Error(socialErrorMessage(error));
   return data as T;
 }
 

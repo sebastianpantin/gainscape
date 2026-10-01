@@ -1,6 +1,5 @@
 import { supabase } from './supabase.ts';
-import type { Profile } from './profile-rules.ts';
-import { TIMEZONE_CHANGE_COOLDOWN_DAYS } from './profile-rules.ts';
+import { type Profile, TIMEZONE_CHANGE_COOLDOWN_DAYS } from './profile-rules.ts';
 
 export * from './profile-rules.ts';
 

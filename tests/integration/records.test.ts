@@ -9,8 +9,8 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
+import { HOUR_MS } from './loot-support.ts';
 
-const HOUR_MS = 60 * 60 * 1000;
 const hard = { type: 'level', level: 'hard' } as const;
 
 function session(hoursAgo: number, sets: { exerciseId: string; weightKg: number; reps: number }[]) {

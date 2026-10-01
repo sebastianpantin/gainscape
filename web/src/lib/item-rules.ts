@@ -1,6 +1,7 @@
 import { GEAR_SLOTS, type GearSlot, ITEM_TIERS, type ItemTier, type Recipe } from '@domain/crafting.ts';
 import type { DropSummary } from '@domain/types.ts';
 import type { ItemIconKind } from '../components/pixel-sprites.ts';
+import { capitalized } from './names.ts';
 
 export type ItemKind = 'gear' | 'material' | 'pet' | 'scroll';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
@@ -19,7 +20,7 @@ export const TIER_COLORS: Record<ItemTier, string> = {
   ascendant: '#ffb000',
 };
 
-export const UNTIERED_COLOR = '#d8c8a8';
+const UNTIERED_COLOR = '#d8c8a8';
 export const LOCKED_COLOR = '#5c4f3d';
 
 export interface CatalogItem {
@@ -179,7 +180,7 @@ export function groupItems(
 }
 
 export function kindLabel(item: CatalogItem): string {
-  const tierName = item.tier ? item.tier[0].toUpperCase() + item.tier.slice(1) : '';
+  const tierName = item.tier ? capitalized(item.tier) : '';
   switch (item.kind) {
     case 'gear':
       return `Gear · ${tierName} tier · ${item.rarity}`;

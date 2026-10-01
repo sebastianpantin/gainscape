@@ -15,7 +15,7 @@ const CALLBACK_TYPES: readonly string[] = ['email', 'recovery', 'email_change'];
 const FORBIDDEN_STATUS = 403;
 
 export const RESEND_COOLDOWN_SECONDS = 60;
-export const USERNAME_CHANGE_WINDOW_MS = 60 * 60 * 1000;
+const USERNAME_CHANGE_WINDOW_MS = 60 * 60 * 1000;
 
 export const AUTH_MESSAGES = {
   emailNotConfirmed: 'Confirm your email first. We can send the link again.',
@@ -54,3 +54,6 @@ export function confirmedRecently(emailConfirmedAt: string | null | undefined, n
   const confirmedAt = Date.parse(emailConfirmedAt);
   return Number.isFinite(confirmedAt) && confirmedAt <= now && now - confirmedAt < USERNAME_CHANGE_WINDOW_MS;
 }
+
+export const USERNAME_PATTERN = '^[a-z0-9_]{3,20}$';
+export const USERNAME_HINT = '3–20 characters: lowercase letters, digits, underscore';
