@@ -61,7 +61,7 @@ dev:
 build-local:
 	npx vite build web --mode development
 
-sw-kill-switch: build-local
+sw-kill-switch:
 	node scripts/build-kill-switch.ts
 
 preview: build-local

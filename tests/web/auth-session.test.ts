@@ -10,6 +10,7 @@ import {
   needsAuthTimeout,
   onForcedSignOut,
   signOutOnThisDevice,
+  signOutSettled,
   storedSessionFrom,
 } from '../../web/src/lib/auth-restore.ts';
 
@@ -131,31 +132,84 @@ describe('auth fallback on a weak signal', () => {
 });
 
 describe('signing out on this device', () => {
-  it('forgets the stored session when signOut fails, for example offline with an expired token', async () => {
-    const forget = vi.fn();
-    await signOutOnThisDevice({
-      signOut: async () => ({ error: new AuthRetryableFetchError('Failed to fetch', 0) }),
-      forget,
+  function device(options: { expiresAt?: number; online?: boolean } = {}) {
+    const session = (refreshToken: string, expiresAt = nowInSeconds() + 3600) =>
+      ({ ...JSON.parse(storedRaw), refresh_token: refreshToken, expires_at: expiresAt }) as Session;
+    let stored: Session | null = session('old-refresh', options.expiresAt);
+    const forget = vi.fn(() => {
+      stored = null;
     });
-    expect(forget).toHaveBeenCalled();
+    const signOut = vi.fn<() => Promise<{ error: unknown }>>();
+    const run = () =>
+      signOutOnThisDevice({
+        signOut,
+        storedSession: () => stored,
+        isOnline: () => options.online ?? true,
+        forget,
+      });
+    return {
+      run,
+      signOut,
+      forget,
+      stored: () => stored,
+      signInAgain: () => {
+        stored = session('new-refresh');
+      },
+    };
+  }
+
+  it('clears the session locally without calling signOut when offline', async () => {
+    const phone = device({ online: false });
+    await phone.run();
+    expect(phone.signOut).not.toHaveBeenCalled();
+    expect(phone.stored()).toBeNull();
+  });
+
+  it('clears the session locally without calling signOut when the access token expired', async () => {
+    const phone = device({ expiresAt: nowInSeconds() - 60 });
+    await phone.run();
+    expect(phone.signOut).not.toHaveBeenCalled();
+    expect(phone.stored()).toBeNull();
+  });
+
+  it('forgets the stored session when signOut fails', async () => {
+    const phone = device();
+    phone.signOut.mockResolvedValue({ error: new AuthRetryableFetchError('Failed to fetch', 0) });
+    await phone.run();
+    expect(phone.forget).toHaveBeenCalled();
   });
 
   it('leaves it to auth-js when signOut succeeds', async () => {
-    const forget = vi.fn();
-    await signOutOnThisDevice({ signOut: async () => ({ error: null }), forget });
-    expect(forget).not.toHaveBeenCalled();
+    const phone = device();
+    phone.signOut.mockResolvedValue({ error: null });
+    await phone.run();
+    expect(phone.forget).not.toHaveBeenCalled();
   });
 
-  it('forgets the session when signOut is still retrying after the fallback time, and again if it then fails', async () => {
-    const forget = vi.fn();
+  it('keeps a newer session when a slow signOut fails after the user signed in again', async () => {
+    const phone = device();
     let finish: (result: { error: unknown }) => void = () => undefined;
-    const signingOut = signOutOnThisDevice({ signOut: () => new Promise((done) => (finish = done)), forget });
-    await vi.advanceTimersByTimeAsync(AUTH_FALLBACK_MS);
-    await signingOut;
-    expect(forget).toHaveBeenCalledTimes(1);
+    phone.signOut.mockReturnValue(new Promise((done) => (finish = done)));
+    await Promise.all([phone.run(), vi.advanceTimersByTimeAsync(AUTH_FALLBACK_MS)]);
+    expect(phone.stored()).toBeNull();
+    phone.signInAgain();
     finish({ error: new AuthRetryableFetchError('Failed to fetch', 0) });
     await vi.runAllTimersAsync();
-    expect(forget).toHaveBeenCalledTimes(2);
+    expect(phone.stored()?.refresh_token).toBe('new-refresh');
+    expect(phone.forget).toHaveBeenCalledTimes(1);
+  });
+
+  it('makes a new sign-in wait until a slow signOut has settled, so its late success cannot remove the new session', async () => {
+    const phone = device();
+    let finish: (result: { error: unknown }) => void = () => undefined;
+    phone.signOut.mockReturnValue(new Promise((done) => (finish = done)));
+    await Promise.all([phone.run(), vi.advanceTimersByTimeAsync(AUTH_FALLBACK_MS)]);
+    const signingIn = signOutSettled().then(phone.signInAgain);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(phone.stored()).toBeNull();
+    finish({ error: null });
+    await signingIn;
+    expect(phone.stored()?.refresh_token).toBe('new-refresh');
   });
 
   it('moves a booted session to signed out on a forced sign-out', async () => {

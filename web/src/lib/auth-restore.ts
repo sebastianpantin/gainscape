@@ -45,19 +45,44 @@ export function forceSignedOut(): void {
 
 export interface SignOutPorts {
   signOut: () => Promise<{ error: unknown }>;
+  storedSession: () => Session | null;
+  isOnline: () => boolean;
   forget: () => void;
+  now?: () => number;
   fallbackMs?: number;
 }
 
-export async function signOutOnThisDevice({ signOut, forget, fallbackMs = AUTH_FALLBACK_MS }: SignOutPorts) {
+let pendingSignOut: Promise<void> = Promise.resolve();
+
+export function signOutSettled(): Promise<void> {
+  return pendingSignOut;
+}
+
+function canRevoke(session: Session | null, online: boolean, now: number): boolean {
+  return online && session !== null && (session.expires_at ?? 0) * 1000 > now;
+}
+
+export async function signOutOnThisDevice({
+  signOut,
+  storedSession,
+  isOnline,
+  forget,
+  now = Date.now,
+  fallbackMs = AUTH_FALLBACK_MS,
+}: SignOutPorts): Promise<void> {
+  const snapshot = storedSession();
+  if (!canRevoke(snapshot, isOnline(), now())) return forget();
+  const forgetIfUnchanged = () => {
+    if (storedSession()?.refresh_token === snapshot!.refresh_token) forget();
+  };
   const signedOut = signOut()
     .catch((error: unknown) => ({ error }))
     .then(({ error }) => {
-      if (error) forget();
-      return error ? 'failed' : 'done';
+      if (error) forgetIfUnchanged();
     });
+  pendingSignOut = signedOut;
   const slow = new Promise<'slow'>((resolve) => setTimeout(() => resolve('slow'), fallbackMs));
-  if ((await Promise.race([signedOut, slow])) === 'slow') forget();
+  if ((await Promise.race([signedOut, slow])) === 'slow') forgetIfUnchanged();
 }
 
 export function storedSessionFrom(raw: string | null): Session | null {

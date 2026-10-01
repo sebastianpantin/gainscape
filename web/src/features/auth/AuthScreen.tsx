@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
 import { MINIMUM_PASSWORD_LENGTH } from '../../lib/account.ts';
 import { authCallbackUrl, authErrorMessage, RESEND_COOLDOWN_SECONDS } from '../../lib/auth-links.ts';
+import { signOutSettled } from '../../lib/auth-restore.ts';
 import { supabase } from '../../lib/supabase.ts';
 import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
 
@@ -26,6 +27,7 @@ async function register(username: string, email: string, password: string): Prom
   if (availabilityError && !availabilityRateLimited) return { problem: availabilityError.message };
   if (!availabilityError && !available) return { problem: 'That username is taken.' };
 
+  await signOutSettled();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -40,6 +42,7 @@ async function register(username: string, email: string, password: string): Prom
 }
 
 async function signIn(email: string, password: string): Promise<{ problem: string | null; unconfirmed: boolean }> {
+  await signOutSettled();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (!error) return { problem: null, unconfirmed: false };
   return { problem: authErrorMessage(error), unconfirmed: error.code === 'email_not_confirmed' };
