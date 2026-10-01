@@ -5,13 +5,13 @@
 
 ## Purpose
 
-A single simulation-backed test that proves the committed balance constants in `domain/balance.ts` still meet the progression design bands. It is the test behind `make sim-check` and takes about 15 s.
+A single simulation-backed test that proves the committed balance constants in `domain/balance.ts` still meet the progression design bands. It is the test behind `make sim-check` and takes about 1 s.
 
 ## Key Files
 
-| File                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `balance-bands.test.ts` | Runs `simulateCommittedConstantsUntilLegsReach99()` once in `beforeAll` (120 s hook timeout), then asserts via `evaluateBands`: legs is the first skill to 99; a focused 4x/week lifter needs the years in `BANDS.focusedLifterYears` for both profiles; hypertrophy vs strength gap is within `BANDS.focusedLifterMaxGap`; casual time scales with effort within `BANDS.casualRatioTolerance`; every profile reaches level 99 within the 40-year horizon. |
+| File                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `balance-bands.test.ts` | Runs `simulateCommittedConstantsUntilLegsReach99()` once in `beforeAll` (120 s hook timeout), then asserts via `evaluateBands`: legs is the first skill to 99; a balanced 3x/week lifter needs the years in `BANDS.balancedLifterYears`; hypertrophy vs strength gap is within `BANDS.focusedLifterMaxGap`; casual time scales with effort within `BANDS.casualRatioTolerance`; the balanced lifter ends week 1 at a legs level within `BANDS.balancedWeekOneLevel`; every profile reaches level 99 within the 40-year horizon. |
 
 ## For AI Agents
 
@@ -19,7 +19,6 @@ A single simulation-backed test that proves the committed balance constants in `
 
 - The bands live in `scripts/balance/bands.ts`, the simulator in `scripts/balance/simulate.ts` and `scripts/balance/tune.ts`. This test only asserts; change thresholds there, with justification, never by loosening an assertion here.
 - Any edit to constants in `supabase/functions/_shared/domain/balance.ts` must keep this test green. Run `make test-domain` and `make sim-check` together.
-- The test logs a `balance report` line; do not remove it, it is the quickest way to see how far a constant change moved the years.
 
 ### Testing Requirements
 
@@ -29,7 +28,7 @@ A single simulation-backed test that proves the committed balance constants in `
 
 ### Common Patterns
 
-- One expensive `beforeAll` computes `results` and `report`; each `it` asserts a single band, named with the design letter, for example `(a)`, `(b)`, `(d)`.
+- One expensive `beforeAll` computes `results` and `report`; each `it` asserts a single band, named with the design letter, for example `(a)`, `(b)`, `(d)`, `(e)`.
 
 ## Dependencies
 

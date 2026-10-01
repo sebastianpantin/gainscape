@@ -62,7 +62,7 @@ Every behaviour change follows red, green, refactor:
 | Change touches                                                               | Test layer and command                                                        | Stack needed |
 | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------ |
 | Game rules: XP, levels, strength, records, loot, crafting, replay, events    | `tests/domain/` with `make test-domain` (fast-check available for properties) | No           |
-| Balance constants in `domain/balance.ts`                                     | `make test-domain` and `make sim-check` (about 15 s)                          | No           |
+| Balance constants in `domain/balance.ts`                                     | `make test-domain` and `make sim-check` (about 1 s)                           | No           |
 | `catalog/*.yaml` or `scripts/catalog/`                                       | `tests/catalog/` with `make test-catalog`, then `make catalog`                | No           |
 | Pure web logic: `web/src/lib/*-rules.ts`, `web/src/offline/`, `web/src/pwa/` | `tests/web/` with `make test-web`                                             | No           |
 | Edge Functions, stores, SQL RPCs, RLS                                        | `tests/integration/` with `make test-integration`                             | Yes          |

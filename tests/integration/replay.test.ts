@@ -128,7 +128,7 @@ describe('out-of-order sync', () => {
 
     const [row] = await db`
       select e1rm_before_kg::float, e1rm_candidate_kg::float, xp_awarded from public.sets where id = ${late.sets[0].id}`;
-    expect(row).toEqual({ e1rm_before_kg: 74, e1rm_candidate_kg: 81.4, xp_awarded: 1290 });
+    expect(row).toEqual({ e1rm_before_kg: 74, e1rm_candidate_kg: 81.4, xp_awarded: 626 });
     const [max] =
       await db`select e1rm_kg::float from public.exercise_maxes where user_id = ${user.id} and exercise_id = ${benchId}`;
     expect(max.e1rm_kg).toBe(81.4);
@@ -170,27 +170,27 @@ describe('out-of-order sync', () => {
 
     const lateResponse = await postSession(outOfOrder, late);
     expect(lateResponse.body).toMatchObject({
-      xpBySkill: { core: 340 },
-      levelUps: [{ skill: 'core', from: 1, to: 4 }],
+      xpBySkill: { core: 165 },
+      levelUps: [{ skill: 'core', from: 1, to: 2 }],
     });
     const earlyResponse = await postSession(outOfOrder, early);
     expect(earlyResponse.body).toMatchObject({
-      xpBySkill: { core: 1020 },
-      levelUps: [{ skill: 'core', from: 1, to: 9 }],
+      xpBySkill: { core: 495 },
+      levelUps: [{ skill: 'core', from: 1, to: 6 }],
     });
     const [earlySet] = await db`select e1rm_candidate_kg::float from public.sets where id = ${early.sets[0].id}`;
     expect(earlySet.e1rm_candidate_kg).toBe(40);
     const [lateSet] =
       await db`select rir::float, rir_source, effective_reps, xp_awarded from public.sets where id = ${late.sets[0].id}`;
-    expect(lateSet).toEqual({ rir: 3, rir_source: 'estimated', effective_reps: 3, xp_awarded: 1020 });
+    expect(lateSet).toEqual({ rir: 3, rir_source: 'estimated', effective_reps: 3, xp_awarded: 495 });
     expect(await storedSummary(late.id)).toMatchObject({
-      xpBySkill: { core: 1020 },
-      levelUps: [{ skill: 'core', from: 9, to: 13 }],
+      xpBySkill: { core: 495 },
+      levelUps: [{ skill: 'core', from: 6, to: 10 }],
     });
     const [skill] = await db`
       select us.xp::int from public.user_skills us join public.skills s on s.id = us.skill_id
       where us.user_id = ${outOfOrder.id} and s.key = 'core'`;
-    expect(skill.xp).toBe(2040);
+    expect(skill.xp).toBe(990);
 
     await syncInOrder(inOrder, [lateSpec, earlySpec]);
     expect((await normalizedSnapshot(outOfOrder.id)).sessions).toEqual((await normalizedSnapshot(inOrder.id)).sessions);

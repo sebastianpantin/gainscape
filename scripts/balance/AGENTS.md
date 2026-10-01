@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Simulates years of training for four lifter profiles using the real domain engine (`processSession`, strength history) and checks that the committed constants in `domain/balance.ts` (`DEFAULT_BALANCE`) keep leveling pace inside target bands: a focused lifter reaches level 99 in 5 to 7 years, hypertrophy and strength profiles stay within 15% of each other, and the casual profile's time and effort ratios stay within tolerance. `make sim` prints a tuning table; `make sim-check` asserts the bands.
+Simulates years of training for four lifter profiles using the real domain engine (`processSession`, strength history) and checks that the committed constants in `domain/balance.ts` (`DEFAULT_BALANCE`) keep leveling pace inside target bands: the balanced 3x/week lifter reaches legs level 99 in 2 to 3 years (target 2.5) and ends week 1 between legs level 20 and 40, hypertrophy and strength profiles stay within 15% of each other, and the casual profile's time and effort ratios stay within tolerance. `make sim` prints a tuning table; `make sim-check` asserts the bands.
 
 ## Key Files
 
@@ -13,7 +13,7 @@ Simulates years of training for four lifter profiles using the real domain engin
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `report.ts`   | Entry for `make sim`. Prints each tuning candidate, the feasible count and the exact simulation of the committed constants.                                      |
 | `tune.ts`     | `tune()` grid search over `intensityBonusMax` and `intensityBonusFull`, best XP per rep search; `simulateCommittedConstantsUntilLegsReach99()` used by the test. |
-| `bands.ts`    | `BANDS` targets, `yearsToLevel99`, `evaluateBands` returning a `BandReport` with pass flags a, b, d and a violation score.                                       |
+| `bands.ts`    | `BANDS` targets, `yearsToLevel99`, `evaluateBands` returning a `BandReport` with pass flags a, b, d, e and a violation score.                                    |
 | `simulate.ts` | `simulateProfile`, `firstSkillToLevel99`, `SimulationResult`; seeded (42) week-by-week session generation with deloads and strength growth.                      |
 | `profiles.ts` | `PROFILES` (`hypertrophy`, `strength`, `balanced`, `casual`) and `STARTING_E1RM_KG`.                                                                             |
 | `catalog.ts`  | `SIM_CATALOG`, `SIM_SKILLS`, `SIM_EXERCISE_SHARES`: a hard-coded subset of the real catalog.                                                                     |
@@ -31,7 +31,7 @@ Simulates years of training for four lifter profiles using the real domain engin
 
 ### Testing Requirements
 
-- `tests/balance/balance-bands.test.ts` (`make sim-check`, about 15 s) runs the committed constants through the bands and unit-tests `evaluateBands`. Put a failing band or `yearsToLevel99` case there first.
+- `tests/balance/balance-bands.test.ts` (`make sim-check`, about 1 s) runs the committed constants through the bands. Hypertrophy and strength years are informational except for band (b), the gap between them. Put a failing band or `yearsToLevel99` case there first.
 - `tests/catalog/sim-catalog.test.ts` (`make test-catalog`, no stack) guards catalog drift for shares and skills.
 - `report.ts` is a console report with no test of its own.
 

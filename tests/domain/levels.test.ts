@@ -4,10 +4,14 @@ import { combatLevel, levelForXp, levelProgress, MAX_LEVEL, xpForLevel } from '@
 describe('xp curve', () => {
   it.each([
     [1, 0],
-    [2, 83],
-    [50, 101_333],
-    [92, 6_517_253],
-    [99, 13_034_431],
+    [2, 80],
+    [3, 167],
+    [10, 980],
+    [30, 7_345],
+    [50, 32_619],
+    [70, 133_230],
+    [92, 614_489],
+    [99, 998_458],
   ])('level %i requires %i xp', (level, xp) => {
     expect(xpForLevel(level)).toBe(xp);
   });
@@ -24,8 +28,8 @@ describe('xp curve', () => {
   });
 
   it('reports progress towards the next level', () => {
-    expect(levelProgress(135)).toMatchObject({ level: 2, levelStartXp: 83, nextLevelXp: 174 });
-    expect(levelProgress(13_034_431)).toMatchObject({ level: 99, nextLevelXp: null, fractionToNextLevel: 1 });
+    expect(levelProgress(135)).toMatchObject({ level: 2, levelStartXp: 80, nextLevelXp: 167 });
+    expect(levelProgress(998_458)).toMatchObject({ level: 99, nextLevelXp: null, fractionToNextLevel: 1 });
   });
 });
 
