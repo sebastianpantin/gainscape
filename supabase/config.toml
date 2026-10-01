@@ -167,7 +167,7 @@ allow_dynamic_registration = false
 
 [edge_runtime]
 enabled = true
-policy = "per_worker"
+policy = "oneshot"
 inspector_port = 8083
 deno_version = 2
 

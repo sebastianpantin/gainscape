@@ -74,6 +74,38 @@ describe('rebuild-caches', () => {
     expect(await normalizedSnapshot(lifter.id)).toEqual(before);
   });
 
+  it('re-derives cardio records and the cardio summaries', async () => {
+    const runner = await createTestUser();
+    const runId = await builtInExerciseId('running');
+    const run = (hoursAgo: number, durationS: number, distanceM: number) => {
+      const startedAt = new Date(Date.now() - hoursAgo * HOUR_MS);
+      return {
+        id: randomUUID(),
+        startedAt: startedAt.toISOString(),
+        endedAt: new Date(startedAt.getTime() + HOUR_MS).toISOString(),
+        sets: [
+          {
+            kind: 'cardio',
+            id: randomUUID(),
+            exerciseId: runId,
+            position: 0,
+            durationS,
+            distanceM,
+            interval: null,
+            effort: null,
+          },
+        ],
+      };
+    };
+    for (const session of [run(6, 1800, 5000), run(4, 2160, 6000), run(2, 1500, 5000)]) {
+      expect((await postCompleteSession(runner.accessToken, session)).status).toBe(200);
+    }
+    const before = await normalizedSnapshot(runner.id);
+    expect(before.cardioRecords).toHaveLength(3);
+    expect((await rebuildCaches(runner.id)).status).toBe(200);
+    expect(await normalizedSnapshot(runner.id)).toEqual(before);
+  });
+
   it('keeps the bodyweight each set was logged with', async () => {
     const rows = await db`
       select st.effective_load_kg::float from public.sets st join public.sessions s on s.id = st.session_id

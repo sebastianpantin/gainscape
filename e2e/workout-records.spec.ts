@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { logExercise, openTab, register } from './support/app.ts';
+import { logCardio, logExercise, openTab, register, uniqueUsername } from './support/app.ts';
 
 test('bodyweight prompt, records and the collection log', async ({ page }) => {
   await register(page, `e2e_${Date.now().toString(36)}`);
@@ -34,4 +34,23 @@ test('bodyweight prompt, records and the collection log', async ({ page }) => {
   });
   await expect(bench.locator('.record-slot.filled')).toHaveText(['5RM 70 kg']);
   await expect(bench).toContainText('e1RM');
+});
+
+test('cardio records on the reveal and in the collection log', async ({ page }) => {
+  await register(page, uniqueUsername('cr'));
+  for (const [minutes, distance] of [
+    [30, 5],
+    [36, 6],
+  ]) {
+    await openTab(page, 'Train');
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]);
+    await page.getByRole('button', { name: 'Finish workout' }).click();
+    await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  }
+  await expect(page.getByLabel('New records')).toContainText('Running: 6 km (was 5 km) · 36 min (was 30 min)');
+
+  await openTab(page, 'Log');
+  await expect(page.getByTestId('cardio-records')).toContainText('Distance 6 km · Pace 6:00 /km · Duration 36 min');
+  await expect(page.getByTestId('collection-completion')).toHaveText('0% (0/0)');
 });

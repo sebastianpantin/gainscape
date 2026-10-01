@@ -4,6 +4,8 @@ import {
   boutDurationS,
   boutModeChanges,
   canAddBout,
+  cardioRecordCards,
+  describeCardioGains,
   DEFAULT_INTERVAL,
   clampedDistanceM,
   clampedInterval,
@@ -166,5 +168,51 @@ describe('distance input', () => {
     expect(distanceFromInput(5, 'km')).toBe(5000);
     expect(distanceFromInput(0.0001, 'km')).toBe(CARDIO_BOUNDS.distanceM.min);
     expect(distanceFromInput(400, 'yd')).toBe(365.8);
+  });
+});
+
+describe('cardio record text', () => {
+  it('writes each gain with what it beat', () => {
+    expect(
+      describeCardioGains(
+        [
+          { kind: 'distance', value: 6000, previous: 5000 },
+          { kind: 'pace', value: 300, previous: 360 },
+          { kind: 'duration', value: 2160, previous: null },
+        ],
+        'km',
+      ),
+    ).toBe('6 km (was 5 km) · 5:00 /km (was 6:00 /km) · 36 min (first)');
+  });
+
+  it('writes a pool pace gain per 100 m', () => {
+    expect(describeCardioGains([{ kind: 'pace', value: 1190, previous: 1200 }], 'm')).toBe(
+      '1:59 /100 m (was 2:00 /100 m)',
+    );
+  });
+
+  it('builds one card per activity with its records in kind order, by name', () => {
+    const activity = (paceUnit: 'per_km' | 'per_100m') => ({
+      paceUnit,
+      referencePaceSPerKm: null,
+      maxEffort: 'max' as const,
+      shares: [],
+    });
+    const exercises = [
+      { id: 'swim', name: 'Swimming', modality: 'cardio' as const, activity: activity('per_100m') },
+      { id: 'run', name: 'Running', modality: 'cardio' as const, activity: activity('per_km') },
+    ];
+    const rows = [
+      { exerciseId: 'swim', kind: 'distance' as const, value: 1500 },
+      { exerciseId: 'run', kind: 'duration' as const, value: 2160 },
+      { exerciseId: 'run', kind: 'distance' as const, value: 6000 },
+      { exerciseId: 'run', kind: 'pace' as const, value: 300 },
+      { exerciseId: 'gone', kind: 'distance' as const, value: 1 },
+    ];
+    expect(cardioRecordCards(rows, exercises, 'kg')).toEqual([
+      { exerciseId: 'run', name: 'Running', lines: ['Distance 6 km', 'Pace 5:00 /km', 'Duration 36 min'] },
+      { exerciseId: 'swim', name: 'Swimming', lines: ['Distance 1500 m'] },
+    ]);
+    expect(cardioRecordCards(rows, exercises, 'lb')[1].lines).toEqual(['Distance 1640 yd']);
   });
 });

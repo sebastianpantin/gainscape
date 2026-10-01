@@ -181,7 +181,13 @@ export async function normalizedSnapshot(userId: string) {
       ...summary,
       ...(summary.sessionId === undefined ? {} : { sessionId: sessionOrdinal.get(summary.sessionId as string) }),
       ...(Array.isArray(summary.prs)
-        ? { prs: summary.prs.map((pr) => ({ ...pr, exerciseId: exercise(pr.exerciseId) })) }
+        ? {
+            prs: summary.prs.map((pr) => ({
+              ...pr,
+              exerciseId: exercise(pr.exerciseId),
+              ...(pr.setId === undefined ? {} : { setId: set(pr.setId) }),
+            })),
+          }
         : {}),
     };
   };
@@ -238,13 +244,21 @@ export async function normalizedSnapshot(userId: string) {
       ).map((row) => ({ ...row, exercise_id: exercise(row.exercise_id), set_id: set(row.set_id) })),
       'exercise_id',
     ),
+    cardioRecords: byKey(
+      (
+        await db`select exercise_id, kind::text, value::float, set_id, achieved_at
+                 from public.cardio_records where user_id = ${userId}`
+      ).map((row) => ({ ...row, exercise_id: exercise(row.exercise_id), set_id: set(row.set_id) })),
+      'exercise_id',
+      'kind',
+    ),
   };
 }
 
 export async function domainCatalogFor(exerciseIds: string[]): Promise<Catalog> {
   const skillRows = await db`select id, key, sort_order, combat_weight from public.skills`;
   const shareRows = await db`
-    select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.max_effort,
+    select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.pace_unit, e.max_effort,
            e.record_min_distance_m, es.skill_id, es.share_bp
     from public.exercises e join public.exercise_skills es on es.exercise_id = e.id
     where e.id = any(${exerciseIds}::uuid[])`;
@@ -258,6 +272,7 @@ export async function domainCatalogFor(exerciseIds: string[]): Promise<Catalog> 
             ...base,
             modality: 'cardio',
             cardio: {
+              paceUnit: row.pace_unit,
               referencePaceSPerKm: row.reference_pace_s_per_km,
               maxEffort: row.max_effort,
               recordMinDistanceM: row.record_min_distance_m,

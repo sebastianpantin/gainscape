@@ -1,16 +1,17 @@
 import { DEFAULT_FEED, type FeedConfig, type ItemRarityRank } from './balance.ts';
 import { MAX_LEVEL } from './levels.ts';
-import { roundTo } from './strength.ts';
-import type { LoadType, PersonalRecordSummary, SessionSummary } from './types.ts';
+import {
+  CARDIO_RECORD_KINDS,
+  type CardioRecordKind,
+  type CardioRecordSummary,
+  type LiftRecordSummary,
+  type LoadType,
+  type SessionSummary,
+} from './types.ts';
 
 export interface FeedSourceSet {
   id: string;
-  exerciseId: string;
-  position: number;
-  weightKg: number;
-  reps: number;
-  isWarmup: boolean;
-  effectiveLoadKg: number;
+  effectiveLoadKg: number | null;
 }
 
 export type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop';
@@ -24,23 +25,13 @@ export interface FeedEventDraft {
 
 export interface FeedExercise {
   builtIn: boolean;
-  loadType: LoadType;
+  loadType: LoadType | null;
 }
 
 const RARITY_ORDER: readonly ItemRarityRank[] = ['common', 'uncommon', 'rare', 'legendary'];
 
 export function isFeedLevelUp(from: number, to: number, cfg: FeedConfig = DEFAULT_FEED): boolean {
   return Math.floor(to / cfg.levelMilestone) > Math.floor(from / cfg.levelMilestone) || to >= cfg.levelAlwaysFrom;
-}
-
-function prSourceSet(pr: PersonalRecordSummary, sets: readonly FeedSourceSet[]): FeedSourceSet | null {
-  const matches = sets
-    .filter((set) => set.exerciseId === pr.exerciseId && !set.isWarmup)
-    .filter((set) =>
-      pr.kind === 'rep_max' ? set.reps >= pr.reps && roundTo(2, set.weightKg) === pr.loadKg : set.reps === pr.reps,
-    )
-    .sort((a, b) => a.position - b.position);
-  return matches[0] ?? null;
 }
 
 function levelEvents(summary: SessionSummary, cfg: FeedConfig): FeedEventDraft[] {
@@ -50,32 +41,60 @@ function levelEvents(summary: SessionSummary, cfg: FeedConfig): FeedEventDraft[]
   });
 }
 
+function liftPrEvent(
+  pr: LiftRecordSummary,
+  exercise: FeedExercise,
+  setsById: ReadonlyMap<string, FeedSourceSet>,
+): FeedEventDraft {
+  const source = setsById.get(pr.setId) ?? null;
+  const totalLoadKg = exercise.loadType === 'bodyweight_plus' ? (source?.effectiveLoadKg ?? null) : null;
+  return {
+    key: `pr:${pr.exerciseId}`,
+    type: 'pr',
+    setId: source?.id ?? null,
+    payload: {
+      exerciseId: pr.exerciseId,
+      kind: pr.kind,
+      reps: pr.reps,
+      loadKg: pr.loadKg,
+      previousLoadKg: pr.previousLoadKg,
+      previousReps: pr.previousReps,
+      totalLoadKg,
+    },
+  };
+}
+
+const CARDIO_PAYLOAD_FIELDS: Record<CardioRecordKind, { value: string; previous: string }> = {
+  distance: { value: 'distanceM', previous: 'previousDistanceM' },
+  pace: { value: 'paceSPerKm', previous: 'previousPaceSPerKm' },
+  duration: { value: 'countedWorkS', previous: 'previousCountedWorkS' },
+};
+
+function cardioPrEvent(pr: CardioRecordSummary, setsById: ReadonlyMap<string, FeedSourceSet>): FeedEventDraft {
+  const payload: Record<string, string | number | null> = {
+    exerciseId: pr.exerciseId,
+    kind: 'cardio',
+    recordKinds: pr.records.map((record) => record.kind).join(','),
+  };
+  for (const kind of CARDIO_RECORD_KINDS) {
+    const fields = CARDIO_PAYLOAD_FIELDS[kind];
+    const record = pr.records.find((candidate) => candidate.kind === kind);
+    payload[fields.value] = record?.value ?? null;
+    payload[fields.previous] = record?.previous ?? null;
+  }
+  return { key: `pr:${pr.setId}`, type: 'pr', setId: setsById.has(pr.setId) ? pr.setId : null, payload };
+}
+
 function prEvents(
   summary: SessionSummary,
   sets: readonly FeedSourceSet[],
   exercises: ReadonlyMap<string, FeedExercise>,
 ): FeedEventDraft[] {
+  const setsById = new Map(sets.map((set) => [set.id, set]));
   return (summary.prs ?? []).flatMap((pr): FeedEventDraft[] => {
     const exercise = exercises.get(pr.exerciseId);
     if (!exercise?.builtIn) return [];
-    const source = prSourceSet(pr, sets);
-    const totalLoadKg = exercise.loadType === 'bodyweight_plus' && source ? source.effectiveLoadKg : null;
-    return [
-      {
-        key: `pr:${pr.exerciseId}`,
-        type: 'pr',
-        setId: source?.id ?? null,
-        payload: {
-          exerciseId: pr.exerciseId,
-          kind: pr.kind,
-          reps: pr.reps,
-          loadKg: pr.loadKg,
-          previousLoadKg: pr.previousLoadKg,
-          previousReps: pr.previousReps,
-          totalLoadKg,
-        },
-      },
-    ];
+    return [pr.kind === 'cardio' ? cardioPrEvent(pr, setsById) : liftPrEvent(pr, exercise, setsById)];
   });
 }
 

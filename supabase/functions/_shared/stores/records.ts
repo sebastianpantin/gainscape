@@ -1,5 +1,12 @@
 import type { Transaction } from '../db.ts';
-import { type BodyweightRepRecord, REP_MAX_SLOT_COUNT, type RecordState, type RepMaxSlot } from '../domain/index.ts';
+import {
+  type BodyweightRepRecord,
+  type CardioRecordKind,
+  type CardioRecords,
+  REP_MAX_SLOT_COUNT,
+  type RecordState,
+  type RepMaxSlot,
+} from '../domain/index.ts';
 
 export async function loadRecords(
   tx: Transaction,
@@ -13,6 +20,10 @@ export async function loadRecords(
   const bodyweightRows = await tx`
     select exercise_id, max_reps, set_id, achieved_at
     from public.bodyweight_rep_records
+    where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
+  const cardioRows = await tx`
+    select exercise_id, kind, value, set_id, achieved_at
+    from public.cardio_records
     where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
 
   const repMaxes: Record<string, (RepMaxSlot | null)[]> = {};
@@ -35,7 +46,14 @@ export async function loadRecords(
       achievedAt: new Date(row.achieved_at).toISOString(),
     };
   }
-  return { repMaxes, bodyweightReps };
+  const cardio: Record<string, Partial<Record<CardioRecordKind, CardioRecords[CardioRecordKind]>>> = {};
+  for (const row of cardioRows) {
+    cardio[row.exercise_id] = {
+      ...cardio[row.exercise_id],
+      [row.kind]: { value: Number(row.value), setId: row.set_id, achievedAt: new Date(row.achieved_at).toISOString() },
+    };
+  }
+  return { repMaxes, bodyweightReps, cardio };
 }
 
 export async function replaceRecordsFor(
@@ -48,6 +66,9 @@ export async function replaceRecordsFor(
   await tx`delete from public.rep_maxes where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
   await tx`
     delete from public.bodyweight_rep_records
+    where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
+  await tx`
+    delete from public.cardio_records
     where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
 
   const repMaxRows = exerciseIds.flatMap((exerciseId) =>
@@ -82,4 +103,22 @@ export async function replaceRecordsFor(
       };
     });
   if (bodyweightRows.length > 0) await tx`insert into public.bodyweight_rep_records ${tx(bodyweightRows)}`;
+
+  const cardioRows = exerciseIds.flatMap((exerciseId) =>
+    Object.entries(records.cardio[exerciseId] ?? {}).flatMap(([kind, record]) =>
+      record === undefined
+        ? []
+        : [
+            {
+              user_id: userId,
+              exercise_id: exerciseId,
+              kind,
+              value: record.value,
+              set_id: record.setId,
+              achieved_at: record.achievedAt,
+            },
+          ],
+    ),
+  );
+  if (cardioRows.length > 0) await tx`insert into public.cardio_records ${tx(cardioRows)}`;
 }

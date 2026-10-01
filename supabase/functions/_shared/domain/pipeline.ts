@@ -157,6 +157,7 @@ function cardioResult(
     effortValue,
     rirSource: bout.effort === null ? 'default' : 'logged',
     cardio: {
+      records: [],
       countedWorkS: counted.workS,
       xpCountedWorkS: counted.xpWorkS,
       cappedWorkS: counted.workS - counted.xpWorkS,

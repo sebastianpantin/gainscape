@@ -204,8 +204,8 @@ describe('lift results beside cardio bouts', () => {
         const mixed = run([...liftSets, ...cardioSets]);
         const mixedLifts = mixed.outputs.sets.filter((result) => result.cardio === null);
         expect(mixedLifts).toEqual(liftOnly.outputs.sets);
-        expect(mixed.nextState.records).toEqual(liftOnly.nextState.records);
-        expect(mixed.outputs.prs).toEqual(liftOnly.outputs.prs);
+        expect({ ...mixed.nextState.records, cardio: {} }).toEqual(liftOnly.nextState.records);
+        expect(mixed.outputs.prs.filter((pr) => pr.kind !== 'cardio')).toEqual(liftOnly.outputs.prs);
         expect(strengthHistoryRows({ id: 'mixed', startedAt: '2026-09-28T10:00:00.000Z' }, mixed.outputs.sets)).toEqual(
           strengthHistoryRows({ id: 'mixed', startedAt: '2026-09-28T10:00:00.000Z' }, liftOnly.outputs.sets),
         );
@@ -228,6 +228,7 @@ describe('HISTORY_ONLY_STEPS', () => {
       })),
     },
     bodyweightReps: {},
+    cardio: {},
   };
   const heavy = { ...fixtureSession, sets: [aSet('bench', 100, 5, hard), aSet('bench', 100, 5, null)] };
   const strength = { bench: { windowMax: 90, fallbackMax: 90, hasPriorSession: true } };

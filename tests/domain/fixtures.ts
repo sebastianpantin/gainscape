@@ -1,5 +1,4 @@
 import {
-  type CardioEffortLevel,
   type CardioExerciseDef,
   type CardioSetInput,
   type Catalog,
@@ -43,12 +42,12 @@ const exercise = (
 const cardioExercise = (
   id: string,
   builtIn: boolean,
-  cardio: { referencePaceSPerKm: number | null; maxEffort: CardioEffortLevel; recordMinDistanceM: number | null },
+  cardio: Omit<CardioExerciseDef['cardio'], 'paceUnit'> & { paceUnit?: CardioExerciseDef['cardio']['paceUnit'] },
   shares: [string, number][],
 ): CardioExerciseDef => ({
   id,
   modality: 'cardio',
-  cardio,
+  cardio: { paceUnit: 'per_km', ...cardio },
   builtIn,
   shares: shares.map(([skillKey, shareBasisPoints]) => ({ skillId: `skill-${skillKey}`, shareBasisPoints })),
 });
@@ -124,6 +123,15 @@ export const catalog: Catalog = {
         ['endurance', 5000],
         ['agility', 5000],
       ]),
+    ],
+    [
+      'swim',
+      cardioExercise(
+        'swim',
+        true,
+        { referencePaceSPerKm: 1200, maxEffort: 'max', recordMinDistanceM: 100, paceUnit: 'per_100m' },
+        [['endurance', 10000]],
+      ),
     ],
     [
       'custom-run',

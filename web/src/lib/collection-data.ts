@@ -1,4 +1,5 @@
 import { REP_MAX_SLOT_COUNT, type StrengthState } from '@domain/types.ts';
+import type { CardioRecordRow } from './cardio-rules.ts';
 import { fetchExercises } from './catalog.ts';
 import { countCollection } from './collection-rules.ts';
 import { supabase } from './supabase.ts';
@@ -18,10 +19,11 @@ export interface CollectionData {
   strengthByExercise: Map<string, ExerciseStrengthView>;
   pinnedExerciseIds: string[];
   nextPinPosition: number;
+  cardioRecords: CardioRecordRow[];
 }
 
 export async function fetchCollectionData(userId: string): Promise<CollectionData> {
-  const [repMaxes, bodyweightRecords, strengthByExercise, pins] = await Promise.all([
+  const [repMaxes, bodyweightRecords, strengthByExercise, pins, cardioRecords] = await Promise.all([
     supabase.from('rep_maxes').select('exercise_id, reps, load_kg, exact_set_id').eq('user_id', userId),
     supabase.from('bodyweight_rep_records').select('exercise_id, max_reps').eq('user_id', userId),
     fetchExerciseStrength(userId),
@@ -31,8 +33,9 @@ export async function fetchCollectionData(userId: string): Promise<CollectionDat
       .eq('user_id', userId)
       .order('position')
       .order('created_at'),
+    supabase.from('cardio_records').select('exercise_id, kind, value').eq('user_id', userId),
   ]);
-  for (const result of [repMaxes, bodyweightRecords, pins]) if (result.error) throw result.error;
+  for (const result of [repMaxes, bodyweightRecords, pins, cardioRecords]) if (result.error) throw result.error;
 
   const repMaxesByExercise = new Map<string, (RepMaxSlotView | null)[]>();
   for (const row of repMaxes.data!) {
@@ -47,6 +50,11 @@ export async function fetchCollectionData(userId: string): Promise<CollectionDat
     strengthByExercise,
     pinnedExerciseIds: pins.data!.map((row) => row.exercise_id),
     nextPinPosition: Math.max(-1, ...pins.data!.map((row) => row.position)) + 1,
+    cardioRecords: cardioRecords.data!.map((row) => ({
+      exerciseId: row.exercise_id,
+      kind: row.kind,
+      value: Number(row.value),
+    })),
   };
 }
 

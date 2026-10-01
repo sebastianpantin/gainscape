@@ -16,6 +16,8 @@ const exercises = new Map<string, FeedExercise>([
   ['weighted_dip', { builtIn: true, loadType: 'bodyweight_plus' }],
   ['pull_up', { builtIn: true, loadType: 'bodyweight' }],
   ['landmine', { builtIn: false, loadType: 'external' }],
+  ['run', { builtIn: true, loadType: null }],
+  ['my_bike', { builtIn: false, loadType: null }],
 ]);
 
 const rarity = new Map<string, ItemRarityRank>([
@@ -29,19 +31,18 @@ function summaryWith(overrides: Partial<SessionSummary>): SessionSummary {
   return { sessionId: 'session-1', xpBySkill: {}, levelUps: [], prs: [], drops: [], ...overrides };
 }
 
-function set(
-  id: string,
-  exerciseId: string,
-  position: number,
-  weightKg: number,
-  reps: number,
-  overrides: Partial<FeedSourceSet> = {},
-): FeedSourceSet {
-  return { id, exerciseId, position, weightKg, reps, isWarmup: false, effectiveLoadKg: weightKg, ...overrides };
+function set(id: string, effectiveLoadKg: number | null): FeedSourceSet {
+  return { id, effectiveLoadKg };
 }
 
-function repMaxPr(exerciseId: string, reps: number, loadKg: number, previousLoadKg: number | null = null) {
-  return { exerciseId, kind: 'rep_max', reps, loadKg, previousLoadKg, previousReps: null } as PersonalRecordSummary;
+function repMaxPr(
+  exerciseId: string,
+  setId: string,
+  reps: number,
+  loadKg: number,
+  previousLoadKg: number | null = null,
+): PersonalRecordSummary {
+  return { exerciseId, kind: 'rep_max', setId, reps, loadKg, previousLoadKg, previousReps: null };
 }
 
 function drop(dropId: string, itemId: string): DropSummary {
@@ -94,15 +95,15 @@ describe('isFeedLevelUp', () => {
 });
 
 describe('PR events', () => {
-  const sets = [
-    set('set-60x5', 'bench', 0, 60, 5),
-    set('set-80x5', 'bench', 1, 80, 5),
-    set('set-80x6', 'bench', 2, 80, 6),
-    set('warmup-80x8', 'bench', 3, 80, 8, { isWarmup: true }),
-  ];
+  const sets = [set('set-60x5', 60), set('set-80x5', 80), set('set-80x6', 80)];
 
-  it('links the lowest-position working set that matches the record', () => {
-    const [event] = feedEventsForSession(summaryWith({ prs: [repMaxPr('bench', 5, 80, 60)] }), sets, exercises, rarity);
+  it('links the set the summary names', () => {
+    const [event] = feedEventsForSession(
+      summaryWith({ prs: [repMaxPr('bench', 'set-80x5', 5, 80, 60)] }),
+      sets,
+      exercises,
+      rarity,
+    );
     expect(event).toEqual({
       key: 'pr:bench',
       type: 'pr',
@@ -119,18 +120,20 @@ describe('PR events', () => {
     });
   });
 
-  it('ignores warm-ups when matching the source set', () => {
-    const [event] = feedEventsForSession(summaryWith({ prs: [repMaxPr('bench', 6, 80)] }), sets, exercises, rarity);
-    expect(event.setId).toBe('set-80x6');
-    const [none] = feedEventsForSession(summaryWith({ prs: [repMaxPr('bench', 8, 80)] }), sets, exercises, rarity);
-    expect(none.setId).toBeNull();
+  it('links no set when the named set is gone', () => {
+    const [event] = feedEventsForSession(
+      summaryWith({ prs: [repMaxPr('bench', 'gone', 8, 80)] }),
+      sets,
+      exercises,
+      rarity,
+    );
+    expect(event.setId).toBeNull();
   });
 
   it('reports the added weight and the total for bodyweight-plus', () => {
-    const dipSets = [set('dip', 'weighted_dip', 0, 20, 5, { effectiveLoadKg: 100 })];
     const [event] = feedEventsForSession(
-      summaryWith({ prs: [repMaxPr('weighted_dip', 5, 20, 10)] }),
-      dipSets,
+      summaryWith({ prs: [repMaxPr('weighted_dip', 'dip', 5, 20, 10)] }),
+      [set('dip', 100)],
       exercises,
       rarity,
     );
@@ -138,28 +141,71 @@ describe('PR events', () => {
     expect(event.payload).toMatchObject({ loadKg: 20, previousLoadKg: 10, totalLoadKg: 100 });
   });
 
-  it('matches a pure bodyweight record by exact reps', () => {
-    const pullUpSets = [set('pull-12', 'pull_up', 0, 0, 12), set('pull-15', 'pull_up', 1, 0, 15)];
+  it('posts a pure bodyweight record with its set', () => {
     const pr: PersonalRecordSummary = {
       exerciseId: 'pull_up',
       kind: 'bodyweight_reps',
+      setId: 'pull-15',
       reps: 15,
       loadKg: null,
       previousLoadKg: null,
       previousReps: 12,
     };
-    const [event] = feedEventsForSession(summaryWith({ prs: [pr] }), pullUpSets, exercises, rarity);
+    const [event] = feedEventsForSession(summaryWith({ prs: [pr] }), [set('pull-15', 80)], exercises, rarity);
     expect(event.setId).toBe('pull-15');
     expect(event.payload).toMatchObject({ kind: 'bodyweight_reps', reps: 15, loadKg: null, totalLoadKg: null });
   });
 
   it('never posts a custom exercise PR', () => {
     const events = feedEventsForSession(
-      summaryWith({ prs: [repMaxPr('landmine', 5, 40)] }),
-      [set('landmine-set', 'landmine', 0, 40, 5)],
+      summaryWith({ prs: [repMaxPr('landmine', 'landmine-set', 5, 40)] }),
+      [set('landmine-set', 40)],
       exercises,
       rarity,
     );
+    expect(events).toEqual([]);
+  });
+});
+
+describe('cardio PR events', () => {
+  const boutPr = (exerciseId: string, setId: string): PersonalRecordSummary => ({
+    kind: 'cardio',
+    exerciseId,
+    setId,
+    records: [
+      { kind: 'distance', value: 6000, previous: 5000 },
+      { kind: 'duration', value: 2160, previous: null },
+    ],
+  });
+
+  it('posts one flat event per bout, keyed by the bout', () => {
+    const events = feedEventsForSession(
+      summaryWith({ prs: [boutPr('run', 'bout-a'), boutPr('run', 'bout-b')] }),
+      [set('bout-a', null), set('bout-b', null)],
+      exercises,
+      rarity,
+    );
+    expect(events.map((event) => event.key)).toEqual(['pr:bout-a', 'pr:bout-b']);
+    expect(events[0]).toEqual({
+      key: 'pr:bout-a',
+      type: 'pr',
+      setId: 'bout-a',
+      payload: {
+        exerciseId: 'run',
+        kind: 'cardio',
+        recordKinds: 'distance,duration',
+        distanceM: 6000,
+        previousDistanceM: 5000,
+        paceSPerKm: null,
+        previousPaceSPerKm: null,
+        countedWorkS: 2160,
+        previousCountedWorkS: null,
+      },
+    });
+  });
+
+  it('never posts a custom cardio PR', () => {
+    const events = feedEventsForSession(summaryWith({ prs: [boutPr('my_bike', 'bout-c')] }), [], exercises, rarity);
     expect(events).toEqual([]);
   });
 });
@@ -187,10 +233,10 @@ describe('feedEventsForSession', () => {
       { skill: 'core', from: 3, to: 4 },
       { skill: 'legs', from: 89, to: 90 },
     ],
-    prs: [repMaxPr('bench', 5, 80), repMaxPr('weighted_dip', 5, 20)],
+    prs: [repMaxPr('bench', 'bench-set', 5, 80), repMaxPr('weighted_dip', 'dip-set', 5, 20)],
     drops: [drop('drop-1', 'item-legendary'), drop('drop-2', 'item-rare')],
   });
-  const sets = [set('bench-set', 'bench', 0, 80, 5), set('dip-set', 'weighted_dip', 1, 20, 5)];
+  const sets = [set('bench-set', 80), set('dip-set', 100)];
 
   it('returns nothing for a history-only session', () => {
     expect(feedEventsForSession({ ...full, historyOnly: true }, sets, exercises, rarity)).toEqual([]);

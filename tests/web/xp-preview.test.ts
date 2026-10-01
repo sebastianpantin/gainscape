@@ -308,6 +308,7 @@ function serverXp(draft: CardioDraftExercise[]): number[] {
             shareBasisPoints: share.shareBasisPoints,
           })),
           cardio: {
+            paceUnit: entry.activity.paceUnit,
             referencePaceSPerKm: entry.activity.referencePaceSPerKm,
             maxEffort: entry.activity.maxEffort,
             recordMinDistanceM: null,

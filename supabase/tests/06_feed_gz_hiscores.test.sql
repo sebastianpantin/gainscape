@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(48);
+select plan(52);
 
 select tests.create_user('fd_owner') as a \gset
 select tests.create_user('fd_friend') as b \gset
@@ -270,6 +270,39 @@ select is(
 reset role;
 select tests.authenticate_as(:'p');
 select is((select count(*)::int from public.get_feed()), 0, 'a pending request grants no feed');
+reset role;
+
+select id as run from public.exercises where key = 'running' \gset
+select tests.add_event(:'a', :'s2', 'pr:' || gen_random_uuid(), 'pr', jsonb_build_object(
+  'exerciseId', :'run', 'kind', 'cardio', 'recordKinds', 'distance,pace,duration',
+  'distanceM', 6000, 'previousDistanceM', 5000, 'paceSPerKm', 300, 'previousPaceSPerKm', 360,
+  'countedWorkS', 1800, 'previousCountedWorkS', 1500, 'secret', 'hidden')) as cardio_event \gset
+update public.profiles set show_weights = true where id = :'a';
+select tests.authenticate_as(:'b');
+select is(
+  (select pg_temp.keys_of(f.payload) from public.get_feed() f where f.event_id = :'cardio_event'),
+  'countedWorkS,distanceM,exerciseId,exerciseName,kind,paceSPerKm,paceUnit,previousCountedWorkS,previousDistanceM,previousPaceSPerKm,recordKinds,weightsHidden',
+  'a friend sees exactly the cardio PR keys while weights are shown'
+);
+select is(
+  (select f.payload ->> 'exerciseName' from public.get_feed() f where f.event_id = :'cardio_event'),
+  'Running',
+  'a cardio PR names the activity'
+);
+reset role;
+update public.profiles set show_weights = false where id = :'a';
+select tests.authenticate_as(:'b');
+select is(
+  (select pg_temp.keys_of(f.payload) from public.get_feed() f where f.event_id = :'cardio_event'),
+  'countedWorkS,exerciseId,exerciseName,kind,paceUnit,previousCountedWorkS,recordKinds,weightsHidden',
+  'hidden weights hide cardio distance and pace but keep the record kinds and duration'
+);
+reset role;
+select tests.authenticate_as(:'a');
+select ok(
+  (select (f.payload ->> 'distanceM')::numeric = 6000 from public.get_feed() f where f.event_id = :'cardio_event'),
+  'the owner always sees the cardio distance'
+);
 reset role;
 
 insert into public.events (user_id, session_id, event_key, type, occurred_at, payload)

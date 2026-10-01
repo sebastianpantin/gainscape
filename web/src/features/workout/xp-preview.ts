@@ -111,6 +111,7 @@ function cardioDefinition({ exerciseId, activity }: CardioDraftExercise, builtIn
     builtIn,
     shares: activity.shares.map((share) => ({ skillId: share.skillKey, shareBasisPoints: share.shareBasisPoints })),
     cardio: {
+      paceUnit: activity.paceUnit,
       referencePaceSPerKm: activity.referencePaceSPerKm,
       maxEffort: activity.maxEffort,
       recordMinDistanceM: null,

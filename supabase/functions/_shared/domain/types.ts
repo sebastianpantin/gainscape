@@ -36,7 +36,10 @@ export interface LiftExerciseDef extends ExerciseBase {
   loadType: LoadType;
 }
 
+export type PaceUnit = 'per_km' | 'per_100m';
+
 export interface CardioProfile {
+  paceUnit: PaceUnit;
   referencePaceSPerKm: number | null;
   maxEffort: CardioEffortLevel;
   recordMinDistanceM: number | null;
@@ -112,12 +115,25 @@ export interface BodyweightRepRecord {
   achievedAt: string;
 }
 
+export type CardioRecordKind = 'distance' | 'pace' | 'duration';
+
+export const CARDIO_RECORD_KINDS: readonly CardioRecordKind[] = Object.freeze(['distance', 'pace', 'duration']);
+
+export interface CardioRecord {
+  value: number;
+  setId: string;
+  achievedAt: string;
+}
+
+export type CardioRecords = Readonly<Partial<Record<CardioRecordKind, CardioRecord>>>;
+
 export interface RecordState {
   repMaxes: Readonly<Record<string, readonly (RepMaxSlot | null)[]>>;
   bodyweightReps: Readonly<Record<string, BodyweightRepRecord>>;
+  cardio: Readonly<Record<string, CardioRecords>>;
 }
 
-export const NO_RECORDS: RecordState = Object.freeze({ repMaxes: {}, bodyweightReps: {} });
+export const NO_RECORDS: RecordState = Object.freeze({ repMaxes: {}, bodyweightReps: {}, cardio: {} });
 
 export interface UserState {
   skillXp: Readonly<Record<string, number>>;
@@ -150,7 +166,14 @@ export interface SkillXp {
   xp: number;
 }
 
+export interface CardioRecordGain {
+  kind: CardioRecordKind;
+  value: number;
+  previous: number | null;
+}
+
 export interface CardioSetResult {
+  records: CardioRecordGain[];
   countedWorkS: number;
   xpCountedWorkS: number;
   cappedWorkS: number;
@@ -193,14 +216,24 @@ export type SetPersonalRecord =
   | { kind: 'rep_max'; reps: number; loadKg: number; previousLoadKg: number | null }
   | { kind: 'bodyweight_reps'; reps: number; previousReps: number | null };
 
-export interface PersonalRecordSummary {
+export interface LiftRecordSummary {
   exerciseId: string;
   kind: 'rep_max' | 'bodyweight_reps';
+  setId: string;
   reps: number;
   loadKg: number | null;
   previousLoadKg: number | null;
   previousReps: number | null;
 }
+
+export interface CardioRecordSummary {
+  kind: 'cardio';
+  exerciseId: string;
+  setId: string;
+  records: CardioRecordGain[];
+}
+
+export type PersonalRecordSummary = LiftRecordSummary | CardioRecordSummary;
 
 export interface LevelUp {
   skill: string;

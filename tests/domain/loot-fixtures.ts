@@ -34,7 +34,17 @@ export const FIXTURE_TABLES: LootTables = { regular: REGULAR_FIXTURE, rare: RARE
 export const FRESH_DAY: LootDayState = { regularUsed: 0, prUsed: 0, dryRolls: 0, alreadyRolled: new Set() };
 
 export function candidate(setId: string, position: number, overrides: Partial<LootCandidate> = {}): LootCandidate {
-  return { setId, position, effectiveReps: 3, personalRecord: false, builtIn: true, ...overrides };
+  return {
+    setId,
+    position,
+    kind: 'lift',
+    effectiveReps: 3,
+    countedWorkS: 0,
+    interval: false,
+    personalRecord: false,
+    builtIn: true,
+    ...overrides,
+  };
 }
 
 export function fixedSeed(label: string): Uint8Array {
