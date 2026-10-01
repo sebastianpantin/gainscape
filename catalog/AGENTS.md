@@ -1,0 +1,65 @@
+# Catalog
+
+**Parent context:** `../AGENTS.md`
+**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+
+## Purpose
+
+The YAML files here are the single source of truth for all seed data: skills, exercises, programs, gear tiers and slots, pets and scrolls, and loot drop tables. `scripts/catalog/` loads them, validates them and renders `supabase/seed.sql`. Nobody edits the SQL by hand. Gear items, upgrade scrap materials and crafting recipes are not written out here; they are expanded from the tier and slot lists in `gear.yaml`.
+
+## Key Files
+
+| File               | Description                                                                                                                                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `skills.yaml`      | List of six skills. Fields: `key`, `name`, `sort_order` (int), `combat_weight` (number).                                                                                                                                                               |
+| `exercises.yaml`   | List of 48 built-in exercises. Fields: `key`, `name`, `load_type` (`external`, `bodyweight`, `bodyweight_plus`), `equipment` (`barbell`, `dumbbell`, `machine`, `cable`, `bodyweight`, `other`), `shares`, optional `variation_of`, `requires_unlock`. |
+| `programs.yaml`    | List of training programs. Each has `key`, `name` and `days`; each day has `key`, `name` and `exercises` of `{ exercise, sets, reps_min, reps_max }`.                                                                                                  |
+| `gear.yaml`        | One object with `tiers` (`key`, `name`, `rarity`, optional `upgrade_scraps`) and `slots` (`key`, `name`, `icon`). Drives gear items, scrap materials and upgrade recipes.                                                                              |
+| `items.yaml`       | List of non-gear items: pets and scrolls. Fields: `key`, `name`, `kind` (`pet` or `scroll`), `rarity`, `icon`, optional `description`, `grants`, `retired`.                                                                                            |
+| `drop_tables.yaml` | List of loot tables (`regular`, `rare`). Each has `key`, `name`, optional `retired`, and `entries` of `{ item, weight, min?, max? }`.                                                                                                                  |
+
+## For AI Agents
+
+### Working In This Directory
+
+- **Never edit `supabase/seed.sql`.** Change YAML, then run `make catalog` to regenerate it. `make catalog-check` (part of `make check` and CI) fails when the committed seed differs from what the YAML produces.
+- **Schemas are strict.** `scripts/catalog/load.ts` parses every file with `z.strictObject`, so an unknown field fails the load. YAML keys are snake_case (`sort_order`, `load_type`, `reps_min`, `upgrade_scraps`); load.ts maps them to camelCase.
+- **Exercise `shares` are basis points keyed by skill key and must sum to exactly 10000.** Every skill key must exist in `skills.yaml`.
+- **Variations and unlocks.** `variation_of` must name another exercise. `requires_unlock: true` is only valid on a variation, such a locked exercise may not appear in a program, and it needs exactly one scroll in `items.yaml` whose `grants` names it.
+- **Keys** match `^[a-z0-9_]+$`; names are 1 to 60 characters. Keys and lowercase names must be unique within each kind. Generated ids are UUID v5 values derived from names such as `item:<key>`, `drop_table:<key>` and `program:<key>`, so renaming a key creates a new row and retires the old one. Do not rename keys casually.
+- **Gear is generated.** `gear.yaml` tiers and slots must match `ITEM_TIERS` and `GEAR_SLOTS` in `supabase/functions/_shared/domain/crafting.ts`, in the same order. Adding a tier or slot means changing that file in the same commit. A tier with `upgrade_scraps` also gets a `<tier>_scraps` material and an upgrade recipe per slot from the previous tier.
+- **Items** need an `icon` from `ITEM_ICON_KINDS` (the gear slot keys plus `scraps`, `pet`, `scroll`). Only `grants` on scrolls is allowed.
+- **Drop tables** must include non-retired `regular` and `rare` tables. Use `item: 'gear:<tier>'` as shorthand for every slot of that tier. `weight` is an integer from 1 to 1,000,000. `min` defaults to 1 and `max` defaults to `min`; both are 1 to 1000. Active tables may not reference retired items. Setting `retired: true` on an item or table keeps the row but stops it dropping.
+- **IP denylist.** No key, name or description may contain a term from `tests/ip-denylist.txt` (whole-word, case-insensitive).
+- **Catalog changes can affect other code.** `scripts/balance/catalog.ts` hard-codes exercise shares for the simulator; `tests/integration/sim-catalog.test.ts` fails if they drift from `exercises.yaml`.
+
+### Testing Requirements
+
+- Validation rules: `tests/catalog/validate.test.ts`. Seed rendering and ids: `tests/catalog/generate.test.ts`. Run both with `make test-catalog`. Add the failing test there first, either a new invalid-catalog case or a new expected statement.
+- A new or changed rule belongs in `scripts/catalog/validate.ts` (see `scripts/catalog/AGENTS.md`), not in the YAML.
+- After any YAML edit run `make catalog`, then `make catalog-check`. Row-level behaviour against the seeded database is covered by `tests/integration/catalog.test.ts`, which needs `make start` and `make reset`.
+- Also run `make test-domain` and `make sim-check` if you change shares or gear, since `tests/domain/crafting.test.ts` loads the catalog. The balance suite uses its own hard-coded `SIM_CATALOG` in `scripts/balance/catalog.ts`; keep shares in sync there, and `tests/integration/sim-catalog.test.ts` (stack needed) catches drift.
+- No local stack is needed for `make test-catalog`, `make catalog` or `make catalog-check`.
+
+### Common Patterns
+
+- Flow style for short records: `shares: { chest: 7000, shoulders: 2000, arms: 1000 }`, `- { item: grinder_scraps, weight: 30, min: 2, max: 5 }`.
+- Single-quoted strings where YAML needs it: `'gear:rookie'`, `'Scroll: pause squat'`.
+- Names reuse the key's words (`barbell_bench_press` is "Barbell Bench Press").
+
+## Dependencies
+
+### Internal
+
+- `scripts/catalog/` (loader, validator, SQL renderer, generator)
+- `supabase/functions/_shared/domain/crafting.ts` (`ITEM_TIERS`, `GEAR_SLOTS`, `ITEM_ICON_KINDS`)
+- `supabase/seed.sql` (generated output)
+- `tests/ip-denylist.txt`
+
+### External
+
+- `yaml` and `zod` (used by the loader)
+
+## Manual Notes
+
+Notes under this heading are written by humans and preserved on regeneration.

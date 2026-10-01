@@ -1,0 +1,47 @@
+# Friends Feature
+
+**Parent context:** `../AGENTS.md`
+**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+
+## Purpose
+
+The Friends tab: requests and the activity feed, hiscores across friends, and a friend's read-only profile. What a friend sees honors the privacy flags the owner sets in the profile feature.
+
+## Key Files
+
+| File                      | Description                                                                                                                                                                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FriendsScreen.tsx`       | Route `/friends`. Feed with gz (kudos) toggles, friend requests by username (send, accept, decline), removal; shows `ProfileBadge` and `initialsFor`; uses `usePreferences` for weight display                                    |
+| `HiscoresScreen.tsx`      | Route `/friends/hiscores`. Metric picker, `fetchHiscores`, ranking with `rankHiscores`/`skillMetric` from `social-rules.ts`                                                                                                       |
+| `FriendProfileScreen.tsx` | Route `/friends/:friendId`. Validates the id with `isUuid`, loads the view from `../../lib/social.ts`, builds `cardProfileOf`/`standingOfView`, renders `ProfileCard` plus records (`REP_MAX_SLOT_COUNT`) and `collectionPercent` |
+| `FriendsTabs.tsx`         | `SegmentedNav` with Feed and Hiscores                                                                                                                                                                                             |
+
+## For AI Agents
+
+### Working In This Directory
+
+- Ranking, feed and percent logic belongs in `../../lib/social-rules.ts`, not here. Privacy is enforced server side (RLS and RPCs); the UI must not try to hide data it was sent.
+- `../profile/FriendPreviewScreen.tsx` and this folder's `FriendProfileScreen.tsx` render the same card from the same helpers (`profile-view.ts`); change both together.
+
+### Testing Requirements
+
+- Unit: `tests/web/social-rules.test.ts` (`make test-web`). Write the failing rule test there first.
+- E2E (stack needed): `e2e/friends.spec.ts` (request, feed with gz and hidden weights, hiscores, profile, removal) and `e2e/a11y.spec.ts`.
+
+### Common Patterns
+
+- Tabbed section via `FriendsTabs` rendered at the top of each tab screen.
+
+## Dependencies
+
+### Internal
+
+- `../../lib/{catalog,format,history-rules,preferences,profile,profile-view,social,social-rules,standing}.ts`, `../profile/ProfileCard.tsx`, `../../components/SegmentedNav.tsx`.
+
+### External
+
+- React Router.
+
+## Manual Notes
+
+Notes under this heading are written by humans and preserved on regeneration.

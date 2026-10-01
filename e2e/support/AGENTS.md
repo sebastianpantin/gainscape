@@ -1,0 +1,57 @@
+# e2e/support
+
+**Parent context:** `../AGENTS.md`
+**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+
+## Purpose
+
+Helpers shared by the Playwright specs: user flows (register, sign in, navigation, logging a set), raw access to the draft store in the browser, direct database setup and checks, Mailpit access, accessibility and font assertions, PWA build manipulation, and the stack guard that both Playwright configs call. These files are not specs and have no tests of their own; they are exercised by every spec.
+
+## Key Files
+
+| File             | Description                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app.ts`         | UI flows: `register` (sign up, confirm via `confirmAccount`, sign in), `submitRegistration`, `signIn`, `signOut`, `openTab`, `openFromProfile`, `logExercise`, constants `password` and `authStorageKey`, helper `emailOf`. Browser storage helpers: `readSession`, `writeSession`, `writeStoredDraft`, `readStoredDraft`, `readFallbackDraft`, `breakIndexedDbOpen`, `setIndexedDbBroken`, `muteDraftBroadcasts`.                       |
+| `db.ts`          | Direct SQL via `db` and `admin` from `tests/integration/local-stack.ts`: `sessionCount`, `sessionRow`, `programDayId`, `setCount`, `latestSetOf`, `setsOf`, `sessionNotes`, `editElsewhere`, `heightOf`, `accountRowCount`, `grantItems`, `grantUnlock`, `hasUnlock`, `activeDropCount`, `activeDropsOfLatestSession`, `confirmAccount`, `usernameOfEmail`, `ageConfirmation`. Re-exports `builtInExerciseId`, `resignedWithAnotherKey`. |
+| `mailbox.ts`     | One-line re-export of `authLinkFrom`, `deleteEmailsTo`, `listEmailsTo`, `waitForEmail` from `tests/integration/mailbox.ts`.                                                                                                                                                                                                                                                                                                              |
+| `stack-guard.ts` | `assertStackEnvironment()`: if `.stack.env` sets `SUPABASE_PROJECT_ID` and the process environment differs, throws, so e2e never drives another worktree's stack. Called from both Playwright configs.                                                                                                                                                                                                                                   |
+| `a11y.ts`        | `expectNoAxeViolations(page, screen)` (WCAG 2.0/2.1/2.2 A and AA tags, fails on serious or critical impact, waits for animations), `expectTouchTargets` and `BETWEEN_SET_CONTROLS` (44px minimum, `TAP_TARGET_PX`).                                                                                                                                                                                                                      |
+| `fonts.ts`       | `expectFontsLoaded(page)` and `FONT_FAMILIES` (`Pixelify Sans`, `IBM Plex Mono`).                                                                                                                                                                                                                                                                                                                                                        |
+| `pwa.ts`         | PWA specs only: `distDir`, `serviceWorkerPath`, `builtShell`, `waitForController`, `markPageOffline`, `fetchOutcome`, `cachedPaths`, `replaceBuildId`, `swapServiceWorker`, `restoreServiceWorker`, `uniqueUsername`, `OFFLINE_BANNER`, `UPDATE_READY`.                                                                                                                                                                                  |
+
+## For AI Agents
+
+### Working In This Directory
+
+- `app.ts` hard-codes the IndexedDB name, version and store (`gainscape`, 1, `drafts`), the fallback key prefix `gainscape.workout-draft.v2.`, the record shape (`v: 3`) and the Supabase auth storage key `sb-localhost-auth-token`. If `web/src/offline/draft-store.ts`, `draft-format.ts` or the Supabase URL changes, update these constants in the same change or the drafts, multi-tab and token-refresh specs fail.
+- `db.ts` and `mailbox.ts` import `tests/integration/*`. Importing `local-stack.ts` runs `npx supabase status` and opens a database pool, so only import helpers from here in specs (never in code that must run without the stack). `stack-guard.ts` is the exception: it has no stack dependency, which is why the configs can import it.
+- User-visible strings are duplicated in helpers (button names such as `Start workout`, `Create account`, `Sign in`, tab names in `Tab`). Renaming UI text in `web/src` requires updating these.
+- `logExercise` assumes the exercise search, `+ Add set`, `kg`/`reps` labels and the `Hard` effort radio. Extend it with parameters rather than copying it into specs.
+- `pwa.ts` mutates `web/dist`. Anything that calls `replaceBuildId` or `swapServiceWorker` must restore the original in `afterEach`.
+- No comments; keep helpers small, named after the behaviour.
+
+### Testing Requirements
+
+- No dedicated tests. A helper change is verified by running the specs that import it: `grep -rl "support/<file>" e2e` to find them, then `npx playwright test <those specs>` (stack required) or `make e2e` / `make e2e-pwa`.
+- If a helper contains logic worth testing on its own (parsing, formatting), move it into `web/src/lib` or `tests/` and unit-test it there.
+
+### Common Patterns
+
+- Browser-side helpers run inside `page.evaluate` with serialisable arguments only (database constants are passed in, not closed over).
+- DB helpers look users up by `username` through `public.profiles`, so specs only need the name they registered.
+- `grantItems` writes the `item_ledger` and `user_items` together so the ledger-parity invariants hold; mimic that when adding new grants.
+
+## Dependencies
+
+### Internal
+
+- `../../tests/integration/local-stack.ts`, `../../tests/integration/mailbox.ts`
+- `../../web/build/service-worker-plugin.ts`, `../../web/src/pwa/shell-rules.ts`
+
+### External
+
+- `@playwright/test`, `@axe-core/playwright`, `node:fs`
+
+## Manual Notes
+
+Notes under this heading are written by humans and preserved on regeneration.
