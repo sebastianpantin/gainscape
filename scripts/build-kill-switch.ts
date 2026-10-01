@@ -1,11 +1,17 @@
-import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildKillSwitch } from '../web/build/service-worker-plugin.ts';
+import {
+  buildKillSwitch,
+  KILL_SWITCH_ALLOW_LOCAL_FLAG,
+  killSwitchRefusal,
+} from '../web/build/service-worker-plugin.ts';
 
 const distDir = join(import.meta.dirname, '../web/dist');
 
-if (!existsSync(join(distDir, 'index.html'))) {
-  console.error('web/dist/index.html is missing. Run your production build first, then make sw-kill-switch.');
+const refusal = killSwitchRefusal(distDir, process.env[KILL_SWITCH_ALLOW_LOCAL_FLAG] === '1');
+if (refusal) {
+  console.error(
+    `Refusing to build the kill switch: ${refusal}. Run your production build (mode production, VITE_SUPABASE_URL set) first, then make sw-kill-switch.`,
+  );
   process.exit(1);
 }
 await buildKillSwitch(distDir);

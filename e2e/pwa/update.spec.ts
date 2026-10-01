@@ -1,5 +1,5 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { expectNoAxeViolations } from '../support/a11y.ts';
@@ -9,13 +9,14 @@ import {
   cachedPaths,
   replaceBuildId,
   restoreServiceWorker,
+  serviceWorkerPath,
   swapServiceWorker,
   uniqueUsername,
   UPDATE_READY,
   waitForController,
 } from '../support/pwa.ts';
 import { finishLockName } from '../../web/src/offline/finish-lock.ts';
-import { buildKillSwitch } from '../../web/build/service-worker-plugin.ts';
+import { KILL_SWITCH_ALLOW_LOCAL_FLAG } from '../../web/build/service-worker-plugin.ts';
 import { SHELL_CACHE_PREFIX, shellCacheName } from '../../web/src/pwa/shell-rules.ts';
 
 let originalWorker: string | null = null;
@@ -121,9 +122,12 @@ test('a new version whose files do not match their hashes never replaces the she
 });
 
 test('the kill switch retires the worker and reloads the page without a click', async ({ page }) => {
-  const buildDir = mkdtempSync(join(tmpdir(), 'gainscape-kill-switch-'));
-  const killSwitch = await buildKillSwitch(buildDir);
-  rmSync(buildDir, { recursive: true, force: true });
+  const shellWorker = readFileSync(serviceWorkerPath, 'utf8');
+  execFileSync('node', [join(import.meta.dirname, '../../scripts/build-kill-switch.ts')], {
+    env: { ...process.env, [KILL_SWITCH_ALLOW_LOCAL_FLAG]: '1' },
+    stdio: 'ignore',
+  });
+  const killSwitch = swapServiceWorker(shellWorker);
   await register(page, uniqueUsername('pwa_k'));
   await waitForController(page);
   const before = await timeOrigin(page);

@@ -1,12 +1,14 @@
 import { AuthApiError, AuthRetryableFetchError, type Session } from '@supabase/supabase-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  AUTH_EXPIRY_MARGIN_MS,
   AUTH_FALLBACK_MS,
   type AuthState,
   authStorageKey,
   bootAuth,
   forceSignedOut,
   type GetSessionResult,
+  REQUEST_TIMEOUT_MS,
   needsAuthTimeout,
   onForcedSignOut,
   signOutOnThisDevice,
@@ -170,6 +172,32 @@ describe('signing out on this device', () => {
     await phone.run();
     expect(phone.signOut).not.toHaveBeenCalled();
     expect(phone.stored()).toBeNull();
+  });
+
+  it('treats a token inside the auth-js expiry margin as expired, so signOut never starts a refresh', async () => {
+    const phone = device({ expiresAt: nowInSeconds() + AUTH_EXPIRY_MARGIN_MS / 1000 - 5 });
+    await phone.run();
+    expect(phone.signOut).not.toHaveBeenCalled();
+    expect(phone.stored()).toBeNull();
+  });
+
+  it('calls signOut for a token just outside the margin', async () => {
+    const phone = device({ expiresAt: nowInSeconds() + AUTH_EXPIRY_MARGIN_MS / 1000 + 60 });
+    phone.signOut.mockResolvedValue({ error: null });
+    await phone.run();
+    expect(phone.signOut).toHaveBeenCalled();
+  });
+
+  it('never makes a sign-in wait longer than the request timeout', async () => {
+    const phone = device();
+    phone.signOut.mockReturnValue(new Promise(() => undefined));
+    await Promise.all([phone.run(), vi.advanceTimersByTimeAsync(AUTH_FALLBACK_MS)]);
+    let settled = false;
+    void signOutSettled().then(() => (settled = true));
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS - 1);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(settled).toBe(true);
   });
 
   it('forgets the stored session when signOut fails', async () => {

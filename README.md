@@ -49,7 +49,7 @@ New versions install in the background. A banner offers "Reload"; it saves open 
 
 Recovery notes:
 
-- A broken service worker is retired with the kill switch. Run your production build first (with the production `VITE_SUPABASE_URL` and anon key, never `make build-local`), then `make sw-kill-switch`, which replaces `web/dist/sw.js` in that existing build with `web/src/sw/kill-switch.ts` and fails when `web/dist/index.html` is missing. Deploy that `dist`. The kill switch activates at once, deletes the `gainscape-shell-*` caches, unregisters and reloads every open tab. Ship a normal build once the fix is in.
+- A broken service worker is retired with the kill switch. Run your production build first (with the production `VITE_SUPABASE_URL` and anon key, never `make build-local`), then `make sw-kill-switch`, which replaces `web/dist/sw.js` in that existing build with `web/src/sw/kill-switch.ts` and refuses unless `web/dist/.vite/gainscape-build.json` (written by every build) says `mode: production` with a hosted `VITE_SUPABASE_URL`. Only the e2e suite sets `GAINSCAPE_KILL_SWITCH_ALLOW_LOCAL=1` to skip that check for its local build. Deploy that `dist`. The kill switch activates at once, deletes the `gainscape-shell-*` caches, unregisters and reloads every open tab. Ship a normal build once the fix is in.
 - The host must serve the build byte for byte. The service worker checks every precached file against its SHA-256, so a host that rewrites HTML (beacon injection, email obfuscation) blocks every update.
 - Draft formats must stay readable by the previous build: a new draft format ships only after a release that can already read it, because a tab can keep running the old bundle until it reloads.
 

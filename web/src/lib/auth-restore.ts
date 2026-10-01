@@ -2,6 +2,8 @@ import { type AuthChangeEvent, isAuthRetryableFetchError, type Session } from '@
 import { z } from 'zod';
 
 export const AUTH_FALLBACK_MS = 3000;
+export const REQUEST_TIMEOUT_MS = 20_000;
+export const AUTH_EXPIRY_MARGIN_MS = 90_000;
 
 export type AuthState =
   { status: 'loading' } | { status: 'signed-out' } | { status: 'signed-in'; session: Session; offline: boolean };
@@ -55,11 +57,11 @@ export interface SignOutPorts {
 let pendingSignOut: Promise<void> = Promise.resolve();
 
 export function signOutSettled(): Promise<void> {
-  return pendingSignOut;
+  return Promise.race([pendingSignOut, new Promise<void>((resolve) => setTimeout(resolve, REQUEST_TIMEOUT_MS))]);
 }
 
 function canRevoke(session: Session | null, online: boolean, now: number): boolean {
-  return online && session !== null && (session.expires_at ?? 0) * 1000 > now;
+  return online && session !== null && (session.expires_at ?? 0) * 1000 - AUTH_EXPIRY_MARGIN_MS > now;
 }
 
 export async function signOutOnThisDevice({

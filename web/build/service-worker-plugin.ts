@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { build, type Plugin } from 'vite';
 import {
@@ -14,6 +14,32 @@ import {
 
 const workerEntry = resolve(import.meta.dirname, '../src/sw/service-worker.ts');
 const killSwitchEntry = resolve(import.meta.dirname, '../src/sw/kill-switch.ts');
+const BUILD_MARKER = '.vite/gainscape-build.json';
+const PRODUCTION_MODE = 'production';
+export const KILL_SWITCH_ALLOW_LOCAL_FLAG = 'GAINSCAPE_KILL_SWITCH_ALLOW_LOCAL';
+
+export interface BuildMarker {
+  mode: string;
+  hostedSupabase: boolean;
+}
+
+export function readBuildMarker(outDir: string): BuildMarker | null {
+  try {
+    return JSON.parse(readFileSync(join(outDir, BUILD_MARKER), 'utf8')) as BuildMarker;
+  } catch {
+    return null;
+  }
+}
+
+export function killSwitchRefusal(outDir: string, allowLocal: boolean): string | null {
+  if (!existsSync(join(outDir, 'index.html'))) return 'web/dist/index.html is missing';
+  if (allowLocal) return null;
+  const marker = readBuildMarker(outDir);
+  if (!marker) return `web/dist/${BUILD_MARKER} is missing`;
+  if (marker.mode !== PRODUCTION_MODE) return `web/dist was built in ${marker.mode} mode`;
+  if (!marker.hostedSupabase) return 'web/dist was built without VITE_SUPABASE_URL';
+  return null;
+}
 
 function sha256(data: Buffer | string): string {
   return createHash('sha256').update(data).digest('hex');
@@ -60,13 +86,17 @@ export async function buildKillSwitch(outDir: string): Promise<string> {
 
 export function serviceWorkerPlugin(): Plugin {
   let outDir = '';
+  let marker: BuildMarker = { mode: PRODUCTION_MODE, hostedSupabase: false };
   return {
     name: 'gainscape-service-worker',
     apply: 'build',
     configResolved(config) {
       outDir = resolve(config.root, config.build.outDir);
+      marker = { mode: config.mode, hostedSupabase: Boolean(config.env.VITE_SUPABASE_URL) };
     },
     async closeBundle() {
+      mkdirSync(join(outDir, '.vite'), { recursive: true });
+      writeFileSync(join(outDir, BUILD_MARKER), `${JSON.stringify(marker)}\n`);
       const shell = shellBuildFor(outDir);
       const worker = await buildWorker(workerEntry, outDir, { __SHELL_BUILD__: JSON.stringify(shell) });
       if (!worker.includes(shell.id)) throw new Error(`${SERVICE_WORKER_FILE} was not built for shell ${shell.id}`);

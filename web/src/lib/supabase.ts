@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import { authStorageKey, needsAuthTimeout } from './auth-restore.ts';
+import { authStorageKey, needsAuthTimeout, REQUEST_TIMEOUT_MS } from './auth-restore.ts';
 
-export const REQUEST_TIMEOUT_MS = 20_000;
+export { REQUEST_TIMEOUT_MS };
 
 const sameOriginSupabaseProxy = `${window.location.origin}/sb`;
 
