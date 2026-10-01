@@ -1,7 +1,7 @@
 import type { EffortLevel } from './types.ts';
 
-const BALANCE_VERSION = 3;
-const XP_PER_EFFECTIVE_REP = 340;
+const BALANCE_VERSION = 4;
+const XP_PER_EFFECTIVE_REP = 165;
 const EFFECTIVE_RIR_WINDOW = 5;
 
 export interface BalanceConfig {

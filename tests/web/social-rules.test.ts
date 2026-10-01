@@ -120,7 +120,7 @@ describe('rankHiscores', () => {
 
   it('breaks level ties by XP, then by username', () => {
     const ranked = rankHiscores(
-      [row('cara', { legs: 1300 }), row('abe', { legs: 1200 }), row('bea', { legs: 1200 }), row('dan', { legs: 0 })],
+      [row('cara', { legs: 1250 }), row('abe', { legs: 1200 }), row('bea', { legs: 1200 }), row('dan', { legs: 0 })],
       skills,
       skillMetric('legs'),
     );
@@ -129,7 +129,7 @@ describe('rankHiscores', () => {
   });
 
   it('computes total and combat from the domain', () => {
-    const [top] = rankHiscores([row('abe', { chest: 1154, legs: 1154, core: 0 })], skills, 'total');
+    const [top] = rankHiscores([row('abe', { chest: 980, legs: 980, core: 0 })], skills, 'total');
     expect(top.value).toBe(10 + 10 + 1);
     const [combat] = rankHiscores([row('abe', { chest: 0, legs: 0, core: 0 })], skills, 'combat');
     expect(combat.value).toBe(3);

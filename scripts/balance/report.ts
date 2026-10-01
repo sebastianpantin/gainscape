@@ -10,7 +10,7 @@ const candidates = tune();
 const feasible = candidates.filter((candidate) => candidate.report.violation === 0);
 
 console.log(
-  'bonusMax bonusFull xp/rep | hyp  str  bal  cas (years to 99 in compared skill) | gap   cas-ratio time/effort | a b d  (balanced/casual informational)',
+  'bonusMax bonusFull xp/rep | hyp  str  bal  cas (years to 99 in compared skill) | gap   cas-ratio time/effort | wk1 | a b d e  (hypertrophy/strength/casual informational)',
 );
 for (const { intensityBonusMax, intensityBonusFull, report } of candidates) {
   const { years, passes } = report;
@@ -29,14 +29,16 @@ for (const { intensityBonusMax, intensityBonusFull, report } of candidates) {
       `${(report.hypertrophyVsStrengthGap * 100).toFixed(0)}%`.padStart(4),
       `${report.casualTimeRatio.toFixed(2)}/${report.casualEffortRatio.toFixed(2)}`.padStart(22),
       '|',
-      ['a', 'b', 'd'].map((band) => (passes[band as keyof typeof passes] ? '✓' : '✗')).join(' '),
+      String(report.balancedWeekOneLevel).padStart(3),
+      '|',
+      ['a', 'b', 'd', 'e'].map((band) => (passes[band as keyof typeof passes] ? '✓' : '✗')).join(' '),
     ].join(' '),
   );
 }
 console.log(
   feasible.length > 0
     ? `\n${feasible.length} feasible configurations.`
-    : '\nNo configuration meets bands a, b and d. Closest is listed first.',
+    : '\nNo configuration meets bands a, b, d and e. Closest is listed first.',
 );
 
 const exact = evaluateBands(
@@ -49,5 +51,5 @@ console.log(
   `\nCommitted constants (XP ${DEFAULT_BALANCE.xpPerEffectiveRep}, bonus ${DEFAULT_BALANCE.intensityBonusMax} at ${DEFAULT_BALANCE.intensityBonusFull}), exact simulation:`,
 );
 console.log(
-  `  hypertrophy ${formatYears(exact.years.hypertrophy)}y, strength ${formatYears(exact.years.strength)}y, balanced ${formatYears(exact.years.balanced)}y, casual ${formatYears(exact.years.casual)}y, gap ${(exact.hypertrophyVsStrengthGap * 100).toFixed(1)}%`,
+  `  hypertrophy ${formatYears(exact.years.hypertrophy)}y, strength ${formatYears(exact.years.strength)}y, balanced ${formatYears(exact.years.balanced)}y, casual ${formatYears(exact.years.casual)}y, gap ${(exact.hypertrophyVsStrengthGap * 100).toFixed(1)}%, balanced week 1 level ${exact.balancedWeekOneLevel}`,
 );
