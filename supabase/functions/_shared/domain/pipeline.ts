@@ -5,8 +5,6 @@ import type {
   Catalog,
   ExerciseDef,
   LevelUp,
-  Rng,
-  RollKind,
   SessionInput,
   SessionSummary,
   SetInput,
@@ -24,7 +22,6 @@ import { effectiveReps, setXp, splitXp } from './xp.ts';
 export interface PipelineDeps {
   catalog: Catalog;
   strength?: StrengthState;
-  rngFor?: (setId: string, kind: RollKind) => Rng;
 }
 
 export interface SessionContext {
@@ -123,7 +120,7 @@ export const resolveSets: Step = (ctx) => {
   return { ...ctx, sets };
 };
 
-export const awardXp: Step = (ctx) => {
+const awardXp: Step = (ctx) => {
   const sortOrderBySkillId = new Map(ctx.deps.catalog.skills.map((skill) => [skill.id, skill.sortOrder]));
   const sets = ctx.sets.map((result) => {
     const effectiveRepCount =
@@ -138,7 +135,7 @@ export const awardXp: Step = (ctx) => {
   return { ...ctx, sets };
 };
 
-export const applyXp: Step = (ctx) => {
+const applyXp: Step = (ctx) => {
   const skillXp: Record<string, number> = { ...ctx.state.skillXp };
   for (const part of ctx.sets.flatMap((result) => result.skillXp)) {
     skillXp[part.skillId] = Math.min(ctx.cfg.maxXp, (skillXp[part.skillId] ?? 0) + part.xp);
@@ -146,7 +143,7 @@ export const applyXp: Step = (ctx) => {
   return { ...ctx, state: { ...ctx.state, skillXp } };
 };
 
-export const detectLevelUps: Step = (ctx) => {
+const detectLevelUps: Step = (ctx) => {
   const levelUps = skillsInDisplayOrder(ctx.deps.catalog)
     .map((skill) => ({
       skill: skill.key,

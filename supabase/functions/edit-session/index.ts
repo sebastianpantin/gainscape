@@ -2,31 +2,32 @@ import { authenticatedUserId } from '../_shared/auth.ts';
 import { type JsonValue, sql, type Transaction } from '../_shared/db.ts';
 import {
   carriedEffectiveLoadKg,
-  type Catalog,
   DEFAULT_BALANCE,
   effectiveLoadForNewSet,
-  isWithinEditWindow,
   resolveEffort,
   type RevokedDrop,
   type SessionSummary,
 } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
-import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+import { HttpError, jsonResponse, readJsonBody } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
+import { serve } from '../_shared/serve.ts';
 import type { SetPayload } from '../_shared/session-payload.ts';
-import { loadCatalog } from '../_shared/stores/catalog.ts';
+import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
-  loadOwnedSession,
+  isEditable,
   loadProfileSettings,
   loadStoredSets,
   lockUser,
   type OwnedSession,
   placeholderSetRow,
+  requireOwnedSession,
   type StoredSet,
   storedSummary,
 } from '../_shared/stores/sessions.ts';
+import { inputSetColumns } from '../_shared/stores/set-columns.ts';
 import { type EditSessionPayload, parseEditSessionPayload } from './payload.ts';
 
 interface EditResponse {
@@ -49,21 +50,16 @@ function sameSet(requested: SetPayload, stored: StoredSet): boolean {
   );
 }
 
-function isNoOp(payload: EditSessionPayload, session: OwnedSession, storedSets: readonly StoredSet[]): boolean {
-  if (payload.notes !== session.notes || payload.sets.length !== storedSets.length) return false;
-  const storedById = new Map(storedSets.map((set) => [set.id, set]));
+function isNoOp(
+  payload: EditSessionPayload,
+  session: OwnedSession,
+  storedById: ReadonlyMap<string, StoredSet>,
+): boolean {
+  if (payload.notes !== session.notes || payload.sets.length !== storedById.size) return false;
   return payload.sets.every((set) => {
     const stored = storedById.get(set.id);
     return stored !== undefined && sameSet(set, stored);
   });
-}
-
-async function loadKnownCatalog(tx: Transaction, userId: string, sets: readonly SetPayload[]): Promise<Catalog> {
-  const exerciseIds = [...new Set(sets.map((set) => set.exerciseId))];
-  const catalog = await loadCatalog(tx, userId, exerciseIds, true);
-  const unknownExerciseIds = exerciseIds.filter((id) => !catalog.exercises.has(id));
-  if (unknownExerciseIds.length > 0) throw new HttpError(422, 'unknown_exercise', { exerciseIds: unknownExerciseIds });
-  return catalog;
 }
 
 async function writeSets(
@@ -84,20 +80,9 @@ async function writeSets(
     await tx`delete from public.sets where session_id = ${sessionId} and id = any(${removedIds}::uuid[])`;
   }
   if (kept.length > 0) {
-    const rows = kept.map((set) => {
-      const effort = resolveEffort(set.effort, DEFAULT_BALANCE);
-      return {
-        id: set.id,
-        exercise_id: set.exerciseId,
-        position: set.position,
-        weight_kg: set.weightKg,
-        effective_load_kg: set.effectiveLoadKg,
-        reps: set.reps,
-        is_warmup: set.isWarmup,
-        effort_input_type: effort.effortInputType,
-        effort_value: effort.effortValue,
-      };
-    });
+    const rows = kept.map((set) =>
+      inputSetColumns(set, set.effectiveLoadKg, resolveEffort(set.effort, DEFAULT_BALANCE)),
+    );
     await tx`
       update public.sets as target
       set exercise_id = derived.exercise_id,
@@ -132,21 +117,18 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId);
 
-    const session = await loadOwnedSession(tx, userId, payload.sessionId);
-    if (!session) throw new HttpError(404, 'session_not_found');
+    const session = await requireOwnedSession(tx, userId, payload.sessionId);
     const storedSets = await loadStoredSets(tx, payload.sessionId);
-    if (isNoOp(payload, session, storedSets)) {
+    const storedById = new Map(storedSets.map((set) => [set.id, set]));
+    if (isNoOp(payload, session, storedById)) {
       return { summary: session.summary, revision: session.revision, replayedSessionIds: [], revokedDrops: [] };
     }
 
-    if (session.historyOnly || !isWithinEditWindow(session.key.startedAt, Date.now())) {
-      throw new HttpError(409, 'edit_window_closed');
-    }
+    if (!isEditable(session, Date.now())) throw new HttpError(409, 'edit_window_closed');
     if (payload.ifRevision !== session.revision) {
       throw new HttpError(409, 'revision_conflict', { revision: session.revision });
     }
     const catalog = await loadKnownCatalog(tx, userId, payload.sets);
-    const storedById = new Map(storedSets.map((set) => [set.id, set]));
     const newSetIds = payload.sets.filter((set) => !storedById.has(set.id)).map((set) => set.id);
     if (newSetIds.length > 0) await assertSetIdsUnused(tx, newSetIds);
 
@@ -185,17 +167,8 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
   });
 }
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-  try {
-    if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed');
-    const userId = await authenticatedUserId(request);
-    const body = await request.json().catch(() => {
-      throw new HttpError(400, 'invalid_json');
-    });
-    const payload = parseEditSessionPayload(body);
-    return jsonResponse(await editSession(userId, payload));
-  } catch (error) {
-    return errorResponse(asHttpError(error));
-  }
-});
+serve(async (request) => {
+  const userId = await authenticatedUserId(request);
+  const payload = parseEditSessionPayload(await readJsonBody(request));
+  return jsonResponse(await editSession(userId, payload));
+}, asHttpError);

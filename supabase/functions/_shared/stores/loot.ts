@@ -17,16 +17,20 @@ import {
 import { lootRngFor, lootSecret } from '../loot-seeds.ts';
 import { syncSessionEvents } from './events.ts';
 
-const LOOT_TABLE_KEYS = { regular: 'regular', rare: 'rare' } as const;
+function sumByItem(entries: readonly (readonly [string, number])[]): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const [itemId, quantity] of entries) totals.set(itemId, (totals.get(itemId) ?? 0) + quantity);
+  return totals;
+}
 
-export async function loadLootTables(tx: Transaction): Promise<LootTables> {
+async function loadLootTables(tx: Transaction): Promise<LootTables> {
   const rows = await tx`
     select t.id as table_id, t.key as table_key, i.id as item_id, i.key as item_key,
            e.weight, e.min_quantity, e.max_quantity
     from public.drop_tables t
     join public.drop_entries e on e.drop_table_id = t.id
     join public.items i on i.id = e.item_id
-    where t.key in (${LOOT_TABLE_KEYS.regular}, ${LOOT_TABLE_KEYS.rare})
+    where t.key in ('regular', 'rare')
       and t.retired_at is null and i.retired_at is null
     order by t.key, i.key`;
   const tables = new Map<string, { id: string; key: string; entries: LootEntry[] }>();
@@ -46,10 +50,10 @@ export async function loadLootTables(tx: Transaction): Promise<LootTables> {
     if (table === undefined) throw new Error(`drop table ${key} is missing or empty`);
     return table;
   };
-  return { regular: tableFor(LOOT_TABLE_KEYS.regular), rare: tableFor(LOOT_TABLE_KEYS.rare) };
+  return { regular: tableFor('regular'), rare: tableFor('rare') };
 }
 
-export async function loadLootDayState(
+async function loadLootDayState(
   tx: Transaction,
   userId: string,
   localDate: string,
@@ -74,7 +78,7 @@ export async function loadLootDayState(
   };
 }
 
-export async function refreshSummaryDrops(tx: Transaction, sessionIds: readonly string[]): Promise<void> {
+async function refreshSummaryDrops(tx: Transaction, sessionIds: readonly string[]): Promise<void> {
   if (sessionIds.length === 0) return;
   await tx`
     update public.sessions as target
@@ -116,71 +120,66 @@ export async function rollNewSessionLoot(
   );
   const rngFor = await lootRngFor(secret, userId, seedRequests);
   const { rolls, dryRolls } = rollSessionLoot(candidates, tables, dayState, DEFAULT_LOOT, rngFor);
-  if (rolls.length === 0) {
-    await refreshSummaryDrops(tx, [sessionId]);
-    await syncSessionEvents(tx, userId, [sessionId]);
-    return;
-  }
-
-  const rollRows = rolls.map((roll) => ({
-    user_id: userId,
-    session_id: sessionId,
-    set_id: roll.setId,
-    kind: roll.kind,
-    local_date: session.local_date,
-    roll_index: roll.rollIndex,
-    drop_table_id: roll.tableId,
-    chance: roll.chance,
-    hit: roll.hit,
-    loot_version: DEFAULT_LOOT.version,
-  }));
-  const insertedRolls = await tx`insert into public.loot_rolls ${tx(rollRows)} returning id, set_id, kind`;
-  const rollIdOf = new Map(insertedRolls.map((row) => [lootRollKey(row.set_id, row.kind), row.id as string]));
-
-  const hits = rolls.filter((roll) => roll.drop !== null);
-  if (hits.length > 0) {
-    const dropRows = hits.map((roll) => ({
+  if (rolls.length > 0) {
+    const rollRows = rolls.map((roll) => ({
       user_id: userId,
-      loot_roll_id: rollIdOf.get(lootRollKey(roll.setId, roll.kind))!,
       session_id: sessionId,
       set_id: roll.setId,
-      item_id: roll.drop!.itemId,
-      quantity: roll.drop!.quantity,
-      source: roll.kind,
+      kind: roll.kind,
+      local_date: session.local_date,
+      roll_index: roll.rollIndex,
+      drop_table_id: roll.tableId,
+      chance: roll.chance,
+      hit: roll.hit,
+      loot_version: DEFAULT_LOOT.version,
     }));
-    const drops = await tx`insert into public.drops ${tx(dropRows)} returning id, item_id, quantity`;
-    await tx`
-      insert into public.item_ledger ${tx(
-        drops.map((drop) => ({
-          user_id: userId,
-          item_id: drop.item_id,
-          delta: drop.quantity,
-          reason: 'drop',
-          ref_id: drop.id,
-        })),
-      )}`;
-    const totals = new Map<string, number>();
-    for (const drop of drops) totals.set(drop.item_id, (totals.get(drop.item_id) ?? 0) + drop.quantity);
-    await tx`
-      insert into public.user_items ${tx(
-        [...totals].map(([itemId, quantity]) => ({ user_id: userId, item_id: itemId, quantity })),
-      )}
-      on conflict (user_id, item_id) do update
-      set quantity = public.user_items.quantity + excluded.quantity, updated_at = now()`;
-    await tx`
-      insert into public.user_unlocks (user_id, exercise_id, item_id, source_drop_id)
-      select ${userId}, i.grants_exercise_id, i.id, d.id
-      from public.drops d join public.items i on i.id = d.item_id
-      where d.id = any(${drops.map((drop) => drop.id as string)}::uuid[]) and i.kind = 'scroll'
-      order by d.created_at, d.id
-      on conflict (user_id, exercise_id) do nothing`;
-  }
+    const insertedRolls = await tx`insert into public.loot_rolls ${tx(rollRows)} returning id, set_id, kind`;
+    const rollIdOf = new Map(insertedRolls.map((row) => [lootRollKey(row.set_id, row.kind), row.id as string]));
 
-  if (rolls.some((roll) => roll.kind === 'regular')) {
-    await tx`
-      insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
-      values (${userId}, ${tables.regular.id}, ${dryRolls})
-      on conflict (user_id, drop_table_id) do update set dry_rolls = excluded.dry_rolls, updated_at = now()`;
+    const hits = rolls.filter((roll) => roll.drop !== null);
+    if (hits.length > 0) {
+      const dropRows = hits.map((roll) => ({
+        user_id: userId,
+        loot_roll_id: rollIdOf.get(lootRollKey(roll.setId, roll.kind))!,
+        session_id: sessionId,
+        set_id: roll.setId,
+        item_id: roll.drop!.itemId,
+        quantity: roll.drop!.quantity,
+        source: roll.kind,
+      }));
+      const drops = await tx`insert into public.drops ${tx(dropRows)} returning id, item_id, quantity`;
+      await tx`
+        insert into public.item_ledger ${tx(
+          drops.map((drop) => ({
+            user_id: userId,
+            item_id: drop.item_id,
+            delta: drop.quantity,
+            reason: 'drop',
+            ref_id: drop.id,
+          })),
+        )}`;
+      const totals = sumByItem(drops.map((drop) => [drop.item_id, drop.quantity]));
+      await tx`
+        insert into public.user_items ${tx(
+          [...totals].map(([itemId, quantity]) => ({ user_id: userId, item_id: itemId, quantity })),
+        )}
+        on conflict (user_id, item_id) do update
+        set quantity = public.user_items.quantity + excluded.quantity, updated_at = now()`;
+      await tx`
+        insert into public.user_unlocks (user_id, exercise_id, item_id, source_drop_id)
+        select ${userId}, i.grants_exercise_id, i.id, d.id
+        from public.drops d join public.items i on i.id = d.item_id
+        where d.id = any(${drops.map((drop) => drop.id as string)}::uuid[]) and i.kind = 'scroll'
+        order by d.created_at, d.id
+        on conflict (user_id, exercise_id) do nothing`;
+    }
+
+    if (rolls.some((roll) => roll.kind === 'regular')) {
+      await tx`
+        insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
+        values (${userId}, ${tables.regular.id}, ${dryRolls})
+        on conflict (user_id, drop_table_id) do update set dry_rolls = excluded.dry_rolls, updated_at = now()`;
+    }
   }
   await refreshSummaryDrops(tx, [sessionId]);
   await syncSessionEvents(tx, userId, [sessionId]);
@@ -188,11 +187,7 @@ export async function rollNewSessionLoot(
 
 export type ActiveDrop = DropSummary & { sessionId: string };
 
-export async function loadActiveDrops(
-  tx: Transaction,
-  userId: string,
-  sessionIds: readonly string[],
-): Promise<ActiveDrop[]> {
+async function loadActiveDrops(tx: Transaction, userId: string, sessionIds: readonly string[]): Promise<ActiveDrop[]> {
   if (sessionIds.length === 0) return [];
   const rows = await tx`
     select d.id, d.session_id, d.set_id, d.item_id, i.key as item_key, d.quantity, d.source
@@ -217,7 +212,7 @@ export interface Revocation {
 
 export type RevokedActiveDrop = ActiveDrop & { revokedQuantity: number };
 
-export async function revokeDrops(
+async function revokeDrops(
   tx: Transaction,
   userId: string,
   revocations: readonly Revocation[],
@@ -262,8 +257,7 @@ export async function revokeDrops(
         ref_id: update.id,
       })),
     )}`;
-  const totals = new Map<string, number>();
-  for (const update of debited) totals.set(update.item_id, (totals.get(update.item_id) ?? 0) + update.revoked_quantity);
+  const totals = sumByItem(debited.map((update) => [update.item_id, update.revoked_quantity]));
   await tx`
     update public.user_items as target
     set quantity = target.quantity - derived.amount, updated_at = now()

@@ -1,6 +1,7 @@
 import { z } from 'npm:zod@4.6.5';
+import { MAX_SETS_PER_SESSION } from '../_shared/domain/index.ts';
 import { HttpError } from '../_shared/http.ts';
-import { assertDistinctSetIdsAndPositions, MAX_SETS_PER_SESSION, setSchema } from '../_shared/session-payload.ts';
+import { assertDistinctSetIdsAndPositions, lowerUuid, parseOr422, setSchema } from '../_shared/session-payload.ts';
 
 const MAX_SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
 const ALLOWED_CLOCK_SKEW_MS = 5 * 60 * 1000;
@@ -10,15 +11,11 @@ function toMillisecondIsoString(instant: string): string {
 }
 
 const sessionSchema = z.object({
-  id: z.uuid().transform((id) => id.toLowerCase()),
+  id: lowerUuid,
   startedAt: z.iso.datetime({ offset: true }).transform(toMillisecondIsoString),
   endedAt: z.iso.datetime({ offset: true }).transform(toMillisecondIsoString),
   notes: z.string().max(2000).nullable().default(null),
-  programDayId: z
-    .uuid()
-    .transform((id) => id.toLowerCase())
-    .nullable()
-    .default(null),
+  programDayId: lowerUuid.nullable().default(null),
   sets: z.array(setSchema).min(1).max(MAX_SETS_PER_SESSION),
 });
 
@@ -34,8 +31,7 @@ export function assertPlausibleTiming(payload: CompleteSessionPayload, now: Date
 }
 
 export function parseCompleteSessionPayload(body: unknown): CompleteSessionPayload {
-  const parsed = sessionSchema.safeParse(body);
-  if (!parsed.success) throw new HttpError(422, 'invalid_payload', z.treeifyError(parsed.error));
-  assertDistinctSetIdsAndPositions(parsed.data.sets);
-  return parsed.data;
+  const payload = parseOr422(sessionSchema, body);
+  assertDistinctSetIdsAndPositions(payload.sets);
+  return payload;
 }

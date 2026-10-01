@@ -1,6 +1,7 @@
 import { sql } from '../_shared/db.ts';
 import { DEFAULT_BALANCE } from '../_shared/domain/index.ts';
-import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+import { HttpError, jsonResponse } from '../_shared/http.ts';
+import { serve } from '../_shared/serve.ts';
 import { assertServiceRole } from '../_shared/service-auth.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
 
@@ -28,13 +29,7 @@ async function requestedUserId(request: Request): Promise<string> {
   return userId;
 }
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-  try {
-    if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed');
-    await assertServiceRole(request);
-    return jsonResponse(await rebuildUser(await requestedUserId(request)));
-  } catch (error) {
-    return errorResponse(error);
-  }
+serve(async (request) => {
+  await assertServiceRole(request);
+  return jsonResponse(await rebuildUser(await requestedUserId(request)));
 });

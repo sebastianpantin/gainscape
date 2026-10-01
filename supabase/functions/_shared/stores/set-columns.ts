@@ -1,4 +1,22 @@
-import type { SetResult } from '../domain/index.ts';
+import type { SetInput, SetResult } from '../domain/index.ts';
+
+export function inputSetColumns(
+  set: Pick<SetInput, 'id' | 'exerciseId' | 'position' | 'weightKg' | 'reps' | 'isWarmup'>,
+  effectiveLoadKg: number,
+  effort: Pick<SetResult, 'effortInputType' | 'effortValue'>,
+) {
+  return {
+    id: set.id,
+    exercise_id: set.exerciseId,
+    position: set.position,
+    weight_kg: set.weightKg,
+    effective_load_kg: effectiveLoadKg,
+    reps: set.reps,
+    is_warmup: set.isWarmup,
+    effort_input_type: effort.effortInputType,
+    effort_value: effort.effortValue,
+  };
+}
 
 export function derivedSetColumns(result: SetResult) {
   return {
@@ -15,17 +33,9 @@ export function derivedSetColumns(result: SetResult) {
 
 export function newSetRow(result: SetResult, sessionId: string, userId: string) {
   return {
-    id: result.set.id,
+    ...inputSetColumns(result.set, result.effectiveLoadKg, result),
     session_id: sessionId,
     user_id: userId,
-    exercise_id: result.set.exerciseId,
-    position: result.set.position,
-    weight_kg: result.set.weightKg,
-    effective_load_kg: result.effectiveLoadKg,
-    reps: result.set.reps,
-    is_warmup: result.set.isWarmup,
-    effort_input_type: result.effortInputType,
-    effort_value: result.effortValue,
     ...derivedSetColumns(result),
   };
 }

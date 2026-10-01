@@ -2,12 +2,14 @@ import type { JsonValue, Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   type EffortInputType,
+  isWithinEditWindow,
   resolveEffort,
   type SessionKey,
   type SessionSummary,
   type SetInput,
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
+import { inputSetColumns } from './set-columns.ts';
 
 export interface StoredSession {
   userId: string;
@@ -49,7 +51,6 @@ export async function findSession(tx: Transaction, sessionId: string): Promise<S
 }
 
 export interface OwnedSession {
-  userId: string;
   key: SessionKey;
   historyOnly: boolean;
   revision: number;
@@ -57,23 +58,22 @@ export interface OwnedSession {
   summary: SessionSummary;
 }
 
-export async function loadOwnedSession(
-  tx: Transaction,
-  userId: string,
-  sessionId: string,
-): Promise<OwnedSession | null> {
+export async function requireOwnedSession(tx: Transaction, userId: string, sessionId: string): Promise<OwnedSession> {
   const [row] = await tx`
     select user_id, started_at, history_only, revision, notes, summary
     from public.sessions where id = ${sessionId}`;
-  if (!row || row.user_id !== userId) return null;
+  if (!row || row.user_id !== userId) throw new HttpError(404, 'session_not_found');
   return {
-    userId: row.user_id,
     key: { id: sessionId, startedAt: new Date(row.started_at).toISOString() },
     historyOnly: row.history_only,
     revision: row.revision,
     notes: row.notes,
     summary: row.summary,
   };
+}
+
+export function isEditable(session: OwnedSession, nowMs: number): boolean {
+  return !session.historyOnly && isWithinEditWindow(session.key.startedAt, nowMs);
 }
 
 export interface StoredSet {
@@ -143,19 +143,10 @@ export function placeholderSetRow(
   userId: string,
   cfg: BalanceConfig,
 ) {
-  const { effortInputType, effortValue } = resolveEffort(set.effort, cfg);
   return {
-    id: set.id,
+    ...inputSetColumns(set, effectiveLoadKg, resolveEffort(set.effort, cfg)),
     session_id: sessionId,
     user_id: userId,
-    exercise_id: set.exerciseId,
-    position: set.position,
-    weight_kg: set.weightKg,
-    effective_load_kg: effectiveLoadKg,
-    reps: set.reps,
-    is_warmup: set.isWarmup,
-    effort_input_type: effortInputType,
-    effort_value: effortValue,
     rir: null,
     rir_source: 'cold_start',
     rir_flagged: false,
@@ -167,13 +158,10 @@ export function placeholderSetRow(
   };
 }
 
-export type SetRow = Record<string, unknown>;
-
 export async function insertSession(
   tx: Transaction,
   row: NewSessionRow,
-  setRows: readonly SetRow[],
-  setSkillXpRows: readonly SetRow[] = [],
+  setRows: readonly Record<string, unknown>[],
 ): Promise<SessionSummary> {
   const [inserted] = await tx`
     insert into public.sessions
@@ -184,9 +172,7 @@ export async function insertSession(
        (${row.startedAt}::timestamptz at time zone ${row.timezone})::date, ${row.timezone}, ${row.historyOnly},
        ${row.balanceVersion}, ${row.balanceVersion}, ${tx.json(row.summary as unknown as JsonValue)}, ${row.notes})
     returning summary`;
-  await tx`insert into public.sets ${tx(setRows as Record<string, unknown>[])}`;
-  if (setSkillXpRows.length > 0)
-    await tx`insert into public.set_skill_xp ${tx(setSkillXpRows as Record<string, unknown>[])}`;
+  await tx`insert into public.sets ${tx(setRows)}`;
   return inserted.summary;
 }
 
@@ -213,10 +199,4 @@ export async function writeSummaries(
         updated_at = now()
     from jsonb_to_recordset(${tx.json(entries as unknown as JsonValue)}) as derived (id uuid, patch jsonb)
     where target.id = derived.id`;
-}
-
-const UNIQUE_VIOLATION = '23505';
-
-export function isUniqueViolation(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && (error as { code?: string }).code === UNIQUE_VIOLATION;
 }
