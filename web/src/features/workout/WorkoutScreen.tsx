@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DEFAULT_BALANCE, type StrengthState } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
-import { type Exercise, fetchExercises, type LoadType, saveBodyweight } from '../../lib/catalog.ts';
+import { canAddBout } from '../../lib/cardio-rules.ts';
+import { type Exercise, fetchExercises, isLiftExercise, type LoadType, saveBodyweight } from '../../lib/catalog.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
 import { type ExerciseStrengthView, fetchExerciseStrength, fetchStrengthState } from '../../lib/collection-data.ts';
 import { fetchProfile } from '../../lib/profile.ts';
@@ -11,6 +12,7 @@ import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/supabase.ts';
 import { formatWeight } from '../../lib/units.ts';
 import {
+  addCardioExercise,
   addExercise,
   addSet,
   canSwapExercise,
@@ -22,6 +24,7 @@ import {
   startDraftFromDay,
   swapExercise,
   toggleSetDone,
+  updateBout,
   updateSet,
   withCurrentLoadTypes,
   type WorkoutDraft,
@@ -31,6 +34,7 @@ import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
+import { CardioSetRow } from './CardioSetRow.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
@@ -70,7 +74,10 @@ async function currentLoadTypes(draft: WorkoutDraft, exercises: Exercise[]): Pro
       draft.exercises.map((exercise) => exercise.exerciseId).filter((id) => !builtInIds.has(id)),
     );
     return new Map(
-      catalog.filter((exercise) => customIds.has(exercise.id)).map((exercise) => [exercise.id, exercise.loadType]),
+      catalog
+        .filter(isLiftExercise)
+        .filter((exercise) => customIds.has(exercise.id))
+        .map((exercise) => [exercise.id, exercise.loadType]),
     );
   } catch {
     return new Map();
@@ -340,6 +347,17 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   };
 
   const canFinish = doneSetCount(draft) > 0 && !checkingFinish;
+  const roomForBouts = canAddBout(
+    draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
+  );
+  const liftExercises = exercises.filter(isLiftExercise);
+  const addPicked = (exercise: Exercise) => {
+    const added =
+      exercise.modality === 'cardio'
+        ? addCardioExercise(draft, exercise.id, exercise.name, exercise.activity)
+        : addExercise(draft, exercise.id, exercise.name, exercise.loadType);
+    changeDraft(addSet(added, draft.exercises.length));
+  };
   const previewTotal = previews
     .flatMap((sets, exerciseIndex) => sets.filter((_, setIndex) => draft.exercises[exerciseIndex].sets[setIndex].done))
     .reduce((sum, preview) => sum + preview.xp, 0);
@@ -381,11 +399,55 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </p>
       )}
       {draft.exercises.map((exercise, exerciseIndex) => {
+        const doneHere = exercise.sets.filter((set) => set.done).length;
+        const removeButton = (
+          <button
+            className="button link"
+            type="button"
+            onClick={() => changeDraft(removeExercise(draft, exerciseIndex))}
+          >
+            Remove
+          </button>
+        );
+        if (exercise.modality === 'cardio') {
+          return (
+            <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
+              <header>
+                <h2>{exercise.name}</h2>
+                <span className="row">{removeButton}</span>
+              </header>
+              <p className="muted">{`${doneHere}/${exercise.sets.length} bouts`}</p>
+              <ol className="set-list">
+                {exercise.sets.map((bout, boutIndex) => (
+                  <CardioSetRow
+                    key={bout.id}
+                    boutNumber={boutIndex + 1}
+                    bout={bout}
+                    paceUnit={exercise.activity.paceUnit}
+                    preview={previews[exerciseIndex][boutIndex]}
+                    unit={unitPref}
+                    onChange={(changes) => changeDraft(updateBout(draft, exerciseIndex, bout.id, changes))}
+                    onRemove={() => changeDraft(removeSet(draft, exerciseIndex, bout.id))}
+                    onToggleDone={() => changeDraft(toggleSetDone(draft, exerciseIndex, bout.id))}
+                  />
+                ))}
+              </ol>
+              <button
+                className="button dashed"
+                type="button"
+                disabled={!roomForBouts}
+                onClick={() => changeDraft(addSet(draft, exerciseIndex))}
+              >
+                + Add bout
+              </button>
+              {!roomForBouts && <p className="hint">Bouts in one workout can add up to at most 4 hours.</p>}
+            </section>
+          );
+        }
         const details = [
           exercise.target && `${exercise.target.sets} × ${exercise.target.repsMin}–${exercise.target.repsMax}`,
           strengthLine(exercise.exerciseId, exercise.loadType),
         ].filter(Boolean);
-        const doneHere = exercise.sets.filter((set) => set.done).length;
         return (
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
             <header>
@@ -400,21 +462,16 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                     Swap
                   </button>
                 )}
-                <button
-                  className="button link"
-                  type="button"
-                  onClick={() => changeDraft(removeExercise(draft, exerciseIndex))}
-                >
-                  Remove
-                </button>
+                {removeButton}
               </span>
             </header>
             <p className="muted">{[...details, `${doneHere}/${exercise.sets.length} sets`].join(' · ')}</p>
             {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
               <ExercisePicker
-                exercises={exercises}
+                exercises={liftExercises}
                 placeholder="Swap for…"
                 onPick={(replacement) => {
+                  if (!isLiftExercise(replacement)) return;
                   const swapped = swapExercise(draft, exerciseIndex, replacement);
                   if (swapped) changeDraft(swapped);
                   setSwappingIndex(null);
@@ -443,12 +500,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </section>
         );
       })}
-      <ExercisePicker
-        exercises={exercises}
-        onPick={(exercise) =>
-          changeDraft(addSet(addExercise(draft, exercise.id, exercise.name, exercise.loadType), draft.exercises.length))
-        }
-      />
+      <ExercisePicker exercises={exercises} onPick={addPicked} />
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>

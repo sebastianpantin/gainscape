@@ -1,3 +1,4 @@
+import type { Modality } from '../../lib/catalog.ts';
 import type { SkillShare } from '../../lib/custom-exercises.ts';
 
 export const BASIS_POINTS_PER_PERCENT = 100;
@@ -34,4 +35,8 @@ export function sharesToSave(form: ShareForm): SkillShare[] | null {
   return percents
     .filter(({ percent }) => percent! > 0)
     .map(({ skillId, percent }) => ({ skillId, shareBp: percent! * BASIS_POINTS_PER_PERCENT }));
+}
+
+export function skillsForModality<S extends { modality: Modality }>(skills: readonly S[], modality: Modality): S[] {
+  return skills.filter((skill) => skill.modality === modality);
 }

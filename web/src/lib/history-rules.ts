@@ -1,4 +1,4 @@
-import type { EffortInput, EffortInputType, RirSource, SessionSummary } from '@domain/types.ts';
+import type { CardioInterval, EffortInput, EffortInputType, RirSource, SessionSummary } from '@domain/types.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { InvokeOutcome } from './function-client.ts';
 
@@ -7,7 +7,7 @@ export const HISTORY_PAGE_SIZE = 50;
 const SESSION_COLUMNS =
   'id,started_at,ended_at,local_date,history_only,revision,program_day_id,notes,summary,sets(count)';
 const SET_COLUMNS =
-  'id,exercise_id,position,weight_kg,effective_load_kg,reps,is_warmup,effort_input_type,effort_value,rir,rir_source,rir_flagged,e1rm_before_kg,effective_reps,xp_awarded';
+  'id,exercise_id,position,weight_kg,effective_load_kg,reps,is_warmup,effort_input_type,effort_value,rir,rir_source,rir_flagged,e1rm_before_kg,effective_reps,xp_awarded,duration_s,distance_m,interval_work_s,interval_rest_s,interval_rounds,counted_work_s,pace_flagged';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface HistorySession {
@@ -27,33 +27,53 @@ export interface StoredSetRow {
   id: string;
   exerciseId: string;
   position: number;
-  weightKg: number;
-  effectiveLoadKg: number;
-  reps: number;
+  weightKg: number | null;
+  effectiveLoadKg: number | null;
+  reps: number | null;
   isWarmup: boolean;
   effortInputType: EffortInputType | null;
   effortValue: number | null;
-  rir: number;
+  rir: number | null;
   rirSource: RirSource;
   rirFlagged: boolean;
   e1rmBeforeKg: number | null;
   effectiveReps: number;
   xpAwarded: number;
+  durationS: number | null;
+  distanceM: number | null;
+  intervalWorkS: number | null;
+  intervalRestS: number | null;
+  intervalRounds: number | null;
+  countedWorkS: number | null;
+  paceFlagged: boolean;
+}
+
+export interface LiftSetPayload {
+  id: string;
+  exerciseId: string;
+  position: number;
+  weightKg: number;
+  reps: number;
+  isWarmup: boolean;
+  effort: EffortInput;
+}
+
+export interface CardioSetPayload {
+  kind: 'cardio';
+  id: string;
+  exerciseId: string;
+  position: number;
+  durationS?: number;
+  distanceM: number | null;
+  interval: CardioInterval | null;
+  effort: EffortInput;
 }
 
 export interface EditSessionPayload {
   sessionId: string;
   ifRevision: number;
   notes: string | null;
-  sets: {
-    id: string;
-    exerciseId: string;
-    position: number;
-    weightKg: number;
-    reps: number;
-    isWarmup: boolean;
-    effort: EffortInput;
-  }[];
+  sets: (LiftSetPayload | CardioSetPayload)[];
 }
 
 interface SessionRow {
@@ -73,18 +93,25 @@ interface SetRow {
   id: string;
   exercise_id: string;
   position: number;
-  weight_kg: number | string;
-  effective_load_kg: number | string;
-  reps: number;
+  weight_kg: number | string | null;
+  effective_load_kg: number | string | null;
+  reps: number | null;
   is_warmup: boolean;
   effort_input_type: EffortInputType | null;
   effort_value: number | string | null;
-  rir: number | string;
+  rir: number | string | null;
   rir_source: RirSource;
   rir_flagged: boolean;
   e1rm_before_kg: number | string | null;
   effective_reps: number;
   xp_awarded: number;
+  duration_s: number | null;
+  distance_m: number | string | null;
+  interval_work_s: number | null;
+  interval_rest_s: number | null;
+  interval_rounds: number | null;
+  counted_work_s: number | null;
+  pace_flagged: boolean;
 }
 
 export function isUuid(value: string): boolean {
@@ -119,18 +146,25 @@ function toStoredSet(row: SetRow): StoredSetRow {
     id: row.id,
     exerciseId: row.exercise_id,
     position: row.position,
-    weightKg: Number(row.weight_kg),
-    effectiveLoadKg: Number(row.effective_load_kg),
+    weightKg: nullableNumber(row.weight_kg),
+    effectiveLoadKg: nullableNumber(row.effective_load_kg),
     reps: row.reps,
     isWarmup: row.is_warmup,
     effortInputType: row.effort_input_type,
     effortValue: nullableNumber(row.effort_value),
-    rir: Number(row.rir),
+    rir: nullableNumber(row.rir),
     rirSource: row.rir_source,
     rirFlagged: row.rir_flagged,
     e1rmBeforeKg: nullableNumber(row.e1rm_before_kg),
     effectiveReps: row.effective_reps,
     xpAwarded: row.xp_awarded,
+    durationS: row.duration_s,
+    distanceM: nullableNumber(row.distance_m),
+    intervalWorkS: row.interval_work_s,
+    intervalRestS: row.interval_rest_s,
+    intervalRounds: row.interval_rounds,
+    countedWorkS: row.counted_work_s,
+    paceFlagged: row.pace_flagged,
   };
 }
 

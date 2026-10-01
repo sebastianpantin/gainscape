@@ -4,13 +4,14 @@ import { effortInputFromStored } from '@domain/effort.ts';
 import { roundTo } from '@domain/strength.ts';
 import {
   type CardioEffortLevel,
+  type CardioInterval,
   type DropSummary,
   type EffortInput,
   type EffortLevel,
   MAX_SETS_PER_SESSION,
   type SessionSummary,
 } from '@domain/types.ts';
-import type { LoadType } from '../../lib/catalog.ts';
+import type { CardioActivity, LoadType, PaceUnit } from '../../lib/catalog.ts';
 import type { InvokeOutcome } from '../../lib/function-client.ts';
 import {
   type EditSessionPayload,
@@ -19,12 +20,21 @@ import {
   transientReason,
 } from '../../lib/history-rules.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds } from '../../lib/rate-limit.ts';
-import { defaultWeightKg, nextSetValues, updateExerciseAt } from '../../offline/draft-format.ts';
+import {
+  type BoutValues,
+  defaultWeightKg,
+  nextBoutValues,
+  nextSetValues,
+  updateExerciseAt,
+} from '../../offline/draft-format.ts';
+import { boutPayload } from '../../offline/session-payload.ts';
 
-export interface KnownExercise {
-  name: string;
-  loadType: LoadType;
-}
+type ExerciseKind =
+  { modality?: 'lift'; loadType: LoadType } | { modality: 'cardio'; activity: Pick<CardioActivity, 'paceUnit'> };
+
+export type KnownExercise = { name: string } & ExerciseKind;
+
+export type NewExercise = { id: string; name: string } & ExerciseKind;
 
 export interface EditSet {
   id: string;
@@ -34,12 +44,28 @@ export interface EditSet {
   effort: EffortInput;
 }
 
-export interface EditExercise {
+export interface EditBout extends BoutValues {
+  id: string;
+  kind: 'cardio';
+}
+
+export interface LiftEditExercise {
   exerciseId: string;
   name: string;
+  modality: 'lift';
   loadType: LoadType;
   sets: EditSet[];
 }
+
+export interface CardioEditExercise {
+  exerciseId: string;
+  name: string;
+  modality: 'cardio';
+  paceUnit: PaceUnit;
+  sets: EditBout[];
+}
+
+export type EditExercise = LiftEditExercise | CardioEditExercise;
 
 export interface SessionEdit {
   sessionId: string;
@@ -48,7 +74,15 @@ export interface SessionEdit {
   exercises: EditExercise[];
 }
 
-const UNKNOWN_EXERCISE: KnownExercise = { name: 'Unknown exercise', loadType: 'external' };
+type LiftHeader = Omit<LiftEditExercise, 'sets'>;
+type CardioHeader = Omit<CardioEditExercise, 'sets'>;
+
+type PlacedSet =
+  { modality: 'lift'; header: LiftHeader; set: EditSet } | { modality: 'cardio'; header: CardioHeader; set: EditBout };
+
+const UNKNOWN_EXERCISE_NAME = 'Unknown exercise';
+const UNKNOWN_EXERCISE_LOAD_TYPE: LoadType = 'external';
+const UNKNOWN_EXERCISE_PACE_UNIT: PaceUnit = 'per_km';
 
 export function isEditable(session: Pick<HistorySession, 'historyOnly' | 'startedAt'>, now: number): boolean {
   return !session.historyOnly && isWithinEditWindow(session.startedAt, now);
@@ -67,6 +101,43 @@ export function formatSessionDate(localDate: string): string {
   });
 }
 
+function storedInterval(row: StoredSetRow): CardioInterval | null {
+  const { intervalWorkS: workS, intervalRestS: restS, intervalRounds: rounds } = row;
+  return workS === null || restS === null || rounds === null ? null : { workS, restS, rounds };
+}
+
+function placedFromRow(row: StoredSetRow, known: KnownExercise | undefined): PlacedSet {
+  const name = known?.name ?? UNKNOWN_EXERCISE_NAME;
+  const effort = effortInputFromStored(row.effortInputType, row.effortValue, DEFAULT_BALANCE);
+  if (row.durationS !== null) {
+    const paceUnit = known?.modality === 'cardio' ? known.activity.paceUnit : UNKNOWN_EXERCISE_PACE_UNIT;
+    return {
+      modality: 'cardio',
+      header: { exerciseId: row.exerciseId, name, modality: 'cardio', paceUnit },
+      set: {
+        id: row.id,
+        kind: 'cardio',
+        durationS: row.durationS,
+        distanceM: row.distanceM,
+        interval: storedInterval(row),
+        effort,
+      },
+    };
+  }
+  const loadType = known !== undefined && known.modality !== 'cardio' ? known.loadType : UNKNOWN_EXERCISE_LOAD_TYPE;
+  return {
+    modality: 'lift',
+    header: { exerciseId: row.exerciseId, name, modality: 'lift', loadType },
+    set: {
+      id: row.id,
+      weightKg: roundTo(2, row.weightKg ?? 0),
+      reps: row.reps ?? 0,
+      isWarmup: row.isWarmup,
+      effort,
+    },
+  };
+}
+
 export function editFromSession(
   session: Pick<HistorySession, 'id' | 'revision' | 'notes'>,
   rows: readonly StoredSetRow[],
@@ -74,38 +145,25 @@ export function editFromSession(
 ): SessionEdit {
   const placed = [...rows]
     .sort((a, b) => a.position - b.position)
-    .map((row): PlacedSet => {
-      const known = exercisesById.get(row.exerciseId) ?? UNKNOWN_EXERCISE;
-      return {
-        exerciseId: row.exerciseId,
-        name: known.name,
-        loadType: known.loadType,
-        set: {
-          id: row.id,
-          weightKg: roundTo(2, row.weightKg),
-          reps: row.reps,
-          isWarmup: row.isWarmup,
-          effort: effortInputFromStored(row.effortInputType, row.effortValue, DEFAULT_BALANCE),
-        },
-      };
-    });
-  const exercises = grouped(placed);
-  return { sessionId: session.id, revision: session.revision, notes: session.notes ?? '', exercises };
+    .map((row) => placedFromRow(row, exercisesById.get(row.exerciseId)));
+  return { sessionId: session.id, revision: session.revision, notes: session.notes ?? '', exercises: grouped(placed) };
 }
 
 export function editPayload(edit: SessionEdit): EditSessionPayload {
   const notes = edit.notes.trim() === '' ? null : edit.notes;
-  const sets = edit.exercises
-    .flatMap((exercise) => exercise.sets.map((set) => ({ exercise, set })))
-    .map(({ exercise, set }, position) => ({
-      id: set.id,
-      exerciseId: exercise.exerciseId,
-      position,
-      weightKg: roundTo(2, set.weightKg),
-      reps: set.reps,
-      isWarmup: set.isWarmup,
-      effort: set.effort,
-    }));
+  const sets = placedSets(edit).map((placed, position) =>
+    placed.modality === 'cardio'
+      ? boutPayload(placed.set, placed.header.exerciseId, position)
+      : {
+          id: placed.set.id,
+          exerciseId: placed.header.exerciseId,
+          position,
+          weightKg: roundTo(2, placed.set.weightKg),
+          reps: placed.set.reps,
+          isWarmup: placed.set.isWarmup,
+          effort: placed.set.effort,
+        },
+  );
   return { sessionId: edit.sessionId, ifRevision: edit.revision, notes, sets };
 }
 
@@ -116,8 +174,8 @@ export function hasChanges(edit: SessionEdit, original: SessionEdit): boolean {
 
 function setsById(edit: SessionEdit): Map<string, string> {
   return new Map(
-    edit.exercises.flatMap((exercise) =>
-      exercise.sets.map((set) => [set.id, JSON.stringify({ exerciseId: exercise.exerciseId, ...set })] as const),
+    placedSets(edit).map(
+      (placed) => [placed.set.id, JSON.stringify({ exerciseId: placed.header.exerciseId, ...placed.set })] as const,
     ),
   );
 }
@@ -154,23 +212,42 @@ export function updateEditSet(
   setId: string,
   changes: Partial<Omit<EditSet, 'id'>>,
 ): SessionEdit {
-  return updateExercise(edit, exerciseIndex, (exercise) => ({
-    ...exercise,
-    sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)),
-  }));
+  return updateExercise(edit, exerciseIndex, (exercise) =>
+    exercise.modality === 'lift'
+      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
+      : exercise,
+  );
+}
+
+export function updateEditBout(
+  edit: SessionEdit,
+  exerciseIndex: number,
+  setId: string,
+  changes: Partial<BoutValues>,
+): SessionEdit {
+  return updateExercise(edit, exerciseIndex, (exercise) =>
+    exercise.modality === 'cardio'
+      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
+      : exercise,
+  );
 }
 
 export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: string): SessionEdit {
-  const removed = updateExercise(edit, exerciseIndex, (exercise) => ({
-    ...exercise,
-    sets: exercise.sets.filter((set) => set.id !== setId),
-  }));
+  const removed = updateExercise(edit, exerciseIndex, (exercise) =>
+    exercise.modality === 'cardio'
+      ? { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) }
+      : { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) },
+  );
   return { ...removed, exercises: removed.exercises.filter((exercise) => exercise.sets.length > 0) };
 }
 
 export function addEditSet(edit: SessionEdit, exerciseIndex: number): SessionEdit {
   if (!canAddSet(edit)) return edit;
   return updateExercise(edit, exerciseIndex, (exercise) => {
+    if (exercise.modality === 'cardio') {
+      const newBout: EditBout = { id: crypto.randomUUID(), kind: 'cardio', ...nextBoutValues(exercise.sets.at(-1)) };
+      return { ...exercise, sets: [...exercise.sets, newBout] };
+    }
     const newSet: EditSet = {
       id: crypto.randomUUID(),
       ...nextSetValues(exercise.sets.at(-1), exercise.loadType),
@@ -181,41 +258,50 @@ export function addEditSet(edit: SessionEdit, exerciseIndex: number): SessionEdi
   });
 }
 
-export function addEditExercise(
-  edit: SessionEdit,
-  exercise: { id: string; name: string; loadType: LoadType },
-): SessionEdit {
-  if (!canAddSet(edit)) return edit;
-  const added: EditExercise = { exerciseId: exercise.id, name: exercise.name, loadType: exercise.loadType, sets: [] };
-  return addEditSet({ ...edit, exercises: [...edit.exercises, added] }, edit.exercises.length);
+function emptyExercise(exercise: NewExercise): EditExercise {
+  const identity = { exerciseId: exercise.id, name: exercise.name };
+  return exercise.modality === 'cardio'
+    ? { ...identity, modality: 'cardio', paceUnit: exercise.activity.paceUnit, sets: [] }
+    : { ...identity, modality: 'lift', loadType: exercise.loadType, sets: [] };
 }
 
-export function swapEditExercise(
-  edit: SessionEdit,
-  exerciseIndex: number,
-  replacement: { id: string; name: string; loadType: LoadType },
-): SessionEdit {
-  return updateExercise(edit, exerciseIndex, (exercise) => ({
-    exerciseId: replacement.id,
-    name: replacement.name,
-    loadType: replacement.loadType,
-    sets:
-      replacement.loadType === exercise.loadType
-        ? exercise.sets
-        : exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) })),
-  }));
+export function addEditExercise(edit: SessionEdit, exercise: NewExercise): SessionEdit {
+  if (!canAddSet(edit)) return edit;
+  return addEditSet({ ...edit, exercises: [...edit.exercises, emptyExercise(exercise)] }, edit.exercises.length);
+}
+
+export function swapEditExercise(edit: SessionEdit, exerciseIndex: number, replacement: NewExercise): SessionEdit {
+  return updateExercise(edit, exerciseIndex, (exercise) => {
+    const identity = { exerciseId: replacement.id, name: replacement.name };
+    if (exercise.modality === 'cardio') {
+      return replacement.modality === 'cardio'
+        ? { ...exercise, ...identity, paceUnit: replacement.activity.paceUnit }
+        : exercise;
+    }
+    if (replacement.modality === 'cardio') return exercise;
+    return {
+      ...exercise,
+      ...identity,
+      loadType: replacement.loadType,
+      sets:
+        replacement.loadType === exercise.loadType
+          ? exercise.sets
+          : exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) })),
+    };
+  });
 }
 
 export function withNewSetIds(edit: SessionEdit, setIds: readonly string[]): SessionEdit {
   const conflicting = new Set(setIds.map((id) => id.toLowerCase()));
+  const freshId = <S extends { id: string }>(set: S): S =>
+    conflicting.has(set.id.toLowerCase()) ? { ...set, id: crypto.randomUUID() } : set;
   return {
     ...edit,
-    exercises: edit.exercises.map((exercise) => ({
-      ...exercise,
-      sets: exercise.sets.map((set) =>
-        conflicting.has(set.id.toLowerCase()) ? { ...set, id: crypto.randomUUID() } : set,
-      ),
-    })),
+    exercises: edit.exercises.map((exercise) =>
+      exercise.modality === 'cardio'
+        ? { ...exercise, sets: exercise.sets.map(freshId) }
+        : { ...exercise, sets: exercise.sets.map(freshId) },
+    ),
   };
 }
 
@@ -223,6 +309,7 @@ export function withoutBodyweightLoads(edit: SessionEdit, loadTypes: ReadonlyMap
   return {
     ...edit,
     exercises: edit.exercises.map((exercise) => {
+      if (exercise.modality === 'cardio') return exercise;
       const loadType = loadTypes.get(exercise.exerciseId) ?? exercise.loadType;
       const sets = loadType === 'bodyweight' ? exercise.sets.map((set) => ({ ...set, weightKg: 0 })) : exercise.sets;
       return { ...exercise, loadType, sets };
@@ -244,51 +331,78 @@ export const CARDIO_EFFORT_LABELS: Record<CardioEffortLevel, string> = {
   max: 'Max',
 };
 
-interface PlacedSet {
-  exerciseId: string;
-  name: string;
-  loadType: LoadType;
-  set: EditSet;
-}
-
 function placedSets(edit: SessionEdit): PlacedSet[] {
-  return edit.exercises.flatMap((exercise) =>
-    exercise.sets.map((set) => ({
-      exerciseId: exercise.exerciseId,
-      name: exercise.name,
-      loadType: exercise.loadType,
-      set,
-    })),
-  );
+  return edit.exercises.flatMap((exercise): PlacedSet[] => {
+    if (exercise.modality === 'cardio') {
+      const { sets, ...header } = exercise;
+      return sets.map((set) => ({ modality: 'cardio', header, set }));
+    }
+    const { sets, ...header } = exercise;
+    return sets.map((set) => ({ modality: 'lift', header, set }));
+  });
 }
 
-const SET_FIELDS = ['weightKg', 'reps', 'isWarmup', 'effort'] as const;
+const LIFT_FIELDS = ['weightKg', 'reps', 'isWarmup', 'effort'] as const;
+const BOUT_FIELDS = ['durationS', 'distanceM', 'interval', 'effort'] as const;
 
-function comparableField(set: EditSet, field: (typeof SET_FIELDS)[number]): string {
-  return JSON.stringify(field === 'weightKg' ? roundTo(2, set.weightKg) : set[field]);
+function comparableField<S extends object>(set: S, field: keyof S): string {
+  const value = set[field];
+  return JSON.stringify(field === 'weightKg' && typeof value === 'number' ? roundTo(2, value) : value);
 }
 
-function changedFields(mine: PlacedSet, before: PlacedSet): (typeof SET_FIELDS)[number][] {
-  return SET_FIELDS.filter((field) => comparableField(mine.set, field) !== comparableField(before.set, field));
+function changedFields<S extends object, F extends keyof S>(mine: S, before: S, fields: readonly F[]): F[] {
+  return fields.filter((field) => comparableField(mine, field) !== comparableField(before, field));
+}
+
+function mergedFields<S extends object, F extends keyof S>(remote: S, before: S, mine: S, fields: readonly F[]): S {
+  const merged = { ...remote };
+  for (const field of changedFields(mine, before, fields)) merged[field] = mine[field];
+  return merged;
 }
 
 function isChangedHere(mine: PlacedSet, before: PlacedSet): boolean {
-  return mine.exerciseId !== before.exerciseId || changedFields(mine, before).length > 0;
+  if (mine.header.exerciseId !== before.header.exerciseId) return true;
+  if (mine.modality === 'cardio' && before.modality === 'cardio') {
+    return changedFields(mine.set, before.set, BOUT_FIELDS).length > 0;
+  }
+  if (mine.modality === 'lift' && before.modality === 'lift') {
+    return changedFields(mine.set, before.set, LIFT_FIELDS).length > 0;
+  }
+  return true;
 }
 
 function mergedSet(remote: PlacedSet, before: PlacedSet, mine: PlacedSet): PlacedSet {
-  const set = { ...remote.set };
-  for (const field of changedFields(mine, before)) Object.assign(set, { [field]: mine.set[field] });
-  const exercise = mine.exerciseId === before.exerciseId ? remote : mine;
-  return { exerciseId: exercise.exerciseId, name: exercise.name, loadType: exercise.loadType, set };
+  const header = mine.header.exerciseId === before.header.exerciseId ? remote.header : mine.header;
+  if (remote.modality === 'cardio' && before.modality === 'cardio' && mine.modality === 'cardio') {
+    return header.modality === 'cardio'
+      ? { modality: 'cardio', header, set: mergedFields(remote.set, before.set, mine.set, BOUT_FIELDS) }
+      : remote;
+  }
+  if (remote.modality === 'lift' && before.modality === 'lift' && mine.modality === 'lift') {
+    return header.modality === 'lift'
+      ? { modality: 'lift', header, set: mergedFields(remote.set, before.set, mine.set, LIFT_FIELDS) }
+      : remote;
+  }
+  return remote;
 }
 
 function grouped(placed: readonly PlacedSet[]): EditExercise[] {
   const exercises: EditExercise[] = [];
-  for (const { exerciseId, name, loadType, set } of placed) {
+  for (const entry of placed) {
     const current = exercises.at(-1);
-    if (current?.exerciseId === exerciseId) current.sets.push(set);
-    else exercises.push({ exerciseId, name, loadType, sets: [set] });
+    if (current?.exerciseId === entry.header.exerciseId) {
+      if (current.modality === 'cardio' && entry.modality === 'cardio') {
+        current.sets.push(entry.set);
+        continue;
+      }
+      if (current.modality === 'lift' && entry.modality === 'lift') {
+        current.sets.push(entry.set);
+        continue;
+      }
+    }
+    exercises.push(
+      entry.modality === 'cardio' ? { ...entry.header, sets: [entry.set] } : { ...entry.header, sets: [entry.set] },
+    );
   }
   return exercises;
 }

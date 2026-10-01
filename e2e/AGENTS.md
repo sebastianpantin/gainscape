@@ -19,7 +19,8 @@ Playwright end-to-end suites that drive the real web app against the real local 
 | `token-refresh.spec.ts`     | Expired or wrongly signed tokens refreshed, forced sign-out then sync, auth outage.                                                                      |
 | `profile.spec.ts`           | Profile fields, pounds display with kilogram storage, RPE logging, time zone cooldown, password change, export, delete account.                          |
 | `programs.spec.ts`          | Copy a template, run a program day, finish.                                                                                                              |
-| `custom-exercise.spec.ts`   | Create, log, record, pin, reorder and archive a custom exercise.                                                                                         |
+| `custom-exercise.spec.ts`   | Create, log, record, pin, reorder and archive a custom exercise; create and log a custom cardio one.                                                     |
+| `cardio.spec.ts`            | A run, intervals and a lift in one workout through reveal and a history distance edit; miles for pound users.                                            |
 | `workout-records.spec.ts`   | Bodyweight prompt, records and the collection log.                                                                                                       |
 | `loot.spec.ts`              | Loot reveal, items screen, crafting, scroll unlock (uses `grantItems`, `grantUnlock`).                                                                   |
 | `friends.spec.ts`           | Friend request, feed, hiscores, profile and removal across two browser contexts.                                                                         |

@@ -135,6 +135,28 @@ describe('rankHiscores', () => {
     expect(combat.value).toBe(3);
   });
 
+  it('breaks combat ties by the XP of combat skills only', () => {
+    const withCardio = [...skills, { key: 'endurance', combatWeight: 0 }];
+    const ranked = rankHiscores(
+      [row('abe', { chest: 100, endurance: 50_000 }), row('bea', { chest: 200 })],
+      withCardio,
+      'combat',
+    );
+    expect(ranked[0].value).toBe(ranked[1].value);
+    expect(ranked.map((entry) => entry.row.username)).toEqual(['bea', 'abe']);
+  });
+
+  it('still breaks total ties by the XP of every skill', () => {
+    const withCardio = [...skills, { key: 'endurance', combatWeight: 0 }];
+    const ranked = rankHiscores(
+      [row('bea', { chest: 200 }), row('abe', { chest: 100, endurance: 150 })],
+      withCardio,
+      'total',
+    );
+    expect(ranked[0].value).toBe(ranked[1].value);
+    expect(ranked.map((entry) => entry.row.username)).toEqual(['abe', 'bea']);
+  });
+
   it('ranks collection percent and treats an empty collection as 0', () => {
     const ranked = rankHiscores([row('abe', {}, 0, 0), row('bea', {}, 5, 20)], skills, 'collection');
     expect(ranked.map((entry) => [entry.row.username, entry.value])).toEqual([

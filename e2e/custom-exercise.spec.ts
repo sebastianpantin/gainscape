@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import { logCardio, logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
 
 async function logLandmineSession(page: Page, weightKg: number) {
   await openTab(page, 'Train');
@@ -65,9 +65,32 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await page.getByRole('button', { name: 'Start workout' }).click();
   await page.getByLabel('Search exercises').fill('landmine');
   await expect(page.getByRole('button', { name: /^Landmine Press\b/ })).toHaveCount(0);
-  await page.getByLabel('Search exercises').fill('running');
-  await expect(page.getByRole('button', { name: /^Running\b/ })).toHaveCount(0);
 
   await openTab(page, 'Log');
   await expect(landmine).toContainText('(archived)');
+});
+
+test('create and log a custom cardio exercise', async ({ page }) => {
+  await register(page, uniqueUsername('cxc'));
+
+  await openFromProfile(page, 'Exercises');
+  await page.getByRole('button', { name: 'New custom exercise' }).click();
+  await page.getByRole('radiogroup', { name: 'Kind' }).getByRole('radio', { name: 'Cardio' }).click();
+  await expect(page.getByLabel('Load type')).toHaveCount(0);
+  await expect(page.getByLabel('Chest')).toHaveCount(0);
+  await page.getByLabel('Name').fill('Assault Bike');
+  await page.getByLabel('Equipment').selectOption('machine');
+  await page.getByLabel('Endurance').fill('70');
+  await page.getByLabel('Agility').fill('30');
+  await expect(page.getByTestId('share-total')).toHaveText('Total: 100%');
+  await page.getByRole('button', { name: 'Save exercise' }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Assault Bike' })).toContainText('(custom)');
+
+  await openTab(page, 'Train');
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logCardio(page, 'assault', 'Assault Bike', [{ minutes: 20, effort: 'Hard' }]);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  const xp = page.getByLabel('XP gained');
+  await expect(xp).toContainText('Endurance');
+  await expect(xp).toContainText('Agility');
 });

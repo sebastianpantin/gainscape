@@ -30,7 +30,7 @@ function describeRecord(
     const previous = record.previousReps === null ? 'first record' : `was ${record.previousReps}`;
     return { headline: `${name}: ${record.reps} reps`, previous: `(${previous})` };
   }
-  const loadType = exercise?.loadType ?? 'external';
+  const loadType = exercise?.modality === 'lift' ? exercise.loadType : 'external';
   const previous =
     record.previousLoadKg === null ? 'first record' : `was ${formatLoad(record.previousLoadKg, loadType, unit)}`;
   return {
