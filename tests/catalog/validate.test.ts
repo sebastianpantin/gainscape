@@ -178,6 +178,17 @@ describe('catalog validation', () => {
       /"Party Hat" matches denylisted term "party hat"/,
     ],
     [
+      'gear tiers match ITEM_TIERS',
+      (c) => c.gearTiers.push('celestial'),
+      /gear tiers \[.*celestial\] must match ITEM_TIERS/,
+    ],
+    [
+      'gear tiers keep the ITEM_TIERS order',
+      (c) => c.gearTiers.reverse(),
+      /gear tiers \[ascendant, .*\] must match ITEM_TIERS/,
+    ],
+    ['gear slots match GEAR_SLOTS', (c) => c.gearSlots.pop(), /gear slots \[.*\] must match GEAR_SLOTS/],
+    [
       'no denylisted term appears in a key',
       (c) => (find(c.items, 'plate_crab').key = 'rune_crab'),
       /"rune_crab" matches denylisted term "rune"/,

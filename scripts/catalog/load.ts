@@ -96,6 +96,8 @@ export interface CatalogData {
   items: CatalogItem[];
   dropTables: CatalogDropTable[];
   recipes: CatalogRecipe[];
+  gearTiers: string[];
+  gearSlots: string[];
 }
 
 const rarity = z.enum(['common', 'uncommon', 'rare', 'legendary']);
@@ -296,6 +298,8 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
     items,
     dropTables,
     recipes,
+    gearTiers: gear.tiers.map((tier) => tier.key),
+    gearSlots: gear.slots.map((slot) => slot.key),
   };
 }
 
