@@ -30,7 +30,7 @@ Everything the backend consists of: the local Supabase stack configuration, appe
 
 ### Working In This Directory
 
-- `config.toml` has values that are only safe locally: `site_url = "https://localhost:5173"`, loopback redirect URLs for `/auth/confirm`, and `[auth.rate_limit]` raised to 1000 so test suites never hit limits, plus `max_frequency = "1s"`. Never run `supabase config push` with this file. `docs/production-auth.md` lists the hosted values.
+- `config.toml` has values that are only safe locally: `site_url = "https://localhost:5173"`, loopback redirect URLs for `/auth/confirm`, and `[auth.rate_limit]` raised to 1000 so test suites never hit limits, plus `max_frequency = "1s"`. `[edge_runtime] policy = "oneshot"` gives every request a fresh isolate: under `per_worker`, a worker retired at its CPU soft limit dropped in-flight requests (`WorkerAlreadyRetired`) during parallel integration runs. Never run `supabase config push` with this file. `docs/production-auth.md` lists the hosted values.
 - `seed.sql` is output. Change `catalog/*.yaml` and run `make catalog`; `make catalog-check` (part of `make check`) fails on drift.
 - After any migration change: `make reset`. No generated DB types are used; update the hand-written `*Row` interfaces and `*_COLUMNS` select strings in `web/src/lib/` and the SQL strings in `functions/_shared/stores/` by hand.
 - Tables are exposed through the `public` schema with RLS. Server-only objects live in the `private` schema.

@@ -334,6 +334,15 @@ describe('cardio records', () => {
     ]);
   });
 
+  it('sets no distance record faster than the plausible pace ceiling on an activity without a reference pace', () => {
+    const claim = aBout('walk', 600, null, { distanceM: 200_000 });
+    const honest = aBout('walk', 3600, null, { distanceM: 6000 });
+    const { finalState } = replay([aBout('walk', 600, null)], [claim], [honest]);
+    expect(finalState.records!.cardio.walk.distance).toEqual(
+      expect.objectContaining({ value: 6000, setId: honest.id }),
+    );
+  });
+
   it('reports a first distance after a duration-only first session, like an empty rep slot', () => {
     const withDistance = run(1800, 5000);
     const { sessions } = replay([run(1800, null)], [withDistance]);

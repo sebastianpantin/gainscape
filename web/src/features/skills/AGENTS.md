@@ -5,7 +5,7 @@
 
 ## Purpose
 
-The Skills tab: the six OSRS-style skills with level, XP and progress to the next level, plus total level.
+The Skills tab: the eight OSRS-style skills (six lifting skills plus Endurance and Agility) with level, XP and progress to the next level, plus total level. A skill with `combat_weight` 0 reads "does not count toward combat".
 
 ## Key Files
 
@@ -18,11 +18,11 @@ The Skills tab: the six OSRS-style skills with level, XP and progress to the nex
 ### Working In This Directory
 
 - Level math is the domain's (`@domain`); never re-derive thresholds here. Standing data comes from `../../lib/standing.ts`.
-- The skill icons are pixel sprites (`../../components/pixel-sprites.ts`); a11y asserts they render for all six skills.
+- The skill icons are pixel sprites (`../../components/pixel-sprites.ts`); a11y asserts they render for all eight skills.
 
 ### Testing Requirements
 
-- E2E (stack needed): `e2e/a11y.spec.ts` ("the skills screen shows pixel art for the six skills", plus the every-screen axe test). Level thresholds are tested in `tests/domain/`; sprite output in `tests/web/pixel-sprites.test.ts`.
+- E2E (stack needed): `e2e/a11y.spec.ts` ("the skills screen shows pixel art for the eight skills", plus the every-screen axe test). Level thresholds are tested in `tests/domain/`; sprite output in `tests/web/pixel-sprites.test.ts`.
 
 ### Common Patterns
 

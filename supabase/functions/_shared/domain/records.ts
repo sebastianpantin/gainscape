@@ -66,13 +66,19 @@ function applyRepMaxSet(
 const METRES_PER_KM = 1000;
 const PACE_DECIMALS = 1;
 
+function isImplausibleDistance(bout: CardioSetInput, exercise: CardioExerciseDef, cfg: BalanceConfig): boolean {
+  if (bout.distanceM === null) return false;
+  if (exercise.cardio.referencePaceSPerKm !== null) return boutPace(bout, exercise, cfg).paceFlagged;
+  return (bout.durationS * METRES_PER_KM) / bout.distanceM < cfg.cardioFastestPlausiblePaceSPerKm;
+}
+
 function boutRecordValues(
   bout: CardioSetInput,
   exercise: CardioExerciseDef,
   cfg: BalanceConfig,
 ): Partial<Record<CardioRecordKind, number>> {
   const values: Partial<Record<CardioRecordKind, number>> = { duration: countedWorkSeconds(bout) };
-  if (bout.interval !== null || bout.distanceM === null || boutPace(bout, exercise, cfg).paceFlagged) return values;
+  if (bout.interval !== null || bout.distanceM === null || isImplausibleDistance(bout, exercise, cfg)) return values;
   values.distance = bout.distanceM;
   const minDistanceM = exercise.cardio.recordMinDistanceM;
   if (exercise.builtIn && minDistanceM !== null && bout.distanceM >= minDistanceM) {

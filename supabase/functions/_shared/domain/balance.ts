@@ -35,6 +35,7 @@ export interface BalanceConfig {
   readonly cardioRecordMinGainM: number;
   readonly cardioRecordMinGainS: number;
   readonly cardioPaceRecordMinGainSPerPaceUnit: number;
+  readonly cardioFastestPlausiblePaceSPerKm: number;
 }
 
 export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
@@ -68,6 +69,7 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   cardioRecordMinGainM: 100,
   cardioRecordMinGainS: 60,
   cardioPaceRecordMinGainSPerPaceUnit: 1,
+  cardioFastestPlausiblePaceSPerKm: 60,
 });
 
 const LOOT_VERSION = 2;
