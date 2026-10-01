@@ -34,7 +34,7 @@ Tests that drive the real local Supabase stack: the Edge Functions over HTTP, SQ
 ### Working In This Directory
 
 - Import `local-stack.ts` for every stack interaction. Do not create a second Supabase client or hardcode URLs or keys; `env` comes from `supabase status`.
-- Always create fresh users with `createTestUser()` (random `t_<hex>` username, `@example.test` email, confirmed). Tests share one database and run serially, so isolation comes from unique users, never from truncating tables. Do not assume an empty DB.
+- Always create fresh users with `createTestUser()` (random `t_<hex>` username, `@example.test` email, confirmed). Tests share one database and most files run in parallel (4 workers), so isolation comes from unique users, never from truncating tables. Do not assume an empty DB or a quiet table. A file that edits or counts global rows must be listed in `INTEGRATION_FILES_SHARING_GLOBAL_STATE` in `vitest.config.ts` so it runs alone.
 - Most files that import `db` end the pool in `afterAll(async () => { await db.end(); })` (`history-paging.test.ts` is the exception). Add it to new files.
 - Shape session data with `aSet` and `payloadAt` from `loot-support.ts` and send it with `postSession` or `postCompleteSession`. `postSession` asserts status 200 for you; use `postCompleteSession` directly when asserting a rejection.
 - Use `ageSession` to move a session back in time instead of sleeping, and `seedRateLimitHits` to pre-fill rate-limit buckets.
