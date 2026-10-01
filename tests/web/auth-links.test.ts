@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { AUTH_MESSAGES, authCallbackUrl, authErrorMessage, parseAuthCallback } from '../../web/src/lib/auth-links.ts';
+import {
+  AUTH_MESSAGES,
+  authCallbackUrl,
+  authErrorMessage,
+  confirmedRecently,
+  parseAuthCallback,
+} from '../../web/src/lib/auth-links.ts';
 
 describe('authCallbackUrl', () => {
   it('points at /auth/confirm on the given origin', () => {
@@ -58,5 +64,23 @@ describe('authErrorMessage', () => {
       'Password is too weak',
     );
     expect(authErrorMessage({ message: 'Failed to fetch' })).toBe('Failed to fetch');
+  });
+});
+
+describe('confirmedRecently', () => {
+  const now = Date.parse('2026-10-01T12:00:00Z');
+
+  it('is true within the hour after confirmation', () => {
+    expect(confirmedRecently('2026-10-01T11:59:00Z', now)).toBe(true);
+    expect(confirmedRecently('2026-10-01T11:00:01Z', now)).toBe(true);
+  });
+
+  it('is false once the hour is over, without a confirmation, or for a bad or future date', () => {
+    expect(confirmedRecently('2026-10-01T11:00:00Z', now)).toBe(false);
+    expect(confirmedRecently('2026-09-30T12:00:00Z', now)).toBe(false);
+    expect(confirmedRecently(null, now)).toBe(false);
+    expect(confirmedRecently(undefined, now)).toBe(false);
+    expect(confirmedRecently('not a date', now)).toBe(false);
+    expect(confirmedRecently('2026-10-01T12:05:00Z', now)).toBe(false);
   });
 });

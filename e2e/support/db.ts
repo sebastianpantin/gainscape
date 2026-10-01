@@ -140,3 +140,7 @@ export async function usernameOfEmail(email: string): Promise<string | null> {
     select p.username from public.profiles p join auth.users u on u.id = p.id where u.email = ${email}`;
   return row?.username ?? null;
 }
+
+export async function ageConfirmation(email: string, interval: string): Promise<void> {
+  await db`update auth.users set email_confirmed_at = now() - ${interval}::interval where email = ${email}`;
+}

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { emailOf, openFromProfile, password, register, signOut, submitRegistration } from './support/app.ts';
-import { usernameOfEmail } from './support/db.ts';
+import { ageConfirmation, usernameOfEmail } from './support/db.ts';
 import { authLinkFrom, waitForEmail } from './support/mailbox.ts';
 
 const CONFIRM_SUBJECT = 'Confirm your Gainscape account';
@@ -122,13 +122,29 @@ test('a used confirmation link is invalid', async ({ page }) => {
   await page.goto(link);
   await expect(page.getByRole('heading', { name: 'Account confirmed' })).toBeVisible();
   await expect(page.getByTestId('confirmed-username')).toHaveText(username);
-  await page.goto('/');
+  await page.getByRole('button', { name: 'Not now' }).click();
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
   await signOut(page);
   await page.goto(link);
   await expect(page.getByText('This link is invalid or has expired.')).toBeVisible();
   await page.getByRole('button', { name: 'Back to sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   await expect(page).toHaveURL(/\/$/);
+});
+
+test('a stale link opened by another signed-in user is invalid', async ({ page }) => {
+  const link = await registerThroughEmail(page, uniqueUsername('au_sl'));
+  await signOut(page);
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  const other = uniqueUsername('au_ot');
+  await register(page, other);
+  await ageConfirmation(emailOf(other), '2 hours');
+  await page.goto(link);
+  await expect(page.getByText('This link is invalid or has expired.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Account confirmed' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Back to sign in' }).click();
+  await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
 });
 
 test('a squatter loses the account when the owner confirms the email', async ({ browser }) => {
