@@ -63,6 +63,12 @@ export async function setsOf(sessionId: string) {
     from public.sets where session_id = ${sessionId} order by position`;
 }
 
+export async function boutsOf(sessionId: string) {
+  return db`
+    select duration_s, distance_m::float as distance_m, interval_rounds, effort_value::float as effort_value
+    from public.sets where session_id = ${sessionId} and duration_s is not null order by position`;
+}
+
 export async function sessionNotes(sessionId: string): Promise<string | null> {
   const [row] = await db`select notes from public.sessions where id = ${sessionId}`;
   return row?.notes ?? null;

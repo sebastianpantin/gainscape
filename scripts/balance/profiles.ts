@@ -1,3 +1,5 @@
+import type { CardioEffortLevel, CardioInterval } from '../../supabase/functions/_shared/domain/index.ts';
+
 export interface PlannedExercise {
   exercise: string;
   sets: number;
@@ -96,3 +98,35 @@ export const PROFILES: Readonly<Record<'hypertrophy' | 'strength' | 'balanced' |
     rirRange: [2, 4],
   },
 };
+
+export interface PlannedBout {
+  exercise: string;
+  effort: CardioEffortLevel;
+  durationS?: number;
+  interval?: CardioInterval;
+}
+
+export interface CardioAthleteProfile {
+  name: string;
+  weeklySessions: PlannedBout[][];
+  dayOffsets: number[];
+  speedRatioRange: readonly [number, number];
+}
+
+const steadyRun: PlannedBout = { exercise: 'running', effort: 'moderate', durationS: 30 * 60 };
+const thirtyByThirtyIntervals: PlannedBout = {
+  exercise: 'sprint_intervals',
+  effort: 'hard',
+  interval: { workS: 30, restS: 30, rounds: 30 },
+};
+
+export const CARDIO_PROFILES: Readonly<Record<'cardio_balanced', CardioAthleteProfile>> = {
+  cardio_balanced: {
+    name: 'cardio_balanced',
+    weeklySessions: [[steadyRun], [thirtyByThirtyIntervals], [steadyRun], [thirtyByThirtyIntervals]],
+    dayOffsets: [0, 1, 3, 5],
+    speedRatioRange: [0.95, 1.05],
+  },
+};
+
+export const STEADY_AGILITY_BOUT: PlannedBout = { exercise: 'jump_rope', effort: 'moderate', durationS: 30 * 60 };

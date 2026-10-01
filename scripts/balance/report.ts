@@ -1,6 +1,11 @@
 import { DEFAULT_BALANCE } from '../../supabase/functions/_shared/domain/index.ts';
-import { evaluateBands } from './bands.ts';
-import { simulateCommittedConstantsUntilLegsReach99, tune } from './tune.ts';
+import { type CardioBandReport, evaluateBands, evaluateCardioBands } from './bands.ts';
+import {
+  simulateCommittedCardioConstantsUntilBothReach99,
+  simulateCommittedConstantsUntilLegsReach99,
+  tune,
+  tuneCardio,
+} from './tune.ts';
 
 function formatYears(years: number): string {
   return Number.isFinite(years) ? years.toFixed(1) : '∞';
@@ -52,4 +57,30 @@ console.log(
 );
 console.log(
   `  hypertrophy ${formatYears(exact.years.hypertrophy)}y, strength ${formatYears(exact.years.strength)}y, balanced ${formatYears(exact.years.balanced)}y, casual ${formatYears(exact.years.casual)}y, gap ${(exact.hypertrophyVsStrengthGap * 100).toFixed(1)}%, balanced week 1 level ${exact.balancedWeekOneLevel}`,
+);
+
+function cardioRow(label: string, report: CardioBandReport): string {
+  const perSkill = Object.keys(report.rates)
+    .map(
+      (skill) =>
+        `${skill} ${report.rates[skill]} XP/min: ${formatYears(report.years[skill])}y, week 1 level ${report.weekOneLevel[skill]} ${report.passes.yearsTo99[skill] && report.passes.weekOneLevel[skill] ? '✓' : '✗'}`,
+    )
+    .join(' | ');
+  return [
+    `${label}: ${perSkill}`,
+    `  (g) agility/endurance ${report.agilityToEnduranceRateRatio.toFixed(2)} ${report.passes.g ? '✓' : '✗'}`,
+    `  (h) steady agility bout ${Math.round(report.steadyAgilityBoutXp)} XP vs interval session ${Math.round(report.intervalSessionAgilityXp)} XP ${report.passes.h ? '✓' : '✗'}`,
+  ].join('\n');
+}
+
+console.log(`\n${cardioRow('Cardio tuned rates (cardio_balanced)', tuneCardio())}`);
+console.log(
+  cardioRow(
+    'Cardio committed rates, exact simulation',
+    evaluateCardioBands(
+      simulateCommittedCardioConstantsUntilBothReach99(),
+      DEFAULT_BALANCE.cardioXpPerWorkMinute,
+      DEFAULT_BALANCE.cardioXpPerWorkMinute,
+    ),
+  ),
 );

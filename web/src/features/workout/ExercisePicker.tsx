@@ -44,7 +44,11 @@ export function ExercisePicker({ exercises, onPick, placeholder = 'Add exerciseâ
                 }}
               >
                 {exercise.name}{' '}
-                <span className="muted">{[exercise.equipment, exerciseLabels(exercise)].join(' ').trim()}</span>
+                <span className="muted">
+                  {[exercise.modality === 'cardio' ? 'cardio' : exercise.equipment, exerciseLabels(exercise)]
+                    .join(' ')
+                    .trim()}
+                </span>
               </button>
             </li>
           ))}

@@ -1,4 +1,10 @@
-import type { Catalog, ExerciseDef, SkillDef } from '../../supabase/functions/_shared/domain/index.ts';
+import type {
+  CardioExerciseDef,
+  CardioProfile,
+  Catalog,
+  LiftExerciseDef,
+  SkillDef,
+} from '../../supabase/functions/_shared/domain/index.ts';
 
 export const SIM_SKILLS: SkillDef[] = [
   { id: 'chest', key: 'chest', sortOrder: 1, combatWeight: 2 },
@@ -24,7 +30,7 @@ export const SIM_EXERCISE_SHARES: Readonly<Record<string, Readonly<Record<string
   cable_crunch: { core: 10000 },
 };
 
-function exerciseDef(key: string): ExerciseDef {
+function exerciseDef(key: string): LiftExerciseDef {
   const shares = Object.entries(SIM_EXERCISE_SHARES[key]).map(([skillId, shareBasisPoints]) => ({
     skillId,
     shareBasisPoints,
@@ -40,3 +46,44 @@ export const SIM_CATALOG: Catalog = {
 export function shareOf(exerciseKey: string, skillKey: string): number {
   return (SIM_EXERCISE_SHARES[exerciseKey][skillKey] ?? 0) / 10_000;
 }
+
+export const CARDIO_SIM_SKILLS: SkillDef[] = [
+  { id: 'endurance', key: 'endurance', sortOrder: 7, combatWeight: 0 },
+  { id: 'agility', key: 'agility', sortOrder: 8, combatWeight: 0 },
+];
+
+export interface CardioSimExercise {
+  cardio: CardioProfile;
+  shares: Readonly<Record<string, number>>;
+}
+
+export const CARDIO_SIM_EXERCISES: Readonly<Record<string, CardioSimExercise>> = {
+  running: {
+    cardio: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', recordMinDistanceM: 1000 },
+    shares: { endurance: 10000 },
+  },
+  sprint_intervals: {
+    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
+    shares: { agility: 10000 },
+  },
+  jump_rope: {
+    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
+    shares: { agility: 10000 },
+  },
+};
+
+function cardioExerciseDef(key: string): CardioExerciseDef {
+  const { cardio, shares } = CARDIO_SIM_EXERCISES[key];
+  return {
+    id: key,
+    modality: 'cardio',
+    cardio,
+    builtIn: true,
+    shares: Object.entries(shares).map(([skillId, shareBasisPoints]) => ({ skillId, shareBasisPoints })),
+  };
+}
+
+export const CARDIO_SIM_CATALOG: Catalog = {
+  skills: CARDIO_SIM_SKILLS,
+  exercises: new Map(Object.keys(CARDIO_SIM_EXERCISES).map((key) => [key, cardioExerciseDef(key)])),
+};

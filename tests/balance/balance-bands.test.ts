@@ -1,8 +1,21 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE } from '@domain/index.ts';
-import { BANDS, type BandReport, evaluateBands, type ProfileResults } from '../../scripts/balance/bands.ts';
+import {
+  BANDS,
+  type BandReport,
+  CARDIO_BANDS,
+  type CardioBandReport,
+  type CardioProfileResults,
+  evaluateBands,
+  evaluateCardioBands,
+  type ProfileResults,
+} from '../../scripts/balance/bands.ts';
+import { CARDIO_SIM_SKILLS } from '../../scripts/balance/catalog.ts';
 import { firstSkillToLevel99 } from '../../scripts/balance/simulate.ts';
-import { simulateCommittedConstantsUntilLegsReach99 } from '../../scripts/balance/tune.ts';
+import {
+  simulateCommittedCardioConstantsUntilBothReach99,
+  simulateCommittedConstantsUntilLegsReach99,
+} from '../../scripts/balance/tune.ts';
 
 const SIMULATION_TIMEOUT_MS = 120_000;
 
@@ -45,5 +58,50 @@ describe('balance bands with the committed constants', () => {
 
   it('actually reaches level 99 for every profile within the 40-year horizon', () => {
     for (const result of Object.values(results)) expect(result.weeksToLevel99.legs).not.toBeNull();
+  });
+});
+
+let cardioResults: CardioProfileResults;
+let cardioReport: CardioBandReport;
+
+beforeAll(() => {
+  cardioResults = simulateCommittedCardioConstantsUntilBothReach99();
+  cardioReport = evaluateCardioBands(
+    cardioResults,
+    DEFAULT_BALANCE.cardioXpPerWorkMinute,
+    DEFAULT_BALANCE.cardioXpPerWorkMinute,
+  );
+}, SIMULATION_TIMEOUT_MS);
+
+describe('cardio balance bands with the committed constants', () => {
+  describe.each(CARDIO_SIM_SKILLS.map((skill) => skill.key))('%s', (skill) => {
+    it('(a-c) takes the balanced cardio profile 2–3 years to reach 99', () => {
+      const [lowest, highest] = CARDIO_BANDS.balancedYears;
+      expect(cardioReport.years[skill]).toBeGreaterThanOrEqual(lowest);
+      expect(cardioReport.years[skill]).toBeLessThanOrEqual(highest);
+      expect(cardioReport.passes.yearsTo99[skill]).toBe(true);
+    });
+
+    it('(e-c) ends the first week of the balanced cardio profile between level 20 and 40', () => {
+      const [lowest, highest] = CARDIO_BANDS.balancedWeekOneLevel;
+      expect(cardioReport.weekOneLevel[skill]).toBeGreaterThanOrEqual(lowest);
+      expect(cardioReport.weekOneLevel[skill]).toBeLessThanOrEqual(highest);
+      expect(cardioReport.passes.weekOneLevel[skill]).toBe(true);
+    });
+
+    it('actually reaches level 99 within the horizon', () => {
+      expect(cardioResults.balanced.weeksToLevel99[skill]).not.toBeNull();
+    });
+  });
+
+  it('(g) keeps the Agility rate at most 2.5 times the Endurance rate', () => {
+    expect(cardioReport.agilityToEnduranceRateRatio).toBeLessThanOrEqual(CARDIO_BANDS.maxAgilityToEnduranceRateRatio);
+    expect(cardioReport.passes.g).toBe(true);
+  });
+
+  it('(h) pays a 30-minute moderate steady Agility bout no more than one interval session', () => {
+    expect(cardioReport.steadyAgilityBoutXp).toBeGreaterThan(0);
+    expect(cardioReport.steadyAgilityBoutXp).toBeLessThanOrEqual(cardioReport.intervalSessionAgilityXp);
+    expect(cardioReport.passes.h).toBe(true);
   });
 });

@@ -5,7 +5,7 @@
 
 ## Purpose
 
-POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one read-only transaction. Export format version is `EXPORT_FORMAT_VERSION = 1`.
+POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one read-only transaction. Export format version is `EXPORT_FORMAT_VERSION = 2` (2 added `cardioRecords`).
 
 ## Key Files
 

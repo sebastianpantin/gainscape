@@ -549,6 +549,30 @@ a:focus-visible {
   border-top: 1px dashed var(--color-panel-border);
 }
 
+.bout-row {
+  grid-template-columns: 22px minmax(0, 1fr) minmax(52px, auto) var(--tap-target);
+  grid-template-areas:
+    'number fields xp done'
+    'mode mode mode remove'
+    'effort effort effort effort';
+}
+
+.bout-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: var(--space-2);
+}
+
+.bout-row > .bout-mode {
+  grid-area: mode;
+}
+
+.choice-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
 .set-number {
   font-family: var(--font-display);
   color: var(--color-text-muted);

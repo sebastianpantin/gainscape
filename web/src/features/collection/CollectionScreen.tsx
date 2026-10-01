@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type Exercise, fetchExercises } from '../../lib/catalog.ts';
+import { cardioRecordCards } from '../../lib/cardio-rules.ts';
+import { type CardioExercise, type Exercise, fetchExercises } from '../../lib/catalog.ts';
+import { usePreferences } from '../../lib/preferences.ts';
 import { moved } from '../../lib/reorder.ts';
 import {
   type CollectionData,
@@ -34,6 +36,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [data, setData] = useState<CollectionData | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const { unitPref } = usePreferences();
 
   const reload = useCallback(() => {
     Promise.all([fetchExercises({ includeArchived: true }), fetchCollectionData(userId)]).then(
@@ -63,6 +66,11 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     );
 
   const { counted, completion } = countCollection(exercises, data);
+  const cardioCards = cardioRecordCards(
+    data.cardioRecords,
+    exercises.filter((exercise): exercise is CardioExercise => exercise.modality === 'cardio'),
+    unitPref,
+  );
 
   const togglePin = async (exercise: Exercise) => {
     try {
@@ -108,7 +116,10 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
         <span className="muted tiny">Counts exercises you've done or pinned.</span>
       </div>
       <ExercisePicker
-        exercises={exercises.filter((exercise) => !exercise.archived && !data.pinnedExerciseIds.includes(exercise.id))}
+        exercises={exercises.filter(
+          (exercise) =>
+            exercise.modality === 'lift' && !exercise.archived && !data.pinnedExerciseIds.includes(exercise.id),
+        )}
         placeholder="Pin an exercise you want to chase…"
         onPick={(exercise) => togglePin(exercise)}
       />
@@ -140,6 +151,20 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
           }
         />
       ))}
+      {cardioCards.length > 0 && (
+        <section className="panel stack" aria-labelledby="cardio-records-heading" data-testid="cardio-records">
+          <h2 id="cardio-records-heading">Cardio records</h2>
+          <span className="muted tiny">Only you can see these.</span>
+          <ul className="stored-set-list">
+            {cardioCards.map((card) => (
+              <li key={card.exerciseId} className="stack" style={{ gap: 2 }}>
+                <strong>{card.name}</strong>
+                <span>{card.lines.join(' · ')}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }

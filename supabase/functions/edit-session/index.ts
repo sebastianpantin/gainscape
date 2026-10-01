@@ -4,6 +4,8 @@ import {
   carriedEffectiveLoadKg,
   DEFAULT_BALANCE,
   effectiveLoadForNewSet,
+  type ExerciseDef,
+  KindMismatchError,
   resolveEffort,
   type RevokedDrop,
   type SessionSummary,
@@ -27,7 +29,7 @@ import {
   type StoredSet,
   storedSummary,
 } from '../_shared/stores/sessions.ts';
-import { inputSetColumns } from '../_shared/stores/set-columns.ts';
+import { inputSetColumns, type WritableSet } from '../_shared/stores/set-columns.ts';
 import { type EditSessionPayload, parseEditSessionPayload } from './payload.ts';
 
 interface EditResponse {
@@ -38,16 +40,49 @@ interface EditResponse {
 }
 
 function sameSet(requested: SetPayload, stored: StoredSet): boolean {
-  const effort = resolveEffort(requested.effort, DEFAULT_BALANCE);
+  const effort = resolveEffort(requested.effort, DEFAULT_BALANCE, requested.kind);
+  const sameEffort = effort.effortInputType === stored.effortInputType && effort.effortValue === stored.effortValue;
+  const sameIdentity = requested.exerciseId === stored.exerciseId && requested.position === stored.position;
+  if (!sameIdentity || !sameEffort) return false;
+  if (requested.kind === 'cardio' || stored.kind === 'cardio') {
+    return (
+      requested.kind === 'cardio' &&
+      stored.kind === 'cardio' &&
+      requested.durationS === stored.durationS &&
+      requested.distanceM === stored.distanceM &&
+      requested.interval?.workS === stored.interval?.workS &&
+      requested.interval?.restS === stored.interval?.restS &&
+      requested.interval?.rounds === stored.interval?.rounds
+    );
+  }
   return (
-    requested.exerciseId === stored.exerciseId &&
-    requested.position === stored.position &&
-    requested.weightKg === stored.weightKg &&
-    requested.reps === stored.reps &&
-    requested.isWarmup === stored.isWarmup &&
-    effort.effortInputType === stored.effortInputType &&
-    effort.effortValue === stored.effortValue
+    requested.weightKg === stored.weightKg && requested.reps === stored.reps && requested.isWarmup === stored.isWarmup
   );
+}
+
+function assertKindsUnchanged(sets: readonly SetPayload[], storedById: ReadonlyMap<string, StoredSet>): void {
+  const changed = sets.filter((set) => {
+    const stored = storedById.get(set.id);
+    return stored !== undefined && stored.kind !== set.kind;
+  });
+  if (changed.length > 0) throw new HttpError(422, 'kind_changed', { setIds: changed.map((set) => set.id) });
+}
+
+function writableSet(
+  set: SetPayload,
+  exercise: ExerciseDef,
+  stored: StoredSet | undefined,
+  bodyweightKg: number | null,
+): WritableSet {
+  if (set.kind === 'cardio') {
+    if (exercise.modality !== 'cardio') throw new KindMismatchError(exercise.id);
+    return set;
+  }
+  const effectiveLoadKg =
+    stored?.kind === 'lift'
+      ? carriedEffectiveLoadKg(stored, set, exercise, bodyweightKg)
+      : effectiveLoadForNewSet(set, exercise, bodyweightKg);
+  return { ...set, effectiveLoadKg };
 }
 
 function isNoOp(
@@ -67,7 +102,7 @@ async function writeSets(
   userId: string,
   sessionId: string,
   storedSets: readonly StoredSet[],
-  requested: readonly (SetPayload & { effectiveLoadKg: number })[],
+  requested: readonly WritableSet[],
 ): Promise<void> {
   const requestedIds = new Set(requested.map((set) => set.id));
   const storedIds = new Set(storedSets.map((set) => set.id));
@@ -81,7 +116,7 @@ async function writeSets(
   }
   if (kept.length > 0) {
     const rows = kept.map((set) =>
-      inputSetColumns(set, set.effectiveLoadKg, resolveEffort(set.effort, DEFAULT_BALANCE)),
+      inputSetColumns(set, resolveEffort(set.effort, DEFAULT_BALANCE, set.kind ?? 'lift')),
     );
     await tx`
       update public.sets as target
@@ -93,6 +128,12 @@ async function writeSets(
           is_warmup = derived.is_warmup,
           effort_input_type = derived.effort_input_type,
           effort_value = derived.effort_value,
+          duration_s = derived.duration_s,
+          distance_m = derived.distance_m,
+          interval_work_s = derived.interval_work_s,
+          interval_rest_s = derived.interval_rest_s,
+          interval_rounds = derived.interval_rounds,
+          counted_work_s = derived.counted_work_s,
           updated_at = now()
       from jsonb_to_recordset(${tx.json(rows as unknown as JsonValue)}) as derived (
         id uuid,
@@ -103,12 +144,18 @@ async function writeSets(
         reps int,
         is_warmup boolean,
         effort_input_type public.effort_input_type,
-        effort_value numeric
+        effort_value numeric,
+        duration_s int,
+        distance_m numeric,
+        interval_work_s int,
+        interval_rest_s int,
+        interval_rounds int,
+        counted_work_s int
       )
       where target.id = derived.id and target.session_id = ${sessionId}`;
   }
   if (added.length > 0) {
-    const rows = added.map((set) => placeholderSetRow(set, set.effectiveLoadKg, sessionId, userId, DEFAULT_BALANCE));
+    const rows = added.map((set) => placeholderSetRow(set, sessionId, userId, DEFAULT_BALANCE));
     await tx`insert into public.sets ${tx(rows)}`;
   }
 }
@@ -128,19 +175,15 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     if (payload.ifRevision !== session.revision) {
       throw new HttpError(409, 'revision_conflict', { revision: session.revision });
     }
+    assertKindsUnchanged(payload.sets, storedById);
     const catalog = await loadKnownCatalog(tx, userId, payload.sets);
     const newSetIds = payload.sets.filter((set) => !storedById.has(set.id)).map((set) => set.id);
     if (newSetIds.length > 0) await assertSetIdsUnused(tx, newSetIds);
 
     const { bodyweightKg } = await loadProfileSettings(tx, userId);
-    const requested = payload.sets.map((set) => {
-      const exercise = catalog.exercises.get(set.exerciseId)!;
-      const stored = storedById.get(set.id);
-      const effectiveLoadKg = stored
-        ? carriedEffectiveLoadKg(stored, set, exercise, bodyweightKg)
-        : effectiveLoadForNewSet(set, exercise, bodyweightKg);
-      return { ...set, effectiveLoadKg };
-    });
+    const requested = payload.sets.map((set) =>
+      writableSet(set, catalog.exercises.get(set.exerciseId)!, storedById.get(set.id), bodyweightKg),
+    );
 
     await takeRateLimit(tx, 'session_edit_hour', userId);
     await writeSets(tx, userId, payload.sessionId, storedSets, requested);

@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Service-role-only POST endpoint that wipes a user's derived records and replays all their sessions with the current balance version, then stamps `derived_balance_version`. Used after balance changes and to backfill feed events (`make rebuild-caches`).
+Service-role-only POST endpoint that wipes a user's derived records (strength, rep maxes, bodyweight and cardio records) and replays all their sessions with the current balance version, then stamps `derived_balance_version`. Used after balance changes and to backfill feed events (`make rebuild-caches`).
 
 ## Key Files
 

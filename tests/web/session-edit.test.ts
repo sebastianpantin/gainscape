@@ -12,16 +12,28 @@ import {
   failureAction,
   hasChanges,
   isEditable,
+  type EditBout,
+  type KnownExercise,
+  type LiftEditExercise,
   rebaseEdit,
   rebaseNotice,
   removeEditSet,
   type SessionEdit,
   swapEditExercise,
+  updateEditBout,
   updateEditSet,
   withNewSetIds,
   withoutBodyweightLoads,
 } from '../../web/src/features/history/session-edit.ts';
-import { isUuid, nextPageFilter, type StoredSetRow, transientReason } from '../../web/src/lib/history-rules.ts';
+import {
+  type EditSessionPayload,
+  isUuid,
+  type LiftSetPayload,
+  nextPageFilter,
+  type StoredSetRow,
+  transientReason,
+} from '../../web/src/lib/history-rules.ts';
+import { boutModeChanges } from '../../web/src/lib/cardio-rules.ts';
 
 const benchId = 'aaaaaaaa-0000-4000-8000-000000000001';
 const pullUpId = 'aaaaaaaa-0000-4000-8000-000000000002';
@@ -30,6 +42,14 @@ const exercisesById = new Map([
   [benchId, { name: 'Barbell Bench Press', loadType: 'external' as const }],
   [pullUpId, { name: 'Pull-up', loadType: 'bodyweight' as const }],
 ]);
+
+function liftSets(payload: EditSessionPayload): LiftSetPayload[] {
+  return payload.sets.filter((set): set is LiftSetPayload => !('kind' in set));
+}
+
+function lifts(edit: SessionEdit): LiftEditExercise[] {
+  return edit.exercises.filter((exercise): exercise is LiftEditExercise => exercise.modality === 'lift');
+}
 
 function row(overrides: Partial<StoredSetRow> & Pick<StoredSetRow, 'id' | 'exerciseId' | 'position'>): StoredSetRow {
   return {
@@ -45,6 +65,13 @@ function row(overrides: Partial<StoredSetRow> & Pick<StoredSetRow, 'id' | 'exerc
     e1rmBeforeKg: null,
     effectiveReps: 3,
     xpAwarded: 100,
+    durationS: null,
+    distanceM: null,
+    intervalWorkS: null,
+    intervalRestS: null,
+    intervalRounds: null,
+    countedWorkS: null,
+    paceFlagged: false,
     ...overrides,
   };
 }
@@ -99,7 +126,7 @@ describe('building the edit from loaded rows', () => {
         'reps',
         'weightKg',
       ]);
-    expect(payload.sets.map((set) => [set.id, set.exerciseId, set.position, set.weightKg])).toEqual([
+    expect(liftSets(payload).map((set) => [set.id, set.exerciseId, set.position, set.weightKg])).toEqual([
       ['set-0', benchId, 0, 61.23],
       ['set-1', benchId, 1, 60],
       ['set-2', pullUpId, 2, 0],
@@ -111,7 +138,7 @@ describe('building the edit from loaded rows', () => {
     const changed = updateEditSet({ ...edit, notes: '   ' }, 0, 'set-1', { weightKg: 72.4567 });
     const payload = editPayload(changed);
     expect(payload.notes).toBeNull();
-    expect(payload.sets[1].weightKg).toBe(72.46);
+    expect(liftSets(payload)[1].weightKg).toBe(72.46);
     expect(hasChanges(changed, edit)).toBe(true);
   });
 
@@ -152,7 +179,7 @@ describe('building the edit from loaded rows', () => {
 
   it('zeroes the load of exercises that are now bodyweight-only', () => {
     const fixed = withoutBodyweightLoads(edit, new Map([[benchId, 'bodyweight' as const]]));
-    expect(editPayload(fixed).sets.map((set) => set.weightKg)).toEqual([0, 0, 0, 0]);
+    expect(liftSets(editPayload(fixed)).map((set) => set.weightKg)).toEqual([0, 0, 0, 0]);
   });
 });
 
@@ -182,6 +209,8 @@ describe('editability and paging', () => {
     expect(effortLabel({ type: 'level', level: 'near_failure' })).toBe('Near fail');
     expect(effortLabel({ type: 'rpe', value: 8.5 })).toBe('RPE 8.5');
     expect(effortLabel({ type: 'rir', value: 2 })).toBe('RIR 2');
+    expect(effortLabel({ type: 'cardio', level: 'moderate' })).toBe('Moderate');
+    expect(effortLabel({ type: 'cardio', level: 'max' })).toBe('Max');
     expect(effortLabel(null)).toBeNull();
   });
 });
@@ -259,6 +288,7 @@ describe('the set cap', () => {
         {
           exerciseId: benchId,
           name: 'Barbell Bench Press',
+          modality: 'lift',
           loadType: 'external',
           sets: Array.from({ length: MAX_SETS_PER_SESSION }, (_, index) => ({
             id: `set-${index}`,
@@ -305,7 +335,7 @@ describe('rebasing local changes onto a newer server copy', () => {
     expect(rebased.revision).toBe(4);
     expect(rebased.notes).toBe('remote notes');
     expect(ids(rebased)).toEqual(['set-1', localNewId, 'set-2', remoteNewId]);
-    const sets = editPayload(rebased).sets;
+    const sets = liftSets(editPayload(rebased));
     expect(sets.find((set) => set.id === 'set-1')?.reps).toBe(9);
     expect(sets.find((set) => set.id === 'set-2')?.reps).toBe(15);
     expect(rebased.exercises.map((exercise) => exercise.exerciseId)).toEqual([benchId, pullUpId]);
@@ -348,7 +378,7 @@ describe('rebasing local changes onto a newer server copy', () => {
   it('points to undo or delete when no sets are left after the rebase', () => {
     const onlySet: SessionEdit = {
       ...original,
-      exercises: [{ ...original.exercises[0], sets: [original.exercises[0].sets[0]] }],
+      exercises: [{ ...lifts(original)[0], sets: [lifts(original)[0].sets[0]] }],
     };
     const freshWithoutNew: SessionEdit = { ...onlySet, revision: 4, exercises: [] };
     const local = updateEditSet(onlySet, 0, 'set-0', { reps: 12 });
@@ -364,7 +394,7 @@ describe('rebasing local changes onto a newer server copy', () => {
     const fresh = { ...updateEditSet(original, 0, 'set-1', { weightKg: 65 }), revision: 4 };
     const local = updateEditSet(original, 0, 'set-1', { weightKg: 60.0012 });
     const rebased = rebaseEdit(local, original, fresh);
-    expect(rebased.edit.exercises[0].sets[1].weightKg).toBe(65);
+    expect(lifts(rebased.edit)[0].sets[1].weightKg).toBe(65);
     expect(rebased.droppedSetIds).toEqual([]);
   });
 
@@ -379,11 +409,8 @@ describe('rebasing local changes onto a newer server copy', () => {
       ...original,
       exercises: [
         {
-          ...original.exercises[0],
-          sets: [
-            { id: 'new-first', weightKg: 40, reps: 10, isWarmup: true, effort: null },
-            ...original.exercises[0].sets,
-          ],
+          ...lifts(original)[0],
+          sets: [{ id: 'new-first', weightKg: 40, reps: 10, isWarmup: true, effort: null }, ...lifts(original)[0].sets],
         },
         ...original.exercises.slice(1),
       ],
@@ -420,5 +447,202 @@ describe('drops put at risk by an edit', () => {
   it('lists the drops of sets moved to another exercise', () => {
     const swapped = swapEditExercise(original, 1, { id: benchId, name: 'Barbell Bench Press', loadType: 'external' });
     expect(dropsAtRisk(swapped, original, drops)).toEqual([{ setId: 'set-2' }]);
+  });
+});
+
+describe('cardio bouts in an edit', () => {
+  const runId = 'aaaaaaaa-0000-4000-8000-000000000003';
+  const poolId = 'aaaaaaaa-0000-4000-8000-000000000004';
+  const activity = (paceUnit: 'per_km' | 'per_100m') => ({
+    paceUnit,
+    referencePaceSPerKm: null,
+    maxEffort: 'max' as const,
+    shares: [],
+  });
+  const known = new Map<string, KnownExercise>([
+    ...exercisesById,
+    [runId, { name: 'Running', modality: 'cardio' as const, activity: activity('per_km') }],
+    [poolId, { name: 'Swimming', modality: 'cardio' as const, activity: activity('per_100m') }],
+  ]);
+
+  function bout(overrides: Partial<StoredSetRow> & Pick<StoredSetRow, 'id' | 'exerciseId' | 'position'>) {
+    return row({
+      weightKg: null,
+      effectiveLoadKg: null,
+      reps: null,
+      rir: null,
+      rirSource: 'default',
+      effectiveReps: 0,
+      durationS: 1800,
+      countedWorkS: 1800,
+      ...overrides,
+    });
+  }
+
+  const cardioRows: StoredSetRow[] = [
+    bout({
+      id: 'bout-0',
+      exerciseId: runId,
+      position: 0,
+      distanceM: 5000,
+      effortInputType: 'cardio',
+      effortValue: 3,
+      rirSource: 'logged',
+    }),
+    bout({
+      id: 'bout-1',
+      exerciseId: runId,
+      position: 1,
+      durationS: 570,
+      countedWorkS: 300,
+      intervalWorkS: 30,
+      intervalRestS: 30,
+      intervalRounds: 10,
+    }),
+    row({ id: 'set-2', exerciseId: benchId, position: 2 }),
+    bout({ id: 'bout-3', exerciseId: 'aaaaaaaa-0000-4000-8000-00000000dead', position: 3 }),
+  ];
+  const edit = editFromSession(session, cardioRows, known);
+
+  it('turns cardio rows into bouts on a cardio exercise', () => {
+    expect(edit.exercises.map((exercise) => [exercise.name, exercise.modality])).toEqual([
+      ['Running', 'cardio'],
+      ['Barbell Bench Press', 'lift'],
+      ['Unknown exercise', 'cardio'],
+    ]);
+    expect(edit.exercises[0]).toMatchObject({ paceUnit: 'per_km' });
+    expect(edit.exercises[0].sets).toEqual([
+      {
+        id: 'bout-0',
+        kind: 'cardio',
+        durationS: 1800,
+        distanceM: 5000,
+        interval: null,
+        effort: { type: 'cardio', level: 'hard' },
+      },
+      {
+        id: 'bout-1',
+        kind: 'cardio',
+        durationS: 570,
+        distanceM: null,
+        interval: { workS: 30, restS: 30, rounds: 10 },
+        effort: null,
+      },
+    ]);
+  });
+
+  it('sends bouts with the keys edit-session accepts and no duration for intervals', () => {
+    const [steady, intervals, lift, unknown] = editPayload(edit).sets;
+    expect(Object.keys(steady).sort()).toEqual(
+      ['distanceM', 'durationS', 'effort', 'exerciseId', 'id', 'interval', 'kind', 'position'].sort(),
+    );
+    expect(intervals).toEqual({
+      kind: 'cardio',
+      id: 'bout-1',
+      exerciseId: runId,
+      position: 1,
+      distanceM: null,
+      interval: { workS: 30, restS: 30, rounds: 10 },
+      effort: null,
+    });
+    expect(lift).toMatchObject({ id: 'set-2', position: 2, weightKg: 60, reps: 5 });
+    expect(unknown).toMatchObject({ kind: 'cardio', id: 'bout-3', position: 3, durationS: 1800 });
+  });
+
+  it('sees a changed distance as a change that puts the bout’s drops at risk', () => {
+    const changed = updateEditBout(edit, 0, 'bout-0', { distanceM: 6000 });
+    expect(editPayload(changed).sets[0]).toMatchObject({ distanceM: 6000 });
+    expect(hasChanges(changed, edit)).toBe(true);
+    expect(dropsAtRisk(changed, edit, [{ setId: 'bout-0' }, { setId: 'bout-1' }])).toEqual([{ setId: 'bout-0' }]);
+  });
+
+  it('leaves lift sets alone when a bout changes, and bouts alone when a lift changes', () => {
+    expect(updateEditBout(edit, 1, 'set-2', { distanceM: 6000 })).toEqual(edit);
+    expect(updateEditSet(edit, 0, 'bout-0', { reps: 9 })).toEqual(edit);
+  });
+
+  it('copies the previous bout when adding one', () => {
+    const added = addEditSet(edit, 0);
+    const copy = added.exercises[0].sets[2];
+    expect(copy).toEqual({ ...edit.exercises[0].sets[1], id: expect.any(String) });
+    expect(copy.id).not.toBe('bout-1');
+  });
+
+  it('adds a cardio exercise with one steady 30-minute bout', () => {
+    const added = addEditExercise(edit, {
+      id: poolId,
+      name: 'Swimming',
+      modality: 'cardio',
+      activity: activity('per_100m'),
+    });
+    expect(added.exercises.at(-1)).toEqual({
+      exerciseId: poolId,
+      name: 'Swimming',
+      modality: 'cardio',
+      paceUnit: 'per_100m',
+      sets: [
+        { id: expect.any(String), kind: 'cardio', durationS: 1800, distanceM: null, interval: null, effort: null },
+      ],
+    });
+  });
+
+  it('replaces an unknown cardio exercise with another cardio exercise, keeping the bouts', () => {
+    const swapped = swapEditExercise(edit, 2, {
+      id: poolId,
+      name: 'Swimming',
+      modality: 'cardio',
+      activity: activity('per_100m'),
+    });
+    expect(swapped.exercises[2]).toMatchObject({ exerciseId: poolId, name: 'Swimming', paceUnit: 'per_100m' });
+    expect(swapped.exercises[2].sets).toEqual(edit.exercises[2].sets);
+  });
+
+  it('refuses to replace an exercise with one of the other kind', () => {
+    expect(swapEditExercise(edit, 2, { id: benchId, name: 'Barbell Bench Press', loadType: 'external' })).toEqual(edit);
+    expect(
+      swapEditExercise(edit, 1, { id: runId, name: 'Running', modality: 'cardio', activity: activity('per_km') }),
+    ).toEqual(edit);
+  });
+
+  it('sends a steady duration the server accepts after a short stored interval is switched to steady', () => {
+    const sprintRows = [
+      bout({
+        id: 'bout-s',
+        exerciseId: runId,
+        position: 0,
+        durationS: 30,
+        intervalWorkS: 30,
+        intervalRestS: 0,
+        intervalRounds: 1,
+      }),
+    ];
+    const stored = editFromSession(session, sprintRows, known);
+    const steady = updateEditBout(
+      stored,
+      0,
+      'bout-s',
+      boutModeChanges(stored.exercises[0].sets[0] as EditBout, 'steady'),
+    );
+    expect(editPayload(steady).sets[0]).toMatchObject({ kind: 'cardio', durationS: 60, interval: null });
+  });
+
+  it('leaves bouts alone when zeroing bodyweight loads', () => {
+    expect(withoutBodyweightLoads(edit, new Map([[runId, 'bodyweight']])).exercises[0]).toEqual(edit.exercises[0]);
+  });
+
+  it('merges a bout changed on both sides field by field, local fields winning', () => {
+    const fresh = {
+      ...updateEditBout(edit, 0, 'bout-0', { effort: { type: 'cardio', level: 'easy' }, durationS: 1700 }),
+      revision: 4,
+    };
+    const local = updateEditBout(edit, 0, 'bout-0', { distanceM: 6000, durationS: 1900 });
+    expect(rebaseEdit(local, edit, fresh).edit.exercises[0].sets[0]).toEqual({
+      id: 'bout-0',
+      kind: 'cardio',
+      durationS: 1900,
+      distanceM: 6000,
+      interval: null,
+      effort: { type: 'cardio', level: 'easy' },
+    });
   });
 });

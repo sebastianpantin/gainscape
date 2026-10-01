@@ -1,10 +1,12 @@
-import type { EffortInput, EffortLevel } from '@domain/types.ts';
-import type { LoadType } from '../lib/catalog.ts';
+import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
+import type { CardioActivity, LoadType } from '../lib/catalog.ts';
 
-const DRAFT_FORMAT_VERSION = 3;
-const UPGRADABLE_FORMAT_VERSION = 2;
+const DRAFT_FORMAT_VERSION = 4;
+const PRE_CARDIO_FORMAT_VERSION = 3;
+const PRE_EFFORT_INPUT_FORMAT_VERSION = 2;
 const STARTING_EXTERNAL_LOAD_KG = 20;
 const STARTING_REPS = 8;
+const STARTING_BOUT_DURATION_S = 1800;
 
 export interface DraftSet {
   id: string;
@@ -20,13 +22,37 @@ export interface DraftTarget {
   repsMax: number;
 }
 
-export interface DraftExercise {
+export interface BoutValues {
+  durationS: number;
+  distanceM: number | null;
+  interval: CardioInterval | null;
+  effort: EffortInput;
+}
+
+export interface CardioDraftSet extends BoutValues {
+  id: string;
+  kind: 'cardio';
+  done: boolean;
+}
+
+export interface LiftDraftExercise {
   exerciseId: string;
   name: string;
+  modality: 'lift';
   loadType: LoadType;
   target: DraftTarget | null;
   sets: DraftSet[];
 }
+
+export interface CardioDraftExercise {
+  exerciseId: string;
+  name: string;
+  modality: 'cardio';
+  activity: CardioActivity;
+  sets: CardioDraftSet[];
+}
+
+export type DraftExercise = LiftDraftExercise | CardioDraftExercise;
 
 export interface WorkoutDraft {
   sessionId: string;
@@ -61,7 +87,7 @@ function isHalfStepBetween(value: unknown, lowest: number, highest: number): boo
   return typeof value === 'number' && Number.isInteger(value * 2) && value >= lowest && value <= highest;
 }
 
-function isEffortInput(value: unknown): value is NonNullable<EffortInput> {
+function isLiftEffortInput(value: unknown): value is NonNullable<EffortInput> {
   if (!isRecord(value)) return false;
   if (value.type === 'level') return EFFORT_LEVELS.some((level) => level === value.level);
   if (value.type === 'rir') return isHalfStepBetween(value.value, 0, 10);
@@ -76,23 +102,40 @@ function normalisedSet(set: unknown, fromV2: boolean): unknown {
     const level = EFFORT_LEVELS.find((candidate) => candidate === effortLevel);
     return { ...rest, effort: level ? { type: 'level', level } : null };
   }
-  return isEffortInput(set.effort) ? set : { ...set, effort: null };
+  return isLiftEffortInput(set.effort) ? set : { ...set, effort: null };
+}
+
+function isCardioEffortInput(value: unknown): boolean {
+  return isRecord(value) && value.type === 'cardio' && CARDIO_EFFORT_LEVELS.some((level) => level === value.level);
+}
+
+function normalisedBout(bout: unknown): unknown {
+  if (!isRecord(bout)) return bout;
+  return isCardioEffortInput(bout.effort) ? bout : { ...bout, effort: null };
+}
+
+function normalisedExercise(exercise: unknown, fromV2: boolean): unknown {
+  if (!isRecord(exercise) || !Array.isArray(exercise.sets)) return exercise;
+  if (exercise.modality === 'cardio') return { ...exercise, sets: exercise.sets.map(normalisedBout) };
+  return { ...exercise, modality: 'lift', sets: exercise.sets.map((set) => normalisedSet(set, fromV2)) };
 }
 
 function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
   return {
     ...draft,
-    exercises: draft.exercises.map((exercise) =>
-      isRecord(exercise) && Array.isArray(exercise.sets)
-        ? { ...exercise, sets: exercise.sets.map((set) => normalisedSet(set, fromV2) as DraftSet) }
-        : exercise,
-    ),
+    exercises: draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
   };
 }
 
+const READABLE_FORMAT_VERSIONS: readonly unknown[] = [
+  DRAFT_FORMAT_VERSION,
+  PRE_CARDIO_FORMAT_VERSION,
+  PRE_EFFORT_INPUT_FORMAT_VERSION,
+];
+
 export function parseStoredDraft(raw: unknown, userId: string): StoredDraft | null {
   if (!isRecord(raw) || raw.userId !== userId) return null;
-  if (raw.v !== DRAFT_FORMAT_VERSION && raw.v !== UPGRADABLE_FORMAT_VERSION) return null;
+  if (!READABLE_FORMAT_VERSIONS.includes(raw.v)) return null;
   if (typeof raw.updatedAt !== 'number' || !Number.isFinite(raw.updatedAt)) return null;
   if (raw.kind === 'synced' && typeof raw.syncedSessionId === 'string')
     return {
@@ -108,7 +151,7 @@ export function parseStoredDraft(raw: unknown, userId: string): StoredDraft | nu
       kind: 'draft',
       userId,
       updatedAt: raw.updatedAt,
-      draft: normalisedDraft(raw.draft, raw.v === UPGRADABLE_FORMAT_VERSION),
+      draft: normalisedDraft(raw.draft, raw.v === PRE_EFFORT_INPUT_FORMAT_VERSION),
     };
   return null;
 }
@@ -141,15 +184,43 @@ export function startDraft(): WorkoutDraft {
 }
 
 export function addExercise(draft: WorkoutDraft, exerciseId: string, name: string, loadType: LoadType): WorkoutDraft {
-  return { ...draft, exercises: [...draft.exercises, { exerciseId, name, loadType, target: null, sets: [] }] };
+  const added: LiftDraftExercise = { exerciseId, name, modality: 'lift', loadType, target: null, sets: [] };
+  return { ...draft, exercises: [...draft.exercises, added] };
+}
+
+export function addCardioExercise(
+  draft: WorkoutDraft,
+  exerciseId: string,
+  name: string,
+  activity: CardioActivity,
+): WorkoutDraft {
+  const added: CardioDraftExercise = { exerciseId, name, modality: 'cardio', activity, sets: [] };
+  return { ...draft, exercises: [...draft.exercises, added] };
 }
 
 export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
   return { ...draft, exercises: draft.exercises.filter((_, index) => index !== exerciseIndex) };
 }
 
+export function nextBoutValues(previous: BoutValues | undefined): BoutValues {
+  if (previous === undefined) {
+    return { durationS: STARTING_BOUT_DURATION_S, distanceM: null, interval: null, effort: null };
+  }
+  const { durationS, distanceM, interval, effort } = previous;
+  return { durationS, distanceM, interval, effort };
+}
+
 export function addSet(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
   return updateExercise(draft, exerciseIndex, (exercise) => {
+    if (exercise.modality === 'cardio') {
+      const newBout: CardioDraftSet = {
+        id: crypto.randomUUID(),
+        kind: 'cardio',
+        ...nextBoutValues(exercise.sets.at(-1)),
+        done: true,
+      };
+      return { ...exercise, sets: [...exercise.sets, newBout] };
+    }
     const newSet: DraftSet = {
       id: crypto.randomUUID(),
       ...nextSetValues(exercise.sets.at(-1), exercise.loadType),
@@ -166,17 +237,38 @@ export function updateSet(
   setId: string,
   changes: Partial<Omit<DraftSet, 'id'>>,
 ): WorkoutDraft {
-  return updateExercise(draft, exerciseIndex, (exercise) => ({
-    ...exercise,
-    sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)),
-  }));
+  return updateExercise(draft, exerciseIndex, (exercise) =>
+    exercise.modality === 'lift'
+      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
+      : exercise,
+  );
+}
+
+export function updateBout(
+  draft: WorkoutDraft,
+  exerciseIndex: number,
+  setId: string,
+  changes: Partial<Omit<CardioDraftSet, 'id' | 'kind'>>,
+): WorkoutDraft {
+  return updateExercise(draft, exerciseIndex, (exercise) =>
+    exercise.modality === 'cardio'
+      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
+      : exercise,
+  );
+}
+
+type AnyDraftSet = DraftSet | CardioDraftSet;
+
+function withSets(exercise: DraftExercise, change: <S extends AnyDraftSet>(sets: S[]) => S[]): DraftExercise {
+  return exercise.modality === 'cardio'
+    ? { ...exercise, sets: change(exercise.sets) }
+    : { ...exercise, sets: change(exercise.sets) };
 }
 
 export function removeSet(draft: WorkoutDraft, exerciseIndex: number, setId: string): WorkoutDraft {
-  return updateExercise(draft, exerciseIndex, (exercise) => ({
-    ...exercise,
-    sets: exercise.sets.filter((set) => set.id !== setId),
-  }));
+  return updateExercise(draft, exerciseIndex, (exercise) =>
+    withSets(exercise, (sets) => sets.filter((set) => set.id !== setId)),
+  );
 }
 
 export function updateExerciseAt<Exercise, Owner extends { exercises: Exercise[] }>(
@@ -208,6 +300,7 @@ export function withCurrentLoadTypes(
 ): { draft: WorkoutDraft; changedNames: string[] } {
   const changedNames: string[] = [];
   const exercises = draft.exercises.map((exercise) => {
+    if (exercise.modality === 'cardio') return exercise;
     const current = loadTypes.get(exercise.exerciseId);
     if (current === undefined || current === exercise.loadType) return exercise;
     changedNames.push(exercise.name);
@@ -231,11 +324,9 @@ export interface StartableDay {
   exercises: PlannedExercise[];
 }
 
-export interface CatalogEntry {
-  name: string;
-  loadType: LoadType;
-  archived: boolean;
-}
+export type CatalogEntry = { name: string; archived: boolean } & (
+  { modality?: 'lift'; loadType: LoadType } | { modality: 'cardio' }
+);
 
 export interface LastLoggedSet {
   weightKg: number;
@@ -266,7 +357,7 @@ export function startDraftFromDay(
   const skippedExerciseIds: string[] = [];
   const exercises = day.exercises.flatMap((planned): DraftExercise[] => {
     const exercise = exercisesById.get(planned.exerciseId);
-    if (!exercise) {
+    if (!exercise || exercise.modality === 'cardio') {
       skippedExerciseIds.push(planned.exerciseId);
       return [];
     }
@@ -276,6 +367,7 @@ export function startDraftFromDay(
       {
         exerciseId: planned.exerciseId,
         name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
+        modality: 'lift',
         loadType: exercise.loadType,
         target: { sets: planned.targetSets, repsMin: planned.targetRepsMin, repsMax: planned.targetRepsMax },
         sets: Array.from({ length: planned.targetSets }, () => ({
@@ -302,8 +394,9 @@ export function startDraftFromDay(
 }
 
 export function toggleSetDone(draft: WorkoutDraft, exerciseIndex: number, setId: string): WorkoutDraft {
-  const set = draft.exercises[exerciseIndex]?.sets.find((candidate) => candidate.id === setId);
-  return set ? updateSet(draft, exerciseIndex, setId, { done: !set.done }) : draft;
+  return updateExercise(draft, exerciseIndex, (exercise) =>
+    withSets(exercise, (sets) => sets.map((set) => (set.id === setId ? { ...set, done: !set.done } : set))),
+  );
 }
 
 export function notDoneSetCount(draft: WorkoutDraft): number {
@@ -312,7 +405,7 @@ export function notDoneSetCount(draft: WorkoutDraft): number {
 
 export function canSwapExercise(draft: WorkoutDraft, exerciseIndex: number): boolean {
   const exercise = draft.exercises[exerciseIndex];
-  return exercise !== undefined && exercise.sets.every((set) => !set.done);
+  return exercise?.modality === 'lift' && exercise.sets.every((set) => !set.done);
 }
 
 export function swapExercise(
@@ -321,11 +414,15 @@ export function swapExercise(
   replacement: { id: string; name: string; loadType: LoadType },
 ): WorkoutDraft | null {
   if (!canSwapExercise(draft, exerciseIndex)) return null;
-  return updateExercise(draft, exerciseIndex, (exercise) => ({
-    ...exercise,
-    exerciseId: replacement.id,
-    name: replacement.name,
-    loadType: replacement.loadType,
-    sets: exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) })),
-  }));
+  return updateExercise(draft, exerciseIndex, (exercise) =>
+    exercise.modality === 'cardio'
+      ? exercise
+      : {
+          ...exercise,
+          exerciseId: replacement.id,
+          name: replacement.name,
+          loadType: replacement.loadType,
+          sets: exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) })),
+        },
+  );
 }

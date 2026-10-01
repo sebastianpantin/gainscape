@@ -1,6 +1,6 @@
 import type { LootConfig } from './balance.ts';
 import { roundTo } from './strength.ts';
-import type { Catalog, RevokeReason, Rng, RollKind, SetResult } from './types.ts';
+import type { Catalog, RevokeReason, Rng, RollKind, SetKind, SetResult } from './types.ts';
 
 const CHANCE_DECIMALS = 5;
 const GUARANTEED_CHANCE = 1;
@@ -27,7 +27,10 @@ export interface LootTables {
 export interface LootCandidate {
   setId: string;
   position: number;
+  kind: SetKind;
   effectiveReps: number;
+  countedWorkS: number;
+  interval: boolean;
   personalRecord: boolean;
   builtIn: boolean;
 }
@@ -72,14 +75,23 @@ export function lootCandidates(sets: readonly SetResult[], catalog: Catalog): Lo
     .map((result) => ({
       setId: result.set.id,
       position: result.set.position,
+      kind: result.set.kind ?? 'lift',
       effectiveReps: result.effectiveReps,
-      personalRecord: result.personalRecord !== null,
+      countedWorkS: result.cardio?.countedWorkS ?? 0,
+      interval: result.set.kind === 'cardio' && result.set.interval !== null,
+      personalRecord: result.personalRecord !== null || (result.cardio?.records.length ?? 0) > 0,
       builtIn: catalog.exercises.get(result.set.exerciseId)?.builtIn ?? false,
     }));
 }
 
+function qualifiesForRegular(candidate: LootCandidate, cfg: LootConfig): boolean {
+  if (candidate.kind === 'lift') return candidate.effectiveReps >= cfg.minEffectiveReps;
+  const minWorkS = candidate.interval ? cfg.minIntervalCardioWorkS : cfg.minSteadyCardioWorkS;
+  return candidate.countedWorkS >= minWorkS;
+}
+
 export function qualifies(kind: RollKind, candidate: LootCandidate, cfg: LootConfig): boolean {
-  const regular = candidate.effectiveReps >= cfg.minEffectiveReps;
+  const regular = qualifiesForRegular(candidate, cfg);
   if (kind === 'regular') return regular;
   return regular && candidate.personalRecord && candidate.builtIn;
 }

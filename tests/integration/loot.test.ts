@@ -9,6 +9,8 @@ import {
   rollSessionLoot,
 } from '@domain/index.ts';
 import {
+  aBout,
+  anIntervalBout,
   aSet,
   DAY_MS,
   HOUR_MS,
@@ -45,13 +47,17 @@ async function lootCounts(userId: string) {
 
 async function storedCandidates(sessionId: string): Promise<LootCandidate[]> {
   const rows = await db`
-    select st.id, st.position, st.effective_reps, e.owner_user_id is null as built_in
+    select st.id, st.position, st.effective_reps, st.counted_work_s, st.interval_rounds,
+           e.owner_user_id is null as built_in
     from public.sets st join public.exercises e on e.id = st.exercise_id
     where st.session_id = ${sessionId} order by st.position`;
   return rows.map((row) => ({
     setId: row.id,
     position: row.position,
+    kind: row.counted_work_s === null ? 'lift' : 'cardio',
     effectiveReps: row.effective_reps,
+    countedWorkS: row.counted_work_s ?? 0,
+    interval: row.interval_rounds !== null,
     personalRecord: false,
     builtIn: row.built_in,
   }));
@@ -263,6 +269,31 @@ describe('PR rolls', () => {
     expect(response.body.prs).toHaveLength(1);
     const rolls = (await rollsOf(user.id)).filter((row) => row.session_id === prSession.id);
     expect(rolls.map((row) => row.kind)).toEqual(['regular']);
+  });
+});
+
+describe('cardio rolls', () => {
+  it('gives a 10-minute steady bout a regular roll and a 9-minute bout none', async () => {
+    const user = await freshUser();
+    const runId = await builtInExerciseId('running');
+    const [start] = startsOnOneLocalDay(1);
+    const session = payloadAt(start, [aBout(runId, 0, { durationS: 600 }), aBout(runId, 1, { durationS: 540 })]);
+    await post(user, session);
+    const rolls = (await rollsOf(user.id)).filter((row) => row.session_id === session.id);
+    expect(rolls.map((row) => [row.set_id, row.kind])).toEqual([[session.sets[0].id, 'regular']]);
+  });
+
+  it('gives an interval bout with 4 work minutes a regular roll and a shorter one none', async () => {
+    const user = await freshUser();
+    const sprintsId = await builtInExerciseId('sprint_intervals');
+    const [start] = startsOnOneLocalDay(1);
+    const session = payloadAt(start, [
+      anIntervalBout(sprintsId, 0, { workS: 30, restS: 30, rounds: 8 }),
+      anIntervalBout(sprintsId, 1, { workS: 30, restS: 30, rounds: 7 }),
+    ]);
+    await post(user, session);
+    const rolls = (await rollsOf(user.id)).filter((row) => row.session_id === session.id);
+    expect(rolls.map((row) => row.set_id)).toEqual([session.sets[0].id]);
   });
 });
 

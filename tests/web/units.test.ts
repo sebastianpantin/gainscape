@@ -3,11 +3,18 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE } from '../../supabase/functions/_shared/domain/balance.ts';
 import {
   cmToFeetAndInches,
+  type DistanceUnit,
+  distanceInUnit,
+  distanceUnitFor,
   feetAndInchesToCm,
+  formatDistance,
   formatHeight,
+  formatPace,
   formatWeight,
   KG_PER_LB,
+  shownDistance,
   shownWeight,
+  unitToDistanceM,
   unitToKg,
 } from '../../web/src/lib/units.ts';
 
@@ -82,5 +89,76 @@ describe('height units', () => {
   it('formats height for each unit preference', () => {
     expect(formatHeight(181, 'kg')).toBe('181 cm');
     expect(formatHeight(181, 'lb')).toBe('5 ft 11 in');
+  });
+});
+
+const DISTANCE_UNITS: DistanceUnit[] = ['km', 'mi', 'm', 'yd'];
+const DISTANCE_RECORD_MIN_GAIN_M = 100;
+
+describe('distance units', () => {
+  it('follows the weight preference, in metres or yards for pool activities', () => {
+    expect(distanceUnitFor('kg', 'per_km')).toBe('km');
+    expect(distanceUnitFor('lb', 'per_km')).toBe('mi');
+    expect(distanceUnitFor('kg', 'per_100m')).toBe('m');
+    expect(distanceUnitFor('lb', 'per_100m')).toBe('yd');
+  });
+
+  it('converts each unit to metres', () => {
+    expect(unitToDistanceM(5, 'km')).toBe(5000);
+    expect(unitToDistanceM(1, 'mi')).toBe(1609.3);
+    expect(unitToDistanceM(400, 'm')).toBe(400);
+    expect(unitToDistanceM(100, 'yd')).toBe(91.4);
+  });
+
+  it.each(DISTANCE_UNITS)('round-trips any stored distance at 0.1 m through %s', (unit) => {
+    fc.assert(
+      fc.property(fc.integer({ min: 10, max: 2_000_000 }), (decimetres) => {
+        const distanceM = decimetres / 10;
+        expect(unitToDistanceM(distanceInUnit(distanceM, unit), unit)).toBe(distanceM);
+      }),
+    );
+  });
+
+  it.each(DISTANCE_UNITS)('never moves a re-entered %s distance by the record threshold', (unit) => {
+    fc.assert(
+      fc.property(fc.integer({ min: 10, max: 2_000_000 }), (decimetres) => {
+        const distanceM = decimetres / 10;
+        const reentered = unitToDistanceM(shownDistance(distanceM, unit), unit);
+        expect(Math.abs(reentered - distanceM)).toBeLessThan(DISTANCE_RECORD_MIN_GAIN_M);
+      }),
+    );
+  });
+
+  it('turns the same typed miles into the same metres every time', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: 12_000 }), (hundredthsOfMile) => {
+        const miles = hundredthsOfMile / 100;
+        const first = unitToDistanceM(miles, 'mi');
+        expect(unitToDistanceM(shownDistance(first, 'mi'), 'mi')).toBe(first);
+      }),
+    );
+  });
+
+  it('formats distances in the chosen unit', () => {
+    expect(formatDistance(5000, 'km')).toBe('5 km');
+    expect(formatDistance(5000, 'mi')).toBe('3.11 mi');
+    expect(formatDistance(400, 'm')).toBe('400 m');
+    expect(formatDistance(400, 'yd')).toBe('437 yd');
+  });
+});
+
+describe('pace', () => {
+  it('formats pace per kilometre and per mile', () => {
+    expect(formatPace(1800, 5000, 'km')).toBe('6:00 /km');
+    expect(formatPace(1800, 5000, 'mi')).toBe('9:39 /mi');
+  });
+
+  it('formats pool pace per 100 m and per 100 yd', () => {
+    expect(formatPace(600, 400, 'm')).toBe('2:30 /100 m');
+    expect(formatPace(600, 400, 'yd')).toBe('2:17 /100 yd');
+  });
+
+  it('carries rounded seconds into the next minute', () => {
+    expect(formatPace(359.8, 1000, 'km')).toBe('6:00 /km');
   });
 });

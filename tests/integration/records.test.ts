@@ -9,7 +9,7 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
-import { HOUR_MS } from './loot-support.ts';
+import { aBout, HOUR_MS, hoursAgo, payloadAt } from './loot-support.ts';
 
 const hard = { type: 'level', level: 'hard' } as const;
 
@@ -27,12 +27,14 @@ let lifter: TestUser;
 let benchId: string;
 let pullUpId: string;
 let responses: FunctionResponse[];
+let workouts: ReturnType<typeof session>[];
 
 beforeAll(async () => {
   [benchId, pullUpId] = await Promise.all([builtInExerciseId('barbell_bench_press'), builtInExerciseId('pull_up')]);
   lifter = await createTestUser();
   await setBodyweight(lifter, 80);
   responses = [];
+  workouts = [];
   for (const workout of [
     session(8, [
       { exerciseId: benchId, weightKg: 90, reps: 5 },
@@ -44,6 +46,7 @@ beforeAll(async () => {
     ]),
     session(2, [{ exerciseId: benchId, weightKg: 105, reps: 3 }]),
   ]) {
+    workouts.push(workout);
     responses.push(await postCompleteSession(lifter.accessToken, workout));
   }
 });
@@ -59,15 +62,40 @@ describe('personal records through complete-session', () => {
   });
 
   it('reports a 5RM and a pull-up rep record in the second session', () => {
+    const [bench, pullUp] = workouts[1].sets;
     expect(responses[1].body.prs).toEqual([
-      { exerciseId: benchId, kind: 'rep_max', reps: 5, loadKg: 100, previousLoadKg: 90, previousReps: null },
-      { exerciseId: pullUpId, kind: 'bodyweight_reps', reps: 10, loadKg: null, previousLoadKg: null, previousReps: 8 },
+      {
+        exerciseId: benchId,
+        kind: 'rep_max',
+        setId: bench.id,
+        reps: 5,
+        loadKg: 100,
+        previousLoadKg: 90,
+        previousReps: null,
+      },
+      {
+        exerciseId: pullUpId,
+        kind: 'bodyweight_reps',
+        setId: pullUp.id,
+        reps: 10,
+        loadKg: null,
+        previousLoadKg: null,
+        previousReps: 8,
+      },
     ]);
   });
 
   it('reports one 3RM for the heavier triple', () => {
     expect(responses[2].body.prs).toEqual([
-      { exerciseId: benchId, kind: 'rep_max', reps: 3, loadKg: 105, previousLoadKg: 100, previousReps: null },
+      {
+        exerciseId: benchId,
+        kind: 'rep_max',
+        setId: workouts[2].sets[0].id,
+        reps: 3,
+        loadKg: 105,
+        previousLoadKg: 100,
+        previousReps: null,
+      },
     ]);
   });
 
@@ -90,27 +118,92 @@ describe('personal records through complete-session', () => {
   });
 });
 
-describe('record tables are read-only for clients', () => {
-  it.each(['rep_maxes', 'exercise_maxes', 'bodyweight_rep_records'])('insert into %s is denied', async (table) => {
-    const rows: Record<string, object> = {
-      rep_maxes: {
-        user_id: lifter.id,
-        exercise_id: benchId,
-        reps: 7,
-        load_kg: 500,
-        achieved_at: new Date().toISOString(),
-      },
-      exercise_maxes: { user_id: lifter.id, exercise_id: pullUpId, e1rm_kg: 500 },
-      bodyweight_rep_records: {
-        user_id: lifter.id,
-        exercise_id: benchId,
-        max_reps: 99,
-        achieved_at: new Date().toISOString(),
-      },
-    };
-    const { error } = await lifter.client.from(table).insert(rows[table]);
-    expect(error).not.toBeNull();
+describe('cardio records through complete-session', () => {
+  let runner: TestUser;
+  let runId: string;
+  let firstRun: ReturnType<typeof payloadAt>;
+  let longerRun: ReturnType<typeof payloadAt>;
+  let cardioResponses: FunctionResponse[];
+
+  beforeAll(async () => {
+    runId = await builtInExerciseId('running');
+    runner = await createTestUser();
+    firstRun = payloadAt(hoursAgo(8), [aBout(runId, 0, { durationS: 1800, distanceM: 5000 })]);
+    longerRun = payloadAt(hoursAgo(4), [aBout(runId, 0, { durationS: 2160, distanceM: 6000 })]);
+    cardioResponses = [];
+    for (const payload of [firstRun, longerRun])
+      cardioResponses.push(await postCompleteSession(runner.accessToken, payload));
   });
+
+  it('reports nothing for the first run', () => {
+    expect(cardioResponses[0].status).toBe(200);
+    expect(cardioResponses[0].body.prs).toEqual([]);
+  });
+
+  it('reports the longer run as one cardio record naming its bout', () => {
+    expect(cardioResponses[1].body.prs).toEqual([
+      {
+        kind: 'cardio',
+        exerciseId: runId,
+        setId: longerRun.sets[0].id,
+        records: [
+          { kind: 'distance', value: 6000, previous: 5000 },
+          { kind: 'duration', value: 2160, previous: 1800 },
+        ],
+      },
+    ]);
+  });
+
+  it('stores the cardio records the domain derives', async () => {
+    const rows = await db`
+      select kind, value::float, set_id from public.cardio_records
+      where user_id = ${runner.id} and exercise_id = ${runId} order by kind`;
+    expect(rows.map((row) => [row.kind, row.value, row.set_id])).toEqual([
+      ['distance', 6000, longerRun.sets[0].id],
+      ['pace', 360, firstRun.sets[0].id],
+      ['duration', 2160, longerRun.sets[0].id],
+    ]);
+  });
+
+  it('lets the owner read their cardio records and nobody else', async () => {
+    const own = await runner.client.from('cardio_records').select('kind');
+    expect(own.data).toHaveLength(3);
+    const other = await lifter.client.from('cardio_records').select('kind').eq('user_id', runner.id);
+    expect(other.data).toEqual([]);
+  });
+});
+
+describe('record tables are read-only for clients', () => {
+  it.each(['rep_maxes', 'exercise_maxes', 'bodyweight_rep_records', 'cardio_records'])(
+    'insert into %s is denied',
+    async (table) => {
+      const rows: Record<string, object> = {
+        rep_maxes: {
+          user_id: lifter.id,
+          exercise_id: benchId,
+          reps: 7,
+          load_kg: 500,
+          achieved_at: new Date().toISOString(),
+        },
+        exercise_maxes: { user_id: lifter.id, exercise_id: pullUpId, e1rm_kg: 500 },
+        bodyweight_rep_records: {
+          user_id: lifter.id,
+          exercise_id: benchId,
+          max_reps: 99,
+          achieved_at: new Date().toISOString(),
+        },
+        cardio_records: {
+          user_id: lifter.id,
+          exercise_id: benchId,
+          kind: 'distance',
+          value: 99_000,
+          achieved_at: new Date().toISOString(),
+        },
+      };
+      const { error } = await lifter.client.from(table).insert(rows[table]);
+      expect(error).not.toBeNull();
+    },
+  );
 });
 
 describe('pinned exercises', () => {

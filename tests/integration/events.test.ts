@@ -7,7 +7,16 @@ import {
   type LootTables,
   pickEntry,
 } from '@domain/index.ts';
-import { aSet, DAY_MS, hoursAgo, payloadAt, postSession, type SessionPayload, type SetShape } from './loot-support.ts';
+import {
+  aBout,
+  aSet,
+  DAY_MS,
+  hoursAgo,
+  payloadAt,
+  postSession,
+  type SessionPayload,
+  type SetShape,
+} from './loot-support.ts';
 import {
   builtInExerciseId,
   createTestUser,
@@ -82,7 +91,7 @@ async function saveCustomExercise(user: TestUser): Promise<string> {
 async function expectEventsMatchSummaries(userId: string): Promise<void> {
   const sessions = await db`select id, summary, ended_at from public.sessions where user_id = ${userId}`;
   const setRows = await db`
-    select id, session_id, exercise_id, position, weight_kg::float, reps, is_warmup, effective_load_kg::float
+    select id, session_id, effective_load_kg::float
     from public.sets where user_id = ${userId} and not is_warmup`;
   const exerciseRows = await db`
     select id, owner_user_id, load_type from public.exercises
@@ -98,15 +107,7 @@ async function expectEventsMatchSummaries(userId: string): Promise<void> {
         session.summary,
         setRows
           .filter((set) => set.session_id === session.id)
-          .map((set) => ({
-            id: set.id,
-            exerciseId: set.exercise_id,
-            position: set.position,
-            weightKg: set.weight_kg,
-            reps: set.reps,
-            isWarmup: set.is_warmup,
-            effectiveLoadKg: set.effective_load_kg,
-          })),
+          .map((set) => ({ id: set.id, effectiveLoadKg: set.effective_load_kg })),
         exercises,
         rarity,
       ).map((draft) => ({
@@ -226,6 +227,33 @@ describe('PR events', () => {
     const response = await postSession(user, old);
     expect(response.body.historyOnly).toBe(true);
     expect(await storedEvents(user.id)).toEqual([]);
+  });
+});
+
+describe('cardio PR events', () => {
+  it('posts one flat PR event per record-setting bout, keyed and linked by the bout', async () => {
+    const user = await freshUser();
+    const runId = await builtInExerciseId('running');
+    await postSession(user, payloadAt(hoursAgo(3), [aBout(runId, 0, { durationS: 1800, distanceM: 5000 })]));
+    const longer = payloadAt(hoursAgo(1), [aBout(runId, 0, { durationS: 2160, distanceM: 6000 })]);
+    await postSession(user, longer);
+    const prs = (await storedEvents(user.id, longer.id)).filter((event) => event.type === 'pr');
+    expect(prs).toHaveLength(1);
+    expect(prs[0]).toMatchObject({
+      event_key: `pr:${longer.sets[0].id}`,
+      set_id: longer.sets[0].id,
+      payload: {
+        exerciseId: runId,
+        kind: 'cardio',
+        recordKinds: 'distance,duration',
+        distanceM: 6000,
+        previousDistanceM: 5000,
+        paceSPerKm: null,
+        previousPaceSPerKm: null,
+        countedWorkS: 2160,
+        previousCountedWorkS: 1800,
+      },
+    });
   });
 });
 

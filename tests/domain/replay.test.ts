@@ -6,8 +6,10 @@ import {
   DEFAULT_BALANCE,
   DEFAULT_STEPS,
   type EffortInput,
-  type ExerciseDef,
   isBefore,
+  isLiftSet,
+  type LiftExerciseDef,
+  type LiftSetInput,
   priorSkillXp,
   type RecordHistoryRow,
   recordsFromHistory,
@@ -24,7 +26,7 @@ import { catalog as fixtureCatalog, DAY_MS, HOUR_MS } from './fixtures.ts';
 const cfg = DEFAULT_BALANCE;
 const HISTORY_START_MS = Date.parse('2026-01-01T06:00:00.000Z');
 
-const extraExercises: ExerciseDef[] = [
+const extraExercises: LiftExerciseDef[] = [
   {
     id: 'weighted-dip',
     loadType: 'bodyweight_plus',
@@ -46,13 +48,14 @@ const extraExercises: ExerciseDef[] = [
   },
 ];
 
-const catalog: Catalog = {
-  skills: fixtureCatalog.skills,
-  exercises: new Map([
-    ...[...fixtureCatalog.exercises].filter(([id]) => id !== 'weighted-pull-up'),
-    ...extraExercises.map((exercise) => [exercise.id, exercise] as const),
-  ]),
-};
+const liftExercises = new Map<string, LiftExerciseDef>([
+  ...[...fixtureCatalog.exercises].flatMap(([id, exercise]) =>
+    exercise.modality === 'cardio' || id === 'weighted-pull-up' ? [] : [[id, exercise] as const],
+  ),
+  ...extraExercises.map((exercise) => [exercise.id, exercise] as const),
+]);
+
+const catalog: Catalog = { skills: fixtureCatalog.skills, exercises: liftExercises };
 
 const EXERCISE_IDS = ['bench', 'squat', 'pull-up', 'weighted-dip', 'custom-press', 'ohp'] as const;
 const WARMUP_ONLY_EXERCISE = 'ohp';
@@ -81,10 +84,10 @@ const sessionDraftArb = fc.record({
 
 type SessionDraft = typeof sessionDraftArb extends fc.Arbitrary<infer T> ? T : never;
 
-function buildSets(sessionId: string, draft: SessionDraft, idPrefix: string): SetInput[] {
+function buildSets(sessionId: string, draft: SessionDraft, idPrefix: string): LiftSetInput[] {
   const bodyweightKg = draft.bodyweightHalfKg / 2;
   return draft.sets.map((setDraft, position) => {
-    const loadType = catalog.exercises.get(setDraft.exerciseId)!.loadType;
+    const loadType = liftExercises.get(setDraft.exerciseId)!.loadType;
     const weightKg =
       loadType === 'bodyweight'
         ? 0
@@ -159,6 +162,7 @@ function strengthRowsOf(replayed: readonly ReplayedSession[]): StrengthHistoryRo
 function recordRowsOf(sessions: readonly SessionInput[]): RecordHistoryRow[] {
   return sessions.flatMap((session) =>
     session.sets
+      .filter(isLiftSet)
       .filter((set) => !set.isWarmup)
       .map((set) => ({
         exerciseId: set.exerciseId,
@@ -334,7 +338,7 @@ describe('replay budget', () => {
       startedAt: new Date(startMs).toISOString(),
       sets: Array.from({ length: setCount }, (_, position) => {
         const exerciseId = benchmarkExercises[position % benchmarkExercises.length];
-        const loadType = catalog.exercises.get(exerciseId)!.loadType;
+        const loadType = liftExercises.get(exerciseId)!.loadType;
         const weightKg = loadType === 'bodyweight' ? 0 : 40 + ((index + position) % 30) * 2.5;
         return {
           id: `${id}:${position}`,

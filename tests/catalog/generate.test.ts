@@ -49,6 +49,52 @@ describe('catalog generator', () => {
     expect(catalog.items.map((item) => item.sortOrder)).toEqual(catalog.items.map((_, index) => index + 1));
   });
 
+  it('lists eight skills, the two cardio skills outside combat', () => {
+    const skills = loadCatalogData().skills;
+    expect(skills.map((skill) => skill.key)).toEqual([
+      'chest',
+      'back',
+      'shoulders',
+      'arms',
+      'legs',
+      'core',
+      'endurance',
+      'agility',
+    ]);
+    const cardio = skills.filter((skill) => skill.modality === 'cardio');
+    expect(cardio.map(({ key, sortOrder, combatWeight }) => ({ key, sortOrder, combatWeight }))).toEqual([
+      { key: 'endurance', sortOrder: 7, combatWeight: 0 },
+      { key: 'agility', sortOrder: 8, combatWeight: 0 },
+    ]);
+  });
+
+  it('renders the skill modality and the cardio exercise columns', () => {
+    const statements = renderStatements(loadCatalogData());
+    const skills = statements.find((statement) => statement.startsWith('insert into public.skills'))!;
+    expect(skills).toContain('(id, key, name, sort_order, combat_weight, modality)');
+    expect(skills).toContain(`'endurance', 'Endurance', 7, 0, 'cardio')`);
+    expect(skills).toContain(`'chest', 'Chest', 1, 2, 'lift')`);
+    expect(skills).toContain('modality = excluded.modality');
+    const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;
+    expect(exercises).toContain(
+      '(id, key, name, modality, load_type, equipment, requires_unlock, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m)',
+    );
+    expect(exercises).toContain(
+      `'running', 'Running', 'cardio', null, 'bodyweight', false, null, 360, 'per_km', 'max', 1000)`,
+    );
+    expect(exercises).toContain(
+      `'walking', 'Walking', 'cardio', null, 'bodyweight', false, null, null, 'per_km', 'moderate', null)`,
+    );
+    expect(exercises).toContain(`'rowing', 'Rowing', 'cardio', null, 'machine', false, null,`);
+    expect(exercises).toContain(
+      `'swimming', 'Swimming', 'cardio', null, 'bodyweight', false, null, 1200, 'per_100m', 'max', 100)`,
+    );
+    expect(exercises).toContain(
+      `'barbell_bench_press', 'Barbell Bench Press', 'lift', 'external', 'barbell', false, null, null, null, null, null)`,
+    );
+    expect(exercises).toContain('modality = excluded.modality');
+  });
+
   it('expands every gear shorthand into the 6 slots of that tier', () => {
     const catalog = loadCatalogData();
     const entriesOf = (table: string) => catalog.dropTables.find((candidate) => candidate.key === table)!.entries;

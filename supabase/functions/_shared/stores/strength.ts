@@ -25,6 +25,7 @@ export async function loadStrengthHistory(
       join public.sessions s on s.id = st.session_id
       where s.user_id = ${userId}
         and not s.history_only
+        and st.reps is not null
         and st.exercise_id = any(${exerciseIds as string[]}::uuid[])
         and (s.started_at, s.id) < (${before.startedAt}::timestamptz, ${before.id}::uuid)
     ),

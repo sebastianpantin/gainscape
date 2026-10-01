@@ -32,8 +32,11 @@ const RARE = '#6fa8dc';
 const PARCHMENT = '#d8c8a8';
 const PARCHMENT_SHADE = '#b3a58c';
 const TEXT = '#f0e6d0';
+const DANGER = '#e8827a';
+const DANGER_FILL = '#e0554b';
+const XP_DARK = '#4e8f3f';
 
-export type SkillKey = 'chest' | 'back' | 'shoulders' | 'arms' | 'legs' | 'core';
+export type SkillKey = 'chest' | 'back' | 'shoulders' | 'arms' | 'legs' | 'core' | 'endurance' | 'agility';
 
 function fromRows(rows: readonly string[], palette: Record<string, string>): Sprite {
   const pixels: Pixel[] = [];
@@ -152,6 +155,40 @@ export const SKILL_SPRITES: Record<SkillKey, Sprite> = {
       '............',
     ],
     { K: INK, L: XP_LIGHT, D: XP },
+  ),
+  endurance: fromRows(
+    [
+      '............',
+      '.KKKK..KKKK.',
+      'KRRLRKKRRRRK',
+      'KRLRRRRRRRRK',
+      'KRRRRRRRRRRK',
+      'KRRRRRRRRRDK',
+      '.KRRRRRRRDK.',
+      '..KRRRRRDK..',
+      '...KRRRDK...',
+      '....KRDK....',
+      '.....KK.....',
+      '............',
+    ],
+    { K: INK, R: DANGER_FILL, L: DANGER, D: TEXT },
+  ),
+  agility: fromRows(
+    [
+      '......KKKK..',
+      '.....KLXXK..',
+      '....KLXXK...',
+      '...KLXXK....',
+      '..KLXXKKKK..',
+      '.KXXXXXXXK..',
+      '..KKKKXXK...',
+      '.....KXDK...',
+      '....KXDK....',
+      '...KXDK.....',
+      '...KDK......',
+      '...KK.......',
+    ],
+    { K: INK, X: XP, L: XP_LIGHT, D: XP_DARK },
   ),
 };
 

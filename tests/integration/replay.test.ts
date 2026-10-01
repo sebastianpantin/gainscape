@@ -133,7 +133,15 @@ describe('out-of-order sync', () => {
       await db`select e1rm_kg::float from public.exercise_maxes where user_id = ${user.id} and exercise_id = ${benchId}`;
     expect(max.e1rm_kg).toBe(81.4);
     expect((await storedSummary(late.id)).prs).toEqual([
-      { exerciseId: benchId, kind: 'rep_max', reps: 5, loadKg: 100, previousLoadKg: 60, previousReps: null },
+      {
+        exerciseId: benchId,
+        kind: 'rep_max',
+        setId: late.sets[0].id,
+        reps: 5,
+        loadKg: 100,
+        previousLoadKg: 60,
+        previousReps: null,
+      },
     ]);
 
     const retry = await postSession(user, late);
@@ -153,7 +161,15 @@ describe('out-of-order sync', () => {
 
     expect(earlierResponse.body.prs).toEqual([]);
     expect((await storedSummary(later.id)).prs).toEqual([
-      { exerciseId: benchId, kind: 'rep_max', reps: 5, loadKg: 105, previousLoadKg: 100, previousReps: null },
+      {
+        exerciseId: benchId,
+        kind: 'rep_max',
+        setId: later.sets[0].id,
+        reps: 5,
+        loadKg: 105,
+        previousLoadKg: 100,
+        previousReps: null,
+      },
     ]);
     const [slot] = await db`
       select load_kg::float, set_id from public.rep_maxes
@@ -213,6 +229,78 @@ describe('out-of-order sync', () => {
     expect(after.drops).toEqual(before.drops);
     expect(after.sessionId).toBe(later.id);
     expect(after.xpBySkill).not.toEqual(before.xpBySkill);
+  });
+});
+
+describe('replay with cardio bouts', () => {
+  it('replays a mixed history to the same lift state as the lift-only history', async () => {
+    const [runningId, sprintsId] = await Promise.all([
+      builtInExerciseId('running'),
+      builtInExerciseId('sprint_intervals'),
+    ]);
+    const specs = [
+      sessionSpec(hoursAgo(5), [
+        { exerciseId: benchId, weightKg: 60, reps: 5, effort: hard },
+        { exerciseId: squatId, weightKg: 100, reps: 5, effort: null },
+      ]),
+      sessionSpec(hoursAgo(3), [
+        { exerciseId: benchId, weightKg: 80, reps: 6, effort: null },
+        { exerciseId: pullUpId, weightKg: 0, reps: 8, effort: hard },
+      ]),
+      sessionSpec(hoursAgo(1), [{ exerciseId: benchId, weightKg: 100, reps: 5, effort: hard }]),
+    ];
+    const withCardio = (payload: ReturnType<typeof payloadFor>) => ({
+      ...payload,
+      sets: [
+        ...payload.sets,
+        {
+          kind: 'cardio',
+          id: randomUUID(),
+          exerciseId: runningId,
+          position: payload.sets.length,
+          durationS: 1800,
+          distanceM: 5500,
+          interval: null,
+          effort: { type: 'cardio', level: 'hard' },
+        },
+        {
+          kind: 'cardio',
+          id: randomUUID(),
+          exerciseId: sprintsId,
+          position: payload.sets.length + 1,
+          distanceM: null,
+          interval: { workS: 20, restS: 40, rounds: 8 },
+          effort: null,
+        },
+      ],
+    });
+    const [mixed, liftOnly] = await Promise.all([createTestUser(), createTestUser()]);
+    await Promise.all([setBodyweight(mixed, 80), setBodyweight(liftOnly, 80)]);
+    for (const index of [2, 0, 1]) await postSession(mixed, withCardio(payloadFor(specs[index])));
+    await syncInOrder(liftOnly, specs);
+
+    const liftStateOf = async (userId: string) => {
+      const snapshot = await normalizedSnapshot(userId);
+      const liftSkills = await db`select id from public.skills where modality = 'lift'`;
+      const liftSkillIds = new Set(liftSkills.map((row) => row.id));
+      return {
+        sets: snapshot.sets.filter((set) => (set as { duration_s?: number | null }).duration_s === null),
+        userSkills: snapshot.userSkills.filter((row) => liftSkillIds.has(row.skill_id)),
+        exerciseMaxes: snapshot.exerciseMaxes,
+        repMaxes: snapshot.repMaxes,
+        bodyweightRepRecords: snapshot.bodyweightRepRecords,
+      };
+    };
+    expect(await liftStateOf(mixed.id)).toEqual(await liftStateOf(liftOnly.id));
+
+    const cardioXp = await db`
+      select s.key, x.xp from public.user_skills x join public.skills s on s.id = x.skill_id
+      where x.user_id = ${mixed.id} and s.modality = 'cardio' order by s.key`;
+    expect(cardioXp.map((row) => row.key)).toEqual(['agility', 'endurance']);
+
+    const incremental = await normalizedSnapshot(mixed.id);
+    expect((await rebuildCaches(mixed.id)).status).toBe(200);
+    expect(await normalizedSnapshot(mixed.id)).toEqual(incremental);
   });
 });
 

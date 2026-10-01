@@ -110,14 +110,42 @@ export interface FunctionResponse {
   headers: Headers;
 }
 
+const EDGE_RUNTIME_RETRIES = 2;
+
+function isEdgeRuntimeDrop(status: number, rawBody: string): boolean {
+  if (status < 500) return false;
+  try {
+    const body = JSON.parse(rawBody);
+    return typeof body !== 'object' || body === null || !('error' in body);
+  } catch {
+    return true;
+  }
+}
+
+export interface RawFunctionResponse {
+  status: number;
+  rawBody: string;
+  headers: Headers;
+}
+
+export async function fetchFunction(name: string, init: RequestInit): Promise<RawFunctionResponse> {
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(`${env.FUNCTIONS_URL}/${name}`, init);
+    const rawBody = await response.text();
+    if (attempt === EDGE_RUNTIME_RETRIES || !isEdgeRuntimeDrop(response.status, rawBody)) {
+      return { status: response.status, rawBody, headers: response.headers };
+    }
+    console.warn(`retrying ${name}: the edge runtime dropped the request (${response.status} ${rawBody})`);
+  }
+}
+
 export async function postFunction(name: string, accessToken: string, body: unknown): Promise<FunctionResponse> {
-  const response = await fetch(`${env.FUNCTIONS_URL}/${name}`, {
+  const response = await fetchFunction(name, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, apikey: env.ANON_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const rawBody = await response.text();
-  return { status: response.status, body: JSON.parse(rawBody), rawBody, headers: response.headers };
+  return { ...response, body: JSON.parse(response.rawBody) };
 }
 
 export async function postCompleteSession(accessToken: string, payload: unknown): Promise<FunctionResponse> {
@@ -125,12 +153,12 @@ export async function postCompleteSession(accessToken: string, payload: unknown)
 }
 
 export async function rebuildCaches(userId: string, bearer = env.SERVICE_ROLE_KEY) {
-  const response = await fetch(`${env.FUNCTIONS_URL}/rebuild-caches`, {
+  const response = await fetchFunction('rebuild-caches', {
     method: 'POST',
     headers: { Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId }),
   });
-  return { status: response.status, body: await response.json() };
+  return { status: response.status, body: JSON.parse(response.rawBody) };
 }
 
 export async function ageSession(sessionId: string, interval: string): Promise<string> {
@@ -155,7 +183,7 @@ export async function normalizedSnapshot(userId: string) {
   const setRows = await db`
     select id, exercise_id, rir::float, rir_source, rir_flagged, e1rm_before_kg::float, e1rm_candidate_kg::float,
            reps_capacity_candidate, effective_reps, xp_awarded, effective_load_kg::float, weight_kg::float, reps,
-           is_warmup
+           is_warmup, duration_s, distance_m::float, counted_work_s, pace_flagged
     from public.sets where user_id = ${userId}`;
   const customExercises =
     await db`select id from public.exercises where owner_user_id = ${userId} order by created_at, id`;
@@ -181,7 +209,13 @@ export async function normalizedSnapshot(userId: string) {
       ...summary,
       ...(summary.sessionId === undefined ? {} : { sessionId: sessionOrdinal.get(summary.sessionId as string) }),
       ...(Array.isArray(summary.prs)
-        ? { prs: summary.prs.map((pr) => ({ ...pr, exerciseId: exercise(pr.exerciseId) })) }
+        ? {
+            prs: summary.prs.map((pr) => ({
+              ...pr,
+              exerciseId: exercise(pr.exerciseId),
+              ...(pr.setId === undefined ? {} : { setId: set(pr.setId) }),
+            })),
+          }
         : {}),
     };
   };
@@ -238,23 +272,41 @@ export async function normalizedSnapshot(userId: string) {
       ).map((row) => ({ ...row, exercise_id: exercise(row.exercise_id), set_id: set(row.set_id) })),
       'exercise_id',
     ),
+    cardioRecords: byKey(
+      (
+        await db`select exercise_id, kind::text, value::float, set_id, achieved_at
+                 from public.cardio_records where user_id = ${userId}`
+      ).map((row) => ({ ...row, exercise_id: exercise(row.exercise_id), set_id: set(row.set_id) })),
+      'exercise_id',
+      'kind',
+    ),
   };
 }
 
 export async function domainCatalogFor(exerciseIds: string[]): Promise<Catalog> {
   const skillRows = await db`select id, key, sort_order, combat_weight from public.skills`;
   const shareRows = await db`
-    select e.id, e.load_type, e.owner_user_id, es.skill_id, es.share_bp
+    select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.pace_unit, e.max_effort,
+           e.record_min_distance_m, es.skill_id, es.share_bp
     from public.exercises e join public.exercise_skills es on es.exercise_id = e.id
     where e.id = any(${exerciseIds}::uuid[])`;
   const exercises = new Map<string, ExerciseDef>();
   for (const row of shareRows) {
-    const exercise: ExerciseDef = exercises.get(row.id) ?? {
-      id: row.id,
-      loadType: row.load_type,
-      builtIn: row.owner_user_id === null,
-      shares: [],
-    };
+    const base = { id: row.id, builtIn: row.owner_user_id === null, shares: [] };
+    const exercise: ExerciseDef =
+      exercises.get(row.id) ??
+      (row.modality === 'cardio'
+        ? {
+            ...base,
+            modality: 'cardio',
+            cardio: {
+              paceUnit: row.pace_unit,
+              referencePaceSPerKm: row.reference_pace_s_per_km,
+              maxEffort: row.max_effort,
+              recordMinDistanceM: row.record_min_distance_m,
+            },
+          }
+        : { ...base, loadType: row.load_type });
     exercise.shares.push({ skillId: row.skill_id, shareBasisPoints: row.share_bp });
     exercises.set(row.id, exercise);
   }

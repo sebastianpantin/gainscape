@@ -1,5 +1,5 @@
 import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
-import { type Exercise, exerciseLabels } from '../../lib/catalog.ts';
+import { exerciseLabels, type LiftExercise } from '../../lib/catalog.ts';
 import type { CollectionData } from '../../lib/collection-data.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
@@ -7,7 +7,7 @@ import { formatWeight } from '../../lib/units.ts';
 import { slotClass } from './slot-class.ts';
 
 interface ExerciseRecordCardProps {
-  exercise: Exercise;
+  exercise: LiftExercise;
   data: CollectionData;
   pinned: boolean;
   onTogglePin: () => void;
@@ -15,7 +15,7 @@ interface ExerciseRecordCardProps {
   onMoveDown?: () => void;
 }
 
-function StrengthLine({ exercise, data }: { exercise: Exercise; data: CollectionData }) {
+function StrengthLine({ exercise, data }: { exercise: LiftExercise; data: CollectionData }) {
   const { unitPref } = usePreferences();
   const strength = data.strengthByExercise.get(exercise.id);
   if (!strength) return null;

@@ -33,6 +33,48 @@ function item(type: FeedItem['type'], payload: Record<string, unknown>): FeedIte
 const bench = { exerciseName: 'Barbell Bench Press', loadType: 'external', kind: 'rep_max', reps: 5 };
 const dip = { exerciseName: 'Weighted Dip', loadType: 'bodyweight_plus', kind: 'rep_max', reps: 5 };
 
+const run = {
+  exerciseName: 'Running',
+  kind: 'cardio',
+  paceUnit: 'per_km',
+  recordKinds: 'distance,pace,duration',
+  countedWorkS: 2160,
+  previousCountedWorkS: 1800,
+};
+
+describe('feedText for cardio records', () => {
+  it('writes every record kind of a bout in the viewer units', () => {
+    const pr = item('pr', { ...run, distanceM: 6000, paceSPerKm: 300, weightsHidden: false });
+    expect(feedText(pr, 'kg')).toEqual({ headline: 'New Running record: 6 km · 5:00 /km · 36 min' });
+    expect(feedText(pr, 'lb')).toEqual({ headline: 'New Running record: 3.73 mi · 8:03 /mi · 36 min' });
+  });
+
+  it('writes only the kinds the bout set', () => {
+    const pr = item('pr', { ...run, recordKinds: 'duration', distanceM: null, paceSPerKm: null, weightsHidden: false });
+    expect(feedText(pr, 'kg')).toEqual({ headline: 'New Running record: 36 min' });
+  });
+
+  it('writes pool distances in metres or yards', () => {
+    const swim = item('pr', {
+      ...run,
+      exerciseName: 'Swimming',
+      paceUnit: 'per_100m',
+      recordKinds: 'distance',
+      distanceM: 1500,
+      weightsHidden: false,
+    });
+    expect(feedText(swim, 'kg').headline).toBe('New Swimming record: 1500 m');
+    expect(feedText(swim, 'lb').headline).toBe('New Swimming record: 1640 yd');
+  });
+
+  it('says who hid the distance and keeps the duration', () => {
+    expect(feedText(item('pr', { ...run, weightsHidden: true }), 'kg')).toEqual({
+      headline: 'New Running record: 36 min',
+      detail: 'Distance hidden by mira',
+    });
+  });
+});
+
 describe('feedText', () => {
   it('writes rep-max PRs in kg and lb', () => {
     const pr = item('pr', { ...bench, loadKg: 80, weightsHidden: false });
@@ -133,6 +175,28 @@ describe('rankHiscores', () => {
     expect(top.value).toBe(10 + 10 + 1);
     const [combat] = rankHiscores([row('abe', { chest: 0, legs: 0, core: 0 })], skills, 'combat');
     expect(combat.value).toBe(3);
+  });
+
+  it('breaks combat ties by the XP of combat skills only', () => {
+    const withCardio = [...skills, { key: 'endurance', combatWeight: 0 }];
+    const ranked = rankHiscores(
+      [row('abe', { chest: 100, endurance: 50_000 }), row('bea', { chest: 200 })],
+      withCardio,
+      'combat',
+    );
+    expect(ranked[0].value).toBe(ranked[1].value);
+    expect(ranked.map((entry) => entry.row.username)).toEqual(['bea', 'abe']);
+  });
+
+  it('still breaks total ties by the XP of every skill', () => {
+    const withCardio = [...skills, { key: 'endurance', combatWeight: 0 }];
+    const ranked = rankHiscores(
+      [row('bea', { chest: 200 }), row('abe', { chest: 100, endurance: 150 })],
+      withCardio,
+      'total',
+    );
+    expect(ranked[0].value).toBe(ranked[1].value);
+    expect(ranked.map((entry) => entry.row.username)).toEqual(['abe', 'bea']);
   });
 
   it('ranks collection percent and treats an empty collection as 0', () => {

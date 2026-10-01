@@ -9,15 +9,16 @@ Simulates years of training for four lifter profiles using the real domain engin
 
 ## Key Files
 
-| File          | Description                                                                                                                                                      |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `report.ts`   | Entry for `make sim`. Prints each tuning candidate, the feasible count and the exact simulation of the committed constants.                                      |
-| `tune.ts`     | `tune()` grid search over `intensityBonusMax` and `intensityBonusFull`, best XP per rep search; `simulateCommittedConstantsUntilLegsReach99()` used by the test. |
-| `bands.ts`    | `BANDS` targets, `yearsToLevel99`, `evaluateBands` returning a `BandReport` with pass flags a, b, d, e and a violation score.                                    |
-| `simulate.ts` | `simulateProfile`, `firstSkillToLevel99`, `SimulationResult`; seeded (42) week-by-week session generation with deloads and strength growth.                      |
-| `profiles.ts` | `PROFILES` (`hypertrophy`, `strength`, `balanced`, `casual`) and `STARTING_E1RM_KG`.                                                                             |
-| `catalog.ts`  | `SIM_CATALOG`, `SIM_SKILLS`, `SIM_EXERCISE_SHARES`: a hard-coded subset of the real catalog.                                                                     |
-| `random.ts`   | `seededRandom` (mulberry32-style) so results are deterministic.                                                                                                  |
+| File                 | Description                                                                                                                                                                                                                                                                                           |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `report.ts`          | Entry for `make sim`. Prints each tuning candidate, the feasible count and the exact simulation of the committed constants.                                                                                                                                                                           |
+| `tune.ts`            | `tune()` grid search over `intensityBonusMax` and `intensityBonusFull`, best XP per rep search; `simulateCommittedConstantsUntilLegsReach99()` used by the test; `tuneCardio()` solves each cardio rate in closed form from a unit-rate run and `simulateCommittedCardioConstantsUntilBothReach99()`. |
+| `bands.ts`           | `BANDS` targets, `yearsToLevel99`, `evaluateBands` returning a `BandReport` with pass flags a, b, d, e and a violation score; `CARDIO_BANDS` and `evaluateCardioBands` (bands a-c and e-c per cardio skill, g, h).                                                                                    |
+| `cardio-simulate.ts` | `simulateCardioProfile` (seeded, real `processSession` over `CARDIO_SIM_CATALOG`), `steadyAgilityBoutXp` and `intervalSessionAgilityXp` for band (h).                                                                                                                                                 |
+| `simulate.ts`        | `simulateProfile`, `firstSkillToLevel99`, `SimulationResult`; seeded (42) week-by-week session generation with deloads and strength growth.                                                                                                                                                           |
+| `profiles.ts`        | `PROFILES` (`hypertrophy`, `strength`, `balanced`, `casual`), `STARTING_E1RM_KG`, `CARDIO_PROFILES.cardio_balanced` (2 steady runs and 2 30x30 s interval sessions a week) and `STEADY_AGILITY_BOUT`.                                                                                                 |
+| `catalog.ts`         | `SIM_CATALOG`, `SIM_SKILLS`, `SIM_EXERCISE_SHARES`: a hard-coded subset of the real catalog; separate `CARDIO_SIM_SKILLS`, `CARDIO_SIM_EXERCISES`, `CARDIO_SIM_CATALOG` for cardio.                                                                                                                   |
+| `random.ts`          | `seededRandom` (mulberry32-style) so results are deterministic.                                                                                                                                                                                                                                       |
 
 ## For AI Agents
 

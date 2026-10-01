@@ -1,12 +1,12 @@
 import type { BalanceConfig } from './balance.ts';
 import type { SessionContext, Step } from './pipeline.ts';
-import type { ExerciseDef, SetResult } from './types.ts';
+import { isLiftResult, type LiftExerciseDef, type LiftSetResult, type SetResult } from './types.ts';
 
 const EPLEY_REPS_PER_LOAD_RATIO = 30;
 const FLOOR_TOLERANCE = 1e-9;
 const REPS_MODEL_UNIT_LOAD = 1;
 
-function measuresRepsCapacity(exercise: ExerciseDef): boolean {
+function measuresRepsCapacity(exercise: LiftExerciseDef): boolean {
   return exercise.loadType === 'bodyweight';
 }
 
@@ -32,7 +32,7 @@ export function fatiguedStrength(strength: number, fatigue: number, repsCapacity
   return repsAtFailure(loadRatioAtFailure(strength) * fatigue);
 }
 
-function workingLoad(result: SetResult, exercise: ExerciseDef): number {
+function workingLoad(result: SetResult, exercise: LiftExerciseDef): number {
   return measuresRepsCapacity(exercise) ? REPS_MODEL_UNIT_LOAD : result.effectiveLoadKg;
 }
 
@@ -41,9 +41,9 @@ function claimedRir(result: SetResult, cfg: BalanceConfig): number {
 }
 
 function rirFloorFromLaterSets(
-  checked: SetResult,
-  laterSets: readonly SetResult[],
-  exercise: ExerciseDef,
+  checked: LiftSetResult,
+  laterSets: readonly LiftSetResult[],
+  exercise: LiftExerciseDef,
   cfg: BalanceConfig,
 ): number {
   const checkedLoad = workingLoad(checked, exercise);
@@ -65,11 +65,11 @@ function rirFloorFromLaterSets(
 }
 
 export const checkFatigue: Step = (ctx: SessionContext) => {
-  const workingSets = ctx.sets.filter((result) => !result.set.isWarmup);
+  const workingSets = ctx.sets.filter(isLiftResult).filter((result) => !result.set.isWarmup);
   const sets = ctx.sets.map((result): SetResult => {
-    if (result.set.isWarmup || result.rirForXp === null) return result;
+    if (!isLiftResult(result) || result.set.isWarmup || result.rirForXp === null) return result;
     const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
-    if (workingLoad(result, exercise) <= 0) return result;
+    if (exercise.modality === 'cardio' || workingLoad(result, exercise) <= 0) return result;
     const laterSets = workingSets.filter(
       (other) => other.set.exerciseId === result.set.exerciseId && other.set.position > result.set.position,
     );

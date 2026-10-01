@@ -198,6 +198,51 @@ describe('catalog validation', () => {
       (c) => (find(c.items, 'plate_crab').description = 'Found near Varrock.'),
       /matches denylisted term "varrock"/,
     ],
+    [
+      'shares never cross modality',
+      (c) => (find(c.exercises, 'running').shares[0].skill = 'legs'),
+      /exercise "running" shares skill "legs" of another modality/,
+    ],
+    [
+      'variation_of never crosses modality',
+      (c) => (find(c.exercises, 'walking').variationOf = 'back_squat'),
+      /exercise "walking" is a variation of "back_squat" of another modality/,
+    ],
+    [
+      'a cardio exercise has no load_type',
+      (c) => (find(c.exercises, 'running').loadType = 'external'),
+      /cardio exercise "running" has a load_type/,
+    ],
+    [
+      'a cardio exercise has a cardio block',
+      (c) => (find(c.exercises, 'running').cardio = null),
+      /cardio exercise "running" needs a cardio block/,
+    ],
+    [
+      'a lift has a load_type',
+      (c) => (find(c.exercises, 'deadlift').loadType = null),
+      /lift exercise "deadlift" needs a load_type/,
+    ],
+    [
+      'a lift has no cardio block',
+      (c) => (find(c.exercises, 'deadlift').cardio = structuredClone(find(c.exercises, 'running').cardio)),
+      /lift exercise "deadlift" has a cardio block/,
+    ],
+    [
+      'programs use no cardio exercise',
+      (c) => (c.programs[0].days[0].exercises[0].exercise = 'running'),
+      /program day "ppl:push" uses cardio exercise "running"/,
+    ],
+    [
+      'max_effort is a cardio effort level',
+      (c) => (find(c.exercises, 'running').cardio!.maxEffort = 'extreme'),
+      /cardio exercise "running" max_effort "extreme" must be one of easy, moderate, hard, max/,
+    ],
+    [
+      'record_min_distance_m needs a reference pace',
+      (c) => (find(c.exercises, 'running').cardio!.referencePaceSPerKm = null),
+      /cardio exercise "running" has record_min_distance_m but no reference pace/,
+    ],
   ])('rejects a catalog when %s is broken', (_rule, mutate, expected) => {
     const problems = problemsAfter(mutate);
     expect(
