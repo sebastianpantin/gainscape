@@ -13,6 +13,7 @@ import {
 } from '../src/pwa/shell-rules.ts';
 
 const workerEntry = resolve(import.meta.dirname, '../src/sw/service-worker.ts');
+const killSwitchEntry = resolve(import.meta.dirname, '../src/sw/kill-switch.ts');
 
 function sha256(data: Buffer | string): string {
   return createHash('sha256').update(data).digest('hex');
@@ -34,6 +35,29 @@ export function shellBuildFor(outDir: string): ShellBuild {
   return { id: sha256(shellBuildManifestText(files)).slice(0, BUILD_ID_LENGTH), files };
 }
 
+async function buildWorker(entry: string, outDir: string, define: Record<string, string>): Promise<string> {
+  await build({
+    configFile: false,
+    publicDir: false,
+    logLevel: 'warn',
+    define,
+    build: {
+      outDir,
+      emptyOutDir: false,
+      copyPublicDir: false,
+      minify: true,
+      lib: { entry, formats: ['iife'], name: 'gainscapeShell', fileName: () => SERVICE_WORKER_FILE },
+    },
+  });
+  const workerPath = join(outDir, SERVICE_WORKER_FILE);
+  if (!existsSync(workerPath)) throw new Error(`${SERVICE_WORKER_FILE} was not built from ${entry}`);
+  return readFileSync(workerPath, 'utf8');
+}
+
+export async function buildKillSwitch(outDir: string): Promise<string> {
+  return buildWorker(killSwitchEntry, outDir, {});
+}
+
 export function serviceWorkerPlugin(): Plugin {
   let outDir = '';
   return {
@@ -44,22 +68,8 @@ export function serviceWorkerPlugin(): Plugin {
     },
     async closeBundle() {
       const shell = shellBuildFor(outDir);
-      await build({
-        configFile: false,
-        publicDir: false,
-        logLevel: 'warn',
-        define: { __SHELL_BUILD__: JSON.stringify(shell) },
-        build: {
-          outDir,
-          emptyOutDir: false,
-          copyPublicDir: false,
-          minify: true,
-          lib: { entry: workerEntry, formats: ['iife'], name: 'gainscapeShell', fileName: () => SERVICE_WORKER_FILE },
-        },
-      });
-      const workerPath = join(outDir, SERVICE_WORKER_FILE);
-      if (!existsSync(workerPath) || !readFileSync(workerPath, 'utf8').includes(shell.id))
-        throw new Error(`${SERVICE_WORKER_FILE} was not built for shell ${shell.id}`);
+      const worker = await buildWorker(workerEntry, outDir, { __SHELL_BUILD__: JSON.stringify(shell) });
+      if (!worker.includes(shell.id)) throw new Error(`${SERVICE_WORKER_FILE} was not built for shell ${shell.id}`);
     },
   };
 }

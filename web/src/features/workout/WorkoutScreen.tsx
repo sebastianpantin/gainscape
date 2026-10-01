@@ -105,6 +105,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         setListNotice(list.notice);
         setLoadProblem(list.problem);
       },
+      () => navigator.onLine === false,
     );
     return () => {
       active = false;

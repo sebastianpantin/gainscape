@@ -3,7 +3,7 @@ import { confirmAccount } from './db.ts';
 
 export const password = 'correct-horse-battery';
 
-const authStorageKey = 'sb-localhost-auth-token';
+export const authStorageKey = 'sb-localhost-auth-token';
 const draftDatabase = { name: 'gainscape', version: 1, store: 'drafts' };
 const fallbackDraftKeyPrefix = 'gainscape.workout-draft.v2.';
 

@@ -3,10 +3,12 @@ import { ACTIVATE_MESSAGE } from './shell-rules.ts';
 
 export const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 export const ACTIVATE_TIMEOUT_MS = 10_000;
+export const UPDATE_CHANNEL_NAME = 'gainscape-update';
+export const RELOAD_PING = 'gainscape:reload';
 
 export type UpdateState = 'idle' | 'ready' | 'applying' | 'waiting_for_finish' | 'reloading' | 'failed';
 
-export type UpdateCheck = 'up_to_date' | 'downloading' | 'ready';
+export type UpdateCheck = 'up_to_date' | 'download_failed' | 'ready';
 
 export interface WorkerPort {
   state: string;
@@ -26,6 +28,11 @@ export interface ContainerPort {
   addEventListener(type: 'controllerchange', listener: () => void): void;
 }
 
+export interface ChannelPort {
+  postMessage(message: unknown): void;
+  addEventListener(type: 'message', listener: (event: MessageEvent<unknown>) => void): void;
+}
+
 export interface LocksPort {
   request<T>(name: string, callback: (lock: unknown) => Promise<T>): Promise<T>;
   request<T>(name: string, options: { ifAvailable: boolean }, callback: (lock: unknown) => Promise<T>): Promise<T>;
@@ -35,6 +42,7 @@ export interface UpdatePorts {
   registration: RegistrationPort;
   serviceWorker: ContainerPort;
   locks: LocksPort | null;
+  channel: ChannelPort | null;
   flushDrafts: () => Promise<void>;
   reload: () => void;
   now: () => number;
@@ -51,13 +59,24 @@ export interface UpdateFlow {
 }
 
 const APPLYING_STATES: readonly UpdateState[] = ['applying', 'waiting_for_finish', 'reloading'];
+const SETTLED_WORKER_STATES = ['installed', 'activating', 'activated', 'redundant'];
+
+function settledState(worker: WorkerPort): Promise<string> {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (SETTLED_WORKER_STATES.includes(worker.state)) resolve(worker.state);
+    };
+    worker.addEventListener('statechange', check);
+    check();
+  });
+}
 
 function holdForever(): Promise<never> {
   return new Promise<never>(() => undefined);
 }
 
 export function createUpdateFlow(ports: UpdatePorts): UpdateFlow {
-  const { registration, serviceWorker, locks, flushDrafts, reload, now, userId, hadControllerAtLoad } = ports;
+  const { registration, serviceWorker, locks, channel, flushDrafts, reload, now, userId, hadControllerAtLoad } = ports;
   const controllerAtLoad = serviceWorker.controller;
   const listeners = new Set<() => void>();
   let state: UpdateState = 'idle';
@@ -117,7 +136,10 @@ export function createUpdateFlow(ports: UpdatePorts): UpdateFlow {
     }
     const changed = nextControllerChange();
     waiting.postMessage({ type: ACTIVATE_MESSAGE });
-    if (await changed) return reloadNow();
+    if (await changed) {
+      channel?.postMessage({ type: RELOAD_PING });
+      return reloadNow();
+    }
     setState('failed');
   };
 
@@ -155,6 +177,11 @@ export function createUpdateFlow(ports: UpdatePorts): UpdateFlow {
     });
   };
 
+  channel?.addEventListener('message', (event) => {
+    if ((event.data as { type?: unknown } | null)?.type !== RELOAD_PING || APPLYING_STATES.includes(state)) return;
+    void passiveReload();
+  });
+
   registration.addEventListener('updatefound', watchInstalling);
   watchInstalling();
   detect();
@@ -162,9 +189,11 @@ export function createUpdateFlow(ports: UpdatePorts): UpdateFlow {
   const checkForUpdates = async (): Promise<UpdateCheck> => {
     lastCheckAt = now();
     await registration.update();
+    const installing = registration.installing;
+    const outcome = installing ? await settledState(installing) : null;
     detect();
     if (registration.waiting && serviceWorker.controller) return 'ready';
-    return registration.installing ? 'downloading' : 'up_to_date';
+    return outcome === 'redundant' ? 'download_failed' : 'up_to_date';
   };
 
   return {

@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
+  authStorageKey,
   logExercise,
   openTab,
   readSession,
@@ -9,6 +10,7 @@ import {
   writeSession,
 } from '../support/app.ts';
 import { sessionCount, setCount } from '../support/db.ts';
+import { expectNoAxeViolations } from '../support/a11y.ts';
 import { expectFontsLoaded } from '../support/fonts.ts';
 import {
   builtShell,
@@ -48,6 +50,7 @@ test('an installed shell cold-starts offline and syncs later', async ({ context,
   const markOnline = await markPageOffline(cold);
   await expectProvenOffline(cold);
   await expect(cold.getByText(OFFLINE_BANNER)).toBeVisible();
+  await expectNoAxeViolations(cold, 'offline banner');
   const benchCard = cold.locator('section', {
     has: cold.getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
   });
@@ -138,5 +141,28 @@ test('every tab renders offline without an uncaught error', async ({ context, pa
   await expect(cold.getByRole('heading', { name: 'App' })).toBeVisible();
   expect(errors).toEqual([]);
   await markOnline();
+  await context.setOffline(false);
+});
+
+test('signing out offline with an expired token stays signed out after a cold start', async ({ context, page }) => {
+  test.setTimeout(180_000);
+  await register(page, uniqueUsername('pwa_s'));
+  await waitForController(page);
+  await context.setOffline(true);
+  await writeSession(page, { expires_at: nowInSeconds() - 60 });
+  await page.close();
+
+  const cold = await context.newPage();
+  expect((await cold.goto('/profile/settings'))?.fromServiceWorker()).toBe(true);
+  await markPageOffline(cold);
+  await cold.getByRole('button', { name: 'Sign out' }).click();
+  await expect(cold.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible({ timeout: 30_000 });
+  expect(await cold.evaluate((key) => localStorage.getItem(key), authStorageKey)).toBeNull();
+  await cold.close();
+
+  const again = await context.newPage();
+  expect((await again.goto('/'))?.fromServiceWorker()).toBe(true);
+  await expect(again.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(again.getByRole('link', { name: 'Train', exact: true })).toHaveCount(0);
   await context.setOffline(false);
 });

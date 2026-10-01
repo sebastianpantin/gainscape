@@ -309,7 +309,7 @@ const LICENSES_PAGE = '/licenses/index.html';
 
 const UPDATE_CHECK_TEXT: Record<Exclude<UpdateCheck, 'ready'>, string> = {
   up_to_date: "You're up to date.",
-  downloading: 'Downloading the new version…',
+  download_failed: "Couldn't download the update. Try again later.",
 };
 
 function AppSection() {
@@ -321,7 +321,7 @@ function AppSection() {
   const checkForUpdates = async () => {
     if (!flow) return;
     setChecking(true);
-    setCheckText(null);
+    setCheckText('Checking for updates…');
     try {
       const result = await flow.checkForUpdates();
       setCheckText(result === 'ready' ? null : UPDATE_CHECK_TEXT[result]);

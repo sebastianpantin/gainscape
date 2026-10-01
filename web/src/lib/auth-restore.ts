@@ -10,11 +10,54 @@ const storedSessionSchema = z.looseObject({
   access_token: z.string(),
   refresh_token: z.string(),
   expires_at: z.number(),
-  user: z.looseObject({ id: z.string(), email: z.string().optional() }),
+  user: z.looseObject({ id: z.uuid(), email: z.string() }),
 });
+
+const AUTH_PATH = '/auth/v1/';
+const TOKEN_PATH = '/auth/v1/token';
+const REFRESH_GRANT = 'refresh_token';
 
 export function authStorageKey(supabaseUrl: string): string {
   return `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
+}
+
+export function needsAuthTimeout(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (!parsed.pathname.includes(AUTH_PATH)) return false;
+  return !(parsed.pathname.endsWith(TOKEN_PATH) && parsed.searchParams.get('grant_type') === REFRESH_GRANT);
+}
+
+const forcedSignOutListeners = new Set<() => void>();
+
+export function onForcedSignOut(listener: () => void): () => void {
+  forcedSignOutListeners.add(listener);
+  return () => forcedSignOutListeners.delete(listener);
+}
+
+export function forceSignedOut(): void {
+  for (const listener of forcedSignOutListeners) listener();
+}
+
+export interface SignOutPorts {
+  signOut: () => Promise<{ error: unknown }>;
+  forget: () => void;
+  fallbackMs?: number;
+}
+
+export async function signOutOnThisDevice({ signOut, forget, fallbackMs = AUTH_FALLBACK_MS }: SignOutPorts) {
+  const signedOut = signOut()
+    .catch((error: unknown) => ({ error }))
+    .then(({ error }) => {
+      if (error) forget();
+      return error ? 'failed' : 'done';
+    });
+  const slow = new Promise<'slow'>((resolve) => setTimeout(() => resolve('slow'), fallbackMs));
+  if ((await Promise.race([signedOut, slow])) === 'slow') forget();
 }
 
 export function storedSessionFrom(raw: string | null): Session | null {

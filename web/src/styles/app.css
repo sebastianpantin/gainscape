@@ -1396,10 +1396,6 @@ a:focus-visible {
   box-shadow: none;
 }
 
-.effort-selector.rir {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 .effort-selector.rpe {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
