@@ -23,7 +23,7 @@ Simulates years of training for four lifter profiles using the real domain engin
 
 ### Working In This Directory
 
-- `SIM_EXERCISE_SHARES` and `SIM_SKILLS` duplicate `catalog/exercises.yaml` and `catalog/skills.yaml`. When those shares change, update `catalog.ts`; `tests/integration/sim-catalog.test.ts` fails on drift.
+- `SIM_EXERCISE_SHARES` and `SIM_SKILLS` duplicate `catalog/exercises.yaml` and `catalog/skills.yaml`. When those shares change, update `catalog.ts`; `tests/catalog/sim-catalog.test.ts` fails on drift.
 - Imports from the domain must go through `supabase/functions/_shared/domain/index.ts`.
 - Keep the simulation deterministic: use `seededRandom`, never `Math.random` or the real clock (the start date is a constant).
 - If `make sim-check` fails after changing balance constants, tune with `make sim` and update `domain/balance.ts`, not the bands, unless the design targets change.
@@ -32,7 +32,7 @@ Simulates years of training for four lifter profiles using the real domain engin
 ### Testing Requirements
 
 - `tests/balance/balance-bands.test.ts` (`make sim-check`, about 15 s) runs the committed constants through the bands and unit-tests `evaluateBands`. Put a failing band or `yearsToLevel99` case there first.
-- `tests/integration/sim-catalog.test.ts` (`make test-integration`, needs the stack) guards catalog drift.
+- `tests/catalog/sim-catalog.test.ts` (`make test-catalog`, no stack) guards catalog drift for shares and skills.
 - `report.ts` is a console report with no test of its own.
 
 ### Common Patterns

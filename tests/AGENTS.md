@@ -45,7 +45,7 @@ Pick the lowest layer that can express the behaviour, write the failing test fir
 | balance     | `npx vitest run tests/balance`                  | `make sim-check`        | No    |
 | integration | `npx vitest run tests/integration/rls.test.ts`  | `make test-integration` | Yes   |
 
-Integration files need `make start` (or `make functions` on a running stack) first; `make test-integration` runs `make functions` itself. `tests/integration/sim-catalog.test.ts` is the one test about the balance simulator that needs the stack, and it lives under `integration/`, not `balance/`.
+Integration files need `make start` (or `make functions` on a running stack) first; `make test-integration` runs `make functions` itself.
 
 ### Common Patterns
 
