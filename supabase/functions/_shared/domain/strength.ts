@@ -3,13 +3,15 @@ import { MS_PER_DAY } from './edit-window.ts';
 import { fatigueAfterSet, fatiguedStrength } from './fatigue.ts';
 import { compareSessionKeys, isBefore } from './ordering.ts';
 import type { SessionContext, Step } from './pipeline.ts';
-import type {
-  ExerciseDef,
-  ExerciseStrength,
-  SessionKey,
-  SetResult,
-  StrengthHistoryRow,
-  StrengthState,
+import {
+  type ExerciseStrength,
+  isLiftResult,
+  type LiftExerciseDef,
+  type LiftSetResult,
+  type SessionKey,
+  type SetResult,
+  type StrengthHistoryRow,
+  type StrengthState,
 } from './types.ts';
 
 const FLOOR_TOLERANCE = 1e-9;
@@ -45,11 +47,11 @@ export function intensityBonus(reps: number, loadKg: number, e1rmKg: number | nu
   return roundTo(6, 1 + (cfg.intensityBonusMax - 1) * progress);
 }
 
-export function liftsNoLoad(exercise: ExerciseDef, effectiveLoadKg: number): boolean {
+export function liftsNoLoad(exercise: LiftExerciseDef, effectiveLoadKg: number): boolean {
   return !usesRepsCapacity(exercise) && effectiveLoadKg <= 0;
 }
 
-function usesRepsCapacity(exercise: ExerciseDef): boolean {
+function usesRepsCapacity(exercise: LiftExerciseDef): boolean {
   return exercise.loadType === 'bodyweight';
 }
 
@@ -113,7 +115,7 @@ interface StrengthDecision {
   rirUsedForStrength: number | null;
 }
 
-function estimateFor(result: SetResult, exercise: ExerciseDef, strengthBefore: number | null): number | null {
+function estimateFor(result: LiftSetResult, exercise: LiftExerciseDef, strengthBefore: number | null): number | null {
   if (strengthBefore === null || strengthBefore <= 0) return null;
   if (usesRepsCapacity(exercise)) {
     return Math.max(0, Math.floor(strengthBefore - result.set.reps + FLOOR_TOLERANCE));
@@ -122,14 +124,14 @@ function estimateFor(result: SetResult, exercise: ExerciseDef, strengthBefore: n
   return estimateRir(result.effectiveLoadKg, result.set.reps, strengthBefore);
 }
 
-function beatsPrediction(result: SetResult, exercise: ExerciseDef, strengthBefore: number): boolean {
+function beatsPrediction(result: LiftSetResult, exercise: LiftExerciseDef, strengthBefore: number): boolean {
   if (usesRepsCapacity(exercise)) return result.set.reps > strengthBefore;
   return result.set.reps > predictedMaxReps(result.effectiveLoadKg, strengthBefore);
 }
 
 function decideEffort(
-  result: SetResult,
-  exercise: ExerciseDef,
+  result: LiftSetResult,
+  exercise: LiftExerciseDef,
   strengthBefore: number | null,
   fatigue: number,
   coldStartPayable: boolean,
@@ -179,8 +181,8 @@ function decideEffort(
 }
 
 function uncappedCandidate(
-  result: SetResult,
-  exercise: ExerciseDef,
+  result: LiftSetResult,
+  exercise: LiftExerciseDef,
   rirUsedForStrength: number | null,
   cfg: BalanceConfig,
 ): number | null {
@@ -191,15 +193,15 @@ function uncappedCandidate(
   return epley(result.effectiveLoadKg, repsToFailure);
 }
 
-function capGrowth(candidate: number, anchor: number | null, exercise: ExerciseDef, cfg: BalanceConfig): number {
+function capGrowth(candidate: number, anchor: number | null, exercise: LiftExerciseDef, cfg: BalanceConfig): number {
   if (anchor === null) return candidate;
   const ceiling = anchor * (1 + cfg.maxStrengthGainPerSession);
   return Math.min(candidate, usesRepsCapacity(exercise) ? Math.ceil(roundTo(6, ceiling)) : roundTo(2, ceiling));
 }
 
 function isColdStartPayable(
-  result: SetResult,
-  exercise: ExerciseDef,
+  result: LiftSetResult,
+  exercise: LiftExerciseDef,
   progress: ExerciseSessionProgress,
   cfg: BalanceConfig,
 ): boolean {
@@ -216,6 +218,7 @@ export const trackStrength: Step = (ctx: SessionContext) => {
 
   const sets = ctx.sets.map((result): SetResult => {
     const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
+    if (!isLiftResult(result) || exercise.modality === 'cardio') return result;
     const known = ctx.deps.strength?.[exercise.id] ?? NO_STRENGTH;
     const progress = progressByExercise.get(exercise.id) ?? {
       strengthAtSessionStart: known.windowMax ?? known.fallbackMax,
@@ -276,7 +279,7 @@ export const trackStrength: Step = (ctx: SessionContext) => {
 };
 
 export function strengthHistoryRows(session: SessionKey, sets: readonly SetResult[]): StrengthHistoryRow[] {
-  return sets.map((result) => ({
+  return sets.filter(isLiftResult).map((result) => ({
     exerciseId: result.set.exerciseId,
     session,
     isWarmup: result.set.isWarmup,

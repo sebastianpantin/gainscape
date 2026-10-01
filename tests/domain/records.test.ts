@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   applySetToRecords,
   collectionCompletion,
+  KindMismatchError,
   NO_RECORDS,
+  recordsFromHistory,
   replayHistory,
   type SessionInput,
   type SetInput,
@@ -169,5 +171,19 @@ describe('collection completion', () => {
 
   it('is zero with nothing done or pinned', () => {
     expect(collectionCompletion([])).toEqual({ filledSlots: 0, totalSlots: 0, fraction: 0 });
+  });
+});
+
+describe('recordsFromHistory', () => {
+  it('rejects a lift history row on a cardio exercise', () => {
+    const row = {
+      exerciseId: 'run',
+      session: { id: 'session-0', startedAt: '2026-09-01T18:00:00.000Z' },
+      setId: 'set-run',
+      position: 0,
+      weightKg: 0,
+      reps: 1,
+    };
+    expect(() => recordsFromHistory([row], catalog, TEST_BALANCE)).toThrow(KindMismatchError);
   });
 });

@@ -3,10 +3,10 @@ import {
   type BalanceConfig,
   type EffortInputType,
   isWithinEditWindow,
+  type LiftSetInput,
   resolveEffort,
   type SessionKey,
   type SessionSummary,
-  type SetInput,
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
 import { inputSetColumns } from './set-columns.ts';
@@ -137,7 +137,7 @@ export async function ownedProgramDayId(
 }
 
 export function placeholderSetRow(
-  set: SetInput,
+  set: LiftSetInput,
   effectiveLoadKg: number,
   sessionId: string,
   userId: string,

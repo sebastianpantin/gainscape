@@ -1,10 +1,15 @@
 import type { BalanceConfig } from './balance.ts';
+import { boutPace, cardioSkillXp, countedWorkSeconds, derivedCardioEffort } from './cardio.ts';
 import { resolveEffort } from './effort.ts';
 import { levelForXp } from './levels.ts';
 import type {
+  CardioExerciseDef,
+  CardioSetInput,
   Catalog,
   ExerciseDef,
   LevelUp,
+  LiftExerciseDef,
+  LiftSetInput,
   SessionInput,
   SessionSummary,
   SetInput,
@@ -13,8 +18,13 @@ import type {
   StrengthState,
   UserState,
 } from './types.ts';
-import { NO_RECORDS } from './types.ts';
-import { BodyweightLoadNotZeroError, BodyweightRequiredError, UnknownExerciseError } from './errors.ts';
+import { isLiftResult, NO_RECORDS } from './types.ts';
+import {
+  BodyweightLoadNotZeroError,
+  BodyweightRequiredError,
+  KindMismatchError,
+  UnknownExerciseError,
+} from './errors.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
 import { checkFatigue } from './fatigue.ts';
 import { liftsNoLoad, roundTo, trackStrength } from './strength.ts';
@@ -51,15 +61,21 @@ function exerciseFor(set: SetInput, catalog: Catalog): ExerciseDef {
   return exercise;
 }
 
-function assertNoAddedLoadOnPureBodyweight(set: Pick<SetInput, 'weightKg'>, exercise: ExerciseDef): void {
+function liftExercise(exercise: ExerciseDef): LiftExerciseDef {
+  if (exercise.modality === 'cardio') throw new KindMismatchError(exercise.id);
+  return exercise;
+}
+
+function assertNoAddedLoadOnPureBodyweight(set: Pick<LiftSetInput, 'weightKg'>, exercise: LiftExerciseDef): void {
   if (exercise.loadType === 'bodyweight' && set.weightKg > 0) throw new BodyweightLoadNotZeroError();
 }
 
 export function effectiveLoadForNewSet(
-  set: Pick<SetInput, 'weightKg'>,
-  exercise: ExerciseDef,
+  set: Pick<LiftSetInput, 'weightKg'>,
+  anyExercise: ExerciseDef,
   bodyweightKg: number | null,
 ): number {
+  const exercise = liftExercise(anyExercise);
   assertNoAddedLoadOnPureBodyweight(set, exercise);
   if (exercise.loadType === 'external') return set.weightKg;
   if (bodyweightKg === null) throw new BodyweightRequiredError();
@@ -74,10 +90,11 @@ export interface StoredSetLoad {
 
 export function carriedEffectiveLoadKg(
   stored: StoredSetLoad,
-  next: Pick<SetInput, 'exerciseId' | 'weightKg'>,
-  exercise: ExerciseDef,
+  next: Pick<LiftSetInput, 'exerciseId' | 'weightKg'>,
+  anyExercise: ExerciseDef,
   bodyweightKg: number | null,
 ): number {
+  const exercise = liftExercise(anyExercise);
   assertNoAddedLoadOnPureBodyweight(next, exercise);
   if (exercise.loadType === 'external') return roundTo(2, next.weightKg);
   if (stored.exerciseId === next.exerciseId) {
@@ -86,46 +103,102 @@ export function carriedEffectiveLoadKg(
   return roundTo(2, effectiveLoadForNewSet(next, exercise, bodyweightKg));
 }
 
-function effectiveLoadKg(set: SetInput, exercise: ExerciseDef, state: UserState): number {
+function effectiveLoadKg(set: LiftSetInput, exercise: LiftExerciseDef, state: UserState): number {
   assertNoAddedLoadOnPureBodyweight(set, exercise);
   return set.recordedEffectiveLoadKg ?? effectiveLoadForNewSet(set, exercise, state.bodyweightKg);
 }
 
+const SECONDS_PER_MINUTE = 60;
+
+const UNSCORED_RESULT_FIELDS = Object.freeze({
+  rir: null,
+  rirForXp: null,
+  rirFlagged: false,
+  intensityBonus: 1,
+  coldStartXp: 0,
+  e1rmBeforeKg: null,
+  repsCapacityBefore: null,
+  e1rmCandidateKg: null,
+  repsCapacityCandidate: null,
+  effectiveLoadKg: 0,
+  personalRecord: null,
+  effectiveReps: 0,
+  xp: 0,
+  cardio: null,
+});
+
+function liftResult(set: LiftSetInput, exercise: LiftExerciseDef, ctx: SessionContext): SetResult {
+  const { effortInputType, effortValue, loggedRir } = resolveEffort(set.effort, ctx.cfg, 'lift');
+  return {
+    ...UNSCORED_RESULT_FIELDS,
+    set,
+    skillXp: [],
+    effortInputType,
+    effortValue,
+    rir: loggedRir,
+    rirSource: loggedRir === null ? 'cold_start' : 'logged',
+    rirForXp: loggedRir,
+    effectiveLoadKg: effectiveLoadKg(set, exercise, ctx.state),
+  };
+}
+
+function cardioResult(
+  bout: CardioSetInput,
+  exercise: CardioExerciseDef,
+  counted: { workS: number; xpWorkS: number },
+  ctx: SessionContext,
+): SetResult {
+  const { effortInputType, effortValue } = resolveEffort(bout.effort, ctx.cfg, 'cardio');
+  return {
+    ...UNSCORED_RESULT_FIELDS,
+    set: bout,
+    skillXp: [],
+    effortInputType,
+    effortValue,
+    rirSource: bout.effort === null ? 'default' : 'logged',
+    cardio: {
+      countedWorkS: counted.workS,
+      xpCountedWorkS: counted.xpWorkS,
+      cappedWorkS: counted.workS - counted.xpWorkS,
+      effort: derivedCardioEffort(bout.effort, exercise.cardio.maxEffort),
+      ...boutPace(bout, exercise, ctx.cfg),
+    },
+  };
+}
+
 export const resolveSets: Step = (ctx) => {
+  let xpWorkSecondsLeft = ctx.cfg.cardioMaxCountedMinutesPerSession * SECONDS_PER_MINUTE;
   const sets = [...ctx.session.sets]
     .sort((a, b) => a.position - b.position)
     .map((set): SetResult => {
       const exercise = exerciseFor(set, ctx.deps.catalog);
-      const { effortInputType, effortValue, loggedRir } = resolveEffort(set.effort, ctx.cfg);
-      return {
-        set,
-        effortInputType,
-        effortValue,
-        rir: loggedRir,
-        rirSource: loggedRir === null ? 'cold_start' : 'logged',
-        rirForXp: loggedRir,
-        rirFlagged: false,
-        intensityBonus: 1,
-        coldStartXp: 0,
-        e1rmBeforeKg: null,
-        repsCapacityBefore: null,
-        e1rmCandidateKg: null,
-        repsCapacityCandidate: null,
-        effectiveLoadKg: effectiveLoadKg(set, exercise, ctx.state),
-        personalRecord: null,
-        effectiveReps: 0,
-        xp: 0,
-        skillXp: [],
-      };
+      if (set.kind === 'cardio') {
+        if (exercise.modality !== 'cardio') throw new KindMismatchError(exercise.id);
+        const workS = countedWorkSeconds(set);
+        const xpWorkS = Math.min(workS, xpWorkSecondsLeft);
+        xpWorkSecondsLeft -= xpWorkS;
+        return cardioResult(set, exercise, { workS, xpWorkS }, ctx);
+      }
+      return liftResult(set, liftExercise(exercise), ctx);
     });
   return { ...ctx, sets };
 };
 
 const awardXp: Step = (ctx) => {
-  const sortOrderBySkillId = new Map(ctx.deps.catalog.skills.map((skill) => [skill.id, skill.sortOrder]));
+  const skillsById = new Map(ctx.deps.catalog.skills.map((skill) => [skill.id, skill]));
+  const sortOrderOf = (skillId: string) => skillsById.get(skillId)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
   const xpSetsSeenByExercise = new Map<string, number>();
   const sets = ctx.sets.map((result) => {
     const exercise = exerciseFor(result.set, ctx.deps.catalog);
+    if (result.cardio !== null) {
+      const shares = [...exercise.shares]
+        .sort((a, b) => sortOrderOf(a.skillId) - sortOrderOf(b.skillId))
+        .map((share) => ({ ...share, skillKey: skillsById.get(share.skillId)?.key ?? '' }));
+      const steady = result.set.kind === 'cardio' && result.set.interval === null;
+      const skillXp = cardioSkillXp({ ...result.cardio, steady }, shares, ctx.cfg);
+      return { ...result, xp: skillXp.reduce((sum, part) => sum + part.xp, 0), skillXp };
+    }
+    if (!isLiftResult(result) || exercise.modality === 'cardio') return result;
     const earnsNothing = result.rirForXp === null || liftsNoLoad(exercise, result.effectiveLoadKg);
     const effectiveRepCount = earnsNothing
       ? 0
@@ -133,10 +206,7 @@ const awardXp: Step = (ctx) => {
     const xp = result.rirForXp === null ? result.coldStartXp : setXp(effectiveRepCount, result.intensityBonus, ctx.cfg);
     const xpSetOrdinal = xpSetsSeenByExercise.get(exercise.id) ?? 0;
     if (xp > 0) xpSetsSeenByExercise.set(exercise.id, xpSetOrdinal + 1);
-    const shares = exercise.shares.map((share) => ({
-      ...share,
-      sortOrder: sortOrderBySkillId.get(share.skillId) ?? Number.MAX_SAFE_INTEGER,
-    }));
+    const shares = exercise.shares.map((share) => ({ ...share, sortOrder: sortOrderOf(share.skillId) }));
     return { ...result, effectiveReps: effectiveRepCount, xp, skillXp: splitXp(xp, shares, xpSetOrdinal) };
   });
   return { ...ctx, sets };

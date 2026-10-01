@@ -1,7 +1,7 @@
-import type { SetInput, SetResult } from '../domain/index.ts';
+import { isLiftResult, KindMismatchError, type LiftSetInput, type SetResult } from '../domain/index.ts';
 
 export function inputSetColumns(
-  set: Pick<SetInput, 'id' | 'exerciseId' | 'position' | 'weightKg' | 'reps' | 'isWarmup'>,
+  set: Pick<LiftSetInput, 'id' | 'exerciseId' | 'position' | 'weightKg' | 'reps' | 'isWarmup'>,
   effectiveLoadKg: number,
   effort: Pick<SetResult, 'effortInputType' | 'effortValue'>,
 ) {
@@ -32,6 +32,7 @@ export function derivedSetColumns(result: SetResult) {
 }
 
 export function newSetRow(result: SetResult, sessionId: string, userId: string) {
+  if (!isLiftResult(result)) throw new KindMismatchError(result.set.exerciseId);
   return {
     ...inputSetColumns(result.set, result.effectiveLoadKg, result),
     session_id: sessionId,

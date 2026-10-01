@@ -2,11 +2,11 @@ import {
   type BalanceConfig,
   type Catalog,
   DEFAULT_BALANCE,
-  type ExerciseDef,
   effectiveLoadForNewSet,
+  type LiftExerciseDef,
+  type LiftSetInput,
   processSession,
   resolveEffort,
-  type SetInput,
   type SetResult,
   type StrengthState,
 } from '@domain/index.ts';
@@ -28,7 +28,7 @@ const PREVIEW_STARTED_AT = '1970-01-01T00:00:00.000Z';
 const REPS_MODEL_PLACEHOLDER_BODYWEIGHT_KG = 0;
 
 interface PlacedSet {
-  input: SetInput | null;
+  input: LiftSetInput | null;
   done: boolean;
   unrated: boolean;
   hasPriorSession: boolean;
@@ -43,7 +43,7 @@ function hasValidEffort(set: DraftSet, cfg: BalanceConfig): boolean {
   }
 }
 
-function previewLoadKg(set: DraftSet, exercise: ExerciseDef, bodyweightKg: number | null): number | null {
+function previewLoadKg(set: DraftSet, exercise: LiftExerciseDef, bodyweightKg: number | null): number | null {
   const knownBodyweightKg =
     exercise.loadType === 'bodyweight' ? (bodyweightKg ?? REPS_MODEL_PLACEHOLDER_BODYWEIGHT_KG) : bodyweightKg;
   try {
@@ -55,11 +55,11 @@ function previewLoadKg(set: DraftSet, exercise: ExerciseDef, bodyweightKg: numbe
 
 function previewInput(
   set: DraftSet,
-  exercise: ExerciseDef,
+  exercise: LiftExerciseDef,
   position: number,
   bodyweightKg: number | null,
   cfg: BalanceConfig,
-): SetInput | null {
+): LiftSetInput | null {
   if (!Number.isInteger(set.reps) || set.reps < 1) return null;
   if (!Number.isFinite(set.weightKg) || set.weightKg < 0) return null;
   if (!hasValidEffort(set, cfg)) return null;
@@ -77,29 +77,29 @@ function previewInput(
   };
 }
 
-function previewCatalog(exercises: readonly DraftExercise[], isBuiltIn: (exerciseId: string) => boolean): Catalog {
-  const definitions = exercises.map((exercise): ExerciseDef => ({
+function previewDefinitions(
+  exercises: readonly DraftExercise[],
+  isBuiltIn: (exerciseId: string) => boolean,
+): Map<string, LiftExerciseDef> {
+  const definitions = exercises.map((exercise): LiftExerciseDef => ({
     id: exercise.exerciseId,
     loadType: exercise.loadType,
     builtIn: isBuiltIn(exercise.exerciseId),
     shares: [{ skillId: PREVIEW_SKILL_ID, shareBasisPoints: FULL_SHARE_BASIS_POINTS }],
   }));
-  return {
-    skills: [{ id: PREVIEW_SKILL_ID, key: PREVIEW_SKILL_ID, sortOrder: 0, combatWeight: 0 }],
-    exercises: new Map(definitions.map((definition) => [definition.id, definition])),
-  };
+  return new Map(definitions.map((definition) => [definition.id, definition]));
 }
 
 function placeSets(
   exercises: readonly DraftExercise[],
-  catalog: Catalog,
+  definitions: ReadonlyMap<string, LiftExerciseDef>,
   strength: StrengthState | null,
   bodyweightKg: number | null,
   cfg: BalanceConfig,
 ): PlacedSet[][] {
   let position = 0;
   return exercises.map((exercise) => {
-    const definition = catalog.exercises.get(exercise.exerciseId)!;
+    const definition = definitions.get(exercise.exerciseId)!;
     return exercise.sets.map((set): PlacedSet => {
       const placed = {
         input: previewInput(set, definition, position, bodyweightKg, cfg),
@@ -127,11 +127,15 @@ export function previewSession(
   bodyweightKg: number | null = null,
   cfg: BalanceConfig = DEFAULT_BALANCE,
 ): SetPreview[][] {
-  const catalog = previewCatalog(exercises, isBuiltIn);
-  const placed = placeSets(exercises, catalog, strength, bodyweightKg, cfg);
+  const definitions = previewDefinitions(exercises, isBuiltIn);
+  const catalog: Catalog = {
+    skills: [{ id: PREVIEW_SKILL_ID, key: PREVIEW_SKILL_ID, sortOrder: 0, combatWeight: 0 }],
+    exercises: definitions,
+  };
+  const placed = placeSets(exercises, definitions, strength, bodyweightKg, cfg);
   const doneInputs = placed.flat().flatMap((entry) => (entry.done && entry.input ? [entry.input] : []));
 
-  const resultsFor = (inputs: SetInput[]): Map<string, SetResult> => {
+  const resultsFor = (inputs: LiftSetInput[]): Map<string, SetResult> => {
     const { outputs } = processSession(
       { skillXp: {}, bodyweightKg },
       { id: PREVIEW_SESSION_ID, startedAt: PREVIEW_STARTED_AT, sets: inputs },

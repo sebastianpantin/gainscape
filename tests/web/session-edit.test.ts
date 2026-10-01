@@ -182,6 +182,8 @@ describe('editability and paging', () => {
     expect(effortLabel({ type: 'level', level: 'near_failure' })).toBe('Near fail');
     expect(effortLabel({ type: 'rpe', value: 8.5 })).toBe('RPE 8.5');
     expect(effortLabel({ type: 'rir', value: 2 })).toBe('RIR 2');
+    expect(effortLabel({ type: 'cardio', level: 'moderate' })).toBe('Moderate');
+    expect(effortLabel({ type: 'cardio', level: 'max' })).toBe('Max');
     expect(effortLabel(null)).toBeNull();
   });
 });
