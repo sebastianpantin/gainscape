@@ -60,6 +60,12 @@ const NOTICE_FOR_CHANGE: Record<DraftChange, DraftNotice | null> = {
   deleted: 'deleted',
 };
 
+const openSessionFlushes = new Set<() => Promise<void>>();
+
+export async function flushOpenDraftSessions(): Promise<void> {
+  await Promise.all([...openSessionFlushes].map((flush) => flush()));
+}
+
 function isDraftMessage(data: unknown): data is DraftMessage {
   const message = data as Partial<DraftMessage> | null;
   return typeof message?.userId === 'string' && typeof message.updatedAt === 'number';
@@ -247,8 +253,11 @@ export function createDraftSession({
 
   const close = () => {
     active = false;
+    openSessionFlushes.delete(flush);
     channel?.close();
   };
+
+  openSessionFlushes.add(flush);
 
   return {
     snapshot: () => snapshot,

@@ -12,7 +12,7 @@
   --color-parchment-shade: #b3a58c;
   --color-text: #f0e6d0;
   --color-text-muted: #b3a58c;
-  --color-text-faint: #8a7d66;
+  --color-text-faint: #a99e8a;
   --color-ink: #1d160f;
   --color-accent: #ffb000;
   --color-accent-light: #ffd166;
@@ -21,8 +21,11 @@
   --color-xp-light: #b5f0a4;
   --color-xp-dark: #4e8f3f;
   --color-rare: #6fa8dc;
-  --color-danger: #e0554b;
+  --color-danger: #e8827a;
+  --color-danger-fill: #e0554b;
   --color-focus: #ffe27a;
+  --color-placeholder: #5e5442;
+  --color-input-border: #000;
 
   --space-1: 4px;
   --space-2: 8px;

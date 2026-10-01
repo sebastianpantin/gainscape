@@ -9,6 +9,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  padding-top: env(safe-area-inset-top);
   background-color: var(--color-background);
   background-image: radial-gradient(var(--color-background-dots) 1px, transparent 1px);
   background-size: 6px 6px;
@@ -140,7 +141,7 @@ select {
   padding: 0 var(--space-2);
   background: var(--color-parchment);
   color: var(--color-ink);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-input-border);
   border-radius: var(--radius);
   box-shadow: inset 2px 2px 0 var(--color-parchment-shade);
   width: 100%;
@@ -155,7 +156,7 @@ input[type='checkbox'] {
 }
 
 input::placeholder {
-  color: #6b5f4b;
+  color: var(--color-placeholder);
 }
 
 fieldset {
@@ -219,7 +220,7 @@ a:focus-visible {
 }
 
 .button.danger {
-  background: var(--color-danger);
+  background: var(--color-danger-fill);
   color: var(--color-ink);
   box-shadow: inset 2px 2px 0 #f08a82;
 }
@@ -323,7 +324,7 @@ a:focus-visible {
 }
 
 .segment.active {
-  color: var(--color-accent);
+  color: var(--color-accent-light);
   font-weight: 600;
   background: var(--color-panel-border);
   border-color: #000;
@@ -351,6 +352,26 @@ a:focus-visible {
   font-size: var(--font-size-small);
 }
 
+.app-banner {
+  position: sticky;
+  top: env(safe-area-inset-top);
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-chrome);
+  border-bottom: var(--border-width) solid #000;
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
+.update-banner {
+  border-bottom-color: var(--color-accent);
+}
+
 .meter {
   height: 12px;
   background: #000;
@@ -374,6 +395,11 @@ a:focus-visible {
 .progress-fill {
   height: 100%;
   background: var(--color-xp);
+}
+
+.skill-icon {
+  display: inline-flex;
+  flex-shrink: 0;
 }
 
 .monogram {
@@ -814,14 +840,6 @@ a:focus-visible {
   to {
     transform: none;
     opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gain-added,
-  .pop,
-  .rise {
-    animation: none;
   }
 }
 
@@ -1378,10 +1396,6 @@ a:focus-visible {
   box-shadow: none;
 }
 
-.effort-selector.rir {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-}
-
 .effort-selector.rpe {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -1489,4 +1503,14 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

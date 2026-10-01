@@ -14,24 +14,44 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 
 ## Everyday commands
 
-| Command                     | What it does                                                                                                           |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `make reset`                | Recreate the local database from migrations and seed                                                                   |
-| `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc`, `deno check`                             |
-| `make test`                 | `make check`, then domain tests, web draft/sync tests, integration/RLS tests and `make test-db`                        |
-| `make test-db`              | pgTAP tests in `supabase/tests/` against the local database (refuses any non-local host)                               |
-| `make sim-check`            | Balance band test (about 15 s)                                                                                         |
-| `make sim`                  | Full balance tuning report (about 2 min)                                                                               |
-| `make e2e`                  | Playwright end-to-end flow in a headless phone-sized browser                                                           |
-| `make format` / `make lint` | Auto-format the repo / lint it                                                                                         |
-| `make rebuild-caches`       | Recompute every user's XP, e1RM, records and feed events from their logged sets (run after changing balance constants) |
-| `make types`                | Regenerate `web/src/lib/database.types.ts` from the local schema                                                       |
-| `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)                     |
-| `make stop`                 | Stop the functions server and the Supabase stack                                                                       |
+| Command                     | What it does                                                                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `make reset`                | Recreate the local database from migrations and seed                                                                                          |
+| `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc` (app and service worker), `deno check`, catalog and icons checks |
+| `make test`                 | `make check`, then domain tests, web draft/sync tests, integration/RLS tests and `make test-db`                                               |
+| `make test-db`              | pgTAP tests in `supabase/tests/` against the local database (refuses any non-local host)                                                      |
+| `make sim-check`            | Balance band test (about 15 s)                                                                                                                |
+| `make sim`                  | Full balance tuning report (about 2 min)                                                                                                      |
+| `make e2e`                  | Playwright end-to-end flow in a headless phone-sized browser                                                                                  |
+| `make e2e-pwa`              | Builds the production bundle and runs the offline, update and installability tests against `vite preview`                                     |
+| `make preview`              | Production build served by `vite preview` (https, preview port = web port - 1000, so 4173 by default)                                         |
+| `make icons`                | Regenerate the app icons and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                    |
+| `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                |
+| `make rebuild-caches`       | Recompute every user's XP, e1RM, records and feed events from their logged sets (run after changing balance constants)                        |
+| `make types`                | Regenerate `web/src/lib/database.types.ts` from the local schema                                                                              |
+| `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)                                            |
+| `make stop`                 | Stop the functions server and the Supabase stack                                                                                              |
 
 Studio (the database UI) runs at http://127.0.0.1:54323 while the stack is up.
 
 To run a second stack side by side (for example from a git worktree), put a gitignored `.stack.env` at the repo root with a distinct `SUPABASE_PROJECT_ID`, `SUPABASE_*_PORT` overrides (the Supabase CLI reads these in place of `config.toml` values) and `GAINSCAPE_WEB_PORT`. The Makefile exports it to every target. Without the file everything uses the defaults above.
+
+## Install on your phone
+
+The production build is an installable PWA: a service worker keeps the app shell, fonts and icons on the device, so the Train tab opens without signal, shows your saved draft and lets you add exercises from the last exercise list it saw. The workout syncs once you are back online. Supabase traffic is never cached.
+
+- Android Chrome: open the app, then use "Install Gainscape" in Profile → Settings → App (or the browser menu).
+- iPhone Safari: tap Share, then Add to Home Screen.
+
+`make dev` never registers a service worker. To try the offline shell on a phone before deploying, run `GAINSCAPE_PLAIN_HTTP=1 make preview` (plain http) and forward the port over USB, because phones refuse service workers on the self-signed LAN certificate: `adb reverse tcp:4173 tcp:4173`, then open `http://localhost:4173` in Android Chrome (`localhost` counts as a secure origin). iOS has no equivalent before deploy.
+
+New versions install in the background. A banner offers "Reload"; it saves open drafts and waits for any running Finish (the per-user finish lock) before it activates the new version, and every open tab then reloads.
+
+Recovery notes:
+
+- A broken service worker is retired with the kill switch. Run your production build first (with the production `VITE_SUPABASE_URL` and anon key, never `make build-local`), then `make sw-kill-switch`, which replaces `web/dist/sw.js` in that existing build with `web/src/sw/kill-switch.ts` and refuses unless `web/dist/.vite/gainscape-build.json` (written by every build) says `mode: production` with a hosted `VITE_SUPABASE_URL`. Only the e2e suite sets `GAINSCAPE_KILL_SWITCH_ALLOW_LOCAL=1` to skip that check for its local build. Deploy that `dist`. The kill switch activates at once, deletes the `gainscape-shell-*` caches, unregisters and reloads every open tab. Ship a normal build once the fix is in.
+- The host must serve the build byte for byte. The service worker checks every precached file against its SHA-256, so a host that rewrites HTML (beacon injection, email obfuscation) blocks every update.
+- Draft formats must stay readable by the previous build: a new draft format ships only after a release that can already read it, because a tab can keep running the old bundle until it reloads.
 
 ## Existing data after S6a
 
@@ -51,7 +71,7 @@ Before anything goes live, work through [docs/production-auth.md](docs/productio
 
 ## CI
 
-`.github/workflows/ci.yml` runs two jobs. `static` runs `make check`, the catalog, domain and web tests and `make sim-check` without a stack. `stack` runs `make ci-start` (the stack without Studio, storage, realtime and the other services the tests don't use, plus the web env file with the stack's anon key and the functions), then `make test-integration`, `make test-db` and `make e2e`. On failure, `make ci-logs` saves every container log to `ci-logs/`, which is uploaded with the Playwright report and traces.
+`.github/workflows/ci.yml` runs two jobs. `static` runs `make check`, the catalog, domain and web tests and `make sim-check` without a stack. `stack` runs `make ci-start` (the stack without Studio, storage, realtime and the other services the tests don't use, plus the web env file with the stack's anon key and the functions), then `make test-integration`, `make test-db`, `make e2e` and `make e2e-pwa`. On failure, `make ci-logs` saves every container log to `ci-logs/`, which is uploaded with the Playwright report and traces.
 
 ## Layout
 
@@ -60,7 +80,8 @@ Before anything goes live, work through [docs/production-auth.md](docs/productio
 - `supabase/functions/export-data/`, `supabase/functions/delete-account/`: account export (JSON of the caller's rows) and deletion (requires typing your username).
 - `supabase/migrations/`: schema and row-level security.
 - `catalog/*.yaml`: the single source of seed data (skills, exercises, programs, items, drop tables); `scripts/catalog/generate.ts` writes `supabase/seed.sql` from it.
-- `web/`: the React PWA (Vite root).
+- `web/`: the React PWA (Vite root). `web/public/` holds the manifest, the generated icons and the font licenses; `web/src/pwa/` the shell rules, update flow and install prompt; `web/src/sw/` the service worker; `web/build/` the Vite plugin that builds `sw.js` with its precache list.
+- `scripts/icons/`: the PNG encoder and icon renderer behind `make icons`.
 - `tests/`: Vitest domain tests, plus integration tests against the local stack.
 
 The full plan lives in `../.omc/plans/2026-09-28-gainscape.md`.

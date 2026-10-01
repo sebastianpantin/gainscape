@@ -26,7 +26,7 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
   }
 
   return (
-    <form className="panel stack" onSubmit={submit}>
+    <form className="panel stack bodyweight-prompt" onSubmit={submit}>
       <p>Bodyweight exercises count your bodyweight as the load. It stays private.</p>
       <label className="field">
         Bodyweight ({unit})
