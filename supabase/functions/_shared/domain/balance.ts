@@ -63,3 +63,17 @@ export const DEFAULT_LOOT: LootConfig = Object.freeze({
   badLuckStep: 0.03,
   maxChance: 0.4,
 });
+
+export type ItemRarityRank = 'common' | 'uncommon' | 'rare' | 'legendary';
+
+export interface FeedConfig {
+  readonly levelMilestone: number;
+  readonly levelAlwaysFrom: number;
+  readonly dropMinRarity: ItemRarityRank;
+}
+
+export const DEFAULT_FEED: FeedConfig = Object.freeze({
+  levelMilestone: 10,
+  levelAlwaysFrom: 90,
+  dropMinRarity: 'rare',
+});

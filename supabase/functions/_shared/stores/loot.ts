@@ -15,6 +15,7 @@ import {
   type RollKind,
 } from '../domain/index.ts';
 import { lootRngFor, lootSecret } from '../loot-seeds.ts';
+import { syncSessionEvents } from './events.ts';
 
 const LOOT_TABLE_KEYS = { regular: 'regular', rare: 'rare' } as const;
 
@@ -117,6 +118,7 @@ export async function rollNewSessionLoot(
   const { rolls, dryRolls } = rollSessionLoot(candidates, tables, dayState, DEFAULT_LOOT, rngFor);
   if (rolls.length === 0) {
     await refreshSummaryDrops(tx, [sessionId]);
+    await syncSessionEvents(tx, userId, [sessionId]);
     return;
   }
 
@@ -181,6 +183,7 @@ export async function rollNewSessionLoot(
       on conflict (user_id, drop_table_id) do update set dry_rolls = excluded.dry_rolls, updated_at = now()`;
   }
   await refreshSummaryDrops(tx, [sessionId]);
+  await syncSessionEvents(tx, userId, [sessionId]);
 }
 
 export type ActiveDrop = DropSummary & { sessionId: string };

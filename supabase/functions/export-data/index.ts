@@ -1,10 +1,12 @@
 import { authenticatedUserId } from '../_shared/auth.ts';
 import { sql } from '../_shared/db.ts';
 import { corsHeaders, errorResponse, HttpError, jsonResponse } from '../_shared/http.ts';
+import { takeRateLimit } from '../_shared/rate-limit.ts';
 
 const EXPORT_FORMAT_VERSION = 1;
 
 async function exportFor(userId: string) {
+  await takeRateLimit(sql, 'export_data_hour', userId);
   return await sql.begin('read only', async (tx) => {
     const [account] = await tx`select email, created_at from auth.users where id = ${userId}`;
     const [profile] = await tx`
@@ -57,6 +59,21 @@ async function exportFor(userId: string) {
     const userUnlocks = await tx`
       select * from public.user_unlocks where user_id = ${userId} order by unlocked_at, exercise_id`;
     const crafts = await tx`select * from public.crafts where user_id = ${userId} order by created_at, id`;
+    const events = await tx`select * from public.events where user_id = ${userId} order by occurred_at, id`;
+    const friendships = await tx`
+      select case when f.requester_id = ${userId} then f.addressee_id else f.requester_id end as "otherUserId",
+             p.username as "otherUsername",
+             case when f.requester_id = ${userId} then 'outgoing' else 'incoming' end as direction,
+             case when f.requester_id = ${userId} and f.status = 'declined' then 'pending' else f.status::text end
+               as status,
+             f.created_at as "createdAt",
+             case when f.requester_id = ${userId} and f.status = 'declined' then null else f.responded_at end
+               as "respondedAt"
+      from public.friendships f
+      join public.profiles p on p.id = case when f.requester_id = ${userId} then f.addressee_id else f.requester_id end
+      where ${userId} in (f.requester_id, f.addressee_id)
+        and not (f.requester_id = ${userId} and f.withdrawn_at is not null)
+      order by f.created_at, p.username`;
 
     return {
       format: 'gainscape-export',
@@ -84,6 +101,8 @@ async function exportFor(userId: string) {
       itemLedger,
       userUnlocks,
       crafts,
+      events,
+      friendships,
     };
   });
 }

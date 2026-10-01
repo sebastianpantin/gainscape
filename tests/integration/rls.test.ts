@@ -178,6 +178,73 @@ describe('profile protections', () => {
   });
 });
 
+describe('events', () => {
+  async function ownerEvents() {
+    return await db`select * from public.events where user_id = ${owner.id} order by id`;
+  }
+
+  it('has no client select, even for the owner', async () => {
+    const { error } = await owner.client.from('events').select('id');
+    expect(error?.code).toBe('42501');
+  });
+
+  it('denies client insert, update and delete', async () => {
+    await db`
+      insert into public.events (user_id, session_id, event_key, type, occurred_at, payload)
+      values (${owner.id}, ${ownerSessionId}, 'level:chest', 'level_up', now(), '{"skill": "chest"}')
+      on conflict (session_id, event_key) do nothing`;
+    const before = await ownerEvents();
+    expect(before.length).toBeGreaterThan(0);
+    const inserted = await owner.client.from('events').insert({
+      user_id: owner.id,
+      session_id: ownerSessionId,
+      event_key: 'level:legs',
+      type: 'level_99',
+      occurred_at: new Date().toISOString(),
+      payload: { skill: 'legs', from: 98, to: 99 },
+    });
+    expect(inserted.error?.code).toBe('42501');
+    const updated = await owner.client.from('events').update({ payload: {} }).eq('user_id', owner.id);
+    expect(updated.error?.code).toBe('42501');
+    const deleted = await owner.client.from('events').delete().eq('user_id', owner.id);
+    expect(deleted.error?.code).toBe('42501');
+    expect(await ownerEvents()).toEqual(before);
+  });
+});
+
+describe('friendships', () => {
+  async function pairRows() {
+    return await db`
+      select * from public.friendships
+      where requester_id in (${owner.id}, ${stranger.id}) or addressee_id in (${owner.id}, ${stranger.id})
+      order by requester_id`;
+  }
+
+  it('denies client insert, update and delete, even of own rows', async () => {
+    const sent = await owner.client.rpc('send_friend_request', { username: stranger.username });
+    expect(sent.error).toBeNull();
+    const before = await pairRows();
+    expect(before).toHaveLength(1);
+
+    const inserted = await stranger.client
+      .from('friendships')
+      .insert({ requester_id: stranger.id, addressee_id: owner.id, status: 'accepted' });
+    expect(inserted.error?.code).toBe('42501');
+    const updated = await stranger.client
+      .from('friendships')
+      .update({ status: 'accepted', responded_at: new Date().toISOString() })
+      .eq('requester_id', owner.id);
+    expect(updated.error?.code).toBe('42501');
+    const deleted = await owner.client.from('friendships').delete().eq('requester_id', owner.id);
+    expect(deleted.error?.code).toBe('42501');
+    const read = await owner.client.from('friendships').select('*');
+    expect(read.error?.code).toBe('42501');
+    expect(await pairRows()).toEqual(before);
+
+    expect((await owner.client.rpc('remove_friend', { other_id: stranger.id })).error).toBeNull();
+  });
+});
+
 describe('function execution rights', () => {
   it('lets anonymous visitors check username availability', async () => {
     const { data, error } = await anon.rpc('username_available', { candidate: 'nobody_has_this' });
@@ -219,10 +286,16 @@ describe('function execution rights', () => {
       'copy_program',
       'craft',
       'delete_program',
+      'get_collection',
+      'get_profile',
       'last_logged_sets',
+      'list_friends',
+      'remove_friend',
       'reorder_pins',
+      'respond_friend_request',
       'save_custom_exercise',
       'save_program',
+      'send_friend_request',
       'set_custom_exercise_archived',
       'set_timezone',
       'username_available',
