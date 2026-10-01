@@ -62,6 +62,7 @@ function withReps(draft: WorkoutDraft, reps: number): WorkoutDraft {
       {
         exerciseId: 'bench',
         name: 'Bench',
+        modality: 'lift',
         loadType: 'external',
         target: null,
         sets: [{ id: 'set-a', weightKg: 60, reps, effort: null, done: true }],
@@ -114,6 +115,48 @@ describe('draft session', () => {
     session.changeDraft(workout('session-a'));
     await session.flush();
     expect(latest().saveProblem).toBe(true);
+  });
+
+  it('round-trips a cardio draft through the store and a fresh session', async () => {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const first = sessionOver(store);
+    await first.session.ready;
+    const cardio: WorkoutDraft = {
+      ...workout('session-cardio'),
+      exercises: [
+        {
+          exerciseId: 'run',
+          name: 'Running',
+          modality: 'cardio',
+          activity: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', shares: [] },
+          sets: [
+            {
+              id: 'bout-a',
+              kind: 'cardio',
+              durationS: 1800,
+              distanceM: 5000,
+              interval: null,
+              effort: { type: 'cardio', level: 'hard' },
+              done: true,
+            },
+            {
+              id: 'bout-b',
+              kind: 'cardio',
+              durationS: 1800,
+              distanceM: null,
+              interval: { workS: 30, restS: 30, rounds: 10 },
+              effort: null,
+              done: false,
+            },
+          ],
+        },
+      ],
+    };
+    first.session.changeDraft(cardio);
+    await first.session.flush();
+    const second = sessionOver(store);
+    await second.session.ready;
+    expect(second.draft()).toEqual(cardio);
   });
 
   it('applies updateDraft to the latest draft, not a stale copy', async () => {

@@ -1,8 +1,10 @@
+import { CARDIO_EFFORT_LEVELS } from '@domain/types.ts';
 import { z } from 'zod';
-import { type Exercise, LOAD_TYPES } from './catalog.ts';
+import { type Exercise, LOAD_TYPES, PACE_UNITS } from './catalog.ts';
 
-const CACHE_VERSION = 1;
-const CACHE_KEY_PREFIX = 'gainscape.exercises.v1.';
+const CACHE_VERSION = 2;
+const CACHE_KEY_PREFIX = 'gainscape.exercises.v2.';
+const PRE_CARDIO_CACHE_KEY_PREFIX = 'gainscape.exercises.v1.';
 
 export const OFFLINE_EXERCISES_NOTICE = 'Offline: using your saved exercise list.';
 export const SAVED_EXERCISES_NOTICE = 'Using your saved exercise list.';
@@ -18,19 +20,32 @@ function isNetworkError(error: unknown): boolean {
   );
 }
 
+const cachedExerciseBase = {
+  id: z.string(),
+  name: z.string(),
+  equipment: z.string(),
+  custom: z.boolean(),
+  archived: z.boolean(),
+};
+
 const cachedExercisesSchema = z.object({
   v: z.literal(CACHE_VERSION),
   savedAt: z.string(),
   userId: z.string(),
   exercises: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      equipment: z.string(),
-      loadType: z.enum(LOAD_TYPES),
-      custom: z.boolean(),
-      archived: z.boolean(),
-    }),
+    z.discriminatedUnion('modality', [
+      z.object({ ...cachedExerciseBase, modality: z.literal('lift'), loadType: z.enum(LOAD_TYPES) }),
+      z.object({
+        ...cachedExerciseBase,
+        modality: z.literal('cardio'),
+        activity: z.object({
+          paceUnit: z.enum(PACE_UNITS),
+          referencePaceSPerKm: z.number().nullable(),
+          maxEffort: z.enum(CARDIO_EFFORT_LEVELS),
+          shares: z.array(z.object({ skillKey: z.string(), shareBasisPoints: z.number() })),
+        }),
+      }),
+    ]),
   ),
 });
 
@@ -44,10 +59,18 @@ export function readCachedExercises(storage: Storage, userId: string): Exercise[
     if (!raw) return null;
     const parsed = cachedExercisesSchema.safeParse(JSON.parse(raw));
     if (!parsed.success || parsed.data.userId !== userId) return null;
-    return parsed.data.exercises.map((exercise) => ({ ...exercise, modality: 'lift' }));
+    return parsed.data.exercises;
   } catch {
     return null;
   }
+}
+
+function cachedFields(exercise: Exercise): Exercise {
+  const { id, name, equipment, custom, archived } = exercise;
+  const base = { id, name, equipment, custom, archived };
+  return exercise.modality === 'lift'
+    ? { ...base, modality: 'lift', loadType: exercise.loadType }
+    : { ...base, modality: 'cardio', activity: exercise.activity };
 }
 
 export function saveCachedExercises(storage: Storage, userId: string, exercises: Exercise[], now = new Date()): void {
@@ -55,16 +78,10 @@ export function saveCachedExercises(storage: Storage, userId: string, exercises:
     v: CACHE_VERSION,
     savedAt: now.toISOString(),
     userId,
-    exercises: exercises.map(({ id, name, equipment, loadType, custom, archived }) => ({
-      id,
-      name,
-      equipment,
-      loadType,
-      custom,
-      archived,
-    })),
+    exercises: exercises.map(cachedFields),
   };
   try {
+    storage.removeItem(`${PRE_CARDIO_CACHE_KEY_PREFIX}${userId}`);
     storage.setItem(exerciseCacheKey(userId), JSON.stringify(record));
   } catch {
     return;

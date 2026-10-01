@@ -214,8 +214,13 @@ function hiscoreValue(row: HiscoreRow, skills: readonly HiscoreSkill[], metric: 
   return levelForXp(row.skillXp[metricSkillKey(metric) ?? ''] ?? 0);
 }
 
+function combatSkills(skills: readonly HiscoreSkill[]): HiscoreSkill[] {
+  return skills.filter((skill) => skill.combatWeight > 0);
+}
+
 function tiebreakXp(row: HiscoreRow, skills: readonly HiscoreSkill[], metric: HiscoreMetric): number {
-  if (metric === 'total' || metric === 'combat') return totalXp(row, skills);
+  if (metric === 'total') return totalXp(row, skills);
+  if (metric === 'combat') return totalXp(row, combatSkills(skills));
   if (metric === 'collection') return row.collectionFilled;
   return row.skillXp[metricSkillKey(metric) ?? ''] ?? 0;
 }

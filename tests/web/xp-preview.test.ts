@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type CardioSetInput,
   type Catalog,
   DEFAULT_BALANCE,
   effectiveLoadForNewSet,
@@ -9,8 +10,14 @@ import {
   processSession,
   setXp,
 } from '@domain/index.ts';
-import type { LoadType } from '../../web/src/lib/catalog.ts';
-import type { DraftExercise, DraftSet } from '../../web/src/offline/draft-format.ts';
+import type { CardioActivity, LoadType } from '../../web/src/lib/catalog.ts';
+import type {
+  CardioDraftExercise,
+  CardioDraftSet,
+  DraftExercise,
+  DraftSet,
+  LiftDraftExercise,
+} from '../../web/src/offline/draft-format.ts';
 import { previewSession } from '../../web/src/features/workout/xp-preview.ts';
 
 const failure = { type: 'level', level: 'failure' } as const;
@@ -22,8 +29,8 @@ function draftSet(weightKg: number, reps: number, effort: DraftSet['effort'], do
   return { id: `set-${setCounter}`, weightKg, reps, effort, done };
 }
 
-function exercise(exerciseId: string, sets: DraftSet[], loadType: LoadType = 'external'): DraftExercise {
-  return { exerciseId, name: exerciseId, loadType, target: null, sets };
+function exercise(exerciseId: string, sets: DraftSet[], loadType: LoadType = 'external'): LiftDraftExercise {
+  return { exerciseId, name: exerciseId, modality: 'lift', loadType, target: null, sets };
 }
 
 function strengthOf(entries: [string, number | null][]): Record<string, ExerciseStrength> {
@@ -243,5 +250,152 @@ describe('previewSession', () => {
     );
     const previews = previewSession(draft, builtIn, strength, 80);
     expect(previews.flat().map((preview) => preview.xp)).toEqual(server.outputs.sets.map((result) => result.xp));
+  });
+});
+
+const ENDURANCE_ONLY = [{ skillKey: 'endurance', shareBasisPoints: 10_000 }];
+
+const running: CardioActivity = {
+  paceUnit: 'per_km',
+  referencePaceSPerKm: 360,
+  maxEffort: 'max',
+  shares: ENDURANCE_ONLY,
+};
+const walking: CardioActivity = { ...running, referencePaceSPerKm: null, maxEffort: 'moderate' };
+const rowingIntervals: CardioActivity = {
+  paceUnit: 'per_km',
+  referencePaceSPerKm: null,
+  maxEffort: 'max',
+  shares: [
+    { skillKey: 'endurance', shareBasisPoints: 5000 },
+    { skillKey: 'agility', shareBasisPoints: 5000 },
+  ],
+};
+
+function bout(values: Partial<CardioDraftSet> = {}): CardioDraftSet {
+  setCounter += 1;
+  return {
+    id: `bout-${setCounter}`,
+    kind: 'cardio',
+    durationS: 1800,
+    distanceM: null,
+    interval: null,
+    effort: null,
+    done: true,
+    ...values,
+  };
+}
+
+function cardio(exerciseId: string, activity: CardioActivity, sets: CardioDraftSet[]): CardioDraftExercise {
+  return { exerciseId, name: exerciseId, modality: 'cardio', activity, sets };
+}
+
+function serverXp(draft: CardioDraftExercise[]): number[] {
+  const catalog: Catalog = {
+    skills: [
+      { id: 'endurance-id', key: 'endurance', sortOrder: 7, combatWeight: 0 },
+      { id: 'agility-id', key: 'agility', sortOrder: 8, combatWeight: 0 },
+    ],
+    exercises: new Map(
+      draft.map((entry) => [
+        entry.exerciseId,
+        {
+          id: entry.exerciseId,
+          modality: 'cardio',
+          builtIn: true,
+          shares: entry.activity.shares.map((share) => ({
+            skillId: `${share.skillKey}-id`,
+            shareBasisPoints: share.shareBasisPoints,
+          })),
+          cardio: {
+            referencePaceSPerKm: entry.activity.referencePaceSPerKm,
+            maxEffort: entry.activity.maxEffort,
+            recordMinDistanceM: null,
+          },
+        },
+      ]),
+    ),
+  };
+  let position = 0;
+  const sets = draft.flatMap((entry) =>
+    entry.sets
+      .filter((set) => set.done)
+      .map((set): CardioSetInput => ({
+        kind: 'cardio',
+        id: set.id,
+        exerciseId: entry.exerciseId,
+        position: position++,
+        durationS: set.durationS,
+        distanceM: set.distanceM,
+        interval: set.interval,
+        effort: set.effort,
+      })),
+  );
+  const server = processSession(
+    { skillXp: {}, bodyweightKg: null },
+    { id: 'server', startedAt: '2026-10-01T10:00:00.000Z', sets },
+    DEFAULT_BALANCE,
+    { catalog, strength: {} },
+  );
+  return server.outputs.sets.map((result) => result.xp);
+}
+
+describe('previewSession with cardio', () => {
+  it('pays a split activity the XP the server awards to both skills', () => {
+    const draft = [
+      cardio('rowing-intervals', rowingIntervals, [
+        bout({ interval: { workS: 60, restS: 60, rounds: 10 }, effort: { type: 'cardio', level: 'hard' } }),
+      ]),
+    ];
+    const previews = previewSession(draft, builtIn, null);
+    expect(previews[0][0]).toMatchObject({ xp: serverXp(draft)[0], basis: 'logged' });
+    expect(previews[0][0].xp).toBeGreaterThan(0);
+  });
+
+  it('applies the pace bonus and the steady factor like the server', () => {
+    const draft = [cardio('run', running, [bout({ distanceM: 6000, effort: { type: 'cardio', level: 'moderate' } })])];
+    expect(previewSession(draft, builtIn, null)[0].map((preview) => preview.xp)).toEqual(serverXp(draft));
+  });
+
+  it('stops paying once the bouts pass the 180 counted minutes of a session', () => {
+    const draft = [cardio('run', running, [bout({ durationS: 7200 }), bout({ durationS: 7200 })])];
+    const previews = previewSession(draft, builtIn, null)[0].map((preview) => preview.xp);
+    expect(previews).toEqual(serverXp(draft));
+    expect(previews[1]).toBe(previews[0] / 2);
+  });
+
+  it('caps a walking bout logged hard at moderate', () => {
+    const hard = [cardio('walk', walking, [bout({ effort: { type: 'cardio', level: 'hard' } })])];
+    const moderate = [cardio('walk', walking, [bout({ effort: { type: 'cardio', level: 'moderate' } })])];
+    expect(previewSession(hard, builtIn, null)[0][0].xp).toBe(serverXp(hard)[0]);
+    expect(previewSession(hard, builtIn, null)[0][0].xp).toBe(previewSession(moderate, builtIn, null)[0][0].xp);
+  });
+
+  it('previews a planned bout after the done bouts', () => {
+    const done = bout({ durationS: 10_000 });
+    const planned = bout({ durationS: 1800, done: false });
+    const draft = [cardio('run', running, [done, planned])];
+    const previews = previewSession(draft, builtIn, null)[0];
+    const plannedAsDone = serverXp([cardio('run', running, [done, { ...planned, done: true }])])[1];
+    expect(previews[1].xp).toBe(plannedAsDone);
+  });
+
+  it('previews no XP for an activity without shares', () => {
+    const draft = [cardio('mystery', { ...running, shares: [] }, [bout()])];
+    expect(previewSession(draft, builtIn, null)[0][0]).toMatchObject({ xp: 0, basis: 'logged' });
+  });
+
+  it('marks a bout outside the server bounds unknown instead of throwing', () => {
+    const draft = [cardio('run', running, [bout({ durationS: 30 }), bout({ durationS: Number.NaN })])];
+    expect(previewSession(draft, builtIn, null)[0].map((preview) => preview.basis)).toEqual(['unknown', 'unknown']);
+  });
+
+  it('leaves lift previews unchanged next to cardio bouts', () => {
+    const strength = strengthOf([['bench', epley(100, 6)]]);
+    const lifts = [exercise('bench', [draftSet(100, 6, failure), draftSet(100, 6, null, false)])];
+    const mixed: DraftExercise[] = [cardio('run', running, [bout()]), ...lifts, cardio('walk', walking, [bout()])];
+    const alone = previewSession(lifts, builtIn, strength);
+    const together = previewSession(mixed, builtIn, strength);
+    expect(together[1]).toEqual(alone[0]);
   });
 });

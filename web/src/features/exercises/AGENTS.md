@@ -9,11 +9,11 @@ Browse the exercise catalog and create, edit or archive the user's custom exerci
 
 ## Key Files
 
-| File                     | Description                                                                                                                                                                                                                          |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ExercisesScreen.tsx`    | Route `/exercises`. Lists exercises and skills, archives via `setCustomExerciseArchived`; opens the form directly when `?new=1` is present (the Train tab links to `/exercises?new=1`) and then clears the param                     |
-| `CustomExerciseForm.tsx` | Create/edit form. Validates the name with `nameProblem`/`trimmedName`, picks `EQUIPMENT`, `LOAD_TYPES` and skills, saves with `saveCustomExercise`, loads shares with `fetchExerciseShares`, and locks load type once `hasLoggedSet` |
-| `share-form.ts`          | Pure helpers: `BASIS_POINTS_PER_PERCENT` (100), `percentsFromShares`, `shareTotal`, `sharesToSave` (returns `null` when the total is not valid). Converts between percent strings and `SkillShare` basis points                      |
+| File                     | Description                                                                                                                                                                                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ExercisesScreen.tsx`    | Route `/exercises`. Lists exercises and skills, archives via `setCustomExerciseArchived`; opens the form directly when `?new=1` is present (the Train tab links to `/exercises?new=1`) and then clears the param                                                                                                                         |
+| `CustomExerciseForm.tsx` | Create/edit form. Validates the name with `nameProblem`/`trimmedName`, picks the kind (Lift or Cardio, only when creating; modality never changes), `EQUIPMENT`, `LOAD_TYPES` (lift only) and the skills of that kind, saves with `saveCustomExercise`, loads shares with `fetchExerciseShares`, and locks load type once `hasLoggedSet` |
+| `share-form.ts`          | Pure helpers: `BASIS_POINTS_PER_PERCENT` (100), `percentsFromShares`, `shareTotal`, `sharesToSave` (returns `null` when the total is not valid), `skillsForModality`. Converts between percent strings and `SkillShare` basis points                                                                                                     |
 
 ## For AI Agents
 

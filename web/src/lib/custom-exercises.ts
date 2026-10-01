@@ -1,4 +1,4 @@
-import type { Equipment, LoadType } from './catalog.ts';
+import type { Equipment, LoadType, Modality } from './catalog.ts';
 import { supabase } from './supabase.ts';
 
 export interface SkillShare {
@@ -9,7 +9,8 @@ export interface SkillShare {
 export interface CustomExerciseDoc {
   id: string;
   name: string;
-  loadType: LoadType;
+  modality: Modality;
+  loadType: LoadType | null;
   equipment: Equipment;
   shares: SkillShare[];
 }

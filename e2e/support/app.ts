@@ -88,6 +88,32 @@ export async function logExercise(
   }
 }
 
+export type CardioBout =
+  | { minutes: number; distance?: number; effort: string }
+  | { rounds: number; workS: number; restS: number; effort: string };
+
+export async function logCardio(page: Page, search: string, activityName: string, bouts: CardioBout[]) {
+  await page.getByLabel('Search exercises').fill(search);
+  await page.getByRole('button', { name: new RegExp(`^${activityName}\\b`) }).click();
+  const card = page.locator('section', { has: page.getByRole('heading', { name: activityName, exact: true }) });
+  for (let index = 1; index < bouts.length; index++) await card.getByRole('button', { name: '+ Add bout' }).click();
+  const rows = card.locator('li.bout-row');
+  for (const [index, bout] of bouts.entries()) {
+    const row = rows.nth(index);
+    if ('minutes' in bout) {
+      await row.getByRole('radio', { name: 'Steady' }).click();
+      await row.getByLabel('min', { exact: true }).fill(String(bout.minutes));
+      if (bout.distance !== undefined) await row.getByLabel(/^(km|mi)$/).fill(String(bout.distance));
+    } else {
+      await row.getByRole('radio', { name: 'Intervals' }).click();
+      await row.getByLabel('rounds').fill(String(bout.rounds));
+      await row.getByLabel('work s').fill(String(bout.workS));
+      await row.getByLabel('rest s').fill(String(bout.restS));
+    }
+    await row.getByRole('radio', { name: bout.effort, exact: true }).click();
+  }
+}
+
 export async function readSession(page: Page): Promise<StoredAuthSession> {
   const raw = await page.evaluate((key) => localStorage.getItem(key), authStorageKey);
   if (!raw) throw new Error('No stored auth session');
