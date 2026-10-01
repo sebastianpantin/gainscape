@@ -25,7 +25,7 @@ import {
 import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
 import { storedSessionId } from '../../offline/draft-format.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
-import { promptInstall, useInstallState } from '../../pwa/install.ts';
+import { forgetInstallCard, promptInstall, useInstallState } from '../../pwa/install.ts';
 import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
 import type { UpdateCheck } from '../../pwa/update-flow.ts';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
@@ -36,10 +36,11 @@ interface SettingsScreenProps {
 }
 
 async function discardLocalDraft(userId: string): Promise<void> {
+  forgetCachedExercises(localStorage, userId);
+  forgetInstallCard(userId);
   const store = await openDraftStoreAndReconcile();
   const record = await store.get(userId);
   if (record) await store.discard(userId, storedSessionId(record));
-  forgetCachedExercises(localStorage, userId);
 }
 
 async function hasUnsyncedDraft(userId: string): Promise<boolean> {

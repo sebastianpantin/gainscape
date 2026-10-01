@@ -70,6 +70,7 @@ function setup(
     locks?: boolean;
     signedIn?: boolean;
     hadControllerAtLoad?: boolean;
+    installing?: FakeWorker;
   } = {},
 ) {
   const order: string[] = [];
@@ -78,7 +79,7 @@ function setup(
   const waiting = options.waiting === false ? null : new FakeWorker();
   const registration = {
     waiting: waiting as FakeWorker | null,
-    installing: null as FakeWorker | null,
+    installing: (options.installing ?? null) as FakeWorker | null,
     update: vi.fn(async () => undefined),
     addEventListener: (_type: 'updatefound', listener: () => void) => updateFoundListeners.push(listener),
   };
@@ -162,6 +163,35 @@ describe('update detection', () => {
     expect(flow.state()).toBe('idle');
     installUpdate(new FakeWorker());
     expect(flow.state()).toBe('ready');
+  });
+
+  it('becomes ready when an update was already installing at start-up', () => {
+    const worker = new FakeWorker();
+    worker.state = 'installing';
+    const { flow, registration } = setup({ waiting: false, installing: worker });
+    expect(flow.state()).toBe('idle');
+    registration.installing = null;
+    registration.waiting = worker;
+    worker.becomes('installed');
+    expect(flow.state()).toBe('ready');
+  });
+
+  it('notices a waiting worker after a visibility check', async () => {
+    const { flow, registration, tick } = setup({ waiting: false });
+    tick(UPDATE_CHECK_INTERVAL_MS);
+    registration.update.mockImplementation(async () => {
+      registration.waiting = new FakeWorker();
+    });
+    flow.checkOnVisible();
+    await settle();
+    expect(flow.state()).toBe('ready');
+  });
+
+  it('fails instead of hanging when flushing throws', async () => {
+    const { flow, ports } = setup();
+    vi.mocked(ports.flushDrafts).mockRejectedValueOnce(new Error('flush_failed'));
+    await flow.apply();
+    expect(flow.state()).toBe('failed');
   });
 
   it('checks for updates on visibility at most once per interval', () => {

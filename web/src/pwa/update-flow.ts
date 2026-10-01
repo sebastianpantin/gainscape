@@ -124,8 +124,12 @@ export function createUpdateFlow(ports: UpdatePorts): UpdateFlow {
   const apply = async () => {
     if (state !== 'ready' && state !== 'failed') return;
     setState('applying');
-    await flushDrafts();
-    await withFinishLock(activateWaiting, () => setState('waiting_for_finish'));
+    try {
+      await flushDrafts();
+      await withFinishLock(activateWaiting, () => setState('waiting_for_finish'));
+    } catch {
+      setState('failed');
+    }
   };
 
   const passiveReload = async () => {
@@ -144,13 +148,15 @@ export function createUpdateFlow(ports: UpdatePorts): UpdateFlow {
     void passiveReload();
   });
 
-  registration.addEventListener('updatefound', () => {
+  const watchInstalling = () => {
     const installing = registration.installing;
     installing?.addEventListener('statechange', () => {
       if (installing.state === 'installed') detect();
     });
-  });
+  };
 
+  registration.addEventListener('updatefound', watchInstalling);
+  watchInstalling();
   detect();
 
   const checkForUpdates = async (): Promise<UpdateCheck> => {
@@ -172,7 +178,7 @@ export function createUpdateFlow(ports: UpdatePorts): UpdateFlow {
     checkOnVisible: () => {
       if (now() - lastCheckAt < UPDATE_CHECK_INTERVAL_MS) return;
       lastCheckAt = now();
-      void registration.update().catch(() => undefined);
+      void registration.update().then(detect, () => undefined);
     },
   };
 }

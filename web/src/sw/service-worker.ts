@@ -14,6 +14,8 @@ const shell: ShellBuild = __SHELL_BUILD__;
 const cacheName = shellCacheName(shell.id);
 const precached = new Set(shell.files.map((file) => file.path));
 
+const BODY_ENCODING_HEADERS = ['content-encoding', 'content-length'];
+
 function hex(digest: ArrayBuffer): string {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -24,18 +26,21 @@ async function verifiedFile(file: ShellFile): Promise<[string, Response]> {
   const body = await response.arrayBuffer();
   if (hex(await crypto.subtle.digest('SHA-256', body)) !== file.sha256)
     throw new Error(`${file.path} does not match this build`);
-  const unredirected = new Response(body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
+  const headers = new Headers(response.headers);
+  for (const encodingHeader of BODY_ENCODING_HEADERS) headers.delete(encodingHeader);
+  const unredirected = new Response(body, { status: response.status, statusText: response.statusText, headers });
   return [file.path, unredirected];
 }
 
 async function installShell(): Promise<void> {
   const verified = await Promise.all(shell.files.map(verifiedFile));
   const cache = await caches.open(cacheName);
-  await Promise.all(verified.map(([path, response]) => cache.put(path, response)));
+  try {
+    await Promise.all(verified.map(([path, response]) => cache.put(path, response)));
+  } catch (error) {
+    await caches.delete(cacheName);
+    throw error;
+  }
 }
 
 async function deleteOldShells(): Promise<void> {

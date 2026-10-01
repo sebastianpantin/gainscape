@@ -87,3 +87,27 @@ test('a new version reloads safely', async ({ context, page }) => {
 
   expect((await cachedPaths(page)).map((cache) => cache.cacheName)).toEqual([shellCacheName(newId)]);
 });
+
+test('a new version whose files do not match their hashes never replaces the shell', async ({ page }) => {
+  const shell = builtShell();
+  const oldId = shell.id;
+  const newId = [...oldId].map((digit) => (15 - parseInt(digit, 16)).toString(16)).join('');
+  const index = shell.files.find((file) => file.path === '/index.html')!;
+  await register(page, uniqueUsername('pwa_h'));
+  await waitForController(page);
+
+  originalWorker = replaceBuildId(oldId, newId);
+  replaceBuildId(index.sha256, '0'.repeat(index.sha256.length));
+  await openFromProfile(page, 'Settings');
+  await page.getByRole('button', { name: 'Check for updates' }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const registration = await navigator.serviceWorker.getRegistration();
+        return { installing: registration?.installing !== null, waiting: registration?.waiting !== null };
+      }),
+    )
+    .toEqual({ installing: false, waiting: false });
+  await expect(page.getByText(UPDATE_READY)).toHaveCount(0);
+  expect((await cachedPaths(page)).map((cache) => cache.cacheName)).toEqual([shellCacheName(oldId)]);
+});
