@@ -1,6 +1,7 @@
 import { combatLevel, levelForXp, totalLevel } from '@domain/index.ts';
 import type { LoadType } from './catalog.ts';
 import { formatLoad } from './format.ts';
+import { capitalized } from './names.ts';
 import type { BadgeColor, UnitPref } from './profile-rules.ts';
 import { RATE_LIMITED_CODE } from './rate-limit.ts';
 import { formatWeight } from './units.ts';
@@ -117,10 +118,6 @@ function textOf(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-function capitalized(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 const UNKNOWN_EXERCISE = 'exercise';
 
 function prText(item: FeedItem, unit: UnitPref): FeedText {
@@ -207,7 +204,7 @@ function totalXp(row: HiscoreRow, skills: readonly HiscoreSkill[]): number {
   return skills.reduce((sum, skill) => sum + (row.skillXp[skill.key] ?? 0), 0);
 }
 
-export function hiscoreValue(row: HiscoreRow, skills: readonly HiscoreSkill[], metric: HiscoreMetric): number {
+function hiscoreValue(row: HiscoreRow, skills: readonly HiscoreSkill[], metric: HiscoreMetric): number {
   if (metric === 'total') return totalLevel(levelsOf(row, skills));
   if (metric === 'combat') {
     const levels = levelsOf(row, skills);

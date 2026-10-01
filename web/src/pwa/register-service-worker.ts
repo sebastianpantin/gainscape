@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { openChannel } from '../lib/channel.ts';
 import { flushOpenDraftSessions } from '../offline/draft-session.ts';
 import { SERVICE_WORKER_FILE } from './shell-rules.ts';
 import { createUpdateFlow, UPDATE_CHANNEL_NAME, type UpdateFlow, type UpdateState } from './update-flow.ts';
@@ -42,7 +43,7 @@ function startUpdateFlow(registration: ServiceWorkerRegistration, hadControllerA
     registration,
     serviceWorker: navigator.serviceWorker,
     locks: navigator.locks ?? null,
-    channel: typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(UPDATE_CHANNEL_NAME),
+    channel: openChannel(UPDATE_CHANNEL_NAME),
     flushDrafts: flushOpenDraftSessions,
     reload: () => window.location.reload(),
     now: () => Date.now(),

@@ -1,5 +1,6 @@
 import type { EffortInput, EffortLevel } from '@domain/types.ts';
 import type { EffortInputMode } from '../../lib/profile.ts';
+import { EFFORT_LEVEL_LABELS } from '../history/session-edit.ts';
 
 interface EffortOption {
   effort: NonNullable<EffortInput>;
@@ -7,18 +8,16 @@ interface EffortOption {
   accessibleName: string;
 }
 
-const LEVEL_OPTIONS: { level: EffortLevel; label: string }[] = [
-  { level: 'easy', label: 'Easy' },
-  { level: 'hard', label: 'Hard' },
-  { level: 'near_failure', label: 'Near fail' },
-  { level: 'failure', label: 'Failure' },
-];
+const LEVELS: EffortLevel[] = ['easy', 'hard', 'near_failure', 'failure'];
 
 const RIR_CHOICES = [6, 5, 4, 3, 2, 1, 0];
 const RPE_CHOICES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 
 const OPTIONS: Record<EffortInputMode, EffortOption[]> = {
-  level: LEVEL_OPTIONS.map(({ level, label }) => ({ effort: { type: 'level', level }, label, accessibleName: label })),
+  level: LEVELS.map((level) => {
+    const label = EFFORT_LEVEL_LABELS[level];
+    return { effort: { type: 'level', level }, label, accessibleName: label };
+  }),
   rir: RIR_CHOICES.map((value) => {
     const label = value === 6 ? '6+' : String(value);
     return { effort: { type: 'rir', value }, label, accessibleName: `RIR ${label}` };

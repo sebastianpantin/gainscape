@@ -61,7 +61,7 @@ function isHalfStepBetween(value: unknown, lowest: number, highest: number): boo
   return typeof value === 'number' && Number.isInteger(value * 2) && value >= lowest && value <= highest;
 }
 
-export function isEffortInput(value: unknown): value is NonNullable<EffortInput> {
+function isEffortInput(value: unknown): value is NonNullable<EffortInput> {
   if (!isRecord(value)) return false;
   if (value.type === 'level') return EFFORT_LEVELS.some((level) => level === value.level);
   if (value.type === 'rir') return isHalfStepBetween(value.value, 0, 10);

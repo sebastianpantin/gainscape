@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { type Exercise, exerciseLabels, fetchExercises } from '../../lib/catalog.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import { cachedPrograms, fetchPrograms, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
+import { moved } from '../../lib/reorder.ts';
 import type { PlannedExercise } from '../../offline/draft-format.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 
@@ -13,14 +14,9 @@ interface ProgramEditorProps {
 type EditorDay = ProgramDoc['days'][number];
 
 const DEFAULT_TARGET = { targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 };
-
-function moved<T>(items: T[], index: number, offset: -1 | 1): T[] {
-  const target = index + offset;
-  if (target < 0 || target >= items.length) return items;
-  const next = [...items];
-  [next[index], next[target]] = [next[target], next[index]];
-  return next;
-}
+const PROGRAM_NAME_MAX_LENGTH = 60;
+const DAY_NAME_MAX_LENGTH = 40;
+const MAX_DAYS = 14;
 
 function docFor(userId: string, programId: string): ProgramDoc | null {
   const program = cachedPrograms(userId)?.find((candidate) => candidate.id === programId);
@@ -119,8 +115,8 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
     }));
 
   const nameIssue =
-    nameProblem(doc.name, 60) ??
-    doc.days.map((day) => nameProblem(day.name, 40)).find((issue) => issue !== null) ??
+    nameProblem(doc.name, PROGRAM_NAME_MAX_LENGTH) ??
+    doc.days.map((day) => nameProblem(day.name, DAY_NAME_MAX_LENGTH)).find((issue) => issue !== null) ??
     null;
 
   const save = async () => {
@@ -145,7 +141,11 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
       <h1 className="title">Edit program</h1>
       <label className="field">
         Program name
-        <input value={doc.name} maxLength={60} onChange={(event) => setDoc({ ...doc, name: event.target.value })} />
+        <input
+          value={doc.name}
+          maxLength={PROGRAM_NAME_MAX_LENGTH}
+          onChange={(event) => setDoc({ ...doc, name: event.target.value })}
+        />
       </label>
       {doc.days.map((day, dayIndex) => (
         <section className="panel stack" key={day.id} aria-label={`Day ${dayIndex + 1}`}>
@@ -154,7 +154,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
               Day name
               <input
                 value={day.name}
-                maxLength={40}
+                maxLength={DAY_NAME_MAX_LENGTH}
                 onChange={(event) => changeDay(dayIndex, (current) => ({ ...current, name: event.target.value }))}
               />
             </label>
@@ -280,7 +280,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
       <button
         className="button"
         type="button"
-        disabled={doc.days.length >= 14}
+        disabled={doc.days.length >= MAX_DAYS}
         onClick={() =>
           setDoc({
             ...doc,

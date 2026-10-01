@@ -1,16 +1,6 @@
 import { useEffect, useState } from 'react';
-import { type AuthState, bootAuth, onForcedSignOut, storedSessionFrom } from './auth-restore.ts';
-import { AUTH_STORAGE_KEY, supabase } from './supabase.ts';
-
-export type { AuthState } from './auth-restore.ts';
-
-function readStoredSession() {
-  try {
-    return storedSessionFrom(localStorage.getItem(AUTH_STORAGE_KEY));
-  } catch {
-    return null;
-  }
-}
+import { type AuthState, bootAuth, onForcedSignOut } from './auth-restore.ts';
+import { readStoredSession, supabase } from './supabase.ts';
 
 export function useAuthSession(): AuthState {
   const [state, setState] = useState<AuthState>({ status: 'loading' });

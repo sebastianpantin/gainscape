@@ -10,7 +10,7 @@ export const SAVED_EXERCISES_NOTICE = 'Using your saved exercise list.';
 const NETWORK_ERROR_NAMES = new Set(['AbortError', 'TimeoutError']);
 const NETWORK_ERROR_MESSAGE = /Failed to fetch|NetworkError|Load failed|AbortError|TimeoutError|aborted/i;
 
-export function isNetworkError(error: unknown): boolean {
+function isNetworkError(error: unknown): boolean {
   const { name, message } = (error ?? {}) as { name?: unknown; message?: unknown };
   return (
     (typeof name === 'string' && NETWORK_ERROR_NAMES.has(name)) ||

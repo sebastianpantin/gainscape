@@ -81,7 +81,7 @@ function Choice<T extends string>({
   return (
     <div className="stack" style={{ gap: 6 }}>
       <span className="field">{label}</span>
-      <div className={options.length === 3 ? 'segmented three' : 'segmented'} role="radiogroup" aria-label={label}>
+      <div className="segmented" role="radiogroup" aria-label={label}>
         {options.map((option) => (
           <button
             key={option.value}
@@ -254,7 +254,7 @@ function TimezoneSection({ profile, onSaved }: SectionProps) {
       <span className="hint">
         {nextAllowed
           ? `Decides which day a workout counts for. Your next change is possible on ${formatDay(nextAllowed)}.`
-          : 'Decides which day a workout counts for. You can change it once every 7 days.'}
+          : `Decides which day a workout counts for. You can change it once every ${TIMEZONE_CHANGE_COOLDOWN_DAYS} days.`}
       </span>
     </section>
   );

@@ -3,7 +3,6 @@ import {
   ageFrom,
   bioProblem,
   birthYearProblem,
-  bodyweightProblem,
   heightProblem,
   initialsFor,
   latestBirthYear,
@@ -18,14 +17,9 @@ describe('profile validation', () => {
     expect(heightProblem('')).toBeNull();
     expect(birthYearProblem('', now)).toBeNull();
     expect(trainingSinceProblem('', now)).toBeNull();
-    expect(bodyweightProblem('')).toBeNull();
   });
 
-  it('bounds bodyweight to 20–400 kg and height to 100–250 cm', () => {
-    expect(bodyweightProblem('19.9')).not.toBeNull();
-    expect(bodyweightProblem('20')).toBeNull();
-    expect(bodyweightProblem('400')).toBeNull();
-    expect(bodyweightProblem('400.1')).not.toBeNull();
+  it('bounds height to 100–250 cm', () => {
     expect(heightProblem('99')).not.toBeNull();
     expect(heightProblem('181.5')).toBeNull();
     expect(heightProblem('251')).not.toBeNull();

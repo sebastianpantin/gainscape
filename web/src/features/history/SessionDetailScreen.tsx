@@ -76,8 +76,12 @@ async function loadSession(sessionId: string): Promise<Loaded | null> {
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
 
+function itemNameIn(items: readonly CatalogItem[]): (itemId: string) => string {
+  return (itemId) => items.find((item) => item.id === itemId)?.name ?? 'an item';
+}
+
 function removalText(drops: readonly { itemId: string; quantity: number }[], items: readonly CatalogItem[]): string {
-  const described = describeDrops(drops, (itemId) => items.find((item) => item.id === itemId)?.name ?? 'an item');
+  const described = describeDrops(drops, itemNameIn(items));
   return described && `This may remove ${described} from your collection.`;
 }
 
@@ -87,7 +91,7 @@ function removedText(
 ): string {
   const described = describeDrops(
     (drops ?? []).map((drop) => ({ itemId: drop.itemId, quantity: drop.revokedQuantity })),
-    (itemId) => items.find((item) => item.id === itemId)?.name ?? 'an item',
+    itemNameIn(items),
   );
   return described && `Removed ${described} from your collection.`;
 }

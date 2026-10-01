@@ -229,7 +229,7 @@ export function withoutBodyweightLoads(edit: SessionEdit, loadTypes: ReadonlyMap
   };
 }
 
-const EFFORT_LEVEL_LABELS: Record<EffortLevel, string> = {
+export const EFFORT_LEVEL_LABELS: Record<EffortLevel, string> = {
   easy: 'Easy',
   hard: 'Hard',
   near_failure: 'Near fail',

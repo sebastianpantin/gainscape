@@ -36,13 +36,13 @@ export function startFinishRetries({ attemptOnce, retryDelayMs, show, settle }: 
     clearTimeout(retryTimer);
     show({ kind: 'syncing', attempt, lastProblem: null });
     try {
-      const result = await attemptOnce(controller.signal).catch((error: unknown) => ({
-        kind: 'sent' as const,
-        outcome: { kind: 'retryable' as const, reason: error instanceof Error ? error.message : 'storage_error' },
+      const result = await attemptOnce(controller.signal).catch((error: unknown): FinishAttemptResult => ({
+        kind: 'sent',
+        outcome: { kind: 'retryable', reason: error instanceof Error ? error.message : 'storage_error' },
       }));
       if (controller.signal.aborted || result.kind === 'aborted') return;
       if (result.kind === 'sent' && result.outcome.kind === 'retryable') {
-        const retryAfterMs = 'retryAfterMs' in result.outcome ? (result.outcome.retryAfterMs ?? 0) : 0;
+        const retryAfterMs = result.outcome.retryAfterMs ?? 0;
         const delayMs = Math.max(retryDelayMs(attempt++), retryAfterMs);
         notBefore = retryAfterMs > 0 ? Date.now() + retryAfterMs : 0;
         show({ kind: 'syncing', attempt, lastProblem: result.outcome.reason, waitMs: delayMs });

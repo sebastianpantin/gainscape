@@ -5,7 +5,6 @@ import { fetchSkills, type Skill } from '../../lib/catalog.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { isUuid } from '../../lib/history-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { cardProfileOf, standingOfView } from '../../lib/profile-view.ts';
 import {
   type CollectionView,
   type CollectionViewExercise,
@@ -14,11 +13,8 @@ import {
   type ProfileView,
   removeFriend,
 } from '../../lib/social.ts';
-import { collectionPercent } from '../../lib/social-rules.ts';
-import { monogramFor } from '../../lib/standing.ts';
-import { ProfileCard } from '../profile/ProfileCard.tsx';
-
-const TOP_SKILL_COUNT = 3;
+import { slotClass } from '../collection/slot-class.ts';
+import { ProfileWithTopSkills } from '../profile/ProfileWithTopSkills.tsx';
 
 type ViewState =
   | { status: 'loading' }
@@ -45,7 +41,7 @@ function RecordsCard({ exercise, weightsHidden }: { exercise: CollectionViewExer
       ) : (
         <ol className="record-slots">
           {slots.map((slot, index) => (
-            <li key={index} className={!slot ? 'record-slot empty' : slot.exact ? 'record-slot filled' : 'record-slot'}>
+            <li key={index} className={slotClass(slot)}>
               <span className="muted">{index + 1}RM</span>{' '}
               <span>
                 {!slot
@@ -126,36 +122,10 @@ function FriendProfile({ friendId }: { friendId: string }) {
       )}
       {state.status === 'ready' &&
         (() => {
-          const standing = standingOfView(state.skills, state.profile);
-          const topSkills = [...standing.skills]
-            .sort((a, b) => b.progress.xp - a.progress.xp)
-            .slice(0, TOP_SKILL_COUNT);
           const { collection } = state;
           return (
             <>
-              <ProfileCard
-                profile={cardProfileOf(state.profile)}
-                totalLevel={standing.totalLevel}
-                combatLevel={standing.combatLevel}
-                collectionPercent={collectionPercent(
-                  state.profile.collection.filledSlots,
-                  state.profile.collection.totalSlots,
-                )}
-              />
-              <section className="panel stack" aria-labelledby="friend-top-skills">
-                <h2 id="friend-top-skills">Top skills</h2>
-                <ul className="menu-list" style={{ gap: 8 }}>
-                  {topSkills.map(({ skill, progress }) => (
-                    <li className="row" key={skill.id}>
-                      <span className="monogram" aria-hidden="true">
-                        {monogramFor(skill.key)}
-                      </span>
-                      <span style={{ flexGrow: 1 }}>{skill.name}</span>
-                      <span className="skill-level">{progress.level}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              <ProfileWithTopSkills skills={state.skills} profile={state.profile} headingId="friend-top-skills" />
               <section className="stack" aria-labelledby="friend-records">
                 <h2 id="friend-records">Records</h2>
                 {collection.weightsHidden && <p className="muted">Weights hidden</p>}

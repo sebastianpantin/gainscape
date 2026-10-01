@@ -21,9 +21,9 @@ export interface DraftStore {
   userIdsWithDrafts(): Promise<string[]>;
 }
 
-export const DRAFT_DATABASE_NAME = 'gainscape';
+const DRAFT_DATABASE_NAME = 'gainscape';
 export const DRAFT_OBJECT_STORE = 'drafts';
-export const FALLBACK_KEY_PREFIX = 'gainscape.workout-draft.v2.';
+const FALLBACK_KEY_PREFIX = 'gainscape.workout-draft.v2.';
 const DRAFT_DATABASE_VERSION = 1;
 const OPEN_TIMEOUT_MS = 2000;
 
@@ -60,7 +60,7 @@ function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 
-function transactionDone(transaction: IDBTransaction): Promise<void> {
+export function transactionDone(transaction: IDBTransaction): Promise<void> {
   const done = new Promise<void>((resolve, reject) => {
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
@@ -106,41 +106,36 @@ export function createIdbDraftStore(database: IDBDatabase): DraftStore {
   const readStored = async (objectStore: IDBObjectStore, userId: string) =>
     parseStoredDraft(await requestResult(objectStore.get(userId)), userId);
 
-  const readOnly = async <T>(read: (objectStore: IDBObjectStore) => Promise<T>): Promise<T> => {
-    const transaction = database.transaction(DRAFT_OBJECT_STORE, 'readonly');
+  const inTransaction = async <T>(
+    mode: IDBTransactionMode,
+    work: (objectStore: IDBObjectStore) => Promise<T>,
+  ): Promise<T> => {
+    const transaction = database.transaction(DRAFT_OBJECT_STORE, mode);
     const done = transactionDone(transaction);
-    const result = await read(transaction.objectStore(DRAFT_OBJECT_STORE));
-    await done;
-    return result;
-  };
-
-  const readWrite = async <T>(write: (objectStore: IDBObjectStore) => Promise<T>): Promise<T> => {
-    const transaction = database.transaction(DRAFT_OBJECT_STORE, 'readwrite');
-    const done = transactionDone(transaction);
-    const result = await write(transaction.objectStore(DRAFT_OBJECT_STORE));
+    const result = await work(transaction.objectStore(DRAFT_OBJECT_STORE));
     await done;
     return result;
   };
 
   return {
-    get: (userId) => readOnly((objectStore) => readStored(objectStore, userId)),
+    get: (userId) => inTransaction('readonly', (objectStore) => readStored(objectStore, userId)),
     put: (userId, updatedAt, draft, options) =>
-      readWrite(async (objectStore) => {
+      inTransaction('readwrite', async (objectStore) => {
         const result = decidePut(await readStored(objectStore, userId), updatedAt, draft, options);
         if (result === 'written') objectStore.put(draftRecord(userId, updatedAt, draft));
         return result;
       }),
     markSynced: (userId, sessionId, updatedAt) =>
-      readWrite(async (objectStore) => {
+      inTransaction('readwrite', async (objectStore) => {
         const tombstone = tombstoneFor(await readStored(objectStore, userId), userId, sessionId, updatedAt);
         if (tombstone) objectStore.put(tombstone);
       }),
     discard: (userId, sessionId) =>
-      readWrite(async (objectStore) => {
+      inTransaction('readwrite', async (objectStore) => {
         if (matchesSession(await readStored(objectStore, userId), sessionId)) objectStore.delete(userId);
       }),
     userIdsWithDrafts: () =>
-      readOnly(async (objectStore) => {
+      inTransaction('readonly', async (objectStore) => {
         const records: unknown[] = await requestResult(objectStore.getAll());
         return records.flatMap((record) => {
           const userId = (record as { userId?: unknown }).userId;

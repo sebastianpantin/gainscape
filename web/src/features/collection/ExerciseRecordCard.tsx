@@ -1,9 +1,10 @@
 import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
 import { type Exercise, exerciseLabels } from '../../lib/catalog.ts';
-import type { CollectionData, RepMaxSlotView } from '../../lib/collection-data.ts';
+import type { CollectionData } from '../../lib/collection-data.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { formatWeight } from '../../lib/units.ts';
+import { slotClass } from './slot-class.ts';
 
 interface ExerciseRecordCardProps {
   exercise: Exercise;
@@ -12,11 +13,6 @@ interface ExerciseRecordCardProps {
   onTogglePin: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-}
-
-function slotClass(slot: RepMaxSlotView | null): string {
-  if (!slot) return 'record-slot empty';
-  return slot.exact ? 'record-slot filled' : 'record-slot';
 }
 
 function StrengthLine({ exercise, data }: { exercise: Exercise; data: CollectionData }) {

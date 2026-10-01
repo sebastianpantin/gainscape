@@ -1,7 +1,13 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
 import { MINIMUM_PASSWORD_LENGTH } from '../../lib/account.ts';
-import { type AuthCallback, authErrorMessage, confirmedRecently } from '../../lib/auth-links.ts';
+import {
+  type AuthCallback,
+  authErrorMessage,
+  confirmedRecently,
+  USERNAME_HINT,
+  USERNAME_PATTERN,
+} from '../../lib/auth-links.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
 import { signOutSettled } from '../../lib/auth-restore.ts';
 import { supabase } from '../../lib/supabase.ts';
@@ -13,8 +19,6 @@ type Step =
   | { kind: 'password-changed' }
   | { kind: 'email-changed' }
   | { kind: 'failed'; problem: string };
-
-const USERNAME_PATTERN = '^[a-z0-9_]{3,20}$';
 
 const USERNAME_PROBLEMS: Record<string, string> = {
   taken: 'That username is taken.',
@@ -148,7 +152,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
   return (
     <main className="screen auth-screen">
       <div className="brand">
-        <LogoMark size={48} />
+        <LogoMark />
         <h1>GAINSCAPE</h1>
       </div>
       {step.kind === 'verifying' && (
@@ -202,7 +206,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   pattern={USERNAME_PATTERN}
-                  title="3–20 characters: lowercase letters, digits, underscore"
+                  title={USERNAME_HINT}
                   autoCapitalize="none"
                   autoComplete="username"
                   required
