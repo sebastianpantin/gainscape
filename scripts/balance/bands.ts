@@ -30,7 +30,7 @@ export interface BandReport {
   distanceFromTargetYears: number;
 }
 
-export function yearsToLevel99(result: SimulationResult, skill: string, xpScale = 1): number {
+function yearsToLevel99(result: SimulationResult, skill: string, xpScale = 1): number {
   const weekly = result.cumulativeXpByWeek[skill];
   const reachedWeek = weekly.findIndex((xp) => xp * xpScale >= LEVEL_99_XP);
   if (reachedWeek >= 0) return (reachedWeek + 1) / WEEKS_PER_YEAR;

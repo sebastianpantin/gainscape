@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { expectNoAxeViolations } from '../support/a11y.ts';
-import { logExercise, openFromProfile, openTab, readSession, register } from '../support/app.ts';
+import { logExercise, openFromProfile, openTab, readSession, register, uniqueUsername } from '../support/app.ts';
 import {
   builtShell,
   cachedPaths,
@@ -11,7 +11,6 @@ import {
   restoreServiceWorker,
   serviceWorkerPath,
   swapServiceWorker,
-  uniqueUsername,
   UPDATE_READY,
   waitForController,
 } from '../support/pwa.ts';

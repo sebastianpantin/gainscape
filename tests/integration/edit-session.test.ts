@@ -14,6 +14,7 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
+import { DAY_MS, HOUR_MS, postSession, withFreshIds } from './loot-support.ts';
 
 type Effort = { type: 'level'; level: 'hard' | 'near_failure' } | { type: 'rir'; value: number } | null;
 
@@ -35,8 +36,6 @@ interface SessionBody {
   sets: SetBody[];
 }
 
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
 const hard = { type: 'level', level: 'hard' } as const;
 const nearFailure = { type: 'level', level: 'near_failure' } as const;
 
@@ -56,16 +55,6 @@ function sessionAt(startedAt: string, sets: ReturnType<typeof aSet>[]): SessionB
 
 function ago(ms: number): string {
   return new Date(Date.now() - ms).toISOString();
-}
-
-function withFreshIds(session: SessionBody): SessionBody {
-  return { ...session, id: randomUUID(), sets: session.sets.map((set) => ({ ...set, id: randomUUID() })) };
-}
-
-async function sync(user: TestUser, session: SessionBody) {
-  const response = await postCompleteSession(user.accessToken, session);
-  expect(response.status, response.rawBody).toBe(200);
-  return response;
 }
 
 function editBody(session: SessionBody, sets: SetBody[], ifRevision = 0, notes: string | null = session.notes) {
@@ -143,8 +132,8 @@ describe('edit-session re-derives history', () => {
     const user = await createTestUser();
     const s1 = sessionAt(ago(3 * DAY_MS), [aSet(benchId, 80, 5, hard)]);
     const s2 = sessionAt(ago(DAY_MS), [aSet(benchId, 80, 5, null)]);
-    await sync(user, s1);
-    await sync(user, s2);
+    await postSession(user, s1);
+    await postSession(user, s2);
     expect((await storedSets(s1.id))[0].xp_awarded).toBe(1125);
     expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 3, xp_awarded: 1262 });
 
@@ -165,8 +154,8 @@ describe('edit-session re-derives history', () => {
     expect(mismatches).toEqual([]);
 
     const fresh = await createTestUser();
-    await sync(fresh, withFreshIds({ ...s1, sets: editedSets }));
-    await sync(fresh, withFreshIds(s2));
+    await postSession(fresh, withFreshIds({ ...s1, sets: editedSets }));
+    await postSession(fresh, withFreshIds(s2));
     expect(await normalizedSnapshot(user.id)).toEqual(await normalizedSnapshot(fresh.id));
   });
 
@@ -177,8 +166,8 @@ describe('edit-session re-derives history', () => {
     const user = await createTestUser();
     const s1 = sessionAt(ago(3 * DAY_MS), [aSet(benchId, 80, 5, hard)]);
     const s2 = sessionAt(ago(DAY_MS), [aSet(benchId, 80, 5, null), aSet(benchId, 80, 5, null)]);
-    await sync(user, s1);
-    await sync(user, s2);
+    await postSession(user, s1);
+    await postSession(user, s2);
 
     const editedSets = [change(s1.sets[0])];
     expect((await edit(user, editBody(s1, editedSets))).status).toBe(200);
@@ -191,8 +180,8 @@ describe('edit-session re-derives history', () => {
     expect(Object.values(summary.xpBySkill as Record<string, number>).reduce((sum, xp) => sum + xp, 0)).toBe(750);
 
     const fresh = await createTestUser();
-    await sync(fresh, withFreshIds({ ...s1, sets: editedSets }));
-    await sync(fresh, withFreshIds(s2));
+    await postSession(fresh, withFreshIds({ ...s1, sets: editedSets }));
+    await postSession(fresh, withFreshIds(s2));
     expect(await normalizedSnapshot(user.id)).toEqual(await normalizedSnapshot(fresh.id));
   });
 
@@ -200,8 +189,8 @@ describe('edit-session re-derives history', () => {
     const user = await createTestUser();
     const s1 = sessionAt(ago(3 * DAY_MS), [aSet(benchId, 100, 5, hard)]);
     const s2 = sessionAt(ago(DAY_MS), [aSet(benchId, 105, 3, hard), aSet(benchId, 60, 10, null, true)]);
-    await sync(user, s1);
-    await sync(user, s2);
+    await postSession(user, s1);
+    await postSession(user, s2);
     expect((await storedSummary(s2.id)).summary.prs).toEqual([
       { exerciseId: benchId, kind: 'rep_max', reps: 3, loadKg: 105, previousLoadKg: 100, previousReps: null },
     ]);
@@ -226,7 +215,7 @@ describe('edit-session re-derives history', () => {
   it('adds, reorders and re-exercises sets', async () => {
     const user = await createTestUser();
     const session = sessionAt(ago(HOUR_MS), [aSet(benchId, 80, 5, hard), aSet(benchId, 85, 3, hard)]);
-    await sync(user, session);
+    await postSession(user, session);
     const [first, second] = session.sets;
     const editedSets = [
       { ...first, position: 1, exerciseId: squatId, weightKg: 120 },
@@ -251,7 +240,7 @@ describe('edit-session loads', () => {
     const user = await createTestUser();
     await setBodyweight(user, 80);
     const session = sessionAt(ago(HOUR_MS), [aSet(weightedDipId, 10, 8, hard), aSet(benchId, 60, 5, hard)]);
-    await sync(user, session);
+    await postSession(user, session);
     await setBodyweight(user, 85);
 
     const [dip, bench] = session.sets;
@@ -288,7 +277,7 @@ describe('edit-session loads', () => {
   it('rounds weights and treats an identical re-send as a no-op', async () => {
     const user = await createTestUser();
     const session = sessionAt(ago(HOUR_MS), [aSet(benchId, 60, 5, hard)]);
-    await sync(user, session);
+    await postSession(user, session);
     const body = editBody(session, [{ ...session.sets[0], weightKg: 62.505 }]);
 
     const first = await edit(user, body);
@@ -306,7 +295,7 @@ describe('edit-session retries and concurrency', () => {
   it('answers retries, stale revisions and changed set ids', async () => {
     const user = await createTestUser();
     const session = sessionAt(ago(HOUR_MS), [aSet(benchId, 60, 5, hard), aSet(benchId, 60, 5, hard)]);
-    await sync(user, session);
+    await postSession(user, session);
     const body = editBody(session, [session.sets[0], { ...session.sets[1], reps: 6 }]);
 
     const first = await edit(user, body);
@@ -328,7 +317,7 @@ describe('edit-session retries and concurrency', () => {
   it('closes the window after 7 days but still accepts a no-op', async () => {
     const user = await createTestUser();
     const session = sessionAt(ago(HOUR_MS), [aSet(benchId, 60, 5, hard)]);
-    await sync(user, session);
+    await postSession(user, session);
     await ageSession(session.id, '7 days 1 minute');
 
     const refused = await edit(user, editBody(session, [{ ...session.sets[0], reps: 6 }]));
@@ -343,8 +332,8 @@ describe('edit-session retries and concurrency', () => {
     const user = await createTestUser();
     const old = sessionAt(ago(2 * HOUR_MS), [aSet(benchId, 80, 5, hard)]);
     const recent = sessionAt(ago(HOUR_MS), [aSet(benchId, 80, 5, null)]);
-    await sync(user, old);
-    await sync(user, recent);
+    await postSession(user, old);
+    await postSession(user, recent);
     await ageSession(old.id, '8 days 1 hour');
     const oldBefore = {
       sets: await db`select * from public.sets where session_id = ${old.id}`,
@@ -362,7 +351,7 @@ describe('edit-session retries and concurrency', () => {
   it('serialises an edit with an earlier complete-session', async () => {
     const user = await createTestUser();
     const s1 = sessionAt(ago(HOUR_MS), [aSet(benchId, 80, 5, null)]);
-    await sync(user, s1);
+    await postSession(user, s1);
     const s0 = sessionAt(ago(3 * HOUR_MS), [aSet(benchId, 80, 5, hard)]);
 
     const responses = await Promise.all([
@@ -384,8 +373,8 @@ describe('edit-session authorization and validation', () => {
     [owner, stranger] = await Promise.all([createTestUser(), createTestUser()]);
     session = sessionAt(ago(2 * HOUR_MS), [aSet(benchId, 60, 5, hard)]);
     otherSession = sessionAt(ago(HOUR_MS), [aSet(benchId, 65, 5, hard)]);
-    await sync(owner, session);
-    await sync(owner, otherSession);
+    await postSession(owner, session);
+    await postSession(owner, otherSession);
   });
 
   async function expectRejected(user: TestUser, body: unknown, status: number, error?: string) {
@@ -403,7 +392,7 @@ describe('edit-session authorization and validation', () => {
   it("returns 422 for someone else's custom exercise", async () => {
     const ownersExercise = await createCustomExercise(owner);
     const strangersSession = sessionAt(ago(HOUR_MS), [aSet(benchId, 60, 5, hard)]);
-    await sync(stranger, strangersSession);
+    await postSession(stranger, strangersSession);
     const body = editBody(strangersSession, [{ ...strangersSession.sets[0], exerciseId: ownersExercise }]);
     await expectRejected(stranger, body, 422, 'unknown_exercise');
   });
@@ -411,7 +400,7 @@ describe('edit-session authorization and validation', () => {
   it("accepts the caller's own archived custom exercise", async () => {
     const archived = await createCustomExercise(owner, true);
     const own = sessionAt(ago(3 * HOUR_MS), [aSet(benchId, 60, 5, hard)]);
-    await sync(owner, own);
+    await postSession(owner, own);
     const response = await edit(owner, editBody(own, [{ ...own.sets[0], exerciseId: archived }]));
     expect(response.status, response.rawBody).toBe(200);
   });

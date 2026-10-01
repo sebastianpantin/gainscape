@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { webCollectionCounts } from './collection-support.ts';
-import { aSet, HOUR_MS, payloadAt, postSession } from './loot-support.ts';
+import { aSet, hoursAgo, payloadAt, postSession } from './loot-support.ts';
 import { builtInExerciseId, createTestUser, db, setBodyweight, type TestUser } from './local-stack.ts';
 
 const ids: Record<string, string> = {};
@@ -15,10 +15,6 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.end();
 });
-
-function hoursAgo(hours: number): Date {
-  return new Date(Date.now() - hours * HOUR_MS);
-}
 
 async function pin(user: TestUser, exerciseId: string, position: number): Promise<void> {
   const { error } = await user.client.from('pinned_exercises').insert({ exercise_id: exerciseId, position });

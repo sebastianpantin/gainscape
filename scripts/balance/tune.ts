@@ -15,7 +15,7 @@ export interface TuningCandidate {
   report: BandReport;
 }
 
-export function simulateAllProfiles(cfg: BalanceConfig, options: SimulationOptions): ProfileResults {
+function simulateAllProfiles(cfg: BalanceConfig, options: SimulationOptions): ProfileResults {
   return {
     hypertrophy: simulateProfile(PROFILES.hypertrophy, cfg, options),
     strength: simulateProfile(PROFILES.strength, cfg, options),

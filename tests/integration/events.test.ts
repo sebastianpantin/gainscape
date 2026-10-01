@@ -7,7 +7,7 @@ import {
   type LootTables,
   pickEntry,
 } from '@domain/index.ts';
-import { aSet, DAY_MS, HOUR_MS, payloadAt, postSession, type SessionPayload, type SetShape } from './loot-support.ts';
+import { aSet, DAY_MS, hoursAgo, payloadAt, postSession, type SessionPayload, type SetShape } from './loot-support.ts';
 import {
   builtInExerciseId,
   createTestUser,
@@ -33,10 +33,6 @@ async function freshUser(): Promise<TestUser> {
   const user = await createTestUser();
   users.push(user);
   return user;
-}
-
-function hoursAgo(hours: number): Date {
-  return new Date(Date.now() - hours * HOUR_MS);
 }
 
 function unrated(exerciseId: string, position: number, weightKg: number, reps: number): SetShape {

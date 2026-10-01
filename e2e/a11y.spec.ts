@@ -1,15 +1,11 @@
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
-import { emailOf, logExercise, openFromProfile, openTab, register, signOut } from './support/app.ts';
+import { emailOf, logExercise, openFromProfile, openTab, register, signOut, uniqueUsername } from './support/app.ts';
 import { grantItems } from './support/db.ts';
 import { authLinkFrom, waitForEmail } from './support/mailbox.ts';
 
 const RECOVERY_SUBJECT = 'Reset your Gainscape password';
 const TAB_BAR = ['.tab-bar a[href]'];
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-}
 
 async function checkScreen(page: Page, screen: string, ready: () => Promise<void>) {
   await ready();

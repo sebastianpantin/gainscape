@@ -1,5 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
-import { emailOf, openFromProfile, password, register, signOut, submitRegistration } from './support/app.ts';
+import {
+  emailOf,
+  openFromProfile,
+  password,
+  register,
+  signOut,
+  submitRegistration,
+  uniqueUsername,
+} from './support/app.ts';
 import { ageConfirmation, usernameOfEmail } from './support/db.ts';
 import { authLinkFrom, waitForEmail } from './support/mailbox.ts';
 
@@ -7,10 +15,6 @@ const CONFIRM_SUBJECT = 'Confirm your Gainscape account';
 const RECOVERY_SUBJECT = 'Reset your Gainscape password';
 const EMAIL_CHANGE_SUBJECT = 'Confirm your new Gainscape email';
 const MAX_FREQUENCY_WAIT_MS = 1_500;
-
-function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-}
 
 async function linkTo(email: string, subject: string, since: Date): Promise<string> {
   return authLinkFrom(await waitForEmail(email, { subject, since }));

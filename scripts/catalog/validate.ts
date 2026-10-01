@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import { type CatalogData, catalogNames } from './load.ts';
 
-export const DENYLIST_PATH = join(import.meta.dirname, '../../tests/ip-denylist.txt');
+const DENYLIST_PATH = join(import.meta.dirname, '../../tests/ip-denylist.txt');
 
 const KEY_PATTERN = /^[a-z0-9_]+$/;
 const MAX_NAME_LENGTH = 60;

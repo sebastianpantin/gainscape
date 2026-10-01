@@ -14,9 +14,8 @@ import {
   strengthStateAt,
   type StrengthHistoryRow,
 } from '@domain/index.ts';
-import { aSet, catalog, failure, freshUser, hard, TEST_BALANCE } from './fixtures.ts';
+import { aSet, catalog, DAY_MS, failure, freshUser, hard, TEST_BALANCE } from './fixtures.ts';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const sessionStart = '2026-09-28T10:00:00.000Z';
 
 function knownStrength(
