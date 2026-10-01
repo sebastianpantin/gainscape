@@ -1,4 +1,14 @@
-import { type ItemIconKind, itemSprite, LOGO, type Sprite, TROPHY } from './pixel-sprites.ts';
+import { monogramFor } from '../lib/standing.ts';
+import {
+  isSkillKey,
+  type ItemIconKind,
+  itemSprite,
+  LEVEL_UP,
+  LOGO,
+  SKILL_SPRITES,
+  type Sprite,
+  TROPHY,
+} from './pixel-sprites.ts';
 
 function PixelGrid({ sprite, size }: { sprite: Sprite; size: number }) {
   const { pixels, cols, rows } = sprite;
@@ -35,4 +45,22 @@ export function TrophyIcon({ size = 36 }: { size?: number }) {
 
 export function ItemIcon({ kind, color, size = 36 }: { kind: ItemIconKind; color: string; size?: number }) {
   return <PixelGrid sprite={itemSprite(kind, color)} size={size} />;
+}
+
+export function SkillIcon({ skillKey, size = 32 }: { skillKey: string; size?: number }) {
+  if (!isSkillKey(skillKey))
+    return (
+      <span className="monogram" aria-hidden="true">
+        {monogramFor(skillKey)}
+      </span>
+    );
+  return (
+    <span className="skill-icon" aria-hidden="true">
+      <PixelGrid sprite={SKILL_SPRITES[skillKey]} size={size} />
+    </span>
+  );
+}
+
+export function LevelUpIcon({ size = 24 }: { size?: number }) {
+  return <PixelGrid sprite={LEVEL_UP} size={size} />;
 }
