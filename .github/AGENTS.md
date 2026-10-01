@@ -5,14 +5,14 @@
 
 ## Purpose
 
-GitHub configuration. It holds two workflows. `workflows/ci.yml` runs the `static` job on pushes to `main` and on every pull request. `workflows/stack.yml` runs the `stack` job only when started by hand (`workflow_dispatch`). `main` has no branch protection, so merge only after `static` passes, and after a manual `stack` run when the change touches SQL, Edge Functions or UI flows.
+GitHub configuration. It holds two workflows. `workflows/ci.yml` runs on pushes to `main` and every pull request, with two parallel jobs: `checks` ("Checks and unit tests", no stack) and `backend` ("Backend integration and pgTAP", Supabase in Docker without Playwright). `workflows/e2e.yml` runs the `e2e` job ("End-to-end and PWA") only when started by hand (`workflow_dispatch`), for example before a release. `main` has no branch protection, so merge only after both `checks` and `backend` pass.
 
 ## Key Files
 
-| File                  | Description                                                                                                                                                                                                                                                                                                                                          |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workflows/ci.yml`    | `static` job on `ubuntu-24.04`, Node 24, read-only `contents` permission, concurrency group per ref with cancel-in-progress (20 min): `npm ci`, `make check`, `make test-catalog test-domain test-web`, `make sim-check`; also sets up Deno. Runs on pushes to `main` and every pull request.                                                        |
-| `workflows/stack.yml` | Manual `stack` job (`workflow_dispatch`, 45 min): Playwright Chromium, `make ci-start`, `make test-integration`, `make test-db`, `make e2e CHROMIUM_PATH=`, `make e2e-pwa CHROMIUM_PATH=`; on failure `make ci-logs` and uploads `stack-logs`; always `make stop`. Start it with `gh workflow run stack.yml --ref <branch>` or from the Actions tab. |
+| File                | Description                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `workflows/ci.yml`  | Both jobs on `ubuntu-24.04`, Node 24, read-only `contents` permission, concurrency group per ref with cancel-in-progress. `checks` (20 min): sets up Deno, `npm ci`, `make check`, `make test-catalog test-domain test-web`, `make sim-check`, `make build`. `backend` (30 min): `npm ci`, `make ci-start`, `make test-integration`, `make test-db`; on failure `make ci-logs` and uploads `backend-logs`; always `make stop`. |
+| `workflows/e2e.yml` | Manual `e2e` job (`workflow_dispatch`, 30 min): Playwright Chromium, `make ci-start`, `make e2e CHROMIUM_PATH=`, `make e2e-pwa CHROMIUM_PATH=`; on failure `make ci-logs` and uploads `e2e-logs`; always `make stop`. Start it with `gh workflow run e2e.yml --ref <branch>` or from the Actions tab.                                                                                                                          |
 
 ## Subdirectories
 
@@ -36,13 +36,13 @@ GitHub configuration. It holds two workflows. `workflows/ci.yml` runs the `stati
 
 ### Common Patterns
 
-- Static work runs automatically; stack work is a separate manual workflow because it is slow and needs the full local stack.
+- Pull requests run the fast `checks` job and the `backend` job in parallel. The slow browser suites live in the manual `e2e` workflow.
 
 ## Dependencies
 
 ### Internal
 
-- `../Makefile` targets: `check`, `test-catalog`, `test-domain`, `test-web`, `sim-check`, `ci-start`, `test-integration`, `test-db`, `e2e`, `e2e-pwa`, `ci-logs`, `stop`
+- `../Makefile` targets: `check`, `test-catalog`, `test-domain`, `test-web`, `sim-check`, `build`, `ci-start`, `test-integration`, `test-db`, `e2e`, `e2e-pwa`, `ci-logs`, `stop`
 
 ### External
 

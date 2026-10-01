@@ -9,10 +9,11 @@ Tests for the catalog toolchain in `scripts/catalog/`: the deterministic SQL see
 
 ## Key Files
 
-| File               | Description                                                                                                                                                                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `generate.test.ts` | Generator determinism (`generateSeed()` twice is identical), the committed `supabase/seed.sql` equals `generateSeed()`, the pinned UUID namespace, stable `idFor` ids, and retire statements from `renderStatements`.                             |
-| `validate.test.ts` | Uses `catalogProblems`, `validateCatalog`, `readDenylist` and `CatalogValidationError`. Accepts the real catalog, then mutates a `structuredClone` per case to prove each rule (tiers, gear slots, denylist terms, references) reports a problem. |
+| File                  | Description                                                                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `generate.test.ts`    | Generator determinism (`generateSeed()` twice is identical), the committed `supabase/seed.sql` equals `generateSeed()`, the pinned UUID namespace, stable `idFor` ids, and retire statements from `renderStatements`.                             |
+| `validate.test.ts`    | Uses `catalogProblems`, `validateCatalog`, `readDenylist` and `CatalogValidationError`. Accepts the real catalog, then mutates a `structuredClone` per case to prove each rule (tiers, gear slots, denylist terms, references) reports a problem. |
+| `sim-catalog.test.ts` | The balance simulator's `SIM_EXERCISE_SHARES` and `SIM_SKILLS` (`scripts/balance/catalog.ts`) equal the catalog's exercise shares and skills.                                                                                                     |
 
 ## For AI Agents
 

@@ -39,7 +39,7 @@ Node tooling run by the Makefile: stack helpers (loot secret, readiness wait, lo
 
 ### Testing Requirements
 
-- Covered by tests: `catalog/*` (`tests/catalog/`), `icons/png.ts` and `icons/render.ts` (`tests/web/png.test.ts`, `tests/web/manifest.test.ts`), `balance/*` (`tests/balance/balance-bands.test.ts`, `tests/integration/sim-catalog.test.ts`), `build-kill-switch.ts` (`e2e/pwa/update.spec.ts`, run by `make e2e-pwa`).
+- Covered by tests: `catalog/*` (`tests/catalog/`), `icons/png.ts` and `icons/render.ts` (`tests/web/png.test.ts`, `tests/web/manifest.test.ts`), `balance/*` (`tests/balance/balance-bands.test.ts`, `tests/catalog/sim-catalog.test.ts`), `build-kill-switch.ts` (`e2e/pwa/update.spec.ts`, run by `make e2e-pwa`).
 - Not covered by a dedicated test: `assert-local-db.mjs`, `ci-web-env.mjs`, `ensure-loot-secret.mjs`, `lan-url.mjs`, `rebuild-caches.mjs` (`tests/integration/rebuild-caches.test.ts` calls the Edge Function directly, not this script), `wait-for-functions.mjs`. Verify them by running the Makefile target.
 - Put new pure logic in a function the existing suites can import, with its test written first. Stack helpers need the local stack.
 

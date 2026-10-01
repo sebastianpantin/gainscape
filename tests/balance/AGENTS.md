@@ -23,7 +23,7 @@ A single simulation-backed test that proves the committed balance constants in `
 
 ### Testing Requirements
 
-- Run with `make sim-check` or `npx vitest run tests/balance`. No stack needed. CI runs it in the `static` job.
+- Run with `make sim-check` or `npx vitest run tests/balance`. No stack needed. CI runs it in the `checks` job.
 - A new balance band starts as a failing assertion here plus a field in `evaluateBands`' report.
 - `make sim` (`scripts/balance/report.ts`) prints the full report for tuning.
 
