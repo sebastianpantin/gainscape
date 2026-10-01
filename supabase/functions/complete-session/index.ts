@@ -6,6 +6,7 @@ import {
   effectiveLoadForNewSet,
   HISTORY_ONLY_STEPS,
   isWithinEditWindow,
+  type LiftSetInput,
   processSession,
   type SessionInput,
   type SessionSummary,
@@ -41,10 +42,12 @@ function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessi
   if (!sameSets) console.warn(`session ${payload.id} re-submitted with different sets; returning the stored summary`);
 }
 
+type LiftSession = Omit<SessionInput, 'sets'> & { sets: LiftSetInput[] };
+
 async function storeHistoryOnly(
   tx: Transaction,
   row: NewSessionRow,
-  session: SessionInput,
+  session: LiftSession,
   catalog: Catalog,
 ): Promise<SessionSummary> {
   const { outputs } = processSession(
@@ -69,7 +72,7 @@ async function storeHistoryOnly(
   );
 }
 
-async function storeAndReplay(tx: Transaction, row: NewSessionRow, session: SessionInput): Promise<SessionSummary> {
+async function storeAndReplay(tx: Transaction, row: NewSessionRow, session: LiftSession): Promise<SessionSummary> {
   await insertSession(
     tx,
     row,
@@ -115,7 +118,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
     );
     const catalog = await loadKnownCatalog(tx, userId, payload.sets);
     const profile = await loadProfileSettings(tx, userId);
-    const session: SessionInput = {
+    const session: LiftSession = {
       id: payload.id,
       startedAt: payload.startedAt,
       sets: payload.sets.map((set) => ({

@@ -50,7 +50,7 @@ interface EffortSelectorProps {
 }
 
 export function EffortSelector({ mode, selected, onSelect }: EffortSelectorProps) {
-  const shownMode = selected?.type ?? mode;
+  const shownMode = selected === null || selected.type === 'cardio' ? mode : selected.type;
   return (
     <div className={`effort-selector ${shownMode}`} role="radiogroup" aria-label={GROUP_LABELS[shownMode]}>
       {shownMode !== 'level' && (

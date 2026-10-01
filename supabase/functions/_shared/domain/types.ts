@@ -1,10 +1,17 @@
 export type LoadType = 'external' | 'bodyweight' | 'bodyweight_plus';
 export type EffortLevel = 'easy' | 'hard' | 'near_failure' | 'failure';
-export type EffortInputType = 'level' | 'rir' | 'rpe';
+export type EffortInputType = 'level' | 'rir' | 'rpe' | 'cardio';
+export type CardioEffortLevel = 'easy' | 'moderate' | 'hard' | 'max';
+export const CARDIO_EFFORT_LEVELS: readonly CardioEffortLevel[] = Object.freeze(['easy', 'moderate', 'hard', 'max']);
+export type SetKind = 'lift' | 'cardio';
 export type RirSource = 'logged' | 'estimated' | 'cold_start' | 'default';
 
 export type EffortInput =
-  { type: 'level'; level: EffortLevel } | { type: 'rir'; value: number } | { type: 'rpe'; value: number } | null;
+  | { type: 'level'; level: EffortLevel }
+  | { type: 'rir'; value: number }
+  | { type: 'rpe'; value: number }
+  | { type: 'cardio'; level: CardioEffortLevel }
+  | null;
 
 export interface SkillDef {
   id: string;
@@ -18,19 +25,37 @@ export interface SkillShare {
   shareBasisPoints: number;
 }
 
-export interface ExerciseDef {
+interface ExerciseBase {
   id: string;
-  loadType: LoadType;
   builtIn: boolean;
   shares: SkillShare[];
 }
+
+export interface LiftExerciseDef extends ExerciseBase {
+  modality?: 'lift';
+  loadType: LoadType;
+}
+
+export interface CardioProfile {
+  referencePaceSPerKm: number | null;
+  maxEffort: CardioEffortLevel;
+  recordMinDistanceM: number | null;
+}
+
+export interface CardioExerciseDef extends ExerciseBase {
+  modality: 'cardio';
+  cardio: CardioProfile;
+}
+
+export type ExerciseDef = LiftExerciseDef | CardioExerciseDef;
 
 export interface Catalog {
   skills: SkillDef[];
   exercises: ReadonlyMap<string, ExerciseDef>;
 }
 
-export interface SetInput {
+export interface LiftSetInput {
+  kind?: 'lift';
   id: string;
   exerciseId: string;
   position: number;
@@ -39,6 +64,29 @@ export interface SetInput {
   isWarmup: boolean;
   effort: EffortInput;
   recordedEffectiveLoadKg?: number;
+}
+
+export interface CardioInterval {
+  workS: number;
+  restS: number;
+  rounds: number;
+}
+
+export interface CardioSetInput {
+  kind: 'cardio';
+  id: string;
+  exerciseId: string;
+  position: number;
+  durationS: number;
+  distanceM: number | null;
+  interval: CardioInterval | null;
+  effort: EffortInput;
+}
+
+export type SetInput = LiftSetInput | CardioSetInput;
+
+export function isLiftSet(set: SetInput): set is LiftSetInput {
+  return set.kind !== 'cardio';
 }
 
 export interface SessionInput {
@@ -102,6 +150,15 @@ export interface SkillXp {
   xp: number;
 }
 
+export interface CardioSetResult {
+  countedWorkS: number;
+  xpCountedWorkS: number;
+  cappedWorkS: number;
+  effort: CardioEffortLevel;
+  paceBonus: number;
+  paceFlagged: boolean;
+}
+
 export interface SetResult {
   set: SetInput;
   effortInputType: EffortInputType | null;
@@ -121,6 +178,15 @@ export interface SetResult {
   effectiveReps: number;
   xp: number;
   skillXp: SkillXp[];
+  cardio: CardioSetResult | null;
+}
+
+export interface LiftSetResult extends SetResult {
+  set: LiftSetInput;
+}
+
+export function isLiftResult(result: SetResult): result is LiftSetResult {
+  return isLiftSet(result.set);
 }
 
 export type SetPersonalRecord =

@@ -1,8 +1,10 @@
 import type { BalanceConfig } from './balance.ts';
-import { UnknownExerciseError } from './errors.ts';
+import { KindMismatchError, UnknownExerciseError } from './errors.ts';
 import type { SessionContext, Step } from './pipeline.ts';
 import {
   type Catalog,
+  isLiftResult,
+  type LiftSetInput,
   type LoadType,
   NO_RECORDS,
   type PersonalRecordSummary,
@@ -10,7 +12,6 @@ import {
   type RecordState,
   type RepMaxSlot,
   type SessionKey,
-  type SetInput,
   type SetPersonalRecord,
   type SetResult,
 } from './types.ts';
@@ -32,7 +33,7 @@ interface RepMaxOutcome {
 
 function applyRepMaxSet(
   slots: readonly (RepMaxSlot | null)[],
-  set: SetInput,
+  set: LiftSetInput,
   achievedAt: string,
   cfg: BalanceConfig,
 ): RepMaxOutcome {
@@ -59,7 +60,7 @@ export interface RecordUpdate {
 
 export function applySetToRecords(
   records: RecordState,
-  set: SetInput,
+  set: LiftSetInput,
   loadType: LoadType,
   achievedAt: string,
   cfg: BalanceConfig,
@@ -100,8 +101,9 @@ export const detectPersonalRecords: Step = (ctx: SessionContext) => {
   let records = ctx.state.records ?? NO_RECORDS;
 
   const sets = ctx.sets.map((result): SetResult => {
-    if (result.set.isWarmup) return result;
+    if (!isLiftResult(result) || result.set.isWarmup) return result;
     const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
+    if (exercise.modality === 'cardio') return result;
     const isBaselineSession = !(ctx.deps.strength?.[exercise.id]?.hasPriorSession ?? false);
     const update = applySetToRecords(records, result.set, exercise.loadType, ctx.session.startedAt, ctx.cfg);
     records = update.records;
@@ -145,7 +147,8 @@ export function recordsFromHistory(
   for (const { row } of ordered) {
     const exercise = catalog.exercises.get(row.exerciseId);
     if (!exercise) throw new UnknownExerciseError(row.exerciseId);
-    const set: SetInput = {
+    if (exercise.modality === 'cardio') throw new KindMismatchError(row.exerciseId);
+    const set: LiftSetInput = {
       id: row.setId,
       exerciseId: row.exerciseId,
       position: row.position,
