@@ -1,4 +1,4 @@
-import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
+import { REP_MAX_SLOT_COUNT, type StrengthState } from '@domain/types.ts';
 import { fetchExercises } from './catalog.ts';
 import { countCollection } from './collection-rules.ts';
 import { supabase } from './supabase.ts';
@@ -60,6 +60,27 @@ export async function fetchExerciseStrength(userId: string): Promise<Map<string,
     data.map((row) => [
       row.exercise_id,
       { e1rmKg: row.e1rm_kg === null ? null : Number(row.e1rm_kg), repsCapacity: row.reps_capacity },
+    ]),
+  );
+}
+
+interface StrengthStateRow {
+  exercise_id: string;
+  window_max: number | string | null;
+  fallback_max: number | string | null;
+}
+
+function strengthValue(value: number | string | null): number | null {
+  return value === null ? null : Number(value);
+}
+
+export async function fetchStrengthState(asOf: string, windowDays: number): Promise<StrengthState> {
+  const { data, error } = await supabase.rpc('exercise_strength_state', { as_of: asOf, window_days: windowDays });
+  if (error) throw error;
+  return Object.fromEntries(
+    (data as StrengthStateRow[]).map((row) => [
+      row.exercise_id,
+      { windowMax: strengthValue(row.window_max), fallbackMax: strengthValue(row.fallback_max), hasPriorSession: true },
     ]),
   );
 }
