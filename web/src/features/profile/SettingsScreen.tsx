@@ -6,10 +6,10 @@ import {
   deleteMyAccount,
   exportFileName,
   exportMyData,
-  MINIMUM_PASSWORD_LENGTH,
   requestEmailChange,
   saveBlob,
 } from '../../lib/account.ts';
+import { MINIMUM_PASSWORD_LENGTH } from '../../lib/auth-links.ts';
 import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import {
@@ -184,7 +184,7 @@ function formatDay(date: Date): string {
   return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-function TimezoneSection({ profile, onSaved }: SectionProps) {
+function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {
   const [candidate, setCandidate] = useState(profile.timezone);
   const [message, setMessage] = useState<{ kind: 'problem' | 'status'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -640,7 +640,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
       {state.status === 'ready' && (
         <>
           <TrainingSection userId={userId} profile={state.bundle.profile} onSaved={replace} />
-          <TimezoneSection userId={userId} profile={state.bundle.profile} onSaved={replace} />
+          <TimezoneSection profile={state.bundle.profile} onSaved={replace} />
           <PrivacySection userId={userId} profile={state.bundle.profile} onSaved={replace} />
         </>
       )}

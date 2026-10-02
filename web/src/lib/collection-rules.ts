@@ -38,7 +38,7 @@ export function countCollection(allExercises: Exercise[], data: CollectionData):
   };
 }
 
-export const PIN_CAP = 50;
+const PIN_CAP = 50;
 
 export function pinProblemText(error: { message: string; code?: string; details?: string | null }): string {
   if (error.message === 'too_many_pins') return `You can pin up to ${PIN_CAP} exercises. Unpin one first.`;

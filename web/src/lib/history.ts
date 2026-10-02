@@ -10,7 +10,8 @@ import {
   querySessionSets,
   type StoredSetRow,
 } from './history-rules.ts';
-import { REQUEST_TIMEOUT_MS, supabase } from './supabase.ts';
+import { REQUEST_TIMEOUT_MS } from './auth-restore.ts';
+import { supabase } from './supabase.ts';
 
 export function fetchSessionPage(after: HistorySession | null): Promise<HistorySession[]> {
   return querySessionPage(supabase, after);

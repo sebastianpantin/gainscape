@@ -10,7 +10,7 @@ import { fetchProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
-import { REQUEST_TIMEOUT_MS } from '../../lib/supabase.ts';
+import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { formatWeight } from '../../lib/units.ts';
 import {
   addCardioExercise,

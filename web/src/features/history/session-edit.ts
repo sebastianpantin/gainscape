@@ -195,21 +195,13 @@ export function canAddSet(edit: SessionEdit): boolean {
   return editSetCount(edit) < MAX_SETS_PER_SESSION;
 }
 
-function updateExercise(
-  edit: SessionEdit,
-  exerciseIndex: number,
-  update: (exercise: EditExercise) => EditExercise,
-): SessionEdit {
-  return updateExerciseAt(edit, exerciseIndex, update);
-}
-
 export function updateEditSet(
   edit: SessionEdit,
   exerciseIndex: number,
   setId: string,
   changes: Partial<Omit<EditSet, 'id'>>,
 ): SessionEdit {
-  return updateExercise(edit, exerciseIndex, (exercise) =>
+  return updateExerciseAt(edit, exerciseIndex, (exercise) =>
     exercise.modality === 'lift'
       ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
       : exercise,
@@ -222,7 +214,7 @@ export function updateEditBout(
   setId: string,
   changes: Partial<BoutValues>,
 ): SessionEdit {
-  return updateExercise(edit, exerciseIndex, (exercise) =>
+  return updateExerciseAt(edit, exerciseIndex, (exercise) =>
     exercise.modality === 'cardio'
       ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
       : exercise,
@@ -230,7 +222,7 @@ export function updateEditBout(
 }
 
 export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: string): SessionEdit {
-  const removed = updateExercise(edit, exerciseIndex, (exercise) =>
+  const removed = updateExerciseAt(edit, exerciseIndex, (exercise) =>
     exercise.modality === 'cardio'
       ? { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) }
       : { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) },
@@ -240,7 +232,7 @@ export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: s
 
 export function addEditSet(edit: SessionEdit, exerciseIndex: number): SessionEdit {
   if (!canAddSet(edit)) return edit;
-  return updateExercise(edit, exerciseIndex, (exercise) => {
+  return updateExerciseAt(edit, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio') {
       const newBout: EditBout = { id: crypto.randomUUID(), kind: 'cardio', ...nextBoutValues(exercise.sets.at(-1)) };
       return { ...exercise, sets: [...exercise.sets, newBout] };
@@ -268,7 +260,7 @@ export function addEditExercise(edit: SessionEdit, exercise: NewExercise): Sessi
 }
 
 export function swapEditExercise(edit: SessionEdit, exerciseIndex: number, replacement: NewExercise): SessionEdit {
-  return updateExercise(edit, exerciseIndex, (exercise) => {
+  return updateExerciseAt(edit, exerciseIndex, (exercise) => {
     const identity = { exerciseId: replacement.id, name: replacement.name };
     if (exercise.modality === 'cardio') {
       return replacement.modality === 'cardio'
