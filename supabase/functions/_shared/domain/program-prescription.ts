@@ -14,7 +14,7 @@ import {
   type SlotDecl,
   type SlotRole,
 } from './program-definition.ts';
-import { dayKeyOf, isCyclePosition, isRotationPosition, type Position } from './program-schedule.ts';
+import { dayOf, isCyclePosition, isRotationPosition, type Position } from './program-schedule.ts';
 import { shownWeight, unitToKg } from './units.ts';
 
 export interface PrescriptionSnapshot {
@@ -75,7 +75,7 @@ export function weekContextOf(position: Position): WeekContext {
   return { week: position.week, cycle: isCyclePosition(position) ? position.cycle : 1 };
 }
 
-function numberContext(
+export function numberContext(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
   position: Position,
@@ -299,8 +299,7 @@ export function resolvePrescription(
   lastLogged: LastLoggedWeights,
 ): ResolvedSlot[] {
   if (definition.schedule.days.length === 0) return [];
-  const dayKey = dayKeyOf(definition, position);
-  const day = definition.schedule.days.find((candidate) => candidate.key === dayKey);
+  const day = dayOf(definition, position);
   if (!day) return [];
   const context: ResolveContext = { definition, enrollment, refs: state.refs, position, lastLogged };
   return day.slots

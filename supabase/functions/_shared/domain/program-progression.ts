@@ -4,7 +4,6 @@ import {
   type Adjustment,
   evaluateAmount,
   evaluateNumber,
-  type NumberContext,
   parseSetRef,
   type ProgramDefinition,
   type ProgramEnrollment,
@@ -12,11 +11,17 @@ import {
   type ReferenceVar,
   type SlotDecl,
 } from './program-definition.ts';
-import { isSlotActive, type PrescriptionSnapshot, requiredSetIndices, weekContextOf } from './program-prescription.ts';
+import {
+  isSlotActive,
+  numberContext,
+  type PrescriptionSnapshot,
+  requiredSetIndices,
+  weekContextOf,
+} from './program-prescription.ts';
 import {
   compareWeeks,
   dayIndexOf,
-  dayKeyOf,
+  dayOf,
   isCyclePosition,
   isPositionInSchedule,
   isRotationPosition,
@@ -59,11 +64,6 @@ export function isSetMet(
   return logged.weightKg >= lightestMetKg && logged.reps >= repsNeeded;
 }
 
-function dayOf(definition: ProgramDefinition, position: Position) {
-  const dayKey = dayKeyOf(definition, position);
-  return definition.schedule.days.find((day) => day.key === dayKey);
-}
-
 function judgedSlotsOf(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
@@ -102,23 +102,23 @@ function ruleOutcomeAt(
   position: Position,
   sets: readonly FactSet[],
 ): LiftOutcome {
-  const slots = judgedSlotsOf(definition, enrollment, rule, position).filter(
-    (slot) => requiredSetIndices(definition, enrollment, slot, position) !== null,
-  );
-  if (slots.length === 0) return 'neutral';
+  const judged = judgedSlotsOf(definition, enrollment, rule, position).flatMap((slot) => {
+    const required = requiredSetIndices(definition, enrollment, slot, position);
+    return required === null ? [] : [{ slot, required }];
+  });
+  if (judged.length === 0) return 'neutral';
   const exerciseId = enrollment.bindings[rule.lift];
-  const candidatesBySlot = slots.map((slot) => setsForSlot(sets, slot, exerciseId));
+  const candidatesBySlot = judged.map(({ slot }) => setsForSlot(sets, slot, exerciseId));
   if (candidatesBySlot.every((candidates) => candidates.length === 0)) return 'neutral';
-  const allMet = slots.every((slot, slotIndex) => {
-    const required = requiredSetIndices(definition, enrollment, slot, position) ?? [];
-    return required.every((index) =>
+  const allMet = judged.every(({ slot, required }, slotIndex) =>
+    required.every((index) =>
       candidatesBySlot[slotIndex].some(
         (set) =>
           set.prescription?.ref === `${slot.id}:${index}` &&
           isSetMet(set, set.prescription, enrollment.rounding, enrollment.unit),
       ),
-    );
-  });
+    ),
+  );
   return allMet ? 'met' : 'missed';
 }
 
@@ -184,7 +184,7 @@ function adjustedValue(
   position: Position,
 ): { value: number; reason: ReferenceChangeReason } | null {
   const { definition, enrollment } = context;
-  const numbers: NumberContext = { definition, options: enrollment.options, cycle: weekContextOf(position).cycle };
+  const numbers = numberContext(definition, enrollment, position);
   switch (adjustment.kind) {
     case 'increment': {
       if (!('byPct' in adjustment)) {
