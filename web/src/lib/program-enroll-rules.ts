@@ -126,6 +126,10 @@ function capitalised(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+export function inputKindLabel(kind: InputKind): string {
+  return capitalised(INPUT_KIND_LABELS[kind]);
+}
+
 export function shownReference(value: number): number {
   return roundTo(SHOWN_REFERENCE_DECIMALS, value);
 }

@@ -313,6 +313,10 @@ a:focus-visible {
   border: var(--border-width) solid transparent;
 }
 
+.segmented.stacked {
+  grid-auto-flow: row;
+}
+
 .segment:hover {
   color: var(--color-text);
 }

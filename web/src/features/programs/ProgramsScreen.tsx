@@ -10,6 +10,7 @@ import {
   templates,
 } from '../../lib/programs.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { PowerliftingPrograms } from './PowerliftingPrograms.tsx';
 
 interface ProgramsScreenProps {
   userId: string;
@@ -100,6 +101,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
           ))}
         </ul>
       </section>
+      <PowerliftingPrograms userId={userId} />
       <section className="stack" aria-label="Templates">
         <h2>Templates</h2>
         <ul className="stack exercise-list">
