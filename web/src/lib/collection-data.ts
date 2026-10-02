@@ -1,11 +1,9 @@
 import { REP_MAX_SLOT_COUNT, type StrengthState } from '@domain/types.ts';
 import type { CardioRecordRow } from './cardio-rules.ts';
 import { fetchExercises } from './catalog.ts';
-import { countCollection, pinProblemText } from './collection-rules.ts';
+import { collectionPercent, countCollection, pinProblemText } from './collection-rules.ts';
 import { withFriendlyRateLimit } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
-
-export { countCollection } from './collection-rules.ts';
 
 export interface RepMaxSlotView {
   loadKg: number;
@@ -111,5 +109,6 @@ export async function reorderPins(exerciseIds: string[]): Promise<void> {
 
 export async function fetchCollectionPercent(userId: string): Promise<number> {
   const [exercises, data] = await Promise.all([fetchExercises({ includeArchived: true }), fetchCollectionData(userId)]);
-  return Math.round(countCollection(exercises, data).completion.fraction * 100);
+  const { filledSlots, totalSlots } = countCollection(exercises, data).completion;
+  return collectionPercent(filledSlots, totalSlots);
 }

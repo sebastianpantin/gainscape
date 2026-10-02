@@ -3,10 +3,10 @@ import { cardioRecordCards } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isCardioExercise } from '../../lib/catalog-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { collectionPercent, countCollection } from '../../lib/collection-rules.ts';
 import { moved } from '../../lib/reorder.ts';
 import {
   type CollectionData,
-  countCollection,
   fetchCollectionData,
   pinExercise,
   reorderPins,
@@ -94,7 +94,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
 
   const pinIndex = (exercise: Exercise) => data.pinnedExerciseIds.indexOf(exercise.id);
 
-  const completionPercent = Math.round(completion.fraction * 100);
+  const completionPercent = collectionPercent(completion.filledSlots, completion.totalSlots);
 
   return (
     <main className="screen stack">

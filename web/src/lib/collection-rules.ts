@@ -15,6 +15,10 @@ function asCollectionExercise(exercise: LiftExercise, data: CollectionData): Col
   };
 }
 
+export function collectionPercent(filled: number, total: number): number {
+  return total === 0 ? 0 : Math.round((filled / total) * 100);
+}
+
 export interface CountedCollection {
   pinned: LiftExercise[];
   counted: LiftExercise[];
