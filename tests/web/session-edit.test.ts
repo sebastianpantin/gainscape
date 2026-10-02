@@ -9,6 +9,7 @@ import {
   editFromSession,
   editPayload,
   failureAction,
+  failureText,
   hasChanges,
   isEditable,
   type EditBout,
@@ -16,7 +17,10 @@ import {
   type LiftEditExercise,
   rebaseEdit,
   rebaseNotice,
+  removalText,
+  removedText,
   removeEditSet,
+  sameSetValues,
   type SessionEdit,
   swapEditExercise,
   updateEditBout,
@@ -33,6 +37,7 @@ import {
   transientReason,
 } from '../../web/src/lib/history-rules.ts';
 import { boutModeChanges } from '../../web/src/lib/cardio-rules.ts';
+import type { CatalogItem } from '../../web/src/lib/item-rules.ts';
 
 const benchId = 'aaaaaaaa-0000-4000-8000-000000000001';
 const pullUpId = 'aaaaaaaa-0000-4000-8000-000000000002';
@@ -645,5 +650,64 @@ describe('cardio bouts in an edit', () => {
       interval: null,
       effort: { type: 'cardio', level: 'easy' },
     });
+  });
+});
+
+describe('session detail texts', () => {
+  const items = [
+    { id: 'item-gloves', name: 'Iron Gloves' },
+    { id: 'item-chalk', name: 'Chalk' },
+  ] as CatalogItem[];
+
+  it('warns which drops a change or delete may remove, naming unknown items generically', () => {
+    expect(
+      removalText(
+        [
+          { itemId: 'item-gloves', quantity: 1 },
+          { itemId: 'item-chalk', quantity: 2 },
+          { itemId: 'item-gone', quantity: 1 },
+        ],
+        items,
+      ),
+    ).toBe('This may remove Iron Gloves, Chalk ×2, an item from your collection.');
+    expect(removalText([], items)).toBe('');
+  });
+
+  it('reports the drops a save or delete removed', () => {
+    expect(removedText([{ itemId: 'item-chalk', revokedQuantity: 3 }], items)).toBe(
+      'Removed Chalk ×3 from your collection.',
+    );
+    expect(removedText([{ itemId: 'item-chalk', revokedQuantity: 0 }], items)).toBe('');
+    expect(removedText(undefined, items)).toBe('');
+  });
+
+  it('compares set values without their ids', () => {
+    const set = { id: 'a', weightKg: 60, reps: 5, isWarmup: false, effort: null };
+    expect(sameSetValues(set, { ...set, id: 'b' })).toBe(true);
+    expect(sameSetValues(set, { ...set, reps: 6 })).toBe(false);
+  });
+
+  it('explains the failures every save and delete can hit', () => {
+    expect(failureText({ kind: 'read_only' }, 'save')).toBe(
+      'This workout is older than 7 days, so it can no longer be changed.',
+    );
+    expect(failureText({ kind: 'wrong_account' }, 'delete')).toBe(
+      'You are signed in as someone else in another tab. Reload the app.',
+    );
+    expect(failureText({ kind: 'retry', reason: 'offline' }, 'save')).toBe(
+      "Couldn't reach the server (offline). Try again.",
+    );
+    expect(failureText({ kind: 'rate_limited', retryAfterSeconds: 120 }, 'save')).toBe(
+      'Too many changes. Try again in 2 min.',
+    );
+    expect(failureText({ kind: 'rate_limited', retryAfterSeconds: null }, 'save')).toBe(
+      'Too many changes. Try again in a few minutes.',
+    );
+    expect(failureText({ kind: 'bug', code: 'invalid_payload' }, 'delete')).toBe(
+      "Couldn't delete this workout: invalid_payload",
+    );
+    expect(failureText({ kind: 'revision_conflict' }, 'delete')).toBe(
+      "Couldn't delete this workout: revision_conflict",
+    );
   });
 });
