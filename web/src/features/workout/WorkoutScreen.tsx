@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { DEFAULT_BALANCE, type StrengthState } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { canAddBout } from '../../lib/cardio-rules.ts';
-import { fetchExercises, saveBodyweight } from '../../lib/catalog.ts';
+import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
 import { type ExerciseStrengthView, fetchExerciseStrength, fetchStrengthState } from '../../lib/collection-data.ts';
-import { fetchProfile } from '../../lib/profile.ts';
+import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
@@ -305,7 +305,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           <BodyweightPrompt
             unit={unitPref}
             onSave={async (bodyweightKg) => {
-              await saveBodyweight(userId, bodyweightKg);
+              await updatePrivateProfile(userId, { bodyweightKg });
               setBodyweightKg(bodyweightKg);
               retryNow();
             }}

@@ -2,7 +2,7 @@ import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
-import { fetchExercises, saveBodyweight } from '../../lib/catalog.ts';
+import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
@@ -11,6 +11,7 @@ import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/histor
 import { type CatalogItem, describeDrops } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { updatePrivateProfile } from '../../lib/profile.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetLastSummary } from '../summary/last-summary.ts';
@@ -433,7 +434,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           unit={unitPref}
           submitLabel="Save bodyweight and changes"
           onSave={async (bodyweightKg) => {
-            await saveBodyweight(userId, bodyweightKg);
+            await updatePrivateProfile(userId, { bodyweightKg });
             await save(problem.pending);
           }}
         />
