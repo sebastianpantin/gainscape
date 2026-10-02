@@ -1,6 +1,7 @@
 import { isoTimestamp, type JsonValue, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
+  isSessionEditable,
   type SessionKey,
   type SessionSummary,
   setKind,
@@ -73,6 +74,10 @@ export async function requireOwnedSession(tx: Transaction, userId: string, sessi
     notes: row.notes,
     summary: row.summary,
   };
+}
+
+export function isOwnedSessionEditable(session: OwnedSession, now: number): boolean {
+  return isSessionEditable({ historyOnly: session.historyOnly, startedAt: session.key.startedAt }, now);
 }
 
 export async function loadStoredSets(tx: Transaction, sessionId: string): Promise<StoredSet[]> {
