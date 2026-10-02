@@ -36,7 +36,7 @@ async function registerThroughEmail(page: Page, username: string): Promise<strin
   await page.goto(link);
   await expect(page.getByRole('heading', { name: 'Account confirmed' })).toBeVisible();
   await expect(page).not.toHaveURL(/token_hash/);
-  await expect(page.getByTestId('confirmed-username')).toHaveText(username);
+  await expect(page.getByText(/^Your username is /)).toContainText(`Your username is ${username}.`);
   await choosePassword(page, TEST_PASSWORD);
   await page.getByRole('button', { name: 'Save and continue' }).click();
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
@@ -123,7 +123,7 @@ test('a used confirmation link is invalid', async ({ page }) => {
   const link = await registerThroughEmail(page, username);
   await page.goto(link);
   await expect(page.getByRole('heading', { name: 'Account confirmed' })).toBeVisible();
-  await expect(page.getByTestId('confirmed-username')).toHaveText(username);
+  await expect(page.getByText(/^Your username is /)).toContainText(`Your username is ${username}.`);
   await page.getByRole('button', { name: 'Not now' }).click();
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
   await expect(page).toHaveURL(/\/$/);
@@ -162,7 +162,7 @@ test('a squatter loses the account when the owner confirms the email', async ({ 
   const since = new Date();
   await submitRegistration(victim, victimName, victimEmail);
   await victim.goto(await linkTo(victimEmail, CONFIRM_SUBJECT, since));
-  await expect(victim.getByTestId('confirmed-username')).toHaveText(squatterName);
+  await expect(victim.getByText(/^Your username is /)).toContainText(`Your username is ${squatterName}.`);
   await victim.getByLabel('Username').fill(victimName);
   await choosePassword(victim, 'the-owners-password');
   await victim.getByRole('button', { name: 'Save and continue' }).click();

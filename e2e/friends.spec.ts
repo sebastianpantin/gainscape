@@ -13,7 +13,7 @@ async function logRun(page: Page, minutes: number, distance: number) {
 }
 
 function feedItem(page: Page, text: string) {
-  return page.getByRole('list', { name: 'Feed' }).getByTestId('feed-item').filter({ hasText: text });
+  return page.getByRole('list', { name: 'Feed' }).getByRole('listitem').filter({ hasText: text });
 }
 
 test('friends: request, feed with gz and hidden weights, hiscores, profile and removal', async ({ newPerson }) => {
@@ -31,9 +31,8 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await expect(alice.getByRole('status')).toHaveText(`Request sent to ${bobName}`);
 
   await openTab(bob, 'Friends');
-  const request = bob.getByTestId('incoming-request');
-  await expect(request).toContainText(`${aliceName} wants to be friends`);
-  await request.getByRole('button', { name: 'Accept' }).click();
+  await expect(bob.getByText(`${aliceName} wants to be friends`)).toBeVisible();
+  await bob.getByRole('button', { name: 'Accept' }).click();
   await expect(bob.getByRole('list', { name: 'Friends list' })).toContainText(aliceName);
 
   await logBench(bob, 60);
@@ -81,7 +80,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
     .getByRole('list', { name: 'Friends list' })
     .getByRole('link', { name: new RegExp(bobName) })
     .click();
-  await expect(alice.getByTestId('profile-display-name')).toHaveText(bobName);
+  await expect(alice.getByRole('heading', { level: 2, name: bobName, exact: true })).toBeVisible();
   await expect(alice.getByTestId('profile-total')).not.toHaveText('—');
   await expect(alice.getByText('Weights hidden')).toBeVisible();
   await alice.getByRole('button', { name: 'Remove friend' }).click();

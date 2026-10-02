@@ -60,7 +60,7 @@ async function befriend(friend: Page, page: Page, username: string): Promise<str
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page.getByRole('status')).toHaveText(`Request sent to ${friendName}`);
   await openTab(friend, 'Friends');
-  await friend.getByTestId('incoming-request').getByRole('button', { name: 'Accept' }).click();
+  await friend.getByRole('button', { name: 'Accept' }).click();
   await expect(friend.getByRole('list', { name: 'Friends list' })).toContainText(username);
   await openTab(friend, 'Train');
   await logWorkout(friend, () => logExercise(friend, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
@@ -236,12 +236,13 @@ test('the reveal runs no animation under reduced motion', async ({ page }) => {
 test('the skills screen shows pixel art for the eight skills', async ({ page }) => {
   await register(page, uniqueUsername('a11y_sk'));
   await openTab(page, 'Skills');
-  const skills = page.getByRole('list').filter({ has: page.getByTestId('skill-chest') });
-  await expect(skills.locator('li')).toHaveCount(8);
+  const chest = page.getByRole('button', { name: /^Chest\b/ });
+  const skills = page.getByRole('list').filter({ has: chest });
+  await expect(skills.getByRole('listitem')).toHaveCount(8);
   await expect(skills.locator('li svg')).toHaveCount(8);
   await expect(skills.locator('.monogram')).toHaveCount(0);
-  await page.getByTestId('skill-endurance').click();
+  await page.getByRole('button', { name: /^Endurance\b/ }).click();
   await expect(page.getByText('does not count toward combat')).toBeVisible();
-  await page.getByTestId('skill-chest').click();
+  await chest.click();
   await expect(page.getByText('counts double toward combat')).toBeVisible();
 });
