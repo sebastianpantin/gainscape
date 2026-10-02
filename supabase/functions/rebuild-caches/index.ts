@@ -4,20 +4,18 @@ import { HttpError, jsonResponse } from '../_shared/http.ts';
 import { serve } from '../_shared/serve.ts';
 import { assertServiceRole } from '../_shared/service-auth.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
-import { lockUser } from '../_shared/stores/sessions.ts';
+import { clearRecordCaches } from '../_shared/stores/records.ts';
+import { lockUser, markSessionsDerivedAt } from '../_shared/stores/sessions.ts';
+import { clearStrengthCache } from '../_shared/stores/strength.ts';
 
 async function rebuildUser(userId: string) {
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId, new HttpError(404, 'user_not_found'));
 
-    await tx`delete from public.exercise_maxes where user_id = ${userId}`;
-    await tx`delete from public.rep_maxes where user_id = ${userId}`;
-    await tx`delete from public.bodyweight_rep_records where user_id = ${userId}`;
-    await tx`delete from public.cardio_records where user_id = ${userId}`;
+    await clearStrengthCache(tx, userId);
+    await clearRecordCaches(tx, userId);
     const { sessionsReplayed, setsRewritten } = await replayFrom(tx, userId, null, [], DEFAULT_BALANCE);
-    await tx`
-      update public.sessions set derived_balance_version = ${DEFAULT_BALANCE.version}
-      where user_id = ${userId} and not history_only and derived_balance_version <> ${DEFAULT_BALANCE.version}`;
+    await markSessionsDerivedAt(tx, userId, DEFAULT_BALANCE.version);
 
     return { userId, sessionsReplayed, setsRewritten, balanceVersion: DEFAULT_BALANCE.version };
   });

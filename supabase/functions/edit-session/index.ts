@@ -1,5 +1,5 @@
 import { authenticatedUserId } from '../_shared/auth.ts';
-import { type JsonValue, sql, type Transaction } from '../_shared/db.ts';
+import { sql } from '../_shared/db.ts';
 import {
   DEFAULT_BALANCE,
   isNoOpEdit,
@@ -7,7 +7,6 @@ import {
   type RevokedDrop,
   type SessionSummary,
   type StoredSet,
-  type WritableSet,
   writableSetFor,
 } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
@@ -19,14 +18,14 @@ import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
+  bumpRevision,
   loadProfileSettings,
   loadStoredSets,
   lockUser,
-  placeholderSetRow,
   requireOwnedSession,
   storedSummary,
+  writeEditedSets,
 } from '../_shared/stores/sessions.ts';
-import { inputColumnsWithEffort } from '../_shared/stores/set-columns.ts';
 import { type EditSessionPayload, parseEditSessionPayload } from './payload.ts';
 
 interface EditResponse {
@@ -42,67 +41,6 @@ function assertKindsUnchanged(sets: readonly SetPayload[], storedById: ReadonlyM
     return stored !== undefined && stored.kind !== set.kind;
   });
   if (changed.length > 0) throw new HttpError(422, 'kind_changed', { setIds: changed.map((set) => set.id) });
-}
-
-async function writeSets(
-  tx: Transaction,
-  userId: string,
-  sessionId: string,
-  storedSets: readonly StoredSet[],
-  requested: readonly WritableSet[],
-): Promise<void> {
-  const requestedIds = new Set(requested.map((set) => set.id));
-  const storedIds = new Set(storedSets.map((set) => set.id));
-  const removedIds = storedSets.filter((set) => !requestedIds.has(set.id)).map((set) => set.id);
-  const kept = requested.filter((set) => storedIds.has(set.id));
-  const added = requested.filter((set) => !storedIds.has(set.id));
-
-  await tx`set constraints public.sets_session_id_position_key deferred`;
-  if (removedIds.length > 0) {
-    await tx`delete from public.sets where session_id = ${sessionId} and id = any(${removedIds}::uuid[])`;
-  }
-  if (kept.length > 0) {
-    const rows = kept.map((set) => inputColumnsWithEffort(set, DEFAULT_BALANCE));
-    await tx`
-      update public.sets as target
-      set exercise_id = derived.exercise_id,
-          position = derived.position,
-          weight_kg = derived.weight_kg,
-          effective_load_kg = derived.effective_load_kg,
-          reps = derived.reps,
-          is_warmup = derived.is_warmup,
-          effort_input_type = derived.effort_input_type,
-          effort_value = derived.effort_value,
-          duration_s = derived.duration_s,
-          distance_m = derived.distance_m,
-          interval_work_s = derived.interval_work_s,
-          interval_rest_s = derived.interval_rest_s,
-          interval_rounds = derived.interval_rounds,
-          counted_work_s = derived.counted_work_s,
-          updated_at = now()
-      from jsonb_to_recordset(${tx.json(rows as unknown as JsonValue)}) as derived (
-        id uuid,
-        exercise_id uuid,
-        position int,
-        weight_kg numeric,
-        effective_load_kg numeric,
-        reps int,
-        is_warmup boolean,
-        effort_input_type public.effort_input_type,
-        effort_value numeric,
-        duration_s int,
-        distance_m numeric,
-        interval_work_s int,
-        interval_rest_s int,
-        interval_rounds int,
-        counted_work_s int
-      )
-      where target.id = derived.id and target.session_id = ${sessionId}`;
-  }
-  if (added.length > 0) {
-    const rows = added.map((set) => placeholderSetRow(set, sessionId, userId, DEFAULT_BALANCE));
-    await tx`insert into public.sets ${tx(rows)}`;
-  }
 }
 
 async function editSession(userId: string, payload: EditSessionPayload): Promise<EditResponse> {
@@ -138,12 +76,8 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     });
 
     await takeRateLimit(tx, 'session_edit_hour', userId);
-    await writeSets(tx, userId, payload.sessionId, storedSets, requested);
-    const [updated] = await tx`
-      update public.sessions
-      set notes = ${payload.notes}, revision = revision + 1, updated_at = now()
-      where id = ${payload.sessionId}
-      returning revision`;
+    await writeEditedSets(tx, userId, payload.sessionId, storedSets, requested, DEFAULT_BALANCE);
+    const revision = await bumpRevision(tx, payload.sessionId, payload.notes);
 
     const storedExerciseIds = [...new Set(storedSets.map((set) => set.exerciseId))];
     const { replayedSessionIds, revokedDrops } = await replayFrom(
@@ -155,7 +89,7 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     );
     return {
       summary: await storedSummary(tx, payload.sessionId),
-      revision: updated.revision,
+      revision,
       replayedSessionIds,
       revokedDrops,
     };

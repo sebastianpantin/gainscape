@@ -56,6 +56,12 @@ export async function loadRecords(
   return { repMaxes, bodyweightReps, cardio };
 }
 
+export async function clearRecordCaches(tx: Transaction, userId: string): Promise<void> {
+  await tx`delete from public.rep_maxes where user_id = ${userId}`;
+  await tx`delete from public.bodyweight_rep_records where user_id = ${userId}`;
+  await tx`delete from public.cardio_records where user_id = ${userId}`;
+}
+
 export async function replaceRecordsFor(
   tx: Transaction,
   userId: string,

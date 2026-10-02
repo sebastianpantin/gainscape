@@ -8,7 +8,13 @@ import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serve } from '../_shared/serve.ts';
 import { lowerUuid, parseOr422 } from '../_shared/session-payload.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
-import { lockUser, requireOwnedSession, tombstoneOwner } from '../_shared/stores/sessions.ts';
+import {
+  lockUser,
+  requireOwnedSession,
+  sessionExerciseIds,
+  tombstoneOwner,
+  tombstoneSession,
+} from '../_shared/stores/sessions.ts';
 
 const deleteSchema = z.object({ sessionId: lowerUuid }).strict();
 
@@ -35,16 +41,13 @@ async function deleteSession(userId: string, sessionId: string): Promise<DeleteR
       throw new HttpError(409, 'edit_window_closed');
 
     await takeRateLimit(tx, 'session_delete_hour', userId);
-    const exerciseRows = await tx`select distinct exercise_id from public.sets where session_id = ${sessionId}`;
-    await tx`
-      insert into public.deleted_sessions (id, user_id, started_at)
-      values (${sessionId}, ${userId}, ${session.key.startedAt})`;
-    await tx`delete from public.sessions where id = ${sessionId} and user_id = ${userId}`;
+    const exerciseIds = await sessionExerciseIds(tx, sessionId);
+    await tombstoneSession(tx, userId, session.key);
     const { replayedSessionIds, revokedDrops } = await replayFrom(
       tx,
       userId,
       session.key,
-      exerciseRows.map((row) => row.exercise_id),
+      exerciseIds,
       DEFAULT_BALANCE,
       [sessionId],
     );

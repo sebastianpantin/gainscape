@@ -149,6 +149,95 @@ export function placeholderSetRow(set: WritableSet, sessionId: string, userId: s
   };
 }
 
+export async function writeEditedSets(
+  tx: Transaction,
+  userId: string,
+  sessionId: string,
+  storedSets: readonly StoredSet[],
+  requested: readonly WritableSet[],
+  cfg: BalanceConfig,
+): Promise<void> {
+  const requestedIds = new Set(requested.map((set) => set.id));
+  const storedIds = new Set(storedSets.map((set) => set.id));
+  const removedIds = storedSets.filter((set) => !requestedIds.has(set.id)).map((set) => set.id);
+  const kept = requested.filter((set) => storedIds.has(set.id));
+  const added = requested.filter((set) => !storedIds.has(set.id));
+
+  await tx`set constraints public.sets_session_id_position_key deferred`;
+  if (removedIds.length > 0) {
+    await tx`delete from public.sets where session_id = ${sessionId} and id = any(${removedIds}::uuid[])`;
+  }
+  if (kept.length > 0) {
+    const rows = kept.map((set) => inputColumnsWithEffort(set, cfg));
+    await tx`
+      update public.sets as target
+      set exercise_id = derived.exercise_id,
+          position = derived.position,
+          weight_kg = derived.weight_kg,
+          effective_load_kg = derived.effective_load_kg,
+          reps = derived.reps,
+          is_warmup = derived.is_warmup,
+          effort_input_type = derived.effort_input_type,
+          effort_value = derived.effort_value,
+          duration_s = derived.duration_s,
+          distance_m = derived.distance_m,
+          interval_work_s = derived.interval_work_s,
+          interval_rest_s = derived.interval_rest_s,
+          interval_rounds = derived.interval_rounds,
+          counted_work_s = derived.counted_work_s,
+          updated_at = now()
+      from jsonb_to_recordset(${tx.json(rows as unknown as JsonValue)}) as derived (
+        id uuid,
+        exercise_id uuid,
+        position int,
+        weight_kg numeric,
+        effective_load_kg numeric,
+        reps int,
+        is_warmup boolean,
+        effort_input_type public.effort_input_type,
+        effort_value numeric,
+        duration_s int,
+        distance_m numeric,
+        interval_work_s int,
+        interval_rest_s int,
+        interval_rounds int,
+        counted_work_s int
+      )
+      where target.id = derived.id and target.session_id = ${sessionId}`;
+  }
+  if (added.length > 0) {
+    const rows = added.map((set) => placeholderSetRow(set, sessionId, userId, cfg));
+    await tx`insert into public.sets ${tx(rows)}`;
+  }
+}
+
+export async function bumpRevision(tx: Transaction, sessionId: string, notes: string | null): Promise<number> {
+  const [updated] = await tx`
+    update public.sessions
+    set notes = ${notes}, revision = revision + 1, updated_at = now()
+    where id = ${sessionId}
+    returning revision`;
+  return updated.revision;
+}
+
+export async function sessionExerciseIds(tx: Transaction, sessionId: string): Promise<string[]> {
+  const rows = await tx`select distinct exercise_id from public.sets where session_id = ${sessionId}`;
+  return rows.map((row) => row.exercise_id);
+}
+
+export async function tombstoneSession(tx: Transaction, userId: string, key: SessionKey): Promise<void> {
+  await tx`
+    insert into public.deleted_sessions (id, user_id, started_at)
+    values (${key.id}, ${userId}, ${key.startedAt})`;
+  await tx`delete from public.sessions where id = ${key.id} and user_id = ${userId}`;
+}
+
+export async function markSessionsDerivedAt(tx: Transaction, userId: string, version: number): Promise<void> {
+  await tx`
+    update public.sessions set derived_balance_version = ${version}
+    where user_id = ${userId} and not history_only and derived_balance_version <> ${version}`;
+}
+
 export async function insertSession(
   tx: Transaction,
   row: NewSessionRow,
