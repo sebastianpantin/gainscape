@@ -31,7 +31,7 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await page.getByLabel('Equipment').selectOption('other');
   await page.getByLabel('Shoulders').fill('60');
   await page.getByLabel('Chest').fill('40');
-  await expect(page.getByTestId('share-total')).toHaveText('Total: 100%');
+  await expect(page.getByText(/^Total: \d+%$/)).toHaveText('Total: 100%');
   await page.getByRole('button', { name: 'Save exercise' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Landmine Press' })).toContainText('(custom)');
 
@@ -87,7 +87,7 @@ test('create and log a custom cardio exercise', async ({ page }) => {
   await page.getByLabel('Equipment').selectOption('machine');
   await page.getByLabel('Endurance').fill('70');
   await page.getByLabel('Agility').fill('30');
-  await expect(page.getByTestId('share-total')).toHaveText('Total: 100%');
+  await expect(page.getByText(/^Total: \d+%$/)).toHaveText('Total: 100%');
   await page.getByRole('button', { name: 'Save exercise' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Assault Bike' })).toContainText('(custom)');
 

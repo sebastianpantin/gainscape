@@ -56,6 +56,8 @@ test('cardio records on the reveal and in the collection log', async ({ page }) 
   await expect(page.getByLabel('New records')).toContainText('Running: 6 km (was 5 km) · 36 min (was 30 min)');
 
   await openTab(page, 'Log');
-  await expect(page.getByTestId('cardio-records')).toContainText('Distance 6 km · Pace 6:00 /km · Duration 36 min');
+  await expect(page.getByRole('region', { name: 'Cardio records' })).toContainText(
+    'Distance 6 km · Pace 6:00 /km · Duration 36 min',
+  );
   await expect(page.getByTestId('collection-completion')).toHaveText('0% (0/0)');
 });

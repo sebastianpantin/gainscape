@@ -28,7 +28,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await register(page, username);
 
   await openTab(page, 'Profile');
-  await expect(page.getByTestId('profile-display-name')).toHaveText(username);
+  await expect(page.getByRole('heading', { level: 2, name: username, exact: true })).toBeVisible();
   await expect(page.getByTestId('profile-bodyweight')).toHaveText('Not set');
 
   await page.getByRole('link', { name: 'Edit profile & body' }).click();
@@ -47,7 +47,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await page.getByLabel('Birth year (optional)').fill('1990');
   await page.getByRole('button', { name: 'Save' }).click();
 
-  await expect(page.getByTestId('profile-display-name')).toHaveText('Iron Otter');
+  await expect(page.getByRole('heading', { level: 2, name: 'Iron Otter', exact: true })).toBeVisible();
   await expect(page.getByTestId('profile-bio')).toHaveText('Chasing a 200 kg squat.');
   await expect(page.getByTestId('profile-details')).toHaveText('Training since 2019 · Strength focus');
   await expect(page.getByTestId('profile-badge')).toHaveAttribute('data-color', 'blue');
