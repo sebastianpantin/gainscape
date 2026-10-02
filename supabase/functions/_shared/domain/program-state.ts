@@ -65,6 +65,7 @@ export interface DayRecord {
   position: Position;
   status: 'completed' | 'skipped';
   outcomes: Readonly<Record<string, LiftOutcome>>;
+  judgedSets: readonly FactSet[];
 }
 
 export interface ProgramState extends ScheduleCursor {
