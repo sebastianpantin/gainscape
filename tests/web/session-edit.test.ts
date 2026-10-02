@@ -504,6 +504,17 @@ describe('cardio bouts in an edit', () => {
   ];
   const edit = editFromSession(session, cardioRows, known);
 
+  it('removes a bout and gives only conflicting bouts new ids', () => {
+    const removed = removeEditSet(edit, 0, 'bout-0');
+    expect(removed.exercises[0].sets.map((set) => set.id)).toEqual(['bout-1']);
+    const reIded = withNewSetIds(edit, ['BOUT-1']);
+    const ids = editPayload(reIded).sets.map((set) => set.id);
+    expect(ids[0]).toBe('bout-0');
+    expect(ids[1]).not.toBe('bout-1');
+    expect(ids.slice(2)).toEqual(['set-2', 'bout-3']);
+    expect(reIded.exercises[0].modality).toBe('cardio');
+  });
+
   it('turns cardio rows into bouts on a cardio exercise', () => {
     expect(edit.exercises.map((exercise) => [exercise.name, exercise.modality])).toEqual([
       ['Running', 'cardio'],

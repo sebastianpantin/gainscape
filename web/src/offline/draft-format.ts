@@ -257,12 +257,13 @@ export function updateBout(
   );
 }
 
-type AnyDraftSet = DraftSet | CardioDraftSet;
+type SetOf<E> = E extends { sets: (infer S)[] } ? S : never;
 
-function withSets(exercise: DraftExercise, change: <S extends AnyDraftSet>(sets: S[]) => S[]): DraftExercise {
-  return exercise.modality === 'cardio'
-    ? { ...exercise, sets: change(exercise.sets) }
-    : { ...exercise, sets: change(exercise.sets) };
+export function withSets<E extends { sets: { id: string }[] }>(
+  exercise: E,
+  change: <S extends SetOf<E>>(sets: S[]) => S[],
+): E {
+  return { ...exercise, sets: change(exercise.sets as SetOf<E>[]) };
 }
 
 export function removeSet(draft: WorkoutDraft, exerciseIndex: number, setId: string): WorkoutDraft {

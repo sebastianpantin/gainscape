@@ -25,6 +25,7 @@ import {
   nextBoutValues,
   nextSetValues,
   updateExerciseAt,
+  withSets,
 } from '../../offline/draft-format.ts';
 import { boutPayload } from '../../offline/session-payload.ts';
 
@@ -223,9 +224,7 @@ export function updateEditBout(
 
 export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: string): SessionEdit {
   const removed = updateExerciseAt(edit, exerciseIndex, (exercise) =>
-    exercise.modality === 'cardio'
-      ? { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) }
-      : { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) },
+    withSets(exercise, (sets) => sets.filter((set) => set.id !== setId)),
   );
   return { ...removed, exercises: removed.exercises.filter((exercise) => exercise.sets.length > 0) };
 }
@@ -286,11 +285,7 @@ export function withNewSetIds(edit: SessionEdit, setIds: readonly string[]): Ses
     conflicting.has(set.id.toLowerCase()) ? { ...set, id: crypto.randomUUID() } : set;
   return {
     ...edit,
-    exercises: edit.exercises.map((exercise) =>
-      exercise.modality === 'cardio'
-        ? { ...exercise, sets: exercise.sets.map(freshId) }
-        : { ...exercise, sets: exercise.sets.map(freshId) },
-    ),
+    exercises: edit.exercises.map((exercise) => withSets(exercise, (sets) => sets.map(freshId))),
   };
 }
 
