@@ -343,6 +343,7 @@ describe('function execution rights', () => {
       'delete_program',
       'end_enrollment',
       'enroll_program',
+      'enrollment_facts',
       'exercise_strength_state',
       'get_collection',
       'get_feed',
