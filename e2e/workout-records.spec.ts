@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { logCardio, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
+import { definitionOf, logCardio, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 
 test('bodyweight prompt, records and the collection log', async ({ page }) => {
   await register(page, `e2e_${Date.now().toString(36)}`);
@@ -28,7 +28,7 @@ test('bodyweight prompt, records and the collection log', async ({ page }) => {
   await expect(records).toContainText('Pull-up: 10 reps (was 8)');
 
   await openTab(page, 'Log');
-  await expect(page.getByTestId('collection-completion')).toHaveText('18% (2/11)');
+  await expect(definitionOf(page, 'Completion')).toHaveText('18% (2/11)');
   const bench = page.locator('section', {
     has: page.getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
   });
@@ -54,5 +54,5 @@ test('cardio records on the reveal and in the collection log', async ({ page }) 
   await expect(page.getByRole('region', { name: 'Cardio records' })).toContainText(
     'Distance 6 km · Pace 6:00 /km · Duration 36 min',
   );
-  await expect(page.getByTestId('collection-completion')).toHaveText('0% (0/0)');
+  await expect(definitionOf(page, 'Completion')).toHaveText('0% (0/0)');
 });
