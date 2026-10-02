@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, muteDraftBroadcasts, register, uniqueUsername } from './support/app.ts';
+import { finishWorkout, logExercise, muteDraftBroadcasts, register, uniqueUsername } from './support/app.ts';
 import { sessionCount } from './support/db.ts';
 
 function benchHeading(page: Page) {
@@ -55,8 +55,7 @@ test('a stale edit after the other tab synced does not resurrect the draft', asy
   await second.goto('/');
   await expect(benchHeading(second)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await finishWorkout(page);
   await expect(benchHeading(second)).toBeVisible();
 
   await second.locator('li.set-row').first().getByLabel('reps').fill('7');

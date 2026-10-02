@@ -1,20 +1,14 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logCardio, logExercise, openFromProfile, openTab, register } from './support/app.ts';
+import { logCardio, logExercise, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
 
 async function logBench(page: Page, weightKg: number) {
   await openTab(page, 'Train');
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg, reps: 5 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg, reps: 5 }]));
 }
 
 async function logRun(page: Page, minutes: number, distance: number) {
   await openTab(page, 'Train');
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]));
 }
 
 function feedItem(page: Page, text: string) {

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
 import { collectionPercent } from '../web/src/lib/collection-rules.ts';
-import { logCardio, logExercise, openTab, register, uniqueUsername } from './support/app.ts';
+import { logCardio, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 
 test('bodyweight prompt, records and the collection log', async ({ page }) => {
   await register(page, `e2e_${Date.now().toString(36)}`);
@@ -51,10 +51,7 @@ test('cardio records on the reveal and in the collection log', async ({ page }) 
     [36, 6],
   ]) {
     await openTab(page, 'Train');
-    await page.getByRole('button', { name: 'Start workout' }).click();
-    await logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]);
-    await page.getByRole('button', { name: 'Finish workout' }).click();
-    await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+    await logWorkout(page, () => logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]));
   }
   await expect(page.getByLabel('New records')).toContainText('Running: 6 km (was 5 km) · 36 min (was 30 min)');
 

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   finishedBenchDraft,
+  finishWorkout,
   logExercise,
   nowInSeconds,
   readSession,
@@ -30,8 +31,7 @@ test('an expired access token is refreshed before the single POST', async ({ pag
   });
 
   await writeSession(page, { expires_at: nowInSeconds() - 60 });
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await finishWorkout(page);
   expect(events.filter((event) => event.startsWith('post'))).toEqual(['post 200']);
   expect(events.indexOf('refresh')).toBeGreaterThanOrEqual(0);
   expect(events.indexOf('refresh')).toBeLessThan(events.indexOf('post 200'));
@@ -54,8 +54,7 @@ test('a token signed with the wrong key is refreshed after a 401', async ({ page
     access_token: resignedWithAnotherKey(session.access_token),
     expires_at: nowInSeconds() + 3600,
   });
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await finishWorkout(page);
   expect(statuses).toEqual([401, 200]);
   expect(await sessionCount(username)).toBe(1);
 });

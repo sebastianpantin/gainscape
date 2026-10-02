@@ -54,7 +54,7 @@ Playwright end-to-end suites that drive the real web app against the real local 
 
 ### Common Patterns
 
-- `register`, `signIn`, `openTab`, `openFromProfile`, `logExercise` from `support/app.ts` for flows.
+- `register`, `signIn`, `openTab`, `openFromProfile`, `logExercise`, `logWorkout`, `finishWorkout`, `openLatestWorkout` from `support/app.ts` for flows. Reuse them instead of inlining the start, finish and reveal steps.
 - Two users or devices: `browser.newContext()` per person (`friends.spec.ts`, `auth.spec.ts`); two tabs: `context.newPage()` (`multi-tab.spec.ts`).
 - Simulating failures: route interception for outages and 401s (`token-refresh.spec.ts`), `breakIndexedDbOpen` and `setIndexedDbBroken` for storage failures, `resignedWithAnotherKey` for bad tokens.
 - Conflicts with another device: `editElsewhere` or `sessionRow` from `support/db.ts`.

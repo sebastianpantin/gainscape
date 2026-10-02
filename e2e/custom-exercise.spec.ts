@@ -1,12 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logCardio, logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import {
+  logCardio,
+  logExercise,
+  logWorkout,
+  openFromProfile,
+  openTab,
+  register,
+  uniqueUsername,
+} from './support/app.ts';
 
 async function logLandmineSession(page: Page, weightKg: number) {
   await openTab(page, 'Train');
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'landmine', 'Landmine Press', [{ weightKg, reps: 8 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'landmine', 'Landmine Press', [{ weightKg, reps: 8 }]));
 }
 
 function collectionHeadings(page: Page) {
