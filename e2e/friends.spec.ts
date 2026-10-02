@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './support/people.ts';
-import { logCardio, logExercise, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
+import { definitionOf, logCardio, logExercise, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
 
 async function logBench(page: Page, weightKg: number) {
   await openTab(page, 'Train');
@@ -81,18 +81,18 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
     .getByRole('link', { name: new RegExp(bobName) })
     .click();
   await expect(alice.getByRole('heading', { level: 2, name: bobName, exact: true })).toBeVisible();
-  await expect(alice.getByTestId('profile-total')).not.toHaveText('—');
+  await expect(definitionOf(alice, 'Total')).not.toHaveText('—');
   await expect(alice.getByText('Weights hidden')).toBeVisible();
   await alice.getByRole('button', { name: 'Remove friend' }).click();
   await alice.getByRole('button', { name: 'Remove for good' }).click();
   await expect(alice.getByText('No posts yet. Add friends, or log a PR.')).toBeVisible();
 
   await openTab(alice, 'Profile');
-  await expect(alice.getByTestId('profile-total')).not.toHaveText('—');
-  await expect(alice.getByTestId('profile-collection')).not.toHaveText('—');
-  const total = await alice.getByTestId('profile-total').textContent();
-  const collection = await alice.getByTestId('profile-collection').textContent();
+  await expect(definitionOf(alice, 'Total')).not.toHaveText('—');
+  await expect(definitionOf(alice, 'Collection')).not.toHaveText('—');
+  const total = await definitionOf(alice, 'Total').textContent();
+  const collection = await definitionOf(alice, 'Collection').textContent();
   await alice.getByRole('link', { name: 'Preview what friends see' }).click();
-  await expect(alice.getByTestId('profile-total')).toHaveText(total ?? '');
-  await expect(alice.getByTestId('profile-collection')).toHaveText(collection ?? '');
+  await expect(definitionOf(alice, 'Total')).toHaveText(total ?? '');
+  await expect(definitionOf(alice, 'Collection')).toHaveText(collection ?? '');
 });

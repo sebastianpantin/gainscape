@@ -12,11 +12,11 @@ function joinedLabel(createdAt: string): string {
   return `Joined ${new Date(createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`;
 }
 
-function StatTile({ label, value, testId }: { label: string; value: string; testId: string }) {
+function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="stat-tile">
-      <span className="muted tiny">{label}</span>
-      <strong data-testid={testId}>{value}</strong>
+      <dt className="muted tiny">{label}</dt>
+      <dd>{value}</dd>
     </div>
   );
 }
@@ -26,9 +26,8 @@ export function ProfileBadge({ color, initials, size = 72 }: { color: BadgeColor
   return (
     <span
       className="profile-badge"
-      aria-hidden="true"
-      data-testid="profile-badge"
-      data-color={color}
+      role="img"
+      aria-label={`${swatch.label} badge`}
       style={{
         width: size,
         height: size,
@@ -58,21 +57,15 @@ export function ProfileCard({ profile, totalLevel, combatLevel, collectionPercen
         <div className="stack" style={{ gap: 2, minWidth: 0 }}>
           <h2 className="profile-name">{profile.displayName}</h2>
           <span className="muted">@{profile.username}</span>
-          <span className="tiny" data-testid="profile-details">
-            {detailLine(profile)}
-          </span>
+          <span className="tiny">{detailLine(profile)}</span>
         </div>
       </div>
-      {profile.bio && <p data-testid="profile-bio">{profile.bio}</p>}
-      <div className="stat-tiles">
-        <StatTile label="Total" value={totalLevel === null ? '—' : String(totalLevel)} testId="profile-total" />
-        <StatTile label="Combat" value={combatLevel === null ? '—' : String(combatLevel)} testId="profile-combat" />
-        <StatTile
-          label="Collection"
-          value={collectionPercent === null ? '—' : `${collectionPercent}%`}
-          testId="profile-collection"
-        />
-      </div>
+      {profile.bio && <p>{profile.bio}</p>}
+      <dl className="stat-tiles">
+        <StatTile label="Total" value={totalLevel === null ? '—' : String(totalLevel)} />
+        <StatTile label="Combat" value={combatLevel === null ? '—' : String(combatLevel)} />
+        <StatTile label="Collection" value={collectionPercent === null ? '—' : `${collectionPercent}%`} />
+      </dl>
     </section>
   );
 }
