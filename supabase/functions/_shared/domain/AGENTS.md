@@ -80,7 +80,7 @@ Domain code is covered by `tests/domain/` (run `make test-domain`, or `npx vites
 | purity of all                       | `tests/domain/purity.test.ts`                                                                                                                    |
 | `types.ts`, `errors.ts`, `index.ts` | exercised indirectly by every suite above                                                                                                        |
 
-Gaps: `effortInputFromStored` (`effort.ts`) has a direct unit test only for cardio values (`cardio.test.ts`) and is otherwise only reached through integration tests such as `tests/integration/complete-session.test.ts` and `edit-session.test.ts`. Add a domain test before changing them. Behaviour that crosses into the database (replay persistence, caches) is covered by `tests/integration/replay.test.ts` and `tests/integration/rebuild-caches.test.ts`, which need the stack (`make test-integration`). Web consumers are covered by `tests/web/` (for example `units.test.ts`, `session-edit.test.ts`).
+Gaps: `effortInputFromStored` (`effort.ts`) has a direct unit test only for cardio values (`cardio.test.ts`) and is otherwise only reached through integration tests such as `tests/integration/complete-session.test.ts` and `edit-session.test.ts`. Add a domain test before changing it. Behaviour that crosses into the database (replay persistence, caches) is covered by `tests/integration/replay.test.ts` and `tests/integration/rebuild-caches.test.ts`, which need the stack (`make test-integration`). Web consumers are covered by `tests/web/` (for example `units.test.ts`, `session-edit.test.ts`).
 
 ### Common Patterns
 

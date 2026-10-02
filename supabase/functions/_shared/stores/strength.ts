@@ -102,6 +102,10 @@ async function storedCandidates(
   }));
 }
 
+export async function clearStrengthCache(tx: Transaction, userId: string): Promise<void> {
+  await tx`delete from public.exercise_maxes where user_id = ${userId}`;
+}
+
 export async function refreshStrengthCache(
   tx: Transaction,
   userId: string,
