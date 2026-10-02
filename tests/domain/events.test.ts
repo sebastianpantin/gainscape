@@ -248,9 +248,31 @@ describe('feedEventsForSession', () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it('is deterministic', () => {
-    expect(feedEventsForSession(full, sets, exercises, rarity)).toEqual(
-      feedEventsForSession(full, sets, exercises, rarity),
-    );
+  it('pins the exact events', () => {
+    const levelPayload = (skill: string, from: number, to: number) => ({ skill, from, to });
+    const prPayload = (exerciseId: string, loadKg: number, totalLoadKg: number | null) => ({
+      exerciseId,
+      kind: 'rep_max',
+      reps: 5,
+      loadKg,
+      previousLoadKg: null,
+      previousReps: null,
+      totalLoadKg,
+    });
+    const dropPayload = (dropId: string, itemId: string) => ({
+      dropId,
+      itemId,
+      itemKey: `${itemId}-key`,
+      quantity: 1,
+      source: 'pr',
+    });
+    expect(feedEventsForSession(full, sets, exercises, rarity)).toEqual([
+      { key: 'level:chest', type: 'level_up', setId: null, payload: levelPayload('chest', 19, 21) },
+      { key: 'level:legs', type: 'level_up', setId: null, payload: levelPayload('legs', 89, 90) },
+      { key: 'pr:bench', type: 'pr', setId: 'bench-set', payload: prPayload('bench', 80, null) },
+      { key: 'pr:weighted_dip', type: 'pr', setId: 'dip-set', payload: prPayload('weighted_dip', 20, 100) },
+      { key: 'drop:drop-1', type: 'drop', setId: 'set-a', payload: dropPayload('drop-1', 'item-legendary') },
+      { key: 'drop:drop-2', type: 'drop', setId: 'set-a', payload: dropPayload('drop-2', 'item-rare') },
+    ]);
   });
 });
