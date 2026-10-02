@@ -22,17 +22,7 @@ export * from './rng.ts';
 export * from './loot.ts';
 export * from './crafting.ts';
 export * from './events.ts';
-export {
-  amountInUnit,
-  KG_PER_LB,
-  kgToUnit,
-  STORED_KG_DECIMALS,
-  SHOWN_LB_DECIMALS,
-  shownWeight,
-  type UnitAmount,
-  unitToKg,
-  type WeightUnit,
-} from './units.ts';
+export { amountInUnit, KG_PER_LB, kgToUnit, shownWeight, type UnitAmount, unitToKg, type WeightUnit } from './units.ts';
 export {
   DEFAULT_ROUNDING,
   halfIncrementKg,
@@ -144,7 +134,6 @@ export {
   ruleKeyOf,
   type LoggedDay,
   type LoggedLoad,
-  WEEKS_BACK_FACTOR,
   weeksBack,
 } from './program-progression.ts';
 export {

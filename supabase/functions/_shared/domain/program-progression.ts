@@ -42,7 +42,7 @@ export interface LoggedLoad {
   reps: number;
 }
 
-export const WEEKS_BACK_FACTOR = 0.975;
+const WEEKS_BACK_FACTOR = 0.975;
 
 export function ruleKeyOf(rule: ProgressionRule): RuleKey {
   return `${rule.lift}:${rule.var}:${rule.trigger}`;
