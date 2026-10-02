@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
-import { saveBodyweight } from '../../lib/catalog.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { ageFrom, HIGHEST_BODYWEIGHT_KG, LOWEST_BODYWEIGHT_KG } from '../../lib/profile.ts';
+import { ageFrom, HIGHEST_BODYWEIGHT_KG, LOWEST_BODYWEIGHT_KG, updatePrivateProfile } from '../../lib/profile.ts';
 import { formatHeight, formatWeight, kgToUnit, unitToKg } from '../../lib/units.ts';
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileCard } from './ProfileCard.tsx';
@@ -64,7 +63,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
     setSaving(true);
     setProblem(null);
     try {
-      await saveBodyweight(userId, draftKg);
+      await updatePrivateProfile(userId, { bodyweightKg: draftKg });
       replace({ ...profile, bodyweightKg: draftKg });
       setDraftKg(null);
     } catch (error) {

@@ -1,5 +1,4 @@
 import { type Exercise, type ExerciseRow, type Skill, toExercise } from './catalog-rules.ts';
-import { withFriendlyRateLimit } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
 export async function fetchSkills(): Promise<Skill[]> {
@@ -33,14 +32,6 @@ export async function fetchExercises({ includeArchived, signal }: ExerciseQuery)
   const { data, error } = await query;
   if (error) throw error;
   return (data as unknown as ExerciseRow[]).map(toExercise);
-}
-
-export async function saveBodyweight(userId: string, bodyweightKg: number): Promise<void> {
-  const { error } = await supabase
-    .from('profile_private')
-    .update({ bodyweight_kg: bodyweightKg })
-    .eq('user_id', userId);
-  if (error) throw withFriendlyRateLimit(error);
 }
 
 export async function fetchSkillXp(userId: string): Promise<Map<string, number>> {

@@ -1,6 +1,5 @@
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { saveBodyweight } from '../../lib/catalog.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import {
   BADGE_COLORS,
@@ -145,7 +144,7 @@ function EditForm({ userId, profile }: { userId: string; profile: Profile }) {
       if (typedWeight !== null) {
         const kg = unitToKg(typedWeight, unitPref);
         const unchanged = profile.bodyweightKg !== null && shownWeight(profile.bodyweightKg, unitPref) === typedWeight;
-        if (!unchanged) await saveBodyweight(userId, kg);
+        if (!unchanged) await updatePrivateProfile(userId, { bodyweightKg: kg });
       }
       navigate('/profile');
     } catch (error) {
