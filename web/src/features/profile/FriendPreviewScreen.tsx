@@ -10,6 +10,7 @@ import { formatWeight } from '../../lib/units.ts';
 import { fetchProfileView, type ProfileView } from '../../lib/social.ts';
 import { ProfileWithTopSkills } from './ProfileWithTopSkills.tsx';
 import { useProfile } from './use-profile.ts';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface FriendPreviewScreenProps {
   userId: string;
@@ -86,7 +87,7 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
               await updatePublicProfile(userId, { showWeights });
             } catch (error) {
               replace((current) => ({ ...current, showWeights: !showWeights }));
-              setProblem(error instanceof Error ? error.message : 'Could not save that setting.');
+              setProblem(messageOf(error, 'Could not save that setting.'));
             }
             setPending(false);
           };

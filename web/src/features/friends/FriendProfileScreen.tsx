@@ -16,6 +16,7 @@ import {
 } from '../../lib/social.ts';
 import { slotClass } from '../collection/slot-class.ts';
 import { ProfileWithTopSkills } from '../profile/ProfileWithTopSkills.tsx';
+import { messageOf } from '../../lib/error-text.ts';
 
 type ViewState =
   | { status: 'loading' }
@@ -96,7 +97,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
       await removeFriend(friendId);
       navigate('/friends', { replace: true });
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not remove this friend.');
+      setProblem(messageOf(error, 'Could not remove this friend.'));
       setRemoving(false);
     }
   };

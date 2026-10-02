@@ -4,6 +4,7 @@ import { fetchExercises, fetchSkills } from '../../lib/catalog.ts';
 import { type Exercise, exerciseLabels, type Skill } from '../../lib/catalog-rules.ts';
 import { setCustomExerciseArchived } from '../../lib/custom-exercises.ts';
 import { CustomExerciseForm } from './CustomExerciseForm.tsx';
+import { messageOf } from '../../lib/error-text.ts';
 
 type Editing = { kind: 'none' } | { kind: 'new' } | { kind: 'edit'; exercise: Exercise };
 
@@ -39,7 +40,7 @@ export function ExercisesScreen() {
       await setCustomExerciseArchived(exercise.id, archived);
       reload();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not update the exercise.');
+      setProblem(messageOf(error, 'Could not update the exercise.'));
     }
   };
 

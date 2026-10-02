@@ -3,6 +3,7 @@ import { authCallbackUrl } from './auth-links.ts';
 import { httpErrorBody } from './function-client-rules.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds, tryAgainIn } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
+import { messageOf } from './error-text.ts';
 
 async function functionError(error: unknown): Promise<string> {
   if (error instanceof FunctionsHttpError) {
@@ -11,7 +12,7 @@ async function functionError(error: unknown): Promise<string> {
     if (response.status === RATE_LIMITED_STATUS) return tryAgainIn(retryAfterSeconds(body.details));
     return body.error ?? `http_${response.status}`;
   }
-  return error instanceof Error ? error.message : 'network_error';
+  return messageOf(error, 'network_error');
 }
 
 export async function changePassword(email: string, currentPassword: string, newPassword: string): Promise<void> {

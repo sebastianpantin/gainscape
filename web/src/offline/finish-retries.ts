@@ -1,4 +1,5 @@
 import type { FinishAttemptResult, SendOutcome } from './finish-lock.ts';
+import { messageOf } from '../lib/error-text.ts';
 
 export type FinishStatus =
   | { kind: 'idle' }
@@ -38,7 +39,7 @@ export function startFinishRetries({ attemptOnce, retryDelayMs, show, settle }: 
     try {
       const result = await attemptOnce(controller.signal).catch((error: unknown): FinishAttemptResult => ({
         kind: 'sent',
-        outcome: { kind: 'retryable', reason: error instanceof Error ? error.message : 'storage_error' },
+        outcome: { kind: 'retryable', reason: messageOf(error, 'storage_error') },
       }));
       if (controller.signal.aborted || result.kind === 'aborted') return;
       if (result.kind === 'sent' && result.outcome.kind === 'retryable') {

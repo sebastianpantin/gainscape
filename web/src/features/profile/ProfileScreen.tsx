@@ -7,6 +7,7 @@ import { formatHeight, formatWeight, kgToUnit, unitToKg } from '../../lib/units.
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileCard } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface ProfileScreenProps {
   userId: string;
@@ -67,7 +68,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
       replace({ ...profile, bodyweightKg: draftKg });
       setDraftKg(null);
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not save your bodyweight.');
+      setProblem(messageOf(error, 'Could not save your bodyweight.'));
     }
     setSaving(false);
   };

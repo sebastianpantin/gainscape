@@ -7,6 +7,7 @@ import { cachedPrograms, fetchPrograms, type ProgramDoc, saveProgram } from '../
 import { moved } from '../../lib/reorder.ts';
 import type { PlannedExercise } from '../../offline/draft-format.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface ProgramEditorProps {
   userId: string;
@@ -135,7 +136,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
       });
       navigate('/programs');
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not save the program.');
+      setProblem(messageOf(error, 'Could not save the program.'));
       setSaving(false);
     }
   };

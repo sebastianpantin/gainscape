@@ -11,6 +11,7 @@ import {
 import { fetchExerciseShares, hasLoggedSet, saveCustomExercise, type SkillShare } from '../../lib/custom-exercises.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import { percentsFromShares, shareTotal, sharesToSave, skillsForModality } from './share-form.ts';
+import { messageOf } from '../../lib/error-text.ts';
 
 const NAME_MAX_LENGTH = 60;
 
@@ -84,7 +85,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
       });
       onSaved();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not save the exercise.');
+      setProblem(messageOf(error, 'Could not save the exercise.'));
       setSaving(false);
     }
   }

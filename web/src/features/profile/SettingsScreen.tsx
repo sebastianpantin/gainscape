@@ -29,6 +29,7 @@ import { forgetInstallCard, promptInstall, useInstallState } from '../../pwa/ins
 import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
 import type { UpdateCheck } from '../../pwa/update-flow.ts';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface SettingsScreenProps {
   userId: string;
@@ -129,7 +130,7 @@ function TrainingSection({ userId, profile, onSaved }: SectionProps) {
     } catch (error) {
       onSaved((current) => ({ ...current, ...previous }));
       applyPreferences(previous);
-      setProblem(error instanceof Error ? error.message : 'Could not save that setting.');
+      setProblem(messageOf(error, 'Could not save that setting.'));
     }
     setPending(false);
   };
@@ -273,7 +274,7 @@ function PrivacySection({ userId, profile, onSaved }: SectionProps) {
       await updatePublicProfile(userId, changes);
     } catch (error) {
       onSaved((current) => ({ ...current, ...previous }));
-      setProblem(error instanceof Error ? error.message : 'Could not save that setting.');
+      setProblem(messageOf(error, 'Could not save that setting.'));
     }
     setPending(false);
   };
@@ -372,7 +373,7 @@ function EmailForm({ email, onDone }: { email: string; onDone: (text: string) =>
       await requestEmailChange(newEmail.trim());
       onDone(`We sent confirmation links to ${email} and ${newEmail.trim()}. Your email changes once you open both.`);
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not change your email.');
+      setProblem(messageOf(error, 'Could not change your email.'));
       setBusy(false);
     }
   };
@@ -420,7 +421,7 @@ function PasswordForm({ email, onDone }: { email: string; onDone: (text: string)
       await changePassword(email, current, next);
       onDone('Password changed.');
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not change your password.');
+      setProblem(messageOf(error, 'Could not change your password.'));
       setBusy(false);
     }
   };
@@ -487,7 +488,7 @@ function DeleteAccountForm({ userId, username }: { userId: string; username: str
       navigate('/', { replace: true });
       await signOutKeepingDrafts();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not delete your account.');
+      setProblem(messageOf(error, 'Could not delete your account.'));
       setBusy(false);
     }
   };
@@ -558,7 +559,7 @@ function AccountSection({
       saveBlob(await exportMyData(), exportFileName());
       setStatus('Your data was downloaded.');
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not export your data.');
+      setProblem(messageOf(error, 'Could not export your data.'));
     }
     setExporting(false);
   };
