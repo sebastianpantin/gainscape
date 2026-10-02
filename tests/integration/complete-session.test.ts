@@ -12,7 +12,7 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
-import { aBout, anIntervalBout, asCardioSetInput, type BoutShape } from './loot-support.ts';
+import { aBout, anIntervalBout, asCardioSetInput, type BoutShape } from './session-support.ts';
 
 type EffortLevel = 'hard' | 'near_failure';
 

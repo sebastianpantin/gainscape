@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { webCollectionCounts } from './collection-support.ts';
-import { aSet, HOUR_MS, payloadAt, postSession } from './loot-support.ts';
+import { aSet, HOUR_MS, payloadAt, postSession } from './session-support.ts';
 import {
   admin,
   anon,

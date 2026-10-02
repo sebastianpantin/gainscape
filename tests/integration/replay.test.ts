@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   ageSession,
@@ -12,54 +11,20 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
-import { HOUR_MS, postSession } from './loot-support.ts';
+import {
+  aBout,
+  anIntervalBout,
+  aSet,
+  hoursAgo,
+  payloadAt,
+  postSession,
+  type SessionPayload,
+  withFreshIds,
+} from './session-support.ts';
 
-type Effort = { type: 'level'; level: 'hard' | 'near_failure' } | null;
-
-interface SetSpec {
-  exerciseId: string;
-  weightKg: number;
-  reps: number;
-  effort: Effort;
-  isWarmup?: boolean;
-}
-
-interface SessionSpec {
-  startedAt: string;
-  sets: SetSpec[];
-}
-
-const hard = { type: 'level', level: 'hard' } as const;
-
-function hoursAgo(hours: number): string {
-  return new Date(Date.now() - hours * HOUR_MS).toISOString();
-}
-
-function sessionSpec(startedAt: string, sets: SetSpec[]): SessionSpec {
-  return { startedAt, sets };
-}
-
-function payloadFor(spec: SessionSpec) {
-  return {
-    id: randomUUID(),
-    startedAt: spec.startedAt,
-    endedAt: new Date(Date.parse(spec.startedAt) + HOUR_MS / 2).toISOString(),
-    notes: null,
-    sets: spec.sets.map((set, position) => ({
-      id: randomUUID(),
-      exerciseId: set.exerciseId,
-      position,
-      weightKg: set.weightKg,
-      reps: set.reps,
-      isWarmup: set.isWarmup ?? false,
-      effort: set.effort,
-    })),
-  };
-}
-
-async function syncInOrder(user: TestUser, specs: SessionSpec[]) {
-  const ordered = [...specs].sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
-  for (const spec of ordered) await postSession(user, payloadFor(spec));
+async function syncInOrder(user: TestUser, sessions: SessionPayload[]) {
+  const ordered = [...sessions].sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
+  for (const session of ordered) await postSession(user, withFreshIds(session));
 }
 
 async function storedSummary(sessionId: string) {
@@ -99,19 +64,16 @@ afterAll(async () => {
 
 describe('out-of-order sync', () => {
   it('stores the same derived state as syncing in order', async () => {
-    const s1 = sessionSpec(hoursAgo(5), [
-      { exerciseId: benchId, weightKg: 60, reps: 5, effort: hard },
-      { exerciseId: squatId, weightKg: 100, reps: 5, effort: null },
+    const s1 = payloadAt(hoursAgo(5), [aSet(benchId, 0, 60), aSet(squatId, 1, 100, { effort: null })]);
+    const s2 = payloadAt(hoursAgo(3), [
+      aSet(benchId, 0, 80, { reps: 6, effort: null }),
+      aSet(pullUpId, 1, 0, { reps: 8 }),
     ]);
-    const s2 = sessionSpec(hoursAgo(3), [
-      { exerciseId: benchId, weightKg: 80, reps: 6, effort: null },
-      { exerciseId: pullUpId, weightKg: 0, reps: 8, effort: hard },
-    ]);
-    const s3 = sessionSpec(hoursAgo(1), [{ exerciseId: benchId, weightKg: 100, reps: 5, effort: hard }]);
+    const s3 = payloadAt(hoursAgo(1), [aSet(benchId, 0, 100)]);
     const [outOfOrder, inOrder] = await Promise.all([createTestUser(), createTestUser()]);
     await Promise.all([setBodyweight(outOfOrder, 80), setBodyweight(inOrder, 80)]);
 
-    for (const spec of [s3, s1, s2]) await postSession(outOfOrder, payloadFor(spec));
+    for (const spec of [s3, s1, s2]) await postSession(outOfOrder, withFreshIds(spec));
     await syncInOrder(inOrder, [s1, s2, s3]);
 
     expect(await normalizedSnapshot(outOfOrder.id)).toEqual(await normalizedSnapshot(inOrder.id));
@@ -119,8 +81,8 @@ describe('out-of-order sync', () => {
 
   it('re-derives a later session when an earlier one syncs late', async () => {
     const user = await createTestUser();
-    const late = payloadFor(sessionSpec(hoursAgo(1), [{ exerciseId: benchId, weightKg: 100, reps: 5, effort: hard }]));
-    const early = payloadFor(sessionSpec(hoursAgo(5), [{ exerciseId: benchId, weightKg: 60, reps: 5, effort: hard }]));
+    const late = withFreshIds(payloadAt(hoursAgo(1), [aSet(benchId, 0, 100)]));
+    const early = withFreshIds(payloadAt(hoursAgo(5), [aSet(benchId, 0, 60)]));
 
     const lateResponse = await postSession(user, late);
     expect(lateResponse.body.prs).toEqual([]);
@@ -152,10 +114,8 @@ describe('out-of-order sync', () => {
 
   it('judges records against earlier sessions only', async () => {
     const user = await createTestUser();
-    const later = payloadFor(sessionSpec(hoursAgo(1), [{ exerciseId: benchId, weightKg: 105, reps: 5, effort: hard }]));
-    const earlier = payloadFor(
-      sessionSpec(hoursAgo(3), [{ exerciseId: benchId, weightKg: 100, reps: 5, effort: hard }]),
-    );
+    const later = withFreshIds(payloadAt(hoursAgo(1), [aSet(benchId, 0, 105)]));
+    const earlier = withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 100)]));
     await postSession(user, later);
     const earlierResponse = await postSession(user, earlier);
 
@@ -178,11 +138,11 @@ describe('out-of-order sync', () => {
   });
 
   it('recomputes level-ups in later summaries', async () => {
-    const lateSpec = sessionSpec(hoursAgo(1), [{ exerciseId: cableCrunchId, weightKg: 30, reps: 8, effort: null }]);
-    const earlySpec = sessionSpec(hoursAgo(3), [{ exerciseId: cableCrunchId, weightKg: 30, reps: 8, effort: hard }]);
+    const lateSpec = payloadAt(hoursAgo(1), [aSet(cableCrunchId, 0, 30, { reps: 8, effort: null })]);
+    const earlySpec = payloadAt(hoursAgo(3), [aSet(cableCrunchId, 0, 30, { reps: 8 })]);
     const [outOfOrder, inOrder] = await Promise.all([createTestUser(), createTestUser()]);
-    const late = payloadFor(lateSpec);
-    const early = payloadFor(earlySpec);
+    const late = withFreshIds(lateSpec);
+    const early = withFreshIds(earlySpec);
 
     const lateResponse = await postSession(outOfOrder, late);
     expect(lateResponse.body).toMatchObject({
@@ -214,15 +174,12 @@ describe('out-of-order sync', () => {
 
   it('merges the rewritten summary into the stored one', async () => {
     const user = await createTestUser();
-    const later = payloadFor(sessionSpec(hoursAgo(1), [{ exerciseId: benchId, weightKg: 80, reps: 5, effort: null }]));
+    const later = withFreshIds(payloadAt(hoursAgo(1), [aSet(benchId, 0, 80, { effort: null })]));
     await postSession(user, later);
     await db`update public.sessions set summary = summary || '{"extra": {"k": 1}}' where id = ${later.id}`;
     const before = await storedSummary(later.id);
 
-    await postSession(
-      user,
-      payloadFor(sessionSpec(hoursAgo(3), [{ exerciseId: benchId, weightKg: 80, reps: 5, effort: hard }])),
-    );
+    await postSession(user, withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 80)])));
 
     const after = await storedSummary(later.id);
     expect(after.extra).toEqual({ k: 1 });
@@ -239,44 +196,21 @@ describe('replay with cardio bouts', () => {
       builtInExerciseId('sprint_intervals'),
     ]);
     const specs = [
-      sessionSpec(hoursAgo(5), [
-        { exerciseId: benchId, weightKg: 60, reps: 5, effort: hard },
-        { exerciseId: squatId, weightKg: 100, reps: 5, effort: null },
-      ]),
-      sessionSpec(hoursAgo(3), [
-        { exerciseId: benchId, weightKg: 80, reps: 6, effort: null },
-        { exerciseId: pullUpId, weightKg: 0, reps: 8, effort: hard },
-      ]),
-      sessionSpec(hoursAgo(1), [{ exerciseId: benchId, weightKg: 100, reps: 5, effort: hard }]),
+      payloadAt(hoursAgo(5), [aSet(benchId, 0, 60), aSet(squatId, 1, 100, { effort: null })]),
+      payloadAt(hoursAgo(3), [aSet(benchId, 0, 80, { reps: 6, effort: null }), aSet(pullUpId, 1, 0, { reps: 8 })]),
+      payloadAt(hoursAgo(1), [aSet(benchId, 0, 100)]),
     ];
-    const withCardio = (payload: ReturnType<typeof payloadFor>) => ({
+    const withCardio = (payload: SessionPayload) => ({
       ...payload,
       sets: [
         ...payload.sets,
-        {
-          kind: 'cardio',
-          id: randomUUID(),
-          exerciseId: runningId,
-          position: payload.sets.length,
-          durationS: 1800,
-          distanceM: 5500,
-          interval: null,
-          effort: { type: 'cardio', level: 'hard' },
-        },
-        {
-          kind: 'cardio',
-          id: randomUUID(),
-          exerciseId: sprintsId,
-          position: payload.sets.length + 1,
-          distanceM: null,
-          interval: { workS: 20, restS: 40, rounds: 8 },
-          effort: null,
-        },
+        aBout(runningId, payload.sets.length, { distanceM: 5500, effort: { type: 'cardio', level: 'hard' } }),
+        anIntervalBout(sprintsId, payload.sets.length + 1, { workS: 20, restS: 40, rounds: 8 }, { effort: null }),
       ],
     });
     const [mixed, liftOnly] = await Promise.all([createTestUser(), createTestUser()]);
     await Promise.all([setBodyweight(mixed, 80), setBodyweight(liftOnly, 80)]);
-    for (const index of [2, 0, 1]) await postSession(mixed, withCardio(payloadFor(specs[index])));
+    for (const index of [2, 0, 1]) await postSession(mixed, withCardio(withFreshIds(specs[index])));
     await syncInOrder(liftOnly, specs);
 
     const liftStateOf = async (userId: string) => {
@@ -308,33 +242,25 @@ describe('prior state loaded from stored rows', () => {
   it('matches a rebuild after long gaps between sessions', async () => {
     const user = await createTestUser();
     await setBodyweight(user, 80);
-    const oldest = payloadFor(sessionSpec(hoursAgo(3), [{ exerciseId: benchId, weightKg: 90, reps: 5, effort: hard }]));
-    const older = payloadFor(
-      sessionSpec(hoursAgo(2), [
-        { exerciseId: benchId, weightKg: 70, reps: 8, effort: hard },
-        { exerciseId: pullUpId, weightKg: 0, reps: 8, effort: hard },
-      ]),
+    const oldest = withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 90)]));
+    const older = withFreshIds(
+      payloadAt(hoursAgo(2), [aSet(benchId, 0, 70, { reps: 8 }), aSet(pullUpId, 1, 0, { reps: 8 })]),
     );
-    const recent = payloadFor(
-      sessionSpec(hoursAgo(1), [{ exerciseId: pullUpId, weightKg: 0, reps: 10, effort: hard }]),
-    );
+    const recent = withFreshIds(payloadAt(hoursAgo(1), [aSet(pullUpId, 0, 0, { reps: 10 })]));
     for (const payload of [oldest, older, recent]) await postSession(user, payload);
     await ageSession(oldest.id, '130 days');
     await ageSession(older.id, '70 days');
     await ageSession(recent.id, '5 days');
     expect((await rebuildCaches(user.id)).status).toBe(200);
 
-    const newest = payloadFor(
-      sessionSpec(hoursAgo(1), [
-        { exerciseId: benchId, weightKg: 75, reps: 6, effort: null },
-        { exerciseId: pullUpId, weightKg: 0, reps: 9, effort: null },
+    const newest = withFreshIds(
+      payloadAt(hoursAgo(1), [
+        aSet(benchId, 0, 75, { reps: 6, effort: null }),
+        aSet(pullUpId, 1, 0, { reps: 9, effort: null }),
       ]),
     );
-    const middle = payloadFor(
-      sessionSpec(hoursAgo(3), [
-        { exerciseId: benchId, weightKg: 72.5, reps: 5, effort: null },
-        { exerciseId: pullUpId, weightKg: 0, reps: 11, effort: hard },
-      ]),
+    const middle = withFreshIds(
+      payloadAt(hoursAgo(3), [aSet(benchId, 0, 72.5, { effort: null }), aSet(pullUpId, 1, 0, { reps: 11 })]),
     );
     await postSession(user, newest);
     await postSession(user, middle);
@@ -352,12 +278,12 @@ describe('prior state loaded from stored rows', () => {
 describe('replay guards', () => {
   it('refuses to replay over derived rows from an older balance version until a rebuild', async () => {
     const user = await createTestUser();
-    const first = payloadFor(sessionSpec(hoursAgo(3), [{ exerciseId: benchId, weightKg: 60, reps: 5, effort: hard }]));
+    const first = withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 60)]));
     await postSession(user, first);
     await db`update public.sessions set derived_balance_version = 1 where id = ${first.id}`;
     const before = await rowCountsFor(user.id);
 
-    const next = payloadFor(sessionSpec(hoursAgo(1), [{ exerciseId: benchId, weightKg: 62.5, reps: 5, effort: hard }]));
+    const next = withFreshIds(payloadAt(hoursAgo(1), [aSet(benchId, 0, 62.5)]));
     const refused = await postCompleteSession(user.accessToken, next);
     expect(refused.status).toBe(503);
     expect(refused.body.error).toBe('rebuild_required');
@@ -368,17 +294,11 @@ describe('replay guards', () => {
   });
 
   it('serialises concurrent out-of-order syncs for one user', async () => {
-    const earlier = sessionSpec(hoursAgo(3), [
-      { exerciseId: benchId, weightKg: 80, reps: 5, effort: hard },
-      { exerciseId: squatId, weightKg: 100, reps: 5, effort: null },
-    ]);
-    const later = sessionSpec(hoursAgo(1), [
-      { exerciseId: benchId, weightKg: 85, reps: 5, effort: null },
-      { exerciseId: squatId, weightKg: 110, reps: 3, effort: hard },
-    ]);
+    const earlier = payloadAt(hoursAgo(3), [aSet(benchId, 0, 80), aSet(squatId, 1, 100, { effort: null })]);
+    const later = payloadAt(hoursAgo(1), [aSet(benchId, 0, 85, { effort: null }), aSet(squatId, 1, 110, { reps: 3 })]);
     const [concurrent, inOrder] = await Promise.all([createTestUser(), createTestUser()]);
 
-    const payloads = [payloadFor(later), payloadFor(earlier)];
+    const payloads = [withFreshIds(later), withFreshIds(earlier)];
     const responses = await Promise.all(
       payloads.map((payload) => postCompleteSession(concurrent.accessToken, payload)),
     );

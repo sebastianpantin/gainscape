@@ -38,7 +38,7 @@ The database access layer for the Edge Functions. Each module wraps the SQL for 
 
 ### Testing Requirements
 
-Stores have no unit tests of their own; they run only against a real Postgres, so every change needs the local stack (`make start`, then `make test-integration`, which runs `make functions` first). Write the failing integration test first. Run one file with `npx vitest run tests/integration/replay.test.ts`. The shared harness is `tests/integration/local-stack.ts` plus `loot-support.ts`, `collection-support.ts` and `mailbox.ts`.
+Stores have no unit tests of their own; they run only against a real Postgres, so every change needs the local stack (`make start`, then `make test-integration`, which runs `make functions` first). Write the failing integration test first. Run one file with `npx vitest run tests/integration/replay.test.ts`. The shared harness is `tests/integration/local-stack.ts` plus `session-support.ts`, `collection-support.ts` and `mailbox.ts`.
 
 | Store module                    | Integration tests that exercise it                                                                                                                     |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |

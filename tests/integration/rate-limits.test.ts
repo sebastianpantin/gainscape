@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { aSet, DAY_MS, hoursAgo, payloadAt, postSession } from './loot-support.ts';
+import { aSet, DAY_MS, hoursAgo, payloadAt, postSession } from './session-support.ts';
 import {
   builtInExerciseId,
   createTestUser,

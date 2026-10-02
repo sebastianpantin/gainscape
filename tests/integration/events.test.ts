@@ -16,7 +16,7 @@ import {
   postSession,
   type SessionPayload,
   type SetShape,
-} from './loot-support.ts';
+} from './session-support.ts';
 import {
   builtInExerciseId,
   createTestUser,

@@ -27,7 +27,7 @@ import {
   type SetShape,
   startsOnOneLocalDay,
   TIMEZONE,
-} from './loot-support.ts';
+} from './session-support.ts';
 
 const users: string[] = [];
 let benchId: string;
