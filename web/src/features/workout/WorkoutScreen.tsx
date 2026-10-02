@@ -6,13 +6,13 @@ import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
 import { type ExerciseStrengthView, fetchExerciseStrength, fetchStrengthState } from '../../lib/collection-data.ts';
+import { strengthText } from '../../lib/collection-rules.ts';
 import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { formatXp } from '../../lib/format.ts';
-import { formatWeight } from '../../lib/units.ts';
 import {
   addCardioExercise,
   addExercise,
@@ -348,14 +348,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   };
   const previewTotal = donePreviewTotal(previews, draft.exercises);
 
-  const strengthLine = (exerciseId: string, loadType: LoadType) => {
-    const known = strength?.get(exerciseId);
-    if (!known) return null;
-    if (loadType === 'bodyweight' && known.repsCapacity !== null) return `capacity ~${known.repsCapacity} reps`;
-    if (known.e1rmKg !== null) return `e1RM ${formatWeight(known.e1rmKg, unitPref)}`;
-    return null;
-  };
-
   return (
     <main className="screen stack">
       <header className="workout-header">
@@ -432,7 +424,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         }
         const details = [
           exercise.target && `${exercise.target.sets} × ${exercise.target.repsMin}–${exercise.target.repsMax}`,
-          strengthLine(exercise.exerciseId, exercise.loadType),
+          strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
         ].filter(Boolean);
         return (
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
