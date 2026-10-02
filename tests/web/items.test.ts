@@ -10,6 +10,7 @@ import {
   describeDrops,
   groupItems,
   type HeldItem,
+  itemNameLookup,
   kindLabel,
   newItemIds,
   showsQuantity,
@@ -173,6 +174,14 @@ describe('row mapping', () => {
       ['a', { itemId: 'a', quantity: 2, firstObtainedAt: '2026-09-30T00:00:00Z' }],
       ['b', { itemId: 'b', quantity: 1, firstObtainedAt: '2026-10-01T00:00:00Z' }],
     ]);
+  });
+});
+
+describe('itemNameLookup', () => {
+  it('names a known item and uses the fallback for any other id', () => {
+    const nameOf = itemNameLookup(fixture, 'an item');
+    expect(nameOf(fixture[0].id)).toBe(fixture[0].name);
+    expect(nameOf('missing')).toBe('an item');
   });
 });
 

@@ -137,6 +137,11 @@ export function tiersOf(items: readonly CatalogItem[]): Map<string, ItemTier | n
   return new Map(items.map((item) => [item.id, item.tier]));
 }
 
+export function itemNameLookup(items: readonly CatalogItem[], fallback: string): (itemId: string) => string {
+  const names = new Map(items.map((item) => [item.id, item.name]));
+  return (itemId) => names.get(itemId) ?? fallback;
+}
+
 export function colorFor(item: Pick<CatalogItem, 'tier'>): string {
   return item.tier ? TIER_COLORS[item.tier] : UNTIERED_COLOR;
 }
