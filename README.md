@@ -31,7 +31,6 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | `make icons`                | Regenerate the app icons and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                                           |
 | `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                                       |
 | `make rebuild-caches`       | Recompute every user's XP, e1RM, records and feed events from their logged sets (run after changing balance constants)                                               |
-| `make types`                | Regenerate `web/src/lib/database.types.ts` from the local schema                                                                                                     |
 | `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)                                                                   |
 | `make stop`                 | Stop the functions server and the Supabase stack                                                                                                                     |
 

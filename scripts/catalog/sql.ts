@@ -3,7 +3,7 @@ import { CATALOG_NAMESPACE } from './namespace.ts';
 
 type SqlValue = string | number | boolean | null | { raw: string };
 
-export function literal(value: string): string {
+function literal(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 

@@ -14,7 +14,7 @@ import {
 
 export const repoRoot = join(import.meta.dirname, '../..');
 
-export function deployEnvPath(): string {
+function deployEnvPath(): string {
   return process.env.GAINSCAPE_DEPLOY_ENV ?? join(homedir(), '.config/gainscape/deploy.env');
 }
 
