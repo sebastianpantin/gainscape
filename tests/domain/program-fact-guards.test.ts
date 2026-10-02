@@ -198,3 +198,15 @@ describe('set_reference facts with an invalid target or value are ignored', () =
     );
   });
 });
+
+describe('set_reference facts for a lift that takes no input are ignored', () => {
+  it('ignores a Madcow top reference for the weighted hyperextension', async () => {
+    const clock = factClock();
+    await expectIgnored(
+      MADCOW_5X5,
+      madcow,
+      validMadcowStart(clock),
+      setReferenceFact(clock.next(), 'hyper', 'top', 40),
+    );
+  });
+});
