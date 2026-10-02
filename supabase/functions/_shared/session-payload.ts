@@ -1,5 +1,5 @@
 import { z } from 'npm:zod@4.6.5';
-import { CARDIO_BOUNDS, intervalDurationSeconds, roundTo } from './domain/index.ts';
+import { boutDurationSeconds, CARDIO_BOUNDS, intervalDurationSeconds, roundTo } from './domain/index.ts';
 import { HttpError } from './http.ts';
 
 export const lowerUuid = z.uuid().transform((id) => id.toLowerCase());
@@ -88,7 +88,7 @@ export const setSchema = z
   .preprocess(addLiftKindWhenMissing, z.discriminatedUnion('kind', [liftSetSchema, cardioSetSchema]))
   .transform((set) => {
     if (set.kind === 'lift') return set;
-    return { ...set, durationS: set.interval === null ? set.durationS! : intervalDurationSeconds(set.interval) };
+    return { ...set, durationS: boutDurationSeconds({ durationS: set.durationS!, interval: set.interval }) };
   });
 
 export type SetPayload = z.infer<typeof setSchema>;

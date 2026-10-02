@@ -1,4 +1,11 @@
-import { CARDIO_BOUNDS, intervalDurationSeconds } from '@domain/cardio.ts';
+import {
+  boutDurationSeconds,
+  CARDIO_BOUNDS,
+  intervalDurationSeconds,
+  METRES_PER_KM,
+  SECONDS_PER_MINUTE,
+} from '@domain/cardio.ts';
+import { roundTo } from '@domain/math.ts';
 import {
   CARDIO_EFFORT_LEVELS,
   CARDIO_RECORD_KINDS,
@@ -11,8 +18,6 @@ import type { CardioExercise } from './catalog-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
 import type { BoutValues } from '../offline/draft-format.ts';
 import { type DistanceUnit, distanceUnitFor, formatDistance, formatPace, unitToDistanceM } from './units.ts';
-
-const SECONDS_PER_MINUTE = 60;
 
 export type BoutMode = 'steady' | 'intervals';
 
@@ -45,8 +50,7 @@ export function clampedInterval(interval: CardioInterval): CardioInterval {
 export function clampedDistanceM(distanceM: number | null): number | null {
   if (distanceM === null) return null;
   const { min, max } = CARDIO_BOUNDS.distanceM;
-  const factor = 10 ** STORED_DISTANCE_DECIMALS;
-  return Math.min(max, Math.max(min, Math.round(distanceM * factor) / factor));
+  return Math.min(max, Math.max(min, roundTo(STORED_DISTANCE_DECIMALS, distanceM)));
 }
 
 function isWithin(value: number, bounds: { min: number; max: number }): boolean {
@@ -85,7 +89,7 @@ export function distanceFromInput(value: number | null, unit: DistanceUnit): num
 }
 
 export function boutDurationS(bout: Pick<BoutValues, 'durationS' | 'interval'>): number {
-  return bout.interval === null ? bout.durationS : intervalDurationSeconds(bout.interval);
+  return boutDurationSeconds(bout);
 }
 
 export function canAddBout(bouts: readonly Pick<BoutValues, 'durationS' | 'interval'>[]): boolean {
@@ -111,8 +115,6 @@ export function describeBout(bout: BoutValues, unit: DistanceUnit): string {
   const pace = bout.distanceM === null ? [] : [formatPace(bout.durationS, bout.distanceM, unit)];
   return [formatDuration(bout.durationS), ...distance, ...pace].join(' · ');
 }
-
-const METRES_PER_KM = 1000;
 
 const RECORD_LABELS: Record<CardioRecordKind, string> = { distance: 'Distance', pace: 'Pace', duration: 'Duration' };
 

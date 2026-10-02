@@ -1,3 +1,4 @@
+import { SECONDS_PER_MINUTE } from '@domain/cardio.ts';
 import { roundTo } from '@domain/math.ts';
 import type { PaceUnit } from './catalog-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
@@ -62,7 +63,6 @@ const PACE_DISTANCE: Record<DistanceUnit, { units: number; label: string }> = {
   yd: { units: 100, label: '/100 yd' },
 };
 const STORED_DISTANCE_DECIMALS = 1;
-const SECONDS_PER_MINUTE = 60;
 
 export function distanceUnitFor(unit: UnitPref, paceUnit: PaceUnit): DistanceUnit {
   if (paceUnit === 'per_100m') return unit === 'kg' ? 'm' : 'yd';

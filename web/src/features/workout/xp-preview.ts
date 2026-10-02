@@ -6,6 +6,7 @@ import {
   DEFAULT_BALANCE,
   effectiveLoadForNewSet,
   type ExerciseDef,
+  FULL_SHARE_BASIS_POINTS,
   type LiftExerciseDef,
   type LiftSetInput,
   processSession,
@@ -34,7 +35,6 @@ export interface SetPreview {
 
 const UNKNOWN_PREVIEW: SetPreview = Object.freeze({ xp: 0, basis: 'unknown', rir: null });
 const PREVIEW_SKILL_ID = 'preview';
-const FULL_SHARE_BASIS_POINTS = 10_000;
 const PREVIEW_SESSION_ID = 'preview';
 const PREVIEW_STARTED_AT = '1970-01-01T00:00:00.000Z';
 const REPS_MODEL_PLACEHOLDER_BODYWEIGHT_KG = 0;
