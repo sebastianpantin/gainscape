@@ -9,12 +9,29 @@ import {
   type WritableSet,
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
-import { cardioFieldsFromRow, inputColumnsWithEffort } from './set-columns.ts';
+import {
+  cardioFieldsFromRow,
+  inputColumnsWithEffort,
+  NO_PRESCRIPTION_SNAPSHOT,
+  type PrescriptionSnapshotColumns,
+} from './set-columns.ts';
 
 export interface StoredSession {
   userId: string;
   summary: SessionSummary;
   setIds: string[];
+  completedAt: string;
+  programLinked: boolean;
+}
+
+export interface ProgramLink {
+  enrollmentId: string;
+  position: Record<string, unknown>;
+}
+
+export interface InsertedSession {
+  summary: SessionSummary;
+  completedAt: string;
 }
 
 export interface ProfileSettings {
@@ -26,6 +43,7 @@ export interface NewSessionRow {
   id: string;
   userId: string;
   programDayId: string | null;
+  programLink: ProgramLink | null;
   startedAt: string;
   endedAt: string;
   timezone: string;
@@ -46,12 +64,20 @@ export async function lockUser(
 
 export async function findSession(tx: Transaction, sessionId: string): Promise<StoredSession | null> {
   const [row] = await tx`
-    select s.user_id, s.summary, coalesce(array_agg(st.id order by st.id) filter (where st.id is not null), '{}') as set_ids
+    select s.user_id, s.summary, s.completed_at, s.enrollment_id,
+           coalesce(array_agg(st.id order by st.id) filter (where st.id is not null), '{}') as set_ids
     from public.sessions s
     left join public.sets st on st.session_id = s.id
     where s.id = ${sessionId}
     group by s.id`;
-  return row ? { userId: row.user_id, summary: row.summary, setIds: row.set_ids } : null;
+  if (!row) return null;
+  return {
+    userId: row.user_id,
+    summary: row.summary,
+    setIds: row.set_ids,
+    completedAt: isoTimestamp(row.completed_at),
+    programLinked: row.enrollment_id !== null,
+  };
 }
 
 export interface OwnedSession {
@@ -136,6 +162,26 @@ export async function ownedProgramDayId(
   return row?.id ?? null;
 }
 
+export async function linkedProgram(
+  tx: Transaction,
+  userId: string,
+  program: ProgramLink | null,
+): Promise<ProgramLink | null> {
+  if (program === null) return null;
+  const [row] = await tx`
+    select e.id from public.program_enrollments e
+    join public.program_templates t on t.key = e.template_key and t.version = e.template_version
+    where e.id = ${program.enrollmentId} and e.user_id = ${userId}
+      and private.is_valid_program_position(t.definition -> 'schedule', ${tx.json(program.position as JsonValue)})`;
+  return row ? program : null;
+}
+
+export async function loadPrescriptionRefs(tx: Transaction, sessionId: string): Promise<Map<string, string>> {
+  const rows = await tx`
+    select id, prescription_ref from public.sets where session_id = ${sessionId} and prescription_ref is not null`;
+  return new Map(rows.map((row) => [row.id, row.prescription_ref]));
+}
+
 export function placeholderSetRow(set: WritableSet, sessionId: string, userId: string, cfg: BalanceConfig) {
   const kind = setKind(set);
   return {
@@ -160,6 +206,7 @@ export async function writeEditedSets(
   sessionId: string,
   storedSets: readonly StoredSet[],
   requested: readonly WritableSet[],
+  addedSnapshots: ReadonlyMap<string, PrescriptionSnapshotColumns>,
   cfg: BalanceConfig,
 ): Promise<void> {
   const requestedIds = new Set(requested.map((set) => set.id));
@@ -211,7 +258,10 @@ export async function writeEditedSets(
       where target.id = derived.id and target.session_id = ${sessionId}`;
   }
   if (added.length > 0) {
-    const rows = added.map((set) => placeholderSetRow(set, sessionId, userId, cfg));
+    const rows = added.map((set) => ({
+      ...placeholderSetRow(set, sessionId, userId, cfg),
+      ...(addedSnapshots.get(set.id) ?? NO_PRESCRIPTION_SNAPSHOT),
+    }));
     await tx`insert into public.sets ${tx(rows)}`;
   }
 }
@@ -247,18 +297,20 @@ export async function insertSession(
   tx: Transaction,
   row: NewSessionRow,
   setRows: readonly Record<string, unknown>[],
-): Promise<SessionSummary> {
+): Promise<InsertedSession> {
+  const programPosition = row.programLink === null ? null : tx.json(row.programLink.position as JsonValue);
   const [inserted] = await tx`
     insert into public.sessions
-      (id, user_id, program_day_id, started_at, ended_at, local_date, timezone, history_only,
-       balance_version, derived_balance_version, summary, notes)
+      (id, user_id, program_day_id, enrollment_id, program_position, started_at, ended_at, local_date, timezone,
+       history_only, balance_version, derived_balance_version, summary, notes)
     values
-      (${row.id}, ${row.userId}, ${row.programDayId}, ${row.startedAt}, ${row.endedAt},
-       (${row.startedAt}::timestamptz at time zone ${row.timezone})::date, ${row.timezone}, ${row.historyOnly},
-       ${row.balanceVersion}, ${row.balanceVersion}, ${tx.json(row.summary as unknown as JsonValue)}, ${row.notes})
-    returning summary`;
+      (${row.id}, ${row.userId}, ${row.programDayId}, ${row.programLink?.enrollmentId ?? null}, ${programPosition},
+       ${row.startedAt}, ${row.endedAt}, (${row.startedAt}::timestamptz at time zone ${row.timezone})::date,
+       ${row.timezone}, ${row.historyOnly}, ${row.balanceVersion}, ${row.balanceVersion},
+       ${tx.json(row.summary as unknown as JsonValue)}, ${row.notes})
+    returning summary, completed_at`;
   await tx`insert into public.sets ${tx(setRows)}`;
-  return inserted.summary;
+  return { summary: inserted.summary, completedAt: isoTimestamp(inserted.completed_at) };
 }
 
 export async function storedSummary(tx: Transaction, sessionId: string): Promise<SessionSummary> {
