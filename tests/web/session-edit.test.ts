@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE } from '../../supabase/functions/_shared/domain/balance.ts';
+import { isSessionEditable } from '@domain/edit-window.ts';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 import {
   addEditExercise,
@@ -11,7 +12,6 @@ import {
   failureAction,
   failureText,
   hasChanges,
-  isEditable,
   type EditBout,
   type KnownExercise,
   type LiftEditExercise,
@@ -191,9 +191,9 @@ describe('editability and paging', () => {
   const now = Date.parse('2026-09-30T12:00:00Z');
 
   it('allows edits within 7 days of the start and never for history-only sessions', () => {
-    expect(isEditable({ historyOnly: false, startedAt: '2026-09-23T12:00:00Z' }, now)).toBe(true);
-    expect(isEditable({ historyOnly: false, startedAt: '2026-09-23T11:59:59Z' }, now)).toBe(false);
-    expect(isEditable({ historyOnly: true, startedAt: '2026-09-30T10:00:00Z' }, now)).toBe(false);
+    expect(isSessionEditable({ historyOnly: false, startedAt: '2026-09-23T12:00:00Z' }, now)).toBe(true);
+    expect(isSessionEditable({ historyOnly: false, startedAt: '2026-09-23T11:59:59Z' }, now)).toBe(false);
+    expect(isSessionEditable({ historyOnly: true, startedAt: '2026-09-30T10:00:00Z' }, now)).toBe(false);
   });
 
   it('recognises session ids before querying', () => {

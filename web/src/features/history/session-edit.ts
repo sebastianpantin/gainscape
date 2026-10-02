@@ -77,8 +77,6 @@ const UNKNOWN_EXERCISE_NAME = 'Unknown exercise';
 const UNKNOWN_EXERCISE_LOAD_TYPE: LoadType = 'external';
 const UNKNOWN_EXERCISE_PACE_UNIT: PaceUnit = 'per_km';
 
-export { isSessionEditable as isEditable } from '@domain/edit-window.ts';
-
 function storedInterval(row: StoredSetRow): CardioInterval | null {
   const { intervalWorkS: workS, intervalRestS: restS, intervalRounds: rounds } = row;
   return workS === null || restS === null || rounds === null ? null : { workS, restS, rounds };
