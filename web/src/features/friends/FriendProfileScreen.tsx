@@ -1,8 +1,7 @@
-import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { fetchSkills, type Skill } from '../../lib/catalog.ts';
-import { formatLoad } from '../../lib/format.ts';
+import { fetchSkills } from '../../lib/catalog.ts';
+import type { Skill } from '../../lib/catalog-rules.ts';
 import { isUuid } from '../../lib/history-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import {
@@ -13,8 +12,10 @@ import {
   type ProfileView,
   removeFriend,
 } from '../../lib/social.ts';
-import { slotClass } from '../collection/slot-class.ts';
+import { slotsByReps } from '../collection/record-slots.ts';
+import { RecordSlots } from '../collection/RecordSlots.tsx';
 import { ProfileWithTopSkills } from '../profile/ProfileWithTopSkills.tsx';
+import { messageOf } from '../../lib/error-text.ts';
 
 type ViewState =
   | { status: 'loading' }
@@ -24,36 +25,19 @@ type ViewState =
 
 function RecordsCard({ exercise, weightsHidden }: { exercise: CollectionViewExercise; weightsHidden: boolean }) {
   const { unitPref } = usePreferences();
-  const slots = Array.from(
-    { length: REP_MAX_SLOT_COUNT },
-    (_, index) => exercise.repMaxes.find((slot) => slot.reps === index + 1) ?? null,
-  );
   return (
-    <section className="panel stack" data-testid="friend-record">
+    <section className="panel stack">
       <header className="row spread">
         <h3>{exercise.name}</h3>
         {exercise.pinned && <span className="muted tiny">Pinned</span>}
       </header>
-      {exercise.loadType === 'bodyweight' ? (
-        <p className={exercise.maxReps ? 'record-slot bodyweight-record filled' : 'record-slot bodyweight-record'}>
-          Max reps: <strong>{exercise.maxReps ?? '—'}</strong>
-        </p>
-      ) : (
-        <ol className="record-slots">
-          {slots.map((slot, index) => (
-            <li key={index} className={slotClass(slot)}>
-              <span className="muted">{index + 1}RM</span>{' '}
-              <span>
-                {!slot
-                  ? '—'
-                  : slot.loadKg === null || weightsHidden
-                    ? 'Set'
-                    : formatLoad(slot.loadKg, exercise.loadType, unitPref)}
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
+      <RecordSlots
+        loadType={exercise.loadType}
+        slots={slotsByReps(exercise.repMaxes)}
+        maxReps={exercise.maxReps}
+        unit={unitPref}
+        weightsHidden={weightsHidden}
+      />
     </section>
   );
 }
@@ -95,7 +79,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
       await removeFriend(friendId);
       navigate('/friends', { replace: true });
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not remove this friend.');
+      setProblem(messageOf(error, 'Could not remove this friend.'));
       setRemoving(false);
     }
   };
@@ -133,7 +117,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
                 {collection.exercises.map((exercise) => (
                   <RecordsCard key={exercise.exerciseId} exercise={exercise} weightsHidden={collection.weightsHidden} />
                 ))}
-                <p className="muted" data-testid="friend-items">
+                <p className="muted">
                   Items found: {collection.items.found.length} of {collection.items.catalogCount}
                 </p>
               </section>

@@ -1,52 +1,39 @@
-import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
-import type { Exercise } from '../../web/src/lib/catalog.ts';
-import type { CollectionData, RepMaxSlotView } from '../../web/src/lib/collection-data.ts';
-import { countCollection } from '../../web/src/lib/collection-rules.ts';
-import { db } from './local-stack.ts';
+import { expect } from 'vitest';
+import { EXERCISE_COLUMNS, type ExerciseRow, toExercise } from '../../web/src/lib/catalog-rules.ts';
+import { COLLECTION_COLUMNS, collectionDataFrom, countCollection } from '../../web/src/lib/collection-rules.ts';
+import type { TestUser } from './local-stack.ts';
 
-async function visibleExercises(userId: string): Promise<Exercise[]> {
-  const rows = await db`
-    select e.id, e.name, e.equipment, e.modality, e.load_type, e.owner_user_id, e.archived_at
-    from public.exercises e
-    where e.owner_user_id = ${userId}
-       or (e.owner_user_id is null and (not e.requires_unlock or exists (
-         select 1 from public.user_unlocks u where u.user_id = ${userId} and u.exercise_id = e.id)))
-    order by e.name`;
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    equipment: row.equipment,
-    modality: row.modality,
-    loadType: row.load_type,
-    custom: row.owner_user_id !== null,
-    archived: row.archived_at !== null,
-  }));
+async function visibleExercises(user: TestUser) {
+  const { data, error } = await user.client.from('exercises').select(EXERCISE_COLUMNS).order('name');
+  expect(error).toBeNull();
+  return (data as unknown as ExerciseRow[]).map(toExercise);
 }
 
-async function collectionData(userId: string): Promise<CollectionData> {
-  const repMaxes = await db`
-    select exercise_id, reps, load_kg::float, exact_set_id from public.rep_maxes where user_id = ${userId}`;
-  const bodyweight =
-    await db`select exercise_id, max_reps from public.bodyweight_rep_records where user_id = ${userId}`;
-  const pins = await db`
-    select exercise_id, position from public.pinned_exercises where user_id = ${userId} order by position, created_at`;
-  const repMaxesByExercise = new Map<string, (RepMaxSlotView | null)[]>();
-  for (const row of repMaxes) {
-    const slots = repMaxesByExercise.get(row.exercise_id) ?? Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
-    slots[row.reps - 1] = { loadKg: row.load_kg, exact: row.exact_set_id !== null };
-    repMaxesByExercise.set(row.exercise_id, slots);
-  }
+async function collectionRows(user: TestUser) {
+  const [repMaxes, bodyweightRecords, strengths, pins, cardioRecords] = await Promise.all([
+    user.client.from('rep_maxes').select(COLLECTION_COLUMNS.repMaxes).eq('user_id', user.id),
+    user.client.from('bodyweight_rep_records').select(COLLECTION_COLUMNS.bodyweightRecords).eq('user_id', user.id),
+    user.client.from('exercise_maxes').select(COLLECTION_COLUMNS.strengths).eq('user_id', user.id),
+    user.client
+      .from('pinned_exercises')
+      .select(COLLECTION_COLUMNS.pins)
+      .eq('user_id', user.id)
+      .order('position')
+      .order('created_at'),
+    user.client.from('cardio_records').select(COLLECTION_COLUMNS.cardioRecords).eq('user_id', user.id),
+  ]);
+  for (const result of [repMaxes, bodyweightRecords, strengths, pins, cardioRecords]) expect(result.error).toBeNull();
   return {
-    repMaxesByExercise,
-    maxRepsByExercise: new Map(bodyweight.map((row) => [row.exercise_id, row.max_reps])),
-    strengthByExercise: new Map(),
-    pinnedExerciseIds: pins.map((row) => row.exercise_id),
-    nextPinPosition: Math.max(-1, ...pins.map((row) => row.position)) + 1,
-    cardioRecords: [],
+    repMaxes: repMaxes.data!,
+    bodyweightRecords: bodyweightRecords.data!,
+    strengths: strengths.data!,
+    pins: pins.data!,
+    cardioRecords: cardioRecords.data!,
   };
 }
 
-export async function webCollectionCounts(userId: string): Promise<{ filledSlots: number; totalSlots: number }> {
-  const { completion } = countCollection(await visibleExercises(userId), await collectionData(userId));
+export async function webCollectionCounts(user: TestUser): Promise<{ filledSlots: number; totalSlots: number }> {
+  const [exercises, rows] = await Promise.all([visibleExercises(user), collectionRows(user)]);
+  const { completion } = countCollection(exercises, collectionDataFrom(rows));
   return { filledSlots: completion.filledSlots, totalSlots: completion.totalSlots };
 }

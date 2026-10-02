@@ -1,31 +1,24 @@
 import { DEFAULT_BALANCE } from '@domain/balance.ts';
-import { isWithinEditWindow } from '@domain/edit-window.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
-import { roundTo } from '@domain/strength.ts';
-import {
-  type CardioEffortLevel,
-  type CardioInterval,
-  type DropSummary,
-  type EffortInput,
-  type EffortLevel,
-  MAX_SETS_PER_SESSION,
-  type SessionSummary,
-} from '@domain/types.ts';
-import type { CardioActivity, LoadType, PaceUnit } from '../../lib/catalog.ts';
-import type { InvokeOutcome } from '../../lib/function-client.ts';
+import { roundTo } from '@domain/math.ts';
+import { type CardioInterval, type DropSummary, type EffortInput, MAX_SETS_PER_SESSION } from '@domain/types.ts';
+import type { CardioActivity, LoadType, PaceUnit } from '../../lib/catalog-rules.ts';
+import type { InvokeOutcome } from '../../lib/function-client-rules.ts';
 import {
   type EditSessionPayload,
   type HistorySession,
   type StoredSetRow,
   transientReason,
 } from '../../lib/history-rules.ts';
-import { RATE_LIMITED_CODE, retryAfterSeconds } from '../../lib/rate-limit.ts';
+import { type CatalogItem, describeDrops, itemNameLookup } from '../../lib/item-rules.ts';
+import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
 import {
   type BoutValues,
   defaultWeightKg,
   nextBoutValues,
   nextSetValues,
   updateExerciseAt,
+  withSets,
 } from '../../offline/draft-format.ts';
 import { boutPayload } from '../../offline/session-payload.ts';
 
@@ -83,23 +76,6 @@ type PlacedSet =
 const UNKNOWN_EXERCISE_NAME = 'Unknown exercise';
 const UNKNOWN_EXERCISE_LOAD_TYPE: LoadType = 'external';
 const UNKNOWN_EXERCISE_PACE_UNIT: PaceUnit = 'per_km';
-
-export function isEditable(session: Pick<HistorySession, 'historyOnly' | 'startedAt'>, now: number): boolean {
-  return !session.historyOnly && isWithinEditWindow(session.startedAt, now);
-}
-
-export function sessionXp(summary: Pick<SessionSummary, 'xpBySkill'>): number {
-  return Object.values(summary.xpBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
-}
-
-export function formatSessionDate(localDate: string): string {
-  return new Date(`${localDate}T00:00:00`).toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 function storedInterval(row: StoredSetRow): CardioInterval | null {
   const { intervalWorkS: workS, intervalRestS: restS, intervalRounds: rounds } = row;
@@ -198,21 +174,13 @@ export function canAddSet(edit: SessionEdit): boolean {
   return editSetCount(edit) < MAX_SETS_PER_SESSION;
 }
 
-function updateExercise(
-  edit: SessionEdit,
-  exerciseIndex: number,
-  update: (exercise: EditExercise) => EditExercise,
-): SessionEdit {
-  return updateExerciseAt(edit, exerciseIndex, update);
-}
-
 export function updateEditSet(
   edit: SessionEdit,
   exerciseIndex: number,
   setId: string,
   changes: Partial<Omit<EditSet, 'id'>>,
 ): SessionEdit {
-  return updateExercise(edit, exerciseIndex, (exercise) =>
+  return updateExerciseAt(edit, exerciseIndex, (exercise) =>
     exercise.modality === 'lift'
       ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
       : exercise,
@@ -225,7 +193,7 @@ export function updateEditBout(
   setId: string,
   changes: Partial<BoutValues>,
 ): SessionEdit {
-  return updateExercise(edit, exerciseIndex, (exercise) =>
+  return updateExerciseAt(edit, exerciseIndex, (exercise) =>
     exercise.modality === 'cardio'
       ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
       : exercise,
@@ -233,17 +201,15 @@ export function updateEditBout(
 }
 
 export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: string): SessionEdit {
-  const removed = updateExercise(edit, exerciseIndex, (exercise) =>
-    exercise.modality === 'cardio'
-      ? { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) }
-      : { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) },
+  const removed = updateExerciseAt(edit, exerciseIndex, (exercise) =>
+    withSets(exercise, (sets) => sets.filter((set) => set.id !== setId)),
   );
   return { ...removed, exercises: removed.exercises.filter((exercise) => exercise.sets.length > 0) };
 }
 
 export function addEditSet(edit: SessionEdit, exerciseIndex: number): SessionEdit {
   if (!canAddSet(edit)) return edit;
-  return updateExercise(edit, exerciseIndex, (exercise) => {
+  return updateExerciseAt(edit, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio') {
       const newBout: EditBout = { id: crypto.randomUUID(), kind: 'cardio', ...nextBoutValues(exercise.sets.at(-1)) };
       return { ...exercise, sets: [...exercise.sets, newBout] };
@@ -271,7 +237,7 @@ export function addEditExercise(edit: SessionEdit, exercise: NewExercise): Sessi
 }
 
 export function swapEditExercise(edit: SessionEdit, exerciseIndex: number, replacement: NewExercise): SessionEdit {
-  return updateExercise(edit, exerciseIndex, (exercise) => {
+  return updateExerciseAt(edit, exerciseIndex, (exercise) => {
     const identity = { exerciseId: replacement.id, name: replacement.name };
     if (exercise.modality === 'cardio') {
       return replacement.modality === 'cardio'
@@ -297,11 +263,7 @@ export function withNewSetIds(edit: SessionEdit, setIds: readonly string[]): Ses
     conflicting.has(set.id.toLowerCase()) ? { ...set, id: crypto.randomUUID() } : set;
   return {
     ...edit,
-    exercises: edit.exercises.map((exercise) =>
-      exercise.modality === 'cardio'
-        ? { ...exercise, sets: exercise.sets.map(freshId) }
-        : { ...exercise, sets: exercise.sets.map(freshId) },
-    ),
+    exercises: edit.exercises.map((exercise) => withSets(exercise, (sets) => sets.map(freshId))),
   };
 }
 
@@ -316,20 +278,6 @@ export function withoutBodyweightLoads(edit: SessionEdit, loadTypes: ReadonlyMap
     }),
   };
 }
-
-export const EFFORT_LEVEL_LABELS: Record<EffortLevel, string> = {
-  easy: 'Easy',
-  hard: 'Hard',
-  near_failure: 'Near fail',
-  failure: 'Failure',
-};
-
-export const CARDIO_EFFORT_LABELS: Record<CardioEffortLevel, string> = {
-  easy: 'Easy',
-  moderate: 'Moderate',
-  hard: 'Hard',
-  max: 'Max',
-};
 
 function placedSets(edit: SessionEdit): PlacedSet[] {
   return edit.exercises.flatMap((exercise): PlacedSet[] => {
@@ -464,13 +412,6 @@ export function rebaseNotice(rebased: RebasedEdit, fresh: SessionEdit): string {
   return `${droppedText}Your changes were applied to the latest version. Check them, then save.`;
 }
 
-export function effortLabel(effort: EffortInput): string | null {
-  if (effort === null) return null;
-  if (effort.type === 'level') return EFFORT_LEVEL_LABELS[effort.level];
-  if (effort.type === 'cardio') return CARDIO_EFFORT_LABELS[effort.level];
-  return `${effort.type.toUpperCase()} ${effort.value}`;
-}
-
 export type FailureAction =
   | { kind: 'retry'; reason: string }
   | { kind: 'sign_out' }
@@ -511,4 +452,46 @@ export function failureAction(outcome: Exclude<InvokeOutcome<unknown>, { kind: '
   if (outcome.kind === 'retryable') return { kind: 'retry', reason: outcome.reason };
   const action = FAILURE_ACTIONS[outcome.code]?.(outcome.details);
   return action ?? { kind: 'bug', code: outcome.code };
+}
+
+export function failureText(action: FailureAction, verb: 'save' | 'delete'): string {
+  switch (action.kind) {
+    case 'read_only':
+      return 'This workout is older than 7 days, so it can no longer be changed.';
+    case 'wrong_account':
+      return 'You are signed in as someone else in another tab. Reload the app.';
+    case 'retry':
+      return `Couldn't reach the server (${action.reason}). Try again.`;
+    case 'rate_limited':
+      return `Too many changes. ${tryAgainIn(action.retryAfterSeconds)}`;
+    case 'bug':
+      return `Couldn't ${verb} this workout: ${action.code}`;
+    default:
+      return `Couldn't ${verb} this workout: ${action.kind}`;
+  }
+}
+
+const UNKNOWN_ITEM_NAME = 'an item';
+
+export function removalText(
+  drops: readonly { itemId: string; quantity: number }[],
+  items: readonly CatalogItem[],
+): string {
+  const described = describeDrops(drops, itemNameLookup(items, UNKNOWN_ITEM_NAME));
+  return described && `This may remove ${described} from your collection.`;
+}
+
+export function removedText(
+  drops: readonly { itemId: string; revokedQuantity: number }[] | undefined,
+  items: readonly CatalogItem[],
+): string {
+  const described = describeDrops(
+    (drops ?? []).map((drop) => ({ itemId: drop.itemId, quantity: drop.revokedQuantity })),
+    itemNameLookup(items, UNKNOWN_ITEM_NAME),
+  );
+  return described && `Removed ${described} from your collection.`;
+}
+
+export function sameSetValues(a: EditSet | EditBout, b: EditSet | EditBout): boolean {
+  return JSON.stringify({ ...a, id: '' }) === JSON.stringify({ ...b, id: '' });
 }

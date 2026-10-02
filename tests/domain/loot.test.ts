@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   chance,
   DEFAULT_LOOT,
+  eligibleRolls,
   type LootCandidate,
   type LootConfig,
   lootCandidates,
@@ -386,9 +387,28 @@ describe('golden session', () => {
       dryRolls: 1,
     });
   });
+});
 
-  it('is deterministic', () => {
-    expect(roll()).toEqual(roll());
+describe('eligibleRolls', () => {
+  it('lists qualifying rolls in position order, regular before pr, skipping rolls already made', () => {
+    const candidates = [
+      candidate('late-pr', 3, { personalRecord: true }),
+      candidate('easy', 1, { effectiveReps: 0 }),
+      candidate('work', 0),
+      candidate('custom-pr', 2, { personalRecord: true, builtIn: false }),
+    ];
+    const day = { ...FRESH_DAY, alreadyRolled: new Set([lootRollKey('late-pr', 'regular')]) };
+    const rolls = eligibleRolls(candidates, day, DEFAULT_LOOT).map(({ candidate, kind }) => [candidate.setId, kind]);
+    expect(rolls).toEqual([
+      ['work', 'regular'],
+      ['custom-pr', 'regular'],
+      ['late-pr', 'pr'],
+    ]);
+  });
+
+  it('ignores the daily caps, which rollSessionLoot applies', () => {
+    const capped = { ...FRESH_DAY, regularUsed: DEFAULT_LOOT.regularRollsPerDay, prUsed: DEFAULT_LOOT.prRollsPerDay };
+    expect(eligibleRolls([candidate('pr', 0, { personalRecord: true })], capped, DEFAULT_LOOT)).toHaveLength(2);
   });
 });
 

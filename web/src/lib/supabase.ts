@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { authStorageKey, needsAuthTimeout, REQUEST_TIMEOUT_MS, storedSessionFrom } from './auth-restore.ts';
 
-export { REQUEST_TIMEOUT_MS };
-
 const sameOriginSupabaseProxy = `${window.location.origin}/sb`;
 
 export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? sameOriginSupabaseProxy;

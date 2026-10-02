@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { combatLevel, levelForXp, levelProgress, MAX_LEVEL, xpForLevel } from '@domain/index.ts';
+import { combatLevel, levelForXp, levelProgress, MAX_LEVEL, totalLevel, xpForLevel } from '@domain/index.ts';
 
 describe('xp curve', () => {
   it.each([
@@ -30,6 +30,16 @@ describe('xp curve', () => {
   it('reports progress towards the next level', () => {
     expect(levelProgress(135)).toMatchObject({ level: 2, levelStartXp: 80, nextLevelXp: 167 });
     expect(levelProgress(998_458)).toMatchObject({ level: 99, nextLevelXp: null, fractionToNextLevel: 1 });
+  });
+});
+
+describe('total level', () => {
+  it('sums the skill levels', () => {
+    expect(totalLevel([1, 12, 99])).toBe(112);
+  });
+
+  it('is 0 without skills', () => {
+    expect(totalLevel([])).toBe(0);
   });
 });
 

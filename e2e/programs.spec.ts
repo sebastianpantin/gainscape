@@ -1,5 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
-import { openFromProfile, openTab, readSession, readStoredDraft, register, uniqueUsername } from './support/app.ts';
+import {
+  finishWorkout,
+  openFromProfile,
+  openTab,
+  readSession,
+  readStoredDraft,
+  register,
+  uniqueUsername,
+} from './support/app.ts';
 import { programDayId, sessionRow, setCount } from './support/db.ts';
 
 function exerciseCard(page: Page, name: string) {
@@ -58,8 +66,7 @@ test('copy a template, run a program day with planned sets and finish it', async
     confirmation = dialog.message();
     return dialog.accept();
   });
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await finishWorkout(page);
   expect(confirmation).toBe('13 planned sets not done will be skipped');
 
   const stored = await readStoredDraft(page, user.id);

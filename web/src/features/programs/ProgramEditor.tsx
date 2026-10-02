@@ -1,31 +1,31 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { type Exercise, exerciseLabels, fetchExercises, isLiftExercise } from '../../lib/catalog.ts';
-import { nameProblem, trimmedName } from '../../lib/names.ts';
+import { fetchExercises } from '../../lib/catalog.ts';
+import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { cachedPrograms, fetchPrograms, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
-import { moved } from '../../lib/reorder.ts';
-import type { PlannedExercise } from '../../offline/draft-format.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
+import {
+  addDay,
+  addPlannedExercise,
+  canAddDay,
+  changePlannedExercise,
+  DAY_NAME_MAX_LENGTH,
+  docFor,
+  moveDay,
+  movePlannedExercise,
+  nameIssue,
+  PROGRAM_NAME_MAX_LENGTH,
+  removeDay,
+  removePlannedExercise,
+  renameDay,
+  TARGET_REPS_RANGE,
+  TARGET_SETS_RANGE,
+  trimmedDoc,
+} from './program-edit.ts';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface ProgramEditorProps {
   userId: string;
-}
-
-type EditorDay = ProgramDoc['days'][number];
-
-const DEFAULT_TARGET = { targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 };
-const PROGRAM_NAME_MAX_LENGTH = 60;
-const DAY_NAME_MAX_LENGTH = 40;
-const MAX_DAYS = 14;
-
-function docFor(userId: string, programId: string): ProgramDoc | null {
-  const program = cachedPrograms(userId)?.find((candidate) => candidate.id === programId);
-  if (!program || program.ownerUserId !== userId) return null;
-  return {
-    id: program.id,
-    name: program.name,
-    days: program.days.map((day) => ({ id: day.id, name: day.name, exercises: day.exercises })),
-  };
 }
 
 interface NumberFieldProps {
@@ -59,7 +59,7 @@ function NumberField({ label, value, lowest, highest, onChange }: NumberFieldPro
 export function ProgramEditor({ userId }: ProgramEditorProps) {
   const { programId = '' } = useParams();
   const navigate = useNavigate();
-  const [doc, setDoc] = useState<ProgramDoc | null>(() => docFor(userId, programId));
+  const [doc, setDoc] = useState<ProgramDoc | null>(() => docFor(cachedPrograms(userId), userId, programId));
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
@@ -75,8 +75,8 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
   useEffect(() => {
     if (doc) return;
     fetchPrograms(userId).then(
-      () => {
-        const loaded = docFor(userId, programId);
+      (programs) => {
+        const loaded = docFor(programs, userId, programId);
         if (loaded) setDoc(loaded);
         else setMissing(true);
       },
@@ -106,35 +106,17 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
   const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const pickable = exercises.filter((exercise) => !exercise.archived);
 
-  const changeDay = (dayIndex: number, update: (day: EditorDay) => EditorDay) =>
-    setDoc({ ...doc, days: doc.days.map((day, index) => (index === dayIndex ? update(day) : day)) });
-
-  const changeExercise = (dayIndex: number, exerciseIndex: number, changes: Partial<PlannedExercise>) =>
-    changeDay(dayIndex, (day) => ({
-      ...day,
-      exercises: day.exercises.map((exercise, index) =>
-        index === exerciseIndex ? { ...exercise, ...changes } : exercise,
-      ),
-    }));
-
-  const nameIssue =
-    nameProblem(doc.name, PROGRAM_NAME_MAX_LENGTH) ??
-    doc.days.map((day) => nameProblem(day.name, DAY_NAME_MAX_LENGTH)).find((issue) => issue !== null) ??
-    null;
+  const issue = nameIssue(doc);
 
   const save = async () => {
-    if (nameIssue) return setProblem(nameIssue);
+    if (issue) return setProblem(issue);
     setSaving(true);
     setProblem(null);
     try {
-      await saveProgram(userId, {
-        ...doc,
-        name: trimmedName(doc.name),
-        days: doc.days.map((day) => ({ ...day, name: trimmedName(day.name) })),
-      });
+      await saveProgram(userId, trimmedDoc(doc));
       navigate('/programs');
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not save the program.');
+      setProblem(messageOf(error, 'Could not save the program.'));
       setSaving(false);
     }
   };
@@ -158,7 +140,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
               <input
                 value={day.name}
                 maxLength={DAY_NAME_MAX_LENGTH}
-                onChange={(event) => changeDay(dayIndex, (current) => ({ ...current, name: event.target.value }))}
+                onChange={(event) => setDoc(renameDay(doc, dayIndex, event.target.value))}
               />
             </label>
             <span className="row">
@@ -166,7 +148,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
                 className="button link"
                 type="button"
                 disabled={dayIndex === 0}
-                onClick={() => setDoc({ ...doc, days: moved(doc.days, dayIndex, -1) })}
+                onClick={() => setDoc(moveDay(doc, dayIndex, -1))}
               >
                 Up
               </button>
@@ -174,7 +156,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
                 className="button link"
                 type="button"
                 disabled={dayIndex === doc.days.length - 1}
-                onClick={() => setDoc({ ...doc, days: moved(doc.days, dayIndex, 1) })}
+                onClick={() => setDoc(moveDay(doc, dayIndex, 1))}
               >
                 Down
               </button>
@@ -182,7 +164,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
                 className="button link"
                 type="button"
                 disabled={doc.days.length === 1}
-                onClick={() => setDoc({ ...doc, days: doc.days.filter((_, index) => index !== dayIndex) })}
+                onClick={() => setDoc(removeDay(doc, dayIndex))}
               >
                 Remove day
               </button>
@@ -204,12 +186,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
                         type="button"
                         aria-label={`Move ${name} up`}
                         disabled={exerciseIndex === 0}
-                        onClick={() =>
-                          changeDay(dayIndex, (current) => ({
-                            ...current,
-                            exercises: moved(current.exercises, exerciseIndex, -1),
-                          }))
-                        }
+                        onClick={() => setDoc(movePlannedExercise(doc, dayIndex, exerciseIndex, -1))}
                       >
                         Up
                       </button>
@@ -218,12 +195,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
                         type="button"
                         aria-label={`Move ${name} down`}
                         disabled={exerciseIndex === day.exercises.length - 1}
-                        onClick={() =>
-                          changeDay(dayIndex, (current) => ({
-                            ...current,
-                            exercises: moved(current.exercises, exerciseIndex, 1),
-                          }))
-                        }
+                        onClick={() => setDoc(movePlannedExercise(doc, dayIndex, exerciseIndex, 1))}
                       >
                         Down
                       </button>
@@ -231,12 +203,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
                         className="button link"
                         type="button"
                         aria-label={`Remove ${name}`}
-                        onClick={() =>
-                          changeDay(dayIndex, (current) => ({
-                            ...current,
-                            exercises: current.exercises.filter((_, index) => index !== exerciseIndex),
-                          }))
-                        }
+                        onClick={() => setDoc(removePlannedExercise(doc, dayIndex, exerciseIndex))}
                       >
                         Remove
                       </button>
@@ -246,23 +213,26 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
                     <NumberField
                       label="Sets"
                       value={planned.targetSets}
-                      lowest={1}
-                      highest={10}
-                      onChange={(targetSets) => changeExercise(dayIndex, exerciseIndex, { targetSets })}
+                      {...TARGET_SETS_RANGE}
+                      onChange={(targetSets) =>
+                        setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetSets }))
+                      }
                     />
                     <NumberField
                       label="Reps min"
                       value={planned.targetRepsMin}
-                      lowest={1}
-                      highest={100}
-                      onChange={(targetRepsMin) => changeExercise(dayIndex, exerciseIndex, { targetRepsMin })}
+                      {...TARGET_REPS_RANGE}
+                      onChange={(targetRepsMin) =>
+                        setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetRepsMin }))
+                      }
                     />
                     <NumberField
                       label="Reps max"
                       value={planned.targetRepsMax}
-                      lowest={1}
-                      highest={100}
-                      onChange={(targetRepsMax) => changeExercise(dayIndex, exerciseIndex, { targetRepsMax })}
+                      {...TARGET_REPS_RANGE}
+                      onChange={(targetRepsMax) =>
+                        setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetRepsMax }))
+                      }
                     />
                   </div>
                 </li>
@@ -271,25 +241,15 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
           </ol>
           <ExercisePicker
             exercises={pickable}
-            onPick={(exercise) =>
-              changeDay(dayIndex, (current) => ({
-                ...current,
-                exercises: [...current.exercises, { exerciseId: exercise.id, ...DEFAULT_TARGET }],
-              }))
-            }
+            onPick={(exercise) => setDoc(addPlannedExercise(doc, dayIndex, exercise.id))}
           />
         </section>
       ))}
       <button
         className="button"
         type="button"
-        disabled={doc.days.length >= MAX_DAYS}
-        onClick={() =>
-          setDoc({
-            ...doc,
-            days: [...doc.days, { id: crypto.randomUUID(), name: `Day ${doc.days.length + 1}`, exercises: [] }],
-          })
-        }
+        disabled={!canAddDay(doc)}
+        onClick={() => setDoc(addDay(doc, crypto.randomUUID()))}
       >
         + Add day
       </button>

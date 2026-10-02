@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { builtInExerciseId, createTestUser, db, postCompleteSession, type TestUser } from './local-stack.ts';
+import { aSet, hoursAgo, payloadAt } from './session-support.ts';
 
 let skillIds: Record<string, string>;
 
@@ -40,14 +41,8 @@ async function ownedExerciseCount(userId: string): Promise<number> {
   return row.count;
 }
 
-function finishedSession(exerciseId: string, weightKg = 40) {
-  const endedAt = new Date();
-  return {
-    id: randomUUID(),
-    startedAt: new Date(endedAt.getTime() - 30 * 60 * 1000).toISOString(),
-    endedAt: endedAt.toISOString(),
-    sets: [{ id: randomUUID(), exerciseId, position: 0, weightKg, reps: 8, effort: { type: 'level', level: 'hard' } }],
-  };
+function finishedSession(exerciseId: string) {
+  return payloadAt(hoursAgo(1), [aSet(exerciseId, 0, 40, { reps: 8 })]);
 }
 
 describe('save_custom_exercise creates', () => {

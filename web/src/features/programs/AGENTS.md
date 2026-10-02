@@ -9,10 +9,11 @@ Training programs: list, copy from templates, create, rename and edit days with 
 
 ## Key Files
 
-| File                 | Description                                                                                                                                                                                                                                        |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ProgramsScreen.tsx` | Route `/programs`. Lists own programs and templates via `../../lib/programs.ts`, links to the editor, navigates after creating or copying                                                                                                          |
-| `ProgramEditor.tsx`  | Route `/programs/:programId`. Edits a `ProgramDoc` (days of `PlannedExercise`), validates names with `nameProblem`/`trimmedName`, loads cached programs first via `cachedPrograms`, saves with `saveProgram`, adds exercises with `ExercisePicker` |
+| File                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ProgramsScreen.tsx` | Route `/programs`. Lists own programs and templates via `../../lib/programs.ts`, links to the editor, navigates after creating or copying                                                                                                                                                                                                                                                                                                                        |
+| `ProgramEditor.tsx`  | Route `/programs/:programId`. Edits a `ProgramDoc` (days of `PlannedExercise`) through the pure functions in `program-edit.ts`, loads cached programs first via `cachedPrograms`, saves `trimmedDoc` with `saveProgram`, adds exercises with `ExercisePicker`                                                                                                                                                                                                    |
+| `program-edit.ts`    | Pure editor logic: `docFor` (finds the program doc in the cached list), day changes (`renameDay`, `moveDay`, `removeDay`, `addDay`, `canAddDay` with `MAX_DAYS`), exercise changes (`changePlannedExercise`, `movePlannedExercise`, `removePlannedExercise`, `addPlannedExercise`), `nameIssue` (program and day names against `PROGRAM_NAME_MAX_LENGTH`/`DAY_NAME_MAX_LENGTH`), `trimmedDoc`, and the target ranges `TARGET_SETS_RANGE` and `TARGET_REPS_RANGE` |
 
 ## For AI Agents
 
@@ -24,7 +25,7 @@ Training programs: list, copy from templates, create, rename and edit days with 
 ### Testing Requirements
 
 - E2E (stack needed): `e2e/programs.spec.ts` (copy a template, run a day with planned sets, finish) and `e2e/a11y.spec.ts`.
-- Integration: `tests/integration/programs.test.ts`. Unit: `tests/web/names.test.ts`, `tests/web/draft-format.test.ts`. There are no unit tests for the editor logic itself; extract it to a pure module and test in `tests/web/` when adding rules.
+- Integration: `tests/integration/programs.test.ts`. Unit: `tests/web/program-edit.test.ts` (editor rules), `tests/web/names.test.ts`, `tests/web/draft-format.test.ts`, `tests/web/reorder.test.ts`. Put new editor rules in `program-edit.ts` and test them there first.
 
 ### Common Patterns
 
@@ -34,7 +35,7 @@ Training programs: list, copy from templates, create, rename and edit days with 
 
 ### Internal
 
-- `../../lib/{catalog,names,programs}.ts`, `../../offline/draft-format.ts`, `../workout/ExercisePicker.tsx`.
+- `../../lib/{catalog,catalog-rules,error-text,names,programs,reorder}.ts`, `../../offline/draft-format.ts`, `../workout/ExercisePicker.tsx`.
 
 ### External
 

@@ -1,8 +1,9 @@
 import type { BalanceConfig } from './balance.ts';
-import { boutPace, countedWorkSeconds } from './cardio.ts';
-import { KindMismatchError, UnknownExerciseError } from './errors.ts';
+import { boutPace, countedWorkSeconds, paceSPerKm } from './cardio.ts';
+import { cardioExercise, exerciseFor, liftExercise, liftExerciseFor } from './exercise-lookup.ts';
 import type { SessionContext, Step } from './pipeline.ts';
-import { roundTo } from './strength.ts';
+import { FLOAT_TOLERANCE, roundTo } from './math.ts';
+import { compareSessionKeys } from './ordering.ts';
 import {
   CARDIO_RECORD_KINDS,
   type CardioExerciseDef,
@@ -15,6 +16,7 @@ import {
   isLiftResult,
   type LiftSetInput,
   type LoadType,
+  measuresRepsCapacity,
   NO_RECORDS,
   type PaceUnit,
   type PersonalRecordSummary,
@@ -30,10 +32,8 @@ function emptySlots(): (RepMaxSlot | null)[] {
   return Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
 }
 
-const GAIN_FLOAT_TOLERANCE = 1e-9;
-
 function improvesSlot(slot: RepMaxSlot | null, loadKg: number, cfg: BalanceConfig): boolean {
-  return slot === null || loadKg >= slot.loadKg + cfg.prMinGainKg - GAIN_FLOAT_TOLERANCE;
+  return slot === null || loadKg >= slot.loadKg + cfg.prMinGainKg - FLOAT_TOLERANCE;
 }
 
 interface RepMaxOutcome {
@@ -63,13 +63,12 @@ function applyRepMaxSet(
   return { slots: next, improvedReps };
 }
 
-const METRES_PER_KM = 1000;
 const PACE_DECIMALS = 1;
 
 function isImplausibleDistance(bout: CardioSetInput, exercise: CardioExerciseDef, cfg: BalanceConfig): boolean {
   if (bout.distanceM === null) return false;
   if (exercise.cardio.referencePaceSPerKm !== null) return boutPace(bout, exercise, cfg).paceFlagged;
-  return (bout.durationS * METRES_PER_KM) / bout.distanceM < cfg.cardioFastestPlausiblePaceSPerKm;
+  return paceSPerKm(bout.durationS, bout.distanceM) < cfg.cardioFastestPlausiblePaceSPerKm;
 }
 
 function boutRecordValues(
@@ -82,7 +81,7 @@ function boutRecordValues(
   values.distance = bout.distanceM;
   const minDistanceM = exercise.cardio.recordMinDistanceM;
   if (exercise.builtIn && minDistanceM !== null && bout.distanceM >= minDistanceM) {
-    values.pace = roundTo(PACE_DECIMALS, (bout.durationS * METRES_PER_KM) / bout.distanceM);
+    values.pace = roundTo(PACE_DECIMALS, paceSPerKm(bout.durationS, bout.distanceM));
   }
   return values;
 }
@@ -98,10 +97,10 @@ function beatsCardioRecord(
 ): boolean {
   if (kind === 'pace') {
     const minGainSPerKm = cfg.cardioPaceRecordMinGainSPerPaceUnit * PACE_UNITS_PER_KM[exercise.cardio.paceUnit];
-    return value <= previous - minGainSPerKm + GAIN_FLOAT_TOLERANCE;
+    return value <= previous - minGainSPerKm + FLOAT_TOLERANCE;
   }
   const minGain = kind === 'distance' ? cfg.cardioRecordMinGainM : cfg.cardioRecordMinGainS;
-  return value >= previous + minGain - GAIN_FLOAT_TOLERANCE;
+  return value >= previous + minGain - FLOAT_TOLERANCE;
 }
 
 export interface CardioRecordUpdate {
@@ -109,7 +108,7 @@ export interface CardioRecordUpdate {
   gains: CardioRecordGain[];
 }
 
-export function applyBoutToRecords(
+function applyBoutToRecords(
   records: RecordState,
   bout: CardioSetInput,
   exercise: CardioExerciseDef,
@@ -144,7 +143,7 @@ export function applySetToRecords(
   achievedAt: string,
   cfg: BalanceConfig,
 ): RecordUpdate {
-  if (loadType === 'bodyweight') {
+  if (measuresRepsCapacity(loadType)) {
     const previous = records.bodyweightReps[set.exerciseId] ?? null;
     if (previous !== null && set.reps <= previous.maxReps) return { records, personalRecord: null };
     return {
@@ -182,8 +181,7 @@ export const detectPersonalRecords: Step = (ctx: SessionContext) => {
 
   const sets = ctx.sets.map((result): SetResult => {
     if (result.set.kind === 'cardio' && result.cardio !== null) {
-      const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
-      if (exercise.modality !== 'cardio') return result;
+      const exercise = cardioExercise(exerciseFor(result.set, ctx.deps.catalog));
       const update = applyBoutToRecords(records, result.set, exercise, ctx.session.startedAt, ctx.cfg);
       records = update.records;
       const isBaselineSession = recordsAtStart.cardio[exercise.id] === undefined;
@@ -191,8 +189,7 @@ export const detectPersonalRecords: Step = (ctx: SessionContext) => {
       return { ...result, cardio: { ...result.cardio, records: update.gains } };
     }
     if (!isLiftResult(result) || result.set.isWarmup) return result;
-    const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
-    if (exercise.modality === 'cardio') return result;
+    const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const isBaselineSession = !(ctx.deps.strength?.[exercise.id]?.hasPriorSession ?? false);
     const update = applySetToRecords(records, result.set, exercise.loadType, ctx.session.startedAt, ctx.cfg);
     records = update.records;
@@ -242,20 +239,11 @@ export function recordsFromHistory(
   catalog: Catalog,
   cfg: BalanceConfig,
 ): RecordState {
-  const ordered = rows
-    .map((row) => ({ row, startedAtMs: Date.parse(row.session.startedAt) }))
-    .sort(
-      (a, b) =>
-        a.startedAtMs - b.startedAtMs ||
-        (a.row.session.id < b.row.session.id ? -1 : a.row.session.id > b.row.session.id ? 1 : 0) ||
-        a.row.position - b.row.position,
-    );
+  const ordered = [...rows].sort((a, b) => compareSessionKeys(a.session, b.session) || a.position - b.position);
   let records: RecordState = NO_RECORDS;
-  for (const { row } of ordered) {
-    const exercise = catalog.exercises.get(row.exerciseId);
-    if (!exercise) throw new UnknownExerciseError(row.exerciseId);
+  for (const row of ordered) {
+    const exercise = exerciseFor(row, catalog);
     if (row.kind === 'cardio') {
-      if (exercise.modality !== 'cardio') throw new KindMismatchError(row.exerciseId);
       const bout: CardioSetInput = {
         kind: 'cardio',
         id: row.setId,
@@ -266,10 +254,9 @@ export function recordsFromHistory(
         interval: row.interval,
         effort: null,
       };
-      records = applyBoutToRecords(records, bout, exercise, row.session.startedAt, cfg).records;
+      records = applyBoutToRecords(records, bout, cardioExercise(exercise), row.session.startedAt, cfg).records;
       continue;
     }
-    if (exercise.modality === 'cardio') throw new KindMismatchError(row.exerciseId);
     const set: LiftSetInput = {
       id: row.setId,
       exerciseId: row.exerciseId,
@@ -279,7 +266,7 @@ export function recordsFromHistory(
       isWarmup: false,
       effort: null,
     };
-    records = applySetToRecords(records, set, exercise.loadType, row.session.startedAt, cfg).records;
+    records = applySetToRecords(records, set, liftExercise(exercise).loadType, row.session.startedAt, cfg).records;
   }
   return records;
 }

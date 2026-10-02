@@ -1,10 +1,11 @@
+import { isSessionEditable } from '@domain/edit-window.ts';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { fetchSessionPage } from '../../lib/history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession } from '../../lib/history-rules.ts';
 import { CollectionTabs } from '../collection/CollectionScreen.tsx';
-import { formatXp } from '../workout/xp-preview.ts';
-import { formatSessionDate, isEditable, sessionXp } from './session-edit.ts';
+import { formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
+import { messageOf } from '../../lib/error-text.ts';
 
 function SessionItem({ session, now }: { session: HistorySession; now: number }) {
   const summaryParts = [
@@ -19,7 +20,7 @@ function SessionItem({ session, now }: { session: HistorySession; now: number })
           {session.historyOnly ? (
             <span className="history-tag history-only">Saved to history, no XP</span>
           ) : (
-            isEditable(session, now) && <span className="history-tag">Editable</span>
+            isSessionEditable(session, now) && <span className="history-tag">Editable</span>
           )}
         </span>
         <span className="muted">{summaryParts.join(' · ')}</span>
@@ -61,7 +62,7 @@ export function HistoryScreen() {
       setSessions([...sessions, ...page]);
       setHasMore(page.length === HISTORY_PAGE_SIZE);
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not load more workouts.');
+      setProblem(messageOf(error, 'Could not load more workouts.'));
     }
     setLoadingMore(false);
   };

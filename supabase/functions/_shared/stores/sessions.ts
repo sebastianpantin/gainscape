@@ -1,15 +1,15 @@
-import type { JsonValue, Transaction } from '../db.ts';
+import { isoTimestamp, type JsonValue, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
-  type CardioInterval,
-  type EffortInputType,
-  isWithinEditWindow,
-  resolveEffort,
+  isSessionEditable,
   type SessionKey,
   type SessionSummary,
+  setKind,
+  type StoredSet,
+  type WritableSet,
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
-import { inputSetColumns, type WritableSet } from './set-columns.ts';
+import { cardioFieldsFromRow, inputColumnsWithEffort } from './set-columns.ts';
 
 export interface StoredSession {
   userId: string;
@@ -35,9 +35,13 @@ export interface NewSessionRow {
   notes: string | null;
 }
 
-export async function lockUser(tx: Transaction, userId: string): Promise<void> {
+export async function lockUser(
+  tx: Transaction,
+  userId: string,
+  missingProfile = new HttpError(403, 'profile_missing'),
+): Promise<void> {
   const [profile] = await tx`select id from public.profiles where id = ${userId} for update`;
-  if (!profile) throw new HttpError(403, 'profile_missing');
+  if (!profile) throw missingProfile;
 }
 
 export async function findSession(tx: Transaction, sessionId: string): Promise<StoredSession | null> {
@@ -64,7 +68,7 @@ export async function requireOwnedSession(tx: Transaction, userId: string, sessi
     from public.sessions where id = ${sessionId}`;
   if (!row || row.user_id !== userId) throw new HttpError(404, 'session_not_found');
   return {
-    key: { id: sessionId, startedAt: new Date(row.started_at).toISOString() },
+    key: { id: sessionId, startedAt: isoTimestamp(row.started_at) },
     historyOnly: row.history_only,
     revision: row.revision,
     notes: row.notes,
@@ -72,34 +76,9 @@ export async function requireOwnedSession(tx: Transaction, userId: string, sessi
   };
 }
 
-export function isEditable(session: OwnedSession, nowMs: number): boolean {
-  return !session.historyOnly && isWithinEditWindow(session.key.startedAt, nowMs);
+export function isOwnedSessionEditable(session: OwnedSession, now: number): boolean {
+  return isSessionEditable({ historyOnly: session.historyOnly, startedAt: session.key.startedAt }, now);
 }
-
-interface StoredSetBase {
-  id: string;
-  exerciseId: string;
-  position: number;
-  effortInputType: EffortInputType | null;
-  effortValue: number | null;
-}
-
-export interface StoredLiftSet extends StoredSetBase {
-  kind: 'lift';
-  weightKg: number;
-  effectiveLoadKg: number;
-  reps: number;
-  isWarmup: boolean;
-}
-
-export interface StoredCardioSet extends StoredSetBase {
-  kind: 'cardio';
-  durationS: number;
-  distanceM: number | null;
-  interval: CardioInterval | null;
-}
-
-export type StoredSet = StoredLiftSet | StoredCardioSet;
 
 export async function loadStoredSets(tx: Transaction, sessionId: string): Promise<StoredSet[]> {
   const rows = await tx`
@@ -112,20 +91,9 @@ export async function loadStoredSets(tx: Transaction, sessionId: string): Promis
       exerciseId: row.exercise_id,
       position: row.position,
       effortInputType: row.effort_input_type,
-      effortValue: row.effort_value === null ? null : Number(row.effort_value),
+      effortValue: nullableNumber(row.effort_value),
     };
-    if (row.duration_s !== null) {
-      return {
-        ...base,
-        kind: 'cardio',
-        durationS: row.duration_s,
-        distanceM: row.distance_m === null ? null : Number(row.distance_m),
-        interval:
-          row.interval_rounds === null
-            ? null
-            : { workS: row.interval_work_s, restS: row.interval_rest_s, rounds: row.interval_rounds },
-      };
-    }
+    if (row.duration_s !== null) return { ...base, kind: 'cardio', ...cardioFieldsFromRow(row) };
     return {
       ...base,
       kind: 'lift',
@@ -151,7 +119,7 @@ export async function loadProfileSettings(tx: Transaction, userId: string): Prom
   const [privateProfile] =
     await tx`select bodyweight_kg, timezone from public.profile_private where user_id = ${userId}`;
   return {
-    bodyweightKg: privateProfile?.bodyweight_kg == null ? null : Number(privateProfile.bodyweight_kg),
+    bodyweightKg: nullableNumber(privateProfile?.bodyweight_kg),
     timezone: privateProfile?.timezone ?? 'UTC',
   };
 }
@@ -169,9 +137,9 @@ export async function ownedProgramDayId(
 }
 
 export function placeholderSetRow(set: WritableSet, sessionId: string, userId: string, cfg: BalanceConfig) {
-  const kind = set.kind ?? 'lift';
+  const kind = setKind(set);
   return {
-    ...inputSetColumns(set, resolveEffort(set.effort, cfg, kind)),
+    ...inputColumnsWithEffort(set, cfg),
     session_id: sessionId,
     user_id: userId,
     rir: null,
@@ -184,6 +152,95 @@ export function placeholderSetRow(set: WritableSet, sessionId: string, userId: s
     xp_awarded: 0,
     pace_flagged: false,
   };
+}
+
+export async function writeEditedSets(
+  tx: Transaction,
+  userId: string,
+  sessionId: string,
+  storedSets: readonly StoredSet[],
+  requested: readonly WritableSet[],
+  cfg: BalanceConfig,
+): Promise<void> {
+  const requestedIds = new Set(requested.map((set) => set.id));
+  const storedIds = new Set(storedSets.map((set) => set.id));
+  const removedIds = storedSets.filter((set) => !requestedIds.has(set.id)).map((set) => set.id);
+  const kept = requested.filter((set) => storedIds.has(set.id));
+  const added = requested.filter((set) => !storedIds.has(set.id));
+
+  await tx`set constraints public.sets_session_id_position_key deferred`;
+  if (removedIds.length > 0) {
+    await tx`delete from public.sets where session_id = ${sessionId} and id = any(${removedIds}::uuid[])`;
+  }
+  if (kept.length > 0) {
+    const rows = kept.map((set) => inputColumnsWithEffort(set, cfg));
+    await tx`
+      update public.sets as target
+      set exercise_id = derived.exercise_id,
+          position = derived.position,
+          weight_kg = derived.weight_kg,
+          effective_load_kg = derived.effective_load_kg,
+          reps = derived.reps,
+          is_warmup = derived.is_warmup,
+          effort_input_type = derived.effort_input_type,
+          effort_value = derived.effort_value,
+          duration_s = derived.duration_s,
+          distance_m = derived.distance_m,
+          interval_work_s = derived.interval_work_s,
+          interval_rest_s = derived.interval_rest_s,
+          interval_rounds = derived.interval_rounds,
+          counted_work_s = derived.counted_work_s,
+          updated_at = now()
+      from jsonb_to_recordset(${tx.json(rows as unknown as JsonValue)}) as derived (
+        id uuid,
+        exercise_id uuid,
+        position int,
+        weight_kg numeric,
+        effective_load_kg numeric,
+        reps int,
+        is_warmup boolean,
+        effort_input_type public.effort_input_type,
+        effort_value numeric,
+        duration_s int,
+        distance_m numeric,
+        interval_work_s int,
+        interval_rest_s int,
+        interval_rounds int,
+        counted_work_s int
+      )
+      where target.id = derived.id and target.session_id = ${sessionId}`;
+  }
+  if (added.length > 0) {
+    const rows = added.map((set) => placeholderSetRow(set, sessionId, userId, cfg));
+    await tx`insert into public.sets ${tx(rows)}`;
+  }
+}
+
+export async function bumpRevision(tx: Transaction, sessionId: string, notes: string | null): Promise<number> {
+  const [updated] = await tx`
+    update public.sessions
+    set notes = ${notes}, revision = revision + 1, updated_at = now()
+    where id = ${sessionId}
+    returning revision`;
+  return updated.revision;
+}
+
+export async function sessionExerciseIds(tx: Transaction, sessionId: string): Promise<string[]> {
+  const rows = await tx`select distinct exercise_id from public.sets where session_id = ${sessionId}`;
+  return rows.map((row) => row.exercise_id);
+}
+
+export async function tombstoneSession(tx: Transaction, userId: string, key: SessionKey): Promise<void> {
+  await tx`
+    insert into public.deleted_sessions (id, user_id, started_at)
+    values (${key.id}, ${userId}, ${key.startedAt})`;
+  await tx`delete from public.sessions where id = ${key.id} and user_id = ${userId}`;
+}
+
+export async function markSessionsDerivedAt(tx: Transaction, userId: string, version: number): Promise<void> {
+  await tx`
+    update public.sessions set derived_balance_version = ${version}
+    where user_id = ${userId} and not history_only and derived_balance_version <> ${version}`;
 }
 
 export async function insertSession(

@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createInterface } from 'node:readline/promises';
 import { buildPages } from './build-pages.ts';
 import {
+  ask,
   assertInviteOnly,
   cliEnvironment,
   databaseCliEnvironment,
@@ -24,9 +24,7 @@ function run(command: string, args: string[], env: Record<string, string>): void
 }
 
 async function confirm(question: string): Promise<boolean> {
-  const prompt = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await prompt.question(`${question} `);
-  prompt.close();
+  const answer = await ask(`${question} `);
   return answer.trim().toLowerCase() === 'yes';
 }
 

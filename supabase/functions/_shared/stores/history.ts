@@ -1,4 +1,4 @@
-import type { Transaction } from '../db.ts';
+import { isoTimestamp, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   effortInputFromStored,
@@ -6,6 +6,7 @@ import {
   type SessionInput,
   type SessionKey,
 } from '../domain/index.ts';
+import { cardioFieldsFromRow } from './set-columns.ts';
 
 export async function loadReplayableSessions(
   tx: Transaction,
@@ -27,15 +28,11 @@ export async function loadReplayableSessions(
   for (const row of rows) {
     const session: SessionInput = sessions.get(row.session_id) ?? {
       id: row.session_id,
-      startedAt: new Date(row.started_at).toISOString(),
+      startedAt: isoTimestamp(row.started_at),
       sets: [],
     };
     const identity = { id: row.set_id, exerciseId: row.exercise_id, position: row.position };
-    const effort = effortInputFromStored(
-      row.effort_input_type,
-      row.effort_value === null ? null : Number(row.effort_value),
-      cfg,
-    );
+    const effort = effortInputFromStored(row.effort_input_type, nullableNumber(row.effort_value), cfg);
     session.sets.push(
       row.duration_s === null
         ? {
@@ -46,17 +43,7 @@ export async function loadReplayableSessions(
             effort,
             recordedEffectiveLoadKg: Number(row.effective_load_kg),
           }
-        : {
-            ...identity,
-            kind: 'cardio',
-            durationS: row.duration_s,
-            distanceM: row.distance_m === null ? null : Number(row.distance_m),
-            interval:
-              row.interval_rounds === null
-                ? null
-                : { workS: row.interval_work_s, restS: row.interval_rest_s, rounds: row.interval_rounds },
-            effort,
-          },
+        : { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row), effort },
     );
     sessions.set(row.session_id, session);
   }
@@ -82,21 +69,12 @@ export async function loadRecordHistory(
   return rows.map((row): RecordHistoryRow => {
     const identity = {
       exerciseId: row.exercise_id,
-      session: { id: row.session_id, startedAt: new Date(row.started_at).toISOString() },
+      session: { id: row.session_id, startedAt: isoTimestamp(row.started_at) },
       setId: row.set_id,
       position: row.position,
     };
     if (row.duration_s === null) return { ...identity, weightKg: Number(row.weight_kg), reps: row.reps };
-    return {
-      ...identity,
-      kind: 'cardio',
-      durationS: row.duration_s,
-      distanceM: row.distance_m === null ? null : Number(row.distance_m),
-      interval:
-        row.interval_rounds === null
-          ? null
-          : { workS: row.interval_work_s, restS: row.interval_rest_s, rounds: row.interval_rounds },
-    };
+    return { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row) };
   });
 }
 

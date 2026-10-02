@@ -4,6 +4,8 @@ import {
   builtInExerciseId,
   createTestUser,
   db,
+  env,
+  fetchFunction,
   normalizedSnapshot,
   postCompleteSession,
   postFunction,
@@ -12,23 +14,7 @@ import {
   type TestUser,
 } from './local-stack.ts';
 import { DEFAULT_BALANCE } from '@domain/index.ts';
-import { HOUR_MS } from './loot-support.ts';
-
-type Effort = { type: 'level'; level: 'hard' | 'near_failure' } | null;
-
-function workingSet(exerciseId: string, position: number, weightKg: number, reps: number, effort: Effort) {
-  return { id: randomUUID(), exerciseId, position, weightKg, reps, isWarmup: false, effort };
-}
-
-function sessionStartedHoursAgo(hoursAgo: number, sets: ReturnType<typeof workingSet>[]) {
-  const startedAt = new Date(Date.now() - hoursAgo * HOUR_MS);
-  return {
-    id: randomUUID(),
-    startedAt: startedAt.toISOString(),
-    endedAt: new Date(startedAt.getTime() + HOUR_MS / 2).toISOString(),
-    sets,
-  };
-}
+import { aBout, aSet, HOUR_MS, hoursAgo, payloadAt } from './session-support.ts';
 
 let lifter: TestUser;
 let benchId: string;
@@ -45,19 +31,19 @@ beforeAll(async () => {
   await setBodyweight(lifter, 80);
 
   const sessions = [
-    sessionStartedHoursAgo(6, [
-      workingSet(benchId, 0, 80, 5, { type: 'level', level: 'hard' }),
-      workingSet(pullUpId, 1, 0, 8, { type: 'level', level: 'hard' }),
-    ]),
-    sessionStartedHoursAgo(4, [
-      workingSet(benchId, 0, 80, 6, null),
-      workingSet(squatId, 1, 100, 5, { type: 'level', level: 'near_failure' }),
+    payloadAt(hoursAgo(6), [aSet(benchId, 0, 80), aSet(pullUpId, 1, 0, { reps: 8 })]),
+    payloadAt(hoursAgo(4), [
+      aSet(benchId, 0, 80, { reps: 6, effort: null }),
+      aSet(squatId, 1, 100, { effort: { type: 'level', level: 'near_failure' } }),
     ]),
   ];
   for (const session of sessions) expect((await postCompleteSession(lifter.accessToken, session)).status).toBe(200);
 
   await setBodyweight(lifter, 85);
-  const third = sessionStartedHoursAgo(2, [workingSet(pullUpId, 0, 0, 9, null), workingSet(benchId, 1, 82.5, 5, null)]);
+  const third = payloadAt(hoursAgo(2), [
+    aSet(pullUpId, 0, 0, { reps: 9, effort: null }),
+    aSet(benchId, 1, 82.5, { effort: null }),
+  ]);
   expect((await postCompleteSession(lifter.accessToken, third)).status).toBe(200);
 });
 
@@ -77,27 +63,9 @@ describe('rebuild-caches', () => {
   it('re-derives cardio records and the cardio summaries', async () => {
     const runner = await createTestUser();
     const runId = await builtInExerciseId('running');
-    const run = (hoursAgo: number, durationS: number, distanceM: number) => {
-      const startedAt = new Date(Date.now() - hoursAgo * HOUR_MS);
-      return {
-        id: randomUUID(),
-        startedAt: startedAt.toISOString(),
-        endedAt: new Date(startedAt.getTime() + HOUR_MS).toISOString(),
-        sets: [
-          {
-            kind: 'cardio',
-            id: randomUUID(),
-            exerciseId: runId,
-            position: 0,
-            durationS,
-            distanceM,
-            interval: null,
-            effort: null,
-          },
-        ],
-      };
-    };
-    for (const session of [run(6, 1800, 5000), run(4, 2160, 6000), run(2, 1500, 5000)]) {
+    const run = (hours: number, durationS: number, distanceM: number) =>
+      payloadAt(hoursAgo(hours), [aBout(runId, 0, { durationS, distanceM, effort: null })]);
+    for (const session of [run(6, 1800, 5000), run(4, 1790, 5800), run(2, 1500, 5000)]) {
       expect((await postCompleteSession(runner.accessToken, session)).status).toBe(200);
     }
     const before = await normalizedSnapshot(runner.id);
@@ -142,11 +110,14 @@ describe('rebuild-caches', () => {
     const user = await createTestUser();
     await setBodyweight(user, 80);
     const sessions = [
-      sessionStartedHoursAgo(2, [workingSet(benchId, 0, 90, 5, null), workingSet(pullUpId, 1, 0, 10, null)]),
-      sessionStartedHoursAgo(6, [workingSet(benchId, 0, 80, 5, { type: 'level', level: 'hard' })]),
-      sessionStartedHoursAgo(4, [
-        workingSet(squatId, 0, 100, 5, { type: 'level', level: 'near_failure' }),
-        workingSet(pullUpId, 1, 0, 8, { type: 'level', level: 'hard' }),
+      payloadAt(hoursAgo(2), [
+        aSet(benchId, 0, 90, { effort: null }),
+        aSet(pullUpId, 1, 0, { reps: 10, effort: null }),
+      ]),
+      payloadAt(hoursAgo(6), [aSet(benchId, 0, 80)]),
+      payloadAt(hoursAgo(4), [
+        aSet(squatId, 0, 100, { effort: { type: 'level', level: 'near_failure' } }),
+        aSet(pullUpId, 1, 0, { reps: 8 }),
       ]),
     ];
     for (const session of sessions) expect((await postCompleteSession(user.accessToken, session)).status).toBe(200);
@@ -158,12 +129,14 @@ describe('rebuild-caches', () => {
   it('rebuild equals the incremental state after edits and deletes', async () => {
     const user = await createTestUser();
     await setBodyweight(user, 80);
-    const hard = { type: 'level', level: 'hard' } as const;
     const sessions = [
-      sessionStartedHoursAgo(2, [workingSet(benchId, 0, 90, 5, null), workingSet(pullUpId, 1, 0, 10, null)]),
-      sessionStartedHoursAgo(8, [workingSet(benchId, 0, 80, 5, hard), workingSet(squatId, 1, 100, 5, hard)]),
-      sessionStartedHoursAgo(4, [workingSet(squatId, 0, 110, 3, null), workingSet(pullUpId, 1, 0, 8, hard)]),
-      sessionStartedHoursAgo(6, [workingSet(benchId, 0, 85, 4, hard)]),
+      payloadAt(hoursAgo(2), [
+        aSet(benchId, 0, 90, { effort: null }),
+        aSet(pullUpId, 1, 0, { reps: 10, effort: null }),
+      ]),
+      payloadAt(hoursAgo(8), [aSet(benchId, 0, 80), aSet(squatId, 1, 100)]),
+      payloadAt(hoursAgo(4), [aSet(squatId, 0, 110, { reps: 3, effort: null }), aSet(pullUpId, 1, 0, { reps: 8 })]),
+      payloadAt(hoursAgo(6), [aSet(benchId, 0, 85, { reps: 4 })]),
     ];
     for (const session of sessions) expect((await postCompleteSession(user.accessToken, session)).status).toBe(200);
     const edit = (body: unknown) => postFunction('edit-session', user.accessToken, body);
@@ -203,7 +176,7 @@ describe('rebuild-caches', () => {
 
   it('rebuild removes cache rows of exercises with no sessions', async () => {
     const user = await createTestUser();
-    const session = sessionStartedHoursAgo(1, [workingSet(benchId, 0, 80, 5, { type: 'level', level: 'hard' })]);
+    const session = payloadAt(hoursAgo(1), [aSet(benchId, 0, 80)]);
     expect((await postCompleteSession(user.accessToken, session)).status).toBe(200);
     await db`insert into public.rep_maxes (user_id, exercise_id, reps, load_kg, achieved_at)
              values (${user.id}, ${squatId}, 3, 120, now())`;
@@ -217,5 +190,27 @@ describe('rebuild-caches', () => {
   it('refuses callers without the service role key', async () => {
     const result = await rebuildCaches(lifter.id, lifter.accessToken);
     expect(result.status).toBe(403);
+    expect(result.body.error).toBe('service_role_required');
+  });
+
+  it('returns 404 user_not_found for a user without a profile', async () => {
+    const result = await rebuildCaches(randomUUID());
+    expect(result.status).toBe(404);
+    expect(result.body.error).toBe('user_not_found');
+  });
+
+  it.each([
+    ['a missing user id', JSON.stringify({}), 422, 'invalid_payload'],
+    ['a user id that is not a uuid', JSON.stringify({ userId: 'not-a-uuid' }), 422, 'invalid_payload'],
+    ['an unknown key', JSON.stringify({ userId: randomUUID(), extra: true }), 422, 'invalid_payload'],
+    ['a body that is not JSON', '{', 400, 'invalid_json'],
+  ])('rejects %s', async (_case, body, status, code) => {
+    const response = await fetchFunction('rebuild-caches', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
+      body,
+    });
+    expect(response.status, response.rawBody).toBe(status);
+    expect(JSON.parse(response.rawBody).error).toBe(code);
   });
 });

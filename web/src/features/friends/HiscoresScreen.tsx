@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { fetchSkills, type Skill } from '../../lib/catalog.ts';
+import { fetchSkills } from '../../lib/catalog.ts';
+import type { Skill } from '../../lib/catalog-rules.ts';
 import { fetchHiscores } from '../../lib/social.ts';
 import { type HiscoreMetric, type HiscoreRow, rankHiscores, skillMetric } from '../../lib/social-rules.ts';
 import { FriendsTabs } from './FriendsTabs.tsx';

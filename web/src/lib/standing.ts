@@ -1,41 +1,6 @@
-import { combatLevel, levelProgress, type LevelProgress, totalLevel } from '@domain/index.ts';
 import { useEffect, useState } from 'react';
-import { fetchSkills, fetchSkillXp, type Skill } from './catalog.ts';
-
-export interface SkillStanding {
-  skill: Skill;
-  progress: LevelProgress;
-}
-
-export interface Standing {
-  skills: SkillStanding[];
-  totalLevel: number;
-  combatLevel: number;
-}
-
-const MONOGRAMS: Record<string, string> = {
-  chest: 'CH',
-  back: 'BK',
-  shoulders: 'SH',
-  arms: 'AR',
-  legs: 'LG',
-  core: 'CR',
-};
-
-export function monogramFor(skillKey: string): string {
-  return MONOGRAMS[skillKey] ?? skillKey.slice(0, 2).toUpperCase();
-}
-
-export function standingFrom(skills: Skill[], xpBySkillId: Map<string, number>): Standing {
-  const standings = skills.map((skill) => ({ skill, progress: levelProgress(xpBySkillId.get(skill.id) ?? 0) }));
-  return {
-    skills: standings,
-    totalLevel: totalLevel(standings.map((standing) => standing.progress.level)),
-    combatLevel: combatLevel(
-      standings.map((standing) => ({ level: standing.progress.level, weight: standing.skill.combatWeight })),
-    ),
-  };
-}
+import { fetchSkills, fetchSkillXp } from './catalog.ts';
+import { type Standing, standingFrom } from './standing-rules.ts';
 
 export async function fetchStanding(userId: string): Promise<Standing> {
   const [skills, xpBySkillId] = await Promise.all([fetchSkills(), fetchSkillXp(userId)]);

@@ -8,6 +8,7 @@ import {
   rateLimitHits,
   type TestUser,
 } from './local-stack.ts';
+import { aSet, hoursAgo, payloadAt } from './session-support.ts';
 
 const templateContents = {
   ppl: {
@@ -187,16 +188,7 @@ async function saveProgram(user: TestUser, program: unknown) {
 }
 
 function finishedSession(programDayId: unknown, exerciseId = benchId) {
-  const endedAt = new Date();
-  return {
-    id: randomUUID(),
-    startedAt: new Date(endedAt.getTime() - 30 * 60 * 1000).toISOString(),
-    endedAt: endedAt.toISOString(),
-    programDayId,
-    sets: [
-      { id: randomUUID(), exerciseId, position: 0, weightKg: 60, reps: 8, effort: { type: 'level', level: 'hard' } },
-    ],
-  };
+  return { ...payloadAt(hoursAgo(1), [aSet(exerciseId, 0, 60, { reps: 8 })]), programDayId };
 }
 
 async function storedProgramDayId(sessionId: string): Promise<string | null> {
@@ -588,27 +580,18 @@ describe('complete-session with a program day', () => {
 describe('last_logged_sets', () => {
   it('returns the latest non-warm-up set per exercise, only for the caller', async () => {
     const [lifter, stranger] = await Promise.all([createTestUser(), createTestUser()]);
-    const now = Date.now();
-    const sessionAt = (hoursAgo: number, sets: object[]) => ({
-      id: randomUUID(),
-      startedAt: new Date(now - hoursAgo * 3_600_000).toISOString(),
-      endedAt: new Date(now - hoursAgo * 3_600_000 + 1_800_000).toISOString(),
-      sets,
-    });
-    const set = (exerciseId: string, position: number, weightKg: number, reps: number, isWarmup = false) => ({
-      id: randomUUID(),
-      exerciseId,
-      position,
-      weightKg,
-      reps,
-      isWarmup,
-      effort: { type: 'level', level: 'hard' },
-    });
-    const later = sessionAt(3, [set(benchId, 0, 70, 6), set(benchId, 1, 72.5, 5), set(benchId, 2, 40, 12, true)]);
-    const earlier = sessionAt(20, [set(benchId, 0, 60, 8), set(squatId, 1, 100, 5)]);
+    const later = payloadAt(hoursAgo(3), [
+      aSet(benchId, 0, 70, { reps: 6 }),
+      aSet(benchId, 1, 72.5),
+      aSet(benchId, 2, 40, { reps: 12, isWarmup: true }),
+    ]);
+    const earlier = payloadAt(hoursAgo(20), [aSet(benchId, 0, 60, { reps: 8 }), aSet(squatId, 1, 100)]);
     for (const session of [earlier, later])
       expect((await postCompleteSession(lifter.accessToken, session)).status).toBe(200);
-    expect((await postCompleteSession(stranger.accessToken, sessionAt(1, [set(benchId, 0, 200, 1)]))).status).toBe(200);
+    expect(
+      (await postCompleteSession(stranger.accessToken, payloadAt(hoursAgo(1), [aSet(benchId, 0, 200, { reps: 1 })])))
+        .status,
+    ).toBe(200);
 
     const { data, error } = await lifter.client.rpc('last_logged_sets', { exercise_ids: [benchId, squatId] });
     expect(error).toBeNull();

@@ -1,12 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logCardio, logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import {
+  logCardio,
+  logExercise,
+  logWorkout,
+  openFromProfile,
+  openTab,
+  register,
+  uniqueUsername,
+} from './support/app.ts';
 
 async function logLandmineSession(page: Page, weightKg: number) {
   await openTab(page, 'Train');
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'landmine', 'Landmine Press', [{ weightKg, reps: 8 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'landmine', 'Landmine Press', [{ weightKg, reps: 8 }]));
 }
 
 function collectionHeadings(page: Page) {
@@ -26,7 +31,7 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await page.getByLabel('Equipment').selectOption('other');
   await page.getByLabel('Shoulders').fill('60');
   await page.getByLabel('Chest').fill('40');
-  await expect(page.getByTestId('share-total')).toHaveText('Total: 100%');
+  await expect(page.getByText(/^Total: \d+%$/)).toHaveText('Total: 100%');
   await page.getByRole('button', { name: 'Save exercise' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Landmine Press' })).toContainText('(custom)');
 
@@ -82,7 +87,7 @@ test('create and log a custom cardio exercise', async ({ page }) => {
   await page.getByLabel('Equipment').selectOption('machine');
   await page.getByLabel('Endurance').fill('70');
   await page.getByLabel('Agility').fill('30');
-  await expect(page.getByTestId('share-total')).toHaveText('Total: 100%');
+  await expect(page.getByText(/^Total: \d+%$/)).toHaveText('Total: 100%');
   await page.getByRole('button', { name: 'Save exercise' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Assault Bike' })).toContainText('(custom)');
 

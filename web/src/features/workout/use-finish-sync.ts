@@ -3,7 +3,7 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import type { WorkoutDraft } from '../../offline/draft-format.ts';
 import type { SyncedChange } from '../../offline/draft-session.ts';
 import type { DraftStore } from '../../offline/draft-store.ts';
-import { retryDelayMs } from '../../lib/function-client.ts';
+import { retryDelayMs } from '../../lib/function-client-rules.ts';
 import { attemptFinish } from '../../offline/finish-lock.ts';
 import { type FinishStatus, startFinishRetries } from '../../offline/finish-retries.ts';
 import { signOutKeepingDrafts, syncFinishedWorkout } from '../../offline/sync-workout.ts';

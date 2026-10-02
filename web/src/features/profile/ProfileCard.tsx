@@ -56,9 +56,7 @@ export function ProfileCard({ profile, totalLevel, combatLevel, collectionPercen
       <div className="row" style={{ gap: 14 }}>
         <ProfileBadge color={profile.badgeColor} initials={initialsFor(profile.displayName, profile.username)} />
         <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-          <h2 className="profile-name" data-testid="profile-display-name">
-            {profile.displayName}
-          </h2>
+          <h2 className="profile-name">{profile.displayName}</h2>
           <span className="muted">@{profile.username}</span>
           <span className="tiny" data-testid="profile-details">
             {detailLine(profile)}

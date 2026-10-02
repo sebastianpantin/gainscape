@@ -23,15 +23,7 @@ const noComments = {
 
 export default tseslint.config(
   {
-    ignores: [
-      'node_modules/',
-      'web/dist/',
-      'test-results/',
-      'playwright-report/',
-      'supabase/.temp/',
-      '.wrangler/',
-      'web/src/lib/database.types.ts',
-    ],
+    ignores: ['node_modules/', 'web/dist/', 'test-results/', 'playwright-report/', 'supabase/.temp/', '.wrangler/'],
   },
   js.configs.recommended,
   tseslint.configs.strict,

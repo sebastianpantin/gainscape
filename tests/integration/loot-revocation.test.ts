@@ -4,10 +4,8 @@ import { DEFAULT_LOOT } from '@domain/index.ts';
 import {
   ageSession,
   builtInExerciseId,
-  createTestUser,
   db,
   grantDrop,
-  ledgerMismatches,
   lootSnapshot,
   postFunction,
   rebuildCaches,
@@ -16,9 +14,11 @@ import {
 import {
   aBout,
   aSet,
-  type BoutShape,
-  DAY_MS,
   beyondEffortWindow,
+  type BoutShape,
+  createCustomExercise,
+  DAY_MS,
+  expectLedgerMatchesItems,
   HOUR_MS,
   localDateOf,
   payloadAt,
@@ -26,18 +26,13 @@ import {
   rollsOf,
   type SetShape,
   startsOnOneLocalDay,
-  TIMEZONE,
-} from './loot-support.ts';
+  trackedUsers,
+} from './session-support.ts';
 
-const users: string[] = [];
 let benchId: string;
 let squatId: string;
 
-async function freshUser(): Promise<TestUser> {
-  const user = await createTestUser(TIMEZONE);
-  users.push(user.id);
-  return user;
-}
+const { freshUser, checkAndClear } = trackedUsers(expectLedgerMatchesItems);
 
 async function fillCaps(userId: string, localDate: string): Promise<void> {
   const [regular] = await db`select id from public.drop_tables where key = 'regular'`;
@@ -112,7 +107,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  for (const userId of users) expect(await ledgerMismatches(userId), userId).toEqual([]);
+  await checkAndClear();
 });
 
 afterAll(async () => {
@@ -319,18 +314,7 @@ describe('edit-session', () => {
 
   it('revokes the PR drop when the PR set moves to a custom exercise', async () => {
     const user = await freshUser();
-    const customId = randomUUID();
-    const [chest] = await db`select id from public.skills where key = 'chest'`;
-    const saved = await user.client.rpc('save_custom_exercise', {
-      exercise: {
-        id: customId,
-        name: 'Revoked Press',
-        loadType: 'external',
-        equipment: 'machine',
-        shares: [{ skillId: chest.id, shareBp: 10000 }],
-      },
-    });
-    expect(saved.error).toBeNull();
+    const customId = await createCustomExercise(user);
     await postSession(user, payloadAt(new Date(Date.now() - 3 * DAY_MS), [aSet(customId, 0, 40)]));
     const { payload, prSet, regular, pr } = await prSessionWithDrops(user);
     const response = await edit(user, payload, [{ ...prSet, exerciseId: customId }, payload.sets[1]]);

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { webCollectionCounts } from './collection-support.ts';
-import { aSet, HOUR_MS, payloadAt, postSession } from './loot-support.ts';
+import { aSet, HOUR_MS, payloadAt, postSession } from './session-support.ts';
 import {
   admin,
   anon,
@@ -97,7 +97,7 @@ describe('get_profile', () => {
       from public.skills s left join public.user_skills u on u.skill_id = s.id and u.user_id = ${friend.id}`;
     expect(data.skillXp).toEqual(Object.fromEntries(skills.map((row) => [row.key, row.xp])));
     expect(data.skillXp.chest).toBeGreaterThan(0);
-    expect(data.collection).toEqual(await webCollectionCounts(friend.id));
+    expect(data.collection).toEqual(await webCollectionCounts(friend));
     expect(data.relation).toBe('friend');
 
     const stranger = await createTestUser();

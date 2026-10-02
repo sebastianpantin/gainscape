@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
+  currentStrength,
   effectiveReps,
   epley,
   estimateRir,
@@ -292,6 +293,42 @@ describe('strength state at a session', () => {
     });
     expect(results[0].e1rmBeforeKg).toBe(100);
     expect(results[1].e1rmBeforeKg).toBe(epley(50, 8));
+  });
+});
+
+describe('current strength after a session', () => {
+  const candidate = (exerciseId: string, setId: string, value: number | null) => ({ exerciseId, setId, value });
+
+  it("takes the session's best candidate and names its set when it beats the window", () => {
+    const current = currentStrength(knownStrength('bench', 100), [
+      candidate('bench', 'a', 104),
+      candidate('bench', 'b', 106),
+      candidate('bench', 'c', null),
+    ]);
+    expect(current).toEqual({ bench: { value: 106, sourceSetId: 'b' } });
+  });
+
+  it('keeps the window max with no source set when the session falls short', () => {
+    const current = currentStrength(knownStrength('bench', 110), [candidate('bench', 'a', 104)]);
+    expect(current).toEqual({ bench: { value: 110, sourceSetId: null } });
+  });
+
+  it('names the first set that reaches a tied best', () => {
+    const current = currentStrength(knownStrength('bench', 100), [
+      candidate('bench', 'a', 105),
+      candidate('bench', 'b', 105),
+    ]);
+    expect(current).toEqual({ bench: { value: 105, sourceSetId: 'a' } });
+  });
+
+  it('falls back to the last known max when neither the window nor the session has a candidate', () => {
+    const current = currentStrength(knownStrength('bench', null, 90), [candidate('bench', 'a', null)]);
+    expect(current).toEqual({ bench: { value: 90, sourceSetId: null } });
+  });
+
+  it('leaves out exercises with no strength at all and ignores exercises without candidates', () => {
+    const current = currentStrength(knownStrength('squat', 150), [candidate('bench', 'a', null)]);
+    expect(current).toEqual({});
   });
 });
 

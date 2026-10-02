@@ -1,6 +1,8 @@
 import type { BalanceConfig } from './balance.ts';
 import { MS_PER_DAY } from './edit-window.ts';
+import { liftExerciseFor } from './exercise-lookup.ts';
 import { fatigueAfterSet, fatiguedStrength } from './fatigue.ts';
+import { FLOAT_TOLERANCE, loadRatioAtFailure, repsAtFailure, roundTo } from './math.ts';
 import { compareSessionKeys, isBefore } from './ordering.ts';
 import type { SessionContext, Step } from './pipeline.ts';
 import {
@@ -8,37 +10,31 @@ import {
   isLiftResult,
   type LiftExerciseDef,
   type LiftSetResult,
+  measuresRepsCapacity,
   type SessionKey,
   type SetResult,
   type StrengthHistoryRow,
   type StrengthState,
 } from './types.ts';
 
-const FLOOR_TOLERANCE = 1e-9;
-
 const NO_STRENGTH: ExerciseStrength = Object.freeze({ windowMax: null, fallbackMax: null, hasPriorSession: false });
 
-export function roundTo(decimals: number, value: number): number {
-  const factor = 10 ** decimals;
-  return Math.round(value * factor) / factor;
-}
-
 export function epley(loadKg: number, repsToFailure: number): number {
-  return roundTo(2, loadKg * (1 + (repsToFailure - 1) / 30));
+  return roundTo(2, loadKg * loadRatioAtFailure(repsToFailure));
 }
 
 export function predictedMaxReps(loadKg: number, e1rmKg: number): number {
-  return Math.max(0, 1 + 30 * (e1rmKg / loadKg - 1));
+  return Math.max(0, repsAtFailure(e1rmKg / loadKg));
 }
 
 export function estimateRir(loadKg: number, reps: number, e1rmKg: number): number {
-  return Math.max(0, Math.floor(predictedMaxReps(loadKg, e1rmKg) - reps + FLOOR_TOLERANCE));
+  return Math.max(0, Math.floor(predictedMaxReps(loadKg, e1rmKg) - reps + FLOAT_TOLERANCE));
 }
 
 export function intensityBonus(reps: number, loadKg: number, e1rmKg: number | null, cfg: BalanceConfig): number {
   if (e1rmKg === null || e1rmKg <= 0 || loadKg <= 0) return 1;
   if (loadKg / e1rmKg <= cfg.intensityBonusStart) return 1;
-  const intensityIfTakenToFailure = 1 / (1 + (reps - 1) / 30);
+  const intensityIfTakenToFailure = 1 / loadRatioAtFailure(reps);
   if (intensityIfTakenToFailure <= cfg.intensityBonusStart) return 1;
   const progress = Math.min(
     1,
@@ -52,7 +48,7 @@ export function liftsNoLoad(exercise: LiftExerciseDef, effectiveLoadKg: number):
 }
 
 function usesRepsCapacity(exercise: LiftExerciseDef): boolean {
-  return exercise.loadType === 'bodyweight';
+  return measuresRepsCapacity(exercise.loadType);
 }
 
 function maxOrNull(...values: (number | null)[]): number | null {
@@ -118,7 +114,7 @@ interface StrengthDecision {
 function estimateFor(result: LiftSetResult, exercise: LiftExerciseDef, strengthBefore: number | null): number | null {
   if (strengthBefore === null || strengthBefore <= 0) return null;
   if (usesRepsCapacity(exercise)) {
-    return Math.max(0, Math.floor(strengthBefore - result.set.reps + FLOOR_TOLERANCE));
+    return Math.max(0, Math.floor(strengthBefore - result.set.reps + FLOAT_TOLERANCE));
   }
   if (result.effectiveLoadKg <= 0) return null;
   return estimateRir(result.effectiveLoadKg, result.set.reps, strengthBefore);
@@ -217,8 +213,8 @@ export const trackStrength: Step = (ctx: SessionContext) => {
   const progressByExercise = new Map<string, ExerciseSessionProgress>();
 
   const sets = ctx.sets.map((result): SetResult => {
-    const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
-    if (!isLiftResult(result) || exercise.modality === 'cardio') return result;
+    if (!isLiftResult(result)) return result;
+    const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const known = ctx.deps.strength?.[exercise.id] ?? NO_STRENGTH;
     const progress = progressByExercise.get(exercise.id) ?? {
       strengthAtSessionStart: known.windowMax ?? known.fallbackMax,

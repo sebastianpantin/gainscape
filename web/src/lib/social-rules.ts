@@ -1,7 +1,8 @@
 import { combatLevel, levelForXp, totalLevel } from '@domain/index.ts';
 import { CARDIO_RECORD_KINDS, type CardioRecordKind } from '@domain/types.ts';
 import { formatCardioRecord } from './cardio-rules.ts';
-import type { LoadType, PaceUnit } from './catalog.ts';
+import { collectionPercent } from './collection-rules.ts';
+import type { LoadType, PaceUnit } from './catalog-rules.ts';
 import { formatLoad } from './format.ts';
 import { capitalized } from './names.ts';
 import type { BadgeColor, UnitPref } from './profile-rules.ts';
@@ -216,10 +217,6 @@ export function relativeTime(occurredAt: string, now: number = Date.now()): stri
   if (elapsed < DAY_MS) return `${Math.floor(elapsed / HOUR_MS)} h`;
   if (elapsed < 2 * DAY_MS) return 'yesterday';
   return `${Math.floor(elapsed / DAY_MS)} days`;
-}
-
-export function collectionPercent(filled: number, total: number): number {
-  return total === 0 ? 0 : Math.round((filled / total) * 100);
 }
 
 function levelsOf(row: HiscoreRow, skills: readonly HiscoreSkill[]): number[] {

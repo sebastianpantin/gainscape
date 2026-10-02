@@ -23,6 +23,7 @@ import {
 } from '../../lib/social-rules.ts';
 import { ProfileBadge } from '../profile/ProfileCard.tsx';
 import { FriendsTabs } from './FriendsTabs.tsx';
+import { messageOf } from '../../lib/error-text.ts';
 
 const REQUEST_BADGE_SIZE = 36;
 const GONE_POST = socialErrorMessage({ message: 'event_not_found' });
@@ -30,7 +31,7 @@ const GONE_POST = socialErrorMessage({ message: 'event_not_found' });
 type LoadState = { status: 'loading' } | { status: 'failed'; problem: string } | { status: 'ready' };
 
 function problemText(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong. Try again.';
+  return messageOf(error, 'Something went wrong. Try again.');
 }
 
 function loadFriendsAndFeed(): Promise<[FriendRow[], FeedItem[]]> {
@@ -48,7 +49,7 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
   const text = feedText(item, unitPref);
   const kind = item.type === 'level_up' || item.type === 'level_99' ? 'level' : item.type;
   return (
-    <li className="panel feed-item" data-testid="feed-item">
+    <li className="panel feed-item">
       <span className={`feed-badge ${kind}`} aria-hidden="true">
         {feedBadge(item)}
       </span>
@@ -244,7 +245,7 @@ export function FriendsScreen() {
       {load.status === 'ready' && (
         <>
           {incoming.map((friend) => (
-            <div className="panel row" key={friend.userId} data-testid="incoming-request">
+            <div className="panel row" key={friend.userId}>
               <ProfileBadge
                 color={friend.badgeColor}
                 initials={initialsFor(friend.displayName, friend.username)}

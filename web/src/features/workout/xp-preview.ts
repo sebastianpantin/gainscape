@@ -6,6 +6,7 @@ import {
   DEFAULT_BALANCE,
   effectiveLoadForNewSet,
   type ExerciseDef,
+  FULL_SHARE_BASIS_POINTS,
   type LiftExerciseDef,
   type LiftSetInput,
   processSession,
@@ -16,6 +17,7 @@ import {
   type StrengthState,
 } from '@domain/index.ts';
 import { isLoggableBout } from '../../lib/cardio-rules.ts';
+import { formatXp } from '../../lib/format.ts';
 import type {
   CardioDraftExercise,
   CardioDraftSet,
@@ -34,7 +36,6 @@ export interface SetPreview {
 
 const UNKNOWN_PREVIEW: SetPreview = Object.freeze({ xp: 0, basis: 'unknown', rir: null });
 const PREVIEW_SKILL_ID = 'preview';
-const FULL_SHARE_BASIS_POINTS = 10_000;
 const PREVIEW_SESSION_ID = 'preview';
 const PREVIEW_STARTED_AT = '1970-01-01T00:00:00.000Z';
 const REPS_MODEL_PLACEHOLDER_BODYWEIGHT_KG = 0;
@@ -210,6 +211,23 @@ export function previewSession(
   );
 }
 
-export function formatXp(xp: number): string {
-  return xp.toLocaleString('en-US');
+export function previewXpLabel(preview: SetPreview): string {
+  return preview.basis === 'unknown' ? '~?' : `~${formatXp(preview.xp)}`;
+}
+
+export function previewNote(preview: SetPreview, cfg: BalanceConfig = DEFAULT_BALANCE): string {
+  const firstRirWithoutXp = cfg.effectiveRirWindow + 1;
+  if (preview.basis === 'logged' && preview.rir !== null && preview.rir >= firstRirWithoutXp) return 'counts for e1RM';
+  if (preview.basis === 'estimated') return `est. RIR ${preview.rir}`;
+  if (preview.basis === 'cold_start') return 'first time';
+  return '';
+}
+
+export function donePreviewTotal(
+  previews: readonly (readonly SetPreview[])[],
+  exercises: readonly { sets: readonly { done: boolean }[] }[],
+): number {
+  return previews
+    .flatMap((sets, exerciseIndex) => sets.filter((_, setIndex) => exercises[exerciseIndex].sets[setIndex].done))
+    .reduce((sum, preview) => sum + preview.xp, 0);
 }

@@ -1,21 +1,21 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
-import { MINIMUM_PASSWORD_LENGTH } from '../../lib/account.ts';
 import {
   authCallbackUrl,
   authErrorMessage,
+  MINIMUM_PASSWORD_LENGTH,
   RESEND_COOLDOWN_SECONDS,
   USERNAME_HINT,
   USERNAME_PATTERN,
 } from '../../lib/auth-links.ts';
 import { signOutSettled } from '../../lib/auth-restore.ts';
+import { RATE_LIMITED_STATUS } from '../../lib/rate-limit.ts';
 import { supabase } from '../../lib/supabase.ts';
 import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
 
 type Mode = 'sign-in' | 'register' | 'check-email' | 'forgot' | 'reset-sent';
 
 const SIGNUP_TRIGGER_FAILURE = 'Database error saving new user';
-const RATE_LIMITED_STATUS = 429;
 const MILLISECONDS_PER_SECOND = 1000;
 
 const emailRedirectTo = () => authCallbackUrl(window.location.origin);

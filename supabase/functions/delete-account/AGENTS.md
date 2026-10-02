@@ -9,11 +9,11 @@ POST endpoint that permanently deletes the caller's account after they confirm t
 
 ## Key Files
 
-| File        | Description                                                                                                                             |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`  | Handler; bucket `delete_account_hour`; 403 `confirmation_mismatch` and `wrong_password`; password verified with a throwaway anon client |
-| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                     |
-| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                          |
+| File        | Description                                                                                                                                                                                                                                               |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`  | Handler via `serveAuthenticated`; strict body `{ confirmUsername, password }` (400 `invalid_json`, 422 `invalid_payload`); bucket `delete_account_hour`; 403 `confirmation_mismatch` and `wrong_password`; password verified with a throwaway anon client |
+| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                                                                       |
+| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                                                                            |
 
 ## For AI Agents
 

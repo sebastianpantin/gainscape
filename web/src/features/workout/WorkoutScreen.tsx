@@ -2,15 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { DEFAULT_BALANCE, type StrengthState } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { canAddBout } from '../../lib/cardio-rules.ts';
-import { type Exercise, fetchExercises, isLiftExercise, type LoadType, saveBodyweight } from '../../lib/catalog.ts';
+import { fetchExercises } from '../../lib/catalog.ts';
+import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
 import { type ExerciseStrengthView, fetchExerciseStrength, fetchStrengthState } from '../../lib/collection-data.ts';
-import { fetchProfile } from '../../lib/profile.ts';
+import { strengthText } from '../../lib/collection-rules.ts';
+import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
-import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
-import { REQUEST_TIMEOUT_MS } from '../../lib/supabase.ts';
-import { formatWeight } from '../../lib/units.ts';
+import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
+import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
+import { formatXp } from '../../lib/format.ts';
 import {
   addCardioExercise,
   addExercise,
@@ -40,20 +42,8 @@ import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
-import { formatXp, previewSession } from './xp-preview.ts';
-
-const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
-const LONG_SYNC_WAIT_MS = 60_000;
-
-function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
-  if (lastProblem !== RATE_LIMITED_CODE) {
-    return `Couldn't reach the server (${lastProblem}). Retrying — your workout is saved on this device.`;
-  }
-  if (waitMs !== undefined && waitMs > LONG_SYNC_WAIT_MS) {
-    return `Sync limit reached; this workout will sync in ${waitText(waitMs / 1000)}. It's saved on this device.`;
-  }
-  return "Sync limit reached; retrying shortly. It's saved on this device.";
-}
+import { rejectionText, syncProblemText } from './workout-rules.ts';
+import { donePreviewTotal, previewSession } from './xp-preview.ts';
 
 interface WorkoutScreenProps {
   userId: string;
@@ -304,7 +294,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           <BodyweightPrompt
             unit={unitPref}
             onSave={async (bodyweightKg) => {
-              await saveBodyweight(userId, bodyweightKg);
+              await updatePrivateProfile(userId, { bodyweightKg });
               setBodyweightKg(bodyweightKg);
               retryNow();
             }}
@@ -313,9 +303,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         {finishStatus.kind === 'rejected' && finishStatus.reason !== 'bodyweight_required' && (
           <div className="panel stack">
             <p className="problem" role="alert">
-              {EXERCISE_CHANGED_REASONS.has(finishStatus.reason)
-                ? 'Load type of an exercise changed; check the weights'
-                : `The server rejected this workout: ${finishStatus.reason}`}
+              {rejectionText(finishStatus.reason)}
             </p>
             <button className="button" type="button" onClick={backToEditing}>
               Back to editing
@@ -358,17 +346,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         : addExercise(draft, exercise.id, exercise.name, exercise.loadType);
     changeDraft(addSet(added, draft.exercises.length));
   };
-  const previewTotal = previews
-    .flatMap((sets, exerciseIndex) => sets.filter((_, setIndex) => draft.exercises[exerciseIndex].sets[setIndex].done))
-    .reduce((sum, preview) => sum + preview.xp, 0);
-
-  const strengthLine = (exerciseId: string, loadType: LoadType) => {
-    const known = strength?.get(exerciseId);
-    if (!known) return null;
-    if (loadType === 'bodyweight' && known.repsCapacity !== null) return `capacity ~${known.repsCapacity} reps`;
-    if (known.e1rmKg !== null) return `e1RM ${formatWeight(known.e1rmKg, unitPref)}`;
-    return null;
-  };
+  const previewTotal = donePreviewTotal(previews, draft.exercises);
 
   return (
     <main className="screen stack">
@@ -446,7 +424,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         }
         const details = [
           exercise.target && `${exercise.target.sets} × ${exercise.target.repsMin}–${exercise.target.repsMax}`,
-          strengthLine(exercise.exerciseId, exercise.loadType),
+          strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
         ].filter(Boolean);
         return (
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>

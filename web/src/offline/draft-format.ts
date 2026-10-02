@@ -1,5 +1,5 @@
 import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
-import type { CardioActivity, LoadType } from '../lib/catalog.ts';
+import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 4;
 const PRE_CARDIO_FORMAT_VERSION = 3;
@@ -211,7 +211,7 @@ export function nextBoutValues(previous: BoutValues | undefined): BoutValues {
 }
 
 export function addSet(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
-  return updateExercise(draft, exerciseIndex, (exercise) => {
+  return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio') {
       const newBout: CardioDraftSet = {
         id: crypto.randomUUID(),
@@ -237,7 +237,7 @@ export function updateSet(
   setId: string,
   changes: Partial<Omit<DraftSet, 'id'>>,
 ): WorkoutDraft {
-  return updateExercise(draft, exerciseIndex, (exercise) =>
+  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
     exercise.modality === 'lift'
       ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
       : exercise,
@@ -250,44 +250,37 @@ export function updateBout(
   setId: string,
   changes: Partial<Omit<CardioDraftSet, 'id' | 'kind'>>,
 ): WorkoutDraft {
-  return updateExercise(draft, exerciseIndex, (exercise) =>
+  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
     exercise.modality === 'cardio'
       ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
       : exercise,
   );
 }
 
-type AnyDraftSet = DraftSet | CardioDraftSet;
+type SetOf<E> = E extends { sets: (infer S)[] } ? S : never;
 
-function withSets(exercise: DraftExercise, change: <S extends AnyDraftSet>(sets: S[]) => S[]): DraftExercise {
-  return exercise.modality === 'cardio'
-    ? { ...exercise, sets: change(exercise.sets) }
-    : { ...exercise, sets: change(exercise.sets) };
+export function withSets<E extends { sets: { id: string }[] }>(
+  exercise: E,
+  change: <S extends SetOf<E>>(sets: S[]) => S[],
+): E {
+  return { ...exercise, sets: change(exercise.sets as SetOf<E>[]) };
 }
 
 export function removeSet(draft: WorkoutDraft, exerciseIndex: number, setId: string): WorkoutDraft {
-  return updateExercise(draft, exerciseIndex, (exercise) =>
+  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
     withSets(exercise, (sets) => sets.filter((set) => set.id !== setId)),
   );
 }
 
-export function updateExerciseAt<Exercise, Owner extends { exercises: Exercise[] }>(
+export function updateExerciseAt<Owner extends { exercises: unknown[] }>(
   owner: Owner,
   exerciseIndex: number,
-  update: (exercise: Exercise) => Exercise,
+  update: (exercise: Owner['exercises'][number]) => Owner['exercises'][number],
 ): Owner {
   return {
     ...owner,
     exercises: owner.exercises.map((exercise, index) => (index === exerciseIndex ? update(exercise) : exercise)),
   };
-}
-
-function updateExercise(
-  draft: WorkoutDraft,
-  exerciseIndex: number,
-  update: (exercise: DraftExercise) => DraftExercise,
-): WorkoutDraft {
-  return updateExerciseAt(draft, exerciseIndex, update);
 }
 
 export function doneSetCount(draft: WorkoutDraft): number {
@@ -394,7 +387,7 @@ export function startDraftFromDay(
 }
 
 export function toggleSetDone(draft: WorkoutDraft, exerciseIndex: number, setId: string): WorkoutDraft {
-  return updateExercise(draft, exerciseIndex, (exercise) =>
+  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
     withSets(exercise, (sets) => sets.map((set) => (set.id === setId ? { ...set, done: !set.done } : set))),
   );
 }
@@ -414,7 +407,7 @@ export function swapExercise(
   replacement: { id: string; name: string; loadType: LoadType },
 ): WorkoutDraft | null {
   if (!canSwapExercise(draft, exerciseIndex)) return null;
-  return updateExercise(draft, exerciseIndex, (exercise) =>
+  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
     exercise.modality === 'cardio'
       ? exercise
       : {

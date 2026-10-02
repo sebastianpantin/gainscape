@@ -11,7 +11,7 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 | File                         | Description                                                                                                                                                                                                 |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Makefile`                   | Entry point for every workflow: stack, dev server, checks, every test layer, codegen                                                                                                                        |
-| `package.json`               | npm dependencies; the scripts here are a subset, prefer `make` targets                                                                                                                                      |
+| `package.json`               | npm dependencies only; every workflow runs through a `make` target                                                                                                                                          |
 | `eslint.config.js`           | ESLint flat config, including the custom `gainscape/no-comments` rule and domain purity globals ban                                                                                                         |
 | `tsconfig.json`              | Type-checks app, tests, e2e, scripts and domain; `@domain/*` path alias                                                                                                                                     |
 | `tsconfig.sw.json`           | Separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`                                                                                                                             |
@@ -83,7 +83,7 @@ Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib
 - `make start` starts Supabase in Docker and serves the Edge Functions. `make reset` recreates the DB from migrations and seed. `make stop` stops everything.
 - A second stack (for a git worktree) needs a gitignored `.stack.env` with a distinct `SUPABASE_PROJECT_ID`, port overrides and `GAINSCAPE_WEB_PORT`. The Makefile exports it.
 - `make test-db` refuses non-local database hosts (`scripts/assert-local-db.mjs`). The e2e stack guard only checks that `SUPABASE_PROJECT_ID` matches `.stack.env`. Never point tests at a hosted project.
-- After a schema change: `make reset`. No generated DB types are committed (`make types` writes an unused, gitignored-by-tooling `web/src/lib/database.types.ts`). Row types are hand-written `*Row` interfaces and `*_COLUMNS` select strings in `web/src/lib/`; update them by hand.
+- After a schema change: `make reset`. There are no generated DB types. Row types are hand-written `*Row` interfaces and `*_COLUMNS` select strings in `web/src/lib/`; update them by hand.
 
 ### Definition of done
 

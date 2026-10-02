@@ -1,4 +1,5 @@
 import { CONTROL_CHARACTER } from './names.ts';
+import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, unitToKg } from './units.ts';
 
 export type UnitPref = 'kg' | 'lb';
 export type EffortInputMode = 'level' | 'rir' | 'rpe';
@@ -104,4 +105,110 @@ export function initialsFor(displayName: string, username: string): string {
   const words = displayName.trim().split(/\s+/).filter(Boolean);
   if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
   return (words[0] ?? username).slice(0, 2).toUpperCase();
+}
+
+const DAY_MS = 86_400_000;
+
+export function nextTimezoneChangeAt(profile: Pick<Profile, 'timezoneChangedAt'>, now = new Date()): Date | null {
+  if (!profile.timezoneChangedAt) return null;
+  const next = new Date(profile.timezoneChangedAt);
+  next.setUTCDate(next.getUTCDate() + TIMEZONE_CHANGE_COOLDOWN_DAYS);
+  return next.getTime() > now.getTime() ? next : null;
+}
+
+export function cooldownStartFor(nextAllowedAt: string): string {
+  return new Date(new Date(nextAllowedAt).getTime() - TIMEZONE_CHANGE_COOLDOWN_DAYS * DAY_MS).toISOString();
+}
+
+export function formatDay(date: Date): string {
+  return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+export function optionalNumber(raw: string): number | null {
+  return raw.trim() === '' ? null : Number(raw);
+}
+
+export function bodyweightRangeInUnit(unit: UnitPref): { lowest: number; highest: number } {
+  return {
+    lowest: Math.ceil(kgToUnit(LOWEST_BODYWEIGHT_KG, unit)),
+    highest: Math.floor(kgToUnit(HIGHEST_BODYWEIGHT_KG, unit)),
+  };
+}
+
+export function bodyweightInUnitProblem(raw: string, unit: UnitPref): string | null {
+  const value = optionalNumber(raw);
+  if (value === null) return null;
+  const kg = unitToKg(value, unit);
+  if (!Number.isFinite(kg) || kg < LOWEST_BODYWEIGHT_KG || kg > HIGHEST_BODYWEIGHT_KG) {
+    const { lowest, highest } = bodyweightRangeInUnit(unit);
+    return `Bodyweight must be between ${lowest} and ${highest} ${unit}.`;
+  }
+  return null;
+}
+
+export const BODYWEIGHT_NUDGE_STEP: Record<UnitPref, number> = { kg: 0.1, lb: 0.2 };
+
+export function nudgedBodyweightKg(bodyweightKg: number, direction: 1 | -1, unit: UnitPref): number {
+  const inUnit = kgToUnit(bodyweightKg, unit) + direction * BODYWEIGHT_NUDGE_STEP[unit];
+  const nextKg = unitToKg(Math.round(inUnit * 10) / 10, unit);
+  return Math.min(HIGHEST_BODYWEIGHT_KG, Math.max(LOWEST_BODYWEIGHT_KG, nextKg));
+}
+
+export interface HeightInput {
+  cm: string;
+  feet: string;
+  inches: string;
+}
+
+export function initialHeight(heightCm: number | null): HeightInput {
+  if (heightCm === null) return { cm: '', feet: '', inches: '' };
+  const { feet, inches } = cmToFeetAndInches(heightCm);
+  return { cm: String(heightCm), feet: String(feet), inches: String(inches) };
+}
+
+function feetAndInchesBlank(input: HeightInput): boolean {
+  return input.feet.trim() === '' && input.inches.trim() === '';
+}
+
+export function heightInCm(input: HeightInput, unit: UnitPref): number | null {
+  if (unit === 'kg') return optionalNumber(input.cm);
+  if (feetAndInchesBlank(input)) return null;
+  return feetAndInchesToCm({ feet: Number(input.feet || 0), inches: Number(input.inches || 0) });
+}
+
+export function sameHeightInput(a: HeightInput, b: HeightInput, unit: UnitPref): boolean {
+  return unit === 'kg' ? a.cm === b.cm : a.feet === b.feet && a.inches === b.inches;
+}
+
+const HIGHEST_INCHES = 11;
+
+export function feetAndInchesProblem(input: HeightInput, unit: UnitPref): string | null {
+  if (unit === 'kg' || feetAndInchesBlank(input)) return null;
+  const feet = Number(input.feet || 0);
+  const inches = Number(input.inches || 0);
+  if (!Number.isInteger(feet) || feet < 0 || !Number.isInteger(inches) || inches < 0 || inches > HIGHEST_INCHES)
+    return 'Enter whole feet and 0–11 inches.';
+  return null;
+}
+
+const SERVER_RULE_MESSAGES: Record<string, string> = {
+  training_since_in_future: "Training since can't be in the future.",
+  birth_year_too_recent: 'You need to be at least 13 to use Gainscape.',
+};
+
+export function saveProblemText(error: unknown): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null && 'message' in error
+        ? String(error.message)
+        : '';
+  return SERVER_RULE_MESSAGES[message] ?? (message || 'Could not save your profile.');
+}
+
+export function previousValues<K extends keyof Profile>(
+  profile: Profile,
+  changes: Partial<Pick<Profile, K>>,
+): Pick<Profile, K> {
+  return Object.fromEntries(Object.keys(changes).map((key) => [key, profile[key as K]])) as Pick<Profile, K>;
 }

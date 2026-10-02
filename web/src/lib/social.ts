@@ -1,4 +1,4 @@
-import type { LoadType } from './catalog.ts';
+import type { LoadType } from './catalog-rules.ts';
 import type { BadgeColor, TrainingFocus } from './profile-rules.ts';
 import {
   type FeedCursor,

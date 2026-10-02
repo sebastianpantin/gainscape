@@ -8,7 +8,6 @@ import {
   waitText,
 } from '../../web/src/lib/rate-limit.ts';
 import {
-  collectionPercent,
   type FeedItem,
   feedBadge,
   feedCursor,
@@ -212,7 +211,6 @@ describe('rankHiscores', () => {
       ['bea', 25],
       ['abe', 0],
     ]);
-    expect(collectionPercent(0, 0)).toBe(0);
   });
 });
 
