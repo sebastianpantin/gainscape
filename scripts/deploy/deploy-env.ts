@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import {
   authSettingsProblems,
   childEnvironment,
@@ -65,6 +66,13 @@ export function databaseCliEnvironment(config: DeployConfig): Record<string, str
 
 export const wranglerBin = join(repoRoot, 'node_modules/.bin/wrangler');
 export const supabaseBin = join(repoRoot, 'node_modules/.bin/supabase');
+
+export async function ask(question: string): Promise<string> {
+  const prompt = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await prompt.question(question);
+  prompt.close();
+  return answer;
+}
 
 export async function runCli(main: () => Promise<void> | void): Promise<void> {
   try {

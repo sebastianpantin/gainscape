@@ -57,6 +57,21 @@ const EXERCISE_COLUMNS = [
   'record_min_distance_m',
 ] as const;
 
+const ITEM_COLUMNS = [
+  'id',
+  'key',
+  'name',
+  'kind',
+  'rarity',
+  'tier',
+  'gear_slot',
+  'icon_key',
+  'description',
+  'grants_exercise_id',
+  'sort_order',
+  'retired_at',
+] as const;
+
 export function renderStatements(catalog: CatalogData): string[] {
   const exerciseId = (key: string) => idFor(catalogNames.exercise(key));
   const skillId = (key: string) => idFor(catalogNames.skill(key));
@@ -64,6 +79,7 @@ export function renderStatements(catalog: CatalogData): string[] {
   const itemId = (key: string) => idFor(catalogNames.item(key));
   const tableId = (key: string) => idFor(catalogNames.dropTable(key));
   const recipeId = (key: string) => idFor(catalogNames.recipe(key));
+  const dayId = (programKey: string, dayKey: string) => idFor(catalogNames.programDay(programKey, dayKey));
   const days = catalog.programs.flatMap((program) => program.days.map((day, position) => ({ program, day, position })));
 
   return [
@@ -78,7 +94,7 @@ export function renderStatements(catalog: CatalogData): string[] {
         skill.combatWeight,
         skill.modality,
       ]),
-      'on conflict (id) do update set name = excluded.name, sort_order = excluded.sort_order, combat_weight = excluded.combat_weight, modality = excluded.modality',
+      upsertSuffix(['name', 'sort_order', 'combat_weight', 'modality'], false),
     ),
     insert(
       'exercises',
@@ -114,14 +130,14 @@ export function renderStatements(catalog: CatalogData): string[] {
       'programs',
       ['id', 'key', 'owner_user_id', 'name'],
       catalog.programs.map((program) => [programId(program.key), program.key, null, program.name]),
-      'on conflict (id) do update set key = excluded.key, name = excluded.name, updated_at = now()',
+      upsertSuffix(['key', 'name'], true),
     ),
     'delete from public.program_days where program_id in (select id from public.programs where owner_user_id is null);',
     insert(
       'program_days',
       ['id', 'program_id', 'position', 'name'],
       days.map(({ program, day, position }) => [
-        idFor(catalogNames.programDay(program.key, day.key)),
+        dayId(program.key, day.key),
         programId(program.key),
         position,
         day.name,
@@ -132,7 +148,7 @@ export function renderStatements(catalog: CatalogData): string[] {
       ['day_id', 'position', 'exercise_id', 'target_sets', 'target_reps_min', 'target_reps_max'],
       days.flatMap(({ program, day }) =>
         day.exercises.map((entry, position) => [
-          idFor(catalogNames.programDay(program.key, day.key)),
+          dayId(program.key, day.key),
           position,
           exerciseId(entry.exercise),
           entry.sets,
@@ -143,20 +159,7 @@ export function renderStatements(catalog: CatalogData): string[] {
     ),
     insert(
       'items',
-      [
-        'id',
-        'key',
-        'name',
-        'kind',
-        'rarity',
-        'tier',
-        'gear_slot',
-        'icon_key',
-        'description',
-        'grants_exercise_id',
-        'sort_order',
-        'retired_at',
-      ],
+      [...ITEM_COLUMNS],
       catalog.items.map((item) => [
         itemId(item.key),
         item.key,
@@ -172,18 +175,7 @@ export function renderStatements(catalog: CatalogData): string[] {
         retiredAtFor(item.retired),
       ]),
       `${upsertSuffix(
-        [
-          'key',
-          'name',
-          'kind',
-          'rarity',
-          'tier',
-          'gear_slot',
-          'icon_key',
-          'description',
-          'grants_exercise_id',
-          'sort_order',
-        ],
+        ITEM_COLUMNS.filter((column) => column !== 'id' && column !== 'retired_at'),
         true,
       )}, ${retiredAtAssignment('items')}`,
     ),
