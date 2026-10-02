@@ -65,7 +65,7 @@ describe('rebuild-caches', () => {
     const runId = await builtInExerciseId('running');
     const run = (hours: number, durationS: number, distanceM: number) =>
       payloadAt(hoursAgo(hours), [aBout(runId, 0, { durationS, distanceM, effort: null })]);
-    for (const session of [run(6, 1800, 5000), run(4, 2160, 6000), run(2, 1500, 5000)]) {
+    for (const session of [run(6, 1800, 5000), run(4, 1790, 5800), run(2, 1500, 5000)]) {
       expect((await postCompleteSession(runner.accessToken, session)).status).toBe(200);
     }
     const before = await normalizedSnapshot(runner.id);
