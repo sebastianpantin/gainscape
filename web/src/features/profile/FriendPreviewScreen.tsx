@@ -54,12 +54,8 @@ function PreviewOfProfile({ userId, profile, replace, view }: PreviewOfProfilePr
         <span className="pixel" data-testid="preview-record">
           {profile.showWeights ? `New 8RM Back Squat: ${formatWeight(110, unitPref)}` : 'New 8RM Back Squat'}
         </span>
-        {!profile.showWeights && (
-          <span className="muted tiny" data-testid="preview-hidden-detail">
-            Weights hidden by {profile.username}
-          </span>
-        )}
-        <span className="pixel" data-testid="preview-bodyweight-record">
+        {!profile.showWeights && <span className="muted tiny">Weights hidden by {profile.username}</span>}
+        <span className="pixel">
           {!profile.showWeights
             ? 'New 5RM Weighted Dip'
             : profile.showBodyweight

@@ -49,7 +49,7 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
   const text = feedText(item, unitPref);
   const kind = item.type === 'level_up' || item.type === 'level_99' ? 'level' : item.type;
   return (
-    <li className="panel feed-item" data-testid="feed-item">
+    <li className="panel feed-item">
       <span className={`feed-badge ${kind}`} aria-hidden="true">
         {feedBadge(item)}
       </span>
@@ -245,7 +245,7 @@ export function FriendsScreen() {
       {load.status === 'ready' && (
         <>
           {incoming.map((friend) => (
-            <div className="panel row" key={friend.userId} data-testid="incoming-request">
+            <div className="panel row" key={friend.userId}>
               <ProfileBadge
                 color={friend.badgeColor}
                 initials={initialsFor(friend.displayName, friend.username)}

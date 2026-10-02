@@ -42,16 +42,16 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
       <div className="standing totals">
         <div className="panel">
           <span className="muted">Total level</span>
-          <strong data-testid="total-level">{standing.totalLevel}</strong>
+          <strong>{standing.totalLevel}</strong>
         </div>
         <div className="panel">
           <span className="muted">Combat level</span>
-          <strong data-testid="combat-level">{standing.combatLevel}</strong>
+          <strong>{standing.combatLevel}</strong>
         </div>
       </div>
       <ul className="skill-grid">
         {standing.skills.map(({ skill, progress }) => (
-          <li key={skill.id} data-testid={`skill-${skill.key}`}>
+          <li key={skill.id}>
             <button
               type="button"
               className="skill-card"

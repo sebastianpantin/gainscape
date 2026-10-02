@@ -150,7 +150,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
         />
       ))}
       {cardioCards.length > 0 && (
-        <section className="panel stack" aria-labelledby="cardio-records-heading" data-testid="cardio-records">
+        <section className="panel stack" aria-labelledby="cardio-records-heading">
           <h2 id="cardio-records-heading">Cardio records</h2>
           <span className="muted tiny">Only you can see these.</span>
           <ul className="stored-set-list">
