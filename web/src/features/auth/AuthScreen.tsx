@@ -1,9 +1,9 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
-import { MINIMUM_PASSWORD_LENGTH } from '../../lib/account.ts';
 import {
   authCallbackUrl,
   authErrorMessage,
+  MINIMUM_PASSWORD_LENGTH,
   RESEND_COOLDOWN_SECONDS,
   USERNAME_HINT,
   USERNAME_PATTERN,
