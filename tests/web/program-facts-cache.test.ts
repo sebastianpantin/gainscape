@@ -281,3 +281,78 @@ describe('program facts cache', () => {
     expect(stateAfter.refs).toEqual(stateBefore.refs);
   });
 });
+
+describe('syncedSessionFact mirrors what the server stores', () => {
+  function draftWithSquatSets(sets: DraftSet[]): WorkoutDraft {
+    const draft = mondayDraft();
+    const [squat, ...rest] = draft.exercises;
+    return { ...draft, exercises: [{ ...squat, sets } as typeof squat, ...rest] };
+  }
+
+  it('rounds the logged weight to 2 decimals and drops a 2500 kg snapshot, as the server fact would read', () => {
+    const draft = draftWithSquatSets([
+      draftSet('squat-0', 100.005, 5, {
+        effort: { type: 'rir', value: 2 },
+        prescription: snapshot('mon-squat:0', { weightKg: 2500, reps: 5 }),
+      }),
+    ]);
+    expect(syncedSessionFact(draft, MONDAY_COMPLETED_AT)?.sets).toEqual([
+      { exerciseId: 'squat', weightKg: 100.01, reps: 5, effortInputType: 'rir', effortValue: 2, prescription: null },
+    ]);
+  });
+
+  it('rounds the snapshot weight to 2 decimals', () => {
+    const draft = draftWithSquatSets([
+      draftSet('squat-0', 70, 5, { prescription: snapshot('mon-squat:0', { weightKg: 70.006, reps: 5 }) }),
+    ]);
+    expect(syncedSessionFact(draft, MONDAY_COMPLETED_AT)?.sets[0].prescription).toEqual(
+      snapshot('mon-squat:0', { weightKg: 70.01, reps: 5 }),
+    );
+  });
+
+  it.each([
+    ['a negative weight', snapshot('mon-squat:0', { weightKg: -5, reps: 5 })],
+    ['zero reps', snapshot('mon-squat:0', { weightKg: 70, reps: 0 })],
+    ['101 reps', snapshot('mon-squat:0', { weightKg: 70, reps: 101 })],
+    ['fractional reps', snapshot('mon-squat:0', { weightKg: 70, reps: 4.5 })],
+    ['negative minimum reps', snapshot('mon-squat:0', { weightKg: 70, reps: 5, minReps: -1 })],
+    ['minimum reps above the reps', snapshot('mon-squat:0', { weightKg: 70, reps: 5, minReps: 6 })],
+    ['an empty ref', snapshot('', { weightKg: 70, reps: 5 })],
+    ['a ref longer than 100 characters', snapshot('x'.repeat(101), { weightKg: 70, reps: 5 })],
+    ['a NUL character in the ref', snapshot('mon-squat:\u00000', { weightKg: 70, reps: 5 })],
+  ])('drops a snapshot with %s, as the server does', (_, prescription) => {
+    const draft = draftWithSquatSets([draftSet('squat-0', 70, 5, { prescription })]);
+    expect(syncedSessionFact(draft, MONDAY_COMPLETED_AT)?.sets[0].prescription).toBeNull();
+  });
+
+  it('keeps the snapshot of the first done set per ref and drops it from later ones, as the server does', () => {
+    const draft = draftWithSquatSets([
+      draftSet('squat-a', 60, 5, { prescription: snapshot('mon-squat:0', { weightKg: 60, reps: 5 }) }),
+      draftSet('squat-b', 65, 5, { prescription: snapshot('mon-squat:0', { weightKg: 65, reps: 5 }) }),
+    ]);
+    expect(
+      syncedSessionFact(draft, MONDAY_COMPLETED_AT)?.sets.map((set) => set.prescription?.weightKg ?? null),
+    ).toEqual([60, null]);
+  });
+});
+
+describe('program facts cache fetch boundary', () => {
+  it('keeps an append made at the very instant the refetch started when the snapshot does not list it', () => {
+    const refetched = fetched(syncedMonday(2_000), 2_000, []);
+    expect(idsOf(refetched)).toEqual([MONDAY_SESSION_ID]);
+  });
+});
+
+describe('fold order of facts at one instant', () => {
+  it('orders an event and a session that share a millisecond by id, whatever the input order', () => {
+    const reference = setReferenceFact({ id: 'event-1', at: '2026-10-05T07:00:00.000456Z' }, 'squat', 'top', 95);
+    const monday = sessionFact({ id: MONDAY_SESSION_ID, at: '2026-10-05T07:00:00.000Z' }, weekDay(1, 'mon'), [
+      ...madcowDaySets('mon'),
+    ]);
+    expect(orderFacts([reference, monday]).map((fact) => fact.id)).toEqual(['event-1', MONDAY_SESSION_ID]);
+    expect(orderFacts([monday, reference]).map((fact) => fact.id)).toEqual(['event-1', MONDAY_SESSION_ID]);
+    expect(programStateAt(MADCOW_5X5, madcow, [monday, reference])).toEqual(
+      programStateAt(MADCOW_5X5, madcow, [reference, monday]),
+    );
+  });
+});
