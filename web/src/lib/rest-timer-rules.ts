@@ -12,6 +12,7 @@ export const REST_CHOICES_S: readonly number[] = [REST_OFF, 60, 90, 120, 180];
 
 export interface RestTimer {
   endsAt: number;
+  setId: string | null;
 }
 
 export interface RestState {
@@ -21,13 +22,13 @@ export interface RestState {
 
 type RestView = { kind: 'idle' } | { kind: 'resting'; remainingS: number } | { kind: 'over' };
 
-export function startRest(now: number, restS: number): RestTimer {
-  return { endsAt: now + restS * MS_PER_SECOND };
+export function startRest(now: number, restS: number, setId: string): RestTimer {
+  return { endsAt: now + restS * MS_PER_SECOND, setId };
 }
 
 export function adjustRest(timer: RestTimer, deltaS: number, now: number): RestTimer {
   const endsAt = Math.max(timer.endsAt, now) + deltaS * MS_PER_SECOND;
-  return { endsAt: Math.min(now + LONGEST_REST_S * MS_PER_SECOND, Math.max(now, endsAt)) };
+  return { endsAt: Math.min(now + LONGEST_REST_S * MS_PER_SECOND, Math.max(now, endsAt)), setId: timer.setId };
 }
 
 export function restView(timer: RestTimer | null, now: number): RestView {
@@ -43,13 +44,14 @@ export function restClock(seconds: number): string {
   return `${minutes}:${String(seconds % SECONDS_PER_MINUTE).padStart(2, '0')}`;
 }
 
-export function finishesSet(
-  set: { done: boolean; effort: EffortInput },
+export function startsRest(
+  set: { id: string; done: boolean; effort: EffortInput },
   changes: { done?: boolean; effort?: EffortInput },
+  timer: RestTimer | null,
 ): boolean {
   const becameDone = !set.done && changes.done === true;
   const firstRated = set.effort === null && changes.effort !== undefined && changes.effort !== null;
-  return becameDone || firstRated;
+  return becameDone || (firstRated && timer?.setId !== set.id);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -58,7 +60,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function parsedTimer(value: unknown): RestTimer | null {
   return isRecord(value) && typeof value.endsAt === 'number' && Number.isFinite(value.endsAt)
-    ? { endsAt: value.endsAt }
+    ? { endsAt: value.endsAt, setId: typeof value.setId === 'string' ? value.setId : null }
     : null;
 }
 

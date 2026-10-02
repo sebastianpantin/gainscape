@@ -9,23 +9,23 @@ Playwright end-to-end suites that drive the real web app against the real local 
 
 ## Key Files
 
-| File                        | Description                                                                                                                                              |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth.spec.ts`              | Registration and confirmation through the emailed link, resend, password reset, email change, used and stale links, pre-hijack squatter.                 |
-| `a11y.spec.ts`              | Axe (WCAG 2.2 AA) on auth screens and every signed-in screen, 44px touch targets on a 360x740 phone, reduced motion, skills pixel art.                   |
-| `history.spec.ts`           | Editing a logged set, deleting a workout, conflict with a delete or edit made elsewhere.                                                                 |
-| `drafts.spec.ts`            | Finished workout survives outage and reload; another account's draft is kept; a draft written while IndexedDB was unavailable moves back into IndexedDB. |
-| `multi-tab.spec.ts`         | Draft sync between tabs via `BroadcastChannel`, single finish request, no resurrected draft.                                                             |
-| `token-refresh.spec.ts`     | Expired or wrongly signed tokens refreshed, forced sign-out then sync, auth outage.                                                                      |
-| `profile.spec.ts`           | Profile fields, pounds display with kilogram storage, RPE logging, time zone cooldown, password change, export, delete account.                          |
-| `programs.spec.ts`          | Copy a template, run a program day, finish.                                                                                                              |
-| `custom-exercise.spec.ts`   | Create, log, record, pin, reorder and archive a custom exercise; create and log a custom cardio one.                                                     |
-| `cardio.spec.ts`            | A run, intervals and a lift in one workout through reveal and a history distance edit; miles for pound users.                                            |
-| `workout-records.spec.ts`   | Bodyweight prompt, records and the collection log.                                                                                                       |
-| `rest-timer.spec.ts`        | Rest timer with `page.clock`: starts on a done set, adjusts, survives a reload, ends; length from Settings, skip, Off, cleared by finishing.             |
-| `loot.spec.ts`              | Loot reveal, items screen, crafting, scroll unlock (uses `grantItems`, `grantUnlock`).                                                                   |
-| `friends.spec.ts`           | Friend request, feed, hiscores, profile and removal across two browser contexts.                                                                         |
-| `no-service-worker.spec.ts` | The dev server never registers a service worker and still loads fonts.                                                                                   |
+| File                        | Description                                                                                                                                                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `auth.spec.ts`              | Registration and confirmation through the emailed link, resend, password reset, email change, used and stale links, pre-hijack squatter.                                                                                       |
+| `a11y.spec.ts`              | Axe (WCAG 2.2 AA) on auth screens and every signed-in screen, 44px touch targets on a 360x740 phone, reduced motion, skills pixel art.                                                                                         |
+| `history.spec.ts`           | Editing a logged set, deleting a workout, conflict with a delete or edit made elsewhere.                                                                                                                                       |
+| `drafts.spec.ts`            | Finished workout survives outage and reload; another account's draft is kept; a draft written while IndexedDB was unavailable moves back into IndexedDB.                                                                       |
+| `multi-tab.spec.ts`         | Draft sync between tabs via `BroadcastChannel`, single finish request, no resurrected draft.                                                                                                                                   |
+| `token-refresh.spec.ts`     | Expired or wrongly signed tokens refreshed, forced sign-out then sync, auth outage.                                                                                                                                            |
+| `profile.spec.ts`           | Profile fields, pounds display with kilogram storage, RPE logging, time zone cooldown, password change, export, delete account.                                                                                                |
+| `programs.spec.ts`          | Copy a template, run a program day, finish.                                                                                                                                                                                    |
+| `custom-exercise.spec.ts`   | Create, log, record, pin, reorder and archive a custom exercise; create and log a custom cardio one.                                                                                                                           |
+| `cardio.spec.ts`            | A run, intervals and a lift in one workout through reveal and a history distance edit; miles for pound users.                                                                                                                  |
+| `workout-records.spec.ts`   | Bodyweight prompt, records and the collection log.                                                                                                                                                                             |
+| `rest-timer.spec.ts`        | Rest timer with `page.clock`: starts on a done set, adjusts, survives a reload, ends; length from Settings, skip, Off, cleared by finishing; rating keeps a set's own rest; focus stays in the bar or moves to Finish workout. |
+| `loot.spec.ts`              | Loot reveal, items screen, crafting, scroll unlock (uses `grantItems`, `grantUnlock`).                                                                                                                                         |
+| `friends.spec.ts`           | Friend request, feed, hiscores, profile and removal across two browser contexts.                                                                                                                                               |
+| `no-service-worker.spec.ts` | The dev server never registers a service worker and still loads fonts.                                                                                                                                                         |
 
 ## Subdirectories
 

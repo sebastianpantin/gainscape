@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, type StrengthState } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { canAddBout } from '../../lib/cardio-rules.ts';
@@ -11,7 +11,7 @@ import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
-import { finishesSet } from '../../lib/rest-timer-rules.ts';
+import { startsRest } from '../../lib/rest-timer-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { formatXp } from '../../lib/format.ts';
 import {
@@ -95,6 +95,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [onlineSignal, setOnlineSignal] = useState(0);
   const standing = useStanding(userId);
   const rest = useRestTimer(userId);
+  const finishButton = useRef<HTMLButtonElement>(null);
+  const finishBar = useRef<HTMLDivElement>(null);
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
 
@@ -472,12 +474,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   unit={unitPref}
                   effortMode={effortInputMode}
                   onChange={(changes) => {
-                    if (finishesSet(set, changes)) rest.start();
+                    if (startsRest(set, changes, rest.timer)) rest.start(set.id);
                     changeDraft(updateSet(draft, exerciseIndex, set.id, changes));
                   }}
                   onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
                   onToggleDone={() => {
-                    if (finishesSet(set, { done: !set.done })) rest.start();
+                    if (startsRest(set, { done: !set.done }, rest.timer)) rest.start(set.id);
                     changeDraft(toggleSetDone(draft, exerciseIndex, set.id));
                   }}
                 />
@@ -493,14 +495,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>
-      <div className="finish-bar">
-        <RestTimerBar key={rest.timer?.endsAt ?? 'none'} {...rest} />
+      <div ref={finishBar} className="finish-bar" tabIndex={-1}>
+        <RestTimerBar {...rest} focusAfterStop={finishButton} focusFallback={finishBar} />
         {finishProblem && (
           <p className="problem" role="alert">
             {finishProblem}
           </p>
         )}
-        <button className="button primary big" type="button" disabled={!canFinish} onClick={finish}>
+        <button ref={finishButton} className="button primary big" type="button" disabled={!canFinish} onClick={finish}>
           Finish workout
         </button>
         <span className="muted tiny">~ is a preview. XP is confirmed when the workout syncs.</span>

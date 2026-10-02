@@ -199,7 +199,8 @@ a:focus-visible {
   background: #372d22;
 }
 
-.button:disabled {
+.button:disabled,
+.button[aria-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -676,6 +677,10 @@ a:focus-visible {
   border-bottom: var(--border-width) solid #000;
   text-align: center;
   z-index: 5;
+}
+
+.finish-bar:focus {
+  outline: none;
 }
 
 .rest-timer {
