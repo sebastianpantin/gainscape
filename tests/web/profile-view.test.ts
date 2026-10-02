@@ -1,6 +1,6 @@
 import { xpForLevel } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
-import type { Skill } from '../../web/src/lib/catalog.ts';
+import type { Skill } from '../../web/src/lib/catalog-rules.ts';
 import { cardProfileOf, standingOfView } from '../../web/src/lib/profile-view.ts';
 import type { ProfileView } from '../../web/src/lib/social.ts';
 

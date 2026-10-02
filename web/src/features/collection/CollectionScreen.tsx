@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { cardioRecordCards } from '../../lib/cardio-rules.ts';
-import { type CardioExercise, type Exercise, fetchExercises } from '../../lib/catalog.ts';
+import { fetchExercises } from '../../lib/catalog.ts';
+import { type Exercise, isCardioExercise } from '../../lib/catalog-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { moved } from '../../lib/reorder.ts';
 import {
@@ -66,11 +67,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     );
 
   const { counted, completion } = countCollection(exercises, data);
-  const cardioCards = cardioRecordCards(
-    data.cardioRecords,
-    exercises.filter((exercise): exercise is CardioExercise => exercise.modality === 'cardio'),
-    unitPref,
-  );
+  const cardioCards = cardioRecordCards(data.cardioRecords, exercises.filter(isCardioExercise), unitPref);
 
   const togglePin = async (exercise: Exercise) => {
     try {

@@ -1,5 +1,5 @@
 import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
-import type { CardioActivity, LoadType } from '../lib/catalog.ts';
+import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 4;
 const PRE_CARDIO_FORMAT_VERSION = 3;

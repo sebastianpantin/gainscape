@@ -1,6 +1,6 @@
 import { CARDIO_EFFORT_LEVELS } from '@domain/types.ts';
 import { z } from 'zod';
-import { type Exercise, LOAD_TYPES, PACE_UNITS } from './catalog.ts';
+import { type Exercise, LOAD_TYPES, PACE_UNITS } from './catalog-rules.ts';
 
 const CACHE_VERSION = 2;
 const CACHE_KEY_PREFIX = 'gainscape.exercises.v2.';

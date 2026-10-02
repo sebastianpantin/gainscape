@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../components/Icon.tsx';
-import { type Exercise, exerciseLabels } from '../../lib/catalog.ts';
+import { type Exercise, exerciseLabels } from '../../lib/catalog-rules.ts';
 
 interface ExercisePickerProps {
   exercises: Exercise[];

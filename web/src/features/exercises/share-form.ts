@@ -1,4 +1,4 @@
-import type { Modality } from '../../lib/catalog.ts';
+import type { Modality } from '../../lib/catalog-rules.ts';
 import type { SkillShare } from '../../lib/custom-exercises.ts';
 
 export const BASIS_POINTS_PER_PERCENT = 100;

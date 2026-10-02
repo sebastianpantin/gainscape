@@ -1,4 +1,4 @@
-import type { LoadType, PaceUnit } from '../../lib/catalog.ts';
+import type { LoadType, PaceUnit } from '../../lib/catalog-rules.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
 import type { BoutValues } from '../../offline/draft-format.ts';
 import { BoutFields, BoutModeToggle } from '../workout/BoutFields.tsx';

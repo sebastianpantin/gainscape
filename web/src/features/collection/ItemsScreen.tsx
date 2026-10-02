@@ -1,7 +1,8 @@
 import { canCraft, recipeFor } from '@domain/crafting.ts';
 import { useCallback, useEffect, useState } from 'react';
 import { ItemIcon } from '../../components/PixelArt.tsx';
-import { type Exercise, fetchExercises } from '../../lib/catalog.ts';
+import { fetchExercises } from '../../lib/catalog.ts';
+import type { Exercise } from '../../lib/catalog-rules.ts';
 import {
   type CatalogItem,
   colorFor,

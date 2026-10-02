@@ -1,5 +1,5 @@
 import { Icon } from '../../components/Icon.tsx';
-import type { LoadType } from '../../lib/catalog.ts';
+import type { LoadType } from '../../lib/catalog-rules.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
 import { highestWeightInUnit, shownWeight, unitToKg, WEIGHT_INPUT_STEP } from '../../lib/units.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';

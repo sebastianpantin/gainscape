@@ -7,7 +7,7 @@ import {
   type CardioRecordKind,
   type EffortInput,
 } from '@domain/types.ts';
-import type { CardioExercise } from './catalog.ts';
+import type { CardioExercise } from './catalog-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
 import type { BoutValues } from '../offline/draft-format.ts';
 import { type DistanceUnit, distanceUnitFor, formatDistance, formatPace, unitToDistanceM } from './units.ts';

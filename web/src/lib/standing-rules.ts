@@ -1,5 +1,5 @@
 import { combatLevel, levelProgress, type LevelProgress, totalLevel } from '@domain/index.ts';
-import type { Skill } from './catalog.ts';
+import type { Skill } from './catalog-rules.ts';
 
 export interface SkillStanding {
   skill: Skill;

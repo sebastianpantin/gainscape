@@ -1,5 +1,5 @@
 import { Icon } from '../../components/Icon.tsx';
-import type { PaceUnit } from '../../lib/catalog.ts';
+import type { PaceUnit } from '../../lib/catalog-rules.ts';
 import type { UnitPref } from '../../lib/profile.ts';
 import type { CardioDraftSet } from '../../offline/draft-format.ts';
 import { BoutFields, BoutModeToggle } from './BoutFields.tsx';

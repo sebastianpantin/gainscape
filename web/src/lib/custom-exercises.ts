@@ -1,4 +1,4 @@
-import type { Equipment, LoadType, Modality } from './catalog.ts';
+import type { Equipment, LoadType, Modality } from './catalog-rules.ts';
 import { rateLimitedMessage, withFriendlyRateLimit } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 

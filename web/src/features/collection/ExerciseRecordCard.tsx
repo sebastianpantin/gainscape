@@ -1,5 +1,5 @@
 import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
-import { exerciseLabels, type LiftExercise } from '../../lib/catalog.ts';
+import { exerciseLabels, type LiftExercise } from '../../lib/catalog-rules.ts';
 import type { CollectionData } from '../../lib/collection-data.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';

@@ -1,5 +1,5 @@
 import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
-import type { Exercise } from '../../web/src/lib/catalog.ts';
+import type { Exercise } from '../../web/src/lib/catalog-rules.ts';
 import type { CollectionData, RepMaxSlotView } from '../../web/src/lib/collection-data.ts';
 import { countCollection } from '../../web/src/lib/collection-rules.ts';
 import { db } from './local-stack.ts';
