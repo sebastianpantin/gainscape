@@ -1,0 +1,193 @@
+key: madcow_5x5
+version: 1
+name: Madcow 5x5
+source:
+  - oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm
+  - strengthlog.com/madcow-5x5
+lifts:
+  - { key: squat, name: Squat, category: lower }
+  - { key: bench, name: Bench press, category: upper }
+  - { key: row, name: Barbell row, category: upper }
+  - { key: press, name: Incline or military press, category: upper }
+  - { key: deadlift, name: Deadlift, category: lower }
+  - { key: hyper, name: Weighted hyperextension }
+  - { key: situp, name: Weighted sit-up }
+  - { key: dip, name: Weighted dip }
+  - { key: curl, name: Curl }
+  - { key: triceps, name: Triceps extension }
+inputs:
+  - lifts: [squat, bench, row, press, deadlift]
+    kinds: [fiveRm]
+referenceVars: [top]
+initial:
+  - { kind: onRamp, var: top, from: fiveRm, factor: 0.975, peakWeek: 4 }
+options:
+  - key: rampStep
+    kind: choice
+    values: [0.1, 0.125, 0.15]
+    default: 0.125
+    source:
+      - oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm
+schedule:
+  kind: weekly
+  days:
+    - key: mon
+      name: Monday
+      slots:
+        - id: mon-squat
+          lift: squat
+          role: main
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 5
+            load: { kind: ramp, step: { option: rampStep }, count: 5, of: top }
+        - id: mon-bench
+          lift: bench
+          role: main
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 5
+            load: { kind: ramp, step: { option: rampStep }, count: 5, of: top }
+        - id: mon-row
+          lift: row
+          role: main
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 5
+            load: { kind: ramp, step: { option: rampStep }, count: 5, of: top }
+        - id: mon-hyper
+          lift: hyper
+          role: assistance
+          scheme: { kind: repeat, count: 2, reps: null, load: { kind: lastLogged }, optional: true }
+        - id: mon-situp
+          lift: situp
+          role: assistance
+          scheme: { kind: repeat, count: 4, reps: null, load: { kind: lastLogged }, optional: true }
+    - key: wed
+      name: Wednesday
+      slots:
+        - id: wed-squat
+          lift: squat
+          role: main
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-squat:0' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-squat:1' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-squat:2' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-squat:2' } }
+        - id: wed-press
+          lift: press
+          role: main
+          scheme:
+            kind: repeat
+            count: 4
+            reps: 5
+            load: { kind: ramp, step: { option: rampStep }, count: 4, of: top }
+        - id: wed-deadlift
+          lift: deadlift
+          role: main
+          scheme:
+            kind: repeat
+            count: 4
+            reps: 5
+            load: { kind: ramp, step: { option: rampStep }, count: 4, of: top }
+        - id: wed-situp
+          lift: situp
+          role: assistance
+          scheme: { kind: repeat, count: 3, reps: null, load: { kind: lastLogged }, optional: true }
+    - key: fri
+      name: Friday
+      slots:
+        - id: fri-squat
+          lift: squat
+          role: main
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-squat:0' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-squat:1' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-squat:2' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-squat:3' } }
+              - { reps: 3, load: { kind: pct, pct: 1.025, of: top } }
+              - { reps: 8, load: { kind: sameAs, ref: 'mon-squat:2' } }
+        - id: fri-bench
+          lift: bench
+          role: main
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-bench:0' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-bench:1' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-bench:2' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-bench:3' } }
+              - { reps: 3, load: { kind: pct, pct: 1.025, of: top } }
+              - { reps: 8, load: { kind: sameAs, ref: 'mon-bench:2' } }
+        - id: fri-row
+          lift: row
+          role: main
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-row:0' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-row:1' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-row:2' } }
+              - { reps: 5, load: { kind: sameAs, ref: 'mon-row:3' } }
+              - { reps: 3, load: { kind: pct, pct: 1.025, of: top } }
+              - { reps: 8, load: { kind: sameAs, ref: 'mon-row:2' } }
+        - id: fri-dip
+          lift: dip
+          role: assistance
+          scheme: { kind: repeat, count: 3, reps: 5, maxReps: 8, load: { kind: lastLogged }, optional: true }
+        - id: fri-curl
+          lift: curl
+          role: assistance
+          scheme: { kind: repeat, count: 3, reps: null, load: { kind: lastLogged }, optional: true }
+        - id: fri-triceps
+          lift: triceps
+          role: assistance
+          scheme: { kind: repeat, count: 3, reps: 8, load: { kind: lastLogged }, optional: true }
+progression:
+  - lift: squat
+    var: top
+    trigger: endOfWeek
+    judgedSlots: [mon-squat]
+    onMet:
+      - { kind: increment, byPct: 0.025 }
+    onMiss:
+      - { kind: hold }
+  - lift: bench
+    var: top
+    trigger: endOfWeek
+    judgedSlots: [mon-bench]
+    onMet:
+      - { kind: increment, byPct: 0.025 }
+    onMiss:
+      - { kind: hold }
+  - lift: row
+    var: top
+    trigger: endOfWeek
+    judgedSlots: [mon-row]
+    onMet:
+      - { kind: increment, byPct: 0.025 }
+    onMiss:
+      - { kind: hold }
+  - lift: press
+    var: top
+    trigger: endOfWeek
+    judgedSlots: [wed-press]
+    onMet:
+      - { kind: increment, byPct: 0.025 }
+    onMiss:
+      - { kind: hold }
+  - lift: deadlift
+    var: top
+    trigger: endOfWeek
+    judgedSlots: [wed-deadlift]
+    onMet:
+      - { kind: increment, byPct: 0.025 }
+    onMiss:
+      - { kind: hold }
