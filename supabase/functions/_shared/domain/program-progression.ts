@@ -137,13 +137,6 @@ export function weeksBack(top: number, weeks: number): number {
   return top * WEEKS_BACK_FACTOR ** weeks;
 }
 
-function samePosition(a: Position, b: Position): boolean {
-  if (isRotationPosition(a) || isRotationPosition(b)) {
-    return isRotationPosition(a) && isRotationPosition(b) && a.index === b.index;
-  }
-  return compareWeeks(a, b) === 0 && isCyclePosition(a) === isCyclePosition(b) && a.day === b.day;
-}
-
 function absoluteWeek(definition: ProgramDefinition, position: Position): number {
   const { week, cycle } = weekContextOf(position);
   const schedule = definition.schedule;
@@ -283,8 +276,31 @@ function withCompletedDay(definition: ProgramDefinition, completedDays: readonly
   return [...completedDays, dayKey].sort((a, b) => dayIndexOf(definition, a) - dayIndexOf(definition, b));
 }
 
+function recordKey(epoch: number, position: Position): string {
+  if (isRotationPosition(position)) return `${epoch}:${position.index}`;
+  const week = isCyclePosition(position) ? `${position.cycle}.${position.week}` : `${position.week}`;
+  return `${epoch}:${week}:${position.day}`;
+}
+
 function findRecord(state: ProgramState, position: Position): DayRecord | undefined {
-  return state.days.find((record) => record.epoch === state.epoch && samePosition(record.position, position));
+  const index = state.dayIndex[recordKey(state.epoch, position)];
+  return index === undefined ? undefined : state.days[index];
+}
+
+function withRecords(state: ProgramState, records: readonly DayRecord[]): ProgramState {
+  const days = [...state.days];
+  const dayIndex = { ...state.dayIndex };
+  for (const record of records) {
+    const key = recordKey(record.epoch, record.position);
+    const index = dayIndex[key];
+    if (index === undefined) {
+      dayIndex[key] = days.length;
+      days.push(record);
+    } else {
+      days[index] = record;
+    }
+  }
+  return { ...state, days, dayIndex };
 }
 
 function hasRecord(state: ProgramState, position: Position): boolean {
@@ -300,7 +316,10 @@ function skipUnfinishedDays(context: FoldContext, state: ProgramState): ProgramS
     .filter((key) => !state.completedDays.includes(key))
     .map((key) => positionAt(state.position, key))
     .filter((position) => !hasRecord(state, position));
-  return { ...state, days: [...state.days, ...pending.map((position) => skippedRecord(state.epoch, position))] };
+  return withRecords(
+    state,
+    pending.map((position) => skippedRecord(state.epoch, position)),
+  );
 }
 
 function advanceToWeekOf(context: FoldContext, state: ProgramState, target: Position): ProgramState {
@@ -310,7 +329,7 @@ function advanceToWeekOf(context: FoldContext, state: ProgramState, target: Posi
     for (let index = next.position.index; index < target.index; index += 1) {
       if (!hasRecord(next, { index })) skipped.push(skippedRecord(next.epoch, { index }));
     }
-    return { ...next, days: [...next.days, ...skipped], position: { index: target.index } };
+    return { ...withRecords(next, skipped), position: { index: target.index } };
   }
   while (compareWeeks(next.position, target) < 0) {
     next = rollOver(context, skipUnfinishedDays(context, next));
@@ -387,8 +406,7 @@ function recordDay(
   sets: readonly FactSet[] | null,
 ): ProgramState {
   const existing = findRecord(state, position);
-  if (sets === null)
-    return existing ? state : { ...state, days: [...state.days, skippedRecord(state.epoch, position)] };
+  if (sets === null) return existing ? state : withRecords(state, [skippedRecord(state.epoch, position)]);
   const { definition, enrollment } = context;
   const judgedSets = mergeBestSets(context, existing?.judgedSets ?? [], judgedSetsOf(context, position, sets));
   const outcomes = liftOutcomes(definition, enrollment, {
@@ -416,13 +434,7 @@ function recordDay(
     judgedSets,
     afterSession: priorEffect,
   };
-  const replaceRecord = (current: ProgramState, replacement: DayRecord): ProgramState => ({
-    ...current,
-    days: existing
-      ? current.days.map((candidate) => (candidate === existing ? replacement : candidate))
-      : [...current.days, replacement],
-  });
-  if (!rejudged) return replaceRecord(state, record);
+  if (!rejudged) return withRecords(state, [record]);
   const baselineState = priorEffect ? undoAfterSessionEffect(state, priorEffect) : state;
   const baseline = priorEffect ?? captureAfterSessionBaseline(baselineState, rules);
   const judged = rules.reduce(
@@ -431,10 +443,9 @@ function recordDay(
     baselineState,
   );
   const changes = judged.history.slice(baselineState.history.length);
-  return replaceRecord(judged, {
-    ...record,
-    afterSession: { refsBefore: baseline.refsBefore, missesBefore: baseline.missesBefore, changes },
-  });
+  return withRecords(judged, [
+    { ...record, afterSession: { refsBefore: baseline.refsBefore, missesBefore: baseline.missesBefore, changes } },
+  ]);
 }
 
 function applyDayFact(
@@ -483,17 +494,16 @@ export function advanceProgram(
   state: ProgramState,
   fact: ProgramFact,
 ): ProgramState {
-  if (state.appliedFactIds.includes(fact.id) || !isApplicable(definition, fact)) return state;
+  if (!isApplicable(definition, fact)) return state;
   const context: FoldContext = { definition, enrollment };
-  const applied: ProgramState = { ...state, appliedFactIds: [...state.appliedFactIds, fact.id] };
   switch (fact.kind) {
     case 'set_reference':
-      return setReference(applied, fact.lift, fact.var, fact.value, 'set_reference', applied.position);
+      return setReference(state, fact.lift, fact.var, fact.value, 'set_reference', state.position);
     case 'jump_to':
-      return jumpTo(definition, applied, fact.position);
+      return jumpTo(definition, state, fact.position);
     case 'skip_day':
-      return applyDayFact(context, applied, fact.position, null);
+      return applyDayFact(context, state, fact.position, null);
     case 'session':
-      return applyDayFact(context, applied, fact.position, fact.sets);
+      return applyDayFact(context, state, fact.position, fact.sets);
   }
 }

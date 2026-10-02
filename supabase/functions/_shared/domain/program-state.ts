@@ -83,7 +83,7 @@ export interface ProgramState extends ScheduleCursor {
   refs: ProgramReferences;
   consecutiveMisses: Readonly<Record<string, number>>;
   days: readonly DayRecord[];
-  appliedFactIds: readonly string[];
+  dayIndex: Readonly<Record<string, number>>;
   history: readonly ReferenceChange[];
 }
 
@@ -114,7 +114,7 @@ export function initialProgramState(definition: ProgramDefinition, enrollment: P
     refs: initialReferences(definition, enrollment),
     consecutiveMisses: Object.fromEntries(definition.progression.map((rule) => [rule.lift, 0])),
     days: [],
-    appliedFactIds: [],
+    dayIndex: {},
     history: [],
   };
 }
