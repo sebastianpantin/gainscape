@@ -470,13 +470,15 @@ function schemeLoads(scheme: SetScheme): Load[] {
 
 class DefinitionChecker {
   readonly errors: string[] = [];
+  private readonly definition: ProgramDefinition;
   private readonly lifts: Set<string>;
   private readonly vars: Set<string>;
   private readonly options: Set<string>;
   private readonly slots = new Map<string, SlotDecl>();
   private readonly dayKeys = new Set<string>();
 
-  constructor(private readonly definition: ProgramDefinition) {
+  constructor(definition: ProgramDefinition) {
+    this.definition = definition;
     this.lifts = new Set(definition.lifts.map((lift) => lift.key));
     this.vars = new Set(definition.referenceVars);
     this.options = new Set(definition.options.map((option) => option.key));
