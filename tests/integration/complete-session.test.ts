@@ -125,8 +125,12 @@ describe('complete-session with the fixture workout', () => {
 
   it('stores the session receipt, local date, timezone and balance version', async () => {
     const [session] =
-      await db`select summary, local_date::text, timezone, balance_version from public.sessions where id = ${fixture.id}`;
-    expect(session.summary).toEqual(firstResponse.body);
+      await db`select summary, completed_at, local_date::text, timezone, balance_version from public.sessions where id = ${fixture.id}`;
+    expect(firstResponse.body).toEqual({
+      ...session.summary,
+      programLinked: false,
+      completedAt: new Date(session.completed_at).toISOString(),
+    });
     expect(session.timezone).toBe('Europe/Stockholm');
     expect(session.balance_version).toBe(DEFAULT_BALANCE.version);
     expect(session.local_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
