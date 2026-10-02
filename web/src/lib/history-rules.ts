@@ -1,6 +1,6 @@
 import type { CardioInterval, EffortInput, EffortInputType, RirSource, SessionSummary } from '@domain/types.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { InvokeOutcome } from './function-client.ts';
+import type { InvokeOutcome } from './function-client-rules.ts';
 
 export const HISTORY_PAGE_SIZE = 50;
 

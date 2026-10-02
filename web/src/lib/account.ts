@@ -1,6 +1,6 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { authCallbackUrl } from './auth-links.ts';
-import { httpErrorBody } from './function-client.ts';
+import { httpErrorBody } from './function-client-rules.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds, tryAgainIn } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 

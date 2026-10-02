@@ -11,7 +11,7 @@ import {
   type SessionSummary,
 } from '@domain/types.ts';
 import type { CardioActivity, LoadType, PaceUnit } from '../../lib/catalog-rules.ts';
-import type { InvokeOutcome } from '../../lib/function-client.ts';
+import type { InvokeOutcome } from '../../lib/function-client-rules.ts';
 import {
   type EditSessionPayload,
   type HistorySession,
