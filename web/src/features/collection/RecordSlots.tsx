@@ -1,3 +1,4 @@
+import { measuresRepsCapacity } from '@domain/types.ts';
 import type { LoadType } from '../../lib/catalog-rules.ts';
 import type { UnitPref } from '../../lib/profile-rules.ts';
 import { slotClass, slotText } from './record-slots.ts';
@@ -11,7 +12,7 @@ interface RecordSlotsProps {
 }
 
 export function RecordSlots({ loadType, slots, maxReps, unit, weightsHidden = false }: RecordSlotsProps) {
-  if (loadType === 'bodyweight') {
+  if (measuresRepsCapacity(loadType)) {
     return (
       <p className={maxReps ? 'record-slot bodyweight-record filled' : 'record-slot bodyweight-record'}>
         Max reps: <strong>{maxReps ?? '—'}</strong>
