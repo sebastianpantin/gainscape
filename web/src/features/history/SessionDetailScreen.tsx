@@ -157,7 +157,11 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
 
   const currentSignal = () => controllerRef.current!.signal;
 
-  const refreshAfterSave = async (signal: AbortSignal, removed = ''): Promise<void> => {
+  const reloadSession = async (
+    signal: AbortSignal,
+    failedText: string,
+    onFresh: (fresh: Loaded) => void,
+  ): Promise<void> => {
     let fresh: Loaded | null;
     try {
       fresh = await loadSession(sessionId);
@@ -165,34 +169,14 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       if (signal.aborted) return;
       setProblem({
         kind: 'refresh_failed',
-        text: "Saved, but couldn't refresh the workout.",
-        retry: () => void refreshAfterSave(signal, removed),
+        text: failedText,
+        retry: () => void reloadSession(signal, failedText, onFresh),
       });
       return;
     }
     if (signal.aborted) return;
     if (!fresh) return goBackGone();
-    adopt(fresh);
-    setProblem(null);
-    setNotice(removed ? `Changes saved. ${removed}` : 'Changes saved.');
-  };
-
-  const loadConflict = async (signal: AbortSignal): Promise<void> => {
-    let fresh: Loaded | null;
-    try {
-      fresh = await loadSession(sessionId);
-    } catch {
-      if (signal.aborted) return;
-      setProblem({
-        kind: 'refresh_failed',
-        text: "This workout was changed on another device, and the latest version couldn't be loaded.",
-        retry: () => void loadConflict(signal),
-      });
-      return;
-    }
-    if (signal.aborted) return;
-    if (!fresh) return goBackGone();
-    setProblem({ kind: 'conflict', fresh });
+    onFresh(fresh);
   };
 
   const handleCommonFailure = (action: FailureAction, verb: 'save' | 'delete') => {
@@ -227,7 +211,12 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           },
       );
       setEdit({ ...toSend, revision });
-      return refreshAfterSave(signal, removedText(revokedDrops, items));
+      const removed = removedText(revokedDrops, items);
+      return reloadSession(signal, "Saved, but couldn't refresh the workout.", (fresh) => {
+        adopt(fresh);
+        setProblem(null);
+        setNotice(removed ? `Changes saved. ${removed}` : 'Changes saved.');
+      });
     }
     const action = failureAction(outcome);
     if (action.kind === 'reid_sets' && setIdRetriesLeft > 0) {
@@ -235,7 +224,13 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       setEdit(reIded);
       return save(reIded, setIdRetriesLeft - 1);
     }
-    if (action.kind === 'revision_conflict') return loadConflict(signal);
+    if (action.kind === 'revision_conflict') {
+      return reloadSession(
+        signal,
+        "This workout was changed on another device, and the latest version couldn't be loaded.",
+        (fresh) => setProblem({ kind: 'conflict', fresh }),
+      );
+    }
     if (action.kind === 'ask_bodyweight') {
       setProblem({ kind: 'bodyweight', pending: toSend });
       return;
