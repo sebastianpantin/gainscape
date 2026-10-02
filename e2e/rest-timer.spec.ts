@@ -29,6 +29,7 @@ test('a done set starts a rest that counts down, adjusts, survives a reload and 
 
   await restTimer(page).getByRole('button', { name: 'Add 15 seconds' }).click();
   await expect(remaining).toHaveText('1:45');
+  await expect(restTimer(page).getByRole('button', { name: 'Add 15 seconds' })).toBeFocused();
   await restTimer(page).getByRole('button', { name: 'Remove 15 seconds' }).click();
   await restTimer(page).getByRole('button', { name: 'Remove 15 seconds' }).click();
   await expect(remaining).toHaveText('1:15');
@@ -42,6 +43,7 @@ test('a done set starts a rest that counts down, adjusts, survives a reload and 
   await expect(restTimer(page).getByRole('status')).toHaveText('Rest over');
   await restTimer(page).getByRole('button', { name: 'Dismiss' }).click();
   await expect(restTimer(page)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Finish workout' })).toBeFocused();
 });
 
 test('the rest length comes from settings, can be skipped or turned off, and ends with the workout', async ({
@@ -64,6 +66,8 @@ test('the rest length comes from settings, can be skipped or turned off, and end
   await expect(remaining).toHaveText('2:45');
   await restTimer(page).getByRole('button', { name: 'Skip rest' }).click();
   await expect(restTimer(page)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Finish workout' })).toBeDisabled();
+  await expect(page.locator('.finish-bar')).toBeFocused();
   await bench.getByRole('button', { name: 'Done set 1' }).click();
   await expect(restTimer(page).getByRole('timer', { name: 'Rest remaining' })).toHaveText('3:00');
 
@@ -77,4 +81,39 @@ test('the rest length comes from settings, can be skipped or turned off, and end
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await expect(bench.getByRole('button', { name: 'Done set 1' })).toHaveAttribute('aria-pressed', 'true');
   await expect(restTimer(page)).toHaveCount(0);
+});
+
+test('rating a set keeps the rest it started, and focus stays in the bar when the rest ends', async ({ page }) => {
+  await page.clock.install();
+  await register(page, uniqueUsername('rf'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await pauseClockNow(page);
+  await page.getByLabel('Search exercises').fill('bench');
+  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
+  const bench = page.locator('section', { has: page.getByRole('heading', { name: 'Barbell Bench Press' }) });
+  const remaining = restTimer(page).getByRole('timer', { name: 'Rest remaining' });
+  const firstSet = bench.locator('li.set-row').nth(0);
+
+  const doneFirstSet = bench.getByRole('button', { name: 'Done set 1' });
+  await expect(doneFirstSet).toHaveAttribute('aria-pressed', 'true');
+  await doneFirstSet.click();
+  await expect(doneFirstSet).toHaveAttribute('aria-pressed', 'false');
+  await doneFirstSet.click();
+  await expect(remaining).toHaveText('1:30');
+  await restTimer(page).getByRole('button', { name: 'Remove 15 seconds' }).click();
+  await firstSet.getByRole('radio', { name: 'Hard' }).click();
+  await expect(remaining).toHaveText('1:15');
+
+  await bench.getByRole('button', { name: '+ Add set' }).click();
+  await bench.locator('li.set-row').nth(1).getByRole('radio', { name: 'Hard' }).click();
+  await expect(remaining).toHaveText('1:30');
+
+  const removeTime = restTimer(page).getByRole('button', { name: 'Remove 15 seconds' });
+  await page.clock.runFor(80_000);
+  await removeTime.click();
+  await expect(restTimer(page).getByRole('status')).toHaveText('Rest over');
+  await expect(removeTime).toBeFocused();
+  await expect(removeTime).toHaveAttribute('aria-disabled', 'true');
+  await restTimer(page).getByRole('button', { name: 'Add 15 seconds' }).click();
+  await expect(remaining).toHaveText('0:15');
 });
