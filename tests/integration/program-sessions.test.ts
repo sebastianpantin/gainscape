@@ -320,6 +320,9 @@ describe('complete-session with a program link', () => {
     ['a negative weight', prescribed('mon-squat:1', -5)],
     ['zero reps', prescribed('mon-squat:1', 70, 0)],
     ['101 reps', prescribed('mon-squat:1', 70, 101)],
+    ['minimum reps past the integer range', prescribed('mon-squat:1', 70, 5, { minReps: 2147483648 })],
+    ['negative minimum reps', prescribed('mon-squat:1', 70, 5, { minReps: -1 })],
+    ['minimum reps above the reps', prescribed('mon-squat:1', 70, 5, { minReps: 6 })],
   ])('drops only the snapshot with %s and still stores the linked session', async (_, outOfRange) => {
     const user = await createTestUser();
     const enrollmentId = await enrollInMadcow(user);
@@ -344,12 +347,13 @@ describe('complete-session with a program link', () => {
     ['with an empty ref', { ref: '', weightKg: 60, reps: 5, amrap: false }],
     ['with a numeric ref', { ref: 7, weightKg: 60, reps: 5, amrap: false }],
     ['with a ref longer than 100 characters', { ref: 'x'.repeat(101), weightKg: 60, reps: 5, amrap: false }],
+    ['with a NUL character in the ref', { ref: 'mon-squat:\u00000', weightKg: 60, reps: 5, amrap: false }],
     ['with a weight that is not a number', { ref: 'mon-squat:0', weightKg: '60', reps: 5, amrap: false }],
     ['with fractional reps', { ref: 'mon-squat:0', weightKg: 60, reps: 4.5, amrap: false }],
     ['with fractional minimum reps', { ref: 'mon-squat:0', weightKg: 60, reps: 5, minReps: 2.5, amrap: false }],
     ['with an unknown key', { ref: 'mon-squat:0', weightKg: 60, reps: 5, amrap: false, pct: 0.8 }],
     ['that is not an object', 'mon-squat:0'],
-  ])('returns 422 for a prescription %s', async (_, malformed) => {
+  ])('stores the linked session and drops only a prescription %s', async (_, malformed) => {
     const user = await createTestUser();
     const enrollmentId = await enrollInMadcow(user);
     const [first, ...rest] = mondaySquatSets();
@@ -360,12 +364,16 @@ describe('complete-session with a program link', () => {
 
     const response = await postCompleteSession(user.accessToken, payload);
 
-    expect(response.status, response.rawBody).toBe(422);
-    expect(response.body.error).toBe('invalid_payload');
-    expect(await rowCounts(user.id, ['sessions'])).toEqual({ sessions: 0 });
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.programLinked).toBe(true);
+    expect((await snapshotsOf(payload.id)).map((row) => row.prescription_ref)).toEqual([
+      null,
+      'mon-squat:1',
+      'mon-squat:2',
+    ]);
   });
 
-  it('returns 422 for a prescription on a cardio bout', async () => {
+  it('stores a cardio bout that carries a prescription and ignores the prescription', async () => {
     const user = await createTestUser();
     const enrollmentId = await enrollInMadcow(user);
     const bout = { ...aBout(exerciseIds.running, 3), prescription: prescribed('mon-squat:3', 60) };
@@ -373,38 +381,58 @@ describe('complete-session with a program link', () => {
 
     const response = await postCompleteSession(user.accessToken, payload);
 
-    expect(response.status, response.rawBody).toBe(422);
-    expect(response.body.error).toBe('invalid_payload');
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.programLinked).toBe(true);
+    expect(await snapshotsOf(payload.id)).toHaveLength(4);
+    expect((await snapshotsOf(payload.id))[3]).toEqual(noSnapshot(3));
   });
 
-  it('returns 422 duplicate_prescription_ref when two sets carry the same ref', async () => {
+  it('keeps the snapshot of the first set per ref and drops it from later sets with the same ref', async () => {
     const user = await createTestUser();
     const enrollmentId = await enrollInMadcow(user);
     const payload = linkedPayload(
-      [squatSet(0, 60, prescribed('mon-squat:0', 60)), squatSet(1, 60, prescribed('mon-squat:0', 60))],
+      [
+        squatSet(0, 60, prescribed('mon-squat:0', 60)),
+        squatSet(1, 65, prescribed('mon-squat:0', 65)),
+        squatSet(2, 70, prescribed('mon-squat:1', 70)),
+        squatSet(3, 75, prescribed('mon-squat:0', 75)),
+      ],
       { enrollmentId, position: MONDAY_WEEK_1 },
     );
 
     const response = await postCompleteSession(user.accessToken, payload);
 
-    expect(response.status, response.rawBody).toBe(422);
-    expect(response.body.error).toBe('duplicate_prescription_ref');
-    expect(await rowCounts(user.id, ['sessions'])).toEqual({ sessions: 0 });
+    expect(response.status, response.rawBody).toBe(200);
+    const snapshots = await snapshotsOf(payload.id);
+    expect(snapshots.map((row) => row.prescription_ref)).toEqual(['mon-squat:0', null, 'mon-squat:1', null]);
+    expect(snapshots[0].prescribed_weight_kg).toBe(60);
   });
 
   it.each([
-    ['an enrollment id that is not a uuid', { enrollmentId: 'madcow', position: MONDAY_WEEK_1 }],
-    ['no position', { enrollmentId: '00000000-0000-4000-8000-000000000000' }],
-    ['a position that is not an object', { enrollmentId: '00000000-0000-4000-8000-000000000000', position: 'mon' }],
-    ['an unknown key', { enrollmentId: '00000000-0000-4000-8000-000000000000', position: MONDAY_WEEK_1, day: 1 }],
-  ])('returns 422 for a program with %s', async (_, program) => {
+    ['an enrollment id that is not a uuid', () => ({ enrollmentId: 'madcow', position: MONDAY_WEEK_1 })],
+    ['no position', (enrollmentId: string) => ({ enrollmentId })],
+    ['a position that is not an object', (enrollmentId: string) => ({ enrollmentId, position: 'mon' })],
+    ['an unknown key', (enrollmentId: string) => ({ enrollmentId, position: MONDAY_WEEK_1, day: 1 })],
+    ['a program that is not an object', () => 'madcow'],
+    [
+      'a NUL character in a position value',
+      (enrollmentId: string) => ({ enrollmentId, position: { week: 1, day: 'mon\u0000' } }),
+    ],
+    [
+      'a NUL character in a position key',
+      (enrollmentId: string) => ({ enrollmentId, position: { week: 1, day: 'mon', ['x\u0000']: 1 } }),
+    ],
+  ])('stores the session unlinked and without snapshots for a program with %s', async (_, programFor) => {
     const user = await createTestUser();
-    const payload = { ...payloadAt(hoursAgo(1), mondaySquatSets().map(withoutPrescription)), program };
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = { ...payloadAt(hoursAgo(1), mondaySquatSets()), program: programFor(enrollmentId) };
 
     const response = await postCompleteSession(user.accessToken, payload);
 
-    expect(response.status, response.rawBody).toBe(422);
-    expect(response.body.error).toBe('invalid_payload');
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.programLinked).toBe(false);
+    expect(await sessionRow(payload.id)).toMatchObject({ enrollment_id: null, program_position: null });
+    expect(await snapshotsOf(payload.id)).toEqual([0, 1, 2].map(noSnapshot));
   });
 });
 
@@ -720,6 +748,22 @@ describe('edit-session of a linked session', () => {
       prescription_ref: 'mon-squat:0',
       prescribed_weight_kg: 65,
     });
+  });
+
+  it.each([
+    ['without the amrap flag', { ref: 'mon-squat:3', weightKg: 90, reps: 5 }],
+    ['with a ref longer than 100 characters', { ref: 'x'.repeat(101), weightKg: 90, reps: 5, amrap: false }],
+    ['with fractional reps', { ref: 'mon-squat:3', weightKg: 90, reps: 4.5, amrap: false }],
+    ['with an unknown key', { ref: 'mon-squat:3', weightKg: 90, reps: 5, amrap: false, pct: 0.8 }],
+    ['that is not an object', 'mon-squat:3'],
+  ])('returns 422 invalid_payload for an edit with a prescription %s', async (_, malformed) => {
+    const user = await createTestUser();
+    const { payload, sets } = await linkedSession(user);
+
+    const response = await edit(user, payload.id, [...sets, { ...squatSet(3, 90, null), prescription: malformed }]);
+
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe('invalid_payload');
   });
 
   it('returns 422 duplicate_prescription_ref when the edit carries one ref twice', async () => {
