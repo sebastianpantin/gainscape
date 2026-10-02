@@ -185,7 +185,10 @@ function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {
   return (
     <section className="panel stack" aria-labelledby="time-heading">
       <h2 id="time-heading">Time zone</h2>
-      <p>{profile.timezone}</p>
+      <dl className="stack" style={{ gap: 2 }}>
+        <dt className="muted tiny">Current</dt>
+        <dd>{profile.timezone}</dd>
+      </dl>
       <form className="timezone-row" onSubmit={change}>
         <label className="field">
           Change to
