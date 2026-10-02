@@ -1,4 +1,4 @@
-import { roundTo } from '@domain/strength.ts';
+import { roundTo } from '@domain/math.ts';
 import type { PaceUnit } from './catalog.ts';
 import type { UnitPref } from './profile-rules.ts';
 

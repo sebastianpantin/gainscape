@@ -1,4 +1,5 @@
 export * from './types.ts';
+export * from './math.ts';
 export * from './errors.ts';
 export * from './exercise-lookup.ts';
 export * from './balance.ts';

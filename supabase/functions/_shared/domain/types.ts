@@ -88,6 +88,10 @@ export interface CardioSetInput {
 
 export type SetInput = LiftSetInput | CardioSetInput;
 
+export function measuresRepsCapacity(loadType: LoadType): boolean {
+  return loadType === 'bodyweight';
+}
+
 export function isLiftSet(set: SetInput): set is LiftSetInput {
   return set.kind !== 'cardio';
 }

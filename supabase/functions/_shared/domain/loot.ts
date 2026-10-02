@@ -1,5 +1,5 @@
 import type { LootConfig } from './balance.ts';
-import { roundTo } from './strength.ts';
+import { roundTo } from './math.ts';
 import type { Catalog, RevokeReason, Rng, RollKind, SetKind, SetResult } from './types.ts';
 
 const CHANCE_DECIMALS = 5;

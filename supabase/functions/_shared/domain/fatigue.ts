@@ -1,15 +1,17 @@
 import type { BalanceConfig } from './balance.ts';
 import { liftExerciseFor } from './exercise-lookup.ts';
+import { FLOAT_TOLERANCE } from './math.ts';
 import type { SessionContext, Step } from './pipeline.ts';
-import { isLiftResult, type LiftExerciseDef, type LiftSetResult, type SetResult } from './types.ts';
+import { loadRatioAtFailure, repsAtFailure } from './strength.ts';
+import {
+  isLiftResult,
+  type LiftExerciseDef,
+  type LiftSetResult,
+  measuresRepsCapacity,
+  type SetResult,
+} from './types.ts';
 
-const EPLEY_REPS_PER_LOAD_RATIO = 30;
-const FLOOR_TOLERANCE = 1e-9;
 const REPS_MODEL_UNIT_LOAD = 1;
-
-function measuresRepsCapacity(exercise: LiftExerciseDef): boolean {
-  return exercise.loadType === 'bodyweight';
-}
 
 function effortProximity(rir: number, cfg: BalanceConfig): number {
   const repsCountedAsEffective = cfg.effectiveRirWindow + 1;
@@ -20,21 +22,13 @@ export function fatigueAfterSet(rir: number, cfg: BalanceConfig): number {
   return 1 - cfg.fatiguePerHardSet * effortProximity(rir, cfg);
 }
 
-function loadRatioAtFailure(reps: number): number {
-  return 1 + (reps - 1) / EPLEY_REPS_PER_LOAD_RATIO;
-}
-
-function repsAtFailure(loadRatio: number): number {
-  return 1 + EPLEY_REPS_PER_LOAD_RATIO * (loadRatio - 1);
-}
-
 export function fatiguedStrength(strength: number, fatigue: number, repsCapacityModel: boolean): number {
   if (!repsCapacityModel) return strength * fatigue;
   return repsAtFailure(loadRatioAtFailure(strength) * fatigue);
 }
 
 function workingLoad(result: SetResult, exercise: LiftExerciseDef): number {
-  return measuresRepsCapacity(exercise) ? REPS_MODEL_UNIT_LOAD : result.effectiveLoadKg;
+  return measuresRepsCapacity(exercise.loadType) ? REPS_MODEL_UNIT_LOAD : result.effectiveLoadKg;
 }
 
 function claimedRir(result: SetResult, cfg: BalanceConfig): number {
@@ -56,7 +50,7 @@ function rirFloorFromLaterSets(
       const demonstratedStrength = laterLoad * loadRatioAtFailure(later.set.reps);
       const freshRepsAtCheckedLoad = repsAtFailure(demonstratedStrength / (fatigueSinceChecked * checkedLoad));
       const impliedRir = Math.floor(
-        freshRepsAtCheckedLoad - checked.set.reps - cfg.fatigueToleranceReps + FLOOR_TOLERANCE,
+        freshRepsAtCheckedLoad - checked.set.reps - cfg.fatigueToleranceReps + FLOAT_TOLERANCE,
       );
       floor = Math.max(floor, impliedRir);
     }
