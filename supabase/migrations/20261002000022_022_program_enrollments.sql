@@ -266,7 +266,11 @@ begin
     enrollment -> 'options',
     enrollment -> 'bindings',
     enrollment -> 'inputs',
-    enrollment -> 'rounding'
+    jsonb_build_object(
+      'increment', enrollment -> 'rounding' -> 'increment',
+      'mode', enrollment -> 'rounding' -> 'mode',
+      'barWeight', enrollment -> 'rounding' -> 'barWeight'
+    )
   )
   returning id into enrolled_id;
 
