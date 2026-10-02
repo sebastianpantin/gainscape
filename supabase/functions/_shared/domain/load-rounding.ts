@@ -1,4 +1,5 @@
-import { type WeightUnit } from './units.ts';
+import { roundTo } from './math.ts';
+import { KG_PER_LB, type WeightUnit } from './units.ts';
 
 export type RoundingMode = 'nearest' | 'down';
 
@@ -15,14 +16,22 @@ export const DEFAULT_ROUNDING: Readonly<Record<WeightUnit, RoundingSetting>> = O
   lb: Object.freeze({ increment: 5, mode: 'nearest', barWeight: 45 }),
 });
 
-export const roundLoad: (value: number, increment: number, mode: RoundingMode) => number = () => {
-  throw new Error('not implemented');
-};
+function decimalPlaces(value: number): number {
+  const [, fraction = ''] = String(value).split('.');
+  return fraction.length;
+}
 
-export const roundPrescribedLoad: (value: number, rounding: RoundingSetting) => number = () => {
-  throw new Error('not implemented');
-};
+export function roundLoad(value: number, increment: number, mode: RoundingMode): number {
+  const steps = value / increment + ROUNDING_EPSILON;
+  const wholeSteps = mode === 'nearest' ? Math.floor(steps + 0.5) : Math.floor(steps);
+  return roundTo(decimalPlaces(increment), wholeSteps * increment);
+}
 
-export const halfIncrementKg: (rounding: RoundingSetting, unit: WeightUnit) => number = () => {
-  throw new Error('not implemented');
-};
+export function roundPrescribedLoad(value: number, rounding: RoundingSetting): number {
+  return Math.max(rounding.barWeight, roundLoad(value, rounding.increment, rounding.mode));
+}
+
+export function halfIncrementKg(rounding: RoundingSetting, unit: WeightUnit): number {
+  const halfIncrement = rounding.increment / 2;
+  return unit === 'kg' ? halfIncrement : halfIncrement * KG_PER_LB;
+}
