@@ -10,6 +10,7 @@ import {
   rebuildCaches,
   setBodyweight,
   type TestUser,
+  rowCounts,
 } from './local-stack.ts';
 import {
   aBout,
@@ -32,17 +33,7 @@ async function storedSummary(sessionId: string) {
   return row.summary;
 }
 
-async function rowCountsFor(userId: string) {
-  const [counts] = await db`
-    select
-      (select count(*) from public.sessions where user_id = ${userId})::int as sessions,
-      (select count(*) from public.sets where user_id = ${userId})::int as sets,
-      (select count(*) from public.set_skill_xp where user_id = ${userId})::int as set_skill_xp,
-      (select count(*) from public.user_skills where user_id = ${userId})::int as user_skills,
-      (select count(*) from public.rep_maxes where user_id = ${userId})::int as rep_maxes,
-      (select count(*) from public.exercise_maxes where user_id = ${userId})::int as exercise_maxes`;
-  return counts;
-}
+const countedTables = ['sessions', 'sets', 'set_skill_xp', 'user_skills', 'rep_maxes', 'exercise_maxes'] as const;
 
 let benchId: string;
 let squatId: string;
@@ -281,13 +272,13 @@ describe('replay guards', () => {
     const first = withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 60)]));
     await postSession(user, first);
     await db`update public.sessions set derived_balance_version = 1 where id = ${first.id}`;
-    const before = await rowCountsFor(user.id);
+    const before = await rowCounts(user.id, countedTables);
 
     const next = withFreshIds(payloadAt(hoursAgo(1), [aSet(benchId, 0, 62.5)]));
     const refused = await postCompleteSession(user.accessToken, next);
     expect(refused.status).toBe(503);
     expect(refused.body.error).toBe('rebuild_required');
-    expect(await rowCountsFor(user.id)).toEqual(before);
+    expect(await rowCounts(user.id, countedTables)).toEqual(before);
 
     expect((await rebuildCaches(user.id)).status).toBe(200);
     expect((await postCompleteSession(user.accessToken, next)).status).toBe(200);

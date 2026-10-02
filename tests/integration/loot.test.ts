@@ -33,17 +33,10 @@ import {
   postFunction,
   rebuildCaches,
   type TestUser,
+  rowCounts,
 } from './local-stack.ts';
 
-async function lootCounts(userId: string) {
-  const [counts] = await db`
-    select (select count(*) from public.loot_rolls where user_id = ${userId})::int as loot_rolls,
-           (select count(*) from public.drops where user_id = ${userId})::int as drops,
-           (select count(*) from public.item_ledger where user_id = ${userId})::int as item_ledger,
-           (select count(*) from public.user_items where user_id = ${userId})::int as user_items,
-           (select count(*) from public.drop_luck where user_id = ${userId})::int as drop_luck`;
-  return counts;
-}
+const lootTablesCounted = ['loot_rolls', 'drops', 'item_ledger', 'user_items', 'drop_luck'] as const;
 
 async function storedCandidates(sessionId: string): Promise<LootCandidate[]> {
   const rows = await db`
@@ -306,7 +299,13 @@ describe('sessions that never roll', () => {
     );
     expect(response.body.historyOnly).toBe(true);
     expect(response.body.drops).toEqual([]);
-    expect(await lootCounts(user.id)).toEqual({ loot_rolls: 0, drops: 0, item_ledger: 0, user_items: 0, drop_luck: 0 });
+    expect(await rowCounts(user.id, lootTablesCounted)).toEqual({
+      loot_rolls: 0,
+      drops: 0,
+      item_ledger: 0,
+      user_items: 0,
+      drop_luck: 0,
+    });
   });
 
   it('answers a retry with the stored body and rolls nothing new', async () => {
@@ -314,11 +313,11 @@ describe('sessions that never roll', () => {
     const [start] = startsOnOneLocalDay(1);
     const payload = payloadAt(start, [aSet(benchId, 0, 60), aSet(benchId, 1, 60), aSet(benchId, 2, 60)]);
     const first = await post(user, payload);
-    const countsAfterFirst = await lootCounts(user.id);
+    const countsAfterFirst = await rowCounts(user.id, lootTablesCounted);
     expect(countsAfterFirst.loot_rolls).toBe(3);
     const retry = await post(user, payload);
     expect(retry.rawBody).toBe(first.rawBody);
-    expect(await lootCounts(user.id)).toEqual(countsAfterFirst);
+    expect(await rowCounts(user.id, lootTablesCounted)).toEqual(countsAfterFirst);
   });
 
   it('gives unrated cold-start sets no rolls', async () => {
@@ -328,7 +327,7 @@ describe('sessions that never roll', () => {
       user,
       payloadAt(start, [aSet(benchId, 0, 60, { effort: null }), aSet(squatId, 1, 90, { effort: null })]),
     );
-    expect((await lootCounts(user.id)).loot_rolls).toBe(0);
+    expect((await rowCounts(user.id, lootTablesCounted)).loot_rolls).toBe(0);
   });
 });
 
