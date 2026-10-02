@@ -2,6 +2,7 @@ import { authenticatedUserId } from '../_shared/auth.ts';
 import { type JsonValue, sql, type Transaction } from '../_shared/db.ts';
 import {
   carriedEffectiveLoadKg,
+  isSessionEditable,
   DEFAULT_BALANCE,
   effectiveLoadForNewSet,
   type ExerciseDef,
@@ -19,7 +20,6 @@ import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
-  isEditable,
   loadProfileSettings,
   loadStoredSets,
   lockUser,
@@ -169,7 +169,8 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
       return { summary: session.summary, revision: session.revision, replayedSessionIds: [], revokedDrops: [] };
     }
 
-    if (!isEditable(session, Date.now())) throw new HttpError(409, 'edit_window_closed');
+    if (!isSessionEditable({ historyOnly: session.historyOnly, startedAt: session.key.startedAt }, Date.now()))
+      throw new HttpError(409, 'edit_window_closed');
     if (payload.ifRevision !== session.revision) {
       throw new HttpError(409, 'revision_conflict', { revision: session.revision });
     }

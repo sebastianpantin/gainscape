@@ -20,7 +20,7 @@ Past workouts under the Log tab: a paged session list and a detail screen where 
 
 ### Working In This Directory
 
-- `isEditable` and the edit window must agree with `@domain/edit-window.ts` and the `edit-session` Edge Function; change them together.
+- `isEditable` re-exports `isSessionEditable` from `@domain/edit-window.ts`, the same rule the `edit-session` and `delete-session` Edge Functions apply.
 - Put every new edit rule in `session-edit.ts` as a pure function. Keep `SessionDetailScreen.tsx` to state and rendering.
 - Row mapping and uuid checks are in `../../lib/history-rules.ts`; fetches and mutations (`fetchSession`, `editSession`, `deleteSession`) in `../../lib/history.ts`.
 - Deleting or syncing must call `forgetLastSummary` so the reveal does not show a removed session.

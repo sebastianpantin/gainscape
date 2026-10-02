@@ -1,5 +1,4 @@
 import { DEFAULT_BALANCE } from '@domain/balance.ts';
-import { isWithinEditWindow } from '@domain/edit-window.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
 import { roundTo } from '@domain/math.ts';
 import {
@@ -84,9 +83,7 @@ const UNKNOWN_EXERCISE_NAME = 'Unknown exercise';
 const UNKNOWN_EXERCISE_LOAD_TYPE: LoadType = 'external';
 const UNKNOWN_EXERCISE_PACE_UNIT: PaceUnit = 'per_km';
 
-export function isEditable(session: Pick<HistorySession, 'historyOnly' | 'startedAt'>, now: number): boolean {
-  return !session.historyOnly && isWithinEditWindow(session.startedAt, now);
-}
+export { isSessionEditable as isEditable } from '@domain/edit-window.ts';
 
 export function sessionXp(summary: Pick<SessionSummary, 'xpBySkill'>): number {
   return Object.values(summary.xpBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
