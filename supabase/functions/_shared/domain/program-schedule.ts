@@ -1,4 +1,4 @@
-import { type ProgramDefinition } from './program-definition.ts';
+import { type DayDecl, type ProgramDefinition } from './program-definition.ts';
 
 export interface CyclePosition {
   cycle: number;
@@ -34,6 +34,11 @@ export function dayKeyOf(definition: ProgramDefinition, position: Position): str
   if (!isRotationPosition(position)) return position.day;
   const days = definition.schedule.days;
   return days[((position.index % days.length) + days.length) % days.length].key;
+}
+
+export function dayOf(definition: ProgramDefinition, position: Position): DayDecl | undefined {
+  const dayKey = dayKeyOf(definition, position);
+  return definition.schedule.days.find((day) => day.key === dayKey);
 }
 
 function weekKeyOf(position: Position): number[] {
@@ -97,19 +102,15 @@ export function comparePositions(definition: ProgramDefinition, a: Position, b: 
   return dayIndexOf(definition, a.day) - dayIndexOf(definition, b.day);
 }
 
-function remainingDaysOfWeek(definition: ProgramDefinition, cursor: ScheduleCursor): Position[] {
+export function availableDays(definition: ProgramDefinition, cursor: ScheduleCursor): Position[] {
   if (isRotationPosition(cursor.position)) return [cursor.position];
   return definition.schedule.days
     .filter((day) => !cursor.completedDays.includes(day.key))
     .map((day) => positionAt(cursor.position, day.key));
 }
 
-export function availableDays(definition: ProgramDefinition, cursor: ScheduleCursor): Position[] {
-  return remainingDaysOfWeek(definition, cursor);
-}
-
 export function upcomingDays(definition: ProgramDefinition, cursor: ScheduleCursor, count: number): Position[] {
-  const upcoming = remainingDaysOfWeek(definition, cursor).slice(0, Math.max(count, 0));
+  const upcoming = availableDays(definition, cursor).slice(0, Math.max(count, 0));
   let week = cursor.position;
   while (upcoming.length < count) {
     week = nextWeek(definition, week);

@@ -722,6 +722,10 @@ function arrayOf(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function ruleAdjustmentsIn(rule: Record<string, unknown>): unknown[] {
+  return [...arrayOf(rule.onMet), ...arrayOf(rule.onMiss), ...arrayOf(rule.always)];
+}
+
 function shapeErrors(json: unknown): string[] {
   if (!isRecord(json)) return ['a program definition must be an object'];
   const errors: string[] = [];
@@ -771,7 +775,7 @@ function unsupportedKindsIn(json: Record<string, unknown>): string[] {
     if (trigger !== null && PROGRESSION_TRIGGERS.includes(trigger) && !SUPPORTED_TRIGGERS.includes(trigger)) {
       unsupported.add(trigger);
     }
-    for (const adjustment of [...arrayOf(record.onMet), ...arrayOf(record.onMiss), ...arrayOf(record.always)]) {
+    for (const adjustment of ruleAdjustmentsIn(record)) {
       const kind = kindOf(adjustment);
       if (kind !== null && ADJUSTMENT_KINDS.includes(kind) && !SUPPORTED_ADJUSTMENT_KINDS.includes(kind)) {
         unsupported.add(kind);
@@ -805,7 +809,7 @@ function unknownKindsIn(json: Record<string, unknown>): string[] {
   for (const rule of arrayOf(json.progression)) {
     const record = rule as Record<string, unknown>;
     if (typeof record.trigger === 'string') note(record.trigger, PROGRESSION_TRIGGERS);
-    for (const adjustment of [...arrayOf(record.onMet), ...arrayOf(record.onMiss), ...arrayOf(record.always)]) {
+    for (const adjustment of ruleAdjustmentsIn(record)) {
       note(kindOf(adjustment), ADJUSTMENT_KINDS);
     }
   }
