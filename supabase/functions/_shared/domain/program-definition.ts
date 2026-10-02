@@ -834,6 +834,8 @@ export function parseProgramDefinition(json: unknown): ParsedProgramDefinition {
 
 const ROUNDING_MODES: readonly string[] = ['nearest', 'down'];
 
+const MAX_INPUT_VALUE = 1000;
+
 function isPositiveNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
@@ -865,11 +867,17 @@ function enrollmentInputErrors(definition: ProgramDefinition, enrollment: Progra
       for (const [kind, value] of given) {
         if (!(input.kinds as string[]).includes(kind)) {
           errors.push(`lift '${lift}' input '${kind}' is not declared by the template`);
-        } else if (!isPositiveNumber(value)) {
-          errors.push(`lift '${lift}' input '${kind}' must be a positive number, got ${String(value)}`);
+        } else if (!isPositiveNumber(value) || value > MAX_INPUT_VALUE) {
+          errors.push(
+            `lift '${lift}' input '${kind}' must be above 0 and at most ${MAX_INPUT_VALUE}, got ${String(value)}`,
+          );
         }
       }
     }
+  }
+  const inputLifts = new Set(definition.inputs.flatMap((input) => input.lifts));
+  for (const lift of Object.keys(enrollment.inputs)) {
+    if (!inputLifts.has(lift)) errors.push(`lift '${lift}' takes no input in this template`);
   }
   return errors;
 }
