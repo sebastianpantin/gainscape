@@ -1,7 +1,7 @@
 import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { isWithinEditWindow } from '@domain/edit-window.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
-import { roundTo } from '@domain/strength.ts';
+import { roundTo } from '@domain/math.ts';
 import {
   type CardioEffortLevel,
   type CardioInterval,

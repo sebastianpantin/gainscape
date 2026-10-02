@@ -2,6 +2,7 @@ import type { Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   currentStrength,
+  measuresRepsCapacity,
   MS_PER_DAY,
   type SessionKey,
   type StrengthCandidate,
@@ -79,7 +80,7 @@ async function latestSessionPerExercise(
     order by st.exercise_id, s.started_at desc, s.id desc`;
   return rows.map((row) => ({
     exerciseId: row.exercise_id,
-    usesRepsCapacity: row.load_type === 'bodyweight',
+    usesRepsCapacity: measuresRepsCapacity(row.load_type),
     session: { id: row.session_id, startedAt: new Date(row.started_at).toISOString() },
   }));
 }

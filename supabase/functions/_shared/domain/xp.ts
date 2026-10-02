@@ -1,7 +1,8 @@
 import type { BalanceConfig } from './balance.ts';
+import { roundTo } from './math.ts';
 import type { SkillXp } from './types.ts';
 
-const FULL_SHARE_BASIS_POINTS = 10_000;
+export const FULL_SHARE_BASIS_POINTS = 10_000;
 
 export function effectiveReps(reps: number, rir: number, isWarmup: boolean, cfg: BalanceConfig): number {
   if (isWarmup) return 0;
@@ -9,12 +10,14 @@ export function effectiveReps(reps: number, rir: number, isWarmup: boolean, cfg:
   return Math.min(reps, Math.max(0, repsWithinFailureWindow));
 }
 
-const FLOAT_NOISE_DECIMALS = 6;
+export const FLOAT_NOISE_DECIMALS = 6;
+
+export function roundXp(rawXp: number): number {
+  return Math.round(roundTo(FLOAT_NOISE_DECIMALS, rawXp));
+}
 
 export function setXp(effectiveRepCount: number, intensityBonus: number, cfg: BalanceConfig): number {
-  const rawXp = cfg.xpPerEffectiveRep * effectiveRepCount * intensityBonus;
-  const factor = 10 ** FLOAT_NOISE_DECIMALS;
-  return Math.round(Math.round(rawXp * factor) / factor);
+  return roundXp(cfg.xpPerEffectiveRep * effectiveRepCount * intensityBonus);
 }
 
 export interface OrderedSkillShare {

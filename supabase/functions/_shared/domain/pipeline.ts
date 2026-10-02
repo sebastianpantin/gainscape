@@ -1,5 +1,5 @@
 import type { BalanceConfig } from './balance.ts';
-import { boutPace, cardioSkillXp, countedWorkSeconds, derivedCardioEffort } from './cardio.ts';
+import { boutPace, cardioSkillXp, countedWorkSeconds, derivedCardioEffort, SECONDS_PER_MINUTE } from './cardio.ts';
 import { resolveEffort } from './effort.ts';
 import { levelForXp } from './levels.ts';
 import type {
@@ -17,12 +17,13 @@ import type {
   StrengthState,
   UserState,
 } from './types.ts';
-import { isLiftResult, NO_RECORDS } from './types.ts';
+import { isLiftResult, measuresRepsCapacity, NO_RECORDS } from './types.ts';
 import { BodyweightLoadNotZeroError, BodyweightRequiredError } from './errors.ts';
 import { cardioExercise, exerciseFor, liftExercise, liftExerciseFor } from './exercise-lookup.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
 import { checkFatigue } from './fatigue.ts';
-import { liftsNoLoad, roundTo, trackStrength } from './strength.ts';
+import { roundTo } from './math.ts';
+import { liftsNoLoad, trackStrength } from './strength.ts';
 import { effectiveReps, setXp, splitXp } from './xp.ts';
 
 export interface PipelineDeps {
@@ -51,7 +52,7 @@ function skillsInDisplayOrder(catalog: Catalog): SkillDef[] {
 }
 
 function assertNoAddedLoadOnPureBodyweight(set: Pick<LiftSetInput, 'weightKg'>, exercise: LiftExerciseDef): void {
-  if (exercise.loadType === 'bodyweight' && set.weightKg > 0) throw new BodyweightLoadNotZeroError();
+  if (measuresRepsCapacity(exercise.loadType) && set.weightKg > 0) throw new BodyweightLoadNotZeroError();
 }
 
 export function effectiveLoadForNewSet(
@@ -92,8 +93,6 @@ function effectiveLoadKg(set: LiftSetInput, exercise: LiftExerciseDef, state: Us
   assertNoAddedLoadOnPureBodyweight(set, exercise);
   return set.recordedEffectiveLoadKg;
 }
-
-const SECONDS_PER_MINUTE = 60;
 
 const UNSCORED_RESULT_FIELDS = Object.freeze({
   rir: null,
