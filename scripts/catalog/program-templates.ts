@@ -295,10 +295,15 @@ function sqlText(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
+function byKeyThenVersion(a: ProgramDefinition, b: ProgramDefinition): number {
+  if (a.key !== b.key) return a.key < b.key ? -1 : 1;
+  return a.version - b.version;
+}
+
 export function renderProgramTemplates(templates: readonly ProgramTemplate[]): string {
   const rows = templates
     .map(({ definition }) => definition)
-    .sort((a, b) => (a.key === b.key ? a.version - b.version : a.key < b.key ? -1 : 1))
+    .sort(byKeyThenVersion)
     .map(
       (definition) =>
         `  (${sqlText(definition.key)}, ${definition.version}, ${sqlText(definition.name)}, ${sqlText(JSON.stringify(definition))}::jsonb)`,
