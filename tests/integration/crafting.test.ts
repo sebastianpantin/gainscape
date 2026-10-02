@@ -4,26 +4,19 @@ import { canCraft, type Recipe } from '@domain/index.ts';
 import {
   anon,
   builtInExerciseId,
-  createTestUser,
   db,
   grantDrop,
-  ledgerMismatches,
   postFunction,
   type TestUser,
   seedRateLimitHits,
 } from './local-stack.ts';
-import { aSet, payloadAt, postSession, TIMEZONE } from './session-support.ts';
+import { aSet, expectLedgerMatchesItems, payloadAt, postSession, trackedUsers } from './session-support.ts';
 
-const users: string[] = [];
 let benchId: string;
 let grinderBelt: Recipe;
 const itemIds = new Map<string, string>();
 
-async function freshUser(): Promise<TestUser> {
-  const user = await createTestUser(TIMEZONE);
-  users.push(user.id);
-  return user;
-}
+const { freshUser, checkAndClear } = trackedUsers(expectLedgerMatchesItems);
 
 async function quietSession(user: TestUser): Promise<string> {
   const payload = payloadAt(new Date(Date.now() - 60 * 60 * 1000), [aSet(benchId, 0, 40, { isWarmup: true })]);
@@ -85,7 +78,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  for (const userId of users) expect(await ledgerMismatches(userId), userId).toEqual([]);
+  await checkAndClear();
 });
 
 afterAll(async () => {
