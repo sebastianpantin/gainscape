@@ -1,9 +1,12 @@
 import {
   type EffortInputType,
   type OptionValue,
+  type FactSet,
   type Position,
+  type PrescriptionSnapshot,
   type ProgramEnrollment,
   type ProgramFact,
+  type ReferenceVar,
   type RoundingSetting,
   type WeightUnit,
 } from '@domain/index.ts';
@@ -55,11 +58,70 @@ export interface EnrollmentFactsRows {
 }
 
 export function enrollmentFromRow(row: EnrollmentRow): ProgramEnrollment {
-  void row;
-  throw new Error('not implemented');
+  return {
+    id: row.id,
+    unit: row.unit,
+    options: row.options,
+    bindings: row.lift_bindings,
+    inputs: row.inputs,
+    rounding: row.rounding,
+  };
+}
+
+function utcIso(timestamp: string): string {
+  return new Date(timestamp).toISOString();
+}
+
+function snapshotFromRow(row: FactSetRow): PrescriptionSnapshot | null {
+  if (row.ref === null || row.prescribed_weight_kg === null || row.prescribed_reps === null) return null;
+  return {
+    ref: row.ref,
+    weightKg: row.prescribed_weight_kg,
+    reps: row.prescribed_reps,
+    minReps: row.prescribed_min_reps,
+    amrap: row.prescribed_amrap === true,
+  };
+}
+
+function factSetFromRow(row: FactSetRow): FactSet {
+  return {
+    exerciseId: row.exercise_id,
+    weightKg: row.weight_kg,
+    reps: row.reps,
+    effortInputType: row.effort_input_type,
+    effortValue: row.effort_value,
+    prescription: snapshotFromRow(row),
+  };
+}
+
+function eventFact(row: EnrollmentEventRow): ProgramFact[] {
+  const base = { id: row.id, at: utcIso(row.effective_at) };
+  switch (row.kind) {
+    case 'set_reference':
+      return [
+        {
+          kind: 'set_reference',
+          ...base,
+          lift: row.payload.lift as string,
+          var: row.payload.var as ReferenceVar,
+          value: row.payload.value as number,
+        },
+      ];
+    case 'skip_day':
+    case 'jump_to':
+      return [{ kind: row.kind, ...base, position: row.payload.position as Position }];
+    default:
+      return [];
+  }
 }
 
 export function programFactsFromRows(rows: EnrollmentFactsRows): ProgramFact[] {
-  void rows;
-  throw new Error('not implemented');
+  const sessions = rows.sessions.map((session): ProgramFact => ({
+    kind: 'session',
+    id: session.id,
+    at: utcIso(session.completed_at),
+    position: session.program_position,
+    sets: session.sets.map(factSetFromRow),
+  }));
+  return [...rows.events.flatMap(eventFact), ...sessions];
 }
