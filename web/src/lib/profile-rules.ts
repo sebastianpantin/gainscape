@@ -105,3 +105,20 @@ export function initialsFor(displayName: string, username: string): string {
   if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
   return (words[0] ?? username).slice(0, 2).toUpperCase();
 }
+
+const DAY_MS = 86_400_000;
+
+export function nextTimezoneChangeAt(profile: Pick<Profile, 'timezoneChangedAt'>, now = new Date()): Date | null {
+  if (!profile.timezoneChangedAt) return null;
+  const next = new Date(profile.timezoneChangedAt);
+  next.setUTCDate(next.getUTCDate() + TIMEZONE_CHANGE_COOLDOWN_DAYS);
+  return next.getTime() > now.getTime() ? next : null;
+}
+
+export function cooldownStartFor(nextAllowedAt: string): string {
+  return new Date(new Date(nextAllowedAt).getTime() - TIMEZONE_CHANGE_COOLDOWN_DAYS * DAY_MS).toISOString();
+}
+
+export function formatDay(date: Date): string {
+  return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
