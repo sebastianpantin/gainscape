@@ -39,10 +39,12 @@ describe('catalog generator', () => {
     expect(seed).not.toContain('\r');
   });
 
-  it('expands 58 items, 36 recipes and 2 drop tables', () => {
+  it('expands 58 items, 36 recipes with 72 inputs and 2 drop tables with 32 entries', () => {
     const catalog = loadCatalogData();
     expect(catalog.items).toHaveLength(58);
     expect(catalog.recipes).toHaveLength(36);
+    expect(catalog.recipes.flatMap((recipe) => recipe.inputs)).toHaveLength(72);
+    expect(catalog.dropTables.flatMap((table) => table.entries)).toHaveLength(32);
     expect(catalog.dropTables.map((table) => table.key)).toEqual(['regular', 'rare']);
     const countOf = (kind: string) => catalog.items.filter((item) => item.kind === kind).length;
     expect([countOf('gear'), countOf('material'), countOf('pet'), countOf('scroll')]).toEqual([42, 6, 4, 6]);
