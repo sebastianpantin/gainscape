@@ -1,5 +1,5 @@
 import type { SessionSummary } from '@domain/types.ts';
-import type { InvokeOutcome } from '../lib/function-client.ts';
+import type { InvokeOutcome } from '../lib/function-client-rules.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds } from '../lib/rate-limit.ts';
 import { rememberLastSummary } from '../features/summary/last-summary.ts';
 import { storedSessionId, type WorkoutDraft } from './draft-format.ts';

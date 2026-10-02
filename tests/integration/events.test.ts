@@ -10,16 +10,17 @@ import {
 import {
   aBout,
   aSet,
+  createCustomExercise,
   DAY_MS,
   hoursAgo,
   payloadAt,
   postSession,
   type SessionPayload,
   type SetShape,
-} from './loot-support.ts';
+  trackedUsers,
+} from './session-support.ts';
 import {
   builtInExerciseId,
-  createTestUser,
   db,
   eventIds,
   eventsSnapshot,
@@ -36,13 +37,6 @@ let dipId: string;
 let crunchId: string;
 let legPressId: string;
 let tables: LootTables;
-const users: TestUser[] = [];
-
-async function freshUser(): Promise<TestUser> {
-  const user = await createTestUser();
-  users.push(user);
-  return user;
-}
 
 function unrated(exerciseId: string, position: number, weightKg: number, reps: number): SetShape {
   return aSet(exerciseId, position, weightKg, { reps, effort: null });
@@ -70,22 +64,6 @@ async function editSession(user: TestUser, session: SessionPayload, sets: SetSha
   });
   expect(response.status, response.rawBody).toBe(200);
   return response;
-}
-
-async function saveCustomExercise(user: TestUser): Promise<string> {
-  const exerciseId = randomUUID();
-  const [chest] = await db`select id from public.skills where key = 'chest'`;
-  const { error } = await user.client.rpc('save_custom_exercise', {
-    exercise: {
-      id: exerciseId,
-      name: `Floor press ${exerciseId.slice(0, 6)}`,
-      loadType: 'external',
-      equipment: 'other',
-      shares: [{ skillId: chest.id, shareBp: 10000 }],
-    },
-  });
-  expect(error).toBeNull();
-  return exerciseId;
 }
 
 async function expectEventsMatchSummaries(userId: string): Promise<void> {
@@ -133,6 +111,8 @@ async function expectEventsMatchSummaries(userId: string): Promise<void> {
   expect(stored).toEqual(expected);
 }
 
+const { freshUser, checkAndClear } = trackedUsers(expectEventsMatchSummaries);
+
 function pickSetIdWhoseRareDropIs(
   user: TestUser,
   wanted: (rarity: ItemRarityRank) => boolean,
@@ -158,7 +138,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  for (const user of users.splice(0)) await expectEventsMatchSummaries(user.id);
+  await checkAndClear();
 });
 
 afterAll(async () => {
@@ -215,7 +195,7 @@ describe('PR events', () => {
 
   it('keeps custom exercise PRs out of the feed', async () => {
     const user = await freshUser();
-    const customId = await saveCustomExercise(user);
+    const customId = await createCustomExercise(user);
     await postSession(user, payloadAt(hoursAgo(3), [aSet(customId, 0, 40)]));
     await postSession(user, payloadAt(hoursAgo(1), [aSet(customId, 0, 60)]));
     expect((await storedEvents(user.id)).filter((event) => event.type === 'pr')).toEqual([]);
@@ -369,7 +349,7 @@ describe('deleting sessions', () => {
 describe('backfill through rebuild-caches', () => {
   it('recreates deleted events exactly and keeps ids on a second rebuild', async () => {
     const user = await freshUser();
-    const customId = await saveCustomExercise(user);
+    const customId = await createCustomExercise(user);
     await postSession(
       user,
       payloadAt(hoursAgo(5), [aSet(benchId, 0, 60), aSet(crunchId, 1, 30, { reps: 8 }), aSet(customId, 2, 40)]),

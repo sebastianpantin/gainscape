@@ -12,7 +12,7 @@ POST endpoint that accepts a finished workout draft from the web app, validates 
 | File         | Description                                                                                                                                                                                                                                                          |
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `index.ts`   | Handler. `completeSession` runs in `sql.begin` under `lockUser`: idempotent on existing id, 409 `session_id_conflict`, 410 `session_deleted` for tombstones, rate limits `session_create_hour` and `session_create_day`, then `storeHistoryOnly` or `storeAndReplay` |
-| `payload.ts` | Zod `sessionSchema`, `parseCompleteSessionPayload`, `assertPlausibleTiming` (max 12 h, 5 min clock skew)                                                                                                                                                             |
+| `payload.ts` | Zod `sessionSchema`, `parseCompleteSessionPayload`, `assertPlausibleTiming` (throws the domain `implausibleTiming` reason as a 422)                                                                                                                                  |
 | `deno.json`  | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                                                                                  |
 | `deno.lock`  | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                                                                                       |
 
@@ -20,7 +20,7 @@ POST endpoint that accepts a finished workout draft from the web app, validates 
 
 ### Working In This Directory
 
-- Server computes effective load via `effectiveLoadForNewSet`; never trust client XP.
+- Server computes effective load via the domain `writableSetFor` and records it as `recordedEffectiveLoadKg` so history-only sessions keep it; never trust client XP.
 - Needs `LOOT_SECRET` through `rollNewSessionLoot`.
 - The payload shape must match the web draft sync code.
 

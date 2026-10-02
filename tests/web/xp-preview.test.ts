@@ -4,13 +4,14 @@ import {
   type Catalog,
   DEFAULT_BALANCE,
   effectiveLoadForNewSet,
+  effectiveReps,
   epley,
   type ExerciseStrength,
   intensityBonus,
   processSession,
   setXp,
 } from '@domain/index.ts';
-import type { CardioActivity, LoadType } from '../../web/src/lib/catalog.ts';
+import type { CardioActivity, LoadType } from '../../web/src/lib/catalog-rules.ts';
 import type {
   CardioDraftExercise,
   CardioDraftSet,
@@ -18,7 +19,12 @@ import type {
   DraftSet,
   LiftDraftExercise,
 } from '../../web/src/offline/draft-format.ts';
-import { previewSession } from '../../web/src/features/workout/xp-preview.ts';
+import {
+  donePreviewTotal,
+  previewNote,
+  previewSession,
+  previewXpLabel,
+} from '../../web/src/features/workout/xp-preview.ts';
 
 const failure = { type: 'level', level: 'failure' } as const;
 
@@ -398,5 +404,50 @@ describe('previewSession with cardio', () => {
     const alone = previewSession(lifts, builtIn, strength);
     const together = previewSession(mixed, builtIn, strength);
     expect(together[1]).toEqual(alone[0]);
+  });
+});
+
+describe('preview labels', () => {
+  it('shows an unknown preview as ~? and any other as ~XP', () => {
+    expect(previewXpLabel({ xp: 0, basis: 'unknown', rir: null })).toBe('~?');
+    expect(previewXpLabel({ xp: 1234, basis: 'logged', rir: 2 })).toBe('~1,234');
+    expect(previewXpLabel({ xp: 0, basis: 'cold_start', rir: null })).toBe('~0');
+  });
+
+  it('notes a logged set too far from failure to earn XP as counting for e1RM', () => {
+    const noXpRir = DEFAULT_BALANCE.effectiveRirWindow + 1;
+    expect(previewNote({ xp: 0, basis: 'logged', rir: noXpRir })).toBe('counts for e1RM');
+    expect(previewNote({ xp: 0, basis: 'logged', rir: noXpRir + 1 })).toBe('counts for e1RM');
+    expect(previewNote({ xp: 165, basis: 'logged', rir: noXpRir - 1 })).toBe('');
+    expect(previewNote({ xp: 0, basis: 'logged', rir: null })).toBe('');
+  });
+
+  it('notes estimated, first-time and unknown previews', () => {
+    expect(previewNote({ xp: 300, basis: 'estimated', rir: 2.5 })).toBe('est. RIR 2.5');
+    expect(previewNote({ xp: 165, basis: 'cold_start', rir: null })).toBe('first time');
+    expect(previewNote({ xp: 0, basis: 'unknown', rir: null })).toBe('');
+  });
+
+  it('earns no XP exactly from the RIR that is noted as counting for e1RM', () => {
+    const noXpRir = DEFAULT_BALANCE.effectiveRirWindow + 1;
+    expect(setXp(effectiveReps(10, noXpRir, false, DEFAULT_BALANCE), 1, DEFAULT_BALANCE)).toBe(0);
+    expect(setXp(effectiveReps(10, noXpRir - 1, false, DEFAULT_BALANCE), 1, DEFAULT_BALANCE)).toBeGreaterThan(0);
+  });
+});
+
+describe('donePreviewTotal', () => {
+  it('adds up the previews of done sets and bouts only', () => {
+    const preview = (xp: number) => ({ xp, basis: 'logged' as const, rir: 2 });
+    const exercises = [{ sets: [{ done: true }, { done: false }] }, { sets: [{ done: true }, { done: true }] }];
+    expect(
+      donePreviewTotal(
+        [
+          [preview(100), preview(50)],
+          [preview(10), preview(1)],
+        ],
+        exercises,
+      ),
+    ).toBe(111);
+    expect(donePreviewTotal([], [])).toBe(0);
   });
 });

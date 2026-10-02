@@ -3,20 +3,26 @@ import { describe, expect, it } from 'vitest';
 import {
   BodyweightLoadNotZeroError,
   BodyweightRequiredError,
+  cardioExercise,
   carriedEffectiveLoadKg,
   type CardioSetInput,
   type EffortInput,
   type ExerciseDef,
   HISTORY_ONLY_STEPS,
+  historyOnlySummary,
   KindMismatchError,
+  liftExerciseFor,
   type LiftSetInput,
+  pendingSummary,
   processSession,
   REP_MAX_SLOT_COUNT,
   type SessionInput,
+  setKind,
   strengthHistoryRows,
   UnknownExerciseError,
+  writableSetFor,
 } from '@domain/index.ts';
-import { aSet, catalog, freshUser, hard, nearFailure, TEST_BALANCE } from './fixtures.ts';
+import { aBout, aSet, catalog, freshUser, hard, nearFailure, TEST_BALANCE } from './fixtures.ts';
 
 const threeSets = (exerciseId: string, weightKg: number, effort: typeof hard | typeof nearFailure) =>
   [0, 1, 2].map(() => aSet(exerciseId, weightKg, 8, effort));
@@ -84,10 +90,41 @@ describe('processSession', () => {
     expect(outputs.sets[1].skillXp).toContainEqual({ skillId: 'skill-chest', xp: 263 });
   });
 
-  it('is deterministic', () => {
-    const first = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog });
-    const second = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog });
-    expect(second).toEqual(first);
+  it('pins the derived columns of every set', () => {
+    const { outputs } = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog });
+    const bench = (e1rmBeforeKg: number | null) => ({
+      rir: 3,
+      rirSource: 'logged',
+      effectiveReps: 3,
+      intensityBonus: 1,
+      e1rmBeforeKg,
+      e1rmCandidateKg: 80,
+      skillXp: [
+        { skillId: 'skill-chest', xp: 21 },
+        { skillId: 'skill-shoulders', xp: 6 },
+        { skillId: 'skill-arms', xp: 3 },
+      ],
+    });
+    const squat = (e1rmBeforeKg: number | null, intensityBonus: number, legsXp: number, coreXp: number) => ({
+      rir: 1,
+      rirSource: 'logged',
+      effectiveReps: 5,
+      intensityBonus,
+      e1rmBeforeKg,
+      e1rmCandidateKg: 126.67,
+      skillXp: [
+        { skillId: 'skill-legs', xp: legsXp },
+        { skillId: 'skill-core', xp: coreXp },
+      ],
+    });
+    expect(outputs.sets).toMatchObject([
+      bench(null),
+      bench(80),
+      bench(80),
+      squat(null, 1, 45, 5),
+      squat(126.67, 1.091216, 49, 6),
+      squat(126.67, 1.091216, 50, 5),
+    ]);
   });
 
   it('builds on existing XP', () => {
@@ -132,6 +169,13 @@ describe('processSession', () => {
     const replayed = { ...fixtureSession, sets: [aSet('pull-up', 0, 10, hard, { recordedEffectiveLoadKg: 75 })] };
     const { outputs } = processSession({ skillXp: {}, bodyweightKg: 80 }, replayed, TEST_BALANCE, { catalog });
     expect(outputs.sets[0].effectiveLoadKg).toBe(75);
+  });
+
+  it('rejects added load on a pure bodyweight exercise even with a recorded load', () => {
+    const replayed = { ...fixtureSession, sets: [aSet('pull-up', 5, 10, hard, { recordedEffectiveLoadKg: 85 })] };
+    expect(() => processSession({ skillXp: {}, bodyweightKg: 80 }, replayed, TEST_BALANCE, { catalog })).toThrow(
+      BodyweightLoadNotZeroError,
+    );
   });
 
   it('lets callers replace the step list', () => {
@@ -298,5 +342,79 @@ describe('carriedEffectiveLoadKg', () => {
     expect(() => carriedEffectiveLoadKg(stored, { exerciseId: 'pull-up', weightKg: 5 }, pullUp, 80)).toThrow(
       BodyweightLoadNotZeroError,
     );
+  });
+});
+
+describe('exercise lookup', () => {
+  it('finds a lift exercise for a lift set', () => {
+    expect(liftExerciseFor(aSet('bench', 60, 5, hard), catalog)).toBe(catalog.exercises.get('bench'));
+  });
+
+  it('rejects a lift set on a cardio exercise and an exercise missing from the catalog', () => {
+    expect(() => liftExerciseFor(aSet('run', 0, 5, hard), catalog)).toThrow(KindMismatchError);
+    expect(() => liftExerciseFor(aSet('missing', 0, 5, hard), catalog)).toThrow(UnknownExerciseError);
+  });
+
+  it('finds a cardio exercise and rejects a lift one', () => {
+    const run = catalog.exercises.get('run')!;
+    expect(cardioExercise(run)).toBe(run);
+    expect(() => cardioExercise(catalog.exercises.get('bench')!)).toThrow(KindMismatchError);
+  });
+});
+
+describe('setKind', () => {
+  it('reads a set without a kind as a lift', () => {
+    expect(setKind(aSet('bench', 60, 5, hard))).toBe('lift');
+    expect(setKind(aSet('bench', 60, 5, hard, { kind: 'lift' }))).toBe('lift');
+    expect(setKind(aBout('run', 1800, null))).toBe('cardio');
+  });
+});
+
+describe('writableSetFor', () => {
+  const exercise = (id: string) => catalog.exercises.get(id)!;
+
+  it('passes a bout on a cardio exercise through unchanged', () => {
+    const bout = aBout('run', 1800, null);
+    expect(writableSetFor(bout, exercise('run'), null)).toBe(bout);
+  });
+
+  it('rejects a bout on a lift exercise and a lift set on a cardio exercise', () => {
+    expect(() => writableSetFor(aBout('run', 1800, null), exercise('bench'), null)).toThrow(KindMismatchError);
+    expect(() => writableSetFor(aSet('run', 0, 5, hard), exercise('run'), null)).toThrow(KindMismatchError);
+  });
+
+  it('gives a new lift set its effective load from the current bodyweight', () => {
+    const set = aSet('weighted-pull-up', 10, 5, hard);
+    expect(writableSetFor(set, exercise('weighted-pull-up'), 80)).toEqual({ ...set, effectiveLoadKg: 90 });
+    expect(writableSetFor(aSet('bench', 60, 5, hard), exercise('bench'), 80)).toMatchObject({ effectiveLoadKg: 60 });
+  });
+
+  it('carries the logged bodyweight of a stored set of the same exercise', () => {
+    const set = aSet('weighted-pull-up', 15, 5, hard);
+    const stored = { exerciseId: 'weighted-pull-up', weightKg: 10, effectiveLoadKg: 85 };
+    expect(writableSetFor(set, exercise('weighted-pull-up'), 80, stored)).toEqual({ ...set, effectiveLoadKg: 90 });
+  });
+
+  it('rejects added load on a pure bodyweight exercise', () => {
+    expect(() => writableSetFor(aSet('pull-up', 5, 5, hard), exercise('pull-up'), 80)).toThrow(
+      BodyweightLoadNotZeroError,
+    );
+  });
+});
+
+describe('session summaries', () => {
+  it('marks a history-only session with nothing earned', () => {
+    expect(historyOnlySummary('session-1')).toEqual({
+      sessionId: 'session-1',
+      xpBySkill: {},
+      levelUps: [],
+      prs: [],
+      drops: [],
+      historyOnly: true,
+    });
+  });
+
+  it('starts a replayed session with its id and no drops', () => {
+    expect(pendingSummary('session-1')).toEqual({ sessionId: 'session-1', drops: [] });
   });
 });

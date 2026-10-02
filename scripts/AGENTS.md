@@ -9,15 +9,17 @@ Node tooling run by the Makefile: stack helpers (loot secret, readiness wait, lo
 
 ## Key Files
 
-| File                     | Makefile target                        | Description                                                                                                                                                                                           |
-| ------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ensure-loot-secret.mjs` | `make functions` (so `start`, `reset`) | Creates `supabase/functions/.env.local` with a random `LOOT_SECRET` (mode 0600) if missing. Exits 1 if the file exists with a secret shorter than 32 characters. Never overwrites an existing secret. |
-| `wait-for-functions.mjs` | `make functions`                       | Polls `OPTIONS` on `complete-session` at `SUPABASE_API_PORT` (default 54321) until it answers 204; fails after 120 s.                                                                                 |
-| `assert-local-db.mjs`    | `make test-db`                         | Refuses to run pgTAP unless `supabase status` reports a loopback DB host, no `SUPABASE_DB_URL` or `DATABASE_URL` is set, and the project's `supabase_db_<id>` container publishes the DB port.        |
-| `ci-web-env.mjs`         | `make ci-start`                        | Writes `web/.env.development.local` with `VITE_SUPABASE_ANON_KEY` from `supabase status`.                                                                                                             |
-| `lan-url.mjs`            | `make dev`, `make preview`             | Prints the localhost and LAN https URLs using `webPort()` / `previewPort()` from `web/build/ports.ts`.                                                                                                |
-| `rebuild-caches.mjs`     | `make rebuild-caches`                  | For every profile, POSTs the `rebuild-caches` Edge Function with the service-role key. Refuses to run if `.stack.env` project id differs from the environment (run through make).                     |
-| `build-kill-switch.ts`   | `make sw-kill-switch`                  | Replaces `web/dist/sw.js` with the kill-switch worker via `web/build/service-worker-plugin.ts`. Refuses local builds unless `KILL_SWITCH_ALLOW_LOCAL_FLAG` is `1`.                                    |
+| File                     | Makefile target                        | Description                                                                                                                                                                                                                        |
+| ------------------------ | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ensure-loot-secret.mjs` | `make functions` (so `start`, `reset`) | Creates `supabase/functions/.env.local` with a random `LOOT_SECRET` (mode 0600) if missing. Exits 1 if the file exists with a secret shorter than 32 characters. Never overwrites an existing secret.                              |
+| `wait-for-functions.mjs` | `make functions`                       | Polls `OPTIONS` on `complete-session` at `SUPABASE_API_PORT` (default 54321) until it answers 204; fails after 120 s.                                                                                                              |
+| `assert-local-db.mjs`    | `make test-db`                         | Refuses to run pgTAP unless `supabase status` reports a loopback DB host, no `SUPABASE_DB_URL` or `DATABASE_URL` is set, and the project's `supabase_db_<id>` container publishes the DB port.                                     |
+| `ci-web-env.mjs`         | `make ci-start`                        | Writes `web/.env.development.local` with `VITE_SUPABASE_ANON_KEY` from `supabase status`.                                                                                                                                          |
+| `lan-url.mjs`            | `make dev`, `make preview`             | Prints the localhost and LAN https URLs using `webPort()` / `previewPort()` from `web/build/ports.ts`.                                                                                                                             |
+| `rebuild-caches.mjs`     | `make rebuild-caches`                  | For every profile, POSTs the `rebuild-caches` Edge Function with the service-role key. Refuses to run if `.stack.env` project id differs from the environment (run through make).                                                  |
+| `build-kill-switch.ts`   | `make sw-kill-switch`                  | Replaces `web/dist/sw.js` with the kill-switch worker via `web/build/service-worker-plugin.ts`. Refuses local builds unless `KILL_SWITCH_ALLOW_LOCAL_FLAG` is `1`.                                                                 |
+| `local-stack.ts`         | (imported)                             | Shared stack helpers: pure `stackEnvMismatch(stackEnvText, env)` and `parseStatusOutput(text)`, plus `currentStackEnvMismatch()` (reads `.stack.env`) and `localStackStatus()`. Unit tested in `tests/deploy/stack-guard.test.ts`. |
+| `loot-secret.ts`         | (imported)                             | Pure `lootSecretDecision(existingEnvText)`: `create` without a file, `accept` a `LOOT_SECRET` of at least `MIN_LOOT_SECRET_LENGTH` (32), otherwise `reject`. Used by `ensure-loot-secret.mjs`.                                     |
 
 ## Subdirectories
 
@@ -34,20 +36,20 @@ Node tooling run by the Makefile: stack helpers (loot secret, readiness wait, lo
 
 - No comments, like all code. ESLint covers `.mjs` and `.ts` here.
 - Script failures print a one-line reason to stderr and `process.exit(1)`. Keep that contract; the Makefile and CI depend on the exit code.
-- The safety scripts (`assert-local-db.mjs`, `ensure-loot-secret.mjs`, `rebuild-caches.mjs`) exist to stop work against a hosted project or with a weak secret. Do not weaken them.
+- The safety scripts (`assert-local-db.mjs`, `ensure-loot-secret.mjs`, `rebuild-caches.mjs`) and their pure rules (`local-stack.ts`, `loot-secret.ts`) exist to stop work against a hosted project, another worktree's stack or with a weak secret. Do not weaken them.
 - Scripts import from `web/build/` and `web/src/components/` and from the shared domain, so a rename there breaks them. `tsconfig.json` type-checks this directory.
 - Makefile target names are the public interface. Document or change a script together with its target.
 
 ### Testing Requirements
 
-- Covered by tests: `catalog/*` (`tests/catalog/`), `icons/png.ts` and `icons/render.ts` (`tests/web/png.test.ts`, `tests/web/manifest.test.ts`), `balance/*` (`tests/balance/balance-bands.test.ts`, `tests/catalog/sim-catalog.test.ts`), `build-kill-switch.ts` (`e2e/pwa/update.spec.ts`, run by `make e2e-pwa`).
-- Not covered by a dedicated test: `assert-local-db.mjs`, `ci-web-env.mjs`, `ensure-loot-secret.mjs`, `lan-url.mjs`, `rebuild-caches.mjs` (`tests/integration/rebuild-caches.test.ts` calls the Edge Function directly, not this script), `wait-for-functions.mjs`. Verify them by running the Makefile target.
+- Covered by tests: `catalog/*` (`tests/catalog/`), `icons/png.ts` and `icons/render.ts` (`tests/web/png.test.ts`, `tests/web/manifest.test.ts`), `balance/*` (`tests/balance/`, `tests/catalog/sim-catalog.test.ts`), `local-stack.ts` (`tests/deploy/stack-guard.test.ts`), `loot-secret.ts` (`tests/deploy/loot-secret.test.ts`), `deploy/admin-users.ts` (`tests/deploy/admin-users.test.ts`), `build-kill-switch.ts` (`e2e/pwa/update.spec.ts`, run by `make e2e-pwa`).
+- Not covered by a dedicated test (beyond the shared rules above): `assert-local-db.mjs`, `ci-web-env.mjs`, `ensure-loot-secret.mjs`, `lan-url.mjs`, `rebuild-caches.mjs` (`tests/integration/rebuild-caches.test.ts` calls the Edge Function directly, not this script), `wait-for-functions.mjs`. Verify them by running the Makefile target.
 - Put new pure logic in a function the existing suites can import, with its test written first. Stack helpers need the local stack.
 
 ### Common Patterns
 
 - Paths resolve from `import.meta.dirname`.
-- `execFileSync('npx', ['supabase', 'status', '-o', 'json'])` and then `JSON.parse(output.slice(output.indexOf('{')))` to read stack URLs and keys.
+- Read stack URLs and keys with `localStackStatus()` from `local-stack.ts` (it runs `npx supabase status -o json` and parses it with `parseStatusOutput`), and guard against another worktree's stack with `currentStackEnvMismatch()`. Never copy either inline; `rebuild-caches.mjs`, `assert-local-db.mjs`, `ci-web-env.mjs`, `tests/integration/local-stack.ts`, `e2e/support/stack-guard.ts` and `playwright.pages.config.ts` all share them, each adding its own failure message.
 - `--check` flag: compare generated output with the committed file and exit 1 when stale (`catalog/generate.ts`, `icons/build.ts`).
 - `scripts/catalog/generate.ts` guards its CLI part with `import.meta.main` so tests can import it. Other CLIs run unguarded, so tests import CLI-free modules instead (for example `balance/tune.ts`, `balance/bands.ts`). Follow one of these two patterns for new testable scripts.
 

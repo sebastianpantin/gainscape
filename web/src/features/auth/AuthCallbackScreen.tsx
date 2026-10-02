@@ -1,10 +1,11 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
-import { MINIMUM_PASSWORD_LENGTH } from '../../lib/account.ts';
 import {
   type AuthCallback,
   authErrorMessage,
   confirmedRecently,
+  MINIMUM_PASSWORD_LENGTH,
+  passwordProblem,
   USERNAME_HINT,
   USERNAME_PATTERN,
 } from '../../lib/auth-links.ts';
@@ -92,9 +93,7 @@ function PasswordFields({
           required
         />
       </label>
-      {password.length > 0 && password.length < MINIMUM_PASSWORD_LENGTH && (
-        <p className="problem">Use at least {MINIMUM_PASSWORD_LENGTH} characters.</p>
-      )}
+      {password.length > 0 && passwordProblem(password) && <p className="problem">{passwordProblem(password)}</p>}
       {repeat.length > 0 && repeat !== password && <p className="problem">The passwords don't match.</p>}
     </>
   );
@@ -198,7 +197,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
           {step.kind === 'choose-password' && (
             <>
               <p>
-                Your username is <b data-testid="confirmed-username">{step.username}</b>. Choose a password to finish.
+                Your username is <b>{step.username}</b>. Choose a password to finish.
               </p>
               <label className="field">
                 Username

@@ -1,9 +1,11 @@
-import { type Browser, expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './support/people.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
 import {
   emailOf,
   logCardio,
   logExercise,
+  logWorkout,
   openFromProfile,
   openTab,
   register,
@@ -11,9 +13,8 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 import { grantItems } from './support/db.ts';
-import { authLinkFrom, waitForEmail } from './support/mailbox.ts';
+import { authLinkFrom, RECOVERY_SUBJECT, waitForEmail } from './support/mailbox.ts';
 
-const RECOVERY_SUBJECT = 'Reset your Gainscape password';
 const TAB_BAR = ['.tab-bar a[href]'];
 
 async function checkScreen(page: Page, screen: string, ready: () => Promise<void>) {
@@ -51,24 +52,18 @@ async function checkEffortTargets(page: Page) {
   }
 }
 
-async function befriend(browser: Browser, page: Page, username: string): Promise<string> {
+async function befriend(friend: Page, page: Page, username: string): Promise<string> {
   const friendName = uniqueUsername('a11y_f');
-  const friendContext = await browser.newContext({ baseURL: test.info().project.use.baseURL, ignoreHTTPSErrors: true });
-  const friend = await friendContext.newPage();
   await register(friend, friendName);
   await openTab(page, 'Friends');
   await page.getByLabel('Add a friend by exact username').fill(friendName);
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page.getByRole('status')).toHaveText(`Request sent to ${friendName}`);
   await openTab(friend, 'Friends');
-  await friend.getByTestId('incoming-request').getByRole('button', { name: 'Accept' }).click();
+  await friend.getByRole('button', { name: 'Accept' }).click();
   await expect(friend.getByRole('list', { name: 'Friends list' })).toContainText(username);
   await openTab(friend, 'Train');
-  await friend.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(friend, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await friend.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(friend.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
-  await friendContext.close();
+  await logWorkout(friend, () => logExercise(friend, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
   return friendName;
 }
 
@@ -120,8 +115,8 @@ test('the password reset form has no serious axe violations', async ({ page }) =
 });
 
 test('every signed-in screen has no serious axe violations and the between-set controls are 44px', async ({
-  browser,
   context,
+  newPerson,
   page,
 }) => {
   test.setTimeout(240_000);
@@ -157,7 +152,7 @@ test('every signed-in screen has no serious axe violations and the between-set c
 
   await page.getByRole('link', { name: 'Done' }).click();
   await grantItems(username, { rookie_belt: 1, grinder_scraps: 8 });
-  const friendName = await befriend(browser, page, username);
+  const friendName = await befriend(await newPerson(), page, username);
   await page.goto('/friends');
   const friendPath = await page
     .getByRole('list', { name: 'Friends list' })
@@ -241,12 +236,13 @@ test('the reveal runs no animation under reduced motion', async ({ page }) => {
 test('the skills screen shows pixel art for the eight skills', async ({ page }) => {
   await register(page, uniqueUsername('a11y_sk'));
   await openTab(page, 'Skills');
-  const skills = page.getByRole('list').filter({ has: page.getByTestId('skill-chest') });
-  await expect(skills.locator('li')).toHaveCount(8);
+  const chest = page.getByRole('button', { name: /^Chest\b/ });
+  const skills = page.getByRole('list').filter({ has: chest });
+  await expect(skills.getByRole('listitem')).toHaveCount(8);
   await expect(skills.locator('li svg')).toHaveCount(8);
   await expect(skills.locator('.monogram')).toHaveCount(0);
-  await page.getByTestId('skill-endurance').click();
+  await page.getByRole('button', { name: /^Endurance\b/ }).click();
   await expect(page.getByText('does not count toward combat')).toBeVisible();
-  await page.getByTestId('skill-chest').click();
+  await chest.click();
   await expect(page.getByText('counts double toward combat')).toBeVisible();
 });

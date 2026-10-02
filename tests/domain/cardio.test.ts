@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   type BalanceConfig,
+  boutDurationSeconds,
   CARDIO_BOUNDS,
   CARDIO_EFFORT_LEVELS,
   countedWorkSeconds,
@@ -126,6 +127,13 @@ describe('intervalDurationSeconds', () => {
   it('adds the rest between rounds but not after the last one', () => {
     expect(intervalDurationSeconds({ workS: 60, restS: 60, rounds: 10 })).toBe(1140);
     expect(intervalDurationSeconds({ workS: 5, restS: 0, rounds: 1 })).toBe(5);
+  });
+});
+
+describe('boutDurationSeconds', () => {
+  it('uses the logged duration of a steady bout and the full interval span otherwise', () => {
+    expect(boutDurationSeconds({ durationS: 1800, interval: null })).toBe(1800);
+    expect(boutDurationSeconds({ durationS: 1800, interval: { workS: 60, restS: 60, rounds: 10 } })).toBe(1140);
   });
 });
 

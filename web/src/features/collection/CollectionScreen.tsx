@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { cardioRecordCards } from '../../lib/cardio-rules.ts';
-import { type CardioExercise, type Exercise, fetchExercises } from '../../lib/catalog.ts';
+import { fetchExercises } from '../../lib/catalog.ts';
+import { type Exercise, isCardioExercise } from '../../lib/catalog-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { collectionPercent, countCollection } from '../../lib/collection-rules.ts';
 import { moved } from '../../lib/reorder.ts';
 import {
   type CollectionData,
-  countCollection,
   fetchCollectionData,
   pinExercise,
   reorderPins,
@@ -14,6 +15,7 @@ import {
 import { SegmentedNav } from '../../components/SegmentedNav.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { ExerciseRecordCard } from './ExerciseRecordCard.tsx';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface CollectionScreenProps {
   userId: string;
@@ -66,11 +68,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     );
 
   const { counted, completion } = countCollection(exercises, data);
-  const cardioCards = cardioRecordCards(
-    data.cardioRecords,
-    exercises.filter((exercise): exercise is CardioExercise => exercise.modality === 'cardio'),
-    unitPref,
-  );
+  const cardioCards = cardioRecordCards(data.cardioRecords, exercises.filter(isCardioExercise), unitPref);
 
   const togglePin = async (exercise: Exercise) => {
     try {
@@ -78,7 +76,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
       else await pinExercise(exercise.id, data.nextPinPosition);
       reload();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not update pins.');
+      setProblem(messageOf(error, 'Could not update pins.'));
     }
   };
 
@@ -91,13 +89,13 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
       await reorderPins(moved(pinned, from, offset));
       reload();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not reorder pins.');
+      setProblem(messageOf(error, 'Could not reorder pins.'));
     }
   };
 
   const pinIndex = (exercise: Exercise) => data.pinnedExerciseIds.indexOf(exercise.id);
 
-  const completionPercent = Math.round(completion.fraction * 100);
+  const completionPercent = collectionPercent(completion.filledSlots, completion.totalSlots);
 
   return (
     <main className="screen stack">
@@ -152,7 +150,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
         />
       ))}
       {cardioCards.length > 0 && (
-        <section className="panel stack" aria-labelledby="cardio-records-heading" data-testid="cardio-records">
+        <section className="panel stack" aria-labelledby="cardio-records-heading">
           <h2 id="cardio-records-heading">Cardio records</h2>
           <span className="muted tiny">Only you can see these.</span>
           <ul className="stored-set-list">

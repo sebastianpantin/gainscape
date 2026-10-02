@@ -9,9 +9,9 @@ The Skills tab: the eight OSRS-style skills (six lifting skills plus Endurance a
 
 ## Key Files
 
-| File               | Description                                                                                                                                                                                                                            |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SkillsScreen.tsx` | Route `/skills`. Reads standing via `useStanding(userId)`, computes progress with `xpForLevel` and `MAX_LEVEL` from `@domain/index.ts`, renders `SkillIcon` and `ProgressBar`, formats with `formatXp` from `../workout/xp-preview.ts` |
+| File               | Description                                                                                                                                                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SkillsScreen.tsx` | Route `/skills`. Reads standing via `useStanding(userId)`, computes progress with `xpForLevel` and `MAX_LEVEL` from `@domain/index.ts`, renders `SkillIcon` and `ProgressBar`, formats with `formatXp` from `../../lib/format.ts` |
 
 ## For AI Agents
 
@@ -32,7 +32,7 @@ The Skills tab: the eight OSRS-style skills (six lifting skills plus Endurance a
 
 ### Internal
 
-- `../../lib/standing.ts`, `../../components/{PixelArt,ProgressBar}.tsx`, `../workout/xp-preview.ts`, `@domain/index.ts`.
+- `../../lib/{format,standing}.ts`, `../../components/{PixelArt,ProgressBar}.tsx`, `@domain/index.ts`.
 
 ### External
 

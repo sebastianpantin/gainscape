@@ -1,12 +1,17 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { z } from 'npm:zod@4.6.5';
-import { authenticatedUserId, clientOptions } from '../_shared/auth.ts';
+import { clientOptions } from '../_shared/auth.ts';
 import { sql } from '../_shared/db.ts';
-import { HttpError, jsonResponse } from '../_shared/http.ts';
+import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
-import { serve } from '../_shared/serve.ts';
+import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
+import { parseOr422 } from '../_shared/session-payload.ts';
 
-const bodySchema = z.object({ confirmUsername: z.string().min(1).max(40), password: z.string().min(1).max(200) });
+const deleteAccountSchema = z
+  .object({ confirmUsername: z.string().min(1).max(40), password: z.string().min(1).max(200) })
+  .strict();
+
+type DeleteAccountPayload = z.infer<typeof deleteAccountSchema>;
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, clientOptions);
 
@@ -17,7 +22,10 @@ async function passwordMatches(email: string, password: string): Promise<boolean
   return !error && data.session !== null;
 }
 
-async function deleteAccount(userId: string, confirmUsername: string, password: string): Promise<void> {
+async function deleteAccount(
+  userId: string,
+  { confirmUsername, password }: DeleteAccountPayload,
+): Promise<{ deleted: true }> {
   await takeRateLimit(sql, 'delete_account_hour', userId);
   const [account] = await sql`
     select p.username, u.email
@@ -28,12 +36,7 @@ async function deleteAccount(userId: string, confirmUsername: string, password: 
   if (!account.email || !(await passwordMatches(account.email, password))) throw new HttpError(403, 'wrong_password');
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) throw error;
+  return { deleted: true };
 }
 
-serve(async (request) => {
-  const userId = await authenticatedUserId(request);
-  const parsed = bodySchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) throw new HttpError(422, 'invalid_body');
-  await deleteAccount(userId, parsed.data.confirmUsername, parsed.data.password);
-  return jsonResponse({ deleted: true });
-});
+serveAuthenticated((body) => parseOr422(deleteAccountSchema, body), deleteAccount);

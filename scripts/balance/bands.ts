@@ -1,10 +1,9 @@
-import { levelForXp, xpForLevel } from '../../supabase/functions/_shared/domain/index.ts';
+import { levelForXp } from '../../supabase/functions/_shared/domain/index.ts';
 import { CARDIO_SIM_SKILLS } from './catalog.ts';
 import type { CardioSimulationResult } from './cardio-simulate.ts';
+import { LEVEL_99_XP } from './progress.ts';
 import type { SimulationResult } from './simulate.ts';
 import { WEEKS_PER_YEAR } from './simulate.ts';
-
-const LEVEL_99_XP = xpForLevel(99);
 
 export const BANDS = Object.freeze({
   balancedLifterYears: [2, 3] as const,

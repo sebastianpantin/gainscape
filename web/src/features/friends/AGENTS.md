@@ -9,12 +9,12 @@ The Friends tab: requests and the activity feed, hiscores across friends, and a 
 
 ## Key Files
 
-| File                      | Description                                                                                                                                                                                                                       |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `FriendsScreen.tsx`       | Route `/friends`. Feed with gz (kudos) toggles, friend requests by username (send, accept, decline), removal; shows `ProfileBadge` and `initialsFor`; uses `usePreferences` for weight display                                    |
-| `HiscoresScreen.tsx`      | Route `/friends/hiscores`. Metric picker, `fetchHiscores`, ranking with `rankHiscores`/`skillMetric` from `social-rules.ts`                                                                                                       |
-| `FriendProfileScreen.tsx` | Route `/friends/:friendId`. Validates the id with `isUuid`, loads the view from `../../lib/social.ts`, builds `cardProfileOf`/`standingOfView`, renders `ProfileCard` plus records (`REP_MAX_SLOT_COUNT`) and `collectionPercent` |
-| `FriendsTabs.tsx`         | `SegmentedNav` with Feed and Hiscores                                                                                                                                                                                             |
+| File                      | Description                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FriendsScreen.tsx`       | Route `/friends`. Feed with gz (kudos) toggles, friend requests by username (send, accept, decline), removal; shows `ProfileBadge` and `initialsFor`; uses `usePreferences` for weight display                                                                                                                                              |
+| `HiscoresScreen.tsx`      | Route `/friends/hiscores`. Metric picker, `fetchHiscores`, ranking with `rankHiscores`/`skillMetric` from `social-rules.ts`                                                                                                                                                                                                                 |
+| `FriendProfileScreen.tsx` | Route `/friends/:friendId`. Validates the id with `isUuid`, loads the view from `../../lib/social.ts`, builds `cardProfileOf`/`standingOfView`, renders `ProfileWithTopSkills` (card plus top skills, collection percent via `collectionPercent`) and each exercise's records through `RecordSlots` and `slotsByReps` from `../collection/` |
+| `FriendsTabs.tsx`         | `SegmentedNav` with Feed and Hiscores                                                                                                                                                                                                                                                                                                       |
 
 ## For AI Agents
 
@@ -36,7 +36,7 @@ The Friends tab: requests and the activity feed, hiscores across friends, and a 
 
 ### Internal
 
-- `../../lib/{catalog,format,history-rules,preferences,profile,profile-view,social,social-rules,standing}.ts`, `../profile/ProfileCard.tsx`, `../../components/SegmentedNav.tsx`.
+- `../../lib/{catalog,catalog-rules,error-text,history-rules,preferences,profile,social,social-rules}.ts`, `../collection/{RecordSlots,record-slots}`, `../profile/{ProfileCard,ProfileWithTopSkills}.tsx`, `../../components/SegmentedNav.tsx`.
 
 ### External
 

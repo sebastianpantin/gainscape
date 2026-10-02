@@ -58,16 +58,25 @@ afterAll(async () => {
 });
 
 describe('game tables reject client writes', () => {
-  it.each(['sessions', 'sets', 'set_skill_xp', 'user_skills'])('insert into %s is denied', async (table) => {
-    const rowsByTable: Record<string, object> = {
+  async function insertableRows(): Promise<Record<string, object>> {
+    const [ownerSet] =
+      await db`select id from public.sets where session_id = ${ownerSessionId} order by position limit 1`;
+    const [uncreditedSkill] = await db`
+      select id from public.skills
+      where id not in (select skill_id from public.user_skills where user_id = ${owner.id})
+        and id not in (select skill_id from public.set_skill_xp where set_id = ${ownerSet.id})
+      order by sort_order limit 1`;
+    const now = new Date().toISOString();
+    return {
       sessions: {
         id: randomUUID(),
         user_id: owner.id,
-        started_at: new Date().toISOString(),
-        ended_at: new Date().toISOString(),
+        started_at: now,
+        ended_at: now,
         local_date: '2026-09-28',
         timezone: 'UTC',
         balance_version: 1,
+        derived_balance_version: 1,
         summary: {},
       },
       sets: {
@@ -84,11 +93,22 @@ describe('game tables reject client writes', () => {
         effective_reps: 1,
         xp_awarded: 999,
       },
-      set_skill_xp: { set_id: randomUUID(), skill_id: randomUUID(), user_id: owner.id, xp: 999 },
-      user_skills: { user_id: owner.id, skill_id: randomUUID(), xp: xpForLevel(MAX_LEVEL) },
+      set_skill_xp: { set_id: ownerSet.id, skill_id: uncreditedSkill.id, user_id: owner.id, xp: 999 },
+      user_skills: { user_id: owner.id, skill_id: uncreditedSkill.id, xp: xpForLevel(MAX_LEVEL) },
     };
-    const { error } = await owner.client.from(table).insert(rowsByTable[table]);
-    expect(error).not.toBeNull();
+  }
+
+  async function ownerRows(table: string) {
+    return await db`select * from ${db('public.' + table)} where user_id = ${owner.id}`;
+  }
+
+  it.each(['sessions', 'sets', 'set_skill_xp', 'user_skills'])('insert into %s is denied', async (table) => {
+    const rows = await insertableRows();
+    const before = await ownerRows(table);
+    const { error } = await owner.client.from(table).insert(rows[table]);
+    expect(error?.code).toBe('42501');
+    expect(await ownerRows(table)).toEqual(before);
+    expect(before.length).toBeGreaterThan(0);
   });
 
   it('update of user_skills xp is denied', async () => {
@@ -426,16 +446,12 @@ describe('item catalog tables', () => {
   });
 
   it('lets any signed-in user read the catalog tables', async () => {
-    for (const [table, expected] of [
-      ['items', 58],
-      ['drop_tables', 2],
-      ['drop_entries', 32],
-      ['recipes', 36],
-      ['recipe_inputs', 72],
-    ] as const) {
+    for (const table of ['items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs']) {
+      const [{ total }] = await db`select count(*)::int as total from ${db('public.' + table)}`;
       const { count, error } = await stranger.client.from(table).select('*', { count: 'exact', head: true });
       expect(error, table).toBeNull();
-      expect(count, table).toBe(expected);
+      expect(count, table).toBe(total);
+      expect(total, table).toBeGreaterThan(0);
     }
   });
 

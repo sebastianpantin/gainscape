@@ -2,26 +2,22 @@ import { expect, test } from '@playwright/test';
 import {
   finishedBenchDraft,
   logExercise,
+  logWorkout,
+  openLatestWorkout,
   openTab,
   readSession,
   readStoredDraft,
   register,
   writeStoredDraft,
+  xpValue,
 } from './support/app.ts';
 import { builtInExerciseId, editElsewhere, latestSetOf, sessionCount, sessionNotes, setsOf } from './support/db.ts';
-
-function xpValue(text: string | null): number {
-  return Number((text ?? '').replace(/[^0-9]/g, ''));
-}
 
 test('edit a logged set from history, see the XP change, then delete the workout', async ({ page }) => {
   const username = `hist_${Date.now().toString(36)}`;
   await register(page, username);
 
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
 
   await openTab(page, 'Log');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
@@ -55,15 +51,9 @@ test('re-sending a workout that was deleted elsewhere shows it as deleted and dr
   await register(page, username);
   const { user } = await readSession(page);
 
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
 
-  await openTab(page, 'Log');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
-  await page.getByRole('list', { name: 'Workouts' }).getByRole('link').first().click();
-  await expect(page.getByTestId('session-xp')).toBeVisible();
+  await openLatestWorkout(page);
   const sessionId = page.url().split('/').at(-1)!;
   await page.getByRole('button', { name: 'Delete workout' }).click();
   await page.getByRole('button', { name: 'Delete for good' }).click();
@@ -84,15 +74,9 @@ test('re-sending a workout that was deleted elsewhere shows it as deleted and dr
 test('a save that races an edit from another device keeps both changes after review', async ({ page }) => {
   const username = `hist_rev_${Date.now().toString(36)}`;
   await register(page, username);
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
 
-  await openTab(page, 'Log');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
-  await page.getByRole('list', { name: 'Workouts' }).getByRole('link').first().click();
-  await expect(page.getByTestId('session-xp')).toBeVisible();
+  await openLatestWorkout(page);
   const sessionId = page.url().split('/').at(-1)!;
 
   await page.locator('li.set-row').first().getByRole('radio', { name: 'Failure' }).click();

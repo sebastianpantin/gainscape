@@ -9,25 +9,13 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
-import { aBout, HOUR_MS, hoursAgo, payloadAt } from './loot-support.ts';
-
-const hard = { type: 'level', level: 'hard' } as const;
-
-function session(hoursAgo: number, sets: { exerciseId: string; weightKg: number; reps: number }[]) {
-  const startedAt = new Date(Date.now() - hoursAgo * HOUR_MS);
-  return {
-    id: randomUUID(),
-    startedAt: startedAt.toISOString(),
-    endedAt: new Date(startedAt.getTime() + HOUR_MS / 2).toISOString(),
-    sets: sets.map((set, position) => ({ id: randomUUID(), position, isWarmup: false, effort: hard, ...set })),
-  };
-}
+import { aBout, aSet, hoursAgo, payloadAt, type SessionPayload } from './session-support.ts';
 
 let lifter: TestUser;
 let benchId: string;
 let pullUpId: string;
 let responses: FunctionResponse[];
-let workouts: ReturnType<typeof session>[];
+let workouts: SessionPayload[];
 
 beforeAll(async () => {
   [benchId, pullUpId] = await Promise.all([builtInExerciseId('barbell_bench_press'), builtInExerciseId('pull_up')]);
@@ -36,15 +24,9 @@ beforeAll(async () => {
   responses = [];
   workouts = [];
   for (const workout of [
-    session(8, [
-      { exerciseId: benchId, weightKg: 90, reps: 5 },
-      { exerciseId: pullUpId, weightKg: 0, reps: 8 },
-    ]),
-    session(5, [
-      { exerciseId: benchId, weightKg: 100, reps: 5 },
-      { exerciseId: pullUpId, weightKg: 0, reps: 10 },
-    ]),
-    session(2, [{ exerciseId: benchId, weightKg: 105, reps: 3 }]),
+    payloadAt(hoursAgo(8), [aSet(benchId, 0, 90, { reps: 5 }), aSet(pullUpId, 1, 0, { reps: 8 })]),
+    payloadAt(hoursAgo(5), [aSet(benchId, 0, 100, { reps: 5 }), aSet(pullUpId, 1, 0, { reps: 10 })]),
+    payloadAt(hoursAgo(2), [aSet(benchId, 0, 105, { reps: 3 })]),
   ]) {
     workouts.push(workout);
     responses.push(await postCompleteSession(lifter.accessToken, workout));

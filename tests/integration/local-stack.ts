@@ -1,6 +1,5 @@
-import { execFileSync } from 'node:child_process';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
@@ -18,37 +17,18 @@ import {
   type SessionSummary,
   sfc32FromSeed,
 } from '@domain/index.ts';
+import { currentStackEnvMismatch, localStackStatus, type LocalStackStatus } from '../../scripts/local-stack.ts';
 
-interface LocalStackEnv {
-  API_URL: string;
-  DB_URL: string;
-  FUNCTIONS_URL: string;
-  ANON_KEY: string;
-  SERVICE_ROLE_KEY: string;
-  MAILPIT_URL: string;
-}
-
-const stackEnvPath = join(import.meta.dirname, '../../.stack.env');
 const functionsEnvPath = join(import.meta.dirname, '../../supabase/functions/.env.local');
 
 function assertStackEnvLoaded(): void {
-  if (!existsSync(stackEnvPath)) return;
-  const expected = /^SUPABASE_PROJECT_ID=(.*)$/m.exec(readFileSync(stackEnvPath, 'utf8'))?.[1]?.trim();
-  if (expected && process.env.SUPABASE_PROJECT_ID !== expected) {
-    throw new Error(
-      `.stack.env sets SUPABASE_PROJECT_ID=${expected} but the environment has ${process.env.SUPABASE_PROJECT_ID ?? 'none'}; ` +
-        'run through make, or `set -a; . ./.stack.env; set +a` first, so tests never reach another stack',
-    );
-  }
+  const mismatch = currentStackEnvMismatch();
+  if (mismatch) throw new Error(`${mismatch}, so tests never reach another stack`);
 }
 
-function readLocalStackEnv(): LocalStackEnv {
+function readLocalStackEnv(): LocalStackStatus {
   assertStackEnvLoaded();
-  const output = execFileSync('npx', ['supabase', 'status', '-o', 'json'], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-  });
-  return JSON.parse(output.slice(output.indexOf('{')));
+  return localStackStatus();
 }
 
 export const env = readLocalStackEnv();
@@ -93,7 +73,7 @@ export async function builtInExerciseId(key: string): Promise<string> {
   return row.id;
 }
 
-export interface FunctionResponseBody extends Partial<SessionSummary> {
+interface FunctionResponseBody extends Partial<SessionSummary> {
   summary?: SessionSummary;
   revision?: number;
   replayedSessionIds?: string[];
@@ -122,7 +102,7 @@ function isEdgeRuntimeDrop(status: number, rawBody: string): boolean {
   }
 }
 
-export interface RawFunctionResponse {
+interface RawFunctionResponse {
   status: number;
   rawBody: string;
   headers: Headers;
@@ -159,6 +139,19 @@ export async function rebuildCaches(userId: string, bearer = env.SERVICE_ROLE_KE
     body: JSON.stringify({ userId }),
   });
   return { status: response.status, body: JSON.parse(response.rawBody) };
+}
+
+export async function rowCounts<Table extends string>(
+  userId: string,
+  tables: readonly Table[],
+): Promise<Record<Table, number>> {
+  const counts = await Promise.all(
+    tables.map(async (table) => {
+      const [row] = await db`select count(*)::int as count from ${db(`public.${table}`)} where user_id = ${userId}`;
+      return [table, row.count as number] as const;
+    }),
+  );
+  return Object.fromEntries(counts) as Record<Table, number>;
 }
 
 export async function ageSession(sessionId: string, interval: string): Promise<string> {
@@ -336,7 +329,7 @@ export function resignedWithAnotherKey(accessToken: string): string {
   return `${header}.${claims}.${signature}`;
 }
 
-export function lootSecret(): string {
+function lootSecret(): string {
   const secret = /^LOOT_SECRET=(.*)$/m.exec(readFileSync(functionsEnvPath, 'utf8'))?.[1]?.trim();
   if (!secret) throw new Error('supabase/functions/.env.local has no LOOT_SECRET; run make functions');
   return secret;
@@ -423,7 +416,7 @@ export async function lootSnapshot(userId: string) {
   return { lootRolls, drops, dropLuck, userItems, itemLedger, userUnlocks };
 }
 
-export interface GrantedDrop {
+interface GrantedDrop {
   dropId: string;
   lootRollId: string;
   itemId: string;

@@ -1,10 +1,18 @@
-import { type CardioSetInput, countedWorkSeconds, type LiftSetInput, type SetResult } from '../domain/index.ts';
+import { type DbRow, nullableNumber } from '../db.ts';
+import {
+  type BalanceConfig,
+  type CardioSetInput,
+  countedWorkSeconds,
+  type LiftSetInput,
+  resolveEffort,
+  type SetResult,
+  setKind,
+  type WritableSet,
+} from '../domain/index.ts';
 
 type EffortColumns = Pick<SetResult, 'effortInputType' | 'effortValue'>;
 
-export type WritableSet = (LiftSetInput & { effectiveLoadKg: number }) | CardioSetInput;
-
-export function liftInputColumns(
+function liftInputColumns(
   set: Pick<LiftSetInput, 'id' | 'exerciseId' | 'position' | 'weightKg' | 'reps' | 'isWarmup'>,
   effectiveLoadKg: number,
   effort: EffortColumns,
@@ -28,7 +36,7 @@ export function liftInputColumns(
   };
 }
 
-export function cardioInputColumns(bout: CardioSetInput, effort: EffortColumns) {
+function cardioInputColumns(bout: CardioSetInput, effort: EffortColumns) {
   return {
     id: bout.id,
     exercise_id: bout.exerciseId,
@@ -48,8 +56,23 @@ export function cardioInputColumns(bout: CardioSetInput, effort: EffortColumns) 
   };
 }
 
-export function inputSetColumns(set: WritableSet, effort: EffortColumns) {
+function inputSetColumns(set: WritableSet, effort: EffortColumns) {
   return set.kind === 'cardio' ? cardioInputColumns(set, effort) : liftInputColumns(set, set.effectiveLoadKg, effort);
+}
+
+export function inputColumnsWithEffort(set: WritableSet, cfg: BalanceConfig) {
+  return inputSetColumns(set, resolveEffort(set.effort, cfg, setKind(set)));
+}
+
+export function cardioFieldsFromRow(row: DbRow): Pick<CardioSetInput, 'durationS' | 'distanceM' | 'interval'> {
+  return {
+    durationS: row.duration_s,
+    distanceM: nullableNumber(row.distance_m),
+    interval:
+      row.interval_rounds === null
+        ? null
+        : { workS: row.interval_work_s, restS: row.interval_rest_s, rounds: row.interval_rounds },
+  };
 }
 
 export function derivedSetColumns(result: SetResult) {

@@ -1,20 +1,20 @@
-import { authenticatedUserId } from '../_shared/auth.ts';
 import { sql, type Transaction } from '../_shared/db.ts';
 import {
   type Catalog,
   DEFAULT_BALANCE,
-  effectiveLoadForNewSet,
   HISTORY_ONLY_STEPS,
+  historyOnlySummary,
   isWithinEditWindow,
-  KindMismatchError,
+  pendingSummary,
   processSession,
   type SessionInput,
   type SessionSummary,
+  type WritableSet,
+  writableSetFor,
 } from '../_shared/domain/index.ts';
-import { asHttpError } from '../_shared/http-errors.ts';
-import { HttpError, jsonResponse, readJsonBody } from '../_shared/http.ts';
+import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
-import { serve } from '../_shared/serve.ts';
+import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { rollNewSessionLoot } from '../_shared/stores/loot.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
@@ -31,7 +31,7 @@ import {
   storedSummary,
   tombstoneOwner,
 } from '../_shared/stores/sessions.ts';
-import { newSetRow, type WritableSet } from '../_shared/stores/set-columns.ts';
+import { newSetRow } from '../_shared/stores/set-columns.ts';
 import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
 
 function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessionPayload): void {
@@ -57,17 +57,9 @@ async function storeHistoryOnly(
     { catalog },
     HISTORY_ONLY_STEPS,
   );
-  const summary: SessionSummary = {
-    sessionId: session.id,
-    xpBySkill: {},
-    levelUps: [],
-    prs: [],
-    drops: [],
-    historyOnly: true,
-  };
   return await insertSession(
     tx,
-    { ...row, historyOnly: true, summary },
+    { ...row, historyOnly: true, summary: historyOnlySummary(session.id) },
     outputs.sets.map((result) => newSetRow(result, session.id, row.userId)),
   );
 }
@@ -120,13 +112,10 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       id: payload.id,
       startedAt: payload.startedAt,
       sets: payload.sets.map((set): WritableSet => {
-        const exercise = catalog.exercises.get(set.exerciseId)!;
-        if (set.kind === 'cardio') {
-          if (exercise.modality !== 'cardio') throw new KindMismatchError(exercise.id);
-          return set;
-        }
-        const effectiveLoadKg = effectiveLoadForNewSet(set, exercise, profile.bodyweightKg);
-        return { ...set, effectiveLoadKg, recordedEffectiveLoadKg: effectiveLoadKg };
+        const writable = writableSetFor(set, catalog.exercises.get(set.exerciseId)!, profile.bodyweightKg);
+        return writable.kind === 'cardio'
+          ? writable
+          : { ...writable, recordedEffectiveLoadKg: writable.effectiveLoadKg };
       }),
     };
     const row: NewSessionRow = {
@@ -138,7 +127,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       timezone: profile.timezone,
       historyOnly: false,
       balanceVersion: DEFAULT_BALANCE.version,
-      summary: { sessionId: payload.id, drops: [] },
+      summary: pendingSummary(payload.id),
       notes: payload.notes,
     };
 
@@ -151,8 +140,4 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
   });
 }
 
-serve(async (request) => {
-  const userId = await authenticatedUserId(request);
-  const payload = parseCompleteSessionPayload(await readJsonBody(request));
-  return jsonResponse(await completeSession(userId, payload));
-}, asHttpError);
+serveAuthenticated(parseCompleteSessionPayload, completeSession);

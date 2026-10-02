@@ -1,34 +1,27 @@
-import { expect, type Page, test } from '@playwright/test';
-import { logCardio, logExercise, openFromProfile, openTab, register } from './support/app.ts';
+import { expect, type Page } from '@playwright/test';
+import { test } from './support/people.ts';
+import { logCardio, logExercise, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
 
 async function logBench(page: Page, weightKg: number) {
   await openTab(page, 'Train');
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg, reps: 5 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg, reps: 5 }]));
 }
 
 async function logRun(page: Page, minutes: number, distance: number) {
   await openTab(page, 'Train');
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]));
 }
 
 function feedItem(page: Page, text: string) {
-  return page.getByRole('list', { name: 'Feed' }).getByTestId('feed-item').filter({ hasText: text });
+  return page.getByRole('list', { name: 'Feed' }).getByRole('listitem').filter({ hasText: text });
 }
 
-test('friends: request, feed with gz and hidden weights, hiscores, profile and removal', async ({ browser }) => {
+test('friends: request, feed with gz and hidden weights, hiscores, profile and removal', async ({ newPerson }) => {
   const stamp = Date.now().toString(36);
   const aliceName = `fa_${stamp}`;
   const bobName = `fb_${stamp}`;
-  const aliceContext = await browser.newContext();
-  const bobContext = await browser.newContext();
-  const alice = await aliceContext.newPage();
-  const bob = await bobContext.newPage();
+  const alice = await newPerson();
+  const bob = await newPerson();
   await register(alice, aliceName);
   await register(bob, bobName);
 
@@ -38,9 +31,8 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await expect(alice.getByRole('status')).toHaveText(`Request sent to ${bobName}`);
 
   await openTab(bob, 'Friends');
-  const request = bob.getByTestId('incoming-request');
-  await expect(request).toContainText(`${aliceName} wants to be friends`);
-  await request.getByRole('button', { name: 'Accept' }).click();
+  await expect(bob.getByText(`${aliceName} wants to be friends`)).toBeVisible();
+  await bob.getByRole('button', { name: 'Accept' }).click();
   await expect(bob.getByRole('list', { name: 'Friends list' })).toContainText(aliceName);
 
   await logBench(bob, 60);
@@ -88,7 +80,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
     .getByRole('list', { name: 'Friends list' })
     .getByRole('link', { name: new RegExp(bobName) })
     .click();
-  await expect(alice.getByTestId('profile-display-name')).toHaveText(bobName);
+  await expect(alice.getByRole('heading', { level: 2, name: bobName, exact: true })).toBeVisible();
   await expect(alice.getByTestId('profile-total')).not.toHaveText('—');
   await expect(alice.getByText('Weights hidden')).toBeVisible();
   await alice.getByRole('button', { name: 'Remove friend' }).click();
@@ -103,6 +95,4 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await alice.getByRole('link', { name: 'Preview what friends see' }).click();
   await expect(alice.getByTestId('profile-total')).toHaveText(total ?? '');
   await expect(alice.getByTestId('profile-collection')).toHaveText(collection ?? '');
-  await aliceContext.close();
-  await bobContext.close();
 });

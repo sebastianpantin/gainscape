@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, muteDraftBroadcasts, register, uniqueUsername } from './support/app.ts';
+import { finishWorkout, logExercise, muteDraftBroadcasts, register, uniqueUsername } from './support/app.ts';
 import { sessionCount } from './support/db.ts';
 
 function benchHeading(page: Page) {
@@ -31,13 +31,16 @@ test('Finish in one tab sends exactly one request and the other tab follows', as
   context.on('request', (request) => {
     if (request.url().includes('/functions/v1/complete-session')) completeSessionRequests.push(request.method());
   });
+  let releaseRequest: () => void = () => {};
+  const requestReleased = new Promise<void>((resolve) => (releaseRequest = resolve));
   await page.route('**/functions/v1/complete-session', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await requestReleased;
     await route.continue();
   });
 
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await expect(second.getByRole('heading', { name: 'Saving workout…' })).toBeVisible();
+  releaseRequest();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
   await expect(second.getByText('This workout was saved in another tab.')).toBeVisible();
   expect(completeSessionRequests).toEqual(['POST']);
@@ -55,8 +58,7 @@ test('a stale edit after the other tab synced does not resurrect the draft', asy
   await second.goto('/');
   await expect(benchHeading(second)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await finishWorkout(page);
   await expect(benchHeading(second)).toBeVisible();
 
   await second.locator('li.set-row').first().getByLabel('reps').fill('7');

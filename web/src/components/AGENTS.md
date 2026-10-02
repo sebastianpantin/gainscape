@@ -44,7 +44,7 @@ Small shared UI pieces used across feature screens: the line icon set, the pixel
 
 ### Internal
 
-- `../lib/preferences.ts`, `../lib/profile.ts`, `../lib/standing.ts` (`monogramFor`), `@domain/crafting.ts`
+- `../lib/preferences.ts`, `../lib/profile.ts`, `../lib/standing-rules.ts` (`monogramFor`), `@domain/crafting.ts`
 - Class names defined in `../styles/app.css`
 
 ### External

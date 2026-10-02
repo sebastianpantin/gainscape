@@ -201,8 +201,8 @@ export interface CatalogSources {
   dropTables: unknown;
 }
 
-export function readCatalogSources(dir = CATALOG_DIR): CatalogSources {
-  const read = (name: string) => parse(readFileSync(join(dir, `${name}.yaml`), 'utf8'));
+export function readCatalogSources(): CatalogSources {
+  const read = (name: string) => parse(readFileSync(join(CATALOG_DIR, `${name}.yaml`), 'utf8'));
   return {
     skills: read('skills'),
     exercises: read('exercises'),
@@ -343,19 +343,15 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
   };
 }
 
-export function loadCatalogData(dir = CATALOG_DIR): CatalogData {
-  return expandCatalog(readCatalogSources(dir));
-}
-
-function programDayName(programKey: string, dayKey: string): string {
-  return `program:${programKey}:${dayKey}`;
+export function loadCatalogData(): CatalogData {
+  return expandCatalog(readCatalogSources());
 }
 
 export const catalogNames = {
   skill: (key: string) => key,
   exercise: (key: string) => key,
   program: (key: string) => `program:${key}`,
-  programDay: programDayName,
+  programDay: (programKey: string, dayKey: string) => `program:${programKey}:${dayKey}`,
   item: (key: string) => `item:${key}`,
   dropTable: (key: string) => `drop_table:${key}`,
   recipe: (key: string) => `recipe:${key}`,

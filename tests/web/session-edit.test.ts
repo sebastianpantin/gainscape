@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE } from '../../supabase/functions/_shared/domain/balance.ts';
+import { isSessionEditable } from '@domain/edit-window.ts';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 import {
   addEditExercise,
@@ -8,16 +9,18 @@ import {
   dropsAtRisk,
   editFromSession,
   editPayload,
-  effortLabel,
   failureAction,
+  failureText,
   hasChanges,
-  isEditable,
   type EditBout,
   type KnownExercise,
   type LiftEditExercise,
   rebaseEdit,
   rebaseNotice,
+  removalText,
+  removedText,
   removeEditSet,
+  sameSetValues,
   type SessionEdit,
   swapEditExercise,
   updateEditBout,
@@ -34,6 +37,7 @@ import {
   transientReason,
 } from '../../web/src/lib/history-rules.ts';
 import { boutModeChanges } from '../../web/src/lib/cardio-rules.ts';
+import type { CatalogItem } from '../../web/src/lib/item-rules.ts';
 
 const benchId = 'aaaaaaaa-0000-4000-8000-000000000001';
 const pullUpId = 'aaaaaaaa-0000-4000-8000-000000000002';
@@ -187,9 +191,9 @@ describe('editability and paging', () => {
   const now = Date.parse('2026-09-30T12:00:00Z');
 
   it('allows edits within 7 days of the start and never for history-only sessions', () => {
-    expect(isEditable({ historyOnly: false, startedAt: '2026-09-23T12:00:00Z' }, now)).toBe(true);
-    expect(isEditable({ historyOnly: false, startedAt: '2026-09-23T11:59:59Z' }, now)).toBe(false);
-    expect(isEditable({ historyOnly: true, startedAt: '2026-09-30T10:00:00Z' }, now)).toBe(false);
+    expect(isSessionEditable({ historyOnly: false, startedAt: '2026-09-23T12:00:00Z' }, now)).toBe(true);
+    expect(isSessionEditable({ historyOnly: false, startedAt: '2026-09-23T11:59:59Z' }, now)).toBe(false);
+    expect(isSessionEditable({ historyOnly: true, startedAt: '2026-09-30T10:00:00Z' }, now)).toBe(false);
   });
 
   it('recognises session ids before querying', () => {
@@ -203,15 +207,6 @@ describe('editability and paging', () => {
     expect(nextPageFilter({ startedAt: '2026-09-30T15:37:36.26+00:00', id: 'abc' })).toBe(
       'started_at.lt."2026-09-30T15:37:36.26+00:00",and(started_at.eq."2026-09-30T15:37:36.26+00:00",id.lt.abc)',
     );
-  });
-
-  it('labels stored effort', () => {
-    expect(effortLabel({ type: 'level', level: 'near_failure' })).toBe('Near fail');
-    expect(effortLabel({ type: 'rpe', value: 8.5 })).toBe('RPE 8.5');
-    expect(effortLabel({ type: 'rir', value: 2 })).toBe('RIR 2');
-    expect(effortLabel({ type: 'cardio', level: 'moderate' })).toBe('Moderate');
-    expect(effortLabel({ type: 'cardio', level: 'max' })).toBe('Max');
-    expect(effortLabel(null)).toBeNull();
   });
 });
 
@@ -504,6 +499,17 @@ describe('cardio bouts in an edit', () => {
   ];
   const edit = editFromSession(session, cardioRows, known);
 
+  it('removes a bout and gives only conflicting bouts new ids', () => {
+    const removed = removeEditSet(edit, 0, 'bout-0');
+    expect(removed.exercises[0].sets.map((set) => set.id)).toEqual(['bout-1']);
+    const reIded = withNewSetIds(edit, ['BOUT-1']);
+    const ids = editPayload(reIded).sets.map((set) => set.id);
+    expect(ids[0]).toBe('bout-0');
+    expect(ids[1]).not.toBe('bout-1');
+    expect(ids.slice(2)).toEqual(['set-2', 'bout-3']);
+    expect(reIded.exercises[0].modality).toBe('cardio');
+  });
+
   it('turns cardio rows into bouts on a cardio exercise', () => {
     expect(edit.exercises.map((exercise) => [exercise.name, exercise.modality])).toEqual([
       ['Running', 'cardio'],
@@ -644,5 +650,64 @@ describe('cardio bouts in an edit', () => {
       interval: null,
       effort: { type: 'cardio', level: 'easy' },
     });
+  });
+});
+
+describe('session detail texts', () => {
+  const items = [
+    { id: 'item-gloves', name: 'Iron Gloves' },
+    { id: 'item-chalk', name: 'Chalk' },
+  ] as CatalogItem[];
+
+  it('warns which drops a change or delete may remove, naming unknown items generically', () => {
+    expect(
+      removalText(
+        [
+          { itemId: 'item-gloves', quantity: 1 },
+          { itemId: 'item-chalk', quantity: 2 },
+          { itemId: 'item-gone', quantity: 1 },
+        ],
+        items,
+      ),
+    ).toBe('This may remove Iron Gloves, Chalk ×2, an item from your collection.');
+    expect(removalText([], items)).toBe('');
+  });
+
+  it('reports the drops a save or delete removed', () => {
+    expect(removedText([{ itemId: 'item-chalk', revokedQuantity: 3 }], items)).toBe(
+      'Removed Chalk ×3 from your collection.',
+    );
+    expect(removedText([{ itemId: 'item-chalk', revokedQuantity: 0 }], items)).toBe('');
+    expect(removedText(undefined, items)).toBe('');
+  });
+
+  it('compares set values without their ids', () => {
+    const set = { id: 'a', weightKg: 60, reps: 5, isWarmup: false, effort: null };
+    expect(sameSetValues(set, { ...set, id: 'b' })).toBe(true);
+    expect(sameSetValues(set, { ...set, reps: 6 })).toBe(false);
+  });
+
+  it('explains the failures every save and delete can hit', () => {
+    expect(failureText({ kind: 'read_only' }, 'save')).toBe(
+      'This workout is older than 7 days, so it can no longer be changed.',
+    );
+    expect(failureText({ kind: 'wrong_account' }, 'delete')).toBe(
+      'You are signed in as someone else in another tab. Reload the app.',
+    );
+    expect(failureText({ kind: 'retry', reason: 'offline' }, 'save')).toBe(
+      "Couldn't reach the server (offline). Try again.",
+    );
+    expect(failureText({ kind: 'rate_limited', retryAfterSeconds: 120 }, 'save')).toBe(
+      'Too many changes. Try again in 2 min.',
+    );
+    expect(failureText({ kind: 'rate_limited', retryAfterSeconds: null }, 'save')).toBe(
+      'Too many changes. Try again in a few minutes.',
+    );
+    expect(failureText({ kind: 'bug', code: 'invalid_payload' }, 'delete')).toBe(
+      "Couldn't delete this workout: invalid_payload",
+    );
+    expect(failureText({ kind: 'revision_conflict' }, 'delete')).toBe(
+      "Couldn't delete this workout: revision_conflict",
+    );
   });
 });

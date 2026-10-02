@@ -1,10 +1,8 @@
-import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
-import { exerciseLabels, type LiftExercise } from '../../lib/catalog.ts';
+import { exerciseLabels, type LiftExercise } from '../../lib/catalog-rules.ts';
 import type { CollectionData } from '../../lib/collection-data.ts';
-import { formatLoad } from '../../lib/format.ts';
+import { emptySlots, strengthText } from '../../lib/collection-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { formatWeight } from '../../lib/units.ts';
-import { slotClass } from './slot-class.ts';
+import { RecordSlots } from './RecordSlots.tsx';
 
 interface ExerciseRecordCardProps {
   exercise: LiftExercise;
@@ -15,15 +13,6 @@ interface ExerciseRecordCardProps {
   onMoveDown?: () => void;
 }
 
-function StrengthLine({ exercise, data }: { exercise: LiftExercise; data: CollectionData }) {
-  const { unitPref } = usePreferences();
-  const strength = data.strengthByExercise.get(exercise.id);
-  if (!strength) return null;
-  if (strength.repsCapacity !== null) return <span className="muted">Capacity ~{strength.repsCapacity} reps</span>;
-  if (strength.e1rmKg !== null) return <span className="muted">e1RM {formatWeight(strength.e1rmKg, unitPref)}</span>;
-  return null;
-}
-
 export function ExerciseRecordCard({
   exercise,
   data,
@@ -32,12 +21,13 @@ export function ExerciseRecordCard({
   onMoveUp,
   onMoveDown,
 }: ExerciseRecordCardProps) {
-  const slots = data.repMaxesByExercise.get(exercise.id) ?? Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
+  const slots = data.repMaxesByExercise.get(exercise.id) ?? emptySlots();
   const maxReps = data.maxRepsByExercise.get(exercise.id);
   const { unitPref } = usePreferences();
+  const strengthLine = strengthText(data.strengthByExercise.get(exercise.id), exercise.loadType, unitPref);
 
   return (
-    <section className="panel stack" data-testid={`collection-${exercise.id}`}>
+    <section className="panel stack">
       <header className="row spread">
         <span className="stack" style={{ gap: 2 }}>
           <h2>{exercise.name}</h2>
@@ -59,21 +49,8 @@ export function ExerciseRecordCard({
           </button>
         </div>
       </header>
-      <StrengthLine exercise={exercise} data={data} />
-      {exercise.loadType === 'bodyweight' ? (
-        <p className={maxReps ? 'record-slot bodyweight-record filled' : 'record-slot bodyweight-record'}>
-          Max reps: <strong>{maxReps ?? '—'}</strong>
-        </p>
-      ) : (
-        <ol className="record-slots">
-          {slots.map((slot, index) => (
-            <li key={index} className={slotClass(slot)}>
-              <span className="muted">{index + 1}RM</span>{' '}
-              <span>{slot ? formatLoad(slot.loadKg, exercise.loadType, unitPref) : '—'}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      {strengthLine && <span className="muted">{strengthLine}</span>}
+      <RecordSlots loadType={exercise.loadType} slots={slots} maxReps={maxReps} unit={unitPref} />
     </section>
   );
 }

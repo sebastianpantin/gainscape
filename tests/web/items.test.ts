@@ -10,9 +10,13 @@ import {
   describeDrops,
   groupItems,
   type HeldItem,
+  itemNameLookup,
+  kindLabel,
   newItemIds,
   showsQuantity,
   TIER_COLORS,
+  toCatalogItem,
+  toHeldItems,
   toRecipe,
 } from '../../web/src/lib/item-rules.ts';
 
@@ -127,6 +131,70 @@ describe('item display', () => {
       { itemId: 'a', quantity: 1 },
       { itemId: 'z', quantity: 8 },
     ]);
+  });
+});
+
+describe('row mapping', () => {
+  it('maps an item row to a catalog item', () => {
+    expect(
+      toCatalogItem({
+        id: 'item-1',
+        key: 'iron_gloves',
+        name: 'Iron Gloves',
+        kind: 'gear',
+        rarity: 'rare',
+        tier: 'forged',
+        gear_slot: 'gloves',
+        icon_key: 'gloves',
+        description: 'Grippy.',
+        grants_exercise_id: null,
+        sort_order: 7,
+      }),
+    ).toEqual({
+      id: 'item-1',
+      key: 'iron_gloves',
+      name: 'Iron Gloves',
+      kind: 'gear',
+      rarity: 'rare',
+      tier: 'forged',
+      gearSlot: 'gloves',
+      icon: 'gloves',
+      description: 'Grippy.',
+      grantsExerciseId: null,
+      sortOrder: 7,
+    });
+  });
+
+  it('keys held items by item id', () => {
+    const rows = [
+      { item_id: 'a', quantity: 2, first_obtained_at: '2026-09-30T00:00:00Z' },
+      { item_id: 'b', quantity: 1, first_obtained_at: '2026-10-01T00:00:00Z' },
+    ];
+    expect([...toHeldItems(rows)]).toEqual([
+      ['a', { itemId: 'a', quantity: 2, firstObtainedAt: '2026-09-30T00:00:00Z' }],
+      ['b', { itemId: 'b', quantity: 1, firstObtainedAt: '2026-10-01T00:00:00Z' }],
+    ]);
+  });
+});
+
+describe('itemNameLookup', () => {
+  it('names a known item and uses the fallback for any other id', () => {
+    const nameOf = itemNameLookup(fixture, 'an item');
+    expect(nameOf(fixture[0].id)).toBe(fixture[0].name);
+    expect(nameOf('missing')).toBe('an item');
+  });
+});
+
+describe('kindLabel', () => {
+  const base = fixture[0];
+
+  it('names the tier of gear and materials and the rarity of every kind', () => {
+    expect(kindLabel({ ...base, kind: 'gear', tier: 'titan', rarity: 'rare' })).toBe('Gear · Titan tier · rare');
+    expect(kindLabel({ ...base, kind: 'material', tier: 'rookie', rarity: 'common' })).toBe(
+      'Material · Rookie · common',
+    );
+    expect(kindLabel({ ...base, kind: 'pet', tier: null, rarity: 'legendary' })).toBe('Pet · legendary');
+    expect(kindLabel({ ...base, kind: 'scroll', tier: null, rarity: 'uncommon' })).toBe('Scroll · uncommon');
   });
 });
 

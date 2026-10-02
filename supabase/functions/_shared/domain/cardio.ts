@@ -1,5 +1,5 @@
 import type { BalanceConfig } from './balance.ts';
-import { roundTo } from './strength.ts';
+import { roundTo } from './math.ts';
 import {
   CARDIO_EFFORT_LEVELS,
   type CardioEffortLevel,
@@ -9,11 +9,10 @@ import {
   type EffortInput,
   type SkillXp,
 } from './types.ts';
+import { FLOAT_NOISE_DECIMALS, FULL_SHARE_BASIS_POINTS, roundXp } from './xp.ts';
 
-const SECONDS_PER_MINUTE = 60;
-const METRES_PER_KM = 1000;
-const FULL_SHARE_BASIS_POINTS = 10_000;
-const FLOAT_NOISE_DECIMALS = 6;
+export const SECONDS_PER_MINUTE = 60;
+export const METRES_PER_KM = 1000;
 
 export const CARDIO_BOUNDS = Object.freeze({
   steadyDurationS: Object.freeze({ min: 60, max: 14_400 }),
@@ -24,10 +23,14 @@ export const CARDIO_BOUNDS = Object.freeze({
   distanceM: Object.freeze({ min: 1, max: 200_000 }),
 });
 
-export const DEFAULT_CARDIO_EFFORT: CardioEffortLevel = 'moderate';
+const DEFAULT_CARDIO_EFFORT: CardioEffortLevel = 'moderate';
 
 export function intervalDurationSeconds(interval: CardioInterval): number {
   return interval.rounds * interval.workS + (interval.rounds - 1) * interval.restS;
+}
+
+export function boutDurationSeconds(bout: { durationS: number; interval: CardioInterval | null }): number {
+  return bout.interval === null ? bout.durationS : intervalDurationSeconds(bout.interval);
 }
 
 export function countedWorkSeconds(bout: Pick<CardioSetInput, 'durationS' | 'interval'>): number {
@@ -38,6 +41,10 @@ export function derivedCardioEffort(effort: EffortInput, maxEffort: CardioEffort
   const logged = effort?.type === 'cardio' ? effort.level : DEFAULT_CARDIO_EFFORT;
   const ceiling = CARDIO_EFFORT_LEVELS.indexOf(maxEffort);
   return CARDIO_EFFORT_LEVELS[Math.min(CARDIO_EFFORT_LEVELS.indexOf(logged), ceiling)];
+}
+
+export function paceSPerKm(durationS: number, distanceM: number): number {
+  return (durationS * METRES_PER_KM) / distanceM;
 }
 
 export function speedRatio(referencePaceSPerKm: number, distanceM: number, durationS: number): number {
@@ -85,7 +92,6 @@ export interface CardioSkillShare {
 
 export function cardioSkillXp(bout: CardioXpBout, shares: readonly CardioSkillShare[], cfg: BalanceConfig): SkillXp[] {
   const minutes = bout.xpCountedWorkS / SECONDS_PER_MINUTE;
-  const factor = 10 ** FLOAT_NOISE_DECIMALS;
   return shares
     .map((share) => {
       const rate = cfg.cardioXpPerWorkMinute[share.skillKey] ?? 0;
@@ -97,7 +103,7 @@ export function cardioSkillXp(bout: CardioXpBout, shares: readonly CardioSkillSh
         (share.shareBasisPoints / FULL_SHARE_BASIS_POINTS) *
         cfg.cardioEffortFactor[bout.effort] *
         bout.paceBonus;
-      return { skillId: share.skillId, xp: Math.round(Math.round(rawXp * factor) / factor) };
+      return { skillId: share.skillId, xp: roundXp(rawXp) };
     })
     .filter((part) => part.xp > 0);
 }

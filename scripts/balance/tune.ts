@@ -1,4 +1,4 @@
-import { type BalanceConfig, DEFAULT_BALANCE, xpForLevel } from '../../supabase/functions/_shared/domain/index.ts';
+import { type BalanceConfig, DEFAULT_BALANCE } from '../../supabase/functions/_shared/domain/index.ts';
 import {
   type BandReport,
   CARDIO_BANDS,
@@ -16,6 +16,7 @@ import {
 } from './cardio-simulate.ts';
 import { CARDIO_SIM_SKILLS } from './catalog.ts';
 import { CARDIO_PROFILES, PROFILES } from './profiles.ts';
+import { LEVEL_99_XP } from './progress.ts';
 import { firstSkillToLevel99, type SimulationOptions, simulateProfile, WEEKS_PER_YEAR } from './simulate.ts';
 
 const UNIT_XP_PER_EFFECTIVE_REP = 1000;
@@ -109,7 +110,7 @@ export function tuneCardio(): CardioBandReport {
     { ...DEFAULT_BALANCE, cardioXpPerWorkMinute: unitRates },
     { maxYears: CARDIO_TUNING_YEARS },
   );
-  const targetWeeklyXp = xpForLevel(99) / (CARDIO_BANDS.balancedTargetYears * WEEKS_PER_YEAR);
+  const targetWeeklyXp = LEVEL_99_XP / (CARDIO_BANDS.balancedTargetYears * WEEKS_PER_YEAR);
   const rates = Object.fromEntries(
     CARDIO_SIM_SKILLS.map((skill) => {
       const weekly = results.balanced.cumulativeXpByWeek[skill.key];

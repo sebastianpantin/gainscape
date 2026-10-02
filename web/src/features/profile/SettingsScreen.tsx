@@ -6,15 +6,17 @@ import {
   deleteMyAccount,
   exportFileName,
   exportMyData,
-  MINIMUM_PASSWORD_LENGTH,
   requestEmailChange,
   saveBlob,
 } from '../../lib/account.ts';
+import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
 import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import {
   changeTimezone,
+  cooldownStartFor,
   type EffortInputMode,
+  formatDay,
   nextTimezoneChangeAt,
   type Profile,
   TIMEZONE_CHANGE_COOLDOWN_DAYS,
@@ -23,33 +25,32 @@ import {
   updatePublicProfile,
 } from '../../lib/profile.ts';
 import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
-import { storedSessionId } from '../../offline/draft-format.ts';
+import { discardLocalDraft, hasUnsyncedDraft } from '../../offline/local-drafts.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetInstallCard, promptInstall, useInstallState } from '../../pwa/install.ts';
 import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
 import type { UpdateCheck } from '../../pwa/update-flow.ts';
+import { useOptimisticProfileSave } from './use-optimistic-profile-save.ts';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface SettingsScreenProps {
   userId: string;
   email: string | null;
 }
 
-async function discardLocalDraft(userId: string): Promise<void> {
+async function forgetThisDevice(userId: string): Promise<void> {
   forgetCachedExercises(localStorage, userId);
   forgetInstallCard(userId);
-  const store = await openDraftStoreAndReconcile();
-  const record = await store.get(userId);
-  if (record) await store.discard(userId, storedSessionId(record));
+  await discardLocalDraft(await openDraftStoreAndReconcile(), userId);
 }
 
-async function hasUnsyncedDraft(userId: string): Promise<boolean> {
-  const store = await openDraftStoreAndReconcile();
-  return (await store.userIdsWithDrafts()).includes(userId);
+async function hasUnsyncedDraftHere(userId: string): Promise<boolean> {
+  return hasUnsyncedDraft(await openDraftStoreAndReconcile(), userId);
 }
 
 async function signOut(userId: string, navigate: NavigateFunction): Promise<void> {
-  if ((await hasUnsyncedDraft(userId)) && !window.confirm('Sign out? Your workout stays on this device.')) return;
+  if ((await hasUnsyncedDraftHere(userId)) && !window.confirm('Sign out? Your workout stays on this device.')) return;
   navigate('/', { replace: true });
   await signOutKeepingDrafts();
 }
@@ -106,33 +107,14 @@ interface SectionProps {
   onSaved: (update: ProfileUpdate) => void;
 }
 
-function previousValues<K extends keyof Profile>(
-  profile: Profile,
-  changes: Partial<Pick<Profile, K>>,
-): Pick<Profile, K> {
-  return Object.fromEntries(Object.keys(changes).map((key) => [key, profile[key as K]])) as Pick<Profile, K>;
-}
-
 function TrainingSection({ userId, profile, onSaved }: SectionProps) {
   const { applyPreferences } = usePreferences();
-  const [problem, setProblem] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  const save = async (changes: Partial<Pick<Profile, 'unitPref' | 'effortInputMode'>>) => {
-    const previous = previousValues(profile, changes);
-    setProblem(null);
-    setPending(true);
-    onSaved((current) => ({ ...current, ...changes }));
-    applyPreferences(changes);
-    try {
-      await updatePrivateProfile(userId, changes);
-    } catch (error) {
-      onSaved((current) => ({ ...current, ...previous }));
-      applyPreferences(previous);
-      setProblem(error instanceof Error ? error.message : 'Could not save that setting.');
-    }
-    setPending(false);
-  };
+  const { save, pending, problem } = useOptimisticProfileSave<'unitPref' | 'effortInputMode'>(
+    profile,
+    onSaved,
+    (changes) => updatePrivateProfile(userId, changes),
+    applyPreferences,
+  );
 
   return (
     <section className="panel stack" aria-labelledby="training-heading">
@@ -174,17 +156,7 @@ function allTimezones(): string[] {
   }
 }
 
-const DAY_MS = 86_400_000;
-
-function cooldownStartFor(nextAllowedAt: string): string {
-  return new Date(new Date(nextAllowedAt).getTime() - TIMEZONE_CHANGE_COOLDOWN_DAYS * DAY_MS).toISOString();
-}
-
-function formatDay(date: Date): string {
-  return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-
-function TimezoneSection({ profile, onSaved }: SectionProps) {
+function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {
   const [candidate, setCandidate] = useState(profile.timezone);
   const [message, setMessage] = useState<{ kind: 'problem' | 'status'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -261,22 +233,11 @@ function TimezoneSection({ profile, onSaved }: SectionProps) {
 }
 
 function PrivacySection({ userId, profile, onSaved }: SectionProps) {
-  const [problem, setProblem] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  const save = async (changes: Partial<Pick<Profile, 'showWeights' | 'showBodyweight'>>) => {
-    const previous = previousValues(profile, changes);
-    setProblem(null);
-    setPending(true);
-    onSaved((current) => ({ ...current, ...changes }));
-    try {
-      await updatePublicProfile(userId, changes);
-    } catch (error) {
-      onSaved((current) => ({ ...current, ...previous }));
-      setProblem(error instanceof Error ? error.message : 'Could not save that setting.');
-    }
-    setPending(false);
-  };
+  const { save, pending, problem } = useOptimisticProfileSave<'showWeights' | 'showBodyweight'>(
+    profile,
+    onSaved,
+    (changes) => updatePublicProfile(userId, changes),
+  );
 
   return (
     <section className="panel stack" aria-labelledby="privacy-heading">
@@ -341,7 +302,7 @@ function AppSection() {
       )}
       {install === 'ios_manual' && <p className="hint">In Safari, tap Share, then Add to Home Screen.</p>}
       {install === 'installed' && <p className="hint">Installed on this device.</p>}
-      <span data-testid="app-version">Version {__APP_VERSION__}</span>
+      <span>Version {__APP_VERSION__}</span>
       <button className="button" type="button" disabled={!flow || checking} onClick={checkForUpdates}>
         Check for updates
       </button>
@@ -372,7 +333,7 @@ function EmailForm({ email, onDone }: { email: string; onDone: (text: string) =>
       await requestEmailChange(newEmail.trim());
       onDone(`We sent confirmation links to ${email} and ${newEmail.trim()}. Your email changes once you open both.`);
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not change your email.');
+      setProblem(messageOf(error, 'Could not change your email.'));
       setBusy(false);
     }
   };
@@ -410,7 +371,7 @@ function PasswordForm({ email, onDone }: { email: string; onDone: (text: string)
   const [next, setNext] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const tooShort = next.length > 0 && next.length < MINIMUM_PASSWORD_LENGTH;
+  const lengthProblem = next.length > 0 ? passwordProblem(next) : null;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -420,7 +381,7 @@ function PasswordForm({ email, onDone }: { email: string; onDone: (text: string)
       await changePassword(email, current, next);
       onDone('Password changed.');
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not change your password.');
+      setProblem(messageOf(error, 'Could not change your password.'));
       setBusy(false);
     }
   };
@@ -448,7 +409,7 @@ function PasswordForm({ email, onDone }: { email: string; onDone: (text: string)
           required
         />
       </label>
-      {tooShort && <p className="problem">Use at least {MINIMUM_PASSWORD_LENGTH} characters.</p>}
+      {lengthProblem && <p className="problem">{lengthProblem}</p>}
       {problem && (
         <p className="problem" role="alert">
           {problem}
@@ -475,7 +436,7 @@ function DeleteAccountForm({ userId, username }: { userId: string; username: str
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (
-      (await hasUnsyncedDraft(userId)) &&
+      (await hasUnsyncedDraftHere(userId)) &&
       !window.confirm('You have a workout that has not synced yet. It will be lost. Delete anyway?')
     )
       return;
@@ -483,11 +444,11 @@ function DeleteAccountForm({ userId, username }: { userId: string; username: str
     setProblem(null);
     try {
       await deleteMyAccount(typed, accountPassword);
-      await discardLocalDraft(userId).catch(() => undefined);
+      await forgetThisDevice(userId).catch(() => undefined);
       navigate('/', { replace: true });
       await signOutKeepingDrafts();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not delete your account.');
+      setProblem(messageOf(error, 'Could not delete your account.'));
       setBusy(false);
     }
   };
@@ -558,7 +519,7 @@ function AccountSection({
       saveBlob(await exportMyData(), exportFileName());
       setStatus('Your data was downloaded.');
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not export your data.');
+      setProblem(messageOf(error, 'Could not export your data.'));
     }
     setExporting(false);
   };
@@ -639,16 +600,16 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
       )}
       {state.status === 'ready' && (
         <>
-          <TrainingSection userId={userId} profile={state.bundle.profile} onSaved={replace} />
-          <TimezoneSection userId={userId} profile={state.bundle.profile} onSaved={replace} />
-          <PrivacySection userId={userId} profile={state.bundle.profile} onSaved={replace} />
+          <TrainingSection userId={userId} profile={state.profile} onSaved={replace} />
+          <TimezoneSection profile={state.profile} onSaved={replace} />
+          <PrivacySection userId={userId} profile={state.profile} onSaved={replace} />
         </>
       )}
       <AppSection />
       <AccountSection
         userId={userId}
         email={email}
-        username={state.status === 'ready' ? state.bundle.profile.username : null}
+        username={state.status === 'ready' ? state.profile.username : null}
       />
     </main>
   );

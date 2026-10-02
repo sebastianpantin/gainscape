@@ -1,6 +1,6 @@
 import { withFriendlyRateLimit } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
-import { type Profile, TIMEZONE_CHANGE_COOLDOWN_DAYS } from './profile-rules.ts';
+import type { Profile } from './profile-rules.ts';
 
 export * from './profile-rules.ts';
 
@@ -109,11 +109,4 @@ export async function changeTimezone(candidate: string): Promise<TimezoneChangeR
   if (error.message === 'invalid_timezone')
     return { ok: false, reason: 'invalid', message: 'That time zone is not recognised.' };
   return { ok: false, reason: 'failed', message: error.message };
-}
-
-export function nextTimezoneChangeAt(profile: Profile): Date | null {
-  if (!profile.timezoneChangedAt) return null;
-  const next = new Date(profile.timezoneChangedAt);
-  next.setUTCDate(next.getUTCDate() + TIMEZONE_CHANGE_COOLDOWN_DAYS);
-  return next.getTime() > Date.now() ? next : null;
 }

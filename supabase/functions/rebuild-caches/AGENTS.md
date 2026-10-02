@@ -9,11 +9,11 @@ Service-role-only POST endpoint that wipes a user's derived records (strength, r
 
 ## Key Files
 
-| File        | Description                                                                                                                       |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`  | Handler; `assertServiceRole`, body `{ userId }`, 404 `user_not_found`, returns sessions replayed, sets rewritten, balance version |
-| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                               |
-| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                    |
+| File        | Description                                                                                                                                                                                          |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`  | Handler; `assertServiceRole`, strict body `{ userId }` (400 `invalid_json`, 422 `invalid_payload`), `lockUser` with 404 `user_not_found`, returns sessions replayed, sets rewritten, balance version |
+| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                  |
+| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                       |
 
 ## For AI Agents
 

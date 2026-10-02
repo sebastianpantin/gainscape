@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { Exercise } from '../../web/src/lib/catalog.ts';
+import { describe, expect, it } from 'vitest';
+import type { Exercise } from '../../web/src/lib/catalog-rules.ts';
 import {
   exerciseCacheKey,
   type ExerciseList,
@@ -11,8 +11,6 @@ import {
   saveCachedExercises,
 } from '../../web/src/lib/catalog-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
-
-vi.mock('../../web/src/lib/supabase.ts', () => ({ supabase: {} }));
 
 const userId = '11111111-1111-4111-8111-111111111111';
 const otherUserId = '22222222-2222-4222-8222-222222222222';

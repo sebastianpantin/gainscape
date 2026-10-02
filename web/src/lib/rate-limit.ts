@@ -1,7 +1,8 @@
+import { SECONDS_PER_MINUTE } from '@domain/cardio.ts';
+
 export const RATE_LIMITED_STATUS = 429;
 export const RATE_LIMITED_CODE = 'rate_limited';
 
-const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 const LONGEST_WAIT_IN_MINUTES = 90;
 

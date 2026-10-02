@@ -269,6 +269,10 @@ describe('draft session start-up', () => {
 });
 
 describe('flushOpenDraftSessions', () => {
+  function afterPendingCallbacks(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+  }
+
   function slowStore() {
     const store = createLocalDraftStore(new MemoryStorage());
     const releases: (() => void)[] = [];
@@ -288,10 +292,10 @@ describe('flushOpenDraftSessions', () => {
     const flushing = flushOpenDraftSessions().then(() => {
       flushed = true;
     });
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await afterPendingCallbacks();
     expect(flushed).toBe(false);
     first.releaseAll();
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await afterPendingCallbacks();
     expect(flushed).toBe(false);
     second.releaseAll();
     await flushing;

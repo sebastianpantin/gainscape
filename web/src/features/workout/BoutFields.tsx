@@ -1,7 +1,7 @@
-import { roundTo } from '@domain/strength.ts';
-import { CARDIO_BOUNDS } from '@domain/cardio.ts';
+import { roundTo } from '@domain/math.ts';
+import { CARDIO_BOUNDS, SECONDS_PER_MINUTE } from '@domain/cardio.ts';
 import { useState } from 'react';
-import type { PaceUnit } from '../../lib/catalog.ts';
+import type { PaceUnit } from '../../lib/catalog-rules.ts';
 import {
   type BoutMode,
   boutModeChanges,
@@ -13,7 +13,6 @@ import type { UnitPref } from '../../lib/profile.ts';
 import { distanceInputStep, distanceUnitFor, shownDistance } from '../../lib/units.ts';
 import type { BoutValues } from '../../offline/draft-format.ts';
 
-const SECONDS_PER_MINUTE = 60;
 const SHOWN_MINUTE_DECIMALS = 1;
 
 interface BoundedNumberFieldProps {

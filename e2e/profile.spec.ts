@@ -1,6 +1,19 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, openFromProfile, openTab, password, register, signOut, uniqueUsername } from './support/app.ts';
+import {
+  emailOf,
+  finishWorkout,
+  logExercise,
+  logWorkout,
+  openFromProfile,
+  openTab,
+  register,
+  signIn,
+  signOut,
+  submitSignIn,
+  TEST_PASSWORD,
+  uniqueUsername,
+} from './support/app.ts';
 import { accountRowCount, heightOf, latestSetOf } from './support/db.ts';
 
 async function pickSetting(page: Page, group: string, option: string) {
@@ -15,7 +28,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await register(page, username);
 
   await openTab(page, 'Profile');
-  await expect(page.getByTestId('profile-display-name')).toHaveText(username);
+  await expect(page.getByRole('heading', { level: 2, name: username, exact: true })).toBeVisible();
   await expect(page.getByTestId('profile-bodyweight')).toHaveText('Not set');
 
   await page.getByRole('link', { name: 'Edit profile & body' }).click();
@@ -34,7 +47,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await page.getByLabel('Birth year (optional)').fill('1990');
   await page.getByRole('button', { name: 'Save' }).click();
 
-  await expect(page.getByTestId('profile-display-name')).toHaveText('Iron Otter');
+  await expect(page.getByRole('heading', { level: 2, name: 'Iron Otter', exact: true })).toBeVisible();
   await expect(page.getByTestId('profile-bio')).toHaveText('Chasing a 200 kg squat.');
   await expect(page.getByTestId('profile-details')).toHaveText('Training since 2019 · Strength focus');
   await expect(page.getByTestId('profile-badge')).toHaveAttribute('data-color', 'blue');
@@ -88,8 +101,7 @@ test('pounds are shown everywhere while kilograms are stored, without false reco
     await row.getByLabel('lb').fill('135');
     await row.getByLabel('reps').fill('5');
     await row.getByRole('radio', { name: 'Hard' }).click();
-    await page.getByRole('button', { name: 'Finish workout' }).click();
-    await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+    await finishWorkout(page);
     await expect(page.getByLabel('New records')).toHaveCount(0);
     expect((await latestSetOf(username)).weight_kg, `round ${round}`).toBe(61.23);
   }
@@ -115,8 +127,7 @@ test('RPE effort is logged as RPE and stored as reps in reserve', async ({ page 
   await row.getByLabel('reps').fill('8');
   await expect(row.getByRole('radio', { name: 'Hard' })).toHaveCount(0);
   await row.getByRole('radio', { name: 'RPE 8', exact: true }).click();
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await finishWorkout(page);
 
   expect(await latestSetOf(username)).toMatchObject({ effort_input_type: 'rpe', effort_value: 8, rir: 2 });
 });
@@ -136,10 +147,7 @@ test('the time zone can change once, then waits 7 days', async ({ page }) => {
 test('change password, export data and delete the account', async ({ page }) => {
   const username = uniqueUsername('e2e_acct');
   await register(page, username);
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
 
   await openFromProfile(page, 'Settings');
   await page.getByRole('button', { name: 'Change password' }).click();
@@ -147,7 +155,7 @@ test('change password, export data and delete the account', async ({ page }) => 
   await page.getByLabel('New password').fill('a-brand-new-password');
   await page.getByRole('button', { name: 'Change password' }).last().click();
   await expect(page.getByText('Your current password is wrong.')).toBeVisible();
-  await page.getByLabel('Current password').fill(password);
+  await page.getByLabel('Current password').fill(TEST_PASSWORD);
   await page.getByRole('button', { name: 'Change password' }).last().click();
   await expect(page.getByText('Password changed.')).toBeVisible();
 
@@ -160,10 +168,7 @@ test('change password, export data and delete the account', async ({ page }) => 
   expect(exported.sets).toHaveLength(1);
 
   await signOut(page);
-  await page.getByLabel('Email').fill(`${username}@example.test`);
-  await page.getByLabel('Password').fill('a-brand-new-password');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
+  await signIn(page, username, 'a-brand-new-password');
 
   await openFromProfile(page, 'Settings');
   await page.getByRole('button', { name: 'Delete account' }).click();
@@ -181,8 +186,6 @@ test('change password, export data and delete the account', async ({ page }) => 
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   expect(await accountRowCount(username)).toBe(0);
 
-  await page.getByLabel('Email').fill(`${username}@example.test`);
-  await page.getByLabel('Password').fill('a-brand-new-password');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await submitSignIn(page, emailOf(username), 'a-brand-new-password');
   await expect(page.getByRole('alert')).toBeVisible();
 });

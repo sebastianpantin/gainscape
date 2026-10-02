@@ -1,21 +1,23 @@
+import { isSessionEditable } from '@domain/edit-window.ts';
 import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
-import { type Exercise, fetchExercises, isLiftExercise, saveBodyweight } from '../../lib/catalog.ts';
-import { formatLoad } from '../../lib/format.ts';
+import { fetchExercises } from '../../lib/catalog.ts';
+import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
+import { effortLabel } from '../../lib/effort-labels.ts';
+import { formatLoad, formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
-import { tryAgainIn } from '../../lib/rate-limit.ts';
 import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/history-rules.ts';
-import { type CatalogItem, describeDrops } from '../../lib/item-rules.ts';
+import type { CatalogItem } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { updatePrivateProfile } from '../../lib/profile.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
-import { formatXp } from '../workout/xp-preview.ts';
 import { HistoryBoutRow, HistorySetRow } from './HistorySetRow.tsx';
 import {
   addEditExercise,
@@ -25,19 +27,19 @@ import {
   editFromSession,
   editPayload,
   editSetCount,
-  effortLabel,
   type EditBout,
   type EditSet,
   type FailureAction,
   failureAction,
-  formatSessionDate,
+  failureText,
   hasChanges,
-  isEditable,
   rebaseEdit,
   rebaseNotice,
+  removalText,
+  removedText,
   removeEditSet,
+  sameSetValues,
   type SessionEdit,
-  sessionXp,
   swapEditExercise,
   updateEditBout,
   updateEditSet,
@@ -80,30 +82,6 @@ async function loadSession(sessionId: string): Promise<Loaded | null> {
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
 
-function itemNameIn(items: readonly CatalogItem[]): (itemId: string) => string {
-  return (itemId) => items.find((item) => item.id === itemId)?.name ?? 'an item';
-}
-
-function removalText(drops: readonly { itemId: string; quantity: number }[], items: readonly CatalogItem[]): string {
-  const described = describeDrops(drops, itemNameIn(items));
-  return described && `This may remove ${described} from your collection.`;
-}
-
-function removedText(
-  drops: readonly { itemId: string; revokedQuantity: number }[] | undefined,
-  items: readonly CatalogItem[],
-): string {
-  const described = describeDrops(
-    (drops ?? []).map((drop) => ({ itemId: drop.itemId, quantity: drop.revokedQuantity })),
-    itemNameIn(items),
-  );
-  return described && `Removed ${described} from your collection.`;
-}
-
-function sameSetValues(a: EditSet | EditBout, b: EditSet | EditBout): boolean {
-  return JSON.stringify({ ...a, id: '' }) === JSON.stringify({ ...b, id: '' });
-}
-
 interface SessionDetailScreenProps {
   userId: string;
 }
@@ -133,7 +111,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const adopt = useCallback((next: Loaded) => {
     setLoaded(next);
     setEdit(next.original);
-    setReadOnly(!isEditable(next.session, Date.now()));
+    setReadOnly(!isSessionEditable(next.session, Date.now()));
   }, []);
 
   const goBackGone = useCallback(
@@ -179,7 +157,11 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
 
   const currentSignal = () => controllerRef.current!.signal;
 
-  const refreshAfterSave = async (signal: AbortSignal, removed = ''): Promise<void> => {
+  const reloadSession = async (
+    signal: AbortSignal,
+    failedText: string,
+    onFresh: (fresh: Loaded) => void,
+  ): Promise<void> => {
     let fresh: Loaded | null;
     try {
       fresh = await loadSession(sessionId);
@@ -187,64 +169,24 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       if (signal.aborted) return;
       setProblem({
         kind: 'refresh_failed',
-        text: "Saved, but couldn't refresh the workout.",
-        retry: () => void refreshAfterSave(signal, removed),
+        text: failedText,
+        retry: () => void reloadSession(signal, failedText, onFresh),
       });
       return;
     }
     if (signal.aborted) return;
     if (!fresh) return goBackGone();
-    adopt(fresh);
-    setProblem(null);
-    setNotice(removed ? `Changes saved. ${removed}` : 'Changes saved.');
+    onFresh(fresh);
   };
 
-  const loadConflict = async (signal: AbortSignal): Promise<void> => {
-    let fresh: Loaded | null;
-    try {
-      fresh = await loadSession(sessionId);
-    } catch {
-      if (signal.aborted) return;
-      setProblem({
-        kind: 'refresh_failed',
-        text: "This workout was changed on another device, and the latest version couldn't be loaded.",
-        retry: () => void loadConflict(signal),
-      });
-      return;
+  const handleCommonFailure = (action: FailureAction, verb: 'save' | 'delete') => {
+    if (action.kind === 'sign_out') return void signOutKeepingDrafts();
+    if (action.kind === 'gone') return goBackGone();
+    if (action.kind === 'read_only') {
+      setReadOnly(true);
+      setEdit(loaded.original);
     }
-    if (signal.aborted) return;
-    if (!fresh) return goBackGone();
-    setProblem({ kind: 'conflict', fresh });
-  };
-
-  const handleCommonFailure = (action: FailureAction, verb: string) => {
-    switch (action.kind) {
-      case 'sign_out':
-        void signOutKeepingDrafts();
-        return;
-      case 'gone':
-        goBackGone();
-        return;
-      case 'read_only':
-        setReadOnly(true);
-        setEdit(loaded.original);
-        setProblem({ kind: 'message', text: 'This workout is older than 7 days, so it can no longer be changed.' });
-        return;
-      case 'wrong_account':
-        setProblem({ kind: 'message', text: 'You are signed in as someone else in another tab. Reload the app.' });
-        return;
-      case 'retry':
-        setProblem({ kind: 'message', text: `Couldn't reach the server (${action.reason}). Try again.` });
-        return;
-      case 'rate_limited':
-        setProblem({ kind: 'message', text: `Too many changes. ${tryAgainIn(action.retryAfterSeconds)}` });
-        return;
-      case 'bug':
-        setProblem({ kind: 'message', text: `Couldn't ${verb} this workout: ${action.code}` });
-        return;
-      default:
-        setProblem({ kind: 'message', text: `Couldn't ${verb} this workout: ${action.kind}` });
-    }
+    setProblem({ kind: 'message', text: failureText(action, verb) });
   };
 
   const save = async (toSend: SessionEdit, setIdRetriesLeft = SET_ID_RETRIES): Promise<void> => {
@@ -269,7 +211,12 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           },
       );
       setEdit({ ...toSend, revision });
-      return refreshAfterSave(signal, removedText(revokedDrops, items));
+      const removed = removedText(revokedDrops, items);
+      return reloadSession(signal, "Saved, but couldn't refresh the workout.", (fresh) => {
+        adopt(fresh);
+        setProblem(null);
+        setNotice(removed ? `Changes saved. ${removed}` : 'Changes saved.');
+      });
     }
     const action = failureAction(outcome);
     if (action.kind === 'reid_sets' && setIdRetriesLeft > 0) {
@@ -277,7 +224,13 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       setEdit(reIded);
       return save(reIded, setIdRetriesLeft - 1);
     }
-    if (action.kind === 'revision_conflict') return loadConflict(signal);
+    if (action.kind === 'revision_conflict') {
+      return reloadSession(
+        signal,
+        "This workout was changed on another device, and the latest version couldn't be loaded.",
+        (fresh) => setProblem({ kind: 'conflict', fresh }),
+      );
+    }
     if (action.kind === 'ask_bodyweight') {
       setProblem({ kind: 'bodyweight', pending: toSend });
       return;
@@ -408,7 +361,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
               setLoaded(fresh);
               const rebased = rebaseEdit(edit, loaded.original, fresh.original);
               setEdit(rebased.edit);
-              setReadOnly(!isEditable(fresh.session, Date.now()));
+              setReadOnly(!isSessionEditable(fresh.session, Date.now()));
               setProblem(null);
               setNotice(rebaseNotice(rebased, fresh.original));
             }}
@@ -432,7 +385,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           unit={unitPref}
           submitLabel="Save bodyweight and changes"
           onSave={async (bodyweightKg) => {
-            await saveBodyweight(userId, bodyweightKg);
+            await updatePrivateProfile(userId, { bodyweightKg });
             await save(problem.pending);
           }}
         />
@@ -586,12 +539,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       </fieldset>
       {setCount === 0 && <p className="hint">A workout needs at least one set. Delete it instead to remove it.</p>}
       {changed && (
-        <div
-          className="notice"
-          role="status"
-          data-testid="edit-loot-warning"
-          style={{ flexDirection: 'column', alignItems: 'flex-start' }}
-        >
+        <div className="notice" role="status" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
           {editWarning && <p>{editWarning}</p>}
           <p>{LATER_LOOT_NOTE}</p>
         </div>
@@ -617,7 +565,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         {confirmingDelete ? (
           <>
             <p>Delete this workout? This can't be undone. XP and records are recalculated without it.</p>
-            {deleteWarning && <p data-testid="delete-loot-warning">{deleteWarning}</p>}
+            {deleteWarning && <p>{deleteWarning}</p>}
             <p>{LATER_LOOT_NOTE}</p>
             <button className="button danger" type="button" disabled={working} onClick={() => void remove()}>
               {busy.kind === 'deleting' ? 'Deleting…' : 'Delete for good'}

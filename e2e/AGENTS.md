@@ -41,7 +41,7 @@ Playwright end-to-end suites that drive the real web app against the real local 
 - Configs: `../playwright.config.ts` (`testDir: 'e2e'`, `testIgnore: 'pwa/**'`, timeout 90 s, `fullyParallel: false` so tests inside a file run in order (files may still use several workers; no `workers` cap is set), no retries, `list` reporter, Pixel 7, `ignoreHTTPSErrors`, `serviceWorkers: 'block'`, trace kept on failure, web server `npx vite web --host` reused if already running) and `../playwright.pwa.config.ts` (for `pwa/`).
 - Both configs call `assertStackEnvironment()` at load; a mismatch with `.stack.env` aborts the run.
 - Every spec registers its own user with a unique name (for example a `prefix_` plus `Date.now().toString(36)`, passed to `register`). Never share users or rely on prior data. Specs reach the database directly through `support/db.ts` for setup and verification (unlocks, items, forced edits).
-- Locate by role and accessible name (`getByRole`, `getByLabel`) so tests double as accessibility checks. Do not add test ids to the app for convenience; fix the accessible name instead.
+- Locate by role and accessible name (`getByRole`, `getByLabel`, then visible text with `getByText`) so tests double as accessibility checks. Do not add test ids to the app for convenience; fix the accessible name instead. The one exception is a bare value with no label of its own, read to compare its text: `session-xp`, `collection-completion`, `profile-*` (bodyweight, height, age, bio, details, badge colour, total, collection), `preview-record`, `settings-email` and `settings-timezone` keep `getByTestId` until the screen gives them a label. Do not use a test id to find a list item, button, warning or section that has a role or name.
 - Long tests set `test.setTimeout(...)` locally (for example `a11y.spec.ts` 240 s, `token-refresh.spec.ts` 180 s). Do not raise the global timeout.
 - No comments and no `test.skip`.
 
@@ -54,8 +54,8 @@ Playwright end-to-end suites that drive the real web app against the real local 
 
 ### Common Patterns
 
-- `register`, `signIn`, `openTab`, `openFromProfile`, `logExercise` from `support/app.ts` for flows.
-- Two users or devices: `browser.newContext()` per person (`friends.spec.ts`, `auth.spec.ts`); two tabs: `context.newPage()` (`multi-tab.spec.ts`).
+- `register`, `signIn`, `openTab`, `openFromProfile`, `logExercise`, `logWorkout`, `finishWorkout`, `openLatestWorkout` from `support/app.ts` for flows. Reuse them instead of inlining the start, finish and reveal steps.
+- Two users or devices: import `test` from `support/people.ts` and call its `newPerson()` fixture once per person (`friends.spec.ts`, `auth.spec.ts`, `a11y.spec.ts`); it opens a fresh context and closes every context it opened when the test ends, even on failure. Do not call `browser.newContext()` directly; two tabs: `context.newPage()` (`multi-tab.spec.ts`).
 - Simulating failures: route interception for outages and 401s (`token-refresh.spec.ts`), `breakIndexedDbOpen` and `setIndexedDbBroken` for storage failures, `resignedWithAnotherKey` for bad tokens.
 - Conflicts with another device: `editElsewhere` or `sessionRow` from `support/db.ts`.
 - Email steps: `waitForEmail` and `authLinkFrom` from `support/mailbox.ts`.

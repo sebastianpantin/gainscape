@@ -11,8 +11,9 @@ import {
   resignedWithAnotherKey,
   setBodyweight,
   type TestUser,
+  rowCounts,
 } from './local-stack.ts';
-import { aBout, anIntervalBout, asCardioSetInput, type BoutShape } from './loot-support.ts';
+import { aBout, anIntervalBout, asCardioSetInput, type BoutShape } from './session-support.ts';
 
 type EffortLevel = 'hard' | 'near_failure';
 
@@ -44,15 +45,7 @@ async function expectedFreshUserSummary(
   return processSession({ skillXp: {}, bodyweightKg: null }, session, DEFAULT_BALANCE, { catalog }).outputs;
 }
 
-async function rowCountsFor(userId: string) {
-  const [counts] = await db`
-    select
-      (select count(*) from public.sessions where user_id = ${userId})::int as sessions,
-      (select count(*) from public.sets where user_id = ${userId})::int as sets,
-      (select count(*) from public.set_skill_xp where user_id = ${userId})::int as set_skill_xp,
-      (select count(*) from public.user_skills where user_id = ${userId})::int as user_skills`;
-  return counts;
-}
+const countedTables = ['sessions', 'sets', 'set_skill_xp', 'user_skills'] as const;
 
 async function derivedCachesFor(userId: string) {
   return {
@@ -140,11 +133,11 @@ describe('complete-session with the fixture workout', () => {
   });
 
   it('is idempotent when Finish is sent again', async () => {
-    const before = await rowCountsFor(lifter.id);
+    const before = await rowCounts(lifter.id, countedTables);
     const retry = await postCompleteSession(lifter.accessToken, fixture);
     expect(retry.status).toBe(200);
     expect(retry.rawBody).toBe(firstResponse.rawBody);
-    expect(await rowCountsFor(lifter.id)).toEqual(before);
+    expect(await rowCounts(lifter.id, countedTables)).toEqual(before);
   });
 
   it('returns the stored summary for a late retry instead of rejecting it as too old', async () => {
@@ -242,7 +235,7 @@ describe('complete-session rejections', () => {
     const locked = await postCompleteSession(user.accessToken, sessionPayload(threeSets(pauseSquatId, 0, 80, 'hard')));
     expect(locked.status).toBe(422);
     expect(locked.body).toMatchObject({ error: 'unknown_exercise', details: { exerciseIds: [pauseSquatId] } });
-    expect(await rowCountsFor(user.id)).toEqual({ sessions: 0, sets: 0, set_skill_xp: 0, user_skills: 0 });
+    expect(await rowCounts(user.id, countedTables)).toEqual({ sessions: 0, sets: 0, set_skill_xp: 0, user_skills: 0 });
 
     await db`
       insert into public.user_unlocks (user_id, exercise_id, item_id)
@@ -264,6 +257,37 @@ describe('complete-session rejections', () => {
     expect(response.status).toBe(422);
   });
 
+  it.each([
+    ['duplicate_set_id', (sets: LiftSetBody[]) => [sets[0], { ...sets[1], id: sets[0].id }]],
+    ['duplicate_set_position', (sets: LiftSetBody[]) => [sets[0], { ...sets[1], position: sets[0].position }]],
+  ])('returns 422 %s and writes nothing', async (code, duplicate) => {
+    const user = await createTestUser();
+    const response = await postCompleteSession(
+      user.accessToken,
+      sessionPayload(duplicate(threeSets(benchId, 0, 50, 'hard'))),
+    );
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe(code);
+    expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
+  });
+
+  it.each([
+    ['ends_before_start', -60, -61],
+    ['session_too_long', -(12 * 60 + 2), -1],
+    ['session_in_future', 6, 7],
+  ])('returns 422 %s for implausible timing', async (code, startMinutesFromNow, endMinutesFromNow) => {
+    const user = await createTestUser();
+    const minutesFromNow = (minutes: number) => new Date(Date.now() + minutes * 60 * 1000).toISOString();
+    const response = await postCompleteSession(user.accessToken, {
+      ...sessionPayload(threeSets(benchId, 0, 50, 'hard')),
+      startedAt: minutesFromNow(startMinutesFromNow),
+      endedAt: minutesFromNow(endMinutesFromNow),
+    });
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe(code);
+    expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
+  });
+
   it('returns 401 without a user token', async () => {
     const response = await postCompleteSession('not-a-token', sessionPayload(threeSets(benchId, 0, 50, 'hard')));
     expect(response.status).toBe(401);
@@ -275,7 +299,7 @@ describe('complete-session rejections', () => {
     const response = await postCompleteSession(resignedWithAnotherKey(user.accessToken), payload);
     expect(response.status).toBe(401);
     expect(response.rawBody).toMatch(/invalid/i);
-    expect(await rowCountsFor(user.id)).toMatchObject({ sessions: 0, sets: 0 });
+    expect(await rowCounts(user.id, countedTables)).toMatchObject({ sessions: 0, sets: 0 });
   });
 });
 
@@ -337,7 +361,7 @@ describe('complete-session edge cases', () => {
       [null, 'cold_start'],
     ]);
     for (const row of sets) expect(row).toMatchObject({ xp_awarded: 0, e1rm_candidate_kg: null });
-    expect((await rowCountsFor(user.id)).set_skill_xp).toBe(0);
+    expect((await rowCounts(user.id, countedTables)).set_skill_xp).toBe(0);
     expect(await derivedCachesFor(user.id)).toEqual(derivedBefore);
 
     const retry = await postCompleteSession(user.accessToken, payload);
@@ -364,7 +388,7 @@ describe('complete-session edge cases', () => {
     const response = await postCompleteSession(user.accessToken, payload);
     expect(response.status).toBe(409);
     expect(response.body.error).toBe('bodyweight_required');
-    expect(await rowCountsFor(user.id)).toMatchObject({ sessions: 0, sets: 0 });
+    expect(await rowCounts(user.id, countedTables)).toMatchObject({ sessions: 0, sets: 0 });
   });
 
   it('stores weightKg rounded to 2 dp', async () => {
@@ -448,7 +472,7 @@ describe('complete-session with bodyweight exercises', () => {
     const refused = await postCompleteSession(user.accessToken, payload);
     expect(refused.status).toBe(409);
     expect(refused.body.error).toBe('bodyweight_required');
-    expect((await rowCountsFor(user.id)).sessions).toBe(0);
+    expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
 
     await setBodyweight(user, 82.5);
     const accepted = await postCompleteSession(user.accessToken, payload);
@@ -570,7 +594,7 @@ describe('complete-session with cardio bouts', () => {
     const response = await postCompleteSession(user.accessToken, sessionPayload([steadyBout(benchId, 0)]));
     expect(response.status, response.rawBody).toBe(422);
     expect(response.body.error).toBe('kind_mismatch');
-    expect((await rowCountsFor(user.id)).sessions).toBe(0);
+    expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
   });
 
   it('returns 422 kind_mismatch for a lift set on a cardio exercise', async () => {

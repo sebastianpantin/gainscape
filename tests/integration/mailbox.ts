@@ -1,6 +1,31 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { env } from './local-stack.ts';
 
-export interface MailMessage {
+const supabaseConfig = readFileSync(join(import.meta.dirname, '../../supabase/config.toml'), 'utf8');
+
+function configValue(section: string, key: string): string {
+  const body = supabaseConfig.split(/^\[/m).find((chunk) => chunk.startsWith(`${section}]`));
+  const value = body === undefined ? undefined : new RegExp(`^${key} = "([^"]*)"`, 'm').exec(body)?.[1];
+  if (value === undefined) throw new Error(`supabase/config.toml has no ${key} under [${section}]`);
+  return value;
+}
+
+function secondsOf(duration: string): number {
+  const seconds = /^(\d+)s$/.exec(duration)?.[1];
+  if (seconds === undefined) throw new Error(`Unsupported duration ${duration} in supabase/config.toml`);
+  return Number(seconds);
+}
+
+const MAX_FREQUENCY_MARGIN_MS = 500;
+
+export const CONFIRM_SUBJECT = configValue('auth.email.template.confirmation', 'subject');
+export const RECOVERY_SUBJECT = configValue('auth.email.template.recovery', 'subject');
+export const EMAIL_CHANGE_SUBJECT = configValue('auth.email.template.email_change', 'subject');
+export const MAX_FREQUENCY_WAIT_MS =
+  secondsOf(configValue('auth.email', 'max_frequency')) * 1000 + MAX_FREQUENCY_MARGIN_MS;
+
+interface MailMessage {
   ID: string;
   Subject: string;
   Created: string;
@@ -50,9 +75,4 @@ export function authLinkFrom(message: Pick<MailMessage, 'HTML'>): string {
   const href = /href="([^"]*token_hash=[^"]*)"/.exec(message.HTML)?.[1];
   if (!href) throw new Error('The email has no token_hash link');
   return href.replaceAll('&amp;', '&');
-}
-
-export async function deleteEmailsTo(to: string): Promise<void> {
-  const response = await fetch(searchUrl(to), { method: 'DELETE' });
-  if (!response.ok) throw new Error(`Mailpit DELETE ${to} answered ${response.status}`);
 }
