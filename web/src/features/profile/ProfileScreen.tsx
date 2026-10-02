@@ -102,12 +102,12 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
           <PrivateTag />
         </div>
         <div className="well row">
-          <div className="stack" style={{ gap: 2, flexGrow: 1 }}>
-            <span className="muted tiny">Bodyweight</span>
-            <strong className="pixel" style={{ fontSize: '1.6rem', fontWeight: 500 }} data-testid="profile-bodyweight">
+          <dl className="stack" style={{ gap: 2, flexGrow: 1 }}>
+            <dt className="muted tiny">Bodyweight</dt>
+            <dd className="pixel" style={{ fontSize: '1.6rem', fontWeight: 500 }}>
               {shownKg === null ? 'Not set' : formatWeight(shownKg, unitPref)}
-            </strong>
-          </div>
+            </dd>
+          </dl>
           {shownKg === null ? (
             <Link className="button" to="/profile/edit">
               Set bodyweight
@@ -148,18 +148,16 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
             {problem}
           </p>
         )}
-        <div className="body-stats">
+        <dl className="body-stats">
           <div className="body-stat">
-            <span className="muted tiny">Height</span>
-            <strong data-testid="profile-height">
-              {profile.heightCm === null ? '—' : formatHeight(profile.heightCm, unitPref)}
-            </strong>
+            <dt className="muted tiny">Height</dt>
+            <dd>{profile.heightCm === null ? '—' : formatHeight(profile.heightCm, unitPref)}</dd>
           </div>
           <div className="body-stat">
-            <span className="muted tiny">Age</span>
-            <strong data-testid="profile-age">{age === null ? '—' : `about ${age}`}</strong>
+            <dt className="muted tiny">Age</dt>
+            <dd>{age === null ? '—' : `about ${age}`}</dd>
           </div>
-        </div>
+        </dl>
         <span className="hint">
           Bodyweight is the load for pull-ups, dips and push-ups. Height and age never change your XP.
         </span>

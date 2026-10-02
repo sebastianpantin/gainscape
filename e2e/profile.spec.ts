@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
 import {
+  definitionOf,
   emailOf,
   finishWorkout,
   logExercise,
@@ -16,6 +17,10 @@ import {
 } from './support/app.ts';
 import { accountRowCount, heightOf, latestSetOf } from './support/db.ts';
 
+function profileCard(page: Page) {
+  return page.getByRole('region', { name: 'Profile', exact: true });
+}
+
 async function pickSetting(page: Page, group: string, option: string) {
   await openFromProfile(page, 'Settings');
   const choice = page.getByRole('radiogroup', { name: group }).getByRole('radio', { name: option, exact: true });
@@ -29,7 +34,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
 
   await openTab(page, 'Profile');
   await expect(page.getByRole('heading', { level: 2, name: username, exact: true })).toBeVisible();
-  await expect(page.getByTestId('profile-bodyweight')).toHaveText('Not set');
+  await expect(definitionOf(page, 'Bodyweight')).toHaveText('Not set');
 
   await page.getByRole('link', { name: 'Edit profile & body' }).click();
   await page.getByLabel('Display name').fill('Iron Otter');
@@ -48,18 +53,18 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
 
   await expect(page.getByRole('heading', { level: 2, name: 'Iron Otter', exact: true })).toBeVisible();
-  await expect(page.getByTestId('profile-bio')).toHaveText('Chasing a 200 kg squat.');
-  await expect(page.getByTestId('profile-details')).toHaveText('Training since 2019 · Strength focus');
-  await expect(page.getByTestId('profile-badge')).toHaveAttribute('data-color', 'blue');
-  await expect(page.getByTestId('profile-bodyweight')).toHaveText('82.4 kg');
-  await expect(page.getByTestId('profile-height')).toHaveText('181 cm');
-  await expect(page.getByTestId('profile-age')).toHaveText(`about ${new Date().getFullYear() - 1990}`);
+  await expect(profileCard(page).getByText('Chasing a 200 kg squat.', { exact: true })).toBeVisible();
+  await expect(profileCard(page).getByText('Training since 2019 · Strength focus', { exact: true })).toBeVisible();
+  await expect(profileCard(page).getByRole('img', { name: 'Blue badge', exact: true })).toBeVisible();
+  await expect(definitionOf(page, 'Bodyweight')).toHaveText('82.4 kg');
+  await expect(definitionOf(page, 'Height')).toHaveText('181 cm');
+  await expect(definitionOf(page, 'Age')).toHaveText(`about ${new Date().getFullYear() - 1990}`);
 
   await page.getByRole('button', { name: 'Increase bodyweight by 0.1 kg' }).click();
   await page.getByRole('button', { name: 'Save 82.5 kg' }).click();
   await expect(page.getByRole('button', { name: 'Save 82.5 kg' })).toHaveCount(0);
   await page.reload();
-  await expect(page.getByTestId('profile-bodyweight')).toHaveText('82.5 kg');
+  await expect(definitionOf(page, 'Bodyweight')).toHaveText('82.5 kg');
 
   await openFromProfile(page, 'Settings');
   const showWeights = page.getByRole('switch', { name: 'Show my weights to friends' });
@@ -71,19 +76,21 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
 
   await openTab(page, 'Profile');
   await page.getByRole('link', { name: 'Preview what friends see' }).click();
-  await expect(page.getByTestId('preview-record')).toHaveText('New 8RM Back Squat');
-  await expect(page.getByTestId('profile-bio')).toHaveText('Chasing a 200 kg squat.');
+  await expect(
+    page.getByRole('region', { name: 'How your records appear' }).getByText('New 8RM Back Squat', { exact: true }),
+  ).toBeVisible();
+  await expect(profileCard(page).getByText('Chasing a 200 kg squat.', { exact: true })).toBeVisible();
   await expect(page.getByText('82.5')).toHaveCount(0);
 
   expect(await heightOf(username)).toBe(181);
   await pickSetting(page, 'Weight units', 'Pounds');
   await openTab(page, 'Profile');
-  await expect(page.getByTestId('profile-height')).toHaveText('5 ft 11 in');
+  await expect(definitionOf(page, 'Height')).toHaveText('5 ft 11 in');
   await page.getByRole('link', { name: 'Edit profile & body' }).click();
   await expect(page.getByLabel('Height feet')).toHaveValue('5');
   await page.getByLabel('Bio').fill('Only the bio changed.');
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByTestId('profile-bio')).toHaveText('Only the bio changed.');
+  await expect(profileCard(page).getByText('Only the bio changed.', { exact: true })).toBeVisible();
   expect(await heightOf(username)).toBe(181);
 });
 
