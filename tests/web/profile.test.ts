@@ -8,6 +8,7 @@ import {
   initialHeight,
   nudgedBodyweightKg,
   optionalNumber,
+  previousValues,
   sameHeightInput,
   saveProblemText,
   bioProblem,
@@ -163,5 +164,18 @@ describe('edit profile inputs', () => {
     expect(saveProblemText(new Error(''))).toBe('Could not save your profile.');
     expect(saveProblemText({})).toBe('Could not save your profile.');
     expect(saveProblemText('offline')).toBe('Could not save your profile.');
+  });
+});
+
+describe('previousValues', () => {
+  it('picks the current values of the changed fields only', () => {
+    const profile = { unitPref: 'kg', effortInputMode: 'rir', showWeights: true } as Parameters<
+      typeof previousValues
+    >[0];
+    expect(previousValues(profile, { unitPref: 'lb' })).toEqual({ unitPref: 'kg' });
+    expect(previousValues(profile, { showWeights: false, effortInputMode: 'rpe' })).toEqual({
+      showWeights: true,
+      effortInputMode: 'rir',
+    });
   });
 });

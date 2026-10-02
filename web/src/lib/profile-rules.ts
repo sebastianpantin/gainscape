@@ -205,3 +205,10 @@ export function saveProblemText(error: unknown): string {
         : '';
   return SERVER_RULE_MESSAGES[message] ?? (message || 'Could not save your profile.');
 }
+
+export function previousValues<K extends keyof Profile>(
+  profile: Profile,
+  changes: Partial<Pick<Profile, K>>,
+): Pick<Profile, K> {
+  return Object.fromEntries(Object.keys(changes).map((key) => [key, profile[key as K]])) as Pick<Profile, K>;
+}
