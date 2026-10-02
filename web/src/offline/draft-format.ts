@@ -1,3 +1,4 @@
+import { type Position, type PrescribedExercise, type PrescriptionSnapshot } from '@domain/index.ts';
 import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
 import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
 
@@ -14,6 +15,7 @@ export interface DraftSet {
   reps: number;
   effort: EffortInput;
   done: boolean;
+  prescription?: PrescriptionSnapshot | null;
 }
 
 export interface DraftTarget {
@@ -54,12 +56,19 @@ export interface CardioDraftExercise {
 
 export type DraftExercise = LiftDraftExercise | CardioDraftExercise;
 
+export interface DraftProgram {
+  enrollmentId: string;
+  position: Position;
+  templateKey: string;
+}
+
 export interface WorkoutDraft {
   sessionId: string;
   startedAt: string;
   finishedAt: string | null;
   programDayId: string | null;
   programLabel: string | null;
+  program?: DraftProgram | null;
   exercises: DraftExercise[];
 }
 
@@ -384,6 +393,24 @@ export function startDraftFromDay(
     },
     skippedExerciseIds,
   };
+}
+
+export interface PrescribedDayStart {
+  enrollmentId: string;
+  templateKey: string;
+  programName: string;
+  dayName: string;
+  position: Position;
+  exercises: readonly PrescribedExercise[];
+}
+
+export function startDraftFromPrescription(
+  day: PrescribedDayStart,
+  exercisesById: ReadonlyMap<string, CatalogEntry>,
+  now: Date,
+): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
+  void [day, exercisesById, now];
+  throw new Error('not implemented');
 }
 
 export function toggleSetDone(draft: WorkoutDraft, exerciseIndex: number, setId: string): WorkoutDraft {
