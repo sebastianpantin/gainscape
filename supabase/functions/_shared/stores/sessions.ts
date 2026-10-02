@@ -3,7 +3,6 @@ import {
   type BalanceConfig,
   type CardioInterval,
   type EffortInputType,
-  isWithinEditWindow,
   type SessionKey,
   type SessionSummary,
   setKind,
@@ -74,10 +73,6 @@ export async function requireOwnedSession(tx: Transaction, userId: string, sessi
     notes: row.notes,
     summary: row.summary,
   };
-}
-
-export function isEditable(session: OwnedSession, nowMs: number): boolean {
-  return !session.historyOnly && isWithinEditWindow(session.key.startedAt, nowMs);
 }
 
 interface StoredSetBase {
