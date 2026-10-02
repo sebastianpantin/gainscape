@@ -21,7 +21,9 @@ import { replayFrom } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
   findSession,
+  type InsertedSession,
   insertSession,
+  linkedProgram,
   loadProfileSettings,
   lockUser,
   type NewSessionRow,
@@ -31,7 +33,11 @@ import {
   storedSummary,
   tombstoneOwner,
 } from '../_shared/stores/sessions.ts';
-import { newSetRow } from '../_shared/stores/set-columns.ts';
+import {
+  newSetRow,
+  type PrescriptionSnapshotColumns,
+  prescriptionSnapshotsBySetId,
+} from '../_shared/stores/set-columns.ts';
 import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
 
 function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessionPayload): void {
@@ -44,12 +50,20 @@ function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessi
 
 type WritableSession = Omit<SessionInput, 'sets'> & { sets: WritableSet[] };
 
+type SnapshotsBySetId = ReadonlyMap<string, PrescriptionSnapshotColumns>;
+
+interface CompleteSessionResponse extends SessionSummary {
+  programLinked: boolean;
+  completedAt: string;
+}
+
 async function storeHistoryOnly(
   tx: Transaction,
   row: NewSessionRow,
   session: WritableSession,
+  snapshots: SnapshotsBySetId,
   catalog: Catalog,
-): Promise<SessionSummary> {
+): Promise<InsertedSession> {
   const { outputs } = processSession(
     { skillXp: {}, bodyweightKg: null },
     session,
@@ -60,15 +74,26 @@ async function storeHistoryOnly(
   return await insertSession(
     tx,
     { ...row, historyOnly: true, summary: historyOnlySummary(session.id) },
-    outputs.sets.map((result) => newSetRow(result, session.id, row.userId)),
+    outputs.sets.map((result) => ({
+      ...newSetRow(result, session.id, row.userId),
+      ...snapshots.get(result.set.id)!,
+    })),
   );
 }
 
-async function storeAndReplay(tx: Transaction, row: NewSessionRow, session: WritableSession): Promise<SessionSummary> {
-  await insertSession(
+async function storeAndReplay(
+  tx: Transaction,
+  row: NewSessionRow,
+  session: WritableSession,
+  snapshots: SnapshotsBySetId,
+): Promise<InsertedSession> {
+  const { completedAt } = await insertSession(
     tx,
     row,
-    session.sets.map((set) => placeholderSetRow(set, session.id, row.userId, DEFAULT_BALANCE)),
+    session.sets.map((set) => ({
+      ...placeholderSetRow(set, session.id, row.userId, DEFAULT_BALANCE),
+      ...snapshots.get(set.id)!,
+    })),
   );
   const outcome = await replayFrom(
     tx,
@@ -83,10 +108,14 @@ async function storeAndReplay(tx: Transaction, row: NewSessionRow, session: Writ
     session.id,
     outcome.sets.filter((set) => set.sessionId === session.id),
   );
-  return await storedSummary(tx, session.id);
+  return { summary: await storedSummary(tx, session.id), completedAt };
 }
 
-async function completeSession(userId: string, payload: CompleteSessionPayload): Promise<SessionSummary> {
+function responseFor(stored: InsertedSession, programLinked: boolean): CompleteSessionResponse {
+  return { ...stored.summary, programLinked, completedAt: stored.completedAt };
+}
+
+async function completeSession(userId: string, payload: CompleteSessionPayload): Promise<CompleteSessionResponse> {
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId);
 
@@ -94,7 +123,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
     if (existing && existing.userId !== userId) throw new HttpError(409, 'session_id_conflict');
     if (existing) {
       warnIfResubmissionDiffers(existing, payload);
-      return existing.summary;
+      return responseFor(existing, existing.programLinked);
     }
     const deletedBy = await tombstoneOwner(tx, payload.id);
     if (deletedBy === userId) throw new HttpError(410, 'session_deleted');
@@ -118,10 +147,13 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
           : { ...writable, recordedEffectiveLoadKg: writable.effectiveLoadKg };
       }),
     };
+    const programLink = await linkedProgram(tx, userId, payload.program);
+    const snapshots = prescriptionSnapshotsBySetId(payload.sets, () => programLink !== null);
     const row: NewSessionRow = {
       id: payload.id,
       userId,
       programDayId: await ownedProgramDayId(tx, userId, payload.programDayId),
+      programLink,
       startedAt: payload.startedAt,
       endedAt: payload.endedAt,
       timezone: profile.timezone,
@@ -133,10 +165,10 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
 
     await takeRateLimit(tx, 'session_create_hour', userId);
     await takeRateLimit(tx, 'session_create_day', userId);
-    if (!isWithinEditWindow(payload.startedAt, now.getTime())) {
-      return await storeHistoryOnly(tx, row, session, catalog);
-    }
-    return await storeAndReplay(tx, row, session);
+    const stored = isWithinEditWindow(payload.startedAt, now.getTime())
+      ? await storeAndReplay(tx, row, session, snapshots)
+      : await storeHistoryOnly(tx, row, session, snapshots, catalog);
+    return responseFor(stored, programLink !== null);
   });
 }
 

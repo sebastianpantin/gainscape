@@ -1,7 +1,13 @@
 import { z } from 'npm:zod@4.6.5';
 import { implausibleTiming, MAX_SETS_PER_SESSION } from '../_shared/domain/index.ts';
 import { HttpError } from '../_shared/http.ts';
-import { assertDistinctSetIdsAndPositions, lowerUuid, parseOr422, setSchema } from '../_shared/session-payload.ts';
+import {
+  assertDistinctPrescriptionRefs,
+  assertDistinctSetIdsAndPositions,
+  lowerUuid,
+  parseOr422,
+  setSchema,
+} from '../_shared/session-payload.ts';
 
 function toMillisecondIsoString(instant: string): string {
   return new Date(instant).toISOString();
@@ -13,6 +19,11 @@ const sessionSchema = z.object({
   endedAt: z.iso.datetime({ offset: true }).transform(toMillisecondIsoString),
   notes: z.string().max(2000).nullable().default(null),
   programDayId: lowerUuid.nullable().default(null),
+  program: z
+    .object({ enrollmentId: lowerUuid, position: z.record(z.string(), z.unknown()) })
+    .strict()
+    .nullable()
+    .default(null),
   sets: z.array(setSchema).min(1).max(MAX_SETS_PER_SESSION),
 });
 
@@ -26,5 +37,6 @@ export function assertPlausibleTiming(payload: CompleteSessionPayload, now: Date
 export function parseCompleteSessionPayload(body: unknown): CompleteSessionPayload {
   const payload = parseOr422(sessionSchema, body);
   assertDistinctSetIdsAndPositions(payload.sets);
+  assertDistinctPrescriptionRefs(payload.sets);
   return payload;
 }
