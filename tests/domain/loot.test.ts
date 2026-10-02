@@ -386,10 +386,6 @@ describe('golden session', () => {
       dryRolls: 1,
     });
   });
-
-  it('is deterministic', () => {
-    expect(roll()).toEqual(roll());
-  });
 });
 
 describe('revocationReason', () => {

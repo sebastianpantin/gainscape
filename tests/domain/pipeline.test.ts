@@ -84,10 +84,41 @@ describe('processSession', () => {
     expect(outputs.sets[1].skillXp).toContainEqual({ skillId: 'skill-chest', xp: 263 });
   });
 
-  it('is deterministic', () => {
-    const first = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog });
-    const second = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog });
-    expect(second).toEqual(first);
+  it('pins the derived columns of every set', () => {
+    const { outputs } = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog });
+    const bench = (e1rmBeforeKg: number | null) => ({
+      rir: 3,
+      rirSource: 'logged',
+      effectiveReps: 3,
+      intensityBonus: 1,
+      e1rmBeforeKg,
+      e1rmCandidateKg: 80,
+      skillXp: [
+        { skillId: 'skill-chest', xp: 21 },
+        { skillId: 'skill-shoulders', xp: 6 },
+        { skillId: 'skill-arms', xp: 3 },
+      ],
+    });
+    const squat = (e1rmBeforeKg: number | null, intensityBonus: number, legsXp: number, coreXp: number) => ({
+      rir: 1,
+      rirSource: 'logged',
+      effectiveReps: 5,
+      intensityBonus,
+      e1rmBeforeKg,
+      e1rmCandidateKg: 126.67,
+      skillXp: [
+        { skillId: 'skill-legs', xp: legsXp },
+        { skillId: 'skill-core', xp: coreXp },
+      ],
+    });
+    expect(outputs.sets).toMatchObject([
+      bench(null),
+      bench(80),
+      bench(80),
+      squat(null, 1, 45, 5),
+      squat(126.67, 1.091216, 49, 6),
+      squat(126.67, 1.091216, 50, 5),
+    ]);
   });
 
   it('builds on existing XP', () => {
