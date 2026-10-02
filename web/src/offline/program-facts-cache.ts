@@ -1,4 +1,12 @@
-import { DEFAULT_BALANCE, type FactSet, type ProgramFact, resolveEffort, type SessionFact } from '@domain/index.ts';
+import {
+  DEFAULT_BALANCE,
+  type FactSet,
+  type ProgramFact,
+  resolveEffort,
+  roundTo,
+  type SessionFact,
+  storableSnapshots,
+} from '@domain/index.ts';
 import { type WorkoutDraft } from './draft-format.ts';
 
 export interface LocalSessionAppend {
@@ -30,23 +38,23 @@ export function emptyProgramFactsCache(enrollmentId: string): ProgramFactsCache 
 
 export function syncedSessionFact(draft: WorkoutDraft, completedAt: string): SessionFact | null {
   if (!draft.program) return null;
-  const sets = draft.exercises.flatMap((exercise): FactSet[] =>
+  const doneSets = draft.exercises.flatMap((exercise) =>
     exercise.modality === 'cardio'
       ? []
-      : exercise.sets
-          .filter((set) => set.done)
-          .map((set) => {
-            const { effortInputType, effortValue } = resolveEffort(set.effort, DEFAULT_BALANCE, 'lift');
-            return {
-              exerciseId: exercise.exerciseId,
-              weightKg: set.weightKg,
-              reps: set.reps,
-              effortInputType,
-              effortValue,
-              prescription: set.prescription ?? null,
-            };
-          }),
+      : exercise.sets.filter((set) => set.done).map((set) => ({ exerciseId: exercise.exerciseId, set })),
   );
+  const snapshots = storableSnapshots(doneSets.map(({ set }) => set.prescription ?? null));
+  const sets = doneSets.map(({ exerciseId, set }, index): FactSet => {
+    const { effortInputType, effortValue } = resolveEffort(set.effort, DEFAULT_BALANCE, 'lift');
+    return {
+      exerciseId,
+      weightKg: roundTo(2, set.weightKg),
+      reps: set.reps,
+      effortInputType,
+      effortValue,
+      prescription: snapshots[index],
+    };
+  });
   return {
     kind: 'session',
     id: draft.sessionId,
