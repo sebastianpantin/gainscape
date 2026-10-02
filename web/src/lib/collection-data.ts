@@ -1,7 +1,14 @@
-import { REP_MAX_SLOT_COUNT, type StrengthState } from '@domain/types.ts';
+import { type StrengthState } from '@domain/types.ts';
 import type { CardioRecordRow } from './cardio-rules.ts';
 import { fetchExercises } from './catalog.ts';
-import { collectionPercent, countCollection, pinProblemText } from './collection-rules.ts';
+import {
+  COLLECTION_COLUMNS,
+  collectionDataFrom,
+  collectionPercent,
+  countCollection,
+  pinProblemText,
+  strengthByExerciseFrom,
+} from './collection-rules.ts';
 import { withFriendlyRateLimit } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
@@ -22,53 +29,36 @@ export interface CollectionData {
 }
 
 export async function fetchCollectionData(userId: string): Promise<CollectionData> {
-  const [repMaxes, bodyweightRecords, strengthByExercise, pins, cardioRecords] = await Promise.all([
-    supabase.from('rep_maxes').select('exercise_id, reps, load_kg, exact_set_id').eq('user_id', userId),
-    supabase.from('bodyweight_rep_records').select('exercise_id, max_reps').eq('user_id', userId),
-    fetchExerciseStrength(userId),
+  const [repMaxes, bodyweightRecords, strengths, pins, cardioRecords] = await Promise.all([
+    supabase.from('rep_maxes').select(COLLECTION_COLUMNS.repMaxes).eq('user_id', userId),
+    supabase.from('bodyweight_rep_records').select(COLLECTION_COLUMNS.bodyweightRecords).eq('user_id', userId),
+    supabase.from('exercise_maxes').select(COLLECTION_COLUMNS.strengths).eq('user_id', userId),
     supabase
       .from('pinned_exercises')
-      .select('exercise_id, position')
+      .select(COLLECTION_COLUMNS.pins)
       .eq('user_id', userId)
       .order('position')
       .order('created_at'),
-    supabase.from('cardio_records').select('exercise_id, kind, value').eq('user_id', userId),
+    supabase.from('cardio_records').select(COLLECTION_COLUMNS.cardioRecords).eq('user_id', userId),
   ]);
-  for (const result of [repMaxes, bodyweightRecords, pins, cardioRecords]) if (result.error) throw result.error;
-
-  const repMaxesByExercise = new Map<string, (RepMaxSlotView | null)[]>();
-  for (const row of repMaxes.data!) {
-    const slots = repMaxesByExercise.get(row.exercise_id) ?? Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
-    slots[row.reps - 1] = { loadKg: Number(row.load_kg), exact: row.exact_set_id !== null };
-    repMaxesByExercise.set(row.exercise_id, slots);
-  }
-
-  return {
-    repMaxesByExercise,
-    maxRepsByExercise: new Map(bodyweightRecords.data!.map((row) => [row.exercise_id, row.max_reps])),
-    strengthByExercise,
-    pinnedExerciseIds: pins.data!.map((row) => row.exercise_id),
-    nextPinPosition: Math.max(-1, ...pins.data!.map((row) => row.position)) + 1,
-    cardioRecords: cardioRecords.data!.map((row) => ({
-      exerciseId: row.exercise_id,
-      kind: row.kind,
-      value: Number(row.value),
-    })),
-  };
+  for (const result of [repMaxes, bodyweightRecords, strengths, pins, cardioRecords])
+    if (result.error) throw result.error;
+  return collectionDataFrom({
+    repMaxes: repMaxes.data!,
+    bodyweightRecords: bodyweightRecords.data!,
+    strengths: strengths.data!,
+    pins: pins.data!,
+    cardioRecords: cardioRecords.data!,
+  });
 }
 
 export async function fetchExerciseStrength(userId: string): Promise<Map<string, ExerciseStrengthView>> {
   const { data, error } = await supabase
     .from('exercise_maxes')
-    .select('exercise_id, e1rm_kg, reps_capacity')
+    .select(COLLECTION_COLUMNS.strengths)
     .eq('user_id', userId);
   if (error) throw error;
-  return new Map(
-    data.map((row) => [
-      row.exercise_id,
-      { e1rmKg: row.e1rm_kg === null ? null : Number(row.e1rm_kg), repsCapacity: row.reps_capacity },
-    ]),
-  );
+  return strengthByExerciseFrom(data);
 }
 
 interface StrengthStateRow {
