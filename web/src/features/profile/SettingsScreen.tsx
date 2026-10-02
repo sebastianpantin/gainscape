@@ -14,7 +14,9 @@ import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import {
   changeTimezone,
+  cooldownStartFor,
   type EffortInputMode,
+  formatDay,
   nextTimezoneChangeAt,
   type Profile,
   TIMEZONE_CHANGE_COOLDOWN_DAYS,
@@ -173,16 +175,6 @@ function allTimezones(): string[] {
   } catch {
     return [deviceTimezone()];
   }
-}
-
-const DAY_MS = 86_400_000;
-
-function cooldownStartFor(nextAllowedAt: string): string {
-  return new Date(new Date(nextAllowedAt).getTime() - TIMEZONE_CHANGE_COOLDOWN_DAYS * DAY_MS).toISOString();
-}
-
-function formatDay(date: Date): string {
-  return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {

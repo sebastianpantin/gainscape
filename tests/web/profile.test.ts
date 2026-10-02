@@ -3,9 +3,12 @@ import {
   ageFrom,
   bioProblem,
   birthYearProblem,
+  cooldownStartFor,
+  formatDay,
   heightProblem,
   initialsFor,
   latestBirthYear,
+  nextTimezoneChangeAt,
   trainingSinceProblem,
 } from '../../web/src/lib/profile-rules.ts';
 
@@ -52,5 +55,26 @@ describe('profile validation', () => {
     expect(initialsFor('Iron Otter', 'iron_otter')).toBe('IO');
     expect(initialsFor('Mira', 'mira_lifts')).toBe('MI');
     expect(initialsFor('  ', 'dan_rows')).toBe('DA');
+  });
+});
+
+describe('time zone cooldown', () => {
+  it('allows a change when the time zone was never changed or the 7 days are over', () => {
+    expect(nextTimezoneChangeAt({ timezoneChangedAt: null }, now)).toBeNull();
+    expect(nextTimezoneChangeAt({ timezoneChangedAt: '2026-09-23T12:00:00.000Z' }, now)).toBeNull();
+  });
+
+  it('gives the next allowed change 7 days after the last one', () => {
+    expect(nextTimezoneChangeAt({ timezoneChangedAt: '2026-09-27T08:00:00.000Z' }, now)?.toISOString()).toBe(
+      '2026-10-04T08:00:00.000Z',
+    );
+  });
+
+  it('works back from the next allowed change to when the cooldown started', () => {
+    expect(cooldownStartFor('2026-10-04T08:00:00.000Z')).toBe('2026-09-27T08:00:00.000Z');
+  });
+
+  it('shows a day with weekday, day and month', () => {
+    expect(formatDay(new Date('2026-10-01T12:00:00Z'))).toBe('Thu 1 Oct');
   });
 });
