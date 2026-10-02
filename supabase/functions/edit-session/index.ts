@@ -66,7 +66,10 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     if (newSetIds.length > 0) await assertSetIdsUnused(tx, newSetIds);
     const storedRefs = await loadPrescriptionRefs(tx, payload.sessionId);
     const keptRefs = new Set(payload.sets.flatMap((set) => storedRefs.get(set.id) ?? []));
-    const addedSnapshots = prescriptionSnapshotsBySetId(addedSets, (prescription) => !keptRefs.has(prescription.ref));
+    const addedSnapshots = prescriptionSnapshotsBySetId(
+      addedSets,
+      (prescription) => session.programLinked && !keptRefs.has(prescription.ref),
+    );
 
     const { bodyweightKg } = await loadProfileSettings(tx, userId);
     const requested = payload.sets.map((set) => {

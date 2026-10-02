@@ -86,11 +86,12 @@ export interface OwnedSession {
   revision: number;
   notes: string | null;
   summary: SessionSummary;
+  programLinked: boolean;
 }
 
 export async function requireOwnedSession(tx: Transaction, userId: string, sessionId: string): Promise<OwnedSession> {
   const [row] = await tx`
-    select user_id, started_at, history_only, revision, notes, summary
+    select user_id, started_at, history_only, revision, notes, summary, enrollment_id
     from public.sessions where id = ${sessionId}`;
   if (!row || row.user_id !== userId) throw new HttpError(404, 'session_not_found');
   return {
@@ -99,6 +100,7 @@ export async function requireOwnedSession(tx: Transaction, userId: string, sessi
     revision: row.revision,
     notes: row.notes,
     summary: row.summary,
+    programLinked: row.enrollment_id !== null,
   };
 }
 
