@@ -377,37 +377,52 @@ export function programLabelFor(programName: string, dayName: string): string {
   return `${programName} — ${dayName}`;
 }
 
+type LiftCatalogEntry = Extract<CatalogEntry, { loadType: LoadType }>;
+
+function liftDraftExercises<Entry extends { exerciseId: string }>(
+  entries: readonly Entry[],
+  exercisesById: ReadonlyMap<string, CatalogEntry>,
+  targetAndSets: (entry: Entry, exercise: LiftCatalogEntry) => Pick<LiftDraftExercise, 'target' | 'sets'>,
+): { exercises: DraftExercise[]; skippedExerciseIds: string[] } {
+  const skippedExerciseIds: string[] = [];
+  const exercises = entries.flatMap((entry): DraftExercise[] => {
+    const exercise = exercisesById.get(entry.exerciseId);
+    if (!exercise || exercise.modality === 'cardio') {
+      skippedExerciseIds.push(entry.exerciseId);
+      return [];
+    }
+    return [
+      {
+        exerciseId: entry.exerciseId,
+        name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
+        modality: 'lift',
+        loadType: exercise.loadType,
+        ...targetAndSets(entry, exercise),
+      },
+    ];
+  });
+  return { exercises, skippedExerciseIds };
+}
+
 export function startDraftFromDay(
   day: StartableDay,
   exercisesById: ReadonlyMap<string, CatalogEntry>,
   lastSets: ReadonlyMap<string, LastLoggedSet>,
   now: Date,
 ): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
-  const skippedExerciseIds: string[] = [];
-  const exercises = day.exercises.flatMap((planned): DraftExercise[] => {
-    const exercise = exercisesById.get(planned.exerciseId);
-    if (!exercise || exercise.modality === 'cardio') {
-      skippedExerciseIds.push(planned.exerciseId);
-      return [];
-    }
+  const { exercises, skippedExerciseIds } = liftDraftExercises(day.exercises, exercisesById, (planned, exercise) => {
     const last = lastSets.get(planned.exerciseId);
     const weightKg = exercise.loadType === 'bodyweight' ? 0 : (last?.weightKg ?? defaultWeightKg(exercise.loadType));
-    return [
-      {
-        exerciseId: planned.exerciseId,
-        name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
-        modality: 'lift',
-        loadType: exercise.loadType,
-        target: { sets: planned.targetSets, repsMin: planned.targetRepsMin, repsMax: planned.targetRepsMax },
-        sets: Array.from({ length: planned.targetSets }, () => ({
-          id: crypto.randomUUID(),
-          weightKg,
-          reps: planned.targetRepsMin,
-          effort: null,
-          done: false,
-        })),
-      },
-    ];
+    return {
+      target: { sets: planned.targetSets, repsMin: planned.targetRepsMin, repsMax: planned.targetRepsMax },
+      sets: Array.from({ length: planned.targetSets }, () => ({
+        id: crypto.randomUUID(),
+        weightKg,
+        reps: planned.targetRepsMin,
+        effort: null,
+        done: false,
+      })),
+    };
   });
   return {
     draft: {
@@ -437,31 +452,21 @@ export function startDraftFromPrescription(
   exercisesById: ReadonlyMap<string, CatalogEntry>,
   now: Date,
 ): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
-  const skippedExerciseIds: string[] = [];
-  const exercises = day.exercises.flatMap((prescribed): DraftExercise[] => {
-    const exercise = exercisesById.get(prescribed.exerciseId);
-    if (!exercise || exercise.modality === 'cardio') {
-      skippedExerciseIds.push(prescribed.exerciseId);
-      return [];
-    }
-    return [
-      {
-        exerciseId: prescribed.exerciseId,
-        name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
-        modality: 'lift',
-        loadType: exercise.loadType,
-        target: null,
-        sets: prescribed.sets.map((set) => ({
-          id: crypto.randomUUID(),
-          weightKg: set.weightKg ?? defaultWeightKg(exercise.loadType),
-          reps: set.reps ?? STARTING_REPS,
-          effort: null,
-          done: false,
-          prescription: set.snapshot,
-        })),
-      },
-    ];
-  });
+  const { exercises, skippedExerciseIds } = liftDraftExercises(
+    day.exercises,
+    exercisesById,
+    (prescribed, exercise) => ({
+      target: null,
+      sets: prescribed.sets.map((set) => ({
+        id: crypto.randomUUID(),
+        weightKg: set.weightKg ?? defaultWeightKg(exercise.loadType),
+        reps: set.reps ?? STARTING_REPS,
+        effort: null,
+        done: false,
+        prescription: set.snapshot,
+      })),
+    }),
+  );
   return {
     draft: {
       sessionId: crypto.randomUUID(),
