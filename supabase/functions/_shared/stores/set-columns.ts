@@ -7,11 +7,10 @@ import {
   resolveEffort,
   type SetResult,
   setKind,
+  type WritableSet,
 } from '../domain/index.ts';
 
 type EffortColumns = Pick<SetResult, 'effortInputType' | 'effortValue'>;
-
-export type WritableSet = (LiftSetInput & { effectiveLoadKg: number }) | CardioSetInput;
 
 function liftInputColumns(
   set: Pick<LiftSetInput, 'id' | 'exerciseId' | 'position' | 'weightKg' | 'reps' | 'isWarmup'>,

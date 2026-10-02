@@ -1,14 +1,14 @@
 import { isoTimestamp, type JsonValue, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
-  type CardioInterval,
-  type EffortInputType,
   type SessionKey,
   type SessionSummary,
   setKind,
+  type StoredSet,
+  type WritableSet,
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
-import { cardioFieldsFromRow, inputColumnsWithEffort, type WritableSet } from './set-columns.ts';
+import { cardioFieldsFromRow, inputColumnsWithEffort } from './set-columns.ts';
 
 export interface StoredSession {
   userId: string;
@@ -74,31 +74,6 @@ export async function requireOwnedSession(tx: Transaction, userId: string, sessi
     summary: row.summary,
   };
 }
-
-interface StoredSetBase {
-  id: string;
-  exerciseId: string;
-  position: number;
-  effortInputType: EffortInputType | null;
-  effortValue: number | null;
-}
-
-export interface StoredLiftSet extends StoredSetBase {
-  kind: 'lift';
-  weightKg: number;
-  effectiveLoadKg: number;
-  reps: number;
-  isWarmup: boolean;
-}
-
-export interface StoredCardioSet extends StoredSetBase {
-  kind: 'cardio';
-  durationS: number;
-  distanceM: number | null;
-  interval: CardioInterval | null;
-}
-
-export type StoredSet = StoredLiftSet | StoredCardioSet;
 
 export async function loadStoredSets(tx: Transaction, sessionId: string): Promise<StoredSet[]> {
   const rows = await tx`

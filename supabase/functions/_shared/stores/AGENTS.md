@@ -58,7 +58,7 @@ Pure logic reached through a store (record rules, loot odds, event rules) is tes
 - Bulk writes use `tx(rows)` helper inserts with an array of snake_case objects built by the `set-columns.ts` mappers.
 - Whole-record updates from a JSON payload use `jsonb_to_recordset` joins (`events.ts`, `loot.ts`, `sessions.ts`).
 - Row locks with `for update` for read-modify-write (`lockUser`, `revokeDrops` on `user_items`).
-- Interfaces named after the stored shape (`StoredSession`, `StoredSet`, `OwnedSession`, `ActiveDrop`, `ReplayOutcome`) separate DB reads from domain types.
+- Interfaces named after the stored shape (`StoredSession`, `OwnedSession`, `ActiveDrop`, `ReplayOutcome`; `StoredSet` lives in the domain `edit-diff.ts` because the no-op check needs it) separate DB reads from domain types.
 - Failures are `HttpError(status, code)` with a snake_case code (`profile_missing`, `rebuild_required`); `isUniqueViolation` detects Postgres error `23505` so handlers can map it.
 
 ## Dependencies

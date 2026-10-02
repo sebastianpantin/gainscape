@@ -12,6 +12,7 @@ import type {
   LiftSetInput,
   SessionInput,
   SessionSummary,
+  SetInput,
   SetResult,
   SkillDef,
   StrengthState,
@@ -86,6 +87,25 @@ export function carriedEffectiveLoadKg(
     return roundTo(2, stored.effectiveLoadKg - stored.weightKg + next.weightKg);
   }
   return roundTo(2, effectiveLoadForNewSet(next, exercise, bodyweightKg));
+}
+
+export type WritableSet = (LiftSetInput & { effectiveLoadKg: number }) | CardioSetInput;
+
+export function writableSetFor(
+  set: SetInput,
+  exercise: ExerciseDef,
+  bodyweightKg: number | null,
+  stored?: StoredSetLoad,
+): WritableSet {
+  if (set.kind === 'cardio') {
+    cardioExercise(exercise);
+    return set;
+  }
+  const effectiveLoadKg =
+    stored === undefined
+      ? effectiveLoadForNewSet(set, exercise, bodyweightKg)
+      : carriedEffectiveLoadKg(stored, set, exercise, bodyweightKg);
+  return { ...set, effectiveLoadKg };
 }
 
 function effectiveLoadKg(set: LiftSetInput, exercise: LiftExerciseDef, state: UserState): number {
