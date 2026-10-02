@@ -142,3 +142,30 @@ describe('validateEnrollment rejects with a readable error', () => {
     );
   });
 });
+
+describe('validateEnrollment bounds inputs to the lifts and values the template takes', () => {
+  it('rejects an input for a declared lift that takes no input (Madcow hyper)', () => {
+    const enrollment = { ...madcowEnrollment(), inputs: { ...madcowEnrollment().inputs, hyper: { fiveRm: 20 } } };
+    expect(validateEnrollment(MADCOW_5X5, enrollment)).toEqual(
+      expect.arrayContaining([expect.stringContaining('hyper')]),
+    );
+  });
+
+  it('rejects an input for a lift the template does not declare (clean)', () => {
+    const enrollment = { ...madcowEnrollment(), inputs: { ...madcowEnrollment().inputs, clean: { fiveRm: 60 } } };
+    expect(validateEnrollment(MADCOW_5X5, enrollment)).toEqual(
+      expect.arrayContaining([expect.stringContaining('clean')]),
+    );
+  });
+
+  it('rejects an input above 1000 (squat 1000.5)', () => {
+    const enrollment = madcowEnrollment({ fiveRms: { squat: 1000.5 } });
+    expect(validateEnrollment(MADCOW_5X5, enrollment)).toEqual(
+      expect.arrayContaining([expect.stringContaining('squat')]),
+    );
+  });
+
+  it('accepts an input of exactly 1000', () => {
+    expect(validateEnrollment(MADCOW_5X5, madcowEnrollment({ fiveRms: { deadlift: 1000 } }))).toEqual([]);
+  });
+});

@@ -3,6 +3,7 @@ import {
   availableDays,
   comparePositions,
   firstPosition,
+  isPositionInSchedule,
   nextPosition,
   programStateAt,
   upcomingDays,
@@ -14,6 +15,7 @@ import {
   FIVE_THREE_ONE,
   fiveThreeOneEnrollment,
 } from './program-fixtures/five_three_one.ts';
+import { GZCLP_SHAPE } from './program-fixtures/gzclp.ts';
 import { MADCOW_5X5, madcowDaySets, madcowEnrollment, madcowWeek, weekDay } from './program-fixtures/madcow_5x5.ts';
 
 const madcow = madcowEnrollment();
@@ -173,5 +175,29 @@ describe('upcomingDays', () => {
       weekDay(1, 'fri'),
       weekDay(2, 'mon'),
     ]);
+  });
+});
+
+describe('isPositionInSchedule bounds every schedule to 520 weeks', () => {
+  it.each([
+    [{ cycle: 130, week: 4, day: 'press' }, true],
+    [{ cycle: 131, week: 1, day: 'squat' }, false],
+  ])('5/3/1 with four-week cycles takes %o: %s', (position, accepted) => {
+    expect(isPositionInSchedule(FIVE_THREE_ONE, position)).toBe(accepted);
+  });
+
+  it.each([
+    [{ week: 520, day: 'fri' }, true],
+    [{ week: 521, day: 'mon' }, false],
+  ])('weekly Madcow takes %o: %s', (position, accepted) => {
+    expect(isPositionInSchedule(MADCOW_5X5, position)).toBe(accepted);
+  });
+
+  it.each([
+    [{ index: 0 }, true],
+    [{ index: 2079 }, true],
+    [{ index: 2080 }, false],
+  ])('the four-day GZCLP rotation takes %o: %s, so the index stays below 520 x 4', (position, accepted) => {
+    expect(isPositionInSchedule(GZCLP_SHAPE, position)).toBe(accepted);
   });
 });
