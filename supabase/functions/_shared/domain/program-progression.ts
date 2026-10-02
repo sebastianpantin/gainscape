@@ -231,10 +231,11 @@ function scopeOutcome(
   context: FoldContext,
   state: ProgramState,
   rule: ProgressionRule,
-  inScope: (position: Position) => boolean,
+  scope: readonly Position[],
 ): LiftOutcome {
-  return state.days
-    .filter((record) => record.epoch === state.epoch && record.status === 'completed' && inScope(record.position))
+  return scope
+    .map((position) => findRecord(state, position))
+    .filter((record): record is DayRecord => record?.status === 'completed')
     .reduce<LiftOutcome>(
       (outcome, record) =>
         combinedOutcome(
@@ -249,29 +250,32 @@ function fireScopeTriggers(
   context: FoldContext,
   state: ProgramState,
   trigger: ProgressionRule['trigger'],
-  inScope: (position: Position) => boolean,
+  scope: readonly Position[],
 ): ProgramState {
   return context.definition.progression
     .filter((rule) => rule.trigger === trigger)
     .reduce(
-      (next, rule) => applyOutcome(context, next, rule, scopeOutcome(context, next, rule, inScope), state.position),
+      (next, rule) => applyOutcome(context, next, rule, scopeOutcome(context, next, rule, scope), state.position),
       state,
     );
 }
 
+function weekPositions(definition: ProgramDefinition, week: Position): Position[] {
+  return definition.schedule.days.map((day) => positionAt(week, day.key));
+}
+
 function rollOver(context: FoldContext, state: ProgramState): ProgramState {
+  const { definition } = context;
   const ending = state.position;
-  let next = fireScopeTriggers(context, state, 'endOfWeek', (position) => compareWeeks(position, ending) === 0);
-  const schedule = context.definition.schedule;
+  let next = fireScopeTriggers(context, state, 'endOfWeek', weekPositions(definition, ending));
+  const schedule = definition.schedule;
   if (schedule.kind === 'cycle' && isCyclePosition(ending) && ending.week >= schedule.weeksPerCycle) {
-    next = fireScopeTriggers(
-      context,
-      next,
-      'endOfCycle',
-      (position) => isCyclePosition(position) && position.cycle === ending.cycle,
+    const cycleWeeks = Array.from({ length: schedule.weeksPerCycle }, (_, index) =>
+      weekPositions(definition, { cycle: ending.cycle, week: index + 1, day: ending.day }),
     );
+    next = fireScopeTriggers(context, next, 'endOfCycle', cycleWeeks.flat());
   }
-  return { ...next, position: nextWeek(context.definition, ending), completedDays: [] };
+  return { ...next, position: nextWeek(definition, ending), completedDays: [] };
 }
 
 function requiredDayKeys(definition: ProgramDefinition): string[] {
