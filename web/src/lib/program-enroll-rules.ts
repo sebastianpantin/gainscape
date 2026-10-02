@@ -42,6 +42,8 @@ export interface EnrollForm {
   options: Readonly<Record<string, OptionValue>>;
   bindings: Readonly<Record<string, string | null>>;
   rounding: RoundingSetting;
+  roundingText?: Readonly<{ increment: string; barWeight: string }>;
+  optionText?: Readonly<Record<string, string>>;
 }
 
 export interface InputField {
