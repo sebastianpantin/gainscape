@@ -89,17 +89,20 @@ function worseOutcome(a: LiftOutcome, b: LiftOutcome): LiftOutcome {
   return a === 'met' || b === 'met' ? 'met' : 'neutral';
 }
 
-function ruleOutcome(
+function ruleOutcomeAt(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
-  slots: readonly SlotDecl[],
-  session: SessionFact,
+  rule: ProgressionRule,
+  position: Position,
+  sets: readonly FactSet[],
 ): LiftOutcome {
-  const exerciseId = enrollment.bindings[slots[0].lift];
-  const candidatesBySlot = slots.map((slot) => setsForSlot(session.sets, slot, exerciseId));
+  const slots = judgedSlotsOf(definition, enrollment, rule, position);
+  if (slots.length === 0) return 'neutral';
+  const exerciseId = enrollment.bindings[rule.lift];
+  const candidatesBySlot = slots.map((slot) => setsForSlot(sets, slot, exerciseId));
   if (candidatesBySlot.every((candidates) => candidates.length === 0)) return 'neutral';
   const allMet = slots.every((slot, slotIndex) => {
-    const required = requiredSetIndices(definition, enrollment, slot, session.position);
+    const required = requiredSetIndices(definition, enrollment, slot, position);
     if (required === null) return false;
     return required.every((index) =>
       candidatesBySlot[slotIndex].some(
@@ -119,9 +122,8 @@ export function liftOutcomes(
 ): Readonly<Record<string, LiftOutcome>> {
   const outcomes: Record<string, LiftOutcome> = {};
   for (const rule of definition.progression) {
-    const slots = judgedSlotsOf(definition, enrollment, rule, session.position);
-    if (slots.length === 0) continue;
-    const outcome = ruleOutcome(definition, enrollment, slots, session);
+    if (judgedSlotsOf(definition, enrollment, rule, session.position).length === 0) continue;
+    const outcome = ruleOutcomeAt(definition, enrollment, rule, session.position, session.sets);
     outcomes[rule.lift] = rule.lift in outcomes ? worseOutcome(outcomes[rule.lift], outcome) : outcome;
   }
   return outcomes;
@@ -213,11 +215,20 @@ function applyOutcome(
   return next;
 }
 
-function scopeOutcome(state: ProgramState, rule: ProgressionRule, inScope: (position: Position) => boolean) {
+function scopeOutcome(
+  context: FoldContext,
+  state: ProgramState,
+  rule: ProgressionRule,
+  inScope: (position: Position) => boolean,
+): LiftOutcome {
   return state.days
-    .filter((record) => inScope(record.position))
+    .filter((record) => record.status === 'completed' && inScope(record.position))
     .reduce<LiftOutcome>(
-      (outcome, record) => worseOutcome(outcome, record.outcomes[rule.lift] ?? 'neutral'),
+      (outcome, record) =>
+        worseOutcome(
+          outcome,
+          ruleOutcomeAt(context.definition, context.enrollment, rule, record.position, record.judgedSets),
+        ),
       'neutral',
     );
 }
@@ -231,7 +242,7 @@ function fireScopeTriggers(
   return context.definition.progression
     .filter((rule) => rule.trigger === trigger)
     .reduce(
-      (next, rule) => applyOutcome(context, next, rule, scopeOutcome(next, rule, inScope), state.position),
+      (next, rule) => applyOutcome(context, next, rule, scopeOutcome(context, next, rule, inScope), state.position),
       state,
     );
 }
@@ -341,13 +352,14 @@ function recordDay(
   const days = existing
     ? state.days.map((candidate) => (candidate === existing ? record : candidate))
     : [...state.days, record];
-  const previous = existing?.status === 'completed' ? existing.outcomes : {};
-  return context.definition.progression
+  const previousSets = existing?.status === 'completed' ? existing.judgedSets : [];
+  const { definition, enrollment } = context;
+  return definition.progression
     .filter((rule) => rule.trigger === 'afterSession')
     .reduce<ProgramState>(
       (next, rule) => {
-        const outcome = outcomes[rule.lift] ?? 'neutral';
-        if (outcome === (previous[rule.lift] ?? 'neutral')) return next;
+        const outcome = ruleOutcomeAt(definition, enrollment, rule, position, judgedSets);
+        if (outcome === ruleOutcomeAt(definition, enrollment, rule, position, previousSets)) return next;
         return applyOutcome(context, next, rule, outcome, position);
       },
       { ...state, days },
