@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './support/people.ts';
 import {
   emailOf,
   openFromProfile,
@@ -148,18 +149,16 @@ test('a stale link opened by another signed-in user is invalid', async ({ page }
   await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
 });
 
-test('a squatter loses the account when the owner confirms the email', async ({ browser }) => {
+test('a squatter loses the account when the owner confirms the email', async ({ newPerson }) => {
   const victimName = uniqueUsername('au_vi');
   const squatterName = uniqueUsername('au_sq');
   const victimEmail = emailOf(victimName);
 
-  const squatterContext = await browser.newContext();
-  const squatter = await squatterContext.newPage();
+  const squatter = await newPerson();
   await submitRegistration(squatter, squatterName, victimEmail);
   await squatter.waitForTimeout(MAX_FREQUENCY_WAIT_MS);
 
-  const victimContext = await browser.newContext();
-  const victim = await victimContext.newPage();
+  const victim = await newPerson();
   const since = new Date();
   await submitRegistration(victim, victimName, victimEmail);
   await victim.goto(await linkTo(victimEmail, CONFIRM_SUBJECT, since));
@@ -173,7 +172,4 @@ test('a squatter loses the account when the owner confirms the email', async ({ 
   await squatter.goto('/');
   await submitSignIn(squatter, victimEmail);
   await expect(squatter.getByText('Wrong email or password.')).toBeVisible();
-
-  await victimContext.close();
-  await squatterContext.close();
 });

@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './support/people.ts';
 import { logCardio, logExercise, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
 
 async function logBench(page: Page, weightKg: number) {
@@ -15,14 +16,12 @@ function feedItem(page: Page, text: string) {
   return page.getByRole('list', { name: 'Feed' }).getByTestId('feed-item').filter({ hasText: text });
 }
 
-test('friends: request, feed with gz and hidden weights, hiscores, profile and removal', async ({ browser }) => {
+test('friends: request, feed with gz and hidden weights, hiscores, profile and removal', async ({ newPerson }) => {
   const stamp = Date.now().toString(36);
   const aliceName = `fa_${stamp}`;
   const bobName = `fb_${stamp}`;
-  const aliceContext = await browser.newContext();
-  const bobContext = await browser.newContext();
-  const alice = await aliceContext.newPage();
-  const bob = await bobContext.newPage();
+  const alice = await newPerson();
+  const bob = await newPerson();
   await register(alice, aliceName);
   await register(bob, bobName);
 
@@ -97,6 +96,4 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await alice.getByRole('link', { name: 'Preview what friends see' }).click();
   await expect(alice.getByTestId('profile-total')).toHaveText(total ?? '');
   await expect(alice.getByTestId('profile-collection')).toHaveText(collection ?? '');
-  await aliceContext.close();
-  await bobContext.close();
 });

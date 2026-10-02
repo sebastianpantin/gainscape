@@ -1,4 +1,5 @@
-import { type Browser, expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './support/people.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
 import {
   emailOf,
@@ -51,10 +52,8 @@ async function checkEffortTargets(page: Page) {
   }
 }
 
-async function befriend(browser: Browser, page: Page, username: string): Promise<string> {
+async function befriend(friend: Page, page: Page, username: string): Promise<string> {
   const friendName = uniqueUsername('a11y_f');
-  const friendContext = await browser.newContext({ baseURL: test.info().project.use.baseURL, ignoreHTTPSErrors: true });
-  const friend = await friendContext.newPage();
   await register(friend, friendName);
   await openTab(page, 'Friends');
   await page.getByLabel('Add a friend by exact username').fill(friendName);
@@ -65,7 +64,6 @@ async function befriend(browser: Browser, page: Page, username: string): Promise
   await expect(friend.getByRole('list', { name: 'Friends list' })).toContainText(username);
   await openTab(friend, 'Train');
   await logWorkout(friend, () => logExercise(friend, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
-  await friendContext.close();
   return friendName;
 }
 
@@ -117,8 +115,8 @@ test('the password reset form has no serious axe violations', async ({ page }) =
 });
 
 test('every signed-in screen has no serious axe violations and the between-set controls are 44px', async ({
-  browser,
   context,
+  newPerson,
   page,
 }) => {
   test.setTimeout(240_000);
@@ -154,7 +152,7 @@ test('every signed-in screen has no serious axe violations and the between-set c
 
   await page.getByRole('link', { name: 'Done' }).click();
   await grantItems(username, { rookie_belt: 1, grinder_scraps: 8 });
-  const friendName = await befriend(browser, page, username);
+  const friendName = await befriend(await newPerson(), page, username);
   await page.goto('/friends');
   const friendPath = await page
     .getByRole('list', { name: 'Friends list' })
