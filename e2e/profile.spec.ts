@@ -38,6 +38,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Edit profile & body' }).click();
   await page.getByLabel('Display name').fill('Iron Otter');
+  await expect(page.getByRole('img', { name: /badge$/ })).toHaveCount(0);
   await page.getByLabel('Bio').fill('Chasing a 200 kg squat.');
   await page.getByLabel('Training focus').selectOption('strength');
   await page.getByLabel('Training since').fill('2019');
