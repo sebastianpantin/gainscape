@@ -1,9 +1,14 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
-const INTEGRATION_FILES_SHARING_GLOBAL_STATE = ['auth-email', 'catalog', 'crafting', 'loot', 'rate-limits'].map(
-  (name) => `tests/integration/${name}.test.ts`,
-);
+const INTEGRATION_FILES_SHARING_GLOBAL_STATE = [
+  'auth-email',
+  'catalog',
+  'crafting',
+  'loot',
+  'program-enrollments',
+  'rate-limits',
+].map((name) => `tests/integration/${name}.test.ts`);
 const INTEGRATION_WORKERS = 4;
 
 export default defineConfig({
