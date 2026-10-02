@@ -195,9 +195,15 @@ interface ResolvedLoad {
 
 type LoadResult = { kind: 'load'; load: ResolvedLoad } | { kind: 'unsupported'; primitive: string };
 
-function prescribedLoad(context: ResolveContext, raw: number | undefined, pct: number): LoadResult {
-  if (raw === undefined) return { kind: 'load', load: { weight: null, weightKg: null, pct, snapshotted: false } };
-  const weight = roundPrescribedLoad(raw, context.enrollment.rounding);
+function prescribedLoad(
+  context: ResolveContext,
+  unroundedInEnrollmentUnit: number | undefined,
+  pct: number,
+): LoadResult {
+  if (unroundedInEnrollmentUnit === undefined) {
+    return { kind: 'load', load: { weight: null, weightKg: null, pct, snapshotted: false } };
+  }
+  const weight = roundPrescribedLoad(unroundedInEnrollmentUnit, context.enrollment.rounding);
   return {
     kind: 'load',
     load: { weight, weightKg: unitToKg(weight, context.enrollment.unit), pct, snapshotted: true },
@@ -206,16 +212,17 @@ function prescribedLoad(context: ResolveContext, raw: number | undefined, pct: n
 
 function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index: number, depth: number): LoadResult {
   const { definition, enrollment, position } = context;
-  const reference = (variable: string) => context.refs[slot.lift]?.[variable as keyof ProgramReferences[string]];
+  const referenceInEnrollmentUnit = (variable: string) =>
+    context.refs[slot.lift]?.[variable as keyof ProgramReferences[string]];
   const numbers = numberContext(definition, enrollment, position);
   switch (load.kind) {
     case 'pct': {
       const pct = evaluateNumber(load.pct, numbers);
-      const raw = reference(load.of);
+      const raw = referenceInEnrollmentUnit(load.of);
       return prescribedLoad(context, raw === undefined ? undefined : raw * pct, pct);
     }
     case 'ramp': {
-      const top = reference(load.of);
+      const top = referenceInEnrollmentUnit(load.of);
       const pct = roundTo(RAMP_PCT_DECIMALS, 1 - evaluateNumber(load.step, numbers) * (load.count - 1 - index));
       if (top === undefined) return prescribedLoad(context, undefined, pct);
       return prescribedLoad(context, roundPrescribedLoad(top, enrollment.rounding) * pct, pct);
@@ -223,7 +230,7 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
     case 'weekTablePct': {
       const pct = definition.weekTables?.[load.table]?.[weekContextOf(position).week - 1]?.sets[load.set]?.pct;
       if (pct === undefined) return { kind: 'unsupported', primitive: load.kind };
-      const raw = reference(load.of);
+      const raw = referenceInEnrollmentUnit(load.of);
       return prescribedLoad(context, raw === undefined ? undefined : raw * pct, pct);
     }
     case 'sameAs': {

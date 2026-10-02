@@ -86,7 +86,7 @@ function setsForSlot(sets: readonly FactSet[], slot: SlotDecl, exerciseId: strin
   );
 }
 
-function worseOutcome(a: LiftOutcome, b: LiftOutcome): LiftOutcome {
+function combinedOutcome(a: LiftOutcome, b: LiftOutcome): LiftOutcome {
   if (a === 'missed' || b === 'missed') return 'missed';
   return a === 'met' || b === 'met' ? 'met' : 'neutral';
 }
@@ -132,7 +132,7 @@ export function liftOutcomes(
   for (const rule of definition.progression) {
     if (judgedSlotsOf(definition, enrollment, rule, position).length === 0) continue;
     const outcome = ruleOutcomeAt(definition, enrollment, rule, position, sets);
-    outcomes[rule.lift] = rule.lift in outcomes ? worseOutcome(outcomes[rule.lift], outcome) : outcome;
+    outcomes[rule.lift] = rule.lift in outcomes ? combinedOutcome(outcomes[rule.lift], outcome) : outcome;
   }
   return outcomes;
 }
@@ -173,7 +173,7 @@ function adjustedValue(
   context: FoldContext,
   rule: ProgressionRule,
   adjustment: Adjustment,
-  value: number,
+  valueInEnrollmentUnit: number,
   position: Position,
 ): { value: number; reason: ReferenceChangeReason } | null {
   const { definition, enrollment } = context;
@@ -181,16 +181,19 @@ function adjustedValue(
   switch (adjustment.kind) {
     case 'increment': {
       if (!('byPct' in adjustment)) {
-        return { value: value + evaluateAmount(adjustment.by, enrollment.unit, numbers), reason: 'increment' };
+        return {
+          value: valueInEnrollmentUnit + evaluateAmount(adjustment.by, enrollment.unit, numbers),
+          reason: 'increment',
+        };
       }
       const onRamp = definition.initial.find((initial) => initial.kind === 'onRamp' && initial.var === rule.var);
       if (onRamp?.kind === 'onRamp' && absoluteWeek(definition, position) < onRamp.peakWeek) {
-        return { value: value / onRamp.factor, reason: 'increment' };
+        return { value: valueInEnrollmentUnit / onRamp.factor, reason: 'increment' };
       }
-      return { value: value * (1 + evaluateNumber(adjustment.byPct, numbers)), reason: 'increment' };
+      return { value: valueInEnrollmentUnit * (1 + evaluateNumber(adjustment.byPct, numbers)), reason: 'increment' };
     }
     case 'tmReset':
-      return { value: value * (1 - evaluateNumber(adjustment.pct, numbers)), reason: 'tmReset' };
+      return { value: valueInEnrollmentUnit * (1 - evaluateNumber(adjustment.pct, numbers)), reason: 'tmReset' };
     default:
       return null;
   }
@@ -226,7 +229,7 @@ function scopeOutcome(
     .filter((record) => record.epoch === state.epoch && record.status === 'completed' && inScope(record.position))
     .reduce<LiftOutcome>(
       (outcome, record) =>
-        worseOutcome(
+        combinedOutcome(
           outcome,
           ruleOutcomeAt(context.definition, context.enrollment, rule, record.position, record.judgedSets),
         ),
