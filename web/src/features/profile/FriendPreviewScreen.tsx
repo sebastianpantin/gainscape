@@ -124,7 +124,7 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
         </section>
       )}
       {state.status === 'ready' && view.status === 'ready' && (
-        <PreviewOfProfile userId={userId} profile={state.bundle.profile} replace={replace} view={view} />
+        <PreviewOfProfile userId={userId} profile={state.profile} replace={replace} view={view} />
       )}
     </main>
   );

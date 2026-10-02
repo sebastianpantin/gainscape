@@ -275,7 +275,7 @@ export function EditProfileScreen({ userId }: EditProfileScreenProps) {
           {state.problem}
         </p>
       )}
-      {state.status === 'ready' && <EditForm userId={userId} profile={state.bundle.profile} />}
+      {state.status === 'ready' && <EditForm userId={userId} profile={state.profile} />}
     </main>
   );
 }

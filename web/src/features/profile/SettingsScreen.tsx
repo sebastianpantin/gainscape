@@ -600,16 +600,16 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
       )}
       {state.status === 'ready' && (
         <>
-          <TrainingSection userId={userId} profile={state.bundle.profile} onSaved={replace} />
-          <TimezoneSection profile={state.bundle.profile} onSaved={replace} />
-          <PrivacySection userId={userId} profile={state.bundle.profile} onSaved={replace} />
+          <TrainingSection userId={userId} profile={state.profile} onSaved={replace} />
+          <TimezoneSection profile={state.profile} onSaved={replace} />
+          <PrivacySection userId={userId} profile={state.profile} onSaved={replace} />
         </>
       )}
       <AppSection />
       <AccountSection
         userId={userId}
         email={email}
-        username={state.status === 'ready' ? state.bundle.profile.username : null}
+        username={state.status === 'ready' ? state.profile.username : null}
       />
     </main>
   );
