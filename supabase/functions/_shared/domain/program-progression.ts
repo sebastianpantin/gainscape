@@ -96,14 +96,15 @@ function ruleOutcomeAt(
   position: Position,
   sets: readonly FactSet[],
 ): LiftOutcome {
-  const slots = judgedSlotsOf(definition, enrollment, rule, position);
+  const slots = judgedSlotsOf(definition, enrollment, rule, position).filter(
+    (slot) => requiredSetIndices(definition, enrollment, slot, position) !== null,
+  );
   if (slots.length === 0) return 'neutral';
   const exerciseId = enrollment.bindings[rule.lift];
   const candidatesBySlot = slots.map((slot) => setsForSlot(sets, slot, exerciseId));
   if (candidatesBySlot.every((candidates) => candidates.length === 0)) return 'neutral';
   const allMet = slots.every((slot, slotIndex) => {
-    const required = requiredSetIndices(definition, enrollment, slot, position);
-    if (required === null) return false;
+    const required = requiredSetIndices(definition, enrollment, slot, position) ?? [];
     return required.every((index) =>
       candidatesBySlot[slotIndex].some(
         (set) =>
