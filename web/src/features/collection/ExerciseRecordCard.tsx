@@ -1,10 +1,9 @@
-import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
 import { exerciseLabels, type LiftExercise } from '../../lib/catalog-rules.ts';
 import type { CollectionData } from '../../lib/collection-data.ts';
-import { formatLoad } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { formatWeight } from '../../lib/units.ts';
-import { slotClass } from './slot-class.ts';
+import { emptySlots } from './record-slots.ts';
+import { RecordSlots } from './RecordSlots.tsx';
 
 interface ExerciseRecordCardProps {
   exercise: LiftExercise;
@@ -32,7 +31,7 @@ export function ExerciseRecordCard({
   onMoveUp,
   onMoveDown,
 }: ExerciseRecordCardProps) {
-  const slots = data.repMaxesByExercise.get(exercise.id) ?? Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
+  const slots = data.repMaxesByExercise.get(exercise.id) ?? emptySlots();
   const maxReps = data.maxRepsByExercise.get(exercise.id);
   const { unitPref } = usePreferences();
 
@@ -60,20 +59,7 @@ export function ExerciseRecordCard({
         </div>
       </header>
       <StrengthLine exercise={exercise} data={data} />
-      {exercise.loadType === 'bodyweight' ? (
-        <p className={maxReps ? 'record-slot bodyweight-record filled' : 'record-slot bodyweight-record'}>
-          Max reps: <strong>{maxReps ?? '—'}</strong>
-        </p>
-      ) : (
-        <ol className="record-slots">
-          {slots.map((slot, index) => (
-            <li key={index} className={slotClass(slot)}>
-              <span className="muted">{index + 1}RM</span>{' '}
-              <span>{slot ? formatLoad(slot.loadKg, exercise.loadType, unitPref) : '—'}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      <RecordSlots loadType={exercise.loadType} slots={slots} maxReps={maxReps} unit={unitPref} />
     </section>
   );
 }
