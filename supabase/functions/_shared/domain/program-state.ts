@@ -119,10 +119,16 @@ export function initialProgramState(definition: ProgramDefinition, enrollment: P
   };
 }
 
+function instantOf(fact: ProgramFact): number {
+  const instant = Date.parse(fact.at);
+  return Number.isNaN(instant) ? Number.POSITIVE_INFINITY : instant;
+}
+
 function compareFacts(a: ProgramFact, b: ProgramFact): number {
-  if (a.at !== b.at) return a.at < b.at ? -1 : 1;
-  if (a.id !== b.id) return a.id < b.id ? -1 : 1;
-  return Number(a.local ?? false) - Number(b.local ?? false);
+  const byInstant = instantOf(a) - instantOf(b);
+  if (byInstant !== 0 && !Number.isNaN(byInstant)) return byInstant;
+  if (a.id === b.id) return 0;
+  return a.id < b.id ? -1 : 1;
 }
 
 export function orderFacts(facts: readonly ProgramFact[]): ProgramFact[] {
