@@ -29,7 +29,7 @@ test('log a run, intervals and a lift in one workout, then edit the run distance
   await expect(gains).toContainText(/Agility: \+[\d,]+ XP/);
 
   await openLatestWorkout(page);
-  const sessionXp = page.getByTestId('session-xp');
+  const sessionXp = page.getByRole('status', { name: 'Workout XP' });
   const xpBefore = xpValue(await sessionXp.textContent());
   const run = page.locator('section', { has: page.getByRole('heading', { name: 'Running', exact: true }) });
   await expect(run.getByLabel('km', { exact: true })).toHaveValue('5');
