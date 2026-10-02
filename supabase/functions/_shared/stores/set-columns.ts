@@ -5,9 +5,11 @@ import {
   type CardioSetInput,
   countedWorkSeconds,
   type LiftSetInput,
+  type PrescriptionSnapshot,
   resolveEffort,
   type SetResult,
   setKind,
+  storableSnapshots,
   type WritableSet,
 } from '../domain/index.ts';
 
@@ -125,20 +127,14 @@ export const NO_PRESCRIPTION_SNAPSHOT: PrescriptionSnapshotColumns = Object.free
   prescribed_amrap: null,
 });
 
-function isStorableSnapshot(prescription: PrescriptionPayload): boolean {
-  return (
-    prescription.weightKg >= 0 && prescription.weightKg <= 2000 && prescription.reps >= 1 && prescription.reps <= 100
-  );
-}
-
-export function prescriptionSnapshotColumns(prescription: PrescriptionPayload | null): PrescriptionSnapshotColumns {
-  if (prescription === null || !isStorableSnapshot(prescription)) return NO_PRESCRIPTION_SNAPSHOT;
+function snapshotColumns(snapshot: PrescriptionSnapshot | null): PrescriptionSnapshotColumns {
+  if (snapshot === null) return NO_PRESCRIPTION_SNAPSHOT;
   return {
-    prescription_ref: prescription.ref,
-    prescribed_weight_kg: prescription.weightKg,
-    prescribed_reps: prescription.reps,
-    prescribed_min_reps: prescription.minReps,
-    prescribed_amrap: prescription.amrap,
+    prescription_ref: snapshot.ref,
+    prescribed_weight_kg: snapshot.weightKg,
+    prescribed_reps: snapshot.reps,
+    prescribed_min_reps: snapshot.minReps,
+    prescribed_amrap: snapshot.amrap,
   };
 }
 
@@ -146,10 +142,9 @@ export function prescriptionSnapshotsBySetId(
   sets: readonly SetPayload[],
   keepsSnapshot: (prescription: PrescriptionPayload) => boolean,
 ): Map<string, PrescriptionSnapshotColumns> {
-  return new Map(
-    sets.map((set) => {
-      const prescription = set.kind === 'lift' && set.prescription !== null ? set.prescription : null;
-      return [set.id, prescriptionSnapshotColumns(prescription && keepsSnapshot(prescription) ? prescription : null)];
-    }),
+  const kept = sets.map((set) =>
+    set.kind === 'lift' && set.prescription !== null && keepsSnapshot(set.prescription) ? set.prescription : null,
   );
+  const snapshots = storableSnapshots(kept);
+  return new Map(sets.map((set, index) => [set.id, snapshotColumns(snapshots[index])]));
 }
