@@ -15,14 +15,14 @@ All Vitest suites live here, split by layer: `catalog/` (YAML catalog generator 
 
 ## Subdirectories
 
-| Directory      | Purpose                                                                                            |
-| -------------- | -------------------------------------------------------------------------------------------------- |
-| `catalog/`     | Catalog generator determinism and validator rules (see `catalog/AGENTS.md`)                        |
-| `domain/`      | Unit and property tests of the pure engine, plus purity enforcement (see `domain/AGENTS.md`)       |
-| `web/`         | Pure web logic, offline draft store contract, PWA rules, static asset checks (see `web/AGENTS.md`) |
-| `balance/`     | Progression-band simulation test behind `make sim-check` (see `balance/AGENTS.md`)                 |
-| `deploy/`      | Deploy guard rules and secret-handling checks for `scripts/deploy/` and the Edge Functions         |
-| `integration/` | Stack-backed tests of Edge Functions, RPCs, RLS, auth email (see `integration/AGENTS.md`)          |
+| Directory      | Purpose                                                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `catalog/`     | Catalog generator determinism and validator rules (see `catalog/AGENTS.md`)                                                                           |
+| `domain/`      | Unit and property tests of the pure engine, plus purity enforcement (see `domain/AGENTS.md`)                                                          |
+| `web/`         | Pure web logic, offline draft store contract, PWA rules, static asset checks (see `web/AGENTS.md`)                                                    |
+| `balance/`     | Progression-band simulation test behind `make sim-check` (see `balance/AGENTS.md`)                                                                    |
+| `deploy/`      | Deploy guard rules and secret-handling checks for `scripts/deploy/` and the Edge Functions, plus the local-stack and loot-secret guards in `scripts/` |
+| `integration/` | Stack-backed tests of Edge Functions, RPCs, RLS, auth email (see `integration/AGENTS.md`)                                                             |
 
 ## For AI Agents
 
