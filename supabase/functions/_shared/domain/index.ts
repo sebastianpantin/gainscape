@@ -125,6 +125,7 @@ export {
   resolvePrescription,
   type UnsupportedPrescription,
 } from './program-prescription.ts';
+export { storableSnapshot, storableSnapshots } from './prescription-snapshot.ts';
 export {
   advanceProgram,
   finalDaySets,
