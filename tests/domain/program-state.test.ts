@@ -260,7 +260,7 @@ describe('fold rule 2: duplicate positions union-merge', () => {
     ];
     const state = programStateAt(MADCOW_5X5, madcow, facts);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(102.5, 9);
-    expect(missesOf(state, 'squat')).toBe(0);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(0);
   });
 
   it('a 5 × 5 split across two sessions at the same position is one complete 5 × 5', () => {
@@ -444,7 +444,7 @@ describe('fold rule 5: an ahead position implicitly skips', () => {
     ];
     const state = programStateAt(MADCOW_5X5, madcow, facts);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(100, 2);
-    expect(missesOf(state, 'squat')).toBe(0);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(0);
     expect(refOf(state, 'press', 'top')).toBeCloseTo(51.25, 9);
   });
 
@@ -504,7 +504,7 @@ describe('fold rule 7: mismatched refs and sets with no snapshot are ignored', (
     ];
     const state = programStateAt(MADCOW_5X5, madcow, facts);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(100, 2);
-    expect(missesOf(state, 'squat')).toBe(0);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(0);
     expect(refOf(state, 'bench', 'top')).toBeCloseTo(82, 9);
   });
 

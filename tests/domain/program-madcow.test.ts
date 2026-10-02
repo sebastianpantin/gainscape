@@ -345,7 +345,7 @@ describe('Madcow on-ramp with a miss or a skip (calendar week 4 is the peak)', (
     const facts = [...metMadcowWeeks(clock, [1, 2]), ...madcowWeek(clock, 3, { skip: ['mon'] })];
     const afterWeek3 = programStateAt(def, enrollment, facts);
     expect(refOf(afterWeek3, 'squat', 'top')).toBeCloseTo(97.5, 9);
-    expect(missesOf(afterWeek3, 'squat')).toBe(0);
+    expect(missesOf(afterWeek3, 'squat:top:endOfWeek')).toBe(0);
     const afterWeek4 = programStateAt(def, enrollment, [...facts, ...madcowWeek(clock, 4)]);
     expect(refOf(afterWeek4, 'squat', 'top')).toBeCloseTo(99.9375, 9);
   });
@@ -418,7 +418,7 @@ describe('Madcow unbound main lift', () => {
   it('treats the unbound row as neutral in the fold: the row top stays at its week 1 value 64.88 (70 × 0.975^3) with no miss', () => {
     const state = programStateAt(def, unbound, metMadcowWeeks(factClock(), [1, 2, 3, 4]));
     expect(refOf(state, 'row', 'top')).toBeCloseTo(64.88, 2);
-    expect(missesOf(state, 'row')).toBe(0);
+    expect(missesOf(state, 'row:top:endOfWeek')).toBe(0);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(102.5, 9);
   });
 });
@@ -441,7 +441,7 @@ describe('Madcow miss rule (holdOnMiss, judged on each lift top day)', () => {
     const facts = [...metMadcowWeeks(clock, [1, 2, 3]), ...madcowWeek(clock, 4, { mondayTopReps: { squat: 4 } })];
     const state = programStateAt(def, enrollment, facts);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(100, 2);
-    expect(missesOf(state, 'squat')).toBe(1);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(1);
   });
 
   it('the squat miss does not hold bench: bench still goes 80 → 82', () => {
@@ -449,7 +449,7 @@ describe('Madcow miss rule (holdOnMiss, judged on each lift top day)', () => {
     const facts = [...metMadcowWeeks(clock, [1, 2, 3]), ...madcowWeek(clock, 4, { mondayTopReps: { squat: 4 } })];
     const state = programStateAt(def, enrollment, facts);
     expect(refOf(state, 'bench', 'top')).toBeCloseTo(82, 9);
-    expect(missesOf(state, 'bench')).toBe(0);
+    expect(missesOf(state, 'bench:top:endOfWeek')).toBe(0);
   });
 
   it('a second miss in week 5 keeps the week 6 top at 100, with no automatic deload', () => {
@@ -461,7 +461,7 @@ describe('Madcow miss rule (holdOnMiss, judged on each lift top day)', () => {
     ];
     const state = programStateAt(def, enrollment, facts);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(100, 2);
-    expect(missesOf(state, 'squat')).toBe(2);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(2);
     expect(weightsOf(resolveDay(state, 6, 'mon'), 'mon-squat')).toEqual([50, 62.5, 75, 87.5, 100]);
   });
 
@@ -475,7 +475,7 @@ describe('Madcow miss rule (holdOnMiss, judged on each lift top day)', () => {
     ];
     const state = programStateAt(def, enrollment, facts);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(102.5, 2);
-    expect(missesOf(state, 'squat')).toBe(0);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(0);
   });
 
   it('a missed Friday triple does not judge the squat: week 5 top still 102.5', () => {
@@ -483,7 +483,7 @@ describe('Madcow miss rule (holdOnMiss, judged on each lift top day)', () => {
     const facts = [...metMadcowWeeks(clock, [1, 2, 3]), ...madcowWeek(clock, 4, { fridayTripleReps: { squat: 2 } })];
     const state = programStateAt(def, enrollment, facts);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(102.5, 9);
-    expect(missesOf(state, 'squat')).toBe(0);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(0);
   });
 
   it('a missed Wednesday squat set does not judge the squat: week 5 top still 102.5', () => {
@@ -497,7 +497,7 @@ describe('Madcow miss rule (holdOnMiss, judged on each lift top day)', () => {
     const facts = [...metMadcowWeeks(clock, [1, 2, 3]), ...madcowWeek(clock, 4, { wednesdayTopReps: { press: 4 } })];
     const state = programStateAt(def, enrollment, facts);
     expect(refOf(state, 'press', 'top')).toBeCloseTo(50, 2);
-    expect(missesOf(state, 'press')).toBe(1);
+    expect(missesOf(state, 'press:top:endOfWeek')).toBe(1);
     expect(refOf(state, 'deadlift', 'top')).toBeCloseTo(143.5, 9);
   });
 
@@ -515,7 +515,7 @@ describe('Madcow skipped top day', () => {
     const state = programStateAt(def, enrollment, facts);
     expect(state.position).toEqual(weekDay(5, 'mon'));
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(100, 2);
-    expect(missesOf(state, 'squat')).toBe(0);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(0);
   });
 
   it('a skipped Monday still lets the Wednesday lifts progress: press 50 → 51.25', () => {
@@ -532,7 +532,7 @@ describe('Madcow skipped top day', () => {
       ...madcowWeek(clock, 5, { skip: ['mon'] }),
     ];
     const state = programStateAt(def, enrollment, facts);
-    expect(missesOf(state, 'squat')).toBe(1);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(1);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(100, 2);
   });
 });

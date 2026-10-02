@@ -5,6 +5,7 @@ import {
   type ReferenceState,
   type ReferenceVar,
   type ResolvedSlot,
+  type RuleKey,
 } from '@domain/index.ts';
 
 export function slotOf(resolved: readonly ResolvedSlot[], slotId: string): PrescribedExercise {
@@ -40,6 +41,6 @@ export function refOf(state: ProgramState, lift: string, variable: ReferenceVar)
   return value as number;
 }
 
-export function missesOf(state: ProgramState, lift: string): number {
-  return state.consecutiveMisses[lift] ?? 0;
+export function missesOf(state: ProgramState, rule: RuleKey): number {
+  return state.consecutiveMisses[rule] ?? 0;
 }

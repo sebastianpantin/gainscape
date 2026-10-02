@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { programStateAt } from '@domain/index.ts';
+import { initialProgramState, programStateAt } from '@domain/index.ts';
 import { factClock, sessionFact } from './program-fixtures/facts.ts';
+import { MADCOW_5X5, madcowEnrollment } from './program-fixtures/madcow_5x5.ts';
 import { missesOf, refOf } from './program-fixtures/prescription-helpers.ts';
 import {
   kgEnrollment,
@@ -49,7 +50,7 @@ describe('a judged slot whose scheme cannot be resolved is neutral', () => {
     const facts = [sessionFact(clock.next(), { week: 1, day: 'a' }, metSets('a-bench', 'bench', 5, 3))];
     const state = programStateAt(UNSUPPORTED_JUDGED_SCHEMES, enrollment, facts);
     expect(refOf(state, 'bench', 'tm')).toBe(100);
-    expect(missesOf(state, 'bench')).toBe(0);
+    expect(missesOf(state, 'bench:tm:afterSession')).toBe(0);
   });
 
   it('logged sets on a week table with no row for week 2 neither miss nor deload: squat stays 100 with no miss', () => {
@@ -60,7 +61,7 @@ describe('a judged slot whose scheme cannot be resolved is neutral', () => {
     ];
     const state = programStateAt(UNSUPPORTED_JUDGED_SCHEMES, enrollment, facts);
     expect(refOf(state, 'squat', 'tm')).toBe(100);
-    expect(missesOf(state, 'squat')).toBe(0);
+    expect(missesOf(state, 'squat:tm:afterSession')).toBe(0);
   });
 
   it('records the unresolvable slot outcome as neutral on the day record', () => {
@@ -68,5 +69,48 @@ describe('a judged slot whose scheme cannot be resolved is neutral', () => {
     const facts = [sessionFact(clock.next(), { week: 1, day: 'a' }, metSets('a-bench', 'bench', 5, 3))];
     const [record] = programStateAt(UNSUPPORTED_JUDGED_SCHEMES, enrollment, facts).days;
     expect(record.outcomes.bench ?? 'neutral').toBe('neutral');
+  });
+});
+
+describe('consecutiveMisses is kept per rule, keyed lift:var:trigger', () => {
+  it('starts every rule of a lift at 0 under its own key', () => {
+    expect(initialProgramState(TWO_RULES_ONE_LIFT, twoRules).consecutiveMisses).toEqual({
+      'squat:tm:endOfWeek': 0,
+      'squat:tm:afterSession': 0,
+    });
+  });
+
+  it('keys Madcow counters by lift, var and trigger', () => {
+    expect(Object.keys(initialProgramState(MADCOW_5X5, madcowEnrollment()).consecutiveMisses).sort()).toEqual([
+      'bench:top:endOfWeek',
+      'deadlift:top:endOfWeek',
+      'press:top:endOfWeek',
+      'row:top:endOfWeek',
+      'squat:top:endOfWeek',
+    ]);
+  });
+
+  it('a met after-session day does not reset the weekly rule miss: A missed, B met gives endOfWeek 1, afterSession 0', () => {
+    const clock = factClock();
+    const facts = [
+      sessionFact(clock.next(), { week: 1, day: 'a' }, metSets('a-squat', 'squat', 3, 4)),
+      sessionFact(clock.next(), { week: 1, day: 'b' }, metSets('b-squat', 'squat')),
+    ];
+    const state = programStateAt(TWO_RULES_ONE_LIFT, twoRules, facts);
+    expect(missesOf(state, 'squat:tm:endOfWeek')).toBe(1);
+    expect(missesOf(state, 'squat:tm:afterSession')).toBe(0);
+  });
+
+  it('each rule counts its own misses: B missed twice and A missed once give afterSession 2, endOfWeek 1', () => {
+    const clock = factClock();
+    const facts = [
+      sessionFact(clock.next(), { week: 1, day: 'a' }, metSets('a-squat', 'squat')),
+      sessionFact(clock.next(), { week: 1, day: 'b' }, metSets('b-squat', 'squat', 3, 4)),
+      sessionFact(clock.next(), { week: 2, day: 'a' }, metSets('a-squat', 'squat', 3, 4)),
+      sessionFact(clock.next(), { week: 2, day: 'b' }, metSets('b-squat', 'squat', 3, 4)),
+    ];
+    const state = programStateAt(TWO_RULES_ONE_LIFT, twoRules, facts);
+    expect(missesOf(state, 'squat:tm:afterSession')).toBe(2);
+    expect(missesOf(state, 'squat:tm:endOfWeek')).toBe(1);
   });
 });
