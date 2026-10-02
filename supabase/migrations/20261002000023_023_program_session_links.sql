@@ -12,7 +12,7 @@ alter table public.sets
   add column prescription_ref text,
   add column prescribed_weight_kg numeric(6, 2) check (prescribed_weight_kg between 0 and 2000),
   add column prescribed_reps int check (prescribed_reps between 1 and 100),
-  add column prescribed_min_reps int,
+  add column prescribed_min_reps int check (prescribed_min_reps between 0 and 100),
   add column prescribed_amrap boolean,
   add constraint prescription_snapshot_is_complete check (
     (prescription_ref is null and prescribed_weight_kg is null and prescribed_reps is null
