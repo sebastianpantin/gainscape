@@ -247,6 +247,14 @@ export const DEFAULT_STEPS: readonly Step[] = Object.freeze([
 
 export const HISTORY_ONLY_STEPS: readonly Step[] = Object.freeze([resolveSets]);
 
+export function historyOnlySummary(sessionId: string): SessionSummary {
+  return { sessionId, xpBySkill: {}, levelUps: [], prs: [], drops: [], historyOnly: true };
+}
+
+export function pendingSummary(sessionId: string): Pick<SessionSummary, 'sessionId' | 'drops'> {
+  return { sessionId, drops: [] };
+}
+
 function xpGainedBySkillKey(before: UserState, after: UserState, catalog: Catalog): Record<string, number> {
   const xpBySkill: Record<string, number> = {};
   for (const skill of skillsInDisplayOrder(catalog)) {

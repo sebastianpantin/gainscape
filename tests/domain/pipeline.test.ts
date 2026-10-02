@@ -9,9 +9,11 @@ import {
   type EffortInput,
   type ExerciseDef,
   HISTORY_ONLY_STEPS,
+  historyOnlySummary,
   KindMismatchError,
   liftExerciseFor,
   type LiftSetInput,
+  pendingSummary,
   processSession,
   REP_MAX_SLOT_COUNT,
   type SessionInput,
@@ -397,5 +399,22 @@ describe('writableSetFor', () => {
     expect(() => writableSetFor(aSet('pull-up', 5, 5, hard), exercise('pull-up'), 80)).toThrow(
       BodyweightLoadNotZeroError,
     );
+  });
+});
+
+describe('session summaries', () => {
+  it('marks a history-only session with nothing earned', () => {
+    expect(historyOnlySummary('session-1')).toEqual({
+      sessionId: 'session-1',
+      xpBySkill: {},
+      levelUps: [],
+      prs: [],
+      drops: [],
+      historyOnly: true,
+    });
+  });
+
+  it('starts a replayed session with its id and no drops', () => {
+    expect(pendingSummary('session-1')).toEqual({ sessionId: 'session-1', drops: [] });
   });
 });
