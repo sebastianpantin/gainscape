@@ -97,7 +97,7 @@ export function mergeFetchedFacts(
   if (ticket.enrollmentId !== cache.enrollmentId || ticket.generation !== cache.generation) return cache;
   const fetchedIds = new Set(serverFacts.map((fact) => fact.id));
   const localAppends = cache.localAppends.filter(
-    (append) => !fetchedIds.has(append.fact.id) && append.appendedAt > ticket.startedAt,
+    (append) => !fetchedIds.has(append.fact.id) && append.appendedAt >= ticket.startedAt,
   );
   return { ...cache, serverFacts, localAppends };
 }
