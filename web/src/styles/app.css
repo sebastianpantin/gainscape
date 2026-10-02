@@ -678,6 +678,26 @@ a:focus-visible {
   z-index: 5;
 }
 
+.rest-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.rest-clock {
+  min-width: 4ch;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-xp);
+  text-shadow: var(--text-shadow);
+  font-variant-numeric: tabular-nums;
+}
+
+.rest-timer.over .rest-clock {
+  color: var(--color-accent);
+}
+
 .exercise-picker {
   display: flex;
   flex-direction: column;

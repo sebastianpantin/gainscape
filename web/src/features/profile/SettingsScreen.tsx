@@ -12,6 +12,8 @@ import {
 import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
 import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { REST_CHOICES_S, REST_OFF, restClock } from '../../lib/rest-timer-rules.ts';
+import { deviceStorage, readRestState, saveRestState } from '../../lib/rest-timer-store.ts';
 import {
   changeTimezone,
   cooldownStartFor,
@@ -107,6 +109,26 @@ interface SectionProps {
   onSaved: (update: ProfileUpdate) => void;
 }
 
+const REST_OPTIONS = REST_CHOICES_S.map((restS) => ({
+  value: String(restS),
+  label: restS === REST_OFF ? 'Off' : restClock(restS),
+}));
+
+function RestChoice({ userId }: { userId: string }) {
+  const [restS, setRestS] = useState(() => readRestState(deviceStorage(), userId).restS);
+  const pick = (value: string) => {
+    const picked = Number(value);
+    setRestS(picked);
+    saveRestState(deviceStorage(), userId, { ...readRestState(deviceStorage(), userId), restS: picked });
+  };
+  return (
+    <>
+      <Choice label="Rest timer" options={REST_OPTIONS} current={String(restS)} disabled={false} onPick={pick} />
+      <span className="hint">Starts when you finish a set. Saved on this device only.</span>
+    </>
+  );
+}
+
 function TrainingSection({ userId, profile, onSaved }: SectionProps) {
   const { applyPreferences } = usePreferences();
   const { save, pending, problem } = useOptimisticProfileSave<'unitPref' | 'effortInputMode'>(
@@ -135,6 +157,7 @@ function TrainingSection({ userId, profile, onSaved }: SectionProps) {
         onPick={(effortInputMode) => save({ effortInputMode })}
       />
       <span className="hint">{EFFORT_OPTIONS.find((option) => option.value === profile.effortInputMode)?.hint}</span>
+      <RestChoice userId={userId} />
       {problem && (
         <p className="problem" role="alert">
           {problem}
