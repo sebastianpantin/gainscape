@@ -1,4 +1,3 @@
-import { authenticatedUserId } from '../_shared/auth.ts';
 import { sql, type Transaction } from '../_shared/db.ts';
 import {
   type Catalog,
@@ -11,10 +10,9 @@ import {
   type WritableSet,
   writableSetFor,
 } from '../_shared/domain/index.ts';
-import { asHttpError } from '../_shared/http-errors.ts';
-import { HttpError, jsonResponse, readJsonBody } from '../_shared/http.ts';
+import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
-import { serve } from '../_shared/serve.ts';
+import { serveAuthenticated } from '../_shared/serve.ts';
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { rollNewSessionLoot } from '../_shared/stores/loot.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
@@ -148,8 +146,4 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
   });
 }
 
-serve(async (request) => {
-  const userId = await authenticatedUserId(request);
-  const payload = parseCompleteSessionPayload(await readJsonBody(request));
-  return jsonResponse(await completeSession(userId, payload));
-}, asHttpError);
+serveAuthenticated(parseCompleteSessionPayload, completeSession);

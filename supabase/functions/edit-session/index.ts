@@ -1,4 +1,3 @@
-import { authenticatedUserId } from '../_shared/auth.ts';
 import { sql } from '../_shared/db.ts';
 import {
   DEFAULT_BALANCE,
@@ -9,10 +8,9 @@ import {
   type StoredSet,
   writableSetFor,
 } from '../_shared/domain/index.ts';
-import { asHttpError } from '../_shared/http-errors.ts';
-import { HttpError, jsonResponse, readJsonBody } from '../_shared/http.ts';
+import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
-import { serve } from '../_shared/serve.ts';
+import { serveAuthenticated } from '../_shared/serve.ts';
 import type { SetPayload } from '../_shared/session-payload.ts';
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
@@ -96,8 +94,4 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
   });
 }
 
-serve(async (request) => {
-  const userId = await authenticatedUserId(request);
-  const payload = parseEditSessionPayload(await readJsonBody(request));
-  return jsonResponse(await editSession(userId, payload));
-}, asHttpError);
+serveAuthenticated(parseEditSessionPayload, editSession);
