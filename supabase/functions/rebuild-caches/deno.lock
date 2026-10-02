@@ -2,7 +2,8 @@
   "version": "5",
   "specifiers": {
     "npm:@supabase/supabase-js@2.117.2": "2.117.2",
-    "npm:postgres@3.4.9": "3.4.9"
+    "npm:postgres@3.4.9": "3.4.9",
+    "npm:zod@4.6.5": "4.6.5"
   },
   "npm": {
     "@supabase/auth-js@2.117.2": {
@@ -58,6 +59,9 @@
     },
     "tslib@2.8.1": {
       "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
+    },
+    "zod@4.6.5": {
+      "integrity": "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="
     }
   }
 }

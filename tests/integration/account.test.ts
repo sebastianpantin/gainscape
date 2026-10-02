@@ -352,7 +352,18 @@ describe('delete-account', () => {
   it('refuses a malformed body', async () => {
     const response = await post('delete-account', owner.accessToken, {});
     expect(response.status).toBe(422);
-    expect(response.body.error).toBe('invalid_body');
+    expect(response.body.error).toBe('invalid_payload');
+  });
+
+  it('refuses a body with an unknown key', async () => {
+    const response = await post('delete-account', owner.accessToken, {
+      confirmUsername: owner.username,
+      password: TEST_PASSWORD,
+      keepData: true,
+    });
+    expect(response.status).toBe(422);
+    expect(response.body.error).toBe('invalid_payload');
+    expect((await rowCounts(owner.id)).profiles).toBe(1);
   });
 
   it('refuses a body that is not JSON', async () => {
@@ -365,8 +376,8 @@ describe('delete-account', () => {
       },
       body: '{',
     });
-    expect(response.status, response.rawBody).toBe(422);
-    expect(JSON.parse(response.rawBody).error).toBe('invalid_body');
+    expect(response.status, response.rawBody).toBe(400);
+    expect(JSON.parse(response.rawBody).error).toBe('invalid_json');
     expect((await rowCounts(owner.id)).profiles).toBe(1);
   });
 
