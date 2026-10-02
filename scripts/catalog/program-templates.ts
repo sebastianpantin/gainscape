@@ -302,7 +302,7 @@ export function renderProgramTemplates(templates: readonly ProgramTemplate[]): s
       (definition) =>
         `  (${sqlText(definition.key)}, ${definition.version}, ${sqlText(definition.name)}, ${sqlText(JSON.stringify(definition))}::jsonb)`,
     );
-  return `insert into public.program_templates (key, version, name, definition) values\n${rows.join(',\n')}\non conflict (key, version) do update set name = excluded.name, definition = excluded.definition;`;
+  return `insert into public.program_templates (key, version, name, definition) values\n${rows.join(',\n')}\non conflict (key, version) do nothing;`;
 }
 
 export const PROGRAM_TEMPLATES_LOCK_PATH = join(import.meta.dirname, '../../catalog/program-templates.lock.json');
