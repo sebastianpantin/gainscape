@@ -1,8 +1,7 @@
 import { exerciseLabels, type LiftExercise } from '../../lib/catalog-rules.ts';
 import type { CollectionData } from '../../lib/collection-data.ts';
-import { strengthText } from '../../lib/collection-rules.ts';
+import { emptySlots, strengthText } from '../../lib/collection-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { emptySlots } from './record-slots.ts';
 import { RecordSlots } from './RecordSlots.tsx';
 
 interface ExerciseRecordCardProps {

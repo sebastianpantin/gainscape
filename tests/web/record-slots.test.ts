@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptySlots, slotClass, slotsByReps, slotText } from '../../web/src/features/collection/record-slots.ts';
+import { slotClass, slotsByReps, slotText } from '../../web/src/features/collection/record-slots.ts';
 
 describe('slotClass', () => {
   it('marks an empty slot, an exact rep max and one beaten by a higher-rep set', () => {
@@ -33,11 +33,5 @@ describe('slotsByReps', () => {
     expect(slots[1]).toBeNull();
     expect(slots[2]).toBe(three);
     expect(slots.slice(3).every((slot) => slot === null)).toBe(true);
-  });
-});
-
-describe('emptySlots', () => {
-  it('has one empty slot per rep max', () => {
-    expect(emptySlots()).toEqual(Array.from({ length: 10 }, () => null));
   });
 });

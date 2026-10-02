@@ -1,6 +1,7 @@
 import type { CardioInterval, EffortInput, EffortInputType, RirSource, SessionSummary } from '@domain/types.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { type InvokeOutcome, retryDelayMs } from './function-client-rules.ts';
+import { nullableNumber } from './rows.ts';
 
 export const HISTORY_PAGE_SIZE = 50;
 
@@ -135,10 +136,6 @@ function toHistorySession(row: SessionRow): HistorySession {
     summary: row.summary,
     setCount: row.sets[0]?.count ?? 0,
   };
-}
-
-function nullableNumber(value: number | string | null): number | null {
-  return value === null ? null : Number(value);
 }
 
 function toStoredSet(row: SetRow): StoredSetRow {

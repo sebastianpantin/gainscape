@@ -25,7 +25,3 @@ export function slotsByReps<S extends { reps: number }>(repMaxes: readonly S[]):
     (_, index) => repMaxes.find((slot) => slot.reps === index + 1) ?? null,
   );
 }
-
-export function emptySlots(): null[] {
-  return Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
-}

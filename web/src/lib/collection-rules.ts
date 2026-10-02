@@ -4,6 +4,7 @@ import { type Exercise, isLiftExercise, type LiftExercise, type LoadType } from 
 import { rateLimitedMessage } from './rate-limit.ts';
 import type { CollectionData, ExerciseStrengthView, RepMaxSlotView } from './collection-data.ts';
 import type { UnitPref } from './profile-rules.ts';
+import { nullableNumber } from './rows.ts';
 import { formatWeight } from './units.ts';
 
 export const COLLECTION_COLUMNS = {
@@ -28,19 +29,20 @@ export interface CollectionRows {
   cardioRecords: { exercise_id: string; kind: CardioRecordKind; value: number | string }[];
 }
 
+export function emptySlots<Slot>(): (Slot | null)[] {
+  return Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
+}
+
 export function strengthByExerciseFrom(rows: readonly StrengthRow[]): Map<string, ExerciseStrengthView> {
   return new Map(
-    rows.map((row) => [
-      row.exercise_id,
-      { e1rmKg: row.e1rm_kg === null ? null : Number(row.e1rm_kg), repsCapacity: row.reps_capacity },
-    ]),
+    rows.map((row) => [row.exercise_id, { e1rmKg: nullableNumber(row.e1rm_kg), repsCapacity: row.reps_capacity }]),
   );
 }
 
 export function collectionDataFrom(rows: CollectionRows): CollectionData {
   const repMaxesByExercise = new Map<string, (RepMaxSlotView | null)[]>();
   for (const row of rows.repMaxes) {
-    const slots = repMaxesByExercise.get(row.exercise_id) ?? Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
+    const slots = repMaxesByExercise.get(row.exercise_id) ?? emptySlots<RepMaxSlotView>();
     slots[row.reps - 1] = { loadKg: Number(row.load_kg), exact: row.exact_set_id !== null };
     repMaxesByExercise.set(row.exercise_id, slots);
   }

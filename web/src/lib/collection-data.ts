@@ -10,6 +10,7 @@ import {
   strengthByExerciseFrom,
 } from './collection-rules.ts';
 import { withFriendlyRateLimit } from './rate-limit.ts';
+import { nullableNumber } from './rows.ts';
 import { supabase } from './supabase.ts';
 
 export interface RepMaxSlotView {
@@ -67,17 +68,17 @@ interface StrengthStateRow {
   fallback_max: number | string | null;
 }
 
-function strengthValue(value: number | string | null): number | null {
-  return value === null ? null : Number(value);
-}
-
 export async function fetchStrengthState(asOf: string, windowDays: number): Promise<StrengthState> {
   const { data, error } = await supabase.rpc('exercise_strength_state', { as_of: asOf, window_days: windowDays });
   if (error) throw error;
   return Object.fromEntries(
     (data as StrengthStateRow[]).map((row) => [
       row.exercise_id,
-      { windowMax: strengthValue(row.window_max), fallbackMax: strengthValue(row.fallback_max), hasPriorSession: true },
+      {
+        windowMax: nullableNumber(row.window_max),
+        fallbackMax: nullableNumber(row.fallback_max),
+        hasPriorSession: true,
+      },
     ]),
   );
 }

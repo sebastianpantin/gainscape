@@ -5,6 +5,7 @@ import {
   collectionDataFrom,
   collectionPercent,
   countCollection,
+  emptySlots,
   pinProblemText,
   strengthText,
 } from '../../web/src/lib/collection-rules.ts';
@@ -138,5 +139,11 @@ describe('collectionDataFrom', () => {
 
   it('starts the first pin at position zero when nothing is pinned', () => {
     expect(collectionDataFrom({ ...rows, pins: [] }).nextPinPosition).toBe(0);
+  });
+});
+
+describe('emptySlots', () => {
+  it('has one empty slot per rep max', () => {
+    expect(emptySlots()).toEqual(Array.from({ length: 10 }, () => null));
   });
 });
