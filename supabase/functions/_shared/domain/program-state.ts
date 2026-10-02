@@ -69,6 +69,13 @@ export interface DayRecord {
   status: 'completed' | 'skipped';
   outcomes: Readonly<Record<string, LiftOutcome>>;
   judgedSets: readonly FactSet[];
+  afterSession: AfterSessionEffect | null;
+}
+
+export interface AfterSessionEffect {
+  refsBefore: ProgramReferences;
+  missesBefore: Readonly<Record<string, number>>;
+  changes: readonly ReferenceChange[];
 }
 
 export interface ProgramState extends ScheduleCursor {
