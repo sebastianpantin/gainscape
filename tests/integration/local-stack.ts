@@ -1,6 +1,5 @@
-import { execFileSync } from 'node:child_process';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
@@ -18,37 +17,18 @@ import {
   type SessionSummary,
   sfc32FromSeed,
 } from '@domain/index.ts';
+import { currentStackEnvMismatch, localStackStatus, type LocalStackStatus } from '../../scripts/local-stack.ts';
 
-interface LocalStackEnv {
-  API_URL: string;
-  DB_URL: string;
-  FUNCTIONS_URL: string;
-  ANON_KEY: string;
-  SERVICE_ROLE_KEY: string;
-  MAILPIT_URL: string;
-}
-
-const stackEnvPath = join(import.meta.dirname, '../../.stack.env');
 const functionsEnvPath = join(import.meta.dirname, '../../supabase/functions/.env.local');
 
 function assertStackEnvLoaded(): void {
-  if (!existsSync(stackEnvPath)) return;
-  const expected = /^SUPABASE_PROJECT_ID=(.*)$/m.exec(readFileSync(stackEnvPath, 'utf8'))?.[1]?.trim();
-  if (expected && process.env.SUPABASE_PROJECT_ID !== expected) {
-    throw new Error(
-      `.stack.env sets SUPABASE_PROJECT_ID=${expected} but the environment has ${process.env.SUPABASE_PROJECT_ID ?? 'none'}; ` +
-        'run through make, or `set -a; . ./.stack.env; set +a` first, so tests never reach another stack',
-    );
-  }
+  const mismatch = currentStackEnvMismatch();
+  if (mismatch) throw new Error(`${mismatch}, so tests never reach another stack`);
 }
 
-function readLocalStackEnv(): LocalStackEnv {
+function readLocalStackEnv(): LocalStackStatus {
   assertStackEnvLoaded();
-  const output = execFileSync('npx', ['supabase', 'status', '-o', 'json'], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-  });
-  return JSON.parse(output.slice(output.indexOf('{')));
+  return localStackStatus();
 }
 
 export const env = readLocalStackEnv();

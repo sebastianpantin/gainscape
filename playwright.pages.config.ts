@@ -1,18 +1,13 @@
-import { execFileSync } from 'node:child_process';
 import { defineConfig, devices } from '@playwright/test';
 import { assertStackEnvironment } from './e2e/support/stack-guard.ts';
+import { localStackStatus } from './scripts/local-stack.ts';
 import { previewPort } from './web/build/ports.ts';
 
 assertStackEnvironment();
 
 const pagesPort = previewPort() + 1;
 const pagesUrl = `http://127.0.0.1:${pagesPort}`;
-const status = JSON.parse(
-  execFileSync('npx', ['supabase', 'status', '-o', 'json'], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-  }).replace(/^[^{]*/, ''),
-);
+const status = localStackStatus();
 
 export default defineConfig({
   testDir: 'e2e/pages',
