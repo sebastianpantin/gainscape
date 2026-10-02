@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import { CARDIO_EFFORT_LEVELS } from '../../supabase/functions/_shared/domain/types.ts';
-import { type CatalogData, type CatalogExercise, catalogNames } from './load.ts';
+import { type CatalogData, type CatalogExercise, type CatalogItem, catalogNames } from './load.ts';
 
 const DENYLIST_PATH = join(import.meta.dirname, '../../tests/ip-denylist.txt');
 
@@ -87,34 +87,21 @@ function checkModalityFields(exercise: CatalogExercise, problems: string[]): voi
   }
 }
 
-export function catalogProblems(catalog: CatalogData, denylist: readonly string[]): string[] {
-  const problems: string[] = [];
-  const days = catalog.programs.flatMap((program) => program.days.map((day) => ({ program, day })));
-  checkKeysAndNames('skill', catalog.skills, problems);
-  checkKeysAndNames('exercise', catalog.exercises, problems);
-  checkKeysAndNames('program', catalog.programs, problems);
-  for (const program of catalog.programs) checkKeysAndNames(`program ${program.key} day`, program.days, problems);
-  checkKeysAndNames('item', catalog.items, problems);
-  checkKeysAndNames('drop table', catalog.dropTables, problems);
-  checkKeysAndNames(
-    'recipe',
-    catalog.recipes.map((recipe) => ({ key: recipe.key, name: recipe.key })),
-    problems,
-  );
+function programDays(catalog: CatalogData) {
+  return catalog.programs.flatMap((program) => program.days.map((day) => ({ program, day })));
+}
 
-  const generatedNames = [
-    ...catalog.skills.map((row) => catalogNames.skill(row.key)),
-    ...catalog.exercises.map((row) => catalogNames.exercise(row.key)),
-    ...catalog.programs.map((row) => catalogNames.program(row.key)),
-    ...days.map(({ program, day }) => catalogNames.programDay(program.key, day.key)),
-    ...catalog.items.map((row) => catalogNames.item(row.key)),
-    ...catalog.dropTables.map((row) => catalogNames.dropTable(row.key)),
-    ...catalog.recipes.map((row) => catalogNames.recipe(row.key)),
-  ];
-  for (const name of duplicates(generatedNames)) problems.push(`generated id name "${name}" is not unique`);
+function exercisesByKeyOf(catalog: CatalogData): Map<string, CatalogExercise> {
+  return new Map(catalog.exercises.map((exercise) => [exercise.key, exercise]));
+}
 
+function itemsByKeyOf(catalog: CatalogData): Map<string, CatalogItem> {
+  return new Map(catalog.items.map((item) => [item.key, item]));
+}
+
+function checkExercises(catalog: CatalogData, problems: string[]): void {
   const skillsByKey = new Map(catalog.skills.map((skill) => [skill.key, skill]));
-  const exercisesByKey = new Map(catalog.exercises.map((exercise) => [exercise.key, exercise]));
+  const exercisesByKey = exercisesByKeyOf(catalog);
   for (const exercise of catalog.exercises) {
     checkModalityFields(exercise, problems);
     for (const share of exercise.shares) {
@@ -139,7 +126,11 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
       problems.push(`exercise "${exercise.key}" requires an unlock but is no variation`);
     }
   }
-  for (const { program, day } of days) {
+}
+
+function checkProgramDays(catalog: CatalogData, problems: string[]): void {
+  const exercisesByKey = exercisesByKeyOf(catalog);
+  for (const { program, day } of programDays(catalog)) {
     for (const entry of day.exercises) {
       const exercise = exercisesByKey.get(entry.exercise);
       if (exercise === undefined) {
@@ -151,7 +142,9 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
       }
     }
   }
+}
 
+function checkGear(catalog: CatalogData, problems: string[]): void {
   if (catalog.gearTiers.join() !== ITEM_TIERS.join()) {
     problems.push(
       `gear tiers [${catalog.gearTiers.join(', ')}] must match ITEM_TIERS [${ITEM_TIERS.join(', ')}] in order`,
@@ -162,8 +155,10 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
       `gear slots [${catalog.gearSlots.join(', ')}] must match GEAR_SLOTS [${GEAR_SLOTS.join(', ')}] in order`,
     );
   }
+}
 
-  const itemsByKey = new Map(catalog.items.map((item) => [item.key, item]));
+function checkItems(catalog: CatalogData, problems: string[]): void {
+  const exercisesByKey = exercisesByKeyOf(catalog);
   const iconKinds = new Set<string>(ITEM_ICON_KINDS);
   for (const item of catalog.items) {
     if (!iconKinds.has(item.icon)) problems.push(`item "${item.key}" has unknown icon "${item.icon}"`);
@@ -189,19 +184,28 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
       );
     }
   }
+}
 
-  const activeItem = (key: string, where: string) => {
-    const item = itemsByKey.get(key);
-    if (item === undefined) problems.push(`${where} references unknown item "${key}"`);
-    else if (item.retired) problems.push(`${where} uses retired item "${key}"`);
-  };
+function checkActiveItem(
+  itemsByKey: ReadonlyMap<string, CatalogItem>,
+  key: string,
+  where: string,
+  problems: string[],
+): void {
+  const item = itemsByKey.get(key);
+  if (item === undefined) problems.push(`${where} references unknown item "${key}"`);
+  else if (item.retired) problems.push(`${where} uses retired item "${key}"`);
+}
+
+function checkDropTables(catalog: CatalogData, problems: string[]): void {
+  const itemsByKey = itemsByKeyOf(catalog);
   for (const table of catalog.dropTables) {
     for (const entry of table.entries) {
       if (table.retired) {
         if (!itemsByKey.has(entry.item))
           problems.push(`drop table "${table.key}" references unknown item "${entry.item}"`);
       } else {
-        activeItem(entry.item, `drop table "${table.key}"`);
+        checkActiveItem(itemsByKey, entry.item, `drop table "${table.key}"`, problems);
       }
       if (!inRange(entry.weight, 1, MAX_WEIGHT)) {
         problems.push(`drop table "${table.key}" entry "${entry.item}" weight must be an integer in 1-${MAX_WEIGHT}`);
@@ -220,14 +224,17 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
       problems.push(`drop table "${key}" is required`);
     }
   }
+}
 
+function checkRecipes(catalog: CatalogData, problems: string[]): void {
+  const itemsByKey = itemsByKeyOf(catalog);
   for (const recipe of catalog.recipes) {
-    activeItem(recipe.output, `recipe "${recipe.key}" output`);
+    checkActiveItem(itemsByKey, recipe.output, `recipe "${recipe.key}" output`, problems);
     if (!inRange(recipe.outputQuantity, 1, MAX_QUANTITY)) {
       problems.push(`recipe "${recipe.key}" output quantity must be 1-${MAX_QUANTITY}`);
     }
     for (const input of recipe.inputs) {
-      activeItem(input.item, `recipe "${recipe.key}" input`);
+      checkActiveItem(itemsByKey, input.item, `recipe "${recipe.key}" input`, problems);
       if (!inRange(input.quantity, 1, MAX_QUANTITY)) {
         problems.push(`recipe "${recipe.key}" input "${input.item}" quantity must be 1-${MAX_QUANTITY}`);
       }
@@ -238,12 +245,14 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
       problems.push(`recipe "${recipe.key}" lists input "${item}" twice`);
     }
   }
+}
 
+function checkDenylist(catalog: CatalogData, denylist: readonly string[], problems: string[]): void {
   const texts = [
     ...catalog.skills.flatMap((row) => [row.key, row.name]),
     ...catalog.exercises.flatMap((row) => [row.key, row.name]),
     ...catalog.programs.flatMap((row) => [row.key, row.name]),
-    ...days.flatMap(({ day }) => [day.key, day.name]),
+    ...programDays(catalog).flatMap(({ day }) => [day.key, day.name]),
     ...catalog.items.flatMap((row) => [row.key, row.name, row.description]),
     ...catalog.dropTables.flatMap((row) => [row.key, row.name]),
     ...catalog.recipes.map((row) => row.key),
@@ -254,6 +263,40 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
       problems.push(`"${text}" matches denylisted term "${term}"`);
     }
   }
+}
+
+export function catalogProblems(catalog: CatalogData, denylist: readonly string[]): string[] {
+  const problems: string[] = [];
+  checkKeysAndNames('skill', catalog.skills, problems);
+  checkKeysAndNames('exercise', catalog.exercises, problems);
+  checkKeysAndNames('program', catalog.programs, problems);
+  for (const program of catalog.programs) checkKeysAndNames(`program ${program.key} day`, program.days, problems);
+  checkKeysAndNames('item', catalog.items, problems);
+  checkKeysAndNames('drop table', catalog.dropTables, problems);
+  checkKeysAndNames(
+    'recipe',
+    catalog.recipes.map((recipe) => ({ key: recipe.key, name: recipe.key })),
+    problems,
+  );
+
+  const generatedNames = [
+    ...catalog.skills.map((row) => catalogNames.skill(row.key)),
+    ...catalog.exercises.map((row) => catalogNames.exercise(row.key)),
+    ...catalog.programs.map((row) => catalogNames.program(row.key)),
+    ...programDays(catalog).map(({ program, day }) => catalogNames.programDay(program.key, day.key)),
+    ...catalog.items.map((row) => catalogNames.item(row.key)),
+    ...catalog.dropTables.map((row) => catalogNames.dropTable(row.key)),
+    ...catalog.recipes.map((row) => catalogNames.recipe(row.key)),
+  ];
+  for (const name of duplicates(generatedNames)) problems.push(`generated id name "${name}" is not unique`);
+
+  checkExercises(catalog, problems);
+  checkProgramDays(catalog, problems);
+  checkGear(catalog, problems);
+  checkItems(catalog, problems);
+  checkDropTables(catalog, problems);
+  checkRecipes(catalog, problems);
+  checkDenylist(catalog, denylist, problems);
   return problems;
 }
 
