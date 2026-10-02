@@ -223,7 +223,7 @@ function scopeOutcome(
   inScope: (position: Position) => boolean,
 ): LiftOutcome {
   return state.days
-    .filter((record) => record.status === 'completed' && inScope(record.position))
+    .filter((record) => record.epoch === state.epoch && record.status === 'completed' && inScope(record.position))
     .reduce<LiftOutcome>(
       (outcome, record) =>
         worseOutcome(
@@ -280,12 +280,16 @@ function withCompletedDay(definition: ProgramDefinition, completedDays: readonly
   return [...completedDays, dayKey].sort((a, b) => dayIndexOf(definition, a) - dayIndexOf(definition, b));
 }
 
-function hasRecord(state: ProgramState, position: Position): boolean {
-  return state.days.some((record) => samePosition(record.position, position));
+function findRecord(state: ProgramState, position: Position): DayRecord | undefined {
+  return state.days.find((record) => record.epoch === state.epoch && samePosition(record.position, position));
 }
 
-function skippedRecord(position: Position): DayRecord {
-  return { position, status: 'skipped', outcomes: {}, judgedSets: [] };
+function hasRecord(state: ProgramState, position: Position): boolean {
+  return findRecord(state, position) !== undefined;
+}
+
+function skippedRecord(epoch: number, position: Position): DayRecord {
+  return { epoch, position, status: 'skipped', outcomes: {}, judgedSets: [] };
 }
 
 function skipUnfinishedDays(context: FoldContext, state: ProgramState): ProgramState {
@@ -293,7 +297,7 @@ function skipUnfinishedDays(context: FoldContext, state: ProgramState): ProgramS
     .filter((key) => !state.completedDays.includes(key))
     .map((key) => positionAt(state.position, key))
     .filter((position) => !hasRecord(state, position));
-  return { ...state, days: [...state.days, ...pending.map(skippedRecord)] };
+  return { ...state, days: [...state.days, ...pending.map((position) => skippedRecord(state.epoch, position))] };
 }
 
 function advanceToWeekOf(context: FoldContext, state: ProgramState, target: Position): ProgramState {
@@ -301,7 +305,7 @@ function advanceToWeekOf(context: FoldContext, state: ProgramState, target: Posi
   if (isRotationPosition(next.position) && isRotationPosition(target)) {
     const skipped: DayRecord[] = [];
     for (let index = next.position.index; index < target.index; index += 1) {
-      if (!hasRecord(next, { index })) skipped.push(skippedRecord({ index }));
+      if (!hasRecord(next, { index })) skipped.push(skippedRecord(next.epoch, { index }));
     }
     return { ...next, days: [...next.days, ...skipped], position: { index: target.index } };
   }
@@ -344,12 +348,13 @@ function recordDay(
   position: Position,
   sets: readonly FactSet[] | null,
 ): ProgramState {
-  const existing = state.days.find((record) => samePosition(record.position, position));
-  if (sets === null) return existing ? state : { ...state, days: [...state.days, skippedRecord(position)] };
+  const existing = findRecord(state, position);
+  if (sets === null)
+    return existing ? state : { ...state, days: [...state.days, skippedRecord(state.epoch, position)] };
   const judgedSets = mergeBestSets(context, existing?.judgedSets ?? [], judgedSetsOf(context, position, sets));
   const merged: SessionFact = { kind: 'session', id: '', at: '', position, sets: judgedSets };
   const outcomes = liftOutcomes(context.definition, context.enrollment, merged);
-  const record: DayRecord = { position, status: 'completed', outcomes, judgedSets };
+  const record: DayRecord = { epoch: state.epoch, position, status: 'completed', outcomes, judgedSets };
   const days = existing
     ? state.days.map((candidate) => (candidate === existing ? record : candidate))
     : [...state.days, record];
@@ -385,10 +390,11 @@ function applyDayFact(
 }
 
 function jumpTo(definition: ProgramDefinition, state: ProgramState, position: Position): ProgramState {
-  if (isRotationPosition(position)) return { ...state, position, completedDays: [] };
+  const epoch = state.epoch + 1;
+  if (isRotationPosition(position)) return { ...state, epoch, position, completedDays: [] };
   const targetIndex = dayIndexOf(definition, position.day);
   const skippedBefore = definition.schedule.days.slice(0, Math.max(targetIndex, 0)).map((day) => day.key);
-  return { ...state, position, completedDays: skippedBefore };
+  return { ...state, epoch, position, completedDays: skippedBefore };
 }
 
 export function advanceProgram(
