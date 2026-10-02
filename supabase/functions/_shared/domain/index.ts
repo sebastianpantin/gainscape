@@ -139,6 +139,7 @@ export {
   advanceProgram,
   isSetMet,
   liftOutcomes,
+  ruleKeyOf,
   type LoggedDay,
   type LoggedLoad,
   WEEKS_BACK_FACTOR,
