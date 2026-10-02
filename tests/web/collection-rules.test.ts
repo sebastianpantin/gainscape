@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Exercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
 import type { CollectionData } from '../../web/src/lib/collection-data.ts';
-import { countCollection, pinProblemText } from '../../web/src/lib/collection-rules.ts';
+import { collectionPercent, countCollection, pinProblemText } from '../../web/src/lib/collection-rules.ts';
 
 function exercise(id: string): LiftExercise {
   return { id, name: id, equipment: 'barbell', modality: 'lift', loadType: 'external', custom: false, archived: false };
@@ -55,5 +55,14 @@ describe('pin problems', () => {
 
   it('passes any other message through', () => {
     expect(pinProblemText({ message: 'permission denied' })).toBe('permission denied');
+  });
+});
+
+describe('collectionPercent', () => {
+  it('rounds the filled share to a whole percent and treats an empty collection as 0', () => {
+    expect(collectionPercent(0, 0)).toBe(0);
+    expect(collectionPercent(1, 3)).toBe(33);
+    expect(collectionPercent(2, 3)).toBe(67);
+    expect(collectionPercent(10, 10)).toBe(100);
   });
 });
