@@ -1275,10 +1275,6 @@ a:focus-visible {
   font-weight: 500;
 }
 
-.body-stat.main strong {
-  font-size: 1.6rem;
-}
-
 .back-link {
   font-size: var(--font-size-tiny);
   color: var(--color-text-muted);
