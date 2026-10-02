@@ -25,6 +25,8 @@ import {
   removeSet,
   startDraft,
   startDraftFromDay,
+  startDraftFromPrescription,
+  type PrescribedDayStart,
   swapExercise,
   toggleSetDone,
   updateBout,
@@ -40,7 +42,9 @@ import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
+import { useActiveProgram } from '../programs/use-active-program.ts';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
+import { ProgramToday } from './ProgramToday.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
@@ -94,6 +98,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [bodyweightKg, setBodyweightKg] = useState<number | null>(null);
   const [onlineSignal, setOnlineSignal] = useState(0);
   const standing = useStanding(userId);
+  const { program: activeProgram } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
   const finishButton = useRef<HTMLButtonElement>(null);
   const finishBar = useRef<HTMLDivElement>(null);
@@ -225,6 +230,23 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     );
   };
 
+  const startFromPrescription = async (day: PrescribedDayStart) => {
+    setStartingDay(true);
+    const started = startDraftFromPrescription(
+      day,
+      new Map(exercises.map((exercise) => [exercise.id, exercise])),
+      new Date(),
+    );
+    const skipped = started.skippedExerciseIds.length;
+    const startedFresh = await startWorkout(() => started.draft);
+    setStartingDay(false);
+    setStartNotice(
+      startedFresh && skipped > 0
+        ? `${skipped} exercise(s) in this day are no longer available and were skipped.`
+        : null,
+    );
+  };
+
   if (!draft) {
     return (
       <main className="screen stack">
@@ -256,6 +278,13 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </p>
         )}
         <InstallCard userId={userId} />
+        <ProgramToday
+          program={activeProgram}
+          exercises={exercises}
+          unit={unitPref}
+          disabled={startingDay}
+          onStart={startFromPrescription}
+        />
         <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
         <button
           className="button primary big"

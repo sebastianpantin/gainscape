@@ -2,6 +2,7 @@ import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
 import { highestWeightInUnit, shownWeight, unitToKg, WEIGHT_INPUT_STEP } from '../../lib/units.ts';
+import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
@@ -86,9 +87,13 @@ export function SetRow({
   onRemove,
   onToggleDone,
 }: SetRowProps) {
+  const amrapBadge = amrapBadgeOf(set.prescription);
   return (
     <li className={set.done ? 'set-row' : 'set-row planned'}>
-      <span className="set-number">{setNumber}</span>
+      <span className="set-number">
+        {setNumber}
+        {amrapBadge && <span className="amrap-badge">{amrapBadge}</span>}
+      </span>
       <WeightField
         loadType={loadType}
         weightKg={set.weightKg}

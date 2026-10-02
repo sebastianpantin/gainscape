@@ -587,6 +587,23 @@ a:focus-visible {
   padding-bottom: var(--space-3);
 }
 
+.amrap-badge {
+  display: block;
+  font-family: var(--font-family);
+  font-size: var(--font-size-tiny);
+  color: var(--color-accent-light);
+}
+
+.prescription-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-small);
+}
+
 .compact-field {
   display: flex;
   flex-direction: column;
