@@ -102,12 +102,14 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
       <h1 className="title">Collection log</h1>
       <CollectionTabs />
       <div className="panel stack">
-        <div className="row spread">
-          <span>Completion</span>
-          <strong className="pixel accent-text" data-testid="collection-completion">
-            {completionPercent}% ({completion.filledSlots}/{completion.totalSlots})
-          </strong>
-        </div>
+        <dl className="row spread">
+          <dt>Completion</dt>
+          <dd className="pixel accent-text">
+            <strong>
+              {completionPercent}% ({completion.filledSlots}/{completion.totalSlots})
+            </strong>
+          </dd>
+        </dl>
         <div className="meter" role="img" aria-label={`${completionPercent}% of slots filled`}>
           <div className="meter-fill" style={{ width: `${completionPercent}%` }} />
         </div>

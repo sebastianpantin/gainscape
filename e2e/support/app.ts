@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 import { confirmAccount } from './db.ts';
 
@@ -17,6 +17,10 @@ interface StoredAuthSession {
 
 export function uniqueUsername(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+}
+
+export function definitionOf(scope: Page | Locator, term: string): Locator {
+  return scope.getByRole('term').getByText(term, { exact: true }).locator('xpath=following-sibling::dd[1]');
 }
 
 export function nowInSeconds(): number {
@@ -106,7 +110,7 @@ export async function openLatestWorkout(page: Page) {
   await openTab(page, 'Log');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
   await page.getByRole('list', { name: 'Workouts' }).getByRole('link').first().click();
-  await expect(page.getByTestId('session-xp')).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
 }
 
 export function xpValue(text: string | null): number {

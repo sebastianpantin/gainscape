@@ -185,7 +185,10 @@ function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {
   return (
     <section className="panel stack" aria-labelledby="time-heading">
       <h2 id="time-heading">Time zone</h2>
-      <span data-testid="settings-timezone">{profile.timezone}</span>
+      <dl className="stack" style={{ gap: 2 }}>
+        <dt className="muted tiny">Current</dt>
+        <dd>{profile.timezone}</dd>
+      </dl>
       <form className="timezone-row" onSubmit={change}>
         <label className="field">
           Change to
@@ -527,10 +530,10 @@ function AccountSection({
   return (
     <section className="panel stack" aria-labelledby="account-heading">
       <h2 id="account-heading">Account</h2>
-      <div className="well stack" style={{ gap: 2 }}>
-        <span className="muted tiny">Email</span>
-        <span data-testid="settings-email">{email ?? '—'}</span>
-      </div>
+      <dl className="well stack" style={{ gap: 2 }}>
+        <dt className="muted tiny">Email</dt>
+        <dd>{email ?? '—'}</dd>
+      </dl>
       {status && (
         <p className="notice" role="status">
           {status}
