@@ -1,3 +1,5 @@
+import { roundTo } from './math.ts';
+
 export type WeightUnit = 'kg' | 'lb';
 
 export const KG_PER_LB = 0.45359237;
@@ -9,14 +11,14 @@ export interface UnitAmount {
   lb: number;
 }
 
-export const unitToKg: (value: number, unit: WeightUnit) => number = () => {
-  throw new Error('not implemented');
-};
+export function unitToKg(value: number, unit: WeightUnit): number {
+  return roundTo(STORED_KG_DECIMALS, unit === 'kg' ? value : value * KG_PER_LB);
+}
 
-export const kgToUnit: (kg: number, unit: WeightUnit) => number = () => {
-  throw new Error('not implemented');
-};
+export function kgToUnit(kg: number, unit: WeightUnit): number {
+  return unit === 'kg' ? kg : kg / KG_PER_LB;
+}
 
-export const amountInUnit: (amount: UnitAmount, unit: WeightUnit) => number = () => {
-  throw new Error('not implemented');
-};
+export function amountInUnit(amount: UnitAmount, unit: WeightUnit): number {
+  return amount[unit];
+}
