@@ -261,4 +261,30 @@ describe('catalog validation', () => {
     expect(problemsAfter((c) => (find(c.items, 'plate_crab').name = 'Prune Crab'))).toEqual([]);
     expect(problemsAfter((c) => (find(c.items, 'plate_crab').name = 'Dragonfly Crab'))).toEqual([]);
   });
+
+  it('reports problems in a fixed order: names, exercises, program days, gear, items, loot, recipes, denylist', () => {
+    expect(
+      problemsAfter((c) => {
+        find(c.items, 'plate_crab').name = 'Grand Exchange Crab';
+        find(c.recipes, 'grinder_belt').inputs[1].quantity = 0;
+        find(c.dropTables, 'rare').entries[0].weight = 0;
+        find(c.items, 'plate_crab').grants = 'deadlift';
+        find(c.items, 'plate_crab').icon = 'teapot';
+        c.gearTiers.reverse();
+        c.programs[0].days[0].exercises[0].exercise = 'moon_walk';
+        find(c.exercises, 'deadlift').shares[0].shareBp += 1;
+        c.skills[0].name = '';
+      }),
+    ).toEqual([
+      'skill "chest" name must be 1-60 characters',
+      'exercise "deadlift" shares sum to 10001, not 10000',
+      'program day "ppl:push" uses unknown exercise "moon_walk"',
+      'gear tiers [ascendant, mythic, titan, forged, tempered, grinder, rookie] must match ITEM_TIERS [rookie, grinder, tempered, forged, titan, mythic, ascendant] in order',
+      'item "plate_crab" has unknown icon "teapot"',
+      'item "plate_crab" grants an exercise but is no scroll',
+      'drop table "rare" entry "scroll_pause_bench_press" weight must be an integer in 1-1000000',
+      'recipe "grinder_belt" input "grinder_scraps" quantity must be 1-1000',
+      '"Grand Exchange Crab" matches denylisted term "grand exchange"',
+    ]);
+  });
 });
