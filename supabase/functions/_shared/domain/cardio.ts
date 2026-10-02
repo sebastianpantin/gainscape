@@ -29,6 +29,10 @@ export function intervalDurationSeconds(interval: CardioInterval): number {
   return interval.rounds * interval.workS + (interval.rounds - 1) * interval.restS;
 }
 
+export function boutDurationSeconds(bout: { durationS: number; interval: CardioInterval | null }): number {
+  return bout.interval === null ? bout.durationS : intervalDurationSeconds(bout.interval);
+}
+
 export function countedWorkSeconds(bout: Pick<CardioSetInput, 'durationS' | 'interval'>): number {
   return bout.interval === null ? bout.durationS : bout.interval.rounds * bout.interval.workS;
 }
