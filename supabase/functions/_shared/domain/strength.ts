@@ -2,7 +2,7 @@ import type { BalanceConfig } from './balance.ts';
 import { MS_PER_DAY } from './edit-window.ts';
 import { liftExerciseFor } from './exercise-lookup.ts';
 import { fatigueAfterSet, fatiguedStrength } from './fatigue.ts';
-import { FLOAT_TOLERANCE, roundTo } from './math.ts';
+import { FLOAT_TOLERANCE, loadRatioAtFailure, repsAtFailure, roundTo } from './math.ts';
 import { compareSessionKeys, isBefore } from './ordering.ts';
 import type { SessionContext, Step } from './pipeline.ts';
 import {
@@ -18,16 +18,6 @@ import {
 } from './types.ts';
 
 const NO_STRENGTH: ExerciseStrength = Object.freeze({ windowMax: null, fallbackMax: null, hasPriorSession: false });
-
-const EPLEY_REPS_PER_LOAD_RATIO = 30;
-
-export function loadRatioAtFailure(reps: number): number {
-  return 1 + (reps - 1) / EPLEY_REPS_PER_LOAD_RATIO;
-}
-
-export function repsAtFailure(loadRatio: number): number {
-  return 1 + EPLEY_REPS_PER_LOAD_RATIO * (loadRatio - 1);
-}
 
 export function epley(loadKg: number, repsToFailure: number): number {
   return roundTo(2, loadKg * loadRatioAtFailure(repsToFailure));
