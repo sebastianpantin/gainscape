@@ -2,13 +2,13 @@ import type { JsonValue, Transaction } from '../db.ts';
 import {
   DEFAULT_LOOT,
   type DropSummary,
+  eligibleRolls,
   type LootCandidate,
   type LootDayState,
   type LootEntry,
   lootRollKey,
   type LootTable,
   type LootTables,
-  qualifies,
   revocationReason,
   type RevokeReason,
   rollSessionLoot,
@@ -110,14 +110,10 @@ export async function rollNewSessionLoot(
     tables.regular.id,
     candidates.map((candidate) => candidate.setId),
   );
-  const seedRequests = candidates.flatMap((candidate) =>
-    (['regular', 'pr'] as const)
-      .filter(
-        (kind) =>
-          qualifies(kind, candidate, DEFAULT_LOOT) && !dayState.alreadyRolled.has(lootRollKey(candidate.setId, kind)),
-      )
-      .map((kind) => ({ setId: candidate.setId, kind })),
-  );
+  const seedRequests = eligibleRolls(candidates, dayState, DEFAULT_LOOT).map(({ candidate, kind }) => ({
+    setId: candidate.setId,
+    kind,
+  }));
   const rngFor = await lootRngFor(secret, userId, seedRequests);
   const { rolls, dryRolls } = rollSessionLoot(candidates, tables, dayState, DEFAULT_LOOT, rngFor);
   if (rolls.length > 0) {

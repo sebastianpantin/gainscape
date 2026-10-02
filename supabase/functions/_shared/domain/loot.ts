@@ -124,6 +124,27 @@ export function quantityFor(entry: LootEntry, u: number): number {
   return entry.minQuantity + Math.floor(u * (entry.maxQuantity - entry.minQuantity + 1));
 }
 
+const ROLL_KINDS: readonly RollKind[] = Object.freeze(['regular', 'pr']);
+
+export interface EligibleRoll {
+  candidate: LootCandidate;
+  kind: RollKind;
+}
+
+export function eligibleRolls(
+  candidates: readonly LootCandidate[],
+  dayState: LootDayState,
+  cfg: LootConfig,
+): EligibleRoll[] {
+  return [...candidates]
+    .sort((a, b) => a.position - b.position)
+    .flatMap((candidate) =>
+      ROLL_KINDS.filter(
+        (kind) => !dayState.alreadyRolled.has(lootRollKey(candidate.setId, kind)) && qualifies(kind, candidate, cfg),
+      ).map((kind) => ({ candidate, kind })),
+    );
+}
+
 function dropFrom(table: LootTable, rng: Rng): LootDrop {
   const entry = pickEntry(table, rng.next());
   return { itemId: entry.itemId, itemKey: entry.itemKey, quantity: quantityFor(entry, rng.next()) };
@@ -138,14 +159,9 @@ export function rollSessionLoot(
 ): LootPassResult {
   const rolls: LootRollResult[] = [];
   let { regularUsed, prUsed, dryRolls } = dayState;
-  const ordered = [...candidates].sort((a, b) => a.position - b.position);
 
-  for (const candidate of ordered) {
-    if (
-      !dayState.alreadyRolled.has(lootRollKey(candidate.setId, 'regular')) &&
-      qualifies('regular', candidate, cfg) &&
-      regularUsed < cfg.regularRollsPerDay
-    ) {
+  for (const { candidate, kind } of eligibleRolls(candidates, dayState, cfg)) {
+    if (kind === 'regular' && regularUsed < cfg.regularRollsPerDay) {
       const rng = rngFor(candidate.setId, 'regular');
       const rollChance = chance(dryRolls, cfg);
       const hit = rng.next() < rollChance;
@@ -162,11 +178,7 @@ export function rollSessionLoot(
       });
       regularUsed += 1;
     }
-    if (
-      !dayState.alreadyRolled.has(lootRollKey(candidate.setId, 'pr')) &&
-      qualifies('pr', candidate, cfg) &&
-      prUsed < cfg.prRollsPerDay
-    ) {
+    if (kind === 'pr' && prUsed < cfg.prRollsPerDay) {
       const rng = rngFor(candidate.setId, 'pr');
       rolls.push({
         setId: candidate.setId,
