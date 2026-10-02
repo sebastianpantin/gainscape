@@ -434,7 +434,7 @@ function jumpTo(definition: ProgramDefinition, state: ProgramState, position: Po
 
 function isValidReference(definition: ProgramDefinition, fact: SetReferenceFact): boolean {
   return (
-    definition.lifts.some((lift) => lift.key === fact.lift) &&
+    definition.inputs.some((input) => input.lifts.includes(fact.lift)) &&
     definition.referenceVars.includes(fact.var) &&
     Number.isFinite(fact.value) &&
     fact.value > 0
