@@ -21,13 +21,19 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function ProfileBadge({ color, initials, size = 72 }: { color: BadgeColor; initials: string; size?: number }) {
+interface ProfileBadgeProps {
+  color: BadgeColor;
+  initials: string;
+  size?: number;
+  named?: boolean;
+}
+
+export function ProfileBadge({ color, initials, size = 72, named = false }: ProfileBadgeProps) {
   const swatch = BADGE_COLORS[color];
   return (
     <span
       className="profile-badge"
-      role="img"
-      aria-label={`${swatch.label} badge`}
+      {...(named ? { role: 'img', 'aria-label': `${swatch.label} badge` } : { 'aria-hidden': true })}
       style={{
         width: size,
         height: size,
@@ -53,7 +59,7 @@ export function ProfileCard({ profile, totalLevel, combatLevel, collectionPercen
   return (
     <section className="panel stack profile-card" aria-label="Profile">
       <div className="row" style={{ gap: 14 }}>
-        <ProfileBadge color={profile.badgeColor} initials={initialsFor(profile.displayName, profile.username)} />
+        <ProfileBadge named color={profile.badgeColor} initials={initialsFor(profile.displayName, profile.username)} />
         <div className="stack" style={{ gap: 2, minWidth: 0 }}>
           <h2 className="profile-name">{profile.displayName}</h2>
           <span className="muted">@{profile.username}</span>
