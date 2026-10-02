@@ -4,7 +4,7 @@ import type { UnitPref } from '../../lib/profile.ts';
 import type { CardioDraftSet } from '../../offline/draft-format.ts';
 import { BoutFields, BoutModeToggle } from './BoutFields.tsx';
 import { CardioEffortSelector } from './CardioEffortSelector.tsx';
-import { formatXp, type SetPreview } from './xp-preview.ts';
+import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface CardioSetRowProps {
   boutNumber: number;
@@ -27,12 +27,11 @@ export function CardioSetRow({
   onRemove,
   onToggleDone,
 }: CardioSetRowProps) {
-  const xpLabel = preview.basis === 'unknown' ? '~?' : `~${formatXp(preview.xp)}`;
   return (
     <li className={bout.done ? 'set-row bout-row' : 'set-row bout-row planned'}>
       <span className="set-number">{boutNumber}</span>
       <BoutFields bout={bout} paceUnit={paceUnit} unit={unit} onChange={onChange} />
-      <span className={bout.done ? 'set-xp earned' : 'set-xp'}>{xpLabel}</span>
+      <span className={bout.done ? 'set-xp earned' : 'set-xp'}>{previewXpLabel(preview)}</span>
       <button
         type="button"
         className={`button done-toggle ${bout.done ? 'selected' : ''}`}

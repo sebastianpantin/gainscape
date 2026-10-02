@@ -4,7 +4,7 @@ import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
 import { highestWeightInUnit, shownWeight, unitToKg, WEIGHT_INPUT_STEP } from '../../lib/units.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
-import { formatXp, type SetPreview } from './xp-preview.ts';
+import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface SetRowProps {
   setNumber: number;
@@ -75,15 +75,6 @@ export function RepsField({ reps, onChange }: RepsFieldProps) {
   );
 }
 
-const NO_XP_RIR = 6;
-
-function previewNote(preview: SetPreview): string {
-  if (preview.basis === 'logged' && preview.rir !== null && preview.rir >= NO_XP_RIR) return 'counts for e1RM';
-  if (preview.basis === 'estimated') return `est. RIR ${preview.rir}`;
-  if (preview.basis === 'cold_start') return 'first time';
-  return '';
-}
-
 export function SetRow({
   setNumber,
   loadType,
@@ -95,7 +86,6 @@ export function SetRow({
   onRemove,
   onToggleDone,
 }: SetRowProps) {
-  const xpLabel = preview.basis === 'unknown' ? '~?' : `~${formatXp(preview.xp)}`;
   return (
     <li className={set.done ? 'set-row' : 'set-row planned'}>
       <span className="set-number">{setNumber}</span>
@@ -107,7 +97,7 @@ export function SetRow({
       />
       <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} />
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
-        {xpLabel}
+        {previewXpLabel(preview)}
         <span className="tiny">{previewNote(preview)}</span>
       </span>
       <button
