@@ -39,7 +39,7 @@ The YAML files here are the single source of truth for all seed data: skills, ex
 - Validation rules: `tests/catalog/validate.test.ts`. Seed rendering and ids: `tests/catalog/generate.test.ts`. Run both with `make test-catalog`. Add the failing test there first, either a new invalid-catalog case or a new expected statement.
 - A new or changed rule belongs in `scripts/catalog/validate.ts` (see `scripts/catalog/AGENTS.md`), not in the YAML.
 - After any YAML edit run `make catalog`, then `make catalog-check`. Row-level behaviour against the seeded database is covered by `tests/integration/catalog.test.ts`, which needs `make start` and `make reset`.
-- Also run `make test-domain` and `make sim-check` if you change shares or gear, since `tests/domain/crafting.test.ts` loads the catalog. The balance suite uses its own hard-coded `SIM_CATALOG` in `scripts/balance/catalog.ts`; keep shares in sync there, and `tests/integration/sim-catalog.test.ts` (stack needed) catches drift.
+- Also run `make test-domain` and `make sim-check` if you change shares or gear, since `tests/domain/crafting.test.ts` loads the catalog. The balance suite uses its own hard-coded `SIM_CATALOG` in `scripts/balance/catalog.ts`; keep shares in sync there, and `tests/catalog/sim-catalog.test.ts` (no stack needed) catches drift.
 - No local stack is needed for `make test-catalog`, `make catalog` or `make catalog-check`.
 
 ### Common Patterns

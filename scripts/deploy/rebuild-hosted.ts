@@ -1,14 +1,11 @@
+import { adminHeaders } from './admin-users.ts';
 import { loadDeployConfig, runCli } from './deploy-env.ts';
 
 const PAGE_SIZE = 500;
 
 await runCli(async () => {
   const config = loadDeployConfig();
-  const headers = {
-    Authorization: `Bearer ${config.SUPABASE_SERVICE_ROLE_KEY}`,
-    apikey: config.SUPABASE_SERVICE_ROLE_KEY!,
-    'Content-Type': 'application/json',
-  };
+  const headers = adminHeaders(config);
   let rebuilt = 0;
   for (let offset = 0; ; offset += PAGE_SIZE) {
     const page = await fetch(

@@ -3,10 +3,10 @@ import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { arch, platform, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { GITLEAKS_CACHE_VERSION, GITLEAKS_RELEASE_URL, gitleaksAsset } from './rules.ts';
+import { repoRoot } from './deploy-env.ts';
+import { GITLEAKS_VERSION, GITLEAKS_RELEASE_URL, gitleaksAsset } from './rules.ts';
 
-const repoRoot = join(import.meta.dirname, '../..');
-const cacheDir = join(repoRoot, 'node_modules/.cache/gitleaks', GITLEAKS_CACHE_VERSION);
+const cacheDir = join(repoRoot, 'node_modules/.cache/gitleaks', GITLEAKS_VERSION);
 const binary = join(cacheDir, 'gitleaks');
 const config = join(repoRoot, '.gitleaks.toml');
 const SCAN_FLAGS = ['--config', config, '--redact', '--no-banner', '--ignore-gitleaks-allow', '--exit-code', '1'];
