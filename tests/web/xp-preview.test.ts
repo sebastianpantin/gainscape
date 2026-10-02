@@ -19,7 +19,12 @@ import type {
   DraftSet,
   LiftDraftExercise,
 } from '../../web/src/offline/draft-format.ts';
-import { previewNote, previewSession, previewXpLabel } from '../../web/src/features/workout/xp-preview.ts';
+import {
+  donePreviewTotal,
+  previewNote,
+  previewSession,
+  previewXpLabel,
+} from '../../web/src/features/workout/xp-preview.ts';
 
 const failure = { type: 'level', level: 'failure' } as const;
 
@@ -427,5 +432,22 @@ describe('preview labels', () => {
     const noXpRir = DEFAULT_BALANCE.effectiveRirWindow + 1;
     expect(setXp(effectiveReps(10, noXpRir, false, DEFAULT_BALANCE), 1, DEFAULT_BALANCE)).toBe(0);
     expect(setXp(effectiveReps(10, noXpRir - 1, false, DEFAULT_BALANCE), 1, DEFAULT_BALANCE)).toBeGreaterThan(0);
+  });
+});
+
+describe('donePreviewTotal', () => {
+  it('adds up the previews of done sets and bouts only', () => {
+    const preview = (xp: number) => ({ xp, basis: 'logged' as const, rir: 2 });
+    const exercises = [{ sets: [{ done: true }, { done: false }] }, { sets: [{ done: true }, { done: true }] }];
+    expect(
+      donePreviewTotal(
+        [
+          [preview(100), preview(50)],
+          [preview(10), preview(1)],
+        ],
+        exercises,
+      ),
+    ).toBe(111);
+    expect(donePreviewTotal([], [])).toBe(0);
   });
 });

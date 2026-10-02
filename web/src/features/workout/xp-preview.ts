@@ -222,3 +222,12 @@ export function previewNote(preview: SetPreview, cfg: BalanceConfig = DEFAULT_BA
   if (preview.basis === 'cold_start') return 'first time';
   return '';
 }
+
+export function donePreviewTotal(
+  previews: readonly (readonly SetPreview[])[],
+  exercises: readonly { sets: readonly { done: boolean }[] }[],
+): number {
+  return previews
+    .flatMap((sets, exerciseIndex) => sets.filter((_, setIndex) => exercises[exerciseIndex].sets[setIndex].done))
+    .reduce((sum, preview) => sum + preview.xp, 0);
+}
