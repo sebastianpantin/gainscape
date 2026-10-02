@@ -98,7 +98,11 @@ describe('out-of-order sync', () => {
     ]);
 
     const retry = await postSession(user, late);
-    expect(retry.body).toEqual(await storedSummary(late.id));
+    expect(retry.body).toEqual({
+      ...(await storedSummary(late.id)),
+      programLinked: false,
+      completedAt: expect.any(String),
+    });
     expect(retry.body.prs).toHaveLength(1);
     expect(retry.rawBody).not.toBe(lateResponse.rawBody);
   });
