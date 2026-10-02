@@ -13,6 +13,7 @@ import {
   rebuildCaches,
   setBodyweight,
   type TestUser,
+  rowCounts,
 } from './local-stack.ts';
 import {
   aBout,
@@ -43,18 +44,13 @@ async function edit(user: TestUser, body: unknown) {
   return await postFunction('edit-session', user.accessToken, body);
 }
 
-async function rowCountsFor(userId: string) {
-  const [counts] = await db`
-    select
-      (select count(*) from public.sessions where user_id = ${userId})::int as sessions,
-      (select count(*) from public.sets where user_id = ${userId})::int as sets,
-      (select count(*) from public.set_skill_xp where user_id = ${userId})::int as set_skill_xp,
-      (select coalesce(sum(revision), 0) from public.sessions where user_id = ${userId})::int as revisions`;
-  return counts;
-}
-
 async function stateOf(userId: string) {
-  return { counts: await rowCountsFor(userId), snapshot: await normalizedSnapshot(userId) };
+  const [{ revisions }] =
+    await db`select coalesce(sum(revision), 0)::int as revisions from public.sessions where user_id = ${userId}`;
+  return {
+    counts: { ...(await rowCounts(userId, ['sessions', 'sets', 'set_skill_xp'])), revisions },
+    snapshot: await normalizedSnapshot(userId),
+  };
 }
 
 async function storedSets(sessionId: string) {

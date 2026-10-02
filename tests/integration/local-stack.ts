@@ -141,6 +141,19 @@ export async function rebuildCaches(userId: string, bearer = env.SERVICE_ROLE_KE
   return { status: response.status, body: JSON.parse(response.rawBody) };
 }
 
+export async function rowCounts<Table extends string>(
+  userId: string,
+  tables: readonly Table[],
+): Promise<Record<Table, number>> {
+  const counts = await Promise.all(
+    tables.map(async (table) => {
+      const [row] = await db`select count(*)::int as count from ${db(`public.${table}`)} where user_id = ${userId}`;
+      return [table, row.count as number] as const;
+    }),
+  );
+  return Object.fromEntries(counts) as Record<Table, number>;
+}
+
 export async function ageSession(sessionId: string, interval: string): Promise<string> {
   const [row] = await db`
     update public.sessions
