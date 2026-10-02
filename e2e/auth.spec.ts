@@ -9,12 +9,14 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 import { ageConfirmation, usernameOfEmail } from './support/db.ts';
-import { authLinkFrom, waitForEmail } from './support/mailbox.ts';
-
-const CONFIRM_SUBJECT = 'Confirm your Gainscape account';
-const RECOVERY_SUBJECT = 'Reset your Gainscape password';
-const EMAIL_CHANGE_SUBJECT = 'Confirm your new Gainscape email';
-const MAX_FREQUENCY_WAIT_MS = 1_500;
+import {
+  authLinkFrom,
+  CONFIRM_SUBJECT,
+  EMAIL_CHANGE_SUBJECT,
+  MAX_FREQUENCY_WAIT_MS,
+  RECOVERY_SUBJECT,
+  waitForEmail,
+} from './support/mailbox.ts';
 
 async function linkTo(email: string, subject: string, since: Date): Promise<string> {
   return authLinkFrom(await waitForEmail(email, { subject, since }));

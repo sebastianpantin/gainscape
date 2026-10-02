@@ -3,14 +3,18 @@ import { type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, describe, expect, it } from 'vitest';
 import { AUTH_MESSAGES, authErrorMessage, parseAuthCallback } from '../../web/src/lib/auth-links.ts';
 import { createTestUser, db, newAnonClient, TEST_PASSWORD } from './local-stack.ts';
-import { authLinkFrom, listEmailsTo, waitForEmail } from './mailbox.ts';
+import {
+  authLinkFrom,
+  CONFIRM_SUBJECT,
+  EMAIL_CHANGE_SUBJECT,
+  listEmailsTo,
+  MAX_FREQUENCY_WAIT_MS,
+  RECOVERY_SUBJECT,
+  waitForEmail,
+} from './mailbox.ts';
 
 const SITE_ORIGIN = 'https://localhost:5173';
 const CALLBACK = `${SITE_ORIGIN}/auth/confirm`;
-const CONFIRM_SUBJECT = 'Confirm your Gainscape account';
-const RECOVERY_SUBJECT = 'Reset your Gainscape password';
-const EMAIL_CHANGE_SUBJECT = 'Confirm your new Gainscape email';
-const MAX_FREQUENCY_WAIT_MS = 1_500;
 
 function freshIdentity(prefix = 'ae') {
   const username = `${prefix}_${randomUUID().replaceAll('-', '').slice(0, 14)}`;
@@ -239,8 +243,12 @@ describe('password recovery', () => {
   it('answers an unknown email without an error and sends nothing', async () => {
     const { email } = freshIdentity('nobody');
     const since = new Date();
-    expect((await newAnonClient().auth.resetPasswordForEmail(email, { redirectTo: CALLBACK })).error).toBeNull();
-    await pause(2_000);
+    const client = newAnonClient();
+    expect((await client.auth.resetPasswordForEmail(email, { redirectTo: CALLBACK })).error).toBeNull();
+    const known = await createTestUser();
+    const knownEmail = `${known.username}@example.test`;
+    expect((await client.auth.resetPasswordForEmail(knownEmail, { redirectTo: CALLBACK })).error).toBeNull();
+    await waitForEmail(knownEmail, { subject: RECOVERY_SUBJECT, since });
     expect(await listEmailsTo(email, since)).toHaveLength(0);
   });
 });
