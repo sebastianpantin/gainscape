@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
 import { usePreferences } from '../../lib/preferences.ts';
-import { ageFrom, HIGHEST_BODYWEIGHT_KG, LOWEST_BODYWEIGHT_KG, updatePrivateProfile } from '../../lib/profile.ts';
-import { formatHeight, formatWeight, kgToUnit, unitToKg } from '../../lib/units.ts';
+import { ageFrom, BODYWEIGHT_NUDGE_STEP, nudgedBodyweightKg, updatePrivateProfile } from '../../lib/profile.ts';
+import { formatHeight, formatWeight } from '../../lib/units.ts';
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileCard } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
@@ -12,8 +12,6 @@ import { messageOf } from '../../lib/error-text.ts';
 interface ProfileScreenProps {
   userId: string;
 }
-
-const NUDGE_STEP = { kg: 0.1, lb: 0.2 } as const;
 
 function MenuLink({ to, children }: { to: string; children: string }) {
   return (
@@ -54,9 +52,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
 
   const nudge = (direction: 1 | -1) => {
     if (shownKg === null) return;
-    const inUnit = kgToUnit(shownKg, unitPref) + direction * NUDGE_STEP[unitPref];
-    const nextKg = unitToKg(Math.round(inUnit * 10) / 10, unitPref);
-    setDraftKg(Math.min(HIGHEST_BODYWEIGHT_KG, Math.max(LOWEST_BODYWEIGHT_KG, nextKg)));
+    setDraftKg(nudgedBodyweightKg(shownKg, direction, unitPref));
   };
 
   const saveNudged = async () => {
@@ -73,7 +69,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
     setSaving(false);
   };
 
-  const step = `${NUDGE_STEP[unitPref]} ${unitPref}`;
+  const step = `${BODYWEIGHT_NUDGE_STEP[unitPref]} ${unitPref}`;
 
   return (
     <main className="screen stack">
