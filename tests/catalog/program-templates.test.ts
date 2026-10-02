@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,8 +17,12 @@ import {
   kgFromLb,
   loadProgramTemplates,
   parseProgramTemplate,
+  programDefinitionHash,
   type ProgramTemplate,
+  type ProgramTemplateLock,
+  programTemplateLockProblems,
   programTemplateProblems,
+  readProgramTemplateLock,
   ProgramTemplateShapeError,
   renderProgramTemplates,
 } from '../../scripts/catalog/program-templates.ts';
@@ -149,6 +154,24 @@ describe('program template schema', () => {
       Object.assign(raw.progression[0].onMiss[0], { kind: 'deload' }),
     );
     expect(error.issues.some((issue) => issue.startsWith('progression.0.onMiss.0'))).toBe(true);
+  });
+
+  it.each(['Five-Three-One', 'five three one', '', 'FIVE_THREE_ONE'])('refuses the template key %j', (key) => {
+    const error = shapeIssuesAfter(FIVE_THREE_ONE, (raw) => (raw.key = key));
+    expect(error.issues.some((issue) => issue.startsWith('key'))).toBe(true);
+  });
+
+  it.each([
+    ['an empty name', ''],
+    ['a name of 61 characters', 'x'.repeat(61)],
+  ])('refuses %s', (_case, name) => {
+    const error = shapeIssuesAfter(MADCOW_5X5, (raw) => (raw.name = name));
+    expect(error.issues.some((issue) => issue.startsWith('name'))).toBe(true);
+  });
+
+  it('accepts a name of exactly 60 characters', () => {
+    const raw = { ...asYaml(MADCOW_5X5), name: 'x'.repeat(60) };
+    expect(parseProgramTemplate({ file: 'madcow_5x5.yaml', raw }).definition.name).toBe('x'.repeat(60));
   });
 
   it('refuses a version that is not a positive whole number', () => {
@@ -308,8 +331,7 @@ describe('loading program templates from a directory', () => {
 });
 
 const PROGRAM_TEMPLATES_INSERT = 'insert into public.program_templates (key, version, name, definition) values\n';
-const PROGRAM_TEMPLATES_UPSERT =
-  'on conflict (key, version) do update set name = excluded.name, definition = excluded.definition;';
+const PROGRAM_TEMPLATES_UPSERT = 'on conflict (key, version) do nothing;';
 
 function renderedDefinition(sql: string, key: string, version: number, name: string): unknown {
   const escapedName = name.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
@@ -319,7 +341,7 @@ function renderedDefinition(sql: string, key: string, version: number, name: str
 }
 
 describe('program template seed rows', () => {
-  it('renders one upsert keyed by key and version with the definition as jsonb', () => {
+  it('renders one insert that never overwrites a published key and version', () => {
     const sql = renderProgramTemplates([template(MADCOW_5X5), template(FIVE_THREE_ONE)]);
     expect(sql.startsWith(PROGRAM_TEMPLATES_INSERT)).toBe(true);
     expect(sql.endsWith(PROGRAM_TEMPLATES_UPSERT)).toBe(true);
@@ -351,5 +373,85 @@ describe('program template seed rows', () => {
 
   it('generates the same template rows every time', () => {
     expect(renderProgramTemplates(loadProgramTemplates())).toBe(renderProgramTemplates(loadProgramTemplates()));
+  });
+});
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const fields = Object.keys(record)
+      .sort()
+      .map((field) => `${JSON.stringify(field)}:${canonicalJson(record[field])}`);
+    return `{${fields.join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function sha256(text: string): string {
+  return createHash('sha256').update(text).digest('hex');
+}
+
+function reversedKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(reversedKeys);
+  if (value === null || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .reverse()
+      .map(([field, inner]) => [field, reversedKeys(inner)]),
+  );
+}
+
+function lockFor(definitions: readonly ProgramDefinition[]): Record<string, string> {
+  return Object.fromEntries(
+    definitions.map((definition) => [`${definition.key}@${definition.version}`, sha256(canonicalJson(definition))]),
+  );
+}
+
+describe('program template lock', () => {
+  it('hashes a definition as the sha256 of its canonical JSON', () => {
+    expect(programDefinitionHash(MADCOW_5X5)).toBe(sha256(canonicalJson(MADCOW_5X5)));
+  });
+
+  it('hashes the same definition the same way whatever its key order', () => {
+    const reordered = reversedKeys(FIVE_THREE_ONE) as ProgramDefinition;
+    expect(Object.keys(reordered)[0]).toBe('progression');
+    expect(programDefinitionHash(reordered)).toBe(programDefinitionHash(FIVE_THREE_ONE));
+  });
+
+  it('finds no problem when every template matches its lock entry', () => {
+    const lock: ProgramTemplateLock = lockFor([FIVE_THREE_ONE, MADCOW_5X5]);
+    expect(programTemplateLockProblems([template(FIVE_THREE_ONE), template(MADCOW_5X5)], lock)).toEqual([]);
+  });
+
+  it('refuses a published definition that changed under the same key and version', () => {
+    const changed = { ...structuredClone(FIVE_THREE_ONE), name: '5/3/1 revised' };
+    const lock = lockFor([FIVE_THREE_ONE, MADCOW_5X5]);
+    expect(programTemplateLockProblems([template(changed), template(MADCOW_5X5)], lock)).toEqual([
+      `program template "five_three_one@1" differs from its lock entry; publish the change as a new version`,
+    ]);
+  });
+
+  it('refuses a template that is missing from the lock', () => {
+    const lock = lockFor([FIVE_THREE_ONE]);
+    expect(programTemplateLockProblems([template(FIVE_THREE_ONE), template(MADCOW_5X5)], lock)).toEqual([
+      `program template "madcow_5x5@1" is missing from the lock`,
+    ]);
+  });
+
+  it('refuses a lock entry that has no template', () => {
+    const lock = lockFor([FIVE_THREE_ONE, GZCLP_SHAPE]);
+    expect(programTemplateLockProblems([template(FIVE_THREE_ONE)], lock)).toEqual([
+      `program template lock entry "gzclp@1" has no template`,
+    ]);
+  });
+
+  it('keeps catalog/program-templates.lock.json in step with every catalog template', () => {
+    const templates = loadProgramTemplates();
+    const lock = readProgramTemplateLock();
+    expect(programTemplateLockProblems(templates, lock)).toEqual([]);
+    expect(Object.keys(lock).sort()).toEqual(
+      templates.map(({ definition }) => `${definition.key}@${definition.version}`).sort(),
+    );
   });
 });

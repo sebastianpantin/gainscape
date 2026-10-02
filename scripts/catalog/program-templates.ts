@@ -205,7 +205,7 @@ const progressionRule = z.strictObject({
   always: z.array(adjustment).optional(),
 });
 
-const programDefinitionSchema = z.strictObject({
+export const programDefinitionSchema = z.strictObject({
   key: z.string(),
   version: positiveInt,
   name: z.string(),
@@ -303,4 +303,31 @@ export function renderProgramTemplates(templates: readonly ProgramTemplate[]): s
         `  (${sqlText(definition.key)}, ${definition.version}, ${sqlText(definition.name)}, ${sqlText(JSON.stringify(definition))}::jsonb)`,
     );
   return `insert into public.program_templates (key, version, name, definition) values\n${rows.join(',\n')}\non conflict (key, version) do update set name = excluded.name, definition = excluded.definition;`;
+}
+
+export const PROGRAM_TEMPLATES_LOCK_PATH = join(import.meta.dirname, '../../catalog/program-templates.lock.json');
+
+export type ProgramTemplateLock = Readonly<Record<string, string>>;
+
+function notImplemented(): never {
+  throw new Error('not implemented');
+}
+
+export function readProgramTemplateLock(path: string = PROGRAM_TEMPLATES_LOCK_PATH): ProgramTemplateLock {
+  void path;
+  return notImplemented();
+}
+
+export function programDefinitionHash(definition: ProgramDefinition): string {
+  void definition;
+  return notImplemented();
+}
+
+export function programTemplateLockProblems(
+  templates: readonly ProgramTemplate[],
+  lock: ProgramTemplateLock,
+): string[] {
+  void templates;
+  void lock;
+  return notImplemented();
 }
