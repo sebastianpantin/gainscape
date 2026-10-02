@@ -3,7 +3,8 @@ import type { DropSummary, PersonalRecordSummary, SessionSummary } from '@domain
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ItemIcon, LevelUpIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
-import { type Exercise, fetchExercises, fetchSkills, fetchSkillXp, type Skill } from '../../lib/catalog.ts';
+import { fetchExercises, fetchSkills, fetchSkillXp } from '../../lib/catalog.ts';
+import type { Exercise, Skill } from '../../lib/catalog-rules.ts';
 import { describeCardioGains } from '../../lib/cardio-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { fetchSession } from '../../lib/history.ts';

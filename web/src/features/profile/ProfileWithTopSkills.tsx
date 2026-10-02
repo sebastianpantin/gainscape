@@ -1,4 +1,4 @@
-import type { Skill } from '../../lib/catalog.ts';
+import type { Skill } from '../../lib/catalog-rules.ts';
 import { cardProfileOf, standingOfView } from '../../lib/profile-view.ts';
 import type { ProfileView } from '../../lib/social.ts';
 import { collectionPercent } from '../../lib/social-rules.ts';

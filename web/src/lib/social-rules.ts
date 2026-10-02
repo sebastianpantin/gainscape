@@ -1,7 +1,7 @@
 import { combatLevel, levelForXp, totalLevel } from '@domain/index.ts';
 import { CARDIO_RECORD_KINDS, type CardioRecordKind } from '@domain/types.ts';
 import { formatCardioRecord } from './cardio-rules.ts';
-import type { LoadType, PaceUnit } from './catalog.ts';
+import type { LoadType, PaceUnit } from './catalog-rules.ts';
 import { formatLoad } from './format.ts';
 import { capitalized } from './names.ts';
 import type { BadgeColor, UnitPref } from './profile-rules.ts';

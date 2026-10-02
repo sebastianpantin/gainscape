@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { type Exercise, exerciseLabels, fetchExercises, fetchSkills, type Skill } from '../../lib/catalog.ts';
+import { fetchExercises, fetchSkills } from '../../lib/catalog.ts';
+import { type Exercise, exerciseLabels, type Skill } from '../../lib/catalog-rules.ts';
 import { setCustomExerciseArchived } from '../../lib/custom-exercises.ts';
 import { CustomExerciseForm } from './CustomExerciseForm.tsx';
 

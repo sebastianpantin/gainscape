@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { type Exercise, exerciseLabels, fetchExercises, isLiftExercise } from '../../lib/catalog.ts';
+import { fetchExercises } from '../../lib/catalog.ts';
+import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import { cachedPrograms, fetchPrograms, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
 import { moved } from '../../lib/reorder.ts';

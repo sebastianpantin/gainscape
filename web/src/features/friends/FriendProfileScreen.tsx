@@ -1,7 +1,8 @@
 import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { fetchSkills, type Skill } from '../../lib/catalog.ts';
+import { fetchSkills } from '../../lib/catalog.ts';
+import type { Skill } from '../../lib/catalog-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { isUuid } from '../../lib/history-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';

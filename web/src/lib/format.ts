@@ -1,4 +1,4 @@
-import type { LoadType } from './catalog.ts';
+import type { LoadType } from './catalog-rules.ts';
 import type { UnitPref } from './profile.ts';
 import { formatWeight } from './units.ts';
 

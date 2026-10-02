@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Switch } from '../../components/Switch.tsx';
-import { fetchSkills, type Skill } from '../../lib/catalog.ts';
+import { fetchSkills } from '../../lib/catalog.ts';
+import type { Skill } from '../../lib/catalog-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { updatePublicProfile } from '../../lib/profile.ts';

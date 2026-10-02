@@ -1,7 +1,7 @@
 import { roundTo } from '@domain/math.ts';
 import { CARDIO_BOUNDS } from '@domain/cardio.ts';
 import { useState } from 'react';
-import type { PaceUnit } from '../../lib/catalog.ts';
+import type { PaceUnit } from '../../lib/catalog-rules.ts';
 import {
   type BoutMode,
   boutModeChanges,

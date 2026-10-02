@@ -1,5 +1,5 @@
 import { collectionCompletion, type CollectionExercise } from '@domain/collection.ts';
-import type { Exercise, LiftExercise } from './catalog.ts';
+import { type Exercise, isLiftExercise, type LiftExercise } from './catalog-rules.ts';
 import { rateLimitedMessage } from './rate-limit.ts';
 import type { CollectionData } from './collection-data.ts';
 
@@ -22,7 +22,7 @@ export interface CountedCollection {
 }
 
 export function countCollection(allExercises: Exercise[], data: CollectionData): CountedCollection {
-  const exercises = allExercises.filter((exercise): exercise is LiftExercise => exercise.modality === 'lift');
+  const exercises = allExercises.filter(isLiftExercise);
   const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const pinned = data.pinnedExerciseIds
     .map((id) => byId.get(id))

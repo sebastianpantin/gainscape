@@ -11,7 +11,7 @@ import {
   processSession,
   setXp,
 } from '@domain/index.ts';
-import type { CardioActivity, LoadType } from '../../web/src/lib/catalog.ts';
+import type { CardioActivity, LoadType } from '../../web/src/lib/catalog-rules.ts';
 import type {
   CardioDraftExercise,
   CardioDraftSet,

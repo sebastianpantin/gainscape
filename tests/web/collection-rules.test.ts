@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Exercise, LiftExercise } from '../../web/src/lib/catalog.ts';
+import type { Exercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
 import type { CollectionData } from '../../web/src/lib/collection-data.ts';
 import { countCollection, pinProblemText } from '../../web/src/lib/collection-rules.ts';
 

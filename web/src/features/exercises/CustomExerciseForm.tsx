@@ -7,7 +7,7 @@ import {
   type LoadType,
   type Modality,
   type Skill,
-} from '../../lib/catalog.ts';
+} from '../../lib/catalog-rules.ts';
 import { fetchExerciseShares, hasLoggedSet, saveCustomExercise, type SkillShare } from '../../lib/custom-exercises.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import { percentsFromShares, shareTotal, sharesToSave, skillsForModality } from './share-form.ts';

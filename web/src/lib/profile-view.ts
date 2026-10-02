@@ -1,4 +1,4 @@
-import type { Skill } from './catalog.ts';
+import type { Skill } from './catalog-rules.ts';
 import type { Profile } from './profile-rules.ts';
 import type { ProfileView } from './social.ts';
 import { type Standing, standingFrom } from './standing-rules.ts';
