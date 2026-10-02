@@ -1,7 +1,8 @@
 import { REP_MAX_SLOT_COUNT, type StrengthState } from '@domain/types.ts';
 import type { CardioRecordRow } from './cardio-rules.ts';
 import { fetchExercises } from './catalog.ts';
-import { countCollection } from './collection-rules.ts';
+import { countCollection, pinProblemText } from './collection-rules.ts';
+import { withFriendlyRateLimit } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
 export { countCollection } from './collection-rules.ts';
@@ -95,17 +96,17 @@ export async function fetchStrengthState(asOf: string, windowDays: number): Prom
 
 export async function pinExercise(exerciseId: string, position: number): Promise<void> {
   const { error } = await supabase.from('pinned_exercises').insert({ exercise_id: exerciseId, position });
-  if (error) throw error;
+  if (error) throw new Error(pinProblemText(error));
 }
 
 export async function unpinExercise(exerciseId: string): Promise<void> {
   const { error } = await supabase.from('pinned_exercises').delete().eq('exercise_id', exerciseId);
-  if (error) throw error;
+  if (error) throw withFriendlyRateLimit(error);
 }
 
 export async function reorderPins(exerciseIds: string[]): Promise<void> {
   const { error } = await supabase.rpc('reorder_pins', { exercise_ids: exerciseIds });
-  if (error) throw error;
+  if (error) throw withFriendlyRateLimit(error);
 }
 
 export async function fetchCollectionPercent(userId: string): Promise<number> {

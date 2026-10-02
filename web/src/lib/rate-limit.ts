@@ -29,6 +29,20 @@ export function waitText(seconds: number): string {
   return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
+const DATABASE_RATE_LIMITED_CODE = 'PT429';
+
+export function rateLimitedMessage(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null) return null;
+  const { code, details } = error as { code?: unknown; details?: unknown };
+  if (code !== DATABASE_RATE_LIMITED_CODE) return null;
+  return `Too many changes in a short time. ${tryAgainIn(retryAfterSeconds(details))}`;
+}
+
+export function withFriendlyRateLimit<E>(error: E): E | Error {
+  const message = rateLimitedMessage(error);
+  return message === null ? error : new Error(message);
+}
+
 export function tryAgainIn(seconds: number | null): string {
   return seconds === null ? 'Try again in a few minutes.' : `Try again in ${waitText(seconds)}.`;
 }

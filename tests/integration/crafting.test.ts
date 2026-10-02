@@ -10,6 +10,7 @@ import {
   ledgerMismatches,
   postFunction,
   type TestUser,
+  seedRateLimitHits,
 } from './local-stack.ts';
 import { aSet, payloadAt, postSession, TIMEZONE } from './loot-support.ts';
 
@@ -238,6 +239,18 @@ describe('craft', () => {
     expect(error?.message).toBe('insufficient_items');
     expect(await lootState(owner.id)).toEqual(ownerBefore);
     expect(await lootState(other.id)).toMatchObject({ crafts: [], userItems: [], itemLedger: [] });
+  });
+});
+
+describe('craft rate limit', () => {
+  it('refuses the 31st craft in a minute and keeps the materials', async () => {
+    const user = await freshUser();
+    await grant(user, await quietSession(user), { rookie_belt: 1, grinder_scraps: 8 });
+    await seedRateLimitHits('craft_minute', user.id, 30);
+    const { error } = await craft(user, grinderBelt.id);
+    expect(error?.code).toBe('PT429');
+    expect(JSON.parse(error!.details)).toMatchObject({ bucket: 'craft_minute' });
+    expect(await held(user.id)).toEqual({ grinder_scraps: 8, rookie_belt: 1 });
   });
 });
 

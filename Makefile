@@ -12,7 +12,7 @@ endif
 PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
 CI_EXCLUDED := studio,imgproxy,vector,logflare,postgres-meta,supavisor
 
-.PHONY: start ci-start ci-logs stop reset functions dev build-local preview sw-kill-switch types test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa
+.PHONY: start ci-start ci-logs stop reset functions dev build-local preview sw-kill-switch types test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
 
 start:
 	$(SUPABASE) start
@@ -61,6 +61,30 @@ dev:
 build:
 	npx vite build web
 
+deploy:
+	node scripts/deploy/deploy.ts
+
+set-loot-secret:
+	node scripts/deploy/set-loot-secret.ts
+
+rebuild-caches-hosted:
+	node scripts/deploy/rebuild-hosted.ts
+
+invite-tester:
+	node scripts/deploy/invite-tester.ts
+
+ban-tester:
+	node scripts/deploy/ban-tester.ts
+
+remove-tester:
+	node scripts/deploy/remove-tester.ts
+
+backup-hosted:
+	node scripts/deploy/backup-hosted.ts
+
+build-pages:
+	node scripts/deploy/build-pages.ts
+
 build-local:
 	npx vite build web --mode development
 
@@ -87,7 +111,13 @@ format:
 format-check:
 	npx prettier --check --ignore-unknown .
 
-check: format-check lint typecheck check-functions catalog-check icons-check
+check: format-check lint typecheck check-functions catalog-check icons-check secrets-scan
+
+hooks:
+	git config core.hooksPath .githooks
+
+secrets-scan:
+	node scripts/deploy/secrets-scan.ts
 
 catalog:
 	node scripts/catalog/generate.ts
@@ -118,6 +148,9 @@ test-domain:
 test-web:
 	npx vitest run tests/web
 
+test-deploy:
+	npx vitest run tests/deploy
+
 test-integration: functions
 	npx vitest run tests/integration
 
@@ -130,6 +163,9 @@ CHROMIUM_PATH ?= $(shell command -v chromium 2>/dev/null)
 e2e: functions
 	CHROMIUM_PATH="$(CHROMIUM_PATH)" npx playwright test
 
+e2e-pages: functions
+	CHROMIUM_PATH="$(CHROMIUM_PATH)" npx playwright test -c playwright.pages.config.ts
+
 e2e-pwa: functions
 	$(MAKE) build-local
 	GAINSCAPE_PLAIN_HTTP=1 CHROMIUM_PATH="$(CHROMIUM_PATH)" npx playwright test -c playwright.pwa.config.ts
@@ -140,4 +176,4 @@ sim:
 sim-check:
 	npx vitest run tests/balance
 
-test: check test-catalog test-domain test-web test-integration test-db
+test: check test-catalog test-domain test-web test-deploy test-integration test-db

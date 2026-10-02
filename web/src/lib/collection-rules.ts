@@ -1,5 +1,6 @@
 import { collectionCompletion, type CollectionExercise } from '@domain/collection.ts';
 import type { Exercise, LiftExercise } from './catalog.ts';
+import { rateLimitedMessage } from './rate-limit.ts';
 import type { CollectionData } from './collection-data.ts';
 
 function isDone(exercise: LiftExercise, data: CollectionData): boolean {
@@ -35,4 +36,11 @@ export function countCollection(allExercises: Exercise[], data: CollectionData):
     counted,
     completion: collectionCompletion(counted.map((exercise) => asCollectionExercise(exercise, data))),
   };
+}
+
+export const PIN_CAP = 50;
+
+export function pinProblemText(error: { message: string; code?: string; details?: string | null }): string {
+  if (error.message === 'too_many_pins') return `You can pin up to ${PIN_CAP} exercises. Unpin one first.`;
+  return rateLimitedMessage(error) ?? error.message;
 }
