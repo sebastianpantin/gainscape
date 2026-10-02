@@ -1,18 +1,16 @@
 import type { RevokedDrop, SessionSummary } from '@domain/types.ts';
 import { invokeAsOwner } from './function-client.ts';
-import { type InvokeOutcome, retryDelayMs } from './function-client-rules.ts';
+import type { InvokeOutcome } from './function-client-rules.ts';
 import {
   type EditSessionPayload,
   type HistorySession,
+  invokeWithRetries,
   querySession,
   querySessionPage,
   querySessionSets,
   type StoredSetRow,
-  transientReason,
 } from './history-rules.ts';
 import { REQUEST_TIMEOUT_MS, supabase } from './supabase.ts';
-
-const AUTOMATIC_RETRIES = 4;
 
 export function fetchSessionPage(after: HistorySession | null): Promise<HistorySession[]> {
   return querySessionPage(supabase, after);
@@ -54,23 +52,19 @@ function pause(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-async function invokeWithRetries<T>(
+function invokeAsOwnerWithRetries<T>(
   userId: string,
   name: string,
   body: unknown,
   signal: AbortSignal,
   onRetry: (reason: string) => void,
 ): Promise<InvokeOutcome<T>> {
-  let outcome = await invokeAsOwner<T>(userId, name, body, REQUEST_TIMEOUT_MS, signal);
-  for (let attempt = 0; attempt < AUTOMATIC_RETRIES && !signal.aborted; attempt++) {
-    const reason = transientReason(outcome);
-    if (reason === null) break;
-    onRetry(reason);
-    await pause(retryDelayMs(attempt), signal);
-    if (signal.aborted) break;
-    outcome = await invokeAsOwner<T>(userId, name, body, REQUEST_TIMEOUT_MS, signal);
-  }
-  return outcome;
+  return invokeWithRetries({
+    invoke: () => invokeAsOwner<T>(userId, name, body, REQUEST_TIMEOUT_MS, signal),
+    pause,
+    signal,
+    onRetry,
+  });
 }
 
 export function editSession(
@@ -79,7 +73,7 @@ export function editSession(
   signal: AbortSignal,
   onRetry: (reason: string) => void,
 ): Promise<InvokeOutcome<EditSessionResponse>> {
-  return invokeWithRetries(userId, 'edit-session', payload, signal, onRetry);
+  return invokeAsOwnerWithRetries(userId, 'edit-session', payload, signal, onRetry);
 }
 
 export function deleteSession(
@@ -88,5 +82,5 @@ export function deleteSession(
   signal: AbortSignal,
   onRetry: (reason: string) => void,
 ): Promise<InvokeOutcome<DeleteSessionResponse>> {
-  return invokeWithRetries(userId, 'delete-session', { sessionId }, signal, onRetry);
+  return invokeAsOwnerWithRetries(userId, 'delete-session', { sessionId }, signal, onRetry);
 }

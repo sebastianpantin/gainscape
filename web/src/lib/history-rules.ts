@@ -1,6 +1,6 @@
 import type { CardioInterval, EffortInput, EffortInputType, RirSource, SessionSummary } from '@domain/types.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { InvokeOutcome } from './function-client-rules.ts';
+import { type InvokeOutcome, retryDelayMs } from './function-client-rules.ts';
 
 export const HISTORY_PAGE_SIZE = 50;
 
@@ -200,4 +200,31 @@ export function transientReason(outcome: InvokeOutcome<unknown>): string | null 
   if (outcome.kind === 'retryable') return outcome.reason;
   if (outcome.kind !== 'http_error') return null;
   return outcome.status >= 500 || outcome.code === 'id_conflict' ? outcome.code : null;
+}
+
+const AUTOMATIC_RETRIES = 4;
+
+export interface RetriedInvoke<T> {
+  invoke: () => Promise<InvokeOutcome<T>>;
+  pause: (ms: number, signal: AbortSignal) => Promise<void>;
+  signal: AbortSignal;
+  onRetry: (reason: string) => void;
+}
+
+export async function invokeWithRetries<T>({
+  invoke,
+  pause,
+  signal,
+  onRetry,
+}: RetriedInvoke<T>): Promise<InvokeOutcome<T>> {
+  let outcome = await invoke();
+  for (let attempt = 0; attempt < AUTOMATIC_RETRIES && !signal.aborted; attempt++) {
+    const reason = transientReason(outcome);
+    if (reason === null) break;
+    onRetry(reason);
+    await pause(retryDelayMs(attempt), signal);
+    if (signal.aborted) break;
+    outcome = await invoke();
+  }
+  return outcome;
 }
