@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(42);
+select plan(43);
 
 create function pg_temp.fill_bucket(bucket_name text, subject uuid) returns void language sql as $$
   insert into private.rate_limit_hits (bucket, subject, window_start, hits)
@@ -38,6 +38,16 @@ select col_is_pk('public', 'program_templates', array['key', 'version'], 'a temp
 select col_is_unique(
   'public', 'program_enrollments', array['id', 'user_id'],
   'an enrollment is unique by id and owner, for the session link in 023'
+);
+select ok(
+  exists (
+    select 1 from pg_index i
+    where i.indrelid = 'public.program_enrollments'::regclass
+      and (select array_agg(a.attname::text order by k.ordinality)
+           from unnest(i.indkey::int2[]) with ordinality as k (attnum, ordinality)
+           join pg_attribute a on a.attrelid = i.indrelid and a.attnum = k.attnum) = array['user_id', 'started_at']
+  ),
+  'enrollments are indexed by owner and start time'
 );
 select fk_ok(
   'public', 'program_enrollments', array['template_key', 'template_version'],
