@@ -76,6 +76,13 @@ describe('validateEnrollment accepts', () => {
 });
 
 describe('validateEnrollment rejects with a readable error', () => {
+  it('a binding for a lift the template does not declare (clean)', () => {
+    const enrollment = madcowEnrollment({ bindings: { clean: 'power-clean' } });
+    expect(validateEnrollment(MADCOW_5X5, enrollment)).toEqual(
+      expect.arrayContaining([expect.stringContaining('clean')]),
+    );
+  });
+
   it.each([0, -2.5, Number.NaN])('a rounding increment of %s', (increment) => {
     const enrollment = {
       ...fiveThreeOneEnrollment(),
