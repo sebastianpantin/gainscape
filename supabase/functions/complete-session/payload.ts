@@ -1,10 +1,7 @@
 import { z } from 'npm:zod@4.6.5';
-import { MAX_SETS_PER_SESSION } from '../_shared/domain/index.ts';
+import { implausibleTiming, MAX_SETS_PER_SESSION } from '../_shared/domain/index.ts';
 import { HttpError } from '../_shared/http.ts';
 import { assertDistinctSetIdsAndPositions, lowerUuid, parseOr422, setSchema } from '../_shared/session-payload.ts';
-
-const MAX_SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
-const ALLOWED_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 function toMillisecondIsoString(instant: string): string {
   return new Date(instant).toISOString();
@@ -22,12 +19,8 @@ const sessionSchema = z.object({
 export type CompleteSessionPayload = z.infer<typeof sessionSchema>;
 
 export function assertPlausibleTiming(payload: CompleteSessionPayload, now: Date): void {
-  const started = Date.parse(payload.startedAt);
-  const ended = Date.parse(payload.endedAt);
-  const latestAllowed = now.getTime() + ALLOWED_CLOCK_SKEW_MS;
-  if (ended < started) throw new HttpError(422, 'ends_before_start');
-  if (ended - started > MAX_SESSION_DURATION_MS) throw new HttpError(422, 'session_too_long');
-  if (started > latestAllowed || ended > latestAllowed) throw new HttpError(422, 'session_in_future');
+  const reason = implausibleTiming(payload.startedAt, payload.endedAt, now.getTime());
+  if (reason !== null) throw new HttpError(422, reason);
 }
 
 export function parseCompleteSessionPayload(body: unknown): CompleteSessionPayload {
