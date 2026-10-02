@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
@@ -309,25 +310,47 @@ export const PROGRAM_TEMPLATES_LOCK_PATH = join(import.meta.dirname, '../../cata
 
 export type ProgramTemplateLock = Readonly<Record<string, string>>;
 
-function notImplemented(): never {
-  throw new Error('not implemented');
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const fields = Object.keys(record)
+      .sort()
+      .map((field) => `${JSON.stringify(field)}:${canonicalJson(record[field])}`);
+    return `{${fields.join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function lockKey(definition: ProgramDefinition): string {
+  return `${definition.key}@${definition.version}`;
 }
 
 export function readProgramTemplateLock(path: string = PROGRAM_TEMPLATES_LOCK_PATH): ProgramTemplateLock {
-  void path;
-  return notImplemented();
+  return z.record(z.string(), z.string()).parse(JSON.parse(readFileSync(path, 'utf8')));
 }
 
 export function programDefinitionHash(definition: ProgramDefinition): string {
-  void definition;
-  return notImplemented();
+  return createHash('sha256').update(canonicalJson(definition)).digest('hex');
 }
 
 export function programTemplateLockProblems(
   templates: readonly ProgramTemplate[],
   lock: ProgramTemplateLock,
 ): string[] {
-  void templates;
-  void lock;
-  return notImplemented();
+  const problems: string[] = [];
+  const templateKeys = new Set<string>();
+  for (const { definition } of templates) {
+    const key = lockKey(definition);
+    templateKeys.add(key);
+    const locked = lock[key];
+    if (locked === undefined) problems.push(`program template "${key}" is missing from the lock`);
+    else if (locked !== programDefinitionHash(definition)) {
+      problems.push(`program template "${key}" differs from its lock entry; publish the change as a new version`);
+    }
+  }
+  for (const key of Object.keys(lock)) {
+    if (!templateKeys.has(key)) problems.push(`program template lock entry "${key}" has no template`);
+  }
+  return problems;
 }
