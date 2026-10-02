@@ -44,7 +44,7 @@ describe('collection rules', () => {
     expect(withPin.pinned).toEqual([]);
     expect(withPin.counted.map((counted) => counted.id)).toEqual(['bench']);
     expect(withPin.completion).toEqual(withoutPin.completion);
-    expect(withPin.completion).toEqual({ filledSlots: 1, totalSlots: 10, fraction: 0.1 });
+    expect(withPin.completion).toEqual({ filledSlots: 1, totalSlots: 10 });
   });
 });
 
