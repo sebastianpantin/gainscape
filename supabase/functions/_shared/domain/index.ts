@@ -154,6 +154,7 @@ export {
   orderFacts,
   type ProgramFact,
   type ProgramState,
+  type RuleKey,
   programStateAt,
   type ReferenceChange,
   type ReferenceChangeReason,

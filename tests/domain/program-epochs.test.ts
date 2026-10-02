@@ -22,7 +22,7 @@ describe('each jump_to starts a new epoch: older records are neither merged nor 
     ];
     const state = programStateAt(MADCOW_5X5, madcow, facts);
     expect(refOf(state, 'squat', 'top')).toBeCloseTo(95.06, 2);
-    expect(missesOf(state, 'squat')).toBe(1);
+    expect(missesOf(state, 'squat:top:endOfWeek')).toBe(1);
   });
 
   it('the repeated week still progresses the lifts met in the repeat: bench 76.05 → 78 (÷ 0.975)', () => {

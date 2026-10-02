@@ -3,6 +3,7 @@ import {
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramReferences,
+  type ProgressionTrigger,
   type ReferenceVar,
 } from './program-definition.ts';
 import { type PrescriptionSnapshot } from './program-prescription.ts';
@@ -77,6 +78,8 @@ export interface AfterSessionEffect {
   missesBefore: Readonly<Record<string, number>>;
   changes: readonly ReferenceChange[];
 }
+
+export type RuleKey = `${string}:${ReferenceVar}:${ProgressionTrigger}`;
 
 export interface ProgramState extends ScheduleCursor {
   epoch: number;
