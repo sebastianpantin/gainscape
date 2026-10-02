@@ -25,7 +25,7 @@ export const EMAIL_CHANGE_SUBJECT = configValue('auth.email.template.email_chang
 export const MAX_FREQUENCY_WAIT_MS =
   secondsOf(configValue('auth.email', 'max_frequency')) * 1000 + MAX_FREQUENCY_MARGIN_MS;
 
-export interface MailMessage {
+interface MailMessage {
   ID: string;
   Subject: string;
   Created: string;

@@ -38,9 +38,9 @@ export function aSet(
   return { id: randomUUID(), exerciseId, position, weightKg, reps: 5, isWarmup: false, effort: hard, ...overrides };
 }
 
-export type CardioEffort = { type: 'cardio'; level: 'easy' | 'moderate' | 'hard' | 'max' } | null;
+type CardioEffort = { type: 'cardio'; level: 'easy' | 'moderate' | 'hard' | 'max' } | null;
 
-export interface BoutInterval {
+interface BoutInterval {
   workS: number;
   restS: number;
   rounds: number;

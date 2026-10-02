@@ -8,7 +8,7 @@ import {
   openDraftDatabase,
 } from '../../web/src/offline/draft-store.ts';
 
-export interface DraftStoreHarness {
+interface DraftStoreHarness {
   store: DraftStore;
   storage: Storage;
   indexedDB: IDBFactory | undefined;
