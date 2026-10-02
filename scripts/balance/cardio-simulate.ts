@@ -4,20 +4,17 @@ import {
   intervalDurationSeconds,
   processSession,
   type SessionInput,
-  xpForLevel,
 } from '../../supabase/functions/_shared/domain/index.ts';
 import { CARDIO_SIM_CATALOG, CARDIO_SIM_EXERCISES, CARDIO_SIM_SKILLS } from './catalog.ts';
 import { type CardioAthleteProfile, type PlannedBout, STEADY_AGILITY_BOUT } from './profiles.ts';
+import { DAY_MS, SIMULATION_SEED, skillProgress } from './progress.ts';
 import { seededRandom, type SeededRandom } from './random.ts';
 import { WEEKS_PER_YEAR } from './simulate.ts';
 
-const SIMULATION_SEED = 42;
 const MAX_SIMULATED_YEARS = 10;
 const METRES_PER_KM = 1000;
 const DISTANCE_DECIMALS_FACTOR = 10;
 
-const LEVEL_99_XP = xpForLevel(99);
-const DAY_MS = 24 * 60 * 60 * 1000;
 const SIMULATION_START_MS = Date.parse('2026-01-05T07:00:00.000Z');
 
 export interface CardioSimulationResult {
@@ -81,12 +78,7 @@ export function simulateCardioProfile(
   const random = seededRandom(SIMULATION_SEED);
   const maxWeeks = (options.maxYears ?? MAX_SIMULATED_YEARS) * WEEKS_PER_YEAR;
   const skillXp: Record<string, number> = {};
-  const cumulativeXpByWeek: Record<string, number[]> = Object.fromEntries(
-    CARDIO_SIM_SKILLS.map((skill) => [skill.key, []]),
-  );
-  const weeksToLevel99: Record<string, number | null> = Object.fromEntries(
-    CARDIO_SIM_SKILLS.map((skill) => [skill.key, null]),
-  );
+  const { cumulativeXpByWeek, weeksToLevel99, recordWeek } = skillProgress(CARDIO_SIM_SKILLS);
   const allReached99 = () => CARDIO_SIM_SKILLS.every((skill) => weeksToLevel99[skill.key] !== null);
   let setCounter = 0;
   let week = 0;
@@ -111,11 +103,7 @@ export function simulateCardioProfile(
       Object.assign(skillXp, nextState.skillXp);
     });
 
-    for (const skill of CARDIO_SIM_SKILLS) {
-      const xp = skillXp[skill.id] ?? 0;
-      cumulativeXpByWeek[skill.key].push(xp);
-      if (weeksToLevel99[skill.key] === null && xp >= LEVEL_99_XP) weeksToLevel99[skill.key] = week + 1;
-    }
+    recordWeek(week, skillXp);
   }
 
   return { profile: profile.name, weeksToLevel99, cumulativeXpByWeek, weeksSimulated: week };
