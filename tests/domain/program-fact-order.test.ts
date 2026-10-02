@@ -37,3 +37,37 @@ describe('facts are ordered by instant, not by timestamp text', () => {
     expect(orderFacts(facts).map((fact) => fact.id)).toEqual(['plus-two-noon', 'utc-half-past-ten']);
   });
 });
+
+describe('a timestamp with no Z or offset is unparseable, so ordering never depends on the time zone', () => {
+  it("orders '2026-10-02T10:00:00' (no zone) after '2026-10-02T23:59:59Z'", () => {
+    const facts = [
+      setReferenceFact({ id: 'a-no-zone', at: '2026-10-02T10:00:00' }, 'squat', 'tm', 110),
+      setReferenceFact({ id: 'z-utc-late', at: '2026-10-02T23:59:59Z' }, 'squat', 'tm', 120),
+    ];
+    expect(orderFacts(facts).map((fact) => fact.id)).toEqual(['z-utc-late', 'a-no-zone']);
+  });
+
+  it("orders a date-only '2026-10-01' after '2026-10-02T00:00:00Z'", () => {
+    const facts = [
+      setReferenceFact({ id: 'a-date-only', at: '2026-10-01' }, 'squat', 'tm', 110),
+      setReferenceFact({ id: 'z-utc', at: '2026-10-02T00:00:00Z' }, 'squat', 'tm', 120),
+    ];
+    expect(orderFacts(facts).map((fact) => fact.id)).toEqual(['z-utc', 'a-date-only']);
+  });
+
+  it('orders unparseable timestamps among themselves by id, not by their local-time reading', () => {
+    const facts = [
+      setReferenceFact({ id: 'b-earlier-local', at: '2026-10-02T09:00:00' }, 'squat', 'tm', 110),
+      setReferenceFact({ id: 'a-later-local', at: '2026-10-02T10:00:00' }, 'squat', 'tm', 120),
+    ];
+    expect(orderFacts(facts).map((fact) => fact.id)).toEqual(['a-later-local', 'b-earlier-local']);
+  });
+
+  it('folds a zoned set_reference before a zone-less one: the zone-less 110 wins', () => {
+    const facts = [
+      setReferenceFact({ id: 'a-no-zone', at: '2026-10-02T10:00:00' }, 'squat', 'tm', 110),
+      setReferenceFact({ id: 'z-utc-late', at: '2026-10-02T23:59:59Z' }, 'squat', 'tm', 120),
+    ];
+    expect(refOf(programStateAt(LINEAR_AFTER_SESSION, linearEnrollment(100), facts), 'squat', 'tm')).toBe(110);
+  });
+});
