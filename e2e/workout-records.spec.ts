@@ -1,6 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
-import { collectionPercent } from '../web/src/lib/collection-rules.ts';
 import { logCardio, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 
 test('bodyweight prompt, records and the collection log', async ({ page }) => {
@@ -30,10 +28,7 @@ test('bodyweight prompt, records and the collection log', async ({ page }) => {
   await expect(records).toContainText('Pull-up: 10 reps (was 8)');
 
   await openTab(page, 'Log');
-  const [filledSlots, totalSlots] = [2, REP_MAX_SLOT_COUNT + 1];
-  await expect(page.getByTestId('collection-completion')).toHaveText(
-    `${collectionPercent(filledSlots, totalSlots)}% (${filledSlots}/${totalSlots})`,
-  );
+  await expect(page.getByTestId('collection-completion')).toHaveText('18% (2/11)');
   const bench = page.locator('section', {
     has: page.getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
   });
