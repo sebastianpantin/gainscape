@@ -1,8 +1,7 @@
 import type { BalanceConfig } from './balance.ts';
 import { liftExerciseFor } from './exercise-lookup.ts';
-import { FLOAT_TOLERANCE } from './math.ts';
+import { FLOAT_TOLERANCE, loadRatioAtFailure, repsAtFailure } from './math.ts';
 import type { SessionContext, Step } from './pipeline.ts';
-import { loadRatioAtFailure, repsAtFailure } from './strength.ts';
 import {
   isLiftResult,
   type LiftExerciseDef,
