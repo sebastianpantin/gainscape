@@ -36,7 +36,7 @@ export function dayKeyOf(definition: ProgramDefinition, position: Position): str
   return days[((position.index % days.length) + days.length) % days.length].key;
 }
 
-export function weekKeyOf(position: Position): number[] {
+function weekKeyOf(position: Position): number[] {
   if (isRotationPosition(position)) return [position.index];
   return isCyclePosition(position) ? [position.cycle, position.week] : [position.week];
 }
