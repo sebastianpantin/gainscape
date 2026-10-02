@@ -152,7 +152,7 @@ export function isPositionInSchedule(definition: ProgramDefinition, position: Po
         fields.week === undefined &&
         fields.day === undefined &&
         fields.cycle === undefined &&
-        isWholeNumberWithin(fields.index, 0, MAX_PROGRAM_WEEKS * schedule.days.length)
+        isWholeNumberWithin(fields.index, 0, MAX_PROGRAM_WEEKS * schedule.days.length - 1)
       );
   }
 }
