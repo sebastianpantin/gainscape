@@ -206,9 +206,9 @@ const progressionRule = z.strictObject({
 });
 
 export const programDefinitionSchema = z.strictObject({
-  key: z.string(),
+  key: z.string().regex(/^[a-z0-9_]+$/),
   version: positiveInt,
-  name: z.string(),
+  name: z.string().min(1).max(60),
   source: sources,
   lifts: z.array(
     z.strictObject({ key: z.string(), name: z.string(), category: z.enum(['upper', 'lower']).optional() }),
