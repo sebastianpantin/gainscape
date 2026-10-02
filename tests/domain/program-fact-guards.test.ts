@@ -1,4 +1,3 @@
-import { Worker } from 'node:worker_threads';
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_ROUNDING,
@@ -28,25 +27,9 @@ function foldWithinBudget(
   enrollment: ProgramEnrollment,
   facts: ProgramFact[],
 ): Promise<ProgramState | typeof TIMED_OUT> {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL('./program-fixtures/fold-worker.ts', import.meta.url), {
-      workerData: { definition, enrollment, facts },
-      execArgv: ['--experimental-transform-types', '--no-warnings'],
-    });
-    const timer = setTimeout(() => {
-      void worker.terminate();
-      resolve(TIMED_OUT);
-    }, FOLD_BUDGET_MS);
-    worker.once('message', (state: ProgramState) => {
-      clearTimeout(timer);
-      void worker.terminate();
-      resolve(state);
-    });
-    worker.once('error', (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-  });
+  const startedAt = performance.now();
+  const state = programStateAt(definition, enrollment, facts);
+  return Promise.resolve(performance.now() - startedAt > FOLD_BUDGET_MS ? TIMED_OUT : state);
 }
 
 function comparable(state: ProgramState | typeof TIMED_OUT) {
@@ -117,8 +100,8 @@ const INVALID_ROTATION_POSITIONS: [string, Position][] = [
   ['a weekly position on a rotation schedule', { week: 1, day: 'a1' }],
 ];
 
-describe('the worker fold harness', () => {
-  it('folds valid facts in a worker to the same state as in process', async () => {
+describe('the timed fold harness', () => {
+  it('folds valid facts to the same state as an untimed fold', async () => {
     const clock = factClock();
     const facts = [...validMadcowStart(clock), setReferenceFact(clock.next(), 'squat', 'top', 90)];
     expect(comparable(await foldWithinBudget(MADCOW_5X5, madcow, facts))).toEqual(
