@@ -302,6 +302,22 @@ describe('parseProgramDefinition marks 1b progression semantics as unsupported u
     expect(namedUnsupportedKinds(parsed)).toContain(kind);
   });
 
+  it('parses a rule with no trigger as invalid with an error naming the trigger, not as unsupported', () => {
+    const json = asJson(LINEAR_AFTER_SESSION) as { progression: Record<string, unknown>[] };
+    delete json.progression[0].trigger;
+    const parsed = parseProgramDefinition(json);
+    expect(parsed.kind).toBe('invalid');
+    expect(parsed.kind === 'invalid' && parsed.errors).toEqual(
+      expect.arrayContaining([expect.stringContaining('trigger')]),
+    );
+  });
+
+  it('parses a rule with a non-text trigger as invalid', () => {
+    const json = asJson(LINEAR_AFTER_SESSION) as { progression: Record<string, unknown>[] };
+    json.progression[0].trigger = 7;
+    expect(parseProgramDefinition(json).kind).toBe('invalid');
+  });
+
   it('parses a rule on the endOfWave trigger as unsupported and names it', () => {
     const json = asJson(
       broken(LINEAR_AFTER_SESSION, (copy) => {
