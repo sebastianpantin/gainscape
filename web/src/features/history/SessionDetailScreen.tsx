@@ -15,6 +15,7 @@ import { usePreferences } from '../../lib/preferences.ts';
 import { updatePrivateProfile } from '../../lib/profile.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
+import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { forgetLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
@@ -266,6 +267,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     setConfirmingDelete(false);
     if (outcome.kind === 'ok') {
       forgetLastSummary([sessionId, ...outcome.data.replayedSessionIds]);
+      forgetDeletedProgramSession(localStorage, userId, sessionId);
       const removed = removedText(outcome.data.revokedDrops, items);
       navigate(HISTORY_PATH, {
         replace: true,
