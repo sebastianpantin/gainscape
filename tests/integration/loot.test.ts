@@ -20,7 +20,7 @@ import {
   rollsOf,
   startsOnOneLocalDay,
   TIMEZONE,
-} from './loot-support.ts';
+} from './session-support.ts';
 import {
   activeDropSummaries,
   builtInExerciseId,

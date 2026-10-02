@@ -12,7 +12,7 @@ import {
   type TestUser,
   seedRateLimitHits,
 } from './local-stack.ts';
-import { aSet, payloadAt, postSession, TIMEZONE } from './loot-support.ts';
+import { aSet, payloadAt, postSession, TIMEZONE } from './session-support.ts';
 
 const users: string[] = [];
 let benchId: string;

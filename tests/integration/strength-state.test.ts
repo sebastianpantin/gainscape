@@ -1,29 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE, type StrengthHistoryRow, strengthStateAt } from '@domain/index.ts';
-import {
-  ageSession,
-  builtInExerciseId,
-  createTestUser,
-  db,
-  postCompleteSession,
-  type TestUser,
-} from './local-stack.ts';
-import { HOUR_MS } from './loot-support.ts';
-
-const hard = { type: 'level', level: 'hard' } as const;
-
-type PlannedSet = { exerciseId: string; weightKg: number; reps: number; isWarmup?: boolean; effort?: unknown };
-
-function session(hoursAgo: number, sets: PlannedSet[]) {
-  const startedAt = new Date(Date.now() - hoursAgo * HOUR_MS);
-  return {
-    id: randomUUID(),
-    startedAt: startedAt.toISOString(),
-    endedAt: new Date(startedAt.getTime() + HOUR_MS / 2).toISOString(),
-    sets: sets.map((set, position) => ({ id: randomUUID(), position, isWarmup: false, effort: hard, ...set })),
-  };
-}
+import { ageSession, builtInExerciseId, createTestUser, db, type TestUser } from './local-stack.ts';
+import { aSet, HOUR_MS, hoursAgo, payloadAt, postSession } from './session-support.ts';
 
 async function storedHistory(userId: string): Promise<StrengthHistoryRow[]> {
   const rows = await db`
@@ -72,21 +51,18 @@ beforeAll(async () => {
     builtInExerciseId('barbell_row'),
   ]);
   [lifter, other] = await Promise.all([createTestUser(), createTestUser()]);
-  const old = session(10, [
-    { exerciseId: squatId, weightKg: 140, reps: 5 },
-    { exerciseId: benchId, weightKg: 100, reps: 5 },
-  ]);
-  await postCompleteSession(lifter.accessToken, old);
+  const old = payloadAt(hoursAgo(10), [aSet(squatId, 0, 140), aSet(benchId, 1, 100)]);
+  await postSession(lifter, old);
   await ageSession(old.id, '70 days');
-  await postCompleteSession(
-    lifter.accessToken,
-    session(5, [
-      { exerciseId: benchId, weightKg: 80, reps: 5 },
-      { exerciseId: curlId, weightKg: 20, reps: 15, effort: { type: 'rir', value: 0 } },
-      { exerciseId: rowId, weightKg: 40, reps: 10, isWarmup: true },
+  await postSession(
+    lifter,
+    payloadAt(hoursAgo(5), [
+      aSet(benchId, 0, 80),
+      aSet(curlId, 1, 20, { reps: 15, effort: { type: 'rir', value: 0 } }),
+      aSet(rowId, 2, 40, { reps: 10, isWarmup: true }),
     ]),
   );
-  await postCompleteSession(other.accessToken, session(3, [{ exerciseId: benchId, weightKg: 200, reps: 5 }]));
+  await postSession(other, payloadAt(hoursAgo(3), [aSet(benchId, 0, 200)]));
 });
 
 afterAll(async () => {

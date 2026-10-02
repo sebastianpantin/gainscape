@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { webCollectionCounts } from './collection-support.ts';
-import { aBout, aSet, hoursAgo, payloadAt, postSession } from './loot-support.ts';
+import { aBout, aSet, hoursAgo, payloadAt, postSession } from './session-support.ts';
 import { builtInExerciseId, createTestUser, db, setBodyweight, type TestUser } from './local-stack.ts';
 
 const ids: Record<string, string> = {};
