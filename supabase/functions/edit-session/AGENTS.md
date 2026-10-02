@@ -22,10 +22,12 @@ POST endpoint that edits notes and sets of an existing session within the edit w
 
 - Rate limit bucket `session_edit_hour`. Closed windows and history-only sessions are rejected.
 - Session revision column comes from migration 006.
+- Prescriptions stay strict here: a malformed one is 422 `invalid_payload`, and a ref repeated among the added sets is 422 `duplicate_prescription_ref`.
+- Kept sets keep their stored snapshot; a prescription sent for one is ignored. An added set stores its snapshot only when the session is linked and its ref is not a kept set's stored ref (removed sets are deleted first, so their refs are free).
 
 ### Testing Requirements
 
-`tests/integration/edit-session.test.ts` (also `loot-revocation.test.ts`, `events.test.ts`). Stack required.
+`tests/integration/edit-session.test.ts` and `program-sessions.test.ts` (also `loot-revocation.test.ts`, `events.test.ts`). Stack required.
 
 ### Common Patterns
 
