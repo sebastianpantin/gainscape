@@ -7,9 +7,8 @@ import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
 import { formatLoad, formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
-import { tryAgainIn } from '../../lib/rate-limit.ts';
 import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/history-rules.ts';
-import { type CatalogItem, describeDrops, itemNameLookup } from '../../lib/item-rules.ts';
+import type { CatalogItem } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { updatePrivateProfile } from '../../lib/profile.ts';
@@ -31,11 +30,15 @@ import {
   type EditSet,
   type FailureAction,
   failureAction,
+  failureText,
   hasChanges,
   isEditable,
   rebaseEdit,
   rebaseNotice,
+  removalText,
+  removedText,
   removeEditSet,
+  sameSetValues,
   type SessionEdit,
   swapEditExercise,
   updateEditBout,
@@ -78,26 +81,6 @@ async function loadSession(sessionId: string): Promise<Loaded | null> {
 }
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
-
-function removalText(drops: readonly { itemId: string; quantity: number }[], items: readonly CatalogItem[]): string {
-  const described = describeDrops(drops, itemNameLookup(items, 'an item'));
-  return described && `This may remove ${described} from your collection.`;
-}
-
-function removedText(
-  drops: readonly { itemId: string; revokedQuantity: number }[] | undefined,
-  items: readonly CatalogItem[],
-): string {
-  const described = describeDrops(
-    (drops ?? []).map((drop) => ({ itemId: drop.itemId, quantity: drop.revokedQuantity })),
-    itemNameLookup(items, 'an item'),
-  );
-  return described && `Removed ${described} from your collection.`;
-}
-
-function sameSetValues(a: EditSet | EditBout, b: EditSet | EditBout): boolean {
-  return JSON.stringify({ ...a, id: '' }) === JSON.stringify({ ...b, id: '' });
-}
 
 interface SessionDetailScreenProps {
   userId: string;
@@ -212,34 +195,14 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     setProblem({ kind: 'conflict', fresh });
   };
 
-  const handleCommonFailure = (action: FailureAction, verb: string) => {
-    switch (action.kind) {
-      case 'sign_out':
-        void signOutKeepingDrafts();
-        return;
-      case 'gone':
-        goBackGone();
-        return;
-      case 'read_only':
-        setReadOnly(true);
-        setEdit(loaded.original);
-        setProblem({ kind: 'message', text: 'This workout is older than 7 days, so it can no longer be changed.' });
-        return;
-      case 'wrong_account':
-        setProblem({ kind: 'message', text: 'You are signed in as someone else in another tab. Reload the app.' });
-        return;
-      case 'retry':
-        setProblem({ kind: 'message', text: `Couldn't reach the server (${action.reason}). Try again.` });
-        return;
-      case 'rate_limited':
-        setProblem({ kind: 'message', text: `Too many changes. ${tryAgainIn(action.retryAfterSeconds)}` });
-        return;
-      case 'bug':
-        setProblem({ kind: 'message', text: `Couldn't ${verb} this workout: ${action.code}` });
-        return;
-      default:
-        setProblem({ kind: 'message', text: `Couldn't ${verb} this workout: ${action.kind}` });
+  const handleCommonFailure = (action: FailureAction, verb: 'save' | 'delete') => {
+    if (action.kind === 'sign_out') return void signOutKeepingDrafts();
+    if (action.kind === 'gone') return goBackGone();
+    if (action.kind === 'read_only') {
+      setReadOnly(true);
+      setEdit(loaded.original);
     }
+    setProblem({ kind: 'message', text: failureText(action, verb) });
   };
 
   const save = async (toSend: SessionEdit, setIdRetriesLeft = SET_ID_RETRIES): Promise<void> => {

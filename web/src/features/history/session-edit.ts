@@ -10,7 +10,8 @@ import {
   type StoredSetRow,
   transientReason,
 } from '../../lib/history-rules.ts';
-import { RATE_LIMITED_CODE, retryAfterSeconds } from '../../lib/rate-limit.ts';
+import { type CatalogItem, describeDrops, itemNameLookup } from '../../lib/item-rules.ts';
+import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
 import {
   type BoutValues,
   defaultWeightKg,
@@ -453,4 +454,46 @@ export function failureAction(outcome: Exclude<InvokeOutcome<unknown>, { kind: '
   if (outcome.kind === 'retryable') return { kind: 'retry', reason: outcome.reason };
   const action = FAILURE_ACTIONS[outcome.code]?.(outcome.details);
   return action ?? { kind: 'bug', code: outcome.code };
+}
+
+export function failureText(action: FailureAction, verb: 'save' | 'delete'): string {
+  switch (action.kind) {
+    case 'read_only':
+      return 'This workout is older than 7 days, so it can no longer be changed.';
+    case 'wrong_account':
+      return 'You are signed in as someone else in another tab. Reload the app.';
+    case 'retry':
+      return `Couldn't reach the server (${action.reason}). Try again.`;
+    case 'rate_limited':
+      return `Too many changes. ${tryAgainIn(action.retryAfterSeconds)}`;
+    case 'bug':
+      return `Couldn't ${verb} this workout: ${action.code}`;
+    default:
+      return `Couldn't ${verb} this workout: ${action.kind}`;
+  }
+}
+
+const UNKNOWN_ITEM_NAME = 'an item';
+
+export function removalText(
+  drops: readonly { itemId: string; quantity: number }[],
+  items: readonly CatalogItem[],
+): string {
+  const described = describeDrops(drops, itemNameLookup(items, UNKNOWN_ITEM_NAME));
+  return described && `This may remove ${described} from your collection.`;
+}
+
+export function removedText(
+  drops: readonly { itemId: string; revokedQuantity: number }[] | undefined,
+  items: readonly CatalogItem[],
+): string {
+  const described = describeDrops(
+    (drops ?? []).map((drop) => ({ itemId: drop.itemId, quantity: drop.revokedQuantity })),
+    itemNameLookup(items, UNKNOWN_ITEM_NAME),
+  );
+  return described && `Removed ${described} from your collection.`;
+}
+
+export function sameSetValues(a: EditSet | EditBout, b: EditSet | EditBout): boolean {
+  return JSON.stringify({ ...a, id: '' }) === JSON.stringify({ ...b, id: '' });
 }
