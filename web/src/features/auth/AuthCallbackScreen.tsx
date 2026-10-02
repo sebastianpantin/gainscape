@@ -5,6 +5,7 @@ import {
   authErrorMessage,
   confirmedRecently,
   MINIMUM_PASSWORD_LENGTH,
+  passwordProblem,
   USERNAME_HINT,
   USERNAME_PATTERN,
 } from '../../lib/auth-links.ts';
@@ -92,9 +93,7 @@ function PasswordFields({
           required
         />
       </label>
-      {password.length > 0 && password.length < MINIMUM_PASSWORD_LENGTH && (
-        <p className="problem">Use at least {MINIMUM_PASSWORD_LENGTH} characters.</p>
-      )}
+      {password.length > 0 && passwordProblem(password) && <p className="problem">{passwordProblem(password)}</p>}
       {repeat.length > 0 && repeat !== password && <p className="problem">The passwords don't match.</p>}
     </>
   );
