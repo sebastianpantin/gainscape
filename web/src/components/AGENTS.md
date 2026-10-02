@@ -17,6 +17,7 @@ Small shared UI pieces used across feature screens: the line icon set, the pixel
 | `PreferencesProvider.tsx` | Provides `PreferencesContext` (unit preference, effort input mode): seeds from the per-user cache, refreshes from `fetchProfile`, ignores the server result if the user changed preferences locally meanwhile, and caches changes |
 | `ProgressBar.tsx`         | `role="progressbar"` bar; clamps `fraction` to 0..1 and exposes a rounded percent                                                                                                                                                 |
 | `SegmentedNav.tsx`        | `nav.segmented` of `NavLink`s (`end` matching) for sub-areas such as the Log and Friends tabs                                                                                                                                     |
+| `SegmentedChoice.tsx`     | `role="radiogroup"` of `role="radio"` buttons in the `.segmented` style, optionally `stacked` in one column; used by the program enroll form and the Day picker                                                                   |
 | `Switch.tsx`              | `role="switch"` button with label and optional hint wired through `aria-labelledby`/`aria-describedby`                                                                                                                            |
 
 ## For AI Agents
