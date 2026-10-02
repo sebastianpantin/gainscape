@@ -1,4 +1,5 @@
 import type { BalanceConfig } from './balance.ts';
+import { liftExerciseFor } from './exercise-lookup.ts';
 import type { SessionContext, Step } from './pipeline.ts';
 import { isLiftResult, type LiftExerciseDef, type LiftSetResult, type SetResult } from './types.ts';
 
@@ -68,8 +69,8 @@ export const checkFatigue: Step = (ctx: SessionContext) => {
   const workingSets = ctx.sets.filter(isLiftResult).filter((result) => !result.set.isWarmup);
   const sets = ctx.sets.map((result): SetResult => {
     if (!isLiftResult(result) || result.set.isWarmup || result.rirForXp === null) return result;
-    const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
-    if (exercise.modality === 'cardio' || workingLoad(result, exercise) <= 0) return result;
+    const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
+    if (workingLoad(result, exercise) <= 0) return result;
     const laterSets = workingSets.filter(
       (other) => other.set.exerciseId === result.set.exerciseId && other.set.position > result.set.position,
     );

@@ -3,12 +3,14 @@ import { describe, expect, it } from 'vitest';
 import {
   BodyweightLoadNotZeroError,
   BodyweightRequiredError,
+  cardioExercise,
   carriedEffectiveLoadKg,
   type CardioSetInput,
   type EffortInput,
   type ExerciseDef,
   HISTORY_ONLY_STEPS,
   KindMismatchError,
+  liftExerciseFor,
   type LiftSetInput,
   processSession,
   REP_MAX_SLOT_COUNT,
@@ -163,6 +165,13 @@ describe('processSession', () => {
     const replayed = { ...fixtureSession, sets: [aSet('pull-up', 0, 10, hard, { recordedEffectiveLoadKg: 75 })] };
     const { outputs } = processSession({ skillXp: {}, bodyweightKg: 80 }, replayed, TEST_BALANCE, { catalog });
     expect(outputs.sets[0].effectiveLoadKg).toBe(75);
+  });
+
+  it('rejects added load on a pure bodyweight exercise even with a recorded load', () => {
+    const replayed = { ...fixtureSession, sets: [aSet('pull-up', 5, 10, hard, { recordedEffectiveLoadKg: 85 })] };
+    expect(() => processSession({ skillXp: {}, bodyweightKg: 80 }, replayed, TEST_BALANCE, { catalog })).toThrow(
+      BodyweightLoadNotZeroError,
+    );
   });
 
   it('lets callers replace the step list', () => {
@@ -329,5 +338,22 @@ describe('carriedEffectiveLoadKg', () => {
     expect(() => carriedEffectiveLoadKg(stored, { exerciseId: 'pull-up', weightKg: 5 }, pullUp, 80)).toThrow(
       BodyweightLoadNotZeroError,
     );
+  });
+});
+
+describe('exercise lookup', () => {
+  it('finds a lift exercise for a lift set', () => {
+    expect(liftExerciseFor(aSet('bench', 60, 5, hard), catalog)).toBe(catalog.exercises.get('bench'));
+  });
+
+  it('rejects a lift set on a cardio exercise and an exercise missing from the catalog', () => {
+    expect(() => liftExerciseFor(aSet('run', 0, 5, hard), catalog)).toThrow(KindMismatchError);
+    expect(() => liftExerciseFor(aSet('missing', 0, 5, hard), catalog)).toThrow(UnknownExerciseError);
+  });
+
+  it('finds a cardio exercise and rejects a lift one', () => {
+    const run = catalog.exercises.get('run')!;
+    expect(cardioExercise(run)).toBe(run);
+    expect(() => cardioExercise(catalog.exercises.get('bench')!)).toThrow(KindMismatchError);
   });
 });

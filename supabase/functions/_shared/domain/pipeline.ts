@@ -12,19 +12,14 @@ import type {
   LiftSetInput,
   SessionInput,
   SessionSummary,
-  SetInput,
   SetResult,
   SkillDef,
   StrengthState,
   UserState,
 } from './types.ts';
 import { isLiftResult, NO_RECORDS } from './types.ts';
-import {
-  BodyweightLoadNotZeroError,
-  BodyweightRequiredError,
-  KindMismatchError,
-  UnknownExerciseError,
-} from './errors.ts';
+import { BodyweightLoadNotZeroError, BodyweightRequiredError } from './errors.ts';
+import { cardioExercise, exerciseFor, liftExercise, liftExerciseFor } from './exercise-lookup.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
 import { checkFatigue } from './fatigue.ts';
 import { liftsNoLoad, roundTo, trackStrength } from './strength.ts';
@@ -53,17 +48,6 @@ export interface SessionOutputs extends Omit<SessionSummary, 'sessionId'> {
 
 function skillsInDisplayOrder(catalog: Catalog): SkillDef[] {
   return [...catalog.skills].sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
-function exerciseFor(set: SetInput, catalog: Catalog): ExerciseDef {
-  const exercise = catalog.exercises.get(set.exerciseId);
-  if (!exercise) throw new UnknownExerciseError(set.exerciseId);
-  return exercise;
-}
-
-function liftExercise(exercise: ExerciseDef): LiftExerciseDef {
-  if (exercise.modality === 'cardio') throw new KindMismatchError(exercise.id);
-  return exercise;
 }
 
 function assertNoAddedLoadOnPureBodyweight(set: Pick<LiftSetInput, 'weightKg'>, exercise: LiftExerciseDef): void {
@@ -104,8 +88,9 @@ export function carriedEffectiveLoadKg(
 }
 
 function effectiveLoadKg(set: LiftSetInput, exercise: LiftExerciseDef, state: UserState): number {
+  if (set.recordedEffectiveLoadKg === undefined) return effectiveLoadForNewSet(set, exercise, state.bodyweightKg);
   assertNoAddedLoadOnPureBodyweight(set, exercise);
-  return set.recordedEffectiveLoadKg ?? effectiveLoadForNewSet(set, exercise, state.bodyweightKg);
+  return set.recordedEffectiveLoadKg;
 }
 
 const SECONDS_PER_MINUTE = 60;
@@ -167,18 +152,17 @@ function cardioResult(
   };
 }
 
-export const resolveSets: Step = (ctx) => {
+const resolveSets: Step = (ctx) => {
   let xpWorkSecondsLeft = ctx.cfg.cardioMaxCountedMinutesPerSession * SECONDS_PER_MINUTE;
   const sets = [...ctx.session.sets]
     .sort((a, b) => a.position - b.position)
     .map((set): SetResult => {
       const exercise = exerciseFor(set, ctx.deps.catalog);
       if (set.kind === 'cardio') {
-        if (exercise.modality !== 'cardio') throw new KindMismatchError(exercise.id);
         const workS = countedWorkSeconds(set);
         const xpWorkS = Math.min(workS, xpWorkSecondsLeft);
         xpWorkSecondsLeft -= xpWorkS;
-        return cardioResult(set, exercise, { workS, xpWorkS }, ctx);
+        return cardioResult(set, cardioExercise(exercise), { workS, xpWorkS }, ctx);
       }
       return liftResult(set, liftExercise(exercise), ctx);
     });
@@ -190,16 +174,16 @@ const awardXp: Step = (ctx) => {
   const sortOrderOf = (skillId: string) => skillsById.get(skillId)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
   const xpSetsSeenByExercise = new Map<string, number>();
   const sets = ctx.sets.map((result) => {
-    const exercise = exerciseFor(result.set, ctx.deps.catalog);
     if (result.cardio !== null) {
-      const shares = [...exercise.shares]
+      const shares = [...exerciseFor(result.set, ctx.deps.catalog).shares]
         .sort((a, b) => sortOrderOf(a.skillId) - sortOrderOf(b.skillId))
         .map((share) => ({ ...share, skillKey: skillsById.get(share.skillId)?.key ?? '' }));
       const steady = result.set.kind === 'cardio' && result.set.interval === null;
       const skillXp = cardioSkillXp({ ...result.cardio, steady }, shares, ctx.cfg);
       return { ...result, xp: skillXp.reduce((sum, part) => sum + part.xp, 0), skillXp };
     }
-    if (!isLiftResult(result) || exercise.modality === 'cardio') return result;
+    if (!isLiftResult(result)) return result;
+    const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const earnsNothing = result.rirForXp === null || liftsNoLoad(exercise, result.effectiveLoadKg);
     const effectiveRepCount = earnsNothing
       ? 0

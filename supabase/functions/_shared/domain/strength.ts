@@ -1,5 +1,6 @@
 import type { BalanceConfig } from './balance.ts';
 import { MS_PER_DAY } from './edit-window.ts';
+import { liftExerciseFor } from './exercise-lookup.ts';
 import { fatigueAfterSet, fatiguedStrength } from './fatigue.ts';
 import { compareSessionKeys, isBefore } from './ordering.ts';
 import type { SessionContext, Step } from './pipeline.ts';
@@ -217,8 +218,8 @@ export const trackStrength: Step = (ctx: SessionContext) => {
   const progressByExercise = new Map<string, ExerciseSessionProgress>();
 
   const sets = ctx.sets.map((result): SetResult => {
-    const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
-    if (!isLiftResult(result) || exercise.modality === 'cardio') return result;
+    if (!isLiftResult(result)) return result;
+    const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const known = ctx.deps.strength?.[exercise.id] ?? NO_STRENGTH;
     const progress = progressByExercise.get(exercise.id) ?? {
       strengthAtSessionStart: known.windowMax ?? known.fallbackMax,

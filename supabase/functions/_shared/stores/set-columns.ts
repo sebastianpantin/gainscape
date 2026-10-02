@@ -4,7 +4,7 @@ type EffortColumns = Pick<SetResult, 'effortInputType' | 'effortValue'>;
 
 export type WritableSet = (LiftSetInput & { effectiveLoadKg: number }) | CardioSetInput;
 
-export function liftInputColumns(
+function liftInputColumns(
   set: Pick<LiftSetInput, 'id' | 'exerciseId' | 'position' | 'weightKg' | 'reps' | 'isWarmup'>,
   effectiveLoadKg: number,
   effort: EffortColumns,
@@ -28,7 +28,7 @@ export function liftInputColumns(
   };
 }
 
-export function cardioInputColumns(bout: CardioSetInput, effort: EffortColumns) {
+function cardioInputColumns(bout: CardioSetInput, effort: EffortColumns) {
   return {
     id: bout.id,
     exercise_id: bout.exerciseId,
