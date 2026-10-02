@@ -53,6 +53,12 @@ async function exportFor(userId: string) {
          order by d.position)
          from public.program_days d where d.program_id = p.id), '[]'::json) as days
       from public.programs p where p.owner_user_id = ${userId} order by p.created_at`;
+    const programEnrollments = await tx`
+      select * from public.program_enrollments where user_id = ${userId} order by started_at, id`;
+    const programEnrollmentEvents = await tx`
+      select ev.* from public.program_enrollment_events ev
+      join public.program_enrollments e on e.id = ev.enrollment_id
+      where e.user_id = ${userId} order by e.started_at, e.id, ev.effective_at, ev.id`;
     const lootRolls = await tx`select * from public.loot_rolls where user_id = ${userId} order by created_at, id`;
     const drops = await tx`select * from public.drops where user_id = ${userId} order by created_at, id`;
     const dropLuck = await tx`select * from public.drop_luck where user_id = ${userId} order by drop_table_id`;
@@ -100,6 +106,8 @@ async function exportFor(userId: string) {
       pinnedExercises,
       customExercises,
       programs,
+      programEnrollments,
+      programEnrollmentEvents,
       lootRolls,
       drops,
       dropLuck,
