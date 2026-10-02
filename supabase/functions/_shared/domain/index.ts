@@ -137,6 +137,8 @@ export {
 } from './program-prescription.ts';
 export {
   advanceProgram,
+  finalDaySets,
+  type FinalDaySets,
   isSetMet,
   liftOutcomes,
   ruleKeyOf,
@@ -146,7 +148,6 @@ export {
   weeksBack,
 } from './program-progression.ts';
 export {
-  type AfterSessionEffect,
   type DayRecord,
   type FactSet,
   initialProgramState,
