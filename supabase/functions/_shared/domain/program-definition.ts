@@ -521,6 +521,7 @@ class DefinitionChecker {
   }
 
   private collectDaysAndSlots() {
+    if (this.definition.schedule.days.length === 0) this.errors.push('the schedule has no days');
     for (const day of this.definition.schedule.days) {
       if (this.dayKeys.has(day.key)) this.errors.push(`duplicate day key '${day.key}'`);
       this.dayKeys.add(day.key);
@@ -672,12 +673,36 @@ class DefinitionChecker {
     if (!this.options.has(option)) this.errors.push(`${where} uses unknown option '${option}'`);
   }
 
+  private declaredOption(key: string): OptionDecl | undefined {
+    return this.definition.options.find((option) => option.key === key);
+  }
+
   private checkNumber(expr: NumberExpr, where: string) {
-    if (typeof expr === 'object' && expr !== null && 'option' in expr) this.checkOption(expr.option, where);
+    if (typeof expr !== 'object' || expr === null) return;
+    if ('byCycle' in expr) {
+      if (expr.byCycle.length === 0) this.errors.push(`${where} has an empty byCycle table`);
+      return;
+    }
+    this.checkOption(expr.option, where);
+    const option = this.declaredOption(expr.option);
+    if (option?.kind === 'choice' && option.values.some((value) => typeof value !== 'number')) {
+      this.errors.push(`${where} reads option '${expr.option}' as a number, but it has text values`);
+    }
   }
 
   private checkAmount(expr: UnitAmountExpr, where: string) {
-    if ('option' in expr) this.checkOption(expr.option, where);
+    if (!('option' in expr)) return;
+    this.checkOption(expr.option, where);
+    const option = this.declaredOption(expr.option);
+    if (option?.kind === 'number') {
+      this.errors.push(`${where} keys amounts by number option '${expr.option}', which has no fixed values`);
+    }
+    if (option?.kind !== 'choice') return;
+    for (const value of option.values) {
+      if (!(String(value) in expr.cases)) {
+        this.errors.push(`${where} has no amount for option '${expr.option}' value '${String(value)}'`);
+      }
+    }
   }
 }
 
@@ -799,6 +824,65 @@ export function parseProgramDefinition(json: unknown): ParsedProgramDefinition {
   return { kind: 'ok', definition };
 }
 
-export const validateEnrollment: (definition: ProgramDefinition, enrollment: ProgramEnrollment) => string[] = () => {
-  throw new Error('not implemented');
-};
+const ROUNDING_MODES: readonly string[] = ['nearest', 'down'];
+
+function isPositiveNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function enrollmentOptionErrors(definition: ProgramDefinition, enrollment: ProgramEnrollment): string[] {
+  const errors: string[] = [];
+  for (const [key, value] of Object.entries(enrollment.options)) {
+    const option = definition.options.find((candidate) => candidate.key === key);
+    if (!option) errors.push(`option '${key}' is not declared by the template`);
+    else if (option.kind === 'choice' && !option.values.includes(value)) {
+      errors.push(`option '${key}' value ${String(value)} is not one of ${option.values.join(', ')}`);
+    } else if (
+      option.kind === 'number' &&
+      (typeof value !== 'number' || !Number.isFinite(value) || value < option.min || value > option.max)
+    ) {
+      errors.push(`option '${key}' value ${String(value)} is outside ${option.min}–${option.max}`);
+    }
+  }
+  return errors;
+}
+
+function enrollmentInputErrors(definition: ProgramDefinition, enrollment: ProgramEnrollment): string[] {
+  const errors: string[] = [];
+  for (const input of definition.inputs) {
+    for (const lift of input.lifts) {
+      const given = Object.entries(enrollment.inputs[lift] ?? {});
+      const declared = given.filter(([kind]) => (input.kinds as string[]).includes(kind));
+      if (declared.length === 0) errors.push(`lift '${lift}' needs one of the inputs ${input.kinds.join(', ')}`);
+      for (const [kind, value] of given) {
+        if (!(input.kinds as string[]).includes(kind)) {
+          errors.push(`lift '${lift}' input '${kind}' is not declared by the template`);
+        } else if (!isPositiveNumber(value)) {
+          errors.push(`lift '${lift}' input '${kind}' must be a positive number, got ${String(value)}`);
+        }
+      }
+    }
+  }
+  return errors;
+}
+
+function enrollmentRoundingErrors(enrollment: ProgramEnrollment): string[] {
+  const { increment, mode, barWeight } = enrollment.rounding;
+  const errors: string[] = [];
+  if (!isPositiveNumber(increment)) errors.push(`rounding increment must be a positive number, got ${increment}`);
+  if (!ROUNDING_MODES.includes(mode)) errors.push(`rounding mode must be nearest or down, got ${String(mode)}`);
+  if (typeof barWeight !== 'number' || !Number.isFinite(barWeight) || barWeight < 0) {
+    errors.push(`rounding bar weight must be zero or more, got ${barWeight}`);
+  }
+  return errors;
+}
+
+export function validateEnrollment(definition: ProgramDefinition, enrollment: ProgramEnrollment): string[] {
+  const unitErrors = enrollment.unit === 'kg' || enrollment.unit === 'lb' ? [] : [`unknown unit '${enrollment.unit}'`];
+  return [
+    ...unitErrors,
+    ...enrollmentRoundingErrors(enrollment),
+    ...enrollmentOptionErrors(definition, enrollment),
+    ...enrollmentInputErrors(definition, enrollment),
+  ];
+}
