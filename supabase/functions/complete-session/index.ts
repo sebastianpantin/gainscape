@@ -3,7 +3,9 @@ import {
   type Catalog,
   DEFAULT_BALANCE,
   HISTORY_ONLY_STEPS,
+  historyOnlySummary,
   isWithinEditWindow,
+  pendingSummary,
   processSession,
   type SessionInput,
   type SessionSummary,
@@ -55,17 +57,9 @@ async function storeHistoryOnly(
     { catalog },
     HISTORY_ONLY_STEPS,
   );
-  const summary: SessionSummary = {
-    sessionId: session.id,
-    xpBySkill: {},
-    levelUps: [],
-    prs: [],
-    drops: [],
-    historyOnly: true,
-  };
   return await insertSession(
     tx,
-    { ...row, historyOnly: true, summary },
+    { ...row, historyOnly: true, summary: historyOnlySummary(session.id) },
     outputs.sets.map((result) => newSetRow(result, session.id, row.userId)),
   );
 }
@@ -133,7 +127,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       timezone: profile.timezone,
       historyOnly: false,
       balanceVersion: DEFAULT_BALANCE.version,
-      summary: { sessionId: payload.id, drops: [] },
+      summary: pendingSummary(payload.id),
       notes: payload.notes,
     };
 
