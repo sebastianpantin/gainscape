@@ -29,7 +29,7 @@ import {
   type StoredSet,
   storedSummary,
 } from '../_shared/stores/sessions.ts';
-import { inputSetColumns, type WritableSet } from '../_shared/stores/set-columns.ts';
+import { inputColumnsWithEffort, type WritableSet } from '../_shared/stores/set-columns.ts';
 import { type EditSessionPayload, parseEditSessionPayload } from './payload.ts';
 
 interface EditResponse {
@@ -115,9 +115,7 @@ async function writeSets(
     await tx`delete from public.sets where session_id = ${sessionId} and id = any(${removedIds}::uuid[])`;
   }
   if (kept.length > 0) {
-    const rows = kept.map((set) =>
-      inputSetColumns(set, resolveEffort(set.effort, DEFAULT_BALANCE, set.kind ?? 'lift')),
-    );
+    const rows = kept.map((set) => inputColumnsWithEffort(set, DEFAULT_BALANCE));
     await tx`
       update public.sets as target
       set exercise_id = derived.exercise_id,

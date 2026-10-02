@@ -1,15 +1,15 @@
-import type { JsonValue, Transaction } from '../db.ts';
+import { isoTimestamp, type JsonValue, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   type CardioInterval,
   type EffortInputType,
   isWithinEditWindow,
-  resolveEffort,
   type SessionKey,
   type SessionSummary,
+  setKind,
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
-import { inputSetColumns, type WritableSet } from './set-columns.ts';
+import { cardioFieldsFromRow, inputColumnsWithEffort, type WritableSet } from './set-columns.ts';
 
 export interface StoredSession {
   userId: string;
@@ -35,9 +35,13 @@ export interface NewSessionRow {
   notes: string | null;
 }
 
-export async function lockUser(tx: Transaction, userId: string): Promise<void> {
+export async function lockUser(
+  tx: Transaction,
+  userId: string,
+  missingProfile = new HttpError(403, 'profile_missing'),
+): Promise<void> {
   const [profile] = await tx`select id from public.profiles where id = ${userId} for update`;
-  if (!profile) throw new HttpError(403, 'profile_missing');
+  if (!profile) throw missingProfile;
 }
 
 export async function findSession(tx: Transaction, sessionId: string): Promise<StoredSession | null> {
@@ -64,7 +68,7 @@ export async function requireOwnedSession(tx: Transaction, userId: string, sessi
     from public.sessions where id = ${sessionId}`;
   if (!row || row.user_id !== userId) throw new HttpError(404, 'session_not_found');
   return {
-    key: { id: sessionId, startedAt: new Date(row.started_at).toISOString() },
+    key: { id: sessionId, startedAt: isoTimestamp(row.started_at) },
     historyOnly: row.history_only,
     revision: row.revision,
     notes: row.notes,
@@ -112,20 +116,9 @@ export async function loadStoredSets(tx: Transaction, sessionId: string): Promis
       exerciseId: row.exercise_id,
       position: row.position,
       effortInputType: row.effort_input_type,
-      effortValue: row.effort_value === null ? null : Number(row.effort_value),
+      effortValue: nullableNumber(row.effort_value),
     };
-    if (row.duration_s !== null) {
-      return {
-        ...base,
-        kind: 'cardio',
-        durationS: row.duration_s,
-        distanceM: row.distance_m === null ? null : Number(row.distance_m),
-        interval:
-          row.interval_rounds === null
-            ? null
-            : { workS: row.interval_work_s, restS: row.interval_rest_s, rounds: row.interval_rounds },
-      };
-    }
+    if (row.duration_s !== null) return { ...base, kind: 'cardio', ...cardioFieldsFromRow(row) };
     return {
       ...base,
       kind: 'lift',
@@ -151,7 +144,7 @@ export async function loadProfileSettings(tx: Transaction, userId: string): Prom
   const [privateProfile] =
     await tx`select bodyweight_kg, timezone from public.profile_private where user_id = ${userId}`;
   return {
-    bodyweightKg: privateProfile?.bodyweight_kg == null ? null : Number(privateProfile.bodyweight_kg),
+    bodyweightKg: nullableNumber(privateProfile?.bodyweight_kg),
     timezone: privateProfile?.timezone ?? 'UTC',
   };
 }
@@ -169,9 +162,9 @@ export async function ownedProgramDayId(
 }
 
 export function placeholderSetRow(set: WritableSet, sessionId: string, userId: string, cfg: BalanceConfig) {
-  const kind = set.kind ?? 'lift';
+  const kind = setKind(set);
   return {
-    ...inputSetColumns(set, resolveEffort(set.effort, cfg, kind)),
+    ...inputColumnsWithEffort(set, cfg),
     session_id: sessionId,
     user_id: userId,
     rir: null,

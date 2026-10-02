@@ -1,6 +1,14 @@
 import type { LootConfig } from './balance.ts';
 import { roundTo } from './math.ts';
-import type { Catalog, RevokeReason, Rng, RollKind, SetKind, SetResult } from './types.ts';
+import {
+  type Catalog,
+  type RevokeReason,
+  type Rng,
+  type RollKind,
+  type SetKind,
+  type SetResult,
+  setKind,
+} from './types.ts';
 
 const CHANCE_DECIMALS = 5;
 const GUARANTEED_CHANCE = 1;
@@ -75,7 +83,7 @@ export function lootCandidates(sets: readonly SetResult[], catalog: Catalog): Lo
     .map((result) => ({
       setId: result.set.id,
       position: result.set.position,
-      kind: result.set.kind ?? 'lift',
+      kind: setKind(result.set),
       effectiveReps: result.effectiveReps,
       countedWorkS: result.cardio?.countedWorkS ?? 0,
       interval: result.set.kind === 'cardio' && result.set.interval !== null,

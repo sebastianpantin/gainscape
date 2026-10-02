@@ -1,4 +1,4 @@
-import type { JsonValue, Transaction } from '../db.ts';
+import { isoTimestamp, type JsonValue, nullableNumber, type Transaction } from '../db.ts';
 import {
   type FeedExercise,
   feedEventsForSession,
@@ -51,7 +51,7 @@ export async function syncSessionEvents(tx: Transaction, userId: string, session
     const sets = setsBySession.get(row.session_id) ?? [];
     sets.push({
       id: row.id,
-      effectiveLoadKg: row.effective_load_kg === null ? null : Number(row.effective_load_kg),
+      effectiveLoadKg: nullableNumber(row.effective_load_kg),
     });
     setsBySession.set(row.session_id, sets);
   }
@@ -62,7 +62,7 @@ export async function syncSessionEvents(tx: Transaction, userId: string, session
       event_key: draft.key,
       type: draft.type,
       set_id: draft.setId,
-      occurred_at: new Date(session.ended_at).toISOString(),
+      occurred_at: isoTimestamp(session.ended_at),
       payload: draft.payload,
     })),
   );
