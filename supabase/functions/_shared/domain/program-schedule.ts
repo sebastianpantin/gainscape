@@ -121,7 +121,7 @@ export function upcomingDays(definition: ProgramDefinition, cursor: ScheduleCurs
   return upcoming;
 }
 
-export const MAX_PROGRAM_WEEKS = 520;
+const MAX_PROGRAM_WEEKS = 520;
 
 function isWholeNumberWithin(value: unknown, min: number, max: number): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
