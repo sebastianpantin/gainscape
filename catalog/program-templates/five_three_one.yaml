@@ -1,0 +1,285 @@
+key: five_three_one
+version: 1
+name: 5/3/1
+source:
+  - arvo.guru/resources/methods/wendler-531
+  - liftvault.com 531-bbb
+  - jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big
+lifts:
+  - { key: squat, name: Squat, category: lower }
+  - { key: bench, name: Bench press, category: upper }
+  - { key: deadlift, name: Deadlift, category: lower }
+  - { key: press, name: Overhead press, category: upper }
+inputs:
+  - lifts: [squat, bench, deadlift, press]
+    kinds: [oneRm, tm]
+referenceVars: [tm]
+initial:
+  - { kind: copy, var: tm, from: tm }
+  - { kind: scale, var: tm, from: oneRm, factor: { option: tmPct } }
+options:
+  - key: supplemental
+    kind: choice
+    values: [none, bbb, fsl]
+    default: bbb
+    source:
+      - jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big
+      - arvo.guru/resources/methods/wendler-531
+      - jimwendler.com post on 5x5 FSL vs BBB
+  - key: bbbPct
+    kind: choice
+    values: [0.5, 0.55, 0.6]
+    default: 0.5
+    source:
+      - jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big
+  - key: bbbProgression
+    kind: choice
+    values: [standard, beginner]
+    default: standard
+    source:
+      - jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big
+  - key: tmPct
+    kind: choice
+    values: [0.9, 0.85]
+    default: 0.9
+    source:
+      - arvo.guru/resources/methods/wendler-531
+      - liftvault.com 531-bbb
+  - key: tmReset
+    kind: number
+    min: 0.1
+    max: 0.15
+    default: 0.1
+    source:
+      - arvo.guru/resources/methods/wendler-531
+      - liftvault.com 531-bbb
+conversions:
+  - { lb: 5, kg: 2.5, note: upper-body cycle increment }
+  - { lb: 10, kg: 5, note: lower-body cycle increment }
+weekTables:
+  main:
+    - sets:
+        - { pct: 0.65, reps: 5 }
+        - { pct: 0.75, reps: 5 }
+        - { pct: 0.85, reps: 5, amrap: true, minReps: 5 }
+    - sets:
+        - { pct: 0.7, reps: 3 }
+        - { pct: 0.8, reps: 3 }
+        - { pct: 0.9, reps: 3, amrap: true, minReps: 3 }
+    - sets:
+        - { pct: 0.75, reps: 5 }
+        - { pct: 0.85, reps: 3 }
+        - { pct: 0.95, reps: 1, amrap: true, minReps: 1 }
+    - sets:
+        - { pct: 0.4, reps: 5 }
+        - { pct: 0.5, reps: 5 }
+        - { pct: 0.6, reps: 5 }
+schedule:
+  kind: cycle
+  weeksPerCycle: 4
+  days:
+    - key: squat
+      name: Squat
+      slots:
+        - id: squat-main
+          lift: squat
+          role: main
+          scheme: { kind: weekTable, table: main, of: tm }
+        - id: squat-bbb
+          lift: squat
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: bbb }
+            - { option: bbbProgression, equals: standard }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 10
+            load: { kind: pct, pct: { option: bbbPct }, of: tm }
+        - id: squat-bbb-beginner
+          lift: squat
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: bbb }
+            - { option: bbbProgression, equals: beginner }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 10
+            load: { kind: pct, pct: { byCycle: [0.3, 0.45, 0.6] }, of: tm }
+        - id: squat-fsl
+          lift: squat
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: fsl }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 5
+            load: { kind: weekTablePct, table: main, set: 0, of: tm }
+    - key: bench
+      name: Bench press
+      slots:
+        - id: bench-main
+          lift: bench
+          role: main
+          scheme: { kind: weekTable, table: main, of: tm }
+        - id: bench-bbb
+          lift: bench
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: bbb }
+            - { option: bbbProgression, equals: standard }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 10
+            load: { kind: pct, pct: { option: bbbPct }, of: tm }
+        - id: bench-bbb-beginner
+          lift: bench
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: bbb }
+            - { option: bbbProgression, equals: beginner }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 10
+            load: { kind: pct, pct: { byCycle: [0.3, 0.45, 0.6] }, of: tm }
+        - id: bench-fsl
+          lift: bench
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: fsl }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 5
+            load: { kind: weekTablePct, table: main, set: 0, of: tm }
+    - key: deadlift
+      name: Deadlift
+      slots:
+        - id: deadlift-main
+          lift: deadlift
+          role: main
+          scheme: { kind: weekTable, table: main, of: tm }
+        - id: deadlift-bbb
+          lift: deadlift
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: bbb }
+            - { option: bbbProgression, equals: standard }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 10
+            load: { kind: pct, pct: { option: bbbPct }, of: tm }
+        - id: deadlift-bbb-beginner
+          lift: deadlift
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: bbb }
+            - { option: bbbProgression, equals: beginner }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 10
+            load: { kind: pct, pct: { byCycle: [0.3, 0.45, 0.6] }, of: tm }
+        - id: deadlift-fsl
+          lift: deadlift
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: fsl }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 5
+            load: { kind: weekTablePct, table: main, set: 0, of: tm }
+    - key: press
+      name: Overhead press
+      slots:
+        - id: press-main
+          lift: press
+          role: main
+          scheme: { kind: weekTable, table: main, of: tm }
+        - id: press-bbb
+          lift: press
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: bbb }
+            - { option: bbbProgression, equals: standard }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 10
+            load: { kind: pct, pct: { option: bbbPct }, of: tm }
+        - id: press-bbb-beginner
+          lift: press
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: bbb }
+            - { option: bbbProgression, equals: beginner }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 10
+            load: { kind: pct, pct: { byCycle: [0.3, 0.45, 0.6] }, of: tm }
+        - id: press-fsl
+          lift: press
+          role: supplemental
+          weeks: [1, 2, 3]
+          when:
+            - { option: supplemental, equals: fsl }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 5
+            load: { kind: weekTablePct, table: main, set: 0, of: tm }
+progression:
+  - lift: squat
+    var: tm
+    trigger: endOfCycle
+    judgedSlots: [squat-main]
+    judgedWeeks: [1, 2, 3]
+    onMet:
+      - { kind: increment, by: { kg: 5, lb: 10 } }
+    onMiss:
+      - { kind: tmReset, pct: { option: tmReset } }
+  - lift: bench
+    var: tm
+    trigger: endOfCycle
+    judgedSlots: [bench-main]
+    judgedWeeks: [1, 2, 3]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: tmReset, pct: { option: tmReset } }
+  - lift: deadlift
+    var: tm
+    trigger: endOfCycle
+    judgedSlots: [deadlift-main]
+    judgedWeeks: [1, 2, 3]
+    onMet:
+      - { kind: increment, by: { kg: 5, lb: 10 } }
+    onMiss:
+      - { kind: tmReset, pct: { option: tmReset } }
+  - lift: press
+    var: tm
+    trigger: endOfCycle
+    judgedSlots: [press-main]
+    judgedWeeks: [1, 2, 3]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: tmReset, pct: { option: tmReset } }
