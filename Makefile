@@ -12,7 +12,7 @@ endif
 PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
 CI_EXCLUDED := studio,imgproxy,vector,logflare,postgres-meta,supavisor
 
-.PHONY: start ci-start ci-logs stop reset functions dev build-local preview sw-kill-switch types test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
+.PHONY: start ci-start ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
 
 start:
 	$(SUPABASE) start
@@ -94,9 +94,6 @@ sw-kill-switch:
 preview: build-local
 	@node scripts/lan-url.mjs --preview
 	npx vite preview web --host
-
-types:
-	$(SUPABASE) gen types typescript --local > web/src/lib/database.types.ts
 
 typecheck:
 	npx tsc --noEmit -p tsconfig.json

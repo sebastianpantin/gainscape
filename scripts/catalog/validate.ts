@@ -22,8 +22,8 @@ export class CatalogValidationError extends Error {
   }
 }
 
-export function readDenylist(path = DENYLIST_PATH): string[] {
-  return readFileSync(path, 'utf8')
+export function readDenylist(): string[] {
+  return readFileSync(DENYLIST_PATH, 'utf8')
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0);

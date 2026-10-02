@@ -21,7 +21,7 @@ Browse the exercise catalog and create, edit or archive the user's custom exerci
 
 - Shares are stored in basis points; the form shows percents. Keep conversion only in `share-form.ts`.
 - Name rules are shared with programs via `../../lib/names.ts`.
-- Custom exercise persistence is in `../../lib/custom-exercises.ts`; database rules back it, so schema changes need a migration and `make types`.
+- Custom exercise persistence is in `../../lib/custom-exercises.ts`; database rules back it, so schema changes need a migration and hand-updated row types in that module.
 
 ### Testing Requirements
 

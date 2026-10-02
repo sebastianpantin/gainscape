@@ -10,7 +10,7 @@ const GPG_FINGERPRINT = /^[0-9A-Fa-f]{40}$/;
 const SUPABASE_SECRET_KEY = /sb_secret_[A-Za-z0-9_-]{16,}/;
 const JWT = /eyJ[A-Za-z0-9_-]+\.(eyJ[A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+/g;
 
-const GITLEAKS_VERSION = '8.30.1';
+export const GITLEAKS_VERSION = '8.30.1';
 const GITLEAKS_CHECKSUMS: Record<string, string> = {
   linux_x64: '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb',
   linux_arm64: 'e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080',
@@ -106,9 +106,8 @@ export function gitleaksAsset(platform: string, arch: string): { name: string; s
 }
 
 export const GITLEAKS_RELEASE_URL = `https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}`;
-export const GITLEAKS_CACHE_VERSION = GITLEAKS_VERSION;
 
-export const REQUIRED_DEPLOY_SETTINGS = [
+const REQUIRED_DEPLOY_SETTINGS = [
   'CLOUDFLARE_PAGES_PROJECT',
   'GPG_RECIPIENT',
   'SUPABASE_DB_PASSWORD',
