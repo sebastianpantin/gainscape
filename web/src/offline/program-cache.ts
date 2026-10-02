@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { type EnrollmentRow } from '../lib/program-facts-rules.ts';
 import { type ProgramTemplateRow } from '../lib/program-enroll-rules.ts';
 import { type WorkoutDraft } from './draft-format.ts';
+import { type SendOutcome } from './finish-lock.ts';
 import {
   appendFinishedSession,
   emptyProgramFactsCache,
@@ -131,4 +132,9 @@ export function forgetDeletedProgramSession(storage: Storage, userId: string, se
   updateProgramCache(storage, userId, (cache) =>
     cache.facts ? { ...cache, facts: forgetDeletedSession(cache.facts, sessionId) } : cache,
   );
+}
+
+export function factsOutcomeOf(outcome: SendOutcome): FinishOutcomeForFacts | null {
+  void outcome;
+  throw new Error('not implemented');
 }
