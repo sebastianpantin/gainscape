@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatLoad } from '../../web/src/lib/format.ts';
+import { formatLoad, formatSessionDate, formatXp, sessionXp } from '../../web/src/lib/format.ts';
 
 describe('formatLoad', () => {
   it('shows an external load in the chosen unit, kilograms by default', () => {
@@ -14,5 +14,26 @@ describe('formatLoad', () => {
 
   it('shows a bodyweight load as a plain weight', () => {
     expect(formatLoad(0, 'bodyweight', 'kg')).toBe('0 kg');
+  });
+});
+
+describe('formatXp', () => {
+  it('groups thousands with commas', () => {
+    expect(formatXp(0)).toBe('0');
+    expect(formatXp(1234567)).toBe('1,234,567');
+  });
+});
+
+describe('sessionXp', () => {
+  it('adds up the XP of every skill and treats a missing map as none', () => {
+    expect(sessionXp({ xpBySkill: { legs: 300, core: 45 } })).toBe(345);
+    expect(sessionXp({ xpBySkill: {} })).toBe(0);
+    expect(sessionXp({ xpBySkill: undefined as unknown as Record<string, number> })).toBe(0);
+  });
+});
+
+describe('formatSessionDate', () => {
+  it('shows the local date of a workout with weekday, day, month and year', () => {
+    expect(formatSessionDate('2026-10-01')).toBe('Thu, 1 Oct 2026');
   });
 });

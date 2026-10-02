@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
 import { useStanding } from '../../lib/standing.ts';
-import { formatXp } from '../workout/xp-preview.ts';
+import { formatXp } from '../../lib/format.ts';
 
 interface SkillsScreenProps {
   userId: string;

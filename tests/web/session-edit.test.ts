@@ -8,7 +8,6 @@ import {
   dropsAtRisk,
   editFromSession,
   editPayload,
-  effortLabel,
   failureAction,
   hasChanges,
   isEditable,
@@ -203,15 +202,6 @@ describe('editability and paging', () => {
     expect(nextPageFilter({ startedAt: '2026-09-30T15:37:36.26+00:00', id: 'abc' })).toBe(
       'started_at.lt."2026-09-30T15:37:36.26+00:00",and(started_at.eq."2026-09-30T15:37:36.26+00:00",id.lt.abc)',
     );
-  });
-
-  it('labels stored effort', () => {
-    expect(effortLabel({ type: 'level', level: 'near_failure' })).toBe('Near fail');
-    expect(effortLabel({ type: 'rpe', value: 8.5 })).toBe('RPE 8.5');
-    expect(effortLabel({ type: 'rir', value: 2 })).toBe('RIR 2');
-    expect(effortLabel({ type: 'cardio', level: 'moderate' })).toBe('Moderate');
-    expect(effortLabel({ type: 'cardio', level: 'max' })).toBe('Max');
-    expect(effortLabel(null)).toBeNull();
   });
 });
 

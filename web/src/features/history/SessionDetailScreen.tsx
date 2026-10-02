@@ -4,7 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
-import { formatLoad } from '../../lib/format.ts';
+import { effortLabel } from '../../lib/effort-labels.ts';
+import { formatLoad, formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
 import { tryAgainIn } from '../../lib/rate-limit.ts';
 import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/history-rules.ts';
@@ -17,7 +18,6 @@ import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
-import { formatXp } from '../workout/xp-preview.ts';
 import { HistoryBoutRow, HistorySetRow } from './HistorySetRow.tsx';
 import {
   addEditExercise,
@@ -27,19 +27,16 @@ import {
   editFromSession,
   editPayload,
   editSetCount,
-  effortLabel,
   type EditBout,
   type EditSet,
   type FailureAction,
   failureAction,
-  formatSessionDate,
   hasChanges,
   isEditable,
   rebaseEdit,
   rebaseNotice,
   removeEditSet,
   type SessionEdit,
-  sessionXp,
   swapEditExercise,
   updateEditBout,
   updateEditSet,

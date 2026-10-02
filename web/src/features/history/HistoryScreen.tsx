@@ -3,8 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { fetchSessionPage } from '../../lib/history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession } from '../../lib/history-rules.ts';
 import { CollectionTabs } from '../collection/CollectionScreen.tsx';
-import { formatXp } from '../workout/xp-preview.ts';
-import { formatSessionDate, isEditable, sessionXp } from './session-edit.ts';
+import { formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
+import { isEditable } from './session-edit.ts';
 import { messageOf } from '../../lib/error-text.ts';
 
 function SessionItem({ session, now }: { session: HistorySession; now: number }) {

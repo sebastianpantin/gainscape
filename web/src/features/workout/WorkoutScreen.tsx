@@ -11,6 +11,7 @@ import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
+import { formatXp } from '../../lib/format.ts';
 import { formatWeight } from '../../lib/units.ts';
 import {
   addCardioExercise,
@@ -41,7 +42,7 @@ import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
-import { formatXp, previewSession } from './xp-preview.ts';
+import { previewSession } from './xp-preview.ts';
 
 const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
 const LONG_SYNC_WAIT_MS = 60_000;
