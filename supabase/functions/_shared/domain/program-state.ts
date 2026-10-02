@@ -7,7 +7,7 @@ import {
   type ReferenceVar,
 } from './program-definition.ts';
 import { type PrescriptionSnapshot } from './program-prescription.ts';
-import { advanceProgram, ruleKeyOf } from './program-progression.ts';
+import { advanceProgram, finalDaySets, ruleKeyOf } from './program-progression.ts';
 import { firstPosition, type Position, type ScheduleCursor } from './program-schedule.ts';
 import { type EffortInputType } from './types.ts';
 
@@ -70,13 +70,6 @@ export interface DayRecord {
   status: 'completed' | 'skipped';
   outcomes: Readonly<Record<string, LiftOutcome>>;
   judgedSets: readonly FactSet[];
-  afterSession: AfterSessionEffect | null;
-}
-
-export interface AfterSessionEffect {
-  refsBefore: ProgramReferences;
-  missesBefore: Readonly<Partial<Record<RuleKey, number>>>;
-  changes: readonly ReferenceChange[];
 }
 
 export type RuleKey = `${string}:${ReferenceVar}:${ProgressionTrigger}`;
@@ -150,8 +143,10 @@ export function programStateAt(
   enrollment: ProgramEnrollment,
   facts: readonly ProgramFact[],
 ): ProgramState {
-  return orderFacts(facts).reduce(
-    (state, fact) => advanceProgram(definition, enrollment, state, fact),
+  const ordered = orderFacts(facts);
+  const finalSets = finalDaySets(definition, enrollment, ordered);
+  return ordered.reduce(
+    (state, fact) => advanceProgram(definition, enrollment, state, fact, finalSets),
     initialProgramState(definition, enrollment),
   );
 }

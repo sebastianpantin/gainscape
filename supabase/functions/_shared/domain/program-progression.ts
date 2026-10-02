@@ -25,7 +25,6 @@ import {
   positionAt,
 } from './program-schedule.ts';
 import {
-  type AfterSessionEffect,
   type DayRecord,
   type FactSet,
   type LiftOutcome,
@@ -152,9 +151,12 @@ function absoluteWeek(definition: ProgramDefinition, position: Position): number
   return schedule.kind === 'cycle' ? (cycle - 1) * schedule.weeksPerCycle + week : week;
 }
 
+export type FinalDaySets = Readonly<Record<string, readonly FactSet[]>>;
+
 interface FoldContext {
   definition: ProgramDefinition;
   enrollment: ProgramEnrollment;
+  finalSets?: FinalDaySets;
 }
 
 function setReference(
@@ -321,7 +323,7 @@ function hasRecord(state: ProgramState, position: Position): boolean {
 }
 
 function skippedRecord(epoch: number, position: Position): DayRecord {
-  return { epoch, position, status: 'skipped', outcomes: {}, judgedSets: [], afterSession: null };
+  return { epoch, position, status: 'skipped', outcomes: {}, judgedSets: [] };
 }
 
 function skipUnfinishedDays(context: FoldContext, state: ProgramState): ProgramState {
@@ -377,41 +379,6 @@ function mergeBestSets(context: FoldContext, existing: readonly FactSet[], incom
   return [...bestByRef.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, set]) => set);
 }
 
-function captureAfterSessionBaseline(
-  state: ProgramState,
-  rules: readonly ProgressionRule[],
-): Pick<AfterSessionEffect, 'refsBefore' | 'missesBefore'> {
-  const refsBefore: Record<string, Partial<Record<ReferenceVar, number>>> = {};
-  const missesBefore: Partial<Record<RuleKey, number>> = {};
-  for (const rule of rules) {
-    const value = state.refs[rule.lift]?.[rule.var];
-    if (value !== undefined) refsBefore[rule.lift] = { ...refsBefore[rule.lift], [rule.var]: value };
-    missesBefore[ruleKeyOf(rule)] = state.consecutiveMisses[ruleKeyOf(rule)] ?? 0;
-  }
-  return { refsBefore, missesBefore };
-}
-
-function withoutChanges(history: readonly ReferenceChange[], changes: readonly ReferenceChange[]): ReferenceChange[] {
-  const remaining = [...history];
-  for (const change of changes) {
-    const key = JSON.stringify(change);
-    const index = remaining.map((candidate) => JSON.stringify(candidate)).lastIndexOf(key);
-    if (index >= 0) remaining.splice(index, 1);
-  }
-  return remaining;
-}
-
-function undoAfterSessionEffect(state: ProgramState, effect: AfterSessionEffect): ProgramState {
-  const refs: Record<string, Partial<Record<ReferenceVar, number>>> = { ...state.refs };
-  for (const [lift, values] of Object.entries(effect.refsBefore)) refs[lift] = { ...refs[lift], ...values };
-  return {
-    ...state,
-    refs,
-    consecutiveMisses: { ...state.consecutiveMisses, ...effect.missesBefore },
-    history: withoutChanges(state.history, effect.changes),
-  };
-}
-
 function recordDay(
   context: FoldContext,
   state: ProgramState,
@@ -420,39 +387,20 @@ function recordDay(
 ): ProgramState {
   const existing = findRecord(state, position);
   if (sets === null) return existing ? state : withRecords(state, [skippedRecord(state.epoch, position)]);
+  if (existing?.status === 'completed') return state;
   const { definition, enrollment } = context;
-  const judgedSets = mergeBestSets(context, existing?.judgedSets ?? [], judgedSetsOf(context, position, sets));
+  const judgedSets =
+    context.finalSets?.[recordKey(state.epoch, position)] ??
+    mergeBestSets(context, [], judgedSetsOf(context, position, sets));
   const outcomes = liftOutcomes(definition, enrollment, { position, sets: judgedSets });
-  const previousSets = existing?.status === 'completed' ? existing.judgedSets : [];
-  const rules = definition.progression.filter(
-    (rule) => rule.trigger === 'afterSession' && judgedSlotsOf(definition, enrollment, rule, position).length > 0,
-  );
-  const rejudged = rules.some(
-    (rule) =>
-      ruleOutcomeAt(definition, enrollment, rule, position, judgedSets) !==
-      ruleOutcomeAt(definition, enrollment, rule, position, previousSets),
-  );
-  const priorEffect = existing?.afterSession ?? null;
-  const record: DayRecord = {
-    epoch: state.epoch,
-    position,
-    status: 'completed',
-    outcomes,
-    judgedSets,
-    afterSession: priorEffect,
-  };
-  if (!rejudged) return withRecords(state, [record]);
-  const baselineState = priorEffect ? undoAfterSessionEffect(state, priorEffect) : state;
-  const baseline = priorEffect ?? captureAfterSessionBaseline(baselineState, rules);
-  const judged = rules.reduce(
-    (next, rule) =>
-      applyOutcome(context, next, rule, ruleOutcomeAt(definition, enrollment, rule, position, judgedSets), position),
-    baselineState,
-  );
-  const changes = judged.history.slice(baselineState.history.length);
-  return withRecords(judged, [
-    { ...record, afterSession: { refsBefore: baseline.refsBefore, missesBefore: baseline.missesBefore, changes } },
-  ]);
+  const record: DayRecord = { epoch: state.epoch, position, status: 'completed', outcomes, judgedSets };
+  return definition.progression
+    .filter((rule) => rule.trigger === 'afterSession')
+    .reduce(
+      (next, rule) =>
+        applyOutcome(context, next, rule, ruleOutcomeAt(definition, enrollment, rule, position, judgedSets), position),
+      withRecords(state, [record]),
+    );
 }
 
 function applyDayFact(
@@ -500,9 +448,10 @@ export function advanceProgram(
   enrollment: ProgramEnrollment,
   state: ProgramState,
   fact: ProgramFact,
+  finalSets?: FinalDaySets,
 ): ProgramState {
   if (!isApplicable(definition, fact)) return state;
-  const context: FoldContext = { definition, enrollment };
+  const context: FoldContext = { definition, enrollment, finalSets };
   switch (fact.kind) {
     case 'set_reference':
       return setReference(state, fact.lift, fact.var, fact.value, 'set_reference', state.position);
@@ -513,4 +462,22 @@ export function advanceProgram(
     case 'session':
       return applyDayFact(context, state, fact.position, fact.sets);
   }
+}
+
+export function finalDaySets(
+  definition: ProgramDefinition,
+  enrollment: ProgramEnrollment,
+  orderedFacts: readonly ProgramFact[],
+): FinalDaySets {
+  const context: FoldContext = { definition, enrollment };
+  const finalSets: Record<string, FactSet[]> = {};
+  let epoch = 0;
+  for (const fact of orderedFacts) {
+    if (!isApplicable(definition, fact)) continue;
+    if (fact.kind === 'jump_to') epoch += 1;
+    if (fact.kind !== 'session') continue;
+    const key = recordKey(epoch, fact.position);
+    finalSets[key] = mergeBestSets(context, finalSets[key] ?? [], judgedSetsOf(context, fact.position, fact.sets));
+  }
+  return finalSets;
 }
