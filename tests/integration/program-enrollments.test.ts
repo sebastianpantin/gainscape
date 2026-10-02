@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { type ProgramDefinition } from '@domain/index.ts';
+import { isPositionInSchedule, type Position, type ProgramDefinition } from '@domain/index.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { GZCLP_SHAPE } from '../domain/program-fixtures/gzclp.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
@@ -262,6 +262,34 @@ describe('enroll_program', () => {
     expect(await enrollmentRows(refusedUser.id)).toHaveLength(0);
   });
 
+  it.each<[string, (payload: EnrollmentPayload) => void]>([
+    ['an input for a lift that takes none (hyper)', (p) => (p.inputs.hyper = { fiveRm: 20 })],
+    ['an input for a lift the template does not define', (p) => (p.inputs.lunge = { fiveRm: 60 })],
+    ['an input above 1000', (p) => (p.inputs.deadlift = { fiveRm: 1000.5 })],
+  ])('refuses %s and stores nothing', async (_case, mutate) => {
+    const user = await createTestUser();
+    const payload = madcowPayload();
+    mutate(payload);
+    expectRefused(await enroll(user, payload), 'invalid_enrollment');
+    expect(await enrollmentRows(user.id)).toHaveLength(0);
+  });
+
+  it('accepts an input of exactly 1000', async () => {
+    const user = await createTestUser();
+    const payload = madcowPayload();
+    payload.inputs.deadlift = { fiveRm: 1000 };
+    await enrolled(user, payload);
+  });
+
+  it('stores only increment, mode and barWeight of the rounding', async () => {
+    const user = await createTestUser();
+    const payload = madcowPayload();
+    payload.rounding = { ...KG_ROUNDING, plates: [25, 20, 10], note: 'home gym' };
+    await enrolled(user, payload);
+    const [row] = await enrollmentRows(user.id);
+    expect(row.rounding).toEqual(KG_ROUNDING);
+  });
+
   it('refuses a payload that is not an object', async () => {
     expectRefused(await enroll(refusedUser, 'madcow_5x5'), 'invalid_enrollment');
     expect(await enrollmentRows(refusedUser.id)).toHaveLength(0);
@@ -358,6 +386,7 @@ describe('adjust_enrollment', () => {
     ['tm, which Madcow does not declare', { lift: 'squat', var: 'tm', value: 100 }],
     ['fiveRm, which is an input and not a reference', { lift: 'squat', var: 'fiveRm', value: 100 }],
     ['a lift the template does not define', { lift: 'lunge', var: 'top', value: 20 }],
+    ['a lift that takes no input (hyper)', { lift: 'hyper', var: 'top', value: 40 }],
     ['a value of zero', { lift: 'squat', var: 'top', value: 0 }],
     ['a negative value', { lift: 'squat', var: 'top', value: -5 }],
     ['a value above 1000', { lift: 'squat', var: 'top', value: 1000.01 }],
@@ -396,9 +425,9 @@ describe('adjust_enrollment', () => {
       ['weekly', 'skip_day', { week: 1, day: 'mon' }],
       ['weekly', 'jump_to', { week: 520, day: 'fri' }],
       ['cycle', 'skip_day', { cycle: 1, week: 1, day: 'squat' }],
-      ['cycle', 'jump_to', { cycle: 100, week: 4, day: 'press' }],
+      ['cycle', 'jump_to', { cycle: 130, week: 4, day: 'press' }],
       ['rotation', 'skip_day', { index: 0 }],
-      ['rotation', 'jump_to', { index: 10000 }],
+      ['rotation', 'jump_to', { index: 2079 }],
     ])('stores a %s %s to %o', async (schedule, kind, position) => {
       const { user, id } = enrollments()[schedule];
       const result = await adjust(user, id, { kind, position });
@@ -416,13 +445,13 @@ describe('adjust_enrollment', () => {
       ['weekly', 'no day', { week: 1 }],
       ['weekly', 'a cycle position', { cycle: 1, week: 1, day: 'mon' }],
       ['weekly', 'a rotation index', { index: 3 }],
-      ['cycle', 'cycle 101', { cycle: 101, week: 1, day: 'squat' }],
+      ['cycle', 'cycle 131', { cycle: 131, week: 1, day: 'squat' }],
       ['cycle', 'cycle 0', { cycle: 0, week: 1, day: 'squat' }],
       ['cycle', 'a week past the end of the cycle', { cycle: 1, week: 5, day: 'squat' }],
       ['cycle', 'week 0', { cycle: 1, week: 0, day: 'squat' }],
       ['cycle', 'a day the template does not have', { cycle: 1, week: 1, day: 'mon' }],
       ['cycle', 'no cycle', { week: 1, day: 'squat' }],
-      ['rotation', 'index 10001', { index: 10001 }],
+      ['rotation', 'index 2080', { index: 2080 }],
       ['rotation', 'a negative index', { index: -1 }],
       ['rotation', 'a fractional index', { index: 2.5 }],
       ['rotation', 'a weekly position', { week: 1, day: 'a1' }],
@@ -450,6 +479,18 @@ describe('adjust_enrollment', () => {
       value: 95,
     });
     expectRefused(result, 'enrollment_not_found');
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    ['set_reference', { kind: 'set_reference', lift: 'squat', var: 'top', value: 95 }],
+    ['skip_day', { kind: 'skip_day', position: { week: 1, day: 'mon' } }],
+    ['jump_to', { kind: 'jump_to', position: { week: 2, day: 'wed' } }],
+  ])('refuses a %s on an ended enrollment and stores nothing', async (_kind, event) => {
+    const user = await createTestUser();
+    const enrollmentId = await enrolled(user, madcowPayload());
+    expect((await endEnrollment(user, enrollmentId)).error).toBeNull();
+    expectRefused(await adjust(user, enrollmentId, event), 'enrollment_ended');
+    expect(await eventRows(enrollmentId)).toHaveLength(0);
   });
 
   it('refuses an adjustment over the hourly limit and stores nothing', async () => {
@@ -554,5 +595,49 @@ describe('delete-account', () => {
       select count(*)::int as count from public.program_enrollment_events
       where enrollment_id = any(${[ended, active]})`;
     expect(orphans.count).toBe(0);
+  });
+});
+
+function cartesianCyclePositions(cycles: number[], weeks: number[], days: string[]): Position[] {
+  return cycles.flatMap((cycle) => weeks.flatMap((week) => days.map((day) => ({ cycle, week, day }))));
+}
+
+async function positionMismatches(
+  user: TestUser,
+  enrollmentId: string,
+  definition: ProgramDefinition,
+  positions: Position[],
+) {
+  const mismatches: { position: Position; domain: boolean; server: boolean }[] = [];
+  for (const position of positions) {
+    const domain = isPositionInSchedule(definition, position);
+    const result = await adjust(user, enrollmentId, { kind: 'jump_to', position });
+    const server = result.error === null;
+    if (!server) expectRefused(result, 'invalid_event');
+    if (server !== domain) mismatches.push({ position, domain, server });
+  }
+  return mismatches;
+}
+
+describe('adjust_enrollment position bounds match the domain', () => {
+  it('accepts exactly the 5/3/1 positions isPositionInSchedule accepts, up to cycle 130', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrolled(user, fiveThreeOnePayload());
+    expect(isPositionInSchedule(FIVE_THREE_ONE, { cycle: 130, week: 4, day: 'press' })).toBe(true);
+    expect(isPositionInSchedule(FIVE_THREE_ONE, { cycle: 131, week: 1, day: 'squat' })).toBe(false);
+    const positions = cartesianCyclePositions([0, 1, 129, 130, 131], [0, 1, 4, 5], ['squat', 'press', 'mon']);
+    expect(await positionMismatches(user, enrollmentId, FIVE_THREE_ONE, positions)).toEqual([]);
+  });
+
+  it('accepts exactly the rotation positions isPositionInSchedule accepts, below 520 x 4 days', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrolled(user, rotationPayload());
+    expect(isPositionInSchedule(ROTATION_TEMPLATE, { index: 2079 })).toBe(true);
+    expect(isPositionInSchedule(ROTATION_TEMPLATE, { index: 2080 })).toBe(false);
+    const positions: Position[] = [
+      ...[-1, 0, 1, 1.5, 2078, 2079, 2080, 2081].map((index) => ({ index })),
+      { week: 1, day: 'a1' },
+    ];
+    expect(await positionMismatches(user, enrollmentId, ROTATION_TEMPLATE, positions)).toEqual([]);
   });
 });
