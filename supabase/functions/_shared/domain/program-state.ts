@@ -7,7 +7,7 @@ import {
   type ReferenceVar,
 } from './program-definition.ts';
 import { type PrescriptionSnapshot } from './program-prescription.ts';
-import { advanceProgram } from './program-progression.ts';
+import { advanceProgram, ruleKeyOf } from './program-progression.ts';
 import { firstPosition, type Position, type ScheduleCursor } from './program-schedule.ts';
 import { type EffortInputType } from './types.ts';
 
@@ -75,7 +75,7 @@ export interface DayRecord {
 
 export interface AfterSessionEffect {
   refsBefore: ProgramReferences;
-  missesBefore: Readonly<Record<string, number>>;
+  missesBefore: Readonly<Partial<Record<RuleKey, number>>>;
   changes: readonly ReferenceChange[];
 }
 
@@ -84,7 +84,7 @@ export type RuleKey = `${string}:${ReferenceVar}:${ProgressionTrigger}`;
 export interface ProgramState extends ScheduleCursor {
   epoch: number;
   refs: ProgramReferences;
-  consecutiveMisses: Readonly<Record<string, number>>;
+  consecutiveMisses: Readonly<Partial<Record<RuleKey, number>>>;
   days: readonly DayRecord[];
   dayIndex: Readonly<Record<string, number>>;
   history: readonly ReferenceChange[];
@@ -115,7 +115,7 @@ export function initialProgramState(definition: ProgramDefinition, enrollment: P
     epoch: 0,
     completedDays: [],
     refs: initialReferences(definition, enrollment),
-    consecutiveMisses: Object.fromEntries(definition.progression.map((rule) => [rule.lift, 0])),
+    consecutiveMisses: Object.fromEntries(definition.progression.map((rule) => [ruleKeyOf(rule), 0])),
     days: [],
     dayIndex: {},
     history: [],

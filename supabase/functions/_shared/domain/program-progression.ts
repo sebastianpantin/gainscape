@@ -33,6 +33,7 @@ import {
   type ProgramState,
   type ReferenceChange,
   type ReferenceChangeReason,
+  type RuleKey,
   type SetReferenceFact,
 } from './program-state.ts';
 import { type WeightUnit } from './units.ts';
@@ -43,6 +44,10 @@ export interface LoggedLoad {
 }
 
 export const WEEKS_BACK_FACTOR = 0.975;
+
+export function ruleKeyOf(rule: ProgressionRule): RuleKey {
+  return `${rule.lift}:${rule.var}:${rule.trigger}`;
+}
 
 export function isSetMet(
   logged: LoggedLoad,
@@ -207,8 +212,9 @@ function applyOutcome(
   position: Position,
 ): ProgramState {
   if (outcome === 'neutral') return state;
-  const misses = outcome === 'met' ? 0 : (state.consecutiveMisses[rule.lift] ?? 0) + 1;
-  let next: ProgramState = { ...state, consecutiveMisses: { ...state.consecutiveMisses, [rule.lift]: misses } };
+  const key = ruleKeyOf(rule);
+  const misses = outcome === 'met' ? 0 : (state.consecutiveMisses[key] ?? 0) + 1;
+  let next: ProgramState = { ...state, consecutiveMisses: { ...state.consecutiveMisses, [key]: misses } };
   const adjustments = [...(outcome === 'met' ? rule.onMet : rule.onMiss), ...(rule.always ?? [])];
   for (const adjustment of adjustments) {
     const current = next.refs[rule.lift]?.[rule.var];
@@ -376,11 +382,11 @@ function captureAfterSessionBaseline(
   rules: readonly ProgressionRule[],
 ): Pick<AfterSessionEffect, 'refsBefore' | 'missesBefore'> {
   const refsBefore: Record<string, Partial<Record<ReferenceVar, number>>> = {};
-  const missesBefore: Record<string, number> = {};
+  const missesBefore: Partial<Record<RuleKey, number>> = {};
   for (const rule of rules) {
     const value = state.refs[rule.lift]?.[rule.var];
     if (value !== undefined) refsBefore[rule.lift] = { ...refsBefore[rule.lift], [rule.var]: value };
-    missesBefore[rule.lift] = state.consecutiveMisses[rule.lift] ?? 0;
+    missesBefore[ruleKeyOf(rule)] = state.consecutiveMisses[ruleKeyOf(rule)] ?? 0;
   }
   return { refsBefore, missesBefore };
 }
