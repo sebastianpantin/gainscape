@@ -1,0 +1,32 @@
+title = "Gainscape"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "postgres-url-with-password"
+description = "Postgres connection string with an inline password"
+regex = '''postgres(?:ql)?://[^:\s/'"`]+:([^@\s'"`]{6,})@'''
+secretGroup = 1
+
+[[rules]]
+id = "supabase-secret-key"
+description = "Supabase secret API key"
+regex = '''sb_secret_[A-Za-z0-9_-]{16,}'''
+
+[[rules]]
+id = "loot-secret"
+description = "Gainscape LOOT_SECRET value"
+regex = '''LOOT_SECRET\s*[=:]\s*['"]?([0-9a-fA-F]{32,})'''
+secretGroup = 1
+
+[[rules]]
+id = "supabase-service-role-jwt"
+description = "JWT whose payload grants the service_role (base64 of \"role\":\"service_role\")"
+regex = '''eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*(?:InJvbGUiOiJzZXJ2aWNlX3JvbGUi|Jyb2xlIjoic2VydmljZV9yb2xl|icm9sZSI6InNlcnZpY2Vfcm9s)[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+'''
+
+[[allowlists]]
+description = "Supabase's public local-stack anon demo key, the same for every local install"
+paths = ['''^web/\.env\.development$''']
+regexes = ['''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9\.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0''']
+condition = "AND"

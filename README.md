@@ -14,24 +14,26 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 
 ## Everyday commands
 
-| Command                     | What it does                                                                                                                                  |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make reset`                | Recreate the local database from migrations and seed                                                                                          |
-| `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc` (app and service worker), `deno check`, catalog and icons checks |
-| `make test`                 | `make check`, then domain tests, web draft/sync tests, integration/RLS tests and `make test-db`                                               |
-| `make test-db`              | pgTAP tests in `supabase/tests/` against the local database (refuses any non-local host)                                                      |
-| `make sim-check`            | Balance band test (about 1 s)                                                                                                                 |
-| `make sim`                  | Full balance tuning report (about 2 min)                                                                                                      |
-| `make e2e`                  | Playwright end-to-end flow in a headless phone-sized browser                                                                                  |
-| `make e2e-pwa`              | Builds the production bundle and runs the offline, update and installability tests against `vite preview`                                     |
-| `make build`                | Production build of the web app into `web/dist` (CI runs it in `checks`)                                                                      |
-| `make preview`              | Production build served by `vite preview` (https, preview port = web port - 1000, so 4173 by default)                                         |
-| `make icons`                | Regenerate the app icons and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                    |
-| `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                |
-| `make rebuild-caches`       | Recompute every user's XP, e1RM, records and feed events from their logged sets (run after changing balance constants)                        |
-| `make types`                | Regenerate `web/src/lib/database.types.ts` from the local schema                                                                              |
-| `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)                                            |
-| `make stop`                 | Stop the functions server and the Supabase stack                                                                                              |
+| Command                     | What it does                                                                                                                                                         |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `make reset`                | Recreate the local database from migrations and seed                                                                                                                 |
+| `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc` (app and service worker), `deno check`, catalog and icons checks, gitleaks secrets scan |
+| `make test`                 | `make check`, then domain tests, web draft/sync tests, integration/RLS tests and `make test-db`                                                                      |
+| `make test-db`              | pgTAP tests in `supabase/tests/` against the local database (refuses any non-local host)                                                                             |
+| `make sim-check`            | Balance band test (about 1 s)                                                                                                                                        |
+| `make sim`                  | Full balance tuning report (about 2 min)                                                                                                                             |
+| `make e2e`                  | Playwright end-to-end flow in a headless phone-sized browser                                                                                                         |
+| `make e2e-pwa`              | Builds the production bundle and runs the offline, update and installability tests against `vite preview`                                                            |
+| `make e2e-pages`            | Builds for Cloudflare Pages against the local stack, serves it with `wrangler pages dev` and checks the `_headers` and a whole workout without a CSP violation       |
+| `make build`                | Production build of the web app into `web/dist` (CI runs it in `checks`)                                                                                             |
+| `make deploy`               | Deploy the test environment (Supabase Free and Cloudflare Pages); admin only, see `docs/deploy.md`                                                                   |
+| `make preview`              | Production build served by `vite preview` (https, preview port = web port - 1000, so 4173 by default)                                                                |
+| `make icons`                | Regenerate the app icons and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                                           |
+| `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                                       |
+| `make rebuild-caches`       | Recompute every user's XP, e1RM, records and feed events from their logged sets (run after changing balance constants)                                               |
+| `make types`                | Regenerate `web/src/lib/database.types.ts` from the local schema                                                                                                     |
+| `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)                                                                   |
+| `make stop`                 | Stop the functions server and the Supabase stack                                                                                                                     |
 
 Studio (the database UI) runs at http://127.0.0.1:54323 while the stack is up.
 
@@ -60,7 +62,7 @@ Feed events are derived from session summaries. A database that already held ses
 
 ## Loot secret
 
-Loot rolls are seeded with HMAC-SHA256 under `LOOT_SECRET`, which only the Edge Functions see. `make functions` (and so `make start` and `make reset`) creates the gitignored `supabase/functions/.env.local` with a random secret on first use, serves the functions with it, and restarts an already running functions server whose env file changed. A hosted deploy sets its own secret once with `supabase secrets set LOOT_SECRET=$(openssl rand -hex 32)`. Without a secret of at least 32 characters, `complete-session` answers 500 `loot_secret_missing` and the draft retries.
+Loot rolls are seeded with HMAC-SHA256 under `LOOT_SECRET`, which only the Edge Functions see. `make functions` (and so `make start` and `make reset`) creates the gitignored `supabase/functions/.env.local` with a random secret on first use, serves the functions with it, and restarts an already running functions server whose env file changed. A hosted deploy sets its own secret once with `make set-loot-secret`. Without a secret of at least 32 characters, `complete-session` answers 500 `loot_secret_missing` and the draft retries.
 
 Anonymous username checks are rate limited per client address, read from `private.client_ip_config` (`header_name`, `trusted_hops_from_right`). The default, the right-most `x-forwarded-for` hop, is what local Kong appends. Before production, set it to the hosting platform's trusted client-IP header (or the number of trusted proxy hops) and verify it against live request headers. Addresses are stored only as HMAC-SHA256 under a random pepper that migration 012 generates in `private.client_key_pepper`.
 
@@ -68,7 +70,7 @@ Anonymous username checks are rate limited per client address, read from `privat
 
 Signups need email confirmation. Locally every email lands in Mailpit, which `npx supabase status` lists as `MAILPIT_URL` (run it through `make` or with `.stack.env` loaded). Confirm, reset and email-change links open `/auth/confirm` on the origin that asked for them. Links asked for from a LAN IP address fall back to `https://localhost:5173`, because GoTrue accepts only loopback or allowlisted hostnames as redirect hosts.
 
-Before anything goes live, work through [docs/production-auth.md](docs/production-auth.md): production SMTP, the hosted redirect and rate-limit settings (never `supabase config push` the local `config.toml` unchanged), `LOOT_SECRET`, `private.client_ip_config` and the backfill. `make test-db` only runs against the local stack and refuses any other database host.
+The free test environment (Supabase Free and Cloudflare Pages, invite-only) is deployed by the admin only, following [docs/deploy.md](docs/deploy.md). Before anything goes live to real users, work through [docs/production-auth.md](docs/production-auth.md): production SMTP, the hosted redirect and rate-limit settings (never `supabase config push` the local `config.toml` unchanged), `LOOT_SECRET`, `private.client_ip_config` and the backfill. `make test-db` only runs against the local stack and refuses any other database host.
 
 ## CI
 

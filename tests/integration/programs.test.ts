@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { builtInExerciseId, createTestUser, db, postCompleteSession, type TestUser } from './local-stack.ts';
+import {
+  builtInExerciseId,
+  createTestUser,
+  db,
+  postCompleteSession,
+  rateLimitHits,
+  type TestUser,
+} from './local-stack.ts';
 
 const templateContents = {
   ppl: {
@@ -282,6 +289,19 @@ describe('copy_program', () => {
     });
     expect(error?.message).toBe('program_not_found');
     expect((await programRowCounts(stranger.id)).programs).toBe(0);
+  });
+});
+
+describe('program save rate limit', () => {
+  it('counts each copy and each edit once, however many rows the save touches', async () => {
+    const user = await createTestUser();
+    const programId = await copyTemplate(user, 'ppl');
+    expect(await rateLimitHits('program_save_hour', user.id)).toBe(1);
+    for (const name of ['One', 'Two', 'Three']) {
+      const { error } = await saveProgram(user, { ...(await programDoc(programId)), name });
+      expect(error).toBeNull();
+    }
+    expect(await rateLimitHits('program_save_hour', user.id)).toBe(4);
   });
 });
 

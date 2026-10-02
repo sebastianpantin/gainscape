@@ -1,3 +1,4 @@
+import { withFriendlyRateLimit } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 import { type Profile, TIMEZONE_CHANGE_COOLDOWN_DAYS } from './profile-rules.ts';
 
@@ -85,14 +86,14 @@ export async function updatePublicProfile(userId: string, changes: PublicProfile
   const row = toRow(changes, PUBLIC_COLUMNS);
   if (Object.keys(row).length === 0) return;
   const { error } = await supabase.from('profiles').update(row).eq('id', userId);
-  if (error) throw error;
+  if (error) throw withFriendlyRateLimit(error);
 }
 
 export async function updatePrivateProfile(userId: string, changes: PrivateProfileChanges): Promise<void> {
   const row = toRow(changes, PRIVATE_COLUMNS);
   if (Object.keys(row).length === 0) return;
   const { error } = await supabase.from('profile_private').update(row).eq('user_id', userId);
-  if (error) throw error;
+  if (error) throw withFriendlyRateLimit(error);
 }
 
 export type TimezoneChangeResult =

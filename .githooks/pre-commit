@@ -1,0 +1,2 @@
+#!/bin/sh
+exec node scripts/deploy/secrets-scan.ts --staged

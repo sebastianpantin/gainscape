@@ -1,4 +1,5 @@
 import type { CardioEffortLevel } from '@domain/types.ts';
+import { withFriendlyRateLimit } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
 export type Modality = 'lift' | 'cardio';
@@ -139,7 +140,7 @@ export async function saveBodyweight(userId: string, bodyweightKg: number): Prom
     .from('profile_private')
     .update({ bodyweight_kg: bodyweightKg })
     .eq('user_id', userId);
-  if (error) throw error;
+  if (error) throw withFriendlyRateLimit(error);
 }
 
 export async function fetchSkillXp(userId: string): Promise<Map<string, number>> {

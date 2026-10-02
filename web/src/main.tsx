@@ -1,3 +1,4 @@
+import './zod-config.ts';
 import './pwa/install.ts';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
