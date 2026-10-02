@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(58);
+select plan(60);
 
 create function pg_temp.add_enrollment(owner uuid) returns uuid language sql as $$
   insert into public.program_enrollments
@@ -226,6 +226,14 @@ select throws_ok(
 select throws_ok(
   format($$select pg_temp.add_set(%L, 19, 'mon-squat:2', 80, 101, false)$$, :'session_a'),
   '23514', null, 'prescribed reps above 100 are rejected'
+);
+select throws_ok(
+  format($$select pg_temp.add_set(%L, 21, 'mon-squat:8', 80, 5, true, 101)$$, :'other_session_a'),
+  '23514', null, 'prescribed minimum reps above 100 are rejected'
+);
+select throws_ok(
+  format($$select pg_temp.add_set(%L, 22, 'mon-squat:9', 80, 5, true, -1)$$, :'other_session_a'),
+  '23514', null, 'negative prescribed minimum reps are rejected'
 );
 select lives_ok(
   format($$select pg_temp.add_set(%L, 20, 'mon-squat:3', 2000, 100, false)$$, :'session_a'),
