@@ -1,0 +1,281 @@
+import { type ProgramDefinition, type RoundingMode, type WeightUnit } from '@domain/index.ts';
+import { useEffect, useId, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
+import { fetchExercises } from '../../lib/catalog.ts';
+import { isLiftExercise } from '../../lib/catalog-rules.ts';
+import { messageOf } from '../../lib/error-text.ts';
+import { usePreferences } from '../../lib/preferences.ts';
+import { enrollProgram, fetchProgramTemplates, refreshProgramCache } from '../../lib/program-enrollment.ts';
+import {
+  type BindableExercise,
+  type EnrollForm,
+  enrollPayload,
+  initialEnrollForm,
+  inputFields,
+  inputKindLabel,
+  liftName,
+  optionControls,
+  referencePreview,
+  type TemplateListEntry,
+  templateListEntries,
+  withUnit,
+} from '../../lib/program-enroll-rules.ts';
+import { readProgramCache, updateProgramCache } from '../../offline/program-cache.ts';
+
+interface ProgramEnrollScreenProps {
+  userId: string;
+}
+
+type Loaded =
+  | { status: 'loading' }
+  | { status: 'failed'; problem: string }
+  | { status: 'missing' }
+  | { status: 'blocked'; name: string; message: string }
+  | { status: 'ready'; definition: ProgramDefinition; name: string; exercises: BindableExercise[] };
+
+const UNIT_OPTIONS: { value: WeightUnit; label: string }[] = [
+  { value: 'kg', label: 'kg' },
+  { value: 'lb', label: 'lb' },
+];
+
+const ROUNDING_MODES: { value: RoundingMode; label: string }[] = [
+  { value: 'nearest', label: 'Nearest' },
+  { value: 'down', label: 'Down' },
+];
+
+const NOT_TRACKED = '';
+
+function loadedEntry(entry: TemplateListEntry | undefined, exercises: BindableExercise[]): Loaded {
+  if (!entry) return { status: 'missing' };
+  if (entry.kind !== 'enrollable') return { status: 'blocked', name: entry.name, message: entry.message };
+  return { status: 'ready', definition: entry.definition, name: entry.name, exercises };
+}
+
+export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
+  const { key } = useParams();
+  const navigate = useNavigate();
+  const { unitPref } = usePreferences();
+  const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
+  const [editedForm, setEditedForm] = useState<EnrollForm | null>(null);
+  const [problems, setProblems] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const idPrefix = useId();
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([fetchProgramTemplates(), fetchExercises({ includeArchived: false })]).then(
+      ([templates, exercises]) => {
+        updateProgramCache(localStorage, userId, (cache) => ({ ...cache, templates }));
+        if (!active) return;
+        const bindable = exercises
+          .filter(isLiftExercise)
+          .map((exercise) => ({ id: exercise.id, key: exercise.key ?? null, name: exercise.name, archived: false }));
+        const next = loadedEntry(
+          templateListEntries(templates).find((entry) => entry.key === key),
+          bindable,
+        );
+        setLoaded(next);
+      },
+      (error: Error) => active && setLoaded({ status: 'failed', problem: error.message }),
+    );
+    return () => {
+      active = false;
+    };
+  }, [userId, key]);
+
+  if (loaded.status === 'loading' || loaded.status === 'failed' || loaded.status === 'missing')
+    return (
+      <main className="screen stack">
+        {loaded.status === 'loading' && <p>Loading…</p>}
+        {loaded.status === 'failed' && (
+          <p className="problem" role="alert">
+            {loaded.problem}
+          </p>
+        )}
+        {loaded.status === 'missing' && <p className="problem">This program doesn't exist.</p>}
+      </main>
+    );
+
+  if (loaded.status === 'blocked')
+    return (
+      <main className="screen stack">
+        <h1 className="title">Follow {loaded.name}</h1>
+        <p className="panel muted">{loaded.message}</p>
+      </main>
+    );
+
+  const { definition, name, exercises } = loaded;
+  const form = editedForm ?? initialEnrollForm(definition, unitPref, exercises);
+  const change = (changes: Partial<EnrollForm>) => setEditedForm({ ...form, ...changes });
+
+  const start = async () => {
+    const result = enrollPayload(definition, form);
+    if (result.kind === 'invalid') {
+      setProblems(result.problems);
+      return;
+    }
+    const replacing = readProgramCache(localStorage, userId).enrollment !== null;
+    if (replacing && !window.confirm(`Follow ${name} instead of your current program?`)) return;
+    setProblems([]);
+    setBusy(true);
+    try {
+      await enrollProgram(result.payload);
+      await refreshProgramCache(userId).catch(() => undefined);
+      navigate('/');
+    } catch (error) {
+      setProblems([messageOf(error, 'Could not start the program.')]);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <main className="screen stack">
+      <h1 className="title">Follow {name}</h1>
+      <div className="panel stack">
+        <span className="field">Unit</span>
+        <SegmentedChoice
+          label="Unit"
+          options={UNIT_OPTIONS}
+          current={form.unit}
+          onPick={(unit) => setEditedForm(withUnit(form, unit))}
+        />
+      </div>
+      <section className="panel stack" aria-label="Starting weights">
+        <h2>Starting weights</h2>
+        {inputFields(definition, form).map((field) => {
+          const preview = referencePreview(definition, form, field.lift);
+          return (
+            <div className="stack" key={field.lift} style={{ gap: 6 }}>
+              {field.kinds.length > 1 && (
+                <SegmentedChoice
+                  label={`${liftName(definition, field.lift)} input`}
+                  options={field.kinds.map((kind) => ({ value: kind, label: inputKindLabel(kind) }))}
+                  current={field.kind}
+                  onPick={(kind) => change({ inputKinds: { ...form.inputKinds, [field.lift]: kind } })}
+                />
+              )}
+              <label className="field">
+                {field.label}
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step="any"
+                  value={form.inputValues[field.lift] ?? ''}
+                  onChange={(event) =>
+                    change({ inputValues: { ...form.inputValues, [field.lift]: event.target.value } })
+                  }
+                />
+              </label>
+              {preview && <p className="hint">{preview}</p>}
+            </div>
+          );
+        })}
+      </section>
+      {definition.options.length > 0 && (
+        <section className="panel stack" aria-label="Options">
+          <h2>Options</h2>
+          {optionControls(definition).map((control) =>
+            control.kind === 'choice' ? (
+              <div className="stack" key={control.key} style={{ gap: 6 }}>
+                <span className="field">{control.label}</span>
+                <SegmentedChoice
+                  label={control.label}
+                  options={control.choices}
+                  current={form.options[control.key] ?? control.defaultValue}
+                  stacked={control.choices.length > 3}
+                  onPick={(value) => change({ options: { ...form.options, [control.key]: value } })}
+                />
+              </div>
+            ) : (
+              <label className="field" key={control.key}>
+                {control.label}
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={control.min}
+                  max={control.max}
+                  step={0.01}
+                  value={form.options[control.key] ?? control.defaultValue}
+                  onChange={(event) =>
+                    change({ options: { ...form.options, [control.key]: Number(event.target.value) } })
+                  }
+                />
+              </label>
+            ),
+          )}
+        </section>
+      )}
+      <section className="panel stack" aria-label="Exercises">
+        <h2>Exercises</h2>
+        {definition.lifts.map((lift) => (
+          <div className="field" key={lift.key}>
+            <label htmlFor={`${idPrefix}-${lift.key}`}>{lift.name} exercise</label>
+            <select
+              id={`${idPrefix}-${lift.key}`}
+              value={form.bindings[lift.key] ?? NOT_TRACKED}
+              onChange={(event) =>
+                change({
+                  bindings: {
+                    ...form.bindings,
+                    [lift.key]: event.target.value === NOT_TRACKED ? null : event.target.value,
+                  },
+                })
+              }
+            >
+              <option value={NOT_TRACKED}>Not tracked</option>
+              {exercises.map((exercise) => (
+                <option key={exercise.id} value={exercise.id}>
+                  {exercise.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </section>
+      <section className="panel stack" aria-label="Rounding">
+        <h2>Rounding</h2>
+        <label className="field">
+          Round to ({form.unit})
+          <input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            value={form.rounding.increment}
+            onChange={(event) => change({ rounding: { ...form.rounding, increment: Number(event.target.value) } })}
+          />
+        </label>
+        <span className="field">Rounding direction</span>
+        <SegmentedChoice
+          label="Rounding direction"
+          options={ROUNDING_MODES}
+          current={form.rounding.mode}
+          onPick={(mode) => change({ rounding: { ...form.rounding, mode } })}
+        />
+        <label className="field">
+          Bar weight ({form.unit})
+          <input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            value={form.rounding.barWeight}
+            onChange={(event) => change({ rounding: { ...form.rounding, barWeight: Number(event.target.value) } })}
+          />
+        </label>
+      </section>
+      {problems.length > 0 && (
+        <div className="problem" role="alert">
+          {problems.map((problem) => (
+            <p key={problem}>{problem}</p>
+          ))}
+        </div>
+      )}
+      <button className="button primary big" type="button" disabled={busy} onClick={start}>
+        Start following
+      </button>
+    </main>
+  );
+}

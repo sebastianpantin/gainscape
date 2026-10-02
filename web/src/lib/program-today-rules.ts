@@ -1,5 +1,10 @@
 import {
   availableDays,
+  parseProgramDefinition,
+  type ProgramEnrollment,
+  type ProgramFact,
+  type ProgramState,
+  programStateAt,
   isCyclePosition,
   isRotationPosition,
   type Position,
@@ -13,7 +18,8 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 import { dayOf } from '@domain/program-schedule.ts';
-import { liftName, pctLabel, UPDATE_APP_TEXT } from './program-enroll-rules.ts';
+import { liftName, pctLabel, type ProgramTemplateRow, UPDATE_APP_TEXT } from './program-enroll-rules.ts';
+import { type EnrollmentRow, enrollmentFromRow } from './program-facts-rules.ts';
 
 export interface DayChoice {
   position: Position;
@@ -126,4 +132,39 @@ export function prescriptionCards(
       ? exerciseCard(definition, slot, unit, exerciseNames)
       : { kind: 'unsupported', slotId: slot.slotId, title: liftName(definition, slot.lift), message: UPDATE_APP_TEXT },
   );
+}
+
+export type ActiveProgram =
+  | { kind: 'none' }
+  | { kind: 'needs_update'; name: string; message: string }
+  | {
+      kind: 'ready';
+      name: string;
+      templateKey: string;
+      definition: ProgramDefinition;
+      enrollment: ProgramEnrollment;
+      state: ProgramState;
+    };
+
+export function activeProgram(
+  templates: readonly ProgramTemplateRow[],
+  enrollmentRow: EnrollmentRow | null,
+  facts: readonly ProgramFact[],
+): ActiveProgram {
+  if (enrollmentRow === null) return { kind: 'none' };
+  const template = templates.find(
+    (candidate) => candidate.key === enrollmentRow.template_key && candidate.version === enrollmentRow.template_version,
+  );
+  if (!template) return { kind: 'none' };
+  const parsed = parseProgramDefinition(template.definition);
+  if (parsed.kind !== 'ok') return { kind: 'needs_update', name: template.name, message: UPDATE_APP_TEXT };
+  const enrollment = enrollmentFromRow(enrollmentRow);
+  return {
+    kind: 'ready',
+    name: template.name,
+    templateKey: template.key,
+    definition: parsed.definition,
+    enrollment,
+    state: programStateAt(parsed.definition, enrollment, facts),
+  };
 }
