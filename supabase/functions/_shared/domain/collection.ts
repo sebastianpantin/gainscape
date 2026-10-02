@@ -12,7 +12,6 @@ export type CollectionExercise = CollectionLift | { modality: 'cardio' };
 export interface CollectionCompletion {
   filledSlots: number;
   totalSlots: number;
-  fraction: number;
 }
 
 function slotsFor(exercise: CollectionExercise): { filled: number; total: number } {
@@ -25,5 +24,5 @@ export function collectionCompletion(exercisesDoneOrPinned: readonly CollectionE
   const counted = exercisesDoneOrPinned.map(slotsFor);
   const filledSlots = counted.reduce((sum, slots) => sum + slots.filled, 0);
   const totalSlots = counted.reduce((sum, slots) => sum + slots.total, 0);
-  return { filledSlots, totalSlots, fraction: totalSlots === 0 ? 0 : filledSlots / totalSlots };
+  return { filledSlots, totalSlots };
 }
