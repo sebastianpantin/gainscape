@@ -64,6 +64,7 @@ export interface ReferenceChange {
 }
 
 export interface DayRecord {
+  epoch: number;
   position: Position;
   status: 'completed' | 'skipped';
   outcomes: Readonly<Record<string, LiftOutcome>>;
@@ -71,6 +72,7 @@ export interface DayRecord {
 }
 
 export interface ProgramState extends ScheduleCursor {
+  epoch: number;
   refs: ProgramReferences;
   consecutiveMisses: Readonly<Record<string, number>>;
   days: readonly DayRecord[];
@@ -100,6 +102,7 @@ function initialReferences(definition: ProgramDefinition, enrollment: ProgramEnr
 export function initialProgramState(definition: ProgramDefinition, enrollment: ProgramEnrollment): ProgramState {
   return {
     position: firstPosition(definition),
+    epoch: 0,
     completedDays: [],
     refs: initialReferences(definition, enrollment),
     consecutiveMisses: Object.fromEntries(definition.progression.map((rule) => [rule.lift, 0])),
