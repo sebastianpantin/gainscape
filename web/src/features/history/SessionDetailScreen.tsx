@@ -1,3 +1,4 @@
+import { isSessionEditable } from '@domain/edit-window.ts';
 import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -32,7 +33,6 @@ import {
   failureAction,
   failureText,
   hasChanges,
-  isEditable,
   rebaseEdit,
   rebaseNotice,
   removalText,
@@ -111,7 +111,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const adopt = useCallback((next: Loaded) => {
     setLoaded(next);
     setEdit(next.original);
-    setReadOnly(!isEditable(next.session, Date.now()));
+    setReadOnly(!isSessionEditable(next.session, Date.now()));
   }, []);
 
   const goBackGone = useCallback(
@@ -361,7 +361,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
               setLoaded(fresh);
               const rebased = rebaseEdit(edit, loaded.original, fresh.original);
               setEdit(rebased.edit);
-              setReadOnly(!isEditable(fresh.session, Date.now()));
+              setReadOnly(!isSessionEditable(fresh.session, Date.now()));
               setProblem(null);
               setNotice(rebaseNotice(rebased, fresh.original));
             }}
