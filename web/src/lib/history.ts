@@ -1,5 +1,6 @@
 import type { RevokedDrop, SessionSummary } from '@domain/types.ts';
-import { type InvokeOutcome, invokeAsOwner, retryDelayMs } from './function-client.ts';
+import { invokeAsOwner } from './function-client.ts';
+import { type InvokeOutcome, retryDelayMs } from './function-client-rules.ts';
 import {
   type EditSessionPayload,
   type HistorySession,
