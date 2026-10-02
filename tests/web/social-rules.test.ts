@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { minutesUntil, retryAfterSeconds, tryAgainIn, waitText } from '../../web/src/lib/rate-limit.ts';
+import {
+  minutesUntil,
+  rateLimitedMessage,
+  retryAfterSeconds,
+  withFriendlyRateLimit,
+  tryAgainIn,
+  waitText,
+} from '../../web/src/lib/rate-limit.ts';
 import {
   collectionPercent,
   type FeedItem,
@@ -250,5 +257,32 @@ describe('social helpers', () => {
     expect(tryAgainIn(90 * 60)).toBe('Try again in 90 min.');
     expect(tryAgainIn(3 * 3600)).toBe('Try again in 3 hours.');
     expect(waitText(91 * 60)).toBe('2 hours');
+  });
+});
+
+describe('rateLimitedMessage', () => {
+  it('turns a database rate limit into a wait message', () => {
+    expect(rateLimitedMessage({ code: 'PT429', details: '{"bucket":"craft_minute","retryAfterSeconds":40}' })).toBe(
+      'Too many changes in a short time. Try again in 1 min.',
+    );
+  });
+
+  it('ignores every other error', () => {
+    expect(rateLimitedMessage({ code: '23505', details: null })).toBeNull();
+    expect(rateLimitedMessage(new Error('Failed to fetch'))).toBeNull();
+    expect(rateLimitedMessage(null)).toBeNull();
+  });
+});
+
+describe('withFriendlyRateLimit', () => {
+  it('replaces a database rate limit with the wait message and keeps other errors as they are', () => {
+    const limited = withFriendlyRateLimit({
+      code: 'PT429',
+      message: 'rate_limited',
+      details: '{"retryAfterSeconds":7200}',
+    });
+    expect(limited.message).toBe('Too many changes in a short time. Try again in 2 hours.');
+    const other = { code: '42501', message: 'permission denied' };
+    expect(withFriendlyRateLimit(other)).toBe(other);
   });
 });

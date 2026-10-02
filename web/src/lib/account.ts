@@ -4,7 +4,7 @@ import { httpErrorBody } from './function-client.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds, tryAgainIn } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
-export const MINIMUM_PASSWORD_LENGTH = 6;
+export { MINIMUM_PASSWORD_LENGTH } from './auth-links.ts';
 
 async function functionError(error: unknown): Promise<string> {
   if (error instanceof FunctionsHttpError) {

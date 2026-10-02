@@ -8,7 +8,7 @@ const localAppUrl = `https://localhost:${webPort()}`;
 
 export default defineConfig({
   testDir: 'e2e',
-  testIgnore: 'pwa/**',
+  testIgnore: ['pwa/**', 'pages/**'],
   timeout: 90_000,
   fullyParallel: false,
   retries: 0,

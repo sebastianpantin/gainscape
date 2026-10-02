@@ -131,6 +131,17 @@ describe('item display', () => {
 });
 
 describe('craft errors', () => {
+  it('turns the craft rate limit into a wait message', () => {
+    const problem = craftProblem({
+      message: 'rate_limited',
+      code: 'PT429',
+      details: JSON.stringify({ bucket: 'craft_minute', retryAfterSeconds: 30 }),
+    });
+    expect(craftProblemText(problem, () => '')).toBe(
+      "Couldn't craft: Too many changes in a short time. Try again in 1 min.",
+    );
+  });
+
   it('maps insufficient_items with its shortfall', () => {
     const problem = craftProblem({
       message: 'insufficient_items',

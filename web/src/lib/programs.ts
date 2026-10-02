@@ -1,4 +1,5 @@
 import type { LastLoggedSet, PlannedExercise } from '../offline/draft-format.ts';
+import { rateLimitedMessage } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
 export interface ProgramDay {
@@ -95,7 +96,7 @@ export function templates(programs: Program[]): Program[] {
 
 async function changeProgramsThenRefresh(userId: string, name: string, args: Record<string, unknown>): Promise<void> {
   const { error } = await supabase.rpc(name, args);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(rateLimitedMessage(error) ?? error.message);
   await fetchPrograms(userId).catch(() => undefined);
 }
 

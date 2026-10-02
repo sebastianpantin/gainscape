@@ -5,13 +5,14 @@
 
 ## Purpose
 
-Human-facing operations documentation. Currently one page: what a hosted Supabase project needs before real users sign up. Nothing in it is applied automatically.
+Human-facing operations documentation. Two pages: `deploy.md` (the free, invite-only test environment: secrets, abuse limits, setup, deploy, testers, incidents, backups, rotation) and `production-auth.md` (what a hosted project needs before real users sign up). Nothing in it is applied automatically.
 
 ## Key Files
 
-| File                 | Description                                                                                                                                                                                                                          |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `production-auth.md` | Go-live checklist: never push the local `config.toml`, SMTP setup, hosted auth settings (`site_url`, exact redirect URLs, `max_frequency`, rate limits), the account pre-hijack fix, `LOOT_SECRET`, client-IP config, hosting rules. |
+| File                 | Description                                                                                                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `production-auth.md` | Go-live checklist: never push the local `config.toml`, SMTP setup, hosted auth settings (`site_url`, exact redirect URLs, `max_frequency`, rate limits), the account pre-hijack fix, `LOOT_SECRET`, client-IP config, hosting rules.                                      |
+| `deploy.md`          | Test environment runbook: who holds which secret and how the tooling enforces it, abuse and rate limits, invite-only setup with email confirmation off, `make deploy`, inviting and removing testers, incidents, backups and restore, secret rotation, pre-tester checks. |
 
 ## For AI Agents
 

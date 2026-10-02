@@ -1,4 +1,5 @@
 import type { Equipment, LoadType, Modality } from './catalog.ts';
+import { rateLimitedMessage, withFriendlyRateLimit } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
 export interface SkillShare {
@@ -23,12 +24,12 @@ function describeSaveError(message: string): string {
 
 export async function saveCustomExercise(exercise: CustomExerciseDoc): Promise<void> {
   const { error } = await supabase.rpc('save_custom_exercise', { exercise });
-  if (error) throw new Error(describeSaveError(error.message));
+  if (error) throw new Error(rateLimitedMessage(error) ?? describeSaveError(error.message));
 }
 
 export async function setCustomExerciseArchived(exerciseId: string, archived: boolean): Promise<void> {
   const { error } = await supabase.rpc('set_custom_exercise_archived', { exercise_id: exerciseId, archived });
-  if (error) throw error;
+  if (error) throw withFriendlyRateLimit(error);
 }
 
 export async function fetchExerciseShares(exerciseId: string): Promise<SkillShare[]> {
