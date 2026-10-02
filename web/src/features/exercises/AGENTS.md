@@ -36,7 +36,7 @@ Browse the exercise catalog and create, edit or archive the user's custom exerci
 
 ### Internal
 
-- `../../lib/{catalog,custom-exercises,names}.ts`.
+- `../../lib/{catalog,catalog-rules,custom-exercises,error-text,names}.ts`.
 
 ### External
 

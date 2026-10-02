@@ -9,10 +9,11 @@ The post-workout reveal: XP per skill, level-ups, personal records and loot drop
 
 ## Key Files
 
-| File               | Description                                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RevealScreen.tsx` | Route `/reveal`. Takes the summary from router `location.state` or `recallLastSummary()`; if absent or stale it can refetch with `fetchSession`. Computes level bars with `levelProgress`, writes lift and cardio records (`describeCardioGains`), shows `LevelUpIcon`, `TrophyIcon`, `ItemIcon`, marks the PWA install card due via `markInstallCardDue`, links to `/skills`, `/collection/items` and `/` |
-| `last-summary.ts`  | `rememberLastSummary`, `recallLastSummary`, `forgetLastSummary(sessionIds)`; stores JSON in `sessionStorage` under `gainscape.last-summary`; every access is try/catch guarded; forget only clears when the cached `sessionId` is in the list                                                                                                                                                              |
+| File               | Description                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RevealScreen.tsx` | Route `/reveal`. Takes the summary from router `location.state` or `recallLastSummary()`; if absent or stale it can refetch with `fetchSession`. Computes level bars with `levelProgress`, writes lift and cardio records through `describeRecord`, shows `LevelUpIcon`, `TrophyIcon`, `ItemIcon`, marks the PWA install card due via `markInstallCardDue`, links to `/skills`, `/collection/items` and `/` |
+| `last-summary.ts`  | `rememberLastSummary`, `recallLastSummary`, `forgetLastSummary(sessionIds)`; stores JSON in `sessionStorage` under `gainscape.last-summary`; every access is try/catch guarded; forget only clears when the cached `sessionId` is in the list                                                                                                                                                               |
+| `reveal-rules.ts`  | Pure `describeRecord(record, exercise, unit)`: headline and previous-value text for a personal record (cardio via `describeCardioGains`, bodyweight reps, or load via `formatLoad`)                                                                                                                                                                                                                         |
 
 ## For AI Agents
 
@@ -25,7 +26,7 @@ The post-workout reveal: XP per skill, level-ups, personal records and loot drop
 ### Testing Requirements
 
 - E2E (stack needed): `e2e/loot.spec.ts` (loot on the reveal), `e2e/a11y.spec.ts` (reduced motion), `e2e/drafts.spec.ts` and `e2e/programs.spec.ts` (finishing leads to the reveal).
-- `last-summary.ts` is pure enough to unit test but currently has no file in `tests/web/`; add `tests/web/last-summary.test.ts` first when changing it (use `tests/web/memory-storage.ts` as a storage stub if needed).
+- Unit: `tests/web/last-summary.test.ts` (storage stubbed with `tests/web/memory-storage.ts`) and `tests/web/reveal-rules.test.ts` (`make test-web`).
 
 ### Common Patterns
 
@@ -35,7 +36,7 @@ The post-workout reveal: XP per skill, level-ups, personal records and loot drop
 
 ### Internal
 
-- `../../lib/{catalog,format,history,item-rules,items,preferences,profile}.ts`, `../../components/PixelArt.tsx`, `../../pwa/install.ts`, `../workout/xp-preview.ts`, `@domain/{index,types}.ts`.
+- `../../lib/{cardio-rules,catalog,catalog-rules,format,history,item-rules,items,preferences,profile-rules,units}.ts`, `../../components/PixelArt.tsx`, `../../pwa/install.ts`, `@domain/{index,types}.ts`.
 
 ### External
 
