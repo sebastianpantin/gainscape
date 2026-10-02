@@ -357,7 +357,7 @@ export interface ProgramEnrollment {
 
 export type ParsedProgramDefinition =
   | { kind: 'ok'; definition: ProgramDefinition }
-  | { kind: 'unsupported'; unknownKinds: string[] }
+  | { kind: 'unsupported'; unknownKinds: string[]; unsupportedKinds: string[] }
   | { kind: 'invalid'; errors: string[] };
 
 export interface NumberContext {
@@ -433,6 +433,9 @@ export const ADJUSTMENT_KINDS: readonly string[] = [
   'e1rmFromSet',
   'customRule',
 ];
+const PROGRESSION_TRIGGERS: readonly string[] = ['afterSession', 'endOfWeek', 'endOfCycle', 'endOfWave'];
+const SUPPORTED_TRIGGERS: readonly string[] = ['afterSession', 'endOfWeek', 'endOfCycle'];
+const SUPPORTED_ADJUSTMENT_KINDS: readonly string[] = ['increment', 'hold', 'tmReset'];
 const INITIAL_KINDS: readonly string[] = ['copy', 'scale', 'onRamp'];
 const OPTION_KINDS: readonly string[] = ['choice', 'number'];
 
@@ -733,6 +736,24 @@ function shapeErrors(json: unknown): string[] {
   return errors;
 }
 
+function unsupportedKindsIn(json: Record<string, unknown>): string[] {
+  const unsupported = new Set<string>();
+  for (const rule of arrayOf(json.progression)) {
+    const record = rule as Record<string, unknown>;
+    const trigger = typeof record.trigger === 'string' ? record.trigger : null;
+    if (trigger !== null && PROGRESSION_TRIGGERS.includes(trigger) && !SUPPORTED_TRIGGERS.includes(trigger)) {
+      unsupported.add(trigger);
+    }
+    for (const adjustment of [...arrayOf(record.onMet), ...arrayOf(record.onMiss), ...arrayOf(record.always)]) {
+      const kind = kindOf(adjustment);
+      if (kind !== null && ADJUSTMENT_KINDS.includes(kind) && !SUPPORTED_ADJUSTMENT_KINDS.includes(kind)) {
+        unsupported.add(kind);
+      }
+    }
+  }
+  return [...unsupported];
+}
+
 function unknownKindsIn(json: Record<string, unknown>): string[] {
   const unknown = new Set<string>();
   const note = (kind: string | null, known: readonly string[]) => {
@@ -756,6 +777,7 @@ function unknownKindsIn(json: Record<string, unknown>): string[] {
   }
   for (const rule of arrayOf(json.progression)) {
     const record = rule as Record<string, unknown>;
+    note(typeof record.trigger === 'string' ? record.trigger : 'missing trigger', PROGRESSION_TRIGGERS);
     for (const adjustment of [...arrayOf(record.onMet), ...arrayOf(record.onMiss), ...arrayOf(record.always)]) {
       note(kindOf(adjustment), ADJUSTMENT_KINDS);
     }
@@ -767,7 +789,10 @@ export function parseProgramDefinition(json: unknown): ParsedProgramDefinition {
   const errors = shapeErrors(json);
   if (errors.length > 0 || !isRecord(json)) return { kind: 'invalid', errors };
   const unknownKinds = unknownKindsIn(json);
-  if (unknownKinds.length > 0) return { kind: 'unsupported', unknownKinds };
+  const unsupportedKinds = unsupportedKindsIn(json);
+  if (unknownKinds.length > 0 || unsupportedKinds.length > 0) {
+    return { kind: 'unsupported', unknownKinds, unsupportedKinds };
+  }
   const definition = json as unknown as ProgramDefinition;
   const semanticErrors = validateProgramDefinition(definition);
   if (semanticErrors.length > 0) return { kind: 'invalid', errors: semanticErrors };
