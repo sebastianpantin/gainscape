@@ -146,7 +146,7 @@ test('the time zone can change once, then waits 7 days', async ({ page }) => {
   await page.getByLabel('Change to').selectOption('Asia/Tokyo');
   await page.getByRole('button', { name: 'Change', exact: true }).click();
   await expect(page.getByText('Time zone changed to Asia/Tokyo.')).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Time zone' }).getByRole('paragraph')).toHaveText('Asia/Tokyo');
+  await expect(definitionOf(page.getByRole('region', { name: 'Time zone' }), 'Current')).toHaveText('Asia/Tokyo');
   await expect(page.getByLabel('Change to')).toBeDisabled();
   await page.reload();
   await expect(page.getByText(/Your next change is possible on/)).toBeVisible();
