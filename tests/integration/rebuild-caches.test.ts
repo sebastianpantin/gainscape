@@ -229,16 +229,17 @@ describe('rebuild-caches', () => {
   });
 
   it.each([
-    ['a missing user id', JSON.stringify({})],
-    ['a user id that is not a uuid', JSON.stringify({ userId: 'not-a-uuid' })],
-    ['a body that is not JSON', '{'],
-  ])('returns 422 user_id_required for %s', async (_case, body) => {
+    ['a missing user id', JSON.stringify({}), 422, 'invalid_payload'],
+    ['a user id that is not a uuid', JSON.stringify({ userId: 'not-a-uuid' }), 422, 'invalid_payload'],
+    ['an unknown key', JSON.stringify({ userId: randomUUID(), extra: true }), 422, 'invalid_payload'],
+    ['a body that is not JSON', '{', 400, 'invalid_json'],
+  ])('rejects %s', async (_case, body, status, code) => {
     const response = await fetchFunction('rebuild-caches', {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
       body,
     });
-    expect(response.status, response.rawBody).toBe(422);
-    expect(JSON.parse(response.rawBody).error).toBe('user_id_required');
+    expect(response.status, response.rawBody).toBe(status);
+    expect(JSON.parse(response.rawBody).error).toBe(code);
   });
 });
