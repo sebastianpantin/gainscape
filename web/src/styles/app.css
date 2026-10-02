@@ -514,7 +514,8 @@ a:focus-visible {
   text-align: right;
 }
 
-.live-xp strong {
+.live-xp strong,
+.live-xp output {
   white-space: nowrap;
   font-family: var(--font-display);
   font-size: 1.5rem;

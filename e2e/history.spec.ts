@@ -27,7 +27,7 @@ test('edit a logged set from history, see the XP change, then delete the workout
   await expect(workouts.first()).toContainText('1 set');
   await workouts.first().click();
 
-  const sessionXp = page.getByTestId('session-xp');
+  const sessionXp = page.getByRole('status', { name: 'Workout XP' });
   await expect(sessionXp).toHaveText(/^\+[\d,]+ XP$/);
   const xpBefore = xpValue(await sessionXp.textContent());
 

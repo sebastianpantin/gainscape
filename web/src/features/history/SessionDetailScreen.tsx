@@ -314,9 +314,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           <h1 className="title">Workout</h1>
         </div>
         <div className="live-xp">
-          <strong data-testid="session-xp">
+          <output aria-label="Workout XP">
             {session.historyOnly ? 'No XP' : `+${formatXp(sessionXp(session.summary))} XP`}
-          </strong>
+          </output>
           <span className="muted tiny">{session.setCount} sets</span>
         </div>
       </header>

@@ -113,7 +113,7 @@ export async function openLatestWorkout(page: Page) {
   await openTab(page, 'Log');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
   await page.getByRole('list', { name: 'Workouts' }).getByRole('link').first().click();
-  await expect(page.getByTestId('session-xp')).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
 }
 
 export function xpValue(text: string | null): number {
