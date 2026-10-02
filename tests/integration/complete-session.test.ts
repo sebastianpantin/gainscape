@@ -264,6 +264,37 @@ describe('complete-session rejections', () => {
     expect(response.status).toBe(422);
   });
 
+  it.each([
+    ['duplicate_set_id', (sets: LiftSetBody[]) => [sets[0], { ...sets[1], id: sets[0].id }]],
+    ['duplicate_set_position', (sets: LiftSetBody[]) => [sets[0], { ...sets[1], position: sets[0].position }]],
+  ])('returns 422 %s and writes nothing', async (code, duplicate) => {
+    const user = await createTestUser();
+    const response = await postCompleteSession(
+      user.accessToken,
+      sessionPayload(duplicate(threeSets(benchId, 0, 50, 'hard'))),
+    );
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe(code);
+    expect((await rowCountsFor(user.id)).sessions).toBe(0);
+  });
+
+  it.each([
+    ['ends_before_start', -60, -61],
+    ['session_too_long', -(12 * 60 + 2), -1],
+    ['session_in_future', 6, 7],
+  ])('returns 422 %s for implausible timing', async (code, startMinutesFromNow, endMinutesFromNow) => {
+    const user = await createTestUser();
+    const minutesFromNow = (minutes: number) => new Date(Date.now() + minutes * 60 * 1000).toISOString();
+    const response = await postCompleteSession(user.accessToken, {
+      ...sessionPayload(threeSets(benchId, 0, 50, 'hard')),
+      startedAt: minutesFromNow(startMinutesFromNow),
+      endedAt: minutesFromNow(endMinutesFromNow),
+    });
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe(code);
+    expect((await rowCountsFor(user.id)).sessions).toBe(0);
+  });
+
   it('returns 401 without a user token', async () => {
     const response = await postCompleteSession('not-a-token', sessionPayload(threeSets(benchId, 0, 50, 'hard')));
     expect(response.status).toBe(401);
