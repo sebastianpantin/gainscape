@@ -18,6 +18,7 @@ import {
   setKind,
   strengthHistoryRows,
   UnknownExerciseError,
+  writableSetFor,
 } from '@domain/index.ts';
 import { aBout, aSet, catalog, freshUser, hard, nearFailure, TEST_BALANCE } from './fixtures.ts';
 
@@ -364,5 +365,37 @@ describe('setKind', () => {
     expect(setKind(aSet('bench', 60, 5, hard))).toBe('lift');
     expect(setKind(aSet('bench', 60, 5, hard, { kind: 'lift' }))).toBe('lift');
     expect(setKind(aBout('run', 1800, null))).toBe('cardio');
+  });
+});
+
+describe('writableSetFor', () => {
+  const exercise = (id: string) => catalog.exercises.get(id)!;
+
+  it('passes a bout on a cardio exercise through unchanged', () => {
+    const bout = aBout('run', 1800, null);
+    expect(writableSetFor(bout, exercise('run'), null)).toBe(bout);
+  });
+
+  it('rejects a bout on a lift exercise and a lift set on a cardio exercise', () => {
+    expect(() => writableSetFor(aBout('run', 1800, null), exercise('bench'), null)).toThrow(KindMismatchError);
+    expect(() => writableSetFor(aSet('run', 0, 5, hard), exercise('run'), null)).toThrow(KindMismatchError);
+  });
+
+  it('gives a new lift set its effective load from the current bodyweight', () => {
+    const set = aSet('weighted-pull-up', 10, 5, hard);
+    expect(writableSetFor(set, exercise('weighted-pull-up'), 80)).toEqual({ ...set, effectiveLoadKg: 90 });
+    expect(writableSetFor(aSet('bench', 60, 5, hard), exercise('bench'), 80)).toMatchObject({ effectiveLoadKg: 60 });
+  });
+
+  it('carries the logged bodyweight of a stored set of the same exercise', () => {
+    const set = aSet('weighted-pull-up', 15, 5, hard);
+    const stored = { exerciseId: 'weighted-pull-up', weightKg: 10, effectiveLoadKg: 85 };
+    expect(writableSetFor(set, exercise('weighted-pull-up'), 80, stored)).toEqual({ ...set, effectiveLoadKg: 90 });
+  });
+
+  it('rejects added load on a pure bodyweight exercise', () => {
+    expect(() => writableSetFor(aSet('pull-up', 5, 5, hard), exercise('pull-up'), 80)).toThrow(
+      BodyweightLoadNotZeroError,
+    );
   });
 });

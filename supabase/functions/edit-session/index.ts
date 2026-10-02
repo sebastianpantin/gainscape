@@ -1,15 +1,14 @@
 import { authenticatedUserId } from '../_shared/auth.ts';
 import { type JsonValue, sql, type Transaction } from '../_shared/db.ts';
 import {
-  carriedEffectiveLoadKg,
-  isSessionEditable,
   DEFAULT_BALANCE,
-  effectiveLoadForNewSet,
-  type ExerciseDef,
-  KindMismatchError,
-  resolveEffort,
+  isNoOpEdit,
+  isSessionEditable,
   type RevokedDrop,
   type SessionSummary,
+  type StoredSet,
+  type WritableSet,
+  writableSetFor,
 } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
 import { HttpError, jsonResponse, readJsonBody } from '../_shared/http.ts';
@@ -23,13 +22,11 @@ import {
   loadProfileSettings,
   loadStoredSets,
   lockUser,
-  type OwnedSession,
   placeholderSetRow,
   requireOwnedSession,
-  type StoredSet,
   storedSummary,
 } from '../_shared/stores/sessions.ts';
-import { inputColumnsWithEffort, type WritableSet } from '../_shared/stores/set-columns.ts';
+import { inputColumnsWithEffort } from '../_shared/stores/set-columns.ts';
 import { type EditSessionPayload, parseEditSessionPayload } from './payload.ts';
 
 interface EditResponse {
@@ -39,62 +36,12 @@ interface EditResponse {
   revokedDrops: RevokedDrop[];
 }
 
-function sameSet(requested: SetPayload, stored: StoredSet): boolean {
-  const effort = resolveEffort(requested.effort, DEFAULT_BALANCE, requested.kind);
-  const sameEffort = effort.effortInputType === stored.effortInputType && effort.effortValue === stored.effortValue;
-  const sameIdentity = requested.exerciseId === stored.exerciseId && requested.position === stored.position;
-  if (!sameIdentity || !sameEffort) return false;
-  if (requested.kind === 'cardio' || stored.kind === 'cardio') {
-    return (
-      requested.kind === 'cardio' &&
-      stored.kind === 'cardio' &&
-      requested.durationS === stored.durationS &&
-      requested.distanceM === stored.distanceM &&
-      requested.interval?.workS === stored.interval?.workS &&
-      requested.interval?.restS === stored.interval?.restS &&
-      requested.interval?.rounds === stored.interval?.rounds
-    );
-  }
-  return (
-    requested.weightKg === stored.weightKg && requested.reps === stored.reps && requested.isWarmup === stored.isWarmup
-  );
-}
-
 function assertKindsUnchanged(sets: readonly SetPayload[], storedById: ReadonlyMap<string, StoredSet>): void {
   const changed = sets.filter((set) => {
     const stored = storedById.get(set.id);
     return stored !== undefined && stored.kind !== set.kind;
   });
   if (changed.length > 0) throw new HttpError(422, 'kind_changed', { setIds: changed.map((set) => set.id) });
-}
-
-function writableSet(
-  set: SetPayload,
-  exercise: ExerciseDef,
-  stored: StoredSet | undefined,
-  bodyweightKg: number | null,
-): WritableSet {
-  if (set.kind === 'cardio') {
-    if (exercise.modality !== 'cardio') throw new KindMismatchError(exercise.id);
-    return set;
-  }
-  const effectiveLoadKg =
-    stored?.kind === 'lift'
-      ? carriedEffectiveLoadKg(stored, set, exercise, bodyweightKg)
-      : effectiveLoadForNewSet(set, exercise, bodyweightKg);
-  return { ...set, effectiveLoadKg };
-}
-
-function isNoOp(
-  payload: EditSessionPayload,
-  session: OwnedSession,
-  storedById: ReadonlyMap<string, StoredSet>,
-): boolean {
-  if (payload.notes !== session.notes || payload.sets.length !== storedById.size) return false;
-  return payload.sets.every((set) => {
-    const stored = storedById.get(set.id);
-    return stored !== undefined && sameSet(set, stored);
-  });
 }
 
 async function writeSets(
@@ -165,7 +112,7 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     const session = await requireOwnedSession(tx, userId, payload.sessionId);
     const storedSets = await loadStoredSets(tx, payload.sessionId);
     const storedById = new Map(storedSets.map((set) => [set.id, set]));
-    if (isNoOp(payload, session, storedById)) {
+    if (isNoOpEdit(payload, session.notes, storedById, DEFAULT_BALANCE)) {
       return { summary: session.summary, revision: session.revision, replayedSessionIds: [], revokedDrops: [] };
     }
 
@@ -180,9 +127,15 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     if (newSetIds.length > 0) await assertSetIdsUnused(tx, newSetIds);
 
     const { bodyweightKg } = await loadProfileSettings(tx, userId);
-    const requested = payload.sets.map((set) =>
-      writableSet(set, catalog.exercises.get(set.exerciseId)!, storedById.get(set.id), bodyweightKg),
-    );
+    const requested = payload.sets.map((set) => {
+      const stored = storedById.get(set.id);
+      return writableSetFor(
+        set,
+        catalog.exercises.get(set.exerciseId)!,
+        bodyweightKg,
+        stored?.kind === 'lift' ? stored : undefined,
+      );
+    });
 
     await takeRateLimit(tx, 'session_edit_hour', userId);
     await writeSets(tx, userId, payload.sessionId, storedSets, requested);

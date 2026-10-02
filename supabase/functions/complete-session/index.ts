@@ -3,13 +3,13 @@ import { sql, type Transaction } from '../_shared/db.ts';
 import {
   type Catalog,
   DEFAULT_BALANCE,
-  effectiveLoadForNewSet,
   HISTORY_ONLY_STEPS,
   isWithinEditWindow,
-  KindMismatchError,
   processSession,
   type SessionInput,
   type SessionSummary,
+  type WritableSet,
+  writableSetFor,
 } from '../_shared/domain/index.ts';
 import { asHttpError } from '../_shared/http-errors.ts';
 import { HttpError, jsonResponse, readJsonBody } from '../_shared/http.ts';
@@ -31,7 +31,7 @@ import {
   storedSummary,
   tombstoneOwner,
 } from '../_shared/stores/sessions.ts';
-import { newSetRow, type WritableSet } from '../_shared/stores/set-columns.ts';
+import { newSetRow } from '../_shared/stores/set-columns.ts';
 import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
 
 function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessionPayload): void {
@@ -120,13 +120,10 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       id: payload.id,
       startedAt: payload.startedAt,
       sets: payload.sets.map((set): WritableSet => {
-        const exercise = catalog.exercises.get(set.exerciseId)!;
-        if (set.kind === 'cardio') {
-          if (exercise.modality !== 'cardio') throw new KindMismatchError(exercise.id);
-          return set;
-        }
-        const effectiveLoadKg = effectiveLoadForNewSet(set, exercise, profile.bodyweightKg);
-        return { ...set, effectiveLoadKg, recordedEffectiveLoadKg: effectiveLoadKg };
+        const writable = writableSetFor(set, catalog.exercises.get(set.exerciseId)!, profile.bodyweightKg);
+        return writable.kind === 'cardio'
+          ? writable
+          : { ...writable, recordedEffectiveLoadKg: writable.effectiveLoadKg };
       }),
     };
     const row: NewSessionRow = {

@@ -20,7 +20,7 @@ POST endpoint that accepts a finished workout draft from the web app, validates 
 
 ### Working In This Directory
 
-- Server computes effective load via `effectiveLoadForNewSet`; never trust client XP.
+- Server computes effective load via the domain `writableSetFor` and records it as `recordedEffectiveLoadKg` so history-only sessions keep it; never trust client XP.
 - Needs `LOOT_SECRET` through `rollNewSessionLoot`.
 - The payload shape must match the web draft sync code.
 
