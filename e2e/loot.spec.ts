@@ -62,7 +62,7 @@ test('loot on the reveal, the items screen, crafting and a scroll unlock', async
   await openTab(page, 'Log');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
   await page.getByRole('list', { name: 'Workouts' }).getByRole('link').nth(1).click();
-  await expect(page.getByTestId('session-xp')).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
   const sessionId = page.url().split('/').at(-1)!;
   await page.locator('li.set-row').first().getByLabel('reps').fill('4');
   const editWarning = page.getByRole('status').filter({ hasText: 'This may remove' });

@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './support/people.ts';
 import {
+  definitionOf,
   emailOf,
   openFromProfile,
   register,
@@ -115,7 +116,7 @@ test('an email change needs both links', async ({ page }) => {
   await submitSignIn(page, newEmail);
   await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
   await openFromProfile(page, 'Settings');
-  await expect(page.getByTestId('settings-email')).toHaveText(newEmail);
+  await expect(definitionOf(page, 'Email')).toHaveText(newEmail);
 });
 
 test('a used confirmation link is invalid', async ({ page }) => {

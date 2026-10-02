@@ -51,7 +51,7 @@ function PreviewOfProfile({ userId, profile, replace, view }: PreviewOfProfilePr
       <ProfileWithTopSkills skills={view.skills} profile={view.profile} headingId="top-skills-heading" />
       <section className="panel stack" aria-labelledby="record-heading">
         <h2 id="record-heading">How your records appear</h2>
-        <span className="pixel" data-testid="preview-record">
+        <span className="pixel">
           {profile.showWeights ? `New 8RM Back Squat: ${formatWeight(110, unitPref)}` : 'New 8RM Back Squat'}
         </span>
         {!profile.showWeights && <span className="muted tiny">Weights hidden by {profile.username}</span>}
