@@ -32,7 +32,9 @@ h2 {
   color: var(--color-text);
 }
 
-p {
+p,
+dl,
+dd {
   margin: 0;
 }
 

@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 import { confirmAccount } from './db.ts';
 
@@ -17,6 +17,13 @@ interface StoredAuthSession {
 
 export function uniqueUsername(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+}
+
+export function definitionOf(scope: Page | Locator, term: string): Locator {
+  return scope
+    .getByRole('term')
+    .filter({ hasText: new RegExp(`^${term}$`) })
+    .locator('xpath=following-sibling::dd[1]');
 }
 
 export function nowInSeconds(): number {
