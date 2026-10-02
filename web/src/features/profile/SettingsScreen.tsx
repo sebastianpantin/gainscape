@@ -30,6 +30,7 @@ import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetInstallCard, promptInstall, useInstallState } from '../../pwa/install.ts';
 import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
 import type { UpdateCheck } from '../../pwa/update-flow.ts';
+import { useOptimisticProfileSave } from './use-optimistic-profile-save.ts';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
 
@@ -106,33 +107,14 @@ interface SectionProps {
   onSaved: (update: ProfileUpdate) => void;
 }
 
-function previousValues<K extends keyof Profile>(
-  profile: Profile,
-  changes: Partial<Pick<Profile, K>>,
-): Pick<Profile, K> {
-  return Object.fromEntries(Object.keys(changes).map((key) => [key, profile[key as K]])) as Pick<Profile, K>;
-}
-
 function TrainingSection({ userId, profile, onSaved }: SectionProps) {
   const { applyPreferences } = usePreferences();
-  const [problem, setProblem] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  const save = async (changes: Partial<Pick<Profile, 'unitPref' | 'effortInputMode'>>) => {
-    const previous = previousValues(profile, changes);
-    setProblem(null);
-    setPending(true);
-    onSaved((current) => ({ ...current, ...changes }));
-    applyPreferences(changes);
-    try {
-      await updatePrivateProfile(userId, changes);
-    } catch (error) {
-      onSaved((current) => ({ ...current, ...previous }));
-      applyPreferences(previous);
-      setProblem(messageOf(error, 'Could not save that setting.'));
-    }
-    setPending(false);
-  };
+  const { save, pending, problem } = useOptimisticProfileSave<'unitPref' | 'effortInputMode'>(
+    profile,
+    onSaved,
+    (changes) => updatePrivateProfile(userId, changes),
+    applyPreferences,
+  );
 
   return (
     <section className="panel stack" aria-labelledby="training-heading">
@@ -251,22 +233,11 @@ function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {
 }
 
 function PrivacySection({ userId, profile, onSaved }: SectionProps) {
-  const [problem, setProblem] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  const save = async (changes: Partial<Pick<Profile, 'showWeights' | 'showBodyweight'>>) => {
-    const previous = previousValues(profile, changes);
-    setProblem(null);
-    setPending(true);
-    onSaved((current) => ({ ...current, ...changes }));
-    try {
-      await updatePublicProfile(userId, changes);
-    } catch (error) {
-      onSaved((current) => ({ ...current, ...previous }));
-      setProblem(messageOf(error, 'Could not save that setting.'));
-    }
-    setPending(false);
-  };
+  const { save, pending, problem } = useOptimisticProfileSave<'showWeights' | 'showBodyweight'>(
+    profile,
+    onSaved,
+    (changes) => updatePublicProfile(userId, changes),
+  );
 
   return (
     <section className="panel stack" aria-labelledby="privacy-heading">
