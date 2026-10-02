@@ -150,3 +150,26 @@ export async function usernameOfEmail(email: string): Promise<string | null> {
 export async function ageConfirmation(email: string, interval: string): Promise<void> {
   await db`update auth.users set email_confirmed_at = now() - ${interval}::interval where email = ${email}`;
 }
+
+export async function insertProgramTemplate(key: string, name: string, definition: unknown): Promise<void> {
+  await db`
+    insert into public.program_templates (key, version, name, definition)
+    values (${key}, 1, ${name}, ${db.json(JSON.parse(JSON.stringify(definition)))})`;
+}
+
+export async function deleteProgramTemplate(key: string): Promise<void> {
+  await db`delete from public.program_templates where key = ${key}`;
+}
+
+export async function activeEnrollmentOf(username: string) {
+  const [row] = await db`
+    select e.template_key, e.template_version, e.unit, e.options, e.lift_bindings, e.inputs, e.rounding
+    from public.program_enrollments e join public.profiles p on p.id = e.user_id
+    where p.username = ${username} and e.ended_at is null`;
+  return row ?? null;
+}
+
+export async function exerciseIdOfKey(key: string): Promise<string> {
+  const [row] = await db`select id from public.exercises where key = ${key} and owner_user_id is null`;
+  return row.id;
+}
