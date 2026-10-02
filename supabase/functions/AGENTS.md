@@ -36,7 +36,7 @@ Integration tests in `tests/integration/` call the served functions; run `make t
 
 ### Common Patterns
 
-- Handler shape: `Deno.serve`, OPTIONS, method check, `authenticatedUserId` (`assertServiceRole` in `rebuild-caches`), parse body with zod, delegate to a function, `errorResponse`.
+- Handler shape: `serve(handler, mapError?)` from `_shared/serve.ts` wraps `Deno.serve`, answers OPTIONS, rejects non-POST with 405 and turns thrown errors into `errorResponse` (complete, edit and delete-session pass `asHttpError` to map domain errors). The handler authenticates with `authenticatedUserId` (`assertServiceRole` in `rebuild-caches`), parses the body with zod and delegates to a function.
 - `complete-session`, `edit-session` and `delete-session` write in `sql.begin` after `lockUser`. `rebuild-caches` locks the `profiles` row with `select ... for update` inside `sql.begin`. `export-data` uses a read-only transaction. `delete-account` uses neither.
 
 ## Dependencies

@@ -1,6 +1,6 @@
 import type { BalanceConfig } from './balance.ts';
 import { boutPace, countedWorkSeconds } from './cardio.ts';
-import { KindMismatchError, UnknownExerciseError } from './errors.ts';
+import { cardioExercise, exerciseFor, liftExercise, liftExerciseFor } from './exercise-lookup.ts';
 import type { SessionContext, Step } from './pipeline.ts';
 import { roundTo } from './strength.ts';
 import {
@@ -109,7 +109,7 @@ export interface CardioRecordUpdate {
   gains: CardioRecordGain[];
 }
 
-export function applyBoutToRecords(
+function applyBoutToRecords(
   records: RecordState,
   bout: CardioSetInput,
   exercise: CardioExerciseDef,
@@ -182,8 +182,7 @@ export const detectPersonalRecords: Step = (ctx: SessionContext) => {
 
   const sets = ctx.sets.map((result): SetResult => {
     if (result.set.kind === 'cardio' && result.cardio !== null) {
-      const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
-      if (exercise.modality !== 'cardio') return result;
+      const exercise = cardioExercise(exerciseFor(result.set, ctx.deps.catalog));
       const update = applyBoutToRecords(records, result.set, exercise, ctx.session.startedAt, ctx.cfg);
       records = update.records;
       const isBaselineSession = recordsAtStart.cardio[exercise.id] === undefined;
@@ -191,8 +190,7 @@ export const detectPersonalRecords: Step = (ctx: SessionContext) => {
       return { ...result, cardio: { ...result.cardio, records: update.gains } };
     }
     if (!isLiftResult(result) || result.set.isWarmup) return result;
-    const exercise = ctx.deps.catalog.exercises.get(result.set.exerciseId)!;
-    if (exercise.modality === 'cardio') return result;
+    const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const isBaselineSession = !(ctx.deps.strength?.[exercise.id]?.hasPriorSession ?? false);
     const update = applySetToRecords(records, result.set, exercise.loadType, ctx.session.startedAt, ctx.cfg);
     records = update.records;
@@ -252,10 +250,8 @@ export function recordsFromHistory(
     );
   let records: RecordState = NO_RECORDS;
   for (const { row } of ordered) {
-    const exercise = catalog.exercises.get(row.exerciseId);
-    if (!exercise) throw new UnknownExerciseError(row.exerciseId);
+    const exercise = exerciseFor(row, catalog);
     if (row.kind === 'cardio') {
-      if (exercise.modality !== 'cardio') throw new KindMismatchError(row.exerciseId);
       const bout: CardioSetInput = {
         kind: 'cardio',
         id: row.setId,
@@ -266,10 +262,9 @@ export function recordsFromHistory(
         interval: row.interval,
         effort: null,
       };
-      records = applyBoutToRecords(records, bout, exercise, row.session.startedAt, cfg).records;
+      records = applyBoutToRecords(records, bout, cardioExercise(exercise), row.session.startedAt, cfg).records;
       continue;
     }
-    if (exercise.modality === 'cardio') throw new KindMismatchError(row.exerciseId);
     const set: LiftSetInput = {
       id: row.setId,
       exerciseId: row.exerciseId,
@@ -279,7 +274,7 @@ export function recordsFromHistory(
       isWarmup: false,
       effort: null,
     };
-    records = applySetToRecords(records, set, exercise.loadType, row.session.startedAt, cfg).records;
+    records = applySetToRecords(records, set, liftExercise(exercise).loadType, row.session.startedAt, cfg).records;
   }
   return records;
 }

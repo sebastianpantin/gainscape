@@ -24,7 +24,7 @@ export const CARDIO_BOUNDS = Object.freeze({
   distanceM: Object.freeze({ min: 1, max: 200_000 }),
 });
 
-export const DEFAULT_CARDIO_EFFORT: CardioEffortLevel = 'moderate';
+const DEFAULT_CARDIO_EFFORT: CardioEffortLevel = 'moderate';
 
 export function intervalDurationSeconds(interval: CardioInterval): number {
   return interval.rounds * interval.workS + (interval.rounds - 1) * interval.restS;

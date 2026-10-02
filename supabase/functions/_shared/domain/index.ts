@@ -1,5 +1,6 @@
 export * from './types.ts';
 export * from './errors.ts';
+export * from './exercise-lookup.ts';
 export * from './balance.ts';
 export * from './levels.ts';
 export * from './combat.ts';
