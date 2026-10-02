@@ -19,6 +19,7 @@ Simulates years of training for four lifter profiles using the real domain engin
 | `profiles.ts`        | `PROFILES` (`hypertrophy`, `strength`, `balanced`, `casual`), `STARTING_E1RM_KG`, `CARDIO_PROFILES.cardio_balanced` (2 steady runs and 2 30x30 s interval sessions a week) and `STEADY_AGILITY_BOUT`.                                                                                                 |
 | `catalog.ts`         | `SIM_CATALOG`, `SIM_SKILLS`, `SIM_EXERCISE_SHARES`: a hard-coded subset of the real catalog; separate `CARDIO_SIM_SKILLS`, `CARDIO_SIM_EXERCISES`, `CARDIO_SIM_CATALOG` for cardio.                                                                                                                   |
 | `random.ts`          | `seededRandom` (mulberry32-style) so results are deterministic.                                                                                                                                                                                                                                       |
+| `progress.ts`        | `SIMULATION_SEED` (42), `DAY_MS`, `LEVEL_99_XP` and `skillProgress`, the weekly cumulative-XP and week-to-99 bookkeeping both simulators share.                                                                                                                                                       |
 
 ## For AI Agents
 
