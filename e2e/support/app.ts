@@ -20,10 +20,7 @@ export function uniqueUsername(prefix: string): string {
 }
 
 export function definitionOf(scope: Page | Locator, term: string): Locator {
-  return scope
-    .getByRole('term')
-    .filter({ hasText: new RegExp(`^${term}$`) })
-    .locator('xpath=following-sibling::dd[1]');
+  return scope.getByRole('term').getByText(term, { exact: true }).locator('xpath=following-sibling::dd[1]');
 }
 
 export function nowInSeconds(): number {
