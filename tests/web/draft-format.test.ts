@@ -11,6 +11,7 @@ import {
   notDoneSetCount,
   parseStoredDraft,
   programLabelFor,
+  removeSet,
   startDraftFromDay,
   swapExercise,
   toggleSetDone,
@@ -397,6 +398,21 @@ describe('cardio drafts', () => {
     const broken = workout({ exercises: [cardioExercise({ sets: [{ ...bout, effort } as typeof bout] })] });
     const parsed = parseStoredDraft({ v: 4, kind: 'draft', userId, updatedAt: 5, draft: broken }, userId);
     expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets[0].effort).toBeNull();
+  });
+
+  it('removes one set or bout by id from the chosen exercise only', () => {
+    const draft = mixedWorkout();
+    const withoutBout = removeSet(draft, 0, 'bout-b');
+    expect(withoutBout.exercises[0].sets.map((set) => set.id)).toEqual(['bout-a', 'bout-c']);
+    expect(withoutBout.exercises.slice(1)).toEqual(draft.exercises.slice(1));
+    const withoutSet = removeSet(draft, 1, 'set-a');
+    expect(withoutSet.exercises[1].sets.map((set) => set.id)).toEqual(['set-b']);
+    expect(removeSet(draft, 2, 'set-a')).toEqual(draft);
+  });
+
+  it('toggles a bout done like a set', () => {
+    const toggled = toggleSetDone(mixedWorkout(), 0, 'bout-c');
+    expect(toggled.exercises[0].sets.map((set) => set.done)).toEqual([true, true, true]);
   });
 
   it('keeps every valid cardio effort level', () => {
