@@ -1,17 +1,16 @@
-import { expect, type Page, test } from '@playwright/test';
-import { logCardio, logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import { expect, test } from '@playwright/test';
+import {
+  logCardio,
+  logExercise,
+  logWorkout,
+  openFromProfile,
+  openLatestWorkout,
+  openTab,
+  register,
+  uniqueUsername,
+  xpValue,
+} from './support/app.ts';
 import { boutsOf } from './support/db.ts';
-
-function xpValue(text: string | null): number {
-  return Number((text ?? '').replace(/[^0-9]/g, ''));
-}
-
-async function openLatestWorkout(page: Page) {
-  await openTab(page, 'Log');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
-  await page.getByRole('list', { name: 'Workouts' }).getByRole('link').first().click();
-  await expect(page.getByTestId('session-xp')).toBeVisible();
-}
 
 test('log a run, intervals and a lift in one workout, then edit the run distance from history', async ({ page }) => {
   const username = uniqueUsername('cd');
@@ -56,10 +55,9 @@ test('a pound user logs distance in miles', async ({ page }) => {
     .click();
   await openTab(page, 'Train');
 
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 3.11, effort: 'Easy' }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () =>
+    logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 3.11, effort: 'Easy' }]),
+  );
 
   await openLatestWorkout(page);
   const run = page.locator('section', { has: page.getByRole('heading', { name: 'Running', exact: true }) });

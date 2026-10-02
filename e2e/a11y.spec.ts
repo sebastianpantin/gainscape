@@ -4,6 +4,7 @@ import {
   emailOf,
   logCardio,
   logExercise,
+  logWorkout,
   openFromProfile,
   openTab,
   register,
@@ -63,10 +64,7 @@ async function befriend(browser: Browser, page: Page, username: string): Promise
   await friend.getByTestId('incoming-request').getByRole('button', { name: 'Accept' }).click();
   await expect(friend.getByRole('list', { name: 'Friends list' })).toContainText(username);
   await openTab(friend, 'Train');
-  await friend.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(friend, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await friend.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(friend.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(friend, () => logExercise(friend, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
   await friendContext.close();
   return friendName;
 }

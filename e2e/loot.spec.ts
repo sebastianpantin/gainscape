@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { logExercise, openTab, register } from './support/app.ts';
+import { finishWorkout, logExercise, logWorkout, openTab, register } from './support/app.ts';
 import { activeDropCount, activeDropsOfLatestSession, grantItems, grantUnlock, hasUnlock } from './support/db.ts';
 
 function slot(page: Page, name: string, quantity?: number) {
@@ -17,17 +17,11 @@ test('loot on the reveal, the items screen, crafting and a scroll unlock', async
   const username = `loot_${Date.now().toString(36)}`;
   await register(page, username);
 
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
   await expect(page.getByRole('region', { name: 'Loot' })).toBeVisible();
 
   await openTab(page, 'Train');
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 80, reps: 5 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 80, reps: 5 }]));
 
   const drops = await activeDropsOfLatestSession(username);
   expect(drops.length).toBeGreaterThanOrEqual(1);
@@ -63,8 +57,7 @@ test('loot on the reveal, the items screen, crafting and a scroll unlock', async
     (await hasUnlock(username, 'pause_bench_press')) ? 1 : 0,
   );
   await logExercise(page, 'pause squat', 'Pause Squat', [{ weightKg: 60, reps: 5 }]);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await finishWorkout(page);
 
   await openTab(page, 'Log');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();

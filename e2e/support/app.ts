@@ -1,7 +1,8 @@
 import { expect, type Page } from '@playwright/test';
+import { TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 import { confirmAccount } from './db.ts';
 
-export const password = 'correct-horse-battery';
+export { TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 
 export const authStorageKey = 'sb-localhost-auth-token';
 const draftDatabase = { name: 'gainscape', version: 1, store: 'drafts' };
@@ -31,25 +32,27 @@ export async function submitRegistration(page: Page, username: string, email = e
   await page.getByRole('button', { name: 'New here? Create an account' }).click();
   await page.getByLabel('Username').fill(username);
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Password').fill(TEST_PASSWORD);
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
 }
 
 export async function register(page: Page, username: string) {
   await submitRegistration(page, username);
-  await confirmAccount(emailOf(username), password);
+  await confirmAccount(emailOf(username), TEST_PASSWORD);
   await page.getByRole('button', { name: 'Back to sign in' }).click();
-  await page.getByLabel('Email').fill(emailOf(username));
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await submitSignIn(page, emailOf(username));
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 }
 
-export async function signIn(page: Page, username: string) {
-  await page.getByLabel('Email').fill(emailOf(username));
-  await page.getByLabel('Password').fill(password);
+export async function submitSignIn(page: Page, email: string, accountPassword = TEST_PASSWORD) {
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(accountPassword);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+}
+
+export async function signIn(page: Page, username: string, accountPassword = TEST_PASSWORD) {
+  await submitSignIn(page, emailOf(username), accountPassword);
   await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
 }
 
@@ -86,6 +89,28 @@ export async function logExercise(
     await row.getByLabel('reps').fill(String(set.reps));
     await row.getByRole('radio', { name: 'Hard' }).click();
   }
+}
+
+export async function finishWorkout(page: Page) {
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+}
+
+export async function logWorkout(page: Page, logSets: () => Promise<void>) {
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logSets();
+  await finishWorkout(page);
+}
+
+export async function openLatestWorkout(page: Page) {
+  await openTab(page, 'Log');
+  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  await page.getByRole('list', { name: 'Workouts' }).getByRole('link').first().click();
+  await expect(page.getByTestId('session-xp')).toBeVisible();
+}
+
+export function xpValue(text: string | null): number {
+  return Number((text ?? '').replace(/[^0-9]/g, ''));
 }
 
 type CardioBout =
