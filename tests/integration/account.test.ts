@@ -352,6 +352,22 @@ describe('delete-account', () => {
   it('refuses a malformed body', async () => {
     const response = await post('delete-account', owner.accessToken, {});
     expect(response.status).toBe(422);
+    expect(response.body.error).toBe('invalid_body');
+  });
+
+  it('refuses a body that is not JSON', async () => {
+    const response = await fetchFunction('delete-account', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${owner.accessToken}`,
+        apikey: env.ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: '{',
+    });
+    expect(response.status, response.rawBody).toBe(422);
+    expect(JSON.parse(response.rawBody).error).toBe('invalid_body');
+    expect((await rowCounts(owner.id)).profiles).toBe(1);
   });
 
   it('deletes the account and every row it owned, leaving other users alone', async () => {

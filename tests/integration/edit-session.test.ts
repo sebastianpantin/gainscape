@@ -447,6 +447,13 @@ describe('edit-session authorization and validation', () => {
     await expectRejected(owner, mutate(editBody(session, [{ ...session.sets[0], reps: 6 }])), 422);
   });
 
+  it.each([
+    ['duplicate_set_id', (sets: SessionBody['sets']) => [sets[0], { ...sets[0], position: 1 }]],
+    ['duplicate_set_position', (sets: SessionBody['sets']) => [sets[0], { ...sets[0], id: randomUUID() }]],
+  ])('returns 422 %s', async (code, duplicate) => {
+    await expectRejected(owner, editBody(session, duplicate(session.sets)), 422, code);
+  });
+
   it('returns 405 for GET and 401 without a token', async () => {
     const url = `${env.FUNCTIONS_URL}/edit-session`;
     const before = await stateOf(owner.id);

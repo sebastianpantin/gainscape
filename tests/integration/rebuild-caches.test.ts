@@ -4,6 +4,8 @@ import {
   builtInExerciseId,
   createTestUser,
   db,
+  env,
+  fetchFunction,
   normalizedSnapshot,
   postCompleteSession,
   postFunction,
@@ -217,5 +219,26 @@ describe('rebuild-caches', () => {
   it('refuses callers without the service role key', async () => {
     const result = await rebuildCaches(lifter.id, lifter.accessToken);
     expect(result.status).toBe(403);
+    expect(result.body.error).toBe('service_role_required');
+  });
+
+  it('returns 404 user_not_found for a user without a profile', async () => {
+    const result = await rebuildCaches(randomUUID());
+    expect(result.status).toBe(404);
+    expect(result.body.error).toBe('user_not_found');
+  });
+
+  it.each([
+    ['a missing user id', JSON.stringify({})],
+    ['a user id that is not a uuid', JSON.stringify({ userId: 'not-a-uuid' })],
+    ['a body that is not JSON', '{'],
+  ])('returns 422 user_id_required for %s', async (_case, body) => {
+    const response = await fetchFunction('rebuild-caches', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
+      body,
+    });
+    expect(response.status, response.rawBody).toBe(422);
+    expect(JSON.parse(response.rawBody).error).toBe('user_id_required');
   });
 });
