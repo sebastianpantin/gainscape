@@ -188,7 +188,9 @@ begin
   case schedule ->> 'kind'
     when 'cycle' then
       return given_keys = array['cycle', 'day', 'week']
-        and private.is_whole_number_between(program_position -> 'cycle', 1, 100)
+        and private.is_whole_number_between(
+          program_position -> 'cycle', 1, ceil(520::numeric / (schedule ->> 'weeksPerCycle')::int)::int
+        )
         and private.is_whole_number_between(program_position -> 'week', 1, (schedule ->> 'weeksPerCycle')::int)
         and day_is_known;
     when 'weekly' then
@@ -197,7 +199,9 @@ begin
         and day_is_known;
     when 'rotation' then
       return given_keys = array['index']
-        and private.is_whole_number_between(program_position -> 'index', 0, 10000);
+        and private.is_whole_number_between(
+          program_position -> 'index', 0, 520 * jsonb_array_length(schedule -> 'days') - 1
+        );
     else
       return false;
   end case;
