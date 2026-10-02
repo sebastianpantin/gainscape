@@ -14,8 +14,8 @@ import {
   type SlotDecl,
   type SlotRole,
 } from './program-definition.ts';
-import { isCyclePosition, isRotationPosition, type Position } from './program-schedule.ts';
-import { kgToUnit, STORED_KG_DECIMALS, unitToKg, type WeightUnit } from './units.ts';
+import { dayKeyOf, isCyclePosition, isRotationPosition, type Position } from './program-schedule.ts';
+import { shownWeight, unitToKg } from './units.ts';
 
 export interface PrescriptionSnapshot {
   ref: string;
@@ -63,7 +63,6 @@ export interface ReferenceState {
 }
 
 const RAMP_PCT_DECIMALS = 6;
-const SHOWN_LB_DECIMALS = 1;
 const MAX_SAME_AS_DEPTH = 8;
 
 interface WeekContext {
@@ -205,10 +204,6 @@ function prescribedLoad(context: ResolveContext, raw: number | undefined, pct: n
   };
 }
 
-function shownInUnit(kg: number, unit: WeightUnit): number {
-  return roundTo(unit === 'kg' ? STORED_KG_DECIMALS : SHOWN_LB_DECIMALS, kgToUnit(kg, unit));
-}
-
 function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index: number, depth: number): LoadResult {
   const { definition, enrollment, position } = context;
   const reference = (variable: string) => context.refs[slot.lift]?.[variable as keyof ProgramReferences[string]];
@@ -251,7 +246,7 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
         return { kind: 'load', load: { weight: null, weightKg: null, pct: null, snapshotted: false } };
       return {
         kind: 'load',
-        load: { weight: shownInUnit(kg, enrollment.unit), weightKg: kg, pct: null, snapshotted: false },
+        load: { weight: shownWeight(kg, enrollment.unit), weightKg: kg, pct: null, snapshotted: false },
       };
     }
     default:
@@ -296,9 +291,8 @@ export function resolvePrescription(
   position: Position,
   lastLogged: LastLoggedWeights,
 ): ResolvedSlot[] {
-  const dayKey = isRotationPosition(position)
-    ? definition.schedule.days[position.index % definition.schedule.days.length]?.key
-    : position.day;
+  if (definition.schedule.days.length === 0) return [];
+  const dayKey = dayKeyOf(definition, position);
   const day = definition.schedule.days.find((candidate) => candidate.key === dayKey);
   if (!day) return [];
   const context: ResolveContext = { definition, enrollment, refs: state.refs, position, lastLogged };

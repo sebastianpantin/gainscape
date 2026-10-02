@@ -33,7 +33,6 @@ import {
   type ProgramState,
   type ReferenceChange,
   type ReferenceChangeReason,
-  type SessionFact,
   type SetReferenceFact,
 } from './program-state.ts';
 import { type WeightUnit } from './units.ts';
@@ -119,15 +118,20 @@ function ruleOutcomeAt(
   return allMet ? 'met' : 'missed';
 }
 
+export interface LoggedDay {
+  position: Position;
+  sets: readonly FactSet[];
+}
+
 export function liftOutcomes(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
-  session: SessionFact,
+  { position, sets }: LoggedDay,
 ): Readonly<Record<string, LiftOutcome>> {
   const outcomes: Record<string, LiftOutcome> = {};
   for (const rule of definition.progression) {
-    if (judgedSlotsOf(definition, enrollment, rule, session.position).length === 0) continue;
-    const outcome = ruleOutcomeAt(definition, enrollment, rule, session.position, session.sets);
+    if (judgedSlotsOf(definition, enrollment, rule, position).length === 0) continue;
+    const outcome = ruleOutcomeAt(definition, enrollment, rule, position, sets);
     outcomes[rule.lift] = rule.lift in outcomes ? worseOutcome(outcomes[rule.lift], outcome) : outcome;
   }
   return outcomes;
@@ -409,13 +413,7 @@ function recordDay(
   if (sets === null) return existing ? state : withRecords(state, [skippedRecord(state.epoch, position)]);
   const { definition, enrollment } = context;
   const judgedSets = mergeBestSets(context, existing?.judgedSets ?? [], judgedSetsOf(context, position, sets));
-  const outcomes = liftOutcomes(definition, enrollment, {
-    kind: 'session',
-    id: '',
-    at: '',
-    position,
-    sets: judgedSets,
-  });
+  const outcomes = liftOutcomes(definition, enrollment, { position, sets: judgedSets });
   const previousSets = existing?.status === 'completed' ? existing.judgedSets : [];
   const rules = definition.progression.filter(
     (rule) => rule.trigger === 'afterSession' && judgedSlotsOf(definition, enrollment, rule, position).length > 0,

@@ -1,19 +1,13 @@
 import { SECONDS_PER_MINUTE } from '@domain/cardio.ts';
 import { roundTo } from '@domain/math.ts';
-import { kgToUnit, STORED_KG_DECIMALS } from '@domain/units.ts';
+import { kgToUnit, shownWeight } from '@domain/units.ts';
 import type { PaceUnit } from './catalog-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
 
-export { KG_PER_LB, kgToUnit, unitToKg } from '@domain/units.ts';
+export { KG_PER_LB, kgToUnit, shownWeight, unitToKg } from '@domain/units.ts';
 
 const CM_PER_INCH = 2.54;
 const INCHES_PER_FOOT = 12;
-
-const SHOWN_DECIMALS = 1;
-
-export function shownWeight(kg: number, unit: UnitPref): number {
-  return roundTo(unit === 'kg' ? STORED_KG_DECIMALS : SHOWN_DECIMALS, kgToUnit(kg, unit));
-}
 
 export function formatWeight(kg: number, unit: UnitPref): string {
   return `${shownWeight(kg, unit)} ${unit}`;
