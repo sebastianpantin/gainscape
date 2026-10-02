@@ -17,6 +17,8 @@ create table public.program_enrollments (
 create unique index program_enrollments_one_active_per_user
   on public.program_enrollments (user_id) where ended_at is null;
 
+create index program_enrollments_by_owner_and_start on public.program_enrollments (user_id, started_at);
+
 create table public.program_enrollment_events (
   id uuid primary key default gen_random_uuid(),
   enrollment_id uuid not null references public.program_enrollments (id) on delete cascade,
