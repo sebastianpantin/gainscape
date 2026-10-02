@@ -10,6 +10,7 @@ import {
   nextUpdatedAt,
   notDoneSetCount,
   parseStoredDraft,
+  programLabelFor,
   startDraftFromDay,
   swapExercise,
   toggleSetDone,
@@ -204,6 +205,12 @@ describe('completeSessionPayload', () => {
   it('sends the programDayId of a program workout', () => {
     const programDayId = '33333333-3333-4333-8333-333333333333';
     expect(completeSessionPayload(workout({ programDayId })).programDayId).toBe(programDayId);
+  });
+});
+
+describe('programLabelFor', () => {
+  it('joins the program and day names with a dash', () => {
+    expect(programLabelFor('Upper Lower', 'Upper A')).toBe('Upper Lower — Upper A');
   });
 });
 
