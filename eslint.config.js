@@ -54,6 +54,13 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXAttribute[name.name='data-testid']",
+          message: 'Give the element a role and an accessible name instead of a test id.',
+        },
+      ],
     },
   },
   {
