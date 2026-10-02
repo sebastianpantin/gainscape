@@ -1,16 +1,24 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadCatalogData } from './load.ts';
-import { loadProgramTemplates, renderProgramTemplates } from './program-templates.ts';
+import {
+  loadProgramTemplates,
+  programTemplateLockProblems,
+  readProgramTemplateLock,
+  renderProgramTemplates,
+} from './program-templates.ts';
 import { renderSeed } from './sql.ts';
-import { validateCatalog } from './validate.ts';
+import { CatalogValidationError, validateCatalog } from './validate.ts';
 
 export const SEED_PATH = join(import.meta.dirname, '../../supabase/seed.sql');
 
 export function generateSeed(): string {
   const catalog = loadCatalogData();
   validateCatalog(catalog);
-  return renderSeed(catalog, [renderProgramTemplates(loadProgramTemplates())]);
+  const programTemplates = loadProgramTemplates();
+  const lockProblems = programTemplateLockProblems(programTemplates, readProgramTemplateLock());
+  if (lockProblems.length > 0) throw new CatalogValidationError(lockProblems);
+  return renderSeed(catalog, [renderProgramTemplates(programTemplates)]);
 }
 
 if (import.meta.main) {
