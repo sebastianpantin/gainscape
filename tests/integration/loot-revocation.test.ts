@@ -4,10 +4,8 @@ import { DEFAULT_LOOT } from '@domain/index.ts';
 import {
   ageSession,
   builtInExerciseId,
-  createTestUser,
   db,
   grantDrop,
-  ledgerMismatches,
   lootSnapshot,
   postFunction,
   rebuildCaches,
@@ -16,9 +14,10 @@ import {
 import {
   aBout,
   aSet,
+  beyondEffortWindow,
   type BoutShape,
   DAY_MS,
-  beyondEffortWindow,
+  expectLedgerMatchesItems,
   HOUR_MS,
   localDateOf,
   payloadAt,
@@ -26,18 +25,13 @@ import {
   rollsOf,
   type SetShape,
   startsOnOneLocalDay,
-  TIMEZONE,
+  trackedUsers,
 } from './session-support.ts';
 
-const users: string[] = [];
 let benchId: string;
 let squatId: string;
 
-async function freshUser(): Promise<TestUser> {
-  const user = await createTestUser(TIMEZONE);
-  users.push(user.id);
-  return user;
-}
+const { freshUser, checkAndClear } = trackedUsers(expectLedgerMatchesItems);
 
 async function fillCaps(userId: string, localDate: string): Promise<void> {
   const [regular] = await db`select id from public.drop_tables where key = 'regular'`;
@@ -112,7 +106,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  for (const userId of users) expect(await ledgerMismatches(userId), userId).toEqual([]);
+  await checkAndClear();
 });
 
 afterAll(async () => {

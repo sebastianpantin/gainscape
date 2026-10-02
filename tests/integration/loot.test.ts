@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
   DEFAULT_LOOT,
   type LootCandidate,
@@ -13,21 +13,20 @@ import {
   anIntervalBout,
   aSet,
   DAY_MS,
+  expectLedgerMatchesItems,
   HOUR_MS,
   localDateOf,
   payloadAt,
   postSession as post,
   rollsOf,
   startsOnOneLocalDay,
-  TIMEZONE,
+  trackedUsers,
 } from './session-support.ts';
 import {
   activeDropSummaries,
   builtInExerciseId,
-  createTestUser,
   db,
   hmacRngFor,
-  ledgerMismatches,
   lootSnapshot,
   lootTablesFromDb,
   postFunction,
@@ -56,13 +55,17 @@ async function storedCandidates(sessionId: string): Promise<LootCandidate[]> {
   }));
 }
 
-const usersToCheck: string[] = [];
-
-async function freshUser(): Promise<TestUser> {
-  const user = await createTestUser(TIMEZONE);
-  usersToCheck.push(user.id);
-  return user;
+async function expectItemsMatchLedger(userId: string): Promise<void> {
+  await expectLedgerMatchesItems(userId);
+  const obtainedAfterFirstGain = await db`
+    select u.item_id from public.user_items u
+    where u.user_id = ${userId} and u.first_obtained_at <> (
+      select min(l.created_at) from public.item_ledger l
+      where l.user_id = u.user_id and l.item_id = u.item_id and l.delta > 0)`;
+  expect(obtainedAfterFirstGain, userId).toEqual([]);
 }
+
+const { freshUser, checkAndClear } = trackedUsers(expectItemsMatchLedger);
 
 let benchId: string;
 let squatId: string;
@@ -80,8 +83,11 @@ beforeAll(async () => {
   tables = await lootTablesFromDb();
 });
 
+afterEach(async () => {
+  await checkAndClear();
+});
+
 afterAll(async () => {
-  for (const userId of usersToCheck) expect(await ledgerMismatches(userId), userId).toEqual([]);
   await db.end();
 });
 
@@ -363,19 +369,6 @@ describe('inventory', () => {
     const ledger = await db`select delta, reason from public.item_ledger where user_id = ${user.id} order by id`;
     expect(ledger).toEqual(pair!.map((hit) => ({ delta: hit.quantity, reason: 'drop' })));
   });
-
-  it('keeps user_items equal to the ledger, with first_obtained_at at the first entry', async () => {
-    expect(usersToCheck.length).toBeGreaterThan(0);
-    for (const userId of usersToCheck) {
-      expect(await ledgerMismatches(userId)).toEqual([]);
-      const late = await db`
-        select u.item_id from public.user_items u
-        where u.user_id = ${userId} and u.first_obtained_at <> (
-          select min(l.created_at) from public.item_ledger l
-          where l.user_id = u.user_id and l.item_id = u.item_id and l.delta > 0)`;
-      expect(late).toEqual([]);
-    }
-  });
 });
 
 describe('scrolls', () => {
@@ -427,13 +420,15 @@ describe('immutability', () => {
         Array.from({ length: 5 }, (_, position) => aSet(rowId, position, 60)),
       ),
     );
-    await db`
-      insert into public.item_ledger (user_id, item_id, delta, reason, ref_id)
-      select ${user.id}, id, 1, 'drop', gen_random_uuid() from public.items where key = 'plate_crab'`;
-    await db`
-      insert into public.user_items (user_id, item_id, quantity)
-      select ${user.id}, id, 1 from public.items where key = 'plate_crab'
-      on conflict (user_id, item_id) do update set quantity = public.user_items.quantity + 1`;
+    await db.begin(async (tx) => {
+      await tx`
+        insert into public.item_ledger (user_id, item_id, delta, reason, ref_id)
+        select ${user.id}, id, 1, 'drop', gen_random_uuid() from public.items where key = 'plate_crab'`;
+      await tx`
+        insert into public.user_items (user_id, item_id, quantity)
+        select ${user.id}, id, 1 from public.items where key = 'plate_crab'
+        on conflict (user_id, item_id) do update set quantity = public.user_items.quantity + 1`;
+    });
   });
 
   it('rejects updating or deleting a loot roll', async () => {

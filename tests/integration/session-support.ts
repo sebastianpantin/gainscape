@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { expect } from 'vitest';
 import type { CardioSetInput } from '@domain/index.ts';
-import { db, type FunctionResponse, postCompleteSession, type TestUser } from './local-stack.ts';
+import {
+  createTestUser,
+  db,
+  type FunctionResponse,
+  ledgerMismatches,
+  postCompleteSession,
+  type TestUser,
+} from './local-stack.ts';
 
 export const HOUR_MS = 60 * 60 * 1000;
 export const DAY_MS = 24 * HOUR_MS;
@@ -141,4 +148,22 @@ export async function rollsOf(userId: string) {
   return await db`
     select session_id, set_id, kind, local_date::text, roll_index, drop_table_id, chance::float, hit, loot_version
     from public.loot_rolls where user_id = ${userId} order by local_date, kind, roll_index`;
+}
+
+export async function expectLedgerMatchesItems(userId: string): Promise<void> {
+  expect(await ledgerMismatches(userId), userId).toEqual([]);
+}
+
+export function trackedUsers(check: (userId: string) => Promise<void>) {
+  const unchecked: string[] = [];
+  return {
+    async freshUser(): Promise<TestUser> {
+      const user = await createTestUser(TIMEZONE);
+      unchecked.push(user.id);
+      return user;
+    },
+    async checkAndClear(): Promise<void> {
+      for (const userId of unchecked.splice(0)) await check(userId);
+    },
+  };
 }
