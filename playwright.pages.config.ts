@@ -1,0 +1,38 @@
+import { execFileSync } from 'node:child_process';
+import { defineConfig, devices } from '@playwright/test';
+import { assertStackEnvironment } from './e2e/support/stack-guard.ts';
+import { previewPort } from './web/build/ports.ts';
+
+assertStackEnvironment();
+
+const pagesPort = previewPort() + 1;
+const pagesUrl = `http://127.0.0.1:${pagesPort}`;
+const status = JSON.parse(
+  execFileSync('npx', ['supabase', 'status', '-o', 'json'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }).replace(/^[^{]*/, ''),
+);
+
+export default defineConfig({
+  testDir: 'e2e/pages',
+  timeout: 120_000,
+  fullyParallel: false,
+  workers: 1,
+  retries: 0,
+  reporter: 'list',
+  use: {
+    ...devices['Pixel 7'],
+    baseURL: pagesUrl,
+    serviceWorkers: 'block',
+    trace: 'retain-on-failure',
+    launchOptions: { executablePath: process.env.CHROMIUM_PATH || undefined },
+  },
+  webServer: {
+    command: `node scripts/deploy/build-pages.ts && node_modules/.bin/wrangler pages dev web/dist --ip 127.0.0.1 --port ${pagesPort}`,
+    url: pagesUrl,
+    env: { VITE_SUPABASE_URL: new URL(status.API_URL).origin, VITE_SUPABASE_ANON_KEY: status.ANON_KEY },
+    reuseExistingServer: false,
+    timeout: 180_000,
+  },
+});

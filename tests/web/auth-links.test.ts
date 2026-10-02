@@ -4,7 +4,9 @@ import {
   authCallbackUrl,
   authErrorMessage,
   confirmedRecently,
+  MINIMUM_PASSWORD_LENGTH,
   parseAuthCallback,
+  passwordProblem,
 } from '../../web/src/lib/auth-links.ts';
 
 describe('authCallbackUrl', () => {
@@ -59,6 +61,12 @@ describe('authErrorMessage', () => {
     ).toBe('Too many emails. Try again in a minute.');
   });
 
+  it('tells someone who tries to sign up that sign-up is invite-only', () => {
+    expect(
+      authErrorMessage({ code: 'signup_disabled', status: 422, message: 'Signups not allowed for this instance' }),
+    ).toBe('Sign-up is invite-only. Ask the admin for an account.');
+  });
+
   it('passes any other message through', () => {
     expect(authErrorMessage({ code: 'weak_password', status: 422, message: 'Password is too weak' })).toBe(
       'Password is too weak',
@@ -82,5 +90,17 @@ describe('confirmedRecently', () => {
     expect(confirmedRecently(undefined, now)).toBe(false);
     expect(confirmedRecently('not a date', now)).toBe(false);
     expect(confirmedRecently('2026-10-01T12:05:00Z', now)).toBe(false);
+  });
+});
+
+describe('passwordProblem', () => {
+  it('asks for at least 12 characters', () => {
+    expect(MINIMUM_PASSWORD_LENGTH).toBe(12);
+    expect(passwordProblem('eleven-char')).toBe('Use at least 12 characters.');
+    expect(passwordProblem('twelve-chars')).toBeNull();
+  });
+
+  it('accepts a long passphrase without digits or symbols', () => {
+    expect(passwordProblem('correct horse battery staple')).toBeNull();
   });
 });

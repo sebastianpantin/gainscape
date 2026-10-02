@@ -21,6 +21,7 @@ pgTAP suites for the database layer: grants, RLS policies, rate limiting, friend
 | `07_account_deletion.test.sql`   | Cascades on user delete                                                                                                                                                                                                        |
 | `08_auth_confirm.test.sql`       | Password rotation on confirm, username change window                                                                                                                                                                           |
 | `09_cardio_schema.test.sql`      | Cardio set checks (lift xor cardio, bounds, effort kind), cross-modality shares, locked modality, lift-only effort mode                                                                                                        |
+| `10_write_rate_limits.test.sql`  | The client write buckets: limits, 429 over the limit, per-user budgets, server writes never limited                                                                                                                            |
 
 ## For AI Agents
 

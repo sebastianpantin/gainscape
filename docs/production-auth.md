@@ -43,6 +43,7 @@ sender_name = "Gainscape"
 - `site_url` is the production origin, for example `https://gainscape.<domain>`.
 - `additional_redirect_urls` lists exact callback URLs only, for example `["https://gainscape.<domain>/auth/confirm"]`. Never use a glob (`*` or `**`) anywhere in an entry. Every email link goes to `{{ .RedirectTo }}`, and GoTrue's globs match hosts such as `https://192.168.evil.test` or `https://localhost:x@3627733341/`, so any glob can hand a login or reset token to an attacker's host. Confirmation, reset and email change all use the same `/auth/confirm` path.
 - `enable_confirmations = true` and `secure_password_change = true` stay on.
+- `minimum_password_length = 12`, the same as the local `config.toml` and the app's `MINIMUM_PASSWORD_LENGTH`.
 - `[auth.email] max_frequency = "60s"`, so one address can't be sent a confirmation or reset email more than once a minute. The local file uses `1s` so the tests can resend quickly.
 - `[auth.rate_limit] email_sent = 30` per hour. Keep the other auth limits at the platform defaults.
 - The templates in `supabase/templates/` (`confirmation.html`, `recovery.html`, `email_change.html`) and their subjects ship with `config push`. Check them in the dashboard after the push.
@@ -55,7 +56,7 @@ Migration 014 adds a trigger that gives an account a random password when an ema
 
 ## Other secrets and settings
 
-- **Loot secret.** Set it once per project: `supabase secrets set LOOT_SECRET=$(openssl rand -hex 32)`. Without a secret of at least 32 characters, `complete-session` answers 500 `loot_secret_missing`.
+- **Loot secret.** Set it once per project: `make set-loot-secret` (it pipes a fresh random secret to `supabase secrets set` over stdin, so the value never appears in the process list or on screen). Without a secret of at least 32 characters, `complete-session` answers 500 `loot_secret_missing`.
 - **Client IP for anonymous rate limits.** Before go-live, set `private.client_ip_config` (`header_name`, `trusted_hops_from_right`) to the hosting platform's trusted client-IP header or proxy hop count, then check it against live request headers. The default, the right-most `x-forwarded-for` hop, is only correct behind the local Kong.
 
 ## Tests never run against a hosted database

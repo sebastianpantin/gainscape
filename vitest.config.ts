@@ -18,7 +18,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['tests/{balance,catalog,domain,web}/**/*.test.ts'],
+          include: ['tests/{balance,catalog,deploy,domain,web}/**/*.test.ts'],
           sequence: { groupOrder: 0 },
         },
       },

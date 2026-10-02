@@ -29,6 +29,7 @@ export default tseslint.config(
       'test-results/',
       'playwright-report/',
       'supabase/.temp/',
+      '.wrangler/',
       'web/src/lib/database.types.ts',
     ],
   },

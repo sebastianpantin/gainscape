@@ -22,7 +22,14 @@ export const AUTH_MESSAGES = {
   invalidCredentials: 'Wrong email or password.',
   invalidLink: 'This link is invalid or has expired.',
   tooManyEmails: 'Too many emails. Try again in a minute.',
+  inviteOnly: 'Sign-up is invite-only. Ask the admin for an account.',
 } as const;
+
+export const MINIMUM_PASSWORD_LENGTH = 12;
+
+export function passwordProblem(password: string): string | null {
+  return password.length < MINIMUM_PASSWORD_LENGTH ? `Use at least ${MINIMUM_PASSWORD_LENGTH} characters.` : null;
+}
 
 export function authCallbackUrl(origin: string): string {
   return `${origin}/auth/confirm`;
@@ -46,6 +53,7 @@ export function authErrorMessage(error: AuthErrorLike): string {
   if (error.code === 'invalid_credentials') return AUTH_MESSAGES.invalidCredentials;
   if (error.code === 'otp_expired' || error.status === FORBIDDEN_STATUS) return AUTH_MESSAGES.invalidLink;
   if (error.code === 'over_email_send_rate_limit') return AUTH_MESSAGES.tooManyEmails;
+  if (error.code === 'signup_disabled') return AUTH_MESSAGES.inviteOnly;
   return error.message;
 }
 

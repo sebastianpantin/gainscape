@@ -28,10 +28,11 @@ Playwright end-to-end suites that drive the real web app against the real local 
 
 ## Subdirectories
 
-| Directory  | Purpose                                                                                          |
-| ---------- | ------------------------------------------------------------------------------------------------ |
-| `pwa/`     | Service worker, offline shell, update flow, installability (see `pwa/AGENTS.md`)                 |
-| `support/` | Shared page helpers, DB helpers, stack guard, a11y and font assertions (see `support/AGENTS.md`) |
+| Directory  | Purpose                                                                                                                                                                                        |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pwa/`     | Service worker, offline shell, update flow, installability (see `pwa/AGENTS.md`)                                                                                                               |
+| `pages/`   | The Cloudflare Pages build under `wrangler pages dev`: `_headers`, deep links, no published agent docs, a whole workout with no CSP violation (`make e2e-pages`, `playwright.pages.config.ts`) |
+| `support/` | Shared page helpers, DB helpers, stack guard, a11y and font assertions (see `support/AGENTS.md`)                                                                                               |
 
 ## For AI Agents
 

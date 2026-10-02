@@ -169,6 +169,44 @@ describe('delete-account', () => {
   });
 });
 
+describe('client writes', () => {
+  it('refuses the 31st custom exercise save in an hour', async () => {
+    const user = await createTestUser();
+    const [shoulders] = await db`select id from public.skills where key = 'shoulders'`;
+    await seedRateLimitHits('custom_exercise_save_hour', user.id, 30);
+    const { error } = await user.client.rpc('save_custom_exercise', {
+      exercise: {
+        id: randomUUID(),
+        name: 'Limited press',
+        loadType: 'external',
+        equipment: 'other',
+        shares: [{ skillId: shoulders.id, shareBp: 10000 }],
+      },
+    });
+    expect(error?.code).toBe('PT429');
+    expect(await db`select 1 from public.exercises where owner_user_id = ${user.id}`).toHaveLength(0);
+  });
+
+  it('refuses the 31st program save in an hour', async () => {
+    const user = await createTestUser();
+    const [template] = await db`select id from public.programs where owner_user_id is null order by key limit 1`;
+    await seedRateLimitHits('program_save_hour', user.id, 30);
+    const { error } = await user.client.rpc('copy_program', {
+      source_program_id: template.id,
+      new_program_id: randomUUID(),
+    });
+    expect(error?.code).toBe('PT429');
+    expect(await db`select 1 from public.programs where owner_user_id = ${user.id}`).toHaveLength(0);
+  });
+
+  it('refuses a profile update over the hourly limit', async () => {
+    const user = await createTestUser();
+    await seedRateLimitHits('profile_update_hour', user.id, 60);
+    const { error } = await user.client.from('profiles').update({ bio: 'one too many' }).eq('id', user.id);
+    expect(error?.code).toBe('PT429');
+  });
+});
+
 describe('CORS', () => {
   it.each(['complete-session', 'edit-session', 'delete-session', 'export-data', 'delete-account'])(
     '%s exposes Retry-After',

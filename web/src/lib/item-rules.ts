@@ -1,3 +1,4 @@
+import { rateLimitedMessage } from './rate-limit.ts';
 import { GEAR_SLOTS, type GearSlot, ITEM_TIERS, type ItemTier, type Recipe } from '@domain/crafting.ts';
 import type { DropSummary } from '@domain/types.ts';
 import type { ItemIconKind } from '../components/pixel-sprites.ts';
@@ -214,7 +215,9 @@ function parsedShortfall(details: string | null | undefined): CraftShortfall[] {
   }
 }
 
-export function craftProblem(error: { message: string; details?: string | null }): CraftProblem {
+export function craftProblem(error: { message: string; code?: string; details?: string | null }): CraftProblem {
+  const rateLimited = rateLimitedMessage(error);
+  if (rateLimited !== null) return { kind: 'other', message: rateLimited };
   switch (error.message) {
     case 'insufficient_items':
       return { kind: 'insufficient_items', shortfall: parsedShortfall(error.details) };
