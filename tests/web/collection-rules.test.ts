@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Exercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
 import type { CollectionData } from '../../web/src/lib/collection-data.ts';
-import { collectionPercent, countCollection, pinProblemText } from '../../web/src/lib/collection-rules.ts';
+import {
+  collectionPercent,
+  countCollection,
+  pinProblemText,
+  strengthText,
+} from '../../web/src/lib/collection-rules.ts';
 
 function exercise(id: string): LiftExercise {
   return { id, name: id, equipment: 'barbell', modality: 'lift', loadType: 'external', custom: false, archived: false };
@@ -64,5 +69,24 @@ describe('collectionPercent', () => {
     expect(collectionPercent(1, 3)).toBe(33);
     expect(collectionPercent(2, 3)).toBe(67);
     expect(collectionPercent(10, 10)).toBe(100);
+  });
+});
+
+describe('strengthText', () => {
+  const both = { e1rmKg: 100, repsCapacity: 12 };
+
+  it('shows the reps capacity of a bodyweight exercise', () => {
+    expect(strengthText(both, 'bodyweight', 'kg')).toBe('Capacity ~12 reps');
+    expect(strengthText({ e1rmKg: 100, repsCapacity: null }, 'bodyweight', 'kg')).toBeNull();
+  });
+
+  it('shows the e1RM of every other load type in the chosen unit', () => {
+    expect(strengthText(both, 'external', 'kg')).toBe('e1RM 100 kg');
+    expect(strengthText(both, 'bodyweight_plus', 'lb')).toBe('e1RM 220.5 lb');
+    expect(strengthText({ e1rmKg: null, repsCapacity: 12 }, 'external', 'kg')).toBeNull();
+  });
+
+  it('shows nothing without a strength estimate', () => {
+    expect(strengthText(undefined, 'external', 'kg')).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 import { exerciseLabels, type LiftExercise } from '../../lib/catalog-rules.ts';
 import type { CollectionData } from '../../lib/collection-data.ts';
+import { strengthText } from '../../lib/collection-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { formatWeight } from '../../lib/units.ts';
 import { emptySlots } from './record-slots.ts';
 import { RecordSlots } from './RecordSlots.tsx';
 
@@ -12,15 +12,6 @@ interface ExerciseRecordCardProps {
   onTogglePin: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-}
-
-function StrengthLine({ exercise, data }: { exercise: LiftExercise; data: CollectionData }) {
-  const { unitPref } = usePreferences();
-  const strength = data.strengthByExercise.get(exercise.id);
-  if (!strength) return null;
-  if (strength.repsCapacity !== null) return <span className="muted">Capacity ~{strength.repsCapacity} reps</span>;
-  if (strength.e1rmKg !== null) return <span className="muted">e1RM {formatWeight(strength.e1rmKg, unitPref)}</span>;
-  return null;
 }
 
 export function ExerciseRecordCard({
@@ -34,6 +25,7 @@ export function ExerciseRecordCard({
   const slots = data.repMaxesByExercise.get(exercise.id) ?? emptySlots();
   const maxReps = data.maxRepsByExercise.get(exercise.id);
   const { unitPref } = usePreferences();
+  const strengthLine = strengthText(data.strengthByExercise.get(exercise.id), exercise.loadType, unitPref);
 
   return (
     <section className="panel stack" data-testid={`collection-${exercise.id}`}>
@@ -58,7 +50,7 @@ export function ExerciseRecordCard({
           </button>
         </div>
       </header>
-      <StrengthLine exercise={exercise} data={data} />
+      {strengthLine && <span className="muted">{strengthLine}</span>}
       <RecordSlots loadType={exercise.loadType} slots={slots} maxReps={maxReps} unit={unitPref} />
     </section>
   );

@@ -34,6 +34,9 @@ test('bodyweight prompt, records and the collection log', async ({ page }) => {
   });
   await expect(bench.locator('.record-slot.filled')).toHaveText(['5RM 70 kg']);
   await expect(bench).toContainText('e1RM');
+  const pullUp = page.locator('section', { has: page.getByRole('heading', { name: 'Pull-up', exact: true }) });
+  await expect(pullUp).toContainText(/Capacity ~\d+ reps/);
+  await expect(pullUp).not.toContainText('e1RM');
 });
 
 test('cardio records on the reveal and in the collection log', async ({ page }) => {
