@@ -28,7 +28,7 @@ interface ProfileBadgeProps {
   named?: boolean;
 }
 
-export function ProfileBadge({ color, initials, size = 72, named = false }: ProfileBadgeProps) {
+export function ProfileBadge({ color, initials, size = 72, named }: ProfileBadgeProps) {
   const swatch = BADGE_COLORS[color];
   return (
     <span
