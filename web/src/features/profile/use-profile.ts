@@ -1,17 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchCollectionPercent } from '../../lib/collection-data.ts';
 import { fetchProfile, type Profile } from '../../lib/profile.ts';
-import type { Standing } from '../../lib/standing-rules.ts';
-import { fetchStanding } from '../../lib/standing.ts';
-
-export interface ProfileBundle {
-  profile: Profile;
-  standing: Standing | null;
-  collectionPercent: number | null;
-}
 
 export type ProfileState =
-  { status: 'loading' } | { status: 'failed'; problem: string } | { status: 'ready'; bundle: ProfileBundle };
+  { status: 'loading' } | { status: 'failed'; problem: string } | { status: 'ready'; profile: Profile };
 
 export type ProfileUpdate = Profile | ((current: Profile) => Profile);
 
@@ -20,13 +11,8 @@ export function useProfile(userId: string): { state: ProfileState; replace: (upd
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      fetchProfile(userId),
-      fetchStanding(userId).catch(() => null),
-      fetchCollectionPercent(userId).catch(() => null),
-    ]).then(
-      ([profile, standing, collectionPercent]) =>
-        active && setState({ status: 'ready', bundle: { profile, standing, collectionPercent } }),
+    fetchProfile(userId).then(
+      (profile) => active && setState({ status: 'ready', profile }),
       (error: Error) => active && setState({ status: 'failed', problem: error.message }),
     );
     return () => {
@@ -38,13 +24,7 @@ export function useProfile(userId: string): { state: ProfileState; replace: (upd
     (update: ProfileUpdate) =>
       setState((current) =>
         current.status === 'ready'
-          ? {
-              status: 'ready',
-              bundle: {
-                ...current.bundle,
-                profile: typeof update === 'function' ? update(current.bundle.profile) : update,
-              },
-            }
+          ? { status: 'ready', profile: typeof update === 'function' ? update(current.profile) : update }
           : current,
       ),
     [],

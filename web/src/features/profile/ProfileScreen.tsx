@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
+import { fetchCollectionPercent } from '../../lib/collection-data.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { ageFrom, BODYWEIGHT_NUDGE_STEP, nudgedBodyweightKg, updatePrivateProfile } from '../../lib/profile.ts';
+import { useStanding } from '../../lib/standing.ts';
 import { formatHeight, formatWeight } from '../../lib/units.ts';
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileCard } from './ProfileCard.tsx';
@@ -26,10 +28,23 @@ function MenuLink({ to, children }: { to: string; children: string }) {
 
 export function ProfileScreen({ userId }: ProfileScreenProps) {
   const { state, replace } = useProfile(userId);
+  const standing = useStanding(userId);
+  const [collectionPercent, setCollectionPercent] = useState<number | null>(null);
   const { unitPref } = usePreferences();
   const [draftKg, setDraftKg] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchCollectionPercent(userId).then(
+      (percent) => active && setCollectionPercent(percent),
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [userId]);
 
   if (state.status === 'failed')
     return (
@@ -46,7 +61,8 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
       </main>
     );
 
-  const { profile, standing, collectionPercent } = state.bundle;
+  const { profile } = state;
+  const levels = standing.status === 'ready' ? standing.standing : null;
   const shownKg = draftKg ?? profile.bodyweightKg;
   const age = ageFrom(profile.birthYear);
 
@@ -76,8 +92,8 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
       <h1 className="title">Profile</h1>
       <ProfileCard
         profile={profile}
-        totalLevel={standing?.totalLevel ?? null}
-        combatLevel={standing?.combatLevel ?? null}
+        totalLevel={levels?.totalLevel ?? null}
+        combatLevel={levels?.combatLevel ?? null}
         collectionPercent={collectionPercent}
       />
       <section className="panel stack" aria-labelledby="body-heading">
