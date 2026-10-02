@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type Adjustment,
   parseProgramDefinition,
   type ProgramDefinition,
   resolvePrescription,
@@ -24,6 +25,30 @@ const FIXTURES: [string, ProgramDefinition][] = [
   ['synthetic after-session linear', LINEAR_AFTER_SESSION],
   ['synthetic full primitive set', FULL_PRIMITIVES],
 ];
+
+const FULLY_SUPPORTED_FIXTURES: [string, ProgramDefinition][] = [
+  ['five_three_one', FIVE_THREE_ONE],
+  ['madcow_5x5', MADCOW_5X5],
+  ['synthetic after-session linear', LINEAR_AFTER_SESSION],
+];
+
+const SLICE_1B_ADJUSTMENTS: [string, Adjustment][] = [
+  ['failureCounter', { kind: 'failureCounter', threshold: 3, deloadPct: 0.1 }],
+  ['stageMachine', { kind: 'stageMachine', onLastFail: { kind: 'retest', pct: 0.85 } }],
+  ['amrapThreshold', { kind: 'amrapThreshold', setIndex: 2, reps: 25 }],
+  ['amrapTable', { kind: 'amrapTable', setIndex: 2, bands: [[2, { kg: 2.5, lb: 5 }]] }],
+  [
+    'repsOverStandard',
+    { kind: 'repsOverStandard', setIndex: 2, standardByWave: [10], perRep: { kg: 2.5, lb: 5 }, cap: 10 },
+  ],
+  ['e1rmFromSet', { kind: 'e1rmFromSet', setIndex: 2 }],
+  ['customRule', { kind: 'customRule', name: 'synthetic' }],
+];
+
+function namedUnsupportedKinds(parsed: ReturnType<typeof parseProgramDefinition>): string[] {
+  const lists = parsed as { unknownKinds?: string[]; unsupportedKinds?: string[] };
+  return [...(lists.unknownKinds ?? []), ...(lists.unsupportedKinds ?? [])];
+}
 
 function broken(definition: ProgramDefinition, mutate: (copy: ProgramDefinition) => void): ProgramDefinition {
   const copy = structuredClone(definition);
@@ -209,7 +234,7 @@ describe('validateProgramDefinition rejects with a readable error', () => {
 });
 
 describe('parseProgramDefinition', () => {
-  it.each(FIXTURES)('parses the %s fixture from JSON as ok', (_, definition) => {
+  it.each(FULLY_SUPPORTED_FIXTURES)('parses the %s fixture from JSON as ok', (_, definition) => {
     expect(parseProgramDefinition(asJson(definition))).toEqual({ kind: 'ok', definition });
   });
 
@@ -262,6 +287,53 @@ describe('parseProgramDefinition', () => {
     const json = asJson(MADCOW_5X5) as ProgramDefinition;
     (madcowDay(json, 'mon').slots[0].scheme as { load: { kind: string } }).load = { kind: 'velocityLoad' };
     expect(() => validateProgramDefinition(json)).not.toThrow();
+  });
+});
+
+describe('parseProgramDefinition marks 1b progression semantics as unsupported until implemented', () => {
+  it.each(SLICE_1B_ADJUSTMENTS)('parses a rule using %s as unsupported and names it', (kind, adjustment) => {
+    const json = asJson(
+      broken(LINEAR_AFTER_SESSION, (copy) => {
+        copy.progression[0].onMiss = [adjustment];
+      }),
+    );
+    const parsed = parseProgramDefinition(json);
+    expect(parsed.kind).toBe('unsupported');
+    expect(namedUnsupportedKinds(parsed)).toContain(kind);
+  });
+
+  it('parses a rule on the endOfWave trigger as unsupported and names it', () => {
+    const json = asJson(
+      broken(LINEAR_AFTER_SESSION, (copy) => {
+        copy.progression[0].trigger = 'endOfWave';
+      }),
+    );
+    const parsed = parseProgramDefinition(json);
+    expect(parsed.kind).toBe('unsupported');
+    expect(namedUnsupportedKinds(parsed)).toContain('endOfWave');
+  });
+
+  it('parses the GZCLP shape as unsupported, naming stageMachine and amrapThreshold', () => {
+    const parsed = parseProgramDefinition(asJson(GZCLP_SHAPE));
+    expect(parsed.kind).toBe('unsupported');
+    expect(namedUnsupportedKinds(parsed)).toEqual(expect.arrayContaining(['stageMachine', 'amrapThreshold']));
+  });
+
+  it('parses the full primitive set as unsupported, naming every 1b adjustment and endOfWave', () => {
+    const parsed = parseProgramDefinition(asJson(FULL_PRIMITIVES));
+    expect(parsed.kind).toBe('unsupported');
+    expect(namedUnsupportedKinds(parsed)).toEqual(
+      expect.arrayContaining([
+        'failureCounter',
+        'stageMachine',
+        'amrapThreshold',
+        'amrapTable',
+        'repsOverStandard',
+        'e1rmFromSet',
+        'customRule',
+        'endOfWave',
+      ]),
+    );
   });
 });
 
