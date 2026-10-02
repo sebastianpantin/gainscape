@@ -104,14 +104,39 @@ function isLiftEffortInput(value: unknown): value is NonNullable<EffortInput> {
   return false;
 }
 
-function normalisedSet(set: unknown, fromV2: boolean): unknown {
-  if (!isRecord(set)) return set;
+function isPrescriptionSnapshot(value: unknown): value is PrescriptionSnapshot {
+  return (
+    isRecord(value) &&
+    typeof value.ref === 'string' &&
+    typeof value.weightKg === 'number' &&
+    typeof value.reps === 'number' &&
+    (value.minReps === null || typeof value.minReps === 'number') &&
+    typeof value.amrap === 'boolean'
+  );
+}
+
+function isDraftProgram(value: unknown): value is DraftProgram {
+  return (
+    isRecord(value) &&
+    typeof value.enrollmentId === 'string' &&
+    isRecord(value.position) &&
+    typeof value.templateKey === 'string'
+  );
+}
+
+function withNormalisedEffort(set: Record<string, unknown>, fromV2: boolean): Record<string, unknown> {
   if (fromV2 && !('effort' in set)) {
     const { effortLevel, ...rest } = set;
     const level = EFFORT_LEVELS.find((candidate) => candidate === effortLevel);
     return { ...rest, effort: level ? { type: 'level', level } : null };
   }
   return isLiftEffortInput(set.effort) ? set : { ...set, effort: null };
+}
+
+function normalisedSet(set: unknown, fromV2: boolean): unknown {
+  if (!isRecord(set)) return set;
+  const prescription = isPrescriptionSnapshot(set.prescription) ? set.prescription : null;
+  return { ...withNormalisedEffort(set, fromV2), prescription };
 }
 
 function isCardioEffortInput(value: unknown): boolean {
@@ -132,6 +157,7 @@ function normalisedExercise(exercise: unknown, fromV2: boolean): unknown {
 function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
   return {
     ...draft,
+    program: isDraftProgram(draft.program) ? draft.program : null,
     exercises: draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
   };
 }
@@ -188,6 +214,7 @@ export function startDraft(): WorkoutDraft {
     finishedAt: null,
     programDayId: null,
     programLabel: null,
+    program: null,
     exercises: [],
   };
 }
@@ -389,6 +416,7 @@ export function startDraftFromDay(
       finishedAt: null,
       programDayId: day.id,
       programLabel: programLabelFor(day.programName, day.name),
+      program: null,
       exercises,
     },
     skippedExerciseIds,
@@ -409,8 +437,43 @@ export function startDraftFromPrescription(
   exercisesById: ReadonlyMap<string, CatalogEntry>,
   now: Date,
 ): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
-  void [day, exercisesById, now];
-  throw new Error('not implemented');
+  const skippedExerciseIds: string[] = [];
+  const exercises = day.exercises.flatMap((prescribed): DraftExercise[] => {
+    const exercise = exercisesById.get(prescribed.exerciseId);
+    if (!exercise || exercise.modality === 'cardio') {
+      skippedExerciseIds.push(prescribed.exerciseId);
+      return [];
+    }
+    return [
+      {
+        exerciseId: prescribed.exerciseId,
+        name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
+        modality: 'lift',
+        loadType: exercise.loadType,
+        target: null,
+        sets: prescribed.sets.map((set) => ({
+          id: crypto.randomUUID(),
+          weightKg: set.weightKg ?? defaultWeightKg(exercise.loadType),
+          reps: set.reps ?? STARTING_REPS,
+          effort: null,
+          done: false,
+          prescription: set.snapshot,
+        })),
+      },
+    ];
+  });
+  return {
+    draft: {
+      sessionId: crypto.randomUUID(),
+      startedAt: now.toISOString(),
+      finishedAt: null,
+      programDayId: null,
+      programLabel: programLabelFor(day.programName, day.dayName),
+      program: { enrollmentId: day.enrollmentId, position: day.position, templateKey: day.templateKey },
+      exercises,
+    },
+    skippedExerciseIds,
+  };
 }
 
 export function toggleSetDone(draft: WorkoutDraft, exerciseIndex: number, setId: string): WorkoutDraft {
