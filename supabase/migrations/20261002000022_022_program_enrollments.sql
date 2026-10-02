@@ -135,12 +135,23 @@ begin
       for given_input in select key, value from jsonb_each(given) loop
         if not (input_decl -> 'kinds' ? given_input.key)
            or jsonb_typeof(given_input.value) is distinct from 'number'
-           or given_input.value::text::numeric <= 0 then
+           or given_input.value::text::numeric <= 0
+           or given_input.value::text::numeric > 1000 then
           return false;
         end if;
       end loop;
     end loop;
   end loop;
+
+  if exists (
+    select 1 from jsonb_object_keys(enrollment -> 'inputs') given_lift
+    where not exists (
+      select 1 from jsonb_array_elements(definition -> 'inputs') declared_input
+      where declared_input -> 'lifts' ? given_lift
+    )
+  ) then
+    return false;
+  end if;
 
   for binding in select key, value from jsonb_each(enrollment -> 'bindings') loop
     if not exists (select 1 from jsonb_array_elements(definition -> 'lifts') l where l ->> 'key' = binding.key) then
