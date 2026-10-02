@@ -81,13 +81,27 @@ test('a new version reloads safely', async ({ context, page }) => {
 
   const pageBefore = await timeOrigin(page);
   const otherBefore = await timeOrigin(other);
+  let lockReleased = false;
+  const navigationsBeforeRelease: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame() && !lockReleased) navigationsBeforeRelease.push(frame.url());
+  });
   await page.getByRole('button', { name: 'Reload' }).click();
   await expect(page.getByText('Saving your workout first…')).toBeVisible();
-  await page.waitForTimeout(2000);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async (name) => (await navigator.locks.query()).pending?.some((lock) => lock.name === name),
+        lockName,
+      ),
+    )
+    .toBe(true);
   expect(await timeOrigin(page)).toBe(pageBefore);
 
+  lockReleased = true;
   await other.evaluate(() => (window as Window & { releaseFinishLock?: () => void }).releaseFinishLock?.());
   await expect.poll(() => timeOrigin(page).catch(() => pageBefore), { timeout: 30_000 }).not.toBe(pageBefore);
+  expect(navigationsBeforeRelease).toEqual([]);
   await expect.poll(() => timeOrigin(other).catch(() => otherBefore), { timeout: 30_000 }).not.toBe(otherBefore);
   await expectDraftWithSet(page);
   await expectDraftWithSet(other);
