@@ -9,7 +9,7 @@ import {
   requestEmailChange,
   saveBlob,
 } from '../../lib/account.ts';
-import { MINIMUM_PASSWORD_LENGTH } from '../../lib/auth-links.ts';
+import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
 import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import {
@@ -410,7 +410,7 @@ function PasswordForm({ email, onDone }: { email: string; onDone: (text: string)
   const [next, setNext] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const tooShort = next.length > 0 && next.length < MINIMUM_PASSWORD_LENGTH;
+  const lengthProblem = next.length > 0 ? passwordProblem(next) : null;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -448,7 +448,7 @@ function PasswordForm({ email, onDone }: { email: string; onDone: (text: string)
           required
         />
       </label>
-      {tooShort && <p className="problem">Use at least {MINIMUM_PASSWORD_LENGTH} characters.</p>}
+      {lengthProblem && <p className="problem">{lengthProblem}</p>}
       {problem && (
         <p className="problem" role="alert">
           {problem}
