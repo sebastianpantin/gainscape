@@ -350,6 +350,8 @@ describe('complete-session edge cases', () => {
       prs: [],
       drops: [],
       historyOnly: true,
+      programLinked: false,
+      completedAt: expect.any(String),
     });
     const [session] = await db`select history_only from public.sessions where id = ${payload.id}`;
     expect(session.history_only).toBe(true);
