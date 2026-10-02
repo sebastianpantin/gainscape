@@ -290,7 +290,17 @@ export function loadProgramTemplates(dir: string = PROGRAM_TEMPLATES_DIR): Progr
   return templates;
 }
 
+function sqlText(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
 export function renderProgramTemplates(templates: readonly ProgramTemplate[]): string {
-  void templates;
-  throw new Error('not implemented');
+  const rows = templates
+    .map(({ definition }) => definition)
+    .sort((a, b) => (a.key === b.key ? a.version - b.version : a.key < b.key ? -1 : 1))
+    .map(
+      (definition) =>
+        `  (${sqlText(definition.key)}, ${definition.version}, ${sqlText(definition.name)}, ${sqlText(JSON.stringify(definition))}::jsonb)`,
+    );
+  return `insert into public.program_templates (key, version, name, definition) values\n${rows.join(',\n')}\non conflict (key, version) do update set name = excluded.name, definition = excluded.definition;`;
 }
