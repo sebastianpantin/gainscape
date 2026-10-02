@@ -11,9 +11,8 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 import { grantItems } from './support/db.ts';
-import { authLinkFrom, waitForEmail } from './support/mailbox.ts';
+import { authLinkFrom, RECOVERY_SUBJECT, waitForEmail } from './support/mailbox.ts';
 
-const RECOVERY_SUBJECT = 'Reset your Gainscape password';
 const TAB_BAR = ['.tab-bar a[href]'];
 
 async function checkScreen(page: Page, screen: string, ready: () => Promise<void>) {
