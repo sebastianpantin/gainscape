@@ -1,16 +1,13 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { localStackStatus } from './local-stack.ts';
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
 function localDbUrl() {
   try {
-    const output = execFileSync('npx', ['supabase', 'status', '-o', 'json'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-    return JSON.parse(output.slice(output.indexOf('{'))).DB_URL ?? null;
+    return localStackStatus().DB_URL ?? null;
   } catch {
     return null;
   }

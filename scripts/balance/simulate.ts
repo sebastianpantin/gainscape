@@ -9,13 +9,12 @@ import {
   strengthHistoryRows,
   strengthStateAt,
   type StrengthHistoryRow,
-  xpForLevel,
 } from '../../supabase/functions/_shared/domain/index.ts';
 import { SIM_CATALOG, SIM_SKILLS, shareOf } from './catalog.ts';
 import { type LifterProfile, STARTING_E1RM_KG } from './profiles.ts';
+import { DAY_MS, SIMULATION_SEED, skillProgress } from './progress.ts';
 import { seededRandom } from './random.ts';
 
-const SIMULATION_SEED = 42;
 const MAX_SIMULATED_YEARS = 40;
 export const WEEKS_PER_YEAR = 52;
 const UNRATED_SET_FRACTION = 0.3;
@@ -24,8 +23,6 @@ const DELOAD_RIR = 4;
 const LOAD_INCREMENT_KG = 2.5;
 const FIRST_YEAR_MONTHLY_GAIN = 0.03;
 
-const LEVEL_99_XP = xpForLevel(99);
-const DAY_MS = 24 * 60 * 60 * 1000;
 const SIMULATION_START_MS = Date.parse('2026-01-05T18:00:00.000Z');
 
 export interface SimulationResult {
@@ -82,10 +79,7 @@ export function simulateProfile(
   const maxWeeks = (options.maxYears ?? MAX_SIMULATED_YEARS) * WEEKS_PER_YEAR;
   const trueE1rm: Record<string, number> = { ...STARTING_E1RM_KG };
   const skillXp: Record<string, number> = {};
-  const cumulativeXpByWeek: Record<string, number[]> = Object.fromEntries(SIM_SKILLS.map((skill) => [skill.key, []]));
-  const weeksToLevel99: Record<string, number | null> = Object.fromEntries(
-    SIM_SKILLS.map((skill) => [skill.key, null]),
-  );
+  const { cumulativeXpByWeek, weeksToLevel99, recordWeek } = skillProgress(SIM_SKILLS);
   const effectiveRepsBySkill: Record<string, number> = Object.fromEntries(SIM_SKILLS.map((skill) => [skill.key, 0]));
   let history: StrengthHistoryRow[] = [];
   let setCounter = 0;
@@ -149,11 +143,7 @@ export function simulateProfile(
       );
     });
 
-    for (const skill of SIM_SKILLS) {
-      const xp = skillXp[skill.id] ?? 0;
-      cumulativeXpByWeek[skill.key].push(xp);
-      if (weeksToLevel99[skill.key] === null && xp >= LEVEL_99_XP) weeksToLevel99[skill.key] = week + 1;
-    }
+    recordWeek(week, skillXp);
     for (const exercise of Object.keys(trueE1rm)) trueE1rm[exercise] *= weeklyGrowthFactor(week);
   }
 

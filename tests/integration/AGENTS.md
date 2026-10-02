@@ -40,7 +40,7 @@ Tests that drive the real local Supabase stack: the Edge Functions over HTTP, SQ
 - Use `ageSession` to move a session back in time instead of sleeping, and `seedRateLimitHits` to pre-fill rate-limit buckets.
 - Time-dependent assertions use real timestamps; use `startsOnOneLocalDay(count)` so a batch of sessions lands on one Stockholm local date regardless of when the test runs.
 - `lootSecret()` and `hmacRngFor(userId)` read `LOOT_SECRET` from `supabase/functions/.env.local` (written by `make functions`) so tests can reproduce the server's loot rolls.
-- Schema or function changes need `make reset` and `make types` before these tests pass; they exercise the migrations, not a snapshot.
+- Schema or function changes need `make reset` before these tests pass; they exercise the migrations, not a snapshot.
 - Never point this at a hosted project. `local-stack.ts` asserts the `.stack.env` project id matches the environment; run through `make` or `set -a; . ./.stack.env; set +a`.
 
 ### Testing Requirements

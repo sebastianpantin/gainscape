@@ -18,7 +18,7 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `make reset`                | Recreate the local database from migrations and seed                                                                                                                 |
 | `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc` (app and service worker), `deno check`, catalog and icons checks, gitleaks secrets scan |
-| `make test`                 | `make check`, then domain tests, web draft/sync tests, integration/RLS tests and `make test-db`                                                                      |
+| `make test`                 | `make check`, then catalog, domain, web and deploy tests, integration/RLS tests and `make test-db`                                                                   |
 | `make test-db`              | pgTAP tests in `supabase/tests/` against the local database (refuses any non-local host)                                                                             |
 | `make sim-check`            | Balance band test (about 1 s)                                                                                                                                        |
 | `make sim`                  | Full balance tuning report (about 2 min)                                                                                                                             |
@@ -31,7 +31,6 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | `make icons`                | Regenerate the app icons and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                                           |
 | `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                                       |
 | `make rebuild-caches`       | Recompute every user's XP, e1RM, records and feed events from their logged sets (run after changing balance constants)                                               |
-| `make types`                | Regenerate `web/src/lib/database.types.ts` from the local schema                                                                                                     |
 | `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)                                                                   |
 | `make stop`                 | Stop the functions server and the Supabase stack                                                                                                                     |
 
@@ -74,7 +73,7 @@ The free test environment (Supabase Free and Cloudflare Pages, invite-only) is d
 
 ## CI
 
-`.github/workflows/ci.yml` runs two jobs on every pull request. Nothing is pushed to `main` directly, so there is no push trigger. `checks` runs `make check`, the catalog, domain and web tests, `make sim-check` and `make build` without a stack. `backend` runs `make ci-start` (the stack without Studio and the other services the tests don't use; storage and realtime are disabled in `supabase/config.toml` because the app uses neither; plus the web env file with the stack's anon key and the functions), then `make test-integration` and `make test-db`. `.github/workflows/e2e.yml` runs `make e2e` and `make e2e-pwa` on the same stack, only when started by hand (`gh workflow run e2e.yml --ref <branch>` or the Actions tab), for example before a release. On failure, `make ci-logs` saves every container log to `ci-logs/`, which is uploaded as an artifact with the Playwright report and traces where present.
+`.github/workflows/ci.yml` runs two jobs on every pull request. Nothing is pushed to `main` directly, so there is no push trigger. `checks` runs `make check`, the catalog, domain, web and deploy tests, `make sim-check` and `make build` without a stack. `backend` runs `make ci-start` (the stack without Studio and the other services the tests don't use; storage and realtime are disabled in `supabase/config.toml` because the app uses neither; plus the web env file with the stack's anon key and the functions), then `make test-integration` and `make test-db`. `.github/workflows/e2e.yml` runs `make e2e` and `make e2e-pwa` on the same stack, only when started by hand (`gh workflow run e2e.yml --ref <branch>` or the Actions tab), for example before a release. On failure, `make ci-logs` saves every container log to `ci-logs/`, which is uploaded as an artifact with the Playwright report and traces where present.
 
 ## Layout
 
