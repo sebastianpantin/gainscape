@@ -12,6 +12,7 @@ import {
   aBout,
   anIntervalBout,
   aSet,
+  createCustomExercise,
   DAY_MS,
   expectLedgerMatchesItems,
   HOUR_MS,
@@ -249,18 +250,7 @@ describe('PR rolls', () => {
 
   it('gives a custom-exercise PR a regular roll only', async () => {
     const user = await freshUser();
-    const customId = randomUUID();
-    const [chest] = await db`select id from public.skills where key = 'chest'`;
-    const saved = await user.client.rpc('save_custom_exercise', {
-      exercise: {
-        id: customId,
-        name: 'Loot Press',
-        loadType: 'external',
-        equipment: 'machine',
-        shares: [{ skillId: chest.id, shareBp: 10000 }],
-      },
-    });
-    expect(saved.error).toBeNull();
+    const customId = await createCustomExercise(user);
     const [baseline, heavier] = startsOnOneLocalDay(2);
     await post(user, payloadAt(baseline, [aSet(customId, 0, 40)]));
     const prSession = payloadAt(heavier, [aSet(customId, 0, 60)]);

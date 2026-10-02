@@ -13,6 +13,7 @@ import {
   TEST_PASSWORD,
   type TestUser,
 } from './local-stack.ts';
+import { createCustomExercise } from './session-support.ts';
 
 const USER_TABLES: { table: string; column: string }[] = [
   { table: 'profiles', column: 'id' },
@@ -122,18 +123,7 @@ async function giveUserEverything(user: TestUser): Promise<void> {
   const benchId = await builtInExerciseId('barbell_bench_press');
   const pin = await user.client.from('pinned_exercises').insert({ exercise_id: benchId, position: 0 });
   expect(pin.error).toBeNull();
-  const exerciseId = randomUUID();
-  const [shoulders] = await db`select id from public.skills where key = 'shoulders'`;
-  const custom = await user.client.rpc('save_custom_exercise', {
-    exercise: {
-      id: exerciseId,
-      name: `Landmine ${exerciseId.slice(0, 6)}`,
-      loadType: 'external',
-      equipment: 'other',
-      shares: [{ skillId: shoulders.id, shareBp: 10000 }],
-    },
-  });
-  expect(custom.error).toBeNull();
+  await createCustomExercise(user, { skillKey: 'shoulders' });
   const [template] = await db`select id from public.programs where owner_user_id is null limit 1`;
   const copy = await user.client.rpc('copy_program', { source_program_id: template.id, new_program_id: randomUUID() });
   expect(copy.error).toBeNull();

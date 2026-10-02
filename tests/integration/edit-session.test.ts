@@ -20,6 +20,7 @@ import {
   anIntervalBout,
   aSet,
   type BoutShape,
+  createCustomExercise,
   hard,
   hoursAgo,
   payloadAt,
@@ -69,18 +70,6 @@ async function expectEqualsRebuild(userId: string) {
   const incremental = await normalizedSnapshot(userId);
   expect((await rebuildCaches(userId)).status).toBe(200);
   expect(await normalizedSnapshot(userId)).toEqual(incremental);
-}
-
-async function createCustomExercise(owner: TestUser, archived = false): Promise<string> {
-  const exerciseId = randomUUID();
-  await db.begin(async (tx) => {
-    await tx`insert into public.exercises (id, name, load_type, equipment, owner_user_id, archived_at)
-             values (${exerciseId}, ${`Custom ${exerciseId.slice(0, 8)}`}, 'external', 'machine', ${owner.id},
-                     ${archived ? new Date() : null})`;
-    await tx`insert into public.exercise_skills (exercise_id, skill_id, share_bp)
-             select ${exerciseId}, id, 10000 from public.skills where key = 'chest'`;
-  });
-  return exerciseId;
 }
 
 let benchId: string;
@@ -386,7 +375,7 @@ describe('edit-session authorization and validation', () => {
   });
 
   it("accepts the caller's own archived custom exercise", async () => {
-    const archived = await createCustomExercise(owner, true);
+    const archived = await createCustomExercise(owner, { archived: true });
     const own = payloadAt(hoursAgo(3), [aSet(benchId, 0, 60)]);
     await postSession(owner, own);
     const response = await edit(owner, editBody(own, [{ ...own.sets[0], exerciseId: archived }]));

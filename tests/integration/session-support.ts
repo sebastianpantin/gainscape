@@ -167,3 +167,26 @@ export function trackedUsers(check: (userId: string) => Promise<void>) {
     },
   };
 }
+
+export async function createCustomExercise(
+  user: TestUser,
+  { skillKey = 'chest', archived = false }: { skillKey?: string; archived?: boolean } = {},
+): Promise<string> {
+  const exerciseId = randomUUID();
+  const [skill] = await db`select id from public.skills where key = ${skillKey}`;
+  const saved = await user.client.rpc('save_custom_exercise', {
+    exercise: {
+      id: exerciseId,
+      name: `Custom ${exerciseId.slice(0, 8)}`,
+      loadType: 'external',
+      equipment: 'other',
+      shares: [{ skillId: skill.id, shareBp: 10000 }],
+    },
+  });
+  expect(saved.error).toBeNull();
+  if (archived) {
+    const archive = await user.client.rpc('set_custom_exercise_archived', { exercise_id: exerciseId, archived: true });
+    expect(archive.error).toBeNull();
+  }
+  return exerciseId;
+}
