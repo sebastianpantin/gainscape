@@ -1,6 +1,6 @@
 import type { EffortInput, EffortLevel } from '@domain/types.ts';
 import type { EffortInputMode } from '../../lib/profile.ts';
-import { EFFORT_LEVEL_LABELS } from '../history/session-edit.ts';
+import { EFFORT_LEVEL_LABELS } from '../../lib/effort-labels.ts';
 
 interface EffortOption {
   effort: NonNullable<EffortInput>;

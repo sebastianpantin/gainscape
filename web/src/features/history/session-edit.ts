@@ -1,15 +1,7 @@
 import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
 import { roundTo } from '@domain/math.ts';
-import {
-  type CardioEffortLevel,
-  type CardioInterval,
-  type DropSummary,
-  type EffortInput,
-  type EffortLevel,
-  MAX_SETS_PER_SESSION,
-  type SessionSummary,
-} from '@domain/types.ts';
+import { type CardioInterval, type DropSummary, type EffortInput, MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import type { CardioActivity, LoadType, PaceUnit } from '../../lib/catalog-rules.ts';
 import type { InvokeOutcome } from '../../lib/function-client-rules.ts';
 import {
@@ -85,19 +77,6 @@ const UNKNOWN_EXERCISE_LOAD_TYPE: LoadType = 'external';
 const UNKNOWN_EXERCISE_PACE_UNIT: PaceUnit = 'per_km';
 
 export { isSessionEditable as isEditable } from '@domain/edit-window.ts';
-
-export function sessionXp(summary: Pick<SessionSummary, 'xpBySkill'>): number {
-  return Object.values(summary.xpBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
-}
-
-export function formatSessionDate(localDate: string): string {
-  return new Date(`${localDate}T00:00:00`).toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 function storedInterval(row: StoredSetRow): CardioInterval | null {
   const { intervalWorkS: workS, intervalRestS: restS, intervalRounds: rounds } = row;
@@ -301,20 +280,6 @@ export function withoutBodyweightLoads(edit: SessionEdit, loadTypes: ReadonlyMap
   };
 }
 
-export const EFFORT_LEVEL_LABELS: Record<EffortLevel, string> = {
-  easy: 'Easy',
-  hard: 'Hard',
-  near_failure: 'Near fail',
-  failure: 'Failure',
-};
-
-export const CARDIO_EFFORT_LABELS: Record<CardioEffortLevel, string> = {
-  easy: 'Easy',
-  moderate: 'Moderate',
-  hard: 'Hard',
-  max: 'Max',
-};
-
 function placedSets(edit: SessionEdit): PlacedSet[] {
   return edit.exercises.flatMap((exercise): PlacedSet[] => {
     if (exercise.modality === 'cardio') {
@@ -446,13 +411,6 @@ export function rebaseNotice(rebased: RebasedEdit, fresh: SessionEdit): string {
   if (!hasChanges(rebased.edit, fresh))
     return `${droppedText}Nothing else of yours is left to save; this is the latest version.`;
   return `${droppedText}Your changes were applied to the latest version. Check them, then save.`;
-}
-
-export function effortLabel(effort: EffortInput): string | null {
-  if (effort === null) return null;
-  if (effort.type === 'level') return EFFORT_LEVEL_LABELS[effort.level];
-  if (effort.type === 'cardio') return CARDIO_EFFORT_LABELS[effort.level];
-  return `${effort.type.toUpperCase()} ${effort.value}`;
 }
 
 export type FailureAction =

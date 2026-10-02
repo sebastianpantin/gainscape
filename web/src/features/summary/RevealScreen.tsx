@@ -6,7 +6,7 @@ import { ItemIcon, LevelUpIcon, SkillIcon, TrophyIcon } from '../../components/P
 import { fetchExercises, fetchSkills, fetchSkillXp } from '../../lib/catalog.ts';
 import type { Exercise, Skill } from '../../lib/catalog-rules.ts';
 import { describeCardioGains } from '../../lib/cardio-rules.ts';
-import { formatLoad } from '../../lib/format.ts';
+import { formatLoad, formatXp, sessionXp } from '../../lib/format.ts';
 import { fetchSession } from '../../lib/history.ts';
 import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
@@ -14,8 +14,6 @@ import { usePreferences } from '../../lib/preferences.ts';
 import type { UnitPref } from '../../lib/profile.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
-import { sessionXp } from '../history/session-edit.ts';
-import { formatXp } from '../workout/xp-preview.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
 
 interface DescribedRecord {

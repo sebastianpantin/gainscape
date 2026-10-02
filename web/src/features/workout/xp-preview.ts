@@ -17,6 +17,7 @@ import {
   type StrengthState,
 } from '@domain/index.ts';
 import { isLoggableBout } from '../../lib/cardio-rules.ts';
+import { formatXp } from '../../lib/format.ts';
 import type {
   CardioDraftExercise,
   CardioDraftSet,
@@ -208,10 +209,6 @@ export function previewSession(
       return result ? toPreview(result, entry.hasPriorSession) : UNKNOWN_PREVIEW;
     }),
   );
-}
-
-export function formatXp(xp: number): string {
-  return xp.toLocaleString('en-US');
 }
 
 export function previewXpLabel(preview: SetPreview): string {
