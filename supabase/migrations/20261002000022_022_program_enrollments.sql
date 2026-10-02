@@ -287,6 +287,7 @@ as $$
 declare
   caller uuid := auth.uid();
   template_definition jsonb;
+  enrollment_ended_at timestamptz;
   event_payload jsonb;
   event_id uuid;
 begin
@@ -294,12 +295,15 @@ begin
     raise exception 'not_authenticated' using errcode = '42501';
   end if;
 
-  select t.definition into template_definition
+  select t.definition, e.ended_at into template_definition, enrollment_ended_at
   from public.program_enrollments e
   join public.program_templates t on t.key = e.template_key and t.version = e.template_version
   where e.id = adjust_enrollment.enrollment_id and e.user_id = caller;
   if not found then
     raise exception 'enrollment_not_found' using errcode = 'P0001';
+  end if;
+  if enrollment_ended_at is not null then
+    raise exception 'enrollment_ended' using errcode = 'P0001';
   end if;
 
   if jsonb_typeof(event) is distinct from 'object' then
