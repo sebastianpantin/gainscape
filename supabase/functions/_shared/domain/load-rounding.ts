@@ -9,7 +9,7 @@ export interface RoundingSetting {
   barWeight: number;
 }
 
-export const ROUNDING_EPSILON = 1e-9;
+const ROUNDING_EPSILON = 1e-9;
 
 export const DEFAULT_ROUNDING: Readonly<Record<WeightUnit, RoundingSetting>> = Object.freeze({
   kg: Object.freeze({ increment: 2.5, mode: 'nearest', barWeight: 20 }),

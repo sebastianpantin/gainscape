@@ -408,9 +408,9 @@ export function findSlot(definition: ProgramDefinition, slotId: string): SlotDec
   return undefined;
 }
 
-export const SCHEDULE_KINDS: readonly string[] = ['cycle', 'weekly', 'rotation'];
-export const SCHEME_KINDS: readonly string[] = ['sets', 'repeat', 'weekTable', 'stages'];
-export const LOAD_KINDS: readonly string[] = [
+const SCHEDULE_KINDS: readonly string[] = ['cycle', 'weekly', 'rotation'];
+const SCHEME_KINDS: readonly string[] = ['sets', 'repeat', 'weekTable', 'stages'];
+const LOAD_KINDS: readonly string[] = [
   'pct',
   'ramp',
   'sameAs',
@@ -421,7 +421,7 @@ export const LOAD_KINDS: readonly string[] = [
   'rpeLoad',
   'cumulativeAddOn',
 ];
-export const ADJUSTMENT_KINDS: readonly string[] = [
+const ADJUSTMENT_KINDS: readonly string[] = [
   'increment',
   'hold',
   'tmReset',
