@@ -12,7 +12,7 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Makefile`                   | Entry point for every workflow: stack, dev server, checks, every test layer, codegen                                                                                                                        |
 | `package.json`               | npm dependencies only; every workflow runs through a `make` target                                                                                                                                          |
-| `eslint.config.js`           | ESLint flat config, including the custom `gainscape/no-comments` rule, the `web/src` test id ban and domain purity globals ban                                                                              |
+| `eslint.config.js`           | ESLint flat config, including the custom `gainscape/no-comments` rule, the test id bans for `web/src` and `e2e/` and domain purity globals ban                                                              |
 | `tsconfig.json`              | Type-checks app, tests, e2e, scripts and domain; `@domain/*` path alias                                                                                                                                     |
 | `tsconfig.sw.json`           | Separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`                                                                                                                             |
 | `vitest.config.ts`           | Vitest projects with the `@domain` alias: `unit` (balance, catalog, domain, web; parallel), `integration` (4 workers in parallel), then `integration-serial` (files that touch global state, one at a time) |
@@ -46,7 +46,7 @@ Generated or ignored directories: `node_modules/`, `web/dist/`, `test-results/`,
 
 - **No comments in code.** `gainscape/no-comments` fails lint on any comment in `.ts`, `.tsx`, `.js` and `.mjs` files. Make code explain itself through names. This also applies to tests and scripts.
 - **No `test.skip`, `it.only`, `describe.only` or stub tests.** A skipped or placeholder test is a blocker, not progress.
-- **No test ids.** ESLint `no-restricted-syntax` fails on a `data-testid` attribute in `web/src`; give the element a role and an accessible name, and locate it that way in `e2e/`.
+- **No test ids.** ESLint `no-restricted-syntax` fails on a `data-testid` attribute or object key in `web/src` and on `getByTestId` in `e2e/`; give the element a role and an accessible name, and locate it that way in `e2e/`.
 - **Domain purity.** `supabase/functions/_shared/domain/*.ts` may only import sibling `./x.ts` files and must not use `Deno`, `process`, `window`, `document`, `localStorage` or `require`. `tests/domain/purity.test.ts` enforces all of these; ESLint `no-restricted-globals` also bans the globals except `require`.
 - **Imports keep the `.ts` extension** (`allowImportingTsExtensions`, needed by Deno). Use `import { type X }` inline type imports.
 - **Never hand-edit generated files:** `supabase/seed.sql` (run `make catalog`), `web/public/icons/*` and `web/public/favicon.svg` (run `make icons`). The `*-check` targets fail when these are stale.

@@ -60,6 +60,22 @@ export default tseslint.config(
           selector: "JSXAttribute[name.name='data-testid']",
           message: 'Give the element a role and an accessible name instead of a test id.',
         },
+        {
+          selector: "Property[key.value='data-testid']",
+          message: 'Give the element a role and an accessible name instead of a test id.',
+        },
+      ],
+    },
+  },
+  {
+    files: ['e2e/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name='getByTestId']",
+          message: 'Locate by role and accessible name instead of a test id.',
+        },
       ],
     },
   },
