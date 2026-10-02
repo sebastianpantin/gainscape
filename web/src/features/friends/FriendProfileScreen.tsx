@@ -26,7 +26,7 @@ type ViewState =
 function RecordsCard({ exercise, weightsHidden }: { exercise: CollectionViewExercise; weightsHidden: boolean }) {
   const { unitPref } = usePreferences();
   return (
-    <section className="panel stack" data-testid="friend-record">
+    <section className="panel stack">
       <header className="row spread">
         <h3>{exercise.name}</h3>
         {exercise.pinned && <span className="muted tiny">Pinned</span>}
@@ -117,7 +117,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
                 {collection.exercises.map((exercise) => (
                   <RecordsCard key={exercise.exerciseId} exercise={exercise} weightsHidden={collection.weightsHidden} />
                 ))}
-                <p className="muted" data-testid="friend-items">
+                <p className="muted">
                   Items found: {collection.items.found.length} of {collection.items.catalogCount}
                 </p>
               </section>

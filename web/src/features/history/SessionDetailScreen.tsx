@@ -539,12 +539,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       </fieldset>
       {setCount === 0 && <p className="hint">A workout needs at least one set. Delete it instead to remove it.</p>}
       {changed && (
-        <div
-          className="notice"
-          role="status"
-          data-testid="edit-loot-warning"
-          style={{ flexDirection: 'column', alignItems: 'flex-start' }}
-        >
+        <div className="notice" role="status" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
           {editWarning && <p>{editWarning}</p>}
           <p>{LATER_LOOT_NOTE}</p>
         </div>
@@ -570,7 +565,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         {confirmingDelete ? (
           <>
             <p>Delete this workout? This can't be undone. XP and records are recalculated without it.</p>
-            {deleteWarning && <p data-testid="delete-loot-warning">{deleteWarning}</p>}
+            {deleteWarning && <p>{deleteWarning}</p>}
             <p>{LATER_LOOT_NOTE}</p>
             <button className="button danger" type="button" disabled={working} onClick={() => void remove()}>
               {busy.kind === 'deleting' ? 'Deleting…' : 'Delete for good'}

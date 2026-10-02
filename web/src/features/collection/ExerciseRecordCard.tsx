@@ -27,7 +27,7 @@ export function ExerciseRecordCard({
   const strengthLine = strengthText(data.strengthByExercise.get(exercise.id), exercise.loadType, unitPref);
 
   return (
-    <section className="panel stack" data-testid={`collection-${exercise.id}`}>
+    <section className="panel stack">
       <header className="row spread">
         <span className="stack" style={{ gap: 2 }}>
           <h2>{exercise.name}</h2>

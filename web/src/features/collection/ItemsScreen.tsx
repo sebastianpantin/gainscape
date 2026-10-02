@@ -184,7 +184,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
         <div className="panel stack" key={group.title}>
           <div className="row spread">
             <h2>{group.title}</h2>
-            <span className="muted" data-testid={`found-${group.title.toLowerCase()}`}>
+            <span className="muted">
               {group.found}/{group.slots} found
             </span>
           </div>

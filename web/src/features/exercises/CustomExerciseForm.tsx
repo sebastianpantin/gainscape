@@ -161,9 +161,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
           </label>
         ))}
       </fieldset>
-      <p data-testid="share-total" className={shares !== null ? '' : 'problem'}>
-        Total: {total}%
-      </p>
+      <p className={shares !== null ? '' : 'problem'}>Total: {total}%</p>
       {problem && (
         <p className="problem" role="alert">
           {problem}

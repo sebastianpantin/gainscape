@@ -197,7 +197,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
           {step.kind === 'choose-password' && (
             <>
               <p>
-                Your username is <b data-testid="confirmed-username">{step.username}</b>. Choose a password to finish.
+                Your username is <b>{step.username}</b>. Choose a password to finish.
               </p>
               <label className="field">
                 Username

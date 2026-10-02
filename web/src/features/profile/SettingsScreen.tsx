@@ -302,7 +302,7 @@ function AppSection() {
       )}
       {install === 'ios_manual' && <p className="hint">In Safari, tap Share, then Add to Home Screen.</p>}
       {install === 'installed' && <p className="hint">Installed on this device.</p>}
-      <span data-testid="app-version">Version {__APP_VERSION__}</span>
+      <span>Version {__APP_VERSION__}</span>
       <button className="button" type="button" disabled={!flow || checking} onClick={checkForUpdates}>
         Check for updates
       </button>
