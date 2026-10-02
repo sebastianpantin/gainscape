@@ -773,3 +773,7 @@ export function parseProgramDefinition(json: unknown): ParsedProgramDefinition {
   if (semanticErrors.length > 0) return { kind: 'invalid', errors: semanticErrors };
   return { kind: 'ok', definition };
 }
+
+export const validateEnrollment: (definition: ProgramDefinition, enrollment: ProgramEnrollment) => string[] = () => {
+  throw new Error('not implemented');
+};
