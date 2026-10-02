@@ -7,7 +7,7 @@ export const authStorageKey = 'sb-localhost-auth-token';
 const draftDatabase = { name: 'gainscape', version: 1, store: 'drafts' };
 const fallbackDraftKeyPrefix = 'gainscape.workout-draft.v2.';
 
-export interface StoredAuthSession {
+interface StoredAuthSession {
   access_token: string;
   refresh_token: string;
   expires_at: number;
@@ -88,7 +88,7 @@ export async function logExercise(
   }
 }
 
-export type CardioBout =
+type CardioBout =
   | { minutes: number; distance?: number; effort: string }
   | { rounds: number; workS: number; restS: number; effort: string };
 
@@ -125,7 +125,7 @@ export async function writeSession(page: Page, changes: Partial<StoredAuthSessio
   await page.evaluate(([key, value]) => localStorage.setItem(key, value), [authStorageKey, JSON.stringify(session)]);
 }
 
-export interface StoredDraftRecord {
+interface StoredDraftRecord {
   v: number;
   kind: 'draft' | 'synced';
   userId: string;

@@ -73,7 +73,7 @@ export async function builtInExerciseId(key: string): Promise<string> {
   return row.id;
 }
 
-export interface FunctionResponseBody extends Partial<SessionSummary> {
+interface FunctionResponseBody extends Partial<SessionSummary> {
   summary?: SessionSummary;
   revision?: number;
   replayedSessionIds?: string[];
@@ -102,7 +102,7 @@ function isEdgeRuntimeDrop(status: number, rawBody: string): boolean {
   }
 }
 
-export interface RawFunctionResponse {
+interface RawFunctionResponse {
   status: number;
   rawBody: string;
   headers: Headers;
@@ -329,7 +329,7 @@ export function resignedWithAnotherKey(accessToken: string): string {
   return `${header}.${claims}.${signature}`;
 }
 
-export function lootSecret(): string {
+function lootSecret(): string {
   const secret = /^LOOT_SECRET=(.*)$/m.exec(readFileSync(functionsEnvPath, 'utf8'))?.[1]?.trim();
   if (!secret) throw new Error('supabase/functions/.env.local has no LOOT_SECRET; run make functions');
   return secret;
@@ -416,7 +416,7 @@ export async function lootSnapshot(userId: string) {
   return { lootRolls, drops, dropLuck, userItems, itemLedger, userUnlocks };
 }
 
-export interface GrantedDrop {
+interface GrantedDrop {
   dropId: string;
   lootRollId: string;
   itemId: string;
