@@ -122,8 +122,10 @@ export function initialProgramState(definition: ProgramDefinition, enrollment: P
   };
 }
 
+const EXPLICIT_ZONE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+
 function instantOf(fact: ProgramFact): number {
-  const instant = Date.parse(fact.at);
+  const instant = EXPLICIT_ZONE.test(fact.at) ? Date.parse(fact.at) : Number.NaN;
   return Number.isNaN(instant) ? Number.POSITIVE_INFINITY : instant;
 }
 
