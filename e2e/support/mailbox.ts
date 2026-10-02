@@ -1,1 +1,1 @@
-export { authLinkFrom, deleteEmailsTo, listEmailsTo, waitForEmail } from '../../tests/integration/mailbox.ts';
+export { authLinkFrom, waitForEmail } from '../../tests/integration/mailbox.ts';

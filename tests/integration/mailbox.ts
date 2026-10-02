@@ -51,8 +51,3 @@ export function authLinkFrom(message: Pick<MailMessage, 'HTML'>): string {
   if (!href) throw new Error('The email has no token_hash link');
   return href.replaceAll('&amp;', '&');
 }
-
-export async function deleteEmailsTo(to: string): Promise<void> {
-  const response = await fetch(searchUrl(to), { method: 'DELETE' });
-  if (!response.ok) throw new Error(`Mailpit DELETE ${to} answered ${response.status}`);
-}
