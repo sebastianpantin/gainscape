@@ -313,7 +313,8 @@ begin
   if event ->> 'kind' = 'set_reference' then
     if jsonb_typeof(event -> 'lift') is distinct from 'string'
        or not exists (
-         select 1 from jsonb_array_elements(template_definition -> 'lifts') l where l ->> 'key' = event ->> 'lift'
+         select 1 from jsonb_array_elements(template_definition -> 'inputs') declared_input
+         where declared_input -> 'lifts' ? (event ->> 'lift')
        )
        or jsonb_typeof(event -> 'var') is distinct from 'string'
        or not (template_definition -> 'referenceVars' ? (event ->> 'var'))
