@@ -31,7 +31,7 @@ async function pin(user: TestUser, exerciseId: string, position: number): Promis
 async function expectParity(user: TestUser): Promise<void> {
   const { data, error } = await user.client.rpc('get_profile', { target: user.id });
   expect(error).toBeNull();
-  const expected = await webCollectionCounts(user.id);
+  const expected = await webCollectionCounts(user);
   expect(data.collection).toEqual(expected);
   expect(expected.totalSlots).toBeGreaterThan(0);
 }
@@ -78,14 +78,14 @@ describe('collection parity between get_profile and the web rule', () => {
     const user = await createTestUser();
     await postSession(user, payloadAt(hoursAgo(2), [aSet(ids.barbell_bench_press, 0, 60, { reps: 3 })]));
     await pin(user, ids.back_squat, 0);
-    const before = await webCollectionCounts(user.id);
+    const before = await webCollectionCounts(user);
     await pin(user, ids.running, 1);
     await postSession(
       user,
       payloadAt(hoursAgo(1), [aBout(ids.running, 0, { durationS: 1200, distanceM: 4000, effort: null })]),
     );
     await expectParity(user);
-    expect(await webCollectionCounts(user.id)).toEqual(before);
+    expect(await webCollectionCounts(user)).toEqual(before);
   });
 
   it('matches for pins without sessions next to a logged lift', async () => {

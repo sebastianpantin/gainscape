@@ -63,6 +63,9 @@ export function isCardioExercise(exercise: Exercise): exercise is CardioExercise
   return exercise.modality === 'cardio';
 }
 
+export const EXERCISE_COLUMNS =
+  'id, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, exercise_skills(share_bp, skills(key))';
+
 export interface ExerciseRow {
   id: string;
   name: string;

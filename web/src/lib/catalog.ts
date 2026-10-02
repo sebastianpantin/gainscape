@@ -1,4 +1,4 @@
-import { type Exercise, type ExerciseRow, type Skill, toExercise } from './catalog-rules.ts';
+import { EXERCISE_COLUMNS, type Exercise, type ExerciseRow, type Skill, toExercise } from './catalog-rules.ts';
 import { supabase } from './supabase.ts';
 
 export async function fetchSkills(): Promise<Skill[]> {
@@ -16,9 +16,6 @@ export async function fetchSkills(): Promise<Skill[]> {
     modality: row.modality,
   }));
 }
-
-const EXERCISE_COLUMNS =
-  'id, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, exercise_skills(share_bp, skills(key))';
 
 export interface ExerciseQuery {
   includeArchived: boolean;

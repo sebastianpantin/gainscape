@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Exercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
 import type { CollectionData } from '../../web/src/lib/collection-data.ts';
 import {
+  collectionDataFrom,
   collectionPercent,
   countCollection,
   pinProblemText,
@@ -88,5 +89,54 @@ describe('strengthText', () => {
 
   it('shows nothing without a strength estimate', () => {
     expect(strengthText(undefined, 'external', 'kg')).toBeNull();
+  });
+});
+
+describe('collectionDataFrom', () => {
+  const rows = {
+    repMaxes: [
+      { exercise_id: 'bench', reps: 5, load_kg: '82.50', exact_set_id: 'set-1' },
+      { exercise_id: 'bench', reps: 1, load_kg: 100, exact_set_id: null },
+    ],
+    bodyweightRecords: [{ exercise_id: 'pull_up', max_reps: 12 }],
+    strengths: [
+      { exercise_id: 'bench', e1rm_kg: '96.25', reps_capacity: null },
+      { exercise_id: 'pull_up', e1rm_kg: null, reps_capacity: 14 },
+    ],
+    pins: [
+      { exercise_id: 'squat', position: 3 },
+      { exercise_id: 'bench', position: 7 },
+    ],
+    cardioRecords: [{ exercise_id: 'run', kind: 'distance' as const, value: '5000.0' }],
+  };
+
+  it('places rep maxes in their rep slot with numeric loads and exactness', () => {
+    const slots = collectionDataFrom(rows).repMaxesByExercise.get('bench');
+    expect(slots).toHaveLength(10);
+    expect(slots?.[0]).toEqual({ loadKg: 100, exact: false });
+    expect(slots?.[4]).toEqual({ loadKg: 82.5, exact: true });
+    expect(slots?.filter((slot) => slot !== null)).toHaveLength(2);
+  });
+
+  it('maps bodyweight records, strengths and cardio records to numbers', () => {
+    const data = collectionDataFrom(rows);
+    expect(data.maxRepsByExercise).toEqual(new Map([['pull_up', 12]]));
+    expect(data.strengthByExercise).toEqual(
+      new Map([
+        ['bench', { e1rmKg: 96.25, repsCapacity: null }],
+        ['pull_up', { e1rmKg: null, repsCapacity: 14 }],
+      ]),
+    );
+    expect(data.cardioRecords).toEqual([{ exerciseId: 'run', kind: 'distance', value: 5000 }]);
+  });
+
+  it('keeps pin order and puts the next pin after the highest position', () => {
+    const data = collectionDataFrom(rows);
+    expect(data.pinnedExerciseIds).toEqual(['squat', 'bench']);
+    expect(data.nextPinPosition).toBe(8);
+  });
+
+  it('starts the first pin at position zero when nothing is pinned', () => {
+    expect(collectionDataFrom({ ...rows, pins: [] }).nextPinPosition).toBe(0);
   });
 });
