@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   ageFrom,
+  bodyweightInUnitProblem,
+  bodyweightRangeInUnit,
+  feetAndInchesProblem,
+  heightInCm,
+  initialHeight,
+  nudgedBodyweightKg,
+  optionalNumber,
+  sameHeightInput,
+  saveProblemText,
   bioProblem,
   birthYearProblem,
   cooldownStartFor,
@@ -76,5 +85,83 @@ describe('time zone cooldown', () => {
 
   it('shows a day with weekday, day and month', () => {
     expect(formatDay(new Date('2026-10-01T12:00:00Z'))).toBe('Thu 1 Oct');
+  });
+});
+
+describe('edit profile inputs', () => {
+  it('reads an optional number, treating blank input as none', () => {
+    expect(optionalNumber('')).toBeNull();
+    expect(optionalNumber('  ')).toBeNull();
+    expect(optionalNumber('72.5')).toBe(72.5);
+    expect(optionalNumber('abc')).toBeNaN();
+  });
+
+  it('gives the bodyweight range in whole units of the chosen unit', () => {
+    expect(bodyweightRangeInUnit('kg')).toEqual({ lowest: 20, highest: 400 });
+    expect(bodyweightRangeInUnit('lb')).toEqual({ lowest: 45, highest: 881 });
+  });
+
+  it('checks a typed bodyweight in the chosen unit', () => {
+    expect(bodyweightInUnitProblem('', 'kg')).toBeNull();
+    expect(bodyweightInUnitProblem('80', 'kg')).toBeNull();
+    expect(bodyweightInUnitProblem('19', 'kg')).toBe('Bodyweight must be between 20 and 400 kg.');
+    expect(bodyweightInUnitProblem('heavy', 'kg')).toBe('Bodyweight must be between 20 and 400 kg.');
+    expect(bodyweightInUnitProblem('45', 'lb')).toBeNull();
+    expect(bodyweightInUnitProblem('44', 'lb')).toBe('Bodyweight must be between 45 and 881 lb.');
+  });
+
+  it('nudges bodyweight by one step of the chosen unit and keeps it in range', () => {
+    expect(nudgedBodyweightKg(80, 1, 'kg')).toBe(80.1);
+    expect(nudgedBodyweightKg(80, -1, 'lb')).toBe(79.92);
+    expect(nudgedBodyweightKg(20, -1, 'kg')).toBe(20);
+    expect(nudgedBodyweightKg(400, 1, 'kg')).toBe(400);
+  });
+
+  it('starts the height fields from the stored centimetres', () => {
+    expect(initialHeight(null)).toEqual({ cm: '', feet: '', inches: '' });
+    expect(initialHeight(180)).toEqual({ cm: '180', feet: '5', inches: '11' });
+  });
+
+  it('reads the height in centimetres from either set of fields', () => {
+    expect(heightInCm({ cm: '180', feet: '', inches: '' }, 'kg')).toBe(180);
+    expect(heightInCm({ cm: '', feet: '5', inches: '11' }, 'kg')).toBeNull();
+    expect(heightInCm({ cm: '', feet: '5', inches: '11' }, 'lb')).toBe(180.3);
+    expect(heightInCm({ cm: '', feet: '6', inches: '' }, 'lb')).toBe(182.9);
+    expect(heightInCm({ cm: '180', feet: ' ', inches: '' }, 'lb')).toBeNull();
+  });
+
+  it('compares only the height fields of the chosen unit', () => {
+    const typed = { cm: '180', feet: '5', inches: '11' };
+    expect(sameHeightInput(typed, { ...typed, feet: '6' }, 'kg')).toBe(true);
+    expect(sameHeightInput(typed, { ...typed, cm: '181' }, 'kg')).toBe(false);
+    expect(sameHeightInput(typed, { ...typed, cm: '181' }, 'lb')).toBe(true);
+    expect(sameHeightInput(typed, { ...typed, inches: '10' }, 'lb')).toBe(false);
+  });
+
+  it('wants whole feet and 0–11 inches', () => {
+    const height = (feet: string, inches: string) => ({ cm: '', feet, inches });
+    expect(feetAndInchesProblem(height('5', '12'), 'kg')).toBeNull();
+    expect(feetAndInchesProblem(height('', ''), 'lb')).toBeNull();
+    expect(feetAndInchesProblem(height('5', '11'), 'lb')).toBeNull();
+    expect(feetAndInchesProblem(height('6', ''), 'lb')).toBeNull();
+    for (const [feet, inches] of [
+      ['5', '12'],
+      ['5.5', '0'],
+      ['-1', '0'],
+      ['5', '-1'],
+    ])
+      expect(feetAndInchesProblem(height(feet, inches), 'lb')).toBe('Enter whole feet and 0–11 inches.');
+  });
+
+  it('explains save failures, mapping the database rules to plain text', () => {
+    expect(saveProblemText(new Error('training_since_in_future'))).toBe("Training since can't be in the future.");
+    expect(saveProblemText({ message: 'birth_year_too_recent', code: 'P0001' })).toBe(
+      'You need to be at least 13 to use Gainscape.',
+    );
+    expect(saveProblemText(new Error('Too many changes in a short time.'))).toBe('Too many changes in a short time.');
+    expect(saveProblemText({ message: 'permission denied' })).toBe('permission denied');
+    expect(saveProblemText(new Error(''))).toBe('Could not save your profile.');
+    expect(saveProblemText({})).toBe('Could not save your profile.');
+    expect(saveProblemText('offline')).toBe('Could not save your profile.');
   });
 });

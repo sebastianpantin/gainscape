@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react';
-import { HIGHEST_BODYWEIGHT_KG, LOWEST_BODYWEIGHT_KG, type UnitPref } from '../../lib/profile.ts';
-import { kgToUnit, unitToKg } from '../../lib/units.ts';
+import { bodyweightRangeInUnit, type UnitPref } from '../../lib/profile.ts';
+import { unitToKg } from '../../lib/units.ts';
 import { messageOf } from '../../lib/error-text.ts';
 
 interface BodyweightPromptProps {
@@ -13,6 +13,7 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
   const [bodyweight, setBodyweight] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { lowest, highest } = bodyweightRangeInUnit(unit);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -34,8 +35,8 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
         <input
           type="number"
           inputMode="decimal"
-          min={Math.ceil(kgToUnit(LOWEST_BODYWEIGHT_KG, unit))}
-          max={Math.floor(kgToUnit(HIGHEST_BODYWEIGHT_KG, unit))}
+          min={lowest}
+          max={highest}
           step={0.1}
           value={bodyweight}
           onChange={(event) => setBodyweight(event.target.value)}

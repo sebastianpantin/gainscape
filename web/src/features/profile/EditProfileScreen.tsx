@@ -7,21 +7,26 @@ import {
   BIO_MAX_LENGTH,
   bioProblem,
   birthYearProblem,
+  bodyweightInUnitProblem,
   DISPLAY_NAME_MAX_LENGTH,
+  feetAndInchesProblem,
+  heightInCm,
+  type HeightInput,
   heightProblem,
-  HIGHEST_BODYWEIGHT_KG,
+  initialHeight,
   initialsFor,
   latestBirthYear,
-  LOWEST_BODYWEIGHT_KG,
+  optionalNumber,
   type Profile,
+  sameHeightInput,
+  saveProblemText,
   TRAINING_FOCUS_LABELS,
   type TrainingFocus,
   trainingSinceProblem,
-  type UnitPref,
   updatePrivateProfile,
   updatePublicProfile,
 } from '../../lib/profile.ts';
-import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, shownWeight, unitToKg } from '../../lib/units.ts';
+import { shownWeight, unitToKg } from '../../lib/units.ts';
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileBadge } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
@@ -32,68 +37,6 @@ interface EditProfileScreenProps {
 
 const BADGE_ORDER = Object.keys(BADGE_COLORS) as BadgeColor[];
 const FOCUS_ORDER = Object.keys(TRAINING_FOCUS_LABELS) as TrainingFocus[];
-
-function optionalNumber(raw: string): number | null {
-  return raw.trim() === '' ? null : Number(raw);
-}
-
-function bodyweightInUnitProblem(raw: string, unit: UnitPref): string | null {
-  const value = optionalNumber(raw);
-  if (value === null) return null;
-  const kg = unitToKg(value, unit);
-  if (!Number.isFinite(kg) || kg < LOWEST_BODYWEIGHT_KG || kg > HIGHEST_BODYWEIGHT_KG) {
-    const lowest = Math.ceil(kgToUnit(LOWEST_BODYWEIGHT_KG, unit));
-    const highest = Math.floor(kgToUnit(HIGHEST_BODYWEIGHT_KG, unit));
-    return `Bodyweight must be between ${lowest} and ${highest} ${unit}.`;
-  }
-  return null;
-}
-
-interface HeightInput {
-  cm: string;
-  feet: string;
-  inches: string;
-}
-
-function initialHeight(heightCm: number | null): HeightInput {
-  if (heightCm === null) return { cm: '', feet: '', inches: '' };
-  const { feet, inches } = cmToFeetAndInches(heightCm);
-  return { cm: String(heightCm), feet: String(feet), inches: String(inches) };
-}
-
-function heightInCm(input: HeightInput, unit: UnitPref): number | null {
-  if (unit === 'kg') return optionalNumber(input.cm);
-  if (input.feet.trim() === '' && input.inches.trim() === '') return null;
-  return feetAndInchesToCm({ feet: Number(input.feet || 0), inches: Number(input.inches || 0) });
-}
-
-function sameHeightInput(a: HeightInput, b: HeightInput, unit: UnitPref): boolean {
-  return unit === 'kg' ? a.cm === b.cm : a.feet === b.feet && a.inches === b.inches;
-}
-
-function feetAndInchesProblem(input: HeightInput, unit: UnitPref): string | null {
-  if (unit === 'kg' || (input.feet.trim() === '' && input.inches.trim() === '')) return null;
-  const feet = Number(input.feet || 0);
-  const inches = Number(input.inches || 0);
-  if (!Number.isInteger(feet) || feet < 0 || !Number.isInteger(inches) || inches < 0 || inches > 11)
-    return 'Enter whole feet and 0–11 inches.';
-  return null;
-}
-
-const SERVER_RULE_MESSAGES: Record<string, string> = {
-  training_since_in_future: "Training since can't be in the future.",
-  birth_year_too_recent: 'You need to be at least 13 to use Gainscape.',
-};
-
-function saveProblemText(error: unknown): string {
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === 'object' && error !== null && 'message' in error
-        ? String(error.message)
-        : '';
-  return SERVER_RULE_MESSAGES[message] ?? (message || 'Could not save your profile.');
-}
 
 function EditForm({ userId, profile }: { userId: string; profile: Profile }) {
   const navigate = useNavigate();
