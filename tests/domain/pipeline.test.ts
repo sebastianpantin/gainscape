@@ -15,10 +15,11 @@ import {
   processSession,
   REP_MAX_SLOT_COUNT,
   type SessionInput,
+  setKind,
   strengthHistoryRows,
   UnknownExerciseError,
 } from '@domain/index.ts';
-import { aSet, catalog, freshUser, hard, nearFailure, TEST_BALANCE } from './fixtures.ts';
+import { aBout, aSet, catalog, freshUser, hard, nearFailure, TEST_BALANCE } from './fixtures.ts';
 
 const threeSets = (exerciseId: string, weightKg: number, effort: typeof hard | typeof nearFailure) =>
   [0, 1, 2].map(() => aSet(exerciseId, weightKg, 8, effort));
@@ -355,5 +356,13 @@ describe('exercise lookup', () => {
     const run = catalog.exercises.get('run')!;
     expect(cardioExercise(run)).toBe(run);
     expect(() => cardioExercise(catalog.exercises.get('bench')!)).toThrow(KindMismatchError);
+  });
+});
+
+describe('setKind', () => {
+  it('reads a set without a kind as a lift', () => {
+    expect(setKind(aSet('bench', 60, 5, hard))).toBe('lift');
+    expect(setKind(aSet('bench', 60, 5, hard, { kind: 'lift' }))).toBe('lift');
+    expect(setKind(aBout('run', 1800, null))).toBe('cardio');
   });
 });

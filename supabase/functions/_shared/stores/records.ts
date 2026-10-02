@@ -1,4 +1,4 @@
-import type { Transaction } from '../db.ts';
+import { isoTimestamp, type Transaction } from '../db.ts';
 import {
   type BodyweightRepRecord,
   type CardioRecordKind,
@@ -32,7 +32,7 @@ export async function loadRecords(
     slots[row.reps - 1] = {
       loadKg: Number(row.load_kg),
       setId: row.set_id,
-      achievedAt: new Date(row.achieved_at).toISOString(),
+      achievedAt: isoTimestamp(row.achieved_at),
       exactSetId: row.exact_set_id,
     };
     repMaxes[row.exercise_id] = slots;
@@ -43,14 +43,14 @@ export async function loadRecords(
     bodyweightReps[row.exercise_id] = {
       maxReps: row.max_reps,
       setId: row.set_id,
-      achievedAt: new Date(row.achieved_at).toISOString(),
+      achievedAt: isoTimestamp(row.achieved_at),
     };
   }
   const cardio: Record<string, Partial<Record<CardioRecordKind, CardioRecords[CardioRecordKind]>>> = {};
   for (const row of cardioRows) {
     cardio[row.exercise_id] = {
       ...cardio[row.exercise_id],
-      [row.kind]: { value: Number(row.value), setId: row.set_id, achievedAt: new Date(row.achieved_at).toISOString() },
+      [row.kind]: { value: Number(row.value), setId: row.set_id, achievedAt: isoTimestamp(row.achieved_at) },
     };
   }
   return { repMaxes, bodyweightReps, cardio };

@@ -4,11 +4,11 @@ import { HttpError, jsonResponse } from '../_shared/http.ts';
 import { serve } from '../_shared/serve.ts';
 import { assertServiceRole } from '../_shared/service-auth.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
+import { lockUser } from '../_shared/stores/sessions.ts';
 
 async function rebuildUser(userId: string) {
   return await sql.begin(async (tx) => {
-    const [profile] = await tx`select id from public.profiles where id = ${userId} for update`;
-    if (!profile) throw new HttpError(404, 'user_not_found');
+    await lockUser(tx, userId, new HttpError(404, 'user_not_found'));
 
     await tx`delete from public.exercise_maxes where user_id = ${userId}`;
     await tx`delete from public.rep_maxes where user_id = ${userId}`;

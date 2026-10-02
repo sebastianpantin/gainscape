@@ -1,4 +1,4 @@
-import type { Transaction } from '../db.ts';
+import { isoTimestamp, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   currentStrength,
@@ -52,9 +52,9 @@ export async function loadStrengthHistory(
 
   return rows.map((row) => ({
     exerciseId: row.exercise_id,
-    session: { id: row.session_id, startedAt: new Date(row.started_at).toISOString() },
+    session: { id: row.session_id, startedAt: isoTimestamp(row.started_at) },
     isWarmup: row.is_warmup,
-    strengthCandidate: row.candidate === null ? null : Number(row.candidate),
+    strengthCandidate: nullableNumber(row.candidate),
   }));
 }
 
@@ -81,7 +81,7 @@ async function latestSessionPerExercise(
   return rows.map((row) => ({
     exerciseId: row.exercise_id,
     usesRepsCapacity: measuresRepsCapacity(row.load_type),
-    session: { id: row.session_id, startedAt: new Date(row.started_at).toISOString() },
+    session: { id: row.session_id, startedAt: isoTimestamp(row.started_at) },
   }));
 }
 
@@ -98,7 +98,7 @@ async function storedCandidates(
   return rows.map((row) => ({
     exerciseId: row.exercise_id,
     setId: row.id,
-    value: row.candidate === null ? null : Number(row.candidate),
+    value: nullableNumber(row.candidate),
   }));
 }
 
