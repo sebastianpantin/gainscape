@@ -1,48 +1,18 @@
 import { levelProgress } from '@domain/index.ts';
-import type { DropSummary, PersonalRecordSummary, SessionSummary } from '@domain/types.ts';
+import type { DropSummary, SessionSummary } from '@domain/types.ts';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ItemIcon, LevelUpIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { fetchExercises, fetchSkills, fetchSkillXp } from '../../lib/catalog.ts';
 import type { Exercise, Skill } from '../../lib/catalog-rules.ts';
-import { describeCardioGains } from '../../lib/cardio-rules.ts';
-import { formatLoad, formatXp, sessionXp } from '../../lib/format.ts';
+import { formatXp, sessionXp } from '../../lib/format.ts';
 import { fetchSession } from '../../lib/history.ts';
 import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import type { UnitPref } from '../../lib/profile.ts';
-import { distanceUnitFor } from '../../lib/units.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
-
-interface DescribedRecord {
-  headline: string;
-  previous: string;
-}
-
-function describeRecord(
-  record: PersonalRecordSummary,
-  exercise: Exercise | undefined,
-  unit: UnitPref,
-): DescribedRecord {
-  const name = exercise?.name ?? 'Exercise';
-  if (record.kind === 'cardio') {
-    const paceUnit = exercise?.modality === 'cardio' ? exercise.activity.paceUnit : 'per_km';
-    return { headline: `${name}:`, previous: describeCardioGains(record.records, distanceUnitFor(unit, paceUnit)) };
-  }
-  if (record.kind === 'bodyweight_reps') {
-    const previous = record.previousReps === null ? 'first record' : `was ${record.previousReps}`;
-    return { headline: `${name}: ${record.reps} reps`, previous: `(${previous})` };
-  }
-  const loadType = exercise?.modality === 'lift' ? exercise.loadType : 'external';
-  const previous =
-    record.previousLoadKg === null ? 'first record' : `was ${formatLoad(record.previousLoadKg, loadType, unit)}`;
-  return {
-    headline: `${name}: ${record.reps}RM ${formatLoad(record.loadKg!, loadType, unit)}`,
-    previous: `(${previous})`,
-  };
-}
+import { describeRecord } from './reveal-rules.ts';
 
 function percent(fraction: number): string {
   return `${(Math.min(1, Math.max(0, fraction)) * 100).toFixed(1)}%`;
