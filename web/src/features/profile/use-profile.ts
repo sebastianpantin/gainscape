@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchCollectionPercent } from '../../lib/collection-data.ts';
 import { fetchProfile, type Profile } from '../../lib/profile.ts';
-import { fetchStanding, type Standing } from '../../lib/standing.ts';
+import type { Standing } from '../../lib/standing-rules.ts';
+import { fetchStanding } from '../../lib/standing.ts';
 
 export interface ProfileBundle {
   profile: Profile;
