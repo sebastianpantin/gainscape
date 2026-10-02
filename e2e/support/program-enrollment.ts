@@ -1,0 +1,87 @@
+import { expect, type Locator, type Page } from '@playwright/test';
+import { openFromProfile } from './app.ts';
+
+export const MADCOW_FIVE_RMS_KG: Readonly<Record<string, number>> = {
+  'Squat 5RM (kg)': 100,
+  'Bench press 5RM (kg)': 80,
+  'Barbell row 5RM (kg)': 70,
+  'Incline or military press 5RM (kg)': 50,
+  'Deadlift 5RM (kg)': 140,
+};
+
+export const FIVE_THREE_ONE_ONE_RMS_KG: Readonly<Record<string, number>> = {
+  'Squat 1RM (kg)': 100,
+  'Bench press 1RM (kg)': 80,
+  'Deadlift 1RM (kg)': 140,
+  'Overhead press 1RM (kg)': 50,
+};
+
+export function powerliftingPrograms(page: Page): Locator {
+  return page.getByRole('region', { name: 'Powerlifting programs', exact: true });
+}
+
+export function programToday(page: Page, programName: string): Locator {
+  return page.getByRole('region', { name: programName, exact: true });
+}
+
+export function prescribedRows(scope: Locator, title: string): Locator {
+  return scope.getByRole('list', { name: title, exact: true }).getByRole('listitem');
+}
+
+export function dayPicker(scope: Locator): Locator {
+  return scope.getByRole('radiogroup', { name: 'Day', exact: true });
+}
+
+export function workoutCards(page: Page, exerciseName: string): Locator {
+  return page.locator('section', { has: page.getByRole('heading', { name: exerciseName, exact: true }) });
+}
+
+export async function fieldValues(fields: Locator): Promise<string[]> {
+  return fields.evaluateAll((elements) => elements.map((element) => (element as HTMLInputElement).value));
+}
+
+export async function weightsIn(card: Locator): Promise<string[]> {
+  return fieldValues(card.getByRole('spinbutton', { name: 'kg', exact: true }));
+}
+
+export async function repsIn(card: Locator): Promise<string[]> {
+  return fieldValues(card.getByRole('spinbutton', { name: 'reps', exact: true }));
+}
+
+export async function openEnrollForm(page: Page, programName: string): Promise<void> {
+  await openFromProfile(page, 'Programs');
+  const follow = powerliftingPrograms(page).getByRole('link', { name: `Follow ${programName}`, exact: true });
+  await expect(follow).toBeVisible();
+  await follow.click();
+  await expect(page.getByRole('heading', { level: 1, name: `Follow ${programName}`, exact: true })).toBeVisible();
+}
+
+export async function fillProgramInputs(page: Page, inputs: Readonly<Record<string, number>>): Promise<void> {
+  for (const [label, value] of Object.entries(inputs))
+    await page.getByLabel(label, { exact: true }).fill(String(value));
+}
+
+export async function startFollowing(page: Page, programName: string): Promise<void> {
+  await page.getByRole('button', { name: 'Start following', exact: true }).click();
+  await expect(programToday(page, programName)).toBeVisible();
+}
+
+export async function followProgram(
+  page: Page,
+  programName: string,
+  inputs: Readonly<Record<string, number>>,
+): Promise<void> {
+  await openEnrollForm(page, programName);
+  await fillProgramInputs(page, inputs);
+  await startFollowing(page, programName);
+}
+
+export async function markEverySetDone(page: Page): Promise<void> {
+  const doneButtons = page.getByRole('main').getByRole('button', { name: /^Done set \d+$/ });
+  const count = await doneButtons.count();
+  for (let index = 0; index < count; index++) {
+    const button = doneButtons.nth(index);
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+  }
+}
