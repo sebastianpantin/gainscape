@@ -120,3 +120,38 @@ export function upcomingDays(definition: ProgramDefinition, cursor: ScheduleCurs
   }
   return upcoming;
 }
+
+export const MAX_PROGRAM_WEEKS = 520;
+
+function isWholeNumberWithin(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+}
+
+export function isPositionInSchedule(definition: ProgramDefinition, position: Position): boolean {
+  const schedule = definition.schedule;
+  const fields = position as Partial<CyclePosition & RotationPosition>;
+  const knownDay = typeof fields.day === 'string' && dayIndexOf(definition, fields.day) >= 0;
+  switch (schedule.kind) {
+    case 'cycle': {
+      if (fields.index !== undefined || !knownDay) return false;
+      const maxCycle = Math.ceil(MAX_PROGRAM_WEEKS / schedule.weeksPerCycle);
+      return (
+        isWholeNumberWithin(fields.cycle, 1, maxCycle) && isWholeNumberWithin(fields.week, 1, schedule.weeksPerCycle)
+      );
+    }
+    case 'weekly':
+      return (
+        fields.index === undefined &&
+        fields.cycle === undefined &&
+        knownDay &&
+        isWholeNumberWithin(fields.week, 1, MAX_PROGRAM_WEEKS)
+      );
+    case 'rotation':
+      return (
+        fields.week === undefined &&
+        fields.day === undefined &&
+        fields.cycle === undefined &&
+        isWholeNumberWithin(fields.index, 0, MAX_PROGRAM_WEEKS * schedule.days.length)
+      );
+  }
+}

@@ -18,6 +18,7 @@ import {
   dayIndexOf,
   dayKeyOf,
   isCyclePosition,
+  isPositionInSchedule,
   isRotationPosition,
   nextWeek,
   type Position,
@@ -33,6 +34,7 @@ import {
   type ReferenceChange,
   type ReferenceChangeReason,
   type SessionFact,
+  type SetReferenceFact,
 } from './program-state.ts';
 import { type WeightUnit } from './units.ts';
 
@@ -460,13 +462,28 @@ function jumpTo(definition: ProgramDefinition, state: ProgramState, position: Po
   return { ...state, epoch, position, completedDays: skippedBefore };
 }
 
+function isValidReference(definition: ProgramDefinition, fact: SetReferenceFact): boolean {
+  return (
+    definition.lifts.some((lift) => lift.key === fact.lift) &&
+    definition.referenceVars.includes(fact.var) &&
+    Number.isFinite(fact.value) &&
+    fact.value > 0
+  );
+}
+
+function isApplicable(definition: ProgramDefinition, fact: ProgramFact): boolean {
+  return fact.kind === 'set_reference'
+    ? isValidReference(definition, fact)
+    : isPositionInSchedule(definition, fact.position);
+}
+
 export function advanceProgram(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
   state: ProgramState,
   fact: ProgramFact,
 ): ProgramState {
-  if (state.appliedFactIds.includes(fact.id)) return state;
+  if (state.appliedFactIds.includes(fact.id) || !isApplicable(definition, fact)) return state;
   const context: FoldContext = { definition, enrollment };
   const applied: ProgramState = { ...state, appliedFactIds: [...state.appliedFactIds, fact.id] };
   switch (fact.kind) {
