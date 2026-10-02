@@ -736,3 +736,17 @@ describe('edit-session of a linked session', () => {
     expect(response.body.error).toBe('duplicate_prescription_ref');
   });
 });
+
+describe('edit-session of an unlinked session', () => {
+  it('stores an added set without a prescription, since the session follows no program', async () => {
+    const user = await createTestUser();
+    const sets = mondaySquatSets().map(withoutPrescription);
+    const payload = linkedPayload(sets, null);
+    expect((await postCompleteSession(user.accessToken, payload)).status).toBe(200);
+
+    const response = await edit(user, payload.id, [...sets, squatSet(3, 90, prescribed('mon-squat:3', 90))]);
+
+    expect(response.status, response.rawBody).toBe(200);
+    expect(await snapshotsOf(payload.id)).toEqual([0, 1, 2, 3].map(noSnapshot));
+  });
+});
