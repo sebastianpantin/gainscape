@@ -39,7 +39,7 @@ export function kgEnrollment(
 export const TWO_RULES_ONE_LIFT: ProgramDefinition = {
   key: 'synthetic_two_rules_one_lift',
   version: 1,
-  name: 'Synthetic lift with a weekly rule on day A and an after-session rule on day B',
+  name: 'Synthetic weekly rule on A, after-session rule on B',
   source: ['synthetic test fixture'],
   lifts: [{ key: 'squat', name: 'Squat', category: 'lower' }],
   inputs: [{ lifts: ['squat'], kinds: ['tm'] }],
@@ -142,7 +142,7 @@ export const UNSUPPORTED_JUDGED_SCHEMES: ProgramDefinition = {
 export const LINEAR_DELOAD_AFTER_SESSION: ProgramDefinition = {
   ...structuredClone(LINEAR_AFTER_SESSION),
   key: 'synthetic_linear_deload_after_session',
-  name: 'Synthetic after-session progression with a 10% deload on a miss',
+  name: 'Synthetic after-session with a 10% deload on a miss',
   progression: [
     {
       ...structuredClone(LINEAR_AFTER_SESSION.progression[0]),
@@ -154,7 +154,7 @@ export const LINEAR_DELOAD_AFTER_SESSION: ProgramDefinition = {
 export const WEEK_AND_CYCLE_RULES: ProgramDefinition = {
   key: 'synthetic_week_and_cycle_rules',
   version: 1,
-  name: 'Synthetic two-week cycle with a weekly bench rule and a cycle squat rule',
+  name: 'Synthetic two-week cycle, weekly bench, cycle squat',
   source: ['synthetic test fixture'],
   lifts: [
     { key: 'squat', name: 'Squat', category: 'lower' },
