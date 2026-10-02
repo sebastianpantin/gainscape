@@ -756,6 +756,8 @@ function shapeErrors(json: unknown): string[] {
       !Array.isArray(rule.onMiss)
     ) {
       errors.push('every progression rule needs judgedSlots, onMet and onMiss arrays');
+    } else if (typeof rule.trigger !== 'string') {
+      errors.push(`progression rule for '${String(rule.lift)}' needs a text trigger`);
     }
   }
   return errors;
@@ -802,7 +804,7 @@ function unknownKindsIn(json: Record<string, unknown>): string[] {
   }
   for (const rule of arrayOf(json.progression)) {
     const record = rule as Record<string, unknown>;
-    note(typeof record.trigger === 'string' ? record.trigger : 'missing trigger', PROGRESSION_TRIGGERS);
+    if (typeof record.trigger === 'string') note(record.trigger, PROGRESSION_TRIGGERS);
     for (const adjustment of [...arrayOf(record.onMet), ...arrayOf(record.onMiss), ...arrayOf(record.always)]) {
       note(kindOf(adjustment), ADJUSTMENT_KINDS);
     }
@@ -877,6 +879,13 @@ function enrollmentRoundingErrors(enrollment: ProgramEnrollment): string[] {
   return errors;
 }
 
+function enrollmentBindingErrors(definition: ProgramDefinition, enrollment: ProgramEnrollment): string[] {
+  const lifts = new Set(definition.lifts.map((lift) => lift.key));
+  return Object.keys(enrollment.bindings)
+    .filter((lift) => !lifts.has(lift))
+    .map((lift) => `binding for lift '${lift}' is not declared by the template`);
+}
+
 export function validateEnrollment(definition: ProgramDefinition, enrollment: ProgramEnrollment): string[] {
   const unitErrors = enrollment.unit === 'kg' || enrollment.unit === 'lb' ? [] : [`unknown unit '${enrollment.unit}'`];
   return [
@@ -884,5 +893,6 @@ export function validateEnrollment(definition: ProgramDefinition, enrollment: Pr
     ...enrollmentRoundingErrors(enrollment),
     ...enrollmentOptionErrors(definition, enrollment),
     ...enrollmentInputErrors(definition, enrollment),
+    ...enrollmentBindingErrors(definition, enrollment),
   ];
 }
