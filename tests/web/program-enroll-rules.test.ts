@@ -495,3 +495,119 @@ describe('enroll payload', () => {
     expect(result.payload.bindings.row).toBeNull();
   });
 });
+
+function withRoundingText(form: EnrollForm, increment: string, barWeight: string): EnrollForm {
+  return { ...form, roundingText: { increment, barWeight } };
+}
+
+function problemsOf(form: EnrollForm, definition: ProgramDefinition = MADCOW_5X5): string[] {
+  const result = enrollPayload(definition, form);
+  return result.kind === 'invalid' ? result.problems : [];
+}
+
+function payloadOf(form: EnrollForm, definition: ProgramDefinition = MADCOW_5X5) {
+  const result = enrollPayload(definition, form);
+  if (result.kind !== 'ok') throw new Error(result.problems.join('; '));
+  return result.payload;
+}
+
+describe('the enroll form keeps raw text for every number field', () => {
+  it('starts the kilogram rounding text at 2.5 and a 20 kg bar', () => {
+    expect(initialEnrollForm(MADCOW_5X5, 'kg', CATALOG).roundingText).toEqual({ increment: '2.5', barWeight: '20' });
+  });
+
+  it('starts the pound rounding text at 5 and a 45 lb bar after switching the unit', () => {
+    expect(withUnit(initialEnrollForm(MADCOW_5X5, 'kg', CATALOG), 'lb').roundingText).toEqual({
+      increment: '5',
+      barWeight: '45',
+    });
+  });
+
+  it('keeps number options as text, starting at their defaults', () => {
+    expect(initialEnrollForm(FIVE_THREE_ONE, 'kg', CATALOG).optionText).toEqual({ tmReset: '0.1' });
+    expect(initialEnrollForm(MADCOW_5X5, 'kg', CATALOG).optionText).toEqual({});
+  });
+
+  it('keeps a cleared rounding field empty and asks for it instead of sending 0', () => {
+    expect(problemsOf(withRoundingText(madcowForm('kg'), '', '20'))).toEqual(['Enter Round to (kg)']);
+    expect(problemsOf(withRoundingText(madcowForm('kg'), '2.5', ''))).toEqual(['Enter Bar weight (kg)']);
+  });
+
+  it('reads 2.5 typed into a cleared rounding field as 2.5, from the text rather than the number', () => {
+    const cleared = { ...madcowForm('kg'), rounding: { increment: 0, mode: 'nearest' as const, barWeight: 0 } };
+    expect(payloadOf(withRoundingText(cleared, '2.5', '20')).rounding).toEqual({
+      increment: 2.5,
+      mode: 'nearest',
+      barWeight: 20,
+    });
+  });
+
+  it('reads 2.5 typed into a cleared 5RM field as 2.5', () => {
+    expect(payloadOf(madcowForm('kg', ['2.5', '80', '70', '50', '140'])).inputs.squat).toEqual({ fiveRm: 2.5 });
+  });
+
+  it('reads the number option text into the payload: TM reset 0.125', () => {
+    const form = fiveThreeOneForm('kg', { squat: '100', bench: '80', deadlift: '140', press: '50' });
+    expect(payloadOf({ ...form, optionText: { tmReset: '0.125' } }, FIVE_THREE_ONE).options.tmReset).toBe(0.125);
+  });
+
+  it('asks for a cleared number option', () => {
+    const form = fiveThreeOneForm('kg', { squat: '100', bench: '80', deadlift: '140', press: '50' });
+    expect(problemsOf({ ...form, optionText: { tmReset: '' } }, FIVE_THREE_ONE)).toEqual(['Enter Training max reset']);
+  });
+});
+
+describe('the enroll payload validates rounding and number options', () => {
+  it.each(['0', '3', '-2.5', 'abc'])('refuses a kilogram rounding increment of %s', (increment) => {
+    expect(problemsOf(withRoundingText(madcowForm('kg'), increment, '20'))).toEqual([
+      'Round to (kg) must be one of 0.5, 1, 1.25, 2.5 or 5',
+    ]);
+  });
+
+  it.each(['0.5', '1', '1.25', '2.5', '5'])('accepts a kilogram rounding increment of %s', (increment) => {
+    expect(payloadOf(withRoundingText(madcowForm('kg'), increment, '20')).rounding.increment).toBe(Number(increment));
+  });
+
+  it.each(['0.5', '0', '7'])('refuses a pound rounding increment of %s', (increment) => {
+    expect(problemsOf(withRoundingText(madcowForm('lb'), increment, '45'))).toEqual([
+      'Round to (lb) must be one of 1, 2.5, 5 or 10',
+    ]);
+  });
+
+  it.each(['1', '2.5', '5', '10'])('accepts a pound rounding increment of %s', (increment) => {
+    expect(payloadOf(withRoundingText(madcowForm('lb'), increment, '45')).rounding.increment).toBe(Number(increment));
+  });
+
+  it.each(['0', '-20', 'heavy'])('refuses a bar weight of %s', (barWeight) => {
+    expect(problemsOf(withRoundingText(madcowForm('kg'), '2.5', barWeight))).toEqual([
+      'Bar weight (kg) must be above 0',
+    ]);
+  });
+
+  it('accepts a 15 kg bar', () => {
+    expect(payloadOf(withRoundingText(madcowForm('kg'), '2.5', '15')).rounding.barWeight).toBe(15);
+  });
+
+  it.each(['0.09', '0.16', '1'])('refuses a TM reset of %s outside 0.1 to 0.15', (tmReset) => {
+    const form = fiveThreeOneForm('kg', { squat: '100', bench: '80', deadlift: '140', press: '50' });
+    expect(problemsOf({ ...form, optionText: { tmReset } }, FIVE_THREE_ONE)).toEqual([
+      'Training max reset must be between 0.1 and 0.15',
+    ]);
+  });
+
+  it.each(['0.1', '0.15'])('accepts a TM reset of %s at the ends of its range', (tmReset) => {
+    const form = fiveThreeOneForm('kg', { squat: '100', bench: '80', deadlift: '140', press: '50' });
+    expect(payloadOf({ ...form, optionText: { tmReset } }, FIVE_THREE_ONE).options.tmReset).toBe(Number(tmReset));
+  });
+
+  it('lists input problems before rounding and option problems', () => {
+    const form = fiveThreeOneForm('kg', { squat: '', bench: '80', deadlift: '140', press: '50' });
+    const broken = { ...form, roundingText: { increment: '3', barWeight: '0' }, optionText: { tmReset: '0.5' } };
+    expect(problemsOf(broken, FIVE_THREE_ONE)).toEqual([
+      'Enter Squat 1RM (kg)',
+      'Round to (kg) must be one of 0.5, 1, 1.25, 2.5 or 5',
+      'Bar weight (kg) must be above 0',
+      'Training max reset must be between 0.1 and 0.15',
+    ]);
+  });
+});
