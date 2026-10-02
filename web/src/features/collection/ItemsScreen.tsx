@@ -10,6 +10,7 @@ import {
   groupItems,
   type HeldItem,
   type ItemCatalog,
+  itemNameLookup,
   kindLabel,
   LOCKED_COLOR,
   newItemIds,
@@ -33,7 +34,7 @@ interface ItemDetailProps {
 function ItemDetail({ item, catalog, held, exercises, onCrafted, onCatalogStale }: ItemDetailProps) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const nameOf = (itemId: string) => catalog.items.find((candidate) => candidate.id === itemId)?.name ?? 'Unknown item';
+  const nameOf = itemNameLookup(catalog.items, 'Unknown item');
   const recipe = recipeFor(item.id, catalog.recipes, tiersOf(catalog.items));
   const inventory = quantities(held);
   const ready = recipe !== undefined && canCraft(recipe, inventory);

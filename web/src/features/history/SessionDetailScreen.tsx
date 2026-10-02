@@ -8,7 +8,7 @@ import { formatLoad } from '../../lib/format.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
 import { tryAgainIn } from '../../lib/rate-limit.ts';
 import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/history-rules.ts';
-import { type CatalogItem, describeDrops } from '../../lib/item-rules.ts';
+import { type CatalogItem, describeDrops, itemNameLookup } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { updatePrivateProfile } from '../../lib/profile.ts';
@@ -82,12 +82,8 @@ async function loadSession(sessionId: string): Promise<Loaded | null> {
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
 
-function itemNameIn(items: readonly CatalogItem[]): (itemId: string) => string {
-  return (itemId) => items.find((item) => item.id === itemId)?.name ?? 'an item';
-}
-
 function removalText(drops: readonly { itemId: string; quantity: number }[], items: readonly CatalogItem[]): string {
-  const described = describeDrops(drops, itemNameIn(items));
+  const described = describeDrops(drops, itemNameLookup(items, 'an item'));
   return described && `This may remove ${described} from your collection.`;
 }
 
@@ -97,7 +93,7 @@ function removedText(
 ): string {
   const described = describeDrops(
     (drops ?? []).map((drop) => ({ itemId: drop.itemId, quantity: drop.revokedQuantity })),
-    itemNameIn(items),
+    itemNameLookup(items, 'an item'),
   );
   return described && `Removed ${described} from your collection.`;
 }
