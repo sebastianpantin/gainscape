@@ -22,6 +22,7 @@ Playwright end-to-end suites that drive the real web app against the real local 
 | `custom-exercise.spec.ts`   | Create, log, record, pin, reorder and archive a custom exercise; create and log a custom cardio one.                                                     |
 | `cardio.spec.ts`            | A run, intervals and a lift in one workout through reveal and a history distance edit; miles for pound users.                                            |
 | `workout-records.spec.ts`   | Bodyweight prompt, records and the collection log.                                                                                                       |
+| `rest-timer.spec.ts`        | Rest timer with `page.clock`: starts on a done set, adjusts, survives a reload, ends; length from Settings, skip, Off, cleared by finishing.             |
 | `loot.spec.ts`              | Loot reveal, items screen, crafting, scroll unlock (uses `grantItems`, `grantUnlock`).                                                                   |
 | `friends.spec.ts`           | Friend request, feed, hiscores, profile and removal across two browser contexts.                                                                         |
 | `no-service-worker.spec.ts` | The dev server never registers a service worker and still loads fonts.                                                                                   |

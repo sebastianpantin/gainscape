@@ -11,6 +11,7 @@ import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
+import { finishesSet } from '../../lib/rest-timer-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { formatXp } from '../../lib/format.ts';
 import {
@@ -40,8 +41,10 @@ import { CardioSetRow } from './CardioSetRow.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
+import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
+import { useRestTimer } from './use-rest-timer.ts';
 import { rejectionText, syncProblemText } from './workout-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
 
@@ -91,6 +94,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [bodyweightKg, setBodyweightKg] = useState<number | null>(null);
   const [onlineSignal, setOnlineSignal] = useState(0);
   const standing = useStanding(userId);
+  const rest = useRestTimer(userId);
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
 
@@ -332,6 +336,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       return changedNames.length > 0 ? checked.draft : { ...checked.draft, finishedAt: new Date().toISOString() };
     });
     if (changedNames.length > 0) setFinishProblem(`Load type of ${changedNames.join(', ')} changed; check the weights`);
+    else rest.stop();
   };
 
   const canFinish = doneSetCount(draft) > 0 && !checkingFinish;
@@ -466,9 +471,15 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   preview={previews[exerciseIndex][setIndex]}
                   unit={unitPref}
                   effortMode={effortInputMode}
-                  onChange={(changes) => changeDraft(updateSet(draft, exerciseIndex, set.id, changes))}
+                  onChange={(changes) => {
+                    if (finishesSet(set, changes)) rest.start();
+                    changeDraft(updateSet(draft, exerciseIndex, set.id, changes));
+                  }}
                   onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
-                  onToggleDone={() => changeDraft(toggleSetDone(draft, exerciseIndex, set.id))}
+                  onToggleDone={() => {
+                    if (finishesSet(set, { done: !set.done })) rest.start();
+                    changeDraft(toggleSetDone(draft, exerciseIndex, set.id));
+                  }}
                 />
               ))}
             </ol>
@@ -483,6 +494,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         Create custom exercise
       </Link>
       <div className="finish-bar">
+        <RestTimerBar key={rest.timer?.endsAt ?? 'none'} {...rest} />
         {finishProblem && (
           <p className="problem" role="alert">
             {finishProblem}
