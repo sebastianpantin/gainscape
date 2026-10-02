@@ -15,6 +15,7 @@ import {
 import { SegmentedNav } from '../../components/SegmentedNav.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { ExerciseRecordCard } from './ExerciseRecordCard.tsx';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface CollectionScreenProps {
   userId: string;
@@ -75,7 +76,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
       else await pinExercise(exercise.id, data.nextPinPosition);
       reload();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not update pins.');
+      setProblem(messageOf(error, 'Could not update pins.'));
     }
   };
 
@@ -88,7 +89,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
       await reorderPins(moved(pinned, from, offset));
       reload();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not reorder pins.');
+      setProblem(messageOf(error, 'Could not reorder pins.'));
     }
   };
 

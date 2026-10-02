@@ -5,6 +5,7 @@ import {
   isAuthRetryableFetchError,
   type Session,
 } from '@supabase/supabase-js';
+import { messageOf } from './error-text.ts';
 
 export type AuthProblem = { kind: 'needs_sign_in' } | { kind: 'wrong_account' } | { kind: 'retryable'; reason: string };
 
@@ -100,7 +101,7 @@ async function invokeOnce<T>(
       details: parsed.details,
     };
   }
-  return { kind: 'retryable', reason: error instanceof Error ? error.message : 'no_response' };
+  return { kind: 'retryable', reason: messageOf(error, 'no_response') };
 }
 
 export async function invokeAsOwnerWith<T>(
@@ -121,6 +122,6 @@ export async function invokeAsOwnerWith<T>(
     const secondOutcome = await invokeOnce<T>(client, name, body, refreshedToken, timeoutMs, signal);
     return secondOutcome.kind === 'unauthorized' ? { kind: 'needs_sign_in' } : secondOutcome;
   } catch (error) {
-    return { kind: 'retryable', reason: error instanceof Error ? error.message : 'network_error' };
+    return { kind: 'retryable', reason: messageOf(error, 'network_error') };
   }
 }

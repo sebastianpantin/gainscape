@@ -9,6 +9,7 @@ import {
   type Program,
   templates,
 } from '../../lib/programs.ts';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface ProgramsScreenProps {
   userId: string;
@@ -39,7 +40,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
       pendingCopyIds.current.delete(template.id);
       navigate(`/programs/${copiedId}`);
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not copy the template.');
+      setProblem(messageOf(error, 'Could not copy the template.'));
       setBusy(false);
     }
   };
@@ -51,7 +52,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
       await deleteProgram(userId, program.id);
       setPrograms(cachedPrograms(userId));
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not delete the program.');
+      setProblem(messageOf(error, 'Could not delete the program.'));
     }
   };
 

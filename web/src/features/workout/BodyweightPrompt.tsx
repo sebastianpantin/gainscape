@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react';
 import { HIGHEST_BODYWEIGHT_KG, LOWEST_BODYWEIGHT_KG, type UnitPref } from '../../lib/profile.ts';
 import { kgToUnit, unitToKg } from '../../lib/units.ts';
+import { messageOf } from '../../lib/error-text.ts';
 
 interface BodyweightPromptProps {
   unit: UnitPref;
@@ -20,7 +21,7 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
     try {
       await onSave(unitToKg(Number(bodyweight), unit));
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not save your bodyweight.');
+      setProblem(messageOf(error, 'Could not save your bodyweight.'));
       setSaving(false);
     }
   }
