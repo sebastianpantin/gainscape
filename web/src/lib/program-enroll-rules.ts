@@ -138,6 +138,10 @@ function capitalised(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+function optionLabel(key: string): string {
+  return OPTION_LABELS[key] ?? key;
+}
+
 export function inputKindLabel(kind: InputKind): string {
   return capitalised(INPUT_KIND_LABELS[kind]);
 }
@@ -155,12 +159,13 @@ export function liftName(definition: ProgramDefinition, lift: string): string {
 }
 
 export function referenceValueProblem(label: string, raw: string | undefined): string | null {
-  const text = (raw ?? '').trim();
-  if (text === '') return `Enter ${label}`;
-  const value = Number(text);
-  return Number.isFinite(value) && value > 0 && value <= MAX_REFERENCE_VALUE
-    ? null
-    : `${label} must be above 0 and at most ${MAX_REFERENCE_VALUE}`;
+  const parsed = parsedNumber(
+    label,
+    raw ?? '',
+    (value) => value > 0 && value <= MAX_REFERENCE_VALUE,
+    `must be above 0 and at most ${MAX_REFERENCE_VALUE}`,
+  );
+  return parsed.kind === 'problem' ? parsed.problem : null;
 }
 
 function entryOf(row: ProgramTemplateRow): TemplateListEntry {
@@ -180,15 +185,26 @@ export function templateListEntries(rows: readonly ProgramTemplateRow[]): Templa
   return [...latest.values()].map(entryOf).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function replacedProgramName(
+interface EnrolledTemplateRef {
+  template_key: string;
+  template_version: number;
+}
+
+export function enrolledTemplate(
   templates: readonly ProgramTemplateRow[],
-  enrolled: { template_key: string; template_version: number } | null,
-): string | null {
-  if (enrolled === null) return null;
-  const template = templates.find(
+  enrolled: EnrolledTemplateRef,
+): ProgramTemplateRow | undefined {
+  return templates.find(
     (candidate) => candidate.key === enrolled.template_key && candidate.version === enrolled.template_version,
   );
-  return template?.name ?? 'your current program';
+}
+
+export function replacedProgramName(
+  templates: readonly ProgramTemplateRow[],
+  enrolled: EnrolledTemplateRef | null,
+): string | null {
+  if (enrolled === null) return null;
+  return enrolledTemplate(templates, enrolled)?.name ?? 'your current program';
 }
 
 function liftOptionKey(lift: string): string {
@@ -311,11 +327,14 @@ function parsedNumber(label: string, raw: string, isAllowed: (value: number) => 
     : { kind: 'problem', problem: `${label} ${rule}` };
 }
 
+export function roundingTextOf(form: EnrollForm): { increment: string; barWeight: string } {
+  return (
+    form.roundingText ?? { increment: String(form.rounding.increment), barWeight: String(form.rounding.barWeight) }
+  );
+}
+
 function roundingOf(form: EnrollForm): { increment: ParsedNumber; barWeight: ParsedNumber } {
-  const text = form.roundingText ?? {
-    increment: String(form.rounding.increment),
-    barWeight: String(form.rounding.barWeight),
-  };
+  const text = roundingTextOf(form);
   const increments = ROUNDING_INCREMENTS[form.unit];
   return {
     increment: parsedNumber(
@@ -333,7 +352,7 @@ function numberOptionsOf(definition: ProgramDefinition, form: EnrollForm): Recor
     definition.options.flatMap((option) => {
       if (option.kind !== 'number') return [];
       const raw = form.optionText?.[option.key] ?? String(form.options[option.key] ?? option.default);
-      const label = OPTION_LABELS[option.key] ?? option.key;
+      const label = optionLabel(option.key);
       const rule = `must be between ${option.min} and ${option.max}`;
       return [[option.key, parsedNumber(label, raw, (value) => value >= option.min && value <= option.max, rule)]];
     }),
@@ -359,7 +378,7 @@ function choiceLabel(value: OptionValue): string {
 }
 
 function optionControl(option: OptionDecl, unit: WeightUnit): OptionControl {
-  const label = OPTION_LABELS[option.key] ?? option.key;
+  const label = optionLabel(option.key);
   if (option.kind === 'number') {
     return { kind: 'number', key: option.key, label, min: option.min, max: option.max, defaultValue: option.default };
   }
@@ -383,7 +402,7 @@ function unitOptionProblems(definition: ProgramDefinition, form: EnrollForm): st
     const value = form.options[option.key];
     const onlyFor = unitOnlyFor(option, value);
     if (value === undefined || onlyFor === undefined || onlyFor === form.unit) return [];
-    const label = OPTION_LABELS[option.key] ?? option.key;
+    const label = optionLabel(option.key);
     return [`${label}: ${choiceLabel(value).toLowerCase()} is only offered for ${onlyFor} enrollments`];
   });
 }

@@ -11,6 +11,7 @@ import {
 } from '@domain/index.ts';
 import { compareWeeks } from '@domain/program-schedule.ts';
 import { liftName, REFERENCE_VAR_LABELS, shownReference } from './program-enroll-rules.ts';
+import { referenceFieldKey } from './program-reference-rules.ts';
 import { weekLabel } from './program-today-rules.ts';
 
 export const DISMISS_SUMMARY_LABEL = 'Dismiss';
@@ -41,7 +42,7 @@ function finishedTitle(definition: ProgramDefinition, week: CyclePosition | Week
 function netChanges(changes: readonly ReferenceChange[]): ReferenceChange[] {
   const byReference = new Map<string, ReferenceChange>();
   for (const change of changes) {
-    const key = `${change.lift}.${change.var}`;
+    const key = referenceFieldKey(change);
     const earlier = byReference.get(key);
     byReference.set(key, earlier ? { ...change, from: earlier.from } : change);
   }
