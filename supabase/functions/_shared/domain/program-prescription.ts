@@ -10,9 +10,9 @@ import {
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramReferences,
-  type SetScheme,
   type SlotDecl,
   type SlotRole,
+  type StageScheme,
 } from './program-definition.ts';
 import { dayOf, isCyclePosition, isRotationPosition, type Position } from './program-schedule.ts';
 import { shownWeight, unitToKg } from './units.ts';
@@ -58,13 +58,15 @@ export type ResolvedSlot = PrescribedExercise | UnsupportedPrescription;
 
 export type LastLoggedWeights = Readonly<Record<string, number>>;
 
+export type StageIndices = Readonly<Record<string, number>>;
+
 export interface ReferenceState {
   refs: ProgramReferences;
-  stages?: Readonly<Record<string, number>>;
+  stages?: StageIndices;
 }
 
 const RAMP_PCT_DECIMALS = 6;
-const MAX_SAME_AS_DEPTH = 8;
+const MAX_REFERENCE_DEPTH = 8;
 
 interface WeekContext {
   week: number;
@@ -112,12 +114,18 @@ function minRepsFor(amrap: boolean, minReps: number | undefined, reps: number | 
   return amrap ? (minReps ?? reps) : null;
 }
 
+export function stageIndexOf(scheme: StageScheme, stages: StageIndices | undefined, lift: string): number {
+  return Math.min(Math.max(stages?.[lift] ?? 0, 0), scheme.stages.length - 1);
+}
+
 function setShapes(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
-  scheme: SetScheme,
+  slot: SlotDecl,
   position: Position,
+  stages: StageIndices | undefined,
 ): ShapesResult {
+  const scheme = slot.scheme;
   switch (scheme.kind) {
     case 'sets':
       return {
@@ -163,8 +171,24 @@ function setShapes(
         })),
       };
     }
-    default:
-      return { kind: 'unsupported', primitive: scheme.kind };
+    case 'stages': {
+      const stage = scheme.stages[stageIndexOf(scheme, stages, slot.lift)];
+      if (!stage) return { kind: 'unsupported', primitive: scheme.kind };
+      return {
+        kind: 'shapes',
+        shapes: Array.from({ length: stage.sets }, (_, index) => {
+          const amrap = stage.amrapLast && index === stage.sets - 1;
+          return {
+            reps: stage.reps,
+            maxReps: null,
+            load: scheme.load,
+            amrap,
+            minReps: minRepsFor(amrap, undefined, stage.reps),
+            optional: false,
+          };
+        }),
+      };
+    }
   }
 }
 
@@ -173,8 +197,9 @@ export function requiredSetIndices(
   enrollment: ProgramEnrollment,
   slot: SlotDecl,
   position: Position,
+  stages?: StageIndices,
 ): number[] | null {
-  const result = setShapes(definition, enrollment, slot.scheme, position);
+  const result = setShapes(definition, enrollment, slot, position, stages);
   if (result.kind === 'unsupported') return null;
   return result.shapes.flatMap((shape, index) => (shape.optional ? [] : [index]));
 }
@@ -183,6 +208,7 @@ interface ResolveContext {
   definition: ProgramDefinition;
   enrollment: ProgramEnrollment;
   refs: ProgramReferences;
+  stages: StageIndices | undefined;
   position: Position;
   lastLogged: LastLoggedWeights;
 }
@@ -211,6 +237,17 @@ function prescribedLoad(
   };
 }
 
+function referencedSlotSets(
+  context: ResolveContext,
+  primitive: string,
+  slot: SlotDecl | undefined,
+  depth: number,
+  position = context.position,
+): SlotSetsResult {
+  if (!slot || depth >= MAX_REFERENCE_DEPTH) return { kind: 'unsupported', primitive };
+  return resolveSlotSets({ ...context, position }, slot, depth + 1);
+}
+
 function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index: number, depth: number): LoadResult {
   const { definition, enrollment, position } = context;
   const referenceInEnrollmentUnit = (variable: string) =>
@@ -237,10 +274,9 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
     case 'sameAs': {
       const target = parseSetRef(load.ref);
       const targetSlot = target ? findSlot(definition, target.slotId) : undefined;
-      if (!target || !targetSlot || depth >= MAX_SAME_AS_DEPTH) return { kind: 'unsupported', primitive: load.kind };
-      const sets = resolveSlotSets(context, targetSlot, depth + 1);
+      const sets = referencedSlotSets(context, load.kind, targetSlot, depth);
       if (sets.kind === 'unsupported') return sets;
-      const set = sets.sets[target.index];
+      const set = target ? sets.sets[target.index] : undefined;
       if (!set) return { kind: 'unsupported', primitive: load.kind };
       return {
         kind: 'load',
@@ -265,31 +301,37 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
 type SlotSetsResult = { kind: 'sets'; sets: PrescribedSet[] } | { kind: 'unsupported'; primitive: string };
 
 function resolveSlotSets(context: ResolveContext, slot: SlotDecl, depth: number): SlotSetsResult {
-  const shapes = setShapes(context.definition, context.enrollment, slot.scheme, context.position);
+  const shapes = setShapes(context.definition, context.enrollment, slot, context.position, context.stages);
   if (shapes.kind === 'unsupported') return shapes;
   const sets: PrescribedSet[] = [];
   for (const [index, shape] of shapes.shapes.entries()) {
     const result = resolveLoad(context, slot, shape.load, index, depth);
     if (result.kind === 'unsupported') return result;
-    const { weight, weightKg, pct, snapshotted } = result.load;
-    const ref = `${slot.id}:${index}`;
-    sets.push({
-      ref,
-      weight,
-      weightKg,
-      pct,
-      reps: shape.reps,
-      maxReps: shape.maxReps,
-      minReps: shape.minReps,
-      amrap: shape.amrap,
-      optional: shape.optional,
-      snapshot:
-        snapshotted && weightKg !== null && shape.reps !== null
-          ? { ref, weightKg, reps: shape.reps, minReps: shape.minReps, amrap: shape.amrap }
-          : null,
-    });
+    sets.push(prescribedSet(`${slot.id}:${index}`, shape, result.load));
   }
   return { kind: 'sets', sets };
+}
+
+function prescribedSet(
+  ref: string,
+  shape: SetShape,
+  { weight, weightKg, pct, snapshotted }: ResolvedLoad,
+): PrescribedSet {
+  return {
+    ref,
+    weight,
+    weightKg,
+    pct,
+    reps: shape.reps,
+    maxReps: shape.maxReps,
+    minReps: shape.minReps,
+    amrap: shape.amrap,
+    optional: shape.optional,
+    snapshot:
+      snapshotted && weightKg !== null && shape.reps !== null
+        ? { ref, weightKg, reps: shape.reps, minReps: shape.minReps, amrap: shape.amrap }
+        : null,
+  };
 }
 
 export function resolvePrescription(
@@ -302,7 +344,14 @@ export function resolvePrescription(
   if (definition.schedule.days.length === 0) return [];
   const day = dayOf(definition, position);
   if (!day) return [];
-  const context: ResolveContext = { definition, enrollment, refs: state.refs, position, lastLogged };
+  const context: ResolveContext = {
+    definition,
+    enrollment,
+    refs: state.refs,
+    stages: state.stages,
+    position,
+    lastLogged,
+  };
   return day.slots
     .filter((slot) => isSlotActive(definition, enrollment, slot, position))
     .map((slot): ResolvedSlot => {
