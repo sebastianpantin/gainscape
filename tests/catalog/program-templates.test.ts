@@ -29,7 +29,7 @@ import {
 import { CatalogValidationError } from '../../scripts/catalog/validate.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { FULL_PRIMITIVES } from '../domain/program-fixtures/full_primitives.ts';
-import { GZCLP_SHAPE } from '../domain/program-fixtures/gzclp.ts';
+import { GZCLP } from '../domain/program-fixtures/gzclp.ts';
 import { LINEAR_AFTER_SESSION } from '../domain/program-fixtures/linear_after_session.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
 import {
@@ -43,7 +43,7 @@ const FIXTURE_DEFINITIONS: readonly ProgramDefinition[] = [
   FIVE_THREE_ONE,
   MADCOW_5X5,
   FULL_PRIMITIVES,
-  GZCLP_SHAPE,
+  GZCLP,
   LINEAR_AFTER_SESSION,
   LINEAR_DELOAD_AFTER_SESSION,
   TWO_RULES_ONE_LIFT,
@@ -206,7 +206,7 @@ describe('program template problems', () => {
   });
 
   it('refuses a kg conversion rounded up a whole step too far', () => {
-    const problems = problemsAfter(GZCLP_SHAPE, (copy) => {
+    const problems = problemsAfter(GZCLP, (copy) => {
       copy.conversions = [
         { lb: 5, kg: 2.5, note: 'upper-body increment' },
         { lb: 10, kg: 5, note: 'lower-body increment' },
@@ -440,7 +440,7 @@ describe('program template lock', () => {
   });
 
   it('refuses a lock entry that has no template', () => {
-    const lock = lockFor([FIVE_THREE_ONE, GZCLP_SHAPE]);
+    const lock = lockFor([FIVE_THREE_ONE, GZCLP]);
     expect(programTemplateLockProblems([template(FIVE_THREE_ONE)], lock)).toEqual([
       `program template lock entry "gzclp@1" has no template`,
     ]);

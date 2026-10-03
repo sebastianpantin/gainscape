@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { isPositionInSchedule, type Position, type ProgramDefinition } from '@domain/index.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
-import { GZCLP_SHAPE } from '../domain/program-fixtures/gzclp.ts';
+import { GZCLP } from '../domain/program-fixtures/gzclp.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
 import {
   anon,
@@ -38,7 +38,7 @@ interface ExportedEnrollments {
 }
 
 const ROTATION_TEMPLATE_KEY = `it_rotation_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
-const ROTATION_TEMPLATE: ProgramDefinition = { ...structuredClone(GZCLP_SHAPE), key: ROTATION_TEMPLATE_KEY };
+const ROTATION_TEMPLATE: ProgramDefinition = { ...structuredClone(GZCLP), key: ROTATION_TEMPLATE_KEY };
 
 const KG_ROUNDING = { increment: 2.5, mode: 'nearest', barWeight: 20 };
 

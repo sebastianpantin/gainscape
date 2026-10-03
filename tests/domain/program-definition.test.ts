@@ -13,7 +13,7 @@ import {
   fullPrimitivesEnrollment,
   SLICE_1B_PRIMITIVES_BY_SLOT,
 } from './program-fixtures/full_primitives.ts';
-import { GZCLP_SHAPE } from './program-fixtures/gzclp.ts';
+import { GZCLP } from './program-fixtures/gzclp.ts';
 import { LINEAR_AFTER_SESSION } from './program-fixtures/linear_after_session.ts';
 import { MADCOW_5X5 } from './program-fixtures/madcow_5x5.ts';
 import { refsState, slotOf, weightsOf } from './program-fixtures/prescription-helpers.ts';
@@ -21,7 +21,7 @@ import { refsState, slotOf, weightsOf } from './program-fixtures/prescription-he
 const FIXTURES: [string, ProgramDefinition][] = [
   ['five_three_one', FIVE_THREE_ONE],
   ['madcow_5x5', MADCOW_5X5],
-  ['gzclp (shape only)', GZCLP_SHAPE],
+  ['gzclp (shape only)', GZCLP],
   ['synthetic after-session linear', LINEAR_AFTER_SESSION],
   ['synthetic full primitive set', FULL_PRIMITIVES],
 ];
@@ -330,7 +330,7 @@ describe('parseProgramDefinition marks 1b progression semantics as unsupported u
   });
 
   it('parses the GZCLP shape as unsupported, naming stageMachine and amrapThreshold', () => {
-    const parsed = parseProgramDefinition(asJson(GZCLP_SHAPE));
+    const parsed = parseProgramDefinition(asJson(GZCLP));
     expect(parsed.kind).toBe('unsupported');
     expect(namedUnsupportedKinds(parsed)).toEqual(expect.arrayContaining(['stageMachine', 'amrapThreshold']));
   });
