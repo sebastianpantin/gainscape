@@ -1,0 +1,78 @@
+key: texas_method
+version: 1
+name: Texas Method
+source:
+  - liftosaur.com/programs/texasmethod
+  - fitnessvolt.com texas-method
+lifts:
+  - { key: squat, name: Squat, category: lower }
+  - { key: press, name: Bench press or overhead press, category: upper }
+  - { key: deadlift, name: Deadlift, category: lower }
+inputs:
+  - { lifts: [squat, press], kinds: [fiveRm] }
+  - { lifts: [deadlift], kinds: [workingWeight] }
+referenceVars: [fiveRm, workingWeight]
+initial:
+  - { kind: copy, var: fiveRm, from: fiveRm }
+  - { kind: copy, var: workingWeight, from: workingWeight }
+options:
+  - { key: pressLift, kind: choice, values: [bench, ohp], default: bench, source: [liftosaur.com/programs/texasmethod] }
+conversions:
+  - { lb: 5, kg: 2.5, note: weekly increase of the Friday 5RM }
+schedule:
+  kind: weekly
+  days:
+    - key: mon
+      name: Volume day
+      slots:
+        - id: mon-squat
+          lift: squat
+          role: main
+          scheme: { kind: repeat, count: 5, reps: 5, load: { kind: pct, pct: 0.9, of: fiveRm } }
+        - id: mon-press
+          lift: press
+          role: main
+          scheme: { kind: repeat, count: 5, reps: 5, load: { kind: pct, pct: 0.9, of: fiveRm } }
+        - id: mon-deadlift
+          lift: deadlift
+          role: main
+          scheme: { kind: repeat, count: 1, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+    - key: wed
+      name: Recovery day
+      slots:
+        - id: wed-squat
+          lift: squat
+          role: main
+          scheme:
+            kind: repeat
+            count: 2
+            reps: 5
+            load: { kind: pctOfSlot, day: mon, slot: mon-squat, idx: 0, pct: 0.8 }
+    - key: fri
+      name: Intensity day
+      slots:
+        - id: fri-squat
+          lift: squat
+          role: main
+          scheme: { kind: repeat, count: 1, reps: 5, load: { kind: pct, pct: 1, of: fiveRm, add: { kg: 2.5, lb: 5 } } }
+        - id: fri-press
+          lift: press
+          role: main
+          scheme: { kind: repeat, count: 1, reps: 5, load: { kind: pct, pct: 1, of: fiveRm, add: { kg: 2.5, lb: 5 } } }
+progression:
+  - lift: squat
+    var: fiveRm
+    trigger: endOfWeek
+    judgedSlots: [fri-squat]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: hold }
+  - lift: press
+    var: fiveRm
+    trigger: endOfWeek
+    judgedSlots: [fri-press]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: hold }
