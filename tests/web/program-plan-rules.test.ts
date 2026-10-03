@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type Position,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramFact,
@@ -7,12 +8,14 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 import { type PlanDay, planStatusText, programPlan } from '../../web/src/lib/program-plan-rules.ts';
-import { factClock, sessionFact, skipDayFact } from '../domain/program-fixtures/facts.ts';
+import { factClock, jumpToFact, sessionFact, skipDayFact } from '../domain/program-fixtures/facts.ts';
 import {
+  cyclePosition,
   cycleSessions,
   FIVE_THREE_ONE,
   FIVE_THREE_ONE_LIFTS,
   fiveThreeOneEnrollment,
+  mainSets531,
 } from '../domain/program-fixtures/five_three_one.ts';
 import { MADCOW_5X5, madcowDaySets, madcowEnrollment, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
 import { STRONGLIFTS_5X5, strongLiftsEnrollment } from '../domain/program-fixtures/stronglifts_5x5.ts';
@@ -195,5 +198,22 @@ describe('plan day status text', () => {
 
   it('has no status text for an upcoming day', () => {
     expect(planStatusText('upcoming')).toBeNull();
+  });
+});
+
+describe('plan day status from the records the fold keeps', () => {
+  const enrollment = fiveThreeOneEnrollment({ tms: { squat: 90 } });
+
+  it('finds a completed day whose position came back from jsonb with its keys in another order', () => {
+    const reordered = JSON.parse('{"day":"squat","week":1,"cycle":1}') as Position;
+    const facts = [sessionFact(factClock().next(), reordered, mainSets531('squat', 1))];
+    expect(dayLabelled(planAfter(FIVE_THREE_ONE, enrollment, facts).days, 'C1 W1 Squat').status).toBe('completed');
+  });
+
+  it('reads the days a jump_to passed over, which have no record, as skipped', () => {
+    const facts = [jumpToFact(factClock().next(), cyclePosition(1, 3, 'squat'))];
+    const days = planAfter(FIVE_THREE_ONE, enrollment, facts).days;
+    expect(days.slice(0, 8).every((day) => day.status === 'skipped')).toBe(true);
+    expect(dayLabelled(days, 'C1 W3 Squat').status).toBe('upcoming');
   });
 });
