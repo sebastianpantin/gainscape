@@ -1,15 +1,13 @@
-import { beginFactsFetch, emptyProgramFactsCache, mergeFetchedFacts } from '../offline/program-facts-cache.ts';
+import { type ProgramCache, updateProgramCache, withEnrollment } from '../offline/program-cache.ts';
 import {
-  type ProgramCache,
-  readProgramCache,
-  saveProgramCache,
-  updateProgramCache,
-  withEnrollment,
-} from '../offline/program-cache.ts';
+  type ProgramFetchers,
+  type ProgramRefreshContext,
+  refreshProgramCacheWith,
+  refreshProgramFactsWith,
+} from '../offline/program-refresh.ts';
 import { type EnrollProgramPayload, type ProgramTemplateRow } from './program-enroll-rules.ts';
-import { type EnrollmentFactsRows, type EnrollmentRow, programFactsFromRows } from './program-facts-rules.ts';
+import { type EnrollmentFactsRows, type EnrollmentRow } from './program-facts-rules.ts';
 import { type SetReferenceEvent } from './program-reference-rules.ts';
-import { rateLimitedMessage } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
 const ENROLLMENT_COLUMNS =
@@ -37,34 +35,40 @@ async function fetchEnrollmentFacts(enrollmentId: string): Promise<EnrollmentFac
   return data as EnrollmentFactsRows;
 }
 
-function rpcError(error: { message: string }): Error {
-  return new Error(rateLimitedMessage(error) ?? error.message);
-}
-
 export async function enrollProgram(payload: EnrollProgramPayload): Promise<string> {
   const { data, error } = await supabase.rpc('enroll_program', { enrollment: payload });
-  if (error) throw rpcError(error);
+  if (error) throw error;
   return data as string;
+}
+
+export async function endEnrollment(enrollmentId: string): Promise<void> {
+  const { error } = await supabase.rpc('end_enrollment', { enrollment_id: enrollmentId });
+  if (error) throw error;
 }
 
 export async function adjustEnrollment(enrollmentId: string, event: SetReferenceEvent): Promise<void> {
   const { error } = await supabase.rpc('adjust_enrollment', { enrollment_id: enrollmentId, event });
-  if (error) throw rpcError(error);
+  if (error) throw error;
 }
 
-export async function refreshProgramFacts(userId: string, enrollment: EnrollmentRow): Promise<ProgramCache> {
-  const startingCache = withEnrollment(readProgramCache(localStorage, userId), enrollment);
-  saveProgramCache(localStorage, userId, startingCache);
-  const ticket = beginFactsFetch(startingCache.facts ?? emptyProgramFactsCache(enrollment.id), Date.now());
-  const facts = programFactsFromRows(await fetchEnrollmentFacts(enrollment.id));
-  return updateProgramCache(localStorage, userId, (latest) =>
-    latest.facts ? { ...latest, facts: mergeFetchedFacts(latest.facts, ticket, facts) } : latest,
-  );
+const PROGRAM_FETCHERS: ProgramFetchers = {
+  templates: fetchProgramTemplates,
+  activeEnrollment: fetchActiveEnrollment,
+  enrollmentFacts: fetchEnrollmentFacts,
+};
+
+function refreshContext(userId: string): ProgramRefreshContext {
+  return { storage: localStorage, userId, now: Date.now, fetchers: PROGRAM_FETCHERS };
 }
 
-export async function refreshProgramCache(userId: string): Promise<ProgramCache> {
-  const [templates, enrollment] = await Promise.all([fetchProgramTemplates(), fetchActiveEnrollment()]);
-  updateProgramCache(localStorage, userId, (cache) => withEnrollment({ ...cache, templates }, enrollment));
-  if (enrollment === null) return readProgramCache(localStorage, userId);
-  return refreshProgramFacts(userId, enrollment);
+export function refreshProgramFacts(userId: string, enrollment: EnrollmentRow): Promise<ProgramCache> {
+  return refreshProgramFactsWith(refreshContext(userId), enrollment);
+}
+
+export function refreshProgramCache(userId: string): Promise<ProgramCache> {
+  return refreshProgramCacheWith(refreshContext(userId));
+}
+
+export function forgetEndedEnrollment(userId: string): void {
+  updateProgramCache(localStorage, userId, (cache) => withEnrollment(cache, null));
 }

@@ -1,6 +1,7 @@
 import { type ProgramTemplateRow } from '../lib/program-enroll-rules.ts';
-import { type EnrollmentFactsRows, type EnrollmentRow } from '../lib/program-facts-rules.ts';
-import { type ProgramCache } from './program-cache.ts';
+import { type EnrollmentFactsRows, type EnrollmentRow, programFactsFromRows } from '../lib/program-facts-rules.ts';
+import { type ProgramCache, readProgramCache, updateProgramCache, withEnrollment } from './program-cache.ts';
+import { beginFactsFetch, emptyProgramFactsCache, mergeFetchedFacts } from './program-facts-cache.ts';
 
 export interface ProgramFetchers {
   templates(): Promise<ProgramTemplateRow[]>;
@@ -15,16 +16,23 @@ export interface ProgramRefreshContext {
   fetchers: ProgramFetchers;
 }
 
-export function refreshProgramFactsWith(
+export async function refreshProgramFactsWith(
   context: ProgramRefreshContext,
   enrollment: EnrollmentRow,
 ): Promise<ProgramCache> {
-  void context;
-  void enrollment;
-  throw new Error('not implemented');
+  const { storage, userId } = context;
+  const starting = updateProgramCache(storage, userId, (cache) => withEnrollment(cache, enrollment));
+  const ticket = beginFactsFetch(starting.facts ?? emptyProgramFactsCache(enrollment.id), context.now());
+  const facts = programFactsFromRows(await context.fetchers.enrollmentFacts(enrollment.id));
+  return updateProgramCache(storage, userId, (latest) =>
+    latest.facts ? { ...latest, facts: mergeFetchedFacts(latest.facts, ticket, facts) } : latest,
+  );
 }
 
-export function refreshProgramCacheWith(context: ProgramRefreshContext): Promise<ProgramCache> {
-  void context;
-  throw new Error('not implemented');
+export async function refreshProgramCacheWith(context: ProgramRefreshContext): Promise<ProgramCache> {
+  const { storage, userId, fetchers } = context;
+  const [templates, enrollment] = await Promise.all([fetchers.templates(), fetchers.activeEnrollment()]);
+  updateProgramCache(storage, userId, (cache) => withEnrollment({ ...cache, templates }, enrollment));
+  if (enrollment === null) return readProgramCache(storage, userId);
+  return refreshProgramFactsWith(context, enrollment);
 }
