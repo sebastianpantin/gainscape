@@ -9,6 +9,11 @@ const STARTING_EXTERNAL_LOAD_KG = 20;
 const STARTING_REPS = 8;
 const STARTING_BOUT_DURATION_S = 1800;
 
+export interface PrescriptionDetail {
+  pct: number | null;
+  optional: boolean;
+}
+
 export interface DraftSet {
   id: string;
   weightKg: number;
@@ -16,6 +21,7 @@ export interface DraftSet {
   effort: EffortInput;
   done: boolean;
   prescription?: PrescriptionSnapshot | null;
+  prescriptionDetail?: PrescriptionDetail;
 }
 
 export interface DraftTarget {

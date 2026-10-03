@@ -155,6 +155,26 @@ function liftsOf(draft: WorkoutDraft): LiftDraftExercise[] {
   return draft.exercises.filter((exercise): exercise is LiftDraftExercise => exercise.modality === 'lift');
 }
 
+describe('parseStoredDraft with prescription details', () => {
+  it.each([
+    ['a percentage as text', { pct: '75%', optional: false }],
+    ['no optional flag', { pct: 0.75 }],
+    ['a string', 'optional'],
+  ])('drops a malformed prescription detail (%s) and keeps the set', (_, prescriptionDetail) => {
+    const draft = programDraft();
+    const [squat] = liftsOf(draft);
+    const withDetail = { ...squat, sets: squat.sets.map((set) => ({ ...set, prescriptionDetail })) };
+    const raw = { ...draft, exercises: [withDetail, ...draft.exercises.slice(1)] };
+    const parsed = parseStoredDraft({ v: 4, kind: 'draft', userId, updatedAt: 5, draft: raw }, userId);
+    expect(parsed?.kind === 'draft' && liftsOf(parsed.draft)[0].sets.map((set) => set.id)).toEqual([
+      'squat-0',
+      'squat-4',
+      'squat-extra',
+    ]);
+    expect(parsed?.kind === 'draft' && liftsOf(parsed.draft)[0].sets[0]).not.toHaveProperty('prescriptionDetail');
+  });
+});
+
 describe('parseStoredDraft with program fields', () => {
   it('reads a v4 draft written before programs with a null program', () => {
     const parsed = parseStoredDraft({ v: 4, kind: 'draft', userId, updatedAt: 5, draft: legacyV4Draft() }, userId);
@@ -335,6 +355,32 @@ function startMonday() {
   );
 }
 
+function engineMadcowMonday(): WorkoutDraft {
+  const enrollment = madcowEnrollment();
+  const resolved = resolvePrescription(
+    MADCOW_5X5,
+    enrollment,
+    initialProgramState(MADCOW_5X5, enrollment),
+    weekDay(1, 'mon'),
+    {},
+  ).filter((slot): slot is PrescribedExercise => slot.kind === 'exercise');
+  const catalog = new Map<string, CatalogEntry>(
+    resolved.map((slot) => [slot.exerciseId, { name: slot.lift, loadType: 'external', archived: false }]),
+  );
+  return startDraftFromPrescription(
+    {
+      enrollmentId: enrollment.id,
+      templateKey: 'madcow_5x5',
+      programName: 'Madcow 5x5',
+      dayName: 'Monday',
+      position: weekDay(1, 'mon'),
+      exercises: resolved,
+    },
+    catalog,
+    STARTED_AT,
+  ).draft;
+}
+
 describe('startDraftFromPrescription', () => {
   it('links the draft to the enrollment, its template and the position', () => {
     expect(startMonday().draft.program).toEqual(MADCOW_MONDAY);
@@ -385,6 +431,18 @@ describe('startDraftFromPrescription', () => {
     expect(hyper?.sets.map((set) => [set.weightKg, set.reps, set.prescription])).toEqual([[20, 8, null]]);
   });
 
+  it("copies each prescribed set's percentage and optional flag as its prescription detail", () => {
+    const hyper = liftsOf(startMonday().draft).find((exercise) => exercise.exerciseId === 'hyper');
+    expect(hyper?.sets.map((set) => set.prescriptionDetail)).toEqual([{ pct: null, optional: true }]);
+  });
+
+  it("copies the engine's Madcow week 1 Monday squat percentages: 50, 62.5, 75, 87.5 and 100%", () => {
+    const [squat] = liftsOf(engineMadcowMonday());
+    expect(squat.sets.map((set) => set.prescriptionDetail)).toEqual(
+      [0.5, 0.625, 0.75, 0.875, 1].map((pct) => ({ pct, optional: false })),
+    );
+  });
+
   it('skips an exercise missing from the catalog or bound to a cardio exercise and reports it', () => {
     const started = startMonday();
     expect(started.draft.exercises.map((exercise) => exercise.exerciseId)).toEqual(['squat', 'old-row', 'hyper']);
@@ -429,29 +487,7 @@ describe('completeSessionPayload with a program', () => {
   });
 
   it("sends the refs of a draft started from the engine's Madcow week 1 Monday", () => {
-    const enrollment = madcowEnrollment();
-    const resolved = resolvePrescription(
-      MADCOW_5X5,
-      enrollment,
-      initialProgramState(MADCOW_5X5, enrollment),
-      weekDay(1, 'mon'),
-      {},
-    ).filter((slot): slot is PrescribedExercise => slot.kind === 'exercise');
-    const catalog = new Map<string, CatalogEntry>(
-      resolved.map((slot) => [slot.exerciseId, { name: slot.lift, loadType: 'external', archived: false }]),
-    );
-    const { draft } = startDraftFromPrescription(
-      {
-        enrollmentId: enrollment.id,
-        templateKey: 'madcow_5x5',
-        programName: 'Madcow 5x5',
-        dayName: 'Monday',
-        position: weekDay(1, 'mon'),
-        exercises: resolved,
-      },
-      catalog,
-      STARTED_AT,
-    );
+    const draft = engineMadcowMonday();
     const doneSets = draft.exercises.flatMap((exercise, index) => exercise.sets.map((set) => ({ index, id: set.id })));
     const done = doneSets.reduce<WorkoutDraft>((current, set) => toggleSetDone(current, set.index, set.id), {
       ...draft,
