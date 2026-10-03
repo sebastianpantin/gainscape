@@ -38,6 +38,7 @@ The YAML files here are the single source of truth for all seed data: skills, ex
   - A `conversions` entry's `kg` must equal `lb × 0.45359` rounded to the nearest 1.25 kg (`kgFromLb`).
   - `key` matches `^[a-z0-9_]+$` and equals the file name; `name` is 1 to 60 characters.
   - Every lift has a `name` for people, never its raw key.
+  - Every day is named `Day 1`, `Day 2`, ... in schedule order, never after a weekday, lift or workout letter, because any day of the week works. Day `key`s (`mon`, `a`, `squat`) stay as they are.
   - gitleaks' `generic-api-key` rule reads the `stronglifts_5x5` key as a secret. `.gitleaks.toml` allows that exact value only in `catalog/program-templates/*.yaml` and `supabase/seed.sql`; a new key that trips a rule gets the same narrow allowlist entry.
   - A published `key@version` never changes: the seed inserts with `on conflict do nothing`, and the lock fails on drift. Publish a change as a new `version` and add its lock entry.
 - **IP denylist.** No key, name or description may contain a term from `tests/ip-denylist.txt` (whole-word, case-insensitive).
