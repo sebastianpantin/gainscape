@@ -268,3 +268,20 @@ describe('GZCLP in lb (the sourced unit)', () => {
     expect(weightsOf(resolveNext(def, lb, state), 'a1-squat-t1')).toEqual([215, 215, 215, 215, 215]);
   });
 });
+
+describe('GZCLP lift categories', () => {
+  it('declares squat and deadlift tiers lower body and bench, overhead press, pulldown and row tiers upper body', () => {
+    expect(Object.fromEntries(def.lifts.map((lift) => [lift.key, lift.category]))).toEqual({
+      'squat-t1': 'lower',
+      'bench-t1': 'upper',
+      'ohp-t1': 'upper',
+      'deadlift-t1': 'lower',
+      'squat-t2': 'lower',
+      'bench-t2': 'upper',
+      'ohp-t2': 'upper',
+      'deadlift-t2': 'lower',
+      'pulldown-t3': 'upper',
+      'row-t3': 'upper',
+    });
+  });
+});
