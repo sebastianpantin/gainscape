@@ -137,7 +137,7 @@ export function shownReference(value: number): number {
 }
 
 export function pctLabel(fraction: number): string {
-  return `${roundTo(4, fraction * 100)}%`;
+  return `${roundTo(1, fraction * 100)}%`;
 }
 
 export function liftName(definition: ProgramDefinition, lift: string): string {
