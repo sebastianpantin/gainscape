@@ -23,6 +23,7 @@ import {
   referencePreview,
   replacedProgramName,
   roundingIncrementLabel,
+  roundingTextOf,
   type TemplateListEntry,
   templateListEntries,
   withOption,
@@ -118,10 +119,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const { definition, name, exercises } = loaded;
   const form = editedForm ?? initialEnrollForm(definition, unitPref, exercises);
   const change = (changes: Partial<EnrollForm>) => setEditedForm({ ...form, ...changes });
-  const roundingText = form.roundingText ?? {
-    increment: String(form.rounding.increment),
-    barWeight: String(form.rounding.barWeight),
-  };
+  const roundingText = roundingTextOf(form);
   const replacing = replacedProgramName(readProgramCache(localStorage, userId).templates, enrolledRow);
 
   const enroll = async (payload: EnrollProgramPayload) => {

@@ -19,7 +19,13 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 import { dayOf } from '@domain/program-schedule.ts';
-import { liftName, pctLabel, type ProgramTemplateRow, UPDATE_APP_TEXT } from './program-enroll-rules.ts';
+import {
+  enrolledTemplate,
+  liftName,
+  pctLabel,
+  type ProgramTemplateRow,
+  UPDATE_APP_TEXT,
+} from './program-enroll-rules.ts';
 import { type EnrollmentRow, enrollmentFromRow, isProgramFact } from './program-facts-rules.ts';
 
 export interface DayChoice {
@@ -168,9 +174,7 @@ export function activeProgram(
   facts: readonly ProgramFact[],
 ): ActiveProgram {
   if (enrollmentRow === null) return { kind: 'none' };
-  const template = templates.find(
-    (candidate) => candidate.key === enrollmentRow.template_key && candidate.version === enrollmentRow.template_version,
-  );
+  const template = enrolledTemplate(templates, enrollmentRow);
   if (!template) return { kind: 'template_missing', message: TEMPLATE_MISSING_TEXT };
   const parsed = parseProgramDefinition(template.definition);
   if (parsed.kind !== 'ok') return { kind: 'needs_update', name: template.name, message: UPDATE_APP_TEXT };
