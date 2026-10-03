@@ -1,0 +1,94 @@
+key: smolov_jr
+version: 1
+name: Smolov Jr
+source:
+  - liftvault.com/programs/lift-specific/smolov
+  - liftosaur.com/programs/smolov-jr
+lifts:
+  - { key: main, name: Main lift }
+inputs:
+  - { lifts: [main], kinds: [oneRm] }
+referenceVars: [tm]
+initial:
+  - { kind: copy, var: tm, from: oneRm }
+options: []
+conversions:
+  - { lb: 10, kg: 5, note: week 2 add-on }
+  - { lb: 20, kg: 8.75, note: week 3 cumulative add-on }
+schedule:
+  kind: cycle
+  weeksPerCycle: 3
+  days:
+    - key: mon
+      name: Monday
+      slots:
+        - id: mon-main
+          lift: main
+          role: main
+          scheme:
+            kind: repeat
+            count: 6
+            reps: 6
+            load:
+              kind: cumulativeAddOn
+              pct: 0.7
+              of: tm
+              byWeek:
+                - { kg: 0, lb: 0 }
+                - { kg: 5, lb: 10 }
+                - { kg: 8.75, lb: 20 }
+    - key: wed
+      name: Wednesday
+      slots:
+        - id: wed-main
+          lift: main
+          role: main
+          scheme:
+            kind: repeat
+            count: 7
+            reps: 5
+            load:
+              kind: cumulativeAddOn
+              pct: 0.75
+              of: tm
+              byWeek:
+                - { kg: 0, lb: 0 }
+                - { kg: 5, lb: 10 }
+                - { kg: 8.75, lb: 20 }
+    - key: fri
+      name: Friday
+      slots:
+        - id: fri-main
+          lift: main
+          role: main
+          scheme:
+            kind: repeat
+            count: 8
+            reps: 4
+            load:
+              kind: cumulativeAddOn
+              pct: 0.8
+              of: tm
+              byWeek:
+                - { kg: 0, lb: 0 }
+                - { kg: 5, lb: 10 }
+                - { kg: 8.75, lb: 20 }
+    - key: sat
+      name: Saturday
+      slots:
+        - id: sat-main
+          lift: main
+          role: main
+          scheme:
+            kind: repeat
+            count: 10
+            reps: 3
+            load:
+              kind: cumulativeAddOn
+              pct: 0.85
+              of: tm
+              byWeek:
+                - { kg: 0, lb: 0 }
+                - { kg: 5, lb: 10 }
+                - { kg: 8.75, lb: 20 }
+progression: []
