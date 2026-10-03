@@ -14,7 +14,7 @@ import {
 
 export const UPDATE_APP_TEXT = 'Update the app to use this program';
 
-export const UNUSABLE_TEMPLATE_TEXT = "This program can't be used right now";
+const UNUSABLE_TEMPLATE_TEXT = "This program can't be used right now";
 
 export interface ProgramTemplateRow {
   key: string;
@@ -76,7 +76,7 @@ export interface EnrollProgramPayload {
 export type EnrollPayloadResult =
   { kind: 'ok'; payload: EnrollProgramPayload } | { kind: 'invalid'; problems: string[] };
 
-export const MAX_REFERENCE_VALUE = 1000;
+const MAX_REFERENCE_VALUE = 1000;
 
 const SHOWN_REFERENCE_DECIMALS = 2;
 

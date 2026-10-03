@@ -398,7 +398,7 @@ export function evaluateAmount(expr: UnitAmountExpr, unit: WeightUnit, context: 
   return expr.cases[String(chosen)][unit];
 }
 
-export interface SetRef {
+interface SetRef {
   slotId: string;
   index: number;
 }
