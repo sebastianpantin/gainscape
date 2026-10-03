@@ -35,10 +35,9 @@ import {
   type WorkoutDraft,
 } from '../../offline/draft-format.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
-import { adjustEnrollment, refreshProgramFacts } from '../../lib/program-enrollment.ts';
+import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program-enrollment.ts';
 import { skipDayEvent } from '../../lib/program-skip-rules.ts';
 import { draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
-import { readProgramCache } from '../../offline/program-cache.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
@@ -253,7 +252,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     const enrollment = programCache.enrollment;
     if (!enrollment) return;
     await adjustEnrollment(enrollment.id, skipDayEvent(position));
-    showProgramCache(await refreshProgramFacts(userId, enrollment).catch(() => readProgramCache(localStorage, userId)));
+    showProgramCache(await refreshProgramFactsOrCached(userId, enrollment));
   };
 
   if (!draft) {

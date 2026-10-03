@@ -1,4 +1,4 @@
-import { type ProgramCache, updateProgramCache, withEnrollment } from '../offline/program-cache.ts';
+import { type ProgramCache, readProgramCache, updateProgramCache, withEnrollment } from '../offline/program-cache.ts';
 import {
   type ProgramFetchers,
   type ProgramRefreshContext,
@@ -62,8 +62,10 @@ function refreshContext(userId: string): ProgramRefreshContext {
   return { storage: localStorage, userId, now: Date.now, fetchers: PROGRAM_FETCHERS };
 }
 
-export function refreshProgramFacts(userId: string, enrollment: EnrollmentRow): Promise<ProgramCache> {
-  return refreshProgramFactsWith(refreshContext(userId), enrollment);
+export function refreshProgramFactsOrCached(userId: string, enrollment: EnrollmentRow): Promise<ProgramCache> {
+  return refreshProgramFactsWith(refreshContext(userId), enrollment).catch(() =>
+    readProgramCache(localStorage, userId),
+  );
 }
 
 export function refreshProgramCache(userId: string): Promise<ProgramCache> {
