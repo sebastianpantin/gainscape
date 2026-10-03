@@ -15,7 +15,7 @@ import {
   FIVE_THREE_ONE,
   fiveThreeOneEnrollment,
 } from './program-fixtures/five_three_one.ts';
-import { GZCLP_SHAPE } from './program-fixtures/gzclp.ts';
+import { GZCLP } from './program-fixtures/gzclp.ts';
 import { MADCOW_5X5, madcowDaySets, madcowEnrollment, madcowWeek, weekDay } from './program-fixtures/madcow_5x5.ts';
 
 const madcow = madcowEnrollment();
@@ -198,6 +198,6 @@ describe('isPositionInSchedule bounds every schedule to 520 weeks', () => {
     [{ index: 2079 }, true],
     [{ index: 2080 }, false],
   ])('the four-day GZCLP rotation takes %o: %s, so the index stays below 520 x 4', (position, accepted) => {
-    expect(isPositionInSchedule(GZCLP_SHAPE, position)).toBe(accepted);
+    expect(isPositionInSchedule(GZCLP, position)).toBe(accepted);
   });
 });

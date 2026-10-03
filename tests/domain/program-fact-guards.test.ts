@@ -16,7 +16,7 @@ import {
   fiveThreeOneEnrollment,
   mainSets531,
 } from './program-fixtures/five_three_one.ts';
-import { GZCLP_SHAPE } from './program-fixtures/gzclp.ts';
+import { GZCLP } from './program-fixtures/gzclp.ts';
 import { MADCOW_5X5, madcowDaySets, madcowEnrollment, weekDay } from './program-fixtures/madcow_5x5.ts';
 
 const FOLD_BUDGET_MS = 3000;
@@ -60,8 +60,8 @@ const gzclp: ProgramEnrollment = {
   id: 'enrollment-gzclp',
   unit: 'kg',
   options: {},
-  bindings: Object.fromEntries(GZCLP_SHAPE.lifts.map((lift) => [lift.key, lift.key])),
-  inputs: Object.fromEntries(GZCLP_SHAPE.lifts.map((lift) => [lift.key, { workingWeight: 60 }])),
+  bindings: Object.fromEntries(GZCLP.lifts.map((lift) => [lift.key, lift.key])),
+  inputs: Object.fromEntries(GZCLP.lifts.map((lift) => [lift.key, { workingWeight: 60 }])),
   rounding: DEFAULT_ROUNDING.kg,
 };
 
@@ -168,12 +168,12 @@ describe('facts at invalid positions are ignored quickly and change nothing', ()
   describe.each(INVALID_ROTATION_POSITIONS)('GZCLP rotation position with %s', (_, position) => {
     it('ignores a session there', async () => {
       const clock = factClock();
-      await expectIgnored(GZCLP_SHAPE, gzclp, [], sessionFact(clock.next(), position, []));
+      await expectIgnored(GZCLP, gzclp, [], sessionFact(clock.next(), position, []));
     });
 
     it('ignores a jump_to there', async () => {
       const clock = factClock();
-      await expectIgnored(GZCLP_SHAPE, gzclp, [], jumpToFact(clock.next(), position));
+      await expectIgnored(GZCLP, gzclp, [], jumpToFact(clock.next(), position));
     });
   });
 });

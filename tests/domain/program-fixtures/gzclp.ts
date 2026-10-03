@@ -1,4 +1,13 @@
-import { type DayDecl, type ProgramDefinition, type ProgressionRule, type SlotDecl } from '@domain/index.ts';
+import {
+  DEFAULT_ROUNDING,
+  type DayDecl,
+  type ProgramDefinition,
+  type ProgramEnrollment,
+  type ProgressionRule,
+  type RoundingSetting,
+  type SlotDecl,
+  type WeightUnit,
+} from '@domain/index.ts';
 
 const GZCLP_WIKI = 'thefitness.wiki/routines/gzclp';
 const GZCL_ARCHIVE = 'thefitness.wiki/reddit-archive/gzcl-method-novice-to-elite';
@@ -111,7 +120,7 @@ function tierThreeRule(lift: string): ProgressionRule {
   };
 }
 
-const LIFT_KEYS = [
+export const GZCLP_LIFTS = [
   'squat-t1',
   'bench-t1',
   'ohp-t1',
@@ -122,19 +131,20 @@ const LIFT_KEYS = [
   'deadlift-t2',
   'pulldown-t3',
   'row-t3',
-];
+] as const;
+export type GzclpLift = (typeof GZCLP_LIFTS)[number];
 
-export const GZCLP_SHAPE: ProgramDefinition = {
+export const GZCLP: ProgramDefinition = {
   key: 'gzclp',
   version: 1,
   name: 'GZCLP',
   source: [GZCLP_WIKI, GZCL_ARCHIVE],
-  lifts: LIFT_KEYS.map((key) => ({
+  lifts: GZCLP_LIFTS.map((key) => ({
     key,
     name: key,
     ...(key.startsWith('squat') || key.startsWith('deadlift') ? { category: 'lower' as const } : {}),
   })),
-  inputs: [{ lifts: LIFT_KEYS, kinds: ['workingWeight'] }],
+  inputs: [{ lifts: [...GZCLP_LIFTS], kinds: ['workingWeight'] }],
   referenceVars: ['workingWeight', 'fiveRm'],
   initial: [{ kind: 'copy', var: 'workingWeight', from: 'workingWeight' }],
   options: [],
@@ -157,3 +167,48 @@ export const GZCLP_SHAPE: ProgramDefinition = {
     tierThreeRule('row-t3'),
   ],
 };
+
+export const GZCLP_EXERCISES: Readonly<Record<GzclpLift, string>> = {
+  'squat-t1': 'squat',
+  'bench-t1': 'bench',
+  'ohp-t1': 'ohp',
+  'deadlift-t1': 'deadlift',
+  'squat-t2': 'squat',
+  'bench-t2': 'bench',
+  'ohp-t2': 'ohp',
+  'deadlift-t2': 'deadlift',
+  'pulldown-t3': 'lat-pulldown',
+  'row-t3': 'dumbbell-row',
+};
+
+export const GZCLP_DEFAULT_WEIGHTS_KG: Readonly<Record<GzclpLift, number>> = {
+  'squat-t1': 100,
+  'bench-t1': 60,
+  'ohp-t1': 40,
+  'deadlift-t1': 120,
+  'squat-t2': 70,
+  'bench-t2': 50,
+  'ohp-t2': 30,
+  'deadlift-t2': 90,
+  'pulldown-t3': 40,
+  'row-t3': 20,
+};
+
+export interface GzclpEnrollmentOverrides {
+  unit?: WeightUnit;
+  weights?: Partial<Record<GzclpLift, number>>;
+  rounding?: RoundingSetting;
+}
+
+export function gzclpEnrollment(overrides: GzclpEnrollmentOverrides = {}): ProgramEnrollment {
+  const unit = overrides.unit ?? 'kg';
+  const weights = { ...GZCLP_DEFAULT_WEIGHTS_KG, ...overrides.weights };
+  return {
+    id: 'enrollment-gzclp',
+    unit,
+    options: {},
+    bindings: { ...GZCLP_EXERCISES },
+    inputs: Object.fromEntries(GZCLP_LIFTS.map((lift) => [lift, { workingWeight: weights[lift] }])),
+    rounding: overrides.rounding ?? DEFAULT_ROUNDING[unit],
+  };
+}
