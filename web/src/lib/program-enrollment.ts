@@ -20,7 +20,7 @@ export async function fetchProgramTemplates(): Promise<ProgramTemplateRow[]> {
   return data as ProgramTemplateRow[];
 }
 
-export async function fetchActiveEnrollment(): Promise<EnrollmentRow | null> {
+async function fetchActiveEnrollment(): Promise<EnrollmentRow | null> {
   const { data, error } = await supabase
     .from('program_enrollments')
     .select(ENROLLMENT_COLUMNS)
