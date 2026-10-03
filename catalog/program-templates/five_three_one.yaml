@@ -25,7 +25,7 @@ options:
     source:
       - https://www.jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big
       - https://arvo.guru/resources/methods/wendler-531
-      - https://simplifaster.com/?p=14835
+      - https://simplifaster.com/articles/5-3-1-first-set-last-weight-training/
   - key: bbbPct
     kind: choice
     values: [0.5, 0.55, 0.6]
