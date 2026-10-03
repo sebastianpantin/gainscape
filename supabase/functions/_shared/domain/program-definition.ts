@@ -841,6 +841,11 @@ function isPositiveNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
+function isOfferedForUnit(option: ChoiceOptionDecl, value: OptionValue, unit: WeightUnit): boolean {
+  const onlyFor = option.onlyForUnit?.[String(value)];
+  return onlyFor === undefined || onlyFor === unit;
+}
+
 function enrollmentOptionErrors(definition: ProgramDefinition, enrollment: ProgramEnrollment): string[] {
   const errors: string[] = [];
   for (const [key, value] of Object.entries(enrollment.options)) {
@@ -848,6 +853,10 @@ function enrollmentOptionErrors(definition: ProgramDefinition, enrollment: Progr
     if (!option) errors.push(`option '${key}' is not declared by the template`);
     else if (option.kind === 'choice' && !option.values.includes(value)) {
       errors.push(`option '${key}' value ${String(value)} is not one of ${option.values.join(', ')}`);
+    } else if (option.kind === 'choice' && !isOfferedForUnit(option, value, enrollment.unit)) {
+      errors.push(
+        `option '${key}' value ${String(value)} is only offered for ${option.onlyForUnit?.[String(value)]} enrollments`,
+      );
     } else if (
       option.kind === 'number' &&
       (typeof value !== 'number' || !Number.isFinite(value) || value < option.min || value > option.max)
