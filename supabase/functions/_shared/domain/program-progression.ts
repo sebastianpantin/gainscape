@@ -282,6 +282,12 @@ function applyAdjustment(
       if (reps === undefined || reps < adjustment.reps) return state;
       return changeTo(current + enrollment.rounding.increment, 'increment');
     }
+    case 'amrapTable': {
+      const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
+      const band = adjustment.bands.filter(([minReps]) => reps !== undefined && reps >= minReps).at(-1);
+      const amount = band?.[1][enrollment.unit] ?? 0;
+      return amount === 0 ? state : changeTo(current + amount, 'increment');
+    }
     default:
       return state;
   }
