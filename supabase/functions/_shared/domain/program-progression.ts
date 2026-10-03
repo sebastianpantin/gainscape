@@ -8,9 +8,11 @@ import {
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgressionRule,
+  type IncrementByAmount,
+  type IncrementByPct,
+  type NumberContext,
   type ReferenceVar,
   type SlotDecl,
-  type StageLastFail,
 } from './program-definition.ts';
 import {
   isSlotActive,
@@ -44,6 +46,7 @@ import {
   type RuleKey,
   type SetReferenceFact,
 } from './program-state.ts';
+import { advanceStage, retestedStages } from './program-stages.ts';
 import { rpeChartPct } from './rpe-chart.ts';
 import { kgToUnit, type WeightUnit } from './units.ts';
 
@@ -184,7 +187,7 @@ interface FoldContext {
   finalSets?: FinalDaySets;
 }
 
-function setReference(
+export function setReference(
   state: ProgramState,
   lift: string,
   variable: ReferenceVar,
@@ -207,55 +210,86 @@ function loggedSetAt(sets: readonly FactSet[], setIndex: number): FactSet | unde
     .reduce<FactSet | undefined>((best, set) => (best === undefined || set.reps > best.reps ? set : best), undefined);
 }
 
-function stageCountOf(definition: ProgramDefinition, rule: ProgressionRule): number {
-  const counts = definition.schedule.days
-    .flatMap((day) => day.slots)
-    .flatMap((slot) =>
-      rule.judgedSlots.includes(slot.id) && slot.scheme.kind === 'stages' ? [slot.scheme.stages.length] : [],
-    );
-  return Math.max(0, ...counts);
+interface AdjustmentInput<A extends Adjustment> {
+  context: FoldContext;
+  state: ProgramState;
+  rule: ProgressionRule;
+  adjustment: A;
+  position: Position;
+  sets: readonly FactSet[];
+  current: number;
+  numbers: NumberContext;
+  changeTo: (value: number, reason: ReferenceChangeReason) => ProgramState;
 }
 
-function withStage(state: ProgramState, lift: string, stage: number): ProgramState {
-  return { ...state, stages: { ...state.stages, [lift]: stage } };
-}
+type AdjustmentHandlers = {
+  [K in Adjustment['kind']]: (input: AdjustmentInput<Extract<Adjustment, { kind: K }>>) => ProgramState;
+};
 
-function advanceStage(
-  context: FoldContext,
-  state: ProgramState,
-  rule: ProgressionRule,
-  onLastFail: StageLastFail,
-  current: number,
-  position: Position,
-): ProgramState {
-  const stage = state.stages[rule.lift] ?? 0;
-  if (stage < stageCountOf(context.definition, rule) - 1) {
-    const base = stage === 0 ? { stageResetBases: { ...state.stageResetBases, [rule.lift]: current } } : {};
-    return { ...withStage(state, rule.lift, stage + 1), ...base };
+function incremented({
+  context,
+  state,
+  rule,
+  adjustment,
+  position,
+  current,
+  numbers,
+  changeTo,
+}: AdjustmentInput<IncrementByAmount | IncrementByPct>): ProgramState {
+  const { definition, enrollment } = context;
+  if (!('byPct' in adjustment)) {
+    const opening = adjustment.opening;
+    const opens = opening !== undefined && (state.successes[ruleKeyOf(rule)] ?? 0) < opening.times;
+    const amount = opens ? opening.by : adjustment.by;
+    return changeTo(current + evaluateAmount(amount, enrollment.unit, numbers), 'increment');
   }
-  if (onLastFail.kind === 'retest') return state;
-  const base = state.stageResetBases[rule.lift] ?? current;
-  const add = onLastFail.add[context.enrollment.unit];
-  return withStage(setReference(state, rule.lift, rule.var, base + add, 'adjustment', position), rule.lift, 0);
-}
-
-function retestOf(rule: ProgressionRule): { pct: number; from: ReferenceVar } | null {
-  for (const adjustment of [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])]) {
-    if (adjustment.kind === 'stageMachine' && adjustment.onLastFail.kind === 'retest') return adjustment.onLastFail;
+  const onRamp = definition.initial.find((initial) => initial.kind === 'onRamp' && initial.var === rule.var);
+  if (onRamp?.kind === 'onRamp' && absoluteWeek(definition, position) < onRamp.peakWeek) {
+    return changeTo(current / onRamp.factor, 'increment');
   }
-  return null;
+  return changeTo(current * (1 + evaluateNumber(adjustment.byPct, numbers)), 'increment');
 }
 
-function retestedStages(definition: ProgramDefinition, state: ProgramState, fact: SetReferenceFact): ProgramState {
-  return definition.progression
-    .filter((rule) => rule.lift === fact.lift && rule.var !== fact.var)
-    .reduce((next, rule) => {
-      const retest = retestOf(rule);
-      if (retest?.from !== fact.var) return next;
-      const restarted = setReference(next, rule.lift, rule.var, fact.value * retest.pct, 'adjustment', next.position);
-      return withStage(restarted, rule.lift, 0);
-    }, state);
-}
+const ADJUSTMENT_HANDLERS: AdjustmentHandlers = {
+  increment: incremented,
+  hold: ({ state }) => state,
+  customRule: ({ state }) => state,
+  tmReset: ({ adjustment, current, numbers, changeTo }) =>
+    changeTo(current * (1 - evaluateNumber(adjustment.pct, numbers)), 'tmReset'),
+  failureCounter: ({ state, rule, adjustment, current, numbers, changeTo }) => {
+    const key = ruleKeyOf(rule);
+    if ((state.consecutiveMisses[key] ?? 0) < adjustment.threshold) return state;
+    const deloaded = changeTo(current * (1 - evaluateNumber(adjustment.deloadPct, numbers)), 'adjustment');
+    return { ...deloaded, consecutiveMisses: { ...deloaded.consecutiveMisses, [key]: 0 } };
+  },
+  stageMachine: ({ context, state, rule, adjustment, current, position }) =>
+    advanceStage(context.definition, context.enrollment.unit, state, rule, adjustment.onLastFail, current, position),
+  amrapThreshold: ({ context, state, adjustment, sets, current, changeTo }) => {
+    const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
+    if (reps === undefined || reps < adjustment.reps) return state;
+    return changeTo(current + context.enrollment.rounding.increment, 'increment');
+  },
+  amrapTable: ({ context, state, adjustment, sets, current, changeTo }) => {
+    const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
+    const band = adjustment.bands.filter(([minReps]) => reps !== undefined && reps >= minReps).at(-1);
+    const amount = band?.[1][context.enrollment.unit] ?? 0;
+    return amount === 0 ? state : changeTo(current + amount, 'increment');
+  },
+  repsOverStandard: ({ context, state, adjustment, position, sets, current, numbers, changeTo }) => {
+    const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
+    const standard = adjustment.standardByWave[waveIndexOf(context.definition, position)];
+    if (reps === undefined || standard === undefined || reps === standard) return state;
+    const perRep = evaluateAmount(adjustment.perRep, context.enrollment.unit, numbers);
+    return changeTo(current + Math.min(reps - standard, adjustment.cap) * perRep, 'increment');
+  },
+  e1rmFromSet: ({ context, state, adjustment, sets, changeTo }) => {
+    const set = loggedSetAt(sets, adjustment.setIndex);
+    const rpe = set ? loggedRpeOf(set) : null;
+    const pct = set && rpe !== null ? rpeChartPct(set.reps, rpe) : null;
+    if (!set || pct === null) return state;
+    return changeTo(kgToUnit(set.weightKg, context.enrollment.unit) / pct, 'adjustment');
+  },
+};
 
 function applyAdjustment(
   context: FoldContext,
@@ -265,64 +299,20 @@ function applyAdjustment(
   position: Position,
   sets: readonly FactSet[],
 ): ProgramState {
-  const { definition, enrollment } = context;
   const current = state.refs[rule.lift]?.[rule.var];
   if (current === undefined) return state;
-  const numbers = numberContext(definition, enrollment, position);
-  const changeTo = (value: number, reason: ReferenceChangeReason) =>
-    setReference(state, rule.lift, rule.var, value, reason, position);
-  switch (adjustment.kind) {
-    case 'increment': {
-      if (!('byPct' in adjustment)) {
-        const opening = adjustment.opening;
-        const opens = opening !== undefined && (state.successes[ruleKeyOf(rule)] ?? 0) < opening.times;
-        const amount = opens ? opening.by : adjustment.by;
-        return changeTo(current + evaluateAmount(amount, enrollment.unit, numbers), 'increment');
-      }
-      const onRamp = definition.initial.find((initial) => initial.kind === 'onRamp' && initial.var === rule.var);
-      if (onRamp?.kind === 'onRamp' && absoluteWeek(definition, position) < onRamp.peakWeek) {
-        return changeTo(current / onRamp.factor, 'increment');
-      }
-      return changeTo(current * (1 + evaluateNumber(adjustment.byPct, numbers)), 'increment');
-    }
-    case 'tmReset':
-      return changeTo(current * (1 - evaluateNumber(adjustment.pct, numbers)), 'tmReset');
-    case 'failureCounter': {
-      const key = ruleKeyOf(rule);
-      if ((state.consecutiveMisses[key] ?? 0) < adjustment.threshold) return state;
-      const deloaded = changeTo(current * (1 - evaluateNumber(adjustment.deloadPct, numbers)), 'adjustment');
-      return { ...deloaded, consecutiveMisses: { ...deloaded.consecutiveMisses, [key]: 0 } };
-    }
-    case 'stageMachine':
-      return advanceStage(context, state, rule, adjustment.onLastFail, current, position);
-    case 'amrapThreshold': {
-      const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
-      if (reps === undefined || reps < adjustment.reps) return state;
-      return changeTo(current + enrollment.rounding.increment, 'increment');
-    }
-    case 'amrapTable': {
-      const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
-      const band = adjustment.bands.filter(([minReps]) => reps !== undefined && reps >= minReps).at(-1);
-      const amount = band?.[1][enrollment.unit] ?? 0;
-      return amount === 0 ? state : changeTo(current + amount, 'increment');
-    }
-    case 'repsOverStandard': {
-      const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
-      const standard = adjustment.standardByWave[waveIndexOf(definition, position)];
-      if (reps === undefined || standard === undefined || reps === standard) return state;
-      const perRep = evaluateAmount(adjustment.perRep, enrollment.unit, numbers);
-      return changeTo(current + Math.min(reps - standard, adjustment.cap) * perRep, 'increment');
-    }
-    case 'e1rmFromSet': {
-      const set = loggedSetAt(sets, adjustment.setIndex);
-      const rpe = set ? loggedRpeOf(set) : null;
-      const pct = set && rpe !== null ? rpeChartPct(set.reps, rpe) : null;
-      if (!set || pct === null) return state;
-      return changeTo(kgToUnit(set.weightKg, enrollment.unit) / pct, 'adjustment');
-    }
-    default:
-      return state;
-  }
+  const handler = ADJUSTMENT_HANDLERS[adjustment.kind] as (input: AdjustmentInput<Adjustment>) => ProgramState;
+  return handler({
+    context,
+    state,
+    rule,
+    adjustment,
+    position,
+    sets,
+    current,
+    numbers: numberContext(context.definition, context.enrollment, position),
+    changeTo: (value, reason) => setReference(state, rule.lift, rule.var, value, reason, position),
+  });
 }
 
 interface Judgement {
