@@ -11,11 +11,13 @@ import {
   type ProgramTemplateRow,
   referencePreview,
   templateListEntries,
+  withOption,
   withUnit,
 } from '../../web/src/lib/program-enroll-rules.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
+import { TEXAS_METHOD } from '../domain/program-fixtures/texas_method.ts';
 
 function catalogExercise(key: string, name: string, archived = false): BindableExercise {
   return { id: `id-${key}`, key, name, archived };
@@ -183,6 +185,48 @@ describe('default lift bindings from catalog exercise keys', () => {
   it('never binds a custom exercise by its name', () => {
     const catalog = CATALOG.filter((exercise) => exercise.key !== 'back_squat');
     expect(defaultBindings(MADCOW_5X5, catalog).squat).toBeNull();
+  });
+});
+
+describe('an option named <lift>Lift picks the catalog exercise for that lift', () => {
+  it('binds the Texas press to barbell_bench_press while pressLift is at its default, bench', () => {
+    expect(initialEnrollForm(TEXAS_METHOD, 'kg', CATALOG).bindings.press).toBe('id-barbell_bench_press');
+  });
+
+  it('binds the Texas press to overhead_press when the options pick ohp', () => {
+    expect(defaultBindings(TEXAS_METHOD, CATALOG, { pressLift: 'ohp' }).press).toBe('id-overhead_press');
+  });
+
+  it('binds the other Texas lifts by their own keys whatever pressLift is', () => {
+    const bindings = defaultBindings(TEXAS_METHOD, CATALOG, { pressLift: 'ohp' });
+    expect([bindings.squat, bindings.deadlift]).toEqual(['id-back_squat', 'id-deadlift']);
+  });
+});
+
+describe('picking an option rebinds the lifts it chooses, unless the user picked their exercise', () => {
+  it('sets the option and rebinds the Texas press to overhead_press when pressLift changes to ohp', () => {
+    const changed = withOption(
+      TEXAS_METHOD,
+      initialEnrollForm(TEXAS_METHOD, 'kg', CATALOG),
+      'pressLift',
+      'ohp',
+      CATALOG,
+    );
+    expect(changed.options.pressLift).toBe('ohp');
+    expect(changed.bindings.press).toBe('id-overhead_press');
+  });
+
+  it('keeps an exercise the user picked for the press when pressLift changes', () => {
+    const form = initialEnrollForm(TEXAS_METHOD, 'kg', CATALOG);
+    const picked = { ...form, bindings: { ...form.bindings, press: 'id-incline_barbell_bench_press' } };
+    expect(withOption(TEXAS_METHOD, picked, 'pressLift', 'ohp', CATALOG).bindings.press).toBe(
+      'id-incline_barbell_bench_press',
+    );
+  });
+
+  it('leaves every binding alone when the option picks no lift', () => {
+    const form = initialEnrollForm(FIVE_THREE_ONE, 'kg', CATALOG);
+    expect(withOption(FIVE_THREE_ONE, form, 'supplemental', 'fsl', CATALOG).bindings).toEqual(form.bindings);
   });
 });
 
