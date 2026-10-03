@@ -22,6 +22,13 @@ import {
   fiveThreeOneEnrollment,
   mainSets531,
 } from '../domain/program-fixtures/five_three_one.ts';
+import { type DayLog, followProgram } from '../domain/program-fixtures/follow.ts';
+import {
+  JUGGERNAUT_2,
+  JUGGERNAUT_LIFTS,
+  juggernautEnrollment,
+  type JuggernautLift,
+} from '../domain/program-fixtures/juggernaut_2.ts';
 import { MADCOW_5X5, madcowEnrollment, madcowWeek } from '../domain/program-fixtures/madcow_5x5.ts';
 import { STRONGLIFTS_5X5, strongLiftsEnrollment } from '../domain/program-fixtures/stronglifts_5x5.ts';
 
@@ -165,6 +172,29 @@ describe('rollover summary for a rotation program (StrongLifts)', () => {
     );
     const facts = [sessionFact(factClock().next(), { index: 0 }, squatSets)];
     expect(summaryAfter(STRONGLIFTS_5X5, strongLiftsEnrollment(), facts)).toBeNull();
+  });
+});
+
+describe('rollover summary for a mid-cycle rollover (Juggernaut endOfWave)', () => {
+  const enrollment = juggernautEnrollment();
+  const squatRealization = (week: number, lift: JuggernautLift): DayLog =>
+    week === 3 && lift === 'squat' ? { reps: { 'squat-main:0': 15 } } : {};
+  const afterFirstWave = () => {
+    const logs = [1, 2, 3, 4].flatMap((week) => JUGGERNAUT_LIFTS.map((lift) => squatRealization(week, lift)));
+    const { state } = followProgram(JUGGERNAUT_2, enrollment, factClock(), logs);
+    return rolloverSummary(JUGGERNAUT_2, enrollment, state);
+  };
+
+  it('titles a rollover inside a cycle with its cycle and week: "Cycle 1 week 4 complete"', () => {
+    expect(afterFirstWave()?.title).toBe('Cycle 1 week 4 complete');
+  });
+
+  it('lists the squat TM raised by 15 reps in the 10s wave: 180 → 192.5 kg', () => {
+    expect(afterFirstWave()?.lines).toEqual(['Squat training max 180 → 192.5 kg']);
+  });
+
+  it('keys the wave rollover by its cycle and week: "enrollment-juggernaut:C1 W4"', () => {
+    expect(afterFirstWave()?.key).toBe('enrollment-juggernaut:C1 W4');
   });
 });
 
