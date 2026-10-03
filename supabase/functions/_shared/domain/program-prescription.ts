@@ -15,7 +15,7 @@ import {
   type SlotRole,
   type StageScheme,
 } from './program-definition.ts';
-import { dayOf, isCyclePosition, isRotationPosition, type Position } from './program-schedule.ts';
+import { dayOf, isCyclePosition, isRotationPosition, type Position, positionAt } from './program-schedule.ts';
 import { rpeChartPct } from './rpe-chart.ts';
 import { shownWeight, unitToKg } from './units.ts';
 
@@ -318,6 +318,13 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
       const sets = referencedSlotSets(context, load.kind, targetSlot, depth);
       return relativeLoad(context, load.kind, sets, target?.index ?? -1, evaluateNumber(load.pct, numbers));
     }
+    case 'pctOfSlot': {
+      const targetSlot = definition.schedule.days
+        .find((day) => day.key === load.day)
+        ?.slots.find((candidate) => candidate.id === load.slot);
+      const sets = referencedSlotSets(context, load.kind, targetSlot, depth, positionAt(position, load.day));
+      return relativeLoad(context, load.kind, sets, load.idx, evaluateNumber(load.pct, numbers));
+    }
     case 'lastLogged': {
       const exerciseId = enrollment.bindings[slot.lift];
       const kg = exerciseId ? context.lastLogged[exerciseId] : undefined;
@@ -328,8 +335,6 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
         load: { weight: shownWeight(kg, enrollment.unit), weightKg: kg, pct: null, snapshotted: false },
       };
     }
-    default:
-      return { kind: 'unsupported', primitive: load.kind };
   }
 }
 
