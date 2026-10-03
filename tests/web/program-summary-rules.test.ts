@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { type ProgramDefinition, type ProgramEnrollment, type ProgramFact, programStateAt } from '@domain/index.ts';
+import {
+  type ProgramDefinition,
+  type ProgramEnrollment,
+  type ProgramFact,
+  type ProgramState,
+  programStateAt,
+  type ReferenceChange,
+} from '@domain/index.ts';
 import { rolloverSummary } from '../../web/src/lib/program-summary-rules.ts';
 import {
   factClock,
@@ -158,5 +165,32 @@ describe('rollover summary for a rotation program (StrongLifts)', () => {
     );
     const facts = [sessionFact(factClock().next(), { index: 0 }, squatSets)];
     expect(summaryAfter(STRONGLIFTS_5X5, strongLiftsEnrollment(), facts)).toBeNull();
+  });
+});
+
+describe('rollover summary nets the changes of one reference in one rollover', () => {
+  const enrollment = fiveThreeOneEnrollment();
+  const finishedWeek = cyclePosition(1, 4, 'press');
+
+  function withRolloverHistory(changes: ReferenceChange[]): ProgramState {
+    const state = programStateAt(FIVE_THREE_ONE, enrollment, cycleSessions(factClock(), 1));
+    return { ...state, history: [...changes, ...state.history.filter((change) => change.lift !== 'squat')] };
+  }
+
+  function squatChange(from: number, to: number, reason: ReferenceChange['reason']): ReferenceChange {
+    return { lift: 'squat', var: 'tm', from, to, reason, position: finishedWeek };
+  }
+
+  it('reads an increment then a reset as first from → last to: squat 140 → 130.5 kg', () => {
+    const state = withRolloverHistory([squatChange(140, 145, 'increment'), squatChange(145, 130.5, 'tmReset')]);
+    expect(rolloverSummary(FIVE_THREE_ONE, enrollment, state)?.lines).toEqual([
+      'Squat training max 140 → 130.5 kg',
+      ...DEFAULT_CYCLE_LINES.slice(1),
+    ]);
+  });
+
+  it('leaves out a reference whose changes cancel out: squat 140 → 145 → 140', () => {
+    const state = withRolloverHistory([squatChange(140, 145, 'increment'), squatChange(145, 140, 'adjustment')]);
+    expect(rolloverSummary(FIVE_THREE_ONE, enrollment, state)?.lines).toEqual(DEFAULT_CYCLE_LINES.slice(1));
   });
 });
