@@ -21,7 +21,7 @@ import { refsState, slotOf, weightsOf } from './program-fixtures/prescription-he
 const FIXTURES: [string, ProgramDefinition][] = [
   ['five_three_one', FIVE_THREE_ONE],
   ['madcow_5x5', MADCOW_5X5],
-  ['gzclp (shape only)', GZCLP],
+  ['gzclp', GZCLP],
   ['synthetic after-session linear', LINEAR_AFTER_SESSION],
   ['synthetic full primitive set', FULL_PRIMITIVES],
 ];
@@ -29,6 +29,7 @@ const FIXTURES: [string, ProgramDefinition][] = [
 const FULLY_SUPPORTED_FIXTURES: [string, ProgramDefinition][] = [
   ['five_three_one', FIVE_THREE_ONE],
   ['madcow_5x5', MADCOW_5X5],
+  ['gzclp', GZCLP],
   ['synthetic after-session linear', LINEAR_AFTER_SESSION],
 ];
 
@@ -42,7 +43,6 @@ const SLICE_1B_ADJUSTMENTS: [string, Adjustment][] = [
     { kind: 'repsOverStandard', setIndex: 2, standardByWave: [10], perRep: { kg: 2.5, lb: 5 }, cap: 10 },
   ],
   ['e1rmFromSet', { kind: 'e1rmFromSet', setIndex: 2 }],
-  ['customRule', { kind: 'customRule', name: 'synthetic' }],
 ];
 
 function namedUnsupportedKinds(parsed: ReturnType<typeof parseProgramDefinition>): string[] {
@@ -290,16 +290,25 @@ describe('parseProgramDefinition', () => {
   });
 });
 
-describe('parseProgramDefinition marks 1b progression semantics as unsupported until implemented', () => {
-  it.each(SLICE_1B_ADJUSTMENTS)('parses a rule using %s as unsupported and names it', (kind, adjustment) => {
+describe('parseProgramDefinition supports the 1b progression semantics', () => {
+  it.each(SLICE_1B_ADJUSTMENTS)('does not name %s as unsupported', (kind, adjustment) => {
     const json = asJson(
       broken(LINEAR_AFTER_SESSION, (copy) => {
         copy.progression[0].onMiss = [adjustment];
       }),
     );
+    expect(namedUnsupportedKinds(parseProgramDefinition(json))).not.toContain(kind);
+  });
+
+  it('parses a rule using customRule as unsupported and names it, since a custom rule has no semantics', () => {
+    const json = asJson(
+      broken(LINEAR_AFTER_SESSION, (copy) => {
+        copy.progression[0].onMiss = [{ kind: 'customRule', name: 'synthetic' }];
+      }),
+    );
     const parsed = parseProgramDefinition(json);
     expect(parsed.kind).toBe('unsupported');
-    expect(namedUnsupportedKinds(parsed)).toContain(kind);
+    expect(namedUnsupportedKinds(parsed)).toContain('customRule');
   });
 
   it('parses a rule with no trigger as invalid with an error naming the trigger, not as unsupported', () => {
@@ -318,72 +327,99 @@ describe('parseProgramDefinition marks 1b progression semantics as unsupported u
     expect(parseProgramDefinition(json).kind).toBe('invalid');
   });
 
-  it('parses a rule on the endOfWave trigger as unsupported and names it', () => {
+  it('does not name the endOfWave trigger as unsupported', () => {
     const json = asJson(
       broken(LINEAR_AFTER_SESSION, (copy) => {
         copy.progression[0].trigger = 'endOfWave';
       }),
     );
+    expect(namedUnsupportedKinds(parseProgramDefinition(json))).not.toContain('endOfWave');
+  });
+
+  it('still parses a truly unknown trigger (endOfBlock) as unsupported and names it', () => {
+    const json = asJson(LINEAR_AFTER_SESSION) as { progression: Record<string, unknown>[] };
+    json.progression[0].trigger = 'endOfBlock';
     const parsed = parseProgramDefinition(json);
     expect(parsed.kind).toBe('unsupported');
-    expect(namedUnsupportedKinds(parsed)).toContain('endOfWave');
+    expect(namedUnsupportedKinds(parsed)).toContain('endOfBlock');
   });
 
-  it('parses the GZCLP shape as unsupported, naming stageMachine and amrapThreshold', () => {
-    const parsed = parseProgramDefinition(asJson(GZCLP));
-    expect(parsed.kind).toBe('unsupported');
-    expect(namedUnsupportedKinds(parsed)).toEqual(expect.arrayContaining(['stageMachine', 'amrapThreshold']));
+  it('parses the full GZCLP program as ok', () => {
+    expect(parseProgramDefinition(asJson(GZCLP))).toEqual({ kind: 'ok', definition: GZCLP });
   });
 
-  it('parses the full primitive set as unsupported, naming every 1b adjustment and endOfWave', () => {
+  it('parses the full primitive set as unsupported naming only customRule', () => {
     const parsed = parseProgramDefinition(asJson(FULL_PRIMITIVES));
     expect(parsed.kind).toBe('unsupported');
-    expect(namedUnsupportedKinds(parsed)).toEqual(
-      expect.arrayContaining([
-        'failureCounter',
-        'stageMachine',
-        'amrapThreshold',
-        'amrapTable',
-        'repsOverStandard',
-        'e1rmFromSet',
-        'customRule',
-        'endOfWave',
-      ]),
-    );
+    expect(namedUnsupportedKinds(parsed)).toEqual(['customRule']);
   });
 });
 
-describe('resolving a primitive whose 1b semantics are not implemented', () => {
+describe('resolving the 1b primitives of the synthetic definition', () => {
+  const enrollment = fullPrimitivesEnrollment();
+  const state = refsState({ squat: { tm: 100 }, bench: { top: 100, e1rm: 120, workingWeight: 80, fiveRm: 100 } });
+  const advanced = () =>
+    resolvePrescription(FULL_PRIMITIVES, enrollment, state, { cycle: 1, week: 1, day: 'advanced' }, {});
+
+  it.each(Object.entries(SLICE_1B_PRIMITIVES_BY_SLOT))('resolves %s (%s) as an exercise', (slotId) => {
+    expect(advanced().find((entry) => entry.slotId === slotId)?.kind).toBe('exercise');
+  });
+
+  it('keeps the lift of each slot', () => {
+    expect(advanced().map((entry) => entry.lift)).toEqual(['bench', 'bench', 'squat', 'squat', 'bench']);
+  });
+
+  it('rpeLoad: 3 @ RPE 8 of e1RM 120 is 120 × 0.863 = 103.56 → 102.5', () => {
+    expect(weightsOf(advanced(), 'advanced-rpe-top')).toEqual([102.5]);
+  });
+
+  it('pctOfSet: five optional back-offs at 95% of the rounded 102.5 = 97.375 → 97.5', () => {
+    const sets = slotOf(advanced(), 'advanced-backoff').sets;
+    expect(sets.map((set) => [set.weight, set.optional])).toEqual(Array.from({ length: 5 }, () => [97.5, true]));
+  });
+
+  it("pctOfSlot: 80% of the basic day's week 1 set 3 (85% × 100 = 85) is 68 → 67.5", () => {
+    expect(weightsOf(advanced(), 'advanced-cross-day')).toEqual([67.5, 67.5]);
+  });
+
+  it('cumulativeAddOn: week 1 adds nothing, 70% × 100 = 70', () => {
+    expect(weightsOf(advanced(), 'advanced-add-on')).toEqual([70, 70, 70, 70, 70, 70]);
+  });
+
+  it('cumulativeAddOn: week 2 adds 5, 70 + 5 = 75', () => {
+    const resolved = resolvePrescription(
+      FULL_PRIMITIVES,
+      enrollment,
+      state,
+      { cycle: 1, week: 2, day: 'advanced' },
+      {},
+    );
+    expect(weightsOf(resolved, 'advanced-add-on')[0]).toBe(75);
+  });
+
+  it('stages: with no stage recorded the first stage applies, 5×3+ @ the working weight 80', () => {
+    const sets = slotOf(advanced(), 'advanced-stages').sets;
+    expect(sets.map((set) => [set.weight, set.reps])).toEqual(Array.from({ length: 5 }, () => [80, 3]));
+    expect(sets[4].amrap).toBe(true);
+  });
+
+  it('stages: stage 2 recorded for bench gives 6×2+', () => {
+    const resolved = resolvePrescription(
+      FULL_PRIMITIVES,
+      enrollment,
+      { ...state, stages: { bench: 1 } },
+      { cycle: 1, week: 1, day: 'advanced' },
+      {},
+    );
+    expect(slotOf(resolved, 'advanced-stages').sets.map((set) => set.reps)).toEqual([2, 2, 2, 2, 2, 2]);
+  });
+});
+
+describe('resolving the 1a primitives of the synthetic definition', () => {
   const enrollment = fullPrimitivesEnrollment();
   const state = refsState({ squat: { tm: 100 }, bench: { top: 100, e1rm: 120, workingWeight: 80, fiveRm: 100 } });
 
-  it('returns a typed unsupported result per slot instead of throwing', () => {
-    const resolved = resolvePrescription(
-      FULL_PRIMITIVES,
-      enrollment,
-      state,
-      { cycle: 1, week: 1, day: 'advanced' },
-      {},
-    );
-    expect(
-      resolved.map((entry) => [entry.slotId, entry.kind, entry.kind === 'unsupported' ? entry.primitive : null]),
-    ).toEqual(
-      Object.entries(SLICE_1B_PRIMITIVES_BY_SLOT).map(([slotId, primitive]) => [slotId, 'unsupported', primitive]),
-    );
-  });
-
-  it('names the lift of each unsupported slot', () => {
-    const resolved = resolvePrescription(
-      FULL_PRIMITIVES,
-      enrollment,
-      state,
-      { cycle: 1, week: 1, day: 'advanced' },
-      {},
-    );
-    expect(resolved.map((entry) => entry.lift)).toEqual(['bench', 'bench', 'squat', 'squat', 'bench']);
-  });
-
-  it('still resolves the 1a primitives of the same definition: week table, first-set repeat, pct, ramp, sameAs, lastLogged', () => {
+  it('resolves week table, first-set repeat, pct, ramp, sameAs and lastLogged', () => {
     const resolved = resolvePrescription(
       FULL_PRIMITIVES,
       enrollment,

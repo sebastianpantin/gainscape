@@ -104,16 +104,7 @@ export const UNSUPPORTED_JUDGED_SCHEMES: ProgramDefinition = {
         key: 'a',
         name: 'Day A',
         slots: [
-          {
-            id: 'a-bench',
-            lift: 'bench',
-            role: 'main',
-            scheme: {
-              kind: 'stages',
-              stages: [{ sets: 5, reps: 3, amrapLast: true }],
-              load: { kind: 'pct', pct: 1, of: 'tm' },
-            },
-          },
+          { id: 'a-bench', lift: 'bench', role: 'main', scheme: { kind: 'weekTable', table: 'main', of: 'tm' } },
           { id: 'a-squat', lift: 'squat', role: 'main', scheme: { kind: 'weekTable', table: 'main', of: 'tm' } },
         ],
       },

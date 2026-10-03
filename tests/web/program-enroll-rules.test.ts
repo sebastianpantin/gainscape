@@ -101,11 +101,11 @@ describe('template list entries', () => {
     ]);
   });
 
-  it('lists a template whose trigger this app knows but cannot run yet as needing an update', () => {
+  it('lists a template whose rule this app knows but cannot run (customRule) as needing an update', () => {
     const definition = {
       ...MADCOW_5X5,
-      key: 'wave_madcow',
-      progression: [{ ...MADCOW_5X5.progression[0], trigger: 'endOfWave' }],
+      key: 'custom_madcow',
+      progression: [{ ...MADCOW_5X5.progression[0], onMiss: [{ kind: 'customRule', name: 'synthetic' }] }],
     };
     expect(templateListEntries([templateRow(definition)])[0].kind).toBe('needs_update');
   });
