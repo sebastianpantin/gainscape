@@ -1,6 +1,7 @@
 import { roundPrescribedLoad } from './load-rounding.ts';
 import { roundTo } from './math.ts';
 import {
+  evaluateAmount,
   evaluateNumber,
   findSlot,
   type Load,
@@ -250,14 +251,15 @@ function referencedSlotSets(
 
 function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index: number, depth: number): LoadResult {
   const { definition, enrollment, position } = context;
-  const referenceInEnrollmentUnit = (variable: string) =>
-    context.refs[slot.lift]?.[variable as keyof ProgramReferences[string]];
+  const referenceInEnrollmentUnit = (variable: string, lift = slot.lift) =>
+    context.refs[lift]?.[variable as keyof ProgramReferences[string]];
   const numbers = numberContext(definition, enrollment, position);
   switch (load.kind) {
     case 'pct': {
       const pct = evaluateNumber(load.pct, numbers);
-      const raw = referenceInEnrollmentUnit(load.of);
-      return prescribedLoad(context, raw === undefined ? undefined : raw * pct, pct);
+      const raw = referenceInEnrollmentUnit(load.of, load.lift);
+      const add = load.add ? evaluateAmount(load.add, enrollment.unit, numbers) : 0;
+      return prescribedLoad(context, raw === undefined ? undefined : raw * pct + add, pct);
     }
     case 'ramp': {
       const top = referenceInEnrollmentUnit(load.of);

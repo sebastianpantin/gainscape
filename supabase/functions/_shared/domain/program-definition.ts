@@ -572,6 +572,8 @@ class DefinitionChecker {
       case 'pct':
         this.checkNumber(load.pct, where);
         this.checkVar(load.of, where);
+        if (load.lift !== undefined) this.checkLift(load.lift, where);
+        if (load.add !== undefined) this.checkAmount(load.add, where);
         return;
       case 'ramp':
         this.checkNumber(load.step, where);
