@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type ProgramDefinition, validateEnrollment, type WeightUnit } from '@domain/index.ts';
+import { type OptionValue, type ProgramDefinition, validateEnrollment, type WeightUnit } from '@domain/index.ts';
 import {
   type BindableExercise,
   defaultBindings,
@@ -14,6 +14,7 @@ import {
   withUnit,
 } from '../../web/src/lib/program-enroll-rules.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
+import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
 
 function catalogExercise(key: string, name: string, archived = false): BindableExercise {
@@ -232,7 +233,7 @@ describe('enroll form fields come from the declared inputs', () => {
 
 describe('enroll form option controls come from the declared options', () => {
   it('offers Madcow a ramp step of 10%, 12.5% or 15%, defaulting to 12.5%', () => {
-    expect(optionControls(MADCOW_5X5)).toEqual([
+    expect(optionControls(MADCOW_5X5, 'kg')).toEqual([
       {
         kind: 'choice',
         key: 'rampStep',
@@ -248,7 +249,7 @@ describe('enroll form option controls come from the declared options', () => {
   });
 
   it('offers 5/3/1 supplemental work, BBB weight and progression, the TM percentage and the TM reset', () => {
-    expect(optionControls(FIVE_THREE_ONE)).toEqual([
+    expect(optionControls(FIVE_THREE_ONE, 'kg')).toEqual([
       {
         kind: 'choice',
         key: 'supplemental',
@@ -300,7 +301,7 @@ describe('enroll form option controls come from the declared options', () => {
       ...MADCOW_5X5,
       options: [{ key: 'tempo', kind: 'choice', values: ['slow', 'fast'], default: 'slow', source: ['x'] }],
     };
-    expect(optionControls(definition)).toEqual([
+    expect(optionControls(definition, 'kg')).toEqual([
       {
         kind: 'choice',
         key: 'tempo',
@@ -312,6 +313,26 @@ describe('enroll form option controls come from the declared options', () => {
         defaultValue: 'slow',
       },
     ]);
+  });
+});
+
+describe('enroll form option controls fit the enrollment unit', () => {
+  function perRepChoices(unit: WeightUnit): OptionValue[] {
+    const control = optionControls(JUGGERNAUT_2, unit).find((candidate) => candidate.key === 'perRep');
+    return control?.kind === 'choice' ? control.choices.map((choice) => choice.value) : [];
+  }
+
+  it('offers a kg Juggernaut enrollment only the standard per-rep increment, because fine is lb only', () => {
+    expect(perRepChoices('kg')).toEqual(['standard']);
+  });
+
+  it('offers an lb Juggernaut enrollment both the standard and the fine per-rep increment', () => {
+    expect(perRepChoices('lb')).toEqual(['standard', 'fine']);
+  });
+
+  it('keeps standard as the default for either unit', () => {
+    expect(optionControls(JUGGERNAUT_2, 'kg')[0]).toMatchObject({ key: 'perRep', defaultValue: 'standard' });
+    expect(optionControls(JUGGERNAUT_2, 'lb')[0]).toMatchObject({ key: 'perRep', defaultValue: 'standard' });
   });
 });
 
