@@ -155,6 +155,12 @@ function absoluteWeek(definition: ProgramDefinition, position: Position): number
   return schedule.kind === 'cycle' ? (cycle - 1) * schedule.weeksPerCycle + week : week;
 }
 
+function waveIndexOf(definition: ProgramDefinition, position: Position): number {
+  const schedule = definition.schedule;
+  if (schedule.kind !== 'cycle' || !schedule.waveWeeks) return 0;
+  return Math.floor((weekContextOf(position).week - 1) / schedule.waveWeeks);
+}
+
 export type FinalDaySets = Readonly<Record<string, readonly FactSet[]>>;
 
 interface FoldContext {
@@ -288,6 +294,13 @@ function applyAdjustment(
       const amount = band?.[1][enrollment.unit] ?? 0;
       return amount === 0 ? state : changeTo(current + amount, 'increment');
     }
+    case 'repsOverStandard': {
+      const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
+      const standard = adjustment.standardByWave[waveIndexOf(definition, position)];
+      if (reps === undefined || standard === undefined || reps === standard) return state;
+      const perRep = evaluateAmount(adjustment.perRep, enrollment.unit, numbers);
+      return changeTo(current + Math.min(reps - standard, adjustment.cap) * perRep, 'increment');
+    }
     default:
       return state;
   }
@@ -374,6 +387,17 @@ function rollOver(context: FoldContext, state: ProgramState): ProgramState {
   const ending = state.position;
   let next = fireScopeTriggers(context, state, 'endOfWeek', weekPositions(definition, ending));
   const schedule = definition.schedule;
+  if (
+    schedule.kind === 'cycle' &&
+    schedule.waveWeeks &&
+    isCyclePosition(ending) &&
+    ending.week % schedule.waveWeeks === 0
+  ) {
+    const waveWeeks = Array.from({ length: schedule.waveWeeks }, (_, index) =>
+      weekPositions(definition, { ...ending, week: ending.week - index }),
+    );
+    next = fireScopeTriggers(context, next, 'endOfWave', waveWeeks.flat());
+  }
   if (schedule.kind === 'cycle' && isCyclePosition(ending) && ending.week >= schedule.weeksPerCycle) {
     const cycleWeeks = Array.from({ length: schedule.weeksPerCycle }, (_, index) =>
       weekPositions(definition, { cycle: ending.cycle, week: index + 1, day: ending.day }),
