@@ -204,11 +204,77 @@ export function initialEnrollForm(
     options: optionDefaults(definition),
     bindings: defaultBindings(definition, exercises),
     rounding: { ...DEFAULT_ROUNDING[unit] },
+    roundingText: defaultRoundingText(unit),
+    optionText: Object.fromEntries(
+      definition.options.flatMap((option) => (option.kind === 'number' ? [[option.key, String(option.default)]] : [])),
+    ),
   };
 }
 
+function defaultRoundingText(unit: WeightUnit): { increment: string; barWeight: string } {
+  const { increment, barWeight } = DEFAULT_ROUNDING[unit];
+  return { increment: String(increment), barWeight: String(barWeight) };
+}
+
 export function withUnit(form: EnrollForm, unit: WeightUnit): EnrollForm {
-  return { ...form, unit, rounding: { ...DEFAULT_ROUNDING[unit] } };
+  return { ...form, unit, rounding: { ...DEFAULT_ROUNDING[unit] }, roundingText: defaultRoundingText(unit) };
+}
+
+const ROUNDING_INCREMENTS: Readonly<Record<WeightUnit, readonly number[]>> = {
+  kg: [0.5, 1, 1.25, 2.5, 5],
+  lb: [1, 2.5, 5, 10],
+};
+
+export function roundingIncrementLabel(unit: WeightUnit): string {
+  return `Round to (${unit})`;
+}
+
+export function barWeightLabel(unit: WeightUnit): string {
+  return `Bar weight (${unit})`;
+}
+
+function listedChoices(values: readonly number[]): string {
+  return `${values.slice(0, -1).join(', ')} or ${values[values.length - 1]}`;
+}
+
+type ParsedNumber = { kind: 'ok'; value: number } | { kind: 'problem'; problem: string };
+
+function parsedNumber(label: string, raw: string, isAllowed: (value: number) => boolean, rule: string): ParsedNumber {
+  const text = raw.trim();
+  if (text === '') return { kind: 'problem', problem: `Enter ${label}` };
+  const value = Number(text);
+  return Number.isFinite(value) && isAllowed(value)
+    ? { kind: 'ok', value }
+    : { kind: 'problem', problem: `${label} ${rule}` };
+}
+
+function roundingOf(form: EnrollForm): { increment: ParsedNumber; barWeight: ParsedNumber } {
+  const text = form.roundingText ?? {
+    increment: String(form.rounding.increment),
+    barWeight: String(form.rounding.barWeight),
+  };
+  const increments = ROUNDING_INCREMENTS[form.unit];
+  return {
+    increment: parsedNumber(
+      roundingIncrementLabel(form.unit),
+      text.increment,
+      (value) => increments.includes(value),
+      `must be one of ${listedChoices(increments)}`,
+    ),
+    barWeight: parsedNumber(barWeightLabel(form.unit), text.barWeight, (value) => value > 0, 'must be above 0'),
+  };
+}
+
+function numberOptionsOf(definition: ProgramDefinition, form: EnrollForm): Record<string, ParsedNumber> {
+  return Object.fromEntries(
+    definition.options.flatMap((option) => {
+      if (option.kind !== 'number') return [];
+      const raw = form.optionText?.[option.key] ?? String(form.options[option.key] ?? option.default);
+      const label = OPTION_LABELS[option.key] ?? option.key;
+      const rule = `must be between ${option.min} and ${option.max}`;
+      return [[option.key, parsedNumber(label, raw, (value) => value >= option.min && value <= option.max, rule)]];
+    }),
+  );
 }
 
 export function inputFields(definition: ProgramDefinition, form: EnrollForm): InputField[] {
@@ -275,17 +341,27 @@ export function enrollPayload(definition: ProgramDefinition, form: EnrollForm): 
     if (problem) problems.push(problem);
     else inputs[field.lift] = { [field.kind]: Number((raw ?? '').trim()) };
   }
-  if (problems.length > 0) return { kind: 'invalid', problems };
+  const { increment, barWeight } = roundingOf(form);
+  const numberOptions = numberOptionsOf(definition, form);
+  const options: Record<string, OptionValue> = { ...form.options };
+  for (const parsed of [increment, barWeight]) if (parsed.kind === 'problem') problems.push(parsed.problem);
+  for (const [key, parsed] of Object.entries(numberOptions)) {
+    if (parsed.kind === 'problem') problems.push(parsed.problem);
+    else options[key] = parsed.value;
+  }
+  if (problems.length > 0 || increment.kind === 'problem' || barWeight.kind === 'problem') {
+    return { kind: 'invalid', problems };
+  }
   return {
     kind: 'ok',
     payload: {
       templateKey: definition.key,
       templateVersion: definition.version,
       unit: form.unit,
-      options: { ...form.options },
+      options,
       bindings: { ...form.bindings },
       inputs,
-      rounding: { increment: form.rounding.increment, mode: form.rounding.mode, barWeight: form.rounding.barWeight },
+      rounding: { increment: increment.value, mode: form.rounding.mode, barWeight: barWeight.value },
     },
   };
 }
