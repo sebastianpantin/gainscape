@@ -155,7 +155,7 @@ export const GZCLP: ProgramDefinition = {
   lifts: GZCLP_LIFTS.map((key) => ({
     key,
     name: LIFT_NAMES[key],
-    ...(key.startsWith('squat') || key.startsWith('deadlift') ? { category: 'lower' as const } : {}),
+    category: key.startsWith('squat') || key.startsWith('deadlift') ? ('lower' as const) : ('upper' as const),
   })),
   inputs: [{ lifts: [...GZCLP_LIFTS], kinds: ['workingWeight'] }],
   referenceVars: ['workingWeight', 'fiveRm'],
