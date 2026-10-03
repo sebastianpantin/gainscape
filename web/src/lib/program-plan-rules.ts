@@ -55,10 +55,21 @@ function dayStatus(definition: ProgramDefinition, state: ProgramState, position:
   );
   if (record) return record.status;
   if (isRotationPosition(position) || isRotationPosition(state.position)) return 'upcoming';
-  const passed =
-    comparePositions(definition, position, state.position) < 0 ||
-    (position.week === state.position.week && state.completedDays.includes(position.day));
+  const before = comparePositions(definition, position, state.position) < 0;
+  const passed = isInCurrentWeek(position, state.position)
+    ? state.completedDays.includes(position.day) || (before && !isOptionalDay(definition, position.day))
+    : before;
   return passed ? 'skipped' : 'upcoming';
+}
+
+function isInCurrentWeek(position: Position, current: Position): boolean {
+  if (isRotationPosition(position) || isRotationPosition(current)) return false;
+  const sameCycle = !isCyclePosition(position) || !isCyclePosition(current) || position.cycle === current.cycle;
+  return sameCycle && position.week === current.week;
+}
+
+function isOptionalDay(definition: ProgramDefinition, dayKey: string): boolean {
+  return definition.schedule.days.some((day) => day.key === dayKey && day.optional === true);
 }
 
 function planTitle(position: Position): string {
