@@ -119,8 +119,10 @@ describe('isSetMet (assumption 7: weight ≥ snapshot − half increment, reps �
 });
 
 describe('liftOutcomes (judged against snapshots on each lift judged slots)', () => {
-  const monday = (sets: FactSet[]) =>
-    sessionFact({ id: 's-1', at: '2026-10-05T06:00:00.000Z' }, weekDay(4, 'mon'), sets);
+  const monday = (sets: FactSet[]) => ({
+    ...sessionFact({ id: 's-1', at: '2026-10-05T06:00:00.000Z' }, weekDay(4, 'mon'), sets),
+    stages: {},
+  });
 
   it('judges squat, bench and row on Monday', () => {
     expect(liftOutcomes(MADCOW_5X5, madcow, monday(madcowDaySets('mon')))).toEqual({
@@ -131,11 +133,10 @@ describe('liftOutcomes (judged against snapshots on each lift judged slots)', ()
   });
 
   it('judges press and deadlift on Wednesday and not the light squat', () => {
-    const wednesday = sessionFact(
-      { id: 's-2', at: '2026-10-07T06:00:00.000Z' },
-      weekDay(4, 'wed'),
-      madcowDaySets('wed'),
-    );
+    const wednesday = {
+      ...sessionFact({ id: 's-2', at: '2026-10-07T06:00:00.000Z' }, weekDay(4, 'wed'), madcowDaySets('wed')),
+      stages: {},
+    };
     expect(liftOutcomes(MADCOW_5X5, madcow, wednesday)).toEqual({ press: 'met', deadlift: 'met' });
   });
 

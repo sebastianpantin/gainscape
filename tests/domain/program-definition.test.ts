@@ -35,7 +35,7 @@ const FULLY_SUPPORTED_FIXTURES: [string, ProgramDefinition][] = [
 
 const SLICE_1B_ADJUSTMENTS: [string, Adjustment][] = [
   ['failureCounter', { kind: 'failureCounter', threshold: 3, deloadPct: 0.1 }],
-  ['stageMachine', { kind: 'stageMachine', onLastFail: { kind: 'retest', pct: 0.85 } }],
+  ['stageMachine', { kind: 'stageMachine', onLastFail: { kind: 'retest', pct: 0.85, from: 'fiveRm' } }],
   ['amrapThreshold', { kind: 'amrapThreshold', setIndex: 2, reps: 25 }],
   ['amrapTable', { kind: 'amrapTable', setIndex: 2, bands: [[2, { kg: 2.5, lb: 5 }]] }],
   [

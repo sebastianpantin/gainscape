@@ -141,7 +141,7 @@ const schedule = z.discriminatedUnion('kind', [
 ]);
 
 const stageLastFail = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('retest'), pct: z.number() }),
+  z.strictObject({ kind: z.literal('retest'), pct: z.number(), from: referenceVar }),
   z.strictObject({ kind: z.literal('resetToFirstStage'), add: unitAmount }),
 ]);
 

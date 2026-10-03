@@ -238,7 +238,7 @@ export const FULL_PRIMITIVES: ProgramDefinition = {
       ],
       onMiss: [
         { kind: 'failureCounter', threshold: 3, deloadPct: { option: 'deloadPct' } },
-        { kind: 'stageMachine', onLastFail: { kind: 'retest', pct: 0.85 } },
+        { kind: 'stageMachine', onLastFail: { kind: 'retest', pct: 0.85, from: 'fiveRm' } },
         { kind: 'stageMachine', onLastFail: { kind: 'resetToFirstStage', add: { kg: 6.25, lb: 15 } } },
       ],
     },
@@ -260,7 +260,7 @@ export const FULL_PRIMITIVES: ProgramDefinition = {
         {
           kind: 'repsOverStandard',
           setIndex: 5,
-          standardByWave: [10, 8, 5, 3],
+          standardByWave: [10],
           perRep: { option: 'perRep', cases: { standard: { kg: 2.5, lb: 5 }, fine: { kg: 1.25, lb: 2.5 } } },
           cap: 10,
         },
