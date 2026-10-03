@@ -2,8 +2,8 @@ key: nsuns_5day
 version: 1
 name: nSuns LP 5-day
 source:
-  - liftosaur.com/programs/nsuns
-  - thefitness.wiki/routines/nsuns-lp
+  - https://www.liftosaur.com/programs/nsuns
+  - https://thefitness.wiki/routines/nsuns-lp/
 lifts:
   - { key: bench, name: Bench press, category: upper }
   - { key: squat, name: Squat, category: lower }

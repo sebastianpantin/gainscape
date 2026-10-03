@@ -2,8 +2,8 @@ key: madcow_5x5
 version: 1
 name: Madcow 5x5
 source:
-  - oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm
-  - strengthlog.com/madcow-5x5
+  - https://www.oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm
+  - https://www.strengthlog.com/madcow-5x5/
 lifts:
   - { key: squat, name: Squat, category: lower }
   - { key: bench, name: Bench press, category: upper }
@@ -27,7 +27,7 @@ options:
     values: [0.1, 0.125, 0.15]
     default: 0.125
     source:
-      - oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm
+      - https://www.oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm
 schedule:
   kind: weekly
   days:

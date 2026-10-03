@@ -2,10 +2,11 @@ key: juggernaut_2
 version: 1
 name: Juggernaut Method 2.0 (structure)
 source:
-  - The Juggernaut Method 2.0 (book, via pdfcoffee.com/juggernaut-method-20-pdf-free.html)
-  - jtsstrength.com/?p=8002
-  - jtsstrength.com/going-heavy-on-the-juggernaut-method
-  - liftosaur.com/programs/juggernaut-method
+  - https://pdfcoffee.com/juggernaut-method-20-pdf-free.html
+  - https://www.jtsstrength.com/?p=8002
+  - https://www.jtsstrength.com/going-heavy-on-the-juggernaut-method/
+  - https://www.liftosaur.com/programs/juggernaut-method
+  - https://liftvault.com/programs/strength/juggernaut-method-base-template-spreadsheet/
 lifts:
   - { key: squat, name: Squat, category: lower }
   - { key: bench, name: Bench press, category: upper }
@@ -24,8 +25,8 @@ options:
     default: standard
     onlyForUnit: { fine: lb }
     source:
-      - The Juggernaut Method 2.0 (book, via pdfcoffee.com/juggernaut-method-20-pdf-free.html)
-      - liftosaur.com/programs/juggernaut-method
+      - https://pdfcoffee.com/juggernaut-method-20-pdf-free.html
+      - https://www.liftosaur.com/programs/juggernaut-method
 conversions:
   - { lb: 5, kg: 2.5, note: lower-body increment per rep over the standard }
   - { lb: 2.5, kg: 1.25, note: 'upper-body increment per rep, and the fine lower-body increment' }

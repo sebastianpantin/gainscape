@@ -2,7 +2,7 @@ key: starting_strength
 version: 1
 name: Starting Strength
 source:
-  - liftosaur.com/programs/ss1
+  - https://www.liftosaur.com/programs/ss1
 lifts:
   - { key: squat, name: Squat, category: lower }
   - { key: bench, name: Bench press, category: upper }
