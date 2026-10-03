@@ -61,12 +61,12 @@ export const STARTING_STRENGTH: ProgramDefinition = {
     days: [
       {
         key: 'a',
-        name: 'Workout A',
+        name: 'Day 1',
         slots: [fives('a', 'squat', 3), fives('a', 'bench', 3), fives('a', 'deadlift', 1)],
       },
       {
         key: 'b',
-        name: 'Workout B',
+        name: 'Day 2',
         slots: [fives('b', 'squat', 3), fives('b', 'press', 3), fives('b', 'deadlift', 1)],
       },
     ],

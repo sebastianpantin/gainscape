@@ -81,10 +81,10 @@ const PER_REP: Readonly<Record<LiftCategory, UnitAmountExpr>> = {
   upper: { option: 'perRep', cases: { standard: { kg: 1.25, lb: 2.5 }, fine: { kg: 0, lb: 1.25 } } },
 };
 
-function mainDay(lift: JuggernautLift): DayDecl {
+function mainDay(lift: JuggernautLift, index: number): DayDecl {
   return {
     key: lift,
-    name: NAMES[lift],
+    name: `Day ${index + 1}`,
     slots: [{ id: `${lift}-main`, lift, role: 'main', scheme: { kind: 'weekTable', table: 'waves', of: 'tm' } }],
   };
 }

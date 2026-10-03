@@ -130,7 +130,7 @@ export const NSUNS_5DAY: ProgramDefinition = {
     days: [
       {
         key: 'mon',
-        name: 'Monday',
+        name: 'Day 1',
         slots: [
           slot('mon', 'bench', 'main', setsOf(BENCH_VOLUME, null)),
           slot('mon', 'press', 'supplemental', setsOf(t2Rows(T2_REPS, 0.5, 0.6, 0.7), null)),
@@ -138,7 +138,7 @@ export const NSUNS_5DAY: ProgramDefinition = {
       },
       {
         key: 'tue',
-        name: 'Tuesday',
+        name: 'Day 2',
         slots: [
           slot('tue', 'squat', 'main', setsOf(HEAVY, null)),
           slot('tue', 'sumo-deadlift', 'supplemental', setsOf(t2Rows(T2_SUMO_REPS, 0.5, 0.6, 0.7), 'deadlift')),
@@ -146,7 +146,7 @@ export const NSUNS_5DAY: ProgramDefinition = {
       },
       {
         key: 'wed',
-        name: 'Wednesday',
+        name: 'Day 3',
         slots: [
           slot('wed', 'press', 'main', setsOf(HEAVY, null)),
           slot('wed', 'incline-bench', 'supplemental', setsOf(t2Rows(T2_REPS, 0.4, 0.5, 0.6), 'bench')),
@@ -154,7 +154,7 @@ export const NSUNS_5DAY: ProgramDefinition = {
       },
       {
         key: 'thu',
-        name: 'Thursday',
+        name: 'Day 4',
         slots: [
           slot('thu', 'deadlift', 'main', setsOf(DEADLIFT, null)),
           slot('thu', 'front-squat', 'supplemental', setsOf(t2Rows(T2_FRONT_SQUAT_REPS, 0.35, 0.45, 0.55), 'squat')),
@@ -162,7 +162,7 @@ export const NSUNS_5DAY: ProgramDefinition = {
       },
       {
         key: 'fri',
-        name: 'Friday',
+        name: 'Day 5',
         slots: [
           slot('fri', 'bench', 'main', setsOf(HEAVY, null)),
           slot('fri', 'close-grip-bench', 'supplemental', setsOf(t2Rows(T2_REPS, 0.4, 0.5, 0.6), 'bench')),

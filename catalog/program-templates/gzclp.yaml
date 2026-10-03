@@ -30,7 +30,7 @@ schedule:
   kind: rotation
   days:
     - key: a1
-      name: A1
+      name: Day 1
       slots:
         - id: a1-squat-t1
           lift: squat-t1
@@ -63,7 +63,7 @@ schedule:
             minReps: 15
             load: { kind: pct, pct: 1, of: workingWeight }
     - key: b1
-      name: B1
+      name: Day 2
       slots:
         - id: b1-ohp-t1
           lift: ohp-t1
@@ -96,7 +96,7 @@ schedule:
             minReps: 15
             load: { kind: pct, pct: 1, of: workingWeight }
     - key: a2
-      name: A2
+      name: Day 3
       slots:
         - id: a2-bench-t1
           lift: bench-t1
@@ -129,7 +129,7 @@ schedule:
             minReps: 15
             load: { kind: pct, pct: 1, of: workingWeight }
     - key: b2
-      name: B2
+      name: Day 4
       slots:
         - id: b2-deadlift-t1
           lift: deadlift-t1

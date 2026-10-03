@@ -20,7 +20,7 @@ schedule:
   weeksPerCycle: 3
   days:
     - key: mon
-      name: Monday
+      name: Day 1
       slots:
         - id: mon-main
           lift: main
@@ -38,7 +38,7 @@ schedule:
                 - { kg: 5, lb: 10 }
                 - { kg: 8.75, lb: 20 }
     - key: wed
-      name: Wednesday
+      name: Day 2
       slots:
         - id: wed-main
           lift: main
@@ -56,7 +56,7 @@ schedule:
                 - { kg: 5, lb: 10 }
                 - { kg: 8.75, lb: 20 }
     - key: fri
-      name: Friday
+      name: Day 3
       slots:
         - id: fri-main
           lift: main
@@ -74,7 +74,7 @@ schedule:
                 - { kg: 5, lb: 10 }
                 - { kg: 8.75, lb: 20 }
     - key: sat
-      name: Saturday
+      name: Day 4
       slots:
         - id: sat-main
           lift: main

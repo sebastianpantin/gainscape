@@ -32,7 +32,7 @@ schedule:
   kind: weekly
   days:
     - key: mon
-      name: Monday
+      name: Day 1
       slots:
         - id: mon-squat
           lift: squat
@@ -67,7 +67,7 @@ schedule:
           role: assistance
           scheme: { kind: repeat, count: 4, reps: null, load: { kind: lastLogged }, optional: true }
     - key: wed
-      name: Wednesday
+      name: Day 2
       slots:
         - id: wed-squat
           lift: squat
@@ -100,7 +100,7 @@ schedule:
           role: assistance
           scheme: { kind: repeat, count: 3, reps: null, load: { kind: lastLogged }, optional: true }
     - key: fri
-      name: Friday
+      name: Day 3
       slots:
         - id: fri-squat
           lift: squat

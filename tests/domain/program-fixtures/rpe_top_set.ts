@@ -20,11 +20,11 @@ export const TOP_SET_REPS = 3;
 export const TOP_SET_RPE = 8;
 export const FATIGUE_DROP_PCT = 0.95;
 
-function liftDay(lift: RpeLift): DayDecl {
+function liftDay(lift: RpeLift, index: number): DayDecl {
   const top = `${lift}-top:0`;
   return {
     key: lift,
-    name: NAMES[lift],
+    name: `Day ${index + 1}`,
     slots: [
       {
         id: `${lift}-top`,

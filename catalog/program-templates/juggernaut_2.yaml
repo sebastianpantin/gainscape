@@ -108,19 +108,19 @@ schedule:
   waveWeeks: 4
   days:
     - key: squat
-      name: Squat
+      name: Day 1
       slots:
         - { id: squat-main, lift: squat, role: main, scheme: { kind: weekTable, table: waves, of: tm } }
     - key: bench
-      name: Bench press
+      name: Day 2
       slots:
         - { id: bench-main, lift: bench, role: main, scheme: { kind: weekTable, table: waves, of: tm } }
     - key: deadlift
-      name: Deadlift
+      name: Day 3
       slots:
         - { id: deadlift-main, lift: deadlift, role: main, scheme: { kind: weekTable, table: waves, of: tm } }
     - key: press
-      name: Overhead press
+      name: Day 4
       slots:
         - { id: press-main, lift: press, role: main, scheme: { kind: weekTable, table: waves, of: tm } }
 progression:

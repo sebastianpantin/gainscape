@@ -28,7 +28,7 @@ schedule:
   kind: weekly
   days:
     - key: mon
-      name: Monday
+      name: Day 1
       slots:
         - id: mon-bench
           lift: bench
@@ -60,7 +60,7 @@ schedule:
               - { reps: 6, load: { kind: pct, pct: 0.7, of: tm } }
               - { reps: 8, load: { kind: pct, pct: 0.7, of: tm } }
     - key: tue
-      name: Tuesday
+      name: Day 2
       slots:
         - id: tue-squat
           lift: squat
@@ -92,7 +92,7 @@ schedule:
               - { reps: 6, load: { kind: pct, pct: 0.7, of: tm, lift: deadlift } }
               - { reps: 8, load: { kind: pct, pct: 0.7, of: tm, lift: deadlift } }
     - key: wed
-      name: Wednesday
+      name: Day 3
       slots:
         - id: wed-press
           lift: press
@@ -124,7 +124,7 @@ schedule:
               - { reps: 6, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
               - { reps: 8, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
     - key: thu
-      name: Thursday
+      name: Day 4
       slots:
         - id: thu-deadlift
           lift: deadlift
@@ -156,7 +156,7 @@ schedule:
               - { reps: 6, load: { kind: pct, pct: 0.55, of: tm, lift: squat } }
               - { reps: 8, load: { kind: pct, pct: 0.55, of: tm, lift: squat } }
     - key: fri
-      name: Friday
+      name: Day 5
       slots:
         - id: fri-bench
           lift: bench
