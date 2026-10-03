@@ -212,6 +212,17 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     </>
   );
 
+  const openStartedDraft = async (started: { draft: WorkoutDraft; skippedExerciseIds: string[] }) => {
+    const skipped = started.skippedExerciseIds.length;
+    const startedFresh = await startWorkout(() => started.draft);
+    setStartingDay(false);
+    setStartNotice(
+      startedFresh && skipped > 0
+        ? `${skipped} exercise(s) in this day are no longer available and were skipped.`
+        : null,
+    );
+  };
+
   const startFromDay = async (program: Program, day: ProgramDay) => {
     setStartingDay(true);
     const exerciseIds = [...new Set(day.exercises.map((planned) => planned.exerciseId))];
@@ -225,14 +236,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       lastSets,
       new Date(),
     );
-    const skipped = started.skippedExerciseIds.length;
-    const startedFresh = await startWorkout(() => started.draft);
-    setStartingDay(false);
-    setStartNotice(
-      startedFresh && skipped > 0
-        ? `${skipped} exercise(s) in this day are no longer available and were skipped.`
-        : null,
-    );
+    await openStartedDraft(started);
   };
 
   const startFromPrescription = async (day: PrescribedDayStart) => {
@@ -242,14 +246,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       new Map(exercises.map((exercise) => [exercise.id, exercise])),
       new Date(),
     );
-    const skipped = started.skippedExerciseIds.length;
-    const startedFresh = await startWorkout(() => started.draft);
-    setStartingDay(false);
-    setStartNotice(
-      startedFresh && skipped > 0
-        ? `${skipped} exercise(s) in this day are no longer available and were skipped.`
-        : null,
-    );
+    await openStartedDraft(started);
   };
 
   const skipProgramDay = async (position: Position) => {
