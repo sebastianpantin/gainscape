@@ -192,7 +192,10 @@ function applyAdjustment(
   switch (adjustment.kind) {
     case 'increment': {
       if (!('byPct' in adjustment)) {
-        return changeTo(current + evaluateAmount(adjustment.by, enrollment.unit, numbers), 'increment');
+        const opening = adjustment.opening;
+        const opens = opening !== undefined && (state.successes[ruleKeyOf(rule)] ?? 0) < opening.times;
+        const amount = opens ? opening.by : adjustment.by;
+        return changeTo(current + evaluateAmount(amount, enrollment.unit, numbers), 'increment');
       }
       const onRamp = definition.initial.find((initial) => initial.kind === 'onRamp' && initial.var === rule.var);
       if (onRamp?.kind === 'onRamp' && absoluteWeek(definition, position) < onRamp.peakWeek) {
@@ -224,10 +227,12 @@ function applyOutcome(
   const key = ruleKeyOf(rule);
   const misses = outcome === 'met' ? 0 : (state.consecutiveMisses[key] ?? 0) + 1;
   const adjustments = [...(outcome === 'met' ? rule.onMet : rule.onMiss), ...(rule.always ?? [])];
-  return adjustments.reduce<ProgramState>(
+  const adjusted = adjustments.reduce<ProgramState>(
     (next, adjustment) => applyAdjustment(context, next, rule, adjustment, position),
     { ...state, consecutiveMisses: { ...state.consecutiveMisses, [key]: misses } },
   );
+  if (outcome !== 'met') return adjusted;
+  return { ...adjusted, successes: { ...adjusted.successes, [key]: (adjusted.successes[key] ?? 0) + 1 } };
 }
 
 function scopeOutcome(
