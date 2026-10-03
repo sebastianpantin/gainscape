@@ -1,0 +1,77 @@
+import { type ProgramCache, readProgramCache, updateProgramCache, withEnrollment } from '../offline/program-cache.ts';
+import {
+  type ProgramFetchers,
+  type ProgramRefreshContext,
+  refreshProgramCacheWith,
+  refreshProgramFactsWith,
+} from '../offline/program-refresh.ts';
+import { type EnrollProgramPayload, type ProgramTemplateRow } from './program-enroll-rules.ts';
+import { type EnrollmentFactsRows, type EnrollmentRow } from './program-facts-rules.ts';
+import { type SetReferenceEvent } from './program-reference-rules.ts';
+import { type SkipDayEvent } from './program-skip-rules.ts';
+import { supabase } from './supabase.ts';
+
+const ENROLLMENT_COLUMNS =
+  'id, template_key, template_version, unit, options, lift_bindings, inputs, rounding, started_at, ended_at';
+
+export async function fetchProgramTemplates(): Promise<ProgramTemplateRow[]> {
+  const { data, error } = await supabase.from('program_templates').select('key, version, name, definition');
+  if (error) throw error;
+  return data as ProgramTemplateRow[];
+}
+
+async function fetchActiveEnrollment(): Promise<EnrollmentRow | null> {
+  const { data, error } = await supabase
+    .from('program_enrollments')
+    .select(ENROLLMENT_COLUMNS)
+    .is('ended_at', null)
+    .maybeSingle();
+  if (error) throw error;
+  return data as EnrollmentRow | null;
+}
+
+async function fetchEnrollmentFacts(enrollmentId: string): Promise<EnrollmentFactsRows> {
+  const { data, error } = await supabase.rpc('enrollment_facts', { enrollment_id: enrollmentId });
+  if (error) throw error;
+  return data as EnrollmentFactsRows;
+}
+
+export async function enrollProgram(payload: EnrollProgramPayload): Promise<string> {
+  const { data, error } = await supabase.rpc('enroll_program', { enrollment: payload });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function endEnrollment(enrollmentId: string): Promise<void> {
+  const { error } = await supabase.rpc('end_enrollment', { enrollment_id: enrollmentId });
+  if (error) throw error;
+}
+
+export async function adjustEnrollment(enrollmentId: string, event: SetReferenceEvent | SkipDayEvent): Promise<void> {
+  const { error } = await supabase.rpc('adjust_enrollment', { enrollment_id: enrollmentId, event });
+  if (error) throw error;
+}
+
+const PROGRAM_FETCHERS: ProgramFetchers = {
+  templates: fetchProgramTemplates,
+  activeEnrollment: fetchActiveEnrollment,
+  enrollmentFacts: fetchEnrollmentFacts,
+};
+
+function refreshContext(userId: string): ProgramRefreshContext {
+  return { storage: localStorage, userId, now: Date.now, fetchers: PROGRAM_FETCHERS };
+}
+
+export function refreshProgramFactsOrCached(userId: string, enrollment: EnrollmentRow): Promise<ProgramCache> {
+  return refreshProgramFactsWith(refreshContext(userId), enrollment).catch(() =>
+    readProgramCache(localStorage, userId),
+  );
+}
+
+export function refreshProgramCache(userId: string): Promise<ProgramCache> {
+  return refreshProgramCacheWith(refreshContext(userId));
+}
+
+export function forgetCachedEnrollment(userId: string): void {
+  updateProgramCache(localStorage, userId, (cache) => withEnrollment(cache, null));
+}

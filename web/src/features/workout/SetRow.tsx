@@ -2,6 +2,7 @@ import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
 import { highestWeightInUnit, shownWeight, unitToKg, WEIGHT_INPUT_STEP } from '../../lib/units.ts';
+import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
@@ -13,6 +14,7 @@ interface SetRowProps {
   preview: SetPreview;
   unit: UnitPref;
   effortMode: EffortInputMode;
+  markers: readonly string[];
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   onRemove: () => void;
   onToggleDone: () => void;
@@ -82,13 +84,21 @@ export function SetRow({
   preview,
   unit,
   effortMode,
+  markers,
   onChange,
   onRemove,
   onToggleDone,
 }: SetRowProps) {
+  const amrapBadge = amrapBadgeOf(set.prescription);
+  const rowClass = ['set-row', set.done ? null : 'planned', markers.length > 0 ? 'marked' : null]
+    .filter((name) => name !== null)
+    .join(' ');
   return (
-    <li className={set.done ? 'set-row' : 'set-row planned'}>
-      <span className="set-number">{setNumber}</span>
+    <li className={rowClass}>
+      <span className="set-number">
+        {setNumber}
+        {amrapBadge && <span className="amrap-badge">{amrapBadge}</span>}
+      </span>
       <WeightField
         loadType={loadType}
         weightKg={set.weightKg}
@@ -109,6 +119,13 @@ export function SetRow({
       >
         <Icon name="check" size={20} strokeWidth={3} />
       </button>
+      {markers.length > 0 && (
+        <span className="set-markers">
+          {markers.map((text) => (
+            <span key={text}>{text}</span>
+          ))}
+        </span>
+      )}
       <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
         ✕
       </button>

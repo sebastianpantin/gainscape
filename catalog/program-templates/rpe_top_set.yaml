@@ -1,0 +1,139 @@
+key: rpe_top_set
+version: 1
+name: RPE top set with back-offs
+source:
+  - https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/
+lifts:
+  - { key: squat, name: Squat, category: lower }
+  - { key: bench, name: Bench press, category: upper }
+  - { key: deadlift, name: Deadlift, category: lower }
+inputs:
+  - { lifts: [squat, bench, deadlift], kinds: [e1rm] }
+referenceVars: [e1rm]
+initial:
+  - { kind: copy, var: e1rm, from: e1rm }
+options:
+  - key: backoff
+    kind: choice
+    values: [fatigue, fixed]
+    default: fatigue
+    source:
+      - https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/
+  - key: fixedBackoffPct
+    kind: choice
+    values: [0.95, 0.925, 0.9]
+    default: 0.925
+    source:
+      - https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/
+schedule:
+  kind: weekly
+  days:
+    - key: squat
+      name: Day 1
+      slots:
+        - id: squat-top
+          lift: squat
+          role: main
+          scheme: { kind: sets, sets: [{ reps: 3, load: { kind: rpeLoad, reps: 3, rpe: 8, of: e1rm } }] }
+        - id: squat-fatigue
+          lift: squat
+          role: supplemental
+          when:
+            - { option: backoff, equals: fatigue }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 3
+            optional: true
+            load: { kind: pctOfSet, ref: 'squat-top:0', pct: 0.95 }
+        - id: squat-fixed
+          lift: squat
+          role: supplemental
+          when:
+            - { option: backoff, equals: fixed }
+          scheme:
+            kind: repeat
+            count: 3
+            reps: 3
+            load: { kind: pctOfSet, ref: 'squat-top:0', pct: { option: fixedBackoffPct } }
+    - key: bench
+      name: Day 2
+      slots:
+        - id: bench-top
+          lift: bench
+          role: main
+          scheme: { kind: sets, sets: [{ reps: 3, load: { kind: rpeLoad, reps: 3, rpe: 8, of: e1rm } }] }
+        - id: bench-fatigue
+          lift: bench
+          role: supplemental
+          when:
+            - { option: backoff, equals: fatigue }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 3
+            optional: true
+            load: { kind: pctOfSet, ref: 'bench-top:0', pct: 0.95 }
+        - id: bench-fixed
+          lift: bench
+          role: supplemental
+          when:
+            - { option: backoff, equals: fixed }
+          scheme:
+            kind: repeat
+            count: 3
+            reps: 3
+            load: { kind: pctOfSet, ref: 'bench-top:0', pct: { option: fixedBackoffPct } }
+    - key: deadlift
+      name: Day 3
+      slots:
+        - id: deadlift-top
+          lift: deadlift
+          role: main
+          scheme: { kind: sets, sets: [{ reps: 3, load: { kind: rpeLoad, reps: 3, rpe: 8, of: e1rm } }] }
+        - id: deadlift-fatigue
+          lift: deadlift
+          role: supplemental
+          when:
+            - { option: backoff, equals: fatigue }
+          scheme:
+            kind: repeat
+            count: 5
+            reps: 3
+            optional: true
+            load: { kind: pctOfSet, ref: 'deadlift-top:0', pct: 0.95 }
+        - id: deadlift-fixed
+          lift: deadlift
+          role: supplemental
+          when:
+            - { option: backoff, equals: fixed }
+          scheme:
+            kind: repeat
+            count: 3
+            reps: 3
+            load: { kind: pctOfSet, ref: 'deadlift-top:0', pct: { option: fixedBackoffPct } }
+progression:
+  - lift: squat
+    var: e1rm
+    trigger: afterSession
+    judgedSlots: [squat-top]
+    onMet: []
+    onMiss: []
+    always:
+      - { kind: e1rmFromSet, setIndex: 0 }
+  - lift: bench
+    var: e1rm
+    trigger: afterSession
+    judgedSlots: [bench-top]
+    onMet: []
+    onMiss: []
+    always:
+      - { kind: e1rmFromSet, setIndex: 0 }
+  - lift: deadlift
+    var: e1rm
+    trigger: afterSession
+    judgedSlots: [deadlift-top]
+    onMet: []
+    onMiss: []
+    always:
+      - { kind: e1rmFromSet, setIndex: 0 }

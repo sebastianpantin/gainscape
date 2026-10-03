@@ -1,12 +1,15 @@
 import { type DbRow, nullableNumber } from '../db.ts';
+import { type PrescriptionPayload, type SetPayload } from '../session-payload.ts';
 import {
   type BalanceConfig,
   type CardioSetInput,
   countedWorkSeconds,
   type LiftSetInput,
+  type PrescriptionSnapshot,
   resolveEffort,
   type SetResult,
   setKind,
+  storableSnapshots,
   type WritableSet,
 } from '../domain/index.ts';
 
@@ -106,4 +109,42 @@ export function setSkillXpRows(results: readonly SetResult[], userId: string) {
   return results.flatMap((result) =>
     result.skillXp.map((part) => ({ set_id: result.set.id, skill_id: part.skillId, user_id: userId, xp: part.xp })),
   );
+}
+
+export interface PrescriptionSnapshotColumns {
+  prescription_ref: string | null;
+  prescribed_weight_kg: number | null;
+  prescribed_reps: number | null;
+  prescribed_min_reps: number | null;
+  prescribed_amrap: boolean | null;
+}
+
+export const NO_PRESCRIPTION_SNAPSHOT: PrescriptionSnapshotColumns = Object.freeze({
+  prescription_ref: null,
+  prescribed_weight_kg: null,
+  prescribed_reps: null,
+  prescribed_min_reps: null,
+  prescribed_amrap: null,
+});
+
+function snapshotColumns(snapshot: PrescriptionSnapshot | null): PrescriptionSnapshotColumns {
+  if (snapshot === null) return NO_PRESCRIPTION_SNAPSHOT;
+  return {
+    prescription_ref: snapshot.ref,
+    prescribed_weight_kg: snapshot.weightKg,
+    prescribed_reps: snapshot.reps,
+    prescribed_min_reps: snapshot.minReps,
+    prescribed_amrap: snapshot.amrap,
+  };
+}
+
+export function prescriptionSnapshotsBySetId(
+  sets: readonly SetPayload[],
+  keepsSnapshot: (prescription: PrescriptionPayload) => boolean,
+): Map<string, PrescriptionSnapshotColumns> {
+  const kept = sets.map((set) =>
+    set.kind === 'lift' && set.prescription !== null && keepsSnapshot(set.prescription) ? set.prescription : null,
+  );
+  const snapshots = storableSnapshots(kept);
+  return new Map(sets.map((set, index) => [set.id, snapshotColumns(snapshots[index])]));
 }

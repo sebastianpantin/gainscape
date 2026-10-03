@@ -336,10 +336,14 @@ describe('function execution rights', () => {
       where n.nspname in ('public', 'private') and has_function_privilege('authenticated', p.oid, 'execute')
       order by p.proname`;
     expect(rows.map((row) => row.name)).toEqual([
+      'adjust_enrollment',
       'change_username',
       'copy_program',
       'craft',
       'delete_program',
+      'end_enrollment',
+      'enroll_program',
+      'enrollment_facts',
       'exercise_strength_state',
       'get_collection',
       'get_feed',

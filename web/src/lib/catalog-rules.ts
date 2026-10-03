@@ -37,6 +37,7 @@ export const PACE_UNITS: PaceUnit[] = ['per_km', 'per_100m'];
 
 interface ExerciseBase {
   id: string;
+  key?: string | null;
   name: string;
   equipment: string;
   custom: boolean;
@@ -64,10 +65,11 @@ export function isCardioExercise(exercise: Exercise): exercise is CardioExercise
 }
 
 export const EXERCISE_COLUMNS =
-  'id, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, exercise_skills(share_bp, skills(key))';
+  'id, key, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, exercise_skills(share_bp, skills(key))';
 
 export interface ExerciseRow {
   id: string;
+  key?: string | null;
   name: string;
   equipment: string;
   modality: Modality;
@@ -83,6 +85,7 @@ export interface ExerciseRow {
 export function toExercise(row: ExerciseRow): Exercise {
   const base = {
     id: row.id,
+    key: row.key,
     name: row.name,
     equipment: row.equipment,
     custom: row.owner_user_id !== null,

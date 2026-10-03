@@ -10,13 +10,14 @@ import {
 import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
-import type { SetPayload } from '../_shared/session-payload.ts';
+import { assertDistinctPrescriptionRefs, type SetPayload } from '../_shared/session-payload.ts';
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
   bumpRevision,
   isOwnedSessionEditable,
+  loadPrescriptionRefs,
   loadProfileSettings,
   loadStoredSets,
   lockUser,
@@ -24,6 +25,7 @@ import {
   storedSummary,
   writeEditedSets,
 } from '../_shared/stores/sessions.ts';
+import { prescriptionSnapshotsBySetId } from '../_shared/stores/set-columns.ts';
 import { type EditSessionPayload, parseEditSessionPayload } from './payload.ts';
 
 interface EditResponse {
@@ -57,9 +59,17 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
       throw new HttpError(409, 'revision_conflict', { revision: session.revision });
     }
     assertKindsUnchanged(payload.sets, storedById);
+    const addedSets = payload.sets.filter((set) => !storedById.has(set.id));
+    assertDistinctPrescriptionRefs(addedSets);
     const catalog = await loadKnownCatalog(tx, userId, payload.sets);
-    const newSetIds = payload.sets.filter((set) => !storedById.has(set.id)).map((set) => set.id);
+    const newSetIds = addedSets.map((set) => set.id);
     if (newSetIds.length > 0) await assertSetIdsUnused(tx, newSetIds);
+    const storedRefs = await loadPrescriptionRefs(tx, payload.sessionId);
+    const keptRefs = new Set(payload.sets.flatMap((set) => storedRefs.get(set.id) ?? []));
+    const addedSnapshots = prescriptionSnapshotsBySetId(
+      addedSets,
+      (prescription) => session.programLinked && !keptRefs.has(prescription.ref),
+    );
 
     const { bodyweightKg } = await loadProfileSettings(tx, userId);
     const requested = payload.sets.map((set) => {
@@ -73,7 +83,7 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     });
 
     await takeRateLimit(tx, 'session_edit_hour', userId);
-    await writeEditedSets(tx, userId, payload.sessionId, storedSets, requested, DEFAULT_BALANCE);
+    await writeEditedSets(tx, userId, payload.sessionId, storedSets, requested, addedSnapshots, DEFAULT_BALANCE);
     const revision = await bumpRevision(tx, payload.sessionId, payload.notes);
 
     const storedExerciseIds = [...new Set(storedSets.map((set) => set.exerciseId))];

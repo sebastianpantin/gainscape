@@ -107,6 +107,7 @@ declare
   unlock_item uuid;
   unlock_exercise uuid;
   friend_event uuid;
+  enrollment_id uuid := gen_random_uuid();
 begin
   select e.id into lift from public.exercises e where e.key is not null and e.load_type = 'external' order by e.key limit 1;
   select e.id into bodyweight_lift from public.exercises e where e.key is not null and e.load_type = 'bodyweight' order by e.key limit 1;
@@ -154,6 +155,13 @@ begin
   insert into public.reactions (event_id, user_id) values (friend_event, give_everything.owner);
   insert into private.rate_limit_hits (bucket, subject, window_start, hits)
   values ('gz_minute', give_everything.owner, date_trunc('minute', now()), 1);
+  insert into public.program_enrollments
+    (id, user_id, template_key, template_version, unit, options, lift_bindings, inputs, rounding)
+  select enrollment_id, give_everything.owner, t.key, t.version, 'kg', '{}', '{}', '{}',
+         '{"increment": 2.5, "mode": "nearest", "barWeight": 20}'
+  from public.program_templates t where t.key = 'madcow_5x5' and t.version = 1;
+  insert into public.program_enrollment_events (enrollment_id, kind, payload)
+  values (enrollment_id, 'skip_day', '{"position": {"week": 1, "day": "mon"}}');
 end;
 $$;
 

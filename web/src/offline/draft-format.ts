@@ -1,3 +1,4 @@
+import { type Position, type PrescribedExercise, type PrescriptionSnapshot } from '@domain/index.ts';
 import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
 import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
 
@@ -8,12 +9,19 @@ const STARTING_EXTERNAL_LOAD_KG = 20;
 const STARTING_REPS = 8;
 const STARTING_BOUT_DURATION_S = 1800;
 
+export interface PrescriptionDetail {
+  pct: number | null;
+  optional: boolean;
+}
+
 export interface DraftSet {
   id: string;
   weightKg: number;
   reps: number;
   effort: EffortInput;
   done: boolean;
+  prescription?: PrescriptionSnapshot | null;
+  prescriptionDetail?: PrescriptionDetail;
 }
 
 export interface DraftTarget {
@@ -54,12 +62,19 @@ export interface CardioDraftExercise {
 
 export type DraftExercise = LiftDraftExercise | CardioDraftExercise;
 
+export interface DraftProgram {
+  enrollmentId: string;
+  position: Position;
+  templateKey: string;
+}
+
 export interface WorkoutDraft {
   sessionId: string;
   startedAt: string;
   finishedAt: string | null;
   programDayId: string | null;
   programLabel: string | null;
+  program?: DraftProgram | null;
   exercises: DraftExercise[];
 }
 
@@ -95,14 +110,48 @@ function isLiftEffortInput(value: unknown): value is NonNullable<EffortInput> {
   return false;
 }
 
-function normalisedSet(set: unknown, fromV2: boolean): unknown {
-  if (!isRecord(set)) return set;
+function isPrescriptionSnapshot(value: unknown): value is PrescriptionSnapshot {
+  return (
+    isRecord(value) &&
+    typeof value.ref === 'string' &&
+    typeof value.weightKg === 'number' &&
+    typeof value.reps === 'number' &&
+    (value.minReps === null || typeof value.minReps === 'number') &&
+    typeof value.amrap === 'boolean'
+  );
+}
+
+function isPrescriptionDetail(value: unknown): value is PrescriptionDetail {
+  return (
+    isRecord(value) && (value.pct === null || typeof value.pct === 'number') && typeof value.optional === 'boolean'
+  );
+}
+
+function isDraftProgram(value: unknown): value is DraftProgram {
+  return (
+    isRecord(value) &&
+    typeof value.enrollmentId === 'string' &&
+    isRecord(value.position) &&
+    typeof value.templateKey === 'string'
+  );
+}
+
+function withNormalisedEffort(set: Record<string, unknown>, fromV2: boolean): Record<string, unknown> {
   if (fromV2 && !('effort' in set)) {
     const { effortLevel, ...rest } = set;
     const level = EFFORT_LEVELS.find((candidate) => candidate === effortLevel);
     return { ...rest, effort: level ? { type: 'level', level } : null };
   }
   return isLiftEffortInput(set.effort) ? set : { ...set, effort: null };
+}
+
+function normalisedSet(set: unknown, fromV2: boolean): unknown {
+  if (!isRecord(set)) return set;
+  const prescription = isPrescriptionSnapshot(set.prescription) ? set.prescription : null;
+  const { prescriptionDetail, ...rest } = withNormalisedEffort(set, fromV2);
+  return isPrescriptionDetail(prescriptionDetail)
+    ? { ...rest, prescription, prescriptionDetail }
+    : { ...rest, prescription };
 }
 
 function isCardioEffortInput(value: unknown): boolean {
@@ -123,6 +172,7 @@ function normalisedExercise(exercise: unknown, fromV2: boolean): unknown {
 function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
   return {
     ...draft,
+    program: isDraftProgram(draft.program) ? draft.program : null,
     exercises: draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
   };
 }
@@ -179,6 +229,7 @@ export function startDraft(): WorkoutDraft {
     finishedAt: null,
     programDayId: null,
     programLabel: null,
+    program: null,
     exercises: [],
   };
 }
@@ -341,37 +392,52 @@ export function programLabelFor(programName: string, dayName: string): string {
   return `${programName} — ${dayName}`;
 }
 
+type LiftCatalogEntry = Extract<CatalogEntry, { loadType: LoadType }>;
+
+function liftDraftExercises<Entry extends { exerciseId: string }>(
+  entries: readonly Entry[],
+  exercisesById: ReadonlyMap<string, CatalogEntry>,
+  targetAndSets: (entry: Entry, exercise: LiftCatalogEntry) => Pick<LiftDraftExercise, 'target' | 'sets'>,
+): { exercises: DraftExercise[]; skippedExerciseIds: string[] } {
+  const skippedExerciseIds: string[] = [];
+  const exercises = entries.flatMap((entry): DraftExercise[] => {
+    const exercise = exercisesById.get(entry.exerciseId);
+    if (!exercise || exercise.modality === 'cardio') {
+      skippedExerciseIds.push(entry.exerciseId);
+      return [];
+    }
+    return [
+      {
+        exerciseId: entry.exerciseId,
+        name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
+        modality: 'lift',
+        loadType: exercise.loadType,
+        ...targetAndSets(entry, exercise),
+      },
+    ];
+  });
+  return { exercises, skippedExerciseIds };
+}
+
 export function startDraftFromDay(
   day: StartableDay,
   exercisesById: ReadonlyMap<string, CatalogEntry>,
   lastSets: ReadonlyMap<string, LastLoggedSet>,
   now: Date,
 ): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
-  const skippedExerciseIds: string[] = [];
-  const exercises = day.exercises.flatMap((planned): DraftExercise[] => {
-    const exercise = exercisesById.get(planned.exerciseId);
-    if (!exercise || exercise.modality === 'cardio') {
-      skippedExerciseIds.push(planned.exerciseId);
-      return [];
-    }
+  const { exercises, skippedExerciseIds } = liftDraftExercises(day.exercises, exercisesById, (planned, exercise) => {
     const last = lastSets.get(planned.exerciseId);
     const weightKg = exercise.loadType === 'bodyweight' ? 0 : (last?.weightKg ?? defaultWeightKg(exercise.loadType));
-    return [
-      {
-        exerciseId: planned.exerciseId,
-        name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
-        modality: 'lift',
-        loadType: exercise.loadType,
-        target: { sets: planned.targetSets, repsMin: planned.targetRepsMin, repsMax: planned.targetRepsMax },
-        sets: Array.from({ length: planned.targetSets }, () => ({
-          id: crypto.randomUUID(),
-          weightKg,
-          reps: planned.targetRepsMin,
-          effort: null,
-          done: false,
-        })),
-      },
-    ];
+    return {
+      target: { sets: planned.targetSets, repsMin: planned.targetRepsMin, repsMax: planned.targetRepsMax },
+      sets: Array.from({ length: planned.targetSets }, () => ({
+        id: crypto.randomUUID(),
+        weightKg,
+        reps: planned.targetRepsMin,
+        effort: null,
+        done: false,
+      })),
+    };
   });
   return {
     draft: {
@@ -380,6 +446,51 @@ export function startDraftFromDay(
       finishedAt: null,
       programDayId: day.id,
       programLabel: programLabelFor(day.programName, day.name),
+      program: null,
+      exercises,
+    },
+    skippedExerciseIds,
+  };
+}
+
+export interface PrescribedDayStart {
+  enrollmentId: string;
+  templateKey: string;
+  programName: string;
+  dayName: string;
+  position: Position;
+  exercises: readonly PrescribedExercise[];
+}
+
+export function startDraftFromPrescription(
+  day: PrescribedDayStart,
+  exercisesById: ReadonlyMap<string, CatalogEntry>,
+  now: Date,
+): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
+  const { exercises, skippedExerciseIds } = liftDraftExercises(
+    day.exercises,
+    exercisesById,
+    (prescribed, exercise) => ({
+      target: null,
+      sets: prescribed.sets.map((set) => ({
+        id: crypto.randomUUID(),
+        weightKg: set.weightKg ?? defaultWeightKg(exercise.loadType),
+        reps: set.reps ?? STARTING_REPS,
+        effort: null,
+        done: false,
+        prescription: set.snapshot,
+        prescriptionDetail: { pct: set.pct, optional: set.optional },
+      })),
+    }),
+  );
+  return {
+    draft: {
+      sessionId: crypto.randomUUID(),
+      startedAt: now.toISOString(),
+      finishedAt: null,
+      programDayId: null,
+      programLabel: programLabelFor(day.programName, day.dayName),
+      program: { enrollmentId: day.enrollmentId, position: day.position, templateKey: day.templateKey },
       exercises,
     },
     skippedExerciseIds,

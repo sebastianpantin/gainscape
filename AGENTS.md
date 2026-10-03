@@ -20,7 +20,7 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 | `playwright.pwa.config.ts`   | PWA E2E against `vite preview` over plain http with service workers allowed                                                                                                                                 |
 | `playwright.pages.config.ts` | Pages E2E: builds with `scripts/deploy/build-pages.ts` against the local stack and serves `web/dist` with `wrangler pages dev`                                                                              |
 | `.prettierrc.json`           | Prettier: single quotes, width 120, trailing commas                                                                                                                                                         |
-| `.gitleaks.toml`             | gitleaks rules for `make secrets-scan`: default rules plus an allowlist for Supabase's public local-demo keys only                                                                                          |
+| `.gitleaks.toml`             | gitleaks rules for `make secrets-scan`: default rules plus allowlists for Supabase's public local-demo keys and the `stronglifts_5x5` template key in the catalog templates and seed                        |
 | `README.md`                  | Human-facing run instructions, command table, PWA, loot secret and auth notes                                                                                                                               |
 | `.github/workflows/ci.yml`   | CI on every pull request: `checks` (no stack, includes `make build`) and `backend` (integration, pgTAP)                                                                                                     |
 | `.github/workflows/e2e.yml`  | Manual `e2e` workflow (e2e, e2e-pwa), started with `gh workflow run e2e.yml --ref <branch>`                                                                                                                 |
@@ -52,7 +52,7 @@ Generated or ignored directories: `node_modules/`, `web/dist/`, `test-results/`,
 - **Never hand-edit generated files:** `supabase/seed.sql` (run `make catalog`), `web/public/icons/*` and `web/public/favicon.svg` (run `make icons`). The `*-check` targets fail when these are stale.
 - **Migrations are append-only.** Add a new `supabase/migrations/YYYYMMDDHHMMSS_NNN_name.sql` with the next number. Never edit a merged migration.
 - **Format with Prettier** (`make format`). `make check` runs `prettier --check`.
-- **No secrets in the repo, ever.** Hosted keys, database URLs and `LOOT_SECRET` stay with the admin (see `docs/deploy.md`). `make secrets-scan` (part of `make check`) fails on a leak. The only allowlisted keys are Supabase's public local-demo keys, listed in `.gitleaks.toml`.
+- **No secrets in the repo, ever.** Hosted keys, database URLs and `LOOT_SECRET` stay with the admin (see `docs/deploy.md`). `make secrets-scan` (part of `make check`) fails on a leak. The only allowlisted keys are Supabase's public local-demo keys, listed in `.gitleaks.toml`; its one other allowlist lets the `stronglifts_5x5` template key through in `catalog/program-templates/*.yaml` and `supabase/seed.sql` only.
 
 ### Test-driven workflow
 

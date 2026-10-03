@@ -22,6 +22,7 @@ function isNetworkError(error: unknown): boolean {
 
 const cachedExerciseBase = {
   id: z.string(),
+  key: z.string().nullable().optional(),
   name: z.string(),
   equipment: z.string(),
   custom: z.boolean(),
@@ -66,8 +67,8 @@ export function readCachedExercises(storage: Storage, userId: string): Exercise[
 }
 
 function cachedFields(exercise: Exercise): Exercise {
-  const { id, name, equipment, custom, archived } = exercise;
-  const base = { id, name, equipment, custom, archived };
+  const { id, key, name, equipment, custom, archived } = exercise;
+  const base = { id, key, name, equipment, custom, archived };
   return exercise.modality === 'lift'
     ? { ...base, modality: 'lift', loadType: exercise.loadType }
     : { ...base, modality: 'cardio', activity: exercise.activity };
