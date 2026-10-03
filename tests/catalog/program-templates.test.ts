@@ -294,6 +294,11 @@ describe('catalog program templates', () => {
     expect(rawNames).toEqual([]);
   });
 
+  it.each(shippedCases)('numbers every %s day as Day 1 to Day n in schedule order', (_key, definition) => {
+    const names = definition.schedule.days.map((day) => day.name);
+    expect(names).toEqual(names.map((_name, index) => `Day ${index + 1}`));
+  });
+
   it.each(shippedCases)(
     'cites every %s source, template and option alike, as an absolute https URL',
     (_key, definition) => {
