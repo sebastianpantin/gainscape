@@ -134,6 +134,19 @@ export const GZCLP_LIFTS = [
 ] as const;
 export type GzclpLift = (typeof GZCLP_LIFTS)[number];
 
+const LIFT_NAMES: Readonly<Record<GzclpLift, string>> = {
+  'squat-t1': 'Squat T1',
+  'bench-t1': 'Bench press T1',
+  'ohp-t1': 'Overhead press T1',
+  'deadlift-t1': 'Deadlift T1',
+  'squat-t2': 'Squat T2',
+  'bench-t2': 'Bench press T2',
+  'ohp-t2': 'Overhead press T2',
+  'deadlift-t2': 'Deadlift T2',
+  'pulldown-t3': 'Lat pulldown T3',
+  'row-t3': 'Dumbbell row T3',
+};
+
 export const GZCLP: ProgramDefinition = {
   key: 'gzclp',
   version: 1,
@@ -141,7 +154,7 @@ export const GZCLP: ProgramDefinition = {
   source: [GZCLP_WIKI, GZCL_ARCHIVE],
   lifts: GZCLP_LIFTS.map((key) => ({
     key,
-    name: key,
+    name: LIFT_NAMES[key],
     ...(key.startsWith('squat') || key.startsWith('deadlift') ? { category: 'lower' as const } : {}),
   })),
   inputs: [{ lifts: [...GZCLP_LIFTS], kinds: ['workingWeight'] }],
