@@ -148,7 +148,7 @@ describe('StrongLifts 5x5 progression (kg)', () => {
   it('then the third fail in a row deloads 102.5 → 92.25, prescribed 92.5 (36.9 → 37)', () => {
     const { state } = followProgram(def, kg, factClock(), [failSquat, failSquat, {}, failSquat, failSquat, failSquat]);
     expect(refOf(state, 'squat', 'workingWeight')).toBeCloseTo(92.25, 9);
-    expect(weightsOf(resolveNext(def, kg, state), 'b-squat')[0]).toBe(92.5);
+    expect(weightsOf(resolveNext(def, kg, state), 'a-squat')[0]).toBe(92.5);
   });
 
   it('bench fails count on A days only: neutral B days keep the count, so the third A fail deloads 60 → 54', () => {
