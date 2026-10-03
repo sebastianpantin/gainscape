@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_BALANCE, type StrengthState } from '@domain/index.ts';
+import { DEFAULT_BALANCE, type Position, type StrengthState } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { canAddBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
@@ -35,7 +35,10 @@ import {
   type WorkoutDraft,
 } from '../../offline/draft-format.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
+import { adjustEnrollment, refreshProgramFacts } from '../../lib/program-enrollment.ts';
+import { skipDayEvent } from '../../lib/program-skip-rules.ts';
 import { draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
+import { readProgramCache } from '../../offline/program-cache.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
@@ -99,7 +102,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [bodyweightKg, setBodyweightKg] = useState<number | null>(null);
   const [onlineSignal, setOnlineSignal] = useState(0);
   const standing = useStanding(userId);
-  const { program: activeProgram } = useActiveProgram(userId);
+  const { cache: programCache, program: activeProgram, showCache: showProgramCache } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
   const finishButton = useRef<HTMLButtonElement>(null);
   const finishBar = useRef<HTMLDivElement>(null);
@@ -248,6 +251,13 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     );
   };
 
+  const skipProgramDay = async (position: Position) => {
+    const enrollment = programCache.enrollment;
+    if (!enrollment) return;
+    await adjustEnrollment(enrollment.id, skipDayEvent(position));
+    showProgramCache(await refreshProgramFacts(userId, enrollment).catch(() => readProgramCache(localStorage, userId)));
+  };
+
   if (!draft) {
     return (
       <main className="screen stack">
@@ -285,6 +295,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           unit={unitPref}
           disabled={startingDay}
           onStart={startFromPrescription}
+          onSkip={skipProgramDay}
         />
         <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
         <button

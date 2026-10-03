@@ -8,6 +8,7 @@ import {
 import { type EnrollProgramPayload, type ProgramTemplateRow } from './program-enroll-rules.ts';
 import { type EnrollmentFactsRows, type EnrollmentRow } from './program-facts-rules.ts';
 import { type SetReferenceEvent } from './program-reference-rules.ts';
+import { type SkipDayEvent } from './program-skip-rules.ts';
 import { supabase } from './supabase.ts';
 
 const ENROLLMENT_COLUMNS =
@@ -46,7 +47,7 @@ export async function endEnrollment(enrollmentId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function adjustEnrollment(enrollmentId: string, event: SetReferenceEvent): Promise<void> {
+export async function adjustEnrollment(enrollmentId: string, event: SetReferenceEvent | SkipDayEvent): Promise<void> {
   const { error } = await supabase.rpc('adjust_enrollment', { enrollment_id: enrollmentId, event });
   if (error) throw error;
 }

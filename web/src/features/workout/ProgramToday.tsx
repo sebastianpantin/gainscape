@@ -1,10 +1,14 @@
 import { type LastLoggedWeights, type Position, resolvePrescription } from '@domain/index.ts';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { type Exercise } from '../../lib/catalog-rules.ts';
 import { type UnitPref } from '../../lib/profile.ts';
+import { programErrorText } from '../../lib/program-error-rules.ts';
+import { SKIP_CONFIRM_LABEL, SKIP_OFFLINE_TEXT, skipDialogTitle, skipLabel } from '../../lib/program-skip-rules.ts';
 import { fetchLastLoggedSets } from '../../lib/programs.ts';
+import { useIsOffline } from '../../lib/use-online.ts';
 import {
   type ActiveProgram,
   dayChoices,
@@ -21,6 +25,7 @@ interface ProgramTodayProps {
   unit: UnitPref;
   disabled: boolean;
   onStart: (day: PrescribedDayStart) => void;
+  onSkip: (position: Position) => Promise<void>;
 }
 
 function useLastLoggedWeights(exerciseIds: readonly string[]): LastLoggedWeights {
@@ -42,8 +47,12 @@ function useLastLoggedWeights(exerciseIds: readonly string[]): LastLoggedWeights
   return weights;
 }
 
-export function ProgramToday({ program, exercises, unit, disabled, onStart }: ProgramTodayProps) {
+export function ProgramToday({ program, exercises, unit, disabled, onStart, onSkip }: ProgramTodayProps) {
   const [picked, setPicked] = useState<Position | null>(null);
+  const [confirmingSkip, setConfirmingSkip] = useState(false);
+  const [skipping, setSkipping] = useState(false);
+  const [skipProblem, setSkipProblem] = useState<string | null>(null);
+  const offline = useIsOffline();
   const idPrefix = useId();
   const boundIds = useMemo(
     () =>
@@ -78,6 +87,20 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart }: Pr
   const slots = resolvePrescription(definition, enrollment, state, position, lastLogged);
   const names = new Map(exercises.map((exercise) => [exercise.id, exercise.name]));
   const cards = prescriptionCards(definition, slots, unit, names);
+
+  const skip = async () => {
+    setSkipping(true);
+    try {
+      await onSkip(position);
+      setPicked(null);
+      setSkipProblem(null);
+    } catch (error) {
+      setSkipProblem(programErrorText(error));
+    } finally {
+      setConfirmingSkip(false);
+      setSkipping(false);
+    }
+  };
 
   return (
     <section className="panel stack" aria-label={name}>
@@ -129,6 +152,29 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart }: Pr
       >
         {startLabel(name, definition, position)}
       </button>
+      {offline && <p className="notice">{SKIP_OFFLINE_TEXT}</p>}
+      {skipProblem && (
+        <p className="problem" role="alert">
+          {skipProblem}
+        </p>
+      )}
+      <button
+        className="button"
+        type="button"
+        disabled={disabled || offline || skipping}
+        onClick={() => setConfirmingSkip(true)}
+      >
+        {skipLabel(definition, position)}
+      </button>
+      {confirmingSkip && (
+        <ConfirmDialog
+          title={skipDialogTitle(definition, position)}
+          confirmLabel={SKIP_CONFIRM_LABEL}
+          busy={skipping || offline}
+          onConfirm={skip}
+          onCancel={() => setConfirmingSkip(false)}
+        />
+      )}
     </section>
   );
 }
