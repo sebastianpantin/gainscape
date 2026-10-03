@@ -451,6 +451,7 @@ function declaredLoadOf(slot: SlotDecl | undefined, index: number): Load | undef
 }
 
 function relativeBaseOf(load: Load | undefined): { ref: string; pct: NumberExpr } | null {
+  if (load?.kind === 'sameAs') return { ref: load.ref, pct: 1 };
   if (load?.kind === 'pctOfSet') return { ref: load.ref, pct: load.pct };
   if (load?.kind === 'pctOfSlot') return { ref: `${load.slot}:${load.idx}`, pct: load.pct };
   return null;
