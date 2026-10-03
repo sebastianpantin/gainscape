@@ -180,6 +180,12 @@ function setReference(
   };
 }
 
+function loggedSetAt(sets: readonly FactSet[], setIndex: number): FactSet | undefined {
+  return sets
+    .filter((set) => set.prescription !== null && parseSetRef(set.prescription.ref)?.index === setIndex)
+    .reduce<FactSet | undefined>((best, set) => (best === undefined || set.reps > best.reps ? set : best), undefined);
+}
+
 function stageCountOf(definition: ProgramDefinition, rule: ProgressionRule): number {
   const counts = definition.schedule.days
     .flatMap((day) => day.slots)
@@ -239,6 +245,7 @@ function applyAdjustment(
   rule: ProgressionRule,
   adjustment: Adjustment,
   position: Position,
+  sets: readonly FactSet[],
 ): ProgramState {
   const { definition, enrollment } = context;
   const current = state.refs[rule.lift]?.[rule.var];
@@ -270,16 +277,42 @@ function applyAdjustment(
     }
     case 'stageMachine':
       return advanceStage(context, state, rule, adjustment.onLastFail, current, position);
+    case 'amrapThreshold': {
+      const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
+      if (reps === undefined || reps < adjustment.reps) return state;
+      return changeTo(current + enrollment.rounding.increment, 'increment');
+    }
     default:
       return state;
   }
+}
+
+interface Judgement {
+  outcome: LiftOutcome;
+  sets: readonly FactSet[];
+}
+
+function judgementAt(
+  context: FoldContext,
+  rule: ProgressionRule,
+  position: Position,
+  sets: readonly FactSet[],
+  stages: StageIndices,
+): Judgement {
+  const { definition, enrollment } = context;
+  return {
+    outcome: ruleOutcomeAt(definition, enrollment, rule, position, sets, stages),
+    sets: judgedSlotsOf(definition, enrollment, rule, position).flatMap((slot) =>
+      setsForSlot(sets, slot, enrollment.bindings[rule.lift]),
+    ),
+  };
 }
 
 function applyOutcome(
   context: FoldContext,
   state: ProgramState,
   rule: ProgressionRule,
-  outcome: LiftOutcome,
+  { outcome, sets }: Judgement,
   position: Position,
 ): ProgramState {
   if (outcome === 'neutral') return state;
@@ -287,29 +320,28 @@ function applyOutcome(
   const misses = outcome === 'met' ? 0 : (state.consecutiveMisses[key] ?? 0) + 1;
   const adjustments = [...(outcome === 'met' ? rule.onMet : rule.onMiss), ...(rule.always ?? [])];
   const adjusted = adjustments.reduce<ProgramState>(
-    (next, adjustment) => applyAdjustment(context, next, rule, adjustment, position),
+    (next, adjustment) => applyAdjustment(context, next, rule, adjustment, position, sets),
     { ...state, consecutiveMisses: { ...state.consecutiveMisses, [key]: misses } },
   );
   if (outcome !== 'met') return adjusted;
   return { ...adjusted, successes: { ...adjusted.successes, [key]: (adjusted.successes[key] ?? 0) + 1 } };
 }
 
-function scopeOutcome(
+function scopeJudgement(
   context: FoldContext,
   state: ProgramState,
   rule: ProgressionRule,
   scope: readonly Position[],
-): LiftOutcome {
+): Judgement {
   return scope
     .map((position) => findRecord(state, position))
     .filter((record): record is DayRecord => record?.status === 'completed')
-    .reduce<LiftOutcome>(
-      (outcome, record) =>
-        combinedOutcome(
-          outcome,
-          ruleOutcomeAt(context.definition, context.enrollment, rule, record.position, record.judgedSets, state.stages),
-        ),
-      'neutral',
+    .reduce<Judgement>(
+      (judgement, record) => {
+        const day = judgementAt(context, rule, record.position, record.judgedSets, state.stages);
+        return { outcome: combinedOutcome(judgement.outcome, day.outcome), sets: [...judgement.sets, ...day.sets] };
+      },
+      { outcome: 'neutral', sets: [] },
     );
 }
 
@@ -322,7 +354,7 @@ function fireScopeTriggers(
   return context.definition.progression
     .filter((rule) => rule.trigger === trigger)
     .reduce(
-      (next, rule) => applyOutcome(context, next, rule, scopeOutcome(context, next, rule, scope), state.position),
+      (next, rule) => applyOutcome(context, next, rule, scopeJudgement(context, next, rule, scope), state.position),
       state,
     );
 }
@@ -469,13 +501,7 @@ function recordDay(
     .filter((rule) => rule.trigger === 'afterSession')
     .reduce(
       (next, rule) =>
-        applyOutcome(
-          context,
-          next,
-          rule,
-          ruleOutcomeAt(definition, enrollment, rule, position, judgedSets, state.stages),
-          position,
-        ),
+        applyOutcome(context, next, rule, judgementAt(context, rule, position, judgedSets, state.stages), position),
       withRecords(state, [record]),
     );
 }
