@@ -14,6 +14,7 @@ import {
   type ProgramReferences,
   type SlotDecl,
   type SlotRole,
+  type StageDecl,
   type StageScheme,
 } from './program-definition.ts';
 import { dayOf, isCyclePosition, isRotationPosition, type Position, positionAt } from './program-schedule.ts';
@@ -119,6 +120,31 @@ function minRepsFor(amrap: boolean, minReps: number | undefined, reps: number | 
 
 export function stageIndexOf(scheme: StageScheme, stages: StageIndices | undefined, lift: string): number {
   return Math.min(Math.max(stages?.[lift] ?? 0, 0), scheme.stages.length - 1);
+}
+
+function matchesStage(stage: StageDecl, snapshot: PrescriptionSnapshot): boolean {
+  const index = parseSetRef(snapshot.ref)?.index ?? -1;
+  const amrap = stage.amrapLast && index === stage.sets - 1;
+  return (
+    index >= 0 &&
+    index < stage.sets &&
+    snapshot.reps === stage.reps &&
+    snapshot.amrap === amrap &&
+    snapshot.minReps === (amrap ? stage.reps : null)
+  );
+}
+
+export function prescribedStageIndex(
+  scheme: StageScheme,
+  loggedSets: readonly { prescription: PrescriptionSnapshot | null }[],
+  dayStages: StageIndices | undefined,
+  lift: string,
+): number {
+  const snapshots = loggedSets.flatMap((set) => (set.prescription ? [set.prescription] : []));
+  const matching = scheme.stages.flatMap((stage, index) =>
+    snapshots.length > 0 && snapshots.every((snapshot) => matchesStage(stage, snapshot)) ? [index] : [],
+  );
+  return matching.length === 1 ? matching[0] : stageIndexOf(scheme, dayStages, lift);
 }
 
 function setShapes(
