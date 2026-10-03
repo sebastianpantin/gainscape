@@ -16,6 +16,7 @@ import {
   type StageScheme,
 } from './program-definition.ts';
 import { dayOf, isCyclePosition, isRotationPosition, type Position } from './program-schedule.ts';
+import { rpeChartPct } from './rpe-chart.ts';
 import { shownWeight, unitToKg } from './units.ts';
 
 export interface PrescriptionSnapshot {
@@ -267,6 +268,12 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
       const week = Math.min(weekContextOf(position).week, load.byWeek.length);
       const add = week > 0 ? load.byWeek[week - 1][enrollment.unit] : 0;
       return prescribedLoad(context, raw === undefined ? undefined : raw * pct + add, pct);
+    }
+    case 'rpeLoad': {
+      const pct = rpeChartPct(load.reps, load.rpe);
+      if (pct === null) return { kind: 'unsupported', primitive: load.kind };
+      const raw = referenceInEnrollmentUnit(load.of);
+      return prescribedLoad(context, raw === undefined ? undefined : raw * pct, pct);
     }
     case 'ramp': {
       const top = referenceInEnrollmentUnit(load.of);
