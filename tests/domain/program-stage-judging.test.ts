@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { programStateAt, type ProgramDefinition } from '@domain/index.ts';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import { type LoggedDay, programStateAt, type ProgramDefinition } from '@domain/index.ts';
 import { factClock, sessionFact, setReferenceFact } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, loggedAsPrescribed, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import { GZCLP, gzclpEnrollment, type GzclpLift } from './program-fixtures/gzclp.ts';
@@ -147,5 +147,11 @@ describe('an AMRAP adjustment reads the set of its own judged slot (full slotId:
     const state = weekWith(12, 5);
     expect(refOf(state, 'squat', 'tm')).toBeCloseTo(105, 9);
     expect(refOf(state, 'squat', 'top')).toBe(100);
+  });
+});
+
+describe('LoggedDay', () => {
+  it('requires the stages the day was judged at', () => {
+    expectTypeOf<Pick<LoggedDay, 'stages'>>().toEqualTypeOf<{ stages: Readonly<Record<string, number>> }>();
   });
 });
