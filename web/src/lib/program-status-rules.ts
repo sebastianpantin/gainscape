@@ -7,12 +7,23 @@ export interface ProgramLoadInput {
   refresh: ProgramRefreshState;
 }
 
+const UNCACHED_STATUS: Readonly<Record<ProgramRefreshState, ProgramLoadStatus>> = {
+  pending: 'refreshing',
+  done: 'none',
+  failed: 'failed',
+};
+
+const STATUS_TEXT: Readonly<Record<ProgramLoadStatus, string | null>> = {
+  cached: null,
+  refreshing: 'Loading program…',
+  none: "You're not following a program.",
+  failed: "Couldn't load your program. Check your connection.",
+};
+
 export function programLoadStatus(input: ProgramLoadInput): ProgramLoadStatus {
-  void input;
-  throw new Error('not implemented');
+  return input.hasCachedEnrollment ? 'cached' : UNCACHED_STATUS[input.refresh];
 }
 
 export function programStatusText(status: ProgramLoadStatus): string | null {
-  void status;
-  throw new Error('not implemented');
+  return STATUS_TEXT[status];
 }
