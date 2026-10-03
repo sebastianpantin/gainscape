@@ -106,7 +106,6 @@ const OPTION_LABELS: Readonly<Record<string, string>> = {
   perRep: 'Per-rep increment',
   pressLift: 'Press',
   backoff: 'Back-off sets',
-  fatigueBackoffPct: 'Fatigue back-off weight',
   fixedBackoffPct: 'Fixed back-off weight',
 };
 
