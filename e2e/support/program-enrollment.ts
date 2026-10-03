@@ -85,3 +85,11 @@ export async function markEverySetDone(page: Page): Promise<void> {
     await expect(button).toHaveAttribute('aria-pressed', 'true');
   }
 }
+
+export async function bindExercise(page: Page, liftName: string, exerciseName: string): Promise<void> {
+  await page.getByLabel(`${liftName} exercise`, { exact: true }).selectOption({ label: exerciseName });
+}
+
+export function repeated(row: string, count: number): string[] {
+  return Array.from({ length: count }, () => row);
+}
