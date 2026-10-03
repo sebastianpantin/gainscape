@@ -55,7 +55,7 @@ export const TEXAS_METHOD: ProgramDefinition = {
     days: [
       {
         key: 'mon',
-        name: 'Volume day',
+        name: 'Day 1',
         slots: [
           {
             id: 'mon-squat',
@@ -79,7 +79,7 @@ export const TEXAS_METHOD: ProgramDefinition = {
       },
       {
         key: 'wed',
-        name: 'Recovery day',
+        name: 'Day 2',
         slots: [
           {
             id: 'wed-squat',
@@ -96,7 +96,7 @@ export const TEXAS_METHOD: ProgramDefinition = {
       },
       {
         key: 'fri',
-        name: 'Intensity day',
+        name: 'Day 3',
         slots: [
           {
             id: 'fri-squat',

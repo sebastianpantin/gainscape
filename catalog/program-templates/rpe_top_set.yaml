@@ -29,7 +29,7 @@ schedule:
   kind: weekly
   days:
     - key: squat
-      name: Squat
+      name: Day 1
       slots:
         - id: squat-top
           lift: squat
@@ -57,7 +57,7 @@ schedule:
             reps: 3
             load: { kind: pctOfSet, ref: 'squat-top:0', pct: { option: fixedBackoffPct } }
     - key: bench
-      name: Bench press
+      name: Day 2
       slots:
         - id: bench-top
           lift: bench
@@ -85,7 +85,7 @@ schedule:
             reps: 3
             load: { kind: pctOfSet, ref: 'bench-top:0', pct: { option: fixedBackoffPct } }
     - key: deadlift
-      name: Deadlift
+      name: Day 3
       slots:
         - id: deadlift-top
           lift: deadlift

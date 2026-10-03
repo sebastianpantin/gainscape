@@ -78,7 +78,7 @@ schedule:
   weeksPerCycle: 4
   days:
     - key: squat
-      name: Squat
+      name: Day 1
       slots:
         - id: squat-main
           lift: squat
@@ -120,7 +120,7 @@ schedule:
             reps: 5
             load: { kind: weekTablePct, table: main, set: 0, of: tm }
     - key: bench
-      name: Bench press
+      name: Day 2
       slots:
         - id: bench-main
           lift: bench
@@ -162,7 +162,7 @@ schedule:
             reps: 5
             load: { kind: weekTablePct, table: main, set: 0, of: tm }
     - key: deadlift
-      name: Deadlift
+      name: Day 3
       slots:
         - id: deadlift-main
           lift: deadlift
@@ -204,7 +204,7 @@ schedule:
             reps: 5
             load: { kind: weekTablePct, table: main, set: 0, of: tm }
     - key: press
-      name: Overhead press
+      name: Day 4
       slots:
         - id: press-main
           lift: press

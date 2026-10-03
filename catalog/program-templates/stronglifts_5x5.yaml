@@ -22,7 +22,7 @@ schedule:
   kind: rotation
   days:
     - key: a
-      name: Workout A
+      name: Day 1
       slots:
         - id: a-squat
           lift: squat
@@ -37,7 +37,7 @@ schedule:
           role: main
           scheme: { kind: repeat, count: 5, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
     - key: b
-      name: Workout B
+      name: Day 2
       slots:
         - id: b-squat
           lift: squat

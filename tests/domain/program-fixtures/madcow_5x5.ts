@@ -134,7 +134,7 @@ export const MADCOW_5X5: ProgramDefinition = {
     days: [
       {
         key: 'mon',
-        name: 'Monday',
+        name: 'Day 1',
         slots: [
           mondayRamp('squat'),
           mondayRamp('bench'),
@@ -145,7 +145,7 @@ export const MADCOW_5X5: ProgramDefinition = {
       },
       {
         key: 'wed',
-        name: 'Wednesday',
+        name: 'Day 2',
         slots: [
           {
             id: 'wed-squat',
@@ -168,7 +168,7 @@ export const MADCOW_5X5: ProgramDefinition = {
       },
       {
         key: 'fri',
-        name: 'Friday',
+        name: 'Day 3',
         slots: [
           fridaySlot('squat'),
           fridaySlot('bench'),

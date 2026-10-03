@@ -28,7 +28,7 @@ schedule:
   kind: weekly
   days:
     - key: mon
-      name: Volume day
+      name: Day 1
       slots:
         - id: mon-squat
           lift: squat
@@ -43,7 +43,7 @@ schedule:
           role: main
           scheme: { kind: repeat, count: 1, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
     - key: wed
-      name: Recovery day
+      name: Day 2
       slots:
         - id: wed-squat
           lift: squat
@@ -54,7 +54,7 @@ schedule:
             reps: 5
             load: { kind: pctOfSlot, day: mon, slot: mon-squat, idx: 0, pct: 0.8 }
     - key: fri
-      name: Intensity day
+      name: Day 3
       slots:
         - id: fri-squat
           lift: squat

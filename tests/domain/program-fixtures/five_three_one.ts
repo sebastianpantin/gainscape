@@ -171,9 +171,9 @@ export const FIVE_THREE_ONE: ProgramDefinition = {
   schedule: {
     kind: 'cycle',
     weeksPerCycle: 4,
-    days: LIFT_DECLS.map((lift) => ({
+    days: LIFT_DECLS.map((lift, index) => ({
       key: lift.key,
-      name: lift.name,
+      name: `Day ${index + 1}`,
       slots: daySlots(lift.key as FiveThreeOneLift),
     })),
   },

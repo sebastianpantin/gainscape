@@ -62,10 +62,10 @@ export const STRONGLIFTS_5X5: ProgramDefinition = {
   schedule: {
     kind: 'rotation',
     days: [
-      { key: 'a', name: 'Workout A', slots: [fives('a', 'squat', 5), fives('a', 'bench', 5), fives('a', 'row', 5)] },
+      { key: 'a', name: 'Day 1', slots: [fives('a', 'squat', 5), fives('a', 'bench', 5), fives('a', 'row', 5)] },
       {
         key: 'b',
-        name: 'Workout B',
+        name: 'Day 2',
         slots: [fives('b', 'squat', 5), fives('b', 'press', 5), fives('b', 'deadlift', 1)],
       },
     ],

@@ -63,22 +63,22 @@ function tierThree(day: string, lift: string): SlotDecl {
 const DAYS: DayDecl[] = [
   {
     key: 'a1',
-    name: 'A1',
+    name: 'Day 1',
     slots: [tierOne('a1', 'squat-t1'), tierTwo('a1', 'bench-t2'), tierThree('a1', 'pulldown-t3')],
   },
   {
     key: 'b1',
-    name: 'B1',
+    name: 'Day 2',
     slots: [tierOne('b1', 'ohp-t1'), tierTwo('b1', 'deadlift-t2'), tierThree('b1', 'row-t3')],
   },
   {
     key: 'a2',
-    name: 'A2',
+    name: 'Day 3',
     slots: [tierOne('a2', 'bench-t1'), tierTwo('a2', 'squat-t2'), tierThree('a2', 'pulldown-t3')],
   },
   {
     key: 'b2',
-    name: 'B2',
+    name: 'Day 4',
     slots: [tierOne('b2', 'deadlift-t1'), tierTwo('b2', 'ohp-t2'), tierThree('b2', 'row-t3')],
   },
 ];
