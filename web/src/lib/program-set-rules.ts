@@ -2,6 +2,7 @@ import { shownWeight, type WeightUnit } from '@domain/index.ts';
 import { type DraftSet } from '../offline/draft-format.ts';
 import { platesLabel, platesPerSide } from './plate-rules.ts';
 import { pctLabel } from './program-enroll-rules.ts';
+import { type ActiveProgram } from './program-today-rules.ts';
 
 export interface BarSetting {
   weight: number;
@@ -16,6 +17,11 @@ export interface ProgramSetMarkers {
 }
 
 export type MarkedSet = Pick<DraftSet, 'weightKg' | 'prescription' | 'prescriptionDetail'>;
+
+export function draftBar(program: ActiveProgram, draftEnrollmentId: string | null): BarSetting | null {
+  if (program.kind !== 'ready' || program.enrollment.id !== draftEnrollmentId) return null;
+  return { weight: program.enrollment.rounding.barWeight, unit: program.enrollment.unit };
+}
 
 export function programSetMarkers(set: MarkedSet, unit: WeightUnit, bar: BarSetting | null): ProgramSetMarkers {
   const { prescription, prescriptionDetail } = set;

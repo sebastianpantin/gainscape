@@ -35,6 +35,7 @@ import {
   type WorkoutDraft,
 } from '../../offline/draft-format.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
+import { draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
@@ -305,6 +306,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   }
 
   const backToEditing = () => changeDraft({ ...draft, finishedAt: null }, { reopen: true });
+  const programBar = draftBar(activeProgram, draft.program?.enrollmentId ?? null);
 
   if (draft.finishedAt) {
     return (
@@ -502,6 +504,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   preview={previews[exerciseIndex][setIndex]}
                   unit={unitPref}
                   effortMode={effortInputMode}
+                  markers={programSetMarkerTexts(programSetMarkers(set, unitPref, programBar))}
                   onChange={(changes) => {
                     if (startsRest(set, changes, rest.timer)) rest.start(set.id);
                     changeDraft(updateSet(draft, exerciseIndex, set.id, changes));

@@ -14,6 +14,7 @@ interface SetRowProps {
   preview: SetPreview;
   unit: UnitPref;
   effortMode: EffortInputMode;
+  markers: readonly string[];
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   onRemove: () => void;
   onToggleDone: () => void;
@@ -83,13 +84,17 @@ export function SetRow({
   preview,
   unit,
   effortMode,
+  markers,
   onChange,
   onRemove,
   onToggleDone,
 }: SetRowProps) {
   const amrapBadge = amrapBadgeOf(set.prescription);
+  const rowClass = ['set-row', set.done ? null : 'planned', markers.length > 0 ? 'marked' : null]
+    .filter((name) => name !== null)
+    .join(' ');
   return (
-    <li className={set.done ? 'set-row' : 'set-row planned'}>
+    <li className={rowClass}>
       <span className="set-number">
         {setNumber}
         {amrapBadge && <span className="amrap-badge">{amrapBadge}</span>}
@@ -114,6 +119,13 @@ export function SetRow({
       >
         <Icon name="check" size={20} strokeWidth={3} />
       </button>
+      {markers.length > 0 && (
+        <span className="set-markers">
+          {markers.map((text) => (
+            <span key={text}>{text}</span>
+          ))}
+        </span>
+      )}
       <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
         ✕
       </button>
