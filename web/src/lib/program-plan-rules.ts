@@ -49,12 +49,10 @@ function planPositions(definition: ProgramDefinition, state: ProgramState): Posi
   );
 }
 
-function samePosition(a: Position, b: Position): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
 function dayStatus(definition: ProgramDefinition, state: ProgramState, position: Position): PlanDayStatus {
-  const record = state.days.find((day) => day.epoch === state.epoch && samePosition(day.position, position));
+  const record = state.days.find(
+    (day) => day.epoch === state.epoch && comparePositions(definition, day.position, position) === 0,
+  );
   if (record) return record.status;
   if (isRotationPosition(position) || isRotationPosition(state.position)) return 'upcoming';
   const passed =
