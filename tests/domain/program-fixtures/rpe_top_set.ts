@@ -18,6 +18,7 @@ const NAMES: Readonly<Record<RpeLift, string>> = { squat: 'Squat', bench: 'Bench
 
 export const TOP_SET_REPS = 3;
 export const TOP_SET_RPE = 8;
+export const FATIGUE_DROP_PCT = 0.95;
 
 function liftDay(lift: RpeLift): DayDecl {
   const top = `${lift}-top:0`;
@@ -44,7 +45,7 @@ function liftDay(lift: RpeLift): DayDecl {
           count: 5,
           reps: TOP_SET_REPS,
           optional: true,
-          load: { kind: 'pctOfSet', ref: top, pct: { option: 'fatigueBackoffPct' } },
+          load: { kind: 'pctOfSet', ref: top, pct: FATIGUE_DROP_PCT },
         },
       },
       {
@@ -93,13 +94,6 @@ export const RPE_TOP_SET: ProgramDefinition = {
       source: [FITNESSVOLT_RTS_CHART],
     },
     {
-      key: 'fatigueBackoffPct',
-      kind: 'choice',
-      values: [0.95, 0.925, 0.9],
-      default: 0.95,
-      source: [FITNESSVOLT_RTS_CHART],
-    },
-    {
       key: 'fixedBackoffPct',
       kind: 'choice',
       values: [0.95, 0.925, 0.9],
@@ -123,7 +117,7 @@ export function rpeEnrollment(overrides: RpeEnrollmentOverrides = {}): ProgramEn
   return {
     id: 'enrollment-rpe',
     unit,
-    options: { backoff: 'fatigue', fatigueBackoffPct: 0.95, fixedBackoffPct: 0.925, ...overrides.options },
+    options: { backoff: 'fatigue', fixedBackoffPct: 0.925, ...overrides.options },
     bindings: Object.fromEntries(RPE_LIFTS.map((lift) => [lift, lift])),
     inputs: Object.fromEntries(RPE_LIFTS.map((lift) => [lift, { e1rm: e1rms[lift] }])),
     rounding: DEFAULT_ROUNDING[unit],

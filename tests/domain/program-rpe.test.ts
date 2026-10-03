@@ -47,6 +47,15 @@ describe('RPE top set (kg), e1RM 200', () => {
     );
   });
 
+  it('the fatigue drop is the sourced 5% only, so the template offers no fatigue drop option', () => {
+    expect(def.options.map((option) => option.key)).toEqual(['backoff', 'fixedBackoffPct']);
+  });
+
+  it('the fatigue drop ignores a stray fatigueBackoffPct in the enrollment options', () => {
+    const stray = rpeEnrollment({ options: { fatigueBackoffPct: 0.9 } });
+    expect(weightsOf(squatDay(stray), 'squat-fatigue')).toEqual([165, 165, 165, 165, 165]);
+  });
+
   it('the fatigue variant has no fixed back-offs', () => {
     expect(slotIdsOf(squatDay())).toEqual(['squat-top', 'squat-fatigue']);
   });
