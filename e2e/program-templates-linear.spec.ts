@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { finishWorkout, register, uniqueUsername } from './support/app.ts';
+import { exerciseIdOfKey } from './support/db.ts';
 import {
   bindExercise,
   dayPicker,
@@ -166,7 +167,7 @@ test('nSuns 5-day: Monday is the T1 bench 9-set list at TM 100 ending "8+", and 
   ]);
 });
 
-test('Texas Method: the volume day is squat and press 5×5 at 90% of the 5RM (150 → 135, 100 → 90) and deadlift 1×5', async ({
+test('Texas Method: the volume day is squat and bench press 5×5 at 90% of the 5RM (150 → 135, 100 → 90) and deadlift 1×5', async ({
   page,
 }) => {
   await register(page, uniqueUsername('pt_tx'));
@@ -179,7 +180,22 @@ test('Texas Method: the volume day is squat and press 5×5 at 90% of the 5RM (15
   const today = programToday(page, TEXAS);
   await expect(dayPicker(today).getByRole('radio', { name: 'W1 Volume day', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('135 kg × 5 · 90%', 5));
-  await expect(prescribedRows(today, 'Overhead Press')).toHaveText(repeated('90 kg × 5 · 90%', 5));
+  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('90 kg × 5 · 90%', 5));
   await expect(prescribedRows(today, 'Deadlift')).toHaveText(['180 kg × 5 · 100%']);
   await expect(today.getByRole('button', { name: `Start: ${TEXAS} — W1 Volume day`, exact: true })).toBeVisible();
+});
+
+test('Texas Method: the press exercise follows the press option until the user picks one', async ({ page }) => {
+  await register(page, uniqueUsername('pt_txp'));
+  await openEnrollForm(page, TEXAS);
+  const pressExercise = page.getByLabel('Bench press or overhead press exercise', { exact: true });
+  const options = page.getByRole('region', { name: 'Options', exact: true });
+  await expect(pressExercise).toHaveValue(await exerciseIdOfKey('barbell_bench_press'));
+
+  await options.getByRole('radio', { name: /ohp|overhead/i }).click();
+  await expect(pressExercise).toHaveValue(await exerciseIdOfKey('overhead_press'));
+
+  await pressExercise.selectOption({ label: 'Incline Barbell Bench Press' });
+  await options.getByRole('radio', { name: /bench/i }).click();
+  await expect(pressExercise).toHaveValue(await exerciseIdOfKey('incline_barbell_bench_press'));
 });
