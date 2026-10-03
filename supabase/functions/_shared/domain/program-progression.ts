@@ -42,7 +42,8 @@ import {
   type RuleKey,
   type SetReferenceFact,
 } from './program-state.ts';
-import { type WeightUnit } from './units.ts';
+import { rpeChartPct } from './rpe-chart.ts';
+import { kgToUnit, type WeightUnit } from './units.ts';
 
 export interface LoggedLoad {
   weightKg: number;
@@ -153,6 +154,14 @@ function absoluteWeek(definition: ProgramDefinition, position: Position): number
   const { week, cycle } = weekContextOf(position);
   const schedule = definition.schedule;
   return schedule.kind === 'cycle' ? (cycle - 1) * schedule.weeksPerCycle + week : week;
+}
+
+const MAX_RPE = 10;
+
+function loggedRpeOf(set: FactSet): number | null {
+  if (set.effortValue === null) return null;
+  if (set.effortInputType === 'rpe') return set.effortValue;
+  return set.effortInputType === 'rir' ? MAX_RPE - set.effortValue : null;
 }
 
 function waveIndexOf(definition: ProgramDefinition, position: Position): number {
@@ -300,6 +309,13 @@ function applyAdjustment(
       if (reps === undefined || standard === undefined || reps === standard) return state;
       const perRep = evaluateAmount(adjustment.perRep, enrollment.unit, numbers);
       return changeTo(current + Math.min(reps - standard, adjustment.cap) * perRep, 'increment');
+    }
+    case 'e1rmFromSet': {
+      const set = loggedSetAt(sets, adjustment.setIndex);
+      const rpe = set ? loggedRpeOf(set) : null;
+      const pct = set && rpe !== null ? rpeChartPct(set.reps, rpe) : null;
+      if (!set || pct === null) return state;
+      return changeTo(kgToUnit(set.weightKg, enrollment.unit) / pct, 'adjustment');
     }
     default:
       return state;
