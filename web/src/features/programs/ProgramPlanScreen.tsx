@@ -6,6 +6,7 @@ import { fetchExercises } from '../../lib/catalog.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { type PlanDay, planStatusText, programPlan } from '../../lib/program-plan-rules.ts';
 import { PrescriptionCards } from './PrescriptionCards.tsx';
+import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';
 import { useLastLoggedWeights } from './use-last-logged-weights.ts';
 
@@ -46,18 +47,10 @@ export function ProgramPlanScreen({ userId }: ProgramPlanScreenProps) {
 
   if (program.kind !== 'ready')
     return (
-      <main className="screen stack">
-        <h1 className="title">Your program</h1>
-        <p className="panel muted">
-          {statusText ?? ('message' in program ? program.message : null)}
-          {loadStatus === 'none' && (
-            <>
-              {' '}
-              <Link to="/programs">Pick a program</Link>
-            </>
-          )}
-        </p>
-      </main>
+      <ProgramStatusScreen
+        text={statusText ?? ('message' in program ? program.message : null)}
+        loadStatus={loadStatus}
+      />
     );
 
   const plan = programPlan({
