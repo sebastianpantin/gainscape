@@ -103,6 +103,11 @@ const OPTION_LABELS: Readonly<Record<string, string>> = {
   bbbProgression: 'BBB progression',
   tmPct: 'Training max percentage',
   tmReset: 'Training max reset',
+  perRep: 'Per-rep increment',
+  pressLift: 'Press',
+  backoff: 'Back-off sets',
+  fatigueBackoffPct: 'Fatigue back-off weight',
+  fixedBackoffPct: 'Fixed back-off weight',
 };
 
 const OPTION_VALUE_LABELS: Readonly<Record<string, string>> = {
@@ -111,6 +116,11 @@ const OPTION_VALUE_LABELS: Readonly<Record<string, string>> = {
   fsl: 'First Set Last',
   standard: 'Standard',
   beginner: 'Beginner',
+  fine: 'Fine',
+  bench: 'Bench press',
+  ohp: 'Overhead press',
+  fatigue: 'Fatigue',
+  fixed: 'Fixed',
 };
 
 const CATALOG_KEYS_BY_LIFT: Readonly<Record<string, string>> = {
@@ -118,6 +128,7 @@ const CATALOG_KEYS_BY_LIFT: Readonly<Record<string, string>> = {
   bench: 'barbell_bench_press',
   row: 'barbell_row',
   press: 'overhead_press',
+  ohp: 'overhead_press',
   deadlift: 'deadlift',
   dip: 'weighted_dip',
   curl: 'barbell_curl',
@@ -181,13 +192,23 @@ export function replacedProgramName(
   return template?.name ?? 'your current program';
 }
 
+function liftOptionKey(lift: string): string {
+  return `${lift}Lift`;
+}
+
+function catalogKeyOf(lift: string, options: Readonly<Record<string, OptionValue>>): string | undefined {
+  const picked = options[liftOptionKey(lift)];
+  return CATALOG_KEYS_BY_LIFT[typeof picked === 'string' ? picked : lift];
+}
+
 export function defaultBindings(
   definition: ProgramDefinition,
   exercises: readonly BindableExercise[],
+  options: Readonly<Record<string, OptionValue>> = optionDefaults(definition),
 ): Record<string, string | null> {
   return Object.fromEntries(
     definition.lifts.map((lift) => {
-      const catalogKey = CATALOG_KEYS_BY_LIFT[lift.key];
+      const catalogKey = catalogKeyOf(lift.key, options);
       const match = exercises.find((exercise) => exercise.key === catalogKey && !exercise.archived);
       return [lift.key, catalogKey && match ? match.id : null];
     }),
@@ -227,8 +248,40 @@ function defaultRoundingText(unit: WeightUnit): { increment: string; barWeight: 
   return { increment: String(increment), barWeight: String(barWeight) };
 }
 
-export function withUnit(form: EnrollForm, unit: WeightUnit): EnrollForm {
-  return { ...form, unit, rounding: { ...DEFAULT_ROUNDING[unit] }, roundingText: defaultRoundingText(unit) };
+export function withOption(
+  definition: ProgramDefinition,
+  form: EnrollForm,
+  key: string,
+  value: OptionValue,
+  exercises: readonly BindableExercise[],
+): EnrollForm {
+  const options = { ...form.options, [key]: value };
+  const before = defaultBindings(definition, exercises, form.options);
+  const after = defaultBindings(definition, exercises, options);
+  const bindings = { ...form.bindings };
+  for (const lift of definition.lifts) {
+    if (liftOptionKey(lift.key) === key && form.bindings[lift.key] === before[lift.key]) {
+      bindings[lift.key] = after[lift.key];
+    }
+  }
+  return { ...form, options, bindings };
+}
+
+function unitOnlyFor(option: OptionDecl, value: OptionValue | undefined): WeightUnit | undefined {
+  return option.kind === 'choice' && value !== undefined ? option.onlyForUnit?.[String(value)] : undefined;
+}
+
+function isOfferedFor(option: OptionDecl, value: OptionValue | undefined, unit: WeightUnit): boolean {
+  const onlyFor = unitOnlyFor(option, value);
+  return onlyFor === undefined || onlyFor === unit;
+}
+
+export function withUnit(form: EnrollForm, unit: WeightUnit, definition: ProgramDefinition): EnrollForm {
+  const options = { ...form.options };
+  for (const option of definition.options) {
+    if (!isOfferedFor(option, options[option.key], unit)) options[option.key] = option.default;
+  }
+  return { ...form, unit, options, rounding: { ...DEFAULT_ROUNDING[unit] }, roundingText: defaultRoundingText(unit) };
 }
 
 const ROUNDING_INCREMENTS: Readonly<Record<WeightUnit, readonly number[]>> = {
@@ -306,7 +359,7 @@ function choiceLabel(value: OptionValue): string {
   return OPTION_VALUE_LABELS[value] ?? value;
 }
 
-function optionControl(option: OptionDecl): OptionControl {
+function optionControl(option: OptionDecl, unit: WeightUnit): OptionControl {
   const label = OPTION_LABELS[option.key] ?? option.key;
   if (option.kind === 'number') {
     return { kind: 'number', key: option.key, label, min: option.min, max: option.max, defaultValue: option.default };
@@ -315,13 +368,25 @@ function optionControl(option: OptionDecl): OptionControl {
     kind: 'choice',
     key: option.key,
     label,
-    choices: option.values.map((value) => ({ value, label: choiceLabel(value) })),
+    choices: option.values
+      .filter((value) => isOfferedFor(option, value, unit))
+      .map((value) => ({ value, label: choiceLabel(value) })),
     defaultValue: option.default,
   };
 }
 
-export function optionControls(definition: ProgramDefinition): OptionControl[] {
-  return definition.options.map(optionControl);
+export function optionControls(definition: ProgramDefinition, unit: WeightUnit): OptionControl[] {
+  return definition.options.map((option) => optionControl(option, unit));
+}
+
+function unitOptionProblems(definition: ProgramDefinition, form: EnrollForm): string[] {
+  return definition.options.flatMap((option) => {
+    const value = form.options[option.key];
+    const onlyFor = unitOnlyFor(option, value);
+    if (value === undefined || onlyFor === undefined || onlyFor === form.unit) return [];
+    const label = OPTION_LABELS[option.key] ?? option.key;
+    return [`${label}: ${choiceLabel(value).toLowerCase()} is only offered for ${onlyFor} enrollments`];
+  });
 }
 
 function previewedValue(definition: ProgramDefinition, form: EnrollForm, lift: string, value: number) {
@@ -356,6 +421,7 @@ export function enrollPayload(definition: ProgramDefinition, form: EnrollForm): 
   const numberOptions = numberOptionsOf(definition, form);
   const options: Record<string, OptionValue> = { ...form.options };
   for (const parsed of [increment, barWeight]) if (parsed.kind === 'problem') problems.push(parsed.problem);
+  problems.push(...unitOptionProblems(definition, form));
   for (const [key, parsed] of Object.entries(numberOptions)) {
     if (parsed.kind === 'problem') problems.push(parsed.problem);
     else options[key] = parsed.value;
