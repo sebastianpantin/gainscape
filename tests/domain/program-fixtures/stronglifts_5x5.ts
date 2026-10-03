@@ -9,10 +9,10 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 
-const STRONGLIFTS_PROGRAM = 'stronglifts.com/stronglifts-5x5/workout-program';
-const STRONGLIFTS_PROGRESS = 'stronglifts.com/stronglifts-5x5/progress';
-const STRONGLIFTS_FAILURE = 'stronglifts.com/stronglifts-5x5/failure';
-const STRONGLIFTS_INCREMENTS = 'support.stronglifts.com/article/71-increments';
+const STRONGLIFTS_PROGRAM = 'https://stronglifts.com/stronglifts-5x5/workout-program/';
+const STRONGLIFTS_PROGRESS = 'https://stronglifts.com/stronglifts-5x5/progress/';
+const STRONGLIFTS_FAILURE = 'https://stronglifts.com/stronglifts-5x5/failure/';
+const STRONGLIFTS_INCREMENTS = 'https://support.stronglifts.com/article/71-increments';
 const TEMPLATE_NAME_IN_CATALOG = 'stronglifts_5x5';
 
 export const STRONGLIFTS_LIFTS = ['squat', 'bench', 'row', 'press', 'deadlift'] as const;

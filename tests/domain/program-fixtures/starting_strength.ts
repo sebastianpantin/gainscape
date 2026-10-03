@@ -8,7 +8,7 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 
-const LIFTOSAUR_SS = 'liftosaur.com/programs/ss1';
+const LIFTOSAUR_SS = 'https://www.liftosaur.com/programs/ss1';
 
 export const STARTING_STRENGTH_LIFTS = ['squat', 'bench', 'press', 'deadlift'] as const;
 export type StartingStrengthLift = (typeof STARTING_STRENGTH_LIFTS)[number];

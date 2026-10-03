@@ -8,8 +8,8 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 
-const LIFTOSAUR_TEXAS = 'liftosaur.com/programs/texasmethod';
-const FITNESSVOLT_TEXAS = 'fitnessvolt.com texas-method';
+const LIFTOSAUR_TEXAS = 'https://www.liftosaur.com/programs/texasmethod';
+const FITNESSVOLT_TEXAS = 'https://fitnessvolt.com/rpe-training/programs/texas-method/';
 
 export const TEXAS_DAYS = ['mon', 'wed', 'fri'] as const;
 export type TexasDay = (typeof TEXAS_DAYS)[number];

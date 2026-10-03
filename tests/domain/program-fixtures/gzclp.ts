@@ -9,8 +9,8 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 
-const GZCLP_WIKI = 'thefitness.wiki/routines/gzclp';
-const GZCL_ARCHIVE = 'thefitness.wiki/reddit-archive/gzcl-method-novice-to-elite';
+const GZCLP_WIKI = 'https://thefitness.wiki/routines/gzclp/';
+const GZCL_ARCHIVE = 'https://thefitness.wiki/reddit-archive/gzcl-method-novice-to-elite/';
 
 const T1_STAGES = [
   { sets: 5, reps: 3, amrapLast: true },

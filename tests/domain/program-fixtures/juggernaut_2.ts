@@ -13,10 +13,11 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 
-const JUGGERNAUT_BOOK = 'The Juggernaut Method 2.0 (book, via pdfcoffee.com/juggernaut-method-20-pdf-free.html)';
-const JTS_JUGGERNAUT = 'jtsstrength.com/?p=8002';
-const JTS_GOING_HEAVY = 'jtsstrength.com/going-heavy-on-the-juggernaut-method';
-const LIFTOSAUR_JUGGERNAUT = 'liftosaur.com/programs/juggernaut-method';
+const JUGGERNAUT_BOOK = 'https://pdfcoffee.com/juggernaut-method-20-pdf-free.html';
+const JTS_JUGGERNAUT = 'https://www.jtsstrength.com/?p=8002';
+const JTS_GOING_HEAVY = 'https://www.jtsstrength.com/going-heavy-on-the-juggernaut-method/';
+const LIFTOSAUR_JUGGERNAUT = 'https://www.liftosaur.com/programs/juggernaut-method';
+const LIFTVAULT_JUGGERNAUT_TM = 'https://liftvault.com/programs/strength/juggernaut-method-base-template-spreadsheet/';
 
 export const JUGGERNAUT_LIFTS = ['squat', 'bench', 'deadlift', 'press'] as const;
 export type JuggernautLift = (typeof JUGGERNAUT_LIFTS)[number];
@@ -114,7 +115,7 @@ export const JUGGERNAUT_2: ProgramDefinition = {
   key: 'juggernaut_2',
   version: 1,
   name: 'Juggernaut Method 2.0 (structure)',
-  source: [JUGGERNAUT_BOOK, JTS_JUGGERNAUT, JTS_GOING_HEAVY, LIFTOSAUR_JUGGERNAUT],
+  source: [JUGGERNAUT_BOOK, JTS_JUGGERNAUT, JTS_GOING_HEAVY, LIFTOSAUR_JUGGERNAUT, LIFTVAULT_JUGGERNAUT_TM],
   lifts: JUGGERNAUT_LIFTS.map((lift) => ({ key: lift, name: NAMES[lift], category: CATEGORY[lift] })),
   inputs: [{ lifts: [...JUGGERNAUT_LIFTS], kinds: ['tm', 'oneRm'] }],
   referenceVars: ['tm'],
