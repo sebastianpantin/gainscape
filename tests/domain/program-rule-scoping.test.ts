@@ -45,9 +45,12 @@ describe('a judged slot whose scheme cannot be resolved is neutral', () => {
     { bench: 'bench', squat: 'squat' },
   );
 
-  it('logged sets on a stages slot neither miss nor deload: bench stays 100 with no miss', () => {
+  it('missed sets on a bench week table with no row for week 2 neither miss nor deload: bench stays 100 with no miss', () => {
     const clock = factClock();
-    const facts = [sessionFact(clock.next(), { week: 1, day: 'a' }, metSets('a-bench', 'bench', 5, 3))];
+    const facts = [
+      sessionFact(clock.next(), { week: 1, day: 'a' }, []),
+      sessionFact(clock.next(), { week: 2, day: 'a' }, metSets('a-bench', 'bench', 3, 2)),
+    ];
     const state = programStateAt(UNSUPPORTED_JUDGED_SCHEMES, enrollment, facts);
     expect(refOf(state, 'bench', 'tm')).toBe(100);
     expect(missesOf(state, 'bench:tm:afterSession')).toBe(0);
@@ -66,8 +69,11 @@ describe('a judged slot whose scheme cannot be resolved is neutral', () => {
 
   it('records the unresolvable slot outcome as neutral on the day record', () => {
     const clock = factClock();
-    const facts = [sessionFact(clock.next(), { week: 1, day: 'a' }, metSets('a-bench', 'bench', 5, 3))];
-    const [record] = programStateAt(UNSUPPORTED_JUDGED_SCHEMES, enrollment, facts).days;
+    const facts = [
+      sessionFact(clock.next(), { week: 1, day: 'a' }, []),
+      sessionFact(clock.next(), { week: 2, day: 'a' }, metSets('a-bench', 'bench', 3, 2)),
+    ];
+    const record = programStateAt(UNSUPPORTED_JUDGED_SCHEMES, enrollment, facts).days[1];
     expect(record.outcomes.bench ?? 'neutral').toBe('neutral');
   });
 });

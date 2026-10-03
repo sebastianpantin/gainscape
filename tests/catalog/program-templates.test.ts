@@ -30,20 +30,34 @@ import { CatalogValidationError } from '../../scripts/catalog/validate.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { FULL_PRIMITIVES } from '../domain/program-fixtures/full_primitives.ts';
 import { GZCLP } from '../domain/program-fixtures/gzclp.ts';
+import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';
 import { LINEAR_AFTER_SESSION } from '../domain/program-fixtures/linear_after_session.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
+import { NSUNS_5DAY } from '../domain/program-fixtures/nsuns_5day.ts';
 import {
   LINEAR_DELOAD_AFTER_SESSION,
   TWO_RULES_ONE_LIFT,
   UNSUPPORTED_JUDGED_SCHEMES,
   WEEK_AND_CYCLE_RULES,
 } from '../domain/program-fixtures/review-fixtures.ts';
+import { RPE_TOP_SET } from '../domain/program-fixtures/rpe_top_set.ts';
+import { SMOLOV_JR } from '../domain/program-fixtures/smolov_jr.ts';
+import { STARTING_STRENGTH } from '../domain/program-fixtures/starting_strength.ts';
+import { STRONGLIFTS_5X5 } from '../domain/program-fixtures/stronglifts_5x5.ts';
+import { TEXAS_METHOD } from '../domain/program-fixtures/texas_method.ts';
 
 const FIXTURE_DEFINITIONS: readonly ProgramDefinition[] = [
   FIVE_THREE_ONE,
   MADCOW_5X5,
   FULL_PRIMITIVES,
   GZCLP,
+  JUGGERNAUT_2,
+  STRONGLIFTS_5X5,
+  STARTING_STRENGTH,
+  NSUNS_5DAY,
+  TEXAS_METHOD,
+  SMOLOV_JR,
+  RPE_TOP_SET,
   LINEAR_AFTER_SESSION,
   LINEAR_DELOAD_AFTER_SESSION,
   TWO_RULES_ONE_LIFT,
