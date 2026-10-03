@@ -188,3 +188,123 @@ export const WEEK_AND_CYCLE_RULES: ProgramDefinition = {
     },
   ],
 };
+
+function stagedBench(id: string): SlotDecl {
+  return {
+    id,
+    lift: 'bench',
+    role: 'main',
+    scheme: {
+      kind: 'stages',
+      stages: [
+        { sets: 5, reps: 3, amrapLast: true },
+        { sets: 6, reps: 2, amrapLast: true },
+        { sets: 10, reps: 1, amrapLast: true },
+      ],
+      load: { kind: 'pct', pct: 1, of: 'workingWeight' },
+    },
+  };
+}
+
+export const STAGED_WEEKLY: ProgramDefinition = {
+  key: 'synthetic_staged_weekly',
+  version: 1,
+  name: 'Synthetic weekly rule on A and a stage machine on B for one lift',
+  source: ['synthetic test fixture'],
+  lifts: [{ key: 'bench', name: 'Bench press', category: 'upper' }],
+  inputs: [{ lifts: ['bench'], kinds: ['workingWeight'] }],
+  referenceVars: ['workingWeight', 'fiveRm'],
+  initial: [{ kind: 'copy', var: 'workingWeight', from: 'workingWeight' }],
+  options: [],
+  schedule: {
+    kind: 'weekly',
+    days: [
+      { key: 'a', name: 'Day A', slots: [stagedBench('a-bench')] },
+      { key: 'b', name: 'Day B', slots: [stagedBench('b-bench')] },
+    ],
+  },
+  progression: [
+    {
+      lift: 'bench',
+      var: 'workingWeight',
+      trigger: 'endOfWeek',
+      judgedSlots: ['a-bench'],
+      onMet: [{ kind: 'increment', by: { kg: 2.5, lb: 5 } }],
+      onMiss: [{ kind: 'hold' }],
+    },
+    {
+      lift: 'bench',
+      var: 'workingWeight',
+      trigger: 'afterSession',
+      judgedSlots: ['b-bench'],
+      onMet: [],
+      onMiss: [{ kind: 'stageMachine', onLastFail: { kind: 'retest', pct: 0.85, from: 'fiveRm' } }],
+    },
+  ],
+};
+
+export const TWO_AMRAP_SLOTS: ProgramDefinition = {
+  key: 'synthetic_two_amrap_slots',
+  version: 1,
+  name: 'Synthetic day with two judged slots whose first set is an AMRAP',
+  source: ['synthetic test fixture'],
+  lifts: [{ key: 'squat', name: 'Squat', category: 'lower' }],
+  inputs: [{ lifts: ['squat'], kinds: ['tm'] }],
+  referenceVars: ['tm', 'top'],
+  initial: [
+    { kind: 'copy', var: 'tm', from: 'tm' },
+    { kind: 'copy', var: 'top', from: 'tm' },
+  ],
+  options: [],
+  schedule: {
+    kind: 'weekly',
+    days: [
+      {
+        key: 'a',
+        name: 'Day A',
+        slots: [
+          {
+            id: 'a-heavy',
+            lift: 'squat',
+            role: 'main',
+            scheme: { kind: 'sets', sets: [{ reps: 1, amrap: true, load: { kind: 'pct', pct: 0.9, of: 'tm' } }] },
+          },
+          {
+            id: 'a-light',
+            lift: 'squat',
+            role: 'supplemental',
+            scheme: { kind: 'sets', sets: [{ reps: 5, amrap: true, load: { kind: 'pct', pct: 0.6, of: 'top' } }] },
+          },
+        ],
+      },
+    ],
+  },
+  progression: [
+    {
+      lift: 'squat',
+      var: 'tm',
+      trigger: 'endOfWeek',
+      judgedSlots: ['a-heavy'],
+      onMet: [],
+      onMiss: [],
+      always: [
+        {
+          kind: 'amrapTable',
+          setIndex: 0,
+          bands: [
+            [0, { kg: 0, lb: 0 }],
+            [4, { kg: 5, lb: 10 }],
+          ],
+        },
+      ],
+    },
+    {
+      lift: 'squat',
+      var: 'top',
+      trigger: 'endOfWeek',
+      judgedSlots: ['a-light'],
+      onMet: [{ kind: 'amrapThreshold', setIndex: 0, reps: 10 }],
+      onMiss: [],
+    },
+  ],
+};
