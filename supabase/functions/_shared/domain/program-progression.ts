@@ -239,23 +239,20 @@ function advanceStage(
   return withStage(setReference(state, rule.lift, rule.var, base + add, 'adjustment', position), rule.lift, 0);
 }
 
-function retestPctOf(rule: ProgressionRule): number | null {
+function retestOf(rule: ProgressionRule): { pct: number; from: ReferenceVar } | null {
   for (const adjustment of [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])]) {
-    if (adjustment.kind === 'stageMachine' && adjustment.onLastFail.kind === 'retest') {
-      return adjustment.onLastFail.pct;
-    }
+    if (adjustment.kind === 'stageMachine' && adjustment.onLastFail.kind === 'retest') return adjustment.onLastFail;
   }
   return null;
 }
 
 function retestedStages(definition: ProgramDefinition, state: ProgramState, fact: SetReferenceFact): ProgramState {
-  if (fact.var !== 'fiveRm') return state;
   return definition.progression
     .filter((rule) => rule.lift === fact.lift && rule.var !== fact.var)
     .reduce((next, rule) => {
-      const pct = retestPctOf(rule);
-      if (pct === null) return next;
-      const restarted = setReference(next, rule.lift, rule.var, fact.value * pct, 'adjustment', next.position);
+      const retest = retestOf(rule);
+      if (retest?.from !== fact.var) return next;
+      const restarted = setReference(next, rule.lift, rule.var, fact.value * retest.pct, 'adjustment', next.position);
       return withStage(restarted, rule.lift, 0);
     }, state);
 }
