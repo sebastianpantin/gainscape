@@ -9,7 +9,7 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 
-const FITNESSVOLT_RTS_CHART = 'https://fitnessvolt.com/tuchscherer-chart-explained/';
+const FITNESSVOLT_RTS_CHART = 'https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/';
 
 export const RPE_LIFTS = ['squat', 'bench', 'deadlift'] as const;
 export type RpeLift = (typeof RPE_LIFTS)[number];

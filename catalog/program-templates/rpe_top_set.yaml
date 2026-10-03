@@ -2,7 +2,7 @@ key: rpe_top_set
 version: 1
 name: RPE top set with back-offs
 source:
-  - https://fitnessvolt.com/tuchscherer-chart-explained/
+  - https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/
 lifts:
   - { key: squat, name: Squat, category: lower }
   - { key: bench, name: Bench press, category: upper }
@@ -18,13 +18,13 @@ options:
     values: [fatigue, fixed]
     default: fatigue
     source:
-      - https://fitnessvolt.com/tuchscherer-chart-explained/
+      - https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/
   - key: fixedBackoffPct
     kind: choice
     values: [0.95, 0.925, 0.9]
     default: 0.925
     source:
-      - https://fitnessvolt.com/tuchscherer-chart-explained/
+      - https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/
 schedule:
   kind: weekly
   days:

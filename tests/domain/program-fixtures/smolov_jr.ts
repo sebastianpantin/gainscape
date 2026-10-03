@@ -8,7 +8,7 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 
-const LIFTVAULT_SMOLOV = 'https://liftvault.com/programs/lift-specific/smolov/';
+const LIFTVAULT_SMOLOV = 'https://liftvault.com/programs/powerlifting/peaking/smolov/';
 const LIFTOSAUR_SMOLOV_JR = 'https://www.liftosaur.com/programs/smolov-jr';
 
 export const SMOLOV_JR_DAYS = ['mon', 'wed', 'fri', 'sat'] as const;

@@ -18,7 +18,7 @@ import { type FactClock, sessionFact, setAsPrescribed } from './facts.ts';
 const WENDLER_BBB = 'https://www.jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big';
 const ARVO_531 = 'https://arvo.guru/resources/methods/wendler-531';
 const LIFTVAULT_BBB = 'https://liftvault.com/programs/strength/531-bbb/';
-const SIMPLIFASTER_FSL_5X5 = 'https://simplifaster.com/?p=14835';
+const SIMPLIFASTER_FSL_5X5 = 'https://simplifaster.com/articles/5-3-1-first-set-last-weight-training/';
 const LIFTVAULT_TM_DEFINITION = 'https://liftvault.com/resources/531-training-max-definition-examples/';
 
 export const FIVE_THREE_ONE_LIFTS = ['squat', 'bench', 'deadlift', 'press'] as const;
