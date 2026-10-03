@@ -1,22 +1,28 @@
 import { type ProgramDefinition, type RoundingMode, type WeightUnit } from '@domain/index.ts';
 import { useEffect, useId, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { isLiftExercise } from '../../lib/catalog-rules.ts';
-import { messageOf } from '../../lib/error-text.ts';
+import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
+import { useIsOffline } from '../../lib/use-online.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { enrollProgram, fetchProgramTemplates, refreshProgramCache } from '../../lib/program-enrollment.ts';
+import { enrollProgram, fetchProgramTemplates, forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
 import {
+  barWeightLabel,
   type BindableExercise,
   type EnrollForm,
   enrollPayload,
+  type EnrollProgramPayload,
   initialEnrollForm,
   inputFields,
   inputKindLabel,
   liftName,
   optionControls,
   referencePreview,
+  replacedProgramName,
+  roundingIncrementLabel,
   type TemplateListEntry,
   templateListEntries,
   withUnit,
@@ -61,6 +67,9 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const [problems, setProblems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const idPrefix = useId();
+  const offline = useIsOffline();
+  const [confirmingReplace, setConfirmingReplace] = useState<EnrollProgramPayload | null>(null);
+  const [enrolledRow] = useState(() => readProgramCache(localStorage, userId).enrollment);
 
   useEffect(() => {
     let active = true;
@@ -108,25 +117,34 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const { definition, name, exercises } = loaded;
   const form = editedForm ?? initialEnrollForm(definition, unitPref, exercises);
   const change = (changes: Partial<EnrollForm>) => setEditedForm({ ...form, ...changes });
+  const roundingText = form.roundingText ?? {
+    increment: String(form.rounding.increment),
+    barWeight: String(form.rounding.barWeight),
+  };
+  const replacing = replacedProgramName(readProgramCache(localStorage, userId).templates, enrolledRow);
 
-  const start = async () => {
+  const enroll = async (payload: EnrollProgramPayload) => {
+    setConfirmingReplace(null);
+    setProblems([]);
+    setBusy(true);
+    try {
+      await enrollProgram(payload);
+      forgetCachedEnrollment(userId);
+      navigate('/');
+    } catch (error) {
+      setProblems([programErrorText(error)]);
+      setBusy(false);
+    }
+  };
+
+  const start = () => {
     const result = enrollPayload(definition, form);
     if (result.kind === 'invalid') {
       setProblems(result.problems);
       return;
     }
-    const replacing = readProgramCache(localStorage, userId).enrollment !== null;
-    if (replacing && !window.confirm(`Follow ${name} instead of your current program?`)) return;
-    setProblems([]);
-    setBusy(true);
-    try {
-      await enrollProgram(result.payload);
-      await refreshProgramCache(userId).catch(() => undefined);
-      navigate('/');
-    } catch (error) {
-      setProblems([messageOf(error, 'Could not start the program.')]);
-      setBusy(false);
-    }
+    if (replacing === null) void enroll(result.payload);
+    else setConfirmingReplace(result.payload);
   };
 
   return (
@@ -197,9 +215,9 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
                   min={control.min}
                   max={control.max}
                   step={0.01}
-                  value={form.options[control.key] ?? control.defaultValue}
+                  value={form.optionText?.[control.key] ?? String(control.defaultValue)}
                   onChange={(event) =>
-                    change({ options: { ...form.options, [control.key]: Number(event.target.value) } })
+                    change({ optionText: { ...form.optionText, [control.key]: event.target.value } })
                   }
                 />
               </label>
@@ -237,14 +255,14 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
       <section className="panel stack" aria-label="Rounding">
         <h2>Rounding</h2>
         <label className="field">
-          Round to ({form.unit})
+          {roundingIncrementLabel(form.unit)}
           <input
             type="number"
             inputMode="decimal"
             min={0}
             step="any"
-            value={form.rounding.increment}
-            onChange={(event) => change({ rounding: { ...form.rounding, increment: Number(event.target.value) } })}
+            value={roundingText.increment}
+            onChange={(event) => change({ roundingText: { ...roundingText, increment: event.target.value } })}
           />
         </label>
         <span className="field">Rounding direction</span>
@@ -255,14 +273,14 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
           onPick={(mode) => change({ rounding: { ...form.rounding, mode } })}
         />
         <label className="field">
-          Bar weight ({form.unit})
+          {barWeightLabel(form.unit)}
           <input
             type="number"
             inputMode="decimal"
             min={0}
             step="any"
-            value={form.rounding.barWeight}
-            onChange={(event) => change({ rounding: { ...form.rounding, barWeight: Number(event.target.value) } })}
+            value={roundingText.barWeight}
+            onChange={(event) => change({ roundingText: { ...roundingText, barWeight: event.target.value } })}
           />
         </label>
       </section>
@@ -273,9 +291,21 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
           ))}
         </div>
       )}
-      <button className="button primary big" type="button" disabled={busy} onClick={start}>
+      {offline && <p className="notice">{PROGRAM_OFFLINE_TEXT}</p>}
+      <button className="button primary big" type="button" disabled={busy || offline} onClick={start}>
         Start following
       </button>
+      {confirmingReplace && replacing !== null && (
+        <ConfirmDialog
+          title={`Replace ${replacing}?`}
+          confirmLabel="Replace"
+          busy={busy}
+          onConfirm={() => void enroll(confirmingReplace)}
+          onCancel={() => setConfirmingReplace(null)}
+        >
+          <p>You'll follow {name} instead. Your logged workouts stay in your history.</p>
+        </ConfirmDialog>
+      )}
     </main>
   );
 }
