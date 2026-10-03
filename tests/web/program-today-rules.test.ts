@@ -170,6 +170,11 @@ describe('today: the picked day', () => {
     expect(pickedDay(choicesAfterMonday(), weekDay(1, 'fri'))).toEqual(weekDay(1, 'fri'));
   });
 
+  it('matches a picked day whose keys come back from jsonb in another order', () => {
+    const reordered: Position = JSON.parse('{"day":"fri","week":1}');
+    expect(pickedDay(choicesAfterMonday(), reordered)).toEqual(weekDay(1, 'fri'));
+  });
+
   it('falls back to the suggested day when the picked day was completed meanwhile', () => {
     expect(pickedDay(choicesAfterMonday(), weekDay(1, 'mon'))).toEqual(weekDay(1, 'wed'));
   });
