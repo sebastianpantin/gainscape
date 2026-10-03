@@ -184,7 +184,7 @@ export async function activeEnrollmentIdOf(username: string): Promise<string> {
 export async function forgetSessionCreateLimits(username: string): Promise<void> {
   await db`
     delete from private.rate_limit_hits h using public.profiles p
-    where p.id = h.subject and p.username = ${username} and h.bucket like 'session_create_%'`;
+    where p.id = h.subject and p.username = ${username} and h.bucket in ('session_create_hour', 'session_create_day')`;
 }
 
 export async function skipProgramDayElsewhere(

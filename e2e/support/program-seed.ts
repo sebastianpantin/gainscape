@@ -30,6 +30,7 @@ const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const PLATE_INCREMENT_KG = 2.5;
 const BAR_KG = 20;
+const TIE_TOLERANCE = 1e-9;
 
 export function sessionClock(hoursBack: number): SessionClock {
   const firstStart = Date.now() - hoursBack * HOUR_MS;
@@ -43,8 +44,8 @@ export function sessionClock(hoursBack: number): SessionClock {
   };
 }
 
-export function nearestPlateKg(rawKg: number): number {
-  return Math.max(BAR_KG, Math.round(rawKg / PLATE_INCREMENT_KG) * PLATE_INCREMENT_KG);
+function nearestPlateKg(rawKg: number): number {
+  return Math.max(BAR_KG, Math.round(rawKg / PLATE_INCREMENT_KG + TIE_TOLERANCE) * PLATE_INCREMENT_KG);
 }
 
 function exerciseOf(bindings: LiftBindings, lift: string): string {
@@ -220,12 +221,13 @@ export function madcowOnRampWeek(
   script: MadcowWeekScript = {},
 ): SeededDay[] {
   const topKg = (lift: MadcowLift) => madcowOnRampTopKg(fiveRmsKg[lift], week);
-  const mondayByLift = Object.fromEntries(
-    MADCOW_MONDAY_LIFTS.map((lift) => [
-      lift,
-      madcowRamp(`mon-${lift}`, lift, topKg(lift), 5, script.mondayTopReps?.[lift]),
-    ]),
-  ) as Record<MadcowMondayLift, SeededSet[]>;
+  const monday = (lift: MadcowMondayLift) =>
+    madcowRamp(`mon-${lift}`, lift, topKg(lift), 5, script.mondayTopReps?.[lift]);
+  const mondayByLift: Record<MadcowMondayLift, SeededSet[]> = {
+    squat: monday('squat'),
+    bench: monday('bench'),
+    row: monday('row'),
+  };
   const wednesday = [
     ...sameAsMonday(mondayByLift.squat, 'wed-squat', [0, 1, 2, 2], [5, 5, 5, 5]),
     ...madcowRamp('wed-press', 'press', topKg('press'), 4),

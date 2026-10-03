@@ -92,7 +92,7 @@ test('Madcow bench and row also progress 2.5% after a met week 4: bench 80 × 1.
   await expect(prescribedRows(today, 'Barbell Row')).toHaveText(ROW_TOP_71_75_RAMP);
 });
 
-test('Madcow with a 4-rep W4 Day 1 squat top set repeats the week: W5 squat top holds at 100 (50, 62.5, 75, 87.5, 100) while bench goes to 82.5 and row to 72.5', async ({
+test('Madcow with a 4-rep W4 Day 1 squat top set holds the squat: W5 squat top stays at 100 (50, 62.5, 75, 87.5, 100) while bench goes to 82.5 and row to 72.5', async ({
   page,
 }) => {
   test.setTimeout(180_000);
