@@ -170,6 +170,17 @@ export function templateListEntries(rows: readonly ProgramTemplateRow[]): Templa
   return [...latest.values()].map(entryOf).sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export function replacedProgramName(
+  templates: readonly ProgramTemplateRow[],
+  enrolled: { template_key: string; template_version: number } | null,
+): string | null {
+  if (enrolled === null) return null;
+  const template = templates.find(
+    (candidate) => candidate.key === enrolled.template_key && candidate.version === enrolled.template_version,
+  );
+  return template?.name ?? 'your current program';
+}
+
 export function defaultBindings(
   definition: ProgramDefinition,
   exercises: readonly BindableExercise[],
