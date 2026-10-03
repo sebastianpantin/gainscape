@@ -466,6 +466,15 @@ function knownSetCount(definition: ProgramDefinition, scheme: SetScheme): number
   }
 }
 
+function referencedSlotIds(slot: SlotDecl): string[] {
+  return schemeLoads(slot.scheme).flatMap((load) => {
+    if (load.kind === 'pctOfSlot') return load.slot === slot.id ? [] : [load.slot];
+    if (load.kind !== 'sameAs' && load.kind !== 'pctOfSet') return [];
+    const target = parseSetRef(load.ref)?.slotId;
+    return target === undefined || target === slot.id ? [] : [target];
+  });
+}
+
 function schemeLoads(scheme: SetScheme): Load[] {
   switch (scheme.kind) {
     case 'sets':
@@ -500,7 +509,9 @@ class DefinitionChecker {
     this.checkInitial();
     this.collectDaysAndSlots();
     this.checkWeekTables();
+    this.checkWaves();
     for (const slot of this.slots.values()) this.checkSlot(slot);
+    this.checkReferenceCycles();
     this.definition.progression.forEach((rule, index) => this.checkRule(rule, index));
     return this.errors;
   }
@@ -513,10 +524,36 @@ class DefinitionChecker {
       if (option.kind === 'choice' && !option.values.includes(option.default)) {
         this.errors.push(`option '${option.key}' default ${String(option.default)} is not one of its values`);
       }
+      if (option.kind === 'choice') this.checkOnlyForUnit(option);
       if (option.kind === 'number' && (option.default < option.min || option.default > option.max)) {
         this.errors.push(`option '${option.key}' default ${option.default} is outside ${option.min}–${option.max}`);
       }
     }
+  }
+
+  private checkOnlyForUnit(option: ChoiceOptionDecl) {
+    for (const [value, unit] of Object.entries(option.onlyForUnit ?? {})) {
+      if (!option.values.some((candidate) => String(candidate) === value)) {
+        this.errors.push(`option '${option.key}' limits value '${value}' to a unit, but it is not one of its values`);
+      }
+      if (unit !== 'kg' && unit !== 'lb') {
+        this.errors.push(`option '${option.key}' limits value '${value}' to unit '${String(unit)}', not kg or lb`);
+      }
+    }
+  }
+
+  private checkWaves() {
+    const schedule = this.definition.schedule;
+    if (schedule.kind !== 'cycle' || schedule.waveWeeks === undefined) return;
+    if (schedule.waveWeeks < 1 || schedule.weeksPerCycle % schedule.waveWeeks !== 0) {
+      this.errors.push(`waveWeeks ${schedule.waveWeeks} does not divide the ${schedule.weeksPerCycle} weeks per cycle`);
+    }
+  }
+
+  private waveCount(): number | null {
+    const schedule = this.definition.schedule;
+    if (schedule.kind !== 'cycle' || !schedule.waveWeeks) return null;
+    return Math.floor(schedule.weeksPerCycle / schedule.waveWeeks);
   }
 
   private checkInputs() {
@@ -566,7 +603,39 @@ class DefinitionChecker {
       this.checkVar(scheme.of, where);
     }
     if (scheme.kind === 'repeat') this.checkNumber(scheme.count, `${where} count`);
-    for (const load of schemeLoads(scheme)) this.checkLoad(load, where);
+    schemeLoads(scheme).forEach((load, index) => {
+      this.checkLoad(load, where);
+      this.checkOwnSetReference(slot, load, index, where);
+    });
+  }
+
+  private checkOwnSetReference(slot: SlotDecl, load: Load, index: number, where: string) {
+    if (load.kind !== 'sameAs' && load.kind !== 'pctOfSet') return;
+    const target = parseSetRef(load.ref);
+    if (target?.slotId !== slot.id) return;
+    if (slot.scheme.kind !== 'sets' || target.index >= index) {
+      this.errors.push(`${where} refers to its own set '${load.ref}', which cannot resolve`);
+    }
+  }
+
+  private checkReferenceCycles() {
+    const reported = new Set<string>();
+    const visit = (slotId: string, path: string[]) => {
+      const loop = path.indexOf(slotId);
+      if (loop >= 0) {
+        const cycle = [...path.slice(loop), slotId];
+        const key = cycle.slice(0, -1).sort().join(',');
+        if (!reported.has(key)) {
+          reported.add(key);
+          this.errors.push(`slots ${cycle.map((id) => `'${id}'`).join(' → ')} read each other in a reference cycle`);
+        }
+        return;
+      }
+      const slot = this.slots.get(slotId);
+      if (!slot) return;
+      for (const target of referencedSlotIds(slot)) visit(target, [...path, slotId]);
+    };
+    for (const slotId of this.slots.keys()) visit(slotId, []);
   }
 
   private checkLoad(load: Load, where: string) {
@@ -612,6 +681,9 @@ class DefinitionChecker {
 
   private checkPctOfSlot(load: PctOfSlotLoad, where: string) {
     this.checkNumber(load.pct, where);
+    if (this.definition.schedule.kind === 'rotation') {
+      this.errors.push(`${where} uses pctOfSlot on a rotation schedule, which has no current week to read`);
+    }
     const day = this.definition.schedule.days.find((candidate) => candidate.key === load.day);
     if (!day) {
       this.errors.push(`${where} refers to unknown day '${load.day}'`);
@@ -649,8 +721,61 @@ class DefinitionChecker {
     for (const slotId of rule.judgedSlots) {
       if (!this.slots.has(slotId)) this.errors.push(`${where} judges unknown slot '${slotId}'`);
     }
+    this.checkTrigger(rule, where);
     for (const adjustment of [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])]) {
       this.checkAdjustment(adjustment, where);
+      this.checkAdjustmentFitsRule(rule, adjustment, where);
+    }
+  }
+
+  private checkTrigger(rule: ProgressionRule, where: string) {
+    if (rule.trigger !== 'endOfWave') return;
+    const schedule = this.definition.schedule;
+    if (schedule.kind !== 'cycle') {
+      this.errors.push(`${where} uses the endOfWave trigger, but only a cycle schedule has waves`);
+    } else if (!schedule.waveWeeks) {
+      this.errors.push(`${where} uses the endOfWave trigger, but the cycle declares no waveWeeks`);
+    }
+  }
+
+  private judgedSlotsOf(rule: ProgressionRule): SlotDecl[] {
+    return rule.judgedSlots.flatMap((slotId) => this.slots.get(slotId) ?? []);
+  }
+
+  private checkAdjustmentFitsRule(rule: ProgressionRule, adjustment: Adjustment, where: string) {
+    if (adjustment.kind === 'stageMachine') {
+      if (!this.judgedSlotsOf(rule).some((slot) => slot.scheme.kind === 'stages')) {
+        this.errors.push(`${where} uses stageMachine, but judges no stages slot`);
+      }
+      if (adjustment.onLastFail.kind === 'retest') this.checkVar(adjustment.onLastFail.from, `${where} retest`);
+    }
+    if (adjustment.kind === 'repsOverStandard') this.checkStandards(adjustment.standardByWave, where);
+    if (adjustment.kind === 'amrapTable') this.checkBands(adjustment.bands, where);
+    if ('setIndex' in adjustment) {
+      for (const slot of this.judgedSlotsOf(rule)) {
+        const count = knownSetCount(this.definition, slot.scheme);
+        if (count !== null && adjustment.setIndex >= count) {
+          this.errors.push(
+            `${where} reads setIndex ${adjustment.setIndex} of ${adjustment.kind}, but slot '${slot.id}' has ${count} sets`,
+          );
+        }
+      }
+    }
+  }
+
+  private checkStandards(standardByWave: number[], where: string) {
+    const waves = this.waveCount();
+    if (waves === null) {
+      this.errors.push(`${where} uses repsOverStandard, but the schedule declares no waveWeeks`);
+    } else if (standardByWave.length !== waves) {
+      this.errors.push(`${where} has ${standardByWave.length} standardByWave entries for ${waves} waves`);
+    }
+  }
+
+  private checkBands(bands: [number, UnitAmount][], where: string) {
+    const minReps = bands.map(([reps]) => reps);
+    if (minReps.some((reps, index) => index > 0 && reps <= minReps[index - 1])) {
+      this.errors.push(`${where} has amrapTable bands whose minReps do not rise: ${minReps.join(', ')}`);
     }
   }
 
