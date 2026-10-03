@@ -380,6 +380,32 @@ describe('enroll form option controls fit the enrollment unit', () => {
   });
 });
 
+describe('switching the unit drops option values offered only for the other unit', () => {
+  function juggernautForm(unit: WeightUnit, perRep: OptionValue): EnrollForm {
+    const form = initialEnrollForm(JUGGERNAUT_2, unit, CATALOG);
+    const inputValues = { squat: '180', bench: '100', deadlift: '200', press: '60' };
+    return { ...form, inputValues, options: { ...form.options, perRep } };
+  }
+
+  it('resets the lb-only fine per-rep increment to standard when an lb Juggernaut form switches to kg', () => {
+    expect(withUnit(juggernautForm('lb', 'fine'), 'kg', JUGGERNAUT_2).options.perRep).toBe('standard');
+  });
+
+  it('keeps the fine per-rep increment when the form stays in lb', () => {
+    expect(withUnit(juggernautForm('lb', 'fine'), 'lb', JUGGERNAUT_2).options.perRep).toBe('fine');
+  });
+
+  it('refuses a kg payload that still carries the lb-only fine per-rep increment', () => {
+    const result = enrollPayload(JUGGERNAUT_2, juggernautForm('kg', 'fine'));
+    expect(result.kind).toBe('invalid');
+    expect(result.kind === 'invalid' ? result.problems : []).toEqual([expect.stringMatching(/fine.*lb/)]);
+  });
+
+  it('accepts a kg payload with the standard per-rep increment', () => {
+    expect(enrollPayload(JUGGERNAUT_2, juggernautForm('kg', 'standard')).kind).toBe('ok');
+  });
+});
+
 describe('initial enroll form', () => {
   it('defaults kilogram rounding to the nearest 2.5 kg with a 20 kg bar', () => {
     expect(initialEnrollForm(MADCOW_5X5, 'kg', CATALOG).rounding).toEqual({
@@ -418,7 +444,7 @@ describe('initial enroll form', () => {
   });
 
   it('switches rounding to the pound defaults when the unit changes to lb and keeps the typed values', () => {
-    const switched = withUnit(madcowForm('kg'), 'lb');
+    const switched = withUnit(madcowForm('kg'), 'lb', MADCOW_5X5);
     expect(switched.unit).toBe('lb');
     expect(switched.rounding).toEqual({ increment: 5, mode: 'nearest', barWeight: 45 });
     expect(switched.inputValues.squat).toBe('100');
@@ -582,7 +608,7 @@ describe('the enroll form keeps raw text for every number field', () => {
   });
 
   it('starts the pound rounding text at 5 and a 45 lb bar after switching the unit', () => {
-    expect(withUnit(initialEnrollForm(MADCOW_5X5, 'kg', CATALOG), 'lb').roundingText).toEqual({
+    expect(withUnit(initialEnrollForm(MADCOW_5X5, 'kg', CATALOG), 'lb', MADCOW_5X5).roundingText).toEqual({
       increment: '5',
       barWeight: '45',
     });
