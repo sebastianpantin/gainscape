@@ -121,6 +121,12 @@ function isPrescriptionSnapshot(value: unknown): value is PrescriptionSnapshot {
   );
 }
 
+function isPrescriptionDetail(value: unknown): value is PrescriptionDetail {
+  return (
+    isRecord(value) && (value.pct === null || typeof value.pct === 'number') && typeof value.optional === 'boolean'
+  );
+}
+
 function isDraftProgram(value: unknown): value is DraftProgram {
   return (
     isRecord(value) &&
@@ -142,7 +148,10 @@ function withNormalisedEffort(set: Record<string, unknown>, fromV2: boolean): Re
 function normalisedSet(set: unknown, fromV2: boolean): unknown {
   if (!isRecord(set)) return set;
   const prescription = isPrescriptionSnapshot(set.prescription) ? set.prescription : null;
-  return { ...withNormalisedEffort(set, fromV2), prescription };
+  const { prescriptionDetail, ...rest } = withNormalisedEffort(set, fromV2);
+  return isPrescriptionDetail(prescriptionDetail)
+    ? { ...rest, prescription, prescriptionDetail }
+    : { ...rest, prescription };
 }
 
 function isCardioEffortInput(value: unknown): boolean {
@@ -470,6 +479,7 @@ export function startDraftFromPrescription(
         effort: null,
         done: false,
         prescription: set.snapshot,
+        prescriptionDetail: { pct: set.pct, optional: set.optional },
       })),
     }),
   );
