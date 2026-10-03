@@ -30,3 +30,10 @@ description = "Supabase's public local-stack anon demo key, the same for every l
 paths = ['''^web/\.env\.development$''']
 regexes = ['''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9\.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0''']
 condition = "AND"
+
+[[allowlists]]
+description = "The StrongLifts 5x5 template key, which generic-api-key reads as a secret, only in the program templates and the seed generated from them"
+targetRules = ["generic-api-key"]
+paths = ['''^catalog/program-templates/[a-z0-9_]+\.yaml$''', '''^supabase/seed\.sql$''']
+regexes = ['''^stronglifts_5x5$''']
+condition = "AND"
