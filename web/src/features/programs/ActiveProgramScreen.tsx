@@ -88,7 +88,11 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
   return (
     <main className="screen stack">
       <h1 className="title">{title}</h1>
-      {program.kind !== 'ready' && <p className="panel muted">{program.message}</p>}
+      {program.kind === 'ready' ? (
+        <Link to="/programs/active/plan">See the plan</Link>
+      ) : (
+        <p className="panel muted">{program.message}</p>
+      )}
       {offline && <p className="notice">{PROGRAM_OFFLINE_TEXT}</p>}
       {fields.length > 0 && (
         <section className="panel stack" aria-label="Training weights">
