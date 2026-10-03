@@ -63,3 +63,19 @@ test('a kg Juggernaut enrollment is not offered the lb-only fine per-rep increme
   await unit.getByRole('radio', { name: 'kg', exact: true }).click();
   await expect(options.getByRole('radio', { name: /fine/i })).toHaveCount(0);
 });
+
+test('switching an lb Juggernaut enrollment with the fine increment to kg falls back to standard', async ({ page }) => {
+  await register(page, uniqueUsername('pt_jrs'));
+  await openEnrollForm(page, JUGGERNAUT);
+  const options = page.getByRole('region', { name: 'Options', exact: true });
+  const unit = page.getByRole('radiogroup', { name: 'Unit', exact: true });
+  await unit.getByRole('radio', { name: 'lb', exact: true }).click();
+  await options.getByRole('radio', { name: /fine/i }).click();
+  await expect(options.getByRole('radio', { name: /fine/i })).toBeChecked();
+
+  await unit.getByRole('radio', { name: 'kg', exact: true }).click();
+  await expect(options.getByRole('radio', { name: /standard/i })).toBeChecked();
+
+  await unit.getByRole('radio', { name: 'lb', exact: true }).click();
+  await expect(options.getByRole('radio', { name: /standard/i })).toBeChecked();
+});
