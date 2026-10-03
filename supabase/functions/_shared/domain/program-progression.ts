@@ -16,8 +16,10 @@ import {
   isSlotActive,
   numberContext,
   type PrescriptionSnapshot,
+  prescribedStageIndex,
   requiredSetIndices,
   type StageIndices,
+  stageIndexOf,
   weekContextOf,
 } from './program-prescription.ts';
 import {
@@ -104,19 +106,23 @@ function ruleOutcomeAt(
   rule: ProgressionRule,
   position: Position,
   sets: readonly FactSet[],
-  stages: StageIndices | undefined,
+  stages: StageIndices,
 ): LiftOutcome {
+  const exerciseId = enrollment.bindings[rule.lift];
   const judged = judgedSlotsOf(definition, enrollment, rule, position).flatMap((slot) => {
-    const required = requiredSetIndices(definition, enrollment, slot, position, stages);
-    return required === null ? [] : [{ slot, required }];
+    const candidates = setsForSlot(sets, slot, exerciseId);
+    const prescribedStages =
+      slot.scheme.kind === 'stages'
+        ? { ...stages, [slot.lift]: prescribedStageIndex(slot.scheme, candidates, stages, slot.lift) }
+        : stages;
+    const required = requiredSetIndices(definition, enrollment, slot, position, prescribedStages);
+    return required === null ? [] : [{ slot, required, candidates }];
   });
   if (judged.length === 0) return 'neutral';
-  const exerciseId = enrollment.bindings[rule.lift];
-  const candidatesBySlot = judged.map(({ slot }) => setsForSlot(sets, slot, exerciseId));
-  if (candidatesBySlot.every((candidates) => candidates.length === 0)) return 'neutral';
-  const allMet = judged.every(({ slot, required }, slotIndex) =>
+  if (judged.every(({ candidates }) => candidates.length === 0)) return 'neutral';
+  const allMet = judged.every(({ slot, required, candidates }) =>
     required.every((index) =>
-      candidatesBySlot[slotIndex].some(
+      candidates.some(
         (set) =>
           set.prescription?.ref === `${slot.id}:${index}` &&
           isSetMet(set, set.prescription, enrollment.rounding, enrollment.unit),
@@ -129,7 +135,7 @@ function ruleOutcomeAt(
 export interface LoggedDay {
   position: Position;
   sets: readonly FactSet[];
-  stages?: StageIndices;
+  stages: StageIndices;
 }
 
 export function liftOutcomes(
@@ -373,7 +379,7 @@ function scopeJudgement(
     .filter((record): record is DayRecord => record?.status === 'completed')
     .reduce<Judgement>(
       (judgement, record) => {
-        const day = judgementAt(context, rule, record.position, record.judgedSets, state.stages);
+        const day = judgementAt(context, rule, record.position, record.judgedSets, record.stages ?? state.stages);
         return { outcome: combinedOutcome(judgement.outcome, day.outcome), sets: [...judgement.sets, ...day.sets] };
       },
       { outcome: 'neutral', sets: [] },
@@ -528,6 +534,14 @@ function mergeBestSets(context: FoldContext, existing: readonly FactSet[], incom
   return [...bestByRef.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, set]) => set);
 }
 
+function dayStagesOf(definition: ProgramDefinition, state: ProgramState, position: Position): StageIndices {
+  return Object.fromEntries(
+    (dayOf(definition, position)?.slots ?? []).flatMap((slot) =>
+      slot.scheme.kind === 'stages' ? [[slot.lift, stageIndexOf(slot.scheme, state.stages, slot.lift)]] : [],
+    ),
+  );
+}
+
 function recordDay(
   context: FoldContext,
   state: ProgramState,
@@ -541,13 +555,14 @@ function recordDay(
   const judgedSets =
     context.finalSets?.[recordKey(state.epoch, position)] ??
     mergeBestSets(context, [], judgedSetsOf(context, position, sets));
-  const outcomes = liftOutcomes(definition, enrollment, { position, sets: judgedSets, stages: state.stages });
-  const record: DayRecord = { epoch: state.epoch, position, status: 'completed', outcomes, judgedSets };
+  const stages = dayStagesOf(definition, state, position);
+  const outcomes = liftOutcomes(definition, enrollment, { position, sets: judgedSets, stages });
+  const record: DayRecord = { epoch: state.epoch, position, status: 'completed', outcomes, judgedSets, stages };
   return definition.progression
     .filter((rule) => rule.trigger === 'afterSession')
     .reduce(
       (next, rule) =>
-        applyOutcome(context, next, rule, judgementAt(context, rule, position, judgedSets, state.stages), position),
+        applyOutcome(context, next, rule, judgementAt(context, rule, position, judgedSets, stages), position),
       withRecords(state, [record]),
     );
 }
