@@ -1,5 +1,5 @@
-import { type LastLoggedWeights, type Position, resolvePrescription } from '@domain/index.ts';
-import { useEffect, useId, useMemo, useState } from 'react';
+import { type Position, resolvePrescription } from '@domain/index.ts';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
@@ -7,7 +7,6 @@ import { type Exercise } from '../../lib/catalog-rules.ts';
 import { type UnitPref } from '../../lib/profile.ts';
 import { programErrorText } from '../../lib/program-error-rules.ts';
 import { SKIP_CONFIRM_LABEL, SKIP_OFFLINE_TEXT, skipDialogTitle, skipLabel } from '../../lib/program-skip-rules.ts';
-import { fetchLastLoggedSets } from '../../lib/programs.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
 import {
   type ActiveProgram,
@@ -18,6 +17,8 @@ import {
   startLabel,
 } from '../../lib/program-today-rules.ts';
 import { type PrescribedDayStart } from '../../offline/draft-format.ts';
+import { PrescriptionCards } from '../programs/PrescriptionCards.tsx';
+import { useLastLoggedWeights } from '../programs/use-last-logged-weights.ts';
 
 interface ProgramTodayProps {
   program: ActiveProgram;
@@ -28,40 +29,13 @@ interface ProgramTodayProps {
   onSkip: (position: Position) => Promise<void>;
 }
 
-function useLastLoggedWeights(exerciseIds: readonly string[]): LastLoggedWeights {
-  const [weights, setWeights] = useState<LastLoggedWeights>({});
-  const idsKey = exerciseIds.join(',');
-
-  useEffect(() => {
-    if (idsKey === '') return;
-    let active = true;
-    fetchLastLoggedSets(idsKey.split(',')).then(
-      (lastSets) => active && setWeights(Object.fromEntries([...lastSets].map(([id, set]) => [id, set.weightKg]))),
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [idsKey]);
-
-  return weights;
-}
-
 export function ProgramToday({ program, exercises, unit, disabled, onStart, onSkip }: ProgramTodayProps) {
   const [picked, setPicked] = useState<Position | null>(null);
   const [confirmingSkip, setConfirmingSkip] = useState(false);
   const [skipping, setSkipping] = useState(false);
   const [skipProblem, setSkipProblem] = useState<string | null>(null);
   const offline = useIsOffline();
-  const idPrefix = useId();
-  const boundIds = useMemo(
-    () =>
-      program.kind === 'ready'
-        ? [...new Set(Object.values(program.enrollment.bindings).filter((id) => id !== null))].sort()
-        : [],
-    [program],
-  );
-  const lastLogged = useLastLoggedWeights(boundIds);
+  const lastLogged = useLastLoggedWeights(program);
 
   if (program.kind === 'none') return null;
   if (program.kind === 'needs_update')
@@ -118,23 +92,7 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
         current={chosenLabel}
         onPick={(label) => setPicked(choices.find((choice) => choice.label === label)?.position ?? null)}
       />
-      {cards.map((card) => {
-        const headingId = `${idPrefix}-${card.slotId}`;
-        return (
-          <div className="stack prescription-card" key={card.slotId}>
-            <h3 id={headingId}>{card.title}</h3>
-            {card.kind === 'exercise' ? (
-              <ul className="prescription-list" aria-labelledby={headingId}>
-                {card.rows.map((row) => (
-                  <li key={row.ref}>{row.line}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">{card.message}</p>
-            )}
-          </div>
-        );
-      })}
+      <PrescriptionCards cards={cards} heading="h3" />
       <button
         className="button primary big"
         type="button"
