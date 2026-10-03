@@ -6,6 +6,7 @@ import {
   findSlot,
   type Load,
   type NumberContext,
+  type NumberExpr,
   optionValue,
   parseSetRef,
   type ProgramDefinition,
@@ -410,6 +411,25 @@ export function resolvePrescription(
     });
 }
 
+function declaredLoadOf(slot: SlotDecl | undefined, index: number): Load | undefined {
+  const scheme = slot?.scheme;
+  switch (scheme?.kind) {
+    case 'sets':
+      return scheme.sets[index]?.load;
+    case 'repeat':
+    case 'stages':
+      return scheme.load;
+    default:
+      return undefined;
+  }
+}
+
+function relativeBaseOf(load: Load | undefined): { ref: string; pct: NumberExpr } | null {
+  if (load?.kind === 'pctOfSet') return { ref: load.ref, pct: load.pct };
+  if (load?.kind === 'pctOfSlot') return { ref: `${load.slot}:${load.idx}`, pct: load.pct };
+  return null;
+}
+
 export function recomputeRelativeSets(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
@@ -417,7 +437,22 @@ export function recomputeRelativeSets(
   slots: readonly ResolvedSlot[],
   editedWeights: Readonly<Record<string, number>>,
 ): ResolvedSlot[] {
-  const edits = Object.keys(editedWeights).length;
-  const where = `${definition.key} ${enrollment.unit} ${JSON.stringify(position)}`;
-  throw new Error(`recomputeRelativeSets is not implemented: ${where}, ${slots.length} slots, ${edits} edited sets`);
+  const numbers = numberContext(definition, enrollment, position);
+  const movedWeights = new Map(Object.entries(editedWeights));
+  return slots.map((slot): ResolvedSlot => {
+    if (slot.kind !== 'exercise') return slot;
+    const declared = findSlot(definition, slot.slotId);
+    const sets = slot.sets.map((set, index) => {
+      const edited = editedWeights[set.ref];
+      if (edited !== undefined) return { ...set, weight: edited, weightKg: unitToKg(edited, enrollment.unit) };
+      const base = relativeBaseOf(declaredLoadOf(declared, index));
+      const baseWeight = base ? movedWeights.get(base.ref) : undefined;
+      if (!base || baseWeight === undefined) return set;
+      const weight = roundPrescribedLoad(baseWeight * evaluateNumber(base.pct, numbers), enrollment.rounding);
+      movedWeights.set(set.ref, weight);
+      const weightKg = unitToKg(weight, enrollment.unit);
+      return { ...set, weight, weightKg, snapshot: set.snapshot && { ...set.snapshot, weightKg } };
+    });
+    return { ...slot, sets };
+  });
 }
