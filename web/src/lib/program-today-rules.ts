@@ -44,7 +44,7 @@ export type PrescriptionCard =
   | { kind: 'exercise'; slotId: string; title: string; exerciseName: string; rows: PrescriptionRow[] }
   | { kind: 'unsupported'; slotId: string; title: string; message: string };
 
-function weekLabel(position: Position): string {
+export function weekLabel(position: Position): string {
   if (isRotationPosition(position)) return `Session ${position.index + 1}`;
   return isCyclePosition(position) ? `C${position.cycle} W${position.week}` : `W${position.week}`;
 }
