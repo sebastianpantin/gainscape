@@ -566,6 +566,22 @@ a:focus-visible {
   border-top: 1px dashed var(--color-panel-border);
 }
 
+.set-row.marked {
+  grid-template-areas:
+    'number weight reps xp done'
+    'markers markers markers markers markers'
+    'effort effort effort effort remove';
+}
+
+.set-markers {
+  grid-area: markers;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+}
+
 .bout-row {
   grid-template-columns: 22px minmax(0, 1fr) minmax(52px, auto) var(--tap-target);
   grid-template-areas:
