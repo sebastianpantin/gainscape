@@ -6,6 +6,7 @@ import {
   type ProgramState,
   programStateAt,
   isCyclePosition,
+  isPositionInSchedule,
   isRotationPosition,
   type Position,
   type PrescribedExercise,
@@ -19,7 +20,7 @@ import {
 } from '@domain/index.ts';
 import { dayOf } from '@domain/program-schedule.ts';
 import { liftName, pctLabel, type ProgramTemplateRow, UPDATE_APP_TEXT } from './program-enroll-rules.ts';
-import { type EnrollmentRow, enrollmentFromRow } from './program-facts-rules.ts';
+import { type EnrollmentRow, enrollmentFromRow, isProgramFact } from './program-facts-rules.ts';
 
 export interface DayChoice {
   position: Position;
@@ -134,9 +135,12 @@ export function prescriptionCards(
   );
 }
 
+export const TEMPLATE_MISSING_TEXT = 'Program details unavailable — reconnect to load them';
+
 export type ActiveProgram =
   | { kind: 'none' }
   | { kind: 'needs_update'; name: string; message: string }
+  | { kind: 'template_missing'; message: typeof TEMPLATE_MISSING_TEXT }
   | {
       kind: 'ready';
       name: string;
@@ -145,6 +149,13 @@ export type ActiveProgram =
       enrollment: ProgramEnrollment;
       state: ProgramState;
     };
+
+function usableFacts(definition: ProgramDefinition, facts: readonly unknown[]): ProgramFact[] {
+  return facts.filter(
+    (fact): fact is ProgramFact =>
+      isProgramFact(fact) && (fact.kind === 'set_reference' || isPositionInSchedule(definition, fact.position)),
+  );
+}
 
 export function activeProgram(
   templates: readonly ProgramTemplateRow[],
@@ -155,7 +166,7 @@ export function activeProgram(
   const template = templates.find(
     (candidate) => candidate.key === enrollmentRow.template_key && candidate.version === enrollmentRow.template_version,
   );
-  if (!template) return { kind: 'none' };
+  if (!template) return { kind: 'template_missing', message: TEMPLATE_MISSING_TEXT };
   const parsed = parseProgramDefinition(template.definition);
   if (parsed.kind !== 'ok') return { kind: 'needs_update', name: template.name, message: UPDATE_APP_TEXT };
   const enrollment = enrollmentFromRow(enrollmentRow);
@@ -165,6 +176,6 @@ export function activeProgram(
     templateKey: template.key,
     definition: parsed.definition,
     enrollment,
-    state: programStateAt(parsed.definition, enrollment, facts),
+    state: programStateAt(parsed.definition, enrollment, usableFacts(parsed.definition, facts)),
   };
 }
