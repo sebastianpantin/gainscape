@@ -1,6 +1,5 @@
-import { type ProgramFact, type SessionFact } from '@domain/index.ts';
 import { z } from 'zod';
-import { type EnrollmentRow } from '../lib/program-facts-rules.ts';
+import { type EnrollmentRow, programFactSchema, sessionFactSchema } from '../lib/program-facts-rules.ts';
 import { type ProgramTemplateRow } from '../lib/program-enroll-rules.ts';
 import { type WorkoutDraft } from './draft-format.ts';
 import { type SendOutcome } from './finish-lock.ts';
@@ -38,8 +37,6 @@ const enrollmentSchema = z.object({
   ended_at: z.string().nullable(),
 });
 
-const factSchema = z.looseObject({ kind: z.string(), id: z.string(), at: z.string() });
-
 const cachedProgramsSchema = z.object({
   v: z.literal(CACHE_VERSION),
   userId: z.string(),
@@ -49,8 +46,8 @@ const cachedProgramsSchema = z.object({
     .object({
       enrollmentId: z.string(),
       generation: z.number(),
-      serverFacts: z.array(factSchema),
-      localAppends: z.array(z.object({ fact: factSchema, appendedAt: z.number() })),
+      serverFacts: z.array(programFactSchema),
+      localAppends: z.array(z.object({ fact: sessionFactSchema, appendedAt: z.number() })),
     })
     .nullable(),
 });
@@ -69,14 +66,7 @@ export function readProgramCache(storage: Storage, userId: string): ProgramCache
     return {
       templates: templates.map((template) => ({ ...template, definition: template.definition ?? null })),
       enrollment,
-      facts: facts && {
-        ...facts,
-        serverFacts: facts.serverFacts as unknown as ProgramFact[],
-        localAppends: facts.localAppends.map((append) => ({
-          fact: append.fact as unknown as SessionFact,
-          appendedAt: append.appendedAt,
-        })),
-      },
+      facts,
     };
   } catch {
     return EMPTY_PROGRAM_CACHE;
@@ -135,6 +125,8 @@ export function forgetDeletedProgramSession(storage: Storage, userId: string, se
 }
 
 export function factsOutcomeOf(outcome: SendOutcome): FinishOutcomeForFacts | null {
-  void outcome;
-  throw new Error('not implemented');
+  if (outcome.kind !== 'synced') return null;
+  const { programLinked, completedAt } = outcome.summary;
+  if (typeof programLinked !== 'boolean' || typeof completedAt !== 'string') return null;
+  return { kind: 'synced', summary: { programLinked, completedAt } };
 }

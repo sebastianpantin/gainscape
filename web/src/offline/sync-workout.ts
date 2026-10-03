@@ -3,7 +3,7 @@ import { forceSignedOut, REQUEST_TIMEOUT_MS, signOutOnThisDevice } from '../lib/
 import { AUTH_STORAGE_KEY, readStoredSession, supabase } from '../lib/supabase.ts';
 import type { WorkoutDraft } from './draft-format.ts';
 import { type CompletedSessionSummary, type SendOutcome, sendOutcomeFrom } from './finish-lock.ts';
-import { rememberFinishedSession } from './program-cache.ts';
+import { factsOutcomeOf, rememberFinishedSession } from './program-cache.ts';
 import { completeSessionPayload } from './session-payload.ts';
 
 export async function syncFinishedWorkout(userId: string, draft: WorkoutDraft): Promise<SendOutcome> {
@@ -15,10 +15,8 @@ export async function syncFinishedWorkout(userId: string, draft: WorkoutDraft): 
       REQUEST_TIMEOUT_MS,
     ),
   );
-  const { programLinked, completedAt } = outcome.kind === 'synced' ? outcome.summary : {};
-  if (programLinked !== undefined && completedAt !== undefined) {
-    rememberFinishedSession(localStorage, userId, draft, { kind: 'synced', summary: { programLinked, completedAt } });
-  }
+  const factsOutcome = factsOutcomeOf(outcome);
+  if (factsOutcome) rememberFinishedSession(localStorage, userId, draft, factsOutcome);
   return outcome;
 }
 
