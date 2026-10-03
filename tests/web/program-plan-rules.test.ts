@@ -87,6 +87,22 @@ describe('plan for a weekly program (Madcow)', () => {
     ]);
   });
 
+  it('keeps an optional Tuesday upcoming while the week waits on a later required Wednesday', () => {
+    const [monday, wednesday] = MADCOW_5X5.schedule.days;
+    const withOptionalTuesday: ProgramDefinition = {
+      ...MADCOW_5X5,
+      schedule: {
+        kind: 'weekly',
+        days: [monday, { ...wednesday, key: 'tue', name: 'Tuesday', optional: true }, wednesday],
+      },
+    };
+    expect(statusesOf(planAfter(withOptionalTuesday, madcowEnrollment(), mondayDone()).days)).toEqual([
+      ['W1 Monday', 'completed'],
+      ['W1 Tuesday', 'upcoming'],
+      ['W1 Wednesday', 'upcoming'],
+    ]);
+  });
+
   it('marks a skipped Monday skipped', () => {
     const facts = [skipDayFact(factClock().next(), weekDay(1, 'mon'))];
     expect(dayLabelled(planAfter(MADCOW_5X5, madcowEnrollment(), facts).days, 'W1 Monday').status).toBe('skipped');
