@@ -176,33 +176,40 @@ function setReference(
   };
 }
 
-function adjustedValue(
+function applyAdjustment(
   context: FoldContext,
+  state: ProgramState,
   rule: ProgressionRule,
   adjustment: Adjustment,
-  valueInEnrollmentUnit: number,
   position: Position,
-): { value: number; reason: ReferenceChangeReason } | null {
+): ProgramState {
   const { definition, enrollment } = context;
+  const current = state.refs[rule.lift]?.[rule.var];
+  if (current === undefined) return state;
   const numbers = numberContext(definition, enrollment, position);
+  const changeTo = (value: number, reason: ReferenceChangeReason) =>
+    setReference(state, rule.lift, rule.var, value, reason, position);
   switch (adjustment.kind) {
     case 'increment': {
       if (!('byPct' in adjustment)) {
-        return {
-          value: valueInEnrollmentUnit + evaluateAmount(adjustment.by, enrollment.unit, numbers),
-          reason: 'increment',
-        };
+        return changeTo(current + evaluateAmount(adjustment.by, enrollment.unit, numbers), 'increment');
       }
       const onRamp = definition.initial.find((initial) => initial.kind === 'onRamp' && initial.var === rule.var);
       if (onRamp?.kind === 'onRamp' && absoluteWeek(definition, position) < onRamp.peakWeek) {
-        return { value: valueInEnrollmentUnit / onRamp.factor, reason: 'increment' };
+        return changeTo(current / onRamp.factor, 'increment');
       }
-      return { value: valueInEnrollmentUnit * (1 + evaluateNumber(adjustment.byPct, numbers)), reason: 'increment' };
+      return changeTo(current * (1 + evaluateNumber(adjustment.byPct, numbers)), 'increment');
     }
     case 'tmReset':
-      return { value: valueInEnrollmentUnit * (1 - evaluateNumber(adjustment.pct, numbers)), reason: 'tmReset' };
+      return changeTo(current * (1 - evaluateNumber(adjustment.pct, numbers)), 'tmReset');
+    case 'failureCounter': {
+      const key = ruleKeyOf(rule);
+      if ((state.consecutiveMisses[key] ?? 0) < adjustment.threshold) return state;
+      const deloaded = changeTo(current * (1 - evaluateNumber(adjustment.deloadPct, numbers)), 'adjustment');
+      return { ...deloaded, consecutiveMisses: { ...deloaded.consecutiveMisses, [key]: 0 } };
+    }
     default:
-      return null;
+      return state;
   }
 }
 
@@ -216,15 +223,11 @@ function applyOutcome(
   if (outcome === 'neutral') return state;
   const key = ruleKeyOf(rule);
   const misses = outcome === 'met' ? 0 : (state.consecutiveMisses[key] ?? 0) + 1;
-  let next: ProgramState = { ...state, consecutiveMisses: { ...state.consecutiveMisses, [key]: misses } };
   const adjustments = [...(outcome === 'met' ? rule.onMet : rule.onMiss), ...(rule.always ?? [])];
-  for (const adjustment of adjustments) {
-    const current = next.refs[rule.lift]?.[rule.var];
-    if (current === undefined) continue;
-    const adjusted = adjustedValue(context, rule, adjustment, current, position);
-    if (adjusted) next = setReference(next, rule.lift, rule.var, adjusted.value, adjusted.reason, position);
-  }
-  return next;
+  return adjustments.reduce<ProgramState>(
+    (next, adjustment) => applyAdjustment(context, next, rule, adjustment, position),
+    { ...state, consecutiveMisses: { ...state.consecutiveMisses, [key]: misses } },
+  );
 }
 
 function scopeOutcome(
