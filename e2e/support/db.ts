@@ -173,3 +173,29 @@ export async function exerciseIdOfKey(key: string): Promise<string> {
   const [row] = await db`select id from public.exercises where key = ${key} and owner_user_id is null`;
   return row.id;
 }
+
+export async function activeEnrollmentIdOf(username: string): Promise<string> {
+  const [row] = await db`
+    select e.id from public.program_enrollments e join public.profiles p on p.id = e.user_id
+    where p.username = ${username} and e.ended_at is null`;
+  return row.id;
+}
+
+export async function skipProgramDayElsewhere(
+  enrollmentId: string,
+  position: Record<string, string | number>,
+): Promise<void> {
+  await db`
+    insert into public.program_enrollment_events (enrollment_id, kind, payload)
+    values (${enrollmentId}, 'skip_day', ${db.json({ position })})`;
+}
+
+export async function programEventsOf(username: string) {
+  return db`
+    select v.kind, v.payload
+    from public.program_enrollment_events v
+    join public.program_enrollments e on e.id = v.enrollment_id
+    join public.profiles p on p.id = e.user_id
+    where p.username = ${username}
+    order by v.effective_at, v.id`;
+}
