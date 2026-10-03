@@ -10,6 +10,7 @@ import {
 } from '../../lib/program-enrollment.ts';
 import { referenceEvents, referenceFieldKey, referenceFields } from '../../lib/program-reference-rules.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
+import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';
 
 interface ActiveProgramScreenProps {
@@ -27,20 +28,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
   const [confirmingStop, setConfirmingStop] = useState(false);
 
   if (statusText !== null || program.kind === 'none')
-    return (
-      <main className="screen stack">
-        <h1 className="title">Your program</h1>
-        <p className="panel muted">
-          {statusText}
-          {loadStatus === 'none' && (
-            <>
-              {' '}
-              <Link to="/programs">Pick a program</Link>
-            </>
-          )}
-        </p>
-      </main>
-    );
+    return <ProgramStatusScreen text={statusText} loadStatus={loadStatus} />;
 
   const title = program.kind === 'template_missing' ? 'Your program' : program.name;
   const fields = program.kind === 'ready' ? referenceFields(program.definition, program.enrollment, program.state) : [];
