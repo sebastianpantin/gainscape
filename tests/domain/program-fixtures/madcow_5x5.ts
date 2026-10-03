@@ -15,8 +15,8 @@ import {
 } from '@domain/index.ts';
 import { type FactClock, sessionFact, setAsPrescribed, skipDayFact } from './facts.ts';
 
-const MADCOW_PRIMARY = 'oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm';
-const STRENGTHLOG_MADCOW = 'strengthlog.com/madcow-5x5';
+const MADCOW_PRIMARY = 'https://www.oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm';
+const STRENGTHLOG_MADCOW = 'https://www.strengthlog.com/madcow-5x5/';
 
 export const MADCOW_MAIN_LIFTS = ['squat', 'bench', 'row', 'press', 'deadlift'] as const;
 export type MadcowMainLift = (typeof MADCOW_MAIN_LIFTS)[number];

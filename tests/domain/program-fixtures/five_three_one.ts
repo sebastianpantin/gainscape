@@ -15,10 +15,11 @@ import {
 } from '@domain/index.ts';
 import { type FactClock, sessionFact, setAsPrescribed } from './facts.ts';
 
-const WENDLER_BBB = 'jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big';
-const ARVO_531 = 'arvo.guru/resources/methods/wendler-531';
-const LIFTVAULT_BBB = 'liftvault.com 531-bbb';
-const WENDLER_FSL_VS_BBB = 'jimwendler.com post on 5x5 FSL vs BBB';
+const WENDLER_BBB = 'https://www.jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big';
+const ARVO_531 = 'https://arvo.guru/resources/methods/wendler-531';
+const LIFTVAULT_BBB = 'https://liftvault.com/programs/strength/531-bbb/';
+const SIMPLIFASTER_FSL_5X5 = 'https://simplifaster.com/?p=14835';
+const LIFTVAULT_TM_DEFINITION = 'https://liftvault.com/resources/531-training-max-definition-examples/';
 
 export const FIVE_THREE_ONE_LIFTS = ['squat', 'bench', 'deadlift', 'press'] as const;
 export type FiveThreeOneLift = (typeof FIVE_THREE_ONE_LIFTS)[number];
@@ -149,7 +150,7 @@ export const FIVE_THREE_ONE: ProgramDefinition = {
       kind: 'choice',
       values: ['none', 'bbb', 'fsl'],
       default: 'bbb',
-      source: [WENDLER_BBB, ARVO_531, WENDLER_FSL_VS_BBB],
+      source: [WENDLER_BBB, ARVO_531, SIMPLIFASTER_FSL_5X5],
     },
     { key: 'bbbPct', kind: 'choice', values: [0.5, 0.55, 0.6], default: 0.5, source: [WENDLER_BBB] },
     {
@@ -159,7 +160,7 @@ export const FIVE_THREE_ONE: ProgramDefinition = {
       default: 'standard',
       source: [WENDLER_BBB],
     },
-    { key: 'tmPct', kind: 'choice', values: [0.9, 0.85], default: 0.9, source: [ARVO_531, LIFTVAULT_BBB] },
+    { key: 'tmPct', kind: 'choice', values: [0.9, 0.85], default: 0.9, source: [LIFTVAULT_TM_DEFINITION] },
     { key: 'tmReset', kind: 'number', min: 0.1, max: 0.15, default: 0.1, source: [ARVO_531, LIFTVAULT_BBB] },
   ],
   conversions: [

@@ -10,8 +10,8 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 
-const LIFTOSAUR_NSUNS = 'liftosaur.com/programs/nsuns';
-const FITNESS_WIKI_NSUNS = 'thefitness.wiki/routines/nsuns-lp';
+const LIFTOSAUR_NSUNS = 'https://www.liftosaur.com/programs/nsuns';
+const FITNESS_WIKI_NSUNS = 'https://thefitness.wiki/routines/nsuns-lp/';
 
 export const NSUNS_TM_LIFTS = ['bench', 'squat', 'press', 'deadlift'] as const;
 export type NsunsTmLift = (typeof NSUNS_TM_LIFTS)[number];
