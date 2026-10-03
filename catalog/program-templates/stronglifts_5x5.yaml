@@ -2,10 +2,10 @@ key: stronglifts_5x5
 version: 1
 name: StrongLifts 5x5
 source:
-  - stronglifts.com/stronglifts-5x5/workout-program
-  - stronglifts.com/stronglifts-5x5/progress
-  - stronglifts.com/stronglifts-5x5/failure
-  - support.stronglifts.com/article/71-increments
+  - https://stronglifts.com/stronglifts-5x5/workout-program/
+  - https://stronglifts.com/stronglifts-5x5/progress/
+  - https://stronglifts.com/stronglifts-5x5/failure/
+  - https://support.stronglifts.com/article/71-increments
 lifts:
   - { key: squat, name: Squat, category: lower }
   - { key: bench, name: Bench press, category: upper }

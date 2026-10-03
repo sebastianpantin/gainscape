@@ -2,8 +2,8 @@ key: texas_method
 version: 1
 name: Texas Method
 source:
-  - liftosaur.com/programs/texasmethod
-  - fitnessvolt.com texas-method
+  - https://www.liftosaur.com/programs/texasmethod
+  - https://fitnessvolt.com/rpe-training/programs/texas-method/
 lifts:
   - { key: squat, name: Squat, category: lower }
   - { key: press, name: Bench press or overhead press, category: upper }
@@ -16,7 +16,12 @@ initial:
   - { kind: copy, var: fiveRm, from: fiveRm }
   - { kind: copy, var: workingWeight, from: workingWeight }
 options:
-  - { key: pressLift, kind: choice, values: [bench, ohp], default: bench, source: [liftosaur.com/programs/texasmethod] }
+  - key: pressLift
+    kind: choice
+    values: [bench, ohp]
+    default: bench
+    source:
+      - https://www.liftosaur.com/programs/texasmethod
 conversions:
   - { lb: 5, kg: 2.5, note: weekly increase of the Friday 5RM }
 schedule:

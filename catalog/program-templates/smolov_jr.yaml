@@ -2,8 +2,8 @@ key: smolov_jr
 version: 1
 name: Smolov Jr
 source:
-  - liftvault.com/programs/lift-specific/smolov
-  - liftosaur.com/programs/smolov-jr
+  - https://liftvault.com/programs/lift-specific/smolov/
+  - https://www.liftosaur.com/programs/smolov-jr
 lifts:
   - { key: main, name: Main lift }
 inputs:

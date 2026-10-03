@@ -2,7 +2,7 @@ key: rpe_top_set
 version: 1
 name: RPE top set with back-offs
 source:
-  - fitnessvolt.com/tuchscherer-chart-explained
+  - https://fitnessvolt.com/tuchscherer-chart-explained/
 lifts:
   - { key: squat, name: Squat, category: lower }
   - { key: bench, name: Bench press, category: upper }
@@ -18,19 +18,13 @@ options:
     values: [fatigue, fixed]
     default: fatigue
     source:
-      - fitnessvolt.com/tuchscherer-chart-explained
-  - key: fatigueBackoffPct
-    kind: choice
-    values: [0.95, 0.925, 0.9]
-    default: 0.95
-    source:
-      - fitnessvolt.com/tuchscherer-chart-explained
+      - https://fitnessvolt.com/tuchscherer-chart-explained/
   - key: fixedBackoffPct
     kind: choice
     values: [0.95, 0.925, 0.9]
     default: 0.925
     source:
-      - fitnessvolt.com/tuchscherer-chart-explained
+      - https://fitnessvolt.com/tuchscherer-chart-explained/
 schedule:
   kind: weekly
   days:
@@ -51,7 +45,7 @@ schedule:
             count: 5
             reps: 3
             optional: true
-            load: { kind: pctOfSet, ref: 'squat-top:0', pct: { option: fatigueBackoffPct } }
+            load: { kind: pctOfSet, ref: 'squat-top:0', pct: 0.95 }
         - id: squat-fixed
           lift: squat
           role: supplemental
@@ -79,7 +73,7 @@ schedule:
             count: 5
             reps: 3
             optional: true
-            load: { kind: pctOfSet, ref: 'bench-top:0', pct: { option: fatigueBackoffPct } }
+            load: { kind: pctOfSet, ref: 'bench-top:0', pct: 0.95 }
         - id: bench-fixed
           lift: bench
           role: supplemental
@@ -107,7 +101,7 @@ schedule:
             count: 5
             reps: 3
             optional: true
-            load: { kind: pctOfSet, ref: 'deadlift-top:0', pct: { option: fatigueBackoffPct } }
+            load: { kind: pctOfSet, ref: 'deadlift-top:0', pct: 0.95 }
         - id: deadlift-fixed
           lift: deadlift
           role: supplemental

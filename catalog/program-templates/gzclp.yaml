@@ -2,19 +2,19 @@ key: gzclp
 version: 1
 name: GZCLP
 source:
-  - thefitness.wiki/routines/gzclp
-  - thefitness.wiki/reddit-archive/gzcl-method-novice-to-elite
+  - https://thefitness.wiki/routines/gzclp/
+  - https://thefitness.wiki/reddit-archive/gzcl-method-novice-to-elite/
 lifts:
   - { key: squat-t1, name: Squat T1, category: lower }
-  - { key: bench-t1, name: Bench press T1 }
-  - { key: ohp-t1, name: Overhead press T1 }
+  - { key: bench-t1, name: Bench press T1, category: upper }
+  - { key: ohp-t1, name: Overhead press T1, category: upper }
   - { key: deadlift-t1, name: Deadlift T1, category: lower }
   - { key: squat-t2, name: Squat T2, category: lower }
-  - { key: bench-t2, name: Bench press T2 }
-  - { key: ohp-t2, name: Overhead press T2 }
+  - { key: bench-t2, name: Bench press T2, category: upper }
+  - { key: ohp-t2, name: Overhead press T2, category: upper }
   - { key: deadlift-t2, name: Deadlift T2, category: lower }
-  - { key: pulldown-t3, name: Lat pulldown T3 }
-  - { key: row-t3, name: Dumbbell row T3 }
+  - { key: pulldown-t3, name: Lat pulldown T3, category: upper }
+  - { key: row-t3, name: Dumbbell row T3, category: upper }
 inputs:
   - lifts: [squat-t1, bench-t1, ohp-t1, deadlift-t1, squat-t2, bench-t2, ohp-t2, deadlift-t2, pulldown-t3, row-t3]
     kinds: [workingWeight]
