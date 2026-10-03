@@ -1,0 +1,178 @@
+key: juggernaut_2
+version: 1
+name: Juggernaut Method 2.0 (structure)
+source:
+  - https://pdfcoffee.com/juggernaut-method-20-pdf-free.html
+  - https://www.jtsstrength.com/going-heavy-on-the-juggernaut-method/
+  - https://www.liftosaur.com/programs/juggernaut-method
+  - https://liftvault.com/programs/strength/juggernaut-method-base-template-spreadsheet/
+lifts:
+  - { key: squat, name: Squat, category: lower }
+  - { key: bench, name: Bench press, category: upper }
+  - { key: deadlift, name: Deadlift, category: lower }
+  - { key: press, name: Overhead press, category: upper }
+inputs:
+  - { lifts: [squat, bench, deadlift, press], kinds: [tm, oneRm] }
+referenceVars: [tm]
+initial:
+  - { kind: copy, var: tm, from: tm }
+  - { kind: scale, var: tm, from: oneRm, factor: 0.9 }
+options:
+  - key: perRep
+    kind: choice
+    values: [standard, fine]
+    default: standard
+    onlyForUnit: { fine: lb }
+    source:
+      - https://pdfcoffee.com/juggernaut-method-20-pdf-free.html
+      - https://www.liftosaur.com/programs/juggernaut-method
+conversions:
+  - { lb: 5, kg: 2.5, note: lower-body increment per rep over the standard }
+  - { lb: 2.5, kg: 1.25, note: 'upper-body increment per rep, and the fine lower-body increment' }
+  - { lb: 1.25, kg: 0, note: 'fine upper-body increment, so fine is offered for lb enrollments only' }
+weekTables:
+  waves:
+    - sets:
+        - { pct: 0.6, reps: 10 }
+        - { pct: 0.6, reps: 10 }
+        - { pct: 0.6, reps: 10 }
+        - { pct: 0.6, reps: 10 }
+        - { pct: 0.6, reps: 10, amrap: true, minReps: 10 }
+    - sets:
+        - { pct: 0.675, reps: 10 }
+        - { pct: 0.675, reps: 10 }
+        - { pct: 0.675, reps: 10 }
+    - sets:
+        - { pct: 0.75, reps: 10, amrap: true, minReps: 10 }
+    - sets:
+        - { pct: 0.4, reps: 5 }
+        - { pct: 0.5, reps: 5 }
+        - { pct: 0.6, reps: 5 }
+    - sets:
+        - { pct: 0.65, reps: 8 }
+        - { pct: 0.65, reps: 8 }
+        - { pct: 0.65, reps: 8 }
+        - { pct: 0.65, reps: 8 }
+        - { pct: 0.65, reps: 8, amrap: true, minReps: 8 }
+    - sets:
+        - { pct: 0.725, reps: 8 }
+        - { pct: 0.725, reps: 8 }
+        - { pct: 0.725, reps: 8 }
+    - sets:
+        - { pct: 0.8, reps: 8, amrap: true, minReps: 8 }
+    - sets:
+        - { pct: 0.4, reps: 5 }
+        - { pct: 0.5, reps: 5 }
+        - { pct: 0.6, reps: 5 }
+    - sets:
+        - { pct: 0.7, reps: 5 }
+        - { pct: 0.7, reps: 5 }
+        - { pct: 0.7, reps: 5 }
+        - { pct: 0.7, reps: 5 }
+        - { pct: 0.7, reps: 5 }
+        - { pct: 0.7, reps: 5, amrap: true, minReps: 5 }
+    - sets:
+        - { pct: 0.775, reps: 5 }
+        - { pct: 0.775, reps: 5 }
+        - { pct: 0.775, reps: 5 }
+        - { pct: 0.775, reps: 5 }
+    - sets:
+        - { pct: 0.85, reps: 5, amrap: true, minReps: 5 }
+    - sets:
+        - { pct: 0.4, reps: 5 }
+        - { pct: 0.5, reps: 5 }
+        - { pct: 0.6, reps: 5 }
+    - sets:
+        - { pct: 0.75, reps: 3 }
+        - { pct: 0.75, reps: 3 }
+        - { pct: 0.75, reps: 3 }
+        - { pct: 0.75, reps: 3 }
+        - { pct: 0.75, reps: 3 }
+        - { pct: 0.75, reps: 3 }
+        - { pct: 0.75, reps: 3, amrap: true, minReps: 3 }
+    - sets:
+        - { pct: 0.825, reps: 3 }
+        - { pct: 0.825, reps: 3 }
+        - { pct: 0.825, reps: 3 }
+        - { pct: 0.825, reps: 3 }
+        - { pct: 0.825, reps: 3 }
+    - sets:
+        - { pct: 0.9, reps: 3, amrap: true, minReps: 3 }
+    - sets:
+        - { pct: 0.4, reps: 5 }
+        - { pct: 0.5, reps: 5 }
+        - { pct: 0.6, reps: 5 }
+schedule:
+  kind: cycle
+  weeksPerCycle: 16
+  waveWeeks: 4
+  days:
+    - key: squat
+      name: Day 1
+      slots:
+        - { id: squat-main, lift: squat, role: main, scheme: { kind: weekTable, table: waves, of: tm } }
+    - key: bench
+      name: Day 2
+      slots:
+        - { id: bench-main, lift: bench, role: main, scheme: { kind: weekTable, table: waves, of: tm } }
+    - key: deadlift
+      name: Day 3
+      slots:
+        - { id: deadlift-main, lift: deadlift, role: main, scheme: { kind: weekTable, table: waves, of: tm } }
+    - key: press
+      name: Day 4
+      slots:
+        - { id: press-main, lift: press, role: main, scheme: { kind: weekTable, table: waves, of: tm } }
+progression:
+  - lift: squat
+    var: tm
+    trigger: endOfWave
+    judgedSlots: [squat-main]
+    judgedWeeks: [3, 7, 11, 15]
+    onMet: []
+    onMiss: []
+    always:
+      - kind: repsOverStandard
+        setIndex: 0
+        standardByWave: [10, 8, 5, 3]
+        perRep: { option: perRep, cases: { standard: { kg: 2.5, lb: 5 }, fine: { kg: 1.25, lb: 2.5 } } }
+        cap: 10
+  - lift: bench
+    var: tm
+    trigger: endOfWave
+    judgedSlots: [bench-main]
+    judgedWeeks: [3, 7, 11, 15]
+    onMet: []
+    onMiss: []
+    always:
+      - kind: repsOverStandard
+        setIndex: 0
+        standardByWave: [10, 8, 5, 3]
+        perRep: { option: perRep, cases: { standard: { kg: 1.25, lb: 2.5 }, fine: { kg: 0, lb: 1.25 } } }
+        cap: 10
+  - lift: deadlift
+    var: tm
+    trigger: endOfWave
+    judgedSlots: [deadlift-main]
+    judgedWeeks: [3, 7, 11, 15]
+    onMet: []
+    onMiss: []
+    always:
+      - kind: repsOverStandard
+        setIndex: 0
+        standardByWave: [10, 8, 5, 3]
+        perRep: { option: perRep, cases: { standard: { kg: 2.5, lb: 5 }, fine: { kg: 1.25, lb: 2.5 } } }
+        cap: 10
+  - lift: press
+    var: tm
+    trigger: endOfWave
+    judgedSlots: [press-main]
+    judgedWeeks: [3, 7, 11, 15]
+    onMet: []
+    onMiss: []
+    always:
+      - kind: repsOverStandard
+        setIndex: 0
+        standardByWave: [10, 8, 5, 3]
+        perRep: { option: perRep, cases: { standard: { kg: 1.25, lb: 2.5 }, fine: { kg: 0, lb: 1.25 } } }
+        cap: 10

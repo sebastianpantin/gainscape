@@ -30,6 +30,7 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
     finishedAt: '2026-09-30T11:00:00.000Z',
     programDayId: null,
     programLabel: null,
+    program: null,
     exercises: [
       {
         exerciseId: 'bench',
@@ -38,8 +39,15 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
         loadType: 'external',
         target: null,
         sets: [
-          { id: 'set-a', weightKg: 60, reps: 8, effort: { type: 'level', level: 'hard' }, done: true },
-          { id: 'set-b', weightKg: 60, reps: 8, effort: null, done: false },
+          {
+            id: 'set-a',
+            weightKg: 60,
+            reps: 8,
+            effort: { type: 'level', level: 'hard' },
+            done: true,
+            prescription: null,
+          },
+          { id: 'set-b', weightKg: 60, reps: 8, effort: null, done: false, prescription: null },
         ],
       },
       {
@@ -49,9 +57,16 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
         loadType: 'external',
         target: { sets: 3, repsMin: 8, repsMax: 12 },
         sets: [
-          { id: 'set-c', weightKg: 50, reps: 10, effort: null, done: false },
-          { id: 'set-d', weightKg: 50, reps: 10, effort: { type: 'level', level: 'easy' }, done: true },
-          { id: 'set-e', weightKg: 55, reps: 9, effort: null, done: true },
+          { id: 'set-c', weightKg: 50, reps: 10, effort: null, done: false, prescription: null },
+          {
+            id: 'set-d',
+            weightKg: 50,
+            reps: 10,
+            effort: { type: 'level', level: 'easy' },
+            done: true,
+            prescription: null,
+          },
+          { id: 'set-e', weightKg: 55, reps: 9, effort: null, done: true, prescription: null },
         ],
       },
     ],

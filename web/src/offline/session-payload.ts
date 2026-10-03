@@ -17,6 +17,7 @@ function liftPayload(set: DraftSet, exerciseId: string, position: number) {
     reps: set.reps,
     isWarmup: false,
     effort: set.effort,
+    prescription: set.prescription ?? null,
   };
 }
 
@@ -35,6 +36,7 @@ export function completeSessionPayload(draft: WorkoutDraft) {
     endedAt: draft.finishedAt,
     notes: null,
     programDayId: draft.programDayId,
+    program: draft.program ? { enrollmentId: draft.program.enrollmentId, position: draft.program.position } : null,
     sets,
   };
 }

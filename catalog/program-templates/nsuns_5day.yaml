@@ -1,0 +1,230 @@
+key: nsuns_5day
+version: 1
+name: nSuns LP 5-day
+source:
+  - https://www.liftosaur.com/programs/nsuns
+  - https://thefitness.wiki/routines/nsuns-lp/
+lifts:
+  - { key: bench, name: Bench press, category: upper }
+  - { key: squat, name: Squat, category: lower }
+  - { key: press, name: Overhead press, category: upper }
+  - { key: deadlift, name: Deadlift, category: lower }
+  - { key: sumo-deadlift, name: Sumo deadlift, category: lower }
+  - { key: incline-bench, name: Incline bench press, category: upper }
+  - { key: front-squat, name: Front squat, category: lower }
+  - { key: close-grip-bench, name: Close-grip bench press, category: upper }
+inputs:
+  - { lifts: [bench, squat, press, deadlift], kinds: [tm, oneRm] }
+referenceVars: [tm]
+initial:
+  - { kind: copy, var: tm, from: tm }
+  - { kind: scale, var: tm, from: oneRm, factor: 0.9 }
+options: []
+conversions:
+  - { lb: 5, kg: 2.5, note: TM increase for 2–3 AMRAP reps }
+  - { lb: 10, kg: 5, note: TM increase for 4–5 AMRAP reps }
+  - { lb: 15, kg: 6.25, note: TM increase for 6 or more AMRAP reps }
+schedule:
+  kind: weekly
+  days:
+    - key: mon
+      name: Day 1
+      slots:
+        - id: mon-bench
+          lift: bench
+          role: main
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 8, load: { kind: pct, pct: 0.65, of: tm } }
+              - { reps: 6, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 4, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 4, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 4, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.8, of: tm } }
+              - { reps: 6, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 7, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 8, load: { kind: pct, pct: 0.65, of: tm }, amrap: true, minReps: 8 }
+        - id: mon-press
+          lift: press
+          role: supplemental
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 6, load: { kind: pct, pct: 0.5, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.6, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 7, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 4, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 6, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 8, load: { kind: pct, pct: 0.7, of: tm } }
+    - key: tue
+      name: Day 2
+      slots:
+        - id: tue-squat
+          lift: squat
+          role: main
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 1, load: { kind: pct, pct: 0.95, of: tm }, amrap: true, minReps: 1 }
+              - { reps: 3, load: { kind: pct, pct: 0.9, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.8, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.65, of: tm }, amrap: true, minReps: 5 }
+        - id: tue-sumo-deadlift
+          lift: sumo-deadlift
+          role: supplemental
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: pct, pct: 0.5, of: tm, lift: deadlift } }
+              - { reps: 5, load: { kind: pct, pct: 0.6, of: tm, lift: deadlift } }
+              - { reps: 3, load: { kind: pct, pct: 0.7, of: tm, lift: deadlift } }
+              - { reps: 5, load: { kind: pct, pct: 0.7, of: tm, lift: deadlift } }
+              - { reps: 7, load: { kind: pct, pct: 0.7, of: tm, lift: deadlift } }
+              - { reps: 4, load: { kind: pct, pct: 0.7, of: tm, lift: deadlift } }
+              - { reps: 6, load: { kind: pct, pct: 0.7, of: tm, lift: deadlift } }
+              - { reps: 8, load: { kind: pct, pct: 0.7, of: tm, lift: deadlift } }
+    - key: wed
+      name: Day 3
+      slots:
+        - id: wed-press
+          lift: press
+          role: main
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 1, load: { kind: pct, pct: 0.95, of: tm }, amrap: true, minReps: 1 }
+              - { reps: 3, load: { kind: pct, pct: 0.9, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.8, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.65, of: tm }, amrap: true, minReps: 5 }
+        - id: wed-incline-bench
+          lift: incline-bench
+          role: supplemental
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 6, load: { kind: pct, pct: 0.4, of: tm, lift: bench } }
+              - { reps: 5, load: { kind: pct, pct: 0.5, of: tm, lift: bench } }
+              - { reps: 3, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 5, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 7, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 4, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 6, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 8, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+    - key: thu
+      name: Day 4
+      slots:
+        - id: thu-deadlift
+          lift: deadlift
+          role: main
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 1, load: { kind: pct, pct: 0.95, of: tm }, amrap: true, minReps: 1 }
+              - { reps: 3, load: { kind: pct, pct: 0.9, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.8, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.65, of: tm }, amrap: true, minReps: 3 }
+        - id: thu-front-squat
+          lift: front-squat
+          role: supplemental
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: pct, pct: 0.35, of: tm, lift: squat } }
+              - { reps: 5, load: { kind: pct, pct: 0.45, of: tm, lift: squat } }
+              - { reps: 3, load: { kind: pct, pct: 0.55, of: tm, lift: squat } }
+              - { reps: 5, load: { kind: pct, pct: 0.55, of: tm, lift: squat } }
+              - { reps: 7, load: { kind: pct, pct: 0.55, of: tm, lift: squat } }
+              - { reps: 4, load: { kind: pct, pct: 0.55, of: tm, lift: squat } }
+              - { reps: 6, load: { kind: pct, pct: 0.55, of: tm, lift: squat } }
+              - { reps: 8, load: { kind: pct, pct: 0.55, of: tm, lift: squat } }
+    - key: fri
+      name: Day 5
+      slots:
+        - id: fri-bench
+          lift: bench
+          role: main
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 5, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 1, load: { kind: pct, pct: 0.95, of: tm }, amrap: true, minReps: 1 }
+              - { reps: 3, load: { kind: pct, pct: 0.9, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.85, of: tm } }
+              - { reps: 3, load: { kind: pct, pct: 0.8, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.75, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.7, of: tm } }
+              - { reps: 5, load: { kind: pct, pct: 0.65, of: tm }, amrap: true, minReps: 5 }
+        - id: fri-close-grip-bench
+          lift: close-grip-bench
+          role: supplemental
+          scheme:
+            kind: sets
+            sets:
+              - { reps: 6, load: { kind: pct, pct: 0.4, of: tm, lift: bench } }
+              - { reps: 5, load: { kind: pct, pct: 0.5, of: tm, lift: bench } }
+              - { reps: 3, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 5, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 7, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 4, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 6, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+              - { reps: 8, load: { kind: pct, pct: 0.6, of: tm, lift: bench } }
+progression:
+  - lift: bench
+    var: tm
+    trigger: endOfWeek
+    judgedSlots: [fri-bench]
+    onMet: []
+    onMiss: []
+    always:
+      - kind: amrapTable
+        setIndex: 2
+        bands: [[0, { kg: 0, lb: 0 }], [2, { kg: 2.5, lb: 5 }], [4, { kg: 5, lb: 10 }], [6, { kg: 6.25, lb: 15 }]]
+  - lift: squat
+    var: tm
+    trigger: endOfWeek
+    judgedSlots: [tue-squat]
+    onMet: []
+    onMiss: []
+    always:
+      - kind: amrapTable
+        setIndex: 2
+        bands: [[0, { kg: 0, lb: 0 }], [2, { kg: 2.5, lb: 5 }], [4, { kg: 5, lb: 10 }], [6, { kg: 6.25, lb: 15 }]]
+  - lift: press
+    var: tm
+    trigger: endOfWeek
+    judgedSlots: [wed-press]
+    onMet: []
+    onMiss: []
+    always:
+      - kind: amrapTable
+        setIndex: 2
+        bands: [[0, { kg: 0, lb: 0 }], [2, { kg: 2.5, lb: 5 }], [4, { kg: 5, lb: 10 }], [6, { kg: 6.25, lb: 15 }]]
+  - lift: deadlift
+    var: tm
+    trigger: endOfWeek
+    judgedSlots: [thu-deadlift]
+    onMet: []
+    onMiss: []
+    always:
+      - kind: amrapTable
+        setIndex: 2
+        bands: [[0, { kg: 0, lb: 0 }], [2, { kg: 2.5, lb: 5 }], [4, { kg: 5, lb: 10 }], [6, { kg: 6.25, lb: 15 }]]

@@ -228,6 +228,6 @@ export function renderStatements(catalog: CatalogData): string[] {
   ];
 }
 
-export function renderSeed(catalog: CatalogData): string {
-  return `begin;\n\n${renderStatements(catalog).join('\n\n')}\n\ncommit;\n`;
+export function renderSeed(catalog: CatalogData, extraStatements: readonly string[] = []): string {
+  return `begin;\n\n${[...renderStatements(catalog), ...extraStatements].join('\n\n')}\n\ncommit;\n`;
 }

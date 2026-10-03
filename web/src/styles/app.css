@@ -94,6 +94,15 @@ a:hover {
   box-shadow: var(--bevel);
 }
 
+.confirm-dialog {
+  width: min(420px, calc(100vw - 32px));
+  color: var(--color-text);
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
 .well {
   background: var(--color-well);
   border: var(--border-width) solid #000;
@@ -311,6 +320,10 @@ a:focus-visible {
   color: var(--color-text-muted);
   text-decoration: none;
   border: var(--border-width) solid transparent;
+}
+
+.segmented.stacked {
+  grid-auto-flow: row;
 }
 
 .segment:hover {
@@ -553,6 +566,22 @@ a:focus-visible {
   border-top: 1px dashed var(--color-panel-border);
 }
 
+.set-row.marked {
+  grid-template-areas:
+    'number weight reps xp done'
+    'markers markers markers markers markers'
+    'effort effort effort effort remove';
+}
+
+.set-markers {
+  grid-area: markers;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+}
+
 .bout-row {
   grid-template-columns: 22px minmax(0, 1fr) minmax(52px, auto) var(--tap-target);
   grid-template-areas:
@@ -581,6 +610,23 @@ a:focus-visible {
   font-family: var(--font-display);
   color: var(--color-text-muted);
   padding-bottom: var(--space-3);
+}
+
+.amrap-badge {
+  display: block;
+  font-family: var(--font-family);
+  font-size: var(--font-size-tiny);
+  color: var(--color-accent-light);
+}
+
+.prescription-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-small);
 }
 
 .compact-field {

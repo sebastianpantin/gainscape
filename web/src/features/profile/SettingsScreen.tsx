@@ -28,6 +28,7 @@ import {
 } from '../../lib/profile.ts';
 import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
 import { discardLocalDraft, hasUnsyncedDraft } from '../../offline/local-drafts.ts';
+import { forgetProgramCache } from '../../offline/program-cache.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetInstallCard, promptInstall, useInstallState } from '../../pwa/install.ts';
 import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
@@ -43,6 +44,7 @@ interface SettingsScreenProps {
 
 async function forgetThisDevice(userId: string): Promise<void> {
   forgetCachedExercises(localStorage, userId);
+  forgetProgramCache(localStorage, userId);
   forgetInstallCard(userId);
   await discardLocalDraft(await openDraftStoreAndReconcile(), userId);
 }

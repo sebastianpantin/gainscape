@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_BALANCE, type StrengthState } from '@domain/index.ts';
+import { DEFAULT_BALANCE, type Position, type StrengthState } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { canAddBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
@@ -25,6 +25,8 @@ import {
   removeSet,
   startDraft,
   startDraftFromDay,
+  startDraftFromPrescription,
+  type PrescribedDayStart,
   swapExercise,
   toggleSetDone,
   updateBout,
@@ -33,6 +35,9 @@ import {
   type WorkoutDraft,
 } from '../../offline/draft-format.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
+import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program-enrollment.ts';
+import { skipDayEvent } from '../../lib/program-skip-rules.ts';
+import { draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
@@ -40,7 +45,10 @@ import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
+import { useActiveProgram } from '../programs/use-active-program.ts';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
+import { ProgramSummary } from './ProgramSummary.tsx';
+import { ProgramToday } from './ProgramToday.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
@@ -94,6 +102,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [bodyweightKg, setBodyweightKg] = useState<number | null>(null);
   const [onlineSignal, setOnlineSignal] = useState(0);
   const standing = useStanding(userId);
+  const { cache: programCache, program: activeProgram, showCache: showProgramCache } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
   const finishButton = useRef<HTMLButtonElement>(null);
   const finishBar = useRef<HTMLDivElement>(null);
@@ -202,6 +211,17 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     </>
   );
 
+  const openStartedDraft = async (started: { draft: WorkoutDraft; skippedExerciseIds: string[] }) => {
+    const skipped = started.skippedExerciseIds.length;
+    const startedFresh = await startWorkout(() => started.draft);
+    setStartingDay(false);
+    setStartNotice(
+      startedFresh && skipped > 0
+        ? `${skipped} exercise(s) in this day are no longer available and were skipped.`
+        : null,
+    );
+  };
+
   const startFromDay = async (program: Program, day: ProgramDay) => {
     setStartingDay(true);
     const exerciseIds = [...new Set(day.exercises.map((planned) => planned.exerciseId))];
@@ -215,14 +235,24 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       lastSets,
       new Date(),
     );
-    const skipped = started.skippedExerciseIds.length;
-    const startedFresh = await startWorkout(() => started.draft);
-    setStartingDay(false);
-    setStartNotice(
-      startedFresh && skipped > 0
-        ? `${skipped} exercise(s) in this day are no longer available and were skipped.`
-        : null,
+    await openStartedDraft(started);
+  };
+
+  const startFromPrescription = async (day: PrescribedDayStart) => {
+    setStartingDay(true);
+    const started = startDraftFromPrescription(
+      day,
+      new Map(exercises.map((exercise) => [exercise.id, exercise])),
+      new Date(),
     );
+    await openStartedDraft(started);
+  };
+
+  const skipProgramDay = async (position: Position) => {
+    const enrollment = programCache.enrollment;
+    if (!enrollment) return;
+    await adjustEnrollment(enrollment.id, skipDayEvent(position));
+    showProgramCache(await refreshProgramFactsOrCached(userId, enrollment));
   };
 
   if (!draft) {
@@ -256,6 +286,15 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </p>
         )}
         <InstallCard userId={userId} />
+        <ProgramSummary userId={userId} program={activeProgram} />
+        <ProgramToday
+          program={activeProgram}
+          exercises={exercises}
+          unit={unitPref}
+          disabled={startingDay}
+          onStart={startFromPrescription}
+          onSkip={skipProgramDay}
+        />
         <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
         <button
           className="button primary big"
@@ -276,6 +315,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   }
 
   const backToEditing = () => changeDraft({ ...draft, finishedAt: null }, { reopen: true });
+  const programBar = draftBar(activeProgram, draft.program?.enrollmentId ?? null);
 
   if (draft.finishedAt) {
     return (
@@ -473,6 +513,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   preview={previews[exerciseIndex][setIndex]}
                   unit={unitPref}
                   effortMode={effortInputMode}
+                  markers={programSetMarkerTexts(programSetMarkers(set, unitPref, programBar))}
                   onChange={(changes) => {
                     if (startsRest(set, changes, rest.timer)) rest.start(set.id);
                     changeDraft(updateSet(draft, exerciseIndex, set.id, changes));

@@ -24,6 +24,7 @@ export function workout(sessionId: string, finishedAt: string | null = null): Wo
     finishedAt,
     programDayId: null,
     programLabel: null,
+    program: null,
     exercises: [],
   };
 }

@@ -15,21 +15,21 @@ All Vitest suites live here, split by layer: `catalog/` (YAML catalog generator 
 
 ## Subdirectories
 
-| Directory      | Purpose                                                                                                                                               |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `catalog/`     | Catalog generator determinism and validator rules (see `catalog/AGENTS.md`)                                                                           |
-| `domain/`      | Unit and property tests of the pure engine, plus purity enforcement (see `domain/AGENTS.md`)                                                          |
-| `web/`         | Pure web logic, offline draft store contract, PWA rules, static asset checks (see `web/AGENTS.md`)                                                    |
-| `balance/`     | Progression-band simulation test behind `make sim-check` (see `balance/AGENTS.md`)                                                                    |
-| `deploy/`      | Deploy guard rules and secret-handling checks for `scripts/deploy/` and the Edge Functions, plus the local-stack and loot-secret guards in `scripts/` |
-| `integration/` | Stack-backed tests of Edge Functions, RPCs, RLS, auth email (see `integration/AGENTS.md`)                                                             |
+| Directory      | Purpose                                                                                                                                                               |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `catalog/`     | Catalog generator determinism, validator rules, program templates and their lock (see `catalog/AGENTS.md`)                                                            |
+| `domain/`      | Unit and property tests of the pure engine, including the program engine (`program-*.test.ts`, `program-fixtures/`), plus purity enforcement (see `domain/AGENTS.md`) |
+| `web/`         | Pure web logic, offline draft store contract, PWA rules, static asset checks (see `web/AGENTS.md`)                                                                    |
+| `balance/`     | Progression-band simulation test behind `make sim-check` (see `balance/AGENTS.md`)                                                                                    |
+| `deploy/`      | Deploy guard rules and secret-handling checks for `scripts/deploy/` and the Edge Functions, plus the local-stack and loot-secret guards in `scripts/`                 |
+| `integration/` | Stack-backed tests of Edge Functions, RPCs, RLS, auth email (see `integration/AGENTS.md`)                                                                             |
 
 ## For AI Agents
 
 ### Working In This Directory
 
 - `../vitest.config.ts` includes only `tests/**/*.test.ts`. Helpers (`fixtures.ts`, `local-stack.ts`, `draft-store.contract.ts`, ...) deliberately do not end in `.test.ts` so Vitest does not run them as suites. Keep that naming.
-- `vitest.config.ts` defines three projects that run in order. `unit` (`balance`, `catalog`, `domain`, `web`) runs files in parallel. `integration` runs files on 4 workers at once; isolation comes from fresh users. `integration-serial` then runs, one file at a time, the files that change or count global state (`auth-email`, `catalog`, `crafting`, `loot` (it truncates loot tables to prove they are append-only), `rate-limits`). A new integration file that edits shared rows (catalog retirement, rate-limit rules, Mailpit) belongs in `INTEGRATION_FILES_SHARING_GLOBAL_STATE`. `testTimeout` is 30 s and `hookTimeout` is 60 s. A test that needs more (the balance simulation) passes an explicit timeout to its hook or test.
+- `vitest.config.ts` defines three projects that run in order. `unit` (`balance`, `catalog`, `domain`, `web`) runs files in parallel. `integration` runs files on 4 workers at once; isolation comes from fresh users. `integration-serial` then runs, one file at a time, the files that change or count global state (`auth-email`, `catalog`, `crafting`, `loot` (it truncates loot tables to prove they are append-only), `program-enrollments` (it inserts and deletes a template row), `rate-limits`). A new integration file that edits shared rows (catalog retirement, rate-limit rules, Mailpit) belongs in `INTEGRATION_FILES_SHARING_GLOBAL_STATE`. `testTimeout` is 30 s and `hookTimeout` is 60 s. A test that needs more (the balance simulation) passes an explicit timeout to its hook or test.
 - The `@domain` alias maps to `supabase/functions/_shared/domain`. Import engine code as `@domain/index.ts` (or `@domain/types.ts`); web and script code is imported by relative path.
 - No comments, no `it.skip`, no `.only`. Lint enforces the comment ban in tests too.
 - `ip-denylist.txt` is test-owned data consumed by production tooling. When adding a term, keep it lowercase, one per line, and run `make test-catalog` and `make catalog` to confirm the real catalog still passes.

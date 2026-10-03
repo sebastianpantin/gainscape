@@ -79,6 +79,8 @@ interface FunctionResponseBody extends Partial<SessionSummary> {
   replayedSessionIds?: string[];
   revokedDrops?: RevokedDrop[];
   deleted?: boolean;
+  programLinked?: boolean;
+  completedAt?: string;
   error?: string;
   details?: unknown;
 }

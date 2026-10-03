@@ -16,7 +16,10 @@ import { EditProfileScreen } from './features/profile/EditProfileScreen.tsx';
 import { FriendPreviewScreen } from './features/profile/FriendPreviewScreen.tsx';
 import { ProfileScreen } from './features/profile/ProfileScreen.tsx';
 import { SettingsScreen } from './features/profile/SettingsScreen.tsx';
+import { ActiveProgramScreen } from './features/programs/ActiveProgramScreen.tsx';
+import { ProgramPlanScreen } from './features/programs/ProgramPlanScreen.tsx';
 import { ProgramEditor } from './features/programs/ProgramEditor.tsx';
+import { ProgramEnrollScreen } from './features/programs/ProgramEnrollScreen.tsx';
 import { ProgramsScreen } from './features/programs/ProgramsScreen.tsx';
 import { SkillsScreen } from './features/skills/SkillsScreen.tsx';
 import { RevealScreen } from './features/summary/RevealScreen.tsx';
@@ -92,6 +95,9 @@ function Screens() {
           />
           <Route path="/exercises" element={<ExercisesScreen />} />
           <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
+          <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />
+          <Route path="/programs/active" element={<ActiveProgramScreen userId={userId} />} />
+          <Route path="/programs/active/plan" element={<ProgramPlanScreen userId={userId} />} />
           <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

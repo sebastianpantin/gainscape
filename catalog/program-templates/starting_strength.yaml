@@ -1,0 +1,85 @@
+key: starting_strength
+version: 1
+name: Starting Strength
+source:
+  - https://www.liftosaur.com/programs/ss1
+lifts:
+  - { key: squat, name: Squat, category: lower }
+  - { key: bench, name: Bench press, category: upper }
+  - { key: press, name: Press, category: upper }
+  - { key: deadlift, name: Deadlift, category: lower }
+inputs:
+  - { lifts: [squat, bench, press, deadlift], kinds: [workingWeight] }
+referenceVars: [workingWeight]
+initial:
+  - { kind: copy, var: workingWeight, from: workingWeight }
+options: []
+conversions:
+  - { lb: 5, kg: 2.5, note: increment per session }
+  - { lb: 10, kg: 5, note: squat increment for the first two squat sessions }
+schedule:
+  kind: rotation
+  days:
+    - key: a
+      name: Day 1
+      slots:
+        - id: a-squat
+          lift: squat
+          role: main
+          scheme: { kind: repeat, count: 3, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+        - id: a-bench
+          lift: bench
+          role: main
+          scheme: { kind: repeat, count: 3, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+        - id: a-deadlift
+          lift: deadlift
+          role: main
+          scheme: { kind: repeat, count: 1, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+    - key: b
+      name: Day 2
+      slots:
+        - id: b-squat
+          lift: squat
+          role: main
+          scheme: { kind: repeat, count: 3, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+        - id: b-press
+          lift: press
+          role: main
+          scheme: { kind: repeat, count: 3, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+        - id: b-deadlift
+          lift: deadlift
+          role: main
+          scheme: { kind: repeat, count: 1, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+progression:
+  - lift: squat
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a-squat, b-squat]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 }, opening: { times: 2, by: { kg: 5, lb: 10 } } }
+    onMiss:
+      - { kind: failureCounter, threshold: 2, deloadPct: 0.1 }
+  - lift: bench
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a-bench]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: failureCounter, threshold: 2, deloadPct: 0.1 }
+  - lift: press
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [b-press]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: failureCounter, threshold: 2, deloadPct: 0.1 }
+  - lift: deadlift
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a-deadlift, b-deadlift]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: failureCounter, threshold: 2, deloadPct: 0.1 }

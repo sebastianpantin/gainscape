@@ -31,6 +31,18 @@ const setIdentity = {
 
 const within = (bounds: { min: number; max: number }) => z.int().min(bounds.min).max(bounds.max);
 
+const prescriptionSchema = z
+  .object({
+    ref: z.string().min(1).max(100),
+    weightKg: z.number(),
+    reps: z.int(),
+    minReps: z.int().nullable().default(null),
+    amrap: z.boolean(),
+  })
+  .strict();
+
+export type PrescriptionPayload = z.infer<typeof prescriptionSchema>;
+
 const liftSetSchema = z
   .object({
     kind: z.literal('lift'),
@@ -43,6 +55,7 @@ const liftSetSchema = z
     reps: z.int().min(1).max(100),
     isWarmup: z.boolean().default(false),
     effort: liftEffortSchema.default(null),
+    prescription: prescriptionSchema.nullable().default(null),
   })
   .strict();
 
@@ -100,4 +113,9 @@ function hasDuplicates(values: readonly (string | number)[]): boolean {
 export function assertDistinctSetIdsAndPositions(sets: readonly SetPayload[]): void {
   if (hasDuplicates(sets.map((set) => set.id))) throw new HttpError(422, 'duplicate_set_id');
   if (hasDuplicates(sets.map((set) => set.position))) throw new HttpError(422, 'duplicate_set_position');
+}
+
+export function assertDistinctPrescriptionRefs(sets: readonly SetPayload[]): void {
+  const refs = sets.flatMap((set) => (set.kind === 'lift' && set.prescription !== null ? [set.prescription.ref] : []));
+  if (hasDuplicates(refs)) throw new HttpError(422, 'duplicate_prescription_ref');
 }

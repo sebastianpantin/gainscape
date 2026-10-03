@@ -6,8 +6,13 @@ import { storedSessionId, type WorkoutDraft } from './draft-format.ts';
 import type { SyncedChange } from './draft-session.ts';
 import type { DraftStore } from './draft-store.ts';
 
+export interface CompletedSessionSummary extends SessionSummary {
+  programLinked?: boolean;
+  completedAt?: string;
+}
+
 export type SendOutcome =
-  | { kind: 'synced'; summary: SessionSummary }
+  | { kind: 'synced'; summary: CompletedSessionSummary }
   | { kind: 'deleted' }
   | { kind: 'retryable'; reason: string; retryAfterMs?: number }
   | { kind: 'rejected'; reason: string }
@@ -29,7 +34,7 @@ export interface FinishAttempt {
 
 const SESSION_DELETED_STATUS = 410;
 
-export function sendOutcomeFrom(outcome: InvokeOutcome<SessionSummary>): SendOutcome {
+export function sendOutcomeFrom(outcome: InvokeOutcome<CompletedSessionSummary>): SendOutcome {
   if (outcome.kind === 'ok') return { kind: 'synced', summary: outcome.data };
   if (outcome.kind !== 'http_error') return outcome;
   if (outcome.status === SESSION_DELETED_STATUS) return { kind: 'deleted' };
