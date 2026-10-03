@@ -1,16 +1,7 @@
-import { useSyncExternalStore } from 'react';
-
-function subscribe(listener: () => void): () => void {
-  window.addEventListener('online', listener);
-  window.addEventListener('offline', listener);
-  return () => {
-    window.removeEventListener('online', listener);
-    window.removeEventListener('offline', listener);
-  };
-}
+import { useIsOffline } from '../lib/use-online.ts';
 
 export function OfflineBanner() {
-  const offline = useSyncExternalStore(subscribe, () => navigator.onLine === false);
+  const offline = useIsOffline();
   if (!offline) return null;
   return (
     <div className="app-banner offline-banner" role="status">
