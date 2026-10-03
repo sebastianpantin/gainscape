@@ -1,0 +1,94 @@
+key: stronglifts_5x5
+version: 1
+name: StrongLifts 5x5
+source:
+  - stronglifts.com/stronglifts-5x5/workout-program
+  - stronglifts.com/stronglifts-5x5/progress
+  - stronglifts.com/stronglifts-5x5/failure
+  - support.stronglifts.com/article/71-increments
+lifts:
+  - { key: squat, name: Squat, category: lower }
+  - { key: bench, name: Bench press, category: upper }
+  - { key: row, name: Barbell row, category: upper }
+  - { key: press, name: Overhead press, category: upper }
+  - { key: deadlift, name: Deadlift, category: lower }
+inputs:
+  - { lifts: [squat, bench, row, press, deadlift], kinds: [workingWeight] }
+referenceVars: [workingWeight]
+initial:
+  - { kind: copy, var: workingWeight, from: workingWeight }
+options: []
+schedule:
+  kind: rotation
+  days:
+    - key: a
+      name: Workout A
+      slots:
+        - id: a-squat
+          lift: squat
+          role: main
+          scheme: { kind: repeat, count: 5, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+        - id: a-bench
+          lift: bench
+          role: main
+          scheme: { kind: repeat, count: 5, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+        - id: a-row
+          lift: row
+          role: main
+          scheme: { kind: repeat, count: 5, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+    - key: b
+      name: Workout B
+      slots:
+        - id: b-squat
+          lift: squat
+          role: main
+          scheme: { kind: repeat, count: 5, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+        - id: b-press
+          lift: press
+          role: main
+          scheme: { kind: repeat, count: 5, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+        - id: b-deadlift
+          lift: deadlift
+          role: main
+          scheme: { kind: repeat, count: 1, reps: 5, load: { kind: pct, pct: 1, of: workingWeight } }
+progression:
+  - lift: squat
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a-squat, b-squat]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: failureCounter, threshold: 3, deloadPct: 0.1 }
+  - lift: bench
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a-bench]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: failureCounter, threshold: 3, deloadPct: 0.1 }
+  - lift: row
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a-row]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: failureCounter, threshold: 3, deloadPct: 0.1 }
+  - lift: press
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [b-press]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: failureCounter, threshold: 3, deloadPct: 0.1 }
+  - lift: deadlift
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [b-deadlift]
+    onMet:
+      - { kind: increment, by: { kg: 5, lb: 10 } }
+    onMiss:
+      - { kind: failureCounter, threshold: 3, deloadPct: 0.1 }
