@@ -303,7 +303,8 @@ begin
   select t.definition, e.ended_at into template_definition, enrollment_ended_at
   from public.program_enrollments e
   join public.program_templates t on t.key = e.template_key and t.version = e.template_version
-  where e.id = adjust_enrollment.enrollment_id and e.user_id = caller;
+  where e.id = adjust_enrollment.enrollment_id and e.user_id = caller
+  for update of e;
   if not found then
     raise exception 'enrollment_not_found' using errcode = 'P0001';
   end if;
