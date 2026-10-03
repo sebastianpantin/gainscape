@@ -34,6 +34,7 @@ function finishedTitle(definition: ProgramDefinition, week: CyclePosition | Week
   const schedule = definition.schedule;
   if (isCyclePosition(week) && schedule.kind === 'cycle' && week.week === schedule.weeksPerCycle)
     return `Cycle ${week.cycle} complete`;
+  if (isCyclePosition(week)) return `Cycle ${week.cycle} week ${week.week} complete`;
   return `Week ${week.week} complete`;
 }
 
