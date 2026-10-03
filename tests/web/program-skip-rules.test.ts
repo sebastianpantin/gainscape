@@ -18,16 +18,16 @@ function skippedAs(stamp: { id: string; at: string }, position: Position): Progr
 }
 
 describe('skip day labels', () => {
-  it('names the action after the picked day: "Skip W1 Monday"', () => {
-    expect(skipLabel(MADCOW_5X5, weekDay(1, 'mon'))).toBe('Skip W1 Monday');
+  it('names the action after the picked day: "Skip W1 Day 1"', () => {
+    expect(skipLabel(MADCOW_5X5, weekDay(1, 'mon'))).toBe('Skip W1 Day 1');
   });
 
-  it('names a 5/3/1 day with its cycle: "Skip C1 W2 Deadlift"', () => {
-    expect(skipLabel(FIVE_THREE_ONE, cyclePosition(1, 2, 'deadlift'))).toBe('Skip C1 W2 Deadlift');
+  it('names a 5/3/1 day with its cycle: "Skip C1 W2 Day 3"', () => {
+    expect(skipLabel(FIVE_THREE_ONE, cyclePosition(1, 2, 'deadlift'))).toBe('Skip C1 W2 Day 3');
   });
 
-  it('asks in the confirm dialog title: "Skip W1 Wednesday?"', () => {
-    expect(skipDialogTitle(MADCOW_5X5, weekDay(1, 'wed'))).toBe('Skip W1 Wednesday?');
+  it('asks in the confirm dialog title: "Skip W1 Day 2?"', () => {
+    expect(skipDialogTitle(MADCOW_5X5, weekDay(1, 'wed'))).toBe('Skip W1 Day 2?');
   });
 });
 
@@ -43,20 +43,20 @@ describe('skip day event', () => {
     });
   });
 
-  it('takes the skipped Monday out of the day picker and suggests Wednesday next', () => {
+  it('takes the skipped Day 1 out of the day picker and suggests Day 2 next', () => {
     expect(choiceLabelsAfter([skippedAs(factClock().next(), weekDay(1, 'mon'))])).toEqual([
-      ['W1 Wednesday', true],
-      ['W1 Friday', false],
+      ['W1 Day 2', true],
+      ['W1 Day 3', false],
     ]);
   });
 
-  it('skipping the last open day of the week moves the picker to week 2 Monday', () => {
+  it('skipping the last open day of the week moves the picker to week 2 Day 1', () => {
     const clock = factClock();
     const facts = [
       sessionFact(clock.next(), weekDay(1, 'mon'), madcowDaySets('mon')),
       sessionFact(clock.next(), weekDay(1, 'wed'), madcowDaySets('wed')),
       skippedAs(clock.next(), weekDay(1, 'fri')),
     ];
-    expect(choiceLabelsAfter(facts)[0]).toEqual(['W2 Monday', true]);
+    expect(choiceLabelsAfter(facts)[0]).toEqual(['W2 Day 1', true]);
   });
 });

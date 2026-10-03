@@ -33,7 +33,7 @@ test('a finished 5/3/1 cycle shows a summary of only the training maxes it chang
   await expect(summary.getByRole('listitem')).toHaveText(CYCLE_1_LINES);
   await expect(summary).not.toContainText('Overhead press');
   await expect(
-    dayPicker(programToday(page, '5/3/1')).getByRole('radio', { name: 'C2 W1 Squat', exact: true }),
+    dayPicker(programToday(page, '5/3/1')).getByRole('radio', { name: 'C2 W1 Day 1', exact: true }),
   ).toBeChecked();
 });
 
@@ -63,7 +63,7 @@ test('deleting the last workout of the cycle undoes the rollover, so the summary
 
   await openTab(page, 'Train');
   const today = programToday(page, '5/3/1');
-  await expect(dayPicker(today).getByRole('radio', { name: 'C1 W4 Deadlift', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'C1 W4 Day 3', exact: true })).toBeChecked();
   await expect(dayPicker(today).getByRole('radio')).toHaveCount(1);
   await expect(cycleSummary(page)).toHaveCount(0);
 });

@@ -32,14 +32,14 @@ test('enroll in Juggernaut in kg and see the 10s accumulation as 5×10 at 60% of
   await startFollowing(page, JUGGERNAUT);
 
   const today = programToday(page, JUGGERNAUT);
-  await expect(dayPicker(today).getByRole('radio', { name: 'C1 W1 Squat', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'C1 W1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText([
     ...repeated('60 kg × 10 · 60%', 4),
     '60 kg × 10+ · 60%',
   ]);
 
-  await today.getByRole('button', { name: `Start: ${JUGGERNAUT} — C1 W1 Squat`, exact: true }).click();
-  await expect(page.getByText(`${JUGGERNAUT} — C1 W1 Squat`, { exact: true })).toBeVisible();
+  await today.getByRole('button', { name: `Start: ${JUGGERNAUT} — C1 W1 Day 1`, exact: true }).click();
+  await expect(page.getByText(`${JUGGERNAUT} — C1 W1 Day 1`, { exact: true })).toBeVisible();
   const squat = workoutCards(page, 'Back Squat');
   expect(await weightsIn(squat)).toEqual(['60', '60', '60', '60', '60']);
   expect(await repsIn(squat)).toEqual(['10', '10', '10', '10', '10']);

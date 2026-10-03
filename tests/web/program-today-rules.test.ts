@@ -78,58 +78,58 @@ function rowsOf(cards: PrescriptionCard[], title: string) {
 }
 
 describe('position labels', () => {
-  it('labels a weekly position by week and day name: W1 Monday', () => {
-    expect(positionLabel(MADCOW_5X5, weekDay(1, 'mon'))).toBe('W1 Monday');
+  it('labels a weekly position by week and day name: W1 Day 1', () => {
+    expect(positionLabel(MADCOW_5X5, weekDay(1, 'mon'))).toBe('W1 Day 1');
   });
 
-  it('labels a cycle position by cycle, week and day name: C2 W3 Deadlift', () => {
-    expect(positionLabel(FIVE_THREE_ONE, cyclePosition(2, 3, 'deadlift'))).toBe('C2 W3 Deadlift');
+  it('labels a cycle position by cycle, week and day name: C2 W3 Day 3', () => {
+    expect(positionLabel(FIVE_THREE_ONE, cyclePosition(2, 3, 'deadlift'))).toBe('C2 W3 Day 3');
   });
 
-  it('labels the start button with the program name and the position: Start: Madcow 5x5 — W1 Monday', () => {
-    expect(startLabel('Madcow 5x5', MADCOW_5X5, weekDay(1, 'mon'))).toBe('Start: Madcow 5x5 — W1 Monday');
+  it('labels the start button with the program name and the position: Start: Madcow 5x5 — W1 Day 1', () => {
+    expect(startLabel('Madcow 5x5', MADCOW_5X5, weekDay(1, 'mon'))).toBe('Start: Madcow 5x5 — W1 Day 1');
   });
 
-  it('labels the 5/3/1 start button: Start: 5/3/1 — C1 W1 Bench press', () => {
-    expect(startLabel('5/3/1', FIVE_THREE_ONE, cyclePosition(1, 1, 'bench'))).toBe('Start: 5/3/1 — C1 W1 Bench press');
+  it('labels the 5/3/1 start button: Start: 5/3/1 — C1 W1 Day 2', () => {
+    expect(startLabel('5/3/1', FIVE_THREE_ONE, cyclePosition(1, 1, 'bench'))).toBe('Start: 5/3/1 — C1 W1 Day 2');
   });
 });
 
 describe('today: the day picker', () => {
-  it('offers every Madcow day of week 1 at the start and suggests Monday', () => {
+  it('offers every Madcow day of week 1 at the start and suggests Day 1', () => {
     expect(choicesAfter(MADCOW_5X5, madcowEnrollment(), [])).toEqual([
-      { position: weekDay(1, 'mon'), label: 'W1 Monday', suggested: true },
-      { position: weekDay(1, 'wed'), label: 'W1 Wednesday', suggested: false },
-      { position: weekDay(1, 'fri'), label: 'W1 Friday', suggested: false },
+      { position: weekDay(1, 'mon'), label: 'W1 Day 1', suggested: true },
+      { position: weekDay(1, 'wed'), label: 'W1 Day 2', suggested: false },
+      { position: weekDay(1, 'fri'), label: 'W1 Day 3', suggested: false },
     ]);
   });
 
-  it('suggests Wednesday next after Monday is done and still offers Friday', () => {
+  it('suggests Day 2 next after Day 1 is done and still offers Day 3', () => {
     const clock = factClock();
     const facts = [sessionFact(clock.next(), weekDay(1, 'mon'), madcowDaySets('mon'))];
     expect(choicesAfter(MADCOW_5X5, madcowEnrollment(), facts)).toEqual([
-      { position: weekDay(1, 'wed'), label: 'W1 Wednesday', suggested: true },
-      { position: weekDay(1, 'fri'), label: 'W1 Friday', suggested: false },
+      { position: weekDay(1, 'wed'), label: 'W1 Day 2', suggested: true },
+      { position: weekDay(1, 'fri'), label: 'W1 Day 3', suggested: false },
     ]);
   });
 
-  it('suggests Monday in schedule order when Wednesday was done first, and offers Friday too', () => {
+  it('suggests Day 1 in schedule order when Day 2 was done first, and offers Day 3 too', () => {
     const clock = factClock();
     const facts = [sessionFact(clock.next(), weekDay(1, 'wed'), madcowDaySets('wed'))];
     expect(choicesAfter(MADCOW_5X5, madcowEnrollment(), facts)).toEqual([
-      { position: weekDay(1, 'mon'), label: 'W1 Monday', suggested: true },
-      { position: weekDay(1, 'fri'), label: 'W1 Friday', suggested: false },
+      { position: weekDay(1, 'mon'), label: 'W1 Day 1', suggested: true },
+      { position: weekDay(1, 'fri'), label: 'W1 Day 3', suggested: false },
     ]);
   });
 
-  it('moves to week 2 Monday once every day of week 1 is done', () => {
+  it('moves to week 2 Day 1 once every day of week 1 is done', () => {
     const facts = madcowWeek(factClock(), 1);
     expect(
       choicesAfter(MADCOW_5X5, madcowEnrollment(), facts).map((choice) => [choice.label, choice.suggested]),
     ).toEqual([
-      ['W2 Monday', true],
-      ['W2 Wednesday', false],
-      ['W2 Friday', false],
+      ['W2 Day 1', true],
+      ['W2 Day 2', false],
+      ['W2 Day 3', false],
     ]);
   });
 
@@ -137,19 +137,19 @@ describe('today: the day picker', () => {
     expect(
       choicesAfter(FIVE_THREE_ONE, fiveThreeOneEnrollment(), []).map((choice) => [choice.label, choice.suggested]),
     ).toEqual([
-      ['C1 W1 Squat', true],
-      ['C1 W1 Bench press', false],
-      ['C1 W1 Deadlift', false],
-      ['C1 W1 Overhead press', false],
+      ['C1 W1 Day 1', true],
+      ['C1 W1 Day 2', false],
+      ['C1 W1 Day 3', false],
+      ['C1 W1 Day 4', false],
     ]);
   });
 
   it('suggests the 5/3/1 bench day after the squat day is done', () => {
     const facts = [sessionFact(factClock().next(), cyclePosition(1, 1, 'squat'), mainSets531('squat', 1))];
     expect(choicesAfter(FIVE_THREE_ONE, fiveThreeOneEnrollment(), facts).map((choice) => choice.label)).toEqual([
-      'C1 W1 Bench press',
-      'C1 W1 Deadlift',
-      'C1 W1 Overhead press',
+      'C1 W1 Day 2',
+      'C1 W1 Day 3',
+      'C1 W1 Day 4',
     ]);
     expect(choicesAfter(FIVE_THREE_ONE, fiveThreeOneEnrollment(), facts)[0].suggested).toBe(true);
   });
@@ -181,7 +181,7 @@ describe('today: the picked day', () => {
 });
 
 describe('today: prescription rows', () => {
-  it('shapes Madcow week 1 Monday squat for a 100 kg 5RM into the ramp rows (top 100 × 0.975^3 = 92.69 → 92.5; × .5/.625/.75/.875 = 46.25/57.81/69.38/80.94 → 47.5/57.5/70/80)', () => {
+  it('shapes Madcow week 1 Day 1 squat for a 100 kg 5RM into the ramp rows (top 100 × 0.975^3 = 92.69 → 92.5; × .5/.625/.75/.875 = 46.25/57.81/69.38/80.94 → 47.5/57.5/70/80)', () => {
     expect(linesOf(cardsFor(MADCOW_5X5, madcowEnrollment(), weekDay(1, 'mon')), 'Back Squat')).toEqual([
       '47.5 kg × 5 · 50%',
       '57.5 kg × 5 · 62.5%',
@@ -191,7 +191,7 @@ describe('today: prescription rows', () => {
     ]);
   });
 
-  it('titles the Madcow Monday cards by exercise, with assistance marked', () => {
+  it('titles the Madcow Day 1 cards by exercise, with assistance marked', () => {
     expect(cardsFor(MADCOW_5X5, madcowEnrollment(), weekDay(1, 'mon')).map((card) => card.title)).toEqual([
       'Back Squat',
       'Barbell Bench Press',
@@ -223,7 +223,7 @@ describe('today: prescription rows', () => {
     ]);
   });
 
-  it('shows a rep range and the last logged weight for the Friday dips: 10 kg × 5–8', () => {
+  it('shows a rep range and the last logged weight for the Day 3 dips: 10 kg × 5–8', () => {
     const cards = cardsFor(MADCOW_5X5, madcowEnrollment(), weekDay(1, 'fri'), 'kg', { 'weighted-dip': 10 });
     expect(linesOf(cards, 'Weighted Dip — assistance')).toEqual([
       '10 kg × 5–8 · optional',

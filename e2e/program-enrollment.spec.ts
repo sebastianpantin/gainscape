@@ -60,7 +60,7 @@ function staleTemplateDefinition(key: string, name: string) {
       days: [
         {
           key: 'mon',
-          name: 'Monday',
+          name: 'Day 1',
           slots: [
             {
               id: 'mon-squat',
@@ -76,7 +76,7 @@ function staleTemplateDefinition(key: string, name: string) {
   };
 }
 
-test('enroll in Madcow in kg, start W1 Monday with the ramp rows, finish and see Wednesday offered next', async ({
+test('enroll in Madcow in kg, start W1 Day 1 with the ramp rows, finish and see W1 Day 2 offered next', async ({
   page,
 }) => {
   test.setTimeout(150_000);
@@ -113,7 +113,7 @@ test('enroll in Madcow in kg, start W1 Monday with the ramp rows, finish and see
   const today = programToday(page, 'Madcow 5x5');
   const days = dayPicker(today);
   await expect(days.getByRole('radio')).toHaveCount(3);
-  await expect(days.getByRole('radio', { name: 'W1 Monday', exact: true })).toBeChecked();
+  await expect(days.getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(MADCOW_W1_MONDAY_SQUAT);
   await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([
     '37.5 kg × 5 · 50%',
@@ -123,8 +123,8 @@ test('enroll in Madcow in kg, start W1 Monday with the ramp rows, finish and see
     '75 kg × 5 · 100%',
   ]);
 
-  await today.getByRole('button', { name: 'Start: Madcow 5x5 — W1 Monday', exact: true }).click();
-  await expect(page.getByText('Madcow 5x5 — W1 Monday', { exact: true })).toBeVisible();
+  await today.getByRole('button', { name: 'Start: Madcow 5x5 — W1 Day 1', exact: true }).click();
+  await expect(page.getByText('Madcow 5x5 — W1 Day 1', { exact: true })).toBeVisible();
   await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText([
     'Back Squat',
     'Barbell Bench Press',
@@ -144,9 +144,9 @@ test('enroll in Madcow in kg, start W1 Monday with the ramp rows, finish and see
   await page.getByRole('link', { name: 'Done' }).click();
   const after = programToday(page, 'Madcow 5x5');
   await expect(dayPicker(after).getByRole('radio')).toHaveCount(2);
-  await expect(dayPicker(after).getByRole('radio', { name: 'W1 Wednesday', exact: true })).toBeChecked();
-  await expect(dayPicker(after).getByRole('radio', { name: 'W1 Monday', exact: true })).toHaveCount(0);
-  await expect(after.getByRole('button', { name: 'Start: Madcow 5x5 — W1 Wednesday', exact: true })).toBeVisible();
+  await expect(dayPicker(after).getByRole('radio', { name: 'W1 Day 2', exact: true })).toBeChecked();
+  await expect(dayPicker(after).getByRole('radio', { name: 'W1 Day 1', exact: true })).toHaveCount(0);
+  await expect(after.getByRole('button', { name: 'Start: Madcow 5x5 — W1 Day 2', exact: true })).toBeVisible();
   await expect(prescribedRows(after, 'Back Squat')).toHaveText([
     '47.5 kg × 5 · 50%',
     '57.5 kg × 5 · 62.5%',
@@ -154,8 +154,8 @@ test('enroll in Madcow in kg, start W1 Monday with the ramp rows, finish and see
     '70 kg × 5 · 75%',
   ]);
 
-  await dayPicker(after).getByRole('radio', { name: 'W1 Friday', exact: true }).click();
-  await expect(after.getByRole('button', { name: 'Start: Madcow 5x5 — W1 Friday', exact: true })).toBeVisible();
+  await dayPicker(after).getByRole('radio', { name: 'W1 Day 3', exact: true }).click();
+  await expect(after.getByRole('button', { name: 'Start: Madcow 5x5 — W1 Day 3', exact: true })).toBeVisible();
   await expect(prescribedRows(after, 'Back Squat')).toHaveText([
     '47.5 kg × 5 · 50%',
     '57.5 kg × 5 · 62.5%',
@@ -190,12 +190,12 @@ test('enroll in 5/3/1 with BBB, start with the "5+" badge and 5×10 rows, finish
   });
 
   const today = programToday(page, '5/3/1');
-  await expect(dayPicker(today).getByRole('radio', { name: 'C1 W1 Squat', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'C1 W1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(FIVE_THREE_ONE_W1_SQUAT_AT_TM_90);
   await expect(prescribedRows(today, 'Back Squat — supplemental')).toHaveText(BBB_AT_TM_90);
 
-  await today.getByRole('button', { name: 'Start: 5/3/1 — C1 W1 Squat', exact: true }).click();
-  await expect(page.getByText('5/3/1 — C1 W1 Squat', { exact: true })).toBeVisible();
+  await today.getByRole('button', { name: 'Start: 5/3/1 — C1 W1 Day 1', exact: true }).click();
+  await expect(page.getByText('5/3/1 — C1 W1 Day 1', { exact: true })).toBeVisible();
   const [main, bbb] = [workoutCards(page, 'Back Squat').nth(0), workoutCards(page, 'Back Squat').nth(1)];
   await expect(workoutCards(page, 'Back Squat')).toHaveCount(2);
   expect(await weightsIn(main)).toEqual(['57.5', '67.5', '77.5']);
@@ -211,9 +211,9 @@ test('enroll in 5/3/1 with BBB, start with the "5+" badge and 5×10 rows, finish
   await page.getByRole('link', { name: 'Done' }).click();
 
   const after = programToday(page, '5/3/1');
-  await expect(dayPicker(after).getByRole('radio', { name: 'C1 W1 Bench press', exact: true })).toBeChecked();
-  await expect(dayPicker(after).getByRole('radio', { name: 'C1 W1 Squat', exact: true })).toHaveCount(0);
-  await expect(after.getByRole('button', { name: 'Start: 5/3/1 — C1 W1 Bench press', exact: true })).toBeVisible();
+  await expect(dayPicker(after).getByRole('radio', { name: 'C1 W1 Day 2', exact: true })).toBeChecked();
+  await expect(dayPicker(after).getByRole('radio', { name: 'C1 W1 Day 1', exact: true })).toHaveCount(0);
+  await expect(after.getByRole('button', { name: 'Start: 5/3/1 — C1 W1 Day 2', exact: true })).toBeVisible();
 });
 
 test("edit the training max and see today's weights change", async ({ page }) => {
@@ -257,8 +257,8 @@ test("start today's workout offline after the program facts were loaded once", a
   await openTab(page, 'Train');
   const today = programToday(page, 'Madcow 5x5');
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(MADCOW_W1_MONDAY_SQUAT);
-  await today.getByRole('button', { name: 'Start: Madcow 5x5 — W1 Monday', exact: true }).click();
-  await expect(page.getByText('Madcow 5x5 — W1 Monday', { exact: true })).toBeVisible();
+  await today.getByRole('button', { name: 'Start: Madcow 5x5 — W1 Day 1', exact: true }).click();
+  await expect(page.getByText('Madcow 5x5 — W1 Day 1', { exact: true })).toBeVisible();
   expect(await weightsIn(workoutCards(page, 'Back Squat'))).toEqual(['47.5', '57.5', '70', '80', '92.5']);
   await markEverySetDone(page);
 

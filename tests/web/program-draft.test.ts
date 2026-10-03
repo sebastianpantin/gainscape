@@ -90,7 +90,7 @@ function programDraft(): WorkoutDraft {
     startedAt: '2026-10-05T06:00:00.000Z',
     finishedAt: '2026-10-05T07:00:00.000Z',
     programDayId: null,
-    programLabel: 'Madcow 5x5 — Monday',
+    programLabel: 'Madcow 5x5 — W1 Day 1',
     program: MADCOW_MONDAY,
     exercises: [
       {
@@ -346,7 +346,7 @@ function startMonday() {
       enrollmentId: 'enrollment-madcow',
       templateKey: 'madcow_5x5',
       programName: 'Madcow 5x5',
-      dayName: 'Monday',
+      dayName: 'W1 Day 1',
       position: { week: 1, day: 'mon' },
       exercises: MONDAY_PRESCRIPTION,
     },
@@ -372,7 +372,7 @@ function engineMadcowMonday(): WorkoutDraft {
       enrollmentId: enrollment.id,
       templateKey: 'madcow_5x5',
       programName: 'Madcow 5x5',
-      dayName: 'Monday',
+      dayName: 'W1 Day 1',
       position: weekDay(1, 'mon'),
       exercises: resolved,
     },
@@ -389,7 +389,7 @@ describe('startDraftFromPrescription', () => {
   it('labels the draft with the program and day, without a custom program day', () => {
     expect(startMonday().draft).toMatchObject({
       programDayId: null,
-      programLabel: 'Madcow 5x5 — Monday',
+      programLabel: 'Madcow 5x5 — W1 Day 1',
       startedAt: '2026-10-05T06:00:00.000Z',
       finishedAt: null,
     });

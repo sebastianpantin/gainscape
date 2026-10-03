@@ -24,18 +24,18 @@ test('Smolov Jr: week 1 at a 1RM of 100 kg is 6×6 @ 70, 7×5 @ 75, 8×4 @ 80 an
 
   const today = programToday(page, SMOLOV_JR);
   const days = dayPicker(today);
-  await expect(days.getByRole('radio', { name: 'C1 W1 Monday', exact: true })).toBeChecked();
+  await expect(days.getByRole('radio', { name: 'C1 W1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('70 kg × 6 · 70%', 6));
 
-  await days.getByRole('radio', { name: 'C1 W1 Wednesday', exact: true }).click();
+  await days.getByRole('radio', { name: 'C1 W1 Day 2', exact: true }).click();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('75 kg × 5 · 75%', 7));
 
-  await days.getByRole('radio', { name: 'C1 W1 Friday', exact: true }).click();
+  await days.getByRole('radio', { name: 'C1 W1 Day 3', exact: true }).click();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('80 kg × 4 · 80%', 8));
 
-  await days.getByRole('radio', { name: 'C1 W1 Saturday', exact: true }).click();
+  await days.getByRole('radio', { name: 'C1 W1 Day 4', exact: true }).click();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('85 kg × 3 · 85%', 10));
-  await expect(today.getByRole('button', { name: `Start: ${SMOLOV_JR} — C1 W1 Saturday`, exact: true })).toBeVisible();
+  await expect(today.getByRole('button', { name: `Start: ${SMOLOV_JR} — C1 W1 Day 4`, exact: true })).toBeVisible();
 });
 
 test('RPE: the squat day is a top set 3 @ RPE 8 (200 × 0.863 = 172.6 → 172.5) and five optional back-offs at 95% (163.875 → 165)', async ({
@@ -49,10 +49,10 @@ test('RPE: the squat day is a top set 3 @ RPE 8 (200 × 0.863 = 172.6 → 172.5)
   });
 
   const today = programToday(page, RPE);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Squat', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(['172.5 kg × 3 · 86.3%']);
   await expect(prescribedRows(today, 'Back Squat — supplemental')).toHaveText(
     repeated('165 kg × 3 · 95% · optional', 5),
   );
-  await expect(today.getByRole('button', { name: `Start: ${RPE} — W1 Squat`, exact: true })).toBeVisible();
+  await expect(today.getByRole('button', { name: `Start: ${RPE} — W1 Day 1`, exact: true })).toBeVisible();
 });
