@@ -277,6 +277,10 @@ const SHIPPED_TEMPLATES: readonly ProgramDefinition[] = [
   RPE_TOP_SET,
 ];
 
+function isHttpsUrl(text: string): boolean {
+  return URL.canParse(text) && new URL(text).protocol === 'https:' && !/\s/.test(text);
+}
+
 const shippedCases = SHIPPED_TEMPLATES.map((definition) => [definition.key, definition] as const);
 
 describe('catalog program templates', () => {
@@ -289,6 +293,14 @@ describe('catalog program templates', () => {
     const rawNames = definition.lifts.filter((lift) => lift.name === lift.key).map((lift) => lift.key);
     expect(rawNames).toEqual([]);
   });
+
+  it.each(shippedCases)(
+    'cites every %s source, template and option alike, as an absolute https URL',
+    (_key, definition) => {
+      const sources = [...definition.source, ...definition.options.flatMap((option) => option.source)];
+      expect(sources.filter((source) => !isHttpsUrl(source))).toEqual([]);
+    },
+  );
 
   it.each(shippedCases)('keeps %s.yaml equal to its domain fixture', (_key, definition) => {
     const loaded = loadProgramTemplates().find((candidate) => candidate.file === fileOf(definition));
