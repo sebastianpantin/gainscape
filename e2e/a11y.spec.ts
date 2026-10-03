@@ -8,19 +8,22 @@ import {
   logWorkout,
   openFromProfile,
   openTab,
+  readSession,
   register,
   signOut,
   uniqueUsername,
 } from './support/app.ts';
-import { grantItems } from './support/db.ts';
+import { activeEnrollmentIdOf, grantItems } from './support/db.ts';
 import { authLinkFrom, RECOVERY_SUBJECT, waitForEmail } from './support/mailbox.ts';
 import {
   FIVE_THREE_ONE_ONE_RMS_KG,
   fillProgramInputs,
+  followProgram,
   openEnrollForm,
   programToday,
   startFollowing,
 } from './support/program-enrollment.ts';
+import { seedFiveThreeOneCycleSkippingPress } from './support/program-seed.ts';
 
 const TAB_BAR = ['.tab-bar a[href]'];
 
@@ -232,10 +235,35 @@ test('the program enrollment screens have no serious axe violations', async ({ p
     expect(page.getByRole('heading', { level: 1, name: '5/3/1', exact: true })).toBeVisible(),
   );
 
+  await page.getByRole('link', { name: 'See the plan', exact: true }).click();
+  await checkScreen(page, 'program plan', () =>
+    expect(page.getByRole('heading', { level: 1, name: '5/3/1 plan', exact: true })).toBeVisible(),
+  );
+
   await openTab(page, 'Train');
+  await programToday(page, '5/3/1').getByRole('button', { name: 'Skip C1 W1 Squat', exact: true }).click();
+  const skipDialog = page.getByRole('dialog', { name: 'Skip C1 W1 Squat?', exact: true });
+  await checkScreen(page, 'skip day dialog', () => expect(skipDialog).toBeVisible());
+  await skipDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(skipDialog).toHaveCount(0);
+
   await startSquat.click();
   await checkScreen(page, 'train (program draft)', () =>
     expect(page.getByText('5/3/1 — C1 W1 Squat', { exact: true })).toBeVisible(),
+  );
+  await expectTouchTargets(page);
+});
+
+test('the program cycle summary has no serious axe violations', async ({ page }) => {
+  test.setTimeout(150_000);
+  const username = uniqueUsername('a11y_ps');
+  await register(page, username);
+  await followProgram(page, '5/3/1', FIVE_THREE_ONE_ONE_RMS_KG);
+  const { access_token: accessToken } = await readSession(page);
+  await seedFiveThreeOneCycleSkippingPress(accessToken, await activeEnrollmentIdOf(username));
+  await page.reload();
+  await checkScreen(page, 'train (cycle summary)', () =>
+    expect(page.getByRole('region', { name: 'Cycle 1 complete', exact: true })).toBeVisible(),
   );
   await expectTouchTargets(page);
 });
