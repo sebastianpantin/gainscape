@@ -117,6 +117,11 @@ begin
        and not exists (select 1 from jsonb_array_elements(declared -> 'values') v where v = chosen.value) then
       return false;
     end if;
+    if declared ->> 'kind' = 'choice'
+       and jsonb_typeof(declared -> 'onlyForUnit' -> (chosen.value #>> '{}')) = 'string'
+       and declared -> 'onlyForUnit' ->> (chosen.value #>> '{}') <> enrollment ->> 'unit' then
+      return false;
+    end if;
     if declared ->> 'kind' = 'number'
        and (jsonb_typeof(chosen.value) is distinct from 'number'
             or chosen.value::text::numeric < (declared ->> 'min')::numeric
