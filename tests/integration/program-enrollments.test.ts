@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { isPositionInSchedule, type Position, type ProgramDefinition } from '@domain/index.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { GZCLP } from '../domain/program-fixtures/gzclp.ts';
+import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
 import {
   anon,
@@ -40,6 +41,9 @@ interface ExportedEnrollments {
 const ROTATION_TEMPLATE_KEY = `it_rotation_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 const ROTATION_TEMPLATE: ProgramDefinition = { ...structuredClone(GZCLP), key: ROTATION_TEMPLATE_KEY };
 
+const UNIT_ONLY_TEMPLATE_KEY = `it_unit_only_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
+const UNIT_ONLY_TEMPLATE: ProgramDefinition = { ...structuredClone(JUGGERNAUT_2), key: UNIT_ONLY_TEMPLATE_KEY };
+
 const KG_ROUNDING = { increment: 2.5, mode: 'nearest', barWeight: 20 };
 
 let exerciseIds: Record<string, string>;
@@ -50,11 +54,16 @@ beforeAll(async () => {
   await db`
     insert into public.program_templates (key, version, name, definition)
     values (${ROTATION_TEMPLATE_KEY}, 1, 'Rotation test template', ${db.json(JSON.parse(JSON.stringify(ROTATION_TEMPLATE)))})`;
+  await db`
+    insert into public.program_templates (key, version, name, definition)
+    values (${UNIT_ONLY_TEMPLATE_KEY}, 1, 'Unit-only option test template', ${db.json(JSON.parse(JSON.stringify(UNIT_ONLY_TEMPLATE)))})`;
 });
 
 afterAll(async () => {
   await db`delete from public.program_enrollments where template_key = ${ROTATION_TEMPLATE_KEY}`;
   await db`delete from public.program_templates where key = ${ROTATION_TEMPLATE_KEY}`;
+  await db`delete from public.program_enrollments where template_key = ${UNIT_ONLY_TEMPLATE_KEY}`;
+  await db`delete from public.program_templates where key = ${UNIT_ONLY_TEMPLATE_KEY}`;
   await db.end();
 });
 
@@ -109,6 +118,18 @@ function rotationPayload(): EnrollmentPayload {
     bindings: {},
     inputs: Object.fromEntries(ROTATION_TEMPLATE.lifts.map((lift) => [lift.key, { workingWeight: 40 }])),
     rounding: { ...KG_ROUNDING },
+  };
+}
+
+function unitOnlyPayload(unit: 'kg' | 'lb', perRep: string): EnrollmentPayload {
+  return {
+    templateKey: UNIT_ONLY_TEMPLATE_KEY,
+    templateVersion: 1,
+    unit,
+    options: { perRep },
+    bindings: {},
+    inputs: Object.fromEntries(UNIT_ONLY_TEMPLATE.lifts.map((lift) => [lift.key, { tm: 100 }])),
+    rounding: unit === 'kg' ? { ...KG_ROUNDING } : { increment: 5, mode: 'nearest', barWeight: 45 },
   };
 }
 
@@ -272,6 +293,19 @@ describe('enroll_program', () => {
     mutate(payload);
     expectRefused(await enroll(user, payload), 'invalid_enrollment');
     expect(await enrollmentRows(user.id)).toHaveLength(0);
+  });
+
+  it('refuses a choice value offered only for lb in a kg enrollment (Juggernaut perRep fine) and stores nothing', async () => {
+    const user = await createTestUser();
+    expectRefused(await enroll(user, unitOnlyPayload('kg', 'fine')), 'invalid_enrollment');
+    expect(await enrollmentRows(user.id)).toHaveLength(0);
+  });
+
+  it.each<['kg' | 'lb', string]>([
+    ['lb', 'fine'],
+    ['kg', 'standard'],
+  ])('accepts a %s enrollment with perRep %s', async (unit, perRep) => {
+    await enrolled(await createTestUser(), unitOnlyPayload(unit, perRep));
   });
 
   it('accepts an input of exactly 1000', async () => {
