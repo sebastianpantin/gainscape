@@ -239,6 +239,19 @@ function prescribedLoad(
   };
 }
 
+function relativeLoad(
+  context: ResolveContext,
+  primitive: string,
+  base: SlotSetsResult,
+  index: number,
+  pct: number,
+): LoadResult {
+  if (base.kind === 'unsupported') return base;
+  const weight = base.sets[index]?.weight;
+  if (weight === undefined) return { kind: 'unsupported', primitive };
+  return prescribedLoad(context, weight === null ? undefined : weight * pct, pct);
+}
+
 function referencedSlotSets(
   context: ResolveContext,
   primitive: string,
@@ -298,6 +311,12 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
         kind: 'load',
         load: { weight: set.weight, weightKg: set.weightKg, pct: set.pct, snapshotted: set.weightKg !== null },
       };
+    }
+    case 'pctOfSet': {
+      const target = parseSetRef(load.ref);
+      const targetSlot = target ? findSlot(definition, target.slotId) : undefined;
+      const sets = referencedSlotSets(context, load.kind, targetSlot, depth);
+      return relativeLoad(context, load.kind, sets, target?.index ?? -1, evaluateNumber(load.pct, numbers));
     }
     case 'lastLogged': {
       const exerciseId = enrollment.bindings[slot.lift];
