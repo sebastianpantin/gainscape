@@ -1,0 +1,244 @@
+key: gzclp
+version: 1
+name: GZCLP
+source:
+  - thefitness.wiki/routines/gzclp
+  - thefitness.wiki/reddit-archive/gzcl-method-novice-to-elite
+lifts:
+  - { key: squat-t1, name: Squat T1, category: lower }
+  - { key: bench-t1, name: Bench press T1 }
+  - { key: ohp-t1, name: Overhead press T1 }
+  - { key: deadlift-t1, name: Deadlift T1, category: lower }
+  - { key: squat-t2, name: Squat T2, category: lower }
+  - { key: bench-t2, name: Bench press T2 }
+  - { key: ohp-t2, name: Overhead press T2 }
+  - { key: deadlift-t2, name: Deadlift T2, category: lower }
+  - { key: pulldown-t3, name: Lat pulldown T3 }
+  - { key: row-t3, name: Dumbbell row T3 }
+inputs:
+  - lifts: [squat-t1, bench-t1, ohp-t1, deadlift-t1, squat-t2, bench-t2, ohp-t2, deadlift-t2, pulldown-t3, row-t3]
+    kinds: [workingWeight]
+referenceVars: [workingWeight, fiveRm]
+initial:
+  - { kind: copy, var: workingWeight, from: workingWeight }
+options: []
+conversions:
+  - { lb: 5, kg: 2.5, note: upper-body increment }
+  - { lb: 10, kg: 5, note: lower-body increment }
+  - { lb: 15, kg: 6.25, note: T2 reset add-on }
+schedule:
+  kind: rotation
+  days:
+    - key: a1
+      name: A1
+      slots:
+        - id: a1-squat-t1
+          lift: squat-t1
+          role: main
+          scheme:
+            kind: stages
+            stages:
+              - { sets: 5, reps: 3, amrapLast: true }
+              - { sets: 6, reps: 2, amrapLast: true }
+              - { sets: 10, reps: 1, amrapLast: true }
+            load: { kind: pct, pct: 1, of: workingWeight }
+        - id: a1-bench-t2
+          lift: bench-t2
+          role: supplemental
+          scheme:
+            kind: stages
+            stages:
+              - { sets: 3, reps: 10, amrapLast: false }
+              - { sets: 3, reps: 8, amrapLast: false }
+              - { sets: 3, reps: 6, amrapLast: false }
+            load: { kind: pct, pct: 1, of: workingWeight }
+        - id: a1-pulldown-t3
+          lift: pulldown-t3
+          role: assistance
+          scheme:
+            kind: repeat
+            count: 3
+            reps: 15
+            amrapLast: true
+            minReps: 15
+            load: { kind: pct, pct: 1, of: workingWeight }
+    - key: b1
+      name: B1
+      slots:
+        - id: b1-ohp-t1
+          lift: ohp-t1
+          role: main
+          scheme:
+            kind: stages
+            stages:
+              - { sets: 5, reps: 3, amrapLast: true }
+              - { sets: 6, reps: 2, amrapLast: true }
+              - { sets: 10, reps: 1, amrapLast: true }
+            load: { kind: pct, pct: 1, of: workingWeight }
+        - id: b1-deadlift-t2
+          lift: deadlift-t2
+          role: supplemental
+          scheme:
+            kind: stages
+            stages:
+              - { sets: 3, reps: 10, amrapLast: false }
+              - { sets: 3, reps: 8, amrapLast: false }
+              - { sets: 3, reps: 6, amrapLast: false }
+            load: { kind: pct, pct: 1, of: workingWeight }
+        - id: b1-row-t3
+          lift: row-t3
+          role: assistance
+          scheme:
+            kind: repeat
+            count: 3
+            reps: 15
+            amrapLast: true
+            minReps: 15
+            load: { kind: pct, pct: 1, of: workingWeight }
+    - key: a2
+      name: A2
+      slots:
+        - id: a2-bench-t1
+          lift: bench-t1
+          role: main
+          scheme:
+            kind: stages
+            stages:
+              - { sets: 5, reps: 3, amrapLast: true }
+              - { sets: 6, reps: 2, amrapLast: true }
+              - { sets: 10, reps: 1, amrapLast: true }
+            load: { kind: pct, pct: 1, of: workingWeight }
+        - id: a2-squat-t2
+          lift: squat-t2
+          role: supplemental
+          scheme:
+            kind: stages
+            stages:
+              - { sets: 3, reps: 10, amrapLast: false }
+              - { sets: 3, reps: 8, amrapLast: false }
+              - { sets: 3, reps: 6, amrapLast: false }
+            load: { kind: pct, pct: 1, of: workingWeight }
+        - id: a2-pulldown-t3
+          lift: pulldown-t3
+          role: assistance
+          scheme:
+            kind: repeat
+            count: 3
+            reps: 15
+            amrapLast: true
+            minReps: 15
+            load: { kind: pct, pct: 1, of: workingWeight }
+    - key: b2
+      name: B2
+      slots:
+        - id: b2-deadlift-t1
+          lift: deadlift-t1
+          role: main
+          scheme:
+            kind: stages
+            stages:
+              - { sets: 5, reps: 3, amrapLast: true }
+              - { sets: 6, reps: 2, amrapLast: true }
+              - { sets: 10, reps: 1, amrapLast: true }
+            load: { kind: pct, pct: 1, of: workingWeight }
+        - id: b2-ohp-t2
+          lift: ohp-t2
+          role: supplemental
+          scheme:
+            kind: stages
+            stages:
+              - { sets: 3, reps: 10, amrapLast: false }
+              - { sets: 3, reps: 8, amrapLast: false }
+              - { sets: 3, reps: 6, amrapLast: false }
+            load: { kind: pct, pct: 1, of: workingWeight }
+        - id: b2-row-t3
+          lift: row-t3
+          role: assistance
+          scheme:
+            kind: repeat
+            count: 3
+            reps: 15
+            amrapLast: true
+            minReps: 15
+            load: { kind: pct, pct: 1, of: workingWeight }
+progression:
+  - lift: squat-t1
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a1-squat-t1]
+    onMet:
+      - { kind: increment, by: { kg: 5, lb: 10 } }
+    onMiss:
+      - { kind: stageMachine, onLastFail: { kind: retest, pct: 0.85, from: fiveRm } }
+  - lift: deadlift-t1
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [b2-deadlift-t1]
+    onMet:
+      - { kind: increment, by: { kg: 5, lb: 10 } }
+    onMiss:
+      - { kind: stageMachine, onLastFail: { kind: retest, pct: 0.85, from: fiveRm } }
+  - lift: bench-t1
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a2-bench-t1]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: stageMachine, onLastFail: { kind: retest, pct: 0.85, from: fiveRm } }
+  - lift: ohp-t1
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [b1-ohp-t1]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: stageMachine, onLastFail: { kind: retest, pct: 0.85, from: fiveRm } }
+  - lift: squat-t2
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a2-squat-t2]
+    onMet:
+      - { kind: increment, by: { kg: 5, lb: 10 } }
+    onMiss:
+      - { kind: stageMachine, onLastFail: { kind: resetToFirstStage, add: { kg: 6.25, lb: 15 } } }
+  - lift: deadlift-t2
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [b1-deadlift-t2]
+    onMet:
+      - { kind: increment, by: { kg: 5, lb: 10 } }
+    onMiss:
+      - { kind: stageMachine, onLastFail: { kind: resetToFirstStage, add: { kg: 6.25, lb: 15 } } }
+  - lift: bench-t2
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a1-bench-t2]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: stageMachine, onLastFail: { kind: resetToFirstStage, add: { kg: 6.25, lb: 15 } } }
+  - lift: ohp-t2
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [b2-ohp-t2]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: stageMachine, onLastFail: { kind: resetToFirstStage, add: { kg: 6.25, lb: 15 } } }
+  - lift: pulldown-t3
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [a1-pulldown-t3, a2-pulldown-t3]
+    onMet:
+      - { kind: amrapThreshold, setIndex: 2, reps: 25 }
+    onMiss:
+      - { kind: hold }
+  - lift: row-t3
+    var: workingWeight
+    trigger: afterSession
+    judgedSlots: [b1-row-t3, b2-row-t3]
+    onMet:
+      - { kind: amrapThreshold, setIndex: 2, reps: 25 }
+    onMiss:
+      - { kind: hold }
