@@ -264,22 +264,38 @@ describe('kgFromLb', () => {
   });
 });
 
+const SHIPPED_TEMPLATES: readonly ProgramDefinition[] = [
+  FIVE_THREE_ONE,
+  MADCOW_5X5,
+  JUGGERNAUT_2,
+  STRONGLIFTS_5X5,
+  STARTING_STRENGTH,
+  GZCLP,
+  NSUNS_5DAY,
+  TEXAS_METHOD,
+  SMOLOV_JR,
+  RPE_TOP_SET,
+];
+
+const shippedCases = SHIPPED_TEMPLATES.map((definition) => [definition.key, definition] as const);
+
 describe('catalog program templates', () => {
-  it('ships five_three_one and madcow_5x5, ordered by file name', () => {
+  it('ships exactly the ten sourced templates, ordered by file name', () => {
     const files = loadProgramTemplates().map((loaded) => loaded.file);
-    expect(files).toContain('five_three_one.yaml');
-    expect(files).toContain('madcow_5x5.yaml');
-    expect(files).toEqual([...files].sort());
+    expect(files).toEqual(SHIPPED_TEMPLATES.map(fileOf).sort());
   });
 
-  it('keeps five_three_one.yaml equal to the 5/3/1 domain fixture', () => {
-    const loaded = loadProgramTemplates().find((candidate) => candidate.file === 'five_three_one.yaml');
-    expect(loaded?.definition).toEqual(FIVE_THREE_ONE);
+  it.each(shippedCases)('keeps %s.yaml equal to its domain fixture', (_key, definition) => {
+    const loaded = loadProgramTemplates().find((candidate) => candidate.file === fileOf(definition));
+    expect(loaded?.definition).toEqual(definition);
   });
 
-  it('keeps madcow_5x5.yaml equal to the Madcow domain fixture', () => {
-    const loaded = loadProgramTemplates().find((candidate) => candidate.file === 'madcow_5x5.yaml');
-    expect(loaded?.definition).toEqual(MADCOW_5X5);
+  it.each(shippedCases)('locks %s@1 at the hash of its domain fixture', (key, definition) => {
+    expect(readProgramTemplateLock()[`${key}@${definition.version}`]).toBe(programDefinitionHash(definition));
+  });
+
+  it.each(shippedCases)('seeds %s version 1 with its domain fixture', (key, definition) => {
+    expect(renderedDefinition(generateSeed(), key, definition.version, definition.name)).toEqual(definition);
   });
 
   it('ships only templates the domain parser accepts as supported', () => {
