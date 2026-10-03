@@ -1,4 +1,5 @@
 import { type RoundingSetting } from './load-rounding.ts';
+import { rpeChartPct } from './rpe-chart.ts';
 import { type UnitAmount, type WeightUnit } from './units.ts';
 
 export type InputKind = 'oneRm' | 'tm' | 'fiveRm' | 'e1rm' | 'workingWeight';
@@ -595,6 +596,9 @@ class DefinitionChecker {
         return;
       case 'rpeLoad':
         this.checkVar(load.of, where);
+        if (rpeChartPct(load.reps, load.rpe) === null) {
+          this.errors.push(`${where} asks for ${load.reps} reps @ RPE ${load.rpe}, which is off the RPE chart`);
+        }
         return;
       case 'cumulativeAddOn':
         this.checkNumber(load.pct, where);
