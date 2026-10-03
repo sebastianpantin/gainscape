@@ -84,20 +84,20 @@ test('GZCLP: A1 is the T1 squat 5×3 with the last set "3+", the T2 bench 3×10 
   await register(page, uniqueUsername('pt_gz'));
   await openEnrollForm(page, GZCLP);
   await fillProgramInputs(page, {
-    'squat-t1 working weight (kg)': 100,
-    'bench-t1 working weight (kg)': 60,
-    'ohp-t1 working weight (kg)': 40,
-    'deadlift-t1 working weight (kg)': 120,
-    'squat-t2 working weight (kg)': 70,
-    'bench-t2 working weight (kg)': 50,
-    'ohp-t2 working weight (kg)': 30,
-    'deadlift-t2 working weight (kg)': 90,
-    'pulldown-t3 working weight (kg)': 40,
-    'row-t3 working weight (kg)': 20,
+    'Squat T1 working weight (kg)': 100,
+    'Bench press T1 working weight (kg)': 60,
+    'Overhead press T1 working weight (kg)': 40,
+    'Deadlift T1 working weight (kg)': 120,
+    'Squat T2 working weight (kg)': 70,
+    'Bench press T2 working weight (kg)': 50,
+    'Overhead press T2 working weight (kg)': 30,
+    'Deadlift T2 working weight (kg)': 90,
+    'Lat pulldown T3 working weight (kg)': 40,
+    'Dumbbell row T3 working weight (kg)': 20,
   });
-  await bindExercise(page, 'squat-t1', 'Back Squat');
-  await bindExercise(page, 'bench-t2', 'Barbell Bench Press');
-  await bindExercise(page, 'pulldown-t3', 'Lat Pulldown');
+  await bindExercise(page, 'Squat T1', 'Back Squat');
+  await bindExercise(page, 'Bench press T2', 'Barbell Bench Press');
+  await bindExercise(page, 'Lat pulldown T3', 'Lat Pulldown');
   await startFollowing(page, GZCLP);
 
   const today = programToday(page, GZCLP);

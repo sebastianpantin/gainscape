@@ -285,6 +285,11 @@ describe('catalog program templates', () => {
     expect(files).toEqual(SHIPPED_TEMPLATES.map(fileOf).sort());
   });
 
+  it.each(shippedCases)('names every %s lift for people, never by its raw key', (_key, definition) => {
+    const rawNames = definition.lifts.filter((lift) => lift.name === lift.key).map((lift) => lift.key);
+    expect(rawNames).toEqual([]);
+  });
+
   it.each(shippedCases)('keeps %s.yaml equal to its domain fixture', (_key, definition) => {
     const loaded = loadProgramTemplates().find((candidate) => candidate.file === fileOf(definition));
     expect(loaded?.definition).toEqual(definition);
