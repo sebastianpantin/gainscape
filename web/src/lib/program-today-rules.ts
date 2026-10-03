@@ -140,7 +140,7 @@ export function prescriptionCards(
   );
 }
 
-export const TEMPLATE_MISSING_TEXT = 'Program details unavailable — reconnect to load them';
+const TEMPLATE_MISSING_TEXT = 'Program details unavailable — reconnect to load them';
 
 export type ActiveProgram =
   | { kind: 'none' }
