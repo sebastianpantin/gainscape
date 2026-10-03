@@ -62,6 +62,13 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart }: Pr
         <p className="muted">{program.message}</p>
       </section>
     );
+  if (program.kind === 'template_missing')
+    return (
+      <section className="panel stack" aria-label="Your program">
+        <h2>Your program</h2>
+        <p className="muted">{program.message}</p>
+      </section>
+    );
 
   const { definition, enrollment, state, name } = program;
   const choices = dayChoices(definition, state);
