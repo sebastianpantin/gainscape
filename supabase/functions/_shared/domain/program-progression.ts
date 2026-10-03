@@ -10,12 +10,14 @@ import {
   type ProgressionRule,
   type ReferenceVar,
   type SlotDecl,
+  type StageLastFail,
 } from './program-definition.ts';
 import {
   isSlotActive,
   numberContext,
   type PrescriptionSnapshot,
   requiredSetIndices,
+  type StageIndices,
   weekContextOf,
 } from './program-prescription.ts';
 import {
@@ -101,9 +103,10 @@ function ruleOutcomeAt(
   rule: ProgressionRule,
   position: Position,
   sets: readonly FactSet[],
+  stages: StageIndices | undefined,
 ): LiftOutcome {
   const judged = judgedSlotsOf(definition, enrollment, rule, position).flatMap((slot) => {
-    const required = requiredSetIndices(definition, enrollment, slot, position);
+    const required = requiredSetIndices(definition, enrollment, slot, position, stages);
     return required === null ? [] : [{ slot, required }];
   });
   if (judged.length === 0) return 'neutral';
@@ -125,17 +128,18 @@ function ruleOutcomeAt(
 export interface LoggedDay {
   position: Position;
   sets: readonly FactSet[];
+  stages?: StageIndices;
 }
 
 export function liftOutcomes(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
-  { position, sets }: LoggedDay,
+  { position, sets, stages }: LoggedDay,
 ): Readonly<Record<string, LiftOutcome>> {
   const outcomes: Record<string, LiftOutcome> = {};
   for (const rule of definition.progression) {
     if (judgedSlotsOf(definition, enrollment, rule, position).length === 0) continue;
-    const outcome = ruleOutcomeAt(definition, enrollment, rule, position, sets);
+    const outcome = ruleOutcomeAt(definition, enrollment, rule, position, sets, stages);
     outcomes[rule.lift] = rule.lift in outcomes ? combinedOutcome(outcomes[rule.lift], outcome) : outcome;
   }
   return outcomes;
@@ -176,6 +180,59 @@ function setReference(
   };
 }
 
+function stageCountOf(definition: ProgramDefinition, rule: ProgressionRule): number {
+  const counts = definition.schedule.days
+    .flatMap((day) => day.slots)
+    .flatMap((slot) =>
+      rule.judgedSlots.includes(slot.id) && slot.scheme.kind === 'stages' ? [slot.scheme.stages.length] : [],
+    );
+  return Math.max(0, ...counts);
+}
+
+function withStage(state: ProgramState, lift: string, stage: number): ProgramState {
+  return { ...state, stages: { ...state.stages, [lift]: stage } };
+}
+
+function advanceStage(
+  context: FoldContext,
+  state: ProgramState,
+  rule: ProgressionRule,
+  onLastFail: StageLastFail,
+  current: number,
+  position: Position,
+): ProgramState {
+  const stage = state.stages[rule.lift] ?? 0;
+  if (stage < stageCountOf(context.definition, rule) - 1) {
+    const base = stage === 0 ? { stageResetBases: { ...state.stageResetBases, [rule.lift]: current } } : {};
+    return { ...withStage(state, rule.lift, stage + 1), ...base };
+  }
+  if (onLastFail.kind === 'retest') return state;
+  const base = state.stageResetBases[rule.lift] ?? current;
+  const add = onLastFail.add[context.enrollment.unit];
+  return withStage(setReference(state, rule.lift, rule.var, base + add, 'adjustment', position), rule.lift, 0);
+}
+
+function retestPctOf(rule: ProgressionRule): number | null {
+  for (const adjustment of [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])]) {
+    if (adjustment.kind === 'stageMachine' && adjustment.onLastFail.kind === 'retest') {
+      return adjustment.onLastFail.pct;
+    }
+  }
+  return null;
+}
+
+function retestedStages(definition: ProgramDefinition, state: ProgramState, fact: SetReferenceFact): ProgramState {
+  if (fact.var !== 'fiveRm') return state;
+  return definition.progression
+    .filter((rule) => rule.lift === fact.lift && rule.var !== fact.var)
+    .reduce((next, rule) => {
+      const pct = retestPctOf(rule);
+      if (pct === null) return next;
+      const restarted = setReference(next, rule.lift, rule.var, fact.value * pct, 'adjustment', next.position);
+      return withStage(restarted, rule.lift, 0);
+    }, state);
+}
+
 function applyAdjustment(
   context: FoldContext,
   state: ProgramState,
@@ -211,6 +268,8 @@ function applyAdjustment(
       const deloaded = changeTo(current * (1 - evaluateNumber(adjustment.deloadPct, numbers)), 'adjustment');
       return { ...deloaded, consecutiveMisses: { ...deloaded.consecutiveMisses, [key]: 0 } };
     }
+    case 'stageMachine':
+      return advanceStage(context, state, rule, adjustment.onLastFail, current, position);
     default:
       return state;
   }
@@ -248,7 +307,7 @@ function scopeOutcome(
       (outcome, record) =>
         combinedOutcome(
           outcome,
-          ruleOutcomeAt(context.definition, context.enrollment, rule, record.position, record.judgedSets),
+          ruleOutcomeAt(context.definition, context.enrollment, rule, record.position, record.judgedSets, state.stages),
         ),
       'neutral',
     );
@@ -404,13 +463,19 @@ function recordDay(
   const judgedSets =
     context.finalSets?.[recordKey(state.epoch, position)] ??
     mergeBestSets(context, [], judgedSetsOf(context, position, sets));
-  const outcomes = liftOutcomes(definition, enrollment, { position, sets: judgedSets });
+  const outcomes = liftOutcomes(definition, enrollment, { position, sets: judgedSets, stages: state.stages });
   const record: DayRecord = { epoch: state.epoch, position, status: 'completed', outcomes, judgedSets };
   return definition.progression
     .filter((rule) => rule.trigger === 'afterSession')
     .reduce(
       (next, rule) =>
-        applyOutcome(context, next, rule, ruleOutcomeAt(definition, enrollment, rule, position, judgedSets), position),
+        applyOutcome(
+          context,
+          next,
+          rule,
+          ruleOutcomeAt(definition, enrollment, rule, position, judgedSets, state.stages),
+          position,
+        ),
       withRecords(state, [record]),
     );
 }
@@ -466,7 +531,11 @@ export function advanceProgram(
   const context: FoldContext = { definition, enrollment, finalSets };
   switch (fact.kind) {
     case 'set_reference':
-      return setReference(state, fact.lift, fact.var, fact.value, 'set_reference', state.position);
+      return retestedStages(
+        definition,
+        setReference(state, fact.lift, fact.var, fact.value, 'set_reference', state.position),
+        fact,
+      );
     case 'jump_to':
       return jumpTo(definition, state, fact.position);
     case 'skip_day':

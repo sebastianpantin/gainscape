@@ -6,7 +6,7 @@ import {
   type ProgressionTrigger,
   type ReferenceVar,
 } from './program-definition.ts';
-import { type PrescriptionSnapshot } from './program-prescription.ts';
+import { type PrescriptionSnapshot, type StageIndices } from './program-prescription.ts';
 import { advanceProgram, finalDaySets, ruleKeyOf } from './program-progression.ts';
 import { firstPosition, type Position, type ScheduleCursor } from './program-schedule.ts';
 import { type EffortInputType } from './types.ts';
@@ -79,6 +79,8 @@ export interface ProgramState extends ScheduleCursor {
   refs: ProgramReferences;
   consecutiveMisses: Readonly<Partial<Record<RuleKey, number>>>;
   successes: Readonly<Partial<Record<RuleKey, number>>>;
+  stages: StageIndices;
+  stageResetBases: Readonly<Record<string, number>>;
   days: readonly DayRecord[];
   dayIndex: Readonly<Record<string, number>>;
   history: readonly ReferenceChange[];
@@ -111,6 +113,8 @@ export function initialProgramState(definition: ProgramDefinition, enrollment: P
     refs: initialReferences(definition, enrollment),
     consecutiveMisses: Object.fromEntries(definition.progression.map((rule) => [ruleKeyOf(rule), 0])),
     successes: {},
+    stages: {},
+    stageResetBases: {},
     days: [],
     dayIndex: {},
     history: [],
