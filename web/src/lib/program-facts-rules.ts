@@ -10,6 +10,7 @@ import {
   type RoundingSetting,
   type WeightUnit,
 } from '@domain/index.ts';
+import { z } from 'zod';
 
 export interface EnrollmentRow {
   id: string;
@@ -124,4 +125,53 @@ export function programFactsFromRows(rows: EnrollmentFactsRows): ProgramFact[] {
     sets: session.sets.map(factSetFromRow),
   }));
   return [...rows.events.flatMap(eventFact), ...sessions];
+}
+
+const positionSchema = z.union([
+  z.object({ cycle: z.number(), week: z.number(), day: z.string() }),
+  z.object({ week: z.number(), day: z.string() }),
+  z.object({ index: z.number() }),
+]);
+
+const snapshotSchema = z.object({
+  ref: z.string(),
+  weightKg: z.number(),
+  reps: z.number(),
+  minReps: z.number().nullable(),
+  amrap: z.boolean(),
+});
+
+const factSetSchema = z.object({
+  exerciseId: z.string(),
+  weightKg: z.number(),
+  reps: z.number(),
+  effortInputType: z.enum(['level', 'rir', 'rpe', 'cardio']).nullable(),
+  effortValue: z.number().nullable(),
+  prescription: snapshotSchema.nullable(),
+});
+
+const factStamp = { id: z.string(), at: z.string(), local: z.boolean().optional() };
+
+export const sessionFactSchema = z.object({
+  kind: z.literal('session'),
+  ...factStamp,
+  position: positionSchema,
+  sets: z.array(factSetSchema),
+});
+
+export const programFactSchema = z.discriminatedUnion('kind', [
+  sessionFactSchema,
+  z.object({
+    kind: z.literal('set_reference'),
+    ...factStamp,
+    lift: z.string(),
+    var: z.enum(['tm', 'top', 'fiveRm', 'e1rm', 'workingWeight']),
+    value: z.number(),
+  }),
+  z.object({ kind: z.literal('skip_day'), ...factStamp, position: positionSchema }),
+  z.object({ kind: z.literal('jump_to'), ...factStamp, position: positionSchema }),
+]);
+
+export function isProgramFact(value: unknown): value is ProgramFact {
+  return programFactSchema.safeParse(value).success;
 }
