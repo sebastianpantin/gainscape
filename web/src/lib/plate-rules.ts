@@ -1,6 +1,6 @@
 import { FLOAT_TOLERANCE, roundTo, type WeightUnit } from '@domain/index.ts';
 
-export const STANDARD_PLATES: Readonly<Record<WeightUnit, readonly number[]>> = {
+const STANDARD_PLATES: Readonly<Record<WeightUnit, readonly number[]>> = {
   kg: [25, 20, 15, 10, 5, 2.5, 1.25],
   lb: [45, 35, 25, 10, 5, 2.5],
 };

@@ -13,7 +13,7 @@ import {
 } from '@domain/index.ts';
 import { positionLabel, type PrescriptionCard, prescriptionCards } from './program-today-rules.ts';
 
-export const ROTATION_PLAN_SESSIONS = 3;
+const ROTATION_PLAN_SESSIONS = 3;
 
 export type PlanDayStatus = 'completed' | 'skipped' | 'upcoming';
 
