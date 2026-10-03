@@ -1,4 +1,5 @@
 import { type Position, type ProgramDefinition } from '@domain/index.ts';
+import { positionLabel } from './program-today-rules.ts';
 
 export const SKIP_OFFLINE_TEXT = "You're offline. Skipping a day needs a connection.";
 
@@ -10,13 +11,13 @@ export interface SkipDayEvent {
 }
 
 export function skipLabel(definition: ProgramDefinition, position: Position): string {
-  throw new Error(`skipLabel is not implemented: ${definition.key} ${JSON.stringify(position)}`);
+  return `Skip ${positionLabel(definition, position)}`;
 }
 
 export function skipDialogTitle(definition: ProgramDefinition, position: Position): string {
-  throw new Error(`skipDialogTitle is not implemented: ${definition.key} ${JSON.stringify(position)}`);
+  return `${skipLabel(definition, position)}?`;
 }
 
 export function skipDayEvent(position: Position): SkipDayEvent {
-  throw new Error(`skipDayEvent is not implemented: ${JSON.stringify(position)}`);
+  return { kind: 'skip_day', position };
 }
