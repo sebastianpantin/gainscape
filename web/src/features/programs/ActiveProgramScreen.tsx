@@ -6,11 +6,10 @@ import {
   adjustEnrollment,
   endEnrollment,
   forgetCachedEnrollment,
-  refreshProgramFacts,
+  refreshProgramFactsOrCached,
 } from '../../lib/program-enrollment.ts';
 import { referenceEvents, referenceFieldKey, referenceFields } from '../../lib/program-reference-rules.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
-import { readProgramCache } from '../../offline/program-cache.ts';
 import { useActiveProgram } from './use-active-program.ts';
 
 interface ActiveProgramScreenProps {
@@ -64,7 +63,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
       failed = true;
       setProblems([programErrorText(error)]);
     } finally {
-      showCache(await refreshProgramFacts(userId, enrollment).catch(() => readProgramCache(localStorage, userId)));
+      showCache(await refreshProgramFactsOrCached(userId, enrollment));
       setEdited({});
       setBusy(false);
     }
