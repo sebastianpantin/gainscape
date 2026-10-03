@@ -44,7 +44,9 @@ const FAILED_SQUAT_SESSIONS: readonly SeededDay[] = [
 async function openToday(page: Page) {
   await page.reload();
   await openTab(page, 'Train');
-  return programToday(page, STRONGLIFTS);
+  const today = programToday(page, STRONGLIFTS);
+  await expect(today).toBeVisible();
+  return today;
 }
 
 test('StrongLifts repeats a failed squat twice at 100, then the third failed session in a row deloads it 10% to 100 × 0.9 = 90 while press goes 40 + 2.5 = 42.5 and deadlift 120 + 5 = 125', async ({
