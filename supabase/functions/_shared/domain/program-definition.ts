@@ -275,7 +275,8 @@ export interface FailureCounterAdjustment {
   deloadPct: NumberExpr;
 }
 
-export type StageLastFail = { kind: 'retest'; pct: number } | { kind: 'resetToFirstStage'; add: UnitAmount };
+export type StageLastFail =
+  { kind: 'retest'; pct: number; from: ReferenceVar } | { kind: 'resetToFirstStage'; add: UnitAmount };
 
 export interface StageMachineAdjustment {
   kind: 'stageMachine';

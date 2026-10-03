@@ -94,7 +94,7 @@ function tierOneRule(lift: string, increment: { kg: number; lb: number }): Progr
     trigger: 'afterSession',
     judgedSlots: slotsOf(lift),
     onMet: [{ kind: 'increment', by: increment }],
-    onMiss: [{ kind: 'stageMachine', onLastFail: { kind: 'retest', pct: 0.85 } }],
+    onMiss: [{ kind: 'stageMachine', onLastFail: { kind: 'retest', pct: 0.85, from: 'fiveRm' } }],
   };
 }
 

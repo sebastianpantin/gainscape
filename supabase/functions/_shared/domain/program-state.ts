@@ -70,6 +70,7 @@ export interface DayRecord {
   status: 'completed' | 'skipped';
   outcomes: Readonly<Record<string, LiftOutcome>>;
   judgedSets: readonly FactSet[];
+  stages?: Readonly<Record<string, number>>;
 }
 
 export type RuleKey = `${string}:${ReferenceVar}:${ProgressionTrigger}`;
