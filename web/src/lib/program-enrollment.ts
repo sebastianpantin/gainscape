@@ -69,6 +69,6 @@ export function refreshProgramCache(userId: string): Promise<ProgramCache> {
   return refreshProgramCacheWith(refreshContext(userId));
 }
 
-export function forgetEndedEnrollment(userId: string): void {
+export function forgetCachedEnrollment(userId: string): void {
   updateProgramCache(localStorage, userId, (cache) => withEnrollment(cache, null));
 }
