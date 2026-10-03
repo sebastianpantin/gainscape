@@ -94,6 +94,15 @@ a:hover {
   box-shadow: var(--bevel);
 }
 
+.confirm-dialog {
+  width: min(420px, calc(100vw - 32px));
+  color: var(--color-text);
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
 .well {
   background: var(--color-well);
   border: var(--border-width) solid #000;
