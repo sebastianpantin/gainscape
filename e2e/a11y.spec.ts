@@ -225,7 +225,7 @@ test('the program enrollment screens have no serious axe violations', async ({ p
   await fillProgramInputs(page, FIVE_THREE_ONE_ONE_RMS_KG);
   await startFollowing(page, '5/3/1');
   const startSquat = programToday(page, '5/3/1').getByRole('button', {
-    name: 'Start: 5/3/1 — C1 W1 Squat',
+    name: 'Start: 5/3/1 — C1 W1 Day 1',
     exact: true,
   });
   await checkScreen(page, 'train (program today)', () => expect(startSquat).toBeVisible());
@@ -241,15 +241,15 @@ test('the program enrollment screens have no serious axe violations', async ({ p
   );
 
   await openTab(page, 'Train');
-  await programToday(page, '5/3/1').getByRole('button', { name: 'Skip C1 W1 Squat', exact: true }).click();
-  const skipDialog = page.getByRole('dialog', { name: 'Skip C1 W1 Squat?', exact: true });
+  await programToday(page, '5/3/1').getByRole('button', { name: 'Skip C1 W1 Day 1', exact: true }).click();
+  const skipDialog = page.getByRole('dialog', { name: 'Skip C1 W1 Day 1?', exact: true });
   await checkScreen(page, 'skip day dialog', () => expect(skipDialog).toBeVisible());
   await skipDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(skipDialog).toHaveCount(0);
 
   await startSquat.click();
   await checkScreen(page, 'train (program draft)', () =>
-    expect(page.getByText('5/3/1 — C1 W1 Squat', { exact: true })).toBeVisible(),
+    expect(page.getByText('5/3/1 — C1 W1 Day 1', { exact: true })).toBeVisible(),
   );
   await expectTouchTargets(page);
 });

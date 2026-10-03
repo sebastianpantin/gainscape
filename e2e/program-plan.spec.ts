@@ -35,11 +35,11 @@ test('the Madcow plan lists the days of the current week with their rows, a skip
   await openPlanFromManage(page, 'Madcow 5x5');
 
   await expect(page.getByRole('heading', { level: 2, name: 'Week 1', exact: true })).toBeVisible();
-  const monday = planDay(page, 'W1 Monday');
+  const monday = planDay(page, 'W1 Day 1');
   await expect(monday.getByText('Skipped', { exact: true })).toBeVisible();
   await expect(monday.getByRole('list')).toHaveCount(0);
 
-  const wednesday = planDay(page, 'W1 Wednesday');
+  const wednesday = planDay(page, 'W1 Day 2');
   await expect(prescribedRows(wednesday, 'Back Squat')).toHaveText([
     '47.5 kg × 5 · 50%',
     '57.5 kg × 5 · 62.5%',
@@ -49,7 +49,7 @@ test('the Madcow plan lists the days of the current week with their rows, a skip
   await expect(wednesday.getByText('Skipped', { exact: true })).toHaveCount(0);
   await expect(wednesday.getByText('Done', { exact: true })).toHaveCount(0);
 
-  await expect(prescribedRows(planDay(page, 'W1 Friday'), 'Back Squat')).toHaveText([
+  await expect(prescribedRows(planDay(page, 'W1 Day 3'), 'Back Squat')).toHaveText([
     '47.5 kg × 5 · 50%',
     '57.5 kg × 5 · 62.5%',
     '70 kg × 5 · 75%',
@@ -76,16 +76,16 @@ test('the 5/3/1 plan lists the whole cycle and marks a logged day "Done"', async
   await expect(page.getByRole('heading', { level: 2, name: 'Cycle 1', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: /^C1 W[1-4] / })).toHaveCount(16);
 
-  const squatDay = planDay(page, 'C1 W1 Squat');
+  const squatDay = planDay(page, 'C1 W1 Day 1');
   await expect(squatDay.getByText('Done', { exact: true })).toBeVisible();
   await expect(squatDay.getByRole('list')).toHaveCount(0);
 
-  await expect(prescribedRows(planDay(page, 'C1 W1 Bench press'), 'Barbell Bench Press')).toHaveText([
+  await expect(prescribedRows(planDay(page, 'C1 W1 Day 2'), 'Barbell Bench Press')).toHaveText([
     '47.5 kg × 5 · 65%',
     '55 kg × 5 · 75%',
     '60 kg × 5+ · 85%',
   ]);
-  await expect(prescribedRows(planDay(page, 'C1 W3 Squat'), 'Back Squat')).toHaveText([
+  await expect(prescribedRows(planDay(page, 'C1 W3 Day 1'), 'Back Squat')).toHaveText([
     '67.5 kg × 5 · 75%',
     '77.5 kg × 3 · 85%',
     '85 kg × 1+ · 95%',

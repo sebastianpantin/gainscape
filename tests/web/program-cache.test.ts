@@ -81,7 +81,7 @@ function programDraft(enrollmentId = ENROLLMENT_ID): WorkoutDraft {
       enrollmentId,
       templateKey: 'madcow_5x5',
       programName: 'Madcow 5x5',
-      dayName: 'W1 Wednesday',
+      dayName: 'W1 Day 2',
       position: weekDay(1, 'wed'),
       exercises: [],
     },

@@ -38,13 +38,13 @@ async function startMadcowMonday(page: Page): Promise<Locator> {
   await register(page, uniqueUsername('pt_mark'));
   await followProgram(page, MADCOW, MADCOW_FIVE_RMS_KG);
   await programToday(page, MADCOW)
-    .getByRole('button', { name: `Start: ${MADCOW} — W1 Monday`, exact: true })
+    .getByRole('button', { name: `Start: ${MADCOW} — W1 Day 1`, exact: true })
     .click();
-  await expect(page.getByText(`${MADCOW} — W1 Monday`, { exact: true })).toBeVisible();
+  await expect(page.getByText(`${MADCOW} — W1 Day 1`, { exact: true })).toBeVisible();
   return workoutCards(page, 'Back Squat').getByRole('listitem');
 }
 
-test('a Madcow W1 Monday draft shows each squat set with its percentage and the plates per side', async ({ page }) => {
+test('a Madcow W1 Day 1 draft shows each squat set with its percentage and the plates per side', async ({ page }) => {
   const rows = await startMadcowMonday(page);
   await expect(rows).toHaveCount(5);
   for (const [index, [pct, plates]] of MADCOW_W1_MONDAY_SQUAT_MARKERS.entries()) {
@@ -77,9 +77,9 @@ test('the RPE back-off sets of a program draft are marked optional at 95% with t
     'Deadlift estimated 1RM (kg)': 240,
   });
   await programToday(page, RPE)
-    .getByRole('button', { name: `Start: ${RPE} — W1 Squat`, exact: true })
+    .getByRole('button', { name: `Start: ${RPE} — W1 Day 1`, exact: true })
     .click();
-  await expect(page.getByText(`${RPE} — W1 Squat`, { exact: true })).toBeVisible();
+  await expect(page.getByText(`${RPE} — W1 Day 1`, { exact: true })).toBeVisible();
 
   const [topCard, backOffCard] = [workoutCards(page, 'Back Squat').nth(0), workoutCards(page, 'Back Squat').nth(1)];
   const topSet = topCard.getByRole('listitem').first();
@@ -104,25 +104,25 @@ test('skip the suggested day through an in-app confirmation: it leaves the picke
   const nativeDialogs = nativeDialogsOf(page);
   await followProgram(page, MADCOW, MADCOW_FIVE_RMS_KG);
   const today = programToday(page, MADCOW);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Monday', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
 
-  const skip = today.getByRole('button', { name: 'Skip W1 Monday', exact: true });
+  const skip = today.getByRole('button', { name: 'Skip W1 Day 1', exact: true });
   await skip.click();
-  const dialog = page.getByRole('dialog', { name: 'Skip W1 Monday?', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Skip W1 Day 1?', exact: true });
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Monday', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
   expect(await programEventsOf(username)).toEqual([]);
 
   await skip.click();
   await dialog.getByRole('button', { name: 'Skip day', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(dayPicker(today).getByRole('radio')).toHaveCount(2);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Monday', exact: true })).toHaveCount(0);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Wednesday', exact: true })).toBeChecked();
-  await expect(today.getByRole('button', { name: `Start: ${MADCOW} — W1 Wednesday`, exact: true })).toBeVisible();
-  await expect(today.getByRole('button', { name: 'Skip W1 Wednesday', exact: true })).toBeVisible();
+  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 1', exact: true })).toHaveCount(0);
+  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 2', exact: true })).toBeChecked();
+  await expect(today.getByRole('button', { name: `Start: ${MADCOW} — W1 Day 2`, exact: true })).toBeVisible();
+  await expect(today.getByRole('button', { name: 'Skip W1 Day 2', exact: true })).toBeVisible();
   expect(await programEventsOf(username)).toEqual([
     { kind: 'skip_day', payload: { position: { week: 1, day: 'mon' } } },
   ]);
@@ -134,16 +134,16 @@ test('skip a picked day other than the suggested one and keep the suggestion', a
   await register(page, username);
   await followProgram(page, MADCOW, MADCOW_FIVE_RMS_KG);
   const today = programToday(page, MADCOW);
-  await dayPicker(today).getByRole('radio', { name: 'W1 Friday', exact: true }).click();
+  await dayPicker(today).getByRole('radio', { name: 'W1 Day 3', exact: true }).click();
 
-  await today.getByRole('button', { name: 'Skip W1 Friday', exact: true }).click();
+  await today.getByRole('button', { name: 'Skip W1 Day 3', exact: true }).click();
   await page
-    .getByRole('dialog', { name: 'Skip W1 Friday?', exact: true })
+    .getByRole('dialog', { name: 'Skip W1 Day 3?', exact: true })
     .getByRole('button', { name: 'Skip day', exact: true })
     .click();
-  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Friday', exact: true })).toHaveCount(0);
+  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 3', exact: true })).toHaveCount(0);
   await expect(dayPicker(today).getByRole('radio')).toHaveCount(2);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Monday', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
   expect(await programEventsOf(username)).toEqual([
     { kind: 'skip_day', payload: { position: { week: 1, day: 'fri' } } },
   ]);
@@ -153,13 +153,13 @@ test('skipping a day offline is disabled with the offline text', async ({ contex
   await register(page, uniqueUsername('pt_skoff'));
   await followProgram(page, MADCOW, MADCOW_FIVE_RMS_KG);
   const today = programToday(page, MADCOW);
-  const skip = today.getByRole('button', { name: 'Skip W1 Monday', exact: true });
+  const skip = today.getByRole('button', { name: 'Skip W1 Day 1', exact: true });
   await expect(skip).toBeEnabled();
 
   await context.setOffline(true);
   await expect(today.getByText(SKIP_OFFLINE_TEXT, { exact: true })).toBeVisible();
   await expect(skip).toBeDisabled();
-  await expect(today.getByRole('button', { name: `Start: ${MADCOW} — W1 Monday`, exact: true })).toBeEnabled();
+  await expect(today.getByRole('button', { name: `Start: ${MADCOW} — W1 Day 1`, exact: true })).toBeEnabled();
 
   await context.setOffline(false);
   await expect(today.getByText(SKIP_OFFLINE_TEXT, { exact: true })).toHaveCount(0);

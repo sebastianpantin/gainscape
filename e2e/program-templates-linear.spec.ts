@@ -22,7 +22,7 @@ const GZCLP = 'GZCLP';
 const NSUNS = 'nSuns LP 5-day';
 const TEXAS = 'Texas Method';
 
-test('StrongLifts: Workout A is 5×5 at the working weights, and finishing it suggests Workout B with the squat up 2.5 kg (60 + 2.5 = 62.5)', async ({
+test('StrongLifts: Day 1 is 5×5 at the working weights, and finishing it suggests Day 2 with the squat up 2.5 kg (60 + 2.5 = 62.5)', async ({
   page,
 }) => {
   test.setTimeout(150_000);
@@ -36,31 +36,29 @@ test('StrongLifts: Workout A is 5×5 at the working weights, and finishing it su
   });
 
   const today = programToday(page, STRONGLIFTS);
-  await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 Workout A', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('60 kg × 5 · 100%', 5));
   await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('40 kg × 5 · 100%', 5));
   await expect(prescribedRows(today, 'Barbell Row')).toHaveText(repeated('40 kg × 5 · 100%', 5));
 
-  await today.getByRole('button', { name: `Start: ${STRONGLIFTS} — Session 1 Workout A`, exact: true }).click();
-  await expect(page.getByText(`${STRONGLIFTS} — Session 1 Workout A`, { exact: true })).toBeVisible();
+  await today.getByRole('button', { name: `Start: ${STRONGLIFTS} — Session 1 Day 1`, exact: true }).click();
+  await expect(page.getByText(`${STRONGLIFTS} — Session 1 Day 1`, { exact: true })).toBeVisible();
   expect(await weightsIn(workoutCards(page, 'Back Squat'))).toEqual(['60', '60', '60', '60', '60']);
   await markEverySetDone(page);
   await finishWorkout(page);
   await page.getByRole('link', { name: 'Done' }).click();
 
   const after = programToday(page, STRONGLIFTS);
-  await expect(dayPicker(after).getByRole('radio', { name: 'Session 2 Workout B', exact: true })).toBeChecked();
+  await expect(dayPicker(after).getByRole('radio', { name: 'Session 2 Day 2', exact: true })).toBeChecked();
   await expect(
-    after.getByRole('button', { name: `Start: ${STRONGLIFTS} — Session 2 Workout B`, exact: true }),
+    after.getByRole('button', { name: `Start: ${STRONGLIFTS} — Session 2 Day 2`, exact: true }),
   ).toBeVisible();
   await expect(prescribedRows(after, 'Back Squat')).toHaveText(repeated('62.5 kg × 5 · 100%', 5));
   await expect(prescribedRows(after, 'Overhead Press')).toHaveText(repeated('30 kg × 5 · 100%', 5));
   await expect(prescribedRows(after, 'Deadlift')).toHaveText(['80 kg × 5 · 100%']);
 });
 
-test('Starting Strength: Workout A is squat 3×5, bench 3×5 and deadlift 1×5 at the working weights', async ({
-  page,
-}) => {
+test('Starting Strength: Day 1 is squat 3×5, bench 3×5 and deadlift 1×5 at the working weights', async ({ page }) => {
   await register(page, uniqueUsername('pt_ss'));
   await followProgram(page, STARTING_STRENGTH, {
     'Squat working weight (kg)': 60,
@@ -70,12 +68,12 @@ test('Starting Strength: Workout A is squat 3×5, bench 3×5 and deadlift 1×5 a
   });
 
   const today = programToday(page, STARTING_STRENGTH);
-  await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 Workout A', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('60 kg × 5 · 100%', 3));
   await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('50 kg × 5 · 100%', 3));
   await expect(prescribedRows(today, 'Deadlift')).toHaveText(['80 kg × 5 · 100%']);
   await expect(
-    today.getByRole('button', { name: `Start: ${STARTING_STRENGTH} — Session 1 Workout A`, exact: true }),
+    today.getByRole('button', { name: `Start: ${STARTING_STRENGTH} — Session 1 Day 1`, exact: true }),
   ).toBeVisible();
 });
 
@@ -102,7 +100,7 @@ test('GZCLP: A1 is the T1 squat 5×3 with the last set "3+", the T2 bench 3×10 
   await startFollowing(page, GZCLP);
 
   const today = programToday(page, GZCLP);
-  await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 A1', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText([
     ...repeated('100 kg × 3 · 100%', 4),
     '100 kg × 3+ · 100%',
@@ -116,7 +114,7 @@ test('GZCLP: A1 is the T1 squat 5×3 with the last set "3+", the T2 bench 3×10 
   ]);
 });
 
-test('nSuns 5-day: Monday is the T1 bench 9-set list at TM 100 ending "8+", and Tuesday the T1 squat at TM 140 with the 1+ set at 95% (133 → 132.5)', async ({
+test('nSuns 5-day: Day 1 is the T1 bench 9-set list at TM 100 ending "8+", and Day 2 the T1 squat at TM 140 with the 1+ set at 95% (133 → 132.5)', async ({
   page,
 }) => {
   await register(page, uniqueUsername('pt_ns'));
@@ -129,7 +127,7 @@ test('nSuns 5-day: Monday is the T1 bench 9-set list at TM 100 ending "8+", and 
 
   const today = programToday(page, NSUNS);
   const days = dayPicker(today);
-  await expect(days.getByRole('radio', { name: 'W1 Monday', exact: true })).toBeChecked();
+  await expect(days.getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([
     '65 kg × 8 · 65%',
     '75 kg × 6 · 75%',
@@ -152,8 +150,8 @@ test('nSuns 5-day: Monday is the T1 bench 9-set list at TM 100 ending "8+", and 
     '42.5 kg × 8 · 70%',
   ]);
 
-  await days.getByRole('radio', { name: 'W1 Tuesday', exact: true }).click();
-  await expect(today.getByRole('button', { name: `Start: ${NSUNS} — W1 Tuesday`, exact: true })).toBeVisible();
+  await days.getByRole('radio', { name: 'W1 Day 2', exact: true }).click();
+  await expect(today.getByRole('button', { name: `Start: ${NSUNS} — W1 Day 2`, exact: true })).toBeVisible();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText([
     '105 kg × 5 · 75%',
     '120 kg × 3 · 85%',
@@ -178,11 +176,11 @@ test('Texas Method: the volume day is squat and bench press 5×5 at 90% of the 5
   });
 
   const today = programToday(page, TEXAS);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Volume day', exact: true })).toBeChecked();
+  await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('135 kg × 5 · 90%', 5));
   await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('90 kg × 5 · 90%', 5));
   await expect(prescribedRows(today, 'Deadlift')).toHaveText(['180 kg × 5 · 100%']);
-  await expect(today.getByRole('button', { name: `Start: ${TEXAS} — W1 Volume day`, exact: true })).toBeVisible();
+  await expect(today.getByRole('button', { name: `Start: ${TEXAS} — W1 Day 1`, exact: true })).toBeVisible();
 });
 
 test('Texas Method: the press exercise follows the press option until the user picks one', async ({ page }) => {
