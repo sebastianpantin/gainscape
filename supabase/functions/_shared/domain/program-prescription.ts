@@ -261,6 +261,13 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
       const add = load.add ? evaluateAmount(load.add, enrollment.unit, numbers) : 0;
       return prescribedLoad(context, raw === undefined ? undefined : raw * pct + add, pct);
     }
+    case 'cumulativeAddOn': {
+      const pct = evaluateNumber(load.pct, numbers);
+      const raw = referenceInEnrollmentUnit(load.of);
+      const week = Math.min(weekContextOf(position).week, load.byWeek.length);
+      const add = week > 0 ? load.byWeek[week - 1][enrollment.unit] : 0;
+      return prescribedLoad(context, raw === undefined ? undefined : raw * pct + add, pct);
+    }
     case 'ramp': {
       const top = referenceInEnrollmentUnit(load.of);
       const pct = roundTo(RAMP_PCT_DECIMALS, 1 - evaluateNumber(load.step, numbers) * (load.count - 1 - index));
