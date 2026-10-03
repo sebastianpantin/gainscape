@@ -48,6 +48,7 @@ import { ExercisePicker } from './ExercisePicker.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { useActiveProgram } from '../programs/use-active-program.ts';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
+import { ProgramSummary } from './ProgramSummary.tsx';
 import { ProgramToday } from './ProgramToday.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
@@ -289,6 +290,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </p>
         )}
         <InstallCard userId={userId} />
+        <ProgramSummary userId={userId} program={activeProgram} />
         <ProgramToday
           program={activeProgram}
           exercises={exercises}
