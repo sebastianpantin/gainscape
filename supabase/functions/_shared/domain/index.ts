@@ -47,6 +47,7 @@ export {
   type FailureCounterAdjustment,
   type HoldAdjustment,
   type IncrementByAmount,
+  type OpeningIncrement,
   type IncrementByPct,
   type InitialExpression,
   type InputDecl,
@@ -120,11 +121,13 @@ export {
   type PrescribedExercise,
   type PrescribedSet,
   type PrescriptionSnapshot,
+  recomputeRelativeSets,
   type ReferenceState,
   type ResolvedSlot,
   resolvePrescription,
   type UnsupportedPrescription,
 } from './program-prescription.ts';
+export { rpeChartPct } from './rpe-chart.ts';
 export { storableSnapshot, storableSnapshots } from './prescription-snapshot.ts';
 export {
   advanceProgram,

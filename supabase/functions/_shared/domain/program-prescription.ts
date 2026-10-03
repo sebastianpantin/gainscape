@@ -60,6 +60,7 @@ export type LastLoggedWeights = Readonly<Record<string, number>>;
 
 export interface ReferenceState {
   refs: ProgramReferences;
+  stages?: Readonly<Record<string, number>>;
 }
 
 const RAMP_PCT_DECIMALS = 6;
@@ -318,4 +319,16 @@ export function resolvePrescription(
         sets: result.sets,
       };
     });
+}
+
+export function recomputeRelativeSets(
+  definition: ProgramDefinition,
+  enrollment: ProgramEnrollment,
+  position: Position,
+  slots: readonly ResolvedSlot[],
+  editedWeights: Readonly<Record<string, number>>,
+): ResolvedSlot[] {
+  const edits = Object.keys(editedWeights).length;
+  const where = `${definition.key} ${enrollment.unit} ${JSON.stringify(position)}`;
+  throw new Error(`recomputeRelativeSets is not implemented: ${where}, ${slots.length} slots, ${edits} edited sets`);
 }

@@ -54,7 +54,13 @@ const unitAmountExpr = z.union([
 ]);
 
 const load = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('pct'), pct: numberExpr, of: referenceVar }),
+  z.strictObject({
+    kind: z.literal('pct'),
+    pct: numberExpr,
+    of: referenceVar,
+    lift: z.string().optional(),
+    add: unitAmountExpr.optional(),
+  }),
   z.strictObject({ kind: z.literal('ramp'), step: numberExpr, count: positiveInt, of: referenceVar }),
   z.strictObject({ kind: z.literal('sameAs'), ref: z.string() }),
   z.strictObject({ kind: z.literal('weekTablePct'), table: z.string(), set: nonNegativeInt, of: referenceVar }),
@@ -140,7 +146,11 @@ const stageLastFail = z.discriminatedUnion('kind', [
 ]);
 
 const adjustment = z.union([
-  z.strictObject({ kind: z.literal('increment'), by: unitAmountExpr }),
+  z.strictObject({
+    kind: z.literal('increment'),
+    by: unitAmountExpr,
+    opening: z.strictObject({ times: positiveInt, by: unitAmountExpr }).optional(),
+  }),
   z.strictObject({ kind: z.literal('increment'), byPct: numberExpr }),
   z.discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('hold') }),
@@ -171,6 +181,7 @@ const option = z.discriminatedUnion('kind', [
     kind: z.literal('choice'),
     values: z.array(optionValue).min(1),
     default: optionValue,
+    onlyForUnit: z.record(z.string(), z.enum(['kg', 'lb'])).optional(),
     source: sources,
   }),
   z.strictObject({

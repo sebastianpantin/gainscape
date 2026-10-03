@@ -27,6 +27,7 @@ export interface ChoiceOptionDecl {
   kind: 'choice';
   values: OptionValue[];
   default: OptionValue;
+  onlyForUnit?: Readonly<Record<string, WeightUnit>>;
   source: string[];
 }
 
@@ -83,6 +84,8 @@ export interface PctLoad {
   kind: 'pct';
   pct: NumberExpr;
   of: ReferenceVar;
+  lift?: string;
+  add?: UnitAmountExpr;
 }
 
 export interface RampLoad {
@@ -240,9 +243,15 @@ export type Schedule = CycleSchedule | WeeklySchedule | RotationSchedule;
 
 export type ProgressionTrigger = 'afterSession' | 'endOfWeek' | 'endOfCycle' | 'endOfWave';
 
+export interface OpeningIncrement {
+  times: number;
+  by: UnitAmountExpr;
+}
+
 export interface IncrementByAmount {
   kind: 'increment';
   by: UnitAmountExpr;
+  opening?: OpeningIncrement;
 }
 
 export interface IncrementByPct {
