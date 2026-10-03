@@ -67,7 +67,12 @@ export function dayChoices(definition: ProgramDefinition, cursor: ScheduleCursor
 }
 
 function samePosition(a: Position, b: Position): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  const aKeys = Object.keys(a);
+  const bKeys = new Set(Object.keys(b));
+  return (
+    aKeys.length === bKeys.size &&
+    aKeys.every((key) => bKeys.has(key) && a[key as keyof Position] === b[key as keyof Position])
+  );
 }
 
 export function pickedDay(choices: readonly DayChoice[], picked: Position | null): Position {
