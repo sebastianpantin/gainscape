@@ -443,8 +443,7 @@ const ADJUSTMENT_KINDS: readonly string[] = [
   'customRule',
 ];
 const PROGRESSION_TRIGGERS: readonly string[] = ['afterSession', 'endOfWeek', 'endOfCycle', 'endOfWave'];
-const SUPPORTED_TRIGGERS: readonly string[] = ['afterSession', 'endOfWeek', 'endOfCycle'];
-const SUPPORTED_ADJUSTMENT_KINDS: readonly string[] = ['increment', 'hold', 'tmReset'];
+const ADJUSTMENT_KINDS_WITHOUT_SEMANTICS: readonly string[] = ['customRule'];
 const INITIAL_KINDS: readonly string[] = ['copy', 'scale', 'onRamp'];
 const OPTION_KINDS: readonly string[] = ['choice', 'number'];
 
@@ -781,16 +780,9 @@ function shapeErrors(json: unknown): string[] {
 function unsupportedKindsIn(json: Record<string, unknown>): string[] {
   const unsupported = new Set<string>();
   for (const rule of arrayOf(json.progression)) {
-    const record = rule as Record<string, unknown>;
-    const trigger = typeof record.trigger === 'string' ? record.trigger : null;
-    if (trigger !== null && PROGRESSION_TRIGGERS.includes(trigger) && !SUPPORTED_TRIGGERS.includes(trigger)) {
-      unsupported.add(trigger);
-    }
-    for (const adjustment of ruleAdjustmentsIn(record)) {
+    for (const adjustment of ruleAdjustmentsIn(rule as Record<string, unknown>)) {
       const kind = kindOf(adjustment);
-      if (kind !== null && ADJUSTMENT_KINDS.includes(kind) && !SUPPORTED_ADJUSTMENT_KINDS.includes(kind)) {
-        unsupported.add(kind);
-      }
+      if (kind !== null && ADJUSTMENT_KINDS_WITHOUT_SEMANTICS.includes(kind)) unsupported.add(kind);
     }
   }
   return [...unsupported];
