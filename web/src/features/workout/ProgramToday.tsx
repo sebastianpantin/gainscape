@@ -90,7 +90,10 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
         stacked
         options={choices.map((choice) => ({ value: choice.label, label: choice.label }))}
         current={chosenLabel}
-        onPick={(label) => setPicked(choices.find((choice) => choice.label === label)?.position ?? null)}
+        onPick={(label) => {
+          setSkipProblem(null);
+          setPicked(choices.find((choice) => choice.label === label)?.position ?? null);
+        }}
       />
       <PrescriptionCards cards={cards} heading="h3" />
       <button
@@ -120,7 +123,10 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
         className="button"
         type="button"
         disabled={disabled || offline || skipping}
-        onClick={() => setConfirmingSkip(true)}
+        onClick={() => {
+          setSkipProblem(null);
+          setConfirmingSkip(true);
+        }}
       >
         {skipLabel(definition, position)}
       </button>
