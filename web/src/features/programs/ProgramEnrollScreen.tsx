@@ -25,6 +25,7 @@ import {
   roundingIncrementLabel,
   type TemplateListEntry,
   templateListEntries,
+  withOption,
   withUnit,
 } from '../../lib/program-enroll-rules.ts';
 import { readProgramCache, updateProgramCache } from '../../offline/program-cache.ts';
@@ -156,7 +157,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
           label="Unit"
           options={UNIT_OPTIONS}
           current={form.unit}
-          onPick={(unit) => setEditedForm(withUnit(form, unit))}
+          onPick={(unit) => setEditedForm(withUnit(form, unit, definition))}
         />
       </div>
       <section className="panel stack" aria-label="Starting weights">
@@ -194,7 +195,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
       {definition.options.length > 0 && (
         <section className="panel stack" aria-label="Options">
           <h2>Options</h2>
-          {optionControls(definition).map((control) =>
+          {optionControls(definition, form.unit).map((control) =>
             control.kind === 'choice' ? (
               <div className="stack" key={control.key} style={{ gap: 6 }}>
                 <span className="field">{control.label}</span>
@@ -203,7 +204,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
                   options={control.choices}
                   current={form.options[control.key] ?? control.defaultValue}
                   stacked={control.choices.length > 3}
-                  onPick={(value) => change({ options: { ...form.options, [control.key]: value } })}
+                  onPick={(value) => setEditedForm(withOption(definition, form, control.key, value, exercises))}
                 />
               </div>
             ) : (
