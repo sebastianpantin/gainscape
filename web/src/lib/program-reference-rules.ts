@@ -1,11 +1,18 @@
-import { type ProgramDefinition, type ProgramEnrollment, type ProgramState, type ReferenceVar } from '@domain/index.ts';
+import {
+  isRetestPending,
+  type ProgramDefinition,
+  type ProgramEnrollment,
+  type ProgramState,
+  type ReferenceVar,
+  retestVarOf,
+} from '@domain/index.ts';
 import { liftName, REFERENCE_VAR_LABELS, referenceValueProblem, shownReference } from './program-enroll-rules.ts';
 
 export interface ReferenceField {
   lift: string;
   var: ReferenceVar;
   label: string;
-  value: number;
+  value: number | null;
 }
 
 export interface SetReferenceEvent {
@@ -25,23 +32,25 @@ export function referenceFieldKey(field: Pick<ReferenceField, 'lift' | 'var'>): 
 export function referenceFields(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
-  state: Pick<ProgramState, 'refs'>,
+  state: Pick<ProgramState, 'refs' | 'pendingRetests'>,
 ): ReferenceField[] {
   const lifts = [...new Set(definition.inputs.flatMap((input) => input.lifts))];
-  return lifts.flatMap((lift) =>
-    definition.referenceVars.flatMap((variable): ReferenceField[] => {
+  return lifts.flatMap((lift) => {
+    const retestVar = retestVarOf(definition, lift);
+    return definition.referenceVars.flatMap((variable): ReferenceField[] => {
       const value = state.refs[lift]?.[variable];
-      if (value === undefined) return [];
+      const pending = isRetestPending(state, lift, variable);
+      if (!pending && (variable === retestVar || value === undefined)) return [];
       return [
         {
           lift,
           var: variable,
           label: `${liftName(definition, lift)} ${REFERENCE_VAR_LABELS[variable]} (${enrollment.unit})`,
-          value: shownReference(value),
+          value: pending || value === undefined ? null : shownReference(value),
         },
       ];
-    }),
-  );
+    });
+  });
 }
 
 export function referenceEvents(
@@ -52,7 +61,7 @@ export function referenceEvents(
   const events: SetReferenceEvent[] = [];
   for (const field of fields) {
     const raw = edited[referenceFieldKey(field)];
-    if (raw === undefined) continue;
+    if (raw === undefined || (field.value === null && raw.trim() === '')) continue;
     const problem = referenceValueProblem(field.label, raw);
     if (problem) {
       problems.push(problem);

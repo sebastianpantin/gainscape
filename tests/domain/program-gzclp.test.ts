@@ -154,6 +154,67 @@ describe('GZCLP T1 stage machine (kg)', () => {
     expect(weightsOf(nextRound(state), 'a1-squat-t1')[0]).toBe(97.5);
   });
 
+  it('a last-stage T1 fail leaves a pending fiveRm retest for that lift only', () => {
+    const lastStageFail = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
+    const { state } = followProgram(def, kg, factClock(), lastStageFail);
+    expect(state.pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
+  });
+
+  it('no retest is pending before the last-stage fail: two fails leave none', () => {
+    const { state } = followProgram(def, kg, factClock(), rounds([miss('squat-t1'), miss('squat-t1')]));
+    expect(state.pendingRetests).toEqual({});
+  });
+
+  it('a 5RM of 110 before the last-stage fail only stores the 5RM: the stage stays 6×2 at 100', () => {
+    const clock = factClock();
+    const { facts } = followProgram(def, kg, clock, rounds([miss('squat-t1')]));
+    const state = programStateAt(def, kg, [...facts, setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110)]);
+    expect(refOf(state, 'squat-t1', 'fiveRm')).toBe(110);
+    expect(state.stages['squat-t1']).toBe(1);
+    expect(refOf(state, 'squat-t1', 'workingWeight')).toBe(100);
+  });
+
+  it('the retested 5RM clears the pending retest', () => {
+    const clock = factClock();
+    const { facts } = followProgram(def, kg, clock, rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]));
+    const state = programStateAt(def, kg, [...facts, setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110)]);
+    expect(state.stages['squat-t1']).toBe(0);
+    expect(state.pendingRetests).toEqual({});
+  });
+
+  it('a second cycle failing 10×1 again restarts again from the same 5RM of 110: 5×3 at 93.5', () => {
+    const clock = factClock();
+    const threeFails = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
+    const { facts } = followProgram(def, kg, clock, threeFails);
+    const firstRetest = [...facts, setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110)];
+    const secondCycle = followProgram(def, kg, clock, threeFails, firstRetest);
+    expect(secondCycle.state.pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
+    const state = programStateAt(def, kg, [
+      ...secondCycle.facts,
+      setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110),
+    ]);
+    expect(state.stages['squat-t1']).toBe(0);
+    expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
+    expect(state.pendingRetests).toEqual({});
+  });
+
+  it('a met 10×1 after the last-stage fail keeps the retest pending: 100 + 5 = 105 at 10×1, then a 5RM of 110 still restarts 5×3 at 93.5', () => {
+    const clock = factClock();
+    const threeFails = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
+    const { facts } = followProgram(def, kg, clock, threeFails);
+    const metLastStage = followProgram(def, kg, clock, rounds([{}]), facts);
+    expect(metLastStage.state.pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
+    expect(metLastStage.state.stages['squat-t1']).toBe(2);
+    expect(refOf(metLastStage.state, 'squat-t1', 'workingWeight')).toBeCloseTo(105, 9);
+    const state = programStateAt(def, kg, [
+      ...metLastStage.facts,
+      setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110),
+    ]);
+    expect(state.stages['squat-t1']).toBe(0);
+    expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
+    expect(state.pendingRetests).toEqual({});
+  });
+
   it('a T1 fail does not touch the T2 of the same exercise: squat-t2 stays 3×10 @ 70', () => {
     const { state } = followProgram(def, kg, factClock(), [miss('squat-t1'), {}]);
     expect(dayKeyOf(def, state.position)).toBe('a2');
