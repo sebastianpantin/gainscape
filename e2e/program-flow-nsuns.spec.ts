@@ -16,7 +16,9 @@ const DAYS_PER_WEEK = 5;
 
 type NsunsLift = 'bench' | 'squat' | 'press' | 'deadlift';
 type SchemeRow = readonly [reps: number, pct: number, amrap?: 'amrap'];
-type AmrapReps = Readonly<Record<string, Readonly<Record<number, number>>>>;
+type AmrapSlot = 'mon-bench' | 'tue-squat' | 'wed-press' | 'thu-deadlift' | 'fri-bench';
+type LoggedAmrapReps = Readonly<Record<number, number>>;
+type AmrapReps = Readonly<Partial<Record<AmrapSlot, LoggedAmrapReps>>>;
 
 const WEEK_ONE_TMS_KG: Readonly<Record<NsunsLift, number>> = { bench: 100, squat: 140, press: 60, deadlift: 200 };
 
@@ -69,12 +71,12 @@ function slotSets(
   lift: string,
   tmKg: number,
   rows: readonly SchemeRow[],
-  amrapReps: AmrapReps,
+  loggedAmrapReps: LoggedAmrapReps = {},
 ): SeededSet[] {
   return rows.map(([reps, pct, amrap], index) => {
     const set = { lift, ref: `${slot}:${index}`, weightKg: nearestPlateKg(tmKg * pct), reps };
     if (amrap === undefined) return set;
-    const loggedReps = amrapReps[slot]?.[index];
+    const loggedReps = loggedAmrapReps[index];
     return { ...set, amrap: true, minReps: reps, ...(loggedReps === undefined ? {} : { loggedReps }) };
   });
 }
@@ -84,36 +86,36 @@ function nsunsWeek(tms: Readonly<Record<NsunsLift, number>>, week: number, amrap
     {
       position: { week, day: 'mon' },
       sets: [
-        ...slotSets('mon-bench', 'bench', tms.bench, MONDAY_BENCH, amrapReps),
-        ...slotSets('mon-press', 'press', tms.press, PRESS_SUPPLEMENTAL, amrapReps),
+        ...slotSets('mon-bench', 'bench', tms.bench, MONDAY_BENCH, amrapReps['mon-bench']),
+        ...slotSets('mon-press', 'press', tms.press, PRESS_SUPPLEMENTAL),
       ],
     },
     {
       position: { week, day: 'tue' },
       sets: [
-        ...slotSets('tue-squat', 'squat', tms.squat, ONE_PLUS_MAIN, amrapReps),
-        ...slotSets('tue-sumo-deadlift', 'sumo-deadlift', tms.deadlift, SUMO_SUPPLEMENTAL, amrapReps),
+        ...slotSets('tue-squat', 'squat', tms.squat, ONE_PLUS_MAIN, amrapReps['tue-squat']),
+        ...slotSets('tue-sumo-deadlift', 'sumo-deadlift', tms.deadlift, SUMO_SUPPLEMENTAL),
       ],
     },
     {
       position: { week, day: 'wed' },
       sets: [
-        ...slotSets('wed-press', 'press', tms.press, ONE_PLUS_MAIN, amrapReps),
-        ...slotSets('wed-incline-bench', 'incline-bench', tms.bench, BENCH_SUPPLEMENTAL, amrapReps),
+        ...slotSets('wed-press', 'press', tms.press, ONE_PLUS_MAIN, amrapReps['wed-press']),
+        ...slotSets('wed-incline-bench', 'incline-bench', tms.bench, BENCH_SUPPLEMENTAL),
       ],
     },
     {
       position: { week, day: 'thu' },
       sets: [
-        ...slotSets('thu-deadlift', 'deadlift', tms.deadlift, ONE_PLUS_DEADLIFT, amrapReps),
-        ...slotSets('thu-front-squat', 'front-squat', tms.squat, FRONT_SQUAT_SUPPLEMENTAL, amrapReps),
+        ...slotSets('thu-deadlift', 'deadlift', tms.deadlift, ONE_PLUS_DEADLIFT, amrapReps['thu-deadlift']),
+        ...slotSets('thu-front-squat', 'front-squat', tms.squat, FRONT_SQUAT_SUPPLEMENTAL),
       ],
     },
     {
       position: { week, day: 'fri' },
       sets: [
-        ...slotSets('fri-bench', 'bench', tms.bench, ONE_PLUS_MAIN, amrapReps),
-        ...slotSets('fri-close-grip-bench', 'close-grip-bench', tms.bench, BENCH_SUPPLEMENTAL, amrapReps),
+        ...slotSets('fri-bench', 'bench', tms.bench, ONE_PLUS_MAIN, amrapReps['fri-bench']),
+        ...slotSets('fri-close-grip-bench', 'close-grip-bench', tms.bench, BENCH_SUPPLEMENTAL),
       ],
     },
   ];
