@@ -22,26 +22,36 @@ export function referenceFieldKey(field: Pick<ReferenceField, 'lift' | 'var'>): 
   return `${field.lift}.${field.var}`;
 }
 
+function retestVarsOf(definition: ProgramDefinition, lift: string): ReferenceVar[] {
+  return definition.progression
+    .filter((rule) => rule.lift === lift)
+    .flatMap((rule) => [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])])
+    .flatMap((adjustment) =>
+      adjustment.kind === 'stageMachine' && adjustment.onLastFail.kind === 'retest' ? [adjustment.onLastFail.from] : [],
+    );
+}
+
 export function referenceFields(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
   state: Pick<ProgramState, 'refs'>,
 ): ReferenceField[] {
   const lifts = [...new Set(definition.inputs.flatMap((input) => input.lifts))];
-  return lifts.flatMap((lift) =>
-    definition.referenceVars.flatMap((variable): ReferenceField[] => {
+  return lifts.flatMap((lift) => {
+    const retestVars = retestVarsOf(definition, lift);
+    return definition.referenceVars.flatMap((variable): ReferenceField[] => {
       const value = state.refs[lift]?.[variable];
-      if (value === undefined) return [];
+      if (value === undefined && !retestVars.includes(variable)) return [];
       return [
         {
           lift,
           var: variable,
           label: `${liftName(definition, lift)} ${REFERENCE_VAR_LABELS[variable]} (${enrollment.unit})`,
-          value: shownReference(value),
+          value: value === undefined ? null : shownReference(value),
         },
       ];
-    }),
-  );
+    });
+  });
 }
 
 export function referenceEvents(
@@ -52,7 +62,7 @@ export function referenceEvents(
   const events: SetReferenceEvent[] = [];
   for (const field of fields) {
     const raw = edited[referenceFieldKey(field)];
-    if (raw === undefined) continue;
+    if (raw === undefined || (field.value === null && raw.trim() === '')) continue;
     const problem = referenceValueProblem(field.label, raw);
     if (problem) {
       problems.push(problem);
