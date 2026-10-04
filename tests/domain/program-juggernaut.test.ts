@@ -117,9 +117,9 @@ describe('Juggernaut 2.0 endOfWave: reps over the standard update the TM directl
     expect(repsOf(resolved, 'squat-main')).toEqual([8, 8, 8, 8, 8]);
   });
 
-  it('8 reps (below the standard 10) gives 180 + (8 − 10) × 2.5 = 175', () => {
+  it('8 reps (below the standard 10) keeps the TM at 180, not 180 + (8 − 10) × 2.5 = 175', () => {
     const { state } = followProgram(def, kg, factClock(), weeks([1, 2, 3, 4], realization(3, 'squat', 8)));
-    expect(refOf(state, 'squat', 'tm')).toBeCloseTo(175, 9);
+    expect(refOf(state, 'squat', 'tm')).toBe(180);
   });
 
   it('exactly the standard 10 reps leaves the TM at 180', () => {
