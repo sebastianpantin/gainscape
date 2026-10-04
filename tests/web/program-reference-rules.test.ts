@@ -3,12 +3,23 @@ import { programStateAt, type SetReferenceFact } from '@domain/index.ts';
 import { referenceEvents, referenceFieldKey, referenceFields } from '../../web/src/lib/program-reference-rules.ts';
 import { factClock, setReferenceFact } from '../domain/program-fixtures/facts.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from '../domain/program-fixtures/five_three_one.ts';
+import { GZCLP, gzclpEnrollment } from '../domain/program-fixtures/gzclp.ts';
 import { MADCOW_5X5, madcowEnrollment } from '../domain/program-fixtures/madcow_5x5.ts';
 
 const fiveThreeOne = fiveThreeOneEnrollment({ oneRms: { squat: 100, bench: 80, deadlift: 140, press: 50 } });
 
 function fiveThreeOneFields(facts: SetReferenceFact[] = []) {
   return referenceFields(FIVE_THREE_ONE, fiveThreeOne, programStateAt(FIVE_THREE_ONE, fiveThreeOne, facts));
+}
+
+const gzclp = gzclpEnrollment();
+
+function gzclpFields(facts: SetReferenceFact[] = []) {
+  return referenceFields(GZCLP, gzclp, programStateAt(GZCLP, gzclp, facts));
+}
+
+function fiveRmFieldsOf(fields: ReturnType<typeof gzclpFields>) {
+  return fields.filter((field) => field.var === 'fiveRm').map((field) => [field.label, field.value]);
 }
 
 describe('reference fields', () => {
@@ -44,6 +55,28 @@ describe('reference fields', () => {
     expect(fields[0]).toMatchObject({ label: 'Squat training max (lb)', value: 283.5 });
   });
 
+  it('lists an empty 5RM field for each GZCLP T1 lift, whose retest after 10×1 restarts from it', () => {
+    expect(fiveRmFieldsOf(gzclpFields())).toEqual([
+      ['Squat T1 5RM (kg)', null],
+      ['Bench press T1 5RM (kg)', null],
+      ['Overhead press T1 5RM (kg)', null],
+      ['Deadlift T1 5RM (kg)', null],
+    ]);
+  });
+
+  it('puts the Squat T1 5RM field right after the Squat T1 working weight', () => {
+    expect(
+      gzclpFields()
+        .slice(0, 2)
+        .map((field) => field.label),
+    ).toEqual(['Squat T1 working weight (kg)', 'Squat T1 5RM (kg)']);
+  });
+
+  it('shows a set 5RM of 110 after its set_reference fact', () => {
+    const facts = [setReferenceFact(factClock().next(), 'squat-t1', 'fiveRm', 110)];
+    expect(fiveRmFieldsOf(gzclpFields(facts))[0]).toEqual(['Squat T1 5RM (kg)', 110]);
+  });
+
   it('keys a field by lift and reference var', () => {
     expect(referenceFieldKey({ lift: 'squat', var: 'tm' })).toBe('squat.tm');
   });
@@ -55,6 +88,20 @@ describe('reference events', () => {
     expect(referenceEvents(fields, { 'squat.tm': '100', 'bench.tm': '72' })).toEqual({
       kind: 'ok',
       events: [{ kind: 'set_reference', lift: 'squat', var: 'tm', value: 100 }],
+    });
+  });
+
+  it('sends a set_reference for a 5RM entered into its empty field', () => {
+    expect(referenceEvents(gzclpFields(), { 'squat-t1.fiveRm': '110' })).toEqual({
+      kind: 'ok',
+      events: [{ kind: 'set_reference', lift: 'squat-t1', var: 'fiveRm', value: 110 }],
+    });
+  });
+
+  it('sends nothing and finds no problem for a 5RM field left or cleared empty', () => {
+    expect(referenceEvents(gzclpFields(), { 'squat-t1.fiveRm': '', 'bench-t1.fiveRm': '  ' })).toEqual({
+      kind: 'ok',
+      events: [],
     });
   });
 
