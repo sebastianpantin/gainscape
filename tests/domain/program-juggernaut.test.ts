@@ -186,11 +186,11 @@ describe('Juggernaut 2.0 endOfWave: reps over the standard update the TM directl
     expect(refOf(state, 'squat', 'tm')).toBeCloseTo(185, 9);
   });
 
-  it('the 3s wave uses the standard 3: jumping to week 13 at TM 180, 2 reps in week 15 gives 180 − 2.5 = 177.5', () => {
+  it('the 3s wave uses the standard 3: jumping to week 13 at TM 180, 4 reps in week 15 gives 180 + (4 − 3) × 2.5 = 182.5', () => {
     const clock = factClock();
     const jump = [jumpToFact(clock.next(), juggernautDay(13, 'squat'))];
-    const { state } = followProgram(def, kg, clock, weeks([13, 14, 15, 16], realization(15, 'squat', 2)), jump);
-    expect(refOf(state, 'squat', 'tm')).toBeCloseTo(177.5, 9);
+    const { state } = followProgram(def, kg, clock, weeks([13, 14, 15, 16], realization(15, 'squat', 4)), jump);
+    expect(refOf(state, 'squat', 'tm')).toBeCloseTo(182.5, 9);
   });
 });
 
