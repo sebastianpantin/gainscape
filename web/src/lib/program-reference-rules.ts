@@ -1,4 +1,11 @@
-import { type ProgramDefinition, type ProgramEnrollment, type ProgramState, type ReferenceVar } from '@domain/index.ts';
+import {
+  isRetestPending,
+  type ProgramDefinition,
+  type ProgramEnrollment,
+  type ProgramState,
+  type ReferenceVar,
+  retestVarOf,
+} from '@domain/index.ts';
 import { liftName, REFERENCE_VAR_LABELS, referenceValueProblem, shownReference } from './program-enroll-rules.ts';
 
 export interface ReferenceField {
@@ -22,32 +29,24 @@ export function referenceFieldKey(field: Pick<ReferenceField, 'lift' | 'var'>): 
   return `${field.lift}.${field.var}`;
 }
 
-function retestVarsOf(definition: ProgramDefinition, lift: string): ReferenceVar[] {
-  return definition.progression
-    .filter((rule) => rule.lift === lift)
-    .flatMap((rule) => [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])])
-    .flatMap((adjustment) =>
-      adjustment.kind === 'stageMachine' && adjustment.onLastFail.kind === 'retest' ? [adjustment.onLastFail.from] : [],
-    );
-}
-
 export function referenceFields(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
-  state: Pick<ProgramState, 'refs'>,
+  state: Pick<ProgramState, 'refs' | 'pendingRetests'>,
 ): ReferenceField[] {
   const lifts = [...new Set(definition.inputs.flatMap((input) => input.lifts))];
   return lifts.flatMap((lift) => {
-    const retestVars = retestVarsOf(definition, lift);
+    const retestVar = retestVarOf(definition, lift);
     return definition.referenceVars.flatMap((variable): ReferenceField[] => {
       const value = state.refs[lift]?.[variable];
-      if (value === undefined && !retestVars.includes(variable)) return [];
+      const pending = isRetestPending(state, lift, variable);
+      if (!pending && (variable === retestVar || value === undefined)) return [];
       return [
         {
           lift,
           var: variable,
           label: `${liftName(definition, lift)} ${REFERENCE_VAR_LABELS[variable]} (${enrollment.unit})`,
-          value: value === undefined ? null : shownReference(value),
+          value: pending || value === undefined ? null : shownReference(value),
         },
       ];
     });
