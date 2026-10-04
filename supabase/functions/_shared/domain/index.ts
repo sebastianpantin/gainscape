@@ -140,6 +140,7 @@ export {
   type LoggedLoad,
   weeksBack,
 } from './program-progression.ts';
+export { isRetestPending } from './program-stages.ts';
 export {
   type DayRecord,
   type FactSet,
