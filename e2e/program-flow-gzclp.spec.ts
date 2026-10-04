@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
 import {
@@ -217,4 +217,56 @@ test('GZCLP: a T1 squat failing 5×3 then 6×2 at 100 moves to 6×2 then 10×1 a
   await expect(prescribedRows(afterThreeRotations, 'Barbell Bench Press — supplemental')).toHaveText(
     stageRows('57.5', T2_STAGES[0]),
   );
+});
+
+async function openManageProgram(page: Page, today: Locator) {
+  await today.getByRole('link', { name: 'Manage program', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: GZCLP, exact: true })).toBeVisible();
+}
+
+test('GZCLP: a T1 squat failing 5×3, 6×2 and 10×1 at 100 (last set at 90) waits at 10×1 for a 5RM test, offered on Manage program only after the 10×1 fail, and a Squat T1 5RM of 110 restarts 5×3 at 110 × 0.85 = 93.5, prescribed as 92.5', async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const { accessToken, enrollmentId, bindings } = await followGzclp(page, 'pf_gzr');
+  const clock = sessionClock(3 * ROTATION_DAYS + 1);
+  const seedFailedRotation = async (rotation: number) => {
+    const squatWithLightLastSet = stageSets('a1-squat-t1', 'squat-t1', 100, T1_STAGES[rotation]).map(
+      (set, index, sets) => (index === sets.length - 1 ? { ...set, loggedWeightKg: 90 } : set),
+    );
+    const dayOne = [
+      ...squatWithLightLastSet,
+      ...stageSets('a1-bench-t2', 'bench-t2', 50, T2_STAGES[0]),
+      ...stageSets('a1-pulldown-t3', 'pulldown-t3', 40, T3_STAGE),
+    ];
+    await seedProgramDays(accessToken, enrollmentId, bindings, clock, metFourDayRotation(rotation, dayOne, 40));
+  };
+  const squatFiveRm = page.getByLabel('Squat T1 5RM (kg)', { exact: true });
+
+  await seedFailedRotation(0);
+  await seedFailedRotation(1);
+  const atTenSingles = await openToday(page);
+  await expect(prescribedRows(atTenSingles, 'Back Squat')).toHaveText(stageRows('100', T1_STAGES[2]));
+  await openManageProgram(page, atTenSingles);
+  await expect(page.getByLabel('Squat T1 working weight (kg)', { exact: true })).toHaveValue('100');
+  await expect(squatFiveRm).toHaveCount(0);
+
+  await seedFailedRotation(2);
+  const afterLastStageFail = await openToday(page);
+  await expect(
+    dayPicker(afterLastStageFail).getByRole('radio', { name: 'Session 13 Day 1', exact: true }),
+  ).toBeChecked();
+  await expect(prescribedRows(afterLastStageFail, 'Back Squat')).toHaveText(stageRows('100', T1_STAGES[2]));
+
+  await openManageProgram(page, afterLastStageFail);
+  await expect(squatFiveRm).toHaveValue('');
+  await expect(page.getByLabel('Bench press T1 5RM (kg)', { exact: true })).toHaveCount(0);
+  await squatFiveRm.fill('110');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+  await expect(squatFiveRm).toHaveCount(0);
+
+  await openTab(page, 'Train');
+  const restarted = programToday(page, GZCLP);
+  await expect(prescribedRows(restarted, 'Back Squat')).toHaveText(stageRows('92.5', T1_STAGES[0]));
 });

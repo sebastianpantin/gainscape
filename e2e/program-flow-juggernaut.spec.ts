@@ -117,3 +117,12 @@ test('Juggernaut caps the W3 AMRAP bonus at 10 reps over the standard: squat 25 
   await expectWeekFiveDay(today, 'Day 1', 'Back Squat', '82.5');
   await expectWeekFiveDay(today, 'Day 4', 'Overhead Press', '40');
 });
+
+test('Juggernaut keeps the TM when the W3 AMRAP falls short of the standard 10: squat 8 reps stays 100, not 100 + (8 − 10) × 2.5 = 95; W5 8s at 65%: squat 65', async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const today = await followAndSeedTenRepWave(page, 'pf_jugb', { squat: 8, bench: 10, deadlift: 10, press: 10 });
+
+  await expectWeekFiveDay(today, 'Day 1', 'Back Squat', '65');
+});

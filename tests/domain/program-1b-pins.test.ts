@@ -57,7 +57,8 @@ describe('history reasons of the 1b adjustments', () => {
   it("a retest restart is a set_reference on fiveRm followed by an 'adjustment' of the working weight to 93.5", () => {
     const clock = factClock();
     const enrollment = gzclpEnrollment();
-    const { facts } = followProgram(GZCLP, enrollment, clock, rounds([miss('squat-t1')]));
+    const lastStageFail = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
+    const { facts } = followProgram(GZCLP, enrollment, clock, lastStageFail);
     const state = programStateAt(GZCLP, enrollment, [
       ...facts,
       setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110),
@@ -81,12 +82,12 @@ describe('history reasons of the 1b adjustments', () => {
     expect(lastChange(state, 'squat')).toEqual({ var: 'tm', to: expect.closeTo(145, 9), reason: 'increment' });
   });
 
-  it("repsOverStandard is an 'increment', also below the standard: Juggernaut squat 8 reps 180 → 175", () => {
+  it("repsOverStandard is an 'increment': Juggernaut squat 15 reps 180 → 192.5", () => {
     const days = [1, 2, 3, 4].flatMap((week) =>
-      JUGGERNAUT_LIFTS.map((lift): DayLog => (week === 3 && lift === 'squat' ? { reps: { 'squat-main:0': 8 } } : {})),
+      JUGGERNAUT_LIFTS.map((lift): DayLog => (week === 3 && lift === 'squat' ? { reps: { 'squat-main:0': 15 } } : {})),
     );
     const { state } = followProgram(JUGGERNAUT_2, juggernautEnrollment(), factClock(), days);
-    expect(lastChange(state, 'squat')).toEqual({ var: 'tm', to: expect.closeTo(175, 9), reason: 'increment' });
+    expect(lastChange(state, 'squat')).toEqual({ var: 'tm', to: expect.closeTo(192.5, 9), reason: 'increment' });
   });
 
   it("amrapThreshold is an 'increment': GZCLP pulldown 25 reps 40 → 42.5", () => {
