@@ -5,7 +5,7 @@ export interface ReferenceField {
   lift: string;
   var: ReferenceVar;
   label: string;
-  value: number;
+  value: number | null;
 }
 
 export interface SetReferenceEvent {

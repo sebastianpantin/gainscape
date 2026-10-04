@@ -94,7 +94,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
                   inputMode="decimal"
                   min={0}
                   step="any"
-                  value={edited[key] ?? String(field.value)}
+                  value={edited[key] ?? (field.value === null ? '' : String(field.value))}
                   onChange={(event) => setEdited({ ...edited, [key]: event.target.value })}
                 />
               </label>
