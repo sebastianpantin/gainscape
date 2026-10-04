@@ -278,7 +278,7 @@ const ADJUSTMENT_HANDLERS: AdjustmentHandlers = {
   repsOverStandard: ({ context, state, adjustment, position, sets, current, numbers, changeTo }) => {
     const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
     const standard = adjustment.standardByWave[waveIndexOf(context.definition, position)];
-    if (reps === undefined || standard === undefined || reps === standard) return state;
+    if (reps === undefined || standard === undefined || reps <= standard) return state;
     const perRep = evaluateAmount(adjustment.perRep, context.enrollment.unit, numbers);
     return changeTo(current + Math.min(reps - standard, adjustment.cap) * perRep, 'increment');
   },
