@@ -1,25 +1,28 @@
-import { randomUUID } from 'node:crypto';
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { postCompleteSession } from '../tests/integration/local-stack.ts';
 import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
 import { dayPicker, followProgram, prescribedRows, programToday, repeated } from './support/program-enrollment.ts';
-import { type LiftBindings, nearestPlateKg, sessionClock } from './support/program-seed.ts';
+import {
+  nearestPlateKg,
+  type SeededDay,
+  type SeededEffort,
+  seedProgramDays,
+  sessionClock,
+} from './support/program-seed.ts';
 
 const RPE = 'RPE top set with back-offs';
-const SESSION_MS = 30 * 60 * 1000;
 const BACK_OFF_SETS = 5;
 const BACK_OFF_PCT = 0.95;
+const PRESCRIBED_REPS = 3;
 
 type RpeLift = 'squat' | 'bench' | 'deadlift';
-type LoggedEffort = { type: 'rpe'; value: number } | { type: 'rir'; value: number } | { type: 'level'; level: 'hard' };
 
 interface LoggedTopSet {
   lift: RpeLift;
   prescribedKg: number;
   loggedKg: number;
   reps: number;
-  effort: LoggedEffort;
+  effort: SeededEffort;
 }
 
 interface WeekTwoDay {
@@ -29,27 +32,25 @@ interface WeekTwoDay {
   backOffRow: string;
 }
 
-function loggedSet(bindings: LiftBindings, lift: RpeLift, position: number, effort: LoggedEffort) {
-  const exerciseId = bindings[lift];
-  if (!exerciseId) throw new Error(`no exercise is bound to ${lift}`);
-  return { id: randomUUID(), exerciseId, position, isWarmup: false, effort };
-}
-
-function rpeDaySets(bindings: LiftBindings, top: LoggedTopSet) {
+function weekOneDay(top: LoggedTopSet): SeededDay {
   const backOffKg = nearestPlateKg(top.prescribedKg * BACK_OFF_PCT);
   const topSet = {
-    ...loggedSet(bindings, top.lift, 0, top.effort),
-    weightKg: top.loggedKg,
-    reps: top.reps,
-    prescription: { ref: `${top.lift}-top:0`, weightKg: top.prescribedKg, reps: 3, minReps: null, amrap: false },
+    lift: top.lift,
+    ref: `${top.lift}-top:0`,
+    weightKg: top.prescribedKg,
+    reps: PRESCRIBED_REPS,
+    loggedWeightKg: top.loggedKg,
+    loggedReps: top.reps,
+    effort: top.effort,
   };
   const backOffs = Array.from({ length: BACK_OFF_SETS }, (_, index) => ({
-    ...loggedSet(bindings, top.lift, index + 1, top.effort),
+    lift: top.lift,
+    ref: `${top.lift}-fatigue:${index}`,
     weightKg: backOffKg,
-    reps: 3,
-    prescription: { ref: `${top.lift}-fatigue:${index}`, weightKg: backOffKg, reps: 3, minReps: null, amrap: false },
+    reps: PRESCRIBED_REPS,
+    effort: top.effort,
   }));
-  return [topSet, ...backOffs];
+  return { position: { week: 1, day: top.lift }, sets: [topSet, ...backOffs] };
 }
 
 async function seedWeekOne(page: Page, prefix: string, topSets: readonly LoggedTopSet[]): Promise<void> {
@@ -64,19 +65,7 @@ async function seedWeekOne(page: Page, prefix: string, topSets: readonly LoggedT
   const enrollmentId = await activeEnrollmentIdOf(username);
   const { lift_bindings: bindings } = await activeEnrollmentOf(username);
   const clock = sessionClock(topSets.length + 1);
-  for (const top of topSets) {
-    const startedAt = clock.next();
-    const response = await postCompleteSession(accessToken, {
-      id: randomUUID(),
-      startedAt: startedAt.toISOString(),
-      endedAt: new Date(startedAt.getTime() + SESSION_MS).toISOString(),
-      notes: null,
-      program: { enrollmentId, position: { week: 1, day: top.lift } },
-      sets: rpeDaySets(bindings, top),
-    });
-    if (response.status !== 200 || response.body.programLinked !== true)
-      throw new Error(`seeding ${top.lift} failed: ${response.status} ${response.rawBody}`);
-  }
+  await seedProgramDays(accessToken, enrollmentId, bindings, clock, topSets.map(weekOneDay));
 }
 
 async function expectWeekTwo(page: Page, days: readonly WeekTwoDay[]): Promise<void> {
