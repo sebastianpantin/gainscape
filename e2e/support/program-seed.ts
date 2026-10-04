@@ -5,13 +5,17 @@ import { exerciseIdOfKey, skipProgramDayElsewhere } from './db.ts';
 export type FiveThreeOneLift = 'squat' | 'bench' | 'deadlift' | 'press';
 export type ProgramPosition = Readonly<Record<string, string | number>>;
 export type LiftBindings = Readonly<Record<string, string | null>>;
+export type SeededEffort =
+  { type: 'rpe'; value: number } | { type: 'rir'; value: number } | { type: 'level'; level: 'hard' };
 
 export interface SeededSet {
   lift: string;
   ref: string;
   weightKg: number;
   reps: number;
+  loggedWeightKg?: number;
   loggedReps?: number;
+  effort?: SeededEffort;
   amrap?: boolean;
   minReps?: number | null;
 }
@@ -31,6 +35,7 @@ const HOUR_MS = 60 * MINUTE_MS;
 const PLATE_INCREMENT_KG = 2.5;
 const BAR_KG = 20;
 const TIE_TOLERANCE = 1e-9;
+const DEFAULT_EFFORT: SeededEffort = { type: 'level', level: 'hard' };
 
 export function sessionClock(hoursBack: number): SessionClock {
   const firstStart = Date.now() - hoursBack * HOUR_MS;
@@ -44,7 +49,7 @@ export function sessionClock(hoursBack: number): SessionClock {
   };
 }
 
-function nearestPlateKg(rawKg: number): number {
+export function nearestPlateKg(rawKg: number): number {
   return Math.max(BAR_KG, Math.round(rawKg / PLATE_INCREMENT_KG + TIE_TOLERANCE) * PLATE_INCREMENT_KG);
 }
 
@@ -59,10 +64,10 @@ function payloadSets(bindings: LiftBindings, sets: readonly SeededSet[]) {
     id: randomUUID(),
     exerciseId: exerciseOf(bindings, set.lift),
     position: index,
-    weightKg: set.weightKg,
+    weightKg: set.loggedWeightKg ?? set.weightKg,
     reps: set.loggedReps ?? set.reps,
     isWarmup: false,
-    effort: { type: 'level', level: 'hard' },
+    effort: set.effort ?? DEFAULT_EFFORT,
     prescription: {
       ref: set.ref,
       weightKg: set.weightKg,
