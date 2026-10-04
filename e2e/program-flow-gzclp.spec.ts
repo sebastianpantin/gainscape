@@ -162,7 +162,7 @@ test('GZCLP after one rotation: a met T1 squat 5×3 goes 100 + 5 = 105, a missed
   await expect(prescribedRows(today, 'Lat Pulldown — assistance')).toHaveText(stageRows('42.5', T3_STAGE));
 });
 
-test('GZCLP: a T1 squat failing 5×3 and 6×2 at 100 moves to 10×1, where a met 10×1 goes 100 + 5 = 105, while a T2 bench failing 3×10, 3×8 and 3×6 at 50 resets to 3×10 at 50 + 6.25 = 56.25, prescribed as 57.5', async ({
+test('GZCLP: a T1 squat failing 5×3 then 6×2 at 100 moves to 6×2 then 10×1 at 100, where a met 10×1 goes 100 + 5 = 105, while a T2 bench failing 3×10 then 3×8 at 50 moves to 3×8 then 3×6 at 50, and failing 3×6 resets to 3×10 at 50 + 6.25 = 56.25, prescribed as 57.5', async ({
   page,
 }) => {
   test.setTimeout(240_000);
@@ -188,10 +188,27 @@ test('GZCLP: a T1 squat failing 5×3 and 6×2 at 100 moves to 10×1, where a met
     stageRows('50', T2_STAGES[1]),
   );
 
-  await seedProgramDays(accessToken, enrollmentId, bindings, clock, [
-    ...metFourDayRotation(1, dayOne(T1_STAGES[1], missedBy(T1_STAGES[1]), T2_STAGES[1]), 40),
-    ...metFourDayRotation(2, dayOne(T1_STAGES[2], T1_STAGES[2].reps, T2_STAGES[2]), 40),
-  ]);
+  await seedProgramDays(
+    accessToken,
+    enrollmentId,
+    bindings,
+    clock,
+    metFourDayRotation(1, dayOne(T1_STAGES[1], missedBy(T1_STAGES[1]), T2_STAGES[1]), 40),
+  );
+  const afterTwoFails = await openToday(page);
+  await expect(dayPicker(afterTwoFails).getByRole('radio', { name: 'Session 9 Day 1', exact: true })).toBeChecked();
+  await expect(prescribedRows(afterTwoFails, 'Back Squat')).toHaveText(stageRows('100', T1_STAGES[2]));
+  await expect(prescribedRows(afterTwoFails, 'Barbell Bench Press — supplemental')).toHaveText(
+    stageRows('50', T2_STAGES[2]),
+  );
+
+  await seedProgramDays(
+    accessToken,
+    enrollmentId,
+    bindings,
+    clock,
+    metFourDayRotation(2, dayOne(T1_STAGES[2], T1_STAGES[2].reps, T2_STAGES[2]), 40),
+  );
   const afterThreeRotations = await openToday(page);
   await expect(
     dayPicker(afterThreeRotations).getByRole('radio', { name: 'Session 13 Day 1', exact: true }),
