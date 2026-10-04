@@ -16,6 +16,8 @@ function rounds(firstDayLogs: readonly DayLog[]): DayLog[] {
   return firstDayLogs.flatMap((log) => [log, {}, {}, {}]);
 }
 
+const lastStageFail = [miss('squat-t1'), miss('squat-t1'), miss('squat-t1')];
+
 function squatT1Sets(stage: number, refs: Parameters<typeof resolveAt>[2]['refs'], log: DayLog = {}) {
   return loggedAsPrescribed(resolveAt(GZCLP, kg, { refs, stages: { 'squat-t1': stage } }, { index: 0 }), log);
 }
@@ -73,9 +75,9 @@ describe('a scope trigger judges a stages day at the stage it had on that day', 
 });
 
 describe('the retest restart reads the var the rule names (from)', () => {
-  it('a set_reference on fiveRm restarts at stage 1 from ANY stage, not only after the last-stage fail (GZCLP users retest when they choose): one fail then 5RM 110 gives 5×3+ @ 92.5', () => {
+  it('a set_reference on fiveRm after the last-stage fail restarts at stage 1: 5RM 110 gives 5×3+ @ 92.5', () => {
     const clock = factClock();
-    const { facts } = followProgram(GZCLP, kg, clock, rounds([miss('squat-t1')]));
+    const { facts } = followProgram(GZCLP, kg, clock, rounds(lastStageFail));
     const state = programStateAt(GZCLP, kg, [...facts, setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110)]);
     expect(state.stages['squat-t1']).toBe(0);
     expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
@@ -104,19 +106,19 @@ describe('the retest restart reads the var the rule names (from)', () => {
       ),
     };
 
-    it('a set_reference on top 110 restarts squat-t1 at stage 1 at 110 × 0.85 = 93.5', () => {
+    it('a set_reference on top 110 after the last-stage fail restarts squat-t1 at stage 1 at 110 × 0.85 = 93.5', () => {
       const clock = factClock();
-      const { facts } = followProgram(fromTop, kg, clock, rounds([miss('squat-t1')]));
+      const { facts } = followProgram(fromTop, kg, clock, rounds(lastStageFail));
       const state = programStateAt(fromTop, kg, [...facts, setReferenceFact(clock.next(), 'squat-t1', 'top', 110)]);
       expect(state.stages['squat-t1']).toBe(0);
       expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
     });
 
-    it('a set_reference on fiveRm no longer restarts it: stage 6×2 at 100 stays', () => {
+    it('a set_reference on fiveRm after the last-stage fail no longer restarts it: stage 10×1 at 100 stays', () => {
       const clock = factClock();
-      const { facts } = followProgram(fromTop, kg, clock, rounds([miss('squat-t1')]));
+      const { facts } = followProgram(fromTop, kg, clock, rounds(lastStageFail));
       const state = programStateAt(fromTop, kg, [...facts, setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110)]);
-      expect(state.stages['squat-t1']).toBe(1);
+      expect(state.stages['squat-t1']).toBe(2);
       expect(refOf(state, 'squat-t1', 'workingWeight')).toBe(100);
     });
   });
