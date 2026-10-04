@@ -2,7 +2,13 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
 import { dayPicker, followProgram, prescribedRows, programToday, repeated } from './support/program-enrollment.ts';
-import { type SeededDay, type SeededSet, seedProgramDays, sessionClock } from './support/program-seed.ts';
+import {
+  nearestPlateKg,
+  type SeededDay,
+  type SeededSet,
+  seedProgramDays,
+  sessionClock,
+} from './support/program-seed.ts';
 
 const JUGGERNAUT = 'Juggernaut Method 2.0 (structure)';
 type JuggernautLift = 'squat' | 'bench' | 'deadlift' | 'press';
@@ -10,9 +16,6 @@ type AmrapReps = Readonly<Record<JuggernautLift, number>>;
 
 const DAY_ORDER: readonly JuggernautLift[] = ['squat', 'bench', 'deadlift', 'press'];
 const TMS_KG: Readonly<Record<JuggernautLift, number>> = { squat: 100, bench: 80, deadlift: 140, press: 50 };
-const PLATE_INCREMENT_KG = 2.5;
-const BAR_KG = 20;
-const TIE_TOLERANCE = 1e-9;
 
 interface WaveSet {
   pct: number;
@@ -39,10 +42,6 @@ const TEN_REP_WAVE: readonly (readonly WaveSet[])[] = [
   ],
 ];
 const REALISATION_WEEK = 3;
-
-function nearestPlateKg(rawKg: number): number {
-  return Math.max(BAR_KG, Math.round(rawKg / PLATE_INCREMENT_KG + TIE_TOLERANCE) * PLATE_INCREMENT_KG);
-}
 
 function weekSets(lift: JuggernautLift, week: number, realisationReps: number): SeededSet[] {
   return TEN_REP_WAVE[week - 1].map(({ pct, reps, amrap }, index) => {

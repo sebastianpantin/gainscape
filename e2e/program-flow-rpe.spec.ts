@@ -4,15 +4,12 @@ import { postCompleteSession } from '../tests/integration/local-stack.ts';
 import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
 import { dayPicker, followProgram, prescribedRows, programToday, repeated } from './support/program-enrollment.ts';
-import { type LiftBindings, sessionClock } from './support/program-seed.ts';
+import { type LiftBindings, nearestPlateKg, sessionClock } from './support/program-seed.ts';
 
 const RPE = 'RPE top set with back-offs';
 const SESSION_MS = 30 * 60 * 1000;
 const BACK_OFF_SETS = 5;
 const BACK_OFF_PCT = 0.95;
-const PLATE_INCREMENT_KG = 2.5;
-const BAR_KG = 20;
-const TIE_TOLERANCE = 1e-9;
 
 type RpeLift = 'squat' | 'bench' | 'deadlift';
 type LoggedEffort = { type: 'rpe'; value: number } | { type: 'rir'; value: number } | { type: 'level'; level: 'hard' };
@@ -30,10 +27,6 @@ interface WeekTwoDay {
   exercise: string;
   topRow: string;
   backOffRow: string;
-}
-
-function nearestPlateKg(rawKg: number): number {
-  return Math.max(BAR_KG, Math.round(rawKg / PLATE_INCREMENT_KG + TIE_TOLERANCE) * PLATE_INCREMENT_KG);
 }
 
 function loggedSet(bindings: LiftBindings, lift: RpeLift, position: number, effort: LoggedEffort) {

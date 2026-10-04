@@ -44,7 +44,7 @@ export function sessionClock(hoursBack: number): SessionClock {
   };
 }
 
-function nearestPlateKg(rawKg: number): number {
+export function nearestPlateKg(rawKg: number): number {
   return Math.max(BAR_KG, Math.round(rawKg / PLATE_INCREMENT_KG + TIE_TOLERANCE) * PLATE_INCREMENT_KG);
 }
 
