@@ -57,7 +57,8 @@ describe('history reasons of the 1b adjustments', () => {
   it("a retest restart is a set_reference on fiveRm followed by an 'adjustment' of the working weight to 93.5", () => {
     const clock = factClock();
     const enrollment = gzclpEnrollment();
-    const { facts } = followProgram(GZCLP, enrollment, clock, rounds([miss('squat-t1')]));
+    const lastStageFail = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
+    const { facts } = followProgram(GZCLP, enrollment, clock, lastStageFail);
     const state = programStateAt(GZCLP, enrollment, [
       ...facts,
       setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110),
