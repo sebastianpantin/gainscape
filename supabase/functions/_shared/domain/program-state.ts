@@ -82,6 +82,7 @@ export interface ProgramState extends ScheduleCursor {
   successes: Readonly<Partial<Record<RuleKey, number>>>;
   stages: StageIndices;
   stageResetBases: Readonly<Record<string, number>>;
+  pendingRetests: Readonly<Record<string, ReferenceVar>>;
   days: readonly DayRecord[];
   dayIndex: Readonly<Record<string, number>>;
   history: readonly ReferenceChange[];
@@ -116,6 +117,7 @@ export function initialProgramState(definition: ProgramDefinition, enrollment: P
     successes: {},
     stages: {},
     stageResetBases: {},
+    pendingRetests: {},
     days: [],
     dayIndex: {},
     history: [],
