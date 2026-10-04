@@ -50,6 +50,14 @@ function retestOf(rule: ProgressionRule): { pct: number; from: ReferenceVar } | 
   return null;
 }
 
+export function retestVarOf(definition: ProgramDefinition, lift: string): ReferenceVar | null {
+  for (const rule of definition.progression) {
+    const retest = rule.lift === lift ? retestOf(rule) : null;
+    if (retest) return retest.from;
+  }
+  return null;
+}
+
 export function isRetestPending(
   state: Pick<ProgramState, 'pendingRetests'>,
   lift: string,
