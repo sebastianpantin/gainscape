@@ -121,8 +121,16 @@ function nsunsWeek(tms: Readonly<Record<NsunsLift, number>>, week: number, amrap
   ];
 }
 
-function boundSetsOnly(bindings: LiftBindings, days: readonly SeededDay[]): SeededDay[] {
-  return days.map((day) => ({ ...day, sets: day.sets.filter((set) => bindings[set.lift]) }));
+const SUPPLEMENTAL_LIFTS_WITHOUT_DEFAULT_BINDING: readonly string[] = [
+  'sumo-deadlift',
+  'incline-bench',
+  'front-squat',
+  'close-grip-bench',
+];
+
+function withoutUnboundSupplementals(bindings: LiftBindings, days: readonly SeededDay[]): SeededDay[] {
+  const isSkipped = (lift: string) => SUPPLEMENTAL_LIFTS_WITHOUT_DEFAULT_BINDING.includes(lift) && !bindings[lift];
+  return days.map((day) => ({ ...day, sets: day.sets.filter((set) => !isSkipped(set.lift)) }));
 }
 
 async function seedWeekOne(page: Page, prefix: string, amrapReps: AmrapReps): Promise<void> {
@@ -137,7 +145,7 @@ async function seedWeekOne(page: Page, prefix: string, amrapReps: AmrapReps): Pr
   const { access_token: accessToken } = await readSession(page);
   const enrollmentId = await activeEnrollmentIdOf(username);
   const { lift_bindings: bindings } = await activeEnrollmentOf(username);
-  const days = boundSetsOnly(bindings, nsunsWeek(WEEK_ONE_TMS_KG, 1, amrapReps));
+  const days = withoutUnboundSupplementals(bindings, nsunsWeek(WEEK_ONE_TMS_KG, 1, amrapReps));
   await seedProgramDays(accessToken, enrollmentId, bindings, sessionClock(DAYS_PER_WEEK + 1), days);
 }
 
