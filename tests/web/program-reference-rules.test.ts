@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { programStateAt, type SetReferenceFact } from '@domain/index.ts';
+import { type ProgramFact, programStateAt, type SetReferenceFact } from '@domain/index.ts';
 import { referenceEvents, referenceFieldKey, referenceFields } from '../../web/src/lib/program-reference-rules.ts';
-import { factClock, setReferenceFact } from '../domain/program-fixtures/facts.ts';
+import { type FactClock, factClock, setReferenceFact } from '../domain/program-fixtures/facts.ts';
+import { followProgram } from '../domain/program-fixtures/follow.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from '../domain/program-fixtures/five_three_one.ts';
 import { GZCLP, gzclpEnrollment } from '../domain/program-fixtures/gzclp.ts';
 import { MADCOW_5X5, madcowEnrollment } from '../domain/program-fixtures/madcow_5x5.ts';
@@ -14,8 +15,18 @@ function fiveThreeOneFields(facts: SetReferenceFact[] = []) {
 
 const gzclp = gzclpEnrollment();
 
-function gzclpFields(facts: SetReferenceFact[] = []) {
+function gzclpFields(facts: readonly ProgramFact[] = []) {
   return referenceFields(GZCLP, gzclp, programStateAt(GZCLP, gzclp, facts));
+}
+
+function squatT1FailsEveryStage(clock: FactClock, earlierFacts: readonly ProgramFact[] = []): ProgramFact[] {
+  const failedRotation = [{ missedLifts: ['squat-t1'] }, {}, {}, {}];
+  const days = [...failedRotation, ...failedRotation, ...failedRotation];
+  return followProgram(GZCLP, gzclp, clock, days, earlierFacts).facts;
+}
+
+function pendingSquatT1Fields() {
+  return gzclpFields(squatT1FailsEveryStage(factClock()));
 }
 
 function fiveRmFieldsOf(fields: ReturnType<typeof gzclpFields>) {
@@ -55,26 +66,31 @@ describe('reference fields', () => {
     expect(fields[0]).toMatchObject({ label: 'Squat training max (lb)', value: 283.5 });
   });
 
-  it('lists an empty 5RM field for each GZCLP T1 lift, whose retest after 10×1 restarts from it', () => {
-    expect(fiveRmFieldsOf(gzclpFields())).toEqual([
-      ['Squat T1 5RM (kg)', null],
-      ['Bench press T1 5RM (kg)', null],
-      ['Overhead press T1 5RM (kg)', null],
-      ['Deadlift T1 5RM (kg)', null],
-    ]);
+  it('lists no GZCLP 5RM field before a T1 fails its last stage', () => {
+    expect(fiveRmFieldsOf(gzclpFields())).toEqual([]);
   });
 
-  it('puts the Squat T1 5RM field right after the Squat T1 working weight', () => {
+  it('lists no 5RM field for a 5RM of 110 set before any last-stage fail', () => {
+    const facts = [setReferenceFact(factClock().next(), 'squat-t1', 'fiveRm', 110)];
+    expect(fiveRmFieldsOf(gzclpFields(facts))).toEqual([]);
+  });
+
+  it('lists an empty Squat T1 5RM field only, after the squat T1 fails 10×1', () => {
+    expect(fiveRmFieldsOf(pendingSquatT1Fields())).toEqual([['Squat T1 5RM (kg)', null]]);
+  });
+
+  it('puts the pending Squat T1 5RM field right after the Squat T1 working weight', () => {
     expect(
-      gzclpFields()
+      pendingSquatT1Fields()
         .slice(0, 2)
         .map((field) => field.label),
     ).toEqual(['Squat T1 working weight (kg)', 'Squat T1 5RM (kg)']);
   });
 
-  it('shows a set 5RM of 110 after its set_reference fact', () => {
-    const facts = [setReferenceFact(factClock().next(), 'squat-t1', 'fiveRm', 110)];
-    expect(fiveRmFieldsOf(gzclpFields(facts))[0]).toEqual(['Squat T1 5RM (kg)', 110]);
+  it('lists the pending 5RM field empty even after an earlier 5RM of 110', () => {
+    const clock = factClock();
+    const facts = squatT1FailsEveryStage(clock, [setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110)]);
+    expect(fiveRmFieldsOf(gzclpFields(facts))).toEqual([['Squat T1 5RM (kg)', null]]);
   });
 
   it('keys a field by lift and reference var', () => {
@@ -91,17 +107,31 @@ describe('reference events', () => {
     });
   });
 
-  it('sends a set_reference for a 5RM entered into its empty field', () => {
-    expect(referenceEvents(gzclpFields(), { 'squat-t1.fiveRm': '110' })).toEqual({
+  it('sends a set_reference for a 5RM entered into the pending empty field', () => {
+    expect(referenceEvents(pendingSquatT1Fields(), { 'squat-t1.fiveRm': '110' })).toEqual({
       kind: 'ok',
       events: [{ kind: 'set_reference', lift: 'squat-t1', var: 'fiveRm', value: 110 }],
     });
   });
 
-  it('sends nothing and finds no problem for a 5RM field left or cleared empty', () => {
-    expect(referenceEvents(gzclpFields(), { 'squat-t1.fiveRm': '', 'bench-t1.fiveRm': '  ' })).toEqual({
+  it('sends the same 5RM of 110 again when an earlier cycle already set 110', () => {
+    const clock = factClock();
+    const facts = squatT1FailsEveryStage(clock, [setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110)]);
+    expect(referenceEvents(gzclpFields(facts), { 'squat-t1.fiveRm': '110' })).toEqual({
       kind: 'ok',
-      events: [],
+      events: [{ kind: 'set_reference', lift: 'squat-t1', var: 'fiveRm', value: 110 }],
+    });
+  });
+
+  it('sends nothing and finds no problem for a pending 5RM field left or cleared empty', () => {
+    expect(referenceEvents(pendingSquatT1Fields(), { 'squat-t1.fiveRm': '  ' })).toEqual({ kind: 'ok', events: [] });
+    expect(referenceEvents(pendingSquatT1Fields(), { 'squat-t1.fiveRm': '' })).toEqual({ kind: 'ok', events: [] });
+  });
+
+  it.each(['0', '-5', 'abc'])('refuses %j typed into the pending empty 5RM field', (raw) => {
+    expect(referenceEvents(pendingSquatT1Fields(), { 'squat-t1.fiveRm': raw })).toEqual({
+      kind: 'invalid',
+      problems: ['Squat T1 5RM (kg) must be above 0 and at most 1000'],
     });
   });
 
