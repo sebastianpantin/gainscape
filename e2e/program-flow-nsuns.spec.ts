@@ -4,6 +4,7 @@ import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
 import { dayPicker, followProgram, prescribedRows, programToday } from './support/program-enrollment.ts';
 import {
   type LiftBindings,
+  nearestPlateKg,
   type SeededDay,
   type SeededSet,
   seedProgramDays,
@@ -11,9 +12,6 @@ import {
 } from './support/program-seed.ts';
 
 const NSUNS = 'nSuns LP 5-day';
-const PLATE_INCREMENT_KG = 2.5;
-const BAR_KG = 20;
-const TIE_TOLERANCE = 1e-9;
 const DAYS_PER_WEEK = 5;
 
 type NsunsLift = 'bench' | 'squat' | 'press' | 'deadlift';
@@ -65,10 +63,6 @@ const PRESS_SUPPLEMENTAL = supplemental([6, 5, 3, 5, 7, 4, 6, 8], [0.5, 0.6, 0.7
 const SUMO_SUPPLEMENTAL = supplemental([5, 5, 3, 5, 7, 4, 6, 8], [0.5, 0.6, 0.7]);
 const BENCH_SUPPLEMENTAL = supplemental([6, 5, 3, 5, 7, 4, 6, 8], [0.4, 0.5, 0.6]);
 const FRONT_SQUAT_SUPPLEMENTAL = supplemental([5, 5, 3, 5, 7, 4, 6, 8], [0.35, 0.45, 0.55]);
-
-function nearestPlateKg(rawKg: number): number {
-  return Math.max(BAR_KG, Math.round(rawKg / PLATE_INCREMENT_KG + TIE_TOLERANCE) * PLATE_INCREMENT_KG);
-}
 
 function slotSets(
   slot: string,
