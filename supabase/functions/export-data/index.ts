@@ -37,6 +37,8 @@ async function exportFor(userId: string) {
     const cardioRecords = await tx`
       select * from public.cardio_records where user_id = ${userId} order by exercise_id, kind`;
     const pinnedExercises = await tx`select * from public.pinned_exercises where user_id = ${userId} order by position`;
+    const exerciseNotes = await tx`
+      select exercise_id, body, updated_at from public.exercise_notes where user_id = ${userId} order by exercise_id`;
     const customExercises = await tx`
       select e.*, coalesce(
         (select json_agg(json_build_object('skill', k.key, 'share_bp', es.share_bp) order by k.sort_order)
@@ -104,6 +106,7 @@ async function exportFor(userId: string) {
       bodyweightRepRecords,
       cardioRecords,
       pinnedExercises,
+      exerciseNotes,
       customExercises,
       programs,
       programEnrollments,
