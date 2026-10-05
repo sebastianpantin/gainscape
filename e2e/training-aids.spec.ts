@@ -30,3 +30,29 @@ test('an exercise shows last session and starts from its first set', async ({ pa
   await expect(squat.locator('li.set-row').first().getByLabel('kg', { exact: true })).toHaveValue('20');
   await expect(squat.getByText(/^Last:/)).toHaveCount(0);
 });
+
+test('steppers change weight by a plate step and reps by one', async ({ page }) => {
+  await register(page, uniqueUsername('st'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await page.getByLabel('Search exercises').fill('bench');
+  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
+  const firstSet = exerciseCard(page, 'Barbell Bench Press').locator('li.set-row').first();
+  const weight = firstSet.getByLabel('kg', { exact: true });
+  const reps = firstSet.getByLabel('reps', { exact: true });
+
+  await firstSet.getByRole('button', { name: 'Heavier' }).click();
+  await firstSet.getByRole('button', { name: 'Heavier' }).click();
+  await expect(weight).toHaveValue('25');
+  await weight.fill('61');
+  await firstSet.getByRole('button', { name: 'Lighter' }).click();
+  await expect(weight).toHaveValue('60');
+  await firstSet.getByRole('button', { name: 'One more rep' }).click();
+  await expect(reps).toHaveValue('9');
+  await firstSet.getByRole('button', { name: 'One rep fewer' }).click();
+  await firstSet.getByRole('button', { name: 'One rep fewer' }).click();
+  await expect(reps).toHaveValue('7');
+
+  await page.reload();
+  await expect(weight).toHaveValue('60');
+  await expect(reps).toHaveValue('7');
+});
