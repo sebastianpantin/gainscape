@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { unitToKg } from '@domain/index.ts';
+import { type PlateSettings } from '../../web/src/lib/plate-rules.ts';
 import {
+  barbellSetupFor,
   type BarSetting,
   type MarkedSet,
   programSetMarkers,
@@ -21,92 +23,87 @@ function prescribed(weightKg: number, pct: number | null, extra: Partial<MarkedS
 }
 
 describe('program set markers', () => {
-  it('shows the Madcow 92.5 kg top set at 100% with 25 + 10 + 1.25 per side on a 20 kg bar', () => {
-    expect(programSetMarkers(prescribed(92.5, 1), 'kg', KG_BAR)).toEqual({
-      pct: '100%',
-      optional: false,
-      adjusted: false,
-      plates: '25 + 10 + 1.25 per side',
-    });
+  it('shows the Madcow 92.5 kg top set at 100%', () => {
+    expect(programSetMarkers(prescribed(92.5, 1), 'kg')).toEqual({ pct: '100%', optional: false, adjusted: false });
   });
 
   it('shows a 62.5% ramp set as "62.5%"', () => {
-    expect(programSetMarkers(prescribed(57.5, 0.625), 'kg', KG_BAR).pct).toBe('62.5%');
+    expect(programSetMarkers(prescribed(57.5, 0.625), 'kg').pct).toBe('62.5%');
   });
 
   it('marks an optional set as optional', () => {
     const backOff = prescribed(165, 0.95, { prescriptionDetail: { pct: 0.95, optional: true } });
-    expect(programSetMarkers(backOff, 'kg', KG_BAR)).toMatchObject({ pct: '95%', optional: true });
+    expect(programSetMarkers(backOff, 'kg')).toMatchObject({ pct: '95%', optional: true });
   });
 
-  it('marks a set whose weight the user changed from the snapshot as adjusted, with plates for the new weight', () => {
+  it('marks a set whose weight the user changed from the snapshot as adjusted', () => {
     const changed = { ...prescribed(92.5, 1), weightKg: 100 };
-    expect(programSetMarkers(changed, 'kg', KG_BAR)).toMatchObject({ adjusted: true, plates: '25 + 15 per side' });
+    expect(programSetMarkers(changed, 'kg')).toMatchObject({ adjusted: true });
   });
 
   it('does not mark a pound user adjusted for retyping the shown 203.9 lb of a 92.5 kg snapshot', () => {
     const retyped = { ...prescribed(92.5, 1), weightKg: unitToKg(203.9, 'lb') };
-    expect(programSetMarkers(retyped, 'lb', LB_BAR).adjusted).toBe(false);
+    expect(programSetMarkers(retyped, 'lb').adjusted).toBe(false);
   });
 
   it('marks a pound user adjusted for a different shown weight: 205 lb against 203.9 lb', () => {
     const changed = { ...prescribed(92.5, 1), weightKg: unitToKg(205, 'lb') };
-    expect(programSetMarkers(changed, 'lb', LB_BAR).adjusted).toBe(true);
-  });
-
-  it('shows 225 lb on a 45 lb bar as 45 + 45 per side', () => {
-    const weightKg = unitToKg(225, 'lb');
-    expect(programSetMarkers(prescribed(weightKg, 0.85), 'lb', LB_BAR).plates).toBe('45 + 45 per side');
-  });
-
-  it('shows no plates when the bar is in another unit than the shown weight', () => {
-    expect(programSetMarkers(prescribed(100, 1), 'lb', KG_BAR).plates).toBeNull();
-  });
-
-  it('shows no plates when the program has no bar weight', () => {
-    expect(programSetMarkers(prescribed(100, 1), 'kg', null).plates).toBeNull();
-  });
-
-  it('shows no plates for a weight the standard plates cannot load: 101 kg', () => {
-    expect(programSetMarkers(prescribed(101, 1), 'kg', KG_BAR).plates).toBeNull();
-  });
-
-  it('shows "Empty bar" for a set at the bar weight', () => {
-    expect(programSetMarkers(prescribed(20, 0.4), 'kg', KG_BAR).plates).toBe('Empty bar');
+    expect(programSetMarkers(changed, 'lb').adjusted).toBe(true);
   });
 
   it('shows no percentage or optional tag for a set from a draft written before prescription details', () => {
     const older: MarkedSet = { weightKg: 92.5, prescription: snapshot('mon-squat:4', { weightKg: 92.5, reps: 5 }) };
-    expect(programSetMarkers(older, 'kg', KG_BAR)).toEqual({
-      pct: null,
-      optional: false,
-      adjusted: false,
-      plates: '25 + 10 + 1.25 per side',
-    });
+    expect(programSetMarkers(older, 'kg')).toEqual({ pct: null, optional: false, adjusted: false });
   });
 
   it('shows no markers at all on a set the user added, which has no prescription', () => {
-    expect(programSetMarkers({ weightKg: 100, prescription: null }, 'kg', KG_BAR)).toEqual({
+    expect(programSetMarkers({ weightKg: 100, prescription: null }, 'kg')).toEqual({
       pct: null,
       optional: false,
       adjusted: false,
-      plates: null,
     });
   });
 });
 
 describe('program set marker texts', () => {
-  it('reads the markers in order: percentage, optional, adjusted, plates', () => {
-    expect(
-      programSetMarkerTexts({ pct: '95%', optional: true, adjusted: true, plates: '25 + 25 + 20 + 2.5 per side' }),
-    ).toEqual(['95%', 'optional', 'adjusted', '25 + 25 + 20 + 2.5 per side']);
+  it('reads the markers in order: percentage, optional, adjusted', () => {
+    expect(programSetMarkerTexts({ pct: '95%', optional: true, adjusted: true })).toEqual([
+      '95%',
+      'optional',
+      'adjusted',
+    ]);
   });
 
   it('leaves out the markers a set does not have', () => {
-    expect(programSetMarkerTexts({ pct: '75%', optional: false, adjusted: false, plates: null })).toEqual(['75%']);
+    expect(programSetMarkerTexts({ pct: '75%', optional: false, adjusted: false })).toEqual(['75%']);
   });
 
   it('has no texts for a set without markers', () => {
-    expect(programSetMarkerTexts({ pct: null, optional: false, adjusted: false, plates: null })).toEqual([]);
+    expect(programSetMarkerTexts({ pct: null, optional: false, adjusted: false })).toEqual([]);
+  });
+});
+
+describe('barbell setup of a draft', () => {
+  const settings: PlateSettings = {
+    kg: { barWeight: 15, plates: [20, 10, 5] },
+    lb: { barWeight: 35, plates: [45, 10] },
+  };
+
+  it('uses the bar and plates set for the unit in a freestyle draft', () => {
+    expect(barbellSetupFor(settings, 'kg', null)).toEqual({ ...settings.kg, barFromProgram: false });
+    expect(barbellSetupFor(settings, 'lb', null)).toEqual({ ...settings.lb, barFromProgram: false });
+  });
+
+  it('uses the bar of the followed program with the plates set for the unit', () => {
+    expect(barbellSetupFor(settings, 'kg', KG_BAR)).toEqual({
+      barWeight: 20,
+      plates: [20, 10, 5],
+      barFromProgram: true,
+    });
+  });
+
+  it('keeps the bar set for the unit when the program bar is in the other unit', () => {
+    expect(barbellSetupFor(settings, 'lb', KG_BAR)).toEqual({ ...settings.lb, barFromProgram: false });
+    expect(barbellSetupFor(settings, 'kg', LB_BAR)).toEqual({ ...settings.kg, barFromProgram: false });
   });
 });

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
@@ -14,8 +14,10 @@ import {
   WEIGHT_INPUT_STEP,
 } from '../../lib/units.ts';
 import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
+import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
+import { PlateCalculator } from './PlateCalculator.tsx';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface SetRowProps {
@@ -26,6 +28,7 @@ interface SetRowProps {
   unit: UnitPref;
   effortMode: EffortInputMode;
   markers: readonly string[];
+  barbell: { plates: string; setup: DraftBarbellSetup } | null;
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   onRemove: () => void;
   onToggleDone: () => void;
@@ -142,12 +145,23 @@ export function SetRow({
   unit,
   effortMode,
   markers,
+  barbell,
   onChange,
   onRemove,
   onToggleDone,
 }: SetRowProps) {
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const calculatorId = useId();
   const amrapBadge = amrapBadgeOf(set.prescription);
-  const rowClass = ['set-row', 'stepped', set.done ? null : 'planned', markers.length > 0 ? 'marked' : null]
+  const marked = markers.length > 0 || barbell !== null;
+  const rowClass = [
+    'set-row',
+    'stepped',
+    set.done ? null : 'planned',
+    set.isWarmup ? 'warmup' : null,
+    marked ? 'marked' : null,
+    barbell !== null && calculatorOpen ? 'calculating' : null,
+  ]
     .filter((name) => name !== null)
     .join(' ');
   return (
@@ -177,12 +191,44 @@ export function SetRow({
       >
         <Icon name="check" size={20} strokeWidth={3} />
       </button>
-      {markers.length > 0 && (
+      <button
+        type="button"
+        className={`button done-toggle warmup-toggle ${set.isWarmup ? 'selected' : ''}`}
+        aria-pressed={set.isWarmup}
+        aria-label={`Warm-up set ${setNumber}`}
+        onClick={() => onChange({ isWarmup: !set.isWarmup })}
+      >
+        W
+      </button>
+      {marked && (
         <span className="set-markers">
           {markers.map((text) => (
             <span key={text}>{text}</span>
           ))}
+          {barbell !== null && (
+            <button
+              type="button"
+              className="plate-marker"
+              aria-expanded={calculatorOpen}
+              aria-controls={calculatorId}
+              aria-label={`${barbell.plates}, plate calculator, set ${setNumber}`}
+              onClick={() => setCalculatorOpen((open) => !open)}
+            >
+              {barbell.plates}
+            </button>
+          )}
         </span>
+      )}
+      {barbell !== null && calculatorOpen && (
+        <PlateCalculator
+          id={calculatorId}
+          setNumber={setNumber}
+          setup={barbell.setup}
+          highestLoadKg={HIGHEST_LOAD_KG}
+          unit={unit}
+          weightKg={set.weightKg}
+          onUse={(weightKg) => onChange({ weightKg })}
+        />
       )}
       <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
         ✕

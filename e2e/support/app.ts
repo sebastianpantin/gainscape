@@ -89,7 +89,7 @@ export async function logExercise(
   const rows = card.locator('li.set-row');
   for (const [index, set] of sets.entries()) {
     const row = rows.nth(index);
-    if (set.weightKg !== undefined) await row.getByLabel(/kg/).fill(String(set.weightKg));
+    if (set.weightKg !== undefined) await row.getByRole('spinbutton', { name: /kg/ }).fill(String(set.weightKg));
     await row.getByLabel('reps').fill(String(set.reps));
     await row.getByRole('radio', { name: 'Hard' }).click();
   }

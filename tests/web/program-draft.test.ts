@@ -100,9 +100,25 @@ function programDraft(): WorkoutDraft {
         loadType: 'external',
         target: null,
         sets: [
-          { id: 'squat-0', weightKg: 70, reps: 5, effort: null, done: false, prescription: SQUAT_RAMP },
-          { id: 'squat-4', weightKg: 100, reps: 5, effort: null, done: false, prescription: SQUAT_TOP },
-          { id: 'squat-extra', weightKg: 60, reps: 10, effort: null, done: false, prescription: null },
+          {
+            id: 'squat-0',
+            weightKg: 70,
+            reps: 5,
+            effort: null,
+            done: false,
+            isWarmup: false,
+            prescription: SQUAT_RAMP,
+          },
+          {
+            id: 'squat-4',
+            weightKg: 100,
+            reps: 5,
+            effort: null,
+            done: false,
+            isWarmup: false,
+            prescription: SQUAT_TOP,
+          },
+          { id: 'squat-extra', weightKg: 60, reps: 10, effort: null, done: false, isWarmup: false, prescription: null },
         ],
       },
       {
@@ -118,6 +134,7 @@ function programDraft(): WorkoutDraft {
             reps: 5,
             effort: null,
             done: false,
+            isWarmup: false,
             prescription: snapshot('mon-bench:0', { weightKg: 60, reps: 5 }),
           },
         ],
@@ -199,7 +216,7 @@ describe('parseStoredDraft with program fields', () => {
   });
 
   it('keeps the program and the prescriptions of a program draft', () => {
-    const raw = { v: 4, kind: 'draft', userId, updatedAt: 5, draft: programDraft() };
+    const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft: programDraft() };
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
   });
 
