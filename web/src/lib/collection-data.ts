@@ -10,6 +10,7 @@ import {
   strengthByExerciseFrom,
 } from './collection-rules.ts';
 import { withFriendlyRateLimit } from './rate-limit.ts';
+import { RECORD_BASELINE_COLUMNS, type RecordBaseline, recordBaselineFrom } from './session-baseline-rules.ts';
 import { nullableNumber } from './rows.ts';
 import { supabase } from './supabase.ts';
 
@@ -60,6 +61,16 @@ export async function fetchExerciseStrength(userId: string): Promise<Map<string,
     .eq('user_id', userId);
   if (error) throw error;
   return strengthByExerciseFrom(data);
+}
+
+export async function fetchRecordBaseline(userId: string): Promise<RecordBaseline> {
+  const [repMaxes, bodyweightRecords] = await Promise.all([
+    supabase.from('rep_maxes').select(RECORD_BASELINE_COLUMNS.repMaxes).eq('user_id', userId),
+    supabase.from('bodyweight_rep_records').select(RECORD_BASELINE_COLUMNS.bodyweightRecords).eq('user_id', userId),
+  ]);
+  if (repMaxes.error) throw repMaxes.error;
+  if (bodyweightRecords.error) throw bodyweightRecords.error;
+  return recordBaselineFrom({ repMaxes: repMaxes.data, bodyweightRecords: bodyweightRecords.data });
 }
 
 interface StrengthStateRow {

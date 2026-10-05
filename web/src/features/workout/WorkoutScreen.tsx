@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_BALANCE, type Position, type StrengthState } from '@domain/index.ts';
+import { DEFAULT_BALANCE, type Position } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { canAddBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
-import { type ExerciseStrengthView, fetchExerciseStrength, fetchStrengthState } from '../../lib/collection-data.ts';
+import {
+  type ExerciseStrengthView,
+  fetchExerciseStrength,
+  fetchRecordBaseline,
+  fetchStrengthState,
+} from '../../lib/collection-data.ts';
 import { strengthText } from '../../lib/collection-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
 import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
@@ -15,6 +20,8 @@ import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
 import { startsRest, stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
+import type { SessionBaseline } from '../../lib/session-baseline-rules.ts';
+import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-baseline-store.ts';
 import { barbellPlatesText } from '../../lib/plate-rules.ts';
 import { readPlateSettings } from '../../lib/plate-settings-store.ts';
 import { warmupSets } from '../../lib/warmup-rules.ts';
@@ -67,6 +74,8 @@ import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
 import { useWakeLock } from './use-wake-lock.ts';
 import { rejectionText, syncProblemText } from './workout-rules.ts';
+import { becomesRecord, previewRecords } from './record-preview.ts';
+import { vibrateNewRecord } from './record-haptic.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
 
 interface WorkoutScreenProps {
@@ -111,7 +120,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
   const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);
-  const [loadedStrength, setLoadedStrength] = useState<{ asOf: string; state: StrengthState } | null>(null);
+  const [loadedBaseline, setLoadedBaseline] = useState<SessionBaseline | null>(null);
+  const [cachedBaseline] = useState(() => readSessionBaseline(deviceStorage(), userId));
   const [bodyweightKg, setBodyweightKg] = useState<number | null>(null);
   const [onlineSignal, setOnlineSignal] = useState(0);
   const standing = useStanding(userId);
@@ -171,16 +181,24 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   useEffect(() => {
     if (draftStartedAt === null) return;
     let active = true;
+    const records = fetchRecordBaseline(userId).catch(() => null);
     fetchStrengthState(draftStartedAt, DEFAULT_BALANCE.e1rmWindowDays).then(
-      (state) => active && setLoadedStrength({ asOf: draftStartedAt, state }),
+      async (strength) => {
+        const baseline = { asOf: draftStartedAt, strength, records: await records };
+        if (!active) return;
+        saveSessionBaseline(deviceStorage(), userId, baseline);
+        setLoadedBaseline(baseline);
+      },
       () => undefined,
     );
     return () => {
       active = false;
     };
   }, [userId, draftStartedAt, onlineSignal]);
-  const previewStrength =
-    loadedStrength !== null && loadedStrength.asOf === draftStartedAt ? loadedStrength.state : null;
+  const sessionBaseline =
+    [loadedBaseline, cachedBaseline].find((baseline) => baseline !== null && baseline.asOf === draftStartedAt) ?? null;
+  const previewStrength = sessionBaseline?.strength ?? null;
+  const recordBaseline = sessionBaseline?.records ?? null;
 
   useEffect(() => {
     let active = true;
@@ -199,6 +217,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     const customIds = new Set(exercises.filter((exercise) => exercise.custom).map((exercise) => exercise.id));
     return previewSession(draftExercises, (exerciseId) => !customIds.has(exerciseId), previewStrength, bodyweightKg);
   }, [draftExercises, exercises, previewStrength, bodyweightKg]);
+  const records = useMemo(
+    () => (draftExercises === null ? [] : previewRecords(draftExercises, previewStrength, recordBaseline)),
+    [draftExercises, previewStrength, recordBaseline],
+  );
 
   const { status: finishStatus, retryNow } = useFinishSync({
     userId,
@@ -433,6 +455,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     if (seed) updateDraft((latest) => seedUntouchedSet(latest, exerciseIndex, original, seed));
   };
   const previewTotal = donePreviewTotal(previews, draft.exercises);
+  const changeSet = (next: WorkoutDraft, setId: string) => {
+    const celebrate = becomesRecord(records, draft.exercises, next.exercises, setId, previewStrength, recordBaseline);
+    if (celebrate && readTrainingDeviceSettings(deviceStorage(), userId).vibrate) vibrateNewRecord();
+    changeDraft(next);
+  };
 
   return (
     <main className="screen stack">
@@ -575,6 +602,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   loadType={exercise.loadType}
                   set={set}
                   preview={previews[exerciseIndex][setIndex]}
+                  record={records[exerciseIndex][setIndex]}
                   unit={unitPref}
                   effortMode={effortInputMode}
                   markers={programSetMarkerTexts(programSetMarkers(set, unitPref))}
@@ -589,12 +617,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   onChange={(changes) => {
                     if (startsRest(set, changes, rest.timer)) rest.start(set.id);
                     if (stopsRestForWarmup(set, changes, rest.timer)) rest.stop();
-                    changeDraft(updateSet(draft, exerciseIndex, set.id, changes));
+                    changeSet(updateSet(draft, exerciseIndex, set.id, changes), set.id);
                   }}
                   onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
                   onToggleDone={() => {
                     if (startsRest(set, { done: !set.done }, rest.timer)) rest.start(set.id);
-                    changeDraft(toggleSetDone(draft, exerciseIndex, set.id));
+                    changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id);
                   }}
                 />
               ))}
@@ -619,7 +647,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <button ref={finishButton} className="button primary big" type="button" disabled={!canFinish} onClick={finish}>
           Finish workout
         </button>
-        <span className="muted tiny">~ is a preview. XP is confirmed when the workout syncs.</span>
+        <span className="muted tiny">~ and new records are previews, confirmed when the workout syncs.</span>
       </div>
     </main>
   );

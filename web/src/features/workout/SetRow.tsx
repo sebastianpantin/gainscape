@@ -1,4 +1,5 @@
 import { type ReactNode, useId, useState } from 'react';
+import type { SetPersonalRecord } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
@@ -18,6 +19,7 @@ import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { PlateCalculator } from './PlateCalculator.tsx';
+import { recordChipLabel, recordChipText } from './record-preview.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface SetRowProps {
@@ -25,6 +27,7 @@ interface SetRowProps {
   loadType: LoadType;
   set: DraftSet;
   preview: SetPreview;
+  record: SetPersonalRecord | null;
   unit: UnitPref;
   effortMode: EffortInputMode;
   markers: readonly string[];
@@ -142,6 +145,7 @@ export function SetRow({
   loadType,
   set,
   preview,
+  record,
   unit,
   effortMode,
   markers,
@@ -181,6 +185,11 @@ export function SetRow({
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
         {previewXpLabel(preview)}
         <span className="tiny">{previewNote(preview)}</span>
+        {record && (
+          <span className="record-chip" role="img" aria-label={recordChipLabel(record)}>
+            {recordChipText(record)}
+          </span>
+        )}
       </span>
       <button
         type="button"
