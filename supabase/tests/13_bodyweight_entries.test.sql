@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(24);
 
 select tests.create_user('bw_owner') as owner \gset
 select tests.create_user('bw_friend') as friend \gset
@@ -78,8 +78,63 @@ select throws_ok(
   'a bodyweight above 400 kg is rejected'
 );
 
+delete from public.bodyweight_entries where user_id = :'owner' and logged_on <> '2026-09-01';
 select tests.authenticate_as(:'owner');
+update public.profile_private set bodyweight_kg = 79 where user_id = :'owner';
+select is((select count(*)::int from public.bodyweight_entries), 2, 'saving an unchanged bodyweight still logs the day');
+reset role;
+
+create function pg_temp.add_bodyweight_set(session uuid, owner uuid, exercise_key text, weight numeric, effective numeric)
+returns void language sql as $$
+  insert into public.sets
+    (id, session_id, user_id, exercise_id, position, weight_kg, effective_load_kg, reps, rir_source, effective_reps, xp_awarded)
+  select gen_random_uuid(), add_bodyweight_set.session, add_bodyweight_set.owner, e.id,
+         (select count(*)::int from public.sets x where x.session_id = add_bodyweight_set.session),
+         add_bodyweight_set.weight, add_bodyweight_set.effective, 5, 'default', 5, 1
+  from public.exercises e where e.key = add_bodyweight_set.exercise_key;
+$$;
+
+select tests.add_session(:'owner', '2026-09-10 07:00+00') as early \gset
+select tests.add_session(:'owner', '2026-09-10 18:00+00') as late \gset
+select tests.add_session(:'owner', '2026-09-12 08:00+00') as weighted \gset
+select tests.add_session(:'owner', '2026-09-14 08:00+00') as external_only \gset
+select tests.add_session(:'owner', '2026-09-15 08:00+00') as imported \gset
+select tests.add_session(:'friend', '2026-09-10 08:00+00') as friend_session \gset
+update public.sessions set history_only = true where id = :'imported';
+select pg_temp.add_bodyweight_set(:'early', :'owner', 'pull_up', 0, 80);
+select pg_temp.add_bodyweight_set(:'late', :'owner', 'pull_up', 0, 81);
+select pg_temp.add_bodyweight_set(:'weighted', :'owner', 'weighted_pull_up', 10, 92.5);
+select pg_temp.add_bodyweight_set(:'external_only', :'owner', 'barbell_bench_press', 60, 60);
+select pg_temp.add_bodyweight_set(:'imported', :'owner', 'pull_up', 0, 90);
+select pg_temp.add_bodyweight_set(:'friend_session', :'friend', 'pull_up', 0, 70);
+
+select has_function('public', 'workout_bodyweights', array[]::text[], 'workout_bodyweights exists');
+select ok(
+  has_function_privilege('authenticated', 'public.workout_bodyweights()', 'execute')
+    and not has_function_privilege('anon', 'public.workout_bodyweights()', 'execute'),
+  'only authenticated may read workout bodyweights'
+);
+select is(
+  (select p.prosecdef from pg_proc p where p.oid = 'public.workout_bodyweights()'::regprocedure),
+  false,
+  'workout_bodyweights runs as the caller'
+);
+
+select tests.authenticate_as(:'owner');
+select results_eq(
+  'select local_date, bodyweight_kg from public.workout_bodyweights()',
+  $$values ('2026-09-10'::date, 81.00::numeric), ('2026-09-12'::date, 82.50::numeric)$$,
+  'one row per day from the newest workout, load minus added weight, no external lifts or history-only workouts'
+);
 select is((select count(*)::int from public.bodyweight_entries), 2, 'the owner reads their own entries');
+reset role;
+
+select tests.authenticate_as(:'friend');
+select results_eq(
+  'select local_date, bodyweight_kg from public.workout_bodyweights()',
+  $$values ('2026-09-10'::date, 70.00::numeric)$$,
+  'a friend reads only their own workout bodyweights'
+);
 reset role;
 
 select tests.authenticate_as(:'friend');
@@ -88,6 +143,7 @@ reset role;
 
 select tests.authenticate_as(:'stranger');
 select is((select count(*)::int from public.bodyweight_entries), 0, 'a stranger reads none of the owner''s entries');
+select is((select count(*)::int from public.workout_bodyweights()), 0, 'a stranger reads no workout bodyweights');
 reset role;
 
 delete from auth.users where id = :'owner';

@@ -7,12 +7,8 @@ import {
   type WorkoutBodyweightRow,
 } from '../../web/src/lib/bodyweight-trend-rules.ts';
 
-function workoutRow(localDate: string, effectiveLoadKg: string, weightKg = '0', hour = '08'): WorkoutBodyweightRow {
-  return {
-    weight_kg: weightKg,
-    effective_load_kg: effectiveLoadKg,
-    sessions: { local_date: localDate, started_at: `${localDate}T${hour}:00:00Z` },
-  };
+function workoutRow(localDate: string, bodyweightKg: string): WorkoutBodyweightRow {
+  return { local_date: localDate, bodyweight_kg: bodyweightKg };
 }
 
 function entryRow(loggedOn: string, bodyweightKg: string): BodyweightEntryRow {
@@ -24,17 +20,11 @@ describe('bodyweight trend', () => {
     expect(bodyweightTrend([], [])).toEqual([]);
   });
 
-  it('reads the bodyweight of a workout from the load minus the added weight, oldest day first', () => {
-    expect(bodyweightTrend([], [workoutRow('2026-10-03', '92.5', '10'), workoutRow('2026-10-01', '80')])).toEqual([
+  it('lists workout days oldest first', () => {
+    expect(bodyweightTrend([], [workoutRow('2026-10-03', '82.5'), workoutRow('2026-10-01', '80')])).toEqual([
       { day: '2026-10-01', bodyweightKg: 80 },
       { day: '2026-10-03', bodyweightKg: 82.5 },
     ]);
-  });
-
-  it('keeps one point per day from the latest workout of that day', () => {
-    expect(
-      bodyweightTrend([], [workoutRow('2026-10-01', '81', '0', '18'), workoutRow('2026-10-01', '80', '0', '07')]),
-    ).toEqual([{ day: '2026-10-01', bodyweightKg: 81 }]);
   });
 
   it('merges logged entries with workouts and lets a logged entry win on the same day', () => {
@@ -48,10 +38,6 @@ describe('bodyweight trend', () => {
       { day: '2026-10-03', bodyweightKg: 79 },
       { day: '2026-10-04', bodyweightKg: 78 },
     ]);
-  });
-
-  it('ignores a workout set that carries no bodyweight', () => {
-    expect(bodyweightTrend([], [workoutRow('2026-10-01', '10', '10')])).toEqual([]);
   });
 });
 
