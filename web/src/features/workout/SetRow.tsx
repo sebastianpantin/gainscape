@@ -1,7 +1,18 @@
+import type { ReactNode } from 'react';
 import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
-import { highestWeightInUnit, shownWeight, unitToKg, WEIGHT_INPUT_STEP } from '../../lib/units.ts';
+import {
+  HIGHEST_REPS,
+  highestWeightInUnit,
+  LOWEST_REPS,
+  shownWeight,
+  type StepDirection,
+  steppedReps,
+  steppedWeight,
+  unitToKg,
+  WEIGHT_INPUT_STEP,
+} from '../../lib/units.ts';
 import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
@@ -28,18 +39,41 @@ function clampedNumber(raw: string, fallback: number, lowest: number, highest: n
 
 const HIGHEST_LOAD_KG = 2000;
 
+interface StepperProps {
+  className: string;
+  lowerLabel: string;
+  higherLabel: string;
+  onStep: (direction: StepDirection) => void;
+  children: ReactNode;
+}
+
+function Stepper({ className, lowerLabel, higherLabel, onStep, children }: StepperProps) {
+  return (
+    <div className={`stepper-field ${className}`}>
+      <button type="button" className="button icon" aria-label={lowerLabel} onClick={() => onStep(-1)}>
+        −
+      </button>
+      {children}
+      <button type="button" className="button icon" aria-label={higherLabel} onClick={() => onStep(1)}>
+        +
+      </button>
+    </div>
+  );
+}
+
 interface WeightFieldProps {
   loadType: LoadType;
   weightKg: number;
   unit: UnitPref;
   onChange: (weightKg: number) => void;
+  steppers?: boolean;
 }
 
-export function WeightField({ loadType, weightKg, unit, onChange }: WeightFieldProps) {
-  if (loadType === 'bodyweight') return <span className="compact-field set-number">bodyweight</span>;
+export function WeightField({ loadType, weightKg, unit, onChange, steppers = false }: WeightFieldProps) {
+  if (loadType === 'bodyweight') return <span className="compact-field set-number weight-field">bodyweight</span>;
   const shown = shownWeight(weightKg, unit);
   const highest = highestWeightInUnit(HIGHEST_LOAD_KG, unit);
-  return (
+  const field = (
     <label className="compact-field">
       {loadType === 'bodyweight_plus' ? `+${unit}` : unit}
       <input
@@ -53,27 +87,50 @@ export function WeightField({ loadType, weightKg, unit, onChange }: WeightFieldP
       />
     </label>
   );
+  if (!steppers) return field;
+  return (
+    <Stepper
+      className="weight-field"
+      lowerLabel="Lighter"
+      higherLabel="Heavier"
+      onStep={(direction) => onChange(unitToKg(steppedWeight(shown, unit, direction, highest), unit))}
+    >
+      {field}
+    </Stepper>
+  );
 }
 
 interface RepsFieldProps {
   reps: number;
   onChange: (reps: number) => void;
+  steppers?: boolean;
 }
 
-export function RepsField({ reps, onChange }: RepsFieldProps) {
-  return (
+export function RepsField({ reps, onChange, steppers = false }: RepsFieldProps) {
+  const field = (
     <label className="compact-field">
       reps
       <input
         type="number"
         inputMode="numeric"
-        min={1}
-        max={100}
+        min={LOWEST_REPS}
+        max={HIGHEST_REPS}
         step={1}
         value={reps}
-        onChange={(event) => onChange(Math.round(clampedNumber(event.target.value, reps, 1, 100)))}
+        onChange={(event) => onChange(Math.round(clampedNumber(event.target.value, reps, LOWEST_REPS, HIGHEST_REPS)))}
       />
     </label>
+  );
+  if (!steppers) return field;
+  return (
+    <Stepper
+      className="reps-field"
+      lowerLabel="One rep fewer"
+      higherLabel="One more rep"
+      onStep={(direction) => onChange(steppedReps(reps, direction))}
+    >
+      {field}
+    </Stepper>
   );
 }
 
@@ -90,7 +147,7 @@ export function SetRow({
   onToggleDone,
 }: SetRowProps) {
   const amrapBadge = amrapBadgeOf(set.prescription);
-  const rowClass = ['set-row', set.done ? null : 'planned', markers.length > 0 ? 'marked' : null]
+  const rowClass = ['set-row', 'stepped', set.done ? null : 'planned', markers.length > 0 ? 'marked' : null]
     .filter((name) => name !== null)
     .join(' ');
   return (
@@ -104,8 +161,9 @@ export function SetRow({
         weightKg={set.weightKg}
         unit={unit}
         onChange={(weightKg) => onChange({ weightKg })}
+        steppers
       />
-      <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} />
+      <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} steppers />
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
         {previewXpLabel(preview)}
         <span className="tiny">{previewNote(preview)}</span>
