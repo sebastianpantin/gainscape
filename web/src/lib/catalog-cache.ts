@@ -35,7 +35,12 @@ const cachedExercisesSchema = z.object({
   userId: z.string(),
   exercises: z.array(
     z.discriminatedUnion('modality', [
-      z.object({ ...cachedExerciseBase, modality: z.literal('lift'), loadType: z.enum(LOAD_TYPES) }),
+      z.object({
+        ...cachedExerciseBase,
+        modality: z.literal('lift'),
+        loadType: z.enum(LOAD_TYPES),
+        compound: z.boolean().optional(),
+      }),
       z.object({
         ...cachedExerciseBase,
         modality: z.literal('cardio'),
@@ -70,7 +75,7 @@ function cachedFields(exercise: Exercise): Exercise {
   const { id, key, name, equipment, custom, archived } = exercise;
   const base = { id, key, name, equipment, custom, archived };
   return exercise.modality === 'lift'
-    ? { ...base, modality: 'lift', loadType: exercise.loadType }
+    ? { ...base, modality: 'lift', loadType: exercise.loadType, compound: exercise.compound }
     : { ...base, modality: 'cardio', activity: exercise.activity };
 }
 

@@ -3,18 +3,31 @@ import type { UnitPref } from './profile-rules.ts';
 import { shownWeight } from './units.ts';
 import type { LastLoggedSet } from '../offline/draft-format.ts';
 
-export interface LastSessionRow {
+export interface RecentLiftRow {
   exercise_id: string;
+  session_rank: number;
   weight_kg: number | string;
   reps: number;
+  logged_rir: number | string | null;
 }
 
-export function lastSessionByExercise(rows: readonly LastSessionRow[]): Map<string, LastLoggedSet[]> {
-  const byExercise = new Map<string, LastLoggedSet[]>();
+export interface RecentSet extends LastLoggedSet {
+  loggedRir: number | null;
+}
+
+export type RecentSessions = readonly (readonly RecentSet[])[];
+
+export function recentSessionsByExercise(rows: readonly RecentLiftRow[]): Map<string, RecentSet[][]> {
+  const byExercise = new Map<string, RecentSet[][]>();
   for (const row of rows) {
-    const sets = byExercise.get(row.exercise_id) ?? [];
-    sets.push({ weightKg: Number(row.weight_kg), reps: row.reps });
-    byExercise.set(row.exercise_id, sets);
+    const sessions = byExercise.get(row.exercise_id) ?? [];
+    const sets = (sessions[row.session_rank - 1] ??= []);
+    sets.push({
+      weightKg: Number(row.weight_kg),
+      reps: row.reps,
+      loggedRir: row.logged_rir === null ? null : Number(row.logged_rir),
+    });
+    byExercise.set(row.exercise_id, sessions);
   }
   return byExercise;
 }

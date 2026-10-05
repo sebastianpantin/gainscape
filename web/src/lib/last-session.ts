@@ -1,12 +1,15 @@
-import type { LastLoggedSet } from '../offline/draft-format.ts';
-import { lastSessionByExercise, type LastSessionRow } from './last-session-rules.ts';
+import { type RecentSet, recentSessionsByExercise, type RecentLiftRow } from './last-session-rules.ts';
 import { supabase } from './supabase.ts';
 
-export async function fetchLastSessionSets(
+export const RECENT_SESSION_COUNT = 3;
+
+export async function fetchRecentLiftSessions(
   exerciseIds: string[],
   signal: AbortSignal,
-): Promise<Map<string, LastLoggedSet[]>> {
-  const { data, error } = await supabase.rpc('last_session_sets', { exercise_ids: exerciseIds }).abortSignal(signal);
+): Promise<Map<string, RecentSet[][]>> {
+  const { data, error } = await supabase
+    .rpc('recent_lift_sets', { exercise_ids: exerciseIds, session_count: RECENT_SESSION_COUNT })
+    .abortSignal(signal);
   if (error) throw error;
-  return lastSessionByExercise(data as LastSessionRow[]);
+  return recentSessionsByExercise(data as RecentLiftRow[]);
 }

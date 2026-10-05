@@ -4,6 +4,7 @@ import {
   exerciseLabels,
   type ExerciseRow,
   isCardioExercise,
+  isCompoundLift,
   isLiftExercise,
   toExercise,
 } from '../../web/src/lib/catalog-rules.ts';
@@ -35,7 +36,14 @@ describe('toExercise', () => {
       archived: false,
       modality: 'lift',
       loadType: 'bodyweight_plus',
+      compound: false,
     });
+  });
+
+  it('marks a lift as compound from its skill shares', () => {
+    const shares = (...bp: number[]) => bp.map((share_bp) => ({ share_bp, skills: { key: 'chest' } }));
+    expect(toExercise(row({ exercise_skills: shares(7000, 2000, 1000) }))).toMatchObject({ compound: true });
+    expect(toExercise(row({ exercise_skills: shares(10_000) }))).toMatchObject({ compound: false });
   });
 
   it('marks owned exercises as custom and archived ones as archived, defaulting the load type to external', () => {
@@ -81,6 +89,30 @@ describe('toExercise', () => {
   it('defaults a cardio activity to per-km pace and a max effort ceiling', () => {
     const exercise = toExercise(row({ modality: 'cardio', load_type: null }));
     expect(exercise).toMatchObject({ activity: { paceUnit: 'per_km', maxEffort: 'max', referencePaceSPerKm: null } });
+  });
+});
+
+describe('isCompoundLift', () => {
+  it('counts a lift spread over several skills as compound', () => {
+    expect(isCompoundLift('dumbbell', [7000, 2000, 1000])).toBe(true);
+    expect(isCompoundLift('cable', [7500, 2500])).toBe(true);
+    expect(isCompoundLift('bodyweight', [5000, 3500, 1500])).toBe(true);
+  });
+
+  it('counts a barbell lift that is mostly one skill as compound', () => {
+    expect(isCompoundLift('barbell', [9000, 1000])).toBe(true);
+    expect(isCompoundLift('barbell', [8500, 1500])).toBe(true);
+  });
+
+  it('counts a lift that is mostly or only one skill as isolation', () => {
+    expect(isCompoundLift('cable', [9000, 1000])).toBe(false);
+    expect(isCompoundLift('machine', [10_000])).toBe(false);
+    expect(isCompoundLift('barbell', [10_000])).toBe(false);
+    expect(isCompoundLift('dumbbell', [8000, 2000])).toBe(false);
+  });
+
+  it('counts a lift without shares as isolation', () => {
+    expect(isCompoundLift('barbell', [])).toBe(false);
   });
 });
 
