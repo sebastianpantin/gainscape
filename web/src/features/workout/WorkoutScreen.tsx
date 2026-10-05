@@ -7,11 +7,14 @@ import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
 import { type ExerciseStrengthView, fetchExerciseStrength, fetchStrengthState } from '../../lib/collection-data.ts';
 import { strengthText } from '../../lib/collection-rules.ts';
+import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
 import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
 import { startsRest } from '../../lib/rest-timer-rules.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { formatXp } from '../../lib/format.ts';
 import {
@@ -23,6 +26,7 @@ import {
   notDoneSetCount,
   removeExercise,
   removeSet,
+  seedUntouchedSet,
   startDraft,
   startDraftFromDay,
   startDraftFromPrescription,
@@ -52,7 +56,10 @@ import { ProgramToday } from './ProgramToday.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
+import { useLastSessionSets } from './use-last-session-sets.ts';
+import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
+import { useWakeLock } from './use-wake-lock.ts';
 import { rejectionText, syncProblemText } from './workout-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
 
@@ -104,10 +111,18 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const standing = useStanding(userId);
   const { cache: programCache, program: activeProgram, showCache: showProgramCache } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
+  useRestAlert(userId, rest.timer);
+  const [keepAwake] = useState(() => readTrainingDeviceSettings(deviceStorage(), userId).keepAwake);
   const finishButton = useRef<HTMLButtonElement>(null);
   const finishBar = useRef<HTMLDivElement>(null);
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
+  const liftExerciseIds =
+    draft && !draft.finishedAt
+      ? draft.exercises.flatMap((exercise) => (exercise.modality === 'lift' ? [exercise.exerciseId] : []))
+      : [];
+  const lastSession = useLastSessionSets(userId, liftExerciseIds, onlineSignal);
+  useWakeLock(keepAwake, draft !== null && !draft.finishedAt);
 
   useEffect(() => {
     let active = true;
@@ -386,12 +401,23 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
   );
   const liftExercises = exercises.filter(isLiftExercise);
-  const addPicked = (exercise: Exercise) => {
-    const added =
-      exercise.modality === 'cardio'
-        ? addCardioExercise(draft, exercise.id, exercise.name, exercise.activity)
-        : addExercise(draft, exercise.id, exercise.name, exercise.loadType);
-    changeDraft(addSet(added, draft.exercises.length));
+  const addPicked = async (exercise: Exercise) => {
+    if (exercise.modality === 'cardio') {
+      changeDraft(
+        addSet(addCardioExercise(draft, exercise.id, exercise.name, exercise.activity), draft.exercises.length),
+      );
+      return;
+    }
+    const known = lastSession.byExercise.has(exercise.id);
+    const firstSet = firstSetFromLastSession(lastSession.byExercise.get(exercise.id), exercise.loadType);
+    const exerciseIndex = draft.exercises.length;
+    const added = addSet(addExercise(draft, exercise.id, exercise.name, exercise.loadType), exerciseIndex, firstSet);
+    changeDraft(added);
+    const addedExercise = added.exercises[exerciseIndex];
+    const original = addedExercise?.modality === 'lift' ? addedExercise.sets[0] : undefined;
+    if (known || original === undefined) return;
+    const seed = firstSetFromLastSession(await lastSession.loadFor(exercise.id), exercise.loadType);
+    if (seed) updateDraft((latest) => seedUntouchedSet(latest, exerciseIndex, original, seed));
   };
   const previewTotal = donePreviewTotal(previews, draft.exercises);
 
@@ -473,6 +499,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           exercise.target && `${exercise.target.sets} × ${exercise.target.repsMin}–${exercise.target.repsMax}`,
           strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
         ].filter(Boolean);
+        const lastTime = lastTimeText(lastSession.byExercise.get(exercise.exerciseId), exercise.loadType, unitPref);
         return (
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
             <header>
@@ -491,6 +518,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               </span>
             </header>
             <p className="muted">{[...details, `${doneHere}/${exercise.sets.length} sets`].join(' · ')}</p>
+            {lastTime && <p className="muted tiny last-time">{lastTime}</p>}
             {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
               <ExercisePicker
                 exercises={liftExercises}
@@ -532,7 +560,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </section>
         );
       })}
-      <ExercisePicker exercises={exercises} onPick={addPicked} />
+      <ExercisePicker exercises={exercises} onPick={(exercise) => void addPicked(exercise)} />
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>

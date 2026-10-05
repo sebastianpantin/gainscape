@@ -14,6 +14,9 @@ import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { REST_CHOICES_S, REST_OFF, restClock } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage, readRestState, saveRestState } from '../../lib/rest-timer-store.ts';
+import type { TrainingDeviceSettings } from '../../lib/training-device-rules.ts';
+import { readTrainingDeviceSettings, saveTrainingDeviceSettings } from '../../lib/training-device-store.ts';
+import { askToNotify } from '../workout/rest-alert-effects.ts';
 import {
   changeTimezone,
   cooldownStartFor,
@@ -131,6 +134,64 @@ function RestChoice({ userId }: { userId: string }) {
   );
 }
 
+const ON_OFF_OPTIONS: { value: 'on' | 'off'; label: string }[] = [
+  { value: 'on', label: 'On' },
+  { value: 'off', label: 'Off' },
+];
+
+const DEVICE_CHOICES: { name: keyof TrainingDeviceSettings; label: string }[] = [
+  { name: 'vibrate', label: 'Vibrate when rest ends' },
+  { name: 'sound', label: 'Sound when rest ends' },
+  { name: 'notify', label: 'Notify when rest ends in the background' },
+  { name: 'keepAwake', label: 'Keep screen on during workouts' },
+];
+
+function TrainingDeviceChoices({ userId }: { userId: string }) {
+  const [settings, setSettings] = useState(() => readTrainingDeviceSettings(deviceStorage(), userId));
+  const [notifyBlocked, setNotifyBlocked] = useState(false);
+  const [askingToNotify, setAskingToNotify] = useState(false);
+  const change = (changes: Partial<TrainingDeviceSettings>) => {
+    const next = { ...readTrainingDeviceSettings(deviceStorage(), userId), ...changes };
+    setSettings(next);
+    saveTrainingDeviceSettings(deviceStorage(), userId, next);
+  };
+  const pick = async (name: keyof TrainingDeviceSettings, value: 'on' | 'off') => {
+    const on = value === 'on';
+    if (name === 'notify') setNotifyBlocked(false);
+    if (name === 'notify' && on) {
+      setAskingToNotify(true);
+      const allowed = await askToNotify();
+      setAskingToNotify(false);
+      setNotifyBlocked(!allowed);
+      if (!allowed) return;
+    }
+    change({ [name]: on });
+  };
+  return (
+    <>
+      {DEVICE_CHOICES.map(({ name, label }) => (
+        <Choice
+          key={name}
+          label={label}
+          options={ON_OFF_OPTIONS}
+          current={settings[name] ? 'on' : 'off'}
+          disabled={name === 'notify' && askingToNotify}
+          onPick={(value) => void pick(name, value)}
+        />
+      ))}
+      {notifyBlocked && (
+        <p className="problem" role="alert">
+          This browser blocks notifications from Gainscape. Allow them in the browser's site settings.
+        </p>
+      )}
+      <span className="hint">
+        Saved on this device only. Phones can pause the app while the screen is off, so keep the screen on for alerts
+        you can count on.
+      </span>
+    </>
+  );
+}
+
 function TrainingSection({ userId, profile, onSaved }: SectionProps) {
   const { applyPreferences } = usePreferences();
   const { save, pending, problem } = useOptimisticProfileSave<'unitPref' | 'effortInputMode'>(
@@ -160,6 +221,7 @@ function TrainingSection({ userId, profile, onSaved }: SectionProps) {
       />
       <span className="hint">{EFFORT_OPTIONS.find((option) => option.value === profile.effortInputMode)?.hint}</span>
       <RestChoice userId={userId} />
+      <TrainingDeviceChoices userId={userId} />
       {problem && (
         <p className="problem" role="alert">
           {problem}

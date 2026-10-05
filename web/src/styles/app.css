@@ -573,6 +573,55 @@ a:focus-visible {
     'effort effort effort effort remove';
 }
 
+.set-row.stepped {
+  grid-template-columns: 22px minmax(0, 1fr) minmax(0, auto) var(--tap-target);
+  grid-template-areas:
+    'number weight weight done'
+    '. reps xp xp'
+    'effort effort effort remove';
+}
+
+.set-row.stepped.marked {
+  grid-template-areas:
+    'number weight weight done'
+    '. reps xp xp'
+    'markers markers markers markers'
+    'effort effort effort remove';
+}
+
+.set-row.stepped > .set-number {
+  grid-area: number;
+}
+
+.set-row.stepped > .weight-field {
+  grid-area: weight;
+}
+
+.set-row.stepped > .reps-field {
+  grid-area: reps;
+}
+
+.set-row.stepped > .set-xp {
+  grid-area: xp;
+  white-space: normal;
+  text-align: right;
+}
+
+.set-row.stepped > .done-toggle {
+  grid-area: done;
+}
+
+.stepper-field {
+  display: grid;
+  grid-template-columns: var(--tap-target) minmax(0, 1fr) var(--tap-target);
+  gap: var(--space-1);
+  align-items: end;
+}
+
+.stepper-field input {
+  text-align: center;
+}
+
 .set-markers {
   grid-area: markers;
   display: flex;
