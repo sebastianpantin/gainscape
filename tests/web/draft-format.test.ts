@@ -12,6 +12,7 @@ import {
   parseStoredDraft,
   programLabelFor,
   removeSet,
+  seedUntouchedSet,
   startDraftFromDay,
   swapExercise,
   toggleSetDone,
@@ -346,6 +347,20 @@ describe('planned set editing', () => {
   it('marks sets added with + Add set as done', () => {
     const added = addSet(planned, 0);
     expect(added.exercises[0].sets.at(-1)?.done).toBe(true);
+  });
+
+  it('seeds a set with last session values only while it is untouched', () => {
+    const empty = workout({ exercises: [{ ...liftsOf(planned)[0], sets: [] }] });
+    const added = addSet(empty, 0);
+    const original = liftsOf(added)[0].sets[0];
+    const seed = { weightKg: 72.5, reps: 6 };
+    const seeded = seedUntouchedSet(added, 0, original, seed);
+    expect(liftsOf(seeded)[0].sets[0]).toEqual({ ...original, ...seed });
+
+    const edited = updateSet(added, 0, original.id, { reps: 3 });
+    expect(seedUntouchedSet(edited, 0, original, seed)).toBe(edited);
+    const removed = removeSet(added, 0, original.id);
+    expect(seedUntouchedSet(removed, 0, original, seed)).toBe(removed);
   });
 
   it('seeds the first set of an exercise and copies the previous set after that', () => {

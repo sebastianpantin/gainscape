@@ -574,19 +574,19 @@ a:focus-visible {
 }
 
 .set-row.stepped {
-  grid-template-columns: 22px minmax(148px, 1fr) minmax(0, auto) var(--tap-target);
+  grid-template-columns: 22px minmax(0, 1fr) minmax(0, auto) var(--tap-target);
   grid-template-areas:
     'number weight weight done'
-    '. reps xp remove'
-    'effort effort effort effort';
+    '. reps xp xp'
+    'effort effort effort remove';
 }
 
 .set-row.stepped.marked {
   grid-template-areas:
     'number weight weight done'
-    '. reps xp remove'
+    '. reps xp xp'
     'markers markers markers markers'
-    'effort effort effort effort';
+    'effort effort effort remove';
 }
 
 .set-row.stepped > .set-number {

@@ -9,7 +9,11 @@ export interface LastSessionSets {
   loadFor: (exerciseId: string) => Promise<readonly LastLoggedSet[] | undefined>;
 }
 
-export function useLastSessionSets(userId: string, exerciseIds: readonly string[]): LastSessionSets {
+export function useLastSessionSets(
+  userId: string,
+  exerciseIds: readonly string[],
+  onlineSignal: number,
+): LastSessionSets {
   const [loaded, setLoaded] = useState<{ userId: string; sets: Map<string, LastLoggedSet[]> }>({
     userId,
     sets: new Map(),
@@ -42,7 +46,7 @@ export function useLastSessionSets(userId: string, exerciseIds: readonly string[
     return () => {
       active = false;
     };
-  }, [missingKey, remember]);
+  }, [missingKey, remember, onlineSignal]);
 
   const loadFor = async (exerciseId: string) => {
     if (byExercise.has(exerciseId)) return byExercise.get(exerciseId);

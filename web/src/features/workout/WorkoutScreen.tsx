@@ -26,6 +26,7 @@ import {
   notDoneSetCount,
   removeExercise,
   removeSet,
+  seedUntouchedSet,
   startDraft,
   startDraftFromDay,
   startDraftFromPrescription,
@@ -120,7 +121,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     draft && !draft.finishedAt
       ? draft.exercises.flatMap((exercise) => (exercise.modality === 'lift' ? [exercise.exerciseId] : []))
       : [];
-  const lastSession = useLastSessionSets(userId, liftExerciseIds);
+  const lastSession = useLastSessionSets(userId, liftExerciseIds, onlineSignal);
   useWakeLock(keepAwake, draft !== null && !draft.finishedAt);
 
   useEffect(() => {
@@ -401,18 +402,22 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   );
   const liftExercises = exercises.filter(isLiftExercise);
   const addPicked = async (exercise: Exercise) => {
-    const firstSet =
-      exercise.modality === 'cardio'
-        ? undefined
-        : firstSetFromLastSession(await lastSession.loadFor(exercise.id), exercise.loadType);
-    updateDraft((latest) => {
-      if (latest.sessionId !== draft.sessionId || latest.finishedAt) return latest;
-      const added =
-        exercise.modality === 'cardio'
-          ? addCardioExercise(latest, exercise.id, exercise.name, exercise.activity)
-          : addExercise(latest, exercise.id, exercise.name, exercise.loadType);
-      return addSet(added, latest.exercises.length, firstSet);
-    });
+    if (exercise.modality === 'cardio') {
+      changeDraft(
+        addSet(addCardioExercise(draft, exercise.id, exercise.name, exercise.activity), draft.exercises.length),
+      );
+      return;
+    }
+    const known = lastSession.byExercise.has(exercise.id);
+    const firstSet = firstSetFromLastSession(lastSession.byExercise.get(exercise.id), exercise.loadType);
+    const exerciseIndex = draft.exercises.length;
+    const added = addSet(addExercise(draft, exercise.id, exercise.name, exercise.loadType), exerciseIndex, firstSet);
+    changeDraft(added);
+    const addedExercise = added.exercises[exerciseIndex];
+    const original = addedExercise?.modality === 'lift' ? addedExercise.sets[0] : undefined;
+    if (known || original === undefined) return;
+    const seed = firstSetFromLastSession(await lastSession.loadFor(exercise.id), exercise.loadType);
+    if (seed) updateDraft((latest) => seedUntouchedSet(latest, exerciseIndex, original, seed));
   };
   const previewTotal = donePreviewTotal(previews, draft.exercises);
 

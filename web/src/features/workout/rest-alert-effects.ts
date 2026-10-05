@@ -17,6 +17,7 @@ export function primeRestSound(): void {
 }
 
 export function playRestSound(): void {
+  primeRestSound();
   const context = audio;
   if (context === null) return;
   try {

@@ -85,7 +85,7 @@ async function focusOpenApp(): Promise<void> {
   const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   const open = windows.at(0);
   if (open) await open.focus();
-  else await self.clients.openWindow('/');
+  else await self.clients.openWindow(self.registration.scope);
 }
 
 self.addEventListener('notificationclick', (event) => {

@@ -25,3 +25,16 @@ export function saveTrainingDeviceSettings(
     return;
   }
 }
+
+const REST_ALERTED_KEY_PREFIX = 'gainscape.rest-alerted.';
+
+export function claimRestAlert(storage: Storage | null, userId: string, endsAt: number): boolean {
+  const key = `${REST_ALERTED_KEY_PREFIX}${userId}`;
+  try {
+    if (storage?.getItem(key) === String(endsAt)) return false;
+    storage?.setItem(key, String(endsAt));
+  } catch {
+    return true;
+  }
+  return true;
+}

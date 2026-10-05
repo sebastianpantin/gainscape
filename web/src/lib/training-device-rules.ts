@@ -42,6 +42,12 @@ export function restAlertDelayMs(endsAt: number | null, now: number): number | n
   return endsAt - now;
 }
 
+const REST_ALERT_GRACE_MS = 5000;
+
+export function restAlertIsFresh(endsAt: number, now: number): boolean {
+  return now - endsAt <= REST_ALERT_GRACE_MS;
+}
+
 export type RestAlertAction = 'vibrate' | 'sound' | 'notify';
 
 export function restAlertActions(

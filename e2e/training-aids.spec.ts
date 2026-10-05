@@ -47,7 +47,10 @@ async function recordDeviceCalls(page: Page) {
       value: {
         request: () => {
           record('lock');
-          return Promise.resolve({ release: () => Promise.resolve(record('release')) });
+          return Promise.resolve({
+            addEventListener: () => undefined,
+            release: () => Promise.resolve(record('release')),
+          });
         },
       },
     });
@@ -110,16 +113,16 @@ test('steppers change weight by a plate step and reps by one', async ({ page }) 
   const weight = firstSet.getByLabel('kg', { exact: true });
   const reps = firstSet.getByLabel('reps', { exact: true });
 
-  await firstSet.getByRole('button', { name: 'Heavier' }).click();
-  await firstSet.getByRole('button', { name: 'Heavier' }).click();
+  await firstSet.getByRole('button', { name: 'Heavier, set 1' }).click();
+  await firstSet.getByRole('button', { name: 'Heavier, set 1' }).click();
   await expect(weight).toHaveValue('25');
   await weight.fill('61');
-  await firstSet.getByRole('button', { name: 'Lighter' }).click();
+  await firstSet.getByRole('button', { name: 'Lighter, set 1' }).click();
   await expect(weight).toHaveValue('60');
-  await firstSet.getByRole('button', { name: 'One more rep' }).click();
+  await firstSet.getByRole('button', { name: 'One more rep, set 1' }).click();
   await expect(reps).toHaveValue('9');
-  await firstSet.getByRole('button', { name: 'One rep fewer' }).click();
-  await firstSet.getByRole('button', { name: 'One rep fewer' }).click();
+  await firstSet.getByRole('button', { name: 'One rep fewer, set 1' }).click();
+  await firstSet.getByRole('button', { name: 'One rep fewer, set 1' }).click();
   await expect(reps).toHaveValue('7');
 
   await page.reload();
