@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { definitionOf, logCardio, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 
-test('bodyweight prompt, records and the collection log', async ({ page }) => {
+test('bodyweight prompt, live record chips, records and the collection log', async ({ page }) => {
   await register(page, `e2e_${Date.now().toString(36)}`);
 
   await page.getByRole('button', { name: 'Start workout' }).click();
@@ -10,6 +10,7 @@ test('bodyweight prompt, records and the collection log', async ({ page }) => {
     { weightKg: 60, reps: 5 },
   ]);
   await logExercise(page, 'pull-up', 'Pull-up', [{ reps: 8 }, { reps: 8 }]);
+  await expect(page.getByText(/New \d+RM!|Most reps!/)).toHaveCount(0);
   await page.getByRole('button', { name: 'Finish workout' }).click();
 
   await page.getByLabel('Bodyweight (kg)').fill('80');
@@ -21,6 +22,10 @@ test('bodyweight prompt, records and the collection log', async ({ page }) => {
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 70, reps: 5 }]);
   await logExercise(page, 'pull-up', 'Pull-up', [{ reps: 10 }]);
+  const card = (name: string) =>
+    page.locator('section', { has: page.getByRole('heading', { name, exact: true }) }).locator('li.set-row');
+  await expect(card('Barbell Bench Press').first()).toContainText('New 5RM!');
+  await expect(card('Pull-up').first()).toContainText('Most reps!');
   await page.getByRole('button', { name: 'Finish workout' }).click();
 
   const records = page.getByLabel('New records');

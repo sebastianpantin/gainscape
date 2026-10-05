@@ -760,6 +760,16 @@ a:focus-visible {
   color: var(--color-text-muted);
 }
 
+.set-xp .record-chip {
+  padding: 0 var(--space-1);
+  font-family: var(--font-family);
+  font-size: var(--font-size-tiny);
+  font-weight: 600;
+  border: var(--border-width) solid #000;
+  background: var(--color-accent);
+  color: var(--color-ink);
+}
+
 .done-toggle {
   min-width: var(--tap-target);
   padding: 0;
