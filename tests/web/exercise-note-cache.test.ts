@@ -76,6 +76,25 @@ describe('cache-first exercise notes', () => {
     expect(readCachedExerciseNotes(storage, userId)).toEqual(notes);
   });
 
+  it('lets a note saved while the fetch was in flight win in what it shows and caches', async () => {
+    const storage = new MemoryStorage();
+    saveCachedExerciseNotes(storage, userId, notes);
+    let savedSinceLoad = {};
+    const shown: ExerciseNotes[] = [];
+    await loadExerciseNotesCacheFirst(
+      storage,
+      userId,
+      async () => {
+        savedSinceLoad = { bench: 'Seat 5', squat: null };
+        return notes;
+      },
+      (shownNotes) => shown.push(shownNotes),
+      () => savedSinceLoad,
+    );
+    expect(shown.at(-1)).toEqual({ bench: 'Seat 5' });
+    expect(readCachedExerciseNotes(storage, userId)).toEqual({ bench: 'Seat 5' });
+  });
+
   it('keeps the cached notes when the fetch fails', async () => {
     const storage = new MemoryStorage();
     saveCachedExerciseNotes(storage, userId, notes);
