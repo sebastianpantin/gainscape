@@ -140,7 +140,7 @@ test('a workout keeps the screen on and the end of a rest vibrates and beeps, as
   await expect.poll(() => deviceCalls(page)).toEqual(['lock']);
 
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await page.clock.runFor(89_000);
+  await page.clock.runFor(179_000);
   expect(await deviceCalls(page)).toEqual(['lock']);
   await page.clock.runFor(2_000);
   await expect.poll(() => deviceCalls(page)).toEqual(['lock', 'vibrate', 'beep', 'beep']);
@@ -156,7 +156,7 @@ test('a workout keeps the screen on and the end of a rest vibrates and beeps, as
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await page.clock.runFor(91_000);
+  await page.clock.runFor(181_000);
   await expect(page.getByRole('region', { name: 'Rest timer' }).getByRole('status')).toHaveText('Rest over');
   expect(await deviceCalls(page)).toEqual([]);
 });
@@ -179,7 +179,7 @@ test('a rest that ends while the app is hidden sends a notification once allowed
   await page.evaluate(() =>
     Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' }),
   );
-  await page.clock.runFor(91_000);
+  await page.clock.runFor(181_000);
   await expect.poll(() => deviceCalls(page)).toContain('notify:Rest over');
 });
 

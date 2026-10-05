@@ -47,6 +47,7 @@ interface ExerciseBase {
 export interface LiftExercise extends ExerciseBase {
   modality: 'lift';
   loadType: LoadType;
+  compound?: boolean;
 }
 
 export interface CardioExercise extends ExerciseBase {
@@ -82,6 +83,15 @@ export interface ExerciseRow {
   exercise_skills: { share_bp: number; skills: { key: string } | null }[];
 }
 
+const WHOLE_SHARE_BP = 10_000;
+const SINGLE_SKILL_SHARE_BP = 8_000;
+
+export function isCompoundLift(equipment: string, shareBasisPoints: readonly number[]): boolean {
+  const largest = Math.max(0, ...shareBasisPoints);
+  if (largest === 0) return false;
+  return largest < SINGLE_SKILL_SHARE_BP || (equipment === 'barbell' && largest < WHOLE_SHARE_BP);
+}
+
 export function toExercise(row: ExerciseRow): Exercise {
   const base = {
     id: row.id,
@@ -91,7 +101,13 @@ export function toExercise(row: ExerciseRow): Exercise {
     custom: row.owner_user_id !== null,
     archived: row.archived_at !== null,
   };
-  if (row.modality === 'lift') return { ...base, modality: 'lift', loadType: row.load_type ?? 'external' };
+  if (row.modality === 'lift') {
+    const compound = isCompoundLift(
+      row.equipment,
+      row.exercise_skills.map((share) => share.share_bp),
+    );
+    return { ...base, modality: 'lift', loadType: row.load_type ?? 'external', compound };
+  }
   return {
     ...base,
     modality: 'cardio',

@@ -9,26 +9,53 @@ const LONGEST_REST_S = 600;
 export const REST_OVER_SHOWN_S = 300;
 export const REST_OFF = 0;
 export const REST_CHOICES_S: readonly number[] = [REST_OFF, 60, 90, 120, 180];
+export const COMPOUND_REST_S = 180;
 
 export interface RestTimer {
   endsAt: number;
   setId: string | null;
+  exerciseId: string | null;
+  startedAt: number | null;
 }
+
+export type RestByExercise = Readonly<Record<string, number>>;
 
 export interface RestState {
   restS: number;
   timer: RestTimer | null;
+  byExercise: RestByExercise;
 }
 
 type RestView = { kind: 'idle' } | { kind: 'resting'; remainingS: number } | { kind: 'over' };
 
-export function startRest(now: number, restS: number, setId: string): RestTimer {
-  return { endsAt: now + restS * MS_PER_SECOND, setId };
+export function startRest(now: number, restS: number, setId: string, exerciseId: string | null = null): RestTimer {
+  return { endsAt: now + restS * MS_PER_SECOND, setId, exerciseId, startedAt: now };
 }
 
 export function adjustRest(timer: RestTimer, deltaS: number, now: number): RestTimer {
   const endsAt = Math.max(timer.endsAt, now) + deltaS * MS_PER_SECOND;
-  return { endsAt: Math.min(now + LONGEST_REST_S * MS_PER_SECOND, Math.max(now, endsAt)), setId: timer.setId };
+  return { ...timer, endsAt: Math.min(now + LONGEST_REST_S * MS_PER_SECOND, Math.max(now, endsAt)) };
+}
+
+export function restLengthFor(state: RestState, exerciseId: string, compound: boolean): number {
+  if (state.restS === REST_OFF) return REST_OFF;
+  return state.byExercise[exerciseId] ?? (compound ? Math.max(state.restS, COMPOUND_REST_S) : state.restS);
+}
+
+function isRememberableRest(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value / REST_STEP_S) &&
+    value >= REST_STEP_S &&
+    value <= LONGEST_REST_S
+  );
+}
+
+export function rememberAdjustedRest(state: RestState, timer: RestTimer): RestState {
+  if (timer.exerciseId === null || timer.startedAt === null) return state;
+  const plannedS = Math.round((timer.endsAt - timer.startedAt) / MS_PER_SECOND / REST_STEP_S) * REST_STEP_S;
+  const restS = Math.min(LONGEST_REST_S, Math.max(REST_STEP_S, plannedS));
+  return { ...state, byExercise: { ...state.byExercise, [timer.exerciseId]: restS } };
 }
 
 export function restView(timer: RestTimer | null, now: number): RestView {
@@ -68,9 +95,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parsedTimer(value: unknown): RestTimer | null {
-  return isRecord(value) && typeof value.endsAt === 'number' && Number.isFinite(value.endsAt)
-    ? { endsAt: value.endsAt, setId: typeof value.setId === 'string' ? value.setId : null }
-    : null;
+  if (!isRecord(value) || typeof value.endsAt !== 'number' || !Number.isFinite(value.endsAt)) return null;
+  return {
+    endsAt: value.endsAt,
+    setId: typeof value.setId === 'string' ? value.setId : null,
+    exerciseId: typeof value.exerciseId === 'string' ? value.exerciseId : null,
+    startedAt: typeof value.startedAt === 'number' && Number.isFinite(value.startedAt) ? value.startedAt : null,
+  };
+}
+
+function parsedByExercise(value: unknown): RestByExercise {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([exerciseId, restS]) => (isRememberableRest(restS) ? [[exerciseId, restS]] : [])),
+  );
 }
 
 export function parseRestState(raw: string | null): RestState {
@@ -80,7 +118,7 @@ export function parseRestState(raw: string | null): RestState {
   } catch {
     parsed = null;
   }
-  if (!isRecord(parsed)) return { restS: DEFAULT_REST_S, timer: null };
+  if (!isRecord(parsed)) return { restS: DEFAULT_REST_S, timer: null, byExercise: {} };
   const restS = REST_CHOICES_S.find((choice) => choice === parsed.restS) ?? DEFAULT_REST_S;
-  return { restS, timer: parsedTimer(parsed.timer) };
+  return { restS, timer: parsedTimer(parsed.timer), byExercise: parsedByExercise(parsed.byExercise) };
 }
