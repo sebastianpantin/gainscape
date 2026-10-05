@@ -46,9 +46,9 @@ function niceStep(rawStep: number): number {
   return nice * magnitude;
 }
 
-export function niceTicks(min: number, max: number, count: number): number[] {
+export function niceTicks(min: number, max: number, count: number, minStep = 0): number[] {
   const [low, high] = min === max ? [min - SINGLE_VALUE_SPREAD, max + SINGLE_VALUE_SPREAD] : [min, max];
-  const step = niceStep((high - low) / count);
+  const step = Math.max(minStep, niceStep((high - low) / count));
   const first = Math.floor(low / step);
   const last = Math.ceil(high / step);
   return Array.from({ length: last - first + 1 }, (_, index) => roundTo(TICK_DECIMALS, (first + index) * step));
@@ -60,14 +60,23 @@ function scale(domainLow: number, domainHigh: number, rangeLow: number, rangeHig
     roundTo(TICK_DECIMALS, rangeLow + ((value - domainLow) / (domainHigh - domainLow)) * (rangeHigh - rangeLow));
 }
 
-export function chartLayout(series: readonly ChartSeries[], frame: ChartFrame, yTickCount = 4): ChartLayout {
+export interface ChartScaleOptions {
+  yTickCount?: number;
+  minYStep?: number;
+}
+
+export function chartLayout(
+  series: readonly ChartSeries[],
+  frame: ChartFrame,
+  { yTickCount = 4, minYStep = 0 }: ChartScaleOptions = {},
+): ChartLayout {
   const points = series.flatMap((line) => line.points);
   if (points.length === 0) {
     return { series: series.map((line) => ({ name: line.name, path: '', dots: [] })), xTicks: [], yTicks: [] };
   }
   const xs = points.map((point) => point.x);
   const ys = points.map((point) => point.y);
-  const yTickValues = niceTicks(Math.min(...ys), Math.max(...ys), yTickCount);
+  const yTickValues = niceTicks(Math.min(...ys), Math.max(...ys), yTickCount, minYStep);
   const [xLow, xHigh] = [Math.min(...xs), Math.max(...xs)];
   const toX = scale(xLow, xHigh, frame.left, frame.width - frame.right);
   const toY = scale(yTickValues[0], yTickValues[yTickValues.length - 1], frame.height - frame.bottom, frame.top);

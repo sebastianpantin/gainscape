@@ -13,6 +13,11 @@ describe('nice ticks', () => {
   it('widens a single value into a range around it', () => {
     expect(niceTicks(80, 80, 4)).toEqual([79, 79.5, 80, 80.5, 81]);
   });
+
+  it('never steps below the smallest step a whole-number series allows', () => {
+    expect(niceTicks(10, 10, 4, 1)).toEqual([9, 10, 11]);
+    expect(niceTicks(8, 10, 4, 1)).toEqual([8, 9, 10]);
+  });
 });
 
 describe('chart layout', () => {
@@ -61,6 +66,11 @@ describe('chart layout', () => {
       [20, 80],
       [190, 45],
     ]);
+  });
+
+  it('passes the smallest y step on to the ticks', () => {
+    const layout = chartLayout([{ name: 'Most reps', points: [{ x: 0, y: 10 }] }], FRAME, { minYStep: 1 });
+    expect(layout.yTicks.map((tick) => tick.value)).toEqual([9, 10, 11]);
   });
 
   it('centres a chart that has a single day', () => {

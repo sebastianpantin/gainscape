@@ -4,7 +4,7 @@ import { measuresRepsCapacity } from '@domain/types.ts';
 import { LineChart } from '../../components/LineChart.tsx';
 import { messageOf } from '../../lib/error-text.ts';
 import { type ExerciseProgress, fetchExerciseProgress } from '../../lib/exercise-progress.ts';
-import { chartDateText, progressChartSeries } from '../../lib/exercise-progress-rules.ts';
+import { chartDateText, progressChartSeries, progressValueText } from '../../lib/exercise-progress-rules.ts';
 import { formatLoad, formatSessionDate } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 
@@ -62,7 +62,7 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
   const { exercise, sessions, repMaxes, maxReps } = loaded.progress;
   const repsOnly = measuresRepsCapacity(exercise.loadType);
   const series = progressChartSeries(sessions, exercise.loadType, unitPref);
-  const formatY = (value: number) => (repsOnly ? `${value}` : `${value} ${unitPref}`);
+  const formatY = (value: number) => progressValueText(value, exercise.loadType, unitPref);
 
   return (
     <main className="screen stack">
@@ -78,6 +78,7 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
             series={series}
             formatX={chartDateText}
             formatY={formatY}
+            minYStep={repsOnly ? 1 : undefined}
           />
         )}
       </section>
