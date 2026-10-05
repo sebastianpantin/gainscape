@@ -13,6 +13,8 @@ import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
 import { startsRest } from '../../lib/rest-timer-rules.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { formatXp } from '../../lib/format.ts';
 import {
@@ -54,7 +56,9 @@ import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
 import { useLastSessionSets } from './use-last-session-sets.ts';
+import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
+import { useWakeLock } from './use-wake-lock.ts';
 import { rejectionText, syncProblemText } from './workout-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
 
@@ -106,6 +110,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const standing = useStanding(userId);
   const { cache: programCache, program: activeProgram, showCache: showProgramCache } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
+  useRestAlert(userId, rest.timer);
+  const [keepAwake] = useState(() => readTrainingDeviceSettings(deviceStorage(), userId).keepAwake);
   const finishButton = useRef<HTMLButtonElement>(null);
   const finishBar = useRef<HTMLDivElement>(null);
   const { unitPref, effortInputMode } = usePreferences();
@@ -114,6 +120,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     exercise.modality === 'lift' && !draft?.finishedAt ? [exercise.exerciseId] : [],
   );
   const lastSession = useLastSessionSets(userId, liftExerciseIds);
+  useWakeLock(keepAwake, draft !== null && !draft.finishedAt);
 
   useEffect(() => {
     let active = true;
