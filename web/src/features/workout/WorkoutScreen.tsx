@@ -13,6 +13,7 @@ import {
 } from '../../lib/collection-data.ts';
 import { strengthText } from '../../lib/collection-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
+import { nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
 import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
@@ -69,7 +70,7 @@ import { ProgramToday } from './ProgramToday.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
-import { useLastSessionSets } from './use-last-session-sets.ts';
+import { useRecentLiftSessions } from './use-recent-lift-sessions.ts';
 import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
 import { useWakeLock } from './use-wake-lock.ts';
@@ -138,7 +139,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     draft && !draft.finishedAt
       ? draft.exercises.flatMap((exercise) => (exercise.modality === 'lift' ? [exercise.exerciseId] : []))
       : [];
-  const lastSession = useLastSessionSets(userId, liftExerciseIds, onlineSignal);
+  const recentSessions = useRecentLiftSessions(userId, liftExerciseIds, onlineSignal);
   useWakeLock(keepAwake, draft !== null && !draft.finishedAt);
 
   useEffect(() => {
@@ -444,15 +445,15 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       );
       return;
     }
-    const known = lastSession.byExercise.has(exercise.id);
-    const firstSet = firstSetFromLastSession(lastSession.byExercise.get(exercise.id), exercise.loadType);
+    const known = recentSessions.byExercise.has(exercise.id);
+    const firstSet = firstSetFromLastSession(recentSessions.byExercise.get(exercise.id)?.[0], exercise.loadType);
     const exerciseIndex = draft.exercises.length;
     const added = addSet(addExercise(draft, exercise.id, exercise.name, exercise.loadType), exerciseIndex, firstSet);
     changeDraft(added);
     const addedExercise = added.exercises[exerciseIndex];
     const original = addedExercise?.modality === 'lift' ? addedExercise.sets[0] : undefined;
     if (known || original === undefined) return;
-    const seed = firstSetFromLastSession(await lastSession.loadFor(exercise.id), exercise.loadType);
+    const seed = firstSetFromLastSession((await recentSessions.loadFor(exercise.id))?.[0], exercise.loadType);
     if (seed) updateDraft((latest) => seedUntouchedSet(latest, exerciseIndex, original, seed));
   };
   const previewTotal = donePreviewTotal(previews, draft.exercises);
@@ -543,8 +544,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
           restS !== REST_OFF && `Rest ${restClock(restS)}`,
         ].filter(Boolean);
-        const lastTime = lastTimeText(lastSession.byExercise.get(exercise.exerciseId), exercise.loadType, unitPref);
+        const lastSessionSets = recentSessions.byExercise.get(exercise.exerciseId)?.[0];
+        const lastTime = lastTimeText(lastSessionSets, exercise.loadType, unitPref);
         const isBarbell = exercise.loadType === 'external' && barbellIds.has(exercise.exerciseId);
+        const followsProgram = exercise.sets.some((set) => Boolean(set.prescription));
+        const step = progressionStep(unitPref, isBarbell ? barbellSetup.plates : null);
+        const advice = followsProgram
+          ? null
+          : nextWeightHint(lastSessionSets, exercise.loadType, exercise.target, unitPref, step);
         const workingSet = firstWorkingSet(exercise);
         const warmups =
           isBarbell && workingSet !== undefined && !exercise.sets.some((set) => set.isWarmup)
@@ -569,6 +576,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             </header>
             <p className="muted">{[...details, `${doneHere}/${exercise.sets.length} sets`].join(' · ')}</p>
             {lastTime && <p className="muted tiny last-time">{lastTime}</p>}
+            {advice && <p className="tiny progression-advice">{advice}</p>}
             {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
               <ExercisePicker
                 exercises={liftExercises}

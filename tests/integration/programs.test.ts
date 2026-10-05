@@ -607,17 +607,33 @@ describe('last_logged_sets', () => {
   });
 });
 
-describe('last_session_sets', () => {
-  it("returns every working set of each exercise's latest session in order, only for the caller", async () => {
+describe('recent_lift_sets', () => {
+  type RecentRow = {
+    exercise_id: string;
+    session_rank: number;
+    weight_kg: number;
+    reps: number;
+    logged_rir: number | null;
+  };
+  const shaped = (data: unknown) =>
+    (data as RecentRow[]).map((row) => [
+      row.exercise_id,
+      row.session_rank,
+      Number(row.weight_kg),
+      row.reps,
+      row.logged_rir === null ? null : Number(row.logged_rir),
+    ]);
+
+  it("returns the working sets of each exercise's latest sessions, newest first, only for the caller", async () => {
     const [lifter, stranger] = await Promise.all([createTestUser(), createTestUser()]);
     const later = payloadAt(hoursAgo(3), [
       aSet(benchId, 0, 40, { reps: 12, isWarmup: true }),
       aSet(benchId, 1, 70, { reps: 6 }),
       aSet(squatId, 2, 120),
-      aSet(benchId, 3, 72.5),
+      aSet(benchId, 3, 72.5, { effort: { type: 'rir', value: 1.5 } }),
     ]);
-    const earlier = payloadAt(hoursAgo(20), [aSet(benchId, 0, 60, { reps: 8 }), aSet(squatId, 1, 100)]);
-    const oldest = payloadAt(hoursAgo(40), [aSet(deadliftId, 0, 140, { reps: 3 })]);
+    const earlier = payloadAt(hoursAgo(20), [aSet(benchId, 0, 60, { reps: 8, effort: null }), aSet(squatId, 1, 100)]);
+    const oldest = payloadAt(hoursAgo(40), [aSet(benchId, 0, 55), aSet(deadliftId, 1, 140, { reps: 3 })]);
     for (const session of [oldest, earlier, later])
       expect((await postCompleteSession(lifter.accessToken, session)).status).toBe(200);
     expect(
@@ -625,20 +641,24 @@ describe('last_session_sets', () => {
         .status,
     ).toBe(200);
 
-    const { data, error } = await lifter.client.rpc('last_session_sets', {
+    const { data, error } = await lifter.client.rpc('recent_lift_sets', {
       exercise_ids: [benchId, squatId, deadliftId],
+      session_count: 2,
     });
     expect(error).toBeNull();
-    const rows = (data as { exercise_id: string; weight_kg: number; reps: number }[]).map((row) => [
-      row.exercise_id,
-      Number(row.weight_kg),
-      row.reps,
+    expect(shaped(data)).toEqual([
+      [benchId, 1, 70, 6, 3],
+      [benchId, 1, 72.5, 5, 1.5],
+      [benchId, 2, 60, 8, null],
+      [squatId, 1, 120, 5, 3],
+      [squatId, 2, 100, 5, 3],
+      [deadliftId, 1, 140, 3, 3],
     ]);
-    expect(rows).toEqual([
-      [benchId, 70, 6],
-      [benchId, 72.5, 5],
-      [squatId, 120, 5],
-      [deadliftId, 140, 3],
+
+    const latestOnly = await lifter.client.rpc('recent_lift_sets', { exercise_ids: [benchId], session_count: 0 });
+    expect(shaped(latestOnly.data)).toEqual([
+      [benchId, 1, 70, 6, 3],
+      [benchId, 1, 72.5, 5, 1.5],
     ]);
   });
 });

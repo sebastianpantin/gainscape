@@ -104,6 +104,30 @@ test('an exercise shows last session and starts from its first set', async ({ pa
   await expect(squat.getByText(/^Last:/)).toHaveCount(0);
 });
 
+test('a lift suggests the next weight from how its last session went', async ({ page }) => {
+  await register(page, uniqueUsername('nw'));
+  const threeSetsOf = (weightKg: number, reps: number) => [
+    { weightKg, reps },
+    { weightKg, reps },
+    { weightKg, reps },
+  ];
+  await logWorkout(page, async () => {
+    await logExercise(page, 'bench', 'Barbell Bench Press', threeSetsOf(80, 5));
+    await logExercise(page, 'squat', 'Back Squat', [...threeSetsOf(100, 5).slice(0, 2), { weightKg: 100, reps: 3 }]);
+  });
+
+  await openTab(page, 'Train');
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await page.getByLabel('Search exercises').fill('bench');
+  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
+  await expect(
+    exerciseCard(page, 'Barbell Bench Press').getByText('Try 82.5 kg: every set hit 5 reps last time'),
+  ).toBeVisible();
+  await page.getByLabel('Search exercises').fill('squat');
+  await page.getByRole('button', { name: /^Back Squat\b/ }).click();
+  await expect(exerciseCard(page, 'Back Squat').getByText('Stay at 100 kg until every set hits 5 reps')).toBeVisible();
+});
+
 test('steppers change weight by a plate step and reps by one', async ({ page }) => {
   await register(page, uniqueUsername('st'));
   await page.getByRole('button', { name: 'Start workout' }).click();
