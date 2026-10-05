@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { adjustRest, REST_OFF, type RestState, type RestTimer, startRest } from '../../lib/rest-timer-rules.ts';
+import {
+  adjustRest,
+  rememberAdjustedRest,
+  REST_OFF,
+  restLengthFor,
+  type RestState,
+  type RestTimer,
+  startRest,
+} from '../../lib/rest-timer-rules.ts';
 import { deviceStorage, readRestState, restStateKey, saveRestState } from '../../lib/rest-timer-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { primeRestSound } from './rest-alert-effects.ts';
@@ -7,7 +15,8 @@ import { primeRestSound } from './rest-alert-effects.ts';
 export interface RestTimerControls {
   timer: RestTimer | null;
   changedAt: number;
-  start: (setId: string) => void;
+  lengthFor: (exerciseId: string, compound: boolean) => number;
+  start: (setId: string, exerciseId: string, compound: boolean) => void;
   adjust: (deltaS: number) => void;
   stop: () => void;
 }
@@ -32,8 +41,9 @@ export function useRestTimer(userId: string): RestTimerControls {
     return () => window.removeEventListener('storage', followOtherTabs);
   }, [userId]);
 
-  const changeTimer = (timer: RestTimer | null) => {
-    const next = { ...readRestState(deviceStorage(), userId), timer };
+  const changeTimer = (timer: RestTimer | null, remember = false) => {
+    const latest = { ...readRestState(deviceStorage(), userId), timer };
+    const next = remember && timer ? rememberAdjustedRest(latest, timer) : latest;
     setTracked({ state: next, changedAt: Date.now() });
     saveRestState(deviceStorage(), userId, next);
   };
@@ -41,14 +51,15 @@ export function useRestTimer(userId: string): RestTimerControls {
   return {
     timer: state.timer,
     changedAt,
-    start: (setId) => {
-      const { restS } = readRestState(deviceStorage(), userId);
+    lengthFor: (exerciseId, compound) => restLengthFor(state, exerciseId, compound),
+    start: (setId, exerciseId, compound) => {
+      const restS = restLengthFor(readRestState(deviceStorage(), userId), exerciseId, compound);
       if (restS === REST_OFF) return;
       if (readTrainingDeviceSettings(deviceStorage(), userId).sound) primeRestSound();
-      changeTimer(startRest(Date.now(), restS, setId));
+      changeTimer(startRest(Date.now(), restS, setId, exerciseId));
     },
     adjust: (deltaS) => {
-      if (state.timer) changeTimer(adjustRest(state.timer, deltaS, Date.now()));
+      if (state.timer) changeTimer(adjustRest(state.timer, deltaS, Date.now()), true);
     },
     stop: () => {
       if (state.timer) changeTimer(null);

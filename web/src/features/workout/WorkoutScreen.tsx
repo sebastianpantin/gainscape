@@ -17,7 +17,7 @@ import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
-import { startsRest, stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
+import { REST_OFF, restClock, startsRest, stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import type { SessionBaseline } from '../../lib/session-baseline-rules.ts';
@@ -435,6 +435,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       .filter((exercise) => exercise.equipment === 'barbell' && exercise.loadType === 'external')
       .map((exercise) => exercise.id),
   );
+  const compoundIds = new Set(liftExercises.filter((exercise) => exercise.compound).map((exercise) => exercise.id));
   const barbellSetup = barbellSetupFor(plateSettings, unitPref, programBar);
   const addPicked = async (exercise: Exercise) => {
     if (exercise.modality === 'cardio') {
@@ -535,9 +536,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             </section>
           );
         }
+        const compound = compoundIds.has(exercise.exerciseId);
+        const restS = rest.lengthFor(exercise.exerciseId, compound);
         const details = [
           exercise.target && `${exercise.target.sets} × ${exercise.target.repsMin}–${exercise.target.repsMax}`,
           strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
+          restS !== REST_OFF && `Rest ${restClock(restS)}`,
         ].filter(Boolean);
         const lastTime = lastTimeText(lastSession.byExercise.get(exercise.exerciseId), exercise.loadType, unitPref);
         const isBarbell = exercise.loadType === 'external' && barbellIds.has(exercise.exerciseId);
@@ -615,13 +619,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                       : null
                   }
                   onChange={(changes) => {
-                    if (startsRest(set, changes, rest.timer)) rest.start(set.id);
+                    if (startsRest(set, changes, rest.timer)) rest.start(set.id, exercise.exerciseId, compound);
                     if (stopsRestForWarmup(set, changes, rest.timer)) rest.stop();
                     changeSet(updateSet(draft, exerciseIndex, set.id, changes), set.id);
                   }}
                   onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
                   onToggleDone={() => {
-                    if (startsRest(set, { done: !set.done }, rest.timer)) rest.start(set.id);
+                    if (startsRest(set, { done: !set.done }, rest.timer))
+                      rest.start(set.id, exercise.exerciseId, compound);
                     changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id);
                   }}
                 />

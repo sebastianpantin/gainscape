@@ -22,6 +22,7 @@ const exercises: Exercise[] = [
     equipment: 'barbell',
     modality: 'lift',
     loadType: 'external',
+    compound: true,
     custom: false,
     archived: false,
   },
@@ -70,7 +71,7 @@ describe('exercise list cache', () => {
     saveCachedExercises(storage, userId, [{ ...exercises[0], secret: 'x' } as unknown as Exercise, exercises[2]]);
     const raw = JSON.parse(storage.getItem(exerciseCacheKey(userId))!);
     expect(Object.keys(raw.exercises[0]).sort()).toEqual(
-      ['archived', 'custom', 'equipment', 'id', 'loadType', 'modality', 'name'].sort(),
+      ['archived', 'compound', 'custom', 'equipment', 'id', 'loadType', 'modality', 'name'].sort(),
     );
     expect(Object.keys(raw.exercises[1]).sort()).toEqual(
       ['activity', 'archived', 'custom', 'equipment', 'id', 'modality', 'name'].sort(),
