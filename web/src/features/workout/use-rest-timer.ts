@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { adjustRest, REST_OFF, type RestState, type RestTimer, startRest } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage, readRestState, restStateKey, saveRestState } from '../../lib/rest-timer-store.ts';
+import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
+import { primeRestSound } from './rest-alert-effects.ts';
 
 export interface RestTimerControls {
   timer: RestTimer | null;
@@ -41,7 +43,9 @@ export function useRestTimer(userId: string): RestTimerControls {
     changedAt,
     start: (setId) => {
       const { restS } = readRestState(deviceStorage(), userId);
-      if (restS !== REST_OFF) changeTimer(startRest(Date.now(), restS, setId));
+      if (restS === REST_OFF) return;
+      if (readTrainingDeviceSettings(deviceStorage(), userId).sound) primeRestSound();
+      changeTimer(startRest(Date.now(), restS, setId));
     },
     adjust: (deltaS) => {
       if (state.timer) changeTimer(adjustRest(state.timer, deltaS, Date.now()));

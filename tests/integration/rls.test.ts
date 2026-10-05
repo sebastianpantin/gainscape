@@ -350,6 +350,7 @@ describe('function execution rights', () => {
       'get_hiscores',
       'get_profile',
       'last_logged_sets',
+      'last_session_sets',
       'list_friends',
       'remove_friend',
       'reorder_pins',

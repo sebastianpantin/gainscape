@@ -14,6 +14,8 @@ import {
   KG_PER_LB,
   shownDistance,
   shownWeight,
+  steppedReps,
+  steppedWeight,
   unitToDistanceM,
   unitToKg,
 } from '../../web/src/lib/units.ts';
@@ -160,5 +162,34 @@ describe('pace', () => {
 
   it('carries rounded seconds into the next minute', () => {
     expect(formatPace(359.8, 1000, 'km')).toBe('6:00 /km');
+  });
+});
+
+describe('weight and reps steppers', () => {
+  it('steps kilograms by 2.5 and pounds by 5', () => {
+    expect(steppedWeight(60, 'kg', 1, 2000)).toBe(62.5);
+    expect(steppedWeight(60, 'kg', -1, 2000)).toBe(57.5);
+    expect(steppedWeight(135, 'lb', 1, 4409)).toBe(140);
+    expect(steppedWeight(135, 'lb', -1, 4409)).toBe(130);
+  });
+
+  it('snaps an off-step weight to the next step in the chosen direction', () => {
+    expect(steppedWeight(61, 'kg', 1, 2000)).toBe(62.5);
+    expect(steppedWeight(61, 'kg', -1, 2000)).toBe(60);
+    expect(steppedWeight(132.3, 'lb', 1, 4409)).toBe(135);
+    expect(steppedWeight(132.3, 'lb', -1, 4409)).toBe(130);
+  });
+
+  it('keeps the weight between zero and the highest load', () => {
+    expect(steppedWeight(1, 'kg', -1, 2000)).toBe(0);
+    expect(steppedWeight(0, 'kg', -1, 2000)).toBe(0);
+    expect(steppedWeight(1999, 'kg', 1, 2000)).toBe(2000);
+  });
+
+  it('steps reps by one between 1 and 100', () => {
+    expect(steppedReps(5, 1)).toBe(6);
+    expect(steppedReps(5, -1)).toBe(4);
+    expect(steppedReps(1, -1)).toBe(1);
+    expect(steppedReps(100, 1)).toBe(100);
   });
 });

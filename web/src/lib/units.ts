@@ -15,6 +15,24 @@ export function formatWeight(kg: number, unit: UnitPref): string {
 
 export const WEIGHT_INPUT_STEP = 0.5;
 
+const WEIGHT_STEPPER_STEP: Record<UnitPref, number> = { kg: 2.5, lb: 5 };
+const STEP_SNAP_DECIMALS = 6;
+export const LOWEST_REPS = 1;
+export const HIGHEST_REPS = 100;
+
+export type StepDirection = 1 | -1;
+
+export function steppedWeight(shown: number, unit: UnitPref, direction: StepDirection, highest: number): number {
+  const step = WEIGHT_STEPPER_STEP[unit];
+  const stepsFromZero = roundTo(STEP_SNAP_DECIMALS, shown / step);
+  const nextSteps = direction === 1 ? Math.floor(stepsFromZero) + 1 : Math.ceil(stepsFromZero) - 1;
+  return Math.min(highest, Math.max(0, nextSteps * step));
+}
+
+export function steppedReps(reps: number, direction: StepDirection): number {
+  return Math.min(HIGHEST_REPS, Math.max(LOWEST_REPS, reps + direction));
+}
+
 export function highestWeightInUnit(highestKg: number, unit: UnitPref): number {
   return Math.floor(kgToUnit(highestKg, unit));
 }
