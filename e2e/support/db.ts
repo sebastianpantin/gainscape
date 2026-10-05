@@ -216,3 +216,24 @@ export async function warmupFlagsOfLatestSession(username: string) {
       )
     order by s.position`;
 }
+
+export async function programPlanOf(username: string, programName: string) {
+  return db`
+    select d.name as day_name, x.key as exercise_key,
+      e.target_sets, e.target_reps_min, e.target_reps_max
+    from public.programs p
+    join public.profiles u on u.id = p.owner_user_id
+    join public.program_days d on d.program_id = p.id
+    left join public.program_day_exercises e on e.day_id = d.id
+    left join public.exercises x on x.id = e.exercise_id
+    where u.username = ${username} and p.name = ${programName}
+    order by d.position, e.position`;
+}
+
+export async function programCount(username: string): Promise<number> {
+  const [row] = await db`
+    select count(*)::int as count
+    from public.programs p join public.profiles u on u.id = p.owner_user_id
+    where u.username = ${username}`;
+  return row.count;
+}
