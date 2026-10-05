@@ -6,7 +6,7 @@ import { nullableNumber } from './rows.ts';
 export const HISTORY_PAGE_SIZE = 50;
 
 const SESSION_COLUMNS =
-  'id,started_at,ended_at,local_date,history_only,revision,program_day_id,notes,summary,sets(count)';
+  'id,started_at,ended_at,session_rpe,local_date,history_only,revision,program_day_id,notes,summary,sets(count)';
 const SET_COLUMNS =
   'id,exercise_id,position,weight_kg,effective_load_kg,reps,is_warmup,effort_input_type,effort_value,rir,rir_source,rir_flagged,e1rm_before_kg,effective_reps,xp_awarded,duration_s,distance_m,interval_work_s,interval_rest_s,interval_rounds,counted_work_s,pace_flagged';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -15,6 +15,7 @@ export interface HistorySession {
   id: string;
   startedAt: string;
   endedAt: string;
+  sessionRpe: number | null;
   localDate: string;
   historyOnly: boolean;
   revision: number;
@@ -81,6 +82,7 @@ interface SessionRow {
   id: string;
   started_at: string;
   ended_at: string;
+  session_rpe: number | null;
   local_date: string;
   history_only: boolean;
   revision: number;
@@ -128,6 +130,7 @@ function toHistorySession(row: SessionRow): HistorySession {
     id: row.id,
     startedAt: row.started_at,
     endedAt: row.ended_at,
+    sessionRpe: row.session_rpe,
     localDate: row.local_date,
     historyOnly: row.history_only,
     revision: row.revision,

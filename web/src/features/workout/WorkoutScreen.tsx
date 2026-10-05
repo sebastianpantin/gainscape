@@ -26,6 +26,7 @@ import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-base
 import { barbellPlatesText } from '../../lib/plate-rules.ts';
 import { readPlateSettings } from '../../lib/plate-settings-store.ts';
 import { warmupSets } from '../../lib/warmup-rules.ts';
+import { SESSION_RPE_VALUES, sessionRpeFromChoice } from '../../lib/session-timing-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { formatXp } from '../../lib/format.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
@@ -50,6 +51,7 @@ import {
   updateBout,
   updateSet,
   withCurrentLoadTypes,
+  withSessionRpe,
   type WorkoutDraft,
 } from '../../offline/draft-format.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
@@ -652,6 +654,20 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>
+      <label className="field">
+        Session RPE (optional)
+        <select
+          value={draft.sessionRpe ?? ''}
+          onChange={(event) => changeDraft(withSessionRpe(draft, sessionRpeFromChoice(event.target.value)))}
+        >
+          <option value="">Not rated</option>
+          {SESSION_RPE_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
+      </label>
       <div ref={finishBar} className="finish-bar" tabIndex={-1}>
         <RestTimerBar {...rest} focusAfterStop={finishButton} focusFallback={finishBar} />
         {finishProblem && (

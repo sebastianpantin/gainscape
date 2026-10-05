@@ -130,6 +130,9 @@ describe('complete-session with the fixture workout', () => {
       ...session.summary,
       programLinked: false,
       completedAt: new Date(session.completed_at).toISOString(),
+      startedAt: fixture.startedAt,
+      endedAt: fixture.endedAt,
+      sessionRpe: null,
     });
     expect(session.timezone).toBe('Europe/Stockholm');
     expect(session.balance_version).toBe(DEFAULT_BALANCE.version);
@@ -154,6 +157,67 @@ describe('complete-session with the fixture workout', () => {
     const retry = await postCompleteSession(lifter.accessToken, lateRetry);
     expect(retry.status).toBe(200);
     expect(retry.rawBody).toBe(firstResponse.rawBody);
+  });
+});
+
+describe('complete-session timing and session RPE', () => {
+  async function storedTiming(sessionId: string) {
+    const [row] = await db`select started_at, ended_at, session_rpe from public.sessions where id = ${sessionId}`;
+    return {
+      startedAt: new Date(row.started_at).toISOString(),
+      endedAt: new Date(row.ended_at).toISOString(),
+      sessionRpe: row.session_rpe,
+    };
+  }
+
+  it('stores the start, finish and session RPE and reports them back', async () => {
+    const user = await createTestUser();
+    const payload = { ...sessionPayload(threeSets(benchId, 0, 50, 'hard')), sessionRpe: 8 };
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    const expected = { startedAt: payload.startedAt, endedAt: payload.endedAt, sessionRpe: 8 };
+    expect(await storedTiming(payload.id)).toEqual(expected);
+    expect(response.body).toMatchObject(expected);
+  });
+
+  it('stores no session RPE when a draft from an older build leaves it out', async () => {
+    const user = await createTestUser();
+    const payload = sessionPayload(threeSets(benchId, 0, 50, 'hard'));
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    expect((await storedTiming(payload.id)).sessionRpe).toBeNull();
+  });
+
+  it('reports the stored timing and RPE when Finish is sent again with other values', async () => {
+    const user = await createTestUser();
+    const payload = { ...sessionPayload(threeSets(benchId, 0, 50, 'hard')), sessionRpe: 6 };
+    await postCompleteSession(user.accessToken, payload);
+    const retry = await postCompleteSession(user.accessToken, {
+      ...payload,
+      endedAt: new Date().toISOString(),
+      sessionRpe: 9,
+    });
+    expect(retry.status).toBe(200);
+    expect(retry.body).toMatchObject({ startedAt: payload.startedAt, endedAt: payload.endedAt, sessionRpe: 6 });
+  });
+
+  it('keeps the session RPE on a session saved to history only', async () => {
+    const user = await createTestUser();
+    const payload = { ...sessionPayload(threeSets(benchId, 0, 50, 'hard'), 8 * 24), sessionRpe: 3 };
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.historyOnly).toBe(true);
+    expect((await storedTiming(payload.id)).sessionRpe).toBe(3);
+  });
+
+  it.each([0, 11, 7.5, '7'])('returns 422 for a session RPE of %j and writes nothing', async (sessionRpe) => {
+    const user = await createTestUser();
+    const response = await postCompleteSession(user.accessToken, {
+      ...sessionPayload(threeSets(benchId, 0, 50, 'hard')),
+      sessionRpe,
+    });
+    expect(response.status, response.rawBody).toBe(422);
+    expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
   });
 });
 
@@ -352,6 +416,9 @@ describe('complete-session edge cases', () => {
       historyOnly: true,
       programLinked: false,
       completedAt: expect.any(String),
+      startedAt: payload.startedAt,
+      endedAt: payload.endedAt,
+      sessionRpe: null,
     });
     const [session] = await db`select history_only from public.sessions where id = ${payload.id}`;
     expect(session.history_only).toBe(true);

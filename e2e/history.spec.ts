@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   finishedBenchDraft,
+  finishWorkout,
   logExercise,
   logWorkout,
   openLatestWorkout,
@@ -94,4 +95,27 @@ test('a save that races an edit from another device keeps both changes after rev
   await expect(page.getByText('Changes saved.')).toBeVisible();
   expect(await setsOf(sessionId)).toEqual([{ reps: 7, effort_input_type: 'level', effort_value: 0 }]);
   expect(await sessionNotes(sessionId)).toBe('edited elsewhere');
+});
+
+test('rate the session when finishing, then see its length and RPE on the summary and in History', async ({ page }) => {
+  await register(page, `hist_rpe_${Date.now().toString(36)}`);
+
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+  const sessionRpe = page.getByRole('combobox', { name: 'Session RPE (optional)' });
+  await expect(sessionRpe).toHaveValue('');
+  await sessionRpe.selectOption('8');
+  await page.reload();
+  await expect(sessionRpe).toHaveValue('8');
+  await finishWorkout(page);
+
+  await expect(page.getByText('<1 min · Session RPE 8')).toBeVisible();
+
+  await openTab(page, 'Log');
+  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  const workout = page.getByRole('list', { name: 'Workouts' }).getByRole('link').first();
+  await expect(workout).toContainText('1 set · <1 min · Session RPE 8');
+  await workout.click();
+  await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
+  await expect(page.getByText('<1 min · Session RPE 8')).toBeVisible();
 });

@@ -20,6 +20,7 @@ import {
   toggleSetDone,
   updateSet,
   withCurrentLoadTypes,
+  withSessionRpe,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
@@ -107,6 +108,17 @@ describe('parseStoredDraft', () => {
       true,
       false,
     ]);
+  });
+
+  it('keeps a session RPE through a v5 parse', () => {
+    const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft: workout({ sessionRpe: 8 }) };
+    expect(parseStoredDraft(raw, userId)).toEqual(raw);
+  });
+
+  it.each([0, 11, 6.5, '8', null])('reads a stored session RPE of %j as not rated', (sessionRpe) => {
+    const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft: { ...workout(), sessionRpe } };
+    const parsed = parseStoredDraft(raw, userId);
+    expect(parsed?.kind === 'draft' && parsed.draft.sessionRpe).toBeNull();
   });
 
   it('upgrades a v4 draft, marking every lift set as a working set', () => {
@@ -263,6 +275,19 @@ describe('completeSessionPayload', () => {
     const warmup = { ...bench.sets[0], isWarmup: true };
     const payload = completeSessionPayload(workout({ exercises: [{ ...bench, sets: [warmup] }, row] }));
     expect(payload.sets.map((set) => ('isWarmup' in set ? set.isWarmup : null))).toEqual([true, false, false]);
+  });
+
+  it('sends the start, the finish and the session RPE', () => {
+    expect(completeSessionPayload(withSessionRpe(workout(), 9))).toMatchObject({
+      startedAt: '2026-09-30T10:00:00.000Z',
+      endedAt: '2026-09-30T11:00:00.000Z',
+      sessionRpe: 9,
+    });
+  });
+
+  it('sends a null session RPE for a workout that was not rated, also from an older draft', () => {
+    expect(completeSessionPayload(workout()).sessionRpe).toBeNull();
+    expect(completeSessionPayload(withSessionRpe(workout({ sessionRpe: 4 }), null)).sessionRpe).toBeNull();
   });
 
   it('sends a null programDayId for a freestyle workout', () => {
