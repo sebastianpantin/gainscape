@@ -1,29 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchLastSessionSets } from '../../lib/last-session.ts';
-import type { LastLoggedSet } from '../../offline/draft-format.ts';
+import { fetchRecentLiftSessions } from '../../lib/last-session.ts';
+import type { RecentSessions, RecentSet } from '../../lib/last-session-rules.ts';
 
-const LAST_SESSION_TIMEOUT_MS = 3000;
+const RECENT_SESSIONS_TIMEOUT_MS = 3000;
 
-export interface LastSessionSets {
-  byExercise: ReadonlyMap<string, readonly LastLoggedSet[]>;
-  loadFor: (exerciseId: string) => Promise<readonly LastLoggedSet[] | undefined>;
+export interface RecentLiftSessions {
+  byExercise: ReadonlyMap<string, RecentSessions>;
+  loadFor: (exerciseId: string) => Promise<RecentSessions | undefined>;
 }
 
-export function useLastSessionSets(
+export function useRecentLiftSessions(
   userId: string,
   exerciseIds: readonly string[],
   onlineSignal: number,
-): LastSessionSets {
-  const [loaded, setLoaded] = useState<{ userId: string; sets: Map<string, LastLoggedSet[]> }>({
+): RecentLiftSessions {
+  const [loaded, setLoaded] = useState<{ userId: string; sets: Map<string, RecentSet[][]> }>({
     userId,
     sets: new Map(),
   });
-  const byExercise = loaded.userId === userId ? loaded.sets : new Map<string, LastLoggedSet[]>();
+  const byExercise = loaded.userId === userId ? loaded.sets : new Map<string, RecentSet[][]>();
 
   const remember = useCallback(
-    (requested: readonly string[], found: Map<string, LastLoggedSet[]>) =>
+    (requested: readonly string[], found: Map<string, RecentSet[][]>) =>
       setLoaded((previous) => {
-        const sets = previous.userId === userId ? new Map(previous.sets) : new Map<string, LastLoggedSet[]>();
+        const sets = previous.userId === userId ? new Map(previous.sets) : new Map<string, RecentSet[][]>();
         for (const id of requested) sets.set(id, found.get(id) ?? []);
         return { userId, sets };
       }),
@@ -39,7 +39,7 @@ export function useLastSessionSets(
     if (missingKey === '' || navigator.onLine === false) return;
     const requested = missingKey.split(',');
     let active = true;
-    fetchLastSessionSets(requested, AbortSignal.timeout(LAST_SESSION_TIMEOUT_MS)).then(
+    fetchRecentLiftSessions(requested, AbortSignal.timeout(RECENT_SESSIONS_TIMEOUT_MS)).then(
       (found) => active && remember(requested, found),
       () => undefined,
     );
@@ -52,7 +52,7 @@ export function useLastSessionSets(
     if (byExercise.has(exerciseId)) return byExercise.get(exerciseId);
     if (navigator.onLine === false) return undefined;
     try {
-      const found = await fetchLastSessionSets([exerciseId], AbortSignal.timeout(LAST_SESSION_TIMEOUT_MS));
+      const found = await fetchRecentLiftSessions([exerciseId], AbortSignal.timeout(RECENT_SESSIONS_TIMEOUT_MS));
       remember([exerciseId], found);
       return found.get(exerciseId);
     } catch {

@@ -1,22 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { firstSetFromLastSession, lastSessionByExercise, lastTimeText } from '../../web/src/lib/last-session-rules.ts';
+import {
+  firstSetFromLastSession,
+  lastTimeText,
+  recentSessionsByExercise,
+} from '../../web/src/lib/last-session-rules.ts';
 
 describe('last session sets', () => {
-  it('groups the rows by exercise and keeps their order', () => {
-    const grouped = lastSessionByExercise([
-      { exercise_id: 'bench', weight_kg: '70', reps: 6 },
-      { exercise_id: 'bench', weight_kg: '72.5', reps: 5 },
-      { exercise_id: 'squat', weight_kg: '120', reps: 5 },
+  it('groups the rows by exercise and session, newest session first, keeping set order', () => {
+    const grouped = recentSessionsByExercise([
+      { exercise_id: 'bench', session_rank: 1, weight_kg: '70', reps: 6, logged_rir: '3.0' },
+      { exercise_id: 'bench', session_rank: 1, weight_kg: '72.5', reps: 5, logged_rir: null },
+      { exercise_id: 'bench', session_rank: 2, weight_kg: '67.5', reps: 6, logged_rir: 2 },
+      { exercise_id: 'squat', session_rank: 1, weight_kg: '120', reps: 5, logged_rir: '1.5' },
     ]);
     expect([...grouped]).toEqual([
       [
         'bench',
         [
-          { weightKg: 70, reps: 6 },
-          { weightKg: 72.5, reps: 5 },
+          [
+            { weightKg: 70, reps: 6, loggedRir: 3 },
+            { weightKg: 72.5, reps: 5, loggedRir: null },
+          ],
+          [{ weightKg: 67.5, reps: 6, loggedRir: 2 }],
         ],
       ],
-      ['squat', [{ weightKg: 120, reps: 5 }]],
+      ['squat', [[{ weightKg: 120, reps: 5, loggedRir: 1.5 }]]],
     ]);
   });
 
