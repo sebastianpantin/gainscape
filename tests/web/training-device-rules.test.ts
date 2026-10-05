@@ -45,12 +45,12 @@ describe('training device settings', () => {
 
 describe('rest alert', () => {
   it('waits until a running rest ends', () => {
-    expect(restAlertDelayMs({ endsAt: now + 90_000, setId: 's' }, now)).toBe(90_000);
+    expect(restAlertDelayMs(now + 90_000, now)).toBe(90_000);
   });
 
   it('never alerts for a rest that already ended or is not running', () => {
-    expect(restAlertDelayMs({ endsAt: now, setId: 's' }, now)).toBeNull();
-    expect(restAlertDelayMs({ endsAt: now - 1000, setId: 's' }, now)).toBeNull();
+    expect(restAlertDelayMs(now, now)).toBeNull();
+    expect(restAlertDelayMs(now - 1000, now)).toBeNull();
     expect(restAlertDelayMs(null, now)).toBeNull();
   });
 

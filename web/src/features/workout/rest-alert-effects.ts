@@ -17,17 +17,16 @@ export function primeRestSound(): void {
 }
 
 export function playRestSound(): void {
-  if (audio === null) return;
+  const context = audio;
+  if (context === null) return;
   try {
-    const startAt = audio.currentTime;
     BEEP_FREQUENCIES_HZ.forEach((frequency, index) => {
-      if (audio === null) return;
-      const beepStart = startAt + index * (BEEP_LENGTH_S + BEEP_GAP_S);
-      const oscillator = audio.createOscillator();
-      const gain = audio.createGain();
+      const beepStart = context.currentTime + index * (BEEP_LENGTH_S + BEEP_GAP_S);
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
       oscillator.frequency.value = frequency;
       gain.gain.value = BEEP_VOLUME;
-      oscillator.connect(gain).connect(audio.destination);
+      oscillator.connect(gain).connect(context.destination);
       oscillator.start(beepStart);
       oscillator.stop(beepStart + BEEP_LENGTH_S);
     });

@@ -9,7 +9,7 @@ export function useRestAlert(userId: string, timer: RestTimer | null): void {
   const endsAt = timer?.endsAt ?? null;
 
   useEffect(() => {
-    const delayMs = restAlertDelayMs(endsAt === null ? null : { endsAt, setId: null }, Date.now());
+    const delayMs = restAlertDelayMs(endsAt, Date.now());
     if (delayMs === null) return;
     const alarm = setTimeout(() => {
       const settings = readTrainingDeviceSettings(deviceStorage(), userId);

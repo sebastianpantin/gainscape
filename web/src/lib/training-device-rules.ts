@@ -1,5 +1,3 @@
-import type { RestTimer } from './rest-timer-rules.ts';
-
 export interface TrainingDeviceSettings {
   vibrate: boolean;
   sound: boolean;
@@ -39,9 +37,9 @@ export function parseTrainingDeviceSettings(raw: string | null): TrainingDeviceS
   return settings;
 }
 
-export function restAlertDelayMs(timer: RestTimer | null, now: number): number | null {
-  if (timer === null || timer.endsAt <= now) return null;
-  return timer.endsAt - now;
+export function restAlertDelayMs(endsAt: number | null, now: number): number | null {
+  if (endsAt === null || endsAt <= now) return null;
+  return endsAt - now;
 }
 
 export type RestAlertAction = 'vibrate' | 'sound' | 'notify';
