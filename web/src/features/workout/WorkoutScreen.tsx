@@ -116,9 +116,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const finishBar = useRef<HTMLDivElement>(null);
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
-  const liftExerciseIds = (draft?.exercises ?? []).flatMap((exercise) =>
-    exercise.modality === 'lift' && !draft?.finishedAt ? [exercise.exerciseId] : [],
-  );
+  const liftExerciseIds =
+    draft && !draft.finishedAt
+      ? draft.exercises.flatMap((exercise) => (exercise.modality === 'lift' ? [exercise.exerciseId] : []))
+      : [];
   const lastSession = useLastSessionSets(userId, liftExerciseIds);
   useWakeLock(keepAwake, draft !== null && !draft.finishedAt);
 
