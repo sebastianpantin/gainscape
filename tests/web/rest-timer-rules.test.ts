@@ -11,6 +11,7 @@ import {
   restClock,
   restLengthFor,
   restView,
+  withChosenRest,
   startRest,
   startsRest,
   stopsRestForWarmup,
@@ -78,7 +79,7 @@ describe('rest timer', () => {
       endsAt: now + seconds(115),
       setId,
       exerciseId: null,
-      startedAt: now,
+      startedAt: null,
     });
   });
 
@@ -189,6 +190,18 @@ describe('rest per exercise', () => {
     expect(rememberAdjustedRest(settings, endedEarly).byExercise).toEqual({ [curlId]: REST_STEP_S });
     const longest = adjustRest(startRest(now, 600, setId, benchId), REST_STEP_S, now);
     expect(rememberAdjustedRest(settings, longest).byExercise).toEqual({ [benchId]: 600 });
+  });
+
+  it('remembers nothing once time is added to a rest that is already over', () => {
+    const over = adjustRest(startRest(now, 90, setId, curlId), REST_STEP_S, now + seconds(330));
+    expect(over.endsAt).toBe(now + seconds(345));
+    expect(rememberAdjustedRest(settings, over)).toBe(settings);
+    expect(rememberAdjustedRest(settings, adjustRest(over, REST_STEP_S, now + seconds(331)))).toBe(settings);
+  });
+
+  it('forgets the remembered rests when a rest is chosen in settings', () => {
+    const remembered = { restS: 90, timer: startRest(now, 90, setId, curlId), byExercise: { [benchId]: 150 } };
+    expect(withChosenRest(remembered, 120)).toEqual({ ...remembered, restS: 120, byExercise: {} });
   });
 
   it('remembers nothing for a rest without an exercise or start time', () => {

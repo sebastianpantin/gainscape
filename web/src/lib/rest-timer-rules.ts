@@ -34,7 +34,12 @@ export function startRest(now: number, restS: number, setId: string, exerciseId:
 
 export function adjustRest(timer: RestTimer, deltaS: number, now: number): RestTimer {
   const endsAt = Math.max(timer.endsAt, now) + deltaS * MS_PER_SECOND;
-  return { ...timer, endsAt: Math.min(now + LONGEST_REST_S * MS_PER_SECOND, Math.max(now, endsAt)) };
+  const startedAt = timer.endsAt > now ? timer.startedAt : null;
+  return { ...timer, startedAt, endsAt: Math.min(now + LONGEST_REST_S * MS_PER_SECOND, Math.max(now, endsAt)) };
+}
+
+export function withChosenRest(state: RestState, restS: number): RestState {
+  return { ...state, restS, byExercise: {} };
 }
 
 export function restLengthFor(state: RestState, exerciseId: string, compound: boolean): number {

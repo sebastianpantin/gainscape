@@ -552,7 +552,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         const step = progressionStep(unitPref, isBarbell ? barbellSetup.plates : null);
         const advice = followsProgram
           ? null
-          : (fatigueAdvice(recent, exercise.loadType, unitPref, step) ??
+          : (fatigueAdvice(recent, exercise.loadType, unitPref, step, isBarbell ? barbellSetup.barWeight : 0) ??
             nextWeightHint(lastSessionSets, exercise.loadType, exercise.target, unitPref, step));
         const workingSet = firstWorkingSet(exercise);
         const warmups =
