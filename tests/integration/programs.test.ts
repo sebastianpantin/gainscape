@@ -110,12 +110,14 @@ interface ProgramDoc {
 let templateIds: Record<string, string>;
 let benchId: string;
 let squatId: string;
+let deadliftId: string;
 
 beforeAll(async () => {
   const rows = await db`select id, key from public.programs where owner_user_id is null`;
   templateIds = Object.fromEntries(rows.map((row) => [row.key, row.id]));
   benchId = await builtInExerciseId('barbell_bench_press');
   squatId = await builtInExerciseId('back_squat');
+  deadliftId = await builtInExerciseId('deadlift');
 });
 
 afterAll(async () => {
@@ -602,5 +604,41 @@ describe('last_logged_sets', () => {
       ]),
     );
     expect(byExercise).toEqual({ [benchId]: [72.5, 5], [squatId]: [100, 5] });
+  });
+});
+
+describe('last_session_sets', () => {
+  it("returns every working set of each exercise's latest session in order, only for the caller", async () => {
+    const [lifter, stranger] = await Promise.all([createTestUser(), createTestUser()]);
+    const later = payloadAt(hoursAgo(3), [
+      aSet(benchId, 0, 40, { reps: 12, isWarmup: true }),
+      aSet(benchId, 1, 70, { reps: 6 }),
+      aSet(squatId, 2, 120),
+      aSet(benchId, 3, 72.5),
+    ]);
+    const earlier = payloadAt(hoursAgo(20), [aSet(benchId, 0, 60, { reps: 8 }), aSet(squatId, 1, 100)]);
+    const oldest = payloadAt(hoursAgo(40), [aSet(deadliftId, 0, 140, { reps: 3 })]);
+    for (const session of [oldest, earlier, later])
+      expect((await postCompleteSession(lifter.accessToken, session)).status).toBe(200);
+    expect(
+      (await postCompleteSession(stranger.accessToken, payloadAt(hoursAgo(1), [aSet(benchId, 0, 200, { reps: 1 })])))
+        .status,
+    ).toBe(200);
+
+    const { data, error } = await lifter.client.rpc('last_session_sets', {
+      exercise_ids: [benchId, squatId, deadliftId],
+    });
+    expect(error).toBeNull();
+    const rows = (data as { exercise_id: string; weight_kg: number; reps: number }[]).map((row) => [
+      row.exercise_id,
+      Number(row.weight_kg),
+      row.reps,
+    ]);
+    expect(rows).toEqual([
+      [benchId, 70, 6],
+      [benchId, 72.5, 5],
+      [squatId, 120, 5],
+      [deadliftId, 140, 3],
+    ]);
   });
 });

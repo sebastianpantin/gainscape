@@ -7,6 +7,7 @@ import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
 import { type ExerciseStrengthView, fetchExerciseStrength, fetchStrengthState } from '../../lib/collection-data.ts';
 import { strengthText } from '../../lib/collection-rules.ts';
+import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
 import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
@@ -52,6 +53,7 @@ import { ProgramToday } from './ProgramToday.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
+import { useLastSessionSets } from './use-last-session-sets.ts';
 import { useRestTimer } from './use-rest-timer.ts';
 import { rejectionText, syncProblemText } from './workout-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
@@ -108,6 +110,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const finishBar = useRef<HTMLDivElement>(null);
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
+  const liftExerciseIds = (draft?.exercises ?? []).flatMap((exercise) =>
+    exercise.modality === 'lift' && !draft?.finishedAt ? [exercise.exerciseId] : [],
+  );
+  const lastSession = useLastSessionSets(userId, liftExerciseIds);
 
   useEffect(() => {
     let active = true;
@@ -386,12 +392,19 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
   );
   const liftExercises = exercises.filter(isLiftExercise);
-  const addPicked = (exercise: Exercise) => {
-    const added =
+  const addPicked = async (exercise: Exercise) => {
+    const firstSet =
       exercise.modality === 'cardio'
-        ? addCardioExercise(draft, exercise.id, exercise.name, exercise.activity)
-        : addExercise(draft, exercise.id, exercise.name, exercise.loadType);
-    changeDraft(addSet(added, draft.exercises.length));
+        ? undefined
+        : firstSetFromLastSession(await lastSession.loadFor(exercise.id), exercise.loadType);
+    updateDraft((latest) => {
+      if (latest.sessionId !== draft.sessionId || latest.finishedAt) return latest;
+      const added =
+        exercise.modality === 'cardio'
+          ? addCardioExercise(latest, exercise.id, exercise.name, exercise.activity)
+          : addExercise(latest, exercise.id, exercise.name, exercise.loadType);
+      return addSet(added, latest.exercises.length, firstSet);
+    });
   };
   const previewTotal = donePreviewTotal(previews, draft.exercises);
 
@@ -473,6 +486,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           exercise.target && `${exercise.target.sets} × ${exercise.target.repsMin}–${exercise.target.repsMax}`,
           strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
         ].filter(Boolean);
+        const lastTime = lastTimeText(lastSession.byExercise.get(exercise.exerciseId), exercise.loadType, unitPref);
         return (
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
             <header>
@@ -491,6 +505,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               </span>
             </header>
             <p className="muted">{[...details, `${doneHere}/${exercise.sets.length} sets`].join(' · ')}</p>
+            {lastTime && <p className="muted tiny last-time">{lastTime}</p>}
             {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
               <ExercisePicker
                 exercises={liftExercises}
@@ -532,7 +547,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </section>
         );
       })}
-      <ExercisePicker exercises={exercises} onPick={addPicked} />
+      <ExercisePicker exercises={exercises} onPick={(exercise) => void addPicked(exercise)} />
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>

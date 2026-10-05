@@ -261,7 +261,7 @@ export function nextBoutValues(previous: BoutValues | undefined): BoutValues {
   return { durationS, distanceM, interval, effort };
 }
 
-export function addSet(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
+export function addSet(draft: WorkoutDraft, exerciseIndex: number, firstSet?: LastLoggedSet): WorkoutDraft {
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio') {
       const newBout: CardioDraftSet = {
@@ -274,7 +274,7 @@ export function addSet(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft
     }
     const newSet: DraftSet = {
       id: crypto.randomUUID(),
-      ...nextSetValues(exercise.sets.at(-1), exercise.loadType),
+      ...nextSetValues(exercise.sets.at(-1) ?? firstSet, exercise.loadType),
       effort: null,
       done: true,
     };
