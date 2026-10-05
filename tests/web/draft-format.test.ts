@@ -347,6 +347,17 @@ describe('planned set editing', () => {
     const added = addSet(planned, 0);
     expect(added.exercises[0].sets.at(-1)?.done).toBe(true);
   });
+
+  it('seeds the first set of an exercise and copies the previous set after that', () => {
+    const empty = workout({ exercises: [{ ...liftsOf(planned)[0], sets: [] }] });
+    const seeded = addSet(empty, 0, { weightKg: 72.5, reps: 6 });
+    expect(liftsOf(seeded)[0].sets.map(({ weightKg, reps }) => [weightKg, reps])).toEqual([[72.5, 6]]);
+    const next = addSet(seeded, 0, { weightKg: 100, reps: 1 });
+    expect(liftsOf(next)[0].sets.map(({ weightKg, reps }) => [weightKg, reps])).toEqual([
+      [72.5, 6],
+      [72.5, 6],
+    ]);
+  });
 });
 
 function cardioExercise(overrides: Partial<CardioDraftExercise> = {}): CardioDraftExercise {
