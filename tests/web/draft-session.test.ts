@@ -65,7 +65,7 @@ function withReps(draft: WorkoutDraft, reps: number): WorkoutDraft {
         modality: 'lift',
         loadType: 'external',
         target: null,
-        sets: [{ id: 'set-a', weightKg: 60, reps, effort: null, done: true }],
+        sets: [{ id: 'set-a', weightKg: 60, reps, effort: null, done: true, isWarmup: false }],
       },
     ],
   };

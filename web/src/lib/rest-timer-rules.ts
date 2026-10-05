@@ -45,13 +45,22 @@ export function restClock(seconds: number): string {
 }
 
 export function startsRest(
-  set: { id: string; done: boolean; effort: EffortInput },
+  set: { id: string; done: boolean; effort: EffortInput; isWarmup?: boolean },
   changes: { done?: boolean; effort?: EffortInput },
   timer: RestTimer | null,
 ): boolean {
+  if (set.isWarmup === true) return false;
   const becameDone = !set.done && changes.done === true;
   const firstRated = set.effort === null && changes.effort !== undefined && changes.effort !== null;
   return becameDone || (firstRated && timer?.setId !== set.id);
+}
+
+export function stopsRestForWarmup(
+  set: { id: string; isWarmup: boolean },
+  changes: { isWarmup?: boolean },
+  timer: RestTimer | null,
+): boolean {
+  return !set.isWarmup && changes.isWarmup === true && timer?.setId === set.id;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -12,17 +12,23 @@ import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
-import { startsRest } from '../../lib/rest-timer-rules.ts';
+import { startsRest, stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
+import { barbellPlatesText } from '../../lib/plate-rules.ts';
+import { readPlateSettings } from '../../lib/plate-settings-store.ts';
+import { warmupSets } from '../../lib/warmup-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { formatXp } from '../../lib/format.ts';
+import { shownWeight, unitToKg } from '../../lib/units.ts';
 import {
   addCardioExercise,
   addExercise,
   addSet,
+  addWarmupSets,
   canSwapExercise,
   doneSetCount,
+  firstWorkingSet,
   notDoneSetCount,
   removeExercise,
   removeSet,
@@ -41,7 +47,7 @@ import {
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
 import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program-enrollment.ts';
 import { skipDayEvent } from '../../lib/program-skip-rules.ts';
-import { draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
+import { barbellSetupFor, draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
@@ -113,6 +119,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const rest = useRestTimer(userId);
   useRestAlert(userId, rest.timer);
   const [keepAwake] = useState(() => readTrainingDeviceSettings(deviceStorage(), userId).keepAwake);
+  const [plateSettings] = useState(() => readPlateSettings(deviceStorage(), userId));
   const finishButton = useRef<HTMLButtonElement>(null);
   const finishBar = useRef<HTMLDivElement>(null);
   const { unitPref, effortInputMode } = usePreferences();
@@ -401,6 +408,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
   );
   const liftExercises = exercises.filter(isLiftExercise);
+  const barbellIds = new Set(
+    liftExercises
+      .filter((exercise) => exercise.equipment === 'barbell' && exercise.loadType === 'external')
+      .map((exercise) => exercise.id),
+  );
+  const barbellSetup = barbellSetupFor(plateSettings, unitPref, programBar);
   const addPicked = async (exercise: Exercise) => {
     if (exercise.modality === 'cardio') {
       changeDraft(
@@ -500,6 +513,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
         ].filter(Boolean);
         const lastTime = lastTimeText(lastSession.byExercise.get(exercise.exerciseId), exercise.loadType, unitPref);
+        const isBarbell = exercise.loadType === 'external' && barbellIds.has(exercise.exerciseId);
+        const workingSet = firstWorkingSet(exercise);
+        const warmups =
+          isBarbell && workingSet !== undefined && !exercise.sets.some((set) => set.isWarmup)
+            ? warmupSets(shownWeight(workingSet.weightKg, unitPref), barbellSetup)
+            : [];
         return (
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
             <header>
@@ -531,6 +550,23 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                 }}
               />
             )}
+            {warmups.length > 0 && (
+              <button
+                className="button dashed"
+                type="button"
+                onClick={() =>
+                  changeDraft(
+                    addWarmupSets(
+                      draft,
+                      exerciseIndex,
+                      warmups.map(({ weight, reps }) => ({ weightKg: unitToKg(weight, unitPref), reps })),
+                    ),
+                  )
+                }
+              >
+                + Add warm-ups
+              </button>
+            )}
             <ol className="set-list">
               {exercise.sets.map((set, setIndex) => (
                 <SetRow
@@ -541,9 +577,18 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   preview={previews[exerciseIndex][setIndex]}
                   unit={unitPref}
                   effortMode={effortInputMode}
-                  markers={programSetMarkerTexts(programSetMarkers(set, unitPref, programBar))}
+                  markers={programSetMarkerTexts(programSetMarkers(set, unitPref))}
+                  barbell={
+                    isBarbell
+                      ? {
+                          plates: barbellPlatesText(shownWeight(set.weightKg, unitPref), barbellSetup, unitPref),
+                          setup: barbellSetup,
+                        }
+                      : null
+                  }
                   onChange={(changes) => {
                     if (startsRest(set, changes, rest.timer)) rest.start(set.id);
+                    if (stopsRestForWarmup(set, changes, rest.timer)) rest.stop();
                     changeDraft(updateSet(draft, exerciseIndex, set.id, changes));
                   }}
                   onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}

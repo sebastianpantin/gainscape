@@ -32,7 +32,7 @@ const RUNNING: CardioActivity = {
 };
 
 function draftSet(id: string, weightKg: number, reps: number, extra: Partial<DraftSet> = {}): DraftSet {
-  return { id, weightKg, reps, effort: null, done: true, prescription: null, ...extra };
+  return { id, weightKg, reps, effort: null, done: true, isWarmup: false, prescription: null, ...extra };
 }
 
 function programDraftAt(sessionId: string, position: Position, enrollmentId = ENROLLMENT_ID): WorkoutDraft {
