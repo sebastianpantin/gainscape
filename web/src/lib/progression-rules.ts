@@ -31,8 +31,8 @@ function loadText(shown: number, loadType: LoadType, unit: UnitPref): string {
 }
 
 function leastRir(sets: readonly RecentSet[]): number | null {
-  const rirs = sets.map((set) => set.loggedRir);
-  return rirs.some((rir) => rir === null) ? null : Math.min(...(rirs as number[]));
+  const rirs = sets.flatMap((set) => (set.loggedRir === null ? [] : [set.loggedRir]));
+  return rirs.length === sets.length ? Math.min(...rirs) : null;
 }
 
 function hadRepsInReserve(sets: readonly RecentSet[], range: RepRange | null): boolean {
@@ -65,9 +65,8 @@ export function nextWeightHint(
 }
 
 function keepsFalling(values: readonly (number | null)[]): boolean {
-  return values.every(
-    (value, index) => value !== null && (index === 0 || value < (values[index - 1] ?? Number.NEGATIVE_INFINITY)),
-  );
+  const known = values.flatMap((value) => (value === null ? [] : [value]));
+  return known.length === values.length && known.every((value, index) => index === 0 || value < known[index - 1]);
 }
 
 function averageReps(sets: readonly RecentSet[]): number {
@@ -86,7 +85,8 @@ export function fatigueAdvice(
   if (oldestFirst.some((sets) => sets[0].weightKg !== weightKg)) return null;
   if (loadType === 'external' && weightKg === 0) return null;
   const rirs = oldestFirst.map(leastRir);
-  const feltHarder = keepsFalling(rirs) && (rirs.at(-1) ?? READY_RIR) <= STRAINED_RIR;
+  const latestRir = rirs.at(-1) ?? null;
+  const feltHarder = latestRir !== null && latestRir <= STRAINED_RIR && keepsFalling(rirs);
   const repsDropped = keepsFalling(oldestFirst.map(averageReps));
   if (!feltHarder && !repsDropped) return null;
   const lead = `${feltHarder ? 'Felt harder' : 'Reps dropped'} ${FATIGUE_SESSIONS} sessions in a row`;
