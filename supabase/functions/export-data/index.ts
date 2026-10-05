@@ -36,6 +36,8 @@ async function exportFor(userId: string) {
     const bodyweightRepRecords = await tx`select * from public.bodyweight_rep_records where user_id = ${userId}`;
     const cardioRecords = await tx`
       select * from public.cardio_records where user_id = ${userId} order by exercise_id, kind`;
+    const bodyweightEntries = await tx`
+      select logged_on, bodyweight_kg::float from public.bodyweight_entries where user_id = ${userId} order by logged_on`;
     const pinnedExercises = await tx`select * from public.pinned_exercises where user_id = ${userId} order by position`;
     const customExercises = await tx`
       select e.*, coalesce(
@@ -103,6 +105,7 @@ async function exportFor(userId: string) {
       repMaxes,
       bodyweightRepRecords,
       cardioRecords,
+      bodyweightEntries,
       pinnedExercises,
       customExercises,
       programs,
