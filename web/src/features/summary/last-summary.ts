@@ -1,8 +1,11 @@
 import type { SessionSummary } from '@domain/types.ts';
+import type { SessionTiming } from '../../lib/session-timing-rules.ts';
+
+type RememberedSummary = SessionSummary & SessionTiming;
 
 const LAST_SUMMARY_KEY = 'gainscape.last-summary';
 
-export function rememberLastSummary(summary: SessionSummary): void {
+export function rememberLastSummary(summary: RememberedSummary): void {
   try {
     sessionStorage.setItem(LAST_SUMMARY_KEY, JSON.stringify(summary));
   } catch {
@@ -10,10 +13,10 @@ export function rememberLastSummary(summary: SessionSummary): void {
   }
 }
 
-export function recallLastSummary(): SessionSummary | null {
+export function recallLastSummary(): RememberedSummary | null {
   try {
     const raw = sessionStorage.getItem(LAST_SUMMARY_KEY);
-    return raw ? (JSON.parse(raw) as SessionSummary) : null;
+    return raw ? (JSON.parse(raw) as RememberedSummary) : null;
   } catch {
     return null;
   }

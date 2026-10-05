@@ -1,6 +1,7 @@
 import { type Position, type PrescribedExercise, type PrescriptionSnapshot } from '@domain/index.ts';
 import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
 import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
+import { isSessionRpe } from '../lib/session-timing-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 5;
 const PRE_WARMUP_FORMAT_VERSION = 4;
@@ -77,6 +78,7 @@ export interface WorkoutDraft {
   programDayId: string | null;
   programLabel: string | null;
   program?: DraftProgram | null;
+  sessionRpe?: number | null;
   exercises: DraftExercise[];
 }
 
@@ -172,9 +174,14 @@ function normalisedExercise(exercise: unknown, fromV2: boolean): unknown {
   return { ...exercise, modality: 'lift', sets: exercise.sets.map((set) => normalisedSet(set, fromV2)) };
 }
 
+function withUsableSessionRpe(draft: WorkoutDraft): WorkoutDraft {
+  if (!('sessionRpe' in draft) || isSessionRpe(draft.sessionRpe)) return draft;
+  return { ...draft, sessionRpe: null };
+}
+
 function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
   return {
-    ...draft,
+    ...withUsableSessionRpe(draft),
     program: isDraftProgram(draft.program) ? draft.program : null,
     exercises: draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
   };
@@ -236,6 +243,10 @@ export function startDraft(): WorkoutDraft {
     program: null,
     exercises: [],
   };
+}
+
+export function withSessionRpe(draft: WorkoutDraft, sessionRpe: number | null): WorkoutDraft {
+  return { ...draft, sessionRpe };
 }
 
 export function addExercise(draft: WorkoutDraft, exerciseId: string, name: string, loadType: LoadType): WorkoutDraft {

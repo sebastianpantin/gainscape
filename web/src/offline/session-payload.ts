@@ -35,6 +35,7 @@ export function completeSessionPayload(draft: WorkoutDraft) {
     startedAt: draft.startedAt,
     endedAt: draft.finishedAt,
     notes: null,
+    sessionRpe: draft.sessionRpe ?? null,
     programDayId: draft.programDayId,
     program: draft.program ? { enrollmentId: draft.program.enrollmentId, position: draft.program.position } : null,
     sets,

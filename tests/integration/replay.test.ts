@@ -102,6 +102,9 @@ describe('out-of-order sync', () => {
       ...(await storedSummary(late.id)),
       programLinked: false,
       completedAt: expect.any(String),
+      startedAt: late.startedAt,
+      endedAt: late.endedAt,
+      sessionRpe: null,
     });
     expect(retry.body.prs).toHaveLength(1);
     expect(retry.rawBody).not.toBe(lateResponse.rawBody);

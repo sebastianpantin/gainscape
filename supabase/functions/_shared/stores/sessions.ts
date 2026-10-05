@@ -16,7 +16,13 @@ import {
   type PrescriptionSnapshotColumns,
 } from './set-columns.ts';
 
-export interface StoredSession {
+export interface SessionTiming {
+  startedAt: string;
+  endedAt: string;
+  sessionRpe: number | null;
+}
+
+export interface StoredSession extends SessionTiming {
   userId: string;
   summary: SessionSummary;
   setIds: string[];
@@ -39,13 +45,11 @@ export interface ProfileSettings {
   timezone: string;
 }
 
-export interface NewSessionRow {
+export interface NewSessionRow extends SessionTiming {
   id: string;
   userId: string;
   programDayId: string | null;
   programLink: ProgramLink | null;
-  startedAt: string;
-  endedAt: string;
   timezone: string;
   historyOnly: boolean;
   balanceVersion: number;
@@ -64,7 +68,7 @@ export async function lockUser(
 
 export async function findSession(tx: Transaction, sessionId: string): Promise<StoredSession | null> {
   const [row] = await tx`
-    select s.user_id, s.summary, s.completed_at, s.enrollment_id,
+    select s.user_id, s.summary, s.completed_at, s.enrollment_id, s.started_at, s.ended_at, s.session_rpe,
            coalesce(array_agg(st.id order by st.id) filter (where st.id is not null), '{}') as set_ids
     from public.sessions s
     left join public.sets st on st.session_id = s.id
@@ -77,6 +81,9 @@ export async function findSession(tx: Transaction, sessionId: string): Promise<S
     setIds: row.set_ids,
     completedAt: isoTimestamp(row.completed_at),
     programLinked: row.enrollment_id !== null,
+    startedAt: isoTimestamp(row.started_at),
+    endedAt: isoTimestamp(row.ended_at),
+    sessionRpe: row.session_rpe,
   };
 }
 
@@ -304,12 +311,12 @@ export async function insertSession(
   const [inserted] = await tx`
     insert into public.sessions
       (id, user_id, program_day_id, enrollment_id, program_position, started_at, ended_at, local_date, timezone,
-       history_only, balance_version, derived_balance_version, summary, notes)
+       history_only, balance_version, derived_balance_version, summary, notes, session_rpe)
     values
       (${row.id}, ${row.userId}, ${row.programDayId}, ${row.programLink?.enrollmentId ?? null}, ${programPosition},
        ${row.startedAt}, ${row.endedAt}, (${row.startedAt}::timestamptz at time zone ${row.timezone})::date,
        ${row.timezone}, ${row.historyOnly}, ${row.balanceVersion}, ${row.balanceVersion},
-       ${tx.json(row.summary as unknown as JsonValue)}, ${row.notes})
+       ${tx.json(row.summary as unknown as JsonValue)}, ${row.notes}, ${row.sessionRpe})
     returning summary, completed_at`;
   await tx`insert into public.sets ${tx(setRows)}`;
   return { summary: inserted.summary, completedAt: isoTimestamp(inserted.completed_at) };
