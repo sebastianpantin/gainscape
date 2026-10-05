@@ -2,7 +2,8 @@ import { type Position, type PrescribedExercise, type PrescriptionSnapshot } fro
 import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
 import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
 
-const DRAFT_FORMAT_VERSION = 4;
+const DRAFT_FORMAT_VERSION = 5;
+const PRE_WARMUP_FORMAT_VERSION = 4;
 const PRE_CARDIO_FORMAT_VERSION = 3;
 const PRE_EFFORT_INPUT_FORMAT_VERSION = 2;
 const STARTING_EXTERNAL_LOAD_KG = 20;
@@ -20,6 +21,7 @@ export interface DraftSet {
   reps: number;
   effort: EffortInput;
   done: boolean;
+  isWarmup: boolean;
   prescription?: PrescriptionSnapshot | null;
   prescriptionDetail?: PrescriptionDetail;
 }
@@ -149,9 +151,10 @@ function normalisedSet(set: unknown, fromV2: boolean): unknown {
   if (!isRecord(set)) return set;
   const prescription = isPrescriptionSnapshot(set.prescription) ? set.prescription : null;
   const { prescriptionDetail, ...rest } = withNormalisedEffort(set, fromV2);
+  const isWarmup = set.isWarmup === true;
   return isPrescriptionDetail(prescriptionDetail)
-    ? { ...rest, prescription, prescriptionDetail }
-    : { ...rest, prescription };
+    ? { ...rest, isWarmup, prescription, prescriptionDetail }
+    : { ...rest, isWarmup, prescription };
 }
 
 function isCardioEffortInput(value: unknown): boolean {
@@ -179,6 +182,7 @@ function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
 
 const READABLE_FORMAT_VERSIONS: readonly unknown[] = [
   DRAFT_FORMAT_VERSION,
+  PRE_WARMUP_FORMAT_VERSION,
   PRE_CARDIO_FORMAT_VERSION,
   PRE_EFFORT_INPUT_FORMAT_VERSION,
 ];
@@ -277,9 +281,33 @@ export function addSet(draft: WorkoutDraft, exerciseIndex: number, firstSet?: La
       ...nextSetValues(exercise.sets.at(-1) ?? firstSet, exercise.loadType),
       effort: null,
       done: true,
+      isWarmup: false,
     };
     return { ...exercise, sets: [...exercise.sets, newSet] };
   });
+}
+
+export function addWarmupSets(
+  draft: WorkoutDraft,
+  exerciseIndex: number,
+  warmups: readonly LastLoggedSet[],
+): WorkoutDraft {
+  return updateExerciseAt(draft, exerciseIndex, (exercise) => {
+    if (exercise.modality === 'cardio') return exercise;
+    const warmupSets: DraftSet[] = warmups.map(({ weightKg, reps }) => ({
+      id: crypto.randomUUID(),
+      weightKg,
+      reps,
+      effort: null,
+      done: false,
+      isWarmup: true,
+    }));
+    return { ...exercise, sets: [...warmupSets, ...exercise.sets] };
+  });
+}
+
+export function firstWorkingSet(exercise: LiftDraftExercise): DraftSet | undefined {
+  return exercise.sets.find((set) => !set.isWarmup);
 }
 
 export function updateSet(
@@ -452,6 +480,7 @@ export function startDraftFromDay(
         reps: planned.targetRepsMin,
         effort: null,
         done: false,
+        isWarmup: false,
       })),
     };
   });
@@ -494,6 +523,7 @@ export function startDraftFromPrescription(
         reps: set.reps ?? STARTING_REPS,
         effort: null,
         done: false,
+        isWarmup: false,
         prescription: set.snapshot,
         prescriptionDetail: { pct: set.pct, optional: set.optional },
       })),

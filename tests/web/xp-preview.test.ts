@@ -32,7 +32,11 @@ let setCounter = 0;
 
 function draftSet(weightKg: number, reps: number, effort: DraftSet['effort'], done = true): DraftSet {
   setCounter += 1;
-  return { id: `set-${setCounter}`, weightKg, reps, effort, done };
+  return { id: `set-${setCounter}`, weightKg, reps, effort, done, isWarmup: false };
+}
+
+function warmupSet(weightKg: number, reps: number, done = true): DraftSet {
+  return { ...draftSet(weightKg, reps, null, done), isWarmup: true };
 }
 
 function exercise(exerciseId: string, sets: DraftSet[], loadType: LoadType = 'external'): LiftDraftExercise {
@@ -59,6 +63,27 @@ describe('previewSession', () => {
       strengthOf([['bench', 100]]),
     );
     expect(previews[0][0].xp).toBe(0);
+  });
+
+  it('previews no XP for a warm-up set and leaves the working sets after it unchanged', () => {
+    const strength = strengthOf([['bench', epley(100, 6)]]);
+    const working = draftSet(100, 6, failure);
+    const withWarmups = previewSession(
+      [exercise('bench', [warmupSet(20, 10), warmupSet(60, 3, false), working])],
+      builtIn,
+      strength,
+    );
+    const alone = previewSession([exercise('bench', [working])], builtIn, strength);
+    expect(withWarmups[0].slice(0, 2)).toEqual([
+      { xp: 0, basis: 'warmup', rir: null },
+      { xp: 0, basis: 'warmup', rir: null },
+    ]);
+    expect(withWarmups[0][2]).toEqual(alone[0][0]);
+  });
+
+  it('previews an unrated warm-up set as a warm-up before strength has loaded', () => {
+    const previews = previewSession([exercise('bench', [warmupSet(20, 10)])], builtIn, null);
+    expect(previews[0][0]).toEqual({ xp: 0, basis: 'warmup', rir: null });
   });
 
   it('previews the rep-based intensity bonus for a logged set', () => {
@@ -420,6 +445,11 @@ describe('preview labels', () => {
     expect(previewNote({ xp: 0, basis: 'logged', rir: noXpRir + 1 })).toBe('counts for e1RM');
     expect(previewNote({ xp: 165, basis: 'logged', rir: noXpRir - 1 })).toBe('');
     expect(previewNote({ xp: 0, basis: 'logged', rir: null })).toBe('');
+  });
+
+  it('notes a warm-up preview as a warm-up', () => {
+    expect(previewXpLabel({ xp: 0, basis: 'warmup', rir: null })).toBe('~0');
+    expect(previewNote({ xp: 0, basis: 'warmup', rir: null })).toBe('warm-up');
   });
 
   it('notes estimated, first-time and unknown previews', () => {

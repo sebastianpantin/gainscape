@@ -15,7 +15,7 @@ function liftPayload(set: DraftSet, exerciseId: string, position: number) {
     position,
     weightKg: set.weightKg,
     reps: set.reps,
-    isWarmup: false,
+    isWarmup: set.isWarmup,
     effort: set.effort,
     prescription: set.prescription ?? null,
   };
