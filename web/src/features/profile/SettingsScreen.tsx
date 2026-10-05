@@ -14,7 +14,7 @@ import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
 import { type BarbellSetup, HEAVIEST_BAR_OR_PLATE, isUsableBarOrPlate, PLATE_CHOICES } from '../../lib/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../lib/plate-settings-store.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { REST_CHOICES_S, REST_OFF, restClock } from '../../lib/rest-timer-rules.ts';
+import { REST_CHOICES_S, REST_OFF, restClock, withChosenRest } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage, readRestState, saveRestState } from '../../lib/rest-timer-store.ts';
 import type { TrainingDeviceSettings } from '../../lib/training-device-rules.ts';
 import { readTrainingDeviceSettings, saveTrainingDeviceSettings } from '../../lib/training-device-store.ts';
@@ -126,12 +126,15 @@ function RestChoice({ userId }: { userId: string }) {
   const pick = (value: string) => {
     const picked = Number(value);
     setRestS(picked);
-    saveRestState(deviceStorage(), userId, { ...readRestState(deviceStorage(), userId), restS: picked });
+    saveRestState(deviceStorage(), userId, withChosenRest(readRestState(deviceStorage(), userId), picked));
   };
   return (
     <>
       <Choice label="Rest timer" options={REST_OPTIONS} current={String(restS)} disabled={false} onPick={pick} />
-      <span className="hint">Starts when you finish a set. Saved on this device only.</span>
+      <span className="hint">
+        Starts when you finish a set. Compound lifts rest at least 3:00. Adjusting a rest keeps it for that exercise
+        until you choose here again. Saved on this device only.
+      </span>
     </>
   );
 }

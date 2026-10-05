@@ -41,7 +41,7 @@ describe('nextWeightHint', () => {
       'Try 82.5 kg: every set hit 5 reps last time',
     );
     expect(nextWeightHint(threeOf(80, 5, 3), 'external', null, 'lb', 5)).toBe(
-      'Try 181.4 lb: every set hit 5 reps last time',
+      'Try 180 lb: every set hit 5 reps last time',
     );
   });
 
@@ -113,7 +113,7 @@ describe('fatigueAdvice', () => {
     expect(FATIGUE_SESSIONS).toBe(3);
     expect(DELOAD_FRACTION).toBe(0.9);
     const sessions = newestFirst(threeOf(80, 5, 1), threeOf(80, 5, 2), threeOf(80, 5, 3));
-    expect(fatigueAdvice(sessions, 'external', 'kg', 2.5)).toBe(
+    expect(fatigueAdvice(sessions, 'external', 'kg', 2.5, 0)).toBe(
       'Felt harder 3 sessions in a row at 80 kg: consider a lighter day at 72.5 kg',
     );
   });
@@ -124,37 +124,55 @@ describe('fatigueAdvice', () => {
       [set(100, 5), set(100, 4)],
       [set(100, 5), set(100, 5), set(60, 12)],
     );
-    expect(fatigueAdvice(sessions, 'external', 'kg', 2.5)).toBe(
+    expect(fatigueAdvice(sessions, 'external', 'kg', 2.5, 0)).toBe(
       'Reps dropped 3 sessions in a row at 100 kg: consider a lighter day at 90 kg',
     );
-    expect(fatigueAdvice(sessions, 'external', 'lb', 5)).toBe(
+    expect(fatigueAdvice(sessions, 'external', 'lb', 5, 0)).toBe(
       'Reps dropped 3 sessions in a row at 220.5 lb: consider a lighter day at 200 lb',
     );
   });
 
   it('stays quiet while the lift still has reps in reserve', () => {
     const sessions = newestFirst(threeOf(80, 5, 2), threeOf(80, 5, 3), threeOf(80, 5, 4));
-    expect(fatigueAdvice(sessions, 'external', 'kg', 2.5)).toBeNull();
+    expect(fatigueAdvice(sessions, 'external', 'kg', 2.5, 0)).toBeNull();
   });
 
   it('stays quiet when effort or reps held steady, the weight changed or there are too few sessions', () => {
     const steady = newestFirst(threeOf(80, 5, 1), threeOf(80, 5, 1), threeOf(80, 5, 3));
-    expect(fatigueAdvice(steady, 'external', 'kg', 2.5)).toBeNull();
+    expect(fatigueAdvice(steady, 'external', 'kg', 2.5, 0)).toBeNull();
     const heavier = newestFirst(threeOf(82.5, 5, 1), threeOf(80, 5, 2), threeOf(80, 5, 3));
-    expect(fatigueAdvice(heavier, 'external', 'kg', 2.5)).toBeNull();
+    expect(fatigueAdvice(heavier, 'external', 'kg', 2.5, 0)).toBeNull();
     const unrated = newestFirst(threeOf(80, 5, 1), threeOf(80, 5, null), threeOf(80, 5, 3));
-    expect(fatigueAdvice(unrated, 'external', 'kg', 2.5)).toBeNull();
-    expect(fatigueAdvice(newestFirst(threeOf(80, 5, 1), threeOf(80, 5, 2)), 'external', 'kg', 2.5)).toBeNull();
-    expect(fatigueAdvice(undefined, 'external', 'kg', 2.5)).toBeNull();
+    expect(fatigueAdvice(unrated, 'external', 'kg', 2.5, 0)).toBeNull();
+    expect(fatigueAdvice(newestFirst(threeOf(80, 5, 1), threeOf(80, 5, 2)), 'external', 'kg', 2.5, 0)).toBeNull();
+    expect(fatigueAdvice(undefined, 'external', 'kg', 2.5, 0)).toBeNull();
+  });
+
+  it('suggests an easier day when no lighter load is left above zero or the bar', () => {
+    const emptyBar = newestFirst(threeOf(20, 5, 0), threeOf(20, 5, 1), threeOf(20, 5, 2));
+    expect(fatigueAdvice(emptyBar, 'external', 'kg', 2.5, 20)).toBe(
+      'Felt harder 3 sessions in a row at 20 kg: consider an easier day with fewer reps',
+    );
+    const lightVest = newestFirst(threeOf(2.5, 5, 0), threeOf(2.5, 5, 1), threeOf(2.5, 5, 2));
+    expect(fatigueAdvice(lightVest, 'bodyweight_plus', 'kg', 2.5, 0)).toBe(
+      'Felt harder 3 sessions in a row at +2.5 kg: consider an easier day with fewer reps',
+    );
+  });
+
+  it('always suggests at least one step lighter', () => {
+    const dumbbell = newestFirst(threeOf(10, 8, 0), threeOf(10, 8, 1), threeOf(10, 8, 2));
+    expect(fatigueAdvice(dumbbell, 'external', 'kg', 2.5, 0)).toBe(
+      'Felt harder 3 sessions in a row at 10 kg: consider a lighter day at 7.5 kg',
+    );
   });
 
   it('suggests an easier day for a bodyweight lift and a lighter load for a weighted one', () => {
     const bodyweight = newestFirst([set(0, 6), set(0, 5)], [set(0, 7), set(0, 6)], [set(0, 8), set(0, 7)]);
-    expect(fatigueAdvice(bodyweight, 'bodyweight', 'kg', 2.5)).toBe(
+    expect(fatigueAdvice(bodyweight, 'bodyweight', 'kg', 2.5, 0)).toBe(
       'Reps dropped 3 sessions in a row: consider an easier day with fewer reps',
     );
     const weighted = newestFirst(threeOf(20, 5, 0), threeOf(20, 5, 1), threeOf(20, 5, 2));
-    expect(fatigueAdvice(weighted, 'bodyweight_plus', 'kg', 2.5)).toBe(
+    expect(fatigueAdvice(weighted, 'bodyweight_plus', 'kg', 2.5, 0)).toBe(
       'Felt harder 3 sessions in a row at +20 kg: consider a lighter day at +17.5 kg',
     );
   });

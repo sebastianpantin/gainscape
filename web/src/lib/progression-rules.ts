@@ -60,7 +60,8 @@ export function nextWeightHint(
       : `Aim for ${floor} reps on every set`;
   const goal = range?.repsMax ?? firstReps;
   if (heaviest.some((set) => set.reps < goal) || !hadRepsInReserve(heaviest, range)) return null;
-  const next = addsLoad ? loadText(roundTo(WEIGHT_DECIMALS, shown + step), loadType, unit) : `${goal + 1} reps`;
+  const heavier = roundTo(WEIGHT_DECIMALS, Math.round((shown + step) / step) * step);
+  const next = addsLoad ? loadText(heavier, loadType, unit) : `${goal + 1} reps`;
   return `Try ${next}: every set hit ${goal} reps last time`;
 }
 
@@ -78,6 +79,7 @@ export function fatigueAdvice(
   loadType: LoadType,
   unit: UnitPref,
   step: number,
+  lowestLoad: number,
 ): string | null {
   if (!sessions || sessions.length < FATIGUE_SESSIONS) return null;
   const oldestFirst = sessions.slice(0, FATIGUE_SESSIONS).map(heaviestSets).reverse();
@@ -90,8 +92,11 @@ export function fatigueAdvice(
   const repsDropped = keepsFalling(oldestFirst.map(averageReps));
   if (!feltHarder && !repsDropped) return null;
   const lead = `${feltHarder ? 'Felt harder' : 'Reps dropped'} ${FATIGUE_SESSIONS} sessions in a row`;
-  if (loadType === 'bodyweight' || weightKg === 0) return `${lead}: consider an easier day with fewer reps`;
+  const easierDay = 'consider an easier day with fewer reps';
+  if (loadType === 'bodyweight' || weightKg === 0) return `${lead}: ${easierDay}`;
   const shown = shownWeight(weightKg, unit);
-  const lighter = roundTo(WEIGHT_DECIMALS, Math.round((shown * DELOAD_FRACTION) / step) * step);
-  return `${lead} at ${loadText(shown, loadType, unit)}: consider a lighter day at ${loadText(lighter, loadType, unit)}`;
+  const at = `${lead} at ${loadText(shown, loadType, unit)}`;
+  const lighter = roundTo(WEIGHT_DECIMALS, Math.min(shown - step, Math.round((shown * DELOAD_FRACTION) / step) * step));
+  if (lighter <= 0 || lighter < lowestLoad) return `${at}: ${easierDay}`;
+  return `${at}: consider a lighter day at ${loadText(lighter, loadType, unit)}`;
 }
