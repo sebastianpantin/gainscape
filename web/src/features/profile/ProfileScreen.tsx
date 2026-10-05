@@ -5,7 +5,9 @@ import { fetchCollectionPercent } from '../../lib/collection-data.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { ageFrom, BODYWEIGHT_NUDGE_STEP, nudgedBodyweightKg, updatePrivateProfile } from '../../lib/profile.ts';
 import { useStanding } from '../../lib/standing.ts';
+import { useIsOffline } from '../../lib/use-online.ts';
 import { formatHeight, formatWeight } from '../../lib/units.ts';
+import { BodyweightTrend } from './BodyweightTrend.tsx';
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileCard } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
@@ -34,6 +36,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
   const [draftKg, setDraftKg] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const offline = useIsOffline();
 
   useEffect(() => {
     let active = true;
@@ -135,7 +138,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         </div>
         {draftKg !== null && (
           <div className="row">
-            <button className="button primary" type="button" disabled={saving} onClick={saveNudged}>
+            <button className="button primary" type="button" disabled={saving || offline} onClick={saveNudged}>
               Save {formatWeight(draftKg, unitPref)}
             </button>
             <button className="button" type="button" onClick={() => setDraftKg(null)}>
@@ -161,6 +164,13 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         <span className="hint">
           Bodyweight is the load for pull-ups, dips and push-ups. Height and age never change your XP.
         </span>
+      </section>
+      <section className="panel stack" aria-labelledby="trend-heading">
+        <div className="row spread">
+          <h2 id="trend-heading">Bodyweight trend</h2>
+          <PrivateTag />
+        </div>
+        <BodyweightTrend userId={userId} savedKg={profile.bodyweightKg} unit={unitPref} />
       </section>
       <ul className="menu-list">
         <MenuLink to="/profile/edit">Edit profile &amp; body</MenuLink>
