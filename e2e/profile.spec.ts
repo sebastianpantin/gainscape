@@ -106,7 +106,7 @@ test('pounds are shown everywhere while kilograms are stored, without false reco
     await page.getByLabel('Search exercises').fill('bench');
     await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
     const row = page.locator('li.set-row').first();
-    await row.getByLabel('lb').fill('135');
+    await row.getByRole('spinbutton', { name: 'lb', exact: true }).fill('135');
     await row.getByLabel('reps').fill('5');
     await row.getByRole('radio', { name: 'Hard' }).click();
     await finishWorkout(page);
@@ -131,7 +131,7 @@ test('RPE effort is logged as RPE and stored as reps in reserve', async ({ page 
   await page.getByLabel('Search exercises').fill('bench');
   await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
   const row = page.locator('li.set-row').first();
-  await row.getByLabel('kg').fill('60');
+  await row.getByRole('spinbutton', { name: 'kg', exact: true }).fill('60');
   await row.getByLabel('reps').fill('8');
   await expect(row.getByRole('radio', { name: 'Hard' })).toHaveCount(0);
   await row.getByRole('radio', { name: 'RPE 8', exact: true }).click();

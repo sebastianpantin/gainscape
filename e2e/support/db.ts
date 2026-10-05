@@ -205,3 +205,14 @@ export async function programEventsOf(username: string) {
     where p.username = ${username}
     order by v.effective_at, v.id`;
 }
+
+export async function warmupFlagsOfLatestSession(username: string) {
+  return db`
+    select s.is_warmup, s.xp_awarded::float as xp_awarded
+    from public.sets s join public.profiles p on p.id = s.user_id
+    where p.username = ${username}
+      and s.session_id = (
+        select s2.session_id from public.sets s2 where s2.user_id = p.id order by s2.created_at desc limit 1
+      )
+    order by s.position`;
+}

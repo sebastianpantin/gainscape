@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   addCardioExercise,
   addSet,
+  addWarmupSets,
   canSwapExercise,
   type CardioDraftExercise,
   type CatalogEntry,
   doneSetCount,
+  firstWorkingSet,
   type LiftDraftExercise,
   nextUpdatedAt,
   notDoneSetCount,
@@ -46,9 +48,10 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
             reps: 8,
             effort: { type: 'level', level: 'hard' },
             done: true,
+            isWarmup: false,
             prescription: null,
           },
-          { id: 'set-b', weightKg: 60, reps: 8, effort: null, done: false, prescription: null },
+          { id: 'set-b', weightKg: 60, reps: 8, effort: null, done: false, isWarmup: false, prescription: null },
         ],
       },
       {
@@ -58,16 +61,17 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
         loadType: 'external',
         target: { sets: 3, repsMin: 8, repsMax: 12 },
         sets: [
-          { id: 'set-c', weightKg: 50, reps: 10, effort: null, done: false, prescription: null },
+          { id: 'set-c', weightKg: 50, reps: 10, effort: null, done: false, isWarmup: false, prescription: null },
           {
             id: 'set-d',
             weightKg: 50,
             reps: 10,
             effort: { type: 'level', level: 'easy' },
             done: true,
+            isWarmup: false,
             prescription: null,
           },
-          { id: 'set-e', weightKg: 55, reps: 9, effort: null, done: true, prescription: null },
+          { id: 'set-e', weightKg: 55, reps: 9, effort: null, done: true, isWarmup: false, prescription: null },
         ],
       },
     ],
@@ -84,14 +88,53 @@ function liftsOf(draft: WorkoutDraft | null | undefined): LiftDraftExercise[] {
 }
 
 describe('parseStoredDraft', () => {
-  it('accepts a v4 draft for the same user', () => {
-    const raw = { v: 4, kind: 'draft', userId, updatedAt: 5, draft: workout() };
+  it('accepts a v5 draft for the same user', () => {
+    const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft: workout() };
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
   });
 
-  it('accepts a v4 tombstone for the same user', () => {
-    const raw = { v: 4, kind: 'synced', userId, updatedAt: 6, syncedSessionId: workout().sessionId };
+  it('accepts a v5 tombstone for the same user', () => {
+    const raw = { v: 5, kind: 'synced', userId, updatedAt: 6, syncedSessionId: workout().sessionId };
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
+  });
+
+  it('keeps a warm-up flag through a v5 parse', () => {
+    const [bench, row] = liftsOf(workout());
+    const warmup = { ...bench.sets[0], isWarmup: true };
+    const draft = workout({ exercises: [{ ...bench, sets: [warmup, bench.sets[1]] }, row] });
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft }, userId);
+    expect(liftsOf(parsed?.kind === 'draft' ? parsed.draft : null)[0].sets.map((set) => set.isWarmup)).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  it('upgrades a v4 draft, marking every lift set as a working set', () => {
+    const v4Draft = {
+      ...workout(),
+      exercises: liftsOf(workout()).map((exercise) => ({
+        ...exercise,
+        sets: exercise.sets.map((set) => Object.fromEntries(Object.entries(set).filter(([key]) => key !== 'isWarmup'))),
+      })),
+    };
+    const upgraded = parseStoredDraft({ v: 4, kind: 'draft', userId, updatedAt: 5, draft: v4Draft }, userId);
+    expect(upgraded).toEqual({ v: 5, kind: 'draft', userId, updatedAt: 5, draft: workout() });
+  });
+
+  it('upgrades a v4 tombstone', () => {
+    const raw = { v: 4, kind: 'synced', userId, updatedAt: 6, syncedSessionId: workout().sessionId };
+    expect(parseStoredDraft(raw, userId)).toEqual({ ...raw, v: 5 });
+  });
+
+  it.each([['yes'], [1], [null]])('reads a malformed stored warm-up flag %j as a working set', (isWarmup) => {
+    const broken = {
+      ...workout(),
+      exercises: [
+        { ...workout().exercises[0], sets: [{ id: 'x', weightKg: 60, reps: 8, effort: null, done: true, isWarmup }] },
+      ],
+    };
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft: broken }, userId);
+    expect(liftsOf(parsed?.kind === 'draft' ? parsed.draft : null)[0].sets[0].isWarmup).toBe(false);
   });
 
   it('upgrades a v3 draft, marking every exercise as a lift', () => {
@@ -100,12 +143,12 @@ describe('parseStoredDraft', () => {
       exercises: workout().exercises.map(withoutModality),
     };
     const upgraded = parseStoredDraft({ v: 3, kind: 'draft', userId, updatedAt: 5, draft: v3Draft }, userId);
-    expect(upgraded).toEqual({ v: 4, kind: 'draft', userId, updatedAt: 5, draft: workout() });
+    expect(upgraded).toEqual({ v: 5, kind: 'draft', userId, updatedAt: 5, draft: workout() });
   });
 
   it('upgrades a v3 tombstone', () => {
     const raw = { v: 3, kind: 'synced', userId, updatedAt: 6, syncedSessionId: workout().sessionId };
-    expect(parseStoredDraft(raw, userId)).toEqual({ ...raw, v: 4 });
+    expect(parseStoredDraft(raw, userId)).toEqual({ ...raw, v: 5 });
   });
 
   it('upgrades a v2 draft, turning effortLevel into an effort input', () => {
@@ -117,7 +160,7 @@ describe('parseStoredDraft', () => {
     const v2Draft = { ...workout(), exercises: [{ ...v2Exercise, sets: v2Sets }] };
     const upgraded = parseStoredDraft({ v: 2, kind: 'draft', userId, updatedAt: 5, draft: v2Draft }, userId);
     expect(upgraded).toEqual({
-      v: 4,
+      v: 5,
       kind: 'draft',
       userId,
       updatedAt: 5,
@@ -127,7 +170,7 @@ describe('parseStoredDraft', () => {
 
   it('upgrades a v2 tombstone', () => {
     const raw = { v: 2, kind: 'synced', userId, updatedAt: 6, syncedSessionId: workout().sessionId };
-    expect(parseStoredDraft(raw, userId)).toEqual({ ...raw, v: 4 });
+    expect(parseStoredDraft(raw, userId)).toEqual({ ...raw, v: 5 });
   });
 
   it('drops an unknown v2 effort level instead of inventing one', () => {
@@ -154,7 +197,7 @@ describe('parseStoredDraft', () => {
       ...workout(),
       exercises: [{ ...workout().exercises[0], sets: [{ id: 'x', weightKg: 60, reps: 8, effort, done: true }] }],
     };
-    const parsed = parseStoredDraft({ v: 4, kind: 'draft', userId, updatedAt: 5, draft: broken }, userId);
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft: broken }, userId);
     expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets[0].effort).toBeNull();
   });
 
@@ -164,7 +207,7 @@ describe('parseStoredDraft', () => {
       { id: 'p', weightKg: 60, reps: 8, effort: { type: 'rpe', value: 8.5 }, done: true },
     ];
     const draft = { ...workout(), exercises: [{ ...workout().exercises[0], sets }] };
-    const parsed = parseStoredDraft({ v: 4, kind: 'draft', userId, updatedAt: 5, draft }, userId);
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft }, userId);
     expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets.map((set) => set.effort)).toEqual([
       { type: 'rir', value: 2 },
       { type: 'rpe', value: 8.5 },
@@ -172,11 +215,11 @@ describe('parseStoredDraft', () => {
   });
 
   it('rejects unknown future versions', () => {
-    expect(parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft: workout() }, userId)).toBeNull();
+    expect(parseStoredDraft({ v: 6, kind: 'draft', userId, updatedAt: 5, draft: workout() }, userId)).toBeNull();
   });
 
   it('rejects a record that belongs to another user', () => {
-    const raw = { v: 4, kind: 'draft', userId: 'someone-else', updatedAt: 5, draft: workout() };
+    const raw = { v: 5, kind: 'draft', userId: 'someone-else', updatedAt: 5, draft: workout() };
     expect(parseStoredDraft(raw, userId)).toBeNull();
   });
 
@@ -213,6 +256,13 @@ describe('completeSessionPayload', () => {
     ]);
     expect(payload.sets[0]).toMatchObject({ exerciseId: 'bench', effort: { type: 'level', level: 'hard' } });
     expect(payload.sets[2]).toMatchObject({ exerciseId: 'row', weightKg: 55, reps: 9, effort: null });
+  });
+
+  it('sends each set with its warm-up flag', () => {
+    const [bench, row] = liftsOf(workout());
+    const warmup = { ...bench.sets[0], isWarmup: true };
+    const payload = completeSessionPayload(workout({ exercises: [{ ...bench, sets: [warmup] }, row] }));
+    expect(payload.sets.map((set) => ('isWarmup' in set ? set.isWarmup : null))).toEqual([true, false, false]);
   });
 
   it('sends a null programDayId for a freestyle workout', () => {
@@ -344,6 +394,44 @@ describe('planned set editing', () => {
     expect(swapExercise(done, 0, { id: 'dip', name: 'Dip', loadType: 'bodyweight' })).toBeNull();
   });
 
+  it('plans every set as a working set', () => {
+    expect(liftsOf(planned)[0].sets.map((set) => set.isWarmup)).toEqual([false, false]);
+  });
+
+  it('marks a set as a warm-up and back', () => {
+    const warmup = updateSet(planned, 0, setId, { isWarmup: true });
+    expect(liftsOf(warmup)[0].sets.map((set) => set.isWarmup)).toEqual([true, false]);
+    expect(liftsOf(updateSet(warmup, 0, setId, { isWarmup: false }))[0].sets[0].isWarmup).toBe(false);
+  });
+
+  it('adds a working set after a warm-up', () => {
+    const warmup = updateSet(planned, 0, planned.exercises[0].sets[1].id, { isWarmup: true });
+    expect(liftsOf(addSet(warmup, 0))[0].sets.at(-1)?.isWarmup).toBe(false);
+  });
+
+  it('puts generated warm-ups before the sets as planned warm-up sets', () => {
+    const withWarmups = addWarmupSets(planned, 0, [
+      { weightKg: 20, reps: 10 },
+      { weightKg: 40, reps: 5 },
+    ]);
+    const sets = liftsOf(withWarmups)[0].sets;
+    expect(sets.map(({ weightKg, reps, isWarmup, done, effort }) => [weightKg, reps, isWarmup, done, effort])).toEqual([
+      [20, 10, true, false, null],
+      [40, 5, true, false, null],
+      [20, 8, false, false, null],
+      [20, 8, false, false, null],
+    ]);
+    expect(new Set(sets.map((set) => set.id)).size).toBe(4);
+  });
+
+  it('finds the first working set after the warm-ups', () => {
+    const [first, second] = planned.exercises[0].sets;
+    const warmedUp = updateSet(updateSet(planned, 0, first.id, { isWarmup: true }), 0, second.id, { weightKg: 90 });
+    expect(firstWorkingSet(liftsOf(warmedUp)[0])?.weightKg).toBe(90);
+    const allWarmups = updateSet(warmedUp, 0, second.id, { isWarmup: true });
+    expect(firstWorkingSet(liftsOf(allWarmups)[0])).toBeUndefined();
+  });
+
   it('marks sets added with + Add set as done', () => {
     const added = addSet(planned, 0);
     expect(added.exercises[0].sets.at(-1)?.done).toBe(true);
@@ -425,7 +513,7 @@ function mixedWorkout(): WorkoutDraft {
 
 describe('cardio drafts', () => {
   it('keeps cardio bouts through a parse', () => {
-    const raw = { v: 4, kind: 'draft', userId, updatedAt: 5, draft: mixedWorkout() };
+    const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft: mixedWorkout() };
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
   });
 
@@ -437,7 +525,7 @@ describe('cardio drafts', () => {
   ])('replaces an invalid cardio effort %j with no effort', (effort) => {
     const [bout] = cardioExercise().sets;
     const broken = workout({ exercises: [cardioExercise({ sets: [{ ...bout, effort } as typeof bout] })] });
-    const parsed = parseStoredDraft({ v: 4, kind: 'draft', userId, updatedAt: 5, draft: broken }, userId);
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft: broken }, userId);
     expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets[0].effort).toBeNull();
   });
 
@@ -461,7 +549,7 @@ describe('cardio drafts', () => {
     const levels = ['easy', 'moderate', 'hard', 'max'] as const;
     const sets = levels.map((level, index) => ({ ...bout, id: `bout-${index}`, effort: { type: 'cardio', level } }));
     const draft = workout({ exercises: [cardioExercise({ sets: sets as CardioDraftExercise['sets'] })] });
-    const parsed = parseStoredDraft({ v: 4, kind: 'draft', userId, updatedAt: 5, draft }, userId);
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft }, userId);
     expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets.map((set) => set.effort)).toEqual(
       levels.map((level) => ({ type: 'cardio', level })),
     );

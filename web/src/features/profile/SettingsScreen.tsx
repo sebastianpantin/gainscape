@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useId, useState } from 'react';
 import { Link, type NavigateFunction, useNavigate } from 'react-router-dom';
 import { Switch } from '../../components/Switch.tsx';
 import {
@@ -11,6 +11,8 @@ import {
 } from '../../lib/account.ts';
 import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
 import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
+import { type BarbellSetup, HEAVIEST_BAR_OR_PLATE, isUsableBarOrPlate, PLATE_CHOICES } from '../../lib/plate-rules.ts';
+import { readPlateSettings, savePlateSettings } from '../../lib/plate-settings-store.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { REST_CHOICES_S, REST_OFF, restClock } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage, readRestState, saveRestState } from '../../lib/rest-timer-store.ts';
@@ -192,6 +194,78 @@ function TrainingDeviceChoices({ userId }: { userId: string }) {
   );
 }
 
+function PlateChoices({ userId, unit }: { userId: string; unit: UnitPref }) {
+  const [setup, setSetup] = useState(() => readPlateSettings(deviceStorage(), userId)[unit]);
+  const [barText, setBarText] = useState(() => String(setup.barWeight));
+  const platesLabelId = useId();
+  const barHintId = useId();
+  const barNumber = Number(barText);
+  const barValid = barText.trim() !== '' && isUsableBarOrPlate(barNumber);
+  const change = (changes: Partial<BarbellSetup>) => {
+    const latest = readPlateSettings(deviceStorage(), userId);
+    const next = { ...latest[unit], ...changes };
+    setSetup(next);
+    savePlateSettings(deviceStorage(), userId, { ...latest, [unit]: next });
+  };
+  const changeBar = (text: string) => {
+    setBarText(text);
+    const barWeight = Number(text);
+    if (text.trim() !== '' && isUsableBarOrPlate(barWeight)) change({ barWeight });
+  };
+  const togglePlate = (plate: number) => {
+    const plates = setup.plates.includes(plate)
+      ? setup.plates.filter((owned) => owned !== plate)
+      : [...setup.plates, plate].sort((a, b) => b - a);
+    change({ plates });
+  };
+  return (
+    <>
+      <label className="field">
+        {`Bar weight (${unit})`}
+        <input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={HEAVIEST_BAR_OR_PLATE}
+          step={0.5}
+          value={barText}
+          aria-invalid={!barValid}
+          aria-describedby={barValid ? undefined : barHintId}
+          onChange={(event) => changeBar(event.target.value)}
+        />
+      </label>
+      {!barValid && (
+        <span className="problem tiny" id={barHintId}>
+          {`Enter a bar weight above 0 and up to ${HEAVIEST_BAR_OR_PLATE} ${unit}. Using ${setup.barWeight} ${unit}.`}
+        </span>
+      )}
+      <div className="stack" style={{ gap: 6 }}>
+        <span className="field" id={platesLabelId}>{`Plates you have (${unit})`}</span>
+        <div className="segmented plate-choices" role="group" aria-labelledby={platesLabelId}>
+          {PLATE_CHOICES[unit].map((plate) => {
+            const owned = setup.plates.includes(plate);
+            return (
+              <button
+                key={plate}
+                type="button"
+                className={owned ? 'segment active' : 'segment'}
+                aria-pressed={owned}
+                onClick={() => togglePlate(plate)}
+              >
+                {plate}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <span className="hint">
+        Barbell sets show plates per side and warm-ups with this bar and these plates. A followed program's workouts use
+        the program's bar. Saved on this device only.
+      </span>
+    </>
+  );
+}
+
 function TrainingSection({ userId, profile, onSaved }: SectionProps) {
   const { applyPreferences } = usePreferences();
   const { save, pending, problem } = useOptimisticProfileSave<'unitPref' | 'effortInputMode'>(
@@ -222,6 +296,7 @@ function TrainingSection({ userId, profile, onSaved }: SectionProps) {
       <span className="hint">{EFFORT_OPTIONS.find((option) => option.value === profile.effortInputMode)?.hint}</span>
       <RestChoice userId={userId} />
       <TrainingDeviceChoices userId={userId} />
+      <PlateChoices key={profile.unitPref} userId={userId} unit={profile.unitPref} />
       {problem && (
         <p className="problem" role="alert">
           {problem}

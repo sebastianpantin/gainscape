@@ -26,7 +26,7 @@ import type {
   LiftDraftExercise,
 } from '../../offline/draft-format.ts';
 
-export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'unknown';
+export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'warmup' | 'unknown';
 
 export interface SetPreview {
   xp: number;
@@ -35,6 +35,7 @@ export interface SetPreview {
 }
 
 const UNKNOWN_PREVIEW: SetPreview = Object.freeze({ xp: 0, basis: 'unknown', rir: null });
+const WARMUP_PREVIEW: SetPreview = Object.freeze({ xp: 0, basis: 'warmup', rir: null });
 const PREVIEW_SKILL_ID = 'preview';
 const PREVIEW_SESSION_ID = 'preview';
 const PREVIEW_STARTED_AT = '1970-01-01T00:00:00.000Z';
@@ -43,6 +44,7 @@ const REPS_MODEL_PLACEHOLDER_BODYWEIGHT_KG = 0;
 interface PlacedSet {
   input: SetInput | null;
   done: boolean;
+  warmup: boolean;
   unrated: boolean;
   hasPriorSession: boolean;
 }
@@ -84,7 +86,7 @@ function previewInput(
     position,
     weightKg: set.weightKg,
     reps: set.reps,
-    isWarmup: false,
+    isWarmup: set.isWarmup,
     effort: set.effort,
     recordedEffectiveLoadKg: effectiveLoadKg,
   };
@@ -140,6 +142,7 @@ function placeCardio(exercise: CardioDraftExercise, firstPosition: number): Plac
   return exercise.sets.map((bout, index) => ({
     input: previewBout(bout, exercise.exerciseId, firstPosition + index),
     done: bout.done,
+    warmup: false,
     unrated: false,
     hasPriorSession: false,
   }));
@@ -161,6 +164,7 @@ function placeSets(
     return exercise.sets.map((set, index): PlacedSet => ({
       input: previewInput(set, definition, firstPosition + index, bodyweightKg, cfg),
       done: set.done,
+      warmup: set.isWarmup,
       unrated: set.effort === null,
       hasPriorSession: strength?.[exercise.exerciseId]?.hasPriorSession ?? false,
     }));
@@ -202,6 +206,7 @@ export function previewSession(
 
   return placed.map((sets) =>
     sets.map((entry) => {
+      if (entry.warmup) return WARMUP_PREVIEW;
       if (entry.input === null || (strength === null && entry.unrated)) return UNKNOWN_PREVIEW;
       const result = entry.done
         ? doneResults.get(entry.input.id)
@@ -220,6 +225,7 @@ export function previewNote(preview: SetPreview, cfg: BalanceConfig = DEFAULT_BA
   if (preview.basis === 'logged' && preview.rir !== null && preview.rir >= firstRirWithoutXp) return 'counts for e1RM';
   if (preview.basis === 'estimated') return `est. RIR ${preview.rir}`;
   if (preview.basis === 'cold_start') return 'first time';
+  if (preview.basis === 'warmup') return 'warm-up';
   return '';
 }
 

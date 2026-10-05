@@ -578,6 +578,7 @@ a:focus-visible {
   grid-template-areas:
     'number weight weight done'
     '. reps xp xp'
+    'warmup warmup warmup warmup'
     'effort effort effort remove';
 }
 
@@ -586,7 +587,60 @@ a:focus-visible {
     'number weight weight done'
     '. reps xp xp'
     'markers markers markers markers'
+    'warmup warmup warmup warmup'
     'effort effort effort remove';
+}
+
+.set-row.stepped.marked.calculating {
+  grid-template-areas:
+    'number weight weight done'
+    '. reps xp xp'
+    'markers markers markers markers'
+    'calculator calculator calculator calculator'
+    'warmup warmup warmup warmup'
+    'effort effort effort remove';
+}
+
+.set-row.stepped > .done-toggle.warmup-toggle {
+  grid-area: warmup;
+  justify-self: end;
+}
+
+.warmup-toggle:not(.selected) {
+  color: var(--color-text-muted);
+}
+
+.set-row.warmup > .set-number {
+  color: var(--color-text-faint);
+}
+
+.plate-marker {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0 var(--space-1);
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+.plate-calculator {
+  grid-area: calculator;
+  padding: var(--space-2);
+  border: 1px dashed var(--color-panel-border);
+}
+
+.plate-calculator p {
+  margin: 0;
+}
+
+.plate-choices {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .set-row.stepped > .set-number {

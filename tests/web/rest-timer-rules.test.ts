@@ -9,6 +9,7 @@ import {
   restView,
   startRest,
   startsRest,
+  stopsRestForWarmup,
 } from '../../web/src/lib/rest-timer-rules.ts';
 import { readRestState, saveRestState } from '../../web/src/lib/rest-timer-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
@@ -87,6 +88,24 @@ describe('rest timer', () => {
     expect(startsRest(logged, { effort: hard, done: true }, startRest(now, 90, 'set-0'))).toBe(true);
     expect(startsRest({ ...logged, effort: hard }, { effort: nearFailure, done: true }, null)).toBe(false);
     expect(startsRest({ ...logged, effort: hard }, { effort: null }, null)).toBe(false);
+  });
+
+  it('never starts for a warm-up set', () => {
+    const warmup = { id: setId, done: false, effort: null, isWarmup: true };
+    expect(startsRest(warmup, { done: true }, null)).toBe(false);
+    expect(startsRest({ ...warmup, done: true }, { effort: hard, done: true }, null)).toBe(false);
+    expect(startsRest({ ...warmup, isWarmup: false }, { done: true }, null)).toBe(true);
+  });
+
+  it('stops the rest a set started when that set becomes a warm-up', () => {
+    const logged = { id: setId, isWarmup: false };
+    expect(stopsRestForWarmup(logged, { isWarmup: true }, startRest(now, 90, setId))).toBe(true);
+    expect(stopsRestForWarmup(logged, { isWarmup: true }, startRest(now, 90, 'set-0'))).toBe(false);
+    expect(stopsRestForWarmup(logged, { isWarmup: true }, null)).toBe(false);
+    expect(stopsRestForWarmup(logged, {}, startRest(now, 90, setId))).toBe(false);
+    expect(stopsRestForWarmup({ ...logged, isWarmup: true }, { isWarmup: false }, startRest(now, 90, setId))).toBe(
+      false,
+    );
   });
 
   it('keeps the rest the same set already started when it is rated', () => {
