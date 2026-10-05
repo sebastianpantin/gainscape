@@ -26,7 +26,7 @@ import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-base
 import { barbellPlatesText } from '../../lib/plate-rules.ts';
 import { readPlateSettings } from '../../lib/plate-settings-store.ts';
 import { warmupSets } from '../../lib/warmup-rules.ts';
-import { SESSION_RPE_VALUES, sessionRpeFromChoice } from '../../lib/session-timing-rules.ts';
+import { SESSION_RPE_VALUES, sessionRpeChoiceLabel, sessionRpeFromChoice } from '../../lib/session-timing-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { formatXp } from '../../lib/format.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
@@ -663,7 +663,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           <option value="">Not rated</option>
           {SESSION_RPE_VALUES.map((value) => (
             <option key={value} value={value}>
-              {value}
+              {sessionRpeChoiceLabel(value)}
             </option>
           ))}
         </select>

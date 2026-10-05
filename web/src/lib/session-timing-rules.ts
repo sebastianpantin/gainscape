@@ -2,10 +2,17 @@ export const SESSION_RPE_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 const MINUTE_MS = 60_000;
 
-export interface SessionTiming {
+export interface RememberedTiming {
   startedAt?: string;
   endedAt?: string;
   sessionRpe?: number | null;
+}
+
+const SESSION_RPE_ANCHORS: Readonly<Record<number, string>> = { 1: 'very easy', 10: 'max effort' };
+
+export function sessionRpeChoiceLabel(value: number): string {
+  const anchor = SESSION_RPE_ANCHORS[value];
+  return anchor ? `${value} (${anchor})` : String(value);
 }
 
 export function isSessionRpe(value: unknown): value is number {
@@ -31,7 +38,7 @@ export function formatSessionDuration(startedAt: string, endedAt: string): strin
   return formatMinutes(Math.round(durationMs / MINUTE_MS));
 }
 
-export function sessionTimingParts({ startedAt, endedAt, sessionRpe }: SessionTiming): string[] {
+export function sessionTimingParts({ startedAt, endedAt, sessionRpe }: RememberedTiming): string[] {
   const duration = startedAt && endedAt ? formatSessionDuration(startedAt, endedAt) : null;
   const rpe = isSessionRpe(sessionRpe) ? `Session RPE ${sessionRpe}` : null;
   return [duration, rpe].filter((part) => part !== null);

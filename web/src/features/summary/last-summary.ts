@@ -1,7 +1,7 @@
 import type { SessionSummary } from '@domain/types.ts';
-import type { SessionTiming } from '../../lib/session-timing-rules.ts';
+import type { RememberedTiming } from '../../lib/session-timing-rules.ts';
 
-type RememberedSummary = SessionSummary & SessionTiming;
+type RememberedSummary = SessionSummary & RememberedTiming;
 
 const LAST_SUMMARY_KEY = 'gainscape.last-summary';
 

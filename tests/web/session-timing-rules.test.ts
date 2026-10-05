@@ -3,6 +3,7 @@ import {
   formatSessionDuration,
   isSessionRpe,
   SESSION_RPE_VALUES,
+  sessionRpeChoiceLabel,
   sessionRpeFromChoice,
   sessionTimingParts,
 } from '../../web/src/lib/session-timing-rules.ts';
@@ -21,6 +22,23 @@ describe('isSessionRpe', () => {
 
   it.each([0, 11, 7.5, '7', null, undefined, Number.NaN])('rejects %j', (value) => {
     expect(isSessionRpe(value)).toBe(false);
+  });
+});
+
+describe('sessionRpeChoiceLabel', () => {
+  it('names the easiest and the hardest choice and shows the rest as numbers', () => {
+    expect(SESSION_RPE_VALUES.map(sessionRpeChoiceLabel)).toEqual([
+      '1 (very easy)',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10 (max effort)',
+    ]);
   });
 });
 
