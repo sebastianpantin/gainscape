@@ -210,6 +210,21 @@ describe('edit-session re-derives history', () => {
     ]);
     await expectEqualsRebuild(user.id);
   });
+
+  it('keeps the start, finish and session RPE of an edited session', async () => {
+    const user = await createTestUser();
+    const session = { ...payloadAt(hoursAgo(1), [aSet(benchId, 0, 80)]), sessionRpe: 7 };
+    await postSession(user, session);
+    const timingOf = async () =>
+      (await db`select started_at, ended_at, session_rpe from public.sessions where id = ${session.id}`)[0];
+    const before = await timingOf();
+
+    const response = await edit(user, editBody(session, [{ ...session.sets[0], reps: 8 }], 0, 'heavier than planned'));
+    expect(response.status, response.rawBody).toBe(200);
+
+    expect(await timingOf()).toEqual(before);
+    expect(before.session_rpe).toBe(7);
+  });
 });
 
 describe('edit-session loads', () => {
