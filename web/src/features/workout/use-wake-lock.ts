@@ -7,6 +7,7 @@ function pageVisible(): boolean {
 
 export function useWakeLock(keepAwake: boolean, workoutOpen: boolean): void {
   const [visible, setVisible] = useState(pageVisible);
+  const [lostCount, setLostCount] = useState(0);
 
   useEffect(() => {
     const followVisibility = () => setVisible(pageVisible());
@@ -22,8 +23,14 @@ export function useWakeLock(keepAwake: boolean, workoutOpen: boolean): void {
     let sentinel: WakeLockSentinel | null = null;
     navigator.wakeLock.request('screen').then(
       (acquired) => {
-        if (released) void acquired.release();
-        else sentinel = acquired;
+        if (released) {
+          void acquired.release();
+          return;
+        }
+        sentinel = acquired;
+        acquired.addEventListener('release', () => {
+          if (!released && pageVisible()) setLostCount((count) => count + 1);
+        });
       },
       () => undefined,
     );
@@ -31,5 +38,5 @@ export function useWakeLock(keepAwake: boolean, workoutOpen: boolean): void {
       released = true;
       void sentinel?.release().catch(() => undefined);
     };
-  }, [holding]);
+  }, [holding, lostCount]);
 }

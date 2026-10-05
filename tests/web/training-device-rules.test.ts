@@ -5,8 +5,13 @@ import {
   parseTrainingDeviceSettings,
   restAlertActions,
   restAlertDelayMs,
+  restAlertIsFresh,
 } from '../../web/src/lib/training-device-rules.ts';
-import { readTrainingDeviceSettings, saveTrainingDeviceSettings } from '../../web/src/lib/training-device-store.ts';
+import {
+  claimRestAlert,
+  readTrainingDeviceSettings,
+  saveTrainingDeviceSettings,
+} from '../../web/src/lib/training-device-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const now = Date.UTC(2026, 9, 5, 18, 0, 0);
@@ -67,6 +72,28 @@ describe('rest alert', () => {
     expect(restAlertActions(notifying, { hidden: true, notificationsAllowed: true })).toEqual(['notify']);
     expect(restAlertActions(notifying, { hidden: false, notificationsAllowed: true })).toEqual([]);
     expect(restAlertActions(notifying, { hidden: true, notificationsAllowed: false })).toEqual([]);
+  });
+});
+
+describe('stale rest alerts', () => {
+  it('alerts right after the rest ends but not when a frozen page wakes up later', () => {
+    expect(restAlertIsFresh(now, now)).toBe(true);
+    expect(restAlertIsFresh(now, now + 5_000)).toBe(true);
+    expect(restAlertIsFresh(now, now + 5_001)).toBe(false);
+  });
+});
+
+describe('rest alert claim', () => {
+  it('lets only the first tab alert for a rest', () => {
+    const storage = new MemoryStorage();
+    expect(claimRestAlert(storage, userId, now)).toBe(true);
+    expect(claimRestAlert(storage, userId, now)).toBe(false);
+    expect(claimRestAlert(storage, userId, now + 90_000)).toBe(true);
+    expect(claimRestAlert(storage, 'user-2', now)).toBe(true);
+  });
+
+  it('still alerts when storage is unavailable', () => {
+    expect(claimRestAlert(null, userId, now)).toBe(true);
   });
 });
 

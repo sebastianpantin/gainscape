@@ -295,6 +295,22 @@ export function updateSet(
   );
 }
 
+export function seedUntouchedSet(
+  draft: WorkoutDraft,
+  exerciseIndex: number,
+  original: DraftSet,
+  seed: LastLoggedSet,
+): WorkoutDraft {
+  const exercise = draft.exercises[exerciseIndex];
+  const current = exercise?.modality === 'lift' ? exercise.sets.find((set) => set.id === original.id) : undefined;
+  const untouched =
+    current !== undefined &&
+    current.weightKg === original.weightKg &&
+    current.reps === original.reps &&
+    current.effort === original.effort;
+  return untouched ? updateSet(draft, exerciseIndex, original.id, seed) : draft;
+}
+
 export function updateBout(
   draft: WorkoutDraft,
   exerciseIndex: number,

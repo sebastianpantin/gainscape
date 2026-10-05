@@ -149,6 +149,7 @@ const DEVICE_CHOICES: { name: keyof TrainingDeviceSettings; label: string }[] = 
 function TrainingDeviceChoices({ userId }: { userId: string }) {
   const [settings, setSettings] = useState(() => readTrainingDeviceSettings(deviceStorage(), userId));
   const [notifyBlocked, setNotifyBlocked] = useState(false);
+  const [askingToNotify, setAskingToNotify] = useState(false);
   const change = (changes: Partial<TrainingDeviceSettings>) => {
     const next = { ...readTrainingDeviceSettings(deviceStorage(), userId), ...changes };
     setSettings(next);
@@ -156,8 +157,11 @@ function TrainingDeviceChoices({ userId }: { userId: string }) {
   };
   const pick = async (name: keyof TrainingDeviceSettings, value: 'on' | 'off') => {
     const on = value === 'on';
+    if (name === 'notify') setNotifyBlocked(false);
     if (name === 'notify' && on) {
+      setAskingToNotify(true);
       const allowed = await askToNotify();
+      setAskingToNotify(false);
       setNotifyBlocked(!allowed);
       if (!allowed) return;
     }
@@ -171,7 +175,7 @@ function TrainingDeviceChoices({ userId }: { userId: string }) {
           label={label}
           options={ON_OFF_OPTIONS}
           current={settings[name] ? 'on' : 'off'}
-          disabled={false}
+          disabled={name === 'notify' && askingToNotify}
           onPick={(value) => void pick(name, value)}
         />
       ))}
@@ -180,7 +184,10 @@ function TrainingDeviceChoices({ userId }: { userId: string }) {
           This browser blocks notifications from Gainscape. Allow them in the browser's site settings.
         </p>
       )}
-      <span className="hint">Saved on this device only.</span>
+      <span className="hint">
+        Saved on this device only. Phones can pause the app while the screen is off, so keep the screen on for alerts
+        you can count on.
+      </span>
     </>
   );
 }
