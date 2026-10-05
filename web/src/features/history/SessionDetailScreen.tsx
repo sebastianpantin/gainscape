@@ -16,6 +16,7 @@ import { updatePrivateProfile } from '../../lib/profile.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
+import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { forgetLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
@@ -409,6 +410,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
             <header>
               <h2>{exercise.name}</h2>
+              {exercise.modality === 'lift' && (
+                <ExerciseProgressLink exerciseId={exercise.exerciseId} exerciseName={exercise.name} />
+              )}
             </header>
             <ol className="stored-set-list">
               {exercise.modality === 'cardio'
@@ -462,6 +466,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
             <header>
               <h2>{exercise.name}</h2>
+              {exercise.modality === 'lift' && (
+                <ExerciseProgressLink exerciseId={exercise.exerciseId} exerciseName={exercise.name} />
+              )}
             </header>
             {unknownIds.includes(exercise.exerciseId) && (
               <>
