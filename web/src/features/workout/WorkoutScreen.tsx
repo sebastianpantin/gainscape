@@ -13,7 +13,7 @@ import {
 } from '../../lib/collection-data.ts';
 import { strengthText } from '../../lib/collection-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
-import { nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
+import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
 import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
@@ -544,14 +544,16 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
           restS !== REST_OFF && `Rest ${restClock(restS)}`,
         ].filter(Boolean);
-        const lastSessionSets = recentSessions.byExercise.get(exercise.exerciseId)?.[0];
+        const recent = recentSessions.byExercise.get(exercise.exerciseId);
+        const lastSessionSets = recent?.[0];
         const lastTime = lastTimeText(lastSessionSets, exercise.loadType, unitPref);
         const isBarbell = exercise.loadType === 'external' && barbellIds.has(exercise.exerciseId);
         const followsProgram = exercise.sets.some((set) => Boolean(set.prescription));
         const step = progressionStep(unitPref, isBarbell ? barbellSetup.plates : null);
         const advice = followsProgram
           ? null
-          : nextWeightHint(lastSessionSets, exercise.loadType, exercise.target, unitPref, step);
+          : (fatigueAdvice(recent, exercise.loadType, unitPref, step) ??
+            nextWeightHint(lastSessionSets, exercise.loadType, exercise.target, unitPref, step));
         const workingSet = firstWorkingSet(exercise);
         const warmups =
           isBarbell && workingSet !== undefined && !exercise.sets.some((set) => set.isWarmup)

@@ -1,10 +1,13 @@
 import { roundTo } from '@domain/index.ts';
 import type { LoadType } from './catalog-rules.ts';
-import type { RecentSet } from './last-session-rules.ts';
+import type { RecentSessions, RecentSet } from './last-session-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
 import { shownWeight } from './units.ts';
 
 export const READY_RIR = 2;
+export const FATIGUE_SESSIONS = 3;
+export const DELOAD_FRACTION = 0.9;
+const STRAINED_RIR = 1;
 const WEIGHT_DECIMALS = 2;
 const STEP_WITHOUT_BARBELL: Readonly<Record<UnitPref, number>> = { kg: 2.5, lb: 5 };
 
@@ -27,10 +30,14 @@ function loadText(shown: number, loadType: LoadType, unit: UnitPref): string {
   return `${loadType === 'bodyweight_plus' ? '+' : ''}${shown} ${unit}`;
 }
 
-function hadRepsInReserve(sets: readonly RecentSet[], range: RepRange | null): boolean {
+function leastRir(sets: readonly RecentSet[]): number | null {
   const rirs = sets.map((set) => set.loggedRir);
-  if (rirs.some((rir) => rir === null)) return range !== null;
-  return Math.min(...(rirs as number[])) >= READY_RIR;
+  return rirs.some((rir) => rir === null) ? null : Math.min(...(rirs as number[]));
+}
+
+function hadRepsInReserve(sets: readonly RecentSet[], range: RepRange | null): boolean {
+  const rir = leastRir(sets);
+  return rir === null ? range !== null : rir >= READY_RIR;
 }
 
 export function nextWeightHint(
@@ -55,4 +62,36 @@ export function nextWeightHint(
   if (heaviest.some((set) => set.reps < goal) || !hadRepsInReserve(heaviest, range)) return null;
   const next = addsLoad ? loadText(roundTo(WEIGHT_DECIMALS, shown + step), loadType, unit) : `${goal + 1} reps`;
   return `Try ${next}: every set hit ${goal} reps last time`;
+}
+
+function keepsFalling(values: readonly (number | null)[]): boolean {
+  return values.every(
+    (value, index) => value !== null && (index === 0 || value < (values[index - 1] ?? Number.NEGATIVE_INFINITY)),
+  );
+}
+
+function averageReps(sets: readonly RecentSet[]): number {
+  return sets.reduce((total, set) => total + set.reps, 0) / sets.length;
+}
+
+export function fatigueAdvice(
+  sessions: RecentSessions | undefined,
+  loadType: LoadType,
+  unit: UnitPref,
+  step: number,
+): string | null {
+  if (!sessions || sessions.length < FATIGUE_SESSIONS) return null;
+  const oldestFirst = sessions.slice(0, FATIGUE_SESSIONS).map(heaviestSets).reverse();
+  const weightKg = oldestFirst[0][0].weightKg;
+  if (oldestFirst.some((sets) => sets[0].weightKg !== weightKg)) return null;
+  if (loadType === 'external' && weightKg === 0) return null;
+  const rirs = oldestFirst.map(leastRir);
+  const feltHarder = keepsFalling(rirs) && (rirs.at(-1) ?? READY_RIR) <= STRAINED_RIR;
+  const repsDropped = keepsFalling(oldestFirst.map(averageReps));
+  if (!feltHarder && !repsDropped) return null;
+  const lead = `${feltHarder ? 'Felt harder' : 'Reps dropped'} ${FATIGUE_SESSIONS} sessions in a row`;
+  if (loadType === 'bodyweight' || weightKg === 0) return `${lead}: consider an easier day with fewer reps`;
+  const shown = shownWeight(weightKg, unit);
+  const lighter = roundTo(WEIGHT_DECIMALS, Math.round((shown * DELOAD_FRACTION) / step) * step);
+  return `${lead} at ${loadText(shown, loadType, unit)}: consider a lighter day at ${loadText(lighter, loadType, unit)}`;
 }
