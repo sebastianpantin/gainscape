@@ -104,6 +104,55 @@ test('an exercise shows last session and starts from its first set', async ({ pa
   await expect(squat.getByText(/^Last:/)).toHaveCount(0);
 });
 
+test('a lift suggests the next weight from how its last session went', async ({ page }) => {
+  await register(page, uniqueUsername('nw'));
+  const threeSetsOf = (weightKg: number, reps: number) => [
+    { weightKg, reps },
+    { weightKg, reps },
+    { weightKg, reps },
+  ];
+  await logWorkout(page, async () => {
+    await logExercise(page, 'bench', 'Barbell Bench Press', threeSetsOf(80, 5));
+    await logExercise(page, 'squat', 'Back Squat', [...threeSetsOf(100, 5).slice(0, 2), { weightKg: 100, reps: 3 }]);
+  });
+
+  await openTab(page, 'Train');
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await page.getByLabel('Search exercises').fill('bench');
+  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
+  await expect(
+    exerciseCard(page, 'Barbell Bench Press').getByText('Try 82.5 kg: every set hit 5 reps last time'),
+  ).toBeVisible();
+  await page.getByLabel('Search exercises').fill('squat');
+  await page.getByRole('button', { name: /^Back Squat\b/ }).click();
+  await expect(exerciseCard(page, 'Back Squat').getByText('Stay at 100 kg until every set hits 5 reps')).toBeVisible();
+});
+
+test('a lift that felt harder three workouts in a row suggests a lighter day', async ({ page }) => {
+  await register(page, uniqueUsername('fa'));
+  const bench = exerciseCard(page, 'Barbell Bench Press');
+  for (const effort of ['Easy', 'Hard', 'Near fail']) {
+    await openTab(page, 'Train');
+    await logWorkout(page, async () => {
+      await logExercise(page, 'bench', 'Barbell Bench Press', [
+        { weightKg: 80, reps: 5 },
+        { weightKg: 80, reps: 5 },
+      ]);
+      if (effort === 'Hard') return;
+      for (const row of await bench.locator('li.set-row').all()) await row.getByRole('radio', { name: effort }).click();
+    });
+  }
+
+  await openTab(page, 'Train');
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await page.getByLabel('Search exercises').fill('bench');
+  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
+  await expect(
+    bench.getByText('Felt harder 3 sessions in a row at 80 kg: consider a lighter day at 72.5 kg'),
+  ).toBeVisible();
+  await expect(bench.getByText(/^Try /)).toHaveCount(0);
+});
+
 test('steppers change weight by a plate step and reps by one', async ({ page }) => {
   await register(page, uniqueUsername('st'));
   await page.getByRole('button', { name: 'Start workout' }).click();
@@ -140,7 +189,7 @@ test('a workout keeps the screen on and the end of a rest vibrates and beeps, as
   await expect.poll(() => deviceCalls(page)).toEqual(['lock']);
 
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await page.clock.runFor(89_000);
+  await page.clock.runFor(179_000);
   expect(await deviceCalls(page)).toEqual(['lock']);
   await page.clock.runFor(2_000);
   await expect.poll(() => deviceCalls(page)).toEqual(['lock', 'vibrate', 'beep', 'beep']);
@@ -156,7 +205,7 @@ test('a workout keeps the screen on and the end of a rest vibrates and beeps, as
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await page.clock.runFor(91_000);
+  await page.clock.runFor(181_000);
   await expect(page.getByRole('region', { name: 'Rest timer' }).getByRole('status')).toHaveText('Rest over');
   expect(await deviceCalls(page)).toEqual([]);
 });
@@ -179,7 +228,7 @@ test('a rest that ends while the app is hidden sends a notification once allowed
   await page.evaluate(() =>
     Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' }),
   );
-  await page.clock.runFor(91_000);
+  await page.clock.runFor(181_000);
   await expect.poll(() => deviceCalls(page)).toContain('notify:Rest over');
 });
 
