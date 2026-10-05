@@ -128,6 +128,31 @@ test('a lift suggests the next weight from how its last session went', async ({ 
   await expect(exerciseCard(page, 'Back Squat').getByText('Stay at 100 kg until every set hits 5 reps')).toBeVisible();
 });
 
+test('a lift that felt harder three workouts in a row suggests a lighter day', async ({ page }) => {
+  await register(page, uniqueUsername('fa'));
+  const bench = exerciseCard(page, 'Barbell Bench Press');
+  for (const effort of ['Easy', 'Hard', 'Near fail']) {
+    await openTab(page, 'Train');
+    await logWorkout(page, async () => {
+      await logExercise(page, 'bench', 'Barbell Bench Press', [
+        { weightKg: 80, reps: 5 },
+        { weightKg: 80, reps: 5 },
+      ]);
+      if (effort === 'Hard') return;
+      for (const row of await bench.locator('li.set-row').all()) await row.getByRole('radio', { name: effort }).click();
+    });
+  }
+
+  await openTab(page, 'Train');
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await page.getByLabel('Search exercises').fill('bench');
+  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
+  await expect(
+    bench.getByText('Felt harder 3 sessions in a row at 80 kg: consider a lighter day at 72.5 kg'),
+  ).toBeVisible();
+  await expect(bench.getByText(/^Try /)).toHaveCount(0);
+});
+
 test('steppers change weight by a plate step and reps by one', async ({ page }) => {
   await register(page, uniqueUsername('st'));
   await page.getByRole('button', { name: 'Start workout' }).click();
