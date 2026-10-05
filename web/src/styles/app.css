@@ -1647,3 +1647,18 @@ a:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+.exercise-note {
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+
+.exercise-note-text {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.exercise-note .notes-field {
+  align-self: stretch;
+}

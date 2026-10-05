@@ -5,6 +5,9 @@ import { canAddBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
+import { loadExerciseNotesCacheFirst, saveCachedExerciseNotes } from '../../lib/exercise-note-cache.ts';
+import { type ExerciseNotes, withNote } from '../../lib/exercise-note-rules.ts';
+import { fetchExerciseNotes, saveExerciseNote } from '../../lib/exercise-notes.ts';
 import {
   type ExerciseStrengthView,
   fetchExerciseStrength,
@@ -27,6 +30,7 @@ import { barbellPlatesText } from '../../lib/plate-rules.ts';
 import { readPlateSettings } from '../../lib/plate-settings-store.ts';
 import { warmupSets } from '../../lib/warmup-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
+import { useIsOffline } from '../../lib/use-online.ts';
 import { formatXp } from '../../lib/format.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
 import {
@@ -61,6 +65,7 @@ import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
+import { ExerciseNote } from './ExerciseNote.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { useActiveProgram } from '../programs/use-active-program.ts';
@@ -115,6 +120,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
   const [listNotice, setListNotice] = useState<string | null>(null);
+  const [notes, setNotes] = useState<ExerciseNotes>({});
+  const offline = useIsOffline();
   const [finishProblem, setFinishProblem] = useState<string | null>(null);
   const [checkingFinish, setCheckingFinish] = useState(false);
   const [startingDay, setStartingDay] = useState(false);
@@ -156,6 +163,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       },
       () => navigator.onLine === false,
     );
+    return () => {
+      active = false;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    let active = true;
+    void loadExerciseNotesCacheFirst(localStorage, userId, fetchExerciseNotes, (loaded) => active && setNotes(loaded));
     return () => {
       active = false;
     };
@@ -457,6 +472,21 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     if (seed) updateDraft((latest) => seedUntouchedSet(latest, exerciseIndex, original, seed));
   };
   const previewTotal = donePreviewTotal(previews, draft.exercises);
+  const noteFor = (exerciseId: string, exerciseName: string) => (
+    <ExerciseNote
+      exerciseName={exerciseName}
+      note={notes[exerciseId]}
+      offline={offline}
+      onSave={async (body) => {
+        const saved = await saveExerciseNote(exerciseId, body);
+        setNotes((current) => {
+          const next = withNote(current, exerciseId, saved);
+          saveCachedExerciseNotes(localStorage, userId, next);
+          return next;
+        });
+      }}
+    />
+  );
   const changeSet = (next: WorkoutDraft, setId: string) => {
     const celebrate = becomesRecord(records, draft.exercises, next.exercises, setId, previewStrength, recordBaseline);
     if (celebrate && readTrainingDeviceSettings(deviceStorage(), userId).vibrate) vibrateNewRecord();
@@ -510,6 +540,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                 <span className="row">{removeButton}</span>
               </header>
               <p className="muted">{`${doneHere}/${exercise.sets.length} bouts`}</p>
+              {noteFor(exercise.exerciseId, exercise.name)}
               <ol className="set-list">
                 {exercise.sets.map((bout, boutIndex) => (
                   <CardioSetRow
@@ -579,6 +610,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             <p className="muted">{[...details, `${doneHere}/${exercise.sets.length} sets`].join(' · ')}</p>
             {lastTime && <p className="muted tiny last-time">{lastTime}</p>}
             {advice && <p className="tiny progression-advice">{advice}</p>}
+            {noteFor(exercise.exerciseId, exercise.name)}
             {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
               <ExercisePicker
                 exercises={liftExercises}

@@ -356,6 +356,7 @@ describe('function execution rights', () => {
       'reorder_pins',
       'respond_friend_request',
       'save_custom_exercise',
+      'save_exercise_note',
       'save_program',
       'send_friend_request',
       'set_custom_exercise_archived',
