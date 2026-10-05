@@ -34,6 +34,7 @@ export async function fetchExerciseProgress(
       .select(PROGRESS_COLUMNS.sets)
       .eq('user_id', userId)
       .eq('exercise_id', exerciseId)
+      .eq('is_warmup', false)
       .order('created_at', { ascending: false })
       .abortSignal(signal),
     supabase

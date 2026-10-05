@@ -5,13 +5,14 @@ interface LineChartProps {
   series: readonly ChartSeries[];
   formatX: (x: number) => string;
   formatY: (y: number) => string;
+  minYStep?: number;
 }
 
 const FRAME: ChartFrame = { width: 320, height: 180, left: 44, right: 16, top: 12, bottom: 24 };
 const DOT_RADIUS = 3;
 
-export function LineChart({ title, series, formatX, formatY }: LineChartProps) {
-  const layout = chartLayout(series, FRAME);
+export function LineChart({ title, series, formatX, formatY, minYStep }: LineChartProps) {
+  const layout = chartLayout(series, FRAME, { minYStep });
   return (
     <figure className="line-chart">
       <svg

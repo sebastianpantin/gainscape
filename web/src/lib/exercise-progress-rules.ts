@@ -8,7 +8,7 @@ import type { UnitPref } from './profile-rules.ts';
 import { shownWeight } from './units.ts';
 
 export const PROGRESS_COLUMNS = {
-  sets: 'session_id, weight_kg, effective_load_kg, reps, is_warmup, rir, rir_source, sessions(started_at)',
+  sets: 'session_id, weight_kg, effective_load_kg, reps, rir, rir_source, sessions(started_at)',
   repMaxes: 'reps, load_kg, achieved_at, sets!rep_maxes_set_id_fkey(sessions(local_date))',
   maxReps: 'max_reps, achieved_at, sets(sessions(local_date))',
 } as const;
@@ -22,7 +22,6 @@ export interface ProgressSetRow {
   weight_kg: number | string;
   effective_load_kg: number | string;
   reps: number;
-  is_warmup: boolean;
   rir: number | string | null;
   rir_source: RirSource;
   sessions: { started_at: string };
@@ -64,7 +63,8 @@ export interface MaxRepsRecord {
 
 function setE1rmKg(row: ProgressSetRow, loadType: LoadType): number | null {
   const effectiveLoadKg = Number(row.effective_load_kg);
-  const repsToFailure = row.reps + (row.rir_source === 'logged' ? Number(row.rir) : 0);
+  const trustedRir = row.rir_source === 'logged' ? Math.min(Number(row.rir), DEFAULT_BALANCE.maxRirForStrength) : 0;
+  const repsToFailure = row.reps + trustedRir;
   if (effectiveLoadKg <= 0 || repsToFailure > DEFAULT_BALANCE.epleyMaxRepsToFailure) return null;
   const bodyweightKg = loadType === 'bodyweight_plus' ? effectiveLoadKg - Number(row.weight_kg) : 0;
   return roundTo(2, epley(effectiveLoadKg, repsToFailure) - bodyweightKg);
@@ -79,7 +79,6 @@ export function sessionProgress(rows: readonly ProgressSetRow[], loadType: LoadT
   const bySession = new Map<string, SessionProgress>();
   const oldestFirst = [...rows].sort((a, b) => Date.parse(a.sessions.started_at) - Date.parse(b.sessions.started_at));
   for (const row of oldestFirst) {
-    if (row.is_warmup) continue;
     const weightKg = Number(row.weight_kg);
     const e1rmKg = setE1rmKg(row, loadType);
     const seen = bySession.get(row.session_id);
@@ -121,12 +120,17 @@ export function progressChartSeries(
   ];
 }
 
+export function progressValueText(value: number, loadType: LoadType, unit: UnitPref): string {
+  if (measuresRepsCapacity(loadType)) return `${value}`;
+  return `${loadType === 'bodyweight_plus' ? '+' : ''}${value} ${unit}`;
+}
+
 export function chartDateText(time: number): string {
   return new Date(time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 function recordDate(ref: RecordSessionRef, achievedAt: string): string {
-  return ref?.sessions?.local_date ?? achievedAt.slice(0, 10);
+  return ref?.sessions?.local_date ?? new Date(achievedAt).toLocaleDateString('en-CA');
 }
 
 export function repMaxTable(rows: readonly RepMaxRow[]): RepMaxEntry[] {
