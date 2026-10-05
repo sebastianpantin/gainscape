@@ -24,6 +24,12 @@ export function withNote(notes: ExerciseNotes, exerciseId: string, body: string 
   return body ? { ...others, [exerciseId]: body } : others;
 }
 
+export type LocalNoteSaves = Readonly<Record<string, string | null>>;
+
+export function withLocalSaves(notes: ExerciseNotes, saves: LocalNoteSaves): ExerciseNotes {
+  return Object.entries(saves).reduce((merged, [exerciseId, body]) => withNote(merged, exerciseId, body), notes);
+}
+
 export function noteActionLabel(note: string | undefined): string {
   return note ? 'Edit note' : 'Add note';
 }

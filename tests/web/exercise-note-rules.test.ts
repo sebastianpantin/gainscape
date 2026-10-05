@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { noteActionLabel, noteChanged, toExerciseNotes, withNote } from '../../web/src/lib/exercise-note-rules.ts';
+import {
+  noteActionLabel,
+  noteChanged,
+  toExerciseNotes,
+  withLocalSaves,
+  withNote,
+} from '../../web/src/lib/exercise-note-rules.ts';
 
 describe('exercise note rules', () => {
   it('maps the rows to a note per exercise', () => {
@@ -26,6 +32,16 @@ describe('exercise note rules', () => {
     expect(withNote(notes, 'row', 'Strap')).toEqual({ bench: 'Seat 4', squat: 'High bar', row: 'Strap' });
     expect(withNote(notes, 'bench', null)).toEqual({ squat: 'High bar' });
     expect(notes).toEqual({ bench: 'Seat 4', squat: 'High bar' });
+  });
+
+  it('lets notes saved on this screen win over a fetch that started before the save', () => {
+    const fetched = { bench: 'Seat 4', squat: 'High bar', row: 'Strap' };
+    expect(withLocalSaves(fetched, { bench: 'Seat 5', squat: null, press: 'Thumbless' })).toEqual({
+      bench: 'Seat 5',
+      row: 'Strap',
+      press: 'Thumbless',
+    });
+    expect(withLocalSaves(fetched, {})).toEqual(fetched);
   });
 
   it('offers to add a note when there is none and to edit one otherwise', () => {

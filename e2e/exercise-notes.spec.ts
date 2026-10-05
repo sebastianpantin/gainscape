@@ -82,6 +82,48 @@ test('a saved note shows from the device cache when the server cannot be reached
   await expect(card.getByText(OFFLINE_TEXT)).toBeHidden();
 });
 
+test('a slow notes fetch that started before a save does not undo the save', async ({ page }) => {
+  await register(page, uniqueUsername('note_rc'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await addExercise(page, 'bench', BENCH);
+  const card = exerciseCard(page, BENCH);
+  await writeNote(page, BENCH, 'Seat 4');
+  await expect(card.getByText('Seat 4', { exact: true })).toBeVisible();
+
+  let release: () => void = () => undefined;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let answered: () => void = () => undefined;
+  const staleAnswered = new Promise<void>((resolve) => {
+    answered = resolve;
+  });
+  await page.route('**/rest/v1/exercise_notes*', async (route) => {
+    const stale = await route.fetch();
+    await released;
+    await route.fulfill({ response: stale });
+    answered();
+  });
+  await page.reload();
+  await expect(card.getByText('Seat 4', { exact: true })).toBeVisible();
+  await writeNote(page, BENCH, 'Seat 5');
+  await expect(card.getByText('Seat 5', { exact: true })).toBeVisible();
+
+  const cacheSavedAt = () =>
+    page.evaluate(() => {
+      const key = Object.keys(localStorage).find((name) => name.startsWith('gainscape.exercise-notes.v1.'));
+      return key ? (JSON.parse(localStorage.getItem(key)!).savedAt as string) : null;
+    });
+  const savedAtBeforeRelease = await cacheSavedAt();
+  release();
+  await staleAnswered;
+  await expect.poll(cacheSavedAt).not.toBe(savedAtBeforeRelease);
+  await expect(card.getByText('Seat 5', { exact: true })).toBeVisible();
+  await page.unroute('**/rest/v1/exercise_notes*');
+  await page.reload();
+  await expect(card.getByText('Seat 5', { exact: true })).toBeVisible();
+});
+
 test('a note that fails to save keeps the text and says why', async ({ page }) => {
   await register(page, uniqueUsername('note_err'));
   await page.getByRole('button', { name: 'Start workout' }).click();

@@ -6,7 +6,7 @@ import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
 import { loadExerciseNotesCacheFirst, saveCachedExerciseNotes } from '../../lib/exercise-note-cache.ts';
-import { type ExerciseNotes, withNote } from '../../lib/exercise-note-rules.ts';
+import { type ExerciseNotes, type LocalNoteSaves, withNote } from '../../lib/exercise-note-rules.ts';
 import { fetchExerciseNotes, saveExerciseNote } from '../../lib/exercise-notes.ts';
 import {
   type ExerciseStrengthView,
@@ -121,6 +121,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
   const [listNotice, setListNotice] = useState<string | null>(null);
   const [notes, setNotes] = useState<ExerciseNotes>({});
+  const notesSavedHere = useRef<LocalNoteSaves>({});
   const offline = useIsOffline();
   const [finishProblem, setFinishProblem] = useState<string | null>(null);
   const [checkingFinish, setCheckingFinish] = useState(false);
@@ -170,7 +171,13 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
 
   useEffect(() => {
     let active = true;
-    void loadExerciseNotesCacheFirst(localStorage, userId, fetchExerciseNotes, (loaded) => active && setNotes(loaded));
+    void loadExerciseNotesCacheFirst(
+      localStorage,
+      userId,
+      fetchExerciseNotes,
+      (loaded) => active && setNotes(loaded),
+      () => notesSavedHere.current,
+    );
     return () => {
       active = false;
     };
@@ -479,6 +486,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       offline={offline}
       onSave={async (body) => {
         const saved = await saveExerciseNote(exerciseId, body);
+        notesSavedHere.current = { ...notesSavedHere.current, [exerciseId]: saved };
         setNotes((current) => {
           const next = withNote(current, exerciseId, saved);
           saveCachedExerciseNotes(localStorage, userId, next);

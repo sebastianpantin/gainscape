@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ExerciseNotes } from './exercise-note-rules.ts';
+import { type ExerciseNotes, type LocalNoteSaves, withLocalSaves } from './exercise-note-rules.ts';
 
 const CACHE_VERSION = 1;
 const CACHE_KEY_PREFIX = 'gainscape.exercise-notes.v1.';
@@ -54,11 +54,12 @@ export async function loadExerciseNotesCacheFirst(
   userId: string,
   fetchLive: () => Promise<ExerciseNotes>,
   show: (notes: ExerciseNotes) => void,
+  savedSinceLoad: () => LocalNoteSaves = () => ({}),
 ): Promise<void> {
   const cached = readCachedExerciseNotes(storage, userId);
   if (cached) show(cached);
   try {
-    const live = await fetchLive();
+    const live = withLocalSaves(await fetchLive(), savedSinceLoad());
     saveCachedExerciseNotes(storage, userId, live);
     show(live);
   } catch {
