@@ -7,13 +7,13 @@ import type { UnitPref } from '../../lib/profile-rules.ts';
 
 interface BodyweightTrendProps {
   userId: string;
-  savedKg: number | null;
+  savedCount: number;
   unit: UnitPref;
 }
 
 type Loaded = { kind: 'loading' } | { kind: 'problem'; message: string } | { kind: 'ready'; trend: BodyweightDay[] };
 
-export function BodyweightTrend({ userId, savedKg, unit }: BodyweightTrendProps) {
+export function BodyweightTrend({ userId, savedCount, unit }: BodyweightTrendProps) {
   const [loaded, setLoaded] = useState<Loaded>({ kind: 'loading' });
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function BodyweightTrend({ userId, savedKg, unit }: BodyweightTrendProps)
       },
     );
     return () => controller.abort();
-  }, [userId, savedKg]);
+  }, [userId, savedCount]);
 
   if (loaded.kind === 'loading') return null;
   if (loaded.kind === 'problem')

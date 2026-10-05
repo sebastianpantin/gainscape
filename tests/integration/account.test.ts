@@ -215,7 +215,7 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(2);
+    expect(exported.version).toBe(3);
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);
@@ -238,7 +238,9 @@ describe('export-data', () => {
     expect(exported.events).toHaveLength(counts.events);
     expect(exported.cardioRecords).toHaveLength(counts.cardio_records);
     expect(counts.cardio_records).toBeGreaterThan(0);
-    expect(exported.bodyweightEntries).toEqual([{ logged_on: expect.any(String), bodyweight_kg: 82 }]);
+    expect(exported.bodyweightEntries).toEqual([
+      { logged_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), bodyweight_kg: 82, updated_at: expect.any(String) },
+    ]);
     expect(exported.crafts).toHaveLength(1);
     expect(exported.reactionsGiven).toHaveLength(1);
     expect(Object.keys(exported.reactionsGiven[0]).sort()).toEqual(['created_at', 'event_id']);

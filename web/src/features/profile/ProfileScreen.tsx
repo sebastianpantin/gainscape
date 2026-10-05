@@ -35,6 +35,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
   const { unitPref } = usePreferences();
   const [draftKg, setDraftKg] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savedCount, setSavedCount] = useState(0);
   const [problem, setProblem] = useState<string | null>(null);
   const offline = useIsOffline();
 
@@ -82,6 +83,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
       await updatePrivateProfile(userId, { bodyweightKg: draftKg });
       replace({ ...profile, bodyweightKg: draftKg });
       setDraftKg(null);
+      setSavedCount((count) => count + 1);
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your bodyweight.'));
     }
@@ -170,7 +172,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
           <h2 id="trend-heading">Bodyweight trend</h2>
           <PrivateTag />
         </div>
-        <BodyweightTrend userId={userId} savedKg={profile.bodyweightKg} unit={unitPref} />
+        <BodyweightTrend userId={userId} savedCount={savedCount} unit={unitPref} />
       </section>
       <ul className="menu-list">
         <MenuLink to="/profile/edit">Edit profile &amp; body</MenuLink>

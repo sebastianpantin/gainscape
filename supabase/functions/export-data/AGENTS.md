@@ -5,7 +5,7 @@
 
 ## Purpose
 
-POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one read-only transaction. Export format version is `EXPORT_FORMAT_VERSION = 2` (2 added `cardioRecords`). `bodyweightEntries` (`logged_on`, `bodyweight_kg`) was added later without a version bump.
+POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one read-only transaction. Export format version is `EXPORT_FORMAT_VERSION = 3` (2 added `cardioRecords`, 3 added `bodyweightEntries` with `logged_on` as a `YYYY-MM-DD` date, `bodyweight_kg` and `updated_at`).
 
 ## Key Files
 

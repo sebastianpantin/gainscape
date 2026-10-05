@@ -4,7 +4,7 @@ import { HttpError, jsonResponse } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serve } from '../_shared/serve.ts';
 
-const EXPORT_FORMAT_VERSION = 2;
+const EXPORT_FORMAT_VERSION = 3;
 
 async function exportFor(userId: string) {
   await takeRateLimit(sql, 'export_data_hour', userId);
@@ -37,7 +37,8 @@ async function exportFor(userId: string) {
     const cardioRecords = await tx`
       select * from public.cardio_records where user_id = ${userId} order by exercise_id, kind`;
     const bodyweightEntries = await tx`
-      select logged_on, bodyweight_kg::float from public.bodyweight_entries where user_id = ${userId} order by logged_on`;
+      select logged_on::text, bodyweight_kg::float, updated_at
+      from public.bodyweight_entries where user_id = ${userId} order by logged_on`;
     const pinnedExercises = await tx`select * from public.pinned_exercises where user_id = ${userId} order by position`;
     const customExercises = await tx`
       select e.*, coalesce(

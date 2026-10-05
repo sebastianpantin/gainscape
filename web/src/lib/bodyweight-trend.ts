@@ -1,6 +1,5 @@
 import {
-  BODYWEIGHT_LOAD_TYPES,
-  BODYWEIGHT_TREND_COLUMNS,
+  BODYWEIGHT_ENTRY_COLUMNS,
   type BodyweightDay,
   type BodyweightEntryRow,
   bodyweightTrend,
@@ -9,23 +8,19 @@ import {
 import { supabase } from './supabase.ts';
 
 export async function fetchBodyweightTrend(userId: string, signal: AbortSignal): Promise<BodyweightDay[]> {
-  const [entries, workoutSets] = await Promise.all([
+  const [entries, workoutDays] = await Promise.all([
     supabase
       .from('bodyweight_entries')
-      .select(BODYWEIGHT_TREND_COLUMNS.entries)
+      .select(BODYWEIGHT_ENTRY_COLUMNS)
       .eq('user_id', userId)
+      .order('logged_on', { ascending: false })
       .abortSignal(signal),
-    supabase
-      .from('sets')
-      .select(BODYWEIGHT_TREND_COLUMNS.workoutSets)
-      .eq('user_id', userId)
-      .in('exercises.load_type', BODYWEIGHT_LOAD_TYPES)
-      .abortSignal(signal),
+    supabase.rpc('workout_bodyweights').order('local_date', { ascending: false }).abortSignal(signal),
   ]);
   if (entries.error) throw entries.error;
-  if (workoutSets.error) throw workoutSets.error;
+  if (workoutDays.error) throw workoutDays.error;
   return bodyweightTrend(
     entries.data as unknown as BodyweightEntryRow[],
-    workoutSets.data as unknown as WorkoutBodyweightRow[],
+    workoutDays.data as unknown as WorkoutBodyweightRow[],
   );
 }
