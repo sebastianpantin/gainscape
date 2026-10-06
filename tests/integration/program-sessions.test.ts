@@ -222,6 +222,29 @@ describe('complete-session with a program link', () => {
     ]);
   });
 
+  it('stores the any-weight snapshot of a 5RM test set, prescribed at 0 kg, next to the unprescribed sets of the attempt', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = linkedPayload([squatSet(0, 60, prescribed('mon-squat:retest', 0)), squatSet(1, 110, null)], {
+      enrollmentId,
+      position: MONDAY_WEEK_1,
+    });
+
+    expect((await postCompleteSession(user.accessToken, payload)).status).toBe(200);
+
+    expect(await snapshotsOf(payload.id)).toEqual([
+      {
+        position: 0,
+        prescription_ref: 'mon-squat:retest',
+        prescribed_weight_kg: 0,
+        prescribed_reps: 5,
+        prescribed_min_reps: null,
+        prescribed_amrap: false,
+      },
+      noSnapshot(1),
+    ]);
+  });
+
   it('answers with completedAt, the server time it stored, at millisecond precision', async () => {
     const user = await createTestUser();
     const enrollmentId = await enrollInMadcow(user);

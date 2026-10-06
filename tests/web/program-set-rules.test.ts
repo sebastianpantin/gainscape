@@ -51,6 +51,15 @@ describe('program set markers', () => {
     expect(programSetMarkers(changed, 'lb').adjusted).toBe(true);
   });
 
+  it('does not mark the 5RM test set adjusted: its snapshot asks for any weight', () => {
+    const retest: MarkedSet = {
+      weightKg: 110,
+      prescription: snapshot('a1-squat-t1:retest', { weightKg: 0, reps: 5 }),
+      prescriptionDetail: { pct: null, optional: false },
+    };
+    expect(programSetMarkers(retest, 'kg')).toEqual({ pct: null, optional: false, adjusted: false });
+  });
+
   it('shows no percentage or optional tag for a set from a draft written before prescription details', () => {
     const older: MarkedSet = { weightKg: 92.5, prescription: snapshot('mon-squat:4', { weightKg: 92.5, reps: 5 }) };
     expect(programSetMarkers(older, 'kg')).toEqual({ pct: null, optional: false, adjusted: false });

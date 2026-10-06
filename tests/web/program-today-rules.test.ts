@@ -24,6 +24,7 @@ import {
   fiveThreeOneEnrollment,
   mainSets531,
 } from '../domain/program-fixtures/five_three_one.ts';
+import { GZCLP, gzclpEnrollment } from '../domain/program-fixtures/gzclp.ts';
 import {
   MADCOW_5X5,
   madcowDaySets,
@@ -289,6 +290,27 @@ describe('today: prescription rows', () => {
     const names = new Map([...EXERCISE_NAMES].filter(([id]) => id !== 'row'));
     const titles = prescriptionCards(MADCOW_5X5, resolved, 'kg', names).map((card) => card.title);
     expect(titles).toContain('Barbell row (exercise unavailable)');
+  });
+
+  it('shows a pending GZCLP T1 retest as one 5RM test row: any weight × 5 · 5RM test, the T2 and T3 unchanged', () => {
+    const enrollment = gzclpEnrollment();
+    const state = {
+      ...programStateAt(GZCLP, enrollment, []),
+      stages: { 'squat-t1': 2 },
+      pendingRetests: { 'squat-t1': 'fiveRm' as const },
+    };
+    const cards = prescriptionCards(
+      GZCLP,
+      resolvePrescription(GZCLP, enrollment, state, { index: 0 }, {}),
+      'kg',
+      EXERCISE_NAMES,
+    );
+    expect(rowsOf(cards, 'Back Squat').map((row) => [row.line, row.weight, row.amrapBadge, row.ref])).toEqual([
+      ['any weight × 5 · 5RM test', null, null, 'a1-squat-t1:retest'],
+    ]);
+    expect(linesOf(cards, 'Barbell Bench Press — supplemental')).toEqual(
+      Array.from({ length: 3 }, () => '50 kg × 10 · 100%'),
+    );
   });
 
   it('shows a slot this app cannot resolve as "Update the app to use this program"', () => {

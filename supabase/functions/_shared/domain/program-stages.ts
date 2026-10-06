@@ -3,6 +3,7 @@ import {
   type ProgressionRule,
   type ReferenceVar,
   type StageLastFail,
+  stageRetestOf,
 } from './program-definition.ts';
 import { setReference } from './program-progression.ts';
 import { type Position } from './program-schedule.ts';
@@ -43,16 +44,9 @@ export function advanceStage(
   return withStage(setReference(state, rule.lift, rule.var, base + add, 'adjustment', position), rule.lift, 0);
 }
 
-function retestOf(rule: ProgressionRule): { pct: number; from: ReferenceVar } | null {
-  for (const adjustment of [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])]) {
-    if (adjustment.kind === 'stageMachine' && adjustment.onLastFail.kind === 'retest') return adjustment.onLastFail;
-  }
-  return null;
-}
-
 export function retestVarOf(definition: ProgramDefinition, lift: string): ReferenceVar | null {
   for (const rule of definition.progression) {
-    const retest = rule.lift === lift ? retestOf(rule) : null;
+    const retest = rule.lift === lift ? stageRetestOf(rule) : null;
     if (retest) return retest.from;
   }
   return null;
@@ -74,14 +68,15 @@ function withoutPendingRetest(state: ProgramState, lift: string): ProgramState {
 export function retestedStages(
   definition: ProgramDefinition,
   state: ProgramState,
-  fact: SetReferenceFact,
+  reference: Pick<SetReferenceFact, 'lift' | 'var' | 'value'>,
+  position: Position,
 ): ProgramState {
   return definition.progression
-    .filter((rule) => rule.lift === fact.lift && rule.var !== fact.var)
+    .filter((rule) => rule.lift === reference.lift && rule.var !== reference.var)
     .reduce((next, rule) => {
-      const retest = retestOf(rule);
-      if (retest?.from !== fact.var || !isRetestPending(next, rule.lift, fact.var)) return next;
-      const restarted = setReference(next, rule.lift, rule.var, fact.value * retest.pct, 'adjustment', next.position);
+      const retest = stageRetestOf(rule);
+      if (retest?.from !== reference.var || !isRetestPending(next, rule.lift, reference.var)) return next;
+      const restarted = setReference(next, rule.lift, rule.var, reference.value * retest.pct, 'adjustment', position);
       return withStage(withoutPendingRetest(restarted, rule.lift), rule.lift, 0);
     }, state);
 }

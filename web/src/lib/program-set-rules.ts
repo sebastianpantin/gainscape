@@ -1,4 +1,4 @@
-import { shownWeight, type WeightUnit } from '@domain/index.ts';
+import { isRetestRef, shownWeight, type WeightUnit } from '@domain/index.ts';
 import { type DraftSet } from '../offline/draft-format.ts';
 import { type BarbellSetup, type PlateSettings } from './plate-rules.ts';
 import { pctLabel } from './program-enroll-rules.ts';
@@ -44,7 +44,8 @@ export function programSetMarkers(set: MarkedSet, unit: WeightUnit): ProgramSetM
   return {
     pct: pct === null ? null : pctLabel(pct),
     optional: prescriptionDetail?.optional ?? false,
-    adjusted: shownWeight(set.weightKg, unit) !== shownWeight(prescription.weightKg, unit),
+    adjusted:
+      !isRetestRef(prescription.ref) && shownWeight(set.weightKg, unit) !== shownWeight(prescription.weightKg, unit),
   };
 }
 
