@@ -237,3 +237,13 @@ export async function programCount(username: string): Promise<number> {
     where u.username = ${username}`;
   return row.count;
 }
+
+export async function backdateWorkoutsOf(username: string, days: number): Promise<void> {
+  await db`
+    update public.sessions s
+    set started_at = s.started_at - make_interval(days => ${days}),
+        ended_at = s.ended_at - make_interval(days => ${days}),
+        local_date = s.local_date - ${days}::int
+    from public.profiles p
+    where p.id = s.user_id and p.username = ${username}`;
+}
