@@ -40,7 +40,8 @@ select results_eq(
       where c.relkind in ('r', 'p') and n.nspname = 'public'
         and c.relname not in ('events', 'reactions', 'friendships', 'drop_luck')
       union all
-      values ('pinned_exercises', 'INSERT'), ('pinned_exercises', 'DELETE')
+      values ('exercise_notes', 'INSERT'), ('exercise_notes', 'DELETE'),
+             ('pinned_exercises', 'INSERT'), ('pinned_exercises', 'DELETE')
     ) t
     order by 1, 2, 3$$,
   'authenticated has exactly the allowlisted table privileges'
@@ -52,6 +53,7 @@ select results_eq(
     where p.grantee = 'authenticated' and p.table_schema in ('public', 'private') and p.privilege_type = 'UPDATE'
     order by 1, 2$$,
   $$values
+    ('exercise_notes', 'body'),
     ('pinned_exercises', 'position'),
     ('profile_private', 'birth_year'),
     ('profile_private', 'bodyweight_kg'),
