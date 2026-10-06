@@ -5,6 +5,7 @@ import { PreferencesProvider } from './components/PreferencesProvider.tsx';
 import { AuthCallbackScreen } from './features/auth/AuthCallbackScreen.tsx';
 import { AuthScreen } from './features/auth/AuthScreen.tsx';
 import { CollectionScreen } from './features/collection/CollectionScreen.tsx';
+import { ExerciseProgressScreen } from './features/collection/ExerciseProgressScreen.tsx';
 import { ItemsScreen } from './features/collection/ItemsScreen.tsx';
 import { ExercisesScreen } from './features/exercises/ExercisesScreen.tsx';
 import { FriendProfileScreen } from './features/friends/FriendProfileScreen.tsx';
@@ -81,6 +82,7 @@ function Screens() {
           <Route path="/skills" element={<SkillsScreen userId={userId} />} />
           <Route path="/collection" element={<CollectionScreen userId={userId} />} />
           <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
+          <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
           <Route path="/collection/history" element={<HistoryScreen />} />
           <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
           <Route path="/friends" element={<FriendsScreen />} />
