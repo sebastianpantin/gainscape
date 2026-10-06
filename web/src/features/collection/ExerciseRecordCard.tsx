@@ -2,6 +2,7 @@ import { exerciseLabels, type LiftExercise } from '../../lib/catalog-rules.ts';
 import type { CollectionData } from '../../lib/collection-data.ts';
 import { emptySlots, strengthText } from '../../lib/collection-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { ExerciseProgressLink } from './ExerciseProgressLink.tsx';
 import { RecordSlots } from './RecordSlots.tsx';
 
 interface ExerciseRecordCardProps {
@@ -34,6 +35,7 @@ export function ExerciseRecordCard({
           {exerciseLabels(exercise) && <span className="muted">{exerciseLabels(exercise)}</span>}
         </span>
         <div className="row">
+          <ExerciseProgressLink exerciseId={exercise.id} exerciseName={exercise.name} />
           {pinned && (
             <>
               <button type="button" className="button link" onClick={onMoveUp} disabled={!onMoveUp}>

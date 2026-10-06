@@ -174,6 +174,8 @@ test('every signed-in screen has no serious axe violations and the between-set c
   const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
   await expect(workouts).toHaveCount(1);
   const sessionPath = await workouts.first().getAttribute('href');
+  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'Records' }).click();
+  const progressPath = await page.getByRole('link', { name: 'Barbell Bench Press progress' }).getAttribute('href');
 
   for (const [path, heading] of [
     ['/skills', 'Skills'],
@@ -181,6 +183,7 @@ test('every signed-in screen has no serious axe violations and the between-set c
     ['/collection/items', 'Collection log'],
     ['/collection/history', 'Collection log'],
     [sessionPath!, null],
+    [progressPath!, 'Barbell Bench Press'],
     ['/friends', 'Friends'],
     ['/friends/hiscores', 'Friends'],
     [friendPath!, null],
