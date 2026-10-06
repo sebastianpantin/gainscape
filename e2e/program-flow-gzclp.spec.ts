@@ -302,6 +302,7 @@ test('GZCLP: after a T1 squat fails 10×1 the Train card prescribes a 5RM test, 
   const squat = workoutCards(page, 'Back Squat');
   await expect(squat).toHaveCount(1);
   await expect(squat.getByRole('listitem')).toHaveCount(1);
+  expect(await weightsIn(squat)).toEqual(['100']);
   await squat.getByRole('spinbutton', { name: 'kg', exact: true }).fill('100');
   await expect(squat.getByRole('spinbutton', { name: 'reps', exact: true })).toHaveValue('5');
   await markEverySetDone(page);

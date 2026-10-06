@@ -530,7 +530,7 @@ export function startDraftFromPrescription(
       target: null,
       sets: prescribed.sets.map((set) => ({
         id: crypto.randomUUID(),
-        weightKg: set.weightKg ?? defaultWeightKg(exercise.loadType),
+        weightKg: set.weightKg ?? set.suggestedWeightKg ?? defaultWeightKg(exercise.loadType),
         reps: set.reps ?? STARTING_REPS,
         effort: null,
         done: false,
