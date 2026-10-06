@@ -13,13 +13,18 @@ import {
   type NumberContext,
   type ReferenceVar,
   type SlotDecl,
+  type StageRetest,
+  stageRetestOf,
 } from './program-definition.ts';
 import {
+  isRetestRef,
   isSlotActive,
   numberContext,
   type PrescriptionSnapshot,
   prescribedStageIndex,
   requiredSetIndices,
+  RETEST_REPS,
+  retestRefOf,
   type StageIndices,
   stageIndexOf,
   weekContextOf,
@@ -46,9 +51,9 @@ import {
   type RuleKey,
   type SetReferenceFact,
 } from './program-state.ts';
-import { advanceStage, retestedStages } from './program-stages.ts';
+import { advanceStage, isRetestPending, retestedStages } from './program-stages.ts';
 import { rpeChartPct } from './rpe-chart.ts';
-import { kgToUnit, type WeightUnit } from './units.ts';
+import { kgToUnit, shownWeight, type WeightUnit } from './units.ts';
 
 export interface LoggedLoad {
   weightKg: number;
@@ -498,16 +503,61 @@ function isBetterSet(context: FoldContext, candidate: FactSet, current: FactSet)
   const met = (set: FactSet) =>
     set.prescription !== null && isSetMet(set, set.prescription, context.enrollment.rounding, context.enrollment.unit);
   if (met(candidate) !== met(current)) return met(candidate);
+  if (candidate.prescription !== null && isRetestRef(candidate.prescription.ref))
+    return candidate.weightKg > current.weightKg;
   if (candidate.reps !== current.reps) return candidate.reps > current.reps;
   return candidate.weightKg > current.weightKg;
+}
+
+function heaviestSet(sets: readonly FactSet[]): FactSet | undefined {
+  return sets.reduce<FactSet | undefined>(
+    (best, set) => (best === undefined || set.weightKg > best.weightKg ? set : best),
+    undefined,
+  );
+}
+
+function retestAttemptOf(sets: readonly FactSet[], slot: SlotDecl, exerciseId: string | null | undefined): FactSet[] {
+  const ref = retestRefOf(slot.id);
+  const exerciseSets = sets.filter((set) => set.exerciseId === exerciseId);
+  const retestSet = exerciseSets.find((set) => set.prescription?.ref === ref);
+  if (!retestSet) return [];
+  const best = heaviestSet(
+    exerciseSets.filter(
+      (set) => (set === retestSet || set.prescription === null) && set.reps >= RETEST_REPS && set.weightKg > 0,
+    ),
+  );
+  return best ? [{ ...best, prescription: retestSet.prescription }] : [];
 }
 
 function judgedSetsOf(context: FoldContext, position: Position, sets: readonly FactSet[]): FactSet[] {
   const { definition, enrollment } = context;
   return definition.progression.flatMap((rule) =>
-    judgedSlotsOf(definition, enrollment, rule, position).flatMap((slot) =>
-      setsForSlot(sets, slot, enrollment.bindings[slot.lift]),
-    ),
+    judgedSlotsOf(definition, enrollment, rule, position).flatMap((slot) => {
+      const exerciseId = enrollment.bindings[slot.lift];
+      const judged = setsForSlot(sets, slot, exerciseId);
+      return stageRetestOf(rule) ? [...judged, ...retestAttemptOf(sets, slot, exerciseId)] : judged;
+    }),
+  );
+}
+
+function retestedFromSession(
+  context: FoldContext,
+  state: ProgramState,
+  rule: ProgressionRule,
+  retest: StageRetest,
+  position: Position,
+  judgedSets: readonly FactSet[],
+): ProgramState {
+  const { definition, enrollment } = context;
+  const refs = judgedSlotsOf(definition, enrollment, rule, position).map((slot) => retestRefOf(slot.id));
+  const attempt = heaviestSet(judgedSets.filter((set) => set.prescription && refs.includes(set.prescription.ref)));
+  if (!attempt) return state;
+  const value = shownWeight(attempt.weightKg, enrollment.unit);
+  return retestedStages(
+    definition,
+    setReference(state, rule.lift, retest.from, value, 'adjustment', position),
+    { lift: rule.lift, var: retest.from, value },
+    position,
   );
 }
 
@@ -548,8 +598,12 @@ function recordDay(
   return definition.progression
     .filter((rule) => rule.trigger === 'afterSession')
     .reduce(
-      (next, rule) =>
-        applyOutcome(context, next, rule, judgementAt(context, rule, position, judgedSets, stages), position),
+      (next, rule) => {
+        const retest = stageRetestOf(rule);
+        return retest && isRetestPending(next, rule.lift, retest.from)
+          ? retestedFromSession(context, next, rule, retest, position, judgedSets)
+          : applyOutcome(context, next, rule, judgementAt(context, rule, position, judgedSets, stages), position);
+      },
       withRecords(state, [record]),
     );
 }
@@ -609,6 +663,7 @@ export function advanceProgram(
         definition,
         setReference(state, fact.lift, fact.var, fact.value, 'set_reference', state.position),
         fact,
+        state.position,
       );
     case 'jump_to':
       return jumpTo(definition, state, fact.position);

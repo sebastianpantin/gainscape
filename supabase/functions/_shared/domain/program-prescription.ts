@@ -12,10 +12,12 @@ import {
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramReferences,
+  type ReferenceVar,
   type SlotDecl,
   type SlotRole,
   type StageDecl,
   type StageScheme,
+  stageRetestOf,
 } from './program-definition.ts';
 import { dayOf, isCyclePosition, isRotationPosition, type Position, positionAt } from './program-schedule.ts';
 import { rpeChartPct } from './rpe-chart.ts';
@@ -64,9 +66,51 @@ export type LastLoggedWeights = Readonly<Record<string, number>>;
 
 export type StageIndices = Readonly<Record<string, number>>;
 
+type PendingRetests = Readonly<Record<string, ReferenceVar>>;
+
 export interface ReferenceState {
   refs: ProgramReferences;
   stages?: StageIndices;
+  pendingRetests?: PendingRetests;
+}
+
+export const RETEST_REPS = 5;
+const RETEST_REF_SUFFIX = ':retest';
+
+export function retestRefOf(slotId: string): string {
+  return `${slotId}${RETEST_REF_SUFFIX}`;
+}
+
+export function isRetestRef(ref: string): boolean {
+  return ref.endsWith(RETEST_REF_SUFFIX);
+}
+
+function isRetestDue(
+  definition: ProgramDefinition,
+  slot: SlotDecl,
+  pendingRetests: PendingRetests | undefined,
+): boolean {
+  const pending = pendingRetests?.[slot.lift];
+  if (pending === undefined || slot.scheme.kind !== 'stages') return false;
+  return definition.progression.some(
+    (rule) => rule.lift === slot.lift && rule.judgedSlots.includes(slot.id) && stageRetestOf(rule)?.from === pending,
+  );
+}
+
+function retestSet(slotId: string): PrescribedSet {
+  const ref = retestRefOf(slotId);
+  return {
+    ref,
+    weight: null,
+    weightKg: null,
+    pct: null,
+    reps: RETEST_REPS,
+    maxReps: null,
+    minReps: null,
+    amrap: false,
+    optional: false,
+    snapshot: { ref, weightKg: 0, reps: RETEST_REPS, minReps: null, amrap: false },
+  };
 }
 
 const RAMP_PCT_DECIMALS = 6;
@@ -238,6 +282,7 @@ interface ResolveContext {
   enrollment: ProgramEnrollment;
   refs: ProgramReferences;
   stages: StageIndices | undefined;
+  pendingRetests: PendingRetests | undefined;
   position: Position;
   lastLogged: LastLoggedWeights;
 }
@@ -368,6 +413,8 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
 type SlotSetsResult = { kind: 'sets'; sets: PrescribedSet[] } | { kind: 'unsupported'; primitive: string };
 
 function resolveSlotSets(context: ResolveContext, slot: SlotDecl, depth: number): SlotSetsResult {
+  if (isRetestDue(context.definition, slot, context.pendingRetests))
+    return { kind: 'sets', sets: [retestSet(slot.id)] };
   const shapes = setShapes(context.definition, context.enrollment, slot, context.position, context.stages);
   if (shapes.kind === 'unsupported') return shapes;
   const sets: PrescribedSet[] = [];
@@ -416,6 +463,7 @@ export function resolvePrescription(
     enrollment,
     refs: state.refs,
     stages: state.stages,
+    pendingRetests: state.pendingRetests,
     position,
     lastLogged,
   };

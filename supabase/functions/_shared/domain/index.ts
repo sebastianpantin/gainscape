@@ -117,6 +117,7 @@ export {
   type WeeklyPosition,
 } from './program-schedule.ts';
 export {
+  isRetestRef,
   type LastLoggedWeights,
   type PrescribedExercise,
   type PrescribedSet,
