@@ -6,11 +6,13 @@ import { HISTORY_PAGE_SIZE, type HistorySession } from '../../lib/history-rules.
 import { CollectionTabs } from '../collection/CollectionScreen.tsx';
 import { formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
 
 function SessionItem({ session, now }: { session: HistorySession; now: number }) {
   const summaryParts = [
     session.historyOnly ? null : `+${formatXp(sessionXp(session.summary))} XP`,
     `${session.setCount} ${session.setCount === 1 ? 'set' : 'sets'}`,
+    ...sessionTimingParts(session),
   ].filter(Boolean);
   return (
     <li>

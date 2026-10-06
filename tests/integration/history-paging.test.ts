@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { HISTORY_PAGE_SIZE, type HistorySession, querySessionPage } from '../../web/src/lib/history-rules.ts';
+import {
+  HISTORY_PAGE_SIZE,
+  type HistorySession,
+  querySession,
+  querySessionPage,
+} from '../../web/src/lib/history-rules.ts';
 import { createTestUser, db, type TestUser } from './local-stack.ts';
 
 const SESSION_COUNT = HISTORY_PAGE_SIZE + 7;
@@ -60,5 +65,16 @@ describe('history keyset paging', () => {
     const tied = seen.slice(TIED_POSITIONS[0], TIED_POSITIONS.at(-1)! + 1).map((session) => session.startedAt);
     expect(new Set(tied).size).toBe(1);
     expect(tied[0]).toContain('.123456');
+  });
+
+  it('reads the start, finish and session RPE of a workout', async () => {
+    const [newest] = await db`
+      update public.sessions set session_rpe = 7, ended_at = started_at + interval '48 minutes'
+      where id = (select id from public.sessions where user_id = ${user.id} order by started_at desc, id desc limit 1)
+      returning id, started_at, ended_at`;
+    const session = await querySession(user.client, newest.id);
+    expect(session).toMatchObject({ sessionRpe: 7 });
+    expect(Date.parse(session!.endedAt) - Date.parse(session!.startedAt)).toBe(48 * MINUTE_MS);
+    expect((await querySessionPage(user.client, null))[0]).toMatchObject({ id: newest.id, sessionRpe: 7 });
   });
 });

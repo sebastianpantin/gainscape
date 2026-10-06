@@ -1,12 +1,13 @@
 import type { SessionSummary } from '@domain/types.ts';
 import type { InvokeOutcome } from '../lib/function-client-rules.ts';
+import type { RememberedTiming } from '../lib/session-timing-rules.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds } from '../lib/rate-limit.ts';
 import { rememberLastSummary } from '../features/summary/last-summary.ts';
 import { storedSessionId, type WorkoutDraft } from './draft-format.ts';
 import type { SyncedChange } from './draft-session.ts';
 import type { DraftStore } from './draft-store.ts';
 
-export interface CompletedSessionSummary extends SessionSummary {
+export interface CompletedSessionSummary extends SessionSummary, RememberedTiming {
   programLinked?: boolean;
   completedAt?: string;
 }
