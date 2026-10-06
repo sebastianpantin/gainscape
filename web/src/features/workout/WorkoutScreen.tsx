@@ -58,6 +58,7 @@ import { skipDayEvent } from '../../lib/program-skip-rules.ts';
 import { barbellSetupFor, draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
+import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
@@ -564,6 +565,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             <header>
               <h2>{exercise.name}</h2>
               <span className="row">
+                <ExerciseProgressLink exerciseId={exercise.exerciseId} exerciseName={exercise.name} />
                 {canSwapExercise(draft, exerciseIndex) && (
                   <button
                     className="button link"
