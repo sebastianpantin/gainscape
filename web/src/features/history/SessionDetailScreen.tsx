@@ -7,6 +7,7 @@ import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
 import { formatLoad, formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
+import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
 import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/history-rules.ts';
 import type { CatalogItem } from '../../lib/item-rules.ts';
@@ -306,6 +307,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const editWarning = removalText(dropsAtRisk(edit, loaded.original, activeDrops), items);
   const deleteWarning = removalText(activeDrops, items);
 
+  const timingText = sessionTimingParts(session).join(' · ');
   const header = (
     <>
       <Link className="back-link" to={HISTORY_PATH}>
@@ -315,6 +317,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         <div className="stack" style={{ gap: 4 }}>
           <span className="muted">{formatSessionDate(session.localDate)}</span>
           <h1 className="title">Workout</h1>
+          {timingText && <span className="muted tiny">{timingText}</span>}
         </div>
         <div className="live-xp">
           <output aria-label="Workout XP">

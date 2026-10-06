@@ -1,5 +1,5 @@
 import { levelProgress } from '@domain/index.ts';
-import type { DropSummary, SessionSummary } from '@domain/types.ts';
+import type { DropSummary } from '@domain/types.ts';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ItemIcon, LevelUpIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
@@ -10,6 +10,8 @@ import { fetchSession } from '../../lib/history.ts';
 import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
+import type { CompletedSessionSummary } from '../../offline/finish-lock.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
 import { describeRecord } from './reveal-rules.ts';
@@ -91,7 +93,7 @@ interface RevealScreenProps {
 
 export function RevealScreen({ userId }: RevealScreenProps) {
   const location = useLocation();
-  const summary = (location.state as SessionSummary | null) ?? recallLastSummary();
+  const summary = (location.state as CompletedSessionSummary | null) ?? recallLastSummary();
   const { unitPref } = usePreferences();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -142,10 +144,13 @@ export function RevealScreen({ userId }: RevealScreenProps) {
     );
   }
 
+  const timingText = sessionTimingParts(summary).join(' · ');
+
   if (summary.historyOnly) {
     return (
       <main className="screen stack">
         <h1 className="title">Workout saved</h1>
+        {timingText && <p className="muted">{timingText}</p>}
         <p className="panel" role="status">
           Saved to history (older than 7 days, no XP)
         </p>
@@ -167,6 +172,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         <h1 className="title">Workout complete!</h1>
         <span className="reveal-total pop">+{formatXp(totalXp)} XP</span>
       </header>
+      {timingText && <p className="muted">{timingText}</p>}
       <ul className="panel reveal-list" aria-label="XP gained">
         {skillsWithXp.map((skill, index) => {
           const gain = summary.xpBySkill[skill.key];

@@ -29,6 +29,7 @@ import {
   type NewSessionRow,
   ownedProgramDayId,
   placeholderSetRow,
+  type SessionTiming,
   type StoredSession,
   storedSummary,
   tombstoneOwner,
@@ -52,7 +53,7 @@ type WritableSession = Omit<SessionInput, 'sets'> & { sets: WritableSet[] };
 
 type SnapshotsBySetId = ReadonlyMap<string, PrescriptionSnapshotColumns>;
 
-interface CompleteSessionResponse extends SessionSummary {
+interface CompleteSessionResponse extends SessionSummary, SessionTiming {
   programLinked: boolean;
   completedAt: string;
 }
@@ -111,8 +112,9 @@ async function storeAndReplay(
   return { summary: await storedSummary(tx, session.id), completedAt };
 }
 
-function responseFor(stored: InsertedSession, programLinked: boolean): CompleteSessionResponse {
-  return { ...stored.summary, programLinked, completedAt: stored.completedAt };
+function responseFor(stored: InsertedSession, timing: SessionTiming, programLinked: boolean): CompleteSessionResponse {
+  const { startedAt, endedAt, sessionRpe } = timing;
+  return { ...stored.summary, programLinked, completedAt: stored.completedAt, startedAt, endedAt, sessionRpe };
 }
 
 async function completeSession(userId: string, payload: CompleteSessionPayload): Promise<CompleteSessionResponse> {
@@ -123,7 +125,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
     if (existing && existing.userId !== userId) throw new HttpError(409, 'session_id_conflict');
     if (existing) {
       warnIfResubmissionDiffers(existing, payload);
-      return responseFor(existing, existing.programLinked);
+      return responseFor(existing, existing, existing.programLinked);
     }
     const deletedBy = await tombstoneOwner(tx, payload.id);
     if (deletedBy === userId) throw new HttpError(410, 'session_deleted');
@@ -161,6 +163,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       balanceVersion: DEFAULT_BALANCE.version,
       summary: pendingSummary(payload.id),
       notes: payload.notes,
+      sessionRpe: payload.sessionRpe,
     };
 
     await takeRateLimit(tx, 'session_create_hour', userId);
@@ -168,7 +171,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
     const stored = isWithinEditWindow(payload.startedAt, now.getTime())
       ? await storeAndReplay(tx, row, session, snapshots)
       : await storeHistoryOnly(tx, row, session, snapshots, catalog);
-    return responseFor(stored, programLink !== null);
+    return responseFor(stored, row, programLink !== null);
   });
 }
 
