@@ -363,6 +363,7 @@ describe('function execution rights', () => {
       'set_gz',
       'set_timezone',
       'username_available',
+      'workout_bodyweights',
     ]);
   });
 });
