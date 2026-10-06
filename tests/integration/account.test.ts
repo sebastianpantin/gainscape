@@ -26,6 +26,7 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'rep_maxes', column: 'user_id' },
   { table: 'bodyweight_rep_records', column: 'user_id' },
   { table: 'cardio_records', column: 'user_id' },
+  { table: 'bodyweight_entries', column: 'user_id' },
   { table: 'pinned_exercises', column: 'user_id' },
   { table: 'exercises', column: 'owner_user_id' },
   { table: 'programs', column: 'owner_user_id' },
@@ -102,6 +103,8 @@ async function logRun(user: TestUser, hoursAgo: number, durationS: number): Prom
 
 async function giveUserEverything(user: TestUser): Promise<void> {
   await logRun(user, 6, 1800);
+  const bodyweight = await user.client.from('profile_private').update({ bodyweight_kg: 82 }).eq('user_id', user.id);
+  expect(bodyweight.error).toBeNull();
   const keptSessionId = await logOneSession(user);
   await logOneSession(user, 80);
   const scroll = await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
@@ -212,7 +215,7 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(2);
+    expect(exported.version).toBe(3);
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);
@@ -235,6 +238,9 @@ describe('export-data', () => {
     expect(exported.events).toHaveLength(counts.events);
     expect(exported.cardioRecords).toHaveLength(counts.cardio_records);
     expect(counts.cardio_records).toBeGreaterThan(0);
+    expect(exported.bodyweightEntries).toEqual([
+      { logged_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), bodyweight_kg: 82, updated_at: expect.any(String) },
+    ]);
     expect(exported.crafts).toHaveLength(1);
     expect(exported.reactionsGiven).toHaveLength(1);
     expect(Object.keys(exported.reactionsGiven[0]).sort()).toEqual(['created_at', 'event_id']);
