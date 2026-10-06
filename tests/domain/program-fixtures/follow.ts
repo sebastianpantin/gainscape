@@ -43,7 +43,7 @@ export function loggedAsPrescribed(resolved: readonly ResolvedSlot[], log: DayLo
       return [
         {
           exerciseId: slot.exerciseId,
-          weightKg: log.weightsKg?.[set.ref] ?? set.snapshot.weightKg,
+          weightKg: log.weightsKg?.[set.ref] ?? set.suggestedWeightKg ?? set.snapshot.weightKg,
           reps: log.reps?.[set.ref] ?? missedReps ?? set.snapshot.reps,
           effortInputType: effort?.type ?? null,
           effortValue: effort?.value ?? null,

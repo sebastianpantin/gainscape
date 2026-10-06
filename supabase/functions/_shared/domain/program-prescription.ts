@@ -41,6 +41,7 @@ export interface PrescribedSet {
   minReps: number | null;
   amrap: boolean;
   optional: boolean;
+  suggestedWeightKg?: number | null;
   snapshot: PrescriptionSnapshot | null;
 }
 
@@ -91,13 +92,13 @@ function isRetestDue(
   pendingRetests: PendingRetests | undefined,
 ): boolean {
   const pending = pendingRetests?.[slot.lift];
-  if (pending === undefined || slot.scheme.kind !== 'stages') return false;
+  if (pending === undefined) return false;
   return definition.progression.some(
     (rule) => rule.lift === slot.lift && rule.judgedSlots.includes(slot.id) && stageRetestOf(rule)?.from === pending,
   );
 }
 
-function retestSet(slotId: string): PrescribedSet {
+function retestSet(slotId: string, suggestedWeightKg: number | null): PrescribedSet {
   const ref = retestRefOf(slotId);
   return {
     ref,
@@ -109,6 +110,7 @@ function retestSet(slotId: string): PrescribedSet {
     minReps: null,
     amrap: false,
     optional: false,
+    suggestedWeightKg,
     snapshot: { ref, weightKg: 0, reps: RETEST_REPS, minReps: null, amrap: false },
   };
 }
@@ -413,8 +415,10 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
 type SlotSetsResult = { kind: 'sets'; sets: PrescribedSet[] } | { kind: 'unsupported'; primitive: string };
 
 function resolveSlotSets(context: ResolveContext, slot: SlotDecl, depth: number): SlotSetsResult {
-  if (isRetestDue(context.definition, slot, context.pendingRetests))
-    return { kind: 'sets', sets: [retestSet(slot.id)] };
+  if (slot.scheme.kind === 'stages' && isRetestDue(context.definition, slot, context.pendingRetests)) {
+    const stageLoad = resolveLoad(context, slot, slot.scheme.load, 0, depth);
+    return { kind: 'sets', sets: [retestSet(slot.id, stageLoad.kind === 'load' ? stageLoad.load.weightKg : null)] };
+  }
   const shapes = setShapes(context.definition, context.enrollment, slot, context.position, context.stages);
   if (shapes.kind === 'unsupported') return shapes;
   const sets: PrescribedSet[] = [];

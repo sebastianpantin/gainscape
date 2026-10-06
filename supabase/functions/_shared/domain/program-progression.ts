@@ -522,9 +522,7 @@ function retestAttemptOf(sets: readonly FactSet[], slot: SlotDecl, exerciseId: s
   const retestSet = exerciseSets.find((set) => set.prescription?.ref === ref);
   if (!retestSet) return [];
   const best = heaviestSet(
-    exerciseSets.filter(
-      (set) => (set === retestSet || set.prescription === null) && set.reps >= RETEST_REPS && set.weightKg > 0,
-    ),
+    exerciseSets.filter((set) => (set === retestSet || set.prescription === null) && set.reps >= RETEST_REPS),
   );
   return best ? [{ ...best, prescription: retestSet.prescription }] : [];
 }
@@ -553,6 +551,7 @@ function retestedFromSession(
   const attempt = heaviestSet(judgedSets.filter((set) => set.prescription && refs.includes(set.prescription.ref)));
   if (!attempt) return state;
   const value = shownWeight(attempt.weightKg, enrollment.unit);
+  if (value <= 0) return state;
   return retestedStages(
     definition,
     setReference(state, rule.lift, retest.from, value, 'adjustment', position),
