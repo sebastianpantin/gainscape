@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { dayKeyOf, programStateAt, type ProgramState } from '@domain/index.ts';
-import { factClock, setReferenceFact } from './program-fixtures/facts.ts';
-import { type DayLog, followProgram, resolveAt, resolveNext } from './program-fixtures/follow.ts';
+import { dayKeyOf, programStateAt, type ProgramState, unitToKg } from '@domain/index.ts';
+import { factClock, jumpToFact, sessionFact, setReferenceFact, unprescribedSet } from './program-fixtures/facts.ts';
+import { type DayLog, followProgram, loggedAsPrescribed, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import { GZCLP as def, GZCLP_DEFAULT_WEIGHTS_KG, gzclpEnrollment, type GzclpLift } from './program-fixtures/gzclp.ts';
 import { refOf, refsState, repsOf, slotIdsOf, slotOf, weightsOf } from './program-fixtures/prescription-helpers.ts';
 
@@ -198,18 +198,19 @@ describe('GZCLP T1 stage machine (kg)', () => {
     expect(state.pendingRetests).toEqual({});
   });
 
-  it('a met 10×1 after the last-stage fail keeps the retest pending: 100 + 5 = 105 at 10×1, then a 5RM of 110 still restarts 5×3 at 93.5', () => {
+  it('a met 10×1 from a draft resolved before the last-stage fail is not judged: squat stays 100 at 10×1 with the retest pending, then a 5RM of 110 still restarts 5×3 at 93.5', () => {
     const clock = factClock();
     const threeFails = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
-    const { facts } = followProgram(def, kg, clock, threeFails);
-    const metLastStage = followProgram(def, kg, clock, rounds([{}]), facts);
-    expect(metLastStage.state.pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
-    expect(metLastStage.state.stages['squat-t1']).toBe(2);
-    expect(refOf(metLastStage.state, 'squat-t1', 'workingWeight')).toBeCloseTo(105, 9);
-    const state = programStateAt(def, kg, [
-      ...metLastStage.facts,
-      setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110),
-    ]);
+    const { facts, state: pending } = followProgram(def, kg, clock, threeFails);
+    const tenSingles = loggedAsPrescribed(
+      resolveAt(def, kg, { refs: pending.refs, stages: pending.stages }, pending.position),
+    );
+    const metLastStage = [...facts, sessionFact(clock.next(), pending.position, tenSingles)];
+    const after = programStateAt(def, kg, metLastStage);
+    expect(after.pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
+    expect(after.stages['squat-t1']).toBe(2);
+    expect(refOf(after, 'squat-t1', 'workingWeight')).toBe(100);
+    const state = programStateAt(def, kg, [...metLastStage, setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110)]);
     expect(state.stages['squat-t1']).toBe(0);
     expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
     expect(state.pendingRetests).toEqual({});
@@ -221,6 +222,196 @@ describe('GZCLP T1 stage machine (kg)', () => {
     const resolved = resolveNext(def, kg, state);
     expect(weightsOf(resolved, 'a2-squat-t2')).toEqual([70, 70, 70]);
     expect(repsOf(resolved, 'a2-squat-t2')).toEqual([10, 10, 10]);
+  });
+});
+
+describe('GZCLP 5RM test while a T1 retest is pending (kg)', () => {
+  const retestRef = 'a1-squat-t1:retest';
+  const lastStageFail = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
+
+  function pendingRetest() {
+    const clock = factClock();
+    return { clock, ...followProgram(def, kg, clock, lastStageFail) };
+  }
+
+  function retestSets(state: ProgramState, prescribedKg: number, prescribedReps: number, extra: [number, number][]) {
+    const prescribed = loggedAsPrescribed(resolveNext(def, kg, state), {
+      weightsKg: { [retestRef]: prescribedKg },
+      reps: { [retestRef]: prescribedReps },
+    });
+    return [...prescribed, ...extra.map(([weightKg, reps]) => unprescribedSet('squat', weightKg, reps))];
+  }
+
+  it('prescribes the T1 squat as one 5RM test set: any weight × 5, its snapshot marked by the retest ref', () => {
+    const sets = slotOf(nextRound(pendingRetest().state), 'a1-squat-t1').sets;
+    expect(sets).toEqual([
+      {
+        ref: retestRef,
+        weight: null,
+        weightKg: null,
+        pct: null,
+        reps: 5,
+        maxReps: null,
+        minReps: null,
+        amrap: false,
+        optional: false,
+        suggestedWeightKg: 100,
+        snapshot: { ref: retestRef, weightKg: 0, reps: 5, minReps: null, amrap: false },
+      },
+    ]);
+  });
+
+  it('leaves the other lifts alone: bench-t2 3×10, pulldown 3×15+ and the b1 overhead press 5×3+', () => {
+    const { state } = pendingRetest();
+    const resolved = nextRound(state);
+    expect(repsOf(resolved, 'a1-bench-t2')).toEqual([10, 10, 10]);
+    expect(repsOf(resolved, 'a1-pulldown-t3')).toEqual([15, 15, 15]);
+    const ohp = resolveAt(def, kg, state, { index: 13 });
+    expect(repsOf(ohp, 'b1-ohp-t1')).toEqual([3, 3, 3, 3, 3]);
+  });
+
+  it('logging 60×5, 80×5, 100×5 and 110×5 sets the 5RM to 110 and restarts 5×3+ @ 92.5 (110 × 0.85 = 93.5)', () => {
+    const { clock, facts, state: pending } = pendingRetest();
+    const sets = retestSets(pending, 60, 5, [
+      [80, 5],
+      [100, 5],
+      [110, 5],
+    ]);
+    const state = programStateAt(def, kg, [...facts, sessionFact(clock.next(), pending.position, sets)]);
+    expect(refOf(state, 'squat-t1', 'fiveRm')).toBe(110);
+    expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
+    expect(state.stages['squat-t1']).toBe(0);
+    expect(state.pendingRetests).toEqual({});
+    const { state: nextA1 } = followProgram(
+      def,
+      kg,
+      clock,
+      [{}, {}, {}],
+      [...facts, sessionFact(clock.next(), pending.position, sets)],
+    );
+    const resolved = nextRound(nextA1);
+    expect(weightsOf(resolved, 'a1-squat-t1')).toEqual([92.5, 92.5, 92.5, 92.5, 92.5]);
+    expect(repsOf(resolved, 'a1-squat-t1')).toEqual([3, 3, 3, 3, 3]);
+  });
+
+  it('takes the heaviest set with at least 5 reps: 100×5 then 120×4 gives a 5RM of 100', () => {
+    const { clock, facts, state: pending } = pendingRetest();
+    const sets = retestSets(pending, 100, 5, [[120, 4]]);
+    const state = programStateAt(def, kg, [...facts, sessionFact(clock.next(), pending.position, sets)]);
+    expect(refOf(state, 'squat-t1', 'fiveRm')).toBe(100);
+    expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(85, 9);
+  });
+
+  it('only 110×4 keeps the retest pending: no 5RM, squat stays 100 at the last stage and the next a1 is the 5RM test again', () => {
+    const { clock, facts, state: pending } = pendingRetest();
+    const sets = retestSets(pending, 110, 4, []);
+    const logged = [...facts, sessionFact(clock.next(), pending.position, sets)];
+    const state = programStateAt(def, kg, logged);
+    expect(state.pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
+    expect(state.refs['squat-t1']?.fiveRm).toBeUndefined();
+    expect(refOf(state, 'squat-t1', 'workingWeight')).toBe(100);
+    expect(state.stages['squat-t1']).toBe(2);
+    expect(state.days.at(-1)?.outcomes['squat-t1']).toBe('neutral');
+    const { state: nextA1 } = followProgram(def, kg, clock, [{}, {}, {}], logged);
+    expect(slotOf(nextRound(nextA1), 'a1-squat-t1').sets.map((set) => set.ref)).toEqual([retestRef]);
+  });
+
+  it('does not count a squat set without the 5RM test set in the session', () => {
+    const { clock, facts, state: pending } = pendingRetest();
+    const sets = [unprescribedSet('squat', 110, 5)];
+    const state = programStateAt(def, kg, [...facts, sessionFact(clock.next(), pending.position, sets)]);
+    expect(state.pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
+  });
+
+  it('the 5RM test logged twice at one position keeps the heaviest of both whichever came first: 110×5 over 100×6', () => {
+    const { clock, facts, state: pending } = pendingRetest();
+    const [first, second] = [clock.next(), clock.next()];
+    const heavy: [number, number] = [110, 5];
+    const lightForMoreReps: [number, number] = [100, 6];
+    for (const [[firstKg, firstReps], [secondKg, secondReps]] of [
+      [heavy, lightForMoreReps],
+      [lightForMoreReps, heavy],
+    ]) {
+      const state = programStateAt(def, kg, [
+        ...facts,
+        sessionFact(first, pending.position, retestSets(pending, firstKg, firstReps, [])),
+        sessionFact(second, pending.position, retestSets(pending, secondKg, secondReps, [])),
+      ]);
+      expect(refOf(state, 'squat-t1', 'fiveRm')).toBe(110);
+      expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
+    }
+  });
+
+  it('suggests the failed 10×1 load as the starting weight of the 5RM test set: 100 kg, rounded like the stage', () => {
+    const fine = gzclpEnrollment({ weights: { 'squat-t1': 101 } });
+    const { state } = followProgram(def, fine, factClock(), lastStageFail);
+    const [set] = slotOf(resolveNext(def, fine, state), 'a1-squat-t1').sets;
+    expect([set.weightKg, set.suggestedWeightKg, set.snapshot?.weightKg]).toEqual([null, 100, 0]);
+  });
+
+  it('an unprescribed 100×5 qualifies when the 5RM test row itself is 120×4: 5RM 100', () => {
+    const { clock, facts, state: pending } = pendingRetest();
+    const sets = retestSets(pending, 120, 4, [[100, 5]]);
+    const state = programStateAt(def, kg, [...facts, sessionFact(clock.next(), pending.position, sets)]);
+    expect(refOf(state, 'squat-t1', 'fiveRm')).toBe(100);
+    expect(state.pendingRetests).toEqual({});
+  });
+
+  it('ignores a 0 kg set and a set of another exercise: a 0×5 test row with a 150×5 bench leaves the retest pending', () => {
+    const { clock, facts, state: pending } = pendingRetest();
+    const sets = [...retestSets(pending, 0, 5, [[0, 8]]), unprescribedSet('bench', 150, 5)];
+    const state = programStateAt(def, kg, [...facts, sessionFact(clock.next(), pending.position, sets)]);
+    expect(state.pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
+    expect(state.refs['squat-t1']?.fiveRm).toBeUndefined();
+  });
+
+  it('retests only the lift whose 5RM test was logged: squat-t1 restarts while bench-t1 stays pending', () => {
+    const clock = factClock();
+    const bothFail = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]).map((log, index) =>
+      index % 4 === 2 ? miss('bench-t1') : log,
+    );
+    const { facts, state: pending } = followProgram(def, kg, clock, bothFail);
+    expect(pending.pendingRetests).toEqual({ 'squat-t1': 'fiveRm', 'bench-t1': 'fiveRm' });
+    const sets = retestSets(pending, 110, 5, []);
+    const state = programStateAt(def, kg, [...facts, sessionFact(clock.next(), pending.position, sets)]);
+    expect(state.pendingRetests).toEqual({ 'bench-t1': 'fiveRm' });
+    expect(refOf(state, 'squat-t1', 'fiveRm')).toBe(110);
+    expect(refOf(state, 'bench-t1', 'workingWeight')).toBe(60);
+  });
+
+  it('a retest pending before a jump_to is taken in the new epoch: jumping to session 17 Day 1 prescribes the 5RM test, 110×5 restarts at 93.5', () => {
+    const { clock, facts } = pendingRetest();
+    const jumped = [...facts, jumpToFact(clock.next(), { index: 16 })];
+    const atJump = programStateAt(def, kg, jumped);
+    expect(slotOf(resolveNext(def, kg, atJump), 'a1-squat-t1').sets.map((set) => set.ref)).toEqual([retestRef]);
+    const sets = retestSets(atJump, 110, 5, []);
+    const state = programStateAt(def, kg, [...jumped, sessionFact(clock.next(), atJump.position, sets)]);
+    expect(refOf(state, 'squat-t1', 'fiveRm')).toBe(110);
+    expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
+  });
+
+  it('a bodyweight-bound T1 logged at 0 kg leaves the retest pending, and a 5RM entered on Manage program still restarts it', () => {
+    const { clock, facts, state: pending } = pendingRetest();
+    const bodyweight = retestSets(pending, 0, 12, [[0, 15]]);
+    const logged = [...facts, sessionFact(clock.next(), pending.position, bodyweight)];
+    expect(programStateAt(def, kg, logged).pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
+    const state = programStateAt(def, kg, [...logged, setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110)]);
+    expect(state.pendingRetests).toEqual({});
+    expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
+  });
+
+  it('a 5RM test set folded when no retest is pending is not judged as a stage: after a Manage program 5RM the squat stays 93.5 at 5×3+', () => {
+    const { clock, facts, state: pending } = pendingRetest();
+    const sets = retestSets(pending, 120, 5, []);
+    const state = programStateAt(def, kg, [
+      ...facts,
+      setReferenceFact(clock.next(), 'squat-t1', 'fiveRm', 110),
+      sessionFact(clock.next(), pending.position, sets),
+    ]);
+    expect(refOf(state, 'squat-t1', 'fiveRm')).toBe(110);
+    expect(refOf(state, 'squat-t1', 'workingWeight')).toBeCloseTo(93.5, 9);
+    expect(state.stages['squat-t1']).toBe(0);
+    expect(state.days.at(-1)?.outcomes['squat-t1']).toBe('neutral');
   });
 });
 
@@ -318,6 +509,36 @@ describe('GZCLP in lb (the sourced unit)', () => {
   it('a 25-rep T3 AMRAP adds one 5 lb rounding increment: 90 → 95', () => {
     const { state } = followProgram(def, lb, factClock(), [{ reps: { 'a1-pulldown-t3:2': 25 } }]);
     expect(refOf(state, 'pulldown-t3', 'workingWeight')).toBe(95);
+  });
+
+  it('a 5RM test logged at 250 lb restarts at 250 × 0.85 = 212.5, prescribed 215', () => {
+    const clock = factClock();
+    const fails = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
+    const { facts, state: pending } = followProgram(def, lb, clock, fails);
+    const sets = loggedAsPrescribed(resolveNext(def, lb, pending), {
+      weightsKg: { 'a1-squat-t1:retest': unitToKg(250, 'lb') },
+    });
+    const state = programStateAt(def, lb, [...facts, sessionFact(clock.next(), pending.position, sets)]);
+    expect(refOf(state, 'squat-t1', 'fiveRm')).toBe(250);
+    const { state: nextA1 } = followProgram(
+      def,
+      lb,
+      clock,
+      [{}, {}, {}],
+      [...facts, sessionFact(clock.next(), pending.position, sets)],
+    );
+    expect(dayKeyOf(def, nextA1.position)).toBe('a1');
+    expect(weightsOf(resolveNext(def, lb, nextA1), 'a1-squat-t1')).toEqual([215, 215, 215, 215, 215]);
+  });
+
+  it('a 5RM test whose weight shows as 0 lb leaves the retest pending: 0.01 kg is 0.0 lb', () => {
+    const clock = factClock();
+    const fails = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
+    const { facts, state: pending } = followProgram(def, lb, clock, fails);
+    const sets = loggedAsPrescribed(resolveNext(def, lb, pending), { weightsKg: { 'a1-squat-t1:retest': 0.01 } });
+    const state = programStateAt(def, lb, [...facts, sessionFact(clock.next(), pending.position, sets)]);
+    expect(state.pendingRetests).toEqual({ 'squat-t1': 'fiveRm' });
+    expect(state.refs['squat-t1']?.fiveRm).toBeUndefined();
   });
 
   it('a retested 5RM of 250 lb restarts at 250 × 0.85 = 212.5, prescribed 215 (42.5 ties up)', () => {
