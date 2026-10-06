@@ -7,6 +7,7 @@ import {
   programStateAt,
   isCyclePosition,
   isPositionInSchedule,
+  isRetestRef,
   isRotationPosition,
   type Position,
   type PrescribedExercise,
@@ -102,7 +103,9 @@ function prescriptionRow(set: PrescribedSet, index: number, unit: WeightUnit): P
   const repsLabel = repsLabelOf(set);
   const shownPct = set.pct === null ? null : pctLabel(set.pct);
   const load = weight === null ? 'any weight' : `${weight} ${unit}`;
-  const details = [shownPct, set.optional ? 'optional' : null].filter((detail) => detail !== null);
+  const details = [shownPct, set.optional ? 'optional' : null, isRetestRef(set.ref) ? '5RM test' : null].filter(
+    (detail) => detail !== null,
+  );
   return {
     ref: set.ref,
     setNumber: index + 1,

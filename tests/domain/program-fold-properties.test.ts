@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type FactSet,
   initialProgramState,
+  isRetestRef,
   type Position,
   type ProgramDefinition,
   type ProgramEnrollment,
@@ -11,8 +12,8 @@ import {
   programStateAt,
   type ReferenceVar,
 } from '@domain/index.ts';
-import { jumpToFact, sessionFact, setReferenceFact, skipDayFact } from './program-fixtures/facts.ts';
-import { loggedAsPrescribed, resolveAt } from './program-fixtures/follow.ts';
+import { factClock, jumpToFact, sessionFact, setReferenceFact, skipDayFact } from './program-fixtures/facts.ts';
+import { followProgram, loggedAsPrescribed, resolveAt } from './program-fixtures/follow.ts';
 import {
   cyclePosition,
   FIVE_THREE_ONE,
@@ -50,6 +51,7 @@ interface Scenario {
   enrollment: ProgramEnrollment;
   positionArb: fc.Arbitrary<Position>;
   references: readonly { lift: string; var: ReferenceVar }[];
+  earlierFacts?: readonly ProgramFact[];
   setsFor(position: Position, repsRoll: number[]): FactSet[];
   orderOf(position: Position): number[];
 }
@@ -116,16 +118,23 @@ function rotationScenario(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
   references: Scenario['references'],
+  earlierFacts: readonly ProgramFact[] = [],
 ): Scenario {
   const start = initialProgramState(definition, enrollment);
+  const { pendingRetests, position } = programStateAt(definition, enrollment, earlierFacts);
+  const firstIndex = (position as { index: number }).index;
   return {
     name,
     definition,
     enrollment,
-    positionArb: fc.integer({ min: 0, max: ROTATION_INDEXES - 1 }).map((index) => ({ index })),
+    positionArb: fc.integer({ min: firstIndex, max: firstIndex + ROTATION_INDEXES - 1 }).map((index) => ({ index })),
     references,
+    earlierFacts,
     setsFor(position, repsRoll) {
-      const resolved = resolveAt(definition, enrollment, start, position);
+      const retestSlots = resolveAt(definition, enrollment, { ...start, pendingRetests }, position).filter(
+        (slot) => slot.kind === 'exercise' && slot.sets.some((set) => isRetestRef(set.ref)),
+      );
+      const resolved = [...resolveAt(definition, enrollment, start, position), ...retestSlots];
       const lastSetReps = Object.fromEntries(
         resolved.flatMap((slot, slotIndex) =>
           slot.kind === 'exercise' && slot.sets.length > 0
@@ -156,11 +165,32 @@ const startingStrengthScenario = rotationScenario(
   ],
 );
 
-const gzclpScenario = rotationScenario('GZCLP (rotation)', GZCLP, gzclpEnrollment(), [
+const GZCLP_REFERENCES: Scenario['references'] = [
   { lift: 'squat-t1', var: 'workingWeight' },
   { lift: 'squat-t1', var: 'fiveRm' },
   { lift: 'bench-t2', var: 'workingWeight' },
-]);
+];
+
+const gzclpScenario = rotationScenario('GZCLP (rotation)', GZCLP, gzclpEnrollment(), GZCLP_REFERENCES);
+
+function dayEarlier(facts: readonly ProgramFact[]): ProgramFact[] {
+  return facts.map((fact) => ({ ...fact, at: new Date(Date.parse(fact.at) - DAY_SHIFT_MS).toISOString() }));
+}
+
+const squatT1LastStageFail = followProgram(
+  GZCLP,
+  gzclpEnrollment(),
+  factClock('pending'),
+  [1, 2, 3].flatMap(() => [{ missedLifts: ['squat-t1'] }, {}, {}, {}]),
+).facts;
+
+const gzclpRetestScenario = rotationScenario(
+  'GZCLP with a pending squat T1 5RM test (rotation)',
+  GZCLP,
+  gzclpEnrollment(),
+  GZCLP_REFERENCES,
+  dayEarlier(squatT1LastStageFail),
+);
 
 function intentArb(scenario: Scenario, withCopies: boolean): fc.Arbitrary<Intent> {
   const options: fc.Arbitrary<Intent>[] = [
@@ -193,7 +223,7 @@ function intentsArb(scenario: Scenario, withCopies: boolean): fc.Arbitrary<Inten
 }
 
 function buildFacts(scenario: Scenario, intents: readonly Intent[], startMs = CLOCK_START_MS): ProgramFact[] {
-  const facts: ProgramFact[] = [];
+  const facts: ProgramFact[] = [...(scenario.earlierFacts ?? [])];
   intents.forEach((intent, index) => {
     if (intent.kind === 'copy') {
       if (facts.length > 0) facts.push(facts[intent.of % facts.length]);
@@ -234,74 +264,81 @@ function withoutFactIds(state: ProgramState) {
   };
 }
 
-describe.each([madcowScenario, fiveThreeOneScenario, strongLiftsScenario, startingStrengthScenario, gzclpScenario])(
-  'programStateAt properties over $name facts',
-  (scenario) => {
-    const fold = (facts: readonly ProgramFact[]) => programStateAt(scenario.definition, scenario.enrollment, facts);
+const SCENARIOS = [
+  madcowScenario,
+  fiveThreeOneScenario,
+  strongLiftsScenario,
+  startingStrengthScenario,
+  gzclpScenario,
+  gzclpRetestScenario,
+];
 
-    it('(a) any permutation of the facts gives the same state as the server-ordered list', () => {
-      fc.assert(
-        fc.property(
-          intentsArb(scenario, true).chain((intents) => {
-            const facts = buildFacts(scenario, intents);
-            return fc.tuple(
-              fc.constant(facts),
-              fc.shuffledSubarray(facts, { minLength: facts.length, maxLength: facts.length }),
-            );
-          }),
-          ([facts, shuffled]) => {
-            expect(fold(shuffled)).toEqual(fold(serverOrder(facts)));
-          },
-        ),
-        { numRuns: NUM_RUNS },
-      );
-    });
+describe.each(SCENARIOS)('programStateAt properties over $name facts', (scenario) => {
+  const fold = (facts: readonly ProgramFact[]) => programStateAt(scenario.definition, scenario.enrollment, facts);
 
-    it('(b) duplicating a fact changes nothing', () => {
-      fc.assert(
-        fc.property(intentsArb(scenario, true), fc.nat(), fc.nat(), (intents, pick, insertAt) => {
+  it('(a) any permutation of the facts gives the same state as the server-ordered list', () => {
+    fc.assert(
+      fc.property(
+        intentsArb(scenario, true).chain((intents) => {
           const facts = buildFacts(scenario, intents);
-          fc.pre(facts.length > 0);
-          const duplicated = [...facts];
-          duplicated.splice(insertAt % (facts.length + 1), 0, facts[pick % facts.length]);
-          expect(fold(duplicated)).toEqual(fold(facts));
+          return fc.tuple(
+            fc.constant(facts),
+            fc.shuffledSubarray(facts, { minLength: facts.length, maxLength: facts.length }),
+          );
         }),
-        { numRuns: NUM_RUNS },
-      );
-    });
+        ([facts, shuffled]) => {
+          expect(fold(shuffled)).toEqual(fold(serverOrder(facts)));
+        },
+      ),
+      { numRuns: NUM_RUNS },
+    );
+  });
 
-    it('(c) the position never decreases across server-ordered prefixes, except where a jump_to sets it', () => {
-      fc.assert(
-        fc.property(intentsArb(scenario, true), (intents) => {
-          const ordered = serverOrder(buildFacts(scenario, intents));
-          let previous = scenario.orderOf(fold([]).position);
-          for (let length = 1; length <= ordered.length; length += 1) {
-            const current = scenario.orderOf(fold(ordered.slice(0, length)).position);
-            if (ordered[length - 1].kind !== 'jump_to') expect(compareOrder(previous, current)).toBeLessThanOrEqual(0);
-            previous = current;
-          }
-        }),
-        { numRuns: NUM_RUNS },
-      );
-    });
+  it('(b) duplicating a fact changes nothing', () => {
+    fc.assert(
+      fc.property(intentsArb(scenario, true), fc.nat(), fc.nat(), (intents, pick, insertAt) => {
+        const facts = buildFacts(scenario, intents);
+        fc.pre(facts.length > 0);
+        const duplicated = [...facts];
+        duplicated.splice(insertAt % (facts.length + 1), 0, facts[pick % facts.length]);
+        expect(fold(duplicated)).toEqual(fold(facts));
+      }),
+      { numRuns: NUM_RUNS },
+    );
+  });
 
-    it('(d) removing a session is the same as never logging it, even at different timestamps and ids', () => {
-      fc.assert(
-        fc.property(intentsArb(scenario, false), fc.nat(), (intents, pick) => {
-          const sessionIndexes = intents.flatMap((intent, index) => (intent.kind === 'session' ? [index] : []));
-          fc.pre(sessionIndexes.length > 0);
-          const removedIndex = sessionIndexes[pick % sessionIndexes.length];
-          const removedId = `fact-${String(removedIndex).padStart(4, '0')}`;
-          const loggedThenRemoved = buildFacts(scenario, intents).filter((fact) => fact.id !== removedId);
-          const remainingIntents = intents.filter((_, index) => index !== removedIndex);
-          const neverLoggedLater = buildFacts(scenario, remainingIntents, CLOCK_START_MS + DAY_SHIFT_MS);
-          const folded = withoutFactIds(fold(loggedThenRemoved));
-          expect(neverLoggedLater.every((fact) => !loggedThenRemoved.some((kept) => kept.at === fact.at))).toBe(true);
-          expect(folded).toEqual(withoutFactIds(fold(buildFacts(scenario, remainingIntents))));
-          expect(folded).toEqual(withoutFactIds(fold(neverLoggedLater)));
-        }),
-        { numRuns: NUM_RUNS },
-      );
-    });
-  },
-);
+  it('(c) the position never decreases across server-ordered prefixes, except where a jump_to sets it', () => {
+    fc.assert(
+      fc.property(intentsArb(scenario, true), (intents) => {
+        const ordered = serverOrder(buildFacts(scenario, intents));
+        let previous = scenario.orderOf(fold([]).position);
+        for (let length = 1; length <= ordered.length; length += 1) {
+          const current = scenario.orderOf(fold(ordered.slice(0, length)).position);
+          if (ordered[length - 1].kind !== 'jump_to') expect(compareOrder(previous, current)).toBeLessThanOrEqual(0);
+          previous = current;
+        }
+      }),
+      { numRuns: NUM_RUNS },
+    );
+  });
+
+  it('(d) removing a session is the same as never logging it, even at different timestamps and ids', () => {
+    fc.assert(
+      fc.property(intentsArb(scenario, false), fc.nat(), (intents, pick) => {
+        const sessionIndexes = intents.flatMap((intent, index) => (intent.kind === 'session' ? [index] : []));
+        fc.pre(sessionIndexes.length > 0);
+        const removedIndex = sessionIndexes[pick % sessionIndexes.length];
+        const removedId = `fact-${String(removedIndex).padStart(4, '0')}`;
+        const loggedThenRemoved = buildFacts(scenario, intents).filter((fact) => fact.id !== removedId);
+        const remainingIntents = intents.filter((_, index) => index !== removedIndex);
+        const neverLoggedLater = buildFacts(scenario, remainingIntents, CLOCK_START_MS + DAY_SHIFT_MS);
+        const folded = withoutFactIds(fold(loggedThenRemoved));
+        const shifted = neverLoggedLater.filter((fact) => !scenario.earlierFacts?.includes(fact));
+        expect(shifted.every((fact) => !loggedThenRemoved.some((kept) => kept.at === fact.at))).toBe(true);
+        expect(folded).toEqual(withoutFactIds(fold(buildFacts(scenario, remainingIntents))));
+        expect(folded).toEqual(withoutFactIds(fold(neverLoggedLater)));
+      }),
+      { numRuns: NUM_RUNS },
+    );
+  });
+});

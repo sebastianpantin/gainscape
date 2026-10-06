@@ -70,6 +70,20 @@ describe('history reasons of the 1b adjustments', () => {
     ]);
   });
 
+  it("a 5RM test logged in a session is an 'adjustment' of fiveRm to 110, then of the working weight to 93.5, both at the session's position", () => {
+    const clock = factClock();
+    const enrollment = gzclpEnrollment();
+    const lastStageFail = rounds([miss('squat-t1'), miss('squat-t1'), miss('squat-t1')]);
+    const { facts, state: pending } = followProgram(GZCLP, enrollment, clock, lastStageFail);
+    const retestLog: DayLog = { weightsKg: { 'a1-squat-t1:retest': 110 } };
+    const { state } = followProgram(GZCLP, enrollment, clock, [retestLog], facts);
+    const changes = state.history.filter((entry) => entry.lift === 'squat-t1').slice(-2);
+    expect(changes.map((entry) => [entry.var, entry.to, entry.reason, entry.position])).toEqual([
+      ['fiveRm', 110, 'adjustment', pending.position],
+      ['workingWeight', expect.closeTo(93.5, 9), 'adjustment', pending.position],
+    ]);
+  });
+
   it("an e1RM update is an 'adjustment': 175 × 3 @ 8 → 202.78", () => {
     const log: DayLog = { weightsKg: { 'squat-top:0': 175 }, efforts: { 'squat-top:0': { type: 'rpe', value: 8 } } };
     const { state } = followProgram(RPE_TOP_SET, rpeEnrollment(), factClock(), [log]);

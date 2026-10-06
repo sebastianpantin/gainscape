@@ -27,6 +27,7 @@ import {
 import { type CardioActivity } from '../../web/src/lib/catalog-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 import { snapshot } from '../domain/program-fixtures/facts.ts';
+import { GZCLP, gzclpEnrollment } from '../domain/program-fixtures/gzclp.ts';
 import { MADCOW_5X5, madcowEnrollment, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -399,6 +400,35 @@ function engineMadcowMonday(): WorkoutDraft {
 }
 
 describe('startDraftFromPrescription', () => {
+  it('starts a pending GZCLP 5RM test set at the failed 10×1 load of 100 kg while its snapshot stays at any weight (0 kg)', () => {
+    const enrollment = gzclpEnrollment();
+    const state = {
+      ...initialProgramState(GZCLP, enrollment),
+      stages: { 'squat-t1': 2 },
+      pendingRetests: { 'squat-t1': 'fiveRm' as const },
+    };
+    const resolved = resolvePrescription(GZCLP, enrollment, state, { index: 0 }, {}).filter(
+      (slot): slot is PrescribedExercise => slot.kind === 'exercise',
+    );
+    const catalog = new Map<string, CatalogEntry>(
+      resolved.map((slot) => [slot.exerciseId, { name: slot.lift, loadType: 'external', archived: false }]),
+    );
+    const { draft } = startDraftFromPrescription(
+      {
+        enrollmentId: enrollment.id,
+        templateKey: 'gzclp',
+        programName: 'GZCLP',
+        dayName: 'Session 1 Day 1',
+        position: { index: 0 },
+        exercises: resolved,
+      },
+      catalog,
+      STARTED_AT,
+    );
+    const squat = draft.exercises[0] as LiftDraftExercise;
+    expect(squat.sets.map((set) => [set.weightKg, set.reps, set.prescription?.weightKg])).toEqual([[100, 5, 0]]);
+  });
+
   it('links the draft to the enrollment, its template and the position', () => {
     expect(startMonday().draft.program).toEqual(MADCOW_MONDAY);
   });

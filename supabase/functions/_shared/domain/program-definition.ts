@@ -275,8 +275,13 @@ export interface FailureCounterAdjustment {
   deloadPct: NumberExpr;
 }
 
-export type StageLastFail =
-  { kind: 'retest'; pct: number; from: ReferenceVar } | { kind: 'resetToFirstStage'; add: UnitAmount };
+export interface StageRetest {
+  kind: 'retest';
+  pct: number;
+  from: ReferenceVar;
+}
+
+export type StageLastFail = StageRetest | { kind: 'resetToFirstStage'; add: UnitAmount };
 
 export interface StageMachineAdjustment {
   kind: 'stageMachine';
@@ -335,6 +340,13 @@ export interface ProgressionRule {
   onMet: Adjustment[];
   onMiss: Adjustment[];
   always?: Adjustment[];
+}
+
+export function stageRetestOf(rule: ProgressionRule): StageRetest | null {
+  for (const adjustment of [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])]) {
+    if (adjustment.kind === 'stageMachine' && adjustment.onLastFail.kind === 'retest') return adjustment.onLastFail;
+  }
+  return null;
 }
 
 export interface ProgramDefinition {
