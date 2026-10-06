@@ -11,6 +11,7 @@ import {
 } from '../../lib/account.ts';
 import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
 import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
+import { forgetCachedExerciseNotes } from '../../lib/exercise-note-cache.ts';
 import { type BarbellSetup, HEAVIEST_BAR_OR_PLATE, isUsableBarOrPlate, PLATE_CHOICES } from '../../lib/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../lib/plate-settings-store.ts';
 import { usePreferences } from '../../lib/preferences.ts';
@@ -49,6 +50,7 @@ interface SettingsScreenProps {
 
 async function forgetThisDevice(userId: string): Promise<void> {
   forgetCachedExercises(localStorage, userId);
+  forgetCachedExerciseNotes(localStorage, userId);
   forgetProgramCache(localStorage, userId);
   forgetInstallCard(userId);
   await discardLocalDraft(await openDraftStoreAndReconcile(), userId);

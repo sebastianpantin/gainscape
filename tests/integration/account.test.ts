@@ -26,7 +26,9 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'rep_maxes', column: 'user_id' },
   { table: 'bodyweight_rep_records', column: 'user_id' },
   { table: 'cardio_records', column: 'user_id' },
+  { table: 'bodyweight_entries', column: 'user_id' },
   { table: 'pinned_exercises', column: 'user_id' },
+  { table: 'exercise_notes', column: 'user_id' },
   { table: 'exercises', column: 'owner_user_id' },
   { table: 'programs', column: 'owner_user_id' },
   { table: 'deleted_sessions', column: 'user_id' },
@@ -102,6 +104,8 @@ async function logRun(user: TestUser, hoursAgo: number, durationS: number): Prom
 
 async function giveUserEverything(user: TestUser): Promise<void> {
   await logRun(user, 6, 1800);
+  const bodyweight = await user.client.from('profile_private').update({ bodyweight_kg: 82 }).eq('user_id', user.id);
+  expect(bodyweight.error).toBeNull();
   const keptSessionId = await logOneSession(user);
   await logOneSession(user, 80);
   const scroll = await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
@@ -123,6 +127,8 @@ async function giveUserEverything(user: TestUser): Promise<void> {
   const benchId = await builtInExerciseId('barbell_bench_press');
   const pin = await user.client.from('pinned_exercises').insert({ exercise_id: benchId, position: 0 });
   expect(pin.error).toBeNull();
+  const note = await user.client.rpc('save_exercise_note', { exercise_id: benchId, body: 'Seat 4' });
+  expect(note.error).toBeNull();
   await createCustomExercise(user, { skillKey: 'shoulders' });
   const [template] = await db`select id from public.programs where owner_user_id is null limit 1`;
   const copy = await user.client.rpc('copy_program', { source_program_id: template.id, new_program_id: randomUUID() });
@@ -212,7 +218,7 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(2);
+    expect(exported.version).toBe(3);
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);
@@ -220,6 +226,8 @@ describe('export-data', () => {
       2,
     );
     expect(exported.pinnedExercises).toHaveLength(1);
+    expect(exported.exerciseNotes).toHaveLength(1);
+    expect(exported.exerciseNotes[0].body).toBe('Seat 4');
     expect(exported.customExercises).toHaveLength(1);
     expect(exported.customExercises[0].shares).toEqual([{ skill: 'shoulders', share_bp: 10000 }]);
     expect(exported.programs.length).toBeGreaterThan(0);
@@ -235,6 +243,9 @@ describe('export-data', () => {
     expect(exported.events).toHaveLength(counts.events);
     expect(exported.cardioRecords).toHaveLength(counts.cardio_records);
     expect(counts.cardio_records).toBeGreaterThan(0);
+    expect(exported.bodyweightEntries).toEqual([
+      { logged_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), bodyweight_kg: 82, updated_at: expect.any(String) },
+    ]);
     expect(exported.crafts).toHaveLength(1);
     expect(exported.reactionsGiven).toHaveLength(1);
     expect(Object.keys(exported.reactionsGiven[0]).sort()).toEqual(['created_at', 'event_id']);

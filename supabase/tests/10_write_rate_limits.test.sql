@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(22);
 
 create function pg_temp.fill_bucket(bucket_name text, subject uuid) returns void language sql as $$
   insert into private.rate_limit_hits (bucket, subject, window_start, hits)
@@ -13,10 +13,10 @@ $$;
 select results_eq(
   $$select bucket, max_hits, window_seconds from private.rate_limit_rules
     where bucket in ('craft_minute', 'custom_exercise_save_hour', 'program_save_hour', 'pin_change_minute',
-                     'profile_update_hour')
+                     'profile_update_hour', 'exercise_note_save_hour')
     order by bucket$$,
-  $$values ('craft_minute', 30, 60), ('custom_exercise_save_hour', 30, 3600), ('pin_change_minute', 60, 60),
-           ('profile_update_hour', 60, 3600), ('program_save_hour', 30, 3600)$$,
+  $$values ('craft_minute', 30, 60), ('custom_exercise_save_hour', 30, 3600), ('exercise_note_save_hour', 120, 3600),
+           ('pin_change_minute', 60, 60), ('profile_update_hour', 60, 3600), ('program_save_hour', 30, 3600)$$,
   'the client write buckets exist with their limits'
 );
 
@@ -46,6 +46,10 @@ select lives_ok(
   format('select public.copy_program(%L, gen_random_uuid())', :'template'),
   'a program copy under the limit is saved'
 );
+select lives_ok(
+  format('select public.save_exercise_note(%L, %L)', :'bench', 'Seat 4'),
+  'a note save under the limit is saved'
+);
 reset role;
 
 select pg_temp.fill_bucket('pin_change_minute', :'a');
@@ -53,6 +57,7 @@ select pg_temp.fill_bucket('profile_update_hour', :'a');
 select pg_temp.fill_bucket('custom_exercise_save_hour', :'a');
 select pg_temp.fill_bucket('program_save_hour', :'a');
 select pg_temp.fill_bucket('craft_minute', :'a');
+select pg_temp.fill_bucket('exercise_note_save_hour', :'a');
 
 select tests.authenticate_as(:'a');
 select throws_ok(
@@ -76,6 +81,14 @@ select throws_ok(
 select throws_ok(
   format('select public.copy_program(%L, gen_random_uuid())', :'template'),
   'PT429', 'rate_limited', 'a program copy over the limit is refused'
+);
+select throws_ok(
+  format('select public.save_exercise_note(%L, %L)', :'bench', 'Seat 5'),
+  'PT429', 'rate_limited', 'a note save over the limit is refused'
+);
+select throws_ok(
+  format('select public.save_exercise_note(%L, %L)', :'bench', ''),
+  'PT429', 'rate_limited', 'clearing a note over the limit is refused'
 );
 reset role;
 

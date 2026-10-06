@@ -127,9 +127,11 @@ begin
   values (give_everything.owner, lift, 5, 60, now());
   insert into public.bodyweight_rep_records (user_id, exercise_id, max_reps, achieved_at)
   values (give_everything.owner, bodyweight_lift, 12, now());
+  update public.profile_private set bodyweight_kg = 80 where user_id = give_everything.owner;
   insert into public.cardio_records (user_id, exercise_id, kind, value, achieved_at)
   select give_everything.owner, e.id, 'distance', 5000, now() from public.exercises e where e.key = 'running';
   insert into public.pinned_exercises (user_id, exercise_id, position) values (give_everything.owner, lift, 0);
+  insert into public.exercise_notes (user_id, exercise_id, body) values (give_everything.owner, lift, 'Seat 4');
   insert into public.exercises (id, owner_user_id, name, load_type, equipment)
   values (custom_id, give_everything.owner, 'Test custom lift', 'external', 'other');
   insert into public.exercise_skills (exercise_id, skill_id, share_bp) values (custom_id, skill, 10000);
