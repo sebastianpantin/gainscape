@@ -28,7 +28,7 @@ import type { SessionBaseline } from '../../lib/session-baseline-rules.ts';
 import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-baseline-store.ts';
 import { barbellPlatesText } from '../../lib/plate-rules.ts';
 import { readPlateSettings } from '../../lib/plate-settings-store.ts';
-import { warmupSets } from '../../lib/warmup-rules.ts';
+import { warmupPlan } from '../../lib/warmup-rules.ts';
 import { SESSION_RPE_VALUES, sessionRpeChoiceLabel, sessionRpeFromChoice } from '../../lib/session-timing-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
@@ -608,8 +608,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             nextWeightHint(lastSessionSets, exercise.loadType, exercise.target, unitPref, step));
         const workingSet = firstWorkingSet(exercise);
         const warmups =
-          isBarbell && workingSet !== undefined && !exercise.sets.some((set) => set.isWarmup)
-            ? warmupSets(shownWeight(workingSet.weightKg, unitPref), barbellSetup)
+          workingSet !== undefined && !exercise.sets.some((set) => set.isWarmup)
+            ? warmupPlan(
+                { weight: shownWeight(workingSet.weightKg, unitPref), reps: workingSet.reps },
+                isBarbell ? barbellSetup : null,
+              )
             : [];
         return (
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>

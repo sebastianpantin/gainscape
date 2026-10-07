@@ -65,8 +65,26 @@ test('warm-ups ramp from the bar to the first working set of a barbell lift', as
   }
   await expect(weightOf(rows.nth(4))).toHaveValue('100');
   await expect(squat.getByRole('button', { name: '+ Add warm-ups' })).toHaveCount(0);
+});
+
+test('a lift with no ramp to build still offers one warm-up set to edit', async ({ page }) => {
+  await register(page, uniqueUsername('wu'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const squat = await addExercise(page, 'squat', 'Back Squat');
+  await weightOf(squat.getByRole('listitem').first()).fill('20');
+  await squat.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
+  await expect(squat.getByRole('listitem')).toHaveCount(2);
+  await expect(weightOf(squat.getByRole('listitem').first())).toHaveValue('20');
+  await expect(squat.getByRole('button', { name: 'Warm-up set 1' })).toHaveAttribute('aria-pressed', 'true');
 
   const curl = await addExercise(page, 'curl', 'Dumbbell Curl');
+  await weightOf(curl.getByRole('listitem').first()).fill('12');
+  await curl.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
+  const curlRows = curl.getByRole('listitem');
+  await expect(curlRows).toHaveCount(2);
+  await expect(weightOf(curlRows.first())).toHaveValue('12');
+  await expect(curl.getByRole('button', { name: 'Warm-up set 1' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(curl.getByRole('button', { name: 'Warm-up set 2' })).toHaveAttribute('aria-pressed', 'false');
   await expect(curl.getByRole('button', { name: '+ Add warm-ups' })).toHaveCount(0);
 });
 
