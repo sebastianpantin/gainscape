@@ -85,7 +85,7 @@ export async function runCli(main: () => Promise<void> | void): Promise<void> {
 
 export async function assertInviteOnly(config: DeployConfig): Promise<void> {
   const response = await fetch(`${config.VITE_SUPABASE_URL}/auth/v1/settings`, {
-    headers: { apikey: config.VITE_SUPABASE_ANON_KEY! },
+    headers: { apikey: config.VITE_SUPABASE_PUBLISHABLE_KEY! },
   });
   const settings = response.ok ? await response.json().catch(() => null) : null;
   const problems = authSettingsProblems(settings);

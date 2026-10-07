@@ -1,11 +1,11 @@
 # delete-account
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-07
 
 ## Purpose
 
-POST endpoint that permanently deletes the caller's account after they confirm their username and re-enter their password. Uses a service-role client for `auth.admin.deleteUser`; database cascades remove the data.
+POST endpoint that permanently deletes the caller's account after they confirm their username and re-enter their password. Uses an admin client on the default secret key (`secretKey()`) for `auth.admin.deleteUser`, and checks the password with a client on the publishable key; database cascades remove the data.
 
 ## Key Files
 
@@ -19,7 +19,7 @@ POST endpoint that permanently deletes the caller's account after they confirm t
 
 ### Working In This Directory
 
-- Uses `SUPABASE_SERVICE_ROLE_KEY`; never expose it or log it.
+- Reads its keys through `_shared/api-keys.ts` (`SUPABASE_SECRET_KEYS`, `SUPABASE_PUBLISHABLE_KEYS`); never expose or log the secret key.
 - Cascades are defined in migrations and covered by pgTAP.
 
 ### Testing Requirements

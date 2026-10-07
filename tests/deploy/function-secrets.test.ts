@@ -37,3 +37,19 @@ describe('Edge Function logging', () => {
     expect(logging).toEqual(['_shared/http.ts', 'complete-session/index.ts']);
   });
 });
+
+describe('Edge Function API keys', () => {
+  it('are read inside a request, so a missing key answers 500 api_key_missing instead of failing the boot', () => {
+    const readAtLoad = sourceFiles(functionsRoot)
+      .filter((path) =>
+        readFileSync(path, 'utf8')
+          .split('\n')
+          .some(
+            (line) =>
+              /^\S/.test(line) && !/^(export )?function /.test(line) && /\b(secretKey|publishableKey)\(\)/.test(line),
+          ),
+      )
+      .map((path) => relative(functionsRoot, path));
+    expect(readAtLoad).toEqual([]);
+  });
+});

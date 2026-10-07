@@ -71,34 +71,36 @@ describe('deploy file', () => {
 });
 
 describe('build environment', () => {
-  const allowed = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'];
+  const allowed = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
 
   it('passes only the allowlisted public variables and the path', () => {
     const env = {
       PATH: '/usr/bin',
       VITE_SUPABASE_URL: 'https://ref.supabase.co',
-      VITE_SUPABASE_ANON_KEY: 'anon',
-      SUPABASE_SERVICE_ROLE_KEY: fakeSecretKey,
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'publishable',
+      SUPABASE_SECRET_KEY: fakeSecretKey,
       HOME: '/home/admin',
     };
     expect(allowlistedBuildEnvironment(env, allowed)).toEqual({
       PATH: '/usr/bin',
       VITE_SUPABASE_URL: 'https://ref.supabase.co',
-      VITE_SUPABASE_ANON_KEY: 'anon',
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'publishable',
     });
   });
 
   it('refuses any other VITE_ variable, which Vite would put in the bundle', () => {
     expect(() =>
       allowlistedBuildEnvironment(
-        { VITE_SUPABASE_URL: 'u', VITE_SUPABASE_ANON_KEY: 'a', VITE_SERVICE_KEY: fakeSecretKey },
+        { VITE_SUPABASE_URL: 'u', VITE_SUPABASE_PUBLISHABLE_KEY: 'a', VITE_SERVICE_KEY: fakeSecretKey },
         allowed,
       ),
     ).toThrow(/VITE_SERVICE_KEY/);
   });
 
   it('refuses a missing allowlisted variable', () => {
-    expect(() => allowlistedBuildEnvironment({ VITE_SUPABASE_URL: 'u' }, allowed)).toThrow(/VITE_SUPABASE_ANON_KEY/);
+    expect(() => allowlistedBuildEnvironment({ VITE_SUPABASE_URL: 'u' }, allowed)).toThrow(
+      /VITE_SUPABASE_PUBLISHABLE_KEY/,
+    );
   });
 });
 
@@ -147,10 +149,10 @@ describe('child process environment', () => {
 
 describe('bundle scan', () => {
   const serviceRoleJwt = fakeJwt({ iss: 'supabase', ref: 'abc', role: 'service_role' });
-  const anonJwt = fakeJwt({ iss: 'supabase', ref: 'abc', role: 'anon' });
+  const publishableKey = ['sb', 'publishable', 'p'.repeat(32)].join('_');
 
-  it('passes a bundle with only the anon key', () => {
-    expect(bundleLeaks([{ path: 'assets/index.js', content: `const key="${anonJwt}";` }], [])).toEqual([]);
+  it('passes a bundle with only the publishable key', () => {
+    expect(bundleLeaks([{ path: 'assets/index.js', content: `const key="${publishableKey}";` }], [])).toEqual([]);
   });
 
   it('finds a known secret value', () => {

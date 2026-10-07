@@ -187,10 +187,15 @@ describe('rebuild-caches', () => {
     expect(kept.length).toBeGreaterThan(0);
   });
 
-  it('refuses callers without the service role key', async () => {
-    const result = await rebuildCaches(lifter.id, lifter.accessToken);
+  it.each([
+    ['a user token', () => ({ Authorization: `Bearer ${lifter.accessToken}`, apikey: env.PUBLISHABLE_KEY })],
+    ['the publishable key', () => ({ apikey: env.PUBLISHABLE_KEY })],
+    ['the secret key as a bearer token instead of apikey', () => ({ Authorization: `Bearer ${env.SECRET_KEY}` })],
+    ['no key at all', () => ({})],
+  ])('refuses a caller with %s', async (_case, credentials) => {
+    const result = await rebuildCaches(lifter.id, credentials());
     expect(result.status).toBe(403);
-    expect(result.body.error).toBe('service_role_required');
+    expect(result.body.error).toBe('secret_key_required');
   });
 
   it('returns 404 user_not_found for a user without a profile', async () => {
@@ -207,7 +212,7 @@ describe('rebuild-caches', () => {
   ])('rejects %s', async (_case, body, status, code) => {
     const response = await fetchFunction('rebuild-caches', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${env.SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
+      headers: { apikey: env.SECRET_KEY, 'Content-Type': 'application/json' },
       body,
     });
     expect(response.status, response.rawBody).toBe(status);

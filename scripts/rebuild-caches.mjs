@@ -16,7 +16,7 @@ await db.end();
 for (const { id } of users) {
   const response = await fetch(`${localStack.FUNCTIONS_URL}/rebuild-caches`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${localStack.SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
+    headers: { apikey: localStack.SECRET_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId: id }),
   });
   const result = await response.json();

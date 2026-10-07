@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { databaseCliEnvironment, loadDeployConfig, repoRoot, runCli, supabaseBin } from './deploy-env.ts';
-import type { DeployConfig } from './rules.ts';
+import { backupConfigProblems, type DeployConfig } from './rules.ts';
 
 const OWNER_ONLY_FOLDER = 0o700;
 const DUMPS = [
@@ -51,6 +51,8 @@ async function encryptedDump(config: DeployConfig, folder: string, stamp: string
 
 await runCli(async () => {
   const config = loadDeployConfig();
+  const problems = backupConfigProblems(config);
+  if (problems.length > 0) throw new Error(problems.join('\n'));
   const folder = join(homedir(), 'gainscape-backups');
   mkdirSync(folder, { recursive: true });
   chmodSync(folder, OWNER_ONLY_FOLDER);

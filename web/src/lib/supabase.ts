@@ -19,7 +19,7 @@ function fetchWithAuthTimeout(input: RequestInfo | URL, init?: RequestInit): Pro
   return fetch(input, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
 }
 
-export const supabase = createClient(supabaseUrl, import.meta.env.VITE_SUPABASE_ANON_KEY, {
+export const supabase = createClient(supabaseUrl, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, {
   auth: { storageKey: AUTH_STORAGE_KEY },
   global: { fetch: fetchWithAuthTimeout },
 });
