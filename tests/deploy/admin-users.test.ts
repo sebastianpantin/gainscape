@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { adminHeaders, type AuthUser, findUserByEmail } from '../../scripts/deploy/admin-users.ts';
+import { adminHeaders, allUserIds, type AuthUser, findUserByEmail } from '../../scripts/deploy/admin-users.ts';
 
 const config = {
   VITE_SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co',
@@ -72,5 +72,24 @@ describe('findUserByEmail', () => {
       vi.fn(async () => new Response('', { status: 503 })),
     );
     await expect(findUserByEmail(config, 'tester@example.com')).rejects.toThrow('listing users failed: 503');
+  });
+});
+
+describe('allUserIds', () => {
+  it('collects every account id from the Auth admin API, page by page, so no table grant is needed', async () => {
+    const fetchMock = stubUserPages([strangers(FULL_PAGE, 1), strangers(2, 2), strangers(5, 3)]);
+    const ids = await allUserIds(config);
+    expect(ids).toHaveLength(FULL_PAGE + 2);
+    expect(ids.slice(-2)).toEqual(['2-0', '2-1']);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1]).toEqual({ headers: adminHeaders(config) });
+  });
+
+  it('fails with the status when listing users fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 403 })),
+    );
+    await expect(allUserIds(config)).rejects.toThrow('listing users failed: 403');
   });
 });
