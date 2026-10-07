@@ -1,7 +1,7 @@
 # tests/web
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-07
 
 ## Purpose
 
@@ -59,6 +59,7 @@ Stack-free tests of the web app's pure logic and of static build inputs: offline
 | `last-session-rules.test.ts`                                              | `lib/last-session-rules.ts` grouping by exercise and session with logged RIR, `lastTimeText`, `firstSetFromLastSession`.                                                                                                                                                                                              |
 | `exercise-progress-rules.test.ts`                                         | `lib/exercise-progress-rules.ts` per-session best e1RM, top set and most reps, logged RIR only and capped, the Epley cut-off, added-load e1RM, chart series in kg and lb, value text, rep-max table and reps record with their day (local day fallback).                                                              |
 | `bodyweight-trend-rules.test.ts`                                          | `lib/bodyweight-trend-rules.ts`: workout days oldest first, a logged entry wins its day, chart points at UTC midnight in kg and lb, day labels                                                                                                                                                                        |
+| `weekly-goal-rules.test.ts`                                               | `lib/weekly-goal-rules.ts`: no status before a goal, the current row, streak from last week and with this week once met, each week judged by its own goal, an off week breaks the streak, a pending change shown or ignored when the goal is unchanged, progress and streak texts, choice mapping, setting hint       |
 | `line-chart-rules.test.ts`                                                | `lib/line-chart-rules.ts` `niceTicks` with a minimum step, `chartLayout` scales, shared scale, single point, empty chart, `chartSummary`.                                                                                                                                                                             |
 | `progression-rules.test.ts`                                               | `lib/progression-rules.ts` `progressionStep`, `nextWeightHint` (heaviest sets only, RIR gate, rep ranges, bodyweight and weighted bodyweight lifts) and `fatigueAdvice` (falling RIR or reps over three sessions at one weight).                                                                                      |
 | `training-device-rules.test.ts`                                           | `lib/training-device-rules.ts` defaults, parsing, `restAlertDelayMs`, `restAlertIsFresh`, `restAlertActions`, `holdsWakeLock`; `claimRestAlert`.                                                                                                                                                                      |
