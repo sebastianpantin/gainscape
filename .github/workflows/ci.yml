@@ -15,6 +15,8 @@ jobs:
     name: Checks and unit tests
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -26,14 +28,24 @@ jobs:
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: v2.x
+      - id: changes
+        run: make ci-changes
       - run: npm ci
-      - run: make check
-      - run: make test-catalog test-domain test-web test-deploy
-      - run: make sim-check
-      - run: make build
+      - if: steps.changes.outputs.code == 'false'
+        run: make format-check secrets-scan
+      - if: steps.changes.outputs.code != 'false'
+        run: make check
+      - if: steps.changes.outputs.code != 'false'
+        run: make test-catalog test-domain test-web test-deploy
+      - if: steps.changes.outputs.code != 'false'
+        run: make sim-check
+      - if: steps.changes.outputs.code != 'false'
+        run: make build
 
   backend:
     name: Backend integration and pgTAP
+    needs: checks
+    if: needs.checks.outputs.backend != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
