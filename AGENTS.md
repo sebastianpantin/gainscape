@@ -1,6 +1,6 @@
 # gainscape
 
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-07
 
 ## Purpose
 
@@ -8,22 +8,22 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 
 ## Key Files
 
-| File                         | Description                                                                                                                                                                                                 |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Makefile`                   | Entry point for every workflow: stack, dev server, checks, every test layer, codegen                                                                                                                        |
-| `package.json`               | npm dependencies only; every workflow runs through a `make` target                                                                                                                                          |
-| `eslint.config.js`           | ESLint flat config, including the custom `gainscape/no-comments` rule, the test id bans for `web/src` and `e2e/` and domain purity globals ban                                                              |
-| `tsconfig.json`              | Type-checks app, tests, e2e, scripts and domain; `@domain/*` path alias                                                                                                                                     |
-| `tsconfig.sw.json`           | Separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`                                                                                                                             |
-| `vitest.config.ts`           | Vitest projects with the `@domain` alias: `unit` (balance, catalog, domain, web; parallel), `integration` (4 workers in parallel), then `integration-serial` (files that touch global state, one at a time) |
-| `playwright.config.ts`       | E2E against `vite web` dev server (https, Pixel 7, service workers blocked)                                                                                                                                 |
-| `playwright.pwa.config.ts`   | PWA E2E against `vite preview` over plain http with service workers allowed                                                                                                                                 |
-| `playwright.pages.config.ts` | Pages E2E: builds with `scripts/deploy/build-pages.ts` against the local stack and serves `web/dist` with `wrangler pages dev`                                                                              |
-| `.prettierrc.json`           | Prettier: single quotes, width 120, trailing commas                                                                                                                                                         |
-| `.gitleaks.toml`             | gitleaks rules for `make secrets-scan`: default rules plus allowlists for Supabase's public local-demo keys and the `stronglifts_5x5` template key in the catalog templates and seed                        |
-| `README.md`                  | Human-facing run instructions, command table, PWA, loot secret and auth notes                                                                                                                               |
-| `.github/workflows/ci.yml`   | CI on every pull request: `checks` (no stack, includes `make build`) and `backend` (integration, pgTAP)                                                                                                     |
-| `.github/workflows/e2e.yml`  | Manual `e2e` workflow (e2e, e2e-pwa), started with `gh workflow run e2e.yml --ref <branch>`                                                                                                                 |
+| File                         | Description                                                                                                                                                                                                                                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Makefile`                   | Entry point for every workflow: stack, dev server, checks, every test layer, codegen                                                                                                                                                                                                                     |
+| `package.json`               | npm dependencies only; every workflow runs through a `make` target                                                                                                                                                                                                                                       |
+| `eslint.config.js`           | ESLint flat config, including the custom `gainscape/no-comments` rule, the test id bans for `web/src` and `e2e/` and domain purity globals ban                                                                                                                                                           |
+| `tsconfig.json`              | Type-checks app, tests, e2e, scripts and domain; `@domain/*` path alias                                                                                                                                                                                                                                  |
+| `tsconfig.sw.json`           | Separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`                                                                                                                                                                                                                          |
+| `vitest.config.ts`           | Vitest projects with the `@domain` alias: `unit` (balance, catalog, domain, web; parallel), `integration` (4 workers in parallel), then `integration-serial` (files that touch global state, one at a time)                                                                                              |
+| `playwright.config.ts`       | E2E against `vite web` dev server (https, Pixel 7, service workers blocked)                                                                                                                                                                                                                              |
+| `playwright.pwa.config.ts`   | PWA E2E against `vite preview` over plain http with service workers allowed                                                                                                                                                                                                                              |
+| `playwright.pages.config.ts` | Pages E2E: builds with `scripts/deploy/build-pages.ts` against the local stack and serves `web/dist` with `wrangler pages dev`                                                                                                                                                                           |
+| `.prettierrc.json`           | Prettier: single quotes, width 120, trailing commas                                                                                                                                                                                                                                                      |
+| `.gitleaks.toml`             | gitleaks rules for `make secrets-scan`: default rules plus allowlists for Supabase's public local-demo keys and the `stronglifts_5x5` template key in the catalog templates and seed                                                                                                                     |
+| `README.md`                  | Human-facing run instructions, command table, PWA, loot secret and auth notes                                                                                                                                                                                                                            |
+| `.github/workflows/ci.yml`   | CI on every pull request: `checks` (no stack; runs `make ci-changes` first, then only `make format-check secrets-scan` for a documentation-only PR, otherwise the full gate including `make build`) and `backend` (integration, pgTAP; needs `checks`, skipped when `ci-changes` finds no backend input) |
+| `.github/workflows/e2e.yml`  | Manual `e2e` workflow (e2e, e2e-pwa), started with `gh workflow run e2e.yml --ref <branch>`                                                                                                                                                                                                              |
 
 ## Subdirectories
 
@@ -96,7 +96,7 @@ Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib
 
 ### Git and delivery
 
-- Never push directly to `main`; every change lands through a PR. Work on a branch, open a PR against `main`. Merge only after both CI jobs (`checks` and `backend`) pass. Run `make e2e` and `make e2e-pwa` locally for UI work; the manual `e2e` workflow (`gh workflow run e2e.yml --ref <branch>`) runs them in CI, for example before a release. `main` has no branch protection, so this rule is manual.
+- Never push directly to `main`; every change lands through a PR. Work on a branch, open a PR against `main`. Merge only after `checks` and `backend` pass; `backend` may show as skipped when no backend-relevant path changed (`scripts/ci-changes.ts`), which counts as fine. Run `make e2e` and `make e2e-pwa` locally for UI work; the manual `e2e` workflow (`gh workflow run e2e.yml --ref <branch>`) runs them in CI, for example before a release. `main` has no branch protection, so this rule is manual.
 - Commit subjects are short imperative or slice-prefixed sentences (for example `S7a: web manifest, ...` or `Catalog validator checks gear tiers ...`).
 - Never deploy or push config to a hosted Supabase project. See `docs/production-auth.md`.
 

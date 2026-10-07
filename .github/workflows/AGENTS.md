@@ -1,7 +1,7 @@
 # Workflows
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-07
 
 ## Purpose
 
@@ -9,10 +9,10 @@ GitHub Actions workflow definitions. See `../AGENTS.md` for the full description
 
 ## Key Files
 
-| File      | Description                                                                                              |
-| --------- | -------------------------------------------------------------------------------------------------------- |
-| `ci.yml`  | Pull request and `main` CI: `checks` (no stack) and `backend` (integration and pgTAP on the local stack) |
-| `e2e.yml` | Manual end-to-end and PWA suites on the local stack, started with `workflow_dispatch`                    |
+| File      | Description                                                                                                                                                                                                                      |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`  | Pull request CI: `checks` (no stack, runs `make ci-changes`; docs-only diffs run just `make format-check secrets-scan`) and `backend` (integration and pgTAP on the local stack; needs `checks`, skipped without backend inputs) |
+| `e2e.yml` | Manual end-to-end and PWA suites on the local stack, started with `workflow_dispatch`                                                                                                                                            |
 
 ## For AI Agents
 
