@@ -11,7 +11,7 @@ Only the admin deploys, from their own machine. Nothing in CI holds deploy crede
 
 | Secret                          | Lives in                                                                               | Readable by            |
 | ------------------------------- | -------------------------------------------------------------------------------------- | ---------------------- |
-| Legacy `service_role` JWT       | Supabase dashboard, `~/.config/gainscape/deploy.env`                                   | Admin only             |
+| Secret API key (`sb_secret_…`)  | Supabase dashboard, `~/.config/gainscape/deploy.env`                                   | Admin only             |
 | Database password               | Supabase dashboard, `~/.config/gainscape/deploy.env`                                   | Admin only             |
 | `LOOT_SECRET`                   | Supabase function secrets only (set by `make set-loot-secret`, never printed or saved) | Admin, Edge Functions  |
 | Supabase CLI token              | `~/.supabase/` (from `npx supabase login`)                                             | Admin only             |
@@ -19,7 +19,7 @@ Only the admin deploys, from their own machine. Nothing in CI holds deploy crede
 | Backups and the gpg private key | `~/gainscape-backups/`, encrypted to your key                                          | Admin only             |
 | A tester's first password       | Shown once on your terminal by `make invite-tester`                                    | Admin, then the tester |
 
-The project URL and the anon key are public by design. They ship in the web app and grant only what row-level security allows.
+The project URL and the publishable key (`sb_publishable_…`) are public by design. They ship in the web app and grant only what row-level security allows.
 
 The tooling enforces this:
 
@@ -34,9 +34,10 @@ The tooling enforces this:
   - CI checks out the full history for it.
   - `make hooks` installs a pre-commit hook that scans every commit's staged changes.
 - **The web build is restricted.**
-  - It gets only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. It stops on any other `VITE_*` variable, and on any `web/.env`, `web/.env.local` or `web/.env.production*` file, since Vite would load those into the bundle.
-  - It is built and scanned **before** anything changes on the hosted project. The scan fails on the service key, the database password, any `sb_secret_` key, any `service_role` JWT or any Postgres URL with a password.
-  - `make deploy` refuses a secret key pasted where the anon key belongs.
+  - It gets only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. It stops on any other `VITE_*` variable, and on any `web/.env`, `web/.env.local` or `web/.env.production*` file, since Vite would load those into the bundle.
+  - It is built and scanned **before** anything changes on the hosted project. The scan fails on the secret key, the database password, any `sb_secret_` key, any `service_role` JWT or any Postgres URL with a password.
+  - `make deploy` refuses a secret key pasted where the publishable key belongs, and a legacy JWT key in either slot.
+- **The secret key goes only in the `apikey` header.** Hosted Supabase rejects it as a `Bearer` token, since it is not a JWT, and rejects it from a browser. The admin scripts never send an `Authorization` header with it.
 - **Each CLI gets only what it needs.** That is `PATH`, `HOME` and `XDG_CONFIG_HOME`, plus `SUPABASE_DB_PASSWORD` only for `db push` and `db dump`. Secrets never appear as command-line arguments, so they never show in the process list. wrangler and the Supabase CLI run from `node_modules`, pinned by the lockfile.
 - **Edge Functions answer unexpected errors with `internal_error` only.** A test fails if a new log line is added anywhere in `supabase/functions/` without review.
 
@@ -70,11 +71,12 @@ The tooling enforces this:
    - Authentication → Sign In / Providers → Email: turn **Secure password change** on. The app's own current-password check runs only in the browser, so this setting is what stops someone holding a session token from changing the password.
    - Authentication → Sign In / Providers → Password: set the minimum length to 12.
    - Authentication → URL Configuration: set **Site URL** to the Pages URL (`https://<project>.pages.dev`).
+   - Settings → API Keys: copy the publishable key and the `default` secret key. The Edge Functions use the same `default` key, so `rebuild-caches` accepts it. Do not use the legacy `anon` and `service_role` keys: nothing in the app or the tooling reads them. Once the first deploy works, disable them under Legacy API Keys.
 
    Never run `supabase config push`: the repo's `config.toml` is written for the local stack (see `production-auth.md`).
 
 4. Create a Cloudflare Pages project with **direct upload**, with production branch `main`, and do not connect it to GitHub.
-5. Make a gpg key for backups if you have none (`gpg --full-generate-key`). Back up its private key somewhere safe and offline: without it, no backup can be read.
+5. Backups are optional until testers have data you would miss. To turn them on, make a gpg key if you have none (`gpg --full-generate-key`), back up its private key somewhere safe and offline (without it, no backup can be read), and set `GPG_RECIPIENT` in step 7.
 6. On your machine (Docker must be running for `supabase functions deploy` and `db dump`):
 
    ```sh
@@ -92,12 +94,14 @@ The tooling enforces this:
    ```sh
    SUPABASE_PROJECT_REF=<project-ref>
    SUPABASE_DB_PASSWORD=<database password>
-   SUPABASE_SERVICE_ROLE_KEY=<legacy service_role JWT, Settings → API → Legacy API keys>
+   SUPABASE_SECRET_KEY=<the default sb_secret_… key, Settings → API Keys>
    VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-   VITE_SUPABASE_ANON_KEY=<legacy anon JWT>
+   VITE_SUPABASE_PUBLISHABLE_KEY=<sb_publishable_… key, Settings → API Keys>
    CLOUDFLARE_PAGES_PROJECT=<pages project name>
-   GPG_RECIPIENT=<40-character fingerprint of your gpg key>
+   GPG_RECIPIENT=<optional: 40-character fingerprint of your gpg key>
    ```
+
+   The scripts refuse a key with the wrong prefix. Only `make backup-hosted` needs `GPG_RECIPIENT`.
 
 8. Run `make set-loot-secret`, then `make deploy`.
 9. Finish the checks in "Before inviting testers", then invite the first tester.
@@ -111,13 +115,15 @@ make backup-hosted
 make deploy
 ```
 
+Skip `make backup-hosted` while `GPG_RECIPIENT` is unset.
+
 `make deploy` first checks the settings file, the git state and the linked project. Then it:
 
 1. builds and scans the web app;
-2. asks you to confirm the backup;
+2. asks you to confirm the backup, when `GPG_RECIPIENT` is set;
 3. shows the migration dry run and asks for `yes`;
 4. pushes the migrations and the seed (`--include-seed` every time: the CLI re-runs the seed only when it changed, and the seed is idempotent);
-5. deploys the Edge Functions;
+5. deploys the Edge Functions, with the settings in `supabase/config.toml` (`rebuild-caches` skips the gateway's JWT check and checks the secret key itself);
 6. uploads the web app.
 
 The web app never goes live before its migrations.
@@ -137,13 +143,13 @@ After a `BALANCE_VERSION` bump, run `make rebuild-caches-hosted` right after the
 - **The project paused.** Free projects pause after about a week without activity. Resume it from the dashboard. Testers' offline workouts stay on their devices and sync after the resume.
 - **Abuse or a suspected breach.** Act in this order, and stop once the problem stops:
   1. **Ban the account involved** with `make ban-tester`. It keeps the evidence, unlike `make remove-tester`. A ban does not end a session already open: an access token stays valid for up to an hour.
-  2. **To cut everyone off at once, pause the project** (Settings → General), or rotate the JWT secret (below), which ends every session. Disabling the Email provider under Sign In / Providers stops new sign-ins only.
+  2. **To cut everyone off at once, pause the project** (Settings → General), or rotate the JWT signing key (Settings → JWT Keys), which ends every session. Disabling the Email provider under Sign In / Providers stops new sign-ins only.
   3. **Rotate the affected secrets** (below), then resume.
 - **A broken web build shipped.** Deploy the previous commit. If the service worker itself is broken, build the kill switch (`make sw-kill-switch`) into `web/dist` and upload it with `npx wrangler pages deploy web/dist`.
 
 ## Backups and restore
 
-`make backup-hosted` writes three gpg-encrypted dumps (roles, schema, data) to `~/gainscape-backups/`. Each one is written as a `.partial` file and renamed only when both the dump and gpg finish, so a failed run leaves nothing that looks like a backup. Plain dumps never touch the disk: they contain user emails and password hashes.
+`make backup-hosted` needs `GPG_RECIPIENT` and writes three gpg-encrypted dumps (roles, schema, data) to `~/gainscape-backups/`. Each one is written as a `.partial` file and renamed only when both the dump and gpg finish, so a failed run leaves nothing that looks like a backup. Plain dumps never touch the disk: they contain user emails and password hashes.
 
 To restore into a fresh Supabase project:
 
@@ -165,15 +171,15 @@ psql --single-transaction -v ON_ERROR_STOP=1 -h aws-0-<region>.pooler.supabase.c
 
 ## Rotating a secret
 
-| Leaked                          | Do this                                                                                                                                                                                           |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `service_role` JWT              | A legacy key cannot be rolled on its own. Rotate the JWT secret (Settings → API), which also changes the anon key and signs everyone out. Update both keys in `deploy.env` and run `make deploy`. |
-| Database password               | Reset it under Settings → Database and update `deploy.env`. Then log a workout to check that the Edge Functions still reach the database.                                                         |
-| `LOOT_SECRET`                   | Run `make set-loot-secret` again. Drops already rolled stay; new rolls use the new secret.                                                                                                        |
-| Supabase CLI token              | Revoke it under Account → Access Tokens, then run `npx supabase login` again.                                                                                                                     |
-| Cloudflare login                | Run `npx wrangler logout`, revoke the token in the Cloudflare dashboard, then run `npx wrangler login`.                                                                                           |
-| A secret shipped in a web build | Rotate that secret, deploy a clean build, and delete the affected deployments in the Pages dashboard: every deployment stays reachable at its own `<hash>.<project>.pages.dev` URL.               |
-| gpg key                         | Make a new key, update `GPG_RECIPIENT`, and take a new backup. Old backups stay readable only with the old key.                                                                                   |
+| Leaked                          | Do this                                                                                                                                                                                  |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Secret API key                  | Replace the `default` secret key under Settings → API Keys and put the new one in `deploy.env`. Then run `make rebuild-caches-hosted` to check that the Edge Functions see the same key. |
+| Database password               | Reset it under Settings → Database and update `deploy.env`. Then log a workout to check that the Edge Functions still reach the database.                                                |
+| `LOOT_SECRET`                   | Run `make set-loot-secret` again. Drops already rolled stay; new rolls use the new secret.                                                                                               |
+| Supabase CLI token              | Revoke it under Account → Access Tokens, then run `npx supabase login` again.                                                                                                            |
+| Cloudflare login                | Run `npx wrangler logout`, revoke the token in the Cloudflare dashboard, then run `npx wrangler login`.                                                                                  |
+| A secret shipped in a web build | Rotate that secret, deploy a clean build, and delete the affected deployments in the Pages dashboard: every deployment stays reachable at its own `<hash>.<project>.pages.dev` URL.      |
+| gpg key                         | Make a new key, update `GPG_RECIPIENT`, and take a new backup. Old backups stay readable only with the old key.                                                                          |
 
 Afterwards, check the Supabase auth and API logs, and the Cloudflare audit log, for use you do not recognise.
 
@@ -184,5 +190,8 @@ Afterwards, check the Supabase auth and API logs, and the Cloudflare audit log, 
 - **Email change.** As a test tester, try changing the email under Settings and note what happens (see "Testers").
 - **Password change.** A direct `PUT /auth/v1/user` with a new password and an access token from a sign-in more than a day old must be refused (Secure password change). The app always signs in again before changing the password, so its own form keeps working.
 - **Client IP.** Find the client IP header Supabase's own proxy appends, and set `private.client_ip_config` (`header_name`, `trusted_hops_from_right`) so the rightmost trusted hop is the real client. Check it with a request that sends a forged `X-Forwarded-For`: the anonymous username-check bucket must not follow the forged value.
+- **Secret key.** Run `make rebuild-caches-hosted`. It must rebuild every user. A 403 `secret_key_required` means `deploy.env` does not hold the key the Edge Functions see as `default`.
+- **JWT signing keys.** If the project switches to asymmetric JWT signing keys, check again that the signed-in functions (`verify_jwt = true`) still accept user tokens: log a workout.
+- **Legacy keys are off.** After disabling them, a request with the old `anon` JWT as `apikey` is refused, and the app still works.
 - **Security advisor.** Run it and fix its findings.
 - **Timing.** Time `complete-session` and `rebuild-caches` for a user with about 20 sessions. Note the numbers here: `____`.

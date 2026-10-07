@@ -35,10 +35,10 @@ export const env = readLocalStackEnv();
 export const db = postgres(env.DB_URL, { max: 2, onnotice: () => {} });
 
 const clientOptions = { auth: { persistSession: false, autoRefreshToken: false } };
-export const admin = createClient(env.API_URL, env.SERVICE_ROLE_KEY, clientOptions);
+export const admin = createClient(env.API_URL, env.SECRET_KEY, clientOptions);
 
 export function newAnonClient(): SupabaseClient {
-  return createClient(env.API_URL, env.ANON_KEY, clientOptions);
+  return createClient(env.API_URL, env.PUBLISHABLE_KEY, clientOptions);
 }
 
 export const anon = newAnonClient();
@@ -124,7 +124,11 @@ export async function fetchFunction(name: string, init: RequestInit): Promise<Ra
 export async function postFunction(name: string, accessToken: string, body: unknown): Promise<FunctionResponse> {
   const response = await fetchFunction(name, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}`, apikey: env.ANON_KEY, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: env.PUBLISHABLE_KEY,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(body),
   });
   return { ...response, body: JSON.parse(response.rawBody) };
@@ -134,10 +138,10 @@ export async function postCompleteSession(accessToken: string, payload: unknown)
   return await postFunction('complete-session', accessToken, payload);
 }
 
-export async function rebuildCaches(userId: string, bearer = env.SERVICE_ROLE_KEY) {
+export async function rebuildCaches(userId: string, credentials: Record<string, string> = { apikey: env.SECRET_KEY }) {
   const response = await fetchFunction('rebuild-caches', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json' },
+    headers: { ...credentials, 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId }),
   });
   return { status: response.status, body: JSON.parse(response.rawBody) };

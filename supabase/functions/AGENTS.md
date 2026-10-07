@@ -1,7 +1,7 @@
 # functions
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-07
 
 ## Purpose
 
@@ -17,7 +17,7 @@ Deno Edge Functions served locally by `make functions` (which runs `npx supabase
 | `delete-session/`   | Tombstones and replays (see `delete-session/AGENTS.md`)                                                         |
 | `delete-account/`   | Password-confirmed account deletion (see `delete-account/AGENTS.md`)                                            |
 | `export-data/`      | Full user data export (see `export-data/AGENTS.md`)                                                             |
-| `rebuild-caches/`   | Service-role replay of a user's caches (see `rebuild-caches/AGENTS.md`)                                         |
+| `rebuild-caches/`   | Secret-key-only replay of a user's caches (see `rebuild-caches/AGENTS.md`)                                      |
 
 ## For AI Agents
 
@@ -36,7 +36,7 @@ Integration tests in `tests/integration/` call the served functions; run `make t
 
 ### Common Patterns
 
-- Handler shape: `serve(handler, mapError?)` from `_shared/serve.ts` wraps `Deno.serve`, answers OPTIONS, rejects non-POST with 405 and turns thrown errors into `errorResponse` (pass `asHttpError` to map domain errors). `serveAuthenticated(parse, handle)` from `_shared/serve-authenticated.ts` adds the common case on top: `authenticatedUserId`, `readJsonBody`, the zod `parse`, then `handle(userId, payload)` as JSON with `asHttpError`; complete-session, edit-session, delete-session and delete-account use it. `rebuild-caches` uses `serve` with `assertServiceRole`, `export-data` uses `serve` with `authenticatedUserId`.
+- Handler shape: `serve(handler, mapError?)` from `_shared/serve.ts` wraps `Deno.serve`, answers OPTIONS, rejects non-POST with 405 and turns thrown errors into `errorResponse` (pass `asHttpError` to map domain errors). `serveAuthenticated(parse, handle)` from `_shared/serve-authenticated.ts` adds the common case on top: `authenticatedUserId`, `readJsonBody`, the zod `parse`, then `handle(userId, payload)` as JSON with `asHttpError`; complete-session, edit-session, delete-session and delete-account use it. `rebuild-caches` uses `serve` with `assertSecretKey`, `export-data` uses `serve` with `authenticatedUserId`.
 - `complete-session`, `edit-session` and `delete-session` write in `sql.begin` after `lockUser`. `rebuild-caches` also calls `lockUser` inside `sql.begin`, passing its own 404 `user_not_found` error. `export-data` uses a read-only transaction. `delete-account` uses neither.
 
 ## Dependencies

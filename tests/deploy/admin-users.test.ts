@@ -3,7 +3,7 @@ import { adminHeaders, type AuthUser, findUserByEmail } from '../../scripts/depl
 
 const config = {
   VITE_SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co',
-  SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+  SUPABASE_SECRET_KEY: ['sb', 'secret', 'k'.repeat(32)].join('_'),
 };
 const FULL_PAGE = 1000;
 
@@ -28,12 +28,12 @@ afterEach(() => {
 });
 
 describe('adminHeaders', () => {
-  it('authorizes with the service role key as bearer token and apikey', () => {
+  it('sends the secret key only as apikey, since hosted Supabase rejects it as a bearer token', () => {
     expect(adminHeaders(config)).toEqual({
-      Authorization: 'Bearer service-key',
-      apikey: 'service-key',
+      apikey: config.SUPABASE_SECRET_KEY,
       'Content-Type': 'application/json',
     });
+    expect(adminHeaders(config)).not.toHaveProperty('Authorization');
   });
 });
 

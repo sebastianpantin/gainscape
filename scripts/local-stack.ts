@@ -8,8 +8,8 @@ export interface LocalStackStatus {
   API_URL: string;
   DB_URL: string;
   FUNCTIONS_URL: string;
-  ANON_KEY: string;
-  SERVICE_ROLE_KEY: string;
+  PUBLISHABLE_KEY: string;
+  SECRET_KEY: string;
   MAILPIT_URL: string;
 }
 

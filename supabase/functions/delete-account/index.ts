@@ -1,5 +1,6 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { z } from 'npm:zod@4.6.5';
+import { publishableKey, secretKey } from '../_shared/api-keys.ts';
 import { clientOptions } from '../_shared/auth.ts';
 import { sql } from '../_shared/db.ts';
 import { HttpError } from '../_shared/http.ts';
@@ -13,10 +14,15 @@ const deleteAccountSchema = z
 
 type DeleteAccountPayload = z.infer<typeof deleteAccountSchema>;
 
-const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, clientOptions);
+let adminClient: SupabaseClient | undefined;
+
+function admin(): SupabaseClient {
+  adminClient ??= createClient(Deno.env.get('SUPABASE_URL')!, secretKey(), clientOptions);
+  return adminClient;
+}
 
 async function passwordMatches(email: string, password: string): Promise<boolean> {
-  const verifier = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, clientOptions);
+  const verifier = createClient(Deno.env.get('SUPABASE_URL')!, publishableKey(), clientOptions);
   const { data, error } = await verifier.auth.signInWithPassword({ email, password });
   if (data.session) await verifier.auth.signOut({ scope: 'local' });
   return !error && data.session !== null;
@@ -34,7 +40,7 @@ async function deleteAccount(
   if (!account) throw new HttpError(404, 'profile_not_found');
   if (account.username !== confirmUsername.trim().toLowerCase()) throw new HttpError(403, 'confirmation_mismatch');
   if (!account.email || !(await passwordMatches(account.email, password))) throw new HttpError(403, 'wrong_password');
-  const { error } = await admin.auth.admin.deleteUser(userId);
+  const { error } = await admin().auth.admin.deleteUser(userId);
   if (error) throw error;
   return { deleted: true };
 }
