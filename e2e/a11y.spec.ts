@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './support/people.ts';
-import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
+import { expectNoAxeViolations, expectRemoveSetButtonsStandApart, expectTouchTargets } from './support/a11y.ts';
 import {
   emailOf,
   logCardio,
@@ -42,6 +42,7 @@ async function finishWithBodyweight(page: Page) {
 
 async function checkEffortTargets(page: Page) {
   await expectTouchTargets(page);
+  await expectRemoveSetButtonsStandApart(page);
   for (const mode of ['RPE', 'RIR', 'Simple']) {
     await openFromProfile(page, 'Settings');
     await page.getByRole('radio', { name: mode, exact: true }).click();
@@ -55,6 +56,7 @@ async function checkEffortTargets(page: Page) {
       mode === 'RPE' ? 'Rate of perceived exertion' : 'Reps in reserve',
     );
     await expectTouchTargets(page);
+    await expectRemoveSetButtonsStandApart(page);
     await bench
       .getByRole('button', { name: /^Remove set/ })
       .last()
