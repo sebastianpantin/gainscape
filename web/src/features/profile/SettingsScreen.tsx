@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { Link, type NavigateFunction, useNavigate } from 'react-router-dom';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { Switch } from '../../components/Switch.tsx';
 import {
   changePassword,
@@ -852,7 +853,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
         </Link>
         <h1 className="title">Settings</h1>
       </div>
-      {state.status === 'loading' && <p>Loading…</p>}
+      {state.status === 'loading' && <ListSkeleton />}
       {state.status === 'failed' && (
         <p className="problem" role="alert">
           {state.problem}

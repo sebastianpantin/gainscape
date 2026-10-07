@@ -63,6 +63,7 @@ import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program
 import { skipDayEvent } from '../../lib/program-skip-rules.ts';
 import { barbellSetupFor, draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
+import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
@@ -263,13 +264,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     onDeleted: () => void reload('deleted'),
   });
 
-  if (state.status === 'loading') {
-    return (
-      <main className="screen">
-        <p>Loading…</p>
-      </main>
-    );
-  }
+  if (state.status === 'loading') return <ScreenSkeleton />;
 
   const deviceNotices = (
     <>
