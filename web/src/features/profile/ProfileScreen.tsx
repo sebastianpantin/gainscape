@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
+import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { fetchCollectionPercent } from '../../lib/collection-data.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { ageFrom, BODYWEIGHT_NUDGE_STEP, nudgedBodyweightKg, updatePrivateProfile } from '../../lib/profile.ts';
@@ -31,24 +33,16 @@ function MenuLink({ to, children }: { to: string; children: string }) {
 export function ProfileScreen({ userId }: ProfileScreenProps) {
   const { state, replace } = useProfile(userId);
   const standing = useStanding(userId);
-  const [collectionPercent, setCollectionPercent] = useState<number | null>(null);
+  const collection = useQuery({
+    queryKey: ['collection-percent', userId],
+    queryFn: () => fetchCollectionPercent(userId),
+  });
   const { unitPref } = usePreferences();
   const [draftKg, setDraftKg] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
   const [problem, setProblem] = useState<string | null>(null);
   const offline = useIsOffline();
-
-  useEffect(() => {
-    let active = true;
-    fetchCollectionPercent(userId).then(
-      (percent) => active && setCollectionPercent(percent),
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId]);
 
   if (state.status === 'failed')
     return (
@@ -58,12 +52,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         </p>
       </main>
     );
-  if (state.status === 'loading')
-    return (
-      <main className="screen">
-        <p>Loading…</p>
-      </main>
-    );
+  if (state.status === 'loading') return <ScreenSkeleton title="Profile" />;
 
   const { profile } = state;
   const levels = standing.status === 'ready' ? standing.standing : null;
@@ -81,7 +70,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
     setProblem(null);
     try {
       await updatePrivateProfile(userId, { bodyweightKg: draftKg });
-      replace({ ...profile, bodyweightKg: draftKg });
+      replace((current) => ({ ...current, bodyweightKg: draftKg }));
       setDraftKg(null);
       setSavedCount((count) => count + 1);
     } catch (error) {
@@ -99,7 +88,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         profile={profile}
         totalLevel={levels?.totalLevel ?? null}
         combatLevel={levels?.combatLevel ?? null}
-        collectionPercent={collectionPercent}
+        collectionPercent={collection.data ?? null}
       />
       <section className="panel stack" aria-labelledby="body-heading">
         <div className="row spread">

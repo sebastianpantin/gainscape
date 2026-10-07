@@ -105,6 +105,7 @@ Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib
 ### External
 
 - React 19, React Router 7, Vite 8 (with `@vitejs/plugin-react`, `@vitejs/plugin-basic-ssl`)
+- TanStack Query 5 (`@tanstack/react-query`) for server data in screens
 - `@supabase/supabase-js` 2, Supabase CLI (local stack, `functions serve`, `test db`)
 - Deno 2 for Edge Function type checks
 - Zod 4 for payload validation
