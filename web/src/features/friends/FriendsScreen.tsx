@@ -1,4 +1,5 @@
-import { type FormEvent, useCallback, useEffect, useState } from 'react';
+import { type InfiniteData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePreferences } from '../../lib/preferences.ts';
 import { initialsFor } from '../../lib/profile.ts';
@@ -12,6 +13,7 @@ import {
   setGz,
 } from '../../lib/social.ts';
 import {
+  type FeedCursor,
   type FeedItem,
   feedBadge,
   feedCursor,
@@ -21,21 +23,17 @@ import {
   sendRequestText,
   socialErrorMessage,
 } from '../../lib/social-rules.ts';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProfileBadge } from '../profile/ProfileCard.tsx';
 import { FriendsTabs } from './FriendsTabs.tsx';
 import { messageOf } from '../../lib/error-text.ts';
+import { loadedState } from '../../lib/query-state-rules.ts';
 
 const REQUEST_BADGE_SIZE = 36;
 const GONE_POST = socialErrorMessage({ message: 'event_not_found' });
 
-type LoadState = { status: 'loading' } | { status: 'failed'; problem: string } | { status: 'ready' };
-
 function problemText(error: unknown): string {
   return messageOf(error, 'Something went wrong. Try again.');
-}
-
-function loadFriendsAndFeed(): Promise<[FriendRow[], FeedItem[]]> {
-  return Promise.all([listFriends(), fetchFeedPage(null)]);
 }
 
 interface FeedEntryProps {
@@ -82,41 +80,45 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
   );
 }
 
-export function FriendsScreen() {
-  const [load, setLoad] = useState<LoadState>({ status: 'loading' });
-  const [reloadNonce, setReloadNonce] = useState(0);
-  const [friends, setFriends] = useState<FriendRow[]>([]);
-  const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [feedEnded, setFeedEnded] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
+interface FriendsScreenProps {
+  userId: string;
+}
+
+function uniqueByEvent(items: FeedItem[]): FeedItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.eventId)) return false;
+    seen.add(item.eventId);
+    return true;
+  });
+}
+
+export function FriendsScreen({ userId }: FriendsScreenProps) {
+  const queryClient = useQueryClient();
+  const friendsQuery = useQuery({ queryKey: ['friends', userId], queryFn: listFriends });
+  const feedQuery = useInfiniteQuery({
+    queryKey: ['feed', userId],
+    queryFn: ({ pageParam }) => fetchFeedPage(pageParam),
+    initialPageParam: null as FeedCursor | null,
+    getNextPageParam: (lastPage) => {
+      const lastItem = lastPage.at(-1);
+      return lastItem && lastPage.length >= FEED_PAGE_SIZE ? feedCursor(lastItem) : undefined;
+    },
+  });
   const [busy, setBusy] = useState(false);
   const [gzPending, setGzPending] = useState<ReadonlySet<string>>(() => new Set());
   const [username, setUsername] = useState('');
   const [status, setStatus] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
 
-  const show = useCallback(([loadedFriends, firstPage]: [FriendRow[], FeedItem[]]) => {
-    setFriends(loadedFriends);
-    setFeed(firstPage);
-    setFeedEnded(firstPage.length < FEED_PAGE_SIZE);
-    setLoad({ status: 'ready' });
-  }, []);
+  const friends = friendsQuery.data ?? [];
+  const feed = uniqueByEvent(feedQuery.data?.pages.flat() ?? []);
+  const load = loadedState(
+    friendsQuery.data && feedQuery.data ? true : undefined,
+    friendsQuery.error ?? feedQuery.error,
+  );
 
-  useEffect(() => {
-    let active = true;
-    loadFriendsAndFeed().then(
-      (loaded) => active && show(loaded),
-      (error: unknown) => active && setLoad({ status: 'failed', problem: problemText(error) }),
-    );
-    return () => {
-      active = false;
-    };
-  }, [show, reloadNonce]);
-
-  const retryLoad = () => {
-    setLoad({ status: 'loading' });
-    setReloadNonce((nonce) => nonce + 1);
-  };
+  const refetchAll = () => Promise.all([friendsQuery.refetch(), feedQuery.refetch()]);
 
   const act = async (action: () => Promise<string | null>) => {
     if (busy) return;
@@ -126,7 +128,8 @@ export function FriendsScreen() {
     try {
       const done = await action();
       if (done !== null) setStatus(done);
-      show(await loadFriendsAndFeed());
+      const failed = (await refetchAll()).find((result) => result.isError);
+      if (failed) setProblem(problemText(failed.error));
     } catch (error) {
       setProblem(problemText(error));
     }
@@ -157,25 +160,23 @@ export function FriendsScreen() {
     });
 
   const loadMore = async () => {
-    const last = feed.at(-1);
-    if (!last || loadingMore) return;
-    setLoadingMore(true);
+    if (feedQuery.isFetchingNextPage) return;
     setProblem(null);
-    try {
-      const next = await fetchFeedPage(feedCursor(last));
-      setFeed((current) => {
-        const known = new Set(current.map((item) => item.eventId));
-        return [...current, ...next.filter((item) => !known.has(item.eventId))];
-      });
-      setFeedEnded(next.length < FEED_PAGE_SIZE);
-    } catch (error) {
-      setProblem(problemText(error));
-    }
-    setLoadingMore(false);
+    const result = await feedQuery.fetchNextPage();
+    if (result.isError) setProblem(problemText(result.error));
   };
 
-  const replaceItem = (eventId: string, change: (item: FeedItem) => FeedItem) =>
-    setFeed((current) => current.map((item) => (item.eventId === eventId ? change(item) : item)));
+  const replaceItem = (eventId: string, change: (item: FeedItem) => FeedItem) => {
+    void queryClient.cancelQueries({ queryKey: ['feed', userId] });
+    queryClient.setQueryData<InfiniteData<FeedItem[], FeedCursor | null>>(['feed', userId], (current) =>
+      current
+        ? {
+            ...current,
+            pages: current.pages.map((page) => page.map((item) => (item.eventId === eventId ? change(item) : item))),
+          }
+        : current,
+    );
+  };
 
   const markGzPending = (eventId: string, pending: boolean) =>
     setGzPending((current) => {
@@ -231,13 +232,13 @@ export function FriendsScreen() {
           {problem}
         </p>
       )}
-      {load.status === 'loading' && <p>Loading…</p>}
+      {load.status === 'loading' && <ListSkeleton />}
       {load.status === 'failed' && (
         <section className="panel stack">
           <p className="problem" role="alert">
             {load.problem}
           </p>
-          <button className="button" type="button" onClick={retryLoad}>
+          <button className="button" type="button" onClick={() => void refetchAll()}>
             Retry
           </button>
         </section>
@@ -311,8 +312,8 @@ export function FriendsScreen() {
               ))}
             </ul>
           )}
-          {feed.length > 0 && !feedEnded && (
-            <button className="button" type="button" disabled={loadingMore} onClick={loadMore}>
+          {feed.length > 0 && feedQuery.hasNextPage && (
+            <button className="button" type="button" disabled={busy || feedQuery.isFetchingNextPage} onClick={loadMore}>
               Load more
             </button>
           )}

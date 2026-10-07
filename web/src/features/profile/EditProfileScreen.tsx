@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import {
   BADGE_COLORS,
@@ -38,7 +39,13 @@ interface EditProfileScreenProps {
 const BADGE_ORDER = Object.keys(BADGE_COLORS) as BadgeColor[];
 const FOCUS_ORDER = Object.keys(TRAINING_FOCUS_LABELS) as TrainingFocus[];
 
-function EditForm({ userId, profile }: { userId: string; profile: Profile }) {
+interface EditFormProps {
+  userId: string;
+  profile: Profile;
+  onSaved: () => Promise<unknown>;
+}
+
+function EditForm({ userId, profile, onSaved }: EditFormProps) {
   const navigate = useNavigate();
   const unitPref = profile.unitPref;
   const [initialHeightInput] = useState<HeightInput>(() => initialHeight(profile.heightCm));
@@ -89,6 +96,7 @@ function EditForm({ userId, profile }: { userId: string; profile: Profile }) {
         const unchanged = profile.bodyweightKg !== null && shownWeight(profile.bodyweightKg, unitPref) === typedWeight;
         if (!unchanged) await updatePrivateProfile(userId, { bodyweightKg: kg });
       }
+      await onSaved();
       navigate('/profile');
     } catch (error) {
       setProblem(saveProblemText(error));
@@ -260,7 +268,7 @@ function EditForm({ userId, profile }: { userId: string; profile: Profile }) {
 }
 
 export function EditProfileScreen({ userId }: EditProfileScreenProps) {
-  const { state } = useProfile(userId);
+  const { state, refresh } = useProfile(userId);
   return (
     <main className="screen stack">
       <div className="stack" style={{ gap: 4 }}>
@@ -269,13 +277,13 @@ export function EditProfileScreen({ userId }: EditProfileScreenProps) {
         </Link>
         <h1 className="title">Edit profile</h1>
       </div>
-      {state.status === 'loading' && <p>Loading…</p>}
+      {state.status === 'loading' && <ListSkeleton panels={4} />}
       {state.status === 'failed' && (
         <p className="problem" role="alert">
           {state.problem}
         </p>
       )}
-      {state.status === 'ready' && <EditForm userId={userId} profile={state.profile} />}
+      {state.status === 'ready' && <EditForm userId={userId} profile={state.profile} onSaved={refresh} />}
     </main>
   );
 }

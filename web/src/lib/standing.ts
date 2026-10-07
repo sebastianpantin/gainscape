@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchSkills, fetchSkillXp } from './catalog.ts';
+import { loadedState } from './query-state-rules.ts';
 import { type Standing, standingFrom } from './standing-rules.ts';
 
 export async function fetchStanding(userId: string): Promise<Standing> {
@@ -11,18 +12,7 @@ export type StandingState =
   { status: 'loading' } | { status: 'failed'; problem: string } | { status: 'ready'; standing: Standing };
 
 export function useStanding(userId: string): StandingState {
-  const [state, setState] = useState<StandingState>({ status: 'loading' });
-
-  useEffect(() => {
-    let active = true;
-    fetchStanding(userId).then(
-      (standing) => active && setState({ status: 'ready', standing }),
-      (error: Error) => active && setState({ status: 'failed', problem: error.message }),
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId]);
-
-  return state;
+  const query = useQuery({ queryKey: ['standing', userId], queryFn: () => fetchStanding(userId) });
+  const state = loadedState(query.data, query.error);
+  return state.status === 'ready' ? { status: 'ready', standing: state.data } : state;
 }

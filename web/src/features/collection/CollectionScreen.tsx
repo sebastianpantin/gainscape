@@ -1,21 +1,18 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { cardioRecordCards } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isCardioExercise } from '../../lib/catalog-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { collectionPercent, countCollection } from '../../lib/collection-rules.ts';
 import { moved } from '../../lib/reorder.ts';
-import {
-  type CollectionData,
-  fetchCollectionData,
-  pinExercise,
-  reorderPins,
-  unpinExercise,
-} from '../../lib/collection-data.ts';
+import { fetchCollectionData, pinExercise, reorderPins, unpinExercise } from '../../lib/collection-data.ts';
+import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedNav } from '../../components/SegmentedNav.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { ExerciseRecordCard } from './ExerciseRecordCard.tsx';
 import { messageOf } from '../../lib/error-text.ts';
+import { loadedState } from '../../lib/query-state-rules.ts';
 
 interface CollectionScreenProps {
   userId: string;
@@ -35,38 +32,36 @@ export function CollectionTabs() {
 }
 
 export function CollectionScreen({ userId }: CollectionScreenProps) {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [data, setData] = useState<CollectionData | null>(null);
+  const collection = useQuery({
+    queryKey: ['collection', userId],
+    queryFn: async () => {
+      const [exercises, data] = await Promise.all([
+        fetchExercises({ includeArchived: true }),
+        fetchCollectionData(userId),
+      ]);
+      return { exercises, data };
+    },
+  });
   const [problem, setProblem] = useState<string | null>(null);
   const { unitPref } = usePreferences();
 
-  const reload = useCallback(() => {
-    Promise.all([fetchExercises({ includeArchived: true }), fetchCollectionData(userId)]).then(
-      ([loadedExercises, loadedData]) => {
-        setExercises(loadedExercises);
-        setData(loadedData);
-      },
-      (error: Error) => setProblem(error.message),
-    );
-  }, [userId]);
-
-  useEffect(reload, [reload]);
-
-  if (problem)
+  const loaded = loadedState(collection.data, collection.error);
+  const shownProblem = problem ?? (loaded.status === 'failed' ? loaded.problem : null);
+  if (shownProblem)
     return (
       <main className="screen">
         <p className="problem" role="alert">
-          {problem}
+          {shownProblem}
         </p>
       </main>
     );
-  if (!data)
-    return (
-      <main className="screen">
-        <p>Loading…</p>
-      </main>
-    );
+  if (loaded.status !== 'ready') return <ScreenSkeleton title="Collection log" />;
 
+  const { exercises, data } = loaded.data;
+  const reload = async () => {
+    const result = await collection.refetch();
+    if (result.isError) setProblem(result.error.message);
+  };
   const { counted, completion } = countCollection(exercises, data);
   const cardioCards = cardioRecordCards(data.cardioRecords, exercises.filter(isCardioExercise), unitPref);
 
@@ -74,7 +69,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     try {
       if (data.pinnedExerciseIds.includes(exercise.id)) await unpinExercise(exercise.id);
       else await pinExercise(exercise.id, data.nextPinPosition);
-      reload();
+      await reload();
     } catch (error) {
       setProblem(messageOf(error, 'Could not update pins.'));
     }
@@ -87,7 +82,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     if (from < 0 || to < 0 || to >= pinned.length) return;
     try {
       await reorderPins(moved(pinned, from, offset));
-      reload();
+      await reload();
     } catch (error) {
       setProblem(messageOf(error, 'Could not reorder pins.'));
     }
