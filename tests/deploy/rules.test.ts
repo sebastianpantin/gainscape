@@ -6,6 +6,7 @@ import {
   deployFileProblem,
   gitleaksAsset,
   inRepoDeployFiles,
+  nativeSupabasePackages,
   strayViteEnvFiles,
 } from '../../scripts/deploy/rules.ts';
 
@@ -124,11 +125,13 @@ describe('Vite env files', () => {
 });
 
 describe('child process environment', () => {
-  it('passes only what a CLI needs to find its own login, plus the named extras', () => {
+  it('passes only what a CLI needs to find its own login, including the desktop keyring, plus the named extras', () => {
     const env = {
       PATH: '/usr/bin',
       HOME: '/home/admin',
       XDG_CONFIG_HOME: '/home/admin/.config',
+      XDG_RUNTIME_DIR: '/run/user/1000',
+      DBUS_SESSION_BUS_ADDRESS: 'unix:path=/run/user/1000/bus',
       SUPABASE_DB_PASSWORD: 'from-the-shell',
       AWS_SECRET_ACCESS_KEY: 'unrelated',
       VITE_SUPABASE_URL: 'u',
@@ -137,13 +140,25 @@ describe('child process environment', () => {
       PATH: '/usr/bin',
       HOME: '/home/admin',
       XDG_CONFIG_HOME: '/home/admin/.config',
+      XDG_RUNTIME_DIR: '/run/user/1000',
+      DBUS_SESSION_BUS_ADDRESS: 'unix:path=/run/user/1000/bus',
     });
     expect(childEnvironment(env, { SUPABASE_DB_PASSWORD: 'from-deploy-env' })).toEqual({
       PATH: '/usr/bin',
       HOME: '/home/admin',
       XDG_CONFIG_HOME: '/home/admin/.config',
+      XDG_RUNTIME_DIR: '/run/user/1000',
+      DBUS_SESSION_BUS_ADDRESS: 'unix:path=/run/user/1000/bus',
       SUPABASE_DB_PASSWORD: 'from-deploy-env',
     });
+  });
+});
+
+describe('native Supabase CLI package', () => {
+  it('lists the platform binary packages in the order the npm wrapper tries them', () => {
+    expect(nativeSupabasePackages('linux', 'x64')).toEqual(['@supabase/cli-linux-x64', '@supabase/cli-linux-x64-musl']);
+    expect(nativeSupabasePackages('darwin', 'arm64')).toEqual(['@supabase/cli-darwin-arm64']);
+    expect(nativeSupabasePackages('win32', 'x64')).toEqual(['@supabase/cli-windows-x64']);
   });
 });
 

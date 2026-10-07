@@ -3,7 +3,8 @@ import { relative, isAbsolute } from 'node:path';
 const OWNER_ONLY_MASK = 0o077;
 const DEPLOY_FILE_NAMES = new Set(['deploy.env', '.deploy.env']);
 const ALWAYS_PASSED_VARIABLES = ['PATH'];
-const CLI_LOGIN_VARIABLES = ['PATH', 'HOME', 'XDG_CONFIG_HOME'];
+const CLI_LOGIN_VARIABLES = ['PATH', 'HOME', 'XDG_CONFIG_HOME', 'XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS'];
+const SUPABASE_CLI_PLATFORM_NAMES: Readonly<Record<string, string>> = { win32: 'windows' };
 const VITE_PRODUCTION_ENV_FILES = new Set(['.env', '.env.local', '.env.production', '.env.production.local']);
 const POSTGRES_URL_WITH_PASSWORD = /postgres(?:ql)?:\/\/[^:\s/'"`]+:[^@\s'"`]{6,}@/;
 const GPG_FINGERPRINT = /^[0-9A-Fa-f]{40}$/;
@@ -56,6 +57,11 @@ export function childEnvironment(
     (entry): entry is readonly [string, string] => entry[1] !== undefined,
   );
   return Object.fromEntries(entries);
+}
+
+export function nativeSupabasePackages(platform: string, arch: string): string[] {
+  const name = `@supabase/cli-${SUPABASE_CLI_PLATFORM_NAMES[platform] ?? platform}-${arch}`;
+  return platform === 'linux' ? [name, `${name}-musl`] : [name];
 }
 
 export function inRepoDeployFiles(paths: readonly string[]): string[] {
