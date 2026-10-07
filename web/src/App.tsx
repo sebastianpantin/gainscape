@@ -1,3 +1,4 @@
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { Icon, type IconName } from './components/Icon.tsx';
@@ -25,6 +26,7 @@ import { ProgramsScreen } from './features/programs/ProgramsScreen.tsx';
 import { SkillsScreen } from './features/skills/SkillsScreen.tsx';
 import { RevealScreen } from './features/summary/RevealScreen.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
+import { createQueryClient } from './lib/query-client.ts';
 import { parseAuthCallback } from './lib/auth-links.ts';
 import { useAuthSession } from './lib/use-auth-session.ts';
 import { OfflineBanner } from './pwa/OfflineBanner.tsx';
@@ -40,19 +42,24 @@ const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
 ];
 
 export function App() {
+  const [queryClient] = useState(createQueryClient);
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <UpdateBanner />
       <OfflineBanner />
       <Screens />
-    </>
+    </QueryClientProvider>
   );
 }
 
 function Screens() {
   const auth = useAuthSession();
+  const queryClient = useQueryClient();
   const signedInUserId = auth.status === 'signed-in' ? auth.session.user.id : null;
   useEffect(() => setUpdateUser(signedInUserId), [signedInUserId]);
+  useEffect(() => {
+    if (signedInUserId === null) queryClient.clear();
+  }, [queryClient, signedInUserId]);
   const [callback, setCallback] = useState(() => parseAuthCallback(window.location.href));
 
   if (callback) return <AuthCallbackScreen callback={callback} onDone={() => setCallback(null)} />;
@@ -85,7 +92,7 @@ function Screens() {
           <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
           <Route path="/collection/history" element={<HistoryScreen />} />
           <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
-          <Route path="/friends" element={<FriendsScreen />} />
+          <Route path="/friends" element={<FriendsScreen userId={userId} />} />
           <Route path="/friends/hiscores" element={<HiscoresScreen />} />
           <Route path="/friends/:friendId" element={<FriendProfileScreen />} />
           <Route path="/profile" element={<ProfileScreen userId={userId} />} />

@@ -1,34 +1,38 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { fetchProfile, type Profile } from '../../lib/profile.ts';
+import { loadedState } from '../../lib/query-state-rules.ts';
 
 export type ProfileState =
   { status: 'loading' } | { status: 'failed'; problem: string } | { status: 'ready'; profile: Profile };
 
 export type ProfileUpdate = Profile | ((current: Profile) => Profile);
 
-export function useProfile(userId: string): { state: ProfileState; replace: (update: ProfileUpdate) => void } {
-  const [state, setState] = useState<ProfileState>({ status: 'loading' });
+interface ProfileQuery {
+  state: ProfileState;
+  replace: (update: ProfileUpdate) => void;
+  refresh: () => Promise<unknown>;
+}
 
-  useEffect(() => {
-    let active = true;
-    fetchProfile(userId).then(
-      (profile) => active && setState({ status: 'ready', profile }),
-      (error: Error) => active && setState({ status: 'failed', problem: error.message }),
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId]);
+export function useProfile(userId: string): ProfileQuery {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['profile', userId], queryFn: () => fetchProfile(userId) });
 
   const replace = useCallback(
-    (update: ProfileUpdate) =>
-      setState((current) =>
-        current.status === 'ready'
-          ? { status: 'ready', profile: typeof update === 'function' ? update(current.profile) : update }
-          : current,
-      ),
-    [],
+    (change: ProfileUpdate) => {
+      void queryClient.cancelQueries({ queryKey: ['profile', userId] });
+      queryClient.setQueryData<Profile>(['profile', userId], (current) =>
+        current === undefined ? current : typeof change === 'function' ? change(current) : change,
+      );
+    },
+    [queryClient, userId],
   );
 
-  return { state, replace };
+  const state = loadedState(query.data, query.error);
+
+  return {
+    state: state.status === 'ready' ? { status: 'ready', profile: state.data } : state,
+    replace,
+    refresh: query.refetch,
+  };
 }

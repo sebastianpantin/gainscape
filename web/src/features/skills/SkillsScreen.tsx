@@ -1,5 +1,6 @@
 import { MAX_LEVEL, xpForLevel } from '@domain/index.ts';
 import { useState } from 'react';
+import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
 import { useStanding } from '../../lib/standing.ts';
@@ -26,12 +27,7 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
         </p>
       </main>
     );
-  if (state.status === 'loading')
-    return (
-      <main className="screen">
-        <p>Loading…</p>
-      </main>
-    );
+  if (state.status === 'loading') return <ScreenSkeleton title="Skills" panels={0} tiles={6} />;
 
   const { standing } = state;
   const picked = standing.skills.find(({ skill }) => skill.key === pickedKey) ?? null;
