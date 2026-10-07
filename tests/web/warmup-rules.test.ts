@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PLATE_SETTINGS } from '../../web/src/lib/plate-rules.ts';
-import { warmupSets } from '../../web/src/lib/warmup-rules.ts';
+import { warmupPlan, warmupSets } from '../../web/src/lib/warmup-rules.ts';
 
 const kgSetup = DEFAULT_PLATE_SETTINGS.kg;
 
@@ -53,5 +53,19 @@ describe('warm-up sets', () => {
       { weight: 20, reps: 10 },
       { weight: 60, reps: 3 },
     ]);
+  });
+});
+
+describe('warm-up plan', () => {
+  it('ramps a barbell lift above the bar from the bar', () => {
+    expect(warmupPlan({ weight: 100, reps: 5 }, kgSetup)).toEqual(warmupSets(100, kgSetup));
+  });
+
+  it('offers one warm-up set at the working weight and reps when a barbell lift is at the bar', () => {
+    expect(warmupPlan({ weight: 20, reps: 5 }, kgSetup)).toEqual([{ weight: 20, reps: 5 }]);
+  });
+
+  it('offers one warm-up set at the working weight and reps for a lift without a barbell', () => {
+    expect(warmupPlan({ weight: 12, reps: 10 }, null)).toEqual([{ weight: 12, reps: 10 }]);
   });
 });

@@ -23,3 +23,8 @@ export function warmupSets(workingWeight: number, setup: BarbellSetup): WarmupSe
   }
   return sets;
 }
+
+export function warmupPlan(workingSet: WarmupSet, barbell: BarbellSetup | null): WarmupSet[] {
+  const ramp = barbell === null ? [] : warmupSets(workingSet.weight, barbell);
+  return ramp.length > 0 ? ramp : [workingSet];
+}
