@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rejectionText, syncProblemText } from '../../web/src/features/workout/workout-rules.ts';
+import { rejectionText, stalledSyncText, syncProblemText } from '../../web/src/features/workout/workout-rules.ts';
 
 describe('syncProblemText', () => {
   it('names the network problem and reassures the workout is kept', () => {
@@ -18,6 +18,14 @@ describe('syncProblemText', () => {
     const shortly = "Sync limit reached; retrying shortly. It's saved on this device.";
     expect(syncProblemText('rate_limited', 60_000)).toBe(shortly);
     expect(syncProblemText('rate_limited', undefined)).toBe(shortly);
+  });
+});
+
+describe('stalledSyncText', () => {
+  it('says the server keeps failing and that the workout is kept', () => {
+    expect(stalledSyncText('internal_error')).toBe(
+      "The server keeps failing to save this workout (internal_error). It's saved on this device; try again later.",
+    );
   });
 });
 

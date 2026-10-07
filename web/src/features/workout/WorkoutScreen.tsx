@@ -84,7 +84,7 @@ import { useRecentLiftSessions } from './use-recent-lift-sessions.ts';
 import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
 import { useWakeLock } from './use-wake-lock.ts';
-import { rejectionText, syncProblemText } from './workout-rules.ts';
+import { rejectionText, stalledSyncText, syncProblemText } from './workout-rules.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
 import { vibrateNewRecord } from './record-haptic.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
@@ -401,6 +401,19 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                 Retry now
               </button>
             )}
+          </div>
+        )}
+        {finishStatus.kind === 'stalled' && (
+          <div className="panel stack">
+            <p className="problem" role="alert">
+              {stalledSyncText(finishStatus.reason)}
+            </p>
+            <button className="button" type="button" onClick={retryNow}>
+              Retry now
+            </button>
+            <button className="button" type="button" onClick={backToEditing}>
+              Back to editing
+            </button>
           </div>
         )}
         {finishStatus.kind === 'rejected' && finishStatus.reason === 'bodyweight_required' && (
