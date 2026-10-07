@@ -13,7 +13,7 @@ import {
   supabaseBin,
   wranglerBin,
 } from './deploy-env.ts';
-import { configuredSecrets, linkedRefProblem, releaseProblem } from './rules.ts';
+import { backupConfigProblems, configuredSecrets, linkedRefProblem, releaseProblem } from './rules.ts';
 
 function git(...args: string[]): string {
   return execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim();
@@ -49,17 +49,25 @@ await runCli(async () => {
     {
       PATH: process.env.PATH,
       VITE_SUPABASE_URL: config.VITE_SUPABASE_URL,
-      VITE_SUPABASE_ANON_KEY: config.VITE_SUPABASE_ANON_KEY,
+      VITE_SUPABASE_PUBLISHABLE_KEY: config.VITE_SUPABASE_PUBLISHABLE_KEY,
     },
     configuredSecrets(config),
   );
 
   await assertInviteOnly(config);
 
-  if (
-    !(await confirm('Back up first with make backup-hosted. Type yes once it is done (or on the very first deploy):'))
-  ) {
-    throw new Error('deploy cancelled before any change');
+  if (!config.GPG_RECIPIENT) {
+    console.log(
+      'No GPG_RECIPIENT, so no backup is taken. Set one up before testers have data (docs/deploy.md, Backups).',
+    );
+  } else {
+    const backupProblems = backupConfigProblems(config);
+    if (backupProblems.length > 0) throw new Error(backupProblems.join('\n'));
+    if (
+      !(await confirm('Back up first with make backup-hosted. Type yes once it is done (or on the very first deploy):'))
+    ) {
+      throw new Error('deploy cancelled before any change');
+    }
   }
   const database = databaseCliEnvironment(config);
   run(supabaseBin, ['db', 'push', '--include-seed', '--dry-run'], database);

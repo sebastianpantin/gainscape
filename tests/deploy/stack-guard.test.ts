@@ -43,7 +43,7 @@ describe('parseStatusOutput', () => {
   });
 
   it('reads plain JSON', () => {
-    expect(parseStatusOutput('{"ANON_KEY":"anon"}')).toEqual({ ANON_KEY: 'anon' });
+    expect(parseStatusOutput('{"PUBLISHABLE_KEY":"publishable"}')).toEqual({ PUBLISHABLE_KEY: 'publishable' });
   });
 
   it('throws on output without JSON', () => {

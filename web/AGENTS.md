@@ -1,7 +1,7 @@
 # web
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-07
 
 ## Purpose
 
@@ -13,7 +13,7 @@ The React 19 PWA and its Vite root. `vite.config.ts` sets `web/` as the root, al
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `vite.config.ts`   | Vite config: `@vitejs/plugin-react`, `@vitejs/plugin-basic-ssl` (skipped when `GAINSCAPE_PLAIN_HTTP` is set), `serviceWorkerPlugin()`, `@domain` alias, `__APP_VERSION__` define (git short hash plus date, or `dev`), and the `/sb` proxy for both dev server and preview |
 | `index.html`       | Single HTML entry: viewport with `viewport-fit=cover`, theme colour, iOS web app meta, manifest and icon links, `#root`, and `/src/main.tsx`                                                                                                                               |
-| `.env.development` | Committed local-only anon key for the Supabase demo stack (`VITE_SUPABASE_ANON_KEY`). `VITE_SUPABASE_URL` is deliberately unset locally so the client uses the `/sb` proxy                                                                                                 |
+| `.env.development` | Committed local-only publishable key of the Supabase CLI stack (`VITE_SUPABASE_PUBLISHABLE_KEY`), the same for every local install. `VITE_SUPABASE_URL` is deliberately unset locally so the client uses the `/sb` proxy                                                   |
 
 ## Subdirectories
 
@@ -31,7 +31,7 @@ The React 19 PWA and its Vite root. `vite.config.ts` sets `web/` as the root, al
 - `web/dist/` is generated. The service worker `sw.js` only exists after `vite build`; the dev server registers no worker (`registerServiceWorker` returns unless `import.meta.env.PROD`).
 - `__APP_VERSION__` is declared in `src/vite-env.d.ts`. If you add another build-time constant, declare it there and in `vite.config.ts` together.
 - The `@domain` alias is also configured in `tsconfig.json` and `vitest.config.ts`. Change all three together.
-- Never commit a hosted Supabase URL or key. Production values come from `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` at build time (see `../docs/production-auth.md`).
+- Never commit a hosted Supabase URL or key. Production values come from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` at build time (see `../docs/production-auth.md`).
 
 ### Testing Requirements
 

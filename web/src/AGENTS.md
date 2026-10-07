@@ -1,7 +1,7 @@
 # src
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-07
 
 ## Purpose
 
@@ -13,7 +13,7 @@ All application source for the React PWA. `main.tsx` boots the app, `App.tsx` ow
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `main.tsx`      | Entry. Imports `zod-config.ts` first (zod's JIT probe would break the Pages CSP), then `pwa/install.ts` (so `beforeinstallprompt` is never missed), the `@fontsource` fonts, `tokens.css` and `app.css`, calls `registerServiceWorker()`, and renders `<App />` in `StrictMode`                           |
 | `App.tsx`       | `App` renders `UpdateBanner`, `OfflineBanner` and `Screens`. `Screens` handles the auth callback (`parseAuthCallback`), loading and signed-out states, then wraps a `BrowserRouter` in `PreferencesProvider` (keyed by user id) with the bottom `TABS` bar and every route. Unknown paths redirect to `/` |
-| `vite-env.d.ts` | Types `import.meta.env` (`VITE_SUPABASE_URL` optional, `VITE_SUPABASE_ANON_KEY`) and declares `__APP_VERSION__`                                                                                                                                                                                           |
+| `vite-env.d.ts` | Types `import.meta.env` (`VITE_SUPABASE_URL` optional, `VITE_SUPABASE_PUBLISHABLE_KEY`) and declares `__APP_VERSION__`                                                                                                                                                                                    |
 
 ## Subdirectories
 

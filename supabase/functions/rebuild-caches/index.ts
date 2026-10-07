@@ -3,7 +3,7 @@ import { sql } from '../_shared/db.ts';
 import { DEFAULT_BALANCE } from '../_shared/domain/index.ts';
 import { HttpError, jsonResponse, readJsonBody } from '../_shared/http.ts';
 import { serve } from '../_shared/serve.ts';
-import { assertServiceRole } from '../_shared/service-auth.ts';
+import { assertSecretKey } from '../_shared/service-auth.ts';
 import { lowerUuid, parseOr422 } from '../_shared/session-payload.ts';
 import { clearRecordCaches } from '../_shared/stores/records.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
@@ -26,7 +26,7 @@ async function rebuildUser(userId: string) {
 }
 
 serve(async (request) => {
-  await assertServiceRole(request);
+  await assertSecretKey(request);
   const { userId } = parseOr422(rebuildSchema, await readJsonBody(request));
   return jsonResponse(await rebuildUser(userId));
 });

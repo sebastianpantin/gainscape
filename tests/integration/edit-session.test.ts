@@ -436,11 +436,13 @@ describe('edit-session authorization and validation', () => {
   it('returns 405 for GET and 401 without a token', async () => {
     const url = `${env.FUNCTIONS_URL}/edit-session`;
     const before = await stateOf(owner.id);
-    const get = await fetch(url, { headers: { Authorization: `Bearer ${owner.accessToken}`, apikey: env.ANON_KEY } });
+    const get = await fetch(url, {
+      headers: { Authorization: `Bearer ${owner.accessToken}`, apikey: env.PUBLISHABLE_KEY },
+    });
     expect(get.status).toBe(405);
     const anonymous = await fetch(url, {
       method: 'POST',
-      headers: { apikey: env.ANON_KEY, 'Content-Type': 'application/json' },
+      headers: { apikey: env.PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify(editBody(session, [{ ...session.sets[0], reps: 6 }])),
     });
     expect(anonymous.status).toBe(401);

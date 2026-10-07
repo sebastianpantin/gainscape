@@ -9,8 +9,7 @@ export interface AuthUser {
 
 export function adminHeaders(config: DeployConfig): Record<string, string> {
   return {
-    Authorization: `Bearer ${config.SUPABASE_SERVICE_ROLE_KEY}`,
-    apikey: config.SUPABASE_SERVICE_ROLE_KEY!,
+    apikey: config.SUPABASE_SECRET_KEY!,
     'Content-Type': 'application/json',
   };
 }

@@ -5,7 +5,7 @@ import { repoRoot, runCli } from './deploy-env.ts';
 import { pagesHeaders, unpublishedFiles } from './pages-headers.ts';
 import { allowlistedBuildEnvironment, bundleLeaks, strayViteEnvFiles } from './rules.ts';
 
-const PUBLIC_BUILD_VARIABLES = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'];
+const PUBLIC_BUILD_VARIABLES = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
 
 const distDir = join(repoRoot, 'web/dist');
 

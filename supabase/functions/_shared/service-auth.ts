@@ -1,4 +1,5 @@
-import { bearerToken, HttpError } from './http.ts';
+import { secretKey } from './api-keys.ts';
+import { HttpError } from './http.ts';
 
 async function sha256(text: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
@@ -10,10 +11,9 @@ function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
   return difference === 0;
 }
 
-export async function assertServiceRole(request: Request): Promise<void> {
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const presented = bearerToken(request) ?? '';
-  if (!serviceRoleKey || !sameBytes(await sha256(presented), await sha256(serviceRoleKey))) {
-    throw new HttpError(403, 'service_role_required');
+export async function assertSecretKey(request: Request): Promise<void> {
+  const expected = await sha256(secretKey());
+  if (!sameBytes(await sha256(request.headers.get('apikey') ?? ''), expected)) {
+    throw new HttpError(403, 'secret_key_required');
   }
 }
