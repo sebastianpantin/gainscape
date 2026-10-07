@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import {
   authSettingsProblems,
@@ -10,6 +11,7 @@ import {
   deployConfigProblems,
   deployFileProblem,
   inRepoDeployFiles,
+  nativeSupabasePackages,
   parseDeployEnv,
 } from './rules.ts';
 
@@ -65,7 +67,23 @@ export function databaseCliEnvironment(config: DeployConfig): Record<string, str
 }
 
 export const wranglerBin = join(repoRoot, 'node_modules/.bin/wrangler');
-export const supabaseBin = join(repoRoot, 'node_modules/.bin/supabase');
+const supabaseWrapperBin = join(repoRoot, 'node_modules/.bin/supabase');
+const supabaseNativeName = process.platform === 'win32' ? 'supabase.exe' : 'supabase';
+
+function resolvedPackageDirectory(name: string): string | undefined {
+  try {
+    return dirname(createRequire(import.meta.url).resolve(`${name}/package.json`));
+  } catch {
+    return undefined;
+  }
+}
+
+export function supabaseBin(): string {
+  const directory = nativeSupabasePackages(process.platform, process.arch)
+    .map(resolvedPackageDirectory)
+    .find((found) => found !== undefined);
+  return directory === undefined ? supabaseWrapperBin : join(directory, 'bin', supabaseNativeName);
+}
 
 export async function ask(question: string): Promise<string> {
   const prompt = createInterface({ input: process.stdin, output: process.stdout });

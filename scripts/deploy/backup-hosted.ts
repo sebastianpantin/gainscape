@@ -22,7 +22,7 @@ function exitCode(child: ChildProcess): Promise<number | null> {
 async function encryptedDump(config: DeployConfig, folder: string, stamp: string, name: string, args: string[]) {
   const output = join(folder, `${stamp}-${name}.sql.gpg`);
   const partial = `${output}.partial`;
-  const dump = spawn(supabaseBin, ['db', 'dump', '--linked', ...args], {
+  const dump = spawn(supabaseBin(), ['db', 'dump', '--linked', ...args], {
     cwd: repoRoot,
     env: databaseCliEnvironment(config),
     stdio: ['ignore', 'pipe', 'inherit'],

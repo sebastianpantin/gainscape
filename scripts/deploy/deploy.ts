@@ -70,12 +70,12 @@ await runCli(async () => {
     }
   }
   const database = databaseCliEnvironment(config);
-  run(supabaseBin, ['db', 'push', '--include-seed', '--dry-run'], database);
+  run(supabaseBin(), ['db', 'push', '--include-seed', '--dry-run'], database);
   if (!(await confirm(`Apply these changes to ${config.SUPABASE_PROJECT_REF}? Type yes:`))) {
     throw new Error('deploy cancelled before any change');
   }
-  run(supabaseBin, ['db', 'push', '--include-seed'], database);
-  run(supabaseBin, ['functions', 'deploy', '--project-ref', config.SUPABASE_PROJECT_REF!], cliEnvironment());
+  run(supabaseBin(), ['db', 'push', '--include-seed'], database);
+  run(supabaseBin(), ['functions', 'deploy', '--project-ref', config.SUPABASE_PROJECT_REF!], cliEnvironment());
   run(
     wranglerBin,
     ['pages', 'deploy', 'web/dist', '--project-name', config.CLOUDFLARE_PAGES_PROJECT!, '--branch', 'main'],
