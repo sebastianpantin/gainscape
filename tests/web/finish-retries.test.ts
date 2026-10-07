@@ -1,12 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FinishAttemptResult } from '../../web/src/offline/finish-lock.ts';
-import { type FinishStatus, type SettledFinish, startFinishRetries } from '../../web/src/offline/finish-retries.ts';
+import {
+  type FinishStatus,
+  MAX_CONSECUTIVE_SERVER_FAULTS,
+  type SettledFinish,
+  startFinishRetries,
+} from '../../web/src/offline/finish-retries.ts';
 
 const summary = { sessionId: 'session-a', xpBySkill: {}, levelUps: [], prs: [], drops: [] };
 const rateLimited: FinishAttemptResult = {
   kind: 'sent',
   outcome: { kind: 'retryable', reason: 'rate_limited', retryAfterMs: 5_000 },
 };
+const serverFault: FinishAttemptResult = {
+  kind: 'sent',
+  outcome: { kind: 'retryable', reason: 'internal_error', serverFault: true },
+};
+const offline: FinishAttemptResult = { kind: 'sent', outcome: { kind: 'retryable', reason: 'offline' } };
 const synced: FinishAttemptResult = { kind: 'sent', outcome: { kind: 'synced', summary } };
 
 function loopWith(results: FinishAttemptResult[]) {
@@ -62,6 +72,30 @@ describe('startFinishRetries', () => {
     retries.onOnline();
     await vi.advanceTimersByTimeAsync(0);
     expect(attemptOnce).toHaveBeenCalledTimes(3);
+    expect(settled).toEqual([synced]);
+    retries.stop();
+  });
+
+  it('stalls after repeated server faults and stops retrying, even when the device goes online', async () => {
+    const { attemptOnce, statuses, settled, retries } = loopWith(
+      Array.from({ length: MAX_CONSECUTIVE_SERVER_FAULTS }, () => serverFault),
+    );
+    await vi.advanceTimersByTimeAsync(MAX_CONSECUTIVE_SERVER_FAULTS * 1_000);
+    expect(attemptOnce).toHaveBeenCalledTimes(MAX_CONSECUTIVE_SERVER_FAULTS);
+    expect(statuses.at(-1)).toEqual({ kind: 'stalled', reason: 'internal_error' });
+
+    retries.onOnline();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(attemptOnce).toHaveBeenCalledTimes(MAX_CONSECUTIVE_SERVER_FAULTS);
+    expect(settled).toEqual([]);
+    retries.stop();
+  });
+
+  it('keeps retrying when a network failure breaks the run of server faults', async () => {
+    const faultsBeforeLimit = Array.from({ length: MAX_CONSECUTIVE_SERVER_FAULTS - 1 }, () => serverFault);
+    const { statuses, settled, retries } = loopWith([...faultsBeforeLimit, offline, ...faultsBeforeLimit]);
+    await vi.advanceTimersByTimeAsync(2 * MAX_CONSECUTIVE_SERVER_FAULTS * 1_000);
+    expect(statuses.some((status) => status.kind === 'stalled')).toBe(false);
     expect(settled).toEqual([synced]);
     retries.stop();
   });

@@ -14,6 +14,10 @@ export function syncProblemText(lastProblem: string, waitMs: number | undefined)
   return "Sync limit reached; retrying shortly. It's saved on this device.";
 }
 
+export function stalledSyncText(reason: string): string {
+  return `The server keeps failing to save this workout (${reason}). It's saved on this device; try again later.`;
+}
+
 export function rejectionText(reason: string): string {
   return EXERCISE_CHANGED_REASONS.has(reason)
     ? 'Load type of an exercise changed; check the weights'

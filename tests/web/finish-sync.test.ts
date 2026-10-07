@@ -153,6 +153,19 @@ describe('sendOutcomeFrom', () => {
     expect(sendOutcomeFrom({ kind: 'retryable', reason: 'offline' })).toEqual({ kind: 'retryable', reason: 'offline' });
   });
 
+  it('marks a server error as a server fault, but not the rebuild gate', () => {
+    expect(sendOutcomeFrom({ kind: 'http_error', status: 500, code: 'internal_error', details: undefined })).toEqual({
+      kind: 'retryable',
+      reason: 'internal_error',
+      serverFault: true,
+    });
+    expect(sendOutcomeFrom({ kind: 'http_error', status: 546, code: 'http_546', details: undefined })).toEqual({
+      kind: 'retryable',
+      reason: 'http_546',
+      serverFault: true,
+    });
+  });
+
   it('treats a rate limit as transient and waits for Retry-After', () => {
     expect(
       sendOutcomeFrom({

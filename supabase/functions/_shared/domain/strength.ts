@@ -27,8 +27,14 @@ export function predictedMaxReps(loadKg: number, e1rmKg: number): number {
   return Math.max(0, repsAtFailure(e1rmKg / loadKg));
 }
 
+export const MAX_ESTIMATED_RIR = 30;
+
+function cappedRir(repsInReserve: number): number {
+  return Math.min(MAX_ESTIMATED_RIR, Math.max(0, Math.floor(repsInReserve + FLOAT_TOLERANCE)));
+}
+
 export function estimateRir(loadKg: number, reps: number, e1rmKg: number): number {
-  return Math.max(0, Math.floor(predictedMaxReps(loadKg, e1rmKg) - reps + FLOAT_TOLERANCE));
+  return cappedRir(predictedMaxReps(loadKg, e1rmKg) - reps);
 }
 
 export function intensityBonus(reps: number, loadKg: number, e1rmKg: number | null, cfg: BalanceConfig): number {
@@ -114,7 +120,7 @@ interface StrengthDecision {
 function estimateFor(result: LiftSetResult, exercise: LiftExerciseDef, strengthBefore: number | null): number | null {
   if (strengthBefore === null || strengthBefore <= 0) return null;
   if (usesRepsCapacity(exercise)) {
-    return Math.max(0, Math.floor(strengthBefore - result.set.reps + FLOAT_TOLERANCE));
+    return cappedRir(strengthBefore - result.set.reps);
   }
   if (result.effectiveLoadKg <= 0) return null;
   return estimateRir(result.effectiveLoadKg, result.set.reps, strengthBefore);
