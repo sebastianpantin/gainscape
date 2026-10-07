@@ -621,8 +621,8 @@ a:focus-visible {
   grid-template-areas:
     'number weight weight done'
     '. reps xp xp'
-    'warmup warmup warmup warmup'
-    'effort effort effort remove';
+    'remove remove warmup warmup'
+    'effort effort effort effort';
 }
 
 .set-row.stepped.marked {
@@ -630,8 +630,8 @@ a:focus-visible {
     'number weight weight done'
     '. reps xp xp'
     'markers markers markers markers'
-    'warmup warmup warmup warmup'
-    'effort effort effort remove';
+    'remove remove warmup warmup'
+    'effort effort effort effort';
 }
 
 .set-row.stepped.marked.calculating {
@@ -640,13 +640,17 @@ a:focus-visible {
     '. reps xp xp'
     'markers markers markers markers'
     'calculator calculator calculator calculator'
-    'warmup warmup warmup warmup'
-    'effort effort effort remove';
+    'remove remove warmup warmup'
+    'effort effort effort effort';
 }
 
 .set-row.stepped > .done-toggle.warmup-toggle {
   grid-area: warmup;
   justify-self: end;
+}
+
+.set-row.stepped > .button.icon {
+  justify-self: start;
 }
 
 .warmup-toggle:not(.selected) {
