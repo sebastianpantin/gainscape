@@ -29,6 +29,7 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'bodyweight_entries', column: 'user_id' },
   { table: 'pinned_exercises', column: 'user_id' },
   { table: 'exercise_notes', column: 'user_id' },
+  { table: 'weekly_goals', column: 'user_id' },
   { table: 'exercises', column: 'owner_user_id' },
   { table: 'programs', column: 'owner_user_id' },
   { table: 'deleted_sessions', column: 'user_id' },
@@ -129,6 +130,8 @@ async function giveUserEverything(user: TestUser): Promise<void> {
   expect(pin.error).toBeNull();
   const note = await user.client.rpc('save_exercise_note', { exercise_id: benchId, body: 'Seat 4' });
   expect(note.error).toBeNull();
+  const goal = await user.client.rpc('set_weekly_session_goal', { goal: 3 });
+  expect(goal.error).toBeNull();
   await createCustomExercise(user, { skillKey: 'shoulders' });
   const [template] = await db`select id from public.programs where owner_user_id is null limit 1`;
   const copy = await user.client.rpc('copy_program', { source_program_id: template.id, new_program_id: randomUUID() });
@@ -218,7 +221,7 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(3);
+    expect(exported.version).toBe(4);
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);
@@ -245,6 +248,9 @@ describe('export-data', () => {
     expect(counts.cardio_records).toBeGreaterThan(0);
     expect(exported.bodyweightEntries).toEqual([
       { logged_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), bodyweight_kg: 82, updated_at: expect.any(String) },
+    ]);
+    expect(exported.weeklyGoals).toEqual([
+      { effective_from: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), goal: 3, updated_at: expect.any(String) },
     ]);
     expect(exported.crafts).toHaveLength(1);
     expect(exported.reactionsGiven).toHaveLength(1);

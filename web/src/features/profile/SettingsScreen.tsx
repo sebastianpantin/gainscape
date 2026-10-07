@@ -1,4 +1,4 @@
-import { type FormEvent, useId, useState } from 'react';
+import { type FormEvent, useEffect, useId, useState } from 'react';
 import { Link, type NavigateFunction, useNavigate } from 'react-router-dom';
 import { Switch } from '../../components/Switch.tsx';
 import {
@@ -42,6 +42,14 @@ import type { UpdateCheck } from '../../pwa/update-flow.ts';
 import { useOptimisticProfileSave } from './use-optimistic-profile-save.ts';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { fetchWeeklyGoalStatus, setWeeklyGoal } from '../../lib/weekly-goal.ts';
+import {
+  goalFromChoice,
+  goalSettingHint,
+  goalToChoice,
+  WEEKLY_GOAL_CHOICES,
+  type WeeklyGoalStatus,
+} from '../../lib/weekly-goal-rules.ts';
 
 interface SettingsScreenProps {
   userId: string;
@@ -302,6 +310,88 @@ function TrainingSection({ userId, profile, onSaved }: SectionProps) {
       <RestChoice userId={userId} />
       <TrainingDeviceChoices userId={userId} />
       <PlateChoices key={profile.unitPref} userId={userId} unit={profile.unitPref} />
+      {problem && (
+        <p className="problem" role="alert">
+          {problem}
+        </p>
+      )}
+    </section>
+  );
+}
+
+const WEEKLY_GOAL_OPTIONS = WEEKLY_GOAL_CHOICES.map((value) => ({ value, label: value === 'off' ? 'Off' : value }));
+
+type LoadedGoal =
+  { kind: 'loading' } | { kind: 'failed'; message: string } | { kind: 'ready'; status: WeeklyGoalStatus | null };
+
+function WeeklyGoalSection() {
+  const [loaded, setLoaded] = useState<LoadedGoal>({ kind: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+  const [pending, setPending] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchWeeklyGoalStatus(controller.signal).then(
+      (status) => setLoaded({ kind: 'ready', status }),
+      (error: unknown) => {
+        if (!controller.signal.aborted)
+          setLoaded({ kind: 'failed', message: messageOf(error, 'Could not load your weekly goal.') });
+      },
+    );
+    return () => controller.abort();
+  }, [attempt]);
+
+  const status = loaded.kind === 'ready' ? loaded.status : null;
+  const chosen = status?.nextGoal ? status.nextGoal.goal : (status?.goal ?? null);
+
+  const pick = async (goal: number | null) => {
+    if (goal === chosen) return;
+    setPending(true);
+    setProblem(null);
+    try {
+      await setWeeklyGoal(goal);
+      setLoaded({ kind: 'ready', status: await fetchWeeklyGoalStatus(new AbortController().signal) });
+    } catch (error) {
+      setProblem(messageOf(error, 'Could not save your weekly goal.'));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  if (loaded.kind === 'failed')
+    return (
+      <section className="panel stack" aria-labelledby="weekly-goal-heading">
+        <h2 id="weekly-goal-heading">Weekly goal</h2>
+        <p className="problem" role="alert">
+          {loaded.message}
+        </p>
+        <button
+          className="button outline"
+          type="button"
+          onClick={() => {
+            setLoaded({ kind: 'loading' });
+            setAttempt((count) => count + 1);
+          }}
+        >
+          Try again
+        </button>
+      </section>
+    );
+
+  return (
+    <section className="panel stack" aria-labelledby="weekly-goal-heading">
+      <h2 id="weekly-goal-heading">Weekly goal</h2>
+      <Choice
+        label="Workouts per week"
+        options={WEEKLY_GOAL_OPTIONS}
+        current={goalToChoice(chosen)}
+        disabled={pending || loaded.kind === 'loading'}
+        onPick={(choice) => void pick(goalFromChoice(choice))}
+      />
+      <span className="hint" aria-live="polite">
+        {loaded.kind === 'ready' ? goalSettingHint(status) : ''}
+      </span>
       {problem && (
         <p className="problem" role="alert">
           {problem}
@@ -771,6 +861,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
       {state.status === 'ready' && (
         <>
           <TrainingSection userId={userId} profile={state.profile} onSaved={replace} />
+          <WeeklyGoalSection />
           <TimezoneSection profile={state.profile} onSaved={replace} />
           <PrivacySection userId={userId} profile={state.profile} onSaved={replace} />
         </>
