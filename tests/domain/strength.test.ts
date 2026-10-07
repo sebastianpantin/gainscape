@@ -7,6 +7,7 @@ import {
   estimateRir,
   type ExerciseStrength,
   intensityBonus,
+  MAX_ESTIMATED_RIR,
   predictedMaxReps,
   processSession,
   replayHistory,
@@ -114,6 +115,29 @@ describe('effort resolution with a known e1RM', () => {
   it('estimates RIR for an unrated set', () => {
     const [result] = runSets([aSet('bench', 80, 5, null)], knownStrength('bench', 100));
     expect(result).toMatchObject({ rir: 3, rirSource: 'estimated', rirForXp: 3, e1rmBeforeKg: 100 });
+  });
+
+  it('caps the estimated RIR of a light set far below the e1RM', () => {
+    const [result] = runSets([aSet('bench', 20, 5, null)], knownStrength('bench', 150));
+    expect(result).toMatchObject({ rir: MAX_ESTIMATED_RIR, rirSource: 'estimated', effectiveReps: 0, xp: 0 });
+  });
+
+  it('caps the estimated RIR of a short set against a large reps capacity', () => {
+    const [result] = runSets([aSet('pull-up', 0, 5, null)], knownStrength('pull-up', 200), 80);
+    expect(result).toMatchObject({ rir: MAX_ESTIMATED_RIR, rirSource: 'estimated', effectiveReps: 0 });
+  });
+
+  it('never estimates a RIR above the cap', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.5, max: 500, noNaN: true }),
+        fc.integer({ min: 1, max: 100 }),
+        fc.double({ min: 1, max: 1000, noNaN: true }),
+        (loadKg, reps, e1rmKg) => {
+          expect(estimateRir(loadKg, reps, e1rmKg)).toBeLessThanOrEqual(MAX_ESTIMATED_RIR);
+        },
+      ),
+    );
   });
 
   it('caps XP for implausibly low logged RIR and flags the set', () => {

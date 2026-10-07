@@ -15,7 +15,7 @@ export interface CompletedSessionSummary extends SessionSummary, RememberedTimin
 export type SendOutcome =
   | { kind: 'synced'; summary: CompletedSessionSummary }
   | { kind: 'deleted' }
-  | { kind: 'retryable'; reason: string; retryAfterMs?: number }
+  | { kind: 'retryable'; reason: string; retryAfterMs?: number; serverFault?: true }
   | { kind: 'rejected'; reason: string }
   | { kind: 'needs_sign_in' }
   | { kind: 'wrong_account' };
@@ -34,6 +34,8 @@ export interface FinishAttempt {
 }
 
 const SESSION_DELETED_STATUS = 410;
+const SERVER_ERROR_STATUS = 500;
+const REBUILD_REQUIRED_CODE = 'rebuild_required';
 
 export function sendOutcomeFrom(outcome: InvokeOutcome<CompletedSessionSummary>): SendOutcome {
   if (outcome.kind === 'ok') return { kind: 'synced', summary: outcome.data };
@@ -43,9 +45,10 @@ export function sendOutcomeFrom(outcome: InvokeOutcome<CompletedSessionSummary>)
     const seconds = retryAfterSeconds(outcome.details);
     return { kind: 'retryable', reason: outcome.code, retryAfterMs: seconds === null ? undefined : seconds * 1000 };
   }
-  return outcome.status >= 500
+  if (outcome.status < SERVER_ERROR_STATUS) return { kind: 'rejected', reason: outcome.code };
+  return outcome.code === REBUILD_REQUIRED_CODE
     ? { kind: 'retryable', reason: outcome.code }
-    : { kind: 'rejected', reason: outcome.code };
+    : { kind: 'retryable', reason: outcome.code, serverFault: true };
 }
 
 export function finishLockName(userId: string): string {

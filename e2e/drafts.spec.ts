@@ -38,6 +38,38 @@ test('a finished workout survives an outage and a reload', async ({ page }) => {
   expect(await sessionRow(stored!.draft!.sessionId)).not.toBeNull();
 });
 
+test('a workout the server keeps failing on stops retrying and syncs on a manual retry', async ({ page }) => {
+  const username = uniqueUsername('dr_s');
+  await register(page, username);
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+
+  let serverFailing = true;
+  let failedAttempts = 0;
+  await page.route(completeSession, (route) => {
+    if (!serverFailing || route.request().method() !== 'POST') return route.continue();
+    failedAttempts += 1;
+    return route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ error: 'internal_error' }),
+    });
+  });
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('alert')).toHaveText(/The server keeps failing to save this workout \(internal_error\)/, {
+    timeout: 30_000,
+  });
+  const attemptsWhenStalled = failedAttempts;
+  await page.waitForTimeout(3_000);
+  expect(failedAttempts).toBe(attemptsWhenStalled);
+
+  serverFailing = false;
+  await page.getByRole('button', { name: 'Retry now' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  expect(await sessionCount(username)).toBe(1);
+});
+
 test("another account's draft is kept, never sent, and restored for its owner", async ({ page }) => {
   const owner = uniqueUsername('dr_o');
   const other = uniqueUsername('dr_b');
