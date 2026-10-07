@@ -4,7 +4,10 @@ import { messageOf } from '../lib/error-text.ts';
 export type FinishStatus =
   | { kind: 'idle' }
   | { kind: 'syncing'; attempt: number; lastProblem: string | null; waitMs?: number }
+  | { kind: 'stalled'; reason: string }
   | { kind: 'rejected'; reason: string };
+
+export const MAX_CONSECUTIVE_SERVER_FAULTS = 5;
 
 export type SettledFinish =
   | { kind: 'superseded' }
@@ -30,9 +33,11 @@ export function startFinishRetries({ attemptOnce, retryDelayMs, show, settle }: 
   let requestInFlight = false;
   let settled = false;
   let notBefore = 0;
+  let consecutiveServerFaults = 0;
+  let stalled = false;
 
   const attemptSync = async () => {
-    if (requestInFlight || controller.signal.aborted || settled) return;
+    if (requestInFlight || controller.signal.aborted || settled || stalled) return;
     requestInFlight = true;
     clearTimeout(retryTimer);
     show({ kind: 'syncing', attempt, lastProblem: null });
@@ -43,6 +48,12 @@ export function startFinishRetries({ attemptOnce, retryDelayMs, show, settle }: 
       }));
       if (controller.signal.aborted || result.kind === 'aborted') return;
       if (result.kind === 'sent' && result.outcome.kind === 'retryable') {
+        consecutiveServerFaults = result.outcome.serverFault ? consecutiveServerFaults + 1 : 0;
+        if (consecutiveServerFaults >= MAX_CONSECUTIVE_SERVER_FAULTS) {
+          stalled = true;
+          show({ kind: 'stalled', reason: result.outcome.reason });
+          return;
+        }
         const retryAfterMs = result.outcome.retryAfterMs ?? 0;
         const delayMs = Math.max(retryDelayMs(attempt++), retryAfterMs);
         notBefore = retryAfterMs > 0 ? Date.now() + retryAfterMs : 0;
