@@ -7,7 +7,7 @@ const LOOT_SECRET_BYTES = 32;
 await runCli(async () => {
   const config = loadDeployConfig();
   execFileSync(
-    supabaseBin,
+    supabaseBin(),
     ['secrets', 'set', '--env-file', '/dev/stdin', '--project-ref', config.SUPABASE_PROJECT_REF!],
     {
       cwd: repoRoot,
