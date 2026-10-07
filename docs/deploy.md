@@ -38,7 +38,7 @@ The tooling enforces this:
   - It is built and scanned **before** anything changes on the hosted project. The scan fails on the secret key, the database password, any `sb_secret_` key, any `service_role` JWT or any Postgres URL with a password.
   - `make deploy` refuses a secret key pasted where the publishable key belongs, and a legacy JWT key in either slot.
 - **The secret key goes only in the `apikey` header.** Hosted Supabase rejects it as a `Bearer` token, since it is not a JWT, and rejects it from a browser. The admin scripts never send an `Authorization` header with it.
-- **Each CLI gets only what it needs.** That is `PATH`, `HOME` and `XDG_CONFIG_HOME`, plus `SUPABASE_DB_PASSWORD` only for `db push` and `db dump`. Secrets never appear as command-line arguments, so they never show in the process list. wrangler and the Supabase CLI run from `node_modules`, pinned by the lockfile.
+- **Each CLI gets only what it needs.** That is `PATH`, `HOME` and `XDG_CONFIG_HOME`, plus `XDG_RUNTIME_DIR` and `DBUS_SESSION_BUS_ADDRESS` so the Supabase CLI can read the login that `supabase login` keeps in the desktop keyring, plus `SUPABASE_DB_PASSWORD` only for `db push` and `db dump`. Secrets never appear as command-line arguments, so they never show in the process list. wrangler and the Supabase CLI run from `node_modules`, pinned by the lockfile. The scripts call the Supabase CLI's native binary directly, because piped input has been seen not to reach it through the npm wrapper; Linux musl builds are found too.
 - **Edge Functions answer unexpected errors with `internal_error` only.** A test fails if a new log line is added anywhere in `supabase/functions/` without review.
 
 ## Abuse and rate limits
