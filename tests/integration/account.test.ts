@@ -51,7 +51,7 @@ async function post(name: string, accessToken: string | null, body: unknown) {
     method: 'POST',
     headers: {
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      apikey: env.ANON_KEY,
+      apikey: env.PUBLISHABLE_KEY,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
@@ -378,7 +378,7 @@ describe('delete-account', () => {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${owner.accessToken}`,
-        apikey: env.ANON_KEY,
+        apikey: env.PUBLISHABLE_KEY,
         'Content-Type': 'application/json',
       },
       body: '{',

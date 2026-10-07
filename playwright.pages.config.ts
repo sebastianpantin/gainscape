@@ -26,7 +26,7 @@ export default defineConfig({
   webServer: {
     command: `node scripts/deploy/build-pages.ts && node_modules/.bin/wrangler pages dev web/dist --ip 127.0.0.1 --port ${pagesPort}`,
     url: pagesUrl,
-    env: { VITE_SUPABASE_URL: new URL(status.API_URL).origin, VITE_SUPABASE_ANON_KEY: status.ANON_KEY },
+    env: { VITE_SUPABASE_URL: new URL(status.API_URL).origin, VITE_SUPABASE_PUBLISHABLE_KEY: status.PUBLISHABLE_KEY },
     reuseExistingServer: false,
     timeout: 180_000,
   },

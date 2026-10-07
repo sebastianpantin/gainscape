@@ -8,6 +8,9 @@ const VITE_PRODUCTION_ENV_FILES = new Set(['.env', '.env.local', '.env.productio
 const POSTGRES_URL_WITH_PASSWORD = /postgres(?:ql)?:\/\/[^:\s/'"`]+:[^@\s'"`]{6,}@/;
 const GPG_FINGERPRINT = /^[0-9A-Fa-f]{40}$/;
 const SUPABASE_SECRET_KEY = /sb_secret_[A-Za-z0-9_-]{16,}/;
+const WHOLE_SECRET_KEY = /^sb_secret_[A-Za-z0-9_-]{16,}$/;
+const WHOLE_PUBLISHABLE_KEY = /^sb_publishable_[A-Za-z0-9_-]{16,}$/;
+const CHECK_THE_PASTE = 'check for a cut-off paste or stray spaces';
 const JWT = /eyJ[A-Za-z0-9_-]+\.(eyJ[A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+/g;
 
 export const GITLEAKS_VERSION = '8.30.1';
@@ -109,11 +112,10 @@ export const GITLEAKS_RELEASE_URL = `https://github.com/gitleaks/gitleaks/releas
 
 const REQUIRED_DEPLOY_SETTINGS = [
   'CLOUDFLARE_PAGES_PROJECT',
-  'GPG_RECIPIENT',
   'SUPABASE_DB_PASSWORD',
   'SUPABASE_PROJECT_REF',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'VITE_SUPABASE_ANON_KEY',
+  'SUPABASE_SECRET_KEY',
+  'VITE_SUPABASE_PUBLISHABLE_KEY',
   'VITE_SUPABASE_URL',
 ] as const;
 
@@ -141,25 +143,44 @@ function isSecretKey(value: string): boolean {
   return SUPABASE_SECRET_KEY.test(value) || hasServiceRoleJwt(value);
 }
 
+function isJwt(value: string): boolean {
+  return value.match(JWT) !== null;
+}
+
+function publishableKeyProblem(value: string): string | null {
+  const name = 'VITE_SUPABASE_PUBLISHABLE_KEY';
+  if (isSecretKey(value)) return `${name} holds a secret key; use the publishable key`;
+  if (isJwt(value)) return `${name} holds a legacy JWT key; use the sb_publishable_ key from Settings → API Keys`;
+  if (!WHOLE_PUBLISHABLE_KEY.test(value)) return `${name} must be a whole sb_publishable_ key; ${CHECK_THE_PASTE}`;
+  return null;
+}
+
+function secretKeyProblem(value: string): string | null {
+  const name = 'SUPABASE_SECRET_KEY';
+  if (isJwt(value)) return `${name} holds a legacy JWT key; use an sb_secret_ key from Settings → API Keys`;
+  if (!WHOLE_SECRET_KEY.test(value)) return `${name} must be a whole sb_secret_ key; ${CHECK_THE_PASTE}`;
+  return null;
+}
+
 export function deployConfigProblems(config: DeployConfig): string[] {
   const missing = REQUIRED_DEPLOY_SETTINGS.filter((name) => !config[name]).map((name) => `missing ${name}`);
   if (missing.length > 0) return missing;
-  const problems: string[] = [];
   const expectedUrl = `https://${config.SUPABASE_PROJECT_REF}.supabase.co`;
-  if (config.VITE_SUPABASE_URL !== expectedUrl) problems.push(`VITE_SUPABASE_URL must be ${expectedUrl}`);
-  if (isSecretKey(config.VITE_SUPABASE_ANON_KEY!)) {
-    problems.push('VITE_SUPABASE_ANON_KEY holds a secret key; use the anon (publishable) key');
-  }
-  if (!hasServiceRoleJwt(config.SUPABASE_SERVICE_ROLE_KEY!)) {
-    problems.push('SUPABASE_SERVICE_ROLE_KEY must be the legacy service_role JWT (Settings → API → Legacy API keys)');
-  }
-  if (!GPG_FINGERPRINT.test(config.GPG_RECIPIENT!))
-    problems.push('GPG_RECIPIENT must be a 40-character key fingerprint');
-  return problems;
+  return [
+    config.VITE_SUPABASE_URL === expectedUrl ? null : `VITE_SUPABASE_URL must be ${expectedUrl}`,
+    publishableKeyProblem(config.VITE_SUPABASE_PUBLISHABLE_KEY!),
+    secretKeyProblem(config.SUPABASE_SECRET_KEY!),
+  ].filter((problem) => problem !== null);
+}
+
+export function backupConfigProblems(config: DeployConfig): string[] {
+  if (!config.GPG_RECIPIENT) return ['missing GPG_RECIPIENT; backups are encrypted to it'];
+  if (!GPG_FINGERPRINT.test(config.GPG_RECIPIENT)) return ['GPG_RECIPIENT must be a 40-character key fingerprint'];
+  return [];
 }
 
 export function configuredSecrets(config: DeployConfig): string[] {
-  return [config.SUPABASE_SERVICE_ROLE_KEY ?? '', config.SUPABASE_DB_PASSWORD ?? ''];
+  return [config.SUPABASE_SECRET_KEY ?? '', config.SUPABASE_DB_PASSWORD ?? ''];
 }
 
 export function linkedRefProblem(configuredRef: string, linkedRef: string | null): string | null {

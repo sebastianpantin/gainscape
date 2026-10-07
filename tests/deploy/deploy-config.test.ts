@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   authSettingsProblems,
+  backupConfigProblems,
   configuredSecrets,
   deployConfigProblems,
   linkedRefProblem,
@@ -16,15 +17,19 @@ function fakeJwt(role: string): string {
   return [base64Url({ alg: 'HS256' }), base64Url({ ref: 'abcdefghijklmnopqrst', role }), 'c2ln'].join('.');
 }
 
+function fakeApiKey(kind: 'publishable' | 'secret', filler: string): string {
+  return ['sb', kind, filler.repeat(32)].join('_');
+}
+
 const config = {
   SUPABASE_PROJECT_REF: 'abcdefghijklmnopqrst',
   SUPABASE_DB_PASSWORD: 'db-password-value',
-  SUPABASE_SERVICE_ROLE_KEY: fakeJwt('service_role'),
+  SUPABASE_SECRET_KEY: fakeApiKey('secret', 's'),
   VITE_SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co',
-  VITE_SUPABASE_ANON_KEY: fakeJwt('anon'),
+  VITE_SUPABASE_PUBLISHABLE_KEY: fakeApiKey('publishable', 'p'),
   CLOUDFLARE_PAGES_PROJECT: 'gainscape',
-  GPG_RECIPIENT: '0123456789ABCDEF0123456789ABCDEF01234567',
 };
+const GPG_FINGERPRINT = '0123456789ABCDEF0123456789ABCDEF01234567';
 
 describe('deploy.env parsing', () => {
   it('reads KEY=VALUE lines, skipping blanks and comments and stripping quotes', () => {
@@ -40,9 +45,14 @@ describe('deploy.env checks', () => {
 
   it('names every missing setting', () => {
     const partial = Object.fromEntries(
-      Object.entries(config).filter(([key]) => key !== 'GPG_RECIPIENT' && key !== 'SUPABASE_DB_PASSWORD'),
+      Object.entries(config).filter(([key]) => key !== 'SUPABASE_SECRET_KEY' && key !== 'SUPABASE_DB_PASSWORD'),
     );
-    expect(deployConfigProblems(partial)).toEqual(['missing GPG_RECIPIENT', 'missing SUPABASE_DB_PASSWORD']);
+    expect(deployConfigProblems(partial)).toEqual(['missing SUPABASE_DB_PASSWORD', 'missing SUPABASE_SECRET_KEY']);
+  });
+
+  it('does not need a backup key to deploy', () => {
+    expect(deployConfigProblems({ ...config, GPG_RECIPIENT: GPG_FINGERPRINT })).toEqual([]);
+    expect(deployConfigProblems({ ...config, GPG_RECIPIENT: 'admin@example.test' })).toEqual([]);
   });
 
   it('requires the API URL of the configured project', () => {
@@ -51,31 +61,67 @@ describe('deploy.env checks', () => {
     ]);
   });
 
-  it('refuses a secret key where the public anon key belongs, since it would ship in the bundle', () => {
-    expect(deployConfigProblems({ ...config, VITE_SUPABASE_ANON_KEY: config.SUPABASE_SERVICE_ROLE_KEY })).toEqual([
-      'VITE_SUPABASE_ANON_KEY holds a secret key; use the anon (publishable) key',
-    ]);
-    const secretKey = ['sb', 'secret', 'y'.repeat(32)].join('_');
-    expect(deployConfigProblems({ ...config, VITE_SUPABASE_ANON_KEY: secretKey })).toEqual([
-      'VITE_SUPABASE_ANON_KEY holds a secret key; use the anon (publishable) key',
+  it('refuses a secret key where the publishable key belongs, since it would ship in the bundle', () => {
+    for (const secret of [config.SUPABASE_SECRET_KEY, fakeJwt('service_role')]) {
+      expect(deployConfigProblems({ ...config, VITE_SUPABASE_PUBLISHABLE_KEY: secret })).toEqual([
+        'VITE_SUPABASE_PUBLISHABLE_KEY holds a secret key; use the publishable key',
+      ]);
+    }
+  });
+
+  it('refuses the legacy anon JWT where the publishable key belongs', () => {
+    expect(deployConfigProblems({ ...config, VITE_SUPABASE_PUBLISHABLE_KEY: fakeJwt('anon') })).toEqual([
+      'VITE_SUPABASE_PUBLISHABLE_KEY holds a legacy JWT key; use the sb_publishable_ key from Settings → API Keys',
     ]);
   });
 
-  it('requires the legacy service_role JWT, which the hosted rebuild and gateway accept', () => {
-    const secretKey = ['sb', 'secret', 'z'.repeat(32)].join('_');
-    expect(deployConfigProblems({ ...config, SUPABASE_SERVICE_ROLE_KEY: secretKey })).toEqual([
-      'SUPABASE_SERVICE_ROLE_KEY must be the legacy service_role JWT (Settings → API → Legacy API keys)',
+  it.each([
+    ['any other value', 'not-a-key'],
+    ['a bare prefix', 'sb_publishable_'],
+    ['a truncated paste', 'sb_publishable_abc'],
+    ['a trailing space', `${fakeApiKey('publishable', 'p')} `],
+  ])('refuses %s where the publishable key belongs', (_case, value) => {
+    expect(deployConfigProblems({ ...config, VITE_SUPABASE_PUBLISHABLE_KEY: value })).toEqual([
+      'VITE_SUPABASE_PUBLISHABLE_KEY must be a whole sb_publishable_ key; check for a cut-off paste or stray spaces',
     ]);
   });
 
-  it('requires the full fingerprint of the backup key, since an email can match the wrong key', () => {
-    expect(deployConfigProblems({ ...config, GPG_RECIPIENT: 'admin@example.test' })).toEqual([
-      'GPG_RECIPIENT must be a 40-character key fingerprint',
+  it('refuses the legacy service_role JWT where the secret key belongs', () => {
+    expect(deployConfigProblems({ ...config, SUPABASE_SECRET_KEY: fakeJwt('service_role') })).toEqual([
+      'SUPABASE_SECRET_KEY holds a legacy JWT key; use an sb_secret_ key from Settings → API Keys',
+    ]);
+  });
+
+  it.each([
+    ['the publishable key', fakeApiKey('publishable', 'p')],
+    ['any other value', 'not-a-key'],
+    ['a bare prefix', 'sb_secret_'],
+    ['a truncated paste', 'sb_secret_abc'],
+    ['a trailing space', `${fakeApiKey('secret', 's')} `],
+  ])('refuses %s where the secret key belongs', (_case, value) => {
+    expect(deployConfigProblems({ ...config, SUPABASE_SECRET_KEY: value })).toEqual([
+      'SUPABASE_SECRET_KEY must be a whole sb_secret_ key; check for a cut-off paste or stray spaces',
     ]);
   });
 
   it('lists the values the bundle must never contain', () => {
-    expect(configuredSecrets(config)).toEqual([config.SUPABASE_SERVICE_ROLE_KEY, config.SUPABASE_DB_PASSWORD]);
+    expect(configuredSecrets(config)).toEqual([config.SUPABASE_SECRET_KEY, config.SUPABASE_DB_PASSWORD]);
+  });
+});
+
+describe('backup settings', () => {
+  it('accepts the full fingerprint of the backup key', () => {
+    expect(backupConfigProblems({ ...config, GPG_RECIPIENT: GPG_FINGERPRINT })).toEqual([]);
+  });
+
+  it('needs a backup key to back up', () => {
+    expect(backupConfigProblems(config)).toEqual(['missing GPG_RECIPIENT; backups are encrypted to it']);
+  });
+
+  it('requires the full fingerprint of the backup key, since an email can match the wrong key', () => {
+    expect(backupConfigProblems({ ...config, GPG_RECIPIENT: 'admin@example.test' })).toEqual([
+      'GPG_RECIPIENT must be a 40-character key fingerprint',
+    ]);
   });
 });
 
