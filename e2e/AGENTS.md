@@ -1,7 +1,7 @@
 # e2e
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-07
 
 ## Purpose
 
@@ -44,6 +44,7 @@ Playwright end-to-end suites that drive the real web app against the real local 
 | `workout-records.spec.ts`                | Bodyweight prompt, records and the collection log.                                                                                                                                                                                                                                                                          |
 | `exercise-progress.spec.ts`              | Progress screen from the workout, Records and History: chart text without the warm-up, rep-max rows with the day, Back keeps the draft; a bodyweight exercise's most reps.                                                                                                                                                  |
 | `bodyweight-trend.spec.ts`               | Profile bodyweight trend: the empty hint, a workout's bodyweight (backdated with `backdateWorkoutsOf`) and a profile save on one chart, Save disabled offline, pounds                                                                                                                                                       |
+| `weekly-goal.spec.ts`                    | Weekly goal: the card is hidden until a goal is set, the "Workouts per week" setting, progress and a one week streak on Today after two workouts, a later change waits for next week                                                                                                                                        |
 | `rest-timer.spec.ts`                     | Rest timer with `page.clock`: starts on a done set, adjusts, survives a reload, ends; length from Settings, skip, Off, cleared by finishing; rating keeps a set's own rest; focus stays in the bar or moves to Finish workout.                                                                                              |
 | `training-aids.spec.ts`                  | Last-session line and prefill, weight and reps steppers, wake lock plus vibrate and beep at rest end and with the settings off (device APIs stubbed with `addInitScript`), the hidden-page notification and the blocked notification alert.                                                                                 |
 | `warmups-and-plates.spec.ts`             | A set flagged W is stored as a warm-up with no XP, "+ Add warm-ups" ramps from the bar to the first working set, a freestyle barbell set shows plates per side from the plates set on this device, and the set's plate calculator breaks a target into plates and uses the nearest loadable weight.                         |

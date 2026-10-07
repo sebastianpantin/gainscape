@@ -78,6 +78,7 @@ import { ProgramToday } from './ProgramToday.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
+import { WeeklyGoalCard } from './WeeklyGoalCard.tsx';
 import { useRecentLiftSessions } from './use-recent-lift-sessions.ts';
 import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
@@ -356,6 +357,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </p>
         )}
         <InstallCard userId={userId} />
+        <WeeklyGoalCard />
         <ProgramSummary userId={userId} program={activeProgram} />
         <ProgramToday
           program={activeProgram}

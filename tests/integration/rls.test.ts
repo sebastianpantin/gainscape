@@ -362,7 +362,9 @@ describe('function execution rights', () => {
       'set_custom_exercise_archived',
       'set_gz',
       'set_timezone',
+      'set_weekly_session_goal',
       'username_available',
+      'weekly_goal_weeks',
       'workout_bodyweights',
     ]);
   });
@@ -380,6 +382,8 @@ describe('item catalog tables', () => {
   };
 
   async function snapshotOf(table: string) {
+    if (table === 'user_unlocks')
+      return await db`select * from public.user_unlocks where user_id = ${owner.id} order by 1, 2`;
     return await db.unsafe(`select * from public.${table} order by 1, 2`);
   }
 
