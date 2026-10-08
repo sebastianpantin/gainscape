@@ -10,6 +10,11 @@ import { fetchSession } from '../../lib/history.ts';
 import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
+import { savedExerciseList } from '../../offline/collection-cache.ts';
+import { readItemsCache } from '../../offline/items-cache.ts';
+import { standingCache } from '../../offline/standing-cache.ts';
 import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
 import type { CompletedSessionSummary } from '../../offline/finish-lock.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
@@ -21,6 +26,10 @@ import {
   describeRecord,
   gearBonusText,
 } from './reveal-rules.ts';
+
+async function savedWhenOffline<Loaded>(saved: Loaded | null, loadLive: () => Promise<Loaded>): Promise<Loaded> {
+  return (await loadCacheFirstWhenOffline(isDeviceOffline, () => saved, loadLive)).loaded;
+}
 
 function percent(fraction: number): string {
   return `${(Math.min(1, Math.max(0, fraction)) * 100).toFixed(1)}%`;
@@ -113,10 +122,18 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   }, [sessionId, userId]);
 
   useEffect(() => {
-    fetchSkills().then(setSkills, () => setSkills([]));
-    fetchExercises({ includeArchived: true }).then(setExercises, () => setExercises([]));
-    fetchSkillXp(userId).then(setXpBySkillId, () => setXpBySkillId(null));
-    fetchItemCatalog().then(
+    const storage = deviceStorage();
+    const standing = standingCache.read(storage, userId);
+    savedWhenOffline(standing?.skills ?? null, fetchSkills).then(setSkills, () => setSkills([]));
+    savedWhenOffline(savedExerciseList(storage, userId), () => fetchExercises({ includeArchived: true })).then(
+      setExercises,
+      () => setExercises([]),
+    );
+    savedWhenOffline(standing && new Map(Object.entries(standing.xpBySkillId)), () => fetchSkillXp(userId)).then(
+      setXpBySkillId,
+      () => setXpBySkillId(null),
+    );
+    savedWhenOffline(readItemsCache(storage, userId)?.catalog ?? null, fetchItemCatalog).then(
       (catalog) => setItems(catalog.items),
       () => setItems('failed'),
     );

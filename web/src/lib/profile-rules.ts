@@ -1,8 +1,10 @@
 import { CONTROL_CHARACTER } from './names.ts';
 import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, unitToKg } from './units.ts';
 
-export type UnitPref = 'kg' | 'lb';
-export type EffortInputMode = 'level' | 'rir' | 'rpe';
+export const UNIT_PREFS = ['kg', 'lb'] as const;
+export const EFFORT_INPUT_MODES = ['level', 'rir', 'rpe'] as const;
+export type UnitPref = (typeof UNIT_PREFS)[number];
+export type EffortInputMode = (typeof EFFORT_INPUT_MODES)[number];
 export type TrainingFocus = 'strength' | 'muscle' | 'powerlifting' | 'general';
 export type BadgeColor = 'gold' | 'blue' | 'green' | 'rust' | 'stone';
 
@@ -50,6 +52,9 @@ export const BADGE_COLORS: Record<BadgeColor, { label: string; fill: string; lig
   rust: { label: 'Rust', fill: '#e0823d', light: '#f0ab78', dark: '#9c5220' },
   stone: { label: 'Stone', fill: '#a9b4bd', light: '#d2d9de', dark: '#6f7a83' },
 };
+
+export const TRAINING_FOCUSES = Object.keys(TRAINING_FOCUS_LABELS) as TrainingFocus[];
+export const BADGE_COLOR_KEYS = Object.keys(BADGE_COLORS) as BadgeColor[];
 
 function rangeProblem(raw: string, lowest: number, highest: number, message: string): string | null {
   if (raw.trim() === '') return null;

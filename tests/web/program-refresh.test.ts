@@ -192,6 +192,16 @@ describe('refreshing the program facts', () => {
 });
 
 describe('refreshing the whole program cache', () => {
+  it('marks the cache as refreshed once a refresh has run, even when no enrollment is active', async () => {
+    const { context, storage } = harness({
+      activeEnrollment: async () => null,
+      enrollmentFacts: async () => factsRows(enrollmentRow(FIRST_ID), []),
+    });
+    expect(cachedFor(storage).refreshed).toBeUndefined();
+    await refreshProgramCacheWith(context);
+    expect(cachedFor(storage).refreshed).toBe(true);
+  });
+
   it('stores the fetched templates, the active enrollment and its facts', async () => {
     const { context, storage } = harness({ enrollmentFacts: async () => factsRows(enrollmentRow(FIRST_ID), [MONDAY]) });
     await refreshProgramCacheWith(context);

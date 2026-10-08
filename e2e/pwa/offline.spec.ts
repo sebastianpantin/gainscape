@@ -3,6 +3,7 @@ import {
   authStorageKey,
   logExercise,
   nowInSeconds,
+  openFromProfile,
   openTab,
   readSession,
   readStoredDraft,
@@ -31,6 +32,16 @@ import {
   OFFLINE_BANNER,
   waitForController,
 } from '../support/pwa.ts';
+
+const OFFLINE_TAB_BUDGET_MS = 3_000;
+const OFFLINE_SKILLS_NOTICE = 'Offline: using your saved skills.';
+const OFFLINE_COLLECTION_NOTICE = 'Offline: using your saved collection log.';
+const OFFLINE_PROFILE_NOTICE = 'Offline: using your saved profile.';
+const OFFLINE_PROGRAMS_NOTICE = 'Offline: using your saved programs.';
+
+function noteOpenTime(screen: string, started: number) {
+  test.info().annotations.push({ type: 'offline open', description: `${screen}: ${Date.now() - started} ms` });
+}
 
 async function expectProvenOffline(page: Page) {
   expect(await fetchOutcome(page, '/sb/rest/v1/')).toBe('rejected');
@@ -141,7 +152,7 @@ test('the worker never stores or answers Supabase traffic', async ({ context, pa
   expect(requests.filter((url) => new URL(url).origin !== appOrigin)).toEqual([]);
 });
 
-test('every tab renders offline without an uncaught error', async ({ context, page }) => {
+test('every tab settles offline within seconds without an uncaught error', async ({ context, page }) => {
   test.setTimeout(240_000);
   const username = uniqueUsername('pwa_c');
   await register(page, username);
@@ -159,23 +170,74 @@ test('every tab renders offline without an uncaught error', async ({ context, pa
 
   const main = cold.getByRole('main');
   for (const tab of ['Skills', 'Log', 'Friends', 'Profile', 'Train'] satisfies Tab[]) {
+    const previous = await main.elementHandle();
+    const started = Date.now();
     await openTab(cold, tab);
     await expect
       .poll(
         () =>
           main.evaluate(
-            (element) =>
-              element.querySelector('[role=alert]') !== null ||
-              (element.querySelector('h1, h2') !== null && !element.textContent?.includes('Loading…')),
+            (element, before) =>
+              element !== before &&
+              (element.querySelector('[role=alert]') !== null ||
+                (element.querySelector('h1, h2') !== null && !element.textContent?.includes('Loading…'))),
+            previous,
           ),
-        { timeout: 60_000 },
+        { timeout: OFFLINE_TAB_BUDGET_MS },
       )
       .toBe(true);
+    noteOpenTime(tab, started);
   }
   expect((await cold.goto('/profile/settings'))?.fromServiceWorker()).toBe(true);
   await expect(cold.getByRole('heading', { name: 'Settings' })).toBeVisible();
   await expect(cold.getByRole('heading', { name: 'App' })).toBeVisible();
   expect(errors).toEqual([]);
+  await markOnline();
+  await context.setOffline(false);
+});
+
+test('screens seen online reopen offline at once from their saved data', async ({ context, page }) => {
+  test.setTimeout(240_000);
+  const username = uniqueUsername('pwa_d');
+  await register(page, username);
+  await waitForController(page);
+  const main = page.getByRole('main');
+  await openTab(page, 'Skills');
+  await expect(main.getByText('Total level')).toBeVisible();
+  await openTab(page, 'Log');
+  await expect(main.getByText('Completion')).toBeVisible();
+  await openTab(page, 'Profile');
+  await expect(main.getByText(`@${username}`)).toBeVisible();
+  await expect(main.locator('.stat-tile', { hasText: 'Collection' })).toContainText('%');
+  await openFromProfile(page, 'Programs');
+  await expect(main.getByRole('heading', { name: 'Templates' })).toBeVisible();
+  await openTab(page, 'Train');
+
+  await context.setOffline(true);
+  expect((await page.reload())?.fromServiceWorker()).toBe(true);
+  const markOnline = await markPageOffline(page);
+  await expectProvenOffline(page);
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+
+  const savedScreens: { tab: Tab; notice: string; shown: string }[] = [
+    { tab: 'Skills', notice: OFFLINE_SKILLS_NOTICE, shown: 'Total level' },
+    { tab: 'Log', notice: OFFLINE_COLLECTION_NOTICE, shown: 'Completion' },
+    { tab: 'Profile', notice: OFFLINE_PROFILE_NOTICE, shown: `@${username}` },
+  ];
+  for (const { tab, notice, shown } of savedScreens) {
+    const started = Date.now();
+    await openTab(page, tab);
+    await expect(main.getByText(notice)).toBeVisible({ timeout: OFFLINE_TAB_BUDGET_MS });
+    await expect(main.getByText(shown)).toBeVisible({ timeout: OFFLINE_TAB_BUDGET_MS });
+    noteOpenTime(tab, started);
+  }
+  await expect(main.locator('.stat-tile', { hasText: 'Collection' })).toContainText('%');
+
+  const started = Date.now();
+  await page.getByRole('main').getByRole('link', { name: 'Programs', exact: true }).click();
+  await expect(main.getByText(OFFLINE_PROGRAMS_NOTICE)).toBeVisible({ timeout: OFFLINE_TAB_BUDGET_MS });
+  await expect(main.getByRole('heading', { name: 'Templates' })).toBeVisible({ timeout: OFFLINE_TAB_BUDGET_MS });
+  noteOpenTime('Programs', started);
   await markOnline();
   await context.setOffline(false);
 });

@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchExercises } from '../../lib/catalog.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { useOnlineSignal } from '../../lib/use-online.ts';
+import { savedExerciseList } from '../../offline/collection-cache.ts';
+import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
-import { cachedPrograms, fetchPrograms, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
+import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import {
   addDay,
@@ -64,25 +68,30 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
   const [problem, setProblem] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const onlineSignal = useOnlineSignal();
 
   useEffect(() => {
-    fetchExercises({ includeArchived: true }).then(
-      (loaded) => setExercises(loaded.filter(isLiftExercise)),
+    loadCacheFirstWhenOffline(
+      isDeviceOffline,
+      () => savedExerciseList(deviceStorage(), userId),
+      () => fetchExercises({ includeArchived: true }),
+    ).then(
+      ({ loaded }) => setExercises(loaded.filter(isLiftExercise)),
       (error: Error) => setProblem(error.message),
     );
-  }, []);
+  }, [userId, onlineSignal]);
 
   useEffect(() => {
     if (doc) return;
-    fetchPrograms(userId).then(
-      (programs) => {
+    loadProgramsCacheFirst(userId).then(
+      ({ loaded: programs }) => {
         const loaded = docFor(programs, userId, programId);
         if (loaded) setDoc(loaded);
         else setMissing(true);
       },
       (error: Error) => setProblem(error.message),
     );
-  }, [doc, userId, programId]);
+  }, [doc, userId, programId, onlineSignal]);
 
   if (missing)
     return (

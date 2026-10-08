@@ -27,3 +27,7 @@ export function programLoadStatus(input: ProgramLoadInput): ProgramLoadStatus {
 export function programStatusText(status: ProgramLoadStatus): string | null {
   return STATUS_TEXT[status];
 }
+
+export function offlineRefreshState(cache: { refreshed?: true }): ProgramRefreshState {
+  return cache.refreshed ? 'done' : 'failed';
+}

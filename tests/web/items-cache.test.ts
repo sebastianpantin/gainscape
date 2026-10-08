@@ -1,8 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   forgetItemsCache,
   type ItemsCache,
-  loadItemsCacheFirstWhenOffline,
   readItemsCache,
   saveItemsCache,
 } from '../../web/src/offline/items-cache.ts';
@@ -123,58 +122,5 @@ describe('items cache', () => {
       throw new Error('blocked');
     };
     expect(() => forgetItemsCache(throwing, USER)).not.toThrow();
-  });
-});
-
-describe('loading the items screen', () => {
-  const live = { source: 'live' };
-  const saved = { source: 'saved' };
-
-  it('shows the saved items at once without waiting on the network while the device is offline', async () => {
-    const loadLive = vi.fn(() => new Promise<typeof live>(() => undefined));
-    const outcome = await loadItemsCacheFirstWhenOffline(
-      () => true,
-      () => saved,
-      loadLive,
-    );
-    expect(outcome).toEqual({ loaded: saved, fromCache: true });
-    expect(loadLive).not.toHaveBeenCalled();
-  });
-
-  it('loads live while online even when items are saved', async () => {
-    const outcome = await loadItemsCacheFirstWhenOffline(
-      () => false,
-      () => saved,
-      () => Promise.resolve(live),
-    );
-    expect(outcome).toEqual({ loaded: live, fromCache: false });
-  });
-
-  it('tries the network while offline when nothing is saved', async () => {
-    const outcome = await loadItemsCacheFirstWhenOffline(
-      () => true,
-      () => null,
-      () => Promise.resolve(live),
-    );
-    expect(outcome).toEqual({ loaded: live, fromCache: false });
-  });
-
-  it('falls back to the saved items when the live load fails', async () => {
-    const outcome = await loadItemsCacheFirstWhenOffline(
-      () => false,
-      () => saved,
-      () => Promise.reject(new Error('Failed to fetch')),
-    );
-    expect(outcome).toEqual({ loaded: saved, fromCache: true });
-  });
-
-  it('rejects with the live problem when the load fails and nothing is saved', async () => {
-    await expect(
-      loadItemsCacheFirstWhenOffline(
-        () => false,
-        () => null,
-        () => Promise.reject(new Error('Failed to fetch')),
-      ),
-    ).rejects.toThrow('Failed to fetch');
   });
 });

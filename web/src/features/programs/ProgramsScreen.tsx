@@ -4,12 +4,15 @@ import {
   cachedPrograms,
   copyProgram,
   deleteProgram,
-  fetchPrograms,
+  loadProgramsCacheFirst,
   ownPrograms,
   type Program,
   templates,
 } from '../../lib/programs.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { useOnlineSignal } from '../../lib/use-online.ts';
+import { cacheFirstNotice } from '../../offline/cache-first.ts';
+import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
 import { PowerliftingPrograms } from './PowerliftingPrograms.tsx';
 
 interface ProgramsScreenProps {
@@ -23,13 +26,22 @@ function daySummary(program: Program): string {
 export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   const navigate = useNavigate();
   const [programs, setPrograms] = useState<Program[] | null>(() => cachedPrograms(userId));
+  const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const onlineSignal = useOnlineSignal();
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const pendingCopyIds = useRef(new Map<string, string>());
 
   useEffect(() => {
-    fetchPrograms(userId).then(setPrograms, (error: Error) => setProblem(error.message));
-  }, [userId]);
+    loadProgramsCacheFirst(userId).then(
+      (load) => {
+        setPrograms(load.loaded);
+        setSavedNotice(cacheFirstNotice(load, OFFLINE_PROGRAMS_NOTICE));
+        setProblem(null);
+      },
+      (error: Error) => setProblem(error.message),
+    );
+  }, [userId, onlineSignal]);
 
   const copyTemplate = async (template: Program) => {
     setBusy(true);
@@ -75,6 +87,11 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   return (
     <main className="screen stack">
       <h1 className="title">Programs</h1>
+      {savedNotice && (
+        <p className="notice" role="status">
+          {savedNotice}
+        </p>
+      )}
       {problem && (
         <p className="problem" role="alert">
           {problem}

@@ -85,6 +85,11 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
   return (
     <main className="screen stack">
       <h1 className="title">Profile</h1>
+      {state.notice && (
+        <p className="notice" role="status">
+          {state.notice}
+        </p>
+      )}
       <ProfileCard
         profile={profile}
         totalLevel={levels?.totalLevel ?? null}

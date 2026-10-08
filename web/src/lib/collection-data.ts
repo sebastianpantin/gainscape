@@ -1,9 +1,14 @@
 import { type StrengthState } from '@domain/types.ts';
 import type { CardioRecordRow } from './cardio-rules.ts';
 import { fetchExercises } from './catalog.ts';
+import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
+import { collectionCache, type SavedCollection } from '../offline/collection-cache.ts';
+import { cachedExerciseFields } from './catalog-cache.ts';
+import { type Exercise } from './catalog-rules.ts';
 import {
   COLLECTION_COLUMNS,
   collectionDataFrom,
+  type CollectionRows,
   collectionPercent,
   countCollection,
   pinProblemText,
@@ -12,6 +17,7 @@ import {
 import { withFriendlyRateLimit } from './rate-limit.ts';
 import { RECORD_BASELINE_COLUMNS, type RecordBaseline, recordBaselineFrom } from './session-baseline-rules.ts';
 import { nullableNumber } from './rows.ts';
+import { deviceStorage } from './rest-timer-store.ts';
 import { supabase } from './supabase.ts';
 
 export interface RepMaxSlotView {
@@ -30,7 +36,7 @@ export interface CollectionData {
   cardioRecords: CardioRecordRow[];
 }
 
-export async function fetchCollectionData(userId: string): Promise<CollectionData> {
+async function fetchCollectionRows(userId: string): Promise<CollectionRows> {
   const [repMaxes, bodyweightRecords, strengths, pins, cardioRecords] = await Promise.all([
     supabase.from('rep_maxes').select(COLLECTION_COLUMNS.repMaxes).eq('user_id', userId),
     supabase.from('bodyweight_rep_records').select(COLLECTION_COLUMNS.bodyweightRecords).eq('user_id', userId),
@@ -45,13 +51,33 @@ export async function fetchCollectionData(userId: string): Promise<CollectionDat
   ]);
   for (const result of [repMaxes, bodyweightRecords, strengths, pins, cardioRecords])
     if (result.error) throw result.error;
-  return collectionDataFrom({
+  return {
     repMaxes: repMaxes.data!,
     bodyweightRecords: bodyweightRecords.data!,
     strengths: strengths.data!,
     pins: pins.data!,
     cardioRecords: cardioRecords.data!,
-  });
+  };
+}
+
+export interface Collection {
+  exercises: Exercise[];
+  data: CollectionData;
+}
+
+async function fetchSavedCollection(userId: string): Promise<SavedCollection> {
+  const [exercises, rows] = await Promise.all([fetchExercises({ includeArchived: true }), fetchCollectionRows(userId)]);
+  collectionCache.save(deviceStorage(), userId, { exercises: exercises.map(cachedExerciseFields), rows });
+  return { exercises, rows };
+}
+
+export async function loadCollectionCacheFirst(userId: string): Promise<CacheFirstLoad<Collection>> {
+  const load = await loadCacheFirstWhenOffline(
+    isDeviceOffline,
+    () => collectionCache.read(deviceStorage(), userId),
+    () => fetchSavedCollection(userId),
+  );
+  return { ...load, loaded: { exercises: load.loaded.exercises, data: collectionDataFrom(load.loaded.rows) } };
 }
 
 export async function fetchExerciseStrength(userId: string): Promise<Map<string, ExerciseStrengthView>> {
@@ -110,7 +136,7 @@ export async function reorderPins(exerciseIds: string[]): Promise<void> {
 }
 
 export async function fetchCollectionPercent(userId: string): Promise<number> {
-  const [exercises, data] = await Promise.all([fetchExercises({ includeArchived: true }), fetchCollectionData(userId)]);
+  const { exercises, data } = (await loadCollectionCacheFirst(userId)).loaded;
   const { filledSlots, totalSlots } = countCollection(exercises, data).completion;
   return collectionPercent(filledSlots, totalSlots);
 }
