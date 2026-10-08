@@ -100,6 +100,12 @@ describe('reading the program cache', () => {
     expect(readProgramCache(storage, USER_ID)).toEqual(cacheWithFacts());
   });
 
+  it('reads back that the cache was refreshed at least once', () => {
+    const storage = new MemoryStorage();
+    saveProgramCache(storage, USER_ID, { ...EMPTY_PROGRAM_CACHE, refreshed: true });
+    expect(readProgramCache(storage, USER_ID).refreshed).toBe(true);
+  });
+
   it('gives the empty cache when nothing is stored', () => {
     expect(readProgramCache(new MemoryStorage(), USER_ID)).toEqual(EMPTY_PROGRAM_CACHE);
   });

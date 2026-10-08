@@ -126,21 +126,3 @@ export function challengeExercisesOf(
     .filter((exercise) => needed.has(exercise.id))
     .map(({ id, name, archived, loadType }) => ({ id, name, archived, modality: 'lift', loadType }));
 }
-
-export async function loadItemsCacheFirstWhenOffline<Loaded>(
-  isOffline: () => boolean,
-  loadSaved: () => Loaded | null,
-  loadLive: () => Promise<Loaded>,
-): Promise<{ loaded: Loaded; fromCache: boolean }> {
-  if (isOffline()) {
-    const saved = loadSaved();
-    if (saved) return { loaded: saved, fromCache: true };
-  }
-  try {
-    return { loaded: await loadLive(), fromCache: false };
-  } catch (error) {
-    const saved = loadSaved();
-    if (saved) return { loaded: saved, fromCache: true };
-    throw error;
-  }
-}

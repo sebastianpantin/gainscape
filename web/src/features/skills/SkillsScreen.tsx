@@ -67,6 +67,11 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
   return (
     <main className="screen stack">
       <h1 className="title">Skills</h1>
+      {state.notice && (
+        <p className="notice" role="status">
+          {state.notice}
+        </p>
+      )}
       <div className="standing totals">
         <div className="panel">
           <span className="muted">Total level</span>

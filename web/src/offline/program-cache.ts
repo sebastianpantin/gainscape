@@ -18,6 +18,7 @@ export interface ProgramCache {
   templates: ProgramTemplateRow[];
   enrollment: EnrollmentRow | null;
   facts: ProgramFactsCache | null;
+  refreshed?: true;
 }
 
 export const EMPTY_PROGRAM_CACHE: ProgramCache = { templates: [], enrollment: null, facts: null };
@@ -50,6 +51,7 @@ const cachedProgramsSchema = z.object({
       localAppends: z.array(z.object({ fact: sessionFactSchema, appendedAt: z.number() })),
     })
     .nullable(),
+  refreshed: z.literal(true).optional(),
 });
 
 export function programCacheKey(userId: string): string {
@@ -62,11 +64,12 @@ export function readProgramCache(storage: Storage, userId: string): ProgramCache
     if (!raw) return EMPTY_PROGRAM_CACHE;
     const parsed = cachedProgramsSchema.safeParse(JSON.parse(raw));
     if (!parsed.success || parsed.data.userId !== userId) return EMPTY_PROGRAM_CACHE;
-    const { templates, enrollment, facts } = parsed.data;
+    const { templates, enrollment, facts, refreshed } = parsed.data;
     return {
       templates: templates.map((template) => ({ ...template, definition: template.definition ?? null })),
       enrollment,
       facts,
+      refreshed,
     };
   } catch {
     return EMPTY_PROGRAM_CACHE;

@@ -11,17 +11,21 @@ import {
   type StoredSetRow,
 } from './history-rules.ts';
 import { REQUEST_TIMEOUT_MS } from './auth-restore.ts';
+import { failFastWhenOffline } from '../offline/cache-first.ts';
 import { supabase } from './supabase.ts';
 
-export function fetchSessionPage(after: HistorySession | null): Promise<HistorySession[]> {
+export async function fetchSessionPage(after: HistorySession | null): Promise<HistorySession[]> {
+  failFastWhenOffline();
   return querySessionPage(supabase, after);
 }
 
-export function fetchSession(sessionId: string): Promise<HistorySession | null> {
+export async function fetchSession(sessionId: string): Promise<HistorySession | null> {
+  failFastWhenOffline();
   return querySession(supabase, sessionId);
 }
 
-export function fetchSessionSets(sessionId: string): Promise<StoredSetRow[]> {
+export async function fetchSessionSets(sessionId: string): Promise<StoredSetRow[]> {
+  failFastWhenOffline();
   return querySessionSets(supabase, sessionId);
 }
 

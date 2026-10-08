@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Exercise } from '../../web/src/lib/catalog-rules.ts';
 import {
   exerciseCacheKey,
@@ -10,6 +10,7 @@ import {
   SAVED_EXERCISES_NOTICE,
   saveCachedExercises,
 } from '../../web/src/lib/catalog-cache.ts';
+import { OFFLINE_PROBLEM } from '../../web/src/offline/cache-first.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -192,17 +193,58 @@ describe('cache-first exercise picker', () => {
     expect(shown.at(-1)?.notice).toBe(SAVED_EXERCISES_NOTICE);
   });
 
-  it('says offline when the browser is offline or the request timed out', async () => {
+  it('shows the saved list with the offline notice at once and sends no request while offline', async () => {
     const storage = new MemoryStorage();
     saveCachedExercises(storage, userId, exercises);
-    const notices: (string | null)[] = [];
+    const fetchLive = vi.fn(() => new Promise<Exercise[]>(() => undefined));
+    const shown: ExerciseList[] = [];
+    await loadExercisesCacheFirst(
+      storage,
+      userId,
+      fetchLive,
+      (list) => shown.push(list),
+      () => true,
+    );
+    expect(shown).toEqual([{ exercises, notice: OFFLINE_EXERCISES_NOTICE, problem: null }]);
+    expect(fetchLive).not.toHaveBeenCalled();
+  });
+
+  it('fails fast with the offline problem while offline with nothing saved', async () => {
+    const fetchLive = vi.fn(() => new Promise<Exercise[]>(() => undefined));
+    const shown: ExerciseList[] = [];
+    await loadExercisesCacheFirst(
+      new MemoryStorage(),
+      userId,
+      fetchLive,
+      (list) => shown.push(list),
+      () => true,
+    );
+    expect(shown).toEqual([{ exercises: [], notice: null, problem: OFFLINE_PROBLEM }]);
+    expect(fetchLive).not.toHaveBeenCalled();
+  });
+
+  it('says offline when the device went offline while the request ran, whatever the error says', async () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    let offlineChecks = 0;
+    const shown: ExerciseList[] = [];
     await loadExercisesCacheFirst(
       storage,
       userId,
       () => Promise.reject({ message: 'server error' }),
-      (list) => notices.push(list.notice),
-      () => true,
+      (list) => shown.push(list),
+      () => offlineChecks++ > 0,
     );
+    expect(shown).toEqual([
+      { exercises, notice: null, problem: null },
+      { exercises, notice: OFFLINE_EXERCISES_NOTICE, problem: null },
+    ]);
+  });
+
+  it('says offline when the request timed out', async () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    const notices: (string | null)[] = [];
     await loadExercisesCacheFirst(
       storage,
       userId,
@@ -210,7 +252,7 @@ describe('cache-first exercise picker', () => {
       (list) => notices.push(list.notice),
       () => false,
     );
-    expect([notices[1], notices[3]]).toEqual([OFFLINE_EXERCISES_NOTICE, OFFLINE_EXERCISES_NOTICE]);
+    expect(notices.at(-1)).toBe(OFFLINE_EXERCISES_NOTICE);
   });
 
   it('reports the load problem when the fetch fails and nothing is cached', async () => {

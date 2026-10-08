@@ -102,7 +102,7 @@ function Screens() {
             path="/profile/settings"
             element={<SettingsScreen userId={userId} email={auth.session.user.email ?? null} />}
           />
-          <Route path="/exercises" element={<ExercisesScreen />} />
+          <Route path="/exercises" element={<ExercisesScreen userId={userId} />} />
           <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
           <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />
           <Route path="/programs/active" element={<ActiveProgramScreen userId={userId} />} />
