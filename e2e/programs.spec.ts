@@ -66,6 +66,9 @@ test('copy a template, run a program day with planned sets and finish it', async
   const fresh = await context.newPage();
   await fresh.route('**/rest/v1/programs*', (route) => route.abort());
   await fresh.goto('/');
+  await expect(fresh.getByRole('button', { name: 'My UL — Upper' })).toBeVisible();
+  await fresh.evaluate((key) => localStorage.removeItem(key), `gainscape.programs.v1.${user.id}`);
+  await fresh.reload();
   await expect(fresh.getByRole('button', { name: 'Start workout' })).toBeVisible();
   await expect(fresh.getByText("Couldn't load your programs")).toBeVisible({ timeout: 15_000 });
   await expect(fresh.getByRole('button', { name: 'My UL — Upper' })).toHaveCount(0);

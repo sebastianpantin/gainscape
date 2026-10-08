@@ -32,7 +32,7 @@ export async function refreshProgramFactsWith(
 export async function refreshProgramCacheWith(context: ProgramRefreshContext): Promise<ProgramCache> {
   const { storage, userId, fetchers } = context;
   const [templates, enrollment] = await Promise.all([fetchers.templates(), fetchers.activeEnrollment()]);
-  updateProgramCache(storage, userId, (cache) => withEnrollment({ ...cache, templates }, enrollment));
+  updateProgramCache(storage, userId, (cache) => withEnrollment({ ...cache, templates, refreshed: true }, enrollment));
   if (enrollment === null) return readProgramCache(storage, userId);
   return refreshProgramFactsWith(context, enrollment);
 }

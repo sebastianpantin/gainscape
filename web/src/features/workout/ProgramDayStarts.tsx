@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
-import { cachedPrograms, fetchPrograms, ownPrograms, type Program, type ProgramDay } from '../../lib/programs.ts';
+import {
+  cachedPrograms,
+  loadProgramsCacheFirst,
+  ownPrograms,
+  type Program,
+  type ProgramDay,
+} from '../../lib/programs.ts';
 import { programLabelFor } from '../../offline/draft-format.ts';
 
 interface ProgramDayStartsProps {
@@ -20,8 +26,8 @@ export function ProgramDayStarts({ userId, disabled, onStart }: ProgramDayStarts
 
   useEffect(() => {
     let active = true;
-    fetchPrograms(userId).then(
-      (loaded) => active && setPrograms(loaded),
+    loadProgramsCacheFirst(userId).then(
+      ({ loaded }) => active && setPrograms(loaded),
       () => active && setFailed(true),
     );
     return () => {

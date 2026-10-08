@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { fetchExercises } from '../../lib/catalog.ts';
+import { readCachedExercises } from '../../lib/catalog-cache.ts';
 import { isLiftExercise } from '../../lib/catalog-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
@@ -29,6 +30,7 @@ import {
   withOption,
   withUnit,
 } from '../../lib/program-enroll-rules.ts';
+import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { readProgramCache, updateProgramCache } from '../../offline/program-cache.ts';
 
 interface ProgramEnrollScreenProps {
@@ -60,6 +62,12 @@ function loadedEntry(entry: TemplateListEntry | undefined, exercises: BindableEx
   return { status: 'ready', definition: entry.definition, name: entry.name, exercises };
 }
 
+function savedTemplatesAndExercises(userId: string) {
+  const { templates } = readProgramCache(localStorage, userId);
+  const exercises = readCachedExercises(localStorage, userId);
+  return templates.length > 0 && exercises ? { templates, exercises } : null;
+}
+
 export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const { key } = useParams();
   const navigate = useNavigate();
@@ -75,9 +83,19 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchProgramTemplates(), fetchExercises({ includeArchived: false })]).then(
-      ([templates, exercises]) => {
+    loadCacheFirstWhenOffline(
+      isDeviceOffline,
+      () => savedTemplatesAndExercises(userId),
+      async () => {
+        const [templates, exercises] = await Promise.all([
+          fetchProgramTemplates(),
+          fetchExercises({ includeArchived: false }),
+        ]);
         updateProgramCache(localStorage, userId, (cache) => ({ ...cache, templates }));
+        return { templates, exercises };
+      },
+    ).then(
+      ({ loaded: { templates, exercises } }) => {
         if (!active) return;
         const bindable = exercises
           .filter(isLiftExercise)

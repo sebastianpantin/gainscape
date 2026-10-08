@@ -1,5 +1,8 @@
 import type { LastLoggedSet, PlannedExercise } from '../offline/draft-format.ts';
+import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
+import { programListCache } from '../offline/program-list-cache.ts';
 import { rateLimitedMessage } from './rate-limit.ts';
+import { deviceStorage } from './rest-timer-store.ts';
 import { supabase } from './supabase.ts';
 
 export interface ProgramDay {
@@ -47,8 +50,6 @@ interface ProgramRow {
 const PROGRAM_SELECT =
   'id,key,name,owner_user_id,copied_from_id,program_days(id,name,position,program_day_exercises(position,exercise_id,target_sets,target_reps_min,target_reps_max))';
 
-const programsByUser = new Map<string, Program[]>();
-
 function toProgram(row: ProgramRow): Program {
   return {
     id: row.id,
@@ -75,15 +76,23 @@ function toProgram(row: ProgramRow): Program {
 }
 
 export function cachedPrograms(userId: string): Program[] | null {
-  return programsByUser.get(userId) ?? null;
+  return programListCache.read(deviceStorage(), userId);
 }
 
 export async function fetchPrograms(userId: string): Promise<Program[]> {
   const { data, error } = await supabase.from('programs').select(PROGRAM_SELECT);
   if (error) throw error;
   const programs = (data as ProgramRow[]).map(toProgram).sort((a, b) => a.name.localeCompare(b.name));
-  programsByUser.set(userId, programs);
+  programListCache.save(deviceStorage(), userId, programs);
   return programs;
+}
+
+export function loadProgramsCacheFirst(userId: string): Promise<CacheFirstLoad<Program[]>> {
+  return loadCacheFirstWhenOffline(
+    isDeviceOffline,
+    () => cachedPrograms(userId),
+    () => fetchPrograms(userId),
+  );
 }
 
 export function ownPrograms(programs: Program[], userId: string): Program[] {

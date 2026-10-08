@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchExercises } from '../../lib/catalog.ts';
+import { readCachedExercises } from '../../lib/catalog-cache.ts';
+import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
-import { cachedPrograms, fetchPrograms, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
+import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import {
   addDay,
@@ -66,16 +68,20 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchExercises({ includeArchived: true }).then(
-      (loaded) => setExercises(loaded.filter(isLiftExercise)),
+    loadCacheFirstWhenOffline(
+      isDeviceOffline,
+      () => readCachedExercises(localStorage, userId),
+      () => fetchExercises({ includeArchived: true }),
+    ).then(
+      ({ loaded }) => setExercises(loaded.filter(isLiftExercise)),
       (error: Error) => setProblem(error.message),
     );
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (doc) return;
-    fetchPrograms(userId).then(
-      (programs) => {
+    loadProgramsCacheFirst(userId).then(
+      ({ loaded: programs }) => {
         const loaded = docFor(programs, userId, programId);
         if (loaded) setDoc(loaded);
         else setMissing(true);
