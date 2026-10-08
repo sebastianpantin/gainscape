@@ -53,9 +53,13 @@ describe('GLOSSARY', () => {
     },
   );
 
-  it('keeps the RIR and RPE wording of Settings', () => {
-    expect(GLOSSARY.rir.definition).toBe('Reps in reserve: how many more you could have done, 0 to 6+.');
-    expect(GLOSSARY.rpe.definition).toBe('Rate of perceived exertion, 6 to 10. RPE 8 means 2 reps in reserve.');
+  it('defines RIR and RPE for a beginner', () => {
+    expect(GLOSSARY.rir.definition).toBe(
+      'Reps in reserve: how many more reps you could have done before failing, 0 to 6+.',
+    );
+    expect(GLOSSARY.rpe.definition).toBe(
+      'Rate of perceived exertion: how hard a set felt, 6 to 10, where 10 means you could not do one more rep. RPE 8 means 2 reps in reserve.',
+    );
   });
 
   it('matches the RPE example to how the app converts 2 reps in reserve', () => {

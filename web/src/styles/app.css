@@ -174,9 +174,11 @@ a:hover {
   line-height: 1;
 }
 
-.term-help:hover .term-help-glyph {
-  background: var(--color-accent);
-  color: var(--color-ink);
+@media (hover: hover) {
+  .term-help:hover .term-help-glyph {
+    background: var(--color-accent);
+    color: var(--color-ink);
+  }
 }
 
 .term-help-panel {
@@ -197,6 +199,7 @@ a:hover {
   padding: var(--space-3);
   background: var(--color-panel);
   color: var(--color-text);
+  font-size: var(--font-size-body);
   border: var(--border-width) solid #000;
   border-radius: var(--radius);
   box-shadow: var(--bevel);
