@@ -51,3 +51,7 @@ export function exercisesTrainingSkill(exercises: readonly Exercise[], skillKey:
       percent: sharePercentText(shareBasisPoints),
     }));
 }
+
+export function skillPanelSeed(cached: Exercise[] | null): Exercise[] | undefined {
+  return cached?.some((exercise) => exercise.skillShares.length > 0) ? cached : undefined;
+}

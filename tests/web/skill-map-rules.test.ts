@@ -5,6 +5,7 @@ import {
   exercisesTrainingSkill,
   pickerRowDetail,
   sharePercentText,
+  skillPanelSeed,
   skillShareRows,
 } from '../../web/src/lib/skill-map-rules.ts';
 
@@ -117,5 +118,21 @@ describe('exercisesTrainingSkill', () => {
         expect(exercisesTrainingSkill([...exercises].reverse(), 'chest')).toEqual(listed);
       }),
     );
+  });
+});
+
+describe('skillPanelSeed', () => {
+  it('seeds the panel with a cached list that carries skill shares', () => {
+    const cached = [bench, lift('Old', [])];
+    expect(skillPanelSeed(cached)).toBe(cached);
+  });
+
+  it('skips the seed when nothing is cached', () => {
+    expect(skillPanelSeed(null)).toBeUndefined();
+    expect(skillPanelSeed([])).toBeUndefined();
+  });
+
+  it('skips the seed when the cache predates skill shares', () => {
+    expect(skillPanelSeed([lift('Bench', []), { ...running, skillShares: [] }])).toBeUndefined();
   });
 });
