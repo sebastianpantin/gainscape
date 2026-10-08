@@ -5,6 +5,7 @@ import {
   challengeLoadKg,
   challengeSummaryText,
   challengeVolumeSoFarKg,
+  mentionsE1rm,
   parsedChallengeDefinition,
   parsedDraftChallenge,
   toCatalogChallenge,
@@ -231,5 +232,48 @@ describe('challengeSummaryText', () => {
     [TEN_TON_DAY.definition, 'Lift 10,000 kg in one workout'],
   ])('describes %j', (definition, text) => {
     expect(challengeSummaryText(definition, nameOf)).toBe(text);
+  });
+});
+
+describe('mentionsE1rm', () => {
+  const withoutPct: ChallengeDefinition = {
+    kind: 'prescription',
+    groups: [
+      { rounds: 3, exercises: [{ exerciseId: 'pull_up', reps: 5, pct: null }] },
+      { rounds: 2, exercises: [{ exerciseId: 'deadlift', reps: 3, pct: null }] },
+    ],
+  };
+  const pctInLaterGroup: ChallengeDefinition = {
+    kind: 'prescription',
+    groups: [
+      { rounds: 3, exercises: [{ exerciseId: 'pull_up', reps: 5, pct: null }] },
+      { rounds: 2, exercises: [{ exerciseId: 'deadlift', reps: 3, pct: 80 }] },
+    ],
+  };
+
+  it.each<[string, ChallengeDefinition, boolean]>([
+    ['a prescription with a load percentage', DEADLIFT_AND_PULL_UP.definition, true],
+    ['a prescription with a load percentage in a later group', pctInLaterGroup, true],
+    ['a prescription without load percentages', withoutPct, false],
+    ['a reps volume with a minimum load', SQUAT_CENTURY.definition, true],
+    [
+      'a reps volume at any load',
+      { kind: 'volume', metric: 'reps', target: 100, exerciseId: null, minPct: null },
+      false,
+    ],
+    [
+      'a kg volume, even with a minimum load',
+      { kind: 'volume', metric: 'kg', target: 5000, exerciseId: null, minPct: 50 },
+      false,
+    ],
+  ])('says whether %s mentions e1RM', (_name, definition, mentions) => {
+    expect(mentionsE1rm(definition)).toBe(mentions);
+  });
+
+  it('agrees with the summary text', () => {
+    const definitions = [DEADLIFT_AND_PULL_UP, SQUAT_CENTURY, TEN_TON_DAY].map((challenge) => challenge.definition);
+    for (const definition of [...definitions, withoutPct, pctInLaterGroup]) {
+      expect(mentionsE1rm(definition)).toBe(challengeSummaryText(definition, (id) => id).includes('e1RM'));
+    }
   });
 });

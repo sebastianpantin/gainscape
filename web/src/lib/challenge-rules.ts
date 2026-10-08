@@ -87,6 +87,13 @@ export function challengeVolumeText(draft: WorkoutDraft, targetKg: number): stri
   return `Volume so far: ${formatXp(Math.round(challengeVolumeSoFarKg(draft)))} / ${formatXp(targetKg)} kg`;
 }
 
+export function mentionsE1rm(definition: ChallengeDefinition): boolean {
+  if (definition.kind === 'prescription') {
+    return definition.groups.some((group) => group.exercises.some((exercise) => exercise.pct !== null));
+  }
+  return definition.metric === 'reps' && definition.minPct !== null;
+}
+
 function prescribedText(reps: number, pct: number | null, name: string): string {
   return pct === null ? `${name} ${reps} reps` : `${name} ${reps} reps at ${pct}% of your e1RM`;
 }
@@ -104,6 +111,6 @@ export function challengeSummaryText(definition: ChallengeDefinition, nameOf: (e
   }
   if (definition.metric === 'kg') return `Lift ${formatXp(definition.target)} kg in one workout`;
   const exercise = definition.exerciseId === null ? 'any lift' : nameOf(definition.exerciseId);
-  const load = definition.minPct === null ? '' : ` at ${definition.minPct}% of your e1RM or more`;
+  const load = mentionsE1rm(definition) ? ` at ${definition.minPct}% of your e1RM or more` : '';
   return `${formatXp(definition.target)} reps of ${exercise}${load}`;
 }
