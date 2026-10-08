@@ -34,6 +34,33 @@ describe('boutPayload', () => {
   });
 });
 
+describe('completeSessionPayload with a challenge', () => {
+  const draft: WorkoutDraft = {
+    sessionId: 's',
+    startedAt: '2026-09-30T10:00:00.000Z',
+    finishedAt: '2026-09-30T11:00:00.000Z',
+    programDayId: null,
+    programLabel: 'Challenge — Ten-Ton Day',
+    program: null,
+    exercises: [],
+  };
+
+  it('sends only the challenge id of a challenge workout', () => {
+    const challenge = {
+      challengeId: 'challenge-tt',
+      name: 'Ten-Ton Day',
+      definition: { kind: 'volume' as const, metric: 'kg' as const, target: 10000, exerciseId: null, minPct: null },
+      targetLoadsKg: {},
+    };
+    expect(completeSessionPayload({ ...draft, challenge }).challenge).toEqual({ challengeId: 'challenge-tt' });
+  });
+
+  it('sends a null challenge for a normal workout, also from an older draft', () => {
+    expect(completeSessionPayload(draft).challenge).toBeNull();
+    expect(completeSessionPayload({ ...draft, challenge: null }).challenge).toBeNull();
+  });
+});
+
 describe('completeSessionPayload with supersets', () => {
   function lift(exerciseId: string, setIds: string[], supersetId: string | null): LiftDraftExercise {
     return {

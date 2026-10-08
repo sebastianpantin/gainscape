@@ -1,6 +1,18 @@
-import { isRetestRef, type Position, type PrescribedExercise, type PrescriptionSnapshot } from '@domain/index.ts';
+import {
+  type ChallengeDefinition,
+  e1rmAtSessionStart,
+  isRetestRef,
+  loadTargetKg,
+  type Position,
+  type PrescribedExercise,
+  type PrescriptionSnapshot,
+  type RoundingSetting,
+  type StrengthState,
+  type WeightUnit,
+} from '@domain/index.ts';
 import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
 import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
+import { type CatalogChallenge, challengeLoadKg, parsedDraftChallenge } from '../lib/challenge-rules.ts';
 import { isSessionRpe } from '../lib/session-timing-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 5;
@@ -10,6 +22,7 @@ const PRE_EFFORT_INPUT_FORMAT_VERSION = 2;
 const STARTING_EXTERNAL_LOAD_KG = 20;
 const STARTING_REPS = 8;
 const STARTING_BOUT_DURATION_S = 1800;
+const CHALLENGE_REPS_PER_SET = 10;
 
 export interface PrescriptionDetail {
   pct: number | null;
@@ -72,6 +85,13 @@ export interface DraftProgram {
   templateKey: string;
 }
 
+export interface DraftChallenge {
+  challengeId: string;
+  name: string;
+  definition: ChallengeDefinition;
+  targetLoadsKg: Record<string, number | null>;
+}
+
 export interface WorkoutDraft {
   sessionId: string;
   startedAt: string;
@@ -79,6 +99,7 @@ export interface WorkoutDraft {
   programDayId: string | null;
   programLabel: string | null;
   program?: DraftProgram | null;
+  challenge?: DraftChallenge | null;
   sessionRpe?: number | null;
   exercises: DraftExercise[];
 }
@@ -214,6 +235,7 @@ function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
   return {
     ...withUsableSessionRpe(draft),
     program: isDraftProgram(draft.program) ? draft.program : null,
+    challenge: parsedDraftChallenge(draft.challenge),
     exercises: withValidSupersets(
       draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
     ),
@@ -274,6 +296,7 @@ export function startDraft(): WorkoutDraft {
     programDayId: null,
     programLabel: null,
     program: null,
+    challenge: null,
     exercises: [],
   };
 }
@@ -485,7 +508,10 @@ type LiftCatalogEntry = Extract<CatalogEntry, { loadType: LoadType }>;
 function liftDraftExercises<Entry extends { exerciseId: string }>(
   entries: readonly Entry[],
   exercisesById: ReadonlyMap<string, CatalogEntry>,
-  targetAndSets: (entry: Entry, exercise: LiftCatalogEntry) => Pick<LiftDraftExercise, 'target' | 'sets'>,
+  targetAndSets: (
+    entry: Entry,
+    exercise: LiftCatalogEntry,
+  ) => Pick<LiftDraftExercise, 'target' | 'sets' | 'supersetId'>,
 ): { exercises: DraftExercise[]; skippedExerciseIds: string[] } {
   const skippedExerciseIds: string[] = [];
   const exercises = entries.flatMap((entry): DraftExercise[] => {
@@ -536,6 +562,7 @@ export function startDraftFromDay(
       programDayId: day.id,
       programLabel: programLabelFor(day.programName, day.name),
       program: null,
+      challenge: null,
       exercises,
     },
     skippedExerciseIds,
@@ -581,7 +608,90 @@ export function startDraftFromPrescription(
       programDayId: null,
       programLabel: programLabelFor(day.programName, day.dayName),
       program: { enrollmentId: day.enrollmentId, position: day.position, templateKey: day.templateKey },
+      challenge: null,
       exercises,
+    },
+    skippedExerciseIds,
+  };
+}
+
+interface PlannedChallengeExercise {
+  exerciseId: string;
+  sets: number;
+  reps: number;
+  pct: number | null;
+  supersetId: string | null;
+}
+
+function plannedChallengeExercises(definition: ChallengeDefinition): PlannedChallengeExercise[] {
+  if (definition.kind === 'prescription') {
+    return definition.groups.flatMap((group) => {
+      const supersetId = group.exercises.length > 1 ? crypto.randomUUID() : null;
+      return group.exercises.map(({ exerciseId, reps, pct }) => ({
+        exerciseId,
+        sets: group.rounds,
+        reps,
+        pct,
+        supersetId,
+      }));
+    });
+  }
+  if (definition.metric !== 'reps' || definition.exerciseId === null) return [];
+  return [
+    {
+      exerciseId: definition.exerciseId,
+      sets: Math.ceil(definition.target / CHALLENGE_REPS_PER_SET),
+      reps: CHALLENGE_REPS_PER_SET,
+      pct: definition.minPct,
+      supersetId: null,
+    },
+  ];
+}
+
+export function startDraftFromChallenge(
+  challenge: CatalogChallenge,
+  exercisesById: ReadonlyMap<string, CatalogEntry>,
+  strength: StrengthState,
+  rounding: RoundingSetting,
+  unit: WeightUnit,
+  now: Date,
+): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
+  const targetLoadsKg: Record<string, number | null> = {};
+  const { exercises, skippedExerciseIds } = liftDraftExercises(
+    plannedChallengeExercises(challenge.definition),
+    exercisesById,
+    (planned, exercise) => {
+      const target =
+        planned.pct === null ? null : loadTargetKg(planned.pct, e1rmAtSessionStart(strength, planned.exerciseId));
+      const weightKg =
+        target === null || exercise.loadType !== 'external'
+          ? defaultWeightKg(exercise.loadType)
+          : challengeLoadKg(target, rounding, unit);
+      targetLoadsKg[planned.exerciseId] = planned.pct === null ? null : weightKg;
+      return {
+        target: null,
+        supersetId: planned.supersetId,
+        sets: Array.from({ length: planned.sets }, () => ({
+          id: crypto.randomUUID(),
+          weightKg,
+          reps: planned.reps,
+          effort: null,
+          done: false,
+          isWarmup: false,
+        })),
+      };
+    },
+  );
+  return {
+    draft: {
+      sessionId: crypto.randomUUID(),
+      startedAt: now.toISOString(),
+      finishedAt: null,
+      programDayId: null,
+      programLabel: `Challenge — ${challenge.name}`,
+      program: null,
+      challenge: { challengeId: challenge.id, name: challenge.name, definition: challenge.definition, targetLoadsKg },
+      exercises: withValidSupersets(exercises),
     },
     skippedExerciseIds,
   };

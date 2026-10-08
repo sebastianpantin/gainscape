@@ -1,0 +1,84 @@
+import { expect, type Locator, type Page } from '@playwright/test';
+import { finishWorkout, openTab } from './app.ts';
+
+export const SCROLL_KEY = 'scroll_deficit_deadlift';
+export const SCROLL_NAME = 'Scroll: Deadlift and Pull-up';
+export const CHALLENGE_NAME = 'Deadlift and Pull-up';
+export const OFFLINE_ITEMS_NOTICE = 'Offline: using your saved items.';
+const ROUNDS = 5;
+
+export async function openItems(page: Page) {
+  await openTab(page, 'Log');
+  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'Items' }).click();
+  await expect(page.getByRole('heading', { name: 'Gear' })).toBeVisible();
+}
+
+export function scrollSlot(page: Page): Locator {
+  return page.getByRole('main').getByRole('button', { name: SCROLL_NAME, exact: true });
+}
+
+export function itemDetails(page: Page): Locator {
+  return page.getByRole('region', { name: 'Item details' });
+}
+
+export function challengeSuperset(page: Page): Locator {
+  return page.getByRole('region', { name: `Superset: ${CHALLENGE_NAME}` });
+}
+
+export function deadliftWeights(page: Page): Locator {
+  return challengeSuperset(page)
+    .getByRole('list', { name: 'Rounds' })
+    .getByRole('spinbutton', { name: 'kg', exact: true });
+}
+
+export async function startChallenge(page: Page) {
+  await scrollSlot(page).click();
+  await itemDetails(page).getByRole('button', { name: 'Start challenge' }).click();
+  await expect(challengeSuperset(page)).toBeVisible();
+}
+
+export async function expectDeadliftPrefill(page: Page, weightKg: number) {
+  const rounds = challengeSuperset(page).getByRole('list', { name: 'Rounds' });
+  await expect(rounds.getByRole('listitem', { name: /^Round \d+$/ })).toHaveCount(ROUNDS);
+  await expect(deadliftWeights(page)).toHaveCount(ROUNDS);
+  for (let index = 0; index < ROUNDS; index++) {
+    await expect(deadliftWeights(page).nth(index)).toHaveValue(String(weightKg));
+  }
+}
+
+export async function markEveryRoundDone(page: Page) {
+  const superset = challengeSuperset(page);
+  for (let round = 1; round <= ROUNDS; round++) {
+    for (const exerciseName of ['Deadlift', 'Pull-up']) {
+      const done = superset.getByRole('button', { name: `Done ${exerciseName} round ${round}` });
+      await done.click();
+      await expect(done).toHaveAttribute('aria-pressed', 'true');
+    }
+  }
+}
+
+export async function shortenFirstDeadliftSet(page: Page, reps: number) {
+  const firstRound = challengeSuperset(page).getByRole('list', { name: 'Rounds' }).getByRole('listitem', {
+    name: 'Round 1',
+  });
+  await firstRound.locator('li.set-row').first().getByLabel('reps').fill(String(reps));
+}
+
+export async function finishWithBodyweight(page: Page) {
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await page.getByLabel('Bodyweight (kg)').fill('80');
+  await page.getByRole('button', { name: 'Save and finish workout' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+}
+
+export async function logDeadliftToFailure(page: Page, weightKg: number) {
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await page.getByLabel('Search exercises').fill('deadlift');
+  await page.getByRole('button', { name: /^Deadlift\b/ }).click();
+  const card = page.locator('section', { has: page.getByRole('heading', { name: 'Deadlift', exact: true }) });
+  const row = card.locator('li.set-row').first();
+  await row.getByRole('spinbutton', { name: /kg/ }).fill(String(weightKg));
+  await row.getByLabel('reps').fill('1');
+  await row.getByRole('radio', { name: 'Failure' }).click();
+  await finishWorkout(page);
+}

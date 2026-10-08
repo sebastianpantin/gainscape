@@ -1,7 +1,13 @@
 import type { SessionSummary } from '@domain/types.ts';
 import type { RememberedTiming } from '../../lib/session-timing-rules.ts';
+import { parsedDraftChallenge } from '../../lib/challenge-rules.ts';
+import type { DraftChallenge } from '../../offline/draft-format.ts';
 
-type RememberedSummary = SessionSummary & RememberedTiming;
+export interface PlannedChallenge {
+  plannedChallenge?: DraftChallenge | null;
+}
+
+type RememberedSummary = SessionSummary & RememberedTiming & PlannedChallenge;
 
 const LAST_SUMMARY_KEY = 'gainscape.last-summary';
 
@@ -16,7 +22,11 @@ export function rememberLastSummary(summary: RememberedSummary): void {
 export function recallLastSummary(): RememberedSummary | null {
   try {
     const raw = sessionStorage.getItem(LAST_SUMMARY_KEY);
-    return raw ? (JSON.parse(raw) as RememberedSummary) : null;
+    if (!raw) return null;
+    const remembered = JSON.parse(raw) as RememberedSummary;
+    return 'plannedChallenge' in remembered
+      ? { ...remembered, plannedChallenge: parsedDraftChallenge(remembered.plannedChallenge) }
+      : remembered;
   } catch {
     return null;
   }

@@ -6,7 +6,14 @@ import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
-import { formatLoad, formatSessionDate, formatXp, sessionGearBonus, sessionXp } from '../../lib/format.ts';
+import {
+  formatLoad,
+  formatSessionDate,
+  formatXp,
+  sessionChallengeBonus,
+  sessionGearBonus,
+  sessionXp,
+} from '../../lib/format.ts';
 import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
 import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/history-rules.ts';
@@ -309,6 +316,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
 
   const timingText = sessionTimingParts(session).join(' · ');
   const gearBonus = session.historyOnly ? 0 : sessionGearBonus(session.summary);
+  const challengeBonus = session.historyOnly ? 0 : sessionChallengeBonus(session.summary);
   const header = (
     <>
       <Link className="back-link" to={HISTORY_PATH}>
@@ -324,6 +332,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           <output aria-label="Workout XP">
             {session.historyOnly ? 'No XP' : `+${formatXp(sessionXp(session.summary))} XP`}
           </output>
+          {challengeBonus > 0 && (
+            <span className="muted tiny">includes Challenge bonus +{formatXp(challengeBonus)} XP</span>
+          )}
           {gearBonus > 0 && <span className="muted tiny">includes Gear bonus +{formatXp(gearBonus)} XP</span>}
           <span className="muted tiny">{session.setCount} sets</span>
         </div>

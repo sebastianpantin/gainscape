@@ -2,6 +2,7 @@ import { rateLimitedMessage } from './rate-limit.ts';
 import { GEAR_SLOTS, type GearSlot, ITEM_TIERS, type ItemTier, type Recipe } from '@domain/crafting.ts';
 import type { DropSummary } from '@domain/types.ts';
 import type { ItemIconKind } from '../components/pixel-sprites.ts';
+import type { CatalogChallenge } from './challenge-rules.ts';
 import { capitalized } from './names.ts';
 
 export type ItemKind = 'gear' | 'material' | 'pet' | 'scroll';
@@ -42,6 +43,7 @@ export interface CatalogItem {
 export interface ItemCatalog {
   items: CatalogItem[];
   recipes: Recipe[];
+  challenges: CatalogChallenge[];
 }
 
 export interface HeldItem {

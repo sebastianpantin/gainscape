@@ -3,6 +3,7 @@ import { DEFAULT_BALANCE, type Position } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { canAddBout } from '../../lib/cardio-rules.ts';
+import { challengeSummaryText, challengeVolumeText } from '../../lib/challenge-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
@@ -42,6 +43,7 @@ import {
   addWarmupSets,
   canSwapExercise,
   doneSetCount,
+  type DraftChallenge,
   type DraftSet,
   firstWorkingSet,
   canQuickFill,
@@ -137,6 +139,48 @@ async function currentLoadTypes(draft: WorkoutDraft, exercises: Exercise[]): Pro
   } catch {
     return new Map();
   }
+}
+
+interface ChallengeBannerProps {
+  draft: WorkoutDraft;
+  challenge: DraftChallenge;
+  exercises: readonly Exercise[];
+  onDiscard: () => void;
+}
+
+function ChallengeBanner({ draft, challenge, exercises, onDiscard }: ChallengeBannerProps) {
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const nameOf = (exerciseId: string) =>
+    exercises.find((exercise) => exercise.id === exerciseId)?.name ??
+    draft.exercises.find((exercise) => exercise.exerciseId === exerciseId)?.name ??
+    'Exercise';
+  const { definition } = challenge;
+  return (
+    <section className="panel stack" aria-label="Challenge">
+      <h2>Challenge: {challenge.name}</h2>
+      <span className="muted">{challengeSummaryText(definition, nameOf)}</span>
+      {definition.kind === 'volume' && definition.metric === 'kg' && (
+        <p className="stack" style={{ gap: 2 }}>
+          <span>{challengeVolumeText(draft, definition.target)}</span>
+          <span className="muted tiny">Estimate: bodyweight lifts count when the workout syncs.</span>
+        </p>
+      )}
+      <button className="button link" type="button" onClick={() => setConfirmingDiscard(true)}>
+        Discard challenge
+      </button>
+      {confirmingDiscard && (
+        <ConfirmDialog
+          title="Discard this challenge workout?"
+          confirmLabel="Discard workout"
+          danger
+          onConfirm={onDiscard}
+          onCancel={() => setConfirmingDiscard(false)}
+        >
+          <p>Your scroll is kept until a challenge workout is saved.</p>
+        </ConfirmDialog>
+      )}
+    </section>
+  );
 }
 
 export function WorkoutScreen({ userId }: WorkoutScreenProps) {
@@ -680,6 +724,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </div>
       </header>
       {deviceNotices}
+      {draft.challenge && (
+        <ChallengeBanner
+          draft={draft}
+          challenge={draft.challenge}
+          exercises={exercises}
+          onDiscard={() => discardDraft(draft.sessionId)}
+        />
+      )}
       {startNotice && (
         <p className="notice" role="status">
           {startNotice}
