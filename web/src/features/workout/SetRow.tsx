@@ -3,6 +3,7 @@ import { DEFAULT_BALANCE, type SetPersonalRecord } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
 import { assumedEffort } from '../../lib/effort-labels.ts';
+import { GLOSSARY } from '../../lib/glossary.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
 import {
   HIGHEST_REPS,
@@ -187,7 +188,11 @@ export function SetRow({
     <li className={rowClass}>
       <span className="set-number">
         {setNumber}
-        {amrapBadge && <span className="amrap-badge">{amrapBadge}</span>}
+        {amrapBadge && (
+          <span className="amrap-badge" role="img" aria-label={`${amrapBadge}, ${GLOSSARY.amrap.name.toLowerCase()}`}>
+            {amrapBadge}
+          </span>
+        )}
       </span>
       <WeightField
         loadType={loadType}
