@@ -1,6 +1,7 @@
 import { isoTimestamp, type JsonValue, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
+  type GearLoadout,
   isSessionEditable,
   type SessionKey,
   type SessionSummary,
@@ -55,6 +56,7 @@ export interface NewSessionRow extends SessionTiming {
   balanceVersion: number;
   summary: Partial<SessionSummary>;
   notes: string | null;
+  gearLoadout: GearLoadout;
 }
 
 export async function lockUser(
@@ -311,12 +313,13 @@ export async function insertSession(
   const [inserted] = await tx`
     insert into public.sessions
       (id, user_id, program_day_id, enrollment_id, program_position, started_at, ended_at, local_date, timezone,
-       history_only, balance_version, derived_balance_version, summary, notes, session_rpe)
+       history_only, balance_version, derived_balance_version, summary, notes, session_rpe, gear_loadout)
     values
       (${row.id}, ${row.userId}, ${row.programDayId}, ${row.programLink?.enrollmentId ?? null}, ${programPosition},
        ${row.startedAt}, ${row.endedAt}, (${row.startedAt}::timestamptz at time zone ${row.timezone})::date,
        ${row.timezone}, ${row.historyOnly}, ${row.balanceVersion}, ${row.balanceVersion},
-       ${tx.json(row.summary as unknown as JsonValue)}, ${row.notes}, ${row.sessionRpe})
+       ${tx.json(row.summary as unknown as JsonValue)}, ${row.notes}, ${row.sessionRpe},
+       ${tx.json(row.gearLoadout as JsonValue)})
     returning summary, completed_at`;
   await tx`insert into public.sets ${tx(setRows)}`;
   return { summary: inserted.summary, completedAt: isoTimestamp(inserted.completed_at) };
@@ -329,7 +332,7 @@ export async function storedSummary(tx: Transaction, sessionId: string): Promise
 
 export interface SummaryPatch {
   id: string;
-  patch: Pick<SessionSummary, 'xpBySkill' | 'levelUps' | 'prs'>;
+  patch: Pick<SessionSummary, 'xpBySkill' | 'levelUps' | 'prs'> & { gearBonusBySkill: Record<string, number> };
 }
 
 export async function writeSummaries(
