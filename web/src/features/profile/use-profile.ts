@@ -29,12 +29,11 @@ export function useProfile(userId: string): ProfileQuery {
   const replace = useCallback(
     (change: ProfileUpdate) => {
       void queryClient.cancelQueries({ queryKey: ['profile', userId] });
-      queryClient.setQueryData<CacheFirstLoad<Profile>>(['profile', userId], (current) => {
-        if (current === undefined) return current;
-        const profile = typeof change === 'function' ? change(current.loaded) : change;
-        profileCache.save(deviceStorage(), userId, profile);
-        return { ...current, loaded: profile };
-      });
+      const current = queryClient.getQueryData<CacheFirstLoad<Profile>>(['profile', userId]);
+      if (current === undefined) return;
+      const profile = typeof change === 'function' ? change(current.loaded) : change;
+      profileCache.save(deviceStorage(), userId, profile);
+      queryClient.setQueryData<CacheFirstLoad<Profile>>(['profile', userId], { ...current, loaded: profile });
     },
     [queryClient, userId],
   );
