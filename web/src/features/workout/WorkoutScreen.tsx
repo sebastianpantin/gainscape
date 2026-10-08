@@ -3,11 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, type Position } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
-import { TermHelp } from '../../components/TermHelp.tsx';
+import { TermHelpRow } from '../../components/TermHelpRow.tsx';
 import { canAddBout } from '../../lib/cardio-rules.ts';
 import { challengeSummaryText, challengeVolumeText } from '../../lib/challenge-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
-import { GLOSSARY } from '../../lib/glossary.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
 import { loadExerciseNotesCacheFirst, saveCachedExerciseNotes } from '../../lib/exercise-note-cache.ts';
@@ -763,16 +762,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           {loadProblem}
         </p>
       )}
-      {helpKeys.length > 0 && (
-        <div className="term-help-row">
-          {helpKeys.map((key) => (
-            <div key={key} className="row" style={{ gap: 0 }}>
-              {GLOSSARY[key].term}
-              <TermHelp glossaryKey={key} />
-            </div>
-          ))}
-        </div>
-      )}
+      <TermHelpRow keys={helpKeys} />
       {draft.exercises.map((exercise, exerciseIndex) => {
         if (exercise.modality === 'cardio') {
           const doneHere = exercise.sets.filter((set) => set.done).length;

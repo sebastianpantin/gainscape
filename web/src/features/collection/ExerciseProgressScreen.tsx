@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { measuresRepsCapacity } from '@domain/types.ts';
 import { LineChart } from '../../components/LineChart.tsx';
+import { TermHelp } from '../../components/TermHelp.tsx';
 import { messageOf } from '../../lib/error-text.ts';
 import { type ExerciseProgress, fetchExerciseProgress } from '../../lib/exercise-progress.ts';
 import { chartDateText, progressChartSeries, progressValueText } from '../../lib/exercise-progress-rules.ts';
@@ -83,7 +84,10 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
         </section>
       )}
       <section className="panel stack" aria-labelledby="progress-chart-heading">
-        <h2 id="progress-chart-heading">{repsOnly ? 'Reps over time' : 'Strength over time'}</h2>
+        <div className="row">
+          <h2 id="progress-chart-heading">{repsOnly ? 'Reps over time' : 'Strength over time'}</h2>
+          {!repsOnly && sessions.length > 0 && <TermHelp glossaryKey="e1rm" />}
+        </div>
         {sessions.length === 0 ? (
           <p className="muted">Log this exercise to see your progress.</p>
         ) : (
@@ -97,7 +101,10 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
         )}
       </section>
       <section className="panel stack" aria-labelledby="rep-maxes-heading">
-        <h2 id="rep-maxes-heading">{repsOnly ? 'Most reps' : 'Rep maxes'}</h2>
+        <div className="row">
+          <h2 id="rep-maxes-heading">{repsOnly ? 'Most reps' : 'Rep maxes'}</h2>
+          {!repsOnly && <TermHelp glossaryKey="repMax" />}
+        </div>
         {repsOnly ? (
           <p>{maxReps ? `${maxReps.reps} reps · ${formatSessionDate(maxReps.localDate)}` : 'No record yet.'}</p>
         ) : (

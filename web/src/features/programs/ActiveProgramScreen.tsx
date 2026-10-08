@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
+import { TermHelpRow } from '../../components/TermHelpRow.tsx';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import {
   adjustEnrollment,
@@ -9,6 +10,7 @@ import {
   refreshProgramFactsOrCached,
 } from '../../lib/program-enrollment.ts';
 import { referenceEvents, referenceFieldKey, referenceFields } from '../../lib/program-reference-rules.ts';
+import { referenceHelpKeys } from '../../lib/term-help-rules.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';
@@ -84,6 +86,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
       {fields.length > 0 && (
         <section className="panel stack" aria-label="Training weights">
           <h2>Training weights</h2>
+          <TermHelpRow keys={referenceHelpKeys(fields)} />
           {fields.map((field) => {
             const key = referenceFieldKey(field);
             return (
