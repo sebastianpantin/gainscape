@@ -32,6 +32,7 @@ import { startDraftFromChallenge } from '../../offline/draft-format.ts';
 import {
   type ChallengeExerciseEntry,
   challengeExercisesOf,
+  loadItemsCacheFirstWhenOffline,
   OFFLINE_ITEMS_NOTICE,
   readItemsCache,
   saveItemsCache,
@@ -300,14 +301,13 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
       const found = loaded.catalog.items.filter((item) => loaded.held.has(item.id));
       setPickedId((found.find((item) => newIds.has(item.id)) ?? found[0])?.id ?? null);
     };
-    loadItemsOnline(userId).then(
-      (loaded) => active && show(loaded, false),
-      (error: Error) => {
-        if (!active) return;
-        const cached = loadItemsFromCache(userId);
-        if (cached) show(cached, true);
-        else setLoadProblem(error.message);
-      },
+    loadItemsCacheFirstWhenOffline(
+      () => navigator.onLine === false,
+      () => loadItemsFromCache(userId),
+      () => loadItemsOnline(userId),
+    ).then(
+      ({ loaded, fromCache }) => active && show(loaded, fromCache),
+      (error: Error) => active && setLoadProblem(error.message),
     );
     return () => {
       active = false;
