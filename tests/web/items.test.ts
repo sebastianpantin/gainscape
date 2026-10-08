@@ -30,7 +30,7 @@ const fixture: CatalogItem[] = loadCatalogData().items.map((item, index) => ({
   gearSlot: item.gearSlot as CatalogItem['gearSlot'],
   icon: item.icon as CatalogItem['icon'],
   description: item.description,
-  grantsExerciseId: null,
+  grantsChallengeId: null,
   sortOrder: index + 1,
 }));
 
@@ -147,7 +147,7 @@ describe('row mapping', () => {
         gear_slot: 'gloves',
         icon_key: 'gloves',
         description: 'Grippy.',
-        grants_exercise_id: null,
+        grants_challenge_id: null,
         sort_order: 7,
       }),
     ).toEqual({
@@ -160,7 +160,7 @@ describe('row mapping', () => {
       gearSlot: 'gloves',
       icon: 'gloves',
       description: 'Grippy.',
-      grantsExerciseId: null,
+      grantsChallengeId: null,
       sortOrder: 7,
     });
   });

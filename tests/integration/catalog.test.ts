@@ -23,6 +23,7 @@ describe('catalog ids', () => {
     ['skills', 'key', 'true'],
     ['exercises', 'key', 'owner_user_id is null'],
     ['programs', "'program:' || key", 'owner_user_id is null'],
+    ['challenges', "'challenge:' || key", 'true'],
     ['items', "'item:' || key", 'true'],
     ['drop_tables', "'drop_table:' || key", 'true'],
     ['recipes', "'recipe:' || key", 'true'],
@@ -61,6 +62,43 @@ describe('catalog ids', () => {
              (select count(*) from public.recipes where retired_at is null)::int as recipes,
              (select count(*) from public.drop_tables where retired_at is null)::int as tables`;
     expect(counts).toEqual({ items: 58, recipes: 36, tables: 2 });
+  });
+
+  it('seeds 6 challenges, each granted by exactly one scroll', async () => {
+    const challenges = await db`
+      select c.key, count(i.id)::int as scrolls
+      from public.challenges c left join public.items i on i.grants_challenge_id = c.id and i.kind = 'scroll'
+      where c.retired_at is null
+      group by c.key order by c.key`;
+    expect(challenges).toHaveLength(6);
+    expect(challenges.every((challenge) => challenge.scrolls === 1)).toBe(true);
+    const [{ ungranted }] = await db`
+      select count(*)::int as ungranted from public.items where kind = 'scroll' and grants_challenge_id is null`;
+    expect(ungranted).toBe(0);
+  });
+
+  it('stores each challenge definition with exercise ids', async () => {
+    const [deadliftAndPullUp] = await db`
+      select c.kind, c.definition from public.challenges c where c.key = 'deadlift_and_pull_up'`;
+    const [deadlift] = await db`select id from public.exercises where key = 'deadlift' and owner_user_id is null`;
+    const [pullUp] = await db`select id from public.exercises where key = 'pull_up' and owner_user_id is null`;
+    expect(deadliftAndPullUp).toEqual({
+      kind: 'prescription',
+      definition: {
+        kind: 'prescription',
+        groups: [
+          {
+            rounds: 5,
+            exercises: [
+              { exerciseId: deadlift.id, reps: 5, pct: 70 },
+              { exerciseId: pullUp.id, reps: 5, pct: null },
+            ],
+          },
+        ],
+      },
+    });
+    const [tenTon] = await db`select definition from public.challenges where key = 'ten_ton_day'`;
+    expect(tenTon.definition).toEqual({ kind: 'volume', metric: 'kg', target: 10000, exerciseId: null, minPct: null });
   });
 });
 

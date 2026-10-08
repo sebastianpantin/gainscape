@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type CatalogData, loadCatalogData } from '../../scripts/catalog/load.ts';
+import { type CatalogData, expandCatalog, loadCatalogData, readCatalogSources } from '../../scripts/catalog/load.ts';
 import {
   CatalogValidationError,
   catalogProblems,
@@ -77,19 +77,89 @@ describe('catalog validation', () => {
       /variation of unknown exercise "hack_squat"/,
     ],
     [
-      'every scroll grants a variation exercise',
-      (c) => (find(c.items, 'scroll_pause_squat').grants = 'back_squat'),
-      /scroll "scroll_pause_squat" must grant a known variation exercise/,
+      'every scroll grants a known challenge',
+      (c) => (find(c.items, 'scroll_pause_squat').grants = 'pause_squat'),
+      /scroll "scroll_pause_squat" must grant a known challenge/,
     ],
     [
-      'every variation exercise has exactly one scroll',
-      (c) => (find(c.items, 'scroll_z_press').grants = 'pause_squat'),
-      /variation "pause_squat" needs exactly one scroll, has 2/,
+      'a challenge has no more than one scroll',
+      (c) => (find(c.items, 'scroll_z_press').grants = 'squat_century'),
+      /challenge "squat_century" needs exactly one scroll, has 2/,
     ],
     [
-      'only scrolls grant exercises',
-      (c) => (find(c.items, 'plate_crab').grants = 'pause_squat'),
-      /item "plate_crab" grants an exercise but is no scroll/,
+      'a challenge has at least one scroll',
+      (c) => (c.items = c.items.filter((item) => item.key !== 'scroll_pause_squat')),
+      /challenge "squat_century" needs exactly one scroll, has 0/,
+    ],
+    [
+      'only scrolls grant challenges',
+      (c) => (find(c.items, 'plate_crab').grants = 'squat_century'),
+      /item "plate_crab" grants a challenge but is no scroll/,
+    ],
+    [
+      'challenge exercises exist',
+      (c) => (find(c.challenges, 'deadlift_and_pull_up').supersets[0].exercises[0].exercise = 'deadlif'),
+      /challenge "deadlift_and_pull_up" uses unknown exercise "deadlif"/,
+    ],
+    [
+      'challenge exercises are lifts',
+      (c) => (find(c.challenges, 'squat_century').volume!.exercise = 'running'),
+      /challenge "squat_century" uses cardio exercise "running"/,
+    ],
+    [
+      'a superset has at least 2 exercises',
+      (c) => find(c.challenges, 'deadlift_and_pull_up').supersets[0].exercises.pop(),
+      /challenge "deadlift_and_pull_up" superset needs at least 2 exercises/,
+    ],
+    [
+      'a superset has at least 1 round',
+      (c) => (find(c.challenges, 'bench_and_row').supersets[0].rounds = 0),
+      /challenge "bench_and_row" needs rounds and reps of at least 1/,
+    ],
+    [
+      'a superset exercise has at least 1 rep',
+      (c) => (find(c.challenges, 'bench_and_row').supersets[0].exercises[1].reps = 0),
+      /challenge "bench_and_row" needs rounds and reps of at least 1/,
+    ],
+    [
+      'pct applies to an external load only',
+      (c) => (find(c.challenges, 'deadlift_and_pull_up').supersets[0].exercises[1].pct = 70),
+      /challenge "deadlift_and_pull_up" sets a percentage on "pull_up", which has no external load/,
+    ],
+    [
+      'min_pct applies to an external exercise only',
+      (c) => (find(c.challenges, 'squat_century').volume!.exercise = 'pull_up'),
+      /challenge "squat_century" sets a percentage on "pull_up", which has no external load/,
+    ],
+    [
+      'min_pct needs an exercise',
+      (c) => (find(c.challenges, 'ten_ton_day').volume!.minPct = 50),
+      /challenge "ten_ton_day" sets min_pct without an exercise/,
+    ],
+    [
+      'a volume target is above 0',
+      (c) => (find(c.challenges, 'ten_ton_day').volume!.target = 0),
+      /challenge "ten_ton_day" needs a volume target above 0/,
+    ],
+    [
+      'a prescription challenge has supersets',
+      (c) => (find(c.challenges, 'dips_and_curls').supersets = []),
+      /challenge "dips_and_curls" of kind prescription needs supersets and no volume/,
+    ],
+    [
+      'a volume challenge has a volume block',
+      (c) => (find(c.challenges, 'ten_ton_day').volume = null),
+      /challenge "ten_ton_day" of kind volume needs a volume and no supersets/,
+    ],
+    [
+      'challenge names are unique',
+      (c) => (find(c.challenges, 'ten_ton_day').name = 'squat century'),
+      /challenge name "squat century" is not unique/,
+    ],
+    [
+      'no denylisted term appears in a challenge name',
+      (c) => (find(c.challenges, 'ten_ton_day').name = 'Party Hat Day'),
+      /"Party Hat Day" matches denylisted term "party hat"/,
     ],
     [
       'drop entries reference items',
@@ -256,6 +326,24 @@ describe('catalog validation', () => {
     ).toBe(true);
   });
 
+  it.each<[string, (challenge: Record<string, unknown>) => void]>([
+    ['an unknown kind', (challenge) => (challenge.kind = 'timed')],
+    [
+      'a pct below 1',
+      (challenge) => ((challenge.supersets as { exercises: { pct?: number }[] }[])[0].exercises[0].pct = 0),
+    ],
+    [
+      'a pct above 100',
+      (challenge) => ((challenge.supersets as { exercises: { pct?: number }[] }[])[0].exercises[0].pct = 101),
+    ],
+    ['an unknown field', (challenge) => (challenge.timed = true)],
+  ])('refuses to load a challenge with %s', (_case, mutate) => {
+    const sources = readCatalogSources();
+    const challenges = structuredClone(sources.challenges) as Record<string, unknown>[];
+    mutate(challenges.find((challenge) => challenge.key === 'deadlift_and_pull_up')!);
+    expect(() => expandCatalog({ ...sources, challenges })).toThrow();
+  });
+
   it('accepts a retired drop table without entries', () => {
     expect(
       problemsAfter((c) => c.dropTables.push({ key: 'old_table', name: 'Old table', retired: true, entries: [] })),
@@ -267,7 +355,7 @@ describe('catalog validation', () => {
     expect(problemsAfter((c) => (find(c.items, 'plate_crab').name = 'Dragonfly Crab'))).toEqual([]);
   });
 
-  it('reports problems in a fixed order: names, exercises, program days, gear, items, loot, recipes, denylist', () => {
+  it('reports problems in a fixed order: names, exercises, program days, gear, items, challenges, loot, recipes, denylist', () => {
     expect(
       problemsAfter((c) => {
         find(c.items, 'plate_crab').name = 'Grand Exchange Crab';
@@ -286,7 +374,7 @@ describe('catalog validation', () => {
       'program day "ppl:push" uses unknown exercise "moon_walk"',
       'gear tiers [ascendant, mythic, titan, forged, tempered, grinder, rookie] must match ITEM_TIERS [rookie, grinder, tempered, forged, titan, mythic, ascendant] in order',
       'item "plate_crab" has unknown icon "teapot"',
-      'item "plate_crab" grants an exercise but is no scroll',
+      'item "plate_crab" grants a challenge but is no scroll',
       'drop table "rare" entry "scroll_pause_bench_press" weight must be an integer in 1-1000000',
       'recipe "grinder_belt" input "grinder_scraps" quantity must be 1-1000',
       '"Grand Exchange Crab" matches denylisted term "grand exchange"',

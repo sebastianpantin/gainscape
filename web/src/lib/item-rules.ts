@@ -7,7 +7,8 @@ import { capitalized } from './names.ts';
 export type ItemKind = 'gear' | 'material' | 'pet' | 'scroll';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
 
-export const ITEM_COLUMNS = 'id,key,name,kind,rarity,tier,gear_slot,icon_key,description,grants_exercise_id,sort_order';
+export const ITEM_COLUMNS =
+  'id,key,name,kind,rarity,tier,gear_slot,icon_key,description,grants_challenge_id,sort_order';
 export const RECIPE_COLUMNS = 'id,key,output_item_id,output_quantity,recipe_inputs(item_id,quantity)';
 export const INVENTORY_COLUMNS = 'item_id,quantity,first_obtained_at';
 
@@ -34,7 +35,7 @@ export interface CatalogItem {
   gearSlot: GearSlot | null;
   icon: ItemIconKind;
   description: string;
-  grantsExerciseId: string | null;
+  grantsChallengeId: string | null;
   sortOrder: number;
 }
 
@@ -74,7 +75,7 @@ export interface ItemRow {
   gear_slot: GearSlot | null;
   icon_key: string;
   description: string;
-  grants_exercise_id: string | null;
+  grants_challenge_id: string | null;
   sort_order: number;
 }
 
@@ -103,7 +104,7 @@ export function toCatalogItem(row: ItemRow): CatalogItem {
     gearSlot: row.gear_slot,
     icon: row.icon_key as ItemIconKind,
     description: row.description,
-    grantsExerciseId: row.grants_exercise_id,
+    grantsChallengeId: row.grants_challenge_id,
     sortOrder: row.sort_order,
   };
 }

@@ -112,7 +112,7 @@ begin
   select e.id into bodyweight_lift from public.exercises e where e.key is not null and e.load_type = 'bodyweight' order by e.key limit 1;
   select es.skill_id into skill from public.exercise_skills es where es.exercise_id = lift order by es.skill_id limit 1;
   select dt.id into table_id from public.drop_tables dt order by dt.key limit 1;
-  select i.id into item from public.items i where i.grants_exercise_id is null order by i.key limit 1;
+  select i.id into item from public.items i where i.kind <> 'scroll' order by i.key limit 1;
 
   insert into public.sets
     (id, session_id, user_id, exercise_id, position, weight_kg, effective_load_kg, reps, rir_source, effective_reps, xp_awarded)

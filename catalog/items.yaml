@@ -23,38 +23,38 @@
   icon: pet
   description: Carries a spare plate on its back, just in case.
 - key: scroll_pause_bench_press
-  name: 'Scroll: pause bench press'
+  name: 'Scroll: Bench and Row'
   kind: scroll
   rarity: rare
   icon: scroll
-  grants: pause_bench_press
+  grants: bench_and_row
 - key: scroll_pause_squat
-  name: 'Scroll: pause squat'
+  name: 'Scroll: Squat Century'
   kind: scroll
   rarity: rare
   icon: scroll
-  grants: pause_squat
+  grants: squat_century
 - key: scroll_deficit_deadlift
-  name: 'Scroll: deficit deadlift'
+  name: 'Scroll: Deadlift and Pull-up'
   kind: scroll
   rarity: rare
   icon: scroll
-  grants: deficit_deadlift
+  grants: deadlift_and_pull_up
 - key: scroll_dead_stop_row
-  name: 'Scroll: dead-stop row'
+  name: 'Scroll: Ten-Ton Day'
   kind: scroll
   rarity: rare
   icon: scroll
-  grants: dead_stop_row
+  grants: ten_ton_day
 - key: scroll_z_press
-  name: 'Scroll: Z press'
+  name: 'Scroll: Press and Chin'
   kind: scroll
   rarity: rare
   icon: scroll
-  grants: z_press
+  grants: press_and_chin
 - key: scroll_spider_curl
-  name: 'Scroll: spider curl'
+  name: 'Scroll: Dips and Curls'
   kind: scroll
   rarity: rare
   icon: scroll
-  grants: spider_curl
+  grants: dips_and_curls

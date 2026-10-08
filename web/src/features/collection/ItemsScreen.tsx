@@ -37,16 +37,7 @@ interface ItemDetailProps {
   onLoadoutChanged: () => Promise<void>;
 }
 
-function ItemDetail({
-  item,
-  catalog,
-  held,
-  exercises,
-  equipped,
-  onCrafted,
-  onCatalogStale,
-  onLoadoutChanged,
-}: ItemDetailProps) {
+function ItemDetail({ item, catalog, held, equipped, onCrafted, onCatalogStale, onLoadoutChanged }: ItemDetailProps) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const nameOf = itemNameLookup(catalog.items, 'Unknown item');
@@ -54,7 +45,6 @@ function ItemDetail({
   const inventory = quantities(held);
   const ready = recipe !== undefined && canCraft(recipe, inventory);
   const quantity = held.get(item.id)?.quantity ?? 0;
-  const grants = item.grantsExerciseId && exercises.find((exercise) => exercise.id === item.grantsExerciseId);
 
   const craft = async () => {
     if (!recipe) return;
@@ -94,9 +84,7 @@ function ItemDetail({
           {showsQuantity(item, { quantity }) && ` ×${quantity}`}
         </h2>
         {item.description && <span className="muted">{item.description}</span>}
-        {item.kind === 'scroll' && (
-          <span className="muted">Unlocks {grants ? grants.name : 'a new exercise variation'}</span>
-        )}
+        {item.kind === 'scroll' && <span className="muted">Grants a challenge</span>}
       </span>
       {item.gearSlot && quantity >= 1 && equipped !== null && (
         <button className="button" type="button" disabled={busy} onClick={() => void changeGear()}>
