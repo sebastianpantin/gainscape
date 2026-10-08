@@ -31,9 +31,12 @@ export function assumedEffort(
   mode: EffortInputMode,
   rir: number,
   levelRir: Readonly<Record<EffortLevel, number>>,
-): NonNullable<EffortInput> {
+): EffortInput {
   if (mode === 'rir') return { type: 'rir', value: Math.min(HIGHEST_RIR_CHOICE, Math.max(0, rir)) };
-  if (mode === 'rpe') return { type: 'rpe', value: Math.max(LOWEST_RPE_CHOICE, RPE_AT_FAILURE - Math.max(0, rir)) };
+  if (mode === 'rpe') {
+    const rpe = RPE_AT_FAILURE - Math.max(0, rir);
+    return rpe < LOWEST_RPE_CHOICE ? null : { type: 'rpe', value: rpe };
+  }
   const distance = (level: EffortLevel) => Math.abs(levelRir[level] - rir);
   const nearest = LEVELS_EASIEST_FIRST.reduce((best, level) => (distance(level) < distance(best) ? level : best));
   return { type: 'level', level: nearest };

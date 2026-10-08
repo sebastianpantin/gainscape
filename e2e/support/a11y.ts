@@ -11,6 +11,8 @@ const BETWEEN_SET_CONTROLS = [
   'li.set-row button',
   'li.set-row [role=radio]',
   '.exercise-card .button.dashed',
+  '.quick-fill input',
+  '.quick-fill button',
   '.finish-bar button',
   '.bodyweight-prompt input',
   '.bodyweight-prompt button',

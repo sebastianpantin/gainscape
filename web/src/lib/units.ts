@@ -101,3 +101,9 @@ export function formatPace(durationS: number, distanceM: number, unit: DistanceU
   const rest = String(seconds % SECONDS_PER_MINUTE).padStart(2, '0');
   return `${minutes}:${rest} ${label}`;
 }
+
+export function wholeNumberWithin(raw: string, lowest: number, highest: number): number | null {
+  const value = Number(raw);
+  if (raw.trim() === '' || !Number.isInteger(value) || value < lowest || value > highest) return null;
+  return value;
+}

@@ -23,3 +23,48 @@ export function rejectionText(reason: string): string {
     ? 'Load type of an exercise changed; check the weights'
     : `The server rejected this workout: ${reason}`;
 }
+
+export interface FinishCounts {
+  done: number;
+  planned: number;
+  leftToLifter: number;
+}
+
+export interface FinishChoice {
+  label: string;
+  marksPlannedDone: boolean;
+}
+
+export interface FinishPrompt {
+  title: string;
+  body: string;
+  confirm: FinishChoice;
+  alternative: FinishChoice | null;
+}
+
+const MARK_DONE: FinishChoice = { label: 'Mark done and finish', marksPlannedDone: true };
+const WITHOUT_THEM: FinishChoice = { label: 'Finish without them', marksPlannedDone: false };
+const LEFT_TO_LIFTER_TEXT = '5RM tests and optional sets stay skipped until you log them.';
+
+export function canFinishWorkout({ done, planned, leftToLifter }: FinishCounts): boolean {
+  return done + planned - leftToLifter > 0;
+}
+
+export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): FinishPrompt | null {
+  if (planned === 0) return null;
+  const title = `${planned} planned ${planned === 1 ? 'set' : 'sets'} not done`;
+  const leftNote = leftToLifter > 0 ? [LEFT_TO_LIFTER_TEXT] : [];
+  if (planned === leftToLifter) {
+    return { title, body: leftNote.join(' '), confirm: WITHOUT_THEM, alternative: null };
+  }
+  const choice =
+    done > 0
+      ? 'Log them as done, or keep only the sets you ticked.'
+      : 'No set is ticked yet. Log the planned sets as done?';
+  return {
+    title,
+    body: [choice, ...leftNote].join(' '),
+    confirm: MARK_DONE,
+    alternative: done > 0 ? WITHOUT_THEM : null,
+  };
+}
