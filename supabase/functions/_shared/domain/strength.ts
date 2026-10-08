@@ -228,7 +228,7 @@ export const trackStrength: Step = (ctx: SessionContext) => {
     const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const known = ctx.deps.strength?.[exercise.id] ?? NO_STRENGTH;
     const progress = progressByExercise.get(exercise.id) ?? {
-      strengthAtSessionStart: e1rmAtSessionStart(ctx.deps.strength ?? {}, exercise.id),
+      strengthAtSessionStart: known.windowMax ?? known.fallbackMax,
       bestCandidateThisSession: null,
       firstCandidateThisSession: null,
       fatigue: 1,

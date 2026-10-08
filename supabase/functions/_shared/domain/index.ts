@@ -28,7 +28,6 @@ export { amountInUnit, KG_PER_LB, kgToUnit, shownWeight, type UnitAmount, unitTo
 export {
   DEFAULT_ROUNDING,
   halfIncrementKg,
-  type LoadRoundingDirection,
   type RoundingMode,
   type RoundingSetting,
   roundLoad,

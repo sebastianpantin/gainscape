@@ -100,8 +100,6 @@ export interface CatalogRecipe {
   inputs: CatalogRecipeInput[];
 }
 
-export type ChallengeKind = 'prescription' | 'volume';
-
 export interface CatalogChallengeExercise {
   exercise: string;
   reps: number;
@@ -123,7 +121,7 @@ export interface CatalogChallengeVolume {
 export interface CatalogChallenge {
   key: string;
   name: string;
-  kind: ChallengeKind;
+  kind: 'prescription' | 'volume';
   supersets: CatalogChallengeSuperset[];
   volume: CatalogChallengeVolume | null;
 }
