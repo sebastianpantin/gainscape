@@ -362,10 +362,10 @@ describe('inventory', () => {
 });
 
 describe('scrolls', () => {
-  it('unlocks the variation when a PR roll drops its scroll', async () => {
+  it('a PR scroll drop adds the scroll to the inventory', async () => {
     const user = await freshUser();
     const rngFor = hmacRngFor(user.id);
-    const scrolls = await db`select id, key, grants_exercise_id from public.items where kind = 'scroll'`;
+    const scrolls = await db`select id, key from public.items where kind = 'scroll'`;
     const scrollById = new Map(scrolls.map((row) => [row.id as string, row]));
     let chosen: { setId: string; itemId: string } | undefined;
     for (let attempt = 0; attempt < 200 && chosen === undefined; attempt += 1) {
@@ -376,7 +376,7 @@ describe('scrolls', () => {
     expect(chosen).toBeDefined();
     const scroll = scrollById.get(chosen!.itemId)!;
 
-    const [baseline, heavier, after] = startsOnOneLocalDay(3);
+    const [baseline, heavier] = startsOnOneLocalDay(2);
     await post(user, payloadAt(baseline, [aSet(benchId, 0, 60)]));
     const prSession = payloadAt(heavier, [{ ...aSet(benchId, 0, 80), id: chosen!.setId }]);
     const response = await post(user, prSession);
@@ -384,16 +384,9 @@ describe('scrolls', () => {
       expect.objectContaining({ setId: chosen!.setId, itemId: scroll.id, itemKey: scroll.key, quantity: 1 }),
     ]);
 
-    const unlocks =
-      await db`select exercise_id, item_id, source_drop_id from public.user_unlocks where user_id = ${user.id}`;
-    const [scrollDrop] = await db`select id from public.drops where set_id = ${chosen!.setId} and source = 'pr'`;
-    expect(unlocks).toEqual([
-      { exercise_id: scroll.grants_exercise_id, item_id: scroll.id, source_drop_id: scrollDrop.id },
-    ]);
-    const visible = await user.client.from('exercises').select('id').eq('id', scroll.grants_exercise_id);
-    expect(visible.data).toEqual([{ id: scroll.grants_exercise_id }]);
-
-    await post(user, payloadAt(after, [aSet(scroll.grants_exercise_id, 0, 50)]));
+    expect(
+      await db`select item_id, quantity from public.user_items where user_id = ${user.id} and item_id = ${scroll.id}`,
+    ).toEqual([{ item_id: scroll.id, quantity: 1 }]);
   });
 });
 

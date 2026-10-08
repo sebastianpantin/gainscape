@@ -38,7 +38,6 @@ export interface CatalogExercise {
   equipment: string;
   shares: CatalogShare[];
   variationOf: string | null;
-  requiresUnlock: boolean;
   cardio: CatalogCardio | null;
 }
 
@@ -135,7 +134,6 @@ const exercisesSchema = z.array(
     equipment: z.enum(['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other']),
     shares: z.record(z.string(), z.int()),
     variation_of: z.string().optional(),
-    requires_unlock: z.boolean().optional(),
     cardio: z
       .strictObject({
         reference_pace_s_per_km: z.int().optional(),
@@ -310,7 +308,6 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
       equipment: exercise.equipment,
       shares: Object.entries(exercise.shares).map(([skill, shareBp]) => ({ skill, shareBp })),
       variationOf: exercise.variation_of ?? null,
-      requiresUnlock: exercise.requires_unlock ?? false,
       cardio:
         exercise.cardio === undefined
           ? null

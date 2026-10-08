@@ -75,8 +75,6 @@ async function exportFor(userId: string) {
     const itemLedger = await tx`select * from public.item_ledger where user_id = ${userId} order by created_at, id`;
     const userLoadout = await tx`
       select slot, item_id, equipped_at from public.user_loadout where user_id = ${userId} order by slot`;
-    const userUnlocks = await tx`
-      select * from public.user_unlocks where user_id = ${userId} order by unlocked_at, exercise_id`;
     const crafts = await tx`select * from public.crafts where user_id = ${userId} order by created_at, id`;
     const events = await tx`select * from public.events where user_id = ${userId} order by occurred_at, id`;
     const friendships = await tx`
@@ -127,7 +125,6 @@ async function exportFor(userId: string) {
       userItems,
       itemLedger,
       userLoadout,
-      userUnlocks,
       crafts,
       events,
       friendships,

@@ -79,20 +79,20 @@ describe('catalog generator', () => {
     expect(skills).toContain('modality = excluded.modality');
     const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;
     expect(exercises).toContain(
-      '(id, key, name, modality, load_type, equipment, requires_unlock, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m)',
+      '(id, key, name, modality, load_type, equipment, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m)',
     );
     expect(exercises).toContain(
-      `'running', 'Running', 'cardio', null, 'bodyweight', false, null, 360, 'per_km', 'max', 1000)`,
+      `'running', 'Running', 'cardio', null, 'bodyweight', null, 360, 'per_km', 'max', 1000)`,
     );
     expect(exercises).toContain(
-      `'walking', 'Walking', 'cardio', null, 'bodyweight', false, null, null, 'per_km', 'moderate', null)`,
+      `'walking', 'Walking', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null)`,
     );
-    expect(exercises).toContain(`'rowing', 'Rowing', 'cardio', null, 'machine', false, null,`);
+    expect(exercises).toContain(`'rowing', 'Rowing', 'cardio', null, 'machine', null,`);
     expect(exercises).toContain(
-      `'swimming', 'Swimming', 'cardio', null, 'bodyweight', false, null, 1200, 'per_100m', 'max', 100)`,
+      `'swimming', 'Swimming', 'cardio', null, 'bodyweight', null, 1200, 'per_100m', 'max', 100)`,
     );
     expect(exercises).toContain(
-      `'barbell_bench_press', 'Barbell Bench Press', 'lift', 'external', 'barbell', false, null, null, null, null, null)`,
+      `'barbell_bench_press', 'Barbell Bench Press', 'lift', 'external', 'barbell', null, null, null, null, null)`,
     );
     expect(exercises).toContain('modality = excluded.modality');
   });

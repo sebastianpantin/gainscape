@@ -105,8 +105,6 @@ declare
   roll_id uuid := gen_random_uuid();
   item uuid;
   gear_item uuid;
-  unlock_item uuid;
-  unlock_exercise uuid;
   friend_event uuid;
   enrollment_id uuid := gen_random_uuid();
 begin
@@ -115,8 +113,6 @@ begin
   select es.skill_id into skill from public.exercise_skills es where es.exercise_id = lift order by es.skill_id limit 1;
   select dt.id into table_id from public.drop_tables dt order by dt.key limit 1;
   select i.id into item from public.items i where i.grants_exercise_id is null order by i.key limit 1;
-  select i.id, i.grants_exercise_id into unlock_item, unlock_exercise
-  from public.items i where i.grants_exercise_id is not null order by i.key limit 1;
 
   insert into public.sets
     (id, session_id, user_id, exercise_id, position, weight_kg, effective_load_kg, reps, rir_source, effective_reps, xp_awarded)
@@ -156,7 +152,6 @@ begin
   insert into public.user_loadout (user_id, slot, item_id)
   select give_everything.owner, i.gear_slot, i.id from public.items i where i.id = gear_item;
   insert into public.crafts (user_id, recipe_id) select give_everything.owner, r.id from public.recipes r order by r.key limit 1;
-  insert into public.user_unlocks (user_id, exercise_id, item_id) values (give_everything.owner, unlock_exercise, unlock_item);
   insert into public.drop_luck (user_id, drop_table_id) values (give_everything.owner, table_id);
   perform tests.add_event(give_everything.owner, session_id, 'level:strength', 'level_up', '{"skill": "strength", "from": 9, "to": 10}');
   friend_event := tests.add_event(give_everything.friend, friend_session_id, 'level:strength', 'level_up', '{"skill": "strength", "from": 9, "to": 10}');
