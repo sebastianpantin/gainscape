@@ -36,7 +36,13 @@ async function docBox(locator: Locator) {
   const box = await locator.boundingBox();
   if (box === null) throw new Error('element is not rendered');
   const scrollY = await locator.page().evaluate(() => window.scrollY);
-  return { x: box.x, y: box.y + scrollY, width: box.width, height: box.height };
+  const toHalfPixel = (value: number) => Math.round(value * 2) / 2;
+  return {
+    x: toHalfPixel(box.x),
+    y: toHalfPixel(box.y + scrollY),
+    width: toHalfPixel(box.width),
+    height: toHalfPixel(box.height),
+  };
 }
 
 async function settled<T>(read: () => Promise<T>): Promise<T> {

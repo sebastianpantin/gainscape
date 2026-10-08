@@ -13,13 +13,14 @@ export const GLOSSARY: Readonly<Record<GlossaryKey, GlossaryEntry>> = {
     term: 'RIR',
     question: 'What is RIR?',
     name: 'Reps in reserve',
-    definition: 'Reps in reserve: how many more you could have done, 0 to 6+.',
+    definition: 'Reps in reserve: how many more reps you could have done before failing, 0 to 6+.',
   },
   rpe: {
     term: 'RPE',
     question: 'What is RPE?',
     name: 'Rate of perceived exertion',
-    definition: 'Rate of perceived exertion, 6 to 10. RPE 8 means 2 reps in reserve.',
+    definition:
+      'Rate of perceived exertion: how hard a set felt, 6 to 10, where 10 means you could not do one more rep. RPE 8 means 2 reps in reserve.',
   },
   sessionRpe: {
     term: 'Session RPE',
@@ -33,7 +34,7 @@ export const GLOSSARY: Readonly<Record<GlossaryKey, GlossaryEntry>> = {
     question: 'What is e1RM (estimated 1RM)?',
     name: 'Estimated one-rep max',
     definition:
-      'Estimated one-rep max: the most you could likely lift for a single rep, worked out from the weights and reps you log.',
+      'Estimated one-rep max: the most you could likely lift for a single rep, worked out from the weights, reps and effort you log.',
   },
   oneRm: {
     term: '1RM',
