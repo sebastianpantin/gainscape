@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { cardioRecordCards } from '../../lib/cardio-rules.ts';
-import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isCardioExercise } from '../../lib/catalog-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { collectionPercent, countCollection } from '../../lib/collection-rules.ts';
 import { moved } from '../../lib/reorder.ts';
-import { fetchCollectionData, pinExercise, reorderPins, unpinExercise } from '../../lib/collection-data.ts';
+import { loadCollectionCacheFirst, pinExercise, reorderPins, unpinExercise } from '../../lib/collection-data.ts';
+import { OFFLINE_COLLECTION_NOTICE } from '../../offline/collection-cache.ts';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedNav } from '../../components/SegmentedNav.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
@@ -34,13 +34,7 @@ export function CollectionTabs() {
 export function CollectionScreen({ userId }: CollectionScreenProps) {
   const collection = useQuery({
     queryKey: ['collection', userId],
-    queryFn: async () => {
-      const [exercises, data] = await Promise.all([
-        fetchExercises({ includeArchived: true }),
-        fetchCollectionData(userId),
-      ]);
-      return { exercises, data };
-    },
+    queryFn: () => loadCollectionCacheFirst(userId),
   });
   const [problem, setProblem] = useState<string | null>(null);
   const { unitPref } = usePreferences();
@@ -57,7 +51,10 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     );
   if (loaded.status !== 'ready') return <ScreenSkeleton title="Collection log" />;
 
-  const { exercises, data } = loaded.data;
+  const {
+    loaded: { exercises, data },
+    fromCache,
+  } = loaded.data;
   const reload = async () => {
     const result = await collection.refetch();
     if (result.isError) setProblem(result.error.message);
@@ -96,6 +93,11 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     <main className="screen stack">
       <h1 className="title">Collection log</h1>
       <CollectionTabs />
+      {fromCache && (
+        <p className="notice" role="status">
+          {OFFLINE_COLLECTION_NOTICE}
+        </p>
+      )}
       <div className="panel stack">
         <dl className="row spread">
           <dt>Completion</dt>

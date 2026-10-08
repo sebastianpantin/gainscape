@@ -37,6 +37,10 @@ import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
 import { discardLocalDraft, hasUnsyncedDraft } from '../../offline/local-drafts.ts';
 import { forgetItemsCache } from '../../offline/items-cache.ts';
 import { forgetProgramCache } from '../../offline/program-cache.ts';
+import { programListCache } from '../../offline/program-list-cache.ts';
+import { standingCache } from '../../offline/standing-cache.ts';
+import { profileCache } from '../../offline/profile-cache.ts';
+import { collectionCache } from '../../offline/collection-cache.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetInstallCard, promptInstall, useInstallState } from '../../pwa/install.ts';
 import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
@@ -63,6 +67,10 @@ async function forgetThisDevice(userId: string): Promise<void> {
   forgetCachedExerciseNotes(localStorage, userId);
   forgetProgramCache(localStorage, userId);
   forgetItemsCache(localStorage, userId);
+  programListCache.forget(localStorage, userId);
+  standingCache.forget(localStorage, userId);
+  profileCache.forget(localStorage, userId);
+  collectionCache.forget(localStorage, userId);
   forgetInstallCard(userId);
   await discardLocalDraft(await openDraftStoreAndReconcile(), userId);
 }
