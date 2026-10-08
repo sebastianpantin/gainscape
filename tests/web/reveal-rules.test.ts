@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CardioExercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
-import { describeRecord } from '../../web/src/features/summary/reveal-rules.ts';
+import { describeRecord, gearBonusText } from '../../web/src/features/summary/reveal-rules.ts';
 
 const base = { equipment: 'barbell', custom: false, archived: false, skillShares: [] };
 const dip: LiftExercise = { ...base, id: 'dip', name: 'Weighted Dip', modality: 'lift', loadType: 'bodyweight_plus' };
@@ -52,5 +52,17 @@ describe('describeRecord', () => {
     };
     expect(describeRecord(record, swim, 'kg')).toEqual({ headline: 'Swimming:', previous: '1500 m (was 1000 m)' });
     expect(describeRecord(record, undefined, 'kg')).toEqual({ headline: 'Exercise:', previous: '1.5 km (was 1 km)' });
+  });
+});
+
+describe('gearBonusText', () => {
+  it('shows the gear bonus of a skill with grouped thousands', () => {
+    expect(gearBonusText({ gearBonusBySkill: { core: 1234 } }, 'core')).toBe('Gear bonus +1,234 XP');
+  });
+
+  it('shows nothing for a skill without a bonus or a summary from before gear', () => {
+    expect(gearBonusText({ gearBonusBySkill: { core: 12 } }, 'chest')).toBeNull();
+    expect(gearBonusText({ gearBonusBySkill: { core: 0 } }, 'core')).toBeNull();
+    expect(gearBonusText({}, 'core')).toBeNull();
   });
 });
