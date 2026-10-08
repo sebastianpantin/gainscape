@@ -19,6 +19,11 @@ import {
 
 const NO_STRENGTH: ExerciseStrength = Object.freeze({ windowMax: null, fallbackMax: null, hasPriorSession: false });
 
+export function e1rmAtSessionStart(strength: StrengthState, exerciseId: string): number | null {
+  const known = strength[exerciseId] ?? NO_STRENGTH;
+  return known.windowMax ?? known.fallbackMax ?? null;
+}
+
 export function epley(loadKg: number, repsToFailure: number): number {
   return roundTo(2, loadKg * loadRatioAtFailure(repsToFailure));
 }
@@ -223,7 +228,7 @@ export const trackStrength: Step = (ctx: SessionContext) => {
     const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const known = ctx.deps.strength?.[exercise.id] ?? NO_STRENGTH;
     const progress = progressByExercise.get(exercise.id) ?? {
-      strengthAtSessionStart: known.windowMax ?? known.fallbackMax,
+      strengthAtSessionStart: e1rmAtSessionStart(ctx.deps.strength ?? {}, exercise.id),
       bestCandidateThisSession: null,
       firstCandidateThisSession: null,
       fatigue: 1,

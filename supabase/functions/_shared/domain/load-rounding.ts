@@ -3,6 +3,8 @@ import { KG_PER_LB, type WeightUnit } from './units.ts';
 
 export type RoundingMode = 'nearest' | 'down';
 
+export type LoadRoundingDirection = RoundingMode | 'up';
+
 export interface RoundingSetting {
   increment: number;
   mode: RoundingMode;
@@ -21,9 +23,14 @@ function decimalPlaces(value: number): number {
   return fraction.length;
 }
 
-export function roundLoad(value: number, increment: number, mode: RoundingMode): number {
+export function roundLoad(value: number, increment: number, mode: LoadRoundingDirection): number {
   const steps = value / increment + ROUNDING_EPSILON;
-  const wholeSteps = mode === 'nearest' ? Math.floor(steps + 0.5) : Math.floor(steps);
+  const wholeSteps =
+    mode === 'up'
+      ? Math.ceil(value / increment - ROUNDING_EPSILON)
+      : mode === 'nearest'
+        ? Math.floor(steps + 0.5)
+        : Math.floor(steps);
   return roundTo(decimalPlaces(increment), wholeSteps * increment);
 }
 

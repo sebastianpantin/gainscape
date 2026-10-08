@@ -52,6 +52,17 @@ describe('roundLoad down', () => {
   });
 });
 
+describe('roundLoad up (challenge prefill)', () => {
+  it.each([
+    [98, 2.5, 100],
+    [97.5, 2.5, 97.5],
+    [98.7, 2.5, 100],
+    [216.05, 5, 220],
+  ])('rounds %s at a %s step up to %s', (value, increment, expected) => {
+    expect(roundLoad(value, increment, 'up')).toBe(expected);
+  });
+});
+
 describe('roundLoad increments', () => {
   it.each([
     [92.6859375, 1.25, 'nearest', 92.5, '92.6859 / 1.25 = 74.15 → 74 → 92.5'],

@@ -21,6 +21,7 @@ import type {
 } from './types.ts';
 import { isLiftResult, measuresRepsCapacity, NO_RECORDS } from './types.ts';
 import { BodyweightLoadNotZeroError, BodyweightRequiredError } from './errors.ts';
+import { challengeBonusXp, type ChallengeVerdict, judgeChallenge } from './challenges.ts';
 import { cardioExercise, exerciseFor, liftExercise, liftExerciseFor } from './exercise-lookup.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
 import { checkFatigue } from './fatigue.ts';
@@ -42,18 +43,21 @@ export interface SessionContext {
   readonly state: UserState;
   readonly sets: readonly SetResult[];
   readonly levelUps: readonly LevelUp[];
-  readonly gearXpBySkill?: Readonly<Record<string, GearXp>>;
+  readonly bonusXpBySkill?: Readonly<Record<string, SessionBonusXp>>;
+  readonly challengeVerdict?: ChallengeVerdict;
 }
 
-export interface GearXp {
+export interface SessionBonusXp {
   readonly baseXp: number;
-  readonly bonus: number;
+  readonly gear: number;
+  readonly challenge: number;
 }
 
 export type Step = (ctx: SessionContext) => SessionContext;
 
 export interface SessionOutputs extends Omit<SessionSummary, 'sessionId'> {
   sets: SetResult[];
+  challengeVerdict?: ChallengeVerdict;
 }
 
 function skillsInDisplayOrder(catalog: Catalog): SkillDef[] {
@@ -238,26 +242,29 @@ function spreadBonus(parts: readonly SkillXp[], baseXp: number, bonus: number): 
   for (const entry of shares) entry.part.xp += entry.share;
 }
 
-const awardGearBonus: Step = (ctx) => {
+const awardSessionBonuses: Step = (ctx) => {
   const loadout = ctx.session.gearLoadout;
-  if (!loadout) return ctx;
+  const challenge = ctx.session.challenge;
+  if (!loadout && !challenge) return ctx;
+  const challengeVerdict = challenge ? judgeChallenge(challenge.definition, ctx.sets, challenge.e1rmKg) : undefined;
   const skillKeyOf = new Map(ctx.deps.catalog.skills.map((skill) => [skill.id, skill.key]));
   const sets = ctx.sets.map((result) => ({ ...result, skillXp: result.skillXp.map((part) => ({ ...part })) }));
   const partsBySkill = new Map<string, SkillXp[]>();
   for (const part of sets.flatMap((result) => result.skillXp)) {
     partsBySkill.set(part.skillId, [...(partsBySkill.get(part.skillId) ?? []), part]);
   }
-  const gearXpBySkill: Record<string, GearXp> = {};
+  const bonusXpBySkill: Record<string, SessionBonusXp> = {};
   for (const [skillId, parts] of partsBySkill) {
     const skillKey = skillKeyOf.get(skillId);
     if (skillKey === undefined) continue;
     const baseXp = parts.reduce((sum, part) => sum + part.xp, 0);
-    const bonus = gearBonusXp(baseXp, skillKey, loadout, ctx.cfg);
-    if (bonus === 0) continue;
-    spreadBonus(parts, baseXp, bonus);
-    gearXpBySkill[skillKey] = { baseXp, bonus };
+    const gear = gearBonusXp(baseXp, skillKey, loadout, ctx.cfg);
+    const challengeBonus = challengeVerdict?.passed ? challengeBonusXp(baseXp, ctx.cfg) : 0;
+    if (baseXp === 0 || gear + challengeBonus === 0) continue;
+    spreadBonus(parts, baseXp, gear + challengeBonus);
+    bonusXpBySkill[skillKey] = { baseXp, gear, challenge: challengeBonus };
   }
-  return { ...ctx, sets, gearXpBySkill };
+  return { ...ctx, sets, bonusXpBySkill, challengeVerdict };
 };
 
 const applyXp: Step = (ctx) => {
@@ -285,7 +292,7 @@ export const DEFAULT_STEPS: readonly Step[] = Object.freeze([
   checkFatigue,
   detectPersonalRecords,
   awardXp,
-  awardGearBonus,
+  awardSessionBonuses,
   applyXp,
   detectLevelUps,
 ]);
@@ -309,18 +316,29 @@ function xpGainedBySkillKey(before: UserState, after: UserState, catalog: Catalo
   return xpBySkill;
 }
 
-function gearBonusWithinGains(
-  gearXpBySkill: Readonly<Record<string, GearXp>>,
+const NO_BONUS: SessionBonusXp = Object.freeze({ baseXp: 0, gear: 0, challenge: 0 });
+
+function positiveEntries(entries: readonly (readonly [string, number])[]): Record<string, number> | undefined {
+  const positive = entries.filter(([, bonus]) => bonus > 0);
+  return positive.length === 0 ? undefined : Object.fromEntries(positive);
+}
+
+function bonusesWithinGains(
+  bonusXpBySkill: Readonly<Record<string, SessionBonusXp>>,
   xpBySkill: Readonly<Record<string, number>>,
-): Pick<SessionOutputs, 'gearBonusBySkill'> {
-  const reported = Object.entries(xpBySkill)
-    .map(([skillKey, gained]) => {
-      const { baseXp, bonus } = gearXpBySkill[skillKey] ?? { baseXp: 0, bonus: 0 };
-      const baseGained = Math.min(baseXp, gained);
-      return [skillKey, Math.max(0, Math.min(bonus, gained - baseGained))] as const;
-    })
-    .filter(([, bonus]) => bonus > 0);
-  return reported.length === 0 ? {} : { gearBonusBySkill: Object.fromEntries(reported) };
+): Pick<SessionOutputs, 'gearBonusBySkill' | 'challengeBonusBySkill'> {
+  const reported = Object.entries(xpBySkill).map(([skillKey, gained]) => {
+    const { baseXp, gear, challenge } = bonusXpBySkill[skillKey] ?? NO_BONUS;
+    const bonusRoom = Math.max(0, gained - baseXp);
+    const challengeGained = Math.min(challenge, bonusRoom);
+    return { skillKey, challengeGained, gearGained: Math.min(gear, bonusRoom - challengeGained) };
+  });
+  const gearBonusBySkill = positiveEntries(reported.map((entry) => [entry.skillKey, entry.gearGained]));
+  const challengeBonusBySkill = positiveEntries(reported.map((entry) => [entry.skillKey, entry.challengeGained]));
+  return {
+    ...(gearBonusBySkill === undefined ? {} : { gearBonusBySkill }),
+    ...(challengeBonusBySkill === undefined ? {} : { challengeBonusBySkill }),
+  };
 }
 
 export function processSession(
@@ -341,7 +359,8 @@ export function processSession(
       levelUps: [...final.levelUps],
       prs: summarizePersonalRecords(final.sets, state.records ?? NO_RECORDS, final.state.records ?? NO_RECORDS),
       drops: [],
-      ...gearBonusWithinGains(final.gearXpBySkill ?? {}, xpBySkill),
+      ...bonusesWithinGains(final.bonusXpBySkill ?? {}, xpBySkill),
+      ...(final.challengeVerdict === undefined ? {} : { challengeVerdict: final.challengeVerdict }),
     },
   };
 }
