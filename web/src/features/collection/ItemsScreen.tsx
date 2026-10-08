@@ -52,11 +52,18 @@ interface ChallengeStartProps {
 
 function ChallengeStart({ challenge, challengeExercises, draftOpen, onStart }: ChallengeStartProps) {
   const [starting, setStarting] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   const names = new Map(challengeExercises.map((exercise) => [exercise.id, exercise.name]));
   const start = async () => {
     setStarting(true);
-    await onStart(challenge);
-    setStarting(false);
+    setProblem(null);
+    try {
+      await onStart(challenge);
+    } catch (error) {
+      setProblem(`Couldn't start the challenge: ${messageOf(error, 'try again.')}`);
+    } finally {
+      setStarting(false);
+    }
   };
   return (
     <div className="well stack">
@@ -75,6 +82,11 @@ function ChallengeStart({ challenge, challengeExercises, draftOpen, onStart }: C
       >
         Start challenge
       </button>
+      {problem && (
+        <p className="problem" role="alert">
+          {problem}
+        </p>
+      )}
     </div>
   );
 }

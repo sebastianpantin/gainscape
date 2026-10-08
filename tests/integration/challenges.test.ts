@@ -268,6 +268,41 @@ describe('claiming a scroll at sync', () => {
     expect(await challengeLedger(user.id)).toHaveLength(1);
   });
 
+  it('completes a normal session when the scroll item is retired', async () => {
+    const [quietAt, sessionAt] = startsOnOneLocalDay(2);
+    const user = await lifter(1, quietAt);
+    const session = challengePayload(sessionAt);
+
+    await db`update public.items set retired_at = now() where key = ${SCROLL_KEY}`;
+    try {
+      const response = await postSession(user, session);
+      expect(response.body.challenge).toBeNull();
+    } finally {
+      await db`update public.items set retired_at = null where key = ${SCROLL_KEY}`;
+    }
+
+    expect((await storedSession(session.id)).challenge).toBeNull();
+    expect(await scrollsHeld(user.id)).toBe(1);
+    expect(await challengeLedger(user.id)).toEqual([]);
+  });
+
+  it('does not refund the scroll when the challenge session is deleted', async () => {
+    const [quietAt, sessionAt] = startsOnOneLocalDay(2);
+    const user = await lifter(1, quietAt);
+    const session = challengePayload(sessionAt);
+    await postSession(user, session);
+
+    const deleted = await postFunction('delete-session', user.accessToken, { sessionId: session.id });
+
+    expect(deleted.status, deleted.rawBody).toBe(200);
+    expect(await scrollsHeld(user.id)).toBe(0);
+    expect(await challengeLedger(user.id)).toEqual([{ delta: -1, reason: 'challenge', ref_id: session.id }]);
+    const refunds = await db`
+      select l.delta from public.item_ledger l join public.items i on i.id = l.item_id
+      where l.user_id = ${user.id} and i.key = ${SCROLL_KEY} and l.delta > 0 and l.ref_id = ${session.id}`;
+    expect(refunds).toEqual([]);
+  });
+
   it('never claims a scroll for a history-only session', async () => {
     const user = await lifter(1, hoursAgo(4));
     const session = withChallenge(payloadAt(new Date(Date.now() - 8 * DAY_MS), challengeSets(100)));

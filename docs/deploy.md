@@ -128,6 +128,8 @@ Skip `make backup-hosted` while `GPG_RECIPIENT` is unset.
 
 The web app never goes live before its migrations.
 
+Migration 032 adds the check `scrolls_grant_a_challenge` as `not valid`, so existing scroll rows keep a null `grants_challenge_id` until the catalog seed runs. `make deploy` pushes the seed together with the migrations; if you ever push 032 another way, run the seed right after it.
+
 After a `BALANCE_VERSION` bump, run `make rebuild-caches-hosted` right after the deploy.
 
 ## Testers

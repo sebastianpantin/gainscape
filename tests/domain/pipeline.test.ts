@@ -711,9 +711,13 @@ describe('challenge bonus', () => {
           TEST_BALANCE,
           { catalog },
         );
+        const passed = boosted.outputs.challengeVerdict?.passed ?? false;
         for (const skill of catalog.skills) {
           const base = plain.outputs.xpBySkill[skill.key] ?? 0;
-          const total = base + gearBonusXp(base, skill.key, gear, TEST_BALANCE) + challengeBonusXp(base, TEST_BALANCE);
+          const total =
+            base +
+            gearBonusXp(base, skill.key, gear, TEST_BALANCE) +
+            (passed ? challengeBonusXp(base, TEST_BALANCE) : 0);
           expect(boosted.outputs.xpBySkill[skill.key] ?? 0).toBe(total);
         }
       }),

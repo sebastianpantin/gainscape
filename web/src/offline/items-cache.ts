@@ -100,6 +100,14 @@ export function saveItemsCache(storage: Storage | null, userId: string, cache: I
   }
 }
 
+export function forgetItemsCache(storage: Storage, userId: string): void {
+  try {
+    storage.removeItem(itemsCacheKey(userId));
+  } catch {
+    return;
+  }
+}
+
 export function challengeExercisesOf(
   challenges: readonly CatalogChallenge[],
   exercises: readonly Exercise[],

@@ -17,6 +17,7 @@ import {
   plannedSetsLeftToLifter,
   parseStoredDraft,
   programLabelFor,
+  removeExercise,
   removeSet,
   seedUntouchedSet,
   startDraftFromDay,
@@ -883,5 +884,36 @@ describe('fillWorkingSets', () => {
     const grouped = { ...liftAt(freshBench(), 0), supersetId: 'g' };
     expect(canQuickFill(grouped)).toBe(false);
     expect(fillWorkingSets(workout({ exercises: [grouped] }), 0, 3, 8).exercises).toEqual([grouped]);
+  });
+});
+
+describe('superset leftovers', () => {
+  function supersetIdsOf(draft: WorkoutDraft | null): (string | null | undefined)[] {
+    return liftsOf(draft).map((lift) => lift.supersetId);
+  }
+
+  function undone(exercise: LiftDraftExercise, supersetId: string | null): LiftDraftExercise {
+    return { ...exercise, supersetId, sets: exercise.sets.map((set) => ({ ...set, done: false })) };
+  }
+
+  const [bench, row] = liftsOf(workout());
+
+  it('ungroups the member left alone when its partner is removed', () => {
+    const singleSetBench = { ...bench, sets: bench.sets.slice(0, 1) };
+    const draft = workout({ exercises: [undone(singleSetBench, 'g'), undone(row, 'g')] });
+    const removed = removeExercise(draft, 1);
+    expect(supersetIdsOf(removed)).toEqual([null]);
+    expect(canQuickFill(liftsOf(removed)[0])).toBe(true);
+  });
+
+  it('keeps a group that still has two members after a removal', () => {
+    const draft = workout({ exercises: [undone(bench, 'g'), undone(row, 'g'), undone(row, 'g')] });
+    expect(supersetIdsOf(removeExercise(draft, 0))).toEqual(['g', 'g']);
+  });
+
+  it('drops a lone superset id when an exercise is swapped', () => {
+    const draft = workout({ exercises: [undone(bench, 'g'), undone(row, null)] });
+    const swapped = swapExercise(draft, 0, { id: 'dip', name: 'Dip', loadType: 'bodyweight' });
+    expect(supersetIdsOf(swapped)).toEqual([null, null]);
   });
 });
