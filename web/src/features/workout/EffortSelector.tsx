@@ -46,10 +46,11 @@ function sameEffort(a: EffortInput, b: EffortInput): boolean {
 interface EffortSelectorProps {
   mode: EffortInputMode;
   selected: EffortInput;
+  assumed?: EffortInput;
   onSelect: (effort: EffortInput) => void;
 }
 
-export function EffortSelector({ mode, selected, onSelect }: EffortSelectorProps) {
+export function EffortSelector({ mode, selected, assumed = null, onSelect }: EffortSelectorProps) {
   const shownMode = selected === null || selected.type === 'cardio' ? mode : selected.type;
   return (
     <div className={`effort-selector ${shownMode}`} role="radiogroup" aria-label={GROUP_LABELS[shownMode]}>
@@ -60,6 +61,7 @@ export function EffortSelector({ mode, selected, onSelect }: EffortSelectorProps
       )}
       {OPTIONS[shownMode].map((option) => {
         const checked = sameEffort(selected, option.effort);
+        const isAssumed = selected === null && sameEffort(assumed, option.effort);
         return (
           <button
             key={option.accessibleName}
@@ -67,7 +69,8 @@ export function EffortSelector({ mode, selected, onSelect }: EffortSelectorProps
             role="radio"
             aria-checked={checked}
             aria-label={option.accessibleName === option.label ? undefined : option.accessibleName}
-            className={`effort-option ${checked ? 'selected' : ''}`}
+            aria-description={isAssumed ? 'Assumed from your strength' : undefined}
+            className={`effort-option ${checked ? 'selected' : ''} ${isAssumed ? 'assumed' : ''}`}
             onClick={() => onSelect(checked ? null : option.effort)}
           >
             {option.label}

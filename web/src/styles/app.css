@@ -862,6 +862,12 @@ a:focus-visible {
   cursor: pointer;
 }
 
+.effort-option.assumed {
+  border-style: dashed;
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
 .effort-option.selected {
   background: var(--color-accent);
   color: var(--color-ink);
