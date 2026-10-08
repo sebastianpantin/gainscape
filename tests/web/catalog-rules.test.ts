@@ -37,11 +37,30 @@ describe('toExercise', () => {
       modality: 'lift',
       loadType: 'bodyweight_plus',
       compound: false,
+      skillShares: [],
     });
   });
 
+  it('lists the skill shares with their names, highest share first, then by skill name', () => {
+    const exercise = toExercise(
+      row({
+        exercise_skills: [
+          { share_bp: 1000, skills: { key: 'arms', name: 'Arms' } },
+          { share_bp: 7000, skills: { key: 'chest', name: 'Chest' } },
+          { share_bp: 1000, skills: { key: 'back', name: 'Back' } },
+          { share_bp: 1000, skills: null },
+        ],
+      }),
+    );
+    expect(exercise.skillShares).toEqual([
+      { skillKey: 'chest', skillName: 'Chest', shareBasisPoints: 7000 },
+      { skillKey: 'arms', skillName: 'Arms', shareBasisPoints: 1000 },
+      { skillKey: 'back', skillName: 'Back', shareBasisPoints: 1000 },
+    ]);
+  });
+
   it('marks a lift as compound from its skill shares', () => {
-    const shares = (...bp: number[]) => bp.map((share_bp) => ({ share_bp, skills: { key: 'chest' } }));
+    const shares = (...bp: number[]) => bp.map((share_bp) => ({ share_bp, skills: { key: 'chest', name: 'Chest' } }));
     expect(toExercise(row({ exercise_skills: shares(7000, 2000, 1000) }))).toMatchObject({ compound: true });
     expect(toExercise(row({ exercise_skills: shares(10_000) }))).toMatchObject({ compound: false });
   });
@@ -65,8 +84,9 @@ describe('toExercise', () => {
           pace_unit: 'per_km',
           max_effort: 'hard',
           exercise_skills: [
-            { share_bp: 7000, skills: { key: 'legs' } },
-            { share_bp: 3000, skills: null },
+            { share_bp: 3000, skills: { key: 'endurance', name: 'Endurance' } },
+            { share_bp: 7000, skills: { key: 'legs', name: 'Legs' } },
+            { share_bp: 1000, skills: null },
           ],
         }),
       ),
@@ -81,8 +101,15 @@ describe('toExercise', () => {
         paceUnit: 'per_km',
         referencePaceSPerKm: 330,
         maxEffort: 'hard',
-        shares: [{ skillKey: 'legs', shareBasisPoints: 7000 }],
+        shares: [
+          { skillKey: 'endurance', shareBasisPoints: 3000 },
+          { skillKey: 'legs', shareBasisPoints: 7000 },
+        ],
       },
+      skillShares: [
+        { skillKey: 'legs', skillName: 'Legs', shareBasisPoints: 7000 },
+        { skillKey: 'endurance', skillName: 'Endurance', shareBasisPoints: 3000 },
+      ],
     });
   });
 

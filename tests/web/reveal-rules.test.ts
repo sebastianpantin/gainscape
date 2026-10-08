@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CardioExercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
 import { describeRecord } from '../../web/src/features/summary/reveal-rules.ts';
 
-const base = { equipment: 'barbell', custom: false, archived: false };
+const base = { equipment: 'barbell', custom: false, archived: false, skillShares: [] };
 const dip: LiftExercise = { ...base, id: 'dip', name: 'Weighted Dip', modality: 'lift', loadType: 'bodyweight_plus' };
 const swim: CardioExercise = {
   ...base,

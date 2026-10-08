@@ -61,6 +61,8 @@ test('an installed shell cold-starts offline and syncs later', async ({ context,
   expect((await readSession(cold)).expires_at).toBeLessThan(nowInSeconds());
   await expectFontsLoaded(cold);
 
+  await cold.getByLabel('Search exercises').fill('squat');
+  await expect(cold.getByRole('button', { name: /^Back Squat\b/ })).toContainText('Legs · Core');
   await logExercise(cold, 'squat', 'Back Squat', [{ weightKg: 80, reps: 5 }]);
   await cold.getByRole('button', { name: 'Finish workout' }).click();
   await expect(cold.getByText(/Couldn't reach the server/)).toBeVisible({ timeout: 60_000 });

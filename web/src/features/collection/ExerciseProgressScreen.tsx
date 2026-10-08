@@ -7,6 +7,7 @@ import { type ExerciseProgress, fetchExerciseProgress } from '../../lib/exercise
 import { chartDateText, progressChartSeries, progressValueText } from '../../lib/exercise-progress-rules.ts';
 import { formatLoad, formatSessionDate } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { skillShareRows } from '../../lib/skill-map-rules.ts';
 
 interface ExerciseProgressScreenProps {
   userId: string;
@@ -63,11 +64,24 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
   const repsOnly = measuresRepsCapacity(exercise.loadType);
   const series = progressChartSeries(sessions, exercise.loadType, unitPref);
   const formatY = (value: number) => progressValueText(value, exercise.loadType, unitPref);
+  const trains = skillShareRows(exercise);
 
   return (
     <main className="screen stack">
       <BackButton />
       <h1 className="title">{exercise.name}</h1>
+      {trains.length > 0 && (
+        <section className="panel stack" aria-labelledby="trains-heading">
+          <h2 id="trains-heading">Trains</h2>
+          <ul>
+            {trains.map((row) => (
+              <li key={row.name}>
+                {row.name} {row.percent}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="panel stack" aria-labelledby="progress-chart-heading">
         <h2 id="progress-chart-heading">{repsOnly ? 'Reps over time' : 'Strength over time'}</h2>
         {sessions.length === 0 ? (

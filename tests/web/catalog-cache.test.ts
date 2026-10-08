@@ -25,6 +25,11 @@ const exercises: Exercise[] = [
     compound: true,
     custom: false,
     archived: false,
+    skillShares: [
+      { skillKey: 'chest', skillName: 'Chest', shareBasisPoints: 7000 },
+      { skillKey: 'shoulders', skillName: 'Shoulders', shareBasisPoints: 2000 },
+      { skillKey: 'arms', skillName: 'Arms', shareBasisPoints: 1000 },
+    ],
   },
   {
     id: 'mine',
@@ -34,6 +39,7 @@ const exercises: Exercise[] = [
     loadType: 'external',
     custom: true,
     archived: false,
+    skillShares: [],
   },
   {
     id: 'run',
@@ -48,6 +54,7 @@ const exercises: Exercise[] = [
     },
     custom: false,
     archived: false,
+    skillShares: [{ skillKey: 'endurance', skillName: 'Endurance', shareBasisPoints: 10_000 }],
   },
 ];
 
@@ -71,10 +78,10 @@ describe('exercise list cache', () => {
     saveCachedExercises(storage, userId, [{ ...exercises[0], secret: 'x' } as unknown as Exercise, exercises[2]]);
     const raw = JSON.parse(storage.getItem(exerciseCacheKey(userId))!);
     expect(Object.keys(raw.exercises[0]).sort()).toEqual(
-      ['archived', 'compound', 'custom', 'equipment', 'id', 'loadType', 'modality', 'name'].sort(),
+      ['archived', 'compound', 'custom', 'equipment', 'id', 'loadType', 'modality', 'name', 'skillShares'].sort(),
     );
     expect(Object.keys(raw.exercises[1]).sort()).toEqual(
-      ['activity', 'archived', 'custom', 'equipment', 'id', 'modality', 'name'].sort(),
+      ['activity', 'archived', 'custom', 'equipment', 'id', 'modality', 'name', 'skillShares'].sort(),
     );
   });
 
@@ -88,6 +95,24 @@ describe('exercise list cache', () => {
     expect(readCachedExercises(storage, userId)).toBeNull();
     saveCachedExercises(storage, userId, exercises);
     expect(storage.getItem(v1Key)).toBeNull();
+  });
+
+  it('reads a v2 list saved before skill shares were cached with no skill shares', () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    const raw = JSON.parse(storage.getItem(exerciseCacheKey(userId))!);
+    for (const entry of raw.exercises) delete entry.skillShares;
+    storage.setItem(exerciseCacheKey(userId), JSON.stringify(raw));
+    expect(readCachedExercises(storage, userId)?.map((exercise) => exercise.skillShares)).toEqual([[], [], []]);
+  });
+
+  it('rejects an entry with a malformed skill share', () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    const raw = JSON.parse(storage.getItem(exerciseCacheKey(userId))!);
+    delete raw.exercises[0].skillShares[0].skillName;
+    storage.setItem(exerciseCacheKey(userId), JSON.stringify(raw));
+    expect(readCachedExercises(storage, userId)).toBeNull();
   });
 
   it('rejects a cardio entry without its activity', () => {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../components/Icon.tsx';
-import { type Exercise, exerciseLabels } from '../../lib/catalog-rules.ts';
+import { type Exercise } from '../../lib/catalog-rules.ts';
+import { pickerRowDetail } from '../../lib/skill-map-rules.ts';
 
 interface ExercisePickerProps {
   exercises: Exercise[];
@@ -33,25 +34,24 @@ export function ExercisePicker({ exercises, onPick, placeholder = 'Add exerciseâ
       </span>
       {matches.length > 0 && (
         <ul className="picker-results">
-          {matches.map((exercise) => (
-            <li key={exercise.id}>
-              <button
-                type="button"
-                className="button list-item"
-                onClick={() => {
-                  onPick(exercise);
-                  setQuery('');
-                }}
-              >
-                {exercise.name}{' '}
-                <span className="muted">
-                  {[exercise.modality === 'cardio' ? 'cardio' : exercise.equipment, exerciseLabels(exercise)]
-                    .join(' ')
-                    .trim()}
-                </span>
-              </button>
-            </li>
-          ))}
+          {matches.map((exercise) => {
+            const detail = pickerRowDetail(exercise);
+            return (
+              <li key={exercise.id}>
+                <button
+                  type="button"
+                  className="button list-item"
+                  onClick={() => {
+                    onPick(exercise);
+                    setQuery('');
+                  }}
+                >
+                  {exercise.name} <span className="muted">{detail.kind}</span>
+                  {detail.skills !== null && <span className="muted"> {detail.skills}</span>}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
