@@ -34,12 +34,12 @@ const fixtureSession: SessionInput = {
 };
 
 describe('processSession', () => {
-  it('awards XP per skill, with an intensity bonus once an e1RM exists within the session', () => {
+  it('awards XP per skill, paying identical sets the same intensity bonus even before any e1RM exists', () => {
     const { nextState, outputs } = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog });
-    expect(outputs.sets.map((result) => result.xp)).toEqual([30, 30, 30, 50, 55, 55]);
-    expect(outputs.xpBySkill).toEqual({ chest: 63, shoulders: 18, arms: 9, legs: 144, core: 16 });
+    expect(outputs.sets.map((result) => result.xp)).toEqual([30, 30, 30, 55, 55, 55]);
+    expect(outputs.xpBySkill).toEqual({ chest: 63, shoulders: 18, arms: 9, legs: 149, core: 16 });
     expect(outputs.levelUps).toEqual([{ skill: 'legs', from: 1, to: 2 }]);
-    expect(nextState.skillXp['skill-legs']).toBe(144);
+    expect(nextState.skillXp['skill-legs']).toBe(149);
   });
 
   it('reports only the XP that fits under the XP cap', () => {
@@ -121,7 +121,7 @@ describe('processSession', () => {
       bench(null),
       bench(80),
       bench(80),
-      squat(null, 1, 45, 5),
+      squat(null, 1.091216, 50, 5),
       squat(126.67, 1.091216, 49, 6),
       squat(126.67, 1.091216, 50, 5),
     ]);

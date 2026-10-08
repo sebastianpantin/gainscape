@@ -137,6 +137,10 @@ a:hover {
   color: var(--color-text);
 }
 
+.confirm-dialog .row.wrap > .button {
+  flex: 1 1 auto;
+}
+
 .confirm-dialog::backdrop {
   background: rgb(0 0 0 / 60%);
 }
@@ -621,8 +625,8 @@ a:focus-visible {
   grid-template-areas:
     'number weight weight done'
     '. reps xp xp'
-    'warmup warmup warmup warmup'
-    'effort effort effort remove';
+    'remove remove warmup warmup'
+    'effort effort effort effort';
 }
 
 .set-row.stepped.marked {
@@ -630,8 +634,8 @@ a:focus-visible {
     'number weight weight done'
     '. reps xp xp'
     'markers markers markers markers'
-    'warmup warmup warmup warmup'
-    'effort effort effort remove';
+    'remove remove warmup warmup'
+    'effort effort effort effort';
 }
 
 .set-row.stepped.marked.calculating {
@@ -640,13 +644,17 @@ a:focus-visible {
     '. reps xp xp'
     'markers markers markers markers'
     'calculator calculator calculator calculator'
-    'warmup warmup warmup warmup'
-    'effort effort effort remove';
+    'remove remove warmup warmup'
+    'effort effort effort effort';
 }
 
 .set-row.stepped > .done-toggle.warmup-toggle {
   grid-area: warmup;
   justify-self: end;
+}
+
+.set-row.stepped > .button.icon {
+  justify-self: start;
 }
 
 .warmup-toggle:not(.selected) {
@@ -659,7 +667,8 @@ a:focus-visible {
 
 .plate-marker {
   font: inherit;
-  color: inherit;
+  font-size: var(--font-size-small);
+  color: var(--color-text);
   background: none;
   border: 0;
   padding: 0 var(--space-1);
@@ -667,8 +676,83 @@ a:focus-visible {
   min-height: var(--tap-target);
   display: inline-flex;
   align-items: center;
-  text-decoration: underline dotted;
+  gap: var(--space-2);
   cursor: pointer;
+  flex: 0 1 auto;
+}
+
+.plate-marker > .plate-text {
+  text-align: left;
+  text-decoration: underline dotted;
+}
+
+.plate-marker > .plate-toggle {
+  color: var(--color-text-muted);
+}
+
+.plate-chips {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  height: 28px;
+}
+
+.plate-sleeve {
+  width: 10px;
+  height: 4px;
+  background: var(--color-plate-steel);
+}
+
+.plate-sleeve.end {
+  width: 6px;
+}
+
+.plate {
+  width: 6px;
+  border: 1px solid #000;
+  border-radius: 1px;
+}
+
+.plate.full {
+  height: 28px;
+}
+
+.plate.large {
+  height: 22px;
+}
+
+.plate.medium {
+  height: 16px;
+}
+
+.plate.small {
+  width: 4px;
+  height: 11px;
+}
+
+.plate.red {
+  background: var(--color-plate-red);
+}
+
+.plate.blue {
+  background: var(--color-plate-blue);
+}
+
+.plate.yellow {
+  background: var(--color-plate-yellow);
+}
+
+.plate.green {
+  background: var(--color-plate-green);
+}
+
+.plate.white {
+  background: var(--color-plate-white);
+}
+
+.plate.steel {
+  background: var(--color-plate-steel);
 }
 
 .plate-calculator {
@@ -717,6 +801,34 @@ a:focus-visible {
 
 .stepper-field input {
   text-align: center;
+}
+
+.quick-fill {
+  display: flex;
+  align-items: end;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border: 1px dashed var(--color-panel-border);
+}
+
+.quick-fill legend {
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+}
+
+.quick-fill .compact-field {
+  width: 64px;
+}
+
+.quick-fill > span {
+  padding-bottom: var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.quick-fill > .button {
+  margin-left: auto;
 }
 
 .set-markers {
@@ -856,6 +968,12 @@ a:focus-visible {
   border: var(--border-width) solid var(--color-panel-border);
   border-radius: var(--radius);
   cursor: pointer;
+}
+
+.effort-option.assumed {
+  border-style: dashed;
+  border-color: var(--color-accent);
+  color: var(--color-text);
 }
 
 .effort-option.selected {

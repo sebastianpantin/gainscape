@@ -97,7 +97,7 @@ describe('edit-session re-derives history', () => {
     const s2 = payloadAt(hoursAgo(24), [aSet(benchId, 0, 80, { effort: null })]);
     await postSession(user, s1);
     await postSession(user, s2);
-    expect((await storedSets(s1.id))[0].xp_awarded).toBe(495);
+    expect((await storedSets(s1.id))[0].xp_awarded).toBe(626);
     expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 3, xp_awarded: 626 });
 
     const editedSets = [{ ...s1.sets[0], effort: nearFailure }];
@@ -105,10 +105,10 @@ describe('edit-session re-derives history', () => {
     expect(response.status, response.rawBody).toBe(200);
     expect(response.body).toMatchObject({ revision: 1, replayedSessionIds: [s1.id, s2.id] });
 
-    expect((await storedSets(s1.id))[0].xp_awarded).toBe(825);
+    expect((await storedSets(s1.id))[0].xp_awarded).toBe(1043);
     expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 0, e1rm_before_kg: 93.33, xp_awarded: 1043 });
     const [{ total }] = await db`select sum(xp)::int as total from public.user_skills where user_id = ${user.id}`;
-    expect(total).toBe(1868);
+    expect(total).toBe(2086);
     const mismatches = await db`
       select us.skill_id from public.user_skills us
       left join (select skill_id, sum(xp)::bigint as xp from public.set_skill_xp where user_id = ${user.id} group by skill_id) l

@@ -56,8 +56,8 @@ test('an installed shell cold-starts offline and syncs later', async ({ context,
   });
   await expect(benchCard).toBeVisible();
   await expect(cold.getByRole('heading', { name: 'Workout', exact: true })).toBeVisible();
-  await expect(benchCard.getByLabel(/kg/)).toHaveValue('60');
-  await expect(benchCard.getByLabel('reps')).toHaveValue('5');
+  await expect(benchCard.locator('li.set-row').getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
+  await expect(benchCard.locator('li.set-row').getByLabel('reps')).toHaveValue('5');
   expect((await readSession(cold)).expires_at).toBeLessThan(nowInSeconds());
   await expectFontsLoaded(cold);
 

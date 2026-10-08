@@ -41,8 +41,8 @@ describe('seededRandom', () => {
 
 describe('seeded simulation with the committed constants', () => {
   it.each([
-    ['hypertrophy', 51, [17679, 39185, 60269], 118.03137254901962],
-    ['strength', 51, [18949, 40793, 61685], 93.67843137254901],
+    ['hypertrophy', 51, [17737, 39243, 60327], 118.03137254901962],
+    ['strength', 51, [19722, 41566, 62458], 93.67843137254901],
     ['balanced', 131, [8335, 15791, 22406], 42.803816793893226],
     ['casual', 247, [3192, 7368, 11494], 24.45627530364383],
   ] as const)('replays the %s lifter exactly', (name, weeks, firstWeeksLegsXp, weeklyLegsEffectiveReps) => {
