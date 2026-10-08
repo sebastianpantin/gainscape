@@ -321,7 +321,7 @@ export function addCardioExercise(
 }
 
 export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
-  return { ...draft, exercises: draft.exercises.filter((_, index) => index !== exerciseIndex) };
+  return { ...draft, exercises: withValidSupersets(draft.exercises.filter((_, index) => index !== exerciseIndex)) };
 }
 
 export function nextBoutValues(previous: BoutValues | undefined): BoutValues {
@@ -763,7 +763,7 @@ export function swapExercise(
   replacement: { id: string; name: string; loadType: LoadType },
 ): WorkoutDraft | null {
   if (!canSwapExercise(draft, exerciseIndex)) return null;
-  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
+  const swapped = updateExerciseAt(draft, exerciseIndex, (exercise) =>
     exercise.modality === 'cardio'
       ? exercise
       : {
@@ -774,4 +774,5 @@ export function swapExercise(
           sets: exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) })),
         },
   );
+  return { ...swapped, exercises: withValidSupersets(swapped.exercises) };
 }

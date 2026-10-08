@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  forgetItemsCache,
   type ItemsCache,
   loadItemsCacheFirstWhenOffline,
   readItemsCache,
@@ -105,6 +106,23 @@ describe('items cache', () => {
     expect(readItemsCache(throwing, USER)).toBeNull();
     expect(() => saveItemsCache(null, USER, CACHE)).not.toThrow();
     expect(readItemsCache(null, USER)).toBeNull();
+  });
+
+  it('forgets the saved items of one user only', () => {
+    const storage = new MemoryStorage();
+    saveItemsCache(storage, USER, CACHE);
+    saveItemsCache(storage, 'user-b', CACHE);
+    forgetItemsCache(storage, USER);
+    expect(readItemsCache(storage, USER)).toBeNull();
+    expect(readItemsCache(storage, 'user-b')).toEqual(CACHE);
+  });
+
+  it('forgets silently when storage throws', () => {
+    const throwing = new MemoryStorage();
+    throwing.removeItem = () => {
+      throw new Error('blocked');
+    };
+    expect(() => forgetItemsCache(throwing, USER)).not.toThrow();
   });
 });
 

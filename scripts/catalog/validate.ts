@@ -203,6 +203,7 @@ function checkChallengeShape(
   } else if (challenge.volume === null || challenge.supersets.length > 0) {
     problems.push(`challenge "${challenge.key}" of kind volume needs a volume and no supersets`);
   }
+  const seenExercises = new Set<string>();
   for (const superset of challenge.supersets) {
     if (superset.exercises.length < 2) {
       problems.push(`challenge "${challenge.key}" superset needs at least 2 exercises`);
@@ -212,6 +213,10 @@ function checkChallengeShape(
     }
     for (const entry of superset.exercises) {
       checkChallengeExercise(challenge, exercisesByKey, entry.exercise, entry.pct !== null, problems);
+      if (seenExercises.has(entry.exercise)) {
+        problems.push(`challenge "${challenge.key}" repeats exercise "${entry.exercise}"`);
+      }
+      seenExercises.add(entry.exercise);
     }
   }
   const volume = challenge.volume;

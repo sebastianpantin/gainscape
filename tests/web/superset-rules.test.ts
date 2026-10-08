@@ -115,6 +115,32 @@ describe('ungroup', () => {
     expect(supersetIds(ungroup(draft, 2))).toEqual(['g', 'g', null]);
   });
 
+  it('moves an ungrouped middle member after the group and keeps the rest together', () => {
+    const draft = draftOf([lift('a', ['a1'], 'g'), lift('b', ['b1'], 'g'), lift('c', ['c1'], 'g'), lift('d', ['d1'])]);
+    const result = ungroup(draft, 1);
+    expect(result.exercises.map((exercise) => exercise.exerciseId)).toEqual(['a', 'c', 'b', 'd']);
+    expect(supersetIds(result)).toEqual(['g', 'g', null, null]);
+  });
+
+  it('keeps the other three members grouped when a middle member of four leaves', () => {
+    const draft = draftOf([
+      lift('a', ['a1'], 'g'),
+      lift('b', ['b1'], 'g'),
+      lift('c', ['c1'], 'g'),
+      lift('d', ['d1'], 'g'),
+    ]);
+    const result = ungroup(draft, 2);
+    expect(result.exercises.map((exercise) => exercise.exerciseId)).toEqual(['a', 'b', 'd', 'c']);
+    expect(supersetIds(result)).toEqual(['g', 'g', 'g', null]);
+  });
+
+  it('keeps the order when the first member of three leaves', () => {
+    const draft = draftOf([lift('a', ['a1'], 'g'), lift('b', ['b1'], 'g'), lift('c', ['c1'], 'g')]);
+    const result = ungroup(draft, 0);
+    expect(result.exercises.map((exercise) => exercise.exerciseId)).toEqual(['a', 'b', 'c']);
+    expect(supersetIds(result)).toEqual([null, 'g', 'g']);
+  });
+
   it('undoes groupWithNext', () => {
     const draft = draftOf([lift('a', ['a1']), lift('b', ['b1'])]);
     expect(ungroup(groupWithNext(draft, 0), 0)).toEqual(draft);

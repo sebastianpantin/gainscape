@@ -112,6 +112,23 @@ describe('catalog validation', () => {
       /challenge "deadlift_and_pull_up" superset needs at least 2 exercises/,
     ],
     [
+      'a challenge does not repeat an exercise within a superset',
+      (c) => (find(c.challenges, 'deadlift_and_pull_up').supersets[0].exercises[1].exercise = 'deadlift'),
+      /challenge "deadlift_and_pull_up" repeats exercise "deadlift"/,
+    ],
+    [
+      'a challenge does not repeat an exercise across supersets',
+      (c) =>
+        find(c.challenges, 'bench_and_row').supersets.push({
+          rounds: 3,
+          exercises: [
+            { exercise: 'barbell_row', reps: 8, pct: 65 },
+            { exercise: 'pull_up', reps: 8, pct: null },
+          ],
+        }),
+      /challenge "bench_and_row" repeats exercise "barbell_row"/,
+    ],
+    [
       'a superset has at least 1 round',
       (c) => (find(c.challenges, 'bench_and_row').supersets[0].rounds = 0),
       /challenge "bench_and_row" needs rounds and reps of at least 1/,

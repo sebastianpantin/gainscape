@@ -47,6 +47,11 @@ test('a challenge starts offline from the saved items with loads from the e1RM, 
 
   await startChallenge(page);
   await expect(page).toHaveURL(/\/$/);
+  const superset = page.getByRole('region', { name: 'Superset: Deadlift and Pull-up' });
+  await expect(superset).toBeVisible();
+  await expect(
+    superset.getByRole('list', { name: 'Rounds' }).getByRole('listitem', { name: /^Round \d+$/ }),
+  ).toHaveCount(5);
   await expectDeadliftPrefill(page, 100);
   await expect(page.getByRole('region', { name: 'Challenge', exact: true })).toContainText(
     `Challenge: ${CHALLENGE_NAME}`,

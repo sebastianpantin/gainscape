@@ -65,10 +65,20 @@ export function groupWithNext(draft: WorkoutDraft, exerciseIndex: number): Worko
   return { ...grouped, exercises: withValidSupersets(grouped.exercises) };
 }
 
+function movedAfter(exercises: DraftExercise[], fromIndex: number, afterIndex: number): DraftExercise[] {
+  const moved = exercises.filter((_, index) => index !== fromIndex);
+  moved.splice(afterIndex, 0, exercises[fromIndex]);
+  return moved;
+}
+
 export function ungroup(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
   if (supersetIdAt(draft, exerciseIndex) === null) return draft;
   const ungrouped = withSupersetId(draft, [exerciseIndex], null);
-  return { ...ungrouped, exercises: withValidSupersets(ungrouped.exercises) };
+  const members = groupOf(draft, exerciseIndex)?.exerciseIndexes ?? [];
+  const lastMember = members.at(-1) ?? exerciseIndex;
+  const isMiddleMember = members[0] < exerciseIndex && exerciseIndex < lastMember;
+  const exercises = isMiddleMember ? movedAfter(ungrouped.exercises, exerciseIndex, lastMember) : ungrouped.exercises;
+  return { ...ungrouped, exercises: withValidSupersets(exercises) };
 }
 
 export function roundRows(draft: WorkoutDraft, group: SupersetGroup): RoundRow[] {
