@@ -1,5 +1,6 @@
 import { CARDIO_EFFORT_LEVELS } from '@domain/types.ts';
 import { z } from 'zod';
+import { OFFLINE_PROBLEM } from '../offline/cache-first.ts';
 import { type Exercise, LOAD_TYPES, PACE_UNITS } from './catalog-rules.ts';
 
 const CACHE_VERSION = 2;
@@ -119,6 +120,14 @@ export async function loadExercisesCacheFirst(
   isOffline: () => boolean = () => false,
 ): Promise<void> {
   const cached = readCachedExercises(storage, userId);
+  if (isOffline()) {
+    show(
+      cached
+        ? { exercises: cached, notice: OFFLINE_EXERCISES_NOTICE, problem: null }
+        : { exercises: [], notice: null, problem: OFFLINE_PROBLEM },
+    );
+    return;
+  }
   if (cached) show({ exercises: cached, notice: null, problem: null });
   try {
     const live = await fetchLive();

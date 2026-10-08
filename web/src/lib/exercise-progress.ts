@@ -13,6 +13,7 @@ import {
 } from './exercise-progress-rules.ts';
 import { isUuid } from './history-rules.ts';
 import { supabase } from './supabase.ts';
+import { failFastWhenOffline } from '../offline/cache-first.ts';
 
 export interface ExerciseProgress {
   exercise: LiftExercise;
@@ -27,6 +28,7 @@ export async function fetchExerciseProgress(
   signal: AbortSignal,
 ): Promise<ExerciseProgress | null> {
   if (!isUuid(exerciseId)) return null;
+  failFastWhenOffline();
   const [exercise, sets, repMaxes, maxReps] = await Promise.all([
     supabase.from('exercises').select(EXERCISE_COLUMNS).eq('id', exerciseId).abortSignal(signal).maybeSingle(),
     supabase
