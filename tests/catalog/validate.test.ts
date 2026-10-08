@@ -77,19 +77,14 @@ describe('catalog validation', () => {
       /variation of unknown exercise "hack_squat"/,
     ],
     [
-      'requires_unlock implies variation_of',
-      (c) => (find(c.exercises, 'pause_squat').variationOf = null),
-      /requires an unlock but is no variation/,
-    ],
-    [
-      'every scroll grants a requires_unlock exercise',
+      'every scroll grants a variation exercise',
       (c) => (find(c.items, 'scroll_pause_squat').grants = 'back_squat'),
-      /scroll "scroll_pause_squat" must grant exactly one exercise that requires an unlock/,
+      /scroll "scroll_pause_squat" must grant a known variation exercise/,
     ],
     [
-      'every requires_unlock exercise has exactly one scroll',
+      'every variation exercise has exactly one scroll',
       (c) => (find(c.items, 'scroll_z_press').grants = 'pause_squat'),
-      /"pause_squat" requires an unlock and needs exactly one scroll, has 2/,
+      /variation "pause_squat" needs exactly one scroll, has 2/,
     ],
     [
       'only scrolls grant exercises',
@@ -156,11 +151,6 @@ describe('catalog validation', () => {
       'an active drop table has entries',
       (c) => (find(c.dropTables, 'rare').entries = []),
       /drop table "rare" has no entries/,
-    ],
-    [
-      'program days never use a locked variation',
-      (c) => (c.programs[0].days[0].exercises[0].exercise = 'pause_bench_press'),
-      /program day "ppl:push" uses locked exercise "pause_bench_press"/,
     ],
     [
       'no retired item appears in an active table',

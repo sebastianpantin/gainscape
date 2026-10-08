@@ -123,9 +123,6 @@ function checkExercises(catalog: CatalogData, problems: string[]): void {
         problems.push(`exercise "${exercise.key}" is a variation of "${base.key}" of another modality`);
       }
     }
-    if (exercise.requiresUnlock && exercise.variationOf === null) {
-      problems.push(`exercise "${exercise.key}" requires an unlock but is no variation`);
-    }
   }
 }
 
@@ -136,8 +133,6 @@ function checkProgramDays(catalog: CatalogData, problems: string[]): void {
       const exercise = exercisesByKey.get(entry.exercise);
       if (exercise === undefined) {
         problems.push(`program day "${program.key}:${day.key}" uses unknown exercise "${entry.exercise}"`);
-      } else if (exercise.requiresUnlock) {
-        problems.push(`program day "${program.key}:${day.key}" uses locked exercise "${entry.exercise}"`);
       } else if (exercise.modality === 'cardio') {
         problems.push(`program day "${program.key}:${day.key}" uses cardio exercise "${entry.exercise}"`);
       }
@@ -181,18 +176,16 @@ function checkItems(catalog: CatalogData, problems: string[]): void {
       continue;
     }
     const granted = item.grants === null ? undefined : exercisesByKey.get(item.grants);
-    if (granted === undefined || !granted.requiresUnlock) {
-      problems.push(`scroll "${item.key}" must grant exactly one exercise that requires an unlock`);
+    if (granted === undefined || granted.variationOf === null) {
+      problems.push(`scroll "${item.key}" must grant a known variation exercise`);
       continue;
     }
     scrollsByExercise.set(granted.key, [...(scrollsByExercise.get(granted.key) ?? []), item.key]);
   }
-  for (const exercise of catalog.exercises.filter((candidate) => candidate.requiresUnlock)) {
+  for (const exercise of catalog.exercises.filter((candidate) => candidate.variationOf !== null)) {
     const scrolls = scrollsByExercise.get(exercise.key) ?? [];
     if (scrolls.length !== 1) {
-      problems.push(
-        `exercise "${exercise.key}" requires an unlock and needs exactly one scroll, has ${scrolls.length}`,
-      );
+      problems.push(`variation "${exercise.key}" needs exactly one scroll, has ${scrolls.length}`);
     }
   }
 }

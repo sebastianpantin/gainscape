@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { finishWorkout, logExercise, logWorkout, openTab, register } from './support/app.ts';
-import { activeDropCount, activeDropsOfLatestSession, grantItems, grantUnlock, hasUnlock } from './support/db.ts';
+import { activeDropCount, activeDropsOfLatestSession, grantItems } from './support/db.ts';
 
 function slot(page: Page, name: string, quantity?: number) {
   const label = quantity === undefined ? `^${name}( ×\\d+)?$` : `^${name} ×${quantity}$`;
@@ -13,7 +13,7 @@ async function openItems(page: Page) {
   await expect(page.getByRole('heading', { name: 'Gear' })).toBeVisible();
 }
 
-test('loot on the reveal, the items screen, crafting and a scroll unlock', async ({ page }) => {
+test('loot on the reveal, the items screen, crafting and a former scroll variation', async ({ page }) => {
   const username = `loot_${Date.now().toString(36)}`;
   await register(page, username);
 
@@ -48,14 +48,11 @@ test('loot on the reveal, the items screen, crafting and a scroll unlock', async
   await expect(slot(page, 'Rookie belt', 0)).toBeVisible();
   await expect(slot(page, 'Grinder scraps', 0)).toBeVisible();
 
-  await grantUnlock(username, 'pause_squat');
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   await page.getByLabel('Search exercises').fill('pause');
   await expect(page.getByRole('button', { name: /^Pause Squat\b/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Pause Bench Press\b/ })).toHaveCount(
-    (await hasUnlock(username, 'pause_bench_press')) ? 1 : 0,
-  );
+  await expect(page.getByRole('button', { name: /^Pause Bench Press\b/ })).toBeVisible();
   await logExercise(page, 'pause squat', 'Pause Squat', [{ weightKg: 60, reps: 5 }]);
   await finishWorkout(page);
 

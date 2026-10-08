@@ -55,13 +55,12 @@ describe('catalog ids', () => {
     }
   });
 
-  it('seeds the loot content and the locked variations', async () => {
+  it('seeds the loot content', async () => {
     const [counts] = await db`
       select (select count(*) from public.items where retired_at is null)::int as items,
              (select count(*) from public.recipes where retired_at is null)::int as recipes,
-             (select count(*) from public.drop_tables where retired_at is null)::int as tables,
-             (select count(*) from public.exercises where requires_unlock)::int as locked`;
-    expect(counts).toEqual({ items: 58, recipes: 36, tables: 2, locked: 6 });
+             (select count(*) from public.drop_tables where retired_at is null)::int as tables`;
+    expect(counts).toEqual({ items: 58, recipes: 36, tables: 2 });
   });
 });
 

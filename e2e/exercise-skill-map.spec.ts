@@ -24,11 +24,11 @@ test('the skill panel lists the exercises that train the skill, highest share fi
   await page.getByRole('button', { name: /^Chest\b/ }).click();
   const chest = page.getByRole('list', { name: 'Exercises that train Chest' });
   const items = chest.getByRole('listitem');
-  await expect(items).toHaveCount(11);
+  await expect(items).toHaveCount(12);
   await expect(items.nth(0)).toHaveText('Cable Fly 90%');
   await expect(items.nth(1)).toHaveText('Pec Deck 90%');
   await expect(items.nth(2)).toHaveText('Barbell Bench Press 70%');
   await expect(items.nth(3)).toHaveText('Dumbbell Bench Press 70%');
   await expect(items.filter({ hasText: 'Incline Barbell Bench Press 60%' })).toHaveCount(1);
-  await expect(items.filter({ hasText: 'Pause Bench Press' })).toHaveCount(0);
+  await expect(items.filter({ hasText: 'Pause Bench Press 70%' })).toHaveCount(1);
 });

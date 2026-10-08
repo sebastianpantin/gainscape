@@ -161,13 +161,6 @@ export async function rollNewSessionLoot(
         )}
         on conflict (user_id, item_id) do update
         set quantity = public.user_items.quantity + excluded.quantity, updated_at = now()`;
-      await tx`
-        insert into public.user_unlocks (user_id, exercise_id, item_id, source_drop_id)
-        select ${userId}, i.grants_exercise_id, i.id, d.id
-        from public.drops d join public.items i on i.id = d.item_id
-        where d.id = any(${drops.map((drop) => drop.id as string)}::uuid[]) and i.kind = 'scroll'
-        order by d.created_at, d.id
-        on conflict (user_id, exercise_id) do nothing`;
     }
 
     if (rolls.some((roll) => roll.kind === 'regular')) {

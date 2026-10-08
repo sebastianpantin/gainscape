@@ -42,14 +42,9 @@ describe('exercise notes', () => {
     expect(await saveExerciseNoteWith(other.client, customId, 'Mine')).toBe('Mine');
   });
 
-  it('refuses a note on a locked variation until the user unlocks it', async () => {
+  it('accepts a note on a former variation the first time', async () => {
     const user = await createTestUser();
     const [pauseSquat] = await db`select id from public.exercises where key = 'pause_squat'`;
-    const [scroll] = await db`select id from public.items where key = 'scroll_pause_squat'`;
-    await expect(saveExerciseNoteWith(user.client, pauseSquat.id, 'Two count')).rejects.toMatchObject({
-      code: '42501',
-    });
-    await db`insert into public.user_unlocks (user_id, exercise_id, item_id) values (${user.id}, ${pauseSquat.id}, ${scroll.id})`;
     expect(await saveExerciseNoteWith(user.client, pauseSquat.id, 'Two count')).toBe('Two count');
   });
 });

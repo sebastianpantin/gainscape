@@ -448,7 +448,7 @@ describe('save_program', () => {
     expect(await programRowCounts(user.id)).toEqual(before);
   });
 
-  it('refuses a locked variation until the caller has unlocked it', async () => {
+  it('accepts a former variation the first time', async () => {
     const user = await createTestUser();
     const pauseSquatId = await builtInExerciseId('pause_squat');
     const program = simpleProgram({
@@ -460,16 +460,8 @@ describe('save_program', () => {
         },
       ],
     });
-    const before = await programRowCounts(user.id);
-    const locked = await saveProgram(user, program);
-    expect(locked.error?.message).toBe('unknown_exercise');
-    expect(await programRowCounts(user.id)).toEqual(before);
-
-    await db`
-      insert into public.user_unlocks (user_id, exercise_id, item_id)
-      select ${user.id}, grants_exercise_id, id from public.items where key = 'scroll_pause_squat'`;
-    const unlocked = await saveProgram(user, program);
-    expect(unlocked.error).toBeNull();
+    const saved = await saveProgram(user, program);
+    expect(saved.error).toBeNull();
     expect((await programDoc(program.id)).days[0].exercises.map((planned) => planned.exerciseId)).toEqual([
       pauseSquatId,
     ]);
