@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
+import { TermHelp } from '../../components/TermHelp.tsx';
 import type { RoundCell, RoundRow } from '../../lib/superset-rules.ts';
 
 const NAME_LIST = new Intl.ListFormat('en-GB', { type: 'conjunction' });
@@ -17,7 +18,10 @@ export function SupersetCard({ exerciseNames, members, rounds, renderCell, onAdd
       className="panel stack exercise-card superset-card"
       aria-label={`Superset: ${NAME_LIST.format(exerciseNames)}`}
     >
-      <span className="superset-tag tiny">Superset</span>
+      <div className="row superset-tag-row">
+        <span className="superset-tag tiny">Superset</span>
+        <TermHelp glossaryKey="superset" />
+      </div>
       {members}
       <ol className="superset-rounds" aria-label="Rounds">
         {rounds.map(({ round, cells }) => (
