@@ -108,29 +108,10 @@ export async function grantItems(username: string, holdings: Record<string, numb
   });
 }
 
-export async function grantUnlock(username: string, exerciseKey: string): Promise<void> {
-  await db`
-    insert into public.user_unlocks (user_id, exercise_id, item_id)
-    select p.id, e.id, i.id
-    from public.profiles p, public.exercises e join public.items i on i.grants_exercise_id = e.id
-    where p.username = ${username} and e.key = ${exerciseKey}
-    on conflict (user_id, exercise_id) do nothing`;
-}
-
 export async function activeDropCount(sessionId: string): Promise<number> {
   const [row] = await db`
     select count(*)::int as count from public.drops where session_id = ${sessionId} and revoked_at is null`;
   return row.count;
-}
-
-export async function hasUnlock(username: string, exerciseKey: string): Promise<boolean> {
-  const [row] = await db`
-    select count(*)::int as count
-    from public.user_unlocks u
-    join public.profiles p on p.id = u.user_id
-    join public.exercises e on e.id = u.exercise_id
-    where p.username = ${username} and e.key = ${exerciseKey}`;
-  return row.count > 0;
 }
 
 export async function confirmAccount(email: string, accountPassword: string): Promise<void> {
@@ -255,4 +236,14 @@ export async function equipGear(username: string, itemKey: string): Promise<void
     from public.profiles p, public.items i
     where p.username = ${username} and i.key = ${itemKey}
     on conflict (user_id, slot) do update set item_id = excluded.item_id`;
+}
+
+export async function scrollQuantity(username: string, key: string): Promise<number> {
+  const [row] = await db`
+    select coalesce(sum(u.quantity), 0)::int as quantity
+    from public.user_items u
+    join public.items i on i.id = u.item_id
+    join public.profiles p on p.id = u.user_id
+    where p.username = ${username} and i.key = ${key}`;
+  return row.quantity;
 }

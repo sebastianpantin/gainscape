@@ -9,11 +9,11 @@ Playwright specs for the installed-app behaviour: manifest installability, the s
 
 ## Key Files
 
-| File                  | Description                                                                                                                                                                                        |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `installable.spec.ts` | The app is installable (manifest and icons).                                                                                                                                                       |
-| `offline.spec.ts`     | Installed shell cold-starts offline and syncs later; worker never stores or answers Supabase traffic; every tab renders offline without an uncaught error; offline sign-out with an expired token. |
-| `update.spec.ts`      | A new version reloads safely (swaps the built worker via `replaceBuildId`); files not matching their hashes never replace the shell; the kill switch retires the worker and reloads.               |
+| File                  | Description                                                                                                                                                                                                                                                                                                                                                       |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `installable.spec.ts` | The app is installable (manifest and icons).                                                                                                                                                                                                                                                                                                                      |
+| `offline.spec.ts`     | Installed shell cold-starts offline and syncs later; the Items tab reloads offline from its saved items (`Offline: using your saved items.`) and starts a challenge with the cached e1RM (Deadlift 100 kg prefill); worker never stores or answers Supabase traffic; every tab renders offline without an uncaught error; offline sign-out with an expired token. |
+| `update.spec.ts`      | A new version reloads safely (swaps the built worker via `replaceBuildId`); files not matching their hashes never replace the shell; the kill switch retires the worker and reloads.                                                                                                                                                                              |
 
 ## For AI Agents
 

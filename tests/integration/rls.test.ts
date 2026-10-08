@@ -374,9 +374,10 @@ describe('function execution rights', () => {
 });
 
 describe('item catalog tables', () => {
-  const catalogTables = ['items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs', 'user_unlocks'];
+  const catalogTables = ['challenges', 'items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs'];
 
   const everyRowColumn: Record<string, string> = {
+    challenges: 'id',
     items: 'id',
     drop_tables: 'id',
     drop_entries: 'item_id',
@@ -385,8 +386,6 @@ describe('item catalog tables', () => {
   };
 
   async function snapshotOf(table: string) {
-    if (table === 'user_unlocks')
-      return await db`select * from public.user_unlocks where user_id = ${owner.id} order by 1, 2`;
     return await db.unsafe(`select * from public.${table} order by 1, 2`);
   }
 
@@ -394,14 +393,13 @@ describe('item catalog tables', () => {
     const [item] = await db`select * from public.items where key = 'plate_crab'`;
     const [table] = await db`select * from public.drop_tables where key = 'rare'`;
     const [recipe] = await db`select * from public.recipes where key = 'grinder_belt'`;
-    const [pauseSquat] = await db`select id from public.exercises where key = 'pause_squat'`;
-    const [scroll] = await db`select id from public.items where key = 'scroll_pause_squat'`;
-    return { item, table, recipe, pauseSquatId: pauseSquat.id as string, scrollId: scroll.id as string };
+    return { item, table, recipe };
   }
 
   it.each(catalogTables)('insert into %s is denied', async (table) => {
-    const { item, table: dropTable, recipe, pauseSquatId, scrollId } = await sampleRows();
+    const { item, table: dropTable, recipe } = await sampleRows();
     const rowsByTable: Record<string, object> = {
+      challenges: { id: randomUUID(), key: 'free_xp', name: 'Free XP', kind: 'volume', definition: {} },
       items: { ...item, id: randomUUID(), key: 'forged_crown', name: 'Forged crown' },
       drop_tables: { id: randomUUID(), key: 'jackpot', name: 'Jackpot' },
       drop_entries: {
@@ -413,7 +411,6 @@ describe('item catalog tables', () => {
       },
       recipes: { id: randomUUID(), key: 'free_crab', output_item_id: item.id, output_quantity: 1 },
       recipe_inputs: { recipe_id: recipe.id, item_id: item.id, quantity: 1 },
-      user_unlocks: { user_id: owner.id, exercise_id: pauseSquatId, item_id: scrollId },
     };
     const before = await snapshotOf(table);
     const { error } = await owner.client.from(table).insert(rowsByTable[table]);
@@ -421,8 +418,9 @@ describe('item catalog tables', () => {
     expect(await snapshotOf(table)).toEqual(before);
   });
 
-  it.each(catalogTables.filter((table) => table !== 'user_unlocks'))('update of %s is denied', async (table) => {
+  it.each(catalogTables)('update of %s is denied', async (table) => {
     const updates: Record<string, object> = {
+      challenges: { name: 'Free XP' },
       items: { name: 'Free loot' },
       drop_tables: { name: 'Free loot' },
       drop_entries: { weight: 1000000 },
@@ -436,31 +434,15 @@ describe('item catalog tables', () => {
     expect(before.length).toBeGreaterThan(0);
   });
 
-  it.each(catalogTables.filter((table) => table !== 'user_unlocks'))('delete from %s is denied', async (table) => {
+  it.each(catalogTables)('delete from %s is denied', async (table) => {
     const before = await snapshotOf(table);
     const { error } = await owner.client.from(table).delete().not(everyRowColumn[table], 'is', null);
     expect(error?.code).toBe('42501');
     expect(await snapshotOf(table)).toEqual(before);
   });
 
-  it('denies update and delete of an own unlock', async () => {
-    const user = await createTestUser();
-    const { pauseSquatId, scrollId } = await sampleRows();
-    await db`insert into public.user_unlocks (user_id, exercise_id, item_id) values (${user.id}, ${pauseSquatId}, ${scrollId})`;
-    const before = await db`select * from public.user_unlocks where user_id = ${user.id}`;
-    const updated = await user.client
-      .from('user_unlocks')
-      .update({ unlocked_at: new Date(0).toISOString() })
-      .eq('user_id', user.id);
-    expect(updated.error).not.toBeNull();
-    const deleted = await user.client.from('user_unlocks').delete().eq('user_id', user.id);
-    expect(deleted.error).not.toBeNull();
-    expect(await db`select * from public.user_unlocks where user_id = ${user.id}`).toEqual(before);
-    expect(before).toHaveLength(1);
-  });
-
   it('lets any signed-in user read the catalog tables', async () => {
-    for (const table of ['items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs']) {
+    for (const table of catalogTables) {
       const [{ total }] = await db`select count(*)::int as total from ${db('public.' + table)}`;
       const { count, error } = await stranger.client.from(table).select('*', { count: 'exact', head: true });
       expect(error, table).toBeNull();
@@ -469,37 +451,45 @@ describe('item catalog tables', () => {
     }
   });
 
-  it('hides a locked variation, its shares and its pin until the user unlocks it', async () => {
-    const [unlocker, outsider] = await Promise.all([createTestUser(), createTestUser()]);
-    const { pauseSquatId, scrollId } = await sampleRows();
-    const visibleTo = async (user: TestUser) => ({
-      exercises: (await user.client.from('exercises').select('id').eq('id', pauseSquatId)).data,
-      shares: (await user.client.from('exercise_skills').select('skill_id').eq('exercise_id', pauseSquatId)).data,
+  it('shows all 6 former variations to a new user and hides another user custom exercise, shares and pin', async () => {
+    const [newcomer, author] = await Promise.all([createTestUser(), createTestUser()]);
+    const variations = await db`
+      select key from public.exercises where owner_user_id is null and variation_of_id is not null order by key`;
+    const { data: visibleVariations } = await newcomer.client
+      .from('exercises')
+      .select('key')
+      .not('variation_of_id', 'is', null)
+      .order('key');
+    expect(visibleVariations).toEqual(variations.map(({ key }) => ({ key })));
+    expect(visibleVariations).toHaveLength(6);
+
+    const [pauseSquat] = await db`select id from public.exercises where key = 'pause_squat'`;
+    const pin = await newcomer.client.from('pinned_exercises').insert({ exercise_id: pauseSquat.id, position: 0 });
+    expect(pin.error).toBeNull();
+
+    const customId = randomUUID();
+    await db.begin(async (tx) => {
+      await tx`
+        insert into public.exercises (id, owner_user_id, name, load_type, equipment)
+        values (${customId}, ${author.id}, 'Secret press', 'external', 'other')`;
+      await tx`
+        insert into public.exercise_skills (exercise_id, skill_id, share_bp)
+        select ${customId}, id, 10000 from public.skills where key = 'chest'`;
     });
-
-    expect(await visibleTo(unlocker)).toEqual({ exercises: [], shares: [] });
-    const pin = await unlocker.client.from('pinned_exercises').insert({ exercise_id: pauseSquatId, position: 0 });
-    expect(pin.error).not.toBeNull();
-    expect(await db`select * from public.pinned_exercises where user_id = ${unlocker.id}`).toEqual([]);
-
-    await db`insert into public.user_unlocks (user_id, exercise_id, item_id) values (${unlocker.id}, ${pauseSquatId}, ${scrollId})`;
-    const unlocked = await visibleTo(unlocker);
-    expect(unlocked.exercises).toEqual([{ id: pauseSquatId }]);
-    expect(unlocked.shares).toHaveLength(2);
-    expect((await unlocker.client.from('user_unlocks').select('exercise_id')).data).toEqual([
-      { exercise_id: pauseSquatId },
+    expect((await newcomer.client.from('exercises').select('id').eq('id', customId)).data).toEqual([]);
+    expect((await newcomer.client.from('exercise_skills').select('skill_id').eq('exercise_id', customId)).data).toEqual(
+      [],
+    );
+    const hiddenPin = await newcomer.client.from('pinned_exercises').insert({ exercise_id: customId, position: 1 });
+    expect(hiddenPin.error).not.toBeNull();
+    expect(await db`select exercise_id from public.pinned_exercises where user_id = ${newcomer.id}`).toEqual([
+      { exercise_id: pauseSquat.id },
     ]);
-    const pinned = await unlocker.client.from('pinned_exercises').insert({ exercise_id: pauseSquatId, position: 0 });
-    expect(pinned.error).toBeNull();
-
-    expect(await visibleTo(outsider)).toEqual({ exercises: [], shares: [] });
-    expect((await outsider.client.from('user_unlocks').select('exercise_id')).data).toEqual([]);
   });
 
-  it('still shows every unlocked built-in exercise', async () => {
+  it('shows every built-in exercise', async () => {
     const { data } = await stranger.client.from('exercises').select('id').is('owner_user_id', null);
-    const [{ count }] =
-      await db`select count(*)::int as count from public.exercises where owner_user_id is null and not requires_unlock`;
+    const [{ count }] = await db`select count(*)::int as count from public.exercises where owner_user_id is null`;
     expect(data).toHaveLength(count);
   });
 });

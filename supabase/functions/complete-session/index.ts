@@ -1,6 +1,9 @@
 import { sql, type Transaction } from '../_shared/db.ts';
 import {
   type Catalog,
+  challengeE1rmSnapshot,
+  challengeLoadExerciseIds,
+  type ChallengeRun,
   DEFAULT_BALANCE,
   HISTORY_ONLY_STEPS,
   historyOnlySummary,
@@ -9,6 +12,7 @@ import {
   processSession,
   type SessionInput,
   type SessionSummary,
+  strengthStateAt,
   type WritableSet,
   writableSetFor,
 } from '../_shared/domain/index.ts';
@@ -16,6 +20,7 @@ import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
+import { claimChallengeScroll } from '../_shared/stores/challenges.ts';
 import { loadEquippedLoadout } from '../_shared/stores/gear.ts';
 import { rollNewSessionLoot } from '../_shared/stores/loot.ts';
 import { replayFrom } from '../_shared/stores/replay.ts';
@@ -40,6 +45,7 @@ import {
   type PrescriptionSnapshotColumns,
   prescriptionSnapshotsBySetId,
 } from '../_shared/stores/set-columns.ts';
+import { loadStrengthHistory } from '../_shared/stores/strength.ts';
 import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
 
 function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessionPayload): void {
@@ -113,6 +119,21 @@ async function storeAndReplay(
   return { summary: await storedSummary(tx, session.id), completedAt };
 }
 
+async function claimChallengeRun(
+  tx: Transaction,
+  userId: string,
+  payload: CompleteSessionPayload,
+): Promise<ChallengeRun | null> {
+  if (payload.challenge === null) return null;
+  const claimed = await claimChallengeScroll(tx, userId, payload.challenge.challengeId, payload.id);
+  if (claimed === null) return null;
+  const key = { id: payload.id, startedAt: payload.startedAt };
+  const exerciseIds = challengeLoadExerciseIds(claimed.definition);
+  const history = await loadStrengthHistory(tx, userId, exerciseIds, key, DEFAULT_BALANCE);
+  const strength = strengthStateAt(history, key, DEFAULT_BALANCE);
+  return { ...claimed, e1rmKg: challengeE1rmSnapshot(claimed.definition, strength) };
+}
+
 function responseFor(stored: InsertedSession, timing: SessionTiming, programLinked: boolean): CompleteSessionResponse {
   const { startedAt, endedAt, sessionRpe } = timing;
   return { ...stored.summary, programLinked, completedAt: stored.completedAt, startedAt, endedAt, sessionRpe };
@@ -166,12 +187,18 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       notes: payload.notes,
       sessionRpe: payload.sessionRpe,
       gearLoadout: await loadEquippedLoadout(tx, userId),
+      challenge: null,
     };
 
     await takeRateLimit(tx, 'session_create_hour', userId);
     await takeRateLimit(tx, 'session_create_day', userId);
     const stored = isWithinEditWindow(payload.startedAt, now.getTime())
-      ? await storeAndReplay(tx, row, session, snapshots)
+      ? await storeAndReplay(
+          tx,
+          { ...row, challenge: await claimChallengeRun(tx, userId, payload) },
+          session,
+          snapshots,
+        )
       : await storeHistoryOnly(tx, row, session, snapshots, catalog);
     return responseFor(stored, row, programLink !== null);
   });

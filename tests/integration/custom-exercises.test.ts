@@ -177,15 +177,7 @@ describe('exercise skill shares', () => {
     return new Map(exercises.map((exercise) => [exercise.id, exercise.skillShares.map((share) => share.skillName)]));
   }
 
-  async function unlock(user: TestUser, exerciseKey: string) {
-    await db`
-      insert into public.user_unlocks (user_id, exercise_id, item_id)
-      select ${user.id}, e.id, i.id
-      from public.exercises e join public.items i on i.grants_exercise_id = e.id
-      where e.key = ${exerciseKey}`;
-  }
-
-  it('names the skills of built-in, custom and newly unlocked exercises, highest share first', async () => {
+  it('names the skills of built-in, custom and former variation exercises, highest share first', async () => {
     const user = await createTestUser();
     const exercise = customExercise();
     expect((await save(user, exercise)).error).toBeNull();
@@ -193,13 +185,10 @@ describe('exercise skill shares', () => {
       ['barbell_bench_press', 'pause_bench_press'].map(builtInExerciseId),
     );
 
-    const beforeUnlock = await visibleSkillNames(user);
-    expect(beforeUnlock.get(benchId)).toEqual(['Chest', 'Shoulders', 'Arms']);
-    expect(beforeUnlock.get(exercise.id)).toEqual(['Shoulders', 'Chest']);
-    expect(beforeUnlock.has(pauseBenchId)).toBe(false);
-
-    await unlock(user, 'pause_bench_press');
-    expect((await visibleSkillNames(user)).get(pauseBenchId)).toEqual(['Chest', 'Shoulders', 'Arms']);
+    const names = await visibleSkillNames(user);
+    expect(names.get(benchId)).toEqual(['Chest', 'Shoulders', 'Arms']);
+    expect(names.get(exercise.id)).toEqual(['Shoulders', 'Chest']);
+    expect(names.get(pauseBenchId)).toEqual(['Chest', 'Shoulders', 'Arms']);
   });
 });
 

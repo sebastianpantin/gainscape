@@ -46,6 +46,7 @@ const sessionSchema = z.object({
   sessionRpe: z.number().int().min(1).max(10).nullable().default(null),
   programDayId: lowerUuid.nullable().default(null),
   program: z.unknown().default(null).transform(programLinkOrNull),
+  challenge: z.object({ challengeId: lowerUuid }).strict().nullable().default(null),
   sets: z.array(setSchema).min(1).max(MAX_SETS_PER_SESSION),
 });
 

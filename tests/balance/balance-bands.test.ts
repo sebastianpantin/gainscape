@@ -4,6 +4,7 @@ import {
   BANDS,
   type BandReport,
   CARDIO_BANDS,
+  CHALLENGE_BANDS,
   type CardioBandReport,
   type CardioProfileResults,
   evaluateBands,
@@ -14,7 +15,12 @@ import {
 import { simulateCardioProfile } from '../../scripts/balance/cardio-simulate.ts';
 import { CARDIO_SIM_SKILLS, SIM_SKILLS } from '../../scripts/balance/catalog.ts';
 import { CARDIO_PROFILES, PROFILES } from '../../scripts/balance/profiles.ts';
-import { firstSkillToLevel99, simulateProfile, WEEKS_PER_YEAR } from '../../scripts/balance/simulate.ts';
+import {
+  ALWAYS_MET_CHALLENGE,
+  firstSkillToLevel99,
+  simulateProfile,
+  WEEKS_PER_YEAR,
+} from '../../scripts/balance/simulate.ts';
 import {
   simulateCommittedCardioConstantsUntilBothReach99,
   simulateCommittedConstantsUntilLegsReach99,
@@ -165,5 +171,31 @@ describe('gear bonus bands', () => {
     const geared = simulateProfile(PROFILES.balanced, DEFAULT_BALANCE, { ...oneYear, gearLoadout: ascendantBelt });
     expectWithin(gearRatios(geared, gearless, ['core']), GEAR_BANDS.beltOnlyCoreRatio);
     expect(xpAfterOneYear(geared, 'chest')).toBe(xpAfterOneYear(gearless, 'chest'));
+  });
+
+  describe('with a challenge passed every session', () => {
+    const liftSkills = SIM_SKILLS.map((skill) => skill.key);
+    const plain = () => simulateProfile(PROFILES.balanced, DEFAULT_BALANCE, oneYear);
+
+    it('gives a balanced lifter about 25% more XP on every trained lift skill after a year', () => {
+      const challenged = simulateProfile(PROFILES.balanced, DEFAULT_BALANCE, {
+        ...oneYear,
+        challenge: ALWAYS_MET_CHALLENGE,
+      });
+      const ratios = gearRatios(challenged, plain(), liftSkills);
+      expect(Object.keys(ratios)).toEqual(liftSkills);
+      expectWithin(ratios, CHALLENGE_BANDS.everySessionXpRatio);
+    });
+
+    it('adds the challenge and full Ascendant bonuses for about 35% more XP', () => {
+      const boosted = simulateProfile(PROFILES.balanced, DEFAULT_BALANCE, {
+        ...oneYear,
+        challenge: ALWAYS_MET_CHALLENGE,
+        gearLoadout: fullAscendant,
+      });
+      const ratios = gearRatios(boosted, plain(), liftSkills);
+      expect(Object.keys(ratios)).toEqual(liftSkills);
+      expectWithin(ratios, CHALLENGE_BANDS.withFullAscendantRatio);
+    });
   });
 });

@@ -39,7 +39,6 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'user_items', column: 'user_id' },
   { table: 'item_ledger', column: 'user_id' },
   { table: 'user_loadout', column: 'user_id' },
-  { table: 'user_unlocks', column: 'user_id' },
   { table: 'events', column: 'user_id' },
   { table: 'friendships', column: 'requester_id' },
   { table: 'friendships', column: 'addressee_id' },
@@ -110,11 +109,7 @@ async function giveUserEverything(user: TestUser): Promise<void> {
   expect(bodyweight.error).toBeNull();
   const keptSessionId = await logOneSession(user);
   await logOneSession(user, 80);
-  const scroll = await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
-  await db`
-    insert into public.user_unlocks (user_id, exercise_id, item_id, source_drop_id)
-    select ${user.id}, grants_exercise_id, id, ${scroll.dropId} from public.items where key = 'scroll_pause_squat'
-    on conflict (user_id, exercise_id) do nothing`;
+  await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
   await db`
     insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
     select ${user.id}, id, 3 from public.drop_tables where key = 'regular'
@@ -224,7 +219,7 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(5);
+    expect(exported.version).toBe(6);
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);
@@ -248,8 +243,7 @@ describe('export-data', () => {
       expect.objectContaining({ slot: 'belt', item_id: expect.any(String), equipped_at: expect.any(String) }),
     ]);
     expect(counts.user_loadout).toBe(1);
-    expect(exported.userUnlocks).toHaveLength(counts.user_unlocks);
-    expect(counts.user_unlocks).toBeGreaterThan(0);
+    expect(exported).not.toHaveProperty('userUnlocks');
     expect(exported.events).toHaveLength(counts.events);
     expect(exported.cardioRecords).toHaveLength(counts.cardio_records);
     expect(counts.cardio_records).toBeGreaterThan(0);
@@ -413,7 +407,6 @@ describe('delete-account', () => {
       'drop_luck',
       'user_items',
       'item_ledger',
-      'user_unlocks',
       'events',
       'crafts',
       'reactions',

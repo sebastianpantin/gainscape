@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   type Catalog,
+  challengeBonusXp,
   compareSessionKeys,
   DEFAULT_BALANCE,
   DEFAULT_STEPS,
@@ -421,5 +422,76 @@ describe('replayHistory with gear snapshots', () => {
       ['squats', { legs: 5, core: 2 }],
       ['bench', { chest: 6, shoulders: 2 }],
     ]);
+  });
+});
+
+describe('replayHistory with challenge snapshots', () => {
+  const challengeCatalog: Catalog = {
+    skills: fixtureCatalog.skills,
+    exercises: new Map([
+      ...fixtureCatalog.exercises,
+      [
+        'deadlift',
+        {
+          id: 'deadlift',
+          loadType: 'external',
+          builtIn: true,
+          shares: [
+            { skillId: 'skill-back', shareBasisPoints: 5000 },
+            { skillId: 'skill-legs', shareBasisPoints: 5000 },
+          ],
+        },
+      ],
+    ]),
+  };
+  const failure = { type: 'level', level: 'failure' } as const;
+
+  it('judges a challenge against its frozen e1RM snapshot, not the replayed strength', () => {
+    const heavyPull: SessionInput = {
+      id: 'heavy-pull',
+      startedAt: '2026-09-28T10:00:00Z',
+      sets: [aSet('deadlift', 150, 1, failure)],
+    };
+    const challengeSession: SessionInput = {
+      id: 'challenge',
+      startedAt: '2026-09-30T10:00:00Z',
+      sets: [0, 1, 2, 3, 4].flatMap(() => [
+        aSet('deadlift', 97.5, 5, hard),
+        aSet('pull-up', 0, 5, hard, { recordedEffectiveLoadKg: 80 }),
+      ]),
+      challenge: {
+        challengeId: 'challenge-deadlift-and-pull-up',
+        key: 'deadlift_and_pull_up',
+        name: 'Deadlift and Pull-up',
+        definition: {
+          kind: 'prescription',
+          groups: [
+            {
+              rounds: 5,
+              exercises: [
+                { exerciseId: 'deadlift', reps: 5, pct: 70 },
+                { exerciseId: 'pull-up', reps: 5, pct: null },
+              ],
+            },
+          ],
+        },
+        e1rmKg: { deadlift: 140 },
+      },
+    };
+    const { sessions } = replayHistory([challengeSession, heavyPull], challengeCatalog, TEST_BALANCE);
+    const replayedChallenge = sessions[1];
+    expect(replayedChallenge.strengthAtStart.deadlift.windowMax).toBe(150);
+    expect(replayedChallenge.outputs.challengeVerdict).toEqual({ passed: true });
+    const plain = replayHistory([{ ...challengeSession, challenge: null }, heavyPull], challengeCatalog, TEST_BALANCE);
+    const baseXpBySkill = plain.sessions[1].outputs.xpBySkill;
+    expect(Object.keys(baseXpBySkill).length).toBeGreaterThan(0);
+    expect(replayedChallenge.outputs.challengeBonusBySkill).toEqual(
+      Object.fromEntries(
+        Object.entries(baseXpBySkill).map(([skill, baseXp]) => [skill, challengeBonusXp(baseXp, TEST_BALANCE)]),
+      ),
+    );
+    expect(replayHistory([challengeSession, heavyPull], challengeCatalog, TEST_BALANCE)).toEqual(
+      replayHistory([heavyPull, challengeSession], challengeCatalog, TEST_BALANCE),
+    );
   });
 });

@@ -19,6 +19,11 @@ import {
 
 const NO_STRENGTH: ExerciseStrength = Object.freeze({ windowMax: null, fallbackMax: null, hasPriorSession: false });
 
+export function e1rmAtSessionStart(strength: StrengthState, exerciseId: string): number | null {
+  const known = strength[exerciseId] ?? NO_STRENGTH;
+  return known.windowMax ?? known.fallbackMax ?? null;
+}
+
 export function epley(loadKg: number, repsToFailure: number): number {
   return roundTo(2, loadKg * loadRatioAtFailure(repsToFailure));
 }

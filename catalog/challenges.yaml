@@ -1,0 +1,40 @@
+- key: deadlift_and_pull_up
+  name: Deadlift and Pull-up
+  kind: prescription
+  supersets:
+    - rounds: 5
+      exercises:
+        - { exercise: deadlift, reps: 5, pct: 70 }
+        - { exercise: pull_up, reps: 5 }
+- key: bench_and_row
+  name: Bench and Row
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: barbell_bench_press, reps: 8, pct: 65 }
+        - { exercise: barbell_row, reps: 8, pct: 65 }
+- key: press_and_chin
+  name: Press and Chin
+  kind: prescription
+  supersets:
+    - rounds: 5
+      exercises:
+        - { exercise: overhead_press, reps: 5, pct: 70 }
+        - { exercise: chin_up, reps: 5 }
+- key: dips_and_curls
+  name: Dips and Curls
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: dip, reps: 10 }
+        - { exercise: barbell_curl, reps: 12 }
+- key: squat_century
+  name: Squat Century
+  kind: volume
+  volume: { metric: reps, target: 100, exercise: back_squat, min_pct: 50 }
+- key: ten_ton_day
+  name: Ten-Ton Day
+  kind: volume
+  volume: { metric: kg, target: 10000 }

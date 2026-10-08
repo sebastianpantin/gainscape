@@ -1,6 +1,18 @@
-import { isRetestRef, type Position, type PrescribedExercise, type PrescriptionSnapshot } from '@domain/index.ts';
+import {
+  type ChallengeDefinition,
+  e1rmAtSessionStart,
+  isRetestRef,
+  loadTargetKg,
+  type Position,
+  type PrescribedExercise,
+  type PrescriptionSnapshot,
+  type RoundingSetting,
+  type StrengthState,
+  type WeightUnit,
+} from '@domain/index.ts';
 import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
 import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
+import { type CatalogChallenge, challengeLoadKg, parsedDraftChallenge } from '../lib/challenge-rules.ts';
 import { isSessionRpe } from '../lib/session-timing-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 5;
@@ -10,6 +22,7 @@ const PRE_EFFORT_INPUT_FORMAT_VERSION = 2;
 const STARTING_EXTERNAL_LOAD_KG = 20;
 const STARTING_REPS = 8;
 const STARTING_BOUT_DURATION_S = 1800;
+const CHALLENGE_REPS_PER_SET = 10;
 
 export interface PrescriptionDetail {
   pct: number | null;
@@ -52,6 +65,7 @@ export interface LiftDraftExercise {
   modality: 'lift';
   loadType: LoadType;
   target: DraftTarget | null;
+  supersetId?: string | null;
   sets: DraftSet[];
 }
 
@@ -71,6 +85,13 @@ export interface DraftProgram {
   templateKey: string;
 }
 
+export interface DraftChallenge {
+  challengeId: string;
+  name: string;
+  definition: ChallengeDefinition;
+  targetLoadsKg: Record<string, number | null>;
+}
+
 export interface WorkoutDraft {
   sessionId: string;
   startedAt: string;
@@ -78,6 +99,7 @@ export interface WorkoutDraft {
   programDayId: string | null;
   programLabel: string | null;
   program?: DraftProgram | null;
+  challenge?: DraftChallenge | null;
   sessionRpe?: number | null;
   exercises: DraftExercise[];
 }
@@ -179,11 +201,44 @@ function withUsableSessionRpe(draft: WorkoutDraft): WorkoutDraft {
   return { ...draft, sessionRpe: null };
 }
 
+function supersetIdOf(exercise: DraftExercise): string | null {
+  return exercise.modality === 'lift' && typeof exercise.supersetId === 'string' ? exercise.supersetId : null;
+}
+
+function validSupersetIds(exercises: readonly DraftExercise[]): Set<string> {
+  const runLengths = new Map<string, number[]>();
+  exercises.forEach((exercise, index) => {
+    const id = supersetIdOf(exercise);
+    if (id === null) return;
+    const runs = runLengths.get(id) ?? [];
+    const continuesRun = index > 0 && supersetIdOf(exercises[index - 1]) === id;
+    if (continuesRun) runs[runs.length - 1] += 1;
+    else runs.push(1);
+    runLengths.set(id, runs);
+  });
+  return new Set([...runLengths].filter(([, runs]) => runs.length === 1 && runs[0] >= 2).map(([id]) => id));
+}
+
+export function withValidSupersets(exercises: DraftExercise[]): DraftExercise[] {
+  const valid = validSupersetIds(exercises);
+  return exercises.map((exercise) => {
+    if (exercise.modality === 'cardio') {
+      const kept = Object.entries(exercise).filter(([key]) => key !== 'supersetId');
+      return Object.fromEntries(kept) as unknown as CardioDraftExercise;
+    }
+    const id = supersetIdOf(exercise);
+    return { ...exercise, supersetId: id !== null && valid.has(id) ? id : null };
+  });
+}
+
 function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
   return {
     ...withUsableSessionRpe(draft),
     program: isDraftProgram(draft.program) ? draft.program : null,
-    exercises: draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
+    challenge: parsedDraftChallenge(draft.challenge),
+    exercises: withValidSupersets(
+      draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
+    ),
   };
 }
 
@@ -241,6 +296,7 @@ export function startDraft(): WorkoutDraft {
     programDayId: null,
     programLabel: null,
     program: null,
+    challenge: null,
     exercises: [],
   };
 }
@@ -265,7 +321,7 @@ export function addCardioExercise(
 }
 
 export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
-  return { ...draft, exercises: draft.exercises.filter((_, index) => index !== exerciseIndex) };
+  return { ...draft, exercises: withValidSupersets(draft.exercises.filter((_, index) => index !== exerciseIndex)) };
 }
 
 export function nextBoutValues(previous: BoutValues | undefined): BoutValues {
@@ -452,7 +508,10 @@ type LiftCatalogEntry = Extract<CatalogEntry, { loadType: LoadType }>;
 function liftDraftExercises<Entry extends { exerciseId: string }>(
   entries: readonly Entry[],
   exercisesById: ReadonlyMap<string, CatalogEntry>,
-  targetAndSets: (entry: Entry, exercise: LiftCatalogEntry) => Pick<LiftDraftExercise, 'target' | 'sets'>,
+  targetAndSets: (
+    entry: Entry,
+    exercise: LiftCatalogEntry,
+  ) => Pick<LiftDraftExercise, 'target' | 'sets' | 'supersetId'>,
 ): { exercises: DraftExercise[]; skippedExerciseIds: string[] } {
   const skippedExerciseIds: string[] = [];
   const exercises = entries.flatMap((entry): DraftExercise[] => {
@@ -503,6 +562,7 @@ export function startDraftFromDay(
       programDayId: day.id,
       programLabel: programLabelFor(day.programName, day.name),
       program: null,
+      challenge: null,
       exercises,
     },
     skippedExerciseIds,
@@ -548,7 +608,90 @@ export function startDraftFromPrescription(
       programDayId: null,
       programLabel: programLabelFor(day.programName, day.dayName),
       program: { enrollmentId: day.enrollmentId, position: day.position, templateKey: day.templateKey },
+      challenge: null,
       exercises,
+    },
+    skippedExerciseIds,
+  };
+}
+
+interface PlannedChallengeExercise {
+  exerciseId: string;
+  sets: number;
+  reps: number;
+  pct: number | null;
+  supersetId: string | null;
+}
+
+function plannedChallengeExercises(definition: ChallengeDefinition): PlannedChallengeExercise[] {
+  if (definition.kind === 'prescription') {
+    return definition.groups.flatMap((group) => {
+      const supersetId = group.exercises.length > 1 ? crypto.randomUUID() : null;
+      return group.exercises.map(({ exerciseId, reps, pct }) => ({
+        exerciseId,
+        sets: group.rounds,
+        reps,
+        pct,
+        supersetId,
+      }));
+    });
+  }
+  if (definition.metric !== 'reps' || definition.exerciseId === null) return [];
+  return [
+    {
+      exerciseId: definition.exerciseId,
+      sets: Math.ceil(definition.target / CHALLENGE_REPS_PER_SET),
+      reps: CHALLENGE_REPS_PER_SET,
+      pct: definition.minPct,
+      supersetId: null,
+    },
+  ];
+}
+
+export function startDraftFromChallenge(
+  challenge: CatalogChallenge,
+  exercisesById: ReadonlyMap<string, CatalogEntry>,
+  strength: StrengthState,
+  rounding: RoundingSetting,
+  unit: WeightUnit,
+  now: Date,
+): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
+  const targetLoadsKg: Record<string, number | null> = {};
+  const { exercises, skippedExerciseIds } = liftDraftExercises(
+    plannedChallengeExercises(challenge.definition),
+    exercisesById,
+    (planned, exercise) => {
+      const target =
+        planned.pct === null ? null : loadTargetKg(planned.pct, e1rmAtSessionStart(strength, planned.exerciseId));
+      const weightKg =
+        target === null || exercise.loadType !== 'external'
+          ? defaultWeightKg(exercise.loadType)
+          : challengeLoadKg(target, rounding, unit);
+      targetLoadsKg[planned.exerciseId] = planned.pct === null ? null : weightKg;
+      return {
+        target: null,
+        supersetId: planned.supersetId,
+        sets: Array.from({ length: planned.sets }, () => ({
+          id: crypto.randomUUID(),
+          weightKg,
+          reps: planned.reps,
+          effort: null,
+          done: false,
+          isWarmup: false,
+        })),
+      };
+    },
+  );
+  return {
+    draft: {
+      sessionId: crypto.randomUUID(),
+      startedAt: now.toISOString(),
+      finishedAt: null,
+      programDayId: null,
+      programLabel: `Challenge — ${challenge.name}`,
+      program: null,
+      challenge: { challengeId: challenge.id, name: challenge.name, definition: challenge.definition, targetLoadsKg },
+      exercises: withValidSupersets(exercises),
     },
     skippedExerciseIds,
   };
@@ -563,6 +706,7 @@ export function toggleSetDone(draft: WorkoutDraft, exerciseIndex: number, setId:
 const MOST_WORKING_SETS_TO_QUICK_FILL = 1;
 
 export function canQuickFill(exercise: LiftDraftExercise): boolean {
+  if (exercise.supersetId != null) return false;
   if (exercise.sets.some((set) => set.prescription)) return false;
   return exercise.sets.filter((set) => !set.isWarmup).length <= MOST_WORKING_SETS_TO_QUICK_FILL;
 }
@@ -619,7 +763,7 @@ export function swapExercise(
   replacement: { id: string; name: string; loadType: LoadType },
 ): WorkoutDraft | null {
   if (!canSwapExercise(draft, exerciseIndex)) return null;
-  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
+  const swapped = updateExerciseAt(draft, exerciseIndex, (exercise) =>
     exercise.modality === 'cardio'
       ? exercise
       : {
@@ -630,4 +774,5 @@ export function swapExercise(
           sets: exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) })),
         },
   );
+  return { ...swapped, exercises: withValidSupersets(swapped.exercises) };
 }

@@ -406,7 +406,7 @@ export async function ledgerMismatches(userId: string) {
 }
 
 export async function lootSnapshot(userId: string) {
-  const [lootRolls, drops, dropLuck, userItems, itemLedger, userUnlocks] = await Promise.all([
+  const [lootRolls, drops, dropLuck, userItems, itemLedger] = await Promise.all([
     db`select session_id, set_id, kind, local_date::text, roll_index, drop_table_id, chance::float, hit, loot_version
        from public.loot_rolls where user_id = ${userId} order by set_id, kind`,
     db`select d.session_id, d.set_id, d.item_id, d.quantity, d.source, d.revoked_at, d.revoke_reason,
@@ -417,9 +417,8 @@ export async function lootSnapshot(userId: string) {
     db`select item_id, quantity, first_obtained_at, updated_at from public.user_items
        where user_id = ${userId} order by item_id`,
     db`select item_id, delta, reason, created_at from public.item_ledger where user_id = ${userId} order by id`,
-    db`select exercise_id, item_id, unlocked_at from public.user_unlocks where user_id = ${userId} order by exercise_id`,
   ]);
-  return { lootRolls, drops, dropLuck, userItems, itemLedger, userUnlocks };
+  return { lootRolls, drops, dropLuck, userItems, itemLedger };
 }
 
 interface GrantedDrop {

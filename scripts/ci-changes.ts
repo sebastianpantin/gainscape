@@ -17,6 +17,7 @@ const BACKEND_FILES = [
   'vitest.config.ts',
   'tsconfig.json',
   '.github/workflows/ci.yml',
+  'web/src/offline/session-payload.ts',
 ];
 
 function isDocumentation(path: string): boolean {

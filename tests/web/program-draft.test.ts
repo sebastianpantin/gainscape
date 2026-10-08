@@ -93,6 +93,7 @@ function programDraft(): WorkoutDraft {
     programDayId: null,
     programLabel: 'Madcow 5x5 — W1 Day 1',
     program: MADCOW_MONDAY,
+    challenge: null,
     exercises: [
       {
         exerciseId: 'squat',
@@ -100,6 +101,7 @@ function programDraft(): WorkoutDraft {
         modality: 'lift',
         loadType: 'external',
         target: null,
+        supersetId: null,
         sets: [
           {
             id: 'squat-0',
@@ -128,6 +130,7 @@ function programDraft(): WorkoutDraft {
         modality: 'lift',
         loadType: 'external',
         target: null,
+        supersetId: null,
         sets: [
           {
             id: 'bench-0',

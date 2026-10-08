@@ -1,4 +1,4 @@
-import { type CatalogData, catalogNames } from './load.ts';
+import { type CatalogChallenge, type CatalogData, catalogNames } from './load.ts';
 import { CATALOG_NAMESPACE } from './namespace.ts';
 
 type SqlValue = string | number | boolean | null | { raw: string };
@@ -42,6 +42,55 @@ function retireAllExcept(table: string, names: readonly string[]): string {
   return `update public.${table} set retired_at = coalesce(retired_at, now())\nwhere id <> all(array[\n  ${ids}\n]);`;
 }
 
+function jsonObject(entries: readonly [string, SqlValue][]): { raw: string } {
+  return {
+    raw: `jsonb_build_object(${entries.map(([key, value]) => `${literal(key)}, ${render(value)}`).join(', ')})`,
+  };
+}
+
+function jsonArray(values: readonly SqlValue[]): { raw: string } {
+  return { raw: `jsonb_build_array(${values.map(render).join(', ')})` };
+}
+
+function challengeDefinition(challenge: CatalogChallenge): { raw: string } {
+  const exerciseId = (key: string) => idFor(catalogNames.exercise(key));
+  if (challenge.volume !== null) {
+    const volume = challenge.volume;
+    return jsonObject([
+      ['kind', 'volume'],
+      ['metric', volume.metric],
+      ['target', volume.target],
+      ['exerciseId', volume.exercise === null ? null : exerciseId(volume.exercise)],
+      ['minPct', volume.minPct],
+    ]);
+  }
+  return jsonObject([
+    ['kind', 'prescription'],
+    [
+      'groups',
+      jsonArray(
+        challenge.supersets.map((superset) =>
+          jsonObject([
+            ['rounds', superset.rounds],
+            [
+              'exercises',
+              jsonArray(
+                superset.exercises.map((entry) =>
+                  jsonObject([
+                    ['exerciseId', exerciseId(entry.exercise)],
+                    ['reps', entry.reps],
+                    ['pct', entry.pct],
+                  ]),
+                ),
+              ),
+            ],
+          ]),
+        ),
+      ),
+    ],
+  ]);
+}
+
 const EXERCISE_COLUMNS = [
   'id',
   'key',
@@ -49,7 +98,6 @@ const EXERCISE_COLUMNS = [
   'modality',
   'load_type',
   'equipment',
-  'requires_unlock',
   'variation_of_id',
   'reference_pace_s_per_km',
   'pace_unit',
@@ -67,7 +115,7 @@ const ITEM_COLUMNS = [
   'gear_slot',
   'icon_key',
   'description',
-  'grants_exercise_id',
+  'grants_challenge_id',
   'sort_order',
   'retired_at',
 ] as const;
@@ -76,6 +124,7 @@ export function renderStatements(catalog: CatalogData): string[] {
   const exerciseId = (key: string) => idFor(catalogNames.exercise(key));
   const skillId = (key: string) => idFor(catalogNames.skill(key));
   const programId = (key: string) => idFor(catalogNames.program(key));
+  const challengeId = (key: string) => idFor(catalogNames.challenge(key));
   const itemId = (key: string) => idFor(catalogNames.item(key));
   const tableId = (key: string) => idFor(catalogNames.dropTable(key));
   const recipeId = (key: string) => idFor(catalogNames.recipe(key));
@@ -106,7 +155,6 @@ export function renderStatements(catalog: CatalogData): string[] {
         exercise.modality,
         exercise.loadType,
         exercise.equipment,
-        exercise.requiresUnlock,
         exercise.variationOf === null ? null : exerciseId(exercise.variationOf),
         exercise.cardio?.referencePaceSPerKm ?? null,
         exercise.cardio?.paceUnit ?? null,
@@ -158,6 +206,19 @@ export function renderStatements(catalog: CatalogData): string[] {
       ),
     ),
     insert(
+      'challenges',
+      ['id', 'key', 'name', 'kind', 'definition', 'retired_at'],
+      catalog.challenges.map((challenge) => [
+        challengeId(challenge.key),
+        challenge.key,
+        challenge.name,
+        challenge.kind,
+        challengeDefinition(challenge),
+        null,
+      ]),
+      `${upsertSuffix(['key', 'name', 'kind', 'definition'], true)}, ${retiredAtAssignment('challenges')}`,
+    ),
+    insert(
       'items',
       [...ITEM_COLUMNS],
       catalog.items.map((item) => [
@@ -170,7 +231,7 @@ export function renderStatements(catalog: CatalogData): string[] {
         item.gearSlot,
         item.icon,
         item.description,
-        item.grants === null ? null : exerciseId(item.grants),
+        item.grants === null ? null : challengeId(item.grants),
         item.sortOrder,
         retiredAtFor(item.retired),
       ]),
@@ -212,6 +273,10 @@ export function renderStatements(catalog: CatalogData): string[] {
       catalog.recipes.flatMap((recipe) =>
         recipe.inputs.map((input) => [recipeId(recipe.key), itemId(input.item), input.quantity]),
       ),
+    ),
+    retireAllExcept(
+      'challenges',
+      catalog.challenges.map((challenge) => catalogNames.challenge(challenge.key)),
     ),
     retireAllExcept(
       'items',
