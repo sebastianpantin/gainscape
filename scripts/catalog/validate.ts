@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
+import { GEAR_SLOT_SKILLS } from '../../supabase/functions/_shared/domain/gear.ts';
 import { CARDIO_EFFORT_LEVELS } from '../../supabase/functions/_shared/domain/types.ts';
 import { type CatalogData, type CatalogExercise, type CatalogItem, catalogNames } from './load.ts';
 
@@ -155,6 +156,16 @@ function checkGear(catalog: CatalogData, problems: string[]): void {
       `gear slots [${catalog.gearSlots.join(', ')}] must match GEAR_SLOTS [${GEAR_SLOTS.join(', ')}] in order`,
     );
   }
+  const skillKeys = new Set(catalog.skills.map((skill) => skill.key));
+  for (const slot of GEAR_SLOTS) {
+    for (const skill of GEAR_SLOT_SKILLS[slot].filter((key) => !skillKeys.has(key))) {
+      problems.push(`gear slot "${slot}" boosts unknown skill "${skill}"`);
+    }
+  }
+  const boosted = new Set(Object.values(GEAR_SLOT_SKILLS).flat());
+  for (const skill of catalog.skills.filter((candidate) => !boosted.has(candidate.key))) {
+    problems.push(`skill "${skill.key}" is boosted by no gear slot`);
+  }
 }
 
 function checkItems(catalog: CatalogData, problems: string[]): void {
@@ -243,6 +254,10 @@ function checkRecipes(catalog: CatalogData, problems: string[]): void {
     if (recipe.inputs.length === 0) problems.push(`recipe "${recipe.key}" has no inputs`);
     for (const item of duplicates(recipe.inputs.map((input) => input.item))) {
       problems.push(`recipe "${recipe.key}" lists input "${item}" twice`);
+    }
+    const gearInputs = recipe.inputs.filter((input) => itemsByKey.get(input.item)?.kind === 'gear').length;
+    if (itemsByKey.get(recipe.output)?.kind === 'gear' && gearInputs > 1) {
+      problems.push(`recipe "${recipe.key}" consumes ${gearInputs} gear items, at most 1 allowed`);
     }
   }
 }
