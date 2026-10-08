@@ -34,8 +34,8 @@ async function expectDraftWithSet(page: Page) {
   const card = page.locator('section', {
     has: page.getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
   });
-  await expect(card.getByLabel(/kg/)).toHaveValue('60');
-  await expect(card.getByLabel('reps')).toHaveValue('5');
+  await expect(card.locator('li.set-row').getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
+  await expect(card.locator('li.set-row').getByLabel('reps')).toHaveValue('5');
 }
 
 test('a new version reloads safely', async ({ context, page }) => {
