@@ -374,9 +374,10 @@ describe('function execution rights', () => {
 });
 
 describe('item catalog tables', () => {
-  const catalogTables = ['items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs'];
+  const catalogTables = ['challenges', 'items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs'];
 
   const everyRowColumn: Record<string, string> = {
+    challenges: 'id',
     items: 'id',
     drop_tables: 'id',
     drop_entries: 'item_id',
@@ -398,6 +399,7 @@ describe('item catalog tables', () => {
   it.each(catalogTables)('insert into %s is denied', async (table) => {
     const { item, table: dropTable, recipe } = await sampleRows();
     const rowsByTable: Record<string, object> = {
+      challenges: { id: randomUUID(), key: 'free_xp', name: 'Free XP', kind: 'volume', definition: {} },
       items: { ...item, id: randomUUID(), key: 'forged_crown', name: 'Forged crown' },
       drop_tables: { id: randomUUID(), key: 'jackpot', name: 'Jackpot' },
       drop_entries: {
@@ -418,6 +420,7 @@ describe('item catalog tables', () => {
 
   it.each(catalogTables)('update of %s is denied', async (table) => {
     const updates: Record<string, object> = {
+      challenges: { name: 'Free XP' },
       items: { name: 'Free loot' },
       drop_tables: { name: 'Free loot' },
       drop_entries: { weight: 1000000 },
@@ -439,7 +442,7 @@ describe('item catalog tables', () => {
   });
 
   it('lets any signed-in user read the catalog tables', async () => {
-    for (const table of ['items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs']) {
+    for (const table of catalogTables) {
       const [{ total }] = await db`select count(*)::int as total from ${db('public.' + table)}`;
       const { count, error } = await stranger.client.from(table).select('*', { count: 'exact', head: true });
       expect(error, table).toBeNull();
