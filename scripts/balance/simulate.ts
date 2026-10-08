@@ -2,6 +2,7 @@ import {
   type BalanceConfig,
   compareSessionKeys,
   type EffortInput,
+  type GearLoadout,
   predictedMaxReps,
   processSession,
   type SessionInput,
@@ -36,6 +37,7 @@ export interface SimulationResult {
 export interface SimulationOptions {
   maxYears?: number;
   stopWhenSkillsReach99?: readonly string[];
+  gearLoadout?: GearLoadout;
 }
 
 function weeklyGrowthFactor(week: number): number {
@@ -123,6 +125,7 @@ export function simulateProfile(
         id: `${profile.name}-${String(week).padStart(5, '0')}-${dayIndex}`,
         startedAt,
         sets,
+        gearLoadout: options.gearLoadout,
       };
       const strength = strengthStateAt(history, session, cfg);
       const { nextState, outputs } = processSession({ skillXp, bodyweightKg: null }, session, cfg, {
