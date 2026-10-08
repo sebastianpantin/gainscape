@@ -15,7 +15,7 @@ export function isDeviceOffline(): boolean {
 
 let nextOffline: Promise<void> | null = null;
 
-export function nextOfflineEvent(): Promise<void> {
+function nextOfflineEvent(): Promise<void> {
   if (typeof window === 'undefined') return new Promise(() => undefined);
   nextOffline ??= new Promise((resolve) =>
     window.addEventListener(
