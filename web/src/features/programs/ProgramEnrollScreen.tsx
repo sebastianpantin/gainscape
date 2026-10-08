@@ -3,11 +3,13 @@ import { useEffect, useId, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
+import { TermHelpRow } from '../../components/TermHelpRow.tsx';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { readCachedExercises } from '../../lib/catalog-cache.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { isLiftExercise } from '../../lib/catalog-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
+import { inputHelpKeys } from '../../lib/term-help-rules.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { enrollProgram, fetchProgramTemplates, forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
@@ -141,6 +143,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const form = editedForm ?? initialEnrollForm(definition, unitPref, exercises);
   const change = (changes: Partial<EnrollForm>) => setEditedForm({ ...form, ...changes });
   const roundingText = roundingTextOf(form);
+  const fields = inputFields(definition, form);
   const replacing = replacedProgramName(readProgramCache(localStorage, userId).templates, enrolledRow);
 
   const enroll = async (payload: EnrollProgramPayload) => {
@@ -181,7 +184,8 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
       </div>
       <section className="panel stack" aria-label="Starting weights">
         <h2>Starting weights</h2>
-        {inputFields(definition, form).map((field) => {
+        <TermHelpRow keys={inputHelpKeys(fields)} />
+        {fields.map((field) => {
           const preview = referencePreview(definition, form, field.lift);
           return (
             <div className="stack" key={field.lift} style={{ gap: 6 }}>

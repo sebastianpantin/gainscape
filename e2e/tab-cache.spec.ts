@@ -5,7 +5,7 @@ import { openFromProfile, openTab, register, uniqueUsername } from './support/ap
 const SKILL_XP = '**/rest/v1/user_skills*';
 const PROFILE_READ = '**/rest/v1/profile_private*';
 const FEED = '**/rest/v1/rpc/get_feed*';
-const EMPTY_FEED = 'No posts yet. Add friends, or log a PR.';
+const EMPTY_FEED = 'No posts yet. Add friends, or log a personal record (PR).';
 
 function holdRequests(page: Page, url: string, method = 'GET'): () => void {
   let release!: () => void;

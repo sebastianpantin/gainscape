@@ -31,6 +31,9 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await expect(loot.getByRole('listitem').filter({ has: page.getByText('PR', { exact: true }) })).toHaveCount(
     drops.filter((drop) => drop.source === 'pr').length,
   );
+  await expect(loot.getByRole('img', { name: 'Personal record', exact: true })).toHaveCount(
+    drops.filter((drop) => drop.source === 'pr').length,
+  );
   await expect(loot).toContainText(drops[0].name);
 
   await loot.getByRole('link', { name: 'See items' }).click();

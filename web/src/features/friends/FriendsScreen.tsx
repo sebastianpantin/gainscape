@@ -304,7 +304,7 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
               </ul>
             </section>
           )}
-          {feed.length === 0 && <p className="muted">No posts yet. Add friends, or log a PR.</p>}
+          {feed.length === 0 && <p className="muted">No posts yet. Add friends, or log a personal record (PR).</p>}
           {feed.length > 0 && (
             <ul className="feed" aria-label="Feed">
               {feed.map((item) => (
