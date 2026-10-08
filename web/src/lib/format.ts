@@ -16,6 +16,10 @@ export function sessionXp(summary: Pick<SessionSummary, 'xpBySkill'>): number {
   return Object.values(summary.xpBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
 }
 
+export function sessionGearBonus(summary: Pick<SessionSummary, 'gearBonusBySkill'>): number {
+  return Object.values(summary.gearBonusBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
+}
+
 export function formatSessionDate(localDate: string): string {
   return new Date(`${localDate}T00:00:00`).toLocaleDateString('en-GB', {
     weekday: 'short',

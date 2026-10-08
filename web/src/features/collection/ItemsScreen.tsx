@@ -1,4 +1,5 @@
 import { canCraft, recipeFor } from '@domain/crafting.ts';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { ItemIcon } from '../../components/PixelArt.tsx';
 import { fetchExercises } from '../../lib/catalog.ts';
@@ -18,7 +19,10 @@ import {
   showsQuantity,
   tiersOf,
 } from '../../lib/item-rules.ts';
-import { craftItem, fetchInventory, fetchItemCatalog } from '../../lib/items.ts';
+import { messageOf } from '../../lib/error-text.ts';
+import { craftItem, equipGear, fetchInventory, fetchItemCatalog, unequipGear } from '../../lib/items.ts';
+import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
+import { loadoutQueryKey, useLoadout } from '../profile/use-loadout.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
 
@@ -27,11 +31,22 @@ interface ItemDetailProps {
   catalog: ItemCatalog;
   held: ReadonlyMap<string, HeldItem>;
   exercises: readonly Exercise[];
+  equipped: boolean | null;
   onCrafted: (outputItemId: string) => Promise<void>;
   onCatalogStale: () => Promise<void>;
+  onLoadoutChanged: () => Promise<void>;
 }
 
-function ItemDetail({ item, catalog, held, exercises, onCrafted, onCatalogStale }: ItemDetailProps) {
+function ItemDetail({
+  item,
+  catalog,
+  held,
+  exercises,
+  equipped,
+  onCrafted,
+  onCatalogStale,
+  onLoadoutChanged,
+}: ItemDetailProps) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const nameOf = itemNameLookup(catalog.items, 'Unknown item');
@@ -56,6 +71,20 @@ function ItemDetail({ item, catalog, held, exercises, onCrafted, onCatalogStale 
     setBusy(false);
   };
 
+  const changeGear = async () => {
+    if (!item.gearSlot) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      if (equipped) await unequipGear(item.gearSlot);
+      else await equipGear(item.gearSlot, item.id);
+    } catch (error) {
+      setProblem(`Couldn't change your gear: ${messageOf(error, 'try again.')}`);
+    }
+    await onLoadoutChanged();
+    setBusy(false);
+  };
+
   return (
     <section className="panel stack" aria-live="polite" aria-label="Item details">
       <span className="stack" style={{ gap: 2 }}>
@@ -69,6 +98,11 @@ function ItemDetail({ item, catalog, held, exercises, onCrafted, onCatalogStale 
           <span className="muted">Unlocks {grants ? grants.name : 'a new exercise variation'}</span>
         )}
       </span>
+      {item.gearSlot && quantity >= 1 && equipped !== null && (
+        <button className="button" type="button" disabled={busy} onClick={() => void changeGear()}>
+          {equipped ? 'Unequip' : 'Equip'}
+        </button>
+      )}
       {recipe && (
         <>
           <div className="well recipe">
@@ -115,6 +149,12 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
   const [newIds] = useState(() => newItemIds(recallLastSummary()?.drops));
+  const queryClient = useQueryClient();
+  const loadout = useLoadout(userId);
+  const refetchLoadout = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: loadoutQueryKey(userId) }),
+    [queryClient, userId],
+  );
 
   const refetchInventory = useCallback(async () => {
     try {
@@ -180,6 +220,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   return (
     <main className="screen stack">
       {header}
+      <LoadoutPanel userId={userId} />
       {groups.map((group) => (
         <div className="panel stack" key={group.title}>
           <div className="row spread">
@@ -221,11 +262,13 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           catalog={catalog}
           held={held}
           exercises={exercises}
+          equipped={loadout.data ? loadout.data.slots.some((equippedGear) => equippedGear.itemId === picked.id) : null}
           onCrafted={async (itemId) => {
-            await refetchInventory();
+            await Promise.all([refetchInventory(), refetchLoadout()]);
             setPickedId(itemId);
           }}
           onCatalogStale={refetchCatalog}
+          onLoadoutChanged={refetchLoadout}
         />
       ) : (
         <p className="panel muted">Hard sets can drop items. Finish a workout to find your first one.</p>

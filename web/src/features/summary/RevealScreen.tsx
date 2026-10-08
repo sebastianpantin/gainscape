@@ -14,7 +14,7 @@ import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
 import type { CompletedSessionSummary } from '../../offline/finish-lock.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
-import { describeRecord } from './reveal-rules.ts';
+import { describeRecord, gearBonusText } from './reveal-rules.ts';
 
 function percent(fraction: number): string {
   return `${(Math.min(1, Math.max(0, fraction)) * 100).toFixed(1)}%`;
@@ -178,6 +178,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           const gain = summary.xpBySkill[skill.key];
           const levelUp = leveledUp.get(skill.key);
           const xpAfter = xpBySkillId?.get(skill.id);
+          const gearBonus = gearBonusText(summary, skill.key);
           return (
             <li key={skill.key} className="skill-gain rise" style={{ animationDelay: `${0.2 + index * 0.2}s` }}>
               <SkillIcon skillKey={skill.key} />
@@ -192,6 +193,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
                     xpAfter !== undefined && <span className="muted tiny">lvl {levelProgress(xpAfter).level}</span>
                   )}
                 </div>
+                {gearBonus && <span className="muted tiny">{gearBonus}</span>}
                 {xpAfter !== undefined && (
                   <GainBar skillName={skill.name} xpAfter={xpAfter} gain={gain} delaySeconds={0.4 + index * 0.2} />
                 )}
