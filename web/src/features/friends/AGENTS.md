@@ -1,7 +1,7 @@
 # Friends Feature
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-08
 
 ## Purpose
 
@@ -11,7 +11,7 @@ The Friends tab: requests and the activity feed, hiscores across friends, and a 
 
 | File                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `FriendsScreen.tsx`       | Route `/friends`. Feed with gz (kudos) toggles, friend requests by username (send, accept, decline), removal; shows `ProfileBadge` and `initialsFor`; uses `usePreferences` for weight display                                                                                                                                                                                                                                           |
+| `FriendsScreen.tsx`       | Route `/friends`. Feed with gz (kudos) toggles, friend requests by username (send, accept, decline), removal; shows `ProfileBadge` and `initialsFor`; uses `usePreferences` for weight display. An empty feed reads `No posts yet. Add friends, or log a personal record (PR).` (asserted in `e2e/friends.spec.ts` and `e2e/tab-cache.spec.ts`)                                                                                          |
 | `HiscoresScreen.tsx`      | Route `/friends/hiscores`. Metric picker, `fetchHiscores`, ranking with `rankHiscores`/`skillMetric` from `social-rules.ts`                                                                                                                                                                                                                                                                                                              |
 | `FriendProfileScreen.tsx` | Route `/friends/:friendId`. Validates the id with `isUuid`, loads the view from `../../lib/social.ts`, builds `cardProfileOf`/`standingOfView`, renders `ProfileWithTopSkills` (card plus top skills, collection percent via `collectionPercent`), the friend's `LoadoutPanel` from `../profile/` (`get_loadout`, hidden when it returns null) and each exercise's records through `RecordSlots` and `slotsByReps` from `../collection/` |
 | `FriendsTabs.tsx`         | `SegmentedNav` with Feed and Hiscores                                                                                                                                                                                                                                                                                                                                                                                                    |
