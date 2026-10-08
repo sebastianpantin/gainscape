@@ -1,14 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fetchExercises, fetchSkills } from '../../lib/catalog.ts';
+import { OFFLINE_EXERCISES_NOTICE, readCachedExercises } from '../../lib/catalog-cache.ts';
 import { type Exercise, exerciseLabels, type Skill } from '../../lib/catalog-rules.ts';
 import { setCustomExerciseArchived } from '../../lib/custom-exercises.ts';
 import { CustomExerciseForm } from './CustomExerciseForm.tsx';
 import { messageOf } from '../../lib/error-text.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
+import { standingCache } from '../../offline/standing-cache.ts';
 
 type Editing = { kind: 'none' } | { kind: 'new' } | { kind: 'edit'; exercise: Exercise };
 
-export function ExercisesScreen() {
+function savedExercisesAndSkills(userId: string): { exercises: Exercise[]; skills: Skill[] } | null {
+  const storage = deviceStorage();
+  const exercises = storage && readCachedExercises(storage, userId);
+  return exercises ? { exercises, skills: standingCache.read(storage, userId)?.skills ?? [] } : null;
+}
+
+interface ExercisesScreenProps {
+  userId: string;
+}
+
+export function ExercisesScreen({ userId }: ExercisesScreenProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [exercises, setExercises] = useState<Exercise[] | null>(null);
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -17,16 +31,28 @@ export function ExercisesScreen() {
     searchParams.get('new') === '1' ? { kind: 'new' } : { kind: 'none' },
   );
   const [problem, setProblem] = useState<string | null>(null);
+  const [fromCache, setFromCache] = useState(false);
 
   const reload = useCallback(() => {
-    Promise.all([fetchExercises({ includeArchived: true }), fetchSkills()]).then(
-      ([loadedExercises, loadedSkills]) => {
-        setExercises(loadedExercises.filter((exercise) => exercise.custom));
-        setSkills(loadedSkills);
+    loadCacheFirstWhenOffline(
+      isDeviceOffline,
+      () => savedExercisesAndSkills(userId),
+      async () => {
+        const [loadedExercises, loadedSkills] = await Promise.all([
+          fetchExercises({ includeArchived: true }),
+          fetchSkills(),
+        ]);
+        return { exercises: loadedExercises, skills: loadedSkills };
+      },
+    ).then(
+      ({ loaded, fromCache: loadedFromCache }) => {
+        setExercises(loaded.exercises.filter((exercise) => exercise.custom));
+        setSkills(loaded.skills);
+        setFromCache(loadedFromCache);
       },
       (error: Error) => setProblem(error.message),
     );
-  }, []);
+  }, [userId]);
 
   useEffect(reload, [reload]);
 
@@ -62,6 +88,11 @@ export function ExercisesScreen() {
   return (
     <main className="screen stack">
       <h1 className="title">Exercises</h1>
+      {fromCache && (
+        <p className="notice" role="status">
+          {OFFLINE_EXERCISES_NOTICE}
+        </p>
+      )}
       {problem && (
         <p className="problem" role="alert">
           {problem}

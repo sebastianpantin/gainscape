@@ -1,4 +1,7 @@
+import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
+import { profileCache } from '../offline/profile-cache.ts';
 import { withFriendlyRateLimit } from './rate-limit.ts';
+import { deviceStorage } from './rest-timer-store.ts';
 import { supabase } from './supabase.ts';
 import type { Profile } from './profile-rules.ts';
 
@@ -25,7 +28,7 @@ export async function fetchProfile(userId: string): Promise<Profile> {
   ]);
   if (publicPart.error) throw publicPart.error;
   if (privatePart.error) throw privatePart.error;
-  return {
+  const profile: Profile = {
     username: publicPart.data.username,
     displayName: publicPart.data.display_name,
     bio: publicPart.data.bio,
@@ -43,6 +46,16 @@ export async function fetchProfile(userId: string): Promise<Profile> {
     timezone: privatePart.data.timezone,
     timezoneChangedAt: privatePart.data.timezone_changed_at,
   };
+  profileCache.save(deviceStorage(), userId, profile);
+  return profile;
+}
+
+export function loadProfileCacheFirst(userId: string): Promise<CacheFirstLoad<Profile>> {
+  return loadCacheFirstWhenOffline(
+    isDeviceOffline,
+    () => profileCache.read(deviceStorage(), userId),
+    () => fetchProfile(userId),
+  );
 }
 
 export type PublicProfileChanges = Partial<
