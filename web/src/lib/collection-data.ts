@@ -65,14 +65,19 @@ export interface Collection {
   data: CollectionData;
 }
 
-function savedCollection(userId: string): { exercises: Exercise[]; rows: CollectionRows } | null {
+interface SavedCollection {
+  exercises: Exercise[];
+  rows: CollectionRows;
+}
+
+function savedCollection(userId: string): SavedCollection | null {
   const storage = deviceStorage();
   const rows = collectionCache.read(storage, userId);
   const exercises = storage && readCachedExercises(storage, userId);
   return rows && exercises ? { exercises, rows } : null;
 }
 
-async function fetchSavedCollection(userId: string): Promise<{ exercises: Exercise[]; rows: CollectionRows }> {
+async function fetchSavedCollection(userId: string): Promise<SavedCollection> {
   const [exercises, rows] = await Promise.all([fetchExercises({ includeArchived: true }), fetchCollectionRows(userId)]);
   collectionCache.save(deviceStorage(), userId, rows);
   return { exercises, rows };
