@@ -9,9 +9,9 @@ The Skills tab: the eight OSRS-style skills (six lifting skills plus Endurance a
 
 ## Key Files
 
-| File               | Description                                                                                                                                                                                                                       |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SkillsScreen.tsx` | Route `/skills`. Reads standing via `useStanding(userId)`, computes progress with `xpForLevel` and `MAX_LEVEL` from `@domain/index.ts`, renders `SkillIcon` and `ProgressBar`, formats with `formatXp` from `../../lib/format.ts` |
+| File               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SkillsScreen.tsx` | Route `/skills`. Reads standing via `useStanding(userId)`, computes progress with `xpForLevel` and `MAX_LEVEL` from `@domain/index.ts`, renders `SkillIcon` and `ProgressBar`, formats with `formatXp` from `../../lib/format.ts`. The picked skill's panel keeps `aria-live` on the XP lines only and lists the exercises that train it (`exercisesTrainingSkill` over `useActiveExercises`), with an empty state and a `role="alert"` problem |
 
 ## For AI Agents
 
@@ -26,7 +26,7 @@ The Skills tab: the eight OSRS-style skills (six lifting skills plus Endurance a
 
 ### Common Patterns
 
-- Presentation only, no local state beyond the standing hook.
+- Presentation only, no local state beyond the picked skill; data comes from `useStanding` and, once a panel opens, `useActiveExercises`.
 
 ## Dependencies
 

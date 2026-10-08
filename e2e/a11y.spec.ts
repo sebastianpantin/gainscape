@@ -199,6 +199,13 @@ test.describe('signed-in screens', () => {
       [sessionPath!, null],
       [progressPath!, 'Barbell Bench Press'],
     ]);
+
+    await page.goto('/skills');
+    await checkScreen(page, 'skills (chest panel)', async () => {
+      await page.getByRole('button', { name: /^Chest\b/ }).click();
+      await expect(page.getByRole('list', { name: 'Exercises that train Chest' })).toBeVisible();
+      await expect(page.getByRole('main').getByText('Loading…', { exact: true })).toHaveCount(0);
+    });
   });
 
   test('the friends and profile screens have no serious axe violations', async ({ newPerson, page }) => {
