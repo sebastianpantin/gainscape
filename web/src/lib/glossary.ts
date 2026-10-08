@@ -26,7 +26,7 @@ export const GLOSSARY: Readonly<Record<GlossaryKey, GlossaryEntry>> = {
     question: 'What is session RPE?',
     name: 'Session rate of perceived exertion',
     definition:
-      'Session rate of perceived exertion: how tough the whole workout felt, from 1 (very light) to 10 (all you had).',
+      'Session rate of perceived exertion: how hard the whole workout felt, from 1 (very easy) to 10 (max effort).',
   },
   e1rm: {
     term: 'e1RM',
