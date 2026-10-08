@@ -15,7 +15,6 @@ import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileCard } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import { OFFLINE_PROFILE_NOTICE } from '../../offline/profile-cache.ts';
 
 interface ProfileScreenProps {
   userId: string;
@@ -86,9 +85,9 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
   return (
     <main className="screen stack">
       <h1 className="title">Profile</h1>
-      {state.fromCache && (
+      {state.notice && (
         <p className="notice" role="status">
-          {OFFLINE_PROFILE_NOTICE}
+          {state.notice}
         </p>
       )}
       <ProfileCard

@@ -9,7 +9,6 @@ import { useStanding } from '../../lib/standing.ts';
 import { formatXp } from '../../lib/format.ts';
 import { type Exercise } from '../../lib/catalog-rules.ts';
 import { type LoadedState } from '../../lib/query-state-rules.ts';
-import { OFFLINE_SKILLS_NOTICE } from '../../offline/standing-cache.ts';
 
 interface SkillsScreenProps {
   userId: string;
@@ -68,9 +67,9 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
   return (
     <main className="screen stack">
       <h1 className="title">Skills</h1>
-      {state.fromCache && (
+      {state.notice && (
         <p className="notice" role="status">
-          {OFFLINE_SKILLS_NOTICE}
+          {state.notice}
         </p>
       )}
       <div className="standing totals">

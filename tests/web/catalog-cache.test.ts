@@ -223,6 +223,24 @@ describe('cache-first exercise picker', () => {
     expect(fetchLive).not.toHaveBeenCalled();
   });
 
+  it('says offline when the device went offline while the request ran, whatever the error says', async () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    let offlineChecks = 0;
+    const shown: ExerciseList[] = [];
+    await loadExercisesCacheFirst(
+      storage,
+      userId,
+      () => Promise.reject({ message: 'server error' }),
+      (list) => shown.push(list),
+      () => offlineChecks++ > 0,
+    );
+    expect(shown).toEqual([
+      { exercises, notice: null, problem: null },
+      { exercises, notice: OFFLINE_EXERCISES_NOTICE, problem: null },
+    ]);
+  });
+
   it('says offline when the request timed out', async () => {
     const storage = new MemoryStorage();
     saveCachedExercises(storage, userId, exercises);

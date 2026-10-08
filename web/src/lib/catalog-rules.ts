@@ -1,6 +1,7 @@
 import type { CardioEffortLevel } from '@domain/types.ts';
 
-export type Modality = 'lift' | 'cardio';
+export const MODALITIES = ['lift', 'cardio'] as const;
+export type Modality = (typeof MODALITIES)[number];
 
 export interface Skill {
   id: string;

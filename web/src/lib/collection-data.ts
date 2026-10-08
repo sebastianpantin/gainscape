@@ -2,8 +2,8 @@ import { type StrengthState } from '@domain/types.ts';
 import type { CardioRecordRow } from './cardio-rules.ts';
 import { fetchExercises } from './catalog.ts';
 import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
-import { collectionCache } from '../offline/collection-cache.ts';
-import { readCachedExercises } from './catalog-cache.ts';
+import { collectionCache, type SavedCollection } from '../offline/collection-cache.ts';
+import { cachedExerciseFields } from './catalog-cache.ts';
 import { type Exercise } from './catalog-rules.ts';
 import {
   COLLECTION_COLUMNS,
@@ -65,31 +65,19 @@ export interface Collection {
   data: CollectionData;
 }
 
-interface SavedCollection {
-  exercises: Exercise[];
-  rows: CollectionRows;
-}
-
-function savedCollection(userId: string): SavedCollection | null {
-  const storage = deviceStorage();
-  const rows = collectionCache.read(storage, userId);
-  const exercises = storage && readCachedExercises(storage, userId);
-  return rows && exercises ? { exercises, rows } : null;
-}
-
 async function fetchSavedCollection(userId: string): Promise<SavedCollection> {
   const [exercises, rows] = await Promise.all([fetchExercises({ includeArchived: true }), fetchCollectionRows(userId)]);
-  collectionCache.save(deviceStorage(), userId, rows);
+  collectionCache.save(deviceStorage(), userId, { exercises: exercises.map(cachedExerciseFields), rows });
   return { exercises, rows };
 }
 
 export async function loadCollectionCacheFirst(userId: string): Promise<CacheFirstLoad<Collection>> {
-  const { loaded, fromCache } = await loadCacheFirstWhenOffline(
+  const load = await loadCacheFirstWhenOffline(
     isDeviceOffline,
-    () => savedCollection(userId),
+    () => collectionCache.read(deviceStorage(), userId),
     () => fetchSavedCollection(userId),
   );
-  return { loaded: { exercises: loaded.exercises, data: collectionDataFrom(loaded.rows) }, fromCache };
+  return { ...load, loaded: { exercises: load.loaded.exercises, data: collectionDataFrom(load.loaded.rows) } };
 }
 
 export async function fetchExerciseStrength(userId: string): Promise<Map<string, ExerciseStrengthView>> {

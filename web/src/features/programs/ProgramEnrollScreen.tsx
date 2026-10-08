@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { readCachedExercises } from '../../lib/catalog-cache.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { isLiftExercise } from '../../lib/catalog-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
@@ -63,8 +64,10 @@ function loadedEntry(entry: TemplateListEntry | undefined, exercises: BindableEx
 }
 
 function savedTemplatesAndExercises(userId: string) {
-  const { templates } = readProgramCache(localStorage, userId);
-  const exercises = readCachedExercises(localStorage, userId);
+  const storage = deviceStorage();
+  if (!storage) return null;
+  const { templates } = readProgramCache(storage, userId);
+  const exercises = readCachedExercises(storage, userId);
   return templates.length > 0 && exercises ? { templates, exercises } : null;
 }
 

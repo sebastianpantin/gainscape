@@ -33,7 +33,9 @@ import { readPlateSettings } from '../../lib/plate-settings-store.ts';
 import { warmupPlan } from '../../lib/warmup-rules.ts';
 import { SESSION_RPE_VALUES, sessionRpeChoiceLabel, sessionRpeFromChoice } from '../../lib/session-timing-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
-import { useIsOffline } from '../../lib/use-online.ts';
+import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
+import { isDeviceOffline } from '../../offline/cache-first.ts';
+import { profileCache } from '../../offline/profile-cache.ts';
 import { formatXp } from '../../lib/format.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
 import {
@@ -203,8 +205,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);
   const [loadedBaseline, setLoadedBaseline] = useState<SessionBaseline | null>(null);
   const [cachedBaseline] = useState(() => readSessionBaseline(deviceStorage(), userId));
-  const [bodyweightKg, setBodyweightKg] = useState<number | null>(null);
-  const [onlineSignal, setOnlineSignal] = useState(0);
+  const onlineSignal = useOnlineSignal();
+  const [bodyweightKg, setBodyweightKg] = useState<number | null>(
+    () => profileCache.read(deviceStorage(), userId)?.bodyweightKg ?? null,
+  );
   const standing = useStanding(userId);
   const { cache: programCache, program: activeProgram, showCache: showProgramCache } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
@@ -266,12 +270,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     };
   }, [userId]);
 
-  useEffect(() => {
-    const signalOnline = () => setOnlineSignal((count) => count + 1);
-    window.addEventListener('online', signalOnline);
-    return () => window.removeEventListener('online', signalOnline);
-  }, []);
-
   const draftStartedAt = draft?.startedAt ?? null;
   useEffect(() => {
     if (draftStartedAt === null) return;
@@ -296,6 +294,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const recordBaseline = sessionBaseline?.records ?? null;
 
   useEffect(() => {
+    if (isDeviceOffline()) return;
     let active = true;
     fetchProfile(userId).then(
       (profile) => active && setBodyweightKg(profile.bodyweightKg),

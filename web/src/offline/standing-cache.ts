@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { type Skill } from '../lib/catalog-rules.ts';
+import { MODALITIES, type Skill } from '../lib/catalog-rules.ts';
 import { userCache } from './cache-first.ts';
 
 export const OFFLINE_SKILLS_NOTICE = 'Offline: using your saved skills.';
@@ -17,7 +17,7 @@ const savedStandingSchema = z.object({
       name: z.string(),
       sortOrder: z.number(),
       combatWeight: z.number(),
-      modality: z.enum(['lift', 'cardio']),
+      modality: z.enum(MODALITIES),
     }),
   ),
   xpBySkillId: z.record(z.string(), z.number()),
