@@ -9,15 +9,15 @@ The Skills tab: the eight OSRS-style skills (six lifting skills plus Endurance a
 
 ## Key Files
 
-| File               | Description                                                                                                                                                                                                                       |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SkillsScreen.tsx` | Route `/skills`. Reads standing via `useStanding(userId)`, computes progress with `xpForLevel` and `MAX_LEVEL` from `@domain/index.ts`, renders `SkillIcon` and `ProgressBar`, formats with `formatXp` from `../../lib/format.ts` |
+| File               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SkillsScreen.tsx` | Route `/skills`. Reads standing via `useStanding(userId)`, computes progress with `xpForLevel` and `MAX_LEVEL` from `@domain/index.ts`, renders `SkillIcon` and `ProgressBar`, formats with `formatXp` from `../../lib/format.ts`. The picked skill's panel keeps `aria-live` on the XP lines only and lists the exercises that train it (`exercisesTrainingSkill` over `useActiveExercises` from `../../lib/skill-map.ts`), with a `role="status"` loading line, an empty state and a `role="alert"` problem |
 
 ## For AI Agents
 
 ### Working In This Directory
 
-- Level math is the domain's (`@domain`); never re-derive thresholds here. Standing data comes from `../../lib/standing.ts`.
+- Level math is the domain's (`@domain`); never re-derive thresholds here. Standing data comes from `../../lib/standing.ts`; the panel's exercise list comes from `../../lib/skill-map.ts`.
 - The skill icons are pixel sprites (`../../components/pixel-sprites.ts`); a11y asserts they render for all eight skills.
 
 ### Testing Requirements
@@ -26,7 +26,7 @@ The Skills tab: the eight OSRS-style skills (six lifting skills plus Endurance a
 
 ### Common Patterns
 
-- Presentation only, no local state beyond the standing hook.
+- Presentation only, no local state beyond the picked skill; data comes from `useStanding` and, once a panel opens, `useActiveExercises`.
 
 ## Dependencies
 

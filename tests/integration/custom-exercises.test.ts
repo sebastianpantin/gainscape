@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { EXERCISE_COLUMNS, type ExerciseRow, toExercise } from '../../web/src/lib/catalog-rules.ts';
 import { builtInExerciseId, createTestUser, db, postCompleteSession, type TestUser } from './local-stack.ts';
 import { aSet, hoursAgo, payloadAt } from './session-support.ts';
 
@@ -165,6 +166,40 @@ describe('save_custom_exercise rejects malformed input', () => {
     const { error } = await save(user, build());
     expect(error?.message).toBe('invalid_exercise');
     expect(await ownedExerciseCount(user.id)).toBe(0);
+  });
+});
+
+describe('exercise skill shares', () => {
+  async function visibleSkillNames(user: TestUser): Promise<Map<string, string[]>> {
+    const { data, error } = await user.client.from('exercises').select(EXERCISE_COLUMNS);
+    expect(error).toBeNull();
+    const exercises = (data as unknown as ExerciseRow[]).map(toExercise);
+    return new Map(exercises.map((exercise) => [exercise.id, exercise.skillShares.map((share) => share.skillName)]));
+  }
+
+  async function unlock(user: TestUser, exerciseKey: string) {
+    await db`
+      insert into public.user_unlocks (user_id, exercise_id, item_id)
+      select ${user.id}, e.id, i.id
+      from public.exercises e join public.items i on i.grants_exercise_id = e.id
+      where e.key = ${exerciseKey}`;
+  }
+
+  it('names the skills of built-in, custom and newly unlocked exercises, highest share first', async () => {
+    const user = await createTestUser();
+    const exercise = customExercise();
+    expect((await save(user, exercise)).error).toBeNull();
+    const [benchId, pauseBenchId] = await Promise.all(
+      ['barbell_bench_press', 'pause_bench_press'].map(builtInExerciseId),
+    );
+
+    const beforeUnlock = await visibleSkillNames(user);
+    expect(beforeUnlock.get(benchId)).toEqual(['Chest', 'Shoulders', 'Arms']);
+    expect(beforeUnlock.get(exercise.id)).toEqual(['Shoulders', 'Chest']);
+    expect(beforeUnlock.has(pauseBenchId)).toBe(false);
+
+    await unlock(user, 'pause_bench_press');
+    expect((await visibleSkillNames(user)).get(pauseBenchId)).toEqual(['Chest', 'Shoulders', 'Arms']);
   });
 });
 

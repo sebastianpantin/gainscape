@@ -11,7 +11,16 @@ import {
 } from '../../web/src/lib/collection-rules.ts';
 
 function exercise(id: string): LiftExercise {
-  return { id, name: id, equipment: 'barbell', modality: 'lift', loadType: 'external', custom: false, archived: false };
+  return {
+    id,
+    name: id,
+    equipment: 'barbell',
+    modality: 'lift',
+    loadType: 'external',
+    custom: false,
+    archived: false,
+    skillShares: [],
+  };
 }
 
 const running: Exercise = {
@@ -22,6 +31,7 @@ const running: Exercise = {
   activity: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', shares: [] },
   custom: false,
   archived: false,
+  skillShares: [],
 };
 
 function data(pinnedExerciseIds: string[]): CollectionData {

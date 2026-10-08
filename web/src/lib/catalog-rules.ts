@@ -35,6 +35,12 @@ export const EQUIPMENT: Equipment[] = ['barbell', 'dumbbell', 'machine', 'cable'
 
 export const PACE_UNITS: PaceUnit[] = ['per_km', 'per_100m'];
 
+export interface ExerciseSkill {
+  skillKey: string;
+  skillName: string;
+  shareBasisPoints: number;
+}
+
 interface ExerciseBase {
   id: string;
   key?: string | null;
@@ -42,6 +48,7 @@ interface ExerciseBase {
   equipment: string;
   custom: boolean;
   archived: boolean;
+  skillShares: ExerciseSkill[];
 }
 
 export interface LiftExercise extends ExerciseBase {
@@ -66,7 +73,7 @@ export function isCardioExercise(exercise: Exercise): exercise is CardioExercise
 }
 
 export const EXERCISE_COLUMNS =
-  'id, key, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, exercise_skills(share_bp, skills(key))';
+  'id, key, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, exercise_skills(share_bp, skills(key, name))';
 
 export interface ExerciseRow {
   id: string;
@@ -80,7 +87,7 @@ export interface ExerciseRow {
   reference_pace_s_per_km: number | null;
   pace_unit: PaceUnit | null;
   max_effort: CardioEffortLevel | null;
-  exercise_skills: { share_bp: number; skills: { key: string } | null }[];
+  exercise_skills: { share_bp: number; skills: { key: string; name: string } | null }[];
 }
 
 const WHOLE_SHARE_BP = 10_000;
@@ -92,6 +99,16 @@ export function isCompoundLift(equipment: string, shareBasisPoints: readonly num
   return largest < SINGLE_SKILL_SHARE_BP || (equipment === 'barbell' && largest < WHOLE_SHARE_BP);
 }
 
+function skillSharesOf(row: ExerciseRow): ExerciseSkill[] {
+  return row.exercise_skills
+    .flatMap((share) =>
+      share.skills
+        ? [{ skillKey: share.skills.key, skillName: share.skills.name, shareBasisPoints: share.share_bp }]
+        : [],
+    )
+    .sort((a, b) => b.shareBasisPoints - a.shareBasisPoints || a.skillName.localeCompare(b.skillName));
+}
+
 export function toExercise(row: ExerciseRow): Exercise {
   const base = {
     id: row.id,
@@ -100,6 +117,7 @@ export function toExercise(row: ExerciseRow): Exercise {
     equipment: row.equipment,
     custom: row.owner_user_id !== null,
     archived: row.archived_at !== null,
+    skillShares: skillSharesOf(row),
   };
   if (row.modality === 'lift') {
     const compound = isCompoundLift(

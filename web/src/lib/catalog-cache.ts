@@ -27,6 +27,9 @@ const cachedExerciseBase = {
   equipment: z.string(),
   custom: z.boolean(),
   archived: z.boolean(),
+  skillShares: z
+    .array(z.object({ skillKey: z.string(), skillName: z.string(), shareBasisPoints: z.number() }))
+    .default([]),
 };
 
 const cachedExercisesSchema = z.object({
@@ -72,8 +75,8 @@ export function readCachedExercises(storage: Storage, userId: string): Exercise[
 }
 
 function cachedFields(exercise: Exercise): Exercise {
-  const { id, key, name, equipment, custom, archived } = exercise;
-  const base = { id, key, name, equipment, custom, archived };
+  const { id, key, name, equipment, custom, archived, skillShares } = exercise;
+  const base = { id, key, name, equipment, custom, archived, skillShares };
   return exercise.modality === 'lift'
     ? { ...base, modality: 'lift', loadType: exercise.loadType, compound: exercise.compound }
     : { ...base, modality: 'cardio', activity: exercise.activity };
