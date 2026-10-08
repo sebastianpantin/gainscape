@@ -1,7 +1,7 @@
-import type { PersonalRecordSummary } from '@domain/types.ts';
+import type { PersonalRecordSummary, SessionSummary } from '@domain/types.ts';
 import { describeCardioGains } from '../../lib/cardio-rules.ts';
 import type { Exercise } from '../../lib/catalog-rules.ts';
-import { formatLoad } from '../../lib/format.ts';
+import { formatLoad, formatXp } from '../../lib/format.ts';
 import type { UnitPref } from '../../lib/profile-rules.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 
@@ -31,4 +31,9 @@ export function describeRecord(
     headline: `${name}: ${record.reps}RM ${formatLoad(record.loadKg!, loadType, unit)}`,
     previous: `(${previous})`,
   };
+}
+
+export function gearBonusText(summary: Pick<SessionSummary, 'gearBonusBySkill'>, skillKey: string): string | null {
+  const bonus = summary.gearBonusBySkill?.[skillKey] ?? 0;
+  return bonus > 0 ? `Gear bonus +${formatXp(bonus)} XP` : null;
 }

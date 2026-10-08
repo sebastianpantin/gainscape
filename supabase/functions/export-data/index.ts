@@ -4,7 +4,7 @@ import { HttpError, jsonResponse } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serve } from '../_shared/serve.ts';
 
-const EXPORT_FORMAT_VERSION = 4;
+const EXPORT_FORMAT_VERSION = 5;
 
 async function exportFor(userId: string) {
   await takeRateLimit(sql, 'export_data_hour', userId);
@@ -73,6 +73,8 @@ async function exportFor(userId: string) {
     const userItems = await tx`
       select * from public.user_items where user_id = ${userId} order by first_obtained_at, item_id`;
     const itemLedger = await tx`select * from public.item_ledger where user_id = ${userId} order by created_at, id`;
+    const userLoadout = await tx`
+      select slot, item_id, equipped_at from public.user_loadout where user_id = ${userId} order by slot`;
     const userUnlocks = await tx`
       select * from public.user_unlocks where user_id = ${userId} order by unlocked_at, exercise_id`;
     const crafts = await tx`select * from public.crafts where user_id = ${userId} order by created_at, id`;
@@ -124,6 +126,7 @@ async function exportFor(userId: string) {
       dropLuck,
       userItems,
       itemLedger,
+      userLoadout,
       userUnlocks,
       crafts,
       events,

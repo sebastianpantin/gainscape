@@ -93,7 +93,7 @@ describe('craft', () => {
     const { data, error } = await craft(user, grinderBelt.id);
     expect(error).toBeNull();
     const [row] = await db`select id from public.crafts where user_id = ${user.id}`;
-    expect(data).toEqual({ craftId: row.id, itemId: itemIds.get('grinder_belt'), quantity: 1 });
+    expect(data).toEqual({ craftId: row.id, itemId: itemIds.get('grinder_belt'), quantity: 1, equippedSlot: null });
     expect(await held(user.id)).toEqual({ grinder_belt: 1, grinder_scraps: 2, rookie_belt: 0 });
     expect(
       await db`
@@ -232,6 +232,62 @@ describe('craft', () => {
     expect(error?.message).toBe('insufficient_items');
     expect(await lootState(owner.id)).toEqual(ownerBefore);
     expect(await lootState(other.id)).toMatchObject({ crafts: [], userItems: [], itemLedger: [] });
+  });
+});
+
+describe('craft and the loadout', () => {
+  async function loadout(userId: string) {
+    return await db`
+      select l.slot::text, i.key from public.user_loadout l join public.items i on i.id = l.item_id
+      where l.user_id = ${userId} order by l.slot`;
+  }
+
+  it('equips the output in the slot of the last equipped copy it spent', async () => {
+    const user = await freshUser();
+    await grant(user, await quietSession(user), { rookie_belt: 1, grinder_scraps: 8 });
+    const equipped = await user.client.rpc('equip_gear', { slot: 'belt', item_id: itemIds.get('rookie_belt') });
+    expect(equipped.error).toBeNull();
+
+    const { data, error } = await craft(user, grinderBelt.id);
+    expect(error).toBeNull();
+    expect(data.equippedSlot).toBe('belt');
+    expect(await loadout(user.id)).toEqual([{ slot: 'belt', key: 'grinder_belt' }]);
+  });
+
+  it('keeps the equipped item when a spare copy is spent', async () => {
+    const user = await freshUser();
+    await grant(user, await quietSession(user), { rookie_belt: 2, grinder_scraps: 8 });
+    const equipped = await user.client.rpc('equip_gear', { slot: 'belt', item_id: itemIds.get('rookie_belt') });
+    expect(equipped.error).toBeNull();
+
+    const { data, error } = await craft(user, grinderBelt.id);
+    expect(error).toBeNull();
+    expect(data.equippedSlot).toBeNull();
+    expect(await loadout(user.id)).toEqual([{ slot: 'belt', key: 'rookie_belt' }]);
+  });
+
+  it('ignores a retired equipped item in get_loadout and in the session bonus', async () => {
+    const user = await freshUser();
+    await grant(user, await quietSession(user), { ascendant_belt: 1 });
+    const beltId = itemIds.get('ascendant_belt')!;
+    const equipped = await user.client.rpc('equip_gear', { slot: 'belt', item_id: beltId });
+    expect(equipped.error).toBeNull();
+    const squatId = await builtInExerciseId('back_squat');
+    const session = payloadAt(new Date(Date.now() - 30 * 60 * 1000), [aSet(squatId, 0, 100), aSet(squatId, 1, 100)]);
+
+    await db`update public.items set retired_at = now() where id = ${beltId}`;
+    try {
+      const shown = await user.client.rpc('get_loadout', { target: user.id });
+      expect(shown.error).toBeNull();
+      expect(shown.data.slots).toEqual([]);
+      await postSession(user, session);
+    } finally {
+      await db`update public.items set retired_at = null where id = ${beltId}`;
+    }
+
+    const [stored] = await db`select gear_loadout, summary from public.sessions where id = ${session.id}`;
+    expect(stored.gear_loadout).toEqual({});
+    expect(stored.summary.gearBonusBySkill).toEqual({});
   });
 });
 

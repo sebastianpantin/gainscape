@@ -1,6 +1,7 @@
 import {
   type BalanceConfig,
   type CardioSetInput,
+  type GearLoadout,
   intervalDurationSeconds,
   processSession,
   type SessionInput,
@@ -27,6 +28,7 @@ export interface CardioSimulationResult {
 export interface CardioSimulationOptions {
   maxYears?: number;
   stopWhenAllSkillsReach99?: boolean;
+  gearLoadout?: GearLoadout;
 }
 
 function distanceAtSpeedRatio(
@@ -96,6 +98,7 @@ export function simulateCardioProfile(
         id: `${profile.name}-${String(week).padStart(5, '0')}-${dayIndex}`,
         startedAt,
         sets,
+        gearLoadout: options.gearLoadout,
       };
       const { nextState } = processSession({ skillXp, bodyweightKg: null }, session, cfg, {
         catalog: CARDIO_SIM_CATALOG,

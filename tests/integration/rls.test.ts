@@ -344,10 +344,12 @@ describe('function execution rights', () => {
       'end_enrollment',
       'enroll_program',
       'enrollment_facts',
+      'equip_gear',
       'exercise_strength_state',
       'get_collection',
       'get_feed',
       'get_hiscores',
+      'get_loadout',
       'get_profile',
       'last_logged_sets',
       'list_friends',
@@ -363,6 +365,7 @@ describe('function execution rights', () => {
       'set_gz',
       'set_timezone',
       'set_weekly_session_goal',
+      'unequip_gear',
       'username_available',
       'weekly_goal_weeks',
       'workout_bodyweights',
@@ -646,5 +649,62 @@ describe('crafts', () => {
     const { error } = await anon.rpc('craft', { recipe_id: recipeId });
     expect(error).not.toBeNull();
     expect(await ownerCrafts()).toHaveLength(1);
+  });
+});
+
+describe('user_loadout', () => {
+  let user: TestUser;
+  let rookieBeltId: string;
+  let rookieGlovesId: string;
+
+  beforeAll(async () => {
+    user = await createTestUser();
+    [{ id: rookieBeltId }] = await db`select id from public.items where key = 'rookie_belt'`;
+    [{ id: rookieGlovesId }] = await db`select id from public.items where key = 'rookie_gloves'`;
+    await grantDrop(user.id, ownerSessionId, randomUUID(), 'rookie_belt', 1);
+    await grantDrop(user.id, ownerSessionId, randomUUID(), 'rookie_gloves', 1);
+    const equipped = await user.client.rpc('equip_gear', { slot: 'belt', item_id: rookieBeltId });
+    expect(equipped.error).toBeNull();
+  });
+
+  async function loadoutRows() {
+    return await db`select * from public.user_loadout where user_id = ${user.id} order by slot`;
+  }
+
+  it('insert into user_loadout is denied', async () => {
+    const before = await loadoutRows();
+    const { error } = await user.client
+      .from('user_loadout')
+      .insert({ user_id: user.id, slot: 'gloves', item_id: rookieGlovesId });
+    expect(error?.code).toBe('42501');
+    expect(await loadoutRows()).toEqual(before);
+  });
+
+  it('update of user_loadout is denied', async () => {
+    const before = await loadoutRows();
+    const { error } = await user.client.from('user_loadout').update({ item_id: rookieGlovesId }).eq('user_id', user.id);
+    expect(error?.code).toBe('42501');
+    expect(await loadoutRows()).toEqual(before);
+    expect(before).toHaveLength(1);
+  });
+
+  it('delete from user_loadout is denied', async () => {
+    const before = await loadoutRows();
+    const { error } = await user.client.from('user_loadout').delete().eq('user_id', user.id);
+    expect(error?.code).toBe('42501');
+    expect(await loadoutRows()).toEqual(before);
+  });
+
+  it("hides another user's loadout", async () => {
+    const theirs = await stranger.client.from('user_loadout').select('slot').eq('user_id', user.id);
+    expect(theirs.error).toBeNull();
+    expect(theirs.data).toEqual([]);
+    expect((await user.client.from('user_loadout').select('slot')).data).toEqual([{ slot: 'belt' }]);
+  });
+
+  it('refuses anon an equip', async () => {
+    const { error } = await anon.rpc('equip_gear', { slot: 'gloves', item_id: rookieGlovesId });
+    expect(error).not.toBeNull();
+    expect(await loadoutRows()).toHaveLength(1);
   });
 });

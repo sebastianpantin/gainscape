@@ -14,6 +14,7 @@ import {
 } from '../../lib/social.ts';
 import { slotsByReps } from '../collection/record-slots.ts';
 import { RecordSlots } from '../collection/RecordSlots.tsx';
+import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { ProfileWithTopSkills } from '../profile/ProfileWithTopSkills.tsx';
 import { messageOf } from '../../lib/error-text.ts';
 
@@ -110,6 +111,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
           return (
             <>
               <ProfileWithTopSkills skills={state.skills} profile={state.profile} headingId="friend-top-skills" />
+              <LoadoutPanel userId={friendId} />
               <section className="stack" aria-labelledby="friend-records">
                 <h2 id="friend-records">Records</h2>
                 {collection.weightsHidden && <p className="muted">Weights hidden</p>}

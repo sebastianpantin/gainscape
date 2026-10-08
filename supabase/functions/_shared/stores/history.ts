@@ -2,6 +2,7 @@ import { isoTimestamp, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   effortInputFromStored,
+  gearLoadoutFromStored,
   type RecordHistoryRow,
   type SessionInput,
   type SessionKey,
@@ -15,7 +16,7 @@ export async function loadReplayableSessions(
   cfg: BalanceConfig,
 ): Promise<SessionInput[]> {
   const rows = await tx`
-    select s.id as session_id, s.started_at, st.id as set_id, st.exercise_id, st.position, st.weight_kg,
+    select s.id as session_id, s.started_at, s.gear_loadout, st.id as set_id, st.exercise_id, st.position, st.weight_kg,
            st.effective_load_kg, st.reps, st.is_warmup, st.effort_input_type, st.effort_value, st.duration_s,
            st.distance_m, st.interval_work_s, st.interval_rest_s, st.interval_rounds
     from public.sessions s
@@ -30,6 +31,7 @@ export async function loadReplayableSessions(
       id: row.session_id,
       startedAt: isoTimestamp(row.started_at),
       sets: [],
+      gearLoadout: gearLoadoutFromStored(row.gear_loadout),
     };
     const identity = { id: row.set_id, exerciseId: row.exercise_id, position: row.position };
     const effort = effortInputFromStored(row.effort_input_type, nullableNumber(row.effort_value), cfg);

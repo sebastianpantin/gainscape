@@ -13,7 +13,7 @@ import {
   signOut,
   uniqueUsername,
 } from './support/app.ts';
-import { activeEnrollmentIdOf, grantItems } from './support/db.ts';
+import { activeEnrollmentIdOf, equipGear, grantItems } from './support/db.ts';
 import { authLinkFrom, RECOVERY_SUBJECT, waitForEmail } from './support/mailbox.ts';
 import {
   FIVE_THREE_ONE_ONE_RMS_KG,
@@ -181,8 +181,12 @@ test.describe('signed-in screens', () => {
     test.setTimeout(150_000);
     const username = uniqueUsername('a11y_log');
     await register(page, username);
+    await grantItems(username, { rookie_belt: 1, grinder_scraps: 8, ascendant_gloves: 1 });
+    await equipGear(username, 'ascendant_gloves');
     await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
-    await grantItems(username, { rookie_belt: 1, grinder_scraps: 8 });
+    await checkScreen(page, 'reveal (gear bonus)', () =>
+      expect(page.getByText(/^Gear bonus \+\d+ XP$/).first()).toBeVisible(),
+    );
     await openTab(page, 'Log');
     await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
     const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
@@ -212,6 +216,8 @@ test.describe('signed-in screens', () => {
     test.setTimeout(150_000);
     const username = uniqueUsername('a11y_fr');
     await register(page, username);
+    await grantItems(username, { rookie_belt: 1 });
+    await equipGear(username, 'rookie_belt');
     const friendName = await befriend(await newPerson(), page, username);
     await page.goto('/friends');
     const friendPath = await page

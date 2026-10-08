@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(23);
 
 create function pg_temp.fill_bucket(bucket_name text, subject uuid) returns void language sql as $$
   insert into private.rate_limit_hits (bucket, subject, window_start, hits)
@@ -13,10 +13,10 @@ $$;
 select results_eq(
   $$select bucket, max_hits, window_seconds from private.rate_limit_rules
     where bucket in ('craft_minute', 'custom_exercise_save_hour', 'program_save_hour', 'pin_change_minute',
-                     'profile_update_hour', 'exercise_note_save_hour')
+                     'profile_update_hour', 'exercise_note_save_hour', 'loadout_change_minute')
     order by bucket$$,
   $$values ('craft_minute', 30, 60), ('custom_exercise_save_hour', 30, 3600), ('exercise_note_save_hour', 120, 3600),
-           ('pin_change_minute', 60, 60), ('profile_update_hour', 60, 3600), ('program_save_hour', 30, 3600)$$,
+           ('loadout_change_minute', 60, 60), ('pin_change_minute', 60, 60), ('profile_update_hour', 60, 3600), ('program_save_hour', 30, 3600)$$,
   'the client write buckets exist with their limits'
 );
 
@@ -58,6 +58,7 @@ select pg_temp.fill_bucket('custom_exercise_save_hour', :'a');
 select pg_temp.fill_bucket('program_save_hour', :'a');
 select pg_temp.fill_bucket('craft_minute', :'a');
 select pg_temp.fill_bucket('exercise_note_save_hour', :'a');
+select pg_temp.fill_bucket('loadout_change_minute', :'a');
 
 select tests.authenticate_as(:'a');
 select throws_ok(
@@ -89,6 +90,10 @@ select throws_ok(
 select throws_ok(
   format('select public.save_exercise_note(%L, %L)', :'bench', ''),
   'PT429', 'rate_limited', 'clearing a note over the limit is refused'
+);
+select throws_ok(
+  $$select public.unequip_gear('belt')$$,
+  'PT429', 'rate_limited', 'a loadout change over the limit is refused'
 );
 reset role;
 

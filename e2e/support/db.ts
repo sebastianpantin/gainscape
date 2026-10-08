@@ -247,3 +247,12 @@ export async function backdateWorkoutsOf(username: string, days: number): Promis
     from public.profiles p
     where p.id = s.user_id and p.username = ${username}`;
 }
+
+export async function equipGear(username: string, itemKey: string): Promise<void> {
+  await db`
+    insert into public.user_loadout (user_id, slot, item_id)
+    select p.id, i.gear_slot, i.id
+    from public.profiles p, public.items i
+    where p.username = ${username} and i.key = ${itemKey}
+    on conflict (user_id, slot) do update set item_id = excluded.item_id`;
+}

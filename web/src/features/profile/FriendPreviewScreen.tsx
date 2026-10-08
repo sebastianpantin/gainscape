@@ -8,6 +8,7 @@ import { usePreferences } from '../../lib/preferences.ts';
 import { type Profile, updatePublicProfile } from '../../lib/profile.ts';
 import { formatWeight } from '../../lib/units.ts';
 import { fetchProfileView, type ProfileView } from '../../lib/social.ts';
+import { LoadoutPanel } from './LoadoutPanel.tsx';
 import { ProfileWithTopSkills } from './ProfileWithTopSkills.tsx';
 import { useOptimisticProfileSave } from './use-optimistic-profile-save.ts';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
@@ -49,6 +50,7 @@ function PreviewOfProfile({ userId, profile, replace, view }: PreviewOfProfilePr
         </p>
       )}
       <ProfileWithTopSkills skills={view.skills} profile={view.profile} headingId="top-skills-heading" />
+      <LoadoutPanel userId={userId} />
       <section className="panel stack" aria-labelledby="record-heading">
         <h2 id="record-heading">How your records appear</h2>
         <span className="pixel">

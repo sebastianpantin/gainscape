@@ -15,6 +15,7 @@ import type {
   SetInput,
   SetResult,
   SkillDef,
+  SkillXp,
   StrengthState,
   UserState,
 } from './types.ts';
@@ -23,6 +24,7 @@ import { BodyweightLoadNotZeroError, BodyweightRequiredError } from './errors.ts
 import { cardioExercise, exerciseFor, liftExercise, liftExerciseFor } from './exercise-lookup.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
 import { checkFatigue } from './fatigue.ts';
+import { gearBonusXp } from './gear.ts';
 import { roundTo } from './math.ts';
 import { liftsNoLoad, trackStrength } from './strength.ts';
 import { effectiveReps, setXp, splitXp } from './xp.ts';
@@ -40,6 +42,12 @@ export interface SessionContext {
   readonly state: UserState;
   readonly sets: readonly SetResult[];
   readonly levelUps: readonly LevelUp[];
+  readonly gearXpBySkill?: Readonly<Record<string, GearXp>>;
+}
+
+export interface GearXp {
+  readonly baseXp: number;
+  readonly bonus: number;
 }
 
 export type Step = (ctx: SessionContext) => SessionContext;
@@ -216,6 +224,42 @@ const awardXp: Step = (ctx) => {
   return { ...ctx, sets };
 };
 
+function spreadBonus(parts: readonly SkillXp[], baseXp: number, bonus: number): void {
+  const shares = parts.map((part) => ({
+    part,
+    share: Math.floor((bonus * part.xp) / baseXp),
+    remainder: (bonus * part.xp) % baseXp,
+  }));
+  const leftover = bonus - shares.reduce((sum, entry) => sum + entry.share, 0);
+  [...shares]
+    .sort((a, b) => b.remainder - a.remainder)
+    .slice(0, leftover)
+    .forEach((entry) => (entry.share += 1));
+  for (const entry of shares) entry.part.xp += entry.share;
+}
+
+const awardGearBonus: Step = (ctx) => {
+  const loadout = ctx.session.gearLoadout;
+  if (!loadout) return ctx;
+  const skillKeyOf = new Map(ctx.deps.catalog.skills.map((skill) => [skill.id, skill.key]));
+  const sets = ctx.sets.map((result) => ({ ...result, skillXp: result.skillXp.map((part) => ({ ...part })) }));
+  const partsBySkill = new Map<string, SkillXp[]>();
+  for (const part of sets.flatMap((result) => result.skillXp)) {
+    partsBySkill.set(part.skillId, [...(partsBySkill.get(part.skillId) ?? []), part]);
+  }
+  const gearXpBySkill: Record<string, GearXp> = {};
+  for (const [skillId, parts] of partsBySkill) {
+    const skillKey = skillKeyOf.get(skillId);
+    if (skillKey === undefined) continue;
+    const baseXp = parts.reduce((sum, part) => sum + part.xp, 0);
+    const bonus = gearBonusXp(baseXp, skillKey, loadout, ctx.cfg);
+    if (bonus === 0) continue;
+    spreadBonus(parts, baseXp, bonus);
+    gearXpBySkill[skillKey] = { baseXp, bonus };
+  }
+  return { ...ctx, sets, gearXpBySkill };
+};
+
 const applyXp: Step = (ctx) => {
   const skillXp: Record<string, number> = { ...ctx.state.skillXp };
   for (const part of ctx.sets.flatMap((result) => result.skillXp)) {
@@ -241,6 +285,7 @@ export const DEFAULT_STEPS: readonly Step[] = Object.freeze([
   checkFatigue,
   detectPersonalRecords,
   awardXp,
+  awardGearBonus,
   applyXp,
   detectLevelUps,
 ]);
@@ -264,6 +309,20 @@ function xpGainedBySkillKey(before: UserState, after: UserState, catalog: Catalo
   return xpBySkill;
 }
 
+function gearBonusWithinGains(
+  gearXpBySkill: Readonly<Record<string, GearXp>>,
+  xpBySkill: Readonly<Record<string, number>>,
+): Pick<SessionOutputs, 'gearBonusBySkill'> {
+  const reported = Object.entries(xpBySkill)
+    .map(([skillKey, gained]) => {
+      const { baseXp, bonus } = gearXpBySkill[skillKey] ?? { baseXp: 0, bonus: 0 };
+      const baseGained = Math.min(baseXp, gained);
+      return [skillKey, Math.max(0, Math.min(bonus, gained - baseGained))] as const;
+    })
+    .filter(([, bonus]) => bonus > 0);
+  return reported.length === 0 ? {} : { gearBonusBySkill: Object.fromEntries(reported) };
+}
+
 export function processSession(
   state: UserState,
   session: SessionInput,
@@ -273,14 +332,16 @@ export function processSession(
 ): { nextState: UserState; outputs: SessionOutputs } {
   const initial: SessionContext = { session, cfg, deps, stateBeforeSession: state, state, sets: [], levelUps: [] };
   const final = steps.reduce((ctx, step) => step(ctx), initial);
+  const xpBySkill = xpGainedBySkillKey(state, final.state, deps.catalog);
   return {
     nextState: final.state,
     outputs: {
       sets: [...final.sets],
-      xpBySkill: xpGainedBySkillKey(state, final.state, deps.catalog),
+      xpBySkill,
       levelUps: [...final.levelUps],
       prs: summarizePersonalRecords(final.sets, state.records ?? NO_RECORDS, final.state.records ?? NO_RECORDS),
       drops: [],
+      ...gearBonusWithinGains(final.gearXpBySkill ?? {}, xpBySkill),
     },
   };
 }

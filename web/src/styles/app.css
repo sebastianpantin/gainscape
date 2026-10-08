@@ -1614,6 +1614,15 @@ a:focus-visible {
   border: var(--border-width) solid #000;
 }
 
+.gear-bonus-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
 .body-stat dd {
   font-family: var(--font-display);
   font-size: 1.25rem;

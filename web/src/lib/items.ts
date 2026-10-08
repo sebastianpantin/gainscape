@@ -13,6 +13,8 @@ import {
   toHeldItems,
   toRecipe,
 } from './item-rules.ts';
+import type { GearSlot } from '@domain/crafting.ts';
+import type { LoadoutView } from './gear-rules.ts';
 import { supabase } from './supabase.ts';
 
 export async function fetchItemCatalog(): Promise<ItemCatalog> {
@@ -38,6 +40,7 @@ export interface CraftResult {
   craftId: string;
   itemId: string;
   quantity: number;
+  equippedSlot: GearSlot | null;
 }
 
 export async function craftItem(
@@ -46,4 +49,20 @@ export async function craftItem(
   const { data, error } = await supabase.rpc('craft', { recipe_id: recipeId });
   if (error) return { kind: 'problem', problem: craftProblem(error) };
   return { kind: 'ok', result: data as CraftResult };
+}
+
+export async function fetchLoadout(userId: string): Promise<LoadoutView | null> {
+  const { data, error } = await supabase.rpc('get_loadout', { target: userId });
+  if (error) throw error;
+  return data as LoadoutView | null;
+}
+
+export async function equipGear(slot: GearSlot, itemId: string): Promise<void> {
+  const { error } = await supabase.rpc('equip_gear', { slot, item_id: itemId });
+  if (error) throw error;
+}
+
+export async function unequipGear(slot: GearSlot): Promise<void> {
+  const { error } = await supabase.rpc('unequip_gear', { slot });
+  if (error) throw error;
 }
