@@ -6,7 +6,7 @@ import {
   TRAINING_FOCUSES,
   UNIT_PREFS,
 } from '../../web/src/lib/profile-rules.ts';
-import { profileCache } from '../../web/src/offline/profile-cache.ts';
+import { profileCache, rememberSavedBodyweight } from '../../web/src/offline/profile-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -55,5 +55,18 @@ describe('saved profile', () => {
       profileCache.save(storage, USER_ID, variant);
       expect(profileCache.read(storage, USER_ID)).toEqual(variant);
     }
+  });
+
+  it('patches the bodyweight of the saved profile after it was saved online', () => {
+    const storage = new MemoryStorage();
+    profileCache.save(storage, USER_ID, PROFILE);
+    rememberSavedBodyweight(storage, USER_ID, 90);
+    expect(profileCache.read(storage, USER_ID)).toEqual({ ...PROFILE, bodyweightKg: 90 });
+  });
+
+  it('saves nothing when no profile was saved', () => {
+    const storage = new MemoryStorage();
+    rememberSavedBodyweight(storage, USER_ID, 90);
+    expect(profileCache.read(storage, USER_ID)).toBeNull();
   });
 });

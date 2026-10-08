@@ -48,11 +48,20 @@ describe('saved collection log', () => {
 });
 
 describe('the saved exercise list for offline screens', () => {
-  it('prefers the full list saved with the collection log', () => {
+  it('includes the archived exercises saved with the collection log', () => {
     const storage = new MemoryStorage();
     saveCachedExercises(storage, USER_ID, [ACTIVE]);
     collectionCache.save(storage, USER_ID, { exercises: [ACTIVE, ARCHIVED], rows: ROWS });
     expect(savedExerciseList(storage, USER_ID)).toEqual([ACTIVE, ARCHIVED]);
+  });
+
+  it('adds a custom exercise saved only in the newer training list and keeps archived ones', () => {
+    const storage = new MemoryStorage();
+    const fresh: Exercise = { ...ACTIVE, id: 'new-lift', key: null, name: 'New lift', custom: true };
+    const renamed: Exercise = { ...ACTIVE, name: 'Bench Press (renamed)' };
+    collectionCache.save(storage, USER_ID, { exercises: [ACTIVE, ARCHIVED], rows: ROWS });
+    saveCachedExercises(storage, USER_ID, [renamed, fresh]);
+    expect(savedExerciseList(storage, USER_ID)).toEqual([renamed, fresh, ARCHIVED]);
   });
 
   it('falls back to the training list when the collection log was never saved', () => {
