@@ -13,6 +13,11 @@ export const BANDS = Object.freeze({
   balancedWeekOneLevel: [20, 40] as const,
 });
 
+export const GEAR_BANDS = Object.freeze({
+  fullAscendantXpRatio: [1.09, 1.11] as const,
+  beltOnlyCoreRatio: [1.09, 1.11] as const,
+});
+
 export interface ProfileResults {
   hypertrophy: SimulationResult;
   strength: SimulationResult;

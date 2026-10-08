@@ -104,6 +104,7 @@ declare
   table_id uuid;
   roll_id uuid := gen_random_uuid();
   item uuid;
+  gear_item uuid;
   unlock_item uuid;
   unlock_exercise uuid;
   friend_event uuid;
@@ -150,6 +151,10 @@ begin
   insert into public.item_ledger (user_id, item_id, delta, reason, ref_id)
   values (give_everything.owner, item, 1, 'drop', roll_id);
   insert into public.user_items (user_id, item_id, quantity) values (give_everything.owner, item, 1);
+  select i.id into gear_item from public.items i where i.kind = 'gear' and i.id <> item order by i.key limit 1;
+  insert into public.user_items (user_id, item_id, quantity) values (give_everything.owner, gear_item, 1);
+  insert into public.user_loadout (user_id, slot, item_id)
+  select give_everything.owner, i.gear_slot, i.id from public.items i where i.id = gear_item;
   insert into public.crafts (user_id, recipe_id) select give_everything.owner, r.id from public.recipes r order by r.key limit 1;
   insert into public.user_unlocks (user_id, exercise_id, item_id) values (give_everything.owner, unlock_exercise, unlock_item);
   insert into public.drop_luck (user_id, drop_table_id) values (give_everything.owner, table_id);
