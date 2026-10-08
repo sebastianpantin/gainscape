@@ -52,6 +52,7 @@ export interface LiftDraftExercise {
   modality: 'lift';
   loadType: LoadType;
   target: DraftTarget | null;
+  supersetId?: string | null;
   sets: DraftSet[];
 }
 
@@ -179,11 +180,43 @@ function withUsableSessionRpe(draft: WorkoutDraft): WorkoutDraft {
   return { ...draft, sessionRpe: null };
 }
 
+function supersetIdOf(exercise: DraftExercise): string | null {
+  return exercise.modality === 'lift' && typeof exercise.supersetId === 'string' ? exercise.supersetId : null;
+}
+
+function validSupersetIds(exercises: readonly DraftExercise[]): Set<string> {
+  const runLengths = new Map<string, number[]>();
+  exercises.forEach((exercise, index) => {
+    const id = supersetIdOf(exercise);
+    if (id === null) return;
+    const runs = runLengths.get(id) ?? [];
+    const continuesRun = index > 0 && supersetIdOf(exercises[index - 1]) === id;
+    if (continuesRun) runs[runs.length - 1] += 1;
+    else runs.push(1);
+    runLengths.set(id, runs);
+  });
+  return new Set([...runLengths].filter(([, runs]) => runs.length === 1 && runs[0] >= 2).map(([id]) => id));
+}
+
+export function withValidSupersets(exercises: DraftExercise[]): DraftExercise[] {
+  const valid = validSupersetIds(exercises);
+  return exercises.map((exercise) => {
+    if (exercise.modality === 'cardio') {
+      const kept = Object.entries(exercise).filter(([key]) => key !== 'supersetId');
+      return Object.fromEntries(kept) as unknown as CardioDraftExercise;
+    }
+    const id = supersetIdOf(exercise);
+    return { ...exercise, supersetId: id !== null && valid.has(id) ? id : null };
+  });
+}
+
 function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
   return {
     ...withUsableSessionRpe(draft),
     program: isDraftProgram(draft.program) ? draft.program : null,
-    exercises: draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
+    exercises: withValidSupersets(
+      draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
+    ),
   };
 }
 
@@ -563,6 +596,7 @@ export function toggleSetDone(draft: WorkoutDraft, exerciseIndex: number, setId:
 const MOST_WORKING_SETS_TO_QUICK_FILL = 1;
 
 export function canQuickFill(exercise: LiftDraftExercise): boolean {
+  if (exercise.supersetId != null) return false;
   if (exercise.sets.some((set) => set.prescription)) return false;
   return exercise.sets.filter((set) => !set.isWarmup).length <= MOST_WORKING_SETS_TO_QUICK_FILL;
 }
