@@ -46,15 +46,18 @@ export async function fetchProfile(userId: string): Promise<Profile> {
     timezone: privatePart.data.timezone,
     timezoneChangedAt: privatePart.data.timezone_changed_at,
   };
-  profileCache.save(deviceStorage(), userId, profile);
   return profile;
 }
 
-export function loadProfileCacheFirst(userId: string): Promise<CacheFirstLoad<Profile>> {
+export function loadProfileCacheFirst(userId: string, signal?: AbortSignal): Promise<CacheFirstLoad<Profile>> {
   return loadCacheFirstWhenOffline(
     isDeviceOffline,
     () => profileCache.read(deviceStorage(), userId),
-    () => fetchProfile(userId),
+    async () => {
+      const profile = await fetchProfile(userId);
+      if (!signal?.aborted) profileCache.save(deviceStorage(), userId, profile);
+      return profile;
+    },
   );
 }
 

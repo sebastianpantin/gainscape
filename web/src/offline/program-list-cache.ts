@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { type Program } from '../lib/programs.ts';
+import { type Program, type ProgramDoc } from '../lib/programs.ts';
 import { userCache } from './cache-first.ts';
 
 export const OFFLINE_PROGRAMS_NOTICE = 'Offline: using your saved programs.';
@@ -28,3 +28,11 @@ const programSchema = z.object({
 });
 
 export const programListCache = userCache<Program[]>('gainscape.programs.v1.', z.array(programSchema));
+
+export function withSavedProgramDoc(programs: Program[], doc: ProgramDoc): Program[] {
+  return programs.map((program) =>
+    program.id === doc.id
+      ? { ...program, name: doc.name, days: doc.days.map((day, position) => ({ ...day, position })) }
+      : program,
+  );
+}

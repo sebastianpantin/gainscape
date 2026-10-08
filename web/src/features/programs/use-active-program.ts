@@ -7,6 +7,7 @@ import {
   programStatusText,
 } from '../../lib/program-status-rules.ts';
 import { activeProgram } from '../../lib/program-today-rules.ts';
+import { useOnlineSignal } from '../../lib/use-online.ts';
 import { isDeviceOffline } from '../../offline/cache-first.ts';
 import { type ProgramCache, readProgramCache } from '../../offline/program-cache.ts';
 import { cachedProgramFacts } from '../../offline/program-facts-cache.ts';
@@ -16,6 +17,8 @@ export function useActiveProgram(userId: string) {
   const [refresh, setRefresh] = useState<ProgramRefreshState>(() =>
     isDeviceOffline() ? offlineRefreshState(cache) : 'pending',
   );
+
+  const onlineSignal = useOnlineSignal();
 
   useEffect(() => {
     if (isDeviceOffline()) return;
@@ -31,7 +34,7 @@ export function useActiveProgram(userId: string) {
     return () => {
       active = false;
     };
-  }, [userId]);
+  }, [userId, onlineSignal]);
 
   const program = useMemo(
     () => activeProgram(cache.templates, cache.enrollment, cache.facts ? cachedProgramFacts(cache.facts) : []),

@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
-import { type SavedStanding, standingCache } from '../offline/standing-cache.ts';
+import {
+  type CacheFirstLoad,
+  cacheFirstNotice,
+  isDeviceOffline,
+  loadCacheFirstWhenOffline,
+} from '../offline/cache-first.ts';
+import { OFFLINE_SKILLS_NOTICE, type SavedStanding, standingCache } from '../offline/standing-cache.ts';
 import { fetchSkills, fetchSkillXp } from './catalog.ts';
 import { loadedState } from './query-state-rules.ts';
 import { deviceStorage } from './rest-timer-store.ts';
@@ -13,22 +18,24 @@ async function fetchSavedStanding(userId: string): Promise<SavedStanding> {
   return saved;
 }
 
-export async function loadStanding(userId: string): Promise<{ standing: Standing; fromCache: boolean }> {
-  const { loaded, fromCache } = await loadCacheFirstWhenOffline(
+export async function loadStanding(userId: string): Promise<CacheFirstLoad<Standing>> {
+  const load = await loadCacheFirstWhenOffline(
     isDeviceOffline,
     () => standingCache.read(deviceStorage(), userId),
     () => fetchSavedStanding(userId),
   );
-  return { standing: standingFrom(loaded.skills, new Map(Object.entries(loaded.xpBySkillId))), fromCache };
+  return { ...load, loaded: standingFrom(load.loaded.skills, new Map(Object.entries(load.loaded.xpBySkillId))) };
 }
 
 export type StandingState =
   | { status: 'loading' }
   | { status: 'failed'; problem: string }
-  | { status: 'ready'; standing: Standing; fromCache: boolean };
+  | { status: 'ready'; standing: Standing; notice: string | null };
 
 export function useStanding(userId: string): StandingState {
   const query = useQuery({ queryKey: ['standing', userId], queryFn: () => loadStanding(userId) });
   const state = loadedState(query.data, query.error);
-  return state.status === 'ready' ? { status: 'ready', ...state.data } : state;
+  return state.status === 'ready'
+    ? { status: 'ready', standing: state.data.loaded, notice: cacheFirstNotice(state.data, OFFLINE_SKILLS_NOTICE) }
+    : state;
 }

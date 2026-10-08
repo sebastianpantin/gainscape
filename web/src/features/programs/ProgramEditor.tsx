@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchExercises } from '../../lib/catalog.ts';
-import { readCachedExercises } from '../../lib/catalog-cache.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { useOnlineSignal } from '../../lib/use-online.ts';
+import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
@@ -66,17 +68,18 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
   const [problem, setProblem] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const onlineSignal = useOnlineSignal();
 
   useEffect(() => {
     loadCacheFirstWhenOffline(
       isDeviceOffline,
-      () => readCachedExercises(localStorage, userId),
+      () => savedExerciseList(deviceStorage(), userId),
       () => fetchExercises({ includeArchived: true }),
     ).then(
       ({ loaded }) => setExercises(loaded.filter(isLiftExercise)),
       (error: Error) => setProblem(error.message),
     );
-  }, [userId]);
+  }, [userId, onlineSignal]);
 
   useEffect(() => {
     if (doc) return;
@@ -88,7 +91,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
       },
       (error: Error) => setProblem(error.message),
     );
-  }, [doc, userId, programId]);
+  }, [doc, userId, programId, onlineSignal]);
 
   if (missing)
     return (

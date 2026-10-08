@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { type Profile } from '../../web/src/lib/profile-rules.ts';
+import {
+  BADGE_COLOR_KEYS,
+  EFFORT_INPUT_MODES,
+  type Profile,
+  TRAINING_FOCUSES,
+  UNIT_PREFS,
+} from '../../web/src/lib/profile-rules.ts';
 import { profileCache } from '../../web/src/offline/profile-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
@@ -35,5 +41,19 @@ describe('saved profile', () => {
     const storage = new MemoryStorage();
     profileCache.save(storage, USER_ID, { ...PROFILE, unitPref: 'stone' as 'kg' });
     expect(profileCache.read(storage, USER_ID)).toBeNull();
+  });
+
+  it('accepts every unit, effort mode, training focus and badge colour the app knows', () => {
+    const storage = new MemoryStorage();
+    const variants: Profile[] = [
+      ...UNIT_PREFS.map((unitPref) => ({ ...PROFILE, unitPref })),
+      ...EFFORT_INPUT_MODES.map((effortInputMode) => ({ ...PROFILE, effortInputMode })),
+      ...TRAINING_FOCUSES.map((trainingFocus) => ({ ...PROFILE, trainingFocus })),
+      ...BADGE_COLOR_KEYS.map((badgeColor) => ({ ...PROFILE, badgeColor })),
+    ];
+    for (const variant of variants) {
+      profileCache.save(storage, USER_ID, variant);
+      expect(profileCache.read(storage, USER_ID)).toEqual(variant);
+    }
   });
 });

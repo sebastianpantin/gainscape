@@ -13,50 +13,76 @@ export function isDeviceOffline(): boolean {
   return typeof navigator !== 'undefined' && navigator.onLine === false;
 }
 
-let nextOffline: Promise<void> | null = null;
+export type SubscribeOffline = (onOffline: () => void) => () => void;
 
-function nextOfflineEvent(): Promise<void> {
-  if (typeof window === 'undefined') return new Promise(() => undefined);
-  nextOffline ??= new Promise((resolve) =>
-    window.addEventListener(
-      'offline',
-      () => {
-        nextOffline = null;
-        resolve();
-      },
-      { once: true },
-    ),
+export function subscribeToOfflineEvent(onOffline: () => void): () => void {
+  if (typeof window === 'undefined') return () => undefined;
+  window.addEventListener('offline', onOffline);
+  return () => window.removeEventListener('offline', onOffline);
+}
+
+const NETWORK_ERROR_NAMES = new Set(['AbortError', 'TimeoutError', 'OfflineError']);
+const NETWORK_ERROR_MESSAGE = /Failed to fetch|NetworkError|Load failed|AbortError|TimeoutError|aborted/i;
+
+export function isNetworkError(error: unknown): boolean {
+  const { name, message } = (error ?? {}) as { name?: unknown; message?: unknown };
+  return (
+    (typeof name === 'string' && NETWORK_ERROR_NAMES.has(name)) ||
+    (typeof message === 'string' && NETWORK_ERROR_MESSAGE.test(message))
   );
-  return nextOffline;
+}
+
+function problemOf(error: unknown): string {
+  const { message } = (error ?? {}) as { message?: unknown };
+  return typeof message === 'string' && message !== '' ? message : 'Something went wrong.';
+}
+
+export function savedCopyNotice(problem: string): string {
+  return `Showing your saved copy. Couldn't refresh: ${problem}`;
 }
 
 export function failFastWhenOffline(isOffline: () => boolean = isDeviceOffline): void {
   if (isOffline()) throw new OfflineError();
 }
 
-export interface CacheFirstLoad<Loaded> {
-  loaded: Loaded;
-  fromCache: boolean;
+export type CacheFirstLoad<Loaded> =
+  | { loaded: Loaded; fromCache: false }
+  | { loaded: Loaded; fromCache: true; offline: true }
+  | { loaded: Loaded; fromCache: true; offline: false; problem: string };
+
+export function cacheFirstNotice(load: CacheFirstLoad<unknown>, offlineNotice: string): string | null {
+  if (!load.fromCache) return null;
+  return load.offline ? offlineNotice : savedCopyNotice(load.problem);
+}
+
+function liveUnlessOffline<Loaded>(loadLive: () => Promise<Loaded>, subscribeOffline: SubscribeOffline) {
+  let unsubscribe: () => void = () => undefined;
+  const loading = new Promise<Loaded>((resolve, reject) => {
+    unsubscribe = subscribeOffline(() => reject(new OfflineError()));
+    loadLive().then(resolve, reject);
+  });
+  return loading.finally(() => unsubscribe());
 }
 
 export async function loadCacheFirstWhenOffline<Loaded>(
   isOffline: () => boolean,
   loadSaved: () => Loaded | null,
   loadLive: () => Promise<Loaded>,
-  wentOffline: Promise<void> = nextOfflineEvent(),
+  subscribeOffline: SubscribeOffline = subscribeToOfflineEvent,
 ): Promise<CacheFirstLoad<Loaded>> {
   if (isOffline()) {
     const saved = loadSaved();
-    if (saved) return { loaded: saved, fromCache: true };
+    if (saved) return { loaded: saved, fromCache: true, offline: true };
     throw new OfflineError();
   }
   try {
-    const offlineMidLoad = wentOffline.then(() => Promise.reject(new OfflineError()));
-    return { loaded: await Promise.race([loadLive(), offlineMidLoad]), fromCache: false };
+    return { loaded: await liveUnlessOffline(loadLive, subscribeOffline), fromCache: false };
   } catch (error) {
     const saved = loadSaved();
-    if (saved) return { loaded: saved, fromCache: true };
-    throw error;
+    if (!saved) throw error;
+    return isOffline() || isNetworkError(error)
+      ? { loaded: saved, fromCache: true, offline: true }
+      : { loaded: saved, fromCache: true, offline: false, problem: problemOf(error) };
   }
 }
 

@@ -6,6 +6,7 @@ import { usePreferences } from '../../lib/preferences.ts';
 import { collectionPercent, countCollection } from '../../lib/collection-rules.ts';
 import { moved } from '../../lib/reorder.ts';
 import { loadCollectionCacheFirst, pinExercise, reorderPins, unpinExercise } from '../../lib/collection-data.ts';
+import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_COLLECTION_NOTICE } from '../../offline/collection-cache.ts';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedNav } from '../../components/SegmentedNav.tsx';
@@ -51,10 +52,8 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     );
   if (loaded.status !== 'ready') return <ScreenSkeleton title="Collection log" />;
 
-  const {
-    loaded: { exercises, data },
-    fromCache,
-  } = loaded.data;
+  const { exercises, data } = loaded.data.loaded;
+  const savedNotice = cacheFirstNotice(loaded.data, OFFLINE_COLLECTION_NOTICE);
   const reload = async () => {
     const result = await collection.refetch();
     if (result.isError) setProblem(result.error.message);
@@ -93,9 +92,9 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     <main className="screen stack">
       <h1 className="title">Collection log</h1>
       <CollectionTabs />
-      {fromCache && (
+      {savedNotice && (
         <p className="notice" role="status">
-          {OFFLINE_COLLECTION_NOTICE}
+          {savedNotice}
         </p>
       )}
       <div className="panel stack">

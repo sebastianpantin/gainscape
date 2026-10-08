@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MODALITIES } from '../../web/src/lib/catalog-rules.ts';
 import { type SavedStanding, standingCache } from '../../web/src/offline/standing-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
@@ -26,5 +27,12 @@ describe('saved skills standing', () => {
       skills: [{ ...SAVED.skills[0]!, modality: 'swim' as 'lift' }],
     });
     expect(standingCache.read(storage, USER_ID)).toBeNull();
+  });
+
+  it('accepts a skill of every modality the app knows', () => {
+    const storage = new MemoryStorage();
+    const skills = MODALITIES.map((modality, index) => ({ ...SAVED.skills[0]!, id: `skill-${index}`, modality }));
+    standingCache.save(storage, USER_ID, { skills, xpBySkillId: {} });
+    expect(standingCache.read(storage, USER_ID)?.skills).toEqual(skills);
   });
 });

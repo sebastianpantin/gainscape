@@ -1,6 +1,6 @@
 import type { LastLoggedSet, PlannedExercise } from '../offline/draft-format.ts';
 import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
-import { programListCache } from '../offline/program-list-cache.ts';
+import { programListCache, withSavedProgramDoc } from '../offline/program-list-cache.ts';
 import { rateLimitedMessage } from './rate-limit.ts';
 import { deviceStorage } from './rest-timer-store.ts';
 import { supabase } from './supabase.ts';
@@ -103,14 +103,23 @@ export function templates(programs: Program[]): Program[] {
   return programs.filter((program) => program.ownerUserId === null);
 }
 
-async function changeProgramsThenRefresh(userId: string, name: string, args: Record<string, unknown>): Promise<void> {
+async function changeProgramsThenRefresh(
+  userId: string,
+  name: string,
+  args: Record<string, unknown>,
+  changeSaved: (programs: Program[]) => Program[] = (programs) => programs,
+): Promise<void> {
   const { error } = await supabase.rpc(name, args);
   if (error) throw new Error(rateLimitedMessage(error) ?? error.message);
+  const saved = cachedPrograms(userId);
+  if (saved) programListCache.save(deviceStorage(), userId, changeSaved(saved));
   await fetchPrograms(userId).catch(() => undefined);
 }
 
 export function saveProgram(userId: string, doc: ProgramDoc): Promise<void> {
-  return changeProgramsThenRefresh(userId, 'save_program', { program: doc });
+  return changeProgramsThenRefresh(userId, 'save_program', { program: doc }, (programs) =>
+    withSavedProgramDoc(programs, doc),
+  );
 }
 
 export async function copyProgram(userId: string, sourceId: string, newId: string): Promise<string> {
@@ -119,7 +128,9 @@ export async function copyProgram(userId: string, sourceId: string, newId: strin
 }
 
 export function deleteProgram(userId: string, programId: string): Promise<void> {
-  return changeProgramsThenRefresh(userId, 'delete_program', { program_id: programId });
+  return changeProgramsThenRefresh(userId, 'delete_program', { program_id: programId }, (programs) =>
+    programs.filter((program) => program.id !== programId),
+  );
 }
 
 export async function fetchLastLoggedSets(exerciseIds: string[]): Promise<Map<string, LastLoggedSet>> {

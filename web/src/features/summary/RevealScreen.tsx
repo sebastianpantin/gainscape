@@ -10,9 +10,9 @@ import { fetchSession } from '../../lib/history.ts';
 import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { readCachedExercises } from '../../lib/catalog-cache.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
+import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { readItemsCache } from '../../offline/items-cache.ts';
 import { standingCache } from '../../offline/standing-cache.ts';
 import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
@@ -125,9 +125,10 @@ export function RevealScreen({ userId }: RevealScreenProps) {
     const storage = deviceStorage();
     const standing = standingCache.read(storage, userId);
     savedWhenOffline(standing?.skills ?? null, fetchSkills).then(setSkills, () => setSkills([]));
-    savedWhenOffline(storage && readCachedExercises(storage, userId), () =>
-      fetchExercises({ includeArchived: true }),
-    ).then(setExercises, () => setExercises([]));
+    savedWhenOffline(savedExerciseList(storage, userId), () => fetchExercises({ includeArchived: true })).then(
+      setExercises,
+      () => setExercises([]),
+    );
     savedWhenOffline(standing && new Map(Object.entries(standing.xpBySkillId)), () => fetchSkillXp(userId)).then(
       setXpBySkillId,
       () => setXpBySkillId(null),

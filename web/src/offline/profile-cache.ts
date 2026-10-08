@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { type Profile } from '../lib/profile-rules.ts';
+import {
+  BADGE_COLOR_KEYS,
+  EFFORT_INPUT_MODES,
+  type Profile,
+  TRAINING_FOCUSES,
+  UNIT_PREFS,
+} from '../lib/profile-rules.ts';
 import { userCache } from './cache-first.ts';
 
 export const OFFLINE_PROFILE_NOTICE = 'Offline: using your saved profile.';
@@ -8,17 +14,17 @@ const profileSchema = z.object({
   username: z.string(),
   displayName: z.string(),
   bio: z.string().nullable(),
-  trainingFocus: z.enum(['strength', 'muscle', 'powerlifting', 'general']).nullable(),
+  trainingFocus: z.enum(TRAINING_FOCUSES).nullable(),
   trainingSince: z.number().nullable(),
-  badgeColor: z.enum(['gold', 'blue', 'green', 'rust', 'stone']),
+  badgeColor: z.enum(BADGE_COLOR_KEYS),
   showWeights: z.boolean(),
   showBodyweight: z.boolean(),
   createdAt: z.string(),
   bodyweightKg: z.number().nullable(),
   heightCm: z.number().nullable(),
   birthYear: z.number().nullable(),
-  unitPref: z.enum(['kg', 'lb']),
-  effortInputMode: z.enum(['level', 'rir', 'rpe']),
+  unitPref: z.enum(UNIT_PREFS),
+  effortInputMode: z.enum(EFFORT_INPUT_MODES),
   timezone: z.string(),
   timezoneChangedAt: z.string().nullable(),
 });

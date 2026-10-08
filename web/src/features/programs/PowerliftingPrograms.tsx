@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchProgramTemplates } from '../../lib/program-enrollment.ts';
 import { templateListEntries } from '../../lib/program-enroll-rules.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { readProgramCache, updateProgramCache } from '../../offline/program-cache.ts';
 
@@ -18,7 +19,8 @@ export function PowerliftingPrograms({ userId }: PowerliftingProgramsProps) {
     loadCacheFirstWhenOffline(
       isDeviceOffline,
       () => {
-        const saved = readProgramCache(localStorage, userId).templates;
+        const storage = deviceStorage();
+        const saved = storage ? readProgramCache(storage, userId).templates : [];
         return saved.length > 0 ? saved : null;
       },
       async () => {

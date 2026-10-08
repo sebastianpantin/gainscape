@@ -37,7 +37,12 @@ import {
   saveItemsCache,
 } from '../../offline/items-cache.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
-import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
+import {
+  type CacheFirstLoad,
+  cacheFirstNotice,
+  isDeviceOffline,
+  loadCacheFirstWhenOffline,
+} from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { loadoutQueryKey, useLoadout } from '../profile/use-loadout.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
@@ -272,6 +277,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const [challengeExercises, setChallengeExercises] = useState<ChallengeExerciseEntry[]>([]);
   const [strength, setStrength] = useState<StrengthState>({});
   const [offline, setOffline] = useState(false);
+  const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
   const [newIds] = useState(() => newItemIds(recallLastSummary()?.drops));
@@ -304,12 +310,14 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
 
   useEffect(() => {
     let active = true;
-    const show = (loaded: LoadedItems, fromCache: boolean) => {
+    const show = (load: CacheFirstLoad<LoadedItems>) => {
+      const { loaded } = load;
       setCatalog(loaded.catalog);
       setHeld(loaded.held);
       setChallengeExercises(loaded.challengeExercises);
       setStrength(loaded.strength);
-      setOffline(fromCache);
+      setOffline(load.fromCache && load.offline);
+      setSavedNotice(cacheFirstNotice(load, OFFLINE_ITEMS_NOTICE));
       const found = loaded.catalog.items.filter((item) => loaded.held.has(item.id));
       setPickedId((found.find((item) => newIds.has(item.id)) ?? found[0])?.id ?? null);
     };
@@ -318,7 +326,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
       () => loadItemsFromCache(userId),
       () => loadItemsOnline(userId),
     ).then(
-      ({ loaded, fromCache }) => active && show(loaded, fromCache),
+      (load) => active && show(load),
       (error: Error) => active && setLoadProblem(error.message),
     );
     return () => {
@@ -370,9 +378,9 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   return (
     <main className="screen stack">
       {header}
-      {offline && (
+      {savedNotice && (
         <p className="notice" role="status">
-          {OFFLINE_ITEMS_NOTICE}
+          {savedNotice}
         </p>
       )}
       <LoadoutPanel userId={userId} />

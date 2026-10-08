@@ -1,6 +1,6 @@
 import { CARDIO_EFFORT_LEVELS } from '@domain/types.ts';
 import { z } from 'zod';
-import { OFFLINE_PROBLEM } from '../offline/cache-first.ts';
+import { isNetworkError, OFFLINE_PROBLEM } from '../offline/cache-first.ts';
 import { type Exercise, LOAD_TYPES, PACE_UNITS } from './catalog-rules.ts';
 
 const CACHE_VERSION = 2;
@@ -9,17 +9,8 @@ const PRE_CARDIO_CACHE_KEY_PREFIX = 'gainscape.exercises.v1.';
 
 export const OFFLINE_EXERCISES_NOTICE = 'Offline: using your saved exercise list.';
 export const SAVED_EXERCISES_NOTICE = 'Using your saved exercise list.';
-
-const NETWORK_ERROR_NAMES = new Set(['AbortError', 'TimeoutError']);
-const NETWORK_ERROR_MESSAGE = /Failed to fetch|NetworkError|Load failed|AbortError|TimeoutError|aborted/i;
-
-function isNetworkError(error: unknown): boolean {
-  const { name, message } = (error ?? {}) as { name?: unknown; message?: unknown };
-  return (
-    (typeof name === 'string' && NETWORK_ERROR_NAMES.has(name)) ||
-    (typeof message === 'string' && NETWORK_ERROR_MESSAGE.test(message))
-  );
-}
+export const OFFLINE_EXERCISES_WITHOUT_SKILLS_NOTICE =
+  'Offline: using your saved exercise list. Skills load once you are back online.';
 
 const cachedExerciseBase = {
   id: z.string(),
@@ -33,30 +24,30 @@ const cachedExerciseBase = {
     .default([]),
 };
 
+export const cachedExerciseSchema = z.discriminatedUnion('modality', [
+  z.object({
+    ...cachedExerciseBase,
+    modality: z.literal('lift'),
+    loadType: z.enum(LOAD_TYPES),
+    compound: z.boolean().optional(),
+  }),
+  z.object({
+    ...cachedExerciseBase,
+    modality: z.literal('cardio'),
+    activity: z.object({
+      paceUnit: z.enum(PACE_UNITS),
+      referencePaceSPerKm: z.number().nullable(),
+      maxEffort: z.enum(CARDIO_EFFORT_LEVELS),
+      shares: z.array(z.object({ skillKey: z.string(), shareBasisPoints: z.number() })),
+    }),
+  }),
+]);
+
 const cachedExercisesSchema = z.object({
   v: z.literal(CACHE_VERSION),
   savedAt: z.string(),
   userId: z.string(),
-  exercises: z.array(
-    z.discriminatedUnion('modality', [
-      z.object({
-        ...cachedExerciseBase,
-        modality: z.literal('lift'),
-        loadType: z.enum(LOAD_TYPES),
-        compound: z.boolean().optional(),
-      }),
-      z.object({
-        ...cachedExerciseBase,
-        modality: z.literal('cardio'),
-        activity: z.object({
-          paceUnit: z.enum(PACE_UNITS),
-          referencePaceSPerKm: z.number().nullable(),
-          maxEffort: z.enum(CARDIO_EFFORT_LEVELS),
-          shares: z.array(z.object({ skillKey: z.string(), shareBasisPoints: z.number() })),
-        }),
-      }),
-    ]),
-  ),
+  exercises: z.array(cachedExerciseSchema),
 });
 
 export function exerciseCacheKey(userId: string): string {
@@ -75,7 +66,7 @@ export function readCachedExercises(storage: Storage, userId: string): Exercise[
   }
 }
 
-function cachedFields(exercise: Exercise): Exercise {
+export function cachedExerciseFields(exercise: Exercise): Exercise {
   const { id, key, name, equipment, custom, archived, skillShares } = exercise;
   const base = { id, key, name, equipment, custom, archived, skillShares };
   return exercise.modality === 'lift'
@@ -88,7 +79,7 @@ export function saveCachedExercises(storage: Storage, userId: string, exercises:
     v: CACHE_VERSION,
     savedAt: now.toISOString(),
     userId,
-    exercises: exercises.map(cachedFields),
+    exercises: exercises.map(cachedExerciseFields),
   };
   try {
     storage.removeItem(`${PRE_CARDIO_CACHE_KEY_PREFIX}${userId}`);
