@@ -13,6 +13,7 @@ import {
 import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
 import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
 import { forgetCachedExerciseNotes } from '../../lib/exercise-note-cache.ts';
+import { GLOSSARY } from '../../lib/glossary.ts';
 import { type BarbellSetup, HEAVIEST_BAR_OR_PLATE, isUsableBarOrPlate, PLATE_CHOICES } from '../../lib/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../lib/plate-settings-store.ts';
 import { usePreferences } from '../../lib/preferences.ts';
@@ -92,8 +93,8 @@ const UNIT_OPTIONS: { value: UnitPref; label: string }[] = [
 
 const EFFORT_OPTIONS: { value: EffortInputMode; label: string; hint: string }[] = [
   { value: 'level', label: 'Simple', hint: 'Four taps: easy, hard, near failure, failure.' },
-  { value: 'rir', label: 'RIR', hint: 'Reps in reserve: how many more you could have done, 0 to 6+.' },
-  { value: 'rpe', label: 'RPE', hint: 'Rate of perceived exertion, 6 to 10. RPE 8 means 2 reps in reserve.' },
+  { value: 'rir', label: 'RIR', hint: GLOSSARY.rir.definition },
+  { value: 'rpe', label: 'RPE', hint: GLOSSARY.rpe.definition },
 ];
 
 function Choice<T extends string>({
