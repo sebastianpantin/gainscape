@@ -1,6 +1,8 @@
 import { isoTimestamp, type JsonValue, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
+  type ChallengeRun,
+  type ChallengeSummary,
   type GearLoadout,
   isSessionEditable,
   type SessionKey,
@@ -57,6 +59,7 @@ export interface NewSessionRow extends SessionTiming {
   summary: Partial<SessionSummary>;
   notes: string | null;
   gearLoadout: GearLoadout;
+  challenge: ChallengeRun | null;
 }
 
 export async function lockUser(
@@ -313,13 +316,14 @@ export async function insertSession(
   const [inserted] = await tx`
     insert into public.sessions
       (id, user_id, program_day_id, enrollment_id, program_position, started_at, ended_at, local_date, timezone,
-       history_only, balance_version, derived_balance_version, summary, notes, session_rpe, gear_loadout)
+       history_only, balance_version, derived_balance_version, summary, notes, session_rpe, gear_loadout, challenge)
     values
       (${row.id}, ${row.userId}, ${row.programDayId}, ${row.programLink?.enrollmentId ?? null}, ${programPosition},
        ${row.startedAt}, ${row.endedAt}, (${row.startedAt}::timestamptz at time zone ${row.timezone})::date,
        ${row.timezone}, ${row.historyOnly}, ${row.balanceVersion}, ${row.balanceVersion},
        ${tx.json(row.summary as unknown as JsonValue)}, ${row.notes}, ${row.sessionRpe},
-       ${tx.json(row.gearLoadout as JsonValue)})
+       ${tx.json(row.gearLoadout as JsonValue)},
+       ${row.challenge === null ? null : tx.json(row.challenge as unknown as JsonValue)})
     returning summary, completed_at`;
   await tx`insert into public.sets ${tx(setRows)}`;
   return { summary: inserted.summary, completedAt: isoTimestamp(inserted.completed_at) };
@@ -332,7 +336,11 @@ export async function storedSummary(tx: Transaction, sessionId: string): Promise
 
 export interface SummaryPatch {
   id: string;
-  patch: Pick<SessionSummary, 'xpBySkill' | 'levelUps' | 'prs'> & { gearBonusBySkill: Record<string, number> };
+  patch: Pick<SessionSummary, 'xpBySkill' | 'levelUps' | 'prs'> & {
+    gearBonusBySkill: Record<string, number>;
+    challenge: ChallengeSummary | null;
+    challengeBonusBySkill: Record<string, number>;
+  };
 }
 
 export async function writeSummaries(

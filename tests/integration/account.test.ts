@@ -219,7 +219,7 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(5);
+    expect(exported.version).toBe(6);
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);

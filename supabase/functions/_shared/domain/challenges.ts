@@ -71,9 +71,22 @@ function loadPercents(definition: ChallengeDefinition): { exerciseId: string; pc
   return exerciseId === null || minPct === null ? [] : [{ exerciseId, pct: minPct }];
 }
 
+export function challengeLoadExerciseIds(definition: ChallengeDefinition): string[] {
+  return [...new Set(loadPercents(definition).map(({ exerciseId }) => exerciseId))];
+}
+
 export function challengeE1rmSnapshot(definition: ChallengeDefinition, strength: StrengthState): E1rmSnapshot {
   return Object.fromEntries(
-    loadPercents(definition).map(({ exerciseId }) => [exerciseId, e1rmAtSessionStart(strength, exerciseId)]),
+    challengeLoadExerciseIds(definition).map((exerciseId) => [exerciseId, e1rmAtSessionStart(strength, exerciseId)]),
+  );
+}
+
+export function challengeTargetLoadsKg(run: ChallengeRun): Record<string, number | null> {
+  return Object.fromEntries(
+    loadPercents(run.definition).map(({ exerciseId, pct }) => {
+      const target = loadTargetKg(pct, run.e1rmKg[exerciseId] ?? null);
+      return [exerciseId, target === null ? null : roundLoad(target, CHALLENGE_LOAD_STEP_KG, 'down')];
+    }),
   );
 }
 
@@ -188,7 +201,7 @@ function storedGroup(value: unknown): ChallengeGroup {
   };
 }
 
-function storedDefinition(value: unknown): ChallengeDefinition {
+export function challengeDefinitionFromStored(value: unknown): ChallengeDefinition {
   const definition = storedRecord(value, 'definition');
   if (definition.kind === 'prescription') {
     return { kind: 'prescription', groups: storedArray(definition.groups, 'groups').map(storedGroup) };
@@ -228,7 +241,7 @@ export function challengeRunFromStored(value: unknown): ChallengeRun | null {
     challengeId: storedString(run.challengeId, 'challengeId'),
     key: storedString(run.key, 'key'),
     name: storedString(run.name, 'name'),
-    definition: storedDefinition(run.definition),
+    definition: challengeDefinitionFromStored(run.definition),
     e1rmKg: storedSnapshot(run.e1rmKg),
   };
 }
