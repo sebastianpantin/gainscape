@@ -174,7 +174,12 @@ export async function replayFrom(
     tx,
     replay.sessions.map((entry) => ({
       id: entry.session.id,
-      patch: { xpBySkill: entry.outputs.xpBySkill, levelUps: entry.outputs.levelUps, prs: entry.outputs.prs },
+      patch: {
+        xpBySkill: entry.outputs.xpBySkill,
+        levelUps: entry.outputs.levelUps,
+        prs: entry.outputs.prs,
+        gearBonusBySkill: entry.outputs.gearBonusBySkill ?? {},
+      },
     })),
     cfg.version,
   );
