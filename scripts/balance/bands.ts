@@ -18,6 +18,11 @@ export const GEAR_BANDS = Object.freeze({
   beltOnlyCoreRatio: [1.09, 1.11] as const,
 });
 
+export const CHALLENGE_BANDS = Object.freeze({
+  everySessionXpRatio: [1.24, 1.26] as const,
+  withFullAscendantRatio: [1.34, 1.36] as const,
+});
+
 export interface ProfileResults {
   hypertrophy: SimulationResult;
   strength: SimulationResult;

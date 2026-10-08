@@ -5,6 +5,8 @@ import {
   BodyweightRequiredError,
   cardioExercise,
   carriedEffectiveLoadKg,
+  challengeBonusXp,
+  type ChallengeRun,
   type Catalog,
   type CardioSetInput,
   type EffortInput,
@@ -569,6 +571,152 @@ describe('gear bonus', () => {
           }
         },
       ),
+    );
+  });
+});
+
+describe('challenge bonus', () => {
+  const singleSkillExercise = (id: string, skillKey: string): [string, ExerciseDef] => [
+    id,
+    { id, loadType: 'external', builtIn: true, shares: [{ skillId: `skill-${skillKey}`, shareBasisPoints: 10000 }] },
+  ];
+  const bonusCatalog: Catalog = {
+    skills: catalog.skills,
+    exercises: new Map([
+      ...catalog.exercises,
+      singleSkillExercise('leg-press', 'legs'),
+      singleSkillExercise('core-press', 'core'),
+      singleSkillExercise('chest-press', 'chest'),
+    ]),
+  };
+  const flatCfg = {
+    ...TEST_BALANCE,
+    xpPerEffectiveRep: 25,
+    intensityBonusStart: 2,
+    intensityBonusFull: 3,
+    fatiguePerHardSet: 0,
+  };
+  const toFailure = { type: 'rir', value: 0 } as const;
+  let pressCounter = 0;
+  const press = (exerciseId: string, reps: number) => {
+    pressCounter += 1;
+    return aSet(exerciseId, 100, reps, toFailure, { id: `${exerciseId}-${pressCounter}`, position: pressCounter });
+  };
+  const thousandXpOf = (exerciseId: string) => [0, 1, 2, 3, 4, 5, 6, 7].map(() => press(exerciseId, 5));
+  const ascendantBelt: GearLoadout = { belt: 'ascendant' };
+  const alwaysMet = (passing: boolean): ChallengeRun => ({
+    challengeId: 'challenge-1',
+    key: 'ten_ton_day',
+    name: 'Ten-Ton Day',
+    definition: { kind: 'volume', metric: 'kg', target: passing ? 1 : 1_000_000, exerciseId: null, minPct: null },
+    e1rmKg: {},
+  });
+  const sessionOf = (sets: SessionInput['sets'], extra: Partial<SessionInput> = {}): SessionInput => ({
+    id: 'challenge-session',
+    startedAt: '2026-09-28T10:00:00Z',
+    sets,
+    ...extra,
+  });
+  const run = (session: SessionInput) => processSession(freshUser, session, flatCfg, { catalog: bonusCatalog });
+
+  it('pays 25% of base XP on a pass with no gear', () => {
+    const sets = thousandXpOf('core-press');
+    expect(run(sessionOf(sets)).outputs.xpBySkill).toEqual({ core: 1000 });
+    const { outputs } = run(sessionOf(sets, { challenge: alwaysMet(true) }));
+    expect(outputs.xpBySkill).toEqual({ core: 1250 });
+    expect(outputs.challengeBonusBySkill).toEqual({ core: 250 });
+    expect(outputs.gearBonusBySkill).toBeUndefined();
+    expect(outputs.challengeVerdict).toEqual({ passed: true });
+    expect(outputs.sets.reduce((sum, result) => sum + result.xp, 0)).toBe(1000);
+  });
+
+  it('pays the challenge share on a skill that gets no gear bonus', () => {
+    const { outputs } = run(
+      sessionOf(thousandXpOf('chest-press'), { challenge: alwaysMet(true), gearLoadout: ascendantBelt }),
+    );
+    expect(outputs.xpBySkill).toEqual({ chest: 1250 });
+    expect(outputs.challengeBonusBySkill).toEqual({ chest: 250 });
+    expect(outputs.gearBonusBySkill?.chest).toBeUndefined();
+  });
+
+  it('adds the gear and challenge bonuses on base XP with an Ascendant belt', () => {
+    const sets = [...thousandXpOf('core-press'), ...thousandXpOf('leg-press')];
+    const { outputs } = run(sessionOf(sets, { challenge: alwaysMet(true), gearLoadout: ascendantBelt }));
+    expect(outputs.xpBySkill).toEqual({ legs: 1283, core: 1350 });
+    expect(outputs.gearBonusBySkill).toEqual({ legs: 33, core: 100 });
+    expect(outputs.challengeBonusBySkill).toEqual({ legs: 250, core: 250 });
+    expect(outputs.sets.reduce((sum, result) => sum + result.xp, 0)).toBe(2000);
+  });
+
+  describe('spreading both bonuses over the sets', () => {
+    const legsXpPerSet = (session: SessionInput) =>
+      run(session).outputs.sets.map((result) => result.skillXp.find((part) => part.skillId === 'skill-legs')?.xp);
+    const legSets = () => [press('leg-press', 4), press('leg-press', 2), press('leg-press', 2)];
+
+    it('spreads gear plus challenge once on a pass', () => {
+      expect(legsXpPerSet(sessionOf(legSets(), { gearLoadout: ascendantBelt, challenge: alwaysMet(true) }))).toEqual([
+        129, 64, 64,
+      ]);
+    });
+
+    it('spreads only the gear bonus on a fail', () => {
+      const failed = run(sessionOf(legSets(), { gearLoadout: ascendantBelt, challenge: alwaysMet(false) }));
+      expect(failed.outputs.challengeVerdict).toEqual({ passed: false });
+      expect(failed.outputs.challengeBonusBySkill).toBeUndefined();
+      expect(
+        failed.outputs.sets.map((result) => result.skillXp.find((part) => part.skillId === 'skill-legs')?.xp),
+      ).toEqual([103, 52, 52]);
+    });
+
+    it('leaves a session without a challenge exactly as gear alone', () => {
+      const sets = legSets();
+      const gearOnly = run(sessionOf(sets, { gearLoadout: ascendantBelt }));
+      expect(run(sessionOf(sets, { gearLoadout: ascendantBelt, challenge: null }))).toEqual(gearOnly);
+      expect(legsXpPerSet(sessionOf(sets, { gearLoadout: ascendantBelt }))).toEqual([103, 52, 52]);
+    });
+  });
+
+  it('clamps the challenge bonus first and gives gear what is left under the XP cap', () => {
+    const nearCap = { skillXp: { 'skill-core': flatCfg.maxXp - 1000 - 300 }, bodyweightKg: null };
+    const { outputs } = processSession(
+      nearCap,
+      sessionOf(thousandXpOf('core-press'), { challenge: alwaysMet(true), gearLoadout: ascendantBelt }),
+      flatCfg,
+      { catalog: bonusCatalog },
+    );
+    expect(outputs.xpBySkill).toEqual({ core: 1300 });
+    expect(outputs.challengeBonusBySkill).toEqual({ core: 250 });
+    expect(outputs.gearBonusBySkill).toEqual({ core: 50 });
+  });
+
+  it('matches base × (1 + 25%) plus the gear bonus per skill for any session', () => {
+    const lift = fc.record({
+      exerciseId: fc.constantFrom('bench', 'squat', 'custom-press'),
+      weightKg: fc.integer({ min: 0, max: 160 }),
+      reps: fc.integer({ min: 1, max: 20 }),
+      isWarmup: fc.boolean(),
+      effort: fc.constantFrom<EffortInput>(null, hard, nearFailure, { type: 'rir', value: 2 }),
+    });
+    const loadout = fc.dictionary(
+      fc.constantFrom(...GEAR_SLOTS),
+      fc.constantFrom('rookie', 'grinder', 'tempered', 'forged', 'titan', 'mythic', 'ascendant' as const),
+    );
+    fc.assert(
+      fc.property(fc.array(lift, { maxLength: 10 }), loadout, (lifts, gear) => {
+        const session = sessionOf(lifts.map((entry, index) => ({ ...entry, id: `lift-${index}`, position: index })));
+        const plain = processSession(freshUser, session, TEST_BALANCE, { catalog });
+        const boosted = processSession(
+          freshUser,
+          { ...session, gearLoadout: gear, challenge: alwaysMet(true) },
+          TEST_BALANCE,
+          { catalog },
+        );
+        for (const skill of catalog.skills) {
+          const base = plain.outputs.xpBySkill[skill.key] ?? 0;
+          const total = base + gearBonusXp(base, skill.key, gear, TEST_BALANCE) + challengeBonusXp(base, TEST_BALANCE);
+          expect(boosted.outputs.xpBySkill[skill.key] ?? 0).toBe(total);
+        }
+      }),
     );
   });
 });
