@@ -26,6 +26,12 @@
   --color-focus: #ffe27a;
   --color-placeholder: #5e5442;
   --color-input-border: #000;
+  --color-plate-red: #d64541;
+  --color-plate-blue: #3d7dd8;
+  --color-plate-yellow: #f2c230;
+  --color-plate-green: #3fa35b;
+  --color-plate-white: #ece6da;
+  --color-plate-steel: #9a9488;
 
   --space-1: 4px;
   --space-2: 8px;

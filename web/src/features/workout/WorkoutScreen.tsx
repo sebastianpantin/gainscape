@@ -27,7 +27,7 @@ import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import type { SessionBaseline } from '../../lib/session-baseline-rules.ts';
 import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-baseline-store.ts';
-import { barbellPlatesText } from '../../lib/plate-rules.ts';
+import { barbellPlates, barbellPlatesText } from '../../lib/plate-rules.ts';
 import { readPlateSettings } from '../../lib/plate-settings-store.ts';
 import { warmupPlan } from '../../lib/warmup-rules.ts';
 import { SESSION_RPE_VALUES, sessionRpeChoiceLabel, sessionRpeFromChoice } from '../../lib/session-timing-rules.ts';
@@ -702,7 +702,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   barbell={
                     isBarbell
                       ? {
-                          plates: barbellPlatesText(shownWeight(set.weightKg, unitPref), barbellSetup, unitPref),
+                          plates: barbellPlates(shownWeight(set.weightKg, unitPref), barbellSetup, unitPref).plates,
+                          text: barbellPlatesText(shownWeight(set.weightKg, unitPref), barbellSetup, unitPref),
                           setup: barbellSetup,
                         }
                       : null

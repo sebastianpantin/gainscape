@@ -20,6 +20,7 @@ import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { PlateCalculator } from './PlateCalculator.tsx';
+import { PlateChips } from './PlateChips.tsx';
 import { recordChipLabel, recordChipText } from './record-preview.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
@@ -32,7 +33,7 @@ interface SetRowProps {
   unit: UnitPref;
   effortMode: EffortInputMode;
   markers: readonly string[];
-  barbell: { plates: string; setup: DraftBarbellSetup } | null;
+  barbell: { plates: number[]; text: string; setup: DraftBarbellSetup } | null;
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   onRemove: () => void;
   onToggleDone: () => void;
@@ -222,10 +223,14 @@ export function SetRow({
               className="plate-marker"
               aria-expanded={calculatorOpen}
               aria-controls={calculatorId}
-              aria-label={`${barbell.plates}, plate calculator, set ${setNumber}`}
+              aria-label={`${barbell.text}, plate calculator, set ${setNumber}`}
               onClick={() => setCalculatorOpen((open) => !open)}
             >
-              {barbell.plates}
+              <PlateChips plates={barbell.plates} unit={unit} />
+              <span className="plate-text">{barbell.text}</span>
+              <span className="plate-toggle" aria-hidden="true">
+                {calculatorOpen ? '▴' : '▾'}
+              </span>
             </button>
           )}
         </span>
