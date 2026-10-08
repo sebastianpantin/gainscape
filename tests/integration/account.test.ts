@@ -38,6 +38,7 @@ const USER_TABLES: { table: string; column: string }[] = [
   { table: 'drop_luck', column: 'user_id' },
   { table: 'user_items', column: 'user_id' },
   { table: 'item_ledger', column: 'user_id' },
+  { table: 'user_loadout', column: 'user_id' },
   { table: 'user_unlocks', column: 'user_id' },
   { table: 'events', column: 'user_id' },
   { table: 'friendships', column: 'requester_id' },
@@ -123,6 +124,8 @@ async function giveUserEverything(user: TestUser): Promise<void> {
   const [recipe] = await db`select id from public.recipes where key = 'grinder_belt'`;
   const crafted = await user.client.rpc('craft', { recipe_id: recipe.id });
   expect(crafted.error).toBeNull();
+  const equipped = await user.client.rpc('equip_gear', { slot: 'belt', item_id: crafted.data.itemId });
+  expect(equipped.error).toBeNull();
   const removed = await postFunction('delete-session', user.accessToken, { sessionId: await logOneSession(user) });
   expect(removed.status).toBe(200);
   const benchId = await builtInExerciseId('barbell_bench_press');
@@ -221,7 +224,7 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(4);
+    expect(exported.version).toBe(5);
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);
@@ -241,6 +244,10 @@ describe('export-data', () => {
     expect(exported.dropLuck).toHaveLength(counts.drop_luck);
     expect(exported.userItems).toHaveLength(counts.user_items);
     expect(exported.itemLedger).toHaveLength(counts.item_ledger);
+    expect(exported.userLoadout).toEqual([
+      expect.objectContaining({ slot: 'belt', item_id: expect.any(String), equipped_at: expect.any(String) }),
+    ]);
+    expect(counts.user_loadout).toBe(1);
     expect(exported.userUnlocks).toHaveLength(counts.user_unlocks);
     expect(counts.user_unlocks).toBeGreaterThan(0);
     expect(exported.events).toHaveLength(counts.events);
