@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, type Position } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
+import { TermHelpRow } from '../../components/TermHelpRow.tsx';
 import { canAddBout } from '../../lib/cardio-rules.ts';
 import { challengeSummaryText, challengeVolumeText } from '../../lib/challenge-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
@@ -32,7 +33,6 @@ import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-base
 import { barbellPlates, barbellPlatesText } from '../../lib/plate-rules.ts';
 import { readPlateSettings } from '../../lib/plate-settings-store.ts';
 import { warmupPlan } from '../../lib/warmup-rules.ts';
-import { SESSION_RPE_VALUES, sessionRpeChoiceLabel, sessionRpeFromChoice } from '../../lib/session-timing-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { type CacheFirstLoad, isDeviceOffline } from '../../offline/cache-first.ts';
@@ -101,7 +101,9 @@ import { ProgramToday } from './ProgramToday.tsx';
 import { QuickFill } from './QuickFill.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
+import { SessionRpeField } from './SessionRpeField.tsx';
 import { SupersetCard } from './SupersetCard.tsx';
+import { workoutHelpKeys } from './workout-help.ts';
 import { useFinishSync } from './use-finish-sync.ts';
 import { WeeklyGoalCard } from './WeeklyGoalCard.tsx';
 import { useRecentLiftSessions } from './use-recent-lift-sessions.ts';
@@ -717,6 +719,13 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     );
   };
 
+  const helpKeys = workoutHelpKeys({
+    mode: effortInputMode,
+    exercises: draft.exercises,
+    strength: previewStrength,
+    challenge: draft.challenge?.definition ?? null,
+  });
+
   return (
     <main className="screen stack">
       <header className="workout-header">
@@ -753,6 +762,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           {loadProblem}
         </p>
       )}
+      <TermHelpRow keys={helpKeys} />
       {draft.exercises.map((exercise, exerciseIndex) => {
         if (exercise.modality === 'cardio') {
           const doneHere = exercise.sets.filter((set) => set.done).length;
@@ -883,20 +893,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>
-      <label className="field">
-        Session RPE (optional)
-        <select
-          value={draft.sessionRpe ?? ''}
-          onChange={(event) => changeDraft(withSessionRpe(draft, sessionRpeFromChoice(event.target.value)))}
-        >
-          <option value="">Not rated</option>
-          {SESSION_RPE_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {sessionRpeChoiceLabel(value)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <SessionRpeField
+        sessionRpe={draft.sessionRpe ?? null}
+        onChange={(sessionRpe) => changeDraft(withSessionRpe(draft, sessionRpe))}
+      />
       <div ref={finishBar} className="finish-bar" tabIndex={-1}>
         <RestTimerBar {...rest} focusAfterStop={finishButton} focusFallback={finishBar} />
         {finishProblem && (

@@ -85,7 +85,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await expect(alice.getByText('Weights hidden')).toBeVisible();
   await alice.getByRole('button', { name: 'Remove friend' }).click();
   await alice.getByRole('button', { name: 'Remove for good' }).click();
-  await expect(alice.getByText('No posts yet. Add friends, or log a PR.')).toBeVisible();
+  await expect(alice.getByText('No posts yet. Add friends, or log a personal record (PR).')).toBeVisible();
 
   await openTab(alice, 'Profile');
   await expect(definitionOf(alice, 'Total')).not.toHaveText('—');
