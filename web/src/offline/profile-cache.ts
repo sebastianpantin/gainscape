@@ -30,3 +30,8 @@ const profileSchema = z.object({
 });
 
 export const profileCache = userCache<Profile>('gainscape.profile.v1.', profileSchema);
+
+export function rememberSavedBodyweight(storage: Storage | null, userId: string, bodyweightKg: number): void {
+  const saved = profileCache.read(storage, userId);
+  if (saved) profileCache.save(storage, userId, { ...saved, bodyweightKg });
+}

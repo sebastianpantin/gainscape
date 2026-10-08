@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, type Position } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
@@ -19,7 +20,7 @@ import {
 import { strengthText } from '../../lib/collection-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
 import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
-import { fetchProfile, updatePrivateProfile } from '../../lib/profile.ts';
+import { fetchProfile, type Profile, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
@@ -34,8 +35,8 @@ import { warmupPlan } from '../../lib/warmup-rules.ts';
 import { SESSION_RPE_VALUES, sessionRpeChoiceLabel, sessionRpeFromChoice } from '../../lib/session-timing-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
-import { isDeviceOffline } from '../../offline/cache-first.ts';
-import { profileCache } from '../../offline/profile-cache.ts';
+import { type CacheFirstLoad, isDeviceOffline } from '../../offline/cache-first.ts';
+import { profileCache, rememberSavedBodyweight } from '../../offline/profile-cache.ts';
 import { formatXp } from '../../lib/format.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
 import {
@@ -206,6 +207,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [loadedBaseline, setLoadedBaseline] = useState<SessionBaseline | null>(null);
   const [cachedBaseline] = useState(() => readSessionBaseline(deviceStorage(), userId));
   const onlineSignal = useOnlineSignal();
+  const queryClient = useQueryClient();
   const [bodyweightKg, setBodyweightKg] = useState<number | null>(
     () => profileCache.read(deviceStorage(), userId)?.bodyweightKg ?? null,
   );
@@ -487,6 +489,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             unit={unitPref}
             onSave={async (bodyweightKg) => {
               await updatePrivateProfile(userId, { bodyweightKg });
+              rememberSavedBodyweight(deviceStorage(), userId, bodyweightKg);
+              queryClient.setQueryData<CacheFirstLoad<Profile>>(
+                ['profile', userId],
+                (current) => current && { ...current, loaded: { ...current.loaded, bodyweightKg } },
+              );
               setBodyweightKg(bodyweightKg);
               retryNow();
             }}
