@@ -14,11 +14,11 @@ const RPE = 'RPE top set with back-offs';
 const SKIP_OFFLINE_TEXT = "You're offline. Skipping a day needs a connection.";
 
 const MADCOW_W1_MONDAY_SQUAT_MARKERS: [string, string][] = [
-  ['50%', '10 + 2.5 + 1.25 per side'],
-  ['62.5%', '15 + 2.5 + 1.25 per side'],
-  ['75%', '25 per side'],
-  ['87.5%', '25 + 5 per side'],
-  ['100%', '25 + 10 + 1.25 per side'],
+  ['50%', '10 + 2.5 + 1.25 kg each side'],
+  ['62.5%', '15 + 2.5 + 1.25 kg each side'],
+  ['75%', '25 kg each side'],
+  ['87.5%', '25 + 5 kg each side'],
+  ['100%', '25 + 10 + 1.25 kg each side'],
 ];
 
 function nativeDialogsOf(page: Page): string[] {
@@ -60,13 +60,13 @@ test('changing a prescribed weight marks the set adjusted and updates its plates
   const top = rows.nth(4);
   await top.getByRole('spinbutton', { name: 'kg', exact: true }).fill('100');
   await expect(marker(top, 'adjusted')).toBeVisible();
-  await expect(marker(top, '25 + 15 per side')).toBeVisible();
+  await expect(marker(top, '25 + 15 kg each side')).toBeVisible();
   await expect(marker(top, '100%')).toBeVisible();
   await expect(marker(rows.nth(3), 'adjusted')).toHaveCount(0);
 
   await top.getByRole('spinbutton', { name: 'kg', exact: true }).fill('92.5');
   await expect(marker(top, 'adjusted')).toHaveCount(0);
-  await expect(marker(top, '25 + 10 + 1.25 per side')).toBeVisible();
+  await expect(marker(top, '25 + 10 + 1.25 kg each side')).toBeVisible();
 });
 
 test('the RPE back-off sets of a program draft are marked optional at 95% with their plates', async ({ page }) => {
@@ -84,7 +84,7 @@ test('the RPE back-off sets of a program draft are marked optional at 95% with t
   const [topCard, backOffCard] = [workoutCards(page, 'Back Squat').nth(0), workoutCards(page, 'Back Squat').nth(1)];
   const topSet = topCard.getByRole('listitem').first();
   await expect(marker(topSet, '86.3%')).toBeVisible();
-  await expect(marker(topSet, '25 + 25 + 25 + 1.25 per side')).toBeVisible();
+  await expect(marker(topSet, '3×25 + 1.25 kg each side')).toBeVisible();
   await expect(marker(topSet, 'optional')).toHaveCount(0);
 
   const backOffs = backOffCard.getByRole('listitem');
@@ -92,7 +92,7 @@ test('the RPE back-off sets of a program draft are marked optional at 95% with t
   for (let index = 0; index < 5; index++) {
     await expect(marker(backOffs.nth(index), '95%')).toBeVisible();
     await expect(marker(backOffs.nth(index), 'optional')).toBeVisible();
-    await expect(marker(backOffs.nth(index), '25 + 25 + 20 + 2.5 per side')).toBeVisible();
+    await expect(marker(backOffs.nth(index), '2×25 + 20 + 2.5 kg each side')).toBeVisible();
   }
 });
 

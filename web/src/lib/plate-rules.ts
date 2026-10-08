@@ -120,20 +120,81 @@ export function nearestLoadable(total: number, barWeight: number, availablePlate
   return roundTo(PLATE_DECIMALS, barWeight + 2 * nearest * grid.stepWeight);
 }
 
-function loadedPlatesLabel(plates: readonly number[]): string {
-  return plates.length === 0 ? 'Empty bar' : `${plates.join(' + ')} per side`;
+function groupedPlates(plates: readonly number[]): string {
+  const counts = new Map<number, number>();
+  for (const plate of plates) counts.set(plate, (counts.get(plate) ?? 0) + 1);
+  return [...counts].map(([plate, count]) => (count > 1 ? `${count}×${plate}` : String(plate))).join(' + ');
 }
 
-export function platesLabel(plates: readonly number[] | null): string | null {
-  return plates === null ? null : loadedPlatesLabel(plates);
+function loadedPlatesLabel(plates: readonly number[], unit: WeightUnit): string {
+  return plates.length === 0 ? 'Empty bar' : `${groupedPlates(plates)} ${unit} each side`;
+}
+
+export function platesLabel(plates: readonly number[] | null, unit: WeightUnit): string | null {
+  return plates === null ? null : loadedPlatesLabel(plates, unit);
+}
+
+export interface BarbellPlates {
+  plates: number[];
+  nearest: number | null;
+}
+
+export function barbellPlates(total: number, setup: BarbellSetup, unit: WeightUnit): BarbellPlates {
+  const exact = platesPerSide(total, setup.barWeight, unit, setup.plates);
+  if (exact !== null) return { plates: exact, nearest: null };
+  const nearest = nearestLoadable(total, setup.barWeight, setup.plates);
+  return { plates: platesPerSide(nearest, setup.barWeight, unit, setup.plates) ?? [], nearest };
 }
 
 export function barbellPlatesText(total: number, setup: BarbellSetup, unit: WeightUnit): string {
-  const exact = platesPerSide(total, setup.barWeight, unit, setup.plates);
-  if (exact !== null) return loadedPlatesLabel(exact);
-  const nearest = nearestLoadable(total, setup.barWeight, setup.plates);
-  const nearestPlates = platesPerSide(nearest, setup.barWeight, unit, setup.plates) ?? [];
-  return `Nearest ${nearest} ${unit}: ${loadedPlatesLabel(nearestPlates)}`;
+  const { plates, nearest } = barbellPlates(total, setup, unit);
+  const label = loadedPlatesLabel(plates, unit);
+  return nearest === null ? label : `Nearest ${nearest} ${unit}: ${label}`;
+}
+
+export type PlateTone = 'red' | 'blue' | 'yellow' | 'green' | 'white' | 'steel';
+export type PlateSize = 'full' | 'large' | 'medium' | 'small';
+
+const PLATE_TONES: Readonly<Record<WeightUnit, ReadonlyMap<number, PlateTone>>> = {
+  kg: new Map([
+    [50, 'red'],
+    [25, 'red'],
+    [20, 'blue'],
+    [15, 'yellow'],
+    [10, 'green'],
+    [5, 'white'],
+    [2.5, 'red'],
+    [2, 'blue'],
+    [1.5, 'yellow'],
+    [1, 'green'],
+    [0.5, 'white'],
+  ]),
+  lb: new Map([
+    [55, 'red'],
+    [45, 'blue'],
+    [35, 'yellow'],
+    [25, 'green'],
+    [15, 'white'],
+    [10, 'white'],
+  ]),
+};
+
+const PLATE_SIZE_FLOORS: Readonly<Record<WeightUnit, readonly [number, PlateSize][]>> = {
+  kg: [
+    [15, 'full'],
+    [10, 'large'],
+    [5, 'medium'],
+  ],
+  lb: [
+    [35, 'full'],
+    [25, 'large'],
+    [10, 'medium'],
+  ],
+};
+
+export function plateLook(plate: number, unit: WeightUnit): { tone: PlateTone; size: PlateSize } {
+  const size = PLATE_SIZE_FLOORS[unit].find(([floor]) => plate >= floor)?.[1] ?? 'small';
+  return { tone: PLATE_TONES[unit].get(plate) ?? 'steel', size };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

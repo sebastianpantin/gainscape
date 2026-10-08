@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  barbellPlates,
   barbellPlatesText,
   DEFAULT_PLATE_SETTINGS,
   nearestLoadable,
   parsePlateSettings,
   PLATE_CHOICES,
+  plateLook,
   platesLabel,
   platesPerSide,
 } from '../../web/src/lib/plate-rules.ts';
@@ -129,7 +131,7 @@ describe('barbell plates text', () => {
   const kgSetup = DEFAULT_PLATE_SETTINGS.kg;
 
   it('shows the plates of a weight that loads exactly', () => {
-    expect(barbellPlatesText(92.5, kgSetup, 'kg')).toBe('25 + 10 + 1.25 per side');
+    expect(barbellPlatesText(92.5, kgSetup, 'kg')).toBe('25 + 10 + 1.25 kg each side');
   });
 
   it('shows "Empty bar" at the bar weight', () => {
@@ -137,7 +139,7 @@ describe('barbell plates text', () => {
   });
 
   it('shows the nearest loadable weight and its plates when the weight does not load exactly', () => {
-    expect(barbellPlatesText(101, kgSetup, 'kg')).toBe('Nearest 100 kg: 25 + 15 per side');
+    expect(barbellPlatesText(101, kgSetup, 'kg')).toBe('Nearest 100 kg: 25 + 15 kg each side');
   });
 
   it('shows the bar as the nearest weight below the bar', () => {
@@ -145,8 +147,8 @@ describe('barbell plates text', () => {
   });
 
   it('uses the bar and plates of the setup', () => {
-    expect(barbellPlatesText(55, { barWeight: 15, plates: [10, 5] }, 'kg')).toBe('10 + 10 per side');
-    expect(barbellPlatesText(135, { barWeight: 45, plates: [45] }, 'lb')).toBe('45 per side');
+    expect(barbellPlatesText(55, { barWeight: 15, plates: [10, 5] }, 'kg')).toBe('2×10 kg each side');
+    expect(barbellPlatesText(135, { barWeight: 45, plates: [45] }, 'lb')).toBe('45 lb each side');
   });
 });
 
@@ -186,24 +188,58 @@ describe('plate settings', () => {
   });
 });
 
+describe('barbell plates', () => {
+  const kgSetup = DEFAULT_PLATE_SETTINGS.kg;
+
+  it('gives the plates of one side, heaviest first, and no nearest weight when the weight loads exactly', () => {
+    expect(barbellPlates(92.5, kgSetup, 'kg')).toEqual({ plates: [25, 10, 1.25], nearest: null });
+  });
+
+  it('gives the nearest loadable weight and its plates when the weight does not load exactly', () => {
+    expect(barbellPlates(101, kgSetup, 'kg')).toEqual({ plates: [25, 15], nearest: 100 });
+    expect(barbellPlates(10, kgSetup, 'kg')).toEqual({ plates: [], nearest: 20 });
+  });
+});
+
 describe('plates label', () => {
-  it('joins the plates of one side: "25 + 15 per side"', () => {
-    expect(platesLabel([25, 15])).toBe('25 + 15 per side');
+  it('joins the plates of one side with the unit: "25 + 15 kg each side"', () => {
+    expect(platesLabel([25, 15], 'kg')).toBe('25 + 15 kg each side');
   });
 
-  it('reads a single plate as "20 per side"', () => {
-    expect(platesLabel([20])).toBe('20 per side');
+  it('reads a single plate as "20 kg each side"', () => {
+    expect(platesLabel([20], 'kg')).toBe('20 kg each side');
   });
 
-  it('keeps fractional plates as they are: "25 + 15 + 1.25 per side"', () => {
-    expect(platesLabel([25, 15, 1.25])).toBe('25 + 15 + 1.25 per side');
+  it('keeps fractional plates and counts repeated ones: "3×25 + 1.25 kg each side"', () => {
+    expect(platesLabel([25, 25, 25, 1.25], 'kg')).toBe('3×25 + 1.25 kg each side');
+    expect(platesLabel([45, 45, 10], 'lb')).toBe('2×45 + 10 lb each side');
   });
 
   it('reads no plates as "Empty bar"', () => {
-    expect(platesLabel([])).toBe('Empty bar');
+    expect(platesLabel([], 'kg')).toBe('Empty bar');
   });
 
   it('has no label for a weight that cannot be loaded', () => {
-    expect(platesLabel(null)).toBeNull();
+    expect(platesLabel(null, 'kg')).toBeNull();
+  });
+});
+
+describe('plate look', () => {
+  it('colours kg plates like competition plates and sizes them by weight', () => {
+    expect(plateLook(25, 'kg')).toEqual({ tone: 'red', size: 'full' });
+    expect(plateLook(20, 'kg')).toEqual({ tone: 'blue', size: 'full' });
+    expect(plateLook(15, 'kg')).toEqual({ tone: 'yellow', size: 'full' });
+    expect(plateLook(10, 'kg')).toEqual({ tone: 'green', size: 'large' });
+    expect(plateLook(5, 'kg')).toEqual({ tone: 'white', size: 'medium' });
+    expect(plateLook(2.5, 'kg')).toEqual({ tone: 'red', size: 'small' });
+    expect(plateLook(1.25, 'kg')).toEqual({ tone: 'steel', size: 'small' });
+  });
+
+  it('colours lb plates like the kg plate of about the same weight', () => {
+    expect(plateLook(45, 'lb')).toEqual({ tone: 'blue', size: 'full' });
+    expect(plateLook(35, 'lb')).toEqual({ tone: 'yellow', size: 'full' });
+    expect(plateLook(25, 'lb')).toEqual({ tone: 'green', size: 'large' });
+    expect(plateLook(10, 'lb')).toEqual({ tone: 'white', size: 'medium' });
+    expect(plateLook(2.5, 'lb')).toEqual({ tone: 'steel', size: 'small' });
   });
 });

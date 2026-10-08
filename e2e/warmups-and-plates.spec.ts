@@ -95,9 +95,10 @@ test('a freestyle barbell set shows plates per side with the plates set on this 
   const firstSet = squat.getByRole('listitem').first();
   await expect(firstSet.getByText('Empty bar', { exact: true })).toBeVisible();
   await weightOf(firstSet).fill('100');
-  await expect(firstSet.getByText('25 + 15 per side', { exact: true })).toBeVisible();
+  await expect(firstSet.getByText('25 + 15 kg each side', { exact: true })).toBeVisible();
+  await expect(firstSet.locator('.plate-chips .plate')).toHaveCount(2);
   const curl = await addExercise(page, 'curl', 'Dumbbell Curl');
-  await expect(curl.getByText(/per side|Empty bar/)).toHaveCount(0);
+  await expect(curl.getByText(/each side|Empty bar/)).toHaveCount(0);
 
   await openFromProfile(page, 'Settings');
   const plates = page.getByRole('group', { name: 'Plates you have (kg)' });
@@ -113,9 +114,9 @@ test('a freestyle barbell set shows plates per side with the plates set on this 
   await expect(bar).toHaveAttribute('aria-invalid', 'false');
 
   await openTab(page, 'Train');
-  await expect(firstSet.getByText('20 + 20 + 2.5 per side', { exact: true })).toBeVisible();
+  await expect(firstSet.getByText('2×20 + 2.5 kg each side', { exact: true })).toBeVisible();
   await weightOf(firstSet).fill('101');
-  await expect(firstSet.getByText('Nearest 100 kg: 20 + 20 + 2.5 per side', { exact: true })).toBeVisible();
+  await expect(firstSet.getByText('Nearest 100 kg: 2×20 + 2.5 kg each side', { exact: true })).toBeVisible();
 });
 
 test('the plate calculator of a set breaks a target weight into plates and uses the nearest loadable weight', async ({
@@ -133,9 +134,9 @@ test('the plate calculator of a set breaks a target weight into plates and uses 
   await expect(calculator.getByRole('status')).toHaveText('Enter a weight up to 2000 kg');
   await expect(calculator.getByRole('button', { name: /^Use / })).toHaveCount(0);
   await target.fill('61');
-  await expect(calculator.getByRole('status')).toHaveText('Nearest 60 kg: 20 per side');
+  await expect(calculator.getByRole('status')).toHaveText('Nearest 60 kg: 20 kg each side');
   await calculator.getByRole('button', { name: 'Use 60 kg', exact: true }).click();
   await expect(weightOf(firstSet)).toHaveValue('60');
-  await expect(firstSet.getByText('20 per side', { exact: true })).toBeVisible();
+  await expect(firstSet.getByText('20 kg each side', { exact: true })).toBeVisible();
   await expect(calculator.getByRole('button', { name: 'Use 60 kg', exact: true })).toBeDisabled();
 });
