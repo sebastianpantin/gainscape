@@ -248,7 +248,7 @@ const awardGearBonus: Step = (ctx) => {
     if (skillKey === undefined) continue;
     const baseXp = parts.reduce((sum, part) => sum + part.xp, 0);
     const bonus = gearBonusXp(baseXp, skillKey, loadout, ctx.cfg);
-    if (baseXp === 0 || bonus === 0) continue;
+    if (bonus === 0) continue;
     spreadBonus(parts, baseXp, bonus);
     gearBonusBySkill[skillKey] = bonus;
   }
