@@ -1,7 +1,8 @@
 import { type ReactNode, useId, useState } from 'react';
-import type { SetPersonalRecord } from '@domain/index.ts';
+import { DEFAULT_BALANCE, type SetPersonalRecord } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
+import { assumedEffort } from '../../lib/effort-labels.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
 import {
   HIGHEST_REPS,
@@ -158,6 +159,7 @@ export function SetRow({
   const calculatorId = useId();
   const amrapBadge = amrapBadgeOf(set.prescription);
   const marked = markers.length > 0 || barbell !== null;
+  const estimatedRir = preview.basis === 'estimated' ? preview.rir : null;
   const rowClass = [
     'set-row',
     'stepped',
@@ -245,6 +247,7 @@ export function SetRow({
       <EffortSelector
         mode={effortMode}
         selected={set.effort}
+        assumed={estimatedRir === null ? null : assumedEffort(effortMode, estimatedRir, DEFAULT_BALANCE.effortLevelRir)}
         onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}
       />
     </li>

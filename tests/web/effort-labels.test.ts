@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CARDIO_EFFORT_LABELS, EFFORT_LEVEL_LABELS, effortLabel } from '../../web/src/lib/effort-labels.ts';
+import { DEFAULT_BALANCE } from '@domain/index.ts';
+import {
+  assumedEffort,
+  CARDIO_EFFORT_LABELS,
+  EFFORT_LEVEL_LABELS,
+  effortLabel,
+} from '../../web/src/lib/effort-labels.ts';
 
 describe('effortLabel', () => {
   it('labels stored effort', () => {
@@ -14,5 +20,27 @@ describe('effortLabel', () => {
   it('has a label for every lift and cardio effort level', () => {
     expect(EFFORT_LEVEL_LABELS).toEqual({ easy: 'Easy', hard: 'Hard', near_failure: 'Near fail', failure: 'Failure' });
     expect(CARDIO_EFFORT_LABELS).toEqual({ easy: 'Easy', moderate: 'Moderate', hard: 'Hard', max: 'Max' });
+  });
+});
+
+describe('assumedEffort', () => {
+  const levelRir = DEFAULT_BALANCE.effortLevelRir;
+
+  it('picks the RIR choice of the estimate, with 6+ for anything above 6', () => {
+    expect(assumedEffort('rir', 2, levelRir)).toEqual({ type: 'rir', value: 2 });
+    expect(assumedEffort('rir', 9, levelRir)).toEqual({ type: 'rir', value: 6 });
+  });
+
+  it('picks RPE 10 minus the estimate, never below RPE 6', () => {
+    expect(assumedEffort('rpe', 2, levelRir)).toEqual({ type: 'rpe', value: 8 });
+    expect(assumedEffort('rpe', 7, levelRir)).toEqual({ type: 'rpe', value: 6 });
+  });
+
+  it('picks the nearest effort level, the easier one on a tie', () => {
+    expect(assumedEffort('level', 3, levelRir)).toEqual({ type: 'level', level: 'hard' });
+    expect(assumedEffort('level', 0, levelRir)).toEqual({ type: 'level', level: 'failure' });
+    expect(assumedEffort('level', 2, levelRir)).toEqual({ type: 'level', level: 'hard' });
+    expect(assumedEffort('level', 4, levelRir)).toEqual({ type: 'level', level: 'easy' });
+    expect(assumedEffort('level', 8, levelRir)).toEqual({ type: 'level', level: 'easy' });
   });
 });
