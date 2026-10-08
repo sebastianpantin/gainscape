@@ -137,6 +137,10 @@ a:hover {
   color: var(--color-text);
 }
 
+.confirm-dialog .row.wrap > .button {
+  flex: 1 1 auto;
+}
+
 .confirm-dialog::backdrop {
   background: rgb(0 0 0 / 60%);
 }

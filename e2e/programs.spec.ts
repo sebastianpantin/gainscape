@@ -1,13 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import {
-  finishWorkout,
-  openFromProfile,
-  openTab,
-  readSession,
-  readStoredDraft,
-  register,
-  uniqueUsername,
-} from './support/app.ts';
+import { openFromProfile, openTab, readSession, readStoredDraft, register, uniqueUsername } from './support/app.ts';
 import { programDayId, sessionRow, setCount } from './support/db.ts';
 
 function exerciseCard(page: Page, name: string) {
@@ -61,13 +53,10 @@ test('copy a template, run a program day with planned sets and finish it', async
   await expect(toggled).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('li.set-row:not(.planned)')).toHaveCount(3);
 
-  let confirmation = '';
-  page.once('dialog', (dialog) => {
-    confirmation = dialog.message();
-    return dialog.accept();
-  });
-  await finishWorkout(page);
-  expect(confirmation).toBe('13 planned sets not done will be skipped');
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  const confirmation = page.getByRole('dialog', { name: '13 planned sets not done' });
+  await confirmation.getByRole('button', { name: 'Finish without them' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
 
   const stored = await readStoredDraft(page, user.id);
   const sessionId = stored!.syncedSessionId!;

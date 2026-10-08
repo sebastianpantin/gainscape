@@ -560,6 +560,15 @@ export function toggleSetDone(draft: WorkoutDraft, exerciseIndex: number, setId:
   );
 }
 
+export function markAllSetsDone(draft: WorkoutDraft): WorkoutDraft {
+  return {
+    ...draft,
+    exercises: draft.exercises.map((exercise) =>
+      withSets(exercise, (sets) => sets.map((set) => ({ ...set, done: true }))),
+    ),
+  };
+}
+
 export function notDoneSetCount(draft: WorkoutDraft): number {
   return draft.exercises.reduce((count, exercise) => count + exercise.sets.filter((set) => !set.done).length, 0);
 }

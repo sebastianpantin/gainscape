@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, type Position } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
+import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { canAddBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
@@ -42,6 +43,7 @@ import {
   canSwapExercise,
   doneSetCount,
   firstWorkingSet,
+  markAllSetsDone,
   notDoneSetCount,
   removeExercise,
   removeSet,
@@ -130,6 +132,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const offline = useIsOffline();
   const [finishProblem, setFinishProblem] = useState<string | null>(null);
   const [checkingFinish, setCheckingFinish] = useState(false);
+  const [confirmingFinish, setConfirmingFinish] = useState(false);
   const [startingDay, setStartingDay] = useState(false);
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
@@ -443,9 +446,13 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     );
   }
 
-  const finish = async () => {
-    const skippedSets = notDoneSetCount(draft);
-    if (skippedSets > 0 && !window.confirm(`${skippedSets} planned sets not done will be skipped`)) return;
+  const finish = () => {
+    if (notDoneSetCount(draft) > 0) setConfirmingFinish(true);
+    else void completeFinish(false);
+  };
+
+  const completeFinish = async (markPlannedDone: boolean) => {
+    setConfirmingFinish(false);
     setCheckingFinish(true);
     setFinishProblem(null);
     const loadTypes = await currentLoadTypes(draft, exercises);
@@ -453,7 +460,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     let changedNames: string[] = [];
     updateDraft((latest) => {
       if (latest.sessionId !== draft.sessionId || latest.finishedAt) return latest;
-      const checked = withCurrentLoadTypes(latest, loadTypes);
+      const checked = withCurrentLoadTypes(markPlannedDone ? markAllSetsDone(latest) : latest, loadTypes);
       changedNames = checked.changedNames;
       return changedNames.length > 0 ? checked.draft : { ...checked.draft, finishedAt: new Date().toISOString() };
     });
@@ -461,7 +468,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     else rest.stop();
   };
 
-  const canFinish = doneSetCount(draft) > 0 && !checkingFinish;
+  const plannedSets = notDoneSetCount(draft);
+  const canFinish = doneSetCount(draft) + plannedSets > 0 && !checkingFinish;
   const roomForBouts = canAddBout(
     draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
   );
@@ -735,6 +743,25 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </button>
         <span className="muted tiny">~ and new records are previews, confirmed when the workout syncs.</span>
       </div>
+      {confirmingFinish && (
+        <ConfirmDialog
+          title={`${plannedSets} planned ${plannedSets === 1 ? 'set' : 'sets'} not done`}
+          confirmLabel="Mark done and finish"
+          alternative={
+            doneSetCount(draft) > 0
+              ? { label: 'Finish without them', onChoose: () => void completeFinish(false) }
+              : undefined
+          }
+          onConfirm={() => void completeFinish(true)}
+          onCancel={() => setConfirmingFinish(false)}
+        >
+          <p>
+            {doneSetCount(draft) > 0
+              ? 'Log them as done, or keep only the sets you ticked.'
+              : 'No set is ticked yet. Log the planned sets as done?'}
+          </p>
+        </ConfirmDialog>
+      )}
     </main>
   );
 }

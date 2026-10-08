@@ -6,6 +6,7 @@ interface ConfirmDialogProps {
   busy?: boolean;
   danger?: boolean;
   children?: ReactNode;
+  alternative?: { label: string; onChoose: () => void };
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -16,6 +17,7 @@ export function ConfirmDialog({
   busy = false,
   danger = false,
   children,
+  alternative,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -40,10 +42,15 @@ export function ConfirmDialog({
     >
       <h2 id={titleId}>{title}</h2>
       {children}
-      <div className="row spread">
+      <div className="row spread wrap">
         <button className="button" type="button" onClick={onCancel}>
           Cancel
         </button>
+        {alternative && (
+          <button className="button" type="button" disabled={busy} onClick={alternative.onChoose}>
+            {alternative.label}
+          </button>
+        )}
         <button
           className={danger ? 'button danger' : 'button primary'}
           type="button"

@@ -66,8 +66,7 @@ test('the rest length comes from settings, can be skipped or turned off, and end
   await expect(remaining).toHaveText('2:45');
   await restTimer(page).getByRole('button', { name: 'Skip rest' }).click();
   await expect(restTimer(page)).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Finish workout' })).toBeDisabled();
-  await expect(page.locator('.finish-bar')).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Finish workout' })).toBeFocused();
   await bench.getByRole('button', { name: 'Done set 1' }).click();
   await expect(restTimer(page).getByRole('timer', { name: 'Rest remaining' })).toHaveText('2:45');
 
