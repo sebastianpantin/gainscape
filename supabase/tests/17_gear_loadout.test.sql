@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(46);
+select plan(49);
 
 select tests.create_user('gl_owner') as owner \gset
 select tests.create_user('gl_friend') as friend \gset
@@ -252,6 +252,27 @@ select results_eq(
   format($$values ('belt', %L::uuid)$$, :'rookie_belt'),
   'the rookie belt stays equipped'
 );
+reset role;
+
+update public.items set retired_at = now() where id = :'grinder_belt';
+select tests.authenticate_as(:'stranger');
+select is(
+  public.get_loadout(:'stranger') -> 'slots',
+  '[]'::jsonb,
+  'a retired equipped item is left out of the loadout'
+);
+reset role;
+update public.items set retired_at = null where id = :'grinder_belt';
+
+update auth.users set banned_until = now() + interval '1 day' where id = :'stranger';
+select tests.authenticate_as(:'stranger');
+select throws_ok(
+  format($$select public.equip_gear('belt', %L)$$, :'grinder_belt'),
+  '42501',
+  'not_authenticated',
+  'a banned caller cannot equip'
+);
+select throws_ok($$select public.unequip_gear('belt')$$, '42501', 'not_authenticated', 'a banned caller cannot unequip');
 reset role;
 
 delete from auth.users where id = :'owner';

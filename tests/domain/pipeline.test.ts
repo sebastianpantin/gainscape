@@ -508,11 +508,19 @@ describe('gear bonus', () => {
     expect(geared.outputs.xpBySkill.endurance).toBe(enduranceBase + Math.round(enduranceBase / 10));
   });
 
-  it('never reports more bonus than the skill gained under the XP cap', () => {
+  it('reports no bonus for a skill whose base XP alone reaches the XP cap', () => {
     const nearCap = { skillXp: { 'skill-legs': TEST_BALANCE.maxXp - 3 }, bodyweightKg: null };
     const { outputs } = processSession(nearCap, withGear(fixtureSession, ascendantBelt), TEST_BALANCE, { catalog });
     expect(outputs.xpBySkill.legs).toBe(3);
-    expect(outputs.gearBonusBySkill).toEqual({ legs: 3, core: 2 });
+    expect(outputs.gearBonusBySkill).toEqual({ core: 2 });
+  });
+
+  it('reports only the bonus XP that fits above the base XP under the XP cap', () => {
+    const legsBaseXp = 149;
+    const nearCap = { skillXp: { 'skill-legs': TEST_BALANCE.maxXp - legsBaseXp - 2 }, bodyweightKg: null };
+    const { outputs } = processSession(nearCap, withGear(fixtureSession, ascendantBelt), TEST_BALANCE, { catalog });
+    expect(outputs.xpBySkill.legs).toBe(legsBaseXp + 2);
+    expect(outputs.gearBonusBySkill).toEqual({ legs: 2, core: 2 });
   });
 
   it('never lowers XP, matches gearBonusXp per skill and is deterministic', () => {
