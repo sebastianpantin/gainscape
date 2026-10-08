@@ -4,7 +4,8 @@ import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
 import { exercisesTrainingSkill } from '../../lib/skill-map-rules.ts';
-import { useActiveExercises, useStanding } from '../../lib/standing.ts';
+import { useActiveExercises } from '../../lib/skill-map.ts';
+import { useStanding } from '../../lib/standing.ts';
 import { formatXp } from '../../lib/format.ts';
 import { type Exercise } from '../../lib/catalog-rules.ts';
 import { type LoadedState } from '../../lib/query-state-rules.ts';
@@ -25,7 +26,7 @@ interface SkillExercisesProps {
 }
 
 function SkillExercises({ skillKey, skillName, exercises }: SkillExercisesProps) {
-  if (exercises.status === 'loading') return <p>Loading…</p>;
+  if (exercises.status === 'loading') return <p role="status">Loading…</p>;
   if (exercises.status === 'failed')
     return (
       <p className="problem" role="alert">
