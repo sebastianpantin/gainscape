@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { DEFAULT_BALANCE } from '@domain/index.ts';
+import { DEFAULT_BALANCE, GEAR_SLOTS, type GearLoadout } from '@domain/index.ts';
 import {
   BANDS,
   type BandReport,
@@ -8,10 +8,13 @@ import {
   type CardioProfileResults,
   evaluateBands,
   evaluateCardioBands,
+  GEAR_BANDS,
   type ProfileResults,
 } from '../../scripts/balance/bands.ts';
-import { CARDIO_SIM_SKILLS } from '../../scripts/balance/catalog.ts';
-import { firstSkillToLevel99 } from '../../scripts/balance/simulate.ts';
+import { simulateCardioProfile } from '../../scripts/balance/cardio-simulate.ts';
+import { CARDIO_SIM_SKILLS, SIM_SKILLS } from '../../scripts/balance/catalog.ts';
+import { CARDIO_PROFILES, PROFILES } from '../../scripts/balance/profiles.ts';
+import { firstSkillToLevel99, simulateProfile, WEEKS_PER_YEAR } from '../../scripts/balance/simulate.ts';
 import {
   simulateCommittedCardioConstantsUntilBothReach99,
   simulateCommittedConstantsUntilLegsReach99,
@@ -103,5 +106,64 @@ describe('cardio balance bands with the committed constants', () => {
     expect(cardioReport.steadyAgilityBoutXp).toBeGreaterThan(0);
     expect(cardioReport.steadyAgilityBoutXp).toBeLessThanOrEqual(cardioReport.intervalSessionAgilityXp);
     expect(cardioReport.passes.h).toBe(true);
+  });
+});
+
+describe('gear bonus bands', () => {
+  const fullAscendant: GearLoadout = Object.fromEntries(GEAR_SLOTS.map((slot) => [slot, 'ascendant']));
+  const ascendantBelt: GearLoadout = { belt: 'ascendant' };
+  const oneYear = { maxYears: 1 };
+  const xpAfterOneYear = (result: { cumulativeXpByWeek: Record<string, number[]> }, skill: string) =>
+    result.cumulativeXpByWeek[skill][WEEKS_PER_YEAR - 1];
+  const gearRatios = (
+    geared: { cumulativeXpByWeek: Record<string, number[]> },
+    gearless: { cumulativeXpByWeek: Record<string, number[]> },
+    skills: readonly string[],
+  ) =>
+    Object.fromEntries(
+      skills
+        .filter((skill) => xpAfterOneYear(gearless, skill) > 0)
+        .map((skill) => [skill, xpAfterOneYear(geared, skill) / xpAfterOneYear(gearless, skill)]),
+    );
+  const expectWithin = (ratios: Record<string, number>, [lowest, highest]: readonly [number, number]) => {
+    expect(Object.keys(ratios).length).toBeGreaterThan(0);
+    for (const [skill, ratio] of Object.entries(ratios)) {
+      expect(ratio, skill).toBeGreaterThanOrEqual(lowest);
+      expect(ratio, skill).toBeLessThanOrEqual(highest);
+    }
+  };
+
+  it('gives a balanced lifter in full Ascendant about 10% more XP on every trained lift skill after a year', () => {
+    const gearless = simulateProfile(PROFILES.balanced, DEFAULT_BALANCE, oneYear);
+    const geared = simulateProfile(PROFILES.balanced, DEFAULT_BALANCE, { ...oneYear, gearLoadout: fullAscendant });
+    const ratios = gearRatios(
+      geared,
+      gearless,
+      SIM_SKILLS.map((skill) => skill.key),
+    );
+    expect(Object.keys(ratios)).toEqual(SIM_SKILLS.map((skill) => skill.key));
+    expectWithin(ratios, GEAR_BANDS.fullAscendantXpRatio);
+  });
+
+  it('gives the balanced cardio profile in full Ascendant about 10% more Endurance and Agility after a year', () => {
+    const gearless = simulateCardioProfile(CARDIO_PROFILES.cardio_balanced, DEFAULT_BALANCE, oneYear);
+    const geared = simulateCardioProfile(CARDIO_PROFILES.cardio_balanced, DEFAULT_BALANCE, {
+      ...oneYear,
+      gearLoadout: fullAscendant,
+    });
+    const ratios = gearRatios(
+      geared,
+      gearless,
+      CARDIO_SIM_SKILLS.map((skill) => skill.key),
+    );
+    expect(Object.keys(ratios)).toEqual(CARDIO_SIM_SKILLS.map((skill) => skill.key));
+    expectWithin(ratios, GEAR_BANDS.fullAscendantXpRatio);
+  });
+
+  it('boosts core but leaves chest untouched with only an Ascendant belt', () => {
+    const gearless = simulateProfile(PROFILES.balanced, DEFAULT_BALANCE, oneYear);
+    const geared = simulateProfile(PROFILES.balanced, DEFAULT_BALANCE, { ...oneYear, gearLoadout: ascendantBelt });
+    expectWithin(gearRatios(geared, gearless, ['core']), GEAR_BANDS.beltOnlyCoreRatio);
+    expect(xpAfterOneYear(geared, 'chest')).toBe(xpAfterOneYear(gearless, 'chest'));
   });
 });
