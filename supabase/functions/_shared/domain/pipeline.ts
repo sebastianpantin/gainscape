@@ -42,7 +42,12 @@ export interface SessionContext {
   readonly state: UserState;
   readonly sets: readonly SetResult[];
   readonly levelUps: readonly LevelUp[];
-  readonly gearBonusBySkill?: Readonly<Record<string, number>>;
+  readonly gearXpBySkill?: Readonly<Record<string, GearXp>>;
+}
+
+export interface GearXp {
+  readonly baseXp: number;
+  readonly bonus: number;
 }
 
 export type Step = (ctx: SessionContext) => SessionContext;
@@ -242,7 +247,7 @@ const awardGearBonus: Step = (ctx) => {
   for (const part of sets.flatMap((result) => result.skillXp)) {
     partsBySkill.set(part.skillId, [...(partsBySkill.get(part.skillId) ?? []), part]);
   }
-  const gearBonusBySkill: Record<string, number> = {};
+  const gearXpBySkill: Record<string, GearXp> = {};
   for (const [skillId, parts] of partsBySkill) {
     const skillKey = skillKeyOf.get(skillId);
     if (skillKey === undefined) continue;
@@ -250,9 +255,9 @@ const awardGearBonus: Step = (ctx) => {
     const bonus = gearBonusXp(baseXp, skillKey, loadout, ctx.cfg);
     if (bonus === 0) continue;
     spreadBonus(parts, baseXp, bonus);
-    gearBonusBySkill[skillKey] = bonus;
+    gearXpBySkill[skillKey] = { baseXp, bonus };
   }
-  return { ...ctx, sets, gearBonusBySkill };
+  return { ...ctx, sets, gearXpBySkill };
 };
 
 const applyXp: Step = (ctx) => {
@@ -305,11 +310,15 @@ function xpGainedBySkillKey(before: UserState, after: UserState, catalog: Catalo
 }
 
 function gearBonusWithinGains(
-  gearBonusBySkill: Readonly<Record<string, number>>,
+  gearXpBySkill: Readonly<Record<string, GearXp>>,
   xpBySkill: Readonly<Record<string, number>>,
 ): Pick<SessionOutputs, 'gearBonusBySkill'> {
   const reported = Object.entries(xpBySkill)
-    .map(([skillKey, gained]) => [skillKey, Math.min(gearBonusBySkill[skillKey] ?? 0, gained)] as const)
+    .map(([skillKey, gained]) => {
+      const { baseXp, bonus } = gearXpBySkill[skillKey] ?? { baseXp: 0, bonus: 0 };
+      const baseGained = Math.min(baseXp, gained);
+      return [skillKey, Math.max(0, Math.min(bonus, gained - baseGained))] as const;
+    })
     .filter(([, bonus]) => bonus > 0);
   return reported.length === 0 ? {} : { gearBonusBySkill: Object.fromEntries(reported) };
 }
@@ -332,7 +341,7 @@ export function processSession(
       levelUps: [...final.levelUps],
       prs: summarizePersonalRecords(final.sets, state.records ?? NO_RECORDS, final.state.records ?? NO_RECORDS),
       drops: [],
-      ...gearBonusWithinGains(final.gearBonusBySkill ?? {}, xpBySkill),
+      ...gearBonusWithinGains(final.gearXpBySkill ?? {}, xpBySkill),
     },
   };
 }

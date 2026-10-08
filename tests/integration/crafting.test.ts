@@ -265,6 +265,30 @@ describe('craft and the loadout', () => {
     expect(data.equippedSlot).toBeNull();
     expect(await loadout(user.id)).toEqual([{ slot: 'belt', key: 'rookie_belt' }]);
   });
+
+  it('ignores a retired equipped item in get_loadout and in the session bonus', async () => {
+    const user = await freshUser();
+    await grant(user, await quietSession(user), { ascendant_belt: 1 });
+    const beltId = itemIds.get('ascendant_belt')!;
+    const equipped = await user.client.rpc('equip_gear', { slot: 'belt', item_id: beltId });
+    expect(equipped.error).toBeNull();
+    const squatId = await builtInExerciseId('back_squat');
+    const session = payloadAt(new Date(Date.now() - 30 * 60 * 1000), [aSet(squatId, 0, 100), aSet(squatId, 1, 100)]);
+
+    await db`update public.items set retired_at = now() where id = ${beltId}`;
+    try {
+      const shown = await user.client.rpc('get_loadout', { target: user.id });
+      expect(shown.error).toBeNull();
+      expect(shown.data.slots).toEqual([]);
+      await postSession(user, session);
+    } finally {
+      await db`update public.items set retired_at = null where id = ${beltId}`;
+    }
+
+    const [stored] = await db`select gear_loadout, summary from public.sessions where id = ${session.id}`;
+    expect(stored.gear_loadout).toEqual({});
+    expect(stored.summary.gearBonusBySkill).toEqual({});
+  });
 });
 
 describe('craft rate limit', () => {

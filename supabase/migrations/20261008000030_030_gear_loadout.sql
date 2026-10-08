@@ -47,7 +47,7 @@ declare
   item_slot public.gear_slot;
   held int;
 begin
-  if caller is null then
+  if caller is null or not private.account_active(caller) then
     raise exception 'not_authenticated' using errcode = 'insufficient_privilege';
   end if;
   perform private.take_rate_limit('loadout_change_minute', caller);
@@ -92,7 +92,7 @@ as $$
 declare
   caller uuid := auth.uid();
 begin
-  if caller is null then
+  if caller is null or not private.account_active(caller) then
     raise exception 'not_authenticated' using errcode = 'insufficient_privilege';
   end if;
   perform private.take_rate_limit('loadout_change_minute', caller);
@@ -132,7 +132,7 @@ begin
       from public.user_loadout l
       join public.items i on i.id = l.item_id
       join public.user_items u on u.user_id = l.user_id and u.item_id = l.item_id
-      where l.user_id = get_loadout.target and u.quantity >= 1
+      where l.user_id = get_loadout.target and u.quantity >= 1 and i.retired_at is null
     ), '[]'::jsonb)
   );
 end;
