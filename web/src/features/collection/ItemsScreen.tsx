@@ -1,9 +1,14 @@
 import { canCraft, recipeFor } from '@domain/crafting.ts';
+import { DEFAULT_BALANCE, DEFAULT_ROUNDING } from '@domain/index.ts';
+import type { StrengthState } from '@domain/types.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ItemIcon } from '../../components/PixelArt.tsx';
 import { fetchExercises } from '../../lib/catalog.ts';
-import type { Exercise } from '../../lib/catalog-rules.ts';
+import { readCachedExercises } from '../../lib/catalog-cache.ts';
+import { type CatalogChallenge, challengeSummaryText } from '../../lib/challenge-rules.ts';
+import { fetchStrengthState } from '../../lib/collection-data.ts';
 import {
   type CatalogItem,
   colorFor,
@@ -21,31 +26,97 @@ import {
 } from '../../lib/item-rules.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { craftItem, equipGear, fetchInventory, fetchItemCatalog, unequipGear } from '../../lib/items.ts';
+import { usePreferences } from '../../lib/preferences.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { startDraftFromChallenge } from '../../offline/draft-format.ts';
+import {
+  type ChallengeExerciseEntry,
+  challengeExercisesOf,
+  loadItemsCacheFirstWhenOffline,
+  OFFLINE_ITEMS_NOTICE,
+  readItemsCache,
+  saveItemsCache,
+} from '../../offline/items-cache.ts';
+import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { loadoutQueryKey, useLoadout } from '../profile/use-loadout.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
 
+interface ChallengeStartProps {
+  challenge: CatalogChallenge;
+  challengeExercises: readonly ChallengeExerciseEntry[];
+  draftOpen: boolean | null;
+  onStart: (challenge: CatalogChallenge) => Promise<void>;
+}
+
+function ChallengeStart({ challenge, challengeExercises, draftOpen, onStart }: ChallengeStartProps) {
+  const [starting, setStarting] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const names = new Map(challengeExercises.map((exercise) => [exercise.id, exercise.name]));
+  const start = async () => {
+    setStarting(true);
+    setProblem(null);
+    try {
+      await onStart(challenge);
+    } catch (error) {
+      setProblem(`Couldn't start the challenge: ${messageOf(error, 'try again.')}`);
+    } finally {
+      setStarting(false);
+    }
+  };
+  return (
+    <div className="well stack">
+      <span className="muted tiny">Challenge: {challenge.name}</span>
+      <span>{challengeSummaryText(challenge.definition, (exerciseId) => names.get(exerciseId) ?? 'Exercise')}</span>
+      {draftOpen && (
+        <p className="notice" role="status">
+          Finish or discard your current workout first
+        </p>
+      )}
+      <button
+        className="button primary"
+        type="button"
+        disabled={draftOpen !== false || starting}
+        onClick={() => void start()}
+      >
+        Start challenge
+      </button>
+      {problem && (
+        <p className="problem" role="alert">
+          {problem}
+        </p>
+      )}
+    </div>
+  );
+}
+
 interface ItemDetailProps {
   item: CatalogItem;
   catalog: ItemCatalog;
   held: ReadonlyMap<string, HeldItem>;
-  exercises: readonly Exercise[];
+  challengeExercises: readonly ChallengeExerciseEntry[];
   equipped: boolean | null;
+  offline: boolean;
+  draftOpen: boolean | null;
   onCrafted: (outputItemId: string) => Promise<void>;
   onCatalogStale: () => Promise<void>;
   onLoadoutChanged: () => Promise<void>;
+  onStartChallenge: (challenge: CatalogChallenge) => Promise<void>;
 }
 
 function ItemDetail({
   item,
   catalog,
   held,
-  exercises,
+  challengeExercises,
   equipped,
+  offline,
+  draftOpen,
   onCrafted,
   onCatalogStale,
   onLoadoutChanged,
+  onStartChallenge,
 }: ItemDetailProps) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -54,7 +125,10 @@ function ItemDetail({
   const inventory = quantities(held);
   const ready = recipe !== undefined && canCraft(recipe, inventory);
   const quantity = held.get(item.id)?.quantity ?? 0;
-  const grants = item.grantsExerciseId && exercises.find((exercise) => exercise.id === item.grantsExerciseId);
+  const challenge =
+    item.kind === 'scroll'
+      ? catalog.challenges.find((candidate) => candidate.id === item.grantsChallengeId)
+      : undefined;
 
   const craft = async () => {
     if (!recipe) return;
@@ -94,12 +168,18 @@ function ItemDetail({
           {showsQuantity(item, { quantity }) && ` ×${quantity}`}
         </h2>
         {item.description && <span className="muted">{item.description}</span>}
-        {item.kind === 'scroll' && (
-          <span className="muted">Unlocks {grants ? grants.name : 'a new exercise variation'}</span>
-        )}
+        {item.kind === 'scroll' && !challenge && <span className="muted">Grants a challenge</span>}
       </span>
+      {challenge && quantity >= 1 && (
+        <ChallengeStart
+          challenge={challenge}
+          challengeExercises={challengeExercises}
+          draftOpen={draftOpen}
+          onStart={onStartChallenge}
+        />
+      )}
       {item.gearSlot && quantity >= 1 && equipped !== null && (
-        <button className="button" type="button" disabled={busy} onClick={() => void changeGear()}>
+        <button className="button" type="button" disabled={busy || offline} onClick={() => void changeGear()}>
           {equipped ? 'Unequip' : 'Equip'}
         </button>
       )}
@@ -122,7 +202,7 @@ function ItemDetail({
           <button
             className={ready ? 'button primary' : 'button'}
             type="button"
-            disabled={!ready || busy}
+            disabled={!ready || busy || offline}
             onClick={() => void craft()}
           >
             {busy ? 'Crafting…' : ready ? `Craft ${nameOf(recipe.outputItemId)}` : 'Need more materials'}
@@ -142,14 +222,64 @@ interface ItemsScreenProps {
   userId: string;
 }
 
+interface LoadedItems {
+  catalog: ItemCatalog;
+  held: Map<string, HeldItem>;
+  challengeExercises: ChallengeExerciseEntry[];
+  strength: StrengthState;
+}
+
+async function loadItemsOnline(userId: string): Promise<LoadedItems> {
+  const strengthAsOf = new Date().toISOString();
+  const [catalog, held, exercises, liveStrength] = await Promise.all([
+    fetchItemCatalog(),
+    fetchInventory(userId),
+    fetchExercises({ includeArchived: true }).catch(() => null),
+    fetchStrengthState(strengthAsOf, DEFAULT_BALANCE.e1rmWindowDays).catch(() => null),
+  ]);
+  const storage = deviceStorage();
+  const cached = readItemsCache(storage, userId);
+  const challengeExercises = exercises
+    ? challengeExercisesOf(catalog.challenges, exercises)
+    : cached?.challengeExercises.length
+      ? cached.challengeExercises
+      : challengeExercisesOf(catalog.challenges, (storage && readCachedExercises(storage, userId)) ?? []);
+  const strength = liveStrength ?? cached?.strength ?? {};
+  saveItemsCache(storage, userId, {
+    catalog,
+    inventory: [...held.values()],
+    strength,
+    strengthAsOf: liveStrength ? strengthAsOf : (cached?.strengthAsOf ?? strengthAsOf),
+    challengeExercises,
+  });
+  return { catalog, held, challengeExercises, strength };
+}
+
+function loadItemsFromCache(userId: string): LoadedItems | null {
+  const cached = readItemsCache(deviceStorage(), userId);
+  if (!cached) return null;
+  return {
+    catalog: cached.catalog,
+    held: new Map(cached.inventory.map((entry) => [entry.itemId, entry])),
+    challengeExercises: cached.challengeExercises,
+    strength: cached.strength,
+  };
+}
+
 export function ItemsScreen({ userId }: ItemsScreenProps) {
   const [catalog, setCatalog] = useState<ItemCatalog | null>(null);
   const [held, setHeld] = useState<Map<string, HeldItem>>(new Map());
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [challengeExercises, setChallengeExercises] = useState<ChallengeExerciseEntry[]>([]);
+  const [strength, setStrength] = useState<StrengthState>({});
+  const [offline, setOffline] = useState(false);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
   const [newIds] = useState(() => newItemIds(recallLastSummary()?.drops));
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { unitPref } = usePreferences();
+  const { state: draftState, startWorkout, flush } = useWorkoutDraft(userId);
+  const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
   const loadout = useLoadout(userId);
   const refetchLoadout = useCallback(
     () => queryClient.invalidateQueries({ queryKey: loadoutQueryKey(userId) }),
@@ -174,21 +304,41 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchItemCatalog(), fetchInventory(userId), fetchExercises({ includeArchived: true })]).then(
-      ([loadedCatalog, loadedHeld, loadedExercises]) => {
-        if (!active) return;
-        setCatalog(loadedCatalog);
-        setHeld(loadedHeld);
-        setExercises(loadedExercises);
-        const found = loadedCatalog.items.filter((item) => loadedHeld.has(item.id));
-        setPickedId((found.find((item) => newIds.has(item.id)) ?? found[0])?.id ?? null);
-      },
+    const show = (loaded: LoadedItems, fromCache: boolean) => {
+      setCatalog(loaded.catalog);
+      setHeld(loaded.held);
+      setChallengeExercises(loaded.challengeExercises);
+      setStrength(loaded.strength);
+      setOffline(fromCache);
+      const found = loaded.catalog.items.filter((item) => loaded.held.has(item.id));
+      setPickedId((found.find((item) => newIds.has(item.id)) ?? found[0])?.id ?? null);
+    };
+    loadItemsCacheFirstWhenOffline(
+      () => navigator.onLine === false,
+      () => loadItemsFromCache(userId),
+      () => loadItemsOnline(userId),
+    ).then(
+      ({ loaded, fromCache }) => active && show(loaded, fromCache),
       (error: Error) => active && setLoadProblem(error.message),
     );
     return () => {
       active = false;
     };
   }, [userId, newIds]);
+
+  const startChallenge = async (challenge: CatalogChallenge) => {
+    const started = startDraftFromChallenge(
+      challenge,
+      new Map(challengeExercises.map((exercise) => [exercise.id, exercise])),
+      strength,
+      DEFAULT_ROUNDING[unitPref],
+      unitPref,
+      new Date(),
+    );
+    await startWorkout(() => started.draft);
+    await flush();
+    navigate('/');
+  };
 
   const header = (
     <>
@@ -220,6 +370,11 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   return (
     <main className="screen stack">
       {header}
+      {offline && (
+        <p className="notice" role="status">
+          {OFFLINE_ITEMS_NOTICE}
+        </p>
+      )}
       <LoadoutPanel userId={userId} />
       {groups.map((group) => (
         <div className="panel stack" key={group.title}>
@@ -261,14 +416,17 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           item={picked}
           catalog={catalog}
           held={held}
-          exercises={exercises}
+          challengeExercises={challengeExercises}
           equipped={loadout.data ? loadout.data.slots.some((equippedGear) => equippedGear.itemId === picked.id) : null}
+          offline={offline}
+          draftOpen={draftOpen}
           onCrafted={async (itemId) => {
             await Promise.all([refetchInventory(), refetchLoadout()]);
             setPickedId(itemId);
           }}
           onCatalogStale={refetchCatalog}
           onLoadoutChanged={refetchLoadout}
+          onStartChallenge={startChallenge}
         />
       ) : (
         <p className="panel muted">Hard sets can drop items. Finish a workout to find your first one.</p>

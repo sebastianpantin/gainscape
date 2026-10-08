@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { CardioExercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
-import { describeRecord, gearBonusText } from '../../web/src/features/summary/reveal-rules.ts';
+import {
+  challengeBonusText,
+  challengeFailReason,
+  challengeHeadline,
+  describeRecord,
+  gearBonusText,
+} from '../../web/src/features/summary/reveal-rules.ts';
 
 const base = { equipment: 'barbell', custom: false, archived: false, skillShares: [] };
 const dip: LiftExercise = { ...base, id: 'dip', name: 'Weighted Dip', modality: 'lift', loadType: 'bodyweight_plus' };
@@ -64,5 +70,87 @@ describe('gearBonusText', () => {
     expect(gearBonusText({ gearBonusBySkill: { core: 12 } }, 'chest')).toBeNull();
     expect(gearBonusText({ gearBonusBySkill: { core: 0 } }, 'core')).toBeNull();
     expect(gearBonusText({}, 'core')).toBeNull();
+  });
+});
+
+describe('challenge lines', () => {
+  const DEADLIFT = 'deadlift-id';
+  const PULL_UP = 'pull-up-id';
+  const names: Record<string, string> = { [DEADLIFT]: 'Deadlift', [PULL_UP]: 'Pull-up' };
+  const nameOf = (exerciseId: string) => names[exerciseId] ?? 'Exercise';
+  const prescription = {
+    kind: 'prescription' as const,
+    groups: [
+      {
+        rounds: 5,
+        exercises: [
+          { exerciseId: DEADLIFT, reps: 5, pct: 70 },
+          { exerciseId: PULL_UP, reps: 5, pct: null },
+        ],
+      },
+    ],
+  };
+  const planned = {
+    challengeId: 'challenge-dl',
+    name: 'Deadlift and Pull-up',
+    definition: prescription,
+    targetLoadsKg: { [DEADLIFT]: 100, [PULL_UP]: null },
+  };
+  const tenTon = {
+    challengeId: 'challenge-tt',
+    name: 'Ten-Ton Day',
+    definition: { kind: 'volume' as const, metric: 'kg' as const, target: 10000, exerciseId: null, minPct: null },
+    targetLoadsKg: {},
+  };
+
+  function judged(passed: boolean, targetLoadsKg: Record<string, number | null> = { [DEADLIFT]: 97.5 }) {
+    return {
+      challenge: {
+        challengeId: 'challenge-dl',
+        key: 'deadlift_and_pull_up',
+        name: 'Deadlift and Pull-up',
+        passed,
+        targetLoadsKg,
+      },
+    };
+  }
+
+  it('heads the reveal with the outcome of the challenge', () => {
+    expect(challengeHeadline(judged(true))).toBe('Challenge complete: Deadlift and Pull-up');
+    expect(challengeHeadline(judged(false))).toBe('Challenge failed: Deadlift and Pull-up');
+    expect(challengeHeadline({ challenge: null })).toBeNull();
+    expect(challengeHeadline({})).toBeNull();
+  });
+
+  it('shows the challenge bonus of a skill', () => {
+    expect(challengeBonusText({ challengeBonusBySkill: { back: 1250 } }, 'back')).toBe('Challenge bonus +1,250 XP');
+    expect(challengeBonusText({ challengeBonusBySkill: { back: 250 } }, 'arms')).toBeNull();
+    expect(challengeBonusText({ challengeBonusBySkill: { back: 0 } }, 'back')).toBeNull();
+    expect(challengeBonusText({}, 'back')).toBeNull();
+  });
+
+  it('explains a fail when the target rose above the planned load since the start', () => {
+    expect(challengeFailReason(judged(false, { [DEADLIFT]: 105, [PULL_UP]: null }), planned, nameOf, 'kg')).toBe(
+      'Target rose since you started: Deadlift 105 kg (planned 100 kg)',
+    );
+  });
+
+  it('blames the logged sets of a prescription challenge when the target stayed within the plan', () => {
+    expect(challengeFailReason(judged(false, { [DEADLIFT]: 97.5, [PULL_UP]: null }), planned, nameOf, 'kg')).toBe(
+      'Not every prescribed set reached its reps and load',
+    );
+  });
+
+  it('blames the volume of a volume challenge', () => {
+    expect(challengeFailReason(judged(false, {}), tenTon, nameOf, 'kg')).toBe('Volume target not reached');
+  });
+
+  it('falls back to a plain reason without the planned challenge', () => {
+    expect(challengeFailReason(judged(false), null, nameOf, 'kg')).toBe('Challenge target not reached');
+  });
+
+  it('gives no reason for a pass or a workout without a challenge', () => {
+    expect(challengeFailReason(judged(true), planned, nameOf, 'kg')).toBeNull();
+    expect(challengeFailReason({ challenge: null }, planned, nameOf, 'kg')).toBeNull();
   });
 });

@@ -79,22 +79,61 @@ describe('catalog generator', () => {
     expect(skills).toContain('modality = excluded.modality');
     const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;
     expect(exercises).toContain(
-      '(id, key, name, modality, load_type, equipment, requires_unlock, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m)',
+      '(id, key, name, modality, load_type, equipment, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m)',
     );
     expect(exercises).toContain(
-      `'running', 'Running', 'cardio', null, 'bodyweight', false, null, 360, 'per_km', 'max', 1000)`,
+      `'running', 'Running', 'cardio', null, 'bodyweight', null, 360, 'per_km', 'max', 1000)`,
     );
     expect(exercises).toContain(
-      `'walking', 'Walking', 'cardio', null, 'bodyweight', false, null, null, 'per_km', 'moderate', null)`,
+      `'walking', 'Walking', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null)`,
     );
-    expect(exercises).toContain(`'rowing', 'Rowing', 'cardio', null, 'machine', false, null,`);
+    expect(exercises).toContain(`'rowing', 'Rowing', 'cardio', null, 'machine', null,`);
     expect(exercises).toContain(
-      `'swimming', 'Swimming', 'cardio', null, 'bodyweight', false, null, 1200, 'per_100m', 'max', 100)`,
+      `'swimming', 'Swimming', 'cardio', null, 'bodyweight', null, 1200, 'per_100m', 'max', 100)`,
     );
     expect(exercises).toContain(
-      `'barbell_bench_press', 'Barbell Bench Press', 'lift', 'external', 'barbell', false, null, null, null, null, null)`,
+      `'barbell_bench_press', 'Barbell Bench Press', 'lift', 'external', 'barbell', null, null, null, null, null)`,
     );
     expect(exercises).toContain('modality = excluded.modality');
+  });
+
+  it('renders the challenges before the items, with exercise ids in each definition', () => {
+    const catalog = loadCatalogData();
+    expect(catalog.challenges.map((challenge) => challenge.key)).toEqual([
+      'deadlift_and_pull_up',
+      'bench_and_row',
+      'press_and_chin',
+      'dips_and_curls',
+      'squat_century',
+      'ten_ton_day',
+    ]);
+    const statements = renderStatements(catalog);
+    const challengesAt = statements.findIndex((statement) => statement.startsWith('insert into public.challenges'));
+    const itemsAt = statements.findIndex((statement) => statement.startsWith('insert into public.items'));
+    expect(challengesAt).toBeGreaterThan(-1);
+    expect(challengesAt).toBeLessThan(itemsAt);
+    const challenges = statements[challengesAt];
+    const exercise = (key: string) => idFor(catalogNames.exercise(key)).raw;
+    expect(challenges).toContain('(id, key, name, kind, definition, retired_at)');
+    expect(challenges).toContain(
+      `'deadlift_and_pull_up', 'Deadlift and Pull-up', 'prescription', jsonb_build_object('kind', 'prescription', 'groups', jsonb_build_array(jsonb_build_object('rounds', 5, 'exercises', jsonb_build_array(jsonb_build_object('exerciseId', ${exercise('deadlift')}, 'reps', 5, 'pct', 70), jsonb_build_object('exerciseId', ${exercise('pull_up')}, 'reps', 5, 'pct', null))))), null)`,
+    );
+    expect(challenges).toContain(
+      `'squat_century', 'Squat Century', 'volume', jsonb_build_object('kind', 'volume', 'metric', 'reps', 'target', 100, 'exerciseId', ${exercise('back_squat')}, 'minPct', 50), null)`,
+    );
+    expect(challenges).toContain(
+      `'ten_ton_day', 'Ten-Ton Day', 'volume', jsonb_build_object('kind', 'volume', 'metric', 'kg', 'target', 10000, 'exerciseId', null, 'minPct', null), null)`,
+    );
+    expect(challenges).toContain('definition = excluded.definition');
+    const items = statements[itemsAt];
+    expect(items).toContain('grants_challenge_id');
+    expect(items).not.toContain('grants_exercise_id');
+    expect(items).toContain(
+      `'scroll_deficit_deadlift', 'Scroll: Deadlift and Pull-up', 'scroll', 'rare', null, null, 'scroll', '', ${idFor(catalogNames.challenge('deadlift_and_pull_up')).raw},`,
+    );
+    expect(retireStatement(statements, 'challenges').match(/extensions\.uuid_generate_v5\([^)]*\)/g)).toEqual(
+      catalog.challenges.map((challenge) => idFor(catalogNames.challenge(challenge.key)).raw),
+    );
   });
 
   it('expands every gear shorthand into the 6 slots of that tier', () => {

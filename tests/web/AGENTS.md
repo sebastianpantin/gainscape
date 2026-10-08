@@ -1,7 +1,7 @@
 # tests/web
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-07
+**Generated:** 2026-10-01 · **Updated:** 2026-10-08
 
 ## Purpose
 
@@ -17,6 +17,7 @@ Stack-free tests of the web app's pure logic and of static build inputs: offline
 | `memory-storage.ts`                                                       | `MemoryStorage`, an in-memory `Storage` implementation for tests.                                                                                                                                                                                                                                                     |
 | `draft-format.test.ts`                                                    | `offline/draft-format.ts` records and mutations (including `withSets`, `updateExerciseAt`). Seeding the first set through `addSet`. Format v5: v2 to v4 records migrate with `isWarmup` false, `addWarmupSets`, `firstWorkingSet`. The optional `sessionRpe` through a parse and in the payload.                      |
 | `session-payload.test.ts`                                                 | `offline/session-payload.ts` `boutPayload`.                                                                                                                                                                                                                                                                           |
+| `superset-rules.test.ts`                                                  | `lib/superset-rules.ts`: `supersetGroups`, `groupWithNext`, `ungroup`, `roundRows`, `nextInRound`, `restsAfter` and `addRound` over the draft's superset groups                                                                                                                                                       |
 | `session-timing-rules.test.ts`                                            | `lib/session-timing-rules.ts`: session RPE bounds and select choices, duration text and the summary and History parts.                                                                                                                                                                                                |
 | `program-draft.test.ts`                                                   | `offline/draft-format.ts` program fields (old drafts parse with a null `program` and null `prescription`s, malformed ones become null, every mutation keeps them), `startDraftFromPrescription`, and the `program` and `prescription` that `offline/session-payload.ts` sends.                                        |
 | `program-facts-cache.test.ts`                                             | `offline/program-facts-cache.ts`: `syncedSessionFact` mirrors the server (rounding, the shared storable-snapshot rule, first ref wins), appends only for a linked sync, the refetch merge (`appendedAt >= startedAt` keeps an append the snapshot misses), the generation counter on delete, and a stable fold order. |

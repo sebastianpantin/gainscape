@@ -1,4 +1,4 @@
-import { type ReactNode, useId, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, type SetPersonalRecord } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
@@ -37,6 +37,9 @@ interface SetRowProps {
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   onRemove: () => void;
   onToggleDone: () => void;
+  doneLabel?: string;
+  focusDone?: boolean;
+  onDoneFocused?: () => void;
 }
 
 function clampedNumber(raw: string, fallback: number, lowest: number, highest: number): number {
@@ -155,8 +158,17 @@ export function SetRow({
   onChange,
   onRemove,
   onToggleDone,
+  doneLabel = `Done set ${setNumber}`,
+  focusDone = false,
+  onDoneFocused,
 }: SetRowProps) {
   const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const doneButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!focusDone) return;
+    doneButton.current?.focus();
+    onDoneFocused?.();
+  }, [focusDone, onDoneFocused]);
   const calculatorId = useId();
   const amrapBadge = amrapBadgeOf(set.prescription);
   const marked = markers.length > 0 || barbell !== null;
@@ -195,10 +207,11 @@ export function SetRow({
         )}
       </span>
       <button
+        ref={doneButton}
         type="button"
         className={`button done-toggle ${set.done ? 'selected' : ''}`}
         aria-pressed={set.done}
-        aria-label={`Done set ${setNumber}`}
+        aria-label={doneLabel}
         onClick={onToggleDone}
       >
         <Icon name="check" size={20} strokeWidth={3} />

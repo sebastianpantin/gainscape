@@ -1,3 +1,4 @@
+import type { ChallengeRun } from './challenges.ts';
 import type { GearLoadout } from './gear.ts';
 
 export type LoadType = 'external' | 'bodyweight' | 'bodyweight_plus';
@@ -107,6 +108,7 @@ export interface SessionInput {
   startedAt: string;
   sets: SetInput[];
   gearLoadout?: GearLoadout | null;
+  challenge?: ChallengeRun | null;
 }
 
 export const REP_MAX_SLOT_COUNT = 10;
@@ -273,6 +275,14 @@ export interface RevokedDrop extends DropSummary {
   revokedQuantity: number;
 }
 
+export interface ChallengeSummary {
+  challengeId: string;
+  key: string;
+  name: string;
+  passed: boolean;
+  targetLoadsKg: Record<string, number | null>;
+}
+
 export interface SessionSummary {
   sessionId: string;
   xpBySkill: Record<string, number>;
@@ -280,5 +290,7 @@ export interface SessionSummary {
   prs: PersonalRecordSummary[];
   drops: DropSummary[];
   gearBonusBySkill?: Record<string, number>;
+  challenge?: ChallengeSummary | null;
+  challengeBonusBySkill?: Record<string, number>;
   historyOnly?: true;
 }

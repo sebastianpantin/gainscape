@@ -1,5 +1,6 @@
 import {
   type BalanceConfig,
+  type ChallengeRun,
   compareSessionKeys,
   type EffortInput,
   type GearLoadout,
@@ -24,6 +25,14 @@ const DELOAD_RIR = 4;
 const LOAD_INCREMENT_KG = 2.5;
 const FIRST_YEAR_MONTHLY_GAIN = 0.03;
 
+export const ALWAYS_MET_CHALLENGE: ChallengeRun = Object.freeze({
+  challengeId: 'always-met',
+  key: 'always_met',
+  name: 'Always met',
+  definition: Object.freeze({ kind: 'volume', metric: 'kg', target: 1, exerciseId: null, minPct: null }),
+  e1rmKg: Object.freeze({}),
+});
+
 const SIMULATION_START_MS = Date.parse('2026-01-05T18:00:00.000Z');
 
 export interface SimulationResult {
@@ -38,6 +47,7 @@ export interface SimulationOptions {
   maxYears?: number;
   stopWhenSkillsReach99?: readonly string[];
   gearLoadout?: GearLoadout;
+  challenge?: ChallengeRun;
 }
 
 function weeklyGrowthFactor(week: number): number {
@@ -126,6 +136,7 @@ export function simulateProfile(
         startedAt,
         sets,
         gearLoadout: options.gearLoadout,
+        challenge: options.challenge,
       };
       const strength = strengthStateAt(history, session, cfg);
       const { nextState, outputs } = processSession({ skillXp, bodyweightKg: null }, session, cfg, {

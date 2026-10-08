@@ -22,6 +22,7 @@ export * from './rng.ts';
 export * from './loot.ts';
 export * from './crafting.ts';
 export * from './gear.ts';
+export * from './challenges.ts';
 export * from './events.ts';
 export { amountInUnit, KG_PER_LB, kgToUnit, shownWeight, type UnitAmount, unitToKg, type WeightUnit } from './units.ts';
 export {

@@ -5,13 +5,19 @@
 
 ## Purpose
 
-POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one read-only transaction. Export format version is `EXPORT_FORMAT_VERSION = 5` (2 added `cardioRecords`, 3 added `bodyweightEntries` with `logged_on` as a `YYYY-MM-DD` date, `bodyweight_kg` and `updated_at`, 4 added `weeklyGoals` with `effective_from` as a `YYYY-MM-DD` Monday, `goal` (null when off) and `updated_at`, 5 added `userLoadout` with `slot`, `item_id` and `equipped_at` and the gear XP semantics below).
+POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one read-only transaction. Export format version is `EXPORT_FORMAT_VERSION = 6` (2 added `cardioRecords`, 3 added `bodyweightEntries` with `logged_on` as a `YYYY-MM-DD` date, `bodyweight_kg` and `updated_at`, 4 added `weeklyGoals` with `effective_from` as a `YYYY-MM-DD` Monday, `goal` (null when off) and `updated_at`, 5 added `userLoadout` with `slot`, `item_id` and `equipped_at` and the gear XP semantics below, 6 removed `userUnlocks` with the `user_unlocks` table and added the challenge semantics below).
 
 Gear XP semantics since version 5:
 
 - `sets.xp_awarded` is the base XP, before any gear bonus.
 - `set_skill_xp.xp` includes the gear bonus, so it can exceed the set's `xp_awarded`.
 - `sessions.gear_loadout` (exported through `select *`) is the slot to tier snapshot taken when the session synced; `null` means the session predates gear and `{}` means nothing was equipped.
+
+Challenge semantics since version 6:
+
+- `sessions.challenge` (exported through `select *`) is the snapshot taken when the session synced: `challengeId`, `key`, `name`, the `definition` and the e1RM snapshot `e1rmKg`; `null` means no challenge was used.
+- The verdict is not stored there. `sessions.summary.challenge` holds `passed` and the load floors, and `summary.challengeBonusBySkill` the bonus XP, which `set_skill_xp.xp` includes like the gear bonus.
+- A scroll used for a challenge shows as an `item_ledger` row with reason `challenge` and delta -1.
 
 ## Key Files
 

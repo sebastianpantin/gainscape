@@ -32,6 +32,25 @@ describe('last summary', () => {
     expect(recallLastSummary()).toEqual(summary);
   });
 
+  it('recalls the planned challenge next to the summary', () => {
+    const plannedChallenge = {
+      challengeId: 'challenge-dl',
+      name: 'Deadlift and Pull-up',
+      definition: {
+        kind: 'prescription' as const,
+        groups: [{ rounds: 5, exercises: [{ exerciseId: 'deadlift', reps: 5, pct: 70 }] }],
+      },
+      targetLoadsKg: { deadlift: 100 },
+    };
+    rememberLastSummary({ ...summary, plannedChallenge });
+    expect(recallLastSummary()?.plannedChallenge).toEqual(plannedChallenge);
+  });
+
+  it('recalls a malformed planned challenge as null', () => {
+    storage.setItem('gainscape.last-summary', JSON.stringify({ ...summary, plannedChallenge: { name: 7 } }));
+    expect(recallLastSummary()).toEqual({ ...summary, plannedChallenge: null });
+  });
+
   it('recalls nothing when nothing was remembered or the entry is not JSON', () => {
     expect(recallLastSummary()).toBeNull();
     storage.setItem('gainscape.last-summary', '{broken');

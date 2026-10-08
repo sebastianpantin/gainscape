@@ -214,42 +214,36 @@
   equipment: barbell
   shares: { chest: 7000, shoulders: 2000, arms: 1000 }
   variation_of: barbell_bench_press
-  requires_unlock: true
 - key: pause_squat
   name: Pause Squat
   load_type: external
   equipment: barbell
   shares: { legs: 9000, core: 1000 }
   variation_of: back_squat
-  requires_unlock: true
 - key: deficit_deadlift
   name: Deficit Deadlift
   load_type: external
   equipment: barbell
   shares: { back: 5000, legs: 4000, core: 1000 }
   variation_of: deadlift
-  requires_unlock: true
 - key: dead_stop_row
   name: Dead-stop Row
   load_type: external
   equipment: barbell
   shares: { back: 7000, arms: 2000, core: 1000 }
   variation_of: barbell_row
-  requires_unlock: true
 - key: z_press
   name: Z Press
   load_type: external
   equipment: barbell
   shares: { shoulders: 7000, arms: 2000, core: 1000 }
   variation_of: overhead_press
-  requires_unlock: true
 - key: spider_curl
   name: Spider Curl
   load_type: external
   equipment: dumbbell
   shares: { arms: 10000 }
   variation_of: dumbbell_curl
-  requires_unlock: true
 - key: running
   name: Running
   modality: cardio

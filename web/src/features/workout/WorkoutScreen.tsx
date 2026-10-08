@@ -3,6 +3,7 @@ import { DEFAULT_BALANCE, type Position } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { canAddBout } from '../../lib/cardio-rules.ts';
+import { challengeSummaryText, challengeVolumeText } from '../../lib/challenge-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
 import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
@@ -42,6 +43,8 @@ import {
   addWarmupSets,
   canSwapExercise,
   doneSetCount,
+  type DraftChallenge,
+  type DraftSet,
   firstWorkingSet,
   canQuickFill,
   fillWorkingSets,
@@ -54,6 +57,7 @@ import {
   startDraft,
   startDraftFromDay,
   startDraftFromPrescription,
+  type LiftDraftExercise,
   type PrescribedDayStart,
   swapExercise,
   toggleSetDone,
@@ -68,12 +72,22 @@ import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program
 import { skipDayEvent } from '../../lib/program-skip-rules.ts';
 import { barbellSetupFor, draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
+import {
+  addRound,
+  groupWithNext,
+  nextInRound,
+  restsAfter,
+  roundRows,
+  supersetGroups,
+  ungroup,
+} from '../../lib/superset-rules.ts';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
+import { ExerciseMenu, type ExerciseMenuAction } from './ExerciseMenu.tsx';
 import { ExerciseNote } from './ExerciseNote.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
@@ -84,6 +98,7 @@ import { ProgramToday } from './ProgramToday.tsx';
 import { QuickFill } from './QuickFill.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
+import { SupersetCard } from './SupersetCard.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
 import { WeeklyGoalCard } from './WeeklyGoalCard.tsx';
 import { useRecentLiftSessions } from './use-recent-lift-sessions.ts';
@@ -126,6 +141,48 @@ async function currentLoadTypes(draft: WorkoutDraft, exercises: Exercise[]): Pro
   }
 }
 
+interface ChallengeBannerProps {
+  draft: WorkoutDraft;
+  challenge: DraftChallenge;
+  exercises: readonly Exercise[];
+  onDiscard: () => void;
+}
+
+function ChallengeBanner({ draft, challenge, exercises, onDiscard }: ChallengeBannerProps) {
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const nameOf = (exerciseId: string) =>
+    exercises.find((exercise) => exercise.id === exerciseId)?.name ??
+    draft.exercises.find((exercise) => exercise.exerciseId === exerciseId)?.name ??
+    'Exercise';
+  const { definition } = challenge;
+  return (
+    <section className="panel stack" aria-label="Challenge">
+      <h2>Challenge: {challenge.name}</h2>
+      <span className="muted">{challengeSummaryText(definition, nameOf)}</span>
+      {definition.kind === 'volume' && definition.metric === 'kg' && (
+        <p className="stack" style={{ gap: 2 }}>
+          <span>{challengeVolumeText(draft, definition.target)}</span>
+          <span className="muted tiny">Estimate: bodyweight lifts count when the workout syncs.</span>
+        </p>
+      )}
+      <button className="button link" type="button" onClick={() => setConfirmingDiscard(true)}>
+        Discard challenge
+      </button>
+      {confirmingDiscard && (
+        <ConfirmDialog
+          title="Discard this challenge workout?"
+          confirmLabel="Discard workout"
+          danger
+          onConfirm={onDiscard}
+          onCancel={() => setConfirmingDiscard(false)}
+        >
+          <p>Your scroll is kept until a challenge workout is saved.</p>
+        </ConfirmDialog>
+      )}
+    </section>
+  );
+}
+
 export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const navigate = useNavigate();
   const { state, store, saveProblem, changeDraft, updateDraft, startWorkout, discardDraft, markSynced, reload, flush } =
@@ -142,6 +199,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [startingDay, setStartingDay] = useState(false);
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
+  const [focusSetId, setFocusSetId] = useState<string | null>(null);
   const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);
   const [loadedBaseline, setLoadedBaseline] = useState<SessionBaseline | null>(null);
   const [cachedBaseline] = useState(() => readSessionBaseline(deviceStorage(), userId));
@@ -535,6 +593,123 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     if (celebrate && readTrainingDeviceSettings(deviceStorage(), userId).vibrate) vibrateNewRecord();
     changeDraft(next);
   };
+  const groups = supersetGroups(draft);
+  const groupOfIndex = new Map(
+    groups.flatMap((group) => group.exerciseIndexes.map((index) => [index, group] as const)),
+  );
+  const isBarbellLift = (exercise: LiftDraftExercise) =>
+    exercise.loadType === 'external' && barbellIds.has(exercise.exerciseId);
+  const menuActions = (exerciseIndex: number) => {
+    const group = groupOfIndex.get(exerciseIndex);
+    const actions: ExerciseMenuAction[] = [];
+    const groupedWithNext = group !== undefined && groupOfIndex.get(exerciseIndex + 1) === group;
+    if (draft.exercises[exerciseIndex + 1]?.modality === 'lift' && !groupedWithNext)
+      actions.push({ label: 'Superset with next', onChoose: () => changeDraft(groupWithNext(draft, exerciseIndex)) });
+    if (group !== undefined)
+      actions.push({ label: 'Ungroup', onChoose: () => changeDraft(ungroup(draft, exerciseIndex)) });
+    if (canSwapExercise(draft, exerciseIndex))
+      actions.push({
+        label: 'Swap',
+        onChoose: () => setSwappingIndex(swappingIndex === exerciseIndex ? null : exerciseIndex),
+      });
+    actions.push({ label: 'Remove', onChoose: () => changeDraft(removeExercise(draft, exerciseIndex)) });
+    return actions;
+  };
+  const liftIntro = (exercise: LiftDraftExercise, exerciseIndex: number) => {
+    const doneHere = exercise.sets.filter((set) => set.done).length;
+    const restS = rest.lengthFor(exercise.exerciseId, compoundIds.has(exercise.exerciseId));
+    const details = [
+      exercise.target && `${exercise.target.sets} × ${exercise.target.repsMin}–${exercise.target.repsMax}`,
+      strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
+      restS !== REST_OFF && `Rest ${restClock(restS)}`,
+    ].filter(Boolean);
+    const recent = recentSessions.byExercise.get(exercise.exerciseId);
+    const lastSessionSets = recent?.[0];
+    const lastTime = lastTimeText(lastSessionSets, exercise.loadType, unitPref);
+    const isBarbell = isBarbellLift(exercise);
+    const followsProgram = exercise.sets.some((set) => Boolean(set.prescription));
+    const step = progressionStep(unitPref, isBarbell ? barbellSetup.plates : null);
+    const advice = followsProgram
+      ? null
+      : (fatigueAdvice(recent, exercise.loadType, unitPref, step, isBarbell ? barbellSetup.barWeight : 0) ??
+        nextWeightHint(lastSessionSets, exercise.loadType, exercise.target, unitPref, step));
+    return (
+      <>
+        <header>
+          <h2>{exercise.name}</h2>
+          <span className="row">
+            <ExerciseProgressLink exerciseId={exercise.exerciseId} exerciseName={exercise.name} />
+            <ExerciseMenu exerciseName={exercise.name} actions={menuActions(exerciseIndex)} />
+          </span>
+        </header>
+        <p className="muted">{[...details, `${doneHere}/${exercise.sets.length} sets`].join(' · ')}</p>
+        {lastTime && <p className="muted tiny last-time">{lastTime}</p>}
+        {advice && <p className="tiny progression-advice">{advice}</p>}
+        {noteFor(exercise.exerciseId, exercise.name)}
+        {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
+          <ExercisePicker
+            exercises={liftExercises}
+            placeholder="Swap for…"
+            onPick={(replacement) => {
+              if (!isLiftExercise(replacement)) return;
+              const swapped = swapExercise(draft, exerciseIndex, replacement);
+              if (swapped) changeDraft(swapped);
+              setSwappingIndex(null);
+            }}
+          />
+        )}
+      </>
+    );
+  };
+  const liftSetRow = (
+    exercise: LiftDraftExercise,
+    exerciseIndex: number,
+    set: DraftSet,
+    setIndex: number,
+    doneLabel?: string,
+  ) => {
+    const compound = compoundIds.has(exercise.exerciseId);
+    const startRestAfter = (changes: Partial<Omit<DraftSet, 'id'>>) => {
+      if (startsRest(set, changes, rest.timer) && restsAfter(draft, exerciseIndex, set.id))
+        rest.start(set.id, exercise.exerciseId, compound);
+    };
+    return (
+      <SetRow
+        key={set.id}
+        setNumber={setIndex + 1}
+        loadType={exercise.loadType}
+        set={set}
+        preview={previews[exerciseIndex][setIndex]}
+        record={records[exerciseIndex][setIndex]}
+        unit={unitPref}
+        effortMode={effortInputMode}
+        markers={programSetMarkerTexts(programSetMarkers(set, unitPref))}
+        barbell={
+          isBarbellLift(exercise)
+            ? {
+                plates: barbellPlates(shownWeight(set.weightKg, unitPref), barbellSetup, unitPref).plates,
+                text: barbellPlatesText(shownWeight(set.weightKg, unitPref), barbellSetup, unitPref),
+                setup: barbellSetup,
+              }
+            : null
+        }
+        doneLabel={doneLabel}
+        focusDone={focusSetId === set.id}
+        onDoneFocused={() => setFocusSetId(null)}
+        onChange={(changes) => {
+          startRestAfter(changes);
+          if (stopsRestForWarmup(set, changes, rest.timer)) rest.stop();
+          changeSet(updateSet(draft, exerciseIndex, set.id, changes), set.id);
+        }}
+        onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
+        onToggleDone={() => {
+          startRestAfter({ done: !set.done });
+          setFocusSetId(set.done ? null : (nextInRound(draft, exerciseIndex, set.id)?.setId ?? null));
+          changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id);
+        }}
+      />
+    );
+  };
 
   return (
     <main className="screen stack">
@@ -549,6 +724,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </div>
       </header>
       {deviceNotices}
+      {draft.challenge && (
+        <ChallengeBanner
+          draft={draft}
+          challenge={draft.challenge}
+          exercises={exercises}
+          onDiscard={() => discardDraft(draft.sessionId)}
+        />
+      )}
       {startNotice && (
         <p className="notice" role="status">
           {startNotice}
@@ -565,22 +748,21 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </p>
       )}
       {draft.exercises.map((exercise, exerciseIndex) => {
-        const doneHere = exercise.sets.filter((set) => set.done).length;
-        const removeButton = (
-          <button
-            className="button link"
-            type="button"
-            onClick={() => changeDraft(removeExercise(draft, exerciseIndex))}
-          >
-            Remove
-          </button>
-        );
         if (exercise.modality === 'cardio') {
+          const doneHere = exercise.sets.filter((set) => set.done).length;
           return (
             <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
               <header>
                 <h2>{exercise.name}</h2>
-                <span className="row">{removeButton}</span>
+                <span className="row">
+                  <button
+                    className="button link"
+                    type="button"
+                    onClick={() => changeDraft(removeExercise(draft, exerciseIndex))}
+                  >
+                    Remove
+                  </button>
+                </span>
               </header>
               <p className="muted">{`${doneHere}/${exercise.sets.length} bouts`}</p>
               {noteFor(exercise.exerciseId, exercise.name)}
@@ -611,65 +793,52 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             </section>
           );
         }
-        const compound = compoundIds.has(exercise.exerciseId);
-        const restS = rest.lengthFor(exercise.exerciseId, compound);
-        const details = [
-          exercise.target && `${exercise.target.sets} × ${exercise.target.repsMin}–${exercise.target.repsMax}`,
-          strengthText(strength?.get(exercise.exerciseId), exercise.loadType, unitPref),
-          restS !== REST_OFF && `Rest ${restClock(restS)}`,
-        ].filter(Boolean);
-        const recent = recentSessions.byExercise.get(exercise.exerciseId);
-        const lastSessionSets = recent?.[0];
-        const lastTime = lastTimeText(lastSessionSets, exercise.loadType, unitPref);
-        const isBarbell = exercise.loadType === 'external' && barbellIds.has(exercise.exerciseId);
-        const followsProgram = exercise.sets.some((set) => Boolean(set.prescription));
-        const step = progressionStep(unitPref, isBarbell ? barbellSetup.plates : null);
-        const advice = followsProgram
-          ? null
-          : (fatigueAdvice(recent, exercise.loadType, unitPref, step, isBarbell ? barbellSetup.barWeight : 0) ??
-            nextWeightHint(lastSessionSets, exercise.loadType, exercise.target, unitPref, step));
+        const group = groupOfIndex.get(exerciseIndex);
+        if (group !== undefined) {
+          if (group.exerciseIndexes[0] !== exerciseIndex) return null;
+          const members = group.exerciseIndexes.flatMap((index) => {
+            const member = draft.exercises[index];
+            return member?.modality === 'lift' ? [{ index, exercise: member }] : [];
+          });
+          return (
+            <SupersetCard
+              key={`superset-${group.id}`}
+              exerciseNames={members.map(({ exercise: member }) => member.name)}
+              members={members.map(({ index, exercise: member }) => (
+                <div className="stack superset-member" key={`${member.exerciseId}-${index}`}>
+                  {liftIntro(member, index)}
+                </div>
+              ))}
+              rounds={roundRows(draft, group)}
+              renderCell={(cell, round) => {
+                const member = members.find(({ index }) => index === cell.exerciseIndex)?.exercise;
+                if (member === undefined) return null;
+                const setIndex = member.sets.findIndex((set) => set.id === cell.setId);
+                if (setIndex === -1)
+                  return <li className="superset-gap muted tiny">{`No ${member.name} set in round ${round}`}</li>;
+                return liftSetRow(
+                  member,
+                  cell.exerciseIndex,
+                  member.sets[setIndex],
+                  setIndex,
+                  `Done ${member.name} round ${round}`,
+                );
+              }}
+              onAddRound={() => changeDraft(addRound(draft, group))}
+            />
+          );
+        }
         const workingSet = firstWorkingSet(exercise);
         const warmups =
           workingSet !== undefined && !exercise.sets.some((set) => set.isWarmup)
             ? warmupPlan(
                 { weight: shownWeight(workingSet.weightKg, unitPref), reps: workingSet.reps },
-                isBarbell ? barbellSetup : null,
+                isBarbellLift(exercise) ? barbellSetup : null,
               )
             : [];
         return (
           <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
-            <header>
-              <h2>{exercise.name}</h2>
-              <span className="row">
-                <ExerciseProgressLink exerciseId={exercise.exerciseId} exerciseName={exercise.name} />
-                {canSwapExercise(draft, exerciseIndex) && (
-                  <button
-                    className="button link"
-                    type="button"
-                    onClick={() => setSwappingIndex(swappingIndex === exerciseIndex ? null : exerciseIndex)}
-                  >
-                    Swap
-                  </button>
-                )}
-                {removeButton}
-              </span>
-            </header>
-            <p className="muted">{[...details, `${doneHere}/${exercise.sets.length} sets`].join(' · ')}</p>
-            {lastTime && <p className="muted tiny last-time">{lastTime}</p>}
-            {advice && <p className="tiny progression-advice">{advice}</p>}
-            {noteFor(exercise.exerciseId, exercise.name)}
-            {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
-              <ExercisePicker
-                exercises={liftExercises}
-                placeholder="Swap for…"
-                onPick={(replacement) => {
-                  if (!isLiftExercise(replacement)) return;
-                  const swapped = swapExercise(draft, exerciseIndex, replacement);
-                  if (swapped) changeDraft(swapped);
-                  setSwappingIndex(null);
-                }}
-              />
-            )}
+            {liftIntro(exercise, exerciseIndex)}
             {warmups.length > 0 && (
               <button
                 className="button dashed"
@@ -688,39 +857,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               </button>
             )}
             <ol className="set-list">
-              {exercise.sets.map((set, setIndex) => (
-                <SetRow
-                  key={set.id}
-                  setNumber={setIndex + 1}
-                  loadType={exercise.loadType}
-                  set={set}
-                  preview={previews[exerciseIndex][setIndex]}
-                  record={records[exerciseIndex][setIndex]}
-                  unit={unitPref}
-                  effortMode={effortInputMode}
-                  markers={programSetMarkerTexts(programSetMarkers(set, unitPref))}
-                  barbell={
-                    isBarbell
-                      ? {
-                          plates: barbellPlates(shownWeight(set.weightKg, unitPref), barbellSetup, unitPref).plates,
-                          text: barbellPlatesText(shownWeight(set.weightKg, unitPref), barbellSetup, unitPref),
-                          setup: barbellSetup,
-                        }
-                      : null
-                  }
-                  onChange={(changes) => {
-                    if (startsRest(set, changes, rest.timer)) rest.start(set.id, exercise.exerciseId, compound);
-                    if (stopsRestForWarmup(set, changes, rest.timer)) rest.stop();
-                    changeSet(updateSet(draft, exerciseIndex, set.id, changes), set.id);
-                  }}
-                  onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
-                  onToggleDone={() => {
-                    if (startsRest(set, { done: !set.done }, rest.timer))
-                      rest.start(set.id, exercise.exerciseId, compound);
-                    changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id);
-                  }}
-                />
-              ))}
+              {exercise.sets.map((set, setIndex) => liftSetRow(exercise, exerciseIndex, set, setIndex))}
             </ol>
             <button className="button dashed" type="button" onClick={() => changeDraft(addSet(draft, exerciseIndex))}>
               + Add set

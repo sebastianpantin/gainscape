@@ -2,6 +2,8 @@ import type { JsonValue, Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   type Catalog,
+  type ChallengeSummary,
+  challengeTargetLoadsKg,
   DEFAULT_STEPS,
   type RevokedDrop,
   type LootCandidate,
@@ -11,7 +13,9 @@ import {
   type RecordState,
   recordsFromHistory,
   replayHistory,
+  type SessionInput,
   type SessionKey,
+  type SessionOutputs,
   type SetResult,
   type StrengthHistoryRow,
 } from '../domain/index.ts';
@@ -103,6 +107,18 @@ async function rewriteDerivedSetColumns(tx: Transaction, results: readonly SetRe
     where target.id = derived.id`;
 }
 
+function challengeSummary(session: SessionInput, outputs: SessionOutputs): ChallengeSummary | null {
+  const run = session.challenge;
+  if (!run || !outputs.challengeVerdict) return null;
+  return {
+    challengeId: run.challengeId,
+    key: run.key,
+    name: run.name,
+    passed: outputs.challengeVerdict.passed,
+    targetLoadsKg: challengeTargetLoadsKg(run),
+  };
+}
+
 async function replaceSkillXp(tx: Transaction, userId: string, skillXp: Readonly<Record<string, number>>) {
   await tx`delete from public.user_skills where user_id = ${userId}`;
   const rows = Object.entries(skillXp).map(([skillId, xp]) => ({ user_id: userId, skill_id: skillId, xp }));
@@ -179,6 +195,8 @@ export async function replayFrom(
         levelUps: entry.outputs.levelUps,
         prs: entry.outputs.prs,
         gearBonusBySkill: entry.outputs.gearBonusBySkill ?? {},
+        challenge: challengeSummary(entry.session, entry.outputs),
+        challengeBonusBySkill: entry.outputs.challengeBonusBySkill ?? {},
       },
     })),
     cfg.version,

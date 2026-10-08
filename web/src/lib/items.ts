@@ -14,19 +14,23 @@ import {
   toRecipe,
 } from './item-rules.ts';
 import type { GearSlot } from '@domain/crafting.ts';
+import { CHALLENGE_COLUMNS, type ChallengeRow, toCatalogChallenge } from './challenge-rules.ts';
 import type { LoadoutView } from './gear-rules.ts';
 import { supabase } from './supabase.ts';
 
 export async function fetchItemCatalog(): Promise<ItemCatalog> {
-  const [items, recipes] = await Promise.all([
+  const [items, recipes, challenges] = await Promise.all([
     supabase.from('items').select(ITEM_COLUMNS).is('retired_at', null).order('sort_order'),
     supabase.from('recipes').select(RECIPE_COLUMNS).is('retired_at', null),
+    supabase.from('challenges').select(CHALLENGE_COLUMNS).is('retired_at', null),
   ]);
   if (items.error) throw items.error;
   if (recipes.error) throw recipes.error;
+  if (challenges.error) throw challenges.error;
   return {
     items: (items.data as ItemRow[]).map(toCatalogItem),
     recipes: (recipes.data as RecipeRow[]).map(toRecipe),
+    challenges: (challenges.data as ChallengeRow[]).flatMap((row) => toCatalogChallenge(row) ?? []),
   };
 }
 

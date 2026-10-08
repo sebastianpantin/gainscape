@@ -3,7 +3,13 @@ import { join } from 'node:path';
 import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import { GEAR_SLOT_SKILLS } from '../../supabase/functions/_shared/domain/gear.ts';
 import { CARDIO_EFFORT_LEVELS } from '../../supabase/functions/_shared/domain/types.ts';
-import { type CatalogData, type CatalogExercise, type CatalogItem, catalogNames } from './load.ts';
+import {
+  type CatalogChallenge,
+  type CatalogData,
+  type CatalogExercise,
+  type CatalogItem,
+  catalogNames,
+} from './load.ts';
 
 const DENYLIST_PATH = join(import.meta.dirname, '../../tests/ip-denylist.txt');
 
@@ -123,9 +129,6 @@ function checkExercises(catalog: CatalogData, problems: string[]): void {
         problems.push(`exercise "${exercise.key}" is a variation of "${base.key}" of another modality`);
       }
     }
-    if (exercise.requiresUnlock && exercise.variationOf === null) {
-      problems.push(`exercise "${exercise.key}" requires an unlock but is no variation`);
-    }
   }
 }
 
@@ -136,8 +139,6 @@ function checkProgramDays(catalog: CatalogData, problems: string[]): void {
       const exercise = exercisesByKey.get(entry.exercise);
       if (exercise === undefined) {
         problems.push(`program day "${program.key}:${day.key}" uses unknown exercise "${entry.exercise}"`);
-      } else if (exercise.requiresUnlock) {
-        problems.push(`program day "${program.key}:${day.key}" uses locked exercise "${entry.exercise}"`);
       } else if (exercise.modality === 'cardio') {
         problems.push(`program day "${program.key}:${day.key}" uses cardio exercise "${entry.exercise}"`);
       }
@@ -169,30 +170,85 @@ function checkGear(catalog: CatalogData, problems: string[]): void {
 }
 
 function checkItems(catalog: CatalogData, problems: string[]): void {
-  const exercisesByKey = exercisesByKeyOf(catalog);
   const iconKinds = new Set<string>(ITEM_ICON_KINDS);
   for (const item of catalog.items) {
     if (!iconKinds.has(item.icon)) problems.push(`item "${item.key}" has unknown icon "${item.icon}"`);
   }
-  const scrollsByExercise = new Map<string, string[]>();
+}
+
+function checkChallengeExercise(
+  challenge: CatalogChallenge,
+  exercisesByKey: ReadonlyMap<string, CatalogExercise>,
+  key: string,
+  hasPercentage: boolean,
+  problems: string[],
+): void {
+  const exercise = exercisesByKey.get(key);
+  if (exercise === undefined) problems.push(`challenge "${challenge.key}" uses unknown exercise "${key}"`);
+  else if (exercise.modality !== 'lift') problems.push(`challenge "${challenge.key}" uses cardio exercise "${key}"`);
+  else if (hasPercentage && exercise.loadType !== 'external') {
+    problems.push(`challenge "${challenge.key}" sets a percentage on "${key}", which has no external load`);
+  }
+}
+
+function checkChallengeShape(
+  challenge: CatalogChallenge,
+  exercisesByKey: ReadonlyMap<string, CatalogExercise>,
+  problems: string[],
+): void {
+  if (challenge.kind === 'prescription') {
+    if (challenge.supersets.length === 0 || challenge.volume !== null) {
+      problems.push(`challenge "${challenge.key}" of kind prescription needs supersets and no volume`);
+    }
+  } else if (challenge.volume === null || challenge.supersets.length > 0) {
+    problems.push(`challenge "${challenge.key}" of kind volume needs a volume and no supersets`);
+  }
+  const seenExercises = new Set<string>();
+  for (const superset of challenge.supersets) {
+    if (superset.exercises.length < 2) {
+      problems.push(`challenge "${challenge.key}" superset needs at least 2 exercises`);
+    }
+    if (superset.rounds < 1 || superset.exercises.some((entry) => entry.reps < 1)) {
+      problems.push(`challenge "${challenge.key}" needs rounds and reps of at least 1`);
+    }
+    for (const entry of superset.exercises) {
+      checkChallengeExercise(challenge, exercisesByKey, entry.exercise, entry.pct !== null, problems);
+      if (seenExercises.has(entry.exercise)) {
+        problems.push(`challenge "${challenge.key}" repeats exercise "${entry.exercise}"`);
+      }
+      seenExercises.add(entry.exercise);
+    }
+  }
+  const volume = challenge.volume;
+  if (volume === null) return;
+  if (!(volume.target > 0)) problems.push(`challenge "${challenge.key}" needs a volume target above 0`);
+  if (volume.exercise !== null) {
+    checkChallengeExercise(challenge, exercisesByKey, volume.exercise, volume.minPct !== null, problems);
+  } else if (volume.minPct !== null) {
+    problems.push(`challenge "${challenge.key}" sets min_pct without an exercise`);
+  }
+}
+
+function checkChallenges(catalog: CatalogData, problems: string[]): void {
+  const exercisesByKey = exercisesByKeyOf(catalog);
+  const challengeKeys = new Set(catalog.challenges.map((challenge) => challenge.key));
+  const scrollsByChallenge = new Map<string, string[]>();
   for (const item of catalog.items) {
     if (item.kind !== 'scroll') {
-      if (item.grants !== null) problems.push(`item "${item.key}" grants an exercise but is no scroll`);
+      if (item.grants !== null) problems.push(`item "${item.key}" grants a challenge but is no scroll`);
       continue;
     }
-    const granted = item.grants === null ? undefined : exercisesByKey.get(item.grants);
-    if (granted === undefined || !granted.requiresUnlock) {
-      problems.push(`scroll "${item.key}" must grant exactly one exercise that requires an unlock`);
+    if (item.grants === null || !challengeKeys.has(item.grants)) {
+      problems.push(`scroll "${item.key}" must grant a known challenge`);
       continue;
     }
-    scrollsByExercise.set(granted.key, [...(scrollsByExercise.get(granted.key) ?? []), item.key]);
+    scrollsByChallenge.set(item.grants, [...(scrollsByChallenge.get(item.grants) ?? []), item.key]);
   }
-  for (const exercise of catalog.exercises.filter((candidate) => candidate.requiresUnlock)) {
-    const scrolls = scrollsByExercise.get(exercise.key) ?? [];
+  for (const challenge of catalog.challenges) {
+    checkChallengeShape(challenge, exercisesByKey, problems);
+    const scrolls = scrollsByChallenge.get(challenge.key) ?? [];
     if (scrolls.length !== 1) {
-      problems.push(
-        `exercise "${exercise.key}" requires an unlock and needs exactly one scroll, has ${scrolls.length}`,
-      );
+      problems.push(`challenge "${challenge.key}" needs exactly one scroll, has ${scrolls.length}`);
     }
   }
 }
@@ -268,6 +324,7 @@ function checkDenylist(catalog: CatalogData, denylist: readonly string[], proble
     ...catalog.exercises.flatMap((row) => [row.key, row.name]),
     ...catalog.programs.flatMap((row) => [row.key, row.name]),
     ...programDays(catalog).flatMap(({ day }) => [day.key, day.name]),
+    ...catalog.challenges.flatMap((row) => [row.key, row.name]),
     ...catalog.items.flatMap((row) => [row.key, row.name, row.description]),
     ...catalog.dropTables.flatMap((row) => [row.key, row.name]),
     ...catalog.recipes.map((row) => row.key),
@@ -286,6 +343,7 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
   checkKeysAndNames('exercise', catalog.exercises, problems);
   checkKeysAndNames('program', catalog.programs, problems);
   for (const program of catalog.programs) checkKeysAndNames(`program ${program.key} day`, program.days, problems);
+  checkKeysAndNames('challenge', catalog.challenges, problems);
   checkKeysAndNames('item', catalog.items, problems);
   checkKeysAndNames('drop table', catalog.dropTables, problems);
   checkKeysAndNames(
@@ -299,6 +357,7 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
     ...catalog.exercises.map((row) => catalogNames.exercise(row.key)),
     ...catalog.programs.map((row) => catalogNames.program(row.key)),
     ...programDays(catalog).map(({ program, day }) => catalogNames.programDay(program.key, day.key)),
+    ...catalog.challenges.map((row) => catalogNames.challenge(row.key)),
     ...catalog.items.map((row) => catalogNames.item(row.key)),
     ...catalog.dropTables.map((row) => catalogNames.dropTable(row.key)),
     ...catalog.recipes.map((row) => catalogNames.recipe(row.key)),
@@ -309,6 +368,7 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
   checkProgramDays(catalog, problems);
   checkGear(catalog, problems);
   checkItems(catalog, problems);
+  checkChallenges(catalog, problems);
   checkDropTables(catalog, problems);
   checkRecipes(catalog, problems);
   checkDenylist(catalog, denylist, problems);

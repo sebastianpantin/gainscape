@@ -2,12 +2,12 @@ import type { SessionSummary } from '@domain/types.ts';
 import type { InvokeOutcome } from '../lib/function-client-rules.ts';
 import type { RememberedTiming } from '../lib/session-timing-rules.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds } from '../lib/rate-limit.ts';
-import { rememberLastSummary } from '../features/summary/last-summary.ts';
+import { type PlannedChallenge, rememberLastSummary } from '../features/summary/last-summary.ts';
 import { storedSessionId, type WorkoutDraft } from './draft-format.ts';
 import type { SyncedChange } from './draft-session.ts';
 import type { DraftStore } from './draft-store.ts';
 
-export interface CompletedSessionSummary extends SessionSummary, RememberedTiming {
+export interface CompletedSessionSummary extends SessionSummary, RememberedTiming, PlannedChallenge {
   programLinked?: boolean;
   completedAt?: string;
 }
@@ -60,7 +60,10 @@ async function sendStoredDraft(attempt: FinishAttempt): Promise<FinishAttemptRes
   if (!record) return { kind: 'not_finished' };
   if (storedSessionId(record) !== attempt.sessionId || record.kind === 'synced') return { kind: 'superseded' };
   if (record.draft.finishedAt === null) return { kind: 'not_finished' };
-  const outcome = await attempt.send(record.draft);
+  const sent = await attempt.send(record.draft);
+  const plannedChallenge = record.draft.challenge;
+  const outcome: SendOutcome =
+    sent.kind === 'synced' && plannedChallenge ? { ...sent, summary: { ...sent.summary, plannedChallenge } } : sent;
   if (outcome.kind === 'synced') rememberLastSummary(outcome.summary);
   if (outcome.kind === 'synced' || outcome.kind === 'deleted')
     await attempt.markSynced(attempt.sessionId, outcome.kind);

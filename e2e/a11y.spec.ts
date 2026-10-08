@@ -14,6 +14,15 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 import { activeEnrollmentIdOf, equipGear, grantItems } from './support/db.ts';
+import {
+  CHALLENGE_NAME,
+  markEveryRoundDone,
+  openItems,
+  SCROLL_KEY,
+  scrollSlot,
+  shortenFirstDeadliftSet,
+  startChallenge,
+} from './support/challenge.ts';
 import { authLinkFrom, RECOVERY_SUBJECT, waitForEmail } from './support/mailbox.ts';
 import {
   FIVE_THREE_ONE_ONE_RMS_KG,
@@ -210,6 +219,38 @@ test.describe('signed-in screens', () => {
       await expect(page.getByRole('list', { name: 'Exercises that train Chest' })).toBeVisible();
       await expect(page.getByRole('main').getByText('Loading…', { exact: true })).toHaveCount(0);
     });
+  });
+
+  test('the challenge screens have no serious axe violations', async ({ page }) => {
+    test.setTimeout(150_000);
+    const username = uniqueUsername('a11y_ch');
+    await register(page, username);
+    await grantItems(username, { [SCROLL_KEY]: 1 });
+    await openItems(page);
+    await checkScreen(page, 'items (scroll picked)', async () => {
+      await scrollSlot(page).click();
+      await expect(page.getByRole('button', { name: 'Start challenge' })).toBeEnabled();
+    });
+
+    await startChallenge(page);
+    await checkScreen(page, 'train (challenge superset)', () =>
+      expect(page.getByRole('region', { name: 'Challenge', exact: true })).toBeVisible(),
+    );
+    await markEveryRoundDone(page);
+    await finishWithBodyweight(page);
+    await checkScreen(page, 'reveal (challenge complete)', () =>
+      expect(page.getByText(`Challenge complete: ${CHALLENGE_NAME}`)).toBeVisible(),
+    );
+
+    await grantItems(username, { [SCROLL_KEY]: 1 });
+    await openItems(page);
+    await startChallenge(page);
+    await shortenFirstDeadliftSet(page, 4);
+    await markEveryRoundDone(page);
+    await page.getByRole('button', { name: 'Finish workout' }).click();
+    await checkScreen(page, 'reveal (challenge failed)', () =>
+      expect(page.getByText(`Challenge failed: ${CHALLENGE_NAME}`)).toBeVisible(),
+    );
   });
 
   test('the friends and profile screens have no serious axe violations', async ({ newPerson, page }) => {

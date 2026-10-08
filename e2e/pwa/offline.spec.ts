@@ -11,7 +11,16 @@ import {
   uniqueUsername,
   writeSession,
 } from '../support/app.ts';
-import { sessionCount, setCount } from '../support/db.ts';
+import {
+  expectDeadliftPrefill,
+  logDeadliftToFailure,
+  OFFLINE_ITEMS_NOTICE,
+  openItems,
+  SCROLL_KEY,
+  scrollSlot,
+  startChallenge,
+} from '../support/challenge.ts';
+import { grantItems, sessionCount, setCount } from '../support/db.ts';
 import { expectNoAxeViolations } from '../support/a11y.ts';
 import { expectFontsLoaded } from '../support/fonts.ts';
 import {
@@ -72,6 +81,31 @@ test('an installed shell cold-starts offline and syncs later', async ({ context,
   await expect(cold.getByRole('heading', { name: 'Workout complete!' })).toBeVisible({ timeout: 90_000 });
   expect(await sessionCount(username)).toBe(1);
   expect(await setCount(sessionId)).toBe(2);
+});
+
+test('the items tab reloads offline from its saved items and starts a challenge with the cached e1RM', async ({
+  context,
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const username = uniqueUsername('pwa_ch');
+  await register(page, username);
+  await waitForController(page);
+  await logDeadliftToFailure(page, 140);
+  await grantItems(username, { [SCROLL_KEY]: 1 });
+  await openItems(page);
+  await expect(scrollSlot(page)).toBeVisible();
+
+  await context.setOffline(true);
+  expect((await page.reload())?.fromServiceWorker()).toBe(true);
+  const markOnline = await markPageOffline(page);
+  await expectProvenOffline(page);
+  await expect(page.getByText(OFFLINE_ITEMS_NOTICE)).toBeVisible({ timeout: 60_000 });
+
+  await startChallenge(page);
+  await expectDeadliftPrefill(page, 100);
+  await markOnline();
+  await context.setOffline(false);
 });
 
 test('the worker never stores or answers Supabase traffic', async ({ context, page, baseURL }) => {

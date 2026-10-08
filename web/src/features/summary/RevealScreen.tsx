@@ -14,7 +14,13 @@ import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
 import type { CompletedSessionSummary } from '../../offline/finish-lock.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
-import { describeRecord, gearBonusText } from './reveal-rules.ts';
+import {
+  challengeBonusText,
+  challengeFailReason,
+  challengeHeadline,
+  describeRecord,
+  gearBonusText,
+} from './reveal-rules.ts';
 
 function percent(fraction: number): string {
   return `${(Math.min(1, Math.max(0, fraction)) * 100).toFixed(1)}%`;
@@ -165,6 +171,13 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const skillsWithXp = skills.filter((skill) => summary.xpBySkill[skill.key]);
   const totalXp = sessionXp(summary);
   const leveledUp = new Map(summary.levelUps.map((levelUp) => [levelUp.skill, levelUp]));
+  const headline = challengeHeadline(summary);
+  const failReason = challengeFailReason(
+    summary,
+    summary.plannedChallenge ?? null,
+    (exerciseId) => exercises.find((exercise) => exercise.id === exerciseId)?.name ?? 'Exercise',
+    unitPref,
+  );
 
   return (
     <main className="screen stack">
@@ -173,11 +186,18 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         <span className="reveal-total pop">+{formatXp(totalXp)} XP</span>
       </header>
       {timingText && <p className="muted">{timingText}</p>}
+      {headline && (
+        <section className="panel stack" aria-label="Challenge">
+          <p className={summary.challenge?.passed ? 'accent-text' : undefined}>{headline}</p>
+          {failReason && <p className="muted">{failReason}</p>}
+        </section>
+      )}
       <ul className="panel reveal-list" aria-label="XP gained">
         {skillsWithXp.map((skill, index) => {
           const gain = summary.xpBySkill[skill.key];
           const levelUp = leveledUp.get(skill.key);
           const xpAfter = xpBySkillId?.get(skill.id);
+          const challengeBonus = challengeBonusText(summary, skill.key);
           const gearBonus = gearBonusText(summary, skill.key);
           return (
             <li key={skill.key} className="skill-gain rise" style={{ animationDelay: `${0.2 + index * 0.2}s` }}>
@@ -193,6 +213,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
                     xpAfter !== undefined && <span className="muted tiny">lvl {levelProgress(xpAfter).level}</span>
                   )}
                 </div>
+                {challengeBonus && <span className="muted tiny">{challengeBonus}</span>}
                 {gearBonus && <span className="muted tiny">{gearBonus}</span>}
                 {xpAfter !== undefined && (
                   <GainBar skillName={skill.name} xpAfter={xpAfter} gain={gain} delaySeconds={0.4 + index * 0.2} />
