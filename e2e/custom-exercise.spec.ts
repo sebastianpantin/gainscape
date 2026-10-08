@@ -18,6 +18,12 @@ function collectionHeadings(page: Page) {
   return page.locator('main section h2');
 }
 
+async function openChestExercises(page: Page) {
+  await openTab(page, 'Skills');
+  await page.getByRole('button', { name: /^Chest\b/ }).click();
+  return page.getByRole('list', { name: 'Exercises that train Chest' }).getByRole('listitem');
+}
+
 test('create, log, record, pin, reorder and archive a custom exercise', async ({ page }) => {
   await register(page, uniqueUsername('cx'));
 
@@ -34,6 +40,7 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await expect(page.getByText(/^Total: \d+%$/)).toHaveText('Total: 100%');
   await page.getByRole('button', { name: 'Save exercise' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Landmine Press' })).toContainText('(custom)');
+  await expect((await openChestExercises(page)).filter({ hasText: 'Landmine Press' })).toHaveText('Landmine Press 40%');
 
   await logLandmineSession(page, 40);
   const xp = page.getByLabel('XP gained');
@@ -65,6 +72,7 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await expect(page.getByRole('listitem').filter({ hasText: 'Landmine Press' })).toHaveCount(0);
   await page.getByLabel('Show archived').check();
   await expect(page.getByRole('listitem').filter({ hasText: 'Landmine Press' })).toContainText('(archived)');
+  await expect((await openChestExercises(page)).filter({ hasText: 'Landmine Press' })).toHaveCount(0);
 
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();

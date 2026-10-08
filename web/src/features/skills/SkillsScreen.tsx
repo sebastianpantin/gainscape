@@ -3,8 +3,11 @@ import { useState } from 'react';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
-import { useStanding } from '../../lib/standing.ts';
+import { exercisesTrainingSkill } from '../../lib/skill-map-rules.ts';
+import { useActiveExercises, useStanding } from '../../lib/standing.ts';
 import { formatXp } from '../../lib/format.ts';
+import { type Exercise } from '../../lib/catalog-rules.ts';
+import { type LoadedState } from '../../lib/query-state-rules.ts';
 
 interface SkillsScreenProps {
   userId: string;
@@ -15,9 +18,37 @@ function combatCopy(combatWeight: number): string {
   return combatWeight > 1 ? 'counts double toward combat' : 'counts once toward combat';
 }
 
+interface SkillExercisesProps {
+  skillKey: string;
+  skillName: string;
+  exercises: LoadedState<Exercise[]>;
+}
+
+function SkillExercises({ skillKey, skillName, exercises }: SkillExercisesProps) {
+  if (exercises.status === 'loading') return <p>Loading…</p>;
+  if (exercises.status === 'failed')
+    return (
+      <p className="problem" role="alert">
+        {exercises.problem}
+      </p>
+    );
+  const entries = exercisesTrainingSkill(exercises.data, skillKey);
+  if (entries.length === 0) return <p className="muted">No exercises train {skillName} yet.</p>;
+  return (
+    <ul aria-label={`Exercises that train ${skillName}`}>
+      {entries.map((entry) => (
+        <li key={entry.id}>
+          {entry.name} {entry.percent}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function SkillsScreen({ userId }: SkillsScreenProps) {
   const state = useStanding(userId);
   const [pickedKey, setPickedKey] = useState<string | null>(null);
+  const exercises = useActiveExercises(userId, pickedKey !== null);
 
   if (state.status === 'failed')
     return (
@@ -72,18 +103,21 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
         ))}
       </ul>
       {picked && (
-        <section className="panel stack" aria-live="polite">
-          <div className="row spread">
-            <h2>{picked.skill.name}</h2>
-            <span className="muted">{combatCopy(picked.skill.combatWeight)}</span>
+        <section className="panel stack">
+          <div className="stack" aria-live="polite">
+            <div className="row spread">
+              <h2>{picked.skill.name}</h2>
+              <span className="muted">{combatCopy(picked.skill.combatWeight)}</span>
+            </div>
+            <span>
+              {formatXp(picked.progress.xp)} XP
+              {picked.progress.nextLevelXp !== null && ` / ${formatXp(picked.progress.nextLevelXp)}`}
+            </span>
+            <span className="muted">
+              Level {MAX_LEVEL} at {formatXp(xpForLevel(MAX_LEVEL))} XP
+            </span>
           </div>
-          <span>
-            {formatXp(picked.progress.xp)} XP
-            {picked.progress.nextLevelXp !== null && ` / ${formatXp(picked.progress.nextLevelXp)}`}
-          </span>
-          <span className="muted">
-            Level {MAX_LEVEL} at {formatXp(xpForLevel(MAX_LEVEL))} XP
-          </span>
+          <SkillExercises skillKey={picked.skill.key} skillName={picked.skill.name} exercises={exercises} />
         </section>
       )}
     </main>
