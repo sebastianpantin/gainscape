@@ -126,77 +126,10 @@ test('the password reset form has no serious axe violations', async ({ page }) =
   );
 });
 
-test('every signed-in screen has no serious axe violations and the between-set controls are 44px', async ({
-  context,
-  newPerson,
-  page,
-}) => {
-  test.setTimeout(240_000);
-  const username = uniqueUsername('a11y');
-  await register(page, username);
-  await checkScreen(page, 'train (empty)', () =>
-    expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible(),
-  );
+type Screen = readonly [path: string, heading: string | null];
 
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await logExercise(page, 'pull-up', 'Pull-up', [{ reps: 8 }]);
-  await logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 5, effort: 'Moderate' }]);
-  await logCardio(page, 'sprint', 'Sprint Intervals', [{ rounds: 10, workS: 30, restS: 30, effort: 'Hard' }]);
-  await checkScreen(page, 'train (draft)', () =>
-    expect(page.getByRole('button', { name: 'Finish workout' })).toBeVisible(),
-  );
-  await checkEffortTargets(page);
-  await context.setOffline(true);
-  await checkScreen(page, 'offline banner', () =>
-    expect(page.getByText('Offline. Your workout is saved on this device.')).toBeVisible(),
-  );
-  await context.setOffline(false);
-  await expect(page.getByText('Offline. Your workout is saved on this device.')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByLabel('Bodyweight (kg)')).toBeVisible();
-  await expectTouchTargets(page);
-  await page.getByLabel('Bodyweight (kg)').fill('80');
-  await page.getByRole('button', { name: 'Save and finish workout' }).click();
-  await checkScreen(page, 'reveal', () =>
-    expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible(),
-  );
-
-  await page.getByRole('link', { name: 'Done' }).click();
-  await grantItems(username, { rookie_belt: 1, grinder_scraps: 8 });
-  const friendName = await befriend(await newPerson(), page, username);
-  await page.goto('/friends');
-  const friendPath = await page
-    .getByRole('list', { name: 'Friends list' })
-    .getByRole('link', { name: new RegExp(friendName) })
-    .getAttribute('href');
-  const programPath = await createProgram(page);
-  await openTab(page, 'Log');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
-  const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
-  await expect(workouts).toHaveCount(1);
-  const sessionPath = await workouts.first().getAttribute('href');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'Records' }).click();
-  const progressPath = await page.getByRole('link', { name: 'Barbell Bench Press progress' }).getAttribute('href');
-
-  for (const [path, heading] of [
-    ['/skills', 'Skills'],
-    ['/collection', 'Collection log'],
-    ['/collection/items', 'Collection log'],
-    ['/collection/history', 'Collection log'],
-    [sessionPath!, null],
-    [progressPath!, 'Barbell Bench Press'],
-    ['/friends', 'Friends'],
-    ['/friends/hiscores', 'Friends'],
-    [friendPath!, null],
-    ['/profile', null],
-    ['/profile/edit', 'Edit profile'],
-    ['/profile/preview', null],
-    ['/exercises', 'Exercises'],
-    ['/programs', 'Programs'],
-    [programPath, null],
-    ['/profile/settings', 'Settings'],
-  ] as const) {
+async function checkScreens(page: Page, screens: readonly Screen[]) {
+  for (const [path, heading] of screens) {
     await page.goto(path);
     await checkScreen(page, path, async () => {
       if (heading) await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
@@ -204,20 +137,117 @@ test('every signed-in screen has no serious axe violations and the between-set c
       await expect(page.getByRole('main').getByText('Loading…', { exact: true })).toHaveCount(0);
     });
   }
+}
 
-  for (const panel of ['Change email', 'Change password', 'Delete account']) {
-    const toggle = page.locator('button[aria-expanded]', { hasText: panel });
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await checkScreen(page, `settings: ${panel}`, async () => undefined);
-  }
+test.describe('signed-in screens', () => {
+  test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
-  await page.getByRole('link', { name: 'Licenses' }).click();
-  await checkScreen(page, 'licenses', () => expect(page.getByRole('heading', { name: 'Licenses' })).toBeVisible());
-  await page.getByRole('link', { name: 'Back to Gainscape' }).click();
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
-  await signOut(page);
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  test('the workout screens have no serious axe violations and the between-set controls are 44px', async ({
+    context,
+    page,
+  }) => {
+    test.setTimeout(150_000);
+    await register(page, uniqueUsername('a11y'));
+    await checkScreen(page, 'train (empty)', () =>
+      expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible(),
+    );
+
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+    await logExercise(page, 'pull-up', 'Pull-up', [{ reps: 8 }]);
+    await logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 5, effort: 'Moderate' }]);
+    await logCardio(page, 'sprint', 'Sprint Intervals', [{ rounds: 10, workS: 30, restS: 30, effort: 'Hard' }]);
+    await checkScreen(page, 'train (draft)', () =>
+      expect(page.getByRole('button', { name: 'Finish workout' })).toBeVisible(),
+    );
+    await checkEffortTargets(page);
+    await context.setOffline(true);
+    await checkScreen(page, 'offline banner', () =>
+      expect(page.getByText('Offline. Your workout is saved on this device.')).toBeVisible(),
+    );
+    await context.setOffline(false);
+    await expect(page.getByText('Offline. Your workout is saved on this device.')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Finish workout' }).click();
+    await expect(page.getByLabel('Bodyweight (kg)')).toBeVisible();
+    await expectTouchTargets(page);
+    await page.getByLabel('Bodyweight (kg)').fill('80');
+    await page.getByRole('button', { name: 'Save and finish workout' }).click();
+    await checkScreen(page, 'reveal', () =>
+      expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible(),
+    );
+  });
+
+  test('the skills, collection, history and progress screens have no serious axe violations', async ({ page }) => {
+    test.setTimeout(150_000);
+    const username = uniqueUsername('a11y_log');
+    await register(page, username);
+    await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+    await grantItems(username, { rookie_belt: 1, grinder_scraps: 8 });
+    await openTab(page, 'Log');
+    await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+    const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
+    await expect(workouts).toHaveCount(1);
+    const sessionPath = await workouts.first().getAttribute('href');
+    await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'Records' }).click();
+    const progressPath = await page.getByRole('link', { name: 'Barbell Bench Press progress' }).getAttribute('href');
+
+    await checkScreens(page, [
+      ['/skills', 'Skills'],
+      ['/collection', 'Collection log'],
+      ['/collection/items', 'Collection log'],
+      ['/collection/history', 'Collection log'],
+      [sessionPath!, null],
+      [progressPath!, 'Barbell Bench Press'],
+    ]);
+  });
+
+  test('the friends and profile screens have no serious axe violations', async ({ newPerson, page }) => {
+    test.setTimeout(150_000);
+    const username = uniqueUsername('a11y_fr');
+    await register(page, username);
+    const friendName = await befriend(await newPerson(), page, username);
+    await page.goto('/friends');
+    const friendPath = await page
+      .getByRole('list', { name: 'Friends list' })
+      .getByRole('link', { name: new RegExp(friendName) })
+      .getAttribute('href');
+
+    await checkScreens(page, [
+      ['/friends', 'Friends'],
+      ['/friends/hiscores', 'Friends'],
+      [friendPath!, null],
+      ['/profile', null],
+      ['/profile/edit', 'Edit profile'],
+      ['/profile/preview', null],
+    ]);
+  });
+
+  test('the exercises, programs and settings screens have no serious axe violations', async ({ page }) => {
+    test.setTimeout(150_000);
+    await register(page, uniqueUsername('a11y_set'));
+    const programPath = await createProgram(page);
+
+    await checkScreens(page, [
+      ['/exercises', 'Exercises'],
+      ['/programs', 'Programs'],
+      [programPath, null],
+      ['/profile/settings', 'Settings'],
+    ]);
+
+    for (const panel of ['Change email', 'Change password', 'Delete account']) {
+      const toggle = page.locator('button[aria-expanded]', { hasText: panel });
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      await checkScreen(page, `settings: ${panel}`, async () => undefined);
+    }
+
+    await page.getByRole('link', { name: 'Licenses' }).click();
+    await checkScreen(page, 'licenses', () => expect(page.getByRole('heading', { name: 'Licenses' })).toBeVisible());
+    await page.getByRole('link', { name: 'Back to Gainscape' }).click();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await signOut(page);
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  });
 });
 
 test('the program enrollment screens have no serious axe violations', async ({ page }) => {
