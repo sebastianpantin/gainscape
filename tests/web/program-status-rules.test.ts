@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { programLoadStatus, programStatusText } from '../../web/src/lib/program-status-rules.ts';
+import { offlineRefreshState, programLoadStatus, programStatusText } from '../../web/src/lib/program-status-rules.ts';
 
 describe('program load status', () => {
   it('shows the cache while a refresh runs when an enrollment is cached', () => {
@@ -42,5 +42,15 @@ describe('program status text', () => {
 
   it('shows no status text for a cached program', () => {
     expect(programStatusText('cached')).toBeNull();
+  });
+});
+
+describe('program refresh state while offline', () => {
+  it('trusts the saved cache as done when it was refreshed online before', () => {
+    expect(offlineRefreshState({ refreshed: true })).toBe('done');
+  });
+
+  it('is failed when the saved cache was never refreshed online', () => {
+    expect(offlineRefreshState({})).toBe('failed');
   });
 });

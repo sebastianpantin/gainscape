@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchProgramTemplates } from '../../lib/program-enrollment.ts';
 import { templateListEntries } from '../../lib/program-enroll-rules.ts';
+import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { readProgramCache, updateProgramCache } from '../../offline/program-cache.ts';
 
 interface PowerliftingProgramsProps {
@@ -14,11 +15,19 @@ export function PowerliftingPrograms({ userId }: PowerliftingProgramsProps) {
 
   useEffect(() => {
     let active = true;
-    fetchProgramTemplates().then(
-      (loaded) => {
-        updateProgramCache(localStorage, userId, (cache) => ({ ...cache, templates: loaded }));
-        if (active) setTemplates(loaded);
+    loadCacheFirstWhenOffline(
+      isDeviceOffline,
+      () => {
+        const saved = readProgramCache(localStorage, userId).templates;
+        return saved.length > 0 ? saved : null;
       },
+      async () => {
+        const loaded = await fetchProgramTemplates();
+        updateProgramCache(localStorage, userId, (cache) => ({ ...cache, templates: loaded }));
+        return loaded;
+      },
+    ).then(
+      ({ loaded }) => active && setTemplates(loaded),
       () => active && setFailed(true),
     );
     return () => {
