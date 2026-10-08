@@ -32,12 +32,12 @@ import { startDraftFromChallenge } from '../../offline/draft-format.ts';
 import {
   type ChallengeExerciseEntry,
   challengeExercisesOf,
-  loadItemsCacheFirstWhenOffline,
   OFFLINE_ITEMS_NOTICE,
   readItemsCache,
   saveItemsCache,
 } from '../../offline/items-cache.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
+import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { loadoutQueryKey, useLoadout } from '../profile/use-loadout.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
@@ -313,8 +313,8 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
       const found = loaded.catalog.items.filter((item) => loaded.held.has(item.id));
       setPickedId((found.find((item) => newIds.has(item.id)) ?? found[0])?.id ?? null);
     };
-    loadItemsCacheFirstWhenOffline(
-      () => navigator.onLine === false,
+    loadCacheFirstWhenOffline(
+      isDeviceOffline,
       () => loadItemsFromCache(userId),
       () => loadItemsOnline(userId),
     ).then(
