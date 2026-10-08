@@ -189,6 +189,21 @@ describe('catalog validation', () => {
     ],
     ['gear slots match GEAR_SLOTS', (c) => c.gearSlots.pop(), /gear slots \[.*\] must match GEAR_SLOTS/],
     [
+      'every gear slot skill exists in the catalog',
+      (c) => (find(c.skills, 'core').key = 'midsection'),
+      /gear slot "belt" boosts unknown skill "core"/,
+    ],
+    [
+      'every skill is boosted by some gear slot',
+      (c) => c.skills.push({ ...structuredClone(find(c.skills, 'core')), key: 'grip', name: 'Grip', sortOrder: 9 }),
+      /skill "grip" is boosted by no gear slot/,
+    ],
+    [
+      'a gear recipe consumes at most one gear item',
+      (c) => find(c.recipes, 'grinder_belt').inputs.push({ item: 'rookie_gloves', quantity: 1 }),
+      /recipe "grinder_belt" consumes 2 gear items, at most 1 allowed/,
+    ],
+    [
       'no denylisted term appears in a key',
       (c) => (find(c.items, 'plate_crab').key = 'rune_crab'),
       /"rune_crab" matches denylisted term "rune"/,

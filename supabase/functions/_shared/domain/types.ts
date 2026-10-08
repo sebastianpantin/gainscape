@@ -1,3 +1,5 @@
+import type { GearLoadout } from './gear.ts';
+
 export type LoadType = 'external' | 'bodyweight' | 'bodyweight_plus';
 export type EffortLevel = 'easy' | 'hard' | 'near_failure' | 'failure';
 export type EffortInputType = 'level' | 'rir' | 'rpe' | 'cardio';
@@ -104,6 +106,7 @@ export interface SessionInput {
   id: string;
   startedAt: string;
   sets: SetInput[];
+  gearLoadout?: GearLoadout | null;
 }
 
 export const REP_MAX_SLOT_COUNT = 10;
@@ -276,5 +279,6 @@ export interface SessionSummary {
   levelUps: LevelUp[];
   prs: PersonalRecordSummary[];
   drops: DropSummary[];
+  gearBonusBySkill?: Record<string, number>;
   historyOnly?: true;
 }

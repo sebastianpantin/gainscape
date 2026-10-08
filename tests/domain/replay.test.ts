@@ -21,7 +21,7 @@ import {
   strengthHistoryRows,
   type StrengthHistoryRow,
 } from '@domain/index.ts';
-import { catalog as fixtureCatalog, DAY_MS, HOUR_MS } from './fixtures.ts';
+import { aSet, catalog as fixtureCatalog, DAY_MS, hard, HOUR_MS, nearFailure, TEST_BALANCE } from './fixtures.ts';
 
 const cfg = DEFAULT_BALANCE;
 const HISTORY_START_MS = Date.parse('2026-01-01T06:00:00.000Z');
@@ -399,5 +399,27 @@ describe('replay budget', () => {
     const elapsedMs = performance.now() - startedAt;
     expect(replay.sessions).toHaveLength(14);
     expect(elapsedMs).toBeLessThan(200);
+  });
+});
+
+describe('replayHistory with gear snapshots', () => {
+  it('gives each session the bonus of its own stored loadout', () => {
+    const squats: SessionInput = {
+      id: 'squats',
+      startedAt: '2026-09-28T10:00:00Z',
+      sets: [0, 1, 2].map(() => aSet('squat', 100, 8, nearFailure)),
+      gearLoadout: { belt: 'ascendant' },
+    };
+    const bench: SessionInput = {
+      id: 'bench',
+      startedAt: '2026-09-29T10:00:00Z',
+      sets: [0, 1, 2].map(() => aSet('bench', 60, 8, hard)),
+      gearLoadout: { gloves: 'ascendant' },
+    };
+    const { sessions } = replayHistory([bench, squats], fixtureCatalog, TEST_BALANCE);
+    expect(sessions.map((entry) => [entry.session.id, entry.outputs.gearBonusBySkill])).toEqual([
+      ['squats', { legs: 5, core: 2 }],
+      ['bench', { chest: 6, shoulders: 2 }],
+    ]);
   });
 });

@@ -5,9 +5,13 @@ import {
   BodyweightRequiredError,
   cardioExercise,
   carriedEffectiveLoadKg,
+  type Catalog,
   type CardioSetInput,
   type EffortInput,
   type ExerciseDef,
+  GEAR_SLOTS,
+  gearBonusXp,
+  type GearLoadout,
   HISTORY_ONLY_STEPS,
   historyOnlySummary,
   KindMismatchError,
@@ -416,5 +420,147 @@ describe('session summaries', () => {
 
   it('starts a replayed session with its id and no drops', () => {
     expect(pendingSummary('session-1')).toEqual({ sessionId: 'session-1', drops: [] });
+  });
+});
+
+describe('gear bonus', () => {
+  const ascendantBelt: GearLoadout = { belt: 'ascendant' };
+  const fullAscendant: GearLoadout = Object.fromEntries(GEAR_SLOTS.map((slot) => [slot, 'ascendant']));
+  const withGear = (session: SessionInput, gearLoadout: GearLoadout | null | undefined): SessionInput => ({
+    ...session,
+    gearLoadout,
+  });
+
+  it('adds the belt bonus per skill on top of the split XP and reports it', () => {
+    const { nextState, outputs } = processSession(freshUser, withGear(fixtureSession, ascendantBelt), TEST_BALANCE, {
+      catalog,
+    });
+    expect(outputs.sets.map((result) => result.xp)).toEqual([30, 30, 30, 55, 55, 55]);
+    expect(outputs.xpBySkill).toEqual({ chest: 63, shoulders: 18, arms: 9, legs: 154, core: 18 });
+    expect(outputs.gearBonusBySkill).toEqual({ legs: 5, core: 2 });
+    expect(nextState.skillXp['skill-legs']).toBe(154);
+  });
+
+  it.each([undefined, null, {}])('leaves a session with gear loadout %j exactly as it was', (gearLoadout) => {
+    const gearless = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog });
+    const snapshot = processSession(freshUser, withGear(fixtureSession, gearLoadout), TEST_BALANCE, { catalog });
+    expect(snapshot).toEqual(gearless);
+    expect(snapshot.outputs.gearBonusBySkill).toBeUndefined();
+  });
+
+  describe('spreading the bonus over the sets', () => {
+    const legPressCatalog: Catalog = {
+      skills: catalog.skills,
+      exercises: new Map([
+        ...catalog.exercises,
+        [
+          'leg-press',
+          {
+            id: 'leg-press',
+            loadType: 'external',
+            builtIn: true,
+            shares: [{ skillId: 'skill-legs', shareBasisPoints: 10000 }],
+          },
+        ],
+      ]),
+    };
+    const flatCfg = { ...TEST_BALANCE, xpPerEffectiveRep: 25, intensityBonusStart: 2, intensityBonusFull: 3 };
+    const toFailure = { type: 'rir', value: 0 } as const;
+    const legPress = (reps: number, position: number) =>
+      aSet('leg-press', 100, reps, toFailure, { id: `press-${position}`, position });
+    const legsXpPerSet = (session: SessionInput) =>
+      processSession(freshUser, session, flatCfg, { catalog: legPressCatalog }).outputs.sets.map(
+        (result) => result.skillXp.find((part) => part.skillId === 'skill-legs')?.xp,
+      );
+
+    it('splits in proportion to each set and gives the leftover to the largest remainders', () => {
+      const session: SessionInput = {
+        id: 'spread',
+        startedAt: '2026-09-28T10:00:00Z',
+        sets: [legPress(4, 1), legPress(2, 2), legPress(2, 3)],
+      };
+      expect(legsXpPerSet(session)).toEqual([100, 50, 50]);
+      expect(legsXpPerSet(withGear(session, ascendantBelt))).toEqual([103, 52, 52]);
+    });
+
+    it('breaks a remainder tie toward the lower set position', () => {
+      const session: SessionInput = {
+        id: 'tie',
+        startedAt: '2026-09-28T10:00:00Z',
+        sets: [legPress(2, 7), legPress(2, 3)],
+      };
+      expect(legsXpPerSet(session)).toEqual([50, 50]);
+      expect(legsXpPerSet(withGear(session, ascendantBelt))).toEqual([52, 51]);
+    });
+  });
+
+  it('applies to cardio XP as well', () => {
+    const session: SessionInput = {
+      id: 'run',
+      startedAt: '2026-09-28T10:00:00Z',
+      sets: [aBout('run', 1800, { type: 'cardio', level: 'hard' })],
+    };
+    const gearless = processSession(freshUser, session, TEST_BALANCE, { catalog });
+    const geared = processSession(freshUser, withGear(session, fullAscendant), TEST_BALANCE, { catalog });
+    const enduranceBase = gearless.outputs.xpBySkill.endurance;
+    expect(enduranceBase).toBeGreaterThan(0);
+    expect(geared.outputs.gearBonusBySkill).toEqual({ endurance: Math.round(enduranceBase / 10) });
+    expect(geared.outputs.xpBySkill.endurance).toBe(enduranceBase + Math.round(enduranceBase / 10));
+  });
+
+  it('never reports more bonus than the skill gained under the XP cap', () => {
+    const nearCap = { skillXp: { 'skill-legs': TEST_BALANCE.maxXp - 3 }, bodyweightKg: null };
+    const { outputs } = processSession(nearCap, withGear(fixtureSession, ascendantBelt), TEST_BALANCE, { catalog });
+    expect(outputs.xpBySkill.legs).toBe(3);
+    expect(outputs.gearBonusBySkill).toEqual({ legs: 3, core: 2 });
+  });
+
+  it('never lowers XP, matches gearBonusXp per skill and is deterministic', () => {
+    const lift = fc.record({
+      exerciseId: fc.constantFrom('bench', 'squat', 'custom-press'),
+      weightKg: fc.integer({ min: 0, max: 160 }),
+      reps: fc.integer({ min: 1, max: 20 }),
+      isWarmup: fc.boolean(),
+      effort: fc.constantFrom<EffortInput>(null, hard, nearFailure, { type: 'rir', value: 2 }),
+    });
+    const bout = fc.record({
+      exerciseId: fc.constantFrom('run', 'sprints', 'row-intervals'),
+      durationS: fc.integer({ min: 60, max: 7200 }),
+      effort: fc.constantFrom<EffortInput>(null, { type: 'cardio', level: 'hard' }),
+    });
+    const loadout = fc.dictionary(
+      fc.constantFrom(...GEAR_SLOTS),
+      fc.constantFrom('rookie', 'grinder', 'tempered', 'forged', 'titan', 'mythic', 'ascendant' as const),
+    );
+    fc.assert(
+      fc.property(
+        fc.array(lift, { maxLength: 10 }),
+        fc.array(bout, { maxLength: 3 }),
+        loadout,
+        (lifts, bouts, gear) => {
+          const sets: SessionInput['sets'] = [
+            ...lifts.map((entry, index) => ({ ...entry, id: `lift-${index}`, position: index })),
+            ...bouts.map((entry, index) => ({
+              ...entry,
+              kind: 'cardio' as const,
+              id: `bout-${index}`,
+              position: 100 + index,
+              distanceM: null,
+              interval: null,
+            })),
+          ];
+          const session: SessionInput = { id: 'property', startedAt: '2026-09-28T10:00:00Z', sets };
+          const gearless = processSession(freshUser, session, TEST_BALANCE, { catalog });
+          const geared = processSession(freshUser, withGear(session, gear), TEST_BALANCE, { catalog });
+          expect(processSession(freshUser, withGear(session, gear), TEST_BALANCE, { catalog })).toEqual(geared);
+          for (const skill of catalog.skills) {
+            const base = gearless.outputs.xpBySkill[skill.key] ?? 0;
+            const bonus = gearBonusXp(base, skill.key, gear, TEST_BALANCE);
+            expect(geared.outputs.xpBySkill[skill.key] ?? 0).toBe(base + bonus);
+            expect(geared.outputs.gearBonusBySkill?.[skill.key] ?? 0).toBe(bonus);
+          }
+        },
+      ),
+    );
   });
 });
