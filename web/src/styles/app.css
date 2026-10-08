@@ -219,6 +219,11 @@ a:hover {
   color: var(--color-text-muted);
 }
 
+.term-help-pair {
+  display: inline-flex;
+  align-items: center;
+}
+
 @supports not selector(:popover-open) {
   .term-help,
   .term-help-row {

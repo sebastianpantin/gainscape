@@ -6,6 +6,7 @@ import { ItemIcon, LevelUpIcon, SkillIcon, TrophyIcon } from '../../components/P
 import { fetchExercises, fetchSkills, fetchSkillXp } from '../../lib/catalog.ts';
 import type { Exercise, Skill } from '../../lib/catalog-rules.ts';
 import { formatXp, sessionXp } from '../../lib/format.ts';
+import { GLOSSARY } from '../../lib/glossary.ts';
 import { fetchSession } from '../../lib/history.ts';
 import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
@@ -92,7 +93,11 @@ function LootPanel({ drops, items }: { drops: readonly DropSummary[]; items: Loa
                 <ItemIcon kind={item?.icon ?? 'scraps'} color={item ? colorFor(item) : colorFor({ tier: null })} />
                 <span style={{ flex: 1 }}>{item?.name ?? 'Unknown item'}</span>
                 <span className="pixel">×{drop.quantity}</span>
-                {drop.source === 'pr' && <span className="accent-text tiny">PR</span>}
+                {drop.source === 'pr' && (
+                  <span className="accent-text tiny" role="img" aria-label={GLOSSARY.pr.name}>
+                    PR
+                  </span>
+                )}
               </li>
             );
           })}

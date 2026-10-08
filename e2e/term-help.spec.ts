@@ -1,7 +1,15 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { GLOSSARY } from '../web/src/lib/glossary.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
-import { logExercise, logWorkout, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import {
+  finishWorkout,
+  logExercise,
+  logWorkout,
+  openFromProfile,
+  openTab,
+  register,
+  uniqueUsername,
+} from './support/app.ts';
 import {
   FIVE_THREE_ONE_ONE_RMS_KG,
   fillProgramInputs,
@@ -211,4 +219,53 @@ test('an AMRAP set names its badge and explains AMRAP', async ({ page }) => {
   const help = helpButton(page, GLOSSARY.amrap.question);
   await help.click();
   await expect((await panelOf(page, help)).getByText(GLOSSARY.amrap.definition, { exact: true })).toBeVisible();
+});
+
+test('the 5/3/1 enroll form explains 1RM and training max, but not 5RM', async ({ page }) => {
+  await register(page, uniqueUsername('th_enr'));
+  await openEnrollForm(page, '5/3/1');
+  const startingWeights = page.getByRole('region', { name: 'Starting weights' });
+  await expect(helpButton(startingWeights, GLOSSARY.oneRm.question)).toBeVisible();
+  const help = helpButton(startingWeights, GLOSSARY.trainingMax.question);
+  await expect(help).toBeVisible();
+  await expect(helpButton(page, GLOSSARY.fiveRm.question)).toHaveCount(0);
+
+  await help.click();
+  await expect((await panelOf(page, help)).getByText(GLOSSARY.trainingMax.definition, { exact: true })).toBeVisible();
+});
+
+test('the manage program screen explains the training max beside its training weights', async ({ page }) => {
+  await register(page, uniqueUsername('th_mng'));
+  await openEnrollForm(page, '5/3/1');
+  await fillProgramInputs(page, FIVE_THREE_ONE_ONE_RMS_KG);
+  await startFollowing(page, '5/3/1');
+  await programToday(page, '5/3/1').getByRole('link', { name: 'Manage program', exact: true }).click();
+  const trainingWeights = page.getByRole('region', { name: 'Training weights' });
+  await expect(helpButton(trainingWeights, GLOSSARY.trainingMax.question)).toBeVisible();
+  await expect(page.getByLabel('Squat training max (kg)', { exact: true })).toBeVisible();
+});
+
+test('a logged lift explains e1RM and rep maxes on its progress screen', async ({ page }) => {
+  await register(page, uniqueUsername('th_prg'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', BENCH, [{ weightKg: 60, reps: 5 }]);
+  await finishWorkout(page);
+  await openTab(page, 'Log');
+  await page.getByRole('link', { name: `${BENCH} progress` }).click();
+  await expect(page.getByRole('heading', { level: 1, name: BENCH })).toBeVisible();
+
+  await expect(helpButton(page, GLOSSARY.repMax.question)).toBeVisible();
+  const help = helpButton(page, GLOSSARY.e1rm.question);
+  await help.click();
+  await expect((await panelOf(page, help)).getByText(GLOSSARY.e1rm.definition, { exact: true })).toBeVisible();
+});
+
+test('an unlogged lift explains rep maxes but not e1RM on its progress screen', async ({ page }) => {
+  await startBenchWorkout(page, 'th_npg', 'Simple');
+  await page.getByRole('link', { name: `${BENCH} progress` }).click();
+  await expect(page.getByRole('heading', { level: 1, name: BENCH })).toBeVisible();
+  await expect(page.getByText('Log this exercise to see your progress.')).toBeVisible();
+
+  await expect(helpButton(page, GLOSSARY.repMax.question)).toBeVisible();
+  await expect(page.getByRole('button', { name: /^What is e1RM/ })).toHaveCount(0);
 });
