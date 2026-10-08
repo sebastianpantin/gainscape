@@ -10,6 +10,7 @@ import { useStanding } from '../../lib/standing.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
 import { formatHeight, formatWeight } from '../../lib/units.ts';
 import { BodyweightTrend } from './BodyweightTrend.tsx';
+import { LoadoutPanel } from './LoadoutPanel.tsx';
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileCard } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
@@ -90,6 +91,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         combatLevel={levels?.combatLevel ?? null}
         collectionPercent={collection.data ?? null}
       />
+      <LoadoutPanel userId={userId} />
       <section className="panel stack" aria-labelledby="body-heading">
         <div className="row spread">
           <h2 id="body-heading">Body</h2>

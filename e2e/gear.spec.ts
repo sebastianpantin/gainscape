@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './support/people.ts';
 import {
   definitionOf,
   logExercise,
@@ -72,4 +73,35 @@ test('the reveal and the workout detail show the gear bonus only with gear equip
 
   await openLatestWorkout(page);
   await expect(page.getByText(/^includes Gear bonus \+\d+ XP$/)).toBeVisible();
+});
+
+async function expectRookieBeltInLoadout(page: Page) {
+  await expect(definitionOf(page.getByRole('region', { name: 'Loadout' }), 'Belt')).toHaveText('Rookie belt');
+}
+
+test('the loadout shows on your profile, the friend preview and a friend profile', async ({ newPerson, page }) => {
+  const username = uniqueUsername('gear_pro');
+  await register(page, username);
+  await grantItems(username, { rookie_belt: 1 });
+  await equipGear(username, 'rookie_belt');
+
+  await openTab(page, 'Profile');
+  await expectRookieBeltInLoadout(page);
+  await page.getByRole('link', { name: 'Preview what friends see' }).click();
+  await expectRookieBeltInLoadout(page);
+
+  const friend = await newPerson();
+  const friendName = uniqueUsername('gear_fr');
+  await register(friend, friendName);
+  await openTab(page, 'Friends');
+  await page.getByLabel('Add a friend by exact username').fill(friendName);
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByRole('status')).toHaveText(`Request sent to ${friendName}`);
+  await openTab(friend, 'Friends');
+  await friend.getByRole('button', { name: 'Accept' }).click();
+  await friend
+    .getByRole('list', { name: 'Friends list' })
+    .getByRole('link', { name: new RegExp(username) })
+    .click();
+  await expectRookieBeltInLoadout(friend);
 });
