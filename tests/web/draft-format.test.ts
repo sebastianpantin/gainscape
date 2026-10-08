@@ -10,6 +10,7 @@ import {
   firstWorkingSet,
   type LiftDraftExercise,
   nextUpdatedAt,
+  markAllSetsDone,
   notDoneSetCount,
   parseStoredDraft,
   programLabelFor,
@@ -609,6 +610,14 @@ describe('cardio drafts', () => {
   it('counts done and planned bouts like sets', () => {
     expect(doneSetCount(mixedWorkout())).toBe(5);
     expect(notDoneSetCount(mixedWorkout())).toBe(3);
+  });
+
+  it('marks every planned set and bout done, keeping everything else', () => {
+    const marked = markAllSetsDone(mixedWorkout());
+    expect(notDoneSetCount(marked)).toBe(0);
+    expect(doneSetCount(marked)).toBe(8);
+    const allDone = mixedWorkout().exercises.map((exercise) => exercise.sets.map((set) => ({ ...set, done: true })));
+    expect(marked.exercises.map((exercise) => exercise.sets)).toEqual(allDone);
   });
 
   it('leaves cardio exercises alone when checking load types', () => {

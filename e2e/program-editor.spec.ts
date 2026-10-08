@@ -1,13 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import {
-  finishWorkout,
-  openFromProfile,
-  openTab,
-  readSession,
-  readStoredDraft,
-  register,
-  uniqueUsername,
-} from './support/app.ts';
+import { openFromProfile, openTab, readSession, readStoredDraft, register, uniqueUsername } from './support/app.ts';
 import { programCount, programPlanOf, sessionRow, setCount } from './support/db.ts';
 
 function day(page: Page, position: number) {
@@ -117,16 +109,22 @@ test('delete a program through the confirmation and keep the workout logged from
 
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Upper / Lower — Upper' }).click();
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  const nothingTicked = page.getByRole('dialog', { name: '18 planned sets not done' });
+  await expect(nothingTicked.getByRole('button', { name: 'Mark done and finish' })).toBeVisible();
+  await expect(nothingTicked.getByRole('button', { name: 'Finish without them' })).toHaveCount(0);
+  await nothingTicked.getByRole('button', { name: 'Cancel' }).click();
+  await expect(nothingTicked).toHaveCount(0);
   await page.locator('li.set-row').first().getByRole('radio', { name: 'Hard' }).click();
-  let skipWarning = '';
-  page.once('dialog', (dialog) => {
-    skipWarning = dialog.message();
-    return dialog.accept();
-  });
-  await finishWorkout(page);
-  expect(skipWarning).toBe('17 planned sets not done will be skipped');
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await page
+    .getByRole('dialog', { name: '17 planned sets not done' })
+    .getByRole('button', { name: 'Mark done and finish' })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
   const sessionId = (await readStoredDraft(page, user.id))!.syncedSessionId!;
   expect((await sessionRow(sessionId)).program_day_id).not.toBeNull();
+  expect(await setCount(sessionId)).toBe(18);
 
   await openFromProfile(page, 'Programs');
   let confirmation = '';
@@ -139,7 +137,7 @@ test('delete a program through the confirmation and keep the workout logged from
   expect(confirmation).toBe('Delete Upper / Lower? Past workouts keep their sets.');
   expect(await programCount(username)).toBe(0);
   expect((await sessionRow(sessionId)).program_day_id).toBeNull();
-  expect(await setCount(sessionId)).toBe(1);
+  expect(await setCount(sessionId)).toBe(18);
 
   await openTab(page, 'Train');
   await expect(page.getByText('No programs yet.')).toBeVisible();
