@@ -263,3 +263,26 @@ test('an unrated set outlines the effort the app assumes from your strength unti
   await expect(row.getByRole('radio', { name: 'Easy' })).toHaveAttribute('aria-checked', 'true');
   await expect(row.getByRole('radio', { name: 'Hard' })).toHaveAccessibleDescription('');
 });
+
+test('a lift fills to sets × reps in one go, every set done', async ({ page }) => {
+  await register(page, uniqueUsername('qf'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await page.getByLabel('Search exercises').fill('squat');
+  await page.getByRole('button', { name: /^Back Squat\b/ }).click();
+  const squat = page.locator('section', { has: page.getByRole('heading', { name: 'Back Squat', exact: true }) });
+  await squat.getByRole('spinbutton', { name: 'kg', exact: true }).fill('80');
+
+  const quickFill = squat.getByRole('group', { name: 'Quick fill' });
+  await quickFill.getByRole('spinbutton', { name: 'sets' }).fill('3');
+  await quickFill.getByRole('spinbutton', { name: 'reps' }).fill('8');
+  await quickFill.getByRole('button', { name: 'Fill' }).click();
+
+  const rows = squat.locator('li.set-row');
+  await expect(rows).toHaveCount(3);
+  for (const [index, row] of (await rows.all()).entries()) {
+    await expect(row.getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('80');
+    await expect(row.getByRole('spinbutton', { name: 'reps', exact: true })).toHaveValue('8');
+    await expect(row.getByRole('button', { name: `Done set ${index + 1}` })).toHaveAttribute('aria-pressed', 'true');
+  }
+  await expect(quickFill).toHaveCount(0);
+});

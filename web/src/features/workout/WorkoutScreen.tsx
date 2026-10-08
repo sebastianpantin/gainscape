@@ -43,7 +43,10 @@ import {
   canSwapExercise,
   doneSetCount,
   firstWorkingSet,
-  markAllSetsDone,
+  canQuickFill,
+  fillWorkingSets,
+  markPlannedSetsDone,
+  plannedSetsLeftToLifter,
   notDoneSetCount,
   removeExercise,
   removeSet,
@@ -78,6 +81,7 @@ import { useActiveProgram } from '../programs/use-active-program.ts';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { ProgramSummary } from './ProgramSummary.tsx';
 import { ProgramToday } from './ProgramToday.tsx';
+import { QuickFill } from './QuickFill.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { useFinishSync } from './use-finish-sync.ts';
@@ -86,7 +90,7 @@ import { useRecentLiftSessions } from './use-recent-lift-sessions.ts';
 import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
 import { useWakeLock } from './use-wake-lock.ts';
-import { rejectionText, stalledSyncText, syncProblemText } from './workout-rules.ts';
+import { canFinishWorkout, finishPrompt, rejectionText, stalledSyncText, syncProblemText } from './workout-rules.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
 import { vibrateNewRecord } from './record-haptic.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
@@ -96,6 +100,8 @@ interface WorkoutScreenProps {
 }
 
 const LOAD_TYPE_CHECK_TIMEOUT_MS = 5000;
+const DEFAULT_QUICK_FILL_SETS = 3;
+const DEFAULT_QUICK_FILL_REPS = 8;
 
 async function currentLoadTypes(draft: WorkoutDraft, exercises: Exercise[]): Promise<Map<string, LoadType>> {
   const builtInIds = new Set(exercises.filter((exercise) => !exercise.custom).map((exercise) => exercise.id));
@@ -132,7 +138,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const offline = useIsOffline();
   const [finishProblem, setFinishProblem] = useState<string | null>(null);
   const [checkingFinish, setCheckingFinish] = useState(false);
-  const [confirmingFinish, setConfirmingFinish] = useState(false);
+  const [finishPromptFor, setFinishPromptFor] = useState<WorkoutDraft | null>(null);
   const [startingDay, setStartingDay] = useState(false);
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
@@ -446,13 +452,20 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     );
   }
 
+  const finishCounts = {
+    done: doneSetCount(draft),
+    planned: notDoneSetCount(draft),
+    leftToLifter: plannedSetsLeftToLifter(draft),
+  };
+  const prompt = finishPrompt(finishCounts);
+
   const finish = () => {
-    if (notDoneSetCount(draft) > 0) setConfirmingFinish(true);
+    if (prompt) setFinishPromptFor(draft);
     else void completeFinish(false);
   };
 
   const completeFinish = async (markPlannedDone: boolean) => {
-    setConfirmingFinish(false);
+    setFinishPromptFor(null);
     setCheckingFinish(true);
     setFinishProblem(null);
     const loadTypes = await currentLoadTypes(draft, exercises);
@@ -460,16 +473,17 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     let changedNames: string[] = [];
     updateDraft((latest) => {
       if (latest.sessionId !== draft.sessionId || latest.finishedAt) return latest;
-      const checked = withCurrentLoadTypes(markPlannedDone ? markAllSetsDone(latest) : latest, loadTypes);
+      const checked = withCurrentLoadTypes(latest, loadTypes);
       changedNames = checked.changedNames;
-      return changedNames.length > 0 ? checked.draft : { ...checked.draft, finishedAt: new Date().toISOString() };
+      if (changedNames.length > 0) return checked.draft;
+      const logged = markPlannedDone ? markPlannedSetsDone(checked.draft) : checked.draft;
+      return { ...logged, finishedAt: new Date().toISOString() };
     });
     if (changedNames.length > 0) setFinishProblem(`Load type of ${changedNames.join(', ')} changed; check the weights`);
     else rest.stop();
   };
 
-  const plannedSets = notDoneSetCount(draft);
-  const canFinish = doneSetCount(draft) + plannedSets > 0 && !checkingFinish;
+  const canFinish = canFinishWorkout(finishCounts) && !checkingFinish;
   const roomForBouts = canAddBout(
     draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
   );
@@ -710,6 +724,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             <button className="button dashed" type="button" onClick={() => changeDraft(addSet(draft, exerciseIndex))}>
               + Add set
             </button>
+            {canQuickFill(exercise) && (
+              <QuickFill
+                key={`${exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS}x${workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS}`}
+                defaultSets={exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS}
+                defaultReps={workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS}
+                onFill={(sets, reps) => changeDraft(fillWorkingSets(draft, exerciseIndex, sets, reps))}
+              />
+            )}
           </section>
         );
       })}
@@ -743,23 +765,19 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </button>
         <span className="muted tiny">~ and new records are previews, confirmed when the workout syncs.</span>
       </div>
-      {confirmingFinish && (
+      {prompt && finishPromptFor === draft && (
         <ConfirmDialog
-          title={`${plannedSets} planned ${plannedSets === 1 ? 'set' : 'sets'} not done`}
-          confirmLabel="Mark done and finish"
+          title={prompt.title}
+          confirmLabel={prompt.confirm.label}
           alternative={
-            doneSetCount(draft) > 0
-              ? { label: 'Finish without them', onChoose: () => void completeFinish(false) }
+            prompt.alternative
+              ? { label: prompt.alternative.label, onChoose: () => void completeFinish(false) }
               : undefined
           }
-          onConfirm={() => void completeFinish(true)}
-          onCancel={() => setConfirmingFinish(false)}
+          onConfirm={() => void completeFinish(prompt.confirm.marksPlannedDone)}
+          onCancel={() => setFinishPromptFor(null)}
         >
-          <p>
-            {doneSetCount(draft) > 0
-              ? 'Log them as done, or keep only the sets you ticked.'
-              : 'No set is ticked yet. Log the planned sets as done?'}
-          </p>
+          {prompt.body && <p>{prompt.body}</p>}
         </ConfirmDialog>
       )}
     </main>

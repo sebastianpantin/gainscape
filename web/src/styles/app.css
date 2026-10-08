@@ -727,6 +727,34 @@ a:focus-visible {
   text-align: center;
 }
 
+.quick-fill {
+  display: flex;
+  align-items: end;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border: 1px dashed var(--color-panel-border);
+}
+
+.quick-fill legend {
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+}
+
+.quick-fill .compact-field {
+  width: 64px;
+}
+
+.quick-fill > span {
+  padding-bottom: var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.quick-fill > .button {
+  margin-left: auto;
+}
+
 .set-markers {
   grid-area: markers;
   display: flex;

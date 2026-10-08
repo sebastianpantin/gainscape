@@ -31,9 +31,10 @@ describe('assumedEffort', () => {
     expect(assumedEffort('rir', 9, levelRir)).toEqual({ type: 'rir', value: 6 });
   });
 
-  it('picks RPE 10 minus the estimate, never below RPE 6', () => {
+  it('picks RPE 10 minus the estimate, and none when that falls below the lowest RPE choice', () => {
     expect(assumedEffort('rpe', 2, levelRir)).toEqual({ type: 'rpe', value: 8 });
-    expect(assumedEffort('rpe', 7, levelRir)).toEqual({ type: 'rpe', value: 6 });
+    expect(assumedEffort('rpe', 4, levelRir)).toEqual({ type: 'rpe', value: 6 });
+    expect(assumedEffort('rpe', 5, levelRir)).toBeNull();
   });
 
   it('picks the nearest effort level, the easier one on a tie', () => {

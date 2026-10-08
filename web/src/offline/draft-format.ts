@@ -1,4 +1,4 @@
-import { type Position, type PrescribedExercise, type PrescriptionSnapshot } from '@domain/index.ts';
+import { isRetestRef, type Position, type PrescribedExercise, type PrescriptionSnapshot } from '@domain/index.ts';
 import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
 import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
 import { isSessionRpe } from '../lib/session-timing-rules.ts';
@@ -560,11 +560,46 @@ export function toggleSetDone(draft: WorkoutDraft, exerciseIndex: number, setId:
   );
 }
 
-export function markAllSetsDone(draft: WorkoutDraft): WorkoutDraft {
+const MOST_WORKING_SETS_TO_QUICK_FILL = 1;
+
+export function canQuickFill(exercise: LiftDraftExercise): boolean {
+  if (exercise.sets.some((set) => set.prescription)) return false;
+  return exercise.sets.filter((set) => !set.isWarmup).length <= MOST_WORKING_SETS_TO_QUICK_FILL;
+}
+
+export function fillWorkingSets(draft: WorkoutDraft, exerciseIndex: number, count: number, reps: number): WorkoutDraft {
+  return updateExerciseAt(draft, exerciseIndex, (exercise) => {
+    if (exercise.modality === 'cardio' || !canQuickFill(exercise)) return exercise;
+    const workingSets = exercise.sets.filter((set) => !set.isWarmup);
+    const filled = exercise.sets.map((set) => (set.isWarmup ? set : { ...set, reps, done: true }));
+    const { weightKg } = nextSetValues(workingSets.at(-1), exercise.loadType);
+    const added = Array.from({ length: Math.max(0, count - workingSets.length) }, (): DraftSet => ({
+      id: crypto.randomUUID(),
+      weightKg,
+      reps,
+      effort: null,
+      done: true,
+      isWarmup: false,
+      prescription: null,
+    }));
+    return { ...exercise, sets: [...filled, ...added] };
+  });
+}
+
+function isLeftToLifter(set: DraftSet | CardioDraftSet): boolean {
+  if ('kind' in set || set.done) return false;
+  return Boolean(set.prescriptionDetail?.optional) || (set.prescription ? isRetestRef(set.prescription.ref) : false);
+}
+
+export function plannedSetsLeftToLifter(draft: WorkoutDraft): number {
+  return draft.exercises.reduce((count, exercise) => count + exercise.sets.filter(isLeftToLifter).length, 0);
+}
+
+export function markPlannedSetsDone(draft: WorkoutDraft): WorkoutDraft {
   return {
     ...draft,
     exercises: draft.exercises.map((exercise) =>
-      withSets(exercise, (sets) => sets.map((set) => ({ ...set, done: true }))),
+      withSets(exercise, (sets) => sets.map((set) => (isLeftToLifter(set) ? set : { ...set, done: true }))),
     ),
   };
 }
