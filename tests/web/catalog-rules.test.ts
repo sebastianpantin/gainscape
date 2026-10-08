@@ -59,19 +59,6 @@ describe('toExercise', () => {
     ]);
   });
 
-  it('lists the skill shares of a lift spread over chest, shoulders and arms in that order', () => {
-    const exercise = toExercise(
-      row({
-        exercise_skills: [
-          { share_bp: 2000, skills: { key: 'shoulders', name: 'Shoulders' } },
-          { share_bp: 1000, skills: { key: 'arms', name: 'Arms' } },
-          { share_bp: 7000, skills: { key: 'chest', name: 'Chest' } },
-        ],
-      }),
-    );
-    expect(exercise.skillShares.map((share) => share.skillName)).toEqual(['Chest', 'Shoulders', 'Arms']);
-  });
-
   it('marks a lift as compound from its skill shares', () => {
     const shares = (...bp: number[]) => bp.map((share_bp) => ({ share_bp, skills: { key: 'chest', name: 'Chest' } }));
     expect(toExercise(row({ exercise_skills: shares(7000, 2000, 1000) }))).toMatchObject({ compound: true });

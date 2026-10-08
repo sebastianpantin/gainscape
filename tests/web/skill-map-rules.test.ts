@@ -54,9 +54,7 @@ describe('pickerRowDetail', () => {
   });
 
   it('shows no skills and no separator for an exercise without shares', () => {
-    const detail = pickerRowDetail(lift('Old', []));
-    expect(detail).toEqual({ kind: 'barbell', skills: null });
-    expect(detail.kind).not.toContain('·');
+    expect(pickerRowDetail(lift('Old', []))).toEqual({ kind: 'barbell', skills: null });
   });
 
   it('keeps the labels of an archived custom exercise in the kind', () => {
