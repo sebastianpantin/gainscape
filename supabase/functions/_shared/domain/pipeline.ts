@@ -260,7 +260,7 @@ const awardSessionBonuses: Step = (ctx) => {
     const baseXp = parts.reduce((sum, part) => sum + part.xp, 0);
     const gear = gearBonusXp(baseXp, skillKey, loadout, ctx.cfg);
     const challengeBonus = challengeVerdict?.passed ? challengeBonusXp(baseXp, ctx.cfg) : 0;
-    if (baseXp === 0 || gear + challengeBonus === 0) continue;
+    if (gear + challengeBonus === 0) continue;
     spreadBonus(parts, baseXp, gear + challengeBonus);
     bonusXpBySkill[skillKey] = { baseXp, gear, challenge: challengeBonus };
   }
