@@ -47,6 +47,7 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
         modality: 'lift',
         loadType: 'external',
         target: null,
+        supersetId: null,
         sets: [
           {
             id: 'set-a',
@@ -66,6 +67,7 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
         modality: 'lift',
         loadType: 'external',
         target: { sets: 3, repsMin: 8, repsMax: 12 },
+        supersetId: null,
         sets: [
           { id: 'set-c', weightKg: 50, reps: 10, effort: null, done: false, isWarmup: false, prescription: null },
           {
@@ -87,6 +89,10 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
 
 function withoutModality(value: object): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'modality'));
+}
+
+function withoutSupersetId(value: object): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'supersetId'));
 }
 
 function liftsOf(draft: WorkoutDraft | null | undefined): LiftDraftExercise[] {
@@ -229,6 +235,79 @@ describe('parseStoredDraft', () => {
       { type: 'rir', value: 2 },
       { type: 'rpe', value: 8.5 },
     ]);
+  });
+
+  describe('superset groups', () => {
+    function parsedLifts(exercises: unknown[]): LiftDraftExercise[] {
+      const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft: { ...workout(), exercises } };
+      const parsed = parseStoredDraft(raw, userId);
+      return liftsOf(parsed?.kind === 'draft' ? parsed.draft : null);
+    }
+
+    function bareLift(exerciseId: string, supersetId?: unknown): Record<string, unknown> {
+      const base = { exerciseId, name: exerciseId, modality: 'lift', loadType: 'external', target: null, sets: [] };
+      return supersetId === undefined ? base : { ...base, supersetId };
+    }
+
+    it('gives a v5 draft without supersetId a null supersetId on every lift', () => {
+      const [bench, row] = liftsOf(workout());
+      const stored = [bench, row].map(withoutSupersetId);
+      const parsed = parseStoredDraft(
+        { v: 5, kind: 'draft', userId, updatedAt: 5, draft: { ...workout(), exercises: stored } },
+        userId,
+      );
+      expect(parsed).toMatchObject({ v: 5 });
+      expect(liftsOf(parsed?.kind === 'draft' ? parsed.draft : null).map((lift) => lift.supersetId)).toEqual([
+        null,
+        null,
+      ]);
+    });
+
+    it('keeps a group of adjacent lifts', () => {
+      expect(
+        parsedLifts([bareLift('a', 'g'), bareLift('b', 'g'), bareLift('c', 'h')]).map((l) => l.supersetId),
+      ).toEqual(['g', 'g', null]);
+    });
+
+    it('resets a group with one member', () => {
+      expect(parsedLifts([bareLift('a', 'g'), bareLift('b', null)]).map((l) => l.supersetId)).toEqual([null, null]);
+    });
+
+    it('resets every member of an id that repeats without being adjacent', () => {
+      const lifts = parsedLifts([bareLift('a', 'g'), bareLift('b', 'g'), bareLift('c', null), bareLift('d', 'g')]);
+      expect(lifts.map((l) => l.supersetId)).toEqual([null, null, null, null]);
+    });
+
+    it.each([7, true, {}, ['g']])('reads a supersetId of %j as null', (supersetId) => {
+      expect(parsedLifts([bareLift('a', supersetId), bareLift('b', supersetId)]).map((l) => l.supersetId)).toEqual([
+        null,
+        null,
+      ]);
+    });
+
+    it('never groups a cardio exercise', () => {
+      const cardioWithGroup = {
+        exerciseId: 'run',
+        name: 'Run',
+        modality: 'cardio',
+        activity: 'run',
+        sets: [],
+        supersetId: 'g',
+      };
+      const raw = {
+        v: 5,
+        kind: 'draft',
+        userId,
+        updatedAt: 5,
+        draft: { ...workout(), exercises: [bareLift('a', 'g'), cardioWithGroup] },
+      };
+      const parsed = parseStoredDraft(raw, userId);
+      const exercises = parsed?.kind === 'draft' ? parsed.draft.exercises : [];
+      expect(exercises.map((exercise) => ('supersetId' in exercise ? exercise.supersetId : 'absent'))).toEqual([
+        null,
+        'absent',
+      ]);
+    });
   });
 
   it('rejects unknown future versions', () => {
@@ -753,5 +832,11 @@ describe('fillWorkingSets', () => {
     const programDraft = workout({ exercises: [{ ...lift, sets: [prescribed] }] });
     expect(canQuickFill(liftAt(programDraft, 0))).toBe(false);
     expect(fillWorkingSets(programDraft, 0, 3, 8)).toEqual(programDraft);
+  });
+
+  it('does not quick fill a lift that is part of a superset', () => {
+    const grouped = { ...liftAt(freshBench(), 0), supersetId: 'g' };
+    expect(canQuickFill(grouped)).toBe(false);
+    expect(fillWorkingSets(workout({ exercises: [grouped] }), 0, 3, 8).exercises).toEqual([grouped]);
   });
 });
