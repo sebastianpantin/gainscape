@@ -5,7 +5,9 @@ import {
   challengeBonusXp,
   type ChallengeDefinition,
   challengeE1rmSnapshot,
+  challengeLoadExerciseIds,
   challengeRunFromStored,
+  challengeTargetLoadsKg,
   DEFAULT_BALANCE,
   e1rmAtSessionStart,
   type E1rmSnapshot,
@@ -308,6 +310,22 @@ describe('e1rmAtSessionStart and challengeE1rmSnapshot', () => {
     expect(challengeE1rmSnapshot(squatCentury, strength)).toEqual({ squat: 110 });
     expect(challengeE1rmSnapshot(tenTonDay, strength)).toEqual({});
     expect(challengeE1rmSnapshot(squatCentury, {})).toEqual({ squat: null });
+  });
+});
+
+describe('challengeLoadExerciseIds and challengeTargetLoadsKg', () => {
+  it('lists the exercises that carry a load percent', () => {
+    expect(challengeLoadExerciseIds(deadliftAndPullUp)).toEqual(['deadlift']);
+    expect(challengeLoadExerciseIds(squatCentury)).toEqual(['squat']);
+    expect(challengeLoadExerciseIds(tenTonDay)).toEqual([]);
+  });
+
+  it('gives the judge floor of every snapshot exercise, or null without an e1RM', () => {
+    const run = { challengeId: 'c', key: 'k', name: 'n', definition: deadliftAndPullUp };
+    expect(challengeTargetLoadsKg({ ...run, e1rmKg: { deadlift: 140 } })).toEqual({ deadlift: 97.5 });
+    expect(challengeTargetLoadsKg({ ...run, e1rmKg: { deadlift: 150 } })).toEqual({ deadlift: 105 });
+    expect(challengeTargetLoadsKg({ ...run, e1rmKg: { deadlift: null } })).toEqual({ deadlift: null });
+    expect(challengeTargetLoadsKg({ ...run, definition: tenTonDay, e1rmKg: {} })).toEqual({});
   });
 });
 
