@@ -10,7 +10,11 @@ import {
   firstWorkingSet,
   type LiftDraftExercise,
   nextUpdatedAt,
+  canQuickFill,
+  fillWorkingSets,
+  markPlannedSetsDone,
   notDoneSetCount,
+  plannedSetsLeftToLifter,
   parseStoredDraft,
   programLabelFor,
   removeSet,
@@ -21,6 +25,7 @@ import {
   updateSet,
   withCurrentLoadTypes,
   withSessionRpe,
+  type DraftSet,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
@@ -611,6 +616,46 @@ describe('cardio drafts', () => {
     expect(notDoneSetCount(mixedWorkout())).toBe(3);
   });
 
+  it('marks every planned set and bout done, keeping everything else', () => {
+    const marked = markPlannedSetsDone(mixedWorkout());
+    expect(notDoneSetCount(marked)).toBe(0);
+    expect(doneSetCount(marked)).toBe(8);
+    const allDone = mixedWorkout().exercises.map((exercise) => exercise.sets.map((set) => ({ ...set, done: true })));
+    expect(marked.exercises.map((exercise) => exercise.sets)).toEqual(allDone);
+  });
+
+  it('leaves a 5RM test and optional sets for the lifter to log, since their numbers are only placeholders', () => {
+    const snapshot = { weightKg: 60, reps: 5, minReps: null, amrap: false };
+    const planned = (id: string, extra: Partial<DraftSet>): DraftSet => ({
+      id,
+      weightKg: 60,
+      reps: 5,
+      effort: null,
+      done: false,
+      isWarmup: false,
+      ...extra,
+    });
+    const retest = planned('retest', { prescription: { ...snapshot, ref: 't1:retest' } });
+    const optional = planned('optional', {
+      prescription: { ...snapshot, ref: 't3-1' },
+      prescriptionDetail: { pct: null, optional: true },
+    });
+    const working = planned('working', {
+      prescription: { ...snapshot, ref: 't1-1' },
+      prescriptionDetail: { pct: 0.85, optional: false },
+    });
+    const bench = workout().exercises[0];
+    if (bench.modality !== 'lift') throw new Error('expected a lift');
+    const draft = workout({ exercises: [{ ...bench, sets: [retest, optional, working] }] });
+    expect(plannedSetsLeftToLifter(draft)).toBe(2);
+    const marked = markPlannedSetsDone(draft);
+    expect(marked.exercises[0].sets.map((set) => [set.id, set.done])).toEqual([
+      ['retest', false],
+      ['optional', false],
+      ['working', true],
+    ]);
+  });
+
   it('leaves cardio exercises alone when checking load types', () => {
     const checked = withCurrentLoadTypes(mixedWorkout(), new Map([['run', 'bodyweight']]));
     expect(checked).toEqual({ draft: mixedWorkout(), changedNames: [] });
@@ -660,5 +705,53 @@ describe('completeSessionPayload with cardio', () => {
       ['set-d', 3],
       ['set-e', 4],
     ]);
+  });
+});
+
+describe('fillWorkingSets', () => {
+  const liftAt = (draft: WorkoutDraft, index: number) => {
+    const exercise = draft.exercises[index];
+    if (exercise.modality !== 'lift') throw new Error('expected a lift');
+    return exercise;
+  };
+  const freshBench = () => {
+    const lift = liftAt(workout(), 0);
+    return workout({ exercises: [{ ...lift, sets: [lift.sets[0]] }] });
+  };
+
+  it('turns a fresh lift into the count of done sets at its weight and the reps', () => {
+    const filled = liftAt(fillWorkingSets(freshBench(), 0, 3, 5), 0);
+    expect(filled.sets.map(({ id, weightKg, reps, done, effort }) => ({ id, weightKg, reps, done, effort }))).toEqual([
+      { id: 'set-a', weightKg: 60, reps: 5, done: true, effort: { type: 'level', level: 'hard' } },
+      { id: expect.any(String), weightKg: 60, reps: 5, done: true, effort: null },
+      { id: expect.any(String), weightKg: 60, reps: 5, done: true, effort: null },
+    ]);
+    expect(new Set(filled.sets.map((set) => set.id)).size).toBe(3);
+  });
+
+  it('leaves warm-ups alone and starts an empty lift at the default weight', () => {
+    const warmup = { id: 'w', weightKg: 20, reps: 10, effort: null, done: false, isWarmup: true, prescription: null };
+    const draft = workout({ exercises: [{ ...liftAt(workout(), 0), sets: [warmup] }] });
+    const sets = liftAt(fillWorkingSets(draft, 0, 3, 8), 0).sets;
+    expect(sets[0]).toEqual(warmup);
+    expect(sets.slice(1).map(({ weightKg, reps, done, isWarmup }) => [weightKg, reps, done, isWarmup])).toEqual([
+      [20, 8, true, false],
+      [20, 8, true, false],
+      [20, 8, true, false],
+    ]);
+  });
+
+  it('only fills a fresh freestyle lift, so logged sets and program sets stay as they are', () => {
+    expect(canQuickFill(liftAt(freshBench(), 0))).toBe(true);
+    expect(canQuickFill(liftAt(workout(), 0))).toBe(false);
+    expect(fillWorkingSets(workout(), 0, 3, 5)).toEqual(workout());
+    const lift = liftAt(freshBench(), 0);
+    const prescribed = {
+      ...lift.sets[0],
+      prescription: { ref: 't1-1', weightKg: 60, reps: 3, minReps: null, amrap: true },
+    };
+    const programDraft = workout({ exercises: [{ ...lift, sets: [prescribed] }] });
+    expect(canQuickFill(liftAt(programDraft, 0))).toBe(false);
+    expect(fillWorkingSets(programDraft, 0, 3, 8)).toEqual(programDraft);
   });
 });

@@ -1,7 +1,8 @@
 import { type ReactNode, useId, useState } from 'react';
-import type { SetPersonalRecord } from '@domain/index.ts';
+import { DEFAULT_BALANCE, type SetPersonalRecord } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
+import { assumedEffort } from '../../lib/effort-labels.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
 import {
   HIGHEST_REPS,
@@ -19,6 +20,7 @@ import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { PlateCalculator } from './PlateCalculator.tsx';
+import { PlateChips } from './PlateChips.tsx';
 import { recordChipLabel, recordChipText } from './record-preview.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
@@ -31,7 +33,7 @@ interface SetRowProps {
   unit: UnitPref;
   effortMode: EffortInputMode;
   markers: readonly string[];
-  barbell: { plates: string; setup: DraftBarbellSetup } | null;
+  barbell: { plates: number[]; text: string; setup: DraftBarbellSetup } | null;
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   onRemove: () => void;
   onToggleDone: () => void;
@@ -158,6 +160,7 @@ export function SetRow({
   const calculatorId = useId();
   const amrapBadge = amrapBadgeOf(set.prescription);
   const marked = markers.length > 0 || barbell !== null;
+  const estimatedRir = preview.basis === 'estimated' ? preview.rir : null;
   const rowClass = [
     'set-row',
     'stepped',
@@ -220,10 +223,14 @@ export function SetRow({
               className="plate-marker"
               aria-expanded={calculatorOpen}
               aria-controls={calculatorId}
-              aria-label={`${barbell.plates}, plate calculator, set ${setNumber}`}
+              aria-label={`${barbell.text}, plate calculator, set ${setNumber}`}
               onClick={() => setCalculatorOpen((open) => !open)}
             >
-              {barbell.plates}
+              <PlateChips plates={barbell.plates} unit={unit} />
+              <span className="plate-text">{barbell.text}</span>
+              <span className="plate-toggle" aria-hidden="true">
+                {calculatorOpen ? '▴' : '▾'}
+              </span>
             </button>
           )}
         </span>
@@ -245,6 +252,7 @@ export function SetRow({
       <EffortSelector
         mode={effortMode}
         selected={set.effort}
+        assumed={estimatedRir === null ? null : assumedEffort(effortMode, estimatedRir, DEFAULT_BALANCE.effortLevelRir)}
         onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}
       />
     </li>

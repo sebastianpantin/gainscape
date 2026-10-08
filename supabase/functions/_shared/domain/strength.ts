@@ -261,7 +261,7 @@ export const trackStrength: Step = (ctx: SessionContext) => {
     const bonus =
       repsModel || decision.rirFlagged
         ? 1
-        : intensityBonus(result.set.reps, result.effectiveLoadKg, strengthBefore, ctx.cfg);
+        : intensityBonus(result.set.reps, result.effectiveLoadKg, strengthBefore ?? candidate, ctx.cfg);
     return {
       ...result,
       rir: decision.rir,

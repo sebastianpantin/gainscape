@@ -20,6 +20,7 @@ async function writeNote(page: Page, name: string, text: string) {
   await card.getByRole('button', { name: new RegExp(`^(Add|Edit) note for ${name}$`) }).click();
   await card.getByRole('textbox', { name: `Note for ${name}` }).fill(text);
   await card.getByRole('button', { name: 'Save note' }).click();
+  await expect(card.getByRole('textbox', { name: `Note for ${name}` })).toHaveCount(0);
 }
 
 test('an exercise note sticks to the exercise across workouts and is edited inline', async ({ page }) => {
@@ -136,7 +137,9 @@ test('a note that fails to save keeps the text and says why', async ({ page }) =
       body: JSON.stringify({ code: 'PT429', message: 'rate_limited', details: '{"retryAfterSeconds": 600}' }),
     }),
   );
-  await writeNote(page, BENCH, 'Seat 4');
+  await card.getByRole('button', { name: `Add note for ${BENCH}` }).click();
+  await card.getByRole('textbox', { name: `Note for ${BENCH}` }).fill('Seat 4');
+  await card.getByRole('button', { name: 'Save note' }).click();
   await expect(card.getByRole('alert')).toHaveText('Too many changes in a short time. Try again in 10 min.');
   await expect(card.getByRole('textbox', { name: `Note for ${BENCH}` })).toHaveValue('Seat 4');
 });

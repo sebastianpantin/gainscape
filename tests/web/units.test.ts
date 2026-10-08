@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE } from '../../supabase/functions/_shared/domain/balance.ts';
 import {
   cmToFeetAndInches,
+  wholeNumberWithin,
   type DistanceUnit,
   distanceInUnit,
   distanceUnitFor,
@@ -191,5 +192,19 @@ describe('weight and reps steppers', () => {
     expect(steppedReps(5, -1)).toBe(4);
     expect(steppedReps(1, -1)).toBe(1);
     expect(steppedReps(100, 1)).toBe(100);
+  });
+});
+
+describe('wholeNumberWithin', () => {
+  it('reads a whole number inside the bounds', () => {
+    expect(wholeNumberWithin('3', 1, 20)).toBe(3);
+    expect(wholeNumberWithin(' 20 ', 1, 20)).toBe(20);
+  });
+
+  it('refuses blanks, fractions and numbers outside the bounds', () => {
+    expect(wholeNumberWithin('', 1, 20)).toBeNull();
+    expect(wholeNumberWithin('2.5', 1, 20)).toBeNull();
+    expect(wholeNumberWithin('0', 1, 20)).toBeNull();
+    expect(wholeNumberWithin('21', 1, 20)).toBeNull();
   });
 });
