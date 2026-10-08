@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatLoad, formatSessionDate, formatXp, sessionGearBonus, sessionXp } from '../../web/src/lib/format.ts';
+import {
+  formatLoad,
+  formatSessionDate,
+  formatXp,
+  sessionChallengeBonus,
+  sessionGearBonus,
+  sessionXp,
+} from '../../web/src/lib/format.ts';
 
 describe('formatLoad', () => {
   it('shows an external load in the chosen unit, kilograms by default', () => {
@@ -40,6 +47,17 @@ describe('sessionGearBonus', () => {
   it('is 0 for a summary without a gear bonus', () => {
     expect(sessionGearBonus({})).toBe(0);
     expect(sessionGearBonus({ gearBonusBySkill: {} })).toBe(0);
+  });
+});
+
+describe('sessionChallengeBonus', () => {
+  it('adds up the challenge bonus of every skill', () => {
+    expect(sessionChallengeBonus({ challengeBonusBySkill: { back: 250, arms: 14 } })).toBe(264);
+  });
+
+  it('is 0 for a summary without a challenge bonus', () => {
+    expect(sessionChallengeBonus({})).toBe(0);
+    expect(sessionChallengeBonus({ challengeBonusBySkill: {} })).toBe(0);
   });
 });
 

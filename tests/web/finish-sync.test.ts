@@ -69,6 +69,23 @@ describe('attemptFinish', () => {
     expect(current()).toMatchObject({ kind: 'synced', syncedSessionId: sessionId });
   });
 
+  it('hands the planned challenge of the draft on with the synced summary', async () => {
+    const plannedChallenge = {
+      challengeId: 'challenge-tt',
+      name: 'Ten-Ton Day',
+      definition: { kind: 'volume' as const, metric: 'kg' as const, target: 10000, exerciseId: null, minPct: null },
+      targetLoadsKg: {},
+    };
+    const finished = { ...workout(sessionId, finishedAt), challenge: plannedChallenge };
+    const { store } = slowWriteStore(draftRecord(userId, 1, finished));
+    const { result } = attemptWith(store);
+
+    expect(await result).toEqual({
+      kind: 'sent',
+      outcome: { ...synced, summary: { ...synced.summary, plannedChallenge } },
+    });
+  });
+
   it('is superseded without a POST when the session is already tombstoned', async () => {
     const { store } = slowWriteStore(syncedRecord(userId, 5, sessionId));
     const { result, send } = attemptWith(store);

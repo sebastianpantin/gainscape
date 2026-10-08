@@ -93,6 +93,7 @@ function programDraft(): WorkoutDraft {
     programDayId: null,
     programLabel: 'Madcow 5x5 — W1 Day 1',
     program: MADCOW_MONDAY,
+    challenge: null,
     exercises: [
       {
         exerciseId: 'squat',

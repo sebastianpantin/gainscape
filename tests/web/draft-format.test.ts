@@ -40,6 +40,7 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
     programDayId: null,
     programLabel: null,
     program: null,
+    challenge: null,
     exercises: [
       {
         exerciseId: 'bench',
@@ -307,6 +308,50 @@ describe('parseStoredDraft', () => {
         null,
         'absent',
       ]);
+    });
+  });
+
+  describe('challenge', () => {
+    const challenge = {
+      challengeId: 'challenge-dl',
+      name: 'Deadlift and Pull-up',
+      definition: {
+        kind: 'prescription',
+        groups: [
+          {
+            rounds: 5,
+            exercises: [
+              { exerciseId: 'deadlift', reps: 5, pct: 70 },
+              { exerciseId: 'pull_up', reps: 5, pct: null },
+            ],
+          },
+        ],
+      },
+      targetLoadsKg: { deadlift: 100, pull_up: null },
+    };
+
+    function parsedChallenge(draft: object) {
+      const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft }, userId);
+      return parsed?.kind === 'draft' ? parsed.draft.challenge : 'not parsed';
+    }
+
+    it('gives a v5 draft without a challenge a null challenge', () => {
+      const withoutChallenge = Object.fromEntries(Object.entries(workout()).filter(([key]) => key !== 'challenge'));
+      expect(parsedChallenge(withoutChallenge)).toBeNull();
+    });
+
+    it('keeps a challenge through a v5 parse', () => {
+      expect(parsedChallenge({ ...workout(), challenge })).toEqual(challenge);
+    });
+
+    it.each([
+      7,
+      'deadlift',
+      { ...challenge, challengeId: null },
+      { ...challenge, definition: { kind: 'timed' } },
+      { ...challenge, targetLoadsKg: [100] },
+    ])('reads a malformed challenge %j as null', (malformed) => {
+      expect(parsedChallenge({ ...workout(), challenge: malformed })).toBeNull();
     });
   });
 

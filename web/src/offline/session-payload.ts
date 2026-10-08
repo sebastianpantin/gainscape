@@ -38,6 +38,7 @@ export function completeSessionPayload(draft: WorkoutDraft) {
     sessionRpe: draft.sessionRpe ?? null,
     programDayId: draft.programDayId,
     program: draft.program ? { enrollmentId: draft.program.enrollmentId, position: draft.program.position } : null,
+    challenge: draft.challenge ? { challengeId: draft.challenge.challengeId } : null,
     sets,
   };
 }

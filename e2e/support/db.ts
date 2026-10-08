@@ -237,3 +237,13 @@ export async function equipGear(username: string, itemKey: string): Promise<void
     where p.username = ${username} and i.key = ${itemKey}
     on conflict (user_id, slot) do update set item_id = excluded.item_id`;
 }
+
+export async function scrollQuantity(username: string, key: string): Promise<number> {
+  const [row] = await db`
+    select coalesce(sum(u.quantity), 0)::int as quantity
+    from public.user_items u
+    join public.items i on i.id = u.item_id
+    join public.profiles p on p.id = u.user_id
+    where p.username = ${username} and i.key = ${key}`;
+  return row.quantity;
+}
