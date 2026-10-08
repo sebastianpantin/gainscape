@@ -24,26 +24,15 @@ const ROW = 'Barbell Row';
 
 type EffortMode = 'Simple' | 'RIR' | 'RPE';
 
-interface DocBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 function helpButton(scope: Page | Locator, question: string): Locator {
   return scope.getByRole('button', { name: question, exact: true });
-}
-
-function helpButtons(page: Page): Locator {
-  return page.getByRole('button', { name: /^What is / });
 }
 
 async function panelOf(page: Page, button: Locator): Promise<Locator> {
   return page.locator(`[id="${await button.getAttribute('aria-controls')}"]`);
 }
 
-async function docBox(locator: Locator): Promise<DocBox> {
+async function docBox(locator: Locator) {
   const box = await locator.boundingBox();
   if (box === null) throw new Error('element is not rendered');
   const scrollY = await locator.page().evaluate(() => window.scrollY);
@@ -150,7 +139,9 @@ test('logging and rating sets never moves or changes the workout help', async ({
   const heading = page.getByRole('heading', { name: BENCH, exact: true });
   const readHelpLayout = async () => ({
     boxes: [await docBox(help), await docBox(heading)],
-    names: await helpButtons(page).evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label'))),
+    names: await page
+      .getByRole('button', { name: /^What is / })
+      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label'))),
   });
   const before = await settled(readHelpLayout);
   expect(before.names).toEqual([GLOSSARY.rir.question, GLOSSARY.repMax.question, GLOSSARY.sessionRpe.question]);
