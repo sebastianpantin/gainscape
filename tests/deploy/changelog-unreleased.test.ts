@@ -97,9 +97,15 @@ describe('reading the first-parent log', () => {
     ]);
   });
 
+  it('reads the squash of a revert pull request as the revert pull request', () => {
+    const text = logRecord(SHA_A, [SHA_B], 'Revert "Show a What\'s new sheet (#70)" (#72)');
+    expect(parseFirstParentLog(text)).toEqual([
+      { kind: 'pr', number: 72, title: 'Revert "Show a What\'s new sheet (#70)"', sha: SHA_A },
+    ]);
+  });
+
   it.each([
-    ['a revert of a squash', [SHA_B], 'Revert "Show a What\'s new sheet (#70)"'],
-    ['the squash of a revert pull request', [SHA_B], 'Revert "Show a What\'s new sheet (#70)" (#72)'],
+    ['a revert of a squash pushed without a pull request', [SHA_B], 'Revert "Show a What\'s new sheet (#70)"'],
     ['a pull request number mid-subject', [SHA_B], 'Fix (#70) layout'],
     ['a two-parent commit with a squash-like subject', [SHA_B, SHA_C], 'Show a sheet (#70)'],
     ['a plain commit', [SHA_B], 'Fix typo'],

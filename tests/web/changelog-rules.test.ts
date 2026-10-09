@@ -81,14 +81,25 @@ describe('parsing the changelog', () => {
     expectProblem(withEntry(0, { items: ['Fine.', '   '] }), 1, 'items');
   });
 
+  it('rejects the same item twice in one release', () => {
+    expectProblem(withEntry(1, { items: ['Plate maths.', 'Bar picker.', 'Plate maths.'] }), 2, 'items');
+  });
+
+  it('accepts the same item in two releases', () => {
+    expect(() => parseChangelog(withEntry(0, { items: ['Plate maths.'] }))).not.toThrow();
+  });
+
   it('rejects an empty or blank title', () => {
     expectProblem(withEntry(1, { title: '' }), 2, 'title');
     expectProblem(withEntry(1, { title: '  ' }), 2, 'title');
   });
 
-  it.each([['2026-02-30'], ['2026-1-5'], [20261020], ['']])('rejects date %j', (date) => {
-    expectProblem(withEntry(1, { date }), 2, 'date');
-  });
+  it.each([['2026-02-30'], ['2026-13-01'], ['2026-12-32'], ['2026-1-5'], [20261020], ['']])(
+    'rejects date %j',
+    (date) => {
+      expectProblem(withEntry(1, { date }), 2, 'date');
+    },
+  );
 
   it('rejects a date later than the entry above it', () => {
     expectProblem(withEntry(1, { date: '2026-11-03' }), 2, 'date');

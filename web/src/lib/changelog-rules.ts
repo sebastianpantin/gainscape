@@ -52,7 +52,9 @@ export function compareVersions(left: string, right: string): number {
 }
 
 function isCalendarDate(text: string): boolean {
-  return DATE_PATTERN.test(text) && new Date(`${text}T00:00:00Z`).toISOString().startsWith(text);
+  if (!DATE_PATTERN.test(text)) return false;
+  const date = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(text);
 }
 
 function shapeProblems(raw: unknown, label: string): string[] {
@@ -70,6 +72,8 @@ function fieldProblems(entry: ChangelogEntry, label: string): string[] {
   if (!isCalendarDate(entry.date)) problems.push(`${label}: date ${entry.date} is not a YYYY-MM-DD calendar date`);
   const repeated = entry.prs.filter((pr, index) => entry.prs.indexOf(pr) !== index);
   if (repeated.length > 0) problems.push(`${label}: prs lists #${repeated[0]} more than once`);
+  const repeatedItem = entry.items.find((item, index) => entry.items.indexOf(item) !== index);
+  if (repeatedItem !== undefined) problems.push(`${label}: items lists ${JSON.stringify(repeatedItem)} more than once`);
   return problems;
 }
 

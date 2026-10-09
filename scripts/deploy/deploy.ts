@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { directCommitWarning, findUnreleased } from '../changelog/unreleased.ts';
+import { directCommitWarning, findUnreleased, gitIn } from '../changelog/unreleased.ts';
 import { buildPages } from './build-pages.ts';
 import {
   ask,
@@ -24,7 +24,7 @@ import {
 } from './rules.ts';
 
 function git(...args: string[]): string {
-  return execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim();
+  return gitIn(repoRoot, ...args);
 }
 
 function run(command: string, args: string[], env: Record<string, string>): void {
