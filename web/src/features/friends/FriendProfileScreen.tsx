@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchSkills } from '../../lib/catalog.ts';
@@ -50,6 +51,7 @@ export function FriendProfileScreen() {
 
 function FriendProfile({ friendId }: { friendId: string }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [state, setState] = useState<ViewState>(() =>
     isUuid(friendId) ? { status: 'loading' } : { status: 'missing' },
   );
@@ -78,6 +80,8 @@ function FriendProfile({ friendId }: { friendId: string }) {
     setRemoving(true);
     try {
       await removeFriend(friendId);
+      queryClient.removeQueries({ queryKey: ['friends'] });
+      queryClient.removeQueries({ queryKey: ['feed'] });
       navigate('/friends', { replace: true });
     } catch (error) {
       setProblem(messageOf(error, 'Could not remove this friend.'));

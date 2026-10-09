@@ -26,7 +26,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await register(bob, bobName);
 
   await openTab(alice, 'Friends');
-  await alice.getByLabel('Add a friend by exact username').fill(bobName);
+  await alice.getByLabel('Add a friend by exact username').fill(`@${bobName}`);
   await alice.getByRole('button', { name: 'Send' }).click();
   await expect(alice.getByRole('status')).toHaveText(`Request sent to ${bobName}`);
 
@@ -44,6 +44,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await expect(feedItem(alice, 'New Running record: 6 km · 36 min')).toBeVisible();
   const pr = feedItem(alice, 'New 5RM Barbell Bench Press: 80 kg');
   await expect(pr).toBeVisible();
+  await expect(pr).toContainText(`${bobName} @${bobName}`);
   const gzSaved = alice.waitForResponse((response) => response.url().includes('/rpc/set_gz') && response.ok());
   await pr.getByRole('button', { name: /Say gz to/ }).click();
   await gzSaved;
