@@ -11,7 +11,7 @@ import {
 import { signOutSettled } from '../../lib/auth-restore.ts';
 import { RATE_LIMITED_STATUS } from '../../lib/rate-limit.ts';
 import { supabase } from '../../lib/supabase.ts';
-import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
+import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
 
 type Mode = 'sign-in' | 'register' | 'check-email' | 'forgot' | 'reset-sent';
 
@@ -127,7 +127,7 @@ export function AuthScreen() {
 
   useEffect(() => {
     let active = true;
-    openDraftStoreAndReconcile()
+    openDraftStoreOrFallback()
       .then((store) => store.userIdsWithDrafts())
       .then((userIds) => active && setKeptWorkout(userIds.length > 0))
       .catch(() => undefined);

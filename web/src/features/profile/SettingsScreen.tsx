@@ -35,7 +35,7 @@ import {
   updatePrivateProfile,
   updatePublicProfile,
 } from '../../lib/profile.ts';
-import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
+import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
 import { forgetDraftOnDevice, hasDraftOnDevice } from '../../offline/local-drafts.ts';
 import { forgetItemsCache } from '../../offline/items-cache.ts';
 import { forgetProgramCache } from '../../offline/program-cache.ts';
@@ -74,11 +74,11 @@ async function forgetThisDevice(userId: string): Promise<void> {
   profileCache.forget(localStorage, userId);
   collectionCache.forget(localStorage, userId);
   forgetInstallCard(userId);
-  await forgetDraftOnDevice(await openDraftStoreAndReconcile(), deviceStorage(), userId);
+  await forgetDraftOnDevice(await openDraftStoreOrFallback(), deviceStorage(), userId);
 }
 
 async function hasUnsyncedDraftHere(userId: string): Promise<boolean> {
-  return hasDraftOnDevice(await openDraftStoreAndReconcile(), deviceStorage(), userId);
+  return hasDraftOnDevice(await openDraftStoreOrFallback(), deviceStorage(), userId);
 }
 
 async function signOut(userId: string, navigate: NavigateFunction): Promise<void> {

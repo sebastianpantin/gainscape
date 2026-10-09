@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { openDraftStore, openDraftStoreAndReconcile, openPrimaryDraftStore } from '../../web/src/offline/draft-boot.ts';
+import { openDraftStore, openDraftStoreOrFallback, openPrimaryDraftStore } from '../../web/src/offline/draft-boot.ts';
 import { draftRecord } from '../../web/src/offline/draft-format.ts';
 import {
   createIdbDraftStore,
@@ -137,12 +137,32 @@ describe('draft store boot', () => {
 
     vi.stubGlobal('indexedDB', unopenableIndexedDb);
     await expect(openPrimaryDraftStore()).rejects.toThrow();
-    expect(await (await openDraftStoreAndReconcile()).get(userId)).toBeNull();
+    expect(await (await openDraftStoreOrFallback()).get(userId)).toBeNull();
 
     vi.stubGlobal('indexedDB', indexedDB);
     expect(await (await openPrimaryDraftStore()).get(userId)).toMatchObject({
       kind: 'draft',
       draft: { sessionId: 'unsynced-in-idb' },
     });
+  });
+
+  it('remembers a failed IndexedDB open for the draft checks while the draft session keeps retrying', async () => {
+    vi.resetModules();
+    const boot = await import('../../web/src/offline/draft-boot.ts');
+    vi.useFakeTimers();
+    const open = vi.fn(() => ({}));
+    vi.stubGlobal('indexedDB', { open });
+    vi.stubGlobal('localStorage', new MemoryStorage());
+
+    const firstCheck = boot.openDraftStoreOrFallback();
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(await (await firstCheck).get(userId)).toBeNull();
+    expect(await (await boot.openDraftStoreOrFallback()).get(userId)).toBeNull();
+    expect(open).toHaveBeenCalledTimes(1);
+
+    const sessionOpen = expect(boot.openPrimaryDraftStore()).rejects.toThrow();
+    expect(open).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(2_000);
+    await sessionOpen;
   });
 });

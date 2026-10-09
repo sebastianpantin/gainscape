@@ -67,15 +67,18 @@ function browserIndexedDb(): IDBFactory | undefined {
 }
 
 let bootedStore: Promise<DraftStore> | null = null;
+let bootFailedThisLoad = false;
 
 export function openPrimaryDraftStore(): Promise<DraftStore> {
   bootedStore ??= openDraftStore({ indexedDB: browserIndexedDb(), storage: localStorage }).catch((error: unknown) => {
     bootedStore = null;
+    bootFailedThisLoad = true;
     throw error;
   });
   return bootedStore;
 }
 
-export function openDraftStoreAndReconcile(): Promise<DraftStore> {
+export async function openDraftStoreOrFallback(): Promise<DraftStore> {
+  if (bootFailedThisLoad && bootedStore === null) return createLocalDraftStore(localStorage);
   return openPrimaryDraftStore().catch(() => createLocalDraftStore(localStorage));
 }
