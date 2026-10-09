@@ -18,6 +18,11 @@ const MAX_NAME_LENGTH = 60;
 const FULL_SHARE_BP = 10000;
 const MAX_WEIGHT = 1_000_000;
 const MAX_QUANTITY = 1000;
+const MAX_PROGRAM_SETS = 10;
+const MAX_PROGRAM_REPS = 100;
+const MAX_DAY_EXERCISES = 20;
+const MAX_PROGRAM_DAYS = 14;
+const MAX_DAY_NAME_LENGTH = 40;
 const REQUIRED_TABLES = ['regular', 'rare'];
 
 export class CatalogValidationError extends Error {
@@ -112,6 +117,11 @@ function checkExercises(catalog: CatalogData, problems: string[]): void {
   for (const exercise of catalog.exercises) {
     checkModalityFields(exercise, problems);
     for (const share of exercise.shares) {
+      if (!inRange(share.shareBp, 1, FULL_SHARE_BP)) {
+        problems.push(
+          `exercise "${exercise.key}" share of skill "${share.skill}" must be an integer in 1-${FULL_SHARE_BP}`,
+        );
+      }
       const skill = skillsByKey.get(share.skill);
       if (skill === undefined) problems.push(`exercise "${exercise.key}" shares unknown skill "${share.skill}"`);
       else if (skill.modality !== exercise.modality) {
@@ -134,15 +144,33 @@ function checkExercises(catalog: CatalogData, problems: string[]): void {
 
 function checkProgramDays(catalog: CatalogData, problems: string[]): void {
   const exercisesByKey = exercisesByKeyOf(catalog);
+  for (const program of catalog.programs) {
+    if (program.days.length > MAX_PROGRAM_DAYS) {
+      problems.push(`program "${program.key}" has ${program.days.length} days, at most ${MAX_PROGRAM_DAYS} allowed`);
+    }
+  }
   for (const { program, day } of programDays(catalog)) {
-    for (const entry of day.exercises) {
+    const where = `program day "${program.key}:${day.key}"`;
+    if (day.name.length > MAX_DAY_NAME_LENGTH) {
+      problems.push(`${where} name must be at most ${MAX_DAY_NAME_LENGTH} characters`);
+    }
+    if (day.exercises.length > MAX_DAY_EXERCISES) {
+      problems.push(`${where} has ${day.exercises.length} exercises, at most ${MAX_DAY_EXERCISES} allowed`);
+    }
+    day.exercises.forEach((entry, index) => {
       const exercise = exercisesByKey.get(entry.exercise);
       if (exercise === undefined) {
-        problems.push(`program day "${program.key}:${day.key}" uses unknown exercise "${entry.exercise}"`);
+        problems.push(`${where} uses unknown exercise "${entry.exercise}"`);
       } else if (exercise.modality === 'cardio') {
-        problems.push(`program day "${program.key}:${day.key}" uses cardio exercise "${entry.exercise}"`);
+        problems.push(`${where} uses cardio exercise "${entry.exercise}"`);
       }
-    }
+      if (!inRange(entry.sets, 1, MAX_PROGRAM_SETS)) {
+        problems.push(`${where} exercise ${index + 1} needs 1-${MAX_PROGRAM_SETS} sets`);
+      }
+      if (!inRange(entry.repsMin, 1, MAX_PROGRAM_REPS) || !inRange(entry.repsMax, entry.repsMin, MAX_PROGRAM_REPS)) {
+        problems.push(`${where} exercise ${index + 1} needs 1 <= reps_min <= reps_max <= ${MAX_PROGRAM_REPS}`);
+      }
+    });
   }
 }
 
@@ -340,6 +368,9 @@ function checkDenylist(catalog: CatalogData, denylist: readonly string[], proble
 export function catalogProblems(catalog: CatalogData, denylist: readonly string[]): string[] {
   const problems: string[] = [];
   checkKeysAndNames('skill', catalog.skills, problems);
+  for (const sortOrder of duplicates(catalog.skills.map((skill) => String(skill.sortOrder)))) {
+    problems.push(`skill sort_order ${sortOrder} is not unique`);
+  }
   checkKeysAndNames('exercise', catalog.exercises, problems);
   checkKeysAndNames('program', catalog.programs, problems);
   for (const program of catalog.programs) checkKeysAndNames(`program ${program.key} day`, program.days, problems);
