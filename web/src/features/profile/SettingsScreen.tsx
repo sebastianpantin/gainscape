@@ -21,6 +21,7 @@ import { REST_CHOICES_S, REST_OFF, restClock, withChosenRest } from '../../lib/r
 import { deviceStorage, readRestState, saveRestState } from '../../lib/rest-timer-store.ts';
 import type { TrainingDeviceSettings } from '../../lib/training-device-rules.ts';
 import { readTrainingDeviceSettings, saveTrainingDeviceSettings } from '../../lib/training-device-store.ts';
+import { APP_VERSION } from '../whats-new/changelog-data.ts';
 import { askToNotify } from '../workout/rest-alert-effects.ts';
 import {
   changeTimezone,
@@ -574,7 +575,8 @@ function AppSection() {
       )}
       {install === 'ios_manual' && <p className="hint">In Safari, tap Share, then Add to Home Screen.</p>}
       {install === 'installed' && <p className="hint">Installed on this device.</p>}
-      <span>Version {__APP_VERSION__}</span>
+      <span>Version {APP_VERSION}</span>
+      <span className="muted tiny">Build {__APP_BUILD__}</span>
       <button className="button" type="button" disabled={!flow || checking} onClick={checkForUpdates}>
         Check for updates
       </button>

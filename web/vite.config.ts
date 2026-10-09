@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { readChangelog } from './build/changelog.ts';
 import { previewPort, webPort } from './build/ports.ts';
 import { serviceWorkerPlugin } from './build/service-worker-plugin.ts';
 
@@ -12,7 +13,7 @@ const supabaseProxy = {
   '/sb': { target: localSupabaseApi, changeOrigin: true, rewrite: (path: string) => path.replace(/^\/sb/, '') },
 };
 
-function appVersion(): string {
+function appBuild(): string {
   try {
     const commit = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
@@ -29,7 +30,7 @@ export default defineConfig({
   resolve: {
     alias: { '@domain': fileURLToPath(new URL('../supabase/functions/_shared/domain', import.meta.url)) },
   },
-  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
+  define: { __CHANGELOG__: JSON.stringify(readChangelog()), __APP_BUILD__: JSON.stringify(appBuild()) },
   server: {
     host: true,
     port: webPort(),
