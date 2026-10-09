@@ -29,9 +29,9 @@ export interface SessionTiming {
 export interface StoredSession extends SessionTiming {
   userId: string;
   summary: SessionSummary;
-  setIds: string[];
   completedAt: string;
   programLinked: boolean;
+  notes: string | null;
 }
 
 export interface ProgramLink {
@@ -74,22 +74,19 @@ export async function lockUser(
 
 export async function findSession(tx: Transaction, sessionId: string): Promise<StoredSession | null> {
   const [row] = await tx`
-    select s.user_id, s.summary, s.completed_at, s.enrollment_id, s.started_at, s.ended_at, s.session_rpe,
-           coalesce(array_agg(st.id order by st.id) filter (where st.id is not null), '{}') as set_ids
-    from public.sessions s
-    left join public.sets st on st.session_id = s.id
-    where s.id = ${sessionId}
-    group by s.id`;
+    select user_id, summary, completed_at, enrollment_id, started_at, ended_at, session_rpe, notes
+    from public.sessions
+    where id = ${sessionId}`;
   if (!row) return null;
   return {
     userId: row.user_id,
     summary: row.summary,
-    setIds: row.set_ids,
     completedAt: isoTimestamp(row.completed_at),
     programLinked: row.enrollment_id !== null,
     startedAt: isoTimestamp(row.started_at),
     endedAt: isoTimestamp(row.ended_at),
     sessionRpe: row.session_rpe,
+    notes: row.notes,
   };
 }
 

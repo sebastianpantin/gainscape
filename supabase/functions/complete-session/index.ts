@@ -7,6 +7,7 @@ import {
   DEFAULT_BALANCE,
   HISTORY_ONLY_STEPS,
   historyOnlySummary,
+  isNoOpEdit,
   isWithinEditWindow,
   pendingSummary,
   processSession,
@@ -31,6 +32,7 @@ import {
   insertSession,
   linkedProgram,
   loadProfileSettings,
+  loadStoredSets,
   lockUser,
   type NewSessionRow,
   ownedProgramDayId,
@@ -48,12 +50,15 @@ import {
 import { loadStrengthHistory } from '../_shared/stores/strength.ts';
 import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
 
-function warnIfResubmissionDiffers(stored: StoredSession, payload: CompleteSessionPayload): void {
-  const resubmittedSetIds = payload.sets.map((set) => set.id).sort();
-  const sameSets =
-    resubmittedSetIds.length === stored.setIds.length &&
-    resubmittedSetIds.every((id, index) => id === stored.setIds[index]);
-  if (!sameSets) console.warn(`session ${payload.id} re-submitted with different sets; returning the stored summary`);
+async function resubmissionDiffers(
+  tx: Transaction,
+  stored: StoredSession,
+  payload: CompleteSessionPayload,
+): Promise<boolean> {
+  if (payload.sessionRpe !== stored.sessionRpe) return true;
+  const storedSets = await loadStoredSets(tx, payload.id);
+  const storedById = new Map(storedSets.map((set) => [set.id, set]));
+  return !isNoOpEdit(payload, stored.notes, storedById, DEFAULT_BALANCE);
 }
 
 type WritableSession = Omit<SessionInput, 'sets'> & { sets: WritableSet[] };
@@ -63,6 +68,7 @@ type SnapshotsBySetId = ReadonlyMap<string, PrescriptionSnapshotColumns>;
 interface CompleteSessionResponse extends SessionSummary, SessionTiming {
   programLinked: boolean;
   completedAt: string;
+  storedContentDiffers?: true;
 }
 
 async function storeHistoryOnly(
@@ -146,8 +152,8 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
     const existing = await findSession(tx, payload.id);
     if (existing && existing.userId !== userId) throw new HttpError(409, 'session_id_conflict');
     if (existing) {
-      warnIfResubmissionDiffers(existing, payload);
-      return responseFor(existing, existing, existing.programLinked);
+      const stored = responseFor(existing, existing, existing.programLinked);
+      return (await resubmissionDiffers(tx, existing, payload)) ? { ...stored, storedContentDiffers: true } : stored;
     }
     const deletedBy = await tombstoneOwner(tx, payload.id);
     if (deletedBy === userId) throw new HttpError(410, 'session_deleted');

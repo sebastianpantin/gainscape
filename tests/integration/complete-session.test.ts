@@ -169,6 +169,56 @@ describe('complete-session with the fixture workout', () => {
   });
 });
 
+describe('complete-session resubmission with changed content', () => {
+  async function storedContent(sessionId: string) {
+    const [session] = await db`select notes, session_rpe, summary from public.sessions where id = ${sessionId}`;
+    const sets = await db`
+      select id, weight_kg::float, reps from public.sets where session_id = ${sessionId} order by position`;
+    return { session, sets };
+  }
+
+  it.each([
+    ['a changed weight', (sets: LiftSetBody[]) => ({ sets: [{ ...sets[0], weightKg: 72.5 }, ...sets.slice(1)] })],
+    ['an added set', (sets: LiftSetBody[]) => ({ sets: [...sets, { ...sets[2], id: randomUUID(), position: 3 }] })],
+    ['a removed set', (sets: LiftSetBody[]) => ({ sets: sets.slice(0, 2) })],
+    ['changed notes', () => ({ notes: 'second thoughts' })],
+    ['a changed session RPE', () => ({ sessionRpe: 9 })],
+  ])('keeps the stored session and flags the answer for %s', async (_label, change) => {
+    const user = await createTestUser();
+    const payload = { ...sessionPayload(threeSets(benchId, 0, 70, 'hard')), sessionRpe: 7 };
+    const first = await postCompleteSession(user.accessToken, payload);
+    expect(first.status, first.rawBody).toBe(200);
+    const before = await storedContent(payload.id);
+
+    const resubmitted = await postCompleteSession(user.accessToken, { ...payload, ...change(payload.sets) });
+    expect(resubmitted.status, resubmitted.rawBody).toBe(200);
+    expect(resubmitted.body).toEqual({ ...first.body, storedContentDiffers: true });
+    expect(await storedContent(payload.id)).toEqual(before);
+  });
+
+  it('does not flag an identical resubmission of a history-only session with cardio and unrated sets', async () => {
+    const user = await createTestUser();
+    const runId = await builtInExerciseId('running');
+    const payload = sessionPayload<LiftSetBody | BoutShape>(
+      [...threeSets(benchId, 0, 62.5, null), aBout(runId, 3, { distanceM: 5000 })],
+      8 * 24,
+    );
+    const first = await postCompleteSession(user.accessToken, payload);
+    expect(first.status, first.rawBody).toBe(200);
+    const resubmitted = await postCompleteSession(user.accessToken, payload);
+    expect(resubmitted.rawBody).toBe(first.rawBody);
+  });
+
+  it('does not flag a resubmission that differs only in its finish time', async () => {
+    const user = await createTestUser();
+    const payload = sessionPayload(threeSets(benchId, 0, 70, 'hard'));
+    const first = await postCompleteSession(user.accessToken, payload);
+    const later = new Date(Date.parse(payload.endedAt) + 5 * 60 * 1000).toISOString();
+    const resubmitted = await postCompleteSession(user.accessToken, { ...payload, endedAt: later });
+    expect(resubmitted.rawBody).toBe(first.rawBody);
+  });
+});
+
 describe('complete-session timing and session RPE', () => {
   async function storedTiming(sessionId: string) {
     const [row] = await db`select started_at, ended_at, session_rpe from public.sessions where id = ${sessionId}`;
