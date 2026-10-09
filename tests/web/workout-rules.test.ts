@@ -33,6 +33,12 @@ describe('stalledSyncText', () => {
       "The server keeps failing to save this workout (internal_error). It's saved on this device; try again later.",
     );
   });
+
+  it('asks to reload when another account is signed in', () => {
+    expect(stalledSyncText('wrong_account')).toBe(
+      "You are signed in as someone else in another tab. Reload the app to save this workout. It's saved on this device.",
+    );
+  });
 });
 
 describe('rejectionText', () => {

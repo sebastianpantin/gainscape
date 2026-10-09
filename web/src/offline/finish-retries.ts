@@ -12,7 +12,7 @@ export const MAX_CONSECUTIVE_SERVER_FAULTS = 5;
 export type SettledFinish =
   | { kind: 'superseded' }
   | { kind: 'not_finished' }
-  | { kind: 'sent'; outcome: Exclude<SendOutcome, { kind: 'retryable' }> };
+  | { kind: 'sent'; outcome: Exclude<SendOutcome, { kind: 'retryable' } | { kind: 'wrong_account' }> };
 
 export interface FinishRetryOptions {
   attemptOnce: (signal: AbortSignal) => Promise<FinishAttemptResult>;
@@ -47,6 +47,11 @@ export function startFinishRetries({ attemptOnce, retryDelayMs, show, settle }: 
         outcome: { kind: 'retryable', reason: messageOf(error, 'storage_error') },
       }));
       if (controller.signal.aborted || result.kind === 'aborted') return;
+      if (result.kind === 'sent' && result.outcome.kind === 'wrong_account') {
+        stalled = true;
+        show({ kind: 'stalled', reason: result.outcome.kind });
+        return;
+      }
       if (result.kind === 'sent' && result.outcome.kind === 'retryable') {
         consecutiveServerFaults = result.outcome.serverFault ? consecutiveServerFaults + 1 : 0;
         if (consecutiveServerFaults >= MAX_CONSECUTIVE_SERVER_FAULTS) {

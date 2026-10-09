@@ -3,6 +3,7 @@ import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
 const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
 const LONG_SYNC_WAIT_MS = 60_000;
 const MS_PER_SECOND = 1000;
+const WRONG_ACCOUNT_REASON = 'wrong_account';
 
 export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
   if (lastProblem !== RATE_LIMITED_CODE) {
@@ -15,6 +16,9 @@ export function syncProblemText(lastProblem: string, waitMs: number | undefined)
 }
 
 export function stalledSyncText(reason: string): string {
+  if (reason === WRONG_ACCOUNT_REASON) {
+    return "You are signed in as someone else in another tab. Reload the app to save this workout. It's saved on this device.";
+  }
   return `The server keeps failing to save this workout (${reason}). It's saved on this device; try again later.`;
 }
 
