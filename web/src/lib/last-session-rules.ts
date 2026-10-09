@@ -1,6 +1,7 @@
 import type { LoadType } from './catalog-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
-import { shownWeight } from './units.ts';
+import { formatLoad } from './format.ts';
+import { nullableNumber } from './rows.ts';
 import type { LastLoggedSet } from '../offline/draft-format.ts';
 
 export interface RecentLiftRow {
@@ -25,7 +26,7 @@ export function recentSessionsByExercise(rows: readonly RecentLiftRow[]): Map<st
     sets.push({
       weightKg: Number(row.weight_kg),
       reps: row.reps,
-      loggedRir: row.logged_rir === null ? null : Number(row.logged_rir),
+      loggedRir: nullableNumber(row.logged_rir),
     });
     byExercise.set(row.exercise_id, sessions);
   }
@@ -49,8 +50,7 @@ function repeatedRuns(sets: readonly LastLoggedSet[]): RepeatedSets[] {
 
 function loadText(weightKg: number, loadType: LoadType, unit: UnitPref): string {
   if (loadType === 'bodyweight' || weightKg === 0) return '';
-  const sign = loadType === 'bodyweight_plus' ? '+' : '';
-  return ` @ ${sign}${shownWeight(weightKg, unit)} ${unit}`;
+  return ` @ ${formatLoad(weightKg, loadType, unit)}`;
 }
 
 export function lastTimeText(
