@@ -8,7 +8,9 @@ import {
   formatUnreleased,
   isInternalPath,
   type MergedPr,
+  type ChangedCommit,
   parseFirstParentLog,
+  uncoveredDirectCommits,
   uncoveredPrs,
   unknownCoveredPrs,
 } from '../../scripts/changelog/unreleased.ts';
@@ -255,11 +257,53 @@ describe('direct commits', () => {
   });
 });
 
+describe('direct commits that change the app', () => {
+  function direct(sha: string, files: readonly string[], subject = 'Pushed'): ChangedCommit {
+    return { kind: 'direct', sha, subject, files };
+  }
+
+  it('lists a direct commit that touches a user-facing path when no changelog change came after it', () => {
+    expect(uncoveredDirectCommits([direct(SHA_A, ['web/src/App.tsx'], 'Rebased PR commit')])).toEqual([
+      { kind: 'direct', sha: SHA_A, subject: 'Rebased PR commit', files: ['web/src/App.tsx'] },
+    ]);
+  });
+
+  it('ignores a direct commit that touches only internal paths', () => {
+    expect(uncoveredDirectCommits([direct(SHA_A, ['README.md', 'tests/web/x.test.ts'])])).toEqual([]);
+  });
+
+  it('treats a later changelog change, from a pull request or a direct commit, as covering it', () => {
+    const changelogPr: ChangedCommit = { ...mergedPr(80, ['web/changelog.yaml']), sha: SHA_B };
+    expect(uncoveredDirectCommits([changelogPr, direct(SHA_A, ['web/src/App.tsx'])])).toEqual([]);
+    expect(
+      uncoveredDirectCommits([
+        direct(SHA_C, ['web/changelog.yaml'], 'Changelog: 0.4.0'),
+        direct(SHA_A, ['web/src/a.ts']),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('still lists a direct commit made after the latest changelog change', () => {
+    expect(
+      uncoveredDirectCommits([
+        direct(SHA_D, ['supabase/functions/x/index.ts']),
+        direct(SHA_C, ['web/changelog.yaml']),
+        direct(SHA_A, ['web/src/a.ts']),
+      ]).map((commit) => commit.sha),
+    ).toEqual([SHA_D]);
+  });
+
+  it('covers a direct commit that writes its own changelog entry', () => {
+    expect(uncoveredDirectCommits([direct(SHA_A, ['web/changelog.yaml', 'web/src/a.ts'])])).toEqual([]);
+  });
+});
+
 describe('the helper output', () => {
   it('lists each uncovered pull request with its files, then the direct-commit warnings', () => {
     expect(
       formatUnreleased({
         uncovered: [mergedPr(70, ['web/src/App.tsx', 'web/src/lib/x.ts'], "Show a What's new sheet")],
+        uncoveredDirect: [],
         direct: [{ kind: 'direct', sha: SHA_B, subject: 'Fix typo' }],
       }),
     ).toBe(
@@ -272,11 +316,33 @@ describe('the helper output', () => {
     );
   });
 
-  it('says every user-facing pull request is covered when none is left', () => {
-    expect(formatUnreleased({ uncovered: [], direct: [] })).toBe('Every user-facing PR is in the changelog.');
-    expect(formatUnreleased({ uncovered: [], direct: [{ kind: 'direct', sha: SHA_C, subject: 'Tidy' }] })).toBe(
-      'Every user-facing PR is in the changelog.\ndirect ccccccc Tidy (pushed without a PR; not blocking)',
+  it('lists the direct commits that change the app with their files, and stays quiet about coverage', () => {
+    expect(
+      formatUnreleased({
+        uncovered: [],
+        uncoveredDirect: [{ kind: 'direct', sha: SHA_D, subject: 'Rebased commit', files: ['web/src/a.ts'] }],
+        direct: [{ kind: 'direct', sha: SHA_C, subject: 'Tidy' }],
+      }),
+    ).toBe(
+      [
+        'direct ddddddd Rebased commit (pushed without a PR and changes the app; cover it in the next entry)',
+        '  web/src/a.ts',
+        'direct ccccccc Tidy (pushed without a PR; not blocking)',
+      ].join('\n'),
     );
+  });
+
+  it('says every user-facing pull request is covered when none is left', () => {
+    expect(formatUnreleased({ uncovered: [], uncoveredDirect: [], direct: [] })).toBe(
+      'Every user-facing PR is in the changelog.',
+    );
+    expect(
+      formatUnreleased({
+        uncovered: [],
+        uncoveredDirect: [],
+        direct: [{ kind: 'direct', sha: SHA_C, subject: 'Tidy' }],
+      }),
+    ).toBe('Every user-facing PR is in the changelog.\ndirect ccccccc Tidy (pushed without a PR; not blocking)');
   });
 });
 

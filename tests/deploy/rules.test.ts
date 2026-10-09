@@ -5,6 +5,7 @@ import {
   changelogProblem,
   childEnvironment,
   deployFileProblem,
+  directCommitsProblem,
   gitleaksAsset,
   inRepoDeployFiles,
   nativeSupabasePackages,
@@ -247,6 +248,29 @@ describe('changelog gate', () => {
   it('refuses covered numbers with no merged pull request', () => {
     expect(unknownPrsProblem([70, 71])).toBe(
       'web/changelog.yaml lists PRs that are not merged since the changelog began: #70, #71\nRemove them from prs (or wait for them to merge), merge that fix, then deploy again.',
+    );
+  });
+});
+
+describe('direct commits gate', () => {
+  it('passes when no direct commit changes the app', () => {
+    expect(directCommitsProblem([])).toBeNull();
+  });
+
+  it('names each direct commit that changes the app and says how to cover it', () => {
+    expect(
+      directCommitsProblem([
+        { sha: 'd'.repeat(40), subject: 'Add rest timer' },
+        { sha: 'e'.repeat(40), subject: 'Tweak rest timer' },
+      ]),
+    ).toBe(
+      [
+        '2 commits on main came without a merge or squash PR, change the app and are not in the changelog yet:',
+        'ddddddd Add rest timer',
+        'eeeeeee Tweak rest timer',
+        'Ask Claude to write the changelog (it covers commits made before it), merge that PR, then deploy again.',
+        'Merge PRs with a merge commit or a squash that keeps the (#N) subject, so the gate can see them.',
+      ].join('\n'),
     );
   });
 });

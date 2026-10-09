@@ -23,9 +23,16 @@ export interface MergedPr extends PrCommit {
   files: readonly string[];
 }
 
+export interface DirectChange extends DirectCommit {
+  files: readonly string[];
+}
+
+export type ChangedCommit = MergedPr | DirectChange;
+
 export interface Unreleased {
   uncovered: MergedPr[];
   unknown: number[];
+  uncoveredDirect: DirectChange[];
   direct: DirectCommit[];
 }
 
@@ -129,16 +136,37 @@ export function directCommits(commits: readonly FirstParentCommit[]): DirectComm
   return commits.filter((commit) => commit.kind === 'direct');
 }
 
+export function uncoveredDirectCommits(newestFirst: readonly ChangedCommit[]): DirectChange[] {
+  let changelogChangedSince = false;
+  const uncovered: DirectChange[] = [];
+  for (const commit of newestFirst) {
+    changelogChangedSince ||= commit.files.includes(CHANGELOG_FILE);
+    if (commit.kind === 'direct' && !changelogChangedSince && classifyPr(commit.files) === 'user-facing') {
+      uncovered.push(commit);
+    }
+  }
+  return uncovered;
+}
+
 export function directCommitWarning(commit: DirectCommit): string {
   return `direct ${commit.sha.slice(0, 7)} ${commit.subject} (pushed without a PR; not blocking)`;
 }
 
-export function formatUnreleased({ uncovered, direct }: Pick<Unreleased, 'uncovered' | 'direct'>): string {
-  const prLines =
-    uncovered.length === 0
-      ? ['Every user-facing PR is in the changelog.']
-      : uncovered.flatMap((pr) => [`#${pr.number} ${pr.title}`, ...pr.files.map((file) => `  ${file}`)]);
-  return [...prLines, ...direct.map(directCommitWarning)].join('\n');
+export function formatUnreleased({
+  uncovered,
+  uncoveredDirect,
+  direct,
+}: Pick<Unreleased, 'uncovered' | 'uncoveredDirect' | 'direct'>): string {
+  const prLines = uncovered.flatMap((pr) => [`#${pr.number} ${pr.title}`, ...pr.files.map((file) => `  ${file}`)]);
+  const directLines = uncoveredDirect.flatMap((commit) => [
+    `direct ${commit.sha.slice(0, 7)} ${commit.subject} (pushed without a PR and changes the app; cover it in the next entry)`,
+    ...commit.files.map((file) => `  ${file}`),
+  ]);
+  const coverage = [...prLines, ...directLines];
+  return [
+    ...(coverage.length === 0 ? ['Every user-facing PR is in the changelog.'] : coverage),
+    ...direct.map(directCommitWarning),
+  ].join('\n');
 }
 
 export function baseProblem({
@@ -175,12 +203,12 @@ export function findUnreleased(cwd: string): Unreleased {
   const commits = parseFirstParentLog(
     git('log', '--first-parent', `--format=${FIRST_PARENT_LOG_FORMAT}`, `${introducingSha}..HEAD`),
   );
-  const merged = commits
-    .filter((commit) => commit.kind === 'pr')
-    .map((commit) => ({
-      ...commit,
-      files: git('diff', '--name-only', '--no-renames', `${commit.sha}^1`, commit.sha).split('\n').filter(Boolean),
-    }));
+  const changed: ChangedCommit[] = commits.map((commit) => ({
+    ...commit,
+    files: git('diff', '--name-only', '--no-renames', `${commit.sha}^1`, commit.sha).split('\n').filter(Boolean),
+  }));
+  const merged = changed.filter((commit) => commit.kind === 'pr');
+  const uncoveredDirect = uncoveredDirectCommits(changed);
   const covered = coveredPrs(readChangelogEntries(join(cwd, CHANGELOG_FILE)));
   return {
     uncovered: uncoveredPrs(merged, covered),
@@ -188,7 +216,8 @@ export function findUnreleased(cwd: string): Unreleased {
       covered,
       merged.map((pr) => pr.number),
     ),
-    direct: directCommits(commits),
+    uncoveredDirect,
+    direct: directCommits(commits).filter((commit) => !uncoveredDirect.some((blocking) => blocking.sha === commit.sha)),
   };
 }
 

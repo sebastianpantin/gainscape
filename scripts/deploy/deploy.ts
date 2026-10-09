@@ -18,6 +18,7 @@ import {
   backupConfigProblems,
   changelogProblem,
   configuredSecrets,
+  directCommitsProblem,
   linkedRefProblem,
   releaseProblem,
   unknownPrsProblem,
@@ -50,9 +51,9 @@ await runCli(async () => {
     originMain: git('rev-parse', 'origin/main'),
   });
   if (release) throw new Error(release);
-  const { uncovered, unknown, direct } = findUnreleased(repoRoot);
+  const { uncovered, unknown, uncoveredDirect, direct } = findUnreleased(repoRoot);
   for (const commit of direct) console.log(directCommitWarning(commit));
-  const changelog = unknownPrsProblem(unknown) ?? changelogProblem(uncovered);
+  const changelog = unknownPrsProblem(unknown) ?? changelogProblem(uncovered) ?? directCommitsProblem(uncoveredDirect);
   if (changelog) throw new Error(changelog);
   const link = linkedRefProblem(config.SUPABASE_PROJECT_REF!, linkedRef());
   if (link) throw new Error(link);

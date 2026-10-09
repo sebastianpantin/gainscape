@@ -9,7 +9,7 @@ description: Write the next web/changelog.yaml entry for the user-facing PRs mer
 
 1. Run `git status --porcelain`. If it prints anything, stop and tell the user to commit or stash first.
 2. `git switch main && git pull && git switch -c changelog-<YYYY-MM-DD>` (today's date).
-3. Run `make changelog-unreleased`. It prints each uncovered PR as `#<n> <title>` with its files, then non-blocking `direct …` warnings. If it says `Every user-facing PR is in the changelog.`, tell the user and stop without writing anything.
+3. Run `make changelog-unreleased`. It prints each uncovered PR as `#<n> <title>` with its files, then each direct commit (pushed without a PR, such as a rebase merge) that changes the app as `direct <sha7> <subject> (… cover it in the next entry)` with its files, then non-blocking `direct …` warnings. A blocking direct commit has no PR number: describe it in the new entry's bullets; the entry covers it because any change to `web/changelog.yaml` made after it does. If it says `Every user-facing PR is in the changelog.`, tell the user and stop without writing anything.
 4. Put every uncovered PR number into `prs`, so none is left behind and deploy cannot deadlock. Read each PR's files (and `git show <sha>` if needed) to judge what users notice:
    - Write a bullet only for a change users can notice. A PR judged invisible is still covered, with no bullet.
    - Write 1-6 plain bullets in the app's voice. No PR numbers, file names or jargon. Merge related PRs into one bullet.
