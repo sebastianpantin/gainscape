@@ -107,3 +107,15 @@ export function wholeNumberWithin(raw: string, lowest: number, highest: number):
   if (raw.trim() === '' || !Number.isInteger(value) || value < lowest || value > highest) return null;
   return value;
 }
+
+export function parsedDecimal(raw: string): number | null {
+  const trimmed = raw.trim();
+  const value = Number(trimmed.replaceAll(',', '.'));
+  return trimmed === '' || !Number.isFinite(value) ? null : value;
+}
+
+export function typedNumberWithin(raw: string, lowest: number, highest: number, wholeNumber: boolean): number | null {
+  const value = parsedDecimal(raw);
+  if (value === null) return null;
+  return Math.min(highest, Math.max(lowest, wholeNumber ? Math.round(value) : value));
+}

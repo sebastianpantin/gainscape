@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE } from '../../supabase/functions/_shared/domain/balance.ts';
 import {
   cmToFeetAndInches,
+  parsedDecimal,
+  typedNumberWithin,
   wholeNumberWithin,
   type DistanceUnit,
   distanceInUnit,
@@ -206,5 +208,36 @@ describe('wholeNumberWithin', () => {
     expect(wholeNumberWithin('2.5', 1, 20)).toBeNull();
     expect(wholeNumberWithin('0', 1, 20)).toBeNull();
     expect(wholeNumberWithin('21', 1, 20)).toBeNull();
+  });
+});
+
+describe('parsedDecimal', () => {
+  it('reads a dot or a comma as the decimal separator', () => {
+    expect(parsedDecimal('62.5')).toBe(62.5);
+    expect(parsedDecimal('62,5')).toBe(62.5);
+    expect(parsedDecimal(' 80 ')).toBe(80);
+    expect(parsedDecimal('62.')).toBe(62);
+  });
+
+  it('is null for a blank or unreadable text', () => {
+    for (const raw of ['', '  ', '-', 'abc', '6,2,5']) expect(parsedDecimal(raw)).toBeNull();
+  });
+});
+
+describe('typedNumberWithin', () => {
+  it('reads a typed number and clamps it into the bounds', () => {
+    expect(typedNumberWithin('62,5', 0, 2000, false)).toBe(62.5);
+    expect(typedNumberWithin('2500', 0, 2000, false)).toBe(2000);
+    expect(typedNumberWithin('0', 1, 100, true)).toBe(1);
+  });
+
+  it('rounds a whole-number field', () => {
+    expect(typedNumberWithin('8.4', 1, 100, true)).toBe(8);
+    expect(typedNumberWithin('8,6', 1, 100, true)).toBe(9);
+  });
+
+  it('is null while the field is blank or unreadable', () => {
+    expect(typedNumberWithin('', 0, 2000, false)).toBeNull();
+    expect(typedNumberWithin('x', 1, 100, true)).toBeNull();
   });
 });
