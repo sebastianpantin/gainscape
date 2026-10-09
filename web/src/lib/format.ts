@@ -12,16 +12,20 @@ export function formatXp(xp: number): string {
   return xp.toLocaleString('en-US');
 }
 
+function totalXp(xpBySkill: Readonly<Record<string, number>> | undefined): number {
+  return Object.values(xpBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
+}
+
 export function sessionXp(summary: Pick<SessionSummary, 'xpBySkill'>): number {
-  return Object.values(summary.xpBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
+  return totalXp(summary.xpBySkill);
 }
 
 export function sessionGearBonus(summary: Pick<SessionSummary, 'gearBonusBySkill'>): number {
-  return Object.values(summary.gearBonusBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
+  return totalXp(summary.gearBonusBySkill);
 }
 
 export function sessionChallengeBonus(summary: Pick<SessionSummary, 'challengeBonusBySkill'>): number {
-  return Object.values(summary.challengeBonusBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
+  return totalXp(summary.challengeBonusBySkill);
 }
 
 export function formatSessionDate(localDate: string): string {

@@ -26,7 +26,7 @@ export const DEFAULT_INTERVAL: CardioInterval = Object.freeze({ workS: 30, restS
 export function boutModeChanges(bout: Pick<BoutValues, 'durationS' | 'interval'>, mode: BoutMode): Partial<BoutValues> {
   if ((bout.interval !== null) === (mode === 'intervals')) return {};
   if (mode === 'intervals') return { interval: DEFAULT_INTERVAL };
-  return { interval: null, durationS: clampedSteadyDurationS(boutDurationS(bout)) };
+  return { interval: null, durationS: clampedSteadyDurationS(boutDurationSeconds(bout)) };
 }
 const SECONDS_PER_HOUR = 3600;
 const STORED_DISTANCE_DECIMALS = 1;
@@ -88,12 +88,8 @@ export function distanceFromInput(value: number | null, unit: DistanceUnit): num
   return clampedDistanceM(unitToDistanceM(value, unit));
 }
 
-export function boutDurationS(bout: Pick<BoutValues, 'durationS' | 'interval'>): number {
-  return boutDurationSeconds(bout);
-}
-
 export function canAddBout(bouts: readonly Pick<BoutValues, 'durationS' | 'interval'>[]): boolean {
-  const totalS = bouts.reduce((sum, bout) => sum + boutDurationS(bout), 0);
+  const totalS = bouts.reduce((sum, bout) => sum + boutDurationSeconds(bout), 0);
   return totalS < CARDIO_BOUNDS.steadyDurationS.max;
 }
 
