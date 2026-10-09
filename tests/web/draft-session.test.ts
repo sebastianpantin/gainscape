@@ -60,6 +60,7 @@ function withReps(draft: WorkoutDraft, reps: number): WorkoutDraft {
     ...draft,
     exercises: [
       {
+        clientId: 'card-bench',
         exerciseId: 'bench',
         name: 'Bench',
         modality: 'lift',
@@ -150,6 +151,7 @@ describe('draft session', () => {
       ...workout('session-cardio'),
       exercises: [
         {
+          clientId: 'card-run',
           exerciseId: 'run',
           name: 'Running',
           modality: 'cardio',

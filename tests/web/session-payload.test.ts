@@ -64,6 +64,7 @@ describe('completeSessionPayload with a challenge', () => {
 describe('completeSessionPayload with supersets', () => {
   function lift(exerciseId: string, setIds: string[], supersetId: string | null): LiftDraftExercise {
     return {
+      clientId: `card-${exerciseId}`,
       exerciseId,
       name: exerciseId,
       modality: 'lift',

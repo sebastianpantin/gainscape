@@ -45,6 +45,7 @@ function programDraftAt(sessionId: string, position: Position, enrollmentId = EN
     program: { enrollmentId, position, templateKey: 'madcow_5x5' },
     exercises: [
       {
+        clientId: 'card-squat',
         exerciseId: 'squat',
         name: 'Squat',
         modality: 'lift',
@@ -60,6 +61,7 @@ function programDraftAt(sessionId: string, position: Position, enrollmentId = EN
         ],
       },
       {
+        clientId: 'card-run',
         exerciseId: 'run',
         name: 'Running',
         modality: 'cardio',

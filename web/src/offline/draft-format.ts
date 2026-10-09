@@ -61,6 +61,7 @@ export interface CardioDraftSet extends BoutValues {
 }
 
 export interface LiftDraftExercise {
+  clientId: string;
   exerciseId: string;
   name: string;
   modality: 'lift';
@@ -71,6 +72,7 @@ export interface LiftDraftExercise {
 }
 
 export interface CardioDraftExercise {
+  clientId: string;
   exerciseId: string;
   name: string;
   modality: 'cardio';
@@ -199,10 +201,11 @@ function normalisedBout(bout: unknown): unknown {
   return isCardioEffortInput(bout.effort) ? bout : { ...bout, effort: null };
 }
 
-function normalisedExercise(exercise: unknown, fromV2: boolean): unknown {
+function normalisedExercise(exercise: unknown, index: number, fromV2: boolean): unknown {
   if (!isRecord(exercise) || !Array.isArray(exercise.sets)) return exercise;
-  if (exercise.modality === 'cardio') return { ...exercise, sets: exercise.sets.map(normalisedBout) };
-  return { ...exercise, modality: 'lift', sets: exercise.sets.map((set) => normalisedSet(set, fromV2)) };
+  const clientId = typeof exercise.clientId === 'string' ? exercise.clientId : `exercise-${index}`;
+  if (exercise.modality === 'cardio') return { ...exercise, clientId, sets: exercise.sets.map(normalisedBout) };
+  return { ...exercise, clientId, modality: 'lift', sets: exercise.sets.map((set) => normalisedSet(set, fromV2)) };
 }
 
 function withUsableSessionRpe(draft: WorkoutDraft): WorkoutDraft {
@@ -246,7 +249,7 @@ function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
     program: isDraftProgram(draft.program) ? draft.program : null,
     challenge: parsedDraftChallenge(draft.challenge),
     exercises: withValidSupersets(
-      draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
+      draft.exercises.map((exercise, index) => normalisedExercise(exercise, index, fromV2) as DraftExercise),
     ),
   };
 }
@@ -330,7 +333,15 @@ export function withSessionRpe(draft: WorkoutDraft, sessionRpe: number | null): 
 }
 
 export function addExercise(draft: WorkoutDraft, exerciseId: string, name: string, loadType: LoadType): WorkoutDraft {
-  const added: LiftDraftExercise = { exerciseId, name, modality: 'lift', loadType, target: null, sets: [] };
+  const added: LiftDraftExercise = {
+    clientId: crypto.randomUUID(),
+    exerciseId,
+    name,
+    modality: 'lift',
+    loadType,
+    target: null,
+    sets: [],
+  };
   return { ...draft, exercises: [...draft.exercises, added] };
 }
 
@@ -340,7 +351,14 @@ export function addCardioExercise(
   name: string,
   activity: CardioActivity,
 ): WorkoutDraft {
-  const added: CardioDraftExercise = { exerciseId, name, modality: 'cardio', activity, sets: [] };
+  const added: CardioDraftExercise = {
+    clientId: crypto.randomUUID(),
+    exerciseId,
+    name,
+    modality: 'cardio',
+    activity,
+    sets: [],
+  };
   return { ...draft, exercises: [...draft.exercises, added] };
 }
 
@@ -546,6 +564,7 @@ function liftDraftExercises<Entry extends { exerciseId: string }>(
     }
     return [
       {
+        clientId: crypto.randomUUID(),
         exerciseId: entry.exerciseId,
         name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
         modality: 'lift',

@@ -19,7 +19,6 @@ import {
   fetchStrengthState,
 } from '../../lib/collection-data.ts';
 import { strengthText } from '../../lib/collection-rules.ts';
-import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
 import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
 import { fetchProfile, type UnitPref } from '../../lib/profile.ts';
@@ -633,11 +632,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     if (celebrate && readTrainingDeviceSettings(deviceStorage(), userId).vibrate) vibrateNewRecord();
     changeDraft(next);
   };
-  const cardKeys = exerciseKeys(draft.exercises);
-  const removeExerciseAt = (exerciseIndex: number) => {
-    if (swappingKey === cardKeys[exerciseIndex]) setSwappingKey(null);
-    changeDraft(removeExercise(draft, exerciseIndex));
-  };
+  const cardKeys = draft.exercises.map((exercise) => exercise.clientId);
+  if (swappingKey !== null && !cardKeys.includes(swappingKey)) setSwappingKey(null);
+  const removeExerciseAt = (exerciseIndex: number) => changeDraft(removeExercise(draft, exerciseIndex));
   const discardWorkout = () => {
     rest.stop();
     discardDraft(draft.sessionId);
