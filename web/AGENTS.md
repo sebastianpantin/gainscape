@@ -1,7 +1,7 @@
 # web
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-07
+**Generated:** 2026-10-01 · **Updated:** 2026-10-09
 
 ## Purpose
 
@@ -9,11 +9,12 @@ The React 19 PWA and its Vite root. `vite.config.ts` sets `web/` as the root, al
 
 ## Key Files
 
-| File               | Description                                                                                                                                                                                                                                                                |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vite.config.ts`   | Vite config: `@vitejs/plugin-react`, `@vitejs/plugin-basic-ssl` (skipped when `GAINSCAPE_PLAIN_HTTP` is set), `serviceWorkerPlugin()`, `@domain` alias, `__APP_VERSION__` define (git short hash plus date, or `dev`), and the `/sb` proxy for both dev server and preview |
-| `index.html`       | Single HTML entry: viewport with `viewport-fit=cover`, theme colour, iOS web app meta, manifest and icon links, `#root`, and `/src/main.tsx`                                                                                                                               |
-| `.env.development` | Committed local-only publishable key of the Supabase CLI stack (`VITE_SUPABASE_PUBLISHABLE_KEY`), the same for every local install. `VITE_SUPABASE_URL` is deliberately unset locally so the client uses the `/sb` proxy                                                   |
+| File               | Description                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vite.config.ts`   | Vite config: `@vitejs/plugin-react`, `@vitejs/plugin-basic-ssl` (skipped when `GAINSCAPE_PLAIN_HTTP` is set), `serviceWorkerPlugin()`, `@domain` alias, `__CHANGELOG__` define (the bundled releases from `changelog.yaml`, read by `build/changelog.ts`), `__APP_BUILD__` define (git short hash plus date, or `dev`), and the `/sb` proxy for both dev server and preview |
+| `changelog.yaml`   | Release history shown in the app: newest entry first, each with `prs` (PR numbers it covers, kept out of the bundle), `version`, `date`, `title` and `items`. Validated by `src/lib/changelog-rules.ts` on every build; `make deploy` refuses until every user-facing merged PR is in some entry's `prs` (`../.claude/skills/changelog/SKILL.md`)                           |
+| `index.html`       | Single HTML entry: viewport with `viewport-fit=cover`, theme colour, iOS web app meta, manifest and icon links, `#root`, and `/src/main.tsx`                                                                                                                                                                                                                                |
+| `.env.development` | Committed local-only publishable key of the Supabase CLI stack (`VITE_SUPABASE_PUBLISHABLE_KEY`), the same for every local install. `VITE_SUPABASE_URL` is deliberately unset locally so the client uses the `/sb` proxy                                                                                                                                                    |
 
 ## Subdirectories
 
@@ -29,7 +30,8 @@ The React 19 PWA and its Vite root. `vite.config.ts` sets `web/` as the root, al
 
 - Run the dev server with `make dev` (`npx vite web --host`), never `npm run` variants. `make build-local` builds in `development` mode for the PWA e2e suite and `make preview` serves it.
 - `web/dist/` is generated. The service worker `sw.js` only exists after `vite build`; the dev server registers no worker (`registerServiceWorker` returns unless `import.meta.env.PROD`).
-- `__APP_VERSION__` is declared in `src/vite-env.d.ts`. If you add another build-time constant, declare it there and in `vite.config.ts` together.
+- `__CHANGELOG__` and `__APP_BUILD__` are declared in `src/vite-env.d.ts`. If you add another build-time constant, declare it there and in `vite.config.ts` together. The app version is the newest `changelog.yaml` entry (`APP_VERSION` in `src/features/whats-new/changelog-data.ts`); there is no other version constant.
+- `vite.config.ts` reads `changelog.yaml` once at startup, so restart `make dev` after editing it. ESLint bans the `__CHANGELOG__` global everywhere except `src/features/whats-new/changelog-data.ts`; import `CHANGELOG` from there.
 - The `@domain` alias is also configured in `tsconfig.json` and `vitest.config.ts`. Change all three together.
 - Never commit a hosted Supabase URL or key. Production values come from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` at build time (see `../docs/production-auth.md`).
 
