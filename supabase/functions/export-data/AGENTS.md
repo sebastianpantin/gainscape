@@ -21,22 +21,23 @@ Challenge semantics since version 6:
 
 ## Key Files
 
-| File        | Description                                                                                                                 |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`  | Handler; `exportFor` takes bucket `export_data_hour` then reads in `sql.begin('isolation level repeatable read read only')` |
-| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                         |
-| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                              |
+| File        | Description                                                                                                                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`  | Handler; `exportFor` takes bucket `export_data_hour` then reads in `sql.begin('isolation level repeatable read read only')` and builds the document with `exportDocument`                                                           |
+| `format.ts` | Pure: `EXPORT_FORMAT_VERSION`, `EXPORT_SECTIONS` (the top-level keys after `format`, `version`, `exportedAt` and `userId`, in order) and `exportDocument`, whose `ExportSections` type makes `index.ts` pass exactly those sections |
+| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                                                 |
+| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                                                      |
 
 ## For AI Agents
 
 ### Working In This Directory
 
-- Adding a user-owned table means adding it to the export and bumping the format version if the shape changes.
+- Adding a user-owned table means adding it to the export and bumping the format version if the shape changes. A new top-level key goes in `EXPORT_SECTIONS`; `tests/deploy/export-format.test.ts` pins the key list per version, so add the new version's list there and bump `EXPORT_FORMAT_VERSION`.
 - Always scope queries by `user_id`.
 
 ### Testing Requirements
 
-`tests/integration/account.test.ts` and `rate-limits.test.ts`. Stack required.
+`tests/deploy/export-format.test.ts` (no stack) pins the top-level keys to the format version. `tests/integration/account.test.ts` and `rate-limits.test.ts` need the stack.
 
 ### Common Patterns
 

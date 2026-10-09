@@ -3,8 +3,7 @@ import { sql } from '../_shared/db.ts';
 import { HttpError, jsonResponse } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serve } from '../_shared/serve.ts';
-
-const EXPORT_FORMAT_VERSION = 6;
+import { exportDocument } from './format.ts';
 
 async function exportFor(userId: string) {
   await takeRateLimit(sql, 'export_data_hour', userId);
@@ -94,11 +93,7 @@ async function exportFor(userId: string) {
     const reactionsGiven = await tx`
       select event_id, created_at from public.reactions where user_id = ${userId} order by created_at, event_id`;
 
-    return {
-      format: 'gainscape-export',
-      version: EXPORT_FORMAT_VERSION,
-      exportedAt: new Date().toISOString(),
-      userId,
+    return exportDocument(userId, new Date().toISOString(), {
       account: { email: account?.email ?? null, createdAt: account?.created_at ?? null },
       profile,
       privateProfile,
@@ -129,7 +124,7 @@ async function exportFor(userId: string) {
       events,
       friendships,
       reactionsGiven,
-    };
+    });
   });
 }
 
