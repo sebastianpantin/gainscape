@@ -68,7 +68,7 @@ set-loot-secret:
 	node scripts/deploy/set-loot-secret.ts
 
 rebuild-caches-hosted:
-	node scripts/deploy/rebuild-hosted.ts
+	node scripts/deploy/rebuild-hosted.ts $(if $(filter 1,$(ALL)),--all)
 
 invite-tester:
 	node scripts/deploy/invite-tester.ts
@@ -134,7 +134,7 @@ check-functions:
 	done
 
 rebuild-caches: functions
-	node scripts/rebuild-caches.mjs
+	node scripts/rebuild-caches.mjs $(if $(filter 1,$(ALL)),--all)
 
 test-catalog:
 	npx vitest run tests/catalog

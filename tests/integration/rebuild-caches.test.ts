@@ -219,3 +219,135 @@ describe('rebuild-caches', () => {
     expect(JSON.parse(response.rawBody).error).toBe(code);
   });
 });
+
+const MAX_UUID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+const TWICE_NAMED = randomUUID();
+
+function uuidBefore(id: string): string {
+  const hex = (BigInt(`0x${id.replaceAll('-', '')}`) - 1n).toString(16).padStart(32, '0');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+async function postRebuild(body: unknown) {
+  const response = await fetchFunction('rebuild-caches', {
+    method: 'POST',
+    headers: { apikey: env.SECRET_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return { status: response.status, body: JSON.parse(response.rawBody), rawBody: response.rawBody };
+}
+
+async function listFrom(scope: 'stale' | 'all', after: string | null, limit: number) {
+  const response = await postRebuild({ list: { scope, after, limit } });
+  expect(response.status, response.rawBody).toBe(200);
+  return response.body as { userIds: string[]; next: string | null };
+}
+
+async function lifterWithSessions(): Promise<TestUser> {
+  const user = await createTestUser();
+  expect((await postCompleteSession(user.accessToken, payloadAt(hoursAgo(3), [aSet(benchId, 0, 80)]))).status).toBe(
+    200,
+  );
+  return user;
+}
+
+async function markStale(userId: string): Promise<void> {
+  await db`update public.sessions set derived_balance_version = ${DEFAULT_BALANCE.version - 1} where user_id = ${userId}`;
+}
+
+describe('rebuild-caches in batches', () => {
+  it('lists a user with a stale session, but not one whose sessions are all current', async () => {
+    const [stale, current] = [await lifterWithSessions(), await lifterWithSessions()];
+    await markStale(stale.id);
+
+    expect(await listFrom('stale', uuidBefore(stale.id), 1)).toEqual({ userIds: [stale.id], next: stale.id });
+    expect((await listFrom('stale', uuidBefore(current.id), 1)).userIds).not.toContain(current.id);
+  });
+
+  it('lists every profile with a session or a derived row for all, but never an empty profile', async () => {
+    const [withSessions, empty, onlyDerived] = [
+      await lifterWithSessions(),
+      await createTestUser(),
+      await createTestUser(),
+    ];
+    await db`insert into public.rep_maxes (user_id, exercise_id, reps, load_kg, achieved_at)
+             values (${onlyDerived.id}, ${squatId}, 3, 120, now())`;
+
+    expect((await listFrom('all', uuidBefore(withSessions.id), 1)).userIds).toEqual([withSessions.id]);
+    expect((await listFrom('all', uuidBefore(onlyDerived.id), 1)).userIds).toEqual([onlyDerived.id]);
+    expect((await listFrom('all', uuidBefore(empty.id), 1)).userIds).not.toContain(empty.id);
+  });
+
+  it('pages in ascending id order and ends with next null', async () => {
+    const page = await listFrom('all', null, 3);
+    expect(page.userIds).toHaveLength(3);
+    expect([...page.userIds].sort()).toEqual(page.userIds);
+    expect(page.next).toBe(page.userIds[2]);
+    const following = await listFrom('all', page.next, 3);
+    expect(following.userIds.every((id) => id > page.userIds[2])).toBe(true);
+    expect(await listFrom('all', MAX_UUID, 3)).toEqual({ userIds: [], next: null });
+  });
+
+  it('rebuilds a batch of users, reports a missing one and leaves no stale session', async () => {
+    const [stale, current] = [await lifterWithSessions(), await lifterWithSessions()];
+    const before = await normalizedSnapshot(current.id);
+    await markStale(stale.id);
+    const missing = randomUUID();
+
+    const response = await postRebuild({ userIds: [stale.id, missing, current.id] });
+
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body).toEqual({
+      balanceVersion: DEFAULT_BALANCE.version,
+      rebuilt: [
+        { userId: stale.id, sessionsReplayed: 1, setsRewritten: 1 },
+        { userId: current.id, sessionsReplayed: 1, setsRewritten: 1 },
+      ],
+      missing: [missing],
+    });
+    expect((await listFrom('stale', uuidBefore(stale.id), 1)).userIds).not.toContain(stale.id);
+    expect(await normalizedSnapshot(current.id)).toEqual(before);
+  });
+
+  it('names the user a batch failed on and keeps the users rebuilt before it', async () => {
+    const [stale, broken] = [await lifterWithSessions(), await lifterWithSessions()];
+    await markStale(stale.id);
+    await db`update public.sessions set challenge = '{}'::jsonb where user_id = ${broken.id}`;
+    try {
+      const response = await postRebuild({ userIds: [stale.id, broken.id] });
+
+      expect(response.status, response.rawBody).toBe(500);
+      expect(response.body).toEqual({ error: 'rebuild_failed', details: { userId: broken.id, rebuiltBefore: 1 } });
+      expect((await listFrom('stale', uuidBefore(stale.id), 1)).userIds).not.toContain(stale.id);
+    } finally {
+      await db`update public.sessions set challenge = null where user_id = ${broken.id}`;
+    }
+  });
+
+  it.each([
+    ['an empty batch', { userIds: [] }],
+    ['a batch of 51 users', { userIds: Array.from({ length: 51 }, () => randomUUID()) }],
+    ['a batch with a non-uuid', { userIds: ['not-a-uuid'] }],
+    ['a batch naming a user twice', { userIds: [TWICE_NAMED, TWICE_NAMED.toUpperCase()] }],
+    ['a list limit of 0', { list: { scope: 'all', after: null, limit: 0 } }],
+    ['a list limit of 1001', { list: { scope: 'all', after: null, limit: 1001 } }],
+    ['an unknown list scope', { list: { scope: 'everyone', after: null, limit: 10 } }],
+    ['a list without after', { list: { scope: 'stale', limit: 10 } }],
+    ['a user id and a batch together', { userId: randomUUID(), userIds: [randomUUID()] }],
+  ])('rejects %s', async (_case, body) => {
+    const response = await postRebuild(body);
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe('invalid_payload');
+  });
+
+  it('refuses a batch or a list without the secret key', async () => {
+    for (const body of [{ userIds: [lifter.id] }, { list: { scope: 'all', after: null, limit: 1 } }]) {
+      const response = await fetchFunction('rebuild-caches', {
+        method: 'POST',
+        headers: { apikey: env.PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      expect(response.status).toBe(403);
+    }
+  });
+});
