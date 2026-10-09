@@ -3,6 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openDraftStore, openDraftStoreOrFallback, openPrimaryDraftStore } from '../../web/src/offline/draft-boot.ts';
 import { draftRecord } from '../../web/src/offline/draft-format.ts';
+import { createDraftSession } from '../../web/src/offline/draft-session.ts';
 import {
   createIdbDraftStore,
   createLocalDraftStore,
@@ -195,5 +196,41 @@ describe('draft store boot', () => {
     expect(open).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(2_000);
     await sessionOpen;
+  });
+
+  it('keeps a remounted draft session on the fallback once a session wrote a workout there this page load', async () => {
+    vi.resetModules();
+    const boot = await import('../../web/src/offline/draft-boot.ts');
+    const indexedDB = new IDBFactory();
+    const database = await openDraftDatabase(indexedDB);
+    await createIdbDraftStore(database!).put(userId, 20, workout('unsynced-in-idb'));
+    database!.close();
+    vi.stubGlobal('localStorage', new MemoryStorage());
+    vi.stubGlobal('indexedDB', unopenableIndexedDb);
+    const mountSession = () =>
+      createDraftSession({
+        userId,
+        openStore: boot.openDraftSessionStore,
+        fallbackStore: boot.openDraftSessionFallback,
+        channel: null,
+        onChange: () => undefined,
+      });
+
+    const first = mountSession();
+    await first.ready;
+    await first.startWorkout(() => workout('started-on-fallback'));
+    await first.flush();
+    first.close();
+    vi.stubGlobal('indexedDB', indexedDB);
+    const remounted = mountSession();
+    await remounted.ready;
+
+    expect(remounted.snapshot()).toMatchObject({
+      state: { draft: { sessionId: 'started-on-fallback' } },
+      saveProblem: 'unreadable',
+    });
+    const reopened = await openDraftDatabase(indexedDB);
+    expect(await createIdbDraftStore(reopened!).get(userId)).toMatchObject({ draft: { sessionId: 'unsynced-in-idb' } });
+    reopened!.close();
   });
 });

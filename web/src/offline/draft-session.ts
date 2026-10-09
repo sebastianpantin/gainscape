@@ -14,7 +14,10 @@ export interface DraftSnapshot {
   state: WorkoutDraftState;
   store: DraftStore | null;
   saveProblem: DraftSaveProblem | null;
+  waitingDraft: boolean;
 }
+
+type StoredWorkout = Extract<StoredDraft, { kind: 'draft' }>;
 
 export type SyncedChange = 'synced' | 'deleted';
 
@@ -81,7 +84,7 @@ export function createDraftSession({
   onChange,
   requestPersistence,
 }: DraftSessionOptions): DraftSession {
-  let snapshot: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: null };
+  let snapshot: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: null, waitingDraft: false };
   let active = true;
   let lastSeen = 0;
   const deletedSessionIds = new Set<string>();
@@ -150,11 +153,29 @@ export function createDraftSession({
   const announce = (sessionId: string, updatedAt: number, change: DraftChange) =>
     channel?.postMessage({ userId, sessionId, updatedAt, change });
 
+  const draftWaitingOnFallback = async (): Promise<StoredWorkout | null> => {
+    if (usingFallback) return null;
+    const record = await fallbackStore()
+      .get(userId)
+      .catch(() => null);
+    return record?.kind === 'draft' ? record : null;
+  };
+
+  const openWaitingDraft = (waiting: StoredWorkout) => {
+    switchToFallback();
+    seen(waiting.updatedAt);
+    publish({ waitingDraft: false });
+    showDraft(waiting.draft);
+  };
+
   const load = async (store: DraftStore) => {
     const record = await store.get(userId);
     if (record) seen(record.updatedAt);
+    const waiting = await draftWaitingOnFallback();
     publish({ store, saveProblem: problemWhenSaved });
-    showDraft(record?.kind === 'draft' ? record.draft : null);
+    if (record?.kind !== 'draft') return waiting ? openWaitingDraft(waiting) : showDraft(null);
+    publish({ waitingDraft: waiting !== null && waiting.draft.sessionId !== record.draft.sessionId });
+    showDraft(record.draft);
   };
 
   const ready = (async () => {
@@ -223,6 +244,8 @@ export function createDraftSession({
       const record = await store.get(userId);
       if (record?.kind === 'draft') return adopt(record);
       if (record) seen(record.updatedAt);
+      const waiting = await draftWaitingOnFallback();
+      if (waiting) return openWaitingDraft(waiting);
       changeDraft(fresh());
       startedFresh = true;
     });

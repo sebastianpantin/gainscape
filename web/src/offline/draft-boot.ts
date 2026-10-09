@@ -112,3 +112,22 @@ export async function openDraftStoreOrFallback(): Promise<DraftStore> {
   if (bootFailedThisLoad && bootedStore === null) return createLocalDraftStore(localStorage);
   return openPrimaryDraftStore().catch(() => createLocalDraftStore(localStorage));
 }
+
+let sessionWroteFallbackThisLoad = false;
+
+export function openDraftSessionStore(): Promise<DraftStore> {
+  if (sessionWroteFallbackThisLoad) return Promise.reject(new Error('draft_session_on_fallback'));
+  return openPrimaryDraftStore();
+}
+
+export function openDraftSessionFallback(): DraftStore {
+  const fallback = createLocalDraftStore(localStorage);
+  return {
+    ...fallback,
+    put: async (...args) => {
+      const result = await fallback.put(...args);
+      if (result === 'written') sessionWroteFallbackThisLoad = true;
+      return result;
+    },
+  };
+}

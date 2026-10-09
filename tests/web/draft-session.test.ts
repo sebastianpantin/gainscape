@@ -212,6 +212,53 @@ describe('draft session', () => {
     expect(await store.get(userId)).toMatchObject({ kind: 'discarded', discardedSessionId: 'session-a' });
   });
 
+  it('tells about a workout kept on the fallback and opens it instead of a fresh one once the shown one is done', async () => {
+    const fallback = createLocalDraftStore(new MemoryStorage());
+    await fallback.put(userId, 30, workout('kept-on-fallback'));
+    const store = createLocalDraftStore(new MemoryStorage());
+    await store.put(userId, 20, workout('shown', finishedAt));
+    const { session, latest, draft } = sessionOver(store, { fallback: () => fallback });
+    await session.ready;
+    expect(draft()?.sessionId).toBe('shown');
+    expect(latest().waitingDraft).toBe(true);
+
+    await session.markSynced('shown');
+    expect(await session.startWorkout(() => workout('fresh'))).toBe(false);
+
+    expect(draft()?.sessionId).toBe('kept-on-fallback');
+    expect(latest().waitingDraft).toBe(false);
+    session.updateDraft((current) => withReps(current, 5));
+    await session.flush();
+    expect(await fallback.get(userId)).toMatchObject({ draft: { sessionId: 'kept-on-fallback' } });
+    expect(await store.get(userId)).toMatchObject({ kind: 'synced', syncedSessionId: 'shown' });
+  });
+
+  it('opens a workout kept on the fallback at once when the main store holds no draft', async () => {
+    const fallback = createLocalDraftStore(new MemoryStorage());
+    await fallback.put(userId, 30, workout('kept-on-fallback'));
+    const store = createLocalDraftStore(new MemoryStorage());
+    await store.put(userId, 20, workout('done', finishedAt));
+    await store.discard(userId, 'done', 21);
+    const { session, latest, draft } = sessionOver(store, { fallback: () => fallback });
+    await session.ready;
+
+    expect(draft()?.sessionId).toBe('kept-on-fallback');
+    expect(latest()).toMatchObject({ waitingDraft: false, saveProblem: null });
+  });
+
+  it('does not report a waiting workout when the fallback holds the shown one or nothing', async () => {
+    const fallback = createLocalDraftStore(new MemoryStorage());
+    const store = createLocalDraftStore(new MemoryStorage());
+    await store.put(userId, 20, workout('shown'));
+    const empty = sessionOver(store, { fallback: () => fallback });
+    await empty.session.ready;
+    expect(empty.latest().waitingDraft).toBe(false);
+    await fallback.put(userId, 10, workout('shown'));
+    const same = sessionOver(store, { fallback: () => fallback });
+    await same.session.ready;
+    expect(same.latest().waitingDraft).toBe(false);
+  });
+
   it('keeps a forgotten workout gone when a tab still signed in to the deleted account writes it late', async () => {
     const store = createLocalDraftStore(new MemoryStorage());
     const stale = sessionOver(store);

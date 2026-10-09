@@ -201,8 +201,19 @@ function ChallengeBanner({ draft, challenge, exercises, unit, onDiscard }: Chall
 
 export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const navigate = useNavigate();
-  const { state, store, saveProblem, changeDraft, updateDraft, startWorkout, discardDraft, markSynced, reload, flush } =
-    useWorkoutDraft(userId);
+  const {
+    state,
+    store,
+    saveProblem,
+    waitingDraft,
+    changeDraft,
+    updateDraft,
+    startWorkout,
+    discardDraft,
+    markSynced,
+    reload,
+    flush,
+  } = useWorkoutDraft(userId);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
   const [listNotice, setListNotice] = useState<string | null>(null);
@@ -362,6 +373,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       {saveProblem && (
         <p className="problem" role="alert">
           {deviceSaveProblemText(saveProblem)}
+        </p>
+      )}
+      {waitingDraft && draft && (
+        <p className="notice" role="status">
+          Another unsynced workout is saved on this device. It opens when you finish or discard this one.
         </p>
       )}
       {store && <OtherAccountDraftNotice store={store} userId={userId} />}
