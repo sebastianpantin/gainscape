@@ -97,6 +97,28 @@ test('a save that races an edit from another device keeps both changes after rev
   expect(await sessionNotes(sessionId)).toBe('edited elsewhere');
 });
 
+test('a delete that races an edit from another device shows the latest version before deleting', async ({ page }) => {
+  const username = `hist_delrev_${Date.now().toString(36)}`;
+  await register(page, username);
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+
+  await openLatestWorkout(page);
+  const sessionId = page.url().split('/').at(-1)!;
+
+  await editElsewhere(sessionId, 7);
+  await page.getByRole('button', { name: 'Delete workout' }).click();
+  await page.getByRole('button', { name: 'Delete for good' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('This workout was changed on another device.');
+  await expect(page.locator('li.set-row').first().getByLabel('reps')).toHaveValue('7');
+  expect(await sessionCount(username)).toBe(1);
+
+  await page.getByRole('button', { name: 'Delete workout' }).click();
+  await page.getByRole('button', { name: 'Delete for good' }).click();
+  await expect(page.getByText('Workout deleted.')).toBeVisible();
+  expect(await sessionCount(username)).toBe(0);
+});
+
 test('rate the session when finishing, then see its length and RPE on the summary and in History', async ({ page }) => {
   await register(page, `hist_rpe_${Date.now().toString(36)}`);
 

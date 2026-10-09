@@ -272,7 +272,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     setProblem(null);
     setNotice(null);
     setBusy({ kind: 'deleting', retrying: null });
-    const outcome = await deleteSession(userId, sessionId, signal, (reason) =>
+    const outcome = await deleteSession(userId, { sessionId, ifRevision: loaded.session.revision }, signal, (reason) =>
       setBusy({ kind: 'deleting', retrying: reason }),
     );
     if (signal.aborted) return;
@@ -288,7 +288,18 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       });
       return;
     }
-    handleCommonFailure(failureAction(outcome), 'delete');
+    const action = failureAction(outcome);
+    if (action.kind === 'revision_conflict') {
+      return reloadSession(
+        signal,
+        "This workout was changed on another device, and the latest version couldn't be loaded.",
+        (fresh) => {
+          adopt(fresh);
+          setProblem({ kind: 'message', text: failureText(action, 'delete') });
+        },
+      );
+    }
+    handleCommonFailure(action, 'delete');
   };
 
   const { session } = loaded;
