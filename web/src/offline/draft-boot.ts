@@ -36,9 +36,12 @@ async function moveFallbackRecord(database: IDBDatabase, storage: Storage, userI
   const request = objectStore.get(userId);
   request.onsuccess = () => {
     const stored = parseStoredDraft(request.result, userId);
-    keepFallback =
-      fallback !== null && stored?.kind === 'draft' && stored.draft.sessionId !== storedSessionId(fallback);
-    if (fallback && !keepFallback && (!stored || fallback.updatedAt > stored.updatedAt)) objectStore.put(fallback);
+    if (!fallback) return;
+    const storesOtherSession = stored !== null && storedSessionId(stored) !== storedSessionId(fallback);
+    keepFallback = storesOtherSession && stored.kind === 'draft';
+    const fallbackIsOnlyCopy = storesOtherSession && fallback.kind === 'draft';
+    if (!keepFallback && (!stored || fallbackIsOnlyCopy || fallback.updatedAt > stored.updatedAt))
+      objectStore.put(fallback);
   };
   await done;
   if (!keepFallback) storage.removeItem(fallbackKeyFor(userId));

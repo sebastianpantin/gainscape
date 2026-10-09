@@ -56,6 +56,26 @@ describe('draft store boot', () => {
     database!.close();
   });
 
+  it('opens a kept fallback workout once the stored workout of another session is finished or discarded', async () => {
+    for (const resolveStored of ['markSynced', 'discard'] as const) {
+      const indexedDB = new IDBFactory();
+      const storage = new MemoryStorage();
+      const database = await openDraftDatabase(indexedDB);
+      const idbStore = createIdbDraftStore(database!);
+      await idbStore.put(userId, 20, workout('unsynced-in-idb', '2026-09-30T11:00:00.000Z'));
+      const keptFallback = draftRecord(userId, 30, workout('started-while-idb-was-down'));
+      storage.setItem(fallbackKeyFor(userId), JSON.stringify(keptFallback));
+      await openDraftStore({ indexedDB, storage });
+
+      await idbStore[resolveStored](userId, 'unsynced-in-idb', 40);
+      const booted = await openDraftStore({ indexedDB, storage });
+
+      expect(await booted.get(userId)).toEqual(keptFallback);
+      expect(storage.getItem(fallbackKeyFor(userId))).toBeNull();
+      database!.close();
+    }
+  });
+
   it('retries IndexedDB on the next open instead of remembering a failed boot', async () => {
     const indexedDB = new IDBFactory();
     const database = await openDraftDatabase(indexedDB);
