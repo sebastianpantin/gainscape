@@ -13,6 +13,13 @@ async function addExercise(page: Page, search: string, exerciseName: string) {
   await expect(page.getByRole('heading', { name: exerciseName, exact: true })).toBeVisible();
 }
 
+async function addUnloggedExercise(page: Page, search: string, exerciseName: string) {
+  await addExercise(page, search, exerciseName);
+  const doneButton = workoutCards(page, exerciseName).getByRole('button', { name: 'Done set 1' });
+  await doneButton.click();
+  await expect(doneButton).toHaveAttribute('aria-pressed', 'false');
+}
+
 async function chooseFromMenu(page: Page, exerciseName: string, action: string) {
   await page.getByLabel(`Exercise menu for ${exerciseName}`, { exact: true }).click();
   await page.getByRole('button', { name: action, exact: true }).click();
@@ -25,9 +32,9 @@ function swapPicker(page: Page) {
 test('the swap picker stays with its exercise when an exercise above it is removed', async ({ page }) => {
   await register(page, uniqueUsername('swap'));
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await addExercise(page, 'bench', BENCH);
-  await addExercise(page, 'barbell row', ROW);
-  await addExercise(page, 'back squat', SQUAT);
+  await addUnloggedExercise(page, 'bench', BENCH);
+  await addUnloggedExercise(page, 'barbell row', ROW);
+  await addUnloggedExercise(page, 'back squat', SQUAT);
 
   await chooseFromMenu(page, ROW, 'Swap');
   await expect(workoutCards(page, ROW).getByPlaceholder('Swap for…')).toBeVisible();
@@ -44,7 +51,7 @@ test('the swap picker stays with its exercise when an exercise above it is remov
 test('discard an ongoing workout behind a confirm, and start the next one fresh', async ({ page }) => {
   await register(page, uniqueUsername('discard'));
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await addExercise(page, 'bench', BENCH);
+  await addUnloggedExercise(page, 'bench', BENCH);
   await chooseFromMenu(page, BENCH, 'Swap');
   await expect(swapPicker(page)).toBeVisible();
 
