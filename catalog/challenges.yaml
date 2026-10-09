@@ -38,3 +38,43 @@
   name: Ten-Ton Day
   kind: volume
   volume: { metric: kg, target: 10000 }
+- key: front_squat_and_romanian_deadlift
+  name: Front Squat and Romanian Deadlift
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: front_squat, reps: 6, pct: 65 }
+        - { exercise: romanian_deadlift, reps: 8, pct: 60 }
+- key: incline_and_pulldown
+  name: Incline and Pulldown
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: incline_barbell_bench_press, reps: 8, pct: 65 }
+        - { exercise: lat_pulldown, reps: 10, pct: 65 }
+- key: raises_and_face_pulls
+  name: Raises and Face Pulls
+  kind: prescription
+  supersets:
+    - rounds: 3
+      exercises:
+        - { exercise: lateral_raise, reps: 15 }
+        - { exercise: face_pull, reps: 15 }
+- key: leg_raise_and_rollout
+  name: Leg Raise and Rollout
+  kind: prescription
+  supersets:
+    - rounds: 3
+      exercises:
+        - { exercise: hanging_leg_raise, reps: 10 }
+        - { exercise: ab_wheel_rollout, reps: 10 }
+- key: push_up_century
+  name: Push-up Century
+  kind: volume
+  volume: { metric: reps, target: 100, exercise: push_up }
+- key: twenty_ton_day
+  name: Twenty-Ton Day
+  kind: volume
+  volume: { metric: kg, target: 20000 }

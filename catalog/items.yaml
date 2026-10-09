@@ -58,3 +58,39 @@
   rarity: rare
   icon: scroll
   grants: dips_and_curls
+- key: scroll_front_squat_and_romanian_deadlift
+  name: 'Scroll: Front Squat and Romanian Deadlift'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: front_squat_and_romanian_deadlift
+- key: scroll_incline_and_pulldown
+  name: 'Scroll: Incline and Pulldown'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: incline_and_pulldown
+- key: scroll_raises_and_face_pulls
+  name: 'Scroll: Raises and Face Pulls'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: raises_and_face_pulls
+- key: scroll_leg_raise_and_rollout
+  name: 'Scroll: Leg Raise and Rollout'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: leg_raise_and_rollout
+- key: scroll_push_up_century
+  name: 'Scroll: Push-up Century'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: push_up_century
+- key: scroll_twenty_ton_day
+  name: 'Scroll: Twenty-Ton Day'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: twenty_ton_day
