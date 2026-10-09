@@ -126,7 +126,7 @@ const DEFAULT_QUICK_FILL_REPS = 8;
 async function currentLoadTypes(draft: WorkoutDraft, exercises: Exercise[]): Promise<Map<string, LoadType>> {
   const builtInIds = new Set(exercises.filter((exercise) => !exercise.custom).map((exercise) => exercise.id));
   const hasCustom = draft.exercises.some((exercise) => !builtInIds.has(exercise.exerciseId));
-  if (!hasCustom || navigator.onLine === false) return new Map();
+  if (!hasCustom || isDeviceOffline()) return new Map();
   try {
     const catalog = await fetchExercises({
       includeArchived: true,
@@ -242,7 +242,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         setListNotice(list.notice);
         setLoadProblem(list.problem);
       },
-      () => navigator.onLine === false,
+      isDeviceOffline,
     );
     return () => {
       active = false;

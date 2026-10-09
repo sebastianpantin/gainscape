@@ -1,4 +1,6 @@
 import { FLOAT_TOLERANCE, roundTo, type WeightUnit } from '@domain/index.ts';
+import { isRecord } from '@domain/types.ts';
+import { parsedJson } from './json-rules.ts';
 
 export interface BarbellSetup {
   barWeight: number;
@@ -130,10 +132,6 @@ function loadedPlatesLabel(plates: readonly number[], unit: WeightUnit): string 
   return plates.length === 0 ? 'Empty bar' : `${groupedPlates(plates)} ${unit} each side`;
 }
 
-export function platesLabel(plates: readonly number[] | null, unit: WeightUnit): string | null {
-  return plates === null ? null : loadedPlatesLabel(plates, unit);
-}
-
 export interface BarbellPlates {
   plates: number[];
   nearest: number | null;
@@ -197,10 +195,6 @@ export function plateLook(plate: number, unit: WeightUnit): { tone: PlateTone; s
   return { tone: PLATE_TONES[unit].get(plate) ?? 'steel', size };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 export function isUsableBarOrPlate(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= HEAVIEST_BAR_OR_PLATE;
 }
@@ -212,14 +206,6 @@ function parsedSetup(raw: unknown, fallback: BarbellSetup): BarbellSetup {
     ? [...new Set(raw.plates.filter(isUsableBarOrPlate))].sort((a, b) => b - a)
     : [...fallback.plates];
   return { barWeight, plates };
-}
-
-function parsedJson(raw: string | null): unknown {
-  try {
-    return raw === null ? null : JSON.parse(raw);
-  } catch {
-    return null;
-  }
 }
 
 export function parsePlateSettings(raw: string | null): PlateSettings {

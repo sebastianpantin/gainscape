@@ -1,11 +1,11 @@
 import { type ExerciseStrength, REP_MAX_SLOT_COUNT, type StrengthState } from '@domain/index.ts';
+import { isRecord } from '@domain/types.ts';
+import { parsedJson } from './json-rules.ts';
 
 export interface RecordBaseline {
   repMaxKg: Readonly<Record<string, readonly (number | null)[]>>;
   maxReps: Readonly<Record<string, number>>;
 }
-
-export const NO_RECORD_BASELINE: RecordBaseline = Object.freeze({ repMaxKg: {}, maxReps: {} });
 
 export interface SessionBaseline {
   asOf: string;
@@ -33,10 +33,6 @@ export function recordBaselineFrom(rows: RecordBaselineRows): RecordBaseline {
     repMaxKg,
     maxReps: Object.fromEntries(rows.bodyweightRecords.map((row) => [row.exercise_id, row.max_reps])),
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isNullableNumber(value: unknown): value is number | null {
@@ -72,12 +68,7 @@ function isRecordBaseline(value: unknown): value is RecordBaseline {
 }
 
 export function parseSessionBaseline(raw: string | null): SessionBaseline | null {
-  let parsed: unknown;
-  try {
-    parsed = raw === null ? null : JSON.parse(raw);
-  } catch {
-    return null;
-  }
+  const parsed = parsedJson(raw);
   if (!isRecord(parsed) || typeof parsed.asOf !== 'string') return null;
   if (!isRecordOf(parsed.strength, isStrength) || !(parsed.records === null || isRecordBaseline(parsed.records)))
     return null;

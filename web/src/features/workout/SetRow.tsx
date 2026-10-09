@@ -39,8 +39,8 @@ interface SetRowProps {
   onRemove: () => void;
   onToggleDone: () => void;
   doneLabel?: string;
-  focusDone?: boolean;
-  onDoneFocused?: () => void;
+  focusDone: boolean;
+  onDoneFocused: () => void;
 }
 
 function clampedNumber(raw: string, fallback: number, lowest: number, highest: number): number {
@@ -160,7 +160,7 @@ export function SetRow({
   onRemove,
   onToggleDone,
   doneLabel = `Done set ${setNumber}`,
-  focusDone = false,
+  focusDone,
   onDoneFocused,
 }: SetRowProps) {
   const [calculatorOpen, setCalculatorOpen] = useState(false);
@@ -168,7 +168,7 @@ export function SetRow({
   useEffect(() => {
     if (!focusDone) return;
     doneButton.current?.focus();
-    onDoneFocused?.();
+    onDoneFocused();
   }, [focusDone, onDoneFocused]);
   const calculatorId = useId();
   const amrapBadge = amrapBadgeOf(set.prescription);

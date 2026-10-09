@@ -7,7 +7,6 @@ import {
   parsePlateSettings,
   PLATE_CHOICES,
   plateLook,
-  platesLabel,
   platesPerSide,
 } from '../../web/src/lib/plate-rules.ts';
 
@@ -198,29 +197,6 @@ describe('barbell plates', () => {
   it('gives the nearest loadable weight and its plates when the weight does not load exactly', () => {
     expect(barbellPlates(101, kgSetup, 'kg')).toEqual({ plates: [25, 15], nearest: 100 });
     expect(barbellPlates(10, kgSetup, 'kg')).toEqual({ plates: [], nearest: 20 });
-  });
-});
-
-describe('plates label', () => {
-  it('joins the plates of one side with the unit: "25 + 15 kg each side"', () => {
-    expect(platesLabel([25, 15], 'kg')).toBe('25 + 15 kg each side');
-  });
-
-  it('reads a single plate as "20 kg each side"', () => {
-    expect(platesLabel([20], 'kg')).toBe('20 kg each side');
-  });
-
-  it('keeps fractional plates and counts repeated ones: "3×25 + 1.25 kg each side"', () => {
-    expect(platesLabel([25, 25, 25, 1.25], 'kg')).toBe('3×25 + 1.25 kg each side');
-    expect(platesLabel([45, 45, 10], 'lb')).toBe('2×45 + 10 lb each side');
-  });
-
-  it('reads no plates as "Empty bar"', () => {
-    expect(platesLabel([], 'kg')).toBe('Empty bar');
-  });
-
-  it('has no label for a weight that cannot be loaded', () => {
-    expect(platesLabel(null, 'kg')).toBeNull();
   });
 });
 

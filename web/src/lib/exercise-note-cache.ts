@@ -27,13 +27,8 @@ export function readCachedExerciseNotes(storage: Storage, userId: string): Exerc
   }
 }
 
-export function saveCachedExerciseNotes(
-  storage: Storage,
-  userId: string,
-  notes: ExerciseNotes,
-  now = new Date(),
-): void {
-  const record = { v: CACHE_VERSION, savedAt: now.toISOString(), userId, notes };
+export function saveCachedExerciseNotes(storage: Storage, userId: string, notes: ExerciseNotes): void {
+  const record = { v: CACHE_VERSION, savedAt: new Date().toISOString(), userId, notes };
   try {
     storage.setItem(exerciseNotesCacheKey(userId), JSON.stringify(record));
   } catch {

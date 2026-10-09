@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchRecentLiftSessions } from '../../lib/last-session.ts';
 import type { RecentSessions, RecentSet } from '../../lib/last-session-rules.ts';
+import { isDeviceOffline } from '../../offline/cache-first.ts';
 
 const RECENT_SESSIONS_TIMEOUT_MS = 3000;
 
@@ -36,7 +37,7 @@ export function useRecentLiftSessions(
     .join(',');
 
   useEffect(() => {
-    if (missingKey === '' || navigator.onLine === false) return;
+    if (missingKey === '' || isDeviceOffline()) return;
     const requested = missingKey.split(',');
     let active = true;
     fetchRecentLiftSessions(requested, AbortSignal.timeout(RECENT_SESSIONS_TIMEOUT_MS)).then(
@@ -50,7 +51,7 @@ export function useRecentLiftSessions(
 
   const loadFor = async (exerciseId: string) => {
     if (byExercise.has(exerciseId)) return byExercise.get(exerciseId);
-    if (navigator.onLine === false) return undefined;
+    if (isDeviceOffline()) return undefined;
     try {
       const found = await fetchRecentLiftSessions([exerciseId], AbortSignal.timeout(RECENT_SESSIONS_TIMEOUT_MS));
       remember([exerciseId], found);
