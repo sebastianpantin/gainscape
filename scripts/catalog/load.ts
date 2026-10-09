@@ -340,10 +340,12 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
     name: table.name,
     retired: table.retired ?? false,
     entries: table.entries.flatMap((entry) => {
-      const quantity = { weight: entry.weight, min: entry.min ?? 1, max: entry.max ?? entry.min ?? 1 };
-      if (!entry.item.startsWith(GEAR_SHORTHAND_PREFIX)) return [{ item: entry.item, ...quantity }];
+      const quantity = { min: entry.min ?? 1, max: entry.max ?? entry.min ?? 1 };
+      if (!entry.item.startsWith(GEAR_SHORTHAND_PREFIX)) {
+        return [{ item: entry.item, weight: entry.weight * gear.slots.length, ...quantity }];
+      }
       const tier = entry.item.slice(GEAR_SHORTHAND_PREFIX.length);
-      return gear.slots.map((slot) => ({ item: `${tier}_${slot.key}`, ...quantity }));
+      return gear.slots.map((slot) => ({ item: `${tier}_${slot.key}`, weight: entry.weight, ...quantity }));
     }),
   }));
 

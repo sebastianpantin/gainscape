@@ -159,10 +159,22 @@ describe('catalog generator', () => {
     expect(rookie.every((entry) => entry.weight === 5 && entry.min === 1 && entry.max === 1)).toBe(true);
     const grinderGear = tierEntries('rare', 'grinder').filter((entry) => !entry.item.endsWith('_scraps'));
     expect(grinderGear).toHaveLength(6);
-    expect(grinderGear.every((entry) => entry.weight === 3)).toBe(true);
-    for (const table of catalog.dropTables) {
-      expect(table.entries.reduce((sum, entry) => sum + entry.weight, 0)).toBe(98);
-    }
+    expect(grinderGear.every((entry) => entry.weight === 18)).toBe(true);
+  });
+
+  it('splits a gear shorthand weight across its slots, so the whole tier drops at that weight', () => {
+    const catalog = loadCatalogData();
+    const weightsOf = (table: string) => catalog.dropTables.find((candidate) => candidate.key === table)!.entries;
+    const total = (entries: readonly { weight: number }[]) => entries.reduce((sum, entry) => sum + entry.weight, 0);
+    const gearOfTier = (table: string, tier: string) =>
+      weightsOf(table).filter((entry) => {
+        const item = catalog.items.find((candidate) => candidate.key === entry.item);
+        return item?.tier === tier && item.kind === 'gear';
+      });
+    const scraps = weightsOf('regular').find((entry) => entry.item === 'grinder_scraps')!;
+    expect(total(gearOfTier('regular', 'rookie')) / total(weightsOf('regular'))).toBeCloseTo(5 / 73);
+    expect(total(gearOfTier('regular', 'rookie')) / scraps.weight).toBeCloseTo(5 / 30);
+    expect(total(gearOfTier('rare', 'grinder')) / total(weightsOf('rare'))).toBeCloseTo(18 / 98);
   });
 
   it('builds each gear recipe from the tier below plus scraps of its own tier', () => {
