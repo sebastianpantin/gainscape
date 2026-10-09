@@ -212,7 +212,7 @@ const progressionRule = z.strictObject({
   trigger: z.enum(['afterSession', 'endOfWeek', 'endOfCycle', 'endOfWave']),
   judgedSlots: z.array(z.string()),
   judgedWeeks: z.array(positiveInt).optional(),
-  judgedSets: z.array(nonNegativeInt).min(1).optional(),
+  judgedSetIndexes: z.array(nonNegativeInt).min(1).optional(),
   onMet: z.array(adjustment),
   onMiss: z.array(adjustment),
   always: z.array(adjustment).optional(),

@@ -124,8 +124,8 @@ function ruleOutcomeAt(
         : stages;
     const required = requiredSetIndices(definition, enrollment, slot, position, prescribedStages);
     if (required === null) return [];
-    const { judgedSets } = rule;
-    const judgedRequired = judgedSets ? required.filter((index) => judgedSets.includes(index)) : required;
+    const { judgedSetIndexes } = rule;
+    const judgedRequired = judgedSetIndexes ? required.filter((index) => judgedSetIndexes.includes(index)) : required;
     return [{ slot, required: judgedRequired, candidates }];
   });
   if (judged.length === 0) return 'neutral';

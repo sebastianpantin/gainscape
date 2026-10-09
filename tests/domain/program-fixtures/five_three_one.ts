@@ -129,7 +129,7 @@ function cycleRule(lift: LiftDecl): ProgressionRule {
     trigger: 'endOfCycle',
     judgedSlots: [`${lift.key}-main`],
     judgedWeeks: NON_DELOAD_WEEKS,
-    judgedSets: [PLUS_SET_INDEX],
+    judgedSetIndexes: [PLUS_SET_INDEX],
     onMet: [{ kind: 'increment', by: lift.category === 'lower' ? LOWER_INCREMENT : UPPER_INCREMENT }],
     onMiss: [{ kind: 'tmReset', pct: { option: 'tmReset' } }],
   };

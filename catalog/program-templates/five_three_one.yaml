@@ -251,7 +251,7 @@ progression:
     trigger: endOfCycle
     judgedSlots: [squat-main]
     judgedWeeks: [1, 2, 3]
-    judgedSets: [2]
+    judgedSetIndexes: [2]
     onMet:
       - { kind: increment, by: { kg: 5, lb: 10 } }
     onMiss:
@@ -261,7 +261,7 @@ progression:
     trigger: endOfCycle
     judgedSlots: [bench-main]
     judgedWeeks: [1, 2, 3]
-    judgedSets: [2]
+    judgedSetIndexes: [2]
     onMet:
       - { kind: increment, by: { kg: 2.5, lb: 5 } }
     onMiss:
@@ -271,7 +271,7 @@ progression:
     trigger: endOfCycle
     judgedSlots: [deadlift-main]
     judgedWeeks: [1, 2, 3]
-    judgedSets: [2]
+    judgedSetIndexes: [2]
     onMet:
       - { kind: increment, by: { kg: 5, lb: 10 } }
     onMiss:
@@ -281,7 +281,7 @@ progression:
     trigger: endOfCycle
     judgedSlots: [press-main]
     judgedWeeks: [1, 2, 3]
-    judgedSets: [2]
+    judgedSetIndexes: [2]
     onMet:
       - { kind: increment, by: { kg: 2.5, lb: 5 } }
     onMiss:

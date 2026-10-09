@@ -162,20 +162,20 @@ describe('validateProgramDefinition rejects a setIndex outside the judged slot',
   });
 });
 
-describe('validateProgramDefinition rejects judgedSets that judge nothing', () => {
-  it('judgedSets 4 on the 4-set Wednesday deadlift', () => {
+describe('validateProgramDefinition rejects judgedSetIndexes that judge nothing', () => {
+  it('judgedSetIndexes 4 on the 4-set Wednesday deadlift', () => {
     const definition = broken(MADCOW_5X5, (copy) => {
       const rule = copy.progression.find((candidate) => candidate.lift === 'deadlift');
-      if (rule) rule.judgedSets = [4];
+      if (rule) rule.judgedSetIndexes = [4];
     });
-    errorsMention(definition, 'judgedSets', '4', 'wed-deadlift', '4 sets');
+    errorsMention(definition, 'judgedSetIndexes', '4', 'wed-deadlift', '4 sets');
   });
 
-  it('an empty judgedSets list', () => {
+  it('an empty judgedSetIndexes list', () => {
     const definition = broken(MADCOW_5X5, (copy) => {
-      copy.progression[0].judgedSets = [];
+      copy.progression[0].judgedSetIndexes = [];
     });
-    errorsMention(definition, 'judgedSets', 'no set');
+    errorsMention(definition, 'judgedSetIndexes', 'no set');
   });
 });
 

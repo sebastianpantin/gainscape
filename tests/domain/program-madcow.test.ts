@@ -454,14 +454,14 @@ describe('Madcow miss rule (holdOnMiss, judged on each lift top day)', () => {
     expect(refOf(programStateAt(def, enrollment, facts), 'squat', 'top')).toBeCloseTo(102.5, 9);
   });
 
-  it('version 1, published without judgedSets, judges every Monday set: just the fifth squat set holds the top 100', () => {
+  it('version 1, published without judgedSetIndexes, judges every Monday set: just the fifth squat set holds the top 100', () => {
     const publishedVersion1 = {
       ...def,
       version: 1,
       progression: def.progression.map((rule) => {
-        const withoutJudgedSets = { ...rule };
-        delete withoutJudgedSets.judgedSets;
-        return withoutJudgedSets;
+        const withoutJudgedSetIndexes = { ...rule };
+        delete withoutJudgedSetIndexes.judgedSetIndexes;
+        return withoutJudgedSetIndexes;
       }),
     };
     const clock = factClock();

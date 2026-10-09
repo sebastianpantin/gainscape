@@ -194,12 +194,12 @@ describe('program template schema', () => {
   });
 
   it.each([
-    ['an empty judgedSets list', []],
+    ['an empty judgedSetIndexes list', []],
     ['a negative judged set', [-1]],
     ['a fractional judged set', [1.5]],
-  ])('refuses %s', (_case, judgedSets) => {
-    const error = shapeIssuesAfter(MADCOW_5X5, (raw) => (raw.progression[0].judgedSets = judgedSets));
-    expect(error.issues.some((issue) => issue.startsWith('progression.0.judgedSets'))).toBe(true);
+  ])('refuses %s', (_case, judgedSetIndexes) => {
+    const error = shapeIssuesAfter(MADCOW_5X5, (raw) => (raw.progression[0].judgedSetIndexes = judgedSetIndexes));
+    expect(error.issues.some((issue) => issue.startsWith('progression.0.judgedSetIndexes'))).toBe(true);
   });
 
   it('refuses a barbell flag that is not true or false', () => {
@@ -209,10 +209,10 @@ describe('program template schema', () => {
     expect(error.issues.some((issue) => issue.startsWith('lifts.0.barbell'))).toBe(true);
   });
 
-  it('names the template and the set when judgedSets reads past the judged slot', () => {
-    const problems = problemsAfter(MADCOW_5X5, (copy) => (copy.progression[0].judgedSets = [5]));
+  it('names the template and the set when judgedSetIndexes reads past the judged slot', () => {
+    const problems = problemsAfter(MADCOW_5X5, (copy) => (copy.progression[0].judgedSetIndexes = [5]));
     expect(problems).toEqual([
-      `program template "madcow_5x5": progression rule 1 (squat) judgedSets reads set 5, but slot 'mon-squat' has 5 sets`,
+      `program template "madcow_5x5": progression rule 1 (squat) judgedSetIndexes reads set 5, but slot 'mon-squat' has 5 sets`,
     ]);
   });
 });

@@ -128,7 +128,7 @@ function weeklyRule(lift: MadcowMainLift, judgedSlot: string, topSetIndex: numbe
     var: 'top',
     trigger: 'endOfWeek',
     judgedSlots: [judgedSlot],
-    judgedSets: [topSetIndex],
+    judgedSetIndexes: [topSetIndex],
     onMet: [{ kind: 'increment', byPct: 0.025 }],
     onMiss: [{ kind: 'hold' }],
   };
