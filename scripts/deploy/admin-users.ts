@@ -34,9 +34,3 @@ export async function findUserByEmail(config: DeployConfig, email: string): Prom
   }
   throw new Error(`no account for ${email}`);
 }
-
-export async function allUserIds(config: DeployConfig): Promise<string[]> {
-  const ids: string[] = [];
-  for await (const users of userPages(config)) ids.push(...users.map((user) => user.id));
-  return ids;
-}
