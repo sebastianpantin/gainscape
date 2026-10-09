@@ -1,5 +1,6 @@
 import { isSessionEditable } from '@domain/edit-window.ts';
 import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
@@ -20,11 +21,12 @@ import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/histor
 import type { CatalogItem } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { updatePrivateProfile } from '../../lib/profile.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
+import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { forgetLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
@@ -99,6 +101,7 @@ interface SessionDetailScreenProps {
 export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { unitPref, effortInputMode } = usePreferences();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [edit, setEdit] = useState<SessionEdit | null>(null);
@@ -404,7 +407,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           unit={unitPref}
           submitLabel="Save bodyweight and changes"
           onSave={async (bodyweightKg) => {
-            await updatePrivateProfile(userId, { bodyweightKg });
+            await saveBodyweight({ userId, bodyweightKg, storage: deviceStorage(), queryClient });
             await save(problem.pending);
           }}
         />

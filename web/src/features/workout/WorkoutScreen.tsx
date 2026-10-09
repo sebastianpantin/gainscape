@@ -21,7 +21,7 @@ import {
 import { strengthText } from '../../lib/collection-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
 import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
-import { fetchProfile, type Profile, type UnitPref, updatePrivateProfile } from '../../lib/profile.ts';
+import { fetchProfile, type UnitPref } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
@@ -36,8 +36,8 @@ import { readPlateSettings } from '../../lib/plate-settings-store.ts';
 import { warmupPlan } from '../../lib/warmup-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
-import { type CacheFirstLoad, isDeviceOffline } from '../../offline/cache-first.ts';
-import { profileCache, rememberSavedBodyweight } from '../../offline/profile-cache.ts';
+import { isDeviceOffline } from '../../offline/cache-first.ts';
+import { profileCache } from '../../offline/profile-cache.ts';
 import { formatXp } from '../../lib/format.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
 import {
@@ -88,6 +88,7 @@ import {
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
+import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
@@ -492,12 +493,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           <BodyweightPrompt
             unit={unitPref}
             onSave={async (bodyweightKg) => {
-              await updatePrivateProfile(userId, { bodyweightKg });
-              rememberSavedBodyweight(deviceStorage(), userId, bodyweightKg);
-              queryClient.setQueryData<CacheFirstLoad<Profile>>(
-                ['profile', userId],
-                (current) => current && { ...current, loaded: { ...current.loaded, bodyweightKg } },
-              );
+              await saveBodyweight({ userId, bodyweightKg, storage: deviceStorage(), queryClient });
               setBodyweightKg(bodyweightKg);
               retryNow();
             }}
