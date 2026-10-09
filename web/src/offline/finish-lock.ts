@@ -10,6 +10,7 @@ import type { DraftStore } from './draft-store.ts';
 export interface CompletedSessionSummary extends SessionSummary, RememberedTiming, PlannedChallenge {
   programLinked?: boolean;
   completedAt?: string;
+  storedContentDiffers?: true;
 }
 
 export type SendOutcome =

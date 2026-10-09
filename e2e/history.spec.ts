@@ -72,6 +72,30 @@ test('re-sending a workout that was deleted elsewhere shows it as deleted and dr
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 });
 
+test('re-finishing a workout that was already saved shows the summary and says the later changes were not applied', async ({
+  page,
+}) => {
+  const username = `hist_resend_${Date.now().toString(36)}`;
+  await register(page, username);
+  const { user } = await readSession(page);
+
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await openLatestWorkout(page);
+  const sessionId = page.url().split('/').at(-1)!;
+  const storedSets = await setsOf(sessionId);
+
+  await writeStoredDraft(page, user.id, finishedBenchDraft(sessionId, await builtInExerciseId('barbell_bench_press')));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'already saved before your later changes' })).toBeVisible();
+  await expect.poll(async () => (await readStoredDraft(page, user.id))?.kind).toBe('synced');
+  expect(await sessionCount(username)).toBe(1);
+  expect(await setsOf(sessionId)).toEqual(storedSets);
+
+  await page.getByRole('link', { name: 'Open this workout' }).click();
+  await expect(page).toHaveURL(new RegExp(`/collection/history/${sessionId}$`));
+});
+
 test('a save that races an edit from another device keeps both changes after review', async ({ page }) => {
   const username = `hist_rev_${Date.now().toString(36)}`;
   await register(page, username);

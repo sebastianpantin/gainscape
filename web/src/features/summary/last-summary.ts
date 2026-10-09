@@ -7,7 +7,7 @@ export interface PlannedChallenge {
   plannedChallenge?: DraftChallenge | null;
 }
 
-type RememberedSummary = SessionSummary & RememberedTiming & PlannedChallenge;
+type RememberedSummary = SessionSummary & RememberedTiming & PlannedChallenge & { storedContentDiffers?: true };
 
 const LAST_SUMMARY_KEY = 'gainscape.last-summary';
 

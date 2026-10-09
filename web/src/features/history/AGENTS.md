@@ -28,7 +28,7 @@ Past workouts under the Log tab: a paged session list and a detail screen where 
 ### Testing Requirements
 
 - Unit: `tests/web/session-edit.test.ts` (`make test-web`) is the place for the first failing test; `tests/web/history-rules.test.ts` covers `invokeWithRetries`, `tests/web/format.test.ts` and `tests/web/effort-labels.test.ts` the moved helpers. Paging is covered by `tests/integration/history-paging.test.ts` (stack needed).
-- E2E (stack needed): `e2e/history.spec.ts` (edit a set and see XP change, delete, workout deleted elsewhere, concurrent edit rebase, delete after an edit elsewhere) and `e2e/a11y.spec.ts`. The server side is covered by `tests/integration/edit-session.test.ts` and `delete-session.test.ts`.
+- E2E (stack needed): `e2e/history.spec.ts` (edit a set and see XP change, delete, workout deleted elsewhere, concurrent edit rebase, delete after an edit elsewhere, re-finishing an already saved workout) and `e2e/a11y.spec.ts`. The server side is covered by `tests/integration/edit-session.test.ts` and `delete-session.test.ts`.
 
 ### Common Patterns
 

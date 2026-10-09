@@ -26,6 +26,7 @@ import {
   challengeHeadline,
   describeRecord,
   gearBonusText,
+  unappliedChangesText,
 } from './reveal-rules.ts';
 
 async function savedWhenOffline<Loaded>(saved: Loaded | null, loadLive: () => Promise<Loaded>): Promise<Loaded> {
@@ -174,6 +175,13 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   }
 
   const timingText = sessionTimingParts(summary).join(' · ');
+  const unappliedText = unappliedChangesText(summary);
+  const unappliedNotice = unappliedText && (
+    <p className="notice" role="status">
+      {unappliedText}{' '}
+      {!summary.historyOnly && <Link to={`/collection/history/${summary.sessionId}`}>Open this workout</Link>}
+    </p>
+  );
 
   if (summary.historyOnly) {
     return (
@@ -183,6 +191,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         <p className="panel" role="status">
           Saved to history (older than 7 days, no XP)
         </p>
+        {unappliedNotice}
         <Link className="button" to="/">
           Done
         </Link>
@@ -209,6 +218,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         <span className="reveal-total pop">+{formatXp(totalXp)} XP</span>
       </header>
       {timingText && <p className="muted">{timingText}</p>}
+      {unappliedNotice}
       {headline && (
         <section className="panel stack" aria-label="Challenge">
           <p className={summary.challenge?.passed ? 'accent-text' : undefined}>{headline}</p>
