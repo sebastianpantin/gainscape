@@ -197,7 +197,7 @@ describe('previewSession', () => {
       builtIn,
       strengthOf([['curl', null]]),
     );
-    expect(previews[0][0]).toMatchObject({ basis: 'unknown', xp: DEFAULT_BALANCE.coldStartXpPerSet });
+    expect(previews[0][0]).toEqual({ basis: 'unrated', xp: DEFAULT_BALANCE.coldStartXpPerSet, rir: null });
   });
 
   it('estimates from the session best when only an expired e1RM is known', () => {
@@ -450,6 +450,11 @@ describe('preview labels', () => {
   it('notes a warm-up preview as a warm-up', () => {
     expect(previewXpLabel({ xp: 0, basis: 'warmup', rir: null })).toBe('~0');
     expect(previewNote({ xp: 0, basis: 'warmup', rir: null })).toBe('warm-up');
+  });
+
+  it('shows the flat XP of an unrated set that has no estimate and notes it as unrated', () => {
+    expect(previewXpLabel({ xp: 165, basis: 'unrated', rir: null })).toBe('~165');
+    expect(previewNote({ xp: 165, basis: 'unrated', rir: null })).toBe('unrated');
   });
 
   it('notes estimated, first-time and unknown previews', () => {

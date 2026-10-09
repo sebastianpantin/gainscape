@@ -26,7 +26,7 @@ import type {
   LiftDraftExercise,
 } from '../../offline/draft-format.ts';
 
-export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'warmup' | 'unknown';
+export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'unrated' | 'warmup' | 'unknown';
 
 export interface SetPreview {
   xp: number;
@@ -175,8 +175,7 @@ function toPreview(result: SetResult, hasPriorSession: boolean): SetPreview {
   if (result.cardio !== null) return { xp: result.xp, basis: 'logged', rir: null };
   if (result.rirSource === 'logged') return { xp: result.xp, basis: 'logged', rir: result.rir };
   if (result.rirSource === 'estimated') return { xp: result.xp, basis: 'estimated', rir: result.rir };
-  if (hasPriorSession) return { ...UNKNOWN_PREVIEW, xp: result.xp };
-  return { xp: result.xp, basis: 'cold_start', rir: null };
+  return { xp: result.xp, basis: hasPriorSession ? 'unrated' : 'cold_start', rir: null };
 }
 
 export function previewSession(
@@ -225,6 +224,7 @@ export function previewNote(preview: SetPreview, cfg: BalanceConfig = DEFAULT_BA
   if (preview.basis === 'logged' && preview.rir !== null && preview.rir >= firstRirWithoutXp) return 'counts for e1RM';
   if (preview.basis === 'estimated') return `est. RIR ${preview.rir}`;
   if (preview.basis === 'cold_start') return 'first time';
+  if (preview.basis === 'unrated') return 'unrated';
   if (preview.basis === 'warmup') return 'warm-up';
   return '';
 }
