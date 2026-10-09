@@ -17,6 +17,7 @@ import {
   type SessionSummary,
   sfc32FromSeed,
 } from '@domain/index.ts';
+import { retryEdgeRuntimeDrops } from '../../scripts/function-batch.ts';
 import { currentStackEnvMismatch, localStackStatus, type LocalStackStatus } from '../../scripts/local-stack.ts';
 
 const functionsEnvPath = join(import.meta.dirname, '../../supabase/functions/.env.local');
@@ -94,16 +95,6 @@ export interface FunctionResponse {
 
 const EDGE_RUNTIME_RETRIES = 2;
 
-function isEdgeRuntimeDrop(status: number, rawBody: string): boolean {
-  if (status < 500) return false;
-  try {
-    const body = JSON.parse(rawBody);
-    return typeof body !== 'object' || body === null || !('error' in body);
-  } catch {
-    return true;
-  }
-}
-
 interface RawFunctionResponse {
   status: number;
   rawBody: string;
@@ -111,14 +102,15 @@ interface RawFunctionResponse {
 }
 
 export async function fetchFunction(name: string, init: RequestInit): Promise<RawFunctionResponse> {
-  for (let attempt = 0; ; attempt += 1) {
-    const response = await fetch(`${env.FUNCTIONS_URL}/${name}`, init);
-    const rawBody = await response.text();
-    if (attempt === EDGE_RUNTIME_RETRIES || !isEdgeRuntimeDrop(response.status, rawBody)) {
-      return { status: response.status, rawBody, headers: response.headers };
-    }
-    console.warn(`retrying ${name}: the edge runtime dropped the request (${response.status} ${rawBody})`);
-  }
+  return await retryEdgeRuntimeDrops(
+    async () => {
+      const response = await fetch(`${env.FUNCTIONS_URL}/${name}`, init);
+      return { status: response.status, rawBody: await response.text(), headers: response.headers };
+    },
+    EDGE_RUNTIME_RETRIES,
+    (dropped) =>
+      console.warn(`retrying ${name}: the edge runtime dropped the request (${dropped.status} ${dropped.rawBody})`),
+  );
 }
 
 export async function postFunction(name: string, accessToken: string, body: unknown): Promise<FunctionResponse> {
