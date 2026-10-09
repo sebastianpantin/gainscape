@@ -11,6 +11,7 @@ import {
   OFFLINE_ITEMS_NOTICE,
   openItems,
   SCROLL_KEY,
+  SCROLL_NAME,
   scrollSlot,
   shortenFirstDeadliftSet,
   startChallenge,
@@ -109,4 +110,52 @@ test('the reveal names a passed challenge with its bonus and explains a failed o
   await expect(page.getByText(/Challenge bonus/)).toHaveCount(0);
   expect(await scrollQuantity(username, SCROLL_KEY)).toBe(0);
   await expect(challengeSuperset(page)).toHaveCount(0);
+});
+
+test('a challenge workout saved after its scroll is gone is saved without the challenge and says so', async ({
+  page,
+}) => {
+  test.setTimeout(150_000);
+  const username = uniqueUsername('ch_gone');
+  await register(page, username);
+  await logDeadliftToFailure(page, 140);
+  await grantItems(username, { [SCROLL_KEY]: 1 });
+
+  await openItems(page);
+  await startChallenge(page);
+  await grantItems(username, { [SCROLL_KEY]: 0 });
+  await markEveryRoundDone(page);
+  await finishWithBodyweight(page);
+  await expect(
+    page.getByText(
+      `Challenge not applied: you had no scroll left for ${CHALLENGE_NAME}, so this was saved as a normal workout.`,
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(/^Challenge (complete|failed):/)).toHaveCount(0);
+  await expect(page.getByText(/Challenge bonus/)).toHaveCount(0);
+});
+
+test('a challenge that used its scroll leaves none in the saved items', async ({ context, page }) => {
+  test.setTimeout(150_000);
+  const username = uniqueUsername('ch_used');
+  await register(page, username);
+  await logDeadliftToFailure(page, 140);
+  await grantItems(username, { [SCROLL_KEY]: 1 });
+
+  await openItems(page);
+  await startChallenge(page);
+  await markEveryRoundDone(page);
+  await finishWithBodyweight(page);
+  await expect(page.getByText(`Challenge complete: ${CHALLENGE_NAME}`)).toBeVisible();
+
+  await context.setOffline(true);
+  await openItems(page);
+  await expect(page.getByText(OFFLINE_ITEMS_NOTICE)).toBeVisible();
+  await expect(scrollSlot(page)).toHaveCount(0);
+  await page
+    .getByRole('main')
+    .getByRole('button', { name: `${SCROLL_NAME} ×0`, exact: true })
+    .click();
+  await expect(itemDetails(page).getByRole('button', { name: 'Start challenge' })).toHaveCount(0);
+  await context.setOffline(false);
 });

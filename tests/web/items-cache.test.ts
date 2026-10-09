@@ -4,6 +4,7 @@ import {
   type ItemsCache,
   readItemsCache,
   saveItemsCache,
+  spendCachedScroll,
 } from '../../web/src/offline/items-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
@@ -122,5 +123,26 @@ describe('items cache', () => {
       throw new Error('blocked');
     };
     expect(() => forgetItemsCache(throwing, USER)).not.toThrow();
+  });
+
+  it('spends one scroll of the challenge a synced workout used, as the server does', () => {
+    const storage = new MemoryStorage();
+    saveItemsCache(storage, USER, CACHE);
+    spendCachedScroll(storage, USER, 'challenge-dl');
+    expect(readItemsCache(storage, USER)?.inventory).toEqual([
+      { itemId: 'scroll-1', quantity: 0, firstObtainedAt: '2026-10-01T10:00:00.000Z' },
+    ]);
+    spendCachedScroll(storage, USER, 'challenge-dl');
+    expect(readItemsCache(storage, USER)?.inventory[0].quantity).toBe(0);
+  });
+
+  it('leaves the saved items alone for a challenge no saved scroll grants, and saves nothing without a cache', () => {
+    const storage = new MemoryStorage();
+    spendCachedScroll(storage, USER, 'challenge-dl');
+    expect(readItemsCache(storage, USER)).toBeNull();
+    saveItemsCache(storage, USER, CACHE);
+    spendCachedScroll(storage, USER, 'challenge-unknown');
+    expect(readItemsCache(storage, USER)).toEqual(CACHE);
+    expect(() => spendCachedScroll(null, USER, 'challenge-dl')).not.toThrow();
   });
 });

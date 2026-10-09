@@ -3,6 +3,7 @@ import { forceSignedOut, REQUEST_TIMEOUT_MS, signOutOnThisDevice } from '../lib/
 import { AUTH_STORAGE_KEY, readStoredSession, supabase } from '../lib/supabase.ts';
 import type { WorkoutDraft } from './draft-format.ts';
 import { type CompletedSessionSummary, type SendOutcome, sendOutcomeFrom } from './finish-lock.ts';
+import { spendCachedScroll } from './items-cache.ts';
 import { factsOutcomeOf, rememberFinishedSession } from './program-cache.ts';
 import { completeSessionPayload } from './session-payload.ts';
 
@@ -17,6 +18,8 @@ export async function syncFinishedWorkout(userId: string, draft: WorkoutDraft): 
   );
   const factsOutcome = factsOutcomeOf(outcome);
   if (factsOutcome) rememberFinishedSession(localStorage, userId, draft, factsOutcome);
+  if (outcome.kind === 'synced' && outcome.summary.challenge)
+    spendCachedScroll(localStorage, userId, outcome.summary.challenge.challengeId);
   return outcome;
 }
 

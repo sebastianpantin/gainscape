@@ -46,6 +46,16 @@ export function challengeHeadline(summary: Pick<SessionSummary, 'challenge'>): s
   return `${challenge.passed ? 'Challenge complete' : 'Challenge failed'}: ${challenge.name}`;
 }
 
+export function challengeNotAppliedText(
+  summary: Pick<SessionSummary, 'challenge' | 'historyOnly'>,
+  planned: DraftChallenge | null,
+): string | null {
+  if (!planned || summary.challenge) return null;
+  return summary.historyOnly
+    ? 'Challenge not applied: a workout older than 7 days is saved to history only. Your scroll was kept.'
+    : `Challenge not applied: you had no scroll left for ${planned.name}, so this was saved as a normal workout.`;
+}
+
 export function challengeBonusText(
   summary: Pick<SessionSummary, 'challengeBonusBySkill'>,
   skillKey: string,
