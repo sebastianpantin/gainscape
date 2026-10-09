@@ -2,7 +2,7 @@ import { parseTrainingDeviceSettings, type TrainingDeviceSettings } from './trai
 
 const TRAINING_DEVICE_KEY_PREFIX = 'gainscape.training-device.';
 
-export function trainingDeviceKey(userId: string): string {
+function trainingDeviceKey(userId: string): string {
   return `${TRAINING_DEVICE_KEY_PREFIX}${userId}`;
 }
 

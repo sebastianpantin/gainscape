@@ -23,7 +23,7 @@ export interface BuildMarker {
   hostedSupabase: boolean;
 }
 
-export function readBuildMarker(outDir: string): BuildMarker | null {
+function readBuildMarker(outDir: string): BuildMarker | null {
   try {
     return JSON.parse(readFileSync(join(outDir, BUILD_MARKER), 'utf8')) as BuildMarker;
   } catch {
