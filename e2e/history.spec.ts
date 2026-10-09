@@ -72,7 +72,7 @@ test('re-sending a workout that was deleted elsewhere shows it as deleted and dr
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 });
 
-test('re-finishing a workout that was already saved shows the summary and says the later changes were not applied', async ({
+test('re-finishing a workout that was already saved shows the summary and says this copy was not applied', async ({
   page,
 }) => {
   const username = `hist_resend_${Date.now().toString(36)}`;
@@ -87,7 +87,9 @@ test('re-finishing a workout that was already saved shows the summary and says t
   await writeStoredDraft(page, user.id, finishedBenchDraft(sessionId, await builtInExerciseId('barbell_bench_press')));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
-  await expect(page.getByRole('status').filter({ hasText: 'already saved before your later changes' })).toBeVisible();
+  await expect(
+    page.getByRole('status').filter({ hasText: "differs from this device's copy, so this copy was not applied" }),
+  ).toBeVisible();
   await expect.poll(async () => (await readStoredDraft(page, user.id))?.kind).toBe('synced');
   expect(await sessionCount(username)).toBe(1);
   expect(await setsOf(sessionId)).toEqual(storedSets);

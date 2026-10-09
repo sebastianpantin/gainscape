@@ -157,15 +157,15 @@ describe('challenge lines', () => {
 });
 
 describe('unappliedChangesText', () => {
-  it('tells the lifter that changes made after the workout was saved were not applied', () => {
+  it('tells the lifter that the copy on this device differs from the saved workout and was not applied', () => {
     expect(unappliedChangesText({ storedContentDiffers: true })).toBe(
-      'This workout was already saved before your later changes, so they were not applied. Make them again in History.',
+      "This workout was already saved, and the saved version differs from this device's copy, so this copy was not applied. Check it in History.",
     );
   });
 
   it('does not send the lifter to History for a workout too old to edit', () => {
     expect(unappliedChangesText({ storedContentDiffers: true, historyOnly: true })).toBe(
-      'This workout was already saved before your later changes, so they were not applied.',
+      "This workout was already saved, and the saved version differs from this device's copy, so this copy was not applied.",
     );
   });
 
