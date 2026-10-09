@@ -20,7 +20,7 @@ const BACKEND_FILES = [
   'web/src/offline/session-payload.ts',
 ];
 
-function isDocumentation(path: string): boolean {
+export function isDocumentation(path: string): boolean {
   return path.endsWith('.md') || path.startsWith('docs/');
 }
 

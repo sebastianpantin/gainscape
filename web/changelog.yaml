@@ -1,0 +1,7 @@
+- prs: []
+  version: 0.1.0
+  date: 2026-10-09
+  title: Gainscape changelog
+  items:
+    - Gainscape now keeps a list of what changed in each release, under Settings.
+    - After an update, a short What's new note lists the changes since your last visit.

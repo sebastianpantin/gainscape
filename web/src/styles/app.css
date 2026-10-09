@@ -145,6 +145,36 @@ a:hover {
   background: rgb(0 0 0 / 60%);
 }
 
+.whats-new-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: 80dvh;
+  color: var(--color-text);
+}
+
+.whats-new-dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+.whats-new-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.whats-new-scroll:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.release-list {
+  gap: var(--space-4);
+}
+
+.release-items {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
 .term-help {
   display: inline-grid;
   place-items: center;

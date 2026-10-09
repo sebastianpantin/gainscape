@@ -108,7 +108,9 @@ The tooling enforces this:
 
 ## Every deploy
 
-On `main` at `origin/main` with a clean tree:
+First ask Claude to write the changelog (`write the changelog`, the skill in `.claude/skills/changelog/SKILL.md`). Review and merge that PR, then `git switch main && git pull` so `make deploy` sees `main` at `origin/main`. `make deploy` enforces this step. `make changelog-unreleased` shows what is still uncovered.
+
+Then, on `main` at `origin/main` with a clean tree:
 
 ```sh
 make backup-hosted
@@ -117,7 +119,7 @@ make deploy
 
 Skip `make backup-hosted` while `GPG_RECIPIENT` is unset.
 
-`make deploy` first checks the settings file, the git state and the linked project. Then it:
+`make deploy` first checks the settings file, the git state and the linked project, and that every user-facing PR merged since the changelog was introduced is listed in some entry's `prs`; it also needs a full (not shallow) clone. The gate also refuses `prs` numbers that are not PRs merged since the changelog began. Then it:
 
 1. builds and scans the web app;
 2. asks you to confirm the backup, when `GPG_RECIPIENT` is set;
