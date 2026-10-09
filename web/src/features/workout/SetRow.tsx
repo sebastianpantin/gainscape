@@ -15,6 +15,7 @@ import {
   steppedReps,
   steppedWeight,
   unitToKg,
+  WEIGHT_STEPPER_STEP,
 } from '../../lib/units.ts';
 import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
 import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
@@ -85,6 +86,7 @@ export function WeightField({ loadType, weightKg, unit, onChange, stepperSetNumb
       value={shown}
       lowest={0}
       highest={highest}
+      step={WEIGHT_STEPPER_STEP[unit]}
       onCommit={(typed) => onChange(unitToKg(typed, unit))}
     />
   );

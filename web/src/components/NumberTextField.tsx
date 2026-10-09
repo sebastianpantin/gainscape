@@ -1,5 +1,11 @@
-import { type ReactNode, useState } from 'react';
-import { typedNumberWithin } from '../lib/units.ts';
+import { type ReactNode, useId, useState } from 'react';
+import {
+  shownNumberText,
+  stepDirectionForKey,
+  steppedFieldValue,
+  typedNumberChange,
+  type TypedNumberText,
+} from '../lib/number-field-rules.ts';
 
 interface NumberTextFieldProps {
   label: ReactNode;
@@ -7,12 +13,8 @@ interface NumberTextFieldProps {
   lowest: number;
   highest: number;
   wholeNumber?: boolean;
+  step?: number;
   onCommit: (value: number) => void;
-}
-
-interface TypedText {
-  text: string;
-  value: number;
 }
 
 export function NumberTextField({
@@ -21,10 +23,13 @@ export function NumberTextField({
   lowest,
   highest,
   wholeNumber = false,
+  step = 1,
   onCommit,
 }: NumberTextFieldProps) {
-  const [typed, setTyped] = useState<TypedText | null>(null);
-  const shownText = typed !== null && typed.value === value ? typed.text : String(value);
+  const hintId = useId();
+  const [typed, setTyped] = useState<TypedNumberText | null>(null);
+  const range = { lowest, highest, wholeNumber };
+  const shown = shownNumberText(typed, value);
   return (
     <label className="compact-field">
       {label}
@@ -36,14 +41,29 @@ export function NumberTextField({
         aria-valuemin={lowest}
         aria-valuemax={highest}
         aria-valuenow={value}
-        value={shownText}
+        aria-invalid={shown.matchesValue ? undefined : true}
+        aria-describedby={shown.matchesValue ? undefined : hintId}
+        value={shown.text}
         onChange={(event) => {
-          const next = typedNumberWithin(event.target.value, lowest, highest, wholeNumber);
-          if (next !== null && next !== value) onCommit(next);
-          setTyped({ text: event.target.value, value: next ?? value });
+          const change = typedNumberChange(event.target.value, value, range);
+          if (change.commit !== null) onCommit(change.commit);
+          setTyped(change.typed);
+        }}
+        onKeyDown={(event) => {
+          const direction = stepDirectionForKey(event.key);
+          if (direction === null) return;
+          event.preventDefault();
+          const next = steppedFieldValue(value, direction, step, range);
+          if (next !== value) onCommit(next);
+          setTyped(null);
         }}
         onBlur={() => setTyped(null)}
       />
+      {shown.matchesValue ? null : (
+        <span id={hintId} className="problem" aria-hidden="true">
+          Saved as {value}
+        </span>
+      )}
     </label>
   );
 }
