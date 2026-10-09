@@ -195,16 +195,22 @@ export function rollSessionLoot(
   return { rolls, dryRolls };
 }
 
+export interface RollVersions {
+  lootVersion: number;
+  balanceVersion: number;
+}
+
 export function revocationReason(
   source: RollKind,
   candidate: LootCandidate | undefined,
   sessionDeleted: boolean,
   cfg: LootConfig,
-  rolledUnderLootVersion: number,
+  rolledUnder: RollVersions,
+  balanceVersion: number,
 ): RevokeReason | null {
   if (sessionDeleted) return 'session_deleted';
   if (candidate === undefined) return 'set_removed';
-  if (rolledUnderLootVersion < cfg.version) return null;
+  if (rolledUnder.lootVersion < cfg.version || rolledUnder.balanceVersion < balanceVersion) return null;
   if (!qualifies(source, candidate, cfg)) return 'no_longer_qualifies';
   return null;
 }
