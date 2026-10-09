@@ -35,15 +35,15 @@ describe('local drafts of an account', () => {
     expect(await hasDraftOnDevice(emptyStore, storage, userId)).toBe(true);
   });
 
-  it('forgets the account record in both the given store and the localStorage fallback, leaving no tombstone', async () => {
+  it('forgets the account draft in both the given store and the localStorage fallback', async () => {
     const storage = new MemoryStorage();
     await createLocalDraftStore(storage).put(userId, 10, workout('session-in-fallback'));
     await createLocalDraftStore(storage).put(otherUserId, 10, workout('session-b'));
     const store = createLocalDraftStore(new MemoryStorage());
     await store.put(userId, 10, workout('session-a'));
     await forgetDraftOnDevice(store, storage, userId);
-    expect(await store.get(userId)).toBeNull();
-    expect(await createLocalDraftStore(storage).get(userId)).toBeNull();
+    expect(await store.get(userId)).toMatchObject({ kind: 'forgotten', forgottenSessionId: 'session-a' });
+    expect(await createLocalDraftStore(storage).get(userId)).toMatchObject({ kind: 'forgotten' });
     expect(await hasDraftOnDevice(store, storage, otherUserId)).toBe(true);
     await expect(forgetDraftOnDevice(store, null, userId)).resolves.toBeUndefined();
   });

@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { openDraftStore } from '../../web/src/offline/draft-boot.ts';
-import { discardedRecord, draftRecord, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
+import {
+  discardedRecord,
+  draftRecord,
+  forgottenRecord,
+  type WorkoutDraft,
+} from '../../web/src/offline/draft-format.ts';
 import {
   createIdbDraftStore,
+  DRAFT_OBJECT_STORE,
   type DraftStore,
   fallbackKeyFor,
   openDraftDatabase,
@@ -31,6 +37,17 @@ export function workout(sessionId: string, finishedAt: string | null = null): Wo
 }
 
 const finished = '2026-09-30T11:00:00.000Z';
+
+async function rawRecord({ storage, indexedDB }: DraftStoreHarness, recordUserId: string): Promise<unknown> {
+  if (!indexedDB) return JSON.parse(storage.getItem(fallbackKeyFor(recordUserId)) ?? 'null');
+  const database = await openDraftDatabase(indexedDB);
+  const request = database!.transaction(DRAFT_OBJECT_STORE).objectStore(DRAFT_OBJECT_STORE).get(recordUserId);
+  const raw = await new Promise((resolve) => {
+    request.onsuccess = () => resolve(request.result);
+  });
+  database!.close();
+  return raw;
+}
 
 export function describeDraftStoreContract(name: string, createHarness: () => Promise<DraftStoreHarness>) {
   describe(`${name} draft store`, () => {
@@ -111,17 +128,33 @@ export function describeDraftStoreContract(name: string, createHarness: () => Pr
       expect(await store.get(userId)).toEqual(discardedRecord(userId, 21, 'session-a'));
     });
 
-    it('forgets the record of the user outright, draft or tombstone, and keeps other users', async () => {
+    it('forgets the draft of the user behind a tombstone that refuses its late write, and keeps other users', async () => {
       const { store } = await createHarness();
       await store.put(userId, 10, workout('session-a'));
       await store.put(otherUserId, 10, workout('session-b'));
       await store.forget(userId);
-      expect(await store.get(userId)).toBeNull();
+      expect(await store.get(userId)).toMatchObject({ kind: 'forgotten', forgottenSessionId: 'session-a' });
       expect(await store.userIdsWithDrafts()).toEqual([otherUserId]);
+      expect(await store.put(userId, Date.now() + 60_000, workout('session-a'))).toBe('discarded');
+      expect(await store.put(userId, Date.now() + 60_000, workout('session-c'))).toBe('written');
       await store.discard(otherUserId, 'session-b', 11);
       await store.forget(otherUserId);
-      expect(await store.get(otherUserId)).toBeNull();
-      await expect(store.forget(userId)).resolves.toBeUndefined();
+      expect(await store.get(otherUserId)).toMatchObject({ kind: 'forgotten', forgottenSessionId: 'session-b' });
+      const neverStored = '55555555-5555-4555-8555-555555555555';
+      await store.forget(neverStored);
+      expect(await store.get(neverStored)).toBeNull();
+    });
+
+    it('stores discard and forget tombstones in the synced shape older app versions read as occupied', async () => {
+      const harness = await createHarness();
+      await harness.store.put(userId, 10, workout('session-a'));
+      await harness.store.discard(userId, 'session-a', 11);
+      expect(await rawRecord(harness, userId)).toMatchObject({ kind: 'synced', syncedSessionId: 'session-a' });
+      await harness.store.put(otherUserId, 10, workout('session-b'));
+      await harness.store.forget(otherUserId);
+      const forgotten = await harness.store.get(otherUserId);
+      expect(forgotten).toEqual(forgottenRecord(otherUserId, forgotten!.updatedAt, 'session-b'));
+      expect(await rawRecord(harness, otherUserId)).toMatchObject({ kind: 'synced', syncedSessionId: 'session-b' });
     });
 
     it('deletes v1 drafts at boot without migrating them', async () => {

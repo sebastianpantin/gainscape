@@ -9,9 +9,10 @@ import {
   readFallbackRecord,
   transactionDone,
 } from './draft-store.ts';
-import { parseStoredDraft, storedSessionId } from './draft-format.ts';
+import { parseStoredDraft, storableRecord, type StoredDraft, storedSessionId } from './draft-format.ts';
 
 const V1_DRAFT_KEY = /^gainscape\.workout-draft\.[0-9a-f-]{36}$/;
+const FORGOTTEN_TOMBSTONE_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
 export interface DraftEnvironment {
   indexedDB: IDBFactory | undefined;
@@ -25,6 +26,29 @@ function deleteV1Drafts(storage: Storage): void {
     if (key !== null && V1_DRAFT_KEY.test(key)) v1Keys.push(key);
   }
   for (const key of v1Keys) storage.removeItem(key);
+}
+
+function isExpiredForgottenTombstone(record: StoredDraft | null, now: number): boolean {
+  return record?.kind === 'forgotten' && now - record.updatedAt >= FORGOTTEN_TOMBSTONE_LIFETIME_MS;
+}
+
+function dropExpiredFallbackTombstones(storage: Storage, now: number): void {
+  for (const userId of fallbackUserIds(storage))
+    if (isExpiredForgottenTombstone(readFallbackRecord(storage, userId), now))
+      storage.removeItem(fallbackKeyFor(userId));
+}
+
+async function dropExpiredStoredTombstones(database: IDBDatabase, now: number): Promise<void> {
+  const transaction = database.transaction(DRAFT_OBJECT_STORE, 'readwrite');
+  const done = transactionDone(transaction);
+  const request = transaction.objectStore(DRAFT_OBJECT_STORE).openCursor();
+  request.onsuccess = () => {
+    const cursor = request.result;
+    if (!cursor) return;
+    if (isExpiredForgottenTombstone(parseStoredDraft(cursor.value, String(cursor.key)), now)) cursor.delete();
+    cursor.continue();
+  };
+  await done;
 }
 
 async function moveFallbackRecord(database: IDBDatabase, storage: Storage, userId: string): Promise<void> {
@@ -41,7 +65,7 @@ async function moveFallbackRecord(database: IDBDatabase, storage: Storage, userI
     keepFallback = storesOtherSession && stored.kind === 'draft';
     const fallbackIsOnlyCopy = storesOtherSession && fallback.kind === 'draft';
     if (!keepFallback && (!stored || fallbackIsOnlyCopy || fallback.updatedAt > stored.updatedAt))
-      objectStore.put(fallback);
+      objectStore.put(storableRecord(fallback));
   };
   await done;
   const fallbackUnchanged = JSON.stringify(readFallbackRecord(storage, userId)) === JSON.stringify(fallback);
@@ -49,12 +73,18 @@ async function moveFallbackRecord(database: IDBDatabase, storage: Storage, userI
 }
 
 export async function openDraftStore(environment: DraftEnvironment): Promise<DraftStore> {
+  const now = Date.now();
   deleteV1Drafts(environment.storage);
-  if (!environment.indexedDB) return createLocalDraftStore(environment.storage);
+  if (!environment.indexedDB) {
+    dropExpiredFallbackTombstones(environment.storage, now);
+    return createLocalDraftStore(environment.storage);
+  }
   const database = await openDraftDatabase(environment.indexedDB);
   if (!database) throw new Error('draft_database_unavailable');
   for (const userId of fallbackUserIds(environment.storage))
     await moveFallbackRecord(database, environment.storage, userId).catch(() => undefined);
+  await dropExpiredStoredTombstones(database, now).catch(() => undefined);
+  dropExpiredFallbackTombstones(environment.storage, now);
   return createIdbDraftStore(database);
 }
 

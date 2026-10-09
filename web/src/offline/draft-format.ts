@@ -114,6 +114,13 @@ export type StoredDraft =
       userId: string;
       updatedAt: number;
       discardedSessionId: string;
+    }
+  | {
+      v: typeof DRAFT_FORMAT_VERSION;
+      kind: 'forgotten';
+      userId: string;
+      updatedAt: number;
+      forgottenSessionId: string;
     };
 
 function looksLikeDraft(value: unknown): value is WorkoutDraft {
@@ -255,8 +262,11 @@ export function parseStoredDraft(raw: unknown, userId: string): StoredDraft | nu
   if (!isRecord(raw) || raw.userId !== userId) return null;
   if (!READABLE_FORMAT_VERSIONS.includes(raw.v)) return null;
   if (typeof raw.updatedAt !== 'number' || !Number.isFinite(raw.updatedAt)) return null;
-  if (raw.kind === 'synced' && typeof raw.syncedSessionId === 'string')
+  if (raw.kind === 'synced' && typeof raw.syncedSessionId === 'string') {
+    if (raw.tombstone === 'discarded') return discardedRecord(userId, raw.updatedAt, raw.syncedSessionId);
+    if (raw.tombstone === 'forgotten') return forgottenRecord(userId, raw.updatedAt, raw.syncedSessionId);
     return syncedRecord(userId, raw.updatedAt, raw.syncedSessionId);
+  }
   if (raw.kind === 'discarded' && typeof raw.discardedSessionId === 'string')
     return discardedRecord(userId, raw.updatedAt, raw.discardedSessionId);
   if (raw.kind === 'draft' && looksLikeDraft(raw.draft))
@@ -282,9 +292,20 @@ export function discardedRecord(userId: string, updatedAt: number, discardedSess
   return { v: DRAFT_FORMAT_VERSION, kind: 'discarded', userId, updatedAt, discardedSessionId };
 }
 
+export function forgottenRecord(userId: string, updatedAt: number, forgottenSessionId: string): StoredDraft {
+  return { v: DRAFT_FORMAT_VERSION, kind: 'forgotten', userId, updatedAt, forgottenSessionId };
+}
+
 export function storedSessionId(record: StoredDraft): string {
   if (record.kind === 'draft') return record.draft.sessionId;
-  return record.kind === 'synced' ? record.syncedSessionId : record.discardedSessionId;
+  if (record.kind === 'synced') return record.syncedSessionId;
+  return record.kind === 'discarded' ? record.discardedSessionId : record.forgottenSessionId;
+}
+
+export function storableRecord(record: StoredDraft): object {
+  if (record.kind === 'draft' || record.kind === 'synced') return record;
+  const { v, userId, updatedAt, kind } = record;
+  return { v, kind: 'synced', userId, updatedAt, syncedSessionId: storedSessionId(record), tombstone: kind };
 }
 
 export function nextUpdatedAt(lastSeen: number, now: number): number {

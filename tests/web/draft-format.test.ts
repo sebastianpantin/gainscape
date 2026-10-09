@@ -16,6 +16,10 @@ import {
   notDoneSetCount,
   plannedSetsLeftToLifter,
   parseStoredDraft,
+  discardedRecord,
+  forgottenRecord,
+  storableRecord,
+  syncedRecord,
   programLabelFor,
   removeExercise,
   removeSet,
@@ -116,6 +120,16 @@ describe('parseStoredDraft', () => {
     const raw = { v: 5, kind: 'discarded', userId, updatedAt: 6, discardedSessionId: workout().sessionId };
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
     expect(parseStoredDraft({ ...raw, discardedSessionId: 7 }, userId)).toBeNull();
+  });
+
+  it('stores discard and forget tombstones in the synced shape an older app version reads as occupied', () => {
+    const sessionId = workout().sessionId;
+    for (const tombstone of [discardedRecord(userId, 6, sessionId), forgottenRecord(userId, 6, sessionId)]) {
+      const stored = storableRecord(tombstone);
+      expect(stored).toMatchObject({ v: 5, kind: 'synced', userId, updatedAt: 6, syncedSessionId: sessionId });
+      expect(parseStoredDraft(JSON.parse(JSON.stringify(stored)), userId)).toEqual(tombstone);
+    }
+    expect(storableRecord(syncedRecord(userId, 6, sessionId))).toEqual(syncedRecord(userId, 6, sessionId));
   });
 
   it('keeps a warm-up flag through a v5 parse', () => {

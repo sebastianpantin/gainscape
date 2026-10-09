@@ -111,7 +111,7 @@ export function createDraftSession({
     if (record) seen(record.updatedAt);
     if (record?.kind === 'draft') showDraft(record.draft);
     else if (record?.kind === 'synced' && deletedSessionIds.has(record.syncedSessionId)) showDraft(null, 'deleted');
-    else if (record?.kind === 'discarded') showDraft(null);
+    else if (record?.kind === 'discarded' || record?.kind === 'forgotten') showDraft(null);
     else showDraft(null, noticeWhenGone);
   };
 

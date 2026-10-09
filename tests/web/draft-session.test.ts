@@ -212,6 +212,21 @@ describe('draft session', () => {
     expect(await store.get(userId)).toMatchObject({ kind: 'discarded', discardedSessionId: 'session-a' });
   });
 
+  it('keeps a forgotten workout gone when a tab still signed in to the deleted account writes it late', async () => {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const stale = sessionOver(store);
+    await stale.session.ready;
+    stale.session.changeDraft(workout('session-a'));
+    await stale.session.flush();
+
+    await store.forget(userId);
+    stale.session.updateDraft((draft) => withReps(draft, 5));
+    await stale.session.flush();
+
+    expect(await store.get(userId)).toMatchObject({ kind: 'forgotten', forgottenSessionId: 'session-a' });
+    expect(stale.latest().state).toMatchObject({ draft: null, notice: null });
+  });
+
   it('keeps a discarded workout gone when another tab writes it late', async () => {
     const store = createLocalDraftStore(new MemoryStorage());
     const first = sessionOver(store);
