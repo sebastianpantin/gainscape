@@ -348,6 +348,30 @@ describe('complete-session rejections', () => {
     expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
   });
 
+  it.each([
+    ['0000-01-01T00:00:00Z', '0000-01-01T00:30:00Z'],
+    ['0001-01-01T00:00:00+01:00', '0001-01-01T00:30:00+01:00'],
+  ])('returns 422 session_too_old for a start at %s', async (startedAt, endedAt) => {
+    const user = await createTestUser();
+    const response = await postCompleteSession(user.accessToken, {
+      ...sessionPayload(threeSets(benchId, 0, 50, 'hard')),
+      startedAt,
+      endedAt,
+    });
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe('session_too_old');
+    expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
+  });
+
+  it('stores notes without NUL characters', async () => {
+    const user = await createTestUser();
+    const payload = { ...sessionPayload(threeSets(benchId, 0, 50, 'hard')), notes: 'felt\u0000 strong\u0000' };
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    const [stored] = await db`select notes from public.sessions where id = ${payload.id}`;
+    expect(stored.notes).toBe('felt strong');
+  });
+
   it('returns 401 without a user token', async () => {
     const response = await postCompleteSession('not-a-token', sessionPayload(threeSets(benchId, 0, 50, 'hard')));
     expect(response.status).toBe(401);

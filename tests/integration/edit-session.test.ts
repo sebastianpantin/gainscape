@@ -397,6 +397,14 @@ describe('edit-session authorization and validation', () => {
     expect(response.status, response.rawBody).toBe(200);
   });
 
+  it('stores edited notes without NUL characters', async () => {
+    const noted = payloadAt(hoursAgo(3), [aSet(benchId, 0, 55)]);
+    await postSession(owner, noted);
+    const response = await edit(owner, editBody(noted, noted.sets, 0, '\u0000heavy day\u0000'));
+    expect(response.status, response.rawBody).toBe(200);
+    expect((await db`select notes from public.sessions where id = ${noted.id}`)[0].notes).toBe('heavy day');
+  });
+
   it("returns 409 for a new set id taken by the caller's other set", async () => {
     const body = editBody(session, [session.sets[0], { ...session.sets[0], id: otherSession.sets[0].id, position: 1 }]);
     await expectRejected(owner, body, 409, 'set_id_conflict');

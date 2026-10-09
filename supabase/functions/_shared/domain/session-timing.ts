@@ -1,7 +1,8 @@
 const MAX_SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
 const ALLOWED_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const EARLIEST_SESSION_START_MS = Date.UTC(1970, 0, 1);
 
-export type ImplausibleTiming = 'ends_before_start' | 'session_too_long' | 'session_in_future';
+export type ImplausibleTiming = 'ends_before_start' | 'session_too_long' | 'session_in_future' | 'session_too_old';
 
 export function implausibleTiming(startedAt: string, endedAt: string, now: number): ImplausibleTiming | null {
   const started = Date.parse(startedAt);
@@ -10,5 +11,6 @@ export function implausibleTiming(startedAt: string, endedAt: string, now: numbe
   if (ended < started) return 'ends_before_start';
   if (ended - started > MAX_SESSION_DURATION_MS) return 'session_too_long';
   if (started > latestAllowed || ended > latestAllowed) return 'session_in_future';
+  if (started < EARLIEST_SESSION_START_MS) return 'session_too_old';
   return null;
 }
