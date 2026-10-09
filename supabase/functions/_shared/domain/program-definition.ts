@@ -1030,6 +1030,7 @@ function enrollmentOptionErrors(definition: ProgramDefinition, enrollment: Progr
 
 function enrollmentInputErrors(definition: ProgramDefinition, enrollment: ProgramEnrollment): string[] {
   const errors: string[] = [];
+  const max = MAX_REFERENCE_VALUE[enrollment.unit];
   for (const input of definition.inputs) {
     for (const lift of input.lifts) {
       const given = Object.entries(enrollment.inputs[lift] ?? {});
@@ -1038,10 +1039,8 @@ function enrollmentInputErrors(definition: ProgramDefinition, enrollment: Progra
       for (const [kind, value] of given) {
         if (!(input.kinds as string[]).includes(kind)) {
           errors.push(`lift '${lift}' input '${kind}' is not declared by the template`);
-        } else if (!isPositiveNumber(value) || value > MAX_REFERENCE_VALUE[enrollment.unit]) {
-          errors.push(
-            `lift '${lift}' input '${kind}' must be above 0 and at most ${MAX_REFERENCE_VALUE[enrollment.unit]}, got ${String(value)}`,
-          );
+        } else if (!isPositiveNumber(value) || value > max) {
+          errors.push(`lift '${lift}' input '${kind}' must be above 0 and at most ${max}, got ${String(value)}`);
         }
       }
     }

@@ -301,14 +301,13 @@ type LoadResult = { kind: 'load'; load: ResolvedLoad } | { kind: 'unsupported'; 
 
 function prescribedLoad(
   context: ResolveContext,
-  slot: SlotDecl,
+  onBar: boolean,
   unroundedInEnrollmentUnit: number | undefined,
   pct: number,
 ): LoadResult {
   if (unroundedInEnrollmentUnit === undefined) {
     return { kind: 'load', load: { weight: null, weightKg: null, pct, snapshotted: false } };
   }
-  const onBar = isBarbellLift(context.definition, slot.lift);
   const weight = roundPrescribedLoad(unroundedInEnrollmentUnit, context.enrollment.rounding, onBar);
   return {
     kind: 'load',
@@ -318,7 +317,7 @@ function prescribedLoad(
 
 function relativeLoad(
   context: ResolveContext,
-  slot: SlotDecl,
+  onBar: boolean,
   primitive: string,
   base: SlotSetsResult,
   index: number,
@@ -327,7 +326,7 @@ function relativeLoad(
   if (base.kind === 'unsupported') return base;
   const weight = base.sets[index]?.weight;
   if (weight === undefined) return { kind: 'unsupported', primitive };
-  return prescribedLoad(context, slot, weight === null ? undefined : weight * pct, pct);
+  return prescribedLoad(context, onBar, weight === null ? undefined : weight * pct, pct);
 }
 
 function referencedSlotSets(
@@ -346,38 +345,38 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
   const referenceInEnrollmentUnit = (variable: string, lift = slot.lift) =>
     context.refs[lift]?.[variable as keyof ProgramReferences[string]];
   const numbers = numberContext(definition, enrollment, position);
+  const onBar = isBarbellLift(definition, slot.lift);
   switch (load.kind) {
     case 'pct': {
       const pct = evaluateNumber(load.pct, numbers);
       const raw = referenceInEnrollmentUnit(load.of, load.lift);
       const add = load.add ? evaluateAmount(load.add, enrollment.unit, numbers) : 0;
-      return prescribedLoad(context, slot, raw === undefined ? undefined : raw * pct + add, pct);
+      return prescribedLoad(context, onBar, raw === undefined ? undefined : raw * pct + add, pct);
     }
     case 'cumulativeAddOn': {
       const pct = evaluateNumber(load.pct, numbers);
       const raw = referenceInEnrollmentUnit(load.of);
       const week = Math.min(weekContextOf(position).week, load.byWeek.length);
       const add = week > 0 ? load.byWeek[week - 1][enrollment.unit] : 0;
-      return prescribedLoad(context, slot, raw === undefined ? undefined : raw * pct + add, pct);
+      return prescribedLoad(context, onBar, raw === undefined ? undefined : raw * pct + add, pct);
     }
     case 'rpeLoad': {
       const pct = rpeChartPct(load.reps, load.rpe);
       if (pct === null) return { kind: 'unsupported', primitive: load.kind };
       const raw = referenceInEnrollmentUnit(load.of);
-      return prescribedLoad(context, slot, raw === undefined ? undefined : raw * pct, pct);
+      return prescribedLoad(context, onBar, raw === undefined ? undefined : raw * pct, pct);
     }
     case 'ramp': {
       const top = referenceInEnrollmentUnit(load.of);
       const pct = roundTo(RAMP_PCT_DECIMALS, 1 - evaluateNumber(load.step, numbers) * (load.count - 1 - index));
-      if (top === undefined) return prescribedLoad(context, slot, undefined, pct);
-      const roundedTop = roundPrescribedLoad(top, enrollment.rounding, isBarbellLift(definition, slot.lift));
-      return prescribedLoad(context, slot, roundedTop * pct, pct);
+      if (top === undefined) return prescribedLoad(context, onBar, undefined, pct);
+      return prescribedLoad(context, onBar, roundPrescribedLoad(top, enrollment.rounding, onBar) * pct, pct);
     }
     case 'weekTablePct': {
       const pct = definition.weekTables?.[load.table]?.[weekContextOf(position).week - 1]?.sets[load.set]?.pct;
       if (pct === undefined) return { kind: 'unsupported', primitive: load.kind };
       const raw = referenceInEnrollmentUnit(load.of);
-      return prescribedLoad(context, slot, raw === undefined ? undefined : raw * pct, pct);
+      return prescribedLoad(context, onBar, raw === undefined ? undefined : raw * pct, pct);
     }
     case 'sameAs': {
       const target = parseSetRef(load.ref);
@@ -395,14 +394,14 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
       const target = parseSetRef(load.ref);
       const targetSlot = target ? findSlot(definition, target.slotId) : undefined;
       const sets = referencedSlotSets(context, load.kind, targetSlot, depth);
-      return relativeLoad(context, slot, load.kind, sets, target?.index ?? -1, evaluateNumber(load.pct, numbers));
+      return relativeLoad(context, onBar, load.kind, sets, target?.index ?? -1, evaluateNumber(load.pct, numbers));
     }
     case 'pctOfSlot': {
       const targetSlot = definition.schedule.days
         .find((day) => day.key === load.day)
         ?.slots.find((candidate) => candidate.id === load.slot);
       const sets = referencedSlotSets(context, load.kind, targetSlot, depth, positionAt(position, load.day));
-      return relativeLoad(context, slot, load.kind, sets, load.idx, evaluateNumber(load.pct, numbers));
+      return relativeLoad(context, onBar, load.kind, sets, load.idx, evaluateNumber(load.pct, numbers));
     }
     case 'lastLogged': {
       const exerciseId = enrollment.bindings[slot.lift];
