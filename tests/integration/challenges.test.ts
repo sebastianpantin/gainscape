@@ -82,6 +82,10 @@ async function lifter(scrolls: number, quietAt: Date): Promise<TestUser> {
   return user;
 }
 
+async function openWithDeadlift(user: TestUser, openerAt: Date): Promise<void> {
+  await postSession(user, payloadAt(openerAt, [aSet(deadliftId, 0, 100)]));
+}
+
 async function scrollsHeld(userId: string): Promise<number> {
   const [row] = await db`
     select u.quantity from public.user_items u join public.items i on i.id = u.item_id
@@ -161,9 +165,11 @@ function judgeFloorKg(pct: number, e1rmKg: number): number {
 
 describe('claiming a scroll at sync', () => {
   it('uses one scroll per challenge session, whether it passes or fails', async () => {
-    const [quietAt, passAt, failAt] = startsOnOneLocalDay(3);
+    const [quietAt, openerAt, passAt, failAt] = startsOnOneLocalDay(4);
     const user = await lifter(2, quietAt);
     const twin = await lifter(0, quietAt);
+    await openWithDeadlift(user, openerAt);
+    await openWithDeadlift(twin, openerAt);
     const passing = challengePayload(passAt);
     const plainTwin = withFreshIds(payloadAt(passAt, passing.sets));
 
@@ -171,12 +177,14 @@ describe('claiming a scroll at sync', () => {
     await postSession(twin, plainTwin);
 
     expect(await scrollsHeld(user.id)).toBe(1);
+    const snapshotE1rm = (await storedSession(passing.id)).challenge.e1rmKg[deadliftId];
+    expect(judgeFloorKg(70, snapshotE1rm)).toBeLessThanOrEqual(100);
     expect(passed.body.challenge).toEqual({
       challengeId,
       key: CHALLENGE_KEY,
       name: CHALLENGE_NAME,
       passed: true,
-      targetLoadsKg: { [deadliftId]: null },
+      targetLoadsKg: { [deadliftId]: judgeFloorKg(70, snapshotE1rm) },
     });
     const backBase = await sessionSkillXp(plainTwin.id, 'back');
     expect(passed.body.challengeBonusBySkill?.back).toBe(Math.round(backBase / 4));
@@ -197,7 +205,7 @@ describe('claiming a scroll at sync', () => {
           },
         ],
       },
-      e1rmKg: { [deadliftId]: null },
+      e1rmKg: { [deadliftId]: snapshotE1rm },
     });
 
     const failing = challengePayload(failAt, 100, 4);
@@ -210,6 +218,19 @@ describe('claiming a scroll at sync', () => {
       { delta: -1, reason: 'challenge', ref_id: passing.id },
       { delta: -1, reason: 'challenge', ref_id: failing.id },
     ]);
+  });
+
+  it('fails and still uses the scroll when a percent lift has no e1RM yet', async () => {
+    const [quietAt, sessionAt] = startsOnOneLocalDay(2);
+    const user = await lifter(1, quietAt);
+    const session = challengePayload(sessionAt, 200);
+
+    const response = await postSession(user, session);
+
+    expect(response.body.challenge).toMatchObject({ passed: false, targetLoadsKg: { [deadliftId]: null } });
+    expect(response.body.challengeBonusBySkill).toEqual({});
+    expect((await storedSession(session.id)).challenge.e1rmKg).toEqual({ [deadliftId]: null });
+    expect(await scrollsHeld(user.id)).toBe(0);
   });
 
   it('completes a normal session when no scroll is held', async () => {
@@ -346,8 +367,10 @@ describe('a challenge done as a superset', () => {
   }
 
   it('gives the same XP, records and loot rolls as the same sets logged ungrouped', async () => {
-    const [quietAt, startedAt] = startsOnOneLocalDay(2);
+    const [quietAt, openerAt, startedAt] = startsOnOneLocalDay(3);
     const [grouped, ungrouped] = [await lifter(1, quietAt), await lifter(1, quietAt)];
+    await openWithDeadlift(grouped, openerAt);
+    await openWithDeadlift(ungrouped, openerAt);
     const groupedPayload = withChallenge(completeSessionPayload(draft(startedAt, randomUUID())));
     const ungroupedPayload = withChallenge(completeSessionPayload(draft(startedAt, null)));
 

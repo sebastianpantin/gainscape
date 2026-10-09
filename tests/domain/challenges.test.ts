@@ -46,10 +46,16 @@ const tenTonDay: ChallengeDefinition = { kind: 'volume', metric: 'kg', target: 1
 
 let position = 0;
 
-function liftResult(exerciseId: string, effectiveLoadKg: number, reps: number, isWarmup = false): LiftSetResult {
+function liftResult(
+  exerciseId: string,
+  effectiveLoadKg: number,
+  reps: number,
+  isWarmup = false,
+  weightKg = effectiveLoadKg,
+): LiftSetResult {
   position += 1;
   return {
-    set: { id: `set-${position}`, exerciseId, position, weightKg: effectiveLoadKg, reps, isWarmup, effort: null },
+    set: { id: `set-${position}`, exerciseId, position, weightKg, reps, isWarmup, effort: null },
     effortInputType: null,
     effortValue: null,
     rir: null,
@@ -74,7 +80,9 @@ function liftResult(exerciseId: string, effectiveLoadKg: number, reps: number, i
 const times = <T>(count: number, make: () => T): T[] => Array.from({ length: count }, make);
 
 const deadliftRounds = (loadKg: number, reps = 5) => times(5, () => liftResult('deadlift', loadKg, reps));
-const pullUpRounds = (reps = 5) => times(5, () => liftResult('pull-up', BODYWEIGHT_KG, reps));
+const pullUpRounds = (reps = 5) => times(5, () => liftResult('pull-up', BODYWEIGHT_KG, reps, false, 0));
+const weightedPullUp = (addedKg: number, reps: number) =>
+  liftResult('weighted-pull-up', BODYWEIGHT_KG + addedKg, reps, false, addedKg);
 
 const deadliftE1rm: E1rmSnapshot = { deadlift: 140 };
 const squatE1rm: E1rmSnapshot = { squat: 100 };
@@ -117,9 +125,9 @@ describe('judgeChallenge prescription (Deadlift and Pull-up)', () => {
     expect(passed(deadliftAndPullUp, sets, deadliftE1rm)).toBe(false);
   });
 
-  it('counts any load without an e1RM', () => {
-    expect(passed(deadliftAndPullUp, [...deadliftRounds(20), ...pullUpRounds()], {})).toBe(true);
-    expect(passed(deadliftAndPullUp, [...deadliftRounds(20), ...pullUpRounds()], { deadlift: null })).toBe(true);
+  it('fails a percent target without an e1RM, whatever the load', () => {
+    expect(passed(deadliftAndPullUp, [...deadliftRounds(200), ...pullUpRounds()], {})).toBe(false);
+    expect(passed(deadliftAndPullUp, [...deadliftRounds(200), ...pullUpRounds()], { deadlift: null })).toBe(false);
   });
 
   it('passes when the sets are not alternated', () => {
@@ -156,14 +164,14 @@ describe('judgeChallenge volume', () => {
     expect(passed(squatCentury, sets, squatE1rm)).toBe(false);
   });
 
-  it('counts any squat load without an e1RM', () => {
+  it('counts no squat reps without an e1RM, whatever the load', () => {
     expect(
       passed(
         squatCentury,
-        times(10, () => liftResult('squat', 20, 10)),
+        times(10, () => liftResult('squat', 200, 10)),
         {},
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('never counts warm-up reps', () => {
@@ -183,9 +191,17 @@ describe('judgeChallenge volume', () => {
   });
 
   it('adds the volume of every lift but never warm-ups', () => {
-    const mixed = [...times(10, () => liftResult('squat', 100, 5)), ...times(10, () => liftResult('pull-up', 100, 5))];
+    const mixed = [...times(10, () => liftResult('squat', 100, 5)), ...times(10, () => liftResult('bench', 100, 5))];
     expect(passed(tenTonDay, mixed, {})).toBe(true);
     expect(passed(tenTonDay, [...mixed.slice(1), liftResult('squat', 100, 5, true)], {})).toBe(false);
+  });
+
+  it('counts no bodyweight toward kg volume, only the load added to a bodyweight lift', () => {
+    const squats = times(18, () => liftResult('squat', 100, 5));
+    const bodyweightOnly = times(100, () => liftResult('pull-up', BODYWEIGHT_KG, 10, false, 0));
+    expect(passed(tenTonDay, [...squats, ...bodyweightOnly], {})).toBe(false);
+    expect(passed(tenTonDay, [...squats, ...times(9, () => weightedPullUp(20, 5))], {})).toBe(false);
+    expect(passed(tenTonDay, [...squats, ...times(10, () => weightedPullUp(20, 5))], {})).toBe(true);
   });
 });
 

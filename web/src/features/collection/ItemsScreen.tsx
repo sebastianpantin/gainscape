@@ -7,7 +7,12 @@ import { useNavigate } from 'react-router-dom';
 import { ItemIcon } from '../../components/PixelArt.tsx';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { readCachedExercises } from '../../lib/catalog-cache.ts';
-import { type CatalogChallenge, challengeSummaryText } from '../../lib/challenge-rules.ts';
+import {
+  type CatalogChallenge,
+  challengeSummaryText,
+  exercisesWithoutE1rm,
+  missingE1rmText,
+} from '../../lib/challenge-rules.ts';
 import { fetchStrengthState } from '../../lib/collection-data.ts';
 import {
   type CatalogItem,
@@ -51,14 +56,19 @@ import { CollectionTabs } from './CollectionScreen.tsx';
 interface ChallengeStartProps {
   challenge: CatalogChallenge;
   challengeExercises: readonly ChallengeExerciseEntry[];
+  strength: StrengthState | null;
   draftOpen: boolean | null;
   onStart: (challenge: CatalogChallenge) => Promise<void>;
 }
 
-function ChallengeStart({ challenge, challengeExercises, draftOpen, onStart }: ChallengeStartProps) {
+function ChallengeStart({ challenge, challengeExercises, strength, draftOpen, onStart }: ChallengeStartProps) {
   const [starting, setStarting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const names = new Map(challengeExercises.map((exercise) => [exercise.id, exercise.name]));
+  const namesWithoutE1rm =
+    strength === null
+      ? []
+      : exercisesWithoutE1rm(challenge.definition, strength).map((exerciseId) => names.get(exerciseId) ?? 'Exercise');
   const start = async () => {
     setStarting(true);
     setProblem(null);
@@ -79,10 +89,15 @@ function ChallengeStart({ challenge, challengeExercises, draftOpen, onStart }: C
           Finish or discard your current workout first
         </p>
       )}
+      {namesWithoutE1rm.length > 0 && (
+        <p className="notice" role="status">
+          {missingE1rmText(namesWithoutE1rm)}
+        </p>
+      )}
       <button
         className="button primary"
         type="button"
-        disabled={draftOpen !== false || starting}
+        disabled={draftOpen !== false || starting || namesWithoutE1rm.length > 0}
         onClick={() => void start()}
       >
         Start challenge
@@ -101,6 +116,7 @@ interface ItemDetailProps {
   catalog: ItemCatalog;
   held: ReadonlyMap<string, HeldItem>;
   challengeExercises: readonly ChallengeExerciseEntry[];
+  strength: StrengthState | null;
   equipped: boolean | null;
   offline: boolean;
   draftOpen: boolean | null;
@@ -115,6 +131,7 @@ function ItemDetail({
   catalog,
   held,
   challengeExercises,
+  strength,
   equipped,
   offline,
   draftOpen,
@@ -179,6 +196,7 @@ function ItemDetail({
         <ChallengeStart
           challenge={challenge}
           challengeExercises={challengeExercises}
+          strength={strength}
           draftOpen={draftOpen}
           onStart={onStartChallenge}
         />
@@ -231,7 +249,7 @@ interface LoadedItems {
   catalog: ItemCatalog;
   held: Map<string, HeldItem>;
   challengeExercises: ChallengeExerciseEntry[];
-  strength: StrengthState;
+  strength: StrengthState | null;
 }
 
 async function loadItemsOnline(userId: string): Promise<LoadedItems> {
@@ -249,11 +267,11 @@ async function loadItemsOnline(userId: string): Promise<LoadedItems> {
     : cached?.challengeExercises.length
       ? cached.challengeExercises
       : challengeExercisesOf(catalog.challenges, (storage && readCachedExercises(storage, userId)) ?? []);
-  const strength = liveStrength ?? cached?.strength ?? {};
+  const strength = liveStrength ?? cached?.strength ?? null;
   saveItemsCache(storage, userId, {
     catalog,
     inventory: [...held.values()],
-    strength,
+    strength: strength ?? {},
     strengthAsOf: liveStrength ? strengthAsOf : (cached?.strengthAsOf ?? strengthAsOf),
     challengeExercises,
   });
@@ -275,7 +293,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const [catalog, setCatalog] = useState<ItemCatalog | null>(null);
   const [held, setHeld] = useState<Map<string, HeldItem>>(new Map());
   const [challengeExercises, setChallengeExercises] = useState<ChallengeExerciseEntry[]>([]);
-  const [strength, setStrength] = useState<StrengthState>({});
+  const [strength, setStrength] = useState<StrengthState | null>(null);
   const [offline, setOffline] = useState(false);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
@@ -338,7 +356,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
     const started = startDraftFromChallenge(
       challenge,
       new Map(challengeExercises.map((exercise) => [exercise.id, exercise])),
-      strength,
+      strength ?? {},
       DEFAULT_ROUNDING[unitPref],
       unitPref,
       new Date(),
@@ -425,6 +443,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           catalog={catalog}
           held={held}
           challengeExercises={challengeExercises}
+          strength={strength}
           equipped={loadout.data ? loadout.data.slots.some((equippedGear) => equippedGear.itemId === picked.id) : null}
           offline={offline}
           draftOpen={draftOpen}
