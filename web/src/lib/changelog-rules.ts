@@ -125,6 +125,13 @@ export function whatsNewDecision(releases: readonly Release[], lastSeen: LastSee
   return newer.length === 0 ? { kind: 'none' } : { kind: 'show', releases: newer };
 }
 
-export function whatsNewMayOpen({ pathname, hasDraft }: { pathname: string; hasDraft: boolean }): boolean {
-  return !hasDraft && pathname !== '/reveal';
+export interface WhatsNewMoment {
+  pathname: string;
+  hasDraft: boolean;
+  draftChangedDuringVisit: boolean;
+}
+
+export function whatsNewMayOpen({ pathname, hasDraft, draftChangedDuringVisit }: WhatsNewMoment): boolean {
+  if (hasDraft || pathname === '/reveal') return false;
+  return !(pathname === '/' && draftChangedDuringVisit);
 }

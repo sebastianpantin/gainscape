@@ -190,16 +190,23 @@ describe('what the What’s new sheet does', () => {
 
 describe('when the sheet may open', () => {
   it('waits while a workout draft exists', () => {
-    expect(whatsNewMayOpen({ pathname: '/', hasDraft: true })).toBe(false);
-    expect(whatsNewMayOpen({ pathname: '/skills', hasDraft: true })).toBe(false);
+    expect(whatsNewMayOpen({ pathname: '/', hasDraft: true, draftChangedDuringVisit: false })).toBe(false);
+    expect(whatsNewMayOpen({ pathname: '/skills', hasDraft: true, draftChangedDuringVisit: false })).toBe(false);
   });
 
   it('waits on the workout reveal', () => {
-    expect(whatsNewMayOpen({ pathname: '/reveal', hasDraft: false })).toBe(false);
+    expect(whatsNewMayOpen({ pathname: '/reveal', hasDraft: false, draftChangedDuringVisit: false })).toBe(false);
+  });
+
+  it('waits on the workout screen after its draft changed until the next visit', () => {
+    expect(whatsNewMayOpen({ pathname: '/', hasDraft: false, draftChangedDuringVisit: true })).toBe(false);
+    expect(whatsNewMayOpen({ pathname: '/skills', hasDraft: false, draftChangedDuringVisit: true })).toBe(true);
   });
 
   it('opens on any other screen without a draft', () => {
-    expect(whatsNewMayOpen({ pathname: '/', hasDraft: false })).toBe(true);
-    expect(whatsNewMayOpen({ pathname: '/profile/settings', hasDraft: false })).toBe(true);
+    expect(whatsNewMayOpen({ pathname: '/', hasDraft: false, draftChangedDuringVisit: false })).toBe(true);
+    expect(whatsNewMayOpen({ pathname: '/profile/settings', hasDraft: false, draftChangedDuringVisit: false })).toBe(
+      true,
+    );
   });
 });

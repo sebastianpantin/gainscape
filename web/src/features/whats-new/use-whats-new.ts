@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { type Release, whatsNewDecision, whatsNewMayOpen } from '../../lib/changelog-rules.ts';
 import { openChannel } from '../../lib/channel.ts';
@@ -18,12 +18,17 @@ async function draftOnDevice(userId: string): Promise<boolean> {
 }
 
 export function useWhatsNew(userId: string): { releases: readonly Release[] | null; dismiss: () => void } {
-  const { pathname } = useLocation();
+  const { pathname, key: visitKey } = useLocation();
+  const currentVisit = useRef(visitKey);
   const [decision] = useState(() => whatsNewDecision(CHANGELOG, readLastSeenRelease(deviceStorage(), userId)));
-  const [draftChanges, setDraftChanges] = useState(0);
+  const [draftChange, setDraftChange] = useState({ count: 0, visitKey: '' });
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const pending = decision.kind === 'show' && !dismissed;
+
+  useEffect(() => {
+    currentVisit.current = visitKey;
+  }, [visitKey]);
 
   useEffect(() => {
     if (decision.kind === 'record') saveLastSeenRelease(deviceStorage(), userId, decision.version);
@@ -34,7 +39,8 @@ export function useWhatsNew(userId: string): { releases: readonly Release[] | nu
     const channel = openChannel(DRAFT_CHANNEL_NAME);
     if (!channel) return;
     channel.onmessage = (event: MessageEvent<{ userId?: unknown }>) => {
-      if (event.data?.userId === userId) setDraftChanges((count) => count + 1);
+      if (event.data?.userId === userId)
+        setDraftChange((change) => ({ count: change.count + 1, visitKey: currentVisit.current }));
     };
     return () => channel.close();
   }, [pending, userId]);
@@ -44,14 +50,15 @@ export function useWhatsNew(userId: string): { releases: readonly Release[] | nu
     let superseded = false;
     void (async () => {
       const hasDraft = await draftOnDevice(userId);
-      if (superseded || !whatsNewMayOpen({ pathname, hasDraft })) return;
+      const draftChangedDuringVisit = draftChange.visitKey === visitKey;
+      if (superseded || !whatsNewMayOpen({ pathname, hasDraft, draftChangedDuringVisit })) return;
       const draftAppeared = await draftOnDevice(userId);
       if (!superseded && !draftAppeared) setOpen(true);
     })();
     return () => {
       superseded = true;
     };
-  }, [pending, open, pathname, draftChanges, userId]);
+  }, [pending, open, pathname, visitKey, draftChange, userId]);
 
   const dismiss = useCallback(() => {
     saveLastSeenRelease(deviceStorage(), userId, APP_VERSION);

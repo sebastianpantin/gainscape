@@ -193,6 +193,10 @@ test('every tab settles offline within seconds without an uncaught error', async
   await expect(cold.getByRole('heading', { name: 'Settings' })).toBeVisible();
   await expect(cold.getByRole('heading', { name: 'App' })).toBeVisible();
   await expect(cold.getByText(`Version ${readChangelog()[0].version}`, { exact: true })).toBeVisible();
+  await cold.getByRole('main').getByRole('link', { name: "What's new", exact: true }).click();
+  await expect(cold.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(
+    readChangelog().map((release) => release.title),
+  );
   expect(errors).toEqual([]);
   await markOnline();
   await context.setOffline(false);
