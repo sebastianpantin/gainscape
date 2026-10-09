@@ -1,3 +1,11 @@
+- prs: [69, 70, 71, 72, 73]
+  version: 0.2.0
+  date: 2026-10-09
+  title: Six new scroll challenges
+  items:
+    - Six new scroll challenges to find in rare loot, including Push-up Century and Twenty-Ton Day.
+    - Ten-Ton Day and Twenty-Ton Day now count only the weight you load, not your bodyweight.
+    - A challenge that sets its loads from your e1RM now asks you to log that lift first, so you never spend a scroll on a challenge you can't pass.
 - prs: []
   version: 0.1.0
   date: 2026-10-09
