@@ -120,20 +120,20 @@ export function createDraftSession({
     return fallback;
   };
 
-  const saved = () => {
+  const markSaved = () => {
     if (snapshot.saveProblem !== primaryUnreadable) publish({ saveProblem: primaryUnreadable });
   };
 
   const runOnStore = async (task: (store: DraftStore) => Promise<void>) => {
     try {
       await task(snapshot.store!);
-      return saved();
+      return markSaved();
     } catch {
       if (usingFallback) return publish({ saveProblem: true });
     }
     try {
       await task(switchToFallback());
-      saved();
+      markSaved();
     } catch {
       publish({ saveProblem: true });
     }

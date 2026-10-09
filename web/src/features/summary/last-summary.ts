@@ -12,13 +12,13 @@ type RememberedSummary = SessionSummary & RememberedTiming & PlannedChallenge;
 const LAST_SUMMARY_KEY = 'gainscape.last-summary';
 
 interface RememberedEntry {
-  userId?: unknown;
-  summary?: RememberedSummary;
+  userId: string;
+  summary: RememberedSummary;
 }
 
-function rememberedEntry(): RememberedEntry | null {
+function rememberedEntry(): Partial<RememberedEntry> | null {
   const raw = sessionStorage.getItem(LAST_SUMMARY_KEY);
-  return raw ? (JSON.parse(raw) as RememberedEntry) : null;
+  return raw ? (JSON.parse(raw) as Partial<RememberedEntry>) : null;
 }
 
 export function rememberLastSummary(userId: string, summary: RememberedSummary): void {
@@ -32,7 +32,7 @@ export function rememberLastSummary(userId: string, summary: RememberedSummary):
 export function recallLastSummary(userId?: string): RememberedSummary | null {
   try {
     const entry = rememberedEntry();
-    if (typeof entry?.userId !== 'string' || !entry.summary) return null;
+    if (!entry?.userId || !entry.summary) return null;
     if (userId !== undefined && entry.userId !== userId) return null;
     const remembered = entry.summary;
     return 'plannedChallenge' in remembered
