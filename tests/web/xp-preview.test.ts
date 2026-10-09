@@ -191,13 +191,13 @@ describe('previewSession', () => {
     expect(totalXp(previews)).toBeGreaterThan(0);
     expect(previews.map((sets) => sets.length)).toEqual([2, 1]);
   });
-  it('pays no cold-start XP for an exercise trained before without an e1RM', () => {
+  it('pays cold-start XP for an exercise trained before without an e1RM', () => {
     const previews = previewSession(
       [exercise('curl', [draftSet(20, 15, null)])],
       builtIn,
       strengthOf([['curl', null]]),
     );
-    expect(previews[0][0].xp).toBe(0);
+    expect(previews[0][0]).toMatchObject({ basis: 'unknown', xp: DEFAULT_BALANCE.coldStartXpPerSet });
   });
 
   it('estimates from the session best when only an expired e1RM is known', () => {

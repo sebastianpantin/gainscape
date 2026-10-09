@@ -163,19 +163,16 @@ function decideEffort(
     };
   }
 
-  const coldStart = (coldStartXp: number): StrengthDecision => ({
-    rir: null,
-    rirSource: 'cold_start',
-    rirForXp: null,
-    rirFlagged: false,
-    coldStartXp,
-    rirUsedForStrength: cfg.coldStartAssumedRir,
-  });
-
-  if (isBaselineSession) {
-    return coldStart(coldStartPayable ? cfg.coldStartXpPerSet : 0);
+  if (isBaselineSession || estimated === null) {
+    return {
+      rir: null,
+      rirSource: 'cold_start',
+      rirForXp: null,
+      rirFlagged: false,
+      coldStartXp: coldStartPayable ? cfg.coldStartXpPerSet : 0,
+      rirUsedForStrength: cfg.coldStartAssumedRir,
+    };
   }
-  if (estimated === null) return coldStart(0);
 
   return {
     rir: estimated,

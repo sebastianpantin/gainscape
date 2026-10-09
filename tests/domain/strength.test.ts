@@ -270,7 +270,30 @@ describe('review regressions', () => {
     const [result] = runSets([aSet('bench', 60, 8, null)], {
       bench: { windowMax: null, fallbackMax: null, hasPriorSession: true },
     });
-    expect(result).toMatchObject({ rirSource: 'cold_start', xp: 0, e1rmCandidateKg: epley(60, 10) });
+    expect(result).toMatchObject({ rirSource: 'cold_start', xp: 10, e1rmCandidateKg: epley(60, 10) });
+  });
+
+  it('keeps paying cold-start XP for unrated sets too long to estimate an e1RM from', () => {
+    const sessions: SessionInput[] = [0, 1, 2].map((index) => ({
+      id: `high-reps-${index}`,
+      startedAt: new Date(Date.parse(sessionStart) + index * DAY_MS).toISOString(),
+      sets: [aSet('bench', 40, 11, null), aSet('bench', 40, 11, null)],
+    }));
+    const replay = replayHistory(sessions, catalog, TEST_BALANCE, freshUser);
+    expect(replay.sessions.map((entry) => entry.outputs.sets.map((result) => [result.rirSource, result.xp]))).toEqual(
+      Array.from({ length: 3 }, () => [
+        ['cold_start', 10],
+        ['cold_start', 10],
+      ]),
+    );
+  });
+
+  it('caps the cold-start XP after the baseline at 8 sets per exercise', () => {
+    const results = runSets(
+      Array.from({ length: 10 }, () => aSet('bench', 40, 11, null)),
+      { bench: { windowMax: null, fallbackMax: null, hasPriorSession: true } },
+    );
+    expect(results.map((result) => result.xp)).toEqual([10, 10, 10, 10, 10, 10, 10, 10, 0, 0]);
   });
 
   it('caps reps-capacity growth without float noise', () => {
