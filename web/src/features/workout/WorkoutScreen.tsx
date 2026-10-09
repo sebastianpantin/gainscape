@@ -342,7 +342,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     markSynced,
     onSynced: (summary) => navigate('/reveal', { state: summary }),
     onSuperseded: (sessionId) => {
-      if (recallLastSummary()?.sessionId === sessionId) navigate('/reveal');
+      if (recallLastSummary(userId)?.sessionId === sessionId) navigate('/reveal');
       else void reload();
     },
     onDeleted: () => void reload('deleted'),

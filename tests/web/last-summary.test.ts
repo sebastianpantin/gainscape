@@ -82,6 +82,12 @@ describe('last summary', () => {
     expect(recallLastSummary(userId)).toBeNull();
   });
 
+  it('forgets a listed session whichever account remembered it', () => {
+    rememberLastSummary(otherUserId, summary);
+    forgetLastSummary(['session-a']);
+    expect(recallLastSummary(otherUserId)).toBeNull();
+  });
+
   it('degrades silently when session storage throws', () => {
     vi.stubGlobal('sessionStorage', {
       getItem: () => {

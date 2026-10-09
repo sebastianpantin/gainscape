@@ -29,11 +29,10 @@ export function rememberLastSummary(userId: string, summary: RememberedSummary):
   }
 }
 
-export function recallLastSummary(userId?: string): RememberedSummary | null {
+export function recallLastSummary(userId: string): RememberedSummary | null {
   try {
     const entry = rememberedEntry();
-    if (!entry?.userId || !entry.summary) return null;
-    if (userId !== undefined && entry.userId !== userId) return null;
+    if (!entry?.userId || !entry.summary || entry.userId !== userId) return null;
     const remembered = entry.summary;
     return 'plannedChallenge' in remembered
       ? { ...remembered, plannedChallenge: parsedDraftChallenge(remembered.plannedChallenge) }
@@ -45,8 +44,8 @@ export function recallLastSummary(userId?: string): RememberedSummary | null {
 
 export function forgetLastSummary(sessionIds: readonly string[]): void {
   try {
-    const cached = recallLastSummary();
-    if (cached && sessionIds.includes(cached.sessionId)) sessionStorage.removeItem(LAST_SUMMARY_KEY);
+    const cachedSessionId = rememberedEntry()?.summary?.sessionId;
+    if (cachedSessionId && sessionIds.includes(cachedSessionId)) sessionStorage.removeItem(LAST_SUMMARY_KEY);
   } catch {
     return;
   }
