@@ -29,6 +29,7 @@ const PRECACHED_EXTENSIONS = ['.js', '.css', '.woff2'];
 const PRECACHED_FILES = ['index.html', 'manifest.webmanifest', 'favicon.svg'];
 const PRECACHED_DIRECTORIES = ['icons/', 'licenses/'];
 const EXCLUDED_EXTENSIONS = ['.map', '.woff'];
+const UNPUBLISHED_FILE_NAMES = new Set(['AGENTS.md']);
 
 export function shellDecision(request: ShellRequest, precached: ReadonlySet<string>): ShellDecision {
   if (request.method !== 'GET') return 'network';
@@ -46,8 +47,12 @@ export function shellDecision(request: ShellRequest, precached: ReadonlySet<stri
   return 'network';
 }
 
+export function isUnpublished(file: string): boolean {
+  return UNPUBLISHED_FILE_NAMES.has(file.split('/').at(-1) ?? '');
+}
+
 function isPrecached(file: string): boolean {
-  if (file === SERVICE_WORKER_FILE || file.startsWith('.vite/')) return false;
+  if (file === SERVICE_WORKER_FILE || file.startsWith('.vite/') || isUnpublished(file)) return false;
   if (EXCLUDED_EXTENSIONS.some((extension) => file.endsWith(extension))) return false;
   return (
     PRECACHED_FILES.includes(file) ||
