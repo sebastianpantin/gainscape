@@ -1,6 +1,6 @@
-import type { EffortInput, EffortLevel } from '@domain/types.ts';
+import type { EffortInput } from '@domain/types.ts';
 import type { EffortInputMode } from '../../lib/profile.ts';
-import { EFFORT_LEVEL_LABELS } from '../../lib/effort-labels.ts';
+import { EFFORT_LEVEL_LABELS, EFFORT_LEVELS } from '../../lib/effort-labels.ts';
 
 interface EffortOption {
   effort: NonNullable<EffortInput>;
@@ -8,13 +8,11 @@ interface EffortOption {
   accessibleName: string;
 }
 
-const LEVELS: EffortLevel[] = ['easy', 'hard', 'near_failure', 'failure'];
-
 const RIR_CHOICES = [6, 5, 4, 3, 2, 1, 0];
 const RPE_CHOICES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 
 const OPTIONS: Record<EffortInputMode, EffortOption[]> = {
-  level: LEVELS.map((level) => {
+  level: EFFORT_LEVELS.map((level) => {
     const label = EFFORT_LEVEL_LABELS[level];
     return { effort: { type: 'level', level }, label, accessibleName: label };
   }),

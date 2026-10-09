@@ -29,8 +29,8 @@ export interface Profile {
 
 export const DISPLAY_NAME_MAX_LENGTH = 40;
 export const BIO_MAX_LENGTH = 80;
-export const LOWEST_BODYWEIGHT_KG = 20;
-export const HIGHEST_BODYWEIGHT_KG = 400;
+const LOWEST_BODYWEIGHT_KG = 20;
+const HIGHEST_BODYWEIGHT_KG = 400;
 const LOWEST_HEIGHT_CM = 100;
 const HIGHEST_HEIGHT_CM = 250;
 const EARLIEST_BIRTH_YEAR = 1900;

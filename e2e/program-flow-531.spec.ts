@@ -1,12 +1,12 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
+import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf, forgetSessionCreateLimits } from './support/db.ts';
 import {
   dayPicker,
   FIVE_THREE_ONE_ONE_RMS_KG,
   followProgram,
+  openProgramToday,
   prescribedRows,
-  programToday,
   repeated,
 } from './support/program-enrollment.ts';
 import {
@@ -108,14 +108,6 @@ async function followFiveThreeOne(page: Page, prefix: string): Promise<FollowedF
   };
 }
 
-async function openToday(page: Page): Promise<Locator> {
-  await page.reload();
-  await openTab(page, 'Train');
-  const today = programToday(page, FIVE_THREE_ONE);
-  await expect(today).toBeVisible();
-  return today;
-}
-
 async function expectWeekOne(today: Locator, cycle: number, days: readonly WeekOneDay[]): Promise<void> {
   await expect(dayPicker(today).getByRole('radio', { name: `C${cycle} W1 Day 1`, exact: true })).toBeChecked();
   for (const { day, exercise, main, bbbRow } of days) {
@@ -141,7 +133,7 @@ test('5/3/1 BBB after a met cycle 1 offers C2 W1 at TMs squat 90 + 5 = 95, bench
   const program = await followFiveThreeOne(page, 'pf_531');
   await program.seedCycle(CYCLE_1_TMS_KG, 1);
 
-  const today = await openToday(page);
+  const today = await openProgramToday(page, FIVE_THREE_ONE);
   await expect(cycleSummary(page, 1).getByRole('listitem')).toHaveText([
     'Squat training max 90 → 95 kg',
     'Bench press training max 72 → 74.5 kg',
@@ -159,7 +151,7 @@ test('5/3/1 BBB after two met cycles offers C3 W1 at TMs squat 95 + 5 = 100, ben
   await program.seedCycle(CYCLE_1_TMS_KG, 1);
   await program.seedCycle(CYCLE_2_TMS_KG, 2);
 
-  const today = await openToday(page);
+  const today = await openProgramToday(page, FIVE_THREE_ONE);
   await expect(cycleSummary(page, 2).getByRole('listitem')).toHaveText([
     'Squat training max 95 → 100 kg',
     'Bench press training max 74.5 → 77 kg',
@@ -176,7 +168,7 @@ test('5/3/1 BBB with a 4-rep C1 W1 squat AMRAP (minimum 5) resets the squat TM t
   const program = await followFiveThreeOne(page, 'pf_531r');
   await program.seedCycle(CYCLE_1_TMS_KG, 1, { amrapReps: { squat: { 1: 4 } } });
 
-  const today = await openToday(page);
+  const today = await openProgramToday(page, FIVE_THREE_ONE);
   await expect(cycleSummary(page, 1).getByRole('listitem')).toHaveText([
     'Squat training max 90 → 81 kg',
     'Bench press training max 72 → 74.5 kg',

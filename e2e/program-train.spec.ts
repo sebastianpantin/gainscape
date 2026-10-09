@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { register, uniqueUsername } from './support/app.ts';
+import { nativeDialogsOf, register, uniqueUsername } from './support/app.ts';
 import { programEventsOf } from './support/db.ts';
 import {
   dayPicker,
@@ -20,15 +20,6 @@ const MADCOW_W1_MONDAY_SQUAT_MARKERS: [string, string][] = [
   ['87.5%', '25 + 5 kg each side'],
   ['100%', '25 + 10 + 1.25 kg each side'],
 ];
-
-function nativeDialogsOf(page: Page): string[] {
-  const messages: string[] = [];
-  page.on('dialog', (dialog) => {
-    messages.push(dialog.message());
-    void dialog.dismiss();
-  });
-  return messages;
-}
 
 function marker(row: Locator, text: string): Locator {
   return row.getByText(text, { exact: true });

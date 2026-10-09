@@ -35,6 +35,11 @@ function readLocalStackEnv(): LocalStackStatus {
 export const env = readLocalStackEnv();
 export const db = postgres(env.DB_URL, { max: 2, onnotice: () => {} });
 
+export async function databaseNow(): Promise<number> {
+  const [row] = await db`select clock_timestamp() as now`;
+  return new Date(row.now).getTime();
+}
+
 const clientOptions = { auth: { persistSession: false, autoRefreshToken: false } };
 export const admin = createClient(env.API_URL, env.SECRET_KEY, clientOptions);
 

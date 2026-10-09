@@ -1,3 +1,5 @@
+import { DATABASE_RATE_LIMITED_CODE, RATE_LIMITED_CODE } from './rate-limit.ts';
+
 export const PROGRAM_OFFLINE_TEXT = "You're offline. Starting or editing a program needs a connection.";
 
 const GENERIC_TEXT = 'Something went wrong. Try again.';
@@ -6,7 +8,7 @@ const RATE_LIMITED_TEXT = 'Too many changes, try again later';
 const SIGN_IN_TEXT = 'Sign in again to change your program.';
 const STOPPED_ELSEWHERE_TEXT = 'This program was stopped on another device.';
 
-const RATE_LIMITED_CODES: readonly string[] = ['PT429', 'rate_limited'];
+const RATE_LIMITED_CODES: readonly string[] = [DATABASE_RATE_LIMITED_CODE, RATE_LIMITED_CODE];
 const NOT_AUTHENTICATED_CODE = '42501';
 const NETWORK_FAILURE = /Failed to fetch|NetworkError|Load failed|AbortError|TimeoutError/i;
 

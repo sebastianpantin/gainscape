@@ -1,5 +1,5 @@
 import { z } from 'npm:zod@4.6.5';
-import { implausibleTiming, MAX_SETS_PER_SESSION, storableSnapshot } from '../_shared/domain/index.ts';
+import { implausibleTiming, isRecord, MAX_SETS_PER_SESSION, storableSnapshot } from '../_shared/domain/index.ts';
 import { HttpError } from '../_shared/http.ts';
 import { assertDistinctSetIdsAndPositions, lowerUuid, parseOr422, setSchema } from '../_shared/session-payload.ts';
 
@@ -19,10 +19,6 @@ function containsNul(value: unknown): boolean {
 function programLinkOrNull(value: unknown): ProgramLinkPayload | null {
   const parsed = programLinkSchema.safeParse(value);
   return parsed.success && !containsNul(parsed.data.position) ? parsed.data : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function withoutPrescriptions(body: unknown): { body: unknown; prescriptions: unknown[] } {

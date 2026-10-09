@@ -28,7 +28,7 @@ import {
   type SetResult,
 } from './types.ts';
 
-function emptySlots(): (RepMaxSlot | null)[] {
+export function emptyRepMaxSlots(): (RepMaxSlot | null)[] {
   return Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
 }
 
@@ -158,7 +158,7 @@ export function applySetToRecords(
     };
   }
 
-  const before = records.repMaxes[set.exerciseId] ?? emptySlots();
+  const before = records.repMaxes[set.exerciseId] ?? emptyRepMaxSlots();
   const { slots, improvedReps } = applyRepMaxSet(before, set, achievedAt, cfg);
   const highestImproved = improvedReps.at(-1);
   return {

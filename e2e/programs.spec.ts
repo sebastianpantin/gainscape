@@ -1,10 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { openFromProfile, openTab, readSession, readStoredDraft, register, uniqueUsername } from './support/app.ts';
 import { programDayId, sessionRow, setCount } from './support/db.ts';
-
-function exerciseCard(page: Page, name: string) {
-  return page.locator('section', { has: page.getByRole('heading', { name, exact: true }) });
-}
+import { workoutCards } from './support/program-enrollment.ts';
 
 test('copy a template, run a program day with planned sets and finish it', async ({ context, page }) => {
   const username = uniqueUsername('pg');
@@ -38,10 +35,10 @@ test('copy a template, run a program day with planned sets and finish it', async
   await expect(page.locator('li.set-row')).toHaveCount(16);
   await expect(page.locator('li.set-row:not(.planned)')).toHaveCount(0);
 
-  const benchRows = exerciseCard(page, 'Barbell Bench Press').locator('li.set-row');
+  const benchRows = workoutCards(page, 'Barbell Bench Press').locator('li.set-row');
   await benchRows.nth(0).getByRole('radio', { name: 'Hard' }).click();
   await benchRows.nth(1).getByRole('radio', { name: 'Hard' }).click();
-  await exerciseCard(page, 'Barbell Row')
+  await workoutCards(page, 'Barbell Row')
     .locator('li.set-row')
     .nth(0)
     .getByRole('button', { name: 'Done set 1' })

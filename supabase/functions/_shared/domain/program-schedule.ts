@@ -1,3 +1,4 @@
+import { isWholeNumberBetween } from './math.ts';
 import { type DayDecl, type ProgramDefinition } from './program-definition.ts';
 
 export interface CyclePosition {
@@ -124,10 +125,6 @@ export function upcomingDays(definition: ProgramDefinition, cursor: ScheduleCurs
 
 const MAX_PROGRAM_WEEKS = 520;
 
-function isWholeNumberWithin(value: unknown, min: number, max: number): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
-}
-
 export function isPositionInSchedule(definition: ProgramDefinition, position: Position): boolean {
   const schedule = definition.schedule;
   const fields = position as Partial<CyclePosition & RotationPosition>;
@@ -137,7 +134,7 @@ export function isPositionInSchedule(definition: ProgramDefinition, position: Po
       if (fields.index !== undefined || !knownDay) return false;
       const maxCycle = Math.ceil(MAX_PROGRAM_WEEKS / schedule.weeksPerCycle);
       return (
-        isWholeNumberWithin(fields.cycle, 1, maxCycle) && isWholeNumberWithin(fields.week, 1, schedule.weeksPerCycle)
+        isWholeNumberBetween(fields.cycle, 1, maxCycle) && isWholeNumberBetween(fields.week, 1, schedule.weeksPerCycle)
       );
     }
     case 'weekly':
@@ -145,14 +142,14 @@ export function isPositionInSchedule(definition: ProgramDefinition, position: Po
         fields.index === undefined &&
         fields.cycle === undefined &&
         knownDay &&
-        isWholeNumberWithin(fields.week, 1, MAX_PROGRAM_WEEKS)
+        isWholeNumberBetween(fields.week, 1, MAX_PROGRAM_WEEKS)
       );
     case 'rotation':
       return (
         fields.week === undefined &&
         fields.day === undefined &&
         fields.cycle === undefined &&
-        isWholeNumberWithin(fields.index, 0, MAX_PROGRAM_WEEKS * schedule.days.length - 1)
+        isWholeNumberBetween(fields.index, 0, MAX_PROGRAM_WEEKS * schedule.days.length - 1)
       );
   }
 }

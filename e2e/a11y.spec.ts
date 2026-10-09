@@ -16,6 +16,7 @@ import {
 import { activeEnrollmentIdOf, equipGear, grantItems } from './support/db.ts';
 import {
   CHALLENGE_NAME,
+  finishWithBodyweight,
   logDeadliftToFailure,
   markEveryRoundDone,
   openItems,
@@ -41,13 +42,6 @@ async function checkScreen(page: Page, screen: string, ready: () => Promise<void
   await ready();
   await expectNoAxeViolations(page, screen);
   if ((await page.locator('.tab-bar').count()) > 0) await expectTouchTargets(page, TAB_BAR);
-}
-
-async function finishWithBodyweight(page: Page) {
-  await page.getByRole('button', { name: 'Finish workout' }).click();
-  await page.getByLabel('Bodyweight (kg)').fill('80');
-  await page.getByRole('button', { name: 'Save and finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
 }
 
 async function checkEffortTargets(page: Page) {

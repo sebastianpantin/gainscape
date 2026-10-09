@@ -59,12 +59,13 @@ function cardioInputColumns(bout: CardioSetInput, effort: EffortColumns) {
   };
 }
 
-function inputSetColumns(set: WritableSet, effort: EffortColumns) {
+export function inputColumnsWithEffort(set: WritableSet, cfg: BalanceConfig) {
+  const effort = resolveEffort(set.effort, cfg, setKind(set));
   return set.kind === 'cardio' ? cardioInputColumns(set, effort) : liftInputColumns(set, set.effectiveLoadKg, effort);
 }
 
-export function inputColumnsWithEffort(set: WritableSet, cfg: BalanceConfig) {
-  return inputSetColumns(set, resolveEffort(set.effort, cfg, setKind(set)));
+export function liftFieldsFromRow(row: DbRow): Pick<LiftSetInput, 'weightKg' | 'reps' | 'isWarmup'> {
+  return { weightKg: Number(row.weight_kg), reps: row.reps, isWarmup: row.is_warmup };
 }
 
 export function cardioFieldsFromRow(row: DbRow): Pick<CardioSetInput, 'durationS' | 'distanceM' | 'interval'> {

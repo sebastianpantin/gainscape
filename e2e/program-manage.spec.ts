@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
+import { nativeDialogsOf, openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentOf } from './support/db.ts';
 import {
   FIVE_THREE_ONE_ONE_RMS_KG,
@@ -11,15 +11,6 @@ import {
 } from './support/program-enrollment.ts';
 
 const OFFLINE_TEXT = "You're offline. Starting or editing a program needs a connection.";
-
-function nativeDialogsOf(page: Page): string[] {
-  const messages: string[] = [];
-  page.on('dialog', (dialog) => {
-    messages.push(dialog.message());
-    void dialog.dismiss();
-  });
-  return messages;
-}
 
 async function openManageProgram(page: Page, programName: string) {
   await programToday(page, programName).getByRole('link', { name: 'Manage program', exact: true }).click();

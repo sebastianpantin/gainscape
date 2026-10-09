@@ -3,7 +3,6 @@ import {
   type JumpToFact,
   type Position,
   type PrescriptionSnapshot,
-  type ProgramFact,
   type ReferenceVar,
   type SessionFact,
   type SetReferenceFact,
@@ -94,8 +93,4 @@ export function skipDayFact(stamp: { id: string; at: string }, position: Positio
 
 export function jumpToFact(stamp: { id: string; at: string }, position: Position): JumpToFact {
   return { kind: 'jump_to', ...stamp, position };
-}
-
-export function sessionsOnly(facts: readonly ProgramFact[]): SessionFact[] {
-  return facts.filter((fact): fact is SessionFact => fact.kind === 'session');
 }

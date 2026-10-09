@@ -1,16 +1,11 @@
 import { expect, type Page, test } from '@playwright/test';
 import { finishWorkout, logExercise, logWorkout, openTab, register } from './support/app.ts';
 import { activeDropCount, activeDropsOfLatestSession, grantItems } from './support/db.ts';
+import { openItems } from './support/challenge.ts';
 
 function slot(page: Page, name: string, quantity?: number) {
   const label = quantity === undefined ? `^${name}( ×\\d+)?$` : `^${name} ×${quantity}$`;
   return page.getByRole('main').getByRole('button', { name: new RegExp(label) });
-}
-
-async function openItems(page: Page) {
-  await openTab(page, 'Log');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'Items' }).click();
-  await expect(page.getByRole('heading', { name: 'Gear' })).toBeVisible();
 }
 
 test('loot on the reveal, the items screen, crafting and a former scroll variation', async ({ page }) => {

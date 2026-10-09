@@ -163,7 +163,7 @@ export async function replayFrom(
   const suffix = await loadReplayableSessions(tx, userId, from, cfg);
   const suffixExerciseIds = [...new Set(suffix.flatMap((session) => session.sets.map((set) => set.exerciseId)))];
   const touched = [...new Set([...suffixExerciseIds, ...touchedExerciseIds])];
-  const catalog = await loadCatalog(tx, userId, touched, true);
+  const catalog = await loadCatalog(tx, userId, touched);
   const prior = await loadPriorState(tx, userId, from, touchedExerciseIds, suffixExerciseIds, touched, catalog, cfg);
 
   const replay = replayHistory(

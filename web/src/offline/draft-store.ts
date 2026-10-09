@@ -70,7 +70,7 @@ export function transactionDone(transaction: IDBTransaction): Promise<void> {
   return done;
 }
 
-export function openDraftDatabase(factory: IDBFactory, timeoutMs = OPEN_TIMEOUT_MS): Promise<IDBDatabase | null> {
+export function openDraftDatabase(factory: IDBFactory): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
     let settled = false;
     const settle = (database: IDBDatabase | null) => {
@@ -82,7 +82,7 @@ export function openDraftDatabase(factory: IDBFactory, timeoutMs = OPEN_TIMEOUT_
       clearTimeout(timer);
       resolve(database);
     };
-    const timer = setTimeout(() => settle(null), timeoutMs);
+    const timer = setTimeout(() => settle(null), OPEN_TIMEOUT_MS);
     try {
       const request = factory.open(DRAFT_DATABASE_NAME, DRAFT_DATABASE_VERSION);
       request.onupgradeneeded = () => {

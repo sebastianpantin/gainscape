@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { EffortInputMode, UnitPref } from './profile-rules.ts';
+import { EFFORT_INPUT_MODES, type EffortInputMode, UNIT_PREFS, type UnitPref } from './profile-rules.ts';
 
 export interface Preferences {
   unitPref: UnitPref;
@@ -27,10 +27,8 @@ function isPreferences(value: unknown): value is Preferences {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Record<string, unknown>;
   return (
-    (candidate.unitPref === 'kg' || candidate.unitPref === 'lb') &&
-    (candidate.effortInputMode === 'level' ||
-      candidate.effortInputMode === 'rir' ||
-      candidate.effortInputMode === 'rpe')
+    UNIT_PREFS.some((unit) => unit === candidate.unitPref) &&
+    EFFORT_INPUT_MODES.some((mode) => mode === candidate.effortInputMode)
   );
 }
 

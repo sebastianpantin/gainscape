@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
+import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
-import { dayPicker, followProgram, prescribedRows, programToday } from './support/program-enrollment.ts';
+import { dayPicker, followProgram, openProgramToday, prescribedRows } from './support/program-enrollment.ts';
 import {
   type LiftBindings,
   nearestPlateKg,
@@ -149,14 +149,6 @@ async function seedWeekOne(page: Page, prefix: string, amrapReps: AmrapReps): Pr
   await seedProgramDays(accessToken, enrollmentId, bindings, sessionClock(DAYS_PER_WEEK + 1), days);
 }
 
-async function openToday(page: Page): Promise<Locator> {
-  await page.reload();
-  await openTab(page, 'Train');
-  const today = programToday(page, NSUNS);
-  await expect(today).toBeVisible();
-  return today;
-}
-
 async function openWeekTwoDay(today: Locator, day: string): Promise<void> {
   await dayPicker(today)
     .getByRole('radio', { name: `W2 ${day}`, exact: true })
@@ -175,7 +167,7 @@ test('nSuns raises each TM at the end of week 1 by the 1+ set reps: squat 2 reps
     'fri-bench': { 2: 3 },
   });
 
-  const today = await openToday(page);
+  const today = await openProgramToday(page, NSUNS);
   await expect(dayPicker(today).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([
     '67.5 kg × 8 · 65%',
@@ -262,7 +254,7 @@ test('nSuns keeps a TM when its 1+ set gets a single rep, whatever the other AMR
     'fri-bench': { 2: 1 },
   });
 
-  const today = await openToday(page);
+  const today = await openProgramToday(page, NSUNS);
   await expect(dayPicker(today).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([
     '65 kg × 8 · 65%',

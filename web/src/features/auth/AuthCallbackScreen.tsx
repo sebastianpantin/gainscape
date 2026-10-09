@@ -69,6 +69,7 @@ function PasswordFields({
   onPassword: (value: string) => void;
   onRepeat: (value: string) => void;
 }) {
+  const problem = passwordProblem(password);
   return (
     <>
       <label className="field">
@@ -93,7 +94,7 @@ function PasswordFields({
           required
         />
       </label>
-      {password.length > 0 && passwordProblem(password) && <p className="problem">{passwordProblem(password)}</p>}
+      {password.length > 0 && problem && <p className="problem">{problem}</p>}
       {repeat.length > 0 && repeat !== password && <p className="problem">The passwords don't match.</p>}
     </>
   );
@@ -129,8 +130,9 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
     event.preventDefault();
     setBusy(true);
     setProblem(null);
-    if (step.kind === 'choose-password' && username.trim().toLowerCase() !== step.username) {
-      const renameProblem = await renameTo(username.trim().toLowerCase());
+    const chosenUsername = username.trim().toLowerCase();
+    if (step.kind === 'choose-password' && chosenUsername !== step.username) {
+      const renameProblem = await renameTo(chosenUsername);
       if (renameProblem) {
         setProblem(renameProblem);
         setBusy(false);
@@ -138,12 +140,11 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
       }
     }
     const { error } = await supabase.auth.updateUser({ password });
+    setBusy(false);
     if (error) {
       setProblem(authErrorMessage(error));
-      setBusy(false);
       return;
     }
-    setBusy(false);
     if (step.kind === 'choose-password') finish();
     else setStep({ kind: 'password-changed' });
   }

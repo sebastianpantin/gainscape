@@ -1,3 +1,6 @@
+import { isRecord } from '@domain/types.ts';
+import { parsedJson } from './json-rules.ts';
+
 export interface TrainingDeviceSettings {
   vibrate: boolean;
   sound: boolean;
@@ -13,18 +16,6 @@ export const DEFAULT_TRAINING_DEVICE_SETTINGS: TrainingDeviceSettings = {
 };
 
 const SETTING_NAMES = Object.keys(DEFAULT_TRAINING_DEVICE_SETTINGS) as (keyof TrainingDeviceSettings)[];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function parsedJson(raw: string | null): unknown {
-  try {
-    return raw === null ? null : JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
 
 export function parseTrainingDeviceSettings(raw: string | null): TrainingDeviceSettings {
   const parsed = parsedJson(raw);

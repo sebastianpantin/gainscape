@@ -12,14 +12,9 @@ import { GZCLP } from './program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2 } from './program-fixtures/juggernaut_2.ts';
 import { LINEAR_AFTER_SESSION } from './program-fixtures/linear_after_session.ts';
 import { NSUNS_5DAY } from './program-fixtures/nsuns_5day.ts';
+import { broken } from './program-fixtures/prescription-helpers.ts';
 import { RPE_TOP_SET } from './program-fixtures/rpe_top_set.ts';
 import { TEXAS_METHOD } from './program-fixtures/texas_method.ts';
-
-function broken(definition: ProgramDefinition, mutate: (copy: ProgramDefinition) => void): ProgramDefinition {
-  const copy = structuredClone(definition);
-  mutate(copy);
-  return copy;
-}
 
 function slotIn(definition: ProgramDefinition, slotId: string): SlotDecl {
   const slot = definition.schedule.days.flatMap((day) => day.slots).find((candidate) => candidate.id === slotId);

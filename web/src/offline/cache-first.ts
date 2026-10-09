@@ -15,7 +15,7 @@ export function isDeviceOffline(): boolean {
 
 export type SubscribeOffline = (onOffline: () => void) => () => void;
 
-export function subscribeToOfflineEvent(onOffline: () => void): () => void {
+function subscribeToOfflineEvent(onOffline: () => void): () => void {
   if (typeof window === 'undefined') return () => undefined;
   window.addEventListener('offline', onOffline);
   return () => window.removeEventListener('offline', onOffline);

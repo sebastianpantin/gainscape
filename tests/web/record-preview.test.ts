@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type ExerciseStrength } from '@domain/index.ts';
 import type { LoadType } from '../../web/src/lib/catalog-rules.ts';
-import { NO_RECORD_BASELINE, type RecordBaseline } from '../../web/src/lib/session-baseline-rules.ts';
+import { type RecordBaseline } from '../../web/src/lib/session-baseline-rules.ts';
 import type { CardioDraftExercise, DraftSet, LiftDraftExercise } from '../../web/src/offline/draft-format.ts';
 import {
   becomesRecord,
@@ -10,6 +10,8 @@ import {
   recordChipText,
   recordForSet,
 } from '../../web/src/features/workout/record-preview.ts';
+
+const NO_RECORD_BASELINE: RecordBaseline = Object.freeze({ repMaxKg: {}, maxReps: {} });
 
 let setCounter = 0;
 

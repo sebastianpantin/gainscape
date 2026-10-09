@@ -36,12 +36,16 @@ export function playRestSound(): void {
   }
 }
 
-export function vibrateRestOver(): void {
+export function vibrate(pattern: number[]): void {
   try {
-    navigator.vibrate?.(VIBRATION_PATTERN_MS);
+    navigator.vibrate?.(pattern);
   } catch {
     return;
   }
+}
+
+export function vibrateRestOver(): void {
+  vibrate(VIBRATION_PATTERN_MS);
 }
 
 export function notificationsAllowed(): boolean {
