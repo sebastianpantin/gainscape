@@ -224,7 +224,12 @@ export const programDefinitionSchema = z.strictObject({
   name: z.string().min(1).max(60),
   source: sources,
   lifts: z.array(
-    z.strictObject({ key: z.string(), name: z.string(), category: z.enum(['upper', 'lower']).optional() }),
+    z.strictObject({
+      key: z.string(),
+      name: z.string(),
+      category: z.enum(['upper', 'lower']).optional(),
+      barbell: z.boolean().optional(),
+    }),
   ),
   inputs: z.array(z.strictObject({ lifts: z.array(z.string()), kinds: z.array(inputKind).min(1) })),
   referenceVars: z.array(referenceVar),

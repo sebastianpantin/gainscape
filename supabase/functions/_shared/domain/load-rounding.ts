@@ -34,8 +34,9 @@ export function roundLoad(value: number, increment: number, mode: LoadRoundingDi
   return roundTo(decimalPlaces(increment), wholeSteps * increment);
 }
 
-export function roundPrescribedLoad(value: number, rounding: RoundingSetting): number {
-  return Math.max(rounding.barWeight, roundLoad(value, rounding.increment, rounding.mode));
+export function roundPrescribedLoad(value: number, rounding: RoundingSetting, onBar = true): number {
+  const lightest = onBar ? rounding.barWeight : rounding.increment;
+  return Math.max(lightest, roundLoad(value, rounding.increment, rounding.mode));
 }
 
 export function halfIncrementKg(rounding: RoundingSetting, unit: WeightUnit): number {

@@ -482,6 +482,28 @@ describe('GZCLP T3 AMRAP threshold (kg)', () => {
     expect(refOf(state, 'pulldown-t3', 'workingWeight')).toBeCloseTo(41.25, 9);
   });
 
+  it('prescribes a T3 off the bar below the bar weight: a 12.5 kg dumbbell row is 3 × 12.5, not the 20 kg bar', () => {
+    const light = gzclpEnrollment({ weights: { 'row-t3': 12.5 } });
+    const resolved = resolveAt(def, light, refsState({ 'row-t3': { workingWeight: 12.5 } }), { index: 1 });
+    expect(weightsOf(resolved, 'b1-row-t3')).toEqual([12.5, 12.5, 12.5]);
+  });
+
+  it('a 12.5 kg dumbbell row logged 15, 15, 30 meets and progresses 12.5 → 15', () => {
+    const light = gzclpEnrollment({ weights: { 'row-t3': 12.5 } });
+    const rowAt12_5 = { 'b1-row-t3:0': 12.5, 'b1-row-t3:1': 12.5, 'b1-row-t3:2': 12.5 };
+    const { state } = followProgram(def, light, factClock(), [
+      {},
+      { weightsKg: rowAt12_5, reps: { 'b1-row-t3:2': 30 } },
+    ]);
+    expect(refOf(state, 'row-t3', 'workingWeight')).toBeCloseTo(15, 9);
+  });
+
+  it('keeps the bar floor on barbell tiers: a 15 kg overhead press T1 is prescribed at the 20 kg bar', () => {
+    const light = gzclpEnrollment({ weights: { 'ohp-t1': 15 } });
+    const resolved = resolveAt(def, light, refsState({ 'ohp-t1': { workingWeight: 15 } }), { index: 1 });
+    expect(weightsOf(resolved, 'b1-ohp-t1')).toEqual([20, 20, 20, 20, 20]);
+  });
+
   it('the shared pulldown progresses on both A days: 25 reps on a1 then on a2 gives 40 → 42.5 → 45', () => {
     const logs: DayLog[] = [{ reps: { 'a1-pulldown-t3:2': 25 } }, {}, { reps: { 'a2-pulldown-t3:2': 25 } }];
     const { state } = followProgram(def, kg, factClock(), logs);

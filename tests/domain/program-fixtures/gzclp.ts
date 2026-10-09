@@ -156,6 +156,7 @@ export const GZCLP: ProgramDefinition = {
     key,
     name: LIFT_NAMES[key],
     category: key.startsWith('squat') || key.startsWith('deadlift') ? ('lower' as const) : ('upper' as const),
+    ...(key.endsWith('-t3') ? { barbell: false } : {}),
   })),
   inputs: [{ lifts: [...GZCLP_LIFTS], kinds: ['workingWeight'] }],
   referenceVars: ['workingWeight', 'fiveRm'],

@@ -17,6 +17,7 @@ export interface LiftDecl {
   key: string;
   name: string;
   category?: LiftCategory;
+  barbell?: boolean;
 }
 
 export interface InputDecl {
@@ -423,6 +424,10 @@ export function parseSetRef(ref: string): SetRef | null {
   const index = Number(ref.slice(separator + 1));
   if (!Number.isInteger(index) || index < 0) return null;
   return { slotId: ref.slice(0, separator), index };
+}
+
+export function isBarbellLift(definition: ProgramDefinition, lift: string): boolean {
+  return definition.lifts.find((candidate) => candidate.key === lift)?.barbell !== false;
 }
 
 export function findSlot(definition: ProgramDefinition, slotId: string): SlotDecl | undefined {

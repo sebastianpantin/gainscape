@@ -202,6 +202,13 @@ describe('program template schema', () => {
     expect(error.issues.some((issue) => issue.startsWith('progression.0.judgedSets'))).toBe(true);
   });
 
+  it('refuses a barbell flag that is not true or false', () => {
+    const error = shapeIssuesAfter(GZCLP, (raw) => {
+      (raw.lifts[0] as unknown as { barbell: string }).barbell = 'no';
+    });
+    expect(error.issues.some((issue) => issue.startsWith('lifts.0.barbell'))).toBe(true);
+  });
+
   it('names the template and the set when judgedSets reads past the judged slot', () => {
     const problems = problemsAfter(MADCOW_5X5, (copy) => (copy.progression[0].judgedSets = [5]));
     expect(problems).toEqual([
