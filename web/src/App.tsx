@@ -25,6 +25,7 @@ import { ProgramEnrollScreen } from './features/programs/ProgramEnrollScreen.tsx
 import { ProgramsScreen } from './features/programs/ProgramsScreen.tsx';
 import { SkillsScreen } from './features/skills/SkillsScreen.tsx';
 import { RevealScreen } from './features/summary/RevealScreen.tsx';
+import { WhatsNewSheet } from './features/whats-new/WhatsNewSheet.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
 import { createQueryClient } from './lib/query-client.ts';
 import { parseAuthCallback } from './lib/auth-links.ts';
@@ -110,6 +111,7 @@ function Screens() {
           <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <WhatsNewSheet userId={userId} />
       </BrowserRouter>
     </PreferencesProvider>
   );
