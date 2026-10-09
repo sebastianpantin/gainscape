@@ -454,6 +454,28 @@ describe('Madcow miss rule (holdOnMiss, judged on each lift top day)', () => {
     expect(refOf(programStateAt(def, enrollment, facts), 'squat', 'top')).toBeCloseTo(102.5, 9);
   });
 
+  it('version 1, published without judgedSets, judges every Monday set: just the fifth squat set holds the top 100', () => {
+    const publishedVersion1 = {
+      ...def,
+      version: 1,
+      progression: def.progression.map((rule) => {
+        const withoutJudgedSets = { ...rule };
+        delete withoutJudgedSets.judgedSets;
+        return withoutJudgedSets;
+      }),
+    };
+    const clock = factClock();
+    const facts = [
+      ...metMadcowWeeks(clock, [1, 2, 3]),
+      ...madcowWeek(clock, 4).map((fact) =>
+        fact.kind === 'session' && 'day' in fact.position && fact.position.day === 'mon'
+          ? { ...fact, sets: fact.sets.filter((set) => !/^mon-squat:[0-3]$/.test(set.prescription?.ref ?? '')) }
+          : fact,
+      ),
+    ];
+    expect(refOf(programStateAt(publishedVersion1, enrollment, facts), 'squat', 'top')).toBeCloseTo(100, 9);
+  });
+
   it('judges only the Wednesday top set: a 3-rep deadlift ramp set still takes the deadlift 140 → 143.5', () => {
     const clock = factClock();
     const facts = [

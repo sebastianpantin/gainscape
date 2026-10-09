@@ -288,7 +288,10 @@ export function kgFromLb(lb: number): number {
 export function programTemplateProblems(template: ProgramTemplate): string[] {
   const { definition } = template;
   const problems: string[] = [];
-  if (`${definition.key}.yaml` !== template.file) {
+  if (template.file.includes('@')) {
+    if (`${definition.key}@${definition.version}.yaml` !== template.file)
+      problems.push(`key and version must equal the file name "${template.file}"`);
+  } else if (`${definition.key}.yaml` !== template.file) {
     problems.push(`key must equal the file name "${template.file}"`);
   }
   problems.push(...validateProgramDefinition(definition));
@@ -301,9 +304,23 @@ export function programTemplateProblems(template: ProgramTemplate): string[] {
   return problems.map((problem) => `program template "${definition.key}": ${problem}`);
 }
 
+function olderVersionProblems(templates: readonly ProgramTemplate[]): string[] {
+  const latestByKey = new Map(
+    templates.filter(({ file }) => !file.includes('@')).map(({ file, definition }) => [file, definition.version]),
+  );
+  return templates.flatMap(({ file, definition }) => {
+    const latestFile = `${definition.key}.yaml`;
+    const latestVersion = latestByKey.get(latestFile);
+    if (!file.includes('@') || latestVersion === undefined || definition.version < latestVersion) return [];
+    return [
+      `program template "${definition.key}": ${latestFile} must hold the latest version, but ${file} is not older`,
+    ];
+  });
+}
+
 export function loadProgramTemplates(dir: string = PROGRAM_TEMPLATES_DIR): ProgramTemplate[] {
   const templates = readProgramTemplateSources(dir).map(parseProgramTemplate);
-  const problems = templates.flatMap(programTemplateProblems);
+  const problems = [...templates.flatMap(programTemplateProblems), ...olderVersionProblems(templates)];
   if (problems.length > 0) throw new CatalogValidationError(problems);
   return templates;
 }

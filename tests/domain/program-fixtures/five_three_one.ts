@@ -137,7 +137,7 @@ function cycleRule(lift: LiftDecl): ProgressionRule {
 
 export const FIVE_THREE_ONE: ProgramDefinition = {
   key: 'five_three_one',
-  version: 1,
+  version: 2,
   name: '5/3/1',
   source: [ARVO_531, LIFTVAULT_BBB, WENDLER_BBB],
   lifts: LIFT_DECLS,

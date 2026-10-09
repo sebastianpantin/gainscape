@@ -136,7 +136,7 @@ function weeklyRule(lift: MadcowMainLift, judgedSlot: string, topSetIndex: numbe
 
 export const MADCOW_5X5: ProgramDefinition = {
   key: 'madcow_5x5',
-  version: 1,
+  version: 2,
   name: 'Madcow 5x5',
   source: [MADCOW_PRIMARY, STRENGTHLOG_MADCOW],
   lifts: LIFT_DECLS,

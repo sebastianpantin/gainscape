@@ -29,7 +29,7 @@ function intensityRule(lift: 'squat' | 'press'): ProgressionRule {
 
 export const TEXAS_METHOD: ProgramDefinition = {
   key: 'texas_method',
-  version: 1,
+  version: 2,
   name: 'Texas Method',
   source: [LIFTOSAUR_TEXAS, FITNESSVOLT_TEXAS],
   lifts: [

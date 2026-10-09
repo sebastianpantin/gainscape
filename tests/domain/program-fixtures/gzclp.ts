@@ -149,7 +149,7 @@ const LIFT_NAMES: Readonly<Record<GzclpLift, string>> = {
 
 export const GZCLP: ProgramDefinition = {
   key: 'gzclp',
-  version: 1,
+  version: 2,
   name: 'GZCLP',
   source: [GZCLP_WIKI, GZCL_ARCHIVE],
   lifts: GZCLP_LIFTS.map((key) => ({

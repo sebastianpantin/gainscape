@@ -85,7 +85,7 @@ describe('template list entries', () => {
     expect(entry).toEqual({
       kind: 'enrollable',
       key: 'madcow_5x5',
-      version: 1,
+      version: MADCOW_5X5.version,
       name: 'Madcow 5x5',
       definition: MADCOW_5X5,
     });
@@ -97,7 +97,7 @@ describe('template list entries', () => {
       {
         kind: 'needs_update',
         key: 'future_madcow',
-        version: 1,
+        version: MADCOW_5X5.version,
         name: 'Future Madcow',
         message: 'Update the app to use this program',
       },
@@ -122,11 +122,11 @@ describe('template list entries', () => {
 
   it('lists only the highest version of each template key', () => {
     const entries = templateListEntries([
-      templateRow({ ...MADCOW_5X5, version: 2, name: 'Madcow 5x5 v2' }),
+      templateRow({ ...MADCOW_5X5, version: MADCOW_5X5.version + 1, name: 'Madcow 5x5 next' }),
       templateRow(MADCOW_5X5),
     ]);
     expect(entries.map((entry) => [entry.key, entry.version, entry.name])).toEqual([
-      ['madcow_5x5', 2, 'Madcow 5x5 v2'],
+      ['madcow_5x5', MADCOW_5X5.version + 1, 'Madcow 5x5 next'],
     ]);
   });
 
@@ -486,7 +486,7 @@ describe('enroll payload', () => {
       kind: 'ok',
       payload: {
         templateKey: 'madcow_5x5',
-        templateVersion: 1,
+        templateVersion: 2,
         unit: 'kg',
         options: { rampStep: 0.125 },
         bindings: defaultBindings(MADCOW_5X5, CATALOG),
@@ -518,7 +518,7 @@ describe('enroll payload', () => {
       kind: 'ok',
       payload: {
         templateKey: 'five_three_one',
-        templateVersion: 1,
+        templateVersion: 2,
         unit: 'lb',
         options: { supplemental: 'bbb', bbbPct: 0.5, bbbProgression: 'standard', tmPct: 0.9, tmReset: 0.1 },
         bindings: defaultBindings(FIVE_THREE_ONE, CATALOG),

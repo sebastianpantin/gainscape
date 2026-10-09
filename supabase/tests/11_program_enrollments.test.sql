@@ -72,9 +72,9 @@ select fk_ok(
   'an enrollment points at one template version'
 );
 select results_eq(
-  $$select key, version from public.program_templates where key in ('five_three_one', 'madcow_5x5') order by key$$,
-  $$values ('five_three_one', 1), ('madcow_5x5', 1)$$,
-  'the seed ships 5/3/1 and Madcow 5x5 as version 1'
+  $$select key, version from public.program_templates where key in ('five_three_one', 'madcow_5x5') order by key, version$$,
+  $$values ('five_three_one', 1), ('five_three_one', 2), ('madcow_5x5', 1), ('madcow_5x5', 2)$$,
+  'the seed keeps 5/3/1 and Madcow 5x5 version 1 and ships their fixed version 2'
 );
 select is(
   (select count(*)::int from public.program_templates t
@@ -106,7 +106,7 @@ select is(
 
 select tests.authenticate_as(:'a');
 select ok(
-  (select count(*) from public.program_templates where key = 'madcow_5x5') = 1,
+  (select count(*) from public.program_templates where key = 'madcow_5x5') = 2,
   'a signed-in user reads the templates'
 );
 select throws_ok(
