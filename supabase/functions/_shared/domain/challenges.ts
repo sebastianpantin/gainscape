@@ -95,7 +95,9 @@ function workingLiftSets(sets: readonly SetResult[]): LiftSetResult[] {
 }
 
 function meetsPercentTarget(result: LiftSetResult, pct: number | null, e1rmSnapshot: E1rmSnapshot): boolean {
-  return meetsLoadTarget(result.effectiveLoadKg, loadTargetKg(pct, e1rmSnapshot[result.set.exerciseId] ?? null));
+  if (pct === null) return true;
+  const e1rmKg = e1rmSnapshot[result.set.exerciseId] ?? null;
+  return e1rmKg !== null && meetsLoadTarget(result.effectiveLoadKg, loadTargetKg(pct, e1rmKg));
 }
 
 function prescriptionMet(
@@ -123,7 +125,7 @@ function volumeMet(challenge: VolumeChallenge, sets: readonly LiftSetResult[], e
       meetsPercentTarget(result, challenge.minPct, e1rmSnapshot),
   );
   const volume = qualifying.reduce(
-    (sum, result) => sum + (challenge.metric === 'reps' ? result.set.reps : result.effectiveLoadKg * result.set.reps),
+    (sum, result) => sum + (challenge.metric === 'reps' ? result.set.reps : result.set.weightKg * result.set.reps),
     0,
   );
   return volume + FLOAT_TOLERANCE >= challenge.target;

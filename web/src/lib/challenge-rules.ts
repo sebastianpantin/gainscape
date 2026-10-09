@@ -1,5 +1,7 @@
-import type { ChallengeDefinition } from '@domain/challenges.ts';
+import { type ChallengeDefinition, challengeLoadExerciseIds } from '@domain/challenges.ts';
 import { type RoundingSetting, roundLoad } from '@domain/load-rounding.ts';
+import { e1rmAtSessionStart } from '@domain/strength.ts';
+import type { StrengthState } from '@domain/types.ts';
 import { kgToUnit, unitToKg, type WeightUnit } from '@domain/units.ts';
 import { z } from 'zod';
 import type { DraftChallenge, WorkoutDraft } from '../offline/draft-format.ts';
@@ -77,7 +79,7 @@ export function challengeLoadKg(targetKg: number, rounding: RoundingSetting, uni
 
 export function challengeVolumeSoFarKg(draft: WorkoutDraft): number {
   return draft.exercises.reduce((total, exercise) => {
-    if (exercise.modality !== 'lift' || exercise.loadType !== 'external') return total;
+    if (exercise.modality !== 'lift') return total;
     const working = exercise.sets.filter((set) => set.done && !set.isWarmup);
     return total + working.reduce((sum, set) => sum + set.weightKg * set.reps, 0);
   }, 0);
@@ -85,6 +87,14 @@ export function challengeVolumeSoFarKg(draft: WorkoutDraft): number {
 
 export function challengeVolumeText(draft: WorkoutDraft, targetKg: number): string {
   return `Volume so far: ${formatXp(Math.round(challengeVolumeSoFarKg(draft)))} / ${formatXp(targetKg)} kg`;
+}
+
+export function exercisesWithoutE1rm(definition: ChallengeDefinition, strength: StrengthState): string[] {
+  return challengeLoadExerciseIds(definition).filter((exerciseId) => e1rmAtSessionStart(strength, exerciseId) === null);
+}
+
+export function missingE1rmText(exerciseNames: readonly string[]): string {
+  return `Log ${exerciseNames.join(' and ')} first: this challenge sets its loads from your e1RM.`;
 }
 
 export function mentionsE1rm(definition: ChallengeDefinition): boolean {

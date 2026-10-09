@@ -167,7 +167,7 @@ function ChallengeBanner({ draft, challenge, exercises, onDiscard }: ChallengeBa
       {definition.kind === 'volume' && definition.metric === 'kg' && (
         <p className="stack" style={{ gap: 2 }}>
           <span>{challengeVolumeText(draft, definition.target)}</span>
-          <span className="muted tiny">Estimate: bodyweight lifts count when the workout syncs.</span>
+          <span className="muted tiny">Only the weight you load counts, never your bodyweight.</span>
         </p>
       )}
       <button className="button link" type="button" onClick={() => setConfirmingDiscard(true)}>
