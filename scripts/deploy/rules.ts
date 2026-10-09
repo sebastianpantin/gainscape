@@ -207,6 +207,24 @@ export function releaseProblem({ dirtyPaths, head, originMain }: ReleaseState): 
   return null;
 }
 
+export function changelogProblem(unreleasedUserFacing: readonly { number: number; title: string }[]): string | null {
+  if (unreleasedUserFacing.length === 0) return null;
+  const count = unreleasedUserFacing.length === 1 ? '1 merged PR is' : `${unreleasedUserFacing.length} merged PRs are`;
+  return [
+    `${count} not in the changelog yet:`,
+    ...unreleasedUserFacing.map((pr) => `#${pr.number} ${pr.title}`),
+    'Ask Claude to write the changelog, merge that PR, then deploy again.',
+  ].join('\n');
+}
+
+export function unknownPrsProblem(unknown: readonly number[]): string | null {
+  if (unknown.length === 0) return null;
+  return [
+    `web/changelog.yaml lists PRs that are not merged since the changelog began: ${unknown.map((number) => `#${number}`).join(', ')}`,
+    'Remove them from prs (or wait for them to merge), merge that fix, then deploy again.',
+  ].join('\n');
+}
+
 export interface AuthSettings {
   disable_signup?: boolean;
   external?: Record<string, boolean>;

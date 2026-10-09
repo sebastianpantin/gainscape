@@ -12,7 +12,7 @@ endif
 PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
 CI_EXCLUDED := studio,imgproxy,vector,logflare,postgres-meta,supavisor
 
-.PHONY: start ci-start ci-changes ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
+.PHONY: start ci-start ci-changes ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy changelog-unreleased test-integration test-db rebuild-caches sim sim-check e2e e2e-pwa secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
 
 start:
 	$(SUPABASE) start
@@ -150,6 +150,9 @@ test-deploy:
 
 ci-changes:
 	@node scripts/ci-changes.ts $(CI_BASE)
+
+changelog-unreleased:
+	@node scripts/changelog/unreleased.ts
 
 test-integration: functions
 	npx vitest run tests/integration

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   allowlistedBuildEnvironment,
   bundleLeaks,
+  changelogProblem,
   childEnvironment,
   deployFileProblem,
   gitleaksAsset,
   inRepoDeployFiles,
   nativeSupabasePackages,
   strayViteEnvFiles,
+  unknownPrsProblem,
 } from '../../scripts/deploy/rules.ts';
 
 function base64Url(value: object): string {
@@ -206,5 +208,45 @@ describe('gitleaks release', () => {
 
   it('refuses an unsupported platform', () => {
     expect(() => gitleaksAsset('win32', 'x64')).toThrow(/win32/);
+  });
+});
+
+describe('changelog gate', () => {
+  it('passes when every user-facing pull request is covered', () => {
+    expect(changelogProblem([])).toBeNull();
+  });
+
+  it('names one uncovered pull request', () => {
+    expect(changelogProblem([{ number: 70, title: "Show a What's new sheet" }])).toBe(
+      "1 merged PR is not in the changelog yet:\n#70 Show a What's new sheet\nAsk Claude to write the changelog, merge that PR, then deploy again.",
+    );
+  });
+
+  it('counts and lists several uncovered pull requests in order', () => {
+    expect(
+      changelogProblem([
+        { number: 72, title: 'Rest timer sound' },
+        { number: 71, title: 'Plate maths' },
+        { number: 70, title: "Show a What's new sheet" },
+      ]),
+    ).toBe(
+      [
+        '3 merged PRs are not in the changelog yet:',
+        '#72 Rest timer sound',
+        '#71 Plate maths',
+        "#70 Show a What's new sheet",
+        'Ask Claude to write the changelog, merge that PR, then deploy again.',
+      ].join('\n'),
+    );
+  });
+
+  it('passes when every covered number is a merged pull request', () => {
+    expect(unknownPrsProblem([])).toBeNull();
+  });
+
+  it('refuses covered numbers with no merged pull request', () => {
+    expect(unknownPrsProblem([70, 71])).toBe(
+      'web/changelog.yaml lists PRs that are not merged since the changelog began: #70, #71\nRemove them from prs (or wait for them to merge), merge that fix, then deploy again.',
+    );
   });
 });
