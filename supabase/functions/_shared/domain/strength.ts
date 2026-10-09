@@ -38,8 +38,13 @@ function cappedRir(repsInReserve: number): number {
   return Math.min(MAX_ESTIMATED_RIR, Math.max(0, Math.floor(repsInReserve + FLOAT_TOLERANCE)));
 }
 
+function wholeRepsToFailure(loadKg: number, e1rmKg: number): number {
+  const repsBelowRoundedE1rm = Math.floor(predictedMaxReps(loadKg, e1rmKg) + FLOAT_TOLERANCE);
+  return epley(loadKg, repsBelowRoundedE1rm + 1) <= e1rmKg ? repsBelowRoundedE1rm + 1 : repsBelowRoundedE1rm;
+}
+
 export function estimateRir(loadKg: number, reps: number, e1rmKg: number): number {
-  return cappedRir(predictedMaxReps(loadKg, e1rmKg) - reps);
+  return cappedRir(wholeRepsToFailure(loadKg, e1rmKg) - reps);
 }
 
 export function intensityBonus(reps: number, loadKg: number, e1rmKg: number | null, cfg: BalanceConfig): number {
@@ -133,7 +138,7 @@ function estimateFor(result: LiftSetResult, exercise: LiftExerciseDef, strengthB
 
 function beatsPrediction(result: LiftSetResult, exercise: LiftExerciseDef, strengthBefore: number): boolean {
   if (usesRepsCapacity(exercise)) return result.set.reps > strengthBefore;
-  return result.set.reps > predictedMaxReps(result.effectiveLoadKg, strengthBefore);
+  return result.set.reps > wholeRepsToFailure(result.effectiveLoadKg, strengthBefore);
 }
 
 function decideEffort(

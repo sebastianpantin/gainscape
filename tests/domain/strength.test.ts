@@ -75,6 +75,30 @@ describe('epley and predicted max reps', () => {
       }),
     );
   });
+
+  it('estimates the reps left that the rounded Epley e1RM was built from', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 80, max: 800 }).map((quarterKg) => quarterKg / 4),
+        fc.integer({ min: 1, max: 12 }),
+        fc.integer({ min: 1, max: 12 }),
+        (loadKg, repsToFailure, reps) => {
+          fc.pre(reps <= repsToFailure);
+          expect(estimateRir(loadKg, reps, epley(loadKg, repsToFailure))).toBe(repsToFailure - reps);
+        },
+      ),
+      { numRuns: 2000 },
+    );
+  });
+
+  it('estimates 1 RIR for 7 reps after 8 reps to failure at the same load', () => {
+    expect(estimateRir(43, 7, epley(43, 8))).toBe(1);
+  });
+
+  it('does not count an unrated set that only matches the rounded e1RM as beating its prediction', () => {
+    const [result] = runSets([aSet('bench', 43, 8, null)], knownStrength('bench', epley(43, 8)));
+    expect(result).toMatchObject({ rir: 0, rirSource: 'estimated', e1rmCandidateKg: null });
+  });
 });
 
 describe('intensity bonus', () => {
