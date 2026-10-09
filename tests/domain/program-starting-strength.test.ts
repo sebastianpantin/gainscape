@@ -99,16 +99,16 @@ describe('Starting Strength resets after two failures in a row (kg)', () => {
     expect(missesOf(state, 'deadlift:workingWeight:afterSession')).toBe(1);
   });
 
-  it('then a second fail in a row resets 102.5 → 92.25, prescribed 92.5', () => {
+  it('then a second fail in a row resets 102.5 → 92.25, stored as 92.5', () => {
     const { state } = followProgram(def, heavy, factClock(), [failDeadlift, {}, failDeadlift, failDeadlift]);
-    expect(refOf(state, 'deadlift', 'workingWeight')).toBeCloseTo(92.25, 9);
+    expect(refOf(state, 'deadlift', 'workingWeight')).toBe(92.5);
     expect(weightsOf(resolveNext(def, heavy, state), 'a-deadlift')).toEqual([92.5]);
   });
 
-  it('press fails only on B days: B fail, A (neutral), B fail resets 35 → 31.5', () => {
+  it('press fails only on B days: B fail, A (neutral), B fail resets 35 → 31.5, stored as 32.5', () => {
     const failPress: DayLog = { missedLifts: ['press'] };
     const { state } = followProgram(def, kg, factClock(), [{}, failPress, {}, failPress]);
-    expect(refOf(state, 'press', 'workingWeight')).toBeCloseTo(31.5, 9);
+    expect(refOf(state, 'press', 'workingWeight')).toBe(32.5);
   });
 });
 

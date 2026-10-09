@@ -1,9 +1,10 @@
-import { halfIncrementKg, type RoundingSetting } from './load-rounding.ts';
+import { halfIncrementKg, roundPrescribedLoad, type RoundingSetting } from './load-rounding.ts';
 import { FLOAT_TOLERANCE } from './math.ts';
 import {
   type Adjustment,
   evaluateAmount,
   evaluateNumber,
+  isBarbellLift,
   parseSetRef,
   type ProgramDefinition,
   type ProgramEnrollment,
@@ -258,10 +259,16 @@ const ADJUSTMENT_HANDLERS: AdjustmentHandlers = {
   customRule: ({ state }) => state,
   tmReset: ({ adjustment, current, numbers, changeTo }) =>
     changeTo(current * (1 - evaluateNumber(adjustment.pct, numbers)), 'tmReset'),
-  failureCounter: ({ state, rule, adjustment, current, numbers, changeTo }) => {
+  failureCounter: ({ context, state, rule, adjustment, current, numbers, changeTo }) => {
     const key = ruleKeyOf(rule);
     if ((state.consecutiveMisses[key] ?? 0) < adjustment.threshold) return state;
-    const deloaded = changeTo(current * (1 - evaluateNumber(adjustment.deloadPct, numbers)), 'adjustment');
+    const { definition, enrollment } = context;
+    const deloadedLoad = roundPrescribedLoad(
+      current * (1 - evaluateNumber(adjustment.deloadPct, numbers)),
+      enrollment.rounding,
+      isBarbellLift(definition, rule.lift),
+    );
+    const deloaded = changeTo(deloadedLoad, 'adjustment');
     return { ...deloaded, consecutiveMisses: { ...deloaded.consecutiveMisses, [key]: 0 } };
   },
   stageMachine: ({ context, state, rule, adjustment, current, position }) =>
