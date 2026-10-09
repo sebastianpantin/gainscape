@@ -3,7 +3,7 @@ import { authStorageKey, needsAuthTimeout, REQUEST_TIMEOUT_MS, storedSessionFrom
 
 const sameOriginSupabaseProxy = `${window.location.origin}/sb`;
 
-export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? sameOriginSupabaseProxy;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? sameOriginSupabaseProxy;
 export const AUTH_STORAGE_KEY = authStorageKey(supabaseUrl);
 
 export function readStoredSession() {

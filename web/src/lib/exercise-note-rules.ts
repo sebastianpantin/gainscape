@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const EXERCISE_NOTE_MAX_LENGTH = 500;
 export const EXERCISE_NOTE_OFFLINE_TEXT = 'Notes can be edited when you are online.';
-export const EXERCISE_NOTE_COLUMNS = 'exercise_id, body';
+const EXERCISE_NOTE_COLUMNS = 'exercise_id, body';
 
 export interface ExerciseNoteRow {
   exercise_id: string;
