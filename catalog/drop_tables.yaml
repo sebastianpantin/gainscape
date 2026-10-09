@@ -11,18 +11,24 @@
 - key: rare
   name: Rare
   entries:
-    - { item: scroll_pause_bench_press, weight: 5 }
-    - { item: scroll_pause_squat, weight: 5 }
-    - { item: scroll_deficit_deadlift, weight: 5 }
-    - { item: scroll_dead_stop_row, weight: 5 }
-    - { item: scroll_z_press, weight: 5 }
-    - { item: scroll_spider_curl, weight: 5 }
+    - { item: scroll_pause_bench_press, weight: 3 }
+    - { item: scroll_pause_squat, weight: 3 }
+    - { item: scroll_deficit_deadlift, weight: 3 }
+    - { item: scroll_dead_stop_row, weight: 3 }
+    - { item: scroll_z_press, weight: 3 }
+    - { item: scroll_spider_curl, weight: 3 }
+    - { item: scroll_front_squat_and_romanian_deadlift, weight: 3 }
+    - { item: scroll_incline_and_pulldown, weight: 3 }
+    - { item: scroll_raises_and_face_pulls, weight: 3 }
+    - { item: scroll_leg_raise_and_rollout, weight: 3 }
+    - { item: scroll_push_up_century, weight: 3 }
+    - { item: scroll_twenty_ton_day, weight: 3 }
     - { item: spotter_pup, weight: 1 }
     - { item: chalk_sprite, weight: 1 }
     - { item: iron_tortoise, weight: 1 }
     - { item: plate_crab, weight: 1 }
     - { item: 'gear:grinder', weight: 3 }
-    - { item: forged_scraps, weight: 20, min: 2, max: 4 }
+    - { item: forged_scraps, weight: 14, min: 2, max: 4 }
     - { item: titan_scraps, weight: 15, min: 1, max: 3 }
     - { item: mythic_scraps, weight: 8, min: 1, max: 2 }
     - { item: ascendant_scraps, weight: 3 }

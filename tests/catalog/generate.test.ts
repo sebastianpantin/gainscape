@@ -39,15 +39,15 @@ describe('catalog generator', () => {
     expect(seed).not.toContain('\r');
   });
 
-  it('expands 58 items, 36 recipes with 72 inputs and 2 drop tables with 32 entries', () => {
+  it('expands 64 items, 36 recipes with 72 inputs and 2 drop tables with 38 entries', () => {
     const catalog = loadCatalogData();
-    expect(catalog.items).toHaveLength(58);
+    expect(catalog.items).toHaveLength(64);
     expect(catalog.recipes).toHaveLength(36);
     expect(catalog.recipes.flatMap((recipe) => recipe.inputs)).toHaveLength(72);
-    expect(catalog.dropTables.flatMap((table) => table.entries)).toHaveLength(32);
+    expect(catalog.dropTables.flatMap((table) => table.entries)).toHaveLength(38);
     expect(catalog.dropTables.map((table) => table.key)).toEqual(['regular', 'rare']);
     const countOf = (kind: string) => catalog.items.filter((item) => item.kind === kind).length;
-    expect([countOf('gear'), countOf('material'), countOf('pet'), countOf('scroll')]).toEqual([42, 6, 4, 6]);
+    expect([countOf('gear'), countOf('material'), countOf('pet'), countOf('scroll')]).toEqual([42, 6, 4, 12]);
     expect(catalog.items.map((item) => item.sortOrder)).toEqual(catalog.items.map((_, index) => index + 1));
   });
 
@@ -106,6 +106,12 @@ describe('catalog generator', () => {
       'dips_and_curls',
       'squat_century',
       'ten_ton_day',
+      'front_squat_and_romanian_deadlift',
+      'incline_and_pulldown',
+      'raises_and_face_pulls',
+      'leg_raise_and_rollout',
+      'push_up_century',
+      'twenty_ton_day',
     ]);
     const statements = renderStatements(catalog);
     const challengesAt = statements.findIndex((statement) => statement.startsWith('insert into public.challenges'));
