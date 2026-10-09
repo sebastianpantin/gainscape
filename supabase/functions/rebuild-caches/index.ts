@@ -1,7 +1,7 @@
 import { z } from 'npm:zod@4.6.5';
 import { sql } from '../_shared/db.ts';
 import { DEFAULT_BALANCE } from '../_shared/domain/index.ts';
-import { HttpError, jsonResponse, logUnexpectedError, readJsonBody } from '../_shared/http.ts';
+import { HttpError, jsonResponse, readJsonBody } from '../_shared/http.ts';
 import { serve } from '../_shared/serve.ts';
 import { assertSecretKey } from '../_shared/service-auth.ts';
 import { lowerUuid, parseOr422 } from '../_shared/session-payload.ts';
@@ -63,7 +63,7 @@ async function rebuildBatch(userIds: readonly string[]) {
       rebuilt.push(await rebuildUser(userId));
     } catch (error) {
       if (!isMissingUser(error)) {
-        logUnexpectedError(error);
+        console.error(error);
         throw new HttpError(500, 'rebuild_failed', { userId, rebuiltBefore: rebuilt.length });
       }
       missing.push(userId);

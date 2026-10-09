@@ -74,10 +74,10 @@ export function cachedExerciseFields(exercise: Exercise): Exercise {
     : { ...base, modality: 'cardio', activity: exercise.activity };
 }
 
-export function saveCachedExercises(storage: Storage, userId: string, exercises: Exercise[], now = new Date()): void {
+export function saveCachedExercises(storage: Storage, userId: string, exercises: Exercise[]): void {
   const record = {
     v: CACHE_VERSION,
-    savedAt: now.toISOString(),
+    savedAt: new Date().toISOString(),
     userId,
     exercises: exercises.map(cachedExerciseFields),
   };

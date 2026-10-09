@@ -15,9 +15,9 @@ import {
   aBout,
   aSet,
   beyondEffortWindow,
-  type BoutShape,
   createCustomExercise,
   DAY_MS,
+  editSession,
   expectLedgerMatchesItems,
   HOUR_MS,
   localDateOf,
@@ -53,17 +53,6 @@ async function fillCaps(userId: string, localDate: string): Promise<void> {
     loot_version: DEFAULT_LOOT.version,
   }));
   await db`insert into public.loot_rolls ${db(rows)}`;
-}
-
-async function edit(user: TestUser, session: { id: string }, sets: (SetShape | BoutShape)[], ifRevision = 0) {
-  const response = await postFunction('edit-session', user.accessToken, {
-    sessionId: session.id,
-    ifRevision,
-    notes: null,
-    sets,
-  });
-  expect(response.status, response.rawBody).toBe(200);
-  return response;
 }
 
 async function dropRow(dropId: string) {
@@ -231,7 +220,7 @@ describe('edit-session', () => {
     const removed = await grantDrop(user.id, payload.id, payload.sets[1].id, 'rookie_belt', 1);
     expect((await storedDrops(payload.id)).map((drop) => drop.dropId)).toEqual([kept.dropId, removed.dropId]);
 
-    const response = await edit(user, payload, [payload.sets[0]]);
+    const response = await editSession(user, payload, [payload.sets[0]]);
     expect(response.body.revokedDrops?.map((drop) => drop.dropId)).toEqual([removed.dropId]);
     expect((await dropRow(removed.dropId)).revoke_reason).toBe('set_removed');
     expect((await dropRow(kept.dropId)).revoked_at).toBeNull();
@@ -247,7 +236,7 @@ describe('edit-session', () => {
     const payload = payloadAt(start, [aBout(runId, 0, { durationS: 600 })]);
     await postSession(user, payload);
     const drop = await grantDrop(user.id, payload.id, payload.sets[0].id, 'grinder_scraps', 2);
-    const response = await edit(user, payload, [{ ...payload.sets[0], durationS: 540 }]);
+    const response = await editSession(user, payload, [{ ...payload.sets[0], durationS: 540 }]);
     expect(response.body.revokedDrops?.map((revoked) => revoked.dropId)).toEqual([drop.dropId]);
     expect((await dropRow(drop.dropId)).revoke_reason).toBe('no_longer_qualifies');
   });
@@ -255,7 +244,7 @@ describe('edit-session', () => {
   it('revokes both drops of a set changed to beyond the effort window', async () => {
     const user = await freshUser();
     const { payload, prSet, regular, pr, other } = await prSessionWithDrops(user);
-    const response = await edit(user, payload, [{ ...prSet, effort: beyondEffortWindow }, payload.sets[1]]);
+    const response = await editSession(user, payload, [{ ...prSet, effort: beyondEffortWindow }, payload.sets[1]]);
     expect(response.body.revokedDrops?.map((drop) => [drop.dropId, drop.source])).toEqual([
       [regular.dropId, 'regular'],
       [pr.dropId, 'pr'],
@@ -279,7 +268,10 @@ describe('edit-session', () => {
       undefined,
       olderVersion,
     );
-    const response = await edit(user, payload, [{ ...payload.sets[0], effort: beyondEffortWindow }, payload.sets[1]]);
+    const response = await editSession(user, payload, [
+      { ...payload.sets[0], effort: beyondEffortWindow },
+      payload.sets[1],
+    ]);
     expect(response.body.revokedDrops).toEqual([]);
     expect((await dropRow(legacy.dropId)).revoked_at).toBeNull();
   });
@@ -298,14 +290,14 @@ describe('edit-session', () => {
       undefined,
       olderVersion,
     );
-    await edit(user, payload, [payload.sets[0]]);
+    await editSession(user, payload, [payload.sets[0]]);
     expect((await dropRow(legacy.dropId)).revoke_reason).toBe('set_removed');
   });
 
   it('revokes only the PR drop when the PR set becomes lighter but stays hard', async () => {
     const user = await freshUser();
     const { payload, prSet, regular, pr } = await prSessionWithDrops(user);
-    const response = await edit(user, payload, [{ ...prSet, weightKg: 60 }, payload.sets[1]]);
+    const response = await editSession(user, payload, [{ ...prSet, weightKg: 60 }, payload.sets[1]]);
     expect(response.body.summary?.prs).toEqual([]);
     expect(response.body.revokedDrops?.map((drop) => drop.dropId)).toEqual([pr.dropId]);
     expect((await dropRow(pr.dropId)).revoke_reason).toBe('no_longer_qualifies');
@@ -317,7 +309,7 @@ describe('edit-session', () => {
     const customId = await createCustomExercise(user);
     await postSession(user, payloadAt(new Date(Date.now() - 3 * DAY_MS), [aSet(customId, 0, 40)]));
     const { payload, prSet, regular, pr } = await prSessionWithDrops(user);
-    const response = await edit(user, payload, [{ ...prSet, exerciseId: customId }, payload.sets[1]]);
+    const response = await editSession(user, payload, [{ ...prSet, exerciseId: customId }, payload.sets[1]]);
     expect(response.body.summary?.prs.map((record) => record.exerciseId)).toEqual([customId]);
     expect(response.body.revokedDrops?.map((drop) => drop.dropId)).toEqual([pr.dropId]);
     expect((await dropRow(pr.dropId)).revoke_reason).toBe('no_longer_qualifies');
@@ -327,7 +319,7 @@ describe('edit-session', () => {
   it('answers a no-op edit with no revoked drops', async () => {
     const user = await freshUser();
     const { payload } = await prSessionWithDrops(user);
-    const response = await edit(user, payload, payload.sets);
+    const response = await editSession(user, payload, payload.sets);
     expect(response.body.revokedDrops).toEqual([]);
     expect(response.body.replayedSessionIds).toEqual([]);
   });
@@ -369,9 +361,9 @@ describe('revocation is final and edits never roll', () => {
     const [prDrop] = await db`select id from public.drops where session_id = ${session.id} and source = 'pr'`;
     const rollsBefore = await rollsOf(user.id);
 
-    await edit(user, session, [{ ...session.sets[0], weightKg: 50 }]);
+    await editSession(user, session, [{ ...session.sets[0], weightKg: 50 }]);
     expect((await dropRow(prDrop.id)).revoke_reason).toBe('no_longer_qualifies');
-    const restored = await edit(user, session, session.sets, 1);
+    const restored = await editSession(user, session, session.sets, 1);
     expect(restored.body.summary?.prs).toHaveLength(1);
     expect(restored.body.revokedDrops).toEqual([]);
     expect((await dropRow(prDrop.id)).revoke_reason).toBe('no_longer_qualifies');
@@ -386,7 +378,7 @@ describe('revocation is final and edits never roll', () => {
     const session = payloadAt(start, [aSet(benchId, 0, 50)]);
     await postSession(user, session);
     const added = aSet(benchId, 1, 90);
-    const response = await edit(user, session, [...session.sets, added]);
+    const response = await editSession(user, session, [...session.sets, added]);
     expect(response.body.summary?.prs).toHaveLength(1);
     expect(await db`select * from public.loot_rolls where set_id = ${added.id}`).toEqual([]);
   });
@@ -403,7 +395,7 @@ describe('neighbours and rebuild', () => {
     const [start] = startsOnOneLocalDay(1);
     const later = payloadAt(start, [aSet(benchId, 0, 60)]);
     await postSession(user, later);
-    const response = await edit(user, later, [{ ...later.sets[0], effort: beyondEffortWindow }]);
+    const response = await editSession(user, later, [{ ...later.sets[0], effort: beyondEffortWindow }]);
     expect(response.body.replayedSessionIds).not.toContain(old.id);
     expect(await dropRow(oldDrop.dropId)).toEqual(before);
     expect(before.revoked_at).toBeNull();
@@ -412,7 +404,7 @@ describe('neighbours and rebuild', () => {
   it('rebuilds caches without touching drops, revoked or not', async () => {
     const user = await freshUser();
     const { payload, prSet } = await prSessionWithDrops(user);
-    await edit(user, payload, [{ ...prSet, weightKg: 50 }, payload.sets[1]]);
+    await editSession(user, payload, [{ ...prSet, weightKg: 50 }, payload.sets[1]]);
     const before = await lootSnapshot(user.id);
     expect(before.drops.some((drop) => drop.revoked_at !== null)).toBe(true);
     expect((await rebuildCaches(user.id)).status).toBe(200);

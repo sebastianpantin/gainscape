@@ -1,6 +1,8 @@
 import type { CardioEffortLevel, EffortInput, EffortLevel } from '@domain/types.ts';
 import type { EffortInputMode } from './profile-rules.ts';
 
+export const EFFORT_LEVELS: readonly EffortLevel[] = ['easy', 'hard', 'near_failure', 'failure'];
+
 export const EFFORT_LEVEL_LABELS: Record<EffortLevel, string> = {
   easy: 'Easy',
   hard: 'Hard',
@@ -25,7 +27,6 @@ export function effortLabel(effort: EffortInput): string | null {
 const HIGHEST_RIR_CHOICE = 6;
 const LOWEST_RPE_CHOICE = 6;
 const RPE_AT_FAILURE = 10;
-const LEVELS_EASIEST_FIRST: EffortLevel[] = ['easy', 'hard', 'near_failure', 'failure'];
 
 export function assumedEffort(
   mode: EffortInputMode,
@@ -38,6 +39,6 @@ export function assumedEffort(
     return rpe < LOWEST_RPE_CHOICE ? null : { type: 'rpe', value: rpe };
   }
   const distance = (level: EffortLevel) => Math.abs(levelRir[level] - rir);
-  const nearest = LEVELS_EASIEST_FIRST.reduce((best, level) => (distance(level) < distance(best) ? level : best));
+  const nearest = EFFORT_LEVELS.reduce((best, level) => (distance(level) < distance(best) ? level : best));
   return { type: 'level', level: nearest };
 }

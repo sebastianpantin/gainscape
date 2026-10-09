@@ -3,7 +3,7 @@ import {
   type BodyweightRepRecord,
   type CardioRecordKind,
   type CardioRecords,
-  REP_MAX_SLOT_COUNT,
+  emptyRepMaxSlots,
   type RecordState,
   type RepMaxSlot,
 } from '../domain/index.ts';
@@ -28,7 +28,7 @@ export async function loadRecords(
 
   const repMaxes: Record<string, (RepMaxSlot | null)[]> = {};
   for (const row of repMaxRows) {
-    const slots = repMaxes[row.exercise_id] ?? Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);
+    const slots = repMaxes[row.exercise_id] ?? emptyRepMaxSlots();
     slots[row.reps - 1] = {
       loadKg: Number(row.load_kg),
       setId: row.set_id,

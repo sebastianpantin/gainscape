@@ -2,7 +2,7 @@ import { canCraft, recipeFor } from '@domain/crafting.ts';
 import { DEFAULT_BALANCE, DEFAULT_ROUNDING } from '@domain/index.ts';
 import type { StrengthState } from '@domain/types.ts';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ItemIcon } from '../../components/PixelArt.tsx';
 import { fetchExercises } from '../../lib/catalog.ts';
@@ -305,26 +305,23 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const { state: draftState, startWorkout, flush } = useWorkoutDraft(userId);
   const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
   const loadout = useLoadout(userId);
-  const refetchLoadout = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: loadoutQueryKey(userId) }),
-    [queryClient, userId],
-  );
+  const refetchLoadout = () => queryClient.invalidateQueries({ queryKey: loadoutQueryKey(userId) });
 
-  const refetchInventory = useCallback(async () => {
+  const refetchInventory = async () => {
     try {
       setHeld(await fetchInventory(userId));
     } catch (error) {
       setLoadProblem((error as Error).message);
     }
-  }, [userId]);
+  };
 
-  const refetchCatalog = useCallback(async () => {
+  const refetchCatalog = async () => {
     try {
       setCatalog(await fetchItemCatalog());
     } catch (error) {
       setLoadProblem((error as Error).message);
     }
-  }, []);
+  };
 
   useEffect(() => {
     let active = true;

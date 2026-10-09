@@ -17,13 +17,13 @@ import { DEFAULT_LOOT } from '@domain/index.ts';
 import {
   aSet,
   DAY_MS,
+  editSession,
   type Effort,
   expectLedgerMatchesItems,
   hard,
   hoursAgo,
   payloadAt,
   postSession,
-  type SessionPayload,
   type SetShape,
   startsOnOneLocalDay,
   trackedUsers,
@@ -116,16 +116,6 @@ function withChallenge<T extends object>(payload: T): T & { challenge: { challen
 
 function challengePayload(startedAt: Date, deadliftKg = 100, deadliftSets = 5) {
   return withChallenge(payloadAt(startedAt, challengeSets(deadliftKg, deadliftSets)));
-}
-
-async function edit(user: TestUser, session: SessionPayload, sets: SetShape[], ifRevision: number): Promise<void> {
-  const response = await postFunction('edit-session', user.accessToken, {
-    sessionId: session.id,
-    ifRevision,
-    notes: session.notes,
-    sets,
-  });
-  expect(response.status, response.rawBody).toBe(200);
 }
 
 async function skillXp(sessionId: string) {
@@ -404,8 +394,8 @@ describe('replaying a challenge verdict', () => {
     expect(await scrollsHeld(user.id)).toBe(0);
 
     const withoutOneDeadlift = (sets: SetShape[]) => sets.filter((set) => set.position !== 4);
-    await edit(user, session, withoutOneDeadlift(session.sets), 0);
-    await edit(twin, twinSession, withoutOneDeadlift(twinSession.sets), 0);
+    await editSession(user, session, withoutOneDeadlift(session.sets), 0);
+    await editSession(twin, twinSession, withoutOneDeadlift(twinSession.sets), 0);
 
     const failed = await storedSession(session.id);
     expect(failed.summary.challenge.passed).toBe(false);
@@ -414,8 +404,8 @@ describe('replaying a challenge verdict', () => {
     expect(await scrollsHeld(user.id)).toBe(0);
     expect(await challengeLedger(user.id)).toHaveLength(1);
 
-    await edit(user, session, session.sets, 1);
-    await edit(
+    await editSession(user, session, session.sets, 1);
+    await editSession(
       twin,
       twinSession,
       twinSession.sets.map((set) => ({ ...set, id: randomUUID() })),
@@ -445,7 +435,7 @@ describe('replaying a challenge verdict', () => {
     const snapshotE1rm = passed.challenge.e1rmKg[deadliftId];
     expect(snapshotE1rm).toBeGreaterThan(100);
 
-    await edit(user, opener, [{ ...opener.sets[0], weightKg: 200 }], 0);
+    await editSession(user, opener, [{ ...opener.sets[0], weightKg: 200 }], 0);
 
     const [{ e1rm_candidate_kg: raisedE1rm }] = await db`
       select e1rm_candidate_kg::float from public.sets where id = ${opener.sets[0].id}`;

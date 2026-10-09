@@ -21,10 +21,6 @@ export function kgToUnit(kg: number, unit: WeightUnit): number {
   return unit === 'kg' ? kg : kg / KG_PER_LB;
 }
 
-export function amountInUnit(amount: UnitAmount, unit: WeightUnit): number {
-  return amount[unit];
-}
-
 export function shownWeight(kg: number, unit: WeightUnit): number {
   return roundTo(unit === 'kg' ? STORED_KG_DECIMALS : SHOWN_LB_DECIMALS, kgToUnit(kg, unit));
 }

@@ -60,8 +60,6 @@ export interface LoggedLoad {
   reps: number;
 }
 
-const WEEKS_BACK_FACTOR = 0.975;
-
 export function ruleKeyOf(rule: ProgressionRule): RuleKey {
   return `${rule.lift}:${rule.var}:${rule.trigger}`;
 }
@@ -158,10 +156,6 @@ export function liftOutcomes(
     outcomes[rule.lift] = rule.lift in outcomes ? combinedOutcome(outcomes[rule.lift], outcome) : outcome;
   }
   return outcomes;
-}
-
-export function weeksBack(top: number, weeks: number): number {
-  return top * WEEKS_BACK_FACTOR ** weeks;
 }
 
 function absoluteWeek(definition: ProgramDefinition, position: Position): number {

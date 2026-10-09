@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CARDIO_BOUNDS } from '../../supabase/functions/_shared/domain/cardio.ts';
+import { boutDurationSeconds, CARDIO_BOUNDS } from '../../supabase/functions/_shared/domain/cardio.ts';
 import {
-  boutDurationS,
   boutModeChanges,
   canAddBout,
   cardioRecordCards,
@@ -44,7 +43,9 @@ describe('interval template', () => {
   it('drops rounds until the derived duration fits in 4 hours', () => {
     const clamped = clampedInterval({ workS: 3600, restS: 3600, rounds: 100 });
     expect(clamped).toEqual({ workS: 3600, restS: 3600, rounds: 2 });
-    expect(boutDurationS({ ...intervals, interval: clamped })).toBeLessThanOrEqual(CARDIO_BOUNDS.intervalDurationS.max);
+    expect(boutDurationSeconds({ ...intervals, interval: clamped })).toBeLessThanOrEqual(
+      CARDIO_BOUNDS.intervalDurationS.max,
+    );
   });
 
   it('keeps a template that already fits', () => {
@@ -53,17 +54,17 @@ describe('interval template', () => {
 
   it('allows a single 5-second sprint', () => {
     expect(clampedInterval({ workS: 5, restS: 0, rounds: 1 })).toEqual({ workS: 5, restS: 0, rounds: 1 });
-    expect(boutDurationS({ ...intervals, interval: { workS: 5, restS: 0, rounds: 1 } })).toBe(5);
+    expect(boutDurationSeconds({ ...intervals, interval: { workS: 5, restS: 0, rounds: 1 } })).toBe(5);
   });
 });
 
 describe('bout duration', () => {
   it('is the logged duration for a steady bout', () => {
-    expect(boutDurationS(steady)).toBe(1800);
+    expect(boutDurationSeconds(steady)).toBe(1800);
   });
 
   it('is rounds of work with the rest between them for an interval bout', () => {
-    expect(boutDurationS(intervals)).toBe(10 * 30 + 9 * 30);
+    expect(boutDurationSeconds(intervals)).toBe(10 * 30 + 9 * 30);
   });
 });
 

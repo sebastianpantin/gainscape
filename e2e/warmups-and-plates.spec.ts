@@ -1,15 +1,12 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { finishWorkout, logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
 import { warmupFlagsOfLatestSession } from './support/db.ts';
-
-function exerciseCard(page: Page, name: string): Locator {
-  return page.locator('section', { has: page.getByRole('heading', { name, exact: true }) });
-}
+import { workoutCards } from './support/program-enrollment.ts';
 
 async function addExercise(page: Page, search: string, name: string): Promise<Locator> {
   await page.getByLabel('Search exercises').fill(search);
   await page.getByRole('button', { name: new RegExp(`^${name}\\b`) }).click();
-  return exerciseCard(page, name);
+  return workoutCards(page, name);
 }
 
 function weightOf(row: Locator): Locator {
@@ -24,7 +21,7 @@ test('a set flagged as a warm-up is stored as a warm-up and earns no XP', async 
     { weightKg: 40, reps: 8 },
     { weightKg: 60, reps: 5 },
   ]);
-  const warmup = exerciseCard(page, 'Barbell Bench Press').getByRole('listitem').first();
+  const warmup = workoutCards(page, 'Barbell Bench Press').getByRole('listitem').first();
   const toggle = warmup.getByRole('button', { name: 'Warm-up set 1', exact: true });
   const restTimer = page.getByRole('region', { name: 'Rest timer' });
   await warmup.getByRole('button', { name: 'Done set 1' }).click();

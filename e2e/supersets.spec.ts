@@ -1,23 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
-import { register, uniqueUsername } from './support/app.ts';
+import { pauseClockNow, register, restTimer, uniqueUsername } from './support/app.ts';
+import { workoutCards } from './support/program-enrollment.ts';
 
 const BENCH = 'Barbell Bench Press';
 const ROW = 'Barbell Row';
 
-function restTimer(page: Page) {
-  return page.getByRole('region', { name: 'Rest timer' });
-}
-
 function superset(page: Page) {
   return page.getByRole('region', { name: `Superset: ${BENCH} and ${ROW}` });
-}
-
-function exerciseCard(page: Page, exerciseName: string) {
-  return page.locator('section', { has: page.getByRole('heading', { name: exerciseName, exact: true }) });
-}
-
-async function pauseClockNow(page: Page) {
-  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
 }
 
 async function addExercise(page: Page, search: string, exerciseName: string) {
@@ -80,8 +69,8 @@ test('grouping two exercises shows one superset card, and ungrouping gives two c
 
   await chooseFromMenu(page, BENCH, 'Ungroup');
   await expect(superset(page)).toHaveCount(0);
-  await expect(exerciseCard(page, BENCH)).toHaveCount(1);
-  await expect(exerciseCard(page, ROW)).toHaveCount(1);
-  await expect(exerciseCard(page, BENCH).getByRole('heading', { name: ROW, exact: true })).toHaveCount(0);
-  await expect(exerciseCard(page, BENCH).getByRole('button', { name: 'Done set 1' })).toBeVisible();
+  await expect(workoutCards(page, BENCH)).toHaveCount(1);
+  await expect(workoutCards(page, ROW)).toHaveCount(1);
+  await expect(workoutCards(page, BENCH).getByRole('heading', { name: ROW, exact: true })).toHaveCount(0);
+  await expect(workoutCards(page, BENCH).getByRole('button', { name: 'Done set 1' })).toBeVisible();
 });

@@ -1,7 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
-import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
+import { expect, test } from '@playwright/test';
+import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
-import { dayPicker, followProgram, prescribedRows, programToday, repeated } from './support/program-enrollment.ts';
+import { dayPicker, followProgram, openProgramToday, prescribedRows, repeated } from './support/program-enrollment.ts';
 import { type SeededDay, type SeededSet, seedProgramDays, sessionClock } from './support/program-seed.ts';
 
 const STRONGLIFTS = 'StrongLifts 5x5';
@@ -41,14 +41,6 @@ const FAILED_SQUAT_SESSIONS: readonly SeededDay[] = [
   },
 ];
 
-async function openToday(page: Page) {
-  await page.reload();
-  await openTab(page, 'Train');
-  const today = programToday(page, STRONGLIFTS);
-  await expect(today).toBeVisible();
-  return today;
-}
-
 test('StrongLifts repeats a failed squat twice at 100, then the third failed session in a row deloads it 10% to 100 × 0.9 = 90 while press goes 40 + 2.5 = 42.5 and deadlift 120 + 5 = 125', async ({
   page,
 }) => {
@@ -68,14 +60,14 @@ test('StrongLifts repeats a failed squat twice at 100, then the third failed ses
   const clock = sessionClock(FAILED_SQUAT_SESSIONS.length + 1);
 
   await seedProgramDays(accessToken, enrollmentId, bindings, clock, FAILED_SQUAT_SESSIONS.slice(0, 2));
-  const afterTwoFails = await openToday(page);
+  const afterTwoFails = await openProgramToday(page, STRONGLIFTS);
   await expect(dayPicker(afterTwoFails).getByRole('radio', { name: 'Session 3 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(afterTwoFails, 'Back Squat')).toHaveText(repeated('100 kg × 5 · 100%', 5));
   await expect(prescribedRows(afterTwoFails, 'Barbell Bench Press')).toHaveText(repeated('62.5 kg × 5 · 100%', 5));
   await expect(prescribedRows(afterTwoFails, 'Barbell Row')).toHaveText(repeated('52.5 kg × 5 · 100%', 5));
 
   await seedProgramDays(accessToken, enrollmentId, bindings, clock, FAILED_SQUAT_SESSIONS.slice(2));
-  const afterThreeFails = await openToday(page);
+  const afterThreeFails = await openProgramToday(page, STRONGLIFTS);
   await expect(dayPicker(afterThreeFails).getByRole('radio', { name: 'Session 4 Day 2', exact: true })).toBeChecked();
   await expect(prescribedRows(afterThreeFails, 'Back Squat')).toHaveText(repeated('90 kg × 5 · 100%', 5));
   await expect(prescribedRows(afterThreeFails, 'Overhead Press')).toHaveText(repeated('42.5 kg × 5 · 100%', 5));

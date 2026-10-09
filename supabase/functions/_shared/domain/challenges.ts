@@ -1,8 +1,8 @@
 import type { BalanceConfig } from './balance.ts';
 import { roundLoad } from './load-rounding.ts';
-import { FLOAT_TOLERANCE } from './math.ts';
+import { FLOAT_TOLERANCE, nonNegativeIntegerPercent } from './math.ts';
 import { e1rmAtSessionStart } from './strength.ts';
-import { isLiftResult, type LiftSetResult, type SetResult, type StrengthState } from './types.ts';
+import { isLiftResult, isRecord, type LiftSetResult, type SetResult, type StrengthState } from './types.ts';
 
 export interface ChallengeExercise {
   exerciseId: string;
@@ -144,20 +144,8 @@ export function judgeChallenge(
   return { passed };
 }
 
-function challengePercent(cfg: ChallengeBonusConfig): number {
-  const percent = cfg.challengeBonusPercent;
-  if (!Number.isInteger(percent) || percent < 0) {
-    throw new RangeError(`challengeBonusPercent must be a non-negative integer, got ${percent}`);
-  }
-  return percent;
-}
-
 export function challengeBonusXp(baseXp: number, cfg: ChallengeBonusConfig): number {
-  return Math.round((baseXp * challengePercent(cfg)) / PERCENT);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return Math.round((baseXp * nonNegativeIntegerPercent('challengeBonusPercent', cfg.challengeBonusPercent)) / PERCENT);
 }
 
 function storedString(value: unknown, field: string): string {

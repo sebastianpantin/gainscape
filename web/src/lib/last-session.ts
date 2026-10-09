@@ -1,7 +1,7 @@
 import { type RecentSet, recentSessionsByExercise, type RecentLiftRow } from './last-session-rules.ts';
 import { supabase } from './supabase.ts';
 
-export const RECENT_SESSION_COUNT = 3;
+const RECENT_SESSION_COUNT = 3;
 
 export async function fetchRecentLiftSessions(
   exerciseIds: string[],

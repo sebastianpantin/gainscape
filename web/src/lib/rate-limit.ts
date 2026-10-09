@@ -30,7 +30,7 @@ export function waitText(seconds: number): string {
   return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
-const DATABASE_RATE_LIMITED_CODE = 'PT429';
+export const DATABASE_RATE_LIMITED_CODE = 'PT429';
 
 export function rateLimitedMessage(error: unknown): string | null {
   if (typeof error !== 'object' || error === null) return null;

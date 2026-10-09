@@ -1,22 +1,19 @@
 import { expect, type Page, test } from '@playwright/test';
 import { expectNoAxeViolations } from './support/a11y.ts';
 import { finishWorkout, logExercise, register, uniqueUsername } from './support/app.ts';
+import { workoutCards } from './support/program-enrollment.ts';
 
 const BENCH = 'Barbell Bench Press';
 const OFFLINE_TEXT = 'Notes can be edited when you are online.';
 
-function exerciseCard(page: Page, name: string) {
-  return page.locator('section', { has: page.getByRole('heading', { name, exact: true }) });
-}
-
 async function addExercise(page: Page, search: string, name: string) {
   await page.getByLabel('Search exercises').fill(search);
   await page.getByRole('button', { name: new RegExp(`^${name}\\b`) }).click();
-  await expect(exerciseCard(page, name)).toBeVisible();
+  await expect(workoutCards(page, name)).toBeVisible();
 }
 
 async function writeNote(page: Page, name: string, text: string) {
-  const card = exerciseCard(page, name);
+  const card = workoutCards(page, name);
   await card.getByRole('button', { name: new RegExp(`^(Add|Edit) note for ${name}$`) }).click();
   await card.getByRole('textbox', { name: `Note for ${name}` }).fill(text);
   await card.getByRole('button', { name: 'Save note' }).click();
@@ -27,7 +24,7 @@ test('an exercise note sticks to the exercise across workouts and is edited inli
   await register(page, uniqueUsername('note'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', BENCH, [{ weightKg: 60, reps: 5 }]);
-  const card = exerciseCard(page, BENCH);
+  const card = workoutCards(page, BENCH);
 
   await writeNote(page, BENCH, 'Seat 4\nWide grip');
   await expect(card.getByText('Seat 4 Wide grip')).toBeVisible();
@@ -67,7 +64,7 @@ test('a saved note shows from the device cache when the server cannot be reached
   await register(page, uniqueUsername('note_off'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   await addExercise(page, 'bench', BENCH);
-  const card = exerciseCard(page, BENCH);
+  const card = workoutCards(page, BENCH);
   await writeNote(page, BENCH, 'Seat 4');
   await expect(card.getByText('Seat 4', { exact: true })).toBeVisible();
 
@@ -87,7 +84,7 @@ test('a slow notes fetch that started before a save does not undo the save', asy
   await register(page, uniqueUsername('note_rc'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   await addExercise(page, 'bench', BENCH);
-  const card = exerciseCard(page, BENCH);
+  const card = workoutCards(page, BENCH);
   await writeNote(page, BENCH, 'Seat 4');
   await expect(card.getByText('Seat 4', { exact: true })).toBeVisible();
 
@@ -129,7 +126,7 @@ test('a note that fails to save keeps the text and says why', async ({ page }) =
   await register(page, uniqueUsername('note_err'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   await addExercise(page, 'bench', BENCH);
-  const card = exerciseCard(page, BENCH);
+  const card = workoutCards(page, BENCH);
   await page.route('**/rest/v1/rpc/save_exercise_note', (route) =>
     route.fulfill({
       status: 429,

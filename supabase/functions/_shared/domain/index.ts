@@ -24,7 +24,7 @@ export * from './crafting.ts';
 export * from './gear.ts';
 export * from './challenges.ts';
 export * from './events.ts';
-export { amountInUnit, KG_PER_LB, kgToUnit, shownWeight, type UnitAmount, unitToKg, type WeightUnit } from './units.ts';
+export { KG_PER_LB, kgToUnit, shownWeight, type UnitAmount, unitToKg, type WeightUnit } from './units.ts';
 export {
   DEFAULT_ROUNDING,
   halfIncrementKg,
@@ -141,7 +141,6 @@ export {
   ruleKeyOf,
   type LoggedDay,
   type LoggedLoad,
-  weeksBack,
 } from './program-progression.ts';
 export { isRetestPending, retestVarOf } from './program-stages.ts';
 export {

@@ -1,5 +1,6 @@
-import { roundTo } from './math.ts';
+import { isWholeNumberBetween, roundTo } from './math.ts';
 import { type PrescriptionSnapshot } from './program-prescription.ts';
+import { isRecord } from './types.ts';
 
 const SNAPSHOT_BOUNDS = Object.freeze({
   refLength: { min: 1, max: 100 },
@@ -10,10 +11,6 @@ const SNAPSHOT_BOUNDS = Object.freeze({
 
 const SNAPSHOT_KEYS: readonly string[] = ['ref', 'weightKg', 'reps', 'minReps', 'amrap'];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function isStorableRef(ref: unknown): ref is string {
   return (
     typeof ref === 'string' &&
@@ -21,10 +18,6 @@ function isStorableRef(ref: unknown): ref is string {
     ref.length <= SNAPSHOT_BOUNDS.refLength.max &&
     !ref.includes('\u0000')
   );
-}
-
-function isWholeNumberBetween(value: unknown, min: number, max: number): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 }
 
 export function storableSnapshot(value: unknown): PrescriptionSnapshot | null {

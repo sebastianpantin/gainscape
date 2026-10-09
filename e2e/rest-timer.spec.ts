@@ -1,13 +1,14 @@
 import { expect, type Page, test } from '@playwright/test';
-import { finishWorkout, logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
-
-function restTimer(page: Page) {
-  return page.getByRole('region', { name: 'Rest timer' });
-}
-
-async function pauseClockNow(page: Page) {
-  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
-}
+import {
+  finishWorkout,
+  logExercise,
+  openFromProfile,
+  openTab,
+  pauseClockNow,
+  register,
+  restTimer,
+  uniqueUsername,
+} from './support/app.ts';
 
 async function chooseRest(page: Page, choice: string) {
   await openTab(page, 'Profile');

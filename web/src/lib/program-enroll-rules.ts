@@ -11,6 +11,7 @@ import {
   roundTo,
   type WeightUnit,
 } from '@domain/index.ts';
+import { capitalized } from './names.ts';
 
 export const UPDATE_APP_TEXT = 'Update the app to use this program';
 
@@ -134,16 +135,12 @@ const CATALOG_KEYS_BY_LIFT: Readonly<Record<string, string>> = {
   triceps: 'skull_crusher',
 };
 
-function capitalised(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 function optionLabel(key: string): string {
   return OPTION_LABELS[key] ?? key;
 }
 
 export function inputKindLabel(kind: InputKind): string {
-  return capitalised(INPUT_KIND_LABELS[kind]);
+  return capitalized(INPUT_KIND_LABELS[kind]);
 }
 
 export function shownReference(value: number): number {
@@ -423,7 +420,7 @@ export function referencePreview(definition: ProgramDefinition, form: EnrollForm
   if (raw === '' || !Number.isFinite(value) || value <= 0) return null;
   const preview = previewedValue(definition, form, lift, value);
   if (!preview) return null;
-  return `${capitalised(REFERENCE_VAR_LABELS[preview.variable])} ${shownReference(preview.value)} ${form.unit}`;
+  return `${capitalized(REFERENCE_VAR_LABELS[preview.variable])} ${shownReference(preview.value)} ${form.unit}`;
 }
 
 export function enrollPayload(definition: ProgramDefinition, form: EnrollForm): EnrollPayloadResult {

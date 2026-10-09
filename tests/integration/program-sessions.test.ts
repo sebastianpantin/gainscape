@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   builtInExerciseId,
   createTestUser,
+  databaseNow,
   db,
   normalizedSnapshot,
   postCompleteSession,
@@ -159,11 +160,6 @@ async function linkedFacts(user: TestUser, enrollmentId: string): Promise<Enroll
   const result = await factsOf(user, enrollmentId);
   expect(result.error).toBeNull();
   return result.data as EnrollmentFacts;
-}
-
-async function databaseNow(): Promise<number> {
-  const [row] = await db`select clock_timestamp() as now`;
-  return new Date(row.now).getTime();
 }
 
 async function edit(user: TestUser, sessionId: string, sets: object[]) {

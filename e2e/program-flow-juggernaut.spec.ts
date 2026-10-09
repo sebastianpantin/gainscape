@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
+import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
-import { dayPicker, followProgram, prescribedRows, programToday, repeated } from './support/program-enrollment.ts';
+import { dayPicker, followProgram, openProgramToday, prescribedRows, repeated } from './support/program-enrollment.ts';
 import {
   nearestPlateKg,
   type SeededDay,
@@ -76,10 +76,7 @@ async function followAndSeedTenRepWave(page: Page, prefix: string, realisationRe
   const days = tenRepWave(realisationReps);
   await seedProgramDays(accessToken, enrollmentId, bindings, sessionClock(days.length + 1), days);
 
-  await page.reload();
-  await openTab(page, 'Train');
-  const today = programToday(page, JUGGERNAUT);
-  await expect(today).toBeVisible();
+  const today = await openProgramToday(page, JUGGERNAUT);
   await expect(dayPicker(today).getByRole('radio', { name: 'C1 W5 Day 1', exact: true })).toBeChecked();
   return today;
 }

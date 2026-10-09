@@ -28,7 +28,7 @@ Playwright specs for the installed-app behaviour: manifest installability, the s
 
 ### Testing Requirements
 
-- Prerequisites: stack and Edge Functions running (`make start`). Run all: `make e2e-pwa`. One file after a build: `make build-local && GAINSCAPE_PLAIN_HTTP=1 npx playwright test -c playwright.pwa.config.ts e2e/pwa/update.spec.ts`.
+- Prerequisites: stack and Edge Functions running (`make start`). Run all: `make e2e-pwa`. One file after a build: `make build-local && npx playwright test -c playwright.pwa.config.ts e2e/pwa/update.spec.ts`.
 - Red-green loop: put pure decisions (cache names, path allow lists, update state) in `web/src/pwa/shell-rules.ts` or `update-flow.ts` and write the failing unit test in `../../tests/web/shell-rules.test.ts` or `update-flow.test.ts` first. Add a failing spec here only for behaviour that needs a real worker, then implement, rebuild and rerun.
 - The manual `e2e` workflow (`.github/workflows/e2e.yml`) runs this as its last step.
 

@@ -23,6 +23,23 @@ export function definitionOf(scope: Page | Locator, term: string): Locator {
   return scope.getByRole('term').getByText(term, { exact: true }).locator('xpath=following-sibling::dd[1]');
 }
 
+export function restTimer(page: Page): Locator {
+  return page.getByRole('region', { name: 'Rest timer' });
+}
+
+export async function pauseClockNow(page: Page): Promise<void> {
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
+}
+
+export function nativeDialogsOf(page: Page): string[] {
+  const messages: string[] = [];
+  page.on('dialog', (dialog) => {
+    messages.push(dialog.message());
+    void dialog.dismiss();
+  });
+  return messages;
+}
+
 export function nowInSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { amountInUnit, KG_PER_LB, kgToUnit, unitToKg } from '@domain/index.ts';
+import { KG_PER_LB, kgToUnit, unitToKg } from '@domain/index.ts';
 import { shownWeight } from '../../web/src/lib/units.ts';
 
 describe('KG_PER_LB', () => {
@@ -39,16 +39,6 @@ describe('kgToUnit', () => {
 
   it('converts 88.45 kg to 194.9989 lb without rounding (88.45 / 0.45359237)', () => {
     expect(kgToUnit(88.45, 'lb')).toBeCloseTo(194.9989, 4);
-  });
-});
-
-describe('amountInUnit', () => {
-  it('picks the kg amount for a kg enrollment', () => {
-    expect(amountInUnit({ kg: 2.5, lb: 5 }, 'kg')).toBe(2.5);
-  });
-
-  it('picks the lb amount for an lb enrollment', () => {
-    expect(amountInUnit({ kg: 2.5, lb: 5 }, 'lb')).toBe(5);
   });
 });
 

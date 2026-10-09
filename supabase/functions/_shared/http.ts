@@ -32,15 +32,11 @@ function retryAfterHeader(error: HttpError): Record<string, string> {
   return { 'Retry-After': String(retryAfterSeconds) };
 }
 
-export function logUnexpectedError(error: unknown): void {
-  console.error(error);
-}
-
 export function errorResponse(error: unknown): Response {
   if (error instanceof HttpError) {
     return jsonResponse({ error: error.code, details: error.details }, error.status, retryAfterHeader(error));
   }
-  logUnexpectedError(error);
+  console.error(error);
   return jsonResponse({ error: 'internal_error' }, 500);
 }
 

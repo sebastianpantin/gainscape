@@ -10,9 +10,10 @@ import {
   type StrengthState,
   type WeightUnit,
 } from '@domain/index.ts';
-import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, type EffortLevel } from '@domain/types.ts';
+import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, isRecord } from '@domain/types.ts';
 import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
 import { type CatalogChallenge, challengeLoadKg, parsedDraftChallenge } from '../lib/challenge-rules.ts';
+import { EFFORT_LEVELS } from '../lib/effort-labels.ts';
 import { isSessionRpe } from '../lib/session-timing-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 5;
@@ -108,10 +109,6 @@ export type StoredDraft =
   | { v: typeof DRAFT_FORMAT_VERSION; kind: 'draft'; userId: string; updatedAt: number; draft: WorkoutDraft }
   | { v: typeof DRAFT_FORMAT_VERSION; kind: 'synced'; userId: string; updatedAt: number; syncedSessionId: string };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function looksLikeDraft(value: unknown): value is WorkoutDraft {
   return (
     isRecord(value) &&
@@ -121,8 +118,6 @@ function looksLikeDraft(value: unknown): value is WorkoutDraft {
     Array.isArray(value.exercises)
   );
 }
-
-const EFFORT_LEVELS: readonly EffortLevel[] = ['easy', 'hard', 'near_failure', 'failure'];
 
 function isHalfStepBetween(value: unknown, lowest: number, highest: number): boolean {
   return typeof value === 'number' && Number.isInteger(value * 2) && value >= lowest && value <= highest;

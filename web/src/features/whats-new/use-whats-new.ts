@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { type Release, whatsNewDecision, whatsNewMayOpen } from '../../lib/changelog-rules.ts';
 import { openChannel } from '../../lib/channel.ts';
@@ -60,11 +60,11 @@ export function useWhatsNew(userId: string): { releases: readonly Release[] | nu
     };
   }, [pending, open, pathname, visitKey, draftChange, userId]);
 
-  const dismiss = useCallback(() => {
+  const dismiss = () => {
     saveLastSeenRelease(deviceStorage(), userId, APP_VERSION);
     setDismissed(true);
     setOpen(false);
-  }, [userId]);
+  };
 
   return { releases: open && decision.kind === 'show' ? decision.releases : null, dismiss };
 }
