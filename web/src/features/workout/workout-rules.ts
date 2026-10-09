@@ -9,6 +9,8 @@ const MS_PER_HOUR = 3_600_000;
 const TIMING_REJECTION_TEXT: Readonly<Record<string, string>> = {
   session_too_long: `This workout is longer than ${MAX_SESSION_DURATION_MS / MS_PER_HOUR} hours. Go back to editing and finish it again to save it.`,
   session_in_future: "This workout's time is ahead of the server's clock. Check the date and time on this device.",
+  session_too_old:
+    "This workout starts before 1970, so this device's date was probably wrong. Fix the date and time, then discard this workout and log it again.",
 };
 
 export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {

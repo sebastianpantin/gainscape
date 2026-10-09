@@ -59,6 +59,12 @@ describe('rejectionText', () => {
     );
   });
 
+  it('blames the device date when the workout starts before 1970', () => {
+    expect(rejectionText('session_too_old')).toBe(
+      "This workout starts before 1970, so this device's date was probably wrong. Fix the date and time, then discard this workout and log it again.",
+    );
+  });
+
   it('shows any other rejection reason', () => {
     expect(rejectionText('invalid_payload')).toBe('The server rejected this workout: invalid_payload');
   });
