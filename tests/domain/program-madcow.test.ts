@@ -441,6 +441,35 @@ describe('Madcow miss rule (holdOnMiss, judged on each lift top day)', () => {
     expect(weightsOf(resolveDay(state, 4, 'fri'), 'fri-squat')).toEqual([50, 62.5, 75, 87.5, 102.5, 75]);
   });
 
+  it('judges only the Monday top set: logging just the fifth squat set in week 4 takes the top 100 → 102.5', () => {
+    const clock = factClock();
+    const facts = [
+      ...metMadcowWeeks(clock, [1, 2, 3]),
+      ...madcowWeek(clock, 4).map((fact) =>
+        fact.kind === 'session' && 'day' in fact.position && fact.position.day === 'mon'
+          ? { ...fact, sets: fact.sets.filter((set) => !/^mon-squat:[0-3]$/.test(set.prescription?.ref ?? '')) }
+          : fact,
+      ),
+    ];
+    expect(refOf(programStateAt(def, enrollment, facts), 'squat', 'top')).toBeCloseTo(102.5, 9);
+  });
+
+  it('judges only the Wednesday top set: a 3-rep deadlift ramp set still takes the deadlift 140 → 143.5', () => {
+    const clock = factClock();
+    const facts = [
+      ...metMadcowWeeks(clock, [1, 2, 3]),
+      ...madcowWeek(clock, 4).map((fact) =>
+        fact.kind === 'session' && 'day' in fact.position && fact.position.day === 'wed'
+          ? {
+              ...fact,
+              sets: fact.sets.map((set) => (set.prescription?.ref === 'wed-deadlift:1' ? { ...set, reps: 3 } : set)),
+            }
+          : fact,
+      ),
+    ];
+    expect(refOf(programStateAt(def, enrollment, facts), 'deadlift', 'top')).toBeCloseTo(143.5, 9);
+  });
+
   it('a missed week 4 Monday keeps the week 5 squat top at 100 and counts one miss', () => {
     const clock = factClock();
     const facts = [...metMadcowWeeks(clock, [1, 2, 3]), ...madcowWeek(clock, 4, { mondayTopReps: { squat: 4 } })];

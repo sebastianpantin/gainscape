@@ -192,6 +192,22 @@ describe('program template schema', () => {
     const error = shapeIssuesAfter(MADCOW_5X5, (raw) => (raw.version = 1.5));
     expect(error.issues.some((issue) => issue.startsWith('version'))).toBe(true);
   });
+
+  it.each([
+    ['an empty judgedSets list', []],
+    ['a negative judged set', [-1]],
+    ['a fractional judged set', [1.5]],
+  ])('refuses %s', (_case, judgedSets) => {
+    const error = shapeIssuesAfter(MADCOW_5X5, (raw) => (raw.progression[0].judgedSets = judgedSets));
+    expect(error.issues.some((issue) => issue.startsWith('progression.0.judgedSets'))).toBe(true);
+  });
+
+  it('names the template and the set when judgedSets reads past the judged slot', () => {
+    const problems = problemsAfter(MADCOW_5X5, (copy) => (copy.progression[0].judgedSets = [5]));
+    expect(problems).toEqual([
+      `program template "madcow_5x5": progression rule 1 (squat) judgedSets reads set 5, but slot 'mon-squat' has 5 sets`,
+    ]);
+  });
 });
 
 describe('program template problems', () => {

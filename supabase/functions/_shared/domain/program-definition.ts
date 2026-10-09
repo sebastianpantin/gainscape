@@ -338,6 +338,7 @@ export interface ProgressionRule {
   trigger: ProgressionTrigger;
   judgedSlots: string[];
   judgedWeeks?: number[];
+  judgedSets?: number[];
   onMet: Adjustment[];
   onMiss: Adjustment[];
   always?: Adjustment[];
@@ -735,6 +736,7 @@ class DefinitionChecker {
       if (!this.slots.has(slotId)) this.errors.push(`${where} judges unknown slot '${slotId}'`);
     }
     this.checkTrigger(rule, where);
+    this.checkJudgedSets(rule, where);
     for (const adjustment of [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])]) {
       this.checkAdjustment(adjustment, where);
       this.checkAdjustmentFitsRule(rule, adjustment, where);
@@ -748,6 +750,19 @@ class DefinitionChecker {
       this.errors.push(`${where} uses the endOfWave trigger, but only a cycle schedule has waves`);
     } else if (!schedule.waveWeeks) {
       this.errors.push(`${where} uses the endOfWave trigger, but the cycle declares no waveWeeks`);
+    }
+  }
+
+  private checkJudgedSets(rule: ProgressionRule, where: string) {
+    if (rule.judgedSets === undefined) return;
+    if (rule.judgedSets.length === 0) this.errors.push(`${where} has judgedSets that judge no set`);
+    for (const setIndex of rule.judgedSets) {
+      for (const slot of this.judgedSlotsOf(rule)) {
+        const count = knownSetCount(this.definition, slot.scheme);
+        if (count !== null && setIndex >= count) {
+          this.errors.push(`${where} judgedSets reads set ${setIndex}, but slot '${slot.id}' has ${count} sets`);
+        }
+      }
     }
   }
 

@@ -122,7 +122,10 @@ function ruleOutcomeAt(
         ? { ...stages, [slot.lift]: prescribedStageIndex(slot.scheme, candidates, stages, slot.lift) }
         : stages;
     const required = requiredSetIndices(definition, enrollment, slot, position, prescribedStages);
-    return required === null ? [] : [{ slot, required, candidates }];
+    if (required === null) return [];
+    const { judgedSets } = rule;
+    const judgedRequired = judgedSets ? required.filter((index) => judgedSets.includes(index)) : required;
+    return [{ slot, required: judgedRequired, candidates }];
   });
   if (judged.length === 0) return 'neutral';
   if (judged.every(({ candidates }) => candidates.length === 0)) return 'neutral';

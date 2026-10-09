@@ -155,6 +155,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [mon-squat]
+    judgedSets: [4]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:
@@ -163,6 +164,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [mon-bench]
+    judgedSets: [4]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:
@@ -171,6 +173,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [mon-row]
+    judgedSets: [4]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:
@@ -179,6 +182,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [wed-press]
+    judgedSets: [3]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:
@@ -187,6 +191,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [wed-deadlift]
+    judgedSets: [3]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:

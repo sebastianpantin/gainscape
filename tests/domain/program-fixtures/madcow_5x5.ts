@@ -50,13 +50,22 @@ const LIFT_DECLS: LiftDecl[] = [
 ];
 
 const RAMP_STEP = { option: 'rampStep' };
+const MONDAY_RAMP_SETS = 5;
+const WEDNESDAY_RAMP_SETS = 4;
+const MONDAY_TOP_SET_INDEX = MONDAY_RAMP_SETS - 1;
+const WEDNESDAY_TOP_SET_INDEX = WEDNESDAY_RAMP_SETS - 1;
 
 function mondayRamp(lift: MadcowMainLift): SlotDecl {
   return {
     id: `mon-${lift}`,
     lift,
     role: 'main',
-    scheme: { kind: 'repeat', count: 5, reps: 5, load: { kind: 'ramp', step: RAMP_STEP, count: 5, of: 'top' } },
+    scheme: {
+      kind: 'repeat',
+      count: MONDAY_RAMP_SETS,
+      reps: 5,
+      load: { kind: 'ramp', step: RAMP_STEP, count: MONDAY_RAMP_SETS, of: 'top' },
+    },
   };
 }
 
@@ -65,7 +74,12 @@ function wednesdayRamp(lift: MadcowMainLift): SlotDecl {
     id: `wed-${lift}`,
     lift,
     role: 'main',
-    scheme: { kind: 'repeat', count: 4, reps: 5, load: { kind: 'ramp', step: RAMP_STEP, count: 4, of: 'top' } },
+    scheme: {
+      kind: 'repeat',
+      count: WEDNESDAY_RAMP_SETS,
+      reps: 5,
+      load: { kind: 'ramp', step: RAMP_STEP, count: WEDNESDAY_RAMP_SETS, of: 'top' },
+    },
   };
 }
 
@@ -108,12 +122,13 @@ function assistance(id: string, lift: string, count: number, reps: number | null
   };
 }
 
-function weeklyRule(lift: MadcowMainLift, judgedSlot: string): ProgressionRule {
+function weeklyRule(lift: MadcowMainLift, judgedSlot: string, topSetIndex: number): ProgressionRule {
   return {
     lift,
     var: 'top',
     trigger: 'endOfWeek',
     judgedSlots: [judgedSlot],
+    judgedSets: [topSetIndex],
     onMet: [{ kind: 'increment', byPct: 0.025 }],
     onMiss: [{ kind: 'hold' }],
   };
@@ -181,11 +196,11 @@ export const MADCOW_5X5: ProgramDefinition = {
     ],
   },
   progression: [
-    weeklyRule('squat', 'mon-squat'),
-    weeklyRule('bench', 'mon-bench'),
-    weeklyRule('row', 'mon-row'),
-    weeklyRule('press', 'wed-press'),
-    weeklyRule('deadlift', 'wed-deadlift'),
+    weeklyRule('squat', 'mon-squat', MONDAY_TOP_SET_INDEX),
+    weeklyRule('bench', 'mon-bench', MONDAY_TOP_SET_INDEX),
+    weeklyRule('row', 'mon-row', MONDAY_TOP_SET_INDEX),
+    weeklyRule('press', 'wed-press', WEDNESDAY_TOP_SET_INDEX),
+    weeklyRule('deadlift', 'wed-deadlift', WEDNESDAY_TOP_SET_INDEX),
   ],
 };
 

@@ -120,6 +120,8 @@ function daySlots(lift: FiveThreeOneLift): SlotDecl[] {
 const UPPER_INCREMENT = { kg: 2.5, lb: 5 };
 const LOWER_INCREMENT = { kg: 5, lb: 10 };
 
+const PLUS_SET_INDEX = 2;
+
 function cycleRule(lift: LiftDecl): ProgressionRule {
   return {
     lift: lift.key,
@@ -127,6 +129,7 @@ function cycleRule(lift: LiftDecl): ProgressionRule {
     trigger: 'endOfCycle',
     judgedSlots: [`${lift.key}-main`],
     judgedWeeks: NON_DELOAD_WEEKS,
+    judgedSets: [PLUS_SET_INDEX],
     onMet: [{ kind: 'increment', by: lift.category === 'lower' ? LOWER_INCREMENT : UPPER_INCREMENT }],
     onMiss: [{ kind: 'tmReset', pct: { option: 'tmReset' } }],
   };
