@@ -1,5 +1,6 @@
 import { type AuthError, FunctionsHttpError, type Session } from '@supabase/supabase-js';
 import { messageOf } from './error-text.ts';
+import { RATE_LIMITED_STATUS } from './rate-limit.ts';
 
 export type AuthProblem = { kind: 'needs_sign_in' } | { kind: 'wrong_account' } | { kind: 'retryable'; reason: string };
 
@@ -26,7 +27,6 @@ export interface OwnerClient {
 
 const MAX_RETRY_DELAY_MS = 30_000;
 const UNAUTHORIZED_STATUS = 401;
-const RATE_LIMITED_STATUS = 429;
 
 export function retryDelayMs(attempt: number): number {
   return Math.min(MAX_RETRY_DELAY_MS, 1000 * 2 ** attempt);
