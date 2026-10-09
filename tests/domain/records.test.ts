@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applySetToRecords,
   collectionCompletion,
+  emptyRepMaxSlots,
   KindMismatchError,
   NO_RECORDS,
   recordsFromHistory,
@@ -393,5 +394,11 @@ describe('cardio records', () => {
     const triple = aSet('bench', 105, 3, hard);
     const { sessions } = replay([aSet('bench', 90, 5, hard)], [triple]);
     expect(sessions[1].outputs.prs).toEqual([expect.objectContaining({ kind: 'rep_max', setId: triple.id })]);
+  });
+});
+
+describe('emptyRepMaxSlots', () => {
+  it('holds one empty slot per rep count from 1 to 10', () => {
+    expect(emptyRepMaxSlots()).toEqual(Array.from({ length: 10 }, () => null));
   });
 });

@@ -44,7 +44,6 @@ async function loadExercisesVisibleTo(
   tx: Transaction,
   userId: string,
   exerciseIds: readonly string[],
-  includeArchived = false,
 ): Promise<Map<string, ExerciseDef>> {
   const rows = await tx<ExerciseRow[]>`
     select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.pace_unit, e.max_effort,
@@ -52,7 +51,7 @@ async function loadExercisesVisibleTo(
     from public.exercises e
     join public.exercise_skills es on es.exercise_id = e.id
     where e.id = any(${exerciseIds as string[]}::uuid[])
-      and (e.owner_user_id is null or (e.owner_user_id = ${userId} and (${includeArchived} or e.archived_at is null)))`;
+      and (e.owner_user_id is null or e.owner_user_id = ${userId})`;
 
   const exercises = new Map<string, ExerciseDef>();
   for (const row of rows) {
@@ -63,15 +62,10 @@ async function loadExercisesVisibleTo(
   return exercises;
 }
 
-export async function loadCatalog(
-  tx: Transaction,
-  userId: string,
-  exerciseIds: readonly string[],
-  includeArchived = false,
-): Promise<Catalog> {
+export async function loadCatalog(tx: Transaction, userId: string, exerciseIds: readonly string[]): Promise<Catalog> {
   return {
     skills: await loadSkills(tx),
-    exercises: await loadExercisesVisibleTo(tx, userId, exerciseIds, includeArchived),
+    exercises: await loadExercisesVisibleTo(tx, userId, exerciseIds),
   };
 }
 
@@ -81,7 +75,7 @@ export async function loadKnownCatalog(
   sets: readonly { exerciseId: string }[],
 ): Promise<Catalog> {
   const exerciseIds = [...new Set(sets.map((set) => set.exerciseId))];
-  const catalog = await loadCatalog(tx, userId, exerciseIds, true);
+  const catalog = await loadCatalog(tx, userId, exerciseIds);
   const unknownExerciseIds = exerciseIds.filter((id) => !catalog.exercises.has(id));
   if (unknownExerciseIds.length > 0) throw new HttpError(422, 'unknown_exercise', { exerciseIds: unknownExerciseIds });
   return catalog;

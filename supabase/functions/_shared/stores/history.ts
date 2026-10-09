@@ -8,7 +8,7 @@ import {
   type SessionInput,
   type SessionKey,
 } from '../domain/index.ts';
-import { cardioFieldsFromRow } from './set-columns.ts';
+import { cardioFieldsFromRow, liftFieldsFromRow } from './set-columns.ts';
 
 export async function loadReplayableSessions(
   tx: Transaction,
@@ -39,14 +39,7 @@ export async function loadReplayableSessions(
     const effort = effortInputFromStored(row.effort_input_type, nullableNumber(row.effort_value), cfg);
     session.sets.push(
       row.duration_s === null
-        ? {
-            ...identity,
-            weightKg: Number(row.weight_kg),
-            reps: row.reps,
-            isWarmup: row.is_warmup,
-            effort,
-            recordedEffectiveLoadKg: Number(row.effective_load_kg),
-          }
+        ? { ...identity, ...liftFieldsFromRow(row), effort, recordedEffectiveLoadKg: Number(row.effective_load_kg) }
         : { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row), effort },
     );
     sessions.set(row.session_id, session);

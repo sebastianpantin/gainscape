@@ -15,6 +15,7 @@ import { HttpError } from '../http.ts';
 import {
   cardioFieldsFromRow,
   inputColumnsWithEffort,
+  liftFieldsFromRow,
   NO_PRESCRIPTION_SNAPSHOT,
   type PrescriptionSnapshotColumns,
 } from './set-columns.ts';
@@ -134,14 +135,7 @@ export async function loadStoredSets(tx: Transaction, sessionId: string): Promis
       effortValue: nullableNumber(row.effort_value),
     };
     if (row.duration_s !== null) return { ...base, kind: 'cardio', ...cardioFieldsFromRow(row) };
-    return {
-      ...base,
-      kind: 'lift',
-      weightKg: Number(row.weight_kg),
-      effectiveLoadKg: Number(row.effective_load_kg),
-      reps: row.reps,
-      isWarmup: row.is_warmup,
-    };
+    return { ...base, kind: 'lift', ...liftFieldsFromRow(row), effectiveLoadKg: Number(row.effective_load_kg) };
   });
 }
 
