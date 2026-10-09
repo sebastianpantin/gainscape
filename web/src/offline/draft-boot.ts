@@ -44,7 +44,8 @@ async function moveFallbackRecord(database: IDBDatabase, storage: Storage, userI
       objectStore.put(fallback);
   };
   await done;
-  if (!keepFallback) storage.removeItem(fallbackKeyFor(userId));
+  const fallbackUnchanged = JSON.stringify(readFallbackRecord(storage, userId)) === JSON.stringify(fallback);
+  if (!keepFallback && fallbackUnchanged) storage.removeItem(fallbackKeyFor(userId));
 }
 
 export async function openDraftStore(environment: DraftEnvironment): Promise<DraftStore> {

@@ -3,7 +3,12 @@ import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openDraftStore, openDraftStoreAndReconcile, openPrimaryDraftStore } from '../../web/src/offline/draft-boot.ts';
 import { draftRecord } from '../../web/src/offline/draft-format.ts';
-import { createIdbDraftStore, fallbackKeyFor, openDraftDatabase } from '../../web/src/offline/draft-store.ts';
+import {
+  createIdbDraftStore,
+  createLocalDraftStore,
+  fallbackKeyFor,
+  openDraftDatabase,
+} from '../../web/src/offline/draft-store.ts';
 import { workout } from './draft-store.contract.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
@@ -14,6 +19,23 @@ const unopenableIndexedDb = {
     throw new Error('idb_broken');
   },
 } as unknown as IDBFactory;
+
+class StorageWrittenDuringBoot extends MemoryStorage {
+  private pendingWrite: (() => void) | null;
+
+  constructor(write: (storage: Storage) => void) {
+    super();
+    this.pendingWrite = () => write(this);
+  }
+
+  override getItem(key: string): string | null {
+    const value = super.getItem(key);
+    const write = this.pendingWrite;
+    this.pendingWrite = null;
+    if (write) queueMicrotask(write);
+    return value;
+  }
+}
 
 const silentIndexedDb = { open: () => ({}) } as unknown as IDBFactory;
 
@@ -74,6 +96,36 @@ describe('draft store boot', () => {
       expect(storage.getItem(fallbackKeyFor(userId))).toBeNull();
       database!.close();
     }
+  });
+
+  it('leaves a fallback write made while boot moved the older record', async () => {
+    const indexedDB = new IDBFactory();
+    const storage = new StorageWrittenDuringBoot((written) =>
+      written.setItem(fallbackKeyFor(userId), JSON.stringify(draftRecord(userId, 20, workout('session-a')))),
+    );
+    storage.setItem(fallbackKeyFor(userId), JSON.stringify(draftRecord(userId, 10, workout('session-a'))));
+
+    await openDraftStore({ indexedDB, storage });
+
+    expect(JSON.parse(storage.getItem(fallbackKeyFor(userId))!)).toEqual(draftRecord(userId, 20, workout('session-a')));
+    const rebooted = await openDraftStore({ indexedDB, storage });
+    expect(await rebooted.get(userId)).toEqual(draftRecord(userId, 20, workout('session-a')));
+    expect(storage.getItem(fallbackKeyFor(userId))).toBeNull();
+  });
+
+  it('keeps a discard made on the fallback after boot raced a fallback write', async () => {
+    const indexedDB = new IDBFactory();
+    const storage = new StorageWrittenDuringBoot((written) =>
+      written.setItem(fallbackKeyFor(userId), JSON.stringify(draftRecord(userId, 20, workout('session-a')))),
+    );
+    storage.setItem(fallbackKeyFor(userId), JSON.stringify(draftRecord(userId, 10, workout('session-a'))));
+    await openDraftStore({ indexedDB, storage });
+
+    await createLocalDraftStore(storage).discard(userId, 'session-a', 30);
+    const rebooted = await openDraftStore({ indexedDB, storage });
+
+    expect(await rebooted.userIdsWithDrafts()).toEqual([]);
+    expect(await rebooted.get(userId)).toMatchObject({ kind: 'discarded', discardedSessionId: 'session-a' });
   });
 
   it('retries IndexedDB on the next open instead of remembering a failed boot', async () => {
