@@ -90,6 +90,33 @@ describe('invokeAsOwnerWith', () => {
     await expect(invoke(client)).resolves.toEqual({ kind: 'needs_sign_in' });
   });
 
+  it.each([
+    ['a rate limit', new AuthApiError('Request rate limit reached', 429, 'over_request_rate_limit')],
+    ['a server error', new AuthApiError('Internal error', 500, 'unexpected_failure')],
+    ['a bad gateway', new AuthRetryableFetchError('Bad Gateway', 502)],
+  ])('retries later instead of signing out when the refresh hits %s', async (_label, error) => {
+    const { client } = clientWith({ refreshed: failedWith(error), responses: [httpError(401)] });
+    await expect(invoke(client)).resolves.toEqual({ kind: 'retryable', reason: error.message });
+  });
+
+  it('asks for a sign-in when the refresh finds no session to refresh', async () => {
+    const { client } = clientWith({
+      refreshed: failedWith(new AuthApiError('Session not found', 403, 'session_not_found')),
+      responses: [httpError(401)],
+    });
+    await expect(invoke(client)).resolves.toEqual({ kind: 'needs_sign_in' });
+  });
+
+  it('retries later when reading the session hits a rate limit or a server error', async () => {
+    for (const error of [
+      new AuthApiError('Request rate limit reached', 429, 'over_request_rate_limit'),
+      new AuthApiError('Internal error', 500, 'unexpected_failure'),
+    ]) {
+      const { client } = clientWith({ current: failedWith(error) });
+      await expect(invoke(client)).resolves.toEqual({ kind: 'retryable', reason: error.message });
+    }
+  });
+
   it('retries later when the refresh cannot reach the auth server', async () => {
     const { client } = clientWith({
       refreshed: failedWith(new AuthRetryableFetchError('Failed to fetch', 0)),
@@ -118,7 +145,7 @@ describe('invokeAsOwnerWith', () => {
     await expect(invoke(unreachable.client)).resolves.toEqual({ kind: 'retryable', reason: 'Load failed' });
   });
 
-  it('asks for a sign-in when reading the session fails for any other reason', async () => {
+  it('asks for a sign-in when the auth server rejects the stored session', async () => {
     const { client } = clientWith({ current: failedWith(new AuthApiError('bad jwt', 403, 'bad_jwt')) });
     await expect(invoke(client)).resolves.toEqual({ kind: 'needs_sign_in' });
   });
