@@ -280,7 +280,7 @@ export async function revokeDisqualifiedDrops(
       deleted.has(drop.sessionId),
       DEFAULT_LOOT,
       { lootVersion: drop.lootVersion, balanceVersion: drop.balanceVersion ?? balanceVersion },
-      balanceVersion,
+      { lootVersion: DEFAULT_LOOT.version, balanceVersion },
     );
     return reason === null ? [] : [{ drop, reason }];
   });

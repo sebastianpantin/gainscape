@@ -206,11 +206,11 @@ export function revocationReason(
   sessionDeleted: boolean,
   cfg: LootConfig,
   rolledUnder: RollVersions,
-  balanceVersion: number,
+  current: RollVersions,
 ): RevokeReason | null {
   if (sessionDeleted) return 'session_deleted';
   if (candidate === undefined) return 'set_removed';
-  if (rolledUnder.lootVersion < cfg.version || rolledUnder.balanceVersion < balanceVersion) return null;
+  if (rolledUnder.lootVersion < current.lootVersion || rolledUnder.balanceVersion < current.balanceVersion) return null;
   if (!qualifies(source, candidate, cfg)) return 'no_longer_qualifies';
   return null;
 }

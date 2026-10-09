@@ -419,130 +419,60 @@ describe('revocationReason', () => {
   const CURRENT: RollVersions = { lootVersion: DEFAULT_LOOT.version, balanceVersion: DEFAULT_BALANCE.version };
 
   it('names why a drop no longer stands, in priority order', () => {
-    expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT, CURRENT, DEFAULT_BALANCE.version)).toBe(
-      'session_deleted',
+    expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT, CURRENT, CURRENT)).toBe('session_deleted');
+    expect(revocationReason('regular', undefined, false, DEFAULT_LOOT, CURRENT, CURRENT)).toBe('set_removed');
+    expect(
+      revocationReason('regular', { ...qualifying, effectiveReps: 0 }, false, DEFAULT_LOOT, CURRENT, CURRENT),
+    ).toBe('no_longer_qualifies');
+    expect(
+      revocationReason('pr', { ...qualifying, personalRecord: false }, false, DEFAULT_LOOT, CURRENT, CURRENT),
+    ).toBe('no_longer_qualifies');
+    expect(revocationReason('pr', { ...qualifying, builtIn: false }, false, DEFAULT_LOOT, CURRENT, CURRENT)).toBe(
+      'no_longer_qualifies',
     );
-    expect(revocationReason('regular', undefined, false, DEFAULT_LOOT, CURRENT, DEFAULT_BALANCE.version)).toBe(
-      'set_removed',
-    );
-    expect(
-      revocationReason(
-        'regular',
-        { ...qualifying, effectiveReps: 0 },
-        false,
-        DEFAULT_LOOT,
-        CURRENT,
-        DEFAULT_BALANCE.version,
-      ),
-    ).toBe('no_longer_qualifies');
-    expect(
-      revocationReason(
-        'pr',
-        { ...qualifying, personalRecord: false },
-        false,
-        DEFAULT_LOOT,
-        CURRENT,
-        DEFAULT_BALANCE.version,
-      ),
-    ).toBe('no_longer_qualifies');
-    expect(
-      revocationReason('pr', { ...qualifying, builtIn: false }, false, DEFAULT_LOOT, CURRENT, DEFAULT_BALANCE.version),
-    ).toBe('no_longer_qualifies');
   });
 
   it('keeps drops rolled under an older loot version that would no longer qualify', () => {
     const olderLoot = { ...CURRENT, lootVersion: DEFAULT_LOOT.version - 1 };
     expect(
-      revocationReason(
-        'regular',
-        { ...qualifying, effectiveReps: 0 },
-        false,
-        DEFAULT_LOOT,
-        olderLoot,
-        DEFAULT_BALANCE.version,
-      ),
+      revocationReason('regular', { ...qualifying, effectiveReps: 0 }, false, DEFAULT_LOOT, olderLoot, CURRENT),
     ).toBeNull();
     expect(
-      revocationReason(
-        'pr',
-        { ...qualifying, personalRecord: false },
-        false,
-        DEFAULT_LOOT,
-        olderLoot,
-        DEFAULT_BALANCE.version,
-      ),
+      revocationReason('pr', { ...qualifying, personalRecord: false }, false, DEFAULT_LOOT, olderLoot, CURRENT),
     ).toBeNull();
   });
 
   it('still revokes older drops whose set or session is gone', () => {
     const olderLoot = { ...CURRENT, lootVersion: DEFAULT_LOOT.version - 1 };
-    expect(revocationReason('regular', undefined, false, DEFAULT_LOOT, olderLoot, DEFAULT_BALANCE.version)).toBe(
-      'set_removed',
-    );
-    expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT, olderLoot, DEFAULT_BALANCE.version)).toBe(
-      'session_deleted',
-    );
+    expect(revocationReason('regular', undefined, false, DEFAULT_LOOT, olderLoot, CURRENT)).toBe('set_removed');
+    expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT, olderLoot, CURRENT)).toBe('session_deleted');
   });
 
   it('revokes a bout edited below the cardio threshold', () => {
     const shortBout = candidate('bout', 0, { kind: 'cardio', effectiveReps: 0, countedWorkS: 540 });
-    expect(revocationReason('regular', shortBout, false, DEFAULT_LOOT, CURRENT, DEFAULT_BALANCE.version)).toBe(
-      'no_longer_qualifies',
-    );
+    expect(revocationReason('regular', shortBout, false, DEFAULT_LOOT, CURRENT, CURRENT)).toBe('no_longer_qualifies');
     expect(
-      revocationReason(
-        'regular',
-        { ...shortBout, countedWorkS: 600 },
-        false,
-        DEFAULT_LOOT,
-        CURRENT,
-        DEFAULT_BALANCE.version,
-      ),
+      revocationReason('regular', { ...shortBout, countedWorkS: 600 }, false, DEFAULT_LOOT, CURRENT, CURRENT),
     ).toBeNull();
   });
 
   it('keeps drops judged under an older balance version that would no longer qualify', () => {
     const olderBalance = { ...CURRENT, balanceVersion: DEFAULT_BALANCE.version - 1 };
     expect(
-      revocationReason(
-        'regular',
-        { ...qualifying, effectiveReps: 0 },
-        false,
-        DEFAULT_LOOT,
-        olderBalance,
-        DEFAULT_BALANCE.version,
-      ),
+      revocationReason('regular', { ...qualifying, effectiveReps: 0 }, false, DEFAULT_LOOT, olderBalance, CURRENT),
     ).toBeNull();
     expect(
-      revocationReason(
-        'pr',
-        { ...qualifying, personalRecord: false },
-        false,
-        DEFAULT_LOOT,
-        olderBalance,
-        DEFAULT_BALANCE.version,
-      ),
+      revocationReason('pr', { ...qualifying, personalRecord: false }, false, DEFAULT_LOOT, olderBalance, CURRENT),
     ).toBeNull();
-    expect(revocationReason('regular', undefined, false, DEFAULT_LOOT, olderBalance, DEFAULT_BALANCE.version)).toBe(
-      'set_removed',
-    );
-    expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT, olderBalance, DEFAULT_BALANCE.version)).toBe(
-      'session_deleted',
-    );
+    expect(revocationReason('regular', undefined, false, DEFAULT_LOOT, olderBalance, CURRENT)).toBe('set_removed');
+    expect(revocationReason('regular', qualifying, true, DEFAULT_LOOT, olderBalance, CURRENT)).toBe('session_deleted');
   });
 
   it('keeps drops whose set still qualifies', () => {
-    expect(revocationReason('regular', qualifying, false, DEFAULT_LOOT, CURRENT, DEFAULT_BALANCE.version)).toBeNull();
-    expect(revocationReason('pr', qualifying, false, DEFAULT_LOOT, CURRENT, DEFAULT_BALANCE.version)).toBeNull();
+    expect(revocationReason('regular', qualifying, false, DEFAULT_LOOT, CURRENT, CURRENT)).toBeNull();
+    expect(revocationReason('pr', qualifying, false, DEFAULT_LOOT, CURRENT, CURRENT)).toBeNull();
     expect(
-      revocationReason(
-        'regular',
-        { ...qualifying, personalRecord: false },
-        false,
-        DEFAULT_LOOT,
-        CURRENT,
-        DEFAULT_BALANCE.version,
-      ),
+      revocationReason('regular', { ...qualifying, personalRecord: false }, false, DEFAULT_LOOT, CURRENT, CURRENT),
     ).toBeNull();
   });
 });
