@@ -1,4 +1,4 @@
-import postgres from 'postgres';
+import { rebuildScopeFrom, rebuildThrough } from './function-batch.ts';
 import { currentStackEnvMismatch, localStackStatus } from './local-stack.ts';
 
 const mismatch = currentStackEnvMismatch();
@@ -8,22 +8,15 @@ if (mismatch) {
 }
 
 const localStack = localStackStatus();
-const db = postgres(localStack.DB_URL, { max: 1, onnotice: () => {} });
-
-const users = await db`select id from public.profiles order by created_at`;
-await db.end();
-
-for (const { id } of users) {
-  const response = await fetch(`${localStack.FUNCTIONS_URL}/rebuild-caches`, {
-    method: 'POST',
-    headers: { apikey: localStack.SECRET_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId: id }),
-  });
-  const result = await response.json();
-  if (!response.ok) {
-    console.error(`rebuild failed for ${id}:`, result);
-    process.exit(1);
-  }
-  console.log(`rebuilt ${id}: ${result.sessionsReplayed} sessions, ${result.setsRewritten} sets`);
+const scope = rebuildScopeFrom(process.argv);
+try {
+  const totals = await rebuildThrough(
+    { url: `${localStack.FUNCTIONS_URL}/rebuild-caches`, headers: { apikey: localStack.SECRET_KEY } },
+    scope,
+    { batchSize: 25, parallelBatches: 8 },
+  );
+  console.log(`Rebuilt ${totals.rebuilt} users (${scope}); ${totals.missing} had no profile.`);
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
 }
-console.log(`Rebuilt ${users.length} users.`);
