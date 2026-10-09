@@ -15,3 +15,8 @@ export async function hasDraftOnDevice(store: DraftStore, storage: Storage | nul
   if (await hasUnsyncedDraft(store, userId)) return true;
   return storage !== null && hasUnsyncedDraft(createLocalDraftStore(storage), userId);
 }
+
+export async function discardDraftOnDevice(store: DraftStore, storage: Storage | null, userId: string): Promise<void> {
+  await discardLocalDraft(store, userId);
+  if (storage !== null) await discardLocalDraft(createLocalDraftStore(storage), userId);
+}

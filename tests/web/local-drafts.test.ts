@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createLocalDraftStore } from '../../web/src/offline/draft-store.ts';
-import { discardLocalDraft, hasDraftOnDevice, hasUnsyncedDraft } from '../../web/src/offline/local-drafts.ts';
+import {
+  discardDraftOnDevice,
+  discardLocalDraft,
+  hasDraftOnDevice,
+  hasUnsyncedDraft,
+} from '../../web/src/offline/local-drafts.ts';
 import { workout } from './draft-store.contract.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
@@ -41,6 +46,18 @@ describe('local drafts of an account', () => {
     await createLocalDraftStore(storage).put(userId, 10, workout('session-a'));
     const emptyStore = createLocalDraftStore(new MemoryStorage());
     expect(await hasDraftOnDevice(emptyStore, storage, userId)).toBe(true);
+  });
+
+  it('discards the account draft from both the given store and the localStorage fallback', async () => {
+    const storage = new MemoryStorage();
+    await createLocalDraftStore(storage).put(userId, 10, workout('session-in-fallback'));
+    await createLocalDraftStore(storage).put(otherUserId, 10, workout('session-b'));
+    const store = createLocalDraftStore(new MemoryStorage());
+    await store.put(userId, 10, workout('session-a'));
+    await discardDraftOnDevice(store, storage, userId);
+    expect(await hasDraftOnDevice(store, storage, userId)).toBe(false);
+    expect(await hasDraftOnDevice(store, storage, otherUserId)).toBe(true);
+    await expect(discardDraftOnDevice(store, null, userId)).resolves.toBeUndefined();
   });
 
   it('ignores drafts of other accounts and synced workouts', async () => {
