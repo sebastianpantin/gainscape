@@ -40,6 +40,6 @@ condition = "AND"
 [[allowlists]]
 description = "The StrongLifts 5x5 template key, which generic-api-key reads as a secret, only in the program templates and the seed generated from them"
 targetRules = ["generic-api-key"]
-paths = ['''^catalog/program-templates/[a-z0-9_]+\.yaml$''', '''^supabase/seed\.sql$''']
+paths = ['''^catalog/program-templates/[a-z0-9_]+(@[0-9]+)?\.yaml$''', '''^supabase/seed\.sql$''']
 regexes = ['''^stronglifts_5x5$''']
 condition = "AND"
