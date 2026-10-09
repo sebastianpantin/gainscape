@@ -1,3 +1,13 @@
+- prs: [76]
+  version: 0.3.0
+  date: 2026-10-09
+  title: Discard a workout and safer logging
+  items:
+    - You can now discard a workout you have started, from the button below Finish.
+    - Weight and reps fields can be cleared and retyped, and accept a comma as the decimal point.
+    - Workouts are no longer lost when the app can't read this device's storage, or when you finish long after starting.
+    - Unrated high-rep sets now earn XP, and XP and records are worked out more fairly.
+    - 5/3/1, Madcow, GZCLP, Texas Method and StrongLifts now progress the way the real programs do.
 - prs: [69, 70, 71, 72, 73]
   version: 0.2.0
   date: 2026-10-09
