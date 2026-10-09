@@ -1,5 +1,5 @@
 import { z } from 'npm:zod@4.6.5';
-import { boutDurationSeconds, CARDIO_BOUNDS, intervalDurationSeconds, roundTo } from './domain/index.ts';
+import { boutDurationSeconds, CARDIO_BOUNDS, intervalDurationSeconds, isRecord, roundTo } from './domain/index.ts';
 import { HttpError } from './http.ts';
 
 export const lowerUuid = z.uuid().transform((id) => id.toLowerCase());
@@ -93,7 +93,7 @@ const cardioSetSchema = z
   });
 
 function addLiftKindWhenMissing(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null || Array.isArray(value) || 'kind' in value) return value;
+  if (!isRecord(value) || 'kind' in value) return value;
   return { ...value, kind: 'lift' };
 }
 

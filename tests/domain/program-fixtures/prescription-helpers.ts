@@ -1,6 +1,7 @@
 import { expect } from 'vitest';
 import {
   type PrescribedExercise,
+  type ProgramDefinition,
   type ProgramState,
   type ReferenceState,
   type ReferenceVar,
@@ -43,4 +44,10 @@ export function refOf(state: ProgramState, lift: string, variable: ReferenceVar)
 
 export function missesOf(state: ProgramState, rule: RuleKey): number {
   return state.consecutiveMisses[rule] ?? 0;
+}
+
+export function broken(definition: ProgramDefinition, mutate: (copy: ProgramDefinition) => void): ProgramDefinition {
+  const copy = structuredClone(definition);
+  mutate(copy);
+  return copy;
 }

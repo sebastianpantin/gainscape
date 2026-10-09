@@ -16,7 +16,7 @@ import {
 import { GZCLP } from './program-fixtures/gzclp.ts';
 import { LINEAR_AFTER_SESSION } from './program-fixtures/linear_after_session.ts';
 import { MADCOW_5X5 } from './program-fixtures/madcow_5x5.ts';
-import { refsState, slotOf, weightsOf } from './program-fixtures/prescription-helpers.ts';
+import { broken, refsState, slotOf, weightsOf } from './program-fixtures/prescription-helpers.ts';
 
 const FIXTURES: [string, ProgramDefinition][] = [
   ['five_three_one', FIVE_THREE_ONE],
@@ -48,12 +48,6 @@ const SLICE_1B_ADJUSTMENTS: [string, Adjustment][] = [
 function namedUnsupportedKinds(parsed: ReturnType<typeof parseProgramDefinition>): string[] {
   const lists = parsed as { unknownKinds?: string[]; unsupportedKinds?: string[] };
   return [...(lists.unknownKinds ?? []), ...(lists.unsupportedKinds ?? [])];
-}
-
-function broken(definition: ProgramDefinition, mutate: (copy: ProgramDefinition) => void): ProgramDefinition {
-  const copy = structuredClone(definition);
-  mutate(copy);
-  return copy;
 }
 
 function madcowDay(copy: ProgramDefinition, dayKey: string) {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { measuresRepsCapacity, paceSPerKm, roundTo, roundXp } from '@domain/index.ts';
+import {
+  isWholeNumberBetween,
+  measuresRepsCapacity,
+  nonNegativeIntegerPercent,
+  paceSPerKm,
+  roundTo,
+  roundXp,
+} from '@domain/index.ts';
 
 describe('roundTo', () => {
   it('rounds to the given decimals', () => {
@@ -28,5 +35,35 @@ describe('measuresRepsCapacity', () => {
     expect(measuresRepsCapacity('bodyweight')).toBe(true);
     expect(measuresRepsCapacity('bodyweight_plus')).toBe(false);
     expect(measuresRepsCapacity('external')).toBe(false);
+  });
+});
+
+describe('isWholeNumberBetween', () => {
+  it('accepts whole numbers inside the inclusive bounds', () => {
+    expect(isWholeNumberBetween(1, 1, 5)).toBe(true);
+    expect(isWholeNumberBetween(5, 1, 5)).toBe(true);
+  });
+
+  it('rejects fractions, values outside the bounds and non-numbers', () => {
+    expect(isWholeNumberBetween(2.5, 1, 5)).toBe(false);
+    expect(isWholeNumberBetween(0, 1, 5)).toBe(false);
+    expect(isWholeNumberBetween(6, 1, 5)).toBe(false);
+    expect(isWholeNumberBetween('3', 1, 5)).toBe(false);
+  });
+});
+
+describe('nonNegativeIntegerPercent', () => {
+  it('returns a non-negative whole percent unchanged', () => {
+    expect(nonNegativeIntegerPercent('challengeBonusPercent', 0)).toBe(0);
+    expect(nonNegativeIntegerPercent('challengeBonusPercent', 25)).toBe(25);
+  });
+
+  it('names the field when the percent is negative or fractional', () => {
+    expect(() => nonNegativeIntegerPercent('gearBonusPercentAtFullTier', -1)).toThrow(
+      new RangeError('gearBonusPercentAtFullTier must be a non-negative integer, got -1'),
+    );
+    expect(() => nonNegativeIntegerPercent('challengeBonusPercent', 2.5)).toThrow(
+      new RangeError('challengeBonusPercent must be a non-negative integer, got 2.5'),
+    );
   });
 });

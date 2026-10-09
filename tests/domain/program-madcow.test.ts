@@ -5,7 +5,6 @@ import {
   programStateAt,
   type ReferenceState,
   resolvePrescription,
-  weeksBack,
 } from '@domain/index.ts';
 import { factClock, sessionFact, setReferenceFact, unprescribedSet } from './program-fixtures/facts.ts';
 import {
@@ -26,6 +25,12 @@ import {
   weightsKgOf,
   weightsOf,
 } from './program-fixtures/prescription-helpers.ts';
+
+const WEEKS_BACK_FACTOR = 0.975;
+
+function weeksBack(top: number, weeks: number): number {
+  return top * WEEKS_BACK_FACTOR ** weeks;
+}
 
 const enrollment = madcowEnrollment();
 

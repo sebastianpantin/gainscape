@@ -1,5 +1,6 @@
 import { type RoundingSetting } from './load-rounding.ts';
 import { rpeChartPct } from './rpe-chart.ts';
+import { isRecord } from './types.ts';
 import { type UnitAmount, type WeightUnit } from './units.ts';
 
 export type InputKind = 'oneRm' | 'tm' | 'fiveRm' | 'e1rm' | 'workingWeight';
@@ -862,10 +863,6 @@ class DefinitionChecker {
 
 export function validateProgramDefinition(definition: ProgramDefinition): string[] {
   return new DefinitionChecker(definition).run();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function kindOf(value: unknown): string | null {

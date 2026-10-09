@@ -1,5 +1,6 @@
 import type { BalanceConfig } from './balance.ts';
 import { GEAR_SLOTS, type GearSlot, ITEM_TIERS, type ItemTier } from './crafting.ts';
+import { nonNegativeIntegerPercent } from './math.ts';
 
 export type GearLoadout = Readonly<Partial<Record<GearSlot, ItemTier>>>;
 
@@ -26,14 +27,6 @@ function slotsTouching(skillKey: string): GearSlot[] {
   return GEAR_SLOTS.filter((slot) => GEAR_SLOT_SKILLS[slot].includes(skillKey));
 }
 
-function fullTierPercent(cfg: GearBonusConfig): number {
-  const percent = cfg.gearBonusPercentAtFullTier;
-  if (!Number.isInteger(percent) || percent < 0) {
-    throw new RangeError(`gearBonusPercentAtFullTier must be a non-negative integer, got ${percent}`);
-  }
-  return percent;
-}
-
 function bonusRatio(
   skillKey: string,
   loadout: GearLoadout | null | undefined,
@@ -42,7 +35,7 @@ function bonusRatio(
   const slots = slotsTouching(skillKey);
   const points = slots.reduce((sum, slot) => sum + gearTierPoints(loadout?.[slot]), 0);
   return {
-    numerator: points * fullTierPercent(cfg),
+    numerator: points * nonNegativeIntegerPercent('gearBonusPercentAtFullTier', cfg.gearBonusPercentAtFullTier),
     denominator: PERCENT * ITEM_TIERS.length * Math.max(1, slots.length),
   };
 }

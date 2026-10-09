@@ -21,7 +21,7 @@ const NO_STRENGTH: ExerciseStrength = Object.freeze({ windowMax: null, fallbackM
 
 export function e1rmAtSessionStart(strength: StrengthState, exerciseId: string): number | null {
   const known = strength[exerciseId] ?? NO_STRENGTH;
-  return known.windowMax ?? known.fallbackMax ?? null;
+  return known.windowMax ?? known.fallbackMax;
 }
 
 export function epley(loadKg: number, repsToFailure: number): number {
