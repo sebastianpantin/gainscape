@@ -29,6 +29,9 @@ function slowWriteStore(initial: StoredDraft | null) {
     discard: async () => {
       record = null;
     },
+    forget: async () => {
+      record = null;
+    },
     userIdsWithDrafts: async () => (record?.kind === 'draft' ? [userId] : []),
   };
   return { store, current: () => record };

@@ -111,6 +111,19 @@ export function describeDraftStoreContract(name: string, createHarness: () => Pr
       expect(await store.get(userId)).toEqual(discardedRecord(userId, 21, 'session-a'));
     });
 
+    it('forgets the record of the user outright, draft or tombstone, and keeps other users', async () => {
+      const { store } = await createHarness();
+      await store.put(userId, 10, workout('session-a'));
+      await store.put(otherUserId, 10, workout('session-b'));
+      await store.forget(userId);
+      expect(await store.get(userId)).toBeNull();
+      expect(await store.userIdsWithDrafts()).toEqual([otherUserId]);
+      await store.discard(otherUserId, 'session-b', 11);
+      await store.forget(otherUserId);
+      expect(await store.get(otherUserId)).toBeNull();
+      await expect(store.forget(userId)).resolves.toBeUndefined();
+    });
+
     it('deletes v1 drafts at boot without migrating them', async () => {
       const { storage, indexedDB } = await createHarness();
       const v1Key = `gainscape.workout-draft.${otherUserId}`;

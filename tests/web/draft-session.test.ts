@@ -32,7 +32,7 @@ function channelHub() {
 
 function failingStore(): DraftStore {
   const fail = () => Promise.reject(new Error('storage_broken'));
-  return { get: fail, put: fail, markSynced: fail, discard: fail, userIdsWithDrafts: fail };
+  return { get: fail, put: fail, markSynced: fail, discard: fail, forget: fail, userIdsWithDrafts: fail };
 }
 
 function sessionOver(

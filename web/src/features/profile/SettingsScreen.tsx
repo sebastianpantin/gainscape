@@ -36,7 +36,7 @@ import {
   updatePublicProfile,
 } from '../../lib/profile.ts';
 import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
-import { discardDraftOnDevice, hasDraftOnDevice } from '../../offline/local-drafts.ts';
+import { forgetDraftOnDevice, hasDraftOnDevice } from '../../offline/local-drafts.ts';
 import { forgetItemsCache } from '../../offline/items-cache.ts';
 import { forgetProgramCache } from '../../offline/program-cache.ts';
 import { programListCache } from '../../offline/program-list-cache.ts';
@@ -74,7 +74,7 @@ async function forgetThisDevice(userId: string): Promise<void> {
   profileCache.forget(localStorage, userId);
   collectionCache.forget(localStorage, userId);
   forgetInstallCard(userId);
-  await discardDraftOnDevice(await openDraftStoreAndReconcile(), deviceStorage(), userId);
+  await forgetDraftOnDevice(await openDraftStoreAndReconcile(), deviceStorage(), userId);
 }
 
 async function hasUnsyncedDraftHere(userId: string): Promise<boolean> {

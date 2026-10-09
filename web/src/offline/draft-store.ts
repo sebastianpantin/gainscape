@@ -18,6 +18,7 @@ export interface DraftStore {
   put(userId: string, updatedAt: number, draft: WorkoutDraft, options?: PutOptions): Promise<PutResult>;
   markSynced(userId: string, sessionId: string, updatedAt: number): Promise<void>;
   discard(userId: string, sessionId: string, updatedAt: number): Promise<void>;
+  forget(userId: string): Promise<void>;
   userIdsWithDrafts(): Promise<string[]>;
 }
 
@@ -138,6 +139,10 @@ export function createIdbDraftStore(database: IDBDatabase): DraftStore {
       }),
     markSynced: (userId, sessionId, updatedAt) => writeTombstone(syncedRecord, userId, sessionId, updatedAt),
     discard: (userId, sessionId, updatedAt) => writeTombstone(discardedRecord, userId, sessionId, updatedAt),
+    forget: (userId) =>
+      inTransaction('readwrite', async (objectStore) => {
+        objectStore.delete(userId);
+      }),
     userIdsWithDrafts: () =>
       inTransaction('readonly', async (objectStore) => {
         const records: unknown[] = await requestResult(objectStore.getAll());
@@ -179,6 +184,7 @@ export function createLocalDraftStore(storage: Storage): DraftStore {
     },
     markSynced: (userId, sessionId, updatedAt) => writeTombstone(syncedRecord, userId, sessionId, updatedAt),
     discard: (userId, sessionId, updatedAt) => writeTombstone(discardedRecord, userId, sessionId, updatedAt),
+    forget: async (userId) => storage.removeItem(fallbackKeyFor(userId)),
     userIdsWithDrafts: async () =>
       fallbackUserIds(storage).filter((userId) => readFallbackRecord(storage, userId)?.kind === 'draft'),
   };

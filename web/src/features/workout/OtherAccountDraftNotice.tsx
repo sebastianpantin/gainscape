@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import type { DraftStore } from '../../offline/draft-store.ts';
-import { discardLocalDraft } from '../../offline/local-drafts.ts';
 
 interface OtherAccountDraftNoticeProps {
   store: DraftStore;
@@ -11,8 +10,8 @@ async function otherAccountIds(store: DraftStore, userId: string): Promise<strin
   return (await store.userIdsWithDrafts()).filter((draftUserId) => draftUserId !== userId);
 }
 
-async function discardOtherAccountDrafts(store: DraftStore, userId: string): Promise<void> {
-  for (const otherUserId of await otherAccountIds(store, userId)) await discardLocalDraft(store, otherUserId);
+async function forgetOtherAccountDrafts(store: DraftStore, userId: string): Promise<void> {
+  for (const otherUserId of await otherAccountIds(store, userId)) await store.forget(otherUserId);
 }
 
 export function OtherAccountDraftNotice({ store, userId }: OtherAccountDraftNoticeProps) {
@@ -33,7 +32,7 @@ export function OtherAccountDraftNotice({ store, userId }: OtherAccountDraftNoti
 
   const discard = async () => {
     if (!window.confirm('Discard the unsynced workout from another account? This cannot be undone.')) return;
-    await discardOtherAccountDrafts(store, userId);
+    await forgetOtherAccountDrafts(store, userId);
     setPresent((await otherAccountIds(store, userId)).length > 0);
   };
 
