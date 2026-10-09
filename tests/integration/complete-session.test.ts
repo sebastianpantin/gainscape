@@ -1,12 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { combatLevel, DEFAULT_BALANCE, levelForXp, processSession, roundTo, type SetInput } from '@domain/index.ts';
+import {
+  combatLevel,
+  DEFAULT_BALANCE,
+  DEFAULT_LOOT,
+  levelForXp,
+  processSession,
+  roundTo,
+  type SetInput,
+} from '@domain/index.ts';
 import {
   activeDropSummaries,
   builtInExerciseId,
   createTestUser,
   db,
   domainCatalogFor,
+  type FunctionResponse,
   postCompleteSession,
   resignedWithAnotherKey,
   setBodyweight,
@@ -733,5 +742,65 @@ describe('complete-session with cardio bouts', () => {
       { duration_s: 1800, counted_work_s: 1800, xp_awarded: 0 },
       { duration_s: 570, counted_work_s: 300, xp_awarded: 0 },
     ]);
+  });
+});
+
+type DatabaseTransaction = Parameters<Parameters<typeof db.begin>[0]>[0];
+
+async function untilSomeoneWaitsOn(transactionId: string, settled: () => boolean): Promise<void> {
+  for (let attempt = 0; attempt < 200 && !settled(); attempt += 1) {
+    const waiting = await db`
+      select 1 from pg_locks where locktype = 'transactionid' and transactionid::text = ${transactionId} and not granted`;
+    if (waiting.length > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+async function syncAgainstUncommittedRow(
+  writeRow: (tx: DatabaseTransaction) => Promise<unknown>,
+  sync: () => Promise<FunctionResponse>,
+): Promise<FunctionResponse> {
+  const { pending } = await db.begin(async (tx) => {
+    await tx`set local session_replication_role = replica`;
+    await writeRow(tx);
+    const [{ transactionId }] = await tx`select txid_current()::text as "transactionId"`;
+    let settled = false;
+    const pending = sync().finally(() => (settled = true));
+    await untilSomeoneWaitsOn(transactionId, () => settled);
+    return { pending };
+  });
+  return await pending;
+}
+
+describe('complete-session unique violations from a concurrent writer', () => {
+  it('answers 409 id_conflict when another writer takes the session id first', async () => {
+    const [user, other] = await Promise.all([createTestUser(), createTestUser()]);
+    const payload = sessionPayload(threeSets(benchId, 0, 50, 'hard'));
+    const response = await syncAgainstUncommittedRow(
+      (tx) => tx`
+        insert into public.sessions
+          (id, user_id, started_at, ended_at, local_date, timezone, balance_version, derived_balance_version, summary)
+        values (${payload.id}, ${other.id}, ${payload.startedAt}, ${payload.endedAt}, current_date, 'UTC',
+                ${DEFAULT_BALANCE.version}, ${DEFAULT_BALANCE.version}, '{}')`,
+      () => postCompleteSession(user.accessToken, payload),
+    );
+    expect(response.status, response.rawBody).toBe(409);
+    expect(response.body.error).toBe('id_conflict');
+  });
+
+  it('answers 500 for a unique violation that is not an id collision', async () => {
+    const user = await createTestUser();
+    const payload = sessionPayload(threeSets(benchId, 0, 50, 'hard'));
+    const [regularTable] = await db`select id from public.drop_tables where key = 'regular'`;
+    const response = await syncAgainstUncommittedRow(
+      (tx) => tx`
+        insert into public.loot_rolls
+          (user_id, session_id, set_id, kind, local_date, roll_index, drop_table_id, chance, hit, loot_version)
+        values (${user.id}, ${payload.id}, ${payload.sets[0].id}, 'regular', '2000-01-01', 0, ${regularTable.id},
+                0.1, false, ${DEFAULT_LOOT.version})`,
+      () => postCompleteSession(user.accessToken, payload),
+    );
+    expect(response.status, response.rawBody).toBe(500);
+    expect(response.body.error).toBe('internal_error');
   });
 });
