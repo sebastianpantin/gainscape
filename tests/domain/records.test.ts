@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   applySetToRecords,
@@ -14,6 +15,7 @@ import {
 import { aBout, aSet, catalog, DAY_MS, hard, TEST_BALANCE } from './fixtures.ts';
 
 const firstDay = Date.parse('2026-09-01T18:00:00.000Z');
+const achievedAt = '2026-09-01T18:00:00.000Z';
 
 function sessionsOf(...setsPerSession: SetInput[][]): SessionInput[] {
   return setsPerSession.map((sets, index) => ({
@@ -113,6 +115,40 @@ describe('rep-max records', () => {
     expect(sessions[2].outputs.prs).toHaveLength(1);
   });
 
+  it('raises lighter lower-rep slots silently to a new higher-rep record', () => {
+    const { sessions, finalState } = replay([aSet('bench', 100, 3, hard)], [aSet('bench', 100.5, 5, hard)]);
+    expect(sessions[1].outputs.sets[0].personalRecord).toEqual({
+      kind: 'rep_max',
+      reps: 5,
+      loadKg: 100.5,
+      previousLoadKg: null,
+    });
+    expect(finalState.records!.repMaxes.bench.slice(0, 5).map((slot) => slot?.loadKg)).toEqual([
+      100.5, 100.5, 100.5, 100.5, 100.5,
+    ]);
+    expect(finalState.records!.repMaxes.bench[2]?.exactSetId).toBe(sessions[0].outputs.sets[0].set.id);
+  });
+
+  it('never leaves a lower-rep slot lighter than a higher-rep slot', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.record({ quarterKg: fc.integer({ min: 0, max: 800 }), reps: fc.integer({ min: 1, max: 12 }) }), {
+          maxLength: 30,
+        }),
+        (sets) => {
+          const records = sets.reduce(
+            (state, { quarterKg, reps }) =>
+              applySetToRecords(state, aSet('bench', quarterKg / 4, reps, hard), 'external', achievedAt, TEST_BALANCE)
+                .records,
+            NO_RECORDS,
+          );
+          const loads = (records.repMaxes.bench ?? []).flatMap((slot) => (slot === null ? [] : [slot.loadKg]));
+          expect(loads).toEqual([...loads].sort((a, b) => b - a));
+        },
+      ),
+    );
+  });
+
   it('ignores warm-ups', () => {
     const { sessions } = replay([aSet('bench', 90, 5, hard)], [aSet('bench', 120, 5, hard, { isWarmup: true })]);
     expect(sessions[1].outputs.prs).toEqual([]);
@@ -125,7 +161,6 @@ describe('rep-max records', () => {
 });
 
 describe('minimum record gain', () => {
-  const achievedAt = '2026-09-01T18:00:00.000Z';
   const at100 = applySetToRecords(
     NO_RECORDS,
     aSet('bench', 100, 1, hard),
