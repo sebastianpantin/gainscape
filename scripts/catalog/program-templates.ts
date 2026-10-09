@@ -305,12 +305,12 @@ export function programTemplateProblems(template: ProgramTemplate): string[] {
 }
 
 function olderVersionProblems(templates: readonly ProgramTemplate[]): string[] {
-  const latestByKey = new Map(
+  const latestVersionByFile = new Map(
     templates.filter(({ file }) => !file.includes('@')).map(({ file, definition }) => [file, definition.version]),
   );
   return templates.flatMap(({ file, definition }) => {
     const latestFile = `${definition.key}.yaml`;
-    const latestVersion = latestByKey.get(latestFile);
+    const latestVersion = latestVersionByFile.get(latestFile);
     if (!file.includes('@') || latestVersion === undefined || definition.version < latestVersion) return [];
     return [
       `program template "${definition.key}": ${latestFile} must hold the latest version, but ${file} is not older`,
