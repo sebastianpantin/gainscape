@@ -36,6 +36,8 @@ export interface FinishAttempt {
 const SESSION_DELETED_STATUS = 410;
 const SERVER_ERROR_STATUS = 500;
 const REBUILD_REQUIRED_CODE = 'rebuild_required';
+const TRANSIENT_CLIENT_ERROR_STATUSES = new Set([404, 408, 425]);
+const PROFILE_NOT_FOUND_CODE = 'profile_not_found';
 
 export function sendOutcomeFrom(outcome: InvokeOutcome<CompletedSessionSummary>): SendOutcome {
   if (outcome.kind === 'ok') return { kind: 'synced', summary: outcome.data };
@@ -45,6 +47,8 @@ export function sendOutcomeFrom(outcome: InvokeOutcome<CompletedSessionSummary>)
     const seconds = retryAfterSeconds(outcome.details);
     return { kind: 'retryable', reason: outcome.code, retryAfterMs: seconds === null ? undefined : seconds * 1000 };
   }
+  if (TRANSIENT_CLIENT_ERROR_STATUSES.has(outcome.status) && outcome.code !== PROFILE_NOT_FOUND_CODE)
+    return { kind: 'retryable', reason: outcome.code };
   if (outcome.status < SERVER_ERROR_STATUS) return { kind: 'rejected', reason: outcome.code };
   return outcome.code === REBUILD_REQUIRED_CODE
     ? { kind: 'retryable', reason: outcome.code }

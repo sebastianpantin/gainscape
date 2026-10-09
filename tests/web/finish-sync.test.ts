@@ -199,6 +199,20 @@ describe('sendOutcomeFrom', () => {
     });
   });
 
+  it('retries a missing function, a timeout or a too-early request instead of rejecting the workout', () => {
+    for (const status of [404, 408, 425])
+      expect(sendOutcomeFrom({ kind: 'http_error', status, code: `http_${status}`, details: undefined })).toEqual({
+        kind: 'retryable',
+        reason: `http_${status}`,
+      });
+  });
+
+  it('still rejects the missing profile that complete-session reports as 404', () => {
+    expect(sendOutcomeFrom({ kind: 'http_error', status: 404, code: 'profile_not_found', details: undefined })).toEqual(
+      { kind: 'rejected', reason: 'profile_not_found' },
+    );
+  });
+
   it('keeps a history-only summary as a successful sync', () => {
     const historyOnly = { ...summary, historyOnly: true as const };
     expect(sendOutcomeFrom({ kind: 'ok', data: historyOnly })).toEqual({ kind: 'synced', summary: historyOnly });
