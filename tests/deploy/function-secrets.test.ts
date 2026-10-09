@@ -34,7 +34,7 @@ describe('Edge Function logging', () => {
       .filter((path) => /\bconsole\.(log|info|warn|error|debug)\(/.test(readFileSync(path, 'utf8')))
       .map((path) => relative(functionsRoot, path))
       .sort();
-    expect(logging).toEqual(['_shared/http.ts', 'complete-session/index.ts']);
+    expect(logging).toEqual(['_shared/http.ts']);
   });
 });
 
