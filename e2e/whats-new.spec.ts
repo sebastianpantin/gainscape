@@ -45,6 +45,17 @@ async function expectSheetListsEveryRelease(page: Page) {
     await expect(whatsNewDialog(page).getByRole('heading', { name: release.title, exact: true })).toBeVisible();
 }
 
+async function openReleaseHistory(page: Page) {
+  await page.getByRole('main').getByRole('link', { name: "What's new", exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: "What's new" })).toBeVisible();
+}
+
+async function expectEveryReleaseInOrder(page: Page) {
+  await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(
+    RELEASES.map((release) => release.title),
+  );
+}
+
 async function logBenchAndFinish(page: Page) {
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await finishWorkout(page);
@@ -144,6 +155,25 @@ test('blocked storage writes keep the app usable and the sheet closed', async ({
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
   await expectNoDialogAcrossTabs(page);
+  await openFromProfile(page, 'Settings');
+  await openReleaseHistory(page);
+  await expectEveryReleaseInOrder(page);
+});
+
+test('Settings lists every release, also offline', async ({ context, page }) => {
+  await register(page, uniqueUsername('wn_hist'));
+  await openFromProfile(page, 'Settings');
+  await openReleaseHistory(page);
+  await expectEveryReleaseInOrder(page);
+  for (const release of RELEASES)
+    for (const item of release.items) await expect(page.getByText(item, { exact: true })).toBeVisible();
+
+  await context.setOffline(true);
+  await page.getByRole('link', { name: '‹ Settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await openReleaseHistory(page);
+  await expectEveryReleaseInOrder(page);
+  await context.setOffline(false);
 });
 
 test('a workout started while the first check runs keeps the sheet away', async ({ page }) => {

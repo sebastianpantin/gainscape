@@ -285,6 +285,7 @@ test.describe('signed-in screens', () => {
       ['/exercises', 'Exercises'],
       ['/programs', 'Programs'],
       [programPath, null],
+      ['/profile/settings/whats-new', "What's new"],
       ['/profile/settings', 'Settings'],
     ]);
 

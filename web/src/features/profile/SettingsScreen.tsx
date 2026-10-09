@@ -577,6 +577,9 @@ function AppSection() {
       {install === 'installed' && <p className="hint">Installed on this device.</p>}
       <span>Version {APP_VERSION}</span>
       <span className="muted tiny">Build {__APP_BUILD__}</span>
+      <Link className="button link" to="/profile/settings/whats-new">
+        What's new
+      </Link>
       <button className="button" type="button" disabled={!flow || checking} onClick={checkForUpdates}>
         Check for updates
       </button>
