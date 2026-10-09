@@ -68,7 +68,7 @@ async function sendStoredDraft(attempt: FinishAttempt): Promise<FinishAttemptRes
   const plannedChallenge = record.draft.challenge;
   const outcome: SendOutcome =
     sent.kind === 'synced' && plannedChallenge ? { ...sent, summary: { ...sent.summary, plannedChallenge } } : sent;
-  if (outcome.kind === 'synced') rememberLastSummary(outcome.summary);
+  if (outcome.kind === 'synced') rememberLastSummary(attempt.userId, outcome.summary);
   if (outcome.kind === 'synced' || outcome.kind === 'deleted')
     await attempt.markSynced(attempt.sessionId, outcome.kind);
   return { kind: 'sent', outcome };

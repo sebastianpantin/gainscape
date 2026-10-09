@@ -298,7 +298,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
-  const [newIds] = useState(() => newItemIds(recallLastSummary()?.drops));
+  const [newIds] = useState(() => newItemIds(recallLastSummary(userId)?.drops));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { unitPref } = usePreferences();

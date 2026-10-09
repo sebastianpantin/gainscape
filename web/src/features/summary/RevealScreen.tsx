@@ -113,7 +113,7 @@ interface RevealScreenProps {
 
 export function RevealScreen({ userId }: RevealScreenProps) {
   const location = useLocation();
-  const summary = (location.state as CompletedSessionSummary | null) ?? recallLastSummary();
+  const summary = (location.state as CompletedSessionSummary | null) ?? recallLastSummary(userId);
   const { unitPref } = usePreferences();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -151,15 +151,16 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       (stored) => {
         if (!active || !stored) return;
         setFreshDrops(stored.summary.drops ?? []);
-        const cached = recallLastSummary();
-        if (cached?.sessionId === sessionId) rememberLastSummary({ ...cached, drops: stored.summary.drops ?? [] });
+        const cached = recallLastSummary(userId);
+        if (cached?.sessionId === sessionId)
+          rememberLastSummary(userId, { ...cached, drops: stored.summary.drops ?? [] });
       },
       () => undefined,
     );
     return () => {
       active = false;
     };
-  }, [sessionId]);
+  }, [sessionId, userId]);
 
   if (!summary) {
     return (

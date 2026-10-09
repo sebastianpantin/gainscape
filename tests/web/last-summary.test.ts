@@ -15,6 +15,9 @@ const summary = {
   drops: [],
 } as unknown as SessionSummary;
 
+const userId = '11111111-1111-4111-8111-111111111111';
+const otherUserId = '22222222-2222-4222-8222-222222222222';
+
 let storage: MemoryStorage;
 
 beforeEach(() => {
@@ -28,8 +31,19 @@ afterEach(() => {
 
 describe('last summary', () => {
   it('recalls the summary it remembered', () => {
-    rememberLastSummary(summary);
-    expect(recallLastSummary()).toEqual(summary);
+    rememberLastSummary(userId, summary);
+    expect(recallLastSummary(userId)).toEqual(summary);
+  });
+
+  it('recalls nothing for another account signed in later in the same tab', () => {
+    rememberLastSummary(userId, summary);
+    expect(recallLastSummary(otherUserId)).toBeNull();
+    expect(recallLastSummary(userId)).toEqual(summary);
+  });
+
+  it('recalls nothing from an entry saved before summaries named their account', () => {
+    storage.setItem('gainscape.last-summary', JSON.stringify(summary));
+    expect(recallLastSummary(userId)).toBeNull();
   });
 
   it('recalls the planned challenge next to the summary', () => {
@@ -42,27 +56,30 @@ describe('last summary', () => {
       },
       targetLoadsKg: { deadlift: 100 },
     };
-    rememberLastSummary({ ...summary, plannedChallenge });
-    expect(recallLastSummary()?.plannedChallenge).toEqual(plannedChallenge);
+    rememberLastSummary(userId, { ...summary, plannedChallenge });
+    expect(recallLastSummary(userId)?.plannedChallenge).toEqual(plannedChallenge);
   });
 
   it('recalls a malformed planned challenge as null', () => {
-    storage.setItem('gainscape.last-summary', JSON.stringify({ ...summary, plannedChallenge: { name: 7 } }));
-    expect(recallLastSummary()).toEqual({ ...summary, plannedChallenge: null });
+    storage.setItem(
+      'gainscape.last-summary',
+      JSON.stringify({ userId, summary: { ...summary, plannedChallenge: { name: 7 } } }),
+    );
+    expect(recallLastSummary(userId)).toEqual({ ...summary, plannedChallenge: null });
   });
 
   it('recalls nothing when nothing was remembered or the entry is not JSON', () => {
-    expect(recallLastSummary()).toBeNull();
+    expect(recallLastSummary(userId)).toBeNull();
     storage.setItem('gainscape.last-summary', '{broken');
-    expect(recallLastSummary()).toBeNull();
+    expect(recallLastSummary(userId)).toBeNull();
   });
 
   it('forgets the summary only when its session is listed', () => {
-    rememberLastSummary(summary);
+    rememberLastSummary(userId, summary);
     forgetLastSummary(['session-b']);
-    expect(recallLastSummary()).toEqual(summary);
+    expect(recallLastSummary(userId)).toEqual(summary);
     forgetLastSummary(['session-b', 'session-a']);
-    expect(recallLastSummary()).toBeNull();
+    expect(recallLastSummary(userId)).toBeNull();
   });
 
   it('degrades silently when session storage throws', () => {
@@ -74,8 +91,8 @@ describe('last summary', () => {
         throw new Error('blocked');
       },
     });
-    expect(() => rememberLastSummary(summary)).not.toThrow();
-    expect(recallLastSummary()).toBeNull();
+    expect(() => rememberLastSummary(userId, summary)).not.toThrow();
+    expect(recallLastSummary(userId)).toBeNull();
     expect(() => forgetLastSummary(['session-a'])).not.toThrow();
   });
 });
