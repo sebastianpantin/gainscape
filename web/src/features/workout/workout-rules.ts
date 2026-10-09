@@ -1,9 +1,15 @@
+import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
 
 const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
 const LONG_SYNC_WAIT_MS = 60_000;
 const MS_PER_SECOND = 1000;
 const WRONG_ACCOUNT_REASON = 'wrong_account';
+const MS_PER_HOUR = 3_600_000;
+const TIMING_REJECTION_TEXT: Readonly<Record<string, string>> = {
+  session_too_long: `This workout is longer than ${MAX_SESSION_DURATION_MS / MS_PER_HOUR} hours. Go back to editing and finish it again to save it.`,
+  session_in_future: "This workout's time is ahead of the server's clock. Check the date and time on this device.",
+};
 
 export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
   if (lastProblem !== RATE_LIMITED_CODE) {
@@ -23,6 +29,7 @@ export function stalledSyncText(reason: string): string {
 }
 
 export function rejectionText(reason: string): string {
+  if (Object.hasOwn(TIMING_REJECTION_TEXT, reason)) return TIMING_REJECTION_TEXT[reason];
   return EXERCISE_CHANGED_REASONS.has(reason)
     ? 'Load type of an exercise changed; check the weights'
     : `The server rejected this workout: ${reason}`;

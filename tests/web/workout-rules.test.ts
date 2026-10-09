@@ -47,6 +47,18 @@ describe('rejectionText', () => {
       expect(rejectionText(reason)).toBe('Load type of an exercise changed; check the weights');
   });
 
+  it('explains a workout longer than the server accepts', () => {
+    expect(rejectionText('session_too_long')).toBe(
+      'This workout is longer than 12 hours. Go back to editing and finish it again to save it.',
+    );
+  });
+
+  it('asks to check the device clock when the workout is ahead of the server', () => {
+    expect(rejectionText('session_in_future')).toBe(
+      "This workout's time is ahead of the server's clock. Check the date and time on this device.",
+    );
+  });
+
   it('shows any other rejection reason', () => {
     expect(rejectionText('invalid_payload')).toBe('The server rejected this workout: invalid_payload');
   });

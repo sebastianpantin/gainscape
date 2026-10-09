@@ -25,6 +25,7 @@ import { fetchProfile, type Profile, updatePrivateProfile } from '../../lib/prof
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
+import { finishedAtFor } from '../../lib/session-timing-rules.ts';
 import { REST_OFF, restClock, startsRest, stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
@@ -543,7 +544,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       changedNames = checked.changedNames;
       if (changedNames.length > 0) return checked.draft;
       const logged = markPlannedDone ? markPlannedSetsDone(checked.draft) : checked.draft;
-      return { ...logged, finishedAt: new Date().toISOString() };
+      return { ...logged, finishedAt: finishedAtFor(logged.startedAt, new Date()) };
     });
     if (changedNames.length > 0) setFinishProblem(`Load type of ${changedNames.join(', ')} changed; check the weights`);
     else rest.stop();

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { implausibleTiming } from '@domain/session-timing.ts';
 import {
+  finishedAtFor,
   formatSessionDuration,
   isSessionRpe,
   SESSION_RPE_VALUES,
@@ -102,5 +104,26 @@ describe('sessionTimingParts', () => {
       'Session RPE 4',
     ]);
     expect(sessionTimingParts({ startedAt: start, endedAt: 'soon' })).toEqual([]);
+  });
+});
+
+describe('finishedAtFor', () => {
+  it('finishes a workout now', () => {
+    expect(finishedAtFor(start, new Date(minutesAfterStart(75)))).toBe(minutesAfterStart(75));
+  });
+
+  it('caps a workout left open overnight at the longest workout the server accepts', () => {
+    expect(finishedAtFor(start, new Date(minutesAfterStart(20 * 60)))).toBe(minutesAfterStart(12 * 60));
+  });
+
+  it('never finishes before the start when the device clock went back', () => {
+    expect(finishedAtFor(start, new Date(minutesAfterStart(-30)))).toBe(start);
+  });
+
+  it('passes the server timing check for a workout left open any length of time', () => {
+    for (const minutes of [0, 75, 12 * 60, 20 * 60]) {
+      const now = Date.parse(minutesAfterStart(minutes));
+      expect(implausibleTiming(start, finishedAtFor(start, new Date(now)), now)).toBeNull();
+    }
   });
 });
