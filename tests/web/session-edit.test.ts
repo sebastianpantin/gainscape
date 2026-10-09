@@ -707,7 +707,7 @@ describe('session detail texts', () => {
       "Couldn't delete this workout: invalid_payload",
     );
     expect(failureText({ kind: 'revision_conflict' }, 'delete')).toBe(
-      "Couldn't delete this workout: revision_conflict",
+      'This workout was changed on another device. Check the latest version, then delete it again if you still want to.',
     );
   });
 });

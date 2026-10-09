@@ -207,7 +207,9 @@ export async function replayFrom(
     lootCandidates(entry.outputs.sets, catalog).map((candidate) => ({ ...candidate, sessionId: entry.session.id })),
   );
   const revoked =
-    from === null ? [] : await revokeDisqualifiedDrops(tx, userId, sets, replayedSessionIds, deletedSessionIds);
+    from === null
+      ? []
+      : await revokeDisqualifiedDrops(tx, userId, sets, replayedSessionIds, deletedSessionIds, cfg.version);
   await syncSessionEvents(tx, userId, replayedSessionIds);
 
   return {

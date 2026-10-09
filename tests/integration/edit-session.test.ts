@@ -106,7 +106,7 @@ describe('edit-session re-derives history', () => {
     expect(response.body).toMatchObject({ revision: 1, replayedSessionIds: [s1.id, s2.id] });
 
     expect((await storedSets(s1.id))[0].xp_awarded).toBe(1043);
-    expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 0, e1rm_before_kg: 93.33, xp_awarded: 1043 });
+    expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 1, e1rm_before_kg: 93.33, xp_awarded: 1043 });
     const [{ total }] = await db`select sum(xp)::int as total from public.user_skills where user_id = ${user.id}`;
     expect(total).toBe(2086);
     const mismatches = await db`
@@ -395,6 +395,14 @@ describe('edit-session authorization and validation', () => {
     await postSession(owner, own);
     const response = await edit(owner, editBody(own, [{ ...own.sets[0], exerciseId: archived }]));
     expect(response.status, response.rawBody).toBe(200);
+  });
+
+  it('stores edited notes without NUL characters', async () => {
+    const noted = payloadAt(hoursAgo(3), [aSet(benchId, 0, 55)]);
+    await postSession(owner, noted);
+    const response = await edit(owner, editBody(noted, noted.sets, 0, '\u0000heavy day\u0000'));
+    expect(response.status, response.rawBody).toBe(200);
+    expect((await db`select notes from public.sessions where id = ${noted.id}`)[0].notes).toBe('heavy day');
   });
 
   it("returns 409 for a new set id taken by the caller's other set", async () => {

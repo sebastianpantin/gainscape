@@ -17,6 +17,7 @@ export interface LiftDecl {
   key: string;
   name: string;
   category?: LiftCategory;
+  barbell?: boolean;
 }
 
 export interface InputDecl {
@@ -338,6 +339,7 @@ export interface ProgressionRule {
   trigger: ProgressionTrigger;
   judgedSlots: string[];
   judgedWeeks?: number[];
+  judgedSetIndexes?: number[];
   onMet: Adjustment[];
   onMiss: Adjustment[];
   always?: Adjustment[];
@@ -422,6 +424,10 @@ export function parseSetRef(ref: string): SetRef | null {
   const index = Number(ref.slice(separator + 1));
   if (!Number.isInteger(index) || index < 0) return null;
   return { slotId: ref.slice(0, separator), index };
+}
+
+export function isBarbellLift(definition: ProgramDefinition, lift: string): boolean {
+  return definition.lifts.find((candidate) => candidate.key === lift)?.barbell !== false;
 }
 
 export function findSlot(definition: ProgramDefinition, slotId: string): SlotDecl | undefined {
@@ -735,6 +741,7 @@ class DefinitionChecker {
       if (!this.slots.has(slotId)) this.errors.push(`${where} judges unknown slot '${slotId}'`);
     }
     this.checkTrigger(rule, where);
+    this.checkJudgedSetIndexes(rule, where);
     for (const adjustment of [...rule.onMet, ...rule.onMiss, ...(rule.always ?? [])]) {
       this.checkAdjustment(adjustment, where);
       this.checkAdjustmentFitsRule(rule, adjustment, where);
@@ -748,6 +755,19 @@ class DefinitionChecker {
       this.errors.push(`${where} uses the endOfWave trigger, but only a cycle schedule has waves`);
     } else if (!schedule.waveWeeks) {
       this.errors.push(`${where} uses the endOfWave trigger, but the cycle declares no waveWeeks`);
+    }
+  }
+
+  private checkJudgedSetIndexes(rule: ProgressionRule, where: string) {
+    if (rule.judgedSetIndexes === undefined) return;
+    if (rule.judgedSetIndexes.length === 0) this.errors.push(`${where} has judgedSetIndexes that judge no set`);
+    for (const setIndex of rule.judgedSetIndexes) {
+      for (const slot of this.judgedSlotsOf(rule)) {
+        const count = knownSetCount(this.definition, slot.scheme);
+        if (count !== null && setIndex >= count) {
+          this.errors.push(`${where} judgedSetIndexes reads set ${setIndex}, but slot '${slot.id}' has ${count} sets`);
+        }
+      }
     }
   }
 
@@ -976,7 +996,7 @@ export function parseProgramDefinition(json: unknown): ParsedProgramDefinition {
 
 const ROUNDING_MODES: readonly string[] = ['nearest', 'down'];
 
-const MAX_INPUT_VALUE = 1000;
+export const MAX_REFERENCE_VALUE: Readonly<Record<WeightUnit, number>> = Object.freeze({ kg: 1000, lb: 2205 });
 
 function isPositiveNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -1010,6 +1030,7 @@ function enrollmentOptionErrors(definition: ProgramDefinition, enrollment: Progr
 
 function enrollmentInputErrors(definition: ProgramDefinition, enrollment: ProgramEnrollment): string[] {
   const errors: string[] = [];
+  const max = MAX_REFERENCE_VALUE[enrollment.unit];
   for (const input of definition.inputs) {
     for (const lift of input.lifts) {
       const given = Object.entries(enrollment.inputs[lift] ?? {});
@@ -1018,10 +1039,8 @@ function enrollmentInputErrors(definition: ProgramDefinition, enrollment: Progra
       for (const [kind, value] of given) {
         if (!(input.kinds as string[]).includes(kind)) {
           errors.push(`lift '${lift}' input '${kind}' is not declared by the template`);
-        } else if (!isPositiveNumber(value) || value > MAX_INPUT_VALUE) {
-          errors.push(
-            `lift '${lift}' input '${kind}' must be above 0 and at most ${MAX_INPUT_VALUE}, got ${String(value)}`,
-          );
+        } else if (!isPositiveNumber(value) || value > max) {
+          errors.push(`lift '${lift}' input '${kind}' must be above 0 and at most ${max}, got ${String(value)}`);
         }
       }
     }

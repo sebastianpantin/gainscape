@@ -128,14 +128,14 @@ describe('StrongLifts 5x5 progression (kg)', () => {
     expect(missesOf(state, 'squat:workingWeight:afterSession')).toBe(0);
   });
 
-  it('three more fails after a deload deload again: 90 → 81, prescribed 80 (81 / 2.5 = 32.4 → 32)', () => {
+  it('three more fails after a deload deload again: 90 → 81, stored on the plate grid as 80 (81 / 2.5 = 32.4 → 32)', () => {
     const { state } = followProgram(
       def,
       kg,
       factClock(),
       Array.from({ length: 6 }, () => failSquat),
     );
-    expect(refOf(state, 'squat', 'workingWeight')).toBeCloseTo(81, 9);
+    expect(refOf(state, 'squat', 'workingWeight')).toBe(80);
     expect(weightsOf(resolveNext(def, kg, state), 'a-squat')[0]).toBe(80);
   });
 
@@ -145,16 +145,31 @@ describe('StrongLifts 5x5 progression (kg)', () => {
     expect(missesOf(state, 'squat:workingWeight:afterSession')).toBe(2);
   });
 
-  it('then the third fail in a row deloads 102.5 → 92.25, prescribed 92.5 (36.9 → 37)', () => {
+  it('then the third fail in a row deloads 102.5 → 92.25, stored as 92.5 (36.9 → 37)', () => {
     const { state } = followProgram(def, kg, factClock(), [failSquat, failSquat, {}, failSquat, failSquat, failSquat]);
-    expect(refOf(state, 'squat', 'workingWeight')).toBeCloseTo(92.25, 9);
+    expect(refOf(state, 'squat', 'workingWeight')).toBe(92.5);
     expect(weightsOf(resolveNext(def, kg, state), 'a-squat')[0]).toBe(92.5);
   });
 
-  it('bench fails count on A days only: neutral B days keep the count, so the third A fail deloads 60 → 54', () => {
+  it('bench fails count on A days only: neutral B days keep the count, so the third A fail deloads 60 → 54 → 55', () => {
     const failBench: DayLog = { missedLifts: ['bench'] };
     const { state } = followProgram(def, kg, factClock(), [failBench, {}, failBench, {}, failBench]);
-    expect(refOf(state, 'bench', 'workingWeight')).toBeCloseTo(54, 9);
+    expect(refOf(state, 'bench', 'workingWeight')).toBe(55);
+  });
+
+  it('a deload never drops a barbell lift below the bar: press 20 fails three times and stays 20, not 18', () => {
+    const light = strongLiftsEnrollment({ press: 20 });
+    const failPress: DayLog = { missedLifts: ['press'] };
+    const { state } = followProgram(def, light, factClock(), [{}, failPress, {}, failPress, {}, failPress]);
+    expect(refOf(state, 'press', 'workingWeight')).toBe(20);
+  });
+
+  it('the next met session after a deload at the bar progresses: press 20 → 22.5', () => {
+    const light = strongLiftsEnrollment({ press: 20 });
+    const failPress: DayLog = { missedLifts: ['press'] };
+    const { state } = followProgram(def, light, factClock(), [{}, failPress, {}, failPress, {}, failPress, {}, {}]);
+    expect(refOf(state, 'press', 'workingWeight')).toBeCloseTo(22.5, 9);
+    expect(weightsOf(resolveAt(def, light, state, { index: 9 }), 'b-press')).toEqual([22.5, 22.5, 22.5, 22.5, 22.5]);
   });
 
   it('a skipped session neither counts nor resets: fail, skip, fail keeps 2 misses at 100', () => {

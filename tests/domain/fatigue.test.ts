@@ -94,6 +94,21 @@ describe('fatigue check', () => {
     expect(results.at(-1)).toMatchObject({ rirFlagged: true });
   });
 
+  it('adds no fatigue from later sets that lift no load when judging an earlier set', () => {
+    const strength = known('bench', epley(100, 6));
+    const withoutZeroLoad = runSets([aSet('bench', 100, 6, failure), aSet('bench', 100, 6, failure)], strength);
+    const withZeroLoad = runSets(
+      [
+        aSet('bench', 100, 6, failure),
+        ...repeated(20, () => aSet('bench', 0, 1, failure)),
+        aSet('bench', 100, 6, failure),
+      ],
+      strength,
+    );
+    expect(withZeroLoad[0]).toMatchObject({ rirFlagged: false, rirForXp: 0 });
+    expect(withZeroLoad[0]).toEqual({ ...withoutZeroLoad[0], set: withZeroLoad[0].set });
+  });
+
   it('ignores warm-ups', () => {
     const results = runSets([
       aSet('bench', 100, 6, failure),

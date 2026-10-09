@@ -145,6 +145,19 @@ describe('reference events', () => {
     expect(referenceEvents(fields, { 'squat.top': '92.69' })).toEqual({ kind: 'ok', events: [] });
   });
 
+  it('accepts an lb training max above 1000 up to the 2205 lb cap', () => {
+    const enrollment = fiveThreeOneEnrollment({ unit: 'lb', tms: { squat: 900 } });
+    const fields = referenceFields(FIVE_THREE_ONE, enrollment, programStateAt(FIVE_THREE_ONE, enrollment, []));
+    expect(referenceEvents(fields, { 'squat.tm': '1100', 'bench.tm': '2206' })).toEqual({
+      kind: 'invalid',
+      problems: ['Bench press training max (lb) must be above 0 and at most 2205'],
+    });
+    expect(referenceEvents(fields, { 'squat.tm': '1100' })).toEqual({
+      kind: 'ok',
+      events: [{ kind: 'set_reference', lift: 'squat', var: 'tm', value: 1100 }],
+    });
+  });
+
   it('refuses an empty, zero or above-1000 value by its field label', () => {
     expect(referenceEvents(fiveThreeOneFields(), { 'squat.tm': '', 'bench.tm': '0', 'press.tm': '1001' })).toEqual({
       kind: 'invalid',

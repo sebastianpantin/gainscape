@@ -15,7 +15,9 @@ import {
   tombstoneSession,
 } from '../_shared/stores/sessions.ts';
 
-const deleteSchema = z.object({ sessionId: lowerUuid }).strict();
+const deleteSchema = z.object({ sessionId: lowerUuid, ifRevision: z.int().min(0).optional() }).strict();
+
+type DeleteSessionPayload = z.infer<typeof deleteSchema>;
 
 interface DeleteResponse {
   sessionId: string;
@@ -24,11 +26,11 @@ interface DeleteResponse {
   revokedDrops: RevokedDrop[];
 }
 
-function parseDeleteSessionPayload(body: unknown): string {
-  return parseOr422(deleteSchema, body).sessionId;
+function parseDeleteSessionPayload(body: unknown): DeleteSessionPayload {
+  return parseOr422(deleteSchema, body);
 }
 
-async function deleteSession(userId: string, sessionId: string): Promise<DeleteResponse> {
+async function deleteSession(userId: string, { sessionId, ifRevision }: DeleteSessionPayload): Promise<DeleteResponse> {
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId);
     if ((await tombstoneOwner(tx, sessionId)) === userId) {
@@ -37,6 +39,9 @@ async function deleteSession(userId: string, sessionId: string): Promise<DeleteR
 
     const session = await requireOwnedSession(tx, userId, sessionId);
     if (!isOwnedSessionEditable(session, Date.now())) throw new HttpError(409, 'edit_window_closed');
+    if (ifRevision !== undefined && ifRevision !== session.revision) {
+      throw new HttpError(409, 'revision_conflict', { revision: session.revision });
+    }
 
     await takeRateLimit(tx, 'session_delete_hour', userId);
     const exerciseIds = await sessionExerciseIds(tx, sessionId);

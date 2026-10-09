@@ -1,9 +1,10 @@
-import { halfIncrementKg, type RoundingSetting } from './load-rounding.ts';
+import { halfIncrementKg, roundPrescribedLoad, type RoundingSetting } from './load-rounding.ts';
 import { FLOAT_TOLERANCE } from './math.ts';
 import {
   type Adjustment,
   evaluateAmount,
   evaluateNumber,
+  isBarbellLift,
   parseSetRef,
   type ProgramDefinition,
   type ProgramEnrollment,
@@ -122,7 +123,10 @@ function ruleOutcomeAt(
         ? { ...stages, [slot.lift]: prescribedStageIndex(slot.scheme, candidates, stages, slot.lift) }
         : stages;
     const required = requiredSetIndices(definition, enrollment, slot, position, prescribedStages);
-    return required === null ? [] : [{ slot, required, candidates }];
+    if (required === null) return [];
+    const { judgedSetIndexes } = rule;
+    const judgedRequired = judgedSetIndexes ? required.filter((index) => judgedSetIndexes.includes(index)) : required;
+    return [{ slot, required: judgedRequired, candidates }];
   });
   if (judged.length === 0) return 'neutral';
   if (judged.every(({ candidates }) => candidates.length === 0)) return 'neutral';
@@ -255,10 +259,16 @@ const ADJUSTMENT_HANDLERS: AdjustmentHandlers = {
   customRule: ({ state }) => state,
   tmReset: ({ adjustment, current, numbers, changeTo }) =>
     changeTo(current * (1 - evaluateNumber(adjustment.pct, numbers)), 'tmReset'),
-  failureCounter: ({ state, rule, adjustment, current, numbers, changeTo }) => {
+  failureCounter: ({ context, state, rule, adjustment, current, numbers, changeTo }) => {
     const key = ruleKeyOf(rule);
     if ((state.consecutiveMisses[key] ?? 0) < adjustment.threshold) return state;
-    const deloaded = changeTo(current * (1 - evaluateNumber(adjustment.deloadPct, numbers)), 'adjustment');
+    const { definition, enrollment } = context;
+    const deloadedLoad = roundPrescribedLoad(
+      current * (1 - evaluateNumber(adjustment.deloadPct, numbers)),
+      enrollment.rounding,
+      isBarbellLift(definition, rule.lift),
+    );
+    const deloaded = changeTo(deloadedLoad, 'adjustment');
     return { ...deloaded, consecutiveMisses: { ...deloaded.consecutiveMisses, [key]: 0 } };
   },
   stageMachine: ({ context, state, rule, adjustment, current, position }) =>

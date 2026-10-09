@@ -38,8 +38,13 @@ function cappedRir(repsInReserve: number): number {
   return Math.min(MAX_ESTIMATED_RIR, Math.max(0, Math.floor(repsInReserve + FLOAT_TOLERANCE)));
 }
 
+function wholeRepsToFailure(loadKg: number, e1rmKg: number): number {
+  const repsBelowRoundedE1rm = Math.floor(predictedMaxReps(loadKg, e1rmKg) + FLOAT_TOLERANCE);
+  return epley(loadKg, repsBelowRoundedE1rm + 1) <= e1rmKg ? repsBelowRoundedE1rm + 1 : repsBelowRoundedE1rm;
+}
+
 export function estimateRir(loadKg: number, reps: number, e1rmKg: number): number {
-  return cappedRir(predictedMaxReps(loadKg, e1rmKg) - reps);
+  return cappedRir(wholeRepsToFailure(loadKg, e1rmKg) - reps);
 }
 
 export function intensityBonus(reps: number, loadKg: number, e1rmKg: number | null, cfg: BalanceConfig): number {
@@ -133,7 +138,7 @@ function estimateFor(result: LiftSetResult, exercise: LiftExerciseDef, strengthB
 
 function beatsPrediction(result: LiftSetResult, exercise: LiftExerciseDef, strengthBefore: number): boolean {
   if (usesRepsCapacity(exercise)) return result.set.reps > strengthBefore;
-  return result.set.reps > predictedMaxReps(result.effectiveLoadKg, strengthBefore);
+  return result.set.reps > wholeRepsToFailure(result.effectiveLoadKg, strengthBefore);
 }
 
 function decideEffort(
@@ -159,23 +164,20 @@ function decideEffort(
       rirForXp: claimsImplausibleEffort ? trustFloor : logged,
       rirFlagged: claimsImplausibleEffort,
       coldStartXp: 0,
-      rirUsedForStrength: Math.min(logged, cfg.maxRirForStrength),
+      rirUsedForStrength: claimsImplausibleEffort ? trustFloor : Math.min(logged, cfg.maxRirForStrength),
     };
   }
 
-  const coldStart = (coldStartXp: number): StrengthDecision => ({
-    rir: null,
-    rirSource: 'cold_start',
-    rirForXp: null,
-    rirFlagged: false,
-    coldStartXp,
-    rirUsedForStrength: cfg.coldStartAssumedRir,
-  });
-
-  if (isBaselineSession) {
-    return coldStart(coldStartPayable ? cfg.coldStartXpPerSet : 0);
+  if (isBaselineSession || estimated === null) {
+    return {
+      rir: null,
+      rirSource: 'cold_start',
+      rirForXp: null,
+      rirFlagged: false,
+      coldStartXp: coldStartPayable ? cfg.coldStartXpPerSet : 0,
+      rirUsedForStrength: cfg.coldStartAssumedRir,
+    };
   }
-  if (estimated === null) return coldStart(0);
 
   return {
     rir: estimated,

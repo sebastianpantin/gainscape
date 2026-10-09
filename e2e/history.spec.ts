@@ -72,6 +72,32 @@ test('re-sending a workout that was deleted elsewhere shows it as deleted and dr
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 });
 
+test('re-finishing a workout that was already saved shows the summary and says this copy was not applied', async ({
+  page,
+}) => {
+  const username = `hist_resend_${Date.now().toString(36)}`;
+  await register(page, username);
+  const { user } = await readSession(page);
+
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await openLatestWorkout(page);
+  const sessionId = page.url().split('/').at(-1)!;
+  const storedSets = await setsOf(sessionId);
+
+  await writeStoredDraft(page, user.id, finishedBenchDraft(sessionId, await builtInExerciseId('barbell_bench_press')));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await expect(
+    page.getByRole('status').filter({ hasText: "differs from this device's copy, so this copy was not applied" }),
+  ).toBeVisible();
+  await expect.poll(async () => (await readStoredDraft(page, user.id))?.kind).toBe('synced');
+  expect(await sessionCount(username)).toBe(1);
+  expect(await setsOf(sessionId)).toEqual(storedSets);
+
+  await page.getByRole('link', { name: 'Open this workout' }).click();
+  await expect(page).toHaveURL(new RegExp(`/collection/history/${sessionId}$`));
+});
+
 test('a save that races an edit from another device keeps both changes after review', async ({ page }) => {
   const username = `hist_rev_${Date.now().toString(36)}`;
   await register(page, username);
@@ -95,6 +121,28 @@ test('a save that races an edit from another device keeps both changes after rev
   await expect(page.getByText('Changes saved.')).toBeVisible();
   expect(await setsOf(sessionId)).toEqual([{ reps: 7, effort_input_type: 'level', effort_value: 0 }]);
   expect(await sessionNotes(sessionId)).toBe('edited elsewhere');
+});
+
+test('a delete that races an edit from another device shows the latest version before deleting', async ({ page }) => {
+  const username = `hist_delrev_${Date.now().toString(36)}`;
+  await register(page, username);
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+
+  await openLatestWorkout(page);
+  const sessionId = page.url().split('/').at(-1)!;
+
+  await editElsewhere(sessionId, 7);
+  await page.getByRole('button', { name: 'Delete workout' }).click();
+  await page.getByRole('button', { name: 'Delete for good' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('This workout was changed on another device.');
+  await expect(page.locator('li.set-row').first().getByLabel('reps')).toHaveValue('7');
+  expect(await sessionCount(username)).toBe(1);
+
+  await page.getByRole('button', { name: 'Delete workout' }).click();
+  await page.getByRole('button', { name: 'Delete for good' }).click();
+  await expect(page.getByText('Workout deleted.')).toBeVisible();
+  expect(await sessionCount(username)).toBe(0);
 });
 
 test('rate the session when finishing, then see its length and RPE on the summary and in History', async ({ page }) => {

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { DEFAULT_LOOT } from '@domain/index.ts';
+import { DEFAULT_BALANCE, DEFAULT_LOOT } from '@domain/index.ts';
 import {
   ageSession,
   builtInExerciseId,
@@ -399,6 +399,21 @@ describe('neighbours and rebuild', () => {
     expect(response.body.replayedSessionIds).not.toContain(old.id);
     expect(await dropRow(oldDrop.dropId)).toEqual(before);
     expect(before.revoked_at).toBeNull();
+  });
+
+  it('keeps a drop judged under an older balance version when an edit of an earlier session replays it', async () => {
+    const user = await freshUser();
+    const earlier = payloadAt(new Date(Date.now() - 2 * DAY_MS), [aSet(benchId, 0, 60)]);
+    await postSession(user, earlier);
+    const { payload: later } = await sessionOnCappedDay(user, [aSet(benchId, 0, 60, { effort: beyondEffortWindow })]);
+    const judgedBeforeBump = await grantDrop(user.id, later.id, later.sets[0].id, 'grinder_scraps', 3);
+    await db`update public.sessions set balance_version = ${DEFAULT_BALANCE.version - 1} where id = ${later.id}`;
+    expect((await rebuildCaches(user.id)).status).toBe(200);
+
+    const response = await editSession(user, earlier, [{ ...earlier.sets[0], weightKg: 62.5 }]);
+    expect(response.body.replayedSessionIds).toContain(later.id);
+    expect(response.body.revokedDrops).toEqual([]);
+    expect((await dropRow(judgedBeforeBump.dropId)).revoked_at).toBeNull();
   });
 
   it('rebuilds caches without touching drops, revoked or not', async () => {

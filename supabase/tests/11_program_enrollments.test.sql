@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(43);
+select plan(47);
 
 create function pg_temp.fill_bucket(bucket_name text, subject uuid) returns void language sql as $$
   insert into private.rate_limit_hits (bucket, subject, window_start, hits)
@@ -31,6 +31,23 @@ create function pg_temp.add_reference_event(enrollment uuid, value numeric) retu
   returning id;
 $$;
 
+create function pg_temp.madcow_enrollment_is_valid(unit text, squat_five_rm numeric) returns boolean language sql as $$
+  select private.is_valid_enrollment(
+    (select t.definition from public.program_templates t where t.key = 'madcow_5x5' and t.version = 1),
+    jsonb_build_object(
+      'unit', madcow_enrollment_is_valid.unit,
+      'options', '{}'::jsonb,
+      'bindings', '{}'::jsonb,
+      'inputs', jsonb_build_object(
+        'squat', jsonb_build_object('fiveRm', madcow_enrollment_is_valid.squat_five_rm),
+        'bench', '{"fiveRm": 80}'::jsonb, 'row', '{"fiveRm": 70}'::jsonb,
+        'press', '{"fiveRm": 50}'::jsonb, 'deadlift', '{"fiveRm": 140}'::jsonb
+      ),
+      'rounding', '{"increment": 2.5, "mode": "nearest", "barWeight": 20}'::jsonb
+    )
+  );
+$$;
+
 select has_table('public', 'program_templates', 'program_templates exists');
 select has_table('public', 'program_enrollments', 'program_enrollments exists');
 select has_table('public', 'program_enrollment_events', 'program_enrollment_events exists');
@@ -55,9 +72,9 @@ select fk_ok(
   'an enrollment points at one template version'
 );
 select results_eq(
-  $$select key, version from public.program_templates where key in ('five_three_one', 'madcow_5x5') order by key$$,
-  $$values ('five_three_one', 1), ('madcow_5x5', 1)$$,
-  'the seed ships 5/3/1 and Madcow 5x5 as version 1'
+  $$select key, version from public.program_templates where key in ('five_three_one', 'madcow_5x5') order by key, version$$,
+  $$values ('five_three_one', 1), ('five_three_one', 2), ('madcow_5x5', 1), ('madcow_5x5', 2)$$,
+  'the seed keeps 5/3/1 and Madcow 5x5 version 1 and ships their fixed version 2'
 );
 select is(
   (select count(*)::int from public.program_templates t
@@ -89,7 +106,7 @@ select is(
 
 select tests.authenticate_as(:'a');
 select ok(
-  (select count(*) from public.program_templates where key = 'madcow_5x5') = 1,
+  (select count(*) from public.program_templates where key = 'madcow_5x5') = 2,
   'a signed-in user reads the templates'
 );
 select throws_ok(
@@ -240,6 +257,11 @@ select is(
   0,
   'deleting the account deletes its enrollments and their events'
 );
+
+select ok(pg_temp.madcow_enrollment_is_valid('kg', 1000), 'a kg input may be 1000');
+select ok(not pg_temp.madcow_enrollment_is_valid('kg', 1000.5), 'a kg input above 1000 is refused');
+select ok(pg_temp.madcow_enrollment_is_valid('lb', 2205), 'an lb input may be 2205, the 1000 kg cap in pounds');
+select ok(not pg_temp.madcow_enrollment_is_valid('lb', 2205.5), 'an lb input above 2205 is refused');
 
 select * from finish();
 rollback;

@@ -118,6 +118,14 @@ describe('roundPrescribedLoad', () => {
   it('floors at a custom bar weight: 12 kg with a 15 kg bar → 15', () => {
     expect(roundPrescribedLoad(12, { ...DEFAULT_ROUNDING.kg, barWeight: 15 })).toBe(15);
   });
+
+  it('does not floor a load off the bar at the bar: a 12.5 kg dumbbell row stays 12.5', () => {
+    expect(roundPrescribedLoad(12.5, DEFAULT_ROUNDING.kg, false)).toBe(12.5);
+  });
+
+  it('floors a load off the bar at one increment so it never reads 0: 1 kg → 2.5', () => {
+    expect(roundPrescribedLoad(1, DEFAULT_ROUNDING.kg, false)).toBe(2.5);
+  });
 });
 
 describe('DEFAULT_ROUNDING', () => {

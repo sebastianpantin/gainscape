@@ -192,6 +192,29 @@ describe('program template schema', () => {
     const error = shapeIssuesAfter(MADCOW_5X5, (raw) => (raw.version = 1.5));
     expect(error.issues.some((issue) => issue.startsWith('version'))).toBe(true);
   });
+
+  it.each([
+    ['an empty judgedSetIndexes list', []],
+    ['a negative judged set', [-1]],
+    ['a fractional judged set', [1.5]],
+  ])('refuses %s', (_case, judgedSetIndexes) => {
+    const error = shapeIssuesAfter(MADCOW_5X5, (raw) => (raw.progression[0].judgedSetIndexes = judgedSetIndexes));
+    expect(error.issues.some((issue) => issue.startsWith('progression.0.judgedSetIndexes'))).toBe(true);
+  });
+
+  it('refuses a barbell flag that is not true or false', () => {
+    const error = shapeIssuesAfter(GZCLP, (raw) => {
+      (raw.lifts[0] as unknown as { barbell: string }).barbell = 'no';
+    });
+    expect(error.issues.some((issue) => issue.startsWith('lifts.0.barbell'))).toBe(true);
+  });
+
+  it('names the template and the set when judgedSetIndexes reads past the judged slot', () => {
+    const problems = problemsAfter(MADCOW_5X5, (copy) => (copy.progression[0].judgedSetIndexes = [5]));
+    expect(problems).toEqual([
+      `program template "madcow_5x5": progression rule 1 (squat) judgedSetIndexes reads set 5, but slot 'mon-squat' has 5 sets`,
+    ]);
+  });
 });
 
 describe('program template problems', () => {
@@ -281,12 +304,19 @@ function isHttpsUrl(text: string): boolean {
   return URL.canParse(text) && new URL(text).protocol === 'https:' && !/\s/.test(text);
 }
 
+const PUBLISHED_OLDER_VERSION_FILES = [
+  'five_three_one@1.yaml',
+  'gzclp@1.yaml',
+  'madcow_5x5@1.yaml',
+  'texas_method@1.yaml',
+];
+
 const shippedCases = SHIPPED_TEMPLATES.map((definition) => [definition.key, definition] as const);
 
 describe('catalog program templates', () => {
-  it('ships exactly the ten sourced templates, ordered by file name', () => {
+  it('ships exactly the ten sourced templates and their older published versions, ordered by file name', () => {
     const files = loadProgramTemplates().map((loaded) => loaded.file);
-    expect(files).toEqual(SHIPPED_TEMPLATES.map(fileOf).sort());
+    expect(files).toEqual([...SHIPPED_TEMPLATES.map(fileOf), ...PUBLISHED_OLDER_VERSION_FILES].sort());
   });
 
   it.each(shippedCases)('names every %s lift for people, never by its raw key', (_key, definition) => {
@@ -312,11 +342,11 @@ describe('catalog program templates', () => {
     expect(loaded?.definition).toEqual(definition);
   });
 
-  it.each(shippedCases)('locks %s@1 at the hash of its domain fixture', (key, definition) => {
+  it.each(shippedCases)('locks %s at the hash of its domain fixture', (key, definition) => {
     expect(readProgramTemplateLock()[`${key}@${definition.version}`]).toBe(programDefinitionHash(definition));
   });
 
-  it.each(shippedCases)('seeds %s version 1 with its domain fixture', (key, definition) => {
+  it.each(shippedCases)('seeds %s at its version with its domain fixture', (key, definition) => {
     expect(renderedDefinition(generateSeed(), key, definition.version, definition.name)).toEqual(definition);
   });
 
@@ -373,6 +403,42 @@ describe('loading program templates from a directory', () => {
     }
   });
 
+  it('loads an older published version from <key>@<version>.yaml beside the latest', () => {
+    const published = { ...structuredClone(MADCOW_5X5), version: 1 };
+    const latest = { ...structuredClone(MADCOW_5X5), version: 2 };
+    const loaded = loadProgramTemplates(directoryWith({ 'madcow_5x5.yaml': latest, 'madcow_5x5@1.yaml': published }));
+    expect(loaded).toEqual([
+      { file: 'madcow_5x5.yaml', definition: latest },
+      { file: 'madcow_5x5@1.yaml', definition: published },
+    ]);
+  });
+
+  it('refuses an older version file whose name does not match its key and version', () => {
+    const latest = { ...structuredClone(MADCOW_5X5), version: 3 };
+    const misnamed = { ...structuredClone(MADCOW_5X5), version: 2 };
+    try {
+      loadProgramTemplates(directoryWith({ 'madcow_5x5.yaml': latest, 'madcow_5x5@1.yaml': misnamed }));
+      expect.unreachable('a misnamed version loaded');
+    } catch (error) {
+      expect((error as CatalogValidationError).problems).toEqual([
+        `program template "madcow_5x5": key and version must equal the file name "madcow_5x5@1.yaml"`,
+      ]);
+    }
+  });
+
+  it('refuses an older version file that is not older than <key>.yaml', () => {
+    const latest = { ...structuredClone(MADCOW_5X5), version: 1 };
+    const newer = { ...structuredClone(MADCOW_5X5), version: 2 };
+    try {
+      loadProgramTemplates(directoryWith({ 'madcow_5x5.yaml': latest, 'madcow_5x5@2.yaml': newer }));
+      expect.unreachable('an older file newer than the latest loaded');
+    } catch (error) {
+      expect((error as CatalogValidationError).problems).toEqual([
+        `program template "madcow_5x5": madcow_5x5.yaml must hold the latest version, but madcow_5x5@2.yaml is not older`,
+      ]);
+    }
+  });
+
   it('throws a shape error naming the file when a template has the wrong shape', () => {
     const broken: Partial<ProgramDefinition> = asYaml(MADCOW_5X5);
     delete broken.schedule;
@@ -397,22 +463,22 @@ describe('program template seed rows', () => {
     const sql = renderProgramTemplates([template(MADCOW_5X5), template(FIVE_THREE_ONE)]);
     expect(sql.startsWith(PROGRAM_TEMPLATES_INSERT)).toBe(true);
     expect(sql.endsWith(PROGRAM_TEMPLATES_UPSERT)).toBe(true);
-    expect(renderedDefinition(sql, 'five_three_one', 1, '5/3/1')).toEqual(FIVE_THREE_ONE);
-    expect(renderedDefinition(sql, 'madcow_5x5', 1, 'Madcow 5x5')).toEqual(MADCOW_5X5);
+    expect(renderedDefinition(sql, 'five_three_one', FIVE_THREE_ONE.version, '5/3/1')).toEqual(FIVE_THREE_ONE);
+    expect(renderedDefinition(sql, 'madcow_5x5', MADCOW_5X5.version, 'Madcow 5x5')).toEqual(MADCOW_5X5);
   });
 
   it('renders the rows in key and version order whatever the input order', () => {
     const forwards = renderProgramTemplates([template(FIVE_THREE_ONE), template(MADCOW_5X5)]);
     const backwards = renderProgramTemplates([template(MADCOW_5X5), template(FIVE_THREE_ONE)]);
     expect(backwards).toBe(forwards);
-    expect(forwards.indexOf("('five_three_one', 1,")).toBeLessThan(forwards.indexOf("('madcow_5x5', 1,"));
+    expect(forwards.indexOf("('five_three_one', 2,")).toBeLessThan(forwards.indexOf("('madcow_5x5', 2,"));
   });
 
   it('escapes quotes in the name and in the definition', () => {
     const quoted = { ...structuredClone(FIVE_THREE_ONE), name: "Wendler's 5/3/1", source: ["Wendler's site"] };
     const sql = renderProgramTemplates([{ file: 'five_three_one.yaml', definition: quoted }]);
-    expect(sql).toContain(`('five_three_one', 1, 'Wendler''s 5/3/1', '`);
-    expect(renderedDefinition(sql, 'five_three_one', 1, "Wendler''s 5/3/1")).toEqual(quoted);
+    expect(sql).toContain(`('five_three_one', 2, 'Wendler''s 5/3/1', '`);
+    expect(renderedDefinition(sql, 'five_three_one', 2, "Wendler''s 5/3/1")).toEqual(quoted);
   });
 
   it('puts the catalog templates into the generated seed, inside its transaction', () => {
@@ -420,7 +486,7 @@ describe('program template seed rows', () => {
     const rows = renderProgramTemplates(loadProgramTemplates());
     expect(seed).toContain(rows);
     expect(seed.indexOf(rows)).toBeLessThan(seed.lastIndexOf('commit;'));
-    expect(renderedDefinition(seed, 'madcow_5x5', 1, 'Madcow 5x5')).toEqual(MADCOW_5X5);
+    expect(renderedDefinition(seed, 'madcow_5x5', MADCOW_5X5.version, 'Madcow 5x5')).toEqual(MADCOW_5X5);
   });
 
   it('generates the same template rows every time', () => {
@@ -480,21 +546,21 @@ describe('program template lock', () => {
     const changed = { ...structuredClone(FIVE_THREE_ONE), name: '5/3/1 revised' };
     const lock = lockFor([FIVE_THREE_ONE, MADCOW_5X5]);
     expect(programTemplateLockProblems([template(changed), template(MADCOW_5X5)], lock)).toEqual([
-      `program template "five_three_one@1" differs from its lock entry; publish the change as a new version`,
+      `program template "five_three_one@2" differs from its lock entry; publish the change as a new version`,
     ]);
   });
 
   it('refuses a template that is missing from the lock', () => {
     const lock = lockFor([FIVE_THREE_ONE]);
     expect(programTemplateLockProblems([template(FIVE_THREE_ONE), template(MADCOW_5X5)], lock)).toEqual([
-      `program template "madcow_5x5@1" is missing from the lock`,
+      `program template "madcow_5x5@2" is missing from the lock`,
     ]);
   });
 
   it('refuses a lock entry that has no template', () => {
     const lock = lockFor([FIVE_THREE_ONE, GZCLP]);
     expect(programTemplateLockProblems([template(FIVE_THREE_ONE)], lock)).toEqual([
-      `program template lock entry "gzclp@1" has no template`,
+      `program template lock entry "gzclp@2" has no template`,
     ]);
   });
 

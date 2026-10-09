@@ -75,6 +75,30 @@ describe('epley and predicted max reps', () => {
       }),
     );
   });
+
+  it('estimates the reps left that the rounded Epley e1RM was built from', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 80, max: 800 }).map((quarterKg) => quarterKg / 4),
+        fc.integer({ min: 1, max: 12 }),
+        fc.integer({ min: 1, max: 12 }),
+        (loadKg, repsToFailure, reps) => {
+          fc.pre(reps <= repsToFailure);
+          expect(estimateRir(loadKg, reps, epley(loadKg, repsToFailure))).toBe(repsToFailure - reps);
+        },
+      ),
+      { numRuns: 2000 },
+    );
+  });
+
+  it('estimates 1 RIR for 7 reps after 8 reps to failure at the same load', () => {
+    expect(estimateRir(43, 7, epley(43, 8))).toBe(1);
+  });
+
+  it('does not count an unrated set that only matches the rounded e1RM as beating its prediction', () => {
+    const [result] = runSets([aSet('bench', 43, 8, null)], knownStrength('bench', epley(43, 8)));
+    expect(result).toMatchObject({ rir: 0, rirSource: 'estimated', e1rmCandidateKg: null });
+  });
 });
 
 describe('intensity bonus', () => {
@@ -183,8 +207,8 @@ describe('effort resolution with a known e1RM', () => {
   });
 
   it('clamps logged RIR used for strength at 5', () => {
-    const [result] = runSets([aSet('bench', 50, 1, { type: 'rir', value: 10 })], knownStrength('bench', 100));
-    expect(result.e1rmCandidateKg).toBe(epley(50, 6));
+    const [result] = runSets([aSet('bench', 70, 1, { type: 'rir', value: 10 })], knownStrength('bench', 100));
+    expect(result).toMatchObject({ rirFlagged: false, e1rmCandidateKg: epley(70, 6) });
   });
 
   it('gives no estimate and no candidate for a zero load', () => {
@@ -270,7 +294,30 @@ describe('review regressions', () => {
     const [result] = runSets([aSet('bench', 60, 8, null)], {
       bench: { windowMax: null, fallbackMax: null, hasPriorSession: true },
     });
-    expect(result).toMatchObject({ rirSource: 'cold_start', xp: 0, e1rmCandidateKg: epley(60, 10) });
+    expect(result).toMatchObject({ rirSource: 'cold_start', xp: 10, e1rmCandidateKg: epley(60, 10) });
+  });
+
+  it('keeps paying cold-start XP for unrated sets too long to estimate an e1RM from', () => {
+    const sessions: SessionInput[] = [0, 1, 2].map((index) => ({
+      id: `high-reps-${index}`,
+      startedAt: new Date(Date.parse(sessionStart) + index * DAY_MS).toISOString(),
+      sets: [aSet('bench', 40, 11, null), aSet('bench', 40, 11, null)],
+    }));
+    const replay = replayHistory(sessions, catalog, TEST_BALANCE, freshUser);
+    expect(replay.sessions.map((entry) => entry.outputs.sets.map((result) => [result.rirSource, result.xp]))).toEqual(
+      Array.from({ length: 3 }, () => [
+        ['cold_start', 10],
+        ['cold_start', 10],
+      ]),
+    );
+  });
+
+  it('caps the cold-start XP after the baseline at 8 sets per exercise', () => {
+    const results = runSets(
+      Array.from({ length: 10 }, () => aSet('bench', 40, 11, null)),
+      { bench: { windowMax: null, fallbackMax: null, hasPriorSession: true } },
+    );
+    expect(results.map((result) => result.xp)).toEqual([10, 10, 10, 10, 10, 10, 10, 10, 0, 0]);
   });
 
   it('caps reps-capacity growth without float noise', () => {
@@ -312,11 +359,26 @@ describe('strength state at a session', () => {
   });
 
   it('lets fresh evidence replace a stale fallback within a session', () => {
-    const results = runSets([aSet('bench', 50, 5, hard), aSet('bench', 50, 5, null)], {
+    const results = runSets([aSet('bench', 80, 5, hard), aSet('bench', 50, 5, null)], {
       bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true },
     });
     expect(results[0].e1rmBeforeKg).toBe(100);
-    expect(results[1].e1rmBeforeKg).toBe(epley(50, 8));
+    expect(results[1].e1rmBeforeKg).toBe(epley(80, 8));
+  });
+
+  it('keeps a stale fallback when the only fresh evidence is a rejected effort claim', () => {
+    const results = runSets([aSet('bench', 40, 5, { type: 'rir', value: 2 }), aSet('bench', 60, 5, null)], {
+      bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true },
+    });
+    expect(results[0]).toMatchObject({ rirFlagged: true, e1rmCandidateKg: null });
+    expect(results[1]).toMatchObject({ e1rmBeforeKg: 100, xp: 0 });
+  });
+
+  it('builds strength from a rejected effort claim at the trusted RIR, not the claimed one', () => {
+    const [result] = runSets([aSet('bench', 75, 5, { type: 'rir', value: 2 })], {
+      bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true },
+    });
+    expect(result).toMatchObject({ rirFlagged: true, rirForXp: 3, e1rmCandidateKg: epley(75, 8) });
   });
 });
 

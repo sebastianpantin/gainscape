@@ -1,6 +1,6 @@
 import type { CardioEffortLevel, EffortLevel } from './types.ts';
 
-const BALANCE_VERSION = 6;
+const BALANCE_VERSION = 7;
 const XP_PER_EFFECTIVE_REP = 165;
 const EFFECTIVE_RIR_WINDOW = 5;
 

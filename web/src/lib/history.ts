@@ -83,9 +83,9 @@ export function editSession(
 
 export function deleteSession(
   userId: string,
-  sessionId: string,
+  payload: { sessionId: string; ifRevision: number },
   signal: AbortSignal,
   onRetry: (reason: string) => void,
 ): Promise<InvokeOutcome<DeleteSessionResponse>> {
-  return invokeAsOwnerWithRetries(userId, 'delete-session', { sessionId }, signal, onRetry);
+  return invokeAsOwnerWithRetries(userId, 'delete-session', payload, signal, onRetry);
 }

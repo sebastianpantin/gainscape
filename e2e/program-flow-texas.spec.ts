@@ -82,7 +82,7 @@ async function showDay(today: Locator, day: string): Promise<void> {
   await expect(today.getByRole('button', { name: `Start: ${TEXAS} — W2 ${day}`, exact: true })).toBeVisible();
 }
 
-test('Texas Method after a met W1 Friday (squat 150 + 2.5 = 152.5, bench 100 + 2.5 = 102.5) raises both 5RMs by 2.5: W2 Monday 5×5 at 152.5 × 0.9 = 137.25 → 137.5 and 102.5 × 0.9 = 92.25 → 92.5, Wednesday squat 137.5 × 0.8 = 110, Friday 152.5 + 2.5 = 155 and 102.5 + 2.5 = 105', async ({
+test('Texas Method after a met W1 Friday (squat 150 + 2.5 = 152.5, bench 100 + 2.5 = 102.5) raises both 5RMs by 2.5: W2 Monday 5×5 at 152.5 × 0.9 = 137.25 → 137.5 and 102.5 × 0.9 = 92.25 → 92.5, Wednesday squat 137.5 × 0.8 = 110, Friday 152.5 + 2.5 = 155 and 102.5 + 2.5 = 105, and the met Monday deadlift 180 + 2.5 = 182.5', async ({
   page,
 }) => {
   test.setTimeout(180_000);
@@ -90,7 +90,7 @@ test('Texas Method after a met W1 Friday (squat 150 + 2.5 = 152.5, bench 100 + 2
 
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('137.5 kg × 5 · 90%', 5));
   await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('92.5 kg × 5 · 90%', 5));
-  await expect(prescribedRows(today, 'Deadlift')).toHaveText(['180 kg × 5 · 100%']);
+  await expect(prescribedRows(today, 'Deadlift')).toHaveText(['182.5 kg × 5 · 100%']);
 
   await showDay(today, 'Day 2');
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('110 kg × 5 · 80%', 2));

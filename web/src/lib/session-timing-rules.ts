@@ -1,3 +1,5 @@
+import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
+
 export const SESSION_RPE_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 const MINUTE_MS = 60_000;
@@ -42,4 +44,9 @@ export function sessionTimingParts({ startedAt, endedAt, sessionRpe }: Remembere
   const duration = startedAt && endedAt ? formatSessionDuration(startedAt, endedAt) : null;
   const rpe = isSessionRpe(sessionRpe) ? `Session RPE ${sessionRpe}` : null;
   return [duration, rpe].filter((part) => part !== null);
+}
+
+export function finishedAtFor(startedAt: string, now: Date): string {
+  const started = Date.parse(startedAt);
+  return new Date(Math.min(Math.max(now.getTime(), started), started + MAX_SESSION_DURATION_MS)).toISOString();
 }

@@ -15,18 +15,27 @@ export function formatWeight(kg: number, unit: UnitPref): string {
 
 export const WEIGHT_INPUT_STEP = 0.5;
 
-const WEIGHT_STEPPER_STEP: Record<UnitPref, number> = { kg: 2.5, lb: 5 };
+export const WEIGHT_STEPPER_STEP: Record<UnitPref, number> = { kg: 2.5, lb: 5 };
 const STEP_SNAP_DECIMALS = 6;
 export const LOWEST_REPS = 1;
 export const HIGHEST_REPS = 100;
 
 export type StepDirection = 1 | -1;
 
-export function steppedWeight(shown: number, unit: UnitPref, direction: StepDirection, highest: number): number {
-  const step = WEIGHT_STEPPER_STEP[unit];
-  const stepsFromZero = roundTo(STEP_SNAP_DECIMALS, shown / step);
+export function steppedOnGrid(
+  value: number,
+  step: number,
+  direction: StepDirection,
+  lowest: number,
+  highest: number,
+): number {
+  const stepsFromZero = roundTo(STEP_SNAP_DECIMALS, value / step);
   const nextSteps = direction === 1 ? Math.floor(stepsFromZero) + 1 : Math.ceil(stepsFromZero) - 1;
-  return Math.min(highest, Math.max(0, nextSteps * step));
+  return Math.min(highest, Math.max(lowest, nextSteps * step));
+}
+
+export function steppedWeight(shown: number, unit: UnitPref, direction: StepDirection, highest: number): number {
+  return steppedOnGrid(shown, WEIGHT_STEPPER_STEP[unit], direction, 0, highest);
 }
 
 export function steppedReps(reps: number, direction: StepDirection): number {
@@ -106,4 +115,16 @@ export function wholeNumberWithin(raw: string, lowest: number, highest: number):
   const value = Number(raw);
   if (raw.trim() === '' || !Number.isInteger(value) || value < lowest || value > highest) return null;
   return value;
+}
+
+export function parsedDecimal(raw: string): number | null {
+  const trimmed = raw.trim();
+  const value = Number(trimmed.replaceAll(',', '.'));
+  return trimmed === '' || !Number.isFinite(value) ? null : value;
+}
+
+export function typedNumberWithin(raw: string, lowest: number, highest: number, wholeNumber: boolean): number | null {
+  const value = parsedDecimal(raw);
+  if (value === null) return null;
+  return Math.min(highest, Math.max(lowest, wholeNumber ? Math.round(value) : value));
 }

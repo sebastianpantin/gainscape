@@ -88,8 +88,19 @@ describe('Texas Method weekly progression (kg)', () => {
     expect(refOf(state, 'squat', 'fiveRm')).toBeCloseTo(152.5, 9);
   });
 
-  it('the deadlift working weight has no automatic progression: still 180 after a week', () => {
+  it('a met Monday deadlift adds 2.5 kg a week: 180 → 182.5, the next Monday 1×5 @ 182.5', () => {
     const { state } = followProgram(def, kg, factClock(), [{}, {}, {}]);
+    expect(refOf(state, 'deadlift', 'workingWeight')).toBeCloseTo(182.5, 9);
+    expect(weightsOf(resolveAt(def, kg, state, texasDay(2, 'mon')), 'mon-deadlift')).toEqual([182.5]);
+  });
+
+  it('a missed Monday deadlift holds 180 for the next week', () => {
+    const { state } = followProgram(def, kg, factClock(), [{ missedLifts: ['deadlift'] }, {}, {}]);
+    expect(refOf(state, 'deadlift', 'workingWeight')).toBe(180);
+  });
+
+  it('the deadlift does not move mid-week: after a met Monday it is still 180', () => {
+    const { state } = followProgram(def, kg, factClock(), [{}]);
     expect(refOf(state, 'deadlift', 'workingWeight')).toBe(180);
   });
 });
@@ -130,6 +141,11 @@ describe('Texas Method in lb (the sourced unit), squat 5RM 300 lb', () => {
     const { state } = followProgram(def, lb, factClock(), [{}, {}, {}]);
     expect(refOf(state, 'squat', 'fiveRm')).toBe(305);
     expect(weightsOf(resolveAt(def, lb, state, texasDay(2, 'mon')), 'mon-squat')[0]).toBe(275);
+  });
+
+  it('a met Monday deadlift adds 5 lb a week: 365 → 370', () => {
+    const { state } = followProgram(def, lb, factClock(), [{}, {}, {}]);
+    expect(refOf(state, 'deadlift', 'workingWeight')).toBe(370);
   });
 });
 

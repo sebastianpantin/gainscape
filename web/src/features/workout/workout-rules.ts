@@ -1,8 +1,18 @@
+import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
+import type { DraftSaveProblem } from '../../offline/draft-session.ts';
 
 const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
 const LONG_SYNC_WAIT_MS = 60_000;
 const MS_PER_SECOND = 1000;
+const WRONG_ACCOUNT_REASON = 'wrong_account';
+const MS_PER_HOUR = 3_600_000;
+const TIMING_REJECTION_TEXT: Readonly<Record<string, string>> = {
+  session_too_long: `This workout is longer than ${MAX_SESSION_DURATION_MS / MS_PER_HOUR} hours. Go back to editing and finish it again to save it.`,
+  session_in_future: "This workout's time is ahead of the server's clock. Check the date and time on this device.",
+  session_too_old:
+    "This workout starts before 1970, so this device's date was probably wrong. Fix the date and time, then discard this workout and log it again.",
+};
 
 export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
   if (lastProblem !== RATE_LIMITED_CODE) {
@@ -15,10 +25,24 @@ export function syncProblemText(lastProblem: string, waitMs: number | undefined)
 }
 
 export function stalledSyncText(reason: string): string {
+  if (reason === WRONG_ACCOUNT_REASON) {
+    return "You are signed in as someone else in another tab. Reload the app to save this workout. It's saved on this device.";
+  }
   return `The server keeps failing to save this workout (${reason}). It's saved on this device; try again later.`;
 }
 
+const DEVICE_SAVE_PROBLEM_TEXT: Readonly<Record<DraftSaveProblem, string>> = {
+  unreadable:
+    "Couldn't read saved workouts on this device. Reload the app to try again; new changes are still saved here.",
+  unsaved: "Couldn't save on this device",
+};
+
+export function deviceSaveProblemText(problem: DraftSaveProblem): string {
+  return DEVICE_SAVE_PROBLEM_TEXT[problem];
+}
+
 export function rejectionText(reason: string): string {
+  if (Object.hasOwn(TIMING_REJECTION_TEXT, reason)) return TIMING_REJECTION_TEXT[reason];
   return EXERCISE_CHANGED_REASONS.has(reason)
     ? 'Load type of an exercise changed; check the weights'
     : `The server rejected this workout: ${reason}`;

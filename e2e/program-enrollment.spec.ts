@@ -97,7 +97,7 @@ test('enroll in Madcow in kg, start W1 Day 1 with the ramp rows, finish and see 
   const enrollment = await activeEnrollmentOf(username);
   expect(enrollment).toMatchObject({
     template_key: 'madcow_5x5',
-    template_version: 1,
+    template_version: 2,
     unit: 'kg',
     options: { rampStep: 0.125 },
     inputs: {

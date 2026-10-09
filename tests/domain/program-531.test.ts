@@ -360,6 +360,35 @@ describe('5/3/1 cycle progression (kg)', () => {
     expect(deloadDay?.outcomes.squat ?? 'neutral').toBe('neutral');
   });
 
+  it('judges only the + set: logging just each week 1–3 + set at 5 reps over the minimum gives squat 140 → 145', () => {
+    const plusSetOnly = cycleSessions(factClock(), 1, {
+      lastSetReps: { 'squat@1': 10, 'squat@2': 8, 'squat@3': 6 },
+    }).map((fact) =>
+      fact.kind === 'session' && 'week' in fact.position && fact.position.week < 4
+        ? { ...fact, sets: fact.sets.filter((set) => set.prescription?.ref.endsWith(':2')) }
+        : fact,
+    );
+    expect(refOf(programStateAt(def, enrollment, plusSetOnly), 'squat', 'tm')).toBeCloseTo(145, 9);
+  });
+
+  it('a short ramp set is not judged: a 3-rep first set in week 1 (prescribed 5) still gives squat 140 → 145', () => {
+    const shortRampSet = cycleSessions(factClock(), 1).map((fact) =>
+      fact.kind === 'session' && 'week' in fact.position && fact.position.week === 1
+        ? { ...fact, sets: fact.sets.map((set, index) => (index === 0 ? { ...set, reps: 3 } : set)) }
+        : fact,
+    );
+    expect(refOf(programStateAt(def, enrollment, shortRampSet), 'squat', 'tm')).toBeCloseTo(145, 9);
+  });
+
+  it('a skipped + set is a miss: logging only the week 1 ramp sets resets squat 140 → 126', () => {
+    const rampSetsOnly = cycleSessions(factClock(), 1).map((fact) =>
+      fact.kind === 'session' && 'week' in fact.position && fact.position.week === 1 && fact.position.day === 'squat'
+        ? { ...fact, sets: fact.sets.filter((set) => !set.prescription?.ref.endsWith(':2')) }
+        : fact,
+    );
+    expect(refOf(programStateAt(def, enrollment, rampSetsOnly), 'squat', 'tm')).toBeCloseTo(126, 9);
+  });
+
   it('set_reference to 130 mid-cycle gives 135 at cycle end', () => {
     const clock = factClock();
     const facts = [

@@ -85,8 +85,12 @@ export function challengeVolumeSoFarKg(draft: WorkoutDraft): number {
   }, 0);
 }
 
-export function challengeVolumeText(draft: WorkoutDraft, targetKg: number): string {
-  return `Volume so far: ${formatXp(Math.round(challengeVolumeSoFarKg(draft)))} / ${formatXp(targetKg)} kg`;
+function volumeInUnit(kg: number, unit: WeightUnit): string {
+  return formatXp(Math.round(kgToUnit(kg, unit)));
+}
+
+export function challengeVolumeText(draft: WorkoutDraft, targetKg: number, unit: WeightUnit): string {
+  return `Volume so far: ${volumeInUnit(challengeVolumeSoFarKg(draft), unit)} / ${volumeInUnit(targetKg, unit)} ${unit}`;
 }
 
 export function exercisesWithoutE1rm(definition: ChallengeDefinition, strength: StrengthState): string[] {
@@ -108,7 +112,11 @@ function prescribedText(reps: number, pct: number | null, name: string): string 
   return pct === null ? `${name} ${reps} reps` : `${name} ${reps} reps at ${pct}% of your e1RM`;
 }
 
-export function challengeSummaryText(definition: ChallengeDefinition, nameOf: (exerciseId: string) => string): string {
+export function challengeSummaryText(
+  definition: ChallengeDefinition,
+  nameOf: (exerciseId: string) => string,
+  unit: WeightUnit,
+): string {
   if (definition.kind === 'prescription') {
     return definition.groups
       .map(
@@ -119,7 +127,7 @@ export function challengeSummaryText(definition: ChallengeDefinition, nameOf: (e
       )
       .join('; ');
   }
-  if (definition.metric === 'kg') return `Lift ${formatXp(definition.target)} kg in one workout`;
+  if (definition.metric === 'kg') return `Lift ${volumeInUnit(definition.target, unit)} ${unit} in one workout`;
   const exercise = definition.exerciseId === null ? 'any lift' : nameOf(definition.exerciseId);
   const load = mentionsE1rm(definition) ? ` at ${definition.minPct}% of your e1RM or more` : '';
   return `${formatXp(definition.target)} reps of ${exercise}${load}`;

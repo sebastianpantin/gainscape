@@ -19,12 +19,14 @@ import {
   fetchStrengthState,
 } from '../../lib/collection-data.ts';
 import { strengthText } from '../../lib/collection-rules.ts';
+import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
 import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
-import { fetchProfile, type Profile, updatePrivateProfile } from '../../lib/profile.ts';
+import { fetchProfile, type UnitPref } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
+import { finishedAtFor } from '../../lib/session-timing-rules.ts';
 import { REST_OFF, restClock, startsRest, stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
@@ -35,8 +37,8 @@ import { readPlateSettings } from '../../lib/plate-settings-store.ts';
 import { warmupPlan } from '../../lib/warmup-rules.ts';
 import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
-import { type CacheFirstLoad, isDeviceOffline } from '../../offline/cache-first.ts';
-import { profileCache, rememberSavedBodyweight } from '../../offline/profile-cache.ts';
+import { isDeviceOffline } from '../../offline/cache-first.ts';
+import { profileCache } from '../../offline/profile-cache.ts';
 import { formatXp } from '../../lib/format.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
 import {
@@ -87,6 +89,7 @@ import {
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
+import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
@@ -110,7 +113,14 @@ import { useRecentLiftSessions } from './use-recent-lift-sessions.ts';
 import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
 import { useWakeLock } from './use-wake-lock.ts';
-import { canFinishWorkout, finishPrompt, rejectionText, stalledSyncText, syncProblemText } from './workout-rules.ts';
+import {
+  canFinishWorkout,
+  deviceSaveProblemText,
+  finishPrompt,
+  rejectionText,
+  stalledSyncText,
+  syncProblemText,
+} from './workout-rules.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
 import { vibrateNewRecord } from './record-haptic.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
@@ -150,10 +160,11 @@ interface ChallengeBannerProps {
   draft: WorkoutDraft;
   challenge: DraftChallenge;
   exercises: readonly Exercise[];
+  unit: UnitPref;
   onDiscard: () => void;
 }
 
-function ChallengeBanner({ draft, challenge, exercises, onDiscard }: ChallengeBannerProps) {
+function ChallengeBanner({ draft, challenge, exercises, unit, onDiscard }: ChallengeBannerProps) {
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const nameOf = (exerciseId: string) =>
     exercises.find((exercise) => exercise.id === exerciseId)?.name ??
@@ -163,10 +174,10 @@ function ChallengeBanner({ draft, challenge, exercises, onDiscard }: ChallengeBa
   return (
     <section className="panel stack" aria-label="Challenge">
       <h2>Challenge: {challenge.name}</h2>
-      <span className="muted">{challengeSummaryText(definition, nameOf)}</span>
+      <span className="muted">{challengeSummaryText(definition, nameOf, unit)}</span>
       {definition.kind === 'volume' && definition.metric === 'kg' && (
         <p className="stack" style={{ gap: 2 }}>
-          <span>{challengeVolumeText(draft, definition.target)}</span>
+          <span>{challengeVolumeText(draft, definition.target, unit)}</span>
           <span className="muted tiny">Only the weight you load counts, never your bodyweight.</span>
         </p>
       )}
@@ -203,7 +214,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [finishPromptFor, setFinishPromptFor] = useState<WorkoutDraft | null>(null);
   const [startingDay, setStartingDay] = useState(false);
   const [startNotice, setStartNotice] = useState<string | null>(null);
-  const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
+  const [swappingKey, setSwappingKey] = useState<string | null>(null);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [focusSetId, setFocusSetId] = useState<string | null>(null);
   const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);
   const [loadedBaseline, setLoadedBaseline] = useState<SessionBaseline | null>(null);
@@ -223,11 +235,20 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const finishBar = useRef<HTMLDivElement>(null);
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
+  const draftSessionId = draft?.sessionId ?? null;
+  const [stateSessionId, setStateSessionId] = useState(draftSessionId);
+  if (stateSessionId !== draftSessionId) {
+    setStateSessionId(draftSessionId);
+    setFinishProblem(null);
+    setSwappingKey(null);
+    setFocusSetId(null);
+    setConfirmingDiscard(false);
+  }
   const liftExerciseIds =
     draft && !draft.finishedAt
       ? draft.exercises.flatMap((exercise) => (exercise.modality === 'lift' ? [exercise.exerciseId] : []))
       : [];
-  const recentSessions = useRecentLiftSessions(userId, liftExerciseIds, onlineSignal);
+  const recentSessions = useRecentLiftSessions(`${userId}/${draftSessionId}`, liftExerciseIds, onlineSignal);
   useWakeLock(keepAwake, draft !== null && !draft.finishedAt);
 
   useEffect(() => {
@@ -272,7 +293,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     return () => {
       active = false;
     };
-  }, [userId]);
+  }, [userId, draftSessionId]);
 
   const draftStartedAt = draft?.startedAt ?? null;
   useEffect(() => {
@@ -328,7 +349,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     markSynced,
     onSynced: (summary) => navigate('/reveal', { state: summary }),
     onSuperseded: (sessionId) => {
-      if (recallLastSummary()?.sessionId === sessionId) navigate('/reveal');
+      if (recallLastSummary(userId)?.sessionId === sessionId) navigate('/reveal');
       else void reload();
     },
     onDeleted: () => void reload('deleted'),
@@ -340,7 +361,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     <>
       {saveProblem && (
         <p className="problem" role="alert">
-          Couldn't save on this device
+          {deviceSaveProblemText(saveProblem)}
         </p>
       )}
       {store && <OtherAccountDraftNotice store={store} userId={userId} />}
@@ -490,12 +511,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           <BodyweightPrompt
             unit={unitPref}
             onSave={async (bodyweightKg) => {
-              await updatePrivateProfile(userId, { bodyweightKg });
-              rememberSavedBodyweight(deviceStorage(), userId, bodyweightKg);
-              queryClient.setQueryData<CacheFirstLoad<Profile>>(
-                ['profile', userId],
-                (current) => current && { ...current, loaded: { ...current.loaded, bodyweightKg } },
-              );
+              await saveBodyweight({ userId, bodyweightKg, storage: deviceStorage(), queryClient });
               setBodyweightKg(bodyweightKg);
               retryNow();
             }}
@@ -543,7 +559,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       changedNames = checked.changedNames;
       if (changedNames.length > 0) return checked.draft;
       const logged = markPlannedDone ? markPlannedSetsDone(checked.draft) : checked.draft;
-      return { ...logged, finishedAt: new Date().toISOString() };
+      return { ...logged, finishedAt: finishedAtFor(logged.startedAt, new Date()) };
     });
     if (changedNames.length > 0) setFinishProblem(`Load type of ${changedNames.join(', ')} changed; check the weights`);
     else rest.stop();
@@ -601,6 +617,15 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     if (celebrate && readTrainingDeviceSettings(deviceStorage(), userId).vibrate) vibrateNewRecord();
     changeDraft(next);
   };
+  const cardKeys = exerciseKeys(draft.exercises);
+  const removeExerciseAt = (exerciseIndex: number) => {
+    if (swappingKey === cardKeys[exerciseIndex]) setSwappingKey(null);
+    changeDraft(removeExercise(draft, exerciseIndex));
+  };
+  const discardWorkout = () => {
+    rest.stop();
+    discardDraft(draft.sessionId);
+  };
   const groups = supersetGroups(draft);
   const groupOfIndex = new Map(
     groups.flatMap((group) => group.exerciseIndexes.map((index) => [index, group] as const)),
@@ -618,9 +643,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     if (canSwapExercise(draft, exerciseIndex))
       actions.push({
         label: 'Swap',
-        onChoose: () => setSwappingIndex(swappingIndex === exerciseIndex ? null : exerciseIndex),
+        onChoose: () => setSwappingKey(swappingKey === cardKeys[exerciseIndex] ? null : cardKeys[exerciseIndex]),
       });
-    actions.push({ label: 'Remove', onChoose: () => changeDraft(removeExercise(draft, exerciseIndex)) });
+    actions.push({ label: 'Remove', onChoose: () => removeExerciseAt(exerciseIndex) });
     return actions;
   };
   const liftIntro = (exercise: LiftDraftExercise, exerciseIndex: number) => {
@@ -654,7 +679,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         {lastTime && <p className="muted tiny last-time">{lastTime}</p>}
         {advice && <p className="tiny progression-advice">{advice}</p>}
         {noteFor(exercise.exerciseId, exercise.name)}
-        {swappingIndex === exerciseIndex && canSwapExercise(draft, exerciseIndex) && (
+        {swappingKey === cardKeys[exerciseIndex] && canSwapExercise(draft, exerciseIndex) && (
           <ExercisePicker
             exercises={liftExercises}
             placeholder="Swap for…"
@@ -662,7 +687,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               if (!isLiftExercise(replacement)) return;
               const swapped = swapExercise(draft, exerciseIndex, replacement);
               if (swapped) changeDraft(swapped);
-              setSwappingIndex(null);
+              setSwappingKey(null);
             }}
           />
         )}
@@ -744,7 +769,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           draft={draft}
           challenge={draft.challenge}
           exercises={exercises}
-          onDiscard={() => discardDraft(draft.sessionId)}
+          unit={unitPref}
+          onDiscard={discardWorkout}
         />
       )}
       {startNotice && (
@@ -767,15 +793,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         if (exercise.modality === 'cardio') {
           const doneHere = exercise.sets.filter((set) => set.done).length;
           return (
-            <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
+            <section className="panel stack exercise-card" key={cardKeys[exerciseIndex]}>
               <header>
                 <h2>{exercise.name}</h2>
                 <span className="row">
-                  <button
-                    className="button link"
-                    type="button"
-                    onClick={() => changeDraft(removeExercise(draft, exerciseIndex))}
-                  >
+                  <button className="button link" type="button" onClick={() => removeExerciseAt(exerciseIndex)}>
                     Remove
                   </button>
                 </span>
@@ -821,7 +843,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               key={`superset-${group.id}`}
               exerciseNames={members.map(({ exercise: member }) => member.name)}
               members={members.map(({ index, exercise: member }) => (
-                <div className="stack superset-member" key={`${member.exerciseId}-${index}`}>
+                <div className="stack superset-member" key={cardKeys[index]}>
                   {liftIntro(member, index)}
                 </div>
               ))}
@@ -853,7 +875,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               )
             : [];
         return (
-          <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
+          <section className="panel stack exercise-card" key={cardKeys[exerciseIndex]}>
             {liftIntro(exercise, exerciseIndex)}
             {warmups.length > 0 && (
               <button
@@ -909,6 +931,22 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </button>
         <span className="muted tiny">~ and new records are previews, confirmed when the workout syncs.</span>
       </div>
+      {!draft.challenge && (
+        <button className="button link" type="button" onClick={() => setConfirmingDiscard(true)}>
+          Discard workout
+        </button>
+      )}
+      {confirmingDiscard && (
+        <ConfirmDialog
+          title="Discard this workout?"
+          confirmLabel="Discard workout"
+          danger
+          onConfirm={discardWorkout}
+          onCancel={() => setConfirmingDiscard(false)}
+        >
+          <p>Your logged sets will be lost.</p>
+        </ConfirmDialog>
+      )}
       {prompt && finishPromptFor === draft && (
         <ConfirmDialog
           title={prompt.title}

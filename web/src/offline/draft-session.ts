@@ -8,10 +8,12 @@ export type DraftNotice = 'saved_elsewhere' | 'deleted';
 export type WorkoutDraftState =
   { status: 'loading' } | { status: 'ready'; draft: WorkoutDraft | null; notice: DraftNotice | null };
 
+export type DraftSaveProblem = 'unreadable' | 'unsaved';
+
 export interface DraftSnapshot {
   state: WorkoutDraftState;
   store: DraftStore | null;
-  saveProblem: boolean;
+  saveProblem: DraftSaveProblem | null;
 }
 
 export type SyncedChange = 'synced' | 'deleted';
@@ -79,12 +81,13 @@ export function createDraftSession({
   onChange,
   requestPersistence,
 }: DraftSessionOptions): DraftSession {
-  let snapshot: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: false };
+  let snapshot: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: null };
   let active = true;
   let lastSeen = 0;
   const deletedSessionIds = new Set<string>();
   let chain: Promise<void> = Promise.resolve();
   let usingFallback = false;
+  let problemWhenSaved: DraftSaveProblem | null = null;
   let persistenceRequested = false;
 
   const publish = (changes: Partial<DraftSnapshot>) => {
@@ -108,6 +111,7 @@ export function createDraftSession({
     if (record) seen(record.updatedAt);
     if (record?.kind === 'draft') showDraft(record.draft);
     else if (record?.kind === 'synced' && deletedSessionIds.has(record.syncedSessionId)) showDraft(null, 'deleted');
+    else if (record?.kind === 'discarded') showDraft(null);
     else showDraft(null, noticeWhenGone);
   };
 
@@ -118,19 +122,22 @@ export function createDraftSession({
     return fallback;
   };
 
+  const markSaved = () => {
+    if (snapshot.saveProblem !== problemWhenSaved) publish({ saveProblem: problemWhenSaved });
+  };
+
   const runOnStore = async (task: (store: DraftStore) => Promise<void>) => {
     try {
       await task(snapshot.store!);
-      if (snapshot.saveProblem) publish({ saveProblem: false });
-      return;
+      return markSaved();
     } catch {
-      if (usingFallback) return publish({ saveProblem: true });
+      if (usingFallback) return publish({ saveProblem: 'unsaved' });
     }
     try {
       await task(switchToFallback());
-      if (snapshot.saveProblem) publish({ saveProblem: false });
+      markSaved();
     } catch {
-      publish({ saveProblem: true });
+      publish({ saveProblem: 'unsaved' });
     }
   };
 
@@ -146,7 +153,7 @@ export function createDraftSession({
   const load = async (store: DraftStore) => {
     const record = await store.get(userId);
     if (record) seen(record.updatedAt);
-    publish({ store });
+    publish({ store, saveProblem: problemWhenSaved });
     showDraft(record?.kind === 'draft' ? record.draft : null);
   };
 
@@ -157,11 +164,12 @@ export function createDraftSession({
       return;
     } catch {
       usingFallback = true;
+      problemWhenSaved = 'unreadable';
     }
     try {
       await load(fallbackStore());
     } catch {
-      publish({ saveProblem: true });
+      publish({ saveProblem: 'unsaved' });
       showDraft(null);
     }
   })();
@@ -214,6 +222,7 @@ export function createDraftSession({
     await enqueue(async (store) => {
       const record = await store.get(userId);
       if (record?.kind === 'draft') return adopt(record);
+      if (record) seen(record.updatedAt);
       changeDraft(fresh());
       startedFresh = true;
     });
@@ -224,8 +233,10 @@ export function createDraftSession({
     showDraft(null);
     const updatedAt = claimUpdatedAt();
     void enqueue(async (store) => {
-      await store.discard(userId, sessionId);
-      announce(sessionId, updatedAt, 'discarded');
+      await store.discard(userId, sessionId, updatedAt);
+      const record = await store.get(userId);
+      if (record) seen(record.updatedAt);
+      announce(sessionId, record?.updatedAt ?? updatedAt, 'discarded');
     });
   };
 

@@ -1,5 +1,5 @@
 key: texas_method
-version: 1
+version: 2
 name: Texas Method
 source:
   - https://www.liftosaur.com/programs/texasmethod
@@ -23,7 +23,7 @@ options:
     source:
       - https://www.liftosaur.com/programs/texasmethod
 conversions:
-  - { lb: 5, kg: 2.5, note: weekly increase of the Friday 5RM }
+  - { lb: 5, kg: 2.5, note: weekly increase of the Friday 5RM and the Monday deadlift }
 schedule:
   kind: weekly
   days:
@@ -77,6 +77,14 @@ progression:
     var: fiveRm
     trigger: endOfWeek
     judgedSlots: [fri-press]
+    onMet:
+      - { kind: increment, by: { kg: 2.5, lb: 5 } }
+    onMiss:
+      - { kind: hold }
+  - lift: deadlift
+    var: workingWeight
+    trigger: endOfWeek
+    judgedSlots: [mon-deadlift]
     onMet:
       - { kind: increment, by: { kg: 2.5, lb: 5 } }
     onMiss:

@@ -29,7 +29,7 @@ function intensityRule(lift: 'squat' | 'press'): ProgressionRule {
 
 export const TEXAS_METHOD: ProgramDefinition = {
   key: 'texas_method',
-  version: 1,
+  version: 2,
   name: 'Texas Method',
   source: [LIFTOSAUR_TEXAS, FITNESSVOLT_TEXAS],
   lifts: [
@@ -49,7 +49,7 @@ export const TEXAS_METHOD: ProgramDefinition = {
   options: [
     { key: 'pressLift', kind: 'choice', values: ['bench', 'ohp'], default: 'bench', source: [LIFTOSAUR_TEXAS] },
   ],
-  conversions: [{ lb: 5, kg: 2.5, note: 'weekly increase of the Friday 5RM' }],
+  conversions: [{ lb: 5, kg: 2.5, note: 'weekly increase of the Friday 5RM and the Monday deadlift' }],
   schedule: {
     kind: 'weekly',
     days: [
@@ -124,7 +124,18 @@ export const TEXAS_METHOD: ProgramDefinition = {
       },
     ],
   },
-  progression: [intensityRule('squat'), intensityRule('press')],
+  progression: [
+    intensityRule('squat'),
+    intensityRule('press'),
+    {
+      lift: 'deadlift',
+      var: 'workingWeight',
+      trigger: 'endOfWeek',
+      judgedSlots: ['mon-deadlift'],
+      onMet: [{ kind: 'increment', by: WEEKLY_INCREMENT }],
+      onMiss: [{ kind: 'hold' }],
+    },
+  ],
 };
 
 export interface TexasEnrollmentOverrides {

@@ -4,14 +4,14 @@ import { type Release, whatsNewDecision, whatsNewMayOpen } from '../../lib/chang
 import { openChannel } from '../../lib/channel.ts';
 import { readLastSeenRelease, saveLastSeenRelease } from '../../lib/last-seen-release-store.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
-import { openDraftStoreAndReconcile } from '../../offline/draft-boot.ts';
+import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
 import { DRAFT_CHANNEL_NAME } from '../../offline/draft-session.ts';
 import { hasDraftOnDevice } from '../../offline/local-drafts.ts';
 import { APP_VERSION, CHANGELOG } from './changelog-data.ts';
 
 async function draftOnDevice(userId: string): Promise<boolean> {
   try {
-    return await hasDraftOnDevice(await openDraftStoreAndReconcile(), deviceStorage(), userId);
+    return await hasDraftOnDevice(await openDraftStoreOrFallback(), deviceStorage(), userId);
   } catch {
     return true;
   }

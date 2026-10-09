@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canFinishWorkout,
+  deviceSaveProblemText,
   finishPrompt,
   rejectionText,
   stalledSyncText,
@@ -33,12 +34,36 @@ describe('stalledSyncText', () => {
       "The server keeps failing to save this workout (internal_error). It's saved on this device; try again later.",
     );
   });
+
+  it('asks to reload when another account is signed in', () => {
+    expect(stalledSyncText('wrong_account')).toBe(
+      "You are signed in as someone else in another tab. Reload the app to save this workout. It's saved on this device.",
+    );
+  });
 });
 
 describe('rejectionText', () => {
   it('asks to check the weights when an exercise changed under the workout', () => {
     for (const reason of ['bodyweight_load_not_zero', 'unknown_exercise'])
       expect(rejectionText(reason)).toBe('Load type of an exercise changed; check the weights');
+  });
+
+  it('explains a workout longer than the server accepts', () => {
+    expect(rejectionText('session_too_long')).toBe(
+      'This workout is longer than 12 hours. Go back to editing and finish it again to save it.',
+    );
+  });
+
+  it('asks to check the device clock when the workout is ahead of the server', () => {
+    expect(rejectionText('session_in_future')).toBe(
+      "This workout's time is ahead of the server's clock. Check the date and time on this device.",
+    );
+  });
+
+  it('blames the device date when the workout starts before 1970', () => {
+    expect(rejectionText('session_too_old')).toBe(
+      "This workout starts before 1970, so this device's date was probably wrong. Fix the date and time, then discard this workout and log it again.",
+    );
   });
 
   it('shows any other rejection reason', () => {
@@ -88,5 +113,17 @@ describe('canFinishWorkout', () => {
     expect(canFinishWorkout({ done: 1, planned: 1, leftToLifter: 1 })).toBe(true);
     expect(canFinishWorkout({ done: 0, planned: 1, leftToLifter: 1 })).toBe(false);
     expect(canFinishWorkout({ done: 0, planned: 0, leftToLifter: 0 })).toBe(false);
+  });
+});
+
+describe('deviceSaveProblemText', () => {
+  it('says saved workouts could not be read when the main store failed at boot', () => {
+    expect(deviceSaveProblemText('unreadable')).toBe(
+      "Couldn't read saved workouts on this device. Reload the app to try again; new changes are still saved here.",
+    );
+  });
+
+  it('says a change could not be saved when every store failed', () => {
+    expect(deviceSaveProblemText('unsaved')).toBe("Couldn't save on this device");
   });
 });

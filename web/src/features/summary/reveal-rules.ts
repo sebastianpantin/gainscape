@@ -85,3 +85,12 @@ export function challengeFailReason(
     ? 'Not every prescribed set reached its reps and load'
     : 'Volume target not reached';
 }
+
+export function unappliedChangesText(
+  summary: Pick<SessionSummary, 'historyOnly'> & { storedContentDiffers?: true },
+): string | null {
+  if (!summary.storedContentDiffers) return null;
+  const notApplied =
+    "This workout was already saved, and the saved version differs from this device's copy, so this copy was not applied.";
+  return summary.historyOnly ? notApplied : `${notApplied} Check it in History.`;
+}

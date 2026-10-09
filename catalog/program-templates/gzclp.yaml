@@ -1,5 +1,5 @@
 key: gzclp
-version: 1
+version: 2
 name: GZCLP
 source:
   - https://thefitness.wiki/routines/gzclp/
@@ -13,8 +13,8 @@ lifts:
   - { key: bench-t2, name: Bench press T2, category: upper }
   - { key: ohp-t2, name: Overhead press T2, category: upper }
   - { key: deadlift-t2, name: Deadlift T2, category: lower }
-  - { key: pulldown-t3, name: Lat pulldown T3, category: upper }
-  - { key: row-t3, name: Dumbbell row T3, category: upper }
+  - { key: pulldown-t3, name: Lat pulldown T3, category: upper, barbell: false }
+  - { key: row-t3, name: Dumbbell row T3, category: upper, barbell: false }
 inputs:
   - lifts: [squat-t1, bench-t1, ohp-t1, deadlift-t1, squat-t2, bench-t2, ohp-t2, deadlift-t2, pulldown-t3, row-t3]
     kinds: [workingWeight]

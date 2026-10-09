@@ -5,6 +5,7 @@ import {
   type ProgramState,
   type ReferenceVar,
   retestVarOf,
+  type WeightUnit,
 } from '@domain/index.ts';
 import { liftName, REFERENCE_VAR_LABELS, referenceValueProblem, shownReference } from './program-enroll-rules.ts';
 
@@ -12,6 +13,7 @@ export interface ReferenceField {
   lift: string;
   var: ReferenceVar;
   label: string;
+  unit: WeightUnit;
   value: number | null;
 }
 
@@ -46,6 +48,7 @@ export function referenceFields(
           lift,
           var: variable,
           label: `${liftName(definition, lift)} ${REFERENCE_VAR_LABELS[variable]} (${enrollment.unit})`,
+          unit: enrollment.unit,
           value: pending || value === undefined ? null : shownReference(value),
         },
       ];
@@ -62,7 +65,7 @@ export function referenceEvents(
   for (const field of fields) {
     const raw = edited[referenceFieldKey(field)];
     if (raw === undefined || (field.value === null && raw.trim() === '')) continue;
-    const problem = referenceValueProblem(field.label, raw);
+    const problem = referenceValueProblem(field.label, raw, field.unit);
     if (problem) {
       problems.push(problem);
       continue;

@@ -191,23 +191,23 @@ describe('previewSession', () => {
     expect(totalXp(previews)).toBeGreaterThan(0);
     expect(previews.map((sets) => sets.length)).toEqual([2, 1]);
   });
-  it('pays no cold-start XP for an exercise trained before without an e1RM', () => {
+  it('pays cold-start XP for an exercise trained before without an e1RM', () => {
     const previews = previewSession(
       [exercise('curl', [draftSet(20, 15, null)])],
       builtIn,
       strengthOf([['curl', null]]),
     );
-    expect(previews[0][0].xp).toBe(0);
+    expect(previews[0][0]).toEqual({ basis: 'unrated', xp: DEFAULT_BALANCE.coldStartXpPerSet, rir: null });
   });
 
   it('estimates from the session best when only an expired e1RM is known', () => {
     const strength = { bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true } };
     const previews = previewSession(
-      [exercise('bench', [draftSet(50, 5, { type: 'level', level: 'hard' }), draftSet(50, 5, null)])],
+      [exercise('bench', [draftSet(80, 5, { type: 'level', level: 'hard' }), draftSet(80, 5, null)])],
       builtIn,
       strength,
     );
-    expect(previews[0][1]).toMatchObject({ basis: 'estimated', rir: 3 });
+    expect(previews[0][1]).toMatchObject({ basis: 'estimated', rir: 2 });
   });
 
   it('adds bodyweight to a weighted bodyweight exercise', () => {
@@ -450,6 +450,11 @@ describe('preview labels', () => {
   it('notes a warm-up preview as a warm-up', () => {
     expect(previewXpLabel({ xp: 0, basis: 'warmup', rir: null })).toBe('~0');
     expect(previewNote({ xp: 0, basis: 'warmup', rir: null })).toBe('warm-up');
+  });
+
+  it('shows the flat XP of an unrated set that has no estimate and notes it as unrated', () => {
+    expect(previewXpLabel({ xp: 165, basis: 'unrated', rir: null })).toBe('~165');
+    expect(previewNote({ xp: 165, basis: 'unrated', rir: null })).toBe('unrated');
   });
 
   it('notes estimated, first-time and unknown previews', () => {

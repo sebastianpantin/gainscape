@@ -9,11 +9,12 @@ POST endpoint that permanently deletes the caller's account after they confirm t
 
 ## Key Files
 
-| File        | Description                                                                                                                                                                                                                                               |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`  | Handler via `serveAuthenticated`; strict body `{ confirmUsername, password }` (400 `invalid_json`, 422 `invalid_payload`); bucket `delete_account_hour`; 403 `confirmation_mismatch` and `wrong_password`; password verified with a throwaway anon client |
-| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                                                                       |
-| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                                                                            |
+| File                | Description                                                                                                                                                                                                                                                                                                |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`          | Handler via `serveAuthenticated`; strict body `{ confirmUsername, password }` (400 `invalid_json`, 422 `invalid_payload`); bucket `delete_account_hour`; 403 `confirmation_mismatch` and `wrong_password`; password verified with a throwaway anon client, its result read by `passwordMatchesAfterSignIn` |
+| `password-check.ts` | `passwordMatchesAfterSignIn(error, signedIn)`: only GoTrue `invalid_credentials` means a wrong password; a GoTrue 429 becomes 429 `auth_rate_limited`, any other error (5xx, network) is logged and becomes 503 `auth_unavailable`. Unit-tested in `tests/deploy/delete-account-password.test.ts`          |
+| `deno.json`         | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                                                                                                                        |
+| `deno.lock`         | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                                                                                                                             |
 
 ## For AI Agents
 
@@ -24,7 +25,7 @@ POST endpoint that permanently deletes the caller's account after they confirm t
 
 ### Testing Requirements
 
-`tests/integration/account.test.ts` and `supabase/tests/07_account_deletion.test.sql`. Stack required.
+`tests/integration/account.test.ts` and `supabase/tests/07_account_deletion.test.sql` (stack required); `tests/deploy/delete-account-password.test.ts` for `password-check.ts` (no stack).
 
 ### Common Patterns
 

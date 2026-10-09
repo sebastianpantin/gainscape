@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { openDraftStore } from '../../web/src/offline/draft-boot.ts';
-import { draftRecord, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
+import { discardedRecord, draftRecord, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import {
   createIdbDraftStore,
   type DraftStore,
@@ -87,10 +87,41 @@ export function describeDraftStoreContract(name: string, createHarness: () => Pr
     it('keeps the record when discard names another session', async () => {
       const { store } = await createHarness();
       await store.put(userId, 10, workout('session-a'));
-      await store.discard(userId, 'session-b');
-      expect(await store.get(userId)).not.toBeNull();
-      await store.discard(userId, 'session-a');
+      await store.discard(userId, 'session-b', 11);
+      expect(await store.get(userId)).toEqual(draftRecord(userId, 10, workout('session-a')));
+      await store.discard(userId, 'session-a', 12);
+      expect(await store.get(userId)).toMatchObject({ kind: 'discarded', discardedSessionId: 'session-a' });
+      expect(await store.userIdsWithDrafts()).toEqual([]);
+    });
+
+    it('refuses a late write of a discarded session but lets a new session start', async () => {
+      const { store } = await createHarness();
+      await store.put(userId, 10, workout('session-a', finished));
+      await store.discard(userId, 'session-a', 11);
+      expect(await store.put(userId, 50, workout('session-a', finished))).toBe('discarded');
+      expect(await store.get(userId)).toEqual(discardedRecord(userId, 11, 'session-a'));
+      expect(await store.put(userId, 12, workout('session-b'))).toBe('written');
+      expect(await store.get(userId)).toEqual(draftRecord(userId, 12, workout('session-b')));
+    });
+
+    it('stamps a discard after the stored record even when the claimed time is older', async () => {
+      const { store } = await createHarness();
+      await store.put(userId, 20, workout('session-a'));
+      await store.discard(userId, 'session-a', 5);
+      expect(await store.get(userId)).toEqual(discardedRecord(userId, 21, 'session-a'));
+    });
+
+    it('forgets the record of the user outright, draft or tombstone, and keeps other users', async () => {
+      const { store } = await createHarness();
+      await store.put(userId, 10, workout('session-a'));
+      await store.put(otherUserId, 10, workout('session-b'));
+      await store.forget(userId);
       expect(await store.get(userId)).toBeNull();
+      expect(await store.userIdsWithDrafts()).toEqual([otherUserId]);
+      await store.discard(otherUserId, 'session-b', 11);
+      await store.forget(otherUserId);
+      expect(await store.get(otherUserId)).toBeNull();
+      await expect(store.forget(userId)).resolves.toBeUndefined();
     });
 
     it('deletes v1 drafts at boot without migrating them', async () => {
@@ -107,7 +138,7 @@ export function describeDraftStoreContract(name: string, createHarness: () => Pr
     it('reconciles the fallback record at boot', async () => {
       const { storage, indexedDB } = await createHarness();
       const fallbackKey = fallbackKeyFor(userId);
-      const fallback = draftRecord(userId, 30, workout('from-fallback'));
+      const fallback = draftRecord(userId, 30, workout('session-a', finished));
       storage.setItem(fallbackKey, JSON.stringify(fallback));
 
       if (!indexedDB) {
@@ -119,9 +150,12 @@ export function describeDraftStoreContract(name: string, createHarness: () => Pr
 
       const database = await openDraftDatabase(indexedDB);
       const direct = createIdbDraftStore(database!);
-      await direct.put(userId, 20, workout('from-idb'));
+      await direct.put(userId, 20, workout('session-a'));
       await direct.put(otherUserId, 50, workout('other-from-idb'));
-      storage.setItem(fallbackKeyFor(otherUserId), JSON.stringify(draftRecord(otherUserId, 40, workout('older'))));
+      storage.setItem(
+        fallbackKeyFor(otherUserId),
+        JSON.stringify(draftRecord(otherUserId, 40, workout('other-from-idb'))),
+      );
 
       const booted = await openDraftStore({ indexedDB, storage });
       expect(await booted.get(userId)).toEqual(fallback);

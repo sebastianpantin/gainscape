@@ -1,5 +1,5 @@
 import { CONTROL_CHARACTER } from './names.ts';
-import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, unitToKg } from './units.ts';
+import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, parsedDecimal, unitToKg } from './units.ts';
 
 export const UNIT_PREFS = ['kg', 'lb'] as const;
 export const EFFORT_INPUT_MODES = ['level', 'rir', 'rpe'] as const;
@@ -140,10 +140,14 @@ export function bodyweightRangeInUnit(unit: UnitPref): { lowest: number; highest
   };
 }
 
+export function bodyweightKgFromInput(raw: string, unit: UnitPref): number | null {
+  if (raw.trim() === '') return null;
+  return unitToKg(parsedDecimal(raw) ?? Number.NaN, unit);
+}
+
 export function bodyweightInUnitProblem(raw: string, unit: UnitPref): string | null {
-  const value = optionalNumber(raw);
-  if (value === null) return null;
-  const kg = unitToKg(value, unit);
+  const kg = bodyweightKgFromInput(raw, unit);
+  if (kg === null) return null;
   if (!Number.isFinite(kg) || kg < LOWEST_BODYWEIGHT_KG || kg > HIGHEST_BODYWEIGHT_KG) {
     const { lowest, highest } = bodyweightRangeInUnit(unit);
     return `Bodyweight must be between ${lowest} and ${highest} ${unit}.`;

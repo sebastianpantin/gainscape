@@ -100,6 +100,19 @@ describe('startFinishRetries', () => {
     retries.stop();
   });
 
+  it('stalls with a Retry instead of settling when another account is signed in', async () => {
+    const { attemptOnce, statuses, settled, retries } = loopWith([
+      { kind: 'sent', outcome: { kind: 'wrong_account' } },
+    ]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(statuses.at(-1)).toEqual({ kind: 'stalled', reason: 'wrong_account' });
+    retries.onOnline();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(attemptOnce).toHaveBeenCalledTimes(1);
+    expect(settled).toEqual([]);
+    retries.stop();
+  });
+
   it('stops retrying once stopped', async () => {
     const { attemptOnce, retries } = loopWith([rateLimited]);
     await vi.advanceTimersByTimeAsync(0);

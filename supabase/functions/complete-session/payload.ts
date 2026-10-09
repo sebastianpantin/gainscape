@@ -1,7 +1,13 @@
 import { z } from 'npm:zod@4.6.5';
 import { implausibleTiming, isRecord, MAX_SETS_PER_SESSION, storableSnapshot } from '../_shared/domain/index.ts';
 import { HttpError } from '../_shared/http.ts';
-import { assertDistinctSetIdsAndPositions, lowerUuid, parseOr422, setSchema } from '../_shared/session-payload.ts';
+import {
+  assertDistinctSetIdsAndPositions,
+  lowerUuid,
+  parseOr422,
+  sessionNotes,
+  setSchema,
+} from '../_shared/session-payload.ts';
 
 const programLinkSchema = z.object({ enrollmentId: lowerUuid, position: z.record(z.string(), z.unknown()) }).strict();
 
@@ -38,7 +44,7 @@ const sessionSchema = z.object({
   id: lowerUuid,
   startedAt: z.iso.datetime({ offset: true }).transform(toMillisecondIsoString),
   endedAt: z.iso.datetime({ offset: true }).transform(toMillisecondIsoString),
-  notes: z.string().max(2000).nullable().default(null),
+  notes: sessionNotes.nullable().default(null),
   sessionRpe: z.number().int().min(1).max(10).nullable().default(null),
   programDayId: lowerUuid.nullable().default(null),
   program: z.unknown().default(null).transform(programLinkOrNull),

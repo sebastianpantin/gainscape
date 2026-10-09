@@ -52,8 +52,8 @@ function rirFloorFromLaterSets(
         freshRepsAtCheckedLoad - checked.set.reps - cfg.fatigueToleranceReps + FLOAT_TOLERANCE,
       );
       floor = Math.max(floor, impliedRir);
+      fatigueSinceChecked *= fatigueAfterSet(claimedRir(later, cfg), cfg);
     }
-    fatigueSinceChecked *= fatigueAfterSet(claimedRir(later, cfg), cfg);
   }
   return floor;
 }

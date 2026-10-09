@@ -2,6 +2,7 @@ import { evaluateNumber } from '@domain/program-definition.ts';
 import {
   DEFAULT_ROUNDING,
   type InputKind,
+  MAX_REFERENCE_VALUE,
   type OptionDecl,
   type OptionValue,
   parseProgramDefinition,
@@ -76,8 +77,6 @@ export interface EnrollProgramPayload {
 
 export type EnrollPayloadResult =
   { kind: 'ok'; payload: EnrollProgramPayload } | { kind: 'invalid'; problems: string[] };
-
-const MAX_REFERENCE_VALUE = 1000;
 
 const SHOWN_REFERENCE_DECIMALS = 2;
 
@@ -155,12 +154,13 @@ export function liftName(definition: ProgramDefinition, lift: string): string {
   return definition.lifts.find((candidate) => candidate.key === lift)?.name ?? lift;
 }
 
-export function referenceValueProblem(label: string, raw: string | undefined): string | null {
+export function referenceValueProblem(label: string, raw: string | undefined, unit: WeightUnit): string | null {
+  const max = MAX_REFERENCE_VALUE[unit];
   const parsed = parsedNumber(
     label,
     raw ?? '',
-    (value) => value > 0 && value <= MAX_REFERENCE_VALUE,
-    `must be above 0 and at most ${MAX_REFERENCE_VALUE}`,
+    (value) => value > 0 && value <= max,
+    `must be above 0 and at most ${max}`,
   );
   return parsed.kind === 'problem' ? parsed.problem : null;
 }
@@ -428,7 +428,7 @@ export function enrollPayload(definition: ProgramDefinition, form: EnrollForm): 
   const inputs: Record<string, Partial<Record<InputKind, number>>> = {};
   for (const field of inputFields(definition, form)) {
     const raw = form.inputValues[field.lift];
-    const problem = referenceValueProblem(field.label, raw);
+    const problem = referenceValueProblem(field.label, raw, form.unit);
     if (problem) problems.push(problem);
     else inputs[field.lift] = { [field.kind]: Number((raw ?? '').trim()) };
   }

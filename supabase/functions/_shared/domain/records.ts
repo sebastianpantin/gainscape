@@ -60,6 +60,13 @@ function applyRepMaxSet(
       next[reps - 1] = { ...slot, exactSetId: set.id };
     }
   }
+  for (let reps = Math.min(set.reps, REP_MAX_SLOT_COUNT) - 1; reps >= 1; reps--) {
+    const slot = next[reps - 1];
+    const higherRepSlot = next[reps];
+    if (slot && higherRepSlot && slot.loadKg < higherRepSlot.loadKg) {
+      next[reps - 1] = { ...higherRepSlot, exactSetId: slot.exactSetId };
+    }
+  }
   return { slots: next, improvedReps };
 }
 

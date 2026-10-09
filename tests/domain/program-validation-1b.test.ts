@@ -11,6 +11,7 @@ import { FULL_PRIMITIVES } from './program-fixtures/full_primitives.ts';
 import { GZCLP } from './program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2 } from './program-fixtures/juggernaut_2.ts';
 import { LINEAR_AFTER_SESSION } from './program-fixtures/linear_after_session.ts';
+import { MADCOW_5X5 } from './program-fixtures/madcow_5x5.ts';
 import { NSUNS_5DAY } from './program-fixtures/nsuns_5day.ts';
 import { broken } from './program-fixtures/prescription-helpers.ts';
 import { RPE_TOP_SET } from './program-fixtures/rpe_top_set.ts';
@@ -158,6 +159,23 @@ describe('validateProgramDefinition rejects a setIndex outside the judged slot',
   it('e1rmFromSet setIndex 1 on the 1-set RPE top', () => {
     const definition = broken(RPE_TOP_SET, (copy) => onlyAdjustment(copy, 0, { kind: 'e1rmFromSet', setIndex: 1 }));
     errorsMention(definition, 'setIndex', '1');
+  });
+});
+
+describe('validateProgramDefinition rejects judgedSetIndexes that judge nothing', () => {
+  it('judgedSetIndexes 4 on the 4-set Wednesday deadlift', () => {
+    const definition = broken(MADCOW_5X5, (copy) => {
+      const rule = copy.progression.find((candidate) => candidate.lift === 'deadlift');
+      if (rule) rule.judgedSetIndexes = [4];
+    });
+    errorsMention(definition, 'judgedSetIndexes', '4', 'wed-deadlift', '4 sets');
+  });
+
+  it('an empty judgedSetIndexes list', () => {
+    const definition = broken(MADCOW_5X5, (copy) => {
+      copy.progression[0].judgedSetIndexes = [];
+    });
+    errorsMention(definition, 'judgedSetIndexes', 'no set');
   });
 });
 
