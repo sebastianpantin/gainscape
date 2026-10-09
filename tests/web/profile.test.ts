@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ageFrom,
   bodyweightInUnitProblem,
+  bodyweightKgFromInput,
   bodyweightRangeInUnit,
   feetAndInchesProblem,
   heightInCm,
@@ -109,6 +110,13 @@ describe('edit profile inputs', () => {
     expect(bodyweightInUnitProblem('heavy', 'kg')).toBe('Bodyweight must be between 20 and 400 kg.');
     expect(bodyweightInUnitProblem('45', 'lb')).toBeNull();
     expect(bodyweightInUnitProblem('44', 'lb')).toBe('Bodyweight must be between 45 and 881 lb.');
+  });
+
+  it('reads a comma as the decimal point of a bodyweight', () => {
+    expect(bodyweightInUnitProblem('80,5', 'kg')).toBeNull();
+    expect(bodyweightInUnitProblem('80,5,1', 'kg')).toBe('Bodyweight must be between 20 and 400 kg.');
+    expect(bodyweightKgFromInput('80,5', 'kg')).toBe(80.5);
+    expect(bodyweightKgFromInput(' ', 'kg')).toBeNull();
   });
 
   it('nudges bodyweight by one step of the chosen unit and keeps it in range', () => {
