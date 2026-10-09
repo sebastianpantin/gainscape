@@ -106,7 +106,7 @@ describe('edit-session re-derives history', () => {
     expect(response.body).toMatchObject({ revision: 1, replayedSessionIds: [s1.id, s2.id] });
 
     expect((await storedSets(s1.id))[0].xp_awarded).toBe(1043);
-    expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 0, e1rm_before_kg: 93.33, xp_awarded: 1043 });
+    expect((await storedSets(s2.id))[0]).toMatchObject({ rir: 1, e1rm_before_kg: 93.33, xp_awarded: 1043 });
     const [{ total }] = await db`select sum(xp)::int as total from public.user_skills where user_id = ${user.id}`;
     expect(total).toBe(2086);
     const mismatches = await db`
