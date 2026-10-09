@@ -132,7 +132,7 @@ The web app never goes live before its migrations.
 
 Migration 032 adds the check `scrolls_grant_a_challenge` as `not valid`, so existing scroll rows keep a null `grants_challenge_id` until the catalog seed runs. `make deploy` pushes the seed together with the migrations; if you ever push 032 another way, run the seed right after it.
 
-After a `BALANCE_VERSION` bump, run `make rebuild-caches-hosted` right after the deploy.
+After a `BALANCE_VERSION` bump, run `make rebuild-caches-hosted` right after the deploy. It rebuilds only users with sessions behind the new version, 10 per request and 4 requests at a time; `make rebuild-caches-hosted ALL=1` rebuilds every user with data. A run that ends with `users still need a rebuild` saw sessions go stale behind it (an older function was still writing); run it again. A failed batch names the user in `rebuild_failed`; the users before it stay rebuilt, so a rerun picks up where it stopped. Once `sessions` holds millions of rows, build migration 033's index by hand with `create index concurrently if not exists sessions_by_user_derived_version on public.sessions (user_id, derived_balance_version) where not history_only;` before the deploy, because the migration's plain `create index` blocks session writes while it builds; the migration then does nothing.
 
 ## Testers
 
@@ -194,7 +194,7 @@ Afterwards, check the Supabase auth and API logs, and the Cloudflare audit log, 
 - **Email change.** As a test tester, try changing the email under Settings and note what happens (see "Testers").
 - **Password change.** A direct `PUT /auth/v1/user` with a new password and an access token from a sign-in more than a day old must be refused (Secure password change). The app always signs in again before changing the password, so its own form keeps working.
 - **Client IP.** Find the client IP header Supabase's own proxy appends, and set `private.client_ip_config` (`header_name`, `trusted_hops_from_right`) so the rightmost trusted hop is the real client. Check it with a request that sends a forged `X-Forwarded-For`: the anonymous username-check bucket must not follow the forged value.
-- **Secret key.** Run `make rebuild-caches-hosted`. It must rebuild every user. A 403 `secret_key_required` means `deploy.env` does not hold the key the Edge Functions see as `default`.
+- **Secret key.** Run `make rebuild-caches-hosted ALL=1`. It must rebuild every user with data. A 403 `secret_key_required` means `deploy.env` does not hold the key the Edge Functions see as `default`.
 - **JWT signing keys.** If the project switches to asymmetric JWT signing keys, check again that the signed-in functions (`verify_jwt = true`) still accept user tokens: log a workout.
 - **Legacy keys are off.** After disabling them, a request with the old `anon` JWT as `apikey` is refused, and the app still works.
 - **Security advisor.** Run it and fix its findings.
