@@ -46,7 +46,8 @@ async function fetchCollectionRows(userId: string): Promise<CollectionRows> {
       .select(COLLECTION_COLUMNS.pins)
       .eq('user_id', userId)
       .order('position')
-      .order('created_at'),
+      .order('created_at')
+      .order('exercise_id'),
     supabase.from('cardio_records').select(COLLECTION_COLUMNS.cardioRecords).eq('user_id', userId),
   ]);
   for (const result of [repMaxes, bodyweightRecords, strengths, pins, cardioRecords])
