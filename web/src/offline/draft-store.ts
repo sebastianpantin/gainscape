@@ -1,13 +1,13 @@
 import {
+  discardedRecord,
   draftRecord,
   parseStoredDraft,
   type StoredDraft,
-  storedSessionId,
   syncedRecord,
   type WorkoutDraft,
 } from './draft-format.ts';
 
-export type PutResult = 'written' | 'stale' | 'synced' | 'refused_reopen';
+export type PutResult = 'written' | 'stale' | 'synced' | 'discarded' | 'refused_reopen';
 
 export interface PutOptions {
   reopen?: boolean;
@@ -17,7 +17,7 @@ export interface DraftStore {
   get(userId: string): Promise<StoredDraft | null>;
   put(userId: string, updatedAt: number, draft: WorkoutDraft, options?: PutOptions): Promise<PutResult>;
   markSynced(userId: string, sessionId: string, updatedAt: number): Promise<void>;
-  discard(userId: string, sessionId: string): Promise<void>;
+  discard(userId: string, sessionId: string, updatedAt: number): Promise<void>;
   userIdsWithDrafts(): Promise<string[]>;
 }
 
@@ -34,6 +34,7 @@ function decidePut(
   options: PutOptions | undefined,
 ): PutResult {
   if (stored?.kind === 'synced' && stored.syncedSessionId === draft.sessionId) return 'synced';
+  if (stored?.kind === 'discarded' && stored.discardedSessionId === draft.sessionId) return 'discarded';
   const reopening =
     stored?.kind === 'draft' &&
     stored.draft.sessionId === draft.sessionId &&
@@ -44,13 +45,17 @@ function decidePut(
   return 'written';
 }
 
-function tombstoneFor(stored: StoredDraft | null, userId: string, sessionId: string, updatedAt: number) {
-  if (stored?.kind !== 'draft' || stored.draft.sessionId !== sessionId) return null;
-  return syncedRecord(userId, Math.max(updatedAt, stored.updatedAt + 1), sessionId);
-}
+type Tombstone = typeof syncedRecord | typeof discardedRecord;
 
-function matchesSession(stored: StoredDraft | null, sessionId: string): boolean {
-  return stored !== null && storedSessionId(stored) === sessionId;
+function tombstoneFor(
+  tombstone: Tombstone,
+  stored: StoredDraft | null,
+  userId: string,
+  sessionId: string,
+  updatedAt: number,
+) {
+  if (stored?.kind !== 'draft' || stored.draft.sessionId !== sessionId) return null;
+  return tombstone(userId, Math.max(updatedAt, stored.updatedAt + 1), sessionId);
 }
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
@@ -117,6 +122,12 @@ export function createIdbDraftStore(database: IDBDatabase): DraftStore {
     return result;
   };
 
+  const writeTombstone = (tombstone: Tombstone, userId: string, sessionId: string, updatedAt: number) =>
+    inTransaction('readwrite', async (objectStore) => {
+      const record = tombstoneFor(tombstone, await readStored(objectStore, userId), userId, sessionId, updatedAt);
+      if (record) objectStore.put(record);
+    });
+
   return {
     get: (userId) => inTransaction('readonly', (objectStore) => readStored(objectStore, userId)),
     put: (userId, updatedAt, draft, options) =>
@@ -125,15 +136,8 @@ export function createIdbDraftStore(database: IDBDatabase): DraftStore {
         if (result === 'written') objectStore.put(draftRecord(userId, updatedAt, draft));
         return result;
       }),
-    markSynced: (userId, sessionId, updatedAt) =>
-      inTransaction('readwrite', async (objectStore) => {
-        const tombstone = tombstoneFor(await readStored(objectStore, userId), userId, sessionId, updatedAt);
-        if (tombstone) objectStore.put(tombstone);
-      }),
-    discard: (userId, sessionId) =>
-      inTransaction('readwrite', async (objectStore) => {
-        if (matchesSession(await readStored(objectStore, userId), sessionId)) objectStore.delete(userId);
-      }),
+    markSynced: (userId, sessionId, updatedAt) => writeTombstone(syncedRecord, userId, sessionId, updatedAt),
+    discard: (userId, sessionId, updatedAt) => writeTombstone(discardedRecord, userId, sessionId, updatedAt),
     userIdsWithDrafts: () =>
       inTransaction('readonly', async (objectStore) => {
         const records: unknown[] = await requestResult(objectStore.getAll());
@@ -161,6 +165,10 @@ export function readFallbackRecord(storage: Storage, userId: string): StoredDraf
 
 export function createLocalDraftStore(storage: Storage): DraftStore {
   const write = (record: StoredDraft) => storage.setItem(fallbackKeyFor(record.userId), JSON.stringify(record));
+  const writeTombstone = async (tombstone: Tombstone, userId: string, sessionId: string, updatedAt: number) => {
+    const record = tombstoneFor(tombstone, readFallbackRecord(storage, userId), userId, sessionId, updatedAt);
+    if (record) write(record);
+  };
 
   return {
     get: async (userId) => readFallbackRecord(storage, userId),
@@ -169,13 +177,8 @@ export function createLocalDraftStore(storage: Storage): DraftStore {
       if (result === 'written') write(draftRecord(userId, updatedAt, draft));
       return result;
     },
-    markSynced: async (userId, sessionId, updatedAt) => {
-      const tombstone = tombstoneFor(readFallbackRecord(storage, userId), userId, sessionId, updatedAt);
-      if (tombstone) write(tombstone);
-    },
-    discard: async (userId, sessionId) => {
-      if (matchesSession(readFallbackRecord(storage, userId), sessionId)) storage.removeItem(fallbackKeyFor(userId));
-    },
+    markSynced: (userId, sessionId, updatedAt) => writeTombstone(syncedRecord, userId, sessionId, updatedAt),
+    discard: (userId, sessionId, updatedAt) => writeTombstone(discardedRecord, userId, sessionId, updatedAt),
     userIdsWithDrafts: async () =>
       fallbackUserIds(storage).filter((userId) => readFallbackRecord(storage, userId)?.kind === 'draft'),
   };

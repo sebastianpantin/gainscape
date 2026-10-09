@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { storedSessionId } from '../../offline/draft-format.ts';
 import type { DraftStore } from '../../offline/draft-store.ts';
+import { discardLocalDraft } from '../../offline/local-drafts.ts';
 
 interface OtherAccountDraftNoticeProps {
   store: DraftStore;
@@ -12,10 +12,7 @@ async function otherAccountIds(store: DraftStore, userId: string): Promise<strin
 }
 
 async function discardOtherAccountDrafts(store: DraftStore, userId: string): Promise<void> {
-  for (const otherUserId of await otherAccountIds(store, userId)) {
-    const record = await store.get(otherUserId);
-    if (record) await store.discard(otherUserId, storedSessionId(record));
-  }
+  for (const otherUserId of await otherAccountIds(store, userId)) await discardLocalDraft(store, otherUserId);
 }
 
 export function OtherAccountDraftNotice({ store, userId }: OtherAccountDraftNoticeProps) {

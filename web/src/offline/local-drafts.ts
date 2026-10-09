@@ -1,4 +1,4 @@
-import { storedSessionId } from './draft-format.ts';
+import { nextUpdatedAt } from './draft-format.ts';
 import { createLocalDraftStore, type DraftStore } from './draft-store.ts';
 
 export async function hasUnsyncedDraft(store: DraftStore, userId: string): Promise<boolean> {
@@ -7,7 +7,8 @@ export async function hasUnsyncedDraft(store: DraftStore, userId: string): Promi
 
 export async function discardLocalDraft(store: DraftStore, userId: string): Promise<void> {
   const record = await store.get(userId);
-  if (record) await store.discard(userId, storedSessionId(record));
+  if (record?.kind === 'draft')
+    await store.discard(userId, record.draft.sessionId, nextUpdatedAt(record.updatedAt, Date.now()));
 }
 
 export async function hasDraftOnDevice(store: DraftStore, storage: Storage | null, userId: string): Promise<boolean> {

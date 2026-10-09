@@ -109,6 +109,7 @@ export function createDraftSession({
     if (record) seen(record.updatedAt);
     if (record?.kind === 'draft') showDraft(record.draft);
     else if (record?.kind === 'synced' && deletedSessionIds.has(record.syncedSessionId)) showDraft(null, 'deleted');
+    else if (record?.kind === 'discarded') showDraft(null);
     else showDraft(null, noticeWhenGone);
   };
 
@@ -219,6 +220,7 @@ export function createDraftSession({
     await enqueue(async (store) => {
       const record = await store.get(userId);
       if (record?.kind === 'draft') return adopt(record);
+      if (record) seen(record.updatedAt);
       changeDraft(fresh());
       startedFresh = true;
     });
@@ -229,8 +231,10 @@ export function createDraftSession({
     showDraft(null);
     const updatedAt = claimUpdatedAt();
     void enqueue(async (store) => {
-      await store.discard(userId, sessionId);
-      announce(sessionId, updatedAt, 'discarded');
+      await store.discard(userId, sessionId, updatedAt);
+      const record = await store.get(userId);
+      if (record) seen(record.updatedAt);
+      announce(sessionId, record?.updatedAt ?? updatedAt, 'discarded');
     });
   };
 

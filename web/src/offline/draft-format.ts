@@ -107,7 +107,14 @@ export interface WorkoutDraft {
 
 export type StoredDraft =
   | { v: typeof DRAFT_FORMAT_VERSION; kind: 'draft'; userId: string; updatedAt: number; draft: WorkoutDraft }
-  | { v: typeof DRAFT_FORMAT_VERSION; kind: 'synced'; userId: string; updatedAt: number; syncedSessionId: string };
+  | { v: typeof DRAFT_FORMAT_VERSION; kind: 'synced'; userId: string; updatedAt: number; syncedSessionId: string }
+  | {
+      v: typeof DRAFT_FORMAT_VERSION;
+      kind: 'discarded';
+      userId: string;
+      updatedAt: number;
+      discardedSessionId: string;
+    };
 
 function looksLikeDraft(value: unknown): value is WorkoutDraft {
   return (
@@ -256,6 +263,8 @@ export function parseStoredDraft(raw: unknown, userId: string): StoredDraft | nu
       updatedAt: raw.updatedAt,
       syncedSessionId: raw.syncedSessionId,
     };
+  if (raw.kind === 'discarded' && typeof raw.discardedSessionId === 'string')
+    return discardedRecord(userId, raw.updatedAt, raw.discardedSessionId);
   if (raw.kind === 'draft' && looksLikeDraft(raw.draft))
     return {
       v: DRAFT_FORMAT_VERSION,
@@ -275,8 +284,13 @@ export function syncedRecord(userId: string, updatedAt: number, syncedSessionId:
   return { v: DRAFT_FORMAT_VERSION, kind: 'synced', userId, updatedAt, syncedSessionId };
 }
 
+export function discardedRecord(userId: string, updatedAt: number, discardedSessionId: string): StoredDraft {
+  return { v: DRAFT_FORMAT_VERSION, kind: 'discarded', userId, updatedAt, discardedSessionId };
+}
+
 export function storedSessionId(record: StoredDraft): string {
-  return record.kind === 'draft' ? record.draft.sessionId : record.syncedSessionId;
+  if (record.kind === 'draft') return record.draft.sessionId;
+  return record.kind === 'synced' ? record.syncedSessionId : record.discardedSessionId;
 }
 
 export function nextUpdatedAt(lastSeen: number, now: number): number {

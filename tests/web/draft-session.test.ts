@@ -197,7 +197,28 @@ describe('draft session', () => {
     first.session.discardDraft('session-a');
     await vi.waitFor(() => expect(second.draft()).toBeNull());
     expect(second.latest().state).toMatchObject({ notice: null });
-    expect(await store.get(userId)).toBeNull();
+    expect(await store.get(userId)).toMatchObject({ kind: 'discarded', discardedSessionId: 'session-a' });
+  });
+
+  it('keeps a discarded workout gone when another tab writes it late', async () => {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const first = sessionOver(store);
+    await first.session.ready;
+    first.session.changeDraft(workout('session-a'));
+    await first.session.flush();
+    const second = sessionOver(store);
+    await second.session.ready;
+
+    first.session.discardDraft('session-a');
+    await first.session.flush();
+    second.session.updateDraft((draft) => withReps(draft, 5));
+    await second.session.flush();
+
+    expect(await store.get(userId)).toMatchObject({ kind: 'discarded', discardedSessionId: 'session-a' });
+    expect(second.latest().state).toMatchObject({ draft: null, notice: null });
+    expect(await first.session.startWorkout(() => workout('session-b'))).toBe(true);
+    await first.session.flush();
+    expect(await store.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'session-b' } });
   });
 
   it('tells other tabs a workout was deleted, not saved, when its sync came back deleted', async () => {
@@ -243,6 +264,19 @@ describe('draft session', () => {
     await session.flush();
     expect(draft()).toMatchObject({ sessionId: 'finished-elsewhere', finishedAt });
     expect(await store.get(userId)).toMatchObject({ draft: { sessionId: 'finished-elsewhere' } });
+  });
+
+  it('starts a fresh draft over a tombstone another tab stamped later than this tab has seen', async () => {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const { session, draft } = sessionOver(store);
+    await session.ready;
+    const later = Date.now() + 60_000;
+    await store.put(userId, later, workout('discarded-elsewhere'));
+    await store.discard(userId, 'discarded-elsewhere', later + 1);
+    expect(await session.startWorkout(() => workout('fresh'))).toBe(true);
+    await session.flush();
+    expect(draft()?.sessionId).toBe('fresh');
+    expect(await store.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'fresh' } });
   });
 
   it('starts a fresh draft when nothing unsynced is stored', async () => {

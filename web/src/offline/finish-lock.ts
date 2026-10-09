@@ -58,7 +58,7 @@ export function finishLockName(userId: string): string {
 async function sendStoredDraft(attempt: FinishAttempt): Promise<FinishAttemptResult> {
   const record = await attempt.store.get(attempt.userId);
   if (!record) return { kind: 'not_finished' };
-  if (storedSessionId(record) !== attempt.sessionId || record.kind === 'synced') return { kind: 'superseded' };
+  if (storedSessionId(record) !== attempt.sessionId || record.kind !== 'draft') return { kind: 'superseded' };
   if (record.draft.finishedAt === null) return { kind: 'not_finished' };
   const sent = await attempt.send(record.draft);
   const plannedChallenge = record.draft.challenge;

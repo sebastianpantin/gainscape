@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { openDraftStore } from '../../web/src/offline/draft-boot.ts';
-import { draftRecord, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
+import { discardedRecord, draftRecord, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import {
   createIdbDraftStore,
   type DraftStore,
@@ -87,10 +87,28 @@ export function describeDraftStoreContract(name: string, createHarness: () => Pr
     it('keeps the record when discard names another session', async () => {
       const { store } = await createHarness();
       await store.put(userId, 10, workout('session-a'));
-      await store.discard(userId, 'session-b');
-      expect(await store.get(userId)).not.toBeNull();
-      await store.discard(userId, 'session-a');
-      expect(await store.get(userId)).toBeNull();
+      await store.discard(userId, 'session-b', 11);
+      expect(await store.get(userId)).toEqual(draftRecord(userId, 10, workout('session-a')));
+      await store.discard(userId, 'session-a', 12);
+      expect(await store.get(userId)).toMatchObject({ kind: 'discarded', discardedSessionId: 'session-a' });
+      expect(await store.userIdsWithDrafts()).toEqual([]);
+    });
+
+    it('refuses a late write of a discarded session but lets a new session start', async () => {
+      const { store } = await createHarness();
+      await store.put(userId, 10, workout('session-a', finished));
+      await store.discard(userId, 'session-a', 11);
+      expect(await store.put(userId, 50, workout('session-a', finished))).toBe('discarded');
+      expect(await store.get(userId)).toEqual(discardedRecord(userId, 11, 'session-a'));
+      expect(await store.put(userId, 12, workout('session-b'))).toBe('written');
+      expect(await store.get(userId)).toEqual(draftRecord(userId, 12, workout('session-b')));
+    });
+
+    it('stamps a discard after the stored record even when the claimed time is older', async () => {
+      const { store } = await createHarness();
+      await store.put(userId, 20, workout('session-a'));
+      await store.discard(userId, 'session-a', 5);
+      expect(await store.get(userId)).toEqual(discardedRecord(userId, 21, 'session-a'));
     });
 
     it('deletes v1 drafts at boot without migrating them', async () => {
