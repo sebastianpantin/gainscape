@@ -64,7 +64,7 @@ const CACHE: ItemsCache = {
   strength: { deadlift: { windowMax: 140, fallbackMax: null, hasPriorSession: true } },
   strengthAsOf: '2026-10-08T09:00:00.000Z',
   challengeExercises: [
-    { id: 'deadlift', name: 'Deadlift', archived: false, modality: 'lift', loadType: 'external' },
+    { id: 'deadlift', name: 'Deadlift', archived: false, modality: 'lift', loadType: 'external', equipment: 'barbell' },
     { id: 'pull_up', name: 'Pull-up', archived: false, modality: 'lift', loadType: 'bodyweight' },
   ],
 };

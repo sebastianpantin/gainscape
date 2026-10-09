@@ -17,6 +17,7 @@ export interface ChallengeExerciseEntry {
   archived: boolean;
   modality: 'lift';
   loadType: LoadType;
+  equipment?: string;
 }
 
 export interface ItemsCache {
@@ -71,6 +72,7 @@ const itemsCacheSchema = z.object({
         archived: z.boolean(),
         modality: z.literal('lift'),
         loadType: z.enum(LOAD_TYPES),
+        equipment: z.string().optional(),
       }),
     ),
   }),
@@ -124,5 +126,12 @@ export function challengeExercisesOf(
   return exercises
     .filter(isLiftExercise)
     .filter((exercise) => needed.has(exercise.id))
-    .map(({ id, name, archived, loadType }) => ({ id, name, archived, modality: 'lift', loadType }));
+    .map(({ id, name, archived, loadType, equipment }) => ({
+      id,
+      name,
+      archived,
+      modality: 'lift',
+      loadType,
+      equipment,
+    }));
 }

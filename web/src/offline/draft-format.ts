@@ -483,7 +483,7 @@ export interface StartableDay {
 }
 
 export type CatalogEntry = { name: string; archived: boolean } & (
-  { modality?: 'lift'; loadType: LoadType } | { modality: 'cardio' }
+  { modality?: 'lift'; loadType: LoadType; equipment?: string } | { modality: 'cardio' }
 );
 
 export interface LastLoggedSet {
@@ -669,7 +669,7 @@ export function startDraftFromChallenge(
       const weightKg =
         target === null || exercise.loadType !== 'external'
           ? defaultWeightKg(exercise.loadType)
-          : challengeLoadKg(target, rounding, unit);
+          : challengeLoadKg(target, rounding, unit, exercise.equipment === 'barbell');
       targetLoadsKg[planned.exerciseId] = planned.pct === null ? null : weightKg;
       return {
         target: null,

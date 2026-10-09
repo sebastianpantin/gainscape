@@ -1,5 +1,6 @@
 import { type ChallengeDefinition, challengeLoadExerciseIds } from '@domain/challenges.ts';
 import { type RoundingSetting, roundLoad } from '@domain/load-rounding.ts';
+import { FLOAT_TOLERANCE, roundTo } from '@domain/math.ts';
 import { e1rmAtSessionStart } from '@domain/strength.ts';
 import type { StrengthState } from '@domain/types.ts';
 import { kgToUnit, unitToKg, type WeightUnit } from '@domain/units.ts';
@@ -72,16 +73,17 @@ export function parsedDraftChallenge(value: unknown): DraftChallenge | null {
   return parsed.success ? parsed.data : null;
 }
 
-export function challengeLoadKg(targetKg: number, rounding: RoundingSetting, unit: WeightUnit): number {
+export function challengeLoadKg(targetKg: number, rounding: RoundingSetting, unit: WeightUnit, onBar: boolean): number {
   const shown = roundLoad(kgToUnit(targetKg, unit), rounding.increment, 'up');
-  return unitToKg(Math.max(rounding.barWeight, shown), unit);
+  const lightest = onBar ? rounding.barWeight : rounding.increment;
+  return unitToKg(Math.max(lightest, shown), unit);
 }
 
 export function challengeVolumeSoFarKg(draft: WorkoutDraft): number {
   return draft.exercises.reduce((total, exercise) => {
     if (exercise.modality !== 'lift') return total;
     const working = exercise.sets.filter((set) => set.done && !set.isWarmup);
-    return total + working.reduce((sum, set) => sum + set.weightKg * set.reps, 0);
+    return total + working.reduce((sum, set) => sum + roundTo(2, set.weightKg) * set.reps, 0);
   }, 0);
 }
 
@@ -89,8 +91,17 @@ function volumeInUnit(kg: number, unit: WeightUnit): string {
   return formatXp(Math.round(kgToUnit(kg, unit)));
 }
 
+function shownVolumeSoFar(soFarKg: number, targetKg: number, unit: WeightUnit): number {
+  const shownTarget = Math.round(kgToUnit(targetKg, unit));
+  const roundedDown = Math.floor(kgToUnit(soFarKg, unit) + FLOAT_TOLERANCE);
+  return soFarKg + FLOAT_TOLERANCE >= targetKg
+    ? Math.max(roundedDown, shownTarget)
+    : Math.min(roundedDown, shownTarget - 1);
+}
+
 export function challengeVolumeText(draft: WorkoutDraft, targetKg: number, unit: WeightUnit): string {
-  return `Volume so far: ${volumeInUnit(challengeVolumeSoFarKg(draft), unit)} / ${volumeInUnit(targetKg, unit)} ${unit}`;
+  const soFar = shownVolumeSoFar(challengeVolumeSoFarKg(draft), targetKg, unit);
+  return `Volume so far: ${formatXp(soFar)} / ${volumeInUnit(targetKg, unit)} ${unit}`;
 }
 
 export function exercisesWithoutE1rm(definition: ChallengeDefinition, strength: StrengthState): string[] {

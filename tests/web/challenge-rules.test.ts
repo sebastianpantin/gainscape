@@ -59,9 +59,13 @@ const TEN_TON_DAY: CatalogChallenge = {
 };
 
 const EXERCISES = new Map<string, CatalogEntry>([
-  ['deadlift', { name: 'Deadlift', archived: false, modality: 'lift', loadType: 'external' }],
-  ['pull_up', { name: 'Pull-up', archived: false, modality: 'lift', loadType: 'bodyweight' }],
-  ['back_squat', { name: 'Back Squat', archived: false, modality: 'lift', loadType: 'external' }],
+  ['deadlift', { name: 'Deadlift', archived: false, modality: 'lift', loadType: 'external', equipment: 'barbell' }],
+  ['pull_up', { name: 'Pull-up', archived: false, modality: 'lift', loadType: 'bodyweight', equipment: 'bodyweight' }],
+  ['back_squat', { name: 'Back Squat', archived: false, modality: 'lift', loadType: 'external', equipment: 'barbell' }],
+  [
+    'lat_pulldown',
+    { name: 'Lat Pulldown', archived: false, modality: 'lift', loadType: 'external', equipment: 'cable' },
+  ],
 ]);
 
 function strengthOf(e1rms: Record<string, number>): StrengthState {
@@ -84,17 +88,22 @@ function startOf(challenge: CatalogChallenge, strength: StrengthState) {
 
 describe('challengeLoadKg', () => {
   it('rounds the exact target up to the next plate step', () => {
-    expect(challengeLoadKg(98, KG, 'kg')).toBe(100);
-    expect(challengeLoadKg(98.7, KG, 'kg')).toBe(100);
-    expect(challengeLoadKg(97.5, KG, 'kg')).toBe(97.5);
+    expect(challengeLoadKg(98, KG, 'kg', true)).toBe(100);
+    expect(challengeLoadKg(98.7, KG, 'kg', true)).toBe(100);
+    expect(challengeLoadKg(97.5, KG, 'kg', true)).toBe(97.5);
   });
 
-  it('never goes below the bar', () => {
-    expect(challengeLoadKg(12, KG, 'kg')).toBe(20);
+  it('never goes below the bar on a barbell', () => {
+    expect(challengeLoadKg(12, KG, 'kg', true)).toBe(20);
+  });
+
+  it('floors a load off the bar at one increment, as program prescriptions do', () => {
+    expect(challengeLoadKg(0.65 * 25, KG, 'kg', false)).toBe(17.5);
+    expect(challengeLoadKg(1, KG, 'kg', false)).toBe(2.5);
   });
 
   it('rounds up in pounds for a pound lifter and stores kilograms', () => {
-    expect(challengeLoadKg(98, DEFAULT_ROUNDING.lb, 'lb')).toBe(99.79);
+    expect(challengeLoadKg(98, DEFAULT_ROUNDING.lb, 'lb', true)).toBe(99.79);
   });
 });
 
@@ -142,6 +151,18 @@ describe('startDraftFromChallenge', () => {
     expect(setValues(squat)).toEqual(Array.from({ length: 10 }, () => [50, 10]));
     expect(squat.supersetId).toBeNull();
     expect(draft.challenge?.targetLoadsKg).toEqual({ back_squat: 50 });
+  });
+
+  it('prefills a lift off the bar below the bar weight', () => {
+    const pulldownVolume: CatalogChallenge = {
+      id: 'challenge-pd',
+      key: 'pulldown_century',
+      name: 'Pulldown Century',
+      definition: { kind: 'volume', metric: 'reps', target: 100, exerciseId: 'lat_pulldown', minPct: 65 },
+    };
+    const draft = startOf(pulldownVolume, strengthOf({ lat_pulldown: 25 }));
+    expect(lifts(draft)[0].sets[0].weightKg).toBe(17.5);
+    expect(draft.challenge?.targetLoadsKg).toEqual({ lat_pulldown: 17.5 });
   });
 
   it('builds Squat Century at 20 kg without an e1RM', () => {
@@ -199,9 +220,29 @@ describe('challengeVolumeSoFarKg', () => {
     expect(challengeVolumeSoFarKg(draft)).toBe(2600);
   });
 
-  it('shows the volume so far against the target in the lifter unit', () => {
+  it('rounds each weight to 2 decimals before multiplying, as the server stores it', () => {
+    const draft = liftedDraft(0, (empty) =>
+      addSet(addExercise(empty, 'lift', 'Lift', 'external'), 0, { weightKg: 33.334999, reps: 3 }),
+    );
+    expect(challengeVolumeSoFarKg(draft)).toBeCloseTo(99.99, 9);
+  });
+
+  it('shows the volume so far rounded down against the target in the lifter unit', () => {
     expect(challengeVolumeText(liftedDraft(1), 10000, 'kg')).toBe('Volume so far: 2,500 / 10,000 kg');
-    expect(challengeVolumeText(liftedDraft(1), 10000, 'lb')).toBe('Volume so far: 5,512 / 22,046 lb');
+    expect(challengeVolumeText(liftedDraft(1), 10000, 'lb')).toBe('Volume so far: 5,511 / 22,046 lb');
+    expect(challengeVolumeText(liftedDraft(4), 10000, 'lb')).toBe('Volume so far: 22,046 / 22,046 lb');
+  });
+
+  it('never shows the target as reached while the server would judge it short', () => {
+    const almost = liftedDraft(0, (empty) =>
+      addSet(addExercise(empty, 'lift', 'Lift', 'external'), 0, { weightKg: 9999.6, reps: 1 }),
+    );
+    expect(challengeVolumeText(almost, 10000, 'kg')).toBe('Volume so far: 9,999 / 10,000 kg');
+    const shortInPounds = liftedDraft(0, (empty) =>
+      addSet(addExercise(empty, 'lift', 'Lift', 'external'), 0, { weightKg: 9999.95, reps: 1 }),
+    );
+    expect(challengeVolumeText(shortInPounds, 10000, 'lb')).toBe('Volume so far: 22,045 / 22,046 lb');
+    expect(challengeVolumeText(liftedDraft(4), 10000, 'kg')).toBe('Volume so far: 10,000 / 10,000 kg');
   });
 });
 
