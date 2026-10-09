@@ -35,19 +35,19 @@ function PixelGrid({ sprite, size }: { sprite: Sprite; size: number }) {
   );
 }
 
-export function LogoMark({ size = 48 }: { size?: number }) {
-  return <PixelGrid sprite={LOGO} size={size} />;
+export function LogoMark() {
+  return <PixelGrid sprite={LOGO} size={48} />;
 }
 
-export function TrophyIcon({ size = 36 }: { size?: number }) {
-  return <PixelGrid sprite={TROPHY} size={size} />;
+export function TrophyIcon() {
+  return <PixelGrid sprite={TROPHY} size={32} />;
 }
 
-export function ItemIcon({ kind, color, size = 36 }: { kind: ItemIconKind; color: string; size?: number }) {
-  return <PixelGrid sprite={itemSprite(kind, color)} size={size} />;
+export function ItemIcon({ kind, color }: { kind: ItemIconKind; color: string }) {
+  return <PixelGrid sprite={itemSprite(kind, color)} size={36} />;
 }
 
-export function SkillIcon({ skillKey, size = 32 }: { skillKey: string; size?: number }) {
+export function SkillIcon({ skillKey }: { skillKey: string }) {
   if (!isSkillKey(skillKey))
     return (
       <span className="monogram" aria-hidden="true">
@@ -56,11 +56,11 @@ export function SkillIcon({ skillKey, size = 32 }: { skillKey: string; size?: nu
     );
   return (
     <span className="skill-icon" aria-hidden="true">
-      <PixelGrid sprite={SKILL_SPRITES[skillKey]} size={size} />
+      <PixelGrid sprite={SKILL_SPRITES[skillKey]} size={32} />
     </span>
   );
 }
 
-export function LevelUpIcon({ size = 24 }: { size?: number }) {
-  return <PixelGrid sprite={LEVEL_UP} size={size} />;
+export function LevelUpIcon() {
+  return <PixelGrid sprite={LEVEL_UP} size={24} />;
 }

@@ -105,51 +105,51 @@ function FriendProfile({ friendId }: { friendId: string }) {
           </Link>
         </section>
       )}
-      {state.status === 'ready' &&
-        (() => {
-          const { collection } = state;
-          return (
-            <>
-              <ProfileWithTopSkills skills={state.skills} profile={state.profile} headingId="friend-top-skills" />
-              <LoadoutPanel userId={friendId} />
-              <section className="stack" aria-labelledby="friend-records">
-                <h2 id="friend-records">Records</h2>
-                {collection.weightsHidden && <p className="muted">Weights hidden</p>}
-                {collection.exercises.length === 0 && <p className="muted">No records yet.</p>}
-                {collection.exercises.map((exercise) => (
-                  <RecordsCard key={exercise.exerciseId} exercise={exercise} weightsHidden={collection.weightsHidden} />
-                ))}
-                <p className="muted">
-                  Items found: {collection.items.found.length} of {collection.items.catalogCount}
+      {state.status === 'ready' && (
+        <>
+          <ProfileWithTopSkills skills={state.skills} profile={state.profile} headingId="friend-top-skills" />
+          <LoadoutPanel userId={friendId} />
+          <section className="stack" aria-labelledby="friend-records">
+            <h2 id="friend-records">Records</h2>
+            {state.collection.weightsHidden && <p className="muted">Weights hidden</p>}
+            {state.collection.exercises.length === 0 && <p className="muted">No records yet.</p>}
+            {state.collection.exercises.map((exercise) => (
+              <RecordsCard
+                key={exercise.exerciseId}
+                exercise={exercise}
+                weightsHidden={state.collection.weightsHidden}
+              />
+            ))}
+            <p className="muted">
+              Items found: {state.collection.items.found.length} of {state.collection.items.catalogCount}
+            </p>
+          </section>
+          {state.profile.relation === 'friend' && (
+            <section className="panel stack">
+              {problem && (
+                <p className="problem" role="alert">
+                  {problem}
                 </p>
-              </section>
-              {state.profile.relation === 'friend' && (
-                <section className="panel stack">
-                  {problem && (
-                    <p className="problem" role="alert">
-                      {problem}
-                    </p>
-                  )}
-                  {confirming ? (
-                    <>
-                      <p>Remove {state.profile.displayName} from your friends?</p>
-                      <button className="button danger" type="button" disabled={removing} onClick={remove}>
-                        Remove for good
-                      </button>
-                      <button className="button" type="button" onClick={() => setConfirming(false)}>
-                        Keep friend
-                      </button>
-                    </>
-                  ) : (
-                    <button className="button danger" type="button" onClick={() => setConfirming(true)}>
-                      Remove friend
-                    </button>
-                  )}
-                </section>
               )}
-            </>
-          );
-        })()}
+              {confirming ? (
+                <>
+                  <p>Remove {state.profile.displayName} from your friends?</p>
+                  <button className="button danger" type="button" disabled={removing} onClick={remove}>
+                    Remove for good
+                  </button>
+                  <button className="button" type="button" onClick={() => setConfirming(false)}>
+                    Keep friend
+                  </button>
+                </>
+              ) : (
+                <button className="button danger" type="button" onClick={() => setConfirming(true)}>
+                  Remove friend
+                </button>
+              )}
+            </section>
+          )}
+        </>
+      )}
     </main>
   );
 }

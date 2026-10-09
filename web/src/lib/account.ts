@@ -36,8 +36,8 @@ export async function exportMyData(): Promise<Blob> {
   return new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
 }
 
-export function exportFileName(now = new Date()): string {
-  return `gainscape-export-${now.toISOString().slice(0, 10)}.json`;
+export function exportFileName(): string {
+  return `gainscape-export-${new Date().toISOString().slice(0, 10)}.json`;
 }
 
 export function saveBlob(blob: Blob, fileName: string): void {

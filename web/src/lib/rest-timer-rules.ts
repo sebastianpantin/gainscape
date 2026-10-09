@@ -1,5 +1,6 @@
 import { SECONDS_PER_MINUTE } from '@domain/cardio.ts';
-import type { EffortInput } from '@domain/types.ts';
+import { type EffortInput, isRecord } from '@domain/types.ts';
+import { parsedJson } from './json-rules.ts';
 
 const MS_PER_SECOND = 1000;
 
@@ -95,10 +96,6 @@ export function stopsRestForWarmup(
   return !set.isWarmup && changes.isWarmup === true && timer?.setId === set.id;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function parsedTimer(value: unknown): RestTimer | null {
   if (!isRecord(value) || typeof value.endsAt !== 'number' || !Number.isFinite(value.endsAt)) return null;
   return {
@@ -117,12 +114,7 @@ function parsedByExercise(value: unknown): RestByExercise {
 }
 
 export function parseRestState(raw: string | null): RestState {
-  let parsed: unknown = null;
-  try {
-    parsed = raw === null ? null : JSON.parse(raw);
-  } catch {
-    parsed = null;
-  }
+  const parsed = parsedJson(raw);
   if (!isRecord(parsed)) return { restS: DEFAULT_REST_S, timer: null, byExercise: {} };
   const restS = REST_CHOICES_S.find((choice) => choice === parsed.restS) ?? DEFAULT_REST_S;
   return { restS, timer: parsedTimer(parsed.timer), byExercise: parsedByExercise(parsed.byExercise) };
