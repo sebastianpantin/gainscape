@@ -256,13 +256,7 @@ export function parseStoredDraft(raw: unknown, userId: string): StoredDraft | nu
   if (!READABLE_FORMAT_VERSIONS.includes(raw.v)) return null;
   if (typeof raw.updatedAt !== 'number' || !Number.isFinite(raw.updatedAt)) return null;
   if (raw.kind === 'synced' && typeof raw.syncedSessionId === 'string')
-    return {
-      v: DRAFT_FORMAT_VERSION,
-      kind: 'synced',
-      userId,
-      updatedAt: raw.updatedAt,
-      syncedSessionId: raw.syncedSessionId,
-    };
+    return syncedRecord(userId, raw.updatedAt, raw.syncedSessionId);
   if (raw.kind === 'discarded' && typeof raw.discardedSessionId === 'string')
     return discardedRecord(userId, raw.updatedAt, raw.discardedSessionId);
   if (raw.kind === 'draft' && looksLikeDraft(raw.draft))
