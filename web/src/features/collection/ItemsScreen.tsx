@@ -64,6 +64,7 @@ interface ChallengeStartProps {
 function ChallengeStart({ challenge, challengeExercises, strength, draftOpen, onStart }: ChallengeStartProps) {
   const [starting, setStarting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const { unitPref } = usePreferences();
   const names = new Map(challengeExercises.map((exercise) => [exercise.id, exercise.name]));
   const namesWithoutE1rm =
     strength === null
@@ -83,7 +84,9 @@ function ChallengeStart({ challenge, challengeExercises, strength, draftOpen, on
   return (
     <div className="well stack">
       <span className="muted tiny">Challenge: {challenge.name}</span>
-      <span>{challengeSummaryText(challenge.definition, (exerciseId) => names.get(exerciseId) ?? 'Exercise')}</span>
+      <span>
+        {challengeSummaryText(challenge.definition, (exerciseId) => names.get(exerciseId) ?? 'Exercise', unitPref)}
+      </span>
       {draftOpen && (
         <p className="notice" role="status">
           Finish or discard your current workout first

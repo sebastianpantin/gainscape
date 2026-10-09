@@ -21,7 +21,7 @@ import {
 import { strengthText } from '../../lib/collection-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
 import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
-import { fetchProfile, type Profile, updatePrivateProfile } from '../../lib/profile.ts';
+import { fetchProfile, type Profile, type UnitPref, updatePrivateProfile } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
@@ -151,10 +151,11 @@ interface ChallengeBannerProps {
   draft: WorkoutDraft;
   challenge: DraftChallenge;
   exercises: readonly Exercise[];
+  unit: UnitPref;
   onDiscard: () => void;
 }
 
-function ChallengeBanner({ draft, challenge, exercises, onDiscard }: ChallengeBannerProps) {
+function ChallengeBanner({ draft, challenge, exercises, unit, onDiscard }: ChallengeBannerProps) {
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const nameOf = (exerciseId: string) =>
     exercises.find((exercise) => exercise.id === exerciseId)?.name ??
@@ -164,10 +165,10 @@ function ChallengeBanner({ draft, challenge, exercises, onDiscard }: ChallengeBa
   return (
     <section className="panel stack" aria-label="Challenge">
       <h2>Challenge: {challenge.name}</h2>
-      <span className="muted">{challengeSummaryText(definition, nameOf)}</span>
+      <span className="muted">{challengeSummaryText(definition, nameOf, unit)}</span>
       {definition.kind === 'volume' && definition.metric === 'kg' && (
         <p className="stack" style={{ gap: 2 }}>
-          <span>{challengeVolumeText(draft, definition.target)}</span>
+          <span>{challengeVolumeText(draft, definition.target, unit)}</span>
           <span className="muted tiny">Only the weight you load counts, never your bodyweight.</span>
         </p>
       )}
@@ -745,6 +746,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           draft={draft}
           challenge={draft.challenge}
           exercises={exercises}
+          unit={unitPref}
           onDiscard={() => discardDraft(draft.sessionId)}
         />
       )}
