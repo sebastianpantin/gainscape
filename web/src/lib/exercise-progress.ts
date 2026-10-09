@@ -4,7 +4,7 @@ import {
   type MaxRepsRecord,
   type MaxRepsRow,
   PROGRESS_COLUMNS,
-  type ProgressSetRow,
+  queryProgressSets,
   repMaxTable,
   type RepMaxEntry,
   type RepMaxRow,
@@ -31,14 +31,7 @@ export async function fetchExerciseProgress(
   failFastWhenOffline();
   const [exercise, sets, repMaxes, maxReps] = await Promise.all([
     supabase.from('exercises').select(EXERCISE_COLUMNS).eq('id', exerciseId).abortSignal(signal).maybeSingle(),
-    supabase
-      .from('sets')
-      .select(PROGRESS_COLUMNS.sets)
-      .eq('user_id', userId)
-      .eq('exercise_id', exerciseId)
-      .eq('is_warmup', false)
-      .order('created_at', { ascending: false })
-      .abortSignal(signal),
+    queryProgressSets(supabase, userId, exerciseId, signal),
     supabase
       .from('rep_maxes')
       .select(PROGRESS_COLUMNS.repMaxes)
@@ -52,13 +45,13 @@ export async function fetchExerciseProgress(
       .eq('exercise_id', exerciseId)
       .abortSignal(signal),
   ]);
-  for (const result of [exercise, sets, repMaxes, maxReps]) if (result.error) throw result.error;
+  for (const result of [exercise, repMaxes, maxReps]) if (result.error) throw result.error;
   if (!exercise.data) return null;
   const loaded = toExercise(exercise.data as unknown as ExerciseRow);
   if (loaded.modality !== 'lift') return null;
   return {
     exercise: loaded,
-    sessions: sessionProgress(sets.data as unknown as ProgressSetRow[], loaded.loadType),
+    sessions: sessionProgress(sets, loaded.loadType),
     repMaxes: repMaxTable(repMaxes.data as unknown as RepMaxRow[]),
     maxReps: maxRepsRecord(maxReps.data as unknown as MaxRepsRow[]),
   };
