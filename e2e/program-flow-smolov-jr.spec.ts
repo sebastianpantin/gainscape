@@ -1,13 +1,13 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
+import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
 import {
   bindExercise,
   dayPicker,
   fillProgramInputs,
   openEnrollForm,
+  openProgramToday,
   prescribedRows,
-  programToday,
   repeated,
   startFollowing,
 } from './support/program-enrollment.ts';
@@ -79,14 +79,6 @@ async function followSmolovJr(page: Page, prefix: string): Promise<FollowedSmolo
   };
 }
 
-async function openToday(page: Page): Promise<Locator> {
-  await page.reload();
-  await openTab(page, 'Train');
-  const today = programToday(page, SMOLOV_JR);
-  await expect(today).toBeVisible();
-  return today;
-}
-
 async function expectWeek(today: Locator, label: string, loadsKg: WeekLoads): Promise<void> {
   await expect(dayPicker(today).getByRole('radio', { name: `${label} Day 1`, exact: true })).toBeChecked();
   for (const [dayIndex, day] of SMOLOV_DAYS.entries()) {
@@ -109,7 +101,7 @@ test('Smolov Jr has no progression: after a week 1 at a 1RM of 120 with the last
   const program = await followSmolovJr(page, 'pf_smj');
   await program.seed(smolovWeek(1, WEEK_1_KG, { sat: 2 }));
 
-  await expectWeek(await openToday(page), 'C1 W2', WEEK_2_KG);
+  await expectWeek(await openProgramToday(page, SMOLOV_JR), 'C1 W2', WEEK_2_KG);
 });
 
 test('Smolov Jr week 3 adds the cumulative 8.75 kg to the 1RM 120 percentages: 84 + 8.75 = 92.75 → 92.5, 90 + 8.75 = 98.75 → 100, 96 + 8.75 = 104.75 → 105, 102 + 8.75 = 110.75 → 110; after week 3 cycle 2 restarts at the unchanged week 1 loads 85, 90, 95, 102.5', async ({
@@ -118,8 +110,8 @@ test('Smolov Jr week 3 adds the cumulative 8.75 kg to the 1RM 120 percentages: 8
   test.setTimeout(240_000);
   const program = await followSmolovJr(page, 'pf_smj3');
   await program.seed([...smolovWeek(1, WEEK_1_KG), ...smolovWeek(2, WEEK_2_KG)]);
-  await expectWeek(await openToday(page), 'C1 W3', WEEK_3_KG);
+  await expectWeek(await openProgramToday(page, SMOLOV_JR), 'C1 W3', WEEK_3_KG);
 
   await program.seed(smolovWeek(3, WEEK_3_KG));
-  await expectWeek(await openToday(page), 'C2 W1', WEEK_1_KG);
+  await expectWeek(await openProgramToday(page, SMOLOV_JR), 'C2 W1', WEEK_1_KG);
 });

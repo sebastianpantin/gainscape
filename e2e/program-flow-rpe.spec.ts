@@ -1,7 +1,7 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
-import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
+import { expect, type Page, test } from '@playwright/test';
+import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
-import { dayPicker, followProgram, prescribedRows, programToday, repeated } from './support/program-enrollment.ts';
+import { dayPicker, followProgram, openProgramToday, prescribedRows, repeated } from './support/program-enrollment.ts';
 import {
   nearestPlateKg,
   type SeededDay,
@@ -69,10 +69,7 @@ async function seedWeekOne(page: Page, prefix: string, topSets: readonly LoggedT
 }
 
 async function expectWeekTwo(page: Page, days: readonly WeekTwoDay[]): Promise<void> {
-  await page.reload();
-  await openTab(page, 'Train');
-  const today: Locator = programToday(page, RPE);
-  await expect(today).toBeVisible();
+  const today = await openProgramToday(page, RPE);
   await expect(dayPicker(today).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
   for (const { day, exercise, topRow, backOffRow } of days) {
     await dayPicker(today)

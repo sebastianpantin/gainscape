@@ -1,7 +1,7 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
-import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
+import { expect, type Page, test } from '@playwright/test';
+import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
-import { dayPicker, followProgram, prescribedRows, programToday, repeated } from './support/program-enrollment.ts';
+import { dayPicker, followProgram, openProgramToday, prescribedRows, repeated } from './support/program-enrollment.ts';
 import { type SeededDay, type SeededSet, seedProgramDays, sessionClock } from './support/program-seed.ts';
 
 const STARTING_STRENGTH = 'Starting Strength';
@@ -65,14 +65,6 @@ async function followStartingStrength(page: Page, prefix: string, sessions: numb
   return { seed: (days) => seedProgramDays(accessToken, enrollmentId, bindings, clock, days) };
 }
 
-async function openToday(page: Page): Promise<Locator> {
-  await page.reload();
-  await openTab(page, 'Train');
-  const today = programToday(page, STARTING_STRENGTH);
-  await expect(today).toBeVisible();
-  return today;
-}
-
 test('Starting Strength opens the squat at +5 for its first two met sessions (60 + 5 = 65, 65 + 5 = 70) then +2.5 (70 + 2.5 = 72.5), while deadlift goes 80 + 2.5 × 3 = 87.5 over both days and press 35 + 2.5 = 37.5', async ({
   page,
 }) => {
@@ -84,7 +76,7 @@ test('Starting Strength opens the squat at +5 for its first two met sessions (60
     dayOne(2, { squat: 70, upper: 52.5, deadlift: 85 }),
   ]);
 
-  const today = await openToday(page);
+  const today = await openProgramToday(page, STARTING_STRENGTH);
   await expect(dayPicker(today).getByRole('radio', { name: 'Session 4 Day 2', exact: true })).toBeChecked();
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('72.5 kg × 5 · 100%', 3));
   await expect(prescribedRows(today, 'Overhead Press')).toHaveText(repeated('37.5 kg × 5 · 100%', 3));
@@ -101,7 +93,7 @@ test('Starting Strength holds a bench missed once at 50, then the second miss in
     dayTwo(1, { squat: 65, upper: 35, deadlift: 82.5 }),
   ]);
 
-  const afterOneMiss = await openToday(page);
+  const afterOneMiss = await openProgramToday(page, STARTING_STRENGTH);
   await expect(dayPicker(afterOneMiss).getByRole('radio', { name: 'Session 3 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(afterOneMiss, 'Barbell Bench Press')).toHaveText(repeated('50 kg × 5 · 100%', 3));
   await expect(prescribedRows(afterOneMiss, 'Back Squat')).toHaveText(repeated('70 kg × 5 · 100%', 3));
@@ -111,7 +103,7 @@ test('Starting Strength holds a bench missed once at 50, then the second miss in
     dayTwo(3, { squat: 72.5, upper: 37.5, deadlift: 87.5 }),
   ]);
 
-  const afterTwoMisses = await openToday(page);
+  const afterTwoMisses = await openProgramToday(page, STARTING_STRENGTH);
   await expect(dayPicker(afterTwoMisses).getByRole('radio', { name: 'Session 5 Day 1', exact: true })).toBeChecked();
   await expect(prescribedRows(afterTwoMisses, 'Barbell Bench Press')).toHaveText(repeated('45 kg × 5 · 100%', 3));
   await expect(prescribedRows(afterTwoMisses, 'Back Squat')).toHaveText(repeated('75 kg × 5 · 100%', 3));

@@ -7,6 +7,7 @@ import {
   type FunctionResponse,
   ledgerMismatches,
   postCompleteSession,
+  postFunction,
   type TestUser,
 } from './local-stack.ts';
 
@@ -140,6 +141,22 @@ export async function postSession(
   payload: { id: string; sets: { id: string }[] },
 ): Promise<FunctionResponse> {
   const response = await postCompleteSession(user.accessToken, payload);
+  expect(response.status, response.rawBody).toBe(200);
+  return response;
+}
+
+export async function editSession(
+  user: TestUser,
+  session: { id: string },
+  sets: (SetShape | BoutShape)[],
+  ifRevision = 0,
+): Promise<FunctionResponse> {
+  const response = await postFunction('edit-session', user.accessToken, {
+    sessionId: session.id,
+    ifRevision,
+    notes: null,
+    sets,
+  });
   expect(response.status, response.rawBody).toBe(200);
   return response;
 }

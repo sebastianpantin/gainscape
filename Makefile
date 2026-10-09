@@ -171,7 +171,7 @@ e2e-pages: functions
 
 e2e-pwa: functions
 	$(MAKE) build-local
-	GAINSCAPE_PLAIN_HTTP=1 CHROMIUM_PATH="$(CHROMIUM_PATH)" npx playwright test -c playwright.pwa.config.ts
+	CHROMIUM_PATH="$(CHROMIUM_PATH)" npx playwright test -c playwright.pwa.config.ts
 
 sim:
 	node scripts/balance/report.ts
