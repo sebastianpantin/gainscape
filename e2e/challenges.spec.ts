@@ -81,8 +81,17 @@ test('the reveal names a passed challenge with its bonus and explains a failed o
   await grantItems(username, { [SCROLL_KEY]: 1 });
 
   await openItems(page);
+  await scrollSlot(page).click();
+  await expect(
+    itemDetails(page).getByText('Log Deadlift first: this challenge sets its loads from your e1RM.'),
+  ).toBeVisible();
+  await expect(itemDetails(page).getByRole('button', { name: 'Start challenge' })).toBeDisabled();
+
+  await openTab(page, 'Train');
+  await logDeadliftToFailure(page, 140);
+  await openItems(page);
   await startChallenge(page);
-  await expectDeadliftPrefill(page, 20);
+  await expectDeadliftPrefill(page, 100);
   await markEveryRoundDone(page);
   await finishWithBodyweight(page);
   await expect(page.getByText(`Challenge complete: ${CHALLENGE_NAME}`)).toBeVisible();

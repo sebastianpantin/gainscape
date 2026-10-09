@@ -16,6 +16,7 @@ import {
 import { activeEnrollmentIdOf, equipGear, grantItems } from './support/db.ts';
 import {
   CHALLENGE_NAME,
+  logDeadliftToFailure,
   markEveryRoundDone,
   openItems,
   SCROLL_KEY,
@@ -225,6 +226,7 @@ test.describe('signed-in screens', () => {
     test.setTimeout(150_000);
     const username = uniqueUsername('a11y_ch');
     await register(page, username);
+    await logDeadliftToFailure(page, 140);
     await grantItems(username, { [SCROLL_KEY]: 1 });
     await openItems(page);
     await checkScreen(page, 'items (scroll picked)', async () => {

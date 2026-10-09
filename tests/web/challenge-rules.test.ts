@@ -5,7 +5,9 @@ import {
   challengeLoadKg,
   challengeSummaryText,
   challengeVolumeSoFarKg,
+  exercisesWithoutE1rm,
   mentionsE1rm,
+  missingE1rmText,
   parsedChallengeDefinition,
   parsedDraftChallenge,
   toCatalogChallenge,
@@ -177,7 +179,7 @@ describe('challengeVolumeSoFarKg', () => {
     expect(challengeVolumeSoFarKg(liftedDraft(4))).toBe(10000);
   });
 
-  it('leaves out warm-ups, sets not done and bodyweight lifts', () => {
+  it('leaves out warm-ups, sets not done and bodyweight', () => {
     const draft = liftedDraft(1, (lifted) => {
       const [exercise] = lifts(lifted);
       const warmup = updateSet(lifted, 0, exercise.sets[0].id, { isWarmup: true });
@@ -186,6 +188,40 @@ describe('challengeVolumeSoFarKg', () => {
       return addSet(withPullUps, 1, { weightKg: 0, reps: 10 });
     });
     expect(challengeVolumeSoFarKg(draft)).toBe(1500);
+  });
+
+  it('counts the load added to a bodyweight lift: 20 kg × 5 weighted pull-ups is 100 kg', () => {
+    const draft = liftedDraft(1, (lifted) => {
+      const withWeightedPullUps = addExercise(lifted, 'weighted_pull_up', 'Weighted Pull-up', 'bodyweight_plus');
+      return addSet(withWeightedPullUps, 1, { weightKg: 20, reps: 5 });
+    });
+    expect(challengeVolumeSoFarKg(draft)).toBe(2600);
+  });
+});
+
+describe('exercisesWithoutE1rm', () => {
+  it('lists each exercise with a load percent and no e1RM', () => {
+    expect(exercisesWithoutE1rm(DEADLIFT_AND_PULL_UP.definition, {})).toEqual(['deadlift']);
+    expect(exercisesWithoutE1rm(SQUAT_CENTURY.definition, strengthOf({ deadlift: 140 }))).toEqual(['back_squat']);
+  });
+
+  it('is empty once every percent exercise has an e1RM, from the window or the fallback', () => {
+    expect(exercisesWithoutE1rm(DEADLIFT_AND_PULL_UP.definition, strengthOf({ deadlift: 140 }))).toEqual([]);
+    const fallbackOnly: StrengthState = { back_squat: { windowMax: null, fallbackMax: 100, hasPriorSession: true } };
+    expect(exercisesWithoutE1rm(SQUAT_CENTURY.definition, fallbackOnly)).toEqual([]);
+  });
+
+  it('is empty for a challenge without a load percent', () => {
+    expect(exercisesWithoutE1rm(TEN_TON_DAY.definition, {})).toEqual([]);
+  });
+});
+
+describe('missingE1rmText', () => {
+  it('names the lifts to log first', () => {
+    expect(missingE1rmText(['Deadlift'])).toBe('Log Deadlift first: this challenge sets its loads from your e1RM.');
+    expect(missingE1rmText(['Front Squat', 'Romanian Deadlift'])).toBe(
+      'Log Front Squat and Romanian Deadlift first: this challenge sets its loads from your e1RM.',
+    );
   });
 });
 
