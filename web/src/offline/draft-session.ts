@@ -85,6 +85,7 @@ export function createDraftSession({
   const deletedSessionIds = new Set<string>();
   let chain: Promise<void> = Promise.resolve();
   let usingFallback = false;
+  let primaryUnreadable = false;
   let persistenceRequested = false;
 
   const publish = (changes: Partial<DraftSnapshot>) => {
@@ -118,17 +119,20 @@ export function createDraftSession({
     return fallback;
   };
 
+  const saved = () => {
+    if (snapshot.saveProblem !== primaryUnreadable) publish({ saveProblem: primaryUnreadable });
+  };
+
   const runOnStore = async (task: (store: DraftStore) => Promise<void>) => {
     try {
       await task(snapshot.store!);
-      if (snapshot.saveProblem) publish({ saveProblem: false });
-      return;
+      return saved();
     } catch {
       if (usingFallback) return publish({ saveProblem: true });
     }
     try {
       await task(switchToFallback());
-      if (snapshot.saveProblem) publish({ saveProblem: false });
+      saved();
     } catch {
       publish({ saveProblem: true });
     }
@@ -146,7 +150,7 @@ export function createDraftSession({
   const load = async (store: DraftStore) => {
     const record = await store.get(userId);
     if (record) seen(record.updatedAt);
-    publish({ store });
+    publish({ store, saveProblem: primaryUnreadable });
     showDraft(record?.kind === 'draft' ? record.draft : null);
   };
 
@@ -157,6 +161,7 @@ export function createDraftSession({
       return;
     } catch {
       usingFallback = true;
+      primaryUnreadable = true;
     }
     try {
       await load(fallbackStore());

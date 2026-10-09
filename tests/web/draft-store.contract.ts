@@ -107,7 +107,7 @@ export function describeDraftStoreContract(name: string, createHarness: () => Pr
     it('reconciles the fallback record at boot', async () => {
       const { storage, indexedDB } = await createHarness();
       const fallbackKey = fallbackKeyFor(userId);
-      const fallback = draftRecord(userId, 30, workout('from-fallback'));
+      const fallback = draftRecord(userId, 30, workout('session-a', finished));
       storage.setItem(fallbackKey, JSON.stringify(fallback));
 
       if (!indexedDB) {
@@ -119,9 +119,12 @@ export function describeDraftStoreContract(name: string, createHarness: () => Pr
 
       const database = await openDraftDatabase(indexedDB);
       const direct = createIdbDraftStore(database!);
-      await direct.put(userId, 20, workout('from-idb'));
+      await direct.put(userId, 20, workout('session-a'));
       await direct.put(otherUserId, 50, workout('other-from-idb'));
-      storage.setItem(fallbackKeyFor(otherUserId), JSON.stringify(draftRecord(otherUserId, 40, workout('older'))));
+      storage.setItem(
+        fallbackKeyFor(otherUserId),
+        JSON.stringify(draftRecord(otherUserId, 40, workout('other-from-idb'))),
+      );
 
       const booted = await openDraftStore({ indexedDB, storage });
       expect(await booted.get(userId)).toEqual(fallback);

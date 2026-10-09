@@ -84,6 +84,19 @@ describe('draft session', () => {
     expect(draft()?.sessionId).toBe('kept');
   });
 
+  it('keeps a save problem showing while the store it should read cannot be opened, even when the fallback saves', async () => {
+    const fallback = createLocalDraftStore(new MemoryStorage());
+    const { session, latest } = sessionOver(() => Promise.reject(new Error('idb_unavailable')), {
+      fallback: () => fallback,
+    });
+    await session.ready;
+    expect(latest()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: true });
+    session.changeDraft(workout('session-a'));
+    await session.flush();
+    expect(await fallback.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'session-a' } });
+    expect(latest().saveProblem).toBe(true);
+  });
+
   it('becomes ready with a save problem when no store can be opened', async () => {
     const { session, latest } = sessionOver(() => Promise.reject(new Error('boot_failed')), {
       fallback: () => {

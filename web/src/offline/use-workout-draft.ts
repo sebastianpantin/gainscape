@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { openChannel } from '../lib/channel.ts';
-import { openDraftStoreAndReconcile } from './draft-boot.ts';
+import { openPrimaryDraftStore } from './draft-boot.ts';
 import { createDraftSession, DRAFT_CHANNEL_NAME, type DraftSession, type DraftSnapshot } from './draft-session.ts';
 import { createLocalDraftStore } from './draft-store.ts';
 
@@ -17,7 +17,7 @@ function requestPersistentStorage(): void {
 function startSession(userId: string, onChange: (snapshot: DraftSnapshot) => void): DraftSession {
   return createDraftSession({
     userId,
-    openStore: openDraftStoreAndReconcile,
+    openStore: openPrimaryDraftStore,
     fallbackStore: () => createLocalDraftStore(localStorage),
     channel: openChannel(DRAFT_CHANNEL_NAME),
     onChange,
