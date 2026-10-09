@@ -32,7 +32,7 @@ function channelHub() {
 
 function failingStore(): DraftStore {
   const fail = () => Promise.reject(new Error('storage_broken'));
-  return { get: fail, put: fail, markSynced: fail, discard: fail, userIdsWithDrafts: fail };
+  return { get: fail, put: fail, markSynced: fail, discard: fail, forget: fail, userIdsWithDrafts: fail };
 }
 
 function sessionOver(
@@ -84,6 +84,31 @@ describe('draft session', () => {
     expect(draft()?.sessionId).toBe('kept');
   });
 
+  it('keeps a save problem showing while the store it should read cannot be opened, even when the fallback saves', async () => {
+    const fallback = createLocalDraftStore(new MemoryStorage());
+    const { session, latest } = sessionOver(() => Promise.reject(new Error('idb_unavailable')), {
+      fallback: () => fallback,
+    });
+    await session.ready;
+    expect(latest()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: 'unreadable' });
+    session.changeDraft(workout('session-a'));
+    await session.flush();
+    expect(await fallback.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'session-a' } });
+    expect(latest().saveProblem).toBe('unreadable');
+  });
+
+  it('reports an unsaved change over an unreadable store when the fallback write fails too', async () => {
+    const fallback = createLocalDraftStore(new MemoryStorage());
+    const { session, latest } = sessionOver(() => Promise.reject(new Error('idb_unavailable')), {
+      fallback: () => fallback,
+    });
+    await session.ready;
+    fallback.put = () => Promise.reject(new Error('quota_exceeded'));
+    session.changeDraft(workout('session-a'));
+    await session.flush();
+    expect(latest().saveProblem).toBe('unsaved');
+  });
+
   it('becomes ready with a save problem when no store can be opened', async () => {
     const { session, latest } = sessionOver(() => Promise.reject(new Error('boot_failed')), {
       fallback: () => {
@@ -91,7 +116,7 @@ describe('draft session', () => {
       },
     });
     await session.ready;
-    expect(latest()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: true });
+    expect(latest()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: 'unsaved' });
   });
 
   it('retries a failed write on the fallback store and switches to it', async () => {
@@ -103,7 +128,7 @@ describe('draft session', () => {
     session.changeDraft(workout('session-a'));
     await session.flush();
     expect(latest().store).toBe(fallback);
-    expect(latest().saveProblem).toBe(false);
+    expect(latest().saveProblem).toBeNull();
     expect(await fallback.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'session-a' } });
   });
 
@@ -114,7 +139,7 @@ describe('draft session', () => {
     await session.ready;
     session.changeDraft(workout('session-a'));
     await session.flush();
-    expect(latest().saveProblem).toBe(true);
+    expect(latest().saveProblem).toBe('unsaved');
   });
 
   it('round-trips a cardio draft through the store and a fresh session', async () => {
@@ -184,7 +209,28 @@ describe('draft session', () => {
     first.session.discardDraft('session-a');
     await vi.waitFor(() => expect(second.draft()).toBeNull());
     expect(second.latest().state).toMatchObject({ notice: null });
-    expect(await store.get(userId)).toBeNull();
+    expect(await store.get(userId)).toMatchObject({ kind: 'discarded', discardedSessionId: 'session-a' });
+  });
+
+  it('keeps a discarded workout gone when another tab writes it late', async () => {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const first = sessionOver(store);
+    await first.session.ready;
+    first.session.changeDraft(workout('session-a'));
+    await first.session.flush();
+    const second = sessionOver(store);
+    await second.session.ready;
+
+    first.session.discardDraft('session-a');
+    await first.session.flush();
+    second.session.updateDraft((draft) => withReps(draft, 5));
+    await second.session.flush();
+
+    expect(await store.get(userId)).toMatchObject({ kind: 'discarded', discardedSessionId: 'session-a' });
+    expect(second.latest().state).toMatchObject({ draft: null, notice: null });
+    expect(await first.session.startWorkout(() => workout('session-b'))).toBe(true);
+    await first.session.flush();
+    expect(await store.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'session-b' } });
   });
 
   it('tells other tabs a workout was deleted, not saved, when its sync came back deleted', async () => {
@@ -232,6 +278,19 @@ describe('draft session', () => {
     expect(await store.get(userId)).toMatchObject({ draft: { sessionId: 'finished-elsewhere' } });
   });
 
+  it('starts a fresh draft over a tombstone another tab stamped later than this tab has seen', async () => {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const { session, draft } = sessionOver(store);
+    await session.ready;
+    const later = Date.now() + 60_000;
+    await store.put(userId, later, workout('discarded-elsewhere'));
+    await store.discard(userId, 'discarded-elsewhere', later + 1);
+    expect(await session.startWorkout(() => workout('fresh'))).toBe(true);
+    await session.flush();
+    expect(draft()?.sessionId).toBe('fresh');
+    expect(await store.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'fresh' } });
+  });
+
   it('starts a fresh draft when nothing unsynced is stored', async () => {
     const store = createLocalDraftStore(new MemoryStorage());
     await store.markSynced(userId, 'old', 1);
@@ -264,7 +323,7 @@ describe('draft session start-up', () => {
     await session.ready;
     expect(seenSessions.length).toBeGreaterThan(0);
     expect(seenSessions.every((seen) => seen === session)).toBe(true);
-    expect(session.snapshot()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: true });
+    expect(session.snapshot()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: 'unsaved' });
   });
 });
 

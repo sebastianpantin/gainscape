@@ -8,6 +8,7 @@ type EditorDay = ProgramDoc['days'][number];
 export const PROGRAM_NAME_MAX_LENGTH = 60;
 export const DAY_NAME_MAX_LENGTH = 40;
 export const MAX_DAYS = 14;
+export const MAX_EXERCISES_PER_DAY = 20;
 export const TARGET_SETS_RANGE = { lowest: 1, highest: 10 } as const;
 export const TARGET_REPS_RANGE = { lowest: 1, highest: 100 } as const;
 
@@ -45,6 +46,10 @@ export function canAddDay(doc: ProgramDoc): boolean {
 
 export function addDay(doc: ProgramDoc, dayId: string): ProgramDoc {
   return { ...doc, days: [...doc.days, { id: dayId, name: `Day ${doc.days.length + 1}`, exercises: [] }] };
+}
+
+export function canAddPlannedExercise(day: EditorDay): boolean {
+  return day.exercises.length < MAX_EXERCISES_PER_DAY;
 }
 
 export function changePlannedExercise(
@@ -87,6 +92,14 @@ export function nameIssue(doc: ProgramDoc): string | null {
     doc.days.map((day) => nameProblem(day.name, DAY_NAME_MAX_LENGTH)).find((issue) => issue !== null) ??
     null
   );
+}
+
+export function targetIssue(doc: ProgramDoc, nameOf: (exerciseId: string) => string): string | null {
+  for (const day of doc.days) {
+    const swapped = day.exercises.find((planned) => planned.targetRepsMin > planned.targetRepsMax);
+    if (swapped) return `${nameOf(swapped.exerciseId)} on ${trimmedName(day.name)}: reps min can't be above reps max.`;
+  }
+  return null;
 }
 
 export function trimmedDoc(doc: ProgramDoc): ProgramDoc {

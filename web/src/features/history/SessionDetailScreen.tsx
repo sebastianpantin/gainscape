@@ -1,11 +1,13 @@
 import { isSessionEditable } from '@domain/edit-window.ts';
 import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
+import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 import {
   formatLoad,
   formatSessionDate,
@@ -20,11 +22,12 @@ import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/histor
 import type { CatalogItem } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { updatePrivateProfile } from '../../lib/profile.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
+import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { forgetLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
@@ -99,6 +102,7 @@ interface SessionDetailScreenProps {
 export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { unitPref, effortInputMode } = usePreferences();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [edit, setEdit] = useState<SessionEdit | null>(null);
@@ -268,7 +272,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     setProblem(null);
     setNotice(null);
     setBusy({ kind: 'deleting', retrying: null });
-    const outcome = await deleteSession(userId, sessionId, signal, (reason) =>
+    const outcome = await deleteSession(userId, { sessionId, ifRevision: loaded.session.revision }, signal, (reason) =>
       setBusy({ kind: 'deleting', retrying: reason }),
     );
     if (signal.aborted) return;
@@ -284,7 +288,18 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       });
       return;
     }
-    handleCommonFailure(failureAction(outcome), 'delete');
+    const action = failureAction(outcome);
+    if (action.kind === 'revision_conflict') {
+      return reloadSession(
+        signal,
+        "This workout was changed on another device, and the latest version couldn't be loaded.",
+        (fresh) => {
+          adopt(fresh);
+          setProblem({ kind: 'message', text: failureText(action, 'delete') });
+        },
+      );
+    }
+    handleCommonFailure(action, 'delete');
   };
 
   const { session } = loaded;
@@ -404,7 +419,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           unit={unitPref}
           submitLabel="Save bodyweight and changes"
           onSave={async (bodyweightKg) => {
-            await updatePrivateProfile(userId, { bodyweightKg });
+            await saveBodyweight({ userId, bodyweightKg, storage: deviceStorage(), queryClient });
             await save(problem.pending);
           }}
         />
@@ -413,6 +428,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   );
 
   if (readOnly) {
+    const storedKeys = exerciseKeys(loaded.original.exercises);
     return (
       <main className="screen stack">
         {header}
@@ -423,7 +439,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           </p>
         )}
         {loaded.original.exercises.map((exercise, exerciseIndex) => (
-          <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
+          <section className="panel stack exercise-card" key={storedKeys[exerciseIndex]}>
             <header>
               <h2>{exercise.name}</h2>
               {exercise.modality === 'lift' && (
@@ -463,6 +479,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     );
   }
 
+  const editKeys = exerciseKeys(edit.exercises);
   return (
     <main className="screen stack">
       {header}
@@ -479,7 +496,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       {problemPanel}
       <fieldset className="stack" disabled={working || askingBodyweight} style={{ border: 'none', padding: 0 }}>
         {edit.exercises.map((exercise, exerciseIndex) => (
-          <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
+          <section className="panel stack exercise-card" key={editKeys[exerciseIndex]}>
             <header>
               <h2>{exercise.name}</h2>
               {exercise.modality === 'lift' && (

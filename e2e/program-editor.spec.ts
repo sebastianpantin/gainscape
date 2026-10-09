@@ -142,3 +142,30 @@ test('delete a program through the confirmation and keep the workout logged from
   await openTab(page, 'Train');
   await expect(page.getByText('No programs yet.')).toBeVisible();
 });
+
+test('a target can be cleared and retyped, and reps min above reps max is explained before saving', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('pt'));
+  await copyTemplate(page, 'Full Body 2x');
+  const squat = plannedExercise(page, 1, 'Back Squat');
+  const sets = squat.getByLabel('Sets');
+
+  await sets.fill('');
+  await expect(sets).toHaveValue('');
+  await sets.pressSequentially('4');
+  await expect(sets).toHaveValue('4');
+  await sets.fill('');
+  await squat.getByLabel('Reps min').click();
+  await expect(sets).toHaveValue('4');
+
+  await squat.getByLabel('Reps min').fill('12');
+  await squat.getByLabel('Reps max').fill('8');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText("Back Squat on Day A: reps min can't be above reps max.");
+  await expect(page).toHaveURL(/\/programs\/[0-9a-f-]+$/);
+
+  await squat.getByLabel('Reps max').fill('15');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page).toHaveURL(/\/programs$/);
+});

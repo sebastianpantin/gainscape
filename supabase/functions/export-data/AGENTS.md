@@ -5,7 +5,7 @@
 
 ## Purpose
 
-POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one read-only transaction. Export format version is `EXPORT_FORMAT_VERSION = 6` (2 added `cardioRecords`, 3 added `bodyweightEntries` with `logged_on` as a `YYYY-MM-DD` date, `bodyweight_kg` and `updated_at`, 4 added `weeklyGoals` with `effective_from` as a `YYYY-MM-DD` Monday, `goal` (null when off) and `updated_at`, 5 added `userLoadout` with `slot`, `item_id` and `equipped_at` and the gear XP semantics below, 6 removed `userUnlocks` with the `user_unlocks` table and added the challenge semantics below).
+POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one repeatable-read, read-only transaction, so all its queries see the same snapshot. Export format version is `EXPORT_FORMAT_VERSION = 6` (2 added `cardioRecords`, 3 added `bodyweightEntries` with `logged_on` as a `YYYY-MM-DD` date, `bodyweight_kg` and `updated_at`, 4 added `weeklyGoals` with `effective_from` as a `YYYY-MM-DD` Monday, `goal` (null when off) and `updated_at`, 5 added `userLoadout` with `slot`, `item_id` and `equipped_at` and the gear XP semantics below, 6 removed `userUnlocks` with the `user_unlocks` table and added the challenge semantics below).
 
 Gear XP semantics since version 5:
 
@@ -21,11 +21,11 @@ Challenge semantics since version 6:
 
 ## Key Files
 
-| File        | Description                                                                                 |
-| ----------- | ------------------------------------------------------------------------------------------- |
-| `index.ts`  | Handler; `exportFor` takes bucket `export_data_hour` then reads in `sql.begin('read only')` |
-| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                         |
-| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                              |
+| File        | Description                                                                                                                 |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`  | Handler; `exportFor` takes bucket `export_data_hour` then reads in `sql.begin('isolation level repeatable read read only')` |
+| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                         |
+| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                              |
 
 ## For AI Agents
 

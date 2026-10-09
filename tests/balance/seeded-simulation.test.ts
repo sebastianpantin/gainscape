@@ -41,10 +41,10 @@ describe('seededRandom', () => {
 
 describe('seeded simulation with the committed constants', () => {
   it.each([
-    ['hypertrophy', 51, [17737, 39243, 60327], 118.03137254901962],
-    ['strength', 51, [19722, 41566, 62458], 93.67843137254901],
-    ['balanced', 131, [8335, 15791, 22406], 42.803816793893226],
-    ['casual', 247, [3192, 7368, 11494], 24.45627530364383],
+    ['hypertrophy', 51, [17737, 39243, 60327], 117.8921568627451],
+    ['strength', 51, [19722, 41566, 62458], 93.56862745098037],
+    ['balanced', 131, [8335, 15791, 22406], 42.76335877862606],
+    ['casual', 249, [3340, 7516, 11493], 24.296787148594476],
   ] as const)('replays the %s lifter exactly', (name, weeks, firstWeeksLegsXp, weeklyLegsEffectiveReps) => {
     const result = simulateProfile(PROFILES[name], DEFAULT_BALANCE, { stopWhenSkillsReach99: ['legs'] });
     expect(result.weeksSimulated).toBe(weeks);

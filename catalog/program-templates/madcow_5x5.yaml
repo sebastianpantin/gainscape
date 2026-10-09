@@ -1,5 +1,5 @@
 key: madcow_5x5
-version: 1
+version: 2
 name: Madcow 5x5
 source:
   - https://www.oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm
@@ -155,6 +155,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [mon-squat]
+    judgedSetIndexes: [4]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:
@@ -163,6 +164,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [mon-bench]
+    judgedSetIndexes: [4]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:
@@ -171,6 +173,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [mon-row]
+    judgedSetIndexes: [4]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:
@@ -179,6 +182,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [wed-press]
+    judgedSetIndexes: [3]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:
@@ -187,6 +191,7 @@ progression:
     var: top
     trigger: endOfWeek
     judgedSlots: [wed-deadlift]
+    judgedSetIndexes: [3]
     onMet:
       - { kind: increment, byPct: 0.025 }
     onMiss:

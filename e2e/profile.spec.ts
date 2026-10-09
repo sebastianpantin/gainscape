@@ -46,7 +46,10 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await page.getByLabel('Bodyweight (kg)').fill('500');
   await expect(page.getByText('Bodyweight must be between 20 and 400 kg.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
-  await page.getByLabel('Bodyweight (kg)').fill('82.4');
+  await page.getByLabel('Bodyweight (kg)').fill('8o');
+  await expect(page.getByText('Bodyweight must be between 20 and 400 kg.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await page.getByLabel('Bodyweight (kg)').fill('82,4');
   await page.getByLabel('Height (cm)').fill('181');
   await page.getByLabel('Birth year (optional)').fill(String(new Date().getFullYear() - 12));
   await expect(page.getByText(/Birth year must be between/)).toBeVisible();

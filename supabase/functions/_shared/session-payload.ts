@@ -4,6 +4,11 @@ import { HttpError } from './http.ts';
 
 export const lowerUuid = z.uuid().transform((id) => id.toLowerCase());
 
+export const sessionNotes = z
+  .string()
+  .max(2000)
+  .transform((notes) => notes.replaceAll('\u0000', ''));
+
 export function parseOr422<T extends z.ZodType>(schema: T, body: unknown): z.output<T> {
   const parsed = schema.safeParse(body);
   if (!parsed.success) throw new HttpError(422, 'invalid_payload', z.treeifyError(parsed.error));

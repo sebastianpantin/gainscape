@@ -5,6 +5,7 @@ import {
   challengeLoadKg,
   challengeSummaryText,
   challengeVolumeSoFarKg,
+  challengeVolumeText,
   exercisesWithoutE1rm,
   mentionsE1rm,
   missingE1rmText,
@@ -197,6 +198,11 @@ describe('challengeVolumeSoFarKg', () => {
     });
     expect(challengeVolumeSoFarKg(draft)).toBe(2600);
   });
+
+  it('shows the volume so far against the target in the lifter unit', () => {
+    expect(challengeVolumeText(liftedDraft(1), 10000, 'kg')).toBe('Volume so far: 2,500 / 10,000 kg');
+    expect(challengeVolumeText(liftedDraft(1), 10000, 'lb')).toBe('Volume so far: 5,512 / 22,046 lb');
+  });
 });
 
 describe('exercisesWithoutE1rm', () => {
@@ -267,7 +273,11 @@ describe('challengeSummaryText', () => {
     [SQUAT_CENTURY.definition, '100 reps of Back Squat at 50% of your e1RM or more'],
     [TEN_TON_DAY.definition, 'Lift 10,000 kg in one workout'],
   ])('describes %j', (definition, text) => {
-    expect(challengeSummaryText(definition, nameOf)).toBe(text);
+    expect(challengeSummaryText(definition, nameOf, 'kg')).toBe(text);
+  });
+
+  it('states a volume target in pounds for a lifter who uses pounds', () => {
+    expect(challengeSummaryText(TEN_TON_DAY.definition, nameOf, 'lb')).toBe('Lift 22,046 lb in one workout');
   });
 });
 
@@ -309,7 +319,7 @@ describe('mentionsE1rm', () => {
   it('agrees with the summary text', () => {
     const definitions = [DEADLIFT_AND_PULL_UP, SQUAT_CENTURY, TEN_TON_DAY].map((challenge) => challenge.definition);
     for (const definition of [...definitions, withoutPct, pctInLaterGroup]) {
-      expect(mentionsE1rm(definition)).toBe(challengeSummaryText(definition, (id) => id).includes('e1RM'));
+      expect(mentionsE1rm(definition)).toBe(challengeSummaryText(definition, (id) => id, 'kg').includes('e1RM'));
     }
   });
 });

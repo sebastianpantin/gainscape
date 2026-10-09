@@ -1,10 +1,13 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   chartDateText,
   maxRepsRecord,
   progressChartSeries,
   progressValueText,
+  PROGRESS_PAGE_SIZE,
   type ProgressSetRow,
+  queryProgressSets,
   repMaxTable,
   sessionProgress,
 } from '../../web/src/lib/exercise-progress-rules.ts';
@@ -158,5 +161,51 @@ describe('rep max table', () => {
       ]),
     ).toEqual({ reps: 12, localDate: '2026-10-01' });
     expect(maxRepsRecord([])).toBeNull();
+  });
+});
+
+describe('queryProgressSets', () => {
+  function pagedClient(rowCount: number) {
+    const rows = Array.from({ length: rowCount }, (_, index) => setRow({ session_id: `day-${(index % 9) + 1}` }));
+    const ranges: [number, number][] = [];
+    const client = {
+      from: () => {
+        let range: [number, number] = [0, rowCount];
+        const builder = {
+          select: () => builder,
+          eq: () => builder,
+          order: () => builder,
+          range: (from: number, to: number) => {
+            range = [from, to];
+            ranges.push(range);
+            return builder;
+          },
+          abortSignal: () => builder,
+          then: (resolve: (result: unknown) => unknown) =>
+            Promise.resolve(resolve({ data: rows.slice(range[0], range[1] + 1), error: null })),
+        };
+        return builder;
+      },
+    };
+    return { client: client as unknown as SupabaseClient, rows, ranges };
+  }
+
+  it('pages past the server row limit until a page comes back short', async () => {
+    const { client, rows, ranges } = pagedClient(2 * PROGRESS_PAGE_SIZE + 5);
+    const loaded = await queryProgressSets(client, 'user', 'exercise', new AbortController().signal);
+    expect(loaded).toEqual(rows);
+    expect(ranges).toEqual([
+      [0, PROGRESS_PAGE_SIZE - 1],
+      [PROGRESS_PAGE_SIZE, 2 * PROGRESS_PAGE_SIZE - 1],
+      [2 * PROGRESS_PAGE_SIZE, 3 * PROGRESS_PAGE_SIZE - 1],
+    ]);
+  });
+
+  it('asks one more page when the history fills the last page exactly', async () => {
+    const { client, ranges } = pagedClient(PROGRESS_PAGE_SIZE);
+    expect(await queryProgressSets(client, 'user', 'exercise', new AbortController().signal)).toHaveLength(
+      PROGRESS_PAGE_SIZE,
+    );
+    expect(ranges).toHaveLength(2);
   });
 });

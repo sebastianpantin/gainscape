@@ -7,23 +7,33 @@ export interface PlannedChallenge {
   plannedChallenge?: DraftChallenge | null;
 }
 
-type RememberedSummary = SessionSummary & RememberedTiming & PlannedChallenge;
+type RememberedSummary = SessionSummary & RememberedTiming & PlannedChallenge & { storedContentDiffers?: true };
 
 const LAST_SUMMARY_KEY = 'gainscape.last-summary';
 
-export function rememberLastSummary(summary: RememberedSummary): void {
+interface RememberedEntry {
+  userId: string;
+  summary: RememberedSummary;
+}
+
+function rememberedEntry(): Partial<RememberedEntry> | null {
+  const raw = sessionStorage.getItem(LAST_SUMMARY_KEY);
+  return raw ? (JSON.parse(raw) as Partial<RememberedEntry>) : null;
+}
+
+export function rememberLastSummary(userId: string, summary: RememberedSummary): void {
   try {
-    sessionStorage.setItem(LAST_SUMMARY_KEY, JSON.stringify(summary));
+    sessionStorage.setItem(LAST_SUMMARY_KEY, JSON.stringify({ userId, summary }));
   } catch {
     return;
   }
 }
 
-export function recallLastSummary(): RememberedSummary | null {
+export function recallLastSummary(userId: string): RememberedSummary | null {
   try {
-    const raw = sessionStorage.getItem(LAST_SUMMARY_KEY);
-    if (!raw) return null;
-    const remembered = JSON.parse(raw) as RememberedSummary;
+    const entry = rememberedEntry();
+    if (!entry?.userId || !entry.summary || entry.userId !== userId) return null;
+    const remembered = entry.summary;
     return 'plannedChallenge' in remembered
       ? { ...remembered, plannedChallenge: parsedDraftChallenge(remembered.plannedChallenge) }
       : remembered;
@@ -34,8 +44,8 @@ export function recallLastSummary(): RememberedSummary | null {
 
 export function forgetLastSummary(sessionIds: readonly string[]): void {
   try {
-    const cached = recallLastSummary();
-    if (cached && sessionIds.includes(cached.sessionId)) sessionStorage.removeItem(LAST_SUMMARY_KEY);
+    const cachedSessionId = rememberedEntry()?.summary?.sessionId;
+    if (cachedSessionId && sessionIds.includes(cachedSessionId)) sessionStorage.removeItem(LAST_SUMMARY_KEY);
   } catch {
     return;
   }

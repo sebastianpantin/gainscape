@@ -464,6 +464,8 @@ export function failureText(action: FailureAction, verb: 'save' | 'delete'): str
       return `Couldn't reach the server (${action.reason}). Try again.`;
     case 'rate_limited':
       return `Too many changes. ${tryAgainIn(action.retryAfterSeconds)}`;
+    case 'revision_conflict':
+      return `This workout was changed on another device. Check the latest version, then ${verb} it again if you still want to.`;
     case 'bug':
       return `Couldn't ${verb} this workout: ${action.code}`;
     default:

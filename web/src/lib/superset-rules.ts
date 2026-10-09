@@ -58,10 +58,11 @@ export function groupWithNext(draft: WorkoutDraft, exerciseIndex: number): Worko
   const nextId = supersetIdAt(draft, exerciseIndex + 1);
   const ownId = supersetIdAt(draft, exerciseIndex);
   if (nextId !== null && nextId === ownId) return draft;
+  const nextMembers = groupOf(draft, exerciseIndex + 1)?.exerciseIndexes ?? [exerciseIndex + 1];
   const grouped =
-    nextId !== null
+    ownId === null && nextId !== null
       ? withSupersetId(draft, [exerciseIndex], nextId)
-      : withSupersetId(draft, [exerciseIndex, exerciseIndex + 1], ownId ?? crypto.randomUUID());
+      : withSupersetId(draft, [exerciseIndex, ...nextMembers], ownId ?? crypto.randomUUID());
   return { ...grouped, exercises: withValidSupersets(grouped.exercises) };
 }
 

@@ -12,7 +12,7 @@ POST endpoint that edits notes and sets of an existing session within the edit w
 | File         | Description                                                                                                                                                                   |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `index.ts`   | Handler; the domain `isNoOpEdit` skips unchanged edits, `writableSetFor` computes carried loads, returns `EditResponse` (summary, revision, replayedSessionIds, revokedDrops) |
-| `payload.ts` | Strict zod `editSchema` and `parseEditSessionPayload`                                                                                                                         |
+| `payload.ts` | Strict zod `editSchema` (notes through `sessionNotes`) and `parseEditSessionPayload`                                                                                          |
 | `deno.json`  | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                           |
 | `deno.lock`  | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                |
 

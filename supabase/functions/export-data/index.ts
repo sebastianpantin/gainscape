@@ -8,7 +8,7 @@ const EXPORT_FORMAT_VERSION = 6;
 
 async function exportFor(userId: string) {
   await takeRateLimit(sql, 'export_data_hour', userId);
-  return await sql.begin('read only', async (tx) => {
+  return await sql.begin('isolation level repeatable read read only', async (tx) => {
     const [account] = await tx`select email, created_at from auth.users where id = ${userId}`;
     const [profile] = await tx`
       select username, display_name, bio, training_focus, training_since, badge_color, show_weights, show_bodyweight,

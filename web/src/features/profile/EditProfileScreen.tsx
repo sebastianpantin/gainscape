@@ -9,6 +9,7 @@ import {
   bioProblem,
   birthYearProblem,
   bodyweightInUnitProblem,
+  bodyweightKgFromInput,
   DISPLAY_NAME_MAX_LENGTH,
   feetAndInchesProblem,
   heightInCm,
@@ -27,7 +28,7 @@ import {
   updatePrivateProfile,
   updatePublicProfile,
 } from '../../lib/profile.ts';
-import { shownWeight, unitToKg } from '../../lib/units.ts';
+import { shownWeight } from '../../lib/units.ts';
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileBadge } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
@@ -90,11 +91,12 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
         badgeColor,
       });
       await updatePrivateProfile(userId, { heightCm, birthYear: optionalNumber(birthYear) });
-      const typedWeight = optionalNumber(bodyweight);
-      if (typedWeight !== null) {
-        const kg = unitToKg(typedWeight, unitPref);
-        const unchanged = profile.bodyweightKg !== null && shownWeight(profile.bodyweightKg, unitPref) === typedWeight;
-        if (!unchanged) await updatePrivateProfile(userId, { bodyweightKg: kg });
+      const typedKg = bodyweightKgFromInput(bodyweight, unitPref);
+      if (typedKg !== null) {
+        const unchanged =
+          profile.bodyweightKg !== null &&
+          shownWeight(profile.bodyweightKg, unitPref) === shownWeight(typedKg, unitPref);
+        if (!unchanged) await updatePrivateProfile(userId, { bodyweightKg: typedKg });
       }
       await onSaved();
       navigate('/profile');
@@ -189,9 +191,9 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
         <label className="field">
           Bodyweight ({unitPref})
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
-            step={0.1}
+            autoComplete="off"
             value={bodyweight}
             onChange={(event) => setBodyweight(event.target.value)}
           />

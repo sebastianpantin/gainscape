@@ -163,4 +163,15 @@ describe('validateEnrollment bounds inputs to the lifts and values the template 
   it('accepts an input of exactly 1000', () => {
     expect(validateEnrollment(MADCOW_5X5, madcowEnrollment({ fiveRms: { deadlift: 1000 } }))).toEqual([]);
   });
+
+  it('accepts an lb input up to 2205, the 1000 kg cap in pounds (deadlift 2205 lb)', () => {
+    expect(validateEnrollment(MADCOW_5X5, madcowEnrollment({ unit: 'lb', fiveRms: { deadlift: 2205 } }))).toEqual([]);
+  });
+
+  it('rejects an lb input above 2205 (squat 2205.5 lb) and names the lb cap', () => {
+    const enrollment = madcowEnrollment({ unit: 'lb', fiveRms: { squat: 2205.5 } });
+    expect(validateEnrollment(MADCOW_5X5, enrollment)).toEqual([
+      "lift 'squat' input 'fiveRm' must be above 0 and at most 2205, got 2205.5",
+    ]);
+  });
 });

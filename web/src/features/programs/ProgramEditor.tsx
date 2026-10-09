@@ -7,14 +7,17 @@ import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
+import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import {
   addDay,
   addPlannedExercise,
   canAddDay,
+  canAddPlannedExercise,
   changePlannedExercise,
   DAY_NAME_MAX_LENGTH,
   docFor,
+  MAX_EXERCISES_PER_DAY,
   moveDay,
   movePlannedExercise,
   nameIssue,
@@ -22,42 +25,16 @@ import {
   removeDay,
   removePlannedExercise,
   renameDay,
+  targetIssue,
   TARGET_REPS_RANGE,
   TARGET_SETS_RANGE,
   trimmedDoc,
 } from './program-edit.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 
 interface ProgramEditorProps {
   userId: string;
-}
-
-interface NumberFieldProps {
-  label: string;
-  value: number;
-  lowest: number;
-  highest: number;
-  onChange: (value: number) => void;
-}
-
-function NumberField({ label, value, lowest, highest, onChange }: NumberFieldProps) {
-  return (
-    <label className="compact-field">
-      {label}
-      <input
-        type="number"
-        inputMode="numeric"
-        min={lowest}
-        max={highest}
-        step={1}
-        value={value}
-        onChange={(event) => {
-          const next = Number(event.target.value);
-          if (event.target.value.trim() !== '' && Number.isInteger(next)) onChange(next);
-        }}
-      />
-    </label>
-  );
 }
 
 export function ProgramEditor({ userId }: ProgramEditorProps) {
@@ -115,7 +92,8 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
   const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const pickable = exercises.filter((exercise) => !exercise.archived);
 
-  const issue = nameIssue(doc);
+  const nameOf = (exerciseId: string) => byId.get(exerciseId)?.name ?? 'Unknown exercise';
+  const issue = nameIssue(doc) ?? targetIssue(doc, nameOf);
 
   const save = async () => {
     if (issue) return setProblem(issue);
@@ -180,11 +158,12 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
             </span>
           </div>
           <ol className="stack exercise-list">
-            {day.exercises.map((planned, exerciseIndex) => {
+            {exerciseKeys(day.exercises).map((plannedKey, exerciseIndex) => {
+              const planned = day.exercises[exerciseIndex];
               const exercise = byId.get(planned.exerciseId);
-              const name = exercise?.name ?? 'Unknown exercise';
+              const name = nameOf(planned.exerciseId);
               return (
-                <li className="stack program-exercise" key={`${planned.exerciseId}-${exerciseIndex}`}>
+                <li className="stack program-exercise" key={plannedKey}>
                   <div className="row spread">
                     <span>
                       {name} {exercise && <span className="muted">{exerciseLabels(exercise)}</span>}
@@ -219,27 +198,30 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
                     </span>
                   </div>
                   <div className="row">
-                    <NumberField
+                    <NumberTextField
                       label="Sets"
                       value={planned.targetSets}
                       {...TARGET_SETS_RANGE}
-                      onChange={(targetSets) =>
+                      wholeNumber
+                      onCommit={(targetSets) =>
                         setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetSets }))
                       }
                     />
-                    <NumberField
+                    <NumberTextField
                       label="Reps min"
                       value={planned.targetRepsMin}
                       {...TARGET_REPS_RANGE}
-                      onChange={(targetRepsMin) =>
+                      wholeNumber
+                      onCommit={(targetRepsMin) =>
                         setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetRepsMin }))
                       }
                     />
-                    <NumberField
+                    <NumberTextField
                       label="Reps max"
                       value={planned.targetRepsMax}
                       {...TARGET_REPS_RANGE}
-                      onChange={(targetRepsMax) =>
+                      wholeNumber
+                      onCommit={(targetRepsMax) =>
                         setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetRepsMax }))
                       }
                     />
@@ -248,10 +230,14 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
               );
             })}
           </ol>
-          <ExercisePicker
-            exercises={pickable}
-            onPick={(exercise) => setDoc(addPlannedExercise(doc, dayIndex, exercise.id))}
-          />
+          {canAddPlannedExercise(day) ? (
+            <ExercisePicker
+              exercises={pickable}
+              onPick={(exercise) => setDoc(addPlannedExercise(doc, dayIndex, exercise.id))}
+            />
+          ) : (
+            <p className="hint">A day holds at most {MAX_EXERCISES_PER_DAY} exercises.</p>
+          )}
         </section>
       ))}
       <button

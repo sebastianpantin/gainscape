@@ -13,7 +13,7 @@ import {
   type TestUser,
   rowCounts,
 } from './local-stack.ts';
-import { aSet, DAY_MS, hoursAgo, payloadAt, postSession, withFreshIds } from './session-support.ts';
+import { aSet, DAY_MS, editSession, hoursAgo, payloadAt, postSession, withFreshIds } from './session-support.ts';
 
 async function remove(user: TestUser, body: unknown) {
   return await postFunction('delete-session', user.accessToken, body);
@@ -153,9 +153,21 @@ describe('delete-session guards', () => {
     expect((await expectRejected(owner, { sessionId: randomUUID() }, 404)).body.error).toBe('session_not_found');
   });
 
+  it('returns 409 revision_conflict for a stale ifRevision and deletes with the current one', async () => {
+    const session = payloadAt(hoursAgo(3), [aSet(benchId, 0, 60)]);
+    await postSession(owner, session);
+    await editSession(owner, session, [{ ...session.sets[0], weightKg: 62.5 }]);
+    const stale = await expectRejected(owner, { sessionId: session.id, ifRevision: 0 }, 409);
+    expect(stale.body).toEqual({ error: 'revision_conflict', details: { revision: 1 } });
+    const current = await remove(owner, { sessionId: session.id, ifRevision: 1 });
+    expect(current.status, current.rawBody).toBe(200);
+    expect(current.body.deleted).toBe(true);
+  });
+
   it('returns 422 for a malformed id or an extra key', async () => {
     await expectRejected(owner, { sessionId: 'not-a-uuid' }, 422);
     await expectRejected(owner, { sessionId: randomUUID(), force: true }, 422);
+    await expectRejected(owner, { sessionId: randomUUID(), ifRevision: -1 }, 422);
   });
 });
 

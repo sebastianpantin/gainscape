@@ -265,7 +265,7 @@ describe('prior state loaded from stored rows', () => {
 
     const [middleBench] =
       await db`select e1rm_before_kg::float, rir_source from public.sets where id = ${middle.sets[0].id}`;
-    expect(middleBench).toEqual({ e1rm_before_kg: 93.33, rir_source: 'estimated' });
+    expect(middleBench).toEqual({ e1rm_before_kg: 111, rir_source: 'estimated' });
 
     const incremental = await normalizedSnapshot(user.id);
     expect((await rebuildCaches(user.id)).status).toBe(200);

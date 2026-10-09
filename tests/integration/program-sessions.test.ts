@@ -74,7 +74,7 @@ async function enrollInMadcow(user: TestUser): Promise<string> {
   const result = await user.client.rpc('enroll_program', {
     enrollment: {
       templateKey: 'madcow_5x5',
-      templateVersion: 1,
+      templateVersion: 2,
       unit: 'kg',
       options: { rampStep: 0.125 },
       bindings: madcowBindings(),
@@ -574,7 +574,7 @@ describe('enrollment_facts', () => {
     expect(facts.enrollment).toMatchObject({
       id: enrollmentId,
       template_key: 'madcow_5x5',
-      template_version: 1,
+      template_version: 2,
       unit: 'kg',
       options: { rampStep: 0.125 },
       lift_bindings: madcowBindings(),

@@ -29,6 +29,9 @@ function slowWriteStore(initial: StoredDraft | null) {
     discard: async () => {
       record = null;
     },
+    forget: async () => {
+      record = null;
+    },
     userIdsWithDrafts: async () => (record?.kind === 'draft' ? [userId] : []),
   };
   return { store, current: () => record };
@@ -197,6 +200,20 @@ describe('sendOutcomeFrom', () => {
       reason: 'rate_limited',
       retryAfterMs: undefined,
     });
+  });
+
+  it('retries a missing function, a timeout or a too-early request instead of rejecting the workout', () => {
+    for (const status of [404, 408, 425])
+      expect(sendOutcomeFrom({ kind: 'http_error', status, code: `http_${status}`, details: undefined })).toEqual({
+        kind: 'retryable',
+        reason: `http_${status}`,
+      });
+  });
+
+  it('still rejects the missing profile that complete-session reports as 404', () => {
+    expect(sendOutcomeFrom({ kind: 'http_error', status: 404, code: 'profile_not_found', details: undefined })).toEqual(
+      { kind: 'rejected', reason: 'profile_not_found' },
+    );
   });
 
   it('keeps a history-only summary as a successful sync', () => {

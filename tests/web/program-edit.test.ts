@@ -3,15 +3,18 @@ import {
   addDay,
   addPlannedExercise,
   canAddDay,
+  canAddPlannedExercise,
   changePlannedExercise,
   docFor,
   MAX_DAYS,
+  MAX_EXERCISES_PER_DAY,
   moveDay,
   movePlannedExercise,
   nameIssue,
   removeDay,
   removePlannedExercise,
   renameDay,
+  targetIssue,
   trimmedDoc,
 } from '../../web/src/features/programs/program-edit.ts';
 import type { Program, ProgramDoc } from '../../web/src/lib/programs.ts';
@@ -82,6 +85,31 @@ describe('planned exercise changes', () => {
     expect(movePlannedExercise(doc, 0, 0, 1).days[0].exercises.map((e) => e.exerciseId)).toEqual(['row', 'bench']);
     expect(removePlannedExercise(doc, 0, 0).days[0].exercises.map((e) => e.exerciseId)).toEqual(['row']);
     expect(addPlannedExercise(doc, 1, 'deadlift').days[1].exercises.at(-1)).toEqual(planned('deadlift'));
+  });
+
+  it('adds planned exercises up to the limit a day holds', () => {
+    const fullDay = {
+      ...doc.days[0],
+      exercises: Array.from({ length: MAX_EXERCISES_PER_DAY }, () => planned('bench')),
+    };
+    expect(MAX_EXERCISES_PER_DAY).toBe(20);
+    expect(canAddPlannedExercise(doc.days[0])).toBe(true);
+    expect(canAddPlannedExercise(fullDay)).toBe(false);
+  });
+});
+
+describe('targets', () => {
+  const names: Record<string, string> = { bench: 'Bench Press', row: 'Barbell Row', squat: 'Back Squat' };
+  const nameOf = (exerciseId: string) => names[exerciseId] ?? 'Unknown exercise';
+
+  it('accepts reps min up to reps max', () => {
+    expect(targetIssue(doc, nameOf)).toBeNull();
+    expect(targetIssue(changePlannedExercise(doc, 1, 0, { targetRepsMin: 12, targetRepsMax: 12 }), nameOf)).toBeNull();
+  });
+
+  it('names the first exercise whose reps min is above its reps max', () => {
+    const swapped = changePlannedExercise(doc, 1, 0, { targetRepsMin: 12, targetRepsMax: 8 });
+    expect(targetIssue(swapped, nameOf)).toBe("Back Squat on Lower: reps min can't be above reps max.");
   });
 });
 

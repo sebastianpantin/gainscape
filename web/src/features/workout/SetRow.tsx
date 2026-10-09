@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, type SetPersonalRecord } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
+import { NumberTextField } from '../../components/NumberTextField.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
 import { assumedEffort } from '../../lib/effort-labels.ts';
 import { GLOSSARY } from '../../lib/glossary.ts';
@@ -14,7 +15,7 @@ import {
   steppedReps,
   steppedWeight,
   unitToKg,
-  WEIGHT_INPUT_STEP,
+  WEIGHT_STEPPER_STEP,
 } from '../../lib/units.ts';
 import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
 import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
@@ -41,12 +42,6 @@ interface SetRowProps {
   doneLabel?: string;
   focusDone: boolean;
   onDoneFocused: () => void;
-}
-
-function clampedNumber(raw: string, fallback: number, lowest: number, highest: number): number {
-  const value = Number(raw);
-  if (raw.trim() === '' || !Number.isFinite(value)) return fallback;
-  return Math.min(highest, Math.max(lowest, value));
 }
 
 const HIGHEST_LOAD_KG = 2000;
@@ -86,18 +81,14 @@ export function WeightField({ loadType, weightKg, unit, onChange, stepperSetNumb
   const shown = shownWeight(weightKg, unit);
   const highest = highestWeightInUnit(HIGHEST_LOAD_KG, unit);
   const field = (
-    <label className="compact-field">
-      {loadType === 'bodyweight_plus' ? `+${unit}` : unit}
-      <input
-        type="number"
-        inputMode="decimal"
-        min={0}
-        max={highest}
-        step={WEIGHT_INPUT_STEP}
-        value={shown}
-        onChange={(event) => onChange(unitToKg(clampedNumber(event.target.value, shown, 0, highest), unit))}
-      />
-    </label>
+    <NumberTextField
+      label={loadType === 'bodyweight_plus' ? `+${unit}` : unit}
+      value={shown}
+      lowest={0}
+      highest={highest}
+      step={WEIGHT_STEPPER_STEP[unit]}
+      onCommit={(typed) => onChange(unitToKg(typed, unit))}
+    />
   );
   if (stepperSetNumber === undefined) return field;
   return (
@@ -120,18 +111,14 @@ interface RepsFieldProps {
 
 export function RepsField({ reps, onChange, stepperSetNumber }: RepsFieldProps) {
   const field = (
-    <label className="compact-field">
-      reps
-      <input
-        type="number"
-        inputMode="numeric"
-        min={LOWEST_REPS}
-        max={HIGHEST_REPS}
-        step={1}
-        value={reps}
-        onChange={(event) => onChange(Math.round(clampedNumber(event.target.value, reps, LOWEST_REPS, HIGHEST_REPS)))}
-      />
-    </label>
+    <NumberTextField
+      label="reps"
+      value={reps}
+      lowest={LOWEST_REPS}
+      highest={HIGHEST_REPS}
+      wholeNumber
+      onCommit={onChange}
+    />
   );
   if (stepperSetNumber === undefined) return field;
   return (

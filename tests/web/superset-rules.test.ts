@@ -92,6 +92,16 @@ describe('groupWithNext', () => {
     expect(supersetIds(groupWithNext(draft, 1))).toEqual(['g', 'g', 'g']);
   });
 
+  it('merges the group of this exercise with the group of the next one', () => {
+    const draft = draftOf([
+      lift('a', ['a1'], 'x'),
+      lift('b', ['b1'], 'x'),
+      lift('c', ['c1'], 'y'),
+      lift('d', ['d1'], 'y'),
+    ]);
+    expect(supersetIds(groupWithNext(draft, 1))).toEqual(['x', 'x', 'x', 'x']);
+  });
+
   it('does nothing on the last exercise', () => {
     const draft = draftOf([lift('a', ['a1']), lift('b', ['b1'])]);
     expect(groupWithNext(draft, 1)).toEqual(draft);

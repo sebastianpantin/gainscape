@@ -34,4 +34,10 @@ describe('implausibleTiming', () => {
     expect(implausibleTiming(at(HOUR_MS), at(HOUR_MS - 1), now)).toBe('ends_before_start');
     expect(implausibleTiming(at(-HOUR_MS), at(12 * HOUR_MS), now)).toBe('session_too_long');
   });
+
+  it('rejects a session that starts before 1970', () => {
+    expect(implausibleTiming('1969-12-31T23:30:00.000Z', '1970-01-01T00:10:00.000Z', now)).toBe('session_too_old');
+    expect(implausibleTiming('0000-01-01T00:00:00.000Z', '0000-01-01T00:30:00.000Z', now)).toBe('session_too_old');
+    expect(implausibleTiming('1970-01-01T00:00:00.000Z', '1970-01-01T00:30:00.000Z', now)).toBeNull();
+  });
 });

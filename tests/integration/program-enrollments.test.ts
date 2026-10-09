@@ -40,10 +40,12 @@ interface ExportedEnrollments {
 }
 
 const ROTATION_TEMPLATE_KEY = `it_rotation_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
-const ROTATION_TEMPLATE: ProgramDefinition = { ...structuredClone(GZCLP), key: ROTATION_TEMPLATE_KEY };
+const ROTATION_TEMPLATE: ProgramDefinition = { ...structuredClone(GZCLP), key: ROTATION_TEMPLATE_KEY, version: 1 };
 
 const UNIT_ONLY_TEMPLATE_KEY = `it_unit_only_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 const UNIT_ONLY_TEMPLATE: ProgramDefinition = { ...structuredClone(JUGGERNAUT_2), key: UNIT_ONLY_TEMPLATE_KEY };
+
+const UNPUBLISHED_VERSION = 99;
 
 const KG_ROUNDING = { increment: 2.5, mode: 'nearest', barWeight: 20 };
 
@@ -71,7 +73,7 @@ afterAll(async () => {
 function madcowPayload(): EnrollmentPayload {
   return {
     templateKey: 'madcow_5x5',
-    templateVersion: 1,
+    templateVersion: MADCOW_5X5.version,
     unit: 'kg',
     options: { rampStep: 0.125 },
     bindings: {
@@ -96,7 +98,7 @@ function madcowPayload(): EnrollmentPayload {
 function fiveThreeOnePayload(): EnrollmentPayload {
   return {
     templateKey: 'five_three_one',
-    templateVersion: 1,
+    templateVersion: FIVE_THREE_ONE.version,
     unit: 'lb',
     options: { supplemental: 'bbb', bbbPct: 0.5 },
     bindings: {
@@ -193,10 +195,10 @@ describe('program_templates', () => {
       .from('program_templates')
       .select('key, version, name, definition')
       .eq('key', key)
-      .eq('version', 1)
+      .eq('version', fixture.version)
       .single();
     expect(error).toBeNull();
-    expect(data).toEqual({ key, version: 1, name, definition: JSON.parse(JSON.stringify(fixture)) });
+    expect(data).toEqual({ key, version: fixture.version, name, definition: JSON.parse(JSON.stringify(fixture)) });
   });
 
   it('refuses a template written by a client', async () => {
@@ -226,7 +228,7 @@ describe('enroll_program', () => {
       id: enrollmentId,
       user_id: user.id,
       template_key: 'madcow_5x5',
-      template_version: 1,
+      template_version: MADCOW_5X5.version,
       unit: 'kg',
       options: payload.options,
       lift_bindings: payload.bindings,
@@ -258,7 +260,7 @@ describe('enroll_program', () => {
 
   it.each<[string, (payload: EnrollmentPayload) => void, string]>([
     ['an unknown template', (p) => (p.templateKey = 'madcow_6x6'), 'unknown_template'],
-    ['an unknown template version', (p) => (p.templateVersion = 2), 'unknown_template'],
+    ['an unknown template version', (p) => (p.templateVersion = UNPUBLISHED_VERSION), 'unknown_template'],
     ['a lift without an input', (p) => delete p.inputs.deadlift, 'invalid_enrollment'],
     ['an input kind the template does not take', (p) => (p.inputs.squat = { oneRm: 120 }), 'invalid_enrollment'],
     ['an input of zero', (p) => (p.inputs.squat = { fiveRm: 0 }), 'invalid_enrollment'],
@@ -309,6 +311,21 @@ describe('enroll_program', () => {
     const payload = madcowPayload();
     payload.inputs.deadlift = { fiveRm: 1000 };
     await enrolled(user, payload);
+  });
+
+  it('accepts an lb input of 2205, the 1000 kg cap in pounds', async () => {
+    const user = await createTestUser();
+    const payload = fiveThreeOnePayload();
+    payload.inputs.deadlift = { tm: 2205 };
+    await enrolled(user, payload);
+  });
+
+  it('refuses an lb input above 2205 and stores nothing', async () => {
+    const user = await createTestUser();
+    const payload = fiveThreeOnePayload();
+    payload.inputs.deadlift = { tm: 2205.5 };
+    expectRefused(await enroll(user, payload), 'invalid_enrollment');
+    expect(await enrollmentRows(user.id)).toHaveLength(0);
   });
 
   it('stores only increment, mode and barWeight of the rounding', async () => {
@@ -426,6 +443,26 @@ describe('adjust_enrollment', () => {
     const before = await eventRows(madcowId);
     expectRefused(await adjust(madcowUser, madcowId, { kind: 'set_reference', ...fields }), 'invalid_event');
     expect(await eventRows(madcowId)).toHaveLength(before.length);
+  });
+
+  it('accepts an lb reference of 2205 on the lb 5/3/1 enrollment', async () => {
+    const result = await adjust(cycleUser, cycleId, {
+      kind: 'set_reference',
+      lift: 'deadlift',
+      var: 'tm',
+      value: 2205,
+    });
+    expect(result.error).toBeNull();
+  });
+
+  it('refuses an lb reference above 2205 on the lb 5/3/1 enrollment', async () => {
+    const result = await adjust(cycleUser, cycleId, {
+      kind: 'set_reference',
+      lift: 'deadlift',
+      var: 'tm',
+      value: 2205.5,
+    });
+    expectRefused(result, 'invalid_event');
   });
 
   it('refuses a top reference on 5/3/1, which declares only tm', async () => {
@@ -573,7 +610,7 @@ describe('the enroll rate limit', () => {
   it('does not count a refused enrollment', async () => {
     const user = await createTestUser();
     const payload = madcowPayload();
-    payload.templateVersion = 2;
+    payload.templateVersion = UNPUBLISHED_VERSION;
     expectRefused(await enroll(user, payload), 'unknown_template');
     expect(await rateLimitHits('program_enroll_hour', user.id)).toBe(0);
   });

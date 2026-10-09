@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { roundTo } from '@domain/math.ts';
 import { epley } from '@domain/strength.ts';
@@ -12,6 +13,33 @@ export const PROGRESS_COLUMNS = {
   repMaxes: 'reps, load_kg, achieved_at, sets!rep_maxes_set_id_fkey(sessions(local_date))',
   maxReps: 'max_reps, achieved_at, sets(sessions(local_date))',
 } as const;
+
+export const PROGRESS_PAGE_SIZE = 1000;
+
+export async function queryProgressSets(
+  client: SupabaseClient,
+  userId: string,
+  exerciseId: string,
+  signal: AbortSignal,
+): Promise<ProgressSetRow[]> {
+  const rows: ProgressSetRow[] = [];
+  for (let from = 0; ; from += PROGRESS_PAGE_SIZE) {
+    const { data, error } = await client
+      .from('sets')
+      .select(PROGRESS_COLUMNS.sets)
+      .eq('user_id', userId)
+      .eq('exercise_id', exerciseId)
+      .eq('is_warmup', false)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, from + PROGRESS_PAGE_SIZE - 1)
+      .abortSignal(signal);
+    if (error) throw error;
+    const page = data as unknown as ProgressSetRow[];
+    rows.push(...page);
+    if (page.length < PROGRESS_PAGE_SIZE) return rows;
+  }
+}
 
 export function exerciseProgressPath(exerciseId: string): string {
   return `/collection/exercises/${exerciseId}`;

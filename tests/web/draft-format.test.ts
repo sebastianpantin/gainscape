@@ -112,6 +112,12 @@ describe('parseStoredDraft', () => {
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
   });
 
+  it('accepts a discard tombstone for the same user', () => {
+    const raw = { v: 5, kind: 'discarded', userId, updatedAt: 6, discardedSessionId: workout().sessionId };
+    expect(parseStoredDraft(raw, userId)).toEqual(raw);
+    expect(parseStoredDraft({ ...raw, discardedSessionId: 7 }, userId)).toBeNull();
+  });
+
   it('keeps a warm-up flag through a v5 parse', () => {
     const [bench, row] = liftsOf(workout());
     const warmup = { ...bench.sets[0], isWarmup: true };

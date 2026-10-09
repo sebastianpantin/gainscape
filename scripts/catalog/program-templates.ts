@@ -212,6 +212,7 @@ const progressionRule = z.strictObject({
   trigger: z.enum(['afterSession', 'endOfWeek', 'endOfCycle', 'endOfWave']),
   judgedSlots: z.array(z.string()),
   judgedWeeks: z.array(positiveInt).optional(),
+  judgedSetIndexes: z.array(nonNegativeInt).min(1).optional(),
   onMet: z.array(adjustment),
   onMiss: z.array(adjustment),
   always: z.array(adjustment).optional(),
@@ -223,7 +224,12 @@ export const programDefinitionSchema = z.strictObject({
   name: z.string().min(1).max(60),
   source: sources,
   lifts: z.array(
-    z.strictObject({ key: z.string(), name: z.string(), category: z.enum(['upper', 'lower']).optional() }),
+    z.strictObject({
+      key: z.string(),
+      name: z.string(),
+      category: z.enum(['upper', 'lower']).optional(),
+      barbell: z.boolean().optional(),
+    }),
   ),
   inputs: z.array(z.strictObject({ lifts: z.array(z.string()), kinds: z.array(inputKind).min(1) })),
   referenceVars: z.array(referenceVar),
@@ -282,7 +288,10 @@ export function kgFromLb(lb: number): number {
 export function programTemplateProblems(template: ProgramTemplate): string[] {
   const { definition } = template;
   const problems: string[] = [];
-  if (`${definition.key}.yaml` !== template.file) {
+  if (template.file.includes('@')) {
+    if (`${definition.key}@${definition.version}.yaml` !== template.file)
+      problems.push(`key and version must equal the file name "${template.file}"`);
+  } else if (`${definition.key}.yaml` !== template.file) {
     problems.push(`key must equal the file name "${template.file}"`);
   }
   problems.push(...validateProgramDefinition(definition));
@@ -295,9 +304,23 @@ export function programTemplateProblems(template: ProgramTemplate): string[] {
   return problems.map((problem) => `program template "${definition.key}": ${problem}`);
 }
 
+function olderVersionProblems(templates: readonly ProgramTemplate[]): string[] {
+  const latestVersionByFile = new Map(
+    templates.filter(({ file }) => !file.includes('@')).map(({ file, definition }) => [file, definition.version]),
+  );
+  return templates.flatMap(({ file, definition }) => {
+    const latestFile = `${definition.key}.yaml`;
+    const latestVersion = latestVersionByFile.get(latestFile);
+    if (!file.includes('@') || latestVersion === undefined || definition.version < latestVersion) return [];
+    return [
+      `program template "${definition.key}": ${latestFile} must hold the latest version, but ${file} is not older`,
+    ];
+  });
+}
+
 export function loadProgramTemplates(dir: string = PROGRAM_TEMPLATES_DIR): ProgramTemplate[] {
   const templates = readProgramTemplateSources(dir).map(parseProgramTemplate);
-  const problems = templates.flatMap(programTemplateProblems);
+  const problems = [...templates.flatMap(programTemplateProblems), ...olderVersionProblems(templates)];
   if (problems.length > 0) throw new CatalogValidationError(problems);
   return templates;
 }

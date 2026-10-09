@@ -174,15 +174,17 @@ export async function rollNewSessionLoot(
   await syncSessionEvents(tx, userId, [sessionId]);
 }
 
-export type ActiveDrop = DropSummary & { sessionId: string; lootVersion: number };
+export type ActiveDrop = DropSummary & { sessionId: string; lootVersion: number; balanceVersion: number | null };
 
 async function loadActiveDrops(tx: Transaction, userId: string, sessionIds: readonly string[]): Promise<ActiveDrop[]> {
   if (sessionIds.length === 0) return [];
   const rows = await tx`
-    select d.id, d.session_id, d.set_id, d.item_id, i.key as item_key, d.quantity, d.source, r.loot_version
+    select d.id, d.session_id, d.set_id, d.item_id, i.key as item_key, d.quantity, d.source, r.loot_version,
+           s.balance_version
     from public.drops d
     join public.items i on i.id = d.item_id
     join public.loot_rolls r on r.id = d.loot_roll_id
+    left join public.sessions s on s.id = d.session_id
     where d.user_id = ${userId} and d.revoked_at is null and d.session_id = any(${sessionIds as string[]}::uuid[])
     order by d.created_at, d.id`;
   return rows.map((row) => ({
@@ -194,6 +196,7 @@ async function loadActiveDrops(tx: Transaction, userId: string, sessionIds: read
     quantity: row.quantity,
     source: row.source,
     lootVersion: row.loot_version,
+    balanceVersion: row.balance_version,
   }));
 }
 
@@ -265,6 +268,7 @@ export async function revokeDisqualifiedDrops(
   current: readonly (LootCandidate & { sessionId: string })[],
   replayedSessionIds: readonly string[],
   deletedSessionIds: readonly string[],
+  balanceVersion: number,
 ): Promise<RevokedActiveDrop[]> {
   const active = await loadActiveDrops(tx, userId, [...replayedSessionIds, ...deletedSessionIds]);
   const currentBySetId = new Map(current.map((candidate) => [`${candidate.sessionId}:${candidate.setId}`, candidate]));
@@ -275,7 +279,8 @@ export async function revokeDisqualifiedDrops(
       currentBySetId.get(`${drop.sessionId}:${drop.setId}`),
       deleted.has(drop.sessionId),
       DEFAULT_LOOT,
-      drop.lootVersion,
+      { lootVersion: drop.lootVersion, balanceVersion: drop.balanceVersion ?? balanceVersion },
+      { lootVersion: DEFAULT_LOOT.version, balanceVersion },
     );
     return reason === null ? [] : [{ drop, reason }];
   });

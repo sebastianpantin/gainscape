@@ -26,6 +26,7 @@ import {
   challengeHeadline,
   describeRecord,
   gearBonusText,
+  unappliedChangesText,
 } from './reveal-rules.ts';
 
 async function savedWhenOffline<Loaded>(saved: Loaded | null, loadLive: () => Promise<Loaded>): Promise<Loaded> {
@@ -113,7 +114,7 @@ interface RevealScreenProps {
 
 export function RevealScreen({ userId }: RevealScreenProps) {
   const location = useLocation();
-  const summary = (location.state as CompletedSessionSummary | null) ?? recallLastSummary();
+  const summary = (location.state as CompletedSessionSummary | null) ?? recallLastSummary(userId);
   const { unitPref } = usePreferences();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -151,15 +152,16 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       (stored) => {
         if (!active || !stored) return;
         setFreshDrops(stored.summary.drops ?? []);
-        const cached = recallLastSummary();
-        if (cached?.sessionId === sessionId) rememberLastSummary({ ...cached, drops: stored.summary.drops ?? [] });
+        const cached = recallLastSummary(userId);
+        if (cached?.sessionId === sessionId)
+          rememberLastSummary(userId, { ...cached, drops: stored.summary.drops ?? [] });
       },
       () => undefined,
     );
     return () => {
       active = false;
     };
-  }, [sessionId]);
+  }, [sessionId, userId]);
 
   if (!summary) {
     return (
@@ -173,6 +175,13 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   }
 
   const timingText = sessionTimingParts(summary).join(' · ');
+  const unappliedText = unappliedChangesText(summary);
+  const unappliedNotice = unappliedText && (
+    <p className="notice" role="status">
+      {unappliedText}{' '}
+      {!summary.historyOnly && <Link to={`/collection/history/${summary.sessionId}`}>Open this workout</Link>}
+    </p>
+  );
 
   if (summary.historyOnly) {
     return (
@@ -182,6 +191,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         <p className="panel" role="status">
           Saved to history (older than 7 days, no XP)
         </p>
+        {unappliedNotice}
         <Link className="button" to="/">
           Done
         </Link>
@@ -208,6 +218,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         <span className="reveal-total pop">+{formatXp(totalXp)} XP</span>
       </header>
       {timingText && <p className="muted">{timingText}</p>}
+      {unappliedNotice}
       {headline && (
         <section className="panel stack" aria-label="Challenge">
           <p className={summary.challenge?.passed ? 'accent-text' : undefined}>{headline}</p>

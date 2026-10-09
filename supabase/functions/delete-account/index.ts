@@ -7,6 +7,7 @@ import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import { parseOr422 } from '../_shared/session-payload.ts';
+import { passwordMatchesAfterSignIn } from './password-check.ts';
 
 const deleteAccountSchema = z
   .object({ confirmUsername: z.string().min(1).max(40), password: z.string().min(1).max(200) })
@@ -25,7 +26,7 @@ async function passwordMatches(email: string, password: string): Promise<boolean
   const verifier = createClient(Deno.env.get('SUPABASE_URL')!, publishableKey(), clientOptions);
   const { data, error } = await verifier.auth.signInWithPassword({ email, password });
   if (data.session) await verifier.auth.signOut({ scope: 'local' });
-  return !error && data.session !== null;
+  return passwordMatchesAfterSignIn(error, data.session !== null);
 }
 
 async function deleteAccount(
