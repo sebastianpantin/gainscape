@@ -125,7 +125,7 @@ export function whatsNewDecision(releases: readonly Release[], lastSeen: LastSee
   return newer.length === 0 ? { kind: 'none' } : { kind: 'show', releases: newer };
 }
 
-export interface WhatsNewMoment {
+interface WhatsNewMoment {
   pathname: string;
   hasDraft: boolean;
   draftChangedDuringVisit: boolean;

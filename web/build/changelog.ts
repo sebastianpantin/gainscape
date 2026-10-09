@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { parse } from 'yaml';
 import { type ChangelogEntry, parseChangelog, type Release, toBundledReleases } from '../src/lib/changelog-rules.ts';
 
-export const CHANGELOG_PATH = join(import.meta.dirname, '../changelog.yaml');
+const CHANGELOG_PATH = join(import.meta.dirname, '../changelog.yaml');
 
 export function readChangelogEntries(path = CHANGELOG_PATH): ChangelogEntry[] {
   return parseChangelog(parse(readFileSync(path, 'utf8')));
