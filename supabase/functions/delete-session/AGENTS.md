@@ -9,11 +9,11 @@ POST endpoint that deletes a session within the edit window, records a tombstone
 
 ## Key Files
 
-| File        | Description                                                                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`  | Handler with strict `{ sessionId }` schema, `deleteSession` transaction, 404 `session_not_found`, 409 `edit_window_closed`, bucket `session_delete_hour` |
-| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                      |
-| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                           |
+| File        | Description                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `index.ts`  | Handler with strict `{ sessionId, ifRevision? }` schema, `deleteSession` transaction, 404 `session_not_found`, 409 `edit_window_closed`, 409 `revision_conflict` with `{ revision }` when an `ifRevision` is sent and differs from the stored revision (optional so older clients still delete; checked after the tombstone, so a retried delete stays idempotent), bucket `session_delete_hour` |
+| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                                                                                                                                                                                                              |
+| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                                                                                                                                                                                                                   |
 
 ## For AI Agents
 
