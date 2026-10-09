@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { directCommitWarning, findUnreleased, gitIn } from '../changelog/unreleased.ts';
 import { buildPages } from './build-pages.ts';
 import {
   ask,
@@ -13,10 +14,17 @@ import {
   supabaseBin,
   wranglerBin,
 } from './deploy-env.ts';
-import { backupConfigProblems, configuredSecrets, linkedRefProblem, releaseProblem } from './rules.ts';
+import {
+  backupConfigProblems,
+  changelogProblem,
+  configuredSecrets,
+  linkedRefProblem,
+  releaseProblem,
+  unknownPrsProblem,
+} from './rules.ts';
 
 function git(...args: string[]): string {
-  return execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim();
+  return gitIn(repoRoot, ...args);
 }
 
 function run(command: string, args: string[], env: Record<string, string>): void {
@@ -42,6 +50,10 @@ await runCli(async () => {
     originMain: git('rev-parse', 'origin/main'),
   });
   if (release) throw new Error(release);
+  const { uncovered, unknown, direct } = findUnreleased(repoRoot);
+  for (const commit of direct) console.log(directCommitWarning(commit));
+  const changelog = unknownPrsProblem(unknown) ?? changelogProblem(uncovered);
+  if (changelog) throw new Error(changelog);
   const link = linkedRefProblem(config.SUPABASE_PROJECT_REF!, linkedRef());
   if (link) throw new Error(link);
 

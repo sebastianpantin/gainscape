@@ -24,6 +24,7 @@ import {
 import { grantItems, sessionCount, setCount } from '../support/db.ts';
 import { expectNoAxeViolations } from '../support/a11y.ts';
 import { expectFontsLoaded } from '../support/fonts.ts';
+import { readChangelog } from '../../web/build/changelog.ts';
 import {
   builtShell,
   cachedPaths,
@@ -191,6 +192,11 @@ test('every tab settles offline within seconds without an uncaught error', async
   expect((await cold.goto('/profile/settings'))?.fromServiceWorker()).toBe(true);
   await expect(cold.getByRole('heading', { name: 'Settings' })).toBeVisible();
   await expect(cold.getByRole('heading', { name: 'App' })).toBeVisible();
+  await expect(cold.getByText(`Version ${readChangelog()[0].version}`, { exact: true })).toBeVisible();
+  await cold.getByRole('main').getByRole('link', { name: "What's new", exact: true }).click();
+  await expect(cold.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(
+    readChangelog().map((release) => release.title),
+  );
   expect(errors).toEqual([]);
   await markOnline();
   await context.setOffline(false);

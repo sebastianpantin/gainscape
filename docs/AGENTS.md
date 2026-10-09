@@ -1,7 +1,7 @@
 # Docs
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-09
 
 ## Purpose
 
@@ -9,10 +9,10 @@ Human-facing operations documentation. Two pages: `deploy.md` (the free, invite-
 
 ## Key Files
 
-| File                 | Description                                                                                                                                                                                                                                                               |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `production-auth.md` | Go-live checklist: never push the local `config.toml`, SMTP setup, hosted auth settings (`site_url`, exact redirect URLs, `max_frequency`, rate limits), the account pre-hijack fix, `LOOT_SECRET`, client-IP config, hosting rules.                                      |
-| `deploy.md`          | Test environment runbook: who holds which secret and how the tooling enforces it, abuse and rate limits, invite-only setup with email confirmation off, `make deploy`, inviting and removing testers, incidents, backups and restore, secret rotation, pre-tester checks. |
+| File                 | Description                                                                                                                                                                                                                                                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `production-auth.md` | Go-live checklist: never push the local `config.toml`, SMTP setup, hosted auth settings (`site_url`, exact redirect URLs, `max_frequency`, rate limits), the account pre-hijack fix, `LOOT_SECRET`, client-IP config, hosting rules.                                                                             |
+| `deploy.md`          | Test environment runbook: who holds which secret and how the tooling enforces it, abuse and rate limits, invite-only setup with email confirmation off, writing the changelog before a deploy, `make deploy`, inviting and removing testers, incidents, backups and restore, secret rotation, pre-tester checks. |
 
 ## For AI Agents
 

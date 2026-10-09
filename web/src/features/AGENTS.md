@@ -1,11 +1,11 @@
 # Features
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-09
 
 ## Purpose
 
-Feature-sliced screens of the Gainscape PWA. Each subdirectory owns one area of the UI (auth, workout logging, history, collection, friends, profile, programs, exercises, skills, reveal summary). Screens are React components named `*Screen`, exported by name, and mounted by `web/src/App.tsx`. Data access, formatting and decisions live in `../lib/`, `../offline/` and the shared domain engine, so feature files stay mostly wiring and markup.
+Feature-sliced screens of the Gainscape PWA. Each subdirectory owns one area of the UI (auth, workout logging, history, collection, friends, profile, programs, exercises, skills, reveal summary, what's new). Screens are React components named `*Screen`, exported by name, and mounted by `web/src/App.tsx`. Data access, formatting and decisions live in `../lib/`, `../offline/` and the shared domain engine, so feature files stay mostly wiring and markup.
 
 ## Subdirectories
 
@@ -20,6 +20,7 @@ Feature-sliced screens of the Gainscape PWA. Each subdirectory owns one area of 
 | `programs/`   | Program list and editor (see `programs/AGENTS.md`)                                      |
 | `skills/`     | Skill levels screen (see `skills/AGENTS.md`)                                            |
 | `summary/`    | Post-workout reveal and last-summary memory (see `summary/AGENTS.md`)                   |
+| `whats-new/`  | Release history screen and the What's new sheet (see `whats-new/AGENTS.md`)             |
 | `workout/`    | The Train tab: draft logging, set rows, finish sync (see `workout/AGENTS.md`)           |
 
 ## For AI Agents

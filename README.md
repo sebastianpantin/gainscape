@@ -27,6 +27,7 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | `make e2e-pages`            | Builds for Cloudflare Pages against the local stack, serves it with `wrangler pages dev` and checks the `_headers` and a whole workout without a CSP violation       |
 | `make build`                | Production build of the web app into `web/dist` (CI runs it in `checks`)                                                                                             |
 | `make deploy`               | Deploy the test environment (Supabase Free and Cloudflare Pages); admin only, see `docs/deploy.md`                                                                   |
+| `make changelog-unreleased` | List user-facing PRs no changelog entry covers yet, for writing the next one                                                                                         |
 | `make preview`              | Production build served by `vite preview` (https, preview port = web port - 1000, so 4173 by default)                                                                |
 | `make icons`                | Regenerate the app icons and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                                           |
 | `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                                       |
