@@ -209,7 +209,7 @@ export async function replayFrom(
   const revoked =
     from === null
       ? []
-      : await revokeDisqualifiedDrops(tx, userId, sets, replayedSessionIds, deletedSessionIds, cfg.version);
+      : await revokeDisqualifiedDrops(tx, userId, sets, from.id, replayedSessionIds, deletedSessionIds, cfg.version);
   await syncSessionEvents(tx, userId, replayedSessionIds);
 
   return {

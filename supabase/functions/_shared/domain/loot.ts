@@ -200,17 +200,21 @@ export interface RollVersions {
   balanceVersion: number;
 }
 
+export type ReplayedSessionRole = 'deleted' | 'edited' | 'later';
+
 export function revocationReason(
   source: RollKind,
   candidate: LootCandidate | undefined,
-  sessionDeleted: boolean,
+  session: ReplayedSessionRole,
   cfg: LootConfig,
   rolledUnder: RollVersions,
   current: RollVersions,
 ): RevokeReason | null {
-  if (sessionDeleted) return 'session_deleted';
+  if (session === 'deleted') return 'session_deleted';
   if (candidate === undefined) return 'set_removed';
-  if (rolledUnder.lootVersion < current.lootVersion || rolledUnder.balanceVersion < current.balanceVersion) return null;
+  const rolledUnderOlderRules =
+    rolledUnder.lootVersion < current.lootVersion || rolledUnder.balanceVersion < current.balanceVersion;
+  if (session === 'later' && rolledUnderOlderRules) return null;
   if (!qualifies(source, candidate, cfg)) return 'no_longer_qualifies';
   return null;
 }
