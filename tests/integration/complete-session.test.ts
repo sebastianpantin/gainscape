@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { type TransactionSql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   combatLevel,
@@ -795,8 +796,6 @@ describe('complete-session with cardio bouts', () => {
   });
 });
 
-type DatabaseTransaction = Parameters<Parameters<typeof db.begin>[0]>[0];
-
 async function untilSomeoneWaitsOn(transactionId: string, settled: () => boolean): Promise<void> {
   for (let attempt = 0; attempt < 200 && !settled(); attempt += 1) {
     const waiting = await db`
@@ -807,7 +806,7 @@ async function untilSomeoneWaitsOn(transactionId: string, settled: () => boolean
 }
 
 async function syncAgainstUncommittedRow(
-  writeRow: (tx: DatabaseTransaction) => Promise<unknown>,
+  writeRow: (tx: TransactionSql) => Promise<unknown>,
   sync: () => Promise<FunctionResponse>,
 ): Promise<FunctionResponse> {
   const { pending } = await db.begin(async (tx) => {
