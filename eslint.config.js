@@ -48,6 +48,16 @@ export default tseslint.config(
     },
   },
   {
+    files: ['web/src/**/*.{ts,tsx}', 'tests/**/*.ts', 'e2e/**/*.ts'],
+    ignores: ['web/src/features/whats-new/changelog-data.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: '__CHANGELOG__', message: 'Import CHANGELOG from features/whats-new/changelog-data.ts.' },
+      ],
+    },
+  },
+  {
     files: ['web/src/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
     plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
