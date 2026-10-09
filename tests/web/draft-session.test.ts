@@ -90,11 +90,23 @@ describe('draft session', () => {
       fallback: () => fallback,
     });
     await session.ready;
-    expect(latest()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: true });
+    expect(latest()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: 'unreadable' });
     session.changeDraft(workout('session-a'));
     await session.flush();
     expect(await fallback.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'session-a' } });
-    expect(latest().saveProblem).toBe(true);
+    expect(latest().saveProblem).toBe('unreadable');
+  });
+
+  it('reports an unsaved change over an unreadable store when the fallback write fails too', async () => {
+    const fallback = createLocalDraftStore(new MemoryStorage());
+    const { session, latest } = sessionOver(() => Promise.reject(new Error('idb_unavailable')), {
+      fallback: () => fallback,
+    });
+    await session.ready;
+    fallback.put = () => Promise.reject(new Error('quota_exceeded'));
+    session.changeDraft(workout('session-a'));
+    await session.flush();
+    expect(latest().saveProblem).toBe('unsaved');
   });
 
   it('becomes ready with a save problem when no store can be opened', async () => {
@@ -104,7 +116,7 @@ describe('draft session', () => {
       },
     });
     await session.ready;
-    expect(latest()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: true });
+    expect(latest()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: 'unsaved' });
   });
 
   it('retries a failed write on the fallback store and switches to it', async () => {
@@ -116,7 +128,7 @@ describe('draft session', () => {
     session.changeDraft(workout('session-a'));
     await session.flush();
     expect(latest().store).toBe(fallback);
-    expect(latest().saveProblem).toBe(false);
+    expect(latest().saveProblem).toBeNull();
     expect(await fallback.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'session-a' } });
   });
 
@@ -127,7 +139,7 @@ describe('draft session', () => {
     await session.ready;
     session.changeDraft(workout('session-a'));
     await session.flush();
-    expect(latest().saveProblem).toBe(true);
+    expect(latest().saveProblem).toBe('unsaved');
   });
 
   it('round-trips a cardio draft through the store and a fresh session', async () => {
@@ -311,7 +323,7 @@ describe('draft session start-up', () => {
     await session.ready;
     expect(seenSessions.length).toBeGreaterThan(0);
     expect(seenSessions.every((seen) => seen === session)).toBe(true);
-    expect(session.snapshot()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: true });
+    expect(session.snapshot()).toMatchObject({ state: { status: 'ready', draft: null }, saveProblem: 'unsaved' });
   });
 });
 

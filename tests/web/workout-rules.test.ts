@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canFinishWorkout,
+  deviceSaveProblemText,
   finishPrompt,
   rejectionText,
   stalledSyncText,
@@ -112,5 +113,17 @@ describe('canFinishWorkout', () => {
     expect(canFinishWorkout({ done: 1, planned: 1, leftToLifter: 1 })).toBe(true);
     expect(canFinishWorkout({ done: 0, planned: 1, leftToLifter: 1 })).toBe(false);
     expect(canFinishWorkout({ done: 0, planned: 0, leftToLifter: 0 })).toBe(false);
+  });
+});
+
+describe('deviceSaveProblemText', () => {
+  it('says saved workouts could not be read when the main store failed at boot', () => {
+    expect(deviceSaveProblemText('unreadable')).toBe(
+      "Couldn't read saved workouts on this device. Reload the app to try again; new changes are still saved here.",
+    );
+  });
+
+  it('says a change could not be saved when every store failed', () => {
+    expect(deviceSaveProblemText('unsaved')).toBe("Couldn't save on this device");
   });
 });

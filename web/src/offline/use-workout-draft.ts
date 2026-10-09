@@ -25,7 +25,7 @@ function startSession(userId: string, onChange: (snapshot: DraftSnapshot) => voi
   });
 }
 
-const LOADING: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: false };
+const LOADING: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: null };
 
 const IDLE_ACTIONS: Omit<WorkoutDraftHandle, keyof DraftSnapshot> = {
   changeDraft: () => undefined,

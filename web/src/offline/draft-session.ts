@@ -8,10 +8,12 @@ export type DraftNotice = 'saved_elsewhere' | 'deleted';
 export type WorkoutDraftState =
   { status: 'loading' } | { status: 'ready'; draft: WorkoutDraft | null; notice: DraftNotice | null };
 
+export type DraftSaveProblem = 'unreadable' | 'unsaved';
+
 export interface DraftSnapshot {
   state: WorkoutDraftState;
   store: DraftStore | null;
-  saveProblem: boolean;
+  saveProblem: DraftSaveProblem | null;
 }
 
 export type SyncedChange = 'synced' | 'deleted';
@@ -79,13 +81,13 @@ export function createDraftSession({
   onChange,
   requestPersistence,
 }: DraftSessionOptions): DraftSession {
-  let snapshot: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: false };
+  let snapshot: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: null };
   let active = true;
   let lastSeen = 0;
   const deletedSessionIds = new Set<string>();
   let chain: Promise<void> = Promise.resolve();
   let usingFallback = false;
-  let primaryUnreadable = false;
+  let problemWhenSaved: DraftSaveProblem | null = null;
   let persistenceRequested = false;
 
   const publish = (changes: Partial<DraftSnapshot>) => {
@@ -121,7 +123,7 @@ export function createDraftSession({
   };
 
   const markSaved = () => {
-    if (snapshot.saveProblem !== primaryUnreadable) publish({ saveProblem: primaryUnreadable });
+    if (snapshot.saveProblem !== problemWhenSaved) publish({ saveProblem: problemWhenSaved });
   };
 
   const runOnStore = async (task: (store: DraftStore) => Promise<void>) => {
@@ -129,13 +131,13 @@ export function createDraftSession({
       await task(snapshot.store!);
       return markSaved();
     } catch {
-      if (usingFallback) return publish({ saveProblem: true });
+      if (usingFallback) return publish({ saveProblem: 'unsaved' });
     }
     try {
       await task(switchToFallback());
       markSaved();
     } catch {
-      publish({ saveProblem: true });
+      publish({ saveProblem: 'unsaved' });
     }
   };
 
@@ -151,7 +153,7 @@ export function createDraftSession({
   const load = async (store: DraftStore) => {
     const record = await store.get(userId);
     if (record) seen(record.updatedAt);
-    publish({ store, saveProblem: primaryUnreadable });
+    publish({ store, saveProblem: problemWhenSaved });
     showDraft(record?.kind === 'draft' ? record.draft : null);
   };
 
@@ -162,12 +164,12 @@ export function createDraftSession({
       return;
     } catch {
       usingFallback = true;
-      primaryUnreadable = true;
+      problemWhenSaved = 'unreadable';
     }
     try {
       await load(fallbackStore());
     } catch {
-      publish({ saveProblem: true });
+      publish({ saveProblem: 'unsaved' });
       showDraft(null);
     }
   })();
