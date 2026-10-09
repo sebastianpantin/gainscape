@@ -1,17 +1,11 @@
 import { useEffect, useState } from 'react';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import type { DraftStore } from '../../offline/draft-store.ts';
+import { forgetOtherAccountDrafts, otherAccountDraftIds } from '../../offline/local-drafts.ts';
 
 interface OtherAccountDraftNoticeProps {
   store: DraftStore;
   userId: string;
-}
-
-async function otherAccountIds(store: DraftStore, userId: string): Promise<string[]> {
-  return (await store.userIdsWithDrafts()).filter((draftUserId) => draftUserId !== userId);
-}
-
-async function forgetOtherAccountDrafts(store: DraftStore, userId: string): Promise<void> {
-  for (const otherUserId of await otherAccountIds(store, userId)) await store.forget(otherUserId);
 }
 
 export function OtherAccountDraftNotice({ store, userId }: OtherAccountDraftNoticeProps) {
@@ -19,7 +13,7 @@ export function OtherAccountDraftNotice({ store, userId }: OtherAccountDraftNoti
 
   useEffect(() => {
     let active = true;
-    otherAccountIds(store, userId).then(
+    otherAccountDraftIds(store, deviceStorage(), userId).then(
       (userIds) => active && setPresent(userIds.length > 0),
       () => undefined,
     );
@@ -32,8 +26,8 @@ export function OtherAccountDraftNotice({ store, userId }: OtherAccountDraftNoti
 
   const discard = async () => {
     if (!window.confirm('Discard the unsynced workout from another account? This cannot be undone.')) return;
-    await forgetOtherAccountDrafts(store, userId);
-    setPresent((await otherAccountIds(store, userId)).length > 0);
+    await forgetOtherAccountDrafts(store, deviceStorage(), userId);
+    setPresent((await otherAccountDraftIds(store, deviceStorage(), userId)).length > 0);
   };
 
   return (

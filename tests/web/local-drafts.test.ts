@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createLocalDraftStore } from '../../web/src/offline/draft-store.ts';
-import { forgetDraftOnDevice, hasDraftOnDevice, hasUnsyncedDraft } from '../../web/src/offline/local-drafts.ts';
+import {
+  forgetDraftOnDevice,
+  forgetOtherAccountDrafts,
+  hasDraftOnDevice,
+  hasUnsyncedDraft,
+  otherAccountDraftIds,
+} from '../../web/src/offline/local-drafts.ts';
 import { workout } from './draft-store.contract.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
@@ -52,5 +58,24 @@ describe('local drafts of an account', () => {
     await store.put(otherUserId, 10, workout('session-c'));
     expect(await hasDraftOnDevice(store, storage, userId)).toBe(false);
     expect(await hasDraftOnDevice(store, null, userId)).toBe(false);
+  });
+
+  it('finds and forgets drafts of other accounts in both the given store and the localStorage fallback', async () => {
+    const thirdUserId = '33333333-3333-4333-8333-333333333333';
+    const storage = new MemoryStorage();
+    await createLocalDraftStore(storage).put(otherUserId, 10, workout('other-in-fallback'));
+    await createLocalDraftStore(storage).put(userId, 10, workout('own-in-fallback'));
+    const store = createLocalDraftStore(new MemoryStorage());
+    await store.put(thirdUserId, 10, workout('third-in-store'));
+    await store.put(otherUserId, 10, workout('other-in-store'));
+    await store.put(userId, 10, workout('own-in-store'));
+
+    expect((await otherAccountDraftIds(store, storage, userId)).sort()).toEqual([otherUserId, thirdUserId]);
+    await forgetOtherAccountDrafts(store, storage, userId);
+
+    expect(await otherAccountDraftIds(store, storage, userId)).toEqual([]);
+    expect(await hasDraftOnDevice(store, null, userId)).toBe(true);
+    expect(await hasDraftOnDevice(createLocalDraftStore(new MemoryStorage()), storage, userId)).toBe(true);
+    expect(await otherAccountDraftIds(store, null, userId)).toEqual([]);
   });
 });
