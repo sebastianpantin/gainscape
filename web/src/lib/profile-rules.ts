@@ -1,4 +1,4 @@
-import { CONTROL_CHARACTER } from './names.ts';
+import { CONTROL_CHARACTER, characterCount } from './names.ts';
 import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, parsedDecimal, unitToKg } from './units.ts';
 
 export const UNIT_PREFS = ['kg', 'lb'] as const;
@@ -97,7 +97,7 @@ export function trainingSinceProblem(raw: string, now = new Date()): string | nu
 }
 
 export function bioProblem(raw: string): string | null {
-  if (raw.length > BIO_MAX_LENGTH) return `Bio can be at most ${BIO_MAX_LENGTH} characters.`;
+  if (characterCount(raw) > BIO_MAX_LENGTH) return `Bio can be at most ${BIO_MAX_LENGTH} characters.`;
   if (CONTROL_CHARACTER.test(raw)) return "Bio can't contain line breaks or control characters.";
   return null;
 }

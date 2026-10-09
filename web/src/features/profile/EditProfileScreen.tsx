@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
-import { nameProblem, trimmedName } from '../../lib/names.ts';
+import { characterCount, nameProblem, trimmedName } from '../../lib/names.ts';
 import {
   BADGE_COLORS,
   type BadgeColor,
@@ -138,11 +138,7 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
         </div>
         <label className="field">
           Display name
-          <input
-            value={displayName}
-            maxLength={DISPLAY_NAME_MAX_LENGTH}
-            onChange={(event) => setDisplayName(event.target.value)}
-          />
+          <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
           <span className="hint">Your username @{profile.username} stays the same.</span>
         </label>
         {issues.displayName && <p className="problem">{issues.displayName}</p>}
@@ -150,10 +146,10 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
           <span className="row spread">
             Bio
             <span className="hint" aria-live="polite">
-              {bio.length} / {BIO_MAX_LENGTH}
+              {characterCount(bio)} / {BIO_MAX_LENGTH}
             </span>
           </span>
-          <input value={bio} maxLength={BIO_MAX_LENGTH} onChange={(event) => setBio(event.target.value)} />
+          <input value={bio} onChange={(event) => setBio(event.target.value)} />
         </label>
         {issues.bio && <p className="problem">{issues.bio}</p>}
         <label className="field">
