@@ -3,6 +3,7 @@ import {
   noteActionLabel,
   noteChanged,
   toExerciseNotes,
+  trimNote,
   withLocalSaves,
   withNote,
 } from '../../web/src/lib/exercise-note-rules.ts';
@@ -24,6 +25,14 @@ describe('exercise note rules', () => {
     expect(noteChanged(undefined, 'Seat 4')).toBe(true);
     expect(noteChanged('Seat 4', '')).toBe(true);
     expect(noteChanged('Seat 4\nwide grip', '\n Seat 4\nwide grip \t')).toBe(false);
+  });
+
+  it('trims the same whitespace set as save_exercise_note, including U+FEFF and U+0085', () => {
+    expect(trimNote('﻿ Seat 4\u0085　')).toBe('Seat 4');
+    expect(trimNote('   Seat 4   ')).toBe('Seat 4');
+    expect(trimNote('​Seat 4᠎')).toBe('​Seat 4᠎');
+    expect(noteChanged('Seat 4', '\u0085Seat 4\u0085')).toBe(false);
+    expect(noteChanged(undefined, '\u0085﻿')).toBe(false);
   });
 
   it('sets, replaces and removes a note without touching the others', () => {

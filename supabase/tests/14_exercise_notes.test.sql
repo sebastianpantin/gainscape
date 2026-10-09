@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(23);
+select plan(25);
 
 select tests.create_user('note_alpha') as a \gset
 select tests.create_user('note_bravo') as b \gset
@@ -34,6 +34,16 @@ select is(
   public.save_exercise_note(:'bench', E'  Seat 4\nwide grip  '),
   E'Seat 4\nwide grip',
   'saving a note stores and returns the trimmed text'
+);
+select is(
+  public.save_exercise_note(:'bench', E'\uFEFF\u00A0Seat 4\u0085\u3000'),
+  'Seat 4',
+  'saving a note trims the same whitespace set as the web app, including U+FEFF and U+0085'
+);
+select is(
+  public.save_exercise_note(:'bench', E'\u200BSeat 4'),
+  E'\u200BSeat 4',
+  'a zero width space is not whitespace and stays in the note'
 );
 select is(
   public.save_exercise_note(:'bench', 'Seat 5'),
