@@ -23,11 +23,18 @@ describe('reference value problems at the boundaries', () => {
     ['   ', 'Enter Squat 1RM (kg)'],
     [' 102.5 ', null],
   ])('reads %j as %j', (raw, expected) => {
-    expect(referenceValueProblem(LABEL, raw)).toBe(expected);
+    expect(referenceValueProblem(LABEL, raw, 'kg')).toBe(expected);
+  });
+
+  it.each([
+    ['2205', null],
+    ['2205.01', 'Squat 1RM (lb) must be above 0 and at most 2205'],
+  ])('caps an lb value at 2205, the 1000 kg cap in pounds: %j reads as %j', (raw, expected) => {
+    expect(referenceValueProblem('Squat 1RM (lb)', raw, 'lb')).toBe(expected);
   });
 
   it('asks for a value that was never typed', () => {
-    expect(referenceValueProblem(LABEL, undefined)).toBe('Enter Squat 1RM (kg)');
+    expect(referenceValueProblem(LABEL, undefined, 'kg')).toBe('Enter Squat 1RM (kg)');
   });
 });
 

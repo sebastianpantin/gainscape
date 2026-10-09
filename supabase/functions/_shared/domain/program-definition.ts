@@ -996,7 +996,7 @@ export function parseProgramDefinition(json: unknown): ParsedProgramDefinition {
 
 const ROUNDING_MODES: readonly string[] = ['nearest', 'down'];
 
-const MAX_INPUT_VALUE = 1000;
+export const MAX_REFERENCE_VALUE: Readonly<Record<WeightUnit, number>> = Object.freeze({ kg: 1000, lb: 2205 });
 
 function isPositiveNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -1038,9 +1038,9 @@ function enrollmentInputErrors(definition: ProgramDefinition, enrollment: Progra
       for (const [kind, value] of given) {
         if (!(input.kinds as string[]).includes(kind)) {
           errors.push(`lift '${lift}' input '${kind}' is not declared by the template`);
-        } else if (!isPositiveNumber(value) || value > MAX_INPUT_VALUE) {
+        } else if (!isPositiveNumber(value) || value > MAX_REFERENCE_VALUE[enrollment.unit]) {
           errors.push(
-            `lift '${lift}' input '${kind}' must be above 0 and at most ${MAX_INPUT_VALUE}, got ${String(value)}`,
+            `lift '${lift}' input '${kind}' must be above 0 and at most ${MAX_REFERENCE_VALUE[enrollment.unit]}, got ${String(value)}`,
           );
         }
       }

@@ -58,6 +58,7 @@ export {
   type LiftCategory,
   type LiftDecl,
   type Load,
+  MAX_REFERENCE_VALUE,
   type NumberExpr,
   type NumberOptionDecl,
   type OnRampInitial,

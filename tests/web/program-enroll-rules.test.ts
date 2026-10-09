@@ -502,6 +502,16 @@ describe('enroll payload', () => {
     });
   });
 
+  it('takes an lb 1RM above 1000 up to the 2205 lb cap, matching the server', () => {
+    const heavy = { ...FIVE_THREE_ONE_ONE_RMS_LB, deadlift: '1102.5' };
+    const result = enrollPayload(FIVE_THREE_ONE, fiveThreeOneForm('lb', heavy));
+    expect(result.kind === 'ok' && result.payload.inputs.deadlift).toEqual({ oneRm: 1102.5 });
+    expect(enrollPayload(FIVE_THREE_ONE, fiveThreeOneForm('lb', { ...heavy, squat: '2205.5' }))).toEqual({
+      kind: 'invalid',
+      problems: ['Squat 1RM (lb) must be above 0 and at most 2205'],
+    });
+  });
+
   it('builds the 5/3/1 payload with a 1RM per lift, the TM percentage and pound rounding', () => {
     const result = enrollPayload(FIVE_THREE_ONE, fiveThreeOneForm('lb', FIVE_THREE_ONE_ONE_RMS_LB));
     expect(result).toEqual({

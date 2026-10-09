@@ -311,6 +311,21 @@ describe('enroll_program', () => {
     await enrolled(user, payload);
   });
 
+  it('accepts an lb input of 2205, the 1000 kg cap in pounds', async () => {
+    const user = await createTestUser();
+    const payload = fiveThreeOnePayload();
+    payload.inputs.deadlift = { tm: 2205 };
+    await enrolled(user, payload);
+  });
+
+  it('refuses an lb input above 2205 and stores nothing', async () => {
+    const user = await createTestUser();
+    const payload = fiveThreeOnePayload();
+    payload.inputs.deadlift = { tm: 2205.5 };
+    expectRefused(await enroll(user, payload), 'invalid_enrollment');
+    expect(await enrollmentRows(user.id)).toHaveLength(0);
+  });
+
   it('stores only increment, mode and barWeight of the rounding', async () => {
     const user = await createTestUser();
     const payload = madcowPayload();
@@ -426,6 +441,26 @@ describe('adjust_enrollment', () => {
     const before = await eventRows(madcowId);
     expectRefused(await adjust(madcowUser, madcowId, { kind: 'set_reference', ...fields }), 'invalid_event');
     expect(await eventRows(madcowId)).toHaveLength(before.length);
+  });
+
+  it('accepts an lb reference of 2205 on the lb 5/3/1 enrollment', async () => {
+    const result = await adjust(cycleUser, cycleId, {
+      kind: 'set_reference',
+      lift: 'deadlift',
+      var: 'tm',
+      value: 2205,
+    });
+    expect(result.error).toBeNull();
+  });
+
+  it('refuses an lb reference above 2205 on the lb 5/3/1 enrollment', async () => {
+    const result = await adjust(cycleUser, cycleId, {
+      kind: 'set_reference',
+      lift: 'deadlift',
+      var: 'tm',
+      value: 2205.5,
+    });
+    expectRefused(result, 'invalid_event');
   });
 
   it('refuses a top reference on 5/3/1, which declares only tm', async () => {
