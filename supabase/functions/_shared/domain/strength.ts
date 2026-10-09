@@ -164,7 +164,7 @@ function decideEffort(
       rirForXp: claimsImplausibleEffort ? trustFloor : logged,
       rirFlagged: claimsImplausibleEffort,
       coldStartXp: 0,
-      rirUsedForStrength: Math.min(logged, cfg.maxRirForStrength),
+      rirUsedForStrength: claimsImplausibleEffort ? trustFloor : Math.min(logged, cfg.maxRirForStrength),
     };
   }
 

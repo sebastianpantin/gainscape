@@ -207,8 +207,8 @@ describe('effort resolution with a known e1RM', () => {
   });
 
   it('clamps logged RIR used for strength at 5', () => {
-    const [result] = runSets([aSet('bench', 50, 1, { type: 'rir', value: 10 })], knownStrength('bench', 100));
-    expect(result.e1rmCandidateKg).toBe(epley(50, 6));
+    const [result] = runSets([aSet('bench', 70, 1, { type: 'rir', value: 10 })], knownStrength('bench', 100));
+    expect(result).toMatchObject({ rirFlagged: false, e1rmCandidateKg: epley(70, 6) });
   });
 
   it('gives no estimate and no candidate for a zero load', () => {
@@ -359,11 +359,26 @@ describe('strength state at a session', () => {
   });
 
   it('lets fresh evidence replace a stale fallback within a session', () => {
-    const results = runSets([aSet('bench', 50, 5, hard), aSet('bench', 50, 5, null)], {
+    const results = runSets([aSet('bench', 80, 5, hard), aSet('bench', 50, 5, null)], {
       bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true },
     });
     expect(results[0].e1rmBeforeKg).toBe(100);
-    expect(results[1].e1rmBeforeKg).toBe(epley(50, 8));
+    expect(results[1].e1rmBeforeKg).toBe(epley(80, 8));
+  });
+
+  it('keeps a stale fallback when the only fresh evidence is a rejected effort claim', () => {
+    const results = runSets([aSet('bench', 40, 5, { type: 'rir', value: 2 }), aSet('bench', 60, 5, null)], {
+      bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true },
+    });
+    expect(results[0]).toMatchObject({ rirFlagged: true, e1rmCandidateKg: null });
+    expect(results[1]).toMatchObject({ e1rmBeforeKg: 100, xp: 0 });
+  });
+
+  it('builds strength from a rejected effort claim at the trusted RIR, not the claimed one', () => {
+    const [result] = runSets([aSet('bench', 75, 5, { type: 'rir', value: 2 })], {
+      bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true },
+    });
+    expect(result).toMatchObject({ rirFlagged: true, rirForXp: 3, e1rmCandidateKg: epley(75, 8) });
   });
 });
 

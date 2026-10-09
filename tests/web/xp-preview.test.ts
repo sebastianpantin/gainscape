@@ -203,11 +203,11 @@ describe('previewSession', () => {
   it('estimates from the session best when only an expired e1RM is known', () => {
     const strength = { bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true } };
     const previews = previewSession(
-      [exercise('bench', [draftSet(50, 5, { type: 'level', level: 'hard' }), draftSet(50, 5, null)])],
+      [exercise('bench', [draftSet(80, 5, { type: 'level', level: 'hard' }), draftSet(80, 5, null)])],
       builtIn,
       strength,
     );
-    expect(previews[0][1]).toMatchObject({ basis: 'estimated', rir: 3 });
+    expect(previews[0][1]).toMatchObject({ basis: 'estimated', rir: 2 });
   });
 
   it('adds bodyweight to a weighted bodyweight exercise', () => {
