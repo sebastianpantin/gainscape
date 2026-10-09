@@ -45,14 +45,13 @@ function rirFloorFromLaterSets(
   let floor = 0;
   for (const later of laterSets) {
     const laterLoad = workingLoad(later, exercise);
-    if (laterLoad > 0) {
-      const demonstratedStrength = laterLoad * loadRatioAtFailure(later.set.reps);
-      const freshRepsAtCheckedLoad = repsAtFailure(demonstratedStrength / (fatigueSinceChecked * checkedLoad));
-      const impliedRir = Math.floor(
-        freshRepsAtCheckedLoad - checked.set.reps - cfg.fatigueToleranceReps + FLOAT_TOLERANCE,
-      );
-      floor = Math.max(floor, impliedRir);
-    }
+    if (laterLoad <= 0) continue;
+    const demonstratedStrength = laterLoad * loadRatioAtFailure(later.set.reps);
+    const freshRepsAtCheckedLoad = repsAtFailure(demonstratedStrength / (fatigueSinceChecked * checkedLoad));
+    const impliedRir = Math.floor(
+      freshRepsAtCheckedLoad - checked.set.reps - cfg.fatigueToleranceReps + FLOAT_TOLERANCE,
+    );
+    floor = Math.max(floor, impliedRir);
     fatigueSinceChecked *= fatigueAfterSet(claimedRir(later, cfg), cfg);
   }
   return floor;
