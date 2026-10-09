@@ -83,6 +83,17 @@ describe('finding unreleased pull requests in a real repository', () => {
     expect(unreleased.direct).toEqual([]);
   });
 
+  it('reads the repository at its directory even when GIT_DIR points elsewhere', () => {
+    const outerGitDir = process.env.GIT_DIR;
+    process.env.GIT_DIR = join(workspace, 'not-a-repository');
+    try {
+      expect(findUnreleased(repo).uncovered.map((pr) => pr.number)).toEqual([2]);
+    } finally {
+      if (outerGitDir === undefined) delete process.env.GIT_DIR;
+      else process.env.GIT_DIR = outerGitDir;
+    }
+  });
+
   it('refuses a shallow clone', () => {
     const shallow = join(workspace, 'shallow');
     git(workspace, 'clone', '--quiet', '--depth', '1', `file://${repo}`, shallow);
@@ -98,5 +109,27 @@ describe('finding unreleased pull requests in a real repository', () => {
     expect(unreleased.uncovered).toEqual([]);
     expect(unreleased.unknown).toEqual([]);
     expect(unreleased.direct.map((commit) => commit.subject)).toEqual(['Changelog: cover #2']);
+  });
+
+  it('lists both paths of a file moved out of the app as user-facing', () => {
+    git(repo, 'switch', '--quiet', '-c', 'move');
+    mkdirSync(join(repo, 'tests'), { recursive: true });
+    git(repo, 'mv', 'web/src/a.ts', 'tests/a.ts');
+    git(repo, 'commit', '--quiet', '-m', 'Move a to tests');
+    git(repo, 'switch', '--quiet', 'main');
+    git(
+      repo,
+      'merge',
+      '--quiet',
+      '--no-ff',
+      '-m',
+      'Merge pull request #3 from x/move',
+      '-m',
+      'Move a to tests',
+      'move',
+    );
+    expect(findUnreleased(repo).uncovered.map(({ number, files }) => ({ number, files }))).toEqual([
+      { number: 3, files: ['tests/a.ts', 'web/src/a.ts'] },
+    ]);
   });
 });

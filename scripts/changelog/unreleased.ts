@@ -33,7 +33,17 @@ const FIRST_PARENT_LOG_FORMAT = '%H%x1f%P%x1f%s%x1f%b%x1e';
 
 const CHANGELOG_FILE = 'web/changelog.yaml';
 const MERGE_SUBJECT = /^Merge pull request #(\d+) from (\S+)$/;
-const SQUASH_SUBJECT = /^(?!Revert ")(.+) \(#(\d+)\)$/;
+const SQUASH_SUBJECT = /^(.+) \(#(\d+)\)$/;
+
+const REPO_LOCATING_GIT_VARIABLES = new Set([
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_INDEX_FILE',
+  'GIT_COMMON_DIR',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_PREFIX',
+]);
 
 const INTERNAL_PREFIXES = [
   '.github/',
@@ -145,8 +155,15 @@ export function baseProblem({
   return null;
 }
 
+export function gitIn(cwd: string, ...args: string[]): string {
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !REPO_LOCATING_GIT_VARIABLES.has(name)),
+  );
+  return execFileSync('git', args, { cwd, encoding: 'utf8', env }).trim();
+}
+
 export function findUnreleased(cwd: string): Unreleased {
-  const git = (...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+  const git = (...args: string[]) => gitIn(cwd, ...args);
   const shallow = git('rev-parse', '--is-shallow-repository') === 'true';
   const introducingSha =
     git('log', '--first-parent', '--diff-filter=A', '--format=%H', '--', CHANGELOG_FILE)
@@ -162,7 +179,7 @@ export function findUnreleased(cwd: string): Unreleased {
     .filter((commit) => commit.kind === 'pr')
     .map((commit) => ({
       ...commit,
-      files: git('diff', '--name-only', `${commit.sha}^1`, commit.sha).split('\n').filter(Boolean),
+      files: git('diff', '--name-only', '--no-renames', `${commit.sha}^1`, commit.sha).split('\n').filter(Boolean),
     }));
   const covered = coveredPrs(readChangelogEntries(join(cwd, CHANGELOG_FILE)));
   return {
