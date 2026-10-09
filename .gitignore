@@ -2,7 +2,7 @@
 .functions-serve.log
 .functions-serve.stamp
 .stack.env
-node_modules/
+node_modules
 dist/
 web/dist/
 .env*.local
