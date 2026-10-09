@@ -31,6 +31,7 @@ import {
   trimmedDoc,
 } from './program-edit.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 
 interface ProgramEditorProps {
   userId: string;
@@ -157,11 +158,12 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
             </span>
           </div>
           <ol className="stack exercise-list">
-            {day.exercises.map((planned, exerciseIndex) => {
+            {exerciseKeys(day.exercises).map((plannedKey, exerciseIndex) => {
+              const planned = day.exercises[exerciseIndex];
               const exercise = byId.get(planned.exerciseId);
               const name = nameOf(planned.exerciseId);
               return (
-                <li className="stack program-exercise" key={`${planned.exerciseId}-${exerciseIndex}`}>
+                <li className="stack program-exercise" key={plannedKey}>
                   <div className="row spread">
                     <span>
                       {name} {exercise && <span className="muted">{exerciseLabels(exercise)}</span>}

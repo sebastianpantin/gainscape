@@ -11,24 +11,24 @@ export interface RecentLiftSessions {
 }
 
 export function useRecentLiftSessions(
-  userId: string,
+  scope: string,
   exerciseIds: readonly string[],
   onlineSignal: number,
 ): RecentLiftSessions {
-  const [loaded, setLoaded] = useState<{ userId: string; sets: Map<string, RecentSet[][]> }>({
-    userId,
+  const [loaded, setLoaded] = useState<{ scope: string; sets: Map<string, RecentSet[][]> }>({
+    scope,
     sets: new Map(),
   });
-  const byExercise = loaded.userId === userId ? loaded.sets : new Map<string, RecentSet[][]>();
+  const byExercise = loaded.scope === scope ? loaded.sets : new Map<string, RecentSet[][]>();
 
   const remember = useCallback(
     (requested: readonly string[], found: Map<string, RecentSet[][]>) =>
       setLoaded((previous) => {
-        const sets = previous.userId === userId ? new Map(previous.sets) : new Map<string, RecentSet[][]>();
+        const sets = previous.scope === scope ? new Map(previous.sets) : new Map<string, RecentSet[][]>();
         for (const id of requested) sets.set(id, found.get(id) ?? []);
-        return { userId, sets };
+        return { scope, sets };
       }),
-    [userId],
+    [scope],
   );
 
   const missingKey = [...new Set(exerciseIds)]

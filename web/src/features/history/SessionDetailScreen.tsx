@@ -7,6 +7,7 @@ import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
+import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 import {
   formatLoad,
   formatSessionDate,
@@ -416,6 +417,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   );
 
   if (readOnly) {
+    const storedKeys = exerciseKeys(loaded.original.exercises);
     return (
       <main className="screen stack">
         {header}
@@ -426,7 +428,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           </p>
         )}
         {loaded.original.exercises.map((exercise, exerciseIndex) => (
-          <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
+          <section className="panel stack exercise-card" key={storedKeys[exerciseIndex]}>
             <header>
               <h2>{exercise.name}</h2>
               {exercise.modality === 'lift' && (
@@ -466,6 +468,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     );
   }
 
+  const editKeys = exerciseKeys(edit.exercises);
   return (
     <main className="screen stack">
       {header}
@@ -482,7 +485,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       {problemPanel}
       <fieldset className="stack" disabled={working || askingBodyweight} style={{ border: 'none', padding: 0 }}>
         {edit.exercises.map((exercise, exerciseIndex) => (
-          <section className="panel stack exercise-card" key={`${exercise.exerciseId}-${exerciseIndex}`}>
+          <section className="panel stack exercise-card" key={editKeys[exerciseIndex]}>
             <header>
               <h2>{exercise.name}</h2>
               {exercise.modality === 'lift' && (
