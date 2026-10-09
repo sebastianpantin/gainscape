@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { readChangelog } from '../web/build/changelog.ts';
-import { LAST_SEEN_RELEASE_KEY_PREFIX } from '../web/src/lib/last-seen-release-store.ts';
+import { LAST_SEEN_RELEASE_KEY_PREFIX, lastSeenReleaseKey } from '../web/src/lib/last-seen-release-store.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
 import {
   finishWorkout,
@@ -21,7 +21,7 @@ function whatsNewDialog(page: Page) {
 }
 
 async function lastSeenKey(page: Page): Promise<string> {
-  return `${LAST_SEEN_RELEASE_KEY_PREFIX}${(await readSession(page)).user.id}`;
+  return lastSeenReleaseKey((await readSession(page)).user.id);
 }
 
 async function storedLastSeen(page: Page): Promise<string | null> {

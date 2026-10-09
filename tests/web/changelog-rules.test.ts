@@ -135,7 +135,6 @@ describe('bundled releases', () => {
     const before = toBundledReleases(parseChangelog(validEntries()));
     const after = toBundledReleases(parseChangelog(withEntry(0, { prs: [71, 72, 73] })));
     expect(JSON.stringify(after)).toBe(JSON.stringify(before));
-    expect(after[0].version).toBe(before[0].version);
     expect(whatsNewDecision(after, { status: 'seen', version: before[0].version })).toEqual({ kind: 'none' });
   });
 });
