@@ -8,6 +8,7 @@ import {
   register,
   uniqueUsername,
 } from './support/app.ts';
+import { workoutCards } from './support/program-enrollment.ts';
 
 declare global {
   interface Window {
@@ -74,10 +75,6 @@ async function pickDeviceSetting(page: Page, setting: string, choice: 'On' | 'Of
   await page.getByRole('radiogroup', { name: setting }).getByRole('radio', { name: choice }).click();
 }
 
-function exerciseCard(page: Page, name: string) {
-  return page.locator('section', { has: page.getByRole('heading', { name, exact: true }) });
-}
-
 test('an exercise shows last session and starts from its first set', async ({ page }) => {
   await register(page, uniqueUsername('lt'));
   await logWorkout(page, () =>
@@ -91,7 +88,7 @@ test('an exercise shows last session and starts from its first set', async ({ pa
   await page.getByRole('button', { name: 'Start workout' }).click();
   await page.getByLabel('Search exercises').fill('bench');
   await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
-  const bench = exerciseCard(page, 'Barbell Bench Press');
+  const bench = workoutCards(page, 'Barbell Bench Press');
   await expect(bench.getByText('Last: 1×5 @ 60 kg, 1×4 @ 62.5 kg')).toBeVisible();
   const firstSet = bench.locator('li.set-row').first();
   await expect(firstSet.getByLabel('kg', { exact: true })).toHaveValue('60');
@@ -99,7 +96,7 @@ test('an exercise shows last session and starts from its first set', async ({ pa
 
   await page.getByLabel('Search exercises').fill('squat');
   await page.getByRole('button', { name: /^Back Squat\b/ }).click();
-  const squat = exerciseCard(page, 'Back Squat');
+  const squat = workoutCards(page, 'Back Squat');
   await expect(squat.locator('li.set-row').first().getByLabel('kg', { exact: true })).toHaveValue('20');
   await expect(squat.getByText(/^Last:/)).toHaveCount(0);
 });
@@ -121,16 +118,16 @@ test('a lift suggests the next weight from how its last session went', async ({ 
   await page.getByLabel('Search exercises').fill('bench');
   await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
   await expect(
-    exerciseCard(page, 'Barbell Bench Press').getByText('Try 82.5 kg: every set hit 5 reps last time'),
+    workoutCards(page, 'Barbell Bench Press').getByText('Try 82.5 kg: every set hit 5 reps last time'),
   ).toBeVisible();
   await page.getByLabel('Search exercises').fill('squat');
   await page.getByRole('button', { name: /^Back Squat\b/ }).click();
-  await expect(exerciseCard(page, 'Back Squat').getByText('Stay at 100 kg until every set hits 5 reps')).toBeVisible();
+  await expect(workoutCards(page, 'Back Squat').getByText('Stay at 100 kg until every set hits 5 reps')).toBeVisible();
 });
 
 test('a lift that felt harder three workouts in a row suggests a lighter day', async ({ page }) => {
   await register(page, uniqueUsername('fa'));
-  const bench = exerciseCard(page, 'Barbell Bench Press');
+  const bench = workoutCards(page, 'Barbell Bench Press');
   for (const effort of ['Easy', 'Hard', 'Near fail']) {
     await openTab(page, 'Train');
     await logWorkout(page, async () => {
@@ -158,7 +155,7 @@ test('steppers change weight by a plate step and reps by one', async ({ page }) 
   await page.getByRole('button', { name: 'Start workout' }).click();
   await page.getByLabel('Search exercises').fill('bench');
   await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
-  const firstSet = exerciseCard(page, 'Barbell Bench Press').locator('li.set-row').first();
+  const firstSet = workoutCards(page, 'Barbell Bench Press').locator('li.set-row').first();
   const weight = firstSet.getByLabel('kg', { exact: true });
   const reps = firstSet.getByLabel('reps', { exact: true });
 

@@ -9,6 +9,7 @@ import {
   anon,
   builtInExerciseId,
   createTestUser,
+  databaseNow,
   db,
   postFunction,
   rateLimitHits,
@@ -180,11 +181,6 @@ async function eventRows(enrollmentId: string) {
   return await db`
     select id, kind, payload, effective_at from public.program_enrollment_events
     where enrollment_id = ${enrollmentId} order by effective_at, id`;
-}
-
-async function databaseNow(): Promise<number> {
-  const [row] = await db`select clock_timestamp() as now`;
-  return (row.now as Date).getTime();
 }
 
 describe('program_templates', () => {

@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { openFromProfile } from './app.ts';
+import { openFromProfile, openTab } from './app.ts';
 
 export const MADCOW_FIVE_RMS_KG: Readonly<Record<string, number>> = {
   'Squat 5RM (kg)': 100,
@@ -22,6 +22,14 @@ export function powerliftingPrograms(page: Page): Locator {
 
 export function programToday(page: Page, programName: string): Locator {
   return page.getByRole('region', { name: programName, exact: true });
+}
+
+export async function openProgramToday(page: Page, programName: string): Promise<Locator> {
+  await page.reload();
+  await openTab(page, 'Train');
+  const today = programToday(page, programName);
+  await expect(today).toBeVisible();
+  return today;
 }
 
 export function prescribedRows(scope: Locator, title: string): Locator {

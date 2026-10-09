@@ -10,14 +10,9 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 import { equipGear, grantItems } from './support/db.ts';
+import { openItems } from './support/challenge.ts';
 
 const GEAR_BONUS_LINE = /^Gear bonus \+\d+ XP$/;
-
-async function openItems(page: Page) {
-  await openTab(page, 'Log');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'Items' }).click();
-  await expect(page.getByRole('heading', { name: 'Gear' })).toBeVisible();
-}
 
 async function logSquats(page: Page) {
   await logWorkout(page, () =>

@@ -6,12 +6,12 @@ import {
   db,
   grantDrop,
   normalizedSnapshot,
-  postFunction,
   rebuildCaches,
   type TestUser,
 } from './local-stack.ts';
 import {
   aSet,
+  editSession,
   hoursAgo,
   payloadAt,
   postSession,
@@ -58,16 +58,6 @@ async function unequip(user: TestUser, slot: string): Promise<void> {
 
 function squatSession(): SessionPayload {
   return payloadAt(hoursAgo(4), [aSet(squatId, 0, 100), aSet(squatId, 1, 100), aSet(squatId, 2, 100)]);
-}
-
-async function edit(user: TestUser, session: SessionPayload, sets: SetShape[]): Promise<void> {
-  const response = await postFunction('edit-session', user.accessToken, {
-    sessionId: session.id,
-    ifRevision: 0,
-    notes: session.notes,
-    sets,
-  });
-  expect(response.status, response.rawBody).toBe(200);
 }
 
 async function skillXpByPosition(sessionId: string, skillKey: string): Promise<number[]> {
@@ -154,12 +144,12 @@ describe('replay with the stored gear snapshot', () => {
     await postSession(gearless, twin);
     await unequip(geared, 'belt');
 
-    await edit(
+    await editSession(
       geared,
       session,
       session.sets.map((set) => ({ ...set, reps: 8 })),
     );
-    await edit(
+    await editSession(
       gearless,
       twin,
       twin.sets.map((set) => ({ ...set, reps: 8 })),
@@ -184,8 +174,8 @@ describe('replay with the stored gear snapshot', () => {
     const coreBefore = await sessionSkillXp(twin.id, 'core');
 
     const editSetTwo = (sets: SetShape[]) => sets.map((set) => (set.position === 1 ? { ...set, reps: 12 } : set));
-    await edit(geared, session, editSetTwo(session.sets));
-    await edit(gearless, twin, editSetTwo(twin.sets));
+    await editSession(geared, session, editSetTwo(session.sets));
+    await editSession(gearless, twin, editSetTwo(twin.sets));
 
     const gearlessCore = await skillXpByPosition(twin.id, 'core');
     const coreAfter = gearlessCore.reduce((sum, xp) => sum + xp, 0);
@@ -203,7 +193,7 @@ describe('replay with the stored gear snapshot', () => {
     await postSession(geared, session);
     expect((await storedSession(session.id)).summary.gearBonusBySkill).toHaveProperty('core');
 
-    await edit(
+    await editSession(
       geared,
       session,
       session.sets.map((set) => ({ ...set, exerciseId: benchId, weightKg: 80 })),
