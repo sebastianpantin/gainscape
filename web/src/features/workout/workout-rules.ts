@@ -1,6 +1,9 @@
 import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
 import { BODYWEIGHT_LOAD_NOT_ZERO_CODE, UNKNOWN_EXERCISE_CODE } from '../../lib/exercise-edit-rules.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
+import type { LoadType } from '../../lib/catalog-rules.ts';
+import { finishedAtFor } from '../../lib/session-timing-rules.ts';
+import { markPlannedSetsDone, withCurrentLoadTypes, type WorkoutDraft } from '../../offline/draft-format.ts';
 import type { DraftSaveProblem, StartOutcome } from '../../offline/draft-session.ts';
 
 const EXERCISE_CHANGED_REASONS = new Set([BODYWEIGHT_LOAD_NOT_ZERO_CODE, UNKNOWN_EXERCISE_CODE]);
@@ -109,4 +112,26 @@ export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): Fin
     confirm: MARK_DONE,
     alternative: done > 0 ? WITHOUT_THEM : null,
   };
+}
+
+export interface FinishOptions {
+  sessionId: string;
+  loadTypes: ReadonlyMap<string, LoadType>;
+  markPlannedDone: boolean;
+  now: Date;
+}
+
+export function finishDraft(
+  latest: WorkoutDraft,
+  { sessionId, loadTypes, markPlannedDone, now }: FinishOptions,
+): { draft: WorkoutDraft; changedNames: string[] } {
+  if (latest.sessionId !== sessionId || latest.finishedAt) return { draft: latest, changedNames: [] };
+  const checked = withCurrentLoadTypes(latest, loadTypes);
+  if (checked.changedNames.length > 0) return checked;
+  const logged = markPlannedDone ? markPlannedSetsDone(checked.draft) : checked.draft;
+  return { draft: { ...logged, finishedAt: finishedAtFor(logged.startedAt, now) }, changedNames: [] };
+}
+
+export function loadTypeChangedText(changedNames: readonly string[]): string {
+  return `Load type of ${changedNames.join(', ')} changed; check the weights`;
 }
