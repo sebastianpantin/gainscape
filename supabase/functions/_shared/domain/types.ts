@@ -243,6 +243,7 @@ export interface SetResult {
   xp: number;
   skillXp: SkillXp[];
   cardio: CardioSetResult | null;
+  holdRecords?: CardioRecordGain[];
 }
 
 export interface LiftSetResult extends SetResult {

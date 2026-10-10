@@ -8,6 +8,7 @@ import {
   lootCandidates,
   processSession,
   qualifies,
+  recordsFromHistory,
   DEFAULT_LOOT,
   type SessionInput,
   type SetInput,
@@ -140,5 +141,91 @@ describe('hold sets', () => {
     };
     expect(sameSet(hang, stored, DEFAULT_BALANCE)).toBe(true);
     expect(sameSet({ ...hang, durationS: 35 }, stored, DEFAULT_BALANCE)).toBe(false);
+  });
+});
+
+describe('hold records', () => {
+  const PRIOR_SESSION: SessionInput = { id: 'first', startedAt: '2026-10-01T10:00:00.000Z', sets: [] };
+
+  function after(previous: SetInput[], sets: SetInput[]) {
+    const first = processSession(user, { ...PRIOR_SESSION, sets: previous }, TEST_BALANCE, { catalog });
+    const session: SessionInput = { id: 'second', startedAt: '2026-10-08T10:00:00.000Z', sets };
+    return processSession(first.nextState, session, TEST_BALANCE, { catalog });
+  }
+
+  it('keeps the longest hold and the farthest carry once the load reaches the floor', () => {
+    expect(DEFAULT_BALANCE.holdRecordMinExternalLoadKg).toBe(20);
+    const { outputs, nextState } = after(
+      [aHold('plate-pinch', 20, { durationS: 30 }, hard), aHold('farmers-carry', 24, { distanceM: 40 }, hard)],
+      [aHold('plate-pinch', 20, { durationS: 45 }, hard), aHold('farmers-carry', 24, { distanceM: 60 }, hard)],
+    );
+    expect(outputs.sets.map((result) => result.holdRecords)).toEqual([
+      [{ kind: 'duration', value: 45, previous: 30 }],
+      [{ kind: 'distance', value: 60, previous: 40 }],
+    ]);
+    expect(nextState.records?.cardio['plate-pinch']).toEqual({
+      duration: { value: 45, setId: outputs.sets[0].set.id, achievedAt: '2026-10-08T10:00:00.000Z' },
+    });
+    expect(outputs.prs).toEqual([
+      {
+        kind: 'cardio',
+        exerciseId: 'plate-pinch',
+        setId: outputs.sets[0].set.id,
+        records: [{ kind: 'duration', value: 45, previous: 30 }],
+      },
+      {
+        kind: 'cardio',
+        exerciseId: 'farmers-carry',
+        setId: outputs.sets[1].set.id,
+        records: [{ kind: 'distance', value: 60, previous: 40 }],
+      },
+    ]);
+  });
+
+  it('counts no record for a hold under the load floor', () => {
+    const { outputs, nextState } = after(
+      [aHold('plate-pinch', 20, { durationS: 30 }, hard)],
+      [aHold('plate-pinch', 15, { durationS: 90 }, hard)],
+    );
+    expect(outputs.sets[0].holdRecords ?? []).toEqual([]);
+    expect(nextState.records?.cardio['plate-pinch']?.duration?.value).toBe(30);
+  });
+
+  it('counts a bodyweight hang at any added load, since the bodyweight is the load', () => {
+    const { outputs } = after(
+      [aHold('dead-hang', 0, { durationS: 30 }, hard)],
+      [aHold('dead-hang', 0, { durationS: 31 }, hard)],
+    );
+    expect(outputs.sets[0].holdRecords).toEqual([{ kind: 'duration', value: 31, previous: 30 }]);
+  });
+
+  it('reports no record in the first session of a hold, only a baseline', () => {
+    const outputs = run([aHold('plate-pinch', 20, { durationS: 30 }, hard)]);
+    expect(outputs.sets[0].holdRecords ?? []).toEqual([]);
+    expect(outputs.prs).toEqual([]);
+  });
+
+  it('rebuilds hold records from history and marks a hold record as a loot PR', () => {
+    const sets = [
+      aHold('farmers-carry', 24, { distanceM: 40 }, hard),
+      aHold('farmers-carry', 10, { distanceM: 90 }, hard),
+    ];
+    const records = recordsFromHistory(
+      sets.map((hold, index) => ({
+        kind: 'hold' as const,
+        exerciseId: hold.exerciseId,
+        session: { id: `s-${index}`, startedAt: `2026-10-0${index + 1}T10:00:00.000Z` },
+        setId: hold.id,
+        position: 0,
+        effectiveLoadKg: hold.weightKg,
+        durationS: hold.durationS,
+        distanceM: hold.distanceM,
+      })),
+      catalog,
+      TEST_BALANCE,
+    );
+    expect(records.cardio['farmers-carry']?.distance?.value).toBe(40);
+    const { outputs } = after([sets[0]], [aHold('farmers-carry', 24, { distanceM: 70 }, hard)]);
+    expect(lootCandidates(outputs.sets, catalog)[0].personalRecord).toBe(true);
   });
 });
