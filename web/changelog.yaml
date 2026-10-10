@@ -1,3 +1,10 @@
+- prs: [78]
+  version: 0.3.2
+  date: 2026-10-10
+  title: Clearer error messages
+  items:
+    - A failed email change, data export, account deletion or pin now says what went wrong in plain words instead of a code.
+    - The History tab's load error goes away once loading older workouts works again.
 - prs: [77]
   version: 0.3.1
   date: 2026-10-10
