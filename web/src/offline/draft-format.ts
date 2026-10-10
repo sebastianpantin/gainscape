@@ -687,6 +687,15 @@ export function canQuickFill(exercise: LiftDraftExercise): boolean {
   return exercise.sets.filter((set) => !set.isWarmup).length <= MOST_WORKING_SETS_TO_QUICK_FILL;
 }
 
+const MOST_QUICK_FILL_SETS = 20;
+
+export function mostQuickFillSets(draft: WorkoutDraft, exerciseIndex: number): number {
+  const workingSetCount = draft.exercises[exerciseIndex]?.sets.filter(
+    (set) => !('isWarmup' in set && set.isWarmup),
+  ).length;
+  return Math.min(MOST_QUICK_FILL_SETS, (workingSetCount ?? 0) + roomForSets(draft));
+}
+
 export function fillWorkingSets(draft: WorkoutDraft, exerciseIndex: number, count: number, reps: number): WorkoutDraft {
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio' || !canQuickFill(exercise)) return exercise;
