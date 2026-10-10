@@ -244,6 +244,857 @@
   equipment: dumbbell
   shares: { arms: 10000 }
   variation_of: dumbbell_curl
+- key: decline_barbell_bench_press
+  name: Decline Barbell Bench Press
+  load_type: external
+  equipment: barbell
+  shares: { chest: 7500, shoulders: 1000, arms: 1500 }
+- key: wide_grip_bench_press
+  name: Wide-grip Bench Press
+  load_type: external
+  equipment: barbell
+  shares: { chest: 8000, shoulders: 1500, arms: 500 }
+  variation_of: barbell_bench_press
+- key: reverse_grip_bench_press
+  name: Reverse-grip Bench Press
+  load_type: external
+  equipment: barbell
+  shares: { chest: 6000, shoulders: 2500, arms: 1500 }
+  variation_of: barbell_bench_press
+- key: barbell_floor_press
+  name: Barbell Floor Press
+  load_type: external
+  equipment: barbell
+  shares: { chest: 6000, arms: 3000, shoulders: 1000 }
+- key: decline_dumbbell_bench_press
+  name: Decline Dumbbell Bench Press
+  load_type: external
+  equipment: dumbbell
+  shares: { chest: 7500, shoulders: 1000, arms: 1500 }
+- key: dumbbell_floor_press
+  name: Dumbbell Floor Press
+  load_type: external
+  equipment: dumbbell
+  shares: { chest: 6000, arms: 3000, shoulders: 1000 }
+- key: dumbbell_fly
+  name: Dumbbell Fly
+  load_type: external
+  equipment: dumbbell
+  shares: { chest: 9000, shoulders: 1000 }
+- key: incline_dumbbell_fly
+  name: Incline Dumbbell Fly
+  load_type: external
+  equipment: dumbbell
+  shares: { chest: 8000, shoulders: 2000 }
+- key: decline_dumbbell_fly
+  name: Decline Dumbbell Fly
+  load_type: external
+  equipment: dumbbell
+  shares: { chest: 9000, shoulders: 1000 }
+- key: dumbbell_pullover
+  name: Dumbbell Pullover
+  load_type: external
+  equipment: dumbbell
+  shares: { chest: 5000, back: 5000 }
+- key: smith_machine_bench_press
+  name: Smith Machine Bench Press
+  load_type: external
+  equipment: machine
+  shares: { chest: 7000, shoulders: 2000, arms: 1000 }
+- key: smith_machine_incline_bench_press
+  name: Smith Machine Incline Bench Press
+  load_type: external
+  equipment: machine
+  shares: { chest: 6000, shoulders: 3000, arms: 1000 }
+- key: incline_machine_chest_press
+  name: Incline Machine Chest Press
+  load_type: external
+  equipment: machine
+  shares: { chest: 6000, shoulders: 3000, arms: 1000 }
+- key: cable_chest_press
+  name: Cable Chest Press
+  load_type: external
+  equipment: cable
+  shares: { chest: 7000, shoulders: 2000, arms: 1000 }
+- key: incline_cable_fly
+  name: Incline Cable Fly
+  load_type: external
+  equipment: cable
+  shares: { chest: 8000, shoulders: 2000 }
+- key: low_to_high_cable_fly
+  name: Low-to-high Cable Fly
+  load_type: external
+  equipment: cable
+  shares: { chest: 8000, shoulders: 2000 }
+- key: incline_push_up
+  name: Incline Push-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { chest: 6500, shoulders: 2000, arms: 1500 }
+- key: decline_push_up
+  name: Decline Push-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { chest: 6000, shoulders: 3000, arms: 1000 }
+- key: wide_grip_push_up
+  name: Wide-grip Push-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { chest: 7500, shoulders: 1500, arms: 1000 }
+- key: archer_push_up
+  name: Archer Push-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { chest: 7000, shoulders: 1500, arms: 1500 }
+- key: pendlay_row
+  name: Pendlay Row
+  load_type: external
+  equipment: barbell
+  shares: { back: 7000, arms: 2000, core: 1000 }
+  variation_of: barbell_row
+- key: reverse_grip_barbell_row
+  name: Reverse-grip Barbell Row
+  load_type: external
+  equipment: barbell
+  shares: { back: 6500, arms: 2500, core: 1000 }
+  variation_of: barbell_row
+- key: seal_row
+  name: Seal Row
+  load_type: external
+  equipment: barbell
+  shares: { back: 7500, arms: 2500 }
+- key: t_bar_row
+  name: T-bar Row
+  load_type: external
+  equipment: machine
+  shares: { back: 7500, arms: 2000, core: 500 }
+- key: chest_supported_dumbbell_row
+  name: Chest-supported Dumbbell Row
+  load_type: external
+  equipment: dumbbell
+  shares: { back: 7500, arms: 2500 }
+- key: renegade_row
+  name: Renegade Row
+  load_type: external
+  equipment: dumbbell
+  shares: { back: 6000, core: 2500, arms: 1500 }
+- key: kettlebell_row
+  name: Kettlebell Row
+  load_type: external
+  equipment: other
+  shares: { back: 7500, arms: 2500 }
+- key: machine_row
+  name: Machine Row
+  load_type: external
+  equipment: machine
+  shares: { back: 7500, arms: 2500 }
+- key: machine_high_row
+  name: Machine High Row
+  load_type: external
+  equipment: machine
+  shares: { back: 7500, arms: 2500 }
+- key: smith_machine_row
+  name: Smith Machine Row
+  load_type: external
+  equipment: machine
+  shares: { back: 7500, arms: 2500 }
+- key: single_arm_cable_row
+  name: Single-arm Cable Row
+  load_type: external
+  equipment: cable
+  shares: { back: 7500, arms: 2500 }
+- key: wide_grip_seated_cable_row
+  name: Wide-grip Seated Cable Row
+  load_type: external
+  equipment: cable
+  shares: { back: 7500, shoulders: 1000, arms: 1500 }
+  variation_of: seated_cable_row
+- key: straight_arm_pulldown
+  name: Straight-arm Pulldown
+  load_type: external
+  equipment: cable
+  shares: { back: 9000, shoulders: 1000 }
+- key: close_grip_lat_pulldown
+  name: Close-grip Lat Pulldown
+  load_type: external
+  equipment: cable
+  shares: { back: 7000, arms: 3000 }
+  variation_of: lat_pulldown
+- key: reverse_grip_lat_pulldown
+  name: Reverse-grip Lat Pulldown
+  load_type: external
+  equipment: cable
+  shares: { back: 6500, arms: 3500 }
+  variation_of: lat_pulldown
+- key: single_arm_lat_pulldown
+  name: Single-arm Lat Pulldown
+  load_type: external
+  equipment: cable
+  shares: { back: 7500, arms: 2500 }
+- key: machine_lat_pulldown
+  name: Machine Lat Pulldown
+  load_type: external
+  equipment: machine
+  shares: { back: 7500, arms: 2500 }
+- key: barbell_pullover
+  name: Barbell Pullover
+  load_type: external
+  equipment: barbell
+  shares: { back: 5000, chest: 5000 }
+- key: wide_grip_pull_up
+  name: Wide-grip Pull-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { back: 8000, arms: 2000 }
+- key: neutral_grip_pull_up
+  name: Neutral-grip Pull-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { back: 7000, arms: 3000 }
+- key: muscle_up
+  name: Muscle-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { back: 5000, chest: 2000, arms: 2500, shoulders: 500 }
+- key: rack_pull
+  name: Rack Pull
+  load_type: external
+  equipment: barbell
+  shares: { back: 6500, legs: 2500, core: 1000 }
+  variation_of: deadlift
+- key: sumo_deadlift
+  name: Sumo Deadlift
+  load_type: external
+  equipment: barbell
+  shares: { legs: 5500, back: 3500, core: 1000 }
+- key: trap_bar_deadlift
+  name: Trap Bar Deadlift
+  load_type: external
+  equipment: other
+  shares: { legs: 5500, back: 3500, core: 1000 }
+- key: dumbbell_deadlift
+  name: Dumbbell Deadlift
+  load_type: external
+  equipment: dumbbell
+  shares: { back: 4500, legs: 4500, core: 1000 }
+- key: good_morning
+  name: Good Morning
+  load_type: external
+  equipment: barbell
+  shares: { legs: 6000, back: 3000, core: 1000 }
+- key: back_extension
+  name: Back Extension
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { back: 6000, legs: 3000, core: 1000 }
+- key: weighted_back_extension
+  name: Weighted Back Extension
+  load_type: bodyweight_plus
+  equipment: bodyweight
+  shares: { back: 6000, legs: 3000, core: 1000 }
+- key: reverse_hyperextension
+  name: Reverse Hyperextension
+  load_type: external
+  equipment: machine
+  shares: { legs: 6000, back: 4000 }
+- key: barbell_shrug
+  name: Barbell Shrug
+  load_type: external
+  equipment: barbell
+  shares: { back: 10000 }
+- key: dumbbell_shrug
+  name: Dumbbell Shrug
+  load_type: external
+  equipment: dumbbell
+  shares: { back: 10000 }
+- key: kettlebell_swing
+  name: Kettlebell Swing
+  load_type: external
+  equipment: other
+  shares: { legs: 6000, back: 3000, core: 1000 }
+- key: seated_overhead_press
+  name: Seated Overhead Press
+  load_type: external
+  equipment: barbell
+  shares: { shoulders: 7500, arms: 2500 }
+  variation_of: overhead_press
+- key: behind_the_neck_press
+  name: Behind-the-neck Press
+  load_type: external
+  equipment: barbell
+  shares: { shoulders: 7500, arms: 2500 }
+  variation_of: overhead_press
+- key: push_press
+  name: Push Press
+  load_type: external
+  equipment: barbell
+  shares: { shoulders: 6000, legs: 2000, arms: 1500, core: 500 }
+- key: dumbbell_push_press
+  name: Dumbbell Push Press
+  load_type: external
+  equipment: dumbbell
+  shares: { shoulders: 6000, legs: 2000, arms: 1500, core: 500 }
+- key: standing_dumbbell_shoulder_press
+  name: Standing Dumbbell Shoulder Press
+  load_type: external
+  equipment: dumbbell
+  shares: { shoulders: 7000, arms: 2000, core: 1000 }
+- key: arnold_press
+  name: Arnold Press
+  load_type: external
+  equipment: dumbbell
+  shares: { shoulders: 7500, arms: 2500 }
+- key: kettlebell_press
+  name: Kettlebell Press
+  load_type: external
+  equipment: other
+  shares: { shoulders: 7500, arms: 2500 }
+- key: machine_shoulder_press
+  name: Machine Shoulder Press
+  load_type: external
+  equipment: machine
+  shares: { shoulders: 7500, arms: 2500 }
+- key: smith_machine_shoulder_press
+  name: Smith Machine Shoulder Press
+  load_type: external
+  equipment: machine
+  shares: { shoulders: 7500, arms: 2500 }
+- key: handstand_push_up
+  name: Handstand Push-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { shoulders: 7000, arms: 3000 }
+- key: pike_push_up
+  name: Pike Push-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { shoulders: 6500, arms: 2500, chest: 1000 }
+- key: cable_lateral_raise
+  name: Cable Lateral Raise
+  load_type: external
+  equipment: cable
+  shares: { shoulders: 10000 }
+- key: machine_lateral_raise
+  name: Machine Lateral Raise
+  load_type: external
+  equipment: machine
+  shares: { shoulders: 10000 }
+- key: dumbbell_front_raise
+  name: Dumbbell Front Raise
+  load_type: external
+  equipment: dumbbell
+  shares: { shoulders: 10000 }
+- key: cable_front_raise
+  name: Cable Front Raise
+  load_type: external
+  equipment: cable
+  shares: { shoulders: 10000 }
+- key: rear_delt_fly
+  name: Rear Delt Fly
+  load_type: external
+  equipment: dumbbell
+  shares: { shoulders: 8000, back: 2000 }
+- key: reverse_pec_deck
+  name: Reverse Pec Deck
+  load_type: external
+  equipment: machine
+  shares: { shoulders: 8000, back: 2000 }
+- key: cable_reverse_fly
+  name: Cable Reverse Fly
+  load_type: external
+  equipment: cable
+  shares: { shoulders: 8000, back: 2000 }
+- key: rear_delt_row
+  name: Rear Delt Row
+  load_type: external
+  equipment: dumbbell
+  shares: { shoulders: 8000, back: 2000 }
+- key: incline_y_raise
+  name: Incline Y Raise
+  load_type: external
+  equipment: dumbbell
+  shares: { shoulders: 8000, back: 2000 }
+- key: cable_external_rotation
+  name: Cable External Rotation
+  load_type: external
+  equipment: cable
+  shares: { shoulders: 10000 }
+- key: barbell_upright_row
+  name: Barbell Upright Row
+  load_type: external
+  equipment: barbell
+  shares: { shoulders: 7000, back: 2000, arms: 1000 }
+- key: dumbbell_upright_row
+  name: Dumbbell Upright Row
+  load_type: external
+  equipment: dumbbell
+  shares: { shoulders: 7000, back: 2000, arms: 1000 }
+- key: cable_upright_row
+  name: Cable Upright Row
+  load_type: external
+  equipment: cable
+  shares: { shoulders: 7000, back: 2000, arms: 1000 }
+- key: ez_bar_curl
+  name: EZ-bar Curl
+  load_type: external
+  equipment: other
+  shares: { arms: 10000 }
+- key: hammer_curl
+  name: Hammer Curl
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+- key: cross_body_hammer_curl
+  name: Cross-body Hammer Curl
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+  variation_of: hammer_curl
+- key: incline_dumbbell_curl
+  name: Incline Dumbbell Curl
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+  variation_of: dumbbell_curl
+- key: concentration_curl
+  name: Concentration Curl
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+- key: zottman_curl
+  name: Zottman Curl
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+- key: preacher_curl
+  name: Preacher Curl
+  load_type: external
+  equipment: barbell
+  shares: { arms: 10000 }
+- key: dumbbell_preacher_curl
+  name: Dumbbell Preacher Curl
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+- key: machine_preacher_curl
+  name: Machine Preacher Curl
+  load_type: external
+  equipment: machine
+  shares: { arms: 10000 }
+- key: drag_curl
+  name: Drag Curl
+  load_type: external
+  equipment: barbell
+  shares: { arms: 10000 }
+  variation_of: barbell_curl
+- key: reverse_curl
+  name: Reverse Curl
+  load_type: external
+  equipment: barbell
+  shares: { arms: 10000 }
+- key: cable_curl
+  name: Cable Curl
+  load_type: external
+  equipment: cable
+  shares: { arms: 10000 }
+- key: cable_rope_hammer_curl
+  name: Cable Rope Hammer Curl
+  load_type: external
+  equipment: cable
+  shares: { arms: 10000 }
+- key: overhead_cable_curl
+  name: Overhead Cable Curl
+  load_type: external
+  equipment: cable
+  shares: { arms: 10000 }
+- key: machine_biceps_curl
+  name: Machine Biceps Curl
+  load_type: external
+  equipment: machine
+  shares: { arms: 10000 }
+- key: rope_triceps_pushdown
+  name: Rope Triceps Pushdown
+  load_type: external
+  equipment: cable
+  shares: { arms: 10000 }
+  variation_of: cable_triceps_pushdown
+- key: reverse_grip_triceps_pushdown
+  name: Reverse-grip Triceps Pushdown
+  load_type: external
+  equipment: cable
+  shares: { arms: 10000 }
+  variation_of: cable_triceps_pushdown
+- key: overhead_cable_triceps_extension
+  name: Overhead Cable Triceps Extension
+  load_type: external
+  equipment: cable
+  shares: { arms: 10000 }
+- key: cable_triceps_kickback
+  name: Cable Triceps Kickback
+  load_type: external
+  equipment: cable
+  shares: { arms: 10000 }
+- key: dumbbell_overhead_triceps_extension
+  name: Dumbbell Overhead Triceps Extension
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+- key: dumbbell_skull_crusher
+  name: Dumbbell Skull Crusher
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+- key: dumbbell_triceps_kickback
+  name: Dumbbell Triceps Kickback
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+- key: tate_press
+  name: Tate Press
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 9000, chest: 1000 }
+- key: close_grip_bench_press
+  name: Close-grip Bench Press
+  load_type: external
+  equipment: barbell
+  shares: { arms: 5000, chest: 4000, shoulders: 1000 }
+  variation_of: barbell_bench_press
+- key: jm_press
+  name: JM Press
+  load_type: external
+  equipment: barbell
+  shares: { arms: 7000, chest: 2000, shoulders: 1000 }
+- key: machine_triceps_extension
+  name: Machine Triceps Extension
+  load_type: external
+  equipment: machine
+  shares: { arms: 10000 }
+- key: machine_dip
+  name: Machine Dip
+  load_type: external
+  equipment: machine
+  shares: { arms: 6000, chest: 3000, shoulders: 1000 }
+- key: diamond_push_up
+  name: Diamond Push-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { arms: 5000, chest: 4000, shoulders: 1000 }
+- key: bench_dip
+  name: Bench Dip
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { arms: 8000, chest: 1000, shoulders: 1000 }
+- key: barbell_wrist_curl
+  name: Barbell Wrist Curl
+  load_type: external
+  equipment: barbell
+  shares: { arms: 10000 }
+- key: barbell_reverse_wrist_curl
+  name: Barbell Reverse Wrist Curl
+  load_type: external
+  equipment: barbell
+  shares: { arms: 10000 }
+- key: dumbbell_wrist_curl
+  name: Dumbbell Wrist Curl
+  load_type: external
+  equipment: dumbbell
+  shares: { arms: 10000 }
+- key: box_squat
+  name: Box Squat
+  load_type: external
+  equipment: barbell
+  shares: { legs: 9000, core: 1000 }
+  variation_of: back_squat
+- key: zercher_squat
+  name: Zercher Squat
+  load_type: external
+  equipment: barbell
+  shares: { legs: 8500, core: 1500 }
+- key: overhead_squat
+  name: Overhead Squat
+  load_type: external
+  equipment: barbell
+  shares: { legs: 6500, shoulders: 2000, core: 1500 }
+- key: hack_squat
+  name: Hack Squat
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+- key: smith_machine_squat
+  name: Smith Machine Squat
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+- key: goblet_squat
+  name: Goblet Squat
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 9000, core: 1000 }
+- key: dumbbell_squat
+  name: Dumbbell Squat
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 9000, core: 1000 }
+- key: bodyweight_squat
+  name: Bodyweight Squat
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { legs: 10000 }
+- key: pistol_squat
+  name: Pistol Squat
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { legs: 9000, core: 1000 }
+- key: sissy_squat
+  name: Sissy Squat
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { legs: 10000 }
+- key: bulgarian_split_squat
+  name: Bulgarian Split Squat
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 9000, core: 1000 }
+- key: barbell_split_squat
+  name: Barbell Split Squat
+  load_type: external
+  equipment: barbell
+  shares: { legs: 9000, core: 1000 }
+- key: split_squat
+  name: Split Squat
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { legs: 10000 }
+- key: barbell_lunge
+  name: Barbell Lunge
+  load_type: external
+  equipment: barbell
+  shares: { legs: 9000, core: 1000 }
+- key: dumbbell_lunge
+  name: Dumbbell Lunge
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 9000, core: 1000 }
+- key: dumbbell_reverse_lunge
+  name: Dumbbell Reverse Lunge
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 9000, core: 1000 }
+- key: dumbbell_walking_lunge
+  name: Dumbbell Walking Lunge
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 9000, core: 1000 }
+- key: barbell_step_up
+  name: Barbell Step-up
+  load_type: external
+  equipment: barbell
+  shares: { legs: 9000, core: 1000 }
+- key: dumbbell_step_up
+  name: Dumbbell Step-up
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 9000, core: 1000 }
+- key: single_leg_leg_press
+  name: Single-leg Leg Press
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+  variation_of: leg_press
+- key: seated_leg_curl
+  name: Seated Leg Curl
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+  variation_of: leg_curl
+- key: lying_leg_curl
+  name: Lying Leg Curl
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+  variation_of: leg_curl
+- key: glute_ham_raise
+  name: Glute-ham Raise
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { legs: 9000, back: 1000 }
+- key: stiff_leg_deadlift
+  name: Stiff-leg Deadlift
+  load_type: external
+  equipment: barbell
+  shares: { legs: 6500, back: 2500, core: 1000 }
+- key: dumbbell_romanian_deadlift
+  name: Dumbbell Romanian Deadlift
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 7000, back: 2000, core: 1000 }
+- key: single_leg_romanian_deadlift
+  name: Single-leg Romanian Deadlift
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 8000, back: 1000, core: 1000 }
+- key: barbell_glute_bridge
+  name: Barbell Glute Bridge
+  load_type: external
+  equipment: barbell
+  shares: { legs: 9000, core: 1000 }
+- key: glute_bridge
+  name: Glute Bridge
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { legs: 9000, core: 1000 }
+- key: cable_pull_through
+  name: Cable Pull-through
+  load_type: external
+  equipment: cable
+  shares: { legs: 8000, back: 2000 }
+- key: cable_glute_kickback
+  name: Cable Glute Kickback
+  load_type: external
+  equipment: cable
+  shares: { legs: 10000 }
+- key: hip_abduction_machine
+  name: Hip Abduction Machine
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+- key: hip_adduction_machine
+  name: Hip Adduction Machine
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+- key: seated_calf_raise
+  name: Seated Calf Raise
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+- key: donkey_calf_raise
+  name: Donkey Calf Raise
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+- key: leg_press_calf_raise
+  name: Leg Press Calf Raise
+  load_type: external
+  equipment: machine
+  shares: { legs: 10000 }
+- key: dumbbell_calf_raise
+  name: Dumbbell Calf Raise
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 10000 }
+- key: power_clean
+  name: Power Clean
+  load_type: external
+  equipment: barbell
+  shares: { legs: 5000, back: 3000, shoulders: 1000, core: 1000 }
+- key: hang_clean
+  name: Hang Clean
+  load_type: external
+  equipment: barbell
+  shares: { legs: 5000, back: 3000, shoulders: 1000, core: 1000 }
+  variation_of: power_clean
+- key: clean_and_jerk
+  name: Clean and Jerk
+  load_type: external
+  equipment: barbell
+  shares: { legs: 4500, back: 2000, shoulders: 2500, core: 1000 }
+- key: power_snatch
+  name: Power Snatch
+  load_type: external
+  equipment: barbell
+  shares: { legs: 4500, back: 2500, shoulders: 2000, core: 1000 }
+- key: thruster
+  name: Thruster
+  load_type: external
+  equipment: barbell
+  shares: { legs: 5000, shoulders: 3500, arms: 1000, core: 500 }
+- key: dumbbell_snatch
+  name: Dumbbell Snatch
+  load_type: external
+  equipment: dumbbell
+  shares: { legs: 4500, back: 2500, shoulders: 2000, core: 1000 }
+- key: kettlebell_clean
+  name: Kettlebell Clean
+  load_type: external
+  equipment: other
+  shares: { legs: 5000, back: 3000, shoulders: 1000, core: 1000 }
+- key: kettlebell_snatch
+  name: Kettlebell Snatch
+  load_type: external
+  equipment: other
+  shares: { legs: 4500, back: 2500, shoulders: 2000, core: 1000 }
+- key: turkish_get_up
+  name: Turkish Get-up
+  load_type: external
+  equipment: other
+  shares: { core: 5000, shoulders: 3000, legs: 2000 }
+- key: sit_up
+  name: Sit-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { core: 10000 }
+- key: crunch
+  name: Crunch
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { core: 10000 }
+- key: decline_sit_up
+  name: Decline Sit-up
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { core: 10000 }
+- key: weighted_decline_sit_up
+  name: Weighted Decline Sit-up
+  load_type: bodyweight_plus
+  equipment: bodyweight
+  shares: { core: 10000 }
+- key: lying_leg_raise
+  name: Lying Leg Raise
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { core: 10000 }
+- key: hanging_knee_raise
+  name: Hanging Knee Raise
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { core: 10000 }
+- key: weighted_hanging_leg_raise
+  name: Weighted Hanging Leg Raise
+  load_type: bodyweight_plus
+  equipment: bodyweight
+  shares: { core: 10000 }
+- key: dead_bug
+  name: Dead Bug
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { core: 10000 }
+- key: russian_twist
+  name: Russian Twist
+  load_type: bodyweight
+  equipment: bodyweight
+  shares: { core: 10000 }
+- key: dumbbell_side_bend
+  name: Dumbbell Side Bend
+  load_type: external
+  equipment: dumbbell
+  shares: { core: 10000 }
+- key: cable_woodchop
+  name: Cable Woodchop
+  load_type: external
+  equipment: cable
+  shares: { core: 9000, shoulders: 1000 }
+- key: landmine_rotation
+  name: Landmine Rotation
+  load_type: external
+  equipment: other
+  shares: { core: 8000, shoulders: 2000 }
+- key: kettlebell_windmill
+  name: Kettlebell Windmill
+  load_type: external
+  equipment: other
+  shares: { core: 7000, shoulders: 3000 }
 - key: running
   name: Running
   modality: cardio
