@@ -16,7 +16,7 @@ import {
 } from '@domain/types.ts';
 import type { CardioExercise } from './catalog-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
-import type { BoutValues } from '../offline/draft-format.ts';
+import type { BoutValues } from './exercise-edit-rules.ts';
 import { type DistanceUnit, distanceUnitFor, formatDistance, formatPace, unitToDistanceM } from './units.ts';
 
 export type BoutMode = 'steady' | 'intervals';

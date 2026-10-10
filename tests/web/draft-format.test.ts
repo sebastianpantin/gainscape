@@ -4,7 +4,6 @@ import {
   addExercise,
   addSet,
   addWarmupSets,
-  canAddSet,
   canSwapExercise,
   type CardioDraftExercise,
   type CatalogEntry,
@@ -25,17 +24,16 @@ import {
   syncedRecord,
   programLabelFor,
   removeExercise,
-  removeSet,
   seedUntouchedSet,
   startDraftFromDay,
   swapExercise,
   toggleSetDone,
-  updateSet,
   withCurrentLoadTypes,
   withSessionRpe,
   type DraftSet,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
+import { canAddSet, removeSet, updateSet } from '../../web/src/lib/exercise-edit-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 

@@ -1,7 +1,8 @@
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import type { Program, ProgramDoc } from '../../lib/programs.ts';
 import { moved } from '../../lib/reorder.ts';
-import { type PlannedExercise, updateExerciseAt } from '../../offline/draft-format.ts';
+import type { PlannedExercise } from '../../offline/draft-format.ts';
+import { updateExerciseAt } from '../../lib/exercise-edit-rules.ts';
 
 type EditorDay = ProgramDoc['days'][number];
 

@@ -45,7 +45,6 @@ import {
   addExercise,
   addSet,
   addWarmupSets,
-  canAddSet,
   canSwapExercise,
   doneSetCount,
   type DraftChallenge,
@@ -57,8 +56,6 @@ import {
   plannedSetsLeftToLifter,
   notDoneSetCount,
   removeExercise,
-  removeSet,
-  roomForSets,
   seedUntouchedSet,
   startDraft,
   startDraftFromDay,
@@ -67,12 +64,11 @@ import {
   type PrescribedDayStart,
   swapExercise,
   toggleSetDone,
-  updateBout,
-  updateSet,
   withCurrentLoadTypes,
   withSessionRpe,
   type WorkoutDraft,
 } from '../../offline/draft-format.ts';
+import { canAddSet, removeSet, roomForSets, updateBout, updateSet } from '../../lib/exercise-edit-rules.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
 import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program-enrollment.ts';
 import { skipDayEvent } from '../../lib/program-skip-rules.ts';

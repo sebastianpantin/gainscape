@@ -1,11 +1,5 @@
-import {
-  addSet,
-  type DraftExercise,
-  roomForSets,
-  updateExerciseAt,
-  type WorkoutDraft,
-  withValidSupersets,
-} from '../offline/draft-format.ts';
+import { addSet, type DraftExercise, type WorkoutDraft, withValidSupersets } from '../offline/draft-format.ts';
+import { roomForSets, updateExerciseAt } from './exercise-edit-rules.ts';
 
 export interface SupersetGroup {
   id: string;
