@@ -2,7 +2,14 @@ import type { BalanceConfig } from './balance.ts';
 import { roundLoad } from './load-rounding.ts';
 import { FLOAT_TOLERANCE, nonNegativeIntegerPercent } from './math.ts';
 import { e1rmAtSessionStart } from './strength.ts';
-import { isLiftResult, isRecord, type LiftSetResult, type SetResult, type StrengthState } from './types.ts';
+import {
+  type ChallengeSummary,
+  isLiftResult,
+  isRecord,
+  type LiftSetResult,
+  type SetResult,
+  type StrengthState,
+} from './types.ts';
 
 export interface ChallengeExercise {
   exerciseId: string;
@@ -88,6 +95,20 @@ export function challengeTargetLoadsKg(run: ChallengeRun): Record<string, number
       return [exerciseId, target === null ? null : roundLoad(target, CHALLENGE_LOAD_STEP_KG, 'down')];
     }),
   );
+}
+
+export function challengeSummary(
+  run: ChallengeRun | null | undefined,
+  verdict: ChallengeVerdict | undefined,
+): ChallengeSummary | null {
+  if (!run || !verdict) return null;
+  return {
+    challengeId: run.challengeId,
+    key: run.key,
+    name: run.name,
+    passed: verdict.passed,
+    targetLoadsKg: challengeTargetLoadsKg(run),
+  };
 }
 
 function workingLiftSets(sets: readonly SetResult[]): LiftSetResult[] {

@@ -7,6 +7,7 @@ import {
   challengeE1rmSnapshot,
   challengeLoadExerciseIds,
   challengeRunFromStored,
+  challengeSummary,
   challengeTargetLoadsKg,
   DEFAULT_BALANCE,
   e1rmAtSessionStart,
@@ -379,5 +380,26 @@ describe('challengeRunFromStored', () => {
     ['a non-numeric e1RM', { ...stored, e1rmKg: { deadlift: '140' } }],
   ])('rejects %s', (_case, value) => {
     expect(() => challengeRunFromStored(value)).toThrow(RangeError);
+  });
+});
+
+describe('challengeSummary', () => {
+  const run = { challengeId: 'c', key: 'k', name: 'n', definition: deadliftAndPullUp, e1rmKg: { deadlift: 140 } };
+
+  it('summarises a judged run with its verdict and judge floors', () => {
+    expect(challengeSummary(run, { passed: true })).toEqual({
+      challengeId: 'c',
+      key: 'k',
+      name: 'n',
+      passed: true,
+      targetLoadsKg: { deadlift: 97.5 },
+    });
+    expect(challengeSummary(run, { passed: false })?.passed).toBe(false);
+  });
+
+  it('is null without a run or without a verdict', () => {
+    expect(challengeSummary(null, { passed: true })).toBeNull();
+    expect(challengeSummary(undefined, { passed: true })).toBeNull();
+    expect(challengeSummary(run, undefined)).toBeNull();
   });
 });

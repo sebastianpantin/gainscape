@@ -2,21 +2,19 @@ import type { JsonValue, Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   type Catalog,
-  type ChallengeSummary,
-  challengeTargetLoadsKg,
+  challengeSummary,
   DEFAULT_BALANCE,
   DEFAULT_STEPS,
   type RevokedDrop,
-  type LootCandidate,
   lootCandidates,
   NO_RECORDS,
   priorSkillXp,
   type RecordState,
   recordsFromHistory,
   replayHistory,
-  type SessionInput,
+  revokedInReplayOrder,
   type SessionKey,
-  type SessionOutputs,
+  type SessionLootCandidate,
   type SessionSummary,
   type SetResult,
   type StoredSet,
@@ -25,7 +23,7 @@ import {
 import { HttpError } from '../http.ts';
 import { loadCatalog } from './catalog.ts';
 import { syncSessionEvents } from './events.ts';
-import { revokeDisqualifiedDrops, type RevokedActiveDrop, rollNewSessionLoot } from './loot.ts';
+import { revokeDisqualifiedDrops, rollNewSessionLoot } from './loot.ts';
 import {
   hasLaterSessions,
   hasStaleDerivedSessions,
@@ -45,13 +43,11 @@ import {
 } from './sessions.ts';
 import { clearStrengthCache, loadStrengthHistory, refreshStrengthCache } from './strength.ts';
 
-type ReplayedSet = LootCandidate & { sessionId: string };
-
 interface ReplayOutcome {
   sessionsReplayed: number;
   setsRewritten: number;
   replayedSessionIds: string[];
-  sets: ReplayedSet[];
+  sets: SessionLootCandidate[];
   revokedDrops: RevokedDrop[];
 }
 
@@ -128,45 +124,10 @@ async function rewriteDerivedSetColumns(tx: Transaction, results: readonly SetRe
     where target.id = derived.id`;
 }
 
-function challengeSummary(session: SessionInput, outputs: SessionOutputs): ChallengeSummary | null {
-  const run = session.challenge;
-  if (!run || !outputs.challengeVerdict) return null;
-  return {
-    challengeId: run.challengeId,
-    key: run.key,
-    name: run.name,
-    passed: outputs.challengeVerdict.passed,
-    targetLoadsKg: challengeTargetLoadsKg(run),
-  };
-}
-
 async function replaceSkillXp(tx: Transaction, userId: string, skillXp: Readonly<Record<string, number>>) {
   await tx`delete from public.user_skills where user_id = ${userId}`;
   const rows = Object.entries(skillXp).map(([skillId, xp]) => ({ user_id: userId, skill_id: skillId, xp }));
   if (rows.length > 0) await tx`insert into public.user_skills ${tx(rows)}`;
-}
-
-function inReplayOrder(
-  drops: readonly RevokedActiveDrop[],
-  sets: readonly ReplayedSet[],
-  replayedSessionIds: readonly string[],
-) {
-  const sessionRank = new Map(replayedSessionIds.map((id, index) => [id, index]));
-  const positionOf = new Map(sets.map((set) => [set.setId, set.position]));
-  const rank = (drop: RevokedActiveDrop) => sessionRank.get(drop.sessionId) ?? -1;
-  const position = (drop: RevokedActiveDrop) => positionOf.get(drop.setId) ?? Number.MAX_SAFE_INTEGER;
-  const sourceOrder = (drop: RevokedActiveDrop) => (drop.source === 'regular' ? 0 : 1);
-  return [...drops]
-    .sort((a, b) => rank(a) - rank(b) || position(a) - position(b) || sourceOrder(a) - sourceOrder(b))
-    .map((drop): RevokedDrop => ({
-      dropId: drop.dropId,
-      setId: drop.setId,
-      itemId: drop.itemId,
-      itemKey: drop.itemKey,
-      quantity: drop.quantity,
-      source: drop.source,
-      revokedQuantity: drop.revokedQuantity,
-    }));
 }
 
 async function replayFrom(
@@ -215,7 +176,7 @@ async function replayFrom(
         levelUps: entry.outputs.levelUps,
         prs: entry.outputs.prs,
         gearBonusBySkill: entry.outputs.gearBonusBySkill ?? {},
-        challenge: challengeSummary(entry.session, entry.outputs),
+        challenge: challengeSummary(entry.session.challenge, entry.outputs.challengeVerdict),
         challengeBonusBySkill: entry.outputs.challengeBonusBySkill ?? {},
       },
     })),
@@ -233,10 +194,12 @@ async function replayFrom(
           tx,
           userId,
           sets,
-          from.id,
           replayedSessionIds,
-          scope.deletedSessionIds,
-          scope.unchangedSetIds,
+          {
+            editedSessionId: from.id,
+            deletedSessionIds: scope.deletedSessionIds,
+            unchangedSetIds: scope.unchangedSetIds,
+          },
           cfg.version,
         );
   await syncSessionEvents(tx, userId, replayedSessionIds);
@@ -246,7 +209,7 @@ async function replayFrom(
     setsRewritten: results.length,
     replayedSessionIds,
     sets,
-    revokedDrops: inReplayOrder(revoked, sets, replayedSessionIds),
+    revokedDrops: revokedInReplayOrder(revoked, sets, replayedSessionIds),
   };
 }
 
