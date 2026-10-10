@@ -9,6 +9,7 @@ import {
 
 interface NumberTextFieldProps {
   label: ReactNode;
+  accessibleName?: string;
   value: number;
   lowest: number;
   highest: number;
@@ -19,6 +20,7 @@ interface NumberTextFieldProps {
 
 export function NumberTextField({
   label,
+  accessibleName,
   value,
   lowest,
   highest,
@@ -36,6 +38,7 @@ export function NumberTextField({
       <input
         type="text"
         role="spinbutton"
+        aria-label={accessibleName}
         inputMode={wholeNumber ? 'numeric' : 'decimal'}
         autoComplete="off"
         aria-valuemin={lowest}
