@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import {
   cachedPrograms,
   copyProgram,
@@ -12,13 +13,21 @@ import {
 } from '../../lib/programs.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
+import { forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
+import { followStatus } from '../../lib/program-follow-rules.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
+import { readProgramCache } from '../../offline/program-cache.ts';
 import { PowerliftingPrograms } from './PowerliftingPrograms.tsx';
 
 interface ProgramsScreenProps {
   userId: string;
+}
+
+interface PendingDelete {
+  program: Program;
+  following: boolean;
 }
 
 function daySummary(program: Program): string {
@@ -33,6 +42,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   const offline = useIsOffline();
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const pendingCopyIds = useRef(new Map<string, string>());
 
   useEffect(() => {
@@ -73,15 +83,23 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
     }
   };
 
-  const remove = async (program: Program) => {
-    if (!window.confirm(`Delete ${program.name}? Past workouts keep their sets.`)) return;
+  const askToRemove = (program: Program) => {
+    const { enrollment, templates } = readProgramCache(localStorage, userId);
+    setPendingDelete({ program, following: followStatus(program, enrollment, templates) !== 'not_following' });
+  };
+
+  const remove = async ({ program, following }: PendingDelete) => {
+    setBusy(true);
     setProblem(null);
     try {
       await deleteProgram(userId, program.id);
+      if (following) forgetCachedEnrollment(userId);
       setPrograms(cachedPrograms(userId));
     } catch (error) {
       setProblem(messageOf(error, 'Could not delete the program.'));
     }
+    setPendingDelete(null);
+    setBusy(false);
   };
 
   if (!programs)
@@ -134,7 +152,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
                 <Link className="button link" to={`/programs/${program.id}`}>
                   Edit
                 </Link>
-                <button className="button link" type="button" onClick={() => remove(program)}>
+                <button className="button link" type="button" onClick={() => askToRemove(program)}>
                   Delete
                 </button>
               </span>
@@ -145,6 +163,19 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
           New program
         </button>
       </section>
+      {pendingDelete && (
+        <ConfirmDialog
+          title={`Delete ${pendingDelete.program.name}?`}
+          confirmLabel="Delete"
+          danger
+          busy={busy}
+          onConfirm={() => void remove(pendingDelete)}
+          onCancel={() => setPendingDelete(null)}
+        >
+          {pendingDelete.following && <p>You're following this program. Deleting it stops following it.</p>}
+          <p>Past workouts keep their sets.</p>
+        </ConfirmDialog>
+      )}
       <PowerliftingPrograms userId={userId} />
       <section className="stack" aria-label="Templates">
         <h2>Templates</h2>

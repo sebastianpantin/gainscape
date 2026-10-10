@@ -970,3 +970,102 @@ describe('publish_program', () => {
     expect(await publishedProgram(user, programId)).toEqual({ key: customTemplateKey(programId), version: 1 });
   });
 });
+
+describe('delete_program on a program you follow', () => {
+  async function followedSquatProgram(user: TestUser) {
+    const squatId = exerciseIds.back_squat;
+    const programId = await savedProgram(user, {
+      id: randomUUID(),
+      name: 'Followed 5x5',
+      days: [plannedDay('Day 1', [linearFiveByFive(squatId)])],
+    });
+    const template = await publishedProgram(user, programId);
+    const liftKey = customLiftKey(squatId);
+    const enrollmentId = await enrolled(user, {
+      templateKey: template.key,
+      templateVersion: template.version,
+      unit: 'kg',
+      options: {},
+      bindings: { [liftKey]: squatId },
+      inputs: { [liftKey]: { workingWeight: 100 } },
+      rounding: { ...KG_ROUNDING },
+    });
+    return { programId, template, enrollmentId };
+  }
+
+  async function linkedSession(user: TestUser, enrollmentId: string): Promise<string> {
+    const sessionId = randomUUID();
+    await db`
+      insert into public.sessions
+        (id, user_id, started_at, ended_at, local_date, timezone, balance_version, derived_balance_version, summary,
+         enrollment_id, program_position)
+      values (${sessionId}, ${user.id}, now(), now(), current_date, 'UTC', 1, 1, '{}', ${enrollmentId},
+              ${db.json({ index: 0 })})`;
+    return sessionId;
+  }
+
+  async function deleteProgram(user: TestUser, programId: string) {
+    return await user.client.rpc('delete_program', { program_id: programId });
+  }
+
+  it('ends the enrollment, keeps the snapshot and leaves past sessions linked to the enrollment', async () => {
+    const user = await createTestUser();
+    const { programId, template, enrollmentId } = await followedSquatProgram(user);
+    const sessionId = await linkedSession(user, enrollmentId);
+
+    expect((await deleteProgram(user, programId)).error).toBeNull();
+
+    const [enrollment] = await enrollmentRows(user.id);
+    expect(enrollment.id).toBe(enrollmentId);
+    expect(enrollment.ended_at).not.toBeNull();
+    const [session] = await db`select enrollment_id from public.sessions where id = ${sessionId}`;
+    expect(session.enrollment_id).toBe(enrollmentId);
+    const snapshots = await db`
+      select version, owner_user_id, source_program_id from public.program_templates where key = ${template.key}`;
+    expect(snapshots).toEqual([{ version: template.version, owner_user_id: user.id, source_program_id: null }]);
+  });
+
+  it('ends the enrollment in an earlier snapshot of the program too', async () => {
+    const user = await createTestUser();
+    const { programId, enrollmentId } = await followedSquatProgram(user);
+    await savedProgram(user, {
+      id: programId,
+      name: 'Followed 5x5',
+      days: [plannedDay('Day 1', [linearFiveByFive(exerciseIds.back_squat, 5, 10)])],
+    });
+    expect(await publishedProgram(user, programId)).toMatchObject({ version: 2 });
+
+    expect((await deleteProgram(user, programId)).error).toBeNull();
+
+    expect((await enrollmentRows(user.id)).map((row) => [row.id, row.ended_at === null])).toEqual([
+      [enrollmentId, false],
+    ]);
+  });
+
+  it('leaves an enrollment in another program running', async () => {
+    const user = await createTestUser();
+    const { programId: earlierProgramId } = await followedSquatProgram(user);
+    const followed = await followedSquatProgram(user);
+    const madcowFollower = await createTestUser();
+    const { programId: unfollowedProgramId } = await followedSquatProgram(madcowFollower);
+    await enrolled(madcowFollower, madcowPayload());
+
+    expect((await deleteProgram(user, earlierProgramId)).error).toBeNull();
+    expect((await deleteProgram(madcowFollower, unfollowedProgramId)).error).toBeNull();
+
+    const activeKeys = async (userId: string) =>
+      (await enrollmentRows(userId)).filter((row) => row.ended_at === null).map((row) => row.template_key);
+    expect(await activeKeys(user.id)).toEqual([followed.template.key]);
+    expect(await activeKeys(madcowFollower.id)).toEqual(['madcow_5x5']);
+  });
+
+  it("does not end another user's enrollment when they cannot delete the program", async () => {
+    const owner = await createTestUser();
+    const stranger = await createTestUser();
+    const { programId, enrollmentId } = await followedSquatProgram(owner);
+
+    expectRefused(await deleteProgram(stranger, programId), 'program_not_found');
+
+    expect((await enrollmentRows(owner.id)).map((row) => [row.id, row.ended_at])).toEqual([[enrollmentId, null]]);
+  });
+});

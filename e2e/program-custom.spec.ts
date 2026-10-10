@@ -1,6 +1,14 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { finishWorkout, openFromProfile, openTab, register, setRow, uniqueUsername } from './support/app.ts';
+import {
+  finishWorkout,
+  nativeDialogsOf,
+  openFromProfile,
+  openTab,
+  register,
+  setRow,
+  uniqueUsername,
+} from './support/app.ts';
 import { activeEnrollmentOf } from './support/db.ts';
 import {
   createSquatAndBenchProgram,
@@ -17,6 +25,7 @@ import {
 } from './support/program-enrollment.ts';
 
 const PROGRAM = 'My Squat 5x5';
+const OUTDATED_TEXT = "You're following an earlier version";
 const OFFLINE_TEXT = "You're offline. Starting or editing a program needs a connection.";
 
 async function followAtSquat(page: Page, squatKg: number): Promise<void> {
@@ -96,4 +105,66 @@ test('Follow on your own program is disabled offline and says it needs a connect
   await expect(follow).toBeDisabled();
   await context.setOffline(false);
   await expect(follow).toBeEnabled();
+});
+
+test('edit a followed program, use the changes keeping Squat at 102.5, then delete it and stop following', async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  const username = uniqueUsername('pc_edit');
+  await register(page, username);
+  const nativeDialogs = nativeDialogsOf(page);
+  await createSquatAndBenchProgram(page, PROGRAM);
+  await followAtSquat(page, 100);
+  await logSessionWithBenchAt(page, 'Session 1 Day 1', 60);
+  await markEverySetDone(page);
+  await finishAndReturn(page);
+  await expect(prescribedRows(programToday(page, PROGRAM), 'Back Squat')).toHaveText(
+    repeated('102.5 kg × 5 · 100%', 5),
+  );
+
+  await openFromProfile(page, 'Programs');
+  await ownProgram(page, PROGRAM).getByRole('link', { name: 'Edit' }).click();
+  await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
+  await expect(page.getByText(OUTDATED_TEXT)).toHaveCount(0);
+  const bench = page
+    .getByRole('region', { name: 'Day 1', exact: true })
+    .getByRole('listitem')
+    .filter({ has: page.getByText('Barbell Bench Press', { exact: true }) });
+  await bench.getByLabel('Sets').fill('4');
+  await expect(page.getByText(OUTDATED_TEXT)).toBeVisible();
+  await page.getByRole('button', { name: 'Use these changes', exact: true }).click();
+
+  await expect(page.getByRole('heading', { level: 1, name: `Follow ${PROGRAM}`, exact: true })).toBeVisible();
+  await expect(page.getByLabel('Back Squat working weight (kg)', { exact: true })).toHaveValue('102.5');
+  await startFollowing(page, PROGRAM);
+  expect(nativeDialogs).toEqual([]);
+  await expect.poll(() => activeEnrollmentOf(username)).toMatchObject({ template_version: 2 });
+  const today = programToday(page, PROGRAM);
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('102.5 kg × 5 · 100%', 5));
+  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveCount(4);
+
+  await openFromProfile(page, 'Programs');
+  await ownProgram(page, PROGRAM).getByRole('link', { name: 'Edit' }).click();
+  await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
+  await expect(page.getByText(OUTDATED_TEXT)).toHaveCount(0);
+
+  await openFromProfile(page, 'Programs');
+  await ownProgram(page, PROGRAM).getByRole('button', { name: 'Delete' }).click();
+  const dialog = page.getByRole('dialog', { name: `Delete ${PROGRAM}?`, exact: true });
+  await expect(dialog).toContainText("You're following this program. Deleting it stops following it.");
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(() => activeEnrollmentOf(username)).not.toBeNull();
+
+  await ownProgram(page, PROGRAM).getByRole('button', { name: 'Delete' }).click();
+  await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(ownProgram(page, PROGRAM)).toHaveCount(0);
+  await expect.poll(() => activeEnrollmentOf(username)).toBeNull();
+  await openTab(page, 'Train');
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  await expect(programToday(page, PROGRAM)).toHaveCount(0);
+  await page.goto('/programs/active');
+  await expect(page.getByText("You're not following a program.")).toBeVisible();
+  expect(nativeDialogs).toEqual([]);
 });
