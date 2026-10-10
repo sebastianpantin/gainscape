@@ -1,22 +1,13 @@
-import { type InfiniteData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePreferences } from '../../lib/preferences.ts';
 import { initialsFor } from '../../lib/profile.ts';
+import { feedQuery, friendsQuery } from '../../lib/queries.ts';
+import { removeFriend, respondToFriendRequest, sendFriendRequest, setGz } from '../../lib/social.ts';
 import {
-  FEED_PAGE_SIZE,
-  fetchFeedPage,
-  listFriends,
-  removeFriend,
-  respondToFriendRequest,
-  sendFriendRequest,
-  setGz,
-} from '../../lib/social.ts';
-import {
-  type FeedCursor,
   type FeedItem,
   feedBadge,
-  feedCursor,
   feedText,
   type FriendRow,
   relativeTime,
@@ -96,30 +87,19 @@ function uniqueByEvent(items: FeedItem[]): FeedItem[] {
 
 export function FriendsScreen({ userId }: FriendsScreenProps) {
   const queryClient = useQueryClient();
-  const friendsQuery = useQuery({ queryKey: ['friends', userId], queryFn: listFriends });
-  const feedQuery = useInfiniteQuery({
-    queryKey: ['feed', userId],
-    queryFn: ({ pageParam }) => fetchFeedPage(pageParam),
-    initialPageParam: null as FeedCursor | null,
-    getNextPageParam: (lastPage) => {
-      const lastItem = lastPage.at(-1);
-      return lastItem && lastPage.length >= FEED_PAGE_SIZE ? feedCursor(lastItem) : undefined;
-    },
-  });
+  const friendsList = useQuery(friendsQuery(userId));
+  const feedPages = useInfiniteQuery(feedQuery(userId));
   const [busy, setBusy] = useState(false);
   const [gzPending, setGzPending] = useState<ReadonlySet<string>>(() => new Set());
   const [username, setUsername] = useState('');
   const [status, setStatus] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
 
-  const friends = friendsQuery.data ?? [];
-  const feed = uniqueByEvent(feedQuery.data?.pages.flat() ?? []);
-  const load = loadedState(
-    friendsQuery.data && feedQuery.data ? true : undefined,
-    friendsQuery.error ?? feedQuery.error,
-  );
+  const friends = friendsList.data ?? [];
+  const feed = uniqueByEvent(feedPages.data?.pages.flat() ?? []);
+  const load = loadedState(friendsList.data && feedPages.data ? true : undefined, friendsList.error ?? feedPages.error);
 
-  const refetchAll = () => Promise.all([friendsQuery.refetch(), feedQuery.refetch()]);
+  const refetchAll = () => Promise.all([friendsList.refetch(), feedPages.refetch()]);
 
   const act = async (action: () => Promise<string | null>) => {
     if (busy) return;
@@ -162,15 +142,16 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
     });
 
   const loadMore = async () => {
-    if (feedQuery.isFetchingNextPage) return;
+    if (feedPages.isFetchingNextPage) return;
     setProblem(null);
-    const result = await feedQuery.fetchNextPage();
+    const result = await feedPages.fetchNextPage();
     if (result.isError) setProblem(problemText(result.error));
   };
 
   const replaceItem = (eventId: string, change: (item: FeedItem) => FeedItem) => {
-    void queryClient.cancelQueries({ queryKey: ['feed', userId] });
-    queryClient.setQueryData<InfiniteData<FeedItem[], FeedCursor | null>>(['feed', userId], (current) =>
+    const { queryKey } = feedQuery(userId);
+    void queryClient.cancelQueries({ queryKey });
+    queryClient.setQueryData(queryKey, (current) =>
       current
         ? {
             ...current,
@@ -319,8 +300,8 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
               ))}
             </ul>
           )}
-          {feed.length > 0 && feedQuery.hasNextPage && (
-            <button className="button" type="button" disabled={busy || feedQuery.isFetchingNextPage} onClick={loadMore}>
+          {feed.length > 0 && feedPages.hasNextPage && (
+            <button className="button" type="button" disabled={busy || feedPages.isFetchingNextPage} onClick={loadMore}>
               Load more
             </button>
           )}
