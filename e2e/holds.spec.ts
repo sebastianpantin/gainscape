@@ -1,5 +1,5 @@
 import { expect, test } from './support/fixtures.ts';
-import { addExercise, openLatestWorkout, register, setRow, uniqueUsername, xpValue } from './support/app.ts';
+import { addExercise, openLatestWorkout, openTab, register, setRow, uniqueUsername, xpValue } from './support/app.ts';
 
 test('log a farmers carry to failure, earn Grip and lengthen it from history', async ({ page }) => {
   await register(page, uniqueUsername('hold'));
@@ -14,6 +14,11 @@ test('log a farmers carry to failure, earn Grip and lengthen it from history', a
 
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
   await expect(page.getByRole('list', { name: 'XP gained' })).toContainText(/Grip: \+[\d,]+ XP/);
+
+  await openTab(page, 'Log');
+  const holdRecords = page.getByRole('region', { name: 'Hold records' });
+  await expect(holdRecords).toContainText('Farmers Carry');
+  await expect(holdRecords).toContainText('Farthest 40 m');
 
   await openLatestWorkout(page);
   const sessionXp = page.getByRole('status', { name: 'Workout XP' });
