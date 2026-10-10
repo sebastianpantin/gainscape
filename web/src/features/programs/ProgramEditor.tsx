@@ -8,6 +8,9 @@ import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-
 import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
+import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
+import { usePreferences } from '../../lib/preferences.ts';
+import type { PlannedExercise, ProgressionKind } from '../../offline/draft-format.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import {
   addDay,
@@ -15,14 +18,20 @@ import {
   canAddDay,
   canAddPlannedExercise,
   changePlannedExercise,
+  changeProgression,
   DAY_NAME_MAX_LENGTH,
   docFor,
+  INCREMENT_PRESETS,
+  INCREMENT_RANGE,
+  INCREMENT_STEP,
   MAX_EXERCISES_PER_DAY,
   moveDay,
   movePlannedExercise,
   nameIssue,
   newProgramDoc,
+  pairedIncrement,
   PROGRAM_NAME_MAX_LENGTH,
+  progressionIssue,
   removeDay,
   removePlannedExercise,
   renameDay,
@@ -33,6 +42,18 @@ import {
 } from './program-edit.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
+
+const PROGRESSION_OPTIONS: { value: ProgressionKind; label: string }[] = [
+  { value: 'none', label: 'Last weight' },
+  { value: 'fixed', label: 'Fixed weight' },
+  { value: 'linear', label: 'Add weight' },
+];
+
+const PROGRESSION_HINTS: Record<ProgressionKind, string | null> = {
+  none: null,
+  fixed: 'You set the weight when you follow this program.',
+  linear: 'Adds the increment after a workout where every set hits its reps. A miss keeps the weight.',
+};
 
 interface ProgramEditorProps {
   userId: string;
@@ -52,6 +73,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   const [missing, setMissing] = useState(false);
   const [saving, setSaving] = useState(false);
   const onlineSignal = useOnlineSignal();
+  const { unitPref } = usePreferences();
 
   useEffect(() => {
     loadCacheFirstWhenOffline(
@@ -99,7 +121,17 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   const pickable = exercises.filter((exercise) => !exercise.archived);
 
   const nameOf = (exerciseId: string) => byId.get(exerciseId)?.name ?? 'Unknown exercise';
-  const issue = nameIssue(doc) ?? targetIssue(doc, nameOf);
+  const loadTypeOf = (exerciseId: string) => {
+    const exercise = byId.get(exerciseId);
+    return exercise && isLiftExercise(exercise) ? exercise.loadType : null;
+  };
+  const issue = nameIssue(doc) ?? targetIssue(doc, nameOf) ?? progressionIssue(doc, nameOf, loadTypeOf);
+  const changeAt = (dayIndex: number, exerciseIndex: number, changes: Partial<PlannedExercise>) =>
+    setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, changes));
+  const changeIncrement = (dayIndex: number, exerciseIndex: number, value: number) => {
+    const { kg, lb } = pairedIncrement(value, unitPref);
+    changeAt(dayIndex, exerciseIndex, { progression: { kind: 'linear', incrementKg: kg, incrementLb: lb } });
+  };
 
   const save = async () => {
     if (issue) return setProblem(issue);
@@ -168,6 +200,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
               const planned = day.exercises[exerciseIndex];
               const exercise = byId.get(planned.exerciseId);
               const name = nameOf(planned.exerciseId);
+              const { progression } = planned;
               return (
                 <li className="stack program-exercise" key={plannedKey}>
                   <div className="row spread">
@@ -203,34 +236,71 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
                       </button>
                     </span>
                   </div>
+                  {(loadTypeOf(planned.exerciseId) === 'external' || progression.kind !== 'none') && (
+                    <SegmentedChoice
+                      label={`${name} progression`}
+                      options={PROGRESSION_OPTIONS}
+                      current={progression.kind}
+                      onPick={(kind) => setDoc(changeProgression(doc, dayIndex, exerciseIndex, kind))}
+                    />
+                  )}
+                  {PROGRESSION_HINTS[progression.kind] && <p className="hint">{PROGRESSION_HINTS[progression.kind]}</p>}
+                  {progression.kind === 'linear' && (
+                    <div className="row">
+                      <SegmentedChoice
+                        label={`${name} increment`}
+                        options={INCREMENT_PRESETS.map((preset) => ({
+                          value: preset[unitPref],
+                          label: `${preset[unitPref]} ${unitPref}`,
+                        }))}
+                        current={unitPref === 'kg' ? progression.incrementKg : progression.incrementLb}
+                        onPick={(value) => changeIncrement(dayIndex, exerciseIndex, value)}
+                      />
+                      <NumberTextField
+                        label={`Increment (${unitPref})`}
+                        value={unitPref === 'kg' ? progression.incrementKg : progression.incrementLb}
+                        {...INCREMENT_RANGE[unitPref]}
+                        step={INCREMENT_STEP[unitPref]}
+                        onCommit={(value) => changeIncrement(dayIndex, exerciseIndex, value)}
+                      />
+                    </div>
+                  )}
                   <div className="row">
                     <NumberTextField
                       label="Sets"
                       value={planned.targetSets}
                       {...TARGET_SETS_RANGE}
                       wholeNumber
-                      onCommit={(targetSets) =>
-                        setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetSets }))
-                      }
+                      onCommit={(targetSets) => changeAt(dayIndex, exerciseIndex, { targetSets })}
                     />
-                    <NumberTextField
-                      label="Reps min"
-                      value={planned.targetRepsMin}
-                      {...TARGET_REPS_RANGE}
-                      wholeNumber
-                      onCommit={(targetRepsMin) =>
-                        setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetRepsMin }))
-                      }
-                    />
-                    <NumberTextField
-                      label="Reps max"
-                      value={planned.targetRepsMax}
-                      {...TARGET_REPS_RANGE}
-                      wholeNumber
-                      onCommit={(targetRepsMax) =>
-                        setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetRepsMax }))
-                      }
-                    />
+                    {progression.kind === 'linear' ? (
+                      <NumberTextField
+                        label="Reps"
+                        value={planned.targetRepsMin}
+                        {...TARGET_REPS_RANGE}
+                        wholeNumber
+                        onCommit={(reps) =>
+                          changeAt(dayIndex, exerciseIndex, { targetRepsMin: reps, targetRepsMax: reps })
+                        }
+                      />
+                    ) : (
+                      <>
+                        <NumberTextField
+                          label="Reps min"
+                          value={planned.targetRepsMin}
+                          {...TARGET_REPS_RANGE}
+                          wholeNumber
+                          onCommit={(targetRepsMin) => changeAt(dayIndex, exerciseIndex, { targetRepsMin })}
+                        />
+                        <NumberTextField
+                          label="Reps max"
+                          value={planned.targetRepsMax}
+                          {...TARGET_REPS_RANGE}
+                          wholeNumber
+                          onCommit={(targetRepsMax) => changeAt(dayIndex, exerciseIndex, { targetRepsMax })}
+                        />
+                      </>
+                    )}
                   </div>
                 </li>
               );
