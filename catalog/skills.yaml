@@ -36,3 +36,8 @@
   sort_order: 9
   combat_weight: 0
   modality: cardio
+- key: mobility
+  name: Mobility
+  sort_order: 10
+  combat_weight: 0
+  modality: cardio

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
-import { GEAR_SLOT_SKILLS } from '../../supabase/functions/_shared/domain/gear.ts';
+import { GEAR_SLOT_SKILLS, SKILLS_WITHOUT_GEAR } from '../../supabase/functions/_shared/domain/gear.ts';
 import { CARDIO_EFFORT_LEVELS } from '../../supabase/functions/_shared/domain/types.ts';
 import {
   type CatalogChallenge,
@@ -191,7 +191,7 @@ function checkGear(catalog: CatalogData, problems: string[]): void {
       problems.push(`gear slot "${slot}" boosts unknown skill "${skill}"`);
     }
   }
-  const boosted = new Set(Object.values(GEAR_SLOT_SKILLS).flat());
+  const boosted = new Set([...Object.values(GEAR_SLOT_SKILLS).flat(), ...SKILLS_WITHOUT_GEAR]);
   for (const skill of catalog.skills.filter((candidate) => !boosted.has(candidate.key))) {
     problems.push(`skill "${skill.key}" is boosted by no gear slot`);
   }

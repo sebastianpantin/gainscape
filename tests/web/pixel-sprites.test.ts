@@ -61,6 +61,7 @@ describe('pixel sprites', () => {
       'grip',
       'endurance',
       'agility',
+      'mobility',
     ]);
     expect(Object.keys(SKILL_SPRITES).sort()).toEqual([...seedSkillKeys].sort());
   });

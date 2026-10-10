@@ -5,6 +5,7 @@ import {
   intervalDurationSeconds,
   processSession,
   type SessionInput,
+  type SkillDef,
 } from '../../supabase/functions/_shared/domain/index.ts';
 import { CARDIO_SIM_CATALOG, CARDIO_SIM_EXERCISES, CARDIO_SIM_SKILLS } from './catalog.ts';
 import { type CardioAthleteProfile, type PlannedBout, STEADY_AGILITY_BOUT } from './profiles.ts';
@@ -29,6 +30,7 @@ export interface CardioSimulationOptions {
   maxYears?: number;
   stopWhenAllSkillsReach99?: boolean;
   gearLoadout?: GearLoadout;
+  skills?: readonly SkillDef[];
 }
 
 function distanceAtSpeedRatio(
@@ -80,8 +82,9 @@ export function simulateCardioProfile(
   const random = seededRandom(SIMULATION_SEED);
   const maxWeeks = (options.maxYears ?? MAX_SIMULATED_YEARS) * WEEKS_PER_YEAR;
   const skillXp: Record<string, number> = {};
-  const { cumulativeXpByWeek, weeksToLevel99, recordWeek } = skillProgress(CARDIO_SIM_SKILLS);
-  const allReached99 = () => CARDIO_SIM_SKILLS.every((skill) => weeksToLevel99[skill.key] !== null);
+  const skills = options.skills ?? CARDIO_SIM_SKILLS;
+  const { cumulativeXpByWeek, weeksToLevel99, recordWeek } = skillProgress(skills);
+  const allReached99 = () => skills.every((skill) => weeksToLevel99[skill.key] !== null);
   let setCounter = 0;
   let week = 0;
 

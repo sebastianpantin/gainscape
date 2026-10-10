@@ -32,6 +32,7 @@ export interface BalanceConfig {
   readonly paceBonusMax: number;
   readonly paceImplausibleRatio: number;
   readonly cardioMaxCountedMinutesPerSession: number;
+  readonly mobilityMaxCountedMinutesPerSession: number;
   readonly cardioRecordMinGainM: number;
   readonly cardioRecordMinGainS: number;
   readonly cardioPaceRecordMinGainSPerPaceUnit: number;
@@ -60,14 +61,15 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   prMinGainKg: 1,
   fatiguePerHardSet: 0.02,
   fatigueToleranceReps: 1,
-  cardioXpPerWorkMinute: Object.freeze({ endurance: 126, agility: 213 }),
-  cardioSteadyFactor: Object.freeze({ endurance: 1, agility: 0.5 }),
+  cardioXpPerWorkMinute: Object.freeze({ endurance: 126, agility: 213, mobility: 107 }),
+  cardioSteadyFactor: Object.freeze({ endurance: 1, agility: 0.5, mobility: 1 }),
   cardioEffortFactor: Object.freeze({ easy: 0.8, moderate: 1, hard: 1.2, max: 1.4 }),
   paceBonusStart: 1,
   paceBonusFull: 1.3,
   paceBonusMax: 1.3,
   paceImplausibleRatio: 2.5,
   cardioMaxCountedMinutesPerSession: 180,
+  mobilityMaxCountedMinutesPerSession: 60,
   cardioRecordMinGainM: 100,
   cardioRecordMinGainS: 60,
   cardioPaceRecordMinGainSPerPaceUnit: 1,

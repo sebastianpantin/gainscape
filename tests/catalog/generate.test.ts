@@ -63,7 +63,7 @@ describe('catalog generator', () => {
     expect(scrollWeight * 98).toBe(totalWeight * 36);
   });
 
-  it('lists nine skills, grip a lift skill of combat weight 1, the two cardio skills outside combat', () => {
+  it('lists ten skills, grip a lift skill of combat weight 1, the three cardio skills outside combat', () => {
     const skills = loadCatalogData().skills;
     expect(skills.map((skill) => skill.key)).toEqual([
       'chest',
@@ -75,6 +75,7 @@ describe('catalog generator', () => {
       'grip',
       'endurance',
       'agility',
+      'mobility',
     ]);
     const grip = skills.find((skill) => skill.key === 'grip')!;
     expect({ sortOrder: grip.sortOrder, combatWeight: grip.combatWeight, modality: grip.modality }).toEqual({
@@ -86,6 +87,22 @@ describe('catalog generator', () => {
     expect(cardio.map(({ key, sortOrder, combatWeight }) => ({ key, sortOrder, combatWeight }))).toEqual([
       { key: 'endurance', sortOrder: 8, combatWeight: 0 },
       { key: 'agility', sortOrder: 9, combatWeight: 0 },
+      { key: 'mobility', sortOrder: 10, combatWeight: 0 },
+    ]);
+  });
+
+  it('trains Mobility only through moderate or hard steady activities', () => {
+    const mobility = loadCatalogData().exercises.filter((exercise) =>
+      exercise.shares.some((share) => share.skill === 'mobility'),
+    );
+    expect(
+      mobility.map((exercise) => [exercise.key, exercise.modality, exercise.cardio?.maxEffort, exercise.shares]),
+    ).toEqual([
+      ['yoga', 'cardio', 'hard', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['static_stretching', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['foam_rolling', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['mobility_flow', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['dynamic_warm_up', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
     ]);
   });
 
@@ -95,6 +112,7 @@ describe('catalog generator', () => {
     expect(skills).toContain('(id, key, name, sort_order, combat_weight, modality)');
     expect(skills).toContain(`'endurance', 'Endurance', 8, 0, 'cardio')`);
     expect(skills).toContain(`'grip', 'Grip', 7, 1, 'lift')`);
+    expect(skills).toContain(`'mobility', 'Mobility', 10, 0, 'cardio')`);
     expect(skills).toContain(`'chest', 'Chest', 1, 2, 'lift')`);
     expect(skills).toContain('modality = excluded.modality');
     const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;

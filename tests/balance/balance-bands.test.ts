@@ -9,12 +9,14 @@ import {
   type CardioProfileResults,
   evaluateBands,
   evaluateCardioBands,
+  evaluateMobilityBands,
   GEAR_BANDS,
+  MOBILITY_BANDS,
   type ProfileResults,
 } from '../../scripts/balance/bands.ts';
 import { simulateCardioProfile } from '../../scripts/balance/cardio-simulate.ts';
-import { CARDIO_SIM_SKILLS, SIM_SKILLS } from '../../scripts/balance/catalog.ts';
-import { CARDIO_PROFILES, PROFILES } from '../../scripts/balance/profiles.ts';
+import { CARDIO_SIM_SKILLS, MOBILITY_SIM_SKILLS, SIM_SKILLS } from '../../scripts/balance/catalog.ts';
+import { CARDIO_PROFILES, MOBILITY_PROFILES, PROFILES } from '../../scripts/balance/profiles.ts';
 import {
   ALWAYS_MET_CHALLENGE,
   firstSkillToLevel99,
@@ -112,6 +114,42 @@ describe('cardio balance bands with the committed constants', () => {
     expect(cardioReport.steadyAgilityBoutXp).toBeGreaterThan(0);
     expect(cardioReport.steadyAgilityBoutXp).toBeLessThanOrEqual(cardioReport.intervalSessionAgilityXp);
     expect(cardioReport.passes.h).toBe(true);
+  });
+});
+
+describe('mobility balance bands with the committed constants', () => {
+  const regular = () =>
+    simulateCardioProfile(MOBILITY_PROFILES.mobility_regular, DEFAULT_BALANCE, {
+      skills: MOBILITY_SIM_SKILLS,
+      stopWhenAllSkillsReach99: true,
+    });
+
+  it('(m) takes three 20-minute stretching sessions a week about 3 years to reach Mobility 99', () => {
+    const report = evaluateMobilityBands(regular());
+    const [lowest, highest] = MOBILITY_BANDS.regularYears;
+    expect(report.years).toBeGreaterThanOrEqual(lowest);
+    expect(report.years).toBeLessThanOrEqual(highest);
+    expect(report.passes.years).toBe(true);
+  });
+
+  it('(m-e) ends the first week of that routine between Mobility level 20 and 40', () => {
+    const report = evaluateMobilityBands(regular());
+    const [lowest, highest] = MOBILITY_BANDS.regularWeekOneLevel;
+    expect(report.weekOneLevel).toBeGreaterThanOrEqual(lowest);
+    expect(report.weekOneLevel).toBeLessThanOrEqual(highest);
+    expect(report.passes.weekOneLevel).toBe(true);
+  });
+
+  it('gives Mobility no gear bonus', () => {
+    const fullAscendant: GearLoadout = Object.fromEntries(GEAR_SLOTS.map((slot) => [slot, 'ascendant']));
+    const oneYear = { skills: MOBILITY_SIM_SKILLS, maxYears: 1 };
+    const geared = simulateCardioProfile(MOBILITY_PROFILES.mobility_regular, DEFAULT_BALANCE, {
+      ...oneYear,
+      gearLoadout: fullAscendant,
+    });
+    const gearless = simulateCardioProfile(MOBILITY_PROFILES.mobility_regular, DEFAULT_BALANCE, oneYear);
+    expect(geared.cumulativeXpByWeek.mobility.at(-1)).toBeGreaterThan(0);
+    expect(geared.cumulativeXpByWeek.mobility).toEqual(gearless.cumulativeXpByWeek.mobility);
   });
 });
 

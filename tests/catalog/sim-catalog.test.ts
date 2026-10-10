@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CARDIO_SIM_EXERCISES,
   CARDIO_SIM_SKILLS,
+  MOBILITY_SIM_SKILLS,
   SIM_EXERCISE_SHARES,
   SIM_SKILLS,
 } from '../../scripts/balance/catalog.ts';
@@ -44,7 +45,7 @@ describe('balance sim catalog', () => {
 
   it('uses the same skills, sort order and combat weights as the catalog', () => {
     expect(
-      [...SIM_SKILLS, ...CARDIO_SIM_SKILLS]
+      [...SIM_SKILLS, ...CARDIO_SIM_SKILLS, ...MOBILITY_SIM_SKILLS]
         .sort((first, second) => first.sortOrder - second.sortOrder)
         .map(({ key, sortOrder, combatWeight }) => ({
           key,
