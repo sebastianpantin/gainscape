@@ -96,6 +96,13 @@ async function createProgram(page: Page): Promise<string> {
     .click();
   await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
   await expectNoAxeViolations(page, 'program editor');
+  await page
+    .getByRole('radiogroup', { name: / progression$/ })
+    .first()
+    .getByRole('radio', { name: 'Add weight' })
+    .click();
+  await expect(page.getByLabel('Increment (kg)')).toBeVisible();
+  await expectNoAxeViolations(page, 'program editor with add weight');
   const editorPath = new URL(page.url()).pathname;
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Your programs' })).toBeVisible();

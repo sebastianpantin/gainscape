@@ -71,6 +71,75 @@ test('create a program from scratch, add Squat 5×5, save, it lists under Your p
   await expect.poll(() => planLines(username, 'Squat Focus')).toEqual(['Day 1 back_squat 5×5-5']);
 });
 
+test('set Squat to add 2.5 kg after each workout, save, reopen and keep it', async ({ page }) => {
+  const username = uniqueUsername('pp');
+  await register(page, username);
+  await copyTemplate(page, 'Full Body 2x');
+  const squat = plannedExercise(page, 1, 'Back Squat');
+  const progression = squat.getByRole('radiogroup', { name: 'Back Squat progression' });
+
+  await expect(progression.getByRole('radio', { name: 'Last weight' })).toHaveAttribute('aria-checked', 'true');
+  await expect(
+    plannedExercise(page, 2, 'Hanging Leg Raise').getByRole('radiogroup', { name: /progression$/ }),
+  ).toHaveCount(0);
+  await squat.getByLabel('Reps min').fill('5');
+  await progression.getByRole('radio', { name: 'Add weight' }).click();
+  const increment = squat.getByRole('radiogroup', { name: 'Back Squat increment' });
+  await expect(increment.getByRole('radio')).toHaveText(['1.25 kg', '2.5 kg', '5 kg']);
+  await increment.getByRole('radio', { name: '5 kg', exact: true }).click();
+  await expect(squat.getByLabel('Increment (kg)')).toHaveValue('5');
+  await squat.getByLabel('Increment (kg)').fill('2.5');
+  await expect(increment.getByRole('radio', { name: '2.5 kg', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await expect(squat.getByLabel('Reps min')).toHaveCount(0);
+  await expect(squat.getByLabel('Reps', { exact: true })).toHaveValue('5');
+  await squat.getByLabel('Sets').fill('5');
+  await page.getByLabel('Program name').fill('FB Linear');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+  await expect(ownProgram(page, 'FB Linear')).toBeVisible();
+  await expect
+    .poll(async () => (await programPlanOf(username, 'FB Linear')).find((row) => row.exercise_key === 'back_squat'))
+    .toMatchObject({
+      target_sets: 5,
+      target_reps_min: 5,
+      target_reps_max: 5,
+      progression: 'linear',
+      increment_kg: 2.5,
+      increment_lb: 5,
+    });
+
+  await ownProgram(page, 'FB Linear').getByRole('link', { name: 'Edit' }).click();
+  const reopened = plannedExercise(page, 1, 'Back Squat');
+  await expect(
+    reopened.getByRole('radiogroup', { name: 'Back Squat progression' }).getByRole('radio', { name: 'Add weight' }),
+  ).toHaveAttribute('aria-checked', 'true');
+  await expect(
+    reopened
+      .getByRole('radiogroup', { name: 'Back Squat increment' })
+      .getByRole('radio', { name: '2.5 kg', exact: true }),
+  ).toHaveAttribute('aria-checked', 'true');
+  await expect(reopened.getByLabel('Increment (kg)')).toHaveValue('2.5');
+  await expect(reopened.getByLabel('Reps', { exact: true })).toHaveValue('5');
+});
+
+test('a fixed weight keeps the rep range and says when the weight is set', async ({ page }) => {
+  const username = uniqueUsername('pr');
+  await register(page, username);
+  await copyTemplate(page, 'Full Body 2x');
+  const squat = plannedExercise(page, 1, 'Back Squat');
+  await squat
+    .getByRole('radiogroup', { name: 'Back Squat progression' })
+    .getByRole('radio', { name: 'Fixed weight' })
+    .click();
+  await expect(squat.getByText('You set the weight when you follow this program.')).toBeVisible();
+  await expect(squat.getByLabel('Reps max')).toHaveValue('8');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page).toHaveURL(/\/programs$/);
+  await expect
+    .poll(async () => (await programPlanOf(username, 'Full Body 2x')).find((row) => row.exercise_key === 'back_squat'))
+    .toMatchObject({ target_reps_min: 5, target_reps_max: 8, progression: 'fixed', increment_kg: null });
+});
+
 test('add, rename, reorder and remove days and exercises, then edit the saved program again', async ({ page }) => {
   const username = uniqueUsername('pe');
   await register(page, username);
