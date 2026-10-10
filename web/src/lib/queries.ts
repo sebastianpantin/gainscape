@@ -4,24 +4,24 @@ import { type CacheFirstLoad } from '../offline/cache-first.ts';
 import { fetchBodyweightTrend } from './bodyweight-trend.ts';
 import { fetchExercises, fetchSkills } from './catalog.ts';
 import { saveCachedExercises } from './catalog-cache.ts';
-import { fetchExerciseProgress } from './exercise-progress.ts';
 import { type Skill } from './catalog-rules.ts';
 import { type Collection, loadCollectionCacheFirst } from './collection-data.ts';
 import { collectionPercent, countCollection } from './collection-rules.ts';
+import { fetchExerciseProgress } from './exercise-progress.ts';
+import { isUuid } from './history-rules.ts';
 import { fetchLoadout, loadItemsCacheFirst } from './items.ts';
 import { loadProfileCacheFirst } from './profile.ts';
 import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from './program-enrollment.ts';
 import { fetchLastLoggedSets } from './programs.ts';
-import { isUuid } from './history-rules.ts';
 import {
   FEED_PAGE_SIZE,
   fetchCollectionView,
   fetchFeedPage,
   fetchHiscores,
   fetchProfileView,
-  listFriends,
   type CollectionView,
   type ProfileView,
+  listFriends,
 } from './social.ts';
 import { type FeedCursor, feedCursor } from './social-rules.ts';
 import { fetchWeeklyGoalStatus } from './weekly-goal.ts';
