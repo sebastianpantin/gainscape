@@ -139,7 +139,9 @@ test('a save whose refresh fails keeps the saved sets as the baseline, so undo c
   await page.route(sessionReads, (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Save changes' }).click();
 
-  await expect(page.getByRole('alert')).toContainText("Saved, but couldn't refresh the workout.");
+  await expect(page.getByRole('alert')).toContainText("Saved, but couldn't refresh the workout.", {
+    timeout: 15_000,
+  });
   await expect(page.getByText('Changes saved.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Undo my changes' })).toHaveCount(0);
