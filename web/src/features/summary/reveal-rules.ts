@@ -5,7 +5,7 @@ import { describeCardioGains } from '../../lib/cardio-rules.ts';
 import type { Exercise } from '../../lib/catalog-rules.ts';
 import { formatLoad, formatXp } from '../../lib/format.ts';
 import type { UnitPref } from '../../lib/profile-rules.ts';
-import { distanceUnitFor, formatWeight } from '../../lib/units.ts';
+import { distanceUnitFor, formatWeight, HOLD_DISTANCE_UNIT } from '../../lib/units.ts';
 
 export interface DescribedRecord {
   headline: string;
@@ -19,9 +19,13 @@ export function describeRecord(
 ): DescribedRecord {
   const name = exercise?.name ?? 'Exercise';
   if (record.kind === 'cardio') {
-    const paceUnit =
-      exercise?.modality === 'cardio' ? exercise.activity.paceUnit : exercise?.measure ? 'per_100m' : 'per_km';
-    return { headline: `${name}:`, previous: describeCardioGains(record.records, distanceUnitFor(unit, paceUnit)) };
+    const distanceUnit =
+      exercise?.modality === 'cardio'
+        ? distanceUnitFor(unit, exercise.activity.paceUnit)
+        : exercise?.measure
+          ? HOLD_DISTANCE_UNIT
+          : distanceUnitFor(unit, 'per_km');
+    return { headline: `${name}:`, previous: describeCardioGains(record.records, distanceUnit) };
   }
   if (record.kind === 'bodyweight_reps') {
     const previous = record.previousReps === null ? 'first record' : `was ${record.previousReps}`;
