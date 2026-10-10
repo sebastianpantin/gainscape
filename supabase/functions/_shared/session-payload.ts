@@ -1,5 +1,13 @@
 import { z } from 'npm:zod@4.6.5';
-import { boutDurationSeconds, CARDIO_BOUNDS, intervalDurationSeconds, isRecord, roundTo } from './domain/index.ts';
+import {
+  boutDurationSeconds,
+  CARDIO_BOUNDS,
+  intervalDurationSeconds,
+  isRecord,
+  MAX_SET_LOAD_KG,
+  MAX_SET_REPS,
+  roundTo,
+} from './domain/index.ts';
 import { HttpError } from './http.ts';
 
 export const lowerUuid = z.uuid().transform((id) => id.toLowerCase());
@@ -55,9 +63,9 @@ const liftSetSchema = z
     weightKg: z
       .number()
       .min(0)
-      .max(2000)
+      .max(MAX_SET_LOAD_KG)
       .transform((weightKg) => roundTo(2, weightKg)),
-    reps: z.int().min(1).max(100),
+    reps: z.int().min(1).max(MAX_SET_REPS),
     isWarmup: z.boolean().default(false),
     effort: liftEffortSchema.default(null),
     prescription: prescriptionSchema.nullable().default(null),

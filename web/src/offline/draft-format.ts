@@ -10,7 +10,13 @@ import {
   type StrengthState,
   type WeightUnit,
 } from '@domain/index.ts';
-import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, isRecord } from '@domain/types.ts';
+import {
+  CARDIO_EFFORT_LEVELS,
+  type CardioInterval,
+  type EffortInput,
+  isRecord,
+  MAX_SETS_PER_SESSION,
+} from '@domain/types.ts';
 import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
 import { type CatalogChallenge, challengeLoadKg, parsedDraftChallenge } from '../lib/challenge-rules.ts';
 import { EFFORT_LEVELS } from '../lib/effort-labels.ts';
@@ -374,7 +380,22 @@ export function nextBoutValues(previous: BoutValues | undefined): BoutValues {
   return { durationS, distanceM, interval, effort };
 }
 
+type SetHolder = { exercises: readonly { sets: readonly unknown[] }[] };
+
+export function setCount(owner: SetHolder): number {
+  return owner.exercises.reduce((count, exercise) => count + exercise.sets.length, 0);
+}
+
+export function roomForSets(owner: SetHolder): number {
+  return Math.max(0, MAX_SETS_PER_SESSION - setCount(owner));
+}
+
+export function canAddSet(owner: SetHolder): boolean {
+  return roomForSets(owner) > 0;
+}
+
 export function addSet(draft: WorkoutDraft, exerciseIndex: number, firstSet?: LastLoggedSet): WorkoutDraft {
+  if (!canAddSet(draft)) return draft;
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio') {
       const newBout: CardioDraftSet = {
@@ -401,6 +422,7 @@ export function addWarmupSets(
   exerciseIndex: number,
   warmups: readonly LastLoggedSet[],
 ): WorkoutDraft {
+  if (warmups.length > roomForSets(draft)) return draft;
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio') return exercise;
     const warmupSets: DraftSet[] = warmups.map(({ weightKg, reps }) => ({
@@ -760,7 +782,8 @@ export function fillWorkingSets(draft: WorkoutDraft, exerciseIndex: number, coun
     const workingSets = exercise.sets.filter((set) => !set.isWarmup);
     const filled = exercise.sets.map((set) => (set.isWarmup ? set : { ...set, reps, done: true }));
     const { weightKg } = nextSetValues(workingSets.at(-1), exercise.loadType);
-    const added = Array.from({ length: Math.max(0, count - workingSets.length) }, (): DraftSet => ({
+    const addedCount = Math.min(roomForSets(draft), Math.max(0, count - workingSets.length));
+    const added = Array.from({ length: addedCount }, (): DraftSet => ({
       id: crypto.randomUUID(),
       weightKg,
       reps,

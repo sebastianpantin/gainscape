@@ -1,5 +1,6 @@
 import { SECONDS_PER_MINUTE } from '@domain/cardio.ts';
 import { roundTo } from '@domain/math.ts';
+import { MAX_SET_REPS } from '@domain/types.ts';
 import { kgToUnit, shownWeight } from '@domain/units.ts';
 import type { PaceUnit } from './catalog-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
@@ -18,7 +19,7 @@ export const WEIGHT_INPUT_STEP = 0.5;
 export const WEIGHT_STEPPER_STEP: Record<UnitPref, number> = { kg: 2.5, lb: 5 };
 const STEP_SNAP_DECIMALS = 6;
 export const LOWEST_REPS = 1;
-export const HIGHEST_REPS = 100;
+export const HIGHEST_REPS = MAX_SET_REPS;
 
 export type StepDirection = 1 | -1;
 
