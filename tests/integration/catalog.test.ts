@@ -117,6 +117,19 @@ describe('cardio catalog', () => {
     expect(count).toBe(10);
   });
 
+  it('seeds the hold and carry exercises with their measure', async () => {
+    const holds = await db`
+      select key, modality, load_type, measure from public.exercises
+      where owner_user_id is null and measure <> 'reps' order by key`;
+    expect(holds).toEqual([
+      { key: 'dead_hang', modality: 'lift', load_type: 'bodyweight', measure: 'time' },
+      { key: 'farmers_carry', modality: 'lift', load_type: 'external', measure: 'distance' },
+      { key: 'plate_pinch', modality: 'lift', load_type: 'external', measure: 'time' },
+      { key: 'suitcase_carry', modality: 'lift', load_type: 'external', measure: 'distance' },
+      { key: 'towel_hang', modality: 'lift', load_type: 'bodyweight', measure: 'time' },
+    ]);
+  });
+
   it('seeds cardio exercises without a load type and with their cardio profile', async () => {
     const rows = await db`
       select key, load_type, equipment, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m

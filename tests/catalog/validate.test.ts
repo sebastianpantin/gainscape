@@ -380,6 +380,26 @@ describe('catalog validation', () => {
       /lift exercise "deadlift" has a cardio block/,
     ],
     [
+      'programs use no hold exercise',
+      (c) => (c.programs[0].days[0].exercises[0].exercise = 'farmers_carry'),
+      /program day "ppl:push" uses hold exercise "farmers_carry"/,
+    ],
+    [
+      'challenges use no hold exercise',
+      (c) => (find(c.challenges, 'squat_century').volume!.exercise = 'dead_hang'),
+      /challenge "squat_century" uses hold exercise "dead_hang"/,
+    ],
+    [
+      'a measure is set only on lifts',
+      (c) => (find(c.exercises, 'running').measure = 'time'),
+      /cardio exercise "running" has a measure/,
+    ],
+    [
+      'a variation keeps the measure of its base',
+      (c) => (find(c.exercises, 'towel_hang').measure = 'distance'),
+      /exercise "towel_hang" measures distance but its base "dead_hang" measures time/,
+    ],
+    [
       'programs use no cardio exercise',
       (c) => (c.programs[0].days[0].exercises[0].exercise = 'running'),
       /program day "ppl:push" uses cardio exercise "running"/,

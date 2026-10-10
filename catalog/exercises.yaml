@@ -1095,6 +1095,38 @@
   load_type: external
   equipment: other
   shares: { core: 7000, shoulders: 3000 }
+- key: farmers_carry
+  name: Farmers Carry
+  load_type: external
+  equipment: dumbbell
+  measure: distance
+  shares: { grip: 6000, legs: 2000, core: 2000 }
+- key: suitcase_carry
+  name: Suitcase Carry
+  load_type: external
+  equipment: dumbbell
+  measure: distance
+  variation_of: farmers_carry
+  shares: { grip: 6000, core: 4000 }
+- key: dead_hang
+  name: Dead Hang
+  load_type: bodyweight
+  equipment: bodyweight
+  measure: time
+  shares: { grip: 10000 }
+- key: towel_hang
+  name: Towel Hang
+  load_type: bodyweight
+  equipment: bodyweight
+  measure: time
+  variation_of: dead_hang
+  shares: { grip: 10000 }
+- key: plate_pinch
+  name: Plate Pinch
+  load_type: external
+  equipment: other
+  measure: time
+  shares: { grip: 10000 }
 - key: running
   name: Running
   modality: cardio

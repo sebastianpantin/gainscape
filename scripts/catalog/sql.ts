@@ -104,6 +104,7 @@ const EXERCISE_COLUMNS = [
   'max_effort',
   'record_min_distance_m',
   'tracks_distance',
+  'measure',
 ] as const;
 
 const ITEM_COLUMNS = [
@@ -162,6 +163,7 @@ export function renderStatements(catalog: CatalogData): string[] {
         exercise.cardio?.maxEffort ?? null,
         exercise.cardio?.recordMinDistanceM ?? null,
         exercise.cardio?.tracksDistance ?? true,
+        exercise.measure,
       ]),
       upsertSuffix(
         EXERCISE_COLUMNS.filter((column) => column !== 'id' && column !== 'key'),
