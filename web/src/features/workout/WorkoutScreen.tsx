@@ -889,7 +889,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             </button>
             {canQuickFill(exercise) && quickFillSets > 0 && (
               <QuickFill
-                key={`${exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS}x${workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS}x${quickFillSets}`}
+                key={`${exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS}x${workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS}`}
                 defaultSets={exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS}
                 mostSets={quickFillSets}
                 defaultReps={workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS}

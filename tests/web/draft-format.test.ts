@@ -1050,5 +1050,6 @@ describe('set limit', () => {
     const full = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 1), oneWorkingSet] });
     expect(mostQuickFillSets(full, 1)).toBe(1);
     expect(mostQuickFillSets(workout({ exercises: [freshLift()] }), 0)).toBe(20);
+    expect(mostQuickFillSets(workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION), freshLift()] }), 1)).toBe(0);
   });
 });
