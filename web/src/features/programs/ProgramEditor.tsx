@@ -32,6 +32,7 @@ import {
   INCREMENT_PRESETS,
   INCREMENT_RANGE,
   INCREMENT_STEP,
+  isPlannableExercise,
   MAX_EXERCISES_PER_DAY,
   moveDay,
   movePlannedExercise,
@@ -92,7 +93,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       () => savedExerciseList(deviceStorage(), userId),
       () => fetchExercises({ includeArchived: true }),
     ).then(
-      ({ loaded }) => setExercises(loaded.filter(isLiftExercise)),
+      ({ loaded }) => setExercises(loaded.filter(isPlannableExercise)),
       (error: Error) => setProblem(error.message),
     );
   }, [userId, onlineSignal]);

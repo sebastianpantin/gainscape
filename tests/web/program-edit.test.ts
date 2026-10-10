@@ -8,6 +8,7 @@ import {
   changeProgression,
   DEFAULT_INCREMENT,
   docFor,
+  isPlannableExercise,
   MAX_DAYS,
   MAX_EXERCISES_PER_DAY,
   moveDay,
@@ -22,7 +23,7 @@ import {
   targetIssue,
   trimmedDoc,
 } from '../../web/src/features/programs/program-edit.ts';
-import type { LoadType } from '../../web/src/lib/catalog-rules.ts';
+import type { CardioExercise, LiftExercise, LoadType } from '../../web/src/lib/catalog-rules.ts';
 import type { Program, ProgramDoc } from '../../web/src/lib/programs.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -51,6 +52,42 @@ const program = (overrides: Partial<Program>): Program => ({
   copiedFromId: null,
   days: doc.days.map((day, position) => ({ ...day, position })),
   ...overrides,
+});
+
+describe('isPlannableExercise', () => {
+  const base = { equipment: 'barbell', custom: false, archived: false, skillShares: [] };
+  const lift = (overrides: Partial<LiftExercise>): LiftExercise => ({
+    ...base,
+    id: 'bench',
+    key: 'barbell_bench_press',
+    name: 'Barbell Bench Press',
+    modality: 'lift',
+    loadType: 'external',
+    ...overrides,
+  });
+  const running: CardioExercise = {
+    ...base,
+    id: 'running',
+    key: 'running',
+    name: 'Running',
+    modality: 'cardio',
+    activity: { paceUnit: 'per_km', referencePaceSPerKm: 300, maxEffort: 'hard', tracksDistance: true, shares: [] },
+  };
+
+  it('offers a rep lift', () => {
+    expect(isPlannableExercise(lift({}))).toBe(true);
+  });
+
+  it('leaves out a timed hold and a carry, since a program plans sets of reps', () => {
+    expect(isPlannableExercise(lift({ id: 'hang', key: 'dead_hang', loadType: 'bodyweight', measure: 'time' }))).toBe(
+      false,
+    );
+    expect(isPlannableExercise(lift({ id: 'carry', key: 'farmers_carry', measure: 'distance' }))).toBe(false);
+  });
+
+  it('leaves out a cardio activity', () => {
+    expect(isPlannableExercise(running)).toBe(false);
+  });
 });
 
 describe('docFor', () => {

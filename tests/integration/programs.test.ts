@@ -533,6 +533,24 @@ describe('save_program', () => {
     expect(await programRowCounts(user.id)).toEqual(before);
   });
 
+  it.each(['dead_hang', 'farmers_carry'])('refuses the hold exercise %s in a program', async (holdKey) => {
+    const user = await createTestUser();
+    const holdId = await builtInExerciseId(holdKey);
+    const program = simpleProgram({
+      days: [
+        {
+          id: randomUUID(),
+          name: 'Grip day',
+          exercises: [{ exerciseId: holdId, targetSets: 3, targetRepsMin: 1, targetRepsMax: 1 }],
+        },
+      ],
+    });
+    const before = await programRowCounts(user.id);
+    const saved = await saveProgram(user, program);
+    expect(saved.error?.message).toBe('invalid_program');
+    expect(await programRowCounts(user.id)).toEqual(before);
+  });
+
   it('accepts a former variation the first time', async () => {
     const user = await createTestUser();
     const pauseSquatId = await builtInExerciseId('pause_squat');

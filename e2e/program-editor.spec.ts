@@ -69,6 +69,19 @@ test('create a program from scratch, add Squat 5×5, save, it lists under Your p
   await expect.poll(() => planLines(username, 'Squat Focus')).toEqual(['Day 1 back_squat 5×5-5']);
 });
 
+test('the exercise picker offers lifts but no holds, since a program plans sets of reps', async ({ page }) => {
+  await register(page, uniqueUsername('ph'));
+  await openFromProfile(page, 'Programs');
+  await page.getByRole('button', { name: 'New program' }).click();
+  const search = day(page, 1).getByLabel('Search exercises');
+  await search.fill('Back Squat');
+  await expect(day(page, 1).getByRole('button', { name: /^Back Squat\b/ })).toBeVisible();
+  await search.fill('Dead Hang');
+  await expect(day(page, 1).getByRole('button', { name: /^Dead Hang\b/ })).toHaveCount(0);
+  await search.fill('Farmers Carry');
+  await expect(day(page, 1).getByRole('button', { name: /^Farmers Carry\b/ })).toHaveCount(0);
+});
+
 test('set Squat to add 2.5 kg after each workout, save, reopen and keep it', async ({ page }) => {
   const username = uniqueUsername('pp');
   await register(page, username);
