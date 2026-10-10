@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { usePreferences } from '../../lib/preferences.ts';
 import { ageFrom, BODYWEIGHT_NUDGE_STEP, nudgedBodyweightKg, updatePrivateProfile } from '../../lib/profile.ts';
-import { collectionPercentQuery } from '../../lib/queries.ts';
+import { bodyweightTrendQuery, collectionPercentQuery } from '../../lib/queries.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
 import { formatHeight, formatWeight } from '../../lib/units.ts';
@@ -36,9 +36,9 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
   const standing = useStanding(userId);
   const collection = useQuery(collectionPercentQuery(userId));
   const { unitPref } = usePreferences();
+  const queryClient = useQueryClient();
   const [draftKg, setDraftKg] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const [savedCount, setSavedCount] = useState(0);
   const [problem, setProblem] = useState<string | null>(null);
   const offline = useIsOffline();
 
@@ -70,7 +70,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
       await updatePrivateProfile(userId, { bodyweightKg: draftKg });
       replace((current) => ({ ...current, bodyweightKg: draftKg }));
       setDraftKg(null);
-      setSavedCount((count) => count + 1);
+      void queryClient.invalidateQueries({ queryKey: bodyweightTrendQuery(userId).queryKey });
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your bodyweight.'));
     }
@@ -165,7 +165,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
           <h2 id="trend-heading">Bodyweight trend</h2>
           <PrivateTag />
         </div>
-        <BodyweightTrend userId={userId} savedCount={savedCount} unit={unitPref} />
+        <BodyweightTrend userId={userId} unit={unitPref} />
       </section>
       <ul className="menu-list">
         <MenuLink to="/profile/edit">Edit profile &amp; body</MenuLink>
