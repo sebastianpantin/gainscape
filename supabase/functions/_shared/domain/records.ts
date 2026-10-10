@@ -13,7 +13,10 @@ import {
   type CardioRecords,
   type CardioSetInput,
   type Catalog,
+  type HoldSetInput,
+  isHoldResult,
   isLiftResult,
+  type LiftExerciseDef,
   type LiftSetInput,
   type LoadType,
   measuresRepsCapacity,
@@ -138,6 +141,33 @@ function applyBoutToRecords(
   return { records: { ...records, cardio: { ...records.cardio, [bout.exerciseId]: next } }, gains };
 }
 
+function holdLoadCountsForRecords(exercise: LiftExerciseDef, effectiveLoadKg: number, cfg: BalanceConfig): boolean {
+  if (exercise.loadType !== 'external') return true;
+  return effectiveLoadKg >= cfg.holdRecordMinExternalLoadKg - FLOAT_TOLERANCE;
+}
+
+function applyHoldToRecords(
+  records: RecordState,
+  hold: Pick<HoldSetInput, 'id' | 'exerciseId' | 'durationS' | 'distanceM'>,
+  effectiveLoadKg: number,
+  exercise: LiftExerciseDef,
+  achievedAt: string,
+  cfg: BalanceConfig,
+): CardioRecordUpdate {
+  if (!holdLoadCountsForRecords(exercise, effectiveLoadKg, cfg)) return { records, gains: [] };
+  const kind: CardioRecordKind = hold.durationS !== null ? 'duration' : 'distance';
+  const value = hold.durationS ?? hold.distanceM ?? 0;
+  const before: CardioRecords = records.cardio[hold.exerciseId] ?? {};
+  const previous = before[kind]?.value ?? null;
+  const minGain = kind === 'duration' ? cfg.holdRecordMinGainS : cfg.carryRecordMinGainM;
+  if (previous !== null && value < previous + minGain - FLOAT_TOLERANCE) return { records, gains: [] };
+  const next = { ...before, [kind]: { value, setId: hold.id, achievedAt } };
+  return {
+    records: { ...records, cardio: { ...records.cardio, [hold.exerciseId]: next } },
+    gains: [{ kind, value, previous }],
+  };
+}
+
 export interface RecordUpdate {
   records: RecordState;
   personalRecord: SetPersonalRecord | null;
@@ -195,6 +225,21 @@ export const detectPersonalRecords: Step = (ctx: SessionContext) => {
       if (isBaselineSession || update.gains.length === 0) return result;
       return { ...result, cardio: { ...result.cardio, records: update.gains } };
     }
+    if (isHoldResult(result)) {
+      const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
+      const update = applyHoldToRecords(
+        records,
+        result.set,
+        result.effectiveLoadKg,
+        exercise,
+        ctx.session.startedAt,
+        ctx.cfg,
+      );
+      records = update.records;
+      const isBaselineSession = recordsAtStart.cardio[exercise.id] === undefined;
+      if (isBaselineSession || update.gains.length === 0) return result;
+      return { ...result, holdRecords: update.gains };
+    }
     if (!isLiftResult(result) || result.set.isWarmup) return result;
     const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const isBaselineSession = !(ctx.deps.strength?.[exercise.id]?.hasPriorSession ?? false);
@@ -239,7 +284,18 @@ export interface CardioRecordHistoryRow {
   interval: CardioInterval | null;
 }
 
-export type RecordHistoryRow = LiftRecordHistoryRow | CardioRecordHistoryRow;
+export interface HoldRecordHistoryRow {
+  kind: 'hold';
+  exerciseId: string;
+  session: SessionKey;
+  setId: string;
+  position: number;
+  effectiveLoadKg: number;
+  durationS: number | null;
+  distanceM: number | null;
+}
+
+export type RecordHistoryRow = LiftRecordHistoryRow | CardioRecordHistoryRow | HoldRecordHistoryRow;
 
 export function recordsFromHistory(
   rows: readonly RecordHistoryRow[],
@@ -262,6 +318,12 @@ export function recordsFromHistory(
         effort: null,
       };
       records = applyBoutToRecords(records, bout, cardioExercise(exercise), row.session.startedAt, cfg).records;
+      continue;
+    }
+    if (row.kind === 'hold') {
+      const hold = { id: row.setId, exerciseId: row.exerciseId, durationS: row.durationS, distanceM: row.distanceM };
+      const lift = liftExercise(exercise);
+      records = applyHoldToRecords(records, hold, row.effectiveLoadKg, lift, row.session.startedAt, cfg).records;
       continue;
     }
     const set: LiftSetInput = {
@@ -323,11 +385,12 @@ function liftRecordSummaries(
 function cardioRecordSummaries(sets: readonly SetResult[]): PersonalRecordSummary[] {
   return [...sets]
     .sort((a, b) => a.set.position - b.set.position)
-    .flatMap((result): PersonalRecordSummary[] =>
-      result.cardio === null || result.cardio.records.length === 0
+    .flatMap((result): PersonalRecordSummary[] => {
+      const gains = result.cardio?.records ?? result.holdRecords ?? [];
+      return gains.length === 0
         ? []
-        : [{ kind: 'cardio', exerciseId: result.set.exerciseId, setId: result.set.id, records: result.cardio.records }],
-    );
+        : [{ kind: 'cardio', exerciseId: result.set.exerciseId, setId: result.set.id, records: gains }];
+    });
 }
 
 export function summarizePersonalRecords(

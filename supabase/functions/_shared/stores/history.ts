@@ -59,13 +59,13 @@ export async function loadRecordHistory(
 ): Promise<RecordHistoryRow[]> {
   const rows = await tx`
     select st.exercise_id, s.id as session_id, s.started_at, st.id as set_id, st.position, st.weight_kg, st.reps,
+           st.effective_load_kg,
            st.duration_s, st.distance_m, st.interval_work_s, st.interval_rest_s, st.interval_rounds
     from public.sets st
     join public.sessions s on s.id = st.session_id
     where s.user_id = ${userId}
       and not s.history_only
       and not st.is_warmup
-      and (st.reps is not null or st.weight_kg is null)
       and st.exercise_id = any(${exerciseIds as string[]}::uuid[])
       and (s.started_at, s.id) < (${before.startedAt}::timestamptz, ${before.id}::uuid)`;
   return rows.map((row): RecordHistoryRow => {
@@ -75,7 +75,12 @@ export async function loadRecordHistory(
       setId: row.set_id,
       position: row.position,
     };
-    if (row.duration_s === null) return { ...identity, weightKg: Number(row.weight_kg), reps: row.reps };
+    const kind = setKindOfRow(row);
+    if (kind === 'lift') return { ...identity, weightKg: Number(row.weight_kg), reps: row.reps };
+    if (kind === 'hold') {
+      const { durationS, distanceM } = holdFieldsFromRow(row);
+      return { ...identity, kind: 'hold', effectiveLoadKg: Number(row.effective_load_kg), durationS, distanceM };
+    }
     return { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row) };
   });
 }

@@ -42,6 +42,9 @@ export interface BalanceConfig {
   readonly holdSecondsPerRep: number;
   readonly carryMetresPerRep: number;
   readonly holdDefaultEffort: EffortLevel;
+  readonly holdRecordMinExternalLoadKg: number;
+  readonly holdRecordMinGainS: number;
+  readonly carryRecordMinGainM: number;
 }
 
 export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
@@ -82,6 +85,9 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   holdSecondsPerRep: 5,
   carryMetresPerRep: 5,
   holdDefaultEffort: 'hard',
+  holdRecordMinExternalLoadKg: 20,
+  holdRecordMinGainS: 1,
+  carryRecordMinGainM: 1,
 });
 
 const LOOT_VERSION = 2;

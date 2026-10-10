@@ -957,6 +957,33 @@ describe('complete-session with hold sets', () => {
     expect(await normalizedSnapshot(user.id)).toEqual(before);
   });
 
+  it('records the longest hold at or above the load floor and rebuilds it from history', async () => {
+    const user = await createTestUser();
+    const { pinchId } = await holdExercisesOf(user);
+    const first = sessionPayload([aHold(pinchId, 0, { durationS: 30 })], 30);
+    expect((await postCompleteSession(user.accessToken, first)).status).toBe(200);
+    const light = sessionPayload([{ ...aHold(pinchId, 0, { durationS: 90 }), weightKg: 10 }], 20);
+    const lightResponse = await postCompleteSession(user.accessToken, light);
+    expect(lightResponse.body.prs).toEqual([]);
+    const longer = sessionPayload([aHold(pinchId, 0, { durationS: 40 })], 10);
+    const response = await postCompleteSession(user.accessToken, longer);
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.prs).toEqual([
+      {
+        kind: 'cardio',
+        exerciseId: pinchId,
+        setId: longer.sets[0].id,
+        records: [{ kind: 'duration', value: 40, previous: 30 }],
+      },
+    ]);
+    const records = await db`
+      select kind, value::float, set_id from public.cardio_records where user_id = ${user.id} and exercise_id = ${pinchId}`;
+    expect(records).toEqual([{ kind: 'duration', value: 40, set_id: longer.sets[0].id }]);
+    const before = await normalizedSnapshot(user.id);
+    expect((await rebuildCaches(user.id)).status).toBe(200);
+    expect(await normalizedSnapshot(user.id)).toEqual(before);
+  });
+
   it('refuses a hold on a rep exercise, a rep set on a hold exercise and a hold with both measures', async () => {
     const user = await createTestUser();
     const { pinchId } = await holdExercisesOf(user);

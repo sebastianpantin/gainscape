@@ -87,7 +87,10 @@ export function lootCandidates(sets: readonly SetResult[], catalog: Catalog): Lo
       effectiveReps: result.effectiveReps,
       countedWorkS: result.cardio?.countedWorkS ?? 0,
       interval: result.set.kind === 'cardio' && result.set.interval !== null,
-      personalRecord: result.personalRecord !== null || (result.cardio?.records.length ?? 0) > 0,
+      personalRecord:
+        result.personalRecord !== null ||
+        (result.cardio?.records.length ?? 0) > 0 ||
+        (result.holdRecords?.length ?? 0) > 0,
       builtIn: catalog.exercises.get(result.set.exerciseId)?.builtIn ?? false,
     }));
 }
