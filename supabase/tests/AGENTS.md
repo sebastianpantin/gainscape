@@ -1,7 +1,7 @@
 # tests (pgTAP)
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-08
+**Generated:** 2026-10-01 · **Updated:** 2026-10-10
 
 ## Purpose
 
@@ -32,6 +32,7 @@ pgTAP suites for the database layer: grants, RLS policies, rate limiting, friend
 | `18_scroll_challenges.test.sql`     | Scroll challenges from 031 and 032: `user_unlocks` gone, `challenges` table with only the read policy and thirty-six seeded rows, `grants_exercise_id` gone and every scroll granting a challenge, a scroll without a challenge refused, `sessions.challenge` object check, no direct writes on `challenges`, every built-in variation visible to a new user, a stranger's custom exercise hidden                                                                                                                                                                                                                                                                  |
 | `19_social_hardening.test.sql`      | Hardening from 036: display names with bidi overrides or isolates, C0 or C1 controls, or only blanks refused; signup trims the requested display name and falls back to the username; friend and request counts skip banned and unconfirmed counterparts; `send_friend_request` strips one leading `@`; the server appends new pins; friends see equal-position pins in the owner's order; retired items left out of `items.found`                                                                                                                                                                                                                                 |
 | `20_craft_account_active.test.sql`  | `craft` from 037 refuses a banned or unconfirmed caller with `not_authenticated` and spends nothing; an active caller still crafts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `21_program_progression.test.sql`   | Columns from 039: `progression` is not null and defaults to `none`, increments are `numeric(5,2)`; an unknown progression, `linear` without both increments, `fixed` or `none` with an increment, and increments outside 0.25 to 20 kg or 0.5 to 45 lb violate their named checks                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ## For AI Agents
 
