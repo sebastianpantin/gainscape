@@ -15,9 +15,11 @@ import type {
   Catalog,
   ExerciseDef,
   HoldSetInput,
+  HoldSetResult,
   LevelUp,
   LiftExerciseDef,
   LiftSetInput,
+  LiftSetResult,
   SessionInput,
   SessionSummary,
   SetInput,
@@ -126,10 +128,8 @@ export function writableSetFor(
   stored?: StoredSetLoad,
 ): WritableSet {
   if (set.kind === 'cardio') {
-    if (set.distanceM !== null && !cardioExercise(exercise).cardio.tracksDistance) {
-      throw new DistanceNotTrackedError(exercise.id);
-    }
-    cardioExercise(exercise);
+    const { cardio } = cardioExercise(exercise);
+    if (set.distanceM !== null && !cardio.tracksDistance) throw new DistanceNotTrackedError(exercise.id);
     return set;
   }
   if (set.kind === 'hold') holdExercise(exercise, set);
@@ -254,6 +254,11 @@ const resolveSets: Step = (ctx) => {
   return { ...ctx, sets };
 };
 
+function effectiveRepsOf(result: LiftSetResult | HoldSetResult, rirForXp: number, cfg: BalanceConfig): number {
+  if (isHoldResult(result)) return effectiveReps(holdRepEquivalents(result.set, cfg), rirForXp, false, cfg);
+  return effectiveReps(result.set.reps, rirForXp, result.set.isWarmup, cfg);
+}
+
 const awardXp: Step = (ctx) => {
   const skillsById = new Map(ctx.deps.catalog.skills.map((skill) => [skill.id, skill]));
   const sortOrderOf = (skillId: string) => skillsById.get(skillId)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
@@ -270,11 +275,7 @@ const awardXp: Step = (ctx) => {
     if (!isLiftResult(result) && !isHoldResult(result)) return result;
     const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const earnsNothing = result.rirForXp === null || liftsNoLoad(exercise, result.effectiveLoadKg);
-    const effectiveRepCount = earnsNothing
-      ? 0
-      : isHoldResult(result)
-        ? effectiveReps(holdRepEquivalents(result.set, ctx.cfg), result.rirForXp!, false, ctx.cfg)
-        : effectiveReps(result.set.reps, result.rirForXp!, result.set.isWarmup, ctx.cfg);
+    const effectiveRepCount = earnsNothing ? 0 : effectiveRepsOf(result, result.rirForXp!, ctx.cfg);
     const xp = result.rirForXp === null ? result.coldStartXp : setXp(effectiveRepCount, result.intensityBonus, ctx.cfg);
     const xpSetOrdinal = xpSetsSeenByExercise.get(exercise.id) ?? 0;
     if (xp > 0) xpSetsSeenByExercise.set(exercise.id, xpSetOrdinal + 1);
