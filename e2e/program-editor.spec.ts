@@ -12,6 +12,7 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 import { programCount, programPlanOf, sessionRow, setCount } from './support/db.ts';
+import { ownProgram } from './support/program-enrollment.ts';
 
 function day(page: Page, position: number) {
   return page.getByRole('region', { name: `Day ${position}`, exact: true });
@@ -23,10 +24,6 @@ function plannedExercises(page: Page, position: number) {
 
 function plannedExercise(page: Page, position: number, name: string) {
   return plannedExercises(page, position).filter({ has: page.getByText(name, { exact: true }) });
-}
-
-function ownProgram(page: Page, name: string) {
-  return page.getByRole('region', { name: 'Your programs' }).getByRole('listitem').filter({ hasText: name });
 }
 
 async function planLines(username: string, programName: string) {

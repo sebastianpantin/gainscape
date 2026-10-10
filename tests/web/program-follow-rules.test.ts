@@ -5,11 +5,11 @@ import { type EnrollmentRow, enrollmentFromRow } from '../../web/src/lib/program
 import {
   carriedFollowOf,
   carriedInputs,
-  customTemplateKey,
   followStatus,
   isEnrolledIn,
   workingWeights,
 } from '../../web/src/lib/program-follow-rules.ts';
+import { customTemplateKey } from '../../web/src/lib/program-enroll-rules.ts';
 import { type PlannedExercise } from '../../web/src/offline/draft-format.ts';
 import {
   BENCH_ID,

@@ -1,5 +1,5 @@
 import { parseProgramDefinition, type ProgramDefinition, type ProgramState, type WeightUnit } from '@domain/index.ts';
-import { enrolledTemplate, type ProgramTemplateRow } from './program-enroll-rules.ts';
+import { customLiftKey, customTemplateKey, enrolledTemplate, type ProgramTemplateRow } from './program-enroll-rules.ts';
 import { type EnrollmentRow } from './program-facts-rules.ts';
 import type { ProgramDoc } from './programs.ts';
 
@@ -15,14 +15,6 @@ type PlannedExercise = ProgramDoc['days'][number]['exercises'][number];
 const WORKING_WEIGHT_LOAD = 'pct 1 workingWeight';
 const LAST_LOGGED_LOAD = 'lastLogged';
 
-export function customTemplateKey(programId: string): string {
-  return `custom_${programId.replaceAll('-', '')}`;
-}
-
-function liftKeyOf(exerciseId: string): string {
-  return `x_${exerciseId.replaceAll('-', '')}`;
-}
-
 function slotLine(lift: string, sets: unknown, reps: unknown, maxReps: unknown, load: string, judged: boolean): string {
   return JSON.stringify([lift, sets, reps, maxReps ?? reps, load, judged]);
 }
@@ -31,14 +23,14 @@ function plannedSlotLine(planned: PlannedExercise): string {
   const load = planned.progression.kind === 'none' ? LAST_LOGGED_LOAD : WORKING_WEIGHT_LOAD;
   const { exerciseId, targetSets, targetRepsMin, targetRepsMax } = planned;
   const judged = planned.progression.kind === 'linear';
-  return slotLine(liftKeyOf(exerciseId), targetSets, targetRepsMin, targetRepsMax, load, judged);
+  return slotLine(customLiftKey(exerciseId), targetSets, targetRepsMin, targetRepsMax, load, judged);
 }
 
 function plannedRuleLines(program: ProgramDoc): string[] {
   const rules = new Map<string, string>();
   for (const day of program.days)
     for (const planned of day.exercises) {
-      const lift = liftKeyOf(planned.exerciseId);
+      const lift = customLiftKey(planned.exerciseId);
       if (planned.progression.kind === 'linear' && !rules.has(lift))
         rules.set(lift, JSON.stringify([lift, planned.progression.incrementKg, planned.progression.incrementLb]));
     }
