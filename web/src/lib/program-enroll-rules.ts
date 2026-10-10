@@ -177,6 +177,14 @@ function entryOf(row: ProgramTemplateRow): TemplateListEntry {
 const CUSTOM_TEMPLATE_PREFIX = 'custom_';
 const CUSTOM_LIFT_PATTERN = /^x_([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/;
 
+export function customTemplateKey(programId: string): string {
+  return `${CUSTOM_TEMPLATE_PREFIX}${programId.replaceAll('-', '')}`;
+}
+
+export function customLiftKey(exerciseId: string): string {
+  return `x_${exerciseId.replaceAll('-', '')}`;
+}
+
 export function isCustomTemplate(row: ProgramTemplateRow): boolean {
   return row.key.startsWith(CUSTOM_TEMPLATE_PREFIX) || (row.owner_user_id ?? null) !== null;
 }
