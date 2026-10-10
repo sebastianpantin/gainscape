@@ -6,10 +6,8 @@ import { serve } from '../_shared/serve.ts';
 import { assertSecretKey } from '../_shared/service-auth.ts';
 import { lowerUuid, parseOr422 } from '../_shared/session-payload.ts';
 import { listUsersToRebuild } from '../_shared/stores/rebuild.ts';
-import { clearRecordCaches } from '../_shared/stores/records.ts';
-import { replayFrom } from '../_shared/stores/replay.ts';
-import { lockUser, markSessionsDerivedAt } from '../_shared/stores/sessions.ts';
-import { clearStrengthCache } from '../_shared/stores/strength.ts';
+import { rebuildDerivedState } from '../_shared/stores/replay.ts';
+import { lockUser } from '../_shared/stores/sessions.ts';
 
 const MAX_USERS_PER_BATCH = 50;
 const MAX_USERS_PER_PAGE = 1000;
@@ -41,12 +39,7 @@ const rebuildSchema = z.union([
 async function rebuildUser(userId: string) {
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId, new HttpError(404, 'user_not_found'));
-
-    await clearStrengthCache(tx, userId);
-    await clearRecordCaches(tx, userId);
-    const { sessionsReplayed, setsRewritten } = await replayFrom(tx, userId, null, [], DEFAULT_BALANCE);
-    await markSessionsDerivedAt(tx, userId, DEFAULT_BALANCE.version);
-
+    const { sessionsReplayed, setsRewritten } = await rebuildDerivedState(tx, userId);
     return { userId, sessionsReplayed, setsRewritten };
   });
 }
