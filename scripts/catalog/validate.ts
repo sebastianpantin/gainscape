@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import { GEAR_SLOT_SKILLS, SKILLS_WITHOUT_GEAR } from '../../supabase/functions/_shared/domain/gear.ts';
 import { CARDIO_EFFORT_LEVELS } from '../../supabase/functions/_shared/domain/types.ts';
+import { MOBILITY_SKILL_KEY } from '../../supabase/functions/_shared/domain/cardio.ts';
 import {
   type CatalogChallenge,
   type CatalogData,
@@ -131,6 +132,9 @@ function checkExercises(catalog: CatalogData, problems: string[]): void {
       else if (skill.modality !== exercise.modality) {
         problems.push(`exercise "${exercise.key}" shares skill "${share.skill}" of another modality`);
       }
+    }
+    if (exercise.shares.length > 1 && exercise.shares.some((share) => share.skill === MOBILITY_SKILL_KEY)) {
+      problems.push(`exercise "${exercise.key}" shares Mobility with another skill`);
     }
     const total = exercise.shares.reduce((sum, share) => sum + share.shareBp, 0);
     if (total !== FULL_SHARE_BP)

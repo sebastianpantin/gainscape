@@ -355,6 +355,15 @@ describe('catalog validation', () => {
       /exercise "running" shares skill "legs" of another modality/,
     ],
     [
+      'mobility is never shared with another skill',
+      (c) => {
+        const shares = find(c.exercises, 'running').shares;
+        shares[0].shareBp = 5000;
+        shares.push({ skill: 'mobility', shareBp: 5000 });
+      },
+      /exercise "running" shares Mobility with another skill/,
+    ],
+    [
       'variation_of never crosses modality',
       (c) => (find(c.exercises, 'walking').variationOf = 'back_squat'),
       /exercise "walking" is a variation of "back_squat" of another modality/,
