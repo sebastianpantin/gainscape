@@ -14,14 +14,13 @@ import {
   GEAR_SLOTS,
   gearBonusXp,
   type GearLoadout,
-  HISTORY_ONLY_STEPS,
   historyOnlySummary,
   KindMismatchError,
   liftExerciseFor,
   type LiftSetInput,
   pendingSummary,
   processSession,
-  REP_MAX_SLOT_COUNT,
+  resolveHistoryOnlySets,
   type SessionInput,
   setKind,
   strengthHistoryRows,
@@ -183,11 +182,6 @@ describe('processSession', () => {
       BodyweightLoadNotZeroError,
     );
   });
-
-  it('lets callers replace the step list', () => {
-    const { outputs } = processSession(freshUser, fixtureSession, TEST_BALANCE, { catalog }, []);
-    expect(outputs.sets).toEqual([]);
-  });
 });
 
 describe('lift results beside cardio bouts', () => {
@@ -267,40 +261,25 @@ describe('lift results beside cardio bouts', () => {
   });
 });
 
-describe('HISTORY_ONLY_STEPS', () => {
-  const lightRecords = {
-    repMaxes: {
-      bench: Array.from({ length: REP_MAX_SLOT_COUNT }, () => ({
-        loadKg: 40,
-        setId: 'old',
-        achievedAt: '2026-01-01T00:00:00.000Z',
-        exactSetId: null,
-      })),
-    },
-    bodyweightReps: {},
-    cardio: {},
-  };
+describe('resolveHistoryOnlySets', () => {
   const heavy = { ...fixtureSession, sets: [aSet('bench', 100, 5, hard), aSet('bench', 100, 5, null)] };
   const strength = { bench: { windowMax: 90, fallbackMax: 90, hasPriorSession: true } };
 
-  it('keeps the logged effort, pays no XP and reports no records', () => {
-    const { outputs } = processSession(
-      { skillXp: {}, bodyweightKg: null, records: lightRecords },
-      heavy,
-      TEST_BALANCE,
-      { catalog, strength },
-      HISTORY_ONLY_STEPS,
-    );
-    expect(outputs.sets.map((result) => [result.rir, result.rirSource])).toEqual([
+  it('keeps the logged effort, pays no XP and marks no records', () => {
+    const sets = resolveHistoryOnlySets(heavy, TEST_BALANCE, { catalog, strength });
+    expect(sets.map((result) => [result.rir, result.rirSource])).toEqual([
       [3, 'logged'],
       [null, 'cold_start'],
     ]);
-    for (const result of outputs.sets) {
-      expect(result).toMatchObject({ xp: 0, effectiveReps: 0, e1rmCandidateKg: null, repsCapacityCandidate: null });
+    for (const result of sets) {
+      expect(result).toMatchObject({
+        xp: 0,
+        effectiveReps: 0,
+        e1rmCandidateKg: null,
+        repsCapacityCandidate: null,
+        personalRecord: null,
+      });
     }
-    expect(outputs.xpBySkill).toEqual({});
-    expect(outputs.levelUps).toEqual([]);
-    expect(outputs.prs).toEqual([]);
   });
 });
 

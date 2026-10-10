@@ -4,7 +4,6 @@ import {
   type Catalog,
   challengeSummary,
   DEFAULT_BALANCE,
-  DEFAULT_STEPS,
   type RevokedDrop,
   lootCandidates,
   NO_RECORDS,
@@ -152,7 +151,6 @@ async function replayFrom(
     catalog,
     cfg,
     { skillXp: prior.skillXp, bodyweightKg: null, records: prior.records },
-    DEFAULT_STEPS,
     prior.strength,
   );
   const results = replay.sessions.flatMap((entry) => entry.outputs.sets);

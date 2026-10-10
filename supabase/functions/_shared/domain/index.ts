@@ -17,6 +17,7 @@ export * from './records.ts';
 export * from './collection.ts';
 export * from './edit-window.ts';
 export * from './edit-diff.ts';
+export * from './new-session.ts';
 export * from './session-timing.ts';
 export * from './rng.ts';
 export * from './loot.ts';
