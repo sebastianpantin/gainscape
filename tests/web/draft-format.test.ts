@@ -4,6 +4,7 @@ import {
   addExercise,
   addSet,
   addWarmupSets,
+  canAddSet,
   canSwapExercise,
   type CardioDraftExercise,
   type CatalogEntry,
@@ -36,6 +37,7 @@ import {
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
+import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
 
@@ -992,5 +994,53 @@ describe('exercise client ids', () => {
     );
     const [first, second] = benchTwice.draft.exercises.map((exercise) => exercise.clientId);
     expect(first).not.toBe(second);
+  });
+});
+
+describe('set limit', () => {
+  const liftWithSets = (count: number): LiftDraftExercise => ({
+    clientId: 'card-squat',
+    exerciseId: 'squat',
+    name: 'Squat',
+    modality: 'lift',
+    loadType: 'external',
+    target: null,
+    supersetId: null,
+    sets: Array.from({ length: count }, (_, index) => ({
+      id: `squat-${index}`,
+      weightKg: 100,
+      reps: 5,
+      effort: null,
+      done: true,
+      isWarmup: false,
+      prescription: null,
+    })),
+  });
+  const freshLift = (): LiftDraftExercise => ({ ...liftWithSets(0), clientId: 'card-press', exerciseId: 'press' });
+  const fullDraft = () => workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 2), cardioExercise()] });
+
+  it('allows a set only while the workout holds fewer sets than the server accepts', () => {
+    expect(canAddSet(workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 1)] }))).toBe(true);
+    expect(canAddSet(fullDraft())).toBe(false);
+  });
+
+  it('adds no set or bout once the workout is full', () => {
+    expect(addSet(fullDraft(), 0)).toEqual(fullDraft());
+    expect(addSet(fullDraft(), 1)).toEqual(fullDraft());
+  });
+
+  it('adds no warm-ups that would not fit', () => {
+    const draft = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 1)] });
+    const warmups = [
+      { weightKg: 20, reps: 10 },
+      { weightKg: 60, reps: 5 },
+    ];
+    expect(addWarmupSets(draft, 0, warmups)).toEqual(draft);
+    expect(addWarmupSets(draft, 0, warmups.slice(0, 1)).exercises[0].sets).toHaveLength(MAX_SETS_PER_SESSION);
+  });
+
+  it('quick fills only up to the set limit', () => {
+    const draft = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 2), freshLift()] });
+    expect(fillWorkingSets(draft, 1, 5, 8).exercises[1].sets).toHaveLength(2);
   });
 });

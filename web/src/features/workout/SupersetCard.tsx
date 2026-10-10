@@ -9,10 +9,18 @@ interface SupersetCardProps {
   members: ReactNode;
   rounds: readonly RoundRow[];
   renderCell: (cell: RoundCell, round: number) => ReactNode;
+  canAddRound: boolean;
   onAddRound: () => void;
 }
 
-export function SupersetCard({ exerciseNames, members, rounds, renderCell, onAddRound }: SupersetCardProps) {
+export function SupersetCard({
+  exerciseNames,
+  members,
+  rounds,
+  renderCell,
+  canAddRound,
+  onAddRound,
+}: SupersetCardProps) {
   return (
     <section
       className="panel stack exercise-card superset-card"
@@ -35,7 +43,7 @@ export function SupersetCard({ exerciseNames, members, rounds, renderCell, onAdd
           </li>
         ))}
       </ol>
-      <button className="button dashed" type="button" onClick={onAddRound}>
+      <button className="button dashed" type="button" disabled={!canAddRound} onClick={onAddRound}>
         + Add round
       </button>
     </section>

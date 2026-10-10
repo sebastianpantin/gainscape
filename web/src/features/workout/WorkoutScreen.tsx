@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_BALANCE, type Position } from '@domain/index.ts';
+import { DEFAULT_BALANCE, MAX_SETS_PER_SESSION, type Position } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
@@ -45,6 +45,7 @@ import {
   addExercise,
   addSet,
   addWarmupSets,
+  canAddSet,
   canSwapExercise,
   doneSetCount,
   type DraftChallenge,
@@ -57,6 +58,7 @@ import {
   notDoneSetCount,
   removeExercise,
   removeSet,
+  roomForSets,
   seedUntouchedSet,
   startDraft,
   startDraftFromDay,
@@ -78,6 +80,7 @@ import { barbellSetupFor, draftBar, programSetMarkers, programSetMarkerTexts } f
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import {
   addRound,
+  canAddRound,
   groupWithNext,
   nextInRound,
   restsAfter,
@@ -581,6 +584,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const roomForBouts = canAddBout(
     draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
   );
+  const roomForSet = canAddSet(draft);
   const liftExercises = exercises.filter(isLiftExercise);
   const barbellIds = new Set(
     liftExercises
@@ -834,7 +838,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               <button
                 className="button dashed"
                 type="button"
-                disabled={!roomForBouts}
+                disabled={!roomForBouts || !roomForSet}
                 onClick={() => changeDraft(addSet(draft, exerciseIndex))}
               >
                 + Add bout
@@ -875,6 +879,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   `${member.name}, set ${setIndex + 1}`,
                 );
               }}
+              canAddRound={canAddRound(draft, group)}
               onAddRound={() => changeDraft(addRound(draft, group))}
             />
           );
@@ -890,7 +895,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         return (
           <section className="panel stack exercise-card" key={cardKeys[exerciseIndex]}>
             {liftIntro(exercise, exerciseIndex)}
-            {warmups.length > 0 && (
+            {warmups.length > 0 && warmups.length <= roomForSets(draft) && (
               <button
                 className="button dashed"
                 type="button"
@@ -910,7 +915,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             <ol className="set-list">
               {exercise.sets.map((set, setIndex) => liftSetRow(exercise, exerciseIndex, set, setIndex))}
             </ol>
-            <button className="button dashed" type="button" onClick={() => changeDraft(addSet(draft, exerciseIndex))}>
+            <button
+              className="button dashed"
+              type="button"
+              disabled={!roomForSet}
+              onClick={() => changeDraft(addSet(draft, exerciseIndex))}
+            >
               + Add set
             </button>
             {canQuickFill(exercise) && (
@@ -924,7 +934,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </section>
         );
       })}
-      <ExercisePicker exercises={exercises} onPick={(exercise) => void addPicked(exercise)} />
+      {roomForSet ? (
+        <ExercisePicker exercises={exercises} onPick={(exercise) => void addPicked(exercise)} />
+      ) : (
+        <p className="hint">A workout can hold at most {MAX_SETS_PER_SESSION} sets.</p>
+      )}
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>

@@ -1,6 +1,7 @@
 import {
   addSet,
   type DraftExercise,
+  roomForSets,
   updateExerciseAt,
   type WorkoutDraft,
   withValidSupersets,
@@ -113,6 +114,11 @@ export function restsAfter(draft: WorkoutDraft, exerciseIndex: number, setId: st
   return nextInRound(draft, exerciseIndex, setId) === null;
 }
 
+export function canAddRound(draft: WorkoutDraft, group: SupersetGroup): boolean {
+  return group.exerciseIndexes.length <= roomForSets(draft);
+}
+
 export function addRound(draft: WorkoutDraft, group: SupersetGroup): WorkoutDraft {
+  if (!canAddRound(draft, group)) return draft;
   return group.exerciseIndexes.reduce((current, index) => addSet(current, index), draft);
 }
