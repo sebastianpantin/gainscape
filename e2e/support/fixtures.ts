@@ -22,17 +22,23 @@ async function prepareContext(
   return pageErrors;
 }
 
-function expectNoPageErrors(pageErrors: string[]): void {
-  expect(pageErrors, 'uncaught errors in the page').toEqual([]);
+const WEBKIT_CANCELLED_FETCH_REPORT = / due to access control checks\.$/;
+
+function expectNoPageErrors(pageErrors: string[], browserName: string): void {
+  const unexpected =
+    browserName === 'webkit'
+      ? pageErrors.filter((message) => !WEBKIT_CANCELLED_FETCH_REPORT.test(message))
+      : pageErrors;
+  expect(unexpected, 'uncaught errors in the page').toEqual([]);
 }
 
 export const test = base.extend<Fixtures>({
-  context: async ({ context, serviceWorkers }, use) => {
+  context: async ({ context, serviceWorkers, browserName }, use) => {
     const pageErrors = await prepareContext(context, serviceWorkers);
     await use(context);
-    expectNoPageErrors(pageErrors);
+    expectNoPageErrors(pageErrors, browserName);
   },
-  newPerson: async ({ browser, serviceWorkers }, use) => {
+  newPerson: async ({ browser, serviceWorkers, browserName }, use) => {
     const people: { context: BrowserContext; pageErrors: string[] }[] = [];
     await use(async () => {
       const context = await browser.newContext();
@@ -40,7 +46,7 @@ export const test = base.extend<Fixtures>({
       return await context.newPage();
     });
     try {
-      for (const { pageErrors } of people) expectNoPageErrors(pageErrors);
+      for (const { pageErrors } of people) expectNoPageErrors(pageErrors, browserName);
     } finally {
       for (const { context } of people) await context.close();
     }

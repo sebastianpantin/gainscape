@@ -38,7 +38,7 @@ test('a weekly goal counts workouts on Today and a change waits for next week', 
   await goalChoice(page, '3').click();
   await expect(goalChoice(page, '3')).toHaveAttribute('aria-checked', 'true');
   await expect(
-    page.getByText(/^Your goal of 3 starts on \w{3} \d{1,2} \w{3}\. This week keeps its goal of 2\.$/),
+    page.getByText(/^Your goal of 3 starts on \w{3},? \d{1,2} \w{3}\. This week keeps its goal of 2\.$/),
   ).toBeVisible();
 
   await openTab(page, 'Train');

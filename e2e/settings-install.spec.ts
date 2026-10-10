@@ -1,6 +1,8 @@
-import { type Page } from '@playwright/test';
+import { devices, type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { logBench, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+
+test.use({ userAgent: devices['Pixel 7'].userAgent });
 
 type InstallPromptWindow = Window & { installPromptCalls?: number };
 
