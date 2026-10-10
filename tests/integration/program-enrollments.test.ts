@@ -36,6 +36,12 @@ import {
   savedProgram,
 } from './program-support.ts';
 import { createCustomExercise } from './session-support.ts';
+import { type ProgramTemplateRow } from '../../web/src/lib/program-enroll-rules.ts';
+import { type EnrollmentRow } from '../../web/src/lib/program-facts-rules.ts';
+import { followStatus } from '../../web/src/lib/program-follow-rules.ts';
+import { PROGRAM_SELECT, programPayload, type ProgramRow, toProgram } from '../../web/src/lib/program-row-rules.ts';
+import { type ProgramDoc as WebProgramDoc } from '../../web/src/lib/programs.ts';
+import { type PlannedProgression } from '../../web/src/offline/draft-format.ts';
 
 interface EnrollmentPayload {
   templateKey: string;
@@ -681,6 +687,46 @@ describe('delete-account', () => {
       where enrollment_id = any(${[ended, active]})`;
     expect(orphans.count).toBe(0);
   });
+
+  it('deletes a followed custom program with its snapshots and enrollment', async () => {
+    const user = await createTestUser();
+    const squatId = exerciseIds.back_squat;
+    const program = {
+      id: randomUUID(),
+      name: 'Followed squat',
+      days: [plannedDay('Day A', [linearFiveByFive(squatId)])],
+    };
+    const programId = await savedProgram(user, program);
+    await publishedProgram(user, programId);
+    await savedProgram(user, { ...program, name: 'Followed squat v2' });
+    const template = await publishedProgram(user, programId);
+    expect(template.version).toBe(2);
+    const squat = customLiftKey(squatId);
+    const enrollmentId = await enrolled(user, {
+      templateKey: template.key,
+      templateVersion: template.version,
+      unit: 'kg',
+      options: {},
+      bindings: { [squat]: squatId },
+      inputs: { [squat]: { workingWeight: 100 } },
+      rounding: { ...KG_ROUNDING },
+    });
+    expect((await adjust(user, enrollmentId, { kind: 'skip_day', position: { index: 0 } })).error).toBeNull();
+
+    const response = await postFunction('delete-account', user.accessToken, {
+      confirmUsername: user.username,
+      password: TEST_PASSWORD,
+    });
+
+    expect(response.status, response.rawBody).toBe(200);
+    expect(await enrollmentRows(user.id)).toHaveLength(0);
+    const [left] = await db`
+      select
+        (select count(*)::int from public.program_templates where key = ${template.key}) as snapshots,
+        (select count(*)::int from public.programs where id = ${programId}) as programs,
+        (select count(*)::int from public.program_enrollment_events where enrollment_id = ${enrollmentId}) as events`;
+    expect(left).toEqual({ snapshots: 0, programs: 0, events: 0 });
+  });
 });
 
 function cartesianCyclePositions(cycles: number[], weeks: number[], days: string[]): Position[] {
@@ -968,6 +1014,65 @@ describe('publish_program', () => {
     expectRateLimited(await publishProgram(user, otherProgramId));
     expect(await templateRows(customTemplateKey(otherProgramId))).toHaveLength(0);
     expect(await publishedProgram(user, programId)).toEqual({ key: customTemplateKey(programId), version: 1 });
+  });
+
+  it('publishes a snapshot the web reads as the current version of the program it was saved from', async () => {
+    const user = await createTestUser();
+    const linearBy = (incrementKg: number, incrementLb: number) => ({
+      kind: 'linear' as const,
+      incrementKg,
+      incrementLb,
+    });
+    const planned = (exerciseId: string, sets: number, reps: number, progression: PlannedProgression) => ({
+      exerciseId,
+      targetSets: sets,
+      targetRepsMin: reps,
+      targetRepsMax: reps,
+      progression,
+    });
+    const doc: WebProgramDoc = {
+      id: randomUUID(),
+      name: 'Bench first',
+      days: [
+        {
+          id: randomUUID(),
+          name: 'Day A',
+          exercises: [
+            planned(benchId, 3, 8, { kind: 'none' }),
+            planned(squatId, 5, 5, linearBy(2.5, 5)),
+            { ...planned(rowId, 3, 8, { kind: 'fixed' }), targetRepsMax: 12 },
+          ],
+        },
+        {
+          id: randomUUID(),
+          name: 'Day B',
+          exercises: [planned(benchId, 5, 5, linearBy(1.25, 2.5)), planned(squatId, 5, 5, linearBy(5, 10))],
+        },
+      ],
+    };
+    const programId = await savedProgram(user, programPayload(doc));
+    const template = await publishedProgram(user, programId);
+    const enrollmentId = await enrolled(user, {
+      ...strengthEnrollment(template),
+      bindings: Object.fromEntries([squatId, benchId, rowId].map((id) => [customLiftKey(id), id])),
+      inputs: Object.fromEntries([squatId, benchId, rowId].map((id) => [customLiftKey(id), { workingWeight: 60 }])),
+    });
+
+    const { data: programRow } = await user.client.from('programs').select(PROGRAM_SELECT).eq('id', programId).single();
+    const { data: templateRows } = await user.client
+      .from('program_templates')
+      .select('key, version, name, definition, owner_user_id')
+      .eq('key', template.key);
+    const { data: enrollment } = await user.client
+      .from('program_enrollments')
+      .select(
+        'id, template_key, template_version, unit, options, lift_bindings, inputs, rounding, started_at, ended_at',
+      )
+      .eq('id', enrollmentId)
+      .single();
+
+    const program = toProgram(programRow as ProgramRow);
+    expect(followStatus(program, enrollment as EnrollmentRow, templateRows as ProgramTemplateRow[])).toBe('current');
   });
 });
 
