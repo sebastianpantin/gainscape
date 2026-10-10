@@ -28,6 +28,7 @@ export interface CatalogCardio {
   paceUnit: 'per_km' | 'per_100m';
   maxEffort: string;
   recordMinDistanceM: number | null;
+  tracksDistance: boolean;
 }
 
 export interface CatalogExercise {
@@ -167,6 +168,7 @@ const exercisesSchema = z.array(
         pace_unit: z.enum(['per_km', 'per_100m']),
         max_effort: z.string(),
         record_min_distance_m: z.int().optional(),
+        distance: z.boolean().optional(),
       })
       .optional(),
   }),
@@ -373,6 +375,7 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
               paceUnit: exercise.cardio.pace_unit,
               maxEffort: exercise.cardio.max_effort,
               recordMinDistanceM: exercise.cardio.record_min_distance_m ?? null,
+              tracksDistance: exercise.cardio.distance ?? true,
             },
     })),
     programs: programsSchema.parse(sources.programs).map((program) => ({

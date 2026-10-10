@@ -21,6 +21,7 @@ interface ExerciseRow {
   pace_unit: string | null;
   max_effort: string | null;
   record_min_distance_m: number | null;
+  tracks_distance: boolean;
   skill_id: string;
   share_bp: number;
 }
@@ -36,6 +37,7 @@ function exerciseFromRow(row: ExerciseRow): ExerciseDef {
       referencePaceSPerKm: row.reference_pace_s_per_km,
       maxEffort: row.max_effort as CardioEffortLevel,
       recordMinDistanceM: row.record_min_distance_m,
+      tracksDistance: row.tracks_distance,
     },
   };
 }
@@ -47,7 +49,7 @@ async function loadExercisesVisibleTo(
 ): Promise<Map<string, ExerciseDef>> {
   const rows = await tx<ExerciseRow[]>`
     select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.pace_unit, e.max_effort,
-           e.record_min_distance_m, es.skill_id, es.share_bp
+           e.record_min_distance_m, e.tracks_distance, es.skill_id, es.share_bp
     from public.exercises e
     join public.exercise_skills es on es.exercise_id = e.id
     where e.id = any(${exerciseIds as string[]}::uuid[])

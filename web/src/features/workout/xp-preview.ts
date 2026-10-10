@@ -118,6 +118,7 @@ function cardioDefinition({ exerciseId, activity }: CardioDraftExercise, builtIn
       referencePaceSPerKm: activity.referencePaceSPerKm,
       maxEffort: activity.maxEffort,
       recordMinDistanceM: null,
+      tracksDistance: activity.tracksDistance,
     },
   };
 }

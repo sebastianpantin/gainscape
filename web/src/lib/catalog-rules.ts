@@ -27,6 +27,7 @@ export interface CardioActivity {
   paceUnit: PaceUnit;
   referencePaceSPerKm: number | null;
   maxEffort: CardioEffortLevel;
+  tracksDistance: boolean;
   shares: ActivityShare[];
 }
 
@@ -74,7 +75,7 @@ export function isCardioExercise(exercise: Exercise): exercise is CardioExercise
 }
 
 export const EXERCISE_COLUMNS =
-  'id, key, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, exercise_skills(share_bp, skills(key, name))';
+  'id, key, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, tracks_distance, exercise_skills(share_bp, skills(key, name))';
 
 export interface ExerciseRow {
   id: string;
@@ -88,6 +89,7 @@ export interface ExerciseRow {
   reference_pace_s_per_km: number | null;
   pace_unit: PaceUnit | null;
   max_effort: CardioEffortLevel | null;
+  tracks_distance: boolean;
   exercise_skills: { share_bp: number; skills: { key: string; name: string } | null }[];
 }
 
@@ -134,6 +136,7 @@ export function toExercise(row: ExerciseRow): Exercise {
       paceUnit: row.pace_unit ?? 'per_km',
       referencePaceSPerKm: row.reference_pace_s_per_km,
       maxEffort: row.max_effort ?? 'max',
+      tracksDistance: row.tracks_distance,
       shares: row.exercise_skills.flatMap((share) =>
         share.skills ? [{ skillKey: share.skills.key, shareBasisPoints: share.share_bp }] : [],
       ),

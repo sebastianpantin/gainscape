@@ -27,7 +27,7 @@ import type {
   UserState,
 } from './types.ts';
 import { isLiftResult, measuresRepsCapacity, NO_RECORDS } from './types.ts';
-import { BodyweightLoadNotZeroError, BodyweightRequiredError } from './errors.ts';
+import { BodyweightLoadNotZeroError, BodyweightRequiredError, DistanceNotTrackedError } from './errors.ts';
 import { challengeBonusXp, type ChallengeVerdict, judgeChallenge } from './challenges.ts';
 import { cardioExercise, exerciseFor, liftExercise, liftExerciseFor } from './exercise-lookup.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
@@ -117,6 +117,9 @@ export function writableSetFor(
   stored?: StoredSetLoad,
 ): WritableSet {
   if (set.kind === 'cardio') {
+    if (set.distanceM !== null && !cardioExercise(exercise).cardio.tracksDistance) {
+      throw new DistanceNotTrackedError(exercise.id);
+    }
     cardioExercise(exercise);
     return set;
   }

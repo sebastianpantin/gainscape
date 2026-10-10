@@ -2,6 +2,7 @@ import { pgErrorCode } from './db.ts';
 import {
   BodyweightLoadNotZeroError,
   BodyweightRequiredError,
+  DistanceNotTrackedError,
   KindMismatchError,
   UnknownExerciseError,
 } from './domain/index.ts';
@@ -21,6 +22,9 @@ export function asHttpError(error: unknown): unknown {
   if (error instanceof BodyweightLoadNotZeroError) return new HttpError(422, 'bodyweight_load_not_zero');
   if (error instanceof KindMismatchError) {
     return new HttpError(422, 'kind_mismatch', { exerciseIds: [error.exerciseId] });
+  }
+  if (error instanceof DistanceNotTrackedError) {
+    return new HttpError(422, 'distance_not_tracked', { exerciseIds: [error.exerciseId] });
   }
   if (error instanceof UnknownExerciseError)
     return new HttpError(422, 'unknown_exercise', { exerciseIds: [error.exerciseId] });

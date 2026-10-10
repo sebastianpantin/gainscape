@@ -35,6 +35,7 @@ describe('balance sim catalog', () => {
               referencePaceSPerKm: exercise.cardio?.referencePaceSPerKm,
               maxEffort: exercise.cardio?.maxEffort,
               recordMinDistanceM: exercise.cardio?.recordMinDistanceM,
+              tracksDistance: exercise.cardio?.tracksDistance,
             },
             shares: Object.fromEntries(exercise.shares.map((share) => [share.skill, share.shareBp])),
           },

@@ -23,7 +23,8 @@ import {
 import { boutPayload } from '../../offline/session-payload.ts';
 
 type ExerciseKind =
-  { modality?: 'lift'; loadType: LoadType } | { modality: 'cardio'; activity: Pick<CardioActivity, 'paceUnit'> };
+  | { modality?: 'lift'; loadType: LoadType }
+  | { modality: 'cardio'; activity: Pick<CardioActivity, 'paceUnit' | 'tracksDistance'> };
 
 export type KnownExercise = { name: string } & ExerciseKind;
 
@@ -55,6 +56,7 @@ export interface CardioEditExercise {
   name: string;
   modality: 'cardio';
   paceUnit: PaceUnit;
+  tracksDistance: boolean;
   sets: EditBout[];
 }
 
@@ -86,10 +88,12 @@ function placedFromRow(row: StoredSetRow, known: KnownExercise | undefined): Pla
   const name = known?.name ?? UNKNOWN_EXERCISE_NAME;
   const effort = effortInputFromStored(row.effortInputType, row.effortValue, DEFAULT_BALANCE);
   if (row.durationS !== null) {
-    const paceUnit = known?.modality === 'cardio' ? known.activity.paceUnit : UNKNOWN_EXERCISE_PACE_UNIT;
+    const activity = known?.modality === 'cardio' ? known.activity : null;
+    const paceUnit = activity?.paceUnit ?? UNKNOWN_EXERCISE_PACE_UNIT;
+    const tracksDistance = activity?.tracksDistance ?? true;
     return {
       modality: 'cardio',
-      header: { exerciseId: row.exerciseId, name, modality: 'cardio', paceUnit },
+      header: { exerciseId: row.exerciseId, name, modality: 'cardio', paceUnit, tracksDistance },
       set: {
         id: row.id,
         kind: 'cardio',
@@ -241,7 +245,13 @@ export function addEditSet(edit: SessionEdit, exerciseIndex: number): SessionEdi
 function emptyExercise(exercise: NewExercise): EditExercise {
   const identity = { exerciseId: exercise.id, name: exercise.name };
   return exercise.modality === 'cardio'
-    ? { ...identity, modality: 'cardio', paceUnit: exercise.activity.paceUnit, sets: [] }
+    ? {
+        ...identity,
+        modality: 'cardio',
+        paceUnit: exercise.activity.paceUnit,
+        tracksDistance: exercise.activity.tracksDistance,
+        sets: [],
+      }
     : { ...identity, modality: 'lift', loadType: exercise.loadType, sets: [] };
 }
 
@@ -254,9 +264,10 @@ export function swapEditExercise(edit: SessionEdit, exerciseIndex: number, repla
   return updateExerciseAt(edit, exerciseIndex, (exercise) => {
     const identity = { exerciseId: replacement.id, name: replacement.name };
     if (exercise.modality === 'cardio') {
-      return replacement.modality === 'cardio'
-        ? { ...exercise, ...identity, paceUnit: replacement.activity.paceUnit }
-        : exercise;
+      if (replacement.modality !== 'cardio') return exercise;
+      const { paceUnit, tracksDistance } = replacement.activity;
+      const sets = tracksDistance ? exercise.sets : exercise.sets.map((bout) => ({ ...bout, distanceM: null }));
+      return { ...exercise, ...identity, paceUnit, tracksDistance, sets };
     }
     if (replacement.modality === 'cardio') return exercise;
     return {

@@ -62,19 +62,43 @@ export interface CardioSimExercise {
 
 export const CARDIO_SIM_EXERCISES: Readonly<Record<string, CardioSimExercise>> = {
   running: {
-    cardio: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', recordMinDistanceM: 1000 },
+    cardio: {
+      paceUnit: 'per_km',
+      referencePaceSPerKm: 360,
+      maxEffort: 'max',
+      recordMinDistanceM: 1000,
+      tracksDistance: true,
+    },
     shares: { endurance: 10000 },
   },
   sprint_intervals: {
-    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
+    cardio: {
+      paceUnit: 'per_km',
+      referencePaceSPerKm: null,
+      maxEffort: 'max',
+      recordMinDistanceM: null,
+      tracksDistance: true,
+    },
     shares: { agility: 10000 },
   },
   jump_rope: {
-    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
+    cardio: {
+      paceUnit: 'per_km',
+      referencePaceSPerKm: null,
+      maxEffort: 'max',
+      recordMinDistanceM: null,
+      tracksDistance: true,
+    },
     shares: { agility: 10000 },
   },
   static_stretching: {
-    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'moderate', recordMinDistanceM: null },
+    cardio: {
+      paceUnit: 'per_km',
+      referencePaceSPerKm: null,
+      maxEffort: 'moderate',
+      recordMinDistanceM: null,
+      tracksDistance: false,
+    },
     shares: { mobility: 10000 },
   },
 };
