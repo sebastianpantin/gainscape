@@ -1,4 +1,5 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { GLOSSARY } from '../web/src/lib/glossary.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
 import {

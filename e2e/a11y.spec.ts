@@ -1,5 +1,5 @@
-import { expect, type Page } from '@playwright/test';
-import { test } from './support/people.ts';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations, expectRemoveSetButtonsStandApart, expectTouchTargets } from './support/a11y.ts';
 import {
   emailOf,
@@ -35,6 +35,8 @@ import {
   startFollowing,
 } from './support/program-enrollment.ts';
 import { seedFiveThreeOneCycleSkippingPress } from './support/program-seed.ts';
+
+test.describe.configure({ mode: 'parallel' });
 
 const TAB_BAR = ['.tab-bar a[href]'];
 

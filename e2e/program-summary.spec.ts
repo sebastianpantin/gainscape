@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { openLatestWorkout, openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf } from './support/db.ts';
 import { dayPicker, FIVE_THREE_ONE_ONE_RMS_KG, followProgram, programToday } from './support/program-enrollment.ts';

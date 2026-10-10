@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { readChangelog } from '../web/build/changelog.ts';
 import { LAST_SEEN_RELEASE_KEY_PREFIX, lastSeenReleaseKey } from '../web/src/lib/last-seen-release-store.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';

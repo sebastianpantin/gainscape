@@ -1,5 +1,5 @@
-import { expect, type Page } from '@playwright/test';
-import { test } from './support/people.ts';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { definitionOf, logCardio, logExercise, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
 
 async function logBench(page: Page, weightKg: number) {

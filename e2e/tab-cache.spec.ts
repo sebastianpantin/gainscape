@@ -1,5 +1,5 @@
-import { expect, type Page } from '@playwright/test';
-import { test } from './support/people.ts';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
 
 const SKILL_XP = '**/rest/v1/user_skills*';

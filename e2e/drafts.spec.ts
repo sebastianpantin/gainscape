@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import {
   breakIndexedDbOpen,
   logExercise,
@@ -14,6 +14,7 @@ import {
 import { sessionCount, sessionRow } from './support/db.ts';
 
 const completeSession = '**/functions/v1/complete-session';
+const LONGEST_RETRY_WAIT_MS = 30_000;
 
 test('a finished workout survives an outage and a reload', async ({ page }) => {
   const username = uniqueUsername('dr_a');
@@ -40,6 +41,7 @@ test('a finished workout survives an outage and a reload', async ({ page }) => {
 
 test('a workout the server keeps failing on stops retrying and syncs on a manual retry', async ({ page }) => {
   const username = uniqueUsername('dr_s');
+  await page.clock.install();
   await register(page, username);
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
@@ -61,7 +63,7 @@ test('a workout the server keeps failing on stops retrying and syncs on a manual
     timeout: 30_000,
   });
   const attemptsWhenStalled = failedAttempts;
-  await page.waitForTimeout(3_000);
+  await page.clock.runFor(LONGEST_RETRY_WAIT_MS * 2);
   expect(failedAttempts).toBe(attemptsWhenStalled);
 
   serverFailing = false;

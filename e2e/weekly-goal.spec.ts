@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { logExercise, logWorkout, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
 
 function weeklyGoalCard(page: Page) {

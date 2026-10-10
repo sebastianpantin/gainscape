@@ -1,4 +1,5 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { finishWorkout, openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf, skipProgramDayElsewhere } from './support/db.ts';
 import {

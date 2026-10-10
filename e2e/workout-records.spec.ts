@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { definitionOf, logCardio, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 
 test('bodyweight prompt, live record chips, records and the collection log', async ({ page }) => {

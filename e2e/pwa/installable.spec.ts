@@ -1,7 +1,8 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { chromium, devices, expect, test } from '@playwright/test';
+import { chromium, devices } from '@playwright/test';
+import { expect, test } from '../support/fixtures.ts';
 import { waitForController } from '../support/pwa.ts';
 
 test('the app is installable', async ({ baseURL }) => {

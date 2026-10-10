@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { nativeDialogsOf, openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentOf } from './support/db.ts';
 import {

@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from '../support/fixtures.ts';
 import { expectNoAxeViolations } from '../support/a11y.ts';
 import { logExercise, openFromProfile, openTab, readSession, register, uniqueUsername } from '../support/app.ts';
 import {

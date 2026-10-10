@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { pauseClockNow, register, restTimer, uniqueUsername } from './support/app.ts';
 import { workoutCards } from './support/program-enrollment.ts';
 

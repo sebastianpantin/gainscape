@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { openFromProfile, openTab, readSession, readStoredDraft, register, uniqueUsername } from './support/app.ts';
 import { programDayId, sessionRow, setCount } from './support/db.ts';
 import { workoutCards } from './support/program-enrollment.ts';

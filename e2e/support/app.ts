@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
-import { confirmAccount } from './db.ts';
+import { createConfirmedAccount } from './db.ts';
 
 export { TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 
@@ -62,9 +62,9 @@ export async function submitRegistration(page: Page, username: string, email = e
 }
 
 export async function register(page: Page, username: string) {
-  await submitRegistration(page, username);
-  await confirmAccount(emailOf(username), TEST_PASSWORD);
-  await page.getByRole('button', { name: 'Back to sign in' }).click();
+  await page.goto('/');
+  const timezone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  await createConfirmedAccount(emailOf(username), username, timezone);
   await submitSignIn(page, emailOf(username));
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 }

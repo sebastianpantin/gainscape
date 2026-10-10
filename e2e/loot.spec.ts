@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { finishWorkout, logExercise, logWorkout, openTab, register } from './support/app.ts';
 import { activeDropCount, activeDropsOfLatestSession, grantItems } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
