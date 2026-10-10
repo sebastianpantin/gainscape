@@ -118,6 +118,22 @@ describe('hold sets', () => {
     ]);
   });
 
+  it('leaves holds out of the fatigue check', () => {
+    const [shortFailure, longFailure] = run([
+      aHold('plate-pinch', 20, { durationS: 20 }, failure),
+      aHold('plate-pinch', 20, { durationS: 120 }, failure),
+    ]).sets;
+    expect(shortFailure).toMatchObject({ rirForXp: 0, rirFlagged: false });
+    expect(longFailure).toMatchObject({ rirForXp: 0, rirFlagged: false });
+  });
+
+  it('leaves a lift fatigue check untouched by holds between its sets', () => {
+    const lifts = [aSet('bench', 60, 5, failure), aSet('bench', 60, 5, failure)];
+    const withHold = run([lifts[0], aHold('plate-pinch', 20, { durationS: 120 }, failure), lifts[1]]).sets;
+    const withoutHold = run(lifts).sets;
+    expect([withHold[0].rirForXp, withHold[2].rirForXp]).toEqual(withoutHold.map((result) => result.rirForXp));
+  });
+
   it('tracks no strength and no lift records', () => {
     const outputs = run([aHold('plate-pinch', 20, { durationS: 60 }, failure)]);
     expect(outputs.sets[0]).toMatchObject({ e1rmCandidateKg: null, repsCapacityCandidate: null, personalRecord: null });
