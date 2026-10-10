@@ -1,7 +1,7 @@
 # tests (pgTAP)
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-10
+**Generated:** 2026-10-01 · **Updated:** 2026-10-11
 
 ## Purpose
 
@@ -39,6 +39,7 @@ pgTAP suites for the database layer: grants, RLS policies, rate limiting, friend
 | `24_hold_sets.test.sql`                | Holds from 044 (timed holds on `plate_pinch`, carries on `farmers_carry`): the `measure` column and its lift-only check, timed holds and carries, and the refusals for both or neither measure, out-of-bounds duration or distance, a RIR effort and a warm-up hold                                                                                                                                                                                                                                                                                                                                                                                                |
 | `25_mobility_shares.test.sql`          | Mobility from 045: no seeded exercise mixes Mobility with another skill, adding a second share to a Mobility activity or a Mobility share to another activity raises `invalid_exercise`, and Mobility alone is fine                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `26_set_measure.test.sql`              | Set measure from 046: a timed hold, a carry and a rep set on exercises of their measure pass; a hold on a rep exercise, a hold of the other measure, a rep set on a hold exercise and moving a hold onto another measure raise `set_measure_mismatch`                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `27_programs_reject_holds.test.sql`    | `save_program` from 047 refuses a timed hold (`dead_hang`) and a carry (`farmers_carry`) with `invalid_program` and still saves a rep lift                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ## For AI Agents
 
