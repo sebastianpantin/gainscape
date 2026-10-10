@@ -156,6 +156,17 @@ export async function copyProgram(userId: string, sourceId: string, newId: strin
   return newId;
 }
 
+export interface PublishedProgram {
+  key: string;
+  version: number;
+}
+
+export async function publishProgram(programId: string): Promise<PublishedProgram> {
+  const { data, error } = await supabase.rpc('publish_program', { program_id: programId });
+  if (error) throw error;
+  return data as PublishedProgram;
+}
+
 export function deleteProgram(userId: string, programId: string): Promise<void> {
   return changeProgramsThenRefresh(userId, 'delete_program', { program_id: programId }, (programs) =>
     programs.filter((program) => program.id !== programId),
