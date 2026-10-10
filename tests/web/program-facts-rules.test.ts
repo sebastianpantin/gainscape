@@ -107,6 +107,12 @@ describe('programFactsFromRows', () => {
     ]);
   });
 
+  it('leaves out a carry or hang logged in a program session, which has no reps', () => {
+    const carry = setRow({ ref: null, reps: null, weight_kg: 32, prescribed_weight_kg: null, prescribed_reps: null });
+    const [fact] = programFactsFromRows(rows([], [sessionRow({ sets: [carry, setRow()] })]));
+    expect(fact.kind === 'session' && fact.sets.map((set) => set.reps)).toEqual([5]);
+  });
+
   it('keeps the instant of a completion time written with another offset', () => {
     const [fact] = programFactsFromRows(rows([], [sessionRow({ completed_at: '2026-10-05T09:00:00+02:00' })]));
     expect(fact.at).toBe('2026-10-05T07:00:00.000Z');

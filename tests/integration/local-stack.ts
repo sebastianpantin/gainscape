@@ -79,6 +79,26 @@ export async function builtInExerciseId(key: string): Promise<string> {
   return row.id;
 }
 
+export async function createHoldExercise(
+  ownerId: string,
+  measure: 'time' | 'distance',
+  loadType: 'external' | 'bodyweight',
+  shares: Readonly<Record<string, number>>,
+): Promise<string> {
+  const id = randomUUID();
+  await db.begin(async (tx) => {
+    await tx`
+      insert into public.exercises (id, name, load_type, equipment, owner_user_id, measure)
+      values (${id}, ${`Test hold ${id.slice(0, 8)}`}, ${loadType}, 'other', ${ownerId}, ${measure})`;
+    for (const [skillKey, shareBp] of Object.entries(shares)) {
+      await tx`
+        insert into public.exercise_skills (exercise_id, skill_id, share_bp)
+        select ${id}, id, ${shareBp} from public.skills where key = ${skillKey}`;
+    }
+  });
+  return id;
+}
+
 interface FunctionResponseBody extends Partial<SessionSummary> {
   summary?: SessionSummary;
   revision?: number;
@@ -283,7 +303,7 @@ export async function domainCatalogFor(exerciseIds: string[]): Promise<Catalog> 
   const skillRows = await db`select id, key, sort_order, combat_weight from public.skills`;
   const shareRows = await db`
     select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.pace_unit, e.max_effort,
-           e.record_min_distance_m, e.tracks_distance, es.skill_id, es.share_bp
+           e.record_min_distance_m, e.tracks_distance, e.measure, es.skill_id, es.share_bp
     from public.exercises e join public.exercise_skills es on es.exercise_id = e.id
     where e.id = any(${exerciseIds}::uuid[])`;
   const exercises = new Map<string, ExerciseDef>();
@@ -303,7 +323,7 @@ export async function domainCatalogFor(exerciseIds: string[]): Promise<Catalog> 
               tracksDistance: row.tracks_distance,
             },
           }
-        : { ...base, loadType: row.load_type });
+        : { ...base, loadType: row.load_type, measure: row.measure });
     exercise.shares.push({ skillId: row.skill_id, shareBasisPoints: row.share_bp });
     exercises.set(row.id, exercise);
   }
