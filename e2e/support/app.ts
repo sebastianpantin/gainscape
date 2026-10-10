@@ -15,8 +15,11 @@ interface StoredAuthSession {
   user: { id: string };
 }
 
+const MAX_USERNAME_LENGTH = 20;
+
 export function uniqueUsername(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+  const suffix = `_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+  return `${prefix.slice(0, MAX_USERNAME_LENGTH - suffix.length)}${suffix}`;
 }
 
 export function definitionOf(scope: Page | Locator, term: string): Locator {

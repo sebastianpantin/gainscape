@@ -9,6 +9,7 @@ import {
   readSession,
   readStoredDraft,
   register,
+  uniqueUsername,
   writeStoredDraft,
   xpValue,
 } from './support/app.ts';
@@ -126,7 +127,7 @@ test('a save that races an edit from another device keeps both changes after rev
 test('a save whose refresh fails keeps the saved sets as the baseline, so undo cannot write old values back', async ({
   page,
 }) => {
-  const username = `hist_refresh_${Date.now().toString(36)}`;
+  const username = uniqueUsername('hist_ref');
   await register(page, username);
   await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
 
