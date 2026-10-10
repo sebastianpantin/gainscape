@@ -11,6 +11,7 @@ import {
   moveDay,
   movePlannedExercise,
   nameIssue,
+  newProgramDoc,
   removeDay,
   removePlannedExercise,
   renameDay,
@@ -51,6 +52,20 @@ describe('docFor', () => {
     expect(docFor([program({ ownerUserId: 'someone-else' })], userId, 'program-1')).toBeNull();
     expect(docFor([program({})], userId, 'program-2')).toBeNull();
     expect(docFor(null, userId, 'program-1')).toBeNull();
+  });
+});
+
+describe('newProgramDoc', () => {
+  it('starts a program from scratch with one empty day called Day 1', () => {
+    expect(newProgramDoc('program-new', 'day-new')).toEqual({
+      id: 'program-new',
+      name: 'My program',
+      days: [{ id: 'day-new', name: 'Day 1', exercises: [] }],
+    });
+  });
+
+  it('starts with names that pass the name checks', () => {
+    expect(nameIssue(newProgramDoc('program-new', 'day-new'))).toBeNull();
   });
 });
 

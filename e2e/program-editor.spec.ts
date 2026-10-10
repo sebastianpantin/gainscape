@@ -45,6 +45,32 @@ async function copyTemplate(page: Page, templateName: string) {
   await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
 }
 
+test('create a program from scratch, add Squat 5×5, save, it lists under Your programs', async ({ page }) => {
+  const username = uniqueUsername('pn');
+  await register(page, username);
+  await openFromProfile(page, 'Programs');
+  await expect(page.getByText('Create a program or copy a template.')).toBeVisible();
+  await page.getByRole('button', { name: 'New program' }).click();
+
+  await expect(page.getByRole('heading', { name: 'New program' })).toBeVisible();
+  await expect(day(page, 1).getByLabel('Day name')).toHaveValue('Day 1');
+  await expect(plannedExercises(page, 1)).toHaveCount(0);
+  await page.getByLabel('Program name').fill('Squat Focus');
+  await day(page, 1).getByLabel('Search exercises').fill('Back Squat');
+  await day(page, 1)
+    .getByRole('button', { name: /^Back Squat\b/ })
+    .click();
+  const squat = plannedExercise(page, 1, 'Back Squat');
+  await squat.getByLabel('Sets').fill('5');
+  await squat.getByLabel('Reps min').fill('5');
+  await squat.getByLabel('Reps max').fill('5');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+  await expect(page).toHaveURL(/\/programs$/);
+  await expect(ownProgram(page, 'Squat Focus')).toContainText('Day 1');
+  await expect.poll(() => planLines(username, 'Squat Focus')).toEqual(['Day 1 back_squat 5×5-5']);
+});
+
 test('add, rename, reorder and remove days and exercises, then edit the saved program again', async ({ page }) => {
   const username = uniqueUsername('pe');
   await register(page, username);

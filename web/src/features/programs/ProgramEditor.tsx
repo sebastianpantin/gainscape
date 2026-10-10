@@ -21,6 +21,7 @@ import {
   moveDay,
   movePlannedExercise,
   nameIssue,
+  newProgramDoc,
   PROGRAM_NAME_MAX_LENGTH,
   removeDay,
   removePlannedExercise,
@@ -35,12 +36,17 @@ import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 
 interface ProgramEditorProps {
   userId: string;
+  creating?: boolean;
 }
 
-export function ProgramEditor({ userId }: ProgramEditorProps) {
+export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) {
   const { programId = '' } = useParams();
   const navigate = useNavigate();
-  const [doc, setDoc] = useState<ProgramDoc | null>(() => docFor(cachedPrograms(userId), userId, programId));
+  const [doc, setDoc] = useState<ProgramDoc | null>(() =>
+    creating
+      ? newProgramDoc(crypto.randomUUID(), crypto.randomUUID())
+      : docFor(cachedPrograms(userId), userId, programId),
+  );
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
@@ -110,7 +116,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
 
   return (
     <main className="screen stack">
-      <h1 className="title">Edit program</h1>
+      <h1 className="title">{creating ? 'New program' : 'Edit program'}</h1>
       <label className="field">
         Program name
         <input
