@@ -93,7 +93,7 @@ export function lootCandidates(sets: readonly SetResult[], catalog: Catalog): Lo
 }
 
 function qualifiesForRegular(candidate: LootCandidate, cfg: LootConfig): boolean {
-  if (candidate.kind === 'lift') return candidate.effectiveReps >= cfg.minEffectiveReps;
+  if (candidate.kind !== 'cardio') return candidate.effectiveReps >= cfg.minEffectiveReps;
   const minWorkS = candidate.interval ? cfg.minIntervalCardioWorkS : cfg.minSteadyCardioWorkS;
   return candidate.countedWorkS >= minWorkS;
 }

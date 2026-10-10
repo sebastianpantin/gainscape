@@ -4,6 +4,7 @@ import {
   type Catalog,
   DEFAULT_BALANCE,
   type ExerciseDef,
+  type HoldSetInput,
   type LiftExerciseDef,
   type LiftSetInput,
 } from '@domain/index.ts';
@@ -85,6 +86,19 @@ export const catalog: Catalog = {
       ]),
     ],
     ['custom-press', exercise('custom-press', 'external', false, [['chest', 10000]])],
+    ['dead-hang', { ...exercise('dead-hang', 'bodyweight', true, [['grip', 10000]]), measure: 'time' }],
+    ['plate-pinch', { ...exercise('plate-pinch', 'external', true, [['grip', 10000]]), measure: 'time' }],
+    [
+      'farmers-carry',
+      {
+        ...exercise('farmers-carry', 'external', true, [
+          ['grip', 6000],
+          ['core', 2000],
+          ['legs', 2000],
+        ]),
+        measure: 'distance',
+      },
+    ],
     [
       'pull-up',
       exercise('pull-up', 'bodyweight', true, [
@@ -203,6 +217,27 @@ export function aBout(
     durationS,
     distanceM: null,
     interval: null,
+    effort,
+    ...overrides,
+  };
+}
+
+export function aHold(
+  exerciseId: string,
+  weightKg: number,
+  measured: { durationS: number } | { distanceM: number },
+  effort: HoldSetInput['effort'],
+  overrides: Partial<HoldSetInput> = {},
+): HoldSetInput {
+  setCounter += 1;
+  return {
+    kind: 'hold',
+    id: `set-${setCounter}`,
+    exerciseId,
+    position: setCounter,
+    weightKg,
+    durationS: 'durationS' in measured ? measured.durationS : null,
+    distanceM: 'distanceM' in measured ? measured.distanceM : null,
     effort,
     ...overrides,
   };

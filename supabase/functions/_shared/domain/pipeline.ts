@@ -14,6 +14,7 @@ import type {
   CardioSetInput,
   Catalog,
   ExerciseDef,
+  HoldSetInput,
   LevelUp,
   LiftExerciseDef,
   LiftSetInput,
@@ -26,10 +27,17 @@ import type {
   StrengthState,
   UserState,
 } from './types.ts';
-import { isLiftResult, measuresRepsCapacity, NO_RECORDS } from './types.ts';
+import { isHoldResult, isLiftResult, measuresRepsCapacity, NO_RECORDS } from './types.ts';
 import { BodyweightLoadNotZeroError, BodyweightRequiredError, DistanceNotTrackedError } from './errors.ts';
 import { challengeBonusXp, type ChallengeVerdict, judgeChallenge } from './challenges.ts';
-import { cardioExercise, exerciseFor, liftExercise, liftExerciseFor } from './exercise-lookup.ts';
+import {
+  cardioExercise,
+  exerciseFor,
+  holdExercise,
+  liftExercise,
+  liftExerciseFor,
+  repsExercise,
+} from './exercise-lookup.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
 import { checkFatigue } from './fatigue.ts';
 import { gearBonusXp } from './gear.ts';
@@ -108,7 +116,8 @@ export function carriedEffectiveLoadKg(
   return roundTo(2, effectiveLoadForNewSet(next, exercise, bodyweightKg));
 }
 
-export type WritableSet = (LiftSetInput & { effectiveLoadKg: number }) | CardioSetInput;
+export type WritableSet =
+  (LiftSetInput & { effectiveLoadKg: number }) | (HoldSetInput & { effectiveLoadKg: number }) | CardioSetInput;
 
 export function writableSetFor(
   set: SetInput,
@@ -123,6 +132,8 @@ export function writableSetFor(
     cardioExercise(exercise);
     return set;
   }
+  if (set.kind === 'hold') holdExercise(exercise, set);
+  else repsExercise(exercise);
   const effectiveLoadKg =
     stored === undefined
       ? effectiveLoadForNewSet(set, exercise, bodyweightKg)
@@ -130,7 +141,11 @@ export function writableSetFor(
   return { ...set, effectiveLoadKg };
 }
 
-function effectiveLoadKg(set: LiftSetInput, exercise: LiftExerciseDef, state: UserState): number {
+function effectiveLoadKg(
+  set: Pick<LiftSetInput, 'weightKg' | 'recordedEffectiveLoadKg'>,
+  exercise: LiftExerciseDef,
+  state: UserState,
+): number {
   if (set.recordedEffectiveLoadKg === undefined) return effectiveLoadForNewSet(set, exercise, state.bodyweightKg);
   assertNoAddedLoadOnPureBodyweight(set, exercise);
   return set.recordedEffectiveLoadKg;
@@ -166,6 +181,27 @@ function liftResult(set: LiftSetInput, exercise: LiftExerciseDef, ctx: SessionCo
     rirForXp: loggedRir,
     effectiveLoadKg: effectiveLoadKg(set, exercise, ctx.state),
   };
+}
+
+function holdResult(hold: HoldSetInput, exercise: LiftExerciseDef, ctx: SessionContext): SetResult {
+  const { effortInputType, effortValue, loggedRir } = resolveEffort(hold.effort, ctx.cfg, 'hold');
+  const rirForXp = loggedRir ?? ctx.cfg.effortLevelRir[ctx.cfg.holdDefaultEffort];
+  return {
+    ...UNSCORED_RESULT_FIELDS,
+    set: hold,
+    skillXp: [],
+    effortInputType,
+    effortValue,
+    rir: loggedRir,
+    rirSource: loggedRir === null ? 'default' : 'logged',
+    rirForXp,
+    effectiveLoadKg: effectiveLoadKg(hold, exercise, ctx.state),
+  };
+}
+
+function holdRepEquivalents(hold: HoldSetInput, cfg: BalanceConfig): number {
+  if (hold.durationS !== null) return Math.floor(hold.durationS / cfg.holdSecondsPerRep);
+  return Math.floor((hold.distanceM ?? 0) / cfg.carryMetresPerRep);
 }
 
 function cardioResult(
@@ -212,7 +248,8 @@ const resolveSets: Step = (ctx) => {
         xpWorkSecondsLeft[pool] -= xpWorkS;
         return cardioResult(set, cardioExercise(exercise), { workS, xpWorkS }, ctx);
       }
-      return liftResult(set, liftExercise(exercise), ctx);
+      if (set.kind === 'hold') return holdResult(set, holdExercise(exercise, set), ctx);
+      return liftResult(set, repsExercise(exercise), ctx);
     });
   return { ...ctx, sets };
 };
@@ -229,6 +266,14 @@ const awardXp: Step = (ctx) => {
       const steady = result.set.kind === 'cardio' && result.set.interval === null;
       const skillXp = cardioSkillXp({ ...result.cardio, steady }, shares, ctx.cfg);
       return { ...result, xp: skillXp.reduce((sum, part) => sum + part.xp, 0), skillXp };
+    }
+    if (isHoldResult(result)) {
+      const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
+      const repEquivalents = holdRepEquivalents(result.set, ctx.cfg);
+      const effectiveRepCount = effectiveReps(repEquivalents, result.rirForXp!, false, ctx.cfg);
+      const xp = setXp(effectiveRepCount, 1, ctx.cfg);
+      const shares = exercise.shares.map((share) => ({ ...share, sortOrder: sortOrderOf(share.skillId) }));
+      return { ...result, effectiveReps: effectiveRepCount, xp, skillXp: splitXp(xp, shares) };
     }
     if (!isLiftResult(result)) return result;
     const exercise = liftExerciseFor(result.set, ctx.deps.catalog);

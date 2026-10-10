@@ -39,6 +39,9 @@ export interface BalanceConfig {
   readonly cardioFastestPlausiblePaceSPerKm: number;
   readonly gearBonusPercentAtFullTier: number;
   readonly challengeBonusPercent: number;
+  readonly holdSecondsPerRep: number;
+  readonly carryMetresPerRep: number;
+  readonly holdDefaultEffort: EffortLevel;
 }
 
 export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
@@ -76,6 +79,9 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   cardioFastestPlausiblePaceSPerKm: 60,
   gearBonusPercentAtFullTier: 10,
   challengeBonusPercent: 25,
+  holdSecondsPerRep: 5,
+  carryMetresPerRep: 5,
+  holdDefaultEffort: 'hard',
 });
 
 const LOOT_VERSION = 2;
