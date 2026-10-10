@@ -346,8 +346,9 @@ function WeeklyGoalSection() {
     setProblem(null);
     try {
       await setWeeklyGoal(goal);
-      void queryClient.cancelQueries({ queryKey: weeklyGoalQuery.queryKey });
-      queryClient.setQueryData(weeklyGoalQuery.queryKey, await fetchWeeklyGoalStatus(new AbortController().signal));
+      const saved = await fetchWeeklyGoalStatus(new AbortController().signal);
+      await queryClient.cancelQueries({ queryKey: weeklyGoalQuery.queryKey });
+      queryClient.setQueryData(weeklyGoalQuery.queryKey, saved);
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your weekly goal.'));
     } finally {
@@ -697,9 +698,12 @@ function DeleteAccountForm({ userId, username }: { userId: string; username: str
     setProblem(null);
     try {
       await deleteMyAccount(typed, accountPassword);
-      await forgetThisDevice(userId).catch(() => undefined);
       navigate('/', { replace: true });
-      await signOutKeepingDrafts();
+      try {
+        await signOutKeepingDrafts();
+      } finally {
+        await forgetThisDevice(userId).catch(() => undefined);
+      }
     } catch (error) {
       setProblem(messageOf(error, 'Could not delete your account.'));
       setBusy(false);

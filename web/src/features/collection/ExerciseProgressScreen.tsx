@@ -42,7 +42,7 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
   const { exerciseId = '' } = useParams();
   const { unitPref } = usePreferences();
   const progress = useQuery(exerciseProgressQuery(userId, exerciseId));
-  const loaded = loadedOf(progress.data, progress.error);
+  const loaded = loadedOf(progress.data, progress.isFetching ? null : progress.error);
 
   if (loaded.kind !== 'ready')
     return (

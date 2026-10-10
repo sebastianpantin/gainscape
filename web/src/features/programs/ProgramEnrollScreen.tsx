@@ -81,7 +81,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const navigate = useNavigate();
   const { unitPref } = usePreferences();
   const choices = useQuery(enrollChoicesQuery(userId));
-  const loaded = loadedChoices(loadedState(choices.data, choices.error), key);
+  const loaded = loadedChoices(loadedState(choices.data, choices.isFetching ? null : choices.error), key);
   const [editedForm, setEditedForm] = useState<EnrollForm | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
