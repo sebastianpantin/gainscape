@@ -48,6 +48,29 @@ test('the swap picker stays with its exercise when an exercise above it is remov
   await expect(page.locator('.exercise-card').getByRole('heading', { level: 2 })).toHaveText([DEADLIFT, SQUAT]);
 });
 
+test('the swap picker stays on the second of two identical exercises when the first is removed', async ({ page }) => {
+  await register(page, uniqueUsername('swap_twin'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await addUnloggedExercise(page, 'bench', BENCH);
+  await page.getByPlaceholder('Add exercise…').fill('bench');
+  await page.getByRole('button', { name: new RegExp(`^${BENCH}\\b`) }).click();
+  const benchCards = workoutCards(page, BENCH);
+  await expect(benchCards).toHaveCount(2);
+  const secondDone = benchCards.nth(1).getByRole('button', { name: 'Done set 1' });
+  await secondDone.click();
+  await expect(secondDone).toHaveAttribute('aria-pressed', 'false');
+
+  const benchMenus = page.getByLabel(`Exercise menu for ${BENCH}`, { exact: true });
+  await benchMenus.nth(1).click();
+  await page.getByRole('button', { name: 'Swap', exact: true }).click();
+  await expect(benchCards.nth(1).getByPlaceholder('Swap for…')).toBeVisible();
+  await benchMenus.nth(0).click();
+  await page.getByRole('button', { name: 'Remove', exact: true }).click();
+
+  await expect(benchCards).toHaveCount(1);
+  await expect(benchCards.getByPlaceholder('Swap for…')).toBeVisible();
+});
+
 test('discard an ongoing workout behind a confirm, and start the next one fresh', async ({ page }) => {
   await register(page, uniqueUsername('discard'));
   await page.getByRole('button', { name: 'Start workout' }).click();

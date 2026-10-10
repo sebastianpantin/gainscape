@@ -9,10 +9,10 @@ Signed-out experience and email-link handling. `AuthScreen` covers sign-in, regi
 
 ## Key Files
 
-| File                     | Description                                                                                                                                                                                                                                                                         |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AuthScreen.tsx`         | Mounted by `App.tsx` when `useAuthSession` reports `signed-out`. Uses `supabase.auth`, `authCallbackUrl`, `RESEND_COOLDOWN_SECONDS`, `MINIMUM_PASSWORD_LENGTH`, and `openDraftStoreOrFallback` for the post-sign-in draft pass                                                      |
-| `AuthCallbackScreen.tsx` | Rendered before everything else when the URL parses as an auth callback; takes `callback` and `onDone`. Maps errors with `authErrorMessage`, guards stale links with `confirmedRecently`, handles rate limits via `RATE_LIMITED_CODE`/`tryAgainIn`, signs out with `signOutSettled` |
+| File                     | Description                                                                                                                                                                                                                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AuthScreen.tsx`         | Mounted by `App.tsx` when `useAuthSession` reports `signed-out`. Uses `supabase.auth`, `authCallbackUrl`, `RESEND_COOLDOWN_SECONDS`, `MINIMUM_PASSWORD_LENGTH`, `passwordResetProblem` (a failed reset request stays on the form with its error), and `openDraftStoreOrFallback` for the post-sign-in draft pass |
+| `AuthCallbackScreen.tsx` | Rendered before everything else when the URL parses as an auth callback; takes `callback` and `onDone`. Maps errors with `authErrorMessage`, guards stale links with `confirmedRecently`, handles rate limits via `RATE_LIMITED_CODE`/`tryAgainIn`, signs out with `signOutSettled`                              |
 
 ## For AI Agents
 

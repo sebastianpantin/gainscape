@@ -7,6 +7,7 @@ import {
   sameSet,
   type StoredCardioSet,
   type StoredLiftSet,
+  unchangedSetIds,
 } from '@domain/index.ts';
 
 const lift: LiftSetInput = {
@@ -102,6 +103,33 @@ describe('sameSet', () => {
         DEFAULT_BALANCE,
       ),
     ).toBe(false);
+  });
+});
+
+describe('unchangedSetIds', () => {
+  const stored = new Map<string, StoredLiftSet | StoredCardioSet>([
+    [storedLift.id, storedLift],
+    [storedBout.id, storedBout],
+  ]);
+
+  it('lists the stored sets the edit keeps with the same exercise and values, wherever they move', () => {
+    expect(unchangedSetIds([bout, lift], stored, DEFAULT_BALANCE)).toEqual(['bout-1', 'set-1']);
+    expect(
+      unchangedSetIds(
+        [
+          { ...lift, position: 1 },
+          { ...bout, position: 0 },
+        ],
+        stored,
+        DEFAULT_BALANCE,
+      ),
+    ).toEqual(['set-1', 'bout-1']);
+  });
+
+  it('leaves out changed, added and removed sets', () => {
+    expect(unchangedSetIds([{ ...lift, reps: 6 }, bout], stored, DEFAULT_BALANCE)).toEqual(['bout-1']);
+    expect(unchangedSetIds([lift, { ...bout, exerciseId: 'rowing' }], stored, DEFAULT_BALANCE)).toEqual(['set-1']);
+    expect(unchangedSetIds([{ ...lift, id: 'set-2' }], stored, DEFAULT_BALANCE)).toEqual([]);
   });
 });
 

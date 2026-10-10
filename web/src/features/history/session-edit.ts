@@ -166,6 +166,20 @@ export function dropsAtRisk<D extends Pick<DropSummary, 'setId'>>(
   return drops.filter((drop) => before.has(drop.setId) && after.get(drop.setId) !== before.get(drop.setId));
 }
 
+export function savedEdit(sent: SessionEdit, revision: number): SessionEdit {
+  return { ...sent, revision };
+}
+
+export function summariesToForget(
+  sessionId: string,
+  replayedSessionIds: readonly string[],
+  retried: boolean,
+  rememberedSessionId: string | undefined,
+): string[] {
+  const possiblyReplayed = retried && rememberedSessionId !== undefined ? [rememberedSessionId] : [];
+  return [sessionId, ...replayedSessionIds, ...possiblyReplayed];
+}
+
 export function editSetCount(edit: SessionEdit): number {
   return edit.exercises.reduce((count, exercise) => count + exercise.sets.length, 0);
 }

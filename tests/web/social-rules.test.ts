@@ -15,6 +15,7 @@ import {
   type HiscoreRow,
   rankHiscores,
   relativeTime,
+  requestedUsername,
   sendRequestText,
   skillMetric,
   socialErrorMessage,
@@ -124,6 +125,13 @@ describe('feedText', () => {
     );
   });
 
+  it('does not claim hidden weights when the record details are missing', () => {
+    expect(feedText(item('pr', {}), 'kg')).toEqual({ headline: 'New exercise record' });
+    expect(feedText(item('pr', { ...bench, weightsHidden: false }), 'kg')).toEqual({
+      headline: 'New 5RM Barbell Bench Press',
+    });
+  });
+
   it('copes with missing fields', () => {
     expect(feedText(item('pr', { weightsHidden: false }), 'kg').headline).toBe('New exercise record');
     expect(feedText(item('level_up', {}), 'kg').headline).toBe('Levelled up a skill');
@@ -205,6 +213,16 @@ describe('rankHiscores', () => {
     expect(ranked.map((entry) => entry.row.username)).toEqual(['abe', 'bea']);
   });
 
+  it('breaks collection percent ties by the exact ratio, then by filled slots', () => {
+    const ranked = rankHiscores(
+      [row('abe', {}, 99, 200), row('bea', {}, 50, 100), row('cid', {}, 10, 20)],
+      skills,
+      'collection',
+    );
+    expect(ranked.map((entry) => entry.value)).toEqual([50, 50, 50]);
+    expect(ranked.map((entry) => entry.row.username)).toEqual(['bea', 'cid', 'abe']);
+  });
+
   it('ranks collection percent and treats an empty collection as 0', () => {
     const ranked = rankHiscores([row('abe', {}, 0, 0), row('bea', {}, 5, 20)], skills, 'collection');
     expect(ranked.map((entry) => [entry.row.username, entry.value])).toEqual([
@@ -217,6 +235,11 @@ describe('rankHiscores', () => {
 describe('social helpers', () => {
   it('builds the next feed cursor from the last item', () => {
     expect(feedCursor(item('pr', {}))).toEqual({ beforeAt: '2026-09-30T10:00:00.000Z', beforeId: 'event-1' });
+  });
+
+  it('reads a typed username without padding, case or a leading @', () => {
+    expect(requestedUsername('  @Iron_Otter ')).toBe('iron_otter');
+    expect(requestedUsername('iron@otter')).toBe('iron@otter');
   });
 
   it('describes request outcomes without revealing declines', () => {

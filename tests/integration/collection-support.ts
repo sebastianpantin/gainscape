@@ -19,7 +19,8 @@ async function collectionRows(user: TestUser) {
       .select(COLLECTION_COLUMNS.pins)
       .eq('user_id', user.id)
       .order('position')
-      .order('created_at'),
+      .order('created_at')
+      .order('exercise_id'),
     user.client.from('cardio_records').select(COLLECTION_COLUMNS.cardioRecords).eq('user_id', user.id),
   ]);
   for (const result of [repMaxes, bodyweightRecords, strengths, pins, cardioRecords]) expect(result.error).toBeNull();

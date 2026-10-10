@@ -95,6 +95,10 @@ export function socialErrorMessage(error: { message?: string } | null | undefine
   return SOCIAL_ERRORS[error?.message ?? ''] ?? GENERIC_SOCIAL_ERROR;
 }
 
+export function requestedUsername(raw: string): string {
+  return raw.trim().replace(/^@/, '').toLowerCase();
+}
+
 export function sendRequestText(status: SendRequestStatus, username: string): string {
   switch (status) {
     case 'sent':
@@ -156,9 +160,8 @@ function prText(item: FeedItem, unit: UnitPref): FeedText {
   }
   const title = reps === null ? `New ${name} record` : `New ${reps}RM ${name}`;
   const loadKg = numberOf(payload.loadKg);
-  if (payload.weightsHidden === true || loadKg === null) {
-    return { headline: title, detail: `Weights hidden by ${item.username}` };
-  }
+  if (payload.weightsHidden === true) return { headline: title, detail: `Weights hidden by ${item.username}` };
+  if (loadKg === null) return { headline: title };
   const loadType = (textOf(payload.loadType) || 'external') as LoadType;
   const load = formatLoad(loadKg, loadType, unit);
   const totalLoadKg = numberOf(payload.totalLoadKg);
@@ -248,6 +251,11 @@ function tiebreakXp(row: HiscoreRow, skills: readonly HiscoreSkill[], metric: Hi
   return row.skillXp[metricSkillKey(metric) ?? ''] ?? 0;
 }
 
+function collectionRatioOrder(a: HiscoreRow, b: HiscoreRow, metric: HiscoreMetric): number {
+  if (metric !== 'collection') return 0;
+  return b.collectionFilled * a.collectionTotal - a.collectionFilled * b.collectionTotal;
+}
+
 export function rankHiscores(
   rows: readonly HiscoreRow[],
   skills: readonly HiscoreSkill[],
@@ -258,6 +266,7 @@ export function rankHiscores(
     .sort(
       (a, b) =>
         b.value - a.value ||
+        collectionRatioOrder(a.row, b.row, metric) ||
         b.xp - a.xp ||
         (a.row.username < b.row.username ? -1 : a.row.username > b.row.username ? 1 : 0),
     )

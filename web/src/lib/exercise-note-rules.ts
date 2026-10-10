@@ -15,8 +15,14 @@ export function toExerciseNotes(rows: readonly ExerciseNoteRow[]): ExerciseNotes
   return Object.fromEntries(rows.map((row) => [row.exercise_id, row.body]));
 }
 
+const NOTE_EDGE_WHITESPACE = /^[\s\u0085]+|[\s\u0085]+$/g;
+
+export function trimNote(body: string): string {
+  return body.replace(NOTE_EDGE_WHITESPACE, '');
+}
+
 export function noteChanged(saved: string | undefined, draft: string): boolean {
-  return draft.trim() !== (saved ?? '');
+  return trimNote(draft) !== (saved ?? '');
 }
 
 export function withNote(notes: ExerciseNotes, exerciseId: string, body: string | null): ExerciseNotes {

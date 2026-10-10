@@ -334,6 +334,7 @@ describe('a challenge done as a superset', () => {
 
   function exercise(exerciseId: string, weightKg: number, supersetId: string | null): LiftDraftExercise {
     return {
+      clientId: `card-${exerciseId}`,
       exerciseId,
       name: exerciseId,
       modality: 'lift',

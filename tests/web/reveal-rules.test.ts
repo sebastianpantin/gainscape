@@ -4,6 +4,7 @@ import {
   challengeBonusText,
   challengeFailReason,
   challengeHeadline,
+  challengeNotAppliedText,
   describeRecord,
   gearBonusText,
   unappliedChangesText,
@@ -153,6 +154,27 @@ describe('challenge lines', () => {
   it('gives no reason for a pass or a workout without a challenge', () => {
     expect(challengeFailReason(judged(true), planned, nameOf, 'kg')).toBeNull();
     expect(challengeFailReason({ challenge: null }, planned, nameOf, 'kg')).toBeNull();
+  });
+
+  it('tells the lifter a planned challenge was not applied, without guessing why the server skipped it', () => {
+    expect(challengeNotAppliedText({ challenge: null }, planned)).toBe(
+      "Challenge not applied: Deadlift and Pull-up couldn't be applied to this workout, so it was saved as a normal workout.",
+    );
+    expect(challengeNotAppliedText({}, planned)).toBe(
+      "Challenge not applied: Deadlift and Pull-up couldn't be applied to this workout, so it was saved as a normal workout.",
+    );
+  });
+
+  it('tells the lifter a planned challenge was not applied to a workout saved to history only', () => {
+    expect(challengeNotAppliedText({ challenge: null, historyOnly: true }, planned)).toBe(
+      'Challenge not applied: a workout older than 7 days is saved to history only. Your scroll was kept.',
+    );
+  });
+
+  it('says nothing when the challenge was applied or none was planned', () => {
+    expect(challengeNotAppliedText(judged(false), planned)).toBeNull();
+    expect(challengeNotAppliedText(judged(true), planned)).toBeNull();
+    expect(challengeNotAppliedText({ challenge: null }, null)).toBeNull();
   });
 });
 

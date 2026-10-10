@@ -5,6 +5,7 @@ import {
   type RevokedDrop,
   type SessionSummary,
   type StoredSet,
+  unchangedSetIds,
   writableSetFor,
 } from '../_shared/domain/index.ts';
 import { HttpError } from '../_shared/http.ts';
@@ -71,6 +72,7 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
       (prescription) => session.programLinked && !keptRefs.has(prescription.ref),
     );
 
+    const unchanged = unchangedSetIds(payload.sets, storedById, DEFAULT_BALANCE);
     const { bodyweightKg } = await loadProfileSettings(tx, userId);
     const requested = payload.sets.map((set) => {
       const stored = storedById.get(set.id);
@@ -93,6 +95,8 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
       session.key,
       storedExerciseIds,
       DEFAULT_BALANCE,
+      [],
+      unchanged,
     );
     return {
       summary: await storedSummary(tx, payload.sessionId),

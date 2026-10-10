@@ -17,6 +17,7 @@ function set(id: string, weightKg = 60, reps = 8): DraftSet {
 
 function lift(exerciseId: string, setIds: string[], supersetId: string | null = null): DraftExercise {
   return {
+    clientId: `card-${exerciseId}`,
     exerciseId,
     name: exerciseId,
     modality: 'lift',
@@ -29,7 +30,7 @@ function lift(exerciseId: string, setIds: string[], supersetId: string | null = 
 
 function cardio(exerciseId: string): DraftExercise {
   const activity: CardioActivity = { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', shares: [] };
-  return { exerciseId, name: exerciseId, modality: 'cardio', activity, sets: [] };
+  return { clientId: `card-${exerciseId}`, exerciseId, name: exerciseId, modality: 'cardio', activity, sets: [] };
 }
 
 function draftOf(exercises: DraftExercise[]): WorkoutDraft {

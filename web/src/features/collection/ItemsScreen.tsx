@@ -51,6 +51,7 @@ import {
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { loadoutQueryKey, useLoadout } from '../profile/use-loadout.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
+import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
 
 interface ChallengeStartProps {
@@ -299,6 +300,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const [strength, setStrength] = useState<StrengthState | null>(null);
   const [offline, setOffline] = useState(false);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const [startNotice, setStartNotice] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
   const [newIds] = useState(() => newItemIds(recallLastSummary(userId)?.drops));
@@ -361,9 +363,11 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
       unitPref,
       new Date(),
     );
-    await startWorkout(() => started.draft);
+    const outcome = await startWorkout(() => started.draft);
     await flush();
-    navigate('/');
+    const notice = challengeStartNoticeText(outcome);
+    if (notice) setStartNotice(notice);
+    else navigate('/');
   };
 
   const header = (
@@ -396,6 +400,11 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   return (
     <main className="screen stack">
       {header}
+      {startNotice && (
+        <p className="notice" role="status">
+          {startNotice}
+        </p>
+      )}
       {savedNotice && (
         <p className="notice" role="status">
           {savedNotice}

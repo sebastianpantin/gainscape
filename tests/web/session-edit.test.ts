@@ -18,6 +18,8 @@ import {
   rebaseEdit,
   rebaseNotice,
   removalText,
+  savedEdit,
+  summariesToForget,
   removedText,
   removeEditSet,
   sameSetValues,
@@ -412,6 +414,27 @@ describe('rebasing local changes onto a newer server copy', () => {
     };
     const fresh = { ...original, revision: 4 };
     expect(ids(rebaseEdit(local, original, fresh).edit)).toEqual(['new-first', 'set-0', 'set-1', 'set-2', 'set-3']);
+  });
+});
+
+describe('after the server accepts an edit', () => {
+  const original = editFromSession(session, rows, exercisesById);
+  const sent = updateEditSet(original, 2, 'set-3', { reps: 9 });
+
+  it('treats the sent sets as the new original at the new revision, so undo keeps what was saved', () => {
+    const saved = savedEdit(sent, 4);
+    expect(hasChanges(sent, saved)).toBe(false);
+    expect(editPayload(saved).ifRevision).toBe(4);
+    expect(liftSets(editPayload(saved)).find((set) => set.id === 'set-3')?.reps).toBe(9);
+  });
+
+  it('forgets the edited and replayed sessions after a first-try reply', () => {
+    expect(summariesToForget(session.id, ['later-1'], false, 'later-2')).toEqual([session.id, 'later-1']);
+  });
+
+  it('also forgets any remembered summary after a retried reply, which may be the no-op answer to a lost write', () => {
+    expect(summariesToForget(session.id, [], true, 'later-2')).toEqual([session.id, 'later-2']);
+    expect(summariesToForget(session.id, [], true, undefined)).toEqual([session.id]);
   });
 });
 

@@ -127,3 +127,32 @@ test('a draft written while IndexedDB was unavailable moves back into IndexedDB'
   expect(await readFallbackDraft(page, user.id)).toBeNull();
   expect(await readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
 });
+
+test('a workout started while IndexedDB was unreadable is announced and opens after the stored one', async ({
+  page,
+}) => {
+  await breakIndexedDbOpen(page);
+  await register(page, uniqueUsername('dr_g'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+
+  await setIndexedDbBroken(page, true);
+  await page.reload();
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'back squat', 'Back Squat', [{ weightKg: 80, reps: 5 }]);
+
+  await setIndexedDbBroken(page, false);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Barbell Bench Press', exact: true })).toBeVisible();
+  const waiting = page.getByText('Another unsynced workout is saved on this device.', { exact: false });
+  await expect(waiting).toBeVisible();
+
+  await page.getByRole('button', { name: 'Discard workout' }).click();
+  await page
+    .getByRole('dialog', { name: 'Discard this workout?' })
+    .getByRole('button', { name: 'Discard workout' })
+    .click();
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await expect(page.getByRole('heading', { name: 'Back Squat', exact: true })).toBeVisible();
+  await expect(waiting).toHaveCount(0);
+});

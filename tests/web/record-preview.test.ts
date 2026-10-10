@@ -21,7 +21,15 @@ function draftSet(weightKg: number, reps: number, done = true): DraftSet {
 }
 
 function exercise(exerciseId: string, sets: DraftSet[], loadType: LoadType = 'external'): LiftDraftExercise {
-  return { exerciseId, name: exerciseId, modality: 'lift', loadType, target: null, sets };
+  return {
+    clientId: `card-${exerciseId}`,
+    exerciseId,
+    name: exerciseId,
+    modality: 'lift',
+    loadType,
+    target: null,
+    sets,
+  };
 }
 
 function trained(...exerciseIds: string[]): Record<string, ExerciseStrength> {
@@ -122,6 +130,7 @@ describe('previewRecords', () => {
 
   it('keeps a cardio exercise in place without records', () => {
     const cardio: CardioDraftExercise = {
+      clientId: 'card-run',
       exerciseId: 'run',
       name: 'Run',
       modality: 'cardio',

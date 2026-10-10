@@ -57,6 +57,11 @@ export function authErrorMessage(error: AuthErrorLike): string {
   return error.message;
 }
 
+export function passwordResetProblem(error: AuthErrorLike | null): string | null {
+  if (!error || error.code === 'user_not_found') return null;
+  return authErrorMessage(error);
+}
+
 export function confirmedRecently(emailConfirmedAt: string | null | undefined, now = Date.now()): boolean {
   if (!emailConfirmedAt) return false;
   const confirmedAt = Date.parse(emailConfirmedAt);

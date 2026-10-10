@@ -217,6 +217,17 @@ export function changelogProblem(unreleasedUserFacing: readonly { number: number
   ].join('\n');
 }
 
+export function directCommitsProblem(commits: readonly { sha: string; subject: string }[]): string | null {
+  if (commits.length === 0) return null;
+  const count = commits.length === 1 ? '1 commit on main came' : `${commits.length} commits on main came`;
+  return [
+    `${count} without a merge or squash PR, change the app and are not in the changelog yet:`,
+    ...commits.map((commit) => `${commit.sha.slice(0, 7)} ${commit.subject}`),
+    'Ask Claude to write the changelog (it covers commits made before it), merge that PR, then deploy again.',
+    'Merge PRs with a merge commit or a squash that keeps the (#N) subject, so the gate can see them.',
+  ].join('\n');
+}
+
 export function unknownPrsProblem(unknown: readonly number[]): string | null {
   if (unknown.length === 0) return null;
   return [

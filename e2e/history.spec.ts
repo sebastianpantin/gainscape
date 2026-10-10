@@ -9,6 +9,7 @@ import {
   readSession,
   readStoredDraft,
   register,
+  uniqueUsername,
   writeStoredDraft,
   xpValue,
 } from './support/app.ts';
@@ -121,6 +122,36 @@ test('a save that races an edit from another device keeps both changes after rev
   await expect(page.getByText('Changes saved.')).toBeVisible();
   expect(await setsOf(sessionId)).toEqual([{ reps: 7, effort_input_type: 'level', effort_value: 0 }]);
   expect(await sessionNotes(sessionId)).toBe('edited elsewhere');
+});
+
+test('a save whose refresh fails keeps the saved sets as the baseline, so undo cannot write old values back', async ({
+  page,
+}) => {
+  const username = uniqueUsername('hist_ref');
+  await register(page, username);
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+
+  await openLatestWorkout(page);
+  const sessionId = page.url().split('/').at(-1)!;
+  const sessionReads = /\/rest\/v1\/sessions\?/;
+
+  await page.locator('li.set-row').first().getByLabel('reps').fill('8');
+  await page.route(sessionReads, (route) => route.abort('failed'));
+  await page.getByRole('button', { name: 'Save changes' }).click();
+
+  await expect(page.getByRole('alert')).toContainText("Saved, but couldn't refresh the workout.", {
+    timeout: 15_000,
+  });
+  await expect(page.getByText('Changes saved.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Undo my changes' })).toHaveCount(0);
+  expect((await setsOf(sessionId)).map((set) => set.reps)).toEqual([8]);
+
+  await page.unroute(sessionReads);
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByText('Changes saved.')).toBeVisible();
+  await expect(page.locator('li.set-row').first().getByLabel('reps')).toHaveValue('8');
 });
 
 test('a delete that races an edit from another device shows the latest version before deleting', async ({ page }) => {

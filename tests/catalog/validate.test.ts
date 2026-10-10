@@ -72,6 +72,65 @@ describe('catalog validation', () => {
     ],
     ['shares sum to 10000', (c) => (find(c.exercises, 'deadlift').shares[0].shareBp = 4000), /shares sum to 9000/],
     [
+      'each share is 1-10000 basis points',
+      (c) => {
+        const shares = find(c.exercises, 'deadlift').shares;
+        shares[0].shareBp += shares[1].shareBp;
+        shares[1].shareBp = 0;
+      },
+      /exercise "deadlift" share of skill "[a-z_]+" must be an integer in 1-10000/,
+    ],
+    [
+      'skill sort orders are unique',
+      (c) => (c.skills[1].sortOrder = c.skills[0].sortOrder),
+      /skill sort_order \d+ is not unique/,
+    ],
+    [
+      'program sets are 1-10',
+      (c) => (c.programs[0].days[0].exercises[0].sets = 11),
+      /program day "ppl:push" exercise 1 needs 1-10 sets/,
+    ],
+    [
+      'program sets are at least 1',
+      (c) => (c.programs[0].days[0].exercises[0].sets = 0),
+      /program day "ppl:push" exercise 1 needs 1-10 sets/,
+    ],
+    [
+      'program reps_min is at most reps_max',
+      (c) => Object.assign(c.programs[0].days[0].exercises[0], { repsMin: 12, repsMax: 5 }),
+      /program day "ppl:push" exercise 1 needs 1 <= reps_min <= reps_max <= 100/,
+    ],
+    [
+      'program reps_max is at most 100',
+      (c) => (c.programs[0].days[0].exercises[0].repsMax = 101),
+      /program day "ppl:push" exercise 1 needs 1 <= reps_min <= reps_max <= 100/,
+    ],
+    [
+      'program days hold at most 20 exercises',
+      (c) => {
+        const day = c.programs[0].days[0];
+        day.exercises = Array.from({ length: 21 }, () => ({ ...day.exercises[0] }));
+      },
+      /program day "ppl:push" has 21 exercises, at most 20 allowed/,
+    ],
+    [
+      'programs have at most 14 days',
+      (c) => {
+        const program = c.programs[0];
+        program.days = Array.from({ length: 15 }, (_, index) => ({
+          ...program.days[0],
+          key: `day_${index}`,
+          name: `Day ${index}`,
+        }));
+      },
+      /program "ppl" has 15 days, at most 14 allowed/,
+    ],
+    [
+      'program day names are at most 40 characters',
+      (c) => (c.programs[0].days[0].name = 'x'.repeat(41)),
+      /program day "ppl:push" name must be at most 40 characters/,
+    ],
+    [
       'variation_of references a built-in exercise',
       (c) => (find(c.exercises, 'pause_squat').variationOf = 'hack_squat'),
       /variation of unknown exercise "hack_squat"/,

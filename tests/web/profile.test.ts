@@ -60,6 +60,11 @@ describe('profile validation', () => {
     expect(bioProblem('two\nlines')).toBe("Bio can't contain line breaks or control characters.");
   });
 
+  it('counts bio length in characters like the server, so an emoji is one character', () => {
+    expect(bioProblem('\u{1F3CB}'.repeat(80))).toBeNull();
+    expect(bioProblem('\u{1F3CB}'.repeat(81))).toBe('Bio can be at most 80 characters.');
+  });
+
   it('derives age from birth year and initials from the display name', () => {
     expect(ageFrom(1990, now)).toBe(36);
     expect(ageFrom(null, now)).toBeNull();

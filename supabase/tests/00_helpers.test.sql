@@ -23,6 +23,30 @@ as $$
   returning id;
 $$;
 
+create or replace function tests.create_user_with_display_name(username text, display_name text)
+returns uuid
+language sql
+security invoker
+set search_path = ''
+as $$
+  insert into auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at, created_at, updated_at)
+  values (
+    gen_random_uuid(),
+    '00000000-0000-0000-0000-000000000000',
+    'authenticated',
+    'authenticated',
+    create_user_with_display_name.username || '@example.test',
+    jsonb_build_object(
+      'username', create_user_with_display_name.username,
+      'display_name', create_user_with_display_name.display_name,
+      'timezone', 'UTC'),
+    now(),
+    now(),
+    now()
+  )
+  returning id;
+$$;
+
 create or replace function tests.authenticate_as(user_id uuid)
 returns void
 language sql
@@ -171,8 +195,9 @@ $$;
 
 revoke all on all functions in schema tests from public, anon, authenticated;
 
-select plan(6);
+select plan(7);
 select has_function('tests', 'create_user', array['text', 'boolean']);
+select has_function('tests', 'create_user_with_display_name', array['text', 'text']);
 select has_function('tests', 'authenticate_as', array['uuid']);
 select has_function('tests', 'add_session', array['uuid', 'timestamp with time zone']);
 select has_function('tests', 'add_event', array['uuid', 'uuid', 'text', 'public.event_type', 'jsonb']);

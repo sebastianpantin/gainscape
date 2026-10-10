@@ -7,6 +7,7 @@ import {
   MINIMUM_PASSWORD_LENGTH,
   parseAuthCallback,
   passwordProblem,
+  passwordResetProblem,
 } from '../../web/src/lib/auth-links.ts';
 
 describe('authCallbackUrl', () => {
@@ -102,5 +103,19 @@ describe('passwordProblem', () => {
 
   it('accepts a long passphrase without digits or symbols', () => {
     expect(passwordProblem('correct horse battery staple')).toBeNull();
+  });
+});
+
+describe('passwordResetProblem', () => {
+  it('stays neutral when the reset was sent or the account does not exist', () => {
+    expect(passwordResetProblem(null)).toBeNull();
+    expect(passwordResetProblem({ message: 'User not found', code: 'user_not_found', status: 404 })).toBeNull();
+  });
+
+  it('shows the auth error for a rate limit or a network failure', () => {
+    expect(
+      passwordResetProblem({ message: 'Email rate limit exceeded', code: 'over_email_send_rate_limit', status: 429 }),
+    ).toBe(AUTH_MESSAGES.tooManyEmails);
+    expect(passwordResetProblem({ message: 'Failed to fetch', status: 0 })).toBe('Failed to fetch');
   });
 });

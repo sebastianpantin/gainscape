@@ -28,11 +28,20 @@ function liftSet(id: string, overrides: Partial<DraftSet> = {}): DraftSet {
 }
 
 function lift(exerciseId: string, sets: DraftSet[] = [liftSet(`${exerciseId}-1`)]): LiftDraftExercise {
-  return { exerciseId, name: exerciseId, modality: 'lift', loadType: 'external', target: null, sets };
+  return {
+    clientId: `card-${exerciseId}`,
+    exerciseId,
+    name: exerciseId,
+    modality: 'lift',
+    loadType: 'external',
+    target: null,
+    sets,
+  };
 }
 
 function cardio(exerciseId: string): CardioDraftExercise {
   return {
+    clientId: `card-${exerciseId}`,
     exerciseId,
     name: exerciseId,
     modality: 'cardio',
