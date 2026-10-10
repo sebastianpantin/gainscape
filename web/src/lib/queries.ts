@@ -8,6 +8,7 @@ import { type Collection, loadCollectionCacheFirst } from './collection-data.ts'
 import { collectionPercent, countCollection } from './collection-rules.ts';
 import { fetchLoadout, loadItemsCacheFirst } from './items.ts';
 import { loadProfileCacheFirst } from './profile.ts';
+import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from './program-enrollment.ts';
 import { isUuid } from './history-rules.ts';
 import {
   FEED_PAGE_SIZE,
@@ -115,5 +116,19 @@ export function exerciseProgressQuery(userId: string, exerciseId: string) {
   return queryOptions({
     queryKey: ['exercise-progress', userId, exerciseId] as const,
     queryFn: ({ signal }) => fetchExerciseProgress(userId, exerciseId, signal),
+  });
+}
+
+export function programTemplatesQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['program-templates', userId] as const,
+    queryFn: () => loadProgramTemplatesCacheFirst(userId),
+  });
+}
+
+export function enrollChoicesQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['enroll-choices', userId] as const,
+    queryFn: () => loadEnrollChoicesCacheFirst(userId),
   });
 }
