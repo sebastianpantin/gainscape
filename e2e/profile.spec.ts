@@ -190,7 +190,7 @@ test('change password, export data and delete the account', async ({ page }) => 
   await page.getByLabel('Your password').fill('wrong-password');
   await confirm.click();
   await expect(page.getByText('Your password is wrong.')).toBeVisible();
-  await expect.poll(() => accountRowCount(username)).toBe(1);
+  expect(await accountRowCount(username)).toBe(1);
   await page.getByLabel('Your password').fill('a-brand-new-password');
   await confirm.click();
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();

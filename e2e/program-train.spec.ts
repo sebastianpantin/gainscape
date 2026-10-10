@@ -106,7 +106,7 @@ test('skip the suggested day through an in-app confirmation: it leaves the picke
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
-  await expect.poll(() => programEventsOf(username)).toEqual([]);
+  expect(await programEventsOf(username)).toEqual([]);
 
   await skip.click();
   await dialog.getByRole('button', { name: 'Skip day', exact: true }).click();

@@ -299,7 +299,7 @@ test('a template with an unknown primitive kind is listed as "Update the app to 
     await page.goto(`/programs/enroll/${key}`);
     await expect(page.getByText('Update the app to use this program', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start following', exact: true })).toHaveCount(0);
-    await expect.poll(() => activeEnrollmentOf(username)).toBeNull();
+    expect(await activeEnrollmentOf(username)).toBeNull();
   } finally {
     await deleteProgramTemplate(key);
   }

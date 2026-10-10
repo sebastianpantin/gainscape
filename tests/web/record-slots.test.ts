@@ -28,7 +28,15 @@ describe('slotLabel', () => {
     expect(slotLabel(5, { loadKg: 70, exact: true }, 'external', 'kg')).toBe('5RM 70 kg');
     expect(slotLabel(4, { loadKg: 70, exact: false }, 'external', 'kg')).toBe('4RM 70 kg, beaten by a higher-rep set');
     expect(slotLabel(6, null, 'external', 'kg')).toBe('6RM empty');
-    expect(slotLabel(1, { loadKg: 100, exact: true }, 'external', 'kg', true)).toBe('1RM Set');
+  });
+
+  it('says a slot is recorded without its load when the weights are hidden or the load is bodyweight only', () => {
+    expect(slotLabel(1, { loadKg: 100, exact: true }, 'external', 'kg', true)).toBe('1RM recorded');
+    expect(slotLabel(8, { loadKg: null, exact: true }, 'bodyweight', 'kg')).toBe('8RM recorded');
+    expect(slotLabel(3, { loadKg: 100, exact: false }, 'external', 'kg', true)).toBe(
+      '3RM recorded, beaten by a higher-rep set',
+    );
+    expect(slotLabel(2, null, 'external', 'kg', true)).toBe('2RM empty');
   });
 });
 

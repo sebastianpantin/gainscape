@@ -3,48 +3,46 @@ import { type BrowserContext, expect, type Page, type PlaywrightTestOptions, tes
 export { expect };
 
 interface Fixtures {
-  allowedPageErrors: RegExp[];
   newPerson: () => Promise<Page>;
-  pageErrors: string[];
 }
 
 async function prepareContext(
   context: BrowserContext,
-  pageErrors: string[],
   serviceWorkers: PlaywrightTestOptions['serviceWorkers'],
-): Promise<void> {
+): Promise<string[]> {
+  const pageErrors: string[] = [];
   context.on('page', (page) => page.on('pageerror', (error) => pageErrors.push(error.message)));
-  if (serviceWorkers !== 'block') return;
-  await context.addInitScript(() => {
-    if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register = () =>
-      Promise.reject(new DOMException('Service workers are blocked', 'SecurityError'));
-  });
+  if (serviceWorkers === 'block') {
+    await context.addInitScript(() => {
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.register = () =>
+        Promise.reject(new DOMException('Service workers are blocked', 'SecurityError'));
+    });
+  }
+  return pageErrors;
+}
+
+function expectNoPageErrors(pageErrors: string[]): void {
+  expect(pageErrors, 'uncaught errors in the page').toEqual([]);
 }
 
 export const test = base.extend<Fixtures>({
-  allowedPageErrors: [[], { option: true }],
-  pageErrors: [
-    async ({ allowedPageErrors }, use) => {
-      const errors: string[] = [];
-      await use(errors);
-      const unexpected = errors.filter((message) => !allowedPageErrors.some((allowed) => allowed.test(message)));
-      expect(unexpected, 'uncaught errors in the page').toEqual([]);
-    },
-    { auto: true },
-  ],
-  context: async ({ context, pageErrors, serviceWorkers }, use) => {
-    await prepareContext(context, pageErrors, serviceWorkers);
+  context: async ({ context, serviceWorkers }, use) => {
+    const pageErrors = await prepareContext(context, serviceWorkers);
     await use(context);
+    expectNoPageErrors(pageErrors);
   },
-  newPerson: async ({ browser, pageErrors, serviceWorkers }, use) => {
-    const contexts: BrowserContext[] = [];
+  newPerson: async ({ browser, serviceWorkers }, use) => {
+    const people: { context: BrowserContext; pageErrors: string[] }[] = [];
     await use(async () => {
       const context = await browser.newContext();
-      contexts.push(context);
-      await prepareContext(context, pageErrors, serviceWorkers);
+      people.push({ context, pageErrors: await prepareContext(context, serviceWorkers) });
       return await context.newPage();
     });
-    await Promise.all(contexts.map((context) => context.close()));
+    try {
+      for (const { pageErrors } of people) expectNoPageErrors(pageErrors);
+    } finally {
+      for (const { context } of people) await context.close();
+    }
   },
 });

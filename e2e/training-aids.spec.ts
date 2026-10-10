@@ -200,7 +200,7 @@ test('a workout keeps the screen on and the end of a rest vibrates and beeps, as
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await page.clock.runFor(181_000);
   await expect(page.getByRole('region', { name: 'Rest timer' }).getByRole('status')).toHaveText('Rest over');
-  await expect.poll(() => deviceCalls(page)).toEqual([]);
+  expect(await deviceCalls(page)).toEqual([]);
 });
 
 test('a rest that ends while the app is hidden sends a notification once allowed', async ({ page }) => {

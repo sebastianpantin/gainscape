@@ -12,7 +12,7 @@ GitHub Actions workflow definitions. See `../AGENTS.md` for the full description
 | File      | Description                                                                                                                                                                                                                      |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ci.yml`  | Pull request CI: `checks` (no stack, runs `make ci-changes`; docs-only diffs run just `make format-check secrets-scan`) and `backend` (integration and pgTAP on the local stack; needs `checks`, skipped without backend inputs) |
-| `e2e.yml` | Nightly and manual end-to-end (chromium and webkit, sharded), PWA and Pages suites on the local stack                                                                                                                            |
+| `e2e.yml` | Weekly and manual end-to-end (chromium and webkit, sharded), PWA and Pages suites on the local stack                                                                                                                             |
 
 ## For AI Agents
 

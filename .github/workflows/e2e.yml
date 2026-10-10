@@ -3,7 +3,7 @@ name: E2E
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 3 * * *'
+    - cron: '17 3 * * 1'
 
 permissions:
   contents: read
@@ -40,7 +40,7 @@ jobs:
           - suite: pwa and pages
             browser: chromium
             shard: ''
-            run: make e2e-pwa e2e-pages CHROMIUM_PATH=
+            run: make -k e2e-pwa e2e-pages CHROMIUM_PATH=
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

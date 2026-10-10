@@ -27,7 +27,8 @@ export function slotLabel(
   weightsHidden = false,
 ): string {
   if (!slot) return `${reps}RM empty`;
-  const named = `${reps}RM ${slotText(slot, loadType, unit, weightsHidden)}`;
+  const load = slot.loadKg === null || weightsHidden ? 'recorded' : formatLoad(slot.loadKg, loadType, unit);
+  const named = `${reps}RM ${load}`;
   return slot.exact ? named : `${named}, beaten by a higher-rep set`;
 }
 

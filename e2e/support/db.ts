@@ -125,7 +125,7 @@ export async function createConfirmedAccount(email: string, username: string, ti
 }
 
 export async function forgetEmailSendLimit(email: string): Promise<void> {
-  await db`update auth.users set confirmation_sent_at = now() - interval '1 hour' where email = ${email}`;
+  await db`update auth.users set confirmation_sent_at = now() - interval '1 minute' where email = ${email}`;
 }
 
 export async function usernameOfEmail(email: string): Promise<string | null> {

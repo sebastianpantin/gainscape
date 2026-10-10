@@ -151,7 +151,7 @@ test('delete a program through the confirmation and keep the workout logged from
   expect(confirmation).toBe('Delete Upper / Lower? Past workouts keep their sets.');
   await expect.poll(() => programCount(username)).toBe(0);
   await expect.poll(async () => (await sessionRow(sessionId)).program_day_id).toBeNull();
-  await expect.poll(() => setCount(sessionId)).toBe(18);
+  expect(await setCount(sessionId)).toBe(18);
 
   await openTab(page, 'Train');
   await expect(page.getByText('No programs yet.')).toBeVisible();

@@ -15,6 +15,7 @@ import { sessionCount, sessionRow } from './support/db.ts';
 
 const completeSession = '**/functions/v1/complete-session';
 const LONGEST_RETRY_WAIT_MS = 30_000;
+const LATE_REQUEST_GRACE_MS = 1_000;
 
 test('a finished workout survives an outage and a reload', async ({ page }) => {
   const username = uniqueUsername('dr_a');
@@ -63,7 +64,12 @@ test('a workout the server keeps failing on stops retrying and syncs on a manual
     timeout: 30_000,
   });
   const attemptsWhenStalled = failedAttempts;
+  const lateRetry = page.waitForRequest(completeSession, { timeout: LATE_REQUEST_GRACE_MS }).then(
+    () => true,
+    () => false,
+  );
   await page.clock.runFor(LONGEST_RETRY_WAIT_MS * 2);
+  expect(await lateRetry).toBe(false);
   expect(failedAttempts).toBe(attemptsWhenStalled);
 
   serverFailing = false;
