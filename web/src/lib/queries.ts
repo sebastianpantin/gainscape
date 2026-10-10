@@ -21,6 +21,7 @@ import {
   type ProfileView,
 } from './social.ts';
 import { type FeedCursor, feedCursor } from './social-rules.ts';
+import { fetchWeeklyGoalStatus } from './weekly-goal.ts';
 
 export const FRIENDS_QUERY_PREFIX = ['friends'] as const;
 export const FEED_QUERY_PREFIX = ['feed'] as const;
@@ -132,3 +133,8 @@ export function enrollChoicesQuery(userId: string) {
     queryFn: () => loadEnrollChoicesCacheFirst(userId),
   });
 }
+
+export const weeklyGoalQuery = queryOptions({
+  queryKey: ['weekly-goal'] as const,
+  queryFn: ({ signal }) => fetchWeeklyGoalStatus(signal),
+});
