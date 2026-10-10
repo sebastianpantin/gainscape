@@ -267,20 +267,14 @@ const awardXp: Step = (ctx) => {
       const skillXp = cardioSkillXp({ ...result.cardio, steady }, shares, ctx.cfg);
       return { ...result, xp: skillXp.reduce((sum, part) => sum + part.xp, 0), skillXp };
     }
-    if (isHoldResult(result)) {
-      const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
-      const repEquivalents = holdRepEquivalents(result.set, ctx.cfg);
-      const effectiveRepCount = effectiveReps(repEquivalents, result.rirForXp!, false, ctx.cfg);
-      const xp = setXp(effectiveRepCount, 1, ctx.cfg);
-      const shares = exercise.shares.map((share) => ({ ...share, sortOrder: sortOrderOf(share.skillId) }));
-      return { ...result, effectiveReps: effectiveRepCount, xp, skillXp: splitXp(xp, shares) };
-    }
-    if (!isLiftResult(result)) return result;
+    if (!isLiftResult(result) && !isHoldResult(result)) return result;
     const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const earnsNothing = result.rirForXp === null || liftsNoLoad(exercise, result.effectiveLoadKg);
     const effectiveRepCount = earnsNothing
       ? 0
-      : effectiveReps(result.set.reps, result.rirForXp!, result.set.isWarmup, ctx.cfg);
+      : isHoldResult(result)
+        ? effectiveReps(holdRepEquivalents(result.set, ctx.cfg), result.rirForXp!, false, ctx.cfg)
+        : effectiveReps(result.set.reps, result.rirForXp!, result.set.isWarmup, ctx.cfg);
     const xp = result.rirForXp === null ? result.coldStartXp : setXp(effectiveRepCount, result.intensityBonus, ctx.cfg);
     const xpSetOrdinal = xpSetsSeenByExercise.get(exercise.id) ?? 0;
     if (xp > 0) xpSetsSeenByExercise.set(exercise.id, xpSetOrdinal + 1);
