@@ -13,7 +13,7 @@ import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import { assertDistinctPrescriptionRefs, type SetPayload } from '../_shared/session-payload.ts';
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
-import { replayFrom } from '../_shared/stores/replay.ts';
+import { deriveEditedSession } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
   bumpRevision,
@@ -23,7 +23,6 @@ import {
   loadStoredSets,
   lockUser,
   requireOwnedSession,
-  storedSummary,
   writeEditedSets,
 } from '../_shared/stores/sessions.ts';
 import { prescriptionSnapshotsBySetId } from '../_shared/stores/set-columns.ts';
@@ -88,22 +87,14 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     await writeEditedSets(tx, userId, payload.sessionId, storedSets, requested, addedSnapshots, DEFAULT_BALANCE);
     const revision = await bumpRevision(tx, payload.sessionId, payload.notes);
 
-    const storedExerciseIds = [...new Set(storedSets.map((set) => set.exerciseId))];
-    const { replayedSessionIds, revokedDrops } = await replayFrom(
+    const { summary, replayedSessionIds, revokedDrops } = await deriveEditedSession(
       tx,
       userId,
       session.key,
-      storedExerciseIds,
-      DEFAULT_BALANCE,
-      [],
+      storedSets,
       unchanged,
     );
-    return {
-      summary: await storedSummary(tx, payload.sessionId),
-      revision,
-      replayedSessionIds,
-      revokedDrops,
-    };
+    return { summary, revision, replayedSessionIds, revokedDrops };
   });
 }
 

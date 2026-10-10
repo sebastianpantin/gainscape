@@ -4,6 +4,7 @@ import {
   type Catalog,
   type ChallengeSummary,
   challengeTargetLoadsKg,
+  DEFAULT_BALANCE,
   DEFAULT_STEPS,
   type RevokedDrop,
   type LootCandidate,
@@ -16,13 +17,15 @@ import {
   type SessionInput,
   type SessionKey,
   type SessionOutputs,
+  type SessionSummary,
   type SetResult,
+  type StoredSet,
   type StrengthHistoryRow,
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
 import { loadCatalog } from './catalog.ts';
 import { syncSessionEvents } from './events.ts';
-import { revokeDisqualifiedDrops, type RevokedActiveDrop } from './loot.ts';
+import { revokeDisqualifiedDrops, type RevokedActiveDrop, rollNewSessionLoot } from './loot.ts';
 import {
   hasLaterSessions,
   hasStaleDerivedSessions,
@@ -31,18 +34,37 @@ import {
   loadReplayableSessions,
   loadSkillXp,
 } from './history.ts';
-import { loadRecords, replaceRecordsFor } from './records.ts';
+import { clearRecordCaches, loadRecords, replaceRecordsFor } from './records.ts';
 import { derivedSetColumns, setSkillXpRows } from './set-columns.ts';
-import { writeSummaries } from './sessions.ts';
-import { loadStrengthHistory, refreshStrengthCache } from './strength.ts';
+import {
+  markSessionsDerivedAt,
+  sessionExerciseIds,
+  storedSummary,
+  tombstoneSession,
+  writeSummaries,
+} from './sessions.ts';
+import { clearStrengthCache, loadStrengthHistory, refreshStrengthCache } from './strength.ts';
 
-export type ReplayedSet = LootCandidate & { sessionId: string };
+type ReplayedSet = LootCandidate & { sessionId: string };
 
-export interface ReplayOutcome {
+interface ReplayOutcome {
   sessionsReplayed: number;
   setsRewritten: number;
   replayedSessionIds: string[];
   sets: ReplayedSet[];
+  revokedDrops: RevokedDrop[];
+}
+
+interface ReplayScope {
+  from: SessionKey | null;
+  anchorIsNew: boolean;
+  previousExerciseIds: readonly string[];
+  deletedSessionIds: readonly string[];
+  unchangedSetIds: readonly string[];
+}
+
+interface ReplayChanges {
+  replayedSessionIds: string[];
   revokedDrops: RevokedDrop[];
 }
 
@@ -55,8 +77,7 @@ interface PriorState {
 async function loadPriorState(
   tx: Transaction,
   userId: string,
-  from: SessionKey | null,
-  touchedExerciseIds: readonly string[],
+  { from, anchorIsNew }: ReplayScope,
   suffixExerciseIds: readonly string[],
   allTouched: readonly string[],
   catalog: Catalog,
@@ -64,7 +85,7 @@ async function loadPriorState(
 ): Promise<PriorState> {
   if (from === null) return { strength: [], records: NO_RECORDS, skillXp: {} };
   const strength = await loadStrengthHistory(tx, userId, suffixExerciseIds, from, cfg);
-  const suffixIsOnlyTheAnchor = touchedExerciseIds.length === 0 && !(await hasLaterSessions(tx, userId, from));
+  const suffixIsOnlyTheAnchor = anchorIsNew && !(await hasLaterSessions(tx, userId, from));
   if (suffixIsOnlyTheAnchor) {
     return { strength, records: await loadRecords(tx, userId, allTouched), skillXp: await loadSkillXp(tx, userId) };
   }
@@ -148,24 +169,22 @@ function inReplayOrder(
     }));
 }
 
-export async function replayFrom(
+async function replayFrom(
   tx: Transaction,
   userId: string,
-  from: SessionKey | null,
-  touchedExerciseIds: readonly string[],
+  scope: ReplayScope,
   cfg: BalanceConfig,
-  deletedSessionIds: readonly string[] = [],
-  unchangedSetIds: readonly string[] = [],
 ): Promise<ReplayOutcome> {
+  const { from } = scope;
   if (from !== null && (await hasStaleDerivedSessions(tx, userId, cfg.version))) {
     throw new HttpError(503, 'rebuild_required');
   }
 
   const suffix = await loadReplayableSessions(tx, userId, from, cfg);
   const suffixExerciseIds = [...new Set(suffix.flatMap((session) => session.sets.map((set) => set.exerciseId)))];
-  const touched = [...new Set([...suffixExerciseIds, ...touchedExerciseIds])];
+  const touched = [...new Set([...suffixExerciseIds, ...scope.previousExerciseIds])];
   const catalog = await loadCatalog(tx, userId, touched);
-  const prior = await loadPriorState(tx, userId, from, touchedExerciseIds, suffixExerciseIds, touched, catalog, cfg);
+  const prior = await loadPriorState(tx, userId, scope, suffixExerciseIds, touched, catalog, cfg);
 
   const replay = replayHistory(
     suffix,
@@ -216,8 +235,8 @@ export async function replayFrom(
           sets,
           from.id,
           replayedSessionIds,
-          deletedSessionIds,
-          unchangedSetIds,
+          scope.deletedSessionIds,
+          scope.unchangedSetIds,
           cfg.version,
         );
   await syncSessionEvents(tx, userId, replayedSessionIds);
@@ -229,4 +248,68 @@ export async function replayFrom(
     sets,
     revokedDrops: inReplayOrder(revoked, sets, replayedSessionIds),
   };
+}
+
+const NOTHING_PREVIOUS = { previousExerciseIds: [], deletedSessionIds: [], unchangedSetIds: [] };
+
+export async function deriveNewSession(tx: Transaction, userId: string, key: SessionKey): Promise<SessionSummary> {
+  const outcome = await replayFrom(tx, userId, { from: key, anchorIsNew: true, ...NOTHING_PREVIOUS }, DEFAULT_BALANCE);
+  await rollNewSessionLoot(
+    tx,
+    userId,
+    key.id,
+    outcome.sets.filter((set) => set.sessionId === key.id),
+  );
+  return await storedSummary(tx, key.id);
+}
+
+export async function deriveEditedSession(
+  tx: Transaction,
+  userId: string,
+  key: SessionKey,
+  setsBeforeEdit: readonly StoredSet[],
+  unchangedSetIds: readonly string[],
+): Promise<ReplayChanges & { summary: SessionSummary }> {
+  const { replayedSessionIds, revokedDrops } = await replayFrom(
+    tx,
+    userId,
+    {
+      from: key,
+      anchorIsNew: false,
+      previousExerciseIds: [...new Set(setsBeforeEdit.map((set) => set.exerciseId))],
+      deletedSessionIds: [],
+      unchangedSetIds,
+    },
+    DEFAULT_BALANCE,
+  );
+  return { summary: await storedSummary(tx, key.id), replayedSessionIds, revokedDrops };
+}
+
+export async function deleteSessionAndRederive(
+  tx: Transaction,
+  userId: string,
+  key: SessionKey,
+): Promise<ReplayChanges> {
+  const previousExerciseIds = await sessionExerciseIds(tx, key.id);
+  await tombstoneSession(tx, userId, key);
+  const { replayedSessionIds, revokedDrops } = await replayFrom(
+    tx,
+    userId,
+    { from: key, anchorIsNew: false, previousExerciseIds, deletedSessionIds: [key.id], unchangedSetIds: [] },
+    DEFAULT_BALANCE,
+  );
+  return { replayedSessionIds, revokedDrops };
+}
+
+export async function rebuildDerivedState(tx: Transaction, userId: string) {
+  await clearStrengthCache(tx, userId);
+  await clearRecordCaches(tx, userId);
+  const { sessionsReplayed, setsRewritten } = await replayFrom(
+    tx,
+    userId,
+    { from: null, anchorIsNew: false, ...NOTHING_PREVIOUS },
+    DEFAULT_BALANCE,
+  );
+  await markSessionsDerivedAt(tx, userId, DEFAULT_BALANCE.version);
+  return { sessionsReplayed, setsRewritten };
 }

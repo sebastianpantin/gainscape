@@ -23,8 +23,7 @@ import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { claimChallengeScroll } from '../_shared/stores/challenges.ts';
 import { loadEquippedLoadout } from '../_shared/stores/gear.ts';
-import { rollNewSessionLoot } from '../_shared/stores/loot.ts';
-import { replayFrom } from '../_shared/stores/replay.ts';
+import { deriveNewSession } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
   findSession,
@@ -39,7 +38,6 @@ import {
   placeholderSetRow,
   type SessionTiming,
   type StoredSession,
-  storedSummary,
   tombstoneOwner,
 } from '../_shared/stores/sessions.ts';
 import {
@@ -109,20 +107,8 @@ async function storeAndReplay(
       ...snapshots.get(set.id)!,
     })),
   );
-  const outcome = await replayFrom(
-    tx,
-    row.userId,
-    { id: session.id, startedAt: session.startedAt },
-    [],
-    DEFAULT_BALANCE,
-  );
-  await rollNewSessionLoot(
-    tx,
-    row.userId,
-    session.id,
-    outcome.sets.filter((set) => set.sessionId === session.id),
-  );
-  return { summary: await storedSummary(tx, session.id), completedAt };
+  const summary = await deriveNewSession(tx, row.userId, { id: session.id, startedAt: session.startedAt });
+  return { summary, completedAt };
 }
 
 async function claimChallengeRun(
