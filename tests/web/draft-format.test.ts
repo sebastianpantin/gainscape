@@ -381,7 +381,7 @@ describe('parseStoredDraft', () => {
   });
 
   it('rejects unknown future versions', () => {
-    expect(parseStoredDraft({ v: 6, kind: 'draft', userId, updatedAt: 5, draft: workout() }, userId)).toBeNull();
+    expect(parseStoredDraft({ v: 7, kind: 'draft', userId, updatedAt: 5, draft: workout() }, userId)).toBeNull();
   });
 
   it('rejects a record that belongs to another user', () => {

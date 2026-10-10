@@ -19,7 +19,8 @@ export function describeRecord(
 ): DescribedRecord {
   const name = exercise?.name ?? 'Exercise';
   if (record.kind === 'cardio') {
-    const paceUnit = exercise?.modality === 'cardio' ? exercise.activity.paceUnit : 'per_km';
+    const paceUnit =
+      exercise?.modality === 'cardio' ? exercise.activity.paceUnit : exercise?.measure ? 'per_100m' : 'per_km';
     return { headline: `${name}:`, previous: describeCardioGains(record.records, distanceUnitFor(unit, paceUnit)) };
   }
   if (record.kind === 'bodyweight_reps') {

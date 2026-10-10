@@ -1,4 +1,4 @@
-import type { BoutValues, DraftSet, WorkoutDraft } from './draft-format.ts';
+import type { BoutValues, DraftSet, HoldDraftSet, WorkoutDraft } from './draft-format.ts';
 
 export function boutPayload(bout: BoutValues & { id: string }, exerciseId: string, position: number) {
   const { id, distanceM, interval, effort } = bout;
@@ -21,14 +21,21 @@ function liftPayload(set: DraftSet, exerciseId: string, position: number) {
   };
 }
 
-type SetPayload = ReturnType<typeof boutPayload> | ReturnType<typeof liftPayload>;
+function holdPayload(set: HoldDraftSet, exerciseId: string, position: number) {
+  const { id, weightKg, durationS, distanceM, effort } = set;
+  return { kind: 'hold' as const, id, exerciseId, position, weightKg, durationS, distanceM, effort };
+}
+
+type SetPayload = ReturnType<typeof boutPayload> | ReturnType<typeof liftPayload> | ReturnType<typeof holdPayload>;
 
 export function completeSessionPayload(draft: WorkoutDraft) {
   let position = 0;
   const sets = draft.exercises.flatMap((exercise): SetPayload[] =>
     exercise.modality === 'cardio'
       ? exercise.sets.filter((bout) => bout.done).map((bout) => boutPayload(bout, exercise.exerciseId, position++))
-      : exercise.sets.filter((set) => set.done).map((set) => liftPayload(set, exercise.exerciseId, position++)),
+      : exercise.modality === 'hold'
+        ? exercise.sets.filter((set) => set.done).map((set) => holdPayload(set, exercise.exerciseId, position++))
+        : exercise.sets.filter((set) => set.done).map((set) => liftPayload(set, exercise.exerciseId, position++)),
   );
   return {
     id: draft.sessionId,
