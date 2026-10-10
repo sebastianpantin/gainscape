@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   addCardioExercise,
+  addExercise,
   addSet,
   addWarmupSets,
   canSwapExercise,
   type CardioDraftExercise,
   type CatalogEntry,
+  type DraftExercise,
   doneSetCount,
   firstWorkingSet,
   type LiftDraftExercise,
@@ -16,6 +18,10 @@ import {
   notDoneSetCount,
   plannedSetsLeftToLifter,
   parseStoredDraft,
+  discardedRecord,
+  forgottenRecord,
+  storableRecord,
+  syncedRecord,
   programLabelFor,
   removeExercise,
   removeSet,
@@ -44,6 +50,7 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
     challenge: null,
     exercises: [
       {
+        clientId: 'card-bench',
         exerciseId: 'bench',
         name: 'Bench',
         modality: 'lift',
@@ -64,6 +71,7 @@ function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
         ],
       },
       {
+        clientId: 'card-row',
         exerciseId: 'row',
         name: 'Row',
         modality: 'lift',
@@ -116,6 +124,16 @@ describe('parseStoredDraft', () => {
     const raw = { v: 5, kind: 'discarded', userId, updatedAt: 6, discardedSessionId: workout().sessionId };
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
     expect(parseStoredDraft({ ...raw, discardedSessionId: 7 }, userId)).toBeNull();
+  });
+
+  it('stores discard and forget tombstones in the synced shape an older app version reads as occupied', () => {
+    const sessionId = workout().sessionId;
+    for (const tombstone of [discardedRecord(userId, 6, sessionId), forgottenRecord(userId, 6, sessionId)]) {
+      const stored = storableRecord(tombstone);
+      expect(stored).toMatchObject({ v: 5, kind: 'synced', userId, updatedAt: 6, syncedSessionId: sessionId });
+      expect(parseStoredDraft(JSON.parse(JSON.stringify(stored)), userId)).toEqual(tombstone);
+    }
+    expect(storableRecord(syncedRecord(userId, 6, sessionId))).toEqual(syncedRecord(userId, 6, sessionId));
   });
 
   it('keeps a warm-up flag through a v5 parse', () => {
@@ -626,6 +644,7 @@ describe('planned set editing', () => {
 
 function cardioExercise(overrides: Partial<CardioDraftExercise> = {}): CardioDraftExercise {
   return {
+    clientId: 'card-run',
     exerciseId: 'run',
     name: 'Running',
     modality: 'cardio',
@@ -921,5 +940,57 @@ describe('superset leftovers', () => {
     const draft = workout({ exercises: [undone(bench, 'g'), undone(row, null)] });
     const swapped = swapExercise(draft, 0, { id: 'dip', name: 'Dip', loadType: 'bodyweight' });
     expect(supersetIdsOf(swapped)).toEqual([null, null]);
+  });
+});
+
+describe('exercise client ids', () => {
+  const withoutClientId = (exercise: DraftExercise) =>
+    Object.fromEntries(Object.entries(exercise).filter(([key]) => key !== 'clientId'));
+
+  it('gives each exercise of a stored draft without client ids a positional one, the same on every parse', () => {
+    const draft = { ...workout(), exercises: workout().exercises.map(withoutClientId) };
+    const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft };
+    const parsed = parseStoredDraft(raw, userId);
+    expect(parsed?.kind === 'draft' && parsed.draft.exercises.map((exercise) => exercise.clientId)).toEqual([
+      'exercise-0',
+      'exercise-1',
+    ]);
+    expect(parseStoredDraft(raw, userId)).toEqual(parsed);
+  });
+
+  it('keeps stored client ids', () => {
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft: workout() }, userId);
+    expect(parsed?.kind === 'draft' && parsed.draft.exercises.map((exercise) => exercise.clientId)).toEqual([
+      'card-bench',
+      'card-row',
+    ]);
+  });
+
+  it('keys every added exercise apart, even a repeat, and keeps the others when one is removed', () => {
+    const empty = workout({ exercises: [] });
+    const twice = addExercise(addExercise(empty, 'bench', 'Bench', 'external'), 'bench', 'Bench', 'external');
+    const withCardio = addCardioExercise(twice, 'run', 'Running', cardioExercise().activity);
+    const clientIds = withCardio.exercises.map((exercise) => exercise.clientId);
+    expect(new Set(clientIds).size).toBe(3);
+    expect(removeExercise(withCardio, 0).exercises.map((exercise) => exercise.clientId)).toEqual(clientIds.slice(1));
+  });
+
+  it('keys every exercise of a started program day apart', () => {
+    const benchTwice = startDraftFromDay(
+      {
+        id: 'day',
+        name: 'Push',
+        programName: 'PPL',
+        exercises: [
+          { exerciseId: 'bench', targetSets: 1, targetRepsMin: 5, targetRepsMax: 5 },
+          { exerciseId: 'bench', targetSets: 1, targetRepsMin: 8, targetRepsMax: 8 },
+        ],
+      },
+      new Map<string, CatalogEntry>([['bench', { name: 'Bench', loadType: 'external', archived: false }]]),
+      new Map(),
+      new Date('2026-09-30T10:00:00.000Z'),
+    );
+    const [first, second] = benchTwice.draft.exercises.map((exercise) => exercise.clientId);
+    expect(first).not.toBe(second);
   });
 });

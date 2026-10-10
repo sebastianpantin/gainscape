@@ -81,6 +81,7 @@ describe('finding unreleased pull requests in a real repository', () => {
     ]);
     expect(unreleased.unknown).toEqual([]);
     expect(unreleased.direct).toEqual([]);
+    expect(unreleased.uncoveredDirect).toEqual([]);
   });
 
   it('reads the repository at its directory even when GIT_DIR points elsewhere', () => {
@@ -109,6 +110,20 @@ describe('finding unreleased pull requests in a real repository', () => {
     expect(unreleased.uncovered).toEqual([]);
     expect(unreleased.unknown).toEqual([]);
     expect(unreleased.direct.map((commit) => commit.subject)).toEqual(['Changelog: cover #2']);
+  });
+
+  it('blocks a direct commit that changes the app until a changelog change comes after it', () => {
+    writeRepoFile('web/src/b.ts', 'export const b = 1;\n');
+    git(repo, 'add', '.');
+    git(repo, 'commit', '--quiet', '-m', 'Add b from a rebase merge');
+    const blocked = findUnreleased(repo);
+    expect(blocked.uncoveredDirect.map(({ subject, files }) => ({ subject, files }))).toEqual([
+      { subject: 'Add b from a rebase merge', files: ['web/src/b.ts'] },
+    ]);
+    expect(blocked.direct.map((commit) => commit.subject)).toEqual(['Changelog: cover #2']);
+    writeRepoFile('web/changelog.yaml', changelogYaml([2]).replace('First release.', 'Adds b.'));
+    git(repo, 'commit', '--quiet', '-am', 'Changelog: cover b');
+    expect(findUnreleased(repo).uncoveredDirect).toEqual([]);
   });
 
   it('lists both paths of a file moved out of the app as user-facing', () => {

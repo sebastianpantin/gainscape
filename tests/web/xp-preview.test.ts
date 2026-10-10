@@ -40,7 +40,15 @@ function warmupSet(weightKg: number, reps: number, done = true): DraftSet {
 }
 
 function exercise(exerciseId: string, sets: DraftSet[], loadType: LoadType = 'external'): LiftDraftExercise {
-  return { exerciseId, name: exerciseId, modality: 'lift', loadType, target: null, sets };
+  return {
+    clientId: `card-${exerciseId}`,
+    exerciseId,
+    name: exerciseId,
+    modality: 'lift',
+    loadType,
+    target: null,
+    sets,
+  };
 }
 
 function strengthOf(entries: [string, number | null][]): Record<string, ExerciseStrength> {
@@ -318,7 +326,7 @@ function bout(values: Partial<CardioDraftSet> = {}): CardioDraftSet {
 }
 
 function cardio(exerciseId: string, activity: CardioActivity, sets: CardioDraftSet[]): CardioDraftExercise {
-  return { exerciseId, name: exerciseId, modality: 'cardio', activity, sets };
+  return { clientId: `card-${exerciseId}`, exerciseId, name: exerciseId, modality: 'cardio', activity, sets };
 }
 
 function serverXp(draft: CardioDraftExercise[]): number[] {

@@ -1,7 +1,11 @@
-import { nextUpdatedAt, type StoredDraft, type WorkoutDraft } from './draft-format.ts';
+import { nextUpdatedAt, type StoredDraft, storedSessionId, type WorkoutDraft } from './draft-format.ts';
 import type { DraftStore, PutOptions } from './draft-store.ts';
 
 export const DRAFT_CHANNEL_NAME = 'gainscape.drafts';
+
+export const SESSION_STAYS_ON_FALLBACK = 'draft_session_on_fallback';
+
+export type StartOutcome = 'started' | 'resumed' | 'opened_waiting';
 
 export type DraftNotice = 'saved_elsewhere' | 'deleted';
 
@@ -14,7 +18,10 @@ export interface DraftSnapshot {
   state: WorkoutDraftState;
   store: DraftStore | null;
   saveProblem: DraftSaveProblem | null;
+  waitingDraft: boolean;
 }
+
+type StoredWorkout = Extract<StoredDraft, { kind: 'draft' }>;
 
 export type SyncedChange = 'synced' | 'deleted';
 
@@ -47,7 +54,7 @@ export interface DraftSession {
   ready: Promise<void>;
   changeDraft: (next: WorkoutDraft, options?: PutOptions) => void;
   updateDraft: (update: (current: WorkoutDraft) => WorkoutDraft | null) => WorkoutDraft | null;
-  startWorkout: (fresh: () => WorkoutDraft) => Promise<boolean>;
+  startWorkout: (fresh: () => WorkoutDraft) => Promise<StartOutcome>;
   discardDraft: (sessionId: string) => void;
   markSynced: (sessionId: string, change?: SyncedChange) => Promise<void>;
   reload: (noticeWhenGone?: DraftNotice | null) => Promise<void>;
@@ -68,6 +75,15 @@ export async function flushOpenDraftSessions(): Promise<void> {
   await Promise.all([...openSessionFlushes].map((flush) => flush()));
 }
 
+function staysOnFallback(error: unknown): boolean {
+  return error instanceof Error && error.message === SESSION_STAYS_ON_FALLBACK;
+}
+
+function supersedes(stored: StoredDraft, waiting: StoredWorkout): boolean {
+  if (storedSessionId(stored) !== waiting.draft.sessionId) return false;
+  return stored.kind !== 'discarded' || stored.updatedAt >= waiting.updatedAt;
+}
+
 function isDraftMessage(data: unknown): data is DraftMessage {
   const message = data as Partial<DraftMessage> | null;
   return typeof message?.userId === 'string' && typeof message.updatedAt === 'number';
@@ -81,7 +97,7 @@ export function createDraftSession({
   onChange,
   requestPersistence,
 }: DraftSessionOptions): DraftSession {
-  let snapshot: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: null };
+  let snapshot: DraftSnapshot = { state: { status: 'loading' }, store: null, saveProblem: null, waitingDraft: false };
   let active = true;
   let lastSeen = 0;
   const deletedSessionIds = new Set<string>();
@@ -111,7 +127,7 @@ export function createDraftSession({
     if (record) seen(record.updatedAt);
     if (record?.kind === 'draft') showDraft(record.draft);
     else if (record?.kind === 'synced' && deletedSessionIds.has(record.syncedSessionId)) showDraft(null, 'deleted');
-    else if (record?.kind === 'discarded') showDraft(null);
+    else if (record?.kind === 'discarded' || record?.kind === 'forgotten') showDraft(null);
     else showDraft(null, noticeWhenGone);
   };
 
@@ -150,11 +166,30 @@ export function createDraftSession({
   const announce = (sessionId: string, updatedAt: number, change: DraftChange) =>
     channel?.postMessage({ userId, sessionId, updatedAt, change });
 
+  const draftWaitingOnFallback = async (stored: StoredDraft | null): Promise<StoredWorkout | null> => {
+    if (usingFallback) return null;
+    const record = await fallbackStore()
+      .get(userId)
+      .catch(() => null);
+    if (record?.kind !== 'draft') return null;
+    return stored && supersedes(stored, record) ? null : record;
+  };
+
+  const openWaitingDraft = (waiting: StoredWorkout) => {
+    switchToFallback();
+    seen(waiting.updatedAt);
+    publish({ waitingDraft: false });
+    showDraft(waiting.draft);
+  };
+
   const load = async (store: DraftStore) => {
     const record = await store.get(userId);
     if (record) seen(record.updatedAt);
+    const waiting = await draftWaitingOnFallback(record);
     publish({ store, saveProblem: problemWhenSaved });
-    showDraft(record?.kind === 'draft' ? record.draft : null);
+    if (record?.kind !== 'draft') return waiting ? openWaitingDraft(waiting) : showDraft(null);
+    publish({ waitingDraft: waiting !== null });
+    showDraft(record.draft);
   };
 
   const ready = (async () => {
@@ -162,9 +197,9 @@ export function createDraftSession({
     try {
       await load(await openStore());
       return;
-    } catch {
+    } catch (error) {
       usingFallback = true;
-      problemWhenSaved = 'unreadable';
+      if (!staysOnFallback(error)) problemWhenSaved = 'unreadable';
     }
     try {
       await load(fallbackStore());
@@ -218,15 +253,20 @@ export function createDraftSession({
   };
 
   const startWorkout = async (fresh: () => WorkoutDraft) => {
-    let startedFresh = false;
+    let outcome: StartOutcome = 'resumed';
     await enqueue(async (store) => {
       const record = await store.get(userId);
       if (record?.kind === 'draft') return adopt(record);
       if (record) seen(record.updatedAt);
+      const waiting = await draftWaitingOnFallback(record);
+      if (waiting) {
+        outcome = 'opened_waiting';
+        return openWaitingDraft(waiting);
+      }
       changeDraft(fresh());
-      startedFresh = true;
+      outcome = 'started';
     });
-    return startedFresh;
+    return outcome;
   };
 
   const discardDraft = (sessionId: string) => {

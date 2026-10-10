@@ -1,5 +1,5 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
-import { authCallbackUrl } from './auth-links.ts';
+import { authCallbackUrl, authErrorMessage } from './auth-links.ts';
 import { httpErrorBody } from './function-client-rules.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds, tryAgainIn } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
@@ -15,9 +15,18 @@ async function functionError(error: unknown): Promise<string> {
   return messageOf(error, 'network_error');
 }
 
-export async function changePassword(email: string, currentPassword: string, newPassword: string): Promise<void> {
-  const check = await supabase.auth.signInWithPassword({ email, password: currentPassword });
-  if (check.error) throw new Error('Your current password is wrong.');
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const current = await supabase.auth.getUser();
+  if (current.error) throw new Error(authErrorMessage(current.error));
+  const check = await supabase.auth.signInWithPassword({
+    email: current.data.user.email ?? '',
+    password: currentPassword,
+  });
+  if (check.error) {
+    throw new Error(
+      check.error.code === 'invalid_credentials' ? 'Your current password is wrong.' : authErrorMessage(check.error),
+    );
+  }
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw new Error(error.message);
 }

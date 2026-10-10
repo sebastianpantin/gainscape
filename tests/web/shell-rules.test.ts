@@ -79,6 +79,12 @@ describe('precacheEntries', () => {
       expect(entries).not.toContain(excluded);
   });
 
+  it('leaves out the files the Pages build does not publish', () => {
+    const entries = precacheEntries([...listing, 'icons/AGENTS.md', 'licenses/AGENTS.md', 'AGENTS.md']);
+    expect(entries.filter((entry) => entry.endsWith('AGENTS.md'))).toEqual([]);
+    expect(entries).toContain('/licenses/index.html');
+  });
+
   it('is sorted and unique', () => {
     const entries = precacheEntries(listing);
     expect(entries).toEqual([...new Set(entries)].sort());

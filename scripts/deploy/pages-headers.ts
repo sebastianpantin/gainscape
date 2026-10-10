@@ -1,6 +1,7 @@
+import { isUnpublished } from '../../web/src/pwa/shell-rules.ts';
+
 const YEAR_SECONDS = 31_536_000;
 const NEVER_CACHED = ['/', '/index.html', '/sw.js', '/manifest.webmanifest'];
-const UNPUBLISHED_FILE_NAMES = new Set(['AGENTS.md']);
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost']);
 const PERMISSIONS_OFF = ['camera', 'microphone', 'geolocation', 'payment', 'usb'];
 
@@ -49,5 +50,5 @@ export function pagesHeaders(supabaseUrl: string): string {
 }
 
 export function unpublishedFiles(paths: readonly string[]): string[] {
-  return paths.filter((path) => UNPUBLISHED_FILE_NAMES.has(path.split('/').at(-1) ?? ''));
+  return paths.filter(isUnpublished);
 }

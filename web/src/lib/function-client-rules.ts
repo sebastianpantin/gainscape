@@ -1,11 +1,6 @@
-import {
-  type AuthError,
-  FunctionsHttpError,
-  isAuthApiError,
-  isAuthRetryableFetchError,
-  type Session,
-} from '@supabase/supabase-js';
+import { type AuthError, FunctionsHttpError, type Session } from '@supabase/supabase-js';
 import { messageOf } from './error-text.ts';
+import { RATE_LIMITED_STATUS } from './rate-limit.ts';
 
 export type AuthProblem = { kind: 'needs_sign_in' } | { kind: 'wrong_account' } | { kind: 'retryable'; reason: string };
 
@@ -47,17 +42,22 @@ export function boundAccessToken(session: Session | null, userId: string): strin
   return session.access_token;
 }
 
+function authErrorProblem(error: AuthError): AuthProblem {
+  const status = error.status ?? 0;
+  const rejectedByAuthServer = status >= 400 && status < 500 && status !== RATE_LIMITED_STATUS;
+  return rejectedByAuthServer ? { kind: 'needs_sign_in' } : { kind: 'retryable', reason: error.message };
+}
+
 async function currentAccessToken(client: OwnerClient, userId: string): Promise<string | AuthProblem> {
   const { data, error } = await client.getSession();
-  if (isAuthRetryableFetchError(error) || client.isOffline())
-    return { kind: 'retryable', reason: error?.message ?? 'offline' };
-  if (error) return { kind: 'needs_sign_in' };
+  if (client.isOffline()) return { kind: 'retryable', reason: error?.message ?? 'offline' };
+  if (error) return authErrorProblem(error);
   return boundAccessToken(data.session, userId);
 }
 
 async function refreshedAccessToken(client: OwnerClient, userId: string): Promise<string | AuthProblem> {
   const { data, error } = await client.refreshSession();
-  if (error) return isAuthApiError(error) ? { kind: 'needs_sign_in' } : { kind: 'retryable', reason: error.message };
+  if (error) return authErrorProblem(error);
   return boundAccessToken(data.session, userId);
 }
 

@@ -20,6 +20,7 @@ import {
   feedText,
   type FriendRow,
   relativeTime,
+  requestedUsername,
   sendRequestText,
   socialErrorMessage,
 } from '../../lib/social-rules.ts';
@@ -53,7 +54,7 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
       </span>
       <div className="feed-body">
         <span className="muted tiny">
-          {item.isOwn ? 'You' : item.displayName} · {relativeTime(item.occurredAt)}
+          {item.isOwn ? 'You' : `${item.displayName} @${item.username}`} · {relativeTime(item.occurredAt)}
         </span>
         <span className="pixel">{text.headline}</span>
         {text.detail && <span className="muted tiny">{text.detail}</span>}
@@ -69,7 +70,7 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
           aria-pressed={item.gzGiven}
           aria-busy={pending}
           disabled={pending}
-          aria-label={`${item.gzGiven ? 'Remove gz from' : 'Say gz to'} ${item.displayName}, ${item.gzCount} so far`}
+          aria-label={`${item.gzGiven ? 'Remove gz from' : 'Say gz to'} ${item.displayName} @${item.username}, ${item.gzCount} so far`}
           onClick={() => onToggleGz(item)}
         >
           <span className="pixel">gz</span>
@@ -125,20 +126,21 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
     setBusy(true);
     setProblem(null);
     setStatus('');
+    let actionProblem: string | null = null;
     try {
       const done = await action();
       if (done !== null) setStatus(done);
-      const failed = (await refetchAll()).find((result) => result.isError);
-      if (failed) setProblem(problemText(failed.error));
     } catch (error) {
-      setProblem(problemText(error));
+      actionProblem = problemText(error);
     }
+    const failedRefetch = (await refetchAll()).find((result) => result.isError);
+    setProblem(actionProblem ?? (failedRefetch ? problemText(failedRefetch.error) : null));
     setBusy(false);
   };
 
   const sendRequest = (event: FormEvent) => {
     event.preventDefault();
-    const wanted = username.trim().toLowerCase();
+    const wanted = requestedUsername(username);
     if (!wanted) return;
     void act(async () => {
       const result = await sendFriendRequest(wanted);
@@ -187,7 +189,7 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
     });
 
   const toggleGz = async (item: FeedItem) => {
-    if (gzPending.has(item.eventId)) return;
+    if (busy || gzPending.has(item.eventId)) return;
     const given = !item.gzGiven;
     const optimisticCount = item.gzCount + (given ? 1 : -1);
     const stillOptimistic = (current: FeedItem) => current.gzGiven === given && current.gzCount === optimisticCount;
@@ -308,7 +310,12 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
           {feed.length > 0 && (
             <ul className="feed" aria-label="Feed">
               {feed.map((item) => (
-                <FeedEntry key={item.eventId} item={item} pending={gzPending.has(item.eventId)} onToggleGz={toggleGz} />
+                <FeedEntry
+                  key={item.eventId}
+                  item={item}
+                  pending={busy || gzPending.has(item.eventId)}
+                  onToggleGz={toggleGz}
+                />
               ))}
             </ul>
           )}

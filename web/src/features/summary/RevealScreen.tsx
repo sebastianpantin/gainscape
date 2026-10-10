@@ -24,6 +24,7 @@ import {
   challengeBonusText,
   challengeFailReason,
   challengeHeadline,
+  challengeNotAppliedText,
   describeRecord,
   gearBonusText,
   unappliedChangesText,
@@ -183,6 +184,13 @@ export function RevealScreen({ userId }: RevealScreenProps) {
     </p>
   );
 
+  const notAppliedText = challengeNotAppliedText(summary, summary.plannedChallenge ?? null);
+  const notAppliedNotice = notAppliedText && (
+    <p className="notice" role="status">
+      {notAppliedText}
+    </p>
+  );
+
   if (summary.historyOnly) {
     return (
       <main className="screen stack">
@@ -192,6 +200,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           Saved to history (older than 7 days, no XP)
         </p>
         {unappliedNotice}
+        {notAppliedNotice}
         <Link className="button" to="/">
           Done
         </Link>
@@ -219,6 +228,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       </header>
       {timingText && <p className="muted">{timingText}</p>}
       {unappliedNotice}
+      {notAppliedNotice}
       {headline && (
         <section className="panel stack" aria-label="Challenge">
           <p className={summary.challenge?.passed ? 'accent-text' : undefined}>{headline}</p>

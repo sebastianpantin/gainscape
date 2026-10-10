@@ -17,6 +17,7 @@ export interface ChallengeExerciseEntry {
   archived: boolean;
   modality: 'lift';
   loadType: LoadType;
+  equipment?: string;
 }
 
 export interface ItemsCache {
@@ -71,6 +72,7 @@ const itemsCacheSchema = z.object({
         archived: z.boolean(),
         modality: z.literal('lift'),
         loadType: z.enum(LOAD_TYPES),
+        equipment: z.string().optional(),
       }),
     ),
   }),
@@ -108,6 +110,16 @@ export function forgetItemsCache(storage: Storage, userId: string): void {
   }
 }
 
+export function spendCachedScroll(storage: Storage | null, userId: string, challengeId: string): void {
+  const cache = readItemsCache(storage, userId);
+  const scroll = cache?.catalog.items.find((item) => item.grantsChallengeId === challengeId);
+  if (!cache || !scroll) return;
+  const inventory = cache.inventory.map((held) =>
+    held.itemId === scroll.id ? { ...held, quantity: Math.max(0, held.quantity - 1) } : held,
+  );
+  saveItemsCache(storage, userId, { ...cache, inventory });
+}
+
 export function challengeExercisesOf(
   challenges: readonly CatalogChallenge[],
   exercises: readonly Exercise[],
@@ -124,5 +136,12 @@ export function challengeExercisesOf(
   return exercises
     .filter(isLiftExercise)
     .filter((exercise) => needed.has(exercise.id))
-    .map(({ id, name, archived, loadType }) => ({ id, name, archived, modality: 'lift', loadType }));
+    .map(({ id, name, archived, loadType, equipment }) => ({
+      id,
+      name,
+      archived,
+      modality: 'lift',
+      loadType,
+      equipment,
+    }));
 }

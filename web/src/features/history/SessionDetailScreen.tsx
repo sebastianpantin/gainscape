@@ -28,7 +28,7 @@ import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
-import { forgetLastSummary } from '../summary/last-summary.ts';
+import { forgetLastSummary, recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { HistoryBoutRow, HistorySetRow } from './HistorySetRow.tsx';
@@ -52,7 +52,9 @@ import {
   removedText,
   removeEditSet,
   sameSetValues,
+  savedEdit,
   type SessionEdit,
+  summariesToForget,
   swapEditExercise,
   updateEditBout,
   updateEditSet,
@@ -69,6 +71,7 @@ interface Loaded {
   sets: StoredSetRow[];
   exercises: Exercise[];
   original: SessionEdit;
+  xpBasis: SessionEdit;
 }
 
 type Problem =
@@ -90,7 +93,8 @@ async function loadSession(sessionId: string): Promise<Loaded | null> {
   ]);
   if (!session) return null;
   const exercisesById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
-  return { session, sets, exercises, original: editFromSession(session, sets, exercisesById) };
+  const original = editFromSession(session, sets, exercisesById);
+  return { session, sets, exercises, original, xpBasis: original };
 }
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
@@ -208,28 +212,26 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     setProblem(null);
     setNotice(null);
     setBusy({ kind: 'saving', retrying: null });
-    const outcome = await editSession(userId, editPayload(toSend), signal, (reason) =>
-      setBusy({ kind: 'saving', retrying: reason }),
-    );
+    let retried = false;
+    const outcome = await editSession(userId, editPayload(toSend), signal, (reason) => {
+      retried = true;
+      setBusy({ kind: 'saving', retrying: reason });
+    });
     if (signal.aborted) return;
     setBusy(IDLE);
     if (outcome.kind === 'ok') {
       const { revision, replayedSessionIds, revokedDrops } = outcome.data;
-      forgetLastSummary([sessionId, ...replayedSessionIds]);
-      setLoaded(
-        (current) =>
-          current && {
-            ...current,
-            session: { ...current.session, revision },
-            original: { ...current.original, revision },
-          },
+      forgetLastSummary(
+        summariesToForget(sessionId, replayedSessionIds, retried, recallLastSummary(userId)?.sessionId),
       );
-      setEdit({ ...toSend, revision });
+      const saved = savedEdit(toSend, revision);
+      setLoaded((current) => current && { ...current, session: { ...current.session, revision }, original: saved });
+      setEdit(saved);
       const removed = removedText(revokedDrops, items);
+      setNotice(removed ? `Changes saved. ${removed}` : 'Changes saved.');
       return reloadSession(signal, "Saved, but couldn't refresh the workout.", (fresh) => {
         adopt(fresh);
         setProblem(null);
-        setNotice(removed ? `Changes saved. ${removed}` : 'Changes saved.');
       });
     }
     const action = failureAction(outcome);
@@ -303,15 +305,15 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   };
 
   const { session } = loaded;
-  const originalSets = new Map(
-    loaded.original.exercises.flatMap((exercise) =>
+  const scoredSets = new Map(
+    loaded.xpBasis.exercises.flatMap((exercise) =>
       exercise.sets.map((set: EditSet | EditBout) => [set.id, { exerciseId: exercise.exerciseId, set }] as const),
     ),
   );
   const storedXp = new Map(loaded.sets.map((row) => [row.id, row.xpAwarded]));
   const xpShownFor = (exerciseId: string, set: EditSet | EditBout) => {
-    const original = originalSets.get(set.id);
-    const unchanged = original?.exerciseId === exerciseId && sameSetValues(original.set, set);
+    const scored = scoredSets.get(set.id);
+    const unchanged = scored?.exerciseId === exerciseId && sameSetValues(scored.set, set);
     return unchanged ? { label: formatXp(storedXp.get(set.id) ?? 0), note: 'XP' } : { label: '~?', note: 'after save' };
   };
   const unknownIds = problem?.kind === 'unknown_exercise' ? problem.exerciseIds : [];

@@ -96,6 +96,7 @@ function programDraft(): WorkoutDraft {
     challenge: null,
     exercises: [
       {
+        clientId: 'card-squat',
         exerciseId: 'squat',
         name: 'Squat',
         modality: 'lift',
@@ -125,6 +126,7 @@ function programDraft(): WorkoutDraft {
         ],
       },
       {
+        clientId: 'card-bench',
         exerciseId: 'bench',
         name: 'Bench',
         modality: 'lift',
@@ -144,6 +146,7 @@ function programDraft(): WorkoutDraft {
         ],
       },
       {
+        clientId: 'card-run',
         exerciseId: 'run',
         name: 'Running',
         modality: 'cardio',

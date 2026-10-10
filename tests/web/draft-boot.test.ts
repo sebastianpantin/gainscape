@@ -3,6 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openDraftStore, openDraftStoreOrFallback, openPrimaryDraftStore } from '../../web/src/offline/draft-boot.ts';
 import { draftRecord } from '../../web/src/offline/draft-format.ts';
+import { createDraftSession } from '../../web/src/offline/draft-session.ts';
 import {
   createIdbDraftStore,
   createLocalDraftStore,
@@ -98,6 +99,37 @@ describe('draft store boot', () => {
     }
   });
 
+  it('drops a forgotten tombstone at boot once it is a day old, in both stores', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-01T10:00:00.000Z') });
+    const otherUserId = '22222222-2222-4222-8222-222222222222';
+    const laterUserId = '33333333-3333-4333-8333-333333333333';
+    const indexedDB = new IDBFactory();
+    const storage = new MemoryStorage();
+    const database = await openDraftDatabase(indexedDB);
+    const idbStore = createIdbDraftStore(database!);
+    await idbStore.put(userId, 10, workout('forgotten-in-idb'));
+    await idbStore.forget(userId);
+    const local = createLocalDraftStore(storage);
+    await local.put(otherUserId, 10, workout('forgotten-in-fallback'));
+    await local.forget(otherUserId);
+    await idbStore.put(otherUserId, 10, workout('kept-in-idb'));
+
+    vi.setSystemTime(new Date('2026-10-02T09:00:00.000Z'));
+    await idbStore.put(laterUserId, 10, workout('forgotten-later'));
+    await idbStore.forget(laterUserId);
+    await openDraftStore({ indexedDB, storage });
+    expect(await idbStore.get(userId)).toMatchObject({ kind: 'forgotten' });
+    expect(await local.get(otherUserId)).toMatchObject({ kind: 'forgotten' });
+
+    vi.setSystemTime(new Date('2026-10-02T11:00:00.000Z'));
+    await openDraftStore({ indexedDB, storage });
+    expect(await idbStore.get(userId)).toBeNull();
+    expect(storage.getItem(fallbackKeyFor(otherUserId))).toBeNull();
+    expect(await idbStore.get(otherUserId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'kept-in-idb' } });
+    expect(await idbStore.get(laterUserId)).toMatchObject({ kind: 'forgotten' });
+    database!.close();
+  });
+
   it('leaves a fallback write made while boot moved the older record', async () => {
     const indexedDB = new IDBFactory();
     const storage = new StorageWrittenDuringBoot((written) =>
@@ -164,5 +196,41 @@ describe('draft store boot', () => {
     expect(open).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(2_000);
     await sessionOpen;
+  });
+
+  it('keeps a remounted draft session on the fallback once a session wrote a workout there this page load', async () => {
+    vi.resetModules();
+    const boot = await import('../../web/src/offline/draft-boot.ts');
+    const indexedDB = new IDBFactory();
+    const database = await openDraftDatabase(indexedDB);
+    await createIdbDraftStore(database!).put(userId, 20, workout('unsynced-in-idb'));
+    database!.close();
+    vi.stubGlobal('localStorage', new MemoryStorage());
+    vi.stubGlobal('indexedDB', unopenableIndexedDb);
+    const mountSession = () =>
+      createDraftSession({
+        userId,
+        openStore: boot.openDraftSessionStore,
+        fallbackStore: boot.openDraftSessionFallback,
+        channel: null,
+        onChange: () => undefined,
+      });
+
+    const first = mountSession();
+    await first.ready;
+    await first.startWorkout(() => workout('started-on-fallback'));
+    await first.flush();
+    first.close();
+    vi.stubGlobal('indexedDB', indexedDB);
+    const remounted = mountSession();
+    await remounted.ready;
+
+    expect(remounted.snapshot()).toMatchObject({
+      state: { draft: { sessionId: 'started-on-fallback' } },
+      saveProblem: null,
+    });
+    const reopened = await openDraftDatabase(indexedDB);
+    expect(await createIdbDraftStore(reopened!).get(userId)).toMatchObject({ draft: { sessionId: 'unsynced-in-idb' } });
+    reopened!.close();
   });
 });

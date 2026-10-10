@@ -155,6 +155,7 @@ export async function replayFrom(
   touchedExerciseIds: readonly string[],
   cfg: BalanceConfig,
   deletedSessionIds: readonly string[] = [],
+  unchangedSetIds: readonly string[] = [],
 ): Promise<ReplayOutcome> {
   if (from !== null && (await hasStaleDerivedSessions(tx, userId, cfg.version))) {
     throw new HttpError(503, 'rebuild_required');
@@ -209,7 +210,16 @@ export async function replayFrom(
   const revoked =
     from === null
       ? []
-      : await revokeDisqualifiedDrops(tx, userId, sets, replayedSessionIds, deletedSessionIds, cfg.version);
+      : await revokeDisqualifiedDrops(
+          tx,
+          userId,
+          sets,
+          from.id,
+          replayedSessionIds,
+          deletedSessionIds,
+          unchangedSetIds,
+          cfg.version,
+        );
   await syncSessionEvents(tx, userId, replayedSessionIds);
 
   return {

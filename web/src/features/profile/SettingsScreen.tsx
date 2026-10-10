@@ -643,7 +643,7 @@ function EmailForm({ email, onDone }: { email: string; onDone: (text: string) =>
   );
 }
 
-function PasswordForm({ email, onDone }: { email: string; onDone: (text: string) => void }) {
+function PasswordForm({ onDone }: { onDone: (text: string) => void }) {
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
@@ -655,7 +655,7 @@ function PasswordForm({ email, onDone }: { email: string; onDone: (text: string)
     setBusy(true);
     setProblem(null);
     try {
-      await changePassword(email, current, next);
+      await changePassword(current, next);
       onDone('Password changed.');
     } catch (error) {
       setProblem(messageOf(error, 'Could not change your password.'));
@@ -832,7 +832,7 @@ function AccountSection({
           >
             Change password
           </button>
-          {panel === 'password' && <PasswordForm email={email} onDone={done} />}
+          {panel === 'password' && <PasswordForm onDone={done} />}
         </>
       )}
       <button className="button" type="button" disabled={exporting} onClick={exportData}>

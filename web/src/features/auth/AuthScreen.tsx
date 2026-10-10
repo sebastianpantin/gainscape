@@ -4,6 +4,7 @@ import {
   authCallbackUrl,
   authErrorMessage,
   MINIMUM_PASSWORD_LENGTH,
+  passwordResetProblem,
   RESEND_COOLDOWN_SECONDS,
   USERNAME_HINT,
   USERNAME_PATTERN,
@@ -149,9 +150,10 @@ export function AuthScreen() {
         setMode('check-email');
       }
     } else if (mode === 'forgot') {
-      await supabase.auth.resetPasswordForEmail(email, { redirectTo: emailRedirectTo() });
-      setProblem(null);
-      setMode('reset-sent');
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: emailRedirectTo() });
+      const resetProblem = passwordResetProblem(error);
+      setProblem(resetProblem);
+      if (!resetProblem) setMode('reset-sent');
     } else {
       const outcome = await signIn(email, password);
       setProblem(outcome.problem);

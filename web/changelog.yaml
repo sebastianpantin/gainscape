@@ -1,3 +1,14 @@
+- prs: [77]
+  version: 0.3.1
+  date: 2026-10-10
+  title: Steadier workouts and friends
+  items:
+    - An unsynced workout saved on this device is never hidden, and a finished or discarded one never comes back.
+    - The friends feed shows each friend's @username, and friend lists update right after you act.
+    - Display names can no longer look blank or flip text direction.
+    - Editing an old workout only re-checks loot on the sets you changed.
+    - You stay signed in when the server has a short outage, and a failed password reset tells you why.
+    - Challenges start at the right weights offline, and the summary says when one could not be applied.
 - prs: [76]
   version: 0.3.0
   date: 2026-10-09

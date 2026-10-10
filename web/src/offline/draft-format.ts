@@ -61,6 +61,7 @@ export interface CardioDraftSet extends BoutValues {
 }
 
 export interface LiftDraftExercise {
+  clientId: string;
   exerciseId: string;
   name: string;
   modality: 'lift';
@@ -71,6 +72,7 @@ export interface LiftDraftExercise {
 }
 
 export interface CardioDraftExercise {
+  clientId: string;
   exerciseId: string;
   name: string;
   modality: 'cardio';
@@ -114,6 +116,13 @@ export type StoredDraft =
       userId: string;
       updatedAt: number;
       discardedSessionId: string;
+    }
+  | {
+      v: typeof DRAFT_FORMAT_VERSION;
+      kind: 'forgotten';
+      userId: string;
+      updatedAt: number;
+      forgottenSessionId: string;
     };
 
 function looksLikeDraft(value: unknown): value is WorkoutDraft {
@@ -192,10 +201,11 @@ function normalisedBout(bout: unknown): unknown {
   return isCardioEffortInput(bout.effort) ? bout : { ...bout, effort: null };
 }
 
-function normalisedExercise(exercise: unknown, fromV2: boolean): unknown {
+function normalisedExercise(exercise: unknown, index: number, fromV2: boolean): unknown {
   if (!isRecord(exercise) || !Array.isArray(exercise.sets)) return exercise;
-  if (exercise.modality === 'cardio') return { ...exercise, sets: exercise.sets.map(normalisedBout) };
-  return { ...exercise, modality: 'lift', sets: exercise.sets.map((set) => normalisedSet(set, fromV2)) };
+  const clientId = typeof exercise.clientId === 'string' ? exercise.clientId : `exercise-${index}`;
+  if (exercise.modality === 'cardio') return { ...exercise, clientId, sets: exercise.sets.map(normalisedBout) };
+  return { ...exercise, clientId, modality: 'lift', sets: exercise.sets.map((set) => normalisedSet(set, fromV2)) };
 }
 
 function withUsableSessionRpe(draft: WorkoutDraft): WorkoutDraft {
@@ -239,7 +249,7 @@ function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
     program: isDraftProgram(draft.program) ? draft.program : null,
     challenge: parsedDraftChallenge(draft.challenge),
     exercises: withValidSupersets(
-      draft.exercises.map((exercise) => normalisedExercise(exercise, fromV2) as DraftExercise),
+      draft.exercises.map((exercise, index) => normalisedExercise(exercise, index, fromV2) as DraftExercise),
     ),
   };
 }
@@ -255,8 +265,11 @@ export function parseStoredDraft(raw: unknown, userId: string): StoredDraft | nu
   if (!isRecord(raw) || raw.userId !== userId) return null;
   if (!READABLE_FORMAT_VERSIONS.includes(raw.v)) return null;
   if (typeof raw.updatedAt !== 'number' || !Number.isFinite(raw.updatedAt)) return null;
-  if (raw.kind === 'synced' && typeof raw.syncedSessionId === 'string')
+  if (raw.kind === 'synced' && typeof raw.syncedSessionId === 'string') {
+    if (raw.tombstone === 'discarded') return discardedRecord(userId, raw.updatedAt, raw.syncedSessionId);
+    if (raw.tombstone === 'forgotten') return forgottenRecord(userId, raw.updatedAt, raw.syncedSessionId);
     return syncedRecord(userId, raw.updatedAt, raw.syncedSessionId);
+  }
   if (raw.kind === 'discarded' && typeof raw.discardedSessionId === 'string')
     return discardedRecord(userId, raw.updatedAt, raw.discardedSessionId);
   if (raw.kind === 'draft' && looksLikeDraft(raw.draft))
@@ -282,9 +295,20 @@ export function discardedRecord(userId: string, updatedAt: number, discardedSess
   return { v: DRAFT_FORMAT_VERSION, kind: 'discarded', userId, updatedAt, discardedSessionId };
 }
 
+export function forgottenRecord(userId: string, updatedAt: number, forgottenSessionId: string): StoredDraft {
+  return { v: DRAFT_FORMAT_VERSION, kind: 'forgotten', userId, updatedAt, forgottenSessionId };
+}
+
 export function storedSessionId(record: StoredDraft): string {
   if (record.kind === 'draft') return record.draft.sessionId;
-  return record.kind === 'synced' ? record.syncedSessionId : record.discardedSessionId;
+  if (record.kind === 'synced') return record.syncedSessionId;
+  return record.kind === 'discarded' ? record.discardedSessionId : record.forgottenSessionId;
+}
+
+export function storableRecord(record: StoredDraft): object {
+  if (record.kind === 'draft' || record.kind === 'synced') return record;
+  const { v, userId, updatedAt, kind } = record;
+  return { v, kind: 'synced', userId, updatedAt, syncedSessionId: storedSessionId(record), tombstone: kind };
 }
 
 export function nextUpdatedAt(lastSeen: number, now: number): number {
@@ -309,7 +333,15 @@ export function withSessionRpe(draft: WorkoutDraft, sessionRpe: number | null): 
 }
 
 export function addExercise(draft: WorkoutDraft, exerciseId: string, name: string, loadType: LoadType): WorkoutDraft {
-  const added: LiftDraftExercise = { exerciseId, name, modality: 'lift', loadType, target: null, sets: [] };
+  const added: LiftDraftExercise = {
+    clientId: crypto.randomUUID(),
+    exerciseId,
+    name,
+    modality: 'lift',
+    loadType,
+    target: null,
+    sets: [],
+  };
   return { ...draft, exercises: [...draft.exercises, added] };
 }
 
@@ -319,7 +351,14 @@ export function addCardioExercise(
   name: string,
   activity: CardioActivity,
 ): WorkoutDraft {
-  const added: CardioDraftExercise = { exerciseId, name, modality: 'cardio', activity, sets: [] };
+  const added: CardioDraftExercise = {
+    clientId: crypto.randomUUID(),
+    exerciseId,
+    name,
+    modality: 'cardio',
+    activity,
+    sets: [],
+  };
   return { ...draft, exercises: [...draft.exercises, added] };
 }
 
@@ -483,7 +522,7 @@ export interface StartableDay {
 }
 
 export type CatalogEntry = { name: string; archived: boolean } & (
-  { modality?: 'lift'; loadType: LoadType } | { modality: 'cardio' }
+  { modality?: 'lift'; loadType: LoadType; equipment?: string } | { modality: 'cardio' }
 );
 
 export interface LastLoggedSet {
@@ -525,6 +564,7 @@ function liftDraftExercises<Entry extends { exerciseId: string }>(
     }
     return [
       {
+        clientId: crypto.randomUUID(),
         exerciseId: entry.exerciseId,
         name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
         modality: 'lift',
@@ -669,7 +709,7 @@ export function startDraftFromChallenge(
       const weightKg =
         target === null || exercise.loadType !== 'external'
           ? defaultWeightKg(exercise.loadType)
-          : challengeLoadKg(target, rounding, unit);
+          : challengeLoadKg(target, rounding, unit, (exercise.equipment ?? 'barbell') === 'barbell');
       targetLoadsKg[planned.exerciseId] = planned.pct === null ? null : weightKg;
       return {
         target: null,

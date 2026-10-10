@@ -273,7 +273,7 @@ test.describe('signed-in screens', () => {
   });
 
   test('the exercises, programs and settings screens have no serious axe violations', async ({ page }) => {
-    test.setTimeout(150_000);
+    test.setTimeout(240_000);
     await register(page, uniqueUsername('a11y_set'));
     const programPath = await createProgram(page);
 

@@ -19,7 +19,6 @@ import {
   fetchStrengthState,
 } from '../../lib/collection-data.ts';
 import { strengthText } from '../../lib/collection-rules.ts';
-import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
 import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
 import { fetchProfile, type UnitPref } from '../../lib/profile.ts';
@@ -119,7 +118,9 @@ import {
   finishPrompt,
   rejectionText,
   stalledSyncText,
+  startNoticeText,
   syncProblemText,
+  WAITING_DRAFT_TEXT,
 } from './workout-rules.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
 import { vibrateNewRecord } from './record-haptic.ts';
@@ -201,8 +202,19 @@ function ChallengeBanner({ draft, challenge, exercises, unit, onDiscard }: Chall
 
 export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const navigate = useNavigate();
-  const { state, store, saveProblem, changeDraft, updateDraft, startWorkout, discardDraft, markSynced, reload, flush } =
-    useWorkoutDraft(userId);
+  const {
+    state,
+    store,
+    saveProblem,
+    waitingDraft,
+    changeDraft,
+    updateDraft,
+    startWorkout,
+    discardDraft,
+    markSynced,
+    reload,
+    flush,
+  } = useWorkoutDraft(userId);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
   const [listNotice, setListNotice] = useState<string | null>(null);
@@ -364,19 +376,19 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           {deviceSaveProblemText(saveProblem)}
         </p>
       )}
+      {waitingDraft && draft && (
+        <p className="notice" role="status">
+          {WAITING_DRAFT_TEXT}
+        </p>
+      )}
       {store && <OtherAccountDraftNotice store={store} userId={userId} />}
     </>
   );
 
   const openStartedDraft = async (started: { draft: WorkoutDraft; skippedExerciseIds: string[] }) => {
-    const skipped = started.skippedExerciseIds.length;
-    const startedFresh = await startWorkout(() => started.draft);
+    const outcome = await startWorkout(() => started.draft);
     setStartingDay(false);
-    setStartNotice(
-      startedFresh && skipped > 0
-        ? `${skipped} exercise(s) in this day are no longer available and were skipped.`
-        : null,
-    );
+    setStartNotice(startNoticeText(outcome, started.skippedExerciseIds.length));
   };
 
   const startFromDay = async (program: Program, day: ProgramDay) => {
@@ -460,7 +472,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           disabled={startingDay}
           onClick={() => {
             setStartNotice(null);
-            void startWorkout(startDraft);
+            void startWorkout(startDraft).then((outcome) => setStartNotice(startNoticeText(outcome, 0)));
           }}
         >
           Start workout
@@ -617,11 +629,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     if (celebrate && readTrainingDeviceSettings(deviceStorage(), userId).vibrate) vibrateNewRecord();
     changeDraft(next);
   };
-  const cardKeys = exerciseKeys(draft.exercises);
-  const removeExerciseAt = (exerciseIndex: number) => {
-    if (swappingKey === cardKeys[exerciseIndex]) setSwappingKey(null);
-    changeDraft(removeExercise(draft, exerciseIndex));
-  };
+  const cardKeys = draft.exercises.map((exercise) => exercise.clientId);
+  if (swappingKey !== null && !cardKeys.includes(swappingKey)) setSwappingKey(null);
+  const removeExerciseAt = (exerciseIndex: number) => changeDraft(removeExercise(draft, exerciseIndex));
   const discardWorkout = () => {
     rest.stop();
     discardDraft(draft.sessionId);
