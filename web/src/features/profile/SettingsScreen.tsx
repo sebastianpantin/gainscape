@@ -1,4 +1,5 @@
-import { type FormEvent, useEffect, useId, useState } from 'react';
+import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { type FormEvent, useId, useState } from 'react';
 import { Link, type NavigateFunction, useNavigate } from 'react-router-dom';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { Switch } from '../../components/Switch.tsx';
@@ -43,6 +44,7 @@ import type { UpdateCheck } from '../../pwa/update-flow.ts';
 import { useOptimisticProfileSave } from './use-optimistic-profile-save.ts';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { weeklyGoalQuery } from '../../lib/queries.ts';
 import { fetchWeeklyGoalStatus, setWeeklyGoal } from '../../lib/weekly-goal.ts';
 import {
   goalFromChoice,
@@ -321,23 +323,19 @@ const WEEKLY_GOAL_OPTIONS = WEEKLY_GOAL_CHOICES.map((value) => ({ value, label: 
 type LoadedGoal =
   { kind: 'loading' } | { kind: 'failed'; message: string } | { kind: 'ready'; status: WeeklyGoalStatus | null };
 
+function loadedGoalOf(goal: UseQueryResult<WeeklyGoalStatus | null>): LoadedGoal {
+  if (goal.data !== undefined) return { kind: 'ready', status: goal.data };
+  if (goal.error && !goal.isFetching)
+    return { kind: 'failed', message: messageOf(goal.error, 'Could not load your weekly goal.') };
+  return { kind: 'loading' };
+}
+
 function WeeklyGoalSection() {
-  const [loaded, setLoaded] = useState<LoadedGoal>({ kind: 'loading' });
-  const [attempt, setAttempt] = useState(0);
+  const queryClient = useQueryClient();
+  const goalQuery = useQuery(weeklyGoalQuery);
+  const loaded = loadedGoalOf(goalQuery);
   const [pending, setPending] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchWeeklyGoalStatus(controller.signal).then(
-      (status) => setLoaded({ kind: 'ready', status }),
-      (error: unknown) => {
-        if (!controller.signal.aborted)
-          setLoaded({ kind: 'failed', message: messageOf(error, 'Could not load your weekly goal.') });
-      },
-    );
-    return () => controller.abort();
-  }, [attempt]);
 
   const status = loaded.kind === 'ready' ? loaded.status : null;
   const chosen = status?.nextGoal ? status.nextGoal.goal : (status?.goal ?? null);
@@ -348,7 +346,8 @@ function WeeklyGoalSection() {
     setProblem(null);
     try {
       await setWeeklyGoal(goal);
-      setLoaded({ kind: 'ready', status: await fetchWeeklyGoalStatus(new AbortController().signal) });
+      void queryClient.cancelQueries({ queryKey: weeklyGoalQuery.queryKey });
+      queryClient.setQueryData(weeklyGoalQuery.queryKey, await fetchWeeklyGoalStatus(new AbortController().signal));
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your weekly goal.'));
     } finally {
@@ -363,14 +362,7 @@ function WeeklyGoalSection() {
         <p className="problem" role="alert">
           {loaded.message}
         </p>
-        <button
-          className="button outline"
-          type="button"
-          onClick={() => {
-            setLoaded({ kind: 'loading' });
-            setAttempt((count) => count + 1);
-          }}
-        >
+        <button className="button outline" type="button" onClick={() => void goalQuery.refetch()}>
           Try again
         </button>
       </section>
