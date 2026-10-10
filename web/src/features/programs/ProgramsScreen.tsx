@@ -14,7 +14,7 @@ import {
 import { messageOf } from '../../lib/error-text.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import { forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
-import { followStatus } from '../../lib/program-follow-rules.ts';
+import { followStatus, isEnrolledIn } from '../../lib/program-follow-rules.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
@@ -28,6 +28,7 @@ interface ProgramsScreenProps {
 interface PendingDelete {
   program: Program;
   following: boolean;
+  cachedEnrollmentInProgram: boolean;
 }
 
 function daySummary(program: Program): string {
@@ -85,15 +86,19 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
 
   const askToRemove = (program: Program) => {
     const { enrollment, templates } = readProgramCache(localStorage, userId);
-    setPendingDelete({ program, following: followStatus(program, enrollment, templates) !== 'not_following' });
+    setPendingDelete({
+      program,
+      following: followStatus(program, enrollment, templates) !== 'not_following',
+      cachedEnrollmentInProgram: isEnrolledIn(program.id, enrollment),
+    });
   };
 
-  const remove = async ({ program, following }: PendingDelete) => {
+  const remove = async ({ program, cachedEnrollmentInProgram }: PendingDelete) => {
     setBusy(true);
     setProblem(null);
     try {
       await deleteProgram(userId, program.id);
-      if (following) forgetCachedEnrollment(userId);
+      if (cachedEnrollmentInProgram) forgetCachedEnrollment(userId);
       setPrograms(cachedPrograms(userId));
     } catch (error) {
       setProblem(messageOf(error, 'Could not delete the program.'));

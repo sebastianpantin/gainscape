@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { programStateAt } from '@domain/index.ts';
+import { type ProgramDefinition, programStateAt } from '@domain/index.ts';
 import { type ProgramDoc } from '../../web/src/lib/programs.ts';
 import { type EnrollmentRow, enrollmentFromRow } from '../../web/src/lib/program-facts-rules.ts';
 import {
@@ -7,6 +7,7 @@ import {
   carriedInputs,
   customTemplateKey,
   followStatus,
+  isEnrolledIn,
   workingWeights,
 } from '../../web/src/lib/program-follow-rules.ts';
 import { type PlannedExercise } from '../../web/src/offline/draft-format.ts';
@@ -119,6 +120,68 @@ describe('follow status of your own program', () => {
     expect(
       followStatus({ ...followedDoc(), name: 'My 5x5 v2' }, enrollmentRow({ template_version: 2 }), templates),
     ).toBe('current');
+  });
+});
+
+describe('follow status when a lift is repeated across days', () => {
+  const benchFirstDays = (): ProgramDoc['days'] => [
+    { id: 'day-a', name: 'Day A', exercises: [BENCH_THREE_BY_EIGHT, SQUAT_FIVE_BY_FIVE] },
+    {
+      id: 'day-b',
+      name: 'Day B',
+      exercises: [{ ...BENCH_THREE_BY_EIGHT, progression: { kind: 'linear', incrementKg: 1.25, incrementLb: 2.5 } }],
+    },
+  ];
+  const repeatSlot = (id: string, lift: string, count: number, reps: number, linear: boolean) => ({
+    id,
+    lift,
+    role: 'main' as const,
+    scheme: {
+      kind: 'repeat' as const,
+      count,
+      reps,
+      load: linear ? { kind: 'pct' as const, pct: 1, of: 'workingWeight' as const } : { kind: 'lastLogged' as const },
+    },
+  });
+  const linearRule = (lift: string, judgedSlot: string, kg: number, lb: number) => ({
+    lift,
+    var: 'workingWeight' as const,
+    trigger: 'afterSession' as const,
+    judgedSlots: [judgedSlot],
+    onMet: [{ kind: 'increment' as const, by: { kg, lb } }],
+    onMiss: [{ kind: 'hold' as const }],
+  });
+  const publishedInFirstSeenOrder = {
+    ...CUSTOM_FIVE_BY_FIVE,
+    schedule: {
+      kind: 'rotation',
+      days: [
+        {
+          key: 'd0',
+          name: 'Day A',
+          slots: [repeatSlot('d0_0', BENCH_LIFT, 3, 8, false), repeatSlot('d0_1', SQUAT_LIFT, 5, 5, true)],
+        },
+        { key: 'd1', name: 'Day B', slots: [repeatSlot('d1_0', BENCH_LIFT, 3, 8, true)] },
+      ],
+    },
+    progression: [linearRule(BENCH_LIFT, 'd1_0', 1.25, 2.5), linearRule(SQUAT_LIFT, 'd0_1', 2.5, 5)],
+  } as ProgramDefinition;
+
+  it('is current whatever order the published rules list the lifts in', () => {
+    const program: ProgramDoc = { ...followedDoc(), days: benchFirstDays() };
+    expect(followStatus(program, enrollmentRow(), [customTemplateRow(publishedInFirstSeenOrder)])).toBe('current');
+  });
+});
+
+describe('a cached enrollment in a program', () => {
+  it('is in the program when it was started from its published key, ended or not', () => {
+    expect(isEnrolledIn(PROGRAM_ID, enrollmentRow())).toBe(true);
+    expect(isEnrolledIn(PROGRAM_ID, enrollmentRow({ ended_at: '2026-10-10T09:00:00.000Z' }))).toBe(true);
+  });
+
+  it('is not in the program with no enrollment or one in another program', () => {
+    expect(isEnrolledIn(PROGRAM_ID, null)).toBe(false);
+    expect(isEnrolledIn(PROGRAM_ID, enrollmentRow({ template_key: 'madcow_5x5' }))).toBe(false);
   });
 });
 

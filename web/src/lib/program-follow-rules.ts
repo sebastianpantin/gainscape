@@ -42,7 +42,7 @@ function plannedRuleLines(program: ProgramDoc): string[] {
       if (planned.progression.kind === 'linear' && !rules.has(lift))
         rules.set(lift, JSON.stringify([lift, planned.progression.incrementKg, planned.progression.incrementLb]));
     }
-  return [...rules.values()];
+  return [...rules.values()].sort();
 }
 
 function programLines(program: ProgramDoc): string[] {
@@ -80,7 +80,12 @@ function definitionLines(definition: ProgramDefinition): string[] {
     const by = adjustment?.kind === 'increment' && 'by' in adjustment ? adjustment.by : null;
     return by !== null && 'kg' in by ? JSON.stringify([rule.lift, by.kg, by.lb]) : JSON.stringify(rule.lift);
   });
+  rules.sort();
   return [JSON.stringify(definition.name), ...slots, ...rules];
+}
+
+export function isEnrolledIn(programId: string, enrollment: EnrollmentRow | null): boolean {
+  return enrollment?.template_key === customTemplateKey(programId);
 }
 
 export function followStatus(
@@ -88,8 +93,8 @@ export function followStatus(
   enrollment: EnrollmentRow | null,
   templates: readonly ProgramTemplateRow[],
 ): FollowStatus {
-  if (enrollment === null || enrollment.ended_at !== null) return 'not_following';
-  if (enrollment.template_key !== customTemplateKey(program.id)) return 'not_following';
+  if (enrollment === null || enrollment.ended_at !== null || !isEnrolledIn(program.id, enrollment))
+    return 'not_following';
   const template = enrolledTemplate(templates, enrollment);
   const parsed = template ? parseProgramDefinition(template.definition) : null;
   if (parsed?.kind !== 'ok') return 'current';
