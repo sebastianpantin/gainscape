@@ -11,6 +11,7 @@ import {
   doneSetCount,
   firstWorkingSet,
   type LiftDraftExercise,
+  type PlannedProgression,
   nextUpdatedAt,
   canQuickFill,
   fillWorkingSets,
@@ -460,17 +461,19 @@ describe('programLabelFor', () => {
   });
 });
 
+const NO_PROGRESSION = { kind: 'none' } as const;
+
 describe('startDraftFromDay', () => {
   const day = {
     id: '55555555-5555-4555-8555-555555555555',
     name: 'Upper',
     programName: 'My UL',
     exercises: [
-      { exerciseId: 'bench', targetSets: 3, targetRepsMin: 6, targetRepsMax: 10 },
-      { exerciseId: 'pullup', targetSets: 2, targetRepsMin: 5, targetRepsMax: 8 },
-      { exerciseId: 'old', targetSets: 1, targetRepsMin: 10, targetRepsMax: 12 },
-      { exerciseId: 'gone', targetSets: 2, targetRepsMin: 8, targetRepsMax: 12 },
-      { exerciseId: 'dip', targetSets: 2, targetRepsMin: 8, targetRepsMax: 12 },
+      { exerciseId: 'bench', targetSets: 3, targetRepsMin: 6, targetRepsMax: 10, progression: NO_PROGRESSION },
+      { exerciseId: 'pullup', targetSets: 2, targetRepsMin: 5, targetRepsMax: 8, progression: NO_PROGRESSION },
+      { exerciseId: 'old', targetSets: 1, targetRepsMin: 10, targetRepsMax: 12, progression: NO_PROGRESSION },
+      { exerciseId: 'gone', targetSets: 2, targetRepsMin: 8, targetRepsMax: 12, progression: NO_PROGRESSION },
+      { exerciseId: 'dip', targetSets: 2, targetRepsMin: 8, targetRepsMax: 12, progression: NO_PROGRESSION },
     ],
   };
   const catalog = new Map<string, CatalogEntry>([
@@ -516,6 +519,31 @@ describe('startDraftFromDay', () => {
     expect(dip.sets[0]).toMatchObject({ weightKg: 0, reps: 8 });
   });
 
+  it('starts a day the same way whatever progression its exercises have', () => {
+    const plainExercises = (progressions: PlannedProgression[]) =>
+      liftsOf(
+        startDraftFromDay(
+          {
+            ...day,
+            exercises: day.exercises.map((planned, index) => ({
+              ...planned,
+              targetRepsMax: planned.targetRepsMin,
+              progression: progressions[index % progressions.length],
+            })),
+          },
+          catalog,
+          lastSets,
+          new Date('2026-09-30T10:00:00.000Z'),
+        ).draft,
+      ).map((exercise) => ({
+        name: exercise.name,
+        target: exercise.target,
+        sets: exercise.sets.map((set) => ({ ...set, id: 'set' })),
+      }));
+    const linear: PlannedProgression = { kind: 'linear', incrementKg: 2.5, incrementLb: 5 };
+    expect(plainExercises([linear, { kind: 'fixed' }])).toEqual(plainExercises([NO_PROGRESSION]));
+  });
+
   it('labels archived exercises and skips missing ones', () => {
     expect(started.draft.exercises.map((exercise) => exercise.name)).toEqual([
       'Bench',
@@ -541,7 +569,9 @@ describe('planned set editing', () => {
       id: 'day',
       name: 'Push',
       programName: 'PPL',
-      exercises: [{ exerciseId: 'bench', targetSets: 2, targetRepsMin: 8, targetRepsMax: 12 }],
+      exercises: [
+        { exerciseId: 'bench', targetSets: 2, targetRepsMin: 8, targetRepsMax: 12, progression: NO_PROGRESSION },
+      ],
     },
     new Map<string, CatalogEntry>([['bench', { name: 'Bench', loadType: 'external', archived: false }]]),
     new Map(),
@@ -1007,8 +1037,8 @@ describe('exercise client ids', () => {
         name: 'Push',
         programName: 'PPL',
         exercises: [
-          { exerciseId: 'bench', targetSets: 1, targetRepsMin: 5, targetRepsMax: 5 },
-          { exerciseId: 'bench', targetSets: 1, targetRepsMin: 8, targetRepsMax: 8 },
+          { exerciseId: 'bench', targetSets: 1, targetRepsMin: 5, targetRepsMax: 5, progression: NO_PROGRESSION },
+          { exerciseId: 'bench', targetSets: 1, targetRepsMin: 8, targetRepsMax: 8, progression: NO_PROGRESSION },
         ],
       },
       new Map<string, CatalogEntry>([['bench', { name: 'Bench', loadType: 'external', archived: false }]]),

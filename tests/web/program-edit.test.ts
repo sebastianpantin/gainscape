@@ -5,22 +5,34 @@ import {
   canAddDay,
   canAddPlannedExercise,
   changePlannedExercise,
+  changeProgression,
+  DEFAULT_INCREMENT,
   docFor,
   MAX_DAYS,
   MAX_EXERCISES_PER_DAY,
   moveDay,
   movePlannedExercise,
   nameIssue,
+  pairedIncrement,
+  progressionIssue,
+  newProgramDoc,
   removeDay,
   removePlannedExercise,
   renameDay,
   targetIssue,
   trimmedDoc,
 } from '../../web/src/features/programs/program-edit.ts';
+import type { LoadType } from '../../web/src/lib/catalog-rules.ts';
 import type { Program, ProgramDoc } from '../../web/src/lib/programs.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
-const planned = (exerciseId: string) => ({ exerciseId, targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 });
+const planned = (exerciseId: string) => ({
+  exerciseId,
+  targetSets: 3,
+  targetRepsMin: 8,
+  targetRepsMax: 12,
+  progression: { kind: 'none' } as const,
+});
 
 const doc: ProgramDoc = {
   id: 'program-1',
@@ -51,6 +63,20 @@ describe('docFor', () => {
     expect(docFor([program({ ownerUserId: 'someone-else' })], userId, 'program-1')).toBeNull();
     expect(docFor([program({})], userId, 'program-2')).toBeNull();
     expect(docFor(null, userId, 'program-1')).toBeNull();
+  });
+});
+
+describe('newProgramDoc', () => {
+  it('starts a program from scratch with one empty day called Day 1', () => {
+    expect(newProgramDoc('program-new', 'day-new')).toEqual({
+      id: 'program-new',
+      name: 'My program',
+      days: [{ id: 'day-new', name: 'Day 1', exercises: [] }],
+    });
+  });
+
+  it('starts with names that pass the name checks', () => {
+    expect(nameIssue(newProgramDoc('program-new', 'day-new'))).toBeNull();
   });
 });
 
@@ -125,5 +151,91 @@ describe('names', () => {
   it('trims the program and day names for saving', () => {
     const untrimmed = renameDay({ ...doc, name: '  Upper Lower ' }, 0, ' Upper ');
     expect(trimmedDoc(untrimmed)).toEqual(doc);
+  });
+});
+
+describe('progression', () => {
+  const names: Record<string, string> = { bench: 'Bench Press', row: 'Barbell Row', squat: 'Back Squat' };
+  const nameOf = (exerciseId: string) => names[exerciseId] ?? 'Unknown exercise';
+  const loadTypes: Record<string, LoadType> = { bench: 'external', row: 'external', squat: 'external' };
+  const loadTypeOf = (exerciseId: string): LoadType | null => loadTypes[exerciseId] ?? null;
+
+  it('adds weight by 2.5 kg or 5 lb unless told otherwise', () => {
+    expect(DEFAULT_INCREMENT).toEqual({ kg: 2.5, lb: 5 });
+  });
+
+  it('switches to add weight with the default increment and one rep target from reps min', () => {
+    const linear = changeProgression(doc, 1, 0, 'linear');
+    expect(linear.days[1].exercises[0]).toEqual({
+      ...planned('squat'),
+      targetRepsMin: 8,
+      targetRepsMax: 8,
+      progression: { kind: 'linear', incrementKg: 2.5, incrementLb: 5 },
+    });
+    expect(linear.days[0]).toBe(doc.days[0]);
+  });
+
+  it('drops the increment when it switches away from add weight', () => {
+    const linear = changeProgression(doc, 1, 0, 'linear');
+    expect(changeProgression(linear, 1, 0, 'fixed').days[1].exercises[0].progression).toEqual({ kind: 'fixed' });
+    expect(changeProgression(linear, 1, 0, 'none').days[1].exercises[0].progression).toEqual({ kind: 'none' });
+  });
+
+  it('keeps the increment when add weight is picked again', () => {
+    const custom = changePlannedExercise(changeProgression(doc, 1, 0, 'linear'), 1, 0, {
+      progression: { kind: 'linear', incrementKg: 5, incrementLb: 10 },
+    });
+    expect(changeProgression(custom, 1, 0, 'linear')).toEqual(custom);
+  });
+
+  it('accepts last weight on anything and weight targets on exercises with added weight', () => {
+    expect(progressionIssue(doc, nameOf, loadTypeOf)).toBeNull();
+    expect(progressionIssue(changeProgression(doc, 1, 0, 'linear'), nameOf, loadTypeOf)).toBeNull();
+    expect(progressionIssue(changeProgression(doc, 1, 0, 'fixed'), nameOf, loadTypeOf)).toBeNull();
+  });
+
+  it('needs one rep target for add weight', () => {
+    const ranged = changePlannedExercise(changeProgression(doc, 1, 0, 'linear'), 1, 0, { targetRepsMax: 10 });
+    expect(progressionIssue(ranged, nameOf, loadTypeOf)).toBe('Back Squat on Lower: add weight needs one rep target.');
+  });
+
+  it('blocks a weight target on bodyweight exercises', () => {
+    const bodyweightRow = (exerciseId: string): LoadType | null => (exerciseId === 'row' ? 'bodyweight' : 'external');
+    for (const kind of ['fixed', 'linear'] as const) {
+      expect(progressionIssue(changeProgression(doc, 0, 1, kind), nameOf, bodyweightRow)).toBe(
+        'Barbell Row on Upper: only exercises with added weight can have a weight target.',
+      );
+    }
+    const assisted = (exerciseId: string): LoadType | null => (exerciseId === 'row' ? 'bodyweight_plus' : 'external');
+    expect(progressionIssue(changeProgression(doc, 0, 1, 'fixed'), nameOf, assisted)).toBe(
+      'Barbell Row on Upper: only exercises with added weight can have a weight target.',
+    );
+  });
+});
+
+describe('pairedIncrement', () => {
+  it('pairs the preset increments of each unit', () => {
+    expect(pairedIncrement(1.25, 'kg')).toEqual({ kg: 1.25, lb: 2.5 });
+    expect(pairedIncrement(2.5, 'kg')).toEqual({ kg: 2.5, lb: 5 });
+    expect(pairedIncrement(5, 'kg')).toEqual({ kg: 5, lb: 10 });
+    expect(pairedIncrement(2.5, 'lb')).toEqual({ kg: 1.25, lb: 2.5 });
+    expect(pairedIncrement(5, 'lb')).toEqual({ kg: 2.5, lb: 5 });
+    expect(pairedIncrement(10, 'lb')).toEqual({ kg: 5, lb: 10 });
+  });
+
+  it('converts a custom increment to the nearest 0.25 kg or 0.5 lb', () => {
+    expect(pairedIncrement(3, 'kg')).toEqual({ kg: 3, lb: 6.5 });
+    expect(pairedIncrement(7, 'lb')).toEqual({ kg: 3.25, lb: 7 });
+    expect(pairedIncrement(0.25, 'kg')).toEqual({ kg: 0.25, lb: 0.5 });
+    expect(pairedIncrement(0.5, 'lb')).toEqual({ kg: 0.25, lb: 0.5 });
+  });
+
+  it('keeps the paired increment within its allowed range', () => {
+    expect(pairedIncrement(20, 'kg')).toEqual({ kg: 20, lb: 44 });
+    expect(pairedIncrement(45, 'lb')).toEqual({ kg: 20, lb: 45 });
+  });
+
+  it('keeps a typed increment to two decimals', () => {
+    expect(pairedIncrement(1.333, 'kg')).toEqual({ kg: 1.33, lb: 3 });
   });
 });

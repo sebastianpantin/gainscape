@@ -17,7 +17,17 @@ const PROGRAMS: Program[] = [
         id: 'day-push',
         name: 'Push',
         position: 0,
-        exercises: [{ exerciseId: 'bench', targetSets: 3, targetRepsMin: 5, targetRepsMax: 8 }],
+        exercises: [
+          { exerciseId: 'bench', targetSets: 3, targetRepsMin: 5, targetRepsMax: 8, progression: { kind: 'none' } },
+          {
+            exerciseId: 'squat',
+            targetSets: 5,
+            targetRepsMin: 5,
+            targetRepsMax: 5,
+            progression: { kind: 'linear', incrementKg: 2.5, incrementLb: 5 },
+          },
+          { exerciseId: 'press', targetSets: 3, targetRepsMin: 5, targetRepsMax: 5, progression: { kind: 'fixed' } },
+        ],
       },
     ],
   },
@@ -29,6 +39,36 @@ describe('saved program list', () => {
     const storage = new MemoryStorage();
     programListCache.save(storage, USER_ID, PROGRAMS);
     expect(programListCache.read(storage, USER_ID)).toEqual(PROGRAMS);
+  });
+
+  it('reads a list saved before progression existed with last weight for every exercise', () => {
+    const storage = new MemoryStorage();
+    const savedBeforeProgression = {
+      userId: USER_ID,
+      value: [
+        {
+          ...PROGRAMS[0],
+          days: [
+            {
+              ...PROGRAMS[0].days[0],
+              exercises: [{ exerciseId: 'bench', targetSets: 3, targetRepsMin: 5, targetRepsMax: 8 }],
+            },
+          ],
+        },
+      ],
+    };
+    storage.setItem(`gainscape.programs.v1.${USER_ID}`, JSON.stringify(savedBeforeProgression));
+    expect(programListCache.read(storage, USER_ID)?.[0].days[0].exercises).toEqual([
+      { exerciseId: 'bench', targetSets: 3, targetRepsMin: 5, targetRepsMax: 8, progression: { kind: 'none' } },
+    ]);
+  });
+
+  it('ignores a saved list with an unknown progression', () => {
+    const storage = new MemoryStorage();
+    programListCache.save(storage, USER_ID, PROGRAMS);
+    const raw = storage.getItem(storage.key(0)!)!;
+    storage.setItem(storage.key(0)!, raw.replace('"kind":"fixed"', '"kind":"wave"'));
+    expect(programListCache.read(storage, USER_ID)).toBeNull();
   });
 
   it('ignores a saved list with a malformed planned exercise', () => {
