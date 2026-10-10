@@ -141,10 +141,8 @@ export function becomesRecord(
   return !wasRecord && recordForSet(previewRecords(after, strength, baseline), after, setId) !== null;
 }
 
-const HOLD_RECORD_NAMES = { duration: 'longest hold', distance: 'farthest carry', pace: 'fastest pace' } as const;
-
 function holdRecordName(record: HoldRecordPreview): string {
-  return HOLD_RECORD_NAMES[record.gain.kind];
+  return record.gain.kind === 'distance' ? 'farthest carry' : 'longest hold';
 }
 
 export function recordChipText(record: PreviewRecord): string {
