@@ -106,6 +106,45 @@ describe('catalog generator', () => {
     ]);
   });
 
+  it('lists the hold and carry exercises with their measure and Grip shares', () => {
+    const holds = loadCatalogData().exercises.filter((exercise) => exercise.measure !== 'reps');
+    expect(
+      holds.map(({ key, measure, loadType, variationOf, shares }) => [key, measure, loadType, variationOf, shares]),
+    ).toEqual([
+      [
+        'farmers_carry',
+        'distance',
+        'external',
+        null,
+        [
+          { skill: 'grip', shareBp: 6000 },
+          { skill: 'legs', shareBp: 2000 },
+          { skill: 'core', shareBp: 2000 },
+        ],
+      ],
+      [
+        'suitcase_carry',
+        'distance',
+        'external',
+        'farmers_carry',
+        [
+          { skill: 'grip', shareBp: 6000 },
+          { skill: 'core', shareBp: 4000 },
+        ],
+      ],
+      ['dead_hang', 'time', 'bodyweight', null, [{ skill: 'grip', shareBp: 10000 }]],
+      ['towel_hang', 'time', 'bodyweight', 'dead_hang', [{ skill: 'grip', shareBp: 10000 }]],
+      ['plate_pinch', 'time', 'external', null, [{ skill: 'grip', shareBp: 10000 }]],
+    ]);
+    const exercises = renderStatements(loadCatalogData()).find((statement) =>
+      statement.startsWith('insert into public.exercises'),
+    )!;
+    expect(exercises).toContain(', tracks_distance, measure)');
+    expect(exercises).toContain(
+      `'dead_hang', 'Dead Hang', 'lift', 'bodyweight', 'bodyweight', null, null, null, null, null, true, 'time')`,
+    );
+  });
+
   it('renders the skill modality and the cardio exercise columns', () => {
     const statements = renderStatements(loadCatalogData());
     const skills = statements.find((statement) => statement.startsWith('insert into public.skills'))!;
@@ -117,23 +156,23 @@ describe('catalog generator', () => {
     expect(skills).toContain('modality = excluded.modality');
     const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;
     expect(exercises).toContain(
-      '(id, key, name, modality, load_type, equipment, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m, tracks_distance)',
+      '(id, key, name, modality, load_type, equipment, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m, tracks_distance, measure)',
     );
     expect(exercises).toContain(
-      `'running', 'Running', 'cardio', null, 'bodyweight', null, 360, 'per_km', 'max', 1000, true)`,
+      `'running', 'Running', 'cardio', null, 'bodyweight', null, 360, 'per_km', 'max', 1000, true, 'reps')`,
     );
     expect(exercises).toContain(
-      `'walking', 'Walking', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, true)`,
+      `'walking', 'Walking', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, true, 'reps')`,
     );
     expect(exercises).toContain(`'rowing', 'Rowing', 'cardio', null, 'machine', null,`);
     expect(exercises).toContain(
-      `'yoga', 'Yoga', 'cardio', null, 'bodyweight', null, null, 'per_km', 'hard', null, false)`,
+      `'yoga', 'Yoga', 'cardio', null, 'bodyweight', null, null, 'per_km', 'hard', null, false, 'reps')`,
     );
     expect(exercises).toContain(
-      `'swimming', 'Swimming', 'cardio', null, 'bodyweight', null, 1200, 'per_100m', 'max', 100, true)`,
+      `'swimming', 'Swimming', 'cardio', null, 'bodyweight', null, 1200, 'per_100m', 'max', 100, true, 'reps')`,
     );
     expect(exercises).toContain(
-      `'barbell_bench_press', 'Barbell Bench Press', 'lift', 'external', 'barbell', null, null, null, null, null, true)`,
+      `'barbell_bench_press', 'Barbell Bench Press', 'lift', 'external', 'barbell', null, null, null, null, null, true, 'reps')`,
     );
     expect(exercises).toContain('modality = excluded.modality');
   });
@@ -142,10 +181,10 @@ describe('catalog generator', () => {
     const statements = renderStatements(loadCatalogData());
     const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;
     expect(exercises).toContain(
-      `'hammer_curl', 'Hammer Curl', 'lift', 'external', 'dumbbell', null, null, null, null, null, true)`,
+      `'hammer_curl', 'Hammer Curl', 'lift', 'external', 'dumbbell', null, null, null, null, null, true, 'reps')`,
     );
     expect(exercises).toContain(
-      `'landmine_rotation', 'Landmine Rotation', 'lift', 'external', 'other', null, null, null, null, null, true)`,
+      `'landmine_rotation', 'Landmine Rotation', 'lift', 'external', 'other', null, null, null, null, null, true, 'reps')`,
     );
     expect(exercises).toContain(
       `'pendlay_row', 'Pendlay Row', 'lift', 'external', 'barbell', extensions.uuid_generate_v5('${PINNED_NAMESPACE}'::uuid, 'barbell_row'),`,

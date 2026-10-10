@@ -84,6 +84,7 @@ function checkModalityFields(exercise: CatalogExercise, problems: string[]): voi
     return;
   }
   if (exercise.loadType !== null) problems.push(`cardio exercise "${exercise.key}" has a load_type`);
+  if (exercise.measure !== 'reps') problems.push(`cardio exercise "${exercise.key}" has a measure`);
   if (exercise.cardio === null) {
     problems.push(`cardio exercise "${exercise.key}" needs a cardio block`);
     return;
@@ -140,6 +141,10 @@ function checkExercises(catalog: CatalogData, problems: string[]): void {
         problems.push(`exercise "${exercise.key}" is a variation of unknown exercise "${exercise.variationOf}"`);
       } else if (base.modality !== exercise.modality) {
         problems.push(`exercise "${exercise.key}" is a variation of "${base.key}" of another modality`);
+      } else if (base.measure !== exercise.measure) {
+        problems.push(
+          `exercise "${exercise.key}" measures ${exercise.measure} but its base "${base.key}" measures ${base.measure}`,
+        );
       }
     }
   }
@@ -166,6 +171,8 @@ function checkProgramDays(catalog: CatalogData, problems: string[]): void {
         problems.push(`${where} uses unknown exercise "${entry.exercise}"`);
       } else if (exercise.modality === 'cardio') {
         problems.push(`${where} uses cardio exercise "${entry.exercise}"`);
+      } else if (exercise.measure !== 'reps') {
+        problems.push(`${where} uses hold exercise "${entry.exercise}"`);
       }
       if (!inRange(entry.sets, 1, MAX_PROGRAM_SETS)) {
         problems.push(`${where} exercise ${index + 1} needs 1-${MAX_PROGRAM_SETS} sets`);
@@ -217,6 +224,7 @@ function checkChallengeExercise(
   const exercise = exercisesByKey.get(key);
   if (exercise === undefined) problems.push(`challenge "${challenge.key}" uses unknown exercise "${key}"`);
   else if (exercise.modality !== 'lift') problems.push(`challenge "${challenge.key}" uses cardio exercise "${key}"`);
+  else if (exercise.measure !== 'reps') problems.push(`challenge "${challenge.key}" uses hold exercise "${key}"`);
   else if (hasPercentage && exercise.loadType !== 'external') {
     problems.push(`challenge "${challenge.key}" sets a percentage on "${key}", which has no external load`);
   }
