@@ -74,6 +74,32 @@ describe('feedText for cardio records', () => {
     expect(feedText(swim, 'lb').headline).toBe('New Swimming record: 1640 yd');
   });
 
+  it('writes a carry record in metres for every unit setting', () => {
+    const carry = item('pr', {
+      exerciseName: 'Farmers Carry',
+      kind: 'cardio',
+      paceUnit: null,
+      recordKinds: 'distance',
+      distanceM: 40,
+      previousDistanceM: 30,
+      weightsHidden: false,
+    });
+    expect(feedText(carry, 'kg').headline).toBe('New Farmers Carry record: 40 m');
+    expect(feedText(carry, 'lb').headline).toBe('New Farmers Carry record: 40 m');
+  });
+
+  it('writes a hold record as a duration', () => {
+    const hang = item('pr', {
+      exerciseName: 'Dead Hang',
+      kind: 'cardio',
+      paceUnit: null,
+      recordKinds: 'duration',
+      countedWorkS: 45,
+      weightsHidden: false,
+    });
+    expect(feedText(hang, 'lb').headline).toBe('New Dead Hang record: 45 s');
+  });
+
   it('says who hid the distance and keeps the duration', () => {
     expect(feedText(item('pr', { ...run, weightsHidden: true }), 'kg')).toEqual({
       headline: 'New Running record: 36 min',

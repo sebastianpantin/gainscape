@@ -45,6 +45,9 @@ describe('describeRecord', () => {
       previous: '60 m (was 40 m)',
     });
     expect(
+      describeRecord({ ...gain, records: [{ kind: 'distance', value: 40, previous: null }] }, carry, 'lb'),
+    ).toEqual({ headline: 'Farmers Carry:', previous: '40 m (first)' });
+    expect(
       describeRecord(
         { ...gain, records: [{ kind: 'duration', value: 45, previous: 30 }] },
         { ...carry, measure: 'time' },
