@@ -14,7 +14,7 @@ export function BodyweightTrend({ userId, unit }: BodyweightTrendProps) {
   const trend = useQuery(bodyweightTrendQuery(userId));
 
   if (trend.data === undefined) {
-    if (!trend.error) return null;
+    if (!trend.error || trend.isFetching) return null;
     return (
       <p className="problem" role="alert">
         {messageOf(trend.error, 'Could not load your bodyweight trend.')}

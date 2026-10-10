@@ -59,9 +59,7 @@ function Screens() {
   const queryClient = useQueryClient();
   const signedInUserId = auth.status === 'signed-in' ? auth.session.user.id : null;
   useEffect(() => setUpdateUser(signedInUserId), [signedInUserId]);
-  useEffect(() => {
-    if (signedInUserId === null) queryClient.clear();
-  }, [queryClient, signedInUserId]);
+  useEffect(() => () => queryClient.clear(), [queryClient, signedInUserId]);
   const [callback, setCallback] = useState(() => parseAuthCallback(window.location.href));
 
   if (callback) return <AuthCallbackScreen callback={callback} onDone={() => setCallback(null)} />;

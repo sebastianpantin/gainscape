@@ -54,7 +54,10 @@ export function loadoutQuery(userId: string) {
 }
 
 export function itemsQuery(userId: string) {
-  return queryOptions({ queryKey: ['items', userId] as const, queryFn: () => loadItemsCacheFirst(userId) });
+  return queryOptions({
+    queryKey: ['items', userId] as const,
+    queryFn: ({ signal }) => loadItemsCacheFirst(userId, signal),
+  });
 }
 
 export const skillsQuery = queryOptions({ queryKey: ['skills'] as const, queryFn: fetchSkills });

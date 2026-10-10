@@ -273,6 +273,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
       const held = await fetchInventory(userId);
       updateItemsCache(deviceStorage(), userId, (cache) => ({ ...cache, inventory: [...held.values()] }));
       showLoaded((loaded) => ({ ...loaded, held }));
+      setRefetchProblem(null);
     } catch (error) {
       setRefetchProblem((error as Error).message);
     }
@@ -283,12 +284,13 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
       const catalog = await fetchItemCatalog();
       updateItemsCache(deviceStorage(), userId, (cache) => ({ ...cache, catalog }));
       showLoaded((loaded) => ({ ...loaded, catalog }));
+      setRefetchProblem(null);
     } catch (error) {
       setRefetchProblem((error as Error).message);
     }
   };
 
-  const state = loadedState(items.data, items.error);
+  const state = loadedState(items.data, items.isFetching ? null : items.error);
   const loaded = state.status === 'ready' ? state.data.loaded : null;
   const catalog = loaded?.catalog ?? null;
   const held = loaded?.held ?? new Map<string, HeldItem>();

@@ -58,7 +58,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const view = useQuery(friendProfileQuery(friendId));
-  const state = viewStateOf(friendId, view.data, view.error);
+  const state = viewStateOf(friendId, view.data, view.isFetching ? null : view.error);
   const [removing, setRemoving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);

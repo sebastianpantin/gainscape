@@ -101,7 +101,7 @@ function loadedFrom(cache: ItemsCache, strength: StrengthState | null): LoadedIt
   };
 }
 
-async function loadItemsOnline(userId: string): Promise<LoadedItems> {
+async function loadItemsOnline(userId: string, signal: AbortSignal | undefined): Promise<LoadedItems> {
   const strengthAsOf = new Date().toISOString();
   const [catalog, held, exercises, strength] = await Promise.all([
     fetchItemCatalog(),
@@ -113,7 +113,7 @@ async function loadItemsOnline(userId: string): Promise<LoadedItems> {
   const cached = readItemsCache(storage, userId);
   const live = { catalog, inventory: [...held.values()], exercises, strength, strengthAsOf };
   const saved = itemsFromLiveAndCache(live, cached, storage && readCachedExercises(storage, userId));
-  saveItemsCache(storage, userId, saved);
+  if (!signal?.aborted) saveItemsCache(storage, userId, saved);
   return loadedFrom(saved, strength ?? cached?.strength ?? null);
 }
 
@@ -122,10 +122,10 @@ function loadItemsFromCache(userId: string): LoadedItems | null {
   return cached && loadedFrom(cached, cached.strength);
 }
 
-export function loadItemsCacheFirst(userId: string): Promise<CacheFirstLoad<LoadedItems>> {
+export function loadItemsCacheFirst(userId: string, signal?: AbortSignal): Promise<CacheFirstLoad<LoadedItems>> {
   return loadCacheFirstWhenOffline(
     isDeviceOffline,
     () => loadItemsFromCache(userId),
-    () => loadItemsOnline(userId),
+    () => loadItemsOnline(userId, signal),
   );
 }

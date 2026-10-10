@@ -11,7 +11,7 @@ export function HiscoresScreen() {
   const [metric, setMetric] = useState<HiscoreMetric>('total');
   const load = loadedState(
     skillsLoad.data && hiscores.data ? { skills: skillsLoad.data, rows: hiscores.data } : undefined,
-    skillsLoad.error ?? hiscores.error,
+    skillsLoad.isFetching || hiscores.isFetching ? null : (skillsLoad.error ?? hiscores.error),
   );
   const skills = load.status === 'ready' ? load.data.skills : null;
   const rows = load.status === 'ready' ? load.data.rows : null;
