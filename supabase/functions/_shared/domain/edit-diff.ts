@@ -27,11 +27,10 @@ export interface StoredCardioSet extends StoredSetBase {
 
 export type StoredSet = StoredLiftSet | StoredCardioSet;
 
-export function sameSet(requested: SetInput, stored: StoredSet, cfg: BalanceConfig): boolean {
+function sameExerciseAndValues(requested: SetInput, stored: StoredSet, cfg: BalanceConfig): boolean {
   const effort = resolveEffort(requested.effort, cfg, setKind(requested));
   const sameEffort = effort.effortInputType === stored.effortInputType && effort.effortValue === stored.effortValue;
-  const sameIdentity = requested.exerciseId === stored.exerciseId && requested.position === stored.position;
-  if (!sameIdentity || !sameEffort) return false;
+  if (requested.exerciseId !== stored.exerciseId || !sameEffort) return false;
   if (requested.kind === 'cardio' || stored.kind === 'cardio') {
     return (
       requested.kind === 'cardio' &&
@@ -46,6 +45,21 @@ export function sameSet(requested: SetInput, stored: StoredSet, cfg: BalanceConf
   return (
     requested.weightKg === stored.weightKg && requested.reps === stored.reps && requested.isWarmup === stored.isWarmup
   );
+}
+
+export function sameSet(requested: SetInput, stored: StoredSet, cfg: BalanceConfig): boolean {
+  return requested.position === stored.position && sameExerciseAndValues(requested, stored, cfg);
+}
+
+export function unchangedSetIds(
+  requested: readonly SetInput[],
+  storedById: ReadonlyMap<string, StoredSet>,
+  cfg: BalanceConfig,
+): string[] {
+  return requested.flatMap((set) => {
+    const stored = storedById.get(set.id);
+    return stored !== undefined && sameExerciseAndValues(set, stored, cfg) ? [set.id] : [];
+  });
 }
 
 export interface RequestedEdit {

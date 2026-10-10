@@ -483,6 +483,24 @@ describe('revocationReason', () => {
     expect(revocationReason('regular', qualifying, 'edited', DEFAULT_LOOT, olderBalance, CURRENT)).toBeNull();
   });
 
+  it('keeps an older drop on a set the edit left unchanged, judging only current drops there', () => {
+    const olderBalance = { ...CURRENT, balanceVersion: DEFAULT_BALANCE.version - 1 };
+    const olderLoot = { ...CURRENT, lootVersion: DEFAULT_LOOT.version - 1 };
+    const untouchedButFailing = { ...qualifying, effectiveReps: 0, personalRecord: false };
+    expect(
+      revocationReason('regular', untouchedButFailing, 'edited_unchanged', DEFAULT_LOOT, olderBalance, CURRENT),
+    ).toBeNull();
+    expect(
+      revocationReason('pr', untouchedButFailing, 'edited_unchanged', DEFAULT_LOOT, olderLoot, CURRENT),
+    ).toBeNull();
+    expect(revocationReason('regular', untouchedButFailing, 'edited_unchanged', DEFAULT_LOOT, CURRENT, CURRENT)).toBe(
+      'no_longer_qualifies',
+    );
+    expect(revocationReason('regular', undefined, 'edited_unchanged', DEFAULT_LOOT, olderLoot, CURRENT)).toBe(
+      'set_removed',
+    );
+  });
+
   it('keeps drops whose set still qualifies', () => {
     expect(revocationReason('regular', qualifying, 'later', DEFAULT_LOOT, CURRENT, CURRENT)).toBeNull();
     expect(revocationReason('pr', qualifying, 'later', DEFAULT_LOOT, CURRENT, CURRENT)).toBeNull();

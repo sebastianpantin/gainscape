@@ -296,6 +296,40 @@ describe('edit-session', () => {
     expect((await dropRow(legacy.dropId)).revoke_reason).toBe('no_longer_qualifies');
   });
 
+  it('judges only the changed sets of an edited session against drops rolled under an older loot version', async () => {
+    const user = await freshUser();
+    const { payload } = await sessionOnCappedDay(user, [
+      aSet(benchId, 0, 60),
+      aSet(squatId, 1, 100, { effort: beyondEffortWindow }),
+    ]);
+    const olderVersion = DEFAULT_LOOT.version - 1;
+    const [editedSet, untouchedSet] = payload.sets;
+    const edited = await grantDrop(
+      user.id,
+      payload.id,
+      editedSet.id,
+      'grinder_scraps',
+      3,
+      'regular',
+      undefined,
+      olderVersion,
+    );
+    const untouched = await grantDrop(
+      user.id,
+      payload.id,
+      untouchedSet.id,
+      'rookie_belt',
+      1,
+      'regular',
+      undefined,
+      olderVersion,
+    );
+    const response = await editSession(user, payload, [{ ...editedSet, effort: beyondEffortWindow }, untouchedSet]);
+    expect(response.body.revokedDrops?.map((drop) => drop.dropId)).toEqual([edited.dropId]);
+    expect((await dropRow(edited.dropId)).revoke_reason).toBe('no_longer_qualifies');
+    expect((await dropRow(untouched.dropId)).revoked_at).toBeNull();
+  });
+
   it('revokes the PR drop of a session completed under an older balance version when its PR is corrected', async () => {
     const user = await freshUser();
     const { payload, prSet, pr } = await prSessionWithDrops(user);

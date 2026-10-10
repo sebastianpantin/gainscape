@@ -270,18 +270,23 @@ export async function revokeDisqualifiedDrops(
   editedSessionId: string,
   replayedSessionIds: readonly string[],
   deletedSessionIds: readonly string[],
+  unchangedSetIds: readonly string[],
   balanceVersion: number,
 ): Promise<RevokedActiveDrop[]> {
   const active = await loadActiveDrops(tx, userId, [...replayedSessionIds, ...deletedSessionIds]);
   const currentBySetId = new Map(current.map((candidate) => [`${candidate.sessionId}:${candidate.setId}`, candidate]));
   const deleted = new Set(deletedSessionIds);
-  const roleOf = (sessionId: string): ReplayedSessionRole =>
-    deleted.has(sessionId) ? 'deleted' : sessionId === editedSessionId ? 'edited' : 'later';
+  const unchanged = new Set(unchangedSetIds);
+  const roleOf = ({ sessionId, setId }: ActiveDrop): ReplayedSessionRole => {
+    if (deleted.has(sessionId)) return 'deleted';
+    if (sessionId !== editedSessionId) return 'later';
+    return unchanged.has(setId) ? 'edited_unchanged' : 'edited';
+  };
   const revocations = active.flatMap((drop) => {
     const reason = revocationReason(
       drop.source,
       currentBySetId.get(`${drop.sessionId}:${drop.setId}`),
-      roleOf(drop.sessionId),
+      roleOf(drop),
       DEFAULT_LOOT,
       { lootVersion: drop.lootVersion, balanceVersion: drop.balanceVersion ?? balanceVersion },
       { lootVersion: DEFAULT_LOOT.version, balanceVersion },

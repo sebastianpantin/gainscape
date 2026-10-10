@@ -200,7 +200,7 @@ export interface RollVersions {
   balanceVersion: number;
 }
 
-export type ReplayedSessionRole = 'deleted' | 'edited' | 'later';
+export type ReplayedSessionRole = 'deleted' | 'edited' | 'edited_unchanged' | 'later';
 
 export function revocationReason(
   source: RollKind,
@@ -214,7 +214,8 @@ export function revocationReason(
   if (candidate === undefined) return 'set_removed';
   const rolledUnderOlderRules =
     rolledUnder.lootVersion < current.lootVersion || rolledUnder.balanceVersion < current.balanceVersion;
-  if (session === 'later' && rolledUnderOlderRules) return null;
+  const keepsOlderRules = session === 'later' || session === 'edited_unchanged';
+  if (keepsOlderRules && rolledUnderOlderRules) return null;
   if (!qualifies(source, candidate, cfg)) return 'no_longer_qualifies';
   return null;
 }
