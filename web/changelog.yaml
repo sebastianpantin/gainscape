@@ -1,3 +1,11 @@
+- prs: [80]
+  version: 0.4.0
+  date: 2026-10-10
+  title: 166 new exercises and 24 new scrolls
+  items:
+    - 166 new built-in exercises, from Pendlay rows and hack squats to kettlebell swings and Turkish get-ups.
+    - Exercise search puts the closest match first, ignores hyphens and apostrophes, and tells you when more matches are hidden.
+    - 24 new scroll challenges use the new exercises. Your chance of finding a scroll on a personal record is unchanged.
 - prs: [78]
   version: 0.3.2
   date: 2026-10-10
