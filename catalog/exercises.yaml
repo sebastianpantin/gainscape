@@ -1172,28 +1172,28 @@
   modality: cardio
   equipment: bodyweight
   shares: { mobility: 10000 }
-  cardio: { pace_unit: per_km, max_effort: hard }
+  cardio: { pace_unit: per_km, max_effort: hard, distance: false }
 - key: static_stretching
   name: Static Stretching
   modality: cardio
   equipment: bodyweight
   shares: { mobility: 10000 }
-  cardio: { pace_unit: per_km, max_effort: moderate }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
 - key: foam_rolling
   name: Foam Rolling
   modality: cardio
   equipment: other
   shares: { mobility: 10000 }
-  cardio: { pace_unit: per_km, max_effort: moderate }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
 - key: mobility_flow
   name: Mobility Flow
   modality: cardio
   equipment: bodyweight
   shares: { mobility: 10000 }
-  cardio: { pace_unit: per_km, max_effort: moderate }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
 - key: dynamic_warm_up
   name: Dynamic Warm-Up
   modality: cardio
   equipment: bodyweight
   shares: { mobility: 10000 }
-  cardio: { pace_unit: per_km, max_effort: moderate }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }

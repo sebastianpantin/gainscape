@@ -97,6 +97,9 @@ function checkModalityFields(exercise: CatalogExercise, problems: string[]): voi
   if (exercise.cardio.recordMinDistanceM !== null && exercise.cardio.referencePaceSPerKm === null) {
     problems.push(`cardio exercise "${exercise.key}" has record_min_distance_m but no reference pace`);
   }
+  if (!exercise.cardio.tracksDistance && exercise.cardio.referencePaceSPerKm !== null) {
+    problems.push(`cardio exercise "${exercise.key}" tracks no distance but has a reference pace`);
+  }
 }
 
 function programDays(catalog: CatalogData) {

@@ -134,7 +134,7 @@ describe('previewRecords', () => {
       exerciseId: 'run',
       name: 'Run',
       modality: 'cardio',
-      activity: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', shares: [] },
+      activity: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', tracksDistance: true, shares: [] },
       sets: [
         { id: 'bout-1', kind: 'cardio', durationS: 600, distanceM: 2000, interval: null, effort: null, done: true },
       ],

@@ -652,6 +652,7 @@ function cardioExercise(overrides: Partial<CardioDraftExercise> = {}): CardioDra
       paceUnit: 'per_km',
       referencePaceSPerKm: 360,
       maxEffort: 'max',
+      tracksDistance: true,
       shares: [{ skillKey: 'endurance', shareBasisPoints: 10_000 }],
     },
     sets: [
@@ -695,6 +696,30 @@ describe('cardio drafts', () => {
   it('keeps cardio bouts through a parse', () => {
     const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft: mixedWorkout() };
     expect(parseStoredDraft(raw, userId)).toEqual(raw);
+  });
+
+  it('reads an activity saved before distance tracking was stored as one that tracks distance', () => {
+    const exercise = cardioExercise();
+    const olderActivity: Partial<CardioDraftExercise['activity']> = { ...exercise.activity };
+    delete olderActivity.tracksDistance;
+    const older = workout({ exercises: [{ ...exercise, activity: olderActivity } as CardioDraftExercise] });
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft: older }, userId);
+    expect(parsed?.kind === 'draft' && parsed.draft.exercises[0]).toMatchObject({ activity: { tracksDistance: true } });
+  });
+
+  it('drops a distance from the bouts of an activity that tracks none', () => {
+    const exercise = cardioExercise();
+    const stretching = {
+      ...exercise,
+      activity: { ...exercise.activity, referencePaceSPerKm: null, tracksDistance: false },
+    };
+    const parsed = parseStoredDraft(
+      { v: 5, kind: 'draft', userId, updatedAt: 5, draft: workout({ exercises: [stretching] }) },
+      userId,
+    );
+    expect(
+      parsed?.kind === 'draft' && parsed.draft.exercises[0].sets.map((bout) => 'distanceM' in bout && bout.distanceM),
+    ).toEqual([null, null, null]);
   });
 
   it.each([

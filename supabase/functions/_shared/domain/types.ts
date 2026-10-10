@@ -46,6 +46,7 @@ export interface CardioProfile {
   referencePaceSPerKm: number | null;
   maxEffort: CardioEffortLevel;
   recordMinDistanceM: number | null;
+  tracksDistance: boolean;
 }
 
 export interface CardioExerciseDef extends ExerciseBase {

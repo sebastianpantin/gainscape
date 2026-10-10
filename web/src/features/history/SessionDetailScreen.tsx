@@ -531,6 +531,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                         boutNumber={boutIndex + 1}
                         bout={bout}
                         paceUnit={exercise.paceUnit}
+                        tracksDistance={exercise.tracksDistance}
                         xpLabel={xp.label}
                         xpNote={xp.note}
                         unit={unitPref}

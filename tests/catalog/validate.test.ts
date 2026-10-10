@@ -394,6 +394,11 @@ describe('catalog validation', () => {
       (c) => (find(c.exercises, 'running').cardio!.referencePaceSPerKm = null),
       /cardio exercise "running" has record_min_distance_m but no reference pace/,
     ],
+    [
+      'an activity without distance has no reference pace',
+      (c) => (find(c.exercises, 'running').cardio!.tracksDistance = false),
+      /cardio exercise "running" tracks no distance but has a reference pace/,
+    ],
   ])('rejects a catalog when %s is broken', (_rule, mutate, expected) => {
     const problems = problemsAfter(mutate);
     expect(

@@ -283,7 +283,7 @@ export async function domainCatalogFor(exerciseIds: string[]): Promise<Catalog> 
   const skillRows = await db`select id, key, sort_order, combat_weight from public.skills`;
   const shareRows = await db`
     select e.id, e.modality, e.load_type, e.owner_user_id, e.reference_pace_s_per_km, e.pace_unit, e.max_effort,
-           e.record_min_distance_m, es.skill_id, es.share_bp
+           e.record_min_distance_m, e.tracks_distance, es.skill_id, es.share_bp
     from public.exercises e join public.exercise_skills es on es.exercise_id = e.id
     where e.id = any(${exerciseIds}::uuid[])`;
   const exercises = new Map<string, ExerciseDef>();
@@ -300,6 +300,7 @@ export async function domainCatalogFor(exerciseIds: string[]): Promise<Catalog> 
               referencePaceSPerKm: row.reference_pace_s_per_km,
               maxEffort: row.max_effort,
               recordMinDistanceM: row.record_min_distance_m,
+              tracksDistance: row.tracks_distance,
             },
           }
         : { ...base, loadType: row.load_type });

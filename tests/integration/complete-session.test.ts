@@ -738,6 +738,23 @@ describe('complete-session with cardio bouts', () => {
     });
   });
 
+  it('pays Mobility for a yoga bout and refuses a distance on it with 422 distance_not_tracked', async () => {
+    const user = await createTestUser();
+    const yogaId = await builtInExerciseId('yoga');
+    const refused = await postCompleteSession(
+      user.accessToken,
+      sessionPayload([steadyBout(yogaId, 0, { distanceM: 1000, durationS: 1200 })]),
+    );
+    expect(refused.status, refused.rawBody).toBe(422);
+    expect(refused.body.error).toBe('distance_not_tracked');
+    expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
+    const payload = sessionPayload([steadyBout(yogaId, 0, { distanceM: null, durationS: 1200 })]);
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.xpBySkill).toEqual((await expectedOutputs(payload)).xpBySkill);
+    expect(Object.keys(response.body.xpBySkill ?? {})).toEqual(['mobility']);
+  });
+
   it('returns 422 kind_mismatch for a cardio bout on a lift exercise and writes nothing', async () => {
     const user = await createTestUser();
     const response = await postCompleteSession(user.accessToken, sessionPayload([steadyBout(benchId, 0)]));

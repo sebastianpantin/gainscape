@@ -823,6 +823,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                     boutNumber={boutIndex + 1}
                     bout={bout}
                     paceUnit={exercise.activity.paceUnit}
+                    tracksDistance={exercise.activity.tracksDistance}
                     preview={previews[exerciseIndex][boutIndex]}
                     unit={unitPref}
                     onChange={(changes) => changeDraft(updateBout(draft, exerciseIndex, bout.id, changes))}

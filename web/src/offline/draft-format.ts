@@ -196,15 +196,27 @@ function isCardioEffortInput(value: unknown): boolean {
   return isRecord(value) && value.type === 'cardio' && CARDIO_EFFORT_LEVELS.some((level) => level === value.level);
 }
 
-function normalisedBout(bout: unknown): unknown {
+function normalisedBout(bout: unknown, tracksDistance: boolean): unknown {
   if (!isRecord(bout)) return bout;
-  return isCardioEffortInput(bout.effort) ? bout : { ...bout, effort: null };
+  const measured = tracksDistance ? bout : { ...bout, distanceM: null };
+  return isCardioEffortInput(measured.effort) ? measured : { ...measured, effort: null };
+}
+
+function normalisedCardio(exercise: Record<string, unknown> & { sets: unknown[] }, clientId: string): unknown {
+  const activity = isRecord(exercise.activity) ? exercise.activity : null;
+  const tracksDistance = activity?.tracksDistance !== false;
+  return {
+    ...exercise,
+    clientId,
+    ...(activity === null ? {} : { activity: { ...activity, tracksDistance } }),
+    sets: exercise.sets.map((bout) => normalisedBout(bout, tracksDistance)),
+  };
 }
 
 function normalisedExercise(exercise: unknown, index: number, fromV2: boolean): unknown {
   if (!isRecord(exercise) || !Array.isArray(exercise.sets)) return exercise;
   const clientId = typeof exercise.clientId === 'string' ? exercise.clientId : `exercise-${index}`;
-  if (exercise.modality === 'cardio') return { ...exercise, clientId, sets: exercise.sets.map(normalisedBout) };
+  if (exercise.modality === 'cardio') return normalisedCardio({ ...exercise, sets: exercise.sets }, clientId);
   return { ...exercise, clientId, modality: 'lift', sets: exercise.sets.map((set) => normalisedSet(set, fromV2)) };
 }
 

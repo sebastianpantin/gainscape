@@ -17,7 +17,7 @@ const swim: CardioExercise = {
   id: 'swim',
   name: 'Swimming',
   modality: 'cardio',
-  activity: { paceUnit: 'per_100m', referencePaceSPerKm: null, maxEffort: 'max', shares: [] },
+  activity: { paceUnit: 'per_100m', referencePaceSPerKm: null, maxEffort: 'max', tracksDistance: true, shares: [] },
 };
 
 const repMax = {

@@ -45,7 +45,7 @@ function cardio(exerciseId: string): CardioDraftExercise {
     exerciseId,
     name: exerciseId,
     modality: 'cardio',
-    activity: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', shares: [] },
+    activity: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', tracksDistance: true, shares: [] },
     sets: [
       {
         id: `${exerciseId}-1`,

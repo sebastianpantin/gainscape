@@ -65,6 +65,7 @@ interface HistoryBoutRowProps {
   boutNumber: number;
   bout: EditBout;
   paceUnit: PaceUnit;
+  tracksDistance: boolean;
   xpLabel: string;
   xpNote: string;
   unit: UnitPref;
@@ -76,6 +77,7 @@ export function HistoryBoutRow({
   boutNumber,
   bout,
   paceUnit,
+  tracksDistance,
   xpLabel,
   xpNote,
   unit,
@@ -85,7 +87,7 @@ export function HistoryBoutRow({
   return (
     <li className="set-row bout-row history-bout-row" aria-label={`Bout ${boutNumber}`}>
       <span className="set-number">{boutNumber}</span>
-      <BoutFields bout={bout} paceUnit={paceUnit} unit={unit} onChange={onChange} />
+      <BoutFields bout={bout} paceUnit={paceUnit} tracksDistance={tracksDistance} unit={unit} onChange={onChange} />
       <span className="set-xp earned">
         {xpLabel}
         <span className="tiny">{xpNote}</span>

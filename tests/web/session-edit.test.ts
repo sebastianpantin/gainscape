@@ -475,6 +475,7 @@ describe('cardio bouts in an edit', () => {
     paceUnit,
     referencePaceSPerKm: null,
     maxEffort: 'max' as const,
+    tracksDistance: true,
     shares: [],
   });
   const known = new Map<string, KnownExercise>([
@@ -609,6 +610,7 @@ describe('cardio bouts in an edit', () => {
       name: 'Swimming',
       modality: 'cardio',
       paceUnit: 'per_100m',
+      tracksDistance: true,
       sets: [
         { id: expect.any(String), kind: 'cardio', durationS: 1800, distanceM: null, interval: null, effort: null },
       ],
@@ -624,6 +626,18 @@ describe('cardio bouts in an edit', () => {
     });
     expect(swapped.exercises[2]).toMatchObject({ exerciseId: poolId, name: 'Swimming', paceUnit: 'per_100m' });
     expect(swapped.exercises[2].sets).toEqual(edit.exercises[2].sets);
+  });
+
+  it('drops the distances when the bouts move to an activity that tracks none', () => {
+    const swapped = swapEditExercise(edit, 0, {
+      id: 'yoga-id',
+      name: 'Yoga',
+      modality: 'cardio',
+      activity: { ...activity('per_km'), tracksDistance: false },
+    });
+    expect(swapped.exercises[0]).toMatchObject({ exerciseId: 'yoga-id', tracksDistance: false });
+    expect(swapped.exercises[0].sets.map((set) => 'distanceM' in set && set.distanceM)).toEqual([null, null]);
+    expect(edit.exercises[0]).toMatchObject({ tracksDistance: true });
   });
 
   it('refuses to replace an exercise with one of the other kind', () => {

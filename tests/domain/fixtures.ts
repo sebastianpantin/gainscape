@@ -42,12 +42,13 @@ const exercise = (
 const cardioExercise = (
   id: string,
   builtIn: boolean,
-  cardio: Omit<CardioExerciseDef['cardio'], 'paceUnit'> & { paceUnit?: CardioExerciseDef['cardio']['paceUnit'] },
+  cardio: Omit<CardioExerciseDef['cardio'], 'paceUnit' | 'tracksDistance'> &
+    Partial<Pick<CardioExerciseDef['cardio'], 'paceUnit' | 'tracksDistance'>>,
   shares: [string, number][],
 ): CardioExerciseDef => ({
   id,
   modality: 'cardio',
-  cardio: { paceUnit: 'per_km', ...cardio },
+  cardio: { paceUnit: 'per_km', tracksDistance: true, ...cardio },
   builtIn,
   shares: shares.map(([skillKey, shareBasisPoints]) => ({ skillId: `skill-${skillKey}`, shareBasisPoints })),
 });
@@ -137,15 +138,21 @@ export const catalog: Catalog = {
     ],
     [
       'stretch',
-      cardioExercise('stretch', true, { referencePaceSPerKm: null, maxEffort: 'moderate', recordMinDistanceM: null }, [
-        ['mobility', 10000],
-      ]),
+      cardioExercise(
+        'stretch',
+        true,
+        { referencePaceSPerKm: null, maxEffort: 'moderate', recordMinDistanceM: null, tracksDistance: false },
+        [['mobility', 10000]],
+      ),
     ],
     [
       'yoga',
-      cardioExercise('yoga', true, { referencePaceSPerKm: null, maxEffort: 'hard', recordMinDistanceM: null }, [
-        ['mobility', 10000],
-      ]),
+      cardioExercise(
+        'yoga',
+        true,
+        { referencePaceSPerKm: null, maxEffort: 'hard', recordMinDistanceM: null, tracksDistance: false },
+        [['mobility', 10000]],
+      ),
     ],
     [
       'custom-run',

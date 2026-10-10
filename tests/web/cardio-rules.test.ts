@@ -197,6 +197,7 @@ describe('cardio record text', () => {
       paceUnit,
       referencePaceSPerKm: null,
       maxEffort: 'max' as const,
+      tracksDistance: true,
       shares: [],
     });
     const exercises = [

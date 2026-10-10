@@ -117,20 +117,23 @@ describe('catalog generator', () => {
     expect(skills).toContain('modality = excluded.modality');
     const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;
     expect(exercises).toContain(
-      '(id, key, name, modality, load_type, equipment, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m)',
+      '(id, key, name, modality, load_type, equipment, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m, tracks_distance)',
     );
     expect(exercises).toContain(
-      `'running', 'Running', 'cardio', null, 'bodyweight', null, 360, 'per_km', 'max', 1000)`,
+      `'running', 'Running', 'cardio', null, 'bodyweight', null, 360, 'per_km', 'max', 1000, true)`,
     );
     expect(exercises).toContain(
-      `'walking', 'Walking', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null)`,
+      `'walking', 'Walking', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, true)`,
     );
     expect(exercises).toContain(`'rowing', 'Rowing', 'cardio', null, 'machine', null,`);
     expect(exercises).toContain(
-      `'swimming', 'Swimming', 'cardio', null, 'bodyweight', null, 1200, 'per_100m', 'max', 100)`,
+      `'yoga', 'Yoga', 'cardio', null, 'bodyweight', null, null, 'per_km', 'hard', null, false)`,
     );
     expect(exercises).toContain(
-      `'barbell_bench_press', 'Barbell Bench Press', 'lift', 'external', 'barbell', null, null, null, null, null)`,
+      `'swimming', 'Swimming', 'cardio', null, 'bodyweight', null, 1200, 'per_100m', 'max', 100, true)`,
+    );
+    expect(exercises).toContain(
+      `'barbell_bench_press', 'Barbell Bench Press', 'lift', 'external', 'barbell', null, null, null, null, null, true)`,
     );
     expect(exercises).toContain('modality = excluded.modality');
   });
@@ -139,10 +142,10 @@ describe('catalog generator', () => {
     const statements = renderStatements(loadCatalogData());
     const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;
     expect(exercises).toContain(
-      `'hammer_curl', 'Hammer Curl', 'lift', 'external', 'dumbbell', null, null, null, null, null)`,
+      `'hammer_curl', 'Hammer Curl', 'lift', 'external', 'dumbbell', null, null, null, null, null, true)`,
     );
     expect(exercises).toContain(
-      `'landmine_rotation', 'Landmine Rotation', 'lift', 'external', 'other', null, null, null, null, null)`,
+      `'landmine_rotation', 'Landmine Rotation', 'lift', 'external', 'other', null, null, null, null, null, true)`,
     );
     expect(exercises).toContain(
       `'pendlay_row', 'Pendlay Row', 'lift', 'external', 'barbell', extensions.uuid_generate_v5('${PINNED_NAMESPACE}'::uuid, 'barbell_row'),`,
