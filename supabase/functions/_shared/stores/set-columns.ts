@@ -10,6 +10,7 @@ import {
   resolveEffort,
   type SetResult,
   setKind,
+  type SetKind,
   storableSnapshots,
   type WritableSet,
 } from '../domain/index.ts';
@@ -85,6 +86,15 @@ export function inputColumnsWithEffort(set: WritableSet, cfg: BalanceConfig) {
   if (set.kind === 'cardio') return cardioInputColumns(set, effort);
   if (set.kind === 'hold') return holdInputColumns(set, set.effectiveLoadKg, effort);
   return liftInputColumns(set, set.effectiveLoadKg, effort);
+}
+
+export function setKindOfRow(row: DbRow): SetKind {
+  if (row.reps !== null) return 'lift';
+  return row.weight_kg === null ? 'cardio' : 'hold';
+}
+
+export function holdFieldsFromRow(row: DbRow): Pick<HoldSetInput, 'weightKg' | 'durationS' | 'distanceM'> {
+  return { weightKg: Number(row.weight_kg), durationS: row.duration_s, distanceM: nullableNumber(row.distance_m) };
 }
 
 export function liftFieldsFromRow(row: DbRow): Pick<LiftSetInput, 'weightKg' | 'reps' | 'isWarmup'> {

@@ -8,7 +8,7 @@ import {
   type SessionInput,
   type SessionKey,
 } from '../domain/index.ts';
-import { cardioFieldsFromRow, liftFieldsFromRow } from './set-columns.ts';
+import { cardioFieldsFromRow, holdFieldsFromRow, liftFieldsFromRow, setKindOfRow } from './set-columns.ts';
 
 export async function loadReplayableSessions(
   tx: Transaction,
@@ -37,10 +37,14 @@ export async function loadReplayableSessions(
     };
     const identity = { id: row.set_id, exerciseId: row.exercise_id, position: row.position };
     const effort = effortInputFromStored(row.effort_input_type, nullableNumber(row.effort_value), cfg);
+    const recordedEffectiveLoadKg = Number(row.effective_load_kg);
+    const kind = setKindOfRow(row);
     session.sets.push(
-      row.duration_s === null
-        ? { ...identity, ...liftFieldsFromRow(row), effort, recordedEffectiveLoadKg: Number(row.effective_load_kg) }
-        : { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row), effort },
+      kind === 'lift'
+        ? { ...identity, ...liftFieldsFromRow(row), effort, recordedEffectiveLoadKg }
+        : kind === 'hold'
+          ? { ...identity, kind: 'hold', ...holdFieldsFromRow(row), effort, recordedEffectiveLoadKg }
+          : { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row), effort },
     );
     sessions.set(row.session_id, session);
   }
@@ -61,6 +65,7 @@ export async function loadRecordHistory(
     where s.user_id = ${userId}
       and not s.history_only
       and not st.is_warmup
+      and (st.reps is not null or st.weight_kg is null)
       and st.exercise_id = any(${exerciseIds as string[]}::uuid[])
       and (s.started_at, s.id) < (${before.startedAt}::timestamptz, ${before.id}::uuid)`;
   return rows.map((row): RecordHistoryRow => {

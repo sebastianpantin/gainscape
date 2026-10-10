@@ -36,7 +36,7 @@ export interface FactSetRow {
   ref: string | null;
   exercise_id: string;
   weight_kg: number;
-  reps: number;
+  reps: number | null;
   effort_input_type: EffortInputType | null;
   effort_value: number | null;
   prescribed_weight_kg: number | null;
@@ -84,15 +84,18 @@ function snapshotFromRow(row: FactSetRow): PrescriptionSnapshot | null {
   };
 }
 
-function factSetFromRow(row: FactSetRow): FactSet {
-  return {
-    exerciseId: row.exercise_id,
-    weightKg: row.weight_kg,
-    reps: row.reps,
-    effortInputType: row.effort_input_type,
-    effortValue: row.effort_value,
-    prescription: snapshotFromRow(row),
-  };
+function factSetsFromRow(row: FactSetRow): FactSet[] {
+  if (row.reps === null) return [];
+  return [
+    {
+      exerciseId: row.exercise_id,
+      weightKg: row.weight_kg,
+      reps: row.reps,
+      effortInputType: row.effort_input_type,
+      effortValue: row.effort_value,
+      prescription: snapshotFromRow(row),
+    },
+  ];
 }
 
 function eventFact(row: EnrollmentEventRow): ProgramFact[] {
@@ -122,7 +125,7 @@ export function programFactsFromRows(rows: EnrollmentFactsRows): ProgramFact[] {
     id: session.id,
     at: utcIso(session.completed_at),
     position: session.program_position,
-    sets: session.sets.map(factSetFromRow),
+    sets: session.sets.flatMap(factSetsFromRow),
   }));
   return [...rows.events.flatMap(eventFact), ...sessions];
 }

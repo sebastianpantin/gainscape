@@ -14,8 +14,10 @@ import {
 import { HttpError } from '../http.ts';
 import {
   cardioFieldsFromRow,
+  holdFieldsFromRow,
   inputColumnsWithEffort,
   liftFieldsFromRow,
+  setKindOfRow,
   NO_PRESCRIPTION_SNAPSHOT,
   type PrescriptionSnapshotColumns,
 } from './set-columns.ts';
@@ -131,7 +133,11 @@ export async function loadStoredSets(tx: Transaction, sessionId: string): Promis
       effortInputType: row.effort_input_type,
       effortValue: nullableNumber(row.effort_value),
     };
-    if (row.duration_s !== null) return { ...base, kind: 'cardio', ...cardioFieldsFromRow(row) };
+    const kind = setKindOfRow(row);
+    if (kind === 'cardio') return { ...base, kind: 'cardio', ...cardioFieldsFromRow(row) };
+    if (kind === 'hold') {
+      return { ...base, kind: 'hold', ...holdFieldsFromRow(row), effectiveLoadKg: Number(row.effective_load_kg) };
+    }
     return { ...base, kind: 'lift', ...liftFieldsFromRow(row), effectiveLoadKg: Number(row.effective_load_kg) };
   });
 }
