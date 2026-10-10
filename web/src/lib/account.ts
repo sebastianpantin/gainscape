@@ -9,7 +9,7 @@ async function functionProblem(error: unknown, reasons: Record<string, string>, 
   const response = error.context as Response;
   const body = await httpErrorBody(response);
   if (response.status === RATE_LIMITED_STATUS) return tryAgainIn(retryAfterSeconds(body.details));
-  return (body.error ? reasons[body.error] : undefined) ?? fallback;
+  return body.error && Object.hasOwn(reasons, body.error) ? reasons[body.error] : fallback;
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {

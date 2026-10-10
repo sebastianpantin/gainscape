@@ -103,5 +103,17 @@ describe('deleteMyAccount', () => {
   it('says the account could not be deleted instead of showing a server error code', async () => {
     auth.invokeError = httpFailure(500, { error: 'internal_error' });
     await expect(deleteMyAccount('me', 'pw')).rejects.toThrow(/^Could not delete your account\.$/);
+    auth.invokeError = httpFailure(503, { error: 'auth_unavailable' });
+    await expect(deleteMyAccount('me', 'pw')).rejects.toThrow(/^Could not delete your account\.$/);
+  });
+
+  it('never reads an inherited object key as a reason', async () => {
+    auth.invokeError = httpFailure(400, { error: 'toString' });
+    await expect(deleteMyAccount('me', 'pw')).rejects.toThrow(/^Could not delete your account\.$/);
+  });
+
+  it('asks to wait when the auth check behind the deletion is rate limited', async () => {
+    auth.invokeError = httpFailure(429, { error: 'auth_rate_limited' });
+    await expect(deleteMyAccount('me', 'pw')).rejects.toThrow('Try again in');
   });
 });

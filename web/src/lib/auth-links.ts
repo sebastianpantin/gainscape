@@ -60,8 +60,9 @@ export function authErrorMessage(error: AuthErrorLike): string {
 const SERVER_ERROR_STATUS = 500;
 
 export function emailChangeProblem(error: AuthErrorLike): string {
-  const unreachableOrFailed = !error.status || error.status >= SERVER_ERROR_STATUS;
-  return unreachableOrFailed ? 'Could not change your email.' : authErrorMessage(error);
+  if (!error.status || error.status >= SERVER_ERROR_STATUS) return 'Could not change your email.';
+  if (error.code === 'over_email_send_rate_limit') return AUTH_MESSAGES.tooManyEmails;
+  return error.message;
 }
 
 export function passwordResetProblem(error: AuthErrorLike | null): string | null {

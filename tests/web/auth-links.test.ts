@@ -130,6 +130,12 @@ describe('emailChangeProblem', () => {
     expect(emailChangeProblem({ message: 'Failed to fetch' })).toBe('Could not change your email.');
   });
 
+  it('keeps the auth message for a forbidden request instead of calling it an invalid link', () => {
+    expect(
+      emailChangeProblem({ message: 'Reauthentication required', code: 'reauthentication_needed', status: 403 }),
+    ).toBe('Reauthentication required');
+  });
+
   it('keeps the auth message for a request the server refused', () => {
     expect(
       emailChangeProblem({
