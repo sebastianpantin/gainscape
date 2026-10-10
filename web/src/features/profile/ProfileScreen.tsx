@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
-import { fetchCollectionPercent } from '../../lib/collection-data.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { ageFrom, BODYWEIGHT_NUDGE_STEP, nudgedBodyweightKg, updatePrivateProfile } from '../../lib/profile.ts';
+import { collectionPercentQuery } from '../../lib/queries.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
 import { formatHeight, formatWeight } from '../../lib/units.ts';
@@ -34,10 +34,7 @@ function MenuLink({ to, children }: { to: string; children: string }) {
 export function ProfileScreen({ userId }: ProfileScreenProps) {
   const { state, replace } = useProfile(userId);
   const standing = useStanding(userId);
-  const collection = useQuery({
-    queryKey: ['collection-percent', userId],
-    queryFn: () => fetchCollectionPercent(userId),
-  });
+  const collection = useQuery(collectionPercentQuery(userId));
   const { unitPref } = usePreferences();
   const [draftKg, setDraftKg] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);

@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchSkills } from '../../lib/catalog.ts';
 import type { Skill } from '../../lib/catalog-rules.ts';
 import { isUuid } from '../../lib/history-rules.ts';
+import { FEED_QUERY_PREFIX, FRIENDS_QUERY_PREFIX } from '../../lib/queries.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import {
   type CollectionView,
@@ -80,8 +81,8 @@ function FriendProfile({ friendId }: { friendId: string }) {
     setRemoving(true);
     try {
       await removeFriend(friendId);
-      queryClient.removeQueries({ queryKey: ['friends'] });
-      queryClient.removeQueries({ queryKey: ['feed'] });
+      queryClient.removeQueries({ queryKey: FRIENDS_QUERY_PREFIX });
+      queryClient.removeQueries({ queryKey: FEED_QUERY_PREFIX });
       navigate('/friends', { replace: true });
     } catch (error) {
       setProblem(messageOf(error, 'Could not remove this friend.'));

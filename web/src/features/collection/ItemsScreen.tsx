@@ -49,7 +49,8 @@ import {
   loadCacheFirstWhenOffline,
 } from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
-import { loadoutQueryKey, useLoadout } from '../profile/use-loadout.ts';
+import { useLoadout } from '../profile/use-loadout.ts';
+import { loadoutQuery } from '../../lib/queries.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
@@ -310,7 +311,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const { state: draftState, startWorkout, flush } = useWorkoutDraft(userId);
   const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
   const loadout = useLoadout(userId);
-  const refetchLoadout = () => queryClient.invalidateQueries({ queryKey: loadoutQueryKey(userId) });
+  const refetchLoadout = () => queryClient.invalidateQueries({ queryKey: loadoutQuery(userId).queryKey });
 
   const refetchInventory = async () => {
     try {

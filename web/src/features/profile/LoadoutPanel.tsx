@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
-import { fetchSkills } from '../../lib/catalog.ts';
 import { bonusRows, loadoutBySlot } from '../../lib/gear-rules.ts';
+import { skillsQuery } from '../../lib/queries.ts';
 import { useLoadout } from './use-loadout.ts';
 
 interface LoadoutPanelProps {
@@ -12,7 +12,7 @@ export function LoadoutPanel({ userId }: LoadoutPanelProps) {
   const headingId = useId();
   const bonusHeadingId = useId();
   const loadout = useLoadout(userId);
-  const skills = useQuery({ queryKey: ['skills'], queryFn: fetchSkills });
+  const skills = useQuery(skillsQuery);
 
   if (loadout.isSuccess && loadout.data === null) return null;
 
