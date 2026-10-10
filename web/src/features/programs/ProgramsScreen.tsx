@@ -99,7 +99,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
       )}
       <section className="stack" aria-label="Your programs">
         <h2>Your programs</h2>
-        {own.length === 0 && <p className="panel muted">Copy a template to make your first program.</p>}
+        {own.length === 0 && <p className="panel muted">Create a program or copy a template.</p>}
         <ul className="stack exercise-list">
           {own.map((program) => (
             <li className="panel row spread" key={program.id}>
@@ -117,6 +117,9 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
             </li>
           ))}
         </ul>
+        <button className="button" type="button" onClick={() => navigate('/programs/new')}>
+          New program
+        </button>
       </section>
       <PowerliftingPrograms userId={userId} />
       <section className="stack" aria-label="Templates">

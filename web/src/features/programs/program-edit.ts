@@ -14,6 +14,10 @@ export const TARGET_REPS_RANGE = { lowest: 1, highest: 100 } as const;
 
 const DEFAULT_TARGET = { targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 };
 
+export function newProgramDoc(programId: string, dayId: string): ProgramDoc {
+  return { id: programId, name: 'My program', days: [{ id: dayId, name: 'Day 1', exercises: [] }] };
+}
+
 export function docFor(programs: readonly Program[] | null, userId: string, programId: string): ProgramDoc | null {
   const program = programs?.find((candidate) => candidate.id === programId);
   if (!program || program.ownerUserId !== userId) return null;
