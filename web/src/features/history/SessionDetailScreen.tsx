@@ -7,6 +7,7 @@ import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
+import { canAddSet, setCount, updateBout, updateSet } from '../../lib/exercise-edit-rules.ts';
 import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 import {
   formatLoad,
@@ -35,11 +36,9 @@ import { HistoryBoutRow, HistorySetRow } from './HistorySetRow.tsx';
 import {
   addEditExercise,
   addEditSet,
-  canAddSet,
   dropsAtRisk,
   editFromSession,
   editPayload,
-  editSetCount,
   type EditBout,
   type EditSet,
   type FailureAction,
@@ -56,8 +55,6 @@ import {
   type SessionEdit,
   summariesToForget,
   swapEditExercise,
-  updateEditBout,
-  updateEditSet,
   withNewSetIds,
   withoutBodyweightLoads,
 } from './session-edit.ts';
@@ -320,9 +317,10 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const pickable = loaded.exercises.filter((exercise) => !exercise.archived);
   const working = busy.kind !== 'idle';
   const changed = hasChanges(edit, loaded.original);
-  const setCount = editSetCount(edit);
+  const editedSetCount = setCount(edit);
   const askingBodyweight = problem?.kind === 'bodyweight';
-  const canSave = changed && !working && !askingBodyweight && setCount > 0 && setCount <= MAX_SETS_PER_SESSION;
+  const canSave =
+    changed && !working && !askingBodyweight && editedSetCount > 0 && editedSetCount <= MAX_SETS_PER_SESSION;
   const roomForSets = canAddSet(edit);
   const roomForBouts = canAddBout(
     edit.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
@@ -534,7 +532,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                         xpLabel={xp.label}
                         xpNote={xp.note}
                         unit={unitPref}
-                        onChange={(changes) => setEdit(updateEditBout(edit, exerciseIndex, bout.id, changes))}
+                        onChange={(changes) => setEdit(updateBout(edit, exerciseIndex, bout.id, changes))}
                         onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, bout.id))}
                       />
                     );
@@ -551,7 +549,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                         xpNote={xp.note}
                         unit={unitPref}
                         effortMode={effortInputMode}
-                        onChange={(changes) => setEdit(updateEditSet(edit, exerciseIndex, set.id, changes))}
+                        onChange={(changes) => setEdit(updateSet(edit, exerciseIndex, set.id, changes))}
                         onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
                       />
                     );
@@ -581,7 +579,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           />
         </label>
       </fieldset>
-      {setCount === 0 && <p className="hint">A workout needs at least one set. Delete it instead to remove it.</p>}
+      {editedSetCount === 0 && (
+        <p className="hint">A workout needs at least one set. Delete it instead to remove it.</p>
+      )}
       {changed && (
         <div className="notice" role="status" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
           {editWarning && <p>{editWarning}</p>}

@@ -1,4 +1,5 @@
-import type { BoutValues, DraftSet, WorkoutDraft } from './draft-format.ts';
+import type { BoutValues } from '../lib/exercise-edit-rules.ts';
+import type { DraftSet, WorkoutDraft } from './draft-format.ts';
 
 export function boutPayload(bout: BoutValues & { id: string }, exerciseId: string, position: number) {
   const { id, distanceM, interval, effort } = bout;

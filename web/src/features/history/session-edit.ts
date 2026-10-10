@@ -1,7 +1,7 @@
 import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
 import { roundTo } from '@domain/math.ts';
-import { type CardioInterval, type DropSummary, type EffortInput, MAX_SETS_PER_SESSION } from '@domain/types.ts';
+import type { CardioInterval, DropSummary, EffortInput } from '@domain/types.ts';
 import type { CardioActivity, LoadType, PaceUnit } from '../../lib/catalog-rules.ts';
 import type { InvokeOutcome } from '../../lib/function-client-rules.ts';
 import {
@@ -13,13 +13,19 @@ import {
 import { type CatalogItem, describeDrops, itemNameLookup } from '../../lib/item-rules.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
 import {
+  BODYWEIGHT_LOAD_NOT_ZERO_CODE,
   type BoutValues,
+  canAddSet,
   defaultWeightKg,
   nextBoutValues,
   nextSetValues,
+  removeSet,
+  setCount,
+  UNKNOWN_EXERCISE_CODE,
   updateExerciseAt,
+  withLoadType,
   withSets,
-} from '../../offline/draft-format.ts';
+} from '../../lib/exercise-edit-rules.ts';
 import { boutPayload } from '../../offline/session-payload.ts';
 
 type ExerciseKind =
@@ -180,44 +186,8 @@ export function summariesToForget(
   return [sessionId, ...replayedSessionIds, ...possiblyReplayed];
 }
 
-export function editSetCount(edit: SessionEdit): number {
-  return edit.exercises.reduce((count, exercise) => count + exercise.sets.length, 0);
-}
-
-export function canAddSet(edit: SessionEdit): boolean {
-  return editSetCount(edit) < MAX_SETS_PER_SESSION;
-}
-
-export function updateEditSet(
-  edit: SessionEdit,
-  exerciseIndex: number,
-  setId: string,
-  changes: Partial<Omit<EditSet, 'id'>>,
-): SessionEdit {
-  return updateExerciseAt(edit, exerciseIndex, (exercise) =>
-    exercise.modality === 'lift'
-      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
-      : exercise,
-  );
-}
-
-export function updateEditBout(
-  edit: SessionEdit,
-  exerciseIndex: number,
-  setId: string,
-  changes: Partial<BoutValues>,
-): SessionEdit {
-  return updateExerciseAt(edit, exerciseIndex, (exercise) =>
-    exercise.modality === 'cardio'
-      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
-      : exercise,
-  );
-}
-
 export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: string): SessionEdit {
-  const removed = updateExerciseAt(edit, exerciseIndex, (exercise) =>
-    withSets(exercise, (sets) => sets.filter((set) => set.id !== setId)),
-  );
+  const removed = removeSet(edit, exerciseIndex, setId);
   return { ...removed, exercises: removed.exercises.filter((exercise) => exercise.sets.length > 0) };
 }
 
@@ -286,9 +256,7 @@ export function withoutBodyweightLoads(edit: SessionEdit, loadTypes: ReadonlyMap
     ...edit,
     exercises: edit.exercises.map((exercise) => {
       if (exercise.modality === 'cardio') return exercise;
-      const loadType = loadTypes.get(exercise.exerciseId) ?? exercise.loadType;
-      const sets = loadType === 'bodyweight' ? exercise.sets.map((set) => ({ ...set, weightKg: 0 })) : exercise.sets;
-      return { ...exercise, loadType, sets };
+      return withLoadType(exercise, loadTypes.get(exercise.exerciseId) ?? exercise.loadType);
     }),
   };
 }
@@ -419,7 +387,7 @@ export function rebaseNotice(rebased: RebasedEdit, fresh: SessionEdit): string {
     dropped === 0
       ? ''
       : `${dropped} ${dropped === 1 ? 'set you changed was' : 'sets you changed were'} deleted on the other device. `;
-  if (editSetCount(rebased.edit) === 0)
+  if (setCount(rebased.edit) === 0)
     return `${droppedText}No sets are left to save. Undo to keep the latest version, or delete the workout.`;
   if (!hasChanges(rebased.edit, fresh))
     return `${droppedText}Nothing else of yours is left to save; this is the latest version.`;
@@ -451,8 +419,8 @@ const FAILURE_ACTIONS: Record<string, (details: unknown) => FailureAction> = {
   revision_conflict: () => ({ kind: 'revision_conflict' }),
   set_id_conflict: (details) => ({ kind: 'reid_sets', setIds: stringList(details, 'setIds') }),
   bodyweight_required: () => ({ kind: 'ask_bodyweight' }),
-  unknown_exercise: (details) => ({ kind: 'unknown_exercise', exerciseIds: stringList(details, 'exerciseIds') }),
-  bodyweight_load_not_zero: () => ({ kind: 'fix_bodyweight_load' }),
+  [UNKNOWN_EXERCISE_CODE]: (details) => ({ kind: 'unknown_exercise', exerciseIds: stringList(details, 'exerciseIds') }),
+  [BODYWEIGHT_LOAD_NOT_ZERO_CODE]: () => ({ kind: 'fix_bodyweight_load' }),
   profile_missing: () => ({ kind: 'sign_out' }),
   session_not_found: () => ({ kind: 'gone' }),
   [RATE_LIMITED_CODE]: (details) => ({ kind: 'rate_limited', retryAfterSeconds: retryAfterSeconds(details) }),

@@ -11,7 +11,7 @@ import {
 } from '../../lib/cardio-rules.ts';
 import type { UnitPref } from '../../lib/profile.ts';
 import { distanceInputStep, distanceUnitFor, shownDistance } from '../../lib/units.ts';
-import type { BoutValues } from '../../offline/draft-format.ts';
+import type { BoutValues } from '../../lib/exercise-edit-rules.ts';
 
 const SHOWN_MINUTE_DECIMALS = 1;
 
