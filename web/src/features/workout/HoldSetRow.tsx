@@ -6,6 +6,7 @@ import type { UnitPref } from '../../lib/profile.ts';
 import type { HoldDraftSet, HoldMeasure, HoldValues } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { WeightField } from './SetRow.tsx';
+import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface HoldFieldsProps {
@@ -57,6 +58,7 @@ interface HoldSetRowProps {
   measure: HoldMeasure;
   loadType: LoadType;
   preview: SetPreview;
+  record: PreviewRecord | null;
   unit: UnitPref;
   onChange: (changes: Partial<Omit<HoldDraftSet, 'id' | 'kind'>>) => void;
   onRemove: () => void;
@@ -69,6 +71,7 @@ export function HoldSetRow({
   measure,
   loadType,
   preview,
+  record,
   unit,
   onChange,
   onRemove,
@@ -78,7 +81,14 @@ export function HoldSetRow({
     <li className={set.done ? 'set-row hold-row' : 'set-row hold-row planned'} aria-label={`Set ${setNumber}`}>
       <span className="set-number">{setNumber}</span>
       <HoldFields set={set} measure={measure} loadType={loadType} unit={unit} onChange={onChange} />
-      <span className={set.done ? 'set-xp earned' : 'set-xp'}>{previewXpLabel(preview)}</span>
+      <span className={set.done ? 'set-xp earned' : 'set-xp'}>
+        {previewXpLabel(preview)}
+        {record && (
+          <span className="record-chip" role="img" aria-label={recordChipLabel(record)}>
+            {recordChipText(record)}
+          </span>
+        )}
+      </span>
       <button
         type="button"
         className={`button done-toggle ${set.done ? 'selected' : ''}`}

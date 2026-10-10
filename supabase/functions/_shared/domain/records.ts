@@ -141,16 +141,20 @@ function applyBoutToRecords(
   return { records: { ...records, cardio: { ...records.cardio, [bout.exerciseId]: next } }, gains };
 }
 
-function holdLoadCountsForRecords(exercise: LiftExerciseDef, effectiveLoadKg: number, cfg: BalanceConfig): boolean {
+function holdLoadCountsForRecords(
+  exercise: Pick<LiftExerciseDef, 'loadType'>,
+  effectiveLoadKg: number,
+  cfg: BalanceConfig,
+): boolean {
   if (exercise.loadType !== 'external') return true;
   return effectiveLoadKg >= cfg.holdRecordMinExternalLoadKg - FLOAT_TOLERANCE;
 }
 
-function applyHoldToRecords(
+export function applyHoldToRecords(
   records: RecordState,
   hold: Pick<HoldSetInput, 'id' | 'exerciseId' | 'durationS' | 'distanceM'>,
   effectiveLoadKg: number,
-  exercise: LiftExerciseDef,
+  exercise: Pick<LiftExerciseDef, 'loadType'>,
   achievedAt: string,
   cfg: BalanceConfig,
 ): CardioRecordUpdate {

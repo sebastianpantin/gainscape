@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { type ExerciseStrength } from '@domain/index.ts';
 import type { LoadType } from '../../web/src/lib/catalog-rules.ts';
 import { type RecordBaseline } from '../../web/src/lib/session-baseline-rules.ts';
-import type { CardioDraftExercise, DraftSet, LiftDraftExercise } from '../../web/src/offline/draft-format.ts';
+import type {
+  CardioDraftExercise,
+  DraftSet,
+  HoldDraftExercise,
+  HoldDraftSet,
+  LiftDraftExercise,
+} from '../../web/src/offline/draft-format.ts';
 import {
   becomesRecord,
   previewRecords,
@@ -184,5 +190,116 @@ describe('recordChipText', () => {
       'Predicted new 5 rep max',
     );
     expect(recordChipLabel({ kind: 'bodyweight_reps', reps: 13, previousReps: 12 })).toBe('Predicted most reps: 13');
+  });
+});
+
+function holdSet(weightKg: number, measured: { durationS: number } | { distanceM: number }, done = true): HoldDraftSet {
+  setCounter += 1;
+  return {
+    id: `hold-${setCounter}`,
+    kind: 'hold',
+    weightKg,
+    durationS: 'durationS' in measured ? measured.durationS : null,
+    distanceM: 'distanceM' in measured ? measured.distanceM : null,
+    effort: null,
+    done,
+  };
+}
+
+function holdExercise(
+  exerciseId: string,
+  measure: HoldDraftExercise['measure'],
+  loadType: LoadType,
+  sets: HoldDraftSet[],
+): HoldDraftExercise {
+  return { clientId: `card-${exerciseId}`, exerciseId, name: exerciseId, modality: 'hold', measure, loadType, sets };
+}
+
+function holdBaseline(exerciseId: string, best: { duration?: number; distance?: number }): RecordBaseline {
+  return { repMaxKg: {}, maxReps: {}, cardioBest: { [exerciseId]: best } };
+}
+
+describe('previewRecords for holds', () => {
+  it('predicts the longest hold and the farthest carry once the load reaches the 20 kg floor', () => {
+    const pinch = previewRecords(
+      [holdExercise('pinch', 'time', 'external', [holdSet(20, { durationS: 45 })])],
+      null,
+      holdBaseline('pinch', { duration: 30 }),
+    );
+    expect(pinch).toEqual([[{ kind: 'hold', gain: { kind: 'duration', value: 45, previous: 30 } }]]);
+    const carry = previewRecords(
+      [holdExercise('carry', 'distance', 'external', [holdSet(24, { distanceM: 60 })])],
+      null,
+      holdBaseline('carry', { distance: 40 }),
+    );
+    expect(carry).toEqual([[{ kind: 'hold', gain: { kind: 'distance', value: 60, previous: 40 } }]]);
+  });
+
+  it('predicts no record for an external-load hold under the floor', () => {
+    const records = previewRecords(
+      [holdExercise('pinch', 'time', 'external', [holdSet(15, { durationS: 90 })])],
+      null,
+      holdBaseline('pinch', { duration: 30 }),
+    );
+    expect(records).toEqual([[null]]);
+  });
+
+  it('counts a bodyweight hang at any added load', () => {
+    const records = previewRecords(
+      [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 31 })])],
+      null,
+      holdBaseline('hang', { duration: 30 }),
+    );
+    expect(records[0][0]).toEqual({ kind: 'hold', gain: { kind: 'duration', value: 31, previous: 30 } });
+  });
+
+  it('needs a gain of at least 1 s or 1 m', () => {
+    const hang = previewRecords(
+      [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 30 })])],
+      null,
+      holdBaseline('hang', { duration: 30 }),
+    );
+    const carry = previewRecords(
+      [
+        holdExercise('carry', 'distance', 'external', [
+          holdSet(24, { distanceM: 40.5 }),
+          holdSet(24, { distanceM: 41 }),
+        ]),
+      ],
+      null,
+      holdBaseline('carry', { distance: 40 }),
+    );
+    expect(hang).toEqual([[null]]);
+    expect(carry[0].map((record) => record?.kind ?? null)).toEqual([null, 'hold']);
+  });
+
+  it('predicts no record for a first hold, a planned hold or before the records have loaded', () => {
+    const first = [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 60 })])];
+    expect(previewRecords(first, null, NO_RECORD_BASELINE)).toEqual([[null]]);
+    expect(previewRecords(first, null, null)).toEqual([[null]]);
+    const planned = [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 60 }, false)])];
+    expect(previewRecords(planned, null, holdBaseline('hang', { duration: 30 }))).toEqual([[null]]);
+  });
+
+  it('lets an earlier hold raise the bar for a later one', () => {
+    const records = previewRecords(
+      [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 40 }), holdSet(0, { durationS: 40 })])],
+      null,
+      holdBaseline('hang', { duration: 30 }),
+    );
+    expect(records[0].map((record) => record?.kind ?? null)).toEqual(['hold', null]);
+  });
+
+  it('names a hold and a carry record on the chip', () => {
+    const longest = { kind: 'hold' as const, gain: { kind: 'duration' as const, value: 45, previous: 30 } };
+    const farthest = { kind: 'hold' as const, gain: { kind: 'distance' as const, value: 40, previous: 30 } };
+    expect([recordChipText(longest), recordChipLabel(longest)]).toEqual([
+      'Longest hold!',
+      'Predicted longest hold: 45 s',
+    ]);
+    expect([recordChipText(farthest), recordChipLabel(farthest)]).toEqual([
+      'Farthest carry!',
+      'Predicted farthest carry: 40 m',
+    ]);
   });
 });
