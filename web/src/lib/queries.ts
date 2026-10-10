@@ -2,6 +2,7 @@ import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import { type CacheFirstLoad } from '../offline/cache-first.ts';
 import { fetchBodyweightTrend } from './bodyweight-trend.ts';
 import { fetchSkills } from './catalog.ts';
+import { fetchExerciseProgress } from './exercise-progress.ts';
 import { type Skill } from './catalog-rules.ts';
 import { type Collection, loadCollectionCacheFirst } from './collection-data.ts';
 import { collectionPercent, countCollection } from './collection-rules.ts';
@@ -107,5 +108,12 @@ export function bodyweightTrendQuery(userId: string) {
   return queryOptions({
     queryKey: ['bodyweight-trend', userId] as const,
     queryFn: ({ signal }) => fetchBodyweightTrend(userId, signal),
+  });
+}
+
+export function exerciseProgressQuery(userId: string, exerciseId: string) {
+  return queryOptions({
+    queryKey: ['exercise-progress', userId, exerciseId] as const,
+    queryFn: ({ signal }) => fetchExerciseProgress(userId, exerciseId, signal),
   });
 }
