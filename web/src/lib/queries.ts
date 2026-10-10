@@ -1,5 +1,6 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import { type CacheFirstLoad } from '../offline/cache-first.ts';
+import { fetchBodyweightTrend } from './bodyweight-trend.ts';
 import { fetchSkills } from './catalog.ts';
 import { type Skill } from './catalog-rules.ts';
 import { type Collection, loadCollectionCacheFirst } from './collection-data.ts';
@@ -88,5 +89,23 @@ export function friendProfileQuery(friendId: string) {
       return profile && collection ? { skills, profile, collection } : null;
     },
     enabled: isUuid(friendId),
+  });
+}
+
+export function profilePreviewQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['profile-preview', userId] as const,
+    queryFn: async () => {
+      const [skills, profile] = await Promise.all([fetchSkills(), fetchProfileView(userId)]);
+      if (!profile) throw new Error('Your profile could not be loaded.');
+      return { skills, profile };
+    },
+  });
+}
+
+export function bodyweightTrendQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['bodyweight-trend', userId] as const,
+    queryFn: ({ signal }) => fetchBodyweightTrend(userId, signal),
   });
 }

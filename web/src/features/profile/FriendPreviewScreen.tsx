@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Switch } from '../../components/Switch.tsx';
-import { fetchSkills } from '../../lib/catalog.ts';
 import type { Skill } from '../../lib/catalog-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { type Profile, updatePublicProfile } from '../../lib/profile.ts';
 import { formatWeight } from '../../lib/units.ts';
-import { fetchProfileView, type ProfileView } from '../../lib/social.ts';
+import { profilePreviewQuery } from '../../lib/queries.ts';
+import { type ProfileView } from '../../lib/social.ts';
 import { LoadoutPanel } from './LoadoutPanel.tsx';
 import { ProfileWithTopSkills } from './ProfileWithTopSkills.tsx';
 import { useOptimisticProfileSave } from './use-optimistic-profile-save.ts';
@@ -70,32 +70,17 @@ function PreviewOfProfile({ userId, profile, replace, view }: PreviewOfProfilePr
   );
 }
 
+function viewStateOf(preview: UseQueryResult<{ skills: Skill[]; profile: ProfileView }>): ViewState {
+  if (preview.data) return { status: 'ready', ...preview.data };
+  if (preview.error && !preview.isFetching) return { status: 'failed', problem: preview.error.message };
+  return { status: 'loading' };
+}
+
 export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
   const { state, replace } = useProfile(userId);
-  const [view, setView] = useState<ViewState>({ status: 'loading' });
-  const [reloadNonce, setReloadNonce] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([fetchSkills(), fetchProfileView(userId)]).then(
-      ([skills, profile]) =>
-        active &&
-        setView(
-          profile
-            ? { status: 'ready', skills, profile }
-            : { status: 'failed', problem: 'Your profile could not be loaded.' },
-        ),
-      (error: Error) => active && setView({ status: 'failed', problem: error.message }),
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId, reloadNonce]);
-
-  const retryView = () => {
-    setView({ status: 'loading' });
-    setReloadNonce((nonce) => nonce + 1);
-  };
+  const preview = useQuery(profilePreviewQuery(userId));
+  const view = viewStateOf(preview);
+  const retryView = () => void preview.refetch();
 
   return (
     <main className="screen stack">

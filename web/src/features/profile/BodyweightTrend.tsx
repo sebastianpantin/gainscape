@@ -1,45 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { LineChart } from '../../components/LineChart.tsx';
-import { fetchBodyweightTrend } from '../../lib/bodyweight-trend.ts';
-import { bodyweightChartSeries, type BodyweightDay, trendDayText } from '../../lib/bodyweight-trend-rules.ts';
+import { bodyweightChartSeries, trendDayText } from '../../lib/bodyweight-trend-rules.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import type { UnitPref } from '../../lib/profile-rules.ts';
+import { bodyweightTrendQuery } from '../../lib/queries.ts';
 
 interface BodyweightTrendProps {
   userId: string;
-  savedCount: number;
   unit: UnitPref;
 }
 
-type Loaded = { kind: 'loading' } | { kind: 'problem'; message: string } | { kind: 'ready'; trend: BodyweightDay[] };
+export function BodyweightTrend({ userId, unit }: BodyweightTrendProps) {
+  const trend = useQuery(bodyweightTrendQuery(userId));
 
-export function BodyweightTrend({ userId, savedCount, unit }: BodyweightTrendProps) {
-  const [loaded, setLoaded] = useState<Loaded>({ kind: 'loading' });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchBodyweightTrend(userId, controller.signal).then(
-      (trend) => setLoaded({ kind: 'ready', trend }),
-      (error: unknown) => {
-        if (!controller.signal.aborted)
-          setLoaded({ kind: 'problem', message: messageOf(error, 'Could not load your bodyweight trend.') });
-      },
-    );
-    return () => controller.abort();
-  }, [userId, savedCount]);
-
-  if (loaded.kind === 'loading') return null;
-  if (loaded.kind === 'problem')
+  if (trend.data === undefined) {
+    if (!trend.error) return null;
     return (
       <p className="problem" role="alert">
-        {loaded.message}
+        {messageOf(trend.error, 'Could not load your bodyweight trend.')}
       </p>
     );
-  if (loaded.trend.length === 0) return <p className="muted">Save your bodyweight to start a trend.</p>;
+  }
+  if (trend.data.length === 0) return <p className="muted">Save your bodyweight to start a trend.</p>;
   return (
     <LineChart
       title="Bodyweight over time"
-      series={bodyweightChartSeries(loaded.trend, unit)}
+      series={bodyweightChartSeries(trend.data, unit)}
       formatX={trendDayText}
       formatY={(value) => `${value} ${unit}`}
     />
