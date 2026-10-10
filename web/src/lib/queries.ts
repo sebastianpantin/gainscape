@@ -1,11 +1,22 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import { type CacheFirstLoad } from '../offline/cache-first.ts';
 import { fetchSkills } from './catalog.ts';
+import { type Skill } from './catalog-rules.ts';
 import { type Collection, loadCollectionCacheFirst } from './collection-data.ts';
 import { collectionPercent, countCollection } from './collection-rules.ts';
 import { fetchLoadout, loadItemsCacheFirst } from './items.ts';
 import { loadProfileCacheFirst } from './profile.ts';
-import { FEED_PAGE_SIZE, fetchFeedPage, listFriends } from './social.ts';
+import { isUuid } from './history-rules.ts';
+import {
+  FEED_PAGE_SIZE,
+  fetchCollectionView,
+  fetchFeedPage,
+  fetchHiscores,
+  fetchProfileView,
+  listFriends,
+  type CollectionView,
+  type ProfileView,
+} from './social.ts';
 import { type FeedCursor, feedCursor } from './social-rules.ts';
 
 export const FRIENDS_QUERY_PREFIX = ['friends'] as const;
@@ -54,5 +65,28 @@ export function feedQuery(userId: string) {
       const lastItem = lastPage.at(-1);
       return lastItem && lastPage.length >= FEED_PAGE_SIZE ? feedCursor(lastItem) : undefined;
     },
+  });
+}
+
+export const hiscoresQuery = queryOptions({ queryKey: ['hiscores'] as const, queryFn: fetchHiscores });
+
+export interface FriendProfileLoad {
+  skills: Skill[];
+  profile: ProfileView;
+  collection: CollectionView;
+}
+
+export function friendProfileQuery(friendId: string) {
+  return queryOptions({
+    queryKey: ['friend-profile', friendId] as const,
+    queryFn: async (): Promise<FriendProfileLoad | null> => {
+      const [skills, profile, collection] = await Promise.all([
+        fetchSkills(),
+        fetchProfileView(friendId),
+        fetchCollectionView(friendId),
+      ]);
+      return profile && collection ? { skills, profile, collection } : null;
+    },
+    enabled: isUuid(friendId),
   });
 }

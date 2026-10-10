@@ -1,19 +1,17 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { fetchSkills } from '../../lib/catalog.ts';
 import type { Skill } from '../../lib/catalog-rules.ts';
 import { isUuid } from '../../lib/history-rules.ts';
-import { FEED_QUERY_PREFIX, FRIENDS_QUERY_PREFIX } from '../../lib/queries.ts';
-import { usePreferences } from '../../lib/preferences.ts';
 import {
-  type CollectionView,
-  type CollectionViewExercise,
-  fetchCollectionView,
-  fetchProfileView,
-  type ProfileView,
-  removeFriend,
-} from '../../lib/social.ts';
+  FEED_QUERY_PREFIX,
+  type FriendProfileLoad,
+  friendProfileQuery,
+  FRIENDS_QUERY_PREFIX,
+} from '../../lib/queries.ts';
+import { loadedState } from '../../lib/query-state-rules.ts';
+import { usePreferences } from '../../lib/preferences.ts';
+import { type CollectionView, type CollectionViewExercise, type ProfileView, removeFriend } from '../../lib/social.ts';
 import { slotsByReps } from '../collection/record-slots.ts';
 import { RecordSlots } from '../collection/RecordSlots.tsx';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
@@ -50,30 +48,20 @@ export function FriendProfileScreen() {
   return <FriendProfile key={friendId} friendId={friendId} />;
 }
 
+function viewStateOf(friendId: string, data: FriendProfileLoad | null | undefined, error: Error | null): ViewState {
+  if (!isUuid(friendId) || data === null) return { status: 'missing' };
+  const loaded = loadedState(data, error);
+  return loaded.status === 'ready' ? { status: 'ready', ...loaded.data } : loaded;
+}
+
 function FriendProfile({ friendId }: { friendId: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [state, setState] = useState<ViewState>(() =>
-    isUuid(friendId) ? { status: 'loading' } : { status: 'missing' },
-  );
+  const view = useQuery(friendProfileQuery(friendId));
+  const state = viewStateOf(friendId, view.data, view.error);
   const [removing, setRemoving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isUuid(friendId)) return;
-    let active = true;
-    Promise.all([fetchSkills(), fetchProfileView(friendId), fetchCollectionView(friendId)]).then(
-      ([skills, profile, collection]) => {
-        if (!active) return;
-        setState(profile && collection ? { status: 'ready', skills, profile, collection } : { status: 'missing' });
-      },
-      (error: Error) => active && setState({ status: 'failed', problem: error.message }),
-    );
-    return () => {
-      active = false;
-    };
-  }, [friendId]);
 
   const remove = async () => {
     if (removing) return;
@@ -83,6 +71,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
       await removeFriend(friendId);
       queryClient.removeQueries({ queryKey: FRIENDS_QUERY_PREFIX });
       queryClient.removeQueries({ queryKey: FEED_QUERY_PREFIX });
+      queryClient.removeQueries({ queryKey: friendProfileQuery(friendId).queryKey });
       navigate('/friends', { replace: true });
     } catch (error) {
       setProblem(messageOf(error, 'Could not remove this friend.'));
