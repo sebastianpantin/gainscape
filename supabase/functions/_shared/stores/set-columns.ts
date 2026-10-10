@@ -4,6 +4,7 @@ import {
   type BalanceConfig,
   type CardioSetInput,
   countedWorkSeconds,
+  type HoldSetInput,
   type LiftSetInput,
   type PrescriptionSnapshot,
   resolveEffort,
@@ -59,9 +60,31 @@ function cardioInputColumns(bout: CardioSetInput, effort: EffortColumns) {
   };
 }
 
+function holdInputColumns(hold: HoldSetInput, effectiveLoadKg: number, effort: EffortColumns) {
+  return {
+    id: hold.id,
+    exercise_id: hold.exerciseId,
+    position: hold.position,
+    weight_kg: hold.weightKg,
+    effective_load_kg: effectiveLoadKg,
+    reps: null,
+    is_warmup: false,
+    effort_input_type: effort.effortInputType,
+    effort_value: effort.effortValue,
+    duration_s: hold.durationS,
+    distance_m: hold.distanceM,
+    interval_work_s: null,
+    interval_rest_s: null,
+    interval_rounds: null,
+    counted_work_s: null,
+  };
+}
+
 export function inputColumnsWithEffort(set: WritableSet, cfg: BalanceConfig) {
   const effort = resolveEffort(set.effort, cfg, setKind(set));
-  return set.kind === 'cardio' ? cardioInputColumns(set, effort) : liftInputColumns(set, set.effectiveLoadKg, effort);
+  if (set.kind === 'cardio') return cardioInputColumns(set, effort);
+  if (set.kind === 'hold') return holdInputColumns(set, set.effectiveLoadKg, effort);
+  return liftInputColumns(set, set.effectiveLoadKg, effort);
 }
 
 export function liftFieldsFromRow(row: DbRow): Pick<LiftSetInput, 'weightKg' | 'reps' | 'isWarmup'> {
@@ -99,7 +122,9 @@ export function newSetRow(result: SetResult, sessionId: string, userId: string) 
   return {
     ...(set.kind === 'cardio'
       ? cardioInputColumns(set, result)
-      : liftInputColumns(set, result.effectiveLoadKg, result)),
+      : set.kind === 'hold'
+        ? holdInputColumns(set, result.effectiveLoadKg, result)
+        : liftInputColumns(set, result.effectiveLoadKg, result)),
     session_id: sessionId,
     user_id: userId,
     ...derivedSetColumns(result),

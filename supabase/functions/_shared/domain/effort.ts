@@ -21,7 +21,7 @@ export function resolveEffort(input: EffortInput, cfg: BalanceConfig, kind: SetK
   if (input === null) {
     return { effortInputType: null, effortValue: null, loggedRir: null };
   }
-  if ((input.type === 'cardio') !== (kind === 'cardio')) {
+  if ((input.type === 'cardio') !== (kind === 'cardio') || (kind === 'hold' && input.type !== 'level')) {
     throw new RangeError(`a ${kind} set cannot carry a ${input.type} effort`);
   }
   switch (input.type) {
