@@ -173,9 +173,13 @@ function isHalfStepBetween(value: unknown, lowest: number, highest: number): boo
   return typeof value === 'number' && Number.isInteger(value * 2) && value >= lowest && value <= highest;
 }
 
+function isLevelEffort(value: unknown): boolean {
+  return isRecord(value) && value.type === 'level' && EFFORT_LEVELS.some((level) => level === value.level);
+}
+
 function isLiftEffortInput(value: unknown): value is NonNullable<EffortInput> {
   if (!isRecord(value)) return false;
-  if (value.type === 'level') return EFFORT_LEVELS.some((level) => level === value.level);
+  if (value.type === 'level') return isLevelEffort(value);
   if (value.type === 'rir') return isHalfStepBetween(value.value, 0, 10);
   if (value.type === 'rpe') return isHalfStepBetween(value.value, 5, 10);
   return false;
@@ -245,10 +249,6 @@ function normalisedCardio(exercise: Record<string, unknown> & { sets: unknown[] 
     ...(activity === null ? {} : { activity: { ...activity, tracksDistance } }),
     sets: exercise.sets.map((bout) => normalisedBout(bout, tracksDistance)),
   };
-}
-
-function isLevelEffort(value: unknown): boolean {
-  return isRecord(value) && value.type === 'level' && EFFORT_LEVELS.some((level) => level === value.level);
 }
 
 function normalisedHoldSet(set: unknown): unknown {

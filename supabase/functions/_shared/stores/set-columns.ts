@@ -127,14 +127,16 @@ export function derivedSetColumns(result: SetResult) {
   };
 }
 
-export function newSetRow(result: SetResult, sessionId: string, userId: string) {
+function resultInputColumns(result: SetResult) {
   const { set } = result;
+  if (set.kind === 'cardio') return cardioInputColumns(set, result);
+  if (set.kind === 'hold') return holdInputColumns(set, result.effectiveLoadKg, result);
+  return liftInputColumns(set, result.effectiveLoadKg, result);
+}
+
+export function newSetRow(result: SetResult, sessionId: string, userId: string) {
   return {
-    ...(set.kind === 'cardio'
-      ? cardioInputColumns(set, result)
-      : set.kind === 'hold'
-        ? holdInputColumns(set, result.effectiveLoadKg, result)
-        : liftInputColumns(set, result.effectiveLoadKg, result)),
+    ...resultInputColumns(result),
     session_id: sessionId,
     user_id: userId,
     ...derivedSetColumns(result),

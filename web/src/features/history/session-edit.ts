@@ -24,7 +24,7 @@ import {
   updateExerciseAt,
   withSets,
 } from '../../offline/draft-format.ts';
-import { boutPayload } from '../../offline/session-payload.ts';
+import { boutPayload, holdPayload } from '../../offline/session-payload.ts';
 
 type ExerciseKind =
   | { modality?: 'lift'; loadType: LoadType; measure?: HoldMeasure }
@@ -166,32 +166,32 @@ export function editFromSession(
   return { sessionId: session.id, revision: session.revision, notes: session.notes ?? '', exercises: grouped(placed) };
 }
 
+function setPayload(placed: PlacedSet, position: number): EditSessionPayload['sets'][number] {
+  switch (placed.modality) {
+    case 'cardio':
+      return boutPayload(placed.set, placed.header.exerciseId, position);
+    case 'hold':
+      return holdPayload(
+        { ...placed.set, weightKg: roundTo(2, placed.set.weightKg) },
+        placed.header.exerciseId,
+        position,
+      );
+    case 'lift':
+      return {
+        id: placed.set.id,
+        exerciseId: placed.header.exerciseId,
+        position,
+        weightKg: roundTo(2, placed.set.weightKg),
+        reps: placed.set.reps,
+        isWarmup: placed.set.isWarmup,
+        effort: placed.set.effort,
+      };
+  }
+}
+
 export function editPayload(edit: SessionEdit): EditSessionPayload {
   const notes = edit.notes.trim() === '' ? null : edit.notes;
-  const sets = placedSets(edit).map((placed, position) =>
-    placed.modality === 'cardio'
-      ? boutPayload(placed.set, placed.header.exerciseId, position)
-      : placed.modality === 'hold'
-        ? {
-            kind: 'hold' as const,
-            id: placed.set.id,
-            exerciseId: placed.header.exerciseId,
-            position,
-            weightKg: roundTo(2, placed.set.weightKg),
-            durationS: placed.set.durationS,
-            distanceM: placed.set.distanceM,
-            effort: placed.set.effort,
-          }
-        : {
-            id: placed.set.id,
-            exerciseId: placed.header.exerciseId,
-            position,
-            weightKg: roundTo(2, placed.set.weightKg),
-            reps: placed.set.reps,
-            isWarmup: placed.set.isWarmup,
-            effort: placed.set.effort,
-          },
-  );
+  const sets = placedSets(edit).map(setPayload);
   return { sessionId: edit.sessionId, ifRevision: edit.revision, notes, sets };
 }
 
@@ -313,17 +313,14 @@ export function addEditSet(edit: SessionEdit, exerciseIndex: number): SessionEdi
 
 function emptyExercise(exercise: NewExercise): EditExercise {
   const identity = { exerciseId: exercise.id, name: exercise.name };
-  return exercise.modality === 'cardio'
-    ? {
-        ...identity,
-        modality: 'cardio',
-        paceUnit: exercise.activity.paceUnit,
-        tracksDistance: exercise.activity.tracksDistance,
-        sets: [],
-      }
-    : exercise.measure !== undefined
-      ? { ...identity, modality: 'hold', measure: exercise.measure, loadType: exercise.loadType, sets: [] }
-      : { ...identity, modality: 'lift', loadType: exercise.loadType, sets: [] };
+  if (exercise.modality === 'cardio') {
+    const { paceUnit, tracksDistance } = exercise.activity;
+    return { ...identity, modality: 'cardio', paceUnit, tracksDistance, sets: [] };
+  }
+  if (exercise.measure !== undefined) {
+    return { ...identity, modality: 'hold', measure: exercise.measure, loadType: exercise.loadType, sets: [] };
+  }
+  return { ...identity, modality: 'lift', loadType: exercise.loadType, sets: [] };
 }
 
 export function addEditExercise(edit: SessionEdit, exercise: NewExercise): SessionEdit {
@@ -455,6 +452,17 @@ function mergedSet(remote: PlacedSet, before: PlacedSet, mine: PlacedSet): Place
   return remote;
 }
 
+function exerciseOf(entry: PlacedSet): EditExercise {
+  switch (entry.modality) {
+    case 'cardio':
+      return { ...entry.header, sets: [entry.set] };
+    case 'hold':
+      return { ...entry.header, sets: [entry.set] };
+    case 'lift':
+      return { ...entry.header, sets: [entry.set] };
+  }
+}
+
 function grouped(placed: readonly PlacedSet[]): EditExercise[] {
   const exercises: EditExercise[] = [];
   for (const entry of placed) {
@@ -473,13 +481,7 @@ function grouped(placed: readonly PlacedSet[]): EditExercise[] {
         continue;
       }
     }
-    exercises.push(
-      entry.modality === 'cardio'
-        ? { ...entry.header, sets: [entry.set] }
-        : entry.modality === 'hold'
-          ? { ...entry.header, sets: [entry.set] }
-          : { ...entry.header, sets: [entry.set] },
-    );
+    exercises.push(exerciseOf(entry));
   }
   return exercises;
 }
