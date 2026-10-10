@@ -28,7 +28,7 @@ test('a done set starts a rest that counts down, adjusts, survives a reload and 
   await expect(restTimer(page)).toHaveCount(0);
 
   await pauseClockNow(page);
-  await logExercise(page, 'curl', 'Barbell Curl', [{ weightKg: 30, reps: 10 }]);
+  await logExercise(page, 'barbell curl', 'Barbell Curl', [{ weightKg: 30, reps: 10 }]);
   const remaining = restTimer(page).getByRole('timer', { name: 'Rest remaining' });
   await expect(remaining).toHaveText('1:30');
 
@@ -92,7 +92,7 @@ test('rating a set keeps the rest it started, and focus stays in the bar when th
   await register(page, uniqueUsername('rf'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   await pauseClockNow(page);
-  const curl = await addExercise(page, 'curl', 'Barbell Curl');
+  const curl = await addExercise(page, 'barbell curl', 'Barbell Curl');
   const remaining = restTimer(page).getByRole('timer', { name: 'Rest remaining' });
   const firstSet = setRow(curl, 1);
 
@@ -138,7 +138,7 @@ test('each lift rests for its own length: compound lifts longer, and an adjusted
   await expect(remaining).toHaveText('3:15');
   await expect(bench.getByText(/Rest 3:15/)).toBeVisible();
 
-  await logExercise(page, 'curl', 'Barbell Curl', [{ weightKg: 30, reps: 10 }]);
+  await logExercise(page, 'barbell curl', 'Barbell Curl', [{ weightKg: 30, reps: 10 }]);
   await expect(curl.getByText(/Rest 1:30/)).toBeVisible();
   await expect(remaining).toHaveText('1:30');
 

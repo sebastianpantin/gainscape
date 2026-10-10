@@ -97,6 +97,20 @@ describe('catalog generator', () => {
     expect(exercises).toContain('modality = excluded.modality');
   });
 
+  it('seeds the curated strength library with its variations', () => {
+    const statements = renderStatements(loadCatalogData());
+    const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;
+    expect(exercises).toContain(
+      `'hammer_curl', 'Hammer Curl', 'lift', 'external', 'dumbbell', null, null, null, null, null)`,
+    );
+    expect(exercises).toContain(
+      `'landmine_rotation', 'Landmine Rotation', 'lift', 'external', 'other', null, null, null, null, null)`,
+    );
+    expect(exercises).toContain(
+      `'pendlay_row', 'Pendlay Row', 'lift', 'external', 'barbell', extensions.uuid_generate_v5('${PINNED_NAMESPACE}'::uuid, 'barbell_row'),`,
+    );
+  });
+
   it('renders the challenges before the items, with exercise ids in each definition', () => {
     const catalog = loadCatalogData();
     expect(catalog.challenges.map((challenge) => challenge.key)).toEqual([
