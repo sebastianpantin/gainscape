@@ -9,7 +9,7 @@ import {
   gearSkillBonus,
 } from '@domain/index.ts';
 
-const ALL_SKILLS = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core', 'endurance', 'agility'];
+const ALL_SKILLS = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core', 'grip', 'endurance', 'agility'];
 
 const fullAscendant: GearLoadout = Object.fromEntries(GEAR_SLOTS.map((slot) => [slot, 'ascendant']));
 const ascendantBelt: GearLoadout = { belt: 'ascendant' };
@@ -54,6 +54,18 @@ describe('gearSkillBonus', () => {
       chest: 1 / 70,
       shoulders: 1 / 70,
       arms: 1 / 280,
+      grip: 1 / 210,
+    });
+  });
+
+  it('boosts grip from chalk, straps and gloves', () => {
+    expect(GEAR_SLOT_SKILLS.chalk).toContain('grip');
+    expect(GEAR_SLOT_SKILLS.straps).toContain('grip');
+    expect(GEAR_SLOT_SKILLS.gloves).toContain('grip');
+    expectBonuses(gearSkillBonus({ chalk: 'ascendant' }, DEFAULT_BALANCE), {
+      back: 1 / 30,
+      arms: 1 / 40,
+      grip: 1 / 30,
     });
   });
 });

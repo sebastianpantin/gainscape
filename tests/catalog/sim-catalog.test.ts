@@ -44,11 +44,13 @@ describe('balance sim catalog', () => {
 
   it('uses the same skills, sort order and combat weights as the catalog', () => {
     expect(
-      [...SIM_SKILLS, ...CARDIO_SIM_SKILLS].map(({ key, sortOrder, combatWeight }) => ({
-        key,
-        sortOrder,
-        combatWeight,
-      })),
+      [...SIM_SKILLS, ...CARDIO_SIM_SKILLS]
+        .sort((first, second) => first.sortOrder - second.sortOrder)
+        .map(({ key, sortOrder, combatWeight }) => ({
+          key,
+          sortOrder,
+          combatWeight,
+        })),
     ).toEqual(catalog.skills.map(({ key, sortOrder, combatWeight }) => ({ key, sortOrder, combatWeight })));
   });
 });

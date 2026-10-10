@@ -70,7 +70,7 @@ describe('catalog validation', () => {
       (c) => (find(c.exercises, 'deadlift').shares[0].skill = 'neck'),
       /shares unknown skill "neck"/,
     ],
-    ['shares sum to 10000', (c) => (find(c.exercises, 'deadlift').shares[0].shareBp = 4000), /shares sum to 9000/],
+    ['shares sum to 10000', (c) => (find(c.exercises, 'deadlift').shares[0].shareBp = 3000), /shares sum to 9000/],
     [
       'each share is 1-10000 basis points',
       (c) => {
@@ -331,8 +331,8 @@ describe('catalog validation', () => {
     ],
     [
       'every skill is boosted by some gear slot',
-      (c) => c.skills.push({ ...structuredClone(find(c.skills, 'core')), key: 'grip', name: 'Grip', sortOrder: 9 }),
-      /skill "grip" is boosted by no gear slot/,
+      (c) => c.skills.push({ ...structuredClone(find(c.skills, 'core')), key: 'neck', name: 'Neck', sortOrder: 99 }),
+      /skill "neck" is boosted by no gear slot/,
     ],
     [
       'a gear recipe consumes at most one gear item',

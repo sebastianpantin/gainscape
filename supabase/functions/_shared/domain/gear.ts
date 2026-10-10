@@ -8,11 +8,11 @@ type GearBonusConfig = Pick<BalanceConfig, 'gearBonusPercentAtFullTier'>;
 
 export const GEAR_SLOT_SKILLS: Readonly<Record<GearSlot, readonly string[]>> = Object.freeze({
   belt: Object.freeze(['legs', 'back', 'core']),
-  chalk: Object.freeze(['back', 'arms']),
-  straps: Object.freeze(['back', 'arms']),
+  chalk: Object.freeze(['back', 'arms', 'grip']),
+  straps: Object.freeze(['back', 'arms', 'grip']),
   sleeves: Object.freeze(['legs', 'arms']),
   shoes: Object.freeze(['legs', 'endurance', 'agility']),
-  gloves: Object.freeze(['chest', 'shoulders', 'arms']),
+  gloves: Object.freeze(['chest', 'shoulders', 'arms', 'grip']),
 });
 
 const BOOSTED_SKILLS: readonly string[] = Object.freeze([...new Set(Object.values(GEAR_SLOT_SKILLS).flat())]);

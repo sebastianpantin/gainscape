@@ -37,17 +37,17 @@
   name: Barbell Row
   load_type: external
   equipment: barbell
-  shares: { back: 7000, arms: 2000, core: 1000 }
+  shares: { back: 7000, arms: 1500, core: 1000, grip: 500 }
 - key: dumbbell_row
   name: Dumbbell Row
   load_type: external
   equipment: dumbbell
-  shares: { back: 7500, arms: 2500 }
+  shares: { back: 7500, arms: 2000, grip: 500 }
 - key: lat_pulldown
   name: Lat Pulldown
   load_type: external
   equipment: cable
-  shares: { back: 7500, arms: 2500 }
+  shares: { back: 7500, arms: 2000, grip: 500 }
 - key: seated_cable_row
   name: Seated Cable Row
   load_type: external
@@ -57,7 +57,7 @@
   name: Deadlift
   load_type: external
   equipment: barbell
-  shares: { back: 5000, legs: 4000, core: 1000 }
+  shares: { back: 4000, legs: 4000, core: 1000, grip: 1000 }
 - key: overhead_press
   name: Overhead Press
   load_type: external
@@ -117,7 +117,7 @@
   name: Romanian Deadlift
   load_type: external
   equipment: barbell
-  shares: { legs: 7000, back: 2000, core: 1000 }
+  shares: { legs: 7000, back: 1500, core: 1000, grip: 500 }
 - key: leg_extension
   name: Leg Extension
   load_type: external
@@ -152,12 +152,12 @@
   name: Pull-up
   load_type: bodyweight
   equipment: bodyweight
-  shares: { back: 7500, arms: 2500 }
+  shares: { back: 7000, arms: 2000, grip: 1000 }
 - key: chin_up
   name: Chin-up
   load_type: bodyweight
   equipment: bodyweight
-  shares: { back: 6500, arms: 3500 }
+  shares: { back: 6000, arms: 3000, grip: 1000 }
 - key: push_up
   name: Push-up
   load_type: bodyweight
@@ -177,7 +177,7 @@
   name: Hanging Leg Raise
   load_type: bodyweight
   equipment: bodyweight
-  shares: { core: 10000 }
+  shares: { core: 9000, grip: 1000 }
 - key: ab_wheel_rollout
   name: Ab Wheel Rollout
   load_type: bodyweight
@@ -192,12 +192,12 @@
   name: Weighted Pull-up
   load_type: bodyweight_plus
   equipment: bodyweight
-  shares: { back: 7500, arms: 2500 }
+  shares: { back: 7000, arms: 2000, grip: 1000 }
 - key: weighted_chin_up
   name: Weighted Chin-up
   load_type: bodyweight_plus
   equipment: bodyweight
-  shares: { back: 6500, arms: 3500 }
+  shares: { back: 6000, arms: 3000, grip: 1000 }
 - key: weighted_dip
   name: Weighted Dip
   load_type: bodyweight_plus
@@ -224,13 +224,13 @@
   name: Deficit Deadlift
   load_type: external
   equipment: barbell
-  shares: { back: 5000, legs: 4000, core: 1000 }
+  shares: { back: 4000, legs: 4000, core: 1000, grip: 1000 }
   variation_of: deadlift
 - key: dead_stop_row
   name: Dead-stop Row
   load_type: external
   equipment: barbell
-  shares: { back: 7000, arms: 2000, core: 1000 }
+  shares: { back: 7000, arms: 1500, core: 1000, grip: 500 }
   variation_of: barbell_row
 - key: z_press
   name: Z Press
@@ -350,29 +350,29 @@
   name: Pendlay Row
   load_type: external
   equipment: barbell
-  shares: { back: 7000, arms: 2000, core: 1000 }
+  shares: { back: 7000, arms: 1500, core: 1000, grip: 500 }
   variation_of: barbell_row
 - key: reverse_grip_barbell_row
   name: Reverse-grip Barbell Row
   load_type: external
   equipment: barbell
-  shares: { back: 6500, arms: 2500, core: 1000 }
+  shares: { back: 6500, arms: 2000, core: 1000, grip: 500 }
   variation_of: barbell_row
 - key: seal_row
   name: Seal Row
   load_type: external
   equipment: barbell
-  shares: { back: 7500, arms: 2500 }
+  shares: { back: 7500, arms: 2000, grip: 500 }
 - key: t_bar_row
   name: T-bar Row
   load_type: external
   equipment: machine
-  shares: { back: 7500, arms: 2000, core: 500 }
+  shares: { back: 7500, arms: 1500, core: 500, grip: 500 }
 - key: chest_supported_dumbbell_row
   name: Chest-supported Dumbbell Row
   load_type: external
   equipment: dumbbell
-  shares: { back: 7500, arms: 2500 }
+  shares: { back: 7500, arms: 2000, grip: 500 }
 - key: renegade_row
   name: Renegade Row
   load_type: external
@@ -382,7 +382,7 @@
   name: Kettlebell Row
   load_type: external
   equipment: other
-  shares: { back: 7500, arms: 2500 }
+  shares: { back: 7500, arms: 2000, grip: 500 }
 - key: machine_row
   name: Machine Row
   load_type: external
@@ -445,12 +445,12 @@
   name: Wide-grip Pull-up
   load_type: bodyweight
   equipment: bodyweight
-  shares: { back: 8000, arms: 2000 }
+  shares: { back: 7500, arms: 1500, grip: 1000 }
 - key: neutral_grip_pull_up
   name: Neutral-grip Pull-up
   load_type: bodyweight
   equipment: bodyweight
-  shares: { back: 7000, arms: 3000 }
+  shares: { back: 6500, arms: 2500, grip: 1000 }
 - key: muscle_up
   name: Muscle-up
   load_type: bodyweight
@@ -460,23 +460,23 @@
   name: Rack Pull
   load_type: external
   equipment: barbell
-  shares: { back: 6500, legs: 2500, core: 1000 }
+  shares: { back: 5500, legs: 2500, core: 1000, grip: 1000 }
   variation_of: deadlift
 - key: sumo_deadlift
   name: Sumo Deadlift
   load_type: external
   equipment: barbell
-  shares: { legs: 5500, back: 3500, core: 1000 }
+  shares: { legs: 5500, back: 2500, core: 1000, grip: 1000 }
 - key: trap_bar_deadlift
   name: Trap Bar Deadlift
   load_type: external
   equipment: other
-  shares: { legs: 5500, back: 3500, core: 1000 }
+  shares: { legs: 5500, back: 3000, core: 1000, grip: 500 }
 - key: dumbbell_deadlift
   name: Dumbbell Deadlift
   load_type: external
   equipment: dumbbell
-  shares: { back: 4500, legs: 4500, core: 1000 }
+  shares: { back: 3500, legs: 4500, core: 1000, grip: 1000 }
 - key: good_morning
   name: Good Morning
   load_type: external
@@ -501,12 +501,12 @@
   name: Barbell Shrug
   load_type: external
   equipment: barbell
-  shares: { back: 10000 }
+  shares: { back: 8000, grip: 2000 }
 - key: dumbbell_shrug
   name: Dumbbell Shrug
   load_type: external
   equipment: dumbbell
-  shares: { back: 10000 }
+  shares: { back: 8000, grip: 2000 }
 - key: kettlebell_swing
   name: Kettlebell Swing
   load_type: external
@@ -643,12 +643,12 @@
   name: Hammer Curl
   load_type: external
   equipment: dumbbell
-  shares: { arms: 10000 }
+  shares: { arms: 8500, grip: 1500 }
 - key: cross_body_hammer_curl
   name: Cross-body Hammer Curl
   load_type: external
   equipment: dumbbell
-  shares: { arms: 10000 }
+  shares: { arms: 8500, grip: 1500 }
   variation_of: hammer_curl
 - key: incline_dumbbell_curl
   name: Incline Dumbbell Curl
@@ -691,7 +691,7 @@
   name: Reverse Curl
   load_type: external
   equipment: barbell
-  shares: { arms: 10000 }
+  shares: { arms: 7000, grip: 3000 }
 - key: cable_curl
   name: Cable Curl
   load_type: external
@@ -701,7 +701,7 @@
   name: Cable Rope Hammer Curl
   load_type: external
   equipment: cable
-  shares: { arms: 10000 }
+  shares: { arms: 9500, grip: 500 }
 - key: overhead_cable_curl
   name: Overhead Cable Curl
   load_type: external
@@ -789,17 +789,17 @@
   name: Barbell Wrist Curl
   load_type: external
   equipment: barbell
-  shares: { arms: 10000 }
+  shares: { grip: 10000 }
 - key: barbell_reverse_wrist_curl
   name: Barbell Reverse Wrist Curl
   load_type: external
   equipment: barbell
-  shares: { arms: 10000 }
+  shares: { grip: 10000 }
 - key: dumbbell_wrist_curl
   name: Dumbbell Wrist Curl
   load_type: external
   equipment: dumbbell
-  shares: { arms: 10000 }
+  shares: { grip: 10000 }
 - key: box_squat
   name: Box Squat
   load_type: external
@@ -923,12 +923,12 @@
   name: Stiff-leg Deadlift
   load_type: external
   equipment: barbell
-  shares: { legs: 6500, back: 2500, core: 1000 }
+  shares: { legs: 6500, back: 2000, core: 1000, grip: 500 }
 - key: dumbbell_romanian_deadlift
   name: Dumbbell Romanian Deadlift
   load_type: external
   equipment: dumbbell
-  shares: { legs: 7000, back: 2000, core: 1000 }
+  shares: { legs: 7000, back: 1500, core: 1000, grip: 500 }
 - key: single_leg_romanian_deadlift
   name: Single-leg Romanian Deadlift
   load_type: external
@@ -1059,12 +1059,12 @@
   name: Hanging Knee Raise
   load_type: bodyweight
   equipment: bodyweight
-  shares: { core: 10000 }
+  shares: { core: 9000, grip: 1000 }
 - key: weighted_hanging_leg_raise
   name: Weighted Hanging Leg Raise
   load_type: bodyweight_plus
   equipment: bodyweight
-  shares: { core: 10000 }
+  shares: { core: 9000, grip: 1000 }
 - key: dead_bug
   name: Dead Bug
   load_type: bodyweight
