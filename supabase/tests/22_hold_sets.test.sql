@@ -43,7 +43,7 @@ as $$
          add_hold_set.warmup, 'default', 3, 495
   from public.sessions s, public.exercises e
   where s.user_id = (select p.id from public.profiles p where p.username = 'hold_owner')
-    and e.key = 'barbell_bench_press';
+    and e.key = case when add_hold_set.duration is null then 'farmers_carry' else 'plate_pinch' end;
 $$;
 
 select lives_ok($$select tests.add_hold_set(0, 0, 80, 45, null)$$, 'a timed hold stores its load and duration');
