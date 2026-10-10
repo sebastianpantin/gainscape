@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
+import { MOBILITY_SKILL_KEY } from '@domain/cardio.ts';
 import {
   EQUIPMENT,
   type Equipment,
@@ -10,7 +11,7 @@ import {
 } from '../../lib/catalog-rules.ts';
 import { fetchExerciseShares, hasLoggedSet, saveCustomExercise, type SkillShare } from '../../lib/custom-exercises.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
-import { percentsFromShares, shareTotal, sharesToSave, skillsForModality } from './share-form.ts';
+import { mixedSoloShareText, percentsFromShares, shareTotal, sharesToSave, skillsForModality } from './share-form.ts';
 import { messageOf } from '../../lib/error-text.ts';
 
 const NAME_MAX_LENGTH = 60;
@@ -63,8 +64,10 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
   }, [exercise]);
 
   const offeredSkills = skillsForModality(skills, modality);
-  const shareForm = { skillIds: offeredSkills.map((skill) => skill.id), percents, locked, storedShares };
+  const soloSkills = offeredSkills.filter((skill) => skill.key === MOBILITY_SKILL_KEY);
+  const shareForm = { skillIds: offeredSkills.map((skill) => skill.id), percents, locked, storedShares, soloSkills };
   const total = shareTotal(shareForm);
+  const soloShareProblem = mixedSoloShareText(shareForm);
   const shares = sharesToSave(shareForm);
   const nameIssue = nameProblem(name, NAME_MAX_LENGTH);
   const canSave = !loading && !saving && nameIssue === null && shares !== null;
@@ -162,6 +165,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
         ))}
       </fieldset>
       <p className={shares !== null ? '' : 'problem'}>Total: {total}%</p>
+      {soloShareProblem && <p className="problem">{soloShareProblem}</p>}
       {problem && (
         <p className="problem" role="alert">
           {problem}
