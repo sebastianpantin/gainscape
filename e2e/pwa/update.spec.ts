@@ -154,3 +154,15 @@ test('the kill switch retires the worker and reloads the page without a click', 
   expect(await page.evaluate(() => navigator.serviceWorker.controller)).toBeNull();
   expect((await cachedPaths(page)).filter((cache) => cache.cacheName.startsWith(SHELL_CACHE_PREFIX))).toEqual([]);
 });
+
+test('checking for updates without a new version says the app is up to date', async ({ page }) => {
+  await register(page, uniqueUsername('pwa_n'));
+  await waitForController(page);
+
+  await openFromProfile(page, 'Settings');
+  await page.getByRole('button', { name: 'Check for updates' }).click();
+  await expect(page.getByRole('status').filter({ hasText: "You're up to date." })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Check for updates' })).toBeEnabled();
+  await expect(page.getByText(UPDATE_READY)).toHaveCount(0);
+  expect((await cachedPaths(page)).map((cache) => cache.cacheName)).toEqual([shellCacheName(builtShell().id)]);
+});
