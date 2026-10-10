@@ -12,7 +12,7 @@ GitHub Actions workflow definitions. See `../AGENTS.md` for the full description
 | File      | Description                                                                                                                                                                                                                      |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ci.yml`  | Pull request CI: `checks` (no stack, runs `make ci-changes`; docs-only diffs run just `make format-check secrets-scan`) and `backend` (integration and pgTAP on the local stack; needs `checks`, skipped without backend inputs) |
-| `e2e.yml` | Manual end-to-end and PWA suites on the local stack, started with `workflow_dispatch`                                                                                                                                            |
+| `e2e.yml` | Nightly and manual end-to-end (chromium and webkit, sharded), PWA and Pages suites on the local stack                                                                                                                            |
 
 ## For AI Agents
 
@@ -22,7 +22,7 @@ GitHub Actions workflow definitions. See `../AGENTS.md` for the full description
 
 ### Testing Requirements
 
-- None automated. Confirm `ci.yml` with a green pull request run and `e2e.yml` with a manual run on the branch.
+- None automated. Confirm `ci.yml` with a green pull request run and `e2e.yml` with a manual run on the branch (`gh workflow run e2e.yml --ref <branch>`).
 
 ## Dependencies
 
