@@ -1,23 +1,21 @@
 import { canCraft, recipeFor } from '@domain/crafting.ts';
-import { DEFAULT_BALANCE, DEFAULT_ROUNDING } from '@domain/index.ts';
+import { DEFAULT_ROUNDING } from '@domain/index.ts';
 import type { StrengthState } from '@domain/types.ts';
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ItemIcon } from '../../components/PixelArt.tsx';
-import { fetchExercises } from '../../lib/catalog.ts';
-import { readCachedExercises } from '../../lib/catalog-cache.ts';
 import {
   type CatalogChallenge,
   challengeSummaryText,
   exercisesWithoutE1rm,
   missingE1rmText,
 } from '../../lib/challenge-rules.ts';
-import { fetchStrengthState } from '../../lib/collection-data.ts';
 import {
   type CatalogItem,
   colorFor,
   craftProblemText,
+  firstPickedItemId,
   groupItems,
   type HeldItem,
   type ItemCatalog,
@@ -30,27 +28,24 @@ import {
   tiersOf,
 } from '../../lib/item-rules.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import { craftItem, equipGear, fetchInventory, fetchItemCatalog, unequipGear } from '../../lib/items.ts';
+import {
+  craftItem,
+  equipGear,
+  fetchInventory,
+  fetchItemCatalog,
+  type LoadedItems,
+  unequipGear,
+} from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { startDraftFromChallenge } from '../../offline/draft-format.ts';
-import {
-  type ChallengeExerciseEntry,
-  challengeExercisesOf,
-  OFFLINE_ITEMS_NOTICE,
-  readItemsCache,
-  saveItemsCache,
-} from '../../offline/items-cache.ts';
+import { type ChallengeExerciseEntry, OFFLINE_ITEMS_NOTICE, updateItemsCache } from '../../offline/items-cache.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
-import {
-  type CacheFirstLoad,
-  cacheFirstNotice,
-  isDeviceOffline,
-  loadCacheFirstWhenOffline,
-} from '../../offline/cache-first.ts';
+import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { useLoadout } from '../profile/use-loadout.ts';
-import { loadoutQuery } from '../../lib/queries.ts';
+import { itemsQuery, loadoutQuery } from '../../lib/queries.ts';
+import { loadedState } from '../../lib/query-state-rules.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
@@ -250,60 +245,11 @@ interface ItemsScreenProps {
   userId: string;
 }
 
-interface LoadedItems {
-  catalog: ItemCatalog;
-  held: Map<string, HeldItem>;
-  challengeExercises: ChallengeExerciseEntry[];
-  strength: StrengthState | null;
-}
-
-async function loadItemsOnline(userId: string): Promise<LoadedItems> {
-  const strengthAsOf = new Date().toISOString();
-  const [catalog, held, exercises, liveStrength] = await Promise.all([
-    fetchItemCatalog(),
-    fetchInventory(userId),
-    fetchExercises({ includeArchived: true }).catch(() => null),
-    fetchStrengthState(strengthAsOf, DEFAULT_BALANCE.e1rmWindowDays).catch(() => null),
-  ]);
-  const storage = deviceStorage();
-  const cached = readItemsCache(storage, userId);
-  const challengeExercises = exercises
-    ? challengeExercisesOf(catalog.challenges, exercises)
-    : cached?.challengeExercises.length
-      ? cached.challengeExercises
-      : challengeExercisesOf(catalog.challenges, (storage && readCachedExercises(storage, userId)) ?? []);
-  const strength = liveStrength ?? cached?.strength ?? null;
-  saveItemsCache(storage, userId, {
-    catalog,
-    inventory: [...held.values()],
-    strength: strength ?? {},
-    strengthAsOf: liveStrength ? strengthAsOf : (cached?.strengthAsOf ?? strengthAsOf),
-    challengeExercises,
-  });
-  return { catalog, held, challengeExercises, strength };
-}
-
-function loadItemsFromCache(userId: string): LoadedItems | null {
-  const cached = readItemsCache(deviceStorage(), userId);
-  if (!cached) return null;
-  return {
-    catalog: cached.catalog,
-    held: new Map(cached.inventory.map((entry) => [entry.itemId, entry])),
-    challengeExercises: cached.challengeExercises,
-    strength: cached.strength,
-  };
-}
-
 export function ItemsScreen({ userId }: ItemsScreenProps) {
-  const [catalog, setCatalog] = useState<ItemCatalog | null>(null);
-  const [held, setHeld] = useState<Map<string, HeldItem>>(new Map());
-  const [challengeExercises, setChallengeExercises] = useState<ChallengeExerciseEntry[]>([]);
-  const [strength, setStrength] = useState<StrengthState | null>(null);
-  const [offline, setOffline] = useState(false);
-  const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const items = useQuery(itemsQuery(userId));
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
-  const [loadProblem, setLoadProblem] = useState<string | null>(null);
+  const [refetchProblem, setRefetchProblem] = useState<string | null>(null);
   const [newIds] = useState(() => newItemIds(recallLastSummary(userId)?.drops));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -313,47 +259,45 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const loadout = useLoadout(userId);
   const refetchLoadout = () => queryClient.invalidateQueries({ queryKey: loadoutQuery(userId).queryKey });
 
+  const showLoaded = (change: (loaded: LoadedItems) => LoadedItems) => {
+    const { queryKey } = itemsQuery(userId);
+    void queryClient.cancelQueries({ queryKey });
+    queryClient.setQueryData<CacheFirstLoad<LoadedItems>>(
+      queryKey,
+      (current) => current && { ...current, loaded: change(current.loaded) },
+    );
+  };
+
   const refetchInventory = async () => {
     try {
-      setHeld(await fetchInventory(userId));
+      const held = await fetchInventory(userId);
+      updateItemsCache(deviceStorage(), userId, (cache) => ({ ...cache, inventory: [...held.values()] }));
+      showLoaded((loaded) => ({ ...loaded, held }));
     } catch (error) {
-      setLoadProblem((error as Error).message);
+      setRefetchProblem((error as Error).message);
     }
   };
 
   const refetchCatalog = async () => {
     try {
-      setCatalog(await fetchItemCatalog());
+      const catalog = await fetchItemCatalog();
+      updateItemsCache(deviceStorage(), userId, (cache) => ({ ...cache, catalog }));
+      showLoaded((loaded) => ({ ...loaded, catalog }));
     } catch (error) {
-      setLoadProblem((error as Error).message);
+      setRefetchProblem((error as Error).message);
     }
   };
 
-  useEffect(() => {
-    let active = true;
-    const show = (load: CacheFirstLoad<LoadedItems>) => {
-      const { loaded } = load;
-      setCatalog(loaded.catalog);
-      setHeld(loaded.held);
-      setChallengeExercises(loaded.challengeExercises);
-      setStrength(loaded.strength);
-      setOffline(load.fromCache && load.offline);
-      setSavedNotice(cacheFirstNotice(load, OFFLINE_ITEMS_NOTICE));
-      const found = loaded.catalog.items.filter((item) => loaded.held.has(item.id));
-      setPickedId((found.find((item) => newIds.has(item.id)) ?? found[0])?.id ?? null);
-    };
-    loadCacheFirstWhenOffline(
-      isDeviceOffline,
-      () => loadItemsFromCache(userId),
-      () => loadItemsOnline(userId),
-    ).then(
-      (load) => active && show(load),
-      (error: Error) => active && setLoadProblem(error.message),
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId, newIds]);
+  const state = loadedState(items.data, items.error);
+  const loaded = state.status === 'ready' ? state.data.loaded : null;
+  const catalog = loaded?.catalog ?? null;
+  const held = loaded?.held ?? new Map<string, HeldItem>();
+  const challengeExercises = loaded?.challengeExercises ?? [];
+  const strength = loaded?.strength ?? null;
+  const offline = state.status === 'ready' && state.data.fromCache && state.data.offline;
+  const savedNotice = state.status === 'ready' ? cacheFirstNotice(state.data, OFFLINE_ITEMS_NOTICE) : null;
+  const loadProblem = refetchProblem ?? (state.status === 'failed' ? state.problem : null);
+  const shownPickedId = pickedId ?? (catalog ? firstPickedItemId(catalog.items, held, newIds) : null);
 
   const startChallenge = async (challenge: CatalogChallenge) => {
     const started = startDraftFromChallenge(
@@ -396,7 +340,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
     );
 
   const groups = groupItems(catalog.items, held, newIds);
-  const picked = catalog.items.find((item) => item.id === pickedId && held.has(item.id));
+  const picked = catalog.items.find((item) => item.id === shownPickedId && held.has(item.id));
 
   return (
     <main className="screen stack">

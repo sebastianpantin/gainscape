@@ -14,8 +14,22 @@ import {
   toRecipe,
 } from './item-rules.ts';
 import type { GearSlot } from '@domain/crafting.ts';
+import { DEFAULT_BALANCE } from '@domain/index.ts';
+import type { StrengthState } from '@domain/types.ts';
+import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
+import {
+  type ChallengeExerciseEntry,
+  type ItemsCache,
+  itemsFromLiveAndCache,
+  readItemsCache,
+  saveItemsCache,
+} from '../offline/items-cache.ts';
+import { fetchExercises } from './catalog.ts';
+import { readCachedExercises } from './catalog-cache.ts';
 import { CHALLENGE_COLUMNS, type ChallengeRow, toCatalogChallenge } from './challenge-rules.ts';
+import { fetchStrengthState } from './collection-data.ts';
 import type { LoadoutView } from './gear-rules.ts';
+import { deviceStorage } from './rest-timer-store.ts';
 import { supabase } from './supabase.ts';
 
 export async function fetchItemCatalog(): Promise<ItemCatalog> {
@@ -69,4 +83,49 @@ export async function equipGear(slot: GearSlot, itemId: string): Promise<void> {
 export async function unequipGear(slot: GearSlot): Promise<void> {
   const { error } = await supabase.rpc('unequip_gear', { slot });
   if (error) throw error;
+}
+
+export interface LoadedItems {
+  catalog: ItemCatalog;
+  held: Map<string, HeldItem>;
+  challengeExercises: ChallengeExerciseEntry[];
+  strength: StrengthState | null;
+}
+
+function loadedFrom(cache: ItemsCache, strength: StrengthState | null): LoadedItems {
+  return {
+    catalog: cache.catalog,
+    held: new Map(cache.inventory.map((entry) => [entry.itemId, entry])),
+    challengeExercises: cache.challengeExercises,
+    strength,
+  };
+}
+
+async function loadItemsOnline(userId: string): Promise<LoadedItems> {
+  const strengthAsOf = new Date().toISOString();
+  const [catalog, held, exercises, strength] = await Promise.all([
+    fetchItemCatalog(),
+    fetchInventory(userId),
+    fetchExercises({ includeArchived: true }).catch(() => null),
+    fetchStrengthState(strengthAsOf, DEFAULT_BALANCE.e1rmWindowDays).catch(() => null),
+  ]);
+  const storage = deviceStorage();
+  const cached = readItemsCache(storage, userId);
+  const live = { catalog, inventory: [...held.values()], exercises, strength, strengthAsOf };
+  const saved = itemsFromLiveAndCache(live, cached, storage && readCachedExercises(storage, userId));
+  saveItemsCache(storage, userId, saved);
+  return loadedFrom(saved, strength ?? cached?.strength ?? null);
+}
+
+function loadItemsFromCache(userId: string): LoadedItems | null {
+  const cached = readItemsCache(deviceStorage(), userId);
+  return cached && loadedFrom(cached, cached.strength);
+}
+
+export function loadItemsCacheFirst(userId: string): Promise<CacheFirstLoad<LoadedItems>> {
+  return loadCacheFirstWhenOffline(
+    isDeviceOffline,
+    () => loadItemsFromCache(userId),
+    () => loadItemsOnline(userId),
+  );
 }

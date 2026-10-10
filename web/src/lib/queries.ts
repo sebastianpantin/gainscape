@@ -3,7 +3,7 @@ import { type CacheFirstLoad } from '../offline/cache-first.ts';
 import { fetchSkills } from './catalog.ts';
 import { type Collection, loadCollectionCacheFirst } from './collection-data.ts';
 import { collectionPercent, countCollection } from './collection-rules.ts';
-import { fetchLoadout } from './items.ts';
+import { fetchLoadout, loadItemsCacheFirst } from './items.ts';
 import { loadProfileCacheFirst } from './profile.ts';
 import { FEED_PAGE_SIZE, fetchFeedPage, listFriends } from './social.ts';
 import { type FeedCursor, feedCursor } from './social-rules.ts';
@@ -33,6 +33,10 @@ export function collectionPercentQuery(userId: string) {
 
 export function loadoutQuery(userId: string) {
   return queryOptions({ queryKey: ['loadout', userId] as const, queryFn: () => fetchLoadout(userId) });
+}
+
+export function itemsQuery(userId: string) {
+  return queryOptions({ queryKey: ['items', userId] as const, queryFn: () => loadItemsCacheFirst(userId) });
 }
 
 export const skillsQuery = queryOptions({ queryKey: ['skills'] as const, queryFn: fetchSkills });
