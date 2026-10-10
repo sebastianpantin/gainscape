@@ -1,6 +1,6 @@
 import { type ProgramDefinition, type RoundingMode, type WeightUnit } from '@domain/index.ts';
 import { useEffect, useId, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
@@ -34,6 +34,7 @@ import {
   withOption,
   withUnit,
 } from '../../lib/program-enroll-rules.ts';
+import { carriedFollowOf, carriedInputs } from '../../lib/program-follow-rules.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { readProgramCache, updateProgramCache } from '../../offline/program-cache.ts';
 
@@ -77,6 +78,8 @@ function savedTemplatesAndExercises(userId: string) {
 export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const { key } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [carried] = useState(() => carriedFollowOf(location.state));
   const { unitPref } = usePreferences();
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [editedForm, setEditedForm] = useState<EnrollForm | null>(null);
@@ -137,7 +140,13 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
     );
 
   const { definition, name, exercises } = loaded;
-  const form = editedForm ?? initialEnrollForm(definition, unitPref, exercises);
+  const initialForm = carried
+    ? {
+        ...initialEnrollForm(definition, carried.unit, exercises),
+        inputValues: carriedInputs(carried.workingWeights, definition),
+      }
+    : initialEnrollForm(definition, unitPref, exercises);
+  const form = editedForm ?? initialForm;
   const change = (changes: Partial<EnrollForm>) => setEditedForm({ ...form, ...changes });
   const roundingText = roundingTextOf(form);
   const fields = inputFields(definition, form);
@@ -164,7 +173,8 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
       setProblems(result.problems);
       return;
     }
-    if (replacing === null) void enroll(result.payload);
+    const refollowing = carried !== null && enrolledRow?.template_key === definition.key;
+    if (replacing === null || refollowing) void enroll(result.payload);
     else setConfirmingReplace(result.payload);
   };
 

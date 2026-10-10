@@ -2,11 +2,19 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
-import { useOnlineSignal } from '../../lib/use-online.ts';
+import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
-import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
+import {
+  cachedPrograms,
+  loadProgramsCacheFirst,
+  type ProgramDoc,
+  publishProgram,
+  saveProgram,
+} from '../../lib/programs.ts';
+import { type CarriedFollow, followStatus, workingWeights } from '../../lib/program-follow-rules.ts';
+import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { usePreferences } from '../../lib/preferences.ts';
@@ -42,6 +50,7 @@ import {
 } from './program-edit.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
+import { useActiveProgram } from './use-active-program.ts';
 
 const PROGRESSION_OPTIONS: { value: ProgressionKind; label: string }[] = [
   { value: 'none', label: 'Last weight' },
@@ -74,6 +83,8 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   const [saving, setSaving] = useState(false);
   const onlineSignal = useOnlineSignal();
   const { unitPref } = usePreferences();
+  const offline = useIsOffline();
+  const { cache: programCache, program: followed } = useActiveProgram(userId);
 
   useEffect(() => {
     loadCacheFirstWhenOffline(
@@ -146,9 +157,40 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     }
   };
 
+  const outdated =
+    !creating && followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates) === 'outdated';
+
+  const followChanges = async () => {
+    if (issue) return setProblem(issue);
+    if (!programCache.enrollment) return;
+    const carried: CarriedFollow = {
+      unit: programCache.enrollment.unit,
+      workingWeights: followed.kind === 'ready' ? workingWeights(followed.state) : {},
+    };
+    setSaving(true);
+    setProblem(null);
+    try {
+      await saveProgram(userId, trimmedDoc(doc));
+      const { key } = await publishProgram(doc.id);
+      navigate(`/programs/enroll/${key}`, { state: { carried } });
+    } catch (error) {
+      setProblem(programErrorText(error));
+      setSaving(false);
+    }
+  };
+
   return (
     <main className="screen stack">
       <h1 className="title">{creating ? 'New program' : 'Edit program'}</h1>
+      {outdated && (
+        <section className="panel stack" aria-label="Followed version">
+          <p>You're following an earlier version</p>
+          {offline && <p className="notice">{PROGRAM_OFFLINE_TEXT}</p>}
+          <button className="button" type="button" disabled={saving || offline} onClick={() => void followChanges()}>
+            Use these changes
+          </button>
+        </section>
+      )}
       <label className="field">
         Program name
         <input

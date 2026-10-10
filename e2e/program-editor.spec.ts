@@ -2,6 +2,7 @@ import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import {
   exerciseCard,
+  nativeDialogsOf,
   openFromProfile,
   openTab,
   readSession,
@@ -236,14 +237,14 @@ test('delete a program through the confirmation and keep the workout logged from
   await expect.poll(() => setCount(sessionId)).toBe(18);
 
   await openFromProfile(page, 'Programs');
-  let confirmation = '';
-  page.once('dialog', (dialog) => {
-    confirmation = dialog.message();
-    return dialog.accept();
-  });
+  const nativeDialogs = nativeDialogsOf(page);
   await ownProgram(page, 'Upper / Lower').getByRole('button', { name: 'Delete' }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Delete Upper / Lower?', exact: true });
+  await expect(confirmation).toContainText('Past workouts keep their sets.');
+  await expect(confirmation).not.toContainText("You're following this program.");
+  await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(ownProgram(page, 'Upper / Lower')).toHaveCount(0);
-  expect(confirmation).toBe('Delete Upper / Lower? Past workouts keep their sets.');
+  expect(nativeDialogs).toEqual([]);
   await expect.poll(() => programCount(username)).toBe(0);
   await expect.poll(async () => (await sessionRow(sessionId)).program_day_id).toBeNull();
   expect(await setCount(sessionId)).toBe(18);
