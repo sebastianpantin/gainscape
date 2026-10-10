@@ -1,5 +1,8 @@
 import { DEFAULT_BALANCE } from '../../supabase/functions/_shared/domain/index.ts';
-import { type CardioBandReport, evaluateBands, evaluateCardioBands } from './bands.ts';
+import { type CardioBandReport, evaluateBands, evaluateCardioBands, evaluateMobilityBands } from './bands.ts';
+import { simulateCardioProfile } from './cardio-simulate.ts';
+import { MOBILITY_SIM_SKILLS } from './catalog.ts';
+import { MOBILITY_PROFILES } from './profiles.ts';
 import {
   simulateCommittedCardioConstantsUntilBothReach99,
   simulateCommittedConstantsUntilLegsReach99,
@@ -83,4 +86,16 @@ console.log(
       DEFAULT_BALANCE.cardioXpPerWorkMinute,
     ),
   ),
+);
+
+const mobility = evaluateMobilityBands(
+  simulateCardioProfile(MOBILITY_PROFILES.mobility_regular, DEFAULT_BALANCE, {
+    skills: MOBILITY_SIM_SKILLS,
+    stopWhenAllSkillsReach99: true,
+  }),
+);
+console.log(
+  `\nMobility at ${DEFAULT_BALANCE.cardioXpPerWorkMinute.mobility} XP/min (mobility_regular): ` +
+    `99 in ${formatYears(mobility.years)} y ${mobility.passes.years ? '✓' : '✗'}, ` +
+    `week 1 level ${mobility.weekOneLevel} ${mobility.passes.weekOneLevel ? '✓' : '✗'}`,
 );

@@ -1,5 +1,12 @@
 import type { BalanceConfig } from './balance.ts';
-import { boutPace, cardioSkillXp, countedWorkSeconds, derivedCardioEffort, SECONDS_PER_MINUTE } from './cardio.ts';
+import {
+  boutPace,
+  cardioSkillXp,
+  countedWorkSeconds,
+  derivedCardioEffort,
+  MOBILITY_SKILL_KEY,
+  SECONDS_PER_MINUTE,
+} from './cardio.ts';
 import { resolveEffort } from './effort.ts';
 import { levelForXp } from './levels.ts';
 import type {
@@ -184,15 +191,22 @@ function cardioResult(
 }
 
 const resolveSets: Step = (ctx) => {
-  let xpWorkSecondsLeft = ctx.cfg.cardioMaxCountedMinutesPerSession * SECONDS_PER_MINUTE;
+  const xpWorkSecondsLeft = {
+    cardio: ctx.cfg.cardioMaxCountedMinutesPerSession * SECONDS_PER_MINUTE,
+    mobility: ctx.cfg.mobilityMaxCountedMinutesPerSession * SECONDS_PER_MINUTE,
+  };
+  const mobilitySkillIds = new Set(
+    ctx.deps.catalog.skills.filter((skill) => skill.key === MOBILITY_SKILL_KEY).map((skill) => skill.id),
+  );
   const sets = [...ctx.session.sets]
     .sort((a, b) => a.position - b.position)
     .map((set): SetResult => {
       const exercise = exerciseFor(set, ctx.deps.catalog);
       if (set.kind === 'cardio') {
+        const pool = exercise.shares.some((share) => mobilitySkillIds.has(share.skillId)) ? 'mobility' : 'cardio';
         const workS = countedWorkSeconds(set);
-        const xpWorkS = Math.min(workS, xpWorkSecondsLeft);
-        xpWorkSecondsLeft -= xpWorkS;
+        const xpWorkS = Math.min(workS, xpWorkSecondsLeft[pool]);
+        xpWorkSecondsLeft[pool] -= xpWorkS;
         return cardioResult(set, cardioExercise(exercise), { workS, xpWorkS }, ctx);
       }
       return liftResult(set, liftExercise(exercise), ctx);

@@ -13,6 +13,7 @@ import { FLOAT_NOISE_DECIMALS, FULL_SHARE_BASIS_POINTS, roundXp } from './xp.ts'
 
 export const SECONDS_PER_MINUTE = 60;
 export const METRES_PER_KM = 1000;
+export const MOBILITY_SKILL_KEY = 'mobility';
 
 export const CARDIO_BOUNDS = Object.freeze({
   steadyDurationS: Object.freeze({ min: 60, max: 14_400 }),

@@ -9,7 +9,8 @@ insert into public.skills (id, key, name, sort_order, combat_weight, modality) v
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'core'), 'core', 'Core', 6, 1, 'lift'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 'grip', 'Grip', 7, 1, 'lift'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'endurance'), 'endurance', 'Endurance', 8, 0, 'cardio'),
-  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'agility'), 'agility', 'Agility', 9, 0, 'cardio')
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'agility'), 'agility', 'Agility', 9, 0, 'cardio'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 'mobility', 'Mobility', 10, 0, 'cardio')
 on conflict (id) do update set name = excluded.name, sort_order = excluded.sort_order, combat_weight = excluded.combat_weight, modality = excluded.modality;
 
 insert into public.exercises (id, key, name, modality, load_type, equipment, variation_of_id, reference_pace_s_per_km, pace_unit, max_effort, record_min_distance_m) values
@@ -238,7 +239,12 @@ insert into public.exercises (id, key, name, modality, load_type, equipment, var
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'jump_rope'), 'jump_rope', 'Jump Rope', 'cardio', null, 'bodyweight', null, null, 'per_km', 'max', null),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'hiit_circuit'), 'hiit_circuit', 'HIIT Circuit', 'cardio', null, 'bodyweight', null, null, 'per_km', 'max', null),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'shuttle_runs'), 'shuttle_runs', 'Shuttle Runs', 'cardio', null, 'bodyweight', null, null, 'per_km', 'max', null),
-  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'rowing_intervals'), 'rowing_intervals', 'Rowing Intervals', 'cardio', null, 'machine', null, null, 'per_km', 'max', null)
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'rowing_intervals'), 'rowing_intervals', 'Rowing Intervals', 'cardio', null, 'machine', null, null, 'per_km', 'max', null),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'yoga'), 'yoga', 'Yoga', 'cardio', null, 'bodyweight', null, null, 'per_km', 'hard', null),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'static_stretching'), 'static_stretching', 'Static Stretching', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'foam_rolling'), 'foam_rolling', 'Foam Rolling', 'cardio', null, 'other', null, null, 'per_km', 'moderate', null),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility_flow'), 'mobility_flow', 'Mobility Flow', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dynamic_warm_up'), 'dynamic_warm_up', 'Dynamic Warm-Up', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null)
 on conflict (id) do update set name = excluded.name, modality = excluded.modality, load_type = excluded.load_type, equipment = excluded.equipment, variation_of_id = excluded.variation_of_id, reference_pace_s_per_km = excluded.reference_pace_s_per_km, pace_unit = excluded.pace_unit, max_effort = excluded.max_effort, record_min_distance_m = excluded.record_min_distance_m, updated_at = now();
 
 delete from public.exercise_skills where exercise_id in (select id from public.exercises where owner_user_id is null);
@@ -727,7 +733,12 @@ insert into public.exercise_skills (exercise_id, skill_id, share_bp) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'hiit_circuit'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'agility'), 10000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'shuttle_runs'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'agility'), 10000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'rowing_intervals'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'endurance'), 5000),
-  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'rowing_intervals'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'agility'), 5000);
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'rowing_intervals'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'agility'), 5000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'yoga'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'static_stretching'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'foam_rolling'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility_flow'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dynamic_warm_up'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000);
 
 insert into public.programs (id, key, owner_user_id, name) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl'), 'ppl', null, 'Push / Pull / Legs'),

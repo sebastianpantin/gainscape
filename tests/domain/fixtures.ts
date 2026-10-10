@@ -62,8 +62,10 @@ export const catalog: Catalog = {
     skill('arms', 4, 1),
     skill('legs', 5, 2),
     skill('core', 6, 1),
-    skill('endurance', 7, 0),
-    skill('agility', 8, 0),
+    skill('grip', 7, 1),
+    skill('endurance', 8, 0),
+    skill('agility', 9, 0),
+    skill('mobility', 10, 0),
   ],
   exercises: new Map<string, ExerciseDef>([
     [
@@ -132,6 +134,18 @@ export const catalog: Catalog = {
         { referencePaceSPerKm: 1200, maxEffort: 'max', recordMinDistanceM: 100, paceUnit: 'per_100m' },
         [['endurance', 10000]],
       ),
+    ],
+    [
+      'stretch',
+      cardioExercise('stretch', true, { referencePaceSPerKm: null, maxEffort: 'moderate', recordMinDistanceM: null }, [
+        ['mobility', 10000],
+      ]),
+    ],
+    [
+      'yoga',
+      cardioExercise('yoga', true, { referencePaceSPerKm: null, maxEffort: 'hard', recordMinDistanceM: null }, [
+        ['mobility', 10000],
+      ]),
     ],
     [
       'custom-run',

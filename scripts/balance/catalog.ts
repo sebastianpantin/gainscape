@@ -53,6 +53,8 @@ export const CARDIO_SIM_SKILLS: SkillDef[] = [
   { id: 'agility', key: 'agility', sortOrder: 9, combatWeight: 0 },
 ];
 
+export const MOBILITY_SIM_SKILLS: SkillDef[] = [{ id: 'mobility', key: 'mobility', sortOrder: 10, combatWeight: 0 }];
+
 export interface CardioSimExercise {
   cardio: CardioProfile;
   shares: Readonly<Record<string, number>>;
@@ -71,6 +73,10 @@ export const CARDIO_SIM_EXERCISES: Readonly<Record<string, CardioSimExercise>> =
     cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
     shares: { agility: 10000 },
   },
+  static_stretching: {
+    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'moderate', recordMinDistanceM: null },
+    shares: { mobility: 10000 },
+  },
 };
 
 function cardioExerciseDef(key: string): CardioExerciseDef {
@@ -85,6 +91,6 @@ function cardioExerciseDef(key: string): CardioExerciseDef {
 }
 
 export const CARDIO_SIM_CATALOG: Catalog = {
-  skills: CARDIO_SIM_SKILLS,
+  skills: [...CARDIO_SIM_SKILLS, ...MOBILITY_SIM_SKILLS],
   exercises: new Map(Object.keys(CARDIO_SIM_EXERCISES).map((key) => [key, cardioExerciseDef(key)])),
 };

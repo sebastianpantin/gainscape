@@ -1167,3 +1167,33 @@
   equipment: machine
   shares: { endurance: 5000, agility: 5000 }
   cardio: { pace_unit: per_km, max_effort: max }
+- key: yoga
+  name: Yoga
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: hard }
+- key: static_stretching
+  name: Static Stretching
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate }
+- key: foam_rolling
+  name: Foam Rolling
+  modality: cardio
+  equipment: other
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate }
+- key: mobility_flow
+  name: Mobility Flow
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate }
+- key: dynamic_warm_up
+  name: Dynamic Warm-Up
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate }

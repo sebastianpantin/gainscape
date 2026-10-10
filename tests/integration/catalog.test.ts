@@ -103,17 +103,18 @@ describe('catalog ids', () => {
 });
 
 describe('cardio catalog', () => {
-  it('seeds Grip as a lift skill before Endurance and Agility, the cardio skills outside combat', async () => {
+  it('seeds Grip as a lift skill before Endurance, Agility and Mobility, the cardio skills outside combat', async () => {
     const skills = await db`
       select key, sort_order, combat_weight::float, modality from public.skills
-      where key in ('grip', 'endurance', 'agility') order by sort_order`;
+      where key in ('grip', 'endurance', 'agility', 'mobility') order by sort_order`;
     expect(skills).toEqual([
       { key: 'grip', sort_order: 7, combat_weight: 1, modality: 'lift' },
       { key: 'endurance', sort_order: 8, combat_weight: 0, modality: 'cardio' },
       { key: 'agility', sort_order: 9, combat_weight: 0, modality: 'cardio' },
+      { key: 'mobility', sort_order: 10, combat_weight: 0, modality: 'cardio' },
     ]);
     const [{ count }] = await db`select count(*)::int as count from public.skills`;
-    expect(count).toBe(9);
+    expect(count).toBe(10);
   });
 
   it('seeds cardio exercises without a load type and with their cardio profile', async () => {
