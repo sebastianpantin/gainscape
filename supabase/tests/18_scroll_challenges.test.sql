@@ -16,8 +16,8 @@ select has_table('public', 'challenges', 'challenges have their own catalog tabl
 select policies_are('public', 'challenges', array['read challenges'], 'challenges have only the read policy');
 select is(
   (select count(*)::int from public.challenges where retired_at is null),
-  12,
-  'the catalog seeds twelve challenges'
+  36,
+  'the catalog seeds thirty-six challenges'
 );
 select hasnt_column('public', 'items', 'grants_exercise_id', 'a scroll no longer grants an exercise');
 select is(
@@ -69,7 +69,7 @@ select is(
 );
 select is(
   (select count(*)::int from public.challenges),
-  12,
+  36,
   'a signed-in user reads every challenge'
 );
 select is(

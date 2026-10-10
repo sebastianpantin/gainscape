@@ -61,16 +61,16 @@ describe('catalog ids', () => {
       select (select count(*) from public.items where retired_at is null)::int as items,
              (select count(*) from public.recipes where retired_at is null)::int as recipes,
              (select count(*) from public.drop_tables where retired_at is null)::int as tables`;
-    expect(counts).toEqual({ items: 64, recipes: 36, tables: 2 });
+    expect(counts).toEqual({ items: 88, recipes: 36, tables: 2 });
   });
 
-  it('seeds 12 challenges, each granted by exactly one scroll', async () => {
+  it('seeds 36 challenges, each granted by exactly one scroll', async () => {
     const challenges = await db`
       select c.key, count(i.id)::int as scrolls
       from public.challenges c left join public.items i on i.grants_challenge_id = c.id and i.kind = 'scroll'
       where c.retired_at is null
       group by c.key order by c.key`;
-    expect(challenges).toHaveLength(12);
+    expect(challenges).toHaveLength(36);
     expect(challenges.every((challenge) => challenge.scrolls === 1)).toBe(true);
     const [{ ungranted }] = await db`
       select count(*)::int as ungranted from public.items where kind = 'scroll' and grants_challenge_id is null`;
