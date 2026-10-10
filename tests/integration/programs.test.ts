@@ -99,6 +99,9 @@ interface PlannedExerciseDoc {
   targetSets: number;
   targetRepsMin: number;
   targetRepsMax: number;
+  progression?: string;
+  incrementKg?: number | null;
+  incrementLb?: number | null;
 }
 
 interface ProgramDoc {
@@ -111,6 +114,8 @@ let templateIds: Record<string, string>;
 let benchId: string;
 let squatId: string;
 let deadliftId: string;
+let pushUpId: string;
+let weightedPullUpId: string;
 
 beforeAll(async () => {
   const rows = await db`select id, key from public.programs where owner_user_id is null`;
@@ -118,6 +123,8 @@ beforeAll(async () => {
   benchId = await builtInExerciseId('barbell_bench_press');
   squatId = await builtInExerciseId('back_squat');
   deadliftId = await builtInExerciseId('deadlift');
+  pushUpId = await builtInExerciseId('push_up');
+  weightedPullUpId = await builtInExerciseId('weighted_pull_up');
 });
 
 afterAll(async () => {
@@ -135,13 +142,17 @@ async function programDoc(programId: string): Promise<ProgramDoc> {
         id: day.id,
         name: day.name,
         exercises: (
-          await db`select exercise_id, target_sets, target_reps_min, target_reps_max
+          await db`select exercise_id, target_sets, target_reps_min, target_reps_max,
+                          progression, increment_kg, increment_lb
                    from public.program_day_exercises where day_id = ${day.id} order by position`
         ).map((row) => ({
           exerciseId: row.exercise_id,
           targetSets: row.target_sets,
           targetRepsMin: row.target_reps_min,
           targetRepsMax: row.target_reps_max,
+          progression: row.progression,
+          incrementKg: row.increment_kg === null ? null : Number(row.increment_kg),
+          incrementLb: row.increment_lb === null ? null : Number(row.increment_lb),
         })),
       })),
     ),
@@ -344,6 +355,15 @@ describe('save_program', () => {
       ...overrides,
     });
     const dayWith = (exercises: unknown[]) => ({ id: randomUUID(), name: 'Day', exercises });
+    const linearFiveByFive = (overrides: Partial<PlannedExerciseDoc> = {}) =>
+      planned({
+        targetRepsMin: 5,
+        targetRepsMax: 5,
+        progression: 'linear',
+        incrementKg: 2.5,
+        incrementLb: 5,
+        ...overrides,
+      });
 
     const cases: [string, () => unknown, string][] = [
       [
@@ -378,6 +398,71 @@ describe('save_program', () => {
         'invalid_program',
       ],
       ['a whitespace-only program name', () => simpleProgram({ name: '​ \t' }), 'invalid_program'],
+      [
+        'an unknown progression',
+        () => simpleProgram({ days: [dayWith([planned({ progression: 'double' })])] as never }),
+        'invalid_program',
+      ],
+      [
+        'a linear progression without increments',
+        () =>
+          simpleProgram({
+            days: [dayWith([planned({ progression: 'linear', targetRepsMin: 5, targetRepsMax: 5 })])] as never,
+          }),
+        'invalid_program',
+      ],
+      [
+        'a kilogram increment above 20',
+        () =>
+          simpleProgram({
+            days: [dayWith([linearFiveByFive({ incrementKg: 20.5 })])] as never,
+          }),
+        'invalid_program',
+      ],
+      [
+        'a pound increment below 0.5',
+        () =>
+          simpleProgram({
+            days: [dayWith([linearFiveByFive({ incrementLb: 0.25 })])] as never,
+          }),
+        'invalid_program',
+      ],
+      [
+        'an increment with three decimals',
+        () =>
+          simpleProgram({
+            days: [dayWith([linearFiveByFive({ incrementKg: 2.125 })])] as never,
+          }),
+        'invalid_program',
+      ],
+      [
+        'a string increment',
+        () =>
+          simpleProgram({
+            days: [dayWith([{ ...linearFiveByFive(), incrementKg: '2.5' }])] as never,
+          }),
+        'invalid_program',
+      ],
+      [
+        'increments without a linear progression',
+        () => simpleProgram({ days: [dayWith([linearFiveByFive({ progression: 'fixed' })])] as never }),
+        'invalid_program',
+      ],
+      [
+        'a linear progression over a rep range',
+        () => simpleProgram({ days: [dayWith([linearFiveByFive({ targetRepsMin: 3 })])] as never }),
+        'invalid_program',
+      ],
+      [
+        'a fixed progression on a bodyweight exercise',
+        () => simpleProgram({ days: [dayWith([planned({ exerciseId: pushUpId, progression: 'fixed' })])] as never }),
+        'invalid_program',
+      ],
+      [
+        'a linear progression on a weighted bodyweight exercise',
+        () => simpleProgram({ days: [dayWith([linearFiveByFive({ exerciseId: weightedPullUpId })])] as never }),
+        'invalid_program',
+      ],
     ];
 
     it.each(cases)('rejects %s', async (_label, build, code) => {
@@ -465,6 +550,90 @@ describe('save_program', () => {
     expect((await programDoc(program.id)).days[0].exercises.map((planned) => planned.exerciseId)).toEqual([
       pauseSquatId,
     ]);
+  });
+
+  it('stores and reloads each progression, defaulting a planned exercise without one to none', async () => {
+    const user = await createTestUser();
+    const program = simpleProgram({
+      days: [
+        {
+          id: randomUUID(),
+          name: 'Five by five',
+          exercises: [
+            {
+              exerciseId: squatId,
+              targetSets: 5,
+              targetRepsMin: 5,
+              targetRepsMax: 5,
+              progression: 'linear',
+              incrementKg: 2.5,
+              incrementLb: 5,
+            },
+            { exerciseId: benchId, targetSets: 3, targetRepsMin: 6, targetRepsMax: 10, progression: 'fixed' },
+            { exerciseId: deadliftId, targetSets: 1, targetRepsMin: 5, targetRepsMax: 5 },
+            { exerciseId: pushUpId, targetSets: 3, targetRepsMin: 10, targetRepsMax: 20, progression: 'none' },
+          ],
+        },
+      ],
+    });
+    const { error } = await saveProgram(user, program);
+    expect(error).toBeNull();
+
+    const stored = await programDoc(program.id);
+    expect(
+      stored.days[0].exercises.map(({ progression, incrementKg, incrementLb }) => [
+        progression,
+        incrementKg,
+        incrementLb,
+      ]),
+    ).toEqual([
+      ['linear', 2.5, 5],
+      ['fixed', null, null],
+      ['none', null, null],
+      ['none', null, null],
+    ]);
+
+    const resaved = await saveProgram(user, stored);
+    expect(resaved.error).toBeNull();
+    expect(await programDoc(program.id)).toEqual(stored);
+
+    const { data } = await user.client
+      .from('program_day_exercises')
+      .select('position, progression, increment_kg, increment_lb')
+      .eq('day_id', program.days[0].id)
+      .order('position')
+      .limit(1);
+    expect(data).toEqual([{ position: 0, progression: 'linear', increment_kg: 2.5, increment_lb: 5 }]);
+  });
+
+  it('copies the progression of each planned exercise', async () => {
+    const user = await createTestUser();
+    const program = simpleProgram({
+      days: [
+        {
+          id: randomUUID(),
+          name: 'Heavy',
+          exercises: [
+            {
+              exerciseId: squatId,
+              targetSets: 5,
+              targetRepsMin: 5,
+              targetRepsMax: 5,
+              progression: 'linear',
+              incrementKg: 1.25,
+              incrementLb: 2.5,
+            },
+            { exerciseId: benchId, targetSets: 3, targetRepsMin: 6, targetRepsMax: 10, progression: 'fixed' },
+          ],
+        },
+      ],
+    });
+    expect((await saveProgram(user, program)).error).toBeNull();
+    const copyId = randomUUID();
+    const copy = await user.client.rpc('copy_program', { source_program_id: program.id, new_program_id: copyId });
+    expect(copy.error).toBeNull();
+    const exercisesOf = async (programId: string) => (await programDoc(programId)).days.map((day) => day.exercises);
+    expect(await exercisesOf(copyId)).toEqual(await exercisesOf(program.id));
   });
 
   it('refuses the 51st program', async () => {
