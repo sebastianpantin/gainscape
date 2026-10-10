@@ -29,3 +29,11 @@ export function saveRestState(storage: Storage | null, userId: string, state: Re
     return;
   }
 }
+
+export function forgetRestState(storage: Storage | null, userId: string): void {
+  try {
+    storage?.removeItem(restStateKey(userId));
+  } catch {
+    return;
+  }
+}

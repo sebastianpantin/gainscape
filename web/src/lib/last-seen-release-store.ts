@@ -28,3 +28,11 @@ export function saveLastSeenRelease(storage: Storage | null, userId: string, ver
     return false;
   }
 }
+
+export function forgetLastSeenRelease(storage: Storage | null, userId: string): void {
+  try {
+    storage?.removeItem(lastSeenReleaseKey(userId));
+  } catch {
+    return;
+  }
+}

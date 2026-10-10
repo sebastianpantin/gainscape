@@ -16,8 +16,8 @@ interface RememberedEntry {
   summary: RememberedSummary;
 }
 
-function rememberedEntry(): Partial<RememberedEntry> | null {
-  const raw = sessionStorage.getItem(LAST_SUMMARY_KEY);
+function rememberedEntry(storage: Storage = sessionStorage): Partial<RememberedEntry> | null {
+  const raw = storage.getItem(LAST_SUMMARY_KEY);
   return raw ? (JSON.parse(raw) as Partial<RememberedEntry>) : null;
 }
 
@@ -46,6 +46,14 @@ export function forgetLastSummary(sessionIds: readonly string[]): void {
   try {
     const cachedSessionId = rememberedEntry()?.summary?.sessionId;
     if (cachedSessionId && sessionIds.includes(cachedSessionId)) sessionStorage.removeItem(LAST_SUMMARY_KEY);
+  } catch {
+    return;
+  }
+}
+
+export function forgetLastSummaryOf(storage: Storage | null, userId: string): void {
+  try {
+    if (storage && rememberedEntry(storage)?.userId === userId) storage.removeItem(LAST_SUMMARY_KEY);
   } catch {
     return;
   }

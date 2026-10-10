@@ -11,8 +11,6 @@ import {
   saveBlob,
 } from '../../lib/account.ts';
 import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
-import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
-import { forgetCachedExerciseNotes } from '../../lib/exercise-note-cache.ts';
 import { GLOSSARY } from '../../lib/glossary.ts';
 import { type BarbellSetup, HEAVIEST_BAR_OR_PLATE, isUsableBarOrPlate, PLATE_CHOICES } from '../../lib/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../lib/plate-settings-store.ts';
@@ -36,15 +34,10 @@ import {
   updatePublicProfile,
 } from '../../lib/profile.ts';
 import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
-import { forgetDraftOnDevice, hasDraftOnDevice } from '../../offline/local-drafts.ts';
-import { forgetItemsCache } from '../../offline/items-cache.ts';
-import { forgetProgramCache } from '../../offline/program-cache.ts';
-import { programListCache } from '../../offline/program-list-cache.ts';
-import { standingCache } from '../../offline/standing-cache.ts';
-import { profileCache } from '../../offline/profile-cache.ts';
-import { collectionCache } from '../../offline/collection-cache.ts';
+import { hasDraftOnDevice } from '../../offline/local-drafts.ts';
+import { forgetUserDeviceData } from '../../offline/user-device-data.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
-import { forgetInstallCard, promptInstall, useInstallState } from '../../pwa/install.ts';
+import { promptInstall, useInstallState } from '../../pwa/install.ts';
 import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
 import type { UpdateCheck } from '../../pwa/update-flow.ts';
 import { useOptimisticProfileSave } from './use-optimistic-profile-save.ts';
@@ -65,16 +58,7 @@ interface SettingsScreenProps {
 }
 
 async function forgetThisDevice(userId: string): Promise<void> {
-  forgetCachedExercises(localStorage, userId);
-  forgetCachedExerciseNotes(localStorage, userId);
-  forgetProgramCache(localStorage, userId);
-  forgetItemsCache(localStorage, userId);
-  programListCache.forget(localStorage, userId);
-  standingCache.forget(localStorage, userId);
-  profileCache.forget(localStorage, userId);
-  collectionCache.forget(localStorage, userId);
-  forgetInstallCard(userId);
-  await forgetDraftOnDevice(await openDraftStoreOrFallback(), deviceStorage(), userId);
+  await forgetUserDeviceData({ localStorage, sessionStorage, draftStore: await openDraftStoreOrFallback() }, userId);
 }
 
 async function hasUnsyncedDraftHere(userId: string): Promise<boolean> {
