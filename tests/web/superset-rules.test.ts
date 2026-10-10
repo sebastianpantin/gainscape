@@ -4,6 +4,7 @@ import type { CardioActivity } from '../../web/src/lib/catalog-rules.ts';
 import type { DraftExercise, DraftSet, WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import {
   addRound,
+  canAddRound,
   groupWithNext,
   nextInRound,
   restsAfter,
@@ -252,5 +253,22 @@ describe('addRound', () => {
     const nearlyFull = draftOf([lift('a', ['a1', 'a2'], 'g'), lift('b', ['b1', 'b2'], 'g'), filler]);
     const [group] = supersetGroups(nearlyFull);
     expect(addRound(nearlyFull, group)).toEqual(nearlyFull);
+  });
+});
+
+describe('canAddRound', () => {
+  function withRoomFor(room: number): WorkoutDraft {
+    const fillerSetIds = Array.from({ length: MAX_SETS_PER_SESSION - 4 - room }, (_, index) => `c${index}`);
+    return draftOf([lift('a', ['a1', 'a2'], 'g'), lift('b', ['b1', 'b2'], 'g'), lift('c', fillerSetIds)]);
+  }
+
+  it('allows a round that exactly fills the set limit', () => {
+    const draft = withRoomFor(2);
+    expect(canAddRound(draft, supersetGroups(draft)[0])).toBe(true);
+  });
+
+  it('refuses a round with fewer free sets than group members', () => {
+    const draft = withRoomFor(1);
+    expect(canAddRound(draft, supersetGroups(draft)[0])).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Switch } from '../../components/Switch.tsx';
 import type { Skill } from '../../lib/catalog-rules.ts';
@@ -7,6 +7,7 @@ import { usePreferences } from '../../lib/preferences.ts';
 import { type Profile, updatePublicProfile } from '../../lib/profile.ts';
 import { formatWeight } from '../../lib/units.ts';
 import { profilePreviewQuery } from '../../lib/queries.ts';
+import { loadedState } from '../../lib/query-state-rules.ts';
 import { type ProfileView } from '../../lib/social.ts';
 import { LoadoutPanel } from './LoadoutPanel.tsx';
 import { ProfileWithTopSkills } from './ProfileWithTopSkills.tsx';
@@ -16,11 +17,6 @@ import { type ProfileUpdate, useProfile } from './use-profile.ts';
 interface FriendPreviewScreenProps {
   userId: string;
 }
-
-type ViewState =
-  | { status: 'loading' }
-  | { status: 'failed'; problem: string }
-  | { status: 'ready'; skills: Skill[]; profile: ProfileView };
 
 interface PreviewOfProfileProps {
   userId: string;
@@ -70,16 +66,10 @@ function PreviewOfProfile({ userId, profile, replace, view }: PreviewOfProfilePr
   );
 }
 
-function viewStateOf(preview: UseQueryResult<{ skills: Skill[]; profile: ProfileView }>): ViewState {
-  if (preview.data) return { status: 'ready', ...preview.data };
-  if (preview.error && !preview.isFetching) return { status: 'failed', problem: preview.error.message };
-  return { status: 'loading' };
-}
-
 export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
   const { state, replace } = useProfile(userId);
   const preview = useQuery(profilePreviewQuery(userId));
-  const view = viewStateOf(preview);
+  const view = loadedState(preview.data, preview.isFetching ? null : preview.error);
   const retryView = () => void preview.refetch();
 
   return (
@@ -107,7 +97,7 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
         </section>
       )}
       {state.status === 'ready' && view.status === 'ready' && (
-        <PreviewOfProfile userId={userId} profile={state.profile} replace={replace} view={view} />
+        <PreviewOfProfile userId={userId} profile={state.profile} replace={replace} view={view.data} />
       )}
     </main>
   );
