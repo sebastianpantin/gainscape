@@ -879,10 +879,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                     measure={exercise.measure}
                     loadType={exercise.loadType}
                     preview={previews[exerciseIndex][setIndex]}
+                    record={records[exerciseIndex][setIndex]}
                     unit={unitPref}
-                    onChange={(changes) => changeDraft(updateHoldSet(draft, exerciseIndex, set.id, changes))}
+                    onChange={(changes) => changeSet(updateHoldSet(draft, exerciseIndex, set.id, changes), set.id)}
                     onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
-                    onToggleDone={() => changeDraft(toggleSetDone(draft, exerciseIndex, set.id))}
+                    onToggleDone={() => changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id)}
                   />
                 ))}
               </ol>

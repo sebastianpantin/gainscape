@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
-import { DEFAULT_BALANCE, type SetPersonalRecord } from '@domain/index.ts';
+import { DEFAULT_BALANCE } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
@@ -23,7 +23,7 @@ import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
-import { recordChipLabel, recordChipText } from './record-preview.ts';
+import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface SetRowProps {
@@ -31,7 +31,7 @@ interface SetRowProps {
   loadType: LoadType;
   set: DraftSet;
   preview: SetPreview;
-  record: SetPersonalRecord | null;
+  record: PreviewRecord | null;
   unit: UnitPref;
   effortMode: EffortInputMode;
   markers: readonly string[];
