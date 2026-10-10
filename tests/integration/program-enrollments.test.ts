@@ -36,12 +36,12 @@ import {
   savedProgram,
 } from './program-support.ts';
 import { createCustomExercise } from './session-support.ts';
-import { type ProgramTemplateRow } from '../../web/src/lib/program-enroll-rules.ts';
-import { type EnrollmentRow } from '../../web/src/lib/program-facts-rules.ts';
+import type { ProgramTemplateRow } from '../../web/src/lib/program-enroll-rules.ts';
+import type { EnrollmentRow } from '../../web/src/lib/program-facts-rules.ts';
 import { followStatus } from '../../web/src/lib/program-follow-rules.ts';
 import { PROGRAM_SELECT, programPayload, type ProgramRow, toProgram } from '../../web/src/lib/program-row-rules.ts';
-import { type ProgramDoc as WebProgramDoc } from '../../web/src/lib/programs.ts';
-import { type PlannedProgression } from '../../web/src/offline/draft-format.ts';
+import type { ProgramDoc as WebProgramDoc } from '../../web/src/lib/programs.ts';
+import type { PlannedProgression } from '../../web/src/offline/draft-format.ts';
 
 interface EnrollmentPayload {
   templateKey: string;
