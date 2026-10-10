@@ -89,6 +89,16 @@ export const catalog: Catalog = {
     ['dead-hang', { ...exercise('dead-hang', 'bodyweight', true, [['grip', 10000]]), measure: 'time' }],
     ['plate-pinch', { ...exercise('plate-pinch', 'external', true, [['grip', 10000]]), measure: 'time' }],
     [
+      'suitcase-hold',
+      {
+        ...exercise('suitcase-hold', 'external', true, [
+          ['grip', 5000],
+          ['core', 5000],
+        ]),
+        measure: 'time',
+      },
+    ],
+    [
       'farmers-carry',
       {
         ...exercise('farmers-carry', 'external', true, [

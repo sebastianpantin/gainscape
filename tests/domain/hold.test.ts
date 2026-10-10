@@ -86,6 +86,38 @@ describe('hold sets', () => {
     expect(() => processSession(freshUser, session, TEST_BALANCE, { catalog })).toThrow(BodyweightRequiredError);
   });
 
+  it('gives an external-load hold at 0 kg no effective reps and no XP, like a lift with no load', () => {
+    const [empty] = run([aHold('plate-pinch', 0, { durationS: 60 }, failure)]).sets;
+    expect([empty.effectiveReps, empty.xp, empty.skillXp]).toEqual([0, 0, []]);
+  });
+
+  it('still pays a bodyweight hold with no added load', () => {
+    const [hang] = run([aHold('dead-hang', 0, { durationS: 60 }, failure)]).sets;
+    expect(hang.xp).toBeGreaterThan(0);
+  });
+
+  it('rotates tied remainders across holds of the same exercise', () => {
+    const cfg = { ...TEST_BALANCE, xpPerEffectiveRep: 5 };
+    const session: SessionInput = {
+      id: 'hold-rotation',
+      startedAt: '2026-10-10T10:00:00.000Z',
+      sets: [
+        aHold('suitcase-hold', 20, { durationS: 60 }, hard),
+        aHold('plate-pinch', 20, { durationS: 60 }, hard),
+        aHold('suitcase-hold', 20, { durationS: 60 }, hard),
+      ],
+    };
+    const { outputs } = processSession(user, session, cfg, { catalog });
+    expect(outputs.sets[0].skillXp).toEqual([
+      { skillId: 'skill-core', xp: 8 },
+      { skillId: 'skill-grip', xp: 7 },
+    ]);
+    expect(outputs.sets[2].skillXp).toEqual([
+      { skillId: 'skill-core', xp: 7 },
+      { skillId: 'skill-grip', xp: 8 },
+    ]);
+  });
+
   it('tracks no strength and no lift records', () => {
     const outputs = run([aHold('plate-pinch', 20, { durationS: 60 }, failure)]);
     expect(outputs.sets[0]).toMatchObject({ e1rmCandidateKg: null, repsCapacityCandidate: null, personalRecord: null });
