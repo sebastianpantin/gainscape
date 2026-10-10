@@ -162,6 +162,10 @@ begin
   insert into public.program_days (id, program_id, position, name) values (day_id, program_id, 0, 'Day A');
   insert into public.program_day_exercises (day_id, position, exercise_id, target_sets, target_reps_min, target_reps_max)
   values (day_id, 0, lift, 3, 5, 8);
+  insert into public.program_templates (key, version, name, definition, owner_user_id, source_program_id)
+  values ('custom_' || replace(program_id::text, '-', ''), 1, 'Test program',
+          private.compiled_program_definition(program_id, 'custom_' || replace(program_id::text, '-', ''), 1),
+          give_everything.owner, program_id);
   insert into public.deleted_sessions (id, user_id, started_at) values (gen_random_uuid(), give_everything.owner, now());
   insert into public.loot_rolls
     (id, user_id, session_id, set_id, kind, local_date, roll_index, drop_table_id, chance, hit, loot_version)
