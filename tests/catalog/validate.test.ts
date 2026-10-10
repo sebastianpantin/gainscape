@@ -132,8 +132,8 @@ describe('catalog validation', () => {
     ],
     [
       'variation_of references a built-in exercise',
-      (c) => (find(c.exercises, 'pause_squat').variationOf = 'hack_squat'),
-      /variation of unknown exercise "hack_squat"/,
+      (c) => (find(c.exercises, 'pause_squat').variationOf = 'not_an_exercise'),
+      /variation of unknown exercise "not_an_exercise"/,
     ],
     [
       'every scroll grants a known challenge',

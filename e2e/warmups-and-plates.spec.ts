@@ -81,7 +81,7 @@ test('a lift with no ramp to build still offers one warm-up set to edit', async 
   await expect(weightOf(setRow(squat, 1))).toHaveValue('20');
   await expect(squat.getByRole('button', { name: 'Warm-up set 1' })).toHaveAttribute('aria-pressed', 'true');
 
-  const curl = await addExercise(page, 'curl', 'Dumbbell Curl');
+  const curl = await addExercise(page, 'dumbbell curl', 'Dumbbell Curl');
   await weightOf(setRow(curl, 1)).fill('12');
   await curl.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
   await expect(setRows(curl)).toHaveCount(2);
@@ -100,7 +100,7 @@ test('a freestyle barbell set shows plates per side with the plates set on this 
   await weightOf(firstSet).fill('100');
   await expect(firstSet.getByText('25 + 15 kg each side', { exact: true })).toBeVisible();
   await expect(firstSet.getByRole('img', { name: '2 plates each side', exact: true })).toBeVisible();
-  const curl = await addExercise(page, 'curl', 'Dumbbell Curl');
+  const curl = await addExercise(page, 'dumbbell curl', 'Dumbbell Curl');
   await expect(curl.getByText(/each side|Empty bar/)).toHaveCount(0);
 
   await openFromProfile(page, 'Settings');
