@@ -71,11 +71,22 @@ export interface CardioSetPayload {
   effort: EffortInput;
 }
 
+export interface HoldSetPayload {
+  kind: 'hold';
+  id: string;
+  exerciseId: string;
+  position: number;
+  weightKg: number;
+  durationS: number | null;
+  distanceM: number | null;
+  effort: EffortInput;
+}
+
 export interface EditSessionPayload {
   sessionId: string;
   ifRevision: number;
   notes: string | null;
-  sets: (LiftSetPayload | CardioSetPayload)[];
+  sets: (LiftSetPayload | CardioSetPayload | HoldSetPayload)[];
 }
 
 interface SessionRow {

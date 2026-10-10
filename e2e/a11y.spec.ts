@@ -385,13 +385,13 @@ test('the reveal runs no animation under reduced motion', async ({ page }) => {
   expect(opacities.every((opacity) => opacity === '1')).toBe(true);
 });
 
-test('the skills screen shows pixel art for the eight skills', async ({ page }) => {
+test('the skills screen shows pixel art for the ten skills', async ({ page }) => {
   await register(page, uniqueUsername('a11y_sk'));
   await openTab(page, 'Skills');
   const chest = page.getByRole('button', { name: /^Chest\b/ });
   const skills = page.getByRole('list').filter({ has: chest });
-  await expect(skills.getByRole('listitem')).toHaveCount(8);
-  await expect(skills.locator('li svg')).toHaveCount(8);
+  await expect(skills.getByRole('listitem')).toHaveCount(10);
+  await expect(skills.locator('li svg')).toHaveCount(10);
   await expect(skills.locator('.monogram')).toHaveCount(0);
   await page.getByRole('button', { name: /^Endurance\b/ }).click();
   await expect(page.getByText('does not count toward combat')).toBeVisible();

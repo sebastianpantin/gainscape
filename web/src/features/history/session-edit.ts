@@ -2,7 +2,8 @@ import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
 import { roundTo } from '@domain/math.ts';
 import { type CardioInterval, type DropSummary, type EffortInput, MAX_SETS_PER_SESSION } from '@domain/types.ts';
-import type { CardioActivity, LoadType, PaceUnit } from '../../lib/catalog-rules.ts';
+import type { CardioActivity, Exercise, HoldMeasure, LoadType, PaceUnit } from '../../lib/catalog-rules.ts';
+import { formatLoad } from '../../lib/format.ts';
 import type { InvokeOutcome } from '../../lib/function-client-rules.ts';
 import {
   type EditSessionPayload,
@@ -11,11 +12,14 @@ import {
   transientReason,
 } from '../../lib/history-rules.ts';
 import { type CatalogItem, describeDrops, itemNameLookup } from '../../lib/item-rules.ts';
+import type { UnitPref } from '../../lib/profile.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
 import {
   type BoutValues,
   defaultWeightKg,
+  type HoldValues,
   nextBoutValues,
+  nextHoldValues,
   nextSetValues,
   updateExerciseAt,
   withSets,
@@ -23,7 +27,7 @@ import {
 import { boutPayload } from '../../offline/session-payload.ts';
 
 type ExerciseKind =
-  | { modality?: 'lift'; loadType: LoadType }
+  | { modality?: 'lift'; loadType: LoadType; measure?: HoldMeasure }
   | { modality: 'cardio'; activity: Pick<CardioActivity, 'paceUnit' | 'tracksDistance'> };
 
 export type KnownExercise = { name: string } & ExerciseKind;
@@ -43,6 +47,20 @@ export interface EditBout extends BoutValues {
   kind: 'cardio';
 }
 
+export interface EditHold extends HoldValues {
+  id: string;
+  kind: 'hold';
+}
+
+export interface HoldEditExercise {
+  exerciseId: string;
+  name: string;
+  modality: 'hold';
+  measure: HoldMeasure;
+  loadType: LoadType;
+  sets: EditHold[];
+}
+
 export interface LiftEditExercise {
   exerciseId: string;
   name: string;
@@ -60,7 +78,7 @@ export interface CardioEditExercise {
   sets: EditBout[];
 }
 
-export type EditExercise = LiftEditExercise | CardioEditExercise;
+export type EditExercise = LiftEditExercise | CardioEditExercise | HoldEditExercise;
 
 export interface SessionEdit {
   sessionId: string;
@@ -71,9 +89,12 @@ export interface SessionEdit {
 
 type LiftHeader = Omit<LiftEditExercise, 'sets'>;
 type CardioHeader = Omit<CardioEditExercise, 'sets'>;
+type HoldHeader = Omit<HoldEditExercise, 'sets'>;
 
 type PlacedSet =
-  { modality: 'lift'; header: LiftHeader; set: EditSet } | { modality: 'cardio'; header: CardioHeader; set: EditBout };
+  | { modality: 'lift'; header: LiftHeader; set: EditSet }
+  | { modality: 'cardio'; header: CardioHeader; set: EditBout }
+  | { modality: 'hold'; header: HoldHeader; set: EditHold };
 
 const UNKNOWN_EXERCISE_NAME = 'Unknown exercise';
 const UNKNOWN_EXERCISE_LOAD_TYPE: LoadType = 'external';
@@ -87,6 +108,22 @@ function storedInterval(row: StoredSetRow): CardioInterval | null {
 function placedFromRow(row: StoredSetRow, known: KnownExercise | undefined): PlacedSet {
   const name = known?.name ?? UNKNOWN_EXERCISE_NAME;
   const effort = effortInputFromStored(row.effortInputType, row.effortValue, DEFAULT_BALANCE);
+  if (row.reps === null && row.weightKg !== null && row.countedWorkS === null) {
+    const measure: HoldMeasure = row.durationS !== null ? 'time' : 'distance';
+    const loadType = known !== undefined && known.modality !== 'cardio' ? known.loadType : UNKNOWN_EXERCISE_LOAD_TYPE;
+    return {
+      modality: 'hold',
+      header: { exerciseId: row.exerciseId, name, modality: 'hold', measure, loadType },
+      set: {
+        id: row.id,
+        kind: 'hold',
+        weightKg: roundTo(2, row.weightKg),
+        durationS: row.durationS,
+        distanceM: row.distanceM,
+        effort,
+      },
+    };
+  }
   if (row.durationS !== null) {
     const activity = known?.modality === 'cardio' ? known.activity : null;
     const paceUnit = activity?.paceUnit ?? UNKNOWN_EXERCISE_PACE_UNIT;
@@ -134,15 +171,26 @@ export function editPayload(edit: SessionEdit): EditSessionPayload {
   const sets = placedSets(edit).map((placed, position) =>
     placed.modality === 'cardio'
       ? boutPayload(placed.set, placed.header.exerciseId, position)
-      : {
-          id: placed.set.id,
-          exerciseId: placed.header.exerciseId,
-          position,
-          weightKg: roundTo(2, placed.set.weightKg),
-          reps: placed.set.reps,
-          isWarmup: placed.set.isWarmup,
-          effort: placed.set.effort,
-        },
+      : placed.modality === 'hold'
+        ? {
+            kind: 'hold' as const,
+            id: placed.set.id,
+            exerciseId: placed.header.exerciseId,
+            position,
+            weightKg: roundTo(2, placed.set.weightKg),
+            durationS: placed.set.durationS,
+            distanceM: placed.set.distanceM,
+            effort: placed.set.effort,
+          }
+        : {
+            id: placed.set.id,
+            exerciseId: placed.header.exerciseId,
+            position,
+            weightKg: roundTo(2, placed.set.weightKg),
+            reps: placed.set.reps,
+            isWarmup: placed.set.isWarmup,
+            effort: placed.set.effort,
+          },
   );
   return { sessionId: edit.sessionId, ifRevision: edit.revision, notes, sets };
 }
@@ -218,6 +266,19 @@ export function updateEditBout(
   );
 }
 
+export function updateEditHold(
+  edit: SessionEdit,
+  exerciseIndex: number,
+  setId: string,
+  changes: Partial<HoldValues>,
+): SessionEdit {
+  return updateExerciseAt(edit, exerciseIndex, (exercise) =>
+    exercise.modality === 'hold'
+      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
+      : exercise,
+  );
+}
+
 export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: string): SessionEdit {
   const removed = updateExerciseAt(edit, exerciseIndex, (exercise) =>
     withSets(exercise, (sets) => sets.filter((set) => set.id !== setId)),
@@ -231,6 +292,14 @@ export function addEditSet(edit: SessionEdit, exerciseIndex: number): SessionEdi
     if (exercise.modality === 'cardio') {
       const newBout: EditBout = { id: crypto.randomUUID(), kind: 'cardio', ...nextBoutValues(exercise.sets.at(-1)) };
       return { ...exercise, sets: [...exercise.sets, newBout] };
+    }
+    if (exercise.modality === 'hold') {
+      const newHold: EditHold = {
+        id: crypto.randomUUID(),
+        kind: 'hold',
+        ...nextHoldValues(exercise.sets.at(-1), exercise.loadType, exercise.measure),
+      };
+      return { ...exercise, sets: [...exercise.sets, newHold] };
     }
     const newSet: EditSet = {
       id: crypto.randomUUID(),
@@ -252,7 +321,9 @@ function emptyExercise(exercise: NewExercise): EditExercise {
         tracksDistance: exercise.activity.tracksDistance,
         sets: [],
       }
-    : { ...identity, modality: 'lift', loadType: exercise.loadType, sets: [] };
+    : exercise.measure !== undefined
+      ? { ...identity, modality: 'hold', measure: exercise.measure, loadType: exercise.loadType, sets: [] }
+      : { ...identity, modality: 'lift', loadType: exercise.loadType, sets: [] };
 }
 
 export function addEditExercise(edit: SessionEdit, exercise: NewExercise): SessionEdit {
@@ -270,6 +341,15 @@ export function swapEditExercise(edit: SessionEdit, exerciseIndex: number, repla
       return { ...exercise, ...identity, paceUnit, tracksDistance, sets };
     }
     if (replacement.modality === 'cardio') return exercise;
+    if (exercise.modality === 'hold') {
+      if (replacement.measure !== exercise.measure) return exercise;
+      const sets =
+        replacement.loadType === exercise.loadType
+          ? exercise.sets
+          : exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) }));
+      return { ...exercise, ...identity, loadType: replacement.loadType, sets };
+    }
+    if (replacement.measure !== undefined) return exercise;
     return {
       ...exercise,
       ...identity,
@@ -298,8 +378,11 @@ export function withoutBodyweightLoads(edit: SessionEdit, loadTypes: ReadonlyMap
     exercises: edit.exercises.map((exercise) => {
       if (exercise.modality === 'cardio') return exercise;
       const loadType = loadTypes.get(exercise.exerciseId) ?? exercise.loadType;
-      const sets = loadType === 'bodyweight' ? exercise.sets.map((set) => ({ ...set, weightKg: 0 })) : exercise.sets;
-      return { ...exercise, loadType, sets };
+      const unloaded = <S extends { weightKg: number }>(sets: S[]): S[] =>
+        loadType === 'bodyweight' ? sets.map((set) => ({ ...set, weightKg: 0 })) : sets;
+      return exercise.modality === 'hold'
+        ? { ...exercise, loadType, sets: unloaded(exercise.sets) }
+        : { ...exercise, loadType, sets: unloaded(exercise.sets) };
     }),
   };
 }
@@ -310,6 +393,10 @@ function placedSets(edit: SessionEdit): PlacedSet[] {
       const { sets, ...header } = exercise;
       return sets.map((set) => ({ modality: 'cardio', header, set }));
     }
+    if (exercise.modality === 'hold') {
+      const { sets, ...header } = exercise;
+      return sets.map((set) => ({ modality: 'hold', header, set }));
+    }
     const { sets, ...header } = exercise;
     return sets.map((set) => ({ modality: 'lift', header, set }));
   });
@@ -317,6 +404,7 @@ function placedSets(edit: SessionEdit): PlacedSet[] {
 
 const LIFT_FIELDS = ['weightKg', 'reps', 'isWarmup', 'effort'] as const;
 const BOUT_FIELDS = ['durationS', 'distanceM', 'interval', 'effort'] as const;
+const HOLD_FIELDS = ['weightKg', 'durationS', 'distanceM', 'effort'] as const;
 
 function comparableField<S extends object>(set: S, field: keyof S): string {
   const value = set[field];
@@ -341,6 +429,9 @@ function isChangedHere(mine: PlacedSet, before: PlacedSet): boolean {
   if (mine.modality === 'lift' && before.modality === 'lift') {
     return changedFields(mine.set, before.set, LIFT_FIELDS).length > 0;
   }
+  if (mine.modality === 'hold' && before.modality === 'hold') {
+    return changedFields(mine.set, before.set, HOLD_FIELDS).length > 0;
+  }
   return true;
 }
 
@@ -354,6 +445,11 @@ function mergedSet(remote: PlacedSet, before: PlacedSet, mine: PlacedSet): Place
   if (remote.modality === 'lift' && before.modality === 'lift' && mine.modality === 'lift') {
     return header.modality === 'lift'
       ? { modality: 'lift', header, set: mergedFields(remote.set, before.set, mine.set, LIFT_FIELDS) }
+      : remote;
+  }
+  if (remote.modality === 'hold' && before.modality === 'hold' && mine.modality === 'hold') {
+    return header.modality === 'hold'
+      ? { modality: 'hold', header, set: mergedFields(remote.set, before.set, mine.set, HOLD_FIELDS) }
       : remote;
   }
   return remote;
@@ -372,9 +468,17 @@ function grouped(placed: readonly PlacedSet[]): EditExercise[] {
         current.sets.push(entry.set);
         continue;
       }
+      if (current.modality === 'hold' && entry.modality === 'hold') {
+        current.sets.push(entry.set);
+        continue;
+      }
     }
     exercises.push(
-      entry.modality === 'cardio' ? { ...entry.header, sets: [entry.set] } : { ...entry.header, sets: [entry.set] },
+      entry.modality === 'cardio'
+        ? { ...entry.header, sets: [entry.set] }
+        : entry.modality === 'hold'
+          ? { ...entry.header, sets: [entry.set] }
+          : { ...entry.header, sets: [entry.set] },
     );
   }
   return exercises;
@@ -519,6 +623,21 @@ export function removedText(
   return described && `Removed ${described} from your collection.`;
 }
 
-export function sameSetValues(a: EditSet | EditBout, b: EditSet | EditBout): boolean {
+export function sameSetValues(a: EditSet | EditBout | EditHold, b: EditSet | EditBout | EditHold): boolean {
   return JSON.stringify({ ...a, id: '' }) === JSON.stringify({ ...b, id: '' });
+}
+
+export function describeHold(set: HoldValues, loadType: LoadType, unit: UnitPref): string {
+  const load = loadType === 'bodyweight' ? 'bodyweight' : formatLoad(set.weightKg, loadType, unit);
+  const measured = set.durationS !== null ? `${set.durationS} s` : `${set.distanceM ?? 0} m`;
+  return `${load} · ${measured}`;
+}
+
+export function sameKindOfExercise(
+  candidate: Exercise,
+  exercise: Pick<EditExercise, 'modality'> & { measure?: HoldMeasure },
+): boolean {
+  if (candidate.modality === 'cardio') return exercise.modality === 'cardio';
+  if (exercise.modality === 'hold') return candidate.measure === exercise.measure;
+  return exercise.modality === 'lift' && candidate.measure === undefined;
 }

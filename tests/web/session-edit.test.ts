@@ -25,6 +25,9 @@ import {
   sameSetValues,
   type SessionEdit,
   swapEditExercise,
+  describeHold,
+  sameKindOfExercise,
+  updateEditHold,
   updateEditBout,
   updateEditSet,
   withNewSetIds,
@@ -746,5 +749,141 @@ describe('session detail texts', () => {
     expect(failureText({ kind: 'revision_conflict' }, 'delete')).toBe(
       'This workout was changed on another device. Check the latest version, then delete it again if you still want to.',
     );
+  });
+});
+
+describe('hold sets in an edit', () => {
+  const pinchId = 'aaaaaaaa-0000-4000-8000-000000000011';
+  const carryId = 'aaaaaaaa-0000-4000-8000-000000000012';
+  const runId = 'aaaaaaaa-0000-4000-8000-000000000013';
+  const known = new Map<string, KnownExercise>([
+    ...exercisesById,
+    [pinchId, { name: 'Plate Pinch', loadType: 'external', measure: 'time' }],
+    [carryId, { name: 'Farmers Carry', loadType: 'external', measure: 'distance' }],
+    [
+      runId,
+      {
+        name: 'Running',
+        modality: 'cardio',
+        activity: { paceUnit: 'per_km', tracksDistance: true },
+      },
+    ],
+  ]);
+  const holdRow = (id: string, exerciseId: string, position: number, measured: Partial<StoredSetRow>) =>
+    row({ id, exerciseId, position, weightKg: 20, effectiveLoadKg: 20, reps: null, rir: null, ...measured });
+  const holdRows = [
+    holdRow('hold-0', pinchId, 0, { durationS: 45, effortInputType: 'level', effortValue: 0 }),
+    holdRow('hold-1', carryId, 1, { distanceM: 40 }),
+  ];
+  const edit = editFromSession(session, holdRows, known);
+
+  it('reads timed holds and carries as hold exercises', () => {
+    expect(edit.exercises).toEqual([
+      {
+        exerciseId: pinchId,
+        name: 'Plate Pinch',
+        modality: 'hold',
+        measure: 'time',
+        loadType: 'external',
+        sets: [
+          {
+            id: 'hold-0',
+            kind: 'hold',
+            weightKg: 20,
+            durationS: 45,
+            distanceM: null,
+            effort: { type: 'level', level: 'failure' },
+          },
+        ],
+      },
+      {
+        exerciseId: carryId,
+        name: 'Farmers Carry',
+        modality: 'hold',
+        measure: 'distance',
+        loadType: 'external',
+        sets: [{ id: 'hold-1', kind: 'hold', weightKg: 20, durationS: null, distanceM: 40, effort: null }],
+      },
+    ]);
+  });
+
+  it('sends holds as hold sets and edits one by id', () => {
+    const longer = updateEditHold(edit, 0, 'hold-0', { durationS: 60 });
+    expect(editPayload(longer).sets).toEqual([
+      {
+        kind: 'hold',
+        id: 'hold-0',
+        exerciseId: pinchId,
+        position: 0,
+        weightKg: 20,
+        durationS: 60,
+        distanceM: null,
+        effort: { type: 'level', level: 'failure' },
+      },
+      {
+        kind: 'hold',
+        id: 'hold-1',
+        exerciseId: carryId,
+        position: 1,
+        weightKg: 20,
+        durationS: null,
+        distanceM: 40,
+        effort: null,
+      },
+    ]);
+    expect(hasChanges(longer, edit)).toBe(true);
+  });
+
+  it('adds a set copying the last hold and adds a hold exercise with one set', () => {
+    const added = addEditSet(edit, 1);
+    expect(added.exercises[1].sets.at(-1)).toMatchObject({ kind: 'hold', weightKg: 20, distanceM: 40, effort: null });
+    const withHang = addEditExercise(edit, { id: 'hang', name: 'Dead Hang', loadType: 'bodyweight', measure: 'time' });
+    expect(withHang.exercises.at(-1)).toMatchObject({
+      modality: 'hold',
+      measure: 'time',
+      sets: [{ kind: 'hold', weightKg: 0, durationS: 30, distanceM: null }],
+    });
+  });
+
+  it('refuses to swap a hold for an exercise of another kind or measure', () => {
+    expect(
+      swapEditExercise(edit, 0, { id: carryId, name: 'Farmers Carry', loadType: 'external', measure: 'distance' }),
+    ).toEqual(edit);
+    expect(swapEditExercise(edit, 0, { id: benchId, name: 'Barbell Bench Press', loadType: 'external' })).toEqual(edit);
+    const swapped = swapEditExercise(edit, 0, {
+      id: 'hang',
+      name: 'Dead Hang',
+      loadType: 'bodyweight',
+      measure: 'time',
+    });
+    expect(swapped.exercises[0]).toMatchObject({
+      exerciseId: 'hang',
+      loadType: 'bodyweight',
+      sets: [{ weightKg: 0, durationS: 45 }],
+    });
+  });
+
+  it('describes a stored hold and matches a replacement of the same kind and measure', () => {
+    expect(describeHold({ weightKg: 20, durationS: 45, distanceM: null, effort: null }, 'external', 'kg')).toBe(
+      '20 kg · 45 s',
+    );
+    expect(describeHold({ weightKg: 0, durationS: null, distanceM: 40, effort: null }, 'bodyweight', 'kg')).toBe(
+      'bodyweight · 40 m',
+    );
+    const lift = {
+      id: 'b',
+      name: 'Bench',
+      equipment: 'barbell',
+      custom: false,
+      archived: false,
+      skillShares: [],
+      modality: 'lift' as const,
+      loadType: 'external' as const,
+    };
+    const carry = { ...lift, measure: 'distance' as const };
+    expect(sameKindOfExercise(carry, { modality: 'hold', measure: 'distance' })).toBe(true);
+    expect(sameKindOfExercise(carry, { modality: 'hold', measure: 'time' })).toBe(false);
+    expect(sameKindOfExercise(carry, { modality: 'lift' })).toBe(false);
+    expect(sameKindOfExercise(lift, { modality: 'lift' })).toBe(true);
   });
 });

@@ -43,6 +43,7 @@ import { shownWeight, unitToKg } from '../../lib/units.ts';
 import {
   addCardioExercise,
   addExercise,
+  addHoldExercise,
   addSet,
   addWarmupSets,
   canSwapExercise,
@@ -66,6 +67,7 @@ import {
   swapExercise,
   toggleSetDone,
   updateBout,
+  updateHoldSet,
   updateSet,
   withCurrentLoadTypes,
   withSessionRpe,
@@ -92,6 +94,7 @@ import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
+import { HoldSetRow } from './HoldSetRow.tsx';
 import { ExerciseMenu, type ExerciseMenuAction } from './ExerciseMenu.tsx';
 import { ExerciseNote } from './ExerciseNote.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
@@ -581,7 +584,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const roomForBouts = canAddBout(
     draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
   );
-  const liftExercises = exercises.filter(isLiftExercise);
+  const liftExercises = exercises.filter(isLiftExercise).filter((exercise) => exercise.measure === undefined);
   const barbellIds = new Set(
     liftExercises
       .filter((exercise) => exercise.equipment === 'barbell' && exercise.loadType === 'external')
@@ -593,6 +596,15 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     if (exercise.modality === 'cardio') {
       changeDraft(
         addSet(addCardioExercise(draft, exercise.id, exercise.name, exercise.activity), draft.exercises.length),
+      );
+      return;
+    }
+    if (exercise.measure !== undefined) {
+      changeDraft(
+        addSet(
+          addHoldExercise(draft, exercise.id, exercise.name, exercise.loadType, exercise.measure),
+          draft.exercises.length,
+        ),
       );
       return;
     }
@@ -841,6 +853,42 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                 + Add bout
               </button>
               {!roomForBouts && <p className="hint">Bouts in one workout can add up to at most 4 hours.</p>}
+            </section>
+          );
+        }
+        if (exercise.modality === 'hold') {
+          const doneHere = exercise.sets.filter((set) => set.done).length;
+          return (
+            <section className="panel stack exercise-card" key={cardKeys[exerciseIndex]}>
+              <header>
+                <h2>{exercise.name}</h2>
+                <span className="row">
+                  <button className="button link" type="button" onClick={() => removeExerciseAt(exerciseIndex)}>
+                    Remove
+                  </button>
+                </span>
+              </header>
+              <p className="muted">{`${doneHere}/${exercise.sets.length} sets`}</p>
+              {noteFor(exercise.exerciseId, exercise.name)}
+              <ol className="set-list">
+                {exercise.sets.map((set, setIndex) => (
+                  <HoldSetRow
+                    key={set.id}
+                    setNumber={setIndex + 1}
+                    set={set}
+                    measure={exercise.measure}
+                    loadType={exercise.loadType}
+                    preview={previews[exerciseIndex][setIndex]}
+                    unit={unitPref}
+                    onChange={(changes) => changeDraft(updateHoldSet(draft, exerciseIndex, set.id, changes))}
+                    onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
+                    onToggleDone={() => changeDraft(toggleSetDone(draft, exerciseIndex, set.id))}
+                  />
+                ))}
+              </ol>
+              <button className="button dashed" type="button" onClick={() => changeDraft(addSet(draft, exerciseIndex))}>
+                + Add set
+              </button>
             </section>
           );
         }
