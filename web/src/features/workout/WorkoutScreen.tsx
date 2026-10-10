@@ -47,6 +47,7 @@ import {
   type DraftSet,
   firstWorkingSet,
   canQuickFill,
+  mostQuickFillSets,
   fillWorkingSets,
   plannedSetsLeftToLifter,
   notDoneSetCount,
@@ -862,6 +863,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         }
         const workingSet = firstWorkingSet(exercise);
         const warmups = warmupsToOffer(exercise, unitPref, barbellOf(exercise), roomForSets(draft));
+        const quickFillSets = mostQuickFillSets(draft, exerciseIndex);
         return (
           <section className="panel stack exercise-card" key={cardKeys[exerciseIndex]}>
             {liftIntro(exercise, exerciseIndex)}
@@ -885,10 +887,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             >
               + Add set
             </button>
-            {canQuickFill(exercise) && (
+            {canQuickFill(exercise) && quickFillSets > 0 && (
               <QuickFill
-                key={`${exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS}x${workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS}`}
+                key={`${exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS}x${workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS}x${quickFillSets}`}
                 defaultSets={exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS}
+                mostSets={quickFillSets}
                 defaultReps={workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS}
                 onFill={(sets, reps) => changeDraft(fillWorkingSets(draft, exerciseIndex, sets, reps))}
               />

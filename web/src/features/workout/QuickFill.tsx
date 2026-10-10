@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { HIGHEST_REPS, LOWEST_REPS, wholeNumberWithin } from '../../lib/units.ts';
 
-const MOST_SETS = 20;
-
 interface QuickFillProps {
   defaultSets: number;
+  mostSets: number;
   defaultReps: number;
   onFill: (sets: number, reps: number) => void;
 }
 
-export function QuickFill({ defaultSets, defaultReps, onFill }: QuickFillProps) {
-  const [sets, setSets] = useState(String(defaultSets));
+export function QuickFill({ defaultSets, mostSets, defaultReps, onFill }: QuickFillProps) {
+  const [sets, setSets] = useState(String(Math.min(defaultSets, mostSets)));
   const [reps, setReps] = useState(String(defaultReps));
-  const setCount = wholeNumberWithin(sets, 1, MOST_SETS);
+  const setCount = wholeNumberWithin(sets, 1, mostSets);
   const repCount = wholeNumberWithin(reps, LOWEST_REPS, HIGHEST_REPS);
   return (
     <fieldset className="quick-fill">
@@ -23,7 +22,7 @@ export function QuickFill({ defaultSets, defaultReps, onFill }: QuickFillProps) 
           type="number"
           inputMode="numeric"
           min={1}
-          max={MOST_SETS}
+          max={mostSets}
           step={1}
           value={sets}
           onChange={(event) => setSets(event.target.value)}

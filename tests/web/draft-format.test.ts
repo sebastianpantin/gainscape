@@ -14,6 +14,7 @@ import {
   nextUpdatedAt,
   canQuickFill,
   fillWorkingSets,
+  mostQuickFillSets,
   markPlannedSetsDone,
   notDoneSetCount,
   plannedSetsLeftToLifter,
@@ -1040,5 +1041,14 @@ describe('set limit', () => {
   it('quick fills only up to the set limit', () => {
     const draft = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 2), freshLift()] });
     expect(fillWorkingSets(draft, 1, 5, 8).exercises[1].sets).toHaveLength(2);
+  });
+
+  it('offers a quick fill of only as many working sets as still fit', () => {
+    const nearlyFull = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 2), freshLift()] });
+    expect(mostQuickFillSets(nearlyFull, 1)).toBe(2);
+    const oneWorkingSet = { ...freshLift(), sets: liftWithSets(1).sets };
+    const full = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 1), oneWorkingSet] });
+    expect(mostQuickFillSets(full, 1)).toBe(1);
+    expect(mostQuickFillSets(workout({ exercises: [freshLift()] }), 0)).toBe(20);
   });
 });
