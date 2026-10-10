@@ -103,7 +103,7 @@ const PIN_CAP = 50;
 
 export function pinProblemText(error: { message: string; code?: string; details?: string | null }): string {
   if (error.message === 'too_many_pins') return `You can pin up to ${PIN_CAP} exercises. Unpin one first.`;
-  return rateLimitedMessage(error) ?? error.message;
+  return rateLimitedMessage(error) ?? 'Could not update pins.';
 }
 
 export function strengthText(

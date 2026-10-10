@@ -56,10 +56,9 @@ test('deleting the account warns about an unsynced workout and only deletes once
   await expect(page.getByText('Your unsynced workout is saved on this device.')).toHaveCount(0);
 });
 
-test('a failed email change keeps the form open with the reason and the old email', async ({ page }) => {
+test('a failed email change says so and keeps the form open with the old email', async ({ page }) => {
   const username = uniqueUsername('st_em');
   const newEmail = `${username}.new@example.test`;
-  const authFailure = 'Error sending email change email';
   await register(page, username);
   await openFromProfile(page, 'Settings');
   await page.route('**/auth/v1/user**', (route) =>
@@ -67,7 +66,11 @@ test('a failed email change keeps the form open with the reason and the old emai
       ? route.fulfill({
           status: 500,
           contentType: 'application/json',
-          body: JSON.stringify({ code: 500, error_code: 'unexpected_failure', msg: authFailure }),
+          body: JSON.stringify({
+            code: 500,
+            error_code: 'unexpected_failure',
+            msg: 'Error sending email change email',
+          }),
         })
       : route.fallback(),
   );
@@ -75,7 +78,7 @@ test('a failed email change keeps the form open with the reason and the old emai
   await page.getByRole('button', { name: 'Change email' }).click();
   await page.getByLabel('New email').fill(newEmail);
   await page.getByRole('button', { name: 'Send confirmation' }).click();
-  await expect(page.getByRole('alert')).toHaveText(authFailure);
+  await expect(page.getByRole('alert')).toHaveText('Could not change your email.');
   await expect(page.getByRole('button', { name: 'Send confirmation' })).toBeEnabled();
   await expect(page.getByLabel('New email')).toHaveValue(newEmail);
   await expect(definitionOf(page, 'Email')).toHaveText(emailOf(username));
@@ -97,7 +100,7 @@ test('a failed export says so without downloading, and a retry downloads the dat
   page.on('download', (download) => downloads.push(download.suggestedFilename()));
 
   await page.getByRole('button', { name: 'Export my data' }).click();
-  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveText('Could not export your data.');
   await expect(page.getByRole('button', { name: 'Export my data' })).toBeEnabled();
   await expect(page.getByText('Your data was downloaded.')).toHaveCount(0);
   expect(downloads).toEqual([]);

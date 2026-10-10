@@ -4,6 +4,7 @@ import {
   authCallbackUrl,
   authErrorMessage,
   confirmedRecently,
+  emailChangeProblem,
   MINIMUM_PASSWORD_LENGTH,
   parseAuthCallback,
   passwordProblem,
@@ -117,5 +118,28 @@ describe('passwordResetProblem', () => {
       passwordResetProblem({ message: 'Email rate limit exceeded', code: 'over_email_send_rate_limit', status: 429 }),
     ).toBe(AUTH_MESSAGES.tooManyEmails);
     expect(passwordResetProblem({ message: 'Failed to fetch', status: 0 })).toBe('Failed to fetch');
+  });
+});
+
+describe('emailChangeProblem', () => {
+  it('says the email could not be changed when the auth server fails or cannot be reached', () => {
+    expect(emailChangeProblem({ message: 'Error sending email change email', status: 500 })).toBe(
+      'Could not change your email.',
+    );
+    expect(emailChangeProblem({ message: 'Failed to fetch', status: 0 })).toBe('Could not change your email.');
+    expect(emailChangeProblem({ message: 'Failed to fetch' })).toBe('Could not change your email.');
+  });
+
+  it('keeps the auth message for a request the server refused', () => {
+    expect(
+      emailChangeProblem({
+        message: 'A user with this email address has already been registered',
+        code: 'email_exists',
+        status: 422,
+      }),
+    ).toBe('A user with this email address has already been registered');
+    expect(
+      emailChangeProblem({ message: 'Email rate limit exceeded', code: 'over_email_send_rate_limit', status: 429 }),
+    ).toBe(AUTH_MESSAGES.tooManyEmails);
   });
 });

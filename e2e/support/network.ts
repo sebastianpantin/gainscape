@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 
-export const INJECTED_FAILURE = 'injected failure';
+const INJECTED_FAILURE = 'injected failure';
 
 export function restTable(table: string): RegExp {
   return new RegExp(`/rest/v1/${table}(\\?|$)`);

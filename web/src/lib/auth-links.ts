@@ -57,6 +57,13 @@ export function authErrorMessage(error: AuthErrorLike): string {
   return error.message;
 }
 
+const SERVER_ERROR_STATUS = 500;
+
+export function emailChangeProblem(error: AuthErrorLike): string {
+  const unreachableOrFailed = !error.status || error.status >= SERVER_ERROR_STATUS;
+  return unreachableOrFailed ? 'Could not change your email.' : authErrorMessage(error);
+}
+
 export function passwordResetProblem(error: AuthErrorLike | null): string | null {
   if (!error || error.code === 'user_not_found') return null;
   return authErrorMessage(error);

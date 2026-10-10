@@ -59,6 +59,7 @@ export function HistoryScreen() {
   const loadMore = async () => {
     if (!sessions || sessions.length === 0) return;
     setLoadingMore(true);
+    setProblem(null);
     try {
       const page = await fetchSessionPage(sessions.at(-1)!);
       setSessions([...sessions, ...page]);

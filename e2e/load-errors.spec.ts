@@ -12,7 +12,7 @@ import {
 } from './support/app.ts';
 import { builtInExerciseId, grantItems } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
-import { failRequests, INJECTED_FAILURE, restTable, rpc } from './support/network.ts';
+import { failRequests, restTable, rpc } from './support/network.ts';
 import { db } from '../tests/integration/local-stack.ts';
 
 const HISTORY_PAGE_SIZE = 50;
@@ -86,6 +86,7 @@ test('a failed Load more on History says so and loads the older workouts when tr
   await page.unroute(nextPage);
   await page.getByRole('button', { name: 'Load more' }).click();
   await expect(workoutLinks(page)).toHaveCount(SEEDED_WORKOUTS);
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
 test('the Items loadout says it could not load, and shows the slots after a reload', async ({ page }) => {
@@ -171,14 +172,14 @@ test('Train says it could not load your programs, and shows the program days aft
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
-test('pinning an exercise that fails shows why, and pinning again works', async ({ page }) => {
+test('pinning an exercise that fails says the pins could not be updated, and pinning again works', async ({ page }) => {
   await register(page, uniqueUsername('le_pin'));
   await openTab(page, 'Log');
   await failRequests(page, restTable('pinned_exercises'), 'POST');
 
   await pickExercise(page, 'back squat', 'Back Squat');
 
-  await expect(page.getByRole('alert')).toHaveText(INJECTED_FAILURE);
+  await expect(page.getByRole('alert')).toHaveText('Could not update pins.');
   await page.unroute(restTable('pinned_exercises'));
   await page.reload();
   await pickExercise(page, 'back squat', 'Back Squat');
