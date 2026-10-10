@@ -39,16 +39,28 @@ describe('catalog generator', () => {
     expect(seed).not.toContain('\r');
   });
 
-  it('expands 64 items, 36 recipes with 72 inputs and 2 drop tables with 38 entries', () => {
+  it('expands 88 items, 36 recipes with 72 inputs and 2 drop tables with 62 entries', () => {
     const catalog = loadCatalogData();
-    expect(catalog.items).toHaveLength(64);
+    expect(catalog.items).toHaveLength(88);
     expect(catalog.recipes).toHaveLength(36);
     expect(catalog.recipes.flatMap((recipe) => recipe.inputs)).toHaveLength(72);
-    expect(catalog.dropTables.flatMap((table) => table.entries)).toHaveLength(38);
+    expect(catalog.dropTables.flatMap((table) => table.entries)).toHaveLength(62);
     expect(catalog.dropTables.map((table) => table.key)).toEqual(['regular', 'rare']);
     const countOf = (kind: string) => catalog.items.filter((item) => item.kind === kind).length;
-    expect([countOf('gear'), countOf('material'), countOf('pet'), countOf('scroll')]).toEqual([42, 6, 4, 12]);
+    expect([countOf('gear'), countOf('material'), countOf('pet'), countOf('scroll')]).toEqual([42, 6, 4, 36]);
     expect(catalog.items.map((item) => item.sortOrder)).toEqual(catalog.items.map((_, index) => index + 1));
+  });
+
+  it('drops some scroll from the rare table exactly as often as the first twelve scrolls did, each scroll equally', () => {
+    const catalog = loadCatalogData();
+    const scrollKeys = new Set(catalog.items.filter((item) => item.kind === 'scroll').map((item) => item.key));
+    const rare = catalog.dropTables.find((table) => table.key === 'rare')!;
+    const scrollWeights = rare.entries.filter((entry) => scrollKeys.has(entry.item)).map((entry) => entry.weight);
+    const scrollWeight = scrollWeights.reduce((sum, weight) => sum + weight, 0);
+    const totalWeight = rare.entries.reduce((sum, entry) => sum + entry.weight, 0);
+    expect(scrollWeights).toHaveLength(scrollKeys.size);
+    expect(new Set(scrollWeights).size).toBe(1);
+    expect(scrollWeight * 98).toBe(totalWeight * 36);
   });
 
   it('lists eight skills, the two cardio skills outside combat', () => {
@@ -97,6 +109,20 @@ describe('catalog generator', () => {
     expect(exercises).toContain('modality = excluded.modality');
   });
 
+  it('seeds the curated strength library with its variations', () => {
+    const statements = renderStatements(loadCatalogData());
+    const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;
+    expect(exercises).toContain(
+      `'hammer_curl', 'Hammer Curl', 'lift', 'external', 'dumbbell', null, null, null, null, null)`,
+    );
+    expect(exercises).toContain(
+      `'landmine_rotation', 'Landmine Rotation', 'lift', 'external', 'other', null, null, null, null, null)`,
+    );
+    expect(exercises).toContain(
+      `'pendlay_row', 'Pendlay Row', 'lift', 'external', 'barbell', extensions.uuid_generate_v5('${PINNED_NAMESPACE}'::uuid, 'barbell_row'),`,
+    );
+  });
+
   it('renders the challenges before the items, with exercise ids in each definition', () => {
     const catalog = loadCatalogData();
     expect(catalog.challenges.map((challenge) => challenge.key)).toEqual([
@@ -112,6 +138,30 @@ describe('catalog generator', () => {
       'leg_raise_and_rollout',
       'push_up_century',
       'twenty_ton_day',
+      'clean_and_push_press',
+      'snatch_and_overhead_squat',
+      'close_grip_and_pendlay',
+      'sumo_and_pull_up',
+      'hack_squat_and_leg_curl',
+      'split_squat_and_hinge',
+      'goblet_and_swing',
+      'arnold_and_rear_delt',
+      'hammer_and_rope',
+      'lunge_century',
+      'sit_up_century',
+      'thirty_ton_day',
+      'incline_press_and_seal_row',
+      'dips_and_pullovers',
+      'thruster_and_pull_up',
+      'zercher_and_good_morning',
+      'box_squat_and_glute_ham',
+      'thrust_and_kickback',
+      'chin_up_and_dip',
+      'kettlebell_clean_press_and_swing',
+      'calf_raise_double_century',
+      'shrug_century',
+      'lateral_raise_century',
+      'curl_century',
     ]);
     const statements = renderStatements(catalog);
     const challengesAt = statements.findIndex((statement) => statement.startsWith('insert into public.challenges'));
@@ -129,6 +179,9 @@ describe('catalog generator', () => {
     );
     expect(challenges).toContain(
       `'ten_ton_day', 'Ten-Ton Day', 'volume', jsonb_build_object('kind', 'volume', 'metric', 'kg', 'target', 10000, 'exerciseId', null, 'minPct', null), null)`,
+    );
+    expect(challenges).toContain(
+      `'kettlebell_clean_press_and_swing', 'Kettlebell Clean, Press and Swing', 'prescription', jsonb_build_object('kind', 'prescription', 'groups', jsonb_build_array(jsonb_build_object('rounds', 4, 'exercises', jsonb_build_array(jsonb_build_object('exerciseId', ${exercise('kettlebell_clean')}, 'reps', 5, 'pct', null), jsonb_build_object('exerciseId', ${exercise('kettlebell_press')}, 'reps', 5, 'pct', null), jsonb_build_object('exerciseId', ${exercise('kettlebell_swing')}, 'reps', 10, 'pct', null))))), null)`,
     );
     expect(challenges).toContain('definition = excluded.definition');
     const items = statements[itemsAt];
@@ -159,7 +212,7 @@ describe('catalog generator', () => {
     expect(rookie.every((entry) => entry.weight === 5 && entry.min === 1 && entry.max === 1)).toBe(true);
     const grinderGear = tierEntries('rare', 'grinder').filter((entry) => !entry.item.endsWith('_scraps'));
     expect(grinderGear).toHaveLength(6);
-    expect(grinderGear.every((entry) => entry.weight === 18)).toBe(true);
+    expect(grinderGear.every((entry) => entry.weight === 54)).toBe(true);
   });
 
   it('splits a gear shorthand weight across its slots, so the whole tier drops at that weight', () => {

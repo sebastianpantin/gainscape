@@ -23,12 +23,36 @@
     - { item: scroll_leg_raise_and_rollout, weight: 3 }
     - { item: scroll_push_up_century, weight: 3 }
     - { item: scroll_twenty_ton_day, weight: 3 }
-    - { item: spotter_pup, weight: 1 }
-    - { item: chalk_sprite, weight: 1 }
-    - { item: iron_tortoise, weight: 1 }
-    - { item: plate_crab, weight: 1 }
-    - { item: 'gear:grinder', weight: 18 }
-    - { item: forged_scraps, weight: 14, min: 2, max: 4 }
-    - { item: titan_scraps, weight: 15, min: 1, max: 3 }
-    - { item: mythic_scraps, weight: 8, min: 1, max: 2 }
-    - { item: ascendant_scraps, weight: 3 }
+    - { item: scroll_clean_and_push_press, weight: 3 }
+    - { item: scroll_snatch_and_overhead_squat, weight: 3 }
+    - { item: scroll_close_grip_and_pendlay, weight: 3 }
+    - { item: scroll_sumo_and_pull_up, weight: 3 }
+    - { item: scroll_hack_squat_and_leg_curl, weight: 3 }
+    - { item: scroll_split_squat_and_hinge, weight: 3 }
+    - { item: scroll_goblet_and_swing, weight: 3 }
+    - { item: scroll_arnold_and_rear_delt, weight: 3 }
+    - { item: scroll_hammer_and_rope, weight: 3 }
+    - { item: scroll_lunge_century, weight: 3 }
+    - { item: scroll_sit_up_century, weight: 3 }
+    - { item: scroll_thirty_ton_day, weight: 3 }
+    - { item: scroll_incline_press_and_seal_row, weight: 3 }
+    - { item: scroll_dips_and_pullovers, weight: 3 }
+    - { item: scroll_thruster_and_pull_up, weight: 3 }
+    - { item: scroll_zercher_and_good_morning, weight: 3 }
+    - { item: scroll_box_squat_and_glute_ham, weight: 3 }
+    - { item: scroll_thrust_and_kickback, weight: 3 }
+    - { item: scroll_chin_up_and_dip, weight: 3 }
+    - { item: scroll_kettlebell_clean_press_and_swing, weight: 3 }
+    - { item: scroll_calf_raise_double_century, weight: 3 }
+    - { item: scroll_shrug_century, weight: 3 }
+    - { item: scroll_lateral_raise_century, weight: 3 }
+    - { item: scroll_curl_century, weight: 3 }
+    - { item: spotter_pup, weight: 3 }
+    - { item: chalk_sprite, weight: 3 }
+    - { item: iron_tortoise, weight: 3 }
+    - { item: plate_crab, weight: 3 }
+    - { item: 'gear:grinder', weight: 54 }
+    - { item: forged_scraps, weight: 42, min: 2, max: 4 }
+    - { item: titan_scraps, weight: 45, min: 1, max: 3 }
+    - { item: mythic_scraps, weight: 24, min: 1, max: 2 }
+    - { item: ascendant_scraps, weight: 9 }

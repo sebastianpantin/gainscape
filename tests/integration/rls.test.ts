@@ -451,7 +451,7 @@ describe('item catalog tables', () => {
     }
   });
 
-  it('shows all 6 former variations to a new user and hides another user custom exercise, shares and pin', async () => {
+  it('shows every built-in variation, including the 6 former scroll variations, to a new user and hides another user custom exercise, shares and pin', async () => {
     const [newcomer, author] = await Promise.all([createTestUser(), createTestUser()]);
     const variations = await db`
       select key from public.exercises where owner_user_id is null and variation_of_id is not null order by key`;
@@ -461,7 +461,13 @@ describe('item catalog tables', () => {
       .not('variation_of_id', 'is', null)
       .order('key');
     expect(visibleVariations).toEqual(variations.map(({ key }) => ({ key })));
-    expect(visibleVariations).toHaveLength(6);
+    expect(visibleVariations).toEqual(
+      expect.arrayContaining(
+        ['dead_stop_row', 'deficit_deadlift', 'pause_bench_press', 'pause_squat', 'spider_curl', 'z_press'].map(
+          (key) => ({ key }),
+        ),
+      ),
+    );
 
     const [pauseSquat] = await db`select id from public.exercises where key = 'pause_squat'`;
     const pin = await newcomer.client.from('pinned_exercises').insert({ exercise_id: pauseSquat.id, position: 0 });

@@ -78,3 +78,168 @@
   name: Twenty-Ton Day
   kind: volume
   volume: { metric: kg, target: 20000 }
+- key: clean_and_push_press
+  name: Clean and Push Press
+  kind: prescription
+  supersets:
+    - rounds: 5
+      exercises:
+        - { exercise: power_clean, reps: 3, pct: 70 }
+        - { exercise: push_press, reps: 5, pct: 65 }
+- key: snatch_and_overhead_squat
+  name: Snatch and Overhead Squat
+  kind: prescription
+  supersets:
+    - rounds: 5
+      exercises:
+        - { exercise: power_snatch, reps: 3, pct: 65 }
+        - { exercise: overhead_squat, reps: 5, pct: 60 }
+- key: close_grip_and_pendlay
+  name: Close-grip and Pendlay
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: close_grip_bench_press, reps: 8, pct: 65 }
+        - { exercise: pendlay_row, reps: 8, pct: 65 }
+- key: sumo_and_pull_up
+  name: Sumo and Pull-up
+  kind: prescription
+  supersets:
+    - rounds: 5
+      exercises:
+        - { exercise: sumo_deadlift, reps: 5, pct: 70 }
+        - { exercise: pull_up, reps: 6 }
+- key: hack_squat_and_leg_curl
+  name: Hack Squat and Leg Curl
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: hack_squat, reps: 10 }
+        - { exercise: seated_leg_curl, reps: 12 }
+- key: split_squat_and_hinge
+  name: Split Squat and Hinge
+  kind: prescription
+  supersets:
+    - rounds: 3
+      exercises:
+        - { exercise: bulgarian_split_squat, reps: 8 }
+        - { exercise: dumbbell_romanian_deadlift, reps: 10 }
+- key: goblet_and_swing
+  name: Goblet and Swing
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: goblet_squat, reps: 10 }
+        - { exercise: kettlebell_swing, reps: 15 }
+- key: arnold_and_rear_delt
+  name: Arnold and Rear Delt
+  kind: prescription
+  supersets:
+    - rounds: 3
+      exercises:
+        - { exercise: arnold_press, reps: 10 }
+        - { exercise: rear_delt_fly, reps: 15 }
+- key: hammer_and_rope
+  name: Hammer and Rope
+  kind: prescription
+  supersets:
+    - rounds: 3
+      exercises:
+        - { exercise: hammer_curl, reps: 12 }
+        - { exercise: rope_triceps_pushdown, reps: 12 }
+- key: lunge_century
+  name: Lunge Century
+  kind: volume
+  volume: { metric: reps, target: 100, exercise: dumbbell_walking_lunge }
+- key: sit_up_century
+  name: Sit-up Century
+  kind: volume
+  volume: { metric: reps, target: 100, exercise: sit_up }
+- key: thirty_ton_day
+  name: Thirty-Ton Day
+  kind: volume
+  volume: { metric: kg, target: 30000 }
+- key: incline_press_and_seal_row
+  name: Incline Press and Seal Row
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: incline_dumbbell_press, reps: 10 }
+        - { exercise: seal_row, reps: 10, pct: 60 }
+- key: dips_and_pullovers
+  name: Dips and Pullovers
+  kind: prescription
+  supersets:
+    - rounds: 3
+      exercises:
+        - { exercise: dip, reps: 12 }
+        - { exercise: dumbbell_pullover, reps: 12 }
+- key: thruster_and_pull_up
+  name: Thruster and Pull-up
+  kind: prescription
+  supersets:
+    - rounds: 5
+      exercises:
+        - { exercise: thruster, reps: 5, pct: 50 }
+        - { exercise: pull_up, reps: 5 }
+- key: zercher_and_good_morning
+  name: Zercher and Good Morning
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: zercher_squat, reps: 6, pct: 60 }
+        - { exercise: good_morning, reps: 8, pct: 50 }
+- key: box_squat_and_glute_ham
+  name: Box Squat and Glute-ham
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: box_squat, reps: 5, pct: 70 }
+        - { exercise: glute_ham_raise, reps: 6 }
+- key: thrust_and_kickback
+  name: Thrust and Kickback
+  kind: prescription
+  supersets:
+    - rounds: 3
+      exercises:
+        - { exercise: hip_thrust, reps: 10, pct: 60 }
+        - { exercise: cable_glute_kickback, reps: 15 }
+- key: chin_up_and_dip
+  name: Chin-up and Dip
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: chin_up, reps: 8 }
+        - { exercise: dip, reps: 10 }
+- key: kettlebell_clean_press_and_swing
+  name: 'Kettlebell Clean, Press and Swing'
+  kind: prescription
+  supersets:
+    - rounds: 4
+      exercises:
+        - { exercise: kettlebell_clean, reps: 5 }
+        - { exercise: kettlebell_press, reps: 5 }
+        - { exercise: kettlebell_swing, reps: 10 }
+- key: calf_raise_double_century
+  name: Calf Raise Double Century
+  kind: volume
+  volume: { metric: reps, target: 200, exercise: standing_calf_raise }
+- key: shrug_century
+  name: Shrug Century
+  kind: volume
+  volume: { metric: reps, target: 100, exercise: barbell_shrug, min_pct: 50 }
+- key: lateral_raise_century
+  name: Lateral Raise Century
+  kind: volume
+  volume: { metric: reps, target: 100, exercise: lateral_raise }
+- key: curl_century
+  name: Curl Century
+  kind: volume
+  volume: { metric: reps, target: 100, exercise: barbell_curl, min_pct: 50 }

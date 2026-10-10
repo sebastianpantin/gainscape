@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(18);
 
 select tests.create_user('sc_owner') as owner \gset
 select tests.create_user('sc_newcomer') as newcomer \gset
@@ -8,14 +8,16 @@ insert into public.exercises (owner_user_id, name, load_type, equipment)
 values (:'owner', 'Owner secret lift', 'external', 'other');
 
 select tests.add_session(:'owner', now() - interval '1 hour') as s \gset
+select count(*)::int as built_in_variations from public.exercises
+  where owner_user_id is null and variation_of_id is not null \gset
 
 select hasnt_table('public', 'user_unlocks', 'the unlock table is gone');
 select has_table('public', 'challenges', 'challenges have their own catalog table');
 select policies_are('public', 'challenges', array['read challenges'], 'challenges have only the read policy');
 select is(
   (select count(*)::int from public.challenges where retired_at is null),
-  12,
-  'the catalog seeds twelve challenges'
+  36,
+  'the catalog seeds thirty-six challenges'
 );
 select hasnt_column('public', 'items', 'grants_exercise_id', 'a scroll no longer grants an exercise');
 select is(
@@ -54,13 +56,20 @@ select policies_are(
 
 select tests.authenticate_as(:'newcomer');
 select is(
-  (select array_agg(e.key order by e.key) from public.exercises e where e.variation_of_id is not null),
+  (select array_agg(e.key order by e.key) from public.exercises e
+    where e.variation_of_id is not null
+      and e.key = any(array['dead_stop_row', 'deficit_deadlift', 'pause_bench_press', 'pause_squat', 'spider_curl', 'z_press'])),
   array['dead_stop_row', 'deficit_deadlift', 'pause_bench_press', 'pause_squat', 'spider_curl', 'z_press'],
   'a new user sees all six former scroll variations'
 );
 select is(
+  (select count(*)::int from public.exercises e where e.owner_user_id is null and e.variation_of_id is not null),
+  :built_in_variations,
+  'a new user sees every built-in variation'
+);
+select is(
   (select count(*)::int from public.challenges),
-  12,
+  36,
   'a signed-in user reads every challenge'
 );
 select is(

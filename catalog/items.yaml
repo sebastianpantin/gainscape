@@ -94,3 +94,147 @@
   rarity: rare
   icon: scroll
   grants: twenty_ton_day
+- key: scroll_clean_and_push_press
+  name: 'Scroll: Clean and Push Press'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: clean_and_push_press
+- key: scroll_snatch_and_overhead_squat
+  name: 'Scroll: Snatch and Overhead Squat'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: snatch_and_overhead_squat
+- key: scroll_close_grip_and_pendlay
+  name: 'Scroll: Close-grip and Pendlay'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: close_grip_and_pendlay
+- key: scroll_sumo_and_pull_up
+  name: 'Scroll: Sumo and Pull-up'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: sumo_and_pull_up
+- key: scroll_hack_squat_and_leg_curl
+  name: 'Scroll: Hack Squat and Leg Curl'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: hack_squat_and_leg_curl
+- key: scroll_split_squat_and_hinge
+  name: 'Scroll: Split Squat and Hinge'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: split_squat_and_hinge
+- key: scroll_goblet_and_swing
+  name: 'Scroll: Goblet and Swing'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: goblet_and_swing
+- key: scroll_arnold_and_rear_delt
+  name: 'Scroll: Arnold and Rear Delt'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: arnold_and_rear_delt
+- key: scroll_hammer_and_rope
+  name: 'Scroll: Hammer and Rope'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: hammer_and_rope
+- key: scroll_lunge_century
+  name: 'Scroll: Lunge Century'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: lunge_century
+- key: scroll_sit_up_century
+  name: 'Scroll: Sit-up Century'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: sit_up_century
+- key: scroll_thirty_ton_day
+  name: 'Scroll: Thirty-Ton Day'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: thirty_ton_day
+- key: scroll_incline_press_and_seal_row
+  name: 'Scroll: Incline Press and Seal Row'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: incline_press_and_seal_row
+- key: scroll_dips_and_pullovers
+  name: 'Scroll: Dips and Pullovers'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: dips_and_pullovers
+- key: scroll_thruster_and_pull_up
+  name: 'Scroll: Thruster and Pull-up'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: thruster_and_pull_up
+- key: scroll_zercher_and_good_morning
+  name: 'Scroll: Zercher and Good Morning'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: zercher_and_good_morning
+- key: scroll_box_squat_and_glute_ham
+  name: 'Scroll: Box Squat and Glute-ham'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: box_squat_and_glute_ham
+- key: scroll_thrust_and_kickback
+  name: 'Scroll: Thrust and Kickback'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: thrust_and_kickback
+- key: scroll_chin_up_and_dip
+  name: 'Scroll: Chin-up and Dip'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: chin_up_and_dip
+- key: scroll_kettlebell_clean_press_and_swing
+  name: 'Scroll: Kettlebell Clean, Press and Swing'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: kettlebell_clean_press_and_swing
+- key: scroll_calf_raise_double_century
+  name: 'Scroll: Calf Raise Double Century'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: calf_raise_double_century
+- key: scroll_shrug_century
+  name: 'Scroll: Shrug Century'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: shrug_century
+- key: scroll_lateral_raise_century
+  name: 'Scroll: Lateral Raise Century'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: lateral_raise_century
+- key: scroll_curl_century
+  name: 'Scroll: Curl Century'
+  kind: scroll
+  rarity: rare
+  icon: scroll
+  grants: curl_century

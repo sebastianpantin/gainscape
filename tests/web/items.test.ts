@@ -50,7 +50,7 @@ describe('groupItems', () => {
       ['Gear', 42, 0],
       ['Materials', 6, 0],
       ['Pets', 4, 0],
-      ['Scrolls', 12, 0],
+      ['Scrolls', 36, 0],
     ]);
   });
 

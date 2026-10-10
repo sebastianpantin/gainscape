@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../components/Icon.tsx';
 import { type Exercise } from '../../lib/catalog-rules.ts';
+import { exerciseSearchMatches, hiddenMatchesText } from '../../lib/exercise-search-rules.ts';
 import { pickerRowDetail } from '../../lib/skill-map-rules.ts';
 
 interface ExercisePickerProps {
@@ -9,16 +10,15 @@ interface ExercisePickerProps {
   placeholder?: string;
 }
 
-const MAX_MATCHES_SHOWN = 8;
+const MAX_MATCHES_SHOWN = 12;
 
 export function ExercisePicker({ exercises, onPick, placeholder = 'Add exerciseâ€¦' }: ExercisePickerProps) {
   const [query, setQuery] = useState('');
 
-  const matches = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return [];
-    return exercises.filter((exercise) => exercise.name.toLowerCase().includes(needle)).slice(0, MAX_MATCHES_SHOWN);
-  }, [exercises, query]);
+  const { shown: matches, hiddenCount } = useMemo(
+    () => exerciseSearchMatches(exercises, query, MAX_MATCHES_SHOWN),
+    [exercises, query],
+  );
 
   return (
     <div className="exercise-picker">
@@ -54,6 +54,7 @@ export function ExercisePicker({ exercises, onPick, placeholder = 'Add exerciseâ
           })}
         </ul>
       )}
+      {hiddenCount > 0 && <p className="muted">{hiddenMatchesText(hiddenCount)}</p>}
     </div>
   );
 }
