@@ -41,7 +41,15 @@ const enrollmentSchema = z.object({
 const cachedProgramsSchema = z.object({
   v: z.literal(CACHE_VERSION),
   userId: z.string(),
-  templates: z.array(z.object({ key: z.string(), version: z.number(), name: z.string(), definition: z.unknown() })),
+  templates: z.array(
+    z.object({
+      key: z.string(),
+      version: z.number(),
+      name: z.string(),
+      definition: z.unknown(),
+      owner_user_id: z.string().nullable().optional(),
+    }),
+  ),
   enrollment: enrollmentSchema.nullable(),
   facts: z
     .object({

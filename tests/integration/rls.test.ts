@@ -353,6 +353,7 @@ describe('function execution rights', () => {
       'get_profile',
       'last_logged_sets',
       'list_friends',
+      'publish_program',
       'recent_lift_sets',
       'remove_friend',
       'reorder_pins',

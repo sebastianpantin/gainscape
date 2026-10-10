@@ -2,12 +2,23 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
-import { useOnlineSignal } from '../../lib/use-online.ts';
+import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
-import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
+import {
+  cachedPrograms,
+  loadProgramsCacheFirst,
+  type ProgramDoc,
+  publishProgram,
+  saveProgram,
+} from '../../lib/programs.ts';
+import { type CarriedFollow, followStatus, workingWeights } from '../../lib/program-follow-rules.ts';
+import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
+import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
+import { usePreferences } from '../../lib/preferences.ts';
+import type { PlannedExercise, ProgressionKind } from '../../offline/draft-format.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import {
   addDay,
@@ -15,13 +26,20 @@ import {
   canAddDay,
   canAddPlannedExercise,
   changePlannedExercise,
+  changeProgression,
   DAY_NAME_MAX_LENGTH,
   docFor,
+  INCREMENT_PRESETS,
+  INCREMENT_RANGE,
+  INCREMENT_STEP,
   MAX_EXERCISES_PER_DAY,
   moveDay,
   movePlannedExercise,
   nameIssue,
+  newProgramDoc,
+  pairedIncrement,
   PROGRAM_NAME_MAX_LENGTH,
+  progressionIssue,
   removeDay,
   removePlannedExercise,
   renameDay,
@@ -32,20 +50,41 @@ import {
 } from './program-edit.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
+import { useActiveProgram } from './use-active-program.ts';
+
+const PROGRESSION_OPTIONS: { value: ProgressionKind; label: string }[] = [
+  { value: 'none', label: 'Last weight' },
+  { value: 'fixed', label: 'Fixed weight' },
+  { value: 'linear', label: 'Add weight' },
+];
+
+const PROGRESSION_HINTS: Record<ProgressionKind, string | null> = {
+  none: null,
+  fixed: 'You set the weight when you follow this program.',
+  linear: 'Adds the increment after a workout where every set hits its reps. A miss keeps the weight.',
+};
 
 interface ProgramEditorProps {
   userId: string;
+  creating?: boolean;
 }
 
-export function ProgramEditor({ userId }: ProgramEditorProps) {
+export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) {
   const { programId = '' } = useParams();
   const navigate = useNavigate();
-  const [doc, setDoc] = useState<ProgramDoc | null>(() => docFor(cachedPrograms(userId), userId, programId));
+  const [doc, setDoc] = useState<ProgramDoc | null>(() =>
+    creating
+      ? newProgramDoc(crypto.randomUUID(), crypto.randomUUID())
+      : docFor(cachedPrograms(userId), userId, programId),
+  );
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
   const [saving, setSaving] = useState(false);
   const onlineSignal = useOnlineSignal();
+  const { unitPref } = usePreferences();
+  const offline = useIsOffline();
+  const { cache: programCache, program: followed } = useActiveProgram(userId);
 
   useEffect(() => {
     loadCacheFirstWhenOffline(
@@ -93,7 +132,17 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
   const pickable = exercises.filter((exercise) => !exercise.archived);
 
   const nameOf = (exerciseId: string) => byId.get(exerciseId)?.name ?? 'Unknown exercise';
-  const issue = nameIssue(doc) ?? targetIssue(doc, nameOf);
+  const loadTypeOf = (exerciseId: string) => {
+    const exercise = byId.get(exerciseId);
+    return exercise && isLiftExercise(exercise) ? exercise.loadType : null;
+  };
+  const issue = nameIssue(doc) ?? targetIssue(doc, nameOf) ?? progressionIssue(doc, nameOf, loadTypeOf);
+  const changeAt = (dayIndex: number, exerciseIndex: number, changes: Partial<PlannedExercise>) =>
+    setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, changes));
+  const changeIncrement = (dayIndex: number, exerciseIndex: number, value: number) => {
+    const { kg, lb } = pairedIncrement(value, unitPref);
+    changeAt(dayIndex, exerciseIndex, { progression: { kind: 'linear', incrementKg: kg, incrementLb: lb } });
+  };
 
   const save = async () => {
     if (issue) return setProblem(issue);
@@ -108,9 +157,40 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
     }
   };
 
+  const outdated =
+    !creating && followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates) === 'outdated';
+
+  const followChanges = async () => {
+    if (issue) return setProblem(issue);
+    if (!programCache.enrollment) return;
+    const carried: CarriedFollow = {
+      unit: programCache.enrollment.unit,
+      workingWeights: followed.kind === 'ready' ? workingWeights(followed.state) : {},
+    };
+    setSaving(true);
+    setProblem(null);
+    try {
+      await saveProgram(userId, trimmedDoc(doc));
+      const { key } = await publishProgram(doc.id);
+      navigate(`/programs/enroll/${key}`, { state: { carried } });
+    } catch (error) {
+      setProblem(programErrorText(error));
+      setSaving(false);
+    }
+  };
+
   return (
     <main className="screen stack">
-      <h1 className="title">Edit program</h1>
+      <h1 className="title">{creating ? 'New program' : 'Edit program'}</h1>
+      {outdated && (
+        <section className="panel stack" aria-label="Followed version">
+          <p>You're following an earlier version</p>
+          {offline && <p className="notice">{PROGRAM_OFFLINE_TEXT}</p>}
+          <button className="button" type="button" disabled={saving || offline} onClick={() => void followChanges()}>
+            Use these changes
+          </button>
+        </section>
+      )}
       <label className="field">
         Program name
         <input
@@ -162,6 +242,7 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
               const planned = day.exercises[exerciseIndex];
               const exercise = byId.get(planned.exerciseId);
               const name = nameOf(planned.exerciseId);
+              const { progression } = planned;
               return (
                 <li className="stack program-exercise" key={plannedKey}>
                   <div className="row spread">
@@ -197,34 +278,71 @@ export function ProgramEditor({ userId }: ProgramEditorProps) {
                       </button>
                     </span>
                   </div>
+                  {(loadTypeOf(planned.exerciseId) === 'external' || progression.kind !== 'none') && (
+                    <SegmentedChoice
+                      label={`${name} progression`}
+                      options={PROGRESSION_OPTIONS}
+                      current={progression.kind}
+                      onPick={(kind) => setDoc(changeProgression(doc, dayIndex, exerciseIndex, kind))}
+                    />
+                  )}
+                  {PROGRESSION_HINTS[progression.kind] && <p className="hint">{PROGRESSION_HINTS[progression.kind]}</p>}
+                  {progression.kind === 'linear' && (
+                    <div className="row">
+                      <SegmentedChoice
+                        label={`${name} increment`}
+                        options={INCREMENT_PRESETS.map((preset) => ({
+                          value: preset[unitPref],
+                          label: `${preset[unitPref]} ${unitPref}`,
+                        }))}
+                        current={unitPref === 'kg' ? progression.incrementKg : progression.incrementLb}
+                        onPick={(value) => changeIncrement(dayIndex, exerciseIndex, value)}
+                      />
+                      <NumberTextField
+                        label={`Increment (${unitPref})`}
+                        value={unitPref === 'kg' ? progression.incrementKg : progression.incrementLb}
+                        {...INCREMENT_RANGE[unitPref]}
+                        step={INCREMENT_STEP[unitPref]}
+                        onCommit={(value) => changeIncrement(dayIndex, exerciseIndex, value)}
+                      />
+                    </div>
+                  )}
                   <div className="row">
                     <NumberTextField
                       label="Sets"
                       value={planned.targetSets}
                       {...TARGET_SETS_RANGE}
                       wholeNumber
-                      onCommit={(targetSets) =>
-                        setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetSets }))
-                      }
+                      onCommit={(targetSets) => changeAt(dayIndex, exerciseIndex, { targetSets })}
                     />
-                    <NumberTextField
-                      label="Reps min"
-                      value={planned.targetRepsMin}
-                      {...TARGET_REPS_RANGE}
-                      wholeNumber
-                      onCommit={(targetRepsMin) =>
-                        setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetRepsMin }))
-                      }
-                    />
-                    <NumberTextField
-                      label="Reps max"
-                      value={planned.targetRepsMax}
-                      {...TARGET_REPS_RANGE}
-                      wholeNumber
-                      onCommit={(targetRepsMax) =>
-                        setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, { targetRepsMax }))
-                      }
-                    />
+                    {progression.kind === 'linear' ? (
+                      <NumberTextField
+                        label="Reps"
+                        value={planned.targetRepsMin}
+                        {...TARGET_REPS_RANGE}
+                        wholeNumber
+                        onCommit={(reps) =>
+                          changeAt(dayIndex, exerciseIndex, { targetRepsMin: reps, targetRepsMax: reps })
+                        }
+                      />
+                    ) : (
+                      <>
+                        <NumberTextField
+                          label="Reps min"
+                          value={planned.targetRepsMin}
+                          {...TARGET_REPS_RANGE}
+                          wholeNumber
+                          onCommit={(targetRepsMin) => changeAt(dayIndex, exerciseIndex, { targetRepsMin })}
+                        />
+                        <NumberTextField
+                          label="Reps max"
+                          value={planned.targetRepsMax}
+                          {...TARGET_REPS_RANGE}
+                          wholeNumber
+                          onCommit={(targetRepsMax) => changeAt(dayIndex, exerciseIndex, { targetRepsMax })}
+                        />
+                      </>
+                    )}
                   </div>
                 </li>
               );
