@@ -288,6 +288,18 @@ describe('draft session', () => {
     expect(await store.get(userId)).toMatchObject({ kind: 'draft', draft: { sessionId: 'fresh' } });
   });
 
+  it('opens newer fallback edits of a workout whose discard on the main store is older', async () => {
+    const fallback = createLocalDraftStore(new MemoryStorage());
+    const store = createLocalDraftStore(new MemoryStorage());
+    await store.put(userId, 20, workout('kept-writing'));
+    await store.discard(userId, 'kept-writing', 21);
+    await fallback.put(userId, 30, workout('kept-writing'));
+    const { session, draft } = sessionOver(store, { fallback: () => fallback });
+    await session.ready;
+
+    expect(draft()?.sessionId).toBe('kept-writing');
+  });
+
   it('does not report a waiting workout when the fallback holds the shown one or nothing', async () => {
     const fallback = createLocalDraftStore(new MemoryStorage());
     const store = createLocalDraftStore(new MemoryStorage());

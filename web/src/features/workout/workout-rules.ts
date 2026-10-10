@@ -25,6 +25,12 @@ export function startNoticeText(outcome: StartOutcome, skippedExerciseCount: num
   return null;
 }
 
+export function challengeStartNoticeText(outcome: StartOutcome): string | null {
+  return outcome === 'opened_waiting'
+    ? 'Another unsynced workout is saved on this device. Open Workout to finish or discard it, then start the challenge.'
+    : null;
+}
+
 export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
   if (lastProblem !== RATE_LIMITED_CODE) {
     return `Couldn't reach the server (${lastProblem}). Retrying — your workout is saved on this device.`;

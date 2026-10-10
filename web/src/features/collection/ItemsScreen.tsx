@@ -51,7 +51,7 @@ import {
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { loadoutQueryKey, useLoadout } from '../profile/use-loadout.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
-import { startNoticeText } from '../workout/workout-rules.ts';
+import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
 
 interface ChallengeStartProps {
@@ -365,7 +365,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
     );
     const outcome = await startWorkout(() => started.draft);
     await flush();
-    const notice = startNoticeText(outcome, 0);
+    const notice = challengeStartNoticeText(outcome);
     if (notice) setStartNotice(notice);
     else navigate('/');
   };

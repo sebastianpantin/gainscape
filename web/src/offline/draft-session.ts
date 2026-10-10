@@ -79,6 +79,11 @@ function staysOnFallback(error: unknown): boolean {
   return error instanceof Error && error.message === SESSION_STAYS_ON_FALLBACK;
 }
 
+function supersedes(stored: StoredDraft, waiting: StoredWorkout): boolean {
+  if (storedSessionId(stored) !== waiting.draft.sessionId) return false;
+  return stored.kind !== 'discarded' || stored.updatedAt >= waiting.updatedAt;
+}
+
 function isDraftMessage(data: unknown): data is DraftMessage {
   const message = data as Partial<DraftMessage> | null;
   return typeof message?.userId === 'string' && typeof message.updatedAt === 'number';
@@ -167,7 +172,7 @@ export function createDraftSession({
       .get(userId)
       .catch(() => null);
     if (record?.kind !== 'draft') return null;
-    return stored && storedSessionId(stored) === record.draft.sessionId ? null : record;
+    return stored && supersedes(stored, record) ? null : record;
   };
 
   const openWaitingDraft = (waiting: StoredWorkout) => {

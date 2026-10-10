@@ -5,6 +5,7 @@ import {
   finishPrompt,
   rejectionText,
   stalledSyncText,
+  challengeStartNoticeText,
   startNoticeText,
   syncProblemText,
   WAITING_DRAFT_TEXT,
@@ -152,5 +153,18 @@ describe('startNoticeText', () => {
   it('says nothing for a fresh start without skips or a resumed workout', () => {
     expect(startNoticeText('started', 0)).toBeNull();
     expect(startNoticeText('resumed', 3)).toBeNull();
+  });
+});
+
+describe('challengeStartNoticeText', () => {
+  it('points to the Workout tab when a waiting workout opened instead of the challenge', () => {
+    expect(challengeStartNoticeText('opened_waiting')).toBe(
+      'Another unsynced workout is saved on this device. Open Workout to finish or discard it, then start the challenge.',
+    );
+  });
+
+  it('says nothing when the challenge started or a workout resumed', () => {
+    expect(challengeStartNoticeText('started')).toBeNull();
+    expect(challengeStartNoticeText('resumed')).toBeNull();
   });
 });
