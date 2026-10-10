@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { chromiumLaunchOptions, failureArtifacts, runSettings } from './e2e/support/run-settings.ts';
 import { assertStackEnvironment } from './e2e/support/stack-guard.ts';
 import { localStackStatus } from './scripts/local-stack.ts';
 import { previewPort } from './web/build/ports.ts';
@@ -14,14 +15,13 @@ export default defineConfig({
   timeout: 120_000,
   fullyParallel: false,
   workers: 1,
-  retries: 0,
-  reporter: 'list',
+  ...runSettings,
   use: {
     ...devices['Pixel 7'],
     baseURL: pagesUrl,
     serviceWorkers: 'block',
-    trace: 'retain-on-failure',
-    launchOptions: { executablePath: process.env.CHROMIUM_PATH || undefined },
+    ...failureArtifacts,
+    launchOptions: chromiumLaunchOptions,
   },
   webServer: {
     command: `node scripts/deploy/build-pages.ts && node_modules/.bin/wrangler pages dev web/dist --ip 127.0.0.1 --port ${pagesPort}`,

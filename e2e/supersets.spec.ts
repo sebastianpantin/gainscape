@@ -1,5 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
-import { pauseClockNow, register, restTimer, uniqueUsername } from './support/app.ts';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
+import { addExercise, chooseFromMenu, pauseClockNow, register, restTimer, uniqueUsername } from './support/app.ts';
 import { workoutCards } from './support/program-enrollment.ts';
 
 const BENCH = 'Barbell Bench Press';
@@ -7,17 +8,6 @@ const ROW = 'Barbell Row';
 
 function superset(page: Page) {
   return page.getByRole('region', { name: `Superset: ${BENCH} and ${ROW}` });
-}
-
-async function addExercise(page: Page, search: string, exerciseName: string) {
-  await page.getByLabel('Search exercises').fill(search);
-  await page.getByRole('button', { name: new RegExp(`^${exerciseName}\\b`) }).click();
-  await expect(page.getByRole('heading', { name: exerciseName, exact: true })).toBeVisible();
-}
-
-async function chooseFromMenu(page: Page, exerciseName: string, action: string) {
-  await page.getByLabel(`Exercise menu for ${exerciseName}`, { exact: true }).click();
-  await page.getByRole('button', { name: action, exact: true }).click();
 }
 
 async function startBenchAndRow(page: Page, prefix: string) {

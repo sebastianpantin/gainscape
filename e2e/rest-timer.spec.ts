@@ -1,5 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import {
+  addExercise,
+  exerciseCard,
   finishWorkout,
   logExercise,
   openFromProfile,
@@ -7,6 +10,7 @@ import {
   pauseClockNow,
   register,
   restTimer,
+  setRow,
   uniqueUsername,
 } from './support/app.ts';
 
@@ -62,7 +66,7 @@ test('the rest length comes from settings, can be skipped or turned off, and end
   await restTimer(page).getByRole('button', { name: 'Remove 15 seconds' }).click();
   await expect(remaining).toHaveText('2:45');
 
-  const bench = page.locator('section', { has: page.getByRole('heading', { name: 'Barbell Bench Press' }) });
+  const bench = exerciseCard(page, 'Barbell Bench Press');
   await bench.getByRole('button', { name: 'Done set 1' }).click();
   await expect(remaining).toHaveText('2:45');
   await restTimer(page).getByRole('button', { name: 'Skip rest' }).click();
@@ -88,11 +92,9 @@ test('rating a set keeps the rest it started, and focus stays in the bar when th
   await register(page, uniqueUsername('rf'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   await pauseClockNow(page);
-  await page.getByLabel('Search exercises').fill('curl');
-  await page.getByRole('button', { name: /^Barbell Curl\b/ }).click();
-  const curl = page.locator('section', { has: page.getByRole('heading', { name: 'Barbell Curl' }) });
+  const curl = await addExercise(page, 'curl', 'Barbell Curl');
   const remaining = restTimer(page).getByRole('timer', { name: 'Rest remaining' });
-  const firstSet = curl.locator('li.set-row').nth(0);
+  const firstSet = setRow(curl, 1);
 
   const doneFirstSet = curl.getByRole('button', { name: 'Done set 1' });
   await expect(doneFirstSet).toHaveAttribute('aria-pressed', 'true');
@@ -105,7 +107,7 @@ test('rating a set keeps the rest it started, and focus stays in the bar when th
   await expect(remaining).toHaveText('1:15');
 
   await curl.getByRole('button', { name: '+ Add set' }).click();
-  await curl.locator('li.set-row').nth(1).getByRole('radio', { name: 'Hard' }).click();
+  await setRow(curl, 2).getByRole('radio', { name: 'Hard' }).click();
   await expect(remaining).toHaveText('1:15');
 
   const removeTime = restTimer(page).getByRole('button', { name: 'Remove 15 seconds' });
@@ -125,8 +127,8 @@ test('each lift rests for its own length: compound lifts longer, and an adjusted
   await register(page, uniqueUsername('rx'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   await pauseClockNow(page);
-  const bench = page.locator('section', { has: page.getByRole('heading', { name: 'Barbell Bench Press' }) });
-  const curl = page.locator('section', { has: page.getByRole('heading', { name: 'Barbell Curl' }) });
+  const bench = exerciseCard(page, 'Barbell Bench Press');
+  const curl = exerciseCard(page, 'Barbell Curl');
   const remaining = restTimer(page).getByRole('timer', { name: 'Rest remaining' });
 
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
@@ -143,6 +145,6 @@ test('each lift rests for its own length: compound lifts longer, and an adjusted
   await page.reload();
   await expect(bench.getByText(/Rest 3:15/)).toBeVisible();
   await bench.getByRole('button', { name: '+ Add set' }).click();
-  await bench.locator('li.set-row').nth(1).getByRole('radio', { name: 'Hard' }).click();
+  await setRow(bench, 2).getByRole('radio', { name: 'Hard' }).click();
   await expect(remaining).toHaveText('3:15');
 });

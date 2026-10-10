@@ -1,4 +1,4 @@
-import { admin, db } from '../../tests/integration/local-stack.ts';
+import { admin, db, TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 
 export { builtInExerciseId, resignedWithAnotherKey } from '../../tests/integration/local-stack.ts';
 
@@ -114,12 +114,18 @@ export async function activeDropCount(sessionId: string): Promise<number> {
   return row.count;
 }
 
-export async function confirmAccount(email: string, accountPassword: string): Promise<void> {
-  const [user] = await db`select id from auth.users where email = ${email}`;
-  const confirmed = await admin.auth.admin.updateUserById(user.id, { email_confirm: true });
-  if (confirmed.error) throw confirmed.error;
-  const withPassword = await admin.auth.admin.updateUserById(user.id, { password: accountPassword });
-  if (withPassword.error) throw withPassword.error;
+export async function createConfirmedAccount(email: string, username: string, timezone: string): Promise<void> {
+  const created = await admin.auth.admin.createUser({
+    email,
+    password: TEST_PASSWORD,
+    email_confirm: true,
+    user_metadata: { username, timezone },
+  });
+  if (created.error) throw created.error;
+}
+
+export async function forgetEmailSendLimit(email: string): Promise<void> {
+  await db`update auth.users set confirmation_sent_at = now() - interval '1 minute' where email = ${email}`;
 }
 
 export async function usernameOfEmail(email: string): Promise<string | null> {

@@ -57,6 +57,14 @@ export function authErrorMessage(error: AuthErrorLike): string {
   return error.message;
 }
 
+const SERVER_ERROR_STATUS = 500;
+
+export function emailChangeProblem(error: AuthErrorLike): string {
+  if (!error.status || error.status >= SERVER_ERROR_STATUS) return 'Could not change your email.';
+  if (error.code === 'over_email_send_rate_limit') return AUTH_MESSAGES.tooManyEmails;
+  return error.message;
+}
+
 export function passwordResetProblem(error: AuthErrorLike | null): string | null {
   if (!error || error.code === 'user_not_found') return null;
   return authErrorMessage(error);

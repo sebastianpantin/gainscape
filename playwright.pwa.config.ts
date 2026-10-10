@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { chromiumLaunchOptions, failureArtifacts, runSettings } from './e2e/support/run-settings.ts';
 import { assertStackEnvironment } from './e2e/support/stack-guard.ts';
 import { previewPort } from './web/build/ports.ts';
 
@@ -11,14 +12,13 @@ export default defineConfig({
   timeout: 120_000,
   fullyParallel: false,
   workers: 1,
-  retries: 0,
-  reporter: 'list',
+  ...runSettings,
   use: {
     ...devices['Pixel 7'],
     baseURL: previewUrl,
     serviceWorkers: 'allow',
-    trace: 'retain-on-failure',
-    launchOptions: { executablePath: process.env.CHROMIUM_PATH || undefined },
+    ...failureArtifacts,
+    launchOptions: chromiumLaunchOptions,
   },
   webServer: {
     command: 'npx vite preview web',

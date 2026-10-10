@@ -1,5 +1,5 @@
-import { expect, type Page } from '@playwright/test';
-import { test } from './support/people.ts';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import {
   definitionOf,
   emailOf,
@@ -11,12 +11,11 @@ import {
   TEST_PASSWORD,
   uniqueUsername,
 } from './support/app.ts';
-import { ageConfirmation, usernameOfEmail } from './support/db.ts';
+import { ageConfirmation, forgetEmailSendLimit, usernameOfEmail } from './support/db.ts';
 import {
   authLinkFrom,
   CONFIRM_SUBJECT,
   EMAIL_CHANGE_SUBJECT,
-  MAX_FREQUENCY_WAIT_MS,
   RECOVERY_SUBJECT,
   waitForEmail,
 } from './support/mailbox.ts';
@@ -53,7 +52,7 @@ test('an unconfirmed sign-in offers to resend the link', async ({ page }) => {
   const username = uniqueUsername('au_rs');
   await submitRegistration(page, username);
   await page.goto('/');
-  await page.waitForTimeout(MAX_FREQUENCY_WAIT_MS);
+  await forgetEmailSendLimit(emailOf(username));
   await submitSignIn(page, emailOf(username));
   await expect(page.getByText('Confirm your email first. We can send the link again.')).toBeVisible();
 
@@ -157,7 +156,7 @@ test('a squatter loses the account when the owner confirms the email', async ({ 
 
   const squatter = await newPerson();
   await submitRegistration(squatter, squatterName, victimEmail);
-  await squatter.waitForTimeout(MAX_FREQUENCY_WAIT_MS);
+  await forgetEmailSendLimit(victimEmail);
 
   const victim = await newPerson();
   const since = new Date();
@@ -168,7 +167,7 @@ test('a squatter loses the account when the owner confirms the email', async ({ 
   await choosePassword(victim, 'the-owners-password');
   await victim.getByRole('button', { name: 'Save and continue' }).click();
   await expect(victim.getByRole('button', { name: 'Start workout' })).toBeVisible();
-  expect(await usernameOfEmail(victimEmail)).toBe(victimName);
+  await expect.poll(() => usernameOfEmail(victimEmail)).toBe(victimName);
 
   await squatter.goto('/');
   await submitSignIn(squatter, victimEmail);

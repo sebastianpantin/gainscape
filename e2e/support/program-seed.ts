@@ -49,6 +49,19 @@ export function sessionClock(hoursBack: number): SessionClock {
   };
 }
 
+export function fiveRepSets(
+  slot: string,
+  lift: string,
+  weightKg: number,
+  count: number,
+  lastSetReps?: number,
+): SeededSet[] {
+  return Array.from({ length: count }, (_, index) => {
+    const set = { lift, ref: `${slot}:${index}`, weightKg, reps: 5 };
+    return index === count - 1 && lastSetReps !== undefined ? { ...set, loggedReps: lastSetReps } : set;
+  });
+}
+
 export function nearestPlateKg(rawKg: number): number {
   return Math.max(BAR_KG, Math.round(rawKg / PLATE_INCREMENT_KG + TIE_TOLERANCE) * PLATE_INCREMENT_KG);
 }

@@ -1,7 +1,17 @@
-import { expect, test } from '@playwright/test';
-import { openFromProfile, openTab, readSession, readStoredDraft, register, uniqueUsername } from './support/app.ts';
+import { expect, test } from './support/fixtures.ts';
+import {
+  doneSetButtons,
+  exerciseCard,
+  openFromProfile,
+  openTab,
+  readSession,
+  readStoredDraft,
+  register,
+  setRow,
+  setRows,
+  uniqueUsername,
+} from './support/app.ts';
 import { programDayId, sessionRow, setCount } from './support/db.ts';
-import { workoutCards } from './support/program-enrollment.ts';
 
 test('copy a template, run a program day with planned sets and finish it', async ({ context, page }) => {
   const username = uniqueUsername('pg');
@@ -25,30 +35,26 @@ test('copy a template, run a program day with planned sets and finish it', async
 
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'My UL — Upper' }).click();
-  await expect(page.locator('main section h2')).toHaveText([
+  await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText([
     'Barbell Bench Press',
     'Barbell Row',
     'Overhead Press',
     'Lat Pulldown',
     'Barbell Curl',
   ]);
-  await expect(page.locator('li.set-row')).toHaveCount(16);
-  await expect(page.locator('li.set-row:not(.planned)')).toHaveCount(0);
+  await expect(setRows(page)).toHaveCount(16);
+  await expect(doneSetButtons(page)).toHaveCount(0);
 
-  const benchRows = workoutCards(page, 'Barbell Bench Press').locator('li.set-row');
-  await benchRows.nth(0).getByRole('radio', { name: 'Hard' }).click();
-  await benchRows.nth(1).getByRole('radio', { name: 'Hard' }).click();
-  await workoutCards(page, 'Barbell Row')
-    .locator('li.set-row')
-    .nth(0)
-    .getByRole('button', { name: 'Done set 1' })
-    .click();
-  const toggled = benchRows.nth(2).getByRole('button', { name: 'Done set 3' });
+  const bench = exerciseCard(page, 'Barbell Bench Press');
+  await setRow(bench, 1).getByRole('radio', { name: 'Hard' }).click();
+  await setRow(bench, 2).getByRole('radio', { name: 'Hard' }).click();
+  await setRow(exerciseCard(page, 'Barbell Row'), 1).getByRole('button', { name: 'Done set 1' }).click();
+  const toggled = setRow(bench, 3).getByRole('button', { name: 'Done set 3' });
   await toggled.click();
   await expect(toggled).toHaveAttribute('aria-pressed', 'true');
   await toggled.click();
   await expect(toggled).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.locator('li.set-row:not(.planned)')).toHaveCount(3);
+  await expect(doneSetButtons(page)).toHaveCount(3);
 
   await page.getByRole('button', { name: 'Finish workout' }).click();
   const confirmation = page.getByRole('dialog', { name: '13 planned sets not done' });
@@ -57,8 +63,9 @@ test('copy a template, run a program day with planned sets and finish it', async
 
   const stored = await readStoredDraft(page, user.id);
   const sessionId = stored!.syncedSessionId!;
-  expect((await sessionRow(sessionId)).program_day_id).toBe(await programDayId(username, 'My UL', 'Upper'));
-  expect(await setCount(sessionId)).toBe(3);
+  const upperDayId = await programDayId(username, 'My UL', 'Upper');
+  await expect.poll(async () => (await sessionRow(sessionId)).program_day_id).toBe(upperDayId);
+  await expect.poll(() => setCount(sessionId)).toBe(3);
 
   const fresh = await context.newPage();
   await fresh.route('**/rest/v1/programs*', (route) => route.abort());

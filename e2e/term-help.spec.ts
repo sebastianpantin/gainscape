@@ -1,7 +1,9 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { GLOSSARY } from '../web/src/lib/glossary.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
 import {
+  addExercise,
   finishWorkout,
   logExercise,
   logWorkout,
@@ -66,12 +68,6 @@ async function chooseEffortMode(page: Page, mode: EffortMode) {
   await choice.click();
   await expect(choice).toHaveAttribute('aria-checked', 'true');
   await openTab(page, 'Train');
-}
-
-async function addExercise(page: Page, search: string, exerciseName: string) {
-  await page.getByLabel('Search exercises').fill(search);
-  await page.getByRole('button', { name: new RegExp(`^${exerciseName}\\b`) }).click();
-  await expect(page.getByRole('heading', { name: exerciseName, exact: true })).toBeVisible();
 }
 
 async function startBenchWorkout(page: Page, prefix: string, mode: EffortMode) {

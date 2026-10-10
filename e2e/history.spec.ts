@@ -1,14 +1,15 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import {
   finishedBenchDraft,
   finishWorkout,
+  logBench,
   logExercise,
-  logWorkout,
   openLatestWorkout,
   openTab,
   readSession,
   readStoredDraft,
   register,
+  setRow,
   uniqueUsername,
   writeStoredDraft,
   xpValue,
@@ -19,7 +20,7 @@ test('edit a logged set from history, see the XP change, then delete the workout
   const username = `hist_${Date.now().toString(36)}`;
   await register(page, username);
 
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
 
   await openTab(page, 'Log');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
@@ -33,19 +34,21 @@ test('edit a logged set from history, see the XP change, then delete the workout
   await expect(sessionXp).toHaveText(/^\+[\d,]+ XP$/);
   const xpBefore = xpValue(await sessionXp.textContent());
 
-  const setRow = page.locator('li.set-row').first();
-  await setRow.getByLabel('reps').fill('8');
-  await setRow.getByRole('radio', { name: 'Failure' }).click();
+  const firstSet = setRow(page, 1);
+  await firstSet.getByLabel('reps').fill('8');
+  await firstSet.getByRole('radio', { name: 'Failure' }).click();
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Changes saved.')).toBeVisible();
   await expect.poll(async () => xpValue(await sessionXp.textContent())).toBeGreaterThan(xpBefore);
-  expect(await latestSetOf(username)).toMatchObject({ reps: 8, effort_input_type: 'level', effort_value: 0 });
+  await expect
+    .poll(() => latestSetOf(username))
+    .toMatchObject({ reps: 8, effort_input_type: 'level', effort_value: 0 });
 
   await page.getByRole('button', { name: 'Delete workout' }).click();
   await page.getByRole('button', { name: 'Delete for good' }).click();
   await expect(page.getByText('Workout deleted.')).toBeVisible();
   await expect(page.getByText('No workouts yet.', { exact: false })).toBeVisible();
-  expect(await sessionCount(username)).toBe(0);
+  await expect.poll(() => sessionCount(username)).toBe(0);
 });
 
 test('re-sending a workout that was deleted elsewhere shows it as deleted and drops the draft', async ({ page }) => {
@@ -53,7 +56,7 @@ test('re-sending a workout that was deleted elsewhere shows it as deleted and dr
   await register(page, username);
   const { user } = await readSession(page);
 
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
 
   await openLatestWorkout(page);
   const sessionId = page.url().split('/').at(-1)!;
@@ -65,7 +68,7 @@ test('re-sending a workout that was deleted elsewhere shows it as deleted and dr
   await page.goto('/');
   await expect(page.getByText('This workout was deleted')).toBeVisible();
   await expect.poll(async () => (await readStoredDraft(page, user.id))?.kind).toBe('synced');
-  expect(await sessionCount(username)).toBe(0);
+  await expect.poll(() => sessionCount(username)).toBe(0);
 
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
   await expect(page.getByText('This workout was saved in another tab.')).toHaveCount(0);
@@ -80,7 +83,7 @@ test('re-finishing a workout that was already saved shows the summary and says t
   await register(page, username);
   const { user } = await readSession(page);
 
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
   await openLatestWorkout(page);
   const sessionId = page.url().split('/').at(-1)!;
   const storedSets = await setsOf(sessionId);
@@ -92,8 +95,8 @@ test('re-finishing a workout that was already saved shows the summary and says t
     page.getByRole('status').filter({ hasText: "differs from this device's copy, so this copy was not applied" }),
   ).toBeVisible();
   await expect.poll(async () => (await readStoredDraft(page, user.id))?.kind).toBe('synced');
-  expect(await sessionCount(username)).toBe(1);
-  expect(await setsOf(sessionId)).toEqual(storedSets);
+  await expect.poll(() => sessionCount(username)).toBe(1);
+  await expect.poll(() => setsOf(sessionId)).toEqual(storedSets);
 
   await page.getByRole('link', { name: 'Open this workout' }).click();
   await expect(page).toHaveURL(new RegExp(`/collection/history/${sessionId}$`));
@@ -102,26 +105,26 @@ test('re-finishing a workout that was already saved shows the summary and says t
 test('a save that races an edit from another device keeps both changes after review', async ({ page }) => {
   const username = `hist_rev_${Date.now().toString(36)}`;
   await register(page, username);
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
 
   await openLatestWorkout(page);
   const sessionId = page.url().split('/').at(-1)!;
 
-  await page.locator('li.set-row').first().getByRole('radio', { name: 'Failure' }).click();
+  await setRow(page, 1).getByRole('radio', { name: 'Failure' }).click();
   await editElsewhere(sessionId, 7);
   await page.getByRole('button', { name: 'Save changes' }).click();
   await page.getByRole('button', { name: 'Apply my changes to the latest version' }).click();
 
-  const setRow = page.locator('li.set-row').first();
-  await expect(setRow.getByLabel('reps')).toHaveValue('7');
-  await expect(setRow.getByRole('radio', { name: 'Failure' })).toHaveAttribute('aria-checked', 'true');
+  const firstSet = setRow(page, 1);
+  await expect(firstSet.getByLabel('reps')).toHaveValue('7');
+  await expect(firstSet.getByRole('radio', { name: 'Failure' })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByLabel('Notes')).toHaveValue('edited elsewhere');
-  expect(await setsOf(sessionId)).toEqual([{ reps: 7, effort_input_type: 'level', effort_value: 3 }]);
+  await expect.poll(() => setsOf(sessionId)).toEqual([{ reps: 7, effort_input_type: 'level', effort_value: 3 }]);
 
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Changes saved.')).toBeVisible();
-  expect(await setsOf(sessionId)).toEqual([{ reps: 7, effort_input_type: 'level', effort_value: 0 }]);
-  expect(await sessionNotes(sessionId)).toBe('edited elsewhere');
+  await expect.poll(() => setsOf(sessionId)).toEqual([{ reps: 7, effort_input_type: 'level', effort_value: 0 }]);
+  await expect.poll(() => sessionNotes(sessionId)).toBe('edited elsewhere');
 });
 
 test('a save whose refresh fails keeps the saved sets as the baseline, so undo cannot write old values back', async ({
@@ -129,13 +132,13 @@ test('a save whose refresh fails keeps the saved sets as the baseline, so undo c
 }) => {
   const username = uniqueUsername('hist_ref');
   await register(page, username);
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
 
   await openLatestWorkout(page);
   const sessionId = page.url().split('/').at(-1)!;
   const sessionReads = /\/rest\/v1\/sessions\?/;
 
-  await page.locator('li.set-row').first().getByLabel('reps').fill('8');
+  await setRow(page, 1).getByLabel('reps').fill('8');
   await page.route(sessionReads, (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Save changes' }).click();
 
@@ -145,19 +148,19 @@ test('a save whose refresh fails keeps the saved sets as the baseline, so undo c
   await expect(page.getByText('Changes saved.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Undo my changes' })).toHaveCount(0);
-  expect((await setsOf(sessionId)).map((set) => set.reps)).toEqual([8]);
+  await expect.poll(async () => (await setsOf(sessionId)).map((set) => set.reps)).toEqual([8]);
 
   await page.unroute(sessionReads);
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByText('Changes saved.')).toBeVisible();
-  await expect(page.locator('li.set-row').first().getByLabel('reps')).toHaveValue('8');
+  await expect(setRow(page, 1).getByLabel('reps')).toHaveValue('8');
 });
 
 test('a delete that races an edit from another device shows the latest version before deleting', async ({ page }) => {
   const username = `hist_delrev_${Date.now().toString(36)}`;
   await register(page, username);
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
 
   await openLatestWorkout(page);
   const sessionId = page.url().split('/').at(-1)!;
@@ -167,13 +170,13 @@ test('a delete that races an edit from another device shows the latest version b
   await page.getByRole('button', { name: 'Delete for good' }).click();
 
   await expect(page.getByRole('alert')).toContainText('This workout was changed on another device.');
-  await expect(page.locator('li.set-row').first().getByLabel('reps')).toHaveValue('7');
-  expect(await sessionCount(username)).toBe(1);
+  await expect(setRow(page, 1).getByLabel('reps')).toHaveValue('7');
+  await expect.poll(() => sessionCount(username)).toBe(1);
 
   await page.getByRole('button', { name: 'Delete workout' }).click();
   await page.getByRole('button', { name: 'Delete for good' }).click();
   await expect(page.getByText('Workout deleted.')).toBeVisible();
-  expect(await sessionCount(username)).toBe(0);
+  await expect.poll(() => sessionCount(username)).toBe(0);
 });
 
 test('rate the session when finishing, then see its length and RPE on the summary and in History', async ({ page }) => {

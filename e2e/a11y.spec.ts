@@ -1,8 +1,10 @@
-import { expect, type Page } from '@playwright/test';
-import { test } from './support/people.ts';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations, expectRemoveSetButtonsStandApart, expectTouchTargets } from './support/a11y.ts';
 import {
   emailOf,
+  exerciseCard,
+  logBench,
   logCardio,
   logExercise,
   logWorkout,
@@ -36,6 +38,8 @@ import {
 } from './support/program-enrollment.ts';
 import { seedFiveThreeOneCycleSkippingPress } from './support/program-seed.ts';
 
+test.describe.configure({ mode: 'parallel' });
+
 const TAB_BAR = ['.tab-bar a[href]'];
 
 async function checkScreen(page: Page, screen: string, ready: () => Promise<void>) {
@@ -53,7 +57,7 @@ async function checkEffortTargets(page: Page) {
     await expect(page.getByRole('radio', { name: mode, exact: true })).toHaveAttribute('aria-checked', 'true');
     await openTab(page, 'Train');
     if (mode === 'Simple') continue;
-    const bench = page.locator('section', { has: page.getByRole('heading', { name: 'Barbell Bench Press' }) });
+    const bench = exerciseCard(page, 'Barbell Bench Press');
     await bench.getByRole('button', { name: '+ Add set' }).click();
     await expect(bench.getByRole('radiogroup').last()).toHaveAttribute(
       'aria-label',
@@ -187,7 +191,7 @@ test.describe('signed-in screens', () => {
     await register(page, username);
     await grantItems(username, { rookie_belt: 1, grinder_scraps: 8, ascendant_gloves: 1 });
     await equipGear(username, 'ascendant_gloves');
-    await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+    await logBench(page);
     await checkScreen(page, 'reveal (gear bonus)', () =>
       expect(page.getByText(/^Gear bonus \+\d+ XP$/).first()).toBeVisible(),
     );
@@ -286,9 +290,8 @@ test.describe('signed-in screens', () => {
     ]);
 
     for (const panel of ['Change email', 'Change password', 'Delete account']) {
-      const toggle = page.locator('button[aria-expanded]', { hasText: panel });
-      await toggle.click();
-      await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      await page.getByRole('button', { name: panel, exact: true, expanded: false }).click();
+      await expect(page.getByRole('button', { name: panel, exact: true, expanded: true })).toBeVisible();
       await checkScreen(page, `settings: ${panel}`, async () => undefined);
     }
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import {
   breakIndexedDbOpen,
   logExercise,
@@ -14,6 +14,8 @@ import {
 import { sessionCount, sessionRow } from './support/db.ts';
 
 const completeSession = '**/functions/v1/complete-session';
+const LONGEST_RETRY_WAIT_MS = 30_000;
+const LATE_REQUEST_GRACE_MS = 1_000;
 
 test('a finished workout survives an outage and a reload', async ({ page }) => {
   const username = uniqueUsername('dr_a');
@@ -34,12 +36,13 @@ test('a finished workout survives an outage and a reload', async ({ page }) => {
   outage = false;
   await page.getByRole('button', { name: 'Retry now' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
-  expect(await sessionCount(username)).toBe(1);
-  expect(await sessionRow(stored!.draft!.sessionId)).not.toBeNull();
+  await expect.poll(() => sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionRow(stored!.draft!.sessionId)).not.toBeNull();
 });
 
 test('a workout the server keeps failing on stops retrying and syncs on a manual retry', async ({ page }) => {
   const username = uniqueUsername('dr_s');
+  await page.clock.install();
   await register(page, username);
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
@@ -61,13 +64,18 @@ test('a workout the server keeps failing on stops retrying and syncs on a manual
     timeout: 30_000,
   });
   const attemptsWhenStalled = failedAttempts;
-  await page.waitForTimeout(3_000);
+  const lateRetry = page.waitForRequest(completeSession, { timeout: LATE_REQUEST_GRACE_MS }).then(
+    () => true,
+    () => false,
+  );
+  await page.clock.runFor(LONGEST_RETRY_WAIT_MS * 2);
+  expect(await lateRetry).toBe(false);
   expect(failedAttempts).toBe(attemptsWhenStalled);
 
   serverFailing = false;
   await page.getByRole('button', { name: 'Retry now' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
-  expect(await sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionCount(username)).toBe(1);
 });
 
 test("another account's draft is kept, never sent, and restored for its owner", async ({ page }) => {
@@ -101,7 +109,7 @@ test("another account's draft is kept, never sent, and restored for its owner", 
   await page.getByRole('button', { name: 'Discard it' }).click();
   await expect.poll(() => confirmShown).toBe(true);
   await expect(notice).toBeVisible();
-  expect(await readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
+  await expect.poll(() => readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
 
   await signOut(page);
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
@@ -124,8 +132,8 @@ test('a draft written while IndexedDB was unavailable moves back into IndexedDB'
   await setIndexedDbBroken(page, false);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Barbell Bench Press', exact: true })).toBeVisible();
-  expect(await readFallbackDraft(page, user.id)).toBeNull();
-  expect(await readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
+  await expect.poll(() => readFallbackDraft(page, user.id)).toBeNull();
+  await expect.poll(() => readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
 });
 
 test('a workout started while IndexedDB was unreadable is announced and opens after the stored one', async ({

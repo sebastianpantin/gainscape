@@ -1,5 +1,6 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
-import { nativeDialogsOf, register, uniqueUsername } from './support/app.ts';
+import { type Locator, type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
+import { exerciseCard, nativeDialogsOf, register, setRow, setRows, uniqueUsername } from './support/app.ts';
 import { programEventsOf } from './support/db.ts';
 import {
   dayPicker,
@@ -32,28 +33,29 @@ async function startMadcowMonday(page: Page): Promise<Locator> {
     .getByRole('button', { name: `Start: ${MADCOW} — W1 Day 1`, exact: true })
     .click();
   await expect(page.getByText(`${MADCOW} — W1 Day 1`, { exact: true })).toBeVisible();
-  return workoutCards(page, 'Back Squat').getByRole('listitem');
+  return exerciseCard(page, 'Back Squat');
 }
 
 test('a Madcow W1 Day 1 draft shows each squat set with its percentage and the plates per side', async ({ page }) => {
-  const rows = await startMadcowMonday(page);
-  await expect(rows).toHaveCount(5);
+  const squat = await startMadcowMonday(page);
+  await expect(setRows(squat)).toHaveCount(5);
   for (const [index, [pct, plates]] of MADCOW_W1_MONDAY_SQUAT_MARKERS.entries()) {
-    await expect(marker(rows.nth(index), pct), `set ${index + 1} percentage`).toBeVisible();
-    await expect(marker(rows.nth(index), plates), `set ${index + 1} plates`).toBeVisible();
-    await expect(marker(rows.nth(index), 'adjusted'), `set ${index + 1} not adjusted`).toHaveCount(0);
-    await expect(marker(rows.nth(index), 'optional'), `set ${index + 1} not optional`).toHaveCount(0);
+    const row = setRow(squat, index + 1);
+    await expect(marker(row, pct), `set ${index + 1} percentage`).toBeVisible();
+    await expect(marker(row, plates), `set ${index + 1} plates`).toBeVisible();
+    await expect(marker(row, 'adjusted'), `set ${index + 1} not adjusted`).toHaveCount(0);
+    await expect(marker(row, 'optional'), `set ${index + 1} not optional`).toHaveCount(0);
   }
 });
 
 test('changing a prescribed weight marks the set adjusted and updates its plates', async ({ page }) => {
-  const rows = await startMadcowMonday(page);
-  const top = rows.nth(4);
+  const squat = await startMadcowMonday(page);
+  const top = setRow(squat, 5);
   await top.getByRole('spinbutton', { name: 'kg', exact: true }).fill('100');
   await expect(marker(top, 'adjusted')).toBeVisible();
   await expect(marker(top, '25 + 15 kg each side')).toBeVisible();
   await expect(marker(top, '100%')).toBeVisible();
-  await expect(marker(rows.nth(3), 'adjusted')).toHaveCount(0);
+  await expect(marker(setRow(squat, 4), 'adjusted')).toHaveCount(0);
 
   await top.getByRole('spinbutton', { name: 'kg', exact: true }).fill('92.5');
   await expect(marker(top, 'adjusted')).toHaveCount(0);
@@ -72,18 +74,18 @@ test('the RPE back-off sets of a program draft are marked optional at 95% with t
     .click();
   await expect(page.getByText(`${RPE} — W1 Day 1`, { exact: true })).toBeVisible();
 
-  const [topCard, backOffCard] = [workoutCards(page, 'Back Squat').nth(0), workoutCards(page, 'Back Squat').nth(1)];
-  const topSet = topCard.getByRole('listitem').first();
+  const [topCard, backOffCard] = [workoutCards(page, 'Back Squat').first(), workoutCards(page, 'Back Squat').last()];
+  const topSet = setRow(topCard, 1);
   await expect(marker(topSet, '86.3%')).toBeVisible();
   await expect(marker(topSet, '3×25 + 1.25 kg each side')).toBeVisible();
   await expect(marker(topSet, 'optional')).toHaveCount(0);
 
-  const backOffs = backOffCard.getByRole('listitem');
-  await expect(backOffs).toHaveCount(5);
-  for (let index = 0; index < 5; index++) {
-    await expect(marker(backOffs.nth(index), '95%')).toBeVisible();
-    await expect(marker(backOffs.nth(index), 'optional')).toBeVisible();
-    await expect(marker(backOffs.nth(index), '2×25 + 20 + 2.5 kg each side')).toBeVisible();
+  await expect(setRows(backOffCard)).toHaveCount(5);
+  for (let setNumber = 1; setNumber <= 5; setNumber++) {
+    const backOff = setRow(backOffCard, setNumber);
+    await expect(marker(backOff, '95%')).toBeVisible();
+    await expect(marker(backOff, 'optional')).toBeVisible();
+    await expect(marker(backOff, '2×25 + 20 + 2.5 kg each side')).toBeVisible();
   }
 });
 
@@ -114,9 +116,9 @@ test('skip the suggested day through an in-app confirmation: it leaves the picke
   await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 2', exact: true })).toBeChecked();
   await expect(today.getByRole('button', { name: `Start: ${MADCOW} — W1 Day 2`, exact: true })).toBeVisible();
   await expect(today.getByRole('button', { name: 'Skip W1 Day 2', exact: true })).toBeVisible();
-  expect(await programEventsOf(username)).toEqual([
-    { kind: 'skip_day', payload: { position: { week: 1, day: 'mon' } } },
-  ]);
+  await expect
+    .poll(() => programEventsOf(username))
+    .toEqual([{ kind: 'skip_day', payload: { position: { week: 1, day: 'mon' } } }]);
   expect(nativeDialogs).toEqual([]);
 });
 
@@ -135,9 +137,9 @@ test('skip a picked day other than the suggested one and keep the suggestion', a
   await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 3', exact: true })).toHaveCount(0);
   await expect(dayPicker(today).getByRole('radio')).toHaveCount(2);
   await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
-  expect(await programEventsOf(username)).toEqual([
-    { kind: 'skip_day', payload: { position: { week: 1, day: 'fri' } } },
-  ]);
+  await expect
+    .poll(() => programEventsOf(username))
+    .toEqual([{ kind: 'skip_day', payload: { position: { week: 1, day: 'fri' } } }]);
 });
 
 test('skipping a day offline is disabled with the offline text', async ({ context, page }) => {

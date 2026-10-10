@@ -1,9 +1,19 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from '../support/fixtures.ts';
 import { expectNoAxeViolations } from '../support/a11y.ts';
-import { logExercise, openFromProfile, openTab, readSession, register, uniqueUsername } from '../support/app.ts';
+import {
+  exerciseCard,
+  logExercise,
+  openFromProfile,
+  openTab,
+  readSession,
+  register,
+  setRow,
+  uniqueUsername,
+} from '../support/app.ts';
 import {
   builtShell,
   cachedPaths,
@@ -31,11 +41,9 @@ function timeOrigin(page: Page): Promise<number> {
 
 async function expectDraftWithSet(page: Page) {
   await openTab(page, 'Train');
-  const card = page.locator('section', {
-    has: page.getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
-  });
-  await expect(card.locator('li.set-row').getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
-  await expect(card.locator('li.set-row').getByLabel('reps')).toHaveValue('5');
+  const firstSet = setRow(exerciseCard(page, 'Barbell Bench Press'), 1);
+  await expect(firstSet.getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
+  await expect(firstSet.getByLabel('reps')).toHaveValue('5');
 }
 
 test('a new version reloads safely', async ({ context, page }) => {
@@ -152,4 +160,16 @@ test('the kill switch retires the worker and reloads the page without a click', 
   await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)).toBe(0);
   expect(await page.evaluate(() => navigator.serviceWorker.controller)).toBeNull();
   expect((await cachedPaths(page)).filter((cache) => cache.cacheName.startsWith(SHELL_CACHE_PREFIX))).toEqual([]);
+});
+
+test('checking for updates without a new version says the app is up to date', async ({ page }) => {
+  await register(page, uniqueUsername('pwa_n'));
+  await waitForController(page);
+
+  await openFromProfile(page, 'Settings');
+  await page.getByRole('button', { name: 'Check for updates' }).click();
+  await expect(page.getByRole('status').filter({ hasText: "You're up to date." })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Check for updates' })).toBeEnabled();
+  await expect(page.getByText(UPDATE_READY)).toHaveCount(0);
+  expect((await cachedPaths(page)).map((cache) => cache.cacheName)).toEqual([shellCacheName(builtShell().id)]);
 });

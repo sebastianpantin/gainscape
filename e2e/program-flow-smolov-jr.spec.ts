@@ -1,4 +1,5 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
 import {
@@ -62,24 +63,32 @@ interface FollowedSmolov {
 }
 
 async function followSmolovJr(page: Page, prefix: string): Promise<FollowedSmolov> {
-  const username = uniqueUsername(prefix);
-  await register(page, username);
-  await openEnrollForm(page, SMOLOV_JR);
-  await fillProgramInputs(page, { 'Main lift 1RM (kg)': ONE_RM_KG });
-  await bindExercise(page, 'Main lift', 'Back Squat');
-  await startFollowing(page, SMOLOV_JR);
-  const { access_token: accessToken } = await readSession(page);
-  const enrollmentId = await activeEnrollmentIdOf(username);
-  const { lift_bindings: bindings } = await activeEnrollmentOf(username);
-  const clock: SessionClock = sessionClock(DAYS_PER_WEEK * WEEKS_PER_CYCLE + 1);
-  return {
-    async seed(days) {
-      await seedProgramDays(accessToken, enrollmentId, bindings, clock, days);
-    },
-  };
+  return await test.step(`follow Smolov Jr on Back Squat at a 1RM of ${ONE_RM_KG}`, async () => {
+    const username = uniqueUsername(prefix);
+    await register(page, username);
+    await openEnrollForm(page, SMOLOV_JR);
+    await fillProgramInputs(page, { 'Main lift 1RM (kg)': ONE_RM_KG });
+    await bindExercise(page, 'Main lift', 'Back Squat');
+    await startFollowing(page, SMOLOV_JR);
+    const { access_token: accessToken } = await readSession(page);
+    const enrollmentId = await activeEnrollmentIdOf(username);
+    const { lift_bindings: bindings } = await activeEnrollmentOf(username);
+    const clock: SessionClock = sessionClock(DAYS_PER_WEEK * WEEKS_PER_CYCLE + 1);
+    return {
+      async seed(days) {
+        await seedProgramDays(accessToken, enrollmentId, bindings, clock, days);
+      },
+    };
+  });
 }
 
 async function expectWeek(today: Locator, label: string, loadsKg: WeekLoads): Promise<void> {
+  await test.step(`${label} prescribes ${loadsKg.join(', ')} kg`, async () => {
+    await expectWeekDays(today, label, loadsKg);
+  });
+}
+
+async function expectWeekDays(today: Locator, label: string, loadsKg: WeekLoads): Promise<void> {
   await expect(dayPicker(today).getByRole('radio', { name: `${label} Day 1`, exact: true })).toBeChecked();
   for (const [dayIndex, day] of SMOLOV_DAYS.entries()) {
     await dayPicker(today)
@@ -99,7 +108,9 @@ test('Smolov Jr has no progression: after a week 1 at a 1RM of 120 with the last
 }) => {
   test.setTimeout(180_000);
   const program = await followSmolovJr(page, 'pf_smj');
-  await program.seed(smolovWeek(1, WEEK_1_KG, { sat: 2 }));
+  await test.step('seed week 1 with the last Day 4 triple missed at 2 reps', async () => {
+    await program.seed(smolovWeek(1, WEEK_1_KG, { sat: 2 }));
+  });
 
   await expectWeek(await openProgramToday(page, SMOLOV_JR), 'C1 W2', WEEK_2_KG);
 });
@@ -109,9 +120,13 @@ test('Smolov Jr week 3 adds the cumulative 8.75 kg to the 1RM 120 percentages: 8
 }) => {
   test.setTimeout(240_000);
   const program = await followSmolovJr(page, 'pf_smj3');
-  await program.seed([...smolovWeek(1, WEEK_1_KG), ...smolovWeek(2, WEEK_2_KG)]);
+  await test.step('seed met weeks 1 and 2', async () => {
+    await program.seed([...smolovWeek(1, WEEK_1_KG), ...smolovWeek(2, WEEK_2_KG)]);
+  });
   await expectWeek(await openProgramToday(page, SMOLOV_JR), 'C1 W3', WEEK_3_KG);
 
-  await program.seed(smolovWeek(3, WEEK_3_KG));
+  await test.step('seed met week 3', async () => {
+    await program.seed(smolovWeek(3, WEEK_3_KG));
+  });
   await expectWeek(await openProgramToday(page, SMOLOV_JR), 'C2 W1', WEEK_1_KG);
 });
