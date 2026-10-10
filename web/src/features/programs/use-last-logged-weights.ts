@@ -1,7 +1,9 @@
 import { type LastLoggedWeights } from '@domain/index.ts';
-import { useEffect, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { type ActiveProgram } from '../../lib/program-today-rules.ts';
-import { fetchLastLoggedSets } from '../../lib/programs.ts';
+import { lastLoggedWeightsQuery } from '../../lib/queries.ts';
+
+const NO_WEIGHTS: LastLoggedWeights = {};
 
 function boundExerciseIds(program: ActiveProgram): string[] {
   if (program.kind !== 'ready') return [];
@@ -9,20 +11,6 @@ function boundExerciseIds(program: ActiveProgram): string[] {
 }
 
 export function useLastLoggedWeights(program: ActiveProgram): LastLoggedWeights {
-  const [weights, setWeights] = useState<LastLoggedWeights>({});
-  const idsKey = boundExerciseIds(program).join(',');
-
-  useEffect(() => {
-    if (idsKey === '') return;
-    let active = true;
-    fetchLastLoggedSets(idsKey.split(',')).then(
-      (lastSets) => active && setWeights(Object.fromEntries([...lastSets].map(([id, set]) => [id, set.weightKg]))),
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [idsKey]);
-
-  return weights;
+  const query = useQuery({ ...lastLoggedWeightsQuery(boundExerciseIds(program)), placeholderData: keepPreviousData });
+  return query.data ?? NO_WEIGHTS;
 }

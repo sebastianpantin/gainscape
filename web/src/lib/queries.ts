@@ -1,7 +1,9 @@
+import { type LastLoggedWeights } from '@domain/index.ts';
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import { type CacheFirstLoad } from '../offline/cache-first.ts';
 import { fetchBodyweightTrend } from './bodyweight-trend.ts';
-import { fetchSkills } from './catalog.ts';
+import { fetchExercises, fetchSkills } from './catalog.ts';
+import { saveCachedExercises } from './catalog-cache.ts';
 import { fetchExerciseProgress } from './exercise-progress.ts';
 import { type Skill } from './catalog-rules.ts';
 import { type Collection, loadCollectionCacheFirst } from './collection-data.ts';
@@ -9,6 +11,7 @@ import { collectionPercent, countCollection } from './collection-rules.ts';
 import { fetchLoadout, loadItemsCacheFirst } from './items.ts';
 import { loadProfileCacheFirst } from './profile.ts';
 import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from './program-enrollment.ts';
+import { fetchLastLoggedSets } from './programs.ts';
 import { isUuid } from './history-rules.ts';
 import {
   FEED_PAGE_SIZE,
@@ -138,3 +141,25 @@ export const weeklyGoalQuery = queryOptions({
   queryKey: ['weekly-goal'] as const,
   queryFn: ({ signal }) => fetchWeeklyGoalStatus(signal),
 });
+
+export function exerciseListQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['exercises', userId, 'all'] as const,
+    queryFn: async () => {
+      const exercises = await fetchExercises({ includeArchived: true });
+      saveCachedExercises(localStorage, userId, exercises);
+      return exercises;
+    },
+  });
+}
+
+export function lastLoggedWeightsQuery(exerciseIds: readonly string[]) {
+  return queryOptions({
+    queryKey: ['last-logged-weights', ...exerciseIds] as const,
+    queryFn: async (): Promise<LastLoggedWeights> => {
+      const lastSets = await fetchLastLoggedSets([...exerciseIds]);
+      return Object.fromEntries([...lastSets].map(([id, set]) => [id, set.weightKg]));
+    },
+    enabled: exerciseIds.length > 0,
+  });
+}
