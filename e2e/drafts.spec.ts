@@ -35,8 +35,8 @@ test('a finished workout survives an outage and a reload', async ({ page }) => {
   outage = false;
   await page.getByRole('button', { name: 'Retry now' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
-  expect(await sessionCount(username)).toBe(1);
-  expect(await sessionRow(stored!.draft!.sessionId)).not.toBeNull();
+  await expect.poll(() => sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionRow(stored!.draft!.sessionId)).not.toBeNull();
 });
 
 test('a workout the server keeps failing on stops retrying and syncs on a manual retry', async ({ page }) => {
@@ -69,7 +69,7 @@ test('a workout the server keeps failing on stops retrying and syncs on a manual
   serverFailing = false;
   await page.getByRole('button', { name: 'Retry now' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
-  expect(await sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionCount(username)).toBe(1);
 });
 
 test("another account's draft is kept, never sent, and restored for its owner", async ({ page }) => {
@@ -103,7 +103,7 @@ test("another account's draft is kept, never sent, and restored for its owner", 
   await page.getByRole('button', { name: 'Discard it' }).click();
   await expect.poll(() => confirmShown).toBe(true);
   await expect(notice).toBeVisible();
-  expect(await readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
+  await expect.poll(() => readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
 
   await signOut(page);
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
@@ -126,8 +126,8 @@ test('a draft written while IndexedDB was unavailable moves back into IndexedDB'
   await setIndexedDbBroken(page, false);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Barbell Bench Press', exact: true })).toBeVisible();
-  expect(await readFallbackDraft(page, user.id)).toBeNull();
-  expect(await readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
+  await expect.poll(() => readFallbackDraft(page, user.id)).toBeNull();
+  await expect.poll(() => readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
 });
 
 test('a workout started while IndexedDB was unreadable is announced and opens after the stored one', async ({

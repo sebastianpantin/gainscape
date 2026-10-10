@@ -1,22 +1,17 @@
-import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { nativeDialogsOf, openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentOf } from './support/db.ts';
 import {
-  FIVE_THREE_ONE_ONE_RMS_KG,
   fillProgramInputs,
+  FIVE_THREE_ONE_ONE_RMS_KG,
   followProgram,
   MADCOW_FIVE_RMS_KG,
   openEnrollForm,
+  openManageProgram,
   programToday,
 } from './support/program-enrollment.ts';
 
 const OFFLINE_TEXT = "You're offline. Starting or editing a program needs a connection.";
-
-async function openManageProgram(page: Page, programName: string) {
-  await programToday(page, programName).getByRole('link', { name: 'Manage program', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: programName, exact: true })).toBeVisible();
-}
 
 test('the manage program screen shows "Loading program…" while the first refresh runs with nothing cached', async ({
   page,
@@ -90,7 +85,7 @@ test('the enroll form refuses a rounding increment that is not offered', async (
   const alert = page.getByRole('alert');
   await expect(alert).toContainText('Round to (kg) must be one of 0.5, 1, 1.25, 2.5 or 5');
   await expect(alert).toContainText('Bar weight (kg) must be above 0');
-  expect(await activeEnrollmentOf(username)).toBeNull();
+  await expect.poll(() => activeEnrollmentOf(username)).toBeNull();
 });
 
 test('stop following a program through an in-app confirmation dialog', async ({ page }) => {
@@ -107,7 +102,7 @@ test('stop following a program through an in-app confirmation dialog', async ({ 
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  expect(await activeEnrollmentOf(username)).not.toBeNull();
+  await expect.poll(() => activeEnrollmentOf(username)).not.toBeNull();
 
   await stopFollowing.click();
   await dialog.getByRole('button', { name: 'Stop following', exact: true }).click();
@@ -133,13 +128,13 @@ test('following another program asks to replace the current one in an in-app dia
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'Follow 5/3/1', exact: true })).toBeVisible();
-  expect(await activeEnrollmentOf(username)).toMatchObject({ template_key: 'madcow_5x5' });
+  await expect.poll(() => activeEnrollmentOf(username)).toMatchObject({ template_key: 'madcow_5x5' });
 
   await page.getByRole('button', { name: 'Start following', exact: true }).click();
   await dialog.getByRole('button', { name: 'Replace', exact: true }).click();
   await expect(programToday(page, '5/3/1')).toBeVisible();
   await expect(programToday(page, 'Madcow 5x5')).toHaveCount(0);
-  expect(await activeEnrollmentOf(username)).toMatchObject({ template_key: 'five_three_one' });
+  await expect.poll(() => activeEnrollmentOf(username)).toMatchObject({ template_key: 'five_three_one' });
   expect(nativeDialogs).toEqual([]);
 });
 

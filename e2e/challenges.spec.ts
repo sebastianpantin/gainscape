@@ -71,7 +71,7 @@ test('a challenge starts offline from the saved items with loads from the e1RM, 
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 
   await context.setOffline(false);
-  expect(await scrollQuantity(username, SCROLL_KEY)).toBe(1);
+  await expect.poll(() => scrollQuantity(username, SCROLL_KEY)).toBe(1);
   await openItems(page);
   await expect(scrollSlot(page)).toBeVisible();
 });
@@ -98,7 +98,7 @@ test('the reveal names a passed challenge with its bonus and explains a failed o
   await finishWithBodyweight(page);
   await expect(page.getByText(`Challenge complete: ${CHALLENGE_NAME}`)).toBeVisible();
   await expect(backGain(page).getByText(/^Challenge bonus \+\d+ XP$/)).toBeVisible();
-  expect(await scrollQuantity(username, SCROLL_KEY)).toBe(0);
+  await expect.poll(() => scrollQuantity(username, SCROLL_KEY)).toBe(0);
 
   await grantItems(username, { [SCROLL_KEY]: 1 });
   await openItems(page);
@@ -109,7 +109,7 @@ test('the reveal names a passed challenge with its bonus and explains a failed o
   await expect(page.getByText(`Challenge failed: ${CHALLENGE_NAME}`)).toBeVisible();
   await expect(page.getByText('Not every prescribed set reached its reps and load')).toBeVisible();
   await expect(page.getByText(/Challenge bonus/)).toHaveCount(0);
-  expect(await scrollQuantity(username, SCROLL_KEY)).toBe(0);
+  await expect.poll(() => scrollQuantity(username, SCROLL_KEY)).toBe(0);
   await expect(challengeSuperset(page)).toHaveCount(0);
 });
 

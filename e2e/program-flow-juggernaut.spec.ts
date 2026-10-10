@@ -64,22 +64,27 @@ function tenRepWave(realisationReps: AmrapReps): SeededDay[] {
 
 async function followAndSeedTenRepWave(page: Page, prefix: string, realisationReps: AmrapReps): Promise<Locator> {
   const username = uniqueUsername(prefix);
-  await register(page, username);
-  await followProgram(page, JUGGERNAUT, {
-    'Squat training max (kg)': TMS_KG.squat,
-    'Bench press training max (kg)': TMS_KG.bench,
-    'Deadlift training max (kg)': TMS_KG.deadlift,
-    'Overhead press training max (kg)': TMS_KG.press,
+  await test.step('follow Juggernaut at TMs squat 100, bench 80, deadlift 140 and press 50', async () => {
+    await register(page, username);
+    await followProgram(page, JUGGERNAUT, {
+      'Squat training max (kg)': TMS_KG.squat,
+      'Bench press training max (kg)': TMS_KG.bench,
+      'Deadlift training max (kg)': TMS_KG.deadlift,
+      'Overhead press training max (kg)': TMS_KG.press,
+    });
   });
-  const { access_token: accessToken } = await readSession(page);
-  const enrollmentId = await activeEnrollmentIdOf(username);
-  const { lift_bindings: bindings } = await activeEnrollmentOf(username);
-  const days = tenRepWave(realisationReps);
-  await seedProgramDays(accessToken, enrollmentId, bindings, sessionClock(days.length + 1), days);
-
-  const today = await openProgramToday(page, JUGGERNAUT);
-  await expect(dayPicker(today).getByRole('radio', { name: 'C1 W5 Day 1', exact: true })).toBeChecked();
-  return today;
+  await test.step('seed the 10s wave, weeks 1 to 4', async () => {
+    const { access_token: accessToken } = await readSession(page);
+    const enrollmentId = await activeEnrollmentIdOf(username);
+    const { lift_bindings: bindings } = await activeEnrollmentOf(username);
+    const days = tenRepWave(realisationReps);
+    await seedProgramDays(accessToken, enrollmentId, bindings, sessionClock(days.length + 1), days);
+  });
+  return await test.step('Train suggests C1 W5 Day 1', async () => {
+    const today = await openProgramToday(page, JUGGERNAUT);
+    await expect(dayPicker(today).getByRole('radio', { name: 'C1 W5 Day 1', exact: true })).toBeChecked();
+    return today;
+  });
 }
 
 function eightRepAccumulation(weightKg: string): string[] {
@@ -87,11 +92,13 @@ function eightRepAccumulation(weightKg: string): string[] {
 }
 
 async function expectWeekFiveDay(today: Locator, day: string, exercise: string, weightKg: string): Promise<void> {
-  await dayPicker(today)
-    .getByRole('radio', { name: `C1 W5 ${day}`, exact: true })
-    .click();
-  await expect(today.getByRole('button', { name: `Start: ${JUGGERNAUT} — C1 W5 ${day}`, exact: true })).toBeVisible();
-  await expect(prescribedRows(today, exercise)).toHaveText(eightRepAccumulation(weightKg));
+  await test.step(`C1 W5 ${day}: ${exercise} 8s at ${weightKg} kg`, async () => {
+    await dayPicker(today)
+      .getByRole('radio', { name: `C1 W5 ${day}`, exact: true })
+      .click();
+    await expect(today.getByRole('button', { name: `Start: ${JUGGERNAUT} — C1 W5 ${day}`, exact: true })).toBeVisible();
+    await expect(prescribedRows(today, exercise)).toHaveText(eightRepAccumulation(weightKg));
+  });
 }
 
 test('Juggernaut after the 10s wave raises each TM by reps over the standard 10 on the W3 AMRAP: squat 14 reps 100 + 4 × 2.5 = 110, bench 13 reps 80 + 3 × 1.25 = 83.75, deadlift and press exactly 10 stay 140 and 50; W5 8s at 65%: squat 71.5 → 72.5, bench 54.44 → 55, deadlift 91 → 90, press 32.5', async ({

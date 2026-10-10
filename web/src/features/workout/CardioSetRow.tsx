@@ -28,7 +28,7 @@ export function CardioSetRow({
   onToggleDone,
 }: CardioSetRowProps) {
   return (
-    <li className={bout.done ? 'set-row bout-row' : 'set-row bout-row planned'}>
+    <li className={bout.done ? 'set-row bout-row' : 'set-row bout-row planned'} aria-label={`Bout ${boutNumber}`}>
       <span className="set-number">{boutNumber}</span>
       <BoutFields bout={bout} paceUnit={paceUnit} unit={unit} onChange={onChange} />
       <span className={bout.done ? 'set-xp earned' : 'set-xp'}>{previewXpLabel(preview)}</span>

@@ -1,5 +1,16 @@
 import { expect, test } from './support/fixtures.ts';
-import { definitionOf, logCardio, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
+import {
+  definitionOf,
+  exactRepMaxes,
+  exerciseCard,
+  logCardio,
+  logExercise,
+  logWorkout,
+  openTab,
+  register,
+  setRow,
+  uniqueUsername,
+} from './support/app.ts';
 
 test('bodyweight prompt, live record chips, records and the collection log', async ({ page }) => {
   await register(page, `e2e_${Date.now().toString(36)}`);
@@ -22,10 +33,8 @@ test('bodyweight prompt, live record chips, records and the collection log', asy
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 70, reps: 5 }]);
   await logExercise(page, 'pull-up', 'Pull-up', [{ reps: 10 }]);
-  const card = (name: string) =>
-    page.locator('section', { has: page.getByRole('heading', { name, exact: true }) }).locator('li.set-row');
-  await expect(card('Barbell Bench Press').first()).toContainText('New 5RM!');
-  await expect(card('Pull-up').first()).toContainText('Most reps!');
+  await expect(setRow(exerciseCard(page, 'Barbell Bench Press'), 1)).toContainText('New 5RM!');
+  await expect(setRow(exerciseCard(page, 'Pull-up'), 1)).toContainText('Most reps!');
   await page.getByRole('button', { name: 'Finish workout' }).click();
 
   const records = page.getByLabel('New records');
@@ -34,12 +43,10 @@ test('bodyweight prompt, live record chips, records and the collection log', asy
 
   await openTab(page, 'Log');
   await expect(definitionOf(page, 'Completion')).toHaveText('18% (2/11)');
-  const bench = page.locator('section', {
-    has: page.getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
-  });
-  await expect(bench.locator('.record-slot.filled')).toHaveText(['5RM 70 kg']);
+  const bench = exerciseCard(page, 'Barbell Bench Press');
+  await expect(exactRepMaxes(bench)).toHaveText(['5RM 70 kg']);
   await expect(bench).toContainText('e1RM');
-  const pullUp = page.locator('section', { has: page.getByRole('heading', { name: 'Pull-up', exact: true }) });
+  const pullUp = exerciseCard(page, 'Pull-up');
   await expect(pullUp).toContainText(/Capacity ~\d+ reps/);
   await expect(pullUp).not.toContainText('e1RM');
 });

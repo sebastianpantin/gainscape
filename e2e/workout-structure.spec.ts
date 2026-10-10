@@ -1,29 +1,17 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { register, uniqueUsername } from './support/app.ts';
-import { workoutCards } from './support/program-enrollment.ts';
+import { addExercise, chooseFromMenu, exerciseCard, register, uniqueUsername } from './support/app.ts';
 
 const BENCH = 'Barbell Bench Press';
 const ROW = 'Barbell Row';
 const SQUAT = 'Back Squat';
 const DEADLIFT = 'Deadlift';
 
-async function addExercise(page: Page, search: string, exerciseName: string) {
-  await page.getByPlaceholder('Add exercise…').fill(search);
-  await page.getByRole('button', { name: new RegExp(`^${exerciseName}\\b`) }).click();
-  await expect(page.getByRole('heading', { name: exerciseName, exact: true })).toBeVisible();
-}
-
 async function addUnloggedExercise(page: Page, search: string, exerciseName: string) {
-  await addExercise(page, search, exerciseName);
-  const doneButton = workoutCards(page, exerciseName).getByRole('button', { name: 'Done set 1' });
+  const card = await addExercise(page, search, exerciseName);
+  const doneButton = card.getByRole('button', { name: 'Done set 1' });
   await doneButton.click();
   await expect(doneButton).toHaveAttribute('aria-pressed', 'false');
-}
-
-async function chooseFromMenu(page: Page, exerciseName: string, action: string) {
-  await page.getByLabel(`Exercise menu for ${exerciseName}`, { exact: true }).click();
-  await page.getByRole('button', { name: action, exact: true }).click();
 }
 
 function swapPicker(page: Page) {
@@ -38,24 +26,22 @@ test('the swap picker stays with its exercise when an exercise above it is remov
   await addUnloggedExercise(page, 'back squat', SQUAT);
 
   await chooseFromMenu(page, ROW, 'Swap');
-  await expect(workoutCards(page, ROW).getByPlaceholder('Swap for…')).toBeVisible();
+  await expect(exerciseCard(page, ROW).getByPlaceholder('Swap for…')).toBeVisible();
   await chooseFromMenu(page, BENCH, 'Remove');
   await expect(page.getByRole('heading', { name: BENCH, exact: true })).toHaveCount(0);
   await expect(swapPicker(page)).toHaveCount(1);
-  await expect(workoutCards(page, ROW).getByPlaceholder('Swap for…')).toBeVisible();
+  await expect(exerciseCard(page, ROW).getByPlaceholder('Swap for…')).toBeVisible();
 
   await swapPicker(page).fill('deadlift');
   await page.getByRole('button', { name: new RegExp(`^${DEADLIFT}\\b`) }).click();
-  await expect(page.locator('.exercise-card').getByRole('heading', { level: 2 })).toHaveText([DEADLIFT, SQUAT]);
+  await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText([DEADLIFT, SQUAT]);
 });
 
 test('the swap picker stays on the second of two identical exercises when the first is removed', async ({ page }) => {
   await register(page, uniqueUsername('swap_twin'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   await addUnloggedExercise(page, 'bench', BENCH);
-  await page.getByPlaceholder('Add exercise…').fill('bench');
-  await page.getByRole('button', { name: new RegExp(`^${BENCH}\\b`) }).click();
-  const benchCards = workoutCards(page, BENCH);
+  const benchCards = await addExercise(page, 'bench', BENCH);
   await expect(benchCards).toHaveCount(2);
   const secondDone = benchCards.nth(1).getByRole('button', { name: 'Done set 1' });
   await secondDone.click();

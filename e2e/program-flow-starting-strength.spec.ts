@@ -3,7 +3,7 @@ import { expect, test } from './support/fixtures.ts';
 import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
 import { dayPicker, followProgram, openProgramToday, prescribedRows, repeated } from './support/program-enrollment.ts';
-import { type SeededDay, type SeededSet, seedProgramDays, sessionClock } from './support/program-seed.ts';
+import { fiveRepSets, type SeededDay, seedProgramDays, sessionClock } from './support/program-seed.ts';
 
 const STARTING_STRENGTH = 'Starting Strength';
 const FAILED_LAST_SET_REPS = 4;
@@ -14,13 +14,6 @@ const WORKING_WEIGHTS_KG = {
   'Press working weight (kg)': 35,
   'Deadlift working weight (kg)': 80,
 };
-
-function sets(slot: string, lift: string, weightKg: number, count: number, lastSetReps?: number): SeededSet[] {
-  return Array.from({ length: count }, (_, index) => {
-    const set = { lift, ref: `${slot}:${index}`, weightKg, reps: 5 };
-    return index === count - 1 && lastSetReps !== undefined ? { ...set, loggedReps: lastSetReps } : set;
-  });
-}
 
 interface DayWeights {
   squat: number;
@@ -33,9 +26,9 @@ function dayOne(index: number, { squat, upper, deadlift, upperLastSetReps }: Day
   return {
     position: { index },
     sets: [
-      ...sets('a-squat', 'squat', squat, 3),
-      ...sets('a-bench', 'bench', upper, 3, upperLastSetReps),
-      ...sets('a-deadlift', 'deadlift', deadlift, 1),
+      ...fiveRepSets('a-squat', 'squat', squat, 3),
+      ...fiveRepSets('a-bench', 'bench', upper, 3, upperLastSetReps),
+      ...fiveRepSets('a-deadlift', 'deadlift', deadlift, 1),
     ],
   };
 }
@@ -44,9 +37,9 @@ function dayTwo(index: number, { squat, upper, deadlift, upperLastSetReps }: Day
   return {
     position: { index },
     sets: [
-      ...sets('b-squat', 'squat', squat, 3),
-      ...sets('b-press', 'press', upper, 3, upperLastSetReps),
-      ...sets('b-deadlift', 'deadlift', deadlift, 1),
+      ...fiveRepSets('b-squat', 'squat', squat, 3),
+      ...fiveRepSets('b-press', 'press', upper, 3, upperLastSetReps),
+      ...fiveRepSets('b-deadlift', 'deadlift', deadlift, 1),
     ],
   };
 }
@@ -56,14 +49,16 @@ interface FollowedStartingStrength {
 }
 
 async function followStartingStrength(page: Page, prefix: string, sessions: number): Promise<FollowedStartingStrength> {
-  const username = uniqueUsername(prefix);
-  await register(page, username);
-  await followProgram(page, STARTING_STRENGTH, WORKING_WEIGHTS_KG);
-  const { access_token: accessToken } = await readSession(page);
-  const enrollmentId = await activeEnrollmentIdOf(username);
-  const { lift_bindings: bindings } = await activeEnrollmentOf(username);
-  const clock = sessionClock(sessions + 1);
-  return { seed: (days) => seedProgramDays(accessToken, enrollmentId, bindings, clock, days) };
+  return await test.step('follow Starting Strength at squat 60, bench 50, press 35 and deadlift 80', async () => {
+    const username = uniqueUsername(prefix);
+    await register(page, username);
+    await followProgram(page, STARTING_STRENGTH, WORKING_WEIGHTS_KG);
+    const { access_token: accessToken } = await readSession(page);
+    const enrollmentId = await activeEnrollmentIdOf(username);
+    const { lift_bindings: bindings } = await activeEnrollmentOf(username);
+    const clock = sessionClock(sessions + 1);
+    return { seed: (days) => seedProgramDays(accessToken, enrollmentId, bindings, clock, days) };
+  });
 }
 
 test('Starting Strength opens the squat at +5 for its first two met sessions (60 + 5 = 65, 65 + 5 = 70) then +2.5 (70 + 2.5 = 72.5), while deadlift goes 80 + 2.5 × 3 = 87.5 over both days and press 35 + 2.5 = 37.5', async ({
@@ -71,17 +66,21 @@ test('Starting Strength opens the squat at +5 for its first two met sessions (60
 }) => {
   test.setTimeout(180_000);
   const program = await followStartingStrength(page, 'pf_ss', 3);
-  await program.seed([
-    dayOne(0, { squat: 60, upper: 50, deadlift: 80 }),
-    dayTwo(1, { squat: 65, upper: 35, deadlift: 82.5 }),
-    dayOne(2, { squat: 70, upper: 52.5, deadlift: 85 }),
-  ]);
+  await test.step('seed three met sessions: squat 60, 65 and 70', async () => {
+    await program.seed([
+      dayOne(0, { squat: 60, upper: 50, deadlift: 80 }),
+      dayTwo(1, { squat: 65, upper: 35, deadlift: 82.5 }),
+      dayOne(2, { squat: 70, upper: 52.5, deadlift: 85 }),
+    ]);
+  });
 
-  const today = await openProgramToday(page, STARTING_STRENGTH);
-  await expect(dayPicker(today).getByRole('radio', { name: 'Session 4 Day 2', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('72.5 kg × 5 · 100%', 3));
-  await expect(prescribedRows(today, 'Overhead Press')).toHaveText(repeated('37.5 kg × 5 · 100%', 3));
-  await expect(prescribedRows(today, 'Deadlift')).toHaveText(['87.5 kg × 5 · 100%']);
+  await test.step('session 4 prescribes squat 72.5, press 37.5 and deadlift 87.5', async () => {
+    const today = await openProgramToday(page, STARTING_STRENGTH);
+    await expect(dayPicker(today).getByRole('radio', { name: 'Session 4 Day 2', exact: true })).toBeChecked();
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('72.5 kg × 5 · 100%', 3));
+    await expect(prescribedRows(today, 'Overhead Press')).toHaveText(repeated('37.5 kg × 5 · 100%', 3));
+    await expect(prescribedRows(today, 'Deadlift')).toHaveText(['87.5 kg × 5 · 100%']);
+  });
 });
 
 test('Starting Strength holds a bench missed once at 50, then the second miss in a row deloads it 10% to 50 × 0.9 = 45 while squat goes 60 → 65 → 70 → 72.5 → 75 and deadlift 80 + 2.5 × 4 = 90', async ({
@@ -89,24 +88,32 @@ test('Starting Strength holds a bench missed once at 50, then the second miss in
 }) => {
   test.setTimeout(180_000);
   const program = await followStartingStrength(page, 'pf_ssd', 4);
-  await program.seed([
-    dayOne(0, { squat: 60, upper: 50, deadlift: 80, upperLastSetReps: FAILED_LAST_SET_REPS }),
-    dayTwo(1, { squat: 65, upper: 35, deadlift: 82.5 }),
-  ]);
+  await test.step('seed sessions 1 and 2 with the bench missed at 50', async () => {
+    await program.seed([
+      dayOne(0, { squat: 60, upper: 50, deadlift: 80, upperLastSetReps: FAILED_LAST_SET_REPS }),
+      dayTwo(1, { squat: 65, upper: 35, deadlift: 82.5 }),
+    ]);
+  });
 
-  const afterOneMiss = await openProgramToday(page, STARTING_STRENGTH);
-  await expect(dayPicker(afterOneMiss).getByRole('radio', { name: 'Session 3 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(afterOneMiss, 'Barbell Bench Press')).toHaveText(repeated('50 kg × 5 · 100%', 3));
-  await expect(prescribedRows(afterOneMiss, 'Back Squat')).toHaveText(repeated('70 kg × 5 · 100%', 3));
+  await test.step('session 3 holds the bench at 50 and moves the squat to 70', async () => {
+    const afterOneMiss = await openProgramToday(page, STARTING_STRENGTH);
+    await expect(dayPicker(afterOneMiss).getByRole('radio', { name: 'Session 3 Day 1', exact: true })).toBeChecked();
+    await expect(prescribedRows(afterOneMiss, 'Barbell Bench Press')).toHaveText(repeated('50 kg × 5 · 100%', 3));
+    await expect(prescribedRows(afterOneMiss, 'Back Squat')).toHaveText(repeated('70 kg × 5 · 100%', 3));
+  });
 
-  await program.seed([
-    dayOne(2, { squat: 70, upper: 50, deadlift: 85, upperLastSetReps: FAILED_LAST_SET_REPS }),
-    dayTwo(3, { squat: 72.5, upper: 37.5, deadlift: 87.5 }),
-  ]);
+  await test.step('seed sessions 3 and 4 with the bench missed at 50 again', async () => {
+    await program.seed([
+      dayOne(2, { squat: 70, upper: 50, deadlift: 85, upperLastSetReps: FAILED_LAST_SET_REPS }),
+      dayTwo(3, { squat: 72.5, upper: 37.5, deadlift: 87.5 }),
+    ]);
+  });
 
-  const afterTwoMisses = await openProgramToday(page, STARTING_STRENGTH);
-  await expect(dayPicker(afterTwoMisses).getByRole('radio', { name: 'Session 5 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(afterTwoMisses, 'Barbell Bench Press')).toHaveText(repeated('45 kg × 5 · 100%', 3));
-  await expect(prescribedRows(afterTwoMisses, 'Back Squat')).toHaveText(repeated('75 kg × 5 · 100%', 3));
-  await expect(prescribedRows(afterTwoMisses, 'Deadlift')).toHaveText(['90 kg × 5 · 100%']);
+  await test.step('session 5 deloads the bench to 45 while squat goes to 75 and deadlift to 90', async () => {
+    const afterTwoMisses = await openProgramToday(page, STARTING_STRENGTH);
+    await expect(dayPicker(afterTwoMisses).getByRole('radio', { name: 'Session 5 Day 1', exact: true })).toBeChecked();
+    await expect(prescribedRows(afterTwoMisses, 'Barbell Bench Press')).toHaveText(repeated('45 kg × 5 · 100%', 3));
+    await expect(prescribedRows(afterTwoMisses, 'Back Squat')).toHaveText(repeated('75 kg × 5 · 100%', 3));
+    await expect(prescribedRows(afterTwoMisses, 'Deadlift')).toHaveText(['90 kg × 5 · 100%']);
+  });
 });

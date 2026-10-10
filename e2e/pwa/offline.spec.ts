@@ -2,6 +2,8 @@ import { type Page } from '@playwright/test';
 import { expect, test } from '../support/fixtures.ts';
 import {
   authStorageKey,
+  definitionOf,
+  exerciseCard,
   logExercise,
   nowInSeconds,
   openFromProfile,
@@ -9,6 +11,7 @@ import {
   readSession,
   readStoredDraft,
   register,
+  setRow,
   type Tab,
   uniqueUsername,
   writeSession,
@@ -73,13 +76,11 @@ test('an installed shell cold-starts offline and syncs later', async ({ context,
   await expectProvenOffline(cold);
   await expect(cold.getByText(OFFLINE_BANNER)).toBeVisible();
   await expectNoAxeViolations(cold, 'offline banner');
-  const benchCard = cold.locator('section', {
-    has: cold.getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
-  });
+  const benchCard = exerciseCard(cold, 'Barbell Bench Press');
   await expect(benchCard).toBeVisible();
   await expect(cold.getByRole('heading', { name: 'Workout', exact: true })).toBeVisible();
-  await expect(benchCard.locator('li.set-row').getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
-  await expect(benchCard.locator('li.set-row').getByLabel('reps')).toHaveValue('5');
+  await expect(setRow(benchCard, 1).getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
+  await expect(setRow(benchCard, 1).getByLabel('reps')).toHaveValue('5');
   expect((await readSession(cold)).expires_at).toBeLessThan(nowInSeconds());
   await expectFontsLoaded(cold);
 
@@ -215,7 +216,7 @@ test('screens seen online reopen offline at once from their saved data', async (
   await expect(main.getByText('Completion')).toBeVisible();
   await openTab(page, 'Profile');
   await expect(main.getByText(`@${username}`)).toBeVisible();
-  await expect(main.locator('.stat-tile', { hasText: 'Collection' })).toContainText('%');
+  await expect(definitionOf(main, 'Collection')).toContainText('%');
   await openFromProfile(page, 'Programs');
   await expect(main.getByRole('heading', { name: 'Templates' })).toBeVisible();
   await openTab(page, 'Train');
@@ -238,7 +239,7 @@ test('screens seen online reopen offline at once from their saved data', async (
     await expect(main.getByText(shown)).toBeVisible({ timeout: OFFLINE_TAB_BUDGET_MS });
     noteOpenTime(tab, started);
   }
-  await expect(main.locator('.stat-tile', { hasText: 'Collection' })).toContainText('%');
+  await expect(definitionOf(main, 'Collection')).toContainText('%');
 
   const started = Date.now();
   await page.getByRole('main').getByRole('link', { name: 'Programs', exact: true }).click();

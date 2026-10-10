@@ -1,5 +1,7 @@
 import { expect, test } from './support/fixtures.ts';
 import {
+  boutRow,
+  exerciseCard,
   logCardio,
   logExercise,
   logWorkout,
@@ -20,7 +22,7 @@ test('log a run, intervals and a lift in one workout, then edit the run distance
   await logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 5, effort: 'Moderate' }]);
   await logCardio(page, 'sprint', 'Sprint Intervals', [{ rounds: 10, workS: 30, restS: 30, effort: 'Hard' }]);
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await expect(page.locator('li.bout-row .set-xp').first()).toHaveText(/^~[\d,]+/);
+  await expect(boutRow(exerciseCard(page, 'Running'), 1).getByText(/^~[\d,]+$/)).toBeVisible();
   await page.getByRole('button', { name: 'Finish workout' }).click();
 
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
@@ -31,7 +33,7 @@ test('log a run, intervals and a lift in one workout, then edit the run distance
   await openLatestWorkout(page);
   const sessionXp = page.getByRole('status', { name: 'Workout XP' });
   const xpBefore = xpValue(await sessionXp.textContent());
-  const run = page.locator('section', { has: page.getByRole('heading', { name: 'Running', exact: true }) });
+  const run = exerciseCard(page, 'Running');
   await expect(run.getByLabel('km', { exact: true })).toHaveValue('5');
   await run.getByLabel('km', { exact: true }).fill('6');
   await page.getByRole('button', { name: 'Save changes' }).click();
@@ -39,10 +41,12 @@ test('log a run, intervals and a lift in one workout, then edit the run distance
   await expect.poll(async () => xpValue(await sessionXp.textContent())).toBeGreaterThan(xpBefore);
 
   const sessionId = page.url().split('/').at(-1)!;
-  expect(await boutsOf(sessionId)).toEqual([
-    { duration_s: 1800, distance_m: 6000, interval_rounds: null, effort_value: 2 },
-    { duration_s: 570, distance_m: null, interval_rounds: 10, effort_value: 3 },
-  ]);
+  await expect
+    .poll(() => boutsOf(sessionId))
+    .toEqual([
+      { duration_s: 1800, distance_m: 6000, interval_rounds: null, effort_value: 2 },
+      { duration_s: 570, distance_m: null, interval_rounds: 10, effort_value: 3 },
+    ]);
 });
 
 test('a pound user logs distance in miles', async ({ page }) => {
@@ -60,10 +64,10 @@ test('a pound user logs distance in miles', async ({ page }) => {
   );
 
   await openLatestWorkout(page);
-  const run = page.locator('section', { has: page.getByRole('heading', { name: 'Running', exact: true }) });
+  const run = exerciseCard(page, 'Running');
   await expect(run.getByLabel('mi', { exact: true })).toHaveValue('3.11');
   const sessionId = page.url().split('/').at(-1)!;
-  expect(await boutsOf(sessionId)).toEqual([
-    { duration_s: 1800, distance_m: 5005.1, interval_rounds: null, effort_value: 1 },
-  ]);
+  await expect
+    .poll(() => boutsOf(sessionId))
+    .toEqual([{ duration_s: 1800, distance_m: 5005.1, interval_rounds: null, effort_value: 1 }]);
 });

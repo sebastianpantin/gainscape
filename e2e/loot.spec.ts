@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { finishWorkout, logExercise, logWorkout, openTab, register } from './support/app.ts';
+import { finishWorkout, logBench, logExercise, openTab, register, setRow } from './support/app.ts';
 import { activeDropCount, activeDropsOfLatestSession, grantItems } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
 
@@ -13,15 +13,16 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   const username = `loot_${Date.now().toString(36)}`;
   await register(page, username);
 
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
   await expect(page.getByRole('region', { name: 'Loot' })).toBeVisible();
 
   await openTab(page, 'Train');
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 80, reps: 5 }]));
+  await logBench(page, 80);
 
+  await expect
+    .poll(async () => (await activeDropsOfLatestSession(username)).some((drop) => drop.source === 'pr'))
+    .toBe(true);
   const drops = await activeDropsOfLatestSession(username);
-  expect(drops.length).toBeGreaterThanOrEqual(1);
-  expect(drops.some((drop) => drop.source === 'pr')).toBe(true);
   const loot = page.getByRole('region', { name: 'Loot' });
   await expect(loot.getByRole('listitem')).toHaveCount(drops.length);
   await expect(loot.getByRole('listitem').filter({ has: page.getByText('PR', { exact: true }) })).toHaveCount(
@@ -60,7 +61,7 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await page.getByRole('list', { name: 'Workouts' }).getByRole('link').nth(1).click();
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
   const sessionId = page.url().split('/').at(-1)!;
-  await page.locator('li.set-row').first().getByLabel('reps').fill('4');
+  await setRow(page, 1).getByLabel('reps').fill('4');
   const editWarning = page.getByRole('status').filter({ hasText: 'This may remove' });
   await expect(editWarning).toContainText('This may remove');
   await expect(editWarning).toContainText(drops[0].name);
@@ -74,5 +75,5 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await expect(deleteWarning).toContainText(drops[0].name);
   await page.getByRole('button', { name: 'Delete for good' }).click();
   await expect(page.getByText('Workout deleted.')).toBeVisible();
-  expect(await activeDropCount(sessionId)).toBe(0);
+  await expect.poll(() => activeDropCount(sessionId)).toBe(0);
 });

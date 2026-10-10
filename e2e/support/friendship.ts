@@ -1,6 +1,8 @@
-import { type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { db } from '../../tests/integration/local-stack.ts';
+import { emailOf, openTab, register, uniqueUsername } from './app.ts';
+import { createConfirmedAccount } from './db.ts';
 
 export async function befriend(username: string, otherUsername: string): Promise<void> {
   await db`
@@ -49,16 +51,24 @@ export async function seedChestLevelUps(username: string, levels: number[]): Pro
   });
 }
 
-export async function failRpc(page: Page, name: string): Promise<void> {
-  await page.route(`**/rest/v1/rpc/${name}`, (route) =>
-    route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'e2e_failure' }) }),
-  );
+export async function registerWithFriend(page: Page, prefix: string): Promise<{ aliceName: string; bobName: string }> {
+  const aliceName = uniqueUsername(`${prefix}_a`);
+  const bobName = uniqueUsername(`${prefix}_b`);
+  await createConfirmedAccount(emailOf(bobName), bobName, 'UTC');
+  await register(page, aliceName);
+  await befriend(aliceName, bobName);
+  return { aliceName, bobName };
 }
 
-export function restoreRpc(page: Page, name: string): Promise<void> {
-  return page.unroute(`**/rest/v1/rpc/${name}`);
+export async function openFriendProfile(page: Page, friendName: string): Promise<void> {
+  await openTab(page, 'Friends');
+  await page
+    .getByRole('list', { name: 'Friends list' })
+    .getByRole('link', { name: new RegExp(friendName) })
+    .click();
+  await expect(page.getByRole('heading', { level: 2, name: friendName, exact: true })).toBeVisible();
 }
 
-export function friendsAlert(page: Page) {
+export function friendsAlert(page: Page): Locator {
   return page.getByRole('main').getByRole('alert');
 }

@@ -51,12 +51,16 @@ export function emailOf(username: string): string {
   return `${username}@example.test`;
 }
 
-export async function submitRegistration(page: Page, username: string, email = emailOf(username)) {
+export async function fillRegistration(page: Page, username: string, email = emailOf(username)) {
   await page.goto('/');
   await page.getByRole('button', { name: 'New here? Create an account' }).click();
   await page.getByLabel('Username').fill(username);
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(TEST_PASSWORD);
+}
+
+export async function submitRegistration(page: Page, username: string, email = emailOf(username)) {
+  await fillRegistration(page, username, email);
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
 }
@@ -96,19 +100,59 @@ export async function signOut(page: Page) {
   await page.getByRole('button', { name: 'Sign out' }).click();
 }
 
+export function exerciseCard(page: Page, exerciseName: string): Locator {
+  return page.locator('section', { has: page.getByRole('heading', { name: exerciseName, exact: true }) });
+}
+
+export function setRow(scope: Page | Locator, setNumber: number): Locator {
+  return scope.getByRole('listitem', { name: `Set ${setNumber}`, exact: true });
+}
+
+export function setRows(scope: Page | Locator): Locator {
+  return scope.getByRole('listitem', { name: /^Set \d+$/ });
+}
+
+export function boutRow(scope: Page | Locator, boutNumber: number): Locator {
+  return scope.getByRole('listitem', { name: `Bout ${boutNumber}`, exact: true });
+}
+
+export function exactRepMaxes(card: Locator): Locator {
+  return card
+    .getByRole('list', { name: 'Rep maxes', exact: true })
+    .getByRole('listitem', { name: /^\d+RM (?!empty$)(?!.*, beaten by a higher-rep set$)/ });
+}
+
+export function doneSetButtons(scope: Page | Locator): Locator {
+  return scope.getByRole('button', { name: /^Done set \d+$/, pressed: true });
+}
+
+export async function pickExercise(page: Page, search: string, exerciseName: string): Promise<Locator> {
+  await page.getByLabel('Search exercises').fill(search);
+  await page.getByRole('button', { name: new RegExp(`^${exerciseName}\\b`) }).click();
+  return exerciseCard(page, exerciseName);
+}
+
+export async function addExercise(page: Page, search: string, exerciseName: string): Promise<Locator> {
+  const card = await pickExercise(page, search, exerciseName);
+  await expect(page.getByRole('heading', { name: exerciseName, exact: true }).first()).toBeVisible();
+  return card;
+}
+
+export async function chooseFromMenu(page: Page, exerciseName: string, action: string) {
+  await page.getByLabel(`Exercise menu for ${exerciseName}`, { exact: true }).click();
+  await page.getByRole('button', { name: action, exact: true }).click();
+}
+
 export async function logExercise(
   page: Page,
   search: string,
   exerciseName: string,
   sets: { weightKg?: number; reps: number }[],
 ) {
-  await page.getByLabel('Search exercises').fill(search);
-  await page.getByRole('button', { name: new RegExp(`^${exerciseName}\\b`) }).click();
-  const card = page.locator('section', { has: page.getByRole('heading', { name: exerciseName, exact: true }) });
+  const card = await pickExercise(page, search, exerciseName);
   for (let index = 1; index < sets.length; index++) await card.getByRole('button', { name: '+ Add set' }).click();
-  const rows = card.locator('li.set-row');
   for (const [index, set] of sets.entries()) {
-    const row = rows.nth(index);
+    const row = setRow(card, index + 1);
     if (set.weightKg !== undefined) await row.getByRole('spinbutton', { name: /kg/ }).fill(String(set.weightKg));
     await row.getByLabel('reps').fill(String(set.reps));
     await row.getByRole('radio', { name: 'Hard' }).click();
@@ -124,6 +168,10 @@ export async function logWorkout(page: Page, logSets: () => Promise<void>) {
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logSets();
   await finishWorkout(page);
+}
+
+export async function logBench(page: Page, weightKg = 60) {
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg, reps: 5 }]));
 }
 
 export async function openLatestWorkout(page: Page) {
@@ -142,13 +190,10 @@ type CardioBout =
   | { rounds: number; workS: number; restS: number; effort: string };
 
 export async function logCardio(page: Page, search: string, activityName: string, bouts: CardioBout[]) {
-  await page.getByLabel('Search exercises').fill(search);
-  await page.getByRole('button', { name: new RegExp(`^${activityName}\\b`) }).click();
-  const card = page.locator('section', { has: page.getByRole('heading', { name: activityName, exact: true }) });
+  const card = await pickExercise(page, search, activityName);
   for (let index = 1; index < bouts.length; index++) await card.getByRole('button', { name: '+ Add bout' }).click();
-  const rows = card.locator('li.bout-row');
   for (const [index, bout] of bouts.entries()) {
-    const row = rows.nth(index);
+    const row = boutRow(card, index + 1);
     if ('minutes' in bout) {
       await row.getByRole('radio', { name: 'Steady' }).click();
       await row.getByLabel('min', { exact: true }).fill(String(bout.minutes));

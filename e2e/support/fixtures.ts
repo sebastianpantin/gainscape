@@ -1,4 +1,4 @@
-import { type BrowserContext, expect, type Page, test as base } from '@playwright/test';
+import { type BrowserContext, expect, type Page, type PlaywrightTestOptions, test as base } from '@playwright/test';
 
 export { expect };
 
@@ -8,11 +8,13 @@ interface Fixtures {
   pageErrors: string[];
 }
 
-function collectPageErrors(context: BrowserContext, errors: string[]): void {
-  context.on('page', (page) => page.on('pageerror', (error) => errors.push(error.message)));
-}
-
-async function rejectServiceWorkerRegistrationLikeABrowser(context: BrowserContext): Promise<void> {
+async function prepareContext(
+  context: BrowserContext,
+  pageErrors: string[],
+  serviceWorkers: PlaywrightTestOptions['serviceWorkers'],
+): Promise<void> {
+  context.on('page', (page) => page.on('pageerror', (error) => pageErrors.push(error.message)));
+  if (serviceWorkers !== 'block') return;
   await context.addInitScript(() => {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register = () =>
@@ -32,8 +34,7 @@ export const test = base.extend<Fixtures>({
     { auto: true },
   ],
   context: async ({ context, pageErrors, serviceWorkers }, use) => {
-    collectPageErrors(context, pageErrors);
-    if (serviceWorkers === 'block') await rejectServiceWorkerRegistrationLikeABrowser(context);
+    await prepareContext(context, pageErrors, serviceWorkers);
     await use(context);
   },
   newPerson: async ({ browser, pageErrors, serviceWorkers }, use) => {
@@ -41,8 +42,7 @@ export const test = base.extend<Fixtures>({
     await use(async () => {
       const context = await browser.newContext();
       contexts.push(context);
-      collectPageErrors(context, pageErrors);
-      if (serviceWorkers === 'block') await rejectServiceWorkerRegistrationLikeABrowser(context);
+      await prepareContext(context, pageErrors, serviceWorkers);
       return await context.newPage();
     });
     await Promise.all(contexts.map((context) => context.close()));

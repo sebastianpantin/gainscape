@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { logExercise, logWorkout, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import { logBench, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
 
 function weeklyGoalCard(page: Page) {
   return page.getByRole('region', { name: 'Weekly goal' });
@@ -8,10 +8,6 @@ function weeklyGoalCard(page: Page) {
 
 function goalChoice(page: Page, name: string) {
   return page.getByRole('radiogroup', { name: 'Workouts per week' }).getByRole('radio', { name, exact: true });
-}
-
-async function logBench(page: Page) {
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
 }
 
 test('a weekly goal counts workouts on Today and a change waits for next week', async ({ page }) => {

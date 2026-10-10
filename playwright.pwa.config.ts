@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { failureArtifacts, runSettings } from './e2e/support/run-settings.ts';
+import { chromiumLaunchOptions, failureArtifacts, runSettings } from './e2e/support/run-settings.ts';
 import { assertStackEnvironment } from './e2e/support/stack-guard.ts';
 import { previewPort } from './web/build/ports.ts';
 
@@ -18,7 +18,7 @@ export default defineConfig({
     baseURL: previewUrl,
     serviceWorkers: 'allow',
     ...failureArtifacts,
-    launchOptions: { executablePath: process.env.CHROMIUM_PATH || undefined },
+    launchOptions: chromiumLaunchOptions,
   },
   webServer: {
     command: 'npx vite preview web',

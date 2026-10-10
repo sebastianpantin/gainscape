@@ -136,18 +136,22 @@ function withoutUnboundSupplementals(bindings: LiftBindings, days: readonly Seed
 
 async function seedWeekOne(page: Page, prefix: string, amrapReps: AmrapReps): Promise<void> {
   const username = uniqueUsername(prefix);
-  await register(page, username);
-  await followProgram(page, NSUNS, {
-    'Bench press training max (kg)': WEEK_ONE_TMS_KG.bench,
-    'Squat training max (kg)': WEEK_ONE_TMS_KG.squat,
-    'Overhead press training max (kg)': WEEK_ONE_TMS_KG.press,
-    'Deadlift training max (kg)': WEEK_ONE_TMS_KG.deadlift,
+  await test.step('follow nSuns at TMs bench 100, squat 140, press 60 and deadlift 200', async () => {
+    await register(page, username);
+    await followProgram(page, NSUNS, {
+      'Bench press training max (kg)': WEEK_ONE_TMS_KG.bench,
+      'Squat training max (kg)': WEEK_ONE_TMS_KG.squat,
+      'Overhead press training max (kg)': WEEK_ONE_TMS_KG.press,
+      'Deadlift training max (kg)': WEEK_ONE_TMS_KG.deadlift,
+    });
   });
-  const { access_token: accessToken } = await readSession(page);
-  const enrollmentId = await activeEnrollmentIdOf(username);
-  const { lift_bindings: bindings } = await activeEnrollmentOf(username);
-  const days = withoutUnboundSupplementals(bindings, nsunsWeek(WEEK_ONE_TMS_KG, 1, amrapReps));
-  await seedProgramDays(accessToken, enrollmentId, bindings, sessionClock(DAYS_PER_WEEK + 1), days);
+  await test.step('seed week 1 with the logged AMRAP reps', async () => {
+    const { access_token: accessToken } = await readSession(page);
+    const enrollmentId = await activeEnrollmentIdOf(username);
+    const { lift_bindings: bindings } = await activeEnrollmentOf(username);
+    const days = withoutUnboundSupplementals(bindings, nsunsWeek(WEEK_ONE_TMS_KG, 1, amrapReps));
+    await seedProgramDays(accessToken, enrollmentId, bindings, sessionClock(DAYS_PER_WEEK + 1), days);
+  });
 }
 
 async function openWeekTwoDay(today: Locator, day: string): Promise<void> {
@@ -168,81 +172,92 @@ test('nSuns raises each TM at the end of week 1 by the 1+ set reps: squat 2 reps
     'fri-bench': { 2: 3 },
   });
 
-  const today = await openProgramToday(page, NSUNS);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([
-    '67.5 kg × 8 · 65%',
-    '77.5 kg × 6 · 75%',
-    '87.5 kg × 4 · 85%',
-    '87.5 kg × 4 · 85%',
-    '87.5 kg × 4 · 85%',
-    '82.5 kg × 5 · 80%',
-    '77.5 kg × 6 · 75%',
-    '72.5 kg × 7 · 70%',
-    '67.5 kg × 8+ · 65%',
-  ]);
-  await expect(prescribedRows(today, 'Overhead Press — supplemental')).toHaveText([
-    '32.5 kg × 6 · 50%',
-    '40 kg × 5 · 60%',
-    '45 kg × 3 · 70%',
-    '45 kg × 5 · 70%',
-    '45 kg × 7 · 70%',
-    '45 kg × 4 · 70%',
-    '45 kg × 6 · 70%',
-    '45 kg × 8 · 70%',
-  ]);
+  const today = await test.step('W2 Day 1: bench at TM 102.5 and press supplemental at TM 65', async () => {
+    const programToday = await openProgramToday(page, NSUNS);
+    await expect(dayPicker(programToday).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
+    await expect(prescribedRows(programToday, 'Barbell Bench Press')).toHaveText([
+      '67.5 kg × 8 · 65%',
+      '77.5 kg × 6 · 75%',
+      '87.5 kg × 4 · 85%',
+      '87.5 kg × 4 · 85%',
+      '87.5 kg × 4 · 85%',
+      '82.5 kg × 5 · 80%',
+      '77.5 kg × 6 · 75%',
+      '72.5 kg × 7 · 70%',
+      '67.5 kg × 8+ · 65%',
+    ]);
+    await expect(prescribedRows(programToday, 'Overhead Press — supplemental')).toHaveText([
+      '32.5 kg × 6 · 50%',
+      '40 kg × 5 · 60%',
+      '45 kg × 3 · 70%',
+      '45 kg × 5 · 70%',
+      '45 kg × 7 · 70%',
+      '45 kg × 4 · 70%',
+      '45 kg × 6 · 70%',
+      '45 kg × 8 · 70%',
+    ]);
+    return programToday;
+  });
 
-  await openWeekTwoDay(today, 'Day 2');
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText([
-    '107.5 kg × 5 · 75%',
-    '120 kg × 3 · 85%',
-    '135 kg × 1+ · 95%',
-    '127.5 kg × 3 · 90%',
-    '120 kg × 3 · 85%',
-    '115 kg × 3 · 80%',
-    '107.5 kg × 5 · 75%',
-    '100 kg × 5 · 70%',
-    '92.5 kg × 5+ · 65%',
-  ]);
+  await test.step('W2 Day 2: squat 1+ at 135 from TM 142.5', async () => {
+    await openWeekTwoDay(today, 'Day 2');
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText([
+      '107.5 kg × 5 · 75%',
+      '120 kg × 3 · 85%',
+      '135 kg × 1+ · 95%',
+      '127.5 kg × 3 · 90%',
+      '120 kg × 3 · 85%',
+      '115 kg × 3 · 80%',
+      '107.5 kg × 5 · 75%',
+      '100 kg × 5 · 70%',
+      '92.5 kg × 5+ · 65%',
+    ]);
+  });
 
-  await openWeekTwoDay(today, 'Day 3');
-  await expect(prescribedRows(today, 'Overhead Press')).toHaveText([
-    '50 kg × 5 · 75%',
-    '55 kg × 3 · 85%',
-    '62.5 kg × 1+ · 95%',
-    '57.5 kg × 3 · 90%',
-    '55 kg × 3 · 85%',
-    '52.5 kg × 3 · 80%',
-    '50 kg × 5 · 75%',
-    '45 kg × 5 · 70%',
-    '42.5 kg × 5+ · 65%',
-  ]);
+  await test.step('W2 Day 3: press 1+ at 62.5 from TM 65', async () => {
+    await openWeekTwoDay(today, 'Day 3');
+    await expect(prescribedRows(today, 'Overhead Press')).toHaveText([
+      '50 kg × 5 · 75%',
+      '55 kg × 3 · 85%',
+      '62.5 kg × 1+ · 95%',
+      '57.5 kg × 3 · 90%',
+      '55 kg × 3 · 85%',
+      '52.5 kg × 3 · 80%',
+      '50 kg × 5 · 75%',
+      '45 kg × 5 · 70%',
+      '42.5 kg × 5+ · 65%',
+    ]);
+  });
 
-  await openWeekTwoDay(today, 'Day 4');
-  await expect(prescribedRows(today, 'Deadlift')).toHaveText([
-    '155 kg × 5 · 75%',
-    '175 kg × 3 · 85%',
-    '195 kg × 1+ · 95%',
-    '185 kg × 3 · 90%',
-    '175 kg × 3 · 85%',
-    '165 kg × 3 · 80%',
-    '155 kg × 3 · 75%',
-    '145 kg × 3 · 70%',
-    '135 kg × 3+ · 65%',
-  ]);
+  await test.step('W2 Day 4: deadlift 1+ at 195 from TM 206.25', async () => {
+    await openWeekTwoDay(today, 'Day 4');
+    await expect(prescribedRows(today, 'Deadlift')).toHaveText([
+      '155 kg × 5 · 75%',
+      '175 kg × 3 · 85%',
+      '195 kg × 1+ · 95%',
+      '185 kg × 3 · 90%',
+      '175 kg × 3 · 85%',
+      '165 kg × 3 · 80%',
+      '155 kg × 3 · 75%',
+      '145 kg × 3 · 70%',
+      '135 kg × 3+ · 65%',
+    ]);
+  });
 
-  await openWeekTwoDay(today, 'Day 5');
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([
-    '77.5 kg × 5 · 75%',
-    '87.5 kg × 3 · 85%',
-    '97.5 kg × 1+ · 95%',
-    '92.5 kg × 3 · 90%',
-    '87.5 kg × 3 · 85%',
-    '82.5 kg × 3 · 80%',
-    '77.5 kg × 5 · 75%',
-    '72.5 kg × 5 · 70%',
-    '67.5 kg × 5+ · 65%',
-  ]);
+  await test.step('W2 Day 5: bench 1+ at 97.5 from TM 102.5', async () => {
+    await openWeekTwoDay(today, 'Day 5');
+    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([
+      '77.5 kg × 5 · 75%',
+      '87.5 kg × 3 · 85%',
+      '97.5 kg × 1+ · 95%',
+      '92.5 kg × 3 · 90%',
+      '87.5 kg × 3 · 85%',
+      '82.5 kg × 3 · 80%',
+      '77.5 kg × 5 · 75%',
+      '72.5 kg × 5 · 70%',
+      '67.5 kg × 5+ · 65%',
+    ]);
+  });
 });
 
 test('nSuns keeps a TM when its 1+ set gets a single rep, whatever the other AMRAP sets show: a 15-rep Monday bench 8+ with a 1-rep Friday 1+ keeps bench at 100 (W2 Day 1 65/75/85 … 65 kg × 8+), and a 12-rep squat 5+ with a 1-rep 1+ keeps squat at 140 (1+ 140 × 0.95 = 133 → 132.5)', async ({
@@ -255,30 +270,35 @@ test('nSuns keeps a TM when its 1+ set gets a single rep, whatever the other AMR
     'fri-bench': { 2: 1 },
   });
 
-  const today = await openProgramToday(page, NSUNS);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([
-    '65 kg × 8 · 65%',
-    '75 kg × 6 · 75%',
-    '85 kg × 4 · 85%',
-    '85 kg × 4 · 85%',
-    '85 kg × 4 · 85%',
-    '80 kg × 5 · 80%',
-    '75 kg × 6 · 75%',
-    '70 kg × 7 · 70%',
-    '65 kg × 8+ · 65%',
-  ]);
+  const today = await test.step('W2 Day 1: bench stays at TM 100', async () => {
+    const programToday = await openProgramToday(page, NSUNS);
+    await expect(dayPicker(programToday).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
+    await expect(prescribedRows(programToday, 'Barbell Bench Press')).toHaveText([
+      '65 kg × 8 · 65%',
+      '75 kg × 6 · 75%',
+      '85 kg × 4 · 85%',
+      '85 kg × 4 · 85%',
+      '85 kg × 4 · 85%',
+      '80 kg × 5 · 80%',
+      '75 kg × 6 · 75%',
+      '70 kg × 7 · 70%',
+      '65 kg × 8+ · 65%',
+    ]);
+    return programToday;
+  });
 
-  await openWeekTwoDay(today, 'Day 2');
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText([
-    '105 kg × 5 · 75%',
-    '120 kg × 3 · 85%',
-    '132.5 kg × 1+ · 95%',
-    '125 kg × 3 · 90%',
-    '120 kg × 3 · 85%',
-    '112.5 kg × 3 · 80%',
-    '105 kg × 5 · 75%',
-    '97.5 kg × 5 · 70%',
-    '90 kg × 5+ · 65%',
-  ]);
+  await test.step('W2 Day 2: squat 1+ at 132.5 from TM 140', async () => {
+    await openWeekTwoDay(today, 'Day 2');
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText([
+      '105 kg × 5 · 75%',
+      '120 kg × 3 · 85%',
+      '132.5 kg × 1+ · 95%',
+      '125 kg × 3 · 90%',
+      '120 kg × 3 · 85%',
+      '112.5 kg × 3 · 80%',
+      '105 kg × 5 · 75%',
+      '97.5 kg × 5 · 70%',
+      '90 kg × 5+ · 65%',
+    ]);
+  });
 });

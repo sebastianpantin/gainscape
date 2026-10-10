@@ -1,17 +1,12 @@
 import { expect, test } from './support/fixtures.ts';
-import { emailOf, openTab, register, uniqueUsername } from './support/app.ts';
-import { createConfirmedAccount } from './support/db.ts';
-import { befriend, levelUpHeadline, seedChestLevelUps } from './support/friendship.ts';
+import { openTab } from './support/app.ts';
+import { levelUpHeadline, registerWithFriend, seedChestLevelUps } from './support/friendship.ts';
 
 const FEED_PAGE_SIZE = 20;
 const SEEDED_LEVELS = Array.from({ length: FEED_PAGE_SIZE + 5 }, (_, index) => index + 2);
 
 test('load more reveals older friend posts beyond the first feed page', async ({ page }) => {
-  const aliceName = uniqueUsername('page_a');
-  const bobName = uniqueUsername('page_b');
-  await createConfirmedAccount(emailOf(bobName), bobName, 'UTC');
-  await register(page, aliceName);
-  await befriend(aliceName, bobName);
+  const { bobName } = await registerWithFriend(page, 'page');
   await seedChestLevelUps(bobName, SEEDED_LEVELS);
   const newest = Math.max(...SEEDED_LEVELS);
   const oldest = Math.min(...SEEDED_LEVELS);

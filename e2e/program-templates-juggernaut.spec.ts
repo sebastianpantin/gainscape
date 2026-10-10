@@ -1,5 +1,5 @@
 import { expect, test } from './support/fixtures.ts';
-import { register, uniqueUsername } from './support/app.ts';
+import { register, setRow, uniqueUsername } from './support/app.ts';
 import {
   dayPicker,
   fillProgramInputs,
@@ -41,11 +41,10 @@ test('enroll in Juggernaut in kg and see the 10s accumulation as 5×10 at 60% of
   await today.getByRole('button', { name: `Start: ${JUGGERNAUT} — C1 W1 Day 1`, exact: true }).click();
   await expect(page.getByText(`${JUGGERNAUT} — C1 W1 Day 1`, { exact: true })).toBeVisible();
   const squat = workoutCards(page, 'Back Squat');
-  expect(await weightsIn(squat)).toEqual(['60', '60', '60', '60', '60']);
-  expect(await repsIn(squat)).toEqual(['10', '10', '10', '10', '10']);
-  const sets = squat.getByRole('listitem');
-  await expect(sets.nth(4).getByText('10+', { exact: true })).toBeVisible();
-  await expect(sets.nth(0).getByText('10+', { exact: true })).toHaveCount(0);
+  await expect.poll(() => weightsIn(squat)).toEqual(['60', '60', '60', '60', '60']);
+  await expect.poll(() => repsIn(squat)).toEqual(['10', '10', '10', '10', '10']);
+  await expect(setRow(squat, 5).getByText('10+', { exact: true })).toBeVisible();
+  await expect(setRow(squat, 1).getByText('10+', { exact: true })).toHaveCount(0);
 });
 
 test('a kg Juggernaut enrollment is not offered the lb-only fine per-rep increment, an lb one is', async ({ page }) => {

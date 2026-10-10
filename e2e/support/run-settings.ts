@@ -14,3 +14,5 @@ export const failureArtifacts = {
 } satisfies PlaywrightTestConfig['use'];
 
 export const reuseLocalServer = !onCi;
+
+export const chromiumLaunchOptions = { executablePath: process.env.CHROMIUM_PATH || undefined };

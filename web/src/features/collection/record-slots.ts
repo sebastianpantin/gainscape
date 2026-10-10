@@ -19,6 +19,18 @@ export function slotText(
   return formatLoad(slot.loadKg, loadType, unit);
 }
 
+export function slotLabel(
+  reps: number,
+  slot: { loadKg: number | null; exact: boolean } | null,
+  loadType: LoadType,
+  unit: UnitPref,
+  weightsHidden = false,
+): string {
+  if (!slot) return `${reps}RM empty`;
+  const named = `${reps}RM ${slotText(slot, loadType, unit, weightsHidden)}`;
+  return slot.exact ? named : `${named}, beaten by a higher-rep set`;
+}
+
 export function slotsByReps<S extends { reps: number }>(repMaxes: readonly S[]): (S | null)[] {
   return Array.from(
     { length: REP_MAX_SLOT_COUNT },

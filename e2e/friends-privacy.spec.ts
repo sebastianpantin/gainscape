@@ -1,8 +1,7 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { emailOf, logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
-import { createConfirmedAccount } from './support/db.ts';
-import { befriend, showsBodyweight } from './support/friendship.ts';
+import { logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import { befriend, openFriendProfile, registerWithFriend, showsBodyweight } from './support/friendship.ts';
 
 function feedItem(page: Page, text: string) {
   return page.getByRole('list', { name: 'Feed' }).getByRole('listitem').filter({ hasText: text });
@@ -59,17 +58,9 @@ test('a friend sees the total load of a weighted dip only while bodyweight is sh
 });
 
 test('a friend without workouts shows no records on their profile', async ({ page }) => {
-  const aliceName = uniqueUsername('norec_a');
-  const bobName = uniqueUsername('norec_b');
-  await createConfirmedAccount(emailOf(bobName), bobName, 'UTC');
-  await register(page, aliceName);
-  await befriend(aliceName, bobName);
+  const { bobName } = await registerWithFriend(page, 'norec');
 
-  await openTab(page, 'Friends');
-  await page
-    .getByRole('list', { name: 'Friends list' })
-    .getByRole('link', { name: new RegExp(bobName) })
-    .click();
+  await openFriendProfile(page, bobName);
 
   const records = page.getByRole('region', { name: 'Records' });
   await expect(records.getByText('No records yet.')).toBeVisible();

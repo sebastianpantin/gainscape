@@ -6,8 +6,8 @@ import {
   FIVE_THREE_ONE_ONE_RMS_KG,
   followProgram,
   MADCOW_FIVE_RMS_KG,
+  openManageProgram,
   prescribedRows,
-  programToday,
 } from './support/program-enrollment.ts';
 import { postFiveThreeOneSession } from './support/program-seed.ts';
 
@@ -18,8 +18,7 @@ function planDay(page: Page, label: string) {
 }
 
 async function openPlanFromManage(page: Page, programName: string): Promise<void> {
-  await programToday(page, programName).getByRole('link', { name: 'Manage program', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: programName, exact: true })).toBeVisible();
+  await openManageProgram(page, programName);
   await page.getByRole('link', { name: 'See the plan', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${PLAN_PATH}$`));
   await expect(page.getByRole('heading', { level: 1, name: `${programName} plan`, exact: true })).toBeVisible();

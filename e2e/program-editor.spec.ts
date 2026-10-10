@@ -1,6 +1,15 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { openFromProfile, openTab, readSession, readStoredDraft, register, uniqueUsername } from './support/app.ts';
+import {
+  exerciseCard,
+  openFromProfile,
+  openTab,
+  readSession,
+  readStoredDraft,
+  register,
+  setRow,
+  uniqueUsername,
+} from './support/app.ts';
 import { programCount, programPlanOf, sessionRow, setCount } from './support/db.ts';
 
 function day(page: Page, position: number) {
@@ -66,13 +75,15 @@ test('add, rename, reorder and remove days and exercises, then edit the saved pr
   await page.getByRole('button', { name: 'Save', exact: true }).click();
 
   await expect(ownProgram(page, 'My FB')).toContainText('Day C · Day B');
-  expect(await planLines(username, 'My FB')).toEqual([
-    'Day C deadlift 5×3-5',
-    'Day B deadlift 3×3-6',
-    'Day B pull_up 3×5-10',
-    'Day B overhead_press 3×6-10',
-    'Day B leg_press 3×10-15',
-  ]);
+  await expect
+    .poll(() => planLines(username, 'My FB'))
+    .toEqual([
+      'Day C deadlift 5×3-5',
+      'Day B deadlift 3×3-6',
+      'Day B pull_up 3×5-10',
+      'Day B overhead_press 3×6-10',
+      'Day B leg_press 3×10-15',
+    ]);
 
   await ownProgram(page, 'My FB').getByRole('link', { name: 'Edit' }).click();
   await expect(page.getByLabel('Program name')).toHaveValue('My FB');
@@ -87,14 +98,16 @@ test('add, rename, reorder and remove days and exercises, then edit the saved pr
   await page.getByRole('button', { name: 'Save', exact: true }).click();
 
   await expect(ownProgram(page, 'My FB 2')).toContainText('Day B · Day C');
-  expect(await programCount(username)).toBe(1);
-  expect(await planLines(username, 'My FB 2')).toEqual([
-    'Day B deadlift 3×3-6',
-    'Day B pull_up 3×5-10',
-    'Day B overhead_press 3×6-10',
-    'Day B leg_press 3×10-15',
-    'Day C deadlift 5×3-8',
-  ]);
+  await expect.poll(() => programCount(username)).toBe(1);
+  await expect
+    .poll(() => planLines(username, 'My FB 2'))
+    .toEqual([
+      'Day B deadlift 3×3-6',
+      'Day B pull_up 3×5-10',
+      'Day B overhead_press 3×6-10',
+      'Day B leg_press 3×10-15',
+      'Day C deadlift 5×3-8',
+    ]);
 
   await openTab(page, 'Train');
   await expect(page.getByRole('button', { name: /^My FB 2 — / })).toHaveText([/My FB 2 — Day B/, /My FB 2 — Day C/]);
@@ -116,7 +129,7 @@ test('delete a program through the confirmation and keep the workout logged from
   await expect(nothingTicked.getByRole('button', { name: 'Finish without them' })).toHaveCount(0);
   await nothingTicked.getByRole('button', { name: 'Cancel' }).click();
   await expect(nothingTicked).toHaveCount(0);
-  await page.locator('li.set-row').first().getByRole('radio', { name: 'Hard' }).click();
+  await setRow(exerciseCard(page, 'Barbell Bench Press'), 1).getByRole('radio', { name: 'Hard' }).click();
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await page
     .getByRole('dialog', { name: '17 planned sets not done' })
@@ -124,8 +137,8 @@ test('delete a program through the confirmation and keep the workout logged from
     .click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
   const sessionId = (await readStoredDraft(page, user.id))!.syncedSessionId!;
-  expect((await sessionRow(sessionId)).program_day_id).not.toBeNull();
-  expect(await setCount(sessionId)).toBe(18);
+  await expect.poll(async () => (await sessionRow(sessionId)).program_day_id).not.toBeNull();
+  await expect.poll(() => setCount(sessionId)).toBe(18);
 
   await openFromProfile(page, 'Programs');
   let confirmation = '';
@@ -136,9 +149,9 @@ test('delete a program through the confirmation and keep the workout logged from
   await ownProgram(page, 'Upper / Lower').getByRole('button', { name: 'Delete' }).click();
   await expect(ownProgram(page, 'Upper / Lower')).toHaveCount(0);
   expect(confirmation).toBe('Delete Upper / Lower? Past workouts keep their sets.');
-  expect(await programCount(username)).toBe(0);
-  expect((await sessionRow(sessionId)).program_day_id).toBeNull();
-  expect(await setCount(sessionId)).toBe(18);
+  await expect.poll(() => programCount(username)).toBe(0);
+  await expect.poll(async () => (await sessionRow(sessionId)).program_day_id).toBeNull();
+  await expect.poll(() => setCount(sessionId)).toBe(18);
 
   await openTab(page, 'Train');
   await expect(page.getByText('No programs yet.')).toBeVisible();

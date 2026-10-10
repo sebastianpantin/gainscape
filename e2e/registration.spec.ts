@@ -1,17 +1,9 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { emailOf, register, TEST_PASSWORD, uniqueUsername } from './support/app.ts';
+import { emailOf, fillRegistration, register, uniqueUsername } from './support/app.ts';
 import { usernameOfEmail } from './support/db.ts';
 
 const USERNAME_TAKEN = 'That username is taken.';
-
-async function fillRegistration(page: Page, username: string, email: string) {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'New here? Create an account' }).click();
-  await page.getByLabel('Username').fill(username);
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(TEST_PASSWORD);
-}
 
 async function reportUsernameAvailable(page: Page) {
   await page.route('**/rest/v1/rpc/username_available', (route) =>

@@ -1,11 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { definitionOf, logCardio, logExercise, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
-
-async function logBench(page: Page, weightKg: number) {
-  await openTab(page, 'Train');
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg, reps: 5 }]));
-}
+import { definitionOf, logBench, logCardio, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
 
 async function logRun(page: Page, minutes: number, distance: number) {
   await openTab(page, 'Train');
@@ -35,7 +30,9 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await bob.getByRole('button', { name: 'Accept' }).click();
   await expect(bob.getByRole('list', { name: 'Friends list' })).toContainText(aliceName);
 
-  await logBench(bob, 60);
+  await openTab(bob, 'Train');
+  await logBench(bob);
+  await openTab(bob, 'Train');
   await logBench(bob, 80);
   await logRun(bob, 30, 5);
   await logRun(bob, 36, 6);

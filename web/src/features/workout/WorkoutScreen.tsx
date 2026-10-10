@@ -710,6 +710,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     set: DraftSet,
     setIndex: number,
     doneLabel?: string,
+    rowLabel?: string,
   ) => {
     const compound = compoundIds.has(exercise.exerciseId);
     const startRestAfter = (changes: Partial<Omit<DraftSet, 'id'>>) => {
@@ -737,6 +738,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             : null
         }
         doneLabel={doneLabel}
+        rowLabel={rowLabel}
         focusDone={focusSetId === set.id}
         onDoneFocused={() => setFocusSetId(null)}
         onChange={(changes) => {
@@ -870,6 +872,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                   member.sets[setIndex],
                   setIndex,
                   `Done ${member.name} round ${round}`,
+                  `${member.name}, set ${setIndex + 1}`,
                 );
               }}
               onAddRound={() => changeDraft(addRound(draft, group))}

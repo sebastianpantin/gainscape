@@ -2,7 +2,13 @@ import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { openLatestWorkout, openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf } from './support/db.ts';
-import { dayPicker, FIVE_THREE_ONE_ONE_RMS_KG, followProgram, programToday } from './support/program-enrollment.ts';
+import {
+  cycleSummary,
+  dayPicker,
+  FIVE_THREE_ONE_ONE_RMS_KG,
+  followProgram,
+  programToday,
+} from './support/program-enrollment.ts';
 import { seedFiveThreeOneCycleSkippingPress } from './support/program-seed.ts';
 
 const CYCLE_1_LINES = [
@@ -10,10 +16,6 @@ const CYCLE_1_LINES = [
   'Bench press training max 72 → 74.5 kg',
   'Deadlift training max 126 → 131 kg',
 ];
-
-function cycleSummary(page: Page) {
-  return page.getByRole('region', { name: 'Cycle 1 complete', exact: true });
-}
 
 async function followAndSeedCycle(page: Page, prefix: string): Promise<void> {
   const username = uniqueUsername(prefix);
@@ -29,7 +31,7 @@ test('a finished 5/3/1 cycle shows a summary of only the training maxes it chang
   test.setTimeout(150_000);
   await followAndSeedCycle(page, 'ps_sum');
 
-  const summary = cycleSummary(page);
+  const summary = cycleSummary(page, 1);
   await expect(summary).toBeVisible();
   await expect(summary.getByRole('listitem')).toHaveText(CYCLE_1_LINES);
   await expect(summary).not.toContainText('Overhead press');
@@ -42,11 +44,11 @@ test('a dismissed cycle summary stays dismissed after a reload', async ({ page }
   test.setTimeout(150_000);
   await followAndSeedCycle(page, 'ps_dis');
 
-  await cycleSummary(page).getByRole('button', { name: 'Dismiss', exact: true }).click();
-  await expect(cycleSummary(page)).toHaveCount(0);
+  await cycleSummary(page, 1).getByRole('button', { name: 'Dismiss', exact: true }).click();
+  await expect(cycleSummary(page, 1)).toHaveCount(0);
   await page.reload();
   await expect(programToday(page, '5/3/1')).toBeVisible();
-  await expect(cycleSummary(page)).toHaveCount(0);
+  await expect(cycleSummary(page, 1)).toHaveCount(0);
 });
 
 test('deleting the last workout of the cycle undoes the rollover, so the summary disappears and the day is offered again', async ({
@@ -54,7 +56,7 @@ test('deleting the last workout of the cycle undoes the rollover, so the summary
 }) => {
   test.setTimeout(150_000);
   await followAndSeedCycle(page, 'ps_del');
-  await expect(cycleSummary(page)).toBeVisible();
+  await expect(cycleSummary(page, 1)).toBeVisible();
 
   await openLatestWorkout(page);
   await expect(page.getByRole('heading', { name: 'Deadlift', exact: true })).toBeVisible();
@@ -66,5 +68,5 @@ test('deleting the last workout of the cycle undoes the rollover, so the summary
   const today = programToday(page, '5/3/1');
   await expect(dayPicker(today).getByRole('radio', { name: 'C1 W4 Day 3', exact: true })).toBeChecked();
   await expect(dayPicker(today).getByRole('radio')).toHaveCount(1);
-  await expect(cycleSummary(page)).toHaveCount(0);
+  await expect(cycleSummary(page, 1)).toHaveCount(0);
 });

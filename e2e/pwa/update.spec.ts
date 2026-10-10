@@ -4,7 +4,16 @@ import { join } from 'node:path';
 import { type Page } from '@playwright/test';
 import { expect, test } from '../support/fixtures.ts';
 import { expectNoAxeViolations } from '../support/a11y.ts';
-import { logExercise, openFromProfile, openTab, readSession, register, uniqueUsername } from '../support/app.ts';
+import {
+  exerciseCard,
+  logExercise,
+  openFromProfile,
+  openTab,
+  readSession,
+  register,
+  setRow,
+  uniqueUsername,
+} from '../support/app.ts';
 import {
   builtShell,
   cachedPaths,
@@ -32,11 +41,9 @@ function timeOrigin(page: Page): Promise<number> {
 
 async function expectDraftWithSet(page: Page) {
   await openTab(page, 'Train');
-  const card = page.locator('section', {
-    has: page.getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
-  });
-  await expect(card.locator('li.set-row').getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
-  await expect(card.locator('li.set-row').getByLabel('reps')).toHaveValue('5');
+  const firstSet = setRow(exerciseCard(page, 'Barbell Bench Press'), 1);
+  await expect(firstSet.getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
+  await expect(firstSet.getByLabel('reps')).toHaveValue('5');
 }
 
 test('a new version reloads safely', async ({ context, page }) => {

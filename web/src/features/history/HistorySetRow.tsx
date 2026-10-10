@@ -31,7 +31,7 @@ export function HistorySetRow({
   onRemove,
 }: HistorySetRowProps) {
   return (
-    <li className="set-row">
+    <li className="set-row" aria-label={`Set ${setNumber}`}>
       <span className="set-number">{setNumber}</span>
       <WeightField
         loadType={loadType}
@@ -83,7 +83,7 @@ export function HistoryBoutRow({
   onRemove,
 }: HistoryBoutRowProps) {
   return (
-    <li className="set-row bout-row history-bout-row">
+    <li className="set-row bout-row history-bout-row" aria-label={`Bout ${boutNumber}`}>
       <span className="set-number">{boutNumber}</span>
       <BoutFields bout={bout} paceUnit={paceUnit} unit={unit} onChange={onChange} />
       <span className="set-xp earned">

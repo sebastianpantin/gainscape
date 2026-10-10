@@ -167,7 +167,7 @@ test('a squatter loses the account when the owner confirms the email', async ({ 
   await choosePassword(victim, 'the-owners-password');
   await victim.getByRole('button', { name: 'Save and continue' }).click();
   await expect(victim.getByRole('button', { name: 'Start workout' })).toBeVisible();
-  expect(await usernameOfEmail(victimEmail)).toBe(victimName);
+  await expect.poll(() => usernameOfEmail(victimEmail)).toBe(victimName);
 
   await squatter.goto('/');
   await submitSignIn(squatter, victimEmail);

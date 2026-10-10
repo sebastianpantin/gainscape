@@ -1,17 +1,12 @@
 import { expect, test } from './support/fixtures.ts';
-import { register, uniqueUsername } from './support/app.ts';
+import { addExercise, register, setRow, uniqueUsername } from './support/app.ts';
 
 const BENCH = 'Barbell Bench Press';
 
 test('weight and reps can be cleared and retyped, with a comma as the decimal separator', async ({ page }) => {
   await register(page, uniqueUsername('fields'));
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('bench');
-  await page.getByRole('button', { name: new RegExp(`^${BENCH}\\b`) }).click();
-  const row = page
-    .locator('section', { has: page.getByRole('heading', { name: BENCH, exact: true }) })
-    .locator('li.set-row')
-    .first();
+  const row = setRow(await addExercise(page, 'bench', BENCH), 1);
   const weight = row.getByRole('spinbutton', { name: 'kg', exact: true });
   const reps = row.getByRole('spinbutton', { name: 'reps', exact: true });
 
@@ -48,12 +43,7 @@ test('weight and reps can be cleared and retyped, with a comma as the decimal se
 test('a field flags text that is not the saved value and steps with the arrow keys', async ({ page }) => {
   await register(page, uniqueUsername('fields'));
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('bench');
-  await page.getByRole('button', { name: new RegExp(`^${BENCH}\\b`) }).click();
-  const row = page
-    .locator('section', { has: page.getByRole('heading', { name: BENCH, exact: true }) })
-    .locator('li.set-row')
-    .first();
+  const row = setRow(await addExercise(page, 'bench', BENCH), 1);
   const weight = row.getByRole('spinbutton', { name: 'kg', exact: true });
   const reps = row.getByRole('spinbutton', { name: 'reps', exact: true });
 

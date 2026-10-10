@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { failureArtifacts, runSettings } from './e2e/support/run-settings.ts';
+import { chromiumLaunchOptions, failureArtifacts, runSettings } from './e2e/support/run-settings.ts';
 import { assertStackEnvironment } from './e2e/support/stack-guard.ts';
 import { localStackStatus } from './scripts/local-stack.ts';
 import { previewPort } from './web/build/ports.ts';
@@ -21,7 +21,7 @@ export default defineConfig({
     baseURL: pagesUrl,
     serviceWorkers: 'block',
     ...failureArtifacts,
-    launchOptions: { executablePath: process.env.CHROMIUM_PATH || undefined },
+    launchOptions: chromiumLaunchOptions,
   },
   webServer: {
     command: `node scripts/deploy/build-pages.ts && node_modules/.bin/wrangler pages dev web/dist --ip 127.0.0.1 --port ${pagesPort}`,

@@ -2,14 +2,17 @@ import { readFile } from 'node:fs/promises';
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import {
+  addExercise,
   definitionOf,
   emailOf,
+  exactRepMaxes,
+  exerciseCard,
   finishWorkout,
-  logExercise,
-  logWorkout,
+  logBench,
   openFromProfile,
   openTab,
   register,
+  setRow,
   signIn,
   signOut,
   submitSignIn,
@@ -87,7 +90,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await expect(profileCard(page).getByText('Chasing a 200 kg squat.', { exact: true })).toBeVisible();
   await expect(page.getByText('82.5')).toHaveCount(0);
 
-  expect(await heightOf(username)).toBe(181);
+  await expect.poll(() => heightOf(username)).toBe(181);
   await pickSetting(page, 'Weight units', 'Pounds');
   await openTab(page, 'Profile');
   await expect(definitionOf(page, 'Height')).toHaveText('5 ft 11 in');
@@ -96,7 +99,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await page.getByLabel('Bio').fill('Only the bio changed.');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(profileCard(page).getByText('Only the bio changed.', { exact: true })).toBeVisible();
-  expect(await heightOf(username)).toBe(181);
+  await expect.poll(() => heightOf(username)).toBe(181);
 });
 
 test('pounds are shown everywhere while kilograms are stored, without false records', async ({ page }) => {
@@ -107,22 +110,18 @@ test('pounds are shown everywhere while kilograms are stored, without false reco
   for (const round of [1, 2]) {
     await openTab(page, 'Train');
     await page.getByRole('button', { name: 'Start workout' }).click();
-    await page.getByLabel('Search exercises').fill('bench');
-    await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
-    const row = page.locator('li.set-row').first();
+    await addExercise(page, 'bench', 'Barbell Bench Press');
+    const row = setRow(page, 1);
     await row.getByRole('spinbutton', { name: 'lb', exact: true }).fill('135');
     await row.getByLabel('reps').fill('5');
     await row.getByRole('radio', { name: 'Hard' }).click();
     await finishWorkout(page);
     await expect(page.getByLabel('New records')).toHaveCount(0);
-    expect((await latestSetOf(username)).weight_kg, `round ${round}`).toBe(61.23);
+    await expect.poll(async () => (await latestSetOf(username)).weight_kg, { message: `round ${round}` }).toBe(61.23);
   }
 
   await openTab(page, 'Log');
-  const bench = page.locator('section', {
-    has: page.getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
-  });
-  await expect(bench.locator('.record-slot.filled')).toHaveText(['5RM 135 lb']);
+  await expect(exactRepMaxes(exerciseCard(page, 'Barbell Bench Press'))).toHaveText(['5RM 135 lb']);
 });
 
 test('RPE effort is logged as RPE and stored as reps in reserve', async ({ page }) => {
@@ -132,16 +131,15 @@ test('RPE effort is logged as RPE and stored as reps in reserve', async ({ page 
 
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('bench');
-  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
-  const row = page.locator('li.set-row').first();
+  await addExercise(page, 'bench', 'Barbell Bench Press');
+  const row = setRow(page, 1);
   await row.getByRole('spinbutton', { name: 'kg', exact: true }).fill('60');
   await row.getByLabel('reps').fill('8');
   await expect(row.getByRole('radio', { name: 'Hard' })).toHaveCount(0);
   await row.getByRole('radio', { name: 'RPE 8', exact: true }).click();
   await finishWorkout(page);
 
-  expect(await latestSetOf(username)).toMatchObject({ effort_input_type: 'rpe', effort_value: 8, rir: 2 });
+  await expect.poll(() => latestSetOf(username)).toMatchObject({ effort_input_type: 'rpe', effort_value: 8, rir: 2 });
 });
 
 test('the time zone can change once, then waits 7 days', async ({ page }) => {
@@ -159,7 +157,7 @@ test('the time zone can change once, then waits 7 days', async ({ page }) => {
 test('change password, export data and delete the account', async ({ page }) => {
   const username = uniqueUsername('e2e_acct');
   await register(page, username);
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
 
   await openFromProfile(page, 'Settings');
   await page.getByRole('button', { name: 'Change password' }).click();
@@ -192,11 +190,11 @@ test('change password, export data and delete the account', async ({ page }) => 
   await page.getByLabel('Your password').fill('wrong-password');
   await confirm.click();
   await expect(page.getByText('Your password is wrong.')).toBeVisible();
-  expect(await accountRowCount(username)).toBe(1);
+  await expect.poll(() => accountRowCount(username)).toBe(1);
   await page.getByLabel('Your password').fill('a-brand-new-password');
   await confirm.click();
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
-  expect(await accountRowCount(username)).toBe(0);
+  await expect.poll(() => accountRowCount(username)).toBe(0);
 
   await submitSignIn(page, emailOf(username), 'a-brand-new-password');
   await expect(page.getByRole('alert')).toBeVisible();

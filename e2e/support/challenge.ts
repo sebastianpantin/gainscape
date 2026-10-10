@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { finishWorkout, openTab } from './app.ts';
+import { addExercise, finishWorkout, openTab, setRow } from './app.ts';
 
 export const SCROLL_KEY = 'scroll_deficit_deadlift';
 export const SCROLL_NAME = 'Scroll: Deadlift and Pull-up';
@@ -61,7 +61,10 @@ export async function shortenFirstDeadliftSet(page: Page, reps: number) {
   const firstRound = challengeSuperset(page).getByRole('list', { name: 'Rounds' }).getByRole('listitem', {
     name: 'Round 1',
   });
-  await firstRound.locator('li.set-row').first().getByLabel('reps').fill(String(reps));
+  await firstRound
+    .getByRole('listitem', { name: 'Deadlift, set 1', exact: true })
+    .getByLabel('reps')
+    .fill(String(reps));
 }
 
 export async function finishWithBodyweight(page: Page) {
@@ -73,10 +76,7 @@ export async function finishWithBodyweight(page: Page) {
 
 export async function logDeadliftToFailure(page: Page, weightKg: number) {
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('deadlift');
-  await page.getByRole('button', { name: /^Deadlift\b/ }).click();
-  const card = page.locator('section', { has: page.getByRole('heading', { name: 'Deadlift', exact: true }) });
-  const row = card.locator('li.set-row').first();
+  const row = setRow(await addExercise(page, 'deadlift', 'Deadlift'), 1);
   await row.getByRole('spinbutton', { name: /kg/ }).fill(String(weightKg));
   await row.getByLabel('reps').fill('1');
   await row.getByRole('radio', { name: 'Failure' }).click();

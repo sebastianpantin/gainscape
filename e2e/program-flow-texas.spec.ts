@@ -52,28 +52,32 @@ const WEEK_ONE: TexasWeek = {
 };
 
 async function followTexasThroughWeekOne(page: Page, prefix: string, weekOne: TexasWeek): Promise<Locator> {
-  const username = uniqueUsername(prefix);
-  await register(page, username);
-  await followProgram(page, TEXAS, {
-    'Squat 5RM (kg)': 150,
-    'Bench press or overhead press 5RM (kg)': 100,
-    'Deadlift working weight (kg)': 180,
+  await test.step('follow Texas Method at squat 150, bench 100 and deadlift 180, and seed week 1', async () => {
+    const username = uniqueUsername(prefix);
+    await register(page, username);
+    await followProgram(page, TEXAS, {
+      'Squat 5RM (kg)': 150,
+      'Bench press or overhead press 5RM (kg)': 100,
+      'Deadlift working weight (kg)': 180,
+    });
+    const { access_token: accessToken } = await readSession(page);
+    const { lift_bindings: bindings } = await activeEnrollmentOf(username);
+    const days = texasWeek(weekOne);
+    await seedProgramDays(
+      accessToken,
+      await activeEnrollmentIdOf(username),
+      bindings,
+      sessionClock(days.length + 1),
+      days,
+    );
   });
-  const { access_token: accessToken } = await readSession(page);
-  const { lift_bindings: bindings } = await activeEnrollmentOf(username);
-  const days = texasWeek(weekOne);
-  await seedProgramDays(
-    accessToken,
-    await activeEnrollmentIdOf(username),
-    bindings,
-    sessionClock(days.length + 1),
-    days,
-  );
-  await page.reload();
-  await openTab(page, 'Train');
-  const today = programToday(page, TEXAS);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
-  return today;
+  return await test.step('Train suggests W2 Day 1', async () => {
+    await page.reload();
+    await openTab(page, 'Train');
+    const today = programToday(page, TEXAS);
+    await expect(dayPicker(today).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
+    return today;
+  });
 }
 
 async function showDay(today: Locator, day: string): Promise<void> {
@@ -89,16 +93,22 @@ test('Texas Method after a met W1 Friday (squat 150 + 2.5 = 152.5, bench 100 + 2
   test.setTimeout(180_000);
   const today = await followTexasThroughWeekOne(page, 'pf_tx', WEEK_ONE);
 
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('137.5 kg × 5 · 90%', 5));
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('92.5 kg × 5 · 90%', 5));
-  await expect(prescribedRows(today, 'Deadlift')).toHaveText(['182.5 kg × 5 · 100%']);
+  await test.step('W2 Monday: squat 137.5, bench 92.5, deadlift 182.5', async () => {
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('137.5 kg × 5 · 90%', 5));
+    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('92.5 kg × 5 · 90%', 5));
+    await expect(prescribedRows(today, 'Deadlift')).toHaveText(['182.5 kg × 5 · 100%']);
+  });
 
-  await showDay(today, 'Day 2');
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('110 kg × 5 · 80%', 2));
+  await test.step('W2 Wednesday: squat 110', async () => {
+    await showDay(today, 'Day 2');
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('110 kg × 5 · 80%', 2));
+  });
 
-  await showDay(today, 'Day 3');
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['155 kg × 5 · 100%']);
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['105 kg × 5 · 100%']);
+  await test.step('W2 Friday: squat 155, bench 105', async () => {
+    await showDay(today, 'Day 3');
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['155 kg × 5 · 100%']);
+    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['105 kg × 5 · 100%']);
+  });
 });
 
 test('Texas Method with a 4-rep W1 Friday squat holds the squat 5RM at 150 while the met bench rises to 102.5: W2 Monday squat stays 150 × 0.9 = 135, Wednesday 135 × 0.8 = 108 → 107.5, Friday 150 + 2.5 = 152.5, bench Monday 92.5 and Friday 105', async ({
@@ -107,13 +117,19 @@ test('Texas Method with a 4-rep W1 Friday squat holds the squat 5RM at 150 while
   test.setTimeout(180_000);
   const today = await followTexasThroughWeekOne(page, 'pf_txm', { ...WEEK_ONE, fridaySquatReps: FAILED_FRIDAY_REPS });
 
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('135 kg × 5 · 90%', 5));
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('92.5 kg × 5 · 90%', 5));
+  await test.step('W2 Monday: squat held at 135, bench 92.5', async () => {
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('135 kg × 5 · 90%', 5));
+    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('92.5 kg × 5 · 90%', 5));
+  });
 
-  await showDay(today, 'Day 2');
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('107.5 kg × 5 · 80%', 2));
+  await test.step('W2 Wednesday: squat 107.5', async () => {
+    await showDay(today, 'Day 2');
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('107.5 kg × 5 · 80%', 2));
+  });
 
-  await showDay(today, 'Day 3');
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['152.5 kg × 5 · 100%']);
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['105 kg × 5 · 100%']);
+  await test.step('W2 Friday: squat 152.5, bench 105', async () => {
+    await showDay(today, 'Day 3');
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['152.5 kg × 5 · 100%']);
+    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['105 kg × 5 · 100%']);
+  });
 });

@@ -1,9 +1,10 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { openFromProfile, register, uniqueUsername } from './support/app.ts';
+import { failRequests, rpc } from './support/network.ts';
 
-const WEEKLY_GOAL_WEEKS = '**/rest/v1/rpc/weekly_goal_weeks**';
-const SET_WEEKLY_GOAL = '**/rest/v1/rpc/set_weekly_session_goal';
+const WEEKLY_GOAL_WEEKS = rpc('weekly_goal_weeks');
+const SET_WEEKLY_GOAL = rpc('set_weekly_session_goal');
 
 function weeklyGoalSection(page: Page) {
   return page.getByRole('region', { name: 'Weekly goal' });
@@ -15,19 +16,9 @@ function goalChoice(page: Page, name: string) {
     .getByRole('radio', { name, exact: true });
 }
 
-async function failWith500(page: Page, url: string) {
-  await page.route(url, (route) =>
-    route.fulfill({
-      status: 500,
-      contentType: 'application/json',
-      body: JSON.stringify({ code: 'XX000', message: 'internal error', details: null, hint: null }),
-    }),
-  );
-}
-
 test('a weekly goal that fails to load offers a retry that loads it', async ({ page }) => {
   await register(page, uniqueUsername('wg_ld'));
-  await failWith500(page, WEEKLY_GOAL_WEEKS);
+  await failRequests(page, WEEKLY_GOAL_WEEKS);
   await openFromProfile(page, 'Settings');
 
   await expect(weeklyGoalSection(page).getByRole('alert')).toHaveText('Could not load your weekly goal.');
@@ -44,7 +35,7 @@ test('a weekly goal that fails to save keeps the old goal and says so', async ({
   await register(page, uniqueUsername('wg_sv'));
   await openFromProfile(page, 'Settings');
   await expect(goalChoice(page, 'Off')).toHaveAttribute('aria-checked', 'true');
-  await failWith500(page, SET_WEEKLY_GOAL);
+  await failRequests(page, SET_WEEKLY_GOAL);
 
   await goalChoice(page, '3').click();
   await expect(weeklyGoalSection(page).getByRole('alert')).toHaveText('Could not save your weekly goal.');

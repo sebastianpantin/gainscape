@@ -8,7 +8,11 @@ interface PlateChipsProps {
 
 export function PlateChips({ plates, unit }: PlateChipsProps) {
   return (
-    <span className="plate-chips" aria-hidden="true">
+    <span
+      className="plate-chips"
+      role="img"
+      aria-label={`${plates.length} ${plates.length === 1 ? 'plate' : 'plates'} each side`}
+    >
       <span className="plate-sleeve" />
       {plates.map((plate, index) => {
         const { tone, size } = plateLook(plate, unit);

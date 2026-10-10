@@ -1,15 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import {
-  emailOf,
-  logExercise,
-  logWorkout,
-  openLatestWorkout,
-  register,
-  submitSignIn,
-  uniqueUsername,
-} from './support/app.ts';
+import { emailOf, logBench, openLatestWorkout, register, submitSignIn, uniqueUsername } from './support/app.ts';
 import { builtInExerciseId, createConfirmedAccount } from './support/db.ts';
 
 const MISSING_PROGRAM = "This program doesn't exist.";
@@ -86,7 +78,7 @@ test('a workout link to a workout that does not exist sends you back to History 
 test("a link to someone else's workout sends you back to History with a notice", async ({ newPerson, page }) => {
   const owner = await newPerson();
   await register(owner, uniqueUsername('dl_hist_own'));
-  await logWorkout(owner, () => logExercise(owner, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(owner);
   await openLatestWorkout(owner);
   const ownersWorkout = new URL(owner.url()).pathname;
 

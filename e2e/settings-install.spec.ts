@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { logExercise, logWorkout, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import { logBench, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
 
 type InstallPromptWindow = Window & { installPromptCalls?: number };
 
@@ -46,7 +46,7 @@ test('the Train install card waits for a first workout, installs, and stays dism
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
   await expect(installCard(page)).toHaveCount(0);
 
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
   await openTab(page, 'Train');
   await expect(installCard(page)).toContainText('Install Gainscape so your workouts load without signal.');
   await installCard(page).getByRole('button', { name: 'Install Gainscape' }).click();

@@ -43,7 +43,7 @@ test('StrongLifts: Day 1 is 5×5 at the working weights, and finishing it sugges
 
   await today.getByRole('button', { name: `Start: ${STRONGLIFTS} — Session 1 Day 1`, exact: true }).click();
   await expect(page.getByText(`${STRONGLIFTS} — Session 1 Day 1`, { exact: true })).toBeVisible();
-  expect(await weightsIn(workoutCards(page, 'Back Squat'))).toEqual(['60', '60', '60', '60', '60']);
+  await expect.poll(() => weightsIn(workoutCards(page, 'Back Squat'))).toEqual(['60', '60', '60', '60', '60']);
   await markEverySetDone(page);
   await finishWorkout(page);
   await page.getByRole('link', { name: 'Done' }).click();

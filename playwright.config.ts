@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { failureArtifacts, reuseLocalServer, runSettings } from './e2e/support/run-settings.ts';
+import { chromiumLaunchOptions, failureArtifacts, reuseLocalServer, runSettings } from './e2e/support/run-settings.ts';
 import { assertStackEnvironment } from './e2e/support/stack-guard.ts';
 import { webPort } from './web/build/ports.ts';
 
@@ -24,7 +24,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Pixel 7'],
-        launchOptions: { executablePath: process.env.CHROMIUM_PATH || undefined },
+        launchOptions: chromiumLaunchOptions,
       },
     },
     {
