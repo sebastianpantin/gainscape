@@ -1,3 +1,4 @@
+import { isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
 import { type ProgramCache, readProgramCache, updateProgramCache, withEnrollment } from '../offline/program-cache.ts';
 import {
   type ProgramFetchers,
@@ -9,6 +10,10 @@ import { type EnrollProgramPayload, type ProgramTemplateRow } from './program-en
 import { type EnrollmentFactsRows, type EnrollmentRow } from './program-facts-rules.ts';
 import { type SetReferenceEvent } from './program-reference-rules.ts';
 import { type SkipDayEvent } from './program-skip-rules.ts';
+import { fetchExercises } from './catalog.ts';
+import { readCachedExercises } from './catalog-cache.ts';
+import { type Exercise } from './catalog-rules.ts';
+import { deviceStorage } from './rest-timer-store.ts';
 import { supabase } from './supabase.ts';
 
 const ENROLLMENT_COLUMNS =
@@ -18,6 +23,53 @@ export async function fetchProgramTemplates(): Promise<ProgramTemplateRow[]> {
   const { data, error } = await supabase.from('program_templates').select('key, version, name, definition');
   if (error) throw error;
   return data as ProgramTemplateRow[];
+}
+
+async function fetchAndSaveProgramTemplates(userId: string): Promise<ProgramTemplateRow[]> {
+  const templates = await fetchProgramTemplates();
+  updateProgramCache(localStorage, userId, (cache) => ({ ...cache, templates }));
+  return templates;
+}
+
+function savedProgramTemplates(storage: Storage | null, userId: string): ProgramTemplateRow[] | null {
+  const saved = storage ? readProgramCache(storage, userId).templates : [];
+  return saved.length > 0 ? saved : null;
+}
+
+export async function loadProgramTemplatesCacheFirst(userId: string): Promise<ProgramTemplateRow[]> {
+  const load = await loadCacheFirstWhenOffline(
+    isDeviceOffline,
+    () => savedProgramTemplates(deviceStorage(), userId),
+    () => fetchAndSaveProgramTemplates(userId),
+  );
+  return load.loaded;
+}
+
+export interface EnrollChoices {
+  templates: ProgramTemplateRow[];
+  exercises: Exercise[];
+}
+
+function savedEnrollChoices(userId: string): EnrollChoices | null {
+  const storage = deviceStorage();
+  const templates = savedProgramTemplates(storage, userId);
+  const exercises = storage && readCachedExercises(storage, userId);
+  return templates && exercises ? { templates, exercises } : null;
+}
+
+export async function loadEnrollChoicesCacheFirst(userId: string): Promise<EnrollChoices> {
+  const load = await loadCacheFirstWhenOffline(
+    isDeviceOffline,
+    () => savedEnrollChoices(userId),
+    async () => {
+      const [templates, exercises] = await Promise.all([
+        fetchAndSaveProgramTemplates(userId),
+        fetchExercises({ includeArchived: false }),
+      ]);
+      return { templates, exercises };
+    },
+  );
+  return load.loaded;
 }
 
 async function fetchActiveEnrollment(): Promise<EnrollmentRow | null> {
