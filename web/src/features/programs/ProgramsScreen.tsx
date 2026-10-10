@@ -7,10 +7,12 @@ import {
   loadProgramsCacheFirst,
   ownPrograms,
   type Program,
+  publishProgram,
   templates,
 } from '../../lib/programs.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import { useOnlineSignal } from '../../lib/use-online.ts';
+import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
+import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
 import { PowerliftingPrograms } from './PowerliftingPrograms.tsx';
@@ -28,6 +30,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   const [programs, setPrograms] = useState<Program[] | null>(() => cachedPrograms(userId));
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const onlineSignal = useOnlineSignal();
+  const offline = useIsOffline();
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const pendingCopyIds = useRef(new Map<string, string>());
@@ -54,6 +57,18 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
       navigate(`/programs/${copiedId}`);
     } catch (error) {
       setProblem(messageOf(error, 'Could not copy the template.'));
+      setBusy(false);
+    }
+  };
+
+  const follow = async (program: Program) => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      const { key } = await publishProgram(program.id);
+      navigate(`/programs/enroll/${key}`);
+    } catch (error) {
+      setProblem(programErrorText(error));
       setBusy(false);
     }
   };
@@ -100,6 +115,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
       <section className="stack" aria-label="Your programs">
         <h2>Your programs</h2>
         {own.length === 0 && <p className="panel muted">Create a program or copy a template.</p>}
+        {own.length > 0 && offline && <p className="notice">{PROGRAM_OFFLINE_TEXT}</p>}
         <ul className="stack exercise-list">
           {own.map((program) => (
             <li className="panel row spread" key={program.id}>
@@ -107,6 +123,14 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
                 {program.name} <span className="muted">{daySummary(program)}</span>
               </span>
               <span className="row">
+                <button
+                  className="button link"
+                  type="button"
+                  disabled={busy || offline}
+                  onClick={() => void follow(program)}
+                >
+                  Follow
+                </button>
                 <Link className="button link" to={`/programs/${program.id}`}>
                   Edit
                 </Link>

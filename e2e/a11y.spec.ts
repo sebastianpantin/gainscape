@@ -29,10 +29,12 @@ import {
 } from './support/challenge.ts';
 import { authLinkFrom, RECOVERY_SUBJECT, waitForEmail } from './support/mailbox.ts';
 import {
+  createSquatAndBenchProgram,
   FIVE_THREE_ONE_ONE_RMS_KG,
   fillProgramInputs,
   followProgram,
   openEnrollForm,
+  openOwnProgramFollowForm,
   programToday,
   startFollowing,
 } from './support/program-enrollment.ts';
@@ -348,6 +350,15 @@ test('the program enrollment screens have no serious axe violations', async ({ p
     expect(page.getByText('5/3/1 — C1 W1 Day 1', { exact: true })).toBeVisible(),
   );
   await expectTouchTargets(page);
+});
+
+test('the follow form of your own program has no serious axe violations', async ({ page }) => {
+  await register(page, uniqueUsername('a11y_pc'));
+  await createSquatAndBenchProgram(page, 'My Squat 5x5');
+  await openOwnProgramFollowForm(page, 'My Squat 5x5');
+  await checkScreen(page, 'own program follow form', () =>
+    expect(page.getByLabel('Back Squat working weight (kg)', { exact: true })).toBeVisible(),
+  );
 });
 
 test('the program cycle summary has no serious axe violations', async ({ page }) => {
