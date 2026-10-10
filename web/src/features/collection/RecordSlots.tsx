@@ -1,7 +1,7 @@
 import { measuresRepsCapacity } from '@domain/types.ts';
 import type { LoadType } from '../../lib/catalog-rules.ts';
 import type { UnitPref } from '../../lib/profile-rules.ts';
-import { slotClass, slotText } from './record-slots.ts';
+import { slotClass, slotLabel, slotText } from './record-slots.ts';
 
 interface RecordSlotsProps {
   loadType: LoadType;
@@ -20,9 +20,13 @@ export function RecordSlots({ loadType, slots, maxReps, unit, weightsHidden = fa
     );
   }
   return (
-    <ol className="record-slots">
+    <ol className="record-slots" aria-label="Rep maxes">
       {slots.map((slot, index) => (
-        <li key={index} className={slotClass(slot)}>
+        <li
+          key={index}
+          className={slotClass(slot)}
+          aria-label={slotLabel(index + 1, slot, loadType, unit, weightsHidden)}
+        >
           <span className="muted">{index + 1}RM</span> <span>{slotText(slot, loadType, unit, weightsHidden)}</span>
         </li>
       ))}

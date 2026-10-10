@@ -1,5 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
-import { finishWorkout, logExercise, muteDraftBroadcasts, register, uniqueUsername } from './support/app.ts';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
+import { finishWorkout, logExercise, muteDraftBroadcasts, register, setRow, uniqueUsername } from './support/app.ts';
 import { sessionCount } from './support/db.ts';
 
 function benchHeading(page: Page) {
@@ -15,7 +16,7 @@ test('an edit in one tab shows up in the other without a reload', async ({ conte
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await expect(benchHeading(second)).toBeVisible();
-  await expect(second.locator('li.set-row').first().getByLabel('reps')).toHaveValue('5');
+  await expect(setRow(second, 1).getByLabel('reps')).toHaveValue('5');
 });
 
 test('Finish in one tab sends exactly one request and the other tab follows', async ({ context, page }) => {
@@ -44,7 +45,7 @@ test('Finish in one tab sends exactly one request and the other tab follows', as
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
   await expect(second.getByText('This workout was saved in another tab.')).toBeVisible();
   expect(completeSessionRequests).toEqual(['POST']);
-  expect(await sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionCount(username)).toBe(1);
 });
 
 test('a stale edit after the other tab synced does not resurrect the draft', async ({ context, page }) => {
@@ -61,10 +62,10 @@ test('a stale edit after the other tab synced does not resurrect the draft', asy
   await finishWorkout(page);
   await expect(benchHeading(second)).toBeVisible();
 
-  await second.locator('li.set-row').first().getByLabel('reps').fill('7');
+  await setRow(second, 1).getByLabel('reps').fill('7');
   await expect(second.getByText('This workout was saved in another tab.')).toBeVisible();
   await second.reload();
   await expect(second.getByRole('button', { name: 'Start workout' })).toBeVisible();
   await expect(benchHeading(second)).toHaveCount(0);
-  expect(await sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionCount(username)).toBe(1);
 });

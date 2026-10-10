@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { readChangelog } from '../web/build/changelog.ts';
 import { LAST_SEEN_RELEASE_KEY_PREFIX, lastSeenReleaseKey } from '../web/src/lib/last-seen-release-store.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
@@ -144,7 +145,7 @@ test('an older stored version shows the sheet once until dismissed', async ({ pa
 
   await whatsNewDialog(page).getByRole('button', { name: 'Got it' }).click();
   await expect(whatsNewDialog(page)).toHaveCount(0);
-  expect(await storedLastSeen(page)).toBe(NEWEST_VERSION);
+  await expect.poll(() => storedLastSeen(page)).toBe(NEWEST_VERSION);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
   await expectNoDialogAcrossTabs(page);
@@ -154,7 +155,7 @@ test('an older stored version shows the sheet once until dismissed', async ({ pa
   await expectSheetListsEveryRelease(page);
   await page.keyboard.press('Escape');
   await expect(whatsNewDialog(page)).toHaveCount(0);
-  expect(await storedLastSeen(page)).toBe(NEWEST_VERSION);
+  await expect.poll(() => storedLastSeen(page)).toBe(NEWEST_VERSION);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
   await expectNoDialogAcrossTabs(page);

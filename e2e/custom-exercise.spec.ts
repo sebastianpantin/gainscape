@@ -1,5 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import {
+  addExercise,
   logCardio,
   logExercise,
   logWorkout,
@@ -15,7 +17,7 @@ async function logLandmineSession(page: Page, weightKg: number) {
 }
 
 function collectionHeadings(page: Page) {
-  return page.locator('main section h2');
+  return page.getByRole('main').getByRole('heading', { level: 2 });
 }
 
 async function openChestExercises(page: Page) {
@@ -51,12 +53,9 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await expect(page.getByLabel('New records')).toContainText('Landmine Press: 8RM 50 kg');
 
   await openTab(page, 'Log');
-  await page.getByLabel('Search exercises').fill('back squat');
-  await page.getByRole('button', { name: /^Back Squat\b/ }).click();
+  await addExercise(page, 'back squat', 'Back Squat');
   await expect(collectionHeadings(page)).toHaveText(['Back Squat', 'Landmine Press']);
-  await page.getByLabel('Search exercises').fill('landmine');
-  await page.getByRole('button', { name: /^Landmine Press\b/ }).click();
-  const landmine = page.locator('section', { has: page.getByRole('heading', { name: 'Landmine Press', exact: true }) });
+  const landmine = await addExercise(page, 'landmine', 'Landmine Press');
   await expect(landmine.getByRole('button', { name: 'Unpin' })).toBeVisible();
   await landmine.getByRole('button', { name: 'Up' }).click();
   await expect(collectionHeadings(page)).toHaveText(['Landmine Press', 'Back Squat']);

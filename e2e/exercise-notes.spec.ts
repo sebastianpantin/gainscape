@@ -1,16 +1,11 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
-import { finishWorkout, logExercise, register, uniqueUsername } from './support/app.ts';
+import { addExercise, finishWorkout, logExercise, register, uniqueUsername } from './support/app.ts';
 import { workoutCards } from './support/program-enrollment.ts';
 
 const BENCH = 'Barbell Bench Press';
 const OFFLINE_TEXT = 'Notes can be edited when you are online.';
-
-async function addExercise(page: Page, search: string, name: string) {
-  await page.getByLabel('Search exercises').fill(search);
-  await page.getByRole('button', { name: new RegExp(`^${name}\\b`) }).click();
-  await expect(workoutCards(page, name)).toBeVisible();
-}
 
 async function writeNote(page: Page, name: string, text: string) {
   const card = workoutCards(page, name);

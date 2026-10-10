@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { finishWorkout, logExercise, openLatestWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 
 const BENCH = 'Barbell Bench Press';

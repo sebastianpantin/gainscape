@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
 import { dayPicker, followProgram, openProgramToday, prescribedRows, repeated } from './support/program-enrollment.ts';
@@ -55,29 +56,38 @@ function weekOneDay(top: LoggedTopSet): SeededDay {
 
 async function seedWeekOne(page: Page, prefix: string, topSets: readonly LoggedTopSet[]): Promise<void> {
   const username = uniqueUsername(prefix);
-  await register(page, username);
-  await followProgram(page, RPE, {
-    'Squat estimated 1RM (kg)': 200,
-    'Bench press estimated 1RM (kg)': 120,
-    'Deadlift estimated 1RM (kg)': 240,
+  await test.step('follow RPE at e1RMs squat 200, bench 120 and deadlift 240', async () => {
+    await register(page, username);
+    await followProgram(page, RPE, {
+      'Squat estimated 1RM (kg)': 200,
+      'Bench press estimated 1RM (kg)': 120,
+      'Deadlift estimated 1RM (kg)': 240,
+    });
   });
-  const { access_token: accessToken } = await readSession(page);
-  const enrollmentId = await activeEnrollmentIdOf(username);
-  const { lift_bindings: bindings } = await activeEnrollmentOf(username);
-  const clock = sessionClock(topSets.length + 1);
-  await seedProgramDays(accessToken, enrollmentId, bindings, clock, topSets.map(weekOneDay));
+  await test.step('seed the week 1 top sets and back-offs', async () => {
+    const { access_token: accessToken } = await readSession(page);
+    const enrollmentId = await activeEnrollmentIdOf(username);
+    const { lift_bindings: bindings } = await activeEnrollmentOf(username);
+    const clock = sessionClock(topSets.length + 1);
+    await seedProgramDays(accessToken, enrollmentId, bindings, clock, topSets.map(weekOneDay));
+  });
 }
 
 async function expectWeekTwo(page: Page, days: readonly WeekTwoDay[]): Promise<void> {
-  const today = await openProgramToday(page, RPE);
-  await expect(dayPicker(today).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
+  const today = await test.step('Train suggests W2 Day 1', async () => {
+    const programToday = await openProgramToday(page, RPE);
+    await expect(dayPicker(programToday).getByRole('radio', { name: 'W2 Day 1', exact: true })).toBeChecked();
+    return programToday;
+  });
   for (const { day, exercise, topRow, backOffRow } of days) {
-    await dayPicker(today)
-      .getByRole('radio', { name: `W2 ${day}`, exact: true })
-      .click();
-    await expect(today.getByRole('button', { name: `Start: ${RPE} — W2 ${day}`, exact: true })).toBeVisible();
-    await expect(prescribedRows(today, exercise)).toHaveText([topRow]);
-    await expect(prescribedRows(today, `${exercise} — supplemental`)).toHaveText(repeated(backOffRow, BACK_OFF_SETS));
+    await test.step(`W2 ${day}: ${exercise} top set ${topRow}, back-offs ${backOffRow}`, async () => {
+      await dayPicker(today)
+        .getByRole('radio', { name: `W2 ${day}`, exact: true })
+        .click();
+      await expect(today.getByRole('button', { name: `Start: ${RPE} — W2 ${day}`, exact: true })).toBeVisible();
+      await expect(prescribedRows(today, exercise)).toHaveText([topRow]);
+      await expect(prescribedRows(today, `${exercise} — supplemental`)).toHaveText(repeated(backOffRow, BACK_OFF_SETS));
+    });
   }
 }
 

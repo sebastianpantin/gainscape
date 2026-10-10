@@ -1,14 +1,19 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import {
+  addExercise,
+  exerciseCard,
   finishWorkout,
+  logBench,
   logExercise,
   logWorkout,
   openFromProfile,
   openTab,
   register,
+  setRow,
+  setRows,
   uniqueUsername,
 } from './support/app.ts';
-import { workoutCards } from './support/program-enrollment.ts';
 
 declare global {
   interface Window {
@@ -86,18 +91,14 @@ test('an exercise shows last session and starts from its first set', async ({ pa
 
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('bench');
-  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
-  const bench = workoutCards(page, 'Barbell Bench Press');
+  const bench = await addExercise(page, 'bench', 'Barbell Bench Press');
   await expect(bench.getByText('Last: 1×5 @ 60 kg, 1×4 @ 62.5 kg')).toBeVisible();
-  const firstSet = bench.locator('li.set-row').first();
+  const firstSet = setRow(bench, 1);
   await expect(firstSet.getByLabel('kg', { exact: true })).toHaveValue('60');
   await expect(firstSet.getByLabel('reps', { exact: true })).toHaveValue('5');
 
-  await page.getByLabel('Search exercises').fill('squat');
-  await page.getByRole('button', { name: /^Back Squat\b/ }).click();
-  const squat = workoutCards(page, 'Back Squat');
-  await expect(squat.locator('li.set-row').first().getByLabel('kg', { exact: true })).toHaveValue('20');
+  const squat = await addExercise(page, 'squat', 'Back Squat');
+  await expect(setRow(squat, 1).getByLabel('kg', { exact: true })).toHaveValue('20');
   await expect(squat.getByText(/^Last:/)).toHaveCount(0);
 });
 
@@ -115,19 +116,17 @@ test('a lift suggests the next weight from how its last session went', async ({ 
 
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('bench');
-  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
+  await addExercise(page, 'bench', 'Barbell Bench Press');
   await expect(
-    workoutCards(page, 'Barbell Bench Press').getByText('Try 82.5 kg: every set hit 5 reps last time'),
+    exerciseCard(page, 'Barbell Bench Press').getByText('Try 82.5 kg: every set hit 5 reps last time'),
   ).toBeVisible();
-  await page.getByLabel('Search exercises').fill('squat');
-  await page.getByRole('button', { name: /^Back Squat\b/ }).click();
-  await expect(workoutCards(page, 'Back Squat').getByText('Stay at 100 kg until every set hits 5 reps')).toBeVisible();
+  await addExercise(page, 'squat', 'Back Squat');
+  await expect(exerciseCard(page, 'Back Squat').getByText('Stay at 100 kg until every set hits 5 reps')).toBeVisible();
 });
 
 test('a lift that felt harder three workouts in a row suggests a lighter day', async ({ page }) => {
   await register(page, uniqueUsername('fa'));
-  const bench = workoutCards(page, 'Barbell Bench Press');
+  const bench = exerciseCard(page, 'Barbell Bench Press');
   for (const effort of ['Easy', 'Hard', 'Near fail']) {
     await openTab(page, 'Train');
     await logWorkout(page, async () => {
@@ -136,14 +135,13 @@ test('a lift that felt harder three workouts in a row suggests a lighter day', a
         { weightKg: 80, reps: 5 },
       ]);
       if (effort === 'Hard') return;
-      for (const row of await bench.locator('li.set-row').all()) await row.getByRole('radio', { name: effort }).click();
+      for (const row of await setRows(bench).all()) await row.getByRole('radio', { name: effort }).click();
     });
   }
 
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('bench');
-  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
+  await addExercise(page, 'bench', 'Barbell Bench Press');
   await expect(
     bench.getByText('Felt harder 3 sessions in a row at 80 kg: consider a lighter day at 72.5 kg'),
   ).toBeVisible();
@@ -153,9 +151,7 @@ test('a lift that felt harder three workouts in a row suggests a lighter day', a
 test('steppers change weight by a plate step and reps by one', async ({ page }) => {
   await register(page, uniqueUsername('st'));
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('bench');
-  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
-  const firstSet = workoutCards(page, 'Barbell Bench Press').locator('li.set-row').first();
+  const firstSet = setRow(await addExercise(page, 'bench', 'Barbell Bench Press'), 1);
   const weight = firstSet.getByLabel('kg', { exact: true });
   const reps = firstSet.getByLabel('reps', { exact: true });
 
@@ -187,7 +183,7 @@ test('a workout keeps the screen on and the end of a rest vibrates and beeps, as
 
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await page.clock.runFor(179_000);
-  expect(await deviceCalls(page)).toEqual(['lock']);
+  await expect.poll(() => deviceCalls(page)).toEqual(['lock']);
   await page.clock.runFor(2_000);
   await expect.poll(() => deviceCalls(page)).toEqual(['lock', 'vibrate', 'beep', 'beep']);
 
@@ -246,12 +242,11 @@ test('turning on rest notifications explains when the browser blocks them', asyn
 
 test('an unrated set outlines the effort the app assumes from your strength until you pick one', async ({ page }) => {
   await register(page, uniqueUsername('ae'));
-  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+  await logBench(page);
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('bench');
-  await page.getByRole('button', { name: /^Barbell Bench Press\b/ }).click();
-  const row = page.locator('li.set-row').first();
+  await addExercise(page, 'bench', 'Barbell Bench Press');
+  const row = setRow(page, 1);
   await expect(row.getByText('est. RIR 3')).toBeVisible();
   await expect(row.getByRole('radio', { name: 'Hard' })).toHaveAccessibleDescription('Assumed from your strength');
   await expect(row.getByRole('radio', { checked: true })).toHaveCount(0);
@@ -264,9 +259,7 @@ test('an unrated set outlines the effort the app assumes from your strength unti
 test('a lift fills to sets × reps in one go, every set done', async ({ page }) => {
   await register(page, uniqueUsername('qf'));
   await page.getByRole('button', { name: 'Start workout' }).click();
-  await page.getByLabel('Search exercises').fill('squat');
-  await page.getByRole('button', { name: /^Back Squat\b/ }).click();
-  const squat = page.locator('section', { has: page.getByRole('heading', { name: 'Back Squat', exact: true }) });
+  const squat = await addExercise(page, 'squat', 'Back Squat');
   await squat.getByRole('spinbutton', { name: 'kg', exact: true }).fill('80');
 
   const quickFill = squat.getByRole('group', { name: 'Quick fill' });
@@ -274,7 +267,7 @@ test('a lift fills to sets × reps in one go, every set done', async ({ page }) 
   await quickFill.getByRole('spinbutton', { name: 'reps' }).fill('8');
   await quickFill.getByRole('button', { name: 'Fill' }).click();
 
-  const rows = squat.locator('li.set-row');
+  const rows = setRows(squat);
   await expect(rows).toHaveCount(3);
   for (const [index, row] of (await rows.all()).entries()) {
     await expect(row.getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('80');

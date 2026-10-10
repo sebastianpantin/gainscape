@@ -70,8 +70,9 @@ describe('pin problems', () => {
     );
   });
 
-  it('passes any other message through', () => {
-    expect(pinProblemText({ message: 'permission denied' })).toBe('permission denied');
+  it('says the pins could not be updated for any other failure instead of the raw message', () => {
+    expect(pinProblemText({ message: 'permission denied' })).toBe('Could not update pins.');
+    expect(pinProblemText({ message: 'TypeError: Failed to fetch' })).toBe('Could not update pins.');
   });
 });
 

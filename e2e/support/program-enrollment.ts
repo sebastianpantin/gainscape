@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { openFromProfile, openTab } from './app.ts';
+import { exerciseCard, openFromProfile, openTab } from './app.ts';
 
 export const MADCOW_FIVE_RMS_KG: Readonly<Record<string, number>> = {
   'Squat 5RM (kg)': 100,
@@ -41,7 +41,7 @@ export function dayPicker(scope: Locator): Locator {
 }
 
 export function workoutCards(page: Page, exerciseName: string): Locator {
-  return page.locator('section', { has: page.getByRole('heading', { name: exerciseName, exact: true }) });
+  return exerciseCard(page, exerciseName);
 }
 
 export async function fieldValues(fields: Locator): Promise<string[]> {
@@ -54,6 +54,15 @@ export async function weightsIn(card: Locator): Promise<string[]> {
 
 export async function repsIn(card: Locator): Promise<string[]> {
   return fieldValues(card.getByRole('spinbutton', { name: 'reps', exact: true }));
+}
+
+export async function openManageProgram(page: Page, programName: string): Promise<void> {
+  await programToday(page, programName).getByRole('link', { name: 'Manage program', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: programName, exact: true })).toBeVisible();
+}
+
+export function cycleSummary(page: Page, cycle: number): Locator {
+  return page.getByRole('region', { name: `Cycle ${cycle} complete`, exact: true });
 }
 
 export async function openEnrollForm(page: Page, programName: string): Promise<void> {

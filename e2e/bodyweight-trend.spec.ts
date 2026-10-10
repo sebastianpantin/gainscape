@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import { logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
 import { backdateWorkoutsOf } from './support/db.ts';
 

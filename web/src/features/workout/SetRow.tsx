@@ -40,6 +40,7 @@ interface SetRowProps {
   onRemove: () => void;
   onToggleDone: () => void;
   doneLabel?: string;
+  rowLabel?: string;
   focusDone: boolean;
   onDoneFocused: () => void;
 }
@@ -147,6 +148,7 @@ export function SetRow({
   onRemove,
   onToggleDone,
   doneLabel = `Done set ${setNumber}`,
+  rowLabel = `Set ${setNumber}`,
   focusDone,
   onDoneFocused,
 }: SetRowProps) {
@@ -172,7 +174,7 @@ export function SetRow({
     .filter((name) => name !== null)
     .join(' ');
   return (
-    <li className={rowClass}>
+    <li className={rowClass} aria-label={rowLabel}>
       <span className="set-number">
         {setNumber}
         {amrapBadge && (

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import {
   finishWorkout,
   openFromProfile,
@@ -6,6 +6,7 @@ import {
   readSession,
   readStoredDraft,
   register,
+  setRow,
   uniqueUsername,
 } from './support/app.ts';
 import {
@@ -94,21 +95,22 @@ test('enroll in Madcow in kg, start W1 Day 1 with the ramp rows, finish and see 
   await expect(page.getByText('Top set 92.69 kg', { exact: true })).toBeVisible();
   await startFollowing(page, 'Madcow 5x5');
 
-  const enrollment = await activeEnrollmentOf(username);
-  expect(enrollment).toMatchObject({
-    template_key: 'madcow_5x5',
-    template_version: 2,
-    unit: 'kg',
-    options: { rampStep: 0.125 },
-    inputs: {
-      squat: { fiveRm: 100 },
-      bench: { fiveRm: 80 },
-      row: { fiveRm: 70 },
-      press: { fiveRm: 50 },
-      deadlift: { fiveRm: 140 },
-    },
-    rounding: { increment: 2.5, mode: 'nearest', barWeight: 20 },
-  });
+  await expect
+    .poll(() => activeEnrollmentOf(username))
+    .toMatchObject({
+      template_key: 'madcow_5x5',
+      template_version: 2,
+      unit: 'kg',
+      options: { rampStep: 0.125 },
+      inputs: {
+        squat: { fiveRm: 100 },
+        bench: { fiveRm: 80 },
+        row: { fiveRm: 70 },
+        press: { fiveRm: 50 },
+        deadlift: { fiveRm: 140 },
+      },
+      rounding: { increment: 2.5, mode: 'nearest', barWeight: 20 },
+    });
 
   const today = programToday(page, 'Madcow 5x5');
   const days = dayPicker(today);
@@ -130,16 +132,18 @@ test('enroll in Madcow in kg, start W1 Day 1 with the ramp rows, finish and see 
     'Barbell Bench Press',
     'Barbell Row',
   ]);
-  expect(await weightsIn(workoutCards(page, 'Back Squat'))).toEqual(['47.5', '57.5', '70', '80', '92.5']);
-  expect(await repsIn(workoutCards(page, 'Back Squat'))).toEqual(['5', '5', '5', '5', '5']);
-  expect(await weightsIn(workoutCards(page, 'Barbell Row'))).toEqual(['32.5', '40', '50', '57.5', '65']);
+  await expect.poll(() => weightsIn(workoutCards(page, 'Back Squat'))).toEqual(['47.5', '57.5', '70', '80', '92.5']);
+  await expect.poll(() => repsIn(workoutCards(page, 'Back Squat'))).toEqual(['5', '5', '5', '5', '5']);
+  await expect.poll(() => weightsIn(workoutCards(page, 'Barbell Row'))).toEqual(['32.5', '40', '50', '57.5', '65']);
 
   await markEverySetDone(page);
   await finishWorkout(page);
-  const stored = await readStoredDraft(page, user.id);
-  const session = await sessionRow(stored!.syncedSessionId!);
-  expect(session.enrollment_id).not.toBeNull();
-  expect(session.program_position).toEqual({ week: 1, day: 'mon' });
+  await expect
+    .poll(async () => {
+      const stored = await readStoredDraft(page, user.id);
+      return stored?.syncedSessionId ? await sessionRow(stored.syncedSessionId) : null;
+    })
+    .toMatchObject({ enrollment_id: expect.any(String), program_position: { week: 1, day: 'mon' } });
 
   await page.getByRole('link', { name: 'Done' }).click();
   const after = programToday(page, 'Madcow 5x5');
@@ -183,11 +187,13 @@ test('enroll in 5/3/1 with BBB, start with the "5+" badge and 5×10 rows, finish
   await fillProgramInputs(page, FIVE_THREE_ONE_ONE_RMS_KG);
   await expect(page.getByText('Training max 90 kg', { exact: true })).toBeVisible();
   await startFollowing(page, '5/3/1');
-  expect(await activeEnrollmentOf(username)).toMatchObject({
-    template_key: 'five_three_one',
-    options: { supplemental: 'bbb', bbbPct: 0.5, bbbProgression: 'standard', tmPct: 0.9, tmReset: 0.1 },
-    inputs: { squat: { oneRm: 100 }, bench: { oneRm: 80 }, deadlift: { oneRm: 140 }, press: { oneRm: 50 } },
-  });
+  await expect
+    .poll(() => activeEnrollmentOf(username))
+    .toMatchObject({
+      template_key: 'five_three_one',
+      options: { supplemental: 'bbb', bbbPct: 0.5, bbbProgression: 'standard', tmPct: 0.9, tmReset: 0.1 },
+      inputs: { squat: { oneRm: 100 }, bench: { oneRm: 80 }, deadlift: { oneRm: 140 }, press: { oneRm: 50 } },
+    });
 
   const today = programToday(page, '5/3/1');
   await expect(dayPicker(today).getByRole('radio', { name: 'C1 W1 Day 1', exact: true })).toBeChecked();
@@ -196,15 +202,14 @@ test('enroll in 5/3/1 with BBB, start with the "5+" badge and 5×10 rows, finish
 
   await today.getByRole('button', { name: 'Start: 5/3/1 — C1 W1 Day 1', exact: true }).click();
   await expect(page.getByText('5/3/1 — C1 W1 Day 1', { exact: true })).toBeVisible();
-  const [main, bbb] = [workoutCards(page, 'Back Squat').nth(0), workoutCards(page, 'Back Squat').nth(1)];
+  const [main, bbb] = [workoutCards(page, 'Back Squat').first(), workoutCards(page, 'Back Squat').last()];
   await expect(workoutCards(page, 'Back Squat')).toHaveCount(2);
-  expect(await weightsIn(main)).toEqual(['57.5', '67.5', '77.5']);
-  const mainSets = main.getByRole('listitem');
-  await expect(mainSets.nth(2).getByText('5+', { exact: true })).toBeVisible();
-  await expect(mainSets.nth(0).getByText('5+', { exact: true })).toHaveCount(0);
-  await expect(mainSets.nth(1).getByText('5+', { exact: true })).toHaveCount(0);
-  expect(await weightsIn(bbb)).toEqual(['45', '45', '45', '45', '45']);
-  expect(await repsIn(bbb)).toEqual(['10', '10', '10', '10', '10']);
+  await expect.poll(() => weightsIn(main)).toEqual(['57.5', '67.5', '77.5']);
+  await expect(setRow(main, 3).getByText('5+', { exact: true })).toBeVisible();
+  await expect(setRow(main, 1).getByText('5+', { exact: true })).toHaveCount(0);
+  await expect(setRow(main, 2).getByText('5+', { exact: true })).toHaveCount(0);
+  await expect.poll(() => weightsIn(bbb)).toEqual(['45', '45', '45', '45', '45']);
+  await expect.poll(() => repsIn(bbb)).toEqual(['10', '10', '10', '10', '10']);
 
   await markEverySetDone(page);
   await finishWorkout(page);
@@ -259,15 +264,17 @@ test("start today's workout offline after the program facts were loaded once", a
   await expect(prescribedRows(today, 'Back Squat')).toHaveText(MADCOW_W1_MONDAY_SQUAT);
   await today.getByRole('button', { name: 'Start: Madcow 5x5 — W1 Day 1', exact: true }).click();
   await expect(page.getByText('Madcow 5x5 — W1 Day 1', { exact: true })).toBeVisible();
-  expect(await weightsIn(workoutCards(page, 'Back Squat'))).toEqual(['47.5', '57.5', '70', '80', '92.5']);
+  await expect.poll(() => weightsIn(workoutCards(page, 'Back Squat'))).toEqual(['47.5', '57.5', '70', '80', '92.5']);
   await markEverySetDone(page);
 
   await context.setOffline(false);
   await finishWorkout(page);
-  const stored = await readStoredDraft(page, user.id);
-  const session = await sessionRow(stored!.syncedSessionId!);
-  expect(session.enrollment_id).not.toBeNull();
-  expect(session.program_position).toEqual({ week: 1, day: 'mon' });
+  await expect
+    .poll(async () => {
+      const stored = await readStoredDraft(page, user.id);
+      return stored?.syncedSessionId ? await sessionRow(stored.syncedSessionId) : null;
+    })
+    .toMatchObject({ enrollment_id: expect.any(String), program_position: { week: 1, day: 'mon' } });
 });
 
 test('a template with an unknown primitive kind is listed as "Update the app to use this program" and cannot be enrolled in', async ({
@@ -276,8 +283,6 @@ test('a template with an unknown primitive kind is listed as "Update the app to 
   const suffix = Date.now().toString(36);
   const key = `e2e_stale_${suffix}`;
   const name = `Future program ${suffix}`;
-  const pageErrors: Error[] = [];
-  page.on('pageerror', (error) => pageErrors.push(error));
   await insertProgramTemplate(key, name, staleTemplateDefinition(key, name));
   try {
     const username = uniqueUsername('pe_stale');
@@ -295,7 +300,6 @@ test('a template with an unknown primitive kind is listed as "Update the app to 
     await expect(page.getByText('Update the app to use this program', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start following', exact: true })).toHaveCount(0);
     expect(await activeEnrollmentOf(username)).toBeNull();
-    expect(pageErrors).toEqual([]);
   } finally {
     await deleteProgramTemplate(key);
   }

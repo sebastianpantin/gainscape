@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures.ts';
 import {
   finishedBenchDraft,
   finishWorkout,
@@ -35,7 +35,7 @@ test('an expired access token is refreshed before the single POST', async ({ pag
   expect(events.filter((event) => event.startsWith('post'))).toEqual(['post 200']);
   expect(events.indexOf('refresh')).toBeGreaterThanOrEqual(0);
   expect(events.indexOf('refresh')).toBeLessThan(events.indexOf('post 200'));
-  expect(await sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionCount(username)).toBe(1);
 });
 
 test('a token signed with the wrong key is refreshed after a 401', async ({ page }) => {
@@ -56,7 +56,7 @@ test('a token signed with the wrong key is refreshed after a 401', async ({ page
   });
   await finishWorkout(page);
   expect(statuses).toEqual([401, 200]);
-  expect(await sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionCount(username)).toBe(1);
 });
 
 test('a workout kept through a forced sign-out syncs after signing in again', async ({ page }) => {
@@ -74,7 +74,7 @@ test('a workout kept through a forced sign-out syncs after signing in again', as
   await expect(page.getByText('Your unsynced workout is saved on this device. Sign in to sync it.')).toBeVisible();
   await signIn(page, username);
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
-  expect(await sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionCount(username)).toBe(1);
 });
 
 test('an auth outage keeps the user signed in and syncs once the auth server is back', async ({ page }) => {
@@ -94,5 +94,5 @@ test('an auth outage keeps the user signed in and syncs once the auth server is 
 
   await page.unroute(tokenEndpoint);
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible({ timeout: 120_000 });
-  expect(await sessionCount(username)).toBe(1);
+  await expect.poll(() => sessionCount(username)).toBe(1);
 });
