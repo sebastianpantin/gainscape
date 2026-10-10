@@ -709,7 +709,7 @@ export function startDraftFromChallenge(
       const weightKg =
         target === null || exercise.loadType !== 'external'
           ? defaultWeightKg(exercise.loadType)
-          : challengeLoadKg(target, rounding, unit, exercise.equipment === 'barbell');
+          : challengeLoadKg(target, rounding, unit, (exercise.equipment ?? 'barbell') === 'barbell');
       targetLoadsKg[planned.exerciseId] = planned.pct === null ? null : weightKg;
       return {
         target: null,

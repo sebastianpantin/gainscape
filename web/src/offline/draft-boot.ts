@@ -10,6 +10,7 @@ import {
   transactionDone,
 } from './draft-store.ts';
 import { parseStoredDraft, storableRecord, type StoredDraft, storedSessionId } from './draft-format.ts';
+import { SESSION_STAYS_ON_FALLBACK } from './draft-session.ts';
 
 const V1_DRAFT_KEY = /^gainscape\.workout-draft\.[0-9a-f-]{36}$/;
 const FORGOTTEN_TOMBSTONE_LIFETIME_MS = 24 * 60 * 60 * 1000;
@@ -116,7 +117,7 @@ export async function openDraftStoreOrFallback(): Promise<DraftStore> {
 let sessionWroteFallbackThisLoad = false;
 
 export function openDraftSessionStore(): Promise<DraftStore> {
-  if (sessionWroteFallbackThisLoad) return Promise.reject(new Error('draft_session_on_fallback'));
+  if (sessionWroteFallbackThisLoad) return Promise.reject(new Error(SESSION_STAYS_ON_FALLBACK));
   return openPrimaryDraftStore();
 }
 

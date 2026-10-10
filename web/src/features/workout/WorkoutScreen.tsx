@@ -118,7 +118,9 @@ import {
   finishPrompt,
   rejectionText,
   stalledSyncText,
+  startNoticeText,
   syncProblemText,
+  WAITING_DRAFT_TEXT,
 } from './workout-rules.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
 import { vibrateNewRecord } from './record-haptic.ts';
@@ -376,7 +378,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       )}
       {waitingDraft && draft && (
         <p className="notice" role="status">
-          Another unsynced workout is saved on this device. It opens when you finish or discard this one.
+          {WAITING_DRAFT_TEXT}
         </p>
       )}
       {store && <OtherAccountDraftNotice store={store} userId={userId} />}
@@ -384,14 +386,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   );
 
   const openStartedDraft = async (started: { draft: WorkoutDraft; skippedExerciseIds: string[] }) => {
-    const skipped = started.skippedExerciseIds.length;
-    const startedFresh = await startWorkout(() => started.draft);
+    const outcome = await startWorkout(() => started.draft);
     setStartingDay(false);
-    setStartNotice(
-      startedFresh && skipped > 0
-        ? `${skipped} exercise(s) in this day are no longer available and were skipped.`
-        : null,
-    );
+    setStartNotice(startNoticeText(outcome, started.skippedExerciseIds.length));
   };
 
   const startFromDay = async (program: Program, day: ProgramDay) => {
@@ -475,7 +472,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           disabled={startingDay}
           onClick={() => {
             setStartNotice(null);
-            void startWorkout(startDraft);
+            void startWorkout(startDraft).then((outcome) => setStartNotice(startNoticeText(outcome, 0)));
           }}
         >
           Start workout

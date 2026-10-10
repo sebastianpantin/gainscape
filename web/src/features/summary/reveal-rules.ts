@@ -53,7 +53,7 @@ export function challengeNotAppliedText(
   if (!planned || summary.challenge) return null;
   return summary.historyOnly
     ? 'Challenge not applied: a workout older than 7 days is saved to history only. Your scroll was kept.'
-    : `Challenge not applied: you had no scroll left for ${planned.name}, so this was saved as a normal workout.`;
+    : `Challenge not applied: ${planned.name} couldn't be applied to this workout, so it was saved as a normal workout.`;
 }
 
 export function challengeBonusText(

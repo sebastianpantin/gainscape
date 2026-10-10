@@ -151,8 +151,10 @@ export function createIdbDraftStore(database: IDBDatabase): DraftStore {
     discard: (userId, sessionId, updatedAt) => writeTombstone(discardedRecord, userId, sessionId, updatedAt),
     forget: (userId) =>
       inTransaction('readwrite', async (objectStore) => {
-        const tombstone = forgottenTombstoneFor(await readStored(objectStore, userId));
+        const raw: unknown = await requestResult(objectStore.get(userId));
+        const tombstone = forgottenTombstoneFor(parseStoredDraft(raw, userId));
         if (tombstone) objectStore.put(storableRecord(tombstone));
+        else if (raw !== undefined) objectStore.delete(userId);
       }),
     userIdsWithDrafts: () =>
       inTransaction('readonly', async (objectStore) => {
@@ -199,6 +201,7 @@ export function createLocalDraftStore(storage: Storage): DraftStore {
     forget: async (userId) => {
       const tombstone = forgottenTombstoneFor(readFallbackRecord(storage, userId));
       if (tombstone) write(tombstone);
+      else storage.removeItem(fallbackKeyFor(userId));
     },
     userIdsWithDrafts: async () =>
       fallbackUserIds(storage).filter((userId) => readFallbackRecord(storage, userId)?.kind === 'draft'),

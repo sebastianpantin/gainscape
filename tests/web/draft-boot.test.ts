@@ -227,7 +227,7 @@ describe('draft store boot', () => {
 
     expect(remounted.snapshot()).toMatchObject({
       state: { draft: { sessionId: 'started-on-fallback' } },
-      saveProblem: 'unreadable',
+      saveProblem: null,
     });
     const reopened = await openDraftDatabase(indexedDB);
     expect(await createIdbDraftStore(reopened!).get(userId)).toMatchObject({ draft: { sessionId: 'unsynced-in-idb' } });

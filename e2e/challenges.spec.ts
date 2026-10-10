@@ -128,7 +128,7 @@ test('a challenge workout saved after its scroll is gone is saved without the ch
   await finishWithBodyweight(page);
   await expect(
     page.getByText(
-      `Challenge not applied: you had no scroll left for ${CHALLENGE_NAME}, so this was saved as a normal workout.`,
+      `Challenge not applied: ${CHALLENGE_NAME} couldn't be applied to this workout, so it was saved as a normal workout.`,
     ),
   ).toBeVisible();
   await expect(page.getByText(/^Challenge (complete|failed):/)).toHaveCount(0);

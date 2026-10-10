@@ -165,6 +165,21 @@ describe('startDraftFromChallenge', () => {
     expect(draft.challenge?.targetLoadsKg).toEqual({ lat_pulldown: 17.5 });
   });
 
+  it('keeps a lift with unknown equipment, as in an items cache saved before equipment was cached, at least on the bar', () => {
+    const exercises = new Map<string, CatalogEntry>([
+      ['back_squat', { name: 'Back Squat', archived: false, modality: 'lift', loadType: 'external' }],
+    ]);
+    const draft = startDraftFromChallenge(
+      SQUAT_CENTURY,
+      exercises,
+      strengthOf({ back_squat: 30 }),
+      KG,
+      'kg',
+      NOW,
+    ).draft;
+    expect(lifts(draft)[0].sets[0].weightKg).toBe(20);
+  });
+
   it('builds Squat Century at 20 kg without an e1RM', () => {
     const [squat] = lifts(startOf(SQUAT_CENTURY, {}));
     expect(setValues(squat)).toEqual(Array.from({ length: 10 }, () => [20, 10]));

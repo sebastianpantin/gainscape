@@ -156,12 +156,12 @@ describe('challenge lines', () => {
     expect(challengeFailReason({ challenge: null }, planned, nameOf, 'kg')).toBeNull();
   });
 
-  it('tells the lifter a planned challenge was not applied when no scroll was left', () => {
+  it('tells the lifter a planned challenge was not applied, without guessing why the server skipped it', () => {
     expect(challengeNotAppliedText({ challenge: null }, planned)).toBe(
-      'Challenge not applied: you had no scroll left for Deadlift and Pull-up, so this was saved as a normal workout.',
+      "Challenge not applied: Deadlift and Pull-up couldn't be applied to this workout, so it was saved as a normal workout.",
     );
     expect(challengeNotAppliedText({}, planned)).toBe(
-      'Challenge not applied: you had no scroll left for Deadlift and Pull-up, so this was saved as a normal workout.',
+      "Challenge not applied: Deadlift and Pull-up couldn't be applied to this workout, so it was saved as a normal workout.",
     );
   });
 

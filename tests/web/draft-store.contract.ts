@@ -49,6 +49,17 @@ async function rawRecord({ storage, indexedDB }: DraftStoreHarness, recordUserId
   return raw;
 }
 
+async function writeUnparsableRecord({ storage, indexedDB }: DraftStoreHarness, recordUserId: string): Promise<void> {
+  if (!indexedDB) return storage.setItem(fallbackKeyFor(recordUserId), JSON.stringify({ kind: 'unknown-shape' }));
+  const database = await openDraftDatabase(indexedDB);
+  const transaction = database!.transaction(DRAFT_OBJECT_STORE, 'readwrite');
+  transaction.objectStore(DRAFT_OBJECT_STORE).put({ userId: recordUserId, kind: 'unknown-shape' });
+  await new Promise((resolve) => {
+    transaction.oncomplete = resolve;
+  });
+  database!.close();
+}
+
 export function describeDraftStoreContract(name: string, createHarness: () => Promise<DraftStoreHarness>) {
   describe(`${name} draft store`, () => {
     it('round-trips a draft', async () => {
@@ -143,6 +154,14 @@ export function describeDraftStoreContract(name: string, createHarness: () => Pr
       const neverStored = '55555555-5555-4555-8555-555555555555';
       await store.forget(neverStored);
       expect(await store.get(neverStored)).toBeNull();
+    });
+
+    it('deletes a stored record it cannot parse when forgetting the user', async () => {
+      const harness = await createHarness();
+      await writeUnparsableRecord(harness, userId);
+      await harness.store.forget(userId);
+      expect((await rawRecord(harness, userId)) ?? null).toBeNull();
+      expect(await harness.store.get(userId)).toBeNull();
     });
 
     it('stores discard and forget tombstones in the synced shape older app versions read as occupied', async () => {

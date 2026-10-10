@@ -1,7 +1,11 @@
-import { nextUpdatedAt, type StoredDraft, type WorkoutDraft } from './draft-format.ts';
+import { nextUpdatedAt, type StoredDraft, storedSessionId, type WorkoutDraft } from './draft-format.ts';
 import type { DraftStore, PutOptions } from './draft-store.ts';
 
 export const DRAFT_CHANNEL_NAME = 'gainscape.drafts';
+
+export const SESSION_STAYS_ON_FALLBACK = 'draft_session_on_fallback';
+
+export type StartOutcome = 'started' | 'resumed' | 'opened_waiting';
 
 export type DraftNotice = 'saved_elsewhere' | 'deleted';
 
@@ -50,7 +54,7 @@ export interface DraftSession {
   ready: Promise<void>;
   changeDraft: (next: WorkoutDraft, options?: PutOptions) => void;
   updateDraft: (update: (current: WorkoutDraft) => WorkoutDraft | null) => WorkoutDraft | null;
-  startWorkout: (fresh: () => WorkoutDraft) => Promise<boolean>;
+  startWorkout: (fresh: () => WorkoutDraft) => Promise<StartOutcome>;
   discardDraft: (sessionId: string) => void;
   markSynced: (sessionId: string, change?: SyncedChange) => Promise<void>;
   reload: (noticeWhenGone?: DraftNotice | null) => Promise<void>;
@@ -69,6 +73,10 @@ const openSessionFlushes = new Set<() => Promise<void>>();
 
 export async function flushOpenDraftSessions(): Promise<void> {
   await Promise.all([...openSessionFlushes].map((flush) => flush()));
+}
+
+function staysOnFallback(error: unknown): boolean {
+  return error instanceof Error && error.message === SESSION_STAYS_ON_FALLBACK;
 }
 
 function isDraftMessage(data: unknown): data is DraftMessage {
@@ -153,12 +161,13 @@ export function createDraftSession({
   const announce = (sessionId: string, updatedAt: number, change: DraftChange) =>
     channel?.postMessage({ userId, sessionId, updatedAt, change });
 
-  const draftWaitingOnFallback = async (): Promise<StoredWorkout | null> => {
+  const draftWaitingOnFallback = async (stored: StoredDraft | null): Promise<StoredWorkout | null> => {
     if (usingFallback) return null;
     const record = await fallbackStore()
       .get(userId)
       .catch(() => null);
-    return record?.kind === 'draft' ? record : null;
+    if (record?.kind !== 'draft') return null;
+    return stored && storedSessionId(stored) === record.draft.sessionId ? null : record;
   };
 
   const openWaitingDraft = (waiting: StoredWorkout) => {
@@ -171,10 +180,10 @@ export function createDraftSession({
   const load = async (store: DraftStore) => {
     const record = await store.get(userId);
     if (record) seen(record.updatedAt);
-    const waiting = await draftWaitingOnFallback();
+    const waiting = await draftWaitingOnFallback(record);
     publish({ store, saveProblem: problemWhenSaved });
     if (record?.kind !== 'draft') return waiting ? openWaitingDraft(waiting) : showDraft(null);
-    publish({ waitingDraft: waiting !== null && waiting.draft.sessionId !== record.draft.sessionId });
+    publish({ waitingDraft: waiting !== null });
     showDraft(record.draft);
   };
 
@@ -183,9 +192,9 @@ export function createDraftSession({
     try {
       await load(await openStore());
       return;
-    } catch {
+    } catch (error) {
       usingFallback = true;
-      problemWhenSaved = 'unreadable';
+      if (!staysOnFallback(error)) problemWhenSaved = 'unreadable';
     }
     try {
       await load(fallbackStore());
@@ -239,17 +248,20 @@ export function createDraftSession({
   };
 
   const startWorkout = async (fresh: () => WorkoutDraft) => {
-    let startedFresh = false;
+    let outcome: StartOutcome = 'resumed';
     await enqueue(async (store) => {
       const record = await store.get(userId);
       if (record?.kind === 'draft') return adopt(record);
       if (record) seen(record.updatedAt);
-      const waiting = await draftWaitingOnFallback();
-      if (waiting) return openWaitingDraft(waiting);
+      const waiting = await draftWaitingOnFallback(record);
+      if (waiting) {
+        outcome = 'opened_waiting';
+        return openWaitingDraft(waiting);
+      }
       changeDraft(fresh());
-      startedFresh = true;
+      outcome = 'started';
     });
-    return startedFresh;
+    return outcome;
   };
 
   const discardDraft = (sessionId: string) => {

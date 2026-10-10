@@ -1,6 +1,6 @@
 import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
-import type { DraftSaveProblem } from '../../offline/draft-session.ts';
+import type { DraftSaveProblem, StartOutcome } from '../../offline/draft-session.ts';
 
 const EXERCISE_CHANGED_REASONS = new Set(['bodyweight_load_not_zero', 'unknown_exercise']);
 const LONG_SYNC_WAIT_MS = 60_000;
@@ -13,6 +13,17 @@ const TIMING_REJECTION_TEXT: Readonly<Record<string, string>> = {
   session_too_old:
     "This workout starts before 1970, so this device's date was probably wrong. Fix the date and time, then discard this workout and log it again.",
 };
+
+export const WAITING_DRAFT_TEXT =
+  'Another unsynced workout is saved on this device. It opens when you start your next workout.';
+
+export function startNoticeText(outcome: StartOutcome, skippedExerciseCount: number): string | null {
+  if (outcome === 'opened_waiting')
+    return 'Another unsynced workout saved on this device opened instead of the one you chose. Finish or discard it, then start again.';
+  if (outcome === 'started' && skippedExerciseCount > 0)
+    return `${skippedExerciseCount} exercise(s) in this day are no longer available and were skipped.`;
+  return null;
+}
 
 export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
   if (lastProblem !== RATE_LIMITED_CODE) {

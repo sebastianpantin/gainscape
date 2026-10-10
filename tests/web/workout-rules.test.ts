@@ -5,7 +5,9 @@ import {
   finishPrompt,
   rejectionText,
   stalledSyncText,
+  startNoticeText,
   syncProblemText,
+  WAITING_DRAFT_TEXT,
 } from '../../web/src/features/workout/workout-rules.ts';
 
 describe('syncProblemText', () => {
@@ -125,5 +127,30 @@ describe('deviceSaveProblemText', () => {
 
   it('says a change could not be saved when every store failed', () => {
     expect(deviceSaveProblemText('unsaved')).toBe("Couldn't save on this device");
+  });
+});
+
+describe('WAITING_DRAFT_TEXT', () => {
+  it('says the waiting workout opens at the next start, not when this one ends', () => {
+    expect(WAITING_DRAFT_TEXT).toBe(
+      'Another unsynced workout is saved on this device. It opens when you start your next workout.',
+    );
+  });
+});
+
+describe('startNoticeText', () => {
+  it('explains that a waiting workout opened instead of the chosen start', () => {
+    expect(startNoticeText('opened_waiting', 2)).toBe(
+      'Another unsynced workout saved on this device opened instead of the one you chose. Finish or discard it, then start again.',
+    );
+  });
+
+  it('counts the exercises skipped from a freshly started day', () => {
+    expect(startNoticeText('started', 2)).toBe('2 exercise(s) in this day are no longer available and were skipped.');
+  });
+
+  it('says nothing for a fresh start without skips or a resumed workout', () => {
+    expect(startNoticeText('started', 0)).toBeNull();
+    expect(startNoticeText('resumed', 3)).toBeNull();
   });
 });
