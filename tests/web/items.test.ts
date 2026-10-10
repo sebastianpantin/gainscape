@@ -8,6 +8,7 @@ import {
   craftProblem,
   craftProblemText,
   describeDrops,
+  firstPickedItemId,
   groupItems,
   type HeldItem,
   itemNameLookup,
@@ -76,6 +77,16 @@ describe('groupItems', () => {
     );
     expect(marked).toEqual(['titan_gloves', 'forged_scraps']);
     expect(newItemIds(undefined).size).toBe(0);
+  });
+});
+
+describe('firstPickedItemId', () => {
+  it('picks the first new held item, else the first held item in catalog order, else nothing', () => {
+    const items = fixture.filter((item) => ['rookie_belt', 'grinder_belt', 'spotter_pup'].includes(item.key));
+    const owned = held({ grinder_belt: 1, spotter_pup: 1 });
+    expect(firstPickedItemId(items, owned, new Set(['id-spotter_pup', 'id-rookie_belt']))).toBe('id-spotter_pup');
+    expect(firstPickedItemId(items, owned, new Set())).toBe('id-grinder_belt');
+    expect(firstPickedItemId(items, new Map(), new Set(['id-rookie_belt']))).toBeNull();
   });
 });
 
