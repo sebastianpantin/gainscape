@@ -95,6 +95,8 @@ export function distanceFromInput(value: number | null, unit: DistanceUnit): num
   return clampedDistanceM(unitToDistanceM(value, unit));
 }
 
+export const BOUTS_FULL_TEXT = 'Bouts in one workout can add up to at most 4 hours.';
+
 export function canAddBout(bouts: readonly Pick<BoutValues, 'durationS' | 'interval'>[]): boolean {
   const totalS = bouts.reduce((sum, bout) => sum + boutDurationSeconds(bout), 0);
   return totalS < CARDIO_BOUNDS.steadyDurationS.max;

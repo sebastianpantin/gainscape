@@ -4,7 +4,7 @@ import { DEFAULT_BALANCE, MAX_SETS_PER_SESSION, type Position } from '@domain/in
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
-import { canAddBout } from '../../lib/cardio-rules.ts';
+import { BOUTS_FULL_TEXT } from '../../lib/cardio-rules.ts';
 import { challengeSummaryText, challengeVolumeText } from '../../lib/challenge-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
@@ -65,7 +65,8 @@ import {
   type WorkoutDraft,
 } from '../../offline/draft-format.ts';
 import {
-  canAddSet,
+  addableExercises,
+  canAddSetTo,
   removeSet,
   roomForSets,
   updateBout,
@@ -589,10 +590,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   };
 
   const canFinish = canFinishWorkout(finishCounts) && !checkingFinish;
-  const roomForBouts = canAddBout(
-    draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
-  );
-  const roomForSet = canAddSet(draft);
+  const roomForSet = canAddSetTo(draft, 'lift');
+  const roomForBout = canAddSetTo(draft, 'cardio');
   const liftExercises = exercises.filter(isLiftExercise).filter((exercise) => exercise.measure === undefined);
   const equipment = liftEquipment(exercises);
   const barbellSetup = barbellSetupFor(plateSettings, unitPref, programBar);
@@ -834,12 +833,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               <button
                 className="button dashed"
                 type="button"
-                disabled={!roomForBouts || !roomForSet}
+                disabled={!roomForBout}
                 onClick={() => changeDraft(addSet(draft, exerciseIndex))}
               >
                 + Add bout
               </button>
-              {!roomForBouts && <p className="hint">Bouts in one workout can add up to at most 4 hours.</p>}
+              {roomForSet && !roomForBout && <p className="hint">{BOUTS_FULL_TEXT}</p>}
             </section>
           );
         }
@@ -961,10 +960,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         );
       })}
       {roomForSet ? (
-        <ExercisePicker exercises={exercises} onPick={(exercise) => void addPicked(exercise)} />
+        <ExercisePicker
+          exercises={addableExercises(draft, exercises)}
+          onPick={(exercise) => void addPicked(exercise)}
+        />
       ) : (
         <p className="hint">A workout can hold at most {MAX_SETS_PER_SESSION} sets.</p>
       )}
+      {roomForSet && !roomForBout && <p className="hint">Cardio exercises are not offered. {BOUTS_FULL_TEXT}</p>}
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>
