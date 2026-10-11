@@ -1,3 +1,14 @@
+- prs: [84, 88]
+  version: 0.5.1
+  date: 2026-10-11
+  title: Smoother screens and fixes
+  items:
+    - Profile, hiscores, friends and program screens show what you saw last right away, then refresh in the background.
+    - A workout stops at 200 sets while you log it, instead of failing when you finish. The same goes for 4 hours of cardio, also when you pick a new cardio exercise.
+    - Archived exercises no longer show up in the exercise picker when you are offline.
+    - A program you follow no longer says it is out of date after you change an exercise to bodyweight.
+    - Deleting your account clears all of your data from this device, and items show up right after crafting.
+    - Your data export now includes every version of the custom programs you have followed.
 - prs: [83, 85]
   version: 0.5.0
   date: 2026-10-11
