@@ -4,6 +4,7 @@ import {
   chance,
   DEFAULT_BALANCE,
   DEFAULT_LOOT,
+  dropRevocations,
   eligibleRolls,
   type LootCandidate,
   type LootConfig,
@@ -12,8 +13,10 @@ import {
   pickEntry,
   qualifies,
   quantityFor,
+  replayedSessionRole,
   replayHistory,
   revocationReason,
+  revokedInReplayOrder,
   rollSessionLoot,
   type RollKind,
   type RollVersions,
@@ -507,5 +510,96 @@ describe('revocationReason', () => {
     expect(
       revocationReason('regular', { ...qualifying, personalRecord: false }, 'later', DEFAULT_LOOT, CURRENT, CURRENT),
     ).toBeNull();
+  });
+});
+
+describe('replayedSessionRole', () => {
+  const scope = { editedSessionId: 'edited', deletedSessionIds: ['gone'], unchangedSetIds: ['kept'] };
+
+  it('classifies a drop by the session it belongs to and whether the edit left its set alone', () => {
+    expect(replayedSessionRole({ sessionId: 'gone', setId: 'kept' }, scope)).toBe('deleted');
+    expect(replayedSessionRole({ sessionId: 'later', setId: 'kept' }, scope)).toBe('later');
+    expect(replayedSessionRole({ sessionId: 'edited', setId: 'kept' }, scope)).toBe('edited_unchanged');
+    expect(replayedSessionRole({ sessionId: 'edited', setId: 'changed' }, scope)).toBe('edited');
+  });
+});
+
+describe('dropRevocations', () => {
+  const scope = { editedSessionId: 'edited', deletedSessionIds: ['gone'], unchangedSetIds: [] };
+  const held = (sessionId: string, setId: string, source: RollKind = 'regular') => ({
+    dropId: `${sessionId}-${setId}-${source}`,
+    sessionId,
+    setId,
+    source,
+    lootVersion: DEFAULT_LOOT.version,
+    balanceVersion: DEFAULT_BALANCE.version as number | null,
+  });
+  const inSession = (sessionId: string, setId: string, overrides: Partial<LootCandidate> = {}) => ({
+    ...candidate(setId, 0, overrides),
+    sessionId,
+  });
+
+  it('pairs each drop that no longer stands with its reason and leaves the rest out', () => {
+    const drops = [held('gone', 'a'), held('edited', 'b'), held('edited', 'c'), held('later', 'd', 'pr')];
+    const current = [
+      inSession('edited', 'b'),
+      inSession('later', 'd', { personalRecord: false }),
+      inSession('other', 'c'),
+    ];
+    expect(dropRevocations(drops, current, scope, DEFAULT_LOOT, DEFAULT_BALANCE.version)).toEqual([
+      { drop: drops[0], reason: 'session_deleted' },
+      { drop: drops[2], reason: 'set_removed' },
+      { drop: drops[3], reason: 'no_longer_qualifies' },
+    ]);
+  });
+
+  it('judges a drop without a stored balance version under the current one', () => {
+    const unversioned = { ...held('later', 'd', 'pr'), balanceVersion: null };
+    const failing = [inSession('later', 'd', { personalRecord: false })];
+    expect(dropRevocations([unversioned], failing, scope, DEFAULT_LOOT, DEFAULT_BALANCE.version)).toEqual([
+      { drop: unversioned, reason: 'no_longer_qualifies' },
+    ]);
+    const olderBalance = { ...unversioned, balanceVersion: DEFAULT_BALANCE.version - 1 };
+    expect(dropRevocations([olderBalance], failing, scope, DEFAULT_LOOT, DEFAULT_BALANCE.version)).toEqual([]);
+  });
+});
+
+describe('revokedInReplayOrder', () => {
+  const revoked = (dropId: string, sessionId: string, setId: string, source: RollKind) => ({
+    dropId,
+    sessionId,
+    setId,
+    itemId: `item-${dropId}`,
+    itemKey: dropId,
+    quantity: 1,
+    source,
+    revokedQuantity: 1,
+  });
+
+  it('orders by replayed session, then set position, then regular before pr, and drops the session id', () => {
+    const sets = [
+      { setId: 'early-1', position: 1 },
+      { setId: 'early-0', position: 0 },
+      { setId: 'late-0', position: 0 },
+    ];
+    const drops = [
+      revoked('late', 'late', 'late-0', 'regular'),
+      revoked('pr', 'early', 'early-1', 'pr'),
+      revoked('regular', 'early', 'early-1', 'regular'),
+      revoked('first', 'early', 'early-0', 'pr'),
+      revoked('removed', 'early', 'missing', 'regular'),
+      revoked('deleted', 'deleted', 'deleted-0', 'regular'),
+    ];
+    const ordered = revokedInReplayOrder(drops, sets, ['early', 'late']);
+    expect(ordered.map((drop) => drop.dropId)).toEqual(['deleted', 'first', 'regular', 'pr', 'removed', 'late']);
+    expect(ordered[0]).toEqual({
+      dropId: 'deleted',
+      setId: 'deleted-0',
+      itemId: 'item-deleted',
+      itemKey: 'deleted',
+      quantity: 1,
+      source: 'regular',
+      revokedQuantity: 1,
+    });
   });
 });

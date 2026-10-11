@@ -21,3 +21,11 @@ export function saveSessionBaseline(storage: Storage | null, userId: string, bas
     return;
   }
 }
+
+export function forgetSessionBaseline(storage: Storage | null, userId: string): void {
+  try {
+    storage?.removeItem(sessionBaselineKey(userId));
+  } catch {
+    return;
+  }
+}

@@ -1,13 +1,11 @@
 import {
   DEFAULT_ROUNDING,
-  type DayDecl,
   type ProgramDefinition,
   type ProgramEnrollment,
-  type ProgressionRule,
   type RoundingSetting,
-  type SlotDecl,
   type WeightUnit,
 } from '@domain/index.ts';
+import { type DayDecl, type ProgressionRule, type SlotDecl } from '@domain/program-definition.ts';
 
 const GZCLP_WIKI = 'https://thefitness.wiki/routines/gzclp/';
 const GZCL_ARCHIVE = 'https://thefitness.wiki/reddit-archive/gzcl-method-novice-to-elite/';

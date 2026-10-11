@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   canFinishWorkout,
   deviceSaveProblemText,
+  finishDraft,
   finishPrompt,
+  loadTypeChangedText,
   rejectionText,
   stalledSyncText,
   challengeStartNoticeText,
@@ -10,6 +12,8 @@ import {
   syncProblemText,
   WAITING_DRAFT_TEXT,
 } from '../../web/src/features/workout/workout-rules.ts';
+import type { LoadType } from '../../web/src/lib/catalog-rules.ts';
+import type { WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 
 describe('syncProblemText', () => {
   it('names the network problem and reassures the workout is kept', () => {
@@ -166,5 +170,71 @@ describe('challengeStartNoticeText', () => {
   it('says nothing when the challenge started or a workout resumed', () => {
     expect(challengeStartNoticeText('started')).toBeNull();
     expect(challengeStartNoticeText('resumed')).toBeNull();
+  });
+});
+
+describe('finishDraft', () => {
+  const startedAt = '2026-10-01T10:00:00.000Z';
+  const now = new Date('2026-10-01T11:00:00.000Z');
+  const plannedSet = {
+    id: 'p1',
+    weightKg: 40,
+    reps: 8,
+    effort: null,
+    done: false,
+    isWarmup: false,
+    prescription: null,
+  };
+  const draft = (): WorkoutDraft => ({
+    sessionId: 'session',
+    startedAt,
+    finishedAt: null,
+    programDayId: null,
+    programLabel: null,
+    exercises: [
+      {
+        clientId: 'card-dip',
+        exerciseId: 'dip',
+        name: 'Dip',
+        modality: 'lift',
+        loadType: 'bodyweight_plus',
+        target: null,
+        supersetId: null,
+        sets: [{ ...plannedSet, id: 'd1', weightKg: 10, done: true }, plannedSet],
+      },
+    ],
+  });
+  const options = { sessionId: 'session', loadTypes: new Map(), markPlannedDone: false, now };
+
+  it('stamps the finish time and keeps planned sets as they are', () => {
+    const { draft: finished, changedNames } = finishDraft(draft(), options);
+    expect(changedNames).toEqual([]);
+    expect(finished.finishedAt).toBe('2026-10-01T11:00:00.000Z');
+    expect(finished.exercises[0].sets.map((set) => set.done)).toEqual([true, false]);
+  });
+
+  it('marks planned sets done when asked', () => {
+    const { draft: finished } = finishDraft(draft(), { ...options, markPlannedDone: true });
+    expect(finished.exercises[0].sets.map((set) => set.done)).toEqual([true, true]);
+  });
+
+  it('does not finish when a load type changed, and names the exercise with its weights reset', () => {
+    const loadTypes = new Map<string, LoadType>([['dip', 'bodyweight']]);
+    const { draft: checked, changedNames } = finishDraft(draft(), { ...options, loadTypes, markPlannedDone: true });
+    expect(changedNames).toEqual(['Dip']);
+    expect(checked.finishedAt).toBeNull();
+    const [dip] = checked.exercises;
+    if (dip.modality !== 'lift') throw new Error('expected a lift');
+    expect(dip.sets.map((set) => [set.weightKg, set.done])).toEqual([
+      [0, true],
+      [0, false],
+    ]);
+    expect(loadTypeChangedText(changedNames)).toBe('Load type of Dip changed; check the weights');
+  });
+
+  it('leaves another session or an already finished draft alone', () => {
+    expect(finishDraft(draft(), { ...options, sessionId: 'other' })).toEqual({ draft: draft(), changedNames: [] });
+    const finished = { ...draft(), finishedAt: startedAt };
+    expect(finishDraft(finished, options)).toEqual({ draft: finished, changedNames: [] });
   });
 });

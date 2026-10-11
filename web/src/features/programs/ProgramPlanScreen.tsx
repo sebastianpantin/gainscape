@@ -1,10 +1,10 @@
-import { useEffect, useId, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
-import { type Exercise } from '../../lib/catalog-rules.ts';
-import { fetchExercises } from '../../lib/catalog.ts';
+import { readCachedExercises } from '../../lib/catalog-cache.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { type PlanDay, planStatusText, programPlan } from '../../lib/program-plan-rules.ts';
+import { exerciseListQuery } from '../../lib/queries.ts';
 import { PrescriptionCards } from './PrescriptionCards.tsx';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';
@@ -30,20 +30,12 @@ export function ProgramPlanScreen({ userId }: ProgramPlanScreenProps) {
   const { program, loadStatus, statusText } = useActiveProgram(userId);
   const { unitPref } = usePreferences();
   const lastLogged = useLastLoggedWeights(program);
-  const [exercises, setExercises] = useState<readonly Exercise[]>([]);
-
-  useEffect(() => {
-    let active = true;
-    void loadExercisesCacheFirst(
-      localStorage,
-      userId,
-      () => fetchExercises({ includeArchived: true }),
-      (list) => active && setExercises(list.exercises),
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId]);
+  const exerciseList = useQuery({
+    ...exerciseListQuery(userId),
+    initialData: () => readCachedExercises(localStorage, userId) ?? undefined,
+    initialDataUpdatedAt: 0,
+  });
+  const exercises = exerciseList.data ?? [];
 
   if (program.kind !== 'ready')
     return (

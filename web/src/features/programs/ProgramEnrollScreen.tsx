@@ -1,18 +1,18 @@
 import { type ProgramDefinition, type RoundingMode, type WeightUnit } from '@domain/index.ts';
-import { useEffect, useId, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useId, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
-import { fetchExercises } from '../../lib/catalog.ts';
-import { readCachedExercises } from '../../lib/catalog-cache.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { isLiftExercise } from '../../lib/catalog-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import { inputHelpKeys } from '../../lib/term-help-rules.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { enrollProgram, fetchProgramTemplates, forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
+import { type EnrollChoices, enrollProgram, forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
+import { enrollChoicesQuery } from '../../lib/queries.ts';
+import { type LoadedState, loadedState } from '../../lib/query-state-rules.ts';
 import {
   barWeightLabel,
   type BindableExercise,
@@ -35,8 +35,7 @@ import {
   withUnit,
 } from '../../lib/program-enroll-rules.ts';
 import { carriedFollowOf, carriedInputs } from '../../lib/program-follow-rules.ts';
-import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
-import { readProgramCache, updateProgramCache } from '../../offline/program-cache.ts';
+import { readProgramCache } from '../../offline/program-cache.ts';
 
 interface ProgramEnrollScreenProps {
   userId: string;
@@ -67,12 +66,13 @@ function loadedEntry(entry: TemplateListEntry | undefined, exercises: BindableEx
   return { status: 'ready', definition: entry.definition, name: entry.name, exercises };
 }
 
-function savedTemplatesAndExercises(userId: string) {
-  const storage = deviceStorage();
-  if (!storage) return null;
-  const { templates } = readProgramCache(storage, userId);
-  const exercises = readCachedExercises(storage, userId);
-  return templates.length > 0 && exercises ? { templates, exercises } : null;
+function loadedChoices(choices: LoadedState<EnrollChoices>, key: string | undefined): Loaded {
+  if (choices.status !== 'ready') return choices;
+  const { templates, exercises } = choices.data;
+  const bindable = exercises
+    .filter(isLiftExercise)
+    .map((exercise) => ({ id: exercise.id, key: exercise.key ?? null, name: exercise.name, archived: false }));
+  return loadedEntry(key === undefined ? undefined : templateEntry(templates, key), bindable);
 }
 
 export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
@@ -81,7 +81,8 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const location = useLocation();
   const [carried] = useState(() => carriedFollowOf(location.state));
   const { unitPref } = usePreferences();
-  const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
+  const choices = useQuery(enrollChoicesQuery(userId));
+  const loaded = loadedChoices(loadedState(choices.data, choices.isFetching ? null : choices.error), key);
   const [editedForm, setEditedForm] = useState<EnrollForm | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -89,34 +90,6 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const offline = useIsOffline();
   const [confirmingReplace, setConfirmingReplace] = useState<EnrollProgramPayload | null>(null);
   const [enrolledRow] = useState(() => readProgramCache(localStorage, userId).enrollment);
-
-  useEffect(() => {
-    let active = true;
-    loadCacheFirstWhenOffline(
-      isDeviceOffline,
-      () => savedTemplatesAndExercises(userId),
-      async () => {
-        const [templates, exercises] = await Promise.all([
-          fetchProgramTemplates(),
-          fetchExercises({ includeArchived: false }),
-        ]);
-        updateProgramCache(localStorage, userId, (cache) => ({ ...cache, templates }));
-        return { templates, exercises };
-      },
-    ).then(
-      ({ loaded: { templates, exercises } }) => {
-        if (!active) return;
-        const bindable = exercises
-          .filter(isLiftExercise)
-          .map((exercise) => ({ id: exercise.id, key: exercise.key ?? null, name: exercise.name, archived: false }));
-        setLoaded(loadedEntry(key === undefined ? undefined : templateEntry(templates, key), bindable));
-      },
-      (error: Error) => active && setLoaded({ status: 'failed', problem: error.message }),
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId, key]);
 
   if (loaded.status === 'loading' || loaded.status === 'failed' || loaded.status === 'missing')
     return (

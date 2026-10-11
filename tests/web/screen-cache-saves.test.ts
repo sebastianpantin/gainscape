@@ -44,6 +44,10 @@ const { profileCache } = await import('../../web/src/offline/profile-cache.ts');
 const { programListCache } = await import('../../web/src/offline/program-list-cache.ts');
 const { standingCache } = await import('../../web/src/offline/standing-cache.ts');
 const { collectionCache } = await import('../../web/src/offline/collection-cache.ts');
+const { loadItemsCacheFirst } = await import('../../web/src/lib/items.ts');
+const { loadProgramTemplatesCacheFirst } = await import('../../web/src/lib/program-enrollment.ts');
+const { readItemsCache } = await import('../../web/src/offline/items-cache.ts');
+const { readProgramCache } = await import('../../web/src/offline/program-cache.ts');
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -213,6 +217,45 @@ describe('saving screen caches after an online load', () => {
       ['old-press', true],
     ]);
     expect(saved?.rows.repMaxes).toEqual([{ exercise_id: 'old-press', reps: 5, load_kg: '60', exact_set_id: 'set-1' }]);
+  });
+});
+
+describe('saving the items and program templates after an online load', () => {
+  it('saves the items with the inventory and the challenge exercises', async () => {
+    server.tables = {
+      items: [
+        {
+          id: 'belt-1',
+          key: 'rookie_belt',
+          name: 'Rookie belt',
+          kind: 'gear',
+          rarity: 'common',
+          tier: 'rookie',
+          gear_slot: 'belt',
+          icon_key: 'belt',
+          description: '',
+          grants_challenge_id: null,
+          sort_order: 1,
+        },
+      ],
+      user_items: [{ item_id: 'belt-1', quantity: 1, first_obtained_at: '2026-10-09T10:00:00.000Z' }],
+      exercises: [exerciseRow('bench', null)],
+    };
+    const load = await loadItemsCacheFirst(USER_ID);
+    expect(load.fromCache).toBe(false);
+    expect(readItemsCache(storage, USER_ID)?.inventory).toEqual([
+      { itemId: 'belt-1', quantity: 1, firstObtainedAt: '2026-10-09T10:00:00.000Z' },
+    ]);
+    expect(load.loaded.held.get('belt-1')?.quantity).toBe(1);
+    expect(load.loaded.strength).toBeNull();
+  });
+
+  it('saves the program templates to the program cache', async () => {
+    vi.stubGlobal('localStorage', storage);
+    const template = { key: 'starter', version: 1, name: 'Starter', definition: {} };
+    server.tables = { program_templates: [template] };
+    expect(await loadProgramTemplatesCacheFirst(USER_ID)).toEqual([template]);
+    expect(readProgramCache(storage, USER_ID).templates).toEqual([template]);
   });
 });
 

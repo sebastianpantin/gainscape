@@ -1,7 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
-  initialProgramState,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramFact,
@@ -9,6 +8,7 @@ import {
   programStateAt,
   type WeeklyPosition,
 } from '@domain/index.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { sessionFact, setReferenceFact } from './program-fixtures/facts.ts';
 import {
   LINEAR_AFTER_SESSION,

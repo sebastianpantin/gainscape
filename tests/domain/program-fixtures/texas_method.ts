@@ -3,10 +3,10 @@ import {
   type OptionValue,
   type ProgramDefinition,
   type ProgramEnrollment,
-  type ProgressionRule,
   type WeeklyPosition,
   type WeightUnit,
 } from '@domain/index.ts';
+import { type ProgressionRule } from '@domain/program-definition.ts';
 
 const LIFTOSAUR_TEXAS = 'https://www.liftosaur.com/programs/texasmethod';
 const FITNESSVOLT_TEXAS = 'https://fitnessvolt.com/rpe-training/programs/texas-method/';

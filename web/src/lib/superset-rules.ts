@@ -1,10 +1,5 @@
-import {
-  addSet,
-  type DraftExercise,
-  updateExerciseAt,
-  type WorkoutDraft,
-  withValidSupersets,
-} from '../offline/draft-format.ts';
+import { addSet, type DraftExercise, type WorkoutDraft, withValidSupersets } from '../offline/draft-format.ts';
+import { roomForSets, updateExerciseAt } from './exercise-edit-rules.ts';
 
 export interface SupersetGroup {
   id: string;
@@ -113,6 +108,11 @@ export function restsAfter(draft: WorkoutDraft, exerciseIndex: number, setId: st
   return nextInRound(draft, exerciseIndex, setId) === null;
 }
 
+export function canAddRound(draft: WorkoutDraft, group: SupersetGroup): boolean {
+  return group.exerciseIndexes.length <= roomForSets(draft);
+}
+
 export function addRound(draft: WorkoutDraft, group: SupersetGroup): WorkoutDraft {
+  if (!canAddRound(draft, group)) return draft;
   return group.exerciseIndexes.reduce((current, index) => addSet(current, index), draft);
 }

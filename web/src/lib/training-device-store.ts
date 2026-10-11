@@ -28,8 +28,12 @@ export function saveTrainingDeviceSettings(
 
 const REST_ALERTED_KEY_PREFIX = 'gainscape.rest-alerted.';
 
+function restAlertedKey(userId: string): string {
+  return `${REST_ALERTED_KEY_PREFIX}${userId}`;
+}
+
 export function claimRestAlert(storage: Storage | null, userId: string, endsAt: number): boolean {
-  const key = `${REST_ALERTED_KEY_PREFIX}${userId}`;
+  const key = restAlertedKey(userId);
   try {
     if (storage?.getItem(key) === String(endsAt)) return false;
     storage?.setItem(key, String(endsAt));
@@ -37,4 +41,13 @@ export function claimRestAlert(storage: Storage | null, userId: string, endsAt: 
     return true;
   }
   return true;
+}
+
+export function forgetTrainingDevice(storage: Storage | null, userId: string): void {
+  try {
+    storage?.removeItem(trainingDeviceKey(userId));
+    storage?.removeItem(restAlertedKey(userId));
+  } catch {
+    return;
+  }
 }

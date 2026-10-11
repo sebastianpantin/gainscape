@@ -1,6 +1,8 @@
 import type { JsonValue, Transaction } from '../db.ts';
 import {
   DEFAULT_LOOT,
+  type DropRevocationScope,
+  dropRevocations,
   type DropSummary,
   eligibleRolls,
   type LootCandidate,
@@ -9,11 +11,10 @@ import {
   lootRollKey,
   type LootTable,
   type LootTables,
-  type ReplayedSessionRole,
-  revocationReason,
   type RevokeReason,
   rollSessionLoot,
   type RollKind,
+  type SessionLootCandidate,
 } from '../domain/index.ts';
 import { lootRngFor, lootSecret } from '../loot-seeds.ts';
 import { syncSessionEvents } from './events.ts';
@@ -266,33 +267,13 @@ async function revokeDrops(
 export async function revokeDisqualifiedDrops(
   tx: Transaction,
   userId: string,
-  current: readonly (LootCandidate & { sessionId: string })[],
-  editedSessionId: string,
+  current: readonly SessionLootCandidate[],
   replayedSessionIds: readonly string[],
-  deletedSessionIds: readonly string[],
-  unchangedSetIds: readonly string[],
+  scope: DropRevocationScope,
   balanceVersion: number,
 ): Promise<RevokedActiveDrop[]> {
-  const active = await loadActiveDrops(tx, userId, [...replayedSessionIds, ...deletedSessionIds]);
-  const currentBySetId = new Map(current.map((candidate) => [`${candidate.sessionId}:${candidate.setId}`, candidate]));
-  const deleted = new Set(deletedSessionIds);
-  const unchanged = new Set(unchangedSetIds);
-  const roleOf = ({ sessionId, setId }: ActiveDrop): ReplayedSessionRole => {
-    if (deleted.has(sessionId)) return 'deleted';
-    if (sessionId !== editedSessionId) return 'later';
-    return unchanged.has(setId) ? 'edited_unchanged' : 'edited';
-  };
-  const revocations = active.flatMap((drop) => {
-    const reason = revocationReason(
-      drop.source,
-      currentBySetId.get(`${drop.sessionId}:${drop.setId}`),
-      roleOf(drop),
-      DEFAULT_LOOT,
-      { lootVersion: drop.lootVersion, balanceVersion: drop.balanceVersion ?? balanceVersion },
-      { lootVersion: DEFAULT_LOOT.version, balanceVersion },
-    );
-    return reason === null ? [] : [{ drop, reason }];
-  });
+  const active = await loadActiveDrops(tx, userId, [...replayedSessionIds, ...scope.deletedSessionIds]);
+  const revocations = dropRevocations(active, current, scope, DEFAULT_LOOT, balanceVersion);
   const revoked = await revokeDrops(tx, userId, revocations);
   await refreshSummaryDrops(tx, replayedSessionIds);
   return revoked;

@@ -38,7 +38,7 @@ Code shared by every Edge Function: request authentication, the Postgres client,
 - Top-level files may use `Deno` and `npm:` imports. `domain/` may not (purity rule).
 - A new rate-limit bucket needs the TypeScript union in `rate-limit.ts` and the SQL in a new migration.
 - Error codes are part of the API contract tested by integration tests and used by the web client. Do not rename them casually.
-- `session-payload.ts` limits (weight 0 to 2000, reps 1 to 100, position 0 to 999) must match web validation.
+- `session-payload.ts` limits (weight 0 to `MAX_SET_LOAD_KG` for lift and hold sets, reps 1 to `MAX_SET_REPS`, position 0 to 999, hold bounds from `HOLD_BOUNDS`) come from the domain constants the web set editors share.
 - Changes here affect all six functions; run `make check-functions`.
 
 ### Testing Requirements

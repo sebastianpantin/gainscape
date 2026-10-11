@@ -14,6 +14,14 @@ export interface SessionBaseline {
   records: RecordBaseline | null;
 }
 
+export function sessionBaselineAsOf(
+  asOf: string | null,
+  loaded: SessionBaseline | null,
+  saved: SessionBaseline | null,
+): SessionBaseline | null {
+  return [loaded, saved].find((baseline) => baseline !== null && baseline.asOf === asOf) ?? null;
+}
+
 export const RECORD_BASELINE_COLUMNS = {
   repMaxes: 'exercise_id, reps, load_kg',
   bodyweightRecords: 'exercise_id, max_reps',

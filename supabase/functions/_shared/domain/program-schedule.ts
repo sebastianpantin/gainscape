@@ -125,31 +125,35 @@ export function upcomingDays(definition: ProgramDefinition, cursor: ScheduleCurs
 
 const MAX_PROGRAM_WEEKS = 520;
 
-export function isPositionInSchedule(definition: ProgramDefinition, position: Position): boolean {
+const POSITION_KEYS: Readonly<Record<ProgramDefinition['schedule']['kind'], readonly string[]>> = {
+  cycle: ['cycle', 'day', 'week'],
+  weekly: ['day', 'week'],
+  rotation: ['index'],
+};
+
+function hasExactlyKeys(value: unknown, sortedKeys: readonly string[]): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const given = Object.keys(value).sort();
+  return given.length === sortedKeys.length && given.every((key, index) => key === sortedKeys[index]);
+}
+
+export function isPositionInSchedule(definition: ProgramDefinition, position: unknown): position is Position {
   const schedule = definition.schedule;
-  const fields = position as Partial<CyclePosition & RotationPosition>;
-  const knownDay = typeof fields.day === 'string' && dayIndexOf(definition, fields.day) >= 0;
+  if (!Object.hasOwn(POSITION_KEYS, schedule.kind) || !hasExactlyKeys(position, POSITION_KEYS[schedule.kind]))
+    return false;
+  const knownDay = typeof position.day === 'string' && dayIndexOf(definition, position.day) >= 0;
   switch (schedule.kind) {
     case 'cycle': {
-      if (fields.index !== undefined || !knownDay) return false;
       const maxCycle = Math.ceil(MAX_PROGRAM_WEEKS / schedule.weeksPerCycle);
       return (
-        isWholeNumberBetween(fields.cycle, 1, maxCycle) && isWholeNumberBetween(fields.week, 1, schedule.weeksPerCycle)
+        knownDay &&
+        isWholeNumberBetween(position.cycle, 1, maxCycle) &&
+        isWholeNumberBetween(position.week, 1, schedule.weeksPerCycle)
       );
     }
     case 'weekly':
-      return (
-        fields.index === undefined &&
-        fields.cycle === undefined &&
-        knownDay &&
-        isWholeNumberBetween(fields.week, 1, MAX_PROGRAM_WEEKS)
-      );
+      return knownDay && isWholeNumberBetween(position.week, 1, MAX_PROGRAM_WEEKS);
     case 'rotation':
-      return (
-        fields.week === undefined &&
-        fields.day === undefined &&
-        fields.cycle === undefined &&
-        isWholeNumberBetween(fields.index, 0, MAX_PROGRAM_WEEKS * schedule.days.length - 1)
-      );
+      return isWholeNumberBetween(position.index, 0, MAX_PROGRAM_WEEKS * schedule.days.length - 1);
   }
 }

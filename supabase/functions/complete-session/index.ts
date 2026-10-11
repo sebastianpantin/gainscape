@@ -1,30 +1,22 @@
 import { sql, type Transaction } from '../_shared/db.ts';
 import {
-  type Catalog,
-  challengeE1rmSnapshot,
-  challengeLoadExerciseIds,
   type ChallengeRun,
   DEFAULT_BALANCE,
-  HISTORY_ONLY_STEPS,
   historyOnlySummary,
   isNoOpEdit,
-  isWithinEditWindow,
   pendingSummary,
-  processSession,
-  type SessionInput,
+  planNewSession,
   type SessionSummary,
-  strengthStateAt,
-  type WritableSet,
-  writableSetFor,
+  type SetResult,
+  type WritableSession,
 } from '../_shared/domain/index.ts';
 import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
-import { claimChallengeScroll } from '../_shared/stores/challenges.ts';
+import { claimChallengeRun } from '../_shared/stores/challenges.ts';
 import { loadEquippedLoadout } from '../_shared/stores/gear.ts';
-import { rollNewSessionLoot } from '../_shared/stores/loot.ts';
-import { replayFrom } from '../_shared/stores/replay.ts';
+import { deriveNewSession } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
   findSession,
@@ -39,7 +31,6 @@ import {
   placeholderSetRow,
   type SessionTiming,
   type StoredSession,
-  storedSummary,
   tombstoneOwner,
 } from '../_shared/stores/sessions.ts';
 import {
@@ -47,7 +38,6 @@ import {
   type PrescriptionSnapshotColumns,
   prescriptionSnapshotsBySetId,
 } from '../_shared/stores/set-columns.ts';
-import { loadStrengthHistory } from '../_shared/stores/strength.ts';
 import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
 
 async function resubmissionDiffers(
@@ -61,8 +51,6 @@ async function resubmissionDiffers(
   return !isNoOpEdit(payload, stored.notes, storedById, DEFAULT_BALANCE);
 }
 
-type WritableSession = Omit<SessionInput, 'sets'> & { sets: WritableSet[] };
-
 type SnapshotsBySetId = ReadonlyMap<string, PrescriptionSnapshotColumns>;
 
 interface CompleteSessionResponse extends SessionSummary, SessionTiming {
@@ -74,22 +62,14 @@ interface CompleteSessionResponse extends SessionSummary, SessionTiming {
 async function storeHistoryOnly(
   tx: Transaction,
   row: NewSessionRow,
-  session: WritableSession,
+  sets: readonly SetResult[],
   snapshots: SnapshotsBySetId,
-  catalog: Catalog,
 ): Promise<InsertedSession> {
-  const { outputs } = processSession(
-    { skillXp: {}, bodyweightKg: null },
-    session,
-    DEFAULT_BALANCE,
-    { catalog },
-    HISTORY_ONLY_STEPS,
-  );
   return await insertSession(
     tx,
-    { ...row, historyOnly: true, summary: historyOnlySummary(session.id) },
-    outputs.sets.map((result) => ({
-      ...newSetRow(result, session.id, row.userId),
+    { ...row, historyOnly: true, summary: historyOnlySummary(row.id) },
+    sets.map((result) => ({
+      ...newSetRow(result, row.id, row.userId),
       ...snapshots.get(result.set.id)!,
     })),
   );
@@ -109,35 +89,18 @@ async function storeAndReplay(
       ...snapshots.get(set.id)!,
     })),
   );
-  const outcome = await replayFrom(
-    tx,
-    row.userId,
-    { id: session.id, startedAt: session.startedAt },
-    [],
-    DEFAULT_BALANCE,
-  );
-  await rollNewSessionLoot(
-    tx,
-    row.userId,
-    session.id,
-    outcome.sets.filter((set) => set.sessionId === session.id),
-  );
-  return { summary: await storedSummary(tx, session.id), completedAt };
+  const summary = await deriveNewSession(tx, row.userId, { id: session.id, startedAt: session.startedAt });
+  return { summary, completedAt };
 }
 
-async function claimChallengeRun(
+async function claimedChallenge(
   tx: Transaction,
   userId: string,
   payload: CompleteSessionPayload,
 ): Promise<ChallengeRun | null> {
   if (payload.challenge === null) return null;
-  const claimed = await claimChallengeScroll(tx, userId, payload.challenge.challengeId, payload.id);
-  if (claimed === null) return null;
   const key = { id: payload.id, startedAt: payload.startedAt };
-  const exerciseIds = challengeLoadExerciseIds(claimed.definition);
-  const history = await loadStrengthHistory(tx, userId, exerciseIds, key, DEFAULT_BALANCE);
-  const strength = strengthStateAt(history, key, DEFAULT_BALANCE);
-  return { ...claimed, e1rmKg: challengeE1rmSnapshot(claimed.definition, strength) };
+  return await claimChallengeRun(tx, userId, payload.challenge.challengeId, key, DEFAULT_BALANCE);
 }
 
 function responseFor(stored: InsertedSession, timing: SessionTiming, programLinked: boolean): CompleteSessionResponse {
@@ -167,16 +130,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
     );
     const catalog = await loadKnownCatalog(tx, userId, payload.sets);
     const profile = await loadProfileSettings(tx, userId);
-    const session: WritableSession = {
-      id: payload.id,
-      startedAt: payload.startedAt,
-      sets: payload.sets.map((set): WritableSet => {
-        const writable = writableSetFor(set, catalog.exercises.get(set.exerciseId)!, profile.bodyweightKg);
-        return writable.kind === 'cardio'
-          ? writable
-          : { ...writable, recordedEffectiveLoadKg: writable.effectiveLoadKg };
-      }),
-    };
+    const plan = planNewSession(payload, catalog, profile.bodyweightKg, now.getTime(), DEFAULT_BALANCE);
     const programLink = await linkedProgram(tx, userId, payload.program);
     const snapshots = prescriptionSnapshotsBySetId(payload.sets, () => programLink !== null);
     const row: NewSessionRow = {
@@ -198,14 +152,15 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
 
     await takeRateLimit(tx, 'session_create_hour', userId);
     await takeRateLimit(tx, 'session_create_day', userId);
-    const stored = isWithinEditWindow(payload.startedAt, now.getTime())
-      ? await storeAndReplay(
-          tx,
-          { ...row, challenge: await claimChallengeRun(tx, userId, payload) },
-          session,
-          snapshots,
-        )
-      : await storeHistoryOnly(tx, row, session, snapshots, catalog);
+    const stored =
+      plan.mode === 'scored'
+        ? await storeAndReplay(
+            tx,
+            { ...row, challenge: await claimedChallenge(tx, userId, payload) },
+            plan.session,
+            snapshots,
+          )
+        : await storeHistoryOnly(tx, row, plan.sets, snapshots);
     return responseFor(stored, row, programLink !== null);
   });
 }

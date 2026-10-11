@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayKeyOf } from '@domain/index.ts';
+import { dayKeyOf } from '@domain/program-schedule.ts';
 import { factClock } from './program-fixtures/facts.ts';
 import { asPrescribed, type DayLog, followProgram, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import { missesOf, refOf, refsState, repsOf, slotIdsOf, weightsOf } from './program-fixtures/prescription-helpers.ts';

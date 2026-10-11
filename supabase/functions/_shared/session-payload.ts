@@ -5,6 +5,8 @@ import {
   HOLD_BOUNDS,
   intervalDurationSeconds,
   isRecord,
+  MAX_SET_LOAD_KG,
+  MAX_SET_REPS,
   roundTo,
 } from './domain/index.ts';
 import { HttpError } from './http.ts';
@@ -63,7 +65,7 @@ export type PrescriptionPayload = z.infer<typeof prescriptionSchema>;
 const weightKgSchema = z
   .number()
   .min(0)
-  .max(2000)
+  .max(MAX_SET_LOAD_KG)
   .transform((weightKg) => roundTo(2, weightKg));
 
 const liftSetSchema = z
@@ -71,7 +73,7 @@ const liftSetSchema = z
     kind: z.literal('lift'),
     ...setIdentity,
     weightKg: weightKgSchema,
-    reps: z.int().min(1).max(100),
+    reps: z.int().min(1).max(MAX_SET_REPS),
     isWarmup: z.boolean().default(false),
     effort: liftEffortSchema.default(null),
     prescription: prescriptionSchema.nullable().default(null),

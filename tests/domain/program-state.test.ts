@@ -1,17 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
-  advanceProgram,
   DEFAULT_ROUNDING,
   type FactSet,
-  initialProgramState,
-  isSetMet,
-  liftOutcomes,
-  orderFacts,
   type Position,
   type ProgramFact,
   type ProgramState,
   programStateAt,
 } from '@domain/index.ts';
+import { advanceProgram, isSetMet, liftOutcomes } from '@domain/program-progression.ts';
+import { initialProgramState, orderFacts } from '@domain/program-state.ts';
 import {
   factClock,
   jumpToFact,

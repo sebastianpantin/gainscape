@@ -143,6 +143,10 @@ export const REP_MAX_SLOT_COUNT = 10;
 
 export const MAX_SETS_PER_SESSION = 200;
 
+export const MAX_SET_LOAD_KG = 2000;
+
+export const MAX_SET_REPS = 100;
+
 export interface RepMaxSlot {
   loadKg: number;
   setId: string;

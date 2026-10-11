@@ -5,7 +5,8 @@ import { type Exercise, isCardioExercise, isLiftExercise } from '../../lib/catal
 import { usePreferences } from '../../lib/preferences.ts';
 import { collectionPercent, countCollection } from '../../lib/collection-rules.ts';
 import { moved } from '../../lib/reorder.ts';
-import { loadCollectionCacheFirst, pinExercise, reorderPins, unpinExercise } from '../../lib/collection-data.ts';
+import { pinExercise, reorderPins, unpinExercise } from '../../lib/collection-data.ts';
+import { collectionQuery } from '../../lib/queries.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_COLLECTION_NOTICE } from '../../offline/collection-cache.ts';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
@@ -33,10 +34,7 @@ export function CollectionTabs() {
 }
 
 export function CollectionScreen({ userId }: CollectionScreenProps) {
-  const collection = useQuery({
-    queryKey: ['collection', userId],
-    queryFn: () => loadCollectionCacheFirst(userId),
-  });
+  const collection = useQuery(collectionQuery(userId));
   const [problem, setProblem] = useState<string | null>(null);
   const { unitPref } = usePreferences();
 

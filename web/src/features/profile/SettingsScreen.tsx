@@ -1,4 +1,5 @@
-import { type FormEvent, useEffect, useId, useState } from 'react';
+import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { type FormEvent, useId, useState } from 'react';
 import { Link, type NavigateFunction, useNavigate } from 'react-router-dom';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { Switch } from '../../components/Switch.tsx';
@@ -11,8 +12,6 @@ import {
   saveBlob,
 } from '../../lib/account.ts';
 import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
-import { forgetCachedExercises } from '../../lib/catalog-cache.ts';
-import { forgetCachedExerciseNotes } from '../../lib/exercise-note-cache.ts';
 import { GLOSSARY } from '../../lib/glossary.ts';
 import { type BarbellSetup, HEAVIEST_BAR_OR_PLATE, isUsableBarOrPlate, PLATE_CHOICES } from '../../lib/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../lib/plate-settings-store.ts';
@@ -36,20 +35,16 @@ import {
   updatePublicProfile,
 } from '../../lib/profile.ts';
 import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
-import { forgetDraftOnDevice, hasDraftOnDevice } from '../../offline/local-drafts.ts';
-import { forgetItemsCache } from '../../offline/items-cache.ts';
-import { forgetProgramCache } from '../../offline/program-cache.ts';
-import { programListCache } from '../../offline/program-list-cache.ts';
-import { standingCache } from '../../offline/standing-cache.ts';
-import { profileCache } from '../../offline/profile-cache.ts';
-import { collectionCache } from '../../offline/collection-cache.ts';
+import { hasDraftOnDevice } from '../../offline/local-drafts.ts';
+import { forgetUserDeviceData } from '../../offline/user-device-data.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
-import { forgetInstallCard, promptInstall, useInstallState } from '../../pwa/install.ts';
+import { promptInstall, useInstallState } from '../../pwa/install.ts';
 import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
 import type { UpdateCheck } from '../../pwa/update-flow.ts';
 import { useOptimisticProfileSave } from './use-optimistic-profile-save.ts';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { weeklyGoalQuery } from '../../lib/queries.ts';
 import { fetchWeeklyGoalStatus, setWeeklyGoal } from '../../lib/weekly-goal.ts';
 import {
   goalFromChoice,
@@ -65,16 +60,7 @@ interface SettingsScreenProps {
 }
 
 async function forgetThisDevice(userId: string): Promise<void> {
-  forgetCachedExercises(localStorage, userId);
-  forgetCachedExerciseNotes(localStorage, userId);
-  forgetProgramCache(localStorage, userId);
-  forgetItemsCache(localStorage, userId);
-  programListCache.forget(localStorage, userId);
-  standingCache.forget(localStorage, userId);
-  profileCache.forget(localStorage, userId);
-  collectionCache.forget(localStorage, userId);
-  forgetInstallCard(userId);
-  await forgetDraftOnDevice(await openDraftStoreOrFallback(), deviceStorage(), userId);
+  await forgetUserDeviceData({ localStorage, sessionStorage, draftStore: await openDraftStoreOrFallback() }, userId);
 }
 
 async function hasUnsyncedDraftHere(userId: string): Promise<boolean> {
@@ -337,23 +323,19 @@ const WEEKLY_GOAL_OPTIONS = WEEKLY_GOAL_CHOICES.map((value) => ({ value, label: 
 type LoadedGoal =
   { kind: 'loading' } | { kind: 'failed'; message: string } | { kind: 'ready'; status: WeeklyGoalStatus | null };
 
+function loadedGoalOf(goal: UseQueryResult<WeeklyGoalStatus | null>): LoadedGoal {
+  if (goal.data !== undefined) return { kind: 'ready', status: goal.data };
+  if (goal.error && !goal.isFetching)
+    return { kind: 'failed', message: messageOf(goal.error, 'Could not load your weekly goal.') };
+  return { kind: 'loading' };
+}
+
 function WeeklyGoalSection() {
-  const [loaded, setLoaded] = useState<LoadedGoal>({ kind: 'loading' });
-  const [attempt, setAttempt] = useState(0);
+  const queryClient = useQueryClient();
+  const goalQuery = useQuery(weeklyGoalQuery);
+  const loaded = loadedGoalOf(goalQuery);
   const [pending, setPending] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchWeeklyGoalStatus(controller.signal).then(
-      (status) => setLoaded({ kind: 'ready', status }),
-      (error: unknown) => {
-        if (!controller.signal.aborted)
-          setLoaded({ kind: 'failed', message: messageOf(error, 'Could not load your weekly goal.') });
-      },
-    );
-    return () => controller.abort();
-  }, [attempt]);
 
   const status = loaded.kind === 'ready' ? loaded.status : null;
   const chosen = status?.nextGoal ? status.nextGoal.goal : (status?.goal ?? null);
@@ -364,7 +346,9 @@ function WeeklyGoalSection() {
     setProblem(null);
     try {
       await setWeeklyGoal(goal);
-      setLoaded({ kind: 'ready', status: await fetchWeeklyGoalStatus(new AbortController().signal) });
+      const saved = await fetchWeeklyGoalStatus(new AbortController().signal);
+      await queryClient.cancelQueries({ queryKey: weeklyGoalQuery.queryKey });
+      queryClient.setQueryData(weeklyGoalQuery.queryKey, saved);
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your weekly goal.'));
     } finally {
@@ -379,14 +363,7 @@ function WeeklyGoalSection() {
         <p className="problem" role="alert">
           {loaded.message}
         </p>
-        <button
-          className="button outline"
-          type="button"
-          onClick={() => {
-            setLoaded({ kind: 'loading' });
-            setAttempt((count) => count + 1);
-          }}
-        >
+        <button className="button outline" type="button" onClick={() => void goalQuery.refetch()}>
           Try again
         </button>
       </section>
@@ -721,9 +698,12 @@ function DeleteAccountForm({ userId, username }: { userId: string; username: str
     setProblem(null);
     try {
       await deleteMyAccount(typed, accountPassword);
-      await forgetThisDevice(userId).catch(() => undefined);
       navigate('/', { replace: true });
-      await signOutKeepingDrafts();
+      try {
+        await signOutKeepingDrafts();
+      } finally {
+        await forgetThisDevice(userId).catch(() => undefined);
+      }
     } catch (error) {
       setProblem(messageOf(error, 'Could not delete your account.'));
       setBusy(false);

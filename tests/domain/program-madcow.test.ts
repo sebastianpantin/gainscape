@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import {
-  initialProgramState,
-  type ProgramEnrollment,
-  programStateAt,
-  type ReferenceState,
-  resolvePrescription,
-} from '@domain/index.ts';
+import { type ProgramEnrollment, programStateAt, resolvePrescription } from '@domain/index.ts';
+import { type ReferenceState } from '@domain/program-prescription.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { factClock, sessionFact, setReferenceFact, unprescribedSet } from './program-fixtures/facts.ts';
 import {
   MADCOW_5X5 as def,

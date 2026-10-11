@@ -2,6 +2,7 @@ import type { LootConfig } from './balance.ts';
 import { roundTo } from './math.ts';
 import {
   type Catalog,
+  type RevokedDrop,
   type RevokeReason,
   type Rng,
   type RollKind,
@@ -221,4 +222,73 @@ export function revocationReason(
   if (keepsOlderRules && rolledUnderOlderRules) return null;
   if (!qualifies(source, candidate, cfg)) return 'no_longer_qualifies';
   return null;
+}
+
+export type SessionLootCandidate = LootCandidate & { sessionId: string };
+
+export interface DropRevocationScope {
+  editedSessionId: string;
+  deletedSessionIds: readonly string[];
+  unchangedSetIds: readonly string[];
+}
+
+export interface HeldDrop {
+  sessionId: string;
+  setId: string;
+  source: RollKind;
+  lootVersion: number;
+  balanceVersion: number | null;
+}
+
+export function replayedSessionRole(
+  { sessionId, setId }: Pick<HeldDrop, 'sessionId' | 'setId'>,
+  scope: DropRevocationScope,
+): ReplayedSessionRole {
+  if (scope.deletedSessionIds.includes(sessionId)) return 'deleted';
+  if (sessionId !== scope.editedSessionId) return 'later';
+  return scope.unchangedSetIds.includes(setId) ? 'edited_unchanged' : 'edited';
+}
+
+export function dropRevocations<Drop extends HeldDrop>(
+  drops: readonly Drop[],
+  current: readonly SessionLootCandidate[],
+  scope: DropRevocationScope,
+  cfg: LootConfig,
+  balanceVersion: number,
+): { drop: Drop; reason: RevokeReason }[] {
+  const currentBySetId = new Map(current.map((candidate) => [`${candidate.sessionId}:${candidate.setId}`, candidate]));
+  return drops.flatMap((drop) => {
+    const reason = revocationReason(
+      drop.source,
+      currentBySetId.get(`${drop.sessionId}:${drop.setId}`),
+      replayedSessionRole(drop, scope),
+      cfg,
+      { lootVersion: drop.lootVersion, balanceVersion: drop.balanceVersion ?? balanceVersion },
+      { lootVersion: cfg.version, balanceVersion },
+    );
+    return reason === null ? [] : [{ drop, reason }];
+  });
+}
+
+export function revokedInReplayOrder(
+  drops: readonly (RevokedDrop & { sessionId: string })[],
+  sets: readonly Pick<LootCandidate, 'setId' | 'position'>[],
+  replayedSessionIds: readonly string[],
+): RevokedDrop[] {
+  const sessionRank = new Map(replayedSessionIds.map((id, index) => [id, index]));
+  const positionOf = new Map(sets.map((set) => [set.setId, set.position]));
+  const rank = (drop: RevokedDrop & { sessionId: string }) => sessionRank.get(drop.sessionId) ?? -1;
+  const position = (drop: RevokedDrop) => positionOf.get(drop.setId) ?? Number.MAX_SAFE_INTEGER;
+  const sourceOrder = (drop: RevokedDrop) => (drop.source === 'regular' ? 0 : 1);
+  return [...drops]
+    .sort((a, b) => rank(a) - rank(b) || position(a) - position(b) || sourceOrder(a) - sourceOrder(b))
+    .map((drop) => ({
+      dropId: drop.dropId,
+      setId: drop.setId,
+      itemId: drop.itemId,
+      itemKey: drop.itemKey,
+      quantity: drop.quantity,
+      source: drop.source,
+      revokedQuantity: drop.revokedQuantity,
+    }));
 }

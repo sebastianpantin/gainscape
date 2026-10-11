@@ -10,10 +10,25 @@ import {
   type StrengthState,
   type WeightUnit,
 } from '@domain/index.ts';
-import { CARDIO_EFFORT_LEVELS, type CardioInterval, type EffortInput, isRecord } from '@domain/types.ts';
-import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
+import { CARDIO_EFFORT_LEVELS, type EffortInput, isRecord } from '@domain/types.ts';
+import type { CardioActivity, HoldMeasure, LoadType } from '../lib/catalog-rules.ts';
 import { type CatalogChallenge, challengeLoadKg, parsedDraftChallenge } from '../lib/challenge-rules.ts';
 import { EFFORT_LEVELS } from '../lib/effort-labels.ts';
+import {
+  type BoutValues,
+  canAddSet,
+  defaultWeightKg,
+  type HoldValues,
+  nextBoutValues,
+  nextHoldValues,
+  nextSetValues,
+  roomForSets,
+  STARTING_REPS,
+  updateExerciseAt,
+  updateSet,
+  withLoadType,
+  withSets,
+} from '../lib/exercise-edit-rules.ts';
 import { isSessionRpe } from '../lib/session-timing-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 5;
@@ -21,11 +36,6 @@ const HOLD_FORMAT_VERSION = 6;
 const PRE_WARMUP_FORMAT_VERSION = 4;
 const PRE_CARDIO_FORMAT_VERSION = 3;
 const PRE_EFFORT_INPUT_FORMAT_VERSION = 2;
-const STARTING_EXTERNAL_LOAD_KG = 20;
-const STARTING_REPS = 8;
-const STARTING_BOUT_DURATION_S = 1800;
-const STARTING_HOLD_DURATION_S = 30;
-const STARTING_CARRY_DISTANCE_M = 20;
 const CHALLENGE_REPS_PER_SET = 10;
 
 export interface PrescriptionDetail {
@@ -48,13 +58,6 @@ export interface DraftTarget {
   sets: number;
   repsMin: number;
   repsMax: number;
-}
-
-export interface BoutValues {
-  durationS: number;
-  distanceM: number | null;
-  interval: CardioInterval | null;
-  effort: EffortInput;
 }
 
 export interface CardioDraftSet extends BoutValues {
@@ -81,15 +84,6 @@ export interface CardioDraftExercise {
   modality: 'cardio';
   activity: CardioActivity;
   sets: CardioDraftSet[];
-}
-
-export type HoldMeasure = 'time' | 'distance';
-
-export interface HoldValues {
-  weightKg: number;
-  durationS: number | null;
-  distanceM: number | null;
-  effort: EffortInput;
 }
 
 export interface HoldDraftSet extends HoldValues {
@@ -435,32 +429,12 @@ export function addHoldExercise(
   return { ...draft, exercises: [...draft.exercises, added] };
 }
 
-export function nextHoldValues(previous: HoldValues | undefined, loadType: LoadType, measure: HoldMeasure): HoldValues {
-  if (previous !== undefined) {
-    const { weightKg, durationS, distanceM } = previous;
-    return { weightKg, durationS, distanceM, effort: null };
-  }
-  return {
-    weightKg: defaultWeightKg(loadType),
-    durationS: measure === 'time' ? STARTING_HOLD_DURATION_S : null,
-    distanceM: measure === 'distance' ? STARTING_CARRY_DISTANCE_M : null,
-    effort: null,
-  };
-}
-
 export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
   return { ...draft, exercises: withValidSupersets(draft.exercises.filter((_, index) => index !== exerciseIndex)) };
 }
 
-export function nextBoutValues(previous: BoutValues | undefined): BoutValues {
-  if (previous === undefined) {
-    return { durationS: STARTING_BOUT_DURATION_S, distanceM: null, interval: null, effort: null };
-  }
-  const { durationS, distanceM, interval, effort } = previous;
-  return { durationS, distanceM, interval, effort };
-}
-
 export function addSet(draft: WorkoutDraft, exerciseIndex: number, firstSet?: LastLoggedSet): WorkoutDraft {
+  if (!canAddSet(draft)) return draft;
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio') {
       const newBout: CardioDraftSet = {
@@ -496,6 +470,7 @@ export function addWarmupSets(
   exerciseIndex: number,
   warmups: readonly LastLoggedSet[],
 ): WorkoutDraft {
+  if (warmups.length > roomForSets(draft)) return draft;
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality !== 'lift') return exercise;
     const warmupSets: DraftSet[] = warmups.map(({ weightKg, reps }) => ({
@@ -514,19 +489,6 @@ export function firstWorkingSet(exercise: LiftDraftExercise): DraftSet | undefin
   return exercise.sets.find((set) => !set.isWarmup);
 }
 
-export function updateSet(
-  draft: WorkoutDraft,
-  exerciseIndex: number,
-  setId: string,
-  changes: Partial<Omit<DraftSet, 'id'>>,
-): WorkoutDraft {
-  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
-    exercise.modality === 'lift'
-      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
-      : exercise,
-  );
-}
-
 export function seedUntouchedSet(
   draft: WorkoutDraft,
   exerciseIndex: number,
@@ -543,58 +505,6 @@ export function seedUntouchedSet(
   return untouched ? updateSet(draft, exerciseIndex, original.id, seed) : draft;
 }
 
-export function updateBout(
-  draft: WorkoutDraft,
-  exerciseIndex: number,
-  setId: string,
-  changes: Partial<Omit<CardioDraftSet, 'id' | 'kind'>>,
-): WorkoutDraft {
-  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
-    exercise.modality === 'cardio'
-      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
-      : exercise,
-  );
-}
-
-export function updateHoldSet(
-  draft: WorkoutDraft,
-  exerciseIndex: number,
-  setId: string,
-  changes: Partial<Omit<HoldDraftSet, 'id' | 'kind'>>,
-): WorkoutDraft {
-  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
-    exercise.modality === 'hold'
-      ? { ...exercise, sets: exercise.sets.map((set) => (set.id === setId ? { ...set, ...changes } : set)) }
-      : exercise,
-  );
-}
-
-type SetOf<E> = E extends { sets: (infer S)[] } ? S : never;
-
-export function withSets<E extends { sets: { id: string }[] }>(
-  exercise: E,
-  change: <S extends SetOf<E>>(sets: S[]) => S[],
-): E {
-  return { ...exercise, sets: change(exercise.sets as SetOf<E>[]) };
-}
-
-export function removeSet(draft: WorkoutDraft, exerciseIndex: number, setId: string): WorkoutDraft {
-  return updateExerciseAt(draft, exerciseIndex, (exercise) =>
-    withSets(exercise, (sets) => sets.filter((set) => set.id !== setId)),
-  );
-}
-
-export function updateExerciseAt<Owner extends { exercises: unknown[] }>(
-  owner: Owner,
-  exerciseIndex: number,
-  update: (exercise: Owner['exercises'][number]) => Owner['exercises'][number],
-): Owner {
-  return {
-    ...owner,
-    exercises: owner.exercises.map((exercise, index) => (index === exerciseIndex ? update(exercise) : exercise)),
-  };
-}
-
 export function doneSetCount(draft: WorkoutDraft): number {
   return draft.exercises.reduce((count, exercise) => count + exercise.sets.filter((set) => set.done).length, 0);
 }
@@ -609,11 +519,7 @@ export function withCurrentLoadTypes(
     const current = loadTypes.get(exercise.exerciseId);
     if (current === undefined || current === exercise.loadType) return exercise;
     changedNames.push(exercise.name);
-    const unloaded = <S extends { weightKg: number }>(sets: S[]): S[] =>
-      current === 'bodyweight' ? sets.map((set) => ({ ...set, weightKg: 0 })) : sets;
-    return exercise.modality === 'hold'
-      ? { ...exercise, loadType: current, sets: unloaded(exercise.sets) }
-      : { ...exercise, loadType: current, sets: unloaded(exercise.sets) };
+    return withLoadType(exercise, current);
   });
   return { draft: changedNames.length > 0 ? { ...draft, exercises } : draft, changedNames };
 }
@@ -645,17 +551,6 @@ export type CatalogEntry = { name: string; archived: boolean } & (
 export interface LastLoggedSet {
   weightKg: number;
   reps: number;
-}
-
-export function defaultWeightKg(loadType: LoadType): number {
-  return loadType === 'external' ? STARTING_EXTERNAL_LOAD_KG : 0;
-}
-
-export function nextSetValues(
-  previous: { weightKg: number; reps: number } | undefined,
-  loadType: LoadType,
-): { weightKg: number; reps: number } {
-  return { weightKg: previous?.weightKg ?? defaultWeightKg(loadType), reps: previous?.reps ?? STARTING_REPS };
 }
 
 export function programLabelFor(programName: string, dayName: string): string {
@@ -871,13 +766,23 @@ export function canQuickFill(exercise: LiftDraftExercise): boolean {
   return exercise.sets.filter((set) => !set.isWarmup).length <= MOST_WORKING_SETS_TO_QUICK_FILL;
 }
 
+const MOST_QUICK_FILL_SETS = 20;
+
+export function mostQuickFillSets(draft: WorkoutDraft, exerciseIndex: number): number {
+  const workingSetCount = draft.exercises[exerciseIndex]?.sets.filter(
+    (set) => !('isWarmup' in set && set.isWarmup),
+  ).length;
+  return Math.min(MOST_QUICK_FILL_SETS, (workingSetCount ?? 0) + roomForSets(draft));
+}
+
 export function fillWorkingSets(draft: WorkoutDraft, exerciseIndex: number, count: number, reps: number): WorkoutDraft {
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality !== 'lift' || !canQuickFill(exercise)) return exercise;
     const workingSets = exercise.sets.filter((set) => !set.isWarmup);
     const filled = exercise.sets.map((set) => (set.isWarmup ? set : { ...set, reps, done: true }));
     const { weightKg } = nextSetValues(workingSets.at(-1), exercise.loadType);
-    const added = Array.from({ length: Math.max(0, count - workingSets.length) }, (): DraftSet => ({
+    const addedCount = Math.min(roomForSets(draft), Math.max(0, count - workingSets.length));
+    const added = Array.from({ length: addedCount }, (): DraftSet => ({
       id: crypto.randomUUID(),
       weightKg,
       reps,

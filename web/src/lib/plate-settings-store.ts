@@ -21,3 +21,11 @@ export function savePlateSettings(storage: Storage | null, userId: string, setti
     return;
   }
 }
+
+export function forgetPlateSettings(storage: Storage | null, userId: string): void {
+  try {
+    storage?.removeItem(plateSettingsKey(userId));
+  } catch {
+    return;
+  }
+}

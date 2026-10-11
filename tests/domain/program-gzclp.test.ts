@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { dayKeyOf, programStateAt, type ProgramState, unitToKg } from '@domain/index.ts';
+import { programStateAt, type ProgramState, unitToKg } from '@domain/index.ts';
+import { dayKeyOf } from '@domain/program-schedule.ts';
 import { factClock, jumpToFact, sessionFact, setReferenceFact, unprescribedSet } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, loggedAsPrescribed, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import { GZCLP as def, GZCLP_DEFAULT_WEIGHTS_KG, gzclpEnrollment, type GzclpLift } from './program-fixtures/gzclp.ts';

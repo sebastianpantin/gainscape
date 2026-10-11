@@ -1,17 +1,19 @@
 import {
   type CyclePosition,
   DEFAULT_ROUNDING,
-  type DayDecl,
-  type LiftCategory,
   type OptionValue,
   type ProgramDefinition,
   type ProgramEnrollment,
+  type WeightUnit,
+} from '@domain/index.ts';
+import {
+  type DayDecl,
+  type LiftCategory,
   type ProgressionRule,
   type UnitAmountExpr,
   type WeekTableRow,
   type WeekTableSet,
-  type WeightUnit,
-} from '@domain/index.ts';
+} from '@domain/program-definition.ts';
 
 const JUGGERNAUT_BOOK = 'https://pdfcoffee.com/juggernaut-method-20-pdf-free.html';
 const JTS_GOING_HEAVY = 'https://www.jtsstrength.com/going-heavy-on-the-juggernaut-method/';

@@ -1,10 +1,5 @@
-import {
-  DEFAULT_ROUNDING,
-  type FactSet,
-  type ProgramDefinition,
-  type ProgramEnrollment,
-  type SlotDecl,
-} from '@domain/index.ts';
+import { DEFAULT_ROUNDING, type FactSet, type ProgramDefinition, type ProgramEnrollment } from '@domain/index.ts';
+import { type SlotDecl } from '@domain/program-definition.ts';
 import { setAsPrescribed } from './facts.ts';
 import { LINEAR_AFTER_SESSION } from './linear_after_session.ts';
 

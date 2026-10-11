@@ -343,7 +343,7 @@ const detectLevelUps: Step = (ctx) => {
   return { ...ctx, levelUps };
 };
 
-export const DEFAULT_STEPS: readonly Step[] = Object.freeze([
+const SESSION_STEPS: readonly Step[] = Object.freeze([
   resolveSets,
   trackStrength,
   checkFatigue,
@@ -354,7 +354,18 @@ export const DEFAULT_STEPS: readonly Step[] = Object.freeze([
   detectLevelUps,
 ]);
 
-export const HISTORY_ONLY_STEPS: readonly Step[] = Object.freeze([resolveSets]);
+function initialContext(
+  state: UserState,
+  session: SessionInput,
+  cfg: BalanceConfig,
+  deps: PipelineDeps,
+): SessionContext {
+  return { session, cfg, deps, stateBeforeSession: state, state, sets: [], levelUps: [] };
+}
+
+export function resolveHistoryOnlySets(session: SessionInput, cfg: BalanceConfig, deps: PipelineDeps): SetResult[] {
+  return [...resolveSets(initialContext({ skillXp: {}, bodyweightKg: null }, session, cfg, deps)).sets];
+}
 
 export function historyOnlySummary(sessionId: string): SessionSummary {
   return { sessionId, xpBySkill: {}, levelUps: [], prs: [], drops: [], historyOnly: true };
@@ -403,10 +414,8 @@ export function processSession(
   session: SessionInput,
   cfg: BalanceConfig,
   deps: PipelineDeps,
-  steps: readonly Step[] = DEFAULT_STEPS,
 ): { nextState: UserState; outputs: SessionOutputs } {
-  const initial: SessionContext = { session, cfg, deps, stateBeforeSession: state, state, sets: [], levelUps: [] };
-  const final = steps.reduce((ctx, step) => step(ctx), initial);
+  const final = SESSION_STEPS.reduce((ctx, step) => step(ctx), initialContext(state, session, cfg, deps));
   const xpBySkill = xpGainedBySkillKey(state, final.state, deps.catalog);
   return {
     nextState: final.state,

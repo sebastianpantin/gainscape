@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { initialProgramState, programStateAt } from '@domain/index.ts';
+import { programStateAt } from '@domain/index.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { factClock, setReferenceFact } from './program-fixtures/facts.ts';
 import { asPrescribed, followProgram, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import { refOf, refsState, repsOf, weightsOf } from './program-fixtures/prescription-helpers.ts';

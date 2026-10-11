@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { orderFacts, programStateAt } from '@domain/index.ts';
+import { programStateAt } from '@domain/index.ts';
+import { orderFacts } from '@domain/program-state.ts';
 import { setReferenceFact } from './program-fixtures/facts.ts';
 import { LINEAR_AFTER_SESSION, linearEnrollment } from './program-fixtures/linear_after_session.ts';
 import { refOf } from './program-fixtures/prescription-helpers.ts';

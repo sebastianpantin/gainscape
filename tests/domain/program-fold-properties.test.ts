@@ -2,7 +2,6 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   type FactSet,
-  initialProgramState,
   isRetestRef,
   type Position,
   type ProgramDefinition,
@@ -12,6 +11,7 @@ import {
   programStateAt,
   type ReferenceVar,
 } from '@domain/index.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { factClock, jumpToFact, sessionFact, setReferenceFact, skipDayFact } from './program-fixtures/facts.ts';
 import { followProgram, loggedAsPrescribed, resolveAt } from './program-fixtures/follow.ts';
 import {
