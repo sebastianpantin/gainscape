@@ -43,7 +43,13 @@ const V6_KEYS = [
   'reactionsGiven',
 ];
 
-const TOP_LEVEL_KEYS_BY_VERSION: Record<number, readonly string[]> = { 6: V6_KEYS };
+const V7_KEYS = [
+  ...V6_KEYS.slice(0, V6_KEYS.indexOf('programs') + 1),
+  'programTemplates',
+  ...V6_KEYS.slice(V6_KEYS.indexOf('programs') + 1),
+];
+
+const TOP_LEVEL_KEYS_BY_VERSION: Record<number, readonly string[]> = { 6: V6_KEYS, 7: V7_KEYS };
 
 describe('the data export format', () => {
   it('bumps EXPORT_FORMAT_VERSION whenever the top-level keys change', () => {
