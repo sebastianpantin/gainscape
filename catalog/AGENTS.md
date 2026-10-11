@@ -38,6 +38,7 @@ The YAML files here are the single source of truth for all seed data: skills, ex
 - **Scroll odds stay fixed.** Every scroll in `rare` has the same weight, and all scrolls together make up exactly 36/98 of the table's weight, the odds of the first twelve scrolls (`tests/catalog/generate.test.ts`). Adding scrolls at weight 3 therefore comes in steps of 12: with `12 × k` scrolls, multiply every other `rare` weight by `k`.
 - **Program templates** (`program-templates/*.yaml`) are parsed by the strict zod schema in `scripts/catalog/program-templates.ts`, then checked by the domain `validateProgramDefinition`. The rules:
   - Every template and every option needs a non-empty `source` list.
+  - A key must not start with `custom_`; that prefix is kept for user program snapshots that `publish_program` writes.
   - A `conversions` entry's `kg` must equal `lb × 0.45359` rounded to the nearest 1.25 kg (`kgFromLb`).
   - `key` matches `^[a-z0-9_]+$` and equals the file name (`<key>.yaml`, or `<key>@<version>.yaml` with its version for an older one, which must be older than `<key>.yaml`); `name` is 1 to 60 characters.
   - Every lift has a `name` for people, never its raw key.

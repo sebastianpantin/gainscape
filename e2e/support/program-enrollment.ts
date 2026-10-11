@@ -110,3 +110,48 @@ export async function bindExercise(page: Page, liftName: string, exerciseName: s
 export function repeated(row: string, count: number): string[] {
   return Array.from({ length: count }, () => row);
 }
+
+export function ownProgram(page: Page, programName: string): Locator {
+  return page.getByRole('region', { name: 'Your programs' }).getByRole('listitem').filter({ hasText: programName });
+}
+
+async function addPlannedExercise(page: Page, search: string, exerciseName: string): Promise<Locator> {
+  const day = page.getByRole('region', { name: 'Day 1', exact: true });
+  await day.getByLabel('Search exercises').fill(search);
+  await day.getByRole('button', { name: new RegExp(`^${exerciseName}\\b`) }).click();
+  return day
+    .getByRole('list')
+    .first()
+    .getByRole('listitem')
+    .filter({ has: page.getByText(exerciseName, { exact: true }) });
+}
+
+export async function createSquatAndBenchProgram(page: Page, programName: string): Promise<void> {
+  await openFromProfile(page, 'Programs');
+  await page.getByRole('button', { name: 'New program' }).click();
+  await page.getByLabel('Program name').fill(programName);
+  const squat = await addPlannedExercise(page, 'Back Squat', 'Back Squat');
+  await squat.getByLabel('Sets').fill('5');
+  await squat.getByLabel('Reps min').fill('5');
+  await squat
+    .getByRole('radiogroup', { name: 'Back Squat progression' })
+    .getByRole('radio', { name: 'Add weight' })
+    .click();
+  await squat
+    .getByRole('radiogroup', { name: 'Back Squat increment' })
+    .getByRole('radio', { name: '2.5 kg', exact: true })
+    .click();
+  await squat.getByLabel('Reps', { exact: true }).fill('5');
+  const bench = await addPlannedExercise(page, 'Bench Press', 'Barbell Bench Press');
+  await bench.getByLabel('Sets').fill('3');
+  await bench.getByLabel('Reps min').fill('8');
+  await bench.getByLabel('Reps max').fill('8');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(ownProgram(page, programName)).toBeVisible();
+}
+
+export async function openOwnProgramFollowForm(page: Page, programName: string): Promise<void> {
+  await openFromProfile(page, 'Programs');
+  await ownProgram(page, programName).getByRole('button', { name: 'Follow', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: `Follow ${programName}`, exact: true })).toBeVisible();
+}

@@ -23,6 +23,7 @@ export interface ProgramTemplateRow {
   version: number;
   name: string;
   definition: unknown;
+  owner_user_id?: string | null;
 }
 
 export type TemplateListEntry =
@@ -173,13 +174,48 @@ function entryOf(row: ProgramTemplateRow): TemplateListEntry {
   return { kind: 'unusable', key, version, name, message: UNUSABLE_TEMPLATE_TEXT };
 }
 
-export function templateListEntries(rows: readonly ProgramTemplateRow[]): TemplateListEntry[] {
+const CUSTOM_TEMPLATE_PREFIX = 'custom_';
+const CUSTOM_LIFT_PATTERN = /^x_([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/;
+
+export function customTemplateKey(programId: string): string {
+  return `${CUSTOM_TEMPLATE_PREFIX}${programId.replaceAll('-', '')}`;
+}
+
+export function customLiftKey(exerciseId: string): string {
+  return `x_${exerciseId.replaceAll('-', '')}`;
+}
+
+export function isCustomTemplate(row: ProgramTemplateRow): boolean {
+  return row.key.startsWith(CUSTOM_TEMPLATE_PREFIX) || (row.owner_user_id ?? null) !== null;
+}
+
+function latestRows(rows: readonly ProgramTemplateRow[]): ProgramTemplateRow[] {
   const latest = new Map<string, ProgramTemplateRow>();
   for (const row of rows) {
     const kept = latest.get(row.key);
     if (!kept || row.version > kept.version) latest.set(row.key, row);
   }
-  return [...latest.values()].map(entryOf).sort((a, b) => a.name.localeCompare(b.name));
+  return [...latest.values()];
+}
+
+export function templateListEntries(rows: readonly ProgramTemplateRow[]): TemplateListEntry[] {
+  return latestRows(rows.filter((row) => !isCustomTemplate(row)))
+    .map(entryOf)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function templateEntry(rows: readonly ProgramTemplateRow[], key: string): TemplateListEntry | undefined {
+  const row = latestRows(rows.filter((candidate) => candidate.key === key))[0];
+  return row ? entryOf(row) : undefined;
+}
+
+function customLiftExerciseId(lift: string): string | null {
+  const parts = CUSTOM_LIFT_PATTERN.exec(lift);
+  return parts ? parts.slice(1).join('-') : null;
+}
+
+export function bindingSelectLifts(definition: ProgramDefinition): ProgramDefinition['lifts'] {
+  return definition.lifts.filter((lift) => customLiftExerciseId(lift.key) === null);
 }
 
 interface EnrolledTemplateRef {
@@ -220,6 +256,8 @@ export function defaultBindings(
 ): Record<string, string | null> {
   return Object.fromEntries(
     definition.lifts.map((lift) => {
+      const customExerciseId = customLiftExerciseId(lift.key);
+      if (customExerciseId !== null) return [lift.key, customExerciseId];
       const catalogKey = catalogKeyOf(lift.key, options);
       const match = exercises.find((exercise) => exercise.key === catalogKey && !exercise.archived);
       return [lift.key, catalogKey && match ? match.id : null];

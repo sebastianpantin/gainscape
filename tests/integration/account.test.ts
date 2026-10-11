@@ -233,6 +233,11 @@ describe('export-data', () => {
     expect(exported.customExercises[0].shares).toEqual([{ skill: 'shoulders', share_bp: 10000 }]);
     expect(exported.programs.length).toBeGreaterThan(0);
     expect(exported.programs[0].days.length).toBeGreaterThan(0);
+    expect(exported.programs[0].days[0].exercises[0]).toMatchObject({
+      progression: 'none',
+      increment_kg: null,
+      increment_lb: null,
+    });
     const counts = await rowCounts(owner.id);
     expect(exported.lootRolls).toHaveLength(counts.loot_rolls);
     expect(exported.drops).toHaveLength(counts.drops);
