@@ -18,6 +18,7 @@ import {
   backupConfigProblems,
   changelogProblem,
   configuredSecrets,
+  databaseDeployCommands,
   directCommitsProblem,
   linkedRefProblem,
   releaseProblem,
@@ -83,11 +84,15 @@ await runCli(async () => {
     }
   }
   const database = databaseCliEnvironment(config);
-  run(supabaseBin(), ['db', 'push', '--include-seed', '--dry-run'], database);
-  if (!(await confirm(`Apply these changes to ${config.SUPABASE_PROJECT_REF}? Type yes:`))) {
+  const databaseCommands = databaseDeployCommands();
+  run(supabaseBin(), databaseCommands.preview, database);
+  if (
+    !(await confirm(`Apply these migrations and re-run the catalog seed on ${config.SUPABASE_PROJECT_REF}? Type yes:`))
+  ) {
     throw new Error('deploy cancelled before any change');
   }
-  run(supabaseBin(), ['db', 'push', '--include-seed'], database);
+  run(supabaseBin(), databaseCommands.migrations, database);
+  run(supabaseBin(), databaseCommands.seed, cliEnvironment());
   run(supabaseBin(), ['functions', 'deploy', '--project-ref', config.SUPABASE_PROJECT_REF!], cliEnvironment());
   run(
     wranglerBin,
