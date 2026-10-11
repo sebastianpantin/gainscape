@@ -5,8 +5,16 @@ import type { Collection } from '../../web/src/lib/collection-data.ts';
 
 vi.mock('../../web/src/lib/supabase.ts', () => ({ supabase: {} }));
 
-const { collectionPercentQuery, collectionQuery, FEED_QUERY_PREFIX, feedQuery, FRIENDS_QUERY_PREFIX, friendsQuery } =
-  await import('../../web/src/lib/queries.ts');
+const {
+  collectionPercentQuery,
+  collectionQuery,
+  enrollChoicesQuery,
+  FEED_QUERY_PREFIX,
+  feedQuery,
+  FRIENDS_QUERY_PREFIX,
+  friendsQuery,
+  publishForEnroll,
+} = await import('../../web/src/lib/queries.ts');
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -50,5 +58,25 @@ describe('query factories', () => {
     queryClient.removeQueries({ queryKey: FEED_QUERY_PREFIX });
     expect(queryClient.getQueryData(friendsQuery(USER_ID).queryKey)).toBeUndefined();
     expect(queryClient.getQueryData(feedQuery(USER_ID).queryKey)).toBeUndefined();
+  });
+
+  it('publishes a program and drops the cached enroll choices so the new version loads', async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(enrollChoicesQuery(USER_ID).queryKey, { loaded: [], fromCache: false } as never);
+    const published = await publishForEnroll(queryClient, USER_ID, 'program-1', (programId) =>
+      Promise.resolve({ key: `custom_${programId}`, version: 2 }),
+    );
+    expect(published).toEqual({ key: 'custom_program-1', version: 2 });
+    expect(queryClient.getQueryData(enrollChoicesQuery(USER_ID).queryKey)).toBeUndefined();
+  });
+
+  it('keeps the cached enroll choices when publishing fails', async () => {
+    const queryClient = new QueryClient();
+    const cached = { loaded: [], fromCache: false };
+    queryClient.setQueryData(enrollChoicesQuery(USER_ID).queryKey, cached as never);
+    await expect(
+      publishForEnroll(queryClient, USER_ID, 'program-1', () => Promise.reject(new Error('offline'))),
+    ).rejects.toThrow('offline');
+    expect(queryClient.getQueryData(enrollChoicesQuery(USER_ID).queryKey)).toBe(cached);
   });
 });

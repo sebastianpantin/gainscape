@@ -1,5 +1,5 @@
 import { type LastLoggedWeights } from '@domain/index.ts';
-import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
+import { infiniteQueryOptions, type QueryClient, queryOptions } from '@tanstack/react-query';
 import { type CacheFirstLoad } from '../offline/cache-first.ts';
 import { fetchBodyweightTrend } from './bodyweight-trend.ts';
 import { fetchExercises, fetchSkills } from './catalog.ts';
@@ -12,7 +12,7 @@ import { isUuid } from './history-rules.ts';
 import { fetchLoadout, loadItemsCacheFirst } from './items.ts';
 import { loadProfileCacheFirst } from './profile.ts';
 import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from './program-enrollment.ts';
-import { fetchLastLoggedSets } from './programs.ts';
+import { fetchLastLoggedSets, type PublishedProgram, publishProgram } from './programs.ts';
 import {
   FEED_PAGE_SIZE,
   fetchCollectionView,
@@ -138,6 +138,17 @@ export function enrollChoicesQuery(userId: string) {
     queryKey: ['enroll-choices', userId] as const,
     queryFn: () => loadEnrollChoicesCacheFirst(userId),
   });
+}
+
+export async function publishForEnroll(
+  queryClient: QueryClient,
+  userId: string,
+  programId: string,
+  publish: (programId: string) => Promise<PublishedProgram> = publishProgram,
+): Promise<PublishedProgram> {
+  const published = await publish(programId);
+  queryClient.removeQueries({ queryKey: enrollChoicesQuery(userId).queryKey });
+  return published;
 }
 
 export const weeklyGoalQuery = queryOptions({

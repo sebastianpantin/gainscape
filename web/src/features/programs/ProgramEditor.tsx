@@ -7,19 +7,13 @@ import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
-import {
-  cachedPrograms,
-  loadProgramsCacheFirst,
-  type ProgramDoc,
-  publishProgram,
-  saveProgram,
-} from '../../lib/programs.ts';
+import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { usePreferences } from '../../lib/preferences.ts';
-import { enrollChoicesQuery } from '../../lib/queries.ts';
+import { publishForEnroll } from '../../lib/queries.ts';
 import type { PlannedExercise, ProgressionKind } from '../../offline/draft-format.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import {
@@ -175,8 +169,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
-      const { key } = await publishProgram(doc.id);
-      queryClient.removeQueries({ queryKey: enrollChoicesQuery(userId).queryKey });
+      const { key } = await publishForEnroll(queryClient, userId, doc.id);
       navigate(`/programs/enroll/${key}`, { state: { carried } });
     } catch (error) {
       setProblem(programErrorText(error));
