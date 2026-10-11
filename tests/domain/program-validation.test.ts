@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  type ProgramDefinition,
-  type RepeatScheme,
-  validateEnrollment,
-  validateProgramDefinition,
-} from '@domain/index.ts';
+import { type ProgramDefinition, validateProgramDefinition } from '@domain/index.ts';
+import { type RepeatScheme, validateEnrollment } from '@domain/program-definition.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from './program-fixtures/five_three_one.ts';
 import { LINEAR_AFTER_SESSION } from './program-fixtures/linear_after_session.ts';
 import { MADCOW_5X5, madcowEnrollment } from './program-fixtures/madcow_5x5.ts';

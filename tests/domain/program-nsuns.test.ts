@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { initialProgramState, validateProgramDefinition } from '@domain/index.ts';
+import { validateProgramDefinition } from '@domain/index.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { factClock } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import {

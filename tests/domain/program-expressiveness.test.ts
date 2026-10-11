@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  initialProgramState,
   parseProgramDefinition,
   type Position,
   type ProgramDefinition,
   type ProgramEnrollment,
-  validateEnrollment,
   validateProgramDefinition,
 } from '@domain/index.ts';
+import { validateEnrollment } from '@domain/program-definition.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from './program-fixtures/five_three_one.ts';
 import { resolveAt } from './program-fixtures/follow.ts';
 import { GZCLP, gzclpEnrollment } from './program-fixtures/gzclp.ts';

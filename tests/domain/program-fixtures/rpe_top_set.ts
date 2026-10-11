@@ -1,13 +1,12 @@
 import {
   DEFAULT_ROUNDING,
-  type DayDecl,
   type OptionValue,
   type ProgramDefinition,
   type ProgramEnrollment,
-  type ProgressionRule,
   type WeeklyPosition,
   type WeightUnit,
 } from '@domain/index.ts';
+import { type DayDecl, type ProgressionRule } from '@domain/program-definition.ts';
 
 const FITNESSVOLT_RTS_CHART = 'https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/';
 

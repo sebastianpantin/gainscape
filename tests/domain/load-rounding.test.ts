@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ROUNDING, halfIncrementKg, roundLoad, roundPrescribedLoad } from '@domain/index.ts';
+import { DEFAULT_ROUNDING, roundLoad } from '@domain/index.ts';
+import { halfIncrementKg, roundPrescribedLoad } from '@domain/load-rounding.ts';
 
 describe('roundLoad nearest (spreadsheet MROUND, ties up)', () => {
   it.each([

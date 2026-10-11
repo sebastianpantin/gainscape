@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { initialProgramState, programStateAt, validateEnrollment } from '@domain/index.ts';
+import { programStateAt } from '@domain/index.ts';
+import { validateEnrollment } from '@domain/program-definition.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { factClock, sessionFact } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, loggedAsPrescribed, resolveAt } from './program-fixtures/follow.ts';
 import { refOf, repsOf, weightsOf } from './program-fixtures/prescription-helpers.ts';

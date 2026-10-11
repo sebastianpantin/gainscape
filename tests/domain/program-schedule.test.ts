@@ -4,10 +4,10 @@ import {
   comparePositions,
   firstPosition,
   isPositionInSchedule,
-  nextPosition,
   programStateAt,
   upcomingDays,
 } from '@domain/index.ts';
+import { nextPosition } from '@domain/program-schedule.ts';
 import { factClock, sessionFact, skipDayFact } from './program-fixtures/facts.ts';
 import {
   cyclePosition,

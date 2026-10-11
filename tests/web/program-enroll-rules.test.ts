@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { type OptionValue, type ProgramDefinition, validateEnrollment, type WeightUnit } from '@domain/index.ts';
+import { type OptionValue, type ProgramDefinition, type WeightUnit } from '@domain/index.ts';
+import { validateEnrollment } from '@domain/program-definition.ts';
 import {
   type BindableExercise,
   bindingSelectLifts,

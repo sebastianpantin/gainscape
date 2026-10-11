@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { initialProgramState, programStateAt } from '@domain/index.ts';
+import { programStateAt } from '@domain/index.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { factClock, sessionFact } from './program-fixtures/facts.ts';
 import { MADCOW_5X5, madcowEnrollment } from './program-fixtures/madcow_5x5.ts';
 import { missesOf, refOf } from './program-fixtures/prescription-helpers.ts';
