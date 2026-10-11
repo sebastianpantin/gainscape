@@ -1072,7 +1072,10 @@ describe('publish_program', () => {
       .single();
 
     const program = toProgram(programRow as ProgramRow);
-    expect(followStatus(program, enrollment as EnrollmentRow, templateRows as ProgramTemplateRow[])).toBe('current');
+    const builtInBarbellLift = () => 'external' as const;
+    expect(
+      followStatus(program, enrollment as EnrollmentRow, templateRows as ProgramTemplateRow[], builtInBarbellLift),
+    ).toBe('current');
   });
 });
 
