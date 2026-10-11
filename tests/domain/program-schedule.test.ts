@@ -4,10 +4,10 @@ import {
   comparePositions,
   firstPosition,
   isPositionInSchedule,
-  nextPosition,
   programStateAt,
   upcomingDays,
 } from '@domain/index.ts';
+import { nextPosition } from '@domain/program-schedule.ts';
 import { factClock, sessionFact, skipDayFact } from './program-fixtures/facts.ts';
 import {
   cyclePosition,
@@ -199,5 +199,44 @@ describe('isPositionInSchedule bounds every schedule to 520 weeks', () => {
     [{ index: 2080 }, false],
   ])('the four-day GZCLP rotation takes %o: %s, so the index stays below 520 x 4', (position, accepted) => {
     expect(isPositionInSchedule(GZCLP, position)).toBe(accepted);
+  });
+});
+
+describe('isPositionInSchedule takes only the exact keys of the schedule kind', () => {
+  it.each([
+    [{ cycle: 1, week: 1, day: 'squat', note: 'x' }, false],
+    [{ cycle: 1, week: 1, day: 'squat', index: 0 }, false],
+    [{ cycle: 1, week: 1 }, false],
+    [{ cycle: 1, week: 1, day: 'squat' }, true],
+  ])('5/3/1 takes %o: %s', (position, accepted) => {
+    expect(isPositionInSchedule(FIVE_THREE_ONE, position)).toBe(accepted);
+  });
+
+  it.each([
+    [{ week: 1, day: 'mon', extra: null }, false],
+    [{ week: 1, day: 'mon', cycle: 1 }, false],
+    [{ week: 1, day: 'mon' }, true],
+  ])('weekly Madcow takes %o: %s', (position, accepted) => {
+    expect(isPositionInSchedule(MADCOW_5X5, position)).toBe(accepted);
+  });
+
+  it.each([
+    [{ index: 0, extra: 'x' }, false],
+    [{ index: 0, week: 1 }, false],
+    [{ index: 0 }, true],
+  ])('the GZCLP rotation takes %o: %s', (position, accepted) => {
+    expect(isPositionInSchedule(GZCLP, position)).toBe(accepted);
+  });
+
+  it.each(['biweekly', 'constructor', 'toString'])(
+    'rejects every position for the unknown schedule kind %s, as SQL does',
+    (kind) => {
+      const unknownKind = { ...GZCLP, schedule: { ...GZCLP.schedule, kind } } as unknown as typeof GZCLP;
+      expect(isPositionInSchedule(unknownKind, { index: 0 })).toBe(false);
+    },
+  );
+
+  it.each([null, 'squat', 3, [], [0]])('rejects the non-object position %o', (position) => {
+    expect(isPositionInSchedule(GZCLP, position)).toBe(false);
   });
 });

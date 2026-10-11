@@ -1,6 +1,6 @@
 import type { HoldMeasure, LoadType, PaceUnit } from '../../lib/catalog-rules.ts';
 import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
-import type { BoutValues, HoldValues } from '../../offline/draft-format.ts';
+import type { BoutValues, HoldValues } from '../../lib/exercise-edit-rules.ts';
 import { BoutFields, BoutModeToggle } from '../workout/BoutFields.tsx';
 import { CardioEffortSelector } from '../workout/CardioEffortSelector.tsx';
 import { EffortSelector } from '../workout/EffortSelector.tsx';

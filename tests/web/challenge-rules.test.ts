@@ -19,9 +19,9 @@ import {
   type CatalogEntry,
   type LiftDraftExercise,
   startDraftFromChallenge,
-  updateSet,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
+import { updateSet } from '../../web/src/lib/exercise-edit-rules.ts';
 
 const NOW = new Date('2026-10-08T09:00:00.000Z');
 const KG = DEFAULT_ROUNDING.kg;

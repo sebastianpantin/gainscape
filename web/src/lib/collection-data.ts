@@ -9,8 +9,6 @@ import {
   COLLECTION_COLUMNS,
   collectionDataFrom,
   type CollectionRows,
-  collectionPercent,
-  countCollection,
   pinProblemText,
   strengthByExerciseFrom,
 } from './collection-rules.ts';
@@ -140,10 +138,4 @@ export async function unpinExercise(exerciseId: string): Promise<void> {
 export async function reorderPins(exerciseIds: string[]): Promise<void> {
   const { error } = await supabase.rpc('reorder_pins', { exercise_ids: exerciseIds });
   if (error) throw withFriendlyRateLimit(error);
-}
-
-export async function fetchCollectionPercent(userId: string): Promise<number> {
-  const { exercises, data } = (await loadCollectionCacheFirst(userId)).loaded;
-  const { filledSlots, totalSlots } = countCollection(exercises, data).completion;
-  return collectionPercent(filledSlots, totalSlots);
 }

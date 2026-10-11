@@ -16,7 +16,7 @@ import {
 } from '@domain/types.ts';
 import type { CardioExercise, LiftExercise } from './catalog-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
-import type { BoutValues } from '../offline/draft-format.ts';
+import type { BoutValues } from './exercise-edit-rules.ts';
 import {
   type DistanceUnit,
   distanceUnitFor,

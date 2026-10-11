@@ -4,14 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse, stringify } from 'yaml';
-import {
-  type OptionDecl,
-  parseProgramDefinition,
-  type ProgramDefinition,
-  type RepeatScheme,
-  type SetListScheme,
-  type WeekTableScheme,
-} from '@domain/index.ts';
+import { type OptionDecl, parseProgramDefinition, type ProgramDefinition } from '@domain/index.ts';
+import { type RepeatScheme, type SetListScheme, type WeekTableScheme } from '@domain/program-definition.ts';
 import { generateSeed } from '../../scripts/catalog/generate.ts';
 import {
   kgFromLb,

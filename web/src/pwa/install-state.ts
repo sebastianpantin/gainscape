@@ -31,3 +31,11 @@ export function isIosSafari(userAgent: string, maxTouchPoints: number): boolean 
 export function installCardKey(userId: string): string {
   return `gainscape.install-card.${userId}`;
 }
+
+export function forgetInstallCard(storage: Storage | null, userId: string): void {
+  try {
+    storage?.removeItem(installCardKey(userId));
+  } catch {
+    return;
+  }
+}

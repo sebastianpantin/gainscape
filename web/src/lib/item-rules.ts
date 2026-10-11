@@ -157,6 +157,15 @@ export function newItemIds(drops: readonly Pick<DropSummary, 'itemId'>[] | undef
   return new Set((drops ?? []).map((drop) => drop.itemId));
 }
 
+export function firstPickedItemId(
+  items: readonly CatalogItem[],
+  held: HeldItems,
+  newIds: ReadonlySet<string>,
+): string | null {
+  const found = items.filter((item) => held.has(item.id));
+  return (found.find((item) => newIds.has(item.id)) ?? found[0])?.id ?? null;
+}
+
 function gearOrder(item: CatalogItem): number {
   return (
     GEAR_SLOTS.indexOf(item.gearSlot ?? GEAR_SLOTS[0]) * ITEM_TIERS.length + ITEM_TIERS.indexOf(item.tier ?? 'rookie')

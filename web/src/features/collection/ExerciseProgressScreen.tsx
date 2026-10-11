@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { measuresRepsCapacity } from '@domain/types.ts';
 import { LineChart } from '../../components/LineChart.tsx';
 import { TermHelp } from '../../components/TermHelp.tsx';
 import { messageOf } from '../../lib/error-text.ts';
-import { type ExerciseProgress, fetchExerciseProgress } from '../../lib/exercise-progress.ts';
+import { type ExerciseProgress } from '../../lib/exercise-progress.ts';
 import { chartDateText, progressChartSeries, progressValueText } from '../../lib/exercise-progress-rules.ts';
 import { formatLoad, formatSessionDate } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { exerciseProgressQuery } from '../../lib/queries.ts';
 import { skillShareRows } from '../../lib/skill-map-rules.ts';
 
 interface ExerciseProgressScreenProps {
@@ -18,6 +19,13 @@ type Loaded =
   { kind: 'loading' } | { kind: 'problem'; message: string } | { kind: 'ready'; progress: ExerciseProgress };
 
 const MISSING_EXERCISE = "This exercise isn't available.";
+
+function loadedOf(progress: ExerciseProgress | null | undefined, error: Error | null): Loaded {
+  if (progress) return { kind: 'ready', progress };
+  if (progress === null) return { kind: 'problem', message: MISSING_EXERCISE };
+  if (error) return { kind: 'problem', message: messageOf(error, 'Could not load progress.') };
+  return { kind: 'loading' };
+}
 
 function BackButton() {
   const navigate = useNavigate();
@@ -33,19 +41,8 @@ function BackButton() {
 export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) {
   const { exerciseId = '' } = useParams();
   const { unitPref } = usePreferences();
-  const [loaded, setLoaded] = useState<Loaded>({ kind: 'loading' });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchExerciseProgress(userId, exerciseId, controller.signal).then(
-      (progress) => setLoaded(progress ? { kind: 'ready', progress } : { kind: 'problem', message: MISSING_EXERCISE }),
-      (error: unknown) => {
-        if (!controller.signal.aborted)
-          setLoaded({ kind: 'problem', message: messageOf(error, 'Could not load progress.') });
-      },
-    );
-    return () => controller.abort();
-  }, [userId, exerciseId]);
+  const progress = useQuery(exerciseProgressQuery(userId, exerciseId));
+  const loaded = loadedOf(progress.data, progress.isFetching ? null : progress.error);
 
   if (loaded.kind !== 'ready')
     return (

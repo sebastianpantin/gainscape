@@ -7,10 +7,10 @@ import {
   type ProgramFact,
   type ProgramState,
   programStateAt,
-  type ReferenceState,
   resolvePrescription,
   type ResolvedSlot,
 } from '@domain/index.ts';
+import { type ReferenceState } from '@domain/program-prescription.ts';
 import { type FactClock, sessionFact, skipDayFact } from './facts.ts';
 
 export interface LoggedEffort {

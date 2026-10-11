@@ -99,6 +99,7 @@ export function saveCachedExercises(storage: Storage, userId: string, exercises:
 
 export function forgetCachedExercises(storage: Storage, userId: string): void {
   try {
+    storage.removeItem(`${PRE_CARDIO_CACHE_KEY_PREFIX}${userId}`);
     storage.removeItem(exerciseCacheKey(userId));
   } catch {
     return;

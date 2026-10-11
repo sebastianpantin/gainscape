@@ -5,8 +5,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
-import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
+import type { Exercise } from '../../lib/catalog-rules.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
+import { canAddSet, setCount, updateBout, updateHoldSet, updateSet } from '../../lib/exercise-edit-rules.ts';
 import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 import {
   formatLoad,
@@ -36,17 +37,11 @@ import {
   addEditExercise,
   addEditSet,
   describeHold,
-  canAddSet,
   dropsAtRisk,
   editFromSession,
-  editPayload,
-  editSetCount,
   type EditBout,
   type EditHold,
   type EditSet,
-  type FailureAction,
-  failureAction,
-  failureText,
   hasChanges,
   rebaseEdit,
   rebaseNotice,
@@ -55,20 +50,19 @@ import {
   removeEditSet,
   sameKindOfExercise,
   sameSetValues,
-  savedEdit,
   type SessionEdit,
-  summariesToForget,
   swapEditExercise,
-  updateEditBout,
-  updateEditHold,
-  updateEditSet,
-  withNewSetIds,
-  withoutBodyweightLoads,
 } from './session-edit.ts';
+import {
+  createSessionEditor,
+  IDLE,
+  type SessionBusy,
+  type SessionEditorChange,
+  type SessionProblem,
+} from './session-editor.ts';
 
 const HISTORY_PATH = '/collection/history';
 const MAX_NOTES_LENGTH = 2000;
-const SET_ID_RETRIES = 2;
 
 interface Loaded {
   session: HistorySession;
@@ -77,17 +71,6 @@ interface Loaded {
   original: SessionEdit;
   xpBasis: SessionEdit;
 }
-
-type Problem =
-  | { kind: 'conflict'; fresh: Loaded }
-  | { kind: 'bodyweight'; pending: SessionEdit }
-  | { kind: 'unknown_exercise'; exerciseIds: string[] }
-  | { kind: 'refresh_failed'; text: string; retry: () => void }
-  | { kind: 'message'; text: string };
-
-type Busy = { kind: 'idle' } | { kind: 'saving' | 'deleting'; retrying: string | null };
-
-const IDLE: Busy = { kind: 'idle' };
 
 async function loadSession(sessionId: string): Promise<Loaded | null> {
   const [session, sets, exercises] = await Promise.all([
@@ -116,8 +99,8 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const [edit, setEdit] = useState<SessionEdit | null>(null);
   const [readOnly, setReadOnly] = useState(true);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
-  const [problem, setProblem] = useState<Problem | null>(null);
-  const [busy, setBusy] = useState<Busy>(IDLE);
+  const [problem, setProblem] = useState<SessionProblem<Loaded> | null>(null);
+  const [busy, setBusy] = useState<SessionBusy>(IDLE);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -177,136 +160,54 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       </main>
     );
 
-  const currentSignal = () => controllerRef.current!.signal;
-
-  const reloadSession = async (
-    signal: AbortSignal,
-    failedText: string,
-    onFresh: (fresh: Loaded) => void,
-  ): Promise<void> => {
-    let fresh: Loaded | null;
-    try {
-      fresh = await loadSession(sessionId);
-    } catch {
-      if (signal.aborted) return;
-      setProblem({
-        kind: 'refresh_failed',
-        text: failedText,
-        retry: () => void reloadSession(signal, failedText, onFresh),
-      });
-      return;
-    }
-    if (signal.aborted) return;
-    if (!fresh) return goBackGone();
-    onFresh(fresh);
-  };
-
-  const handleCommonFailure = (action: FailureAction, verb: 'save' | 'delete') => {
-    if (action.kind === 'sign_out') return void signOutKeepingDrafts();
-    if (action.kind === 'gone') return goBackGone();
-    if (action.kind === 'read_only') {
-      setReadOnly(true);
-      setEdit(loaded.original);
-    }
-    setProblem({ kind: 'message', text: failureText(action, verb) });
-  };
-
-  const save = async (toSend: SessionEdit, setIdRetriesLeft = SET_ID_RETRIES): Promise<void> => {
-    const signal = currentSignal();
-    setProblem(null);
-    setNotice(null);
-    setBusy({ kind: 'saving', retrying: null });
-    let retried = false;
-    const outcome = await editSession(userId, editPayload(toSend), signal, (reason) => {
-      retried = true;
-      setBusy({ kind: 'saving', retrying: reason });
+  const editor = () =>
+    createSessionEditor<Loaded>({
+      sessionId,
+      signal: () => controllerRef.current!.signal,
+      editSession: (payload, signal, onRetry) => editSession(userId, payload, signal, onRetry),
+      deleteSession: (payload, signal, onRetry) => deleteSession(userId, payload, signal, onRetry),
+      loadSession: () => loadSession(sessionId),
+      latestExercises: () => fetchExercises({ includeArchived: true }).catch(() => loaded.exercises),
+      rememberedSummaryId: () => recallLastSummary(userId)?.sessionId,
+      forgetSummaries: forgetLastSummary,
+      forgetDeletedSession: () => forgetDeletedProgramSession(localStorage, userId, sessionId),
+      describeRevoked: (drops) => removedText(drops, items),
+      apply: (change: SessionEditorChange<Loaded>) => {
+        switch (change.kind) {
+          case 'busy':
+            return setBusy(change.busy);
+          case 'problem':
+            return setProblem(change.problem);
+          case 'notice':
+            return setNotice(change.notice);
+          case 'edit':
+            return setEdit(change.edit);
+          case 'saved': {
+            const { saved } = change;
+            setLoaded(
+              (current) =>
+                current && { ...current, session: { ...current.session, revision: saved.revision }, original: saved },
+            );
+            return setEdit(saved);
+          }
+          case 'adopt':
+            return adopt(change.fresh);
+          case 'read_only':
+            setReadOnly(true);
+            return setEdit(loaded.original);
+          case 'delete_settled':
+            return setConfirmingDelete(false);
+          case 'deleted':
+            return navigate(HISTORY_PATH, { replace: true, state: { notice: change.notice } });
+          case 'gone':
+            return goBackGone();
+          case 'sign_out':
+            return void signOutKeepingDrafts();
+        }
+      },
     });
-    if (signal.aborted) return;
-    setBusy(IDLE);
-    if (outcome.kind === 'ok') {
-      const { revision, replayedSessionIds, revokedDrops } = outcome.data;
-      forgetLastSummary(
-        summariesToForget(sessionId, replayedSessionIds, retried, recallLastSummary(userId)?.sessionId),
-      );
-      const saved = savedEdit(toSend, revision);
-      setLoaded((current) => current && { ...current, session: { ...current.session, revision }, original: saved });
-      setEdit(saved);
-      const removed = removedText(revokedDrops, items);
-      setNotice(removed ? `Changes saved. ${removed}` : 'Changes saved.');
-      return reloadSession(signal, "Saved, but couldn't refresh the workout.", (fresh) => {
-        adopt(fresh);
-        setProblem(null);
-      });
-    }
-    const action = failureAction(outcome);
-    if (action.kind === 'reid_sets' && setIdRetriesLeft > 0) {
-      const reIded = withNewSetIds(toSend, action.setIds);
-      setEdit(reIded);
-      return save(reIded, setIdRetriesLeft - 1);
-    }
-    if (action.kind === 'revision_conflict') {
-      return reloadSession(
-        signal,
-        "This workout was changed on another device, and the latest version couldn't be loaded.",
-        (fresh) => setProblem({ kind: 'conflict', fresh }),
-      );
-    }
-    if (action.kind === 'ask_bodyweight') {
-      setProblem({ kind: 'bodyweight', pending: toSend });
-      return;
-    }
-    if (action.kind === 'unknown_exercise') {
-      setProblem({ kind: 'unknown_exercise', exerciseIds: action.exerciseIds });
-      return;
-    }
-    if (action.kind === 'fix_bodyweight_load') {
-      const exercises = await fetchExercises({ includeArchived: true }).catch(() => loaded.exercises);
-      if (signal.aborted) return;
-      const loadTypes = new Map(exercises.filter(isLiftExercise).map((exercise) => [exercise.id, exercise.loadType]));
-      setEdit(withoutBodyweightLoads(toSend, loadTypes));
-      setProblem({
-        kind: 'message',
-        text: "Bodyweight-only exercises can't carry added weight, so it was reset to 0. Check the sets and save again.",
-      });
-      return;
-    }
-    handleCommonFailure(action, 'save');
-  };
-
-  const remove = async () => {
-    const signal = currentSignal();
-    setProblem(null);
-    setNotice(null);
-    setBusy({ kind: 'deleting', retrying: null });
-    const outcome = await deleteSession(userId, { sessionId, ifRevision: loaded.session.revision }, signal, (reason) =>
-      setBusy({ kind: 'deleting', retrying: reason }),
-    );
-    if (signal.aborted) return;
-    setBusy(IDLE);
-    setConfirmingDelete(false);
-    if (outcome.kind === 'ok') {
-      forgetLastSummary([sessionId, ...outcome.data.replayedSessionIds]);
-      forgetDeletedProgramSession(localStorage, userId, sessionId);
-      const removed = removedText(outcome.data.revokedDrops, items);
-      navigate(HISTORY_PATH, {
-        replace: true,
-        state: { notice: removed ? `Workout deleted. ${removed}` : 'Workout deleted.' },
-      });
-      return;
-    }
-    const action = failureAction(outcome);
-    if (action.kind === 'revision_conflict') {
-      return reloadSession(
-        signal,
-        "This workout was changed on another device, and the latest version couldn't be loaded.",
-        (fresh) => {
-          adopt(fresh);
-          setProblem({ kind: 'message', text: failureText(action, 'delete') });
-        },
-      );
-    }
-    handleCommonFailure(action, 'delete');
-  };
+  const save = (toSend: SessionEdit) => editor().save(toSend);
+  const remove = () => editor().remove(loaded.session.revision);
 
   const { session } = loaded;
   const scoredSets = new Map(
@@ -326,9 +227,10 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const pickable = loaded.exercises.filter((exercise) => !exercise.archived);
   const working = busy.kind !== 'idle';
   const changed = hasChanges(edit, loaded.original);
-  const setCount = editSetCount(edit);
+  const editedSetCount = setCount(edit);
   const askingBodyweight = problem?.kind === 'bodyweight';
-  const canSave = changed && !working && !askingBodyweight && setCount > 0 && setCount <= MAX_SETS_PER_SESSION;
+  const canSave =
+    changed && !working && !askingBodyweight && editedSetCount > 0 && editedSetCount <= MAX_SETS_PER_SESSION;
   const roomForSets = canAddSet(edit);
   const roomForBouts = canAddBout(
     edit.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
@@ -551,7 +453,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                         xpLabel={xp.label}
                         xpNote={xp.note}
                         unit={unitPref}
-                        onChange={(changes) => setEdit(updateEditBout(edit, exerciseIndex, bout.id, changes))}
+                        onChange={(changes) => setEdit(updateBout(edit, exerciseIndex, bout.id, changes))}
                         onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, bout.id))}
                       />
                     );
@@ -569,7 +471,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                           xpLabel={xp.label}
                           xpNote={xp.note}
                           unit={unitPref}
-                          onChange={(changes) => setEdit(updateEditHold(edit, exerciseIndex, set.id, changes))}
+                          onChange={(changes) => setEdit(updateHoldSet(edit, exerciseIndex, set.id, changes))}
                           onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
                         />
                       );
@@ -586,7 +488,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                           xpNote={xp.note}
                           unit={unitPref}
                           effortMode={effortInputMode}
-                          onChange={(changes) => setEdit(updateEditSet(edit, exerciseIndex, set.id, changes))}
+                          onChange={(changes) => setEdit(updateSet(edit, exerciseIndex, set.id, changes))}
                           onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
                         />
                       );
@@ -616,7 +518,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           />
         </label>
       </fieldset>
-      {setCount === 0 && <p className="hint">A workout needs at least one set. Delete it instead to remove it.</p>}
+      {editedSetCount === 0 && (
+        <p className="hint">A workout needs at least one set. Delete it instead to remove it.</p>
+      )}
       {changed && (
         <div className="notice" role="status" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
           {editWarning && <p>{editWarning}</p>}

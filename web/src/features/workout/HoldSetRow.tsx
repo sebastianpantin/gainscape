@@ -1,9 +1,10 @@
 import { HOLD_BOUNDS } from '@domain/types.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
-import type { LoadType } from '../../lib/catalog-rules.ts';
+import type { HoldMeasure, LoadType } from '../../lib/catalog-rules.ts';
+import type { HoldValues } from '../../lib/exercise-edit-rules.ts';
 import type { UnitPref } from '../../lib/profile.ts';
-import type { HoldDraftSet, HoldMeasure, HoldValues } from '../../offline/draft-format.ts';
+import type { HoldDraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { WeightField } from './SetRow.tsx';
 import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';

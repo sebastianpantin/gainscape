@@ -12,7 +12,6 @@ import {
   type IncrementByAmount,
   type IncrementByPct,
   type NumberContext,
-  type ReferenceVar,
   type SlotDecl,
   type StageRetest,
   stageRetestOf,
@@ -47,10 +46,10 @@ import {
   type LiftOutcome,
   type ProgramFact,
   type ProgramState,
-  type ReferenceChange,
   type ReferenceChangeReason,
-  type RuleKey,
+  ruleKeyOf,
   type SetReferenceFact,
+  setReference,
 } from './program-state.ts';
 import { advanceStage, isRetestPending, retestedStages } from './program-stages.ts';
 import { rpeChartPct } from './rpe-chart.ts';
@@ -59,10 +58,6 @@ import { kgToUnit, shownWeight, type WeightUnit } from './units.ts';
 export interface LoggedLoad {
   weightKg: number;
   reps: number;
-}
-
-export function ruleKeyOf(rule: ProgressionRule): RuleKey {
-  return `${rule.lift}:${rule.var}:${rule.trigger}`;
 }
 
 export function isSetMet(
@@ -188,23 +183,6 @@ interface FoldContext {
   definition: ProgramDefinition;
   enrollment: ProgramEnrollment;
   finalSets?: FinalDaySets;
-}
-
-export function setReference(
-  state: ProgramState,
-  lift: string,
-  variable: ReferenceVar,
-  to: number,
-  reason: ReferenceChangeReason,
-  position: Position,
-): ProgramState {
-  const from = state.refs[lift]?.[variable] ?? to;
-  const change: ReferenceChange = { lift, var: variable, from, to, reason, position };
-  return {
-    ...state,
-    refs: { ...state.refs, [lift]: { ...state.refs[lift], [variable]: to } },
-    history: [...state.history, change],
-  };
 }
 
 function loggedSetAt(sets: readonly FactSet[], setIndex: number): FactSet | undefined {

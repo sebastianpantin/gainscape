@@ -49,3 +49,11 @@ export function cachePreferences(userId: string, preferences: Preferences): void
     return;
   }
 }
+
+export function forgetCachedPreferences(storage: Storage | null, userId: string): void {
+  try {
+    storage?.removeItem(`${CACHE_KEY_PREFIX}${userId}`);
+  } catch {
+    return;
+  }
+}

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { initialProgramState, programStateAt, recomputeRelativeSets, type ResolvedSlot } from '@domain/index.ts';
+import { programStateAt, type ResolvedSlot } from '@domain/index.ts';
+import { recomputeRelativeSets } from '@domain/program-prescription.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { factClock, loggedSet, sessionFact } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, type LoggedEffort, resolveAt } from './program-fixtures/follow.ts';
 import {

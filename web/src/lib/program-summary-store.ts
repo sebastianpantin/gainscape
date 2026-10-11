@@ -26,3 +26,11 @@ export function dismissSummary(storage: Storage | null, userId: string, summaryK
     return;
   }
 }
+
+export function forgetDismissedSummaries(storage: Storage | null, userId: string): void {
+  try {
+    storage?.removeItem(dismissedKey(userId));
+  } catch {
+    return;
+  }
+}

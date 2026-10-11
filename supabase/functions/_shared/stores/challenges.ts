@@ -1,14 +1,24 @@
 import type { Transaction } from '../db.ts';
-import { type ChallengeDefinition, challengeDefinitionFromStored } from '../domain/index.ts';
+import {
+  type BalanceConfig,
+  type ChallengeDefinition,
+  challengeDefinitionFromStored,
+  challengeE1rmSnapshot,
+  challengeLoadExerciseIds,
+  type ChallengeRun,
+  type SessionKey,
+  strengthStateAt,
+} from '../domain/index.ts';
+import { loadStrengthHistory } from './strength.ts';
 
-export interface ClaimedChallenge {
+interface ClaimedChallenge {
   challengeId: string;
   key: string;
   name: string;
   definition: ChallengeDefinition;
 }
 
-export async function claimChallengeScroll(
+async function claimChallengeScroll(
   tx: Transaction,
   userId: string,
   challengeId: string,
@@ -34,4 +44,18 @@ export async function claimChallengeScroll(
     name: claimable.name,
     definition: challengeDefinitionFromStored(claimable.definition),
   };
+}
+
+export async function claimChallengeRun(
+  tx: Transaction,
+  userId: string,
+  challengeId: string,
+  session: SessionKey,
+  cfg: BalanceConfig,
+): Promise<ChallengeRun | null> {
+  const claimed = await claimChallengeScroll(tx, userId, challengeId, session.id);
+  if (claimed === null) return null;
+  const history = await loadStrengthHistory(tx, userId, challengeLoadExerciseIds(claimed.definition), session, cfg);
+  const strength = strengthStateAt(history, session, cfg);
+  return { ...claimed, e1rmKg: challengeE1rmSnapshot(claimed.definition, strength) };
 }

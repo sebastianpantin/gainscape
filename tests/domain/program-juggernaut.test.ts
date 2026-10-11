@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateEnrollment } from '@domain/index.ts';
+import { validateEnrollment } from '@domain/program-definition.ts';
 import { factClock, jumpToFact } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import {

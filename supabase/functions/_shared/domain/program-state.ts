@@ -3,11 +3,11 @@ import {
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramReferences,
+  type ProgressionRule,
   type ProgressionTrigger,
   type ReferenceVar,
 } from './program-definition.ts';
 import { type PrescriptionSnapshot, type StageIndices } from './program-prescription.ts';
-import { advanceProgram, finalDaySets, ruleKeyOf } from './program-progression.ts';
 import { firstPosition, type Position, type ScheduleCursor } from './program-schedule.ts';
 import { type EffortInputType } from './types.ts';
 
@@ -88,6 +88,27 @@ export interface ProgramState extends ScheduleCursor {
   history: readonly ReferenceChange[];
 }
 
+export function ruleKeyOf(rule: ProgressionRule): RuleKey {
+  return `${rule.lift}:${rule.var}:${rule.trigger}`;
+}
+
+export function setReference(
+  state: ProgramState,
+  lift: string,
+  variable: ReferenceVar,
+  to: number,
+  reason: ReferenceChangeReason,
+  position: Position,
+): ProgramState {
+  const from = state.refs[lift]?.[variable] ?? to;
+  const change: ReferenceChange = { lift, var: variable, from, to, reason, position };
+  return {
+    ...state,
+    refs: { ...state.refs, [lift]: { ...state.refs[lift], [variable]: to } },
+    history: [...state.history, change],
+  };
+}
+
 function initialReferences(definition: ProgramDefinition, enrollment: ProgramEnrollment): ProgramReferences {
   const numbers = { definition, options: enrollment.options, cycle: 1 };
   const lifts = [...new Set(definition.inputs.flatMap((input) => input.lifts))];
@@ -145,17 +166,4 @@ export function orderFacts(facts: readonly ProgramFact[]): ProgramFact[] {
     if (!kept || (kept.local && !fact.local)) byId.set(fact.id, fact);
   }
   return [...byId.values()].sort(compareFacts);
-}
-
-export function programStateAt(
-  definition: ProgramDefinition,
-  enrollment: ProgramEnrollment,
-  facts: readonly ProgramFact[],
-): ProgramState {
-  const ordered = orderFacts(facts);
-  const finalSets = finalDaySets(definition, enrollment, ordered);
-  return ordered.reduce(
-    (state, fact) => advanceProgram(definition, enrollment, state, fact, finalSets),
-    initialProgramState(definition, enrollment),
-  );
 }

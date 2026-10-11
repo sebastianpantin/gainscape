@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { loadProfileCacheFirst, type Profile } from '../../lib/profile.ts';
+import { type Profile } from '../../lib/profile.ts';
+import { profileQuery } from '../../lib/queries.ts';
 import { loadedState } from '../../lib/query-state-rules.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
-import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first.ts';
+import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROFILE_NOTICE, profileCache } from '../../offline/profile-cache.ts';
 
 export type ProfileState =
@@ -21,19 +22,17 @@ interface ProfileQuery {
 
 export function useProfile(userId: string): ProfileQuery {
   const queryClient = useQueryClient();
-  const query = useQuery({
-    queryKey: ['profile', userId],
-    queryFn: ({ signal }) => loadProfileCacheFirst(userId, signal),
-  });
+  const query = useQuery(profileQuery(userId));
 
   const replace = useCallback(
     (change: ProfileUpdate) => {
-      void queryClient.cancelQueries({ queryKey: ['profile', userId] });
-      const current = queryClient.getQueryData<CacheFirstLoad<Profile>>(['profile', userId]);
+      const { queryKey } = profileQuery(userId);
+      void queryClient.cancelQueries({ queryKey });
+      const current = queryClient.getQueryData(queryKey);
       if (current === undefined) return;
       const profile = typeof change === 'function' ? change(current.loaded) : change;
       profileCache.save(deviceStorage(), userId, profile);
-      queryClient.setQueryData<CacheFirstLoad<Profile>>(['profile', userId], { ...current, loaded: profile });
+      queryClient.setQueryData(queryKey, { ...current, loaded: profile });
     },
     [queryClient, userId],
   );

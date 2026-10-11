@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  type Adjustment,
   parseProgramDefinition,
   type ProgramDefinition,
   resolvePrescription,
-  type SetListScheme,
   validateProgramDefinition,
 } from '@domain/index.ts';
+import { type Adjustment, type SetListScheme } from '@domain/program-definition.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from './program-fixtures/five_three_one.ts';
 import {
   FULL_PRIMITIVES,

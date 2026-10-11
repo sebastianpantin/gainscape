@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  initialProgramState,
   type PrescribedExercise,
   type PrescribedSet,
   type PrescriptionSnapshot,
   resolvePrescription,
 } from '@domain/index.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import {
   addCardioExercise,
   addExercise,
@@ -15,15 +15,13 @@ import {
   type LiftDraftExercise,
   parseStoredDraft,
   removeExercise,
-  removeSet,
   startDraftFromPrescription,
   swapExercise,
   toggleSetDone,
-  updateBout,
-  updateSet,
   withCurrentLoadTypes,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
+import { removeSet, updateBout, updateSet } from '../../web/src/lib/exercise-edit-rules.ts';
 import { type CardioActivity } from '../../web/src/lib/catalog-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 import { snapshot } from '../domain/program-fixtures/facts.ts';

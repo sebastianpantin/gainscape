@@ -5,7 +5,6 @@ import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/ty
 import {
   addEditExercise,
   addEditSet,
-  canAddSet,
   dropsAtRisk,
   editFromSession,
   editPayload,
@@ -27,9 +26,6 @@ import {
   swapEditExercise,
   describeHold,
   sameKindOfExercise,
-  updateEditHold,
-  updateEditBout,
-  updateEditSet,
   withNewSetIds,
   withoutBodyweightLoads,
 } from '../../web/src/features/history/session-edit.ts';
@@ -42,6 +38,7 @@ import {
   transientReason,
 } from '../../web/src/lib/history-rules.ts';
 import { boutModeChanges } from '../../web/src/lib/cardio-rules.ts';
+import { canAddSet, updateBout, updateHoldSet, updateSet } from '../../web/src/lib/exercise-edit-rules.ts';
 import type { CatalogItem } from '../../web/src/lib/item-rules.ts';
 
 const benchId = 'aaaaaaaa-0000-4000-8000-000000000001';
@@ -144,7 +141,7 @@ describe('building the edit from loaded rows', () => {
   });
 
   it('sends blank notes as null and rounds weights to 2 dp', () => {
-    const changed = updateEditSet({ ...edit, notes: '   ' }, 0, 'set-1', { weightKg: 72.4567 });
+    const changed = updateSet({ ...edit, notes: '   ' }, 0, 'set-1', { weightKg: 72.4567 });
     const payload = editPayload(changed);
     expect(payload.notes).toBeNull();
     expect(liftSets(payload)[1].weightKg).toBe(72.46);
@@ -153,7 +150,7 @@ describe('building the edit from loaded rows', () => {
 
   it('sees no change when nothing but the revision differs', () => {
     expect(hasChanges({ ...edit, revision: 9 }, edit)).toBe(false);
-    expect(hasChanges(updateEditSet(edit, 0, 'set-1', { weightKg: 60.001 }), edit)).toBe(false);
+    expect(hasChanges(updateSet(edit, 0, 'set-1', { weightKg: 60.001 }), edit)).toBe(false);
   });
 
   it('adds sets with fresh ids, drops removed sets and renumbers positions', () => {
@@ -312,7 +309,7 @@ describe('rebasing local changes onto a newer server copy', () => {
   const ids = (edit: SessionEdit) => editPayload(edit).sets.map((set) => set.id);
 
   it('keeps the other device’s added, removed and changed sets and notes when nothing was changed here', () => {
-    const remote = updateEditSet(removeEditSet(addEditSet(original, 1), 0, 'set-1'), 2, 'set-3', { reps: 12 });
+    const remote = updateSet(removeEditSet(addEditSet(original, 1), 0, 'set-1'), 2, 'set-3', { reps: 12 });
     const fresh = { ...remote, revision: 4, notes: 'from the other phone' };
     const rebased = rebaseEdit(original, original, fresh).edit;
     expect(rebased).toEqual(fresh);
@@ -322,14 +319,14 @@ describe('rebasing local changes onto a newer server copy', () => {
     const remoteAdded = addEditSet(original, 1);
     const remoteNewId = remoteAdded.exercises[1].sets[1].id;
     const fresh = {
-      ...updateEditSet(removeEditSet(remoteAdded, 0, 'set-0'), 1, 'set-2', { reps: 15 }),
+      ...updateSet(removeEditSet(remoteAdded, 0, 'set-0'), 1, 'set-2', { reps: 15 }),
       revision: 4,
       notes: 'remote notes',
     };
 
     const localAdded = addEditSet(original, 0);
     const localNewId = localAdded.exercises[0].sets[2].id;
-    const local = removeEditSet(updateEditSet(localAdded, 0, 'set-1', { reps: 9 }), 2, 'set-3');
+    const local = removeEditSet(updateSet(localAdded, 0, 'set-1', { reps: 9 }), 2, 'set-3');
 
     const rebased = rebaseEdit(local, original, fresh).edit;
     expect(rebased.revision).toBe(4);
@@ -342,8 +339,8 @@ describe('rebasing local changes onto a newer server copy', () => {
   });
 
   it('merges a set changed on both sides field by field, local fields winning', () => {
-    const fresh = { ...updateEditSet(original, 0, 'set-1', { reps: 7, weightKg: 65 }), revision: 4 };
-    const local = updateEditSet(original, 0, 'set-1', { weightKg: 70, effort: { type: 'level', level: 'failure' } });
+    const fresh = { ...updateSet(original, 0, 'set-1', { reps: 7, weightKg: 65 }), revision: 4 };
+    const local = updateSet(original, 0, 'set-1', { weightKg: 70, effort: { type: 'level', level: 'failure' } });
     const set = rebaseEdit(local, original, fresh).edit.exercises[0].sets[1];
     expect(set).toEqual({
       id: 'set-1',
@@ -356,7 +353,7 @@ describe('rebasing local changes onto a newer server copy', () => {
 
   it('does not bring back a set the other device removed, and reports it when it was changed here', () => {
     const fresh = { ...removeEditSet(removeEditSet(original, 0, 'set-1'), 0, 'set-0'), revision: 4 };
-    const local = updateEditSet(original, 0, 'set-1', { reps: 11 });
+    const local = updateSet(original, 0, 'set-1', { reps: 11 });
     const rebased = rebaseEdit(local, original, fresh);
     expect(ids(rebased.edit)).toEqual(['set-2', 'set-3']);
     expect(rebased.droppedSetIds).toEqual(['set-1']);
@@ -367,7 +364,7 @@ describe('rebasing local changes onto a newer server copy', () => {
 
   it('does not count a set as dropped when it was not changed here', () => {
     const fresh = { ...removeEditSet(original, 0, 'set-1'), revision: 4 };
-    const local = updateEditSet(original, 2, 'set-3', { reps: 11 });
+    const local = updateSet(original, 2, 'set-3', { reps: 11 });
     const rebased = rebaseEdit(local, original, fresh);
     expect(rebased.droppedSetIds).toEqual([]);
     expect(rebaseNotice(rebased, fresh)).toBe(
@@ -381,7 +378,7 @@ describe('rebasing local changes onto a newer server copy', () => {
       exercises: [{ ...lifts(original)[0], sets: [lifts(original)[0].sets[0]] }],
     };
     const freshWithoutNew: SessionEdit = { ...onlySet, revision: 4, exercises: [] };
-    const local = updateEditSet(onlySet, 0, 'set-0', { reps: 12 });
+    const local = updateSet(onlySet, 0, 'set-0', { reps: 12 });
     const rebased = rebaseEdit(local, onlySet, freshWithoutNew);
     expect(rebased.edit.exercises).toEqual([]);
     expect(rebased.droppedSetIds).toEqual(['set-0']);
@@ -391,8 +388,8 @@ describe('rebasing local changes onto a newer server copy', () => {
   });
 
   it('ignores a weight re-typed to the same stored value, so the other device keeps its change', () => {
-    const fresh = { ...updateEditSet(original, 0, 'set-1', { weightKg: 65 }), revision: 4 };
-    const local = updateEditSet(original, 0, 'set-1', { weightKg: 60.0012 });
+    const fresh = { ...updateSet(original, 0, 'set-1', { weightKg: 65 }), revision: 4 };
+    const local = updateSet(original, 0, 'set-1', { weightKg: 60.0012 });
     const rebased = rebaseEdit(local, original, fresh);
     expect(lifts(rebased.edit)[0].sets[1].weightKg).toBe(65);
     expect(rebased.droppedSetIds).toEqual([]);
@@ -422,7 +419,7 @@ describe('rebasing local changes onto a newer server copy', () => {
 
 describe('after the server accepts an edit', () => {
   const original = editFromSession(session, rows, exercisesById);
-  const sent = updateEditSet(original, 2, 'set-3', { reps: 9 });
+  const sent = updateSet(original, 2, 'set-3', { reps: 9 });
 
   it('treats the sent sets as the new original at the new revision, so undo keeps what was saved', () => {
     const saved = savedEdit(sent, 4);
@@ -461,7 +458,7 @@ describe('drops put at risk by an edit', () => {
       { isWarmup: true },
       { effort: { type: 'level' as const, level: 'easy' as const } },
     ]) {
-      expect(dropsAtRisk(updateEditSet(original, 2, 'set-3', changes), original, drops)).toEqual([{ setId: 'set-3' }]);
+      expect(dropsAtRisk(updateSet(original, 2, 'set-3', changes), original, drops)).toEqual([{ setId: 'set-3' }]);
     }
   });
 
@@ -583,15 +580,15 @@ describe('cardio bouts in an edit', () => {
   });
 
   it('sees a changed distance as a change that puts the bout’s drops at risk', () => {
-    const changed = updateEditBout(edit, 0, 'bout-0', { distanceM: 6000 });
+    const changed = updateBout(edit, 0, 'bout-0', { distanceM: 6000 });
     expect(editPayload(changed).sets[0]).toMatchObject({ distanceM: 6000 });
     expect(hasChanges(changed, edit)).toBe(true);
     expect(dropsAtRisk(changed, edit, [{ setId: 'bout-0' }, { setId: 'bout-1' }])).toEqual([{ setId: 'bout-0' }]);
   });
 
   it('leaves lift sets alone when a bout changes, and bouts alone when a lift changes', () => {
-    expect(updateEditBout(edit, 1, 'set-2', { distanceM: 6000 })).toEqual(edit);
-    expect(updateEditSet(edit, 0, 'bout-0', { reps: 9 })).toEqual(edit);
+    expect(updateBout(edit, 1, 'set-2', { distanceM: 6000 })).toEqual(edit);
+    expect(updateSet(edit, 0, 'bout-0', { reps: 9 })).toEqual(edit);
   });
 
   it('copies the previous bout when adding one', () => {
@@ -663,12 +660,7 @@ describe('cardio bouts in an edit', () => {
       }),
     ];
     const stored = editFromSession(session, sprintRows, known);
-    const steady = updateEditBout(
-      stored,
-      0,
-      'bout-s',
-      boutModeChanges(stored.exercises[0].sets[0] as EditBout, 'steady'),
-    );
+    const steady = updateBout(stored, 0, 'bout-s', boutModeChanges(stored.exercises[0].sets[0] as EditBout, 'steady'));
     expect(editPayload(steady).sets[0]).toMatchObject({ kind: 'cardio', durationS: 60, interval: null });
   });
 
@@ -678,10 +670,10 @@ describe('cardio bouts in an edit', () => {
 
   it('merges a bout changed on both sides field by field, local fields winning', () => {
     const fresh = {
-      ...updateEditBout(edit, 0, 'bout-0', { effort: { type: 'cardio', level: 'easy' }, durationS: 1700 }),
+      ...updateBout(edit, 0, 'bout-0', { effort: { type: 'cardio', level: 'easy' }, durationS: 1700 }),
       revision: 4,
     };
-    const local = updateEditBout(edit, 0, 'bout-0', { distanceM: 6000, durationS: 1900 });
+    const local = updateBout(edit, 0, 'bout-0', { distanceM: 6000, durationS: 1900 });
     expect(rebaseEdit(local, edit, fresh).edit.exercises[0].sets[0]).toEqual({
       id: 'bout-0',
       kind: 'cardio',
@@ -808,7 +800,7 @@ describe('hold sets in an edit', () => {
   });
 
   it('sends holds as hold sets and edits one by id', () => {
-    const longer = updateEditHold(edit, 0, 'hold-0', { durationS: 60 });
+    const longer = updateHoldSet(edit, 0, 'hold-0', { durationS: 60 });
     expect(editPayload(longer).sets).toEqual([
       {
         kind: 'hold',

@@ -1,6 +1,6 @@
 import type { BalanceConfig } from './balance.ts';
 import { compareSessionKeys } from './ordering.ts';
-import { DEFAULT_STEPS, processSession, type SessionOutputs, type Step } from './pipeline.ts';
+import { processSession, type SessionOutputs } from './pipeline.ts';
 import { strengthHistoryRows, strengthStateAt } from './strength.ts';
 import type { Catalog, SessionInput, StrengthHistoryRow, StrengthState, UserState } from './types.ts';
 
@@ -20,7 +20,6 @@ export function replayHistory(
   catalog: Catalog,
   cfg: BalanceConfig,
   initialState: UserState = { skillXp: {}, bodyweightKg: null },
-  steps: readonly Step[] = DEFAULT_STEPS,
   priorStrength: readonly StrengthHistoryRow[] = [],
 ): ReplayResult {
   const ordered = [...sessions].sort(compareSessionKeys);
@@ -30,7 +29,7 @@ export function replayHistory(
 
   for (const session of ordered) {
     const strength = strengthStateAt(history, session, cfg);
-    const { nextState, outputs } = processSession(state, session, cfg, { catalog, strength }, steps);
+    const { nextState, outputs } = processSession(state, session, cfg, { catalog, strength });
     history.push(...strengthHistoryRows(session, outputs.sets));
     replayed.push({ session, strengthAtStart: strength, outputs });
     state = nextState;

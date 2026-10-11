@@ -5,7 +5,8 @@ import type { Program, ProgramDoc } from '../../lib/programs.ts';
 import { moved } from '../../lib/reorder.ts';
 import { KG_PER_LB } from '../../lib/units.ts';
 import { roundTo } from '@domain/math.ts';
-import { type PlannedExercise, type ProgressionKind, updateExerciseAt } from '../../offline/draft-format.ts';
+import type { PlannedExercise, ProgressionKind } from '../../offline/draft-format.ts';
+import { updateExerciseAt } from '../../lib/exercise-edit-rules.ts';
 
 type EditorDay = ProgramDoc['days'][number];
 

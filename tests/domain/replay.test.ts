@@ -5,7 +5,6 @@ import {
   challengeBonusXp,
   compareSessionKeys,
   DEFAULT_BALANCE,
-  DEFAULT_STEPS,
   type EffortInput,
   isBefore,
   isLiftSet,
@@ -249,7 +248,6 @@ function replaySuffix(
       bodyweightKg: null,
       records: recordsFromHistory(recordRowsOf(prefixSessions), catalog, cfg),
     },
-    DEFAULT_STEPS,
     trimmed ? trimmedStrength.rows : priorStrength,
   );
   return { suffix, trimmedAway: trimmedStrength.removed };
@@ -383,14 +381,7 @@ describe('replay budget', () => {
 
   function runBudgetedReplay() {
     const records = recordsFromHistory(recordRows, catalog, cfg);
-    return replayHistory(
-      suffixSessions,
-      catalog,
-      cfg,
-      { skillXp: {}, bodyweightKg: null, records },
-      DEFAULT_STEPS,
-      priorStrength,
-    );
+    return replayHistory(suffixSessions, catalog, cfg, { skillXp: {}, bodyweightKg: null, records }, priorStrength);
   }
 
   it('folds 10 000 record rows and replays 14 × 40 sets over 3 000 prior rows within 200 ms', () => {

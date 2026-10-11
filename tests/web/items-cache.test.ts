@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { type Exercise } from '../../web/src/lib/catalog-rules.ts';
 import {
   forgetItemsCache,
   type ItemsCache,
+  itemsFromLiveAndCache,
   readItemsCache,
   saveItemsCache,
   spendCachedScroll,
+  updateItemsCache,
 } from '../../web/src/offline/items-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
@@ -144,5 +147,77 @@ describe('items cache', () => {
     spendCachedScroll(storage, USER, 'challenge-unknown');
     expect(readItemsCache(storage, USER)).toEqual(CACHE);
     expect(() => spendCachedScroll(null, USER, 'challenge-dl')).not.toThrow();
+  });
+});
+
+const DEADLIFT: Exercise = {
+  id: 'deadlift',
+  key: 'deadlift',
+  name: 'Conventional Deadlift',
+  equipment: 'barbell',
+  custom: false,
+  archived: false,
+  skillShares: [],
+  modality: 'lift',
+  loadType: 'external',
+};
+
+const LIVE_AS_OF = '2026-10-10T09:00:00.000Z';
+
+const LIVE = {
+  catalog: CACHE.catalog,
+  inventory: [{ itemId: 'belt-1', quantity: 1, firstObtainedAt: '2026-10-09T10:00:00.000Z' }],
+  exercises: [DEADLIFT],
+  strength: { deadlift: { windowMax: 150, fallbackMax: null, hasPriorSession: true } },
+  strengthAsOf: LIVE_AS_OF,
+};
+
+describe('items from live data and the saved copy', () => {
+  it('takes the live inventory, exercises and strength', () => {
+    expect(itemsFromLiveAndCache(LIVE, CACHE, null)).toEqual({
+      catalog: CACHE.catalog,
+      inventory: LIVE.inventory,
+      strength: LIVE.strength,
+      strengthAsOf: LIVE_AS_OF,
+      challengeExercises: [
+        {
+          id: 'deadlift',
+          name: 'Conventional Deadlift',
+          archived: false,
+          modality: 'lift',
+          loadType: 'external',
+          equipment: 'barbell',
+        },
+      ],
+    });
+  });
+
+  it('keeps the saved challenge exercises and strength when those live loads failed', () => {
+    const merged = itemsFromLiveAndCache({ ...LIVE, exercises: null, strength: null }, CACHE, [DEADLIFT]);
+    expect(merged.challengeExercises).toEqual(CACHE.challengeExercises);
+    expect(merged.strength).toEqual(CACHE.strength);
+    expect(merged.strengthAsOf).toBe(CACHE.strengthAsOf);
+  });
+
+  it('falls back to the saved exercise list and no strength without a saved copy', () => {
+    const merged = itemsFromLiveAndCache({ ...LIVE, exercises: null, strength: null }, null, [DEADLIFT]);
+    expect(merged.challengeExercises.map((exercise) => exercise.id)).toEqual(['deadlift']);
+    expect(merged.strength).toEqual({});
+    expect(merged.strengthAsOf).toBe(LIVE_AS_OF);
+  });
+});
+
+describe('updating the saved items', () => {
+  it('saves a refetched inventory after a craft so the offline copy is current', () => {
+    const storage = new MemoryStorage();
+    saveItemsCache(storage, USER, CACHE);
+    updateItemsCache(storage, USER, (cache) => ({ ...cache, inventory: LIVE.inventory }));
+    expect(readItemsCache(storage, USER)).toEqual({ ...CACHE, inventory: LIVE.inventory });
+  });
+
+  it('saves nothing without a saved copy', () => {
+    const storage = new MemoryStorage();
+    updateItemsCache(storage, USER, (cache) => ({ ...cache, inventory: LIVE.inventory }));
+    expect(readItemsCache(storage, USER)).toBeNull();
   });
 });

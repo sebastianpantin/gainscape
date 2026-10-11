@@ -3,6 +3,7 @@ import {
   parseSessionBaseline,
   recordBaselineFrom,
   type SessionBaseline,
+  sessionBaselineAsOf,
 } from '../../web/src/lib/session-baseline-rules.ts';
 import { readSessionBaseline, saveSessionBaseline } from '../../web/src/lib/session-baseline-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
@@ -104,5 +105,20 @@ describe('stored session baseline', () => {
     expect(readSessionBaseline(null, 'user-1')).toBeNull();
     expect(readSessionBaseline(throwing, 'user-1')).toBeNull();
     expect(() => saveSessionBaseline(throwing, 'user-1', baseline)).not.toThrow();
+  });
+});
+
+describe('sessionBaselineAsOf', () => {
+  const later = { ...baseline, asOf: '2026-10-06T08:00:00.000Z' };
+
+  it('prefers the loaded baseline, else the saved one, when it is as of the draft start', () => {
+    expect(sessionBaselineAsOf(baseline.asOf, baseline, { ...baseline, records: null })).toBe(baseline);
+    expect(sessionBaselineAsOf(baseline.asOf, later, baseline)).toBe(baseline);
+  });
+
+  it('gives nothing for another start, a missing draft or no baseline', () => {
+    expect(sessionBaselineAsOf(baseline.asOf, later, null)).toBeNull();
+    expect(sessionBaselineAsOf(null, baseline, baseline)).toBeNull();
+    expect(sessionBaselineAsOf(baseline.asOf, null, null)).toBeNull();
   });
 });

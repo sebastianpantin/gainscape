@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { type ProgramFact, programStateAt, type SetReferenceFact } from '@domain/index.ts';
+import { type ProgramFact, programStateAt } from '@domain/index.ts';
+import { type SetReferenceFact } from '@domain/program-state.ts';
 import { referenceEvents, referenceFieldKey, referenceFields } from '../../web/src/lib/program-reference-rules.ts';
 import { type FactClock, factClock, setReferenceFact } from '../domain/program-fixtures/facts.ts';
 import { followProgram } from '../domain/program-fixtures/follow.ts';

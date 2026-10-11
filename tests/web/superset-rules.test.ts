@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 import type { CardioActivity } from '../../web/src/lib/catalog-rules.ts';
 import type { DraftExercise, DraftSet, WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import {
   addRound,
+  canAddRound,
   groupWithNext,
   nextInRound,
   restsAfter,
@@ -247,5 +249,32 @@ describe('addRound', () => {
     expect(c.sets).toHaveLength(1);
     expect(a.sets[2]).toMatchObject({ weightKg: 60, reps: 8, effort: null, isWarmup: false });
     expect(a.sets[2].id).not.toBe(b.sets[2].id);
+  });
+
+  it('adds no round that would not fit under the set limit', () => {
+    const filler = lift(
+      'c',
+      Array.from({ length: MAX_SETS_PER_SESSION - 5 }, (_, index) => `c${index}`),
+    );
+    const nearlyFull = draftOf([lift('a', ['a1', 'a2'], 'g'), lift('b', ['b1', 'b2'], 'g'), filler]);
+    const [group] = supersetGroups(nearlyFull);
+    expect(addRound(nearlyFull, group)).toEqual(nearlyFull);
+  });
+});
+
+describe('canAddRound', () => {
+  function withRoomFor(room: number): WorkoutDraft {
+    const fillerSetIds = Array.from({ length: MAX_SETS_PER_SESSION - 4 - room }, (_, index) => `c${index}`);
+    return draftOf([lift('a', ['a1', 'a2'], 'g'), lift('b', ['b1', 'b2'], 'g'), lift('c', fillerSetIds)]);
+  }
+
+  it('allows a round that exactly fills the set limit', () => {
+    const draft = withRoomFor(2);
+    expect(canAddRound(draft, supersetGroups(draft)[0])).toBe(true);
+  });
+
+  it('refuses a round with fewer free sets than group members', () => {
+    const draft = withRoomFor(1);
+    expect(canAddRound(draft, supersetGroups(draft)[0])).toBe(false);
   });
 });

@@ -110,6 +110,15 @@ export function forgetItemsCache(storage: Storage, userId: string): void {
   }
 }
 
+export function updateItemsCache(
+  storage: Storage | null,
+  userId: string,
+  change: (cache: ItemsCache) => ItemsCache,
+): void {
+  const cache = readItemsCache(storage, userId);
+  if (cache) saveItemsCache(storage, userId, change(cache));
+}
+
 export function spendCachedScroll(storage: Storage | null, userId: string, challengeId: string): void {
   const cache = readItemsCache(storage, userId);
   const scroll = cache?.catalog.items.find((item) => item.grantsChallengeId === challengeId);
@@ -118,6 +127,38 @@ export function spendCachedScroll(storage: Storage | null, userId: string, chall
     held.itemId === scroll.id ? { ...held, quantity: Math.max(0, held.quantity - 1) } : held,
   );
   saveItemsCache(storage, userId, { ...cache, inventory });
+}
+
+export interface LiveItems {
+  catalog: ItemCatalog;
+  inventory: HeldItem[];
+  exercises: readonly Exercise[] | null;
+  strength: StrengthState | null;
+  strengthAsOf: string;
+}
+
+function challengeExercisesFrom(
+  live: LiveItems,
+  cached: ItemsCache | null,
+  savedExercises: readonly Exercise[] | null,
+): ChallengeExerciseEntry[] {
+  if (live.exercises) return challengeExercisesOf(live.catalog.challenges, live.exercises);
+  if (cached?.challengeExercises.length) return cached.challengeExercises;
+  return challengeExercisesOf(live.catalog.challenges, savedExercises ?? []);
+}
+
+export function itemsFromLiveAndCache(
+  live: LiveItems,
+  cached: ItemsCache | null,
+  savedExercises: readonly Exercise[] | null,
+): ItemsCache {
+  return {
+    catalog: live.catalog,
+    inventory: live.inventory,
+    strength: live.strength ?? cached?.strength ?? {},
+    strengthAsOf: live.strength ? live.strengthAsOf : (cached?.strengthAsOf ?? live.strengthAsOf),
+    challengeExercises: challengeExercisesFrom(live, cached, savedExercises),
+  };
 }
 
 export function challengeExercisesOf(

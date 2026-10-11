@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_BALANCE } from '@domain/index.ts';
+import { DEFAULT_BALANCE, MAX_SETS_PER_SESSION } from '@domain/index.ts';
 import { previewSession } from '../../web/src/features/workout/xp-preview.ts';
 import { toExercise } from '../../web/src/lib/catalog-rules.ts';
 import {
@@ -8,12 +8,11 @@ import {
   draftRecord,
   type HoldDraftExercise,
   parseStoredDraft,
-  removeSet,
   startDraft,
   toggleSetDone,
-  updateHoldSet,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
+import { removeSet, updateHoldSet } from '../../web/src/lib/exercise-edit-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 
 const userId = 'user-1';
@@ -55,6 +54,15 @@ describe('hold drafts', () => {
     const second = holdOf(twice).sets[1];
     expect(holdOf(toggleSetDone(twice, 0, second.id)).sets[1].done).toBe(false);
     expect(holdOf(removeSet(twice, 0, first.id)).sets.map((set) => set.id)).toEqual([second.id]);
+  });
+
+  it('adds no hold set once the workout holds the most sets the server takes', () => {
+    const carry = holdOf(withCarry());
+    const full: WorkoutDraft = {
+      ...withCarry(),
+      exercises: [{ ...carry, sets: Array.from({ length: MAX_SETS_PER_SESSION }, () => carry.sets[0]) }],
+    };
+    expect(addSet(full, 0)).toBe(full);
   });
 
   it('writes a draft with a hold as format 6, keeps other drafts at format 5 and reads both', () => {

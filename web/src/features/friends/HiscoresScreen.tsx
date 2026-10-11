@@ -1,30 +1,21 @@
-import { useEffect, useState } from 'react';
-import { fetchSkills } from '../../lib/catalog.ts';
-import type { Skill } from '../../lib/catalog-rules.ts';
-import { fetchHiscores } from '../../lib/social.ts';
-import { type HiscoreMetric, type HiscoreRow, rankHiscores, skillMetric } from '../../lib/social-rules.ts';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { hiscoresQuery, skillsQuery } from '../../lib/queries.ts';
+import { loadedState } from '../../lib/query-state-rules.ts';
+import { type HiscoreMetric, rankHiscores, skillMetric } from '../../lib/social-rules.ts';
 import { FriendsTabs } from './FriendsTabs.tsx';
 
 export function HiscoresScreen() {
-  const [skills, setSkills] = useState<Skill[] | null>(null);
-  const [rows, setRows] = useState<HiscoreRow[] | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  const skillsLoad = useQuery(skillsQuery);
+  const hiscores = useQuery(hiscoresQuery);
   const [metric, setMetric] = useState<HiscoreMetric>('total');
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([fetchSkills(), fetchHiscores()]).then(
-      ([loadedSkills, loadedRows]) => {
-        if (!active) return;
-        setSkills(loadedSkills);
-        setRows(loadedRows);
-      },
-      (error: Error) => active && setProblem(error.message),
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
+  const load = loadedState(
+    skillsLoad.data && hiscores.data ? { skills: skillsLoad.data, rows: hiscores.data } : undefined,
+    skillsLoad.isFetching || hiscores.isFetching ? null : (skillsLoad.error ?? hiscores.error),
+  );
+  const skills = load.status === 'ready' ? load.data.skills : null;
+  const rows = load.status === 'ready' ? load.data.rows : null;
+  const problem = load.status === 'failed' ? load.problem : null;
 
   const metrics: { key: HiscoreMetric; label: string }[] = [
     { key: 'total', label: 'Total' },

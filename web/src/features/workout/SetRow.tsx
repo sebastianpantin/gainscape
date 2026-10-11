@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
-import { DEFAULT_BALANCE } from '@domain/index.ts';
+import { DEFAULT_BALANCE, MAX_SET_LOAD_KG } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import type { LoadType } from '../../lib/catalog-rules.ts';
@@ -45,8 +45,6 @@ interface SetRowProps {
   onDoneFocused: () => void;
 }
 
-const HIGHEST_LOAD_KG = 2000;
-
 interface StepperProps {
   className: string;
   lowerLabel: string;
@@ -80,7 +78,7 @@ interface WeightFieldProps {
 export function WeightField({ loadType, weightKg, unit, onChange, stepperSetNumber }: WeightFieldProps) {
   if (loadType === 'bodyweight') return <span className="compact-field set-number weight-field">bodyweight</span>;
   const shown = shownWeight(weightKg, unit);
-  const highest = highestWeightInUnit(HIGHEST_LOAD_KG, unit);
+  const highest = highestWeightInUnit(MAX_SET_LOAD_KG, unit);
   const field = (
     <NumberTextField
       label={loadType === 'bodyweight_plus' ? `+${unit}` : unit}
@@ -247,7 +245,7 @@ export function SetRow({
           id={calculatorId}
           setNumber={setNumber}
           setup={barbell.setup}
-          highestLoadKg={HIGHEST_LOAD_KG}
+          highestLoadKg={MAX_SET_LOAD_KG}
           unit={unit}
           weightKg={set.weightKg}
           onUse={(weightKg) => onChange({ weightKg })}
