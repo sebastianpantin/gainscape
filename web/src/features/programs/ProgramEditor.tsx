@@ -75,7 +75,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       ? newProgramDoc(crypto.randomUUID(), crypto.randomUUID())
       : docFor(cachedPrograms(userId), userId, programId),
   );
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exercises, setExercises] = useState<Exercise[] | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -90,7 +90,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       () => savedExerciseList(deviceStorage(), userId),
       () => fetchExercises({ includeArchived: true }),
     ).then(
-      ({ loaded }) => setExercises(loaded.filter(isPlannableExercise)),
+      ({ loaded }) => setExercises(loaded),
       (error: Error) => setProblem(error.message),
     );
   }, [userId, onlineSignal]);
@@ -126,8 +126,8 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       </main>
     );
 
-  const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
-  const pickable = exercises.filter((exercise) => !exercise.archived);
+  const byId = new Map((exercises ?? []).map((exercise) => [exercise.id, exercise]));
+  const pickable = (exercises ?? []).filter(isPlannableExercise).filter((exercise) => !exercise.archived);
 
   const nameOf = (exerciseId: string) => byId.get(exerciseId)?.name ?? 'Unknown exercise';
   const loadTypeOf = (exerciseId: string) => {
@@ -156,7 +156,9 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   };
 
   const outdated =
-    !creating && followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates) === 'outdated';
+    !creating &&
+    followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates, exercises ? loadTypeOf : null) ===
+      'outdated';
 
   const followChanges = async () => {
     if (issue) return setProblem(issue);

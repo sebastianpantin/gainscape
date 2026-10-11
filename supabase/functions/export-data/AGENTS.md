@@ -1,11 +1,11 @@
 # export-data
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-08
+**Generated:** 2026-10-01 · **Updated:** 2026-10-11
 
 ## Purpose
 
-POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one repeatable-read, read-only transaction, so all its queries see the same snapshot. Export format version is `EXPORT_FORMAT_VERSION = 6` (2 added `cardioRecords`, 3 added `bodyweightEntries` with `logged_on` as a `YYYY-MM-DD` date, `bodyweight_kg` and `updated_at`, 4 added `weeklyGoals` with `effective_from` as a `YYYY-MM-DD` Monday, `goal` (null when off) and `updated_at`, 5 added `userLoadout` with `slot`, `item_id` and `equipped_at` and the gear XP semantics below, 6 removed `userUnlocks` with the `user_unlocks` table and added the challenge semantics below).
+POST endpoint returning a JSON export of everything the caller owns (account, profile, sessions, sets, XP, records, custom exercises and more) from one repeatable-read, read-only transaction, so all its queries see the same snapshot. Export format version is `EXPORT_FORMAT_VERSION = 7` (2 added `cardioRecords`, 3 added `bodyweightEntries` with `logged_on` as a `YYYY-MM-DD` date, `bodyweight_kg` and `updated_at`, 4 added `weeklyGoals` with `effective_from` as a `YYYY-MM-DD` Monday, `goal` (null when off) and `updated_at`, 5 added `userLoadout` with `slot`, `item_id` and `equipped_at` and the gear XP semantics below, 6 removed `userUnlocks` with the `user_unlocks` table and added the challenge semantics below, 7 added `programTemplates`: the `program_templates` rows the caller owns (`owner_user_id`), which are the published snapshots of their own programs that `programEnrollments` point at by `template_key` and `template_version`; catalog templates have no owner and are left out).
 
 Gear XP semantics since version 5:
 
@@ -32,12 +32,12 @@ Challenge semantics since version 6:
 
 ### Working In This Directory
 
-- Adding a user-owned table means adding it to the export and bumping the format version if the shape changes. A new top-level key goes in `EXPORT_SECTIONS`; `tests/deploy/export-format.test.ts` pins the key list per version, so add the new version's list there and bump `EXPORT_FORMAT_VERSION`.
+- Adding a user-owned table means adding it to the export (`tests/integration/export-coverage.test.ts` fails until every `public` table with a `user_id` or `owner_user_id` column or a foreign key to `profiles` maps to a section or has a reason in `NOT_EXPORTED_USER_TABLES`, and every table owned through a foreign key to one of those maps in `SECTION_OF_CHILD_TABLE` or has a reason in `NOT_EXPORTED_CHILD_TABLES`) and bumping the format version if the shape changes. A new top-level key goes in `EXPORT_SECTIONS`; `tests/deploy/export-format.test.ts` pins the key list per version, so add the new version's list there and bump `EXPORT_FORMAT_VERSION`.
 - Always scope queries by `user_id`.
 
 ### Testing Requirements
 
-`tests/deploy/export-format.test.ts` (no stack) pins the top-level keys to the format version. `tests/integration/account.test.ts` and `rate-limits.test.ts` need the stack.
+`tests/deploy/export-format.test.ts` (no stack) pins the top-level keys to the format version. `tests/integration/account.test.ts`, `export-coverage.test.ts` and `rate-limits.test.ts` need the stack.
 
 ### Common Patterns
 

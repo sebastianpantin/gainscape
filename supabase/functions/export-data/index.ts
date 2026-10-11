@@ -60,6 +60,8 @@ async function exportFor(userId: string) {
          order by d.position)
          from public.program_days d where d.program_id = p.id), '[]'::json) as days
       from public.programs p where p.owner_user_id = ${userId} order by p.created_at`;
+    const programTemplates = await tx`
+      select * from public.program_templates where owner_user_id = ${userId} order by created_at, key, version`;
     const programEnrollments = await tx`
       select * from public.program_enrollments where user_id = ${userId} order by started_at, id`;
     const programEnrollmentEvents = await tx`
@@ -112,6 +114,7 @@ async function exportFor(userId: string) {
       weeklyGoals,
       customExercises,
       programs,
+      programTemplates,
       programEnrollments,
       programEnrollmentEvents,
       lootRolls,

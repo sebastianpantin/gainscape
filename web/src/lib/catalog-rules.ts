@@ -149,6 +149,10 @@ export function toExercise(row: ExerciseRow): Exercise {
   };
 }
 
+export function activeExercises(exercises: readonly Exercise[]): Exercise[] {
+  return exercises.filter((exercise) => !exercise.archived);
+}
+
 export function exerciseLabels(exercise: Exercise): string {
   return [exercise.custom && '(custom)', exercise.archived && '(archived)'].filter(Boolean).join(' ');
 }
