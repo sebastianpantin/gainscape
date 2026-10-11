@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Exercise } from '../../web/src/lib/catalog-rules.ts';
+import { type Exercise } from '../../web/src/lib/catalog-rules.ts';
 import {
   exerciseCacheKey,
   type ExerciseList,
@@ -60,6 +60,17 @@ const exercises: Exercise[] = [
   },
 ];
 
+const archivedCustom: Exercise = {
+  id: 'old-row',
+  name: 'Old Row',
+  equipment: 'cable',
+  modality: 'lift',
+  loadType: 'external',
+  custom: true,
+  archived: true,
+  skillShares: [],
+};
+
 function withoutModality(value: object): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'modality'));
 }
@@ -72,7 +83,7 @@ describe('exercise list cache', () => {
   });
 
   it('uses the per-user key', () => {
-    expect(exerciseCacheKey(userId)).toBe(`gainscape.exercises.v2.${userId}`);
+    expect(exerciseCacheKey(userId)).toBe(`gainscape.exercises.v3.${userId}`);
   });
 
   it('stores only the exercise fields', () => {
@@ -87,6 +98,17 @@ describe('exercise list cache', () => {
     );
   });
 
+  it('discards a v2 list, which may hold only the active exercises, and removes it on save', () => {
+    const storage = new MemoryStorage();
+    const v2Key = `gainscape.exercises.v2.${userId}`;
+    const v2 = JSON.stringify({ v: 2, savedAt: new Date().toISOString(), userId, exercises });
+    storage.setItem(v2Key, v2);
+    storage.setItem(exerciseCacheKey(userId), v2);
+    expect(readCachedExercises(storage, userId)).toBeNull();
+    saveCachedExercises(storage, userId, exercises);
+    expect(storage.getItem(v2Key)).toBeNull();
+  });
+
   it('discards a v1 list, which predates cardio', () => {
     const storage = new MemoryStorage();
     const v1Key = `gainscape.exercises.v1.${userId}`;
@@ -99,7 +121,7 @@ describe('exercise list cache', () => {
     expect(storage.getItem(v1Key)).toBeNull();
   });
 
-  it('reads a v2 list saved before skill shares were cached with no skill shares', () => {
+  it('reads a list saved before skill shares were cached with no skill shares', () => {
     const storage = new MemoryStorage();
     saveCachedExercises(storage, userId, exercises);
     const raw = JSON.parse(storage.getItem(exerciseCacheKey(userId))!);
@@ -142,7 +164,7 @@ describe('exercise list cache', () => {
     expect(readCachedExercises(storage, userId)).toBeNull();
     storage.setItem(
       exerciseCacheKey(userId),
-      JSON.stringify({ v: 3, savedAt: new Date().toISOString(), userId, exercises }),
+      JSON.stringify({ v: 4, savedAt: new Date().toISOString(), userId, exercises }),
     );
     expect(readCachedExercises(storage, userId)).toBeNull();
     storage.setItem(exerciseCacheKey(userId), '{not json');
@@ -263,6 +285,33 @@ describe('cache-first exercise picker', () => {
       () => false,
     );
     expect(notices.at(-1)).toBe(OFFLINE_EXERCISES_NOTICE);
+  });
+
+  it('offers only active exercises offline after the full list, archived ones included, was saved', async () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, [...exercises, archivedCustom]);
+    const shown: ExerciseList[] = [];
+    await loadExercisesCacheFirst(
+      storage,
+      userId,
+      () => Promise.reject(new Error('Failed to fetch')),
+      (list) => shown.push(list),
+      () => true,
+    );
+    expect(shown).toEqual([{ exercises, notice: OFFLINE_EXERCISES_NOTICE, problem: null }]);
+  });
+
+  it('saves the full live list and shows only its active exercises', async () => {
+    const storage = new MemoryStorage();
+    const shown: ExerciseList[] = [];
+    await loadExercisesCacheFirst(
+      storage,
+      userId,
+      () => Promise.resolve([...exercises, archivedCustom]),
+      (list) => shown.push(list),
+    );
+    expect(shown).toEqual([{ exercises, notice: null, problem: null }]);
+    expect(readCachedExercises(storage, userId)).toEqual([...exercises, archivedCustom]);
   });
 
   it('reports the load problem when the fetch fails and nothing is cached', async () => {

@@ -12,7 +12,7 @@ import { type SetReferenceEvent } from './program-reference-rules.ts';
 import { type SkipDayEvent } from './program-skip-rules.ts';
 import { fetchExercises } from './catalog.ts';
 import { readCachedExercises } from './catalog-cache.ts';
-import { type Exercise } from './catalog-rules.ts';
+import { activeExercises, type Exercise } from './catalog-rules.ts';
 import { deviceStorage } from './rest-timer-store.ts';
 import { supabase } from './supabase.ts';
 
@@ -56,7 +56,7 @@ function savedEnrollChoices(userId: string): EnrollChoices | null {
   const storage = deviceStorage();
   const templates = savedProgramTemplates(storage, userId);
   const exercises = storage && readCachedExercises(storage, userId);
-  return templates && exercises ? { templates, exercises } : null;
+  return templates && exercises ? { templates, exercises: activeExercises(exercises) } : null;
 }
 
 export async function loadEnrollChoicesCacheFirst(userId: string): Promise<EnrollChoices> {
