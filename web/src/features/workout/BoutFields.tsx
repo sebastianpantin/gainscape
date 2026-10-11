@@ -75,11 +75,12 @@ function BoundedNumberField({
 interface BoutFieldsProps {
   bout: BoutValues;
   paceUnit: PaceUnit;
+  tracksDistance: boolean;
   unit: UnitPref;
   onChange: (changes: Partial<BoutValues>) => void;
 }
 
-export function BoutFields({ bout, paceUnit, unit, onChange }: BoutFieldsProps) {
+export function BoutFields({ bout, paceUnit, tracksDistance, unit, onChange }: BoutFieldsProps) {
   const distanceUnit = distanceUnitFor(unit, paceUnit);
   const { interval } = bout;
   const changeInterval = (changes: Partial<NonNullable<BoutValues['interval']>>, settled: boolean) => {
@@ -133,16 +134,18 @@ export function BoutFields({ bout, paceUnit, unit, onChange }: BoutFieldsProps) 
           />
         </>
       )}
-      <BoundedNumberField
-        label={distanceUnit}
-        value={bout.distanceM === null ? null : shownDistance(bout.distanceM, distanceUnit)}
-        min={0}
-        max={shownDistance(CARDIO_BOUNDS.distanceM.max, distanceUnit)}
-        step={distanceInputStep(distanceUnit)}
-        inputMode="decimal"
-        emptyAllowed
-        onCommit={(distance) => onChange({ distanceM: distanceFromInput(distance, distanceUnit) })}
-      />
+      {tracksDistance && (
+        <BoundedNumberField
+          label={distanceUnit}
+          value={bout.distanceM === null ? null : shownDistance(bout.distanceM, distanceUnit)}
+          min={0}
+          max={shownDistance(CARDIO_BOUNDS.distanceM.max, distanceUnit)}
+          step={distanceInputStep(distanceUnit)}
+          inputMode="decimal"
+          emptyAllowed
+          onCommit={(distance) => onChange({ distanceM: distanceFromInput(distance, distanceUnit) })}
+        />
+      )}
     </div>
   );
 }

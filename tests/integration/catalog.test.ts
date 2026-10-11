@@ -103,16 +103,31 @@ describe('catalog ids', () => {
 });
 
 describe('cardio catalog', () => {
-  it('seeds Endurance and Agility as cardio skills outside combat', async () => {
+  it('seeds Grip as a lift skill before Endurance, Agility and Mobility, the cardio skills outside combat', async () => {
     const skills = await db`
       select key, sort_order, combat_weight::float, modality from public.skills
-      where key in ('endurance', 'agility') order by sort_order`;
+      where key in ('grip', 'endurance', 'agility', 'mobility') order by sort_order`;
     expect(skills).toEqual([
-      { key: 'endurance', sort_order: 7, combat_weight: 0, modality: 'cardio' },
-      { key: 'agility', sort_order: 8, combat_weight: 0, modality: 'cardio' },
+      { key: 'grip', sort_order: 7, combat_weight: 1, modality: 'lift' },
+      { key: 'endurance', sort_order: 8, combat_weight: 0, modality: 'cardio' },
+      { key: 'agility', sort_order: 9, combat_weight: 0, modality: 'cardio' },
+      { key: 'mobility', sort_order: 10, combat_weight: 0, modality: 'cardio' },
     ]);
     const [{ count }] = await db`select count(*)::int as count from public.skills`;
-    expect(count).toBe(8);
+    expect(count).toBe(10);
+  });
+
+  it('seeds the hold and carry exercises with their measure', async () => {
+    const holds = await db`
+      select key, modality, load_type, measure from public.exercises
+      where owner_user_id is null and measure <> 'reps' order by key`;
+    expect(holds).toEqual([
+      { key: 'dead_hang', modality: 'lift', load_type: 'bodyweight', measure: 'time' },
+      { key: 'farmers_carry', modality: 'lift', load_type: 'external', measure: 'distance' },
+      { key: 'plate_pinch', modality: 'lift', load_type: 'external', measure: 'time' },
+      { key: 'suitcase_carry', modality: 'lift', load_type: 'external', measure: 'distance' },
+      { key: 'towel_hang', modality: 'lift', load_type: 'bodyweight', measure: 'time' },
+    ]);
   });
 
   it('seeds cardio exercises without a load type and with their cardio profile', async () => {

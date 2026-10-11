@@ -28,6 +28,7 @@ const RUNNING: CardioActivity = {
   paceUnit: 'per_km',
   referencePaceSPerKm: 360,
   maxEffort: 'max',
+  tracksDistance: true,
   shares: [{ skillKey: 'endurance', shareBasisPoints: 10_000 }],
 };
 

@@ -27,6 +27,7 @@ import {
   strengthHistoryRows,
   UnknownExerciseError,
   writableSetFor,
+  DistanceNotTrackedError,
 } from '@domain/index.ts';
 import { aBout, aSet, catalog, freshUser, hard, nearFailure, TEST_BALANCE } from './fixtures.ts';
 
@@ -387,6 +388,14 @@ describe('writableSetFor', () => {
   it('rejects a bout on a lift exercise and a lift set on a cardio exercise', () => {
     expect(() => writableSetFor(aBout('run', 1800, null), exercise('bench'), null)).toThrow(KindMismatchError);
     expect(() => writableSetFor(aSet('run', 0, 5, hard), exercise('run'), null)).toThrow(KindMismatchError);
+  });
+
+  it('rejects a distance on an activity that tracks none, and takes the bout without one', () => {
+    expect(() => writableSetFor(aBout('stretch', 1200, null, { distanceM: 500 }), exercise('stretch'), null)).toThrow(
+      DistanceNotTrackedError,
+    );
+    const bout = aBout('stretch', 1200, null);
+    expect(writableSetFor(bout, exercise('stretch'), null)).toBe(bout);
   });
 
   it('gives a new lift set its effective load from the current bodyweight', () => {

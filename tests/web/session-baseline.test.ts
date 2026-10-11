@@ -13,6 +13,7 @@ const baseline: SessionBaseline = {
   records: {
     repMaxKg: { bench: [120, null, null, null, 100, null, null, null, null, null] },
     maxReps: { pullup: 12 },
+    cardioBest: { hang: { duration: 45 }, run: { distance: 5000, pace: 300 } },
   },
 };
 
@@ -24,6 +25,11 @@ describe('recordBaselineFrom', () => {
         { exercise_id: 'bench', reps: 1, load_kg: 120 },
       ],
       bodyweightRecords: [{ exercise_id: 'pullup', max_reps: 12 }],
+      cardioRecords: [
+        { exercise_id: 'hang', kind: 'duration', value: '45.0' },
+        { exercise_id: 'run', kind: 'distance', value: 5000 },
+        { exercise_id: 'run', kind: 'pace', value: 300 },
+      ],
     });
     expect(records).toEqual(baseline.records);
   });
@@ -34,6 +40,19 @@ describe('parseSessionBaseline', () => {
     expect(parseSessionBaseline(JSON.stringify(baseline))).toEqual(baseline);
     const withoutRecords = { ...baseline, records: null };
     expect(parseSessionBaseline(JSON.stringify(withoutRecords))).toEqual(withoutRecords);
+  });
+
+  it('reads a baseline saved before hold records as one without them', () => {
+    const saved = {
+      ...baseline,
+      records: { repMaxKg: baseline.records!.repMaxKg, maxReps: baseline.records!.maxReps },
+    };
+    expect(parseSessionBaseline(JSON.stringify(saved))).toEqual(saved);
+  });
+
+  it('rejects malformed best hold and cardio values', () => {
+    const malformed = { ...baseline, records: { ...baseline.records, cardioBest: { hang: { duration: 'long' } } } };
+    expect(parseSessionBaseline(JSON.stringify(malformed))).toBeNull();
   });
 
   it('rejects missing, malformed or partial baselines', () => {

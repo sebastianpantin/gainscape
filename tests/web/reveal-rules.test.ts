@@ -17,7 +17,7 @@ const swim: CardioExercise = {
   id: 'swim',
   name: 'Swimming',
   modality: 'cardio',
-  activity: { paceUnit: 'per_100m', referencePaceSPerKm: null, maxEffort: 'max', shares: [] },
+  activity: { paceUnit: 'per_100m', referencePaceSPerKm: null, maxEffort: 'max', tracksDistance: true, shares: [] },
 };
 
 const repMax = {
@@ -31,6 +31,31 @@ const repMax = {
 };
 
 describe('describeRecord', () => {
+  it('shows a carry record in metres and a hold record as a duration', () => {
+    const carry: LiftExercise = {
+      ...dip,
+      id: 'carry',
+      name: 'Farmers Carry',
+      loadType: 'external',
+      measure: 'distance',
+    };
+    const gain = { kind: 'cardio' as const, exerciseId: 'carry', setId: 'set-9' };
+    expect(describeRecord({ ...gain, records: [{ kind: 'distance', value: 60, previous: 40 }] }, carry, 'kg')).toEqual({
+      headline: 'Farmers Carry:',
+      previous: '60 m (was 40 m)',
+    });
+    expect(
+      describeRecord({ ...gain, records: [{ kind: 'distance', value: 40, previous: null }] }, carry, 'lb'),
+    ).toEqual({ headline: 'Farmers Carry:', previous: '40 m (first)' });
+    expect(
+      describeRecord(
+        { ...gain, records: [{ kind: 'duration', value: 45, previous: 30 }] },
+        { ...carry, measure: 'time' },
+        'kg',
+      ),
+    ).toEqual({ headline: 'Farmers Carry:', previous: '45 s (was 30 s)' });
+  });
+
   it('shows a rep max with the load type of the exercise and the beaten load', () => {
     expect(describeRecord(repMax, dip, 'kg')).toEqual({
       headline: 'Weighted Dip: 5RM +20 kg',

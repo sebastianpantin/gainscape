@@ -21,7 +21,7 @@ import { aBout, aSet, catalog, freshUser, hard, RUN_REFERENCE_PACE_S_PER_KM, TES
 
 const CARDIO_BALANCE: BalanceConfig = Object.freeze({
   ...TEST_BALANCE,
-  cardioXpPerWorkMinute: Object.freeze({ endurance: 100, agility: 200 }),
+  cardioXpPerWorkMinute: Object.freeze({ endurance: 100, agility: 200, mobility: 50 }),
 });
 
 const moderate = { type: 'cardio', level: 'moderate' } as const;
@@ -257,6 +257,28 @@ describe('cardio XP', () => {
     expect(bouts.map((result) => result.cardio?.cappedWorkS)).toEqual([0, 1800, 1800]);
     expect(bouts.map((result) => result.cardio?.countedWorkS)).toEqual([7200, 5400, 1800]);
     expect(bouts.map((result) => result.xp)).toEqual([12_000, 6000, 0]);
+  });
+
+  it('earns Mobility XP at its own rate per counted minute, capped by the activity effort', () => {
+    const stretch = run([aBout('stretch', THIRTY_MINUTES_S, hardBout)]);
+    expect(stretch.sets[0].cardio?.effort).toBe('moderate');
+    expect(stretch.xpBySkill).toEqual({ mobility: 1500 });
+    const yoga = run([aBout('yoga', THIRTY_MINUTES_S, { type: 'cardio', level: 'max' })]);
+    expect(yoga.sets[0].cardio?.effort).toBe('hard');
+    expect(yoga.xpBySkill).toEqual({ mobility: 1800 });
+  });
+
+  it('caps Mobility minutes in their own pool, apart from the cardio cap', () => {
+    const outputs = run([
+      aBout('stretch', 2400, moderate),
+      aBout('run', 10_800, moderate),
+      aBout('yoga', 2400, moderate),
+      aBout('run', 600, moderate),
+    ]);
+    expect(DEFAULT_BALANCE.mobilityMaxCountedMinutesPerSession).toBe(60);
+    expect(outputs.sets.map((result) => result.cardio?.xpCountedWorkS)).toEqual([2400, 10_800, 1200, 0]);
+    expect(outputs.sets.map((result) => result.cardio?.cappedWorkS)).toEqual([0, 0, 1200, 600]);
+    expect(outputs.xpBySkill).toEqual({ endurance: 18_000, mobility: 3000 });
   });
 
   it('caps by position order, not by the order the bouts were listed', () => {

@@ -298,6 +298,7 @@ const running: CardioActivity = {
   paceUnit: 'per_km',
   referencePaceSPerKm: 360,
   maxEffort: 'max',
+  tracksDistance: true,
   shares: ENDURANCE_ONLY,
 };
 const walking: CardioActivity = { ...running, referencePaceSPerKm: null, maxEffort: 'moderate' };
@@ -305,6 +306,7 @@ const rowingIntervals: CardioActivity = {
   paceUnit: 'per_km',
   referencePaceSPerKm: null,
   maxEffort: 'max',
+  tracksDistance: true,
   shares: [
     { skillKey: 'endurance', shareBasisPoints: 5000 },
     { skillKey: 'agility', shareBasisPoints: 5000 },
@@ -350,6 +352,7 @@ function serverXp(draft: CardioDraftExercise[]): number[] {
             paceUnit: entry.activity.paceUnit,
             referencePaceSPerKm: entry.activity.referencePaceSPerKm,
             maxEffort: entry.activity.maxEffort,
+            tracksDistance: entry.activity.tracksDistance,
             recordMinDistanceM: null,
           },
         },

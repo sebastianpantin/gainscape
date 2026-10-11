@@ -57,13 +57,13 @@ select throws_ok(
     (id, session_id, user_id, exercise_id, position, weight_kg, effective_load_kg, reps, duration_s, counted_work_s,
      rir_source, effective_reps, xp_awarded)
     values (gen_random_uuid(), %L, %L, %L, 0, 60, 60, 5, 600, 600, 'default', 5, 0)$$, :'s', :'owner', :'bench'),
-  '23514', 'new row for relation "sets" violates check constraint "set_is_lift_xor_cardio"', 'a set row cannot be both a lift and a cardio bout'
+  '23514', 'new row for relation "sets" violates check constraint "set_is_lift_cardio_or_hold"', 'a set row cannot be both a lift and a cardio bout'
 );
 select throws_ok(
   format($$insert into public.sets
     (id, session_id, user_id, exercise_id, position, rir_source, effective_reps, xp_awarded)
     values (gen_random_uuid(), %L, %L, %L, 0, 'default', 0, 0)$$, :'s', :'owner', :'running'),
-  '23514', 'new row for relation "sets" violates check constraint "set_is_lift_xor_cardio"', 'a set row must be a lift or a cardio bout'
+  '23514', 'new row for relation "sets" violates check constraint "set_is_lift_cardio_or_hold"', 'a set row must be a lift or a cardio bout'
 );
 select throws_ok(
   format($$select tests.add_cardio_set(%L, 0, 600, 'rir', 2)$$, :'running'),

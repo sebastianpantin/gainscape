@@ -12,6 +12,7 @@ import {
   describeBout,
   distanceFromInput,
   formatDuration,
+  holdRecordCards,
   isLoggableBout,
 } from '../../web/src/lib/cardio-rules.ts';
 
@@ -197,6 +198,7 @@ describe('cardio record text', () => {
       paceUnit,
       referencePaceSPerKm: null,
       maxEffort: 'max' as const,
+      tracksDistance: true,
       shares: [],
     });
     const exercises = [
@@ -215,5 +217,22 @@ describe('cardio record text', () => {
       { exerciseId: 'swim', name: 'Swimming', lines: ['Distance 1500 m'] },
     ]);
     expect(cardioRecordCards(rows, exercises, 'lb')[1].lines).toEqual(['Distance 1640 yd']);
+  });
+
+  it('builds one card per hold with its longest time or farthest carry in metres, by name', () => {
+    const exercises = [
+      { id: 'carry', name: 'Farmers Carry', measure: 'distance' as const },
+      { id: 'hang', name: 'Dead Hang', measure: 'time' as const },
+      { id: 'bench', name: 'Bench Press' },
+    ];
+    const rows = [
+      { exerciseId: 'carry', kind: 'distance' as const, value: 40 },
+      { exerciseId: 'hang', kind: 'duration' as const, value: 45 },
+      { exerciseId: 'bench', kind: 'duration' as const, value: 30 },
+    ];
+    expect(holdRecordCards(rows, exercises)).toEqual([
+      { exerciseId: 'hang', name: 'Dead Hang', lines: ['Longest 45 s'] },
+      { exerciseId: 'carry', name: 'Farmers Carry', lines: ['Farthest 40 m'] },
+    ]);
   });
 });

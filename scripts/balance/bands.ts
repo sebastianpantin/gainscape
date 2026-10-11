@@ -173,3 +173,29 @@ export function evaluateCardioBands(
     violation: [...yearViolations, ...weekOneViolations, g, h].reduce((sum, value) => sum + value, 0),
   };
 }
+
+export const MOBILITY_BANDS = Object.freeze({
+  regularYears: [2.75, 3.25] as const,
+  regularWeekOneLevel: [20, 40] as const,
+});
+
+export interface MobilityBandReport {
+  years: number;
+  weekOneLevel: number;
+  passes: { years: boolean; weekOneLevel: boolean };
+}
+
+export function evaluateMobilityBands(regular: Pick<CardioSimulationResult, 'cumulativeXpByWeek'>): MobilityBandReport {
+  const years = yearsToLevel99(regular, 'mobility');
+  const weekOneLevel = levelForXp(regular.cumulativeXpByWeek.mobility[0]);
+  const [lowestYears, highestYears] = MOBILITY_BANDS.regularYears;
+  const [lowestWeekOneLevel, highestWeekOneLevel] = MOBILITY_BANDS.regularWeekOneLevel;
+  return {
+    years,
+    weekOneLevel,
+    passes: {
+      years: distanceOutside(years, lowestYears, highestYears) === 0,
+      weekOneLevel: distanceOutside(weekOneLevel, lowestWeekOneLevel, highestWeekOneLevel) === 0,
+    },
+  };
+}

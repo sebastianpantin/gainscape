@@ -1,6 +1,6 @@
 import type { CardioEffortLevel, EffortLevel } from './types.ts';
 
-const BALANCE_VERSION = 7;
+const BALANCE_VERSION = 8;
 const XP_PER_EFFECTIVE_REP = 165;
 const EFFECTIVE_RIR_WINDOW = 5;
 
@@ -32,12 +32,19 @@ export interface BalanceConfig {
   readonly paceBonusMax: number;
   readonly paceImplausibleRatio: number;
   readonly cardioMaxCountedMinutesPerSession: number;
+  readonly mobilityMaxCountedMinutesPerSession: number;
   readonly cardioRecordMinGainM: number;
   readonly cardioRecordMinGainS: number;
   readonly cardioPaceRecordMinGainSPerPaceUnit: number;
   readonly cardioFastestPlausiblePaceSPerKm: number;
   readonly gearBonusPercentAtFullTier: number;
   readonly challengeBonusPercent: number;
+  readonly holdSecondsPerRep: number;
+  readonly carryMetresPerRep: number;
+  readonly holdDefaultEffort: EffortLevel;
+  readonly holdRecordMinExternalLoadKg: number;
+  readonly holdRecordMinGainS: number;
+  readonly carryRecordMinGainM: number;
 }
 
 export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
@@ -60,20 +67,27 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   prMinGainKg: 1,
   fatiguePerHardSet: 0.02,
   fatigueToleranceReps: 1,
-  cardioXpPerWorkMinute: Object.freeze({ endurance: 126, agility: 213 }),
-  cardioSteadyFactor: Object.freeze({ endurance: 1, agility: 0.5 }),
+  cardioXpPerWorkMinute: Object.freeze({ endurance: 126, agility: 213, mobility: 107 }),
+  cardioSteadyFactor: Object.freeze({ endurance: 1, agility: 0.5, mobility: 1 }),
   cardioEffortFactor: Object.freeze({ easy: 0.8, moderate: 1, hard: 1.2, max: 1.4 }),
   paceBonusStart: 1,
   paceBonusFull: 1.3,
   paceBonusMax: 1.3,
   paceImplausibleRatio: 2.5,
   cardioMaxCountedMinutesPerSession: 180,
+  mobilityMaxCountedMinutesPerSession: 60,
   cardioRecordMinGainM: 100,
   cardioRecordMinGainS: 60,
   cardioPaceRecordMinGainSPerPaceUnit: 1,
   cardioFastestPlausiblePaceSPerKm: 60,
   gearBonusPercentAtFullTier: 10,
   challengeBonusPercent: 25,
+  holdSecondsPerRep: 5,
+  carryMetresPerRep: 5,
+  holdDefaultEffort: 'hard',
+  holdRecordMinExternalLoadKg: 20,
+  holdRecordMinGainS: 1,
+  carryRecordMinGainM: 1,
 });
 
 const LOOT_VERSION = 2;

@@ -160,6 +160,18 @@ describe('save_custom_exercise rejects malformed input', () => {
     ],
     ['an unknown equipment value', () => customExercise({ equipment: 'kettlebell' })],
     ['an empty shares array', () => customExercise({ shares: [] })],
+    [
+      'Mobility shared with another skill',
+      () =>
+        customExercise({
+          modality: 'cardio',
+          loadType: null,
+          shares: [
+            { skillId: skillIds.mobility, shareBp: 5000 },
+            { skillId: skillIds.endurance, shareBp: 5000 },
+          ],
+        }),
+    ],
   ];
 
   it.each(cases)('rejects %s with nothing written', async (_label, build) => {
