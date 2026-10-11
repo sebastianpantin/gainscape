@@ -1,3 +1,14 @@
+- prs: [83, 85]
+  version: 0.5.0
+  date: 2026-10-11
+  title: Build your own programs, plus Grip and Mobility
+  items:
+    - Create a program from scratch, and choose for each exercise whether to use your last weight, a fixed weight, or add weight after every workout where you hit all your reps.
+    - Follow your own program like a built-in one. Edit it later and pick up the changes without losing your working weights.
+    - New Grip skill. Wrist curls train it, and deadlifts, rows, pull-ups and shrugs now give it a share of their XP.
+    - Log dead hangs, plate pinches and farmer's carries by seconds or metres, and set records for your longest hold and farthest carry.
+    - New Mobility skill for yoga, stretching and foam rolling, with its own time cap so it never eats into your cardio.
+    - Exercise search no longer matches letters that run across two words, so short searches find what you meant.
 - prs: [80]
   version: 0.4.0
   date: 2026-10-10
