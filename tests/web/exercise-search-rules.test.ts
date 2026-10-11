@@ -55,6 +55,15 @@ describe('exerciseSearchMatches', () => {
     expect(matchedNames(names, 'pullup')).toEqual(['Pull-up']);
   });
 
+  it('matches a name typed without its word breaks only from the start of a word', () => {
+    const names = named('Ay J', 'Bench Row');
+    expect(matchedNames(names, 'yj')).toEqual([]);
+    expect(matchedNames(names, 'hr')).toEqual([]);
+    expect(matchedNames(names, 'aYj')).toEqual(['Ay J']);
+    expect(matchedNames(names, 'benchrow')).toEqual(['Bench Row']);
+    expect(matchedNames(names, 'chrow')).toEqual([]);
+  });
+
   it('ignores straight and curly apostrophes and accents', () => {
     const names = named("Farmer's Walk", 'Smal bänkpress');
     expect(matchedNames(names, 'farmers')).toEqual(["Farmer's Walk"]);
@@ -93,7 +102,7 @@ describe('exerciseSearchMatches', () => {
     expect(shown('deadlift')[0]).toBe('Deadlift');
   });
 
-  it('never returns more than the limit and only names containing every query word', () => {
+  it('never returns more than the limit and only names containing every query word once word breaks are ignored', () => {
     fc.assert(
       fc.property(
         fc.array(fc.stringMatching(/^[A-Za-z][A-Za-z ]{0,20}$/), { maxLength: 30 }),
@@ -104,7 +113,8 @@ describe('exerciseSearchMatches', () => {
           expect(result.shown.length).toBeLessThanOrEqual(limit);
           expect(result.shown.length + result.hiddenCount).toBeLessThanOrEqual(names.length);
           for (const { name } of result.shown) {
-            for (const word of query.split(' ')) expect(name.toLowerCase()).toContain(word);
+            const nameWithoutBreaks = name.toLowerCase().replaceAll(' ', '');
+            for (const word of query.split(' ')) expect(nameWithoutBreaks).toContain(word);
           }
         },
       ),

@@ -2,6 +2,7 @@ import { z } from 'npm:zod@4.6.5';
 import {
   boutDurationSeconds,
   CARDIO_BOUNDS,
+  HOLD_BOUNDS,
   intervalDurationSeconds,
   isRecord,
   MAX_SET_LOAD_KG,
@@ -31,6 +32,11 @@ const liftEffortSchema = z
   ])
   .nullable();
 
+const holdEffortSchema = z
+  .object({ type: z.literal('level'), level: z.enum(['easy', 'hard', 'near_failure', 'failure']) })
+  .strict()
+  .nullable();
+
 const cardioEffortSchema = z
   .object({ type: z.literal('cardio'), level: z.enum(['easy', 'moderate', 'hard', 'max']) })
   .strict()
@@ -56,15 +62,17 @@ const prescriptionSchema = z
 
 export type PrescriptionPayload = z.infer<typeof prescriptionSchema>;
 
+const weightKgSchema = z
+  .number()
+  .min(0)
+  .max(MAX_SET_LOAD_KG)
+  .transform((weightKg) => roundTo(2, weightKg));
+
 const liftSetSchema = z
   .object({
     kind: z.literal('lift'),
     ...setIdentity,
-    weightKg: z
-      .number()
-      .min(0)
-      .max(MAX_SET_LOAD_KG)
-      .transform((weightKg) => roundTo(2, weightKg)),
+    weightKg: weightKgSchema,
     reps: z.int().min(1).max(MAX_SET_REPS),
     isWarmup: z.boolean().default(false),
     effort: liftEffortSchema.default(null),
@@ -105,15 +113,36 @@ const cardioSetSchema = z
     path: ['durationS'],
   });
 
+const holdSetSchema = z
+  .object({
+    kind: z.literal('hold'),
+    ...setIdentity,
+    weightKg: weightKgSchema,
+    durationS: within(HOLD_BOUNDS.durationS).nullable().default(null),
+    distanceM: z
+      .number()
+      .min(HOLD_BOUNDS.distanceM.min)
+      .max(HOLD_BOUNDS.distanceM.max)
+      .transform((distanceM) => roundTo(1, distanceM))
+      .nullable()
+      .default(null),
+    effort: holdEffortSchema.default(null),
+  })
+  .strict()
+  .refine((hold) => (hold.durationS === null) !== (hold.distanceM === null), {
+    message: 'a hold needs either durationS or distanceM',
+    path: ['durationS'],
+  });
+
 function addLiftKindWhenMissing(value: unknown): unknown {
   if (!isRecord(value) || 'kind' in value) return value;
   return { ...value, kind: 'lift' };
 }
 
 export const setSchema = z
-  .preprocess(addLiftKindWhenMissing, z.discriminatedUnion('kind', [liftSetSchema, cardioSetSchema]))
+  .preprocess(addLiftKindWhenMissing, z.discriminatedUnion('kind', [liftSetSchema, cardioSetSchema, holdSetSchema]))
   .transform((set) => {
-    if (set.kind === 'lift') return set;
+    if (set.kind !== 'cardio') return set;
     return { ...set, durationS: boutDurationSeconds({ durationS: set.durationS!, interval: set.interval }) };
   });
 

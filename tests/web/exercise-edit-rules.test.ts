@@ -4,11 +4,13 @@ import {
   canAddSet,
   defaultWeightKg,
   nextBoutValues,
+  nextHoldValues,
   nextSetValues,
   removeSet,
   roomForSets,
   setCount,
   updateBout,
+  updateHoldSet,
   updateSet,
   withLoadType,
 } from '../../web/src/lib/exercise-edit-rules.ts';
@@ -16,6 +18,14 @@ import type { SessionEdit } from '../../web/src/features/history/session-edit.ts
 import type { WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 
 const bout = { id: 'bout-1', kind: 'cardio' as const, durationS: 600, distanceM: 2000, interval: null, effort: null };
+const hold = { id: 'hold-1', kind: 'hold' as const, weightKg: 24, durationS: 30, distanceM: null, effort: null };
+const holdExercise = {
+  exerciseId: 'hang',
+  name: 'Dead Hang',
+  modality: 'hold' as const,
+  measure: 'time' as const,
+  loadType: 'bodyweight_plus' as const,
+};
 
 function draft(): WorkoutDraft {
   return {
@@ -39,7 +49,7 @@ function draft(): WorkoutDraft {
         exerciseId: 'run',
         name: 'Run',
         modality: 'cardio',
-        activity: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', shares: [] },
+        activity: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', tracksDistance: true, shares: [] },
         sets: [{ ...bout, done: true }],
       },
     ],
@@ -59,12 +69,54 @@ function edit(): SessionEdit {
         loadType: 'external',
         sets: [{ id: 'set-1', weightKg: 60, reps: 8, isWarmup: false, effort: null }],
       },
-      { exerciseId: 'run', name: 'Run', modality: 'cardio', paceUnit: 'per_km', sets: [bout] },
+      { exerciseId: 'run', name: 'Run', modality: 'cardio', paceUnit: 'per_km', tracksDistance: true, sets: [bout] },
     ],
   };
 }
 
+function draftWithHold(): WorkoutDraft {
+  const base = draft();
+  return {
+    ...base,
+    exercises: [...base.exercises, { ...holdExercise, clientId: 'card-hang', sets: [{ ...hold, done: true }] }],
+  };
+}
+
+function editWithHold(): SessionEdit {
+  const base = edit();
+  return { ...base, exercises: [...base.exercises, { ...holdExercise, sets: [hold] }] };
+}
+
 describe('exercise edit rules', () => {
+  it('update a hold the same way in a live draft and in a history edit', () => {
+    expect(updateHoldSet(draftWithHold(), 2, 'hold-1', { durationS: 45 }).exercises[2].sets[0]).toMatchObject({
+      durationS: 45,
+      weightKg: 24,
+    });
+    expect(updateHoldSet(editWithHold(), 2, 'hold-1', { durationS: 45 }).exercises[2].sets[0]).toMatchObject({
+      durationS: 45,
+      weightKg: 24,
+    });
+    expect(updateHoldSet(editWithHold(), 0, 'set-1', { durationS: 45 })).toEqual(editWithHold());
+    expect(setCount(draftWithHold())).toBe(3);
+  });
+
+  it('start a new hold from the previous one, unrated, or from the defaults of its measure', () => {
+    expect(nextHoldValues({ ...hold, effort: { type: 'level', level: 'hard' } }, 'external', 'time')).toEqual({
+      weightKg: 24,
+      durationS: 30,
+      distanceM: null,
+      effort: null,
+    });
+    expect(nextHoldValues(undefined, 'external', 'distance')).toEqual({
+      weightKg: defaultWeightKg('external'),
+      durationS: null,
+      distanceM: 20,
+      effort: null,
+    });
+    expect(nextHoldValues(undefined, 'bodyweight', 'time')).toMatchObject({ weightKg: 0, durationS: 30 });
+  });
+
   it('update a lift set or a bout the same way in a live draft and in a history edit', () => {
     expect(updateSet(draft(), 0, 'set-1', { reps: 5 }).exercises[0].sets[0]).toMatchObject({ reps: 5, weightKg: 60 });
     expect(updateSet(edit(), 0, 'set-1', { reps: 5 }).exercises[0].sets[0]).toMatchObject({ reps: 5, weightKg: 60 });

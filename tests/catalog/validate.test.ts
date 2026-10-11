@@ -70,7 +70,7 @@ describe('catalog validation', () => {
       (c) => (find(c.exercises, 'deadlift').shares[0].skill = 'neck'),
       /shares unknown skill "neck"/,
     ],
-    ['shares sum to 10000', (c) => (find(c.exercises, 'deadlift').shares[0].shareBp = 4000), /shares sum to 9000/],
+    ['shares sum to 10000', (c) => (find(c.exercises, 'deadlift').shares[0].shareBp = 3000), /shares sum to 9000/],
     [
       'each share is 1-10000 basis points',
       (c) => {
@@ -331,8 +331,8 @@ describe('catalog validation', () => {
     ],
     [
       'every skill is boosted by some gear slot',
-      (c) => c.skills.push({ ...structuredClone(find(c.skills, 'core')), key: 'grip', name: 'Grip', sortOrder: 9 }),
-      /skill "grip" is boosted by no gear slot/,
+      (c) => c.skills.push({ ...structuredClone(find(c.skills, 'core')), key: 'neck', name: 'Neck', sortOrder: 99 }),
+      /skill "neck" is boosted by no gear slot/,
     ],
     [
       'a gear recipe consumes at most one gear item',
@@ -353,6 +353,15 @@ describe('catalog validation', () => {
       'shares never cross modality',
       (c) => (find(c.exercises, 'running').shares[0].skill = 'legs'),
       /exercise "running" shares skill "legs" of another modality/,
+    ],
+    [
+      'mobility is never shared with another skill',
+      (c) => {
+        const shares = find(c.exercises, 'running').shares;
+        shares[0].shareBp = 5000;
+        shares.push({ skill: 'mobility', shareBp: 5000 });
+      },
+      /exercise "running" shares Mobility with another skill/,
     ],
     [
       'variation_of never crosses modality',
@@ -380,6 +389,26 @@ describe('catalog validation', () => {
       /lift exercise "deadlift" has a cardio block/,
     ],
     [
+      'programs use no hold exercise',
+      (c) => (c.programs[0].days[0].exercises[0].exercise = 'farmers_carry'),
+      /program day "ppl:push" uses hold exercise "farmers_carry"/,
+    ],
+    [
+      'challenges use no hold exercise',
+      (c) => (find(c.challenges, 'squat_century').volume!.exercise = 'dead_hang'),
+      /challenge "squat_century" uses hold exercise "dead_hang"/,
+    ],
+    [
+      'a measure is set only on lifts',
+      (c) => (find(c.exercises, 'running').measure = 'time'),
+      /cardio exercise "running" has a measure/,
+    ],
+    [
+      'a variation keeps the measure of its base',
+      (c) => (find(c.exercises, 'towel_hang').measure = 'distance'),
+      /exercise "towel_hang" measures distance but its base "dead_hang" measures time/,
+    ],
+    [
       'programs use no cardio exercise',
       (c) => (c.programs[0].days[0].exercises[0].exercise = 'running'),
       /program day "ppl:push" uses cardio exercise "running"/,
@@ -393,6 +422,11 @@ describe('catalog validation', () => {
       'record_min_distance_m needs a reference pace',
       (c) => (find(c.exercises, 'running').cardio!.referencePaceSPerKm = null),
       /cardio exercise "running" has record_min_distance_m but no reference pace/,
+    ],
+    [
+      'an activity without distance has no reference pace',
+      (c) => (find(c.exercises, 'running').cardio!.tracksDistance = false),
+      /cardio exercise "running" tracks no distance but has a reference pace/,
     ],
   ])('rejects a catalog when %s is broken', (_rule, mutate, expected) => {
     const problems = problemsAfter(mutate);

@@ -11,14 +11,16 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 import { CARDIO_EFFORT_LEVELS, type EffortInput, isRecord } from '@domain/types.ts';
-import type { CardioActivity, LoadType } from '../lib/catalog-rules.ts';
+import type { CardioActivity, HoldMeasure, LoadType } from '../lib/catalog-rules.ts';
 import { type CatalogChallenge, challengeLoadKg, parsedDraftChallenge } from '../lib/challenge-rules.ts';
 import { EFFORT_LEVELS } from '../lib/effort-labels.ts';
 import {
   type BoutValues,
   canAddSet,
   defaultWeightKg,
+  type HoldValues,
   nextBoutValues,
+  nextHoldValues,
   nextSetValues,
   roomForSets,
   STARTING_REPS,
@@ -30,6 +32,7 @@ import {
 import { isSessionRpe } from '../lib/session-timing-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 5;
+const HOLD_FORMAT_VERSION = 6;
 const PRE_WARMUP_FORMAT_VERSION = 4;
 const PRE_CARDIO_FORMAT_VERSION = 3;
 const PRE_EFFORT_INPUT_FORMAT_VERSION = 2;
@@ -83,7 +86,23 @@ export interface CardioDraftExercise {
   sets: CardioDraftSet[];
 }
 
-export type DraftExercise = LiftDraftExercise | CardioDraftExercise;
+export interface HoldDraftSet extends HoldValues {
+  id: string;
+  kind: 'hold';
+  done: boolean;
+}
+
+export interface HoldDraftExercise {
+  clientId: string;
+  exerciseId: string;
+  name: string;
+  modality: 'hold';
+  measure: HoldMeasure;
+  loadType: LoadType;
+  sets: HoldDraftSet[];
+}
+
+export type DraftExercise = LiftDraftExercise | CardioDraftExercise | HoldDraftExercise;
 
 export interface DraftProgram {
   enrollmentId: string;
@@ -111,7 +130,13 @@ export interface WorkoutDraft {
 }
 
 export type StoredDraft =
-  | { v: typeof DRAFT_FORMAT_VERSION; kind: 'draft'; userId: string; updatedAt: number; draft: WorkoutDraft }
+  | {
+      v: typeof DRAFT_FORMAT_VERSION | typeof HOLD_FORMAT_VERSION;
+      kind: 'draft';
+      userId: string;
+      updatedAt: number;
+      draft: WorkoutDraft;
+    }
   | { v: typeof DRAFT_FORMAT_VERSION; kind: 'synced'; userId: string; updatedAt: number; syncedSessionId: string }
   | {
       v: typeof DRAFT_FORMAT_VERSION;
@@ -142,9 +167,13 @@ function isHalfStepBetween(value: unknown, lowest: number, highest: number): boo
   return typeof value === 'number' && Number.isInteger(value * 2) && value >= lowest && value <= highest;
 }
 
+function isLevelEffort(value: unknown): boolean {
+  return isRecord(value) && value.type === 'level' && EFFORT_LEVELS.some((level) => level === value.level);
+}
+
 function isLiftEffortInput(value: unknown): value is NonNullable<EffortInput> {
   if (!isRecord(value)) return false;
-  if (value.type === 'level') return EFFORT_LEVELS.some((level) => level === value.level);
+  if (value.type === 'level') return isLevelEffort(value);
   if (value.type === 'rir') return isHalfStepBetween(value.value, 0, 10);
   if (value.type === 'rpe') return isHalfStepBetween(value.value, 5, 10);
   return false;
@@ -199,15 +228,33 @@ function isCardioEffortInput(value: unknown): boolean {
   return isRecord(value) && value.type === 'cardio' && CARDIO_EFFORT_LEVELS.some((level) => level === value.level);
 }
 
-function normalisedBout(bout: unknown): unknown {
+function normalisedBout(bout: unknown, tracksDistance: boolean): unknown {
   if (!isRecord(bout)) return bout;
-  return isCardioEffortInput(bout.effort) ? bout : { ...bout, effort: null };
+  const measured = tracksDistance ? bout : { ...bout, distanceM: null };
+  return isCardioEffortInput(measured.effort) ? measured : { ...measured, effort: null };
+}
+
+function normalisedCardio(exercise: Record<string, unknown> & { sets: unknown[] }, clientId: string): unknown {
+  const activity = isRecord(exercise.activity) ? exercise.activity : null;
+  const tracksDistance = activity?.tracksDistance !== false;
+  return {
+    ...exercise,
+    clientId,
+    ...(activity === null ? {} : { activity: { ...activity, tracksDistance } }),
+    sets: exercise.sets.map((bout) => normalisedBout(bout, tracksDistance)),
+  };
+}
+
+function normalisedHoldSet(set: unknown): unknown {
+  if (!isRecord(set)) return set;
+  return isLevelEffort(set.effort) ? set : { ...set, effort: null };
 }
 
 function normalisedExercise(exercise: unknown, index: number, fromV2: boolean): unknown {
   if (!isRecord(exercise) || !Array.isArray(exercise.sets)) return exercise;
   const clientId = typeof exercise.clientId === 'string' ? exercise.clientId : `exercise-${index}`;
-  if (exercise.modality === 'cardio') return { ...exercise, clientId, sets: exercise.sets.map(normalisedBout) };
+  if (exercise.modality === 'hold') return { ...exercise, clientId, sets: exercise.sets.map(normalisedHoldSet) };
+  if (exercise.modality === 'cardio') return normalisedCardio({ ...exercise, sets: exercise.sets }, clientId);
   return { ...exercise, clientId, modality: 'lift', sets: exercise.sets.map((set) => normalisedSet(set, fromV2)) };
 }
 
@@ -237,9 +284,9 @@ function validSupersetIds(exercises: readonly DraftExercise[]): Set<string> {
 export function withValidSupersets(exercises: DraftExercise[]): DraftExercise[] {
   const valid = validSupersetIds(exercises);
   return exercises.map((exercise) => {
-    if (exercise.modality === 'cardio') {
+    if (exercise.modality !== 'lift') {
       const kept = Object.entries(exercise).filter(([key]) => key !== 'supersetId');
-      return Object.fromEntries(kept) as unknown as CardioDraftExercise;
+      return Object.fromEntries(kept) as unknown as typeof exercise;
     }
     const id = supersetIdOf(exercise);
     return { ...exercise, supersetId: id !== null && valid.has(id) ? id : null };
@@ -258,6 +305,7 @@ function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
 }
 
 const READABLE_FORMAT_VERSIONS: readonly unknown[] = [
+  HOLD_FORMAT_VERSION,
   DRAFT_FORMAT_VERSION,
   PRE_WARMUP_FORMAT_VERSION,
   PRE_CARDIO_FORMAT_VERSION,
@@ -276,18 +324,15 @@ export function parseStoredDraft(raw: unknown, userId: string): StoredDraft | nu
   if (raw.kind === 'discarded' && typeof raw.discardedSessionId === 'string')
     return discardedRecord(userId, raw.updatedAt, raw.discardedSessionId);
   if (raw.kind === 'draft' && looksLikeDraft(raw.draft))
-    return {
-      v: DRAFT_FORMAT_VERSION,
-      kind: 'draft',
-      userId,
-      updatedAt: raw.updatedAt,
-      draft: normalisedDraft(raw.draft, raw.v === PRE_EFFORT_INPUT_FORMAT_VERSION),
-    };
+    return draftRecord(userId, raw.updatedAt, normalisedDraft(raw.draft, raw.v === PRE_EFFORT_INPUT_FORMAT_VERSION));
   return null;
 }
 
 export function draftRecord(userId: string, updatedAt: number, draft: WorkoutDraft): StoredDraft {
-  return { v: DRAFT_FORMAT_VERSION, kind: 'draft', userId, updatedAt, draft };
+  const v = draft.exercises.some((exercise) => exercise.modality === 'hold')
+    ? HOLD_FORMAT_VERSION
+    : DRAFT_FORMAT_VERSION;
+  return { v, kind: 'draft', userId, updatedAt, draft };
 }
 
 export function syncedRecord(userId: string, updatedAt: number, syncedSessionId: string): StoredDraft {
@@ -365,6 +410,25 @@ export function addCardioExercise(
   return { ...draft, exercises: [...draft.exercises, added] };
 }
 
+export function addHoldExercise(
+  draft: WorkoutDraft,
+  exerciseId: string,
+  name: string,
+  loadType: LoadType,
+  measure: HoldMeasure,
+): WorkoutDraft {
+  const added: HoldDraftExercise = {
+    clientId: crypto.randomUUID(),
+    exerciseId,
+    name,
+    modality: 'hold',
+    measure,
+    loadType,
+    sets: [],
+  };
+  return { ...draft, exercises: [...draft.exercises, added] };
+}
+
 export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
   return { ...draft, exercises: withValidSupersets(draft.exercises.filter((_, index) => index !== exerciseIndex)) };
 }
@@ -380,6 +444,15 @@ export function addSet(draft: WorkoutDraft, exerciseIndex: number, firstSet?: La
         done: true,
       };
       return { ...exercise, sets: [...exercise.sets, newBout] };
+    }
+    if (exercise.modality === 'hold') {
+      const newHold: HoldDraftSet = {
+        id: crypto.randomUUID(),
+        kind: 'hold',
+        ...nextHoldValues(exercise.sets.at(-1), exercise.loadType, exercise.measure),
+        done: true,
+      };
+      return { ...exercise, sets: [...exercise.sets, newHold] };
     }
     const newSet: DraftSet = {
       id: crypto.randomUUID(),
@@ -399,7 +472,7 @@ export function addWarmupSets(
 ): WorkoutDraft {
   if (warmups.length > roomForSets(draft)) return draft;
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
-    if (exercise.modality === 'cardio') return exercise;
+    if (exercise.modality !== 'lift') return exercise;
     const warmupSets: DraftSet[] = warmups.map(({ weightKg, reps }) => ({
       id: crypto.randomUUID(),
       weightKg,
@@ -441,7 +514,7 @@ export function withCurrentLoadTypes(
   loadTypes: ReadonlyMap<string, LoadType>,
 ): { draft: WorkoutDraft; changedNames: string[] } {
   const changedNames: string[] = [];
-  const exercises = draft.exercises.map((exercise) => {
+  const exercises = draft.exercises.map((exercise): DraftExercise => {
     if (exercise.modality === 'cardio') return exercise;
     const current = loadTypes.get(exercise.exerciseId);
     if (current === undefined || current === exercise.loadType) return exercise;
@@ -451,11 +524,17 @@ export function withCurrentLoadTypes(
   return { draft: changedNames.length > 0 ? { ...draft, exercises } : draft, changedNames };
 }
 
+export type PlannedProgression =
+  { kind: 'none' } | { kind: 'fixed' } | { kind: 'linear'; incrementKg: number; incrementLb: number };
+
+export type ProgressionKind = PlannedProgression['kind'];
+
 export interface PlannedExercise {
   exerciseId: string;
   targetSets: number;
   targetRepsMin: number;
   targetRepsMax: number;
+  progression: PlannedProgression;
 }
 
 export interface StartableDay {
@@ -698,7 +777,7 @@ export function mostQuickFillSets(draft: WorkoutDraft, exerciseIndex: number): n
 
 export function fillWorkingSets(draft: WorkoutDraft, exerciseIndex: number, count: number, reps: number): WorkoutDraft {
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
-    if (exercise.modality === 'cardio' || !canQuickFill(exercise)) return exercise;
+    if (exercise.modality !== 'lift' || !canQuickFill(exercise)) return exercise;
     const workingSets = exercise.sets.filter((set) => !set.isWarmup);
     const filled = exercise.sets.map((set) => (set.isWarmup ? set : { ...set, reps, done: true }));
     const { weightKg } = nextSetValues(workingSets.at(-1), exercise.loadType);
@@ -716,7 +795,7 @@ export function fillWorkingSets(draft: WorkoutDraft, exerciseIndex: number, coun
   });
 }
 
-function isLeftToLifter(set: DraftSet | CardioDraftSet): boolean {
+function isLeftToLifter(set: DraftSet | CardioDraftSet | HoldDraftSet): boolean {
   if ('kind' in set || set.done) return false;
   return Boolean(set.prescriptionDetail?.optional) || (set.prescription ? isRetestRef(set.prescription.ref) : false);
 }
@@ -750,7 +829,7 @@ export function swapExercise(
 ): WorkoutDraft | null {
   if (!canSwapExercise(draft, exerciseIndex)) return null;
   const swapped = updateExerciseAt(draft, exerciseIndex, (exercise) =>
-    exercise.modality === 'cardio'
+    exercise.modality !== 'lift'
       ? exercise
       : {
           ...exercise,

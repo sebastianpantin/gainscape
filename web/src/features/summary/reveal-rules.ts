@@ -5,11 +5,17 @@ import { describeCardioGains } from '../../lib/cardio-rules.ts';
 import type { Exercise } from '../../lib/catalog-rules.ts';
 import { formatLoad, formatXp } from '../../lib/format.ts';
 import type { UnitPref } from '../../lib/profile-rules.ts';
-import { distanceUnitFor, formatWeight } from '../../lib/units.ts';
+import { type DistanceUnit, distanceUnitFor, formatWeight, HOLD_DISTANCE_UNIT } from '../../lib/units.ts';
 
 export interface DescribedRecord {
   headline: string;
   previous: string;
+}
+
+function recordDistanceUnit(exercise: Exercise | undefined, unit: UnitPref): DistanceUnit {
+  if (exercise?.modality === 'cardio') return distanceUnitFor(unit, exercise.activity.paceUnit);
+  if (exercise?.measure !== undefined) return HOLD_DISTANCE_UNIT;
+  return distanceUnitFor(unit, 'per_km');
 }
 
 export function describeRecord(
@@ -19,8 +25,7 @@ export function describeRecord(
 ): DescribedRecord {
   const name = exercise?.name ?? 'Exercise';
   if (record.kind === 'cardio') {
-    const paceUnit = exercise?.modality === 'cardio' ? exercise.activity.paceUnit : 'per_km';
-    return { headline: `${name}:`, previous: describeCardioGains(record.records, distanceUnitFor(unit, paceUnit)) };
+    return { headline: `${name}:`, previous: describeCardioGains(record.records, recordDistanceUnit(exercise, unit)) };
   }
   if (record.kind === 'bodyweight_reps') {
     const previous = record.previousReps === null ? 'first record' : `was ${record.previousReps}`;

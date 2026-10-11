@@ -4,6 +4,7 @@ import {
   type Catalog,
   DEFAULT_BALANCE,
   type ExerciseDef,
+  type HoldSetInput,
   type LiftExerciseDef,
   type LiftSetInput,
 } from '@domain/index.ts';
@@ -42,12 +43,13 @@ const exercise = (
 const cardioExercise = (
   id: string,
   builtIn: boolean,
-  cardio: Omit<CardioExerciseDef['cardio'], 'paceUnit'> & { paceUnit?: CardioExerciseDef['cardio']['paceUnit'] },
+  cardio: Omit<CardioExerciseDef['cardio'], 'paceUnit' | 'tracksDistance'> &
+    Partial<Pick<CardioExerciseDef['cardio'], 'paceUnit' | 'tracksDistance'>>,
   shares: [string, number][],
 ): CardioExerciseDef => ({
   id,
   modality: 'cardio',
-  cardio: { paceUnit: 'per_km', ...cardio },
+  cardio: { paceUnit: 'per_km', tracksDistance: true, ...cardio },
   builtIn,
   shares: shares.map(([skillKey, shareBasisPoints]) => ({ skillId: `skill-${skillKey}`, shareBasisPoints })),
 });
@@ -62,8 +64,10 @@ export const catalog: Catalog = {
     skill('arms', 4, 1),
     skill('legs', 5, 2),
     skill('core', 6, 1),
-    skill('endurance', 7, 0),
-    skill('agility', 8, 0),
+    skill('grip', 7, 1),
+    skill('endurance', 8, 0),
+    skill('agility', 9, 0),
+    skill('mobility', 10, 0),
   ],
   exercises: new Map<string, ExerciseDef>([
     [
@@ -82,6 +86,29 @@ export const catalog: Catalog = {
       ]),
     ],
     ['custom-press', exercise('custom-press', 'external', false, [['chest', 10000]])],
+    ['dead-hang', { ...exercise('dead-hang', 'bodyweight', true, [['grip', 10000]]), measure: 'time' }],
+    ['plate-pinch', { ...exercise('plate-pinch', 'external', true, [['grip', 10000]]), measure: 'time' }],
+    [
+      'suitcase-hold',
+      {
+        ...exercise('suitcase-hold', 'external', true, [
+          ['grip', 5000],
+          ['core', 5000],
+        ]),
+        measure: 'time',
+      },
+    ],
+    [
+      'farmers-carry',
+      {
+        ...exercise('farmers-carry', 'external', true, [
+          ['grip', 6000],
+          ['core', 2000],
+          ['legs', 2000],
+        ]),
+        measure: 'distance',
+      },
+    ],
     [
       'pull-up',
       exercise('pull-up', 'bodyweight', true, [
@@ -134,6 +161,24 @@ export const catalog: Catalog = {
       ),
     ],
     [
+      'stretch',
+      cardioExercise(
+        'stretch',
+        true,
+        { referencePaceSPerKm: null, maxEffort: 'moderate', recordMinDistanceM: null, tracksDistance: false },
+        [['mobility', 10000]],
+      ),
+    ],
+    [
+      'yoga',
+      cardioExercise(
+        'yoga',
+        true,
+        { referencePaceSPerKm: null, maxEffort: 'hard', recordMinDistanceM: null, tracksDistance: false },
+        [['mobility', 10000]],
+      ),
+    ],
+    [
       'custom-run',
       cardioExercise(
         'custom-run',
@@ -182,6 +227,27 @@ export function aBout(
     durationS,
     distanceM: null,
     interval: null,
+    effort,
+    ...overrides,
+  };
+}
+
+export function aHold(
+  exerciseId: string,
+  weightKg: number,
+  measured: { durationS: number } | { distanceM: number },
+  effort: HoldSetInput['effort'],
+  overrides: Partial<HoldSetInput> = {},
+): HoldSetInput {
+  setCounter += 1;
+  return {
+    kind: 'hold',
+    id: `set-${setCounter}`,
+    exerciseId,
+    position: setCounter,
+    weightKg,
+    durationS: 'durationS' in measured ? measured.durationS : null,
+    distanceM: 'distanceM' in measured ? measured.distanceM : null,
     effort,
     ...overrides,
   };

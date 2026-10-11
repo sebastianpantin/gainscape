@@ -1,16 +1,24 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { programStateAt, type ProgramDefinition } from '@domain/index.ts';
+import {
+  type EnrollmentFactsRows,
+  enrollmentFromRow,
+  programFactsFromRows,
+} from '../../web/src/lib/program-facts-rules.ts';
 import {
   builtInExerciseId,
   createTestUser,
   databaseNow,
   db,
+  lootSnapshot,
   normalizedSnapshot,
   postCompleteSession,
   postFunction,
   rowCounts,
   type TestUser,
 } from './local-stack.ts';
+import { customLiftKey, linearFiveByFive, plannedDay, publishedProgram, savedProgram } from './program-support.ts';
 import { aBout, hoursAgo, payloadAt } from './session-support.ts';
 
 interface PrescriptionBody {
@@ -811,5 +819,133 @@ describe('edit-session of an unlinked session', () => {
 
     expect(response.status, response.rawBody).toBe(200);
     expect(await snapshotsOf(payload.id)).toEqual([0, 1, 2, 3].map(noSnapshot));
+  });
+});
+
+describe('complete-session following a custom program snapshot', () => {
+  const START_KG = 100;
+
+  async function followFiveByFive(
+    user: TestUser,
+    liftId = exerciseIds.back_squat,
+  ): Promise<{ enrollmentId: string; liftKey: string }> {
+    const programId = await savedProgram(user, {
+      id: randomUUID(),
+      name: '5x5',
+      days: [plannedDay('Lift day', [linearFiveByFive(liftId)])],
+    });
+    const template = await publishedProgram(user, programId);
+    const liftKey = customLiftKey(liftId);
+    const result = await user.client.rpc('enroll_program', {
+      enrollment: {
+        templateKey: template.key,
+        templateVersion: template.version,
+        unit: 'kg',
+        options: {},
+        bindings: { [liftKey]: liftId },
+        inputs: { [liftKey]: { workingWeight: START_KG } },
+        rounding: { increment: 2.5, mode: 'nearest', barWeight: 20 },
+      },
+    });
+    expect(result.error).toBeNull();
+    return { enrollmentId: result.data as string, liftKey };
+  }
+
+  function fiveByFive(weightKg: number, repsBySet = [5, 5, 5, 5, 5]): ProgramSetBody[] {
+    return repsBySet.map((reps, index) => squatSet(index, weightKg, prescribed(`d0_0:${index}`, weightKg), reps));
+  }
+
+  async function completeLinked(user: TestUser, enrollmentId: string, index: number, sets: ProgramSetBody[]) {
+    const payload = linkedPayload(sets, { enrollmentId, position: { index } }, hoursAgo(3 - index));
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.programLinked).toBe(true);
+  }
+
+  async function workingWeightOf(user: TestUser, enrollmentId: string, liftKey: string): Promise<number | undefined> {
+    const facts = await linkedFacts(user, enrollmentId);
+    const { data, error } = await user.client
+      .from('program_templates')
+      .select('definition')
+      .eq('key', facts.enrollment.template_key as string)
+      .eq('version', facts.enrollment.template_version as number)
+      .single();
+    expect(error).toBeNull();
+    const rows = facts as unknown as EnrollmentFactsRows;
+    const state = programStateAt(
+      data?.definition as ProgramDefinition,
+      enrollmentFromRow(rows.enrollment),
+      programFactsFromRows(rows),
+    );
+    return state.refs[liftKey]?.workingWeight;
+  }
+
+  it('moves the working weight up by the increment after a met 5x5 and holds it after a miss', async () => {
+    const user = await createTestUser();
+    const { enrollmentId, liftKey } = await followFiveByFive(user);
+    expect(await workingWeightOf(user, enrollmentId, liftKey)).toBe(START_KG);
+
+    await completeLinked(user, enrollmentId, 0, fiveByFive(START_KG));
+    expect(await workingWeightOf(user, enrollmentId, liftKey)).toBe(102.5);
+
+    await completeLinked(user, enrollmentId, 1, fiveByFive(102.5, [5, 5, 5, 4, 3]));
+    expect(await workingWeightOf(user, enrollmentId, liftKey)).toBe(102.5);
+  });
+
+  async function lootRollsBySet(userId: string) {
+    const { lootRolls } = await lootSnapshot(userId);
+    return lootRolls.map((roll) => [roll.kind, roll.roll_index, roll.drop_table_id]).sort();
+  }
+
+  it('awards the same XP, levels, derived set columns and loot rolls as the same sets with no program', async () => {
+    const freestyle = await createTestUser();
+    const follower = await createTestUser();
+    const { enrollmentId } = await followFiveByFive(follower);
+    const startedAt = hoursAgo(1);
+    const sets = fiveByFive(START_KG);
+    const unlinked = await postCompleteSession(
+      freestyle.accessToken,
+      payloadAt(startedAt, sets.map(withoutPrescription)),
+    );
+    const linked = await postCompleteSession(
+      follower.accessToken,
+      linkedPayload(
+        sets.map((set) => ({ ...set, id: randomUUID() })),
+        { enrollmentId, position: { index: 0 } },
+        startedAt,
+      ),
+    );
+
+    expect(unlinked.status, unlinked.rawBody).toBe(200);
+    expect(linked.status, linked.rawBody).toBe(200);
+    expect(linked.body.programLinked).toBe(true);
+    expect(linked.body.xpBySkill).toEqual(unlinked.body.xpBySkill);
+    expect(linked.body.levelUps).toEqual(unlinked.body.levelUps);
+    const [linkedState, unlinkedState] = await Promise.all([
+      normalizedSnapshot(follower.id),
+      normalizedSnapshot(freestyle.id),
+    ]);
+    expect(linkedState.sets).toEqual(unlinkedState.sets);
+    expect(linkedState.userSkills).toEqual(unlinkedState.userSkills);
+    expect(linkedState.exerciseMaxes).toEqual(unlinkedState.exerciseMaxes);
+    const [linkedRolls, unlinkedRolls] = await Promise.all([lootRollsBySet(follower.id), lootRollsBySet(freestyle.id)]);
+    expect(linkedRolls.length).toBeGreaterThan(0);
+    expect(linkedRolls).toEqual(unlinkedRolls);
+  });
+
+  it('awards Grip XP for a deadlift planned in your own program, from its grip share', async () => {
+    const user = await createTestUser();
+    const { enrollmentId } = await followFiveByFive(user, exerciseIds.deadlift);
+    const deadliftSets = fiveByFive(START_KG).map((set) => ({ ...set, exerciseId: exerciseIds.deadlift }));
+    const response = await postCompleteSession(
+      user.accessToken,
+      linkedPayload(deadliftSets, { enrollmentId, position: { index: 0 } }),
+    );
+
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.programLinked).toBe(true);
+    const xpBySkill = response.body.xpBySkill ?? {};
+    expect(xpBySkill.grip).toBeGreaterThan(0);
+    expect(xpBySkill.grip).toBeLessThan(xpBySkill.back);
   });
 });

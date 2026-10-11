@@ -30,6 +30,7 @@ export const cachedExerciseSchema = z.discriminatedUnion('modality', [
     modality: z.literal('lift'),
     loadType: z.enum(LOAD_TYPES),
     compound: z.boolean().optional(),
+    measure: z.enum(['time', 'distance']).optional(),
   }),
   z.object({
     ...cachedExerciseBase,
@@ -38,6 +39,7 @@ export const cachedExerciseSchema = z.discriminatedUnion('modality', [
       paceUnit: z.enum(PACE_UNITS),
       referencePaceSPerKm: z.number().nullable(),
       maxEffort: z.enum(CARDIO_EFFORT_LEVELS),
+      tracksDistance: z.boolean().default(true),
       shares: z.array(z.object({ skillKey: z.string(), shareBasisPoints: z.number() })),
     }),
   }),
@@ -70,7 +72,13 @@ export function cachedExerciseFields(exercise: Exercise): Exercise {
   const { id, key, name, equipment, custom, archived, skillShares } = exercise;
   const base = { id, key, name, equipment, custom, archived, skillShares };
   return exercise.modality === 'lift'
-    ? { ...base, modality: 'lift', loadType: exercise.loadType, compound: exercise.compound }
+    ? {
+        ...base,
+        modality: 'lift',
+        loadType: exercise.loadType,
+        compound: exercise.compound,
+        ...(exercise.measure === undefined ? {} : { measure: exercise.measure }),
+      }
     : { ...base, modality: 'cardio', activity: exercise.activity };
 }
 

@@ -124,13 +124,13 @@ Skip `make backup-hosted` while `GPG_RECIPIENT` is unset.
 1. builds and scans the web app;
 2. asks you to confirm the backup, when `GPG_RECIPIENT` is set;
 3. shows the migration dry run and asks for `yes`;
-4. pushes the migrations and the seed (`--include-seed` every time: the CLI re-runs the seed only when it changed, and the seed is idempotent);
+4. pushes the migrations, then runs the whole seed with `supabase db query --linked --file supabase/seed.sql` (every time: the seed is idempotent and runs in one transaction; `db push --include-seed` is not used because it only records the new hash of a changed seed and never runs it again);
 5. deploys the Edge Functions, with the settings in `supabase/config.toml` (`rebuild-caches` skips the gateway's JWT check and checks the secret key itself);
 6. uploads the web app.
 
 The web app never goes live before its migrations.
 
-Migration 032 adds the check `scrolls_grant_a_challenge` as `not valid`, so existing scroll rows keep a null `grants_challenge_id` until the catalog seed runs. `make deploy` pushes the seed together with the migrations; if you ever push 032 another way, run the seed right after it.
+Migration 032 adds the check `scrolls_grant_a_challenge` as `not valid`, so existing scroll rows keep a null `grants_challenge_id` until the catalog seed runs. `make deploy` runs the seed right after the migrations; if you ever push 032 another way, run the seed right after it.
 
 After a `BALANCE_VERSION` bump, run `make rebuild-caches-hosted` right after the deploy. It rebuilds only users with sessions behind the new version, 10 per request and 4 requests at a time; `make rebuild-caches-hosted ALL=1` rebuilds every user with data. A run that ends with `users still need a rebuild` saw sessions go stale behind it (an older function was still writing); run it again. A failed batch names the user in `rebuild_failed`; the users before it stay rebuilt, so a rerun picks up where it stopped. Once `sessions` holds millions of rows, build migration 033's index by hand with `create index concurrently if not exists sessions_by_user_derived_version on public.sessions (user_id, derived_balance_version) where not history_only;` before the deploy, because the migration's plain `create index` blocks session writes while it builds; the migration then does nothing.
 

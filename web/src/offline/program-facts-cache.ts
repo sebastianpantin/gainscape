@@ -39,7 +39,7 @@ export function emptyProgramFactsCache(enrollmentId: string): ProgramFactsCache 
 export function syncedSessionFact(draft: WorkoutDraft, completedAt: string): SessionFact | null {
   if (!draft.program) return null;
   const doneSets = draft.exercises.flatMap((exercise) =>
-    exercise.modality === 'cardio'
+    exercise.modality !== 'lift'
       ? []
       : exercise.sets.filter((set) => set.done).map((set) => ({ exerciseId: exercise.exerciseId, set })),
   );

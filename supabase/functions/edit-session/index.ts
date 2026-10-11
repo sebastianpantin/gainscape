@@ -79,7 +79,7 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
         set,
         catalog.exercises.get(set.exerciseId)!,
         bodyweightKg,
-        stored?.kind === 'lift' ? stored : undefined,
+        stored?.kind === 'lift' || stored?.kind === 'hold' ? stored : undefined,
       );
     });
 

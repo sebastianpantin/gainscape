@@ -1,5 +1,12 @@
 import type { BalanceConfig } from './balance.ts';
-import { boutPace, cardioSkillXp, countedWorkSeconds, derivedCardioEffort, SECONDS_PER_MINUTE } from './cardio.ts';
+import {
+  boutPace,
+  cardioSkillXp,
+  countedWorkSeconds,
+  derivedCardioEffort,
+  MOBILITY_SKILL_KEY,
+  SECONDS_PER_MINUTE,
+} from './cardio.ts';
 import { resolveEffort } from './effort.ts';
 import { levelForXp } from './levels.ts';
 import type {
@@ -7,9 +14,12 @@ import type {
   CardioSetInput,
   Catalog,
   ExerciseDef,
+  HoldSetInput,
+  HoldSetResult,
   LevelUp,
   LiftExerciseDef,
   LiftSetInput,
+  LiftSetResult,
   SessionInput,
   SessionSummary,
   SetInput,
@@ -19,10 +29,17 @@ import type {
   StrengthState,
   UserState,
 } from './types.ts';
-import { isLiftResult, measuresRepsCapacity, NO_RECORDS } from './types.ts';
-import { BodyweightLoadNotZeroError, BodyweightRequiredError } from './errors.ts';
+import { isHoldResult, isLiftResult, measuresRepsCapacity, NO_RECORDS } from './types.ts';
+import { BodyweightLoadNotZeroError, BodyweightRequiredError, DistanceNotTrackedError } from './errors.ts';
 import { challengeBonusXp, type ChallengeVerdict, judgeChallenge } from './challenges.ts';
-import { cardioExercise, exerciseFor, liftExercise, liftExerciseFor } from './exercise-lookup.ts';
+import {
+  cardioExercise,
+  exerciseFor,
+  holdExercise,
+  liftExercise,
+  liftExerciseFor,
+  repsExercise,
+} from './exercise-lookup.ts';
 import { detectPersonalRecords, summarizePersonalRecords } from './records.ts';
 import { checkFatigue } from './fatigue.ts';
 import { gearBonusXp } from './gear.ts';
@@ -101,7 +118,8 @@ export function carriedEffectiveLoadKg(
   return roundTo(2, effectiveLoadForNewSet(next, exercise, bodyweightKg));
 }
 
-export type WritableSet = (LiftSetInput & { effectiveLoadKg: number }) | CardioSetInput;
+export type WritableSet =
+  (LiftSetInput & { effectiveLoadKg: number }) | (HoldSetInput & { effectiveLoadKg: number }) | CardioSetInput;
 
 export function writableSetFor(
   set: SetInput,
@@ -110,9 +128,12 @@ export function writableSetFor(
   stored?: StoredSetLoad,
 ): WritableSet {
   if (set.kind === 'cardio') {
-    cardioExercise(exercise);
+    const { cardio } = cardioExercise(exercise);
+    if (set.distanceM !== null && !cardio.tracksDistance) throw new DistanceNotTrackedError(exercise.id);
     return set;
   }
+  if (set.kind === 'hold') holdExercise(exercise, set);
+  else repsExercise(exercise);
   const effectiveLoadKg =
     stored === undefined
       ? effectiveLoadForNewSet(set, exercise, bodyweightKg)
@@ -120,7 +141,11 @@ export function writableSetFor(
   return { ...set, effectiveLoadKg };
 }
 
-function effectiveLoadKg(set: LiftSetInput, exercise: LiftExerciseDef, state: UserState): number {
+function effectiveLoadKg(
+  set: Pick<LiftSetInput, 'weightKg' | 'recordedEffectiveLoadKg'>,
+  exercise: LiftExerciseDef,
+  state: UserState,
+): number {
   if (set.recordedEffectiveLoadKg === undefined) return effectiveLoadForNewSet(set, exercise, state.bodyweightKg);
   assertNoAddedLoadOnPureBodyweight(set, exercise);
   return set.recordedEffectiveLoadKg;
@@ -158,6 +183,27 @@ function liftResult(set: LiftSetInput, exercise: LiftExerciseDef, ctx: SessionCo
   };
 }
 
+function holdResult(hold: HoldSetInput, exercise: LiftExerciseDef, ctx: SessionContext): SetResult {
+  const { effortInputType, effortValue, loggedRir } = resolveEffort(hold.effort, ctx.cfg, 'hold');
+  const rirForXp = loggedRir ?? ctx.cfg.effortLevelRir[ctx.cfg.holdDefaultEffort];
+  return {
+    ...UNSCORED_RESULT_FIELDS,
+    set: hold,
+    skillXp: [],
+    effortInputType,
+    effortValue,
+    rir: loggedRir,
+    rirSource: loggedRir === null ? 'default' : 'logged',
+    rirForXp,
+    effectiveLoadKg: effectiveLoadKg(hold, exercise, ctx.state),
+  };
+}
+
+function holdRepEquivalents(hold: HoldSetInput, cfg: BalanceConfig): number {
+  if (hold.durationS !== null) return Math.floor(hold.durationS / cfg.holdSecondsPerRep);
+  return Math.floor((hold.distanceM ?? 0) / cfg.carryMetresPerRep);
+}
+
 function cardioResult(
   bout: CardioSetInput,
   exercise: CardioExerciseDef,
@@ -184,21 +230,34 @@ function cardioResult(
 }
 
 const resolveSets: Step = (ctx) => {
-  let xpWorkSecondsLeft = ctx.cfg.cardioMaxCountedMinutesPerSession * SECONDS_PER_MINUTE;
+  const xpWorkSecondsLeft = {
+    cardio: ctx.cfg.cardioMaxCountedMinutesPerSession * SECONDS_PER_MINUTE,
+    mobility: ctx.cfg.mobilityMaxCountedMinutesPerSession * SECONDS_PER_MINUTE,
+  };
+  const mobilitySkillIds = new Set(
+    ctx.deps.catalog.skills.filter((skill) => skill.key === MOBILITY_SKILL_KEY).map((skill) => skill.id),
+  );
   const sets = [...ctx.session.sets]
     .sort((a, b) => a.position - b.position)
     .map((set): SetResult => {
       const exercise = exerciseFor(set, ctx.deps.catalog);
       if (set.kind === 'cardio') {
+        const pool = exercise.shares.some((share) => mobilitySkillIds.has(share.skillId)) ? 'mobility' : 'cardio';
         const workS = countedWorkSeconds(set);
-        const xpWorkS = Math.min(workS, xpWorkSecondsLeft);
-        xpWorkSecondsLeft -= xpWorkS;
+        const xpWorkS = Math.min(workS, xpWorkSecondsLeft[pool]);
+        xpWorkSecondsLeft[pool] -= xpWorkS;
         return cardioResult(set, cardioExercise(exercise), { workS, xpWorkS }, ctx);
       }
-      return liftResult(set, liftExercise(exercise), ctx);
+      if (set.kind === 'hold') return holdResult(set, holdExercise(exercise, set), ctx);
+      return liftResult(set, repsExercise(exercise), ctx);
     });
   return { ...ctx, sets };
 };
+
+function effectiveRepsOf(result: LiftSetResult | HoldSetResult, rirForXp: number, cfg: BalanceConfig): number {
+  if (isHoldResult(result)) return effectiveReps(holdRepEquivalents(result.set, cfg), rirForXp, false, cfg);
+  return effectiveReps(result.set.reps, rirForXp, result.set.isWarmup, cfg);
+}
 
 const awardXp: Step = (ctx) => {
   const skillsById = new Map(ctx.deps.catalog.skills.map((skill) => [skill.id, skill]));
@@ -213,12 +272,10 @@ const awardXp: Step = (ctx) => {
       const skillXp = cardioSkillXp({ ...result.cardio, steady }, shares, ctx.cfg);
       return { ...result, xp: skillXp.reduce((sum, part) => sum + part.xp, 0), skillXp };
     }
-    if (!isLiftResult(result)) return result;
+    if (!isLiftResult(result) && !isHoldResult(result)) return result;
     const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
     const earnsNothing = result.rirForXp === null || liftsNoLoad(exercise, result.effectiveLoadKg);
-    const effectiveRepCount = earnsNothing
-      ? 0
-      : effectiveReps(result.set.reps, result.rirForXp!, result.set.isWarmup, ctx.cfg);
+    const effectiveRepCount = earnsNothing ? 0 : effectiveRepsOf(result, result.rirForXp!, ctx.cfg);
     const xp = result.rirForXp === null ? result.coldStartXp : setXp(effectiveRepCount, result.intensityBonus, ctx.cfg);
     const xpSetOrdinal = xpSetsSeenByExercise.get(exercise.id) ?? 0;
     if (xp > 0) xpSetsSeenByExercise.set(exercise.id, xpSetOrdinal + 1);

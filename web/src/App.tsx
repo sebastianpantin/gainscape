@@ -111,6 +111,7 @@ function Screens() {
           <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />
           <Route path="/programs/active" element={<ActiveProgramScreen userId={userId} />} />
           <Route path="/programs/active/plan" element={<ProgramPlanScreen userId={userId} />} />
+          <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
           <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

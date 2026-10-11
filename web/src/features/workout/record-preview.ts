@@ -1,6 +1,9 @@
 import {
+  applyHoldToRecords,
   applySetToRecords,
   type BalanceConfig,
+  type CardioRecordGain,
+  type CardioRecords,
   DEFAULT_BALANCE,
   type LiftSetInput,
   NO_RECORDS,
@@ -9,7 +12,13 @@ import {
   type StrengthState,
 } from '@domain/index.ts';
 import type { RecordBaseline } from '../../lib/session-baseline-rules.ts';
-import type { DraftExercise, DraftSet } from '../../offline/draft-format.ts';
+import { formatCardioRecord } from '../../lib/cardio-rules.ts';
+import { capitalized } from '../../lib/names.ts';
+import { HOLD_DISTANCE_UNIT } from '../../lib/units.ts';
+import type { DraftExercise, DraftSet, HoldDraftExercise, HoldDraftSet } from '../../offline/draft-format.ts';
+
+export type HoldRecordPreview = { kind: 'hold'; gain: CardioRecordGain };
+export type PreviewRecord = SetPersonalRecord | HoldRecordPreview;
 
 const PREVIEW_ACHIEVED_AT = '1970-01-01T00:00:00.000Z';
 const BASELINE_SET_ID = 'baseline';
@@ -29,7 +38,18 @@ function recordStateFrom(baseline: RecordBaseline): RecordState {
       { maxReps, setId: BASELINE_SET_ID, achievedAt: PREVIEW_ACHIEVED_AT },
     ]),
   );
-  return { ...NO_RECORDS, repMaxes, bodyweightReps };
+  const cardio = Object.fromEntries(
+    Object.entries(baseline.cardioBest ?? {}).map(([exerciseId, best]): [string, CardioRecords] => [
+      exerciseId,
+      Object.fromEntries(
+        Object.entries(best).map(([kind, value]) => [
+          kind,
+          { value, setId: BASELINE_SET_ID, achievedAt: PREVIEW_ACHIEVED_AT },
+        ]),
+      ),
+    ]),
+  );
+  return { ...NO_RECORDS, repMaxes, bodyweightReps, cardio };
 }
 
 function countsForRecords(set: DraftSet): boolean {
@@ -43,17 +63,40 @@ function countsForRecords(set: DraftSet): boolean {
   );
 }
 
+function measuredHold(set: HoldDraftSet, exercise: HoldDraftExercise): Pick<HoldDraftSet, 'durationS' | 'distanceM'> {
+  return exercise.measure === 'time'
+    ? { durationS: set.durationS, distanceM: null }
+    : { durationS: null, distanceM: set.distanceM };
+}
+
+function holdCountsForRecords(set: HoldDraftSet, measured: Pick<HoldDraftSet, 'durationS' | 'distanceM'>): boolean {
+  const value = measured.durationS ?? measured.distanceM;
+  return set.done && value !== null && Number.isFinite(value) && value > 0 && Number.isFinite(set.weightKg);
+}
+
 export function previewRecords(
   exercises: readonly DraftExercise[],
   strength: StrengthState | null,
   baseline: RecordBaseline | null,
   cfg: BalanceConfig = DEFAULT_BALANCE,
-): (SetPersonalRecord | null)[][] {
+): (PreviewRecord | null)[][] {
   let records = baseline === null ? NO_RECORDS : recordStateFrom(baseline);
   let position = 0;
-  return exercises.map((exercise) => {
+  return exercises.map((exercise): (PreviewRecord | null)[] => {
     const firstPosition = position;
     position += exercise.sets.length;
+    if (exercise.modality === 'hold') {
+      const hasPriorRecord = baseline?.cardioBest?.[exercise.exerciseId] !== undefined;
+      return exercise.sets.map((set) => {
+        const measured = measuredHold(set, exercise);
+        if (!hasPriorRecord || !holdCountsForRecords(set, measured)) return null;
+        const hold = { id: set.id, exerciseId: exercise.exerciseId, ...measured };
+        const update = applyHoldToRecords(records, hold, set.weightKg, exercise, PREVIEW_ACHIEVED_AT, cfg);
+        records = update.records;
+        const [gain] = update.gains;
+        return gain === undefined ? null : { kind: 'hold', gain };
+      });
+    }
     if (exercise.modality !== 'lift') return exercise.sets.map(() => null);
     const hasPriorSession = strength?.[exercise.exerciseId]?.hasPriorSession ?? false;
     return exercise.sets.map((set, index) => {
@@ -75,10 +118,10 @@ export function previewRecords(
 }
 
 export function recordForSet(
-  records: readonly (readonly (SetPersonalRecord | null)[])[],
+  records: readonly (readonly (PreviewRecord | null)[])[],
   exercises: readonly DraftExercise[],
   setId: string,
-): SetPersonalRecord | null {
+): PreviewRecord | null {
   for (const [exerciseIndex, exercise] of exercises.entries()) {
     const setIndex = exercise.sets.findIndex((set) => set.id === setId);
     if (setIndex >= 0) return records[exerciseIndex]?.[setIndex] ?? null;
@@ -87,7 +130,7 @@ export function recordForSet(
 }
 
 export function becomesRecord(
-  recordsBefore: readonly (readonly (SetPersonalRecord | null)[])[],
+  recordsBefore: readonly (readonly (PreviewRecord | null)[])[],
   before: readonly DraftExercise[],
   after: readonly DraftExercise[],
   setId: string,
@@ -98,10 +141,18 @@ export function becomesRecord(
   return !wasRecord && recordForSet(previewRecords(after, strength, baseline), after, setId) !== null;
 }
 
-export function recordChipText(record: SetPersonalRecord): string {
+function holdRecordName(record: HoldRecordPreview): string {
+  return record.gain.kind === 'distance' ? 'farthest carry' : 'longest hold';
+}
+
+export function recordChipText(record: PreviewRecord): string {
+  if (record.kind === 'hold') return `${capitalized(holdRecordName(record))}!`;
   return record.kind === 'rep_max' ? `New ${record.reps}RM!` : 'Most reps!';
 }
 
-export function recordChipLabel(record: SetPersonalRecord): string {
+export function recordChipLabel(record: PreviewRecord): string {
+  if (record.kind === 'hold') {
+    return `Predicted ${holdRecordName(record)}: ${formatCardioRecord(record.gain.kind, record.gain.value, HOLD_DISTANCE_UNIT)}`;
+  }
   return record.kind === 'rep_max' ? `Predicted new ${record.reps} rep max` : `Predicted most reps: ${record.reps}`;
 }

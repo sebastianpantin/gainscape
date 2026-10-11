@@ -39,6 +39,7 @@ import { shownWeight } from '../../lib/units.ts';
 import {
   addCardioExercise,
   addExercise,
+  addHoldExercise,
   addSet,
   addWarmupSets,
   canSwapExercise,
@@ -63,7 +64,14 @@ import {
   withSessionRpe,
   type WorkoutDraft,
 } from '../../offline/draft-format.ts';
-import { canAddSet, removeSet, roomForSets, updateBout, updateSet } from '../../lib/exercise-edit-rules.ts';
+import {
+  canAddSet,
+  removeSet,
+  roomForSets,
+  updateBout,
+  updateHoldSet,
+  updateSet,
+} from '../../lib/exercise-edit-rules.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
 import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program-enrollment.ts';
 import { skipDayEvent } from '../../lib/program-skip-rules.ts';
@@ -85,6 +93,7 @@ import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
+import { HoldSetRow } from './HoldSetRow.tsx';
 import { ExerciseMenu } from './ExerciseMenu.tsx';
 import { ExerciseNote } from './ExerciseNote.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
@@ -584,13 +593,22 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
   );
   const roomForSet = canAddSet(draft);
-  const liftExercises = exercises.filter(isLiftExercise);
+  const liftExercises = exercises.filter(isLiftExercise).filter((exercise) => exercise.measure === undefined);
   const equipment = liftEquipment(exercises);
   const barbellSetup = barbellSetupFor(plateSettings, unitPref, programBar);
   const addPicked = async (exercise: Exercise) => {
     if (exercise.modality === 'cardio') {
       changeDraft(
         addSet(addCardioExercise(draft, exercise.id, exercise.name, exercise.activity), draft.exercises.length),
+      );
+      return;
+    }
+    if (exercise.measure !== undefined) {
+      changeDraft(
+        addSet(
+          addHoldExercise(draft, exercise.id, exercise.name, exercise.loadType, exercise.measure),
+          draft.exercises.length,
+        ),
       );
       return;
     }
@@ -804,6 +822,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                     boutNumber={boutIndex + 1}
                     bout={bout}
                     paceUnit={exercise.activity.paceUnit}
+                    tracksDistance={exercise.activity.tracksDistance}
                     preview={previews[exerciseIndex][boutIndex]}
                     unit={unitPref}
                     onChange={(changes) => changeDraft(updateBout(draft, exerciseIndex, bout.id, changes))}
@@ -821,6 +840,48 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                 + Add bout
               </button>
               {!roomForBouts && <p className="hint">Bouts in one workout can add up to at most 4 hours.</p>}
+            </section>
+          );
+        }
+        if (exercise.modality === 'hold') {
+          const doneHere = exercise.sets.filter((set) => set.done).length;
+          return (
+            <section className="panel stack exercise-card" key={cardKeys[exerciseIndex]}>
+              <header>
+                <h2>{exercise.name}</h2>
+                <span className="row">
+                  <button className="button link" type="button" onClick={() => removeExerciseAt(exerciseIndex)}>
+                    Remove
+                  </button>
+                </span>
+              </header>
+              <p className="muted">{`${doneHere}/${exercise.sets.length} sets`}</p>
+              {noteFor(exercise.exerciseId, exercise.name)}
+              <ol className="set-list">
+                {exercise.sets.map((set, setIndex) => (
+                  <HoldSetRow
+                    key={set.id}
+                    setNumber={setIndex + 1}
+                    set={set}
+                    measure={exercise.measure}
+                    loadType={exercise.loadType}
+                    preview={previews[exerciseIndex][setIndex]}
+                    record={records[exerciseIndex][setIndex]}
+                    unit={unitPref}
+                    onChange={(changes) => changeSet(updateHoldSet(draft, exerciseIndex, set.id, changes), set.id)}
+                    onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
+                    onToggleDone={() => changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id)}
+                  />
+                ))}
+              </ol>
+              <button
+                className="button dashed"
+                type="button"
+                disabled={!roomForSet}
+                onClick={() => changeDraft(addSet(draft, exerciseIndex))}
+              >
+                + Add set
+              </button>
             </section>
           );
         }

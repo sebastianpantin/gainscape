@@ -4,6 +4,7 @@ import { roundTo } from '@domain/index.ts';
 import {
   ageSession,
   builtInExerciseId,
+  createHoldExercise,
   createTestUser,
   db,
   env,
@@ -540,5 +541,37 @@ describe('edit-session with cardio bouts', () => {
     const response = await edit(user, editBody(session, [onBench, session.sprints, session.bench]));
     expect(response.status, response.rawBody).toBe(422);
     expect(response.body.error).toBe('kind_mismatch');
+  });
+});
+
+describe('edit-session with hold sets', () => {
+  it('replays a longer hang into more Grip XP, keeps the logged bodyweight and matches a rebuild', async () => {
+    const user = await createTestUser();
+    const hangId = await createHoldExercise(user.id, 'time', 'bodyweight', { grip: 10000 });
+    await setBodyweight(user, 70);
+    const hang = {
+      kind: 'hold',
+      id: randomUUID(),
+      exerciseId: hangId,
+      position: 0,
+      weightKg: 0,
+      durationS: 10,
+      effort: null,
+    };
+    const session = payloadAt(hoursAgo(2), [hang as never]);
+    await postSession(user, session);
+    await setBodyweight(user, 90);
+
+    const longer = { ...hang, durationS: 40 };
+    const response = await edit(user, editBody(session, [longer as never]));
+    expect(response.status, response.rawBody).toBe(200);
+    const [row] = await db`
+      select duration_s, effective_load_kg::float, effective_reps from public.sets where id = ${hang.id}`;
+    expect(row).toEqual({ duration_s: 40, effective_load_kg: 70, effective_reps: 3 });
+    await expectEqualsRebuild(user.id);
+
+    const unchanged = await edit(user, editBody(session, [longer as never], 1));
+    expect(unchanged.status, unchanged.rawBody).toBe(200);
+    expect(unchanged.body).toMatchObject({ revision: 1, replayedSessionIds: [] });
   });
 });

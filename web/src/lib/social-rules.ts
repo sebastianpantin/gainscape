@@ -2,12 +2,12 @@ import { combatLevel, levelForXp, totalLevel } from '@domain/index.ts';
 import { CARDIO_RECORD_KINDS, type CardioRecordKind } from '@domain/types.ts';
 import { formatCardioRecord } from './cardio-rules.ts';
 import { collectionPercent } from './collection-rules.ts';
-import type { LoadType, PaceUnit } from './catalog-rules.ts';
+import { type LoadType, PACE_UNITS } from './catalog-rules.ts';
 import { formatLoad } from './format.ts';
 import { capitalized } from './names.ts';
 import type { BadgeColor, UnitPref } from './profile-rules.ts';
 import { RATE_LIMITED_CODE } from './rate-limit.ts';
-import { distanceUnitFor, formatWeight } from './units.ts';
+import { type DistanceUnit, distanceUnitFor, formatWeight, HOLD_DISTANCE_UNIT } from './units.ts';
 
 export type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop';
 
@@ -136,8 +136,8 @@ const DISTANCE_KINDS: readonly CardioRecordKind[] = ['distance', 'pace'];
 
 function cardioPrText(item: FeedItem, name: string, unit: UnitPref): FeedText {
   const { payload } = item;
-  const paceUnit: PaceUnit = payload.paceUnit === 'per_100m' ? 'per_100m' : 'per_km';
-  const distanceUnit = distanceUnitFor(unit, paceUnit);
+  const paceUnit = PACE_UNITS.find((known) => known === payload.paceUnit);
+  const distanceUnit: DistanceUnit = paceUnit === undefined ? HOLD_DISTANCE_UNIT : distanceUnitFor(unit, paceUnit);
   const kinds = textOf(payload.recordKinds)
     .split(',')
     .filter((kind): kind is CardioRecordKind => CARDIO_RECORD_KINDS.some((known) => known === kind));

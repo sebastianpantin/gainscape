@@ -285,6 +285,8 @@ export function kgFromLb(lb: number): number {
   return Math.round((lb * KG_PER_LB_FOR_CONVERSIONS) / KG_CONVERSION_STEP) * KG_CONVERSION_STEP;
 }
 
+const USER_PROGRAM_KEY_PREFIX = 'custom_';
+
 export function programTemplateProblems(template: ProgramTemplate): string[] {
   const { definition } = template;
   const problems: string[] = [];
@@ -293,6 +295,9 @@ export function programTemplateProblems(template: ProgramTemplate): string[] {
       problems.push(`key and version must equal the file name "${template.file}"`);
   } else if (`${definition.key}.yaml` !== template.file) {
     problems.push(`key must equal the file name "${template.file}"`);
+  }
+  if (definition.key.startsWith(USER_PROGRAM_KEY_PREFIX)) {
+    problems.push(`key must not start with "${USER_PROGRAM_KEY_PREFIX}", which is kept for user programs`);
   }
   problems.push(...validateProgramDefinition(definition));
   for (const conversion of definition.conversions ?? []) {

@@ -19,6 +19,15 @@ export class BodyweightLoadNotZeroError extends Error {
   }
 }
 
+export class DistanceNotTrackedError extends Error {
+  readonly exerciseId: string;
+
+  constructor(exerciseId: string) {
+    super(`exercise ${exerciseId} tracks no distance`);
+    this.exerciseId = exerciseId;
+  }
+}
+
 export class KindMismatchError extends Error {
   readonly exerciseId: string;
 

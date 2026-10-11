@@ -26,7 +26,8 @@ function matchTier(nameWords: readonly string[], queryWords: readonly string[]):
   if (name === query || compactName === compactQuery) return EXACT_NAME;
   if (name.startsWith(query) || compactName.startsWith(compactQuery)) return NAME_PREFIX;
   if (queryWords.every((word) => nameWords.some((nameWord) => nameWord.startsWith(word)))) return WORD_PREFIXES;
-  if (queryWords.every((word) => name.includes(word)) || compactName.includes(compactQuery)) return INNER_MATCH;
+  const compactFromAWordStart = nameWords.some((_, index) => nameWords.slice(index).join('').startsWith(compactQuery));
+  if (queryWords.every((word) => name.includes(word)) || compactFromAWordStart) return INNER_MATCH;
   return null;
 }
 

@@ -2,18 +2,30 @@ import { describe, expect, it } from 'vitest';
 import { type OptionValue, type ProgramDefinition, validateEnrollment, type WeightUnit } from '@domain/index.ts';
 import {
   type BindableExercise,
+  bindingSelectLifts,
   defaultBindings,
   type EnrollForm,
   enrollPayload,
   initialEnrollForm,
   inputFields,
+  isCustomTemplate,
   optionControls,
   type ProgramTemplateRow,
   referencePreview,
+  templateEntry,
   templateListEntries,
   withOption,
   withUnit,
 } from '../../web/src/lib/program-enroll-rules.ts';
+import {
+  BENCH_ID,
+  BENCH_LIFT,
+  CUSTOM_FIVE_BY_FIVE,
+  CUSTOM_KEY,
+  customTemplateRow,
+  SQUAT_ID,
+  SQUAT_LIFT,
+} from './custom-program-fixture.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
@@ -107,7 +119,7 @@ describe('template list entries', () => {
   it('lists a template whose rule this app knows but cannot run (customRule) as needing an update', () => {
     const definition = {
       ...MADCOW_5X5,
-      key: 'custom_madcow',
+      key: 'synthetic_madcow',
       progression: [{ ...MADCOW_5X5.progression[0], onMiss: [{ kind: 'customRule', name: 'synthetic' }] }],
     };
     expect(templateListEntries([templateRow(definition)])[0].kind).toBe('needs_update');
@@ -710,5 +722,53 @@ describe('the enroll payload validates rounding and number options', () => {
       'Bar weight (kg) must be above 0',
       'Training max reset must be between 0.1 and 0.15',
     ]);
+  });
+});
+
+describe('a template compiled from your own program', () => {
+  it('is custom when it has an owner or a custom_ key, and catalog templates are not', () => {
+    expect(isCustomTemplate(customTemplateRow())).toBe(true);
+    expect(isCustomTemplate({ ...customTemplateRow(), owner_user_id: undefined })).toBe(true);
+    expect(isCustomTemplate(templateRow(MADCOW_5X5))).toBe(false);
+    expect(isCustomTemplate(templateRow(MADCOW_5X5, { owner_user_id: null }))).toBe(false);
+  });
+
+  it('is left out of the built-in template list', () => {
+    const entries = templateListEntries([templateRow(MADCOW_5X5), customTemplateRow()]);
+    expect(entries.map((entry) => entry.key)).toEqual(['madcow_5x5']);
+  });
+
+  it('is found by its key at its highest version for the follow form', () => {
+    const next = { ...CUSTOM_FIVE_BY_FIVE, version: 2, name: 'My 5x5 v2' };
+    const entry = templateEntry([customTemplateRow(), customTemplateRow(next), templateRow(MADCOW_5X5)], CUSTOM_KEY);
+    expect(entry).toEqual({ kind: 'enrollable', key: CUSTOM_KEY, version: 2, name: 'My 5x5 v2', definition: next });
+    expect(templateEntry([templateRow(MADCOW_5X5)], 'madcow_5x5')?.key).toBe('madcow_5x5');
+    expect(templateEntry([templateRow(MADCOW_5X5)], CUSTOM_KEY)).toBeUndefined();
+  });
+
+  it('binds each lift to the exercise its key was made from, even one missing from the exercise list', () => {
+    expect(defaultBindings(CUSTOM_FIVE_BY_FIVE, CATALOG)).toEqual({ [SQUAT_LIFT]: SQUAT_ID, [BENCH_LIFT]: BENCH_ID });
+  });
+
+  it('asks for no exercise picks, while a catalog template asks for every lift', () => {
+    expect(bindingSelectLifts(CUSTOM_FIVE_BY_FIVE)).toEqual([]);
+    expect(bindingSelectLifts(MADCOW_5X5).map((lift) => lift.key)).toEqual(MADCOW_5X5.lifts.map((lift) => lift.key));
+  });
+
+  it('asks only for the working weight of the lifts that add weight and builds a valid enrollment', () => {
+    const form = initialEnrollForm(CUSTOM_FIVE_BY_FIVE, 'kg', CATALOG);
+    expect(inputFields(CUSTOM_FIVE_BY_FIVE, form).map((field) => field.label)).toEqual([
+      'Back Squat working weight (kg)',
+    ]);
+    const result = enrollPayload(CUSTOM_FIVE_BY_FIVE, { ...form, inputValues: { [SQUAT_LIFT]: '100' } });
+    if (result.kind !== 'ok') throw new Error(result.problems.join('; '));
+    expect(result.payload).toMatchObject({
+      templateKey: CUSTOM_KEY,
+      templateVersion: 1,
+      options: {},
+      bindings: { [SQUAT_LIFT]: SQUAT_ID, [BENCH_LIFT]: BENCH_ID },
+      inputs: { [SQUAT_LIFT]: { workingWeight: 100 } },
+    });
+    expect(validateEnrollment(CUSTOM_FIVE_BY_FIVE, { id: 'new', ...result.payload })).toEqual([]);
   });
 });

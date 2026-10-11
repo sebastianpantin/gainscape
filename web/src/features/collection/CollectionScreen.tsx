@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { cardioRecordCards } from '../../lib/cardio-rules.ts';
-import { type Exercise, isCardioExercise } from '../../lib/catalog-rules.ts';
+import { type CardioRecordCard, cardioRecordCards, holdRecordCards } from '../../lib/cardio-rules.ts';
+import { type Exercise, isCardioExercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { collectionPercent, countCollection } from '../../lib/collection-rules.ts';
 import { moved } from '../../lib/reorder.ts';
@@ -58,6 +58,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
   };
   const { counted, completion } = countCollection(exercises, data);
   const cardioCards = cardioRecordCards(data.cardioRecords, exercises.filter(isCardioExercise), unitPref);
+  const holdCards = holdRecordCards(data.cardioRecords, exercises.filter(isLiftExercise));
 
   const togglePin = async (exercise: Exercise) => {
     try {
@@ -145,20 +146,32 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
           }
         />
       ))}
-      {cardioCards.length > 0 && (
-        <section className="panel stack" aria-labelledby="cardio-records-heading">
-          <h2 id="cardio-records-heading">Cardio records</h2>
-          <span className="muted tiny">Only you can see these.</span>
-          <ul className="stored-set-list">
-            {cardioCards.map((card) => (
-              <li key={card.exerciseId} className="stack" style={{ gap: 2 }}>
-                <strong>{card.name}</strong>
-                <span>{card.lines.join(' · ')}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <TimedRecordSection id="cardio-records-heading" title="Cardio records" cards={cardioCards} />
+      <TimedRecordSection id="hold-records-heading" title="Hold records" cards={holdCards} />
     </main>
+  );
+}
+
+interface TimedRecordSectionProps {
+  id: string;
+  title: string;
+  cards: readonly CardioRecordCard[];
+}
+
+function TimedRecordSection({ id, title, cards }: TimedRecordSectionProps) {
+  if (cards.length === 0) return null;
+  return (
+    <section className="panel stack" aria-labelledby={id}>
+      <h2 id={id}>{title}</h2>
+      <span className="muted tiny">Only you can see these.</span>
+      <ul className="stored-set-list">
+        {cards.map((card) => (
+          <li key={card.exerciseId} className="stack" style={{ gap: 2 }}>
+            <strong>{card.name}</strong>
+            <span>{card.lines.join(' · ')}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

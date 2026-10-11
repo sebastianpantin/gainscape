@@ -71,3 +71,16 @@ test('a pound user logs distance in miles', async ({ page }) => {
     .poll(() => boutsOf(sessionId))
     .toEqual([{ duration_s: 1800, distance_m: 5005.1, interval_rounds: null, effort_value: 1 }]);
 });
+
+test('log yoga without a distance field and earn Mobility', async ({ page }) => {
+  await register(page, uniqueUsername('cdyoga'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logCardio(page, 'yoga', 'Yoga', [{ minutes: 20, effort: 'Moderate' }]);
+  const bout = boutRow(exerciseCard(page, 'Yoga'), 1);
+  await expect(bout.getByLabel('min', { exact: true })).toHaveValue('20');
+  await expect(bout.getByLabel(/^(km|mi)$/)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'XP gained' })).toContainText(/Mobility: \+[\d,]+ XP/);
+});
