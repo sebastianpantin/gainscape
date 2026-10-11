@@ -189,6 +189,20 @@ export function configuredSecrets(config: DeployConfig): string[] {
   return [config.SUPABASE_SECRET_KEY ?? '', config.SUPABASE_DB_PASSWORD ?? ''];
 }
 
+export interface DatabaseDeployCommands {
+  preview: string[];
+  migrations: string[];
+  seed: string[];
+}
+
+export function databaseDeployCommands(): DatabaseDeployCommands {
+  return {
+    preview: ['db', 'push', '--dry-run'],
+    migrations: ['db', 'push'],
+    seed: ['db', 'query', '--linked', '--file', 'supabase/seed.sql'],
+  };
+}
+
 export function linkedRefProblem(configuredRef: string, linkedRef: string | null): string | null {
   if (linkedRef === null) return `the CLI is not linked; run npx supabase link --project-ref ${configuredRef}`;
   if (linkedRef !== configuredRef) return `the CLI is linked to ${linkedRef}, not ${configuredRef}`;
