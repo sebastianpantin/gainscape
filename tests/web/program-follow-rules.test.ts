@@ -7,8 +7,10 @@ import {
   carriedInputs,
   followStatus,
   isEnrolledIn,
+  isFollowing,
   workingWeights,
 } from '../../web/src/lib/program-follow-rules.ts';
+import { type LoadType } from '../../web/src/lib/catalog-rules.ts';
 import { customTemplateKey } from '../../web/src/lib/program-enroll-rules.ts';
 import { type PlannedExercise } from '../../web/src/offline/draft-format.ts';
 import {
@@ -62,6 +64,8 @@ function enrollmentRow(overrides: Partial<EnrollmentRow> = {}): EnrollmentRow {
 
 const TEMPLATES = [customTemplateRow()];
 
+const ALL_EXTERNAL = (): LoadType => 'external';
+
 describe('the key a program is published under', () => {
   it('is custom_ and the program id without dashes', () => {
     expect(customTemplateKey(PROGRAM_ID)).toBe(CUSTOM_KEY);
@@ -70,19 +74,21 @@ describe('the key a program is published under', () => {
 
 describe('follow status of your own program', () => {
   it('is not following with no enrollment, an ended one, or one in another program', () => {
-    expect(followStatus(followedDoc(), null, TEMPLATES)).toBe('not_following');
-    expect(followStatus(followedDoc(), enrollmentRow({ ended_at: '2026-10-10T09:00:00.000Z' }), TEMPLATES)).toBe(
+    expect(followStatus(followedDoc(), null, TEMPLATES, ALL_EXTERNAL)).toBe('not_following');
+    expect(
+      followStatus(followedDoc(), enrollmentRow({ ended_at: '2026-10-10T09:00:00.000Z' }), TEMPLATES, ALL_EXTERNAL),
+    ).toBe('not_following');
+    expect(followStatus(followedDoc(), enrollmentRow({ template_key: 'madcow_5x5' }), TEMPLATES, ALL_EXTERNAL)).toBe(
       'not_following',
     );
-    expect(followStatus(followedDoc(), enrollmentRow({ template_key: 'madcow_5x5' }), TEMPLATES)).toBe('not_following');
   });
 
   it('is current when the program still compiles to the followed definition', () => {
-    expect(followStatus(followedDoc(), enrollmentRow(), TEMPLATES)).toBe('current');
+    expect(followStatus(followedDoc(), enrollmentRow(), TEMPLATES, ALL_EXTERNAL)).toBe('current');
   });
 
   it('is current when the followed snapshot is not saved on this device, since nothing can be compared', () => {
-    expect(followStatus(followedDoc(), enrollmentRow(), [])).toBe('current');
+    expect(followStatus(followedDoc(), enrollmentRow(), [], ALL_EXTERNAL)).toBe('current');
   });
 
   it('is outdated after a change to the name, a day name, sets, reps, the increment or the progression', () => {
@@ -98,7 +104,8 @@ describe('follow status of your own program', () => {
       followedDoc([SQUAT_FIVE_BY_FIVE, { ...BENCH_THREE_BY_EIGHT, progression: { kind: 'fixed' } }]),
       followedDoc([{ ...SQUAT_FIVE_BY_FIVE, progression: { kind: 'fixed' } }, BENCH_THREE_BY_EIGHT]),
     ];
-    for (const changed of changes) expect(followStatus(changed, enrollmentRow(), TEMPLATES)).toBe('outdated');
+    for (const changed of changes)
+      expect(followStatus(changed, enrollmentRow(), TEMPLATES, ALL_EXTERNAL)).toBe('outdated');
   });
 
   it('is outdated after adding, removing or reordering exercises or days', () => {
@@ -109,16 +116,24 @@ describe('follow status of your own program', () => {
       followedDoc([BENCH_THREE_BY_EIGHT, SQUAT_FIVE_BY_FIVE]),
       { ...followedDoc(), days: [...followedDoc().days, { id: 'day-2', name: 'Day 2', exercises: [rowExercise] }] },
     ];
-    for (const changed of changes) expect(followStatus(changed, enrollmentRow(), TEMPLATES)).toBe('outdated');
+    for (const changed of changes)
+      expect(followStatus(changed, enrollmentRow(), TEMPLATES, ALL_EXTERNAL)).toBe('outdated');
   });
 
   it('compares with the followed version, not the newest snapshot', () => {
     const newer = { ...CUSTOM_FIVE_BY_FIVE, version: 2, name: 'My 5x5 v2' };
     const templates = [...TEMPLATES, customTemplateRow(newer)];
-    expect(followStatus(followedDoc(), enrollmentRow(), templates)).toBe('current');
-    expect(followStatus({ ...followedDoc(), name: 'My 5x5 v2' }, enrollmentRow(), templates)).toBe('outdated');
+    expect(followStatus(followedDoc(), enrollmentRow(), templates, ALL_EXTERNAL)).toBe('current');
+    expect(followStatus({ ...followedDoc(), name: 'My 5x5 v2' }, enrollmentRow(), templates, ALL_EXTERNAL)).toBe(
+      'outdated',
+    );
     expect(
-      followStatus({ ...followedDoc(), name: 'My 5x5 v2' }, enrollmentRow({ template_version: 2 }), templates),
+      followStatus(
+        { ...followedDoc(), name: 'My 5x5 v2' },
+        enrollmentRow({ template_version: 2 }),
+        templates,
+        ALL_EXTERNAL,
+      ),
     ).toBe('current');
   });
 });
@@ -169,7 +184,52 @@ describe('follow status when a lift is repeated across days', () => {
 
   it('is current whatever order the published rules list the lifts in', () => {
     const program: ProgramDoc = { ...followedDoc(), days: benchFirstDays() };
-    expect(followStatus(program, enrollmentRow(), [customTemplateRow(publishedInFirstSeenOrder)])).toBe('current');
+    expect(followStatus(program, enrollmentRow(), [customTemplateRow(publishedInFirstSeenOrder)], ALL_EXTERNAL)).toBe(
+      'current',
+    );
+  });
+});
+
+describe('follow status when an exercise has no added weight', () => {
+  const loadTypes =
+    (squatLoadType: LoadType) =>
+    (exerciseId: string): LoadType | null =>
+      exerciseId === SQUAT_ID ? squatLoadType : 'external';
+  const [publishedDay] = CUSTOM_FIVE_BY_FIVE.schedule.kind === 'rotation' ? CUSTOM_FIVE_BY_FIVE.schedule.days : [];
+  const publishedWithoutAddedWeight = {
+    ...CUSTOM_FIVE_BY_FIVE,
+    inputs: [],
+    schedule: {
+      kind: 'rotation',
+      days: [
+        {
+          ...publishedDay,
+          slots: publishedDay.slots.map((slot) =>
+            slot.lift === SQUAT_LIFT && slot.scheme.kind === 'repeat'
+              ? { ...slot, scheme: { ...slot.scheme, load: { kind: 'lastLogged' } } }
+              : slot,
+          ),
+        },
+      ],
+    },
+    progression: [],
+  } as ProgramDefinition;
+
+  it('is current when the snapshot was compiled after the exercise changed to bodyweight', () => {
+    for (const loadType of ['bodyweight', 'bodyweight_plus'] as const) {
+      const templates = [customTemplateRow(publishedWithoutAddedWeight)];
+      expect(followStatus(followedDoc(), enrollmentRow(), templates, loadTypes(loadType))).toBe('current');
+      const fixedSquat = followedDoc([{ ...SQUAT_FIVE_BY_FIVE, progression: { kind: 'fixed' } }, BENCH_THREE_BY_EIGHT]);
+      expect(followStatus(fixedSquat, enrollmentRow(), templates, loadTypes(loadType))).toBe('current');
+    }
+  });
+
+  it('is outdated when the snapshot still adds weight to an exercise that now has none', () => {
+    expect(followStatus(followedDoc(), enrollmentRow(), TEMPLATES, loadTypes('bodyweight'))).toBe('outdated');
+  });
+
+  it('keeps the planned progression of an exercise this device does not know', () => {
+    expect(followStatus(followedDoc(), enrollmentRow(), TEMPLATES, () => null)).toBe('current');
   });
 });
 
@@ -182,6 +242,15 @@ describe('a cached enrollment in a program', () => {
   it('is not in the program with no enrollment or one in another program', () => {
     expect(isEnrolledIn(PROGRAM_ID, null)).toBe(false);
     expect(isEnrolledIn(PROGRAM_ID, enrollmentRow({ template_key: 'madcow_5x5' }))).toBe(false);
+  });
+});
+
+describe('following a program', () => {
+  it('needs an enrollment in that program that has not ended', () => {
+    expect(isFollowing(PROGRAM_ID, enrollmentRow())).toBe(true);
+    expect(isFollowing(PROGRAM_ID, enrollmentRow({ ended_at: '2026-10-10T09:00:00.000Z' }))).toBe(false);
+    expect(isFollowing(PROGRAM_ID, enrollmentRow({ template_key: 'madcow_5x5' }))).toBe(false);
+    expect(isFollowing(PROGRAM_ID, null)).toBe(false);
   });
 });
 

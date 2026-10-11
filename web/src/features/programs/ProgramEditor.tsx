@@ -156,7 +156,8 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   };
 
   const outdated =
-    !creating && followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates) === 'outdated';
+    !creating &&
+    followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates, loadTypeOf) === 'outdated';
 
   const followChanges = async () => {
     if (issue) return setProblem(issue);

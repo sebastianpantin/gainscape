@@ -14,7 +14,7 @@ import {
 import { messageOf } from '../../lib/error-text.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import { forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
-import { followStatus, isEnrolledIn } from '../../lib/program-follow-rules.ts';
+import { isEnrolledIn, isFollowing } from '../../lib/program-follow-rules.ts';
 import { publishForEnroll } from '../../lib/queries.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
@@ -87,10 +87,10 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   };
 
   const askToRemove = (program: Program) => {
-    const { enrollment, templates } = readProgramCache(localStorage, userId);
+    const { enrollment } = readProgramCache(localStorage, userId);
     setPendingDelete({
       program,
-      following: followStatus(program, enrollment, templates) !== 'not_following',
+      following: isFollowing(program.id, enrollment),
       cachedEnrollmentInProgram: isEnrolledIn(program.id, enrollment),
     });
   };
