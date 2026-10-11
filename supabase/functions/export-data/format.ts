@@ -1,4 +1,4 @@
-export const EXPORT_FORMAT_VERSION = 6;
+export const EXPORT_FORMAT_VERSION = 7;
 
 export const EXPORT_SECTIONS = [
   'account',
@@ -19,6 +19,7 @@ export const EXPORT_SECTIONS = [
   'weeklyGoals',
   'customExercises',
   'programs',
+  'programTemplates',
   'programEnrollments',
   'programEnrollmentEvents',
   'lootRolls',

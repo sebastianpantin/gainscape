@@ -1,9 +1,10 @@
 import { parseProgramDefinition, type ProgramDefinition, type ProgramState, type WeightUnit } from '@domain/index.ts';
 import { customLiftKey, customTemplateKey, enrolledTemplate, type ProgramTemplateRow } from './program-enroll-rules.ts';
+import { type LoadType } from './catalog-rules.ts';
 import { type EnrollmentRow } from './program-facts-rules.ts';
 import type { ProgramDoc } from './programs.ts';
 
-export type FollowStatus = 'not_following' | 'current' | 'outdated';
+export type FollowStatus = 'not_following' | 'undecided' | 'current' | 'outdated';
 
 export interface CarriedFollow {
   unit: WeightUnit;
@@ -12,6 +13,8 @@ export interface CarriedFollow {
 
 type PlannedExercise = ProgramDoc['days'][number]['exercises'][number];
 
+type LoadTypeOf = (exerciseId: string) => LoadType | null;
+
 const WORKING_WEIGHT_LOAD = 'pct 1 workingWeight';
 const LAST_LOGGED_LOAD = 'lastLogged';
 
@@ -19,29 +22,38 @@ function slotLine(lift: string, sets: unknown, reps: unknown, maxReps: unknown, 
   return JSON.stringify([lift, sets, reps, maxReps ?? reps, load, judged]);
 }
 
-function plannedSlotLine(planned: PlannedExercise): string {
-  const load = planned.progression.kind === 'none' ? LAST_LOGGED_LOAD : WORKING_WEIGHT_LOAD;
+function compiledProgression(planned: PlannedExercise, loadType: LoadType | null): PlannedExercise['progression'] {
+  return loadType === null || loadType === 'external' ? planned.progression : { kind: 'none' };
+}
+
+function plannedSlotLine(planned: PlannedExercise, loadTypeOf: LoadTypeOf): string {
+  const progression = compiledProgression(planned, loadTypeOf(planned.exerciseId));
+  const load = progression.kind === 'none' ? LAST_LOGGED_LOAD : WORKING_WEIGHT_LOAD;
   const { exerciseId, targetSets, targetRepsMin, targetRepsMax } = planned;
-  const judged = planned.progression.kind === 'linear';
+  const judged = progression.kind === 'linear';
   return slotLine(customLiftKey(exerciseId), targetSets, targetRepsMin, targetRepsMax, load, judged);
 }
 
-function plannedRuleLines(program: ProgramDoc): string[] {
+function plannedRuleLines(program: ProgramDoc, loadTypeOf: LoadTypeOf): string[] {
   const rules = new Map<string, string>();
   for (const day of program.days)
     for (const planned of day.exercises) {
       const lift = customLiftKey(planned.exerciseId);
-      if (planned.progression.kind === 'linear' && !rules.has(lift))
-        rules.set(lift, JSON.stringify([lift, planned.progression.incrementKg, planned.progression.incrementLb]));
+      const progression = compiledProgression(planned, loadTypeOf(planned.exerciseId));
+      if (progression.kind === 'linear' && !rules.has(lift))
+        rules.set(lift, JSON.stringify([lift, progression.incrementKg, progression.incrementLb]));
     }
   return [...rules.values()].sort();
 }
 
-function programLines(program: ProgramDoc): string[] {
+function programLines(program: ProgramDoc, loadTypeOf: LoadTypeOf): string[] {
   return [
     JSON.stringify(program.name),
-    ...program.days.flatMap((day) => [JSON.stringify(day.name), ...day.exercises.map(plannedSlotLine)]),
-    ...plannedRuleLines(program),
+    ...program.days.flatMap((day) => [
+      JSON.stringify(day.name),
+      ...day.exercises.map((planned) => plannedSlotLine(planned, loadTypeOf)),
+    ]),
+    ...plannedRuleLines(program, loadTypeOf),
   ];
 }
 
@@ -80,18 +92,23 @@ export function isEnrolledIn(programId: string, enrollment: EnrollmentRow | null
   return enrollment?.template_key === customTemplateKey(programId);
 }
 
+export function isFollowing(programId: string, enrollment: EnrollmentRow | null): enrollment is EnrollmentRow {
+  return enrollment !== null && enrollment.ended_at === null && isEnrolledIn(programId, enrollment);
+}
+
 export function followStatus(
   program: ProgramDoc,
   enrollment: EnrollmentRow | null,
   templates: readonly ProgramTemplateRow[],
+  loadTypeOf: LoadTypeOf | null,
 ): FollowStatus {
-  if (enrollment === null || enrollment.ended_at !== null || !isEnrolledIn(program.id, enrollment))
-    return 'not_following';
+  if (!isFollowing(program.id, enrollment)) return 'not_following';
+  if (loadTypeOf === null) return 'undecided';
   const template = enrolledTemplate(templates, enrollment);
   const parsed = template ? parseProgramDefinition(template.definition) : null;
   if (parsed?.kind !== 'ok') return 'current';
   const followed = definitionLines(parsed.definition).join('\n');
-  return followed === programLines(program).join('\n') ? 'current' : 'outdated';
+  return followed === programLines(program, loadTypeOf).join('\n') ? 'current' : 'outdated';
 }
 
 export function workingWeights(state: ProgramState): Record<string, number> {

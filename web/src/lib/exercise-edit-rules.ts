@@ -1,5 +1,6 @@
 import { type CardioInterval, type EffortInput, MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import type { HoldMeasure, LoadType } from './catalog-rules.ts';
+import { canAddBout } from './cardio-rules.ts';
 
 const STARTING_EXTERNAL_LOAD_KG = 20;
 export const STARTING_REPS = 8;
@@ -34,6 +35,14 @@ interface ExerciseOwner {
 }
 
 type SetHolder = { exercises: readonly { sets: readonly unknown[] }[] };
+
+type BoutTiming = Pick<BoutValues, 'durationS' | 'interval'>;
+
+type SetAndBoutHolder = {
+  exercises: readonly (
+    { modality: 'cardio'; sets: readonly BoutTiming[] } | { modality: 'lift' | 'hold'; sets: readonly unknown[] }
+  )[];
+};
 
 type SetOf<E> = E extends { sets: (infer S)[] } ? S : never;
 
@@ -83,6 +92,19 @@ export function roomForSets(owner: SetHolder): number {
 
 export function canAddSet(owner: SetHolder): boolean {
   return roomForSets(owner) > 0;
+}
+
+export function canAddSetTo(owner: SetAndBoutHolder, modality: ExerciseWithSets['modality']): boolean {
+  if (!canAddSet(owner)) return false;
+  if (modality !== 'cardio') return true;
+  return canAddBout(owner.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])));
+}
+
+export function addableExercises<E extends { modality: 'lift' | 'cardio' }>(
+  owner: SetAndBoutHolder,
+  exercises: readonly E[],
+): E[] {
+  return exercises.filter((exercise) => canAddSetTo(owner, exercise.modality));
 }
 
 export function updateExerciseAt<Owner extends { exercises: unknown[] }>(

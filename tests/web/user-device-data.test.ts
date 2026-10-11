@@ -74,6 +74,7 @@ afterEach(() => {
 async function writeEveryStore(userId: string): Promise<void> {
   saveCachedExercises(local, userId, [EXERCISE]);
   local.setItem(`gainscape.exercises.v1.${userId}`, JSON.stringify({ v: 1, userId, exercises: [] }));
+  local.setItem(`gainscape.exercises.v2.${userId}`, JSON.stringify({ v: 2, userId, exercises: [] }));
   saveCachedExerciseNotes(local, userId, { bench: 'Pause on the chest.' });
   saveLastSeenRelease(local, userId, '0.4.0');
   savePlateSettings(local, userId, parsePlateSettings(null));

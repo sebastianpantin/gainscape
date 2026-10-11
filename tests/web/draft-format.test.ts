@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addCardioExercise,
   addExercise,
+  addHoldExercise,
   addSet,
   addWarmupSets,
   canSwapExercise,
@@ -1081,6 +1082,22 @@ describe('set limit', () => {
   it('adds no set or bout once the workout is full', () => {
     expect(addSet(fullDraft(), 0)).toEqual(fullDraft());
     expect(addSet(fullDraft(), 1)).toEqual(fullDraft());
+  });
+
+  it('adds no bout and no cardio exercise once the bouts add up to 4 hours, but still adds a lift', () => {
+    const fourHours = workout({
+      exercises: [cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 14_400 }] })],
+    });
+    expect(addSet(fourHours, 0)).toBe(fourHours);
+    expect(addCardioExercise(fourHours, 'row', 'Rowing', cardioExercise().activity)).toBe(fourHours);
+    const withLift = addSet(addExercise(fourHours, 'press', 'Press', 'external'), 1);
+    expect(withLift.exercises[1].sets).toHaveLength(1);
+  });
+
+  it('adds no lift or hold exercise once the workout holds as many sets as the server accepts', () => {
+    const full = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION)] });
+    expect(addExercise(full, 'press', 'Press', 'external')).toBe(full);
+    expect(addHoldExercise(full, 'plank', 'Plank', 'bodyweight', 'time')).toBe(full);
   });
 
   it('adds no warm-ups that would not fit', () => {
