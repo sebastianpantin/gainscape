@@ -1,13 +1,6 @@
-import {
-  DEFAULT_ROUNDING,
-  type LiftDecl,
-  type ProgramDefinition,
-  type ProgramEnrollment,
-  type ProgressionRule,
-  type SlotDecl,
-  type UnitAmount,
-  type WeightUnit,
-} from '@domain/index.ts';
+import { DEFAULT_ROUNDING, type ProgramDefinition, type ProgramEnrollment, type WeightUnit } from '@domain/index.ts';
+import { type LiftDecl, type ProgressionRule, type SlotDecl } from '@domain/program-definition.ts';
+import { type UnitAmount } from '@domain/units.ts';
 
 const STRONGLIFTS_PROGRAM = 'https://stronglifts.com/stronglifts-5x5/workout-program/';
 const STRONGLIFTS_PROGRESS = 'https://stronglifts.com/stronglifts-5x5/progress/';

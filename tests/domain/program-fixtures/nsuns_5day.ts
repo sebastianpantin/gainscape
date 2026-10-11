@@ -1,14 +1,11 @@
 import {
   DEFAULT_ROUNDING,
-  type LiftDecl,
   type ProgramDefinition,
   type ProgramEnrollment,
-  type ProgressionRule,
-  type SetSpec,
-  type SlotDecl,
   type WeeklyPosition,
   type WeightUnit,
 } from '@domain/index.ts';
+import { type LiftDecl, type ProgressionRule, type SetSpec, type SlotDecl } from '@domain/program-definition.ts';
 
 const LIFTOSAUR_NSUNS = 'https://www.liftosaur.com/programs/nsuns';
 const FITNESS_WIKI_NSUNS = 'https://thefitness.wiki/routines/nsuns-lp/';

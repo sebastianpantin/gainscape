@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  initialProgramState,
   type PrescribedExercise,
   type PrescribedSet,
   type PrescriptionSnapshot,
   resolvePrescription,
 } from '@domain/index.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import {
   addCardioExercise,
   addExercise,

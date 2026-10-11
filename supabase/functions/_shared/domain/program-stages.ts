@@ -5,9 +5,8 @@ import {
   type StageLastFail,
   stageRetestOf,
 } from './program-definition.ts';
-import { setReference } from './program-progression.ts';
 import { type Position } from './program-schedule.ts';
-import { type ProgramState, type SetReferenceFact } from './program-state.ts';
+import { type ProgramState, type SetReferenceFact, setReference } from './program-state.ts';
 import { type WeightUnit } from './units.ts';
 
 function stageCountOf(definition: ProgramDefinition, rule: ProgressionRule): number {

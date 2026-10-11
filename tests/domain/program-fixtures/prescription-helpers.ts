@@ -3,11 +3,11 @@ import {
   type PrescribedExercise,
   type ProgramDefinition,
   type ProgramState,
-  type ReferenceState,
   type ReferenceVar,
   type ResolvedSlot,
-  type RuleKey,
 } from '@domain/index.ts';
+import { type ReferenceState } from '@domain/program-prescription.ts';
+import { type RuleKey } from '@domain/program-state.ts';
 
 export function slotOf(resolved: readonly ResolvedSlot[], slotId: string): PrescribedExercise {
   const slot = resolved.find((entry) => entry.slotId === slotId);

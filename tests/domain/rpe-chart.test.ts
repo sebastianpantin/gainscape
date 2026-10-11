@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { rpeChartPct } from '@domain/index.ts';
+import { rpeChartPct } from '@domain/rpe-chart.ts';
 
 const RPE_COLUMNS = [10, 9.5, 9, 8.5, 8, 7.5, 7];
 

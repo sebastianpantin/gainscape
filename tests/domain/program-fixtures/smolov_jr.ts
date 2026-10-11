@@ -1,12 +1,12 @@
 import {
   type CyclePosition,
   DEFAULT_ROUNDING,
-  type DayDecl,
   type ProgramDefinition,
   type ProgramEnrollment,
-  type UnitAmount,
   type WeightUnit,
 } from '@domain/index.ts';
+import { type DayDecl } from '@domain/program-definition.ts';
+import { type UnitAmount } from '@domain/units.ts';
 
 const LIFTVAULT_SMOLOV = 'https://liftvault.com/programs/powerlifting/peaking/smolov/';
 const LIFTOSAUR_SMOLOV_JR = 'https://www.liftosaur.com/programs/smolov-jr';

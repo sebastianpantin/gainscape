@@ -1,13 +1,11 @@
 import {
   type FactSet,
-  type JumpToFact,
   type Position,
   type PrescriptionSnapshot,
   type ReferenceVar,
   type SessionFact,
-  type SetReferenceFact,
-  type SkipDayFact,
 } from '@domain/index.ts';
+import { type JumpToFact, type SetReferenceFact, type SkipDayFact } from '@domain/program-state.ts';
 
 const CLOCK_START_MS = Date.parse('2026-10-05T06:00:00.000Z');
 const MINUTE_MS = 60 * 1000;

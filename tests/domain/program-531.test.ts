@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ROUNDING, initialProgramState, programStateAt, resolvePrescription } from '@domain/index.ts';
+import { DEFAULT_ROUNDING, programStateAt, resolvePrescription } from '@domain/index.ts';
+import { initialProgramState } from '@domain/program-state.ts';
 import { factClock, sessionFact, setReferenceFact } from './program-fixtures/facts.ts';
 import {
   bbbSets531,
