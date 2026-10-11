@@ -3,11 +3,18 @@ import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
+import { BOUTS_FULL_TEXT, describeBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import type { Exercise } from '../../lib/catalog-rules.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
-import { canAddSet, setCount, updateBout, updateHoldSet, updateSet } from '../../lib/exercise-edit-rules.ts';
+import {
+  addableExercises,
+  canAddSetTo,
+  setCount,
+  updateBout,
+  updateHoldSet,
+  updateSet,
+} from '../../lib/exercise-edit-rules.ts';
 import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 import {
   formatLoad,
@@ -231,10 +238,8 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const askingBodyweight = problem?.kind === 'bodyweight';
   const canSave =
     changed && !working && !askingBodyweight && editedSetCount > 0 && editedSetCount <= MAX_SETS_PER_SESSION;
-  const roomForSets = canAddSet(edit);
-  const roomForBouts = canAddBout(
-    edit.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : [])),
-  );
+  const roomForSets = canAddSetTo(edit, 'lift');
+  const roomForBouts = canAddSetTo(edit, 'cardio');
   const activeDrops = session.summary.drops ?? [];
   const editWarning = removalText(dropsAtRisk(edit, loaded.original, activeDrops), items);
   const deleteWarning = removalText(activeDrops, items);
@@ -497,18 +502,25 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
             <button
               className="button dashed"
               type="button"
-              disabled={!roomForSets || (exercise.modality === 'cardio' && !roomForBouts)}
+              disabled={!canAddSetTo(edit, exercise.modality)}
               onClick={() => setEdit(addEditSet(edit, exerciseIndex))}
             >
               {exercise.modality === 'cardio' ? '+ Add bout' : '+ Add set'}
             </button>
+            {exercise.modality === 'cardio' && roomForSets && !roomForBouts && (
+              <p className="hint">{BOUTS_FULL_TEXT}</p>
+            )}
           </section>
         ))}
         {roomForSets ? (
-          <ExercisePicker exercises={pickable} onPick={(exercise) => setEdit(addEditExercise(edit, exercise))} />
+          <ExercisePicker
+            exercises={addableExercises(edit, pickable)}
+            onPick={(exercise) => setEdit(addEditExercise(edit, exercise))}
+          />
         ) : (
           <p className="hint">A workout can hold at most {MAX_SETS_PER_SESSION} sets.</p>
         )}
+        {roomForSets && !roomForBouts && <p className="hint">Cardio exercises are not offered. {BOUTS_FULL_TEXT}</p>}
         <label className="field notes-field">
           Notes
           <textarea
