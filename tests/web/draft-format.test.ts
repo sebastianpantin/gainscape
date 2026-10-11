@@ -1083,6 +1083,16 @@ describe('set limit', () => {
     expect(addSet(fullDraft(), 1)).toEqual(fullDraft());
   });
 
+  it('adds no bout and no cardio exercise once the bouts add up to 4 hours, but still adds a lift', () => {
+    const fourHours = workout({
+      exercises: [cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 14_400 }] })],
+    });
+    expect(addSet(fourHours, 0)).toBe(fourHours);
+    expect(addCardioExercise(fourHours, 'row', 'Rowing', cardioExercise().activity)).toBe(fourHours);
+    const withLift = addSet(addExercise(fourHours, 'press', 'Press', 'external'), 1);
+    expect(withLift.exercises[1].sets).toHaveLength(1);
+  });
+
   it('adds no warm-ups that would not fit', () => {
     const draft = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 1)] });
     const warmups = [

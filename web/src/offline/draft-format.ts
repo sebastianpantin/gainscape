@@ -16,7 +16,7 @@ import { type CatalogChallenge, challengeLoadKg, parsedDraftChallenge } from '..
 import { EFFORT_LEVELS } from '../lib/effort-labels.ts';
 import {
   type BoutValues,
-  canAddSet,
+  canAddSetTo,
   defaultWeightKg,
   type HoldValues,
   nextBoutValues,
@@ -399,6 +399,7 @@ export function addCardioExercise(
   name: string,
   activity: CardioActivity,
 ): WorkoutDraft {
+  if (!canAddSetTo(draft, 'cardio')) return draft;
   const added: CardioDraftExercise = {
     clientId: crypto.randomUUID(),
     exerciseId,
@@ -434,7 +435,8 @@ export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): Work
 }
 
 export function addSet(draft: WorkoutDraft, exerciseIndex: number, firstSet?: LastLoggedSet): WorkoutDraft {
-  if (!canAddSet(draft)) return draft;
+  const target = draft.exercises[exerciseIndex];
+  if (target === undefined || !canAddSetTo(draft, target.modality)) return draft;
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio') {
       const newBout: CardioDraftSet = {

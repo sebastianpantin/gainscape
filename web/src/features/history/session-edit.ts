@@ -17,7 +17,7 @@ import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate
 import {
   BODYWEIGHT_LOAD_NOT_ZERO_CODE,
   type BoutValues,
-  canAddSet,
+  canAddSetTo,
   defaultWeightKg,
   type HoldValues,
   nextBoutValues,
@@ -244,7 +244,8 @@ export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: s
 }
 
 export function addEditSet(edit: SessionEdit, exerciseIndex: number): SessionEdit {
-  if (!canAddSet(edit)) return edit;
+  const target = edit.exercises[exerciseIndex];
+  if (target === undefined || !canAddSetTo(edit, target.modality)) return edit;
   return updateExerciseAt(edit, exerciseIndex, (exercise) => {
     if (exercise.modality === 'cardio') {
       const newBout: EditBout = { id: crypto.randomUUID(), kind: 'cardio', ...nextBoutValues(exercise.sets.at(-1)) };
@@ -281,8 +282,9 @@ function emptyExercise(exercise: NewExercise): EditExercise {
 }
 
 export function addEditExercise(edit: SessionEdit, exercise: NewExercise): SessionEdit {
-  if (!canAddSet(edit)) return edit;
-  return addEditSet({ ...edit, exercises: [...edit.exercises, emptyExercise(exercise)] }, edit.exercises.length);
+  const added = emptyExercise(exercise);
+  if (!canAddSetTo(edit, added.modality)) return edit;
+  return addEditSet({ ...edit, exercises: [...edit.exercises, added] }, edit.exercises.length);
 }
 
 export function swapEditExercise(edit: SessionEdit, exerciseIndex: number, replacement: NewExercise): SessionEdit {
