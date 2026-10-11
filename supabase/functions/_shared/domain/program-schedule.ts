@@ -139,8 +139,8 @@ function hasExactlyKeys(value: unknown, sortedKeys: readonly string[]): value is
 
 export function isPositionInSchedule(definition: ProgramDefinition, position: unknown): position is Position {
   const schedule = definition.schedule;
-  const keys = POSITION_KEYS[schedule.kind] as readonly string[] | undefined;
-  if (keys === undefined || !hasExactlyKeys(position, keys)) return false;
+  if (!Object.hasOwn(POSITION_KEYS, schedule.kind) || !hasExactlyKeys(position, POSITION_KEYS[schedule.kind]))
+    return false;
   const knownDay = typeof position.day === 'string' && dayIndexOf(definition, position.day) >= 0;
   switch (schedule.kind) {
     case 'cycle': {

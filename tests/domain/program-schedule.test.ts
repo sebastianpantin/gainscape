@@ -228,10 +228,13 @@ describe('isPositionInSchedule takes only the exact keys of the schedule kind', 
     expect(isPositionInSchedule(GZCLP, position)).toBe(accepted);
   });
 
-  it('rejects every position for a schedule kind it does not know, as SQL does', () => {
-    const unknownKind = { ...GZCLP, schedule: { ...GZCLP.schedule, kind: 'biweekly' } } as unknown as typeof GZCLP;
-    expect(isPositionInSchedule(unknownKind, { index: 0 })).toBe(false);
-  });
+  it.each(['biweekly', 'constructor', 'toString'])(
+    'rejects every position for the unknown schedule kind %s, as SQL does',
+    (kind) => {
+      const unknownKind = { ...GZCLP, schedule: { ...GZCLP.schedule, kind } } as unknown as typeof GZCLP;
+      expect(isPositionInSchedule(unknownKind, { index: 0 })).toBe(false);
+    },
+  );
 
   it.each([null, 'squat', 3, [], [0]])('rejects the non-object position %o', (position) => {
     expect(isPositionInSchedule(GZCLP, position)).toBe(false);
