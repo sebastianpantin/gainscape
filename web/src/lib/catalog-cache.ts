@@ -1,11 +1,11 @@
 import { CARDIO_EFFORT_LEVELS } from '@domain/types.ts';
 import { z } from 'zod';
 import { isNetworkError, OFFLINE_PROBLEM } from '../offline/cache-first.ts';
-import { type Exercise, LOAD_TYPES, PACE_UNITS } from './catalog-rules.ts';
+import { activeExercises, type Exercise, LOAD_TYPES, PACE_UNITS } from './catalog-rules.ts';
 
-const CACHE_VERSION = 2;
-const CACHE_KEY_PREFIX = 'gainscape.exercises.v2.';
-const PRE_CARDIO_CACHE_KEY_PREFIX = 'gainscape.exercises.v1.';
+const CACHE_VERSION = 3;
+const CACHE_KEY_PREFIX = 'gainscape.exercises.v3.';
+const RETIRED_CACHE_KEY_PREFIXES = ['gainscape.exercises.v1.', 'gainscape.exercises.v2.'];
 
 export const OFFLINE_EXERCISES_NOTICE = 'Offline: using your saved exercise list.';
 export const SAVED_EXERCISES_NOTICE = 'Using your saved exercise list.';
@@ -90,7 +90,7 @@ export function saveCachedExercises(storage: Storage, userId: string, exercises:
     exercises: exercises.map(cachedExerciseFields),
   };
   try {
-    storage.removeItem(`${PRE_CARDIO_CACHE_KEY_PREFIX}${userId}`);
+    for (const prefix of RETIRED_CACHE_KEY_PREFIXES) storage.removeItem(`${prefix}${userId}`);
     storage.setItem(exerciseCacheKey(userId), JSON.stringify(record));
   } catch {
     return;
@@ -99,7 +99,7 @@ export function saveCachedExercises(storage: Storage, userId: string, exercises:
 
 export function forgetCachedExercises(storage: Storage, userId: string): void {
   try {
-    storage.removeItem(`${PRE_CARDIO_CACHE_KEY_PREFIX}${userId}`);
+    for (const prefix of RETIRED_CACHE_KEY_PREFIXES) storage.removeItem(`${prefix}${userId}`);
     storage.removeItem(exerciseCacheKey(userId));
   } catch {
     return;
@@ -115,7 +115,7 @@ export interface ExerciseList {
 export async function loadExercisesCacheFirst(
   storage: Storage,
   userId: string,
-  fetchLive: () => Promise<Exercise[]>,
+  fetchAll: () => Promise<Exercise[]>,
   show: (list: ExerciseList) => void,
   isOffline: () => boolean = () => false,
 ): Promise<void> {
@@ -123,21 +123,21 @@ export async function loadExercisesCacheFirst(
   if (isOffline()) {
     show(
       cached
-        ? { exercises: cached, notice: OFFLINE_EXERCISES_NOTICE, problem: null }
+        ? { exercises: activeExercises(cached), notice: OFFLINE_EXERCISES_NOTICE, problem: null }
         : { exercises: [], notice: null, problem: OFFLINE_PROBLEM },
     );
     return;
   }
-  if (cached) show({ exercises: cached, notice: null, problem: null });
+  if (cached) show({ exercises: activeExercises(cached), notice: null, problem: null });
   try {
-    const live = await fetchLive();
-    saveCachedExercises(storage, userId, live);
-    show({ exercises: live, notice: null, problem: null });
+    const all = await fetchAll();
+    saveCachedExercises(storage, userId, all);
+    show({ exercises: activeExercises(all), notice: null, problem: null });
   } catch (error) {
     show(
       cached
         ? {
-            exercises: cached,
+            exercises: activeExercises(cached),
             notice: isOffline() || isNetworkError(error) ? OFFLINE_EXERCISES_NOTICE : SAVED_EXERCISES_NOTICE,
             problem: null,
           }

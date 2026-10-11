@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 import {
+  addableExercises,
   canAddSet,
+  canAddSetTo,
   defaultWeightKg,
   nextBoutValues,
   nextHoldValues,
@@ -137,6 +139,28 @@ describe('exercise edit rules', () => {
     expect(setCount(draft())).toBe(2);
     expect(roomForSets(edit())).toBe(MAX_SETS_PER_SESSION - 2);
     expect(canAddSet({ exercises: [{ sets: Array.from({ length: MAX_SETS_PER_SESSION }) }] })).toBe(false);
+  });
+
+  it('add a bout only while the bouts of the workout stay under 4 hours, and other sets regardless', () => {
+    const fourHours = updateBout(edit(), 1, 'bout-1', { durationS: 14_400 });
+    expect(canAddSetTo(edit(), 'cardio')).toBe(true);
+    expect(canAddSetTo(fourHours, 'cardio')).toBe(false);
+    expect(canAddSetTo(fourHours, 'lift')).toBe(true);
+    expect(canAddSetTo(updateBout(draft(), 1, 'bout-1', { durationS: 14_400 }), 'hold')).toBe(true);
+  });
+
+  it('offer only the exercises a set or bout can still be added to', () => {
+    const running = { id: 'run', modality: 'cardio' as const };
+    const bench = { id: 'bench', modality: 'lift' as const };
+    const fourHours = updateBout(edit(), 1, 'bout-1', { durationS: 14_400 });
+    expect(addableExercises(edit(), [running, bench])).toEqual([running, bench]);
+    expect(addableExercises(fourHours, [running, bench])).toEqual([bench]);
+  });
+
+  it('add nothing of any kind once the workout holds the most sets the server accepts', () => {
+    const full = { exercises: [{ modality: 'lift' as const, sets: Array.from({ length: MAX_SETS_PER_SESSION }) }] };
+    expect(canAddSetTo(full, 'lift')).toBe(false);
+    expect(canAddSetTo(full, 'cardio')).toBe(false);
   });
 
   it('zero every load once an exercise becomes bodyweight and keep loads otherwise', () => {

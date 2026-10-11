@@ -32,9 +32,9 @@ export const collectionCache = userCache<SavedCollection>(
 );
 
 export function savedExerciseList(storage: Storage | null, userId: string): Exercise[] | null {
-  const fullList = collectionCache.read(storage, userId)?.exercises ?? null;
-  const activeList = storage && readCachedExercises(storage, userId);
-  if (!fullList || !activeList) return activeList ?? fullList;
-  const activeIds = new Set(activeList.map((exercise) => exercise.id));
-  return [...activeList, ...fullList.filter((exercise) => !activeIds.has(exercise.id))];
+  const collectionList = collectionCache.read(storage, userId)?.exercises ?? null;
+  const exerciseList = storage && readCachedExercises(storage, userId);
+  if (!collectionList || !exerciseList) return exerciseList ?? collectionList;
+  const savedIds = new Set(exerciseList.map((exercise) => exercise.id));
+  return [...exerciseList, ...collectionList.filter((exercise) => !savedIds.has(exercise.id))];
 }
