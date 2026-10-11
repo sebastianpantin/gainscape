@@ -4,6 +4,7 @@ import {
   bundleLeaks,
   changelogProblem,
   childEnvironment,
+  databaseDeployCommands,
   deployFileProblem,
   directCommitsProblem,
   gitleaksAsset,
@@ -272,5 +273,18 @@ describe('direct commits gate', () => {
         'Merge PRs with a merge commit or a squash that keeps the (#N) subject, so the gate can see them.',
       ].join('\n'),
     );
+  });
+});
+
+describe('database deploy commands', () => {
+  const commands = databaseDeployCommands();
+
+  it('previews and pushes only the migrations, because db push skips a seed whose hash changed', () => {
+    expect(commands.preview).toEqual(['db', 'push', '--dry-run']);
+    expect(commands.migrations).toEqual(['db', 'push']);
+  });
+
+  it('runs the whole seed against the linked project on every deploy', () => {
+    expect(commands.seed).toEqual(['db', 'query', '--linked', '--file', 'supabase/seed.sql']);
   });
 });
