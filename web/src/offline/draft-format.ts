@@ -381,6 +381,7 @@ export function withSessionRpe(draft: WorkoutDraft, sessionRpe: number | null): 
 }
 
 export function addExercise(draft: WorkoutDraft, exerciseId: string, name: string, loadType: LoadType): WorkoutDraft {
+  if (!canAddSetTo(draft, 'lift')) return draft;
   const added: LiftDraftExercise = {
     clientId: crypto.randomUUID(),
     exerciseId,
@@ -418,6 +419,7 @@ export function addHoldExercise(
   loadType: LoadType,
   measure: HoldMeasure,
 ): WorkoutDraft {
+  if (!canAddSetTo(draft, 'hold')) return draft;
   const added: HoldDraftExercise = {
     clientId: crypto.randomUUID(),
     exerciseId,

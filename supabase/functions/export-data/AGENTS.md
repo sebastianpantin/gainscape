@@ -32,7 +32,7 @@ Challenge semantics since version 6:
 
 ### Working In This Directory
 
-- Adding a user-owned table means adding it to the export (`tests/integration/export-coverage.test.ts` fails until every `public` table with a `user_id` or `owner_user_id` column maps to a section or has a reason in `NOT_EXPORTED_USER_TABLES`) and bumping the format version if the shape changes. A new top-level key goes in `EXPORT_SECTIONS`; `tests/deploy/export-format.test.ts` pins the key list per version, so add the new version's list there and bump `EXPORT_FORMAT_VERSION`.
+- Adding a user-owned table means adding it to the export (`tests/integration/export-coverage.test.ts` fails until every `public` table with a `user_id` or `owner_user_id` column or a foreign key to `profiles` maps to a section or has a reason in `NOT_EXPORTED_USER_TABLES`, and every table owned through a foreign key to one of those maps in `SECTION_OF_CHILD_TABLE` or has a reason in `NOT_EXPORTED_CHILD_TABLES`) and bumping the format version if the shape changes. A new top-level key goes in `EXPORT_SECTIONS`; `tests/deploy/export-format.test.ts` pins the key list per version, so add the new version's list there and bump `EXPORT_FORMAT_VERSION`.
 - Always scope queries by `user_id`.
 
 ### Testing Requirements

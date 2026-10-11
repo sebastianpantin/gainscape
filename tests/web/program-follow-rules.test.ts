@@ -233,6 +233,18 @@ describe('follow status when an exercise has no added weight', () => {
   });
 });
 
+describe('follow status before the exercise list has loaded', () => {
+  it('is undecided for a followed program, even one whose snapshot differs', () => {
+    const renamed = { ...followedDoc(), name: 'My 5x5 v2' };
+    expect(followStatus(renamed, enrollmentRow(), TEMPLATES, null)).toBe('undecided');
+    expect(followStatus(followedDoc(), enrollmentRow(), TEMPLATES, null)).toBe('undecided');
+  });
+
+  it('is still not following when the program is not followed', () => {
+    expect(followStatus(followedDoc(), null, TEMPLATES, null)).toBe('not_following');
+  });
+});
+
 describe('a cached enrollment in a program', () => {
   it('is in the program when it was started from its published key, ended or not', () => {
     expect(isEnrolledIn(PROGRAM_ID, enrollmentRow())).toBe(true);

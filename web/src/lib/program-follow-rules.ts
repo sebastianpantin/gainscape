@@ -4,7 +4,7 @@ import { type LoadType } from './catalog-rules.ts';
 import { type EnrollmentRow } from './program-facts-rules.ts';
 import type { ProgramDoc } from './programs.ts';
 
-export type FollowStatus = 'not_following' | 'current' | 'outdated';
+export type FollowStatus = 'not_following' | 'undecided' | 'current' | 'outdated';
 
 export interface CarriedFollow {
   unit: WeightUnit;
@@ -100,9 +100,10 @@ export function followStatus(
   program: ProgramDoc,
   enrollment: EnrollmentRow | null,
   templates: readonly ProgramTemplateRow[],
-  loadTypeOf: LoadTypeOf,
+  loadTypeOf: LoadTypeOf | null,
 ): FollowStatus {
   if (!isFollowing(program.id, enrollment)) return 'not_following';
+  if (loadTypeOf === null) return 'undecided';
   const template = enrolledTemplate(templates, enrollment);
   const parsed = template ? parseProgramDefinition(template.definition) : null;
   if (parsed?.kind !== 'ok') return 'current';

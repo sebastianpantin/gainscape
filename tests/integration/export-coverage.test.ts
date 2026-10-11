@@ -16,6 +16,7 @@ const SECTION_OF_USER_TABLE: Record<string, string> = {
   exercise_maxes: 'exerciseMaxes',
   exercise_notes: 'exerciseNotes',
   exercises: 'customExercises',
+  friendships: 'friendships',
   item_ledger: 'itemLedger',
   loot_rolls: 'lootRolls',
   pinned_exercises: 'pinnedExercises',
@@ -36,30 +37,81 @@ const SECTION_OF_USER_TABLE: Record<string, string> = {
 
 const NOT_EXPORTED_USER_TABLES: Record<string, string> = {};
 
+const SECTION_OF_CHILD_TABLE: Record<string, string> = {
+  exercise_skills: 'customExercises',
+  program_day_exercises: 'programs',
+  program_days: 'programs',
+  program_enrollment_events: 'programEnrollmentEvents',
+};
+
+const NOT_EXPORTED_CHILD_TABLES: Record<string, string> = {};
+
 afterAll(async () => {
   await db.end();
 });
 
 async function publicTablesOwnedByAUser(): Promise<string[]> {
   const rows = await db`
-    select distinct table_name::text as table_name
+    select table_name::text as table_name
     from information_schema.columns
     where table_schema = 'public' and column_name in ('user_id', 'owner_user_id')
+    union
+    select c.conrelid::regclass::text
+    from pg_constraint c
+    where c.contype = 'f' and c.connamespace = 'public'::regnamespace and c.confrelid = 'public.profiles'::regclass
     order by 1`;
   return rows.map((row) => row.table_name as string);
 }
 
+async function publicForeignKeys(): Promise<{ child: string; parent: string }[]> {
+  const rows = await db`
+    select distinct c.conrelid::regclass::text as child, c.confrelid::regclass::text as parent
+    from pg_constraint c
+    where c.contype = 'f' and c.connamespace = 'public'::regnamespace and c.conrelid <> c.confrelid`;
+  return rows.map((row) => ({ child: row.child as string, parent: row.parent as string }));
+}
+
+function tablesOwnedThroughAParent(owned: readonly string[], foreignKeys: { child: string; parent: string }[]) {
+  const reached = new Set(owned);
+  const children = new Set<string>();
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const { child, parent } of foreignKeys)
+      if (reached.has(parent) && !reached.has(child)) {
+        reached.add(child);
+        children.add(child);
+        grew = true;
+      }
+  }
+  return [...children].sort();
+}
+
+function isExportSection(section: string | undefined): boolean {
+  return (EXPORT_SECTIONS as readonly string[]).includes(section ?? '');
+}
+
 describe('export-data coverage', () => {
-  it('exports every public table that has a user_id or owner_user_id column, or names why not', async () => {
+  it('exports every public table owned by a user column or a foreign key to profiles, or names why not', async () => {
     const tables = await publicTablesOwnedByAUser();
     const uncovered = tables.filter(
-      (table) =>
-        !(table in NOT_EXPORTED_USER_TABLES) &&
-        !(EXPORT_SECTIONS as readonly string[]).includes(SECTION_OF_USER_TABLE[table] ?? ''),
+      (table) => !(table in NOT_EXPORTED_USER_TABLES) && !isExportSection(SECTION_OF_USER_TABLE[table]),
     );
     expect(uncovered).toEqual([]);
     const stale = [...Object.keys(SECTION_OF_USER_TABLE), ...Object.keys(NOT_EXPORTED_USER_TABLES)].filter(
       (table) => !tables.includes(table),
+    );
+    expect(stale).toEqual([]);
+  });
+
+  it('exports every table owned through a foreign key to a user-owned table, or names why not', async () => {
+    const children = tablesOwnedThroughAParent(await publicTablesOwnedByAUser(), await publicForeignKeys());
+    const uncovered = children.filter(
+      (table) => !(table in NOT_EXPORTED_CHILD_TABLES) && !isExportSection(SECTION_OF_CHILD_TABLE[table]),
+    );
+    expect(uncovered).toEqual([]);
+    const stale = [...Object.keys(SECTION_OF_CHILD_TABLE), ...Object.keys(NOT_EXPORTED_CHILD_TABLES)].filter(
+      (table) => !children.includes(table),
     );
     expect(stale).toEqual([]);
   });
