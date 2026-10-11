@@ -283,7 +283,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     void loadExercisesCacheFirst(
       localStorage,
       userId,
-      () => fetchExercises({ includeArchived: false, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
+      () => fetchExercises({ includeArchived: true, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
       (list) => {
         if (!active) return;
         setExercises(list.exercises);

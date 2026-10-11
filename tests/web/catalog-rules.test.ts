@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activeExercises,
   type Exercise,
   exerciseLabels,
   type ExerciseRow,
@@ -125,6 +126,15 @@ describe('toExercise', () => {
   it('defaults a cardio activity to per-km pace and a max effort ceiling', () => {
     const exercise = toExercise(row({ modality: 'cardio', load_type: null }));
     expect(exercise).toMatchObject({ activity: { paceUnit: 'per_km', maxEffort: 'max', referencePaceSPerKm: null } });
+  });
+});
+
+describe('activeExercises', () => {
+  it('keeps the exercises that are not archived, in order', () => {
+    const bench = toExercise(row({}));
+    const archivedRow = toExercise(row({ id: 'old-row', name: 'Old Row', archived_at: '2026-10-01T00:00:00Z' }));
+    const squat = toExercise(row({ id: 'squat', name: 'Back Squat' }));
+    expect(activeExercises([bench, archivedRow, squat])).toEqual([bench, squat]);
   });
 });
 
