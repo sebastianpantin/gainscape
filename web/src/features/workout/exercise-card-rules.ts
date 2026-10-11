@@ -33,7 +33,7 @@ export const EXERCISE_MENU_LABELS: Readonly<Record<ExerciseMenuChoice, string>> 
 };
 
 export function liftEquipment(exercises: readonly Exercise[]): LiftEquipment {
-  const lifts = exercises.filter(isLiftExercise);
+  const lifts = exercises.filter(isLiftExercise).filter((exercise) => exercise.measure === undefined);
   return {
     barbellIds: new Set(
       lifts

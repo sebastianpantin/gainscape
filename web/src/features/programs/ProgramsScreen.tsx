@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
@@ -8,13 +9,13 @@ import {
   loadProgramsCacheFirst,
   ownPrograms,
   type Program,
-  publishProgram,
   templates,
 } from '../../lib/programs.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
 import { forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
 import { followStatus, isEnrolledIn } from '../../lib/program-follow-rules.ts';
+import { publishForEnroll } from '../../lib/queries.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
@@ -36,6 +37,7 @@ function daySummary(program: Program): string {
 }
 
 export function ProgramsScreen({ userId }: ProgramsScreenProps) {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [programs, setPrograms] = useState<Program[] | null>(() => cachedPrograms(userId));
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
     setBusy(true);
     setProblem(null);
     try {
-      const { key } = await publishProgram(program.id);
+      const { key } = await publishForEnroll(queryClient, userId, program.id);
       navigate(`/programs/enroll/${key}`);
     } catch (error) {
       setProblem(programErrorText(error));

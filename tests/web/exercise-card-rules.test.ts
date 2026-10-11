@@ -73,6 +73,12 @@ describe('liftEquipment', () => {
     expect(isBarbellLift(lift('squat', [], { loadType: 'bodyweight_plus' }), equipment)).toBe(false);
     expect(isBarbellLift(lift('curl', []), equipment)).toBe(false);
   });
+
+  it('leaves hold exercises out of the barbell and compound lifts', () => {
+    const equipment = liftEquipment([catalogLift('plate_pinch', { compound: true, measure: 'time' })]);
+    expect([...equipment.barbellIds]).toEqual([]);
+    expect([...equipment.compoundIds]).toEqual([]);
+  });
 });
 
 describe('exerciseMenuChoices', () => {

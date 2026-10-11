@@ -7,7 +7,7 @@ const domainFiles = readdirSync(domainDir).filter((file) => file.endsWith('.ts')
 const importSpecifier = /(?:(?:import|export)[^'"]*from\s+|import\s*\(?\s*)['"]([^'"]+)['"]/g;
 const runtimeSpecificGlobals = /\b(Deno|process|window|document|localStorage|require)\b\s*[.(]/;
 
-const siblingImport = /^(?:import|export)\s+(type\s+)?([^'"]*?)\s*from\s+'\.\/([\w-]+\.ts)'/gm;
+const siblingImport = /^(?:import|export)\s+(type\s+)?([^'"]*?)\s*from\s+['"]\.\/([\w-]+\.ts)['"]/gm;
 
 interface SiblingImport {
   file: string;
