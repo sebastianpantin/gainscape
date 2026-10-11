@@ -1,10 +1,11 @@
 import { type ExerciseStrength, REP_MAX_SLOT_COUNT, type StrengthState } from '@domain/index.ts';
-import { isRecord } from '@domain/types.ts';
+import { CARDIO_RECORD_KINDS, type CardioRecordKind, isRecord } from '@domain/types.ts';
 import { parsedJson } from './json-rules.ts';
 
 export interface RecordBaseline {
   repMaxKg: Readonly<Record<string, readonly (number | null)[]>>;
   maxReps: Readonly<Record<string, number>>;
+  cardioBest?: Readonly<Record<string, Partial<Record<CardioRecordKind, number>>>>;
 }
 
 export interface SessionBaseline {
@@ -16,11 +17,13 @@ export interface SessionBaseline {
 export const RECORD_BASELINE_COLUMNS = {
   repMaxes: 'exercise_id, reps, load_kg',
   bodyweightRecords: 'exercise_id, max_reps',
+  cardioRecords: 'exercise_id, kind, value',
 } as const;
 
 export interface RecordBaselineRows {
   repMaxes: readonly { exercise_id: string; reps: number; load_kg: number | string }[];
   bodyweightRecords: readonly { exercise_id: string; max_reps: number }[];
+  cardioRecords: readonly { exercise_id: string; kind: CardioRecordKind; value: number | string }[];
 }
 
 export function recordBaselineFrom(rows: RecordBaselineRows): RecordBaseline {
@@ -29,9 +32,14 @@ export function recordBaselineFrom(rows: RecordBaselineRows): RecordBaseline {
     const slots = (repMaxKg[row.exercise_id] ??= Array.from({ length: REP_MAX_SLOT_COUNT }, () => null));
     slots[row.reps - 1] = Number(row.load_kg);
   }
+  const cardioBest: Record<string, Partial<Record<CardioRecordKind, number>>> = {};
+  for (const row of rows.cardioRecords) {
+    cardioBest[row.exercise_id] = { ...cardioBest[row.exercise_id], [row.kind]: Number(row.value) };
+  }
   return {
     repMaxKg,
     maxReps: Object.fromEntries(rows.bodyweightRecords.map((row) => [row.exercise_id, row.max_reps])),
+    cardioBest,
   };
 }
 
@@ -59,11 +67,23 @@ function isSlots(value: unknown): value is (number | null)[] {
   return Array.isArray(value) && value.length === REP_MAX_SLOT_COUNT && value.every(isNullableNumber);
 }
 
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number';
+}
+
+function isBestByKind(value: unknown): value is Partial<Record<CardioRecordKind, number>> {
+  return (
+    isRecordOf(value, isNumber) &&
+    Object.keys(value).every((kind) => CARDIO_RECORD_KINDS.some((known) => known === kind))
+  );
+}
+
 function isRecordBaseline(value: unknown): value is RecordBaseline {
   return (
     isRecord(value) &&
     isRecordOf(value.repMaxKg, isSlots) &&
-    isRecordOf(value.maxReps, (entry): entry is number => typeof entry === 'number')
+    isRecordOf(value.maxReps, isNumber) &&
+    (value.cardioBest === undefined || isRecordOf(value.cardioBest, isBestByKind))
   );
 }
 

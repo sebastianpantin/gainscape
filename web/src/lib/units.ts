@@ -78,6 +78,8 @@ const PACE_DISTANCE: Record<DistanceUnit, { units: number; label: string }> = {
 };
 const STORED_DISTANCE_DECIMALS = 1;
 
+export const HOLD_DISTANCE_UNIT: DistanceUnit = 'm';
+
 export function distanceUnitFor(unit: UnitPref, paceUnit: PaceUnit): DistanceUnit {
   if (paceUnit === 'per_100m') return unit === 'kg' ? 'm' : 'yd';
   return unit === 'kg' ? 'km' : 'mi';

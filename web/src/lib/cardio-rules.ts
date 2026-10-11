@@ -14,10 +14,17 @@ import {
   type CardioRecordKind,
   type EffortInput,
 } from '@domain/types.ts';
-import type { CardioExercise } from './catalog-rules.ts';
+import type { CardioExercise, LiftExercise } from './catalog-rules.ts';
 import type { UnitPref } from './profile-rules.ts';
 import type { BoutValues } from '../offline/draft-format.ts';
-import { type DistanceUnit, distanceUnitFor, formatDistance, formatPace, unitToDistanceM } from './units.ts';
+import {
+  type DistanceUnit,
+  distanceUnitFor,
+  formatDistance,
+  formatPace,
+  HOLD_DISTANCE_UNIT,
+  unitToDistanceM,
+} from './units.ts';
 
 export type BoutMode = 'steady' | 'intervals';
 
@@ -154,6 +161,25 @@ export function cardioRecordCards(
         return row ? [`${RECORD_LABELS[kind]} ${formatCardioRecord(kind, row.value, unit)}`] : [];
       });
       return lines.length === 0 ? [] : [{ exerciseId: exercise.id, name: exercise.name, lines }];
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const HOLD_RECORD_KINDS = { time: 'duration', distance: 'distance' } as const;
+const HOLD_RECORD_LABELS = { time: 'Longest', distance: 'Farthest' } as const;
+
+export function holdRecordCards(
+  rows: readonly CardioRecordRow[],
+  exercises: readonly Pick<LiftExercise, 'id' | 'name' | 'measure'>[],
+): CardioRecordCard[] {
+  return exercises
+    .flatMap((exercise): CardioRecordCard[] => {
+      if (exercise.measure === undefined) return [];
+      const kind = HOLD_RECORD_KINDS[exercise.measure];
+      const row = rows.find((candidate) => candidate.exerciseId === exercise.id && candidate.kind === kind);
+      if (!row) return [];
+      const line = `${HOLD_RECORD_LABELS[exercise.measure]} ${formatCardioRecord(kind, row.value, HOLD_DISTANCE_UNIT)}`;
+      return [{ exerciseId: exercise.id, name: exercise.name, lines: [line] }];
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 }

@@ -6,7 +6,8 @@ export type EffortLevel = 'easy' | 'hard' | 'near_failure' | 'failure';
 export type EffortInputType = 'level' | 'rir' | 'rpe' | 'cardio';
 export type CardioEffortLevel = 'easy' | 'moderate' | 'hard' | 'max';
 export const CARDIO_EFFORT_LEVELS: readonly CardioEffortLevel[] = Object.freeze(['easy', 'moderate', 'hard', 'max']);
-export type SetKind = 'lift' | 'cardio';
+export type SetKind = 'lift' | 'cardio' | 'hold';
+export type ExerciseMeasure = 'reps' | 'time' | 'distance';
 export type RirSource = 'logged' | 'estimated' | 'cold_start' | 'default';
 
 export type EffortInput =
@@ -37,6 +38,7 @@ interface ExerciseBase {
 export interface LiftExerciseDef extends ExerciseBase {
   modality?: 'lift';
   loadType: LoadType;
+  measure?: ExerciseMeasure;
 }
 
 export type PaceUnit = 'per_km' | 'per_100m';
@@ -46,6 +48,7 @@ export interface CardioProfile {
   referencePaceSPerKm: number | null;
   maxEffort: CardioEffortLevel;
   recordMinDistanceM: number | null;
+  tracksDistance: boolean;
 }
 
 export interface CardioExerciseDef extends ExerciseBase {
@@ -89,7 +92,24 @@ export interface CardioSetInput {
   effort: EffortInput;
 }
 
-export type SetInput = LiftSetInput | CardioSetInput;
+export interface HoldSetInput {
+  kind: 'hold';
+  id: string;
+  exerciseId: string;
+  position: number;
+  weightKg: number;
+  durationS: number | null;
+  distanceM: number | null;
+  effort: EffortInput;
+  recordedEffectiveLoadKg?: number;
+}
+
+export const HOLD_BOUNDS = Object.freeze({
+  durationS: Object.freeze({ min: 1, max: 3600 }),
+  distanceM: Object.freeze({ min: 1, max: 10_000 }),
+});
+
+export type SetInput = LiftSetInput | CardioSetInput | HoldSetInput;
 
 export function measuresRepsCapacity(loadType: LoadType): boolean {
   return loadType === 'bodyweight';
@@ -100,7 +120,15 @@ export function setKind(set: Pick<SetInput, 'kind'>): SetKind {
 }
 
 export function isLiftSet(set: SetInput): set is LiftSetInput {
-  return set.kind !== 'cardio';
+  return set.kind === undefined || set.kind === 'lift';
+}
+
+export function isHoldSet(set: SetInput): set is HoldSetInput {
+  return set.kind === 'hold';
+}
+
+export function measureOf(exercise: Pick<LiftExerciseDef, 'measure'>): ExerciseMeasure {
+  return exercise.measure ?? 'reps';
 }
 
 export interface SessionInput {
@@ -215,6 +243,7 @@ export interface SetResult {
   xp: number;
   skillXp: SkillXp[];
   cardio: CardioSetResult | null;
+  holdRecords?: CardioRecordGain[];
 }
 
 export interface LiftSetResult extends SetResult {
@@ -223,6 +252,14 @@ export interface LiftSetResult extends SetResult {
 
 export function isLiftResult(result: SetResult): result is LiftSetResult {
   return isLiftSet(result.set);
+}
+
+export interface HoldSetResult extends SetResult {
+  set: HoldSetInput;
+}
+
+export function isHoldResult(result: SetResult): result is HoldSetResult {
+  return isHoldSet(result.set);
 }
 
 export type SetPersonalRecord =

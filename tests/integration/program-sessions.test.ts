@@ -825,22 +825,24 @@ describe('edit-session of an unlinked session', () => {
 describe('complete-session following a custom program snapshot', () => {
   const START_KG = 100;
 
-  async function followSquatFiveByFive(user: TestUser): Promise<{ enrollmentId: string; liftKey: string }> {
-    const squatId = exerciseIds.back_squat;
+  async function followFiveByFive(
+    user: TestUser,
+    liftId = exerciseIds.back_squat,
+  ): Promise<{ enrollmentId: string; liftKey: string }> {
     const programId = await savedProgram(user, {
       id: randomUUID(),
-      name: 'Squat 5x5',
-      days: [plannedDay('Squat day', [linearFiveByFive(squatId)])],
+      name: '5x5',
+      days: [plannedDay('Lift day', [linearFiveByFive(liftId)])],
     });
     const template = await publishedProgram(user, programId);
-    const liftKey = customLiftKey(squatId);
+    const liftKey = customLiftKey(liftId);
     const result = await user.client.rpc('enroll_program', {
       enrollment: {
         templateKey: template.key,
         templateVersion: template.version,
         unit: 'kg',
         options: {},
-        bindings: { [liftKey]: squatId },
+        bindings: { [liftKey]: liftId },
         inputs: { [liftKey]: { workingWeight: START_KG } },
         rounding: { increment: 2.5, mode: 'nearest', barWeight: 20 },
       },
@@ -880,7 +882,7 @@ describe('complete-session following a custom program snapshot', () => {
 
   it('moves the working weight up by the increment after a met 5x5 and holds it after a miss', async () => {
     const user = await createTestUser();
-    const { enrollmentId, liftKey } = await followSquatFiveByFive(user);
+    const { enrollmentId, liftKey } = await followFiveByFive(user);
     expect(await workingWeightOf(user, enrollmentId, liftKey)).toBe(START_KG);
 
     await completeLinked(user, enrollmentId, 0, fiveByFive(START_KG));
@@ -898,7 +900,7 @@ describe('complete-session following a custom program snapshot', () => {
   it('awards the same XP, levels, derived set columns and loot rolls as the same sets with no program', async () => {
     const freestyle = await createTestUser();
     const follower = await createTestUser();
-    const { enrollmentId } = await followSquatFiveByFive(follower);
+    const { enrollmentId } = await followFiveByFive(follower);
     const startedAt = hoursAgo(1);
     const sets = fiveByFive(START_KG);
     const unlinked = await postCompleteSession(
@@ -929,5 +931,21 @@ describe('complete-session following a custom program snapshot', () => {
     const [linkedRolls, unlinkedRolls] = await Promise.all([lootRollsBySet(follower.id), lootRollsBySet(freestyle.id)]);
     expect(linkedRolls.length).toBeGreaterThan(0);
     expect(linkedRolls).toEqual(unlinkedRolls);
+  });
+
+  it('awards Grip XP for a deadlift planned in your own program, from its grip share', async () => {
+    const user = await createTestUser();
+    const { enrollmentId } = await followFiveByFive(user, exerciseIds.deadlift);
+    const deadliftSets = fiveByFive(START_KG).map((set) => ({ ...set, exerciseId: exerciseIds.deadlift }));
+    const response = await postCompleteSession(
+      user.accessToken,
+      linkedPayload(deadliftSets, { enrollmentId, position: { index: 0 } }),
+    );
+
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.programLinked).toBe(true);
+    const xpBySkill = response.body.xpBySkill ?? {};
+    expect(xpBySkill.grip).toBeGreaterThan(0);
+    expect(xpBySkill.grip).toBeLessThan(xpBySkill.back);
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  mixedSoloShareText,
   percentsFromShares,
   sharesToSave,
   shareTotal,
@@ -35,6 +36,29 @@ describe('sharesToSave', () => {
   it('keeps the stored shares of a locked exercise even when they are not whole percents', () => {
     const form = { skillIds, percents: percentsFromShares(storedShares), locked: true, storedShares };
     expect(sharesToSave(form)).toEqual(storedShares);
+  });
+});
+
+describe('a skill that trains alone', () => {
+  const cardioSkills = ['endurance', 'agility', 'mobility'];
+  const form = (percents: Record<string, string>) => ({
+    skillIds: cardioSkills,
+    percents,
+    locked: false,
+    storedShares: [],
+    soloSkills: [{ id: 'mobility', name: 'Mobility' }],
+  });
+
+  it('refuses Mobility shared with another skill and says why', () => {
+    const mixed = form({ endurance: '50', mobility: '50' });
+    expect(sharesToSave(mixed)).toBeNull();
+    expect(mixedSoloShareText(mixed)).toBe('Mobility trains alone: give it 100% or leave it out.');
+  });
+
+  it('accepts Mobility alone and other skills without it', () => {
+    expect(sharesToSave(form({ mobility: '100' }))).toEqual([{ skillId: 'mobility', shareBp: 10000 }]);
+    expect(sharesToSave(form({ endurance: '50', agility: '50', mobility: '' }))).toHaveLength(2);
+    expect(mixedSoloShareText(form({ mobility: '100' }))).toBeNull();
   });
 });
 

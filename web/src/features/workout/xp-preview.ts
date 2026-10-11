@@ -7,6 +7,8 @@ import {
   effectiveLoadForNewSet,
   type ExerciseDef,
   FULL_SHARE_BASIS_POINTS,
+  HOLD_BOUNDS,
+  type HoldSetInput,
   type LiftExerciseDef,
   type LiftSetInput,
   processSession,
@@ -23,6 +25,8 @@ import type {
   CardioDraftSet,
   DraftExercise,
   DraftSet,
+  HoldDraftExercise,
+  HoldDraftSet,
   LiftDraftExercise,
 } from '../../offline/draft-format.ts';
 
@@ -58,7 +62,11 @@ function hasValidEffort(set: DraftSet, cfg: BalanceConfig): boolean {
   }
 }
 
-function previewLoadKg(set: DraftSet, exercise: LiftExerciseDef, bodyweightKg: number | null): number | null {
+function previewLoadKg(
+  set: Pick<DraftSet, 'weightKg'>,
+  exercise: LiftExerciseDef,
+  bodyweightKg: number | null,
+): number | null {
   const knownBodyweightKg =
     exercise.loadType === 'bodyweight' ? (bodyweightKg ?? REPS_MODEL_PLACEHOLDER_BODYWEIGHT_KG) : bodyweightKg;
   try {
@@ -98,12 +106,51 @@ function previewBout(bout: CardioDraftSet, exerciseId: string, position: number)
   return { kind: 'cardio', id, exerciseId, position, durationS, distanceM, interval, effort };
 }
 
-function liftDefinition(exercise: LiftDraftExercise, builtIn: boolean): LiftExerciseDef {
+function liftDefinition(exercise: LiftDraftExercise | HoldDraftExercise, builtIn: boolean): LiftExerciseDef {
   return {
     id: exercise.exerciseId,
     loadType: exercise.loadType,
+    ...(exercise.modality === 'hold' ? { measure: exercise.measure } : {}),
     builtIn,
     shares: [{ skillId: PREVIEW_SKILL_ID, shareBasisPoints: FULL_SHARE_BASIS_POINTS }],
+  };
+}
+
+function isWithin(value: number | null, bounds: { min: number; max: number }): boolean {
+  return value !== null && Number.isFinite(value) && value >= bounds.min && value <= bounds.max;
+}
+
+function previewHold(
+  set: HoldDraftSet,
+  exercise: LiftExerciseDef,
+  position: number,
+  bodyweightKg: number | null,
+  cfg: BalanceConfig,
+): HoldSetInput | null {
+  if (!Number.isFinite(set.weightKg) || set.weightKg < 0) return null;
+  const measured =
+    exercise.measure === 'time'
+      ? isWithin(set.durationS, HOLD_BOUNDS.durationS)
+      : isWithin(set.distanceM, HOLD_BOUNDS.distanceM);
+  if (!measured) return null;
+  try {
+    resolveEffort(set.effort, cfg, 'hold');
+  } catch {
+    return null;
+  }
+  const effectiveLoadKg = previewLoadKg(set, exercise, bodyweightKg);
+  if (effectiveLoadKg === null) return null;
+  const { id, weightKg, durationS, distanceM, effort } = set;
+  return {
+    kind: 'hold',
+    id,
+    exerciseId: exercise.id,
+    position,
+    weightKg,
+    durationS: exercise.measure === 'time' ? durationS : null,
+    distanceM: exercise.measure === 'distance' ? distanceM : null,
+    effort,
+    recordedEffectiveLoadKg: effectiveLoadKg,
   };
 }
 
@@ -118,12 +165,13 @@ function cardioDefinition({ exerciseId, activity }: CardioDraftExercise, builtIn
       referencePaceSPerKm: activity.referencePaceSPerKm,
       maxEffort: activity.maxEffort,
       recordMinDistanceM: null,
+      tracksDistance: activity.tracksDistance,
     },
   };
 }
 
 function previewDefinition(exercise: DraftExercise, builtIn: boolean): ExerciseDef {
-  return exercise.modality === 'lift' ? liftDefinition(exercise, builtIn) : cardioDefinition(exercise, builtIn);
+  return exercise.modality === 'cardio' ? cardioDefinition(exercise, builtIn) : liftDefinition(exercise, builtIn);
 }
 
 function previewSkills(exercises: readonly DraftExercise[]): SkillDef[] {
@@ -161,6 +209,15 @@ function placeSets(
     position += exercise.sets.length;
     if (exercise.modality === 'cardio') return placeCardio(exercise, firstPosition);
     const definition = liftDefinition(exercise, isBuiltIn(exercise.exerciseId));
+    if (exercise.modality === 'hold') {
+      return exercise.sets.map((set, index): PlacedSet => ({
+        input: previewHold(set, definition, firstPosition + index, bodyweightKg, cfg),
+        done: set.done,
+        warmup: false,
+        unrated: false,
+        hasPriorSession: false,
+      }));
+    }
     return exercise.sets.map((set, index): PlacedSet => ({
       input: previewInput(set, definition, firstPosition + index, bodyweightKg, cfg),
       done: set.done,
@@ -172,7 +229,7 @@ function placeSets(
 }
 
 function toPreview(result: SetResult, hasPriorSession: boolean): SetPreview {
-  if (result.cardio !== null) return { xp: result.xp, basis: 'logged', rir: null };
+  if (result.cardio !== null || result.set.kind === 'hold') return { xp: result.xp, basis: 'logged', rir: null };
   if (result.rirSource === 'logged') return { xp: result.xp, basis: 'logged', rir: result.rir };
   if (result.rirSource === 'estimated') return { xp: result.xp, basis: 'estimated', rir: result.rir };
   return { xp: result.xp, basis: hasPriorSession ? 'unrated' : 'cold_start', rir: null };

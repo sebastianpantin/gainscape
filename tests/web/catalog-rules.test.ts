@@ -21,6 +21,7 @@ function row(overrides: Partial<ExerciseRow>): ExerciseRow {
     reference_pace_s_per_km: null,
     pace_unit: null,
     max_effort: null,
+    tracks_distance: true,
     exercise_skills: [],
     ...overrides,
   };
@@ -101,6 +102,7 @@ describe('toExercise', () => {
         paceUnit: 'per_km',
         referencePaceSPerKm: 330,
         maxEffort: 'hard',
+        tracksDistance: true,
         shares: [
           { skillKey: 'endurance', shareBasisPoints: 3000 },
           { skillKey: 'legs', shareBasisPoints: 7000 },
@@ -111,6 +113,13 @@ describe('toExercise', () => {
         { skillKey: 'endurance', skillName: 'Endurance', shareBasisPoints: 3000 },
       ],
     });
+  });
+
+  it('maps an activity that tracks no distance', () => {
+    const exercise = toExercise(
+      row({ modality: 'cardio', load_type: null, max_effort: 'moderate', tracks_distance: false }),
+    );
+    expect(exercise).toMatchObject({ modality: 'cardio', activity: { tracksDistance: false } });
   });
 
   it('defaults a cardio activity to per-km pace and a max effort ceiling', () => {

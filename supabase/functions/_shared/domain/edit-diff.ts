@@ -25,12 +25,29 @@ export interface StoredCardioSet extends StoredSetBase {
   interval: CardioInterval | null;
 }
 
-export type StoredSet = StoredLiftSet | StoredCardioSet;
+export interface StoredHoldSet extends StoredSetBase {
+  kind: 'hold';
+  weightKg: number;
+  effectiveLoadKg: number;
+  durationS: number | null;
+  distanceM: number | null;
+}
+
+export type StoredSet = StoredLiftSet | StoredCardioSet | StoredHoldSet;
 
 function sameExerciseAndValues(requested: SetInput, stored: StoredSet, cfg: BalanceConfig): boolean {
   const effort = resolveEffort(requested.effort, cfg, setKind(requested));
   const sameEffort = effort.effortInputType === stored.effortInputType && effort.effortValue === stored.effortValue;
   if (requested.exerciseId !== stored.exerciseId || !sameEffort) return false;
+  if (requested.kind === 'hold' || stored.kind === 'hold') {
+    return (
+      requested.kind === 'hold' &&
+      stored.kind === 'hold' &&
+      requested.weightKg === stored.weightKg &&
+      requested.durationS === stored.durationS &&
+      requested.distanceM === stored.distanceM
+    );
+  }
   if (requested.kind === 'cardio' || stored.kind === 'cardio') {
     return (
       requested.kind === 'cardio' &&
