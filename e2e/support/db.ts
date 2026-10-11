@@ -207,7 +207,8 @@ export async function warmupFlagsOfLatestSession(username: string) {
 export async function programPlanOf(username: string, programName: string) {
   return db`
     select d.name as day_name, x.key as exercise_key,
-      e.target_sets, e.target_reps_min, e.target_reps_max
+      e.target_sets, e.target_reps_min, e.target_reps_max,
+      e.progression, e.increment_kg::float8 as increment_kg, e.increment_lb::float8 as increment_lb
     from public.programs p
     join public.profiles u on u.id = p.owner_user_id
     join public.program_days d on d.program_id = p.id

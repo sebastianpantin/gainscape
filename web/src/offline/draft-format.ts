@@ -507,11 +507,17 @@ export function withCurrentLoadTypes(
   return { draft: changedNames.length > 0 ? { ...draft, exercises } : draft, changedNames };
 }
 
+export type PlannedProgression =
+  { kind: 'none' } | { kind: 'fixed' } | { kind: 'linear'; incrementKg: number; incrementLb: number };
+
+export type ProgressionKind = PlannedProgression['kind'];
+
 export interface PlannedExercise {
   exerciseId: string;
   targetSets: number;
   targetRepsMin: number;
   targetRepsMax: number;
+  progression: PlannedProgression;
 }
 
 export interface StartableDay {

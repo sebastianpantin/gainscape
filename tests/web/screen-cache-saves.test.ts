@@ -4,6 +4,7 @@ import { MemoryStorage } from './memory-storage.ts';
 const server = vi.hoisted(() => ({
   tables: {} as Record<string, unknown[] | { error: { message: string } }>,
   rpcCalls: [] as string[],
+  rpcArgs: [] as unknown[],
 }));
 
 vi.mock('../../web/src/lib/supabase.ts', () => {
@@ -26,8 +27,9 @@ vi.mock('../../web/src/lib/supabase.ts', () => {
   return {
     supabase: {
       from: query,
-      rpc: (name: string) => {
+      rpc: (name: string, args: unknown) => {
         server.rpcCalls.push(name);
+        server.rpcArgs.push(args);
         return Promise.resolve({ data: null, error: null });
       },
     },
@@ -80,7 +82,36 @@ function programRow(id: string, name: string) {
         name: 'Upper',
         position: 0,
         program_day_exercises: [
-          { position: 0, exercise_id: 'bench', target_sets: 3, target_reps_min: 5, target_reps_max: 8 },
+          {
+            position: 0,
+            exercise_id: 'bench',
+            target_sets: 3,
+            target_reps_min: 5,
+            target_reps_max: 8,
+            progression: 'none',
+            increment_kg: null,
+            increment_lb: null,
+          },
+          {
+            position: 1,
+            exercise_id: 'squat',
+            target_sets: 5,
+            target_reps_min: 5,
+            target_reps_max: 5,
+            progression: 'linear',
+            increment_kg: 2.5,
+            increment_lb: 5,
+          },
+          {
+            position: 2,
+            exercise_id: 'press',
+            target_sets: 3,
+            target_reps_min: 5,
+            target_reps_max: 5,
+            progression: 'fixed',
+            increment_kg: null,
+            increment_lb: null,
+          },
         ],
       },
     ],
@@ -110,6 +141,7 @@ beforeEach(() => {
   storage = new MemoryStorage();
   server.tables = {};
   server.rpcCalls = [];
+  server.rpcArgs = [];
   vi.stubGlobal('window', {
     localStorage: storage,
     addEventListener: () => undefined,
@@ -144,6 +176,16 @@ describe('saving screen caches after an online load', () => {
     const programs = await fetchPrograms(USER_ID);
     expect(programs.map((program) => program.name)).toEqual(['A plan', 'B plan']);
     expect(programListCache.read(storage, USER_ID)).toEqual(programs);
+  });
+
+  it('reads the progression of each planned exercise', async () => {
+    server.tables = { programs: [programRow('a', 'A plan')] };
+    const [program] = await fetchPrograms(USER_ID);
+    expect(program.days[0].exercises.map((planned) => planned.progression)).toEqual([
+      { kind: 'none' },
+      { kind: 'linear', incrementKg: 2.5, incrementLb: 5 },
+      { kind: 'fixed' },
+    ]);
   });
 
   it('saves the skills and their XP when the standing loads online', async () => {
@@ -197,5 +239,43 @@ describe('keeping the saved program list right after a change when the refresh f
       name: 'B renamed',
       days: [{ id: 'b-day-2', name: 'Lower', position: 0, exercises: [] }],
     });
+  });
+
+  it('sends the progression of each planned exercise as flat fields', async () => {
+    const planned = { targetSets: 5, targetRepsMin: 5, targetRepsMax: 5 };
+    await saveProgram(USER_ID, {
+      id: 'b',
+      name: 'B plan',
+      days: [
+        {
+          id: 'b-day',
+          name: 'Upper',
+          exercises: [
+            { exerciseId: 'bench', ...planned, progression: { kind: 'none' } },
+            { exerciseId: 'squat', ...planned, progression: { kind: 'linear', incrementKg: 2.5, incrementLb: 5 } },
+            { exerciseId: 'press', ...planned, progression: { kind: 'fixed' } },
+          ],
+        },
+      ],
+    });
+    expect(server.rpcArgs).toEqual([
+      {
+        program: {
+          id: 'b',
+          name: 'B plan',
+          days: [
+            {
+              id: 'b-day',
+              name: 'Upper',
+              exercises: [
+                { exerciseId: 'bench', ...planned, progression: 'none', incrementKg: null, incrementLb: null },
+                { exerciseId: 'squat', ...planned, progression: 'linear', incrementKg: 2.5, incrementLb: 5 },
+                { exerciseId: 'press', ...planned, progression: 'fixed', incrementKg: null, incrementLb: null },
+              ],
+            },
+          ],
+        },
+      },
+    ]);
   });
 });

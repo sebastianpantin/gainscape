@@ -260,6 +260,13 @@ describe('program template problems', () => {
     );
   });
 
+  it('refuses a key that starts with custom_, which is kept for user program snapshots', () => {
+    const problems = problemsAfter(FIVE_THREE_ONE, (copy) => (copy.key = 'custom_five_three_one'));
+    expect(problems).toContain(
+      `program template "custom_five_three_one": key must not start with "custom_", which is kept for user programs`,
+    );
+  });
+
   it('lists every problem in one pass', () => {
     const problems = problemsAfter(FIVE_THREE_ONE, (copy) => {
       copy.conversions = [
