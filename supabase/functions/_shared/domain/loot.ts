@@ -88,13 +88,16 @@ export function lootCandidates(sets: readonly SetResult[], catalog: Catalog): Lo
       effectiveReps: result.effectiveReps,
       countedWorkS: result.cardio?.countedWorkS ?? 0,
       interval: result.set.kind === 'cardio' && result.set.interval !== null,
-      personalRecord: result.personalRecord !== null || (result.cardio?.records.length ?? 0) > 0,
+      personalRecord:
+        result.personalRecord !== null ||
+        (result.cardio?.records.length ?? 0) > 0 ||
+        (result.holdRecords?.length ?? 0) > 0,
       builtIn: catalog.exercises.get(result.set.exerciseId)?.builtIn ?? false,
     }));
 }
 
 function qualifiesForRegular(candidate: LootCandidate, cfg: LootConfig): boolean {
-  if (candidate.kind === 'lift') return candidate.effectiveReps >= cfg.minEffectiveReps;
+  if (candidate.kind !== 'cardio') return candidate.effectiveReps >= cfg.minEffectiveReps;
   const minWorkS = candidate.interval ? cfg.minIntervalCardioWorkS : cfg.minSteadyCardioWorkS;
   return candidate.countedWorkS >= minWorkS;
 }

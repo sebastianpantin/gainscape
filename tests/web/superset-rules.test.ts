@@ -31,7 +31,13 @@ function lift(exerciseId: string, setIds: string[], supersetId: string | null = 
 }
 
 function cardio(exerciseId: string): DraftExercise {
-  const activity: CardioActivity = { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', shares: [] };
+  const activity: CardioActivity = {
+    paceUnit: 'per_km',
+    referencePaceSPerKm: 360,
+    maxEffort: 'max',
+    tracksDistance: true,
+    shares: [],
+  };
   return { clientId: `card-${exerciseId}`, exerciseId, name: exerciseId, modality: 'cardio', activity, sets: [] };
 }
 

@@ -29,10 +29,12 @@ import {
 } from './support/challenge.ts';
 import { authLinkFrom, RECOVERY_SUBJECT, waitForEmail } from './support/mailbox.ts';
 import {
+  createSquatAndBenchProgram,
   FIVE_THREE_ONE_ONE_RMS_KG,
   fillProgramInputs,
   followProgram,
   openEnrollForm,
+  openOwnProgramFollowForm,
   programToday,
   startFollowing,
 } from './support/program-enrollment.ts';
@@ -96,6 +98,13 @@ async function createProgram(page: Page): Promise<string> {
     .click();
   await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
   await expectNoAxeViolations(page, 'program editor');
+  await page
+    .getByRole('radiogroup', { name: / progression$/ })
+    .first()
+    .getByRole('radio', { name: 'Add weight' })
+    .click();
+  await expect(page.getByLabel('Increment (kg)')).toBeVisible();
+  await expectNoAxeViolations(page, 'program editor with add weight');
   const editorPath = new URL(page.url()).pathname;
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Your programs' })).toBeVisible();
@@ -343,6 +352,15 @@ test('the program enrollment screens have no serious axe violations', async ({ p
   await expectTouchTargets(page);
 });
 
+test('the follow form of your own program has no serious axe violations', async ({ page }) => {
+  await register(page, uniqueUsername('a11y_pc'));
+  await createSquatAndBenchProgram(page, 'My Squat 5x5');
+  await openOwnProgramFollowForm(page, 'My Squat 5x5');
+  await checkScreen(page, 'own program follow form', () =>
+    expect(page.getByLabel('Back Squat working weight (kg)', { exact: true })).toBeVisible(),
+  );
+});
+
 test('the program cycle summary has no serious axe violations', async ({ page }) => {
   test.setTimeout(150_000);
   const username = uniqueUsername('a11y_ps');
@@ -385,13 +403,13 @@ test('the reveal runs no animation under reduced motion', async ({ page }) => {
   expect(opacities.every((opacity) => opacity === '1')).toBe(true);
 });
 
-test('the skills screen shows pixel art for the eight skills', async ({ page }) => {
+test('the skills screen shows pixel art for the ten skills', async ({ page }) => {
   await register(page, uniqueUsername('a11y_sk'));
   await openTab(page, 'Skills');
   const chest = page.getByRole('button', { name: /^Chest\b/ });
   const skills = page.getByRole('list').filter({ has: chest });
-  await expect(skills.getByRole('listitem')).toHaveCount(8);
-  await expect(skills.locator('li svg')).toHaveCount(8);
+  await expect(skills.getByRole('listitem')).toHaveCount(10);
+  await expect(skills.locator('li svg')).toHaveCount(10);
   await expect(skills.locator('.monogram')).toHaveCount(0);
   await page.getByRole('button', { name: /^Endurance\b/ }).click();
   await expect(page.getByText('does not count toward combat')).toBeVisible();

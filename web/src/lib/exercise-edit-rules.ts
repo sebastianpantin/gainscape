@@ -1,9 +1,11 @@
 import { type CardioInterval, type EffortInput, MAX_SETS_PER_SESSION } from '@domain/types.ts';
-import type { LoadType } from './catalog-rules.ts';
+import type { HoldMeasure, LoadType } from './catalog-rules.ts';
 
 const STARTING_EXTERNAL_LOAD_KG = 20;
 export const STARTING_REPS = 8;
 const STARTING_BOUT_DURATION_S = 1800;
+const STARTING_HOLD_DURATION_S = 30;
+const STARTING_CARRY_DISTANCE_M = 20;
 
 export const BODYWEIGHT_LOAD_NOT_ZERO_CODE = 'bodyweight_load_not_zero';
 export const UNKNOWN_EXERCISE_CODE = 'unknown_exercise';
@@ -15,8 +17,15 @@ export interface BoutValues {
   effort: EffortInput;
 }
 
+export interface HoldValues {
+  weightKg: number;
+  durationS: number | null;
+  distanceM: number | null;
+  effort: EffortInput;
+}
+
 interface ExerciseWithSets {
-  modality: 'lift' | 'cardio';
+  modality: 'lift' | 'cardio' | 'hold';
   sets: { id: string }[];
 }
 
@@ -49,6 +58,19 @@ export function nextBoutValues(previous: BoutValues | undefined): BoutValues {
   }
   const { durationS, distanceM, interval, effort } = previous;
   return { durationS, distanceM, interval, effort };
+}
+
+export function nextHoldValues(previous: HoldValues | undefined, loadType: LoadType, measure: HoldMeasure): HoldValues {
+  if (previous !== undefined) {
+    const { weightKg, durationS, distanceM } = previous;
+    return { weightKg, durationS, distanceM, effort: null };
+  }
+  return {
+    weightKg: defaultWeightKg(loadType),
+    durationS: measure === 'time' ? STARTING_HOLD_DURATION_S : null,
+    distanceM: measure === 'distance' ? STARTING_CARRY_DISTANCE_M : null,
+    effort: null,
+  };
 }
 
 export function setCount(owner: SetHolder): number {
@@ -111,6 +133,15 @@ export function updateBout<Owner extends ExerciseOwner>(
   changes: Partial<Omit<SetOfModality<Owner, 'cardio'>, 'id' | 'kind'>>,
 ): Owner {
   return withSetChanged(owner, exerciseIndex, 'cardio', setId, changes);
+}
+
+export function updateHoldSet<Owner extends ExerciseOwner>(
+  owner: Owner,
+  exerciseIndex: number,
+  setId: string,
+  changes: Partial<Omit<SetOfModality<Owner, 'hold'>, 'id' | 'kind'>>,
+): Owner {
+  return withSetChanged(owner, exerciseIndex, 'hold', setId, changes);
 }
 
 export function removeSet<Owner extends ExerciseOwner>(owner: Owner, exerciseIndex: number, setId: string): Owner {

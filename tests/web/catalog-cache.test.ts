@@ -51,6 +51,7 @@ const exercises: Exercise[] = [
       paceUnit: 'per_km',
       referencePaceSPerKm: 360,
       maxEffort: 'max',
+      tracksDistance: true,
       shares: [{ skillKey: 'endurance', shareBasisPoints: 10_000 }],
     },
     custom: false,
@@ -105,6 +106,15 @@ describe('exercise list cache', () => {
     for (const entry of raw.exercises) delete entry.skillShares;
     storage.setItem(exerciseCacheKey(userId), JSON.stringify(raw));
     expect(readCachedExercises(storage, userId)?.map((exercise) => exercise.skillShares)).toEqual([[], [], []]);
+  });
+
+  it('reads a cardio entry saved before distance tracking was cached as one that tracks distance', () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    const raw = JSON.parse(storage.getItem(exerciseCacheKey(userId))!);
+    for (const entry of raw.exercises) if (entry.activity) delete entry.activity.tracksDistance;
+    storage.setItem(exerciseCacheKey(userId), JSON.stringify(raw));
+    expect(readCachedExercises(storage, userId)?.[2]).toMatchObject({ activity: { tracksDistance: true } });
   });
 
   it('rejects an entry with a malformed skill share', () => {

@@ -167,7 +167,13 @@ describe('draft session', () => {
           exerciseId: 'run',
           name: 'Running',
           modality: 'cardio',
-          activity: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', shares: [] },
+          activity: {
+            paceUnit: 'per_km',
+            referencePaceSPerKm: 360,
+            maxEffort: 'max',
+            tracksDistance: true,
+            shares: [],
+          },
           sets: [
             {
               id: 'bout-a',

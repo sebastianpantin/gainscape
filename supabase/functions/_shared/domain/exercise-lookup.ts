@@ -1,5 +1,13 @@
 import { KindMismatchError, UnknownExerciseError } from './errors.ts';
-import type { CardioExerciseDef, Catalog, ExerciseDef, LiftExerciseDef, SetInput } from './types.ts';
+import {
+  type CardioExerciseDef,
+  type Catalog,
+  type ExerciseDef,
+  type HoldSetInput,
+  type LiftExerciseDef,
+  measureOf,
+  type SetInput,
+} from './types.ts';
 
 export function exerciseFor(set: Pick<SetInput, 'exerciseId'>, catalog: Catalog): ExerciseDef {
   const exercise = catalog.exercises.get(set.exerciseId);
@@ -19,4 +27,22 @@ export function cardioExercise(exercise: ExerciseDef): CardioExerciseDef {
 
 export function liftExerciseFor(set: Pick<SetInput, 'exerciseId'>, catalog: Catalog): LiftExerciseDef {
   return liftExercise(exerciseFor(set, catalog));
+}
+
+export function repsExercise(exercise: ExerciseDef): LiftExerciseDef {
+  const lift = liftExercise(exercise);
+  if (measureOf(lift) !== 'reps') throw new KindMismatchError(exercise.id);
+  return lift;
+}
+
+export function holdExercise(
+  exercise: ExerciseDef,
+  hold: Pick<HoldSetInput, 'durationS' | 'distanceM'>,
+): LiftExerciseDef {
+  const lift = liftExercise(exercise);
+  const measure = measureOf(lift);
+  const timed = hold.durationS !== null && hold.distanceM === null;
+  const carried = hold.distanceM !== null && hold.durationS === null;
+  if ((measure === 'time' && timed) || (measure === 'distance' && carried)) return lift;
+  throw new KindMismatchError(exercise.id);
 }

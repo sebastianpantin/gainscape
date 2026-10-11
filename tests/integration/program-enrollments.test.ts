@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { isPositionInSchedule, type Position, type ProgramDefinition } from '@domain/index.ts';
+import {
+  isPositionInSchedule,
+  parseProgramDefinition,
+  type Position,
+  type ProgramDefinition,
+  type ProgramEnrollment,
+  validateEnrollment,
+} from '@domain/index.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { GZCLP } from '../domain/program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';
@@ -17,7 +24,24 @@ import {
   TEST_PASSWORD,
   type TestUser,
 } from './local-stack.ts';
+import {
+  customLiftKey,
+  customTemplateKey,
+  linearFiveByFive,
+  plannedDay,
+  type ProgramDoc,
+  publishedProgram,
+  publishProgram,
+  type PublishedTemplate,
+  savedProgram,
+} from './program-support.ts';
 import { createCustomExercise } from './session-support.ts';
+import type { ProgramTemplateRow } from '../../web/src/lib/program-enroll-rules.ts';
+import type { EnrollmentRow } from '../../web/src/lib/program-facts-rules.ts';
+import { followStatus } from '../../web/src/lib/program-follow-rules.ts';
+import { PROGRAM_SELECT, programPayload, type ProgramRow, toProgram } from '../../web/src/lib/program-row-rules.ts';
+import type { ProgramDoc as WebProgramDoc } from '../../web/src/lib/programs.ts';
+import type { PlannedProgression } from '../../web/src/offline/draft-format.ts';
 
 interface EnrollmentPayload {
   templateKey: string;
@@ -663,6 +687,46 @@ describe('delete-account', () => {
       where enrollment_id = any(${[ended, active]})`;
     expect(orphans.count).toBe(0);
   });
+
+  it('deletes a followed custom program with its snapshots and enrollment', async () => {
+    const user = await createTestUser();
+    const squatId = exerciseIds.back_squat;
+    const program = {
+      id: randomUUID(),
+      name: 'Followed squat',
+      days: [plannedDay('Day A', [linearFiveByFive(squatId)])],
+    };
+    const programId = await savedProgram(user, program);
+    await publishedProgram(user, programId);
+    await savedProgram(user, { ...program, name: 'Followed squat v2' });
+    const template = await publishedProgram(user, programId);
+    expect(template.version).toBe(2);
+    const squat = customLiftKey(squatId);
+    const enrollmentId = await enrolled(user, {
+      templateKey: template.key,
+      templateVersion: template.version,
+      unit: 'kg',
+      options: {},
+      bindings: { [squat]: squatId },
+      inputs: { [squat]: { workingWeight: 100 } },
+      rounding: { ...KG_ROUNDING },
+    });
+    expect((await adjust(user, enrollmentId, { kind: 'skip_day', position: { index: 0 } })).error).toBeNull();
+
+    const response = await postFunction('delete-account', user.accessToken, {
+      confirmUsername: user.username,
+      password: TEST_PASSWORD,
+    });
+
+    expect(response.status, response.rawBody).toBe(200);
+    expect(await enrollmentRows(user.id)).toHaveLength(0);
+    const [left] = await db`
+      select
+        (select count(*)::int from public.program_templates where key = ${template.key}) as snapshots,
+        (select count(*)::int from public.programs where id = ${programId}) as programs,
+        (select count(*)::int from public.program_enrollment_events where enrollment_id = ${enrollmentId}) as events`;
+    expect(left).toEqual({ snapshots: 0, programs: 0, events: 0 });
+  });
 });
 
 function cartesianCyclePositions(cycles: number[], weeks: number[], days: string[]): Position[] {
@@ -706,5 +770,407 @@ describe('adjust_enrollment position bounds match the domain', () => {
       { week: 1, day: 'a1' },
     ];
     expect(await positionMismatches(user, enrollmentId, ROTATION_TEMPLATE, positions)).toEqual([]);
+  });
+});
+
+describe('publish_program', () => {
+  let squatId: string;
+  let benchId: string;
+  let rowId: string;
+  let pullUpId: string;
+
+  beforeAll(async () => {
+    [squatId, benchId, rowId, pullUpId] = await Promise.all(
+      ['back_squat', 'barbell_bench_press', 'barbell_row', 'pull_up'].map(builtInExerciseId),
+    );
+  });
+
+  function strengthProgram(): ProgramDoc {
+    return {
+      id: randomUUID(),
+      name: 'Strength A/B',
+      days: [
+        plannedDay('Day A', [
+          linearFiveByFive(squatId),
+          { exerciseId: benchId, targetSets: 3, targetRepsMin: 5, targetRepsMax: 5, progression: 'fixed' },
+          { exerciseId: rowId, targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 },
+        ]),
+        plannedDay('Day B', [
+          linearFiveByFive(squatId),
+          { exerciseId: pullUpId, targetSets: 3, targetRepsMin: 5, targetRepsMax: 10, progression: 'none' },
+        ]),
+      ],
+    };
+  }
+
+  async function templateRows(key: string) {
+    return await db`
+      select version, name, definition, owner_user_id, source_program_id
+      from public.program_templates where key = ${key} order by version`;
+  }
+
+  function strengthEnrollment(template: PublishedTemplate): EnrollmentPayload {
+    return {
+      templateKey: template.key,
+      templateVersion: template.version,
+      unit: 'kg',
+      options: {},
+      bindings: Object.fromEntries([squatId, benchId, rowId, pullUpId].map((id) => [customLiftKey(id), id])),
+      inputs: { [customLiftKey(squatId)]: { workingWeight: 100 }, [customLiftKey(benchId)]: { workingWeight: 60 } },
+      rounding: { ...KG_ROUNDING },
+    };
+  }
+
+  it('compiles the program into a rotation the domain parses, with one rule per linear lift that holds on a miss', async () => {
+    const user = await createTestUser();
+    const program = strengthProgram();
+    const programId = await savedProgram(user, program);
+
+    const template = await publishedProgram(user, programId);
+
+    const key = customTemplateKey(programId);
+    expect(template).toEqual({ key, version: 1 });
+    const [squat, bench, row, pullUp] = [squatId, benchId, rowId, pullUpId].map(customLiftKey);
+    const working = { kind: 'pct', pct: 1, of: 'workingWeight' };
+    const [stored] = await templateRows(key);
+    expect(stored).toMatchObject({
+      version: 1,
+      name: 'Strength A/B',
+      owner_user_id: user.id,
+      source_program_id: programId,
+    });
+    expect(stored.definition).toEqual({
+      key,
+      version: 1,
+      name: 'Strength A/B',
+      source: [],
+      lifts: [
+        { key: squat, name: 'Back Squat', barbell: true },
+        { key: bench, name: 'Barbell Bench Press', barbell: true },
+        { key: row, name: 'Barbell Row', barbell: true },
+        { key: pullUp, name: 'Pull-up', barbell: false },
+      ],
+      inputs: [{ lifts: [squat, bench], kinds: ['workingWeight'] }],
+      referenceVars: ['workingWeight'],
+      initial: [{ kind: 'copy', var: 'workingWeight', from: 'workingWeight' }],
+      options: [],
+      schedule: {
+        kind: 'rotation',
+        days: [
+          {
+            key: 'd0',
+            name: 'Day A',
+            slots: [
+              { id: 'd0_0', lift: squat, role: 'main', scheme: { kind: 'repeat', count: 5, reps: 5, load: working } },
+              { id: 'd0_1', lift: bench, role: 'main', scheme: { kind: 'repeat', count: 3, reps: 5, load: working } },
+              {
+                id: 'd0_2',
+                lift: row,
+                role: 'main',
+                scheme: { kind: 'repeat', count: 3, reps: 8, maxReps: 12, load: { kind: 'lastLogged' } },
+              },
+            ],
+          },
+          {
+            key: 'd1',
+            name: 'Day B',
+            slots: [
+              { id: 'd1_0', lift: squat, role: 'main', scheme: { kind: 'repeat', count: 5, reps: 5, load: working } },
+              {
+                id: 'd1_1',
+                lift: pullUp,
+                role: 'main',
+                scheme: { kind: 'repeat', count: 3, reps: 5, maxReps: 10, load: { kind: 'lastLogged' } },
+              },
+            ],
+          },
+        ],
+      },
+      progression: [
+        {
+          lift: squat,
+          var: 'workingWeight',
+          trigger: 'afterSession',
+          judgedSlots: ['d0_0', 'd1_0'],
+          onMet: [{ kind: 'increment', by: { kg: 2.5, lb: 5 } }],
+          onMiss: [{ kind: 'hold' }],
+        },
+      ],
+    });
+  });
+
+  it('publishes a definition that parseProgramDefinition and validateEnrollment accept and the owner can follow', async () => {
+    const user = await createTestUser();
+    const programId = await savedProgram(user, strengthProgram());
+    const template = await publishedProgram(user, programId);
+    const { data, error } = await user.client
+      .from('program_templates')
+      .select('definition')
+      .eq('key', template.key)
+      .eq('version', template.version)
+      .single();
+    expect(error).toBeNull();
+
+    const parsed = parseProgramDefinition(data?.definition);
+
+    expect(parsed.kind, JSON.stringify(parsed)).toBe('ok');
+    if (parsed.kind !== 'ok') return;
+    const enrollment = strengthEnrollment(template);
+    const domainEnrollment: ProgramEnrollment = {
+      id: randomUUID(),
+      unit: 'kg',
+      options: {},
+      bindings: enrollment.bindings as Record<string, string>,
+      inputs: enrollment.inputs as Record<string, Record<string, number>>,
+      rounding: { increment: 2.5, mode: 'nearest', barWeight: 20 },
+    };
+    expect(validateEnrollment(parsed.definition, domainEnrollment)).toEqual([]);
+    await enrolled(user, enrollment);
+  });
+
+  it('compiles a custom exercise switched to bodyweight after the save as last logged, with no starting weight', async () => {
+    const user = await createTestUser();
+    const customId = await createCustomExercise(user);
+    const programId = await savedProgram(user, {
+      id: randomUUID(),
+      name: 'Switched',
+      days: [plannedDay('Day 1', [linearFiveByFive(customId)])],
+    });
+    await db`update public.exercises set load_type = 'bodyweight' where id = ${customId}`;
+
+    const template = await publishedProgram(user, programId);
+
+    const [stored] = await templateRows(template.key);
+    expect(stored.definition.inputs).toEqual([]);
+    expect(stored.definition.progression).toEqual([]);
+    expect(stored.definition.schedule.days[0].slots[0].scheme.load).toEqual({ kind: 'lastLogged' });
+    expect(parseProgramDefinition(stored.definition).kind).toBe('ok');
+  });
+
+  it('reuses the latest version when the program has not changed', async () => {
+    const user = await createTestUser();
+    const programId = await savedProgram(user, strengthProgram());
+    const first = await publishedProgram(user, programId);
+
+    const second = await publishedProgram(user, programId);
+
+    expect(second).toEqual(first);
+    expect(await templateRows(first.key)).toHaveLength(1);
+  });
+
+  it('adds the next version after an edit and keeps the earlier one', async () => {
+    const user = await createTestUser();
+    const program = strengthProgram();
+    const programId = await savedProgram(user, program);
+    await publishedProgram(user, programId);
+    program.days[0].exercises[0] = linearFiveByFive(squatId, 5, 10);
+    await savedProgram(user, program);
+
+    const edited = await publishedProgram(user, programId);
+
+    expect(edited).toEqual({ key: customTemplateKey(programId), version: 2 });
+    const rows = await templateRows(edited.key);
+    expect(rows.map((row) => [row.version, row.definition.version])).toEqual([
+      [1, 1],
+      [2, 2],
+    ]);
+    expect(rows[1].definition.progression[0].onMet).toEqual([{ kind: 'increment', by: { kg: 5, lb: 10 } }]);
+    expect(await publishedProgram(user, programId)).toEqual(edited);
+  });
+
+  it("refuses another user's program, a built-in program and a program that does not exist", async () => {
+    const owner = await createTestUser();
+    const stranger = await createTestUser();
+    const programId = await savedProgram(owner, strengthProgram());
+    const [builtIn] = await db`select id from public.programs where owner_user_id is null limit 1`;
+
+    for (const id of [programId, builtIn.id as string, randomUUID()]) {
+      expectRefused(await publishProgram(stranger, id), 'program_not_found');
+    }
+    expect(await templateRows(customTemplateKey(programId))).toHaveLength(0);
+  });
+
+  it('hides a snapshot from every other user, and following it raises unknown_template', async () => {
+    const owner = await createTestUser();
+    const stranger = await createTestUser();
+    const template = await publishedProgram(owner, await savedProgram(owner, strengthProgram()));
+
+    const { data } = await stranger.client.from('program_templates').select('key').eq('key', template.key);
+
+    expect(data).toEqual([]);
+    expectRefused(await enroll(stranger, strengthEnrollment(template)), 'unknown_template');
+  });
+
+  it('counts only new snapshots against the hourly limit and refuses the 21st', async () => {
+    const user = await createTestUser();
+    const programId = await savedProgram(user, strengthProgram());
+    await publishedProgram(user, programId);
+    await publishedProgram(user, programId);
+    expect(await rateLimitHits('program_publish_hour', user.id)).toBe(1);
+
+    await seedRateLimitHits('program_publish_hour', user.id, 20);
+    const otherProgramId = await savedProgram(user, strengthProgram());
+
+    expectRateLimited(await publishProgram(user, otherProgramId));
+    expect(await templateRows(customTemplateKey(otherProgramId))).toHaveLength(0);
+    expect(await publishedProgram(user, programId)).toEqual({ key: customTemplateKey(programId), version: 1 });
+  });
+
+  it('publishes a snapshot the web reads as the current version of the program it was saved from', async () => {
+    const user = await createTestUser();
+    const linearBy = (incrementKg: number, incrementLb: number) => ({
+      kind: 'linear' as const,
+      incrementKg,
+      incrementLb,
+    });
+    const planned = (exerciseId: string, sets: number, reps: number, progression: PlannedProgression) => ({
+      exerciseId,
+      targetSets: sets,
+      targetRepsMin: reps,
+      targetRepsMax: reps,
+      progression,
+    });
+    const doc: WebProgramDoc = {
+      id: randomUUID(),
+      name: 'Bench first',
+      days: [
+        {
+          id: randomUUID(),
+          name: 'Day A',
+          exercises: [
+            planned(benchId, 3, 8, { kind: 'none' }),
+            planned(squatId, 5, 5, linearBy(2.5, 5)),
+            { ...planned(rowId, 3, 8, { kind: 'fixed' }), targetRepsMax: 12 },
+          ],
+        },
+        {
+          id: randomUUID(),
+          name: 'Day B',
+          exercises: [planned(benchId, 5, 5, linearBy(1.25, 2.5)), planned(squatId, 5, 5, linearBy(5, 10))],
+        },
+      ],
+    };
+    const programId = await savedProgram(user, programPayload(doc));
+    const template = await publishedProgram(user, programId);
+    const enrollmentId = await enrolled(user, {
+      ...strengthEnrollment(template),
+      bindings: Object.fromEntries([squatId, benchId, rowId].map((id) => [customLiftKey(id), id])),
+      inputs: Object.fromEntries([squatId, benchId, rowId].map((id) => [customLiftKey(id), { workingWeight: 60 }])),
+    });
+
+    const { data: programRow } = await user.client.from('programs').select(PROGRAM_SELECT).eq('id', programId).single();
+    const { data: templateRows } = await user.client
+      .from('program_templates')
+      .select('key, version, name, definition, owner_user_id')
+      .eq('key', template.key);
+    const { data: enrollment } = await user.client
+      .from('program_enrollments')
+      .select(
+        'id, template_key, template_version, unit, options, lift_bindings, inputs, rounding, started_at, ended_at',
+      )
+      .eq('id', enrollmentId)
+      .single();
+
+    const program = toProgram(programRow as ProgramRow);
+    expect(followStatus(program, enrollment as EnrollmentRow, templateRows as ProgramTemplateRow[])).toBe('current');
+  });
+});
+
+describe('delete_program on a program you follow', () => {
+  async function followedSquatProgram(user: TestUser) {
+    const squatId = exerciseIds.back_squat;
+    const programId = await savedProgram(user, {
+      id: randomUUID(),
+      name: 'Followed 5x5',
+      days: [plannedDay('Day 1', [linearFiveByFive(squatId)])],
+    });
+    const template = await publishedProgram(user, programId);
+    const liftKey = customLiftKey(squatId);
+    const enrollmentId = await enrolled(user, {
+      templateKey: template.key,
+      templateVersion: template.version,
+      unit: 'kg',
+      options: {},
+      bindings: { [liftKey]: squatId },
+      inputs: { [liftKey]: { workingWeight: 100 } },
+      rounding: { ...KG_ROUNDING },
+    });
+    return { programId, template, enrollmentId };
+  }
+
+  async function linkedSession(user: TestUser, enrollmentId: string): Promise<string> {
+    const sessionId = randomUUID();
+    await db`
+      insert into public.sessions
+        (id, user_id, started_at, ended_at, local_date, timezone, balance_version, derived_balance_version, summary,
+         enrollment_id, program_position)
+      values (${sessionId}, ${user.id}, now(), now(), current_date, 'UTC', 1, 1, '{}', ${enrollmentId},
+              ${db.json({ index: 0 })})`;
+    return sessionId;
+  }
+
+  async function deleteProgram(user: TestUser, programId: string) {
+    return await user.client.rpc('delete_program', { program_id: programId });
+  }
+
+  it('ends the enrollment, keeps the snapshot and leaves past sessions linked to the enrollment', async () => {
+    const user = await createTestUser();
+    const { programId, template, enrollmentId } = await followedSquatProgram(user);
+    const sessionId = await linkedSession(user, enrollmentId);
+
+    expect((await deleteProgram(user, programId)).error).toBeNull();
+
+    const [enrollment] = await enrollmentRows(user.id);
+    expect(enrollment.id).toBe(enrollmentId);
+    expect(enrollment.ended_at).not.toBeNull();
+    const [session] = await db`select enrollment_id from public.sessions where id = ${sessionId}`;
+    expect(session.enrollment_id).toBe(enrollmentId);
+    const snapshots = await db`
+      select version, owner_user_id, source_program_id from public.program_templates where key = ${template.key}`;
+    expect(snapshots).toEqual([{ version: template.version, owner_user_id: user.id, source_program_id: null }]);
+  });
+
+  it('ends the enrollment in an earlier snapshot of the program too', async () => {
+    const user = await createTestUser();
+    const { programId, enrollmentId } = await followedSquatProgram(user);
+    await savedProgram(user, {
+      id: programId,
+      name: 'Followed 5x5',
+      days: [plannedDay('Day 1', [linearFiveByFive(exerciseIds.back_squat, 5, 10)])],
+    });
+    expect(await publishedProgram(user, programId)).toMatchObject({ version: 2 });
+
+    expect((await deleteProgram(user, programId)).error).toBeNull();
+
+    expect((await enrollmentRows(user.id)).map((row) => [row.id, row.ended_at === null])).toEqual([
+      [enrollmentId, false],
+    ]);
+  });
+
+  it('leaves an enrollment in another program running', async () => {
+    const user = await createTestUser();
+    const { programId: earlierProgramId } = await followedSquatProgram(user);
+    const followed = await followedSquatProgram(user);
+    const madcowFollower = await createTestUser();
+    const { programId: unfollowedProgramId } = await followedSquatProgram(madcowFollower);
+    await enrolled(madcowFollower, madcowPayload());
+
+    expect((await deleteProgram(user, earlierProgramId)).error).toBeNull();
+    expect((await deleteProgram(madcowFollower, unfollowedProgramId)).error).toBeNull();
+
+    const activeKeys = async (userId: string) =>
+      (await enrollmentRows(userId)).filter((row) => row.ended_at === null).map((row) => row.template_key);
+    expect(await activeKeys(user.id)).toEqual([followed.template.key]);
+    expect(await activeKeys(madcowFollower.id)).toEqual(['madcow_5x5']);
+  });
+
+  it("does not end another user's enrollment when they cannot delete the program", async () => {
+    const owner = await createTestUser();
+    const stranger = await createTestUser();
+    const { programId, enrollmentId } = await followedSquatProgram(owner);
+
+    expectRefused(await deleteProgram(stranger, programId), 'program_not_found');
+
+    expect((await enrollmentRows(owner.id)).map((row) => [row.id, row.ended_at])).toEqual([[enrollmentId, null]]);
   });
 });

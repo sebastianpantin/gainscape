@@ -13,11 +13,14 @@ import {
 import {
   activeDropSummaries,
   builtInExerciseId,
+  createHoldExercise,
   createTestUser,
   db,
   domainCatalogFor,
   type FunctionResponse,
+  normalizedSnapshot,
   postCompleteSession,
+  rebuildCaches,
   resignedWithAnotherKey,
   setBodyweight,
   type TestUser,
@@ -738,6 +741,23 @@ describe('complete-session with cardio bouts', () => {
     });
   });
 
+  it('pays Mobility for a yoga bout and refuses a distance on it with 422 distance_not_tracked', async () => {
+    const user = await createTestUser();
+    const yogaId = await builtInExerciseId('yoga');
+    const refused = await postCompleteSession(
+      user.accessToken,
+      sessionPayload([steadyBout(yogaId, 0, { distanceM: 1000, durationS: 1200 })]),
+    );
+    expect(refused.status, refused.rawBody).toBe(422);
+    expect(refused.body.error).toBe('distance_not_tracked');
+    expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
+    const payload = sessionPayload([steadyBout(yogaId, 0, { distanceM: null, durationS: 1200 })]);
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.xpBySkill).toEqual((await expectedOutputs(payload)).xpBySkill);
+    expect(Object.keys(response.body.xpBySkill ?? {})).toEqual(['mobility']);
+  });
+
   it('returns 422 kind_mismatch for a cardio bout on a lift exercise and writes nothing', async () => {
     const user = await createTestUser();
     const response = await postCompleteSession(user.accessToken, sessionPayload([steadyBout(benchId, 0)]));
@@ -851,5 +871,139 @@ describe('complete-session unique violations from a concurrent writer', () => {
     );
     expect(response.status, response.rawBody).toBe(500);
     expect(response.body.error).toBe('internal_error');
+  });
+});
+
+describe('complete-session with hold sets', () => {
+  async function holdExercisesOf(user: TestUser) {
+    return {
+      pinchId: await createHoldExercise(user.id, 'time', 'external', { grip: 10000 }),
+      carryId: await createHoldExercise(user.id, 'distance', 'external', { grip: 6000, core: 4000 }),
+      hangId: await createHoldExercise(user.id, 'time', 'bodyweight', { grip: 10000 }),
+    };
+  }
+
+  function aHold(exerciseId: string, position: number, measured: { durationS: number } | { distanceM: number }) {
+    return {
+      kind: 'hold' as const,
+      id: randomUUID(),
+      exerciseId,
+      position,
+      weightKg: 24,
+      ...measured,
+      effort: { type: 'level' as const, level: 'failure' as const },
+    };
+  }
+
+  it('stores a timed hold and a carry and pays Grip by rep equivalents', async () => {
+    const user = await createTestUser();
+    const { pinchId, carryId } = await holdExercisesOf(user);
+    const payload = sessionPayload([aHold(pinchId, 0, { durationS: 45 }), aHold(carryId, 1, { distanceM: 20 })]);
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    const xpPerRep = DEFAULT_BALANCE.xpPerEffectiveRep;
+    expect(response.body.xpBySkill).toEqual({
+      core: Math.round(4 * xpPerRep * 0.4),
+      grip: 6 * xpPerRep + Math.round(4 * xpPerRep * 0.6),
+    });
+    const rows = await db`
+      select position, weight_kg::float, effective_load_kg::float, reps, duration_s, distance_m::float, counted_work_s,
+             effort_input_type, effort_value::float, rir_source, effective_reps, xp_awarded
+      from public.sets where session_id = ${payload.id} order by position`;
+    expect(rows).toEqual([
+      {
+        position: 0,
+        weight_kg: 24,
+        effective_load_kg: 24,
+        reps: null,
+        duration_s: 45,
+        distance_m: null,
+        counted_work_s: null,
+        effort_input_type: 'level',
+        effort_value: 0,
+        rir_source: 'logged',
+        effective_reps: 6,
+        xp_awarded: 6 * xpPerRep,
+      },
+      {
+        position: 1,
+        weight_kg: 24,
+        effective_load_kg: 24,
+        reps: null,
+        duration_s: null,
+        distance_m: 20,
+        counted_work_s: null,
+        effort_input_type: 'level',
+        effort_value: 0,
+        rir_source: 'logged',
+        effective_reps: 4,
+        xp_awarded: 4 * xpPerRep,
+      },
+    ]);
+  });
+
+  it('adds the bodyweight to a hang and rebuilds the same state from history', async () => {
+    const user = await createTestUser();
+    const { hangId } = await holdExercisesOf(user);
+    await setBodyweight(user, 75);
+    const payload = sessionPayload([{ ...aHold(hangId, 0, { durationS: 30 }), weightKg: 0, effort: null }]);
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    const [row] =
+      await db`select effective_load_kg::float, rir_source, effective_reps from public.sets where session_id = ${payload.id}`;
+    expect(row).toEqual({ effective_load_kg: 75, rir_source: 'default', effective_reps: 3 });
+    const before = await normalizedSnapshot(user.id);
+    expect((await rebuildCaches(user.id)).status).toBe(200);
+    expect(await normalizedSnapshot(user.id)).toEqual(before);
+  });
+
+  it('records the longest hold at or above the load floor and rebuilds it from history', async () => {
+    const user = await createTestUser();
+    const { pinchId } = await holdExercisesOf(user);
+    const first = sessionPayload([aHold(pinchId, 0, { durationS: 30 })], 30);
+    expect((await postCompleteSession(user.accessToken, first)).status).toBe(200);
+    const light = sessionPayload([{ ...aHold(pinchId, 0, { durationS: 90 }), weightKg: 10 }], 20);
+    const lightResponse = await postCompleteSession(user.accessToken, light);
+    expect(lightResponse.body.prs).toEqual([]);
+    const longer = sessionPayload([aHold(pinchId, 0, { durationS: 40 })], 10);
+    const response = await postCompleteSession(user.accessToken, longer);
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.prs).toEqual([
+      {
+        kind: 'cardio',
+        exerciseId: pinchId,
+        setId: longer.sets[0].id,
+        records: [{ kind: 'duration', value: 40, previous: 30 }],
+      },
+    ]);
+    const records = await db`
+      select kind, value::float, set_id from public.cardio_records where user_id = ${user.id} and exercise_id = ${pinchId}`;
+    expect(records).toEqual([{ kind: 'duration', value: 40, set_id: longer.sets[0].id }]);
+    const before = await normalizedSnapshot(user.id);
+    expect((await rebuildCaches(user.id)).status).toBe(200);
+    expect(await normalizedSnapshot(user.id)).toEqual(before);
+  });
+
+  it('refuses a hold on a rep exercise, a rep set on a hold exercise and a hold with both measures', async () => {
+    const user = await createTestUser();
+    const { pinchId } = await holdExercisesOf(user);
+    const onBench = await postCompleteSession(user.accessToken, sessionPayload([aHold(benchId, 0, { durationS: 30 })]));
+    expect([onBench.status, onBench.body.error]).toEqual([422, 'kind_mismatch']);
+    const repsOnPinch = await postCompleteSession(
+      user.accessToken,
+      sessionPayload([threeSets(pinchId, 0, 20, 'hard')[0]]),
+    );
+    expect([repsOnPinch.status, repsOnPinch.body.error]).toEqual([422, 'kind_mismatch']);
+    const both = await postCompleteSession(
+      user.accessToken,
+      sessionPayload([{ ...aHold(pinchId, 0, { durationS: 30 }), distanceM: 10 }]),
+    );
+    expect([both.status, both.body.error]).toEqual([422, 'invalid_payload']);
+    const rir = await postCompleteSession(
+      user.accessToken,
+      sessionPayload([{ ...aHold(pinchId, 0, { durationS: 30 }), effort: { type: 'rir', value: 2 } }]),
+    );
+    expect([rir.status, rir.body.error]).toEqual([422, 'invalid_payload']);
+    expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
   });
 });

@@ -7,7 +7,7 @@ import { canAddBout, describeBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import type { Exercise } from '../../lib/catalog-rules.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
-import { canAddSet, setCount, updateBout, updateSet } from '../../lib/exercise-edit-rules.ts';
+import { canAddSet, setCount, updateBout, updateHoldSet, updateSet } from '../../lib/exercise-edit-rules.ts';
 import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
 import {
   formatLoad,
@@ -32,13 +32,15 @@ import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { forgetLastSummary, recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
-import { HistoryBoutRow, HistorySetRow } from './HistorySetRow.tsx';
+import { HistoryBoutRow, HistoryHoldRow, HistorySetRow } from './HistorySetRow.tsx';
 import {
   addEditExercise,
   addEditSet,
+  describeHold,
   dropsAtRisk,
   editFromSession,
   type EditBout,
+  type EditHold,
   type EditSet,
   hasChanges,
   rebaseEdit,
@@ -46,6 +48,7 @@ import {
   removalText,
   removedText,
   removeEditSet,
+  sameKindOfExercise,
   sameSetValues,
   type SessionEdit,
   swapEditExercise,
@@ -209,11 +212,13 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const { session } = loaded;
   const scoredSets = new Map(
     loaded.xpBasis.exercises.flatMap((exercise) =>
-      exercise.sets.map((set: EditSet | EditBout) => [set.id, { exerciseId: exercise.exerciseId, set }] as const),
+      exercise.sets.map(
+        (set: EditSet | EditBout | EditHold) => [set.id, { exerciseId: exercise.exerciseId, set }] as const,
+      ),
     ),
   );
   const storedXp = new Map(loaded.sets.map((row) => [row.id, row.xpAwarded]));
-  const xpShownFor = (exerciseId: string, set: EditSet | EditBout) => {
+  const xpShownFor = (exerciseId: string, set: EditSet | EditBout | EditHold) => {
     const scored = scoredSets.get(set.id);
     const unchanged = scored?.exerciseId === exerciseId && sameSetValues(scored.set, set);
     return unchanged ? { label: formatXp(storedXp.get(set.id) ?? 0), note: 'XP' } : { label: '~?', note: 'after save' };
@@ -362,20 +367,30 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                       <span className="xp-text">{formatXp(storedXp.get(bout.id) ?? 0)} XP</span>
                     </li>
                   ))
-                : exercise.sets.map((set, setIndex) => (
-                    <li className="row spread" key={set.id}>
-                      <span>
-                        {setIndex + 1}.{' '}
-                        {exercise.loadType === 'bodyweight'
-                          ? 'bodyweight'
-                          : formatLoad(set.weightKg, exercise.loadType, unitPref)}{' '}
-                        × {set.reps}
-                        {set.isWarmup && ' · warm-up'}
-                        {effortLabel(set.effort) && ` · ${effortLabel(set.effort)}`}
-                      </span>
-                      <span className="xp-text">{formatXp(storedXp.get(set.id) ?? 0)} XP</span>
-                    </li>
-                  ))}
+                : exercise.modality === 'hold'
+                  ? exercise.sets.map((set, setIndex) => (
+                      <li className="row spread" key={set.id}>
+                        <span>
+                          {setIndex + 1}. {describeHold(set, exercise.loadType, unitPref)}
+                          {effortLabel(set.effort) && ` · ${effortLabel(set.effort)}`}
+                        </span>
+                        <span className="xp-text">{formatXp(storedXp.get(set.id) ?? 0)} XP</span>
+                      </li>
+                    ))
+                  : exercise.sets.map((set, setIndex) => (
+                      <li className="row spread" key={set.id}>
+                        <span>
+                          {setIndex + 1}.{' '}
+                          {exercise.loadType === 'bodyweight'
+                            ? 'bodyweight'
+                            : formatLoad(set.weightKg, exercise.loadType, unitPref)}{' '}
+                          × {set.reps}
+                          {set.isWarmup && ' · warm-up'}
+                          {effortLabel(set.effort) && ` · ${effortLabel(set.effort)}`}
+                        </span>
+                        <span className="xp-text">{formatXp(storedXp.get(set.id) ?? 0)} XP</span>
+                      </li>
+                    ))}
             </ol>
           </section>
         ))}
@@ -414,7 +429,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                   This exercise isn't available. Pick another one or remove its sets.
                 </p>
                 <ExercisePicker
-                  exercises={pickable.filter((candidate) => candidate.modality === exercise.modality)}
+                  exercises={pickable.filter((candidate) => sameKindOfExercise(candidate, exercise))}
                   placeholder="Replace with…"
                   onPick={(replacement) => {
                     setEdit(swapEditExercise(edit, exerciseIndex, replacement));
@@ -434,6 +449,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                         boutNumber={boutIndex + 1}
                         bout={bout}
                         paceUnit={exercise.paceUnit}
+                        tracksDistance={exercise.tracksDistance}
                         xpLabel={xp.label}
                         xpNote={xp.note}
                         unit={unitPref}
@@ -442,23 +458,41 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                       />
                     );
                   })
-                : exercise.sets.map((set, setIndex) => {
-                    const xp = xpShownFor(exercise.exerciseId, set);
-                    return (
-                      <HistorySetRow
-                        key={set.id}
-                        setNumber={setIndex + 1}
-                        loadType={exercise.loadType}
-                        set={set}
-                        xpLabel={xp.label}
-                        xpNote={xp.note}
-                        unit={unitPref}
-                        effortMode={effortInputMode}
-                        onChange={(changes) => setEdit(updateSet(edit, exerciseIndex, set.id, changes))}
-                        onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
-                      />
-                    );
-                  })}
+                : exercise.modality === 'hold'
+                  ? exercise.sets.map((set, setIndex) => {
+                      const xp = xpShownFor(exercise.exerciseId, set);
+                      return (
+                        <HistoryHoldRow
+                          key={set.id}
+                          setNumber={setIndex + 1}
+                          set={set}
+                          measure={exercise.measure}
+                          loadType={exercise.loadType}
+                          xpLabel={xp.label}
+                          xpNote={xp.note}
+                          unit={unitPref}
+                          onChange={(changes) => setEdit(updateHoldSet(edit, exerciseIndex, set.id, changes))}
+                          onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
+                        />
+                      );
+                    })
+                  : exercise.sets.map((set, setIndex) => {
+                      const xp = xpShownFor(exercise.exerciseId, set);
+                      return (
+                        <HistorySetRow
+                          key={set.id}
+                          setNumber={setIndex + 1}
+                          loadType={exercise.loadType}
+                          set={set}
+                          xpLabel={xp.label}
+                          xpNote={xp.note}
+                          unit={unitPref}
+                          effortMode={effortInputMode}
+                          onChange={(changes) => setEdit(updateSet(edit, exerciseIndex, set.id, changes))}
+                          onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
+                        />
+                      );
+                    })}
             </ol>
             <button
               className="button dashed"

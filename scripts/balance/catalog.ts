@@ -13,17 +13,18 @@ export const SIM_SKILLS: SkillDef[] = [
   { id: 'arms', key: 'arms', sortOrder: 4, combatWeight: 1 },
   { id: 'legs', key: 'legs', sortOrder: 5, combatWeight: 2 },
   { id: 'core', key: 'core', sortOrder: 6, combatWeight: 1 },
+  { id: 'grip', key: 'grip', sortOrder: 7, combatWeight: 1 },
 ];
 
 export const SIM_EXERCISE_SHARES: Readonly<Record<string, Readonly<Record<string, number>>>> = {
   barbell_bench_press: { chest: 7000, shoulders: 2000, arms: 1000 },
-  barbell_row: { back: 7000, arms: 2000, core: 1000 },
+  barbell_row: { back: 7000, arms: 1500, core: 1000, grip: 500 },
   overhead_press: { shoulders: 7000, arms: 2000, core: 1000 },
-  lat_pulldown: { back: 7500, arms: 2500 },
+  lat_pulldown: { back: 7500, arms: 2000, grip: 500 },
   barbell_curl: { arms: 10000 },
   cable_triceps_pushdown: { arms: 10000 },
   back_squat: { legs: 9000, core: 1000 },
-  romanian_deadlift: { legs: 7000, back: 2000, core: 1000 },
+  romanian_deadlift: { legs: 7000, back: 1500, core: 1000, grip: 500 },
   leg_press: { legs: 10000 },
   leg_curl: { legs: 10000 },
   standing_calf_raise: { legs: 10000 },
@@ -48,9 +49,11 @@ export function shareOf(exerciseKey: string, skillKey: string): number {
 }
 
 export const CARDIO_SIM_SKILLS: SkillDef[] = [
-  { id: 'endurance', key: 'endurance', sortOrder: 7, combatWeight: 0 },
-  { id: 'agility', key: 'agility', sortOrder: 8, combatWeight: 0 },
+  { id: 'endurance', key: 'endurance', sortOrder: 8, combatWeight: 0 },
+  { id: 'agility', key: 'agility', sortOrder: 9, combatWeight: 0 },
 ];
+
+export const MOBILITY_SIM_SKILLS: SkillDef[] = [{ id: 'mobility', key: 'mobility', sortOrder: 10, combatWeight: 0 }];
 
 export interface CardioSimExercise {
   cardio: CardioProfile;
@@ -59,16 +62,44 @@ export interface CardioSimExercise {
 
 export const CARDIO_SIM_EXERCISES: Readonly<Record<string, CardioSimExercise>> = {
   running: {
-    cardio: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', recordMinDistanceM: 1000 },
+    cardio: {
+      paceUnit: 'per_km',
+      referencePaceSPerKm: 360,
+      maxEffort: 'max',
+      recordMinDistanceM: 1000,
+      tracksDistance: true,
+    },
     shares: { endurance: 10000 },
   },
   sprint_intervals: {
-    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
+    cardio: {
+      paceUnit: 'per_km',
+      referencePaceSPerKm: null,
+      maxEffort: 'max',
+      recordMinDistanceM: null,
+      tracksDistance: true,
+    },
     shares: { agility: 10000 },
   },
   jump_rope: {
-    cardio: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', recordMinDistanceM: null },
+    cardio: {
+      paceUnit: 'per_km',
+      referencePaceSPerKm: null,
+      maxEffort: 'max',
+      recordMinDistanceM: null,
+      tracksDistance: true,
+    },
     shares: { agility: 10000 },
+  },
+  static_stretching: {
+    cardio: {
+      paceUnit: 'per_km',
+      referencePaceSPerKm: null,
+      maxEffort: 'moderate',
+      recordMinDistanceM: null,
+      tracksDistance: false,
+    },
+    shares: { mobility: 10000 },
   },
 };
 
@@ -84,6 +115,6 @@ function cardioExerciseDef(key: string): CardioExerciseDef {
 }
 
 export const CARDIO_SIM_CATALOG: Catalog = {
-  skills: CARDIO_SIM_SKILLS,
+  skills: [...CARDIO_SIM_SKILLS, ...MOBILITY_SIM_SKILLS],
   exercises: new Map(Object.keys(CARDIO_SIM_EXERCISES).map((key) => [key, cardioExerciseDef(key)])),
 };

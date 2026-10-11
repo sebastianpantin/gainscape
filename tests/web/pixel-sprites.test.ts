@@ -51,7 +51,18 @@ describe('pixel sprites', () => {
   });
 
   it('has art for exactly the seeded skills', () => {
-    expect(seedSkillKeys).toEqual(['chest', 'back', 'shoulders', 'arms', 'legs', 'core', 'endurance', 'agility']);
+    expect(seedSkillKeys).toEqual([
+      'chest',
+      'back',
+      'shoulders',
+      'arms',
+      'legs',
+      'core',
+      'grip',
+      'endurance',
+      'agility',
+      'mobility',
+    ]);
     expect(Object.keys(SKILL_SPRITES).sort()).toEqual([...seedSkillKeys].sort());
   });
 

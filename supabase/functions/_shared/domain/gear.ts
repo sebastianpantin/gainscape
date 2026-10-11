@@ -1,4 +1,5 @@
 import type { BalanceConfig } from './balance.ts';
+import { MOBILITY_SKILL_KEY } from './cardio.ts';
 import { GEAR_SLOTS, type GearSlot, ITEM_TIERS, type ItemTier } from './crafting.ts';
 import { nonNegativeIntegerPercent } from './math.ts';
 
@@ -8,12 +9,14 @@ type GearBonusConfig = Pick<BalanceConfig, 'gearBonusPercentAtFullTier'>;
 
 export const GEAR_SLOT_SKILLS: Readonly<Record<GearSlot, readonly string[]>> = Object.freeze({
   belt: Object.freeze(['legs', 'back', 'core']),
-  chalk: Object.freeze(['back', 'arms']),
-  straps: Object.freeze(['back', 'arms']),
+  chalk: Object.freeze(['back', 'arms', 'grip']),
+  straps: Object.freeze(['back', 'arms', 'grip']),
   sleeves: Object.freeze(['legs', 'arms']),
   shoes: Object.freeze(['legs', 'endurance', 'agility']),
-  gloves: Object.freeze(['chest', 'shoulders', 'arms']),
+  gloves: Object.freeze(['chest', 'shoulders', 'arms', 'grip']),
 });
+
+export const SKILLS_WITHOUT_GEAR: readonly string[] = Object.freeze([MOBILITY_SKILL_KEY]);
 
 const BOOSTED_SKILLS: readonly string[] = Object.freeze([...new Set(Object.values(GEAR_SLOT_SKILLS).flat())]);
 

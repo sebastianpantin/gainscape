@@ -89,13 +89,19 @@ export async function fetchExerciseStrength(userId: string): Promise<Map<string,
 }
 
 export async function fetchRecordBaseline(userId: string): Promise<RecordBaseline> {
-  const [repMaxes, bodyweightRecords] = await Promise.all([
+  const [repMaxes, bodyweightRecords, cardioRecords] = await Promise.all([
     supabase.from('rep_maxes').select(RECORD_BASELINE_COLUMNS.repMaxes).eq('user_id', userId),
     supabase.from('bodyweight_rep_records').select(RECORD_BASELINE_COLUMNS.bodyweightRecords).eq('user_id', userId),
+    supabase.from('cardio_records').select(RECORD_BASELINE_COLUMNS.cardioRecords).eq('user_id', userId),
   ]);
   if (repMaxes.error) throw repMaxes.error;
   if (bodyweightRecords.error) throw bodyweightRecords.error;
-  return recordBaselineFrom({ repMaxes: repMaxes.data, bodyweightRecords: bodyweightRecords.data });
+  if (cardioRecords.error) throw cardioRecords.error;
+  return recordBaselineFrom({
+    repMaxes: repMaxes.data,
+    bodyweightRecords: bodyweightRecords.data,
+    cardioRecords: cardioRecords.data,
+  });
 }
 
 interface StrengthStateRow {

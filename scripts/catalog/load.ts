@@ -9,6 +9,7 @@ export type ItemKind = 'gear' | 'material' | 'pet' | 'scroll';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
 
 export type CatalogModality = 'lift' | 'cardio';
+export type CatalogMeasure = 'reps' | 'time' | 'distance';
 
 export interface CatalogSkill {
   key: string;
@@ -28,6 +29,7 @@ export interface CatalogCardio {
   paceUnit: 'per_km' | 'per_100m';
   maxEffort: string;
   recordMinDistanceM: number | null;
+  tracksDistance: boolean;
 }
 
 export interface CatalogExercise {
@@ -38,6 +40,7 @@ export interface CatalogExercise {
   equipment: string;
   shares: CatalogShare[];
   variationOf: string | null;
+  measure: CatalogMeasure;
   cardio: CatalogCardio | null;
 }
 
@@ -161,12 +164,14 @@ const exercisesSchema = z.array(
     equipment: z.enum(['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other']),
     shares: z.record(z.string(), z.int()),
     variation_of: z.string().optional(),
+    measure: z.enum(['time', 'distance']).optional(),
     cardio: z
       .strictObject({
         reference_pace_s_per_km: z.int().optional(),
         pace_unit: z.enum(['per_km', 'per_100m']),
         max_effort: z.string(),
         record_min_distance_m: z.int().optional(),
+        distance: z.boolean().optional(),
       })
       .optional(),
   }),
@@ -361,6 +366,7 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
       key: exercise.key,
       name: exercise.name,
       modality: exercise.modality ?? 'lift',
+      measure: exercise.measure ?? 'reps',
       loadType: exercise.load_type ?? null,
       equipment: exercise.equipment,
       shares: Object.entries(exercise.shares).map(([skill, shareBp]) => ({ skill, shareBp })),
@@ -373,6 +379,7 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
               paceUnit: exercise.cardio.pace_unit,
               maxEffort: exercise.cardio.max_effort,
               recordMinDistanceM: exercise.cardio.record_min_distance_m ?? null,
+              tracksDistance: exercise.cardio.distance ?? true,
             },
     })),
     programs: programsSchema.parse(sources.programs).map((program) => ({

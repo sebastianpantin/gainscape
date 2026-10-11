@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
-import { GEAR_SLOT_SKILLS } from '../../supabase/functions/_shared/domain/gear.ts';
+import { GEAR_SLOT_SKILLS, SKILLS_WITHOUT_GEAR } from '../../supabase/functions/_shared/domain/gear.ts';
 import { CARDIO_EFFORT_LEVELS } from '../../supabase/functions/_shared/domain/types.ts';
+import { MOBILITY_SKILL_KEY } from '../../supabase/functions/_shared/domain/cardio.ts';
 import {
   type CatalogChallenge,
   type CatalogData,
@@ -84,6 +85,7 @@ function checkModalityFields(exercise: CatalogExercise, problems: string[]): voi
     return;
   }
   if (exercise.loadType !== null) problems.push(`cardio exercise "${exercise.key}" has a load_type`);
+  if (exercise.measure !== 'reps') problems.push(`cardio exercise "${exercise.key}" has a measure`);
   if (exercise.cardio === null) {
     problems.push(`cardio exercise "${exercise.key}" needs a cardio block`);
     return;
@@ -96,6 +98,9 @@ function checkModalityFields(exercise: CatalogExercise, problems: string[]): voi
   }
   if (exercise.cardio.recordMinDistanceM !== null && exercise.cardio.referencePaceSPerKm === null) {
     problems.push(`cardio exercise "${exercise.key}" has record_min_distance_m but no reference pace`);
+  }
+  if (!exercise.cardio.tracksDistance && exercise.cardio.referencePaceSPerKm !== null) {
+    problems.push(`cardio exercise "${exercise.key}" tracks no distance but has a reference pace`);
   }
 }
 
@@ -128,6 +133,9 @@ function checkExercises(catalog: CatalogData, problems: string[]): void {
         problems.push(`exercise "${exercise.key}" shares skill "${share.skill}" of another modality`);
       }
     }
+    if (exercise.shares.length > 1 && exercise.shares.some((share) => share.skill === MOBILITY_SKILL_KEY)) {
+      problems.push(`exercise "${exercise.key}" shares Mobility with another skill`);
+    }
     const total = exercise.shares.reduce((sum, share) => sum + share.shareBp, 0);
     if (total !== FULL_SHARE_BP)
       problems.push(`exercise "${exercise.key}" shares sum to ${total}, not ${FULL_SHARE_BP}`);
@@ -137,6 +145,10 @@ function checkExercises(catalog: CatalogData, problems: string[]): void {
         problems.push(`exercise "${exercise.key}" is a variation of unknown exercise "${exercise.variationOf}"`);
       } else if (base.modality !== exercise.modality) {
         problems.push(`exercise "${exercise.key}" is a variation of "${base.key}" of another modality`);
+      } else if (base.measure !== exercise.measure) {
+        problems.push(
+          `exercise "${exercise.key}" measures ${exercise.measure} but its base "${base.key}" measures ${base.measure}`,
+        );
       }
     }
   }
@@ -163,6 +175,8 @@ function checkProgramDays(catalog: CatalogData, problems: string[]): void {
         problems.push(`${where} uses unknown exercise "${entry.exercise}"`);
       } else if (exercise.modality === 'cardio') {
         problems.push(`${where} uses cardio exercise "${entry.exercise}"`);
+      } else if (exercise.measure !== 'reps') {
+        problems.push(`${where} uses hold exercise "${entry.exercise}"`);
       }
       if (!inRange(entry.sets, 1, MAX_PROGRAM_SETS)) {
         problems.push(`${where} exercise ${index + 1} needs 1-${MAX_PROGRAM_SETS} sets`);
@@ -191,7 +205,7 @@ function checkGear(catalog: CatalogData, problems: string[]): void {
       problems.push(`gear slot "${slot}" boosts unknown skill "${skill}"`);
     }
   }
-  const boosted = new Set(Object.values(GEAR_SLOT_SKILLS).flat());
+  const boosted = new Set([...Object.values(GEAR_SLOT_SKILLS).flat(), ...SKILLS_WITHOUT_GEAR]);
   for (const skill of catalog.skills.filter((candidate) => !boosted.has(candidate.key))) {
     problems.push(`skill "${skill.key}" is boosted by no gear slot`);
   }
@@ -214,6 +228,7 @@ function checkChallengeExercise(
   const exercise = exercisesByKey.get(key);
   if (exercise === undefined) problems.push(`challenge "${challenge.key}" uses unknown exercise "${key}"`);
   else if (exercise.modality !== 'lift') problems.push(`challenge "${challenge.key}" uses cardio exercise "${key}"`);
+  else if (exercise.measure !== 'reps') problems.push(`challenge "${challenge.key}" uses hold exercise "${key}"`);
   else if (hasPercentage && exercise.loadType !== 'external') {
     problems.push(`challenge "${challenge.key}" sets a percentage on "${key}", which has no external load`);
   }

@@ -130,3 +130,18 @@ export const CARDIO_PROFILES: Readonly<Record<'cardio_balanced', CardioAthletePr
 };
 
 export const STEADY_AGILITY_BOUT: PlannedBout = { exercise: 'jump_rope', effort: 'moderate', durationS: 30 * 60 };
+
+const twentyMinutesOfStretching: PlannedBout = {
+  exercise: 'static_stretching',
+  effort: 'moderate',
+  durationS: 20 * 60,
+};
+
+export const MOBILITY_PROFILES: Readonly<Record<'mobility_regular', CardioAthleteProfile>> = {
+  mobility_regular: {
+    name: 'mobility_regular',
+    weeklySessions: [[twentyMinutesOfStretching], [twentyMinutesOfStretching], [twentyMinutesOfStretching]],
+    dayOffsets: [0, 2, 4],
+    speedRatioRange: [1, 1],
+  },
+};

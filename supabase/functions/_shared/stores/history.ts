@@ -8,7 +8,7 @@ import {
   type SessionInput,
   type SessionKey,
 } from '../domain/index.ts';
-import { cardioFieldsFromRow, liftFieldsFromRow } from './set-columns.ts';
+import { cardioFieldsFromRow, holdFieldsFromRow, liftFieldsFromRow, setKindOfRow } from './set-columns.ts';
 
 export async function loadReplayableSessions(
   tx: Transaction,
@@ -37,10 +37,14 @@ export async function loadReplayableSessions(
     };
     const identity = { id: row.set_id, exerciseId: row.exercise_id, position: row.position };
     const effort = effortInputFromStored(row.effort_input_type, nullableNumber(row.effort_value), cfg);
+    const recordedEffectiveLoadKg = Number(row.effective_load_kg);
+    const kind = setKindOfRow(row);
     session.sets.push(
-      row.duration_s === null
-        ? { ...identity, ...liftFieldsFromRow(row), effort, recordedEffectiveLoadKg: Number(row.effective_load_kg) }
-        : { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row), effort },
+      kind === 'lift'
+        ? { ...identity, ...liftFieldsFromRow(row), effort, recordedEffectiveLoadKg }
+        : kind === 'hold'
+          ? { ...identity, kind: 'hold', ...holdFieldsFromRow(row), effort, recordedEffectiveLoadKg }
+          : { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row), effort },
     );
     sessions.set(row.session_id, session);
   }
@@ -55,6 +59,7 @@ export async function loadRecordHistory(
 ): Promise<RecordHistoryRow[]> {
   const rows = await tx`
     select st.exercise_id, s.id as session_id, s.started_at, st.id as set_id, st.position, st.weight_kg, st.reps,
+           st.effective_load_kg,
            st.duration_s, st.distance_m, st.interval_work_s, st.interval_rest_s, st.interval_rounds
     from public.sets st
     join public.sessions s on s.id = st.session_id
@@ -70,7 +75,12 @@ export async function loadRecordHistory(
       setId: row.set_id,
       position: row.position,
     };
-    if (row.duration_s === null) return { ...identity, weightKg: Number(row.weight_kg), reps: row.reps };
+    const kind = setKindOfRow(row);
+    if (kind === 'lift') return { ...identity, weightKg: Number(row.weight_kg), reps: row.reps };
+    if (kind === 'hold') {
+      const { durationS, distanceM } = holdFieldsFromRow(row);
+      return { ...identity, kind: 'hold', effectiveLoadKg: Number(row.effective_load_kg), durationS, distanceM };
+    }
     return { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row) };
   });
 }

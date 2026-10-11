@@ -4,6 +4,12 @@ import { userCache } from './cache-first.ts';
 
 export const OFFLINE_PROGRAMS_NOTICE = 'Offline: using your saved programs.';
 
+const progressionSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('none') }),
+  z.object({ kind: z.literal('fixed') }),
+  z.object({ kind: z.literal('linear'), incrementKg: z.number(), incrementLb: z.number() }),
+]);
+
 const programSchema = z.object({
   id: z.string(),
   key: z.string().nullable(),
@@ -21,6 +27,7 @@ const programSchema = z.object({
           targetSets: z.number(),
           targetRepsMin: z.number(),
           targetRepsMax: z.number(),
+          progression: progressionSchema.default({ kind: 'none' }),
         }),
       ),
     }),

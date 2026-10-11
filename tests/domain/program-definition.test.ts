@@ -232,6 +232,11 @@ describe('parseProgramDefinition', () => {
     expect(parseProgramDefinition(asJson(definition))).toEqual({ kind: 'ok', definition });
   });
 
+  it('parses a definition with no source as ok, since only the catalog loader asks for sources', () => {
+    const definition = { ...structuredClone(MADCOW_5X5), source: [] };
+    expect(parseProgramDefinition(asJson(definition))).toEqual({ kind: 'ok', definition });
+  });
+
   it('parses an unknown load kind as unsupported instead of throwing', () => {
     const json = asJson(MADCOW_5X5) as ProgramDefinition;
     (madcowDay(json, 'mon').slots[0].scheme as { load: { kind: string } }).load = { kind: 'velocityLoad' };
