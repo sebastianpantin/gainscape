@@ -14,6 +14,7 @@ export type DataChange = (typeof DATA_CHANGES)[number];
 
 export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
   'workout-changed': [
+    'history',
     'standing',
     'collection',
     'items',
@@ -29,7 +30,7 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
   'profile-saved': ['profile', 'profile-preview', 'bodyweight-trend', 'feed', 'hiscores'],
   'timezone-changed': ['profile', 'weekly-goal'],
   'gear-changed': ['loadout', 'items'],
-  'exercise-saved': ['exercises', 'collection', 'enroll-choices', 'exercise-progress', 'profile-preview'],
+  'exercise-saved': ['exercises', 'collection', 'enroll-choices', 'exercise-progress', 'profile-preview', 'history'],
   'weekly-goal-saved': ['weekly-goal'],
   'pins-changed': ['collection'],
 };

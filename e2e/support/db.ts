@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { admin, db, TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 
 export { builtInExerciseId, resignedWithAnotherKey } from '../../tests/integration/local-stack.ts';
@@ -270,4 +271,26 @@ export async function scrollQuantity(username: string, key: string): Promise<num
     join public.profiles p on p.id = u.user_id
     where p.username = ${username} and i.key = ${key}`;
   return row.quantity;
+}
+
+export async function seedWorkouts(username: string, count: number, oldestNote: string | null = null): Promise<void> {
+  const minuteMs = 60 * 1000;
+  const [profile] = await db`select id from public.profiles where username = ${username}`;
+  const newest = Date.now() - 2 * 60 * minuteMs;
+  const rows = Array.from({ length: count }, (_, index) => {
+    const startedAt = new Date(newest - index * 30 * minuteMs).toISOString();
+    return {
+      id: randomUUID(),
+      user_id: profile.id,
+      started_at: startedAt,
+      ended_at: startedAt,
+      local_date: startedAt.slice(0, 10),
+      timezone: 'UTC',
+      balance_version: 2,
+      derived_balance_version: 2,
+      notes: index === count - 1 ? oldestNote : null,
+      summary: db.json({ xpBySkill: {}, levelUps: [], prs: [], drops: [] }),
+    };
+  });
+  await db`insert into public.sessions ${db(rows)}`;
 }

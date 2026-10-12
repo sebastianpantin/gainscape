@@ -1,10 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 import { APP_TITLE, routeTitle } from './route-title-rules.ts';
+import { restoredScrollY, shouldScrollToTop } from './route-scroll-rules.ts';
 
 const SCREEN_WAIT_MS = 3_000;
 const LOADED_SCREEN = 'main:not([aria-busy="true"])';
 const ROUTE_FOCUS_TARGET = 'route-focus-target';
+const scrollPositions = new Map<string, number>();
 
 function focusRouteTarget(target: HTMLElement): boolean {
   if (!target.hasAttribute('tabindex')) target.tabIndex = -1;
@@ -42,9 +44,10 @@ function moveFocusToScreen(): () => void {
 }
 
 export function useRouteFocusAndTitle(): void {
-  const { pathname } = useLocation();
+  const { pathname, key } = useLocation();
   const navigationType = useNavigationType();
   const previousPathname = useRef(pathname);
+  const shownKey = useRef(key);
 
   useEffect(() => {
     document.title = routeTitle(pathname);
@@ -53,9 +56,22 @@ export function useRouteFocusAndTitle(): void {
   useEffect(() => () => void (document.title = APP_TITLE), []);
 
   useEffect(() => {
+    const rememberScroll = () => scrollPositions.set(shownKey.current, window.scrollY);
+    window.addEventListener('scroll', rememberScroll, { passive: true });
+    return () => window.removeEventListener('scroll', rememberScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    shownKey.current = key;
+    if (previousPathname.current === pathname) return;
+    if (shouldScrollToTop(navigationType, previousPathname.current, pathname)) window.scrollTo(0, 0);
+    const restoreTo = restoredScrollY(navigationType, scrollPositions.get(key));
+    if (restoreTo !== null) window.scrollTo(0, restoreTo);
+  }, [key, pathname, navigationType]);
+
+  useEffect(() => {
     if (previousPathname.current === pathname) return;
     previousPathname.current = pathname;
-    if (navigationType === 'PUSH') window.scrollTo(0, 0);
     return moveFocusToScreen();
-  }, [pathname, navigationType]);
+  }, [pathname]);
 }

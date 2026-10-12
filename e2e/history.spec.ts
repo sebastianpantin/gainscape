@@ -20,6 +20,7 @@ import {
   editElsewhere,
   latestSetOf,
   sessionCount,
+  seedWorkouts,
   sessionNotes,
   setsOf,
 } from './support/db.ts';
@@ -73,6 +74,47 @@ test('a workout older than the edit window shows as locked in History', async ({
   const workout = page.getByRole('list', { name: 'Workouts' }).getByRole('link').first();
   await expect(workout).toContainText('Locked');
   await expect(workout).not.toContainText('Editable');
+});
+
+test('Back from an older workout keeps every loaded page of History and its scroll position', async ({ page }) => {
+  const username = uniqueUsername('hist_back');
+  await register(page, username);
+  await seedWorkouts(username, 55);
+  await openTab(page, 'Collection');
+  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
+  await expect(workouts).toHaveCount(50);
+  await workouts.last().scrollIntoViewIfNeeded();
+  await expect(workouts).toHaveCount(55);
+
+  const olderWorkout = workouts.nth(52);
+  await olderWorkout.scrollIntoViewIfNeeded();
+  const scrolledTo = await page.evaluate(() => window.scrollY);
+  expect(scrolledTo).toBeGreaterThan(0);
+  await olderWorkout.click();
+  await expect(page).toHaveURL(/\/collection\/history\/[0-9a-f-]+$/);
+  await expect(page.getByRole('link', { name: '← History' })).toBeVisible();
+
+  await page.goBack();
+
+  await expect(workouts).toHaveCount(55);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(scrolledTo);
+  await expect(olderWorkout).toBeInViewport();
+});
+
+test('the Progress link waits until edits are saved, so leaving for progress cannot drop them', async ({ page }) => {
+  await register(page, uniqueUsername('hist_prog'));
+  await logBench(page);
+  await openLatestWorkout(page);
+  const progress = page.getByRole('link', { name: 'Barbell Bench Press progress' });
+  await expect(progress).toBeVisible();
+
+  await setRow(page, 1).getByLabel('reps', { exact: true }).fill('8');
+  await expect(progress).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Changes saved.')).toBeVisible();
+  await expect(progress).toBeVisible();
 });
 
 test('re-sending a workout that was deleted elsewhere shows it as deleted and drops the draft', async ({ page }) => {

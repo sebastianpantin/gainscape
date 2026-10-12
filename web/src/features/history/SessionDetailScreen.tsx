@@ -427,7 +427,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           <section className="panel stack exercise-card" key={editKeys[exerciseIndex]}>
             <header>
               <h2>{exercise.name}</h2>
-              {exercise.modality === 'lift' && (
+              {exercise.modality === 'lift' && !changed && (
                 <ExerciseProgressLink exerciseId={exercise.exerciseId} exerciseName={exercise.name} />
               )}
             </header>

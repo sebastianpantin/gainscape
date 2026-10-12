@@ -8,7 +8,8 @@ import { type Skill } from './catalog-rules.ts';
 import { type Collection, loadCollectionCacheFirst } from './collection-data.ts';
 import { collectionPercent, countCollection } from './collection-rules.ts';
 import { fetchExerciseProgress } from './exercise-progress.ts';
-import { isUuid } from './history-rules.ts';
+import { fetchSessionPage } from './history.ts';
+import { HISTORY_PAGE_SIZE, type HistorySession, isUuid } from './history-rules.ts';
 import { fetchLoadout, loadItemsCacheFirst } from './items.ts';
 import { fetchTrainingHistory } from './onboarding.ts';
 import { loadProfileCacheFirst } from './profile.ts';
@@ -76,6 +77,15 @@ export function feedQuery(userId: string) {
       const lastItem = lastPage.at(-1);
       return lastItem && lastPage.length >= FEED_PAGE_SIZE ? feedCursor(lastItem) : undefined;
     },
+  });
+}
+
+export function historyQuery(userId: string) {
+  return infiniteQueryOptions({
+    queryKey: ['history', userId] as const,
+    queryFn: ({ pageParam }) => fetchSessionPage(pageParam),
+    initialPageParam: null as HistorySession | null,
+    getNextPageParam: (lastPage) => (lastPage.length === HISTORY_PAGE_SIZE ? lastPage.at(-1) : undefined),
   });
 }
 

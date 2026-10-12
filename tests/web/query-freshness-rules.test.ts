@@ -38,6 +38,7 @@ const QUERY_ROOTS = [
   queries.exerciseListQuery(USER_ID),
   queries.lastLoggedWeightsQuery(['bench']),
   queries.trainingHistoryQuery(USER_ID),
+  queries.historyQuery(USER_ID),
 ].map(({ queryKey }) => String(queryKey[0]));
 
 function draftMessage(change: string) {
@@ -69,6 +70,7 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
   it('refreshes every screen a finished, edited or deleted workout changes', () => {
     expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toEqual(
       expect.arrayContaining([
+        'history',
         'standing',
         'collection',
         'items',
@@ -105,7 +107,7 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
 
   it('refreshes every exercise list and the Collection tab after a custom exercise is saved or archived', () => {
     expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toEqual(
-      expect.arrayContaining(['exercises', 'collection', 'enroll-choices', 'exercise-progress']),
+      expect.arrayContaining(['exercises', 'collection', 'enroll-choices', 'exercise-progress', 'history']),
     );
   });
 
