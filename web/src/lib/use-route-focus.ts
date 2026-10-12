@@ -1,15 +1,16 @@
 import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigationType } from 'react-router-dom';
 import { APP_TITLE, routeTitle } from './route-title-rules.ts';
 
 const SCREEN_WAIT_MS = 3_000;
 const LOADED_SCREEN = 'main:not([aria-busy="true"])';
 const ROUTE_FOCUS_TARGET = 'route-focus-target';
 
-function focusRouteTarget(target: HTMLElement): void {
+function focusRouteTarget(target: HTMLElement): boolean {
   if (!target.hasAttribute('tabindex')) target.tabIndex = -1;
   target.classList.add(ROUTE_FOCUS_TARGET);
-  target.focus();
+  target.focus({ preventScroll: true });
+  return document.activeElement === target;
 }
 
 function hasOpenDialog(): boolean {
@@ -28,7 +29,7 @@ function moveFocusToScreen(): () => void {
   const attempt = () => {
     if (document.activeElement !== focusedAtNavigation || hasOpenDialog()) return;
     const heading = document.querySelector<HTMLElement>(`${LOADED_SCREEN} h1`);
-    if (heading) return focusRouteTarget(heading);
+    if (heading && focusRouteTarget(heading)) return;
     if (performance.now() >= deadline) {
       const screen = document.querySelector<HTMLElement>('main');
       if (screen) focusRouteTarget(screen);
@@ -42,6 +43,7 @@ function moveFocusToScreen(): () => void {
 
 export function useRouteFocusAndTitle(): void {
   const { pathname } = useLocation();
+  const navigationType = useNavigationType();
   const previousPathname = useRef(pathname);
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export function useRouteFocusAndTitle(): void {
   useEffect(() => {
     if (previousPathname.current === pathname) return;
     previousPathname.current = pathname;
+    if (navigationType === 'PUSH') window.scrollTo(0, 0);
     return moveFocusToScreen();
-  }, [pathname]);
+  }, [pathname, navigationType]);
 }
