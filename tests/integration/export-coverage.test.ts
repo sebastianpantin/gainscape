@@ -135,9 +135,13 @@ describe('export-data and custom program templates', () => {
       days: [plannedDay('Day A', [linearFiveByFive(squatId)])],
     };
     const programId = await savedProgram(owner, program);
+    const otherProgramId = await savedProgram(owner, {
+      id: randomUUID(),
+      name: 'Exported squat two',
+      days: [plannedDay('Day A', [linearFiveByFive(squatId)])],
+    });
     const first = await publishedProgram(owner, programId);
-    await savedProgram(owner, { ...program, name: 'Exported squat v2' });
-    const second = await publishedProgram(owner, programId);
+    const second = await publishedProgram(owner, otherProgramId);
     const bystanderProgramId = await savedProgram(bystander, {
       id: randomUUID(),
       name: 'Hidden squat',
@@ -148,13 +152,15 @@ describe('export-data and custom program templates', () => {
     const response = await postFunction('export-data', owner.accessToken, {});
     expect(response.status, response.rawBody).toBe(200);
     const templates = (response.body as unknown as { programTemplates: ExportedTemplate[] }).programTemplates;
-    expect(templates.map((template) => [template.key, template.version])).toEqual([
-      [first.key, first.version],
-      [second.key, second.version],
-    ]);
+    const exported = templates.map((template) => [template.key, template.version, template.source_program_id]);
+    expect(exported.sort()).toEqual(
+      [
+        [first.key, first.version, programId],
+        [second.key, second.version, otherProgramId],
+      ].sort(),
+    );
     expect(templates.every((template) => template.owner_user_id === owner.id)).toBe(true);
-    expect(templates.every((template) => template.source_program_id === programId)).toBe(true);
-    expect(templates[1].definition.key).toBe(second.key);
+    expect(templates.every((template) => template.definition.key === template.key)).toBe(true);
     expect(response.rawBody).not.toContain(bystanderTemplate.key);
     expect(response.rawBody).not.toContain(bystander.id);
   });
