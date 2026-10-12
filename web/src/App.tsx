@@ -2,6 +2,7 @@ import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { type ComponentType, lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { Icon, type IconName } from './components/Icon.tsx';
+import { ScreenErrorBoundary } from './components/ScreenErrorBoundary.tsx';
 import { ScreenSkeleton } from './components/ScreenSkeleton.tsx';
 import { PreferencesProvider } from './components/PreferencesProvider.tsx';
 import { AuthCallbackScreen } from './features/auth/AuthCallbackScreen.tsx';
@@ -128,37 +129,39 @@ function Screens() {
           ))}
         </nav>
         <ActiveWorkoutBar userId={userId} />
-        <Suspense fallback={<ScreenSkeleton />}>
-          <Routes>
-            <Route path="/" element={<WorkoutScreen key={userId} userId={userId} />} />
-            <Route path="/reveal" element={<RevealScreen userId={userId} />} />
-            <Route path="/skills" element={<SkillsScreen userId={userId} />} />
-            <Route path="/collection" element={<CollectionScreen userId={userId} />} />
-            <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
-            <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
-            <Route path="/collection/history" element={<HistoryScreen />} />
-            <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
-            <Route path="/friends" element={<FriendsScreen userId={userId} />} />
-            <Route path="/friends/hiscores" element={<HiscoresScreen />} />
-            <Route path="/friends/:friendId" element={<FriendProfileScreen />} />
-            <Route path="/profile" element={<ProfileScreen userId={userId} />} />
-            <Route path="/profile/edit" element={<EditProfileScreen userId={userId} />} />
-            <Route path="/profile/preview" element={<FriendPreviewScreen userId={userId} />} />
-            <Route
-              path="/profile/settings"
-              element={<SettingsScreen userId={userId} email={auth.session.user.email ?? null} />}
-            />
-            <Route path="/profile/settings/whats-new" element={<WhatsNewScreen />} />
-            <Route path="/exercises" element={<ExercisesScreen userId={userId} />} />
-            <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
-            <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />
-            <Route path="/programs/active" element={<ActiveProgramScreen userId={userId} />} />
-            <Route path="/programs/active/plan" element={<ProgramPlanScreen userId={userId} />} />
-            <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
-            <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
+        <ScreenErrorBoundary>
+          <Suspense fallback={<ScreenSkeleton />}>
+            <Routes>
+              <Route path="/" element={<WorkoutScreen key={userId} userId={userId} />} />
+              <Route path="/reveal" element={<RevealScreen userId={userId} />} />
+              <Route path="/skills" element={<SkillsScreen userId={userId} />} />
+              <Route path="/collection" element={<CollectionScreen userId={userId} />} />
+              <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
+              <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
+              <Route path="/collection/history" element={<HistoryScreen />} />
+              <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
+              <Route path="/friends" element={<FriendsScreen userId={userId} />} />
+              <Route path="/friends/hiscores" element={<HiscoresScreen />} />
+              <Route path="/friends/:friendId" element={<FriendProfileScreen />} />
+              <Route path="/profile" element={<ProfileScreen userId={userId} />} />
+              <Route path="/profile/edit" element={<EditProfileScreen userId={userId} />} />
+              <Route path="/profile/preview" element={<FriendPreviewScreen userId={userId} />} />
+              <Route
+                path="/profile/settings"
+                element={<SettingsScreen userId={userId} email={auth.session.user.email ?? null} />}
+              />
+              <Route path="/profile/settings/whats-new" element={<WhatsNewScreen />} />
+              <Route path="/exercises" element={<ExercisesScreen userId={userId} />} />
+              <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
+              <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />
+              <Route path="/programs/active" element={<ActiveProgramScreen userId={userId} />} />
+              <Route path="/programs/active/plan" element={<ProgramPlanScreen userId={userId} />} />
+              <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
+              <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </ScreenErrorBoundary>
         <WhatsNewSheet userId={userId} />
       </BrowserRouter>
     </PreferencesProvider>
