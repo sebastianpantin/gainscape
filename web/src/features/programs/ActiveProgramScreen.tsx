@@ -78,7 +78,9 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
     <main className="screen stack">
       <h1 className="title">{title}</h1>
       {program.kind === 'ready' ? (
-        <Link to="/programs/active/plan">See the plan</Link>
+        <Link className="standalone-link" to="/programs/active/plan">
+          See the plan
+        </Link>
       ) : (
         <p className="panel muted">{program.message}</p>
       )}

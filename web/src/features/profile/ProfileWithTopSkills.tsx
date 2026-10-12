@@ -11,15 +11,17 @@ interface ProfileWithTopSkillsProps {
   skills: Skill[];
   profile: ProfileView;
   headingId: string;
+  nameIsPageTitle?: boolean;
 }
 
-export function ProfileWithTopSkills({ skills, profile, headingId }: ProfileWithTopSkillsProps) {
+export function ProfileWithTopSkills({ skills, profile, headingId, nameIsPageTitle }: ProfileWithTopSkillsProps) {
   const standing = standingOfView(skills, profile);
   const topSkills = [...standing.skills].sort((a, b) => b.progress.xp - a.progress.xp).slice(0, TOP_SKILL_COUNT);
   return (
     <>
       <ProfileCard
         profile={cardProfileOf(profile)}
+        nameIsPageTitle={nameIsPageTitle}
         totalLevel={standing.totalLevel}
         combatLevel={standing.combatLevel}
         collectionPercent={collectionPercent(profile.collection.filledSlots, profile.collection.totalSlots)}

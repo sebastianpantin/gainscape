@@ -101,7 +101,12 @@ function FriendProfile({ friendId }: { friendId: string }) {
       )}
       {state.status === 'ready' && (
         <>
-          <ProfileWithTopSkills skills={state.skills} profile={state.profile} headingId="friend-top-skills" />
+          <ProfileWithTopSkills
+            skills={state.skills}
+            profile={state.profile}
+            headingId="friend-top-skills"
+            nameIsPageTitle
+          />
           <LoadoutPanel userId={friendId} />
           <section className="stack" aria-labelledby="friend-records">
             <h2 id="friend-records">Records</h2>

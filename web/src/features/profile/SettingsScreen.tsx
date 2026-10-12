@@ -85,6 +85,8 @@ const EFFORT_OPTIONS: { value: EffortInputMode; label: string; hint: string }[] 
   { value: 'rpe', label: 'RPE', hint: GLOSSARY.rpe.definition },
 ];
 
+const MOST_SEGMENTS_IN_ONE_ROW = 6;
+
 function Choice<T extends string>({
   label,
   options,
@@ -101,7 +103,11 @@ function Choice<T extends string>({
   return (
     <div className="stack" style={{ gap: 6 }}>
       <span className="field">{label}</span>
-      <div className="segmented" role="radiogroup" aria-label={label}>
+      <div
+        className={options.length > MOST_SEGMENTS_IN_ONE_ROW ? 'segmented wrapped' : 'segmented'}
+        role="radiogroup"
+        aria-label={label}
+      >
         {options.map((option) => (
           <button
             key={option.value}

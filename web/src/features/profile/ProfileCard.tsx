@@ -6,6 +6,7 @@ interface ProfileCardProps {
   totalLevel: number | null;
   combatLevel: number | null;
   collectionPercent: number | null;
+  nameIsPageTitle?: boolean;
 }
 
 function joinedLabel(createdAt: string): string {
@@ -55,13 +56,20 @@ function detailLine(profile: CardProfile): string {
   return parts.length > 0 ? parts.join(' · ') : joinedLabel(profile.createdAt);
 }
 
-export function ProfileCard({ profile, totalLevel, combatLevel, collectionPercent }: ProfileCardProps) {
+export function ProfileCard({
+  profile,
+  totalLevel,
+  combatLevel,
+  collectionPercent,
+  nameIsPageTitle = false,
+}: ProfileCardProps) {
+  const NameHeading = nameIsPageTitle ? 'h1' : 'h2';
   return (
     <section className="panel stack profile-card" aria-label="Profile">
       <div className="row" style={{ gap: 14 }}>
         <ProfileBadge named color={profile.badgeColor} initials={initialsFor(profile.displayName, profile.username)} />
         <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-          <h2 className="profile-name">{profile.displayName}</h2>
+          <NameHeading className="profile-name">{profile.displayName}</NameHeading>
           <span className="muted">@{profile.username}</span>
           <span className="tiny">{detailLine(profile)}</span>
         </div>

@@ -78,7 +78,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
     .getByRole('list', { name: 'Friends list' })
     .getByRole('link', { name: new RegExp(bobName) })
     .click();
-  await expect(alice.getByRole('heading', { level: 2, name: bobName, exact: true })).toBeVisible();
+  await expect(alice.getByRole('heading', { level: 1, name: bobName, exact: true })).toBeVisible();
   await expect(definitionOf(alice, 'Total')).not.toHaveText('—');
   await expect(alice.getByText('Weights hidden')).toBeVisible();
   await alice.getByRole('button', { name: 'Remove friend' }).click();

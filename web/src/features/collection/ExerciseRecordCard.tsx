@@ -34,7 +34,7 @@ export function ExerciseRecordCard({
           <h2>{exercise.name}</h2>
           {exerciseLabels(exercise) && <span className="muted">{exerciseLabels(exercise)}</span>}
         </span>
-        <div className="row">
+        <div className="row wrap">
           <ExerciseProgressLink exerciseId={exercise.id} exerciseName={exercise.name} />
           {pinned && (
             <>

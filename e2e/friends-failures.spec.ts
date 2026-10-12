@@ -61,7 +61,7 @@ test('a failed removal shows the problem and keeps the friend', async ({ page })
   await page.getByRole('button', { name: 'Remove for good' }).click();
 
   await expect(friendsAlert(page)).toHaveText(GENERIC_PROBLEM);
-  await expect(page.getByRole('heading', { level: 2, name: bobName, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: bobName, exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Remove for good' })).toBeEnabled();
   await expect.poll(() => friendshipStatus(aliceName, bobName)).toBe('accepted');
 });
