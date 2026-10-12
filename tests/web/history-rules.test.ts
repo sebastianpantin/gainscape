@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { InvokeOutcome } from '../../web/src/lib/function-client-rules.ts';
-import { invokeWithRetries, parseSessionDetailRow, parseSessionPageRows } from '../../web/src/lib/history-rules.ts';
+import {
+  invokeWithRetries,
+  parseSessionDetailRow,
+  parseSessionPageRows,
+  withoutHistorySession,
+} from '../../web/src/lib/history-rules.ts';
 
 type Outcome = InvokeOutcome<{ saved: true }>;
 
@@ -143,5 +148,21 @@ describe('parseSessionDetailRow', () => {
 
   it('rejects a detail row whose set count is missing', () => {
     expect(() => parseSessionDetailRow({ ...sessionColumns, sets: [] })).toThrow();
+  });
+});
+
+describe('withoutHistorySession', () => {
+  const pages = { pages: [[{ id: 'a' }, { id: 'b' }], [{ id: 'c' }]], pageParams: [null, { id: 'b' }] };
+
+  it('drops a deleted workout from whichever loaded page holds it and keeps the page params', () => {
+    expect(withoutHistorySession(pages, 'c')).toEqual({
+      pages: [[{ id: 'a' }, { id: 'b' }], []],
+      pageParams: [null, { id: 'b' }],
+    });
+  });
+
+  it('leaves the pages alone when the workout is not loaded, and an empty cache empty', () => {
+    expect(withoutHistorySession(pages, 'z')).toEqual(pages);
+    expect(withoutHistorySession(undefined, 'a')).toBeUndefined();
   });
 });

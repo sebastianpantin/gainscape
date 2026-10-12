@@ -82,15 +82,15 @@ export function HistoryScreen({ userId }: { userId: string }) {
   const loaded = loadedState(pages.data?.pages.flat(), pages.error);
   const sessions = loaded.status === 'ready' ? loaded.data : null;
   const problem = moreProblem ?? (loaded.status === 'failed' ? loaded.problem : null);
-  const { hasNextPage: hasMore, isFetchingNextPage: loadingMore, fetchNextPage } = pages;
+  const { hasNextPage: hasMore, isFetching, isFetchingNextPage: loadingMore, fetchNextPage } = pages;
 
   const loadMore = useCallback(async () => {
-    if (loadingMore) return;
+    if (isFetching) return;
     setMoreProblem(null);
     const result = await fetchNextPage();
     if (result.isError) setMoreProblem(messageOf(result.error, 'Could not load more workouts.'));
     setAutoLoad(!result.isError);
-  }, [loadingMore, fetchNextPage]);
+  }, [isFetching, fetchNextPage]);
 
   const lastCardRef = useRef<HTMLLIElement | null>(null);
   useEffect(() => {
