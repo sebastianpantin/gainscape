@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { SET_MENU_GAP_PX, setMenuPlacement } from '../../web/src/features/workout/set-menu-rules.ts';
+import {
+  rowToFocusAfterRemoving,
+  SET_MENU_GAP_PX,
+  setMenuPlacement,
+} from '../../web/src/features/workout/set-menu-rules.ts';
 
 const VIEWPORT = { width: 412, height: 839 };
 const MENU_HEIGHT = 120;
@@ -38,5 +42,20 @@ describe('setMenuPlacement', () => {
 
   it('never lets the menu start past the left or right edge of the screen', () => {
     expect(setMenuPlacement({ top: 200, bottom: 244, right: 500 }, VIEWPORT, MENU_HEIGHT).right).toBe(0);
+  });
+});
+
+describe('rowToFocusAfterRemoving', () => {
+  it('moves to the next row', () => {
+    expect(rowToFocusAfterRemoving(['a', 'b', 'c'], 'b')).toBe('c');
+  });
+
+  it('moves to the previous row when the last row is removed', () => {
+    expect(rowToFocusAfterRemoving(['a', 'b', 'c'], 'c')).toBe('b');
+  });
+
+  it('has no row to move to when the only row is removed or the row is unknown', () => {
+    expect(rowToFocusAfterRemoving(['a'], 'a')).toBeNull();
+    expect(rowToFocusAfterRemoving(['a', 'b'], 'z')).toBeNull();
   });
 });

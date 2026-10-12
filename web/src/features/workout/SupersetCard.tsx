@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type ReactNode, type Ref } from 'react';
 import { TermHelp } from '../../components/TermHelp.tsx';
 import type { RoundCell, RoundRow } from '../../lib/superset-rules.ts';
 
@@ -11,6 +11,7 @@ interface SupersetCardProps {
   renderCell: (cell: RoundCell, round: number) => ReactNode;
   canAddRound: boolean;
   onAddRound: () => void;
+  addRoundRef: Ref<HTMLButtonElement>;
 }
 
 export function SupersetCard({
@@ -20,6 +21,7 @@ export function SupersetCard({
   renderCell,
   canAddRound,
   onAddRound,
+  addRoundRef,
 }: SupersetCardProps) {
   return (
     <section
@@ -43,7 +45,7 @@ export function SupersetCard({
           </li>
         ))}
       </ol>
-      <button className="button dashed" type="button" disabled={!canAddRound} onClick={onAddRound}>
+      <button ref={addRoundRef} className="button dashed" type="button" disabled={!canAddRound} onClick={onAddRound}>
         + Add round
       </button>
     </section>

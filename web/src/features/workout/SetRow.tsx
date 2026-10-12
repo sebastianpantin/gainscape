@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, type Ref, useEffect, useId, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, MAX_SET_LOAD_KG } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
@@ -41,6 +41,7 @@ interface SetRowProps {
   barbell: { plates: number[]; text: string; setup: DraftBarbellSetup } | null;
   last: LastLoggedSet | null;
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
+  menuRef: Ref<HTMLButtonElement>;
   onRemove: () => void;
   onToggleDone: () => void;
   doneLabel?: string;
@@ -167,6 +168,7 @@ export function SetRow({
   barbell,
   last,
   onChange,
+  menuRef,
   onRemove,
   onToggleDone,
   doneLabel = `Done set ${setNumber}`,
@@ -295,6 +297,7 @@ export function SetRow({
         onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}
       />
       <SetMenu
+        buttonRef={menuRef}
         name={`${rowLabel} options`}
         actions={[
           {

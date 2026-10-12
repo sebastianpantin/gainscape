@@ -1,3 +1,4 @@
+import type { Ref } from 'react';
 import { Icon } from '../../components/Icon.tsx';
 import type { PaceUnit } from '../../lib/catalog-rules.ts';
 import type { UnitPref } from '../../lib/profile.ts';
@@ -17,6 +18,7 @@ interface CardioSetRowProps {
   drop: ShownSetDrop | null;
   unit: UnitPref;
   onChange: (changes: Partial<Omit<CardioDraftSet, 'id' | 'kind'>>) => void;
+  menuRef: Ref<HTMLButtonElement>;
   onRemove: () => void;
   onToggleDone: () => void;
 }
@@ -30,6 +32,7 @@ export function CardioSetRow({
   drop,
   unit,
   onChange,
+  menuRef,
   onRemove,
   onToggleDone,
 }: CardioSetRowProps) {
@@ -54,6 +57,7 @@ export function CardioSetRow({
       )}
       <BoutModeToggle boutNumber={boutNumber} bout={bout} onChange={onChange} />
       <SetMenu
+        buttonRef={menuRef}
         name={`Bout ${boutNumber} options`}
         actions={[
           { label: 'Remove bout', accessibleName: `Remove bout ${boutNumber}`, danger: true, onChoose: onRemove },
