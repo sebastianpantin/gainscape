@@ -258,7 +258,7 @@ a:hover {
 }
 
 .first-run-choice h3 {
-  font-size: var(--font-size-lg);
+  font-size: 1.15rem;
   color: var(--color-accent-light);
 }
 
@@ -494,7 +494,7 @@ a:focus-visible {
 
 .button.primary {
   font-family: var(--font-display);
-  font-size: var(--font-size-lg);
+  font-size: 1.15rem;
   font-weight: 600;
   background: var(--color-accent);
   color: var(--color-ink);
@@ -837,7 +837,7 @@ body:has(.active-workout-bar) .screen {
   justify-content: space-between;
   text-align: left;
   font-family: var(--font-display);
-  font-size: var(--font-size-lg);
+  font-size: 1.05rem;
 }
 
 .day-button .muted {
@@ -2125,7 +2125,7 @@ body:has(.active-workout-bar) .screen {
 }
 
 .feed-body .pixel {
-  font-size: var(--font-size-lg);
+  font-size: 1.05rem;
   text-wrap: pretty;
 }
 
