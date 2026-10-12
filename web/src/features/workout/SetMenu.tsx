@@ -1,4 +1,4 @@
-import { useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { setMenuPlacement } from './set-menu-rules.ts';
 
 export interface SetMenuAction {
@@ -20,6 +20,13 @@ const PANEL_CHROME_PX = 24;
 export function SetMenu({ name, actions }: SetMenuProps) {
   const panelId = useId();
   const panel = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const close = () => panel.current?.hidePopover();
+    window.addEventListener('scroll', close, { passive: true, capture: true });
+    return () => window.removeEventListener('scroll', close, { capture: true });
+  }, [open]);
   const placeBeside = (button: HTMLElement) => {
     const menu = panel.current;
     if (menu === null) return;
@@ -52,7 +59,8 @@ export function SetMenu({ name, actions }: SetMenuProps) {
         aria-label={name}
         className="set-menu"
         onToggle={(event) => {
-          if (event.newState === 'open') event.currentTarget.querySelector('button')?.focus();
+          setOpen(event.newState === 'open');
+          if (event.newState === 'open') event.currentTarget.querySelector('button')?.focus({ preventScroll: true });
         }}
       >
         {actions.map(({ label, accessibleName, pressed, danger, onChoose }) => (
