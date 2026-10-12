@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { type FormEvent, useId, useState } from 'react';
+import { type FormEvent, Fragment, useId, useState } from 'react';
 import { Link, type NavigateFunction, useNavigate } from 'react-router-dom';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { Switch } from '../../components/Switch.tsx';
@@ -153,8 +153,8 @@ const ON_OFF_OPTIONS: { value: 'on' | 'off'; label: string }[] = [
   { value: 'off', label: 'Off' },
 ];
 
-const DEVICE_CHOICES: { name: keyof TrainingDeviceSettings; label: string }[] = [
-  { name: 'vibrate', label: 'Vibrate when rest ends' },
+const DEVICE_CHOICES: { name: keyof TrainingDeviceSettings; label: string; hint?: string }[] = [
+  { name: 'vibrate', label: 'Vibration', hint: 'Buzz when a set is logged, a record falls and rest ends.' },
   { name: 'sound', label: 'Sound when rest ends' },
   { name: 'notify', label: 'Notify when rest ends in the background' },
   { name: 'keepAwake', label: 'Keep screen on during workouts' },
@@ -183,15 +183,17 @@ function TrainingDeviceChoices({ userId }: { userId: string }) {
   };
   return (
     <>
-      {DEVICE_CHOICES.map(({ name, label }) => (
-        <Choice
-          key={name}
-          label={label}
-          options={ON_OFF_OPTIONS}
-          current={settings[name] ? 'on' : 'off'}
-          disabled={name === 'notify' && askingToNotify}
-          onPick={(value) => void pick(name, value)}
-        />
+      {DEVICE_CHOICES.map(({ name, label, hint }) => (
+        <Fragment key={name}>
+          <Choice
+            label={label}
+            options={ON_OFF_OPTIONS}
+            current={settings[name] ? 'on' : 'off'}
+            disabled={name === 'notify' && askingToNotify}
+            onPick={(value) => void pick(name, value)}
+          />
+          {hint && <span className="hint">{hint}</span>}
+        </Fragment>
       ))}
       {notifyBlocked && (
         <p className="problem" role="alert">

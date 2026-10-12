@@ -46,6 +46,10 @@ test('a done set starts a rest that counts down, adjusts, survives a reload and 
 
   await page.clock.runFor(60_000);
   await expect(restTimer(page).getByRole('status')).toHaveText('Rest over');
+  const overBy = restTimer(page).getByRole('timer', { name: 'Rest over by' });
+  await expect(overBy).toHaveText('+0:00');
+  await page.clock.runFor(32_000);
+  await expect(overBy).toHaveText('+0:32');
   await restTimer(page).getByRole('button', { name: 'Dismiss' }).click();
   await expect(restTimer(page)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Finish workout' })).toBeFocused();
