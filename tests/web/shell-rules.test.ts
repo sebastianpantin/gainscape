@@ -44,6 +44,7 @@ describe('precacheEntries', () => {
     '.vite/manifest.json',
     'icons/icon-192.png',
     'icons/maskable-512.png',
+    'screenshots/train.png',
     'licenses/index.html',
     'licenses/pixelify-sans-OFL.txt',
     'assets/index-abc.js',
@@ -75,6 +76,7 @@ describe('precacheEntries', () => {
       '/assets/font-latin-400.woff',
       '/assets/index-abc.js.map',
       '/robots.txt',
+      '/screenshots/train.png',
     ])
       expect(entries).not.toContain(excluded);
   });

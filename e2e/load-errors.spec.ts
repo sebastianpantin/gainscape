@@ -30,7 +30,7 @@ function workoutLinks(page: Page): Locator {
 }
 
 async function openHistory(page: Page) {
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
 }
 
@@ -176,7 +176,7 @@ test('Train says it could not load your programs, and shows the program days aft
 
 test('pinning an exercise that fails says the pins could not be updated, and pinning again works', async ({ page }) => {
   await register(page, uniqueUsername('le_pin'));
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await failRequests(page, restTable('pinned_exercises'), 'POST');
 
   await pickExercise(page, 'back squat', 'Back Squat');
@@ -190,7 +190,7 @@ test('pinning an exercise that fails says the pins could not be updated, and pin
 
 test('unpinning an exercise that fails says the pins could not be updated', async ({ page }) => {
   await register(page, uniqueUsername('le_unpin'));
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await pickExercise(page, 'back squat', 'Back Squat');
   const backSquat = exerciseCard(page, 'Back Squat');
   await expect(backSquat.getByRole('button', { name: 'Unpin' })).toBeVisible();
@@ -206,7 +206,7 @@ test('unpinning an exercise that fails says the pins could not be updated', asyn
 
 test('reordering pins that fails says the pins could not be reordered', async ({ page }) => {
   await register(page, uniqueUsername('le_reorder'));
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await pickExercise(page, 'back squat', 'Back Squat');
   await expect(exerciseCard(page, 'Back Squat').getByRole('button', { name: 'Unpin' })).toBeVisible();
   await pickExercise(page, 'deadlift', 'Deadlift');

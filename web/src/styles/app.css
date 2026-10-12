@@ -2682,3 +2682,16 @@ button.back-link {
   background: var(--color-accent);
   border-radius: var(--radius);
 }
+
+.route-focus-target:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.route-focus-target:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: var(--space-0-5);
+}
+
+.tab {
+  font-size: min(var(--font-size-2xs), 3vw);
+}

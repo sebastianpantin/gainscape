@@ -59,7 +59,7 @@ test('the progress screen charts e1RM and top set without warm-ups and lists rep
   await expect(page.getByRole('button', { name: 'Finish workout' })).toBeVisible();
   await finishWorkout(page);
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('link', { name: `${BENCH} progress` }).click();
   await expectBenchProgress(page);
   await expect(page.getByRole('table').getByRole('row').nth(5)).toHaveText(['5RM', '70 kg', today].join(''));
@@ -78,7 +78,7 @@ test('a bodyweight exercise charts its most reps and shows its reps record', asy
   await page.getByRole('button', { name: 'Save and finish workout' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('link', { name: 'Pull-up progress' }).click();
   await expect(page.getByRole('img', { name: /^Most reps per workout\./ })).toHaveAccessibleName(
     'Most reps per workout. Most reps 10, 1 point.',

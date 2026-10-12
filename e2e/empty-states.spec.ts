@@ -73,7 +73,7 @@ test('a skill with no exercises that train it says so', async ({ page }) => {
 test('an empty history offers to start the first workout', async ({ page }) => {
   await register(page, uniqueUsername('es_hist'));
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
   await expect(page.getByText('No workouts yet. Finish one and it shows up here.')).toBeVisible();
   await page.getByRole('main').getByRole('link', { name: 'Start your first workout', exact: true }).click();
@@ -84,7 +84,7 @@ test('an empty history offers to start the first workout', async ({ page }) => {
 test('empty records and items link back to the Train screen', async ({ page }) => {
   await register(page, uniqueUsername('es_links'));
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await expect(page.getByText('Log a workout or pin an exercise to start your collection.')).toBeVisible();
   await expect(page.getByRole('main').getByRole('link', { name: 'Start a workout', exact: true })).toHaveAttribute(
     'href',

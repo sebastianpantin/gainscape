@@ -5,7 +5,7 @@
 
 ## Purpose
 
-The "Log" tab: personal records per exercise, the loot inventory with crafting, and the shared `CollectionTabs` (Records, Items, History) that also frames the history screens.
+The "Collection" tab: personal records per exercise, the loot inventory with crafting, and the shared `CollectionTabs` (Records, Items, History) that also frames the history screens.
 
 ## Key Files
 

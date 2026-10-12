@@ -98,12 +98,12 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['gear-changed']).toEqual(expect.arrayContaining(['loadout', 'items']));
   });
 
-  it('refreshes the weekly goal after a goal change and the Log tab after pinning', () => {
+  it('refreshes the weekly goal after a goal change and the Collection tab after pinning', () => {
     expect(QUERY_ROOTS_CHANGED_BY['weekly-goal-saved']).toContain('weekly-goal');
     expect(QUERY_ROOTS_CHANGED_BY['pins-changed']).toContain('collection');
   });
 
-  it('refreshes every exercise list and the Log tab after a custom exercise is saved or archived', () => {
+  it('refreshes every exercise list and the Collection tab after a custom exercise is saved or archived', () => {
     expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toEqual(
       expect.arrayContaining(['exercises', 'collection', 'enroll-choices', 'exercise-progress']),
     );
