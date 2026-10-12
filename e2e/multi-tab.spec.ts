@@ -16,7 +16,7 @@ test('an edit in one tab shows up in the other without a reload', async ({ conte
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await expect(benchHeading(second)).toBeVisible();
-  await expect(setRow(second, 1).getByLabel('reps')).toHaveValue('5');
+  await expect(setRow(second, 1).getByLabel('reps', { exact: true })).toHaveValue('5');
 });
 
 test('Finish in one tab sends exactly one request and the other tab follows', async ({ context, page }) => {
@@ -62,7 +62,7 @@ test('a stale edit after the other tab synced does not resurrect the draft', asy
   await finishWorkout(page);
   await expect(benchHeading(second)).toBeVisible();
 
-  await setRow(second, 1).getByLabel('reps').fill('7');
+  await setRow(second, 1).getByLabel('reps', { exact: true }).fill('7');
   await expect(second.getByText('This workout was saved in another tab.')).toBeVisible();
   await second.reload();
   await expect(second.getByRole('button', { name: 'Start workout' })).toBeVisible();

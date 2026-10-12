@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, MAX_SETS_PER_SESSION, type Position } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
@@ -63,6 +63,7 @@ import {
   toggleSetDone,
   withSessionRpe,
   type WorkoutDraft,
+  type DraftExercise,
 } from '../../offline/draft-format.ts';
 import {
   addableExercises,
@@ -95,6 +96,7 @@ import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
 import { HoldSetRow } from './HoldSetRow.tsx';
+import { lastSetForRow } from './last-set-rules.ts';
 import { ExerciseMenu } from './ExerciseMenu.tsx';
 import { ExerciseNote } from './ExerciseNote.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
@@ -107,6 +109,7 @@ import { QuickFill } from './QuickFill.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
 import { SetRow } from './SetRow.tsx';
 import { SessionRpeField } from './SessionRpeField.tsx';
+import { rowToFocusAfterRemoving } from './set-menu-rules.ts';
 import { SupersetCard } from './SupersetCard.tsx';
 import { workoutHelpKeys } from './workout-help.ts';
 import { useFinishSync } from './use-finish-sync.ts';
@@ -139,7 +142,8 @@ import {
   WAITING_DRAFT_TEXT,
 } from './workout-rules.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
-import { vibrateNewRecord } from './record-haptic.ts';
+import { vibrate } from './rest-alert-effects.ts';
+import { feedbackLabel, setFeedback, type ShownSetDrop, XP_DROP_MS } from './set-feedback-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
 
 interface WorkoutScreenProps {
@@ -245,6 +249,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [swappingKey, setSwappingKey] = useState<string | null>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [focusSetId, setFocusSetId] = useState<string | null>(null);
+  const [drop, setDrop] = useState<ShownSetDrop | null>(null);
+  const [setAnnouncement, setSetAnnouncement] = useState<{ text: string; key: number } | null>(null);
+  const dropCount = useRef(0);
+  const focusTargets = useRef(new Map<string, HTMLButtonElement>());
+  const focusAfterRemoval = useRef<{ setId: string | null; addKey: string } | null>(null);
   const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);
   const [loadedBaseline, setLoadedBaseline] = useState<SessionBaseline | null>(null);
   const [cachedBaseline] = useState(() => readSessionBaseline(deviceStorage(), userId));
@@ -358,15 +367,35 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   }, [userId, onlineSignal]);
 
   const draftExercises = draft?.exercises ?? null;
-  const previews = useMemo(() => {
-    if (draftExercises === null) return [];
-    const customIds = new Set(exercises.filter((exercise) => exercise.custom).map((exercise) => exercise.id));
-    return previewSession(draftExercises, (exerciseId) => !customIds.has(exerciseId), previewStrength, bodyweightKg);
-  }, [draftExercises, exercises, previewStrength, bodyweightKg]);
+  const previewsOf = useCallback(
+    (list: readonly DraftExercise[]) => {
+      const customIds = new Set(exercises.filter((exercise) => exercise.custom).map((exercise) => exercise.id));
+      return previewSession(list, (exerciseId) => !customIds.has(exerciseId), previewStrength, bodyweightKg);
+    },
+    [exercises, previewStrength, bodyweightKg],
+  );
+  const previews = useMemo(
+    () => (draftExercises === null ? [] : previewsOf(draftExercises)),
+    [draftExercises, previewsOf],
+  );
   const records = useMemo(
     () => (draftExercises === null ? [] : previewRecords(draftExercises, previewStrength, recordBaseline)),
     [draftExercises, previewStrength, recordBaseline],
   );
+
+  useEffect(() => {
+    if (drop === null) return;
+    const timer = setTimeout(() => setDrop(null), XP_DROP_MS);
+    return () => clearTimeout(timer);
+  }, [drop]);
+
+  useEffect(() => {
+    const pending = focusAfterRemoval.current;
+    if (pending === null) return;
+    focusAfterRemoval.current = null;
+    const nextRow = pending.setId === null ? undefined : focusTargets.current.get(pending.setId);
+    (nextRow ?? focusTargets.current.get(pending.addKey))?.focus();
+  }, [draftExercises]);
 
   const { status: finishStatus, retryNow } = useFinishSync({
     userId,
@@ -639,12 +668,36 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       }}
     />
   );
-  const changeSet = (next: WorkoutDraft, setId: string) => {
-    const celebrate = becomesRecord(records, draft.exercises, next.exercises, setId, previewStrength, recordBaseline);
-    if (celebrate && readTrainingDeviceSettings(deviceStorage(), userId).vibrate) vibrateNewRecord();
+  const changeSet = (
+    next: WorkoutDraft,
+    setId: string,
+    place: { exerciseIndex: number; setIndex: number; label: string },
+  ) => {
+    const { exerciseIndex, setIndex } = place;
+    const feedback = setFeedback({
+      label: place.label,
+      wasDone: draft.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
+      isDone: next.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
+      preview: () => previewsOf(next.exercises)[exerciseIndex][setIndex],
+      record: () => previewRecords(next.exercises, previewStrength, recordBaseline)[exerciseIndex][setIndex],
+      becameRecord: () =>
+        becomesRecord(records, draft.exercises, next.exercises, setId, previewStrength, recordBaseline),
+      vibrate: readTrainingDeviceSettings(deviceStorage(), userId).vibrate,
+    });
+    if (feedback.vibrationMs) vibrate(feedback.vibrationMs);
+    if (feedback.drop) {
+      dropCount.current += 1;
+      setDrop({ ...feedback.drop, setId, key: dropCount.current });
+      setSetAnnouncement({ text: feedback.drop.announcement, key: dropCount.current });
+    }
     changeDraft(next);
   };
+  const dropOn = (setId: string) => (drop?.setId === setId ? drop : null);
   const cardKeys = draft.exercises.map((exercise) => exercise.clientId);
+  const focusTarget = (key: string) => (button: HTMLButtonElement | null) => {
+    if (button) focusTargets.current.set(key, button);
+    else focusTargets.current.delete(key);
+  };
   if (swappingKey !== null && !cardKeys.includes(swappingKey)) setSwappingKey(null);
   const removeExerciseAt = (exerciseIndex: number) => changeDraft(removeExercise(draft, exerciseIndex));
   const discardWorkout = () => {
@@ -655,6 +708,20 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const groupOfIndex = new Map(
     groups.flatMap((group) => group.exerciseIndexes.map((index) => [index, group] as const)),
   );
+  const addButtonKeyOf = (exerciseIndex: number) => {
+    const group = groupOfIndex.get(exerciseIndex);
+    return group === undefined ? cardKeys[exerciseIndex] : `superset-${group.id}`;
+  };
+  const removeSetAt = (exerciseIndex: number, setId: string) => {
+    focusAfterRemoval.current = {
+      setId: rowToFocusAfterRemoving(
+        draft.exercises[exerciseIndex].sets.map((set) => set.id),
+        setId,
+      ),
+      addKey: addButtonKeyOf(exerciseIndex),
+    };
+    changeDraft(removeSet(draft, exerciseIndex, setId));
+  };
   const barbellOf = (exercise: LiftDraftExercise) => (isBarbellLift(exercise, equipment) ? barbellSetup : null);
   const menuAction = (exerciseIndex: number, choice: ExerciseMenuChoice) => {
     if (choice === 'superset_with_next') return () => changeDraft(groupWithNext(draft, exerciseIndex));
@@ -711,6 +778,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     rowLabel?: string,
   ) => {
     const compound = equipment.compoundIds.has(exercise.exerciseId);
+    const place = { exerciseIndex, setIndex, label: feedbackLabel(exercise.name, 'set', setIndex + 1) };
     const startRestAfter = (changes: Partial<Omit<DraftSet, 'id'>>) => {
       if (restStartsAfterChange(draft, exerciseIndex, set, changes, rest.timer))
         rest.start(set.id, exercise.exerciseId, compound);
@@ -723,6 +791,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         set={set}
         preview={previews[exerciseIndex][setIndex]}
         record={records[exerciseIndex][setIndex]}
+        drop={dropOn(set.id)}
         unit={unitPref}
         effortMode={effortInputMode}
         markers={programSetMarkerTexts(programSetMarkers(set, unitPref))}
@@ -735,6 +804,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               }
             : null
         }
+        last={lastSetForRow(exercise.sets, setIndex, recentSessions.byExercise.get(exercise.exerciseId)?.[0])}
         doneLabel={doneLabel}
         rowLabel={rowLabel}
         focusDone={focusSetId === set.id}
@@ -742,13 +812,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         onChange={(changes) => {
           startRestAfter(changes);
           if (stopsRestForWarmup(set, changes, rest.timer)) rest.stop();
-          changeSet(updateSet(draft, exerciseIndex, set.id, changes), set.id);
+          changeSet(updateSet(draft, exerciseIndex, set.id, changes), set.id, place);
         }}
-        onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
+        menuRef={focusTarget(set.id)}
+        onRemove={() => removeSetAt(exerciseIndex, set.id)}
         onToggleDone={() => {
           startRestAfter({ done: !set.done });
           setFocusSetId(set.done ? null : (nextInRound(draft, exerciseIndex, set.id)?.setId ?? null));
-          changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id);
+          changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id, place);
         }}
       />
     );
@@ -768,11 +839,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           {draft.programLabel && <span className="muted">{draft.programLabel}</span>}
           <h1 className="title">Workout</h1>
         </div>
-        <div className="live-xp" aria-live="polite">
+        <div className="live-xp">
           <strong>~{formatXp(previewTotal)} XP</strong>
           <span className="muted tiny">{doneSetCount(draft)} sets done</span>
         </div>
       </header>
+      <p className="visually-hidden" role="status">
+        {setAnnouncement && <span key={setAnnouncement.key}>{setAnnouncement.text}</span>}
+      </p>
       {deviceNotices}
       {draft.challenge && (
         <ChallengeBanner
@@ -823,14 +897,29 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                     paceUnit={exercise.activity.paceUnit}
                     tracksDistance={exercise.activity.tracksDistance}
                     preview={previews[exerciseIndex][boutIndex]}
+                    drop={dropOn(bout.id)}
                     unit={unitPref}
-                    onChange={(changes) => changeDraft(updateBout(draft, exerciseIndex, bout.id, changes))}
-                    onRemove={() => changeDraft(removeSet(draft, exerciseIndex, bout.id))}
-                    onToggleDone={() => changeDraft(toggleSetDone(draft, exerciseIndex, bout.id))}
+                    onChange={(changes) =>
+                      changeSet(updateBout(draft, exerciseIndex, bout.id, changes), bout.id, {
+                        exerciseIndex,
+                        setIndex: boutIndex,
+                        label: feedbackLabel(exercise.name, 'bout', boutIndex + 1),
+                      })
+                    }
+                    menuRef={focusTarget(bout.id)}
+                    onRemove={() => removeSetAt(exerciseIndex, bout.id)}
+                    onToggleDone={() =>
+                      changeSet(toggleSetDone(draft, exerciseIndex, bout.id), bout.id, {
+                        exerciseIndex,
+                        setIndex: boutIndex,
+                        label: feedbackLabel(exercise.name, 'bout', boutIndex + 1),
+                      })
+                    }
                   />
                 ))}
               </ol>
               <button
+                ref={focusTarget(cardKeys[exerciseIndex])}
                 className="button dashed"
                 type="button"
                 disabled={!roomForBout}
@@ -866,14 +955,29 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                     loadType={exercise.loadType}
                     preview={previews[exerciseIndex][setIndex]}
                     record={records[exerciseIndex][setIndex]}
+                    drop={dropOn(set.id)}
                     unit={unitPref}
-                    onChange={(changes) => changeSet(updateHoldSet(draft, exerciseIndex, set.id, changes), set.id)}
-                    onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
-                    onToggleDone={() => changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id)}
+                    onChange={(changes) =>
+                      changeSet(updateHoldSet(draft, exerciseIndex, set.id, changes), set.id, {
+                        exerciseIndex,
+                        setIndex,
+                        label: feedbackLabel(exercise.name, 'set', setIndex + 1),
+                      })
+                    }
+                    menuRef={focusTarget(set.id)}
+                    onRemove={() => removeSetAt(exerciseIndex, set.id)}
+                    onToggleDone={() =>
+                      changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id, {
+                        exerciseIndex,
+                        setIndex,
+                        label: feedbackLabel(exercise.name, 'set', setIndex + 1),
+                      })
+                    }
                   />
                 ))}
               </ol>
               <button
+                ref={focusTarget(cardKeys[exerciseIndex])}
                 className="button dashed"
                 type="button"
                 disabled={!roomForSet}
@@ -918,6 +1022,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               }}
               canAddRound={canAddRound(draft, group)}
               onAddRound={() => changeDraft(addRound(draft, group))}
+              addRoundRef={focusTarget(`superset-${group.id}`)}
             />
           );
         }
@@ -940,6 +1045,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               {exercise.sets.map((set, setIndex) => liftSetRow(exercise, exerciseIndex, set, setIndex))}
             </ol>
             <button
+              ref={focusTarget(cardKeys[exerciseIndex])}
               className="button dashed"
               type="button"
               disabled={!roomForSet}

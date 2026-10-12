@@ -1,3 +1,4 @@
+import type { Ref } from 'react';
 import { HOLD_BOUNDS } from '@domain/types.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
@@ -6,8 +7,10 @@ import type { HoldValues } from '../../lib/exercise-edit-rules.ts';
 import type { UnitPref } from '../../lib/profile.ts';
 import type { HoldDraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
+import { SetMenu } from './SetMenu.tsx';
 import { WeightField } from './SetRow.tsx';
 import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
+import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface HoldFieldsProps {
@@ -60,8 +63,10 @@ interface HoldSetRowProps {
   loadType: LoadType;
   preview: SetPreview;
   record: PreviewRecord | null;
+  drop: ShownSetDrop | null;
   unit: UnitPref;
   onChange: (changes: Partial<Omit<HoldDraftSet, 'id' | 'kind'>>) => void;
+  menuRef: Ref<HTMLButtonElement>;
   onRemove: () => void;
   onToggleDone: () => void;
 }
@@ -73,8 +78,10 @@ export function HoldSetRow({
   loadType,
   preview,
   record,
+  drop,
   unit,
   onChange,
+  menuRef,
   onRemove,
   onToggleDone,
 }: HoldSetRowProps) {
@@ -85,7 +92,11 @@ export function HoldSetRow({
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
         {previewXpLabel(preview)}
         {record && (
-          <span className="record-chip" role="img" aria-label={recordChipLabel(record)}>
+          <span
+            className={drop?.record ? 'record-chip pulse' : 'record-chip'}
+            role="img"
+            aria-label={recordChipLabel(record)}
+          >
             {recordChipText(record)}
           </span>
         )}
@@ -99,9 +110,16 @@ export function HoldSetRow({
       >
         <Icon name="check" size={20} strokeWidth={3} />
       </button>
-      <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
-        ✕
-      </button>
+      {drop?.xpText && (
+        <span key={drop.key} className="xp-drop" aria-hidden="true">
+          {drop.xpText}
+        </span>
+      )}
+      <SetMenu
+        buttonRef={menuRef}
+        name={`Set ${setNumber} options`}
+        actions={[{ label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove }]}
+      />
       <EffortSelector
         mode="level"
         selected={set.effort}

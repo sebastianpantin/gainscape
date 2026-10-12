@@ -43,7 +43,7 @@ async function expectDraftWithSet(page: Page) {
   await openTab(page, 'Train');
   const firstSet = setRow(exerciseCard(page, 'Barbell Bench Press'), 1);
   await expect(firstSet.getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
-  await expect(firstSet.getByLabel('reps')).toHaveValue('5');
+  await expect(firstSet.getByLabel('reps', { exact: true })).toHaveValue('5');
 }
 
 test('a new version reloads safely', async ({ context, page }) => {

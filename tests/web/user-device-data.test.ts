@@ -2,6 +2,7 @@ import type { SessionSummary } from '@domain/types.ts';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CHUNK_RELOAD_KEY } from '../../web/src/pwa/chunk-reload.ts';
 import { rememberLastSummary } from '../../web/src/features/summary/last-summary.ts';
 import { saveCachedExercises } from '../../web/src/lib/catalog-cache.ts';
 import { type Exercise } from '../../web/src/lib/catalog-rules.ts';
@@ -35,6 +36,7 @@ const STAYING_USER = '22222222-2222-4222-8222-222222222222';
 const WEB_SRC = join(import.meta.dirname, '../../web/src');
 
 const NAMES_THAT_ARE_NOT_STORAGE_KEYS = new Set(['gainscape.rest-alert', 'gainscape.drafts', 'gainscape.finish.']);
+const DEVICE_KEYS_WITHOUT_USER_DATA = new Set([CHUNK_RELOAD_KEY]);
 
 const EXERCISE: Exercise = {
   id: 'bench',
@@ -118,7 +120,9 @@ function storageKeyNamesInSource(): string[] {
   const names = sourceFiles(WEB_SRC).flatMap((file) =>
     [...readFileSync(file, 'utf8').matchAll(/['`](gainscape\.[\w.-]*)/g)].map((match) => match[1] ?? ''),
   );
-  return [...new Set(names)].filter((name) => !NAMES_THAT_ARE_NOT_STORAGE_KEYS.has(name));
+  return [...new Set(names)].filter(
+    (name) => !NAMES_THAT_ARE_NOT_STORAGE_KEYS.has(name) && !DEVICE_KEYS_WITHOUT_USER_DATA.has(name),
+  );
 }
 
 describe('forgetting a user on this device', () => {

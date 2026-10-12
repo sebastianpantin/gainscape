@@ -36,9 +36,9 @@ export function playRestSound(): void {
   }
 }
 
-export function vibrate(pattern: number[]): void {
+export function vibrate(pattern: readonly number[]): void {
   try {
-    navigator.vibrate?.(pattern);
+    navigator.vibrate?.([...pattern]);
   } catch {
     return;
   }

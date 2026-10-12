@@ -1,32 +1,14 @@
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { type ComponentType, lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { Icon, type IconName } from './components/Icon.tsx';
+import { ScreenErrorBoundary } from './components/ScreenErrorBoundary.tsx';
+import { ScreenSkeleton } from './components/ScreenSkeleton.tsx';
 import { PreferencesProvider } from './components/PreferencesProvider.tsx';
 import { AuthCallbackScreen } from './features/auth/AuthCallbackScreen.tsx';
 import { AuthScreen } from './features/auth/AuthScreen.tsx';
-import { CollectionScreen } from './features/collection/CollectionScreen.tsx';
-import { ExerciseProgressScreen } from './features/collection/ExerciseProgressScreen.tsx';
-import { ItemsScreen } from './features/collection/ItemsScreen.tsx';
-import { ExercisesScreen } from './features/exercises/ExercisesScreen.tsx';
-import { FriendProfileScreen } from './features/friends/FriendProfileScreen.tsx';
-import { FriendsScreen } from './features/friends/FriendsScreen.tsx';
-import { HiscoresScreen } from './features/friends/HiscoresScreen.tsx';
-import { HistoryScreen } from './features/history/HistoryScreen.tsx';
-import { SessionDetailScreen } from './features/history/SessionDetailScreen.tsx';
-import { EditProfileScreen } from './features/profile/EditProfileScreen.tsx';
-import { FriendPreviewScreen } from './features/profile/FriendPreviewScreen.tsx';
-import { ProfileScreen } from './features/profile/ProfileScreen.tsx';
-import { SettingsScreen } from './features/profile/SettingsScreen.tsx';
-import { ActiveProgramScreen } from './features/programs/ActiveProgramScreen.tsx';
-import { ProgramPlanScreen } from './features/programs/ProgramPlanScreen.tsx';
-import { ProgramEditor } from './features/programs/ProgramEditor.tsx';
-import { ProgramEnrollScreen } from './features/programs/ProgramEnrollScreen.tsx';
-import { ProgramsScreen } from './features/programs/ProgramsScreen.tsx';
-import { SkillsScreen } from './features/skills/SkillsScreen.tsx';
-import { RevealScreen } from './features/summary/RevealScreen.tsx';
-import { WhatsNewScreen } from './features/whats-new/WhatsNewScreen.tsx';
 import { WhatsNewSheet } from './features/whats-new/WhatsNewSheet.tsx';
+import { ActiveWorkoutBar } from './features/workout/ActiveWorkoutBar.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
 import { createQueryClient } from './lib/query-client.ts';
 import { parseAuthCallback } from './lib/auth-links.ts';
@@ -34,6 +16,61 @@ import { useAuthSession } from './lib/use-auth-session.ts';
 import { OfflineBanner } from './pwa/OfflineBanner.tsx';
 import { setUpdateUser } from './pwa/register-service-worker.ts';
 import { UpdateBanner } from './pwa/UpdateBanner.tsx';
+
+const SCREEN_PRELOAD_DELAY_MS = 1_000;
+const screenLoaders: (() => Promise<unknown>)[] = [];
+
+function lazyScreen<Name extends string, Props extends object>(
+  load: () => Promise<Record<Name, ComponentType<Props>>>,
+  name: Name,
+) {
+  screenLoaders.push(load);
+  return lazy(async () => ({ default: (await load())[name] }));
+}
+
+function preloadScreens(): void {
+  for (const load of screenLoaders) load().catch(() => undefined);
+}
+
+const CollectionScreen = lazyScreen(() => import('./features/collection/CollectionScreen.tsx'), 'CollectionScreen');
+const ExerciseProgressScreen = lazyScreen(
+  () => import('./features/collection/ExerciseProgressScreen.tsx'),
+  'ExerciseProgressScreen',
+);
+const ItemsScreen = lazyScreen(() => import('./features/collection/ItemsScreen.tsx'), 'ItemsScreen');
+const ExercisesScreen = lazyScreen(() => import('./features/exercises/ExercisesScreen.tsx'), 'ExercisesScreen');
+const FriendProfileScreen = lazyScreen(
+  () => import('./features/friends/FriendProfileScreen.tsx'),
+  'FriendProfileScreen',
+);
+const FriendsScreen = lazyScreen(() => import('./features/friends/FriendsScreen.tsx'), 'FriendsScreen');
+const HiscoresScreen = lazyScreen(() => import('./features/friends/HiscoresScreen.tsx'), 'HiscoresScreen');
+const HistoryScreen = lazyScreen(() => import('./features/history/HistoryScreen.tsx'), 'HistoryScreen');
+const SessionDetailScreen = lazyScreen(
+  () => import('./features/history/SessionDetailScreen.tsx'),
+  'SessionDetailScreen',
+);
+const EditProfileScreen = lazyScreen(() => import('./features/profile/EditProfileScreen.tsx'), 'EditProfileScreen');
+const FriendPreviewScreen = lazyScreen(
+  () => import('./features/profile/FriendPreviewScreen.tsx'),
+  'FriendPreviewScreen',
+);
+const ProfileScreen = lazyScreen(() => import('./features/profile/ProfileScreen.tsx'), 'ProfileScreen');
+const SettingsScreen = lazyScreen(() => import('./features/profile/SettingsScreen.tsx'), 'SettingsScreen');
+const ActiveProgramScreen = lazyScreen(
+  () => import('./features/programs/ActiveProgramScreen.tsx'),
+  'ActiveProgramScreen',
+);
+const ProgramPlanScreen = lazyScreen(() => import('./features/programs/ProgramPlanScreen.tsx'), 'ProgramPlanScreen');
+const ProgramEditor = lazyScreen(() => import('./features/programs/ProgramEditor.tsx'), 'ProgramEditor');
+const ProgramEnrollScreen = lazyScreen(
+  () => import('./features/programs/ProgramEnrollScreen.tsx'),
+  'ProgramEnrollScreen',
+);
+const ProgramsScreen = lazyScreen(() => import('./features/programs/ProgramsScreen.tsx'), 'ProgramsScreen');
+const SkillsScreen = lazyScreen(() => import('./features/skills/SkillsScreen.tsx'), 'SkillsScreen');
+const RevealScreen = lazyScreen(() => import('./features/summary/RevealScreen.tsx'), 'RevealScreen');
+const WhatsNewScreen = lazyScreen(() => import('./features/whats-new/WhatsNewScreen.tsx'), 'WhatsNewScreen');
 
 const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'Train', icon: 'train', end: true },
@@ -63,6 +100,11 @@ function Screens() {
     if (signedInUserId === null) return;
     return () => queryClient.clear();
   }, [queryClient, signedInUserId]);
+  useEffect(() => {
+    if (signedInUserId === null) return;
+    const timer = setTimeout(preloadScreens, SCREEN_PRELOAD_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [signedInUserId]);
   const [callback, setCallback] = useState(() => parseAuthCallback(window.location.href));
 
   if (callback) return <AuthCallbackScreen callback={callback} onDone={() => setCallback(null)} />;
@@ -86,35 +128,40 @@ function Screens() {
             </NavLink>
           ))}
         </nav>
-        <Routes>
-          <Route path="/" element={<WorkoutScreen key={userId} userId={userId} />} />
-          <Route path="/reveal" element={<RevealScreen userId={userId} />} />
-          <Route path="/skills" element={<SkillsScreen userId={userId} />} />
-          <Route path="/collection" element={<CollectionScreen userId={userId} />} />
-          <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
-          <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
-          <Route path="/collection/history" element={<HistoryScreen />} />
-          <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
-          <Route path="/friends" element={<FriendsScreen userId={userId} />} />
-          <Route path="/friends/hiscores" element={<HiscoresScreen />} />
-          <Route path="/friends/:friendId" element={<FriendProfileScreen />} />
-          <Route path="/profile" element={<ProfileScreen userId={userId} />} />
-          <Route path="/profile/edit" element={<EditProfileScreen userId={userId} />} />
-          <Route path="/profile/preview" element={<FriendPreviewScreen userId={userId} />} />
-          <Route
-            path="/profile/settings"
-            element={<SettingsScreen userId={userId} email={auth.session.user.email ?? null} />}
-          />
-          <Route path="/profile/settings/whats-new" element={<WhatsNewScreen />} />
-          <Route path="/exercises" element={<ExercisesScreen userId={userId} />} />
-          <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
-          <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />
-          <Route path="/programs/active" element={<ActiveProgramScreen userId={userId} />} />
-          <Route path="/programs/active/plan" element={<ProgramPlanScreen userId={userId} />} />
-          <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
-          <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <ActiveWorkoutBar userId={userId} />
+        <ScreenErrorBoundary>
+          <Suspense fallback={<ScreenSkeleton />}>
+            <Routes>
+              <Route path="/" element={<WorkoutScreen key={userId} userId={userId} />} />
+              <Route path="/reveal" element={<RevealScreen userId={userId} />} />
+              <Route path="/skills" element={<SkillsScreen userId={userId} />} />
+              <Route path="/collection" element={<CollectionScreen userId={userId} />} />
+              <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
+              <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
+              <Route path="/collection/history" element={<HistoryScreen />} />
+              <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
+              <Route path="/friends" element={<FriendsScreen userId={userId} />} />
+              <Route path="/friends/hiscores" element={<HiscoresScreen />} />
+              <Route path="/friends/:friendId" element={<FriendProfileScreen />} />
+              <Route path="/profile" element={<ProfileScreen userId={userId} />} />
+              <Route path="/profile/edit" element={<EditProfileScreen userId={userId} />} />
+              <Route path="/profile/preview" element={<FriendPreviewScreen userId={userId} />} />
+              <Route
+                path="/profile/settings"
+                element={<SettingsScreen userId={userId} email={auth.session.user.email ?? null} />}
+              />
+              <Route path="/profile/settings/whats-new" element={<WhatsNewScreen />} />
+              <Route path="/exercises" element={<ExercisesScreen userId={userId} />} />
+              <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
+              <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />
+              <Route path="/programs/active" element={<ActiveProgramScreen userId={userId} />} />
+              <Route path="/programs/active/plan" element={<ProgramPlanScreen userId={userId} />} />
+              <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
+              <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </ScreenErrorBoundary>
         <WhatsNewSheet userId={userId} />
       </BrowserRouter>
     </PreferencesProvider>
