@@ -279,7 +279,7 @@ test.describe('signed-in screens', () => {
     await checkScreens(page, [
       ['/friends', 'Friends'],
       ['/friends/hiscores', 'Friends'],
-      [friendPath!, null],
+      [friendPath!, friendName],
       ['/profile', null],
       ['/profile/edit', 'Edit profile'],
       ['/profile/preview', null],

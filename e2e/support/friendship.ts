@@ -66,7 +66,7 @@ export async function openFriendProfile(page: Page, friendName: string): Promise
     .getByRole('list', { name: 'Friends list' })
     .getByRole('link', { name: new RegExp(friendName) })
     .click();
-  await expect(page.getByRole('heading', { level: 2, name: friendName, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: friendName, exact: true })).toBeVisible();
 }
 
 export function friendsAlert(page: Page): Locator {
