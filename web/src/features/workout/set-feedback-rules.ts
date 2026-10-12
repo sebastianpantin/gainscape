@@ -10,9 +10,9 @@ export interface SetFeedbackInput {
   label: string;
   wasDone: boolean;
   isDone: boolean;
-  preview: SetPreview;
-  record: PreviewRecord | null;
-  becameRecord: boolean;
+  preview: () => SetPreview;
+  record: () => PreviewRecord | null;
+  becameRecord: () => boolean;
   vibrate: boolean;
 }
 
@@ -55,8 +55,8 @@ function setDrop(label: string, preview: SetPreview, record: PreviewRecord | nul
 
 export function setFeedback(input: SetFeedbackInput): SetFeedback {
   const logged = !input.wasDone && input.isDone;
-  const drop = logged ? setDrop(input.label, input.preview, input.record) : null;
-  if (!input.vibrate) return { drop, vibrationMs: null };
-  if (input.becameRecord) return { drop, vibrationMs: NEW_RECORD_VIBRATION_MS };
+  const drop = logged ? setDrop(input.label, input.preview(), input.record()) : null;
+  if (!input.vibrate || !input.isDone) return { drop, vibrationMs: null };
+  if (input.becameRecord()) return { drop, vibrationMs: NEW_RECORD_VIBRATION_MS };
   return { drop, vibrationMs: logged ? SET_DONE_VIBRATION_MS : null };
 }

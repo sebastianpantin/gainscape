@@ -6,11 +6,19 @@ import {
   setFeedback,
   type SetFeedbackInput,
 } from '../../web/src/features/workout/set-feedback-rules.ts';
+import type { PreviewRecord } from '../../web/src/features/workout/record-preview.ts';
+import type { SetPreview } from '../../web/src/features/workout/xp-preview.ts';
 
 const FIVE_REP_MAX = { kind: 'rep_max' as const, reps: 5, loadKg: 100, previousLoadKg: 95 };
 
-function input(overrides: Partial<SetFeedbackInput> = {}): SetFeedbackInput {
-  return {
+interface FeedbackValues extends Omit<SetFeedbackInput, 'preview' | 'record' | 'becameRecord'> {
+  preview: SetPreview;
+  record: PreviewRecord | null;
+  becameRecord: boolean;
+}
+
+function input(overrides: Partial<FeedbackValues> = {}): SetFeedbackInput {
+  const values: FeedbackValues = {
     label: 'Set 2',
     wasDone: false,
     isDone: true,
@@ -19,6 +27,26 @@ function input(overrides: Partial<SetFeedbackInput> = {}): SetFeedbackInput {
     becameRecord: false,
     vibrate: true,
     ...overrides,
+  };
+  return {
+    ...values,
+    preview: () => values.preview,
+    record: () => values.record,
+    becameRecord: () => values.becameRecord,
+  };
+}
+
+function countingWork(values: Partial<FeedbackValues>) {
+  const calls = { preview: 0, record: 0, becameRecord: 0 };
+  const counted = input(values);
+  return {
+    calls,
+    input: {
+      ...counted,
+      preview: () => (calls.preview++, counted.preview()),
+      record: () => (calls.record++, counted.record()),
+      becameRecord: () => (calls.becameRecord++, counted.becameRecord()),
+    },
   };
 }
 
@@ -104,5 +132,20 @@ describe('setFeedback', () => {
     expect(bench.drop?.announcement).toBe('Barbell Bench Press, set 1 logged, about 45 XP');
     expect(squat.drop?.announcement).toBe('Barbell Back Squat, set 1 logged, about 45 XP');
     expect(feedbackLabel('Rower', 'bout', 2)).toBe('Rower, bout 2');
+  });
+
+  it('does no preview or record work while a set is typed into before it is done', () => {
+    const typing = countingWork({ isDone: false });
+    setFeedback(typing.input);
+    expect(typing.calls).toEqual({ preview: 0, record: 0, becameRecord: 0 });
+  });
+
+  it('only checks for a new record when a done set is edited, and only with vibration on', () => {
+    const editing = countingWork({ wasDone: true });
+    setFeedback(editing.input);
+    expect(editing.calls).toEqual({ preview: 0, record: 0, becameRecord: 1 });
+    const silent = countingWork({ wasDone: true, vibrate: false });
+    setFeedback(silent.input);
+    expect(silent.calls).toEqual({ preview: 0, record: 0, becameRecord: 0 });
   });
 });
