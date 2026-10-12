@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { type Release, whatsNewDecision, whatsNewMayOpen } from '../../lib/changelog-rules.ts';
 import { openChannel } from '../../lib/channel.ts';
 import { readLastSeenRelease, saveLastSeenRelease } from '../../lib/last-seen-release-store.ts';
+import { readOnboarding } from '../../lib/onboarding-store.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
 import { DRAFT_CHANNEL_NAME } from '../../offline/draft-session.ts';
@@ -51,7 +52,8 @@ export function useWhatsNew(userId: string): { releases: readonly Release[] | nu
     void (async () => {
       const hasDraft = await draftOnDevice(userId);
       const draftChangedDuringVisit = draftChange.visitKey === visitKey;
-      if (superseded || !whatsNewMayOpen({ pathname, hasDraft, draftChangedDuringVisit })) return;
+      const onboarding = readOnboarding(deviceStorage(), userId);
+      if (superseded || !whatsNewMayOpen({ pathname, hasDraft, draftChangedDuringVisit, onboarding })) return;
       const draftAppeared = await draftOnDevice(userId);
       if (!superseded && !draftAppeared) setOpen(true);
     })();
