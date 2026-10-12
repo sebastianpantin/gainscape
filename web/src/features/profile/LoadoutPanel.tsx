@@ -20,11 +20,9 @@ export function LoadoutPanel({ userId }: LoadoutPanelProps) {
   const bonus = bonusRows(slots, skills.data ?? []);
 
   return (
-    <section className="panel stack" aria-labelledby={headingId}>
+    <section className="panel stack" aria-labelledby={headingId} aria-busy={loadout.isPending}>
       <h2 id={headingId}>Loadout</h2>
-      {loadout.isPending ? (
-        <p className="muted">Loading loadout…</p>
-      ) : loadout.isError ? (
+      {loadout.isError ? (
         <p className="muted">Couldn't load the loadout.</p>
       ) : (
         <>
@@ -32,14 +30,16 @@ export function LoadoutPanel({ userId }: LoadoutPanelProps) {
             {loadoutBySlot(slots).map((row) => (
               <div className="body-stat" key={row.slot}>
                 <dt className="muted tiny">{row.label}</dt>
-                <dd>{row.gear?.name ?? 'Empty'}</dd>
+                <dd>{loadout.isPending ? '…' : (row.gear?.name ?? 'Empty')}</dd>
               </div>
             ))}
           </dl>
           <span className="muted tiny" id={bonusHeadingId}>
             Gear bonus
           </span>
-          {bonus.length === 0 ? (
+          {loadout.isPending ? (
+            <p className="muted">Loading loadout…</p>
+          ) : bonus.length === 0 ? (
             <p className="muted">No gear bonus</p>
           ) : (
             <ul className="gear-bonus-list" aria-labelledby={bonusHeadingId}>
