@@ -803,7 +803,7 @@ a:focus-visible {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .set-row {
@@ -822,28 +822,19 @@ a:focus-visible {
   grid-template-columns: 20px minmax(0, 1fr) 64px var(--tap-target);
   grid-template-areas:
     'number weight reps done'
-    'xp xp xp menu'
-    'effort effort effort effort';
+    'info info info info'
+    'effort effort effort menu';
   row-gap: var(--space-1);
   align-items: center;
   padding-top: var(--space-2);
 }
 
-.set-row.stepped.marked {
+.set-row.stepped.calculating {
   grid-template-areas:
     'number weight reps done'
-    '. markers markers menu'
-    'xp xp xp xp'
-    'effort effort effort effort';
-}
-
-.set-row.stepped.marked.calculating {
-  grid-template-areas:
-    'number weight reps done'
-    '. markers markers menu'
+    'info info info info'
     'calculator calculator calculator calculator'
-    'xp xp xp xp'
-    'effort effort effort effort';
+    'effort effort effort menu';
 }
 
 .set-row.stepped > .set-number {
@@ -873,40 +864,55 @@ a:focus-visible {
   text-align: center;
 }
 
-.set-row.stepped > .set-markers {
-  grid-area: markers;
+.set-info {
+  grid-area: info;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+  min-height: calc(var(--tap-target) - 2 * var(--space-1));
 }
 
-.set-row.stepped > .set-xp {
-  grid-area: xp;
+.set-info .plate-marker,
+.set-info > .last-set {
+  min-height: var(--tap-target);
+  margin-block: calc(var(--space-1) * -1);
+}
+
+.set-info > .set-markers {
+  align-items: center;
+  min-width: 0;
+}
+
+.set-info > .set-xp {
   flex-direction: row;
   align-items: baseline;
-  justify-content: flex-end;
   gap: var(--space-2);
+  margin-left: auto;
   padding-bottom: 0;
 }
 
-.set-xp > .last-set,
-.set-xp > .last-delta {
-  margin-right: auto;
-  align-self: center;
-}
-
 .last-set {
-  min-height: 28px;
-  padding: 0 var(--space-2);
+  min-width: var(--tap-target);
+  padding: 0;
   font: inherit;
   font-family: var(--font-family);
   font-size: var(--font-size-tiny);
   color: var(--color-text-muted);
   background: transparent;
-  border: 1px dashed var(--color-panel-border);
-  border-radius: var(--radius);
+  border: 0;
   cursor: pointer;
 }
 
-.last-set:hover {
+.last-set-chip {
+  display: block;
+  padding: var(--space-1) var(--space-2);
+  border: 1px dashed var(--color-panel-border);
+  border-radius: var(--radius);
+}
+
+.last-set:hover > .last-set-chip {
   color: var(--color-text);
   border-color: var(--color-accent);
 }
@@ -1309,6 +1315,29 @@ a:focus-visible {
 
 .set-row > .effort-selector {
   grid-area: effort;
+}
+
+.effort-selector {
+  container-type: inline-size;
+}
+
+.set-row .effort-option {
+  padding: 0 2px;
+  white-space: nowrap;
+}
+
+.effort-short {
+  display: none;
+}
+
+@container (max-width: 319px) {
+  .effort-full {
+    display: none;
+  }
+
+  .effort-short {
+    display: inline;
+  }
 }
 
 .effort-selector,
