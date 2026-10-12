@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { CardioExercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
 import {
@@ -7,6 +8,12 @@ import {
   challengeNotAppliedText,
   describeRecord,
   gearBonusText,
+  levelUpCueDelayMs,
+  playsReveal,
+  REVEAL_MAX_PRE_LOOT_S,
+  revealShape,
+  revealTimeline,
+  skipsRevealOnKey,
   unappliedChangesText,
 } from '../../web/src/features/summary/reveal-rules.ts';
 
@@ -218,5 +225,121 @@ describe('unappliedChangesText', () => {
 
   it('says nothing when the server stored what was sent', () => {
     expect(unappliedChangesText({})).toBeNull();
+  });
+});
+
+describe('revealTimeline', () => {
+  const shapes = fc.record({
+    skillCount: fc.integer({ min: 0, max: 40 }),
+    hasLevelUps: fc.boolean(),
+    hasRecords: fc.boolean(),
+  });
+
+  it('staggers a few skills at a relaxed pace', () => {
+    const timeline = revealTimeline({ skillCount: 3, hasLevelUps: false, hasRecords: false });
+    expect(timeline.skillDelaysS).toEqual([0.1, 0.25, 0.4]);
+    expect(timeline.barDelaysS).toEqual([0.2, 0.35, 0.5]);
+  });
+
+  it('compresses the stagger so ten skills start within the same window as four', () => {
+    const four = revealTimeline({ skillCount: 4, hasLevelUps: false, hasRecords: false });
+    const ten = revealTimeline({ skillCount: 10, hasLevelUps: false, hasRecords: false });
+    expect(ten.skillDelaysS.at(-1)).toBeCloseTo(four.skillDelaysS.at(-1)!);
+    expect(ten.skillDelaysS[1] - ten.skillDelaysS[0]).toBeCloseTo(0.05);
+  });
+
+  it('brings in level ups, then records, then the loot', () => {
+    const timeline = revealTimeline({ skillCount: 2, hasLevelUps: true, hasRecords: true });
+    expect(timeline.levelUpDelayS).toBeCloseTo(0.6);
+    expect(timeline.recordsDelayS).toBeCloseTo(0.9);
+    expect(timeline.lootDelayS).toBeCloseTo(1.15);
+  });
+
+  it('skips the beats of sections that are not shown', () => {
+    const timeline = revealTimeline({ skillCount: 2, hasLevelUps: false, hasRecords: false });
+    expect(timeline.levelUpDelayS).toBeNull();
+    expect(timeline.recordsDelayS).toBeNull();
+    expect(timeline.lootDelayS).toBeCloseTo(0.6);
+  });
+
+  it('starts the loot at once when nothing comes before it', () => {
+    expect(revealTimeline({ skillCount: 0, hasLevelUps: false, hasRecords: false }).lootDelayS).toBeCloseTo(0.1);
+  });
+
+  it('never makes the user wait more than the cap for the loot, whatever the skill count', () => {
+    fc.assert(
+      fc.property(shapes, (shape) => {
+        const timeline = revealTimeline(shape);
+        expect(timeline.lootDelayS).toBeLessThanOrEqual(REVEAL_MAX_PRE_LOOT_S);
+        expect(timeline.skillDelaysS).toHaveLength(shape.skillCount);
+        for (const delay of [...timeline.skillDelaysS, ...timeline.barDelaysS])
+          expect(delay).toBeLessThanOrEqual(timeline.lootDelayS);
+      }),
+    );
+  });
+
+  it('settles only after every animation has finished', () => {
+    fc.assert(
+      fc.property(shapes, (shape) => {
+        const timeline = revealTimeline(shape);
+        const lastBarEndS = Math.max(0, ...timeline.barDelaysS.map((delay) => delay + 0.6));
+        expect(timeline.settledAfterMs).toBeGreaterThanOrEqual(Math.round((timeline.lootDelayS + 0.4) * 1000));
+        expect(timeline.settledAfterMs).toBeGreaterThanOrEqual(Math.round(lastBarEndS * 1000));
+        expect(timeline.settledAfterMs).toBeLessThanOrEqual(2000);
+      }),
+    );
+  });
+});
+
+describe('revealShape', () => {
+  const summary = {
+    xpBySkill: { chest: 120, arms: 0, shoulders: 40 },
+    levelUps: [{ skill: 'chest', from: 4, to: 5 }],
+    prs: [],
+  };
+
+  it('counts the skills that gained XP and notes level ups and records', () => {
+    expect(revealShape(summary)).toEqual({ skillCount: 2, hasLevelUps: true, hasRecords: false });
+  });
+
+  it('has nothing to choreograph for a history-only save or a missing summary', () => {
+    const empty = { skillCount: 0, hasLevelUps: false, hasRecords: false };
+    expect(revealShape({ ...summary, historyOnly: true as const })).toEqual(empty);
+    expect(revealShape(null)).toEqual(empty);
+  });
+});
+
+describe('levelUpCueDelayMs', () => {
+  const withLevelUp = revealTimeline({ skillCount: 2, hasLevelUps: true, hasRecords: false });
+
+  it('lands the cue on the peak of the level-up pop', () => {
+    expect(levelUpCueDelayMs(withLevelUp, false)).toBe(900);
+  });
+
+  it('cues at once under reduced motion, where the level up is already on screen', () => {
+    expect(levelUpCueDelayMs(withLevelUp, true)).toBe(0);
+  });
+
+  it('has no cue without a level up', () => {
+    const without = revealTimeline({ skillCount: 2, hasLevelUps: false, hasRecords: false });
+    expect(levelUpCueDelayMs(without, false)).toBeNull();
+    expect(levelUpCueDelayMs(without, true)).toBeNull();
+  });
+});
+
+describe('reveal playback', () => {
+  it('plays only for a summary that is not history only', () => {
+    expect(playsReveal(null)).toBe(false);
+    expect(playsReveal({ historyOnly: true })).toBe(false);
+    expect(playsReveal({})).toBe(true);
+  });
+
+  it('skips on Escape anywhere and on Enter only away from links and buttons', () => {
+    expect(skipsRevealOnKey({ key: 'Escape', onInteractiveElement: true })).toBe(true);
+    expect(skipsRevealOnKey({ key: 'Escape', onInteractiveElement: false })).toBe(true);
+    expect(skipsRevealOnKey({ key: 'Enter', onInteractiveElement: false })).toBe(true);
+    expect(skipsRevealOnKey({ key: 'Enter', onInteractiveElement: true })).toBe(false);
+    expect(skipsRevealOnKey({ key: 'Tab', onInteractiveElement: false })).toBe(false);
+    expect(skipsRevealOnKey({ key: ' ', onInteractiveElement: false })).toBe(false);
   });
 });

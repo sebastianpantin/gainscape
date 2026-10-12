@@ -245,6 +245,24 @@ export const LEVEL_UP: Sprite = fromRows(
   { K: INK, X: XP, G: TEXT },
 );
 
+export const LOOT_CHEST: Sprite = fromRows(
+  [
+    '............',
+    '.KKKKKKKKKK.',
+    'KLLLLLLLLLLK',
+    'KDDDDGGDDDDK',
+    'KDDDDGGDDDDK',
+    'KKKKKYYKKKKK',
+    'KDDDKYYKDDDK',
+    'KDDDDKKDDDDK',
+    'KDDDDDDDDDDK',
+    'KGGGGGGGGGGK',
+    'KDDDDDDDDDDK',
+    'KKKKKKKKKKKK',
+  ],
+  { K: INK, L: ACCENT_LIGHT, D: ACCENT_DARK, G: GOLD, Y: '#ffe27a' },
+);
+
 export function isSkillKey(key: string): key is SkillKey {
   return Object.hasOwn(SKILL_SPRITES, key);
 }

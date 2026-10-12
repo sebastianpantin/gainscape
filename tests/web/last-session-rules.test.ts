@@ -28,27 +28,27 @@ describe('last session sets', () => {
     ]);
   });
 
-  it('collapses repeated sets into sets × reps at a weight', () => {
+  it('sums up last session as its set count and top set', () => {
     const sets = [
       { weightKg: 80, reps: 5 },
       { weightKg: 80, reps: 5 },
       { weightKg: 80, reps: 5 },
     ];
-    expect(lastTimeText(sets, 'external', 'kg')).toBe('Last: 3×5 @ 80 kg');
+    expect(lastTimeText(sets, 'external', 'kg')).toBe('Last: 3 sets, top 80 kg × 5');
   });
 
-  it('lists changes in weight or reps in the order they were lifted', () => {
+  it('takes the heaviest set as the top set, then the one with most reps', () => {
     const sets = [
       { weightKg: 70, reps: 6 },
       { weightKg: 72.5, reps: 5 },
       { weightKg: 72.5, reps: 5 },
       { weightKg: 72.5, reps: 4 },
     ];
-    expect(lastTimeText(sets, 'external', 'kg')).toBe('Last: 1×6 @ 70 kg, 2×5 @ 72.5 kg, 1×4 @ 72.5 kg');
+    expect(lastTimeText(sets, 'external', 'kg')).toBe('Last: 4 sets, top 72.5 kg × 5');
   });
 
   it('shows the weight in the preferred unit', () => {
-    expect(lastTimeText([{ weightKg: 100, reps: 5 }], 'external', 'lb')).toBe('Last: 1×5 @ 220.5 lb');
+    expect(lastTimeText([{ weightKg: 100, reps: 5 }], 'external', 'lb')).toBe('Last: 1 set, top 220.5 lb × 5');
   });
 
   it('leaves out the weight for bodyweight exercises and marks added load', () => {
@@ -56,9 +56,10 @@ describe('last session sets', () => {
       { weightKg: 0, reps: 12 },
       { weightKg: 0, reps: 10 },
     ];
-    expect(lastTimeText(sets, 'bodyweight', 'kg')).toBe('Last: 1×12, 1×10');
-    expect(lastTimeText(sets, 'bodyweight_plus', 'kg')).toBe('Last: 1×12, 1×10');
-    expect(lastTimeText([{ weightKg: 10, reps: 8 }], 'bodyweight_plus', 'kg')).toBe('Last: 1×8 @ +10 kg');
+    expect(lastTimeText(sets, 'bodyweight', 'kg')).toBe('Last: 2 sets, top 12 reps');
+    expect(lastTimeText(sets, 'bodyweight_plus', 'kg')).toBe('Last: 2 sets, top 12 reps');
+    expect(lastTimeText([{ weightKg: 10, reps: 8 }], 'bodyweight_plus', 'kg')).toBe('Last: 1 set, top +10 kg × 8');
+    expect(lastTimeText([{ weightKg: 0, reps: 1 }], 'bodyweight', 'kg')).toBe('Last: 1 set, top 1 rep');
   });
 
   it('has no text before the exercise was ever logged', () => {

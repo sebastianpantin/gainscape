@@ -1,4 +1,6 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { previousValues, type Profile } from '../../lib/profile-rules.ts';
 import type { ProfileUpdate } from './use-profile.ts';
@@ -15,6 +17,7 @@ export function useOptimisticProfileSave<K extends keyof Profile>(
   persist: (changes: Partial<Pick<Profile, K>>) => Promise<void>,
   mirror: (changes: Partial<Pick<Profile, K>>) => void = () => undefined,
 ): OptimisticProfileSave<K> {
+  const queryClient = useQueryClient();
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -26,6 +29,7 @@ export function useOptimisticProfileSave<K extends keyof Profile>(
     mirror(changes);
     try {
       await persist(changes);
+      void announceDataChange(queryClient, 'profile-saved');
     } catch (error) {
       replace((current) => ({ ...current, ...previous }));
       mirror(previous);

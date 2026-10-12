@@ -91,6 +91,8 @@ import {
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
+import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
+import { useOnboarding } from '../onboarding/use-onboarding.ts';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
@@ -100,6 +102,7 @@ import { lastSetForRow } from './last-set-rules.ts';
 import { ExerciseMenu } from './ExerciseMenu.tsx';
 import { ExerciseNote } from './ExerciseNote.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
+import { NotifyPrompt } from './NotifyPrompt.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { useActiveProgram } from '../programs/use-active-program.ts';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
@@ -141,8 +144,8 @@ import {
   syncProblemText,
   WAITING_DRAFT_TEXT,
 } from './workout-rules.ts';
+import { vibrate } from '../../lib/device-effects.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
-import { vibrate } from './rest-alert-effects.ts';
 import { feedbackLabel, setFeedback, type ShownSetDrop, XP_DROP_MS } from './set-feedback-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
 
@@ -272,6 +275,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const finishBar = useRef<HTMLDivElement>(null);
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
+  const onboarding = useOnboarding(userId, draft !== null);
+  const startButton = useRef<HTMLButtonElement>(null);
+  const focusPickerOnOpen = useRef(false);
   const draftSessionId = draft?.sessionId ?? null;
   const [stateSessionId, setStateSessionId] = useState(draftSessionId);
   if (stateSessionId !== draftSessionId) {
@@ -468,6 +474,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     showProgramCache(await refreshProgramFactsOrCached(userId, enrollment));
   };
 
+  const startFreestyle = () => {
+    if (startingDay) return;
+    setStartNotice(null);
+    void startWorkout(startDraft).then((outcome) => setStartNotice(startNoticeText(outcome, 0)));
+  };
+
   if (!draft) {
     return (
       <main className="screen stack">
@@ -511,19 +523,31 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         />
         <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
         <button
+          ref={startButton}
           className="button primary big"
           type="button"
           disabled={startingDay}
-          onClick={() => {
-            setStartNotice(null);
-            void startWorkout(startDraft).then((outcome) => setStartNotice(startNoticeText(outcome, 0)));
-          }}
+          onClick={startFreestyle}
         >
           Start workout
         </button>
         <p className="muted" style={{ textAlign: 'center' }}>
           Freestyle: add exercises as you go.
         </p>
+        {onboarding.open && (
+          <FirstRunDialog
+            userId={userId}
+            onFinish={onboarding.finish}
+            onSkip={() => {
+              onboarding.finish();
+              requestAnimationFrame(() => startButton.current?.focus());
+            }}
+            onFreestyle={() => {
+              focusPickerOnOpen.current = true;
+              startFreestyle();
+            }}
+          />
+        )}
       </main>
     );
   }
@@ -1069,6 +1093,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <ExercisePicker
           exercises={addableExercises(draft, exercises)}
           onPick={(exercise) => void addPicked(exercise)}
+          searchRef={(search) => {
+            if (!search || !focusPickerOnOpen.current) return;
+            focusPickerOnOpen.current = false;
+            search.focus();
+          }}
         />
       ) : (
         <p className="hint">A workout can hold at most {MAX_SETS_PER_SESSION} sets.</p>
@@ -1082,7 +1111,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         onChange={(sessionRpe) => changeDraft(withSessionRpe(draft, sessionRpe))}
       />
       <div ref={finishBar} className="finish-bar" tabIndex={-1}>
-        <RestTimerBar {...rest} focusAfterStop={finishButton} focusFallback={finishBar} />
+        <RestTimerBar
+          {...rest}
+          focusAfterStop={finishButton}
+          focusFallback={finishBar}
+          prompt={(moveFocusOn) => <NotifyPrompt userId={userId} onAnswered={moveFocusOn} />}
+        />
         {finishProblem && (
           <p className="problem" role="alert">
             {finishProblem}
@@ -1091,8 +1125,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <button ref={finishButton} className="button primary big" type="button" disabled={!canFinish} onClick={finish}>
           Finish workout
         </button>
-        <span className="muted tiny">~ and new records are previews, confirmed when the workout syncs.</span>
       </div>
+      <p className="muted tiny preview-note">~ and new records are previews, confirmed when the workout syncs.</p>
       {!draft.challenge && (
         <button className="button link" type="button" onClick={() => setConfirmingDiscard(true)}>
           Discard workout

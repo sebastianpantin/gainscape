@@ -2,13 +2,18 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TRAINING_DEVICE_SETTINGS,
   holdsWakeLock,
+  offersNotifyPrompt,
+  levelUpCues,
   parseTrainingDeviceSettings,
   restAlertActions,
   restAlertDelayMs,
   restAlertIsFresh,
 } from '../../web/src/lib/training-device-rules.ts';
 import {
+  answerNotifyPrompt,
   claimRestAlert,
+  forgetTrainingDevice,
+  notifyPromptAnswered,
   readTrainingDeviceSettings,
   saveTrainingDeviceSettings,
 } from '../../web/src/lib/training-device-store.ts';
@@ -103,5 +108,53 @@ describe('wake lock', () => {
     expect(holdsWakeLock({ keepAwake: false, workoutOpen: true, visible: true })).toBe(false);
     expect(holdsWakeLock({ keepAwake: true, workoutOpen: false, visible: true })).toBe(false);
     expect(holdsWakeLock({ keepAwake: true, workoutOpen: true, visible: false })).toBe(false);
+  });
+});
+
+describe('notification prompt', () => {
+  const firstRestInTheApp = {
+    standalone: true,
+    permission: 'default',
+    notifyOn: false,
+    answered: false,
+  } as const;
+
+  it('offers notifications in the installed app while the browser has not asked yet', () => {
+    expect(offersNotifyPrompt(firstRestInTheApp)).toBe(true);
+  });
+
+  it('stays away in a browser tab, once asked, without notification support, or when already on', () => {
+    expect(offersNotifyPrompt({ ...firstRestInTheApp, standalone: false })).toBe(false);
+    expect(offersNotifyPrompt({ ...firstRestInTheApp, permission: 'granted' })).toBe(false);
+    expect(offersNotifyPrompt({ ...firstRestInTheApp, permission: 'denied' })).toBe(false);
+    expect(offersNotifyPrompt({ ...firstRestInTheApp, permission: 'unsupported' })).toBe(false);
+    expect(offersNotifyPrompt({ ...firstRestInTheApp, notifyOn: true })).toBe(false);
+    expect(offersNotifyPrompt({ ...firstRestInTheApp, answered: true })).toBe(false);
+  });
+
+  it('remembers an answer per user until the user is forgotten on this device', () => {
+    const storage = new MemoryStorage();
+    expect(notifyPromptAnswered(storage, userId)).toBe(false);
+    answerNotifyPrompt(storage, userId);
+    expect(notifyPromptAnswered(storage, userId)).toBe(true);
+    expect(notifyPromptAnswered(storage, 'user-2')).toBe(false);
+    forgetTrainingDevice(storage, userId);
+    expect(notifyPromptAnswered(storage, userId)).toBe(false);
+  });
+
+  it('never asks again when storage is blocked rather than asking every rest', () => {
+    expect(notifyPromptAnswered(null, userId)).toBe(true);
+  });
+});
+
+describe('levelUpCues', () => {
+  it('vibrates and chimes with the default settings', () => {
+    expect(levelUpCues(DEFAULT_TRAINING_DEVICE_SETTINGS)).toEqual(['vibrate', 'sound']);
+  });
+
+  it('follows the vibrate and sound switches and ignores notifications', () => {
+    const quiet = { ...DEFAULT_TRAINING_DEVICE_SETTINGS, sound: false, notify: true };
+    expect(levelUpCues(quiet)).toEqual(['vibrate']);
+    expect(levelUpCues({ ...quiet, vibrate: false })).toEqual([]);
   });
 });

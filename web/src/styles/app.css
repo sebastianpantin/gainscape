@@ -4,6 +4,12 @@
 
 html {
   background: var(--color-backdrop);
+  touch-action: manipulation;
+}
+
+html,
+body {
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -153,6 +159,112 @@ a:hover {
 
 .whats-new-dialog::backdrop {
   background: rgb(0 0 0 / 60%);
+}
+
+.empty-state .button {
+  align-self: flex-start;
+}
+
+.first-run-dialog {
+  width: min(440px, calc(100vw - 32px));
+  margin-top: max(var(--space-4), env(safe-area-inset-top));
+  max-height: calc(100dvh - 2 * var(--space-4) - env(safe-area-inset-top));
+  overflow-y: auto;
+  color: var(--color-text);
+  border-top: 6px solid var(--color-accent);
+}
+
+.first-run-dialog::backdrop {
+  background: rgb(0 0 0 / 70%);
+}
+
+.first-run-progress {
+  gap: var(--space-2);
+}
+
+.first-run-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.first-run-pip {
+  width: 16px;
+  height: 8px;
+  background: var(--color-well);
+  border: var(--border-width) solid #000;
+}
+
+.first-run-pip.lit {
+  background: var(--color-accent);
+  box-shadow: inset -2px -2px 0 var(--color-accent-dark);
+}
+
+.first-run-title {
+  font-size: 1.6rem;
+  color: var(--color-accent);
+  text-shadow: var(--text-shadow);
+  line-height: 1.1;
+}
+
+.first-run-title:focus {
+  outline: none;
+}
+
+.first-run-title:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.first-run-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.first-run-card,
+.first-run-choice {
+  background: var(--color-well);
+  border: var(--border-width) solid #000;
+  box-shadow: var(--bevel-sunken);
+  padding: var(--space-3);
+}
+
+.first-run-card {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.first-run-card-icon {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-panel);
+  border: var(--border-width) solid #000;
+  box-shadow: var(--bevel);
+}
+
+.first-run-card-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: var(--color-accent-light);
+}
+
+.first-run-choice h3 {
+  font-size: 1.15rem;
+  color: var(--color-accent-light);
+}
+
+.first-run-browse {
+  align-self: flex-start;
+  padding: 0;
 }
 
 .whats-new-scroll {
@@ -1228,7 +1340,7 @@ body:has(.active-workout-bar) .screen {
   width: 64px;
 }
 
-.quick-fill > span {
+.quick-fill > span[aria-hidden] {
   padding-bottom: var(--space-3);
   color: var(--color-text-muted);
 }
@@ -1462,24 +1574,83 @@ body:has(.active-workout-bar) .screen {
   outline: none;
 }
 
+.preview-note {
+  margin: 0;
+  text-align: center;
+}
+
 .rest-timer {
+  position: relative;
   display: flex;
   align-items: center;
+  gap: var(--space-1);
+  text-align: left;
+}
+
+.rest-reading {
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  gap: var(--space-2);
+  min-height: var(--tap-target);
+  margin-right: auto;
+  line-height: 1.1;
+}
+
+.rest-label {
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .rest-clock {
   min-width: 4ch;
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--font-size-heading);
   color: var(--color-xp);
   text-shadow: var(--text-shadow);
   font-variant-numeric: tabular-nums;
 }
 
+.rest-timer.over .rest-label,
 .rest-timer.over .rest-clock {
   color: var(--color-accent);
+}
+
+.notify-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-width) dashed var(--color-panel-border);
+  text-align: left;
+}
+
+.notify-prompt p {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-size: var(--font-size-small);
+}
+
+.rest-progress {
+  position: absolute;
+  top: calc(var(--space-3) * -1);
+  left: calc(var(--space-3) * -1);
+  right: calc(var(--space-3) * -1);
+  height: var(--space-1);
+  background: var(--color-well);
+}
+
+.rest-progress span {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--color-xp) 0 6px, var(--color-xp-dark) 6px 8px);
+  transition: width 250ms linear;
+}
+
+.rest-timer.over .rest-progress span {
+  background: repeating-linear-gradient(90deg, var(--color-accent) 0 6px, var(--color-accent-dark) 6px 8px);
 }
 
 .exercise-picker {
@@ -1520,6 +1691,62 @@ body:has(.active-workout-bar) .screen {
   align-items: center;
   gap: var(--space-1);
   text-align: center;
+}
+
+.reveal-skip {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + var(--space-3));
+  z-index: 2;
+  min-width: 88px;
+  box-shadow:
+    inset 2px 2px 0 var(--color-panel-highlight),
+    3px 3px 0 #000;
+}
+
+.reveal-still .rise,
+.reveal-still .pop,
+.reveal-still .gain-added {
+  animation: none;
+}
+
+.loot-chest {
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: radial-gradient(
+    circle at 50% 42%,
+    color-mix(in srgb, var(--color-accent) 22%, var(--color-well)) 0,
+    var(--color-well) 70%
+  );
+  color: var(--color-accent);
+  border: var(--border-width) dashed var(--color-accent-dark);
+  border-radius: var(--radius);
+  box-shadow: var(--bevel-sunken);
+  text-shadow: var(--text-shadow);
+  cursor: pointer;
+}
+
+.loot-chest:hover {
+  border-color: var(--color-accent);
+}
+
+.loot-chest-art {
+  display: inline-flex;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 45%, transparent));
+  animation: chest-wiggle 2.4s steps(1, end) 1.6s infinite;
+}
+
+.loot-drop {
+  animation: pop 0.35s ease-out both;
 }
 
 .reveal-total {
@@ -1570,7 +1797,7 @@ body:has(.active-workout-bar) .screen {
   bottom: 0;
   background: var(--color-xp);
   transform-origin: left center;
-  animation: gain-fill 1.1s steps(12, end) both;
+  animation: gain-fill 0.6s steps(8, end) both;
 }
 
 .level-ups {
@@ -1646,6 +1873,26 @@ body:has(.active-workout-bar) .screen {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@keyframes chest-wiggle {
+  0%,
+  76%,
+  100% {
+    transform: none;
+  }
+  80% {
+    transform: translateY(-3px) rotate(-6deg);
+  }
+  84% {
+    transform: translateY(-3px) rotate(6deg);
+  }
+  88% {
+    transform: translateY(-2px) rotate(-4deg);
+  }
+  92% {
+    transform: none;
   }
 }
 

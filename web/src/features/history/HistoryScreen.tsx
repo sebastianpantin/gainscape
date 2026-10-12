@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { fetchSessionPage } from '../../lib/history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession } from '../../lib/history-rules.ts';
+import { EmptyState } from '../../components/EmptyState.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { CollectionTabs } from '../collection/CollectionScreen.tsx';
 import { formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
 import { messageOf } from '../../lib/error-text.ts';
@@ -84,8 +86,10 @@ export function HistoryScreen() {
           {problem}
         </p>
       )}
-      {!sessions && !problem && <p>Loading…</p>}
-      {sessions?.length === 0 && <p className="panel muted">No workouts yet. Finish one and it shows up here.</p>}
+      {!sessions && !problem && <ListSkeleton />}
+      {sessions?.length === 0 && (
+        <EmptyState text="No workouts yet. Finish one and it shows up here." startLabel="Start your first workout" />
+      )}
       {sessions && sessions.length > 0 && (
         <ul className="history-list" aria-label="Workouts">
           {sessions.map((session) => (

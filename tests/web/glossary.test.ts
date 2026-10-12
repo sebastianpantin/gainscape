@@ -19,6 +19,8 @@ describe('GLOSSARY', () => {
     ['amrap', 'What is an AMRAP set?'],
     ['superset', 'What is a superset?'],
     ['pr', 'What is a PR?'],
+    ['xp', 'What is XP?'],
+    ['loot', 'What is loot?'],
   ])('asks %s as %j', (key, question) => {
     expect(GLOSSARY[key].question).toBe(question);
   });
@@ -52,6 +54,11 @@ describe('GLOSSARY', () => {
       expect(entry.definition.toLowerCase()).toContain(entry.name.toLowerCase());
     },
   );
+
+  it('explains skill levels and loot for a first-time lifter', () => {
+    expect(GLOSSARY.xp.definition).toContain('1 to 99');
+    expect(GLOSSARY.loot.definition).toContain('hard sets can drop items');
+  });
 
   it('defines RIR and RPE for a beginner', () => {
     expect(GLOSSARY.rir.definition).toBe(
