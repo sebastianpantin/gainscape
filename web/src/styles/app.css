@@ -2275,6 +2275,7 @@ body:has(.active-workout-bar) .screen {
 }
 
 .profile-name {
+  color: var(--color-text);
   font-size: var(--font-size-3xl);
   font-weight: 600;
   overflow-wrap: anywhere;
