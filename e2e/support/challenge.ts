@@ -8,7 +8,7 @@ export const OFFLINE_ITEMS_NOTICE = 'Offline: using your saved items.';
 const ROUNDS = 5;
 
 export async function openItems(page: Page) {
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'Items' }).click();
   await expect(page.getByRole('heading', { name: 'Gear' })).toBeVisible();
 }

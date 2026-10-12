@@ -2647,3 +2647,7 @@ button.back-link {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
+
+.tab {
+  font-size: min(var(--font-size-tiny), 3vw);
+}

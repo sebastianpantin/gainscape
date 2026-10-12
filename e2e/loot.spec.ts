@@ -57,7 +57,7 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await logExercise(page, 'pause squat', 'Pause Squat', [{ weightKg: 60, reps: 5 }]);
   await finishWorkout(page);
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
   await page.getByRole('list', { name: 'Workouts' }).getByRole('link').nth(1).click();
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();

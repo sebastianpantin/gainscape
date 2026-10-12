@@ -77,7 +77,7 @@ const WhatsNewScreen = lazyScreen(() => import('./features/whats-new/WhatsNewScr
 const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'Train', icon: 'train', end: true },
   { to: '/skills', label: 'Skills', icon: 'skills' },
-  { to: '/collection', label: 'Log', icon: 'log' },
+  { to: '/collection', label: 'Collection', icon: 'log' },
   { to: '/friends', label: 'Friends', icon: 'friends' },
   { to: '/profile', label: 'Profile', icon: 'profile' },
 ];
