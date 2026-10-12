@@ -205,7 +205,7 @@ test.describe('signed-in screens', () => {
     await checkScreen(page, 'reveal (gear bonus)', () =>
       expect(page.getByText(/^Gear bonus \+\d+ XP$/).first()).toBeVisible(),
     );
-    await openTab(page, 'Log');
+    await openTab(page, 'Collection');
     await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
     const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
     await expect(workouts).toHaveCount(1);
@@ -385,6 +385,20 @@ test.describe('on a 360x740 phone', () => {
     await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
     await logCardio(page, 'sprint', 'Sprint Intervals', [{ rounds: 10, workS: 30, restS: 30, effort: 'Hard' }]);
     await checkEffortTargets(page);
+  });
+});
+
+test.describe('on a 320x640 phone', () => {
+  test.use({ viewport: { width: 320, height: 640 } });
+
+  test('every tab label fits inside its tab', async ({ page }) => {
+    await register(page, uniqueUsername('a11y_320'));
+    const tabs = page.getByRole('navigation', { name: 'Main' }).getByRole('link');
+    await expect(tabs).toHaveText(['Train', 'Skills', 'Collection', 'Friends', 'Profile']);
+    for (const tab of await tabs.all()) {
+      const overflow = await tab.evaluate((link) => link.scrollWidth - link.clientWidth);
+      expect(overflow, await tab.innerText()).toBeLessThanOrEqual(0);
+    }
   });
 });
 
