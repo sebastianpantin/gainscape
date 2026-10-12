@@ -21,7 +21,7 @@ body {
   background-size: 6px 6px;
   color: var(--color-text);
   font-family: var(--font-family);
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-md);
   line-height: 1.4;
 }
 
@@ -34,7 +34,7 @@ h3 {
 }
 
 h2 {
-  font-size: var(--font-size-heading);
+  font-size: var(--font-size-xl);
   color: var(--color-text);
 }
 
@@ -65,7 +65,7 @@ a:hover {
 
 .title {
   font-family: var(--font-display);
-  font-size: var(--font-size-title);
+  font-size: var(--font-size-4xl);
   font-weight: 600;
   color: var(--color-accent);
   text-shadow: var(--text-shadow);
@@ -94,7 +94,7 @@ a:hover {
 
 .panel {
   background: var(--color-panel);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   border-radius: var(--radius);
   padding: var(--space-3);
   box-shadow: var(--bevel);
@@ -121,7 +121,7 @@ a:hover {
 
 .skeleton-title {
   width: 45%;
-  height: calc(var(--font-size-title) * 1.1);
+  height: calc(var(--font-size-4xl) * 1.1);
 }
 
 .skeleton-tile {
@@ -191,7 +191,7 @@ a:hover {
   width: 16px;
   height: 8px;
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
 }
 
 .first-run-pip.lit {
@@ -227,7 +227,7 @@ a:hover {
 .first-run-card,
 .first-run-choice {
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   box-shadow: var(--bevel-sunken);
   padding: var(--space-3);
 }
@@ -246,19 +246,19 @@ a:hover {
   align-items: center;
   justify-content: center;
   background: var(--color-panel);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   box-shadow: var(--bevel);
 }
 
 .first-run-card-title {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   color: var(--color-accent-light);
 }
 
 .first-run-choice h3 {
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   color: var(--color-accent-light);
 }
 
@@ -311,7 +311,7 @@ a:hover {
   background: var(--color-well);
   color: var(--color-accent);
   font-family: var(--font-display);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
   font-weight: 700;
   line-height: 1;
 }
@@ -341,8 +341,8 @@ a:hover {
   padding: var(--space-3);
   background: var(--color-panel);
   color: var(--color-text);
-  font-size: var(--font-size-body);
-  border: var(--border-width) solid #000;
+  font-size: var(--font-size-md);
+  border: var(--border-width) solid var(--color-outline);
   border-radius: var(--radius);
   box-shadow: var(--bevel);
 }
@@ -360,7 +360,7 @@ a:hover {
   flex-wrap: wrap;
   align-items: center;
   column-gap: var(--space-1);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
 
@@ -378,17 +378,17 @@ a:hover {
 
 .well {
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   padding: var(--space-2) var(--space-3);
 }
 
 .muted {
   color: var(--color-text-muted);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
 }
 
 .tiny {
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
 }
 
 .xp-text {
@@ -408,12 +408,12 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
   color: var(--color-parchment);
 }
 
 .hint {
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -425,7 +425,7 @@ a:hover {
 input,
 select {
   font: inherit;
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-md);
   min-height: var(--tap-target);
   padding: 0 var(--space-2);
   background: var(--color-parchment);
@@ -465,12 +465,12 @@ a:focus-visible {
 
 .button {
   font: inherit;
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
   min-height: var(--tap-target);
   padding: 0 var(--space-3);
   background: var(--color-chrome);
   color: var(--color-text);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   border-radius: var(--radius);
   box-shadow: inset 2px 2px 0 var(--color-panel-highlight);
   cursor: pointer;
@@ -483,7 +483,7 @@ a:focus-visible {
 
 .button:hover {
   color: var(--color-text);
-  background: #372d22;
+  background: var(--color-chrome-hover);
 }
 
 .button:disabled,
@@ -494,7 +494,7 @@ a:focus-visible {
 
 .button.primary {
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   background: var(--color-accent);
   color: var(--color-ink);
@@ -502,18 +502,18 @@ a:focus-visible {
 }
 
 .button.primary:hover {
-  background: #ffbb26;
+  background: var(--color-accent-hover);
 }
 
 .button.big {
   min-height: 56px;
-  font-size: 1.25rem;
+  font-size: var(--font-size-xl);
 }
 
 .button.danger {
   background: var(--color-danger-fill);
   color: var(--color-ink);
-  box-shadow: inset 2px 2px 0 #f08a82;
+  box-shadow: inset 2px 2px 0 var(--color-danger-highlight);
 }
 
 .button.link {
@@ -565,13 +565,13 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--space-0-5);
   text-decoration: none;
 }
 
 .header-stat strong {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: var(--font-size-xl);
   font-weight: 500;
   color: var(--color-text);
 }
@@ -583,12 +583,12 @@ a:focus-visible {
   gap: var(--space-1);
   padding: var(--space-1);
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
 }
 
 .segment {
   font: inherit;
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
   background: transparent;
   cursor: pointer;
   display: flex;
@@ -612,15 +612,15 @@ a:focus-visible {
   color: var(--color-accent-light);
   font-weight: 600;
   background: var(--color-panel-border);
-  border-color: #000;
-  box-shadow: inset 2px 2px 0 #7a6a52;
+  border-color: var(--color-outline);
+  box-shadow: inset 2px 2px 0 var(--color-panel-border-highlight);
 }
 
 .sample-note {
   padding: var(--space-2) var(--space-3);
   border: var(--border-width) dashed var(--color-rare);
   color: var(--color-parchment);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
 }
 
 .sample-note strong {
@@ -634,7 +634,7 @@ a:focus-visible {
   padding: var(--space-2) var(--space-3);
   background: var(--color-well);
   border: var(--border-width) dashed var(--color-accent);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
 }
 
 .app-banner {
@@ -648,8 +648,8 @@ a:focus-visible {
   gap: var(--space-2) var(--space-3);
   padding: var(--space-2) var(--space-4);
   background: var(--color-chrome);
-  border-bottom: var(--border-width) solid #000;
-  font-size: var(--font-size-small);
+  border-bottom: var(--border-width) solid var(--color-outline);
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 
@@ -659,7 +659,7 @@ a:focus-visible {
 
 .meter {
   height: 12px;
-  background: #000;
+  background: var(--color-track);
   border: 1px solid var(--color-panel-border);
   position: relative;
   overflow: hidden;
@@ -673,7 +673,7 @@ a:focus-visible {
 
 .progress-bar {
   height: 10px;
-  background: #000;
+  background: var(--color-track);
   border: 1px solid var(--color-panel-border);
 }
 
@@ -695,11 +695,11 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   box-shadow: inset 2px 2px 0 var(--color-panel-highlight);
   color: var(--color-accent);
   font-family: var(--font-display);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .tab-bar {
@@ -710,7 +710,7 @@ a:focus-visible {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   background: var(--color-chrome);
-  border-top: var(--border-width) solid #000;
+  border-top: var(--border-width) solid var(--color-outline);
   box-shadow: inset 0 2px 0 var(--color-panel-shade);
   padding: var(--space-1) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
   z-index: 10;
@@ -725,7 +725,7 @@ a:focus-visible {
   gap: var(--space-1);
   color: var(--color-text-muted);
   text-decoration: none;
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-2xs);
 }
 
 .tab:hover {
@@ -751,10 +751,10 @@ a:focus-visible {
   padding-left: calc(var(--space-4) + env(safe-area-inset-left));
   padding-right: calc(var(--space-4) + env(safe-area-inset-right));
   background: var(--color-panel);
-  border-top: var(--border-width) solid #000;
+  border-top: var(--border-width) solid var(--color-outline);
   box-shadow: inset 0 2px 0 var(--color-panel-highlight);
   color: var(--color-text);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
   text-decoration: none;
   z-index: 10;
 }
@@ -811,12 +811,12 @@ body:has(.active-workout-bar) .screen {
   font-weight: 700;
   letter-spacing: 2px;
   color: var(--color-accent);
-  text-shadow: 3px 3px 0 #000;
+  text-shadow: 3px 3px 0 var(--color-bevel);
 }
 
 .brand p {
   color: var(--color-parchment);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
 }
 
 .day-list,
@@ -837,7 +837,7 @@ body:has(.active-workout-bar) .screen {
   justify-content: space-between;
   text-align: left;
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: var(--font-size-lg);
 }
 
 .day-button .muted {
@@ -855,7 +855,7 @@ body:has(.active-workout-bar) .screen {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--space-0-5);
   text-align: right;
 }
 
@@ -863,7 +863,7 @@ body:has(.active-workout-bar) .screen {
 .live-xp output {
   white-space: nowrap;
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--font-size-3xl);
   font-weight: 500;
   color: var(--color-xp);
   text-shadow: var(--text-shadow);
@@ -905,7 +905,7 @@ body:has(.active-workout-bar) .screen {
   min-width: 12rem;
   padding: var(--space-2);
   background: var(--color-panel);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   border-radius: var(--radius);
   box-shadow: var(--bevel);
 }
@@ -1015,17 +1015,17 @@ body:has(.active-workout-bar) .screen {
 
 .set-row.stepped .field-caption {
   position: absolute;
-  top: 4px;
-  left: 6px;
+  top: var(--space-1);
+  left: var(--space-1-5);
   z-index: 1;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   line-height: 1;
   color: var(--color-ink);
   pointer-events: none;
 }
 
 .set-row.stepped .compact-field input {
-  padding: 8px 2px 0;
+  padding: var(--space-2) var(--space-0-5) 0;
   text-align: center;
 }
 
@@ -1053,7 +1053,7 @@ body:has(.active-workout-bar) .screen {
 .set-info > .set-xp {
   flex-direction: row;
   align-items: baseline;
-  gap: var(--space-2);
+  gap: var(--space-1);
   margin-left: auto;
   padding-bottom: 0;
 }
@@ -1063,7 +1063,7 @@ body:has(.active-workout-bar) .screen {
   padding: 0;
   font: inherit;
   font-family: var(--font-family);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   background: transparent;
   border: 0;
@@ -1084,7 +1084,7 @@ body:has(.active-workout-bar) .screen {
 
 .last-delta {
   font-family: var(--font-family);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -1121,7 +1121,7 @@ body:has(.active-workout-bar) .screen {
   padding: var(--space-2);
   background: var(--color-panel);
   color: var(--color-text);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   border-radius: var(--radius);
   box-shadow: var(--bevel);
 }
@@ -1147,7 +1147,7 @@ body:has(.active-workout-bar) .screen {
   min-height: var(--tap-target);
   padding: 0 var(--space-2);
   font: inherit;
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
   text-align: left;
   color: var(--color-text);
   background: none;
@@ -1176,12 +1176,12 @@ body:has(.active-workout-bar) .screen {
 }
 
 .set-menu-action.selected > .set-menu-check {
-  border-color: #000;
+  border-color: var(--color-outline);
 }
 
 .warmup-badge {
   font-family: var(--font-family);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-accent-light);
 }
 
@@ -1191,7 +1191,7 @@ body:has(.active-workout-bar) .screen {
 
 .plate-marker {
   font: inherit;
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
   color: var(--color-text);
   background: none;
   border: 0;
@@ -1200,7 +1200,7 @@ body:has(.active-workout-bar) .screen {
   min-height: var(--tap-target);
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   cursor: pointer;
   flex: 0 1 auto;
 }
@@ -1234,7 +1234,7 @@ body:has(.active-workout-bar) .screen {
 
 .plate {
   width: 6px;
-  border: 1px solid #000;
+  border: 1px solid var(--color-outline);
   border-radius: 1px;
 }
 
@@ -1332,7 +1332,7 @@ body:has(.active-workout-bar) .screen {
 
 .quick-fill legend {
   padding: 0 var(--space-1);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -1353,7 +1353,7 @@ body:has(.active-workout-bar) .screen {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -1390,7 +1390,7 @@ body:has(.active-workout-bar) .screen {
 .amrap-badge {
   display: block;
   font-family: var(--font-family);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-accent-light);
 }
 
@@ -1401,14 +1401,14 @@ body:has(.active-workout-bar) .screen {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
 }
 
 .compact-field {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: var(--font-size-tiny);
+  gap: var(--space-0-5);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -1416,8 +1416,8 @@ body:has(.active-workout-bar) .screen {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
-  padding-bottom: 6px;
+  gap: var(--space-0-5);
+  padding-bottom: var(--space-1-5);
   font-family: var(--font-display);
   color: var(--color-text-faint);
   white-space: nowrap;
@@ -1435,9 +1435,9 @@ body:has(.active-workout-bar) .screen {
 .set-xp .record-chip {
   padding: 0 var(--space-1);
   font-family: var(--font-family);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   font-weight: 600;
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   background: var(--color-accent);
   color: var(--color-ink);
 }
@@ -1505,7 +1505,8 @@ body:has(.active-workout-bar) .screen {
 }
 
 .set-row .effort-option {
-  padding: 0 2px;
+  padding: 0;
+  letter-spacing: -0.02em;
   white-space: nowrap;
 }
 
@@ -1532,7 +1533,7 @@ body:has(.active-workout-bar) .screen {
 
 .effort-option {
   font: inherit;
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   min-height: var(--tap-target);
   background: var(--color-background);
   color: var(--color-text-muted);
@@ -1550,7 +1551,7 @@ body:has(.active-workout-bar) .screen {
 .effort-option.selected {
   background: var(--color-accent);
   color: var(--color-ink);
-  border-color: #000;
+  border-color: var(--color-outline);
   font-weight: 600;
   box-shadow: inset 2px 2px 0 var(--color-accent-light);
 }
@@ -1564,8 +1565,8 @@ body:has(.active-workout-bar) .screen {
   padding: var(--space-3);
   margin: 0 calc(var(--space-4) * -1);
   background: var(--color-chrome);
-  border-top: var(--border-width) solid #000;
-  border-bottom: var(--border-width) solid #000;
+  border-top: var(--border-width) solid var(--color-outline);
+  border-bottom: var(--border-width) solid var(--color-outline);
   text-align: center;
   z-index: 5;
 }
@@ -1597,7 +1598,7 @@ body:has(.active-workout-bar) .screen {
 }
 
 .rest-label {
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   white-space: nowrap;
 }
@@ -1605,7 +1606,7 @@ body:has(.active-workout-bar) .screen {
 .rest-clock {
   min-width: 4ch;
   font-family: var(--font-display);
-  font-size: var(--font-size-heading);
+  font-size: var(--font-size-xl);
   color: var(--color-xp);
   text-shadow: var(--text-shadow);
   font-variant-numeric: tabular-nums;
@@ -1630,7 +1631,7 @@ body:has(.active-workout-bar) .screen {
 .notify-prompt p {
   flex: 1 1 12rem;
   margin: 0;
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
 }
 
 .rest-progress {
@@ -1665,10 +1666,10 @@ body:has(.active-workout-bar) .screen {
 
 .search-field svg {
   position: absolute;
-  left: 12px;
+  left: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
-  color: #6b5f4b;
+  color: var(--color-input-icon);
   pointer-events: none;
 }
 
@@ -1701,7 +1702,7 @@ body:has(.active-workout-bar) .screen {
   min-width: 88px;
   box-shadow:
     inset 2px 2px 0 var(--color-panel-highlight),
-    3px 3px 0 #000;
+    3px 3px 0 var(--color-bevel);
 }
 
 .reveal-still .rise,
@@ -1713,7 +1714,7 @@ body:has(.active-workout-bar) .screen {
 .loot-chest {
   font: inherit;
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: var(--font-size-xl);
   font-weight: 600;
   min-height: 120px;
   display: flex;
@@ -1754,7 +1755,7 @@ body:has(.active-workout-bar) .screen {
   font-size: 2.75rem;
   font-weight: 700;
   color: var(--color-xp);
-  text-shadow: 3px 3px 0 #000;
+  text-shadow: 3px 3px 0 var(--color-bevel);
 }
 
 .reveal-list,
@@ -1776,7 +1777,7 @@ body:has(.active-workout-bar) .screen {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .skill-gain strong {
@@ -1805,7 +1806,7 @@ body:has(.active-workout-bar) .screen {
   color: var(--color-ink);
   box-shadow:
     var(--bevel-accent),
-    4px 4px 0 #000;
+    4px 4px 0 var(--color-bevel);
 }
 
 .level-ups h2 {
@@ -1826,11 +1827,11 @@ body:has(.active-workout-bar) .screen {
 .level-up-grid li {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2) 10px;
+  gap: var(--space-0-5);
+  padding: var(--space-2) var(--space-2-5);
   background: var(--color-accent-light);
-  border: var(--border-width) solid #000;
-  font-size: var(--font-size-tiny);
+  border: var(--border-width) solid var(--color-outline);
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -1916,7 +1917,7 @@ body:has(.active-workout-bar) .screen {
 .standing .panel {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0-5);
 }
 
 .standing strong {
@@ -1934,11 +1935,11 @@ body:has(.active-workout-bar) .screen {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: 10px;
+  padding: var(--space-2-5);
   text-align: left;
   color: var(--color-text);
   background: var(--color-panel);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   box-shadow: var(--bevel);
   cursor: pointer;
 }
@@ -1951,11 +1952,11 @@ body:has(.active-workout-bar) .screen {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .skill-name {
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
 }
 
 .skill-level {
@@ -1971,14 +1972,14 @@ body:has(.active-workout-bar) .screen {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
 .slot-legend span {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .swatch {
@@ -2008,18 +2009,18 @@ body:has(.active-workout-bar) .screen {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--space-0-5);
   padding: var(--space-1);
   border: var(--border-width) dashed var(--color-text-faint);
   color: var(--color-text-muted);
   font-family: var(--font-display);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 
 .record-slot .muted {
   font-family: var(--font-family);
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
 }
 
 .record-slot.empty {
@@ -2037,13 +2038,13 @@ body:has(.active-workout-bar) .screen {
 .bodyweight-record {
   flex-direction: row;
   justify-content: space-between;
-  padding: 10px var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
   font-family: var(--font-family);
 }
 
 .bodyweight-record strong {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: var(--font-size-2xl);
   color: var(--color-accent);
 }
 
@@ -2053,7 +2054,7 @@ body:has(.active-workout-bar) .screen {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .item-slot {
@@ -2068,7 +2069,7 @@ body:has(.active-workout-bar) .screen {
   padding: 0;
   cursor: pointer;
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   box-shadow: var(--bevel-sunken);
 }
 
@@ -2087,19 +2088,19 @@ body:has(.active-workout-bar) .screen {
 
 .item-qty {
   position: absolute;
-  top: 2px;
-  left: 4px;
+  top: var(--space-0-5);
+  left: var(--space-1);
   font-family: var(--font-display);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-focus);
-  text-shadow: 1px 1px 0 #000;
+  text-shadow: 1px 1px 0 var(--color-bevel);
 }
 
 .recipe {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: var(--font-size-small);
+  gap: var(--space-1-5);
+  font-size: var(--font-size-sm);
 }
 
 .have-enough {
@@ -2112,7 +2113,7 @@ body:has(.active-workout-bar) .screen {
 
 .feed-item {
   display: flex;
-  gap: 10px;
+  gap: var(--space-2-5);
 }
 
 .feed-body {
@@ -2124,7 +2125,7 @@ body:has(.active-workout-bar) .screen {
 }
 
 .feed-body .pixel {
-  font-size: 1.05rem;
+  font-size: var(--font-size-lg);
   text-wrap: pretty;
 }
 
@@ -2137,8 +2138,8 @@ body:has(.active-workout-bar) .screen {
   justify-content: center;
   font-family: var(--font-display);
   font-weight: 600;
-  border: var(--border-width) solid #000;
-  box-shadow: 2px 2px 0 #000;
+  border: var(--border-width) solid var(--color-outline);
+  box-shadow: 2px 2px 0 var(--color-bevel);
   background: var(--color-accent);
   color: var(--color-ink);
 }
@@ -2166,7 +2167,7 @@ body:has(.active-workout-bar) .screen {
 }
 
 .gz-button .pixel {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .gz-button[aria-pressed='true'],
@@ -2177,13 +2178,13 @@ body:has(.active-workout-bar) .screen {
 }
 
 .metric-grid .effort-option {
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
 }
 
 .hiscores {
   list-style: none;
   margin: 0;
-  padding: 6px;
+  padding: var(--space-1-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -2192,14 +2193,14 @@ body:has(.active-workout-bar) .screen {
 .hiscore-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2-5);
   min-height: 52px;
-  padding: 0 10px;
+  padding: 0 var(--space-2-5);
   border: var(--border-width) solid transparent;
 }
 
 .hiscore-row:nth-child(even) {
-  background: #352d23;
+  background: var(--color-row-stripe);
 }
 
 .hiscore-row.me {
@@ -2210,18 +2211,18 @@ body:has(.active-workout-bar) .screen {
 .hiscore-rank {
   width: 28px;
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: var(--font-size-xl);
   color: var(--color-text-muted);
 }
 
 .hiscore-name {
   flex-grow: 1;
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
 }
 
 .hiscore-value {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: var(--font-size-2xl);
   color: var(--color-accent);
   text-shadow: var(--text-shadow);
 }
@@ -2230,7 +2231,7 @@ body:has(.active-workout-bar) .screen {
   width: 100%;
   min-height: 56px;
   justify-content: space-between;
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-md);
 }
 
 .exercise-list {
@@ -2256,14 +2257,14 @@ body:has(.active-workout-bar) .screen {
   font-family: var(--font-display);
   font-size: 1.9rem;
   font-weight: 700;
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   box-shadow:
     var(--bevel-accent),
-    3px 3px 0 #000;
+    3px 3px 0 var(--color-bevel);
 }
 
 .profile-name {
-  font-size: 1.5rem;
+  font-size: var(--font-size-3xl);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
@@ -2271,22 +2272,22 @@ body:has(.active-workout-bar) .screen {
 .stat-tiles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .stat-tile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-0-5);
   padding: var(--space-2) var(--space-1);
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
 }
 
 .stat-tile dd {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: var(--font-size-2xl);
   font-weight: 500;
   color: var(--color-accent);
   text-shadow: var(--text-shadow);
@@ -2295,29 +2296,29 @@ body:has(.active-workout-bar) .screen {
 .private-tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: var(--font-size-tiny);
+  gap: var(--space-1-5);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
 .public-tag {
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-xp);
 }
 
 .body-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .body-stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2) 10px;
+  gap: var(--space-0-5);
+  padding: var(--space-2) var(--space-2-5);
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
 }
 
 .gear-bonus-list {
@@ -2331,12 +2332,12 @@ body:has(.active-workout-bar) .screen {
 
 .body-stat dd {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: var(--font-size-xl);
   font-weight: 500;
 }
 
 .back-link {
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   text-decoration: none;
 }
@@ -2362,7 +2363,7 @@ button.back-link {
   width: 100%;
   height: auto;
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
 }
 
 .line-chart text {
@@ -2408,7 +2409,7 @@ button.back-link {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
 }
 
 .line-chart-legend li {
@@ -2421,13 +2422,13 @@ button.back-link {
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 1px solid #000;
+  border: 1px solid var(--color-outline);
 }
 
 .rep-max-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-sm);
 }
 
 .rep-max-table th,
@@ -2471,11 +2472,11 @@ button.back-link {
   position: relative;
   width: 60px;
   height: 34px;
-  margin-top: 2px;
+  margin-top: var(--space-0-5);
   padding: 0;
   cursor: pointer;
   background: var(--color-well);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   box-shadow: var(--bevel-sunken);
 }
 
@@ -2495,7 +2496,7 @@ button.back-link {
   width: 24px;
   height: 24px;
   background: var(--color-text-faint);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
 }
 
 .switch[aria-checked='true'] .switch-knob {
@@ -2524,7 +2525,7 @@ button.back-link {
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -2533,7 +2534,7 @@ button.back-link {
   height: var(--tap-target);
   padding: 0;
   cursor: pointer;
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.35);
 }
 
@@ -2579,7 +2580,7 @@ button.back-link {
 }
 
 .history-tag {
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-xp);
 }
 
@@ -2589,12 +2590,12 @@ button.back-link {
 
 .notes-field textarea {
   font: inherit;
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-md);
   min-height: calc(var(--tap-target) * 2);
   padding: var(--space-2);
   background: var(--color-parchment);
   color: var(--color-ink);
-  border: var(--border-width) solid #000;
+  border: var(--border-width) solid var(--color-outline);
   border-radius: var(--radius);
   box-shadow: inset 2px 2px 0 var(--color-parchment-shade);
   width: 100%;
