@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  feedbackLabel,
   NEW_RECORD_VIBRATION_MS,
   SET_DONE_VIBRATION_MS,
   setFeedback,
@@ -95,5 +96,13 @@ describe('setFeedback', () => {
 
   it('uses the row label it is given', () => {
     expect(setFeedback(input({ label: 'Bout 1' })).drop?.announcement).toBe('Bout 1 logged, about 45 XP');
+  });
+
+  it('names the exercise so logging set 1 of two exercises in a row reads differently', () => {
+    const bench = setFeedback(input({ label: feedbackLabel('Barbell Bench Press', 'set', 1) }));
+    const squat = setFeedback(input({ label: feedbackLabel('Barbell Back Squat', 'set', 1) }));
+    expect(bench.drop?.announcement).toBe('Barbell Bench Press, set 1 logged, about 45 XP');
+    expect(squat.drop?.announcement).toBe('Barbell Back Squat, set 1 logged, about 45 XP');
+    expect(feedbackLabel('Rower', 'bout', 2)).toBe('Rower, bout 2');
   });
 });

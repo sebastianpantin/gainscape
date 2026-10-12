@@ -4,6 +4,7 @@ import { expectNoAxeViolations } from './support/a11y.ts';
 import { addExercise, logBench, openTab, register, setRow, uniqueUsername } from './support/app.ts';
 
 const BENCH = 'Barbell Bench Press';
+const LOGGED = /^Barbell Bench Press, set 1 logged, about [\d,]+ XP$/;
 
 type VibrationLog = { vibrations: number[][] };
 
@@ -22,7 +23,9 @@ function vibrations(page: Page): Promise<number[][]> {
   return page.evaluate(() => (window as unknown as VibrationLog).vibrations.splice(0));
 }
 
-test('marking a set done drops its XP and announces it, a new record included', async ({ page }) => {
+test('marking a set done drops its XP and announces it with the exercise name, again on a re-log, a new record included', async ({
+  page,
+}) => {
   await recordVibrations(page);
   await register(page, uniqueUsername('drop'));
   await logBench(page, 60);
@@ -42,14 +45,25 @@ test('marking a set done drops its XP and announces it, a new record included', 
 
   await done.click();
   await expect(done).toHaveAttribute('aria-pressed', 'true');
-  await expect(announcement).toHaveText(/^Set 1 logged, about [\d,]+ XP$/);
+  await expect(announcement).toHaveText(LOGGED);
   expect(await vibrations(page)).toEqual([[12]]);
   await expectNoAxeViolations(page, 'workout after a set is logged');
+
+  const firstAnnouncement = await announcement.locator('span').elementHandle();
+  await done.click();
+  await expect(done).toHaveAttribute('aria-pressed', 'false');
+  await done.click();
+  await expect(done).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => firstAnnouncement?.evaluate((node) => node.isConnected)).toBe(false);
+  await expect(announcement).toHaveText(LOGGED);
+  expect(await vibrations(page)).toEqual([[12]]);
 
   await done.click();
   await row.getByRole('spinbutton', { name: 'kg', exact: true }).fill('70');
   await done.click();
-  await expect(announcement).toHaveText(/^Set 1 logged, about [\d,]+ XP\. Predicted new 5 rep max$/);
+  await expect(announcement).toHaveText(
+    /^Barbell Bench Press, set 1 logged, about [\d,]+ XP\. Predicted new 5 rep max$/,
+  );
   await expect(row).toContainText('New 5RM!');
   expect(await vibrations(page)).toEqual([[60, 40, 60]]);
 });

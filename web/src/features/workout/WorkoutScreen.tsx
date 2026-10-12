@@ -142,7 +142,7 @@ import {
 } from './workout-rules.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
 import { vibrate } from './rest-alert-effects.ts';
-import { setFeedback, type ShownSetDrop, XP_DROP_MS } from './set-feedback-rules.ts';
+import { feedbackLabel, setFeedback, type ShownSetDrop, XP_DROP_MS } from './set-feedback-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
 
 interface WorkoutScreenProps {
@@ -249,7 +249,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [focusSetId, setFocusSetId] = useState<string | null>(null);
   const [drop, setDrop] = useState<ShownSetDrop | null>(null);
-  const [setAnnouncement, setSetAnnouncement] = useState('');
+  const [setAnnouncement, setSetAnnouncement] = useState<{ text: string; key: number } | null>(null);
   const dropCount = useRef(0);
   const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);
   const [loadedBaseline, setLoadedBaseline] = useState<SessionBaseline | null>(null);
@@ -676,7 +676,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     if (feedback.drop) {
       dropCount.current += 1;
       setDrop({ ...feedback.drop, setId, key: dropCount.current });
-      setSetAnnouncement(feedback.drop.announcement);
+      setSetAnnouncement({ text: feedback.drop.announcement, key: dropCount.current });
     }
     changeDraft(next);
   };
@@ -748,7 +748,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     rowLabel?: string,
   ) => {
     const compound = equipment.compoundIds.has(exercise.exerciseId);
-    const place = { exerciseIndex, setIndex, label: rowLabel ?? `Set ${setIndex + 1}` };
+    const place = { exerciseIndex, setIndex, label: feedbackLabel(exercise.name, 'set', setIndex + 1) };
     const startRestAfter = (changes: Partial<Omit<DraftSet, 'id'>>) => {
       if (restStartsAfterChange(draft, exerciseIndex, set, changes, rest.timer))
         rest.start(set.id, exercise.exerciseId, compound);
@@ -814,7 +814,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </div>
       </header>
       <p className="visually-hidden" role="status">
-        {setAnnouncement}
+        {setAnnouncement && <span key={setAnnouncement.key}>{setAnnouncement.text}</span>}
       </p>
       {deviceNotices}
       {draft.challenge && (
@@ -872,7 +872,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                       changeSet(updateBout(draft, exerciseIndex, bout.id, changes), bout.id, {
                         exerciseIndex,
                         setIndex: boutIndex,
-                        label: `Bout ${boutIndex + 1}`,
+                        label: feedbackLabel(exercise.name, 'bout', boutIndex + 1),
                       })
                     }
                     onRemove={() => changeDraft(removeSet(draft, exerciseIndex, bout.id))}
@@ -880,7 +880,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                       changeSet(toggleSetDone(draft, exerciseIndex, bout.id), bout.id, {
                         exerciseIndex,
                         setIndex: boutIndex,
-                        label: `Bout ${boutIndex + 1}`,
+                        label: feedbackLabel(exercise.name, 'bout', boutIndex + 1),
                       })
                     }
                   />
@@ -928,7 +928,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                       changeSet(updateHoldSet(draft, exerciseIndex, set.id, changes), set.id, {
                         exerciseIndex,
                         setIndex,
-                        label: `Set ${setIndex + 1}`,
+                        label: feedbackLabel(exercise.name, 'set', setIndex + 1),
                       })
                     }
                     onRemove={() => changeDraft(removeSet(draft, exerciseIndex, set.id))}
@@ -936,7 +936,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
                       changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id, {
                         exerciseIndex,
                         setIndex,
-                        label: `Set ${setIndex + 1}`,
+                        label: feedbackLabel(exercise.name, 'set', setIndex + 1),
                       })
                     }
                   />
