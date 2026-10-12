@@ -1462,24 +1462,65 @@ body:has(.active-workout-bar) .screen {
   outline: none;
 }
 
+.preview-note {
+  margin: 0;
+  text-align: center;
+}
+
 .rest-timer {
   display: flex;
   align-items: center;
+  gap: var(--space-1);
+  text-align: left;
+}
+
+.rest-reading {
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  gap: var(--space-2);
+  min-height: var(--tap-target);
+  margin-right: auto;
+  line-height: 1.1;
+}
+
+.rest-label {
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .rest-clock {
   min-width: 4ch;
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--font-size-heading);
   color: var(--color-xp);
   text-shadow: var(--text-shadow);
   font-variant-numeric: tabular-nums;
 }
 
+.rest-timer.over .rest-label,
 .rest-timer.over .rest-clock {
   color: var(--color-accent);
+}
+
+.rest-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--space-1);
+  background: var(--color-well);
+}
+
+.rest-progress span {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--color-xp) 0 6px, var(--color-xp-dark) 6px 8px);
+  transition: width 250ms linear;
+}
+
+.rest-timer.over .rest-progress span {
+  background: repeating-linear-gradient(90deg, var(--color-accent) 0 6px, var(--color-accent-dark) 6px 8px);
 }
 
 .exercise-picker {
