@@ -20,7 +20,7 @@ const VENDOR_CHUNKS = [
   },
   { name: 'vendor-supabase', test: /node_modules[\\/]@supabase[\\/]/ },
   { name: 'vendor-query', test: /node_modules[\\/]@tanstack[\\/]/ },
-  { name: 'vendor-zod', test: /node_modules[\\/]zod[\\/]/ },
+  { name: 'vendor-zod', test: /node_modules[\\/]zod[\\/]|[\\/]src[\\/]zod-config\.ts$/ },
 ];
 
 function appBuild(): string {
