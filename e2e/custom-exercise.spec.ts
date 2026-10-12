@@ -52,7 +52,7 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await logLandmineSession(page, 50);
   await expect(page.getByLabel('New records')).toContainText('Landmine Press: 8RM 50 kg');
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await addExercise(page, 'back squat', 'Back Squat');
   await expect(collectionHeadings(page)).toHaveText(['Back Squat', 'Landmine Press']);
   const landmine = await addExercise(page, 'landmine', 'Landmine Press');
@@ -78,7 +78,7 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await page.getByLabel('Search exercises').fill('landmine');
   await expect(page.getByRole('button', { name: /^Landmine Press\b/ })).toHaveCount(0);
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await expect(landmine).toContainText('(archived)');
 });
 

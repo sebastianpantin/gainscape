@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { InvokeOutcome } from '../../web/src/lib/function-client-rules.ts';
-import { invokeWithRetries } from '../../web/src/lib/history-rules.ts';
+import { invokeWithRetries, parseSessionDetailRow, parseSessionPageRows } from '../../web/src/lib/history-rules.ts';
 
 type Outcome = InvokeOutcome<{ saved: true }>;
 
@@ -69,5 +69,79 @@ describe('invokeWithRetries', () => {
     const { invoke, run } = harness([offline], controller);
     await expect(run()).resolves.toEqual(offline);
     expect(invoke).toHaveBeenCalledTimes(1);
+  });
+});
+
+const sessionColumns = {
+  id: 'session-1',
+  started_at: '2026-09-30T08:00:00.000Z',
+  ended_at: '2026-09-30T08:48:00.000Z',
+  session_rpe: 7,
+  local_date: '2026-09-30',
+  history_only: false,
+  revision: 2,
+  program_day_id: null,
+  notes: null,
+  summary: { xpBySkill: {}, levelUps: [], prs: [], drops: [] },
+};
+
+const sessionView = {
+  id: 'session-1',
+  startedAt: '2026-09-30T08:00:00.000Z',
+  endedAt: '2026-09-30T08:48:00.000Z',
+  sessionRpe: 7,
+  localDate: '2026-09-30',
+  historyOnly: false,
+  revision: 2,
+  programDayId: null,
+  notes: null,
+  summary: { xpBySkill: {}, levelUps: [], prs: [], drops: [] },
+};
+
+describe('parseSessionPageRows', () => {
+  it('reads the embedded sets with their object-shaped exercise and numeric loads', () => {
+    const rows = [
+      {
+        ...sessionColumns,
+        sets: [
+          { position: 1, is_warmup: false, effective_load_kg: '80.5', reps: 5, exercises: { name: 'Bench press' } },
+          { position: 0, is_warmup: true, effective_load_kg: null, reps: null, exercises: null },
+        ],
+      },
+    ];
+    expect(parseSessionPageRows(rows)).toEqual([
+      {
+        ...sessionView,
+        setCount: 2,
+        overviewSets: [
+          { exerciseName: 'Bench press', position: 1, effectiveLoadKg: 80.5, reps: 5, isWarmup: false },
+          { exerciseName: 'Exercise', position: 0, effectiveLoadKg: null, reps: null, isWarmup: true },
+        ],
+      },
+    ]);
+  });
+
+  it('rejects a row whose exercise embed is not an object', () => {
+    const rows = [
+      {
+        ...sessionColumns,
+        sets: [{ position: 0, is_warmup: false, effective_load_kg: 60, reps: 5, exercises: [{ name: 'Squat' }] }],
+      },
+    ];
+    expect(() => parseSessionPageRows(rows)).toThrow();
+  });
+
+  it('rejects a row without its session columns', () => {
+    expect(() => parseSessionPageRows([{ id: 'session-1', sets: [] }])).toThrow();
+  });
+});
+
+describe('parseSessionDetailRow', () => {
+  it('reads the set count from the counted embed without any set rows', () => {
+    expect(parseSessionDetailRow({ ...sessionColumns, sets: [{ count: 4 }] })).toEqual({ ...sessionView, setCount: 4 });
+  });
+
+  it('rejects a detail row whose set count is missing', () => {
+    expect(() => parseSessionDetailRow({ ...sessionColumns, sets: [] })).toThrow();
   });
 });

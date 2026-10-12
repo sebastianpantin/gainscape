@@ -243,7 +243,7 @@ test('a logged lift explains e1RM and rep maxes on its progress screen', async (
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', BENCH, [{ weightKg: 60, reps: 5 }]);
   await finishWorkout(page);
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('link', { name: `${BENCH} progress` }).click();
   await expect(page.getByRole('heading', { level: 1, name: BENCH })).toBeVisible();
 

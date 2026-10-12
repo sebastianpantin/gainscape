@@ -27,7 +27,7 @@ import {
 } from '../../lib/format.ts';
 import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
-import { type HistorySession, isUuid, type StoredSetRow } from '../../lib/history-rules.ts';
+import { isUuid, type SessionDetail, type StoredSetRow } from '../../lib/history-rules.ts';
 import type { CatalogItem } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
@@ -73,7 +73,7 @@ const HISTORY_PATH = '/collection/history';
 const MAX_NOTES_LENGTH = 2000;
 
 interface Loaded {
-  session: HistorySession;
+  session: SessionDetail;
   sets: StoredSetRow[];
   exercises: Exercise[];
   original: SessionEdit;

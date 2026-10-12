@@ -172,7 +172,7 @@ test('every tab settles offline within seconds without an uncaught error', async
   await expect(cold.getByRole('button', { name: 'Start workout' })).toBeVisible();
 
   const main = cold.getByRole('main');
-  for (const tab of ['Skills', 'Log', 'Friends', 'Profile', 'Train'] satisfies Tab[]) {
+  for (const tab of ['Skills', 'Collection', 'Friends', 'Profile', 'Train'] satisfies Tab[]) {
     const previous = await main.elementHandle();
     const started = Date.now();
     await openTab(cold, tab);
@@ -212,7 +212,7 @@ test('screens seen online reopen offline at once from their saved data', async (
   const main = page.getByRole('main');
   await openTab(page, 'Skills');
   await expect(main.getByText('Total level')).toBeVisible();
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await expect(main.getByText('Completion')).toBeVisible();
   await openTab(page, 'Profile');
   await expect(main.getByText(`@${username}`)).toBeVisible();
@@ -229,7 +229,7 @@ test('screens seen online reopen offline at once from their saved data', async (
 
   const savedScreens: { tab: Tab; notice: string; shown: string }[] = [
     { tab: 'Skills', notice: OFFLINE_SKILLS_NOTICE, shown: 'Total level' },
-    { tab: 'Log', notice: OFFLINE_COLLECTION_NOTICE, shown: 'Completion' },
+    { tab: 'Collection', notice: OFFLINE_COLLECTION_NOTICE, shown: 'Completion' },
     { tab: 'Profile', notice: OFFLINE_PROFILE_NOTICE, shown: `@${username}` },
   ];
   for (const { tab, notice, shown } of savedScreens) {

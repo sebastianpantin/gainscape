@@ -29,7 +29,17 @@ function contrast(first: string, second: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-const SURFACES = ['color-background', 'color-panel', 'color-chrome', 'color-well'];
+const SURFACES = [
+  'color-backdrop',
+  'color-background',
+  'color-background-dots',
+  'color-panel',
+  'color-panel-shade',
+  'color-chrome',
+  'color-well',
+];
+const SECONDARY_TEXT = ['color-text-muted', 'color-text-faint', 'color-rare', 'color-danger'];
+const SECONDARY_TEXT_HEADROOM = 5;
 const BODY_TEXT = [
   'color-text',
   'color-text-muted',
@@ -42,6 +52,9 @@ const BODY_TEXT = [
 
 const pairs: [string, string, number][] = [
   ...BODY_TEXT.flatMap((text) => SURFACES.map((surface): [string, string, number] => [text, surface, 4.5])),
+  ...SECONDARY_TEXT.flatMap((text) =>
+    SURFACES.map((surface): [string, string, number] => [text, surface, SECONDARY_TEXT_HEADROOM]),
+  ),
   ['color-ink', 'color-parchment', 4.5],
   ['color-ink', 'color-accent', 4.5],
   ['color-ink', 'color-danger-fill', 4.5],

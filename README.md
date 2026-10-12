@@ -31,6 +31,7 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | `make changelog-unreleased` | List user-facing PRs no changelog entry covers yet, for writing the next one                                                                                                 |
 | `make preview`              | Production build served by `vite preview` (https, preview port = web port - 1000, so 4173 by default)                                                                        |
 | `make icons`                | Regenerate the app icons and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                                                   |
+| `make screenshots`          | Recapture the install screenshots in `web/public/screenshots/` against the local stack                                                                                       |
 | `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                                               |
 | `make rebuild-caches`       | Recompute XP, e1RM, records and feed events from logged sets for every user with sessions behind `BALANCE_VERSION` (run after a bump); `ALL=1` rebuilds every user with data |
 | `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)                                                                           |

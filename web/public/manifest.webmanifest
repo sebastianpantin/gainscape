@@ -10,8 +10,81 @@
   "background_color": "#241b13",
   "theme_color": "#241b13",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Train",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Program",
+      "url": "/programs/active",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Skills",
+      "url": "/skills",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/train.png",
+      "sizes": "824x1830",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Logging a workout"
+    },
+    {
+      "src": "/screenshots/skills.png",
+      "sizes": "824x1830",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Skills and levels"
+    },
+    {
+      "src": "/screenshots/collection.png",
+      "sizes": "824x1830",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Personal records"
+    }
   ]
 }
