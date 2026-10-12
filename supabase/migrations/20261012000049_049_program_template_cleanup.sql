@@ -18,6 +18,8 @@ begin
     raise exception 'not_authenticated' using errcode = '42501';
   end if;
 
+  perform 1 from public.profiles p where p.id = caller for update;
+
   select p.owner_user_id, p.name into program_owner, program_name
   from public.programs p
   where p.id = publish_program.program_id
@@ -77,6 +79,8 @@ begin
     raise exception 'invalid_enrollment' using errcode = 'P0001';
   end if;
 
+  perform 1 from public.profiles p where p.id = caller for update;
+
   select t.definition into template_definition
   from public.program_templates t
   where t.key = enrollment ->> 'templateKey'
@@ -100,8 +104,6 @@ begin
   ) then
     raise exception 'unknown_exercise' using errcode = 'P0001';
   end if;
-
-  perform 1 from public.profiles p where p.id = caller for update;
 
   update public.program_enrollments e set ended_at = now()
   where e.user_id = caller and e.ended_at is null;
