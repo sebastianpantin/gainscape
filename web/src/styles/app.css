@@ -2342,6 +2342,15 @@ body:has(.active-workout-bar) .screen {
   text-decoration: none;
 }
 
+a.back-link,
+a.tiny,
+a.standalone-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: var(--tap-target);
+}
+
 button.back-link {
   align-self: flex-start;
   min-height: var(--tap-target);
