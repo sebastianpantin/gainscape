@@ -101,7 +101,7 @@ function Choice<T extends string>({
   return (
     <div className="stack" style={{ gap: 6 }}>
       <span className="field">{label}</span>
-      <div className="segmented" role="radiogroup" aria-label={label}>
+      <div className={options.length > 6 ? 'segmented wrapped' : 'segmented'} role="radiogroup" aria-label={label}>
         {options.map((option) => (
           <button
             key={option.value}
