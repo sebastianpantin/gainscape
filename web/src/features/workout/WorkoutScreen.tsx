@@ -667,9 +667,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       label: place.label,
       wasDone: draft.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
       isDone: next.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
-      preview: previewsOf(next.exercises)[exerciseIndex][setIndex],
-      record: previewRecords(next.exercises, previewStrength, recordBaseline)[exerciseIndex][setIndex],
-      becameRecord: becomesRecord(records, draft.exercises, next.exercises, setId, previewStrength, recordBaseline),
+      preview: () => previewsOf(next.exercises)[exerciseIndex][setIndex],
+      record: () => previewRecords(next.exercises, previewStrength, recordBaseline)[exerciseIndex][setIndex],
+      becameRecord: () =>
+        becomesRecord(records, draft.exercises, next.exercises, setId, previewStrength, recordBaseline),
       vibrate: readTrainingDeviceSettings(deviceStorage(), userId).vibrate,
     });
     if (feedback.vibrationMs) vibrate(feedback.vibrationMs);
