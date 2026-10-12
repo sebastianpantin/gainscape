@@ -9,6 +9,7 @@ import { pinExercise, reorderPins, unpinExercise } from '../../lib/collection-da
 import { collectionQuery } from '../../lib/queries.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_COLLECTION_NOTICE } from '../../offline/collection-cache.ts';
+import { EmptyState } from '../../components/EmptyState.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedNav } from '../../components/SegmentedNav.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
@@ -129,7 +130,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
         </span>
       </div>
       {counted.length === 0 && (
-        <p className="panel muted">Log a workout or pin an exercise to start your collection.</p>
+        <EmptyState text="Log a workout or pin an exercise to start your collection." startLabel="Start a workout" />
       )}
       {counted.map((exercise) => (
         <ExerciseRecordCard

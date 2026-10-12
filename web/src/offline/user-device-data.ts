@@ -2,6 +2,7 @@ import { forgetLastSummaryOf } from '../features/summary/last-summary.ts';
 import { forgetCachedExercises } from '../lib/catalog-cache.ts';
 import { forgetCachedExerciseNotes } from '../lib/exercise-note-cache.ts';
 import { forgetLastSeenRelease } from '../lib/last-seen-release-store.ts';
+import { forgetOnboarding } from '../lib/onboarding-store.ts';
 import { forgetPlateSettings } from '../lib/plate-settings-store.ts';
 import { forgetCachedPreferences } from '../lib/preferences.ts';
 import { forgetDismissedSummaries } from '../lib/program-summary-store.ts';
@@ -41,6 +42,7 @@ export async function forgetUserDeviceData(device: UserDevice, userId: string): 
   forgetTrainingDevice(storage, userId);
   forgetDismissedSummaries(storage, userId);
   forgetLastSeenRelease(storage, userId);
+  forgetOnboarding(storage, userId);
   forgetInstallCard(storage, userId);
   forgetLastSummaryOf(device.sessionStorage, userId);
   await forgetDraftOnDevice(device.draftStore, storage, userId);

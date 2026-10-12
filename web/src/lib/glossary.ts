@@ -1,5 +1,17 @@
 export type GlossaryKey =
-  'rir' | 'rpe' | 'sessionRpe' | 'e1rm' | 'oneRm' | 'fiveRm' | 'repMax' | 'trainingMax' | 'amrap' | 'superset' | 'pr';
+  | 'rir'
+  | 'rpe'
+  | 'sessionRpe'
+  | 'e1rm'
+  | 'oneRm'
+  | 'fiveRm'
+  | 'repMax'
+  | 'trainingMax'
+  | 'amrap'
+  | 'superset'
+  | 'pr'
+  | 'xp'
+  | 'loot';
 
 export interface GlossaryEntry {
   term: string;
@@ -82,5 +94,19 @@ export const GLOSSARY: Readonly<Record<GlossaryKey, GlossaryEntry>> = {
     name: 'Personal record',
     definition:
       'Personal record: your best result so far on an exercise, such as the most weight for a number of reps.',
+  },
+  xp: {
+    term: 'XP',
+    question: 'What is XP?',
+    name: 'Experience points',
+    definition:
+      'Experience points: the sets you log earn XP for the skills their exercises train, such as Chest or Legs. Skills level up from 1 to 99.',
+  },
+  loot: {
+    term: 'Loot',
+    question: 'What is loot?',
+    name: 'Loot',
+    definition:
+      'Loot: hard sets can drop items when you finish a workout. Equip gear for bonus XP and craft it into better tiers.',
   },
 };

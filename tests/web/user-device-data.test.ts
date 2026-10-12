@@ -8,6 +8,7 @@ import { saveCachedExercises } from '../../web/src/lib/catalog-cache.ts';
 import { type Exercise } from '../../web/src/lib/catalog-rules.ts';
 import { saveCachedExerciseNotes } from '../../web/src/lib/exercise-note-cache.ts';
 import { saveLastSeenRelease } from '../../web/src/lib/last-seen-release-store.ts';
+import { saveOnboardingDone } from '../../web/src/lib/onboarding-store.ts';
 import { parsePlateSettings } from '../../web/src/lib/plate-rules.ts';
 import { savePlateSettings } from '../../web/src/lib/plate-settings-store.ts';
 import { cachePreferences } from '../../web/src/lib/preferences.ts';
@@ -83,6 +84,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   local.setItem(`gainscape.exercises.v2.${userId}`, JSON.stringify({ v: 2, userId, exercises: [] }));
   saveCachedExerciseNotes(local, userId, { bench: 'Pause on the chest.' });
   saveLastSeenRelease(local, userId, '0.4.0');
+  saveOnboardingDone(local, userId);
   savePlateSettings(local, userId, parsePlateSettings(null));
   cachePreferences(userId, { unitPref: 'lb', effortInputMode: 'rpe' });
   dismissSummary(local, userId, 'program-a:week-1');
