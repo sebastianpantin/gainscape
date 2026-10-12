@@ -9,9 +9,11 @@ import {
   describeRecord,
   gearBonusText,
   levelUpCueDelayMs,
+  playsReveal,
   REVEAL_MAX_PRE_LOOT_S,
   revealShape,
   revealTimeline,
+  skipsRevealOnKey,
   unappliedChangesText,
 } from '../../web/src/features/summary/reveal-rules.ts';
 
@@ -322,5 +324,22 @@ describe('levelUpCueDelayMs', () => {
     const without = revealTimeline({ skillCount: 2, hasLevelUps: false, hasRecords: false });
     expect(levelUpCueDelayMs(without, false)).toBeNull();
     expect(levelUpCueDelayMs(without, true)).toBeNull();
+  });
+});
+
+describe('reveal playback', () => {
+  it('plays only for a summary that is not history only', () => {
+    expect(playsReveal(null)).toBe(false);
+    expect(playsReveal({ historyOnly: true })).toBe(false);
+    expect(playsReveal({})).toBe(true);
+  });
+
+  it('skips on Escape anywhere and on Enter only away from links and buttons', () => {
+    expect(skipsRevealOnKey({ key: 'Escape', onInteractiveElement: true })).toBe(true);
+    expect(skipsRevealOnKey({ key: 'Escape', onInteractiveElement: false })).toBe(true);
+    expect(skipsRevealOnKey({ key: 'Enter', onInteractiveElement: false })).toBe(true);
+    expect(skipsRevealOnKey({ key: 'Enter', onInteractiveElement: true })).toBe(false);
+    expect(skipsRevealOnKey({ key: 'Tab', onInteractiveElement: false })).toBe(false);
+    expect(skipsRevealOnKey({ key: ' ', onInteractiveElement: false })).toBe(false);
   });
 });
