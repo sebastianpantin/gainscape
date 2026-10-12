@@ -33,24 +33,15 @@ export function recentSessionsByExercise(rows: readonly RecentLiftRow[]): Map<st
   return byExercise;
 }
 
-interface RepeatedSets {
-  count: number;
-  set: LastLoggedSet;
+function topSet(sets: readonly LastLoggedSet[]): LastLoggedSet {
+  return sets.reduce((top, set) =>
+    set.weightKg > top.weightKg || (set.weightKg === top.weightKg && set.reps > top.reps) ? set : top,
+  );
 }
 
-function repeatedRuns(sets: readonly LastLoggedSet[]): RepeatedSets[] {
-  const runs: RepeatedSets[] = [];
-  for (const set of sets) {
-    const last = runs.at(-1);
-    if (last && last.set.weightKg === set.weightKg && last.set.reps === set.reps) last.count++;
-    else runs.push({ count: 1, set });
-  }
-  return runs;
-}
-
-function loadText(weightKg: number, loadType: LoadType, unit: UnitPref): string {
-  if (loadType === 'bodyweight' || weightKg === 0) return '';
-  return ` @ ${formatLoad(weightKg, loadType, unit)}`;
+function topSetText({ weightKg, reps }: LastLoggedSet, loadType: LoadType, unit: UnitPref): string {
+  if (loadType === 'bodyweight' || weightKg === 0) return reps === 1 ? '1 rep' : `${reps} reps`;
+  return `${formatLoad(weightKg, loadType, unit)} × ${reps}`;
 }
 
 export function lastTimeText(
@@ -59,10 +50,8 @@ export function lastTimeText(
   unit: UnitPref,
 ): string | null {
   if (!sets || sets.length === 0) return null;
-  const runs = repeatedRuns(sets).map(
-    ({ count, set }) => `${count}×${set.reps}${loadText(set.weightKg, loadType, unit)}`,
-  );
-  return `Last: ${runs.join(', ')}`;
+  const count = sets.length === 1 ? '1 set' : `${sets.length} sets`;
+  return `Last: ${count}, top ${topSetText(topSet(sets), loadType, unit)}`;
 }
 
 export function firstSetFromLastSession(

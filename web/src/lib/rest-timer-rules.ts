@@ -27,7 +27,7 @@ export interface RestState {
   byExercise: RestByExercise;
 }
 
-type RestView = { kind: 'idle' } | { kind: 'resting'; remainingS: number } | { kind: 'over' };
+type RestView = { kind: 'idle' } | { kind: 'resting'; remainingS: number } | { kind: 'over'; overS: number };
 
 export function startRest(now: number, restS: number, setId: string, exerciseId: string | null = null): RestTimer {
   return { endsAt: now + restS * MS_PER_SECOND, setId, exerciseId, startedAt: now };
@@ -69,7 +69,15 @@ export function restView(timer: RestTimer | null, now: number): RestView {
   const remainingMs = timer.endsAt - now;
   if (remainingMs > LONGEST_REST_S * MS_PER_SECOND) return { kind: 'idle' };
   if (remainingMs > 0) return { kind: 'resting', remainingS: Math.ceil(remainingMs / MS_PER_SECOND) };
-  return -remainingMs < REST_OVER_SHOWN_S * MS_PER_SECOND ? { kind: 'over' } : { kind: 'idle' };
+  const overMs = now - timer.endsAt;
+  if (overMs >= REST_OVER_SHOWN_S * MS_PER_SECOND) return { kind: 'idle' };
+  return { kind: 'over', overS: Math.floor(overMs / MS_PER_SECOND) };
+}
+
+export function restLeftFraction(timer: RestTimer | null, now: number): number | null {
+  if (timer?.startedAt == null || timer.endsAt <= timer.startedAt) return null;
+  const leftMs = Math.max(0, timer.endsAt - now);
+  return Math.min(1, leftMs / (timer.endsAt - timer.startedAt));
 }
 
 export function restClock(seconds: number): string {

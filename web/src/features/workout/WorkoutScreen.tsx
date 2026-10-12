@@ -100,6 +100,7 @@ import { lastSetForRow } from './last-set-rules.ts';
 import { ExerciseMenu } from './ExerciseMenu.tsx';
 import { ExerciseNote } from './ExerciseNote.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
+import { NotifyPrompt } from './NotifyPrompt.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { useActiveProgram } from '../programs/use-active-program.ts';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
@@ -1082,7 +1083,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         onChange={(sessionRpe) => changeDraft(withSessionRpe(draft, sessionRpe))}
       />
       <div ref={finishBar} className="finish-bar" tabIndex={-1}>
-        <RestTimerBar {...rest} focusAfterStop={finishButton} focusFallback={finishBar} />
+        <RestTimerBar
+          {...rest}
+          focusAfterStop={finishButton}
+          focusFallback={finishBar}
+          prompt={(moveFocusOn) => <NotifyPrompt userId={userId} onAnswered={moveFocusOn} />}
+        />
         {finishProblem && (
           <p className="problem" role="alert">
             {finishProblem}
@@ -1091,8 +1097,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <button ref={finishButton} className="button primary big" type="button" disabled={!canFinish} onClick={finish}>
           Finish workout
         </button>
-        <span className="muted tiny">~ and new records are previews, confirmed when the workout syncs.</span>
       </div>
+      <p className="muted tiny preview-note">~ and new records are previews, confirmed when the workout syncs.</p>
       {!draft.challenge && (
         <button className="button link" type="button" onClick={() => setConfirmingDiscard(true)}>
           Discard workout

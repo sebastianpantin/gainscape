@@ -31,8 +31,8 @@ function restParts(restTimer: RestTimer | null, now: number): { text: string; na
     const clock = restClock(view.remainingS);
     return { text: `Rest ${clock}`, name: `rest ${clock} left` };
   }
-  if (view.kind === 'idle' || restTimer === null) return null;
-  const overClock = restClock(Math.floor((now - restTimer.endsAt) / MS_PER_SECOND));
+  if (view.kind === 'idle') return null;
+  const overClock = restClock(view.overS);
   return { text: `Rest over +${overClock}`, name: `rest over ${overClock} ago` };
 }
 

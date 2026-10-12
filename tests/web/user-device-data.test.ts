@@ -17,7 +17,11 @@ import { parseRestState } from '../../web/src/lib/rest-timer-rules.ts';
 import { saveRestState } from '../../web/src/lib/rest-timer-store.ts';
 import { saveSessionBaseline } from '../../web/src/lib/session-baseline-store.ts';
 import { parseTrainingDeviceSettings } from '../../web/src/lib/training-device-rules.ts';
-import { claimRestAlert, saveTrainingDeviceSettings } from '../../web/src/lib/training-device-store.ts';
+import {
+  answerNotifyPrompt,
+  claimRestAlert,
+  saveTrainingDeviceSettings,
+} from '../../web/src/lib/training-device-store.ts';
 import { collectionCache, type SavedCollection } from '../../web/src/offline/collection-cache.ts';
 import { createLocalDraftStore, fallbackKeyFor, readFallbackRecord } from '../../web/src/offline/draft-store.ts';
 import { type ItemsCache, saveItemsCache } from '../../web/src/offline/items-cache.ts';
@@ -86,6 +90,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   saveSessionBaseline(local, userId, { asOf: '2026-10-05T08:00:00.000Z', strength: {}, records: null });
   saveTrainingDeviceSettings(local, userId, parseTrainingDeviceSettings(null));
   claimRestAlert(local, userId, 1_000);
+  answerNotifyPrompt(local, userId);
   collectionCache.save(local, userId, { rows: {} } as unknown as SavedCollection);
   saveItemsCache(local, userId, { catalog: { items: [] }, inventory: [] } as unknown as ItemsCache);
   profileCache.save(local, userId, { username: 'lifter' } as unknown as Profile);
