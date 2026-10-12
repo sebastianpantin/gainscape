@@ -19,8 +19,8 @@ import {
   builtInExerciseId,
   editElsewhere,
   latestSetOf,
-  sessionCount,
   seedWorkouts,
+  sessionCount,
   sessionNotes,
   setsOf,
 } from './support/db.ts';
