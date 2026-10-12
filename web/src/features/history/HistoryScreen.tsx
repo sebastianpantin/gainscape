@@ -57,7 +57,8 @@ function SessionItem({ session, now, unit, cardRef }: SessionItemProps) {
         {(exercises || records) && (
           <span className="history-exercises">
             {records && <span className="history-record-badge">{records}</span>}
-            {exercises && <span className="history-exercise-names">{exercises}</span>}
+            {exercises && <span className="history-exercise-names">{exercises.names}</span>}
+            {exercises?.more && <span className="history-exercise-more">{exercises.more}</span>}
           </span>
         )}
         <span className="muted">{summaryParts.join(' · ')}</span>
@@ -107,9 +108,10 @@ export function HistoryScreen() {
     } catch (error) {
       setProblem(messageOf(error, 'Could not load more workouts.'));
       setAutoLoad(false);
+    } finally {
+      loadingRef.current = false;
+      setLoadingMore(false);
     }
-    loadingRef.current = false;
-    setLoadingMore(false);
   }, [sessions]);
 
   const lastCardRef = useRef<HTMLLIElement | null>(null);

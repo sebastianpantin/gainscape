@@ -57,13 +57,13 @@ describe('topExerciseNames', () => {
 });
 
 describe('exerciseListText', () => {
-  it('joins the top three names and says how many more there are', () => {
+  it('joins the top three names and keeps how many more there are apart', () => {
     const sets = ['Squat', 'Bench press', 'Row', 'Curl', 'Dip'].map((name, index) => liftSet(name, index));
-    expect(exerciseListText(sets)).toBe('Squat, Bench press, Row +2 more');
+    expect(exerciseListText(sets)).toEqual({ names: 'Squat, Bench press, Row', more: '+2 more' });
   });
 
-  it('lists every name when there are three or fewer', () => {
-    expect(exerciseListText([liftSet('Squat', 0), liftSet('Row', 1)])).toBe('Squat, Row');
+  it('lists every name with nothing more when there are three or fewer', () => {
+    expect(exerciseListText([liftSet('Squat', 0), liftSet('Row', 1)])).toEqual({ names: 'Squat, Row', more: null });
   });
 
   it('is null without sets', () => {
