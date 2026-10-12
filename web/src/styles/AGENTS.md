@@ -22,13 +22,14 @@ The whole visual layer. `tokens.css` defines the design tokens as CSS custom pro
 - Interactive targets use `min-height`/`min-width: var(--tap-target)` (44px). Keep that on any new button, link or row.
 - Honour safe areas (`env(safe-area-inset-*)`) on full-width chrome, as `body`, `.screen` and the licenses page do.
 - Wrap new animation in the existing `prefers-reduced-motion: reduce` block at the end of `app.css`.
+- `--color-art-rare` and `--color-art-danger` hold the pixel-art shades that `../components/pixel-sprites.ts` paints with (`RARE`, `DANGER`). They stay at the original values when the text tokens `--color-rare` and `--color-danger` were lifted for contrast, because `tests/web/pixel-sprites.test.ts` only lets sprites use colours listed in `tokens.css`. Change both together.
 - `tokens.css` is parsed by a test: only `--name: #hex;` declarations are read for contrast checks, so keep colour tokens as plain hex literals.
 - Class names are the contract with TSX files in `../components/`, `../features/` and `../pwa/`. Rename in both places, and check `e2e/` selectors that use class names.
 - The licenses page (`web/public/licenses/index.html`) duplicates a few token values inline because it does not load these files. Keep them in sync with `--color-background`, `--color-panel`, `--color-text` and `--color-accent`.
 
 ### Testing Requirements
 
-- `tests/web/contrast.test.ts` reads `tokens.css` and asserts WCAG contrast for text, muted, faint and accent pairs. Add a failing contrast case there before changing a colour token (`make test-web`, no stack).
+- `tests/web/contrast.test.ts` reads `tokens.css` and asserts WCAG contrast for every text token on every surface (`--color-backdrop`, `--color-background`, `--color-background-dots`, `--color-panel`, `--color-panel-shade`, `--color-chrome`, `--color-well`): 4.5:1 for all body text, and 5:1 headroom for the secondary text tokens (`--color-text-muted`, `--color-text-faint`, `--color-rare`, `--color-danger`), which sit closest to the floor on `--color-panel`. Add a failing contrast case there before changing a colour token (`make test-web`, no stack).
 - `app.css` has no unit test. Layout and accessibility regressions are caught by `e2e/a11y.spec.ts` (axe scans, `make e2e`, needs the stack).
 
 ### Common Patterns
