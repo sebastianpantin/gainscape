@@ -92,7 +92,7 @@ test('an exercise shows last session and starts from its first set', async ({ pa
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   const bench = await addExercise(page, 'bench', 'Barbell Bench Press');
-  await expect(bench.getByText('Last: 1×5 @ 60 kg, 1×4 @ 62.5 kg')).toBeVisible();
+  await expect(bench.getByText('Last: 2 sets, top 62.5 kg × 4')).toBeVisible();
   const firstSet = setRow(bench, 1);
   await expect(firstSet.getByLabel('kg', { exact: true })).toHaveValue('60');
   await expect(firstSet.getByLabel('reps', { exact: true })).toHaveValue('5');
