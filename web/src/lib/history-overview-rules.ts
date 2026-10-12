@@ -28,12 +28,7 @@ export function topExerciseNames(sets: readonly OverviewSet[], limit: number): T
   return { names: ranked.slice(0, limit), moreCount: Math.max(0, ranked.length - limit) };
 }
 
-export interface ExerciseListText {
-  names: string;
-  more: string | null;
-}
-
-export function exerciseListText(sets: readonly OverviewSet[]): ExerciseListText | null {
+export function exerciseListText(sets: readonly OverviewSet[]): { names: string; more: string | null } | null {
   const { names, moreCount } = topExerciseNames(sets, SHOWN_EXERCISE_NAMES);
   if (names.length === 0) return null;
   return { names: names.join(', '), more: moreCount > 0 ? `+${moreCount} more` : null };
