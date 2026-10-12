@@ -7,6 +7,7 @@ import { PreferencesProvider } from './components/PreferencesProvider.tsx';
 import { AuthCallbackScreen } from './features/auth/AuthCallbackScreen.tsx';
 import { AuthScreen } from './features/auth/AuthScreen.tsx';
 import { WhatsNewSheet } from './features/whats-new/WhatsNewSheet.tsx';
+import { ActiveWorkoutBar } from './features/workout/ActiveWorkoutBar.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
 import { createQueryClient } from './lib/query-client.ts';
 import { parseAuthCallback } from './lib/auth-links.ts';
@@ -126,6 +127,7 @@ function Screens() {
             </NavLink>
           ))}
         </nav>
+        <ActiveWorkoutBar userId={userId} />
         <Suspense fallback={<ScreenSkeleton />}>
           <Routes>
             <Route path="/" element={<WorkoutScreen key={userId} userId={userId} />} />

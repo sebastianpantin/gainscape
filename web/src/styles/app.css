@@ -624,6 +624,52 @@ a:focus-visible {
   color: var(--color-accent);
 }
 
+.active-workout-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  min-height: var(--tap-target);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  padding-left: calc(var(--space-4) + env(safe-area-inset-left));
+  padding-right: calc(var(--space-4) + env(safe-area-inset-right));
+  background: var(--color-panel);
+  border-top: var(--border-width) solid #000;
+  box-shadow: inset 0 2px 0 var(--color-panel-highlight);
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  text-decoration: none;
+  z-index: 10;
+}
+
+.active-workout-bar:hover {
+  color: var(--color-text);
+  background: var(--color-panel-border);
+}
+
+.active-workout-clock,
+.active-workout-rest {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.active-workout-clock {
+  color: var(--color-accent);
+}
+
+.active-workout-rest {
+  color: var(--color-xp);
+}
+
+body:has(.active-workout-bar) .screen {
+  padding-bottom: calc(96px + 56px + env(safe-area-inset-bottom));
+}
+
 .auth-screen {
   min-height: 100vh;
   display: flex;
