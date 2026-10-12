@@ -96,6 +96,7 @@ import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { CardioSetRow } from './CardioSetRow.tsx';
 import { HoldSetRow } from './HoldSetRow.tsx';
+import { lastSetForRow } from './last-set-rules.ts';
 import { ExerciseMenu } from './ExerciseMenu.tsx';
 import { ExerciseNote } from './ExerciseNote.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
@@ -773,6 +774,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               }
             : null
         }
+        last={lastSetForRow(exercise.sets, setIndex, recentSessions.byExercise.get(exercise.exerciseId)?.[0])}
         doneLabel={doneLabel}
         rowLabel={rowLabel}
         focusDone={focusSetId === set.id}

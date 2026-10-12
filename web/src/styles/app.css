@@ -887,6 +887,40 @@ a:focus-visible {
   padding-bottom: 0;
 }
 
+.set-xp > .last-set,
+.set-xp > .last-delta {
+  margin-right: auto;
+  align-self: center;
+}
+
+.last-set {
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-family: var(--font-family);
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px dashed var(--color-panel-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.last-set:hover {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.last-delta {
+  font-family: var(--font-family);
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+}
+
+.last-delta.up {
+  color: var(--color-xp);
+}
+
 .set-xp-line {
   display: inline-flex;
   align-items: center;

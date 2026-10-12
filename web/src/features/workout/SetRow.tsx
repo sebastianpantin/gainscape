@@ -18,8 +18,9 @@ import {
 } from '../../lib/units.ts';
 import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
 import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
-import type { DraftSet } from '../../offline/draft-format.ts';
+import type { DraftSet, LastLoggedSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
+import { lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './last-set-rules.ts';
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
 import { SetMenu } from './SetMenu.tsx';
@@ -38,6 +39,7 @@ interface SetRowProps {
   effortMode: EffortInputMode;
   markers: readonly string[];
   barbell: { plates: number[]; text: string; setup: DraftBarbellSetup } | null;
+  last: LastLoggedSet | null;
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   onRemove: () => void;
   onToggleDone: () => void;
@@ -122,6 +124,36 @@ export function RepsField({ reps, onChange }: RepsFieldProps) {
   );
 }
 
+interface LastSetProps {
+  last: LastLoggedSet;
+  set: DraftSet;
+  loadType: LoadType;
+  unit: UnitPref;
+  setNumber: number;
+  onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
+}
+
+function LastSet({ last, set, loadType, unit, setNumber, onChange }: LastSetProps) {
+  if (set.done) {
+    const delta = lastSetDelta(set, last, loadType, unit);
+    return (
+      <span className={`last-delta ${delta.direction}`} role="img" aria-label={delta.label}>
+        {delta.text}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="last-set"
+      aria-label={lastSetName(last, loadType, unit, setNumber)}
+      onClick={() => onChange(lastSetChangesFor(last, loadType))}
+    >
+      {lastSetText(last, loadType, unit)}
+    </button>
+  );
+}
+
 export function SetRow({
   setNumber,
   loadType,
@@ -133,6 +165,7 @@ export function SetRow({
   effortMode,
   markers,
   barbell,
+  last,
   onChange,
   onRemove,
   onToggleDone,
@@ -226,6 +259,9 @@ export function SetRow({
         </span>
       )}
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
+        {last !== null && (
+          <LastSet last={last} set={set} loadType={loadType} unit={unit} setNumber={setNumber} onChange={onChange} />
+        )}
         <span className="set-xp-line">
           {previewXpLabel(preview)}
           {record && (
