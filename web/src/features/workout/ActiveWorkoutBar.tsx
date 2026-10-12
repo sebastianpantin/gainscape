@@ -31,13 +31,13 @@ function ActiveWorkoutLink({ userId, pathname }: { userId: string; pathname: str
     <Link to="/" className="active-workout-bar" aria-label={bar.name}>
       {bar.kind === 'in-progress' ? (
         <>
-          <span>
+          <span className="active-workout-status">
             Workout in progress · <span className="active-workout-clock">{bar.elapsed}</span>
           </span>
           {bar.rest !== null && <span className="active-workout-rest">{bar.rest}</span>}
         </>
       ) : (
-        <span>Workout not saved yet</span>
+        <span className="active-workout-status">Workout not saved yet</span>
       )}
     </Link>
   );

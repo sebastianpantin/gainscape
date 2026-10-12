@@ -605,7 +605,7 @@ a:focus-visible {
 }
 
 .tab {
-  min-height: 56px;
+  min-height: calc(var(--tab-bar-height) - var(--border-width) - var(--space-1) - var(--space-2));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -628,13 +628,13 @@ a:focus-visible {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(70px + env(safe-area-inset-bottom));
-  min-height: var(--tap-target);
+  bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
+  height: var(--tap-target);
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-1) var(--space-3);
+  gap: var(--space-3);
+  white-space: nowrap;
   padding: var(--space-2) var(--space-4);
   padding-left: calc(var(--space-4) + env(safe-area-inset-left));
   padding-right: calc(var(--space-4) + env(safe-area-inset-right));
@@ -652,6 +652,12 @@ a:focus-visible {
   background: var(--color-panel-border);
 }
 
+.active-workout-status {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .active-workout-clock,
 .active-workout-rest {
   font-family: var(--font-display);
@@ -663,11 +669,12 @@ a:focus-visible {
 }
 
 .active-workout-rest {
+  flex-shrink: 0;
   color: var(--color-xp);
 }
 
 body:has(.active-workout-bar) .screen {
-  padding-bottom: calc(96px + 56px + env(safe-area-inset-bottom));
+  padding-bottom: calc(96px + var(--tap-target) + var(--space-3) + env(safe-area-inset-bottom));
 }
 
 .auth-screen {
@@ -1438,7 +1445,7 @@ body:has(.active-workout-bar) .screen {
 
 .finish-bar {
   position: sticky;
-  bottom: calc(72px + env(safe-area-inset-bottom));
+  bottom: calc(var(--tab-bar-height) - var(--border-width) + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
