@@ -446,7 +446,6 @@ input[type='checkbox'] {
 
 label.row:has(> input[type='checkbox']) {
   min-height: var(--tap-target);
-  align-items: center;
 }
 
 input::placeholder {
