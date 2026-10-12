@@ -1,12 +1,13 @@
 import type { CardioInterval, EffortInput, EffortInputType, RirSource, SessionSummary } from '@domain/types.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { type InvokeOutcome, retryDelayMs } from './function-client-rules.ts';
+import type { OverviewSet } from './history-overview-rules.ts';
 import { nullableNumber } from './rows.ts';
 
 export const HISTORY_PAGE_SIZE = 50;
 
 const SESSION_COLUMNS =
-  'id,started_at,ended_at,session_rpe,local_date,history_only,revision,program_day_id,notes,summary,sets(count)';
+  'id,started_at,ended_at,session_rpe,local_date,history_only,revision,program_day_id,notes,summary,sets(position,is_warmup,effective_load_kg,reps,exercises(name))';
 const SET_COLUMNS =
   'id,exercise_id,position,weight_kg,effective_load_kg,reps,is_warmup,effort_input_type,effort_value,rir,rir_source,rir_flagged,e1rm_before_kg,effective_reps,xp_awarded,duration_s,distance_m,interval_work_s,interval_rest_s,interval_rounds,counted_work_s,pace_flagged';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -23,6 +24,7 @@ export interface HistorySession {
   notes: string | null;
   summary: SessionSummary;
   setCount: number;
+  overviewSets: OverviewSet[];
 }
 
 export interface StoredSetRow {
@@ -100,7 +102,15 @@ interface SessionRow {
   program_day_id: string | null;
   notes: string | null;
   summary: SessionSummary;
-  sets: { count: number }[];
+  sets: OverviewSetRow[];
+}
+
+interface OverviewSetRow {
+  position: number;
+  is_warmup: boolean;
+  effective_load_kg: number | string | null;
+  reps: number | null;
+  exercises: { name: string } | null;
 }
 
 interface SetRow {
@@ -148,7 +158,14 @@ function toHistorySession(row: SessionRow): HistorySession {
     programDayId: row.program_day_id,
     notes: row.notes,
     summary: row.summary,
-    setCount: row.sets[0]?.count ?? 0,
+    setCount: row.sets.length,
+    overviewSets: row.sets.map((set) => ({
+      exerciseName: set.exercises?.name ?? 'Exercise',
+      position: set.position,
+      effectiveLoadKg: nullableNumber(set.effective_load_kg),
+      reps: set.reps,
+      isWarmup: set.is_warmup,
+    })),
   };
 }
 
@@ -192,13 +209,13 @@ export async function querySessionPage(
   if (after) query = query.or(nextPageFilter(after));
   const { data, error } = await query;
   if (error) throw error;
-  return (data as SessionRow[]).map(toHistorySession);
+  return (data as unknown as SessionRow[]).map(toHistorySession);
 }
 
 export async function querySession(client: SupabaseClient, sessionId: string): Promise<HistorySession | null> {
   const { data, error } = await client.from('sessions').select(SESSION_COLUMNS).eq('id', sessionId).maybeSingle();
   if (error) throw error;
-  return data ? toHistorySession(data as SessionRow) : null;
+  return data ? toHistorySession(data as unknown as SessionRow) : null;
 }
 
 export async function querySessionSets(client: SupabaseClient, sessionId: string): Promise<StoredSetRow[]> {

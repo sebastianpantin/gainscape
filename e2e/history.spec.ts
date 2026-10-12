@@ -14,7 +14,15 @@ import {
   writeStoredDraft,
   xpValue,
 } from './support/app.ts';
-import { builtInExerciseId, editElsewhere, latestSetOf, sessionCount, sessionNotes, setsOf } from './support/db.ts';
+import {
+  backdateSessions,
+  builtInExerciseId,
+  editElsewhere,
+  latestSetOf,
+  sessionCount,
+  sessionNotes,
+  setsOf,
+} from './support/db.ts';
 
 test('edit a logged set from history, see the XP change, then delete the workout', async ({ page }) => {
   const username = `hist_${Date.now().toString(36)}`;
@@ -28,6 +36,9 @@ test('edit a logged set from history, see the XP change, then delete the workout
   await expect(workouts).toHaveCount(1);
   await expect(workouts.first()).toContainText('Editable');
   await expect(workouts.first()).toContainText('1 set');
+  await expect(workouts.first()).toContainText('Barbell Bench Press');
+  await expect(workouts.first()).toContainText('300 kg volume');
+  await expect(page.getByText('You can change or delete workouts from the last 7 days.')).toBeVisible();
   await workouts.first().click();
 
   const sessionXp = page.getByRole('status', { name: 'Workout XP' });
@@ -49,6 +60,19 @@ test('edit a logged set from history, see the XP change, then delete the workout
   await expect(page.getByText('Workout deleted.')).toBeVisible();
   await expect(page.getByText('No workouts yet.', { exact: false })).toBeVisible();
   await expect.poll(() => sessionCount(username)).toBe(0);
+});
+
+test('a workout older than the edit window shows as locked in History', async ({ page }) => {
+  const username = uniqueUsername('hist_lock');
+  await register(page, username);
+  await logBench(page);
+  await backdateSessions(username, 10);
+
+  await openTab(page, 'Log');
+  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  const workout = page.getByRole('list', { name: 'Workouts' }).getByRole('link').first();
+  await expect(workout).toContainText('Locked');
+  await expect(workout).not.toContainText('Editable');
 });
 
 test('re-sending a workout that was deleted elsewhere shows it as deleted and drops the draft', async ({ page }) => {
@@ -196,7 +220,7 @@ test('rate the session when finishing, then see its length and RPE on the summar
   await openTab(page, 'Log');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
   const workout = page.getByRole('list', { name: 'Workouts' }).getByRole('link').first();
-  await expect(workout).toContainText('1 set · <1 min · Session RPE 8');
+  await expect(workout).toContainText('1 set · 300 kg volume · <1 min · Session RPE 8');
   await workout.click();
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
   await expect(page.getByText('<1 min · Session RPE 8')).toBeVisible();

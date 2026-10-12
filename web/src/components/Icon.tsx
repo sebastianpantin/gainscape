@@ -1,4 +1,5 @@
-export type IconName = 'train' | 'skills' | 'log' | 'friends' | 'search' | 'check' | 'chevron' | 'profile';
+export type IconName =
+  'train' | 'skills' | 'log' | 'friends' | 'search' | 'check' | 'chevron' | 'profile' | 'lock' | 'pencil';
 
 const PATHS: Record<IconName, string[]> = {
   train: ['M6 6v12M2.5 9v6M18 6v12M21.5 9v6M6 12h12'],
@@ -13,6 +14,8 @@ const PATHS: Record<IconName, string[]> = {
   check: ['M4 12l5 5L20 6'],
   chevron: ['M9 5l7 7-7 7'],
   profile: ['M8 8a4 4 0 1 0 8 0a4 4 0 1 0 -8 0', 'M4 21a8 8 0 0 1 16 0'],
+  lock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 8 0v4'],
+  pencil: ['M4 20l1-5L16 4l4 4L9 19z', 'M13 7l4 4'],
 };
 
 interface IconProps {
