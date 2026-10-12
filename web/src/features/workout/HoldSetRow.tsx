@@ -1,3 +1,4 @@
+import type { Ref } from 'react';
 import { HOLD_BOUNDS } from '@domain/types.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
@@ -65,6 +66,7 @@ interface HoldSetRowProps {
   drop: ShownSetDrop | null;
   unit: UnitPref;
   onChange: (changes: Partial<Omit<HoldDraftSet, 'id' | 'kind'>>) => void;
+  menuRef: Ref<HTMLButtonElement>;
   onRemove: () => void;
   onToggleDone: () => void;
 }
@@ -79,6 +81,7 @@ export function HoldSetRow({
   drop,
   unit,
   onChange,
+  menuRef,
   onRemove,
   onToggleDone,
 }: HoldSetRowProps) {
@@ -113,6 +116,7 @@ export function HoldSetRow({
         </span>
       )}
       <SetMenu
+        buttonRef={menuRef}
         name={`Set ${setNumber} options`}
         actions={[{ label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove }]}
       />

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { type Ref, useEffect, useId, useRef, useState } from 'react';
 import { setMenuPlacement } from './set-menu-rules.ts';
 
 export interface SetMenuAction {
@@ -12,12 +12,13 @@ export interface SetMenuAction {
 interface SetMenuProps {
   name: string;
   actions: readonly SetMenuAction[];
+  buttonRef: Ref<HTMLButtonElement>;
 }
 
 const ACTION_HEIGHT_PX = 44;
 const PANEL_CHROME_PX = 24;
 
-export function SetMenu({ name, actions }: SetMenuProps) {
+export function SetMenu({ name, actions, buttonRef }: SetMenuProps) {
   const panelId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -42,6 +43,7 @@ export function SetMenu({ name, actions }: SetMenuProps) {
   return (
     <>
       <button
+        ref={buttonRef}
         type="button"
         className="button icon set-menu-button"
         popoverTarget={panelId}
