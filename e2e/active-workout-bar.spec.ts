@@ -11,6 +11,29 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 
+const REST_OVER_VIBRATION = [200, 100, 200];
+
+type VibrationLog = { vibrations: number[][] };
+
+async function recordVibrations(page: Page) {
+  await page.addInitScript(() => {
+    const log = window as unknown as VibrationLog;
+    log.vibrations = [];
+    navigator.vibrate = (pattern: number | Iterable<number>) => {
+      log.vibrations.push(typeof pattern === 'number' ? [pattern] : [...pattern]);
+      return true;
+    };
+  });
+}
+
+function vibrations(page: Page): Promise<number[][]> {
+  return page.evaluate(() => [...(window as unknown as VibrationLog).vibrations]);
+}
+
+async function forgetVibrations(page: Page): Promise<void> {
+  await page.evaluate(() => (window as unknown as VibrationLog).vibrations.splice(0));
+}
+
 function workoutBar(page: Page) {
   return page.getByRole('link', { name: /^Back to workout/ });
 }
@@ -19,7 +42,10 @@ function skillsList(page: Page) {
   return page.getByRole('list').filter({ has: page.getByRole('button', { name: /^Chest\b/ }) });
 }
 
-test('an open workout and its rest follow the lifter to other screens and lead back', async ({ page }) => {
+test('an open workout and its rest follow the lifter to other screens, alert there once, and lead back', async ({
+  page,
+}) => {
+  await recordVibrations(page);
   await page.clock.install();
   await register(page, uniqueUsername('awb'));
   await openTab(page, 'Skills');
@@ -32,6 +58,7 @@ test('an open workout and its rest follow the lifter to other screens and lead b
   await logExercise(page, 'barbell curl', 'Barbell Curl', [{ weightKg: 30, reps: 10 }]);
   await expect(restTimer(page).getByRole('timer', { name: 'Rest remaining' })).toHaveText('1:30');
   await expect(workoutBar(page)).toHaveCount(0);
+  await forgetVibrations(page);
 
   await openTab(page, 'Skills');
   await expect(skillsList(page)).toBeVisible();
@@ -45,6 +72,7 @@ test('an open workout and its rest follow the lifter to other screens and lead b
 
   await page.clock.runFor(87_000);
   await expect(workoutBar(page)).toContainText('Rest over +0:12');
+  await expect.poll(() => vibrations(page)).toEqual([REST_OVER_VIBRATION]);
   await page.clock.resume();
   await expectNoAxeViolations(page, 'skills with the workout bar');
 
@@ -52,6 +80,7 @@ test('an open workout and its rest follow the lifter to other screens and lead b
   await expect(page).toHaveURL(/\/$/);
   await expect(restTimer(page).getByRole('status')).toHaveText('Rest over');
   await expect(workoutBar(page)).toHaveCount(0);
+  expect(await vibrations(page)).toEqual([REST_OVER_VIBRATION]);
 
   await finishWorkout(page);
   await expect(workoutBar(page)).toHaveCount(0);

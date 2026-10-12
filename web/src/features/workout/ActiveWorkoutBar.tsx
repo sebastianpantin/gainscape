@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { activeWorkoutBar, showsActiveWorkoutBarOn } from '../../lib/active-workout-bar-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
+import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
 
 const TICK_MS = 250;
@@ -15,6 +16,7 @@ export function ActiveWorkoutBar({ userId }: { userId: string }) {
 function ActiveWorkoutLink({ userId, pathname }: { userId: string; pathname: string }) {
   const { state } = useWorkoutDraft(userId);
   const rest = useRestTimer(userId);
+  useRestAlert(userId, rest.timer);
   const [tickedAt, setTickedAt] = useState(() => Date.now());
   const draft = state.status === 'ready' ? state.draft : null;
   const bar = activeWorkoutBar({ pathname, draft, restTimer: rest.timer, now: Math.max(tickedAt, rest.changedAt) });
