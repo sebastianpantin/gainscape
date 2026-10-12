@@ -39,10 +39,6 @@ export function steppedWeight(shown: number, unit: UnitPref, direction: StepDire
   return steppedOnGrid(shown, WEIGHT_STEPPER_STEP[unit], direction, 0, highest);
 }
 
-export function steppedReps(reps: number, direction: StepDirection): number {
-  return Math.min(HIGHEST_REPS, Math.max(LOWEST_REPS, reps + direction));
-}
-
 export function highestWeightInUnit(highestKg: number, unit: UnitPref): number {
   return Math.floor(kgToUnit(highestKg, unit));
 }
