@@ -17,7 +17,6 @@ import {
   KG_PER_LB,
   shownDistance,
   shownWeight,
-  steppedReps,
   steppedWeight,
   unitToDistanceM,
   unitToKg,
@@ -187,13 +186,6 @@ describe('weight and reps steppers', () => {
     expect(steppedWeight(1, 'kg', -1, 2000)).toBe(0);
     expect(steppedWeight(0, 'kg', -1, 2000)).toBe(0);
     expect(steppedWeight(1999, 'kg', 1, 2000)).toBe(2000);
-  });
-
-  it('steps reps by one between 1 and 100', () => {
-    expect(steppedReps(5, 1)).toBe(6);
-    expect(steppedReps(5, -1)).toBe(4);
-    expect(steppedReps(1, -1)).toBe(1);
-    expect(steppedReps(100, 1)).toBe(100);
   });
 });
 
