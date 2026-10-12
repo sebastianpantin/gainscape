@@ -31,8 +31,7 @@
   ],
   "shortcuts": [
     {
-      "name": "Start workout",
-      "short_name": "Train",
+      "name": "Train",
       "url": "/",
       "icons": [
         {

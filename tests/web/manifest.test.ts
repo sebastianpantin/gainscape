@@ -36,7 +36,7 @@ describe('web manifest', () => {
         { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
       shortcuts: [
-        { name: 'Start workout', short_name: 'Train', url: '/', icons: [shortcutIcon] },
+        { name: 'Train', url: '/', icons: [shortcutIcon] },
         { name: 'Program', url: '/programs/active', icons: [shortcutIcon] },
         { name: 'Skills', url: '/skills', icons: [shortcutIcon] },
       ],
