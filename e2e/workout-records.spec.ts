@@ -49,6 +49,13 @@ test('bodyweight prompt, live record chips, records and the collection log', asy
   const pullUp = exerciseCard(page, 'Pull-up');
   await expect(pullUp).toContainText(/Capacity ~\d+ reps/);
   await expect(pullUp).not.toContainText('e1RM');
+
+  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
+  await expect(workouts.first()).toContainText('2 PRs');
+  await expect(workouts.first()).toContainText('Barbell Bench Press, Pull-up');
+  await expect(workouts.first()).toContainText('1,150 kg volume');
+  await expect(workouts.last()).not.toContainText(/\d+ PRs?/);
 });
 
 test('cardio records on the reveal and in the collection log', async ({ page }) => {

@@ -2638,3 +2638,46 @@ button.back-link {
 .exercise-note .notes-field {
   align-self: stretch;
 }
+
+.history-edit-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+}
+
+.history-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.history-tag.history-locked {
+  color: var(--color-text-faint);
+}
+
+.history-exercises {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.history-exercise-names {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.history-record-badge {
+  flex-shrink: 0;
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-tiny);
+  font-weight: 700;
+  color: var(--color-ink);
+  background: var(--color-accent);
+  border-radius: var(--radius);
+}

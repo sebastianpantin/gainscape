@@ -63,26 +63,27 @@ async function registerWithWorkouts(page: Page, prefix: string): Promise<void> {
   await expect(workoutLinks(page)).toHaveCount(HISTORY_PAGE_SIZE);
 }
 
-test('Load more on History shows the workouts older than the first page', async ({ page }) => {
+test('scrolling to the end of History loads the workouts older than the first page', async ({ page }) => {
   await registerWithWorkouts(page, 'le_more');
   await expect(page.getByText(OLDEST_WORKOUT_NOTE)).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Load more' }).click();
+  await workoutLinks(page).last().scrollIntoViewIfNeeded();
 
   await expect(workoutLinks(page)).toHaveCount(SEEDED_WORKOUTS);
   await expect(workoutLinks(page).last()).toContainText(OLDEST_WORKOUT_NOTE);
   await expect(page.getByRole('button', { name: 'Load more' })).toHaveCount(0);
 });
 
-test('a failed Load more on History says so and loads the older workouts when tried again', async ({ page }) => {
+test('a failed automatic load on History says so and Load more fetches the older workouts', async ({ page }) => {
   await registerWithWorkouts(page, 'le_more_fail');
   const nextPage = /\/rest\/v1\/sessions\?.*or=/;
   await failRequests(page, nextPage, 'GET');
 
-  await page.getByRole('button', { name: 'Load more' }).click();
+  await workoutLinks(page).last().scrollIntoViewIfNeeded();
 
   await expect(page.getByRole('alert')).toHaveText('Could not load more workouts.');
   await expect(workoutLinks(page)).toHaveCount(HISTORY_PAGE_SIZE);
+  await expect(page.getByRole('button', { name: 'Load more' })).toBeEnabled();
 
   await page.unroute(nextPage);
   await page.getByRole('button', { name: 'Load more' }).click();

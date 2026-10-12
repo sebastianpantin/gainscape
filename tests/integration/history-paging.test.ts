@@ -6,7 +6,7 @@ import {
   querySession,
   querySessionPage,
 } from '../../web/src/lib/history-rules.ts';
-import { createTestUser, db, type TestUser } from './local-stack.ts';
+import { builtInExerciseId, createTestUser, db, type TestUser } from './local-stack.ts';
 
 const SESSION_COUNT = HISTORY_PAGE_SIZE + 7;
 const MINUTE_MS = 60 * 1000;
@@ -76,5 +76,55 @@ describe('history keyset paging', () => {
     expect(session).toMatchObject({ sessionRpe: 7 });
     expect(Date.parse(session!.endedAt) - Date.parse(session!.startedAt)).toBe(48 * MINUTE_MS);
     expect((await querySessionPage(user.client, null))[0]).toMatchObject({ id: newest.id, sessionRpe: 7 });
+  });
+});
+
+describe('history overview sets', () => {
+  it('reads each set with its exercise name, so a card can name the exercises and total the volume', async () => {
+    const owner = await createTestUser();
+    const [benchId, squatId] = await Promise.all([
+      builtInExerciseId('barbell_bench_press'),
+      builtInExerciseId('back_squat'),
+    ]);
+    const startedAt = '2026-09-30T08:00:00.000Z';
+    const sessionId = randomUUID();
+    const setFor = (exerciseId: string, position: number, loadKg: number, isWarmup: boolean) => ({
+      id: randomUUID(),
+      session_id: sessionId,
+      user_id: owner.id,
+      exercise_id: exerciseId,
+      position,
+      weight_kg: loadKg,
+      effective_load_kg: loadKg,
+      reps: 5,
+      is_warmup: isWarmup,
+      rir: 3,
+      rir_source: 'default',
+      effective_reps: 3,
+      xp_awarded: 10,
+    });
+    await db.begin(async (tx) => {
+      await tx`insert into public.sessions ${tx({
+        id: sessionId,
+        user_id: owner.id,
+        started_at: startedAt,
+        ended_at: startedAt,
+        local_date: startedAt.slice(0, 10),
+        timezone: 'UTC',
+        balance_version: 2,
+        derived_balance_version: 2,
+        summary: tx.json({ xpBySkill: {}, levelUps: [], prs: [], drops: [] }),
+      })}`;
+      await tx`insert into public.sets ${tx([setFor(squatId, 0, 60, true), setFor(squatId, 1, 100, false), setFor(benchId, 2, 80.5, false)])}`;
+    });
+
+    const [session] = await querySessionPage(owner.client, null);
+
+    expect(session.setCount).toBe(3);
+    expect([...session.overviewSets].sort((a, b) => a.position - b.position)).toEqual([
+      { exerciseName: 'Back Squat', position: 0, effectiveLoadKg: 60, reps: 5, isWarmup: true },
+      { exerciseName: 'Back Squat', position: 1, effectiveLoadKg: 100, reps: 5, isWarmup: false },
+      { exerciseName: 'Barbell Bench Press', position: 2, effectiveLoadKg: 80.5, reps: 5, isWarmup: false },
+    ]);
   });
 });
