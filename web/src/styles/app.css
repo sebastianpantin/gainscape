@@ -2354,7 +2354,7 @@ body:has(.active-workout-bar) .screen {
   text-decoration: none;
 }
 
-a.back-link,
+.back-link,
 a.tiny,
 a.standalone-link {
   display: inline-flex;
@@ -2364,8 +2364,6 @@ a.standalone-link {
 }
 
 button.back-link {
-  align-self: flex-start;
-  min-height: var(--tap-target);
   padding: 0;
   font-family: inherit;
   background: none;
