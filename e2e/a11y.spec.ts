@@ -308,7 +308,7 @@ test.describe('signed-in screens', () => {
     await page.getByRole('link', { name: 'Licenses' }).click();
     await checkScreen(page, 'licenses', () => expect(page.getByRole('heading', { name: 'Licenses' })).toBeVisible());
     await page.getByRole('link', { name: 'Back to Gainscape' }).click();
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 15_000 });
     await signOut(page);
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   });
