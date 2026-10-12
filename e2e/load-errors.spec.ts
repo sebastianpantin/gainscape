@@ -5,6 +5,7 @@ import {
   exerciseCard,
   logBench,
   openFromProfile,
+  openLoot,
   openTab,
   pickExercise,
   register,
@@ -229,7 +230,7 @@ test('the reveal says it could not load the loot names when the item catalog fai
 
   await logBench(page, 80);
 
-  const loot = page.getByRole('region', { name: 'Loot' });
+  const loot = await openLoot(page);
   await expect(loot).toContainText("Couldn't load the loot names. See items for what dropped.");
   await expect(loot.getByRole('list', { name: 'Loot drops' })).toHaveCount(0);
 });
