@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   feedbackLabel,
   NEW_RECORD_VIBRATION_MS,
@@ -30,23 +30,9 @@ function input(overrides: Partial<FeedbackValues> = {}): SetFeedbackInput {
   };
   return {
     ...values,
-    preview: () => values.preview,
-    record: () => values.record,
-    becameRecord: () => values.becameRecord,
-  };
-}
-
-function countingWork(values: Partial<FeedbackValues>) {
-  const calls = { preview: 0, record: 0, becameRecord: 0 };
-  const counted = input(values);
-  return {
-    calls,
-    input: {
-      ...counted,
-      preview: () => (calls.preview++, counted.preview()),
-      record: () => (calls.record++, counted.record()),
-      becameRecord: () => (calls.becameRecord++, counted.becameRecord()),
-    },
+    preview: vi.fn(() => values.preview),
+    record: vi.fn(() => values.record),
+    becameRecord: vi.fn(() => values.becameRecord),
   };
 }
 
@@ -135,17 +121,21 @@ describe('setFeedback', () => {
   });
 
   it('does no preview or record work while a set is typed into before it is done', () => {
-    const typing = countingWork({ isDone: false });
-    setFeedback(typing.input);
-    expect(typing.calls).toEqual({ preview: 0, record: 0, becameRecord: 0 });
+    const typing = input({ isDone: false });
+    setFeedback(typing);
+    expect(typing.preview).not.toHaveBeenCalled();
+    expect(typing.record).not.toHaveBeenCalled();
+    expect(typing.becameRecord).not.toHaveBeenCalled();
   });
 
   it('only checks for a new record when a done set is edited, and only with vibration on', () => {
-    const editing = countingWork({ wasDone: true });
-    setFeedback(editing.input);
-    expect(editing.calls).toEqual({ preview: 0, record: 0, becameRecord: 1 });
-    const silent = countingWork({ wasDone: true, vibrate: false });
-    setFeedback(silent.input);
-    expect(silent.calls).toEqual({ preview: 0, record: 0, becameRecord: 0 });
+    const editing = input({ wasDone: true });
+    setFeedback(editing);
+    expect(editing.preview).not.toHaveBeenCalled();
+    expect(editing.record).not.toHaveBeenCalled();
+    expect(editing.becameRecord).toHaveBeenCalledOnce();
+    const silent = input({ wasDone: true, vibrate: false });
+    setFeedback(silent);
+    expect(silent.becameRecord).not.toHaveBeenCalled();
   });
 });
