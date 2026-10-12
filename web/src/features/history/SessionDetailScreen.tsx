@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BOUTS_FULL_TEXT, describeBout } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
 import type { Exercise } from '../../lib/catalog-rules.ts';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { effortLabel } from '../../lib/effort-labels.ts';
 import {
   addableExercises,
@@ -191,6 +192,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
             return setEdit(change.edit);
           case 'saved': {
             const { saved } = change;
+            void announceDataChange(queryClient, 'workout-changed');
             setLoaded(
               (current) =>
                 current && { ...current, session: { ...current.session, revision: saved.revision }, original: saved },
@@ -205,6 +207,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           case 'delete_settled':
             return setConfirmingDelete(false);
           case 'deleted':
+            void announceDataChange(queryClient, 'workout-changed');
             return navigate(HISTORY_PATH, { replace: true, state: { notice: change.notice } });
           case 'gone':
             return goBackGone();

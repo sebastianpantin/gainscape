@@ -45,7 +45,8 @@ import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { useLoadout } from '../profile/use-loadout.ts';
-import { itemsQuery, loadoutQuery } from '../../lib/queries.ts';
+import { announceDataChange } from '../../lib/data-changes.ts';
+import { itemsQuery } from '../../lib/queries.ts';
 import { loadedState } from '../../lib/query-state-rules.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
@@ -258,7 +259,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const { state: draftState, startWorkout, flush } = useWorkoutDraft(userId);
   const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
   const loadout = useLoadout(userId);
-  const refetchLoadout = () => queryClient.invalidateQueries({ queryKey: loadoutQuery(userId).queryKey });
+  const refetchLoadout = () => announceDataChange(queryClient, 'gear-changed');
 
   const showLoaded = (change: (loaded: LoadedItems) => LoadedItems) => {
     const { queryKey } = itemsQuery(userId);

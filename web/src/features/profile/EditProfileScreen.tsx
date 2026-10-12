@@ -1,6 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { characterCount, nameProblem, trimmedName } from '../../lib/names.ts';
 import {
   BADGE_COLORS,
@@ -48,6 +50,7 @@ interface EditFormProps {
 
 function EditForm({ userId, profile, onSaved }: EditFormProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const unitPref = profile.unitPref;
   const [initialHeightInput] = useState<HeightInput>(() => initialHeight(profile.heightCm));
   const [displayName, setDisplayName] = useState(profile.displayName);
@@ -98,6 +101,7 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
           shownWeight(profile.bodyweightKg, unitPref) === shownWeight(typedKg, unitPref);
         if (!unchanged) await updatePrivateProfile(userId, { bodyweightKg: typedKg });
       }
+      void announceDataChange(queryClient, 'profile-saved');
       await onSaved();
       navigate('/profile');
     } catch (error) {
