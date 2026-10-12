@@ -988,6 +988,10 @@ body:has(.active-workout-bar) .screen {
   font-weight: 700;
 }
 
+.set-menu {
+  display: none;
+}
+
 .set-menu:popover-open {
   position: fixed;
   inset: auto;
@@ -1001,6 +1005,20 @@ body:has(.active-workout-bar) .screen {
   border: var(--border-width) solid #000;
   border-radius: var(--radius);
   box-shadow: var(--bevel);
+}
+
+@supports not selector(:popover-open) {
+  .set-row > .set-menu-button {
+    display: none;
+  }
+
+  .set-row > .set-menu {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
 }
 
 .set-menu-action {
