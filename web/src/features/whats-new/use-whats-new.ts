@@ -52,8 +52,8 @@ export function useWhatsNew(userId: string): { releases: readonly Release[] | nu
     void (async () => {
       const hasDraft = await draftOnDevice(userId);
       const draftChangedDuringVisit = draftChange.visitKey === visitKey;
-      const onboarding = readOnboarding(deviceStorage(), userId);
-      if (superseded || !whatsNewMayOpen({ pathname, hasDraft, draftChangedDuringVisit, onboarding })) return;
+      const introPending = readOnboarding(deviceStorage(), userId).status === 'absent';
+      if (superseded || !whatsNewMayOpen({ pathname, hasDraft, draftChangedDuringVisit, introPending })) return;
       const draftAppeared = await draftOnDevice(userId);
       if (!superseded && !draftAppeared) setOpen(true);
     })();
