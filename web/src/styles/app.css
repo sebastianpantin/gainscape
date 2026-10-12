@@ -2673,6 +2673,11 @@ button.back-link {
   min-width: 0;
 }
 
+.history-exercise-more {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .history-record-badge {
   flex-shrink: 0;
   padding: 0 var(--space-1);
