@@ -35,7 +35,7 @@ test('edit a logged set from history, see the XP change, then delete the workout
   const xpBefore = xpValue(await sessionXp.textContent());
 
   const firstSet = setRow(page, 1);
-  await firstSet.getByLabel('reps').fill('8');
+  await firstSet.getByLabel('reps', { exact: true }).fill('8');
   await firstSet.getByRole('radio', { name: 'Failure' }).click();
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Changes saved.')).toBeVisible();
@@ -116,7 +116,7 @@ test('a save that races an edit from another device keeps both changes after rev
   await page.getByRole('button', { name: 'Apply my changes to the latest version' }).click();
 
   const firstSet = setRow(page, 1);
-  await expect(firstSet.getByLabel('reps')).toHaveValue('7');
+  await expect(firstSet.getByLabel('reps', { exact: true })).toHaveValue('7');
   await expect(firstSet.getByRole('radio', { name: 'Failure' })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByLabel('Notes')).toHaveValue('edited elsewhere');
   await expect.poll(() => setsOf(sessionId)).toEqual([{ reps: 7, effort_input_type: 'level', effort_value: 3 }]);
@@ -138,7 +138,7 @@ test('a save whose refresh fails keeps the saved sets as the baseline, so undo c
   const sessionId = page.url().split('/').at(-1)!;
   const sessionReads = /\/rest\/v1\/sessions\?/;
 
-  await setRow(page, 1).getByLabel('reps').fill('8');
+  await setRow(page, 1).getByLabel('reps', { exact: true }).fill('8');
   await page.route(sessionReads, (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Save changes' }).click();
 
@@ -154,7 +154,7 @@ test('a save whose refresh fails keeps the saved sets as the baseline, so undo c
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByText('Changes saved.')).toBeVisible();
-  await expect(setRow(page, 1).getByLabel('reps')).toHaveValue('8');
+  await expect(setRow(page, 1).getByLabel('reps', { exact: true })).toHaveValue('8');
 });
 
 test('a delete that races an edit from another device shows the latest version before deleting', async ({ page }) => {
@@ -170,7 +170,7 @@ test('a delete that races an edit from another device shows the latest version b
   await page.getByRole('button', { name: 'Delete for good' }).click();
 
   await expect(page.getByRole('alert')).toContainText('This workout was changed on another device.');
-  await expect(setRow(page, 1).getByLabel('reps')).toHaveValue('7');
+  await expect(setRow(page, 1).getByLabel('reps', { exact: true })).toHaveValue('7');
   await expect.poll(() => sessionCount(username)).toBe(1);
 
   await page.getByRole('button', { name: 'Delete workout' }).click();

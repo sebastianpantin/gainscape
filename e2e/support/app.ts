@@ -163,7 +163,7 @@ export async function logExercise(
   for (const [index, set] of sets.entries()) {
     const row = setRow(card, index + 1);
     if (set.weightKg !== undefined) await row.getByRole('spinbutton', { name: /kg/ }).fill(String(set.weightKg));
-    await row.getByLabel('reps').fill(String(set.reps));
+    await row.getByLabel('reps', { exact: true }).fill(String(set.reps));
     await row.getByRole('radio', { name: 'Hard' }).click();
   }
 }
