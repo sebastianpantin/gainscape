@@ -5,6 +5,7 @@ import {
   addExercise,
   emailOf,
   logBench,
+  openFromProfile,
   openTab,
   registerWithoutSigningIn,
   signIn,
@@ -55,6 +56,27 @@ test('a new user sees what they earn, picks pounds and starts an empty workout',
   await expect(page.getByRole('button', { name: 'Finish workout' })).toBeVisible();
   await addExercise(page, 'bench', 'Barbell Bench Press');
   await expect(setRow(page, 1).getByRole('spinbutton', { name: 'lb', exact: true })).toBeVisible();
+});
+
+test('pounds picked in the intro show in Settings at once, also after the profile was loaded first', async ({
+  page,
+}) => {
+  const username = await signInAsNewUser(page, 'ob_units');
+  await page.goto('/profile');
+  await expect(page.getByRole('link', { name: 'Settings', exact: true })).toBeVisible();
+  await openTab(page, 'Train');
+  const dialog = firstRun(page);
+
+  await dialog.getByRole('button', { name: 'Next', exact: true }).click();
+  await dialog.getByRole('radio', { name: 'Pounds', exact: true }).click();
+  await expect(dialog.getByRole('radio', { name: 'Pounds', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(() => unitPrefOf(username)).toBe('lb');
+  await dialog.getByRole('button', { name: 'Skip intro', exact: true }).click();
+
+  await openFromProfile(page, 'Settings');
+  await expect(
+    page.getByRole('radiogroup', { name: 'Weight units' }).getByRole('radio', { name: 'Pounds', exact: true }),
+  ).toHaveAttribute('aria-checked', 'true');
 });
 
 test('a new user can follow the beginner program from the last step', async ({ page }) => {
