@@ -155,6 +155,112 @@ a:hover {
   background: rgb(0 0 0 / 60%);
 }
 
+.empty-state .button {
+  align-self: flex-start;
+}
+
+.first-run-dialog {
+  width: min(440px, calc(100vw - 32px));
+  margin-top: max(var(--space-4), env(safe-area-inset-top));
+  max-height: calc(100dvh - 2 * var(--space-4) - env(safe-area-inset-top));
+  overflow-y: auto;
+  color: var(--color-text);
+  border-top: 6px solid var(--color-accent);
+}
+
+.first-run-dialog::backdrop {
+  background: rgb(0 0 0 / 70%);
+}
+
+.first-run-progress {
+  gap: var(--space-2);
+}
+
+.first-run-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.first-run-pip {
+  width: 16px;
+  height: 8px;
+  background: var(--color-well);
+  border: var(--border-width) solid #000;
+}
+
+.first-run-pip.lit {
+  background: var(--color-accent);
+  box-shadow: inset -2px -2px 0 var(--color-accent-dark);
+}
+
+.first-run-title {
+  font-size: 1.6rem;
+  color: var(--color-accent);
+  text-shadow: var(--text-shadow);
+  line-height: 1.1;
+}
+
+.first-run-title:focus {
+  outline: none;
+}
+
+.first-run-title:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.first-run-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.first-run-card,
+.first-run-choice {
+  background: var(--color-well);
+  border: var(--border-width) solid #000;
+  box-shadow: var(--bevel-sunken);
+  padding: var(--space-3);
+}
+
+.first-run-card {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.first-run-card-icon {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-panel);
+  border: var(--border-width) solid #000;
+  box-shadow: var(--bevel);
+}
+
+.first-run-card-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: var(--color-accent-light);
+}
+
+.first-run-choice h3 {
+  font-size: 1.15rem;
+  color: var(--color-accent-light);
+}
+
+.first-run-browse {
+  align-self: flex-start;
+  padding: 0;
+}
+
 .whats-new-scroll {
   flex: 1 1 auto;
   min-height: 0;

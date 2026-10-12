@@ -9,19 +9,20 @@ Feature-sliced screens of the Gainscape PWA. Each subdirectory owns one area of 
 
 ## Subdirectories
 
-| Directory     | Purpose                                                                                 |
-| ------------- | --------------------------------------------------------------------------------------- |
-| `auth/`       | Sign-in, register, reset and email-link callback screens (see `auth/AGENTS.md`)         |
-| `collection/` | Records, items/crafting; hosts the shared `CollectionTabs` (see `collection/AGENTS.md`) |
-| `exercises/`  | Exercise list and custom-exercise form (see `exercises/AGENTS.md`)                      |
-| `friends/`    | Feed, hiscores, friend profile (see `friends/AGENTS.md`)                                |
-| `history/`    | Session list, detail and edit flow (see `history/AGENTS.md`)                            |
-| `profile/`    | Profile, edit, friend preview, settings (see `profile/AGENTS.md`)                       |
-| `programs/`   | Program list and editor (see `programs/AGENTS.md`)                                      |
-| `skills/`     | Skill levels screen (see `skills/AGENTS.md`)                                            |
-| `summary/`    | Post-workout reveal and last-summary memory (see `summary/AGENTS.md`)                   |
-| `whats-new/`  | Release history screen and the What's new sheet (see `whats-new/AGENTS.md`)             |
-| `workout/`    | The Train tab: draft logging, set rows, finish sync (see `workout/AGENTS.md`)           |
+| Directory     | Purpose                                                                                            |
+| ------------- | -------------------------------------------------------------------------------------------------- |
+| `auth/`       | Sign-in, register, reset and email-link callback screens (see `auth/AGENTS.md`)                    |
+| `collection/` | Records, items/crafting; hosts the shared `CollectionTabs` (see `collection/AGENTS.md`)            |
+| `exercises/`  | Exercise list and custom-exercise form (see `exercises/AGENTS.md`)                                 |
+| `friends/`    | Feed, hiscores, friend profile (see `friends/AGENTS.md`)                                           |
+| `history/`    | Session list, detail and edit flow (see `history/AGENTS.md`)                                       |
+| `onboarding/` | First-run dialog shown on the Train screen to a user with no workouts (see `onboarding/AGENTS.md`) |
+| `profile/`    | Profile, edit, friend preview, settings (see `profile/AGENTS.md`)                                  |
+| `programs/`   | Program list and editor (see `programs/AGENTS.md`)                                                 |
+| `skills/`     | Skill levels screen (see `skills/AGENTS.md`)                                                       |
+| `summary/`    | Post-workout reveal and last-summary memory (see `summary/AGENTS.md`)                              |
+| `whats-new/`  | Release history screen and the What's new sheet (see `whats-new/AGENTS.md`)                        |
+| `workout/`    | The Train tab: draft logging, set rows, finish sync (see `workout/AGENTS.md`)                      |
 
 ## For AI Agents
 
