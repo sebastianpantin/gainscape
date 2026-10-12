@@ -6,6 +6,7 @@ import {
   itemSprite,
   LEVEL_UP,
   LOGO,
+  LOOT_CHEST,
   SKILL_SPRITES,
   type Sprite,
   TROPHY,
@@ -30,6 +31,7 @@ const allSprites: [string, Sprite][] = [
   ['logo', LOGO],
   ['trophy', TROPHY],
   ['level up', LEVEL_UP],
+  ['loot chest', LOOT_CHEST],
   ...Object.entries(SKILL_SPRITES),
   ...ITEM_KINDS.map((kind): [string, Sprite] => [kind, itemSprite(kind, '#ffb000')]),
 ];
@@ -75,8 +77,11 @@ describe('pixel sprites', () => {
     for (const fill of palette) expect(tokenColours.has(fill), fill).toBe(true);
   });
 
-  it('draws the level-up art at 12x12 in palette colours', () => {
-    expect([LEVEL_UP.cols, LEVEL_UP.rows]).toEqual([12, 12]);
-    for (const fill of fills(LEVEL_UP)) expect(fill === '#000' || tokenColours.has(fill), fill).toBe(true);
+  it.each([
+    ['level-up', LEVEL_UP],
+    ['loot chest', LOOT_CHEST],
+  ])('draws the %s art at 12x12 in palette colours', (_name, sprite) => {
+    expect([sprite.cols, sprite.rows]).toEqual([12, 12]);
+    for (const fill of fills(sprite)) expect(fill === '#000' || tokenColours.has(fill), fill).toBe(true);
   });
 });

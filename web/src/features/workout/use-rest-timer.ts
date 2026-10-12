@@ -10,7 +10,7 @@ import {
 } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage, readRestState, restStateKey, saveRestState } from '../../lib/rest-timer-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
-import { primeRestSound } from './rest-alert-effects.ts';
+import { primeAudio } from '../../lib/device-effects.ts';
 
 export interface RestTimerControls {
   timer: RestTimer | null;
@@ -55,7 +55,7 @@ export function useRestTimer(userId: string): RestTimerControls {
     start: (setId, exerciseId, compound) => {
       const restS = restLengthFor(readRestState(deviceStorage(), userId), exerciseId, compound);
       if (restS === REST_OFF) return;
-      if (readTrainingDeviceSettings(deviceStorage(), userId).sound) primeRestSound();
+      if (readTrainingDeviceSettings(deviceStorage(), userId).sound) primeAudio();
       changeTimer(startRest(Date.now(), restS, setId, exerciseId));
     },
     adjust: (deltaS) => {

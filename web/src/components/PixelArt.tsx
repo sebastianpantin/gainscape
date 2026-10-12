@@ -5,6 +5,7 @@ import {
   itemSprite,
   LEVEL_UP,
   LOGO,
+  LOOT_CHEST,
   SKILL_SPRITES,
   type Sprite,
   TROPHY,
@@ -63,4 +64,8 @@ export function SkillIcon({ skillKey }: { skillKey: string }) {
 
 export function LevelUpIcon() {
   return <PixelGrid sprite={LEVEL_UP} size={24} />;
+}
+
+export function LootChestIcon() {
+  return <PixelGrid sprite={LOOT_CHEST} size={56} />;
 }

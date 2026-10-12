@@ -173,6 +173,12 @@ export async function finishWorkout(page: Page) {
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
 }
 
+export async function openLoot(page: Page): Promise<Locator> {
+  const loot = page.getByRole('region', { name: 'Loot' });
+  await loot.getByRole('button', { name: 'Open loot' }).click();
+  return loot;
+}
+
 export async function logWorkout(page: Page, logSets: () => Promise<void>) {
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logSets();
