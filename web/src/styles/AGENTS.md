@@ -19,6 +19,7 @@ The whole visual layer. `tokens.css` defines the design tokens as CSS custom pro
 ### Working In This Directory
 
 - Use tokens (`var(--color-*)`, `var(--space-*)`) rather than literal colours and sizes. New colours go into `tokens.css` first.
+- Text floor: data text (set and effort labels, record chips, last-set and XP lines, hints, input captions, `.tiny`) is never smaller than `--font-size-tiny` (0.8125rem, 13px). `--font-size-caption` (0.75rem) is only for decorative captions next to an icon or inside a field that already has an accessible name: the tab bar labels, the stepped set row's in-field `kg`/`reps` captions and the record slot sub-labels. The stepped set row fits at 360px with this floor because `.plate-marker` and `.set-info > .set-xp` use a `--space-1` gap and `.set-row .effort-option` has no side padding and `-0.02em` letter spacing; widen any of those and the XP line wraps or `Failure` clips.
 - Interactive targets use `min-height`/`min-width: var(--tap-target)` (44px). Keep that on any new button, link or row.
 - Honour safe areas (`env(safe-area-inset-*)`) on full-width chrome, as `body`, `.screen` and the licenses page do.
 - Wrap new animation in the existing `prefers-reduced-motion: reduce` block at the end of `app.css`.

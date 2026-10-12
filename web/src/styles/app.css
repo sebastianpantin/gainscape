@@ -725,7 +725,7 @@ a:focus-visible {
   gap: var(--space-1);
   color: var(--color-text-muted);
   text-decoration: none;
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-caption);
 }
 
 .tab:hover {
@@ -1018,7 +1018,7 @@ body:has(.active-workout-bar) .screen {
   top: 4px;
   left: 6px;
   z-index: 1;
-  font-size: 0.625rem;
+  font-size: var(--font-size-caption);
   line-height: 1;
   color: var(--color-ink);
   pointer-events: none;
@@ -1053,7 +1053,7 @@ body:has(.active-workout-bar) .screen {
 .set-info > .set-xp {
   flex-direction: row;
   align-items: baseline;
-  gap: var(--space-2);
+  gap: var(--space-1);
   margin-left: auto;
   padding-bottom: 0;
 }
@@ -1200,7 +1200,7 @@ body:has(.active-workout-bar) .screen {
   min-height: var(--tap-target);
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   cursor: pointer;
   flex: 0 1 auto;
 }
@@ -1505,7 +1505,8 @@ body:has(.active-workout-bar) .screen {
 }
 
 .set-row .effort-option {
-  padding: 0 2px;
+  padding: 0;
+  letter-spacing: -0.02em;
   white-space: nowrap;
 }
 
@@ -2019,7 +2020,7 @@ body:has(.active-workout-bar) .screen {
 
 .record-slot .muted {
   font-family: var(--font-family);
-  font-size: 0.65rem;
+  font-size: var(--font-size-caption);
 }
 
 .record-slot.empty {
