@@ -2,6 +2,7 @@ import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { readChangelog } from '../web/build/changelog.ts';
 import { LAST_SEEN_RELEASE_KEY_PREFIX, lastSeenReleaseKey } from '../web/src/lib/last-seen-release-store.ts';
+import { onboardingKey } from '../web/src/lib/onboarding-store.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
 import {
   finishWorkout,
@@ -159,6 +160,23 @@ test('an older stored version shows the sheet once until dismissed', async ({ pa
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
   await expectNoDialogAcrossTabs(page);
+});
+
+test('the sheet waits until the first-run intro is done', async ({ page }) => {
+  await countDraftReads(page);
+  await register(page, uniqueUsername('wn_intro'));
+  await seedLastSeen(page, '0.0.0');
+  const introKey = onboardingKey((await readSession(page)).user.id);
+  await page.evaluate((key) => localStorage.removeItem(key), introKey);
+  await page.reload();
+  const intro = page.getByRole('dialog', { name: 'Welcome to Gainscape' });
+  await expect(intro).toBeVisible();
+  await expectNoDialogNow(page);
+
+  await intro.getByRole('button', { name: 'Skip intro', exact: true }).click();
+  await expect(intro).toHaveCount(0);
+  await openTab(page, 'Skills');
+  await expectSheetListsEveryRelease(page);
 });
 
 test('the sheet waits for the workout to finish and skips the reveal', async ({ page }) => {
