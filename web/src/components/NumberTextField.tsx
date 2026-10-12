@@ -1,4 +1,4 @@
-import { type ReactNode, useRef, useState } from 'react';
+import { type ReactNode, useId, useRef, useState } from 'react';
 import {
   enterKeyHintFor,
   fieldAfter,
@@ -41,6 +41,7 @@ export function NumberTextField({
 }: NumberTextFieldProps) {
   const [typed, setTyped] = useState<TypedNumberText | null>(null);
   const keepSelectionOnMouseUp = useRef(false);
+  const savedAsId = useId();
   const range = { lowest, highest, wholeNumber };
   const shown = shownNumberText(typed, value);
   const enterKeyHint = enterKeyHintFor(lastInGroup);
@@ -59,6 +60,7 @@ export function NumberTextField({
           aria-valuemax={highest}
           aria-valuenow={value}
           aria-invalid={shown.matchesValue ? undefined : true}
+          aria-describedby={shown.matchesValue ? undefined : savedAsId}
           value={shown.text}
           onFocus={(event) => {
             keepSelectionOnMouseUp.current = true;
@@ -79,7 +81,7 @@ export function NumberTextField({
             keepSelectionOnMouseUp.current = false;
             if (event.key === 'Enter') {
               event.preventDefault();
-              if (enterKeyHint === 'done') event.currentTarget.blur();
+              if (enterKeyHint === 'done') setTyped(null);
               else focusFieldAfter(event.currentTarget);
               return;
             }
@@ -101,7 +103,7 @@ export function NumberTextField({
           </span>
         )}
       </label>
-      <span role="status" className="visually-hidden">
+      <span id={savedAsId} role="status" className="visually-hidden">
         {shown.matchesValue ? '' : `Saved as ${value}`}
       </span>
     </>

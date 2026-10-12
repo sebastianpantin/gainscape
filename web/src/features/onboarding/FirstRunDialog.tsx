@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { TIER_COLORS } from '../../lib/item-rules.ts';
 import {
@@ -15,9 +16,12 @@ import {
   onboardingStepLabel,
 } from '../../lib/onboarding-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { updatePrivateProfile, type UnitPref } from '../../lib/profile.ts';
+import { type Profile, updatePrivateProfile, type UnitPref } from '../../lib/profile.ts';
 import { templateListEntries } from '../../lib/program-enroll-rules.ts';
-import { programTemplatesQuery } from '../../lib/queries.ts';
+import { profileQuery, programTemplatesQuery } from '../../lib/queries.ts';
+import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { type CacheFirstLoad } from '../../offline/cache-first.ts';
+import { profileCache } from '../../offline/profile-cache.ts';
 
 interface TrainStepProps {
   userId: string;
@@ -74,8 +78,20 @@ function WelcomeStep() {
 
 function UnitsStep({ userId }: { userId: string }) {
   const { unitPref, applyPreferences } = usePreferences();
+  const queryClient = useQueryClient();
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const showSavedUnits = (saved: UnitPref) => {
+    const storedProfile = profileCache.read(deviceStorage(), userId);
+    if (storedProfile) profileCache.save(deviceStorage(), userId, { ...storedProfile, unitPref: saved });
+    const { queryKey } = profileQuery(userId);
+    void queryClient.cancelQueries({ queryKey });
+    queryClient.setQueryData<CacheFirstLoad<Profile>>(
+      queryKey,
+      (current) => current && { ...current, loaded: { ...current.loaded, unitPref: saved } },
+    );
+  };
 
   const pick = async (next: UnitPref) => {
     if (saving || next === unitPref) return;
@@ -85,6 +101,8 @@ function UnitsStep({ userId }: { userId: string }) {
     applyPreferences({ unitPref: next });
     try {
       await updatePrivateProfile(userId, { unitPref: next });
+      showSavedUnits(next);
+      void announceDataChange(queryClient, 'profile-saved');
     } catch (error) {
       applyPreferences({ unitPref: previous });
       setProblem(messageOf(error, 'Could not save your units.'));

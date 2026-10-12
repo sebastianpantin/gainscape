@@ -277,6 +277,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const draft = state.status === 'ready' ? state.draft : null;
   const onboarding = useOnboarding(userId, draft !== null);
   const startButton = useRef<HTMLButtonElement>(null);
+  const focusPickerOnOpen = useRef(false);
   const draftSessionId = draft?.sessionId ?? null;
   const [stateSessionId, setStateSessionId] = useState(draftSessionId);
   if (stateSessionId !== draftSessionId) {
@@ -541,7 +542,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               onboarding.finish();
               requestAnimationFrame(() => startButton.current?.focus());
             }}
-            onFreestyle={startFreestyle}
+            onFreestyle={() => {
+              focusPickerOnOpen.current = true;
+              startFreestyle();
+            }}
           />
         )}
       </main>
@@ -1089,6 +1093,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <ExercisePicker
           exercises={addableExercises(draft, exercises)}
           onPick={(exercise) => void addPicked(exercise)}
+          searchRef={(search) => {
+            if (!search || !focusPickerOnOpen.current) return;
+            focusPickerOnOpen.current = false;
+            search.focus();
+          }}
         />
       ) : (
         <p className="hint">A workout can hold at most {MAX_SETS_PER_SESSION} sets.</p>

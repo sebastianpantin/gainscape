@@ -31,9 +31,11 @@ import {
   describeRecord,
   gearBonusText,
   levelUpCueDelayMs,
+  playsReveal,
   type RevealTimeline,
   revealShape,
   revealTimeline,
+  skipsRevealOnKey,
   unappliedChangesText,
 } from './reveal-rules.ts';
 
@@ -45,7 +47,7 @@ const LEVEL_UP_CHIME: Tone[] = [523, 659, 784, 1047].map((frequencyHz, index, no
 const LEVEL_UP_CHIME_VOLUME = 0.18;
 const LEVEL_UP_VIBRATION_MS = [40, 50, 40, 50, 140];
 const LOOT_DROP_STAGGER_S = 0.08;
-const SKIP_KEYS = new Set(['Escape', 'Enter']);
+const INTERACTIVE_ELEMENTS = 'a[href], button, input, select, textarea, summary, [role="button"], [role="link"]';
 
 async function savedWhenOffline<Loaded>(saved: Loaded | null, loadLive: () => Promise<Loaded>): Promise<Loaded> {
   return (await loadCacheFirstWhenOffline(isDeviceOffline, () => saved, loadLive)).loaded;
@@ -68,6 +70,7 @@ function useRevealPlayback(
   userId: string,
   timeline: RevealTimeline,
   focusAfterSkip: RefObject<HTMLElement | null>,
+  plays: boolean,
 ): { phase: RevealPhase; skip: () => void } {
   const [reducedMotion] = useState(prefersReducedMotion);
   const [phase, setPhase] = useState<RevealPhase>(reducedMotion ? 'settled' : 'playing');
@@ -91,10 +94,12 @@ function useRevealPlayback(
   }, [focusAfterSkip]);
 
   useEffect(() => {
-    if (phase !== 'playing') return;
+    if (!plays || phase !== 'playing') return;
     const settle = setTimeout(() => setPhase('settled'), settledAfterMs);
     const skipOnKey = (event: KeyboardEvent) => {
-      if (SKIP_KEYS.has(event.key)) skip();
+      const onInteractiveElement =
+        event.target instanceof Element && event.target.closest(INTERACTIVE_ELEMENTS) !== null;
+      if (skipsRevealOnKey({ key: event.key, onInteractiveElement })) skip();
     };
     document.addEventListener('pointerdown', skip);
     document.addEventListener('keydown', skipOnKey);
@@ -103,7 +108,7 @@ function useRevealPlayback(
       document.removeEventListener('pointerdown', skip);
       document.removeEventListener('keydown', skipOnKey);
     };
-  }, [phase, settledAfterMs, skip]);
+  }, [plays, phase, settledAfterMs, skip]);
 
   return { phase, skip };
 }
@@ -219,7 +224,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const sessionId = summary?.sessionId;
   const timeline = revealTimeline(revealShape(summary));
   const title = useRef<HTMLHeadingElement>(null);
-  const { phase, skip } = useRevealPlayback(userId, timeline, title);
+  const { phase, skip } = useRevealPlayback(userId, timeline, title, playsReveal(summary));
 
   useEffect(() => {
     if (sessionId) markInstallCardDue(userId);
