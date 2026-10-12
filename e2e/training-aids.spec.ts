@@ -192,7 +192,7 @@ test('a workout keeps the screen on and the end of a rest vibrates and beeps, as
   await expect.poll(() => deviceCalls(page)).toContain('release');
 
   await openFromProfile(page, 'Settings');
-  for (const setting of ['Vibrate when rest ends', 'Sound when rest ends', 'Keep screen on during workouts'])
+  for (const setting of ['Vibration', 'Sound when rest ends', 'Keep screen on during workouts'])
     await pickDeviceSetting(page, setting, 'Off');
   await page.evaluate(() => (window.deviceCalls = []));
   await openTab(page, 'Train');
