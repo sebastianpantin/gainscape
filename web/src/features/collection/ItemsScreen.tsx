@@ -4,6 +4,7 @@ import type { StrengthState } from '@domain/types.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { EmptyState } from '../../components/EmptyState.tsx';
 import { ItemIcon } from '../../components/PixelArt.tsx';
 import {
   type CatalogChallenge,
@@ -412,7 +413,10 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           onStartChallenge={startChallenge}
         />
       ) : (
-        <p className="panel muted">Hard sets can drop items. Finish a workout to find your first one.</p>
+        <EmptyState
+          text="Hard sets can drop items. Finish a workout to find your first one."
+          startLabel="Start a workout"
+        />
       )}
     </main>
   );

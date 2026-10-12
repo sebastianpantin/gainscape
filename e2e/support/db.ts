@@ -52,6 +52,14 @@ export async function heightOf(username: string): Promise<number | null> {
   return row?.height_cm ?? null;
 }
 
+export async function unitPrefOf(username: string): Promise<string | null> {
+  const [row] = await db`
+    select pp.unit_pref::text as unit_pref
+    from public.profile_private pp join public.profiles p on p.id = pp.user_id
+    where p.username = ${username}`;
+  return row?.unit_pref ?? null;
+}
+
 export async function editElsewhere(sessionId: string, reps: number): Promise<void> {
   await db`update public.sets set reps = ${reps} where session_id = ${sessionId}`;
   await db`update public.sessions set revision = revision + 1, notes = 'edited elsewhere' where id = ${sessionId}`;
@@ -114,7 +122,7 @@ export async function activeDropCount(sessionId: string): Promise<number> {
   return row.count;
 }
 
-export async function createConfirmedAccount(email: string, username: string, timezone: string): Promise<void> {
+export async function createConfirmedAccount(email: string, username: string, timezone: string): Promise<string> {
   const created = await admin.auth.admin.createUser({
     email,
     password: TEST_PASSWORD,
@@ -122,6 +130,7 @@ export async function createConfirmedAccount(email: string, username: string, ti
     user_metadata: { username, timezone },
   });
   if (created.error) throw created.error;
+  return created.data.user.id;
 }
 
 export async function forgetEmailSendLimit(email: string): Promise<void> {

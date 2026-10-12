@@ -1,8 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { emailOf, logBench, openLatestWorkout, register, submitSignIn, uniqueUsername } from './support/app.ts';
-import { builtInExerciseId, createConfirmedAccount } from './support/db.ts';
+import {
+  emailOf,
+  logBench,
+  openLatestWorkout,
+  register,
+  registerWithoutSigningIn,
+  skipOnboarding,
+  submitSignIn,
+  uniqueUsername,
+} from './support/app.ts';
+import { builtInExerciseId } from './support/db.ts';
 
 const MISSING_PROGRAM = "This program doesn't exist.";
 const MISSING_EXERCISE = "This exercise isn't available.";
@@ -14,7 +23,7 @@ function homeUrl(page: Page): RegExp {
 
 async function expectGoneWorkoutNotice(page: Page) {
   await expect(page).toHaveURL(/\/collection\/history$/);
-  await expect(page.getByRole('status')).toHaveText(GONE_WORKOUT);
+  await expect(page.getByRole('status').filter({ hasText: GONE_WORKOUT })).toHaveText(GONE_WORKOUT);
 }
 
 test('an unknown path redirects a signed-in user to the Train screen', async ({ page }) => {
@@ -28,9 +37,7 @@ test('an unknown path redirects a signed-in user to the Train screen', async ({ 
 
 test('an unknown path asks a signed-out visitor to sign in, then lands on the Train screen', async ({ page }) => {
   const username = uniqueUsername('dl_signout');
-  await page.goto('/');
-  const timezone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
-  await createConfirmedAccount(emailOf(username), username, timezone);
+  await skipOnboarding(page, await registerWithoutSigningIn(page, username));
 
   await page.goto('/no/such/screen');
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
