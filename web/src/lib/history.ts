@@ -8,6 +8,7 @@ import {
   querySession,
   querySessionPage,
   querySessionSets,
+  type SessionDetail,
   type StoredSetRow,
 } from './history-rules.ts';
 import { REQUEST_TIMEOUT_MS } from './auth-restore.ts';
@@ -19,7 +20,7 @@ export async function fetchSessionPage(after: HistorySession | null): Promise<Hi
   return querySessionPage(supabase, after);
 }
 
-export async function fetchSession(sessionId: string): Promise<HistorySession | null> {
+export async function fetchSession(sessionId: string): Promise<SessionDetail | null> {
   failFastWhenOffline();
   return querySession(supabase, sessionId);
 }
