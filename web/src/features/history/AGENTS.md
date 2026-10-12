@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Past workouts under the Log tab: a paged session list and a detail screen where a recent session can be edited or deleted. Edits are sent to the server, which recomputes XP, records and loot.
+Past workouts under the Collection tab: a paged session list and a detail screen where a recent session can be edited or deleted. Edits are sent to the server, which recomputes XP, records and loot.
 
 ## Key Files
 

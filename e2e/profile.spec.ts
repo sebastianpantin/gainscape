@@ -120,7 +120,7 @@ test('pounds are shown everywhere while kilograms are stored, without false reco
     await expect.poll(async () => (await latestSetOf(username)).weight_kg, { message: `round ${round}` }).toBe(61.23);
   }
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await expect(exactRepMaxes(exerciseCard(page, 'Barbell Bench Press'))).toHaveText(['5RM 135 lb']);
 });
 

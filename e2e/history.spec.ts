@@ -22,7 +22,7 @@ test('edit a logged set from history, see the XP change, then delete the workout
 
   await logBench(page);
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
   const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
   await expect(workouts).toHaveCount(1);
@@ -193,7 +193,7 @@ test('rate the session when finishing, then see its length and RPE on the summar
 
   await expect(page.getByText('<1 min · Session RPE 8')).toBeVisible();
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
   const workout = page.getByRole('list', { name: 'Workouts' }).getByRole('link').first();
   await expect(workout).toContainText('1 set · <1 min · Session RPE 8');
