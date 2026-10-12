@@ -108,6 +108,15 @@ export function setRow(scope: Page | Locator, setNumber: number): Locator {
   return scope.getByRole('listitem', { name: `Set ${setNumber}`, exact: true });
 }
 
+export async function openSetOptions(row: Locator, setNumber: number): Promise<void> {
+  await row.getByRole('button', { name: `Set ${setNumber} options`, exact: true }).click();
+  await expect(row.getByRole('group', { name: `Set ${setNumber} options`, exact: true })).toBeVisible();
+}
+
+export function warmupBadge(row: Locator): Locator {
+  return row.getByRole('img', { name: 'Warm-up', exact: true });
+}
+
 export function setRows(scope: Page | Locator): Locator {
   return scope.getByRole('listitem', { name: /^Set \d+$/ });
 }
@@ -154,7 +163,7 @@ export async function logExercise(
   for (const [index, set] of sets.entries()) {
     const row = setRow(card, index + 1);
     if (set.weightKg !== undefined) await row.getByRole('spinbutton', { name: /kg/ }).fill(String(set.weightKg));
-    await row.getByLabel('reps').fill(String(set.reps));
+    await row.getByLabel('reps', { exact: true }).fill(String(set.reps));
     await row.getByRole('radio', { name: 'Hard' }).click();
   }
 }

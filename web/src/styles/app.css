@@ -605,7 +605,7 @@ a:focus-visible {
 }
 
 .tab {
-  min-height: 56px;
+  min-height: calc(var(--tab-bar-height) - var(--border-width) - var(--space-1) - var(--space-2));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -622,6 +622,59 @@ a:focus-visible {
 
 .tab.active {
   color: var(--color-accent);
+}
+
+.active-workout-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
+  height: var(--tap-target);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  white-space: nowrap;
+  padding: var(--space-2) var(--space-4);
+  padding-left: calc(var(--space-4) + env(safe-area-inset-left));
+  padding-right: calc(var(--space-4) + env(safe-area-inset-right));
+  background: var(--color-panel);
+  border-top: var(--border-width) solid #000;
+  box-shadow: inset 0 2px 0 var(--color-panel-highlight);
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  text-decoration: none;
+  z-index: 10;
+}
+
+.active-workout-bar:hover {
+  color: var(--color-text);
+  background: var(--color-panel-border);
+}
+
+.active-workout-status {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-workout-clock,
+.active-workout-rest {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.active-workout-clock {
+  color: var(--color-accent);
+}
+
+.active-workout-rest {
+  flex-shrink: 0;
+  color: var(--color-xp);
+}
+
+body:has(.active-workout-bar) .screen {
+  padding-bottom: calc(96px + var(--tap-target) + var(--space-3) + env(safe-area-inset-bottom));
 }
 
 .auth-screen {
@@ -803,7 +856,7 @@ a:focus-visible {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .set-row {
@@ -811,59 +864,213 @@ a:focus-visible {
   grid-template-columns: 22px minmax(0, 1fr) minmax(0, 0.8fr) minmax(52px, auto) var(--tap-target);
   grid-template-areas:
     'number weight reps xp done'
-    'effort effort effort effort remove';
+    'effort effort effort effort menu';
   gap: var(--space-2);
   align-items: end;
   padding-top: var(--space-3);
   border-top: 1px dashed var(--color-panel-border);
 }
 
-.set-row.marked {
-  grid-template-areas:
-    'number weight reps xp done'
-    'markers markers markers markers markers'
-    'effort effort effort effort remove';
-}
-
 .set-row.stepped {
-  grid-template-columns: 22px minmax(0, 1fr) minmax(0, auto) var(--tap-target);
+  grid-template-columns: 20px minmax(0, 1fr) 64px var(--tap-target);
   grid-template-areas:
-    'number weight weight done'
-    '. reps xp xp'
-    'remove remove warmup warmup'
-    'effort effort effort effort';
+    'number weight reps done'
+    'info info info info'
+    'effort effort effort menu';
+  row-gap: var(--space-1);
+  align-items: center;
+  padding-top: var(--space-2);
 }
 
-.set-row.stepped.marked {
+.set-row.stepped.calculating {
   grid-template-areas:
-    'number weight weight done'
-    '. reps xp xp'
-    'markers markers markers markers'
-    'remove remove warmup warmup'
-    'effort effort effort effort';
-}
-
-.set-row.stepped.marked.calculating {
-  grid-template-areas:
-    'number weight weight done'
-    '. reps xp xp'
-    'markers markers markers markers'
+    'number weight reps done'
+    'info info info info'
     'calculator calculator calculator calculator'
-    'remove remove warmup warmup'
-    'effort effort effort effort';
+    'effort effort effort menu';
 }
 
-.set-row.stepped > .done-toggle.warmup-toggle {
-  grid-area: warmup;
-  justify-self: end;
+.set-row.stepped > .set-number {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 0;
 }
 
-.set-row.stepped > .button.icon {
-  justify-self: start;
+.set-row.stepped .compact-field {
+  position: relative;
 }
 
-.warmup-toggle:not(.selected) {
+.set-row.stepped .field-caption {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  z-index: 1;
+  font-size: 0.625rem;
+  line-height: 1;
+  color: var(--color-ink);
+  pointer-events: none;
+}
+
+.set-row.stepped .compact-field input {
+  padding: 8px 2px 0;
+  text-align: center;
+}
+
+.set-info {
+  grid-area: info;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+  min-height: calc(var(--tap-target) - 2 * var(--space-1));
+}
+
+.set-info .plate-marker,
+.set-info > .last-set {
+  min-height: var(--tap-target);
+  margin-block: calc(var(--space-1) * -1);
+}
+
+.set-info > .set-markers {
+  align-items: center;
+  min-width: 0;
+}
+
+.set-info > .set-xp {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-left: auto;
+  padding-bottom: 0;
+}
+
+.last-set {
+  min-width: var(--tap-target);
+  padding: 0;
+  font: inherit;
+  font-family: var(--font-family);
+  font-size: var(--font-size-tiny);
   color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.last-set-chip {
+  display: block;
+  padding: var(--space-1) var(--space-2);
+  border: 1px dashed var(--color-panel-border);
+  border-radius: var(--radius);
+}
+
+.last-set:hover > .last-set-chip {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.last-delta {
+  font-family: var(--font-family);
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+}
+
+.last-delta.up {
+  color: var(--color-xp);
+}
+
+.set-xp-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.set-row > .set-menu-button {
+  grid-area: menu;
+  background: transparent;
+  box-shadow: none;
+  border-color: var(--color-panel-border);
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.set-menu {
+  display: none;
+}
+
+.set-menu:popover-open {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 11rem;
+  padding: var(--space-2);
+  background: var(--color-panel);
+  color: var(--color-text);
+  border: var(--border-width) solid #000;
+  border-radius: var(--radius);
+  box-shadow: var(--bevel);
+}
+
+@supports not selector(:popover-open) {
+  .set-row > .set-menu-button {
+    display: none;
+  }
+
+  .set-row > .set-menu {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+}
+
+.set-menu-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-size: var(--font-size-small);
+  text-align: left;
+  color: var(--color-text);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.set-menu-action:hover {
+  background: var(--color-panel-shade);
+}
+
+.set-menu-action.danger {
+  color: var(--color-danger);
+}
+
+.set-menu-check {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: var(--border-width) solid var(--color-panel-border);
+  background: var(--color-well);
+  color: var(--color-xp);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.set-menu-action.selected > .set-menu-check {
+  border-color: #000;
+}
+
+.warmup-badge {
+  font-family: var(--font-family);
+  font-size: var(--font-size-tiny);
+  color: var(--color-accent-light);
 }
 
 .set-row.warmup > .set-number {
@@ -987,12 +1194,6 @@ a:focus-visible {
   grid-area: reps;
 }
 
-.set-row.stepped > .set-xp {
-  grid-area: xp;
-  white-space: normal;
-  text-align: right;
-}
-
 .set-row.stepped > .done-toggle {
   grid-area: done;
 }
@@ -1037,7 +1238,6 @@ a:focus-visible {
 }
 
 .set-markers {
-  grid-area: markers;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
@@ -1049,7 +1249,7 @@ a:focus-visible {
   grid-template-columns: 22px minmax(0, 1fr) minmax(52px, auto) var(--tap-target);
   grid-template-areas:
     'number fields xp done'
-    'mode mode mode remove'
+    'mode mode mode menu'
     'effort effort effort effort';
 }
 
@@ -1149,12 +1349,66 @@ a:focus-visible {
   color: var(--color-ink);
 }
 
-.set-row > .button.icon {
-  grid-area: remove;
+.set-row > .xp-drop {
+  grid-area: done;
+  align-self: start;
+  justify-self: end;
+  z-index: 1;
+  pointer-events: none;
+  font-family: var(--font-display);
+  color: var(--color-xp);
+  text-shadow: var(--text-shadow);
+  white-space: nowrap;
+  opacity: 0;
+  animation: xp-drop 800ms ease-out forwards;
+}
+
+.set-xp .record-chip.pulse {
+  animation: pop 450ms ease-out;
+}
+
+@keyframes xp-drop {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
 }
 
 .set-row > .effort-selector {
   grid-area: effort;
+}
+
+.effort-selector {
+  container-type: inline-size;
+}
+
+.set-row .effort-option {
+  padding: 0 2px;
+  white-space: nowrap;
+}
+
+.effort-short {
+  display: none;
+}
+
+@container (max-width: 319px) {
+  .effort-full {
+    display: none;
+  }
+
+  .effort-short {
+    display: inline;
+  }
 }
 
 .effort-selector,
@@ -1191,7 +1445,7 @@ a:focus-visible {
 
 .finish-bar {
   position: sticky;
-  bottom: calc(72px + env(safe-area-inset-bottom));
+  bottom: calc(var(--tab-bar-height) - var(--border-width) + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -2116,6 +2370,10 @@ button.back-link {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+
+  .xp-drop {
+    display: none;
   }
 }
 

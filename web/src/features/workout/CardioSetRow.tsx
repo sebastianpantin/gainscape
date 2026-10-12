@@ -1,9 +1,12 @@
+import type { Ref } from 'react';
 import { Icon } from '../../components/Icon.tsx';
 import type { PaceUnit } from '../../lib/catalog-rules.ts';
 import type { UnitPref } from '../../lib/profile.ts';
 import type { CardioDraftSet } from '../../offline/draft-format.ts';
 import { BoutFields, BoutModeToggle } from './BoutFields.tsx';
 import { CardioEffortSelector } from './CardioEffortSelector.tsx';
+import { SetMenu } from './SetMenu.tsx';
+import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface CardioSetRowProps {
@@ -12,8 +15,10 @@ interface CardioSetRowProps {
   paceUnit: PaceUnit;
   tracksDistance: boolean;
   preview: SetPreview;
+  drop: ShownSetDrop | null;
   unit: UnitPref;
   onChange: (changes: Partial<Omit<CardioDraftSet, 'id' | 'kind'>>) => void;
+  menuRef: Ref<HTMLButtonElement>;
   onRemove: () => void;
   onToggleDone: () => void;
 }
@@ -24,8 +29,10 @@ export function CardioSetRow({
   paceUnit,
   tracksDistance,
   preview,
+  drop,
   unit,
   onChange,
+  menuRef,
   onRemove,
   onToggleDone,
 }: CardioSetRowProps) {
@@ -43,10 +50,19 @@ export function CardioSetRow({
       >
         <Icon name="check" size={20} strokeWidth={3} />
       </button>
+      {drop?.xpText && (
+        <span key={drop.key} className="xp-drop" aria-hidden="true">
+          {drop.xpText}
+        </span>
+      )}
       <BoutModeToggle boutNumber={boutNumber} bout={bout} onChange={onChange} />
-      <button type="button" className="button icon" aria-label={`Remove bout ${boutNumber}`} onClick={onRemove}>
-        ✕
-      </button>
+      <SetMenu
+        buttonRef={menuRef}
+        name={`Bout ${boutNumber} options`}
+        actions={[
+          { label: 'Remove bout', accessibleName: `Remove bout ${boutNumber}`, danger: true, onChoose: onRemove },
+        ]}
+      />
       <CardioEffortSelector
         selected={bout.effort}
         onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}

@@ -50,6 +50,7 @@
   --border-width: 2px;
   --radius: 0;
   --tap-target: 44px;
+  --tab-bar-height: 70px;
 
   --bevel: inset 2px 2px 0 var(--color-panel-highlight), inset -2px -2px 0 var(--color-panel-shade);
   --bevel-accent: inset 2px 2px 0 var(--color-accent-light), inset -3px -3px 0 var(--color-accent-dark);

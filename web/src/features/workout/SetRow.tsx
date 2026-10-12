@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, type Ref, useEffect, useId, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, MAX_SET_LOAD_KG } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
@@ -12,18 +12,20 @@ import {
   LOWEST_REPS,
   shownWeight,
   type StepDirection,
-  steppedReps,
   steppedWeight,
   unitToKg,
   WEIGHT_STEPPER_STEP,
 } from '../../lib/units.ts';
 import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
 import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
-import type { DraftSet } from '../../offline/draft-format.ts';
+import type { DraftSet, LastLoggedSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
+import { lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './last-set-rules.ts';
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
+import { SetMenu } from './SetMenu.tsx';
 import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
+import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface SetRowProps {
@@ -32,11 +34,14 @@ interface SetRowProps {
   set: DraftSet;
   preview: SetPreview;
   record: PreviewRecord | null;
+  drop: ShownSetDrop | null;
   unit: UnitPref;
   effortMode: EffortInputMode;
   markers: readonly string[];
   barbell: { plates: number[]; text: string; setup: DraftBarbellSetup } | null;
+  last: LastLoggedSet | null;
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
+  menuRef: Ref<HTMLButtonElement>;
   onRemove: () => void;
   onToggleDone: () => void;
   doneLabel?: string;
@@ -105,11 +110,10 @@ export function WeightField({ loadType, weightKg, unit, onChange, stepperSetNumb
 interface RepsFieldProps {
   reps: number;
   onChange: (reps: number) => void;
-  stepperSetNumber?: number;
 }
 
-export function RepsField({ reps, onChange, stepperSetNumber }: RepsFieldProps) {
-  const field = (
+export function RepsField({ reps, onChange }: RepsFieldProps) {
+  return (
     <NumberTextField
       label="reps"
       value={reps}
@@ -119,16 +123,35 @@ export function RepsField({ reps, onChange, stepperSetNumber }: RepsFieldProps) 
       onCommit={onChange}
     />
   );
-  if (stepperSetNumber === undefined) return field;
+}
+
+interface LastSetProps {
+  last: LastLoggedSet;
+  set: DraftSet;
+  loadType: LoadType;
+  unit: UnitPref;
+  setNumber: number;
+  onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
+}
+
+function LastSet({ last, set, loadType, unit, setNumber, onChange }: LastSetProps) {
+  if (set.done) {
+    const delta = lastSetDelta(set, last, loadType, unit);
+    return (
+      <span className={`last-delta ${delta.direction}`} role="img" aria-label={delta.label}>
+        {delta.text}
+      </span>
+    );
+  }
   return (
-    <Stepper
-      className="reps-field"
-      lowerLabel={`One rep fewer, set ${stepperSetNumber}`}
-      higherLabel={`One more rep, set ${stepperSetNumber}`}
-      onStep={(direction) => onChange(steppedReps(reps, direction))}
+    <button
+      type="button"
+      className="last-set"
+      aria-label={lastSetName(last, loadType, unit, setNumber)}
+      onClick={() => onChange(lastSetChangesFor(last, loadType))}
     >
-      {field}
-    </Stepper>
+      <span className="last-set-chip">{lastSetText(last, loadType, unit)}</span>
+    </button>
   );
 }
 
@@ -138,11 +161,14 @@ export function SetRow({
   set,
   preview,
   record,
+  drop,
   unit,
   effortMode,
   markers,
   barbell,
+  last,
   onChange,
+  menuRef,
   onRemove,
   onToggleDone,
   doneLabel = `Done set ${setNumber}`,
@@ -166,7 +192,6 @@ export function SetRow({
     'stepped',
     set.done ? null : 'planned',
     set.isWarmup ? 'warmup' : null,
-    marked ? 'marked' : null,
     barbell !== null && calculatorOpen ? 'calculating' : null,
   ]
     .filter((name) => name !== null)
@@ -180,6 +205,11 @@ export function SetRow({
             {amrapBadge}
           </span>
         )}
+        {set.isWarmup && (
+          <span className="warmup-badge" role="img" aria-label="Warm-up">
+            W
+          </span>
+        )}
       </span>
       <WeightField
         loadType={loadType}
@@ -188,16 +218,9 @@ export function SetRow({
         onChange={(weightKg) => onChange({ weightKg })}
         stepperSetNumber={setNumber}
       />
-      <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} stepperSetNumber={setNumber} />
-      <span className={set.done ? 'set-xp earned' : 'set-xp'}>
-        {previewXpLabel(preview)}
-        <span className="tiny">{previewNote(preview)}</span>
-        {record && (
-          <span className="record-chip" role="img" aria-label={recordChipLabel(record)}>
-            {recordChipText(record)}
-          </span>
-        )}
-      </span>
+      <div className="reps-field">
+        <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} />
+      </div>
       <button
         ref={doneButton}
         type="button"
@@ -208,38 +231,54 @@ export function SetRow({
       >
         <Icon name="check" size={20} strokeWidth={3} />
       </button>
-      <button
-        type="button"
-        className={`button done-toggle warmup-toggle ${set.isWarmup ? 'selected' : ''}`}
-        aria-pressed={set.isWarmup}
-        aria-label={`Warm-up set ${setNumber}`}
-        onClick={() => onChange({ isWarmup: !set.isWarmup })}
-      >
-        W
-      </button>
-      {marked && (
-        <span className="set-markers">
-          {markers.map((text) => (
-            <span key={text}>{text}</span>
-          ))}
-          {barbell !== null && (
-            <button
-              type="button"
-              className="plate-marker"
-              aria-expanded={calculatorOpen}
-              aria-controls={calculatorId}
-              aria-label={`${barbell.text}, plate calculator, set ${setNumber}`}
-              onClick={() => setCalculatorOpen((open) => !open)}
-            >
-              <PlateChips plates={barbell.plates} unit={unit} />
-              <span className="plate-text">{barbell.text}</span>
-              <span className="plate-toggle" aria-hidden="true">
-                {calculatorOpen ? '▴' : '▾'}
-              </span>
-            </button>
-          )}
+      {drop?.xpText && (
+        <span key={drop.key} className="xp-drop" aria-hidden="true">
+          {drop.xpText}
         </span>
       )}
+      <div className="set-info">
+        {marked && (
+          <span className="set-markers">
+            {markers.map((text) => (
+              <span key={text}>{text}</span>
+            ))}
+            {barbell !== null && (
+              <button
+                type="button"
+                className="plate-marker"
+                aria-expanded={calculatorOpen}
+                aria-controls={calculatorId}
+                aria-label={`${barbell.text}, plate calculator, set ${setNumber}`}
+                onClick={() => setCalculatorOpen((open) => !open)}
+              >
+                <PlateChips plates={barbell.plates} unit={unit} />
+                <span className="plate-text">{barbell.text}</span>
+                <span className="plate-toggle" aria-hidden="true">
+                  {calculatorOpen ? '▴' : '▾'}
+                </span>
+              </button>
+            )}
+          </span>
+        )}
+        {last !== null && (
+          <LastSet last={last} set={set} loadType={loadType} unit={unit} setNumber={setNumber} onChange={onChange} />
+        )}
+        <span className={set.done ? 'set-xp earned' : 'set-xp'}>
+          <span className="set-xp-line">
+            {previewXpLabel(preview)}
+            {record && (
+              <span
+                className={drop?.record ? 'record-chip pulse' : 'record-chip'}
+                role="img"
+                aria-label={recordChipLabel(record)}
+              >
+                {recordChipText(record)}
+              </span>
+            )}
+          </span>
+          <span className="tiny">{previewNote(preview)}</span>
+        </span>
+      </div>
       {barbell !== null && calculatorOpen && (
         <PlateCalculator
           id={calculatorId}
@@ -251,14 +290,24 @@ export function SetRow({
           onUse={(weightKg) => onChange({ weightKg })}
         />
       )}
-      <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
-        ✕
-      </button>
       <EffortSelector
         mode={effortMode}
         selected={set.effort}
         assumed={estimatedRir === null ? null : assumedEffort(effortMode, estimatedRir, DEFAULT_BALANCE.effortLevelRir)}
         onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}
+      />
+      <SetMenu
+        buttonRef={menuRef}
+        name={`${rowLabel} options`}
+        actions={[
+          {
+            label: 'Warm-up',
+            accessibleName: `Warm-up set ${setNumber}`,
+            pressed: set.isWarmup,
+            onChoose: () => onChange({ isWarmup: !set.isWarmup }),
+          },
+          { label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove },
+        ]}
       />
     </li>
   );
