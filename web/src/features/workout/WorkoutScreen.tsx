@@ -91,6 +91,8 @@ import {
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
+import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
+import { useOnboarding } from '../onboarding/use-onboarding.ts';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
@@ -273,6 +275,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const finishBar = useRef<HTMLDivElement>(null);
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
+  const onboarding = useOnboarding(userId, draft !== null);
+  const startButton = useRef<HTMLButtonElement>(null);
   const draftSessionId = draft?.sessionId ?? null;
   const [stateSessionId, setStateSessionId] = useState(draftSessionId);
   if (stateSessionId !== draftSessionId) {
@@ -469,6 +473,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     showProgramCache(await refreshProgramFactsOrCached(userId, enrollment));
   };
 
+  const startFreestyle = () => {
+    if (startingDay) return;
+    setStartNotice(null);
+    void startWorkout(startDraft).then((outcome) => setStartNotice(startNoticeText(outcome, 0)));
+  };
+
   if (!draft) {
     return (
       <main className="screen stack">
@@ -512,19 +522,28 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         />
         <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
         <button
+          ref={startButton}
           className="button primary big"
           type="button"
           disabled={startingDay}
-          onClick={() => {
-            setStartNotice(null);
-            void startWorkout(startDraft).then((outcome) => setStartNotice(startNoticeText(outcome, 0)));
-          }}
+          onClick={startFreestyle}
         >
           Start workout
         </button>
         <p className="muted" style={{ textAlign: 'center' }}>
           Freestyle: add exercises as you go.
         </p>
+        {onboarding.open && (
+          <FirstRunDialog
+            userId={userId}
+            onFinish={onboarding.finish}
+            onSkip={() => {
+              onboarding.finish();
+              requestAnimationFrame(() => startButton.current?.focus());
+            }}
+            onFreestyle={startFreestyle}
+          />
+        )}
       </main>
     );
   }

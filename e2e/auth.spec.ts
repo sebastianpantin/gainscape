@@ -39,6 +39,7 @@ async function registerThroughEmail(page: Page, username: string): Promise<strin
   await expect(page.getByText(/^Your username is /)).toContainText(`Your username is ${username}.`);
   await choosePassword(page, TEST_PASSWORD);
   await page.getByRole('button', { name: 'Save and continue' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Skip intro', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
   return link;
 }
