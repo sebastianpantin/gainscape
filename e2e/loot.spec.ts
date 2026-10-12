@@ -38,6 +38,7 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   for (const drop of drops) await expect(slot(page, drop.name).first()).toBeVisible();
 
   await grantItems(username, { rookie_belt: 1, grinder_scraps: 8 });
+  await page.reload();
   await openItems(page);
   await slot(page, 'Rookie belt').click();
   const details = page.getByRole('region', { name: 'Item details' });
