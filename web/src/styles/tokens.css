@@ -3,11 +3,14 @@
   --color-background: #241b13;
   --color-background-dots: #2f2419;
   --color-chrome: #2e251c;
+  --color-chrome-hover: #372d22;
   --color-panel: #3e3529;
   --color-panel-border: #5c4f3d;
   --color-panel-highlight: #5c4f3d;
+  --color-panel-border-highlight: #7a6a52;
   --color-panel-shade: #2a2219;
   --color-well: #1d160f;
+  --color-row-stripe: #352d23;
   --color-parchment: #d8c8a8;
   --color-parchment-shade: #b3a58c;
   --color-text: #f0e6d0;
@@ -15,6 +18,7 @@
   --color-text-faint: #b7ab96;
   --color-ink: #1d160f;
   --color-accent: #ffb000;
+  --color-accent-hover: #ffbb26;
   --color-accent-light: #ffd166;
   --color-accent-dark: #b87d00;
   --color-xp: #7fd46a;
@@ -23,9 +27,14 @@
   --color-rare: #78afe0;
   --color-danger: #ee918a;
   --color-danger-fill: #e0554b;
+  --color-danger-highlight: #f08a82;
   --color-focus: #ffe27a;
   --color-placeholder: #5e5442;
   --color-input-border: #000;
+  --color-input-icon: #6b5f4b;
+  --color-outline: #000;
+  --color-bevel: #000;
+  --color-track: #000;
   --color-plate-red: #d64541;
   --color-plate-blue: #3d7dd8;
   --color-plate-yellow: #f2c230;
@@ -35,20 +44,26 @@
   --color-art-rare: #6fa8dc;
   --color-art-danger: #e8827a;
 
+  --space-0-5: 2px;
   --space-1: 4px;
+  --space-1-5: 6px;
   --space-2: 8px;
+  --space-2-5: 10px;
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
 
   --font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
   --font-display: 'Pixelify Sans', 'IBM Plex Mono', ui-monospace, monospace;
-  --font-size-caption: 0.75rem;
-  --font-size-tiny: 0.8125rem;
-  --font-size-small: 0.85rem;
-  --font-size-body: 1rem;
-  --font-size-heading: 1.25rem;
-  --font-size-title: 2rem;
+  --font-size-2xs: 0.75rem;
+  --font-size-xs: 0.8125rem;
+  --font-size-sm: 0.85rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.1rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.4rem;
+  --font-size-3xl: 1.5rem;
+  --font-size-4xl: 2rem;
 
   --border-width: 2px;
   --radius: 0;
@@ -57,6 +72,6 @@
 
   --bevel: inset 2px 2px 0 var(--color-panel-highlight), inset -2px -2px 0 var(--color-panel-shade);
   --bevel-accent: inset 2px 2px 0 var(--color-accent-light), inset -3px -3px 0 var(--color-accent-dark);
-  --bevel-sunken: inset 2px 2px 0 #000;
-  --text-shadow: 2px 2px 0 #000;
+  --bevel-sunken: inset 2px 2px 0 var(--color-bevel);
+  --text-shadow: 2px 2px 0 var(--color-bevel);
 }
