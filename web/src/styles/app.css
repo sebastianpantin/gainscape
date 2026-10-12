@@ -2645,7 +2645,7 @@ button.back-link {
   align-items: center;
   gap: var(--space-1);
   margin: 0;
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -2676,7 +2676,7 @@ button.back-link {
 .history-record-badge {
   flex-shrink: 0;
   padding: 0 var(--space-1);
-  font-size: var(--font-size-tiny);
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--color-ink);
   background: var(--color-accent);
