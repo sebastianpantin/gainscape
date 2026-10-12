@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import { type OnboardingRecord } from './onboarding-rules.ts';
-
 export interface Release {
   version: string;
   date: string;
@@ -134,10 +132,15 @@ interface WhatsNewMoment {
   pathname: string;
   hasDraft: boolean;
   draftChangedDuringVisit: boolean;
-  onboarding: OnboardingRecord;
+  introPending: boolean;
 }
 
-export function whatsNewMayOpen({ pathname, hasDraft, draftChangedDuringVisit, onboarding }: WhatsNewMoment): boolean {
-  if (hasDraft || onboarding.status === 'absent' || pathname === '/reveal') return false;
+export function whatsNewMayOpen({
+  pathname,
+  hasDraft,
+  draftChangedDuringVisit,
+  introPending,
+}: WhatsNewMoment): boolean {
+  if (hasDraft || introPending || pathname === '/reveal') return false;
   return !(pathname === '/' && draftChangedDuringVisit);
 }
