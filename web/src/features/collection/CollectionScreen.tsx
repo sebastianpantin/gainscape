@@ -17,6 +17,7 @@ import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { ExerciseRecordCard } from './ExerciseRecordCard.tsx';
 import { messageOf } from '../../lib/error-text.ts';
 import { loadedState } from '../../lib/query-state-rules.ts';
+import { CollectionHeading } from './CollectionHeading.tsx';
 
 interface CollectionScreenProps {
   userId: string;
@@ -93,7 +94,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
 
   return (
     <main className="screen stack">
-      <h1 className="title">Collection log</h1>
+      <CollectionHeading tab="Records" />
       <CollectionTabs />
       {savedNotice && (
         <p className="notice" role="status">

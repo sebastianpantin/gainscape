@@ -215,9 +215,9 @@ test.describe('signed-in screens', () => {
 
     await checkScreens(page, [
       ['/skills', 'Skills'],
-      ['/collection', 'Collection log'],
-      ['/collection/items', 'Collection log'],
-      ['/collection/history', 'Collection log'],
+      ['/collection', 'Collection log: Records'],
+      ['/collection/items', 'Collection log: Items'],
+      ['/collection/history', 'Collection log: History'],
       [sessionPath!, null],
       [progressPath!, 'Barbell Bench Press'],
     ]);

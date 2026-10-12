@@ -40,3 +40,16 @@ test('opening a screen from a scrolled page starts it at the top', async ({ page
   await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
+
+test('each Collection tab focuses a heading that names the tab', async ({ page }) => {
+  await register(page, uniqueUsername('nav_tabs'));
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Collection', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection log: Records', exact: true })).toBeFocused();
+
+  const collectionTabs = page.getByRole('navigation', { name: 'Collection' });
+  await collectionTabs.getByRole('link', { name: 'Items' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection log: Items', exact: true })).toBeFocused();
+
+  await collectionTabs.getByRole('link', { name: 'History' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection log: History', exact: true })).toBeFocused();
+});

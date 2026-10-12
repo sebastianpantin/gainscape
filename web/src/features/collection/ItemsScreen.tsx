@@ -51,6 +51,7 @@ import { loadedState } from '../../lib/query-state-rules.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
+import { CollectionHeading } from './CollectionHeading.tsx';
 
 interface ChallengeStartProps {
   challenge: CatalogChallenge;
@@ -321,7 +322,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
 
   const header = (
     <>
-      <h1 className="title">Collection log</h1>
+      <CollectionHeading tab="Items" />
       <CollectionTabs />
     </>
   );
