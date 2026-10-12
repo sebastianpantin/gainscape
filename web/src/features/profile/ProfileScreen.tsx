@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { ageFrom, BODYWEIGHT_NUDGE_STEP, nudgedBodyweightKg, updatePrivateProfile } from '../../lib/profile.ts';
-import { bodyweightTrendQuery, collectionPercentQuery } from '../../lib/queries.ts';
+import { collectionPercentQuery } from '../../lib/queries.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
 import { formatHeight, formatWeight } from '../../lib/units.ts';
@@ -70,7 +71,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
       await updatePrivateProfile(userId, { bodyweightKg: draftKg });
       replace((current) => ({ ...current, bodyweightKg: draftKg }));
       setDraftKg(null);
-      void queryClient.invalidateQueries({ queryKey: bodyweightTrendQuery(userId).queryKey });
+      void announceDataChange(queryClient, 'profile-saved');
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your bodyweight.'));
     }

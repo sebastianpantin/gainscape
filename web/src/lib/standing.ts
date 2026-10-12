@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import {
   type CacheFirstLoad,
   cacheFirstNotice,
@@ -32,8 +32,12 @@ export type StandingState =
   | { status: 'failed'; problem: string }
   | { status: 'ready'; standing: Standing; notice: string | null };
 
+export function standingQuery(userId: string) {
+  return queryOptions({ queryKey: ['standing', userId] as const, queryFn: () => loadStanding(userId) });
+}
+
 export function useStanding(userId: string): StandingState {
-  const query = useQuery({ queryKey: ['standing', userId], queryFn: () => loadStanding(userId) });
+  const query = useQuery(standingQuery(userId));
   const state = loadedState(query.data, query.error);
   return state.status === 'ready'
     ? { status: 'ready', standing: state.data.loaded, notice: cacheFirstNotice(state.data, OFFLINE_SKILLS_NOTICE) }

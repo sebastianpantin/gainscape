@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { type CardioRecordCard, cardioRecordCards, holdRecordCards } from '../../lib/cardio-rules.ts';
 import { type Exercise, isCardioExercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { usePreferences } from '../../lib/preferences.ts';
@@ -35,6 +36,7 @@ export function CollectionTabs() {
 
 export function CollectionScreen({ userId }: CollectionScreenProps) {
   const collection = useQuery(collectionQuery(userId));
+  const queryClient = useQueryClient();
   const [problem, setProblem] = useState<string | null>(null);
   const { unitPref } = usePreferences();
 
@@ -52,7 +54,8 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
 
   const { exercises, data } = loaded.data.loaded;
   const savedNotice = cacheFirstNotice(loaded.data, OFFLINE_COLLECTION_NOTICE);
-  const reload = async () => {
+  const reloadPins = async () => {
+    void announceDataChange(queryClient, 'pins-changed');
     const result = await collection.refetch();
     if (result.isError) setProblem(result.error.message);
   };
@@ -64,7 +67,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     try {
       if (data.pinnedExerciseIds.includes(exercise.id)) await unpinExercise(exercise.id);
       else await pinExercise(exercise.id, data.nextPinPosition);
-      await reload();
+      await reloadPins();
     } catch (error) {
       setProblem(messageOf(error, 'Could not update pins.'));
     }
@@ -77,7 +80,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     if (from < 0 || to < 0 || to >= pinned.length) return;
     try {
       await reorderPins(moved(pinned, from, offset));
-      await reload();
+      await reloadPins();
     } catch (error) {
       setProblem(messageOf(error, 'Could not reorder pins.'));
     }

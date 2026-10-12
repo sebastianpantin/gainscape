@@ -10,6 +10,7 @@ import { AuthScreen } from './features/auth/AuthScreen.tsx';
 import { WhatsNewSheet } from './features/whats-new/WhatsNewSheet.tsx';
 import { ActiveWorkoutBar } from './features/workout/ActiveWorkoutBar.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
+import { useDataChangeInvalidation } from './lib/data-changes.ts';
 import { createQueryClient } from './lib/query-client.ts';
 import { parseAuthCallback } from './lib/auth-links.ts';
 import { useAuthSession } from './lib/use-auth-session.ts';
@@ -94,6 +95,7 @@ export function App() {
 function Screens() {
   const auth = useAuthSession();
   const queryClient = useQueryClient();
+  useDataChangeInvalidation();
   const signedInUserId = auth.status === 'signed-in' ? auth.session.user.id : null;
   useEffect(() => setUpdateUser(signedInUserId), [signedInUserId]);
   useEffect(() => {

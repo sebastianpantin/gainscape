@@ -12,6 +12,7 @@ import {
   saveBlob,
 } from '../../lib/account.ts';
 import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { GLOSSARY } from '../../lib/glossary.ts';
 import { type BarbellSetup, HEAVIEST_BAR_OR_PLATE, isUsableBarOrPlate, PLATE_CHOICES } from '../../lib/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../lib/plate-settings-store.ts';
@@ -349,6 +350,7 @@ function WeeklyGoalSection() {
       const saved = await fetchWeeklyGoalStatus(new AbortController().signal);
       await queryClient.cancelQueries({ queryKey: weeklyGoalQuery.queryKey });
       queryClient.setQueryData(weeklyGoalQuery.queryKey, saved);
+      void announceDataChange(queryClient, 'weekly-goal-saved');
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your weekly goal.'));
     } finally {
@@ -404,6 +406,7 @@ function allTimezones(): string[] {
 }
 
 function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {
+  const queryClient = useQueryClient();
   const [candidate, setCandidate] = useState(profile.timezone);
   const [message, setMessage] = useState<{ kind: 'problem' | 'status'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -420,6 +423,7 @@ function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {
     setBusy(false);
     if (result.ok) {
       onSaved((current) => ({ ...current, timezone: candidate, timezoneChangedAt: new Date().toISOString() }));
+      void announceDataChange(queryClient, 'timezone-changed');
       setMessage({ kind: 'status', text: `Time zone changed to ${candidate}.` });
     } else if (result.reason === 'too_soon') {
       onSaved((current) => ({ ...current, timezoneChangedAt: cooldownStartFor(result.nextAllowedAt) }));
