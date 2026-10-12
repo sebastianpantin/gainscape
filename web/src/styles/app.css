@@ -1580,6 +1580,7 @@ body:has(.active-workout-bar) .screen {
 }
 
 .rest-timer {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -1634,9 +1635,9 @@ body:has(.active-workout-bar) .screen {
 
 .rest-progress {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: calc(var(--space-3) * -1);
+  left: calc(var(--space-3) * -1);
+  right: calc(var(--space-3) * -1);
   height: var(--space-1);
   background: var(--color-well);
 }
