@@ -1,7 +1,16 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodePng } from '../../scripts/icons/png.ts';
+import { SCREENSHOT_MAX_BYTES, SCREENSHOT_SIZE } from '../../scripts/screenshots/screens.ts';
+import { APP_TITLE, routeTitle } from '../../web/src/lib/route-title-rules.ts';
+
+const shortcutIcon = { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' };
+const narrowScreenshot = {
+  sizes: `${SCREENSHOT_SIZE.width}x${SCREENSHOT_SIZE.height}`,
+  type: 'image/png',
+  form_factor: 'narrow',
+};
 
 const webDir = join(import.meta.dirname, '../../web');
 const manifest = JSON.parse(readFileSync(join(webDir, 'public/manifest.webmanifest'), 'utf8'));
@@ -26,7 +35,34 @@ describe('web manifest', () => {
         { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
+      shortcuts: [
+        { name: 'Start workout', short_name: 'Train', url: '/', icons: [shortcutIcon] },
+        { name: 'Program', url: '/programs/active', icons: [shortcutIcon] },
+        { name: 'Skills', url: '/skills', icons: [shortcutIcon] },
+      ],
+      screenshots: [
+        { ...narrowScreenshot, src: '/screenshots/train.png', label: 'Logging a workout' },
+        { ...narrowScreenshot, src: '/screenshots/skills.png', label: 'Skills and levels' },
+        { ...narrowScreenshot, src: '/screenshots/collection.png', label: 'Personal records' },
+      ],
     });
+  });
+
+  it('points shortcuts at app routes and at a generated icon', () => {
+    for (const shortcut of manifest.shortcuts as { url: string; icons: { src: string }[] }[]) {
+      expect(routeTitle(shortcut.url)).not.toBe(APP_TITLE);
+      for (const icon of shortcut.icons) expect(existsSync(join(webDir, 'public', icon.src))).toBe(true);
+    }
+  });
+
+  it('points at small narrow screenshots whose PNG size matches sizes', () => {
+    for (const screenshot of manifest.screenshots as { src: string; sizes: string }[]) {
+      const path = join(webDir, 'public', screenshot.src);
+      expect(existsSync(path), screenshot.src).toBe(true);
+      expect(statSync(path).size, screenshot.src).toBeLessThan(SCREENSHOT_MAX_BYTES);
+      const { width, height } = decodePng(readFileSync(path));
+      expect(`${width}x${height}`).toBe(screenshot.sizes);
+    }
   });
 
   it('points at icon files whose PNG size matches sizes', () => {
