@@ -100,6 +100,7 @@ import { lastSetForRow } from './last-set-rules.ts';
 import { ExerciseMenu } from './ExerciseMenu.tsx';
 import { ExerciseNote } from './ExerciseNote.tsx';
 import { ExercisePicker } from './ExercisePicker.tsx';
+import { NotifyPrompt } from './NotifyPrompt.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { useActiveProgram } from '../programs/use-active-program.ts';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
@@ -1082,7 +1083,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         onChange={(sessionRpe) => changeDraft(withSessionRpe(draft, sessionRpe))}
       />
       <div ref={finishBar} className="finish-bar" tabIndex={-1}>
-        <RestTimerBar {...rest} focusAfterStop={finishButton} focusFallback={finishBar} />
+        <RestTimerBar
+          {...rest}
+          focusAfterStop={finishButton}
+          focusFallback={finishBar}
+          prompt={(moveFocusOn) => <NotifyPrompt userId={userId} onAnswered={moveFocusOn} />}
+        />
         {finishProblem && (
           <p className="problem" role="alert">
             {finishProblem}

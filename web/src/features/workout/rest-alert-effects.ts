@@ -48,8 +48,12 @@ export function vibrateRestOver(): void {
   vibrate(VIBRATION_PATTERN_MS);
 }
 
+export function notificationPermission(): NotificationPermission | 'unsupported' {
+  return typeof Notification === 'undefined' ? 'unsupported' : Notification.permission;
+}
+
 export function notificationsAllowed(): boolean {
-  return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  return notificationPermission() === 'granted';
 }
 
 export async function askToNotify(): Promise<boolean> {
