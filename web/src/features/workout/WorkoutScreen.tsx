@@ -142,8 +142,8 @@ import {
   syncProblemText,
   WAITING_DRAFT_TEXT,
 } from './workout-rules.ts';
+import { vibrate } from '../../lib/device-effects.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
-import { vibrate } from './rest-alert-effects.ts';
 import { feedbackLabel, setFeedback, type ShownSetDrop, XP_DROP_MS } from './set-feedback-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
 

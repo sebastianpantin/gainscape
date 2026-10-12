@@ -66,3 +66,12 @@ export interface NotifyPromptFacts {
 export function offersNotifyPrompt(facts: NotifyPromptFacts): boolean {
   return facts.standalone && facts.permission === 'default' && !facts.notifyOn && !facts.answered;
 }
+
+export type LevelUpCue = 'vibrate' | 'sound';
+
+export function levelUpCues(settings: TrainingDeviceSettings): LevelUpCue[] {
+  const cues: LevelUpCue[] = [];
+  if (settings.vibrate) cues.push('vibrate');
+  if (settings.sound) cues.push('sound');
+  return cues;
+}

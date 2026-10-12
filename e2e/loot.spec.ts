@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { finishWorkout, logBench, logExercise, openTab, register, setRow } from './support/app.ts';
+import { finishWorkout, logBench, logExercise, openLoot, openTab, register, setRow } from './support/app.ts';
 import { activeDropCount, activeDropsOfLatestSession, grantItems } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
 
@@ -23,7 +23,7 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
     .poll(async () => (await activeDropsOfLatestSession(username)).some((drop) => drop.source === 'pr'))
     .toBe(true);
   const drops = await activeDropsOfLatestSession(username);
-  const loot = page.getByRole('region', { name: 'Loot' });
+  const loot = await openLoot(page);
   await expect(loot.getByRole('listitem')).toHaveCount(drops.length);
   await expect(loot.getByRole('listitem').filter({ has: page.getByText('PR', { exact: true }) })).toHaveCount(
     drops.filter((drop) => drop.source === 'pr').length,

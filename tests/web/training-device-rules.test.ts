@@ -3,6 +3,7 @@ import {
   DEFAULT_TRAINING_DEVICE_SETTINGS,
   holdsWakeLock,
   offersNotifyPrompt,
+  levelUpCues,
   parseTrainingDeviceSettings,
   restAlertActions,
   restAlertDelayMs,
@@ -143,5 +144,17 @@ describe('notification prompt', () => {
 
   it('never asks again when storage is blocked rather than asking every rest', () => {
     expect(notifyPromptAnswered(null, userId)).toBe(true);
+  });
+});
+
+describe('levelUpCues', () => {
+  it('vibrates and chimes with the default settings', () => {
+    expect(levelUpCues(DEFAULT_TRAINING_DEVICE_SETTINGS)).toEqual(['vibrate', 'sound']);
+  });
+
+  it('follows the vibrate and sound switches and ignores notifications', () => {
+    const quiet = { ...DEFAULT_TRAINING_DEVICE_SETTINGS, sound: false, notify: true };
+    expect(levelUpCues(quiet)).toEqual(['vibrate']);
+    expect(levelUpCues({ ...quiet, vibrate: false })).toEqual([]);
   });
 });
