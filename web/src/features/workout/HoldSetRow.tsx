@@ -6,6 +6,7 @@ import type { HoldValues } from '../../lib/exercise-edit-rules.ts';
 import type { UnitPref } from '../../lib/profile.ts';
 import type { HoldDraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
+import { SetMenu } from './SetMenu.tsx';
 import { WeightField } from './SetRow.tsx';
 import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
 import type { ShownSetDrop } from './set-feedback-rules.ts';
@@ -111,9 +112,10 @@ export function HoldSetRow({
           {drop.xpText}
         </span>
       )}
-      <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
-        ✕
-      </button>
+      <SetMenu
+        name={`Set ${setNumber} options`}
+        actions={[{ label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove }]}
+      />
       <EffortSelector
         mode="level"
         selected={set.effort}

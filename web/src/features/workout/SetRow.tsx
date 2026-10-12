@@ -12,7 +12,6 @@ import {
   LOWEST_REPS,
   shownWeight,
   type StepDirection,
-  steppedReps,
   steppedWeight,
   unitToKg,
   WEIGHT_STEPPER_STEP,
@@ -23,6 +22,7 @@ import type { DraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
+import { SetMenu } from './SetMenu.tsx';
 import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
 import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
@@ -107,11 +107,10 @@ export function WeightField({ loadType, weightKg, unit, onChange, stepperSetNumb
 interface RepsFieldProps {
   reps: number;
   onChange: (reps: number) => void;
-  stepperSetNumber?: number;
 }
 
-export function RepsField({ reps, onChange, stepperSetNumber }: RepsFieldProps) {
-  const field = (
+export function RepsField({ reps, onChange }: RepsFieldProps) {
+  return (
     <NumberTextField
       label="reps"
       value={reps}
@@ -120,17 +119,6 @@ export function RepsField({ reps, onChange, stepperSetNumber }: RepsFieldProps) 
       wholeNumber
       onCommit={onChange}
     />
-  );
-  if (stepperSetNumber === undefined) return field;
-  return (
-    <Stepper
-      className="reps-field"
-      lowerLabel={`One rep fewer, set ${stepperSetNumber}`}
-      higherLabel={`One more rep, set ${stepperSetNumber}`}
-      onStep={(direction) => onChange(steppedReps(reps, direction))}
-    >
-      {field}
-    </Stepper>
   );
 }
 
@@ -183,6 +171,11 @@ export function SetRow({
             {amrapBadge}
           </span>
         )}
+        {set.isWarmup && (
+          <span className="warmup-badge" role="img" aria-label="Warm-up">
+            W
+          </span>
+        )}
       </span>
       <WeightField
         loadType={loadType}
@@ -191,20 +184,9 @@ export function SetRow({
         onChange={(weightKg) => onChange({ weightKg })}
         stepperSetNumber={setNumber}
       />
-      <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} stepperSetNumber={setNumber} />
-      <span className={set.done ? 'set-xp earned' : 'set-xp'}>
-        {previewXpLabel(preview)}
-        <span className="tiny">{previewNote(preview)}</span>
-        {record && (
-          <span
-            className={drop?.record ? 'record-chip pulse' : 'record-chip'}
-            role="img"
-            aria-label={recordChipLabel(record)}
-          >
-            {recordChipText(record)}
-          </span>
-        )}
-      </span>
+      <div className="reps-field">
+        <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} />
+      </div>
       <button
         ref={doneButton}
         type="button"
@@ -220,15 +202,6 @@ export function SetRow({
           {drop.xpText}
         </span>
       )}
-      <button
-        type="button"
-        className={`button done-toggle warmup-toggle ${set.isWarmup ? 'selected' : ''}`}
-        aria-pressed={set.isWarmup}
-        aria-label={`Warm-up set ${setNumber}`}
-        onClick={() => onChange({ isWarmup: !set.isWarmup })}
-      >
-        W
-      </button>
       {marked && (
         <span className="set-markers">
           {markers.map((text) => (
@@ -252,6 +225,33 @@ export function SetRow({
           )}
         </span>
       )}
+      <span className={set.done ? 'set-xp earned' : 'set-xp'}>
+        <span className="set-xp-line">
+          {previewXpLabel(preview)}
+          {record && (
+            <span
+              className={drop?.record ? 'record-chip pulse' : 'record-chip'}
+              role="img"
+              aria-label={recordChipLabel(record)}
+            >
+              {recordChipText(record)}
+            </span>
+          )}
+        </span>
+        <span className="tiny">{previewNote(preview)}</span>
+      </span>
+      <SetMenu
+        name={`${rowLabel} options`}
+        actions={[
+          {
+            label: 'Warm-up',
+            accessibleName: `Warm-up set ${setNumber}`,
+            pressed: set.isWarmup,
+            onChoose: () => onChange({ isWarmup: !set.isWarmup }),
+          },
+          { label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove },
+        ]}
+      />
       {barbell !== null && calculatorOpen && (
         <PlateCalculator
           id={calculatorId}
@@ -263,9 +263,6 @@ export function SetRow({
           onUse={(weightKg) => onChange({ weightKg })}
         />
       )}
-      <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
-        ✕
-      </button>
       <EffortSelector
         mode={effortMode}
         selected={set.effort}

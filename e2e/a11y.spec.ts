@@ -68,9 +68,10 @@ async function checkEffortTargets(page: Page) {
     await expectTouchTargets(page);
     await expectRemoveSetButtonsStandApart(page);
     await bench
-      .getByRole('button', { name: /^Remove set/ })
+      .getByRole('button', { name: /^Set \d+ options$/ })
       .last()
       .click();
+    await bench.getByRole('button', { name: /^Remove set/ }).click();
   }
 }
 

@@ -34,7 +34,7 @@ export function NumberTextField({
   const shown = shownNumberText(typed, value);
   return (
     <label className="compact-field">
-      {label}
+      <span className="field-caption">{label}</span>
       <input
         type="text"
         role="spinbutton"

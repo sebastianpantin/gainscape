@@ -32,7 +32,7 @@ test('weight and reps can be cleared and retyped, with a comma as the decimal se
   await expect(weight).toHaveValue('65');
 
   await reps.fill('');
-  await row.getByRole('button', { name: 'One more rep, set 1' }).click();
+  await reps.press('ArrowUp');
   await expect(reps).toHaveValue('11');
 
   await page.reload();

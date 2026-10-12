@@ -4,6 +4,7 @@ import type { UnitPref } from '../../lib/profile.ts';
 import type { CardioDraftSet } from '../../offline/draft-format.ts';
 import { BoutFields, BoutModeToggle } from './BoutFields.tsx';
 import { CardioEffortSelector } from './CardioEffortSelector.tsx';
+import { SetMenu } from './SetMenu.tsx';
 import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
@@ -52,9 +53,12 @@ export function CardioSetRow({
         </span>
       )}
       <BoutModeToggle boutNumber={boutNumber} bout={bout} onChange={onChange} />
-      <button type="button" className="button icon" aria-label={`Remove bout ${boutNumber}`} onClick={onRemove}>
-        ✕
-      </button>
+      <SetMenu
+        name={`Bout ${boutNumber} options`}
+        actions={[
+          { label: 'Remove bout', accessibleName: `Remove bout ${boutNumber}`, danger: true, onChoose: onRemove },
+        ]}
+      />
       <CardioEffortSelector
         selected={bout.effort}
         onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}

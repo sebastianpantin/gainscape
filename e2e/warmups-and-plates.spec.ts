@@ -6,11 +6,13 @@ import {
   finishWorkout,
   logExercise,
   openFromProfile,
+  openSetOptions,
   openTab,
   register,
   setRow,
   setRows,
   uniqueUsername,
+  warmupBadge,
 } from './support/app.ts';
 import { warmupFlagsOfLatestSession } from './support/db.ts';
 
@@ -27,13 +29,20 @@ test('a set flagged as a warm-up is stored as a warm-up and earns no XP', async 
     { weightKg: 60, reps: 5 },
   ]);
   const warmup = setRow(exerciseCard(page, 'Barbell Bench Press'), 1);
-  const toggle = warmup.getByRole('button', { name: 'Warm-up set 1', exact: true });
   const restTimer = page.getByRole('region', { name: 'Rest timer' });
   await warmup.getByRole('button', { name: 'Done set 1' }).click();
   await warmup.getByRole('button', { name: 'Done set 1' }).click();
   await expect(restTimer).toBeVisible();
+  await openSetOptions(warmup, 1);
+  const toggle = warmup.getByRole('button', { name: 'Warm-up set 1', exact: true });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await toggle.click();
+  await expect(toggle).toBeHidden();
+  await expect(warmupBadge(warmup)).toBeVisible();
+  await openSetOptions(warmup, 1);
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+  await expect(toggle).toBeHidden();
   await expect(restTimer).toHaveCount(0);
   await expect(warmup.getByText('warm-up', { exact: true })).toBeVisible();
 
@@ -64,7 +73,7 @@ test('warm-ups ramp from the bar to the first working set of a barbell lift', as
     const row = setRow(squat, index + 1);
     await expect(weightOf(row), `warm-up ${index + 1} weight`).toHaveValue(weight);
     await expect(row.getByRole('spinbutton', { name: 'reps', exact: true })).toHaveValue(reps);
-    await expect(row.getByRole('button', { name: `Warm-up set ${index + 1}` })).toHaveAttribute('aria-pressed', 'true');
+    await expect(warmupBadge(row), `warm-up ${index + 1} flag`).toBeVisible();
     await expect(row.getByRole('button', { name: `Done set ${index + 1}` })).toHaveAttribute('aria-pressed', 'false');
   }
   await expect(weightOf(setRow(squat, 5))).toHaveValue('100');
@@ -79,15 +88,15 @@ test('a lift with no ramp to build still offers one warm-up set to edit', async 
   await squat.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
   await expect(setRows(squat)).toHaveCount(2);
   await expect(weightOf(setRow(squat, 1))).toHaveValue('20');
-  await expect(squat.getByRole('button', { name: 'Warm-up set 1' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(warmupBadge(setRow(squat, 1))).toBeVisible();
 
   const curl = await addExercise(page, 'dumbbell curl', 'Dumbbell Curl');
   await weightOf(setRow(curl, 1)).fill('12');
   await curl.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
   await expect(setRows(curl)).toHaveCount(2);
   await expect(weightOf(setRow(curl, 1))).toHaveValue('12');
-  await expect(curl.getByRole('button', { name: 'Warm-up set 1' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(curl.getByRole('button', { name: 'Warm-up set 2' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(warmupBadge(setRow(curl, 1))).toBeVisible();
+  await expect(warmupBadge(setRow(curl, 2))).toHaveCount(0);
   await expect(curl.getByRole('button', { name: '+ Add warm-ups' })).toHaveCount(0);
 });
 

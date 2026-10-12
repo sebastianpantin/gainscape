@@ -1,6 +1,15 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { finishWorkout, logExercise, openLatestWorkout, openTab, register, uniqueUsername } from './support/app.ts';
+import {
+  finishWorkout,
+  logExercise,
+  openLatestWorkout,
+  openSetOptions,
+  openTab,
+  register,
+  setRow,
+  uniqueUsername,
+} from './support/app.ts';
 
 const BENCH = 'Barbell Bench Press';
 
@@ -20,7 +29,9 @@ test('the progress screen charts e1RM and top set without warm-ups and lists rep
     { weightKg: 100, reps: 1 },
     { weightKg: 60, reps: 5 },
   ]);
-  await page.getByRole('button', { name: 'Warm-up set 1', exact: true }).click();
+  const firstSet = setRow(page, 1);
+  await openSetOptions(firstSet, 1);
+  await firstSet.getByRole('button', { name: 'Warm-up set 1', exact: true }).click();
   await finishWorkout(page);
 
   await openTab(page, 'Train');
