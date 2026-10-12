@@ -10,10 +10,12 @@ import '@fontsource/pixelify-sans/500.css';
 import '@fontsource/pixelify-sans/600.css';
 import '@fontsource/pixelify-sans/700.css';
 import { App } from './App.tsx';
+import { reloadOnChunkLoadError } from './pwa/chunk-reload.ts';
 import { registerServiceWorker } from './pwa/register-service-worker.ts';
 import './styles/tokens.css';
 import './styles/app.css';
 
+reloadOnChunkLoadError();
 registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
