@@ -16,14 +16,16 @@ interface NotifyPromptProps {
 }
 
 export function NotifyPrompt({ userId, onAnswered }: NotifyPromptProps) {
-  const [answered, setAnswered] = useState(() => notifyPromptAnswered(deviceStorage(), userId));
-  const offered = offersNotifyPrompt({
-    standalone: runsStandalone(),
-    permission: notificationPermission(),
-    notifyOn: readTrainingDeviceSettings(deviceStorage(), userId).notify,
-    answered,
-  });
-  if (!offered) return null;
+  const [offered] = useState(() =>
+    offersNotifyPrompt({
+      standalone: runsStandalone(),
+      permission: notificationPermission(),
+      notifyOn: readTrainingDeviceSettings(deviceStorage(), userId).notify,
+      answered: notifyPromptAnswered(deviceStorage(), userId),
+    }),
+  );
+  const [answered, setAnswered] = useState(false);
+  if (!offered || answered) return null;
 
   const answer = () => {
     answerNotifyPrompt(deviceStorage(), userId);
