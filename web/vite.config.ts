@@ -13,6 +13,16 @@ const supabaseProxy = {
   '/sb': { target: localSupabaseApi, changeOrigin: true, rewrite: (path: string) => path.replace(/^\/sb/, '') },
 };
 
+const VENDOR_CHUNKS = [
+  {
+    name: 'vendor-react',
+    test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler|cookie|set-cookie-parser)[\\/]/,
+  },
+  { name: 'vendor-supabase', test: /node_modules[\\/]@supabase[\\/]/ },
+  { name: 'vendor-query', test: /node_modules[\\/]@tanstack[\\/]/ },
+  { name: 'vendor-zod', test: /node_modules[\\/]zod[\\/]/ },
+];
+
 function appBuild(): string {
   try {
     const commit = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
@@ -43,5 +53,9 @@ export default defineConfig({
     strictPort: true,
     proxy: supabaseProxy,
   },
-  build: { outDir: 'dist', emptyOutDir: true },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rolldownOptions: { output: { codeSplitting: { groups: VENDOR_CHUNKS } } },
+  },
 });
