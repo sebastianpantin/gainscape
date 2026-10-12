@@ -55,3 +55,14 @@ export function restAlertActions(
 export function holdsWakeLock(state: { keepAwake: boolean; workoutOpen: boolean; visible: boolean }): boolean {
   return state.keepAwake && state.workoutOpen && state.visible;
 }
+
+export interface NotifyPromptFacts {
+  standalone: boolean;
+  permission: NotificationPermission | 'unsupported';
+  notifyOn: boolean;
+  answered: boolean;
+}
+
+export function offersNotifyPrompt(facts: NotifyPromptFacts): boolean {
+  return facts.standalone && facts.permission === 'default' && !facts.notifyOn && !facts.answered;
+}

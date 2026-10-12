@@ -43,10 +43,34 @@ export function claimRestAlert(storage: Storage | null, userId: string, endsAt: 
   return true;
 }
 
+const NOTIFY_PROMPT_KEY_PREFIX = 'gainscape.notify-prompt.';
+const NOTIFY_PROMPT_ANSWERED = 'answered';
+
+function notifyPromptKey(userId: string): string {
+  return `${NOTIFY_PROMPT_KEY_PREFIX}${userId}`;
+}
+
+export function notifyPromptAnswered(storage: Storage | null, userId: string): boolean {
+  try {
+    return storage === null || storage.getItem(notifyPromptKey(userId)) === NOTIFY_PROMPT_ANSWERED;
+  } catch {
+    return true;
+  }
+}
+
+export function answerNotifyPrompt(storage: Storage | null, userId: string): void {
+  try {
+    storage?.setItem(notifyPromptKey(userId), NOTIFY_PROMPT_ANSWERED);
+  } catch {
+    return;
+  }
+}
+
 export function forgetTrainingDevice(storage: Storage | null, userId: string): void {
   try {
     storage?.removeItem(trainingDeviceKey(userId));
     storage?.removeItem(restAlertedKey(userId));
+    storage?.removeItem(notifyPromptKey(userId));
   } catch {
     return;
   }
