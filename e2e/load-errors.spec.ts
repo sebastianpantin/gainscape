@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { type Locator, type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import {
@@ -11,15 +10,13 @@ import {
   register,
   uniqueUsername,
 } from './support/app.ts';
-import { builtInExerciseId, grantItems } from './support/db.ts';
+import { builtInExerciseId, grantItems, seedWorkouts } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
 import { failRequests, restTable, rpc } from './support/network.ts';
-import { db } from '../tests/integration/local-stack.ts';
 
 const HISTORY_PAGE_SIZE = 50;
 const SEEDED_WORKOUTS = HISTORY_PAGE_SIZE + 5;
 const OLDEST_WORKOUT_NOTE = 'oldest seeded workout';
-const MINUTE_MS = 60 * 1000;
 
 function loadoutPanel(page: Page): Locator {
   return page.getByRole('region', { name: 'Loadout' });
@@ -34,31 +31,10 @@ async function openHistory(page: Page) {
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
 }
 
-async function seedWorkouts(username: string, count: number): Promise<void> {
-  const [profile] = await db`select id from public.profiles where username = ${username}`;
-  const newest = Date.now() - 2 * 60 * MINUTE_MS;
-  const rows = Array.from({ length: count }, (_, index) => {
-    const startedAt = new Date(newest - index * 30 * MINUTE_MS).toISOString();
-    return {
-      id: randomUUID(),
-      user_id: profile.id,
-      started_at: startedAt,
-      ended_at: startedAt,
-      local_date: startedAt.slice(0, 10),
-      timezone: 'UTC',
-      balance_version: 2,
-      derived_balance_version: 2,
-      notes: index === count - 1 ? OLDEST_WORKOUT_NOTE : null,
-      summary: db.json({ xpBySkill: {}, levelUps: [], prs: [], drops: [] }),
-    };
-  });
-  await db`insert into public.sessions ${db(rows)}`;
-}
-
 async function registerWithWorkouts(page: Page, prefix: string): Promise<void> {
   const username = uniqueUsername(prefix);
   await register(page, username);
-  await seedWorkouts(username, SEEDED_WORKOUTS);
+  await seedWorkouts(username, SEEDED_WORKOUTS, OLDEST_WORKOUT_NOTE);
   await openHistory(page);
   await expect(workoutLinks(page)).toHaveCount(HISTORY_PAGE_SIZE);
 }
