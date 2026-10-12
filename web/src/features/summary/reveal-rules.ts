@@ -128,6 +128,21 @@ export interface RevealShape {
   hasRecords: boolean;
 }
 
+export function playsReveal(summary: Pick<SessionSummary, 'historyOnly'> | null): boolean {
+  return summary !== null && !summary.historyOnly;
+}
+
+export function skipsRevealOnKey({
+  key,
+  onInteractiveElement,
+}: {
+  key: string;
+  onInteractiveElement: boolean;
+}): boolean {
+  if (key === 'Escape') return true;
+  return key === 'Enter' && !onInteractiveElement;
+}
+
 export function revealShape(
   summary: Pick<SessionSummary, 'historyOnly' | 'xpBySkill' | 'levelUps' | 'prs'> | null,
 ): RevealShape {
