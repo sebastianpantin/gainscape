@@ -4,6 +4,7 @@ import type { UnitPref } from '../../lib/profile.ts';
 import type { CardioDraftSet } from '../../offline/draft-format.ts';
 import { BoutFields, BoutModeToggle } from './BoutFields.tsx';
 import { CardioEffortSelector } from './CardioEffortSelector.tsx';
+import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface CardioSetRowProps {
@@ -12,6 +13,7 @@ interface CardioSetRowProps {
   paceUnit: PaceUnit;
   tracksDistance: boolean;
   preview: SetPreview;
+  drop: ShownSetDrop | null;
   unit: UnitPref;
   onChange: (changes: Partial<Omit<CardioDraftSet, 'id' | 'kind'>>) => void;
   onRemove: () => void;
@@ -24,6 +26,7 @@ export function CardioSetRow({
   paceUnit,
   tracksDistance,
   preview,
+  drop,
   unit,
   onChange,
   onRemove,
@@ -43,6 +46,11 @@ export function CardioSetRow({
       >
         <Icon name="check" size={20} strokeWidth={3} />
       </button>
+      {drop?.xpText && (
+        <span key={drop.key} className="xp-drop" aria-hidden="true">
+          {drop.xpText}
+        </span>
+      )}
       <BoutModeToggle boutNumber={boutNumber} bout={bout} onChange={onChange} />
       <button type="button" className="button icon" aria-label={`Remove bout ${boutNumber}`} onClick={onRemove}>
         ✕

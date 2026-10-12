@@ -24,6 +24,7 @@ import { EffortSelector } from './EffortSelector.tsx';
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
 import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
+import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface SetRowProps {
@@ -32,6 +33,7 @@ interface SetRowProps {
   set: DraftSet;
   preview: SetPreview;
   record: PreviewRecord | null;
+  drop: ShownSetDrop | null;
   unit: UnitPref;
   effortMode: EffortInputMode;
   markers: readonly string[];
@@ -138,6 +140,7 @@ export function SetRow({
   set,
   preview,
   record,
+  drop,
   unit,
   effortMode,
   markers,
@@ -193,7 +196,11 @@ export function SetRow({
         {previewXpLabel(preview)}
         <span className="tiny">{previewNote(preview)}</span>
         {record && (
-          <span className="record-chip" role="img" aria-label={recordChipLabel(record)}>
+          <span
+            className={drop?.record ? 'record-chip pulse' : 'record-chip'}
+            role="img"
+            aria-label={recordChipLabel(record)}
+          >
             {recordChipText(record)}
           </span>
         )}
@@ -208,6 +215,11 @@ export function SetRow({
       >
         <Icon name="check" size={20} strokeWidth={3} />
       </button>
+      {drop?.xpText && (
+        <span key={drop.key} className="xp-drop" aria-hidden="true">
+          {drop.xpText}
+        </span>
+      )}
       <button
         type="button"
         className={`button done-toggle warmup-toggle ${set.isWarmup ? 'selected' : ''}`}
