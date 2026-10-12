@@ -199,6 +199,18 @@ describe('parsedDecimal', () => {
   it('is null for a blank or unreadable text', () => {
     for (const raw of ['', '  ', '-', 'abc', '6,2,5']) expect(parsedDecimal(raw)).toBeNull();
   });
+
+  it('is null for hex, binary, exponent and grouped numbers that Number would read', () => {
+    for (const raw of ['0x10', '0b11', '0o7', '1e2', '1.234,5', 'Infinity', '+5']) {
+      expect(parsedDecimal(raw), raw).toBeNull();
+    }
+  });
+
+  it('keeps reading a leading minus and a leading decimal separator', () => {
+    expect(parsedDecimal('-12.5')).toBe(-12.5);
+    expect(parsedDecimal('.5')).toBe(0.5);
+    expect(parsedDecimal(',5')).toBe(0.5);
+  });
 });
 
 describe('typedNumberWithin', () => {
