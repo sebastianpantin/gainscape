@@ -14,6 +14,7 @@ import { useDataChangeInvalidation } from './lib/data-changes.ts';
 import { createQueryClient } from './lib/query-client.ts';
 import { parseAuthCallback } from './lib/auth-links.ts';
 import { useAuthSession } from './lib/use-auth-session.ts';
+import { useRouteFocusAndTitle } from './lib/use-route-focus.ts';
 import { OfflineBanner } from './pwa/OfflineBanner.tsx';
 import { setUpdateUser } from './pwa/register-service-worker.ts';
 import { UpdateBanner } from './pwa/UpdateBanner.tsx';
@@ -92,6 +93,11 @@ export function App() {
   );
 }
 
+function RouteFocusAndTitle() {
+  useRouteFocusAndTitle();
+  return null;
+}
+
 function Screens() {
   const auth = useAuthSession();
   const queryClient = useQueryClient();
@@ -122,6 +128,7 @@ function Screens() {
   return (
     <PreferencesProvider key={userId} userId={userId}>
       <BrowserRouter>
+        <RouteFocusAndTitle />
         <nav className="tab-bar" aria-label="Main">
           {TABS.map((tab) => (
             <NavLink key={tab.to} to={tab.to} end={tab.end} className="tab">

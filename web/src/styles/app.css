@@ -2638,3 +2638,12 @@ button.back-link {
 .exercise-note .notes-field {
   align-self: stretch;
 }
+
+.route-focus-target:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.route-focus-target:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
