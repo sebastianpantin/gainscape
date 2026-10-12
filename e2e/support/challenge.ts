@@ -63,7 +63,7 @@ export async function shortenFirstDeadliftSet(page: Page, reps: number) {
   });
   await firstRound
     .getByRole('listitem', { name: 'Deadlift, set 1', exact: true })
-    .getByLabel('reps')
+    .getByLabel('reps', { exact: true })
     .fill(String(reps));
 }
 
@@ -78,7 +78,7 @@ export async function logDeadliftToFailure(page: Page, weightKg: number) {
   await page.getByRole('button', { name: 'Start workout' }).click();
   const row = setRow(await addExercise(page, 'deadlift', 'Deadlift'), 1);
   await row.getByRole('spinbutton', { name: /kg/ }).fill(String(weightKg));
-  await row.getByLabel('reps').fill('1');
+  await row.getByLabel('reps', { exact: true }).fill('1');
   await row.getByRole('radio', { name: 'Failure' }).click();
   await finishWorkout(page);
 }

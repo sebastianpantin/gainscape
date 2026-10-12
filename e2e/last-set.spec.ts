@@ -31,13 +31,13 @@ test('each set compares with last session’s set and a planned set fills it in 
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   const bench = await addExercise(page, 'bench', 'Barbell Bench Press');
-  await bench.getByRole('button', { name: '+ Add set' }).click();
-  await bench.getByRole('button', { name: '+ Add set' }).click();
   const first = setRow(bench, 1);
   const second = setRow(bench, 2);
   const third = setRow(bench, 3);
-
   await expect(first.getByRole('img', { name: 'Same as last time', exact: true })).toHaveText('= last');
+  await bench.getByRole('button', { name: '+ Add set' }).click();
+  await bench.getByRole('button', { name: '+ Add set' }).click();
+
   await expect(second.getByRole('img', { name: '2.5 kg less and 1 more rep than last time', exact: true })).toHaveText(
     '▼ −2.5 kg +1 rep',
   );
