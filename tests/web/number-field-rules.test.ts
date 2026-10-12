@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  enterKeyHintFor,
+  fieldAfter,
   shownNumberText,
   steppedFieldValue,
   stepDirectionForKey,
@@ -59,5 +61,20 @@ describe('stepping a number field with the arrow keys', () => {
     expect(steppedFieldValue(100, 1, 1, reps)).toBe(100);
     expect(steppedFieldValue(1999, 1, 2.5, weight)).toBe(2000);
     expect(steppedFieldValue(1, -1, 2.5, weight)).toBe(0);
+  });
+});
+
+describe('the Enter key of a number field', () => {
+  it('offers next until the last field of its group, which offers done', () => {
+    expect(enterKeyHintFor(false)).toBe('next');
+    expect(enterKeyHintFor(true)).toBe('done');
+  });
+
+  it('moves to the field after the current one, or nowhere from the last', () => {
+    const fields = ['weight', 'reps', 'seconds'];
+    expect(fieldAfter(fields, 'weight')).toBe('reps');
+    expect(fieldAfter(fields, 'reps')).toBe('seconds');
+    expect(fieldAfter(fields, 'seconds')).toBeNull();
+    expect(fieldAfter(fields, 'metres')).toBeNull();
   });
 });

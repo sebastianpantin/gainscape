@@ -120,6 +120,7 @@ export function RepsField({ reps, onChange }: RepsFieldProps) {
       lowest={LOWEST_REPS}
       highest={HIGHEST_REPS}
       wholeNumber
+      lastInGroup
       onCommit={onChange}
     />
   );

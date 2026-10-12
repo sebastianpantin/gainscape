@@ -51,7 +51,7 @@ test('a field flags text that is not the saved value and steps with the arrow ke
   await expect(weight).not.toHaveAttribute('aria-invalid');
   await weight.fill('');
   await expect(weight).toHaveAttribute('aria-invalid', 'true');
-  await expect(weight).toHaveAccessibleDescription('Saved as 60');
+  await expect(row.getByRole('status').filter({ hasText: 'Saved as' })).toHaveText('Saved as 60');
   await weight.press('ArrowUp');
   await expect(weight).toHaveValue('62.5');
   await expect(weight).not.toHaveAttribute('aria-invalid');
@@ -61,12 +61,41 @@ test('a field flags text that is not the saved value and steps with the arrow ke
 
   await reps.fill('0');
   await expect(reps).toHaveAttribute('aria-invalid', 'true');
-  await expect(reps).toHaveAccessibleDescription('Saved as 1');
+  await expect(row.getByRole('status').filter({ hasText: 'Saved as' })).toHaveText('Saved as 1');
   await reps.blur();
   await expect(reps).toHaveValue('1');
   await expect(reps).not.toHaveAttribute('aria-invalid');
+  await expect(row.getByRole('status').filter({ hasText: 'Saved as' })).toHaveCount(0);
   await reps.press('ArrowDown');
   await expect(reps).toHaveValue('1');
   await reps.press('ArrowUp');
   await expect(reps).toHaveValue('2');
+});
+
+test('focusing a filled field selects it, so typing replaces the value, and Enter moves on', async ({ page }) => {
+  await register(page, uniqueUsername('fields'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const row = setRow(await addExercise(page, 'bench', BENCH), 1);
+  const weight = row.getByRole('spinbutton', { name: 'kg', exact: true });
+  const reps = row.getByRole('spinbutton', { name: 'reps', exact: true });
+  await expect(weight).toHaveAttribute('enterkeyhint', 'next');
+  await expect(reps).toHaveAttribute('enterkeyhint', 'done');
+
+  await weight.fill('80');
+  await weight.blur();
+  await weight.click();
+  await weight.pressSequentially('85');
+  await expect(weight).toHaveValue('85');
+
+  await weight.press('Enter');
+  await expect(reps).toBeFocused();
+  await reps.pressSequentially('6');
+  await expect(reps).toHaveValue('6');
+  await reps.press('Enter');
+  await expect(reps).not.toBeFocused();
+
+  await reps.click();
+  await reps.press('ArrowRight');
+  await reps.pressSequentially('0');
+  await expect(reps).toHaveValue('60');
 });
