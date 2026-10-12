@@ -39,6 +39,7 @@ export function HoldFields({ set, measure, loadType, unit, onChange }: HoldField
           highest={HOLD_BOUNDS.durationS.max}
           wholeNumber
           step={5}
+          lastInGroup
           onCommit={(durationS) => onChange({ durationS })}
         />
       ) : (
@@ -49,6 +50,7 @@ export function HoldFields({ set, measure, loadType, unit, onChange }: HoldField
           lowest={HOLD_BOUNDS.distanceM.min}
           highest={HOLD_BOUNDS.distanceM.max}
           step={5}
+          lastInGroup
           onCommit={(distanceM) => onChange({ distanceM })}
         />
       )}

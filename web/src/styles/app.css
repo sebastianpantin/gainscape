@@ -1228,7 +1228,7 @@ body:has(.active-workout-bar) .screen {
   width: 64px;
 }
 
-.quick-fill > span {
+.quick-fill > span[aria-hidden] {
   padding-bottom: var(--space-3);
   color: var(--color-text-muted);
 }

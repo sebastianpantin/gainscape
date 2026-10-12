@@ -321,6 +321,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
                         value={planned.targetRepsMin}
                         {...TARGET_REPS_RANGE}
                         wholeNumber
+                        lastInGroup
                         onCommit={(reps) =>
                           changeAt(dayIndex, exerciseIndex, { targetRepsMin: reps, targetRepsMax: reps })
                         }
@@ -339,6 +340,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
                           value={planned.targetRepsMax}
                           {...TARGET_REPS_RANGE}
                           wholeNumber
+                          lastInGroup
                           onCommit={(targetRepsMax) => changeAt(dayIndex, exerciseIndex, { targetRepsMax })}
                         />
                       </>
