@@ -32,6 +32,10 @@ export interface SetFeedback {
   vibrationMs: readonly number[] | null;
 }
 
+export function feedbackLabel(exerciseName: string, row: 'set' | 'bout', rowNumber: number): string {
+  return `${exerciseName}, ${row} ${rowNumber}`;
+}
+
 function earnedText(preview: SetPreview): string | null {
   if (preview.basis === 'unknown') return null;
   if (preview.basis === 'warmup') return 'warm-up';
