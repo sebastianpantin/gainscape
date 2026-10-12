@@ -10,6 +10,7 @@ import {
   REST_STEP_S,
   restClock,
   restLengthFor,
+  restLeftFraction,
   restView,
   withChosenRest,
   startRest,
@@ -41,10 +42,30 @@ describe('rest timer', () => {
 
   it('shows the rest as over for a while, then hides it', () => {
     const timer = startRest(now, 60, setId);
-    expect(restView(timer, now + seconds(60))).toEqual({ kind: 'over' });
-    expect(restView(timer, now + seconds(60 + REST_OVER_SHOWN_S) - 1)).toEqual({ kind: 'over' });
+    expect(restView(timer, now + seconds(60))).toEqual({ kind: 'over', overS: 0 });
+    expect(restView(timer, now + seconds(92) + 500)).toEqual({ kind: 'over', overS: 32 });
+    expect(restView(timer, now + seconds(60 + REST_OVER_SHOWN_S) - 1)).toEqual({
+      kind: 'over',
+      overS: REST_OVER_SHOWN_S - 1,
+    });
     expect(restView(timer, now + seconds(60 + REST_OVER_SHOWN_S))).toEqual({ kind: 'idle' });
     expect(restView(null, now)).toEqual({ kind: 'idle' });
+  });
+
+  it('tells how much of the planned rest is left', () => {
+    const timer = startRest(now, 120, setId);
+    expect(restLeftFraction(timer, now)).toBe(1);
+    expect(restLeftFraction(timer, now + seconds(30))).toBe(0.75);
+    expect(restLeftFraction(timer, now + seconds(120))).toBe(0);
+    expect(restLeftFraction(timer, now + seconds(200))).toBe(0);
+    expect(restLeftFraction(adjustRest(timer, REST_STEP_S, now + seconds(30)), now + seconds(30))).toBe(105 / 135);
+  });
+
+  it('knows no planned length for a rest restarted after it was over', () => {
+    const restarted = adjustRest(startRest(now, 60, setId), REST_STEP_S, now + seconds(90));
+    expect(restLeftFraction(restarted, now + seconds(90))).toBeNull();
+    expect(restLeftFraction({ ...startRest(now, 60, setId), startedAt: now + seconds(60) }, now)).toBeNull();
+    expect(restLeftFraction(null, now)).toBeNull();
   });
 
   it('adds and removes time from a running rest', () => {

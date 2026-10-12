@@ -21,7 +21,14 @@ const BETWEEN_SET_CONTROLS = [
 ];
 
 export async function expectNoAxeViolations(page: Page, screen: string): Promise<void> {
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+  await page.evaluate(() =>
+    Promise.allSettled(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished),
+    ),
+  );
   const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
   const blocking = results.violations
     .filter((violation) => BLOCKING_IMPACTS.has(violation.impact ?? ''))

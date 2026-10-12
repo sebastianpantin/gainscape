@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { type FormEvent, useId, useState } from 'react';
+import { type FormEvent, Fragment, useId, useState } from 'react';
 import { Link, type NavigateFunction, useNavigate } from 'react-router-dom';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { Switch } from '../../components/Switch.tsx';
@@ -12,6 +12,7 @@ import {
   saveBlob,
 } from '../../lib/account.ts';
 import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { GLOSSARY } from '../../lib/glossary.ts';
 import { type BarbellSetup, HEAVIEST_BAR_OR_PLATE, isUsableBarOrPlate, PLATE_CHOICES } from '../../lib/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../lib/plate-settings-store.ts';
@@ -153,8 +154,8 @@ const ON_OFF_OPTIONS: { value: 'on' | 'off'; label: string }[] = [
   { value: 'off', label: 'Off' },
 ];
 
-const DEVICE_CHOICES: { name: keyof TrainingDeviceSettings; label: string }[] = [
-  { name: 'vibrate', label: 'Vibrate when rest ends' },
+const DEVICE_CHOICES: { name: keyof TrainingDeviceSettings; label: string; hint?: string }[] = [
+  { name: 'vibrate', label: 'Vibration', hint: 'Buzz when a set is logged, a record falls and rest ends.' },
   { name: 'sound', label: 'Sound when rest ends' },
   { name: 'notify', label: 'Notify when rest ends in the background' },
   { name: 'keepAwake', label: 'Keep screen on during workouts' },
@@ -183,15 +184,17 @@ function TrainingDeviceChoices({ userId }: { userId: string }) {
   };
   return (
     <>
-      {DEVICE_CHOICES.map(({ name, label }) => (
-        <Choice
-          key={name}
-          label={label}
-          options={ON_OFF_OPTIONS}
-          current={settings[name] ? 'on' : 'off'}
-          disabled={name === 'notify' && askingToNotify}
-          onPick={(value) => void pick(name, value)}
-        />
+      {DEVICE_CHOICES.map(({ name, label, hint }) => (
+        <Fragment key={name}>
+          <Choice
+            label={label}
+            options={ON_OFF_OPTIONS}
+            current={settings[name] ? 'on' : 'off'}
+            disabled={name === 'notify' && askingToNotify}
+            onPick={(value) => void pick(name, value)}
+          />
+          {hint && <span className="hint">{hint}</span>}
+        </Fragment>
       ))}
       {notifyBlocked && (
         <p className="problem" role="alert">
@@ -349,6 +352,7 @@ function WeeklyGoalSection() {
       const saved = await fetchWeeklyGoalStatus(new AbortController().signal);
       await queryClient.cancelQueries({ queryKey: weeklyGoalQuery.queryKey });
       queryClient.setQueryData(weeklyGoalQuery.queryKey, saved);
+      void announceDataChange(queryClient, 'weekly-goal-saved');
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your weekly goal.'));
     } finally {
@@ -404,6 +408,7 @@ function allTimezones(): string[] {
 }
 
 function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {
+  const queryClient = useQueryClient();
   const [candidate, setCandidate] = useState(profile.timezone);
   const [message, setMessage] = useState<{ kind: 'problem' | 'status'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -420,6 +425,7 @@ function TimezoneSection({ profile, onSaved }: Omit<SectionProps, 'userId'>) {
     setBusy(false);
     if (result.ok) {
       onSaved((current) => ({ ...current, timezone: candidate, timezoneChangedAt: new Date().toISOString() }));
+      void announceDataChange(queryClient, 'timezone-changed');
       setMessage({ kind: 'status', text: `Time zone changed to ${candidate}.` });
     } else if (result.reason === 'too_soon') {
       onSaved((current) => ({ ...current, timezoneChangedAt: cooldownStartFor(result.nextAllowedAt) }));

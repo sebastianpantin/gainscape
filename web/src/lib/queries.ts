@@ -10,6 +10,7 @@ import { collectionPercent, countCollection } from './collection-rules.ts';
 import { fetchExerciseProgress } from './exercise-progress.ts';
 import { isUuid } from './history-rules.ts';
 import { fetchLoadout, loadItemsCacheFirst } from './items.ts';
+import { fetchTrainingHistory } from './onboarding.ts';
 import { loadProfileCacheFirst } from './profile.ts';
 import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from './program-enrollment.ts';
 import { fetchLastLoggedSets, type PublishedProgram, publishProgram } from './programs.ts';
@@ -123,6 +124,15 @@ export function exerciseProgressQuery(userId: string, exerciseId: string) {
   return queryOptions({
     queryKey: ['exercise-progress', userId, exerciseId] as const,
     queryFn: ({ signal }) => fetchExerciseProgress(userId, exerciseId, signal),
+  });
+}
+
+export function trainingHistoryQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['training-history', userId] as const,
+    queryFn: () => fetchTrainingHistory(userId),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 

@@ -7,6 +7,7 @@ export { TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 export const authStorageKey = 'sb-localhost-auth-token';
 const draftDatabase = { name: 'gainscape', version: 1, store: 'drafts' };
 const fallbackDraftKeyPrefix = 'gainscape.workout-draft.v2.';
+const onboardingKeyPrefix = 'gainscape.onboarding.';
 
 interface StoredAuthSession {
   access_token: string;
@@ -65,10 +66,18 @@ export async function submitRegistration(page: Page, username: string, email = e
   await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
 }
 
-export async function register(page: Page, username: string) {
+export async function skipOnboarding(page: Page, userId: string) {
+  await page.evaluate((key) => localStorage.setItem(key, 'done'), `${onboardingKeyPrefix}${userId}`);
+}
+
+export async function registerWithoutSigningIn(page: Page, username: string): Promise<string> {
   await page.goto('/');
   const timezone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
-  await createConfirmedAccount(emailOf(username), username, timezone);
+  return createConfirmedAccount(emailOf(username), username, timezone);
+}
+
+export async function register(page: Page, username: string) {
+  await skipOnboarding(page, await registerWithoutSigningIn(page, username));
   await submitSignIn(page, emailOf(username));
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 }
@@ -171,6 +180,12 @@ export async function logExercise(
 export async function finishWorkout(page: Page) {
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+}
+
+export async function openLoot(page: Page): Promise<Locator> {
+  const loot = page.getByRole('region', { name: 'Loot' });
+  await loot.getByRole('button', { name: 'Open loot' }).click();
+  return loot;
 }
 
 export async function logWorkout(page: Page, logSets: () => Promise<void>) {

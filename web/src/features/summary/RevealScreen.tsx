@@ -1,10 +1,11 @@
 import { levelProgress } from '@domain/index.ts';
 import type { DropSummary } from '@domain/types.ts';
-import { useEffect, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ItemIcon, LevelUpIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
+import { ItemIcon, LevelUpIcon, LootChestIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { fetchExercises, fetchSkills, fetchSkillXp } from '../../lib/catalog.ts';
 import type { Exercise, Skill } from '../../lib/catalog-rules.ts';
+import { playTones, primeAudio, type Tone, vibrate } from '../../lib/device-effects.ts';
 import { formatXp, sessionXp } from '../../lib/format.ts';
 import { GLOSSARY } from '../../lib/glossary.ts';
 import { fetchSession } from '../../lib/history.ts';
@@ -12,6 +13,8 @@ import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { levelUpCues } from '../../lib/training-device-rules.ts';
+import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { readItemsCache } from '../../offline/items-cache.ts';
@@ -27,11 +30,87 @@ import {
   challengeNotAppliedText,
   describeRecord,
   gearBonusText,
+  levelUpCueDelayMs,
+  playsReveal,
+  type RevealTimeline,
+  revealShape,
+  revealTimeline,
+  skipsRevealOnKey,
   unappliedChangesText,
 } from './reveal-rules.ts';
 
+const LEVEL_UP_CHIME: Tone[] = [523, 659, 784, 1047].map((frequencyHz, index, notes) => ({
+  frequencyHz,
+  startS: index * 0.08,
+  lengthS: index === notes.length - 1 ? 0.3 : 0.08,
+}));
+const LEVEL_UP_CHIME_VOLUME = 0.18;
+const LEVEL_UP_VIBRATION_MS = [40, 50, 40, 50, 140];
+const LOOT_DROP_STAGGER_S = 0.08;
+const INTERACTIVE_ELEMENTS = 'a[href], button, input, select, textarea, summary, [role="button"], [role="link"]';
+
 async function savedWhenOffline<Loaded>(saved: Loaded | null, loadLive: () => Promise<Loaded>): Promise<Loaded> {
   return (await loadCacheFirstWhenOffline(isDeviceOffline, () => saved, loadLive)).loaded;
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function cueLevelUp(userId: string): void {
+  for (const cue of levelUpCues(readTrainingDeviceSettings(deviceStorage(), userId))) {
+    if (cue === 'vibrate') vibrate(LEVEL_UP_VIBRATION_MS);
+    if (cue === 'sound') playTones(LEVEL_UP_CHIME, LEVEL_UP_CHIME_VOLUME, 'triangle');
+  }
+}
+
+type RevealPhase = 'playing' | 'settled' | 'skipped';
+
+function useRevealPlayback(
+  userId: string,
+  timeline: RevealTimeline,
+  focusAfterSkip: RefObject<HTMLElement | null>,
+  plays: boolean,
+): { phase: RevealPhase; skip: () => void } {
+  const [reducedMotion] = useState(prefersReducedMotion);
+  const [phase, setPhase] = useState<RevealPhase>(reducedMotion ? 'settled' : 'playing');
+  const skipped = useRef(false);
+  const cueDelayMs = levelUpCueDelayMs(timeline, reducedMotion);
+  const { settledAfterMs } = timeline;
+
+  useEffect(() => {
+    if (cueDelayMs === null) return;
+    if (readTrainingDeviceSettings(deviceStorage(), userId).sound) primeAudio();
+    const cue = setTimeout(() => {
+      if (!skipped.current) cueLevelUp(userId);
+    }, cueDelayMs);
+    return () => clearTimeout(cue);
+  }, [cueDelayMs, userId]);
+
+  const skip = useCallback(() => {
+    skipped.current = true;
+    if (document.activeElement?.matches('.reveal-skip')) focusAfterSkip.current?.focus();
+    setPhase('skipped');
+  }, [focusAfterSkip]);
+
+  useEffect(() => {
+    if (!plays || phase !== 'playing') return;
+    const settle = setTimeout(() => setPhase('settled'), settledAfterMs);
+    const skipOnKey = (event: KeyboardEvent) => {
+      const onInteractiveElement =
+        event.target instanceof Element && event.target.closest(INTERACTIVE_ELEMENTS) !== null;
+      if (skipsRevealOnKey({ key: event.key, onInteractiveElement })) skip();
+    };
+    document.addEventListener('pointerdown', skip);
+    document.addEventListener('keydown', skipOnKey);
+    return () => {
+      clearTimeout(settle);
+      document.removeEventListener('pointerdown', skip);
+      document.removeEventListener('keydown', skipOnKey);
+    };
+  }, [plays, phase, settledAfterMs, skip]);
+
+  return { phase, skip };
 }
 
 function percent(fraction: number): string {
@@ -71,40 +150,60 @@ function GainBar({ skillName, xpAfter, gain, delaySeconds }: GainBarProps) {
 
 type LoadedItems = CatalogItem[] | 'loading' | 'failed';
 
-function LootPanel({ drops, items }: { drops: readonly DropSummary[]; items: LoadedItems }) {
+function LootDrops({ drops, items }: { drops: readonly DropSummary[]; items: LoadedItems }) {
+  if (items === 'loading') return <p className="muted">Loading loot…</p>;
+  if (items === 'failed') return <p className="muted">Couldn't load the loot names. See items for what dropped.</p>;
   return (
-    <section className="panel stack rise" aria-label="Loot" style={{ animationDelay: '2s' }}>
+    <ul className="record-list" aria-label="Loot drops">
+      {drops.map((drop, index) => {
+        const item = items.find((candidate) => candidate.id === drop.itemId);
+        return (
+          <li key={drop.dropId} className="loot-drop" style={{ animationDelay: `${index * LOOT_DROP_STAGGER_S}s` }}>
+            <ItemIcon kind={item?.icon ?? 'scraps'} color={item ? colorFor(item) : colorFor({ tier: null })} />
+            <span style={{ flex: 1 }}>{item?.name ?? 'Unknown item'}</span>
+            <span className="pixel">×{drop.quantity}</span>
+            {drop.source === 'pr' && (
+              <span className="accent-text tiny" role="img" aria-label={GLOSSARY.pr.name}>
+                PR
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function LootPanel({ drops, items, delayS }: { drops: readonly DropSummary[]; items: LoadedItems; delayS: number }) {
+  const [open, setOpen] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const hasDrops = drops.length > 0;
+
+  const openLoot = () => {
+    setOpen(true);
+    heading.current?.focus();
+  };
+
+  return (
+    <section className="panel stack rise" aria-label="Loot" style={{ animationDelay: `${delayS}s` }}>
       <div className="row spread">
-        <h2>Loot</h2>
+        <h2 ref={heading} tabIndex={-1}>
+          Loot
+        </h2>
         <Link className="tiny" to="/collection/items">
           See items
         </Link>
       </div>
-      {drops.length === 0 ? (
-        <p className="muted">No loot this time</p>
-      ) : items === 'loading' ? (
-        <p className="muted">Loading loot…</p>
-      ) : items === 'failed' ? (
-        <p className="muted">Couldn't load the loot names. See items for what dropped.</p>
-      ) : (
-        <ul className="record-list" aria-label="Loot drops">
-          {drops.map((drop) => {
-            const item = items.find((candidate) => candidate.id === drop.itemId);
-            return (
-              <li key={drop.dropId}>
-                <ItemIcon kind={item?.icon ?? 'scraps'} color={item ? colorFor(item) : colorFor({ tier: null })} />
-                <span style={{ flex: 1 }}>{item?.name ?? 'Unknown item'}</span>
-                <span className="pixel">×{drop.quantity}</span>
-                {drop.source === 'pr' && (
-                  <span className="accent-text tiny" role="img" aria-label={GLOSSARY.pr.name}>
-                    PR
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+      {!hasDrops && <p className="muted">No loot this time</p>}
+      {hasDrops && !open && (
+        <button type="button" className="loot-chest" onClick={openLoot}>
+          <span className="loot-chest-art">
+            <LootChestIcon />
+          </span>
+          Open loot
+        </button>
       )}
+      {hasDrops && <div role="status">{open && <LootDrops drops={drops} items={items} />}</div>}
     </section>
   );
 }
@@ -123,6 +222,9 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const [items, setItems] = useState<LoadedItems>('loading');
   const [freshDrops, setFreshDrops] = useState<DropSummary[] | null>(null);
   const sessionId = summary?.sessionId;
+  const timeline = revealTimeline(revealShape(summary));
+  const title = useRef<HTMLHeadingElement>(null);
+  const { phase, skip } = useRevealPlayback(userId, timeline, title, playsReveal(summary));
 
   useEffect(() => {
     if (sessionId) markInstallCardDue(userId);
@@ -221,10 +323,17 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   );
 
   return (
-    <main className="screen stack">
+    <main className={phase === 'playing' ? 'screen stack' : 'screen stack reveal-still'}>
       <header className="reveal-header">
-        <h1 className="title">Workout complete!</h1>
+        <h1 className="title" ref={title} tabIndex={-1}>
+          Workout complete!
+        </h1>
         <span className="reveal-total pop">+{formatXp(totalXp)} XP</span>
+        {phase === 'playing' && (
+          <button type="button" className="button reveal-skip" onClick={skip}>
+            Skip
+          </button>
+        )}
       </header>
       {timingText && <p className="muted">{timingText}</p>}
       {unappliedNotice}
@@ -243,7 +352,11 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           const challengeBonus = challengeBonusText(summary, skill.key);
           const gearBonus = gearBonusText(summary, skill.key);
           return (
-            <li key={skill.key} className="skill-gain rise" style={{ animationDelay: `${0.2 + index * 0.2}s` }}>
+            <li
+              key={skill.key}
+              className="skill-gain rise"
+              style={{ animationDelay: `${timeline.skillDelaysS[index] ?? 0}s` }}
+            >
               <SkillIcon skillKey={skill.key} />
               <div className="skill-gain-body">
                 <div className="row spread">
@@ -259,7 +372,12 @@ export function RevealScreen({ userId }: RevealScreenProps) {
                 {challengeBonus && <span className="muted tiny">{challengeBonus}</span>}
                 {gearBonus && <span className="muted tiny">{gearBonus}</span>}
                 {xpAfter !== undefined && (
-                  <GainBar skillName={skill.name} xpAfter={xpAfter} gain={gain} delaySeconds={0.4 + index * 0.2} />
+                  <GainBar
+                    skillName={skill.name}
+                    xpAfter={xpAfter}
+                    gain={gain}
+                    delaySeconds={timeline.barDelaysS[index] ?? 0}
+                  />
                 )}
               </div>
             </li>
@@ -267,7 +385,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         })}
       </ul>
       {summary.levelUps.length > 0 && (
-        <section className="panel stack level-ups pop" style={{ animationDelay: '1.2s' }}>
+        <section className="panel stack level-ups pop" style={{ animationDelay: `${timeline.levelUpDelayS ?? 0}s` }}>
           <h2 className="row">
             <LevelUpIcon />
             Level up!
@@ -285,7 +403,11 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         </section>
       )}
       {summary.prs.length > 0 && (
-        <ul className="panel record-list rise" aria-label="New records" style={{ animationDelay: '1.6s' }}>
+        <ul
+          className="panel record-list rise"
+          aria-label="New records"
+          style={{ animationDelay: `${timeline.recordsDelayS ?? 0}s` }}
+        >
           {summary.prs.map((record, index) => {
             const described = describeRecord(
               record,
@@ -307,7 +429,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           })}
         </ul>
       )}
-      <LootPanel drops={freshDrops ?? summary.drops ?? []} items={items} />
+      <LootPanel drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />
       <Link className="button primary big" to="/skills">
         See skills
       </Link>

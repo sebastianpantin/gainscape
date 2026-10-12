@@ -92,7 +92,7 @@ test('an exercise shows last session and starts from its first set', async ({ pa
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   const bench = await addExercise(page, 'bench', 'Barbell Bench Press');
-  await expect(bench.getByText('Last: 1×5 @ 60 kg, 1×4 @ 62.5 kg')).toBeVisible();
+  await expect(bench.getByText('Last: 2 sets, top 62.5 kg × 4')).toBeVisible();
   const firstSet = setRow(bench, 1);
   await expect(firstSet.getByLabel('kg', { exact: true })).toHaveValue('60');
   await expect(firstSet.getByLabel('reps', { exact: true })).toHaveValue('5');
@@ -192,7 +192,7 @@ test('a workout keeps the screen on and the end of a rest vibrates and beeps, as
   await expect.poll(() => deviceCalls(page)).toContain('release');
 
   await openFromProfile(page, 'Settings');
-  for (const setting of ['Vibrate when rest ends', 'Sound when rest ends', 'Keep screen on during workouts'])
+  for (const setting of ['Vibration', 'Sound when rest ends', 'Keep screen on during workouts'])
     await pickDeviceSetting(page, setting, 'Off');
   await page.evaluate(() => (window.deviceCalls = []));
   await openTab(page, 'Train');

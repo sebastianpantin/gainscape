@@ -46,3 +46,13 @@ export function steppedFieldValue(
 ): number {
   return steppedOnGrid(value, step, direction, range.lowest, range.highest);
 }
+
+export function enterKeyHintFor(lastInGroup: boolean): 'next' | 'done' {
+  return lastInGroup ? 'done' : 'next';
+}
+
+export function fieldAfter<T>(fields: readonly T[], current: T): T | null {
+  const index = fields.indexOf(current);
+  if (index === -1) return null;
+  return fields[index + 1] ?? null;
+}

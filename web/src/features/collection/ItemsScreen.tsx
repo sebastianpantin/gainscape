@@ -4,6 +4,7 @@ import type { StrengthState } from '@domain/types.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { EmptyState } from '../../components/EmptyState.tsx';
 import { ItemIcon } from '../../components/PixelArt.tsx';
 import {
   type CatalogChallenge,
@@ -44,7 +45,8 @@ import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { useLoadout } from '../profile/use-loadout.ts';
-import { itemsQuery, loadoutQuery } from '../../lib/queries.ts';
+import { announceDataChange } from '../../lib/data-changes.ts';
+import { itemsQuery } from '../../lib/queries.ts';
 import { loadedState } from '../../lib/query-state-rules.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
@@ -257,7 +259,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const { state: draftState, startWorkout, flush } = useWorkoutDraft(userId);
   const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
   const loadout = useLoadout(userId);
-  const refetchLoadout = () => queryClient.invalidateQueries({ queryKey: loadoutQuery(userId).queryKey });
+  const announceGearChanged = () => announceDataChange(queryClient, 'gear-changed');
 
   const showLoaded = (change: (loaded: LoadedItems) => LoadedItems) => {
     const { queryKey } = itemsQuery(userId);
@@ -404,15 +406,18 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           offline={offline}
           draftOpen={draftOpen}
           onCrafted={async (itemId) => {
-            await Promise.all([refetchInventory(), refetchLoadout()]);
+            await Promise.all([refetchInventory(), announceGearChanged()]);
             setPickedId(itemId);
           }}
           onCatalogStale={refetchCatalog}
-          onLoadoutChanged={refetchLoadout}
+          onLoadoutChanged={announceGearChanged}
           onStartChallenge={startChallenge}
         />
       ) : (
-        <p className="panel muted">Hard sets can drop items. Finish a workout to find your first one.</p>
+        <EmptyState
+          text="Hard sets can drop items. Finish a workout to find your first one."
+          startLabel="Start a workout"
+        />
       )}
     </main>
   );

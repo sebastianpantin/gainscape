@@ -109,3 +109,94 @@ export function unappliedChangesText(
     "This workout was already saved, and the saved version differs from this device's copy, so this copy was not applied.";
   return summary.historyOnly ? notApplied : `${notApplied} Check it in History.`;
 }
+
+export const REVEAL_MAX_PRE_LOOT_S = 1.5;
+const SKILLS_START_S = 0.1;
+const SKILL_STAGGER_S = 0.15;
+const SKILL_SPREAD_MAX_S = 0.45;
+const BAR_LAG_S = 0.1;
+const SKILL_SETTLE_S = 0.35;
+const LEVEL_UP_BEAT_S = 0.3;
+const RECORDS_BEAT_S = 0.25;
+const RISE_S = 0.4;
+const GAIN_FILL_S = 0.6;
+const POP_PEAK_MS = 300;
+
+export interface RevealShape {
+  skillCount: number;
+  hasLevelUps: boolean;
+  hasRecords: boolean;
+}
+
+export function playsReveal(summary: Pick<SessionSummary, 'historyOnly'> | null): boolean {
+  return summary !== null && !summary.historyOnly;
+}
+
+export function skipsRevealOnKey({
+  key,
+  onInteractiveElement,
+}: {
+  key: string;
+  onInteractiveElement: boolean;
+}): boolean {
+  if (key === 'Escape') return true;
+  return key === 'Enter' && !onInteractiveElement;
+}
+
+export function revealShape(
+  summary: Pick<SessionSummary, 'historyOnly' | 'xpBySkill' | 'levelUps' | 'prs'> | null,
+): RevealShape {
+  if (!summary || summary.historyOnly) return { skillCount: 0, hasLevelUps: false, hasRecords: false };
+  return {
+    skillCount: Object.values(summary.xpBySkill).filter((xp) => xp > 0).length,
+    hasLevelUps: summary.levelUps.length > 0,
+    hasRecords: summary.prs.length > 0,
+  };
+}
+
+export interface RevealTimeline {
+  skillDelaysS: number[];
+  barDelaysS: number[];
+  levelUpDelayS: number | null;
+  recordsDelayS: number | null;
+  lootDelayS: number;
+  settledAfterMs: number;
+}
+
+function toMs(seconds: number): number {
+  return Math.round(seconds * 1000);
+}
+
+function roundedS(seconds: number): number {
+  return toMs(seconds) / 1000;
+}
+
+export function revealTimeline({ skillCount, hasLevelUps, hasRecords }: RevealShape): RevealTimeline {
+  const stagger = skillCount > 1 ? Math.min(SKILL_STAGGER_S, SKILL_SPREAD_MAX_S / (skillCount - 1)) : 0;
+  const skillDelaysS = Array.from({ length: skillCount }, (_, index) => roundedS(SKILLS_START_S + index * stagger));
+  const barDelaysS = skillDelaysS.map((delay) => roundedS(delay + BAR_LAG_S));
+  const lastSkillS = skillDelaysS.at(-1);
+  let cursor = lastSkillS === undefined ? SKILLS_START_S : lastSkillS + SKILL_SETTLE_S;
+  const levelUpDelayS = hasLevelUps ? roundedS(cursor) : null;
+  if (hasLevelUps) cursor += LEVEL_UP_BEAT_S;
+  const recordsDelayS = hasRecords ? roundedS(cursor) : null;
+  if (hasRecords) cursor += RECORDS_BEAT_S;
+  const lootDelayS = roundedS(cursor);
+  const lastBarEndS = Math.max(0, ...barDelaysS.map((delay) => delay + GAIN_FILL_S));
+  return {
+    skillDelaysS,
+    barDelaysS,
+    levelUpDelayS,
+    recordsDelayS,
+    lootDelayS,
+    settledAfterMs: toMs(Math.max(lootDelayS + RISE_S, lastBarEndS)),
+  };
+}
+
+export function levelUpCueDelayMs(
+  timeline: Pick<RevealTimeline, 'levelUpDelayS'>,
+  reducedMotion: boolean,
+): number | null {
+  if (timeline.levelUpDelayS === null) return null;
+  return reducedMotion ? 0 : toMs(timeline.levelUpDelayS) + POP_PEAK_MS;
+}

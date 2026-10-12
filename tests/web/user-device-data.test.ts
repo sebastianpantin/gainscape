@@ -8,6 +8,7 @@ import { saveCachedExercises } from '../../web/src/lib/catalog-cache.ts';
 import { type Exercise } from '../../web/src/lib/catalog-rules.ts';
 import { saveCachedExerciseNotes } from '../../web/src/lib/exercise-note-cache.ts';
 import { saveLastSeenRelease } from '../../web/src/lib/last-seen-release-store.ts';
+import { saveOnboardingDone } from '../../web/src/lib/onboarding-store.ts';
 import { parsePlateSettings } from '../../web/src/lib/plate-rules.ts';
 import { savePlateSettings } from '../../web/src/lib/plate-settings-store.ts';
 import { cachePreferences } from '../../web/src/lib/preferences.ts';
@@ -17,7 +18,11 @@ import { parseRestState } from '../../web/src/lib/rest-timer-rules.ts';
 import { saveRestState } from '../../web/src/lib/rest-timer-store.ts';
 import { saveSessionBaseline } from '../../web/src/lib/session-baseline-store.ts';
 import { parseTrainingDeviceSettings } from '../../web/src/lib/training-device-rules.ts';
-import { claimRestAlert, saveTrainingDeviceSettings } from '../../web/src/lib/training-device-store.ts';
+import {
+  answerNotifyPrompt,
+  claimRestAlert,
+  saveTrainingDeviceSettings,
+} from '../../web/src/lib/training-device-store.ts';
 import { collectionCache, type SavedCollection } from '../../web/src/offline/collection-cache.ts';
 import { createLocalDraftStore, fallbackKeyFor, readFallbackRecord } from '../../web/src/offline/draft-store.ts';
 import { type ItemsCache, saveItemsCache } from '../../web/src/offline/items-cache.ts';
@@ -35,7 +40,12 @@ const STAYING_USER = '22222222-2222-4222-8222-222222222222';
 
 const WEB_SRC = join(import.meta.dirname, '../../web/src');
 
-const NAMES_THAT_ARE_NOT_STORAGE_KEYS = new Set(['gainscape.rest-alert', 'gainscape.drafts', 'gainscape.finish.']);
+const NAMES_THAT_ARE_NOT_STORAGE_KEYS = new Set([
+  'gainscape.rest-alert',
+  'gainscape.drafts',
+  'gainscape.data-changes',
+  'gainscape.finish.',
+]);
 const DEVICE_KEYS_WITHOUT_USER_DATA = new Set([CHUNK_RELOAD_KEY]);
 
 const EXERCISE: Exercise = {
@@ -79,6 +89,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   local.setItem(`gainscape.exercises.v2.${userId}`, JSON.stringify({ v: 2, userId, exercises: [] }));
   saveCachedExerciseNotes(local, userId, { bench: 'Pause on the chest.' });
   saveLastSeenRelease(local, userId, '0.4.0');
+  saveOnboardingDone(local, userId);
   savePlateSettings(local, userId, parsePlateSettings(null));
   cachePreferences(userId, { unitPref: 'lb', effortInputMode: 'rpe' });
   dismissSummary(local, userId, 'program-a:week-1');
@@ -86,6 +97,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   saveSessionBaseline(local, userId, { asOf: '2026-10-05T08:00:00.000Z', strength: {}, records: null });
   saveTrainingDeviceSettings(local, userId, parseTrainingDeviceSettings(null));
   claimRestAlert(local, userId, 1_000);
+  answerNotifyPrompt(local, userId);
   collectionCache.save(local, userId, { rows: {} } as unknown as SavedCollection);
   saveItemsCache(local, userId, { catalog: { items: [] }, inventory: [] } as unknown as ItemsCache);
   profileCache.save(local, userId, { username: 'lifter' } as unknown as Profile);

@@ -25,7 +25,7 @@ window.addEventListener('appinstalled', () => {
   notify();
 });
 
-function standalone(): boolean {
+export function runsStandalone(): boolean {
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
     (navigator as Navigator & { standalone?: boolean }).standalone === true
@@ -34,7 +34,7 @@ function standalone(): boolean {
 
 function currentInstallState(): InstallState {
   return installState({
-    standalone: standalone(),
+    standalone: runsStandalone(),
     iosSafari: isIosSafari(navigator.userAgent, navigator.maxTouchPoints),
     hasDeferredPrompt: deferredPrompt !== null,
     installedThisSession,

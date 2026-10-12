@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
 import {
@@ -9,6 +10,7 @@ import {
   USERNAME_HINT,
   USERNAME_PATTERN,
 } from '../../lib/auth-links.ts';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
 import { signOutSettled } from '../../lib/auth-restore.ts';
 import { supabase } from '../../lib/supabase.ts';
@@ -108,6 +110,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const started = useRef(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (started.current) return;
@@ -138,6 +141,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
         setBusy(false);
         return;
       }
+      void announceDataChange(queryClient, 'profile-saved');
     }
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);

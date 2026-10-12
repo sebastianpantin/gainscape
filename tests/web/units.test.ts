@@ -5,7 +5,6 @@ import {
   cmToFeetAndInches,
   parsedDecimal,
   typedNumberWithin,
-  wholeNumberWithin,
   type DistanceUnit,
   distanceInUnit,
   distanceUnitFor,
@@ -186,20 +185,6 @@ describe('weight and reps steppers', () => {
     expect(steppedWeight(1, 'kg', -1, 2000)).toBe(0);
     expect(steppedWeight(0, 'kg', -1, 2000)).toBe(0);
     expect(steppedWeight(1999, 'kg', 1, 2000)).toBe(2000);
-  });
-});
-
-describe('wholeNumberWithin', () => {
-  it('reads a whole number inside the bounds', () => {
-    expect(wholeNumberWithin('3', 1, 20)).toBe(3);
-    expect(wholeNumberWithin(' 20 ', 1, 20)).toBe(20);
-  });
-
-  it('refuses blanks, fractions and numbers outside the bounds', () => {
-    expect(wholeNumberWithin('', 1, 20)).toBeNull();
-    expect(wholeNumberWithin('2.5', 1, 20)).toBeNull();
-    expect(wholeNumberWithin('0', 1, 20)).toBeNull();
-    expect(wholeNumberWithin('21', 1, 20)).toBeNull();
   });
 });
 

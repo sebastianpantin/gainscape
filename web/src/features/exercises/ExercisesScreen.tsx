@@ -1,6 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fetchExercises, fetchSkills } from '../../lib/catalog.ts';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { OFFLINE_EXERCISES_NOTICE, OFFLINE_EXERCISES_WITHOUT_SKILLS_NOTICE } from '../../lib/catalog-cache.ts';
 import { type Exercise, exerciseLabels, type Skill } from '../../lib/catalog-rules.ts';
 import { setCustomExerciseArchived } from '../../lib/custom-exercises.ts';
@@ -30,6 +32,7 @@ interface ExercisesScreenProps {
 }
 
 export function ExercisesScreen({ userId }: ExercisesScreenProps) {
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [exercises, setExercises] = useState<Exercise[] | null>(null);
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -78,6 +81,7 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
   const setArchived = async (exercise: Exercise, archived: boolean) => {
     try {
       await setCustomExerciseArchived(exercise.id, archived);
+      void announceDataChange(queryClient, 'exercise-saved');
       reload();
     } catch (error) {
       setProblem(messageOf(error, 'Could not update the exercise.'));
@@ -122,6 +126,7 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
           exercise={editing.kind === 'edit' ? editing.exercise : null}
           skills={skills}
           onSaved={() => {
+            void announceDataChange(queryClient, 'exercise-saved');
             closeForm();
             reload();
           }}

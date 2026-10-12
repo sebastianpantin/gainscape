@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
+import { announceDataChange } from '../../lib/data-changes.ts';
 import { type Profile, updatePrivateProfile } from '../../lib/profile.ts';
 import { profileQuery } from '../../lib/queries.ts';
 import type { CacheFirstLoad } from '../../offline/cache-first.ts';
@@ -18,4 +19,5 @@ export async function saveBodyweight({ userId, bodyweightKg, storage, queryClien
     profileQuery(userId).queryKey,
     (current) => current && { ...current, loaded: { ...current.loaded, bodyweightKg } },
   );
+  void announceDataChange(queryClient, 'profile-saved');
 }
