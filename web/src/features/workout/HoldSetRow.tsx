@@ -8,6 +8,7 @@ import type { HoldDraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { WeightField } from './SetRow.tsx';
 import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
+import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface HoldFieldsProps {
@@ -60,6 +61,7 @@ interface HoldSetRowProps {
   loadType: LoadType;
   preview: SetPreview;
   record: PreviewRecord | null;
+  drop: ShownSetDrop | null;
   unit: UnitPref;
   onChange: (changes: Partial<Omit<HoldDraftSet, 'id' | 'kind'>>) => void;
   onRemove: () => void;
@@ -73,6 +75,7 @@ export function HoldSetRow({
   loadType,
   preview,
   record,
+  drop,
   unit,
   onChange,
   onRemove,
@@ -85,7 +88,11 @@ export function HoldSetRow({
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
         {previewXpLabel(preview)}
         {record && (
-          <span className="record-chip" role="img" aria-label={recordChipLabel(record)}>
+          <span
+            className={drop?.record ? 'record-chip pulse' : 'record-chip'}
+            role="img"
+            aria-label={recordChipLabel(record)}
+          >
             {recordChipText(record)}
           </span>
         )}
@@ -99,6 +106,11 @@ export function HoldSetRow({
       >
         <Icon name="check" size={20} strokeWidth={3} />
       </button>
+      {drop?.xpText && (
+        <span key={drop.key} className="xp-drop" aria-hidden="true">
+          {drop.xpText}
+        </span>
+      )}
       <button type="button" className="button icon" aria-label={`Remove set ${setNumber}`} onClick={onRemove}>
         ✕
       </button>
