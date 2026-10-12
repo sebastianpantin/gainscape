@@ -1091,8 +1091,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <button ref={finishButton} className="button primary big" type="button" disabled={!canFinish} onClick={finish}>
           Finish workout
         </button>
-        <span className="muted tiny">~ and new records are previews, confirmed when the workout syncs.</span>
       </div>
+      <p className="muted tiny preview-note">~ and new records are previews, confirmed when the workout syncs.</p>
       {!draft.challenge && (
         <button className="button link" type="button" onClick={() => setConfirmingDiscard(true)}>
           Discard workout
