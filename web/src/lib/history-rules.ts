@@ -97,8 +97,6 @@ export interface EditSessionPayload {
   sets: (LiftSetPayload | CardioSetPayload | HoldSetPayload)[];
 }
 
-const numericColumn = z.union([z.number(), z.string()]).nullable();
-
 const sessionColumnsSchema = z.object({
   id: z.string(),
   started_at: z.string(),
@@ -117,7 +115,7 @@ const sessionPageRowSchema = sessionColumnsSchema.extend({
     z.object({
       position: z.number(),
       is_warmup: z.boolean(),
-      effective_load_kg: numericColumn,
+      effective_load_kg: z.union([z.number(), z.string()]).nullable(),
       reps: z.number().nullable(),
       exercises: z.object({ name: z.string() }).nullable(),
     }),
