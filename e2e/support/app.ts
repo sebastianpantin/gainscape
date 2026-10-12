@@ -93,7 +93,7 @@ export async function signIn(page: Page, username: string, accountPassword = TES
   await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
 }
 
-export type Tab = 'Train' | 'Skills' | 'Log' | 'Friends' | 'Profile';
+export type Tab = 'Train' | 'Skills' | 'Collection' | 'Friends' | 'Profile';
 
 export async function openTab(page: Page, tab: Tab) {
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: tab, exact: true }).click();
@@ -199,7 +199,7 @@ export async function logBench(page: Page, weightKg = 60) {
 }
 
 export async function openLatestWorkout(page: Page) {
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
   await page.getByRole('list', { name: 'Workouts' }).getByRole('link').first().click();
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();

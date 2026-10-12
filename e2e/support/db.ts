@@ -65,6 +65,14 @@ export async function editElsewhere(sessionId: string, reps: number): Promise<vo
   await db`update public.sessions set revision = revision + 1, notes = 'edited elsewhere' where id = ${sessionId}`;
 }
 
+export async function backdateSessions(username: string, days: number): Promise<void> {
+  await db`
+    update public.sessions s
+    set started_at = s.started_at - make_interval(days => ${days}), ended_at = s.ended_at - make_interval(days => ${days})
+    from public.profiles p
+    where p.id = s.user_id and p.username = ${username}`;
+}
+
 export async function setsOf(sessionId: string) {
   return db`
     select reps, effort_input_type, effort_value::float as effort_value

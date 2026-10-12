@@ -1,17 +1,21 @@
 import type { CardioInterval, EffortInput, EffortInputType, RirSource, SessionSummary } from '@domain/types.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { z } from 'zod';
 import { type InvokeOutcome, retryDelayMs } from './function-client-rules.ts';
+import type { OverviewSet } from './history-overview-rules.ts';
 import { nullableNumber } from './rows.ts';
 
 export const HISTORY_PAGE_SIZE = 50;
 
 const SESSION_COLUMNS =
-  'id,started_at,ended_at,session_rpe,local_date,history_only,revision,program_day_id,notes,summary,sets(count)';
+  'id,started_at,ended_at,session_rpe,local_date,history_only,revision,program_day_id,notes,summary';
+const SESSION_PAGE_COLUMNS = `${SESSION_COLUMNS},sets(position,is_warmup,effective_load_kg,reps,exercises(name))`;
+const SESSION_DETAIL_COLUMNS = `${SESSION_COLUMNS},sets(count)`;
 const SET_COLUMNS =
   'id,exercise_id,position,weight_kg,effective_load_kg,reps,is_warmup,effort_input_type,effort_value,rir,rir_source,rir_flagged,e1rm_before_kg,effective_reps,xp_awarded,duration_s,distance_m,interval_work_s,interval_rest_s,interval_rounds,counted_work_s,pace_flagged';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export interface HistorySession {
+export interface SessionDetail {
   id: string;
   startedAt: string;
   endedAt: string;
@@ -23,6 +27,10 @@ export interface HistorySession {
   notes: string | null;
   summary: SessionSummary;
   setCount: number;
+}
+
+export interface HistorySession extends SessionDetail {
+  overviewSets: OverviewSet[];
 }
 
 export interface StoredSetRow {
@@ -89,19 +97,34 @@ export interface EditSessionPayload {
   sets: (LiftSetPayload | CardioSetPayload | HoldSetPayload)[];
 }
 
-interface SessionRow {
-  id: string;
-  started_at: string;
-  ended_at: string;
-  session_rpe: number | null;
-  local_date: string;
-  history_only: boolean;
-  revision: number;
-  program_day_id: string | null;
-  notes: string | null;
-  summary: SessionSummary;
-  sets: { count: number }[];
-}
+const sessionColumnsSchema = z.object({
+  id: z.string(),
+  started_at: z.string(),
+  ended_at: z.string(),
+  session_rpe: z.number().nullable(),
+  local_date: z.string(),
+  history_only: z.boolean(),
+  revision: z.number(),
+  program_day_id: z.string().nullable(),
+  notes: z.string().nullable(),
+  summary: z.custom<SessionSummary>((value) => typeof value === 'object' && value !== null),
+});
+
+const sessionPageRowSchema = sessionColumnsSchema.extend({
+  sets: z.array(
+    z.object({
+      position: z.number(),
+      is_warmup: z.boolean(),
+      effective_load_kg: z.union([z.number(), z.string()]).nullable(),
+      reps: z.number().nullable(),
+      exercises: z.object({ name: z.string() }).nullable(),
+    }),
+  ),
+});
+
+const sessionDetailRowSchema = sessionColumnsSchema.extend({
+  sets: z.tuple([z.object({ count: z.number() })]),
+});
 
 interface SetRow {
   id: string;
@@ -136,7 +159,7 @@ export function nextPageFilter(last: Pick<HistorySession, 'startedAt' | 'id'>): 
   return `started_at.lt."${last.startedAt}",and(started_at.eq."${last.startedAt}",id.lt.${last.id})`;
 }
 
-function toHistorySession(row: SessionRow): HistorySession {
+function toSessionDetail(row: z.infer<typeof sessionColumnsSchema>, setCount: number): SessionDetail {
   return {
     id: row.id,
     startedAt: row.started_at,
@@ -148,8 +171,29 @@ function toHistorySession(row: SessionRow): HistorySession {
     programDayId: row.program_day_id,
     notes: row.notes,
     summary: row.summary,
-    setCount: row.sets[0]?.count ?? 0,
+    setCount,
   };
+}
+
+export function parseSessionPageRows(data: unknown): HistorySession[] {
+  return z
+    .array(sessionPageRowSchema)
+    .parse(data)
+    .map((row) => ({
+      ...toSessionDetail(row, row.sets.length),
+      overviewSets: row.sets.map((set) => ({
+        exerciseName: set.exercises?.name ?? 'Exercise',
+        position: set.position,
+        effectiveLoadKg: nullableNumber(set.effective_load_kg),
+        reps: set.reps,
+        isWarmup: set.is_warmup,
+      })),
+    }));
+}
+
+export function parseSessionDetailRow(data: unknown): SessionDetail {
+  const row = sessionDetailRowSchema.parse(data);
+  return toSessionDetail(row, row.sets[0].count);
 }
 
 function toStoredSet(row: SetRow): StoredSetRow {
@@ -185,20 +229,24 @@ export async function querySessionPage(
 ): Promise<HistorySession[]> {
   let query = client
     .from('sessions')
-    .select(SESSION_COLUMNS)
+    .select(SESSION_PAGE_COLUMNS)
     .order('started_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(HISTORY_PAGE_SIZE);
   if (after) query = query.or(nextPageFilter(after));
   const { data, error } = await query;
   if (error) throw error;
-  return (data as SessionRow[]).map(toHistorySession);
+  return parseSessionPageRows(data);
 }
 
-export async function querySession(client: SupabaseClient, sessionId: string): Promise<HistorySession | null> {
-  const { data, error } = await client.from('sessions').select(SESSION_COLUMNS).eq('id', sessionId).maybeSingle();
+export async function querySession(client: SupabaseClient, sessionId: string): Promise<SessionDetail | null> {
+  const { data, error } = await client
+    .from('sessions')
+    .select(SESSION_DETAIL_COLUMNS)
+    .eq('id', sessionId)
+    .maybeSingle();
   if (error) throw error;
-  return data ? toHistorySession(data as SessionRow) : null;
+  return data ? parseSessionDetailRow(data) : null;
 }
 
 export async function querySessionSets(client: SupabaseClient, sessionId: string): Promise<StoredSetRow[]> {

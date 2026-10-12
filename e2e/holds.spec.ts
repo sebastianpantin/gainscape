@@ -15,7 +15,7 @@ test('log a farmers carry to failure, earn Grip and lengthen it from history', a
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
   await expect(page.getByRole('list', { name: 'XP gained' })).toContainText(/Grip: \+[\d,]+ XP/);
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   const holdRecords = page.getByRole('region', { name: 'Hold records' });
   await expect(holdRecords).toContainText('Farmers Carry');
   await expect(holdRecords).toContainText('Farthest 40 m');
@@ -48,7 +48,7 @@ test('time a dead hang and a plate pinch in seconds, then see the record chip wh
   await page.getByRole('button', { name: 'Save and finish workout' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
 
-  await openTab(page, 'Log');
+  await openTab(page, 'Collection');
   const holdRecords = page.getByRole('region', { name: 'Hold records' });
   await expect(holdRecords).toContainText('Dead Hang');
   await expect(holdRecords).toContainText('Longest 30 s');

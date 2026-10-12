@@ -14,6 +14,7 @@ import { useDataChangeInvalidation } from './lib/data-changes.ts';
 import { createQueryClient } from './lib/query-client.ts';
 import { parseAuthCallback } from './lib/auth-links.ts';
 import { useAuthSession } from './lib/use-auth-session.ts';
+import { useRouteFocusAndTitle } from './lib/use-route-focus.ts';
 import { OfflineBanner } from './pwa/OfflineBanner.tsx';
 import { setUpdateUser } from './pwa/register-service-worker.ts';
 import { UpdateBanner } from './pwa/UpdateBanner.tsx';
@@ -76,7 +77,7 @@ const WhatsNewScreen = lazyScreen(() => import('./features/whats-new/WhatsNewScr
 const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'Train', icon: 'train', end: true },
   { to: '/skills', label: 'Skills', icon: 'skills' },
-  { to: '/collection', label: 'Log', icon: 'log' },
+  { to: '/collection', label: 'Collection', icon: 'log' },
   { to: '/friends', label: 'Friends', icon: 'friends' },
   { to: '/profile', label: 'Profile', icon: 'profile' },
 ];
@@ -90,6 +91,11 @@ export function App() {
       <Screens />
     </QueryClientProvider>
   );
+}
+
+function RouteFocusAndTitle() {
+  useRouteFocusAndTitle();
+  return null;
 }
 
 function Screens() {
@@ -122,6 +128,7 @@ function Screens() {
   return (
     <PreferencesProvider key={userId} userId={userId}>
       <BrowserRouter>
+        <RouteFocusAndTitle />
         <nav className="tab-bar" aria-label="Main">
           {TABS.map((tab) => (
             <NavLink key={tab.to} to={tab.to} end={tab.end} className="tab">

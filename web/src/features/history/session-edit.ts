@@ -7,7 +7,7 @@ import { formatLoad } from '../../lib/format.ts';
 import type { InvokeOutcome } from '../../lib/function-client-rules.ts';
 import {
   type EditSessionPayload,
-  type HistorySession,
+  type SessionDetail,
   type StoredSetRow,
   transientReason,
 } from '../../lib/history-rules.ts';
@@ -162,7 +162,7 @@ function placedFromRow(row: StoredSetRow, known: KnownExercise | undefined): Pla
 }
 
 export function editFromSession(
-  session: Pick<HistorySession, 'id' | 'revision' | 'notes'>,
+  session: Pick<SessionDetail, 'id' | 'revision' | 'notes'>,
   rows: readonly StoredSetRow[],
   exercisesById: ReadonlyMap<string, KnownExercise>,
 ): SessionEdit {
