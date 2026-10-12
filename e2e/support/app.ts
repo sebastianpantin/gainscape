@@ -108,6 +108,15 @@ export function setRow(scope: Page | Locator, setNumber: number): Locator {
   return scope.getByRole('listitem', { name: `Set ${setNumber}`, exact: true });
 }
 
+export async function openSetOptions(row: Locator, setNumber: number): Promise<void> {
+  await row.getByRole('button', { name: `Set ${setNumber} options`, exact: true }).click();
+  await expect(row.getByRole('group', { name: `Set ${setNumber} options`, exact: true })).toBeVisible();
+}
+
+export function warmupBadge(row: Locator): Locator {
+  return row.getByRole('img', { name: 'Warm-up', exact: true });
+}
+
 export function setRows(scope: Page | Locator): Locator {
   return scope.getByRole('listitem', { name: /^Set \d+$/ });
 }

@@ -148,7 +148,7 @@ test('a lift that felt harder three workouts in a row suggests a lighter day', a
   await expect(bench.getByText(/^Try /)).toHaveCount(0);
 });
 
-test('steppers change weight by a plate step and reps by one', async ({ page }) => {
+test('steppers change weight by a plate step and the arrow keys change reps by one', async ({ page }) => {
   await register(page, uniqueUsername('st'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   const firstSet = setRow(await addExercise(page, 'bench', 'Barbell Bench Press'), 1);
@@ -161,10 +161,10 @@ test('steppers change weight by a plate step and reps by one', async ({ page }) 
   await weight.fill('61');
   await firstSet.getByRole('button', { name: 'Lighter, set 1' }).click();
   await expect(weight).toHaveValue('60');
-  await firstSet.getByRole('button', { name: 'One more rep, set 1' }).click();
+  await reps.press('ArrowUp');
   await expect(reps).toHaveValue('9');
-  await firstSet.getByRole('button', { name: 'One rep fewer, set 1' }).click();
-  await firstSet.getByRole('button', { name: 'One rep fewer, set 1' }).click();
+  await reps.press('ArrowDown');
+  await reps.press('ArrowDown');
   await expect(reps).toHaveValue('7');
 
   await page.reload();
