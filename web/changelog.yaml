@@ -1,3 +1,11 @@
+- prs: [98]
+  version: 0.6.1
+  date: 2026-10-12
+  title: Easier to tap
+  items:
+    - Back links, small links, switches and the weekly goal picker are bigger and easier to hit with one thumb. The weekly goal picker now sits on two rows.
+    - Your profile no longer jumps while your loadout loads.
+    - A friend's profile now opens with their name as the page heading, so screen readers start there.
 - prs: [90, 91, 92, 93, 95]
   version: 0.6.0
   date: 2026-10-12
