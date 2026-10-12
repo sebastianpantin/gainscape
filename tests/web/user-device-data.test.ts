@@ -35,7 +35,12 @@ const STAYING_USER = '22222222-2222-4222-8222-222222222222';
 
 const WEB_SRC = join(import.meta.dirname, '../../web/src');
 
-const NAMES_THAT_ARE_NOT_STORAGE_KEYS = new Set(['gainscape.rest-alert', 'gainscape.drafts', 'gainscape.finish.']);
+const NAMES_THAT_ARE_NOT_STORAGE_KEYS = new Set([
+  'gainscape.rest-alert',
+  'gainscape.drafts',
+  'gainscape.data-changes',
+  'gainscape.finish.',
+]);
 const DEVICE_KEYS_WITHOUT_USER_DATA = new Set([CHUNK_RELOAD_KEY]);
 
 const EXERCISE: Exercise = {

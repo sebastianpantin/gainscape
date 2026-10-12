@@ -20,11 +20,36 @@ describe('createQueryClient', () => {
     expect(load).toHaveBeenCalledTimes(1);
   });
 
-  it('refreshes loaded data on the next visit so a finished workout shows up on every tab', async () => {
+  it('serves live data from the cache within the fresh window so a tab switch does not refetch', async () => {
     const client = createQueryClient();
-    const load = vi.fn(() => Promise.resolve('levels'));
+    const load = vi.fn(() => Promise.resolve({ loaded: 'levels', fromCache: false }));
     await client.fetchQuery({ queryKey: KEY, queryFn: load });
     await client.fetchQuery({ queryKey: KEY, queryFn: load });
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches once a change invalidates the data, so a finished workout shows up at once', async () => {
+    const client = createQueryClient();
+    const load = vi.fn(() => Promise.resolve({ loaded: 'levels', fromCache: false }));
+    await client.fetchQuery({ queryKey: KEY, queryFn: load });
+    await client.invalidateQueries({ queryKey: KEY });
+    await client.fetchQuery({ queryKey: KEY, queryFn: load });
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it('refetches a saved copy on the next visit', async () => {
+    const client = createQueryClient();
+    const load = vi.fn(() => Promise.resolve({ loaded: 'levels', fromCache: true, offline: true }));
+    await client.fetchQuery({ queryKey: KEY, queryFn: load });
+    await client.fetchQuery({ queryKey: KEY, queryFn: load });
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it('refetches the friends feed on every visit, since other people change it', async () => {
+    const client = createQueryClient();
+    const load = vi.fn(() => Promise.resolve([]));
+    await client.fetchQuery({ queryKey: ['feed', 'user'], queryFn: load });
+    await client.fetchQuery({ queryKey: ['feed', 'user'], queryFn: load });
     expect(load).toHaveBeenCalledTimes(2);
   });
 });

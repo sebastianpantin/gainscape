@@ -18,6 +18,7 @@ export function useActiveExercises(userId: string, enabled: boolean): LoadedStat
     queryFn: () => fetchExercises({ includeArchived: false }),
     enabled,
     initialData: () => cachedSeed(userId),
+    initialDataUpdatedAt: 0,
   });
   return loadedState(query.data, query.error);
 }
