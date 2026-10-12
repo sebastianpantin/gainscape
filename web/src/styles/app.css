@@ -4,6 +4,12 @@
 
 html {
   background: var(--color-backdrop);
+  touch-action: manipulation;
+}
+
+html,
+body {
+  overscroll-behavior-y: none;
 }
 
 body {
