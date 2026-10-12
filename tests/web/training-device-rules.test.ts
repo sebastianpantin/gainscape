@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TRAINING_DEVICE_SETTINGS,
   holdsWakeLock,
+  levelUpCues,
   parseTrainingDeviceSettings,
   restAlertActions,
   restAlertDelayMs,
@@ -103,5 +104,17 @@ describe('wake lock', () => {
     expect(holdsWakeLock({ keepAwake: false, workoutOpen: true, visible: true })).toBe(false);
     expect(holdsWakeLock({ keepAwake: true, workoutOpen: false, visible: true })).toBe(false);
     expect(holdsWakeLock({ keepAwake: true, workoutOpen: true, visible: false })).toBe(false);
+  });
+});
+
+describe('levelUpCues', () => {
+  it('vibrates and chimes with the default settings', () => {
+    expect(levelUpCues(DEFAULT_TRAINING_DEVICE_SETTINGS)).toEqual(['vibrate', 'sound']);
+  });
+
+  it('follows the vibrate and sound switches and ignores notifications', () => {
+    const quiet = { ...DEFAULT_TRAINING_DEVICE_SETTINGS, sound: false, notify: true };
+    expect(levelUpCues(quiet)).toEqual(['vibrate']);
+    expect(levelUpCues({ ...quiet, vibrate: false })).toEqual([]);
   });
 });

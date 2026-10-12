@@ -55,3 +55,12 @@ export function restAlertActions(
 export function holdsWakeLock(state: { keepAwake: boolean; workoutOpen: boolean; visible: boolean }): boolean {
   return state.keepAwake && state.workoutOpen && state.visible;
 }
+
+export type LevelUpCue = 'vibrate' | 'sound';
+
+export function levelUpCues(settings: TrainingDeviceSettings): LevelUpCue[] {
+  const cues: LevelUpCue[] = [];
+  if (settings.vibrate) cues.push('vibrate');
+  if (settings.sound) cues.push('sound');
+  return cues;
+}
