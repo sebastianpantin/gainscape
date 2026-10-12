@@ -1,3 +1,14 @@
+- prs: [90, 91, 92, 93]
+  version: 0.6.0
+  date: 2026-10-12
+  title: Faster logging and a livelier workout
+  items:
+    - Set rows are compact, show what you lifted last time with one tap to repeat it, and mark whether you beat it. Finishing a set drops its XP with a short buzz.
+    - A bar above the tabs keeps your workout time and rest countdown in view on every screen, and the rest alert reaches you there too. The rest timer is one slim line that counts the time past your rest.
+    - The end-of-workout reveal is quicker and can be skipped. Level-ups chime, and your loot waits in a chest you tap to open.
+    - New players get a short intro to skills, records and loot, choose kg or lb, and pick a first program or an empty workout.
+    - History shows the main exercises, volume and records of each workout and loads more as you scroll. The Log tab is now called Collection.
+    - Screens open faster, text is easier to read, number fields select their value when you tap them, and screen readers and keyboards follow you from screen to screen.
 - prs: [84, 88]
   version: 0.5.1
   date: 2026-10-11
