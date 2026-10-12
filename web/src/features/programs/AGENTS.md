@@ -29,6 +29,7 @@ Training programs: list, copy from templates, create, rename and edit days with 
 
 - `PlannedExercise` is defined in `../../offline/draft-format.ts` and is what a started day copies into the draft (its `progression` is not copied, so it needed no format bump); changing what the draft stores means updating draft format versioning and `tests/web/draft-format.test.ts`.
 - Program persistence lives in `../../lib/programs.ts`; the list is saved per user in `Storage` by `../../offline/program-list-cache.ts`, so `ProgramsScreen`, `ProgramDayStarts` and `ProgramEditor` open offline from it (`loadProgramsCacheFirst`, with `Offline: using your saved programs.` on Programs). `PowerliftingPrograms` and `ProgramEnrollScreen` read the saved templates (and the saved exercise list) offline without a request; enrolling stays disabled offline. `useActiveProgram` skips its refresh offline and uses `offlineRefreshState`, so a user whose saved cache was refreshed online with no enrollment sees `You're not following a program.`
+- Editor checks in `program-edit.ts`: `exerciseIssue` (`Add at least one exercise.` while no day plans one) runs after `nameIssue` and before `targetIssue`; `addDay` names the new day `Day <n>` from the day count plus one, skipping names already taken, so removing `Day 1` then adding gives `Day 4`, not a second `Day 3`. `ProgramEditor` shows a problem from Save or Use these changes only until the program is edited again; a load problem stays.
 
 ### Testing Requirements
 

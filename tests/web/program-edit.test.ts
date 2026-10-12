@@ -8,6 +8,7 @@ import {
   changeProgression,
   DEFAULT_INCREMENT,
   docFor,
+  exerciseIssue,
   isPlannableExercise,
   MAX_DAYS,
   MAX_EXERCISES_PER_DAY,
@@ -135,6 +136,13 @@ describe('day changes', () => {
     expect(MAX_DAYS).toBe(14);
     expect(canAddDay(full)).toBe(false);
   });
+
+  it('numbers an added day past the names already taken, so removing Day 1 does not give two Day 3s', () => {
+    const numbered = addDay(addDay(newProgramDoc('program-2', 'day-1'), 'day-2'), 'day-3');
+    const withoutFirst = removeDay(numbered, 0);
+    expect(withoutFirst.days.map((day) => day.name)).toEqual(['Day 2', 'Day 3']);
+    expect(addDay(withoutFirst, 'day-4').days.map((day) => day.name)).toEqual(['Day 2', 'Day 3', 'Day 4']);
+  });
 });
 
 describe('planned exercise changes', () => {
@@ -173,6 +181,14 @@ describe('targets', () => {
   it('names the first exercise whose reps min is above its reps max', () => {
     const swapped = changePlannedExercise(doc, 1, 0, { targetRepsMin: 12, targetRepsMax: 8 });
     expect(targetIssue(swapped, nameOf)).toBe("Back Squat on Lower: reps min can't be above reps max.");
+  });
+});
+
+describe('exercises', () => {
+  it('needs at least one exercise somewhere in the program', () => {
+    expect(exerciseIssue(doc)).toBeNull();
+    expect(exerciseIssue(removePlannedExercise(doc, 1, 0))).toBeNull();
+    expect(exerciseIssue(newProgramDoc('program-2', 'day-1'))).toBe('Add at least one exercise.');
   });
 });
 

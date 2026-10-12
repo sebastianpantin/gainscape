@@ -25,6 +25,7 @@ import {
   changeProgression,
   DAY_NAME_MAX_LENGTH,
   docFor,
+  exerciseIssue,
   INCREMENT_PRESETS,
   INCREMENT_RANGE,
   INCREMENT_STEP,
@@ -76,7 +77,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       : docFor(cachedPrograms(userId), userId, programId),
   );
   const [exercises, setExercises] = useState<Exercise[] | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<{ text: string; shownFor: ProgramDoc | null } | null>(null);
   const [missing, setMissing] = useState(false);
   const [saving, setSaving] = useState(false);
   const onlineSignal = useOnlineSignal();
@@ -91,7 +92,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       () => fetchExercises({ includeArchived: true }),
     ).then(
       ({ loaded }) => setExercises(loaded),
-      (error: Error) => setProblem(error.message),
+      (error: Error) => setProblem({ text: error.message, shownFor: null }),
     );
   }, [userId, onlineSignal]);
 
@@ -103,7 +104,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
         if (loaded) setDoc(loaded);
         else setMissing(true);
       },
-      (error: Error) => setProblem(error.message),
+      (error: Error) => setProblem({ text: error.message, shownFor: null }),
     );
   }, [doc, userId, programId, onlineSignal]);
 
@@ -118,7 +119,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       <main className="screen">
         {problem ? (
           <p className="problem" role="alert">
-            {problem}
+            {problem.text}
           </p>
         ) : (
           <p>Loading…</p>
@@ -134,7 +135,9 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     const exercise = byId.get(exerciseId);
     return exercise && isLiftExercise(exercise) ? exercise.loadType : null;
   };
-  const issue = nameIssue(doc) ?? targetIssue(doc, nameOf) ?? progressionIssue(doc, nameOf, loadTypeOf);
+  const issue =
+    nameIssue(doc) ?? exerciseIssue(doc) ?? targetIssue(doc, nameOf) ?? progressionIssue(doc, nameOf, loadTypeOf);
+  const shownProblem = problem && (problem.shownFor === null || problem.shownFor === doc) ? problem.text : null;
   const changeAt = (dayIndex: number, exerciseIndex: number, changes: Partial<PlannedExercise>) =>
     setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, changes));
   const changeIncrement = (dayIndex: number, exerciseIndex: number, value: number) => {
@@ -143,14 +146,14 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   };
 
   const save = async () => {
-    if (issue) return setProblem(issue);
+    if (issue) return setProblem({ text: issue, shownFor: doc });
     setSaving(true);
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
       navigate('/programs');
     } catch (error) {
-      setProblem(messageOf(error, 'Could not save the program.'));
+      setProblem({ text: messageOf(error, 'Could not save the program.'), shownFor: doc });
       setSaving(false);
     }
   };
@@ -161,7 +164,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       'outdated';
 
   const followChanges = async () => {
-    if (issue) return setProblem(issue);
+    if (issue) return setProblem({ text: issue, shownFor: doc });
     if (!programCache.enrollment) return;
     const carried: CarriedFollow = {
       unit: programCache.enrollment.unit,
@@ -174,7 +177,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       const { key } = await publishForEnroll(queryClient, userId, doc.id);
       navigate(`/programs/enroll/${key}`, { state: { carried } });
     } catch (error) {
-      setProblem(programErrorText(error));
+      setProblem({ text: programErrorText(error), shownFor: doc });
       setSaving(false);
     }
   };
@@ -368,9 +371,9 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       >
         + Add day
       </button>
-      {problem && (
+      {shownProblem && (
         <p className="problem" role="alert">
-          {problem}
+          {shownProblem}
         </p>
       )}
       <button className="button primary" type="button" disabled={saving} onClick={save}>

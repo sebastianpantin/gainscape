@@ -286,6 +286,7 @@ test('a target can be cleared and retyped, and reps min above reps max is explai
   await expect(page).toHaveURL(/\/programs\/[0-9a-f-]+$/);
 
   await squat.getByLabel('Reps max').fill('15');
+  await expect(page.getByRole('alert')).toHaveCount(0);
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page).toHaveURL(/\/programs$/);
 });
