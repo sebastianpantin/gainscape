@@ -259,7 +259,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const { state: draftState, startWorkout, flush } = useWorkoutDraft(userId);
   const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
   const loadout = useLoadout(userId);
-  const refetchLoadout = () => announceDataChange(queryClient, 'gear-changed');
+  const announceGearChanged = () => announceDataChange(queryClient, 'gear-changed');
 
   const showLoaded = (change: (loaded: LoadedItems) => LoadedItems) => {
     const { queryKey } = itemsQuery(userId);
@@ -406,11 +406,11 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           offline={offline}
           draftOpen={draftOpen}
           onCrafted={async (itemId) => {
-            await Promise.all([refetchInventory(), refetchLoadout()]);
+            await Promise.all([refetchInventory(), announceGearChanged()]);
             setPickedId(itemId);
           }}
           onCatalogStale={refetchCatalog}
-          onLoadoutChanged={refetchLoadout}
+          onLoadoutChanged={announceGearChanged}
           onStartChallenge={startChallenge}
         />
       ) : (
