@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type Ref, useMemo, useState } from 'react';
 import { Icon } from '../../components/Icon.tsx';
 import { type Exercise } from '../../lib/catalog-rules.ts';
 import { exerciseSearchMatches, hiddenMatchesText } from '../../lib/exercise-search-rules.ts';
@@ -8,11 +8,12 @@ interface ExercisePickerProps {
   exercises: Exercise[];
   onPick: (exercise: Exercise) => void;
   placeholder?: string;
+  searchRef?: Ref<HTMLInputElement>;
 }
 
 const MAX_MATCHES_SHOWN = 12;
 
-export function ExercisePicker({ exercises, onPick, placeholder = 'Add exercise…' }: ExercisePickerProps) {
+export function ExercisePicker({ exercises, onPick, placeholder = 'Add exercise…', searchRef }: ExercisePickerProps) {
   const [query, setQuery] = useState('');
 
   const { shown: matches, hiddenCount } = useMemo(
@@ -25,6 +26,7 @@ export function ExercisePicker({ exercises, onPick, placeholder = 'Add exercise�
       <span className="search-field">
         <Icon name="search" size={18} />
         <input
+          ref={searchRef}
           type="search"
           placeholder={placeholder}
           value={query}
