@@ -46,8 +46,12 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await details.getByRole('button', { name: 'Craft Grinder belt' }).click();
   await expect(slot(page, 'Grinder belt')).toBeVisible();
   await expect(details).toContainText('Grinder belt');
+  await expect(details.getByText('Crafted!')).toBeVisible();
   await expect(slot(page, 'Rookie belt', 0)).toBeVisible();
   await expect(slot(page, 'Grinder scraps', 0)).toBeVisible();
+  await slot(page, 'Grinder scraps', 0).click();
+  await slot(page, 'Grinder belt').click();
+  await expect(details.getByText('Crafted!')).toHaveCount(0);
 
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();

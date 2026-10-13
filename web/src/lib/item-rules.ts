@@ -149,6 +149,16 @@ export function colorFor(item: Pick<CatalogItem, 'tier'>): string {
   return item.tier ? TIER_COLORS[item.tier] : UNTIERED_COLOR;
 }
 
+const RARITY_ORDER: readonly ItemRarity[] = ['common', 'uncommon', 'rare', 'legendary'];
+
+export type Fanfare = Extract<ItemRarity, 'rare' | 'legendary'>;
+
+export function fanfareFor(rarities: readonly ItemRarity[]): Fanfare | null {
+  const rarest = Math.max(-1, ...rarities.map((rarity) => RARITY_ORDER.indexOf(rarity)));
+  const rarity = RARITY_ORDER[rarest];
+  return rarity === 'rare' || rarity === 'legendary' ? rarity : null;
+}
+
 export function showsQuantity(item: Pick<CatalogItem, 'kind'>, held: Pick<HeldItem, 'quantity'>): boolean {
   return item.kind === 'material' || held.quantity !== 1;
 }
