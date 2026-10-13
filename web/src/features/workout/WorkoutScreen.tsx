@@ -28,7 +28,7 @@ import { PetCompanion } from './PetCompanion.tsx';
 import { greetingFor, nearestLevelUp, nearestLevelUpText } from './today-rules.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
 import { stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { type SessionBaseline, sessionBaselineAsOf } from '../../lib/session-baseline-rules.ts';
 import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-baseline-store.ts';

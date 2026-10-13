@@ -19,7 +19,7 @@ import { usePreferences } from '../../lib/preferences.ts';
 import { type Profile, updatePrivateProfile, type UnitPref } from '../../lib/profile.ts';
 import { templateListEntries } from '../../lib/program-enroll-rules.ts';
 import { profileQuery, programTemplatesQuery } from '../../lib/queries.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { type CacheFirstLoad } from '../../offline/cache-first.ts';
 import { profileCache } from '../../offline/profile-cache.ts';
 

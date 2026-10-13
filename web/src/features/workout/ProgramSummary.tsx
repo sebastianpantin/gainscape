@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { DISMISS_SUMMARY_LABEL, rolloverSummary } from '../../lib/program-summary-rules.ts';
 import { dismissSummary, isSummaryDismissed } from '../../lib/program-summary-store.ts';
 import { type ActiveProgram } from '../../lib/program-today-rules.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 
 interface ProgramSummaryProps {
   userId: string;

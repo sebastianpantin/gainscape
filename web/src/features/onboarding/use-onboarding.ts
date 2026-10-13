@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { onboardingDecision, trainingHistoryNow } from '../../lib/onboarding-rules.ts';
 import { readOnboarding, saveOnboardingDone } from '../../lib/onboarding-store.ts';
 import { trainingHistoryQuery } from '../../lib/queries.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 
 export function useOnboarding(userId: string, hasDraft: boolean): { open: boolean; finish: () => void } {
   const [record, setRecord] = useState(() => readOnboarding(deviceStorage(), userId));
