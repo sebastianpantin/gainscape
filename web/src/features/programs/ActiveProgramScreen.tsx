@@ -12,6 +12,7 @@ import {
 import { referenceEvents, referenceFieldKey, referenceFields } from '../../lib/program-reference-rules.ts';
 import { referenceHelpKeys } from '../../lib/term-help-rules.ts';
 import { useIsOffline } from '../../lib/use-online.ts';
+import { useToast } from '../../lib/toast.ts';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';
 
@@ -25,7 +26,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
   const { cache, program, loadStatus, statusText, showCache } = useActiveProgram(userId);
   const [edited, setEdited] = useState<Record<string, string>>({});
   const [problems, setProblems] = useState<string[]>([]);
-  const [saved, setSaved] = useState(false);
+  const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
   const [confirmingStop, setConfirmingStop] = useState(false);
 
@@ -39,7 +40,6 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
     if (!cache.enrollment) return;
     const enrollment = cache.enrollment;
     const result = referenceEvents(fields, edited);
-    setSaved(false);
     if (result.kind === 'invalid') {
       setProblems(result.problems);
       return;
@@ -57,7 +57,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
       setEdited({});
       setBusy(false);
     }
-    setSaved(!failed);
+    if (!failed) showToast('Saved');
   };
 
   const stop = async () => {
@@ -113,11 +113,6 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
             <p key={problem}>{problem}</p>
           ))}
         </div>
-      )}
-      {saved && (
-        <p className="notice" role="status">
-          Saved
-        </p>
       )}
       {fields.length > 0 && (
         <button className="button primary big" type="button" disabled={busy || offline} onClick={save}>

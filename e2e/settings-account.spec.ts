@@ -78,7 +78,9 @@ test('resetting all data needs RESET typed, wipes the workouts and keeps the acc
   await confirm.fill('RESET');
   await page.getByRole('button', { name: 'Reset everything' }).click();
 
-  await expect(page.getByRole('status')).toHaveText('Your data was reset. You start again from level 1.');
+  await expect(
+    page.getByRole('status').getByText('Your data was reset. You start again from level 1.', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel('Type RESET to confirm')).toHaveCount(0);
   expect(await sessionCount(username)).toBe(0);
   expect(await accountRowCount(username)).toBe(1);

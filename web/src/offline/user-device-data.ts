@@ -18,6 +18,7 @@ import { forgetDraftOnDevice } from './local-drafts.ts';
 import { profileCache } from './profile-cache.ts';
 import { forgetProgramCache } from './program-cache.ts';
 import { programListCache } from './program-list-cache.ts';
+import { seenLevelsCache } from './seen-levels-cache.ts';
 import { standingCache } from './standing-cache.ts';
 
 export interface UserDevice {
@@ -35,6 +36,7 @@ export async function forgetUserProgressData(device: UserDevice, userId: string)
   forgetItemsCache(storage, userId);
   programListCache.forget(storage, userId);
   standingCache.forget(storage, userId);
+  seenLevelsCache.forget(storage, userId);
   profileCache.forget(storage, userId);
   collectionCache.forget(storage, userId);
   forgetSessionBaseline(storage, userId);

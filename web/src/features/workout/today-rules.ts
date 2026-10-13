@@ -9,6 +9,10 @@ export function greetingFor(hour: number): string {
   return 'Late one tonight';
 }
 
+export function levelCountStart(seen: number | null, current: number): number {
+  return seen !== null && seen < current ? seen : current;
+}
+
 export interface NearestLevelUp {
   skillName: string;
   xpToGo: number;
