@@ -56,7 +56,7 @@ Pure logic here is covered by `tests/web/` (`make test-web`, no stack). Screens 
 
 ### External
 
-- `react`, `react-dom`, `react-router-dom`, `@supabase/supabase-js`, `@fontsource/ibm-plex-mono`, `@fontsource/pixelify-sans`
+- `react`, `react-dom`, `react-router-dom`, `@supabase/supabase-js`, `@fontsource/ibm-plex-mono`, `@fontsource/silkscreen`
 
 ## Manual Notes
 
