@@ -19,7 +19,7 @@ import { fetchSession } from '../../lib/history.ts';
 import { type CatalogItem, colorFor, fanfareFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { readItemsCache } from '../../offline/items-cache.ts';

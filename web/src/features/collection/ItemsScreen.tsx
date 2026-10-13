@@ -47,7 +47,7 @@ import {
   unequipGear,
 } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { startDraftFromChallenge } from '../../offline/draft-format.ts';
 import { type ChallengeExerciseEntry, OFFLINE_ITEMS_NOTICE, updateItemsCache } from '../../offline/items-cache.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';

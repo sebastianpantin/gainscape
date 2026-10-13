@@ -20,7 +20,8 @@ import { type BarbellSetup, HEAVIEST_BAR_OR_PLATE, isUsableBarOrPlate, PLATE_CHO
 import { readPlateSettings, savePlateSettings } from '../../lib/plate-settings-store.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { REST_CHOICES_S, REST_OFF, restClock, withChosenRest } from '../../lib/rest-timer-rules.ts';
-import { deviceStorage, readRestState, saveRestState } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
+import { readRestState, saveRestState } from '../../lib/rest-timer-store.ts';
 import type { TrainingDeviceSettings } from '../../lib/training-device-rules.ts';
 import { readTrainingDeviceSettings, saveTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { useToast } from '../../lib/toast.ts';
