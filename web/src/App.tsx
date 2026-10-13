@@ -147,7 +147,7 @@ function Screens() {
               <Route path="/collection" element={<CollectionScreen userId={userId} />} />
               <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
               <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
-              <Route path="/collection/history" element={<HistoryScreen />} />
+              <Route path="/collection/history" element={<HistoryScreen userId={userId} />} />
               <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
               <Route path="/friends" element={<FriendsScreen userId={userId} />} />
               <Route path="/friends/hiscores" element={<HiscoresScreen />} />

@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { CHUNK_RELOAD_COOLDOWN_MS, CHUNK_RELOAD_KEY, claimChunkReload } from '../../web/src/pwa/chunk-reload.ts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  CHUNK_RELOAD_COOLDOWN_MS,
+  CHUNK_RELOAD_KEY,
+  claimChunkReload,
+  reloadOnChunkLoadError,
+} from '../../web/src/pwa/chunk-reload.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const NOW = 1_700_000_000_000;
@@ -41,5 +46,41 @@ describe('claimChunkReload', () => {
     expect(claimChunkReload(null, NOW)).toBe(false);
     expect(claimChunkReload(readOnly, NOW)).toBe(false);
     expect(claimChunkReload(unreadable, NOW)).toBe(false);
+  });
+});
+
+describe('reloadOnChunkLoadError', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubPage() {
+    const page = new EventTarget();
+    const reload = vi.fn();
+    vi.stubGlobal('window', Object.assign(page, { location: { reload } }));
+    vi.stubGlobal('sessionStorage', new MemoryStorage());
+    return { page, reload };
+  }
+
+  it('reloads only after the open drafts are flushed, so a pending draft write is not lost', async () => {
+    const { page, reload } = stubPage();
+    let finishFlush: () => void = () => undefined;
+    const flushDrafts = vi.fn(() => new Promise<void>((resolve) => (finishFlush = resolve)));
+    reloadOnChunkLoadError(flushDrafts);
+    const preloadError = new Event('vite:preloadError', { cancelable: true });
+    page.dispatchEvent(preloadError);
+    expect(preloadError.defaultPrevented).toBe(true);
+    expect(flushDrafts).toHaveBeenCalledOnce();
+    await Promise.resolve();
+    expect(reload).not.toHaveBeenCalled();
+    finishFlush();
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
+  });
+
+  it('still reloads when flushing the drafts fails', async () => {
+    const { page, reload } = stubPage();
+    reloadOnChunkLoadError(() => Promise.reject(new Error('store closed')));
+    page.dispatchEvent(new Event('vite:preloadError', { cancelable: true }));
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
   });
 });

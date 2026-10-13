@@ -27,10 +27,11 @@ import {
 } from '../../lib/format.ts';
 import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
 import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
-import { isUuid, type SessionDetail, type StoredSetRow } from '../../lib/history-rules.ts';
+import { isUuid, type SessionDetail, type StoredSetRow, withoutHistorySession } from '../../lib/history-rules.ts';
 import type { CatalogItem } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
+import { historyQuery } from '../../lib/queries.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
@@ -207,6 +208,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           case 'delete_settled':
             return setConfirmingDelete(false);
           case 'deleted':
+            queryClient.setQueryData(historyQuery(userId).queryKey, (loadedPages) =>
+              withoutHistorySession(loadedPages, sessionId),
+            );
             void announceDataChange(queryClient, 'workout-changed');
             return navigate(HISTORY_PATH, { replace: true, state: { notice: change.notice } });
           case 'gone':
@@ -427,7 +431,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           <section className="panel stack exercise-card" key={editKeys[exerciseIndex]}>
             <header>
               <h2>{exercise.name}</h2>
-              {exercise.modality === 'lift' && (
+              {exercise.modality === 'lift' && !changed && (
                 <ExerciseProgressLink exerciseId={exercise.exerciseId} exerciseName={exercise.name} />
               )}
             </header>

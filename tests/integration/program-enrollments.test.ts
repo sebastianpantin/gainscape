@@ -958,7 +958,7 @@ describe('publish_program', () => {
     expect(await templateRows(first.key)).toHaveLength(1);
   });
 
-  it('adds the next version after an edit and keeps the earlier one', async () => {
+  it('adds the next version after an edit and prunes the earlier one nobody follows', async () => {
     const user = await createTestUser();
     const program = strengthProgram();
     const programId = await savedProgram(user, program);
@@ -970,12 +970,23 @@ describe('publish_program', () => {
 
     expect(edited).toEqual({ key: customTemplateKey(programId), version: 2 });
     const rows = await templateRows(edited.key);
-    expect(rows.map((row) => [row.version, row.definition.version])).toEqual([
-      [1, 1],
-      [2, 2],
-    ]);
-    expect(rows[1].definition.progression[0].onMet).toEqual([{ kind: 'increment', by: { kg: 5, lb: 10 } }]);
+    expect(rows.map((row) => [row.version, row.definition.version])).toEqual([[2, 2]]);
+    expect(rows[0].definition.progression[0].onMet).toEqual([{ kind: 'increment', by: { kg: 5, lb: 10 } }]);
     expect(await publishedProgram(user, programId)).toEqual(edited);
+  });
+
+  it('keeps an earlier version an enrollment follows when an edit adds the next one', async () => {
+    const user = await createTestUser();
+    const program = strengthProgram();
+    const programId = await savedProgram(user, program);
+    const first = await publishedProgram(user, programId);
+    await enrolled(user, strengthEnrollment(first));
+    program.days[0].exercises[0] = linearFiveByFive(squatId, 5, 10);
+    await savedProgram(user, program);
+
+    await publishedProgram(user, programId);
+
+    expect((await templateRows(first.key)).map((row) => row.version)).toEqual([1, 2]);
   });
 
   it("refuses another user's program, a built-in program and a program that does not exist", async () => {

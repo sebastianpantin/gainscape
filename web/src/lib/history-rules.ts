@@ -151,6 +151,13 @@ interface SetRow {
   pace_flagged: boolean;
 }
 
+export function withoutHistorySession<Pages extends { pages: { id: string }[][] }>(
+  loaded: Pages | undefined,
+  sessionId: string,
+): Pages | undefined {
+  return loaded && { ...loaded, pages: loaded.pages.map((page) => page.filter((session) => session.id !== sessionId)) };
+}
+
 export function isUuid(value: string): boolean {
   return UUID_PATTERN.test(value);
 }

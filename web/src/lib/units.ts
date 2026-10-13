@@ -110,10 +110,12 @@ export function formatPace(durationS: number, distanceM: number, unit: DistanceU
   return `${minutes}:${rest} ${label}`;
 }
 
+const PLAIN_DECIMAL = /^-?(?:\d+[.,]?\d*|[.,]\d+)$/;
+
 export function parsedDecimal(raw: string): number | null {
   const trimmed = raw.trim();
-  const value = Number(trimmed.replaceAll(',', '.'));
-  return trimmed === '' || !Number.isFinite(value) ? null : value;
+  if (!PLAIN_DECIMAL.test(trimmed)) return null;
+  return Number(trimmed.replace(',', '.'));
 }
 
 export function typedNumberWithin(raw: string, lowest: number, highest: number, wholeNumber: boolean): number | null {
