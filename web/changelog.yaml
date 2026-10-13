@@ -1,3 +1,10 @@
+- prs: [105]
+  version: 0.7.0
+  date: 2026-10-13
+  title: Start over from scratch
+  items:
+    - Settings has a Reset all data button. Type RESET to wipe your workouts, XP, records, loot, gear, bodyweight log, notes and goals and start again from level 1.
+    - Your account, profile, friends, settings, custom exercises and programs stay. Your old posts leave your friends' feeds.
 - prs: [103]
   version: 0.6.4
   date: 2026-10-13
