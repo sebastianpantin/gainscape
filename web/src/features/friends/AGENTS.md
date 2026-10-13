@@ -5,43 +5,28 @@
 
 ## Purpose
 
-The Friends tab: requests and the activity feed, hiscores across friends, and a friend's read-only profile. What a friend sees honors the privacy flags the owner sets in the profile feature.
+The Friends tab: requests and the activity feed (`/friends`), hiscores across friends (`/friends/hiscores`), a friend's read-only profile (`/friends/:friendId`), and the friend activity strip on Train. What a friend sees honours the privacy flags the owner sets in the profile feature.
 
-## Key Files
+## Map
 
-| File                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `FriendsScreen.tsx`       | Route `/friends`. Feed with gz (kudos) toggles (each entry names the poster as display name plus `@username`; gz is disabled while a request action and its refetch run), friend requests by username (send, accept, decline; a leading `@` is fine), removal; refetches friends and feed after every action, failed or not; an action result (`Request sent to ...`) shows as a toast (`useToast`), dismissed when the next action or a gz toggle starts, and the screen has no inline status paragraph, only the `problem` alert; shows `ProfileBadge` and `initialsFor`; badge classes come from `feedBadgeKind`; uses `usePreferences` for weight display. An empty feed reads `No posts yet. Add friends, or log a personal record (PR).` (asserted in `e2e/friends.spec.ts` and `e2e/tab-cache.spec.ts`) |
-| `FriendActivityStrip.tsx` | `FriendActivityStrip({ userId })`: the `Friends` panel on Train after `WeeklyGoalCard`. Reads `feedPreviewQuery(userId)` and shows `recentFriendActivity(items, 3)` (your own events left out) as a list of `feedBadgeKind` badge, display name with `feedText(...).headline` and `relativeTime`; renders nothing when there is no friend event. `See all` links to `/friends`                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `HiscoresScreen.tsx`      | Route `/friends/hiscores`. Metric picker, `hiscoresQuery` and `skillsQuery` from `../../lib/queries.ts`, ranking with `rankHiscores`/`skillMetric` from `social-rules.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `FriendProfileScreen.tsx` | Route `/friends/:friendId`. Validates the id with `isUuid`, loads the view with `friendProfileQuery(friendId)` from `../../lib/queries.ts` (null means not available), builds `cardProfileOf`/`standingOfView`, removes the cached friends, feed (`FRIENDS_QUERY_PREFIX`, `FEED_QUERY_PREFIX`) and this friend's profile queries after removing a friend; renders `ProfileWithTopSkills` (card plus top skills, collection percent via `collectionPercent`), the friend's `LoadoutPanel` from `../profile/` (`get_loadout`, hidden when it returns null) and each exercise's records through `RecordSlots` and `slotsByReps` from `../collection/`                                                                                                                                                             |
-| `FriendsTabs.tsx`         | `SegmentedNav` with Feed and Hiscores                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+- `FriendsScreen.tsx`, `HiscoresScreen.tsx`, `FriendProfileScreen.tsx`, `FriendsTabs.tsx` (Feed and Hiscores).
+- `FriendActivityStrip.tsx`: the `Friends` panel on Train; renders nothing without a friend event and leaves out your own events.
+- Ranking, feed text and percent logic: `../../lib/social-rules.ts`. Queries: `../../lib/queries.ts`.
 
-## For AI Agents
+## Rules and gotchas
 
-### Working In This Directory
+- Privacy is enforced on the server (RLS and RPCs). The UI must not try to hide data it was sent.
+- `../profile/FriendPreviewScreen.tsx` and `FriendProfileScreen.tsx` render the same card from the same helpers (`profile-view.ts`). Change both together.
+- After every request action, failed or not, refetch friends and feed. gz is disabled while a request action and its refetch run.
+- Results show as toasts, dismissed when the next action or a gz toggle starts. There is no inline status paragraph, only the `problem` alert.
+- A leading `@` in a username request is fine (the server strips one).
+- `FriendProfileScreen` validates the id with `isUuid`; a null view means not available. After removing a friend it removes the cached friends, feed and this friend's profile queries. The friend's `LoadoutPanel` hides when `get_loadout` returns null.
+- The empty feed text is asserted in `e2e/friends.spec.ts` and `e2e/tab-cache.spec.ts`.
 
-- Ranking, feed and percent logic belongs in `../../lib/social-rules.ts`, not here. Privacy is enforced server side (RLS and RPCs); the UI must not try to hide data it was sent.
-- `../profile/FriendPreviewScreen.tsx` and this folder's `FriendProfileScreen.tsx` render the same card from the same helpers (`profile-view.ts`); change both together.
-
-### Testing Requirements
+## Testing
 
 - Unit: `tests/web/social-rules.test.ts` (`make test-web`). Write the failing rule test there first.
-- E2E (stack needed): `e2e/friends.spec.ts` (request, feed with gz and hidden weights, hiscores, profile, removal) and `e2e/a11y.spec.ts`.
-
-### Common Patterns
-
-- Tabbed section via `FriendsTabs` rendered at the top of each tab screen.
-
-## Dependencies
-
-### Internal
-
-- `../../lib/{catalog,catalog-rules,error-text,history-rules,preferences,profile,social,social-rules}.ts`, `../collection/{RecordSlots,record-slots}`, `../profile/{ProfileCard,ProfileWithTopSkills}.tsx`, `../../components/SegmentedNav.tsx`.
-
-### External
-
-- React Router.
+- E2E (stack): `e2e/friends*.spec.ts`, `e2e/a11y.spec.ts`.
 
 ## Manual Notes
 

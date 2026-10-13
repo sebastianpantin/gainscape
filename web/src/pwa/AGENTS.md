@@ -1,59 +1,38 @@
 # pwa
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-13
 
 ## Purpose
 
-The page-side PWA runtime: worker registration, the update flow that safely swaps in a new service worker, the install prompt state, and the banners that surface these. It also owns `shell-rules.ts`, the pure rules and constants shared by the page, the worker (`../sw/`) and the build plugin (`../../build/`).
+The page-side PWA runtime: service worker registration, the update flow that swaps in a new worker safely, install prompt state, chunk-load recovery and the banners that surface them. It also owns `shell-rules.ts`, the rules and constants shared by the page, the worker (`../sw/`) and the build plugin (`../../build/`).
 
-## Key Files
+## Map
 
-| File                         | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shell-rules.ts`             | Pure and browser-free. Constants (`SHELL_CACHE_PREFIX`, `SHELL_INDEX`, `SHELL_MANIFEST`, `SERVICE_WORKER_FILE` = `sw.js`, `ACTIVATE_MESSAGE`, `BUILD_ID_LENGTH`), `shellDecision`, `precacheEntries` (skips `isUnpublished` files such as `AGENTS.md`, which the Pages build deletes; `scripts/deploy/pages-headers.ts` uses the same predicate), `shellBuildManifestText`, `shellCacheName`. Type-checked by both tsconfigs                                                                                                  |
-| `update-flow.ts`             | `createUpdateFlow(ports)` state machine over injected ports (registration, service worker container, `BroadcastChannel`, Web Locks, clock, reload, draft flush). States: idle, ready, applying, waiting_for_finish, reloading, failed. Checks for updates every 30 min and on visibility, posts `ACTIVATE_MESSAGE` to the waiting worker, waits on the finish lock (`finishLockName`) so a workout finish is not interrupted, flushes open drafts, then reloads and pings other tabs (`RELOAD_PING`)                          |
-| `register-service-worker.ts` | Wires the real browser objects into `createUpdateFlow`. `registerServiceWorker()` only runs in production builds (`import.meta.env.PROD`) after `load`. Exposes `useUpdateFlow`, `useUpdateState` and `setUpdateUser` (called from `App.tsx`)                                                                                                                                                                                                                                                                                 |
-| `chunk-reload.ts`            | `claimChunkReload(storage, now)`: true at most once per `CHUNK_RELOAD_COOLDOWN_MS` (10 s), stamping `gainscape.chunk-reload-at` in the given storage; false without storage or when it throws, so a broken chunk never loops. `reloadOnChunkLoadError()` (called from `../main.tsx`) reloads on Vite's `vite:preloadError` when the claim succeeds, after `flushOpenDraftSessions` settles so a pending draft write is not lost, otherwise the error reaches `ScreenErrorBoundary`                                            |
-| `install-state.ts`           | Pure install logic: `installState` (installed, promptable, ios_manual, unavailable), `isIosSafari` (including iPadOS desktop UA), `installCardKey`                                                                                                                                                                                                                                                                                                                                                                            |
-| `install.ts`                 | Module-level store capturing `beforeinstallprompt`/`appinstalled` at import time. Exposes `useInstallState`, `runsStandalone` (display-mode standalone or iOS `navigator.standalone`), `promptInstall`, and per-user localStorage helpers for the install card (`markInstallCardDue`, `readInstallCard`, `dismissInstallCard`, `forgetInstallCard`, `INSTALL_CARD_DUE`)                                                                                                                                                       |
-| `launch-rules.ts`            | `launchTargetPath({ targetURL, origin, currentPath })`: the path, query and hash of a same-origin launch target, or null when there is no target, it is another origin, it is not a URL, or the app already shows it                                                                                                                                                                                                                                                                                                          |
-| `use-launch-routing.ts`      | `useLaunchRouting()`, mounted by `LaunchRouting` inside the router in `../App.tsx`: sets a `window.launchQueue` consumer (Chromium, with the manifest's `launch_handler` `focus-existing`) that routes a shortcut or link launch inside the open window with `navigate`, so an open workout is never reloaded. Sets the consumer once per router mount and reads `navigate` through a ref. While signed out no consumer exists, so a launch waits in the queue and routes after sign-in. No-op where `launchQueue` is missing |
-| `InstallCard.tsx`            | Panel inviting install, shown when the card is due and the state is promptable or ios_manual; Safari shows manual Add to Home Screen instructions                                                                                                                                                                                                                                                                                                                                                                             |
-| `UpdateBanner.tsx`           | Banner per `UpdateState`: Reload, Updating, Saving your workout first, or failure with Try again                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `OfflineBanner.tsx`          | Status banner driven by the `online`/`offline` events                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+- `shell-rules.ts`: pure constants and rules for the shell cache (cache names, `sw.js`, precache list, build manifest). Imported by three runtimes.
+- `update-flow.ts`: the update state machine over injected ports; `register-service-worker.ts` wires the real browser objects into it.
+- `install-state.ts` (pure) and `install.ts` (module-level store of `beforeinstallprompt`): install card logic.
+- `chunk-reload.ts`: reload once on Vite's `vite:preloadError`.
+- `launch-rules.ts` (pure) and `use-launch-routing.ts`: with the manifest's `launch_handler` `focus-existing`, a shortcut or link launch is routed inside the open window through `window.launchQueue` and `navigate`, so an open workout is never reloaded.
+- `*.tsx`: the install card and the update and offline banners.
 
-## For AI Agents
+## Rules and gotchas
 
-### Working In This Directory
+- `shell-rules.ts` runs in the page, the worker and Node. Keep it free of DOM and Node APIs and inside `tsconfig.sw.json`'s include.
+- `precacheEntries` skips unpublished files such as `AGENTS.md`, which the Pages build deletes; `scripts/deploy/pages-headers.ts` imports the same `isUnpublished` predicate; keep using it there, or the worker precaches a 404.
+- `update-flow.ts` only touches injected ports so tests can pass plain objects. Put new browser access in `register-service-worker.ts`.
+- Updates never apply silently. The user clicks Reload, then the flow takes the finish lock (`../offline/finish-lock.ts`) so a workout finish is not interrupted, flushes open drafts (`flushOpenDraftSessions`), reloads and pings other tabs. Do not bypass these or a finish can be lost.
+- `registerServiceWorker()` runs only in production builds, after `load`. `setUpdateUser` (from `App.tsx`) supplies the user id for the finish lock name.
+- `install.ts` must be the first import in `../main.tsx`, or `beforeinstallprompt` can fire before the listener exists.
+- `claimChunkReload` allows one reload per 10 s and returns false when storage is missing or throws, so a broken chunk never loops. It reloads only after open drafts flush; otherwise the error reaches `ScreenErrorBoundary`.
+- `isIosSafari` also matches iPadOS, which reports a desktop user agent.
+- The launch consumer is mounted only inside the signed-in router: while signed out a launch waits in the queue and routes after sign-in. It is set once per router mount and reads `navigate` through a ref. No-op where `launchQueue` is missing (Firefox, Safari).
+- Guard every localStorage access with try/catch for private-mode browsers.
 
-- `shell-rules.ts` is imported from three runtimes (page, worker, Node build). Keep it dependency-free with no DOM or Node APIs, and keep it inside `tsconfig.sw.json`'s include.
-- `update-flow.ts` depends only on injected ports so it can be tested with fakes. Keep new browser access in `register-service-worker.ts`, not inside the flow.
-- `install.ts` must be imported first in `../main.tsx`; otherwise `beforeinstallprompt` can fire before the listener exists.
-- Updates never apply silently: the user clicks Reload, and the flow serialises with `finishLockName` from `../offline/finish-lock.ts` and `flushOpenDraftSessions` from `../offline/draft-session.ts`. Do not bypass these or a workout finish can be lost.
-- localStorage access is try/catch guarded; keep that for private-mode browsers.
-- `setUpdateUser` supplies the user id used for the finish lock name; `App.tsx` sets it on sign in and out.
+## Testing
 
-### Testing Requirements
-
-- `tests/web/shell-rules.test.ts`, `tests/web/update-flow.test.ts`, `tests/web/install-state.test.ts` and `tests/web/launch-rules.test.ts` cover the pure modules. Write the failing test there (`make test-web`, no stack).
-- `use-launch-routing.ts` has no test of its own; only its pure rule `launch-rules.ts` is unit tested.
-- `install.ts`, `register-service-worker.ts` and the three components have no unit tests; they are covered by `e2e/pwa/installable.spec.ts`, `offline.spec.ts` and `update.spec.ts` (`make e2e-pwa`, needs the stack) and the banners by general e2e.
-
-### Common Patterns
-
-- Ports interfaces (`WorkerPort`, `RegistrationPort`, `ContainerPort`, `ChannelPort`, `LocksPort`) are minimal structural types so tests pass plain objects.
-- Module-level store plus `useSyncExternalStore` for install state, flow state and offline status.
-
-## Dependencies
-
-### Internal
-
-- `../offline/finish-lock.ts`, `../offline/draft-session.ts`, `../sw/service-worker.ts`, `../../build/service-worker-plugin.ts`, `../App.tsx`, `../main.tsx`
-
-### External
-
-- `react` (`useSyncExternalStore`, `useState`), Service Worker, Web Locks, BroadcastChannel and `beforeinstallprompt` browser APIs
+- Pure modules: `tests/web/shell-rules.test.ts`, `update-flow.test.ts`, `install-state.test.ts`, `launch-rules.test.ts` (`make test-web`, no stack). Write the failing test there.
+- `install.ts`, `register-service-worker.ts` and the components: `e2e/pwa/` (`make e2e-pwa`, needs the stack).
 
 ## Manual Notes
 

@@ -1,34 +1,19 @@
 # Workflows
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-07
+**Generated:** 2026-10-01 · **Updated:** 2026-10-13
 
 ## Purpose
 
-GitHub Actions workflow definitions. See `../AGENTS.md` for the full description of `ci.yml` and `e2e.yml`.
+GitHub Actions workflow definitions: `ci.yml` (pull request CI: `checks` and `backend`) and `e2e.yml` (weekly and manual browser, PWA and Pages suites). `../AGENTS.md` describes both and their rules.
 
-## Key Files
+## Rules and gotchas
 
-| File      | Description                                                                                                                                                                                                                      |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ci.yml`  | Pull request CI: `checks` (no stack, runs `make ci-changes`; docs-only diffs run just `make format-check secrets-scan`) and `backend` (integration and pgTAP on the local stack; needs `checks`, skipped without backend inputs) |
-| `e2e.yml` | Weekly and manual end-to-end (chromium and webkit, sharded), PWA and Pages suites on the local stack                                                                                                                             |
+- Call `make` targets only, and keep third-party actions pinned to commit SHAs.
 
-## For AI Agents
+## Testing
 
-### Working In This Directory
-
-- Call `make` targets only, and keep third-party actions pinned to commit SHAs. Details in `../AGENTS.md`.
-
-### Testing Requirements
-
-- None automated. Confirm `ci.yml` with a green pull request run and `e2e.yml` with a manual run on the branch (`gh workflow run e2e.yml --ref <branch>`).
-
-## Dependencies
-
-### Internal
-
-- `../../Makefile`
+None automated. Confirm `ci.yml` with a green pull request run and `e2e.yml` with a manual run on the branch (`gh workflow run e2e.yml --ref <branch>`).
 
 ## Manual Notes
 
