@@ -5,39 +5,26 @@
 
 ## Purpose
 
-The Skills tab: the eight OSRS-style skills (six lifting skills plus Endurance and Agility) with level, XP and progress to the next level, plus total level. A skill with `combat_weight` 0 reads "does not count toward combat".
+The Skills tab (`/skills`): every skill's level, XP and progress, total level, the exercises that train a picked skill, and the Recovery panel (a body map of recent hard sets).
 
-## Key Files
+## Map
 
-| File                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SkillsScreen.tsx`  | Route `/skills`. Reads standing via `useStanding(userId)` (the saved standing at once while offline, with `Offline: using your saved skills.`), computes progress with `xpForLevel` and `MAX_LEVEL` from `@domain/index.ts`, renders `SkillIcon` and `ProgressBar`, formats with `formatXp` from `../../lib/format.ts`. The picked skill's panel keeps `aria-live` on the XP lines only and lists the exercises that train it (`exercisesTrainingSkill` over `useActiveExercises` from `../../lib/skill-map.ts`), with a `role="status"` loading line, an empty state and a `role="alert"` problem                                                                                    |
-| `RecoveryPanel.tsx` | The `Recovery` panel (`aria-labelledby` heading) between the totals and the skill grid. Reads `recentSetsQuery(userId)` and `exerciseListQuery(userId)` (skill shares), computes `recoveryBySkill` at `now` = the later of the mount time and the recent sets' `dataUpdatedAt`, and `recoveryGroups` (names from `SkillsScreen`'s `nameOf`); renders `BodyMap`, a legend of `Recovering`, `Almost fresh` and `Fresh` with the skill names (empty groups left out) and the caption `Hard sets each muscle took in the last week, fading by half every day and a half.` Renders nothing while loading; on a load error it shows `Recovery needs a connection to load your recent sets.` |
+- `SkillsScreen.tsx`: standing from `useStanding(userId)` (`../../lib/standing.ts`), exercises from `../../lib/skill-map.ts`.
+- `RecoveryPanel.tsx`: rules in `../../lib/recovery-rules.ts`, drawn with `components/BodyMap.tsx`.
 
-## For AI Agents
+## Rules and gotchas
 
-### Working In This Directory
+- Level math comes from the domain (`xpForLevel`, `MAX_LEVEL`); never re-derive thresholds here.
+- A skill with `combat_weight` 0 reads "does not count toward combat".
+- Offline, the saved standing shows at once with its notice.
+- The picked skill's panel keeps `aria-live` on the XP lines only, not on the exercise list.
+- Recovery computes at the later of mount time and the recent sets' `dataUpdatedAt`. It renders nothing while loading and needs a connection. The body map's colour is the only state cue in the figure, so the legend must list skill names.
+- Recovery here (recent days) is separate from the server's in-session fatigue check.
 
-- Level math is the domain's (`@domain`); never re-derive thresholds here. Standing data comes from `../../lib/standing.ts`; the panel's exercise list comes from `../../lib/skill-map.ts`.
-- The skill icons are pixel sprites (`../../components/pixel-sprites.ts`); a11y asserts they render for all eight skills.
+## Testing
 
-### Testing Requirements
-
-- E2E (stack needed): `e2e/a11y.spec.ts` ("the skills screen shows pixel art for the eight skills", plus the every-screen axe test). Level thresholds are tested in `tests/domain/`; sprite output in `tests/web/pixel-sprites.test.ts`. The Recovery panel is covered by `e2e/recovery-and-companion.spec.ts` and its rules by `tests/web/recovery-rules.test.ts`.
-
-### Common Patterns
-
-- Presentation only, no local state beyond the picked skill; data comes from `useStanding` and, once a panel opens, `useActiveExercises`.
-
-## Dependencies
-
-### Internal
-
-- `../../lib/{format,queries,recovery-rules,standing}.ts`, `../../components/{BodyMap,PixelArt,ProgressBar}.tsx`, `@domain/index.ts`.
-
-### External
-
-- React.
+- Unit: `tests/web/recovery-rules.test.ts`; level thresholds in `tests/domain/`; sprites in `tests/web/pixel-sprites.test.ts`.
+- E2E (stack): `e2e/a11y.spec.ts` (pixel art for every skill, axe), `e2e/recovery-and-companion.spec.ts`.
 
 ## Manual Notes
 

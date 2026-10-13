@@ -1,44 +1,21 @@
 # Docs
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-09
+**Generated:** 2026-10-01 · **Updated:** 2026-10-13
 
 ## Purpose
 
-Human-facing operations documentation. Two pages: `deploy.md` (the free, invite-only test environment: secrets, abuse limits, setup, deploy, testers, incidents, backups, rotation) and `production-auth.md` (what a hosted project needs before real users sign up). Nothing in it is applied automatically.
+Human-facing operations documentation. `deploy.md` is the runbook for the invite-only test environment (secrets, abuse limits, setup, changelog before deploy, `make deploy`, testers, incidents, backups, rotation). `production-auth.md` is the checklist for what a hosted project needs before real users sign up. Nothing here is applied automatically.
 
-## Key Files
+## Rules and gotchas
 
-| File                 | Description                                                                                                                                                                                                                                                                                                      |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `production-auth.md` | Go-live checklist: never push the local `config.toml`, SMTP setup, hosted auth settings (`site_url`, exact redirect URLs, `max_frequency`, rate limits), the account pre-hijack fix, `LOOT_SECRET`, client-IP config, hosting rules.                                                                             |
-| `deploy.md`          | Test environment runbook: who holds which secret and how the tooling enforces it, abuse and rate limits, invite-only setup with email confirmation off, writing the changelog before a deploy, `make deploy`, inviting and removing testers, incidents, backups and restore, secret rotation, pre-tester checks. |
+- Keep the pages consistent with `supabase/config.toml`, `supabase/templates/`, migration 014 (the account pre-hijack fix) and the `README.md` auth notes. If any of those change, update the docs in the same commit.
+- Never run or suggest `supabase config push`, `test db --linked` or tests against a hosted project; the pages explain why.
+- Claims about guards (for example `make test-db`) are backed by `scripts/assert-local-db.mjs`; re-read it when editing those sentences.
 
-## For AI Agents
+## Testing
 
-### Working In This Directory
-
-- Keep the page consistent with `supabase/config.toml`, `supabase/templates/`, migration 014 and the `README.md` auth notes. If any of those change, update this page in the same commit.
-- Never run or suggest `supabase config push`, `test db --linked` or tests against a hosted project. The page documents why.
-- Prettier formats Markdown here (`make format`); tables are aligned by it.
-
-### Testing Requirements
-
-- No tests cover prose. `make format-check` is the only check. Claims about behaviour (for example the `make test-db` guard) are backed by `scripts/assert-local-db.mjs`; re-read it when editing those sentences.
-
-### Common Patterns
-
-- Short imperative sections, a table for settings, TOML snippets, and a final checkbox checklist.
-
-## Dependencies
-
-### Internal
-
-- `../supabase/config.toml`, `../supabase/templates/`, `../scripts/assert-local-db.mjs`, `../README.md`
-
-### External
-
-- Supabase hosted project, an SMTP provider (Resend is the example)
+No tests cover prose. `make format-check` is the only check.
 
 ## Manual Notes
 
