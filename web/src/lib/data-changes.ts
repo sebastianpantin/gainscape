@@ -14,8 +14,9 @@ function dataChanges(): BroadcastChannel | null {
 }
 
 async function invalidateAfter(queryClient: QueryClient, change: DataChange, origin: ChangeOrigin): Promise<void> {
+  const refresh = change === 'account-reset' ? queryClient.resetQueries : queryClient.invalidateQueries;
   await Promise.all(
-    queryRootsToInvalidate(change, origin).map((root) => queryClient.invalidateQueries({ queryKey: [root] })),
+    queryRootsToInvalidate(change, origin).map((root) => refresh.call(queryClient, { queryKey: [root] })),
   );
 }
 

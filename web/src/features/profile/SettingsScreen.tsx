@@ -9,6 +9,8 @@ import {
   exportFileName,
   exportMyData,
   requestEmailChange,
+  RESET_CONFIRMATION,
+  resetMyData,
   saveBlob,
 } from '../../lib/account.ts';
 import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../lib/auth-links.ts';
@@ -35,9 +37,11 @@ import {
   updatePrivateProfile,
   updatePublicProfile,
 } from '../../lib/profile.ts';
+import { openChannel } from '../../lib/channel.ts';
 import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
+import { DRAFT_CHANNEL_NAME } from '../../offline/draft-session.ts';
 import { hasDraftOnDevice } from '../../offline/local-drafts.ts';
-import { forgetUserDeviceData } from '../../offline/user-device-data.ts';
+import { forgetUserDeviceData, forgetUserProgressData } from '../../offline/user-device-data.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { promptInstall, useInstallState } from '../../pwa/install.ts';
 import { useUpdateFlow } from '../../pwa/register-service-worker.ts';
@@ -60,8 +64,13 @@ interface SettingsScreenProps {
   email: string | null;
 }
 
-async function forgetThisDevice(userId: string): Promise<void> {
-  await forgetUserDeviceData({ localStorage, sessionStorage, draftStore: await openDraftStoreOrFallback() }, userId);
+async function forgetOnThisDevice(forget: typeof forgetUserDeviceData, userId: string): Promise<void> {
+  const draftChannel = openChannel(DRAFT_CHANNEL_NAME);
+  try {
+    await forget({ localStorage, sessionStorage, draftStore: await openDraftStoreOrFallback(), draftChannel }, userId);
+  } finally {
+    draftChannel?.close();
+  }
 }
 
 async function hasUnsyncedDraftHere(userId: string): Promise<boolean> {
@@ -584,7 +593,7 @@ function AppSection() {
   );
 }
 
-type AccountPanel = 'email' | 'password' | 'delete' | null;
+type AccountPanel = 'email' | 'password' | 'reset' | 'delete' | null;
 
 function EmailForm({ email, onDone }: { email: string; onDone: (text: string) => void }) {
   const [newEmail, setNewEmail] = useState('');
@@ -692,6 +701,57 @@ function PasswordForm({ onDone }: { onDone: (text: string) => void }) {
   );
 }
 
+function ResetDataForm({ userId, onDone }: { userId: string; onDone: (text: string) => void }) {
+  const queryClient = useQueryClient();
+  const [typed, setTyped] = useState('');
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setProblem(null);
+    if (
+      (await hasUnsyncedDraftHere(userId)) &&
+      !window.confirm('You have a workout that has not synced yet. It will be lost. Reset anyway?')
+    ) {
+      setBusy(false);
+      return;
+    }
+    try {
+      await resetMyData();
+    } catch (error) {
+      setProblem(messageOf(error, 'Could not reset your data.'));
+      setBusy(false);
+      return;
+    }
+    await forgetOnThisDevice(forgetUserProgressData, userId).catch(() => undefined);
+    await announceDataChange(queryClient, 'account-reset');
+    onDone('Your data was reset. You start again from level 1.');
+  };
+
+  return (
+    <form className="danger-zone" onSubmit={submit}>
+      <p>
+        This wipes your workouts, XP, records, loot, gear, bodyweight log, notes and goals for good. Your account,
+        profile, friends, settings, custom exercises and programs stay. Export first if you want a copy.
+      </p>
+      <label className="field">
+        Type {RESET_CONFIRMATION} to confirm
+        <input autoCapitalize="characters" value={typed} onChange={(event) => setTyped(event.target.value)} />
+      </label>
+      {problem && (
+        <p className="problem" role="alert">
+          {problem}
+        </p>
+      )}
+      <button className="button danger" type="submit" disabled={busy || typed.trim() !== RESET_CONFIRMATION}>
+        Reset everything
+      </button>
+    </form>
+  );
+}
+
 function DeleteAccountForm({ userId, username }: { userId: string; username: string }) {
   const navigate = useNavigate();
   const [typed, setTyped] = useState('');
@@ -714,7 +774,7 @@ function DeleteAccountForm({ userId, username }: { userId: string; username: str
       try {
         await signOutKeepingDrafts();
       } finally {
-        await forgetThisDevice(userId).catch(() => undefined);
+        await forgetOnThisDevice(forgetUserDeviceData, userId).catch(() => undefined);
       }
     } catch (error) {
       setProblem(messageOf(error, 'Could not delete your account.'));
@@ -833,6 +893,15 @@ function AccountSection({
       <button className="button" type="button" onClick={() => signOut(userId, navigate)}>
         Sign out
       </button>
+      <button
+        className="button danger-outline"
+        type="button"
+        aria-expanded={panel === 'reset'}
+        onClick={() => toggle('reset')}
+      >
+        Reset all data
+      </button>
+      {panel === 'reset' && <ResetDataForm userId={userId} onDone={done} />}
       {username && (
         <>
           <button

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { EXPORT_SECTIONS } from '../../supabase/functions/export-data/format.ts';
+import { publicTablesOwnedByAUser } from './account-support.ts';
 import { builtInExerciseId, createTestUser, db, postFunction } from './local-stack.ts';
 import { linearFiveByFive, plannedDay, publishedProgram, savedProgram } from './program-support.ts';
 
@@ -49,19 +50,6 @@ const NOT_EXPORTED_CHILD_TABLES: Record<string, string> = {};
 afterAll(async () => {
   await db.end();
 });
-
-async function publicTablesOwnedByAUser(): Promise<string[]> {
-  const rows = await db`
-    select table_name::text as table_name
-    from information_schema.columns
-    where table_schema = 'public' and column_name in ('user_id', 'owner_user_id')
-    union
-    select c.conrelid::regclass::text
-    from pg_constraint c
-    where c.contype = 'f' and c.connamespace = 'public'::regnamespace and c.confrelid = 'public.profiles'::regclass
-    order by 1`;
-  return rows.map((row) => row.table_name as string);
-}
 
 async function publicForeignKeys(): Promise<{ child: string; parent: string }[]> {
   const rows = await db`
