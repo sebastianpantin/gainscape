@@ -69,6 +69,60 @@ test('create a program from scratch, add Squat 5×5, save, it lists under Your p
   await expect.poll(() => planLines(username, 'Squat Focus')).toEqual(['Day 1 back_squat 5×5-5']);
 });
 
+test('cancel a new program: leaves at once when untouched, asks before discarding a change', async ({ page }) => {
+  const username = uniqueUsername('pc');
+  await register(page, username);
+  await openFromProfile(page, 'Programs');
+  await page.getByRole('button', { name: 'New program' }).click();
+  await expect(page.getByRole('heading', { name: 'New program' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page).toHaveURL(/\/programs$/);
+
+  await page.getByRole('button', { name: 'New program' }).click();
+  await page.getByLabel('Program name').fill('Half Done');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Discard your changes?', exact: true });
+  await expect(confirmation).toContainText("This program isn't saved yet.");
+  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(page.getByLabel('Program name')).toHaveValue('Half Done');
+
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await confirmation.getByRole('button', { name: 'Discard changes' }).click();
+  await expect(page).toHaveURL(/\/programs$/);
+  await expect(ownProgram(page, 'Half Done')).toHaveCount(0);
+  expect(await programCount(username)).toBe(0);
+});
+
+test('cancel edits to a saved program keeps the saved plan', async ({ page }) => {
+  const username = uniqueUsername('pe');
+  await register(page, username);
+  await openFromProfile(page, 'Programs');
+  await page.getByRole('button', { name: 'New program' }).click();
+  await page.getByLabel('Program name').fill('Keep Me');
+  await day(page, 1).getByLabel('Search exercises').fill('Back Squat');
+  await day(page, 1)
+    .getByRole('button', { name: /^Back Squat\b/ })
+    .click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(ownProgram(page, 'Keep Me')).toBeVisible();
+
+  await ownProgram(page, 'Keep Me').getByRole('link', { name: 'Edit' }).click();
+  await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page).toHaveURL(/\/programs$/);
+
+  await ownProgram(page, 'Keep Me').getByRole('link', { name: 'Edit' }).click();
+  await plannedExercise(page, 1, 'Back Squat').getByLabel('Sets').fill('5');
+  await plannedExercise(page, 1, 'Back Squat').getByLabel('Reps min').click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Discard your changes?', exact: true });
+  await expect(confirmation).toContainText('Your edits to this program are not saved.');
+  await confirmation.getByRole('button', { name: 'Discard changes' }).click();
+  await expect(page).toHaveURL(/\/programs$/);
+  expect(await planLines(username, 'Keep Me')).toEqual(['Day 1 back_squat 3×8-12']);
+});
+
 test('the exercise picker offers lifts but no holds, since a program plans sets of reps', async ({ page }) => {
   await register(page, uniqueUsername('ph'));
   await openFromProfile(page, 'Programs');

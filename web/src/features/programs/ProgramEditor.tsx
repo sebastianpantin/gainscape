@@ -10,6 +10,7 @@ import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog
 import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
+import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { usePreferences } from '../../lib/preferences.ts';
@@ -26,6 +27,7 @@ import {
   DAY_NAME_MAX_LENGTH,
   docFor,
   exerciseIssue,
+  hasUnsavedChanges,
   INCREMENT_PRESETS,
   INCREMENT_RANGE,
   INCREMENT_STEP,
@@ -76,6 +78,8 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       ? newProgramDoc(crypto.randomUUID(), crypto.randomUUID())
       : docFor(cachedPrograms(userId), userId, programId),
   );
+  const [savedDoc, setSavedDoc] = useState(doc);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [exercises, setExercises] = useState<Exercise[] | null>(null);
   const [problem, setProblem] = useState<{ text: string; shownFor: ProgramDoc | null } | null>(null);
   const [missing, setMissing] = useState(false);
@@ -101,8 +105,10 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     loadProgramsCacheFirst(userId).then(
       ({ loaded: programs }) => {
         const loaded = docFor(programs, userId, programId);
-        if (loaded) setDoc(loaded);
-        else setMissing(true);
+        if (loaded) {
+          setDoc(loaded);
+          setSavedDoc(loaded);
+        } else setMissing(true);
       },
       (error: Error) => setProblem({ text: error.message, shownFor: null }),
     );
@@ -158,6 +164,11 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     }
   };
 
+  const cancel = () => {
+    if (savedDoc && hasUnsavedChanges(savedDoc, doc)) setConfirmingCancel(true);
+    else navigate('/programs');
+  };
+
   const outdated =
     !creating &&
     followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates, exercises ? loadTypeOf : null) ===
@@ -184,7 +195,12 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
 
   return (
     <main className="screen stack">
-      <h1 className="title">{creating ? 'New program' : 'Edit program'}</h1>
+      <div className="stack" style={{ gap: 4 }}>
+        <button className="back-link" type="button" disabled={saving} onClick={cancel}>
+          Cancel
+        </button>
+        <h1 className="title">{creating ? 'New program' : 'Edit program'}</h1>
+      </div>
       {outdated && (
         <section className="panel stack" aria-label="Followed version">
           <p>You're following an earlier version</p>
@@ -379,6 +395,18 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       <button className="button primary" type="button" disabled={saving} onClick={save}>
         Save
       </button>
+      {confirmingCancel && (
+        <ConfirmDialog
+          title="Discard your changes?"
+          confirmLabel="Discard changes"
+          danger
+          busy={saving}
+          onConfirm={() => navigate('/programs')}
+          onCancel={() => setConfirmingCancel(false)}
+        >
+          <p>{creating ? "This program isn't saved yet." : 'Your edits to this program are not saved.'}</p>
+        </ConfirmDialog>
+      )}
     </main>
   );
 }
