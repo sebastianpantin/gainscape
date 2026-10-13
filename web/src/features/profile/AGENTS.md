@@ -19,15 +19,15 @@ The Profile tab and everything under it: the user's own profile card and stats (
   - `LoadoutPanel.tsx` (Items, Profile, Preview and the friend profile).
   - `save-bodyweight.ts` (workout finish and history edit).
 - Logic lives outside this folder:
-  - Rules and validation: `../../lib/profile-rules.ts`.
-  - Supabase calls and the column maps: `../../lib/profile.ts`.
+  - Rules and validation: `../../lib/profile/profile-rules.ts`.
+  - Supabase calls and the column maps: `../../lib/profile/profile.ts`.
   - Display shaping: `profile-view.ts`.
   - Conversion: `units.ts`.
 
 ## Rules and gotchas
 
 - Weights are always stored in kg. Convert only for display and input.
-- Public and private fields live in separate tables or RPCs (`updatePublicProfile` versus `updatePrivateProfile`). A new field goes on the right side, shows on `ProfileCard` only if public, and must stay in sync with RLS and with `PUBLIC_COLUMNS`/`PRIVATE_COLUMNS` in `web/src/lib/profile.ts`.
+- Public and private fields live in separate tables or RPCs (`updatePublicProfile` versus `updatePrivateProfile`). A new field goes on the right side, shows on `ProfileCard` only if public, and must stay in sync with RLS and with `PUBLIC_COLUMNS`/`PRIVATE_COLUMNS` in `web/src/lib/profile/profile.ts`.
 - Name and bio inputs have no `maxLength`, because it counts UTF-16 units. The bio counter uses `characterCount`, so both count characters the way the server does.
 - Bodyweight is a text field with a decimal keyboard, so `82,4` saves as 82.4. Unreadable text shows the range problem and disables Save.
 - A database trigger logs the profile bodyweight save as today's bodyweight entry. Save is disabled offline. After each save, invalidate `bodyweightTrendQuery`.
@@ -39,12 +39,12 @@ The Profile tab and everything under it: the user's own profile card and stats (
 - `ProfileScreen` reads the collection percent through a `select` over the shared `['collection', userId]` query, so it shares the Collection tab's cache.
 - The time zone can change once, then must wait 7 days (`nextTimezoneChangeAt`). A weekly goal change takes effect from a later week (`goalSettingHint`).
 - Device-only settings never go through the profile save:
-  - Rest timer: `../../lib/rest-timer-store.ts`.
-  - Plates and bar weight: `../../lib/plate-settings-store.ts`.
-  - Vibration, sound, notify and keep screen on: `../../lib/training-device-store.ts`.
+  - Rest timer: `../../lib/workout/rest-timer-store.ts`.
+  - Plates and bar weight: `../../lib/workout/plate-settings-store.ts`.
+  - Vibration, sound, notify and keep screen on: `../../lib/workout/training-device-store.ts`.
   - Vibration also gates the set and record buzzes, not only the rest end.
   - Notify asks for permission and shows an alert when it is denied.
-- The RIR and RPE hints come from `GLOSSARY` in `../../lib/glossary.ts`, the same text as the workout help.
+- The RIR and RPE hints come from `GLOSSARY` in `../../lib/ui/glossary.ts`, the same text as the workout help.
 - Sign-out must keep drafts (`signOutKeepingDrafts`).
 - Reset and deletion warn about an unsynced draft (`hasDraftOnDevice`), checking both the booted draft store and the `localStorage` fallback.
   - Reset needs `RESET` typed, then calls `resetMyData`, then `forgetUserProgressData`, then `announceDataChange('account-reset')`.

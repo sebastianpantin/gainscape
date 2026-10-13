@@ -9,22 +9,22 @@ Stack-free Vitest suites for the web app's pure logic and its static build input
 
 ## Map
 
-- Most files are named after the module they test: `lib/foo-rules.ts` is tested in `foo-rules.test.ts`, and `offline/`, `pwa/` and `features/*` modules follow the same pattern.
+- Most files are named after the module they test: `lib/<area>/foo-rules.ts` is tested in `foo-rules.test.ts`, and `offline/`, `pwa/` and `features/*` modules follow the same pattern.
 - Helpers, not suites:
   - `draft-store.contract.ts`: `describeDraftStoreContract`, the shared `DraftStore` contract.
   - `memory-storage.ts`: an in-memory `Storage`.
   - `custom-program-fixture.ts`: a custom template shaped like the output of `publish_program`, shared by the enroll and follow tests.
 - The draft store contract runs twice: `draft-store.idb.test.ts` (fake-indexeddb) and `draft-store.local.test.ts` (`MemoryStorage`).
 - Test files whose names do not match the module:
-  - `auth-session.test.ts`: `lib/auth-restore.ts`
-  - `items.test.ts`: `lib/item-rules.ts`, run against the real catalog YAML
-  - `standing.test.ts`: `lib/standing-rules.ts`
-  - `profile.test.ts`: `lib/profile-rules.ts`
+  - `auth-session.test.ts`: `lib/platform/auth-restore.ts`
+  - `items.test.ts`: `lib/collection/item-rules.ts`, run against the real catalog YAML
+  - `standing.test.ts`: `lib/progress/standing-rules.ts`
+  - `profile.test.ts`: `lib/profile/profile-rules.ts`
   - `program-active.test.ts`: `activeProgram`
   - `program-rule-boundaries.test.ts`: label and boundary helpers of `program-enroll-rules.ts`
   - `hold-draft.test.ts`: hold drafts in `offline/draft-format.ts`
   - `program-draft.test.ts`: the draft's program fields
-  - `social-rules.test.ts`: also `lib/rate-limit.ts`
+  - `social-rules.test.ts`: also `lib/platform/rate-limit.ts`
   - `rest-timer-rules.test.ts`: also `rest-timer-store.ts`
   - `training-device-rules.test.ts`: also `training-device-store.ts`
   - `user-device-data.test.ts`: `companion-pet-store.ts`
@@ -52,9 +52,9 @@ Stack-free Vitest suites for the web app's pure logic and its static build input
   - Shortcuts must be real routes (checked through `routeTitle`).
 - `shell-rules.test.ts` keeps the manifest screenshots out of the service worker precache.
 - `glossary.test.ts` requires each `question` to be distinct and never to contain another, so e2e lookups by exact name never collide.
-- Some suites mock `lib/supabase.ts`, because it reads `window.location` and `import.meta.env` at import time: `account.test.ts`, `screen-cache-saves.test.ts`, `queries.test.ts` and `query-freshness-rules.test.ts`. `save-bodyweight.test.ts` uses a mocked client instead. `catalog-cache.test.ts` needs no mock because it imports types only.
+- Some suites mock `lib/platform/supabase.ts`, because it reads `window.location` and `import.meta.env` at import time: `account.test.ts`, `screen-cache-saves.test.ts`, `queries.test.ts` and `query-freshness-rules.test.ts`. `save-bodyweight.test.ts` uses a mocked client instead. `catalog-cache.test.ts` needs no mock because it imports types only.
 - `workout-help.test.ts` includes balance checks: Simple levels and the lowest RPE must stay below the RIR that counts only for e1RM, and RIR 6 must reach it. A change to `domain/balance.ts` can break it.
-- React components are not rendered here. Put decisions into pure functions (`lib/*-rules.ts`, `offline/*`, `features/**/…-rules.ts`) and cover the wiring in `e2e/`. `web/src/sw/*` is covered only through `pwa/shell-rules.ts` here and by `e2e/pwa/`.
+- React components are not rendered here. Put decisions into pure functions (`lib/**/*-rules.ts`, `offline/*`, `features/**/…-rules.ts`) and cover the wiring in `e2e/`. `web/src/sw/*` is covered only through `pwa/shell-rules.ts` here and by `e2e/pwa/`.
 - Browser-only behaviour (service workers, several tabs, a real IndexedDB failure) belongs in Playwright.
 
 ## Testing

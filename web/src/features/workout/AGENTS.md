@@ -48,7 +48,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - Adding an exercise never waits for last-session values. Known values seed the first set. Otherwise `seedUntouchedSet` fills it later, only if it is still untouched.
 - In a superset, the rest timer starts only after the round's last exercise (`restsAfter`). Done moves focus to the next exercise in the round.
 - Rest timer:
-  - State lives in `../../lib/rest-timer-store.ts`. Re-read it before every write; tabs follow it through the `storage` event.
+  - State lives in `../../lib/workout/rest-timer-store.ts`. Re-read it before every write; tabs follow it through the `storage` event.
   - `RestTimerBar` ticks itself every 250 ms so the screen does not re-render.
   - It stays one mounted `section` so focus survives adjusting and the rest running out.
   - Skip and Dismiss move focus to Finish, or to `.finish-bar` (`tabIndex={-1}`) while Finish is disabled.

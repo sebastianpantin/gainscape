@@ -9,7 +9,7 @@ GoTrue email bodies referenced from `[auth.email.template.*]` in `../config.toml
 
 ## Rules and gotchas
 
-- Keep the `token_hash` and `type` parameters in sync with the `/auth/confirm` handling in `web/src/lib/auth-links.ts`.
+- Keep the `token_hash` and `type` parameters in sync with the `/auth/confirm` handling in `web/src/lib/platform/auth-links.ts`.
 - Subjects live in `config.toml`, not here. Template paths there are relative to the repo root (`./supabase/templates/...`).
 - After a template change, check the hosted project's templates in its dashboard (`docs/production-auth.md`).
 - One call-to-action link per email.
