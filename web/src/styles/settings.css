@@ -1,0 +1,118 @@
+.unit-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.unit-input span {
+  width: 28px;
+  color: var(--color-text-muted);
+}
+
+.switch-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.switch-text {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.switch {
+  flex-shrink: 0;
+  position: relative;
+  width: 76px;
+  height: var(--tap-target);
+  margin-top: var(--space-0-5);
+  padding: 0;
+  cursor: pointer;
+  background: var(--color-well);
+  border: var(--border-width) solid var(--color-outline);
+  box-shadow: var(--bevel-sunken);
+}
+
+.switch[aria-checked='true'] {
+  background: var(--color-xp);
+}
+
+.switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 34px;
+  height: 34px;
+  background: var(--color-text-faint);
+  border: var(--border-width) solid var(--color-outline);
+}
+
+.switch[aria-checked='true'] .switch-knob {
+  left: 35px;
+  background: var(--color-text);
+}
+
+.segment:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.danger-outline {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  background: transparent;
+  box-shadow: none;
+}
+
+.effort-selector.rpe {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.effort-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.swatch-button {
+  width: var(--tap-target);
+  height: var(--tap-target);
+  padding: 0;
+  cursor: pointer;
+  border: var(--border-width) solid var(--color-outline);
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.35);
+}
+
+.swatch-button[aria-checked='true'] {
+  outline: 3px solid var(--color-text);
+  outline-offset: 1px;
+}
+
+.timezone-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.timezone-row .field {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-danger);
+}

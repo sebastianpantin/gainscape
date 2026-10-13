@@ -10,7 +10,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 ## Map
 
 - `HistoryScreen.tsx`: the paged list.
-- `SessionDetailScreen.tsx`: state and rendering only.
+- `SessionDetailScreen.tsx`: state and rendering only; `load-session.ts` loads the session, `SessionHeader.tsx` and `StoredExerciseList.tsx` render the read-only parts.
 - `session-edit.ts`: the pure edit model. Every new edit rule goes here as a pure function.
 - `session-editor.ts`: `createSessionEditor(ports)`, the save and delete flow with every I/O injected. Every save or delete outcome goes here.
 - `HistorySetRow.tsx`: editable set, bout and hold rows reusing the workout field components.

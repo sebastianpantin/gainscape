@@ -1,43 +1,20 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_BALANCE, MAX_SETS_PER_SESSION, type Position } from '@domain/index.ts';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { MAX_SETS_PER_SESSION } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
 import { BOUTS_FULL_TEXT } from '../../lib/cardio-rules.ts';
-import { challengeSummaryText, challengeVolumeText } from '../../lib/challenge-rules.ts';
-import { fetchExercises } from '../../lib/catalog.ts';
-import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
-import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
-import { loadExerciseNotesCacheFirst, saveCachedExerciseNotes } from '../../lib/exercise-note-cache.ts';
-import { type ExerciseNotes, type LocalNoteSaves, withNote } from '../../lib/exercise-note-rules.ts';
-import { fetchExerciseNotes, saveExerciseNote } from '../../lib/exercise-notes.ts';
-import {
-  type ExerciseStrengthView,
-  fetchExerciseStrength,
-  fetchRecordBaseline,
-  fetchStrengthState,
-} from '../../lib/collection-data.ts';
+import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
-import { fetchProfile, type UnitPref } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
-import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
-import { LevelStat } from './LevelStat.tsx';
-import { PetCompanion } from './PetCompanion.tsx';
-import { greetingFor, nearestLevelUp, nearestLevelUpText } from './today-rules.ts';
-import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
 import { stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage } from '../../lib/keyed-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
-import { type SessionBaseline, sessionBaselineAsOf } from '../../lib/session-baseline-rules.ts';
-import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-baseline-store.ts';
 import { barbellPlates, barbellPlatesText } from '../../lib/plate-rules.ts';
 import { readPlateSettings } from '../../lib/plate-settings-store.ts';
-import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
-import { isDeviceOffline } from '../../offline/cache-first.ts';
-import { profileCache } from '../../offline/profile-cache.ts';
 import { formatXp } from '../../lib/format.ts';
 import { shownWeight } from '../../lib/units.ts';
 import {
@@ -48,7 +25,6 @@ import {
   addWarmupSets,
   canSwapExercise,
   doneSetCount,
-  type DraftChallenge,
   type DraftSet,
   firstWorkingSet,
   canQuickFill,
@@ -58,29 +34,14 @@ import {
   notDoneSetCount,
   removeExercise,
   seedUntouchedSet,
-  startDraft,
-  startDraftFromDay,
-  startDraftFromPrescription,
   type LiftDraftExercise,
-  type PrescribedDayStart,
   swapExercise,
   toggleSetDone,
   withSessionRpe,
   type WorkoutDraft,
   type DraftExercise,
 } from '../../offline/draft-format.ts';
-import {
-  addableExercises,
-  canAddSetTo,
-  removeSet,
-  roomForSets,
-  updateBout,
-  updateHoldSet,
-  updateSet,
-} from '../../lib/exercise-edit-rules.ts';
-import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
-import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program-enrollment.ts';
-import { skipDayEvent } from '../../lib/program-skip-rules.ts';
+import { addableExercises, canAddSetTo, removeSet, roomForSets, updateSet } from '../../lib/exercise-edit-rules.ts';
 import { barbellSetupFor, draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import {
@@ -93,15 +54,15 @@ import {
   ungroup,
 } from '../../lib/superset-rules.ts';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
-import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
-import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
 import { useOnboarding } from '../onboarding/use-onboarding.ts';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
-import { BodyweightPrompt } from './BodyweightPrompt.tsx';
-import { CardioSetRow } from './CardioSetRow.tsx';
-import { HoldSetRow } from './HoldSetRow.tsx';
+import { CardioExerciseCard } from './CardioExerciseCard.tsx';
+import { ChallengeBanner } from './ChallengeBanner.tsx';
+import { currentLoadTypes } from './current-load-types.ts';
+import { type ExerciseCardActions, type SetPlace } from './exercise-card-actions.ts';
+import { HoldExerciseCard } from './HoldExerciseCard.tsx';
 import { lastSetForRow } from './last-set-rules.ts';
 import { ExerciseMenu } from './ExerciseMenu.tsx';
 import { ExerciseNote } from './ExerciseNote.tsx';
@@ -109,22 +70,27 @@ import { ExercisePicker } from './ExercisePicker.tsx';
 import { NotifyPrompt } from './NotifyPrompt.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { useActiveProgram } from '../programs/use-active-program.ts';
-import { ProgramDayStarts } from './ProgramDayStarts.tsx';
-import { ProgramSummary } from './ProgramSummary.tsx';
-import { ProgramToday } from './ProgramToday.tsx';
 import { QuickFill } from './QuickFill.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
+import { SavingWorkoutView } from './SavingWorkoutView.tsx';
 import { SetRow } from './SetRow.tsx';
 import { SessionRpeField } from './SessionRpeField.tsx';
 import { rowToFocusAfterRemoving } from './set-menu-rules.ts';
 import { SupersetCard } from './SupersetCard.tsx';
+import { TodayView } from './TodayView.tsx';
 import { workoutHelpKeys } from './workout-help.ts';
+import { useExerciseList } from './use-exercise-list.ts';
+import { useExerciseNotes } from './use-exercise-notes.ts';
 import { useFinishSync } from './use-finish-sync.ts';
-import { WeeklyGoalCard } from './WeeklyGoalCard.tsx';
+import { useFocusAfterRemoval } from './use-focus-after-removal.ts';
+import { useLatestBodyweight } from './use-latest-bodyweight.ts';
 import { useRecentLiftSessions } from './use-recent-lift-sessions.ts';
 import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
+import { useExerciseStrength, useSessionBaseline } from './use-session-strength.ts';
+import { useSetDrop } from './use-set-drop.ts';
 import { useWakeLock } from './use-wake-lock.ts';
+import { useWorkoutStart } from './use-workout-start.ts';
 import {
   EXERCISE_MENU_LABELS,
   type ExerciseMenuChoice,
@@ -142,90 +108,19 @@ import {
   finishDraft,
   finishPrompt,
   loadTypeChangedText,
-  rejectionText,
-  stalledSyncText,
-  startNoticeText,
-  syncProblemText,
   WAITING_DRAFT_TEXT,
 } from './workout-rules.ts';
 import { vibrate } from '../../lib/device-effects.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
-import { feedbackLabel, setFeedback, type ShownSetDrop, XP_DROP_MS } from './set-feedback-rules.ts';
+import { feedbackLabel, setFeedback } from './set-feedback-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';
 
 interface WorkoutScreenProps {
   userId: string;
 }
 
-const LOAD_TYPE_CHECK_TIMEOUT_MS = 5000;
 const DEFAULT_QUICK_FILL_SETS = 3;
 const DEFAULT_QUICK_FILL_REPS = 8;
-
-async function currentLoadTypes(draft: WorkoutDraft, exercises: Exercise[]): Promise<Map<string, LoadType>> {
-  const builtInIds = new Set(exercises.filter((exercise) => !exercise.custom).map((exercise) => exercise.id));
-  const hasCustom = draft.exercises.some((exercise) => !builtInIds.has(exercise.exerciseId));
-  if (!hasCustom || isDeviceOffline()) return new Map();
-  try {
-    const catalog = await fetchExercises({
-      includeArchived: true,
-      signal: AbortSignal.timeout(LOAD_TYPE_CHECK_TIMEOUT_MS),
-    });
-    const customIds = new Set(
-      draft.exercises.map((exercise) => exercise.exerciseId).filter((id) => !builtInIds.has(id)),
-    );
-    return new Map(
-      catalog
-        .filter(isLiftExercise)
-        .filter((exercise) => customIds.has(exercise.id))
-        .map((exercise) => [exercise.id, exercise.loadType]),
-    );
-  } catch {
-    return new Map();
-  }
-}
-
-interface ChallengeBannerProps {
-  draft: WorkoutDraft;
-  challenge: DraftChallenge;
-  exercises: readonly Exercise[];
-  unit: UnitPref;
-  onDiscard: () => void;
-}
-
-function ChallengeBanner({ draft, challenge, exercises, unit, onDiscard }: ChallengeBannerProps) {
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
-  const nameOf = (exerciseId: string) =>
-    exercises.find((exercise) => exercise.id === exerciseId)?.name ??
-    draft.exercises.find((exercise) => exercise.exerciseId === exerciseId)?.name ??
-    'Exercise';
-  const { definition } = challenge;
-  return (
-    <section className="panel stack" aria-label="Challenge">
-      <h2>Challenge: {challenge.name}</h2>
-      <span className="muted">{challengeSummaryText(definition, nameOf, unit)}</span>
-      {definition.kind === 'volume' && definition.metric === 'kg' && (
-        <p className="stack" style={{ gap: 2 }}>
-          <span>{challengeVolumeText(draft, definition.target, unit)}</span>
-          <span className="muted tiny">Only the weight you load counts, never your bodyweight.</span>
-        </p>
-      )}
-      <button className="button link" type="button" onClick={() => setConfirmingDiscard(true)}>
-        Discard challenge
-      </button>
-      {confirmingDiscard && (
-        <ConfirmDialog
-          title="Discard this challenge workout?"
-          confirmLabel="Discard workout"
-          danger
-          onConfirm={onDiscard}
-          onCancel={() => setConfirmingDiscard(false)}
-        >
-          <p>Your scroll is kept until a challenge workout is saved.</p>
-        </ConfirmDialog>
-      )}
-    </section>
-  );
-}
 
 export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const navigate = useNavigate();
@@ -242,33 +137,15 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     reload,
     flush,
   } = useWorkoutDraft(userId);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loadProblem, setLoadProblem] = useState<string | null>(null);
-  const [listNotice, setListNotice] = useState<string | null>(null);
-  const [notes, setNotes] = useState<ExerciseNotes>({});
-  const notesSavedHere = useRef<LocalNoteSaves>({});
   const offline = useIsOffline();
   const [finishProblem, setFinishProblem] = useState<string | null>(null);
   const [checkingFinish, setCheckingFinish] = useState(false);
   const [finishPromptFor, setFinishPromptFor] = useState<WorkoutDraft | null>(null);
-  const [startingDay, setStartingDay] = useState(false);
-  const [startNotice, setStartNotice] = useState<string | null>(null);
   const [swappingKey, setSwappingKey] = useState<string | null>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [focusSetId, setFocusSetId] = useState<string | null>(null);
-  const [drop, setDrop] = useState<ShownSetDrop | null>(null);
-  const [setAnnouncement, setSetAnnouncement] = useState<{ text: string; key: number } | null>(null);
-  const dropCount = useRef(0);
-  const focusTargets = useRef(new Map<string, HTMLButtonElement>());
-  const focusAfterRemoval = useRef<{ setId: string | null; addKey: string } | null>(null);
-  const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);
-  const [loadedBaseline, setLoadedBaseline] = useState<SessionBaseline | null>(null);
-  const [cachedBaseline] = useState(() => readSessionBaseline(deviceStorage(), userId));
   const onlineSignal = useOnlineSignal();
   const queryClient = useQueryClient();
-  const [bodyweightKg, setBodyweightKg] = useState<number | null>(
-    () => profileCache.read(deviceStorage(), userId)?.bodyweightKg ?? null,
-  );
   const standing = useStanding(userId);
   const { cache: programCache, program: activeProgram, showCache: showProgramCache } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
@@ -280,7 +157,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
   const onboarding = useOnboarding(userId, draft !== null);
-  const startButton = useRef<HTMLButtonElement>(null);
   const focusPickerOnOpen = useRef(false);
   const draftSessionId = draft?.sessionId ?? null;
   const [stateSessionId, setStateSessionId] = useState(draftSessionId);
@@ -298,83 +174,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const recentSessions = useRecentLiftSessions(`${userId}/${draftSessionId}`, liftExerciseIds, onlineSignal);
   useWakeLock(keepAwake, draft !== null && !draft.finishedAt);
 
-  useEffect(() => {
-    let active = true;
-    void loadExercisesCacheFirst(
-      localStorage,
-      userId,
-      () => fetchExercises({ includeArchived: true, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
-      (list) => {
-        if (!active) return;
-        setExercises(list.exercises);
-        setListNotice(list.notice);
-        setLoadProblem(list.problem);
-      },
-      isDeviceOffline,
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    let active = true;
-    void loadExerciseNotesCacheFirst(
-      localStorage,
-      userId,
-      fetchExerciseNotes,
-      (loaded) => active && setNotes(loaded),
-      () => notesSavedHere.current,
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    let active = true;
-    fetchExerciseStrength(userId).then(
-      (loaded) => active && setStrength(loaded),
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId, draftSessionId]);
-
-  const draftStartedAt = draft?.startedAt ?? null;
-  useEffect(() => {
-    if (draftStartedAt === null) return;
-    let active = true;
-    const records = fetchRecordBaseline(userId).catch(() => null);
-    fetchStrengthState(draftStartedAt, DEFAULT_BALANCE.e1rmWindowDays).then(
-      async (strength) => {
-        const baseline = { asOf: draftStartedAt, strength, records: await records };
-        if (!active) return;
-        saveSessionBaseline(deviceStorage(), userId, baseline);
-        setLoadedBaseline(baseline);
-      },
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId, draftStartedAt, onlineSignal]);
-  const sessionBaseline = sessionBaselineAsOf(draftStartedAt, loadedBaseline, cachedBaseline);
+  const { exercises, loadProblem, listNotice } = useExerciseList(userId);
+  const { notes, saveNote } = useExerciseNotes(userId);
+  const strength = useExerciseStrength(userId, draftSessionId);
+  const sessionBaseline = useSessionBaseline(userId, draft?.startedAt ?? null, onlineSignal);
   const previewStrength = sessionBaseline?.strength ?? null;
   const recordBaseline = sessionBaseline?.records ?? null;
-
-  useEffect(() => {
-    if (isDeviceOffline()) return;
-    let active = true;
-    fetchProfile(userId).then(
-      (profile) => active && setBodyweightKg(profile.bodyweightKg),
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId, onlineSignal]);
+  const [bodyweightKg, setBodyweightKg] = useLatestBodyweight(userId, onlineSignal);
+  const start = useWorkoutStart({ userId, exercises, startWorkout, programCache, showProgramCache });
 
   const draftExercises = draft?.exercises ?? null;
   const previewsOf = useCallback(
@@ -393,19 +200,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     [draftExercises, previewStrength, recordBaseline],
   );
 
-  useEffect(() => {
-    if (drop === null) return;
-    const timer = setTimeout(() => setDrop(null), XP_DROP_MS);
-    return () => clearTimeout(timer);
-  }, [drop]);
-
-  useEffect(() => {
-    const pending = focusAfterRemoval.current;
-    if (pending === null) return;
-    focusAfterRemoval.current = null;
-    const nextRow = pending.setId === null ? undefined : focusTargets.current.get(pending.setId);
-    (nextRow ?? focusTargets.current.get(pending.addKey))?.focus();
-  }, [draftExercises]);
+  const { announcement: setAnnouncement, showDrop, dropOn } = useSetDrop();
+  const { focusTarget, focusAfterNextChange } = useFocusAfterRemoval(draftExercises);
 
   const { status: finishStatus, retryNow } = useFinishSync({
     userId,
@@ -439,131 +235,23 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     </>
   );
 
-  const openStartedDraft = async (started: { draft: WorkoutDraft; skippedExerciseIds: string[] }) => {
-    const outcome = await startWorkout(() => started.draft);
-    setStartingDay(false);
-    setStartNotice(startNoticeText(outcome, started.skippedExerciseIds.length));
-  };
-
-  const startFromDay = async (program: Program, day: ProgramDay) => {
-    setStartingDay(true);
-    const exerciseIds = [...new Set(day.exercises.map((planned) => planned.exerciseId))];
-    const [catalog, lastSets] = await Promise.all([
-      fetchExercises({ includeArchived: true }).catch(() => exercises),
-      fetchLastLoggedSets(exerciseIds).catch(() => new Map()),
-    ]);
-    const started = startDraftFromDay(
-      { id: day.id, name: day.name, programName: program.name, exercises: day.exercises },
-      new Map(catalog.map((exercise) => [exercise.id, exercise])),
-      lastSets,
-      new Date(),
-    );
-    await openStartedDraft(started);
-  };
-
-  const startFromPrescription = async (day: PrescribedDayStart) => {
-    setStartingDay(true);
-    const started = startDraftFromPrescription(
-      day,
-      new Map(exercises.map((exercise) => [exercise.id, exercise])),
-      new Date(),
-    );
-    await openStartedDraft(started);
-  };
-
-  const skipProgramDay = async (position: Position) => {
-    const enrollment = programCache.enrollment;
-    if (!enrollment) return;
-    await adjustEnrollment(enrollment.id, skipDayEvent(position));
-    showProgramCache(await refreshProgramFactsOrCached(userId, enrollment));
-  };
-
-  const startFreestyle = () => {
-    if (startingDay) return;
-    setStartNotice(null);
-    void startWorkout(startDraft).then((outcome) => setStartNotice(startNoticeText(outcome, 0)));
-  };
-
   if (!draft) {
-    const now = new Date();
-    const levelNudge = standing.status === 'ready' ? nearestLevelUp(standing.standing.skills) : null;
     return (
-      <main className="screen stack">
-        <div className="screen-header">
-          <div className="stack" style={{ gap: 4 }}>
-            <span className="muted">
-              {greetingFor(now.getHours())} ·{' '}
-              {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
-            </span>
-            <h1 className="title">Today</h1>
-          </div>
-          {standing.status === 'ready' && (
-            <LevelStat
-              userId={userId}
-              totalLevel={standing.standing.totalLevel}
-              combatLevel={standing.standing.combatLevel}
-            />
-          )}
-        </div>
-        {deviceNotices}
-        {state.notice === 'deleted' && (
-          <p className="notice" role="status">
-            This workout was deleted
-          </p>
-        )}
-        {state.notice === 'saved_elsewhere' && (
-          <p className="notice" role="status">
-            This workout was saved in another tab.
-          </p>
-        )}
-        <InstallCard userId={userId} />
-        <div className="today-row">
-          {levelNudge && (
-            <Link className="level-nudge" to="/skills">
-              {nearestLevelUpText(levelNudge)}
-            </Link>
-          )}
-          <PetCompanion userId={userId} />
-        </div>
-        <WeeklyGoalCard />
-        <FriendActivityStrip userId={userId} />
-        <ProgramSummary userId={userId} program={activeProgram} />
-        <ProgramToday
-          program={activeProgram}
-          exercises={exercises}
-          unit={unitPref}
-          disabled={startingDay}
-          onStart={startFromPrescription}
-          onSkip={skipProgramDay}
-        />
-        <ProgramDayStarts userId={userId} disabled={startingDay} onStart={startFromDay} />
-        <button
-          ref={startButton}
-          className="button primary big"
-          type="button"
-          disabled={startingDay}
-          onClick={startFreestyle}
-        >
-          Start workout
-        </button>
-        <p className="muted" style={{ textAlign: 'center' }}>
-          Freestyle: add exercises as you go.
-        </p>
-        {onboarding.open && (
-          <FirstRunDialog
-            userId={userId}
-            onFinish={onboarding.finish}
-            onSkip={() => {
-              onboarding.finish();
-              requestAnimationFrame(() => startButton.current?.focus());
-            }}
-            onFreestyle={() => {
-              focusPickerOnOpen.current = true;
-              startFreestyle();
-            }}
-          />
-        )}
-      </main>
+      <TodayView
+        userId={userId}
+        deviceNotices={deviceNotices}
+        notice={state.notice}
+        standing={standing}
+        exercises={exercises}
+        unit={unitPref}
+        program={activeProgram}
+        start={start}
+        onboarding={onboarding}
+        onFreestyleFromOnboarding={() => {
+          focusPickerOnOpen.current = true;
+          start.startFreestyle();
+        }}
+      />
     );
   }
 
@@ -572,60 +260,19 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
 
   if (draft.finishedAt) {
     return (
-      <main className="screen stack">
-        <h1 className="title">Saving workout…</h1>
-        {deviceNotices}
-        {finishStatus.kind === 'syncing' && (
-          <div className="panel stack" role="status">
-            <p>
-              {finishStatus.lastProblem
-                ? syncProblemText(finishStatus.lastProblem, finishStatus.waitMs)
-                : 'Sending your workout…'}
-            </p>
-            {finishStatus.lastProblem && finishStatus.lastProblem !== RATE_LIMITED_CODE && (
-              <button className="button" type="button" onClick={retryNow}>
-                Retry now
-              </button>
-            )}
-          </div>
-        )}
-        {finishStatus.kind === 'stalled' && (
-          <div className="panel stack">
-            <p className="problem" role="alert">
-              {stalledSyncText(finishStatus.reason)}
-            </p>
-            <button className="button" type="button" onClick={retryNow}>
-              Retry now
-            </button>
-            <button className="button" type="button" onClick={backToEditing}>
-              Back to editing
-            </button>
-          </div>
-        )}
-        {finishStatus.kind === 'rejected' && finishStatus.reason === 'bodyweight_required' && (
-          <BodyweightPrompt
-            unit={unitPref}
-            onSave={async (bodyweightKg) => {
-              await saveBodyweight({ userId, bodyweightKg, storage: deviceStorage(), queryClient });
-              setBodyweightKg(bodyweightKg);
-              retryNow();
-            }}
-          />
-        )}
-        {finishStatus.kind === 'rejected' && finishStatus.reason !== 'bodyweight_required' && (
-          <div className="panel stack">
-            <p className="problem" role="alert">
-              {rejectionText(finishStatus.reason)}
-            </p>
-            <button className="button" type="button" onClick={backToEditing}>
-              Back to editing
-            </button>
-            <button className="button danger" type="button" onClick={() => discardDraft(draft.sessionId)}>
-              Discard workout
-            </button>
-          </div>
-        )}
-      </main>
+      <SavingWorkoutView
+        deviceNotices={deviceNotices}
+        finishStatus={finishStatus}
+        unit={unitPref}
+        onRetryNow={retryNow}
+        onBackToEditing={backToEditing}
+        onSaveBodyweight={async (bodyweightKg) => {
+          await saveBodyweight({ userId, bodyweightKg, storage: deviceStorage(), queryClient });
+          setBodyweightKg(bodyweightKg);
+          retryNow();
+        }}
+        onDiscard={() => discardDraft(draft.sessionId)}
+      />
     );
   }
 
@@ -696,22 +343,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       exerciseName={exerciseName}
       note={notes[exerciseId]}
       offline={offline}
-      onSave={async (body) => {
-        const saved = await saveExerciseNote(exerciseId, body);
-        notesSavedHere.current = { ...notesSavedHere.current, [exerciseId]: saved };
-        setNotes((current) => {
-          const next = withNote(current, exerciseId, saved);
-          saveCachedExerciseNotes(localStorage, userId, next);
-          return next;
-        });
-      }}
+      onSave={(body) => saveNote(exerciseId, body)}
     />
   );
-  const changeSet = (
-    next: WorkoutDraft,
-    setId: string,
-    place: { exerciseIndex: number; setIndex: number; label: string },
-  ) => {
+  const changeSet = (next: WorkoutDraft, setId: string, place: SetPlace) => {
     const { exerciseIndex, setIndex } = place;
     const feedback = setFeedback({
       label: place.label,
@@ -724,19 +359,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       vibrate: readTrainingDeviceSettings(deviceStorage(), userId).vibrate,
     });
     if (feedback.vibrationMs) vibrate(feedback.vibrationMs);
-    if (feedback.drop) {
-      dropCount.current += 1;
-      setDrop({ ...feedback.drop, setId, key: dropCount.current });
-      setSetAnnouncement({ text: feedback.drop.announcement, key: dropCount.current });
-    }
+    if (feedback.drop) showDrop(feedback.drop, setId);
     changeDraft(next);
   };
-  const dropOn = (setId: string) => (drop?.setId === setId ? drop : null);
   const cardKeys = draft.exercises.map((exercise) => exercise.clientId);
-  const focusTarget = (key: string) => (button: HTMLButtonElement | null) => {
-    if (button) focusTargets.current.set(key, button);
-    else focusTargets.current.delete(key);
-  };
   if (swappingKey !== null && !cardKeys.includes(swappingKey)) setSwappingKey(null);
   const removeExerciseAt = (exerciseIndex: number) => changeDraft(removeExercise(draft, exerciseIndex));
   const discardWorkout = () => {
@@ -752,14 +378,22 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     return group === undefined ? cardKeys[exerciseIndex] : `superset-${group.id}`;
   };
   const removeSetAt = (exerciseIndex: number, setId: string) => {
-    focusAfterRemoval.current = {
+    focusAfterNextChange({
       setId: rowToFocusAfterRemoving(
         draft.exercises[exerciseIndex].sets.map((set) => set.id),
         setId,
       ),
       addKey: addButtonKeyOf(exerciseIndex),
-    };
+    });
     changeDraft(removeSet(draft, exerciseIndex, setId));
+  };
+  const cardActions: ExerciseCardActions = {
+    changeDraft,
+    changeSet,
+    removeExerciseAt,
+    removeSetAt,
+    focusTarget,
+    dropOn,
   };
   const barbellOf = (exercise: LiftDraftExercise) => (isBarbellLift(exercise, equipment) ? barbellSetup : null);
   const menuAction = (exerciseIndex: number, choice: ExerciseMenuChoice) => {
@@ -896,9 +530,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           onDiscard={discardWorkout}
         />
       )}
-      {startNotice && (
+      {start.startNotice && (
         <p className="notice" role="status">
-          {startNotice}
+          {start.startNotice}
         </p>
       )}
       {listNotice && (
@@ -913,120 +547,38 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       )}
       <TermHelpRow keys={helpKeys} />
       {draft.exercises.map((exercise, exerciseIndex) => {
-        if (exercise.modality === 'cardio') {
-          const doneHere = exercise.sets.filter((set) => set.done).length;
+        if (exercise.modality === 'cardio')
           return (
-            <section className="panel stack exercise-card" key={cardKeys[exerciseIndex]}>
-              <header>
-                <h2>{exercise.name}</h2>
-                <span className="row">
-                  <button className="button link" type="button" onClick={() => removeExerciseAt(exerciseIndex)}>
-                    Remove
-                  </button>
-                </span>
-              </header>
-              <p className="muted">{`${doneHere}/${exercise.sets.length} bouts`}</p>
-              {noteFor(exercise.exerciseId, exercise.name)}
-              <ol className="set-list">
-                {exercise.sets.map((bout, boutIndex) => (
-                  <CardioSetRow
-                    key={bout.id}
-                    boutNumber={boutIndex + 1}
-                    bout={bout}
-                    paceUnit={exercise.activity.paceUnit}
-                    tracksDistance={exercise.activity.tracksDistance}
-                    preview={previews[exerciseIndex][boutIndex]}
-                    drop={dropOn(bout.id)}
-                    unit={unitPref}
-                    onChange={(changes) =>
-                      changeSet(updateBout(draft, exerciseIndex, bout.id, changes), bout.id, {
-                        exerciseIndex,
-                        setIndex: boutIndex,
-                        label: feedbackLabel(exercise.name, 'bout', boutIndex + 1),
-                      })
-                    }
-                    menuRef={focusTarget(bout.id)}
-                    onRemove={() => removeSetAt(exerciseIndex, bout.id)}
-                    onToggleDone={() =>
-                      changeSet(toggleSetDone(draft, exerciseIndex, bout.id), bout.id, {
-                        exerciseIndex,
-                        setIndex: boutIndex,
-                        label: feedbackLabel(exercise.name, 'bout', boutIndex + 1),
-                      })
-                    }
-                  />
-                ))}
-              </ol>
-              <button
-                ref={focusTarget(cardKeys[exerciseIndex])}
-                className="button dashed"
-                type="button"
-                disabled={!roomForBout}
-                onClick={() => changeDraft(addSet(draft, exerciseIndex))}
-              >
-                + Add bout
-              </button>
-              {roomForSet && !roomForBout && <p className="hint">{BOUTS_FULL_TEXT}</p>}
-            </section>
+            <CardioExerciseCard
+              key={cardKeys[exerciseIndex]}
+              draft={draft}
+              exercise={exercise}
+              exerciseIndex={exerciseIndex}
+              cardKey={cardKeys[exerciseIndex]}
+              previews={previews[exerciseIndex]}
+              unit={unitPref}
+              note={noteFor(exercise.exerciseId, exercise.name)}
+              roomForBout={roomForBout}
+              roomForSet={roomForSet}
+              actions={cardActions}
+            />
           );
-        }
-        if (exercise.modality === 'hold') {
-          const doneHere = exercise.sets.filter((set) => set.done).length;
+        if (exercise.modality === 'hold')
           return (
-            <section className="panel stack exercise-card" key={cardKeys[exerciseIndex]}>
-              <header>
-                <h2>{exercise.name}</h2>
-                <span className="row">
-                  <button className="button link" type="button" onClick={() => removeExerciseAt(exerciseIndex)}>
-                    Remove
-                  </button>
-                </span>
-              </header>
-              <p className="muted">{`${doneHere}/${exercise.sets.length} sets`}</p>
-              {noteFor(exercise.exerciseId, exercise.name)}
-              <ol className="set-list">
-                {exercise.sets.map((set, setIndex) => (
-                  <HoldSetRow
-                    key={set.id}
-                    setNumber={setIndex + 1}
-                    set={set}
-                    measure={exercise.measure}
-                    loadType={exercise.loadType}
-                    preview={previews[exerciseIndex][setIndex]}
-                    record={records[exerciseIndex][setIndex]}
-                    drop={dropOn(set.id)}
-                    unit={unitPref}
-                    onChange={(changes) =>
-                      changeSet(updateHoldSet(draft, exerciseIndex, set.id, changes), set.id, {
-                        exerciseIndex,
-                        setIndex,
-                        label: feedbackLabel(exercise.name, 'set', setIndex + 1),
-                      })
-                    }
-                    menuRef={focusTarget(set.id)}
-                    onRemove={() => removeSetAt(exerciseIndex, set.id)}
-                    onToggleDone={() =>
-                      changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id, {
-                        exerciseIndex,
-                        setIndex,
-                        label: feedbackLabel(exercise.name, 'set', setIndex + 1),
-                      })
-                    }
-                  />
-                ))}
-              </ol>
-              <button
-                ref={focusTarget(cardKeys[exerciseIndex])}
-                className="button dashed"
-                type="button"
-                disabled={!roomForSet}
-                onClick={() => changeDraft(addSet(draft, exerciseIndex))}
-              >
-                + Add set
-              </button>
-            </section>
+            <HoldExerciseCard
+              key={cardKeys[exerciseIndex]}
+              draft={draft}
+              exercise={exercise}
+              exerciseIndex={exerciseIndex}
+              cardKey={cardKeys[exerciseIndex]}
+              previews={previews[exerciseIndex]}
+              records={records[exerciseIndex]}
+              unit={unitPref}
+              note={noteFor(exercise.exerciseId, exercise.name)}
+              roomForSet={roomForSet}
+              actions={cardActions}
+            />
           );
-        }
         const group = groupOfIndex.get(exerciseIndex);
         if (group !== undefined) {
           if (group.exerciseIndexes[0] !== exerciseIndex) return null;
