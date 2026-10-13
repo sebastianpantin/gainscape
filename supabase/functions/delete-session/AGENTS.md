@@ -1,43 +1,25 @@
 # delete-session
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-13
 
 ## Purpose
 
-POST endpoint that deletes a session within the edit window, records a tombstone in `public.deleted_sessions`, replays later sessions and returns revoked drops. Deleting an already-tombstoned id is idempotent.
+POST endpoint that deletes a session inside the edit window, records a tombstone in `public.deleted_sessions`, replays later sessions and returns revoked drops. Deleting an already-tombstoned id is idempotent.
 
-## Key Files
+## Map
 
-| File        | Description                                                                                                                                                                                                                                                                                                                                                                                      |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `index.ts`  | Handler with strict `{ sessionId, ifRevision? }` schema, `deleteSession` transaction, 404 `session_not_found`, 409 `edit_window_closed`, 409 `revision_conflict` with `{ revision }` when an `ifRevision` is sent and differs from the stored revision (optional so older clients still delete; checked after the tombstone, so a retried delete stays idempotent), bucket `session_delete_hour` |
-| `deno.json` | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                                                                                                                                                                                                              |
-| `deno.lock` | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                                                                                                                                                                                                                   |
+- `index.ts`: strict `{ sessionId, ifRevision? }`, bucket `session_delete_hour`. `deno.json`, `deno.lock` (never hand-edit).
 
-## For AI Agents
+## Rules and gotchas
 
-### Working In This Directory
+- The tombstone is what makes a later `complete-session` of the same id answer 410 `session_deleted`. Keep both in sync.
+- `ifRevision` is optional so older clients still delete. A mismatch is 409 `revision_conflict` with `{ revision }`, checked after the tombstone lookup so a retried delete stays idempotent.
+- 404 `session_not_found`, 409 `edit_window_closed`.
 
-- The tombstone insert is what makes later `complete-session` of the same id return 410. Keep both in sync.
+## Testing
 
-### Testing Requirements
-
-`tests/integration/delete-session.test.ts` (also `loot-revocation.test.ts`, `account.test.ts`). Stack required.
-
-### Common Patterns
-
-Handler is thin: OPTIONS, POST check, auth, parse, one async function, `errorResponse`. No comments in code.
-
-## Dependencies
-
-### Internal
-
-- `../_shared/` (auth, db, http, rate-limit, replay and sessions stores, domain)
-
-### External
-
-- Deno 2, `npm:zod@4.6.5`, `npm:postgres@3.4.9`
+`tests/integration/delete-session.test.ts`, `loot-revocation.test.ts`, `account.test.ts` (stack).
 
 ## Manual Notes
 
