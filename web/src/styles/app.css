@@ -614,6 +614,100 @@ a:focus-visible {
   animation: toast-in 220ms ease-out both;
 }
 
+.today-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.today-row .level-nudge {
+  align-self: center;
+}
+
+.today-row:empty {
+  display: none;
+}
+
+.pet-companion {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-0-5);
+  text-decoration: none;
+}
+
+.pet-companion-art {
+  display: inline-flex;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 40%, transparent));
+  animation: pet-bob 1.8s steps(2, jump-none) infinite;
+}
+
+.body-map {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-6);
+}
+
+.body-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.body-figure svg {
+  width: 80px;
+  height: 136px;
+}
+
+.body-head {
+  fill: var(--color-parchment-shade);
+}
+
+.body-region.fresh,
+.recovery-swatch.fresh {
+  fill: var(--color-xp);
+  background: var(--color-xp);
+}
+
+.body-region.easing,
+.recovery-swatch.easing {
+  fill: var(--color-accent-dark);
+  background: var(--color-accent-dark);
+}
+
+.body-region.recovering,
+.recovery-swatch.recovering {
+  fill: var(--color-danger-fill);
+  background: var(--color-danger-fill);
+}
+
+.recovery-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  font-size: var(--font-size-sm);
+}
+
+.recovery-legend li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.recovery-swatch {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border: var(--border-width) solid var(--color-outline);
+}
+
 .segmented {
   display: grid;
   grid-auto-flow: column;
@@ -2060,6 +2154,16 @@ body:has(.active-workout-bar) .screen {
   100% {
     color: var(--color-text);
     text-shadow: none;
+  }
+}
+
+@keyframes pet-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
   }
 }
 

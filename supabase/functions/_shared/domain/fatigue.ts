@@ -12,7 +12,7 @@ import {
 
 const REPS_MODEL_UNIT_LOAD = 1;
 
-function effortProximity(rir: number, cfg: BalanceConfig): number {
+export function effortProximity(rir: number, cfg: BalanceConfig): number {
   const repsCountedAsEffective = cfg.effectiveRirWindow + 1;
   return Math.min(1, Math.max(0, (repsCountedAsEffective - rir) / repsCountedAsEffective));
 }

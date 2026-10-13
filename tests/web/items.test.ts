@@ -8,6 +8,7 @@ import {
   craftProblem,
   craftProblemText,
   describeDrops,
+  companionPet,
   fanfareFor,
   firstPickedItemId,
   groupItems,
@@ -254,5 +255,53 @@ describe('fanfareFor', () => {
   it('stays quiet for common and uncommon finds', () => {
     expect(fanfareFor(['common', 'uncommon'])).toBeNull();
     expect(fanfareFor([])).toBeNull();
+  });
+});
+
+describe('companionPet', () => {
+  const pet = (id: string): CatalogItem =>
+    ({
+      id,
+      key: id,
+      name: id,
+      kind: 'pet',
+      rarity: 'legendary',
+      tier: null,
+      gearSlot: null,
+      icon: 'pet',
+    }) as CatalogItem;
+  const belt = { ...pet('belt'), kind: 'gear' } as CatalogItem;
+  const held = (entries: [string, string][]) =>
+    new Map(entries.map(([itemId, firstObtainedAt]) => [itemId, { itemId, quantity: 1, firstObtainedAt }]));
+  const items = [pet('pup'), pet('crab'), belt];
+
+  it('shows the pet chosen on this device while it is held', () => {
+    const owned = held([
+      ['pup', '2026-10-01T00:00:00Z'],
+      ['crab', '2026-10-05T00:00:00Z'],
+    ]);
+    expect(companionPet(items, owned, 'pup')?.id).toBe('pup');
+  });
+
+  it('falls back to the newest pet found', () => {
+    const owned = held([
+      ['pup', '2026-10-01T00:00:00Z'],
+      ['crab', '2026-10-05T00:00:00Z'],
+      ['belt', '2026-10-09T00:00:00Z'],
+    ]);
+    expect(companionPet(items, owned, null)?.id).toBe('crab');
+    expect(companionPet(items, owned, 'gone')?.id).toBe('crab');
+  });
+
+  it('ranks a pet with no found date below a dated one', () => {
+    const owned = held([
+      ['crab', '2026-10-05T00:00:00Z'],
+      ['pup', ''],
+    ]);
+    expect(companionPet([pet('crab'), pet('pup')], owned, null)?.id).toBe('crab');
+  });
+
+  it('has no companion without a pet', () => {
+    expect(companionPet(items, held([['belt', '2026-10-09T00:00:00Z']]), null)).toBeNull();
   });
 });

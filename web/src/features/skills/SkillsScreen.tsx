@@ -9,6 +9,7 @@ import { useStanding } from '../../lib/standing.ts';
 import { formatXp } from '../../lib/format.ts';
 import { type Exercise } from '../../lib/catalog-rules.ts';
 import { type LoadedState } from '../../lib/query-state-rules.ts';
+import { RecoveryPanel } from './RecoveryPanel.tsx';
 
 interface SkillsScreenProps {
   userId: string;
@@ -82,6 +83,10 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
           <strong>{standing.combatLevel}</strong>
         </div>
       </div>
+      <RecoveryPanel
+        userId={userId}
+        nameOf={(key) => standing.skills.find(({ skill }) => skill.key === key)?.skill.name ?? key}
+      />
       <ul className="skill-grid">
         {standing.skills.map(({ skill, progress }) => (
           <li key={skill.id}>
