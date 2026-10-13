@@ -1,47 +1,27 @@
 # edit-session
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-01
+**Generated:** 2026-10-01 · **Updated:** 2026-10-13
 
 ## Purpose
 
-POST endpoint that edits notes and sets of an existing session within the edit window, using optimistic concurrency (`ifRevision`), then replays later sessions and reports revoked loot drops.
+POST endpoint that edits the notes and sets of an existing session inside the edit window, with optimistic concurrency (`ifRevision`), then replays later sessions and reports revoked loot drops.
 
-## Key Files
+## Map
 
-| File         | Description                                                                                                                                                                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `index.ts`   | Handler; the domain `isNoOpEdit` skips unchanged edits, `writableSetFor` computes carried loads, `unchangedSetIds` tells replay which sets keep drops rolled under older rules, returns `EditResponse` (summary, revision, replayedSessionIds, revokedDrops) |
-| `payload.ts` | Strict zod `editSchema` (notes through `sessionNotes`) and `parseEditSessionPayload`                                                                                                                                                                         |
-| `deno.json`  | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                                                                          |
-| `deno.lock`  | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                                                                               |
+- `index.ts`: the handler. `payload.ts`: strict zod `editSchema`. `deno.json`, `deno.lock` (never hand-edit).
 
-## For AI Agents
+## Rules and gotchas
 
-### Working In This Directory
+- Bucket `session_edit_hour`. Closed edit windows and history-only sessions are rejected.
+- The domain `isNoOpEdit` skips an unchanged edit (no write, no replay); a retried save gets that no-op answer.
+- `unchangedSetIds` tells replay which sets keep drops rolled under older rules; it uses the same test as the web `dropsAtRisk` warning.
+- Unlike `complete-session`, prescriptions are strict here: a malformed one is 422 `invalid_payload`, a ref repeated among added sets is 422 `duplicate_prescription_ref`.
+- Kept sets keep their stored snapshot; a prescription sent for one is ignored. An added set stores a snapshot only when the session is linked and its ref is not a kept set's ref (removed sets are deleted first, so their refs are free).
 
-- Rate limit bucket `session_edit_hour`. Closed windows and history-only sessions are rejected.
-- Session revision column comes from migration 006.
-- Prescriptions stay strict here: a malformed one is 422 `invalid_payload`, and a ref repeated among the added sets is 422 `duplicate_prescription_ref`.
-- Kept sets keep their stored snapshot; a prescription sent for one is ignored. An added set stores its snapshot only when the session is linked and its ref is not a kept set's stored ref (removed sets are deleted first, so their refs are free).
+## Testing
 
-### Testing Requirements
-
-`tests/integration/edit-session.test.ts` and `program-sessions.test.ts` (also `loot-revocation.test.ts`, `events.test.ts`). Stack required.
-
-### Common Patterns
-
-Handler is thin: OPTIONS, POST check, auth, parse, one async function, `errorResponse`. No comments in code.
-
-## Dependencies
-
-### Internal
-
-- `../_shared/` (auth, db, http, rate-limit, session-payload, domain, stores)
-
-### External
-
-- Deno 2, `npm:zod@4.6.5`, `npm:postgres@3.4.9`
+`tests/integration/edit-session.test.ts`, `program-sessions.test.ts`, `loot-revocation.test.ts`, `events.test.ts` (stack).
 
 ## Manual Notes
 
