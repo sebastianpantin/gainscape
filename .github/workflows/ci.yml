@@ -32,7 +32,7 @@ jobs:
         run: make ci-changes
       - run: npm ci
       - if: steps.changes.outputs.code == 'false'
-        run: make format-check secrets-scan
+        run: make format-check docs-check secrets-scan
       - if: steps.changes.outputs.code != 'false'
         run: make check
       - if: steps.changes.outputs.code != 'false'

@@ -1,45 +1,27 @@
 # delete-account
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-07
+**Generated:** 2026-10-01 · **Updated:** 2026-10-13
 
 ## Purpose
 
-POST endpoint that permanently deletes the caller's account after they confirm their username and re-enter their password. Uses an admin client on the default secret key (`secretKey()`) for `auth.admin.deleteUser`, and checks the password with a client on the publishable key; database cascades remove the data.
+POST endpoint that permanently deletes the caller's account after they confirm their username and re-enter their password. An admin client on the default secret key calls `auth.admin.deleteUser`; database cascades remove the data.
 
-## Key Files
+## Map
 
-| File                | Description                                                                                                                                                                                                                                                                                                |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`          | Handler via `serveAuthenticated`; strict body `{ confirmUsername, password }` (400 `invalid_json`, 422 `invalid_payload`); bucket `delete_account_hour`; 403 `confirmation_mismatch` and `wrong_password`; password verified with a throwaway anon client, its result read by `passwordMatchesAfterSignIn` |
-| `password-check.ts` | `passwordMatchesAfterSignIn(error, signedIn)`: only GoTrue `invalid_credentials` means a wrong password; a GoTrue 429 becomes 429 `auth_rate_limited`, any other error (5xx, network) is logged and becomes 503 `auth_unavailable`. Unit-tested in `tests/deploy/delete-account-password.test.ts`          |
-| `deno.json`         | `{ "nodeModulesDir": "none" }`; picked up by `make check-functions`                                                                                                                                                                                                                                        |
-| `deno.lock`         | Pinned dependency lock; regenerate with Deno, do not hand-edit                                                                                                                                                                                                                                             |
+- `index.ts`: handler via `serveAuthenticated`, strict body `{ confirmUsername, password }`, bucket `delete_account_hour`.
+- `password-check.ts`: reads the result of the throwaway sign-in that checks the password. `deno.json`, `deno.lock` (never hand-edit).
 
-## For AI Agents
+## Rules and gotchas
 
-### Working In This Directory
-
-- Reads its keys through `_shared/api-keys.ts` (`SUPABASE_SECRET_KEYS`, `SUPABASE_PUBLISHABLE_KEYS`); never expose or log the secret key.
+- Only GoTrue `invalid_credentials` means a wrong password (403 `wrong_password`). A GoTrue 429 becomes 429 `auth_rate_limited`; any other error (5xx, network) is logged and becomes 503 `auth_unavailable`, so an auth outage never reads as a wrong password.
+- The password is checked by signing in with a throwaway client on the publishable key.
+- Keys come from `_shared/api-keys.ts` per request; never expose or log the secret key.
 - Cascades are defined in migrations and covered by pgTAP.
 
-### Testing Requirements
+## Testing
 
-`tests/integration/account.test.ts` and `supabase/tests/07_account_deletion.test.sql` (stack required); `tests/deploy/delete-account-password.test.ts` for `password-check.ts` (no stack).
-
-### Common Patterns
-
-Handler is thin: OPTIONS, POST check, auth, parse, one async function, `errorResponse`. No comments in code.
-
-## Dependencies
-
-### Internal
-
-- `../_shared/auth.ts`, `db.ts`, `http.ts`, `rate-limit.ts`
-
-### External
-
-- Deno 2, `npm:zod@4.6.5`, `npm:postgres@3.4.9`
+`tests/deploy/delete-account-password.test.ts` (no stack); `tests/integration/account.test.ts` and `supabase/tests/07_account_deletion.test.sql` (stack).
 
 ## Manual Notes
 
