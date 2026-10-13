@@ -5,10 +5,10 @@ import {
   fetchExerciseStrength,
   fetchRecordBaseline,
   fetchStrengthState,
-} from '../../lib/collection-data.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
-import { type SessionBaseline, sessionBaselineAsOf } from '../../lib/session-baseline-rules.ts';
-import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-baseline-store.ts';
+} from '../../lib/collection/collection-data.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { type SessionBaseline, sessionBaselineAsOf } from '../../lib/workout/session-baseline-rules.ts';
+import { readSessionBaseline, saveSessionBaseline } from '../../lib/workout/session-baseline-store.ts';
 
 export function useExerciseStrength(userId: string, draftSessionId: string | null) {
   const [strength, setStrength] = useState<Map<string, ExerciseStrengthView> | null>(null);

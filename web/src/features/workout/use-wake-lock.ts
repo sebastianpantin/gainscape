@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { holdsWakeLock } from '../../lib/training-device-rules.ts';
+import { holdsWakeLock } from '../../lib/workout/training-device-rules.ts';
 
 function pageVisible(): boolean {
   return document.visibilityState === 'visible';

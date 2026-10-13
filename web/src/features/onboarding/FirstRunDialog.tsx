@@ -3,9 +3,9 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
-import { announceDataChange } from '../../lib/data-changes.ts';
+import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import { TIER_COLORS } from '../../lib/item-rules.ts';
+import { TIER_COLORS } from '../../lib/collection/item-rules.ts';
 import {
   beginnerProgram,
   FIRST_RUN_CARDS,
@@ -14,12 +14,12 @@ import {
   ONBOARDING_STEPS,
   type OnboardingStep,
   onboardingStepLabel,
-} from '../../lib/onboarding-rules.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { type Profile, updatePrivateProfile, type UnitPref } from '../../lib/profile.ts';
-import { templateListEntries } from '../../lib/program-enroll-rules.ts';
-import { profileQuery, programTemplatesQuery } from '../../lib/queries.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
+} from '../../lib/profile/onboarding-rules.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { type Profile, updatePrivateProfile, type UnitPref } from '../../lib/profile/profile.ts';
+import { templateListEntries } from '../../lib/programs/program-enroll-rules.ts';
+import { profileQuery, programTemplatesQuery } from '../../lib/query/queries.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { type CacheFirstLoad } from '../../offline/cache-first.ts';
 import { profileCache } from '../../offline/profile-cache.ts';
 

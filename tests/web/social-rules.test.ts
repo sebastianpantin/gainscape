@@ -6,7 +6,7 @@ import {
   withFriendlyRateLimit,
   tryAgainIn,
   waitText,
-} from '../../web/src/lib/rate-limit.ts';
+} from '../../web/src/lib/platform/rate-limit.ts';
 import {
   type FeedItem,
   feedBadge,
@@ -21,7 +21,7 @@ import {
   sendRequestText,
   skillMetric,
   socialErrorMessage,
-} from '../../web/src/lib/social-rules.ts';
+} from '../../web/src/lib/social/social-rules.ts';
 
 function item(type: FeedItem['type'], payload: Record<string, unknown>): FeedItem {
   return {

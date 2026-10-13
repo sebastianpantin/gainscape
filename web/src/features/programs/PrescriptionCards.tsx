@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { type PrescriptionCard } from '../../lib/program-today-rules.ts';
+import { type PrescriptionCard } from '../../lib/programs/program-today-rules.ts';
 
 interface PrescriptionCardsProps {
   cards: readonly PrescriptionCard[];

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { REQUEST_TIMEOUT_MS } from '../../lib/auth-restore.ts';
-import { fetchExercises } from '../../lib/catalog.ts';
-import { loadExercisesCacheFirst } from '../../lib/catalog-cache.ts';
-import { type Exercise } from '../../lib/catalog-rules.ts';
+import { REQUEST_TIMEOUT_MS } from '../../lib/platform/auth-restore.ts';
+import { fetchExercises } from '../../lib/exercises/catalog.ts';
+import { loadExercisesCacheFirst } from '../../lib/exercises/catalog-cache.ts';
+import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { isDeviceOffline } from '../../offline/cache-first.ts';
 
 export function useExerciseList(userId: string) {

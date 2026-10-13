@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
-import { challengeSummaryText, challengeVolumeText } from '../../lib/challenge-rules.ts';
-import { type Exercise } from '../../lib/catalog-rules.ts';
-import { type UnitPref } from '../../lib/profile.ts';
+import { challengeSummaryText, challengeVolumeText } from '../../lib/collection/challenge-rules.ts';
+import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
+import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type DraftChallenge, type WorkoutDraft } from '../../offline/draft-format.ts';
 
 interface ChallengeBannerProps {

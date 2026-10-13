@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import type { CardioExercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
+import type { CardioExercise, LiftExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   challengeBonusText,
   challengeFailReason,

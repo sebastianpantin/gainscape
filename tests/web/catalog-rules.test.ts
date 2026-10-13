@@ -8,7 +8,7 @@ import {
   isCompoundLift,
   isLiftExercise,
   toExercise,
-} from '../../web/src/lib/catalog-rules.ts';
+} from '../../web/src/lib/exercises/catalog-rules.ts';
 
 function row(overrides: Partial<ExerciseRow>): ExerciseRow {
   return {

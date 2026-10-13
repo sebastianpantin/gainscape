@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { keyedStore } from '../../web/src/lib/keyed-store.ts';
+import { keyedStore } from '../../web/src/lib/platform/keyed-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 function throwingStorage(): MemoryStorage {

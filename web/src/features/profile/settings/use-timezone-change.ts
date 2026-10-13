@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
-import { announceDataChange } from '../../../lib/data-changes.ts';
-import { changeTimezone, cooldownStartFor, formatDay, type Profile } from '../../../lib/profile.ts';
+import { announceDataChange } from '../../../lib/query/data-changes.ts';
+import { changeTimezone, cooldownStartFor, formatDay, type Profile } from '../../../lib/profile/profile.ts';
 import { type SectionProps } from './section-props.ts';
 
 export function useTimezoneChange(profile: Profile, onSaved: SectionProps['onSaved']) {

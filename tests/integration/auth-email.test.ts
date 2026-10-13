@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, describe, expect, it } from 'vitest';
-import { AUTH_MESSAGES, authErrorMessage, parseAuthCallback } from '../../web/src/lib/auth-links.ts';
+import { AUTH_MESSAGES, authErrorMessage, parseAuthCallback } from '../../web/src/lib/platform/auth-links.ts';
 import { createTestUser, db, newAnonClient, TEST_PASSWORD } from './local-stack.ts';
 import {
   authLinkFrom,

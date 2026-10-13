@@ -44,7 +44,7 @@ describe('which pull requests run the backend job', () => {
     'supabase/seed.sql',
     'tests/integration/account.test.ts',
     'tests/domain/program-fixtures/gzclp.ts',
-    'web/src/lib/history-rules.ts',
+    'web/src/lib/history/history-rules.ts',
     'web/src/offline/session-payload.ts',
     'scripts/local-stack.ts',
     'catalog/exercises.yaml',
@@ -93,7 +93,7 @@ describe('which pull requests run the backend job', () => {
       'vitest.config.ts',
     ];
     const closure = valueImportClosure(entries);
-    expect(closure).toContain('web/src/lib/history-rules.ts');
+    expect(closure).toContain('web/src/lib/history/history-rules.ts');
     expect(closure).toContain(`${DOMAIN_DIR}index.ts`);
     expect([...closure].filter((file) => !needsBackend([file]))).toEqual([]);
   });

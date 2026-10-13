@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Program } from '../../web/src/lib/programs.ts';
+import { type Program } from '../../web/src/lib/programs/programs.ts';
 import { programListCache } from '../../web/src/offline/program-list-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
 

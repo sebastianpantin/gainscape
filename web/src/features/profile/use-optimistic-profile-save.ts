@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { announceDataChange } from '../../lib/data-changes.ts';
+import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import { previousValues, type Profile } from '../../lib/profile-rules.ts';
+import { previousValues, type Profile } from '../../lib/profile/profile-rules.ts';
 import type { ProfileUpdate } from './use-profile.ts';
 
 interface OptimisticProfileSave<K extends keyof Profile> {

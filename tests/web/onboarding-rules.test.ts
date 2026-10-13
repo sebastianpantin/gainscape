@@ -9,10 +9,10 @@ import {
   onboardingStepLabel,
   trainingHistoryNow,
   trainingHistoryOf,
-} from '../../web/src/lib/onboarding-rules.ts';
-import { GLOSSARY } from '../../web/src/lib/glossary.ts';
+} from '../../web/src/lib/profile/onboarding-rules.ts';
+import { GLOSSARY } from '../../web/src/lib/ui/glossary.ts';
 import { type ProgramDefinition } from '@domain/index.ts';
-import { type TemplateListEntry, UPDATE_APP_TEXT } from '../../web/src/lib/program-enroll-rules.ts';
+import { type TemplateListEntry, UPDATE_APP_TEXT } from '../../web/src/lib/programs/program-enroll-rules.ts';
 
 describe('onboarding decision', () => {
   it('stays hidden once finished or skipped, whatever the history says', () => {

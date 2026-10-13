@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { loadExerciseNotesCacheFirst, saveCachedExerciseNotes } from '../../lib/exercise-note-cache.ts';
-import { type ExerciseNotes, type LocalNoteSaves, withNote } from '../../lib/exercise-note-rules.ts';
-import { fetchExerciseNotes, saveExerciseNote } from '../../lib/exercise-notes.ts';
+import { loadExerciseNotesCacheFirst, saveCachedExerciseNotes } from '../../lib/exercises/exercise-note-cache.ts';
+import { type ExerciseNotes, type LocalNoteSaves, withNote } from '../../lib/exercises/exercise-note-rules.ts';
+import { fetchExerciseNotes, saveExerciseNote } from '../../lib/exercises/exercise-notes.ts';
 
 export function useExerciseNotes(userId: string) {
   const [notes, setNotes] = useState<ExerciseNotes>({});

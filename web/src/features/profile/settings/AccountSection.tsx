@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { exportFileName, exportMyData, saveBlob } from '../../../lib/account.ts';
+import { exportFileName, exportMyData, saveBlob } from '../../../lib/profile/account.ts';
 import { messageOf } from '../../../lib/error-text.ts';
-import { useToast } from '../../../lib/toast.ts';
+import { useToast } from '../../../lib/ui/toast.ts';
 import { DeleteAccountForm } from './DeleteAccountForm.tsx';
 import { signOut } from './device-data.ts';
 import { EmailForm } from './EmailForm.tsx';

@@ -10,7 +10,7 @@ import {
   queryProgressSets,
   repMaxTable,
   sessionProgress,
-} from '../../web/src/lib/exercise-progress-rules.ts';
+} from '../../web/src/lib/progress/exercise-progress-rules.ts';
 
 function setRow(changes: Partial<ProgressSetRow> & { session_id: string }): ProgressSetRow {
   const day = changes.session_id.replace('day-', '');

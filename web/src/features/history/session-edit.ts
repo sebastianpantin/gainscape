@@ -2,18 +2,18 @@ import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
 import { roundTo } from '@domain/math.ts';
 import type { CardioInterval, DropSummary, EffortInput } from '@domain/types.ts';
-import type { CardioActivity, Exercise, HoldMeasure, LoadType, PaceUnit } from '../../lib/catalog-rules.ts';
+import type { CardioActivity, Exercise, HoldMeasure, LoadType, PaceUnit } from '../../lib/exercises/catalog-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
-import type { InvokeOutcome } from '../../lib/function-client-rules.ts';
+import type { InvokeOutcome } from '../../lib/platform/function-client-rules.ts';
 import {
   type EditSessionPayload,
   type SessionDetail,
   type StoredSetRow,
   transientReason,
-} from '../../lib/history-rules.ts';
-import { type CatalogItem, describeDrops, itemNameLookup } from '../../lib/item-rules.ts';
-import type { UnitPref } from '../../lib/profile.ts';
-import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
+} from '../../lib/history/history-rules.ts';
+import { type CatalogItem, describeDrops, itemNameLookup } from '../../lib/collection/item-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile.ts';
+import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/platform/rate-limit.ts';
 import {
   BODYWEIGHT_LOAD_NOT_ZERO_CODE,
   type BoutValues,
@@ -29,7 +29,7 @@ import {
   updateExerciseAt,
   withLoadType,
   withSets,
-} from '../../lib/exercise-edit-rules.ts';
+} from '../../lib/workout/exercise-edit-rules.ts';
 import { boutPayload, holdPayload } from '../../offline/session-payload.ts';
 
 type ExerciseKind =

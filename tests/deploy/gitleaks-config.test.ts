@@ -34,6 +34,6 @@ describe('the gitleaks allowlist for the StrongLifts template key', () => {
     expect(allowlisted(`${TEMPLATE_DIRECTORY}/nested/stronglifts_5x5.yaml`)).toBe(false);
     expect(allowlisted(`${TEMPLATE_DIRECTORY}/stronglifts_5x5@v1.yaml`)).toBe(false);
     expect(allowlisted('catalog/exercises.yaml')).toBe(false);
-    expect(allowlisted('web/src/lib/programs.ts')).toBe(false);
+    expect(allowlisted('web/src/lib/programs/programs.ts')).toBe(false);
   });
 });

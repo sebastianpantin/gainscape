@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
-import type { CardioActivity } from '../../web/src/lib/catalog-rules.ts';
+import type { CardioActivity } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { DraftExercise, DraftSet, WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import {
   addRound,
@@ -11,7 +11,7 @@ import {
   roundRows,
   supersetGroups,
   ungroup,
-} from '../../web/src/lib/superset-rules.ts';
+} from '../../web/src/lib/workout/superset-rules.ts';
 
 function set(id: string, weightKg = 60, reps = 8): DraftSet {
   return { id, weightKg, reps, effort: null, done: false, isWarmup: false, prescription: null };

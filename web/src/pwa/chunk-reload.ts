@@ -1,4 +1,4 @@
-import { tabStorage } from '../lib/keyed-store.ts';
+import { tabStorage } from '../lib/platform/keyed-store.ts';
 import { flushOpenDraftSessions } from '../offline/draft-session.ts';
 
 export const CHUNK_RELOAD_KEY = 'gainscape.chunk-reload-at';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RecentSet } from '../../web/src/lib/last-session-rules.ts';
+import type { RecentSet } from '../../web/src/lib/history/last-session-rules.ts';
 import {
   DELOAD_FRACTION,
   FATIGUE_SESSIONS,
@@ -7,7 +7,7 @@ import {
   nextWeightHint,
   progressionStep,
   READY_RIR,
-} from '../../web/src/lib/progression-rules.ts';
+} from '../../web/src/lib/workout/progression-rules.ts';
 
 const set = (weightKg: number, reps: number, loggedRir: number | null = null): RecentSet => ({
   weightKg,

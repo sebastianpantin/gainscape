@@ -1,5 +1,5 @@
-import { BADGE_COLORS, type BadgeColor, initialsFor, TRAINING_FOCUS_LABELS } from '../../lib/profile.ts';
-import type { CardProfile } from '../../lib/profile-view.ts';
+import { BADGE_COLORS, type BadgeColor, initialsFor, TRAINING_FOCUS_LABELS } from '../../lib/profile/profile.ts';
+import type { CardProfile } from '../../lib/profile/profile-view.ts';
 
 interface ProfileCardProps {
   profile: CardProfile;

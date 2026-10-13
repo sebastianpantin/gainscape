@@ -4,12 +4,12 @@ import { measuresRepsCapacity } from '@domain/types.ts';
 import { LineChart } from '../../components/LineChart.tsx';
 import { TermHelp } from '../../components/TermHelp.tsx';
 import { messageOf } from '../../lib/error-text.ts';
-import { type ExerciseProgress } from '../../lib/exercise-progress.ts';
-import { chartDateText, progressChartSeries, progressValueText } from '../../lib/exercise-progress-rules.ts';
+import { type ExerciseProgress } from '../../lib/progress/exercise-progress.ts';
+import { chartDateText, progressChartSeries, progressValueText } from '../../lib/progress/exercise-progress-rules.ts';
 import { formatLoad, formatSessionDate } from '../../lib/format.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { exerciseProgressQuery } from '../../lib/queries.ts';
-import { skillShareRows } from '../../lib/skill-map-rules.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { exerciseProgressQuery } from '../../lib/query/queries.ts';
+import { skillShareRows } from '../../lib/progress/skill-map-rules.ts';
 
 interface ExerciseProgressScreenProps {
   userId: string;

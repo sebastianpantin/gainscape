@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
-import type { Release } from '../../lib/changelog-rules.ts';
+import type { Release } from '../../lib/platform/changelog-rules.ts';
 import { ReleaseList } from './ReleaseList.tsx';
 import { useWhatsNew } from './use-whats-new.ts';
 

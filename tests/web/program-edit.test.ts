@@ -25,8 +25,8 @@ import {
   targetIssue,
   trimmedDoc,
 } from '../../web/src/features/programs/program-edit.ts';
-import type { CardioExercise, LiftExercise, LoadType } from '../../web/src/lib/catalog-rules.ts';
-import type { Program, ProgramDoc } from '../../web/src/lib/programs.ts';
+import type { CardioExercise, LiftExercise, LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
+import type { Program, ProgramDoc } from '../../web/src/lib/programs/programs.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
 const planned = (exerciseId: string) => ({

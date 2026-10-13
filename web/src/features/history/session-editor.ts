@@ -1,7 +1,7 @@
 import type { RevokedDrop } from '@domain/types.ts';
-import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
-import type { InvokeOutcome } from '../../lib/function-client-rules.ts';
-import type { EditSessionPayload } from '../../lib/history-rules.ts';
+import { type Exercise, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import type { InvokeOutcome } from '../../lib/platform/function-client-rules.ts';
+import type { EditSessionPayload } from '../../lib/history/history-rules.ts';
 import {
   editPayload,
   type FailureAction,

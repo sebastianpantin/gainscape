@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { activeWorkoutBar, elapsedClock } from '../../web/src/lib/active-workout-bar-rules.ts';
-import { startRest } from '../../web/src/lib/rest-timer-rules.ts';
+import { activeWorkoutBar, elapsedClock } from '../../web/src/lib/workout/active-workout-bar-rules.ts';
+import { startRest } from '../../web/src/lib/workout/rest-timer-rules.ts';
 
 const startedAt = '2026-10-12T10:00:00.000Z';
 const started = Date.parse(startedAt);

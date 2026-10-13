@@ -2,9 +2,9 @@ import { isSessionEditable } from '@domain/edit-window.ts';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { type HistorySession } from '../../lib/history-rules.ts';
-import { historyQuery } from '../../lib/queries.ts';
-import { loadedState } from '../../lib/query-state-rules.ts';
+import { type HistorySession } from '../../lib/history/history-rules.ts';
+import { historyQuery } from '../../lib/query/queries.ts';
+import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { EmptyState } from '../../components/EmptyState.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
@@ -12,10 +12,15 @@ import { CollectionTabs } from '../collection/CollectionScreen.tsx';
 import { CollectionHeading } from '../collection/CollectionHeading.tsx';
 import { formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
-import { exerciseListText, recordBadgeText, sessionVolumeKg, volumeText } from '../../lib/history-overview-rules.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import type { UnitPref } from '../../lib/profile-rules.ts';
+import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
+import {
+  exerciseListText,
+  recordBadgeText,
+  sessionVolumeKg,
+  volumeText,
+} from '../../lib/history/history-overview-rules.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 
 function EditState({ session, now }: { session: HistorySession; now: number }) {
   if (session.historyOnly) return <span className="history-tag history-only">Saved to history, no XP</span>;

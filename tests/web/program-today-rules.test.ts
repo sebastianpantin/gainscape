@@ -16,7 +16,7 @@ import {
   type PrescriptionCard,
   prescriptionCards,
   startLabel,
-} from '../../web/src/lib/program-today-rules.ts';
+} from '../../web/src/lib/programs/program-today-rules.ts';
 import { factClock, sessionFact, snapshot } from '../domain/program-fixtures/facts.ts';
 import {
   cyclePosition,

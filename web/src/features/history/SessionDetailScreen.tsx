@@ -3,9 +3,9 @@ import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { BOUTS_FULL_TEXT } from '../../lib/cardio-rules.ts';
-import { fetchExercises } from '../../lib/catalog.ts';
-import { announceDataChange } from '../../lib/data-changes.ts';
+import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
+import { fetchExercises } from '../../lib/exercises/catalog.ts';
+import { announceDataChange } from '../../lib/query/data-changes.ts';
 import {
   addableExercises,
   canAddSetTo,
@@ -13,16 +13,16 @@ import {
   updateBout,
   updateHoldSet,
   updateSet,
-} from '../../lib/exercise-edit-rules.ts';
-import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
+} from '../../lib/workout/exercise-edit-rules.ts';
+import { exerciseKeys } from '../../lib/exercises/exercise-key-rules.ts';
 import { formatXp } from '../../lib/format.ts';
-import { deleteSession, editSession } from '../../lib/history.ts';
-import { isUuid, withoutHistorySession } from '../../lib/history-rules.ts';
-import { type CatalogItem } from '../../lib/item-rules.ts';
-import { fetchItemCatalog } from '../../lib/items.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { historyQuery } from '../../lib/queries.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
+import { deleteSession, editSession } from '../../lib/history/history.ts';
+import { isUuid, withoutHistorySession } from '../../lib/history/history-rules.ts';
+import { type CatalogItem } from '../../lib/collection/item-rules.ts';
+import { fetchItemCatalog } from '../../lib/collection/items.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { historyQuery } from '../../lib/query/queries.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';

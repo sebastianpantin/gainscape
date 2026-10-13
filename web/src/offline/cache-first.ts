@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { type KeyedStore, keyedStore } from '../lib/keyed-store.ts';
+import { type KeyedStore, keyedStore } from '../lib/platform/keyed-store.ts';
 
 export const OFFLINE_PROBLEM = 'Offline: connect to load this screen.';
 

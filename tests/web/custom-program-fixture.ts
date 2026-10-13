@@ -1,5 +1,5 @@
 import { type ProgramDefinition } from '@domain/index.ts';
-import { type ProgramTemplateRow } from '../../web/src/lib/program-enroll-rules.ts';
+import { type ProgramTemplateRow } from '../../web/src/lib/programs/program-enroll-rules.ts';
 
 export const OWNER_ID = '00000000-0000-4000-8000-000000000100';
 export const PROGRAM_ID = '00000000-0000-4000-8000-000000000200';

@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { Release } from '../../lib/changelog-rules.ts';
+import type { Release } from '../../lib/platform/changelog-rules.ts';
 import { formatSessionDate } from '../../lib/format.ts';
 
 type HeadingLevel = 2 | 3;

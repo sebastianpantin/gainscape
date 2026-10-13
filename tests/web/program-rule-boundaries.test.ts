@@ -4,7 +4,7 @@ import {
   pctLabel,
   referenceValueProblem,
   shownReference,
-} from '../../web/src/lib/program-enroll-rules.ts';
+} from '../../web/src/lib/programs/program-enroll-rules.ts';
 
 const LABEL = 'Squat 1RM (kg)';
 const OUT_OF_RANGE = 'Squat 1RM (kg) must be above 0 and at most 1000';

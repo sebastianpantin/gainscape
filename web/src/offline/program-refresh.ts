@@ -1,5 +1,9 @@
-import { type ProgramTemplateRow } from '../lib/program-enroll-rules.ts';
-import { type EnrollmentFactsRows, type EnrollmentRow, programFactsFromRows } from '../lib/program-facts-rules.ts';
+import { type ProgramTemplateRow } from '../lib/programs/program-enroll-rules.ts';
+import {
+  type EnrollmentFactsRows,
+  type EnrollmentRow,
+  programFactsFromRows,
+} from '../lib/programs/program-facts-rules.ts';
 import { type ProgramCache, readProgramCache, updateProgramCache, withEnrollment } from './program-cache.ts';
 import { beginFactsFetch, emptyProgramFactsCache, mergeFetchedFacts } from './program-facts-cache.ts';
 

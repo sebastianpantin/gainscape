@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react';
-import { changePassword } from '../../../lib/account.ts';
-import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../../lib/auth-links.ts';
+import { changePassword } from '../../../lib/profile/account.ts';
+import { MINIMUM_PASSWORD_LENGTH, passwordProblem } from '../../../lib/platform/auth-links.ts';
 import { messageOf } from '../../../lib/error-text.ts';
 
 export function PasswordForm({ onDone }: { onDone: (text: string) => void }) {

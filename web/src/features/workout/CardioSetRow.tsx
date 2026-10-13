@@ -1,7 +1,7 @@
 import type { Ref } from 'react';
 import { Icon } from '../../components/Icon.tsx';
-import type { PaceUnit } from '../../lib/catalog-rules.ts';
-import type { UnitPref } from '../../lib/profile.ts';
+import type { PaceUnit } from '../../lib/exercises/catalog-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile.ts';
 import type { CardioDraftSet } from '../../offline/draft-format.ts';
 import { BoutFields, BoutModeToggle } from './BoutFields.tsx';
 import { CardioEffortSelector } from './CardioEffortSelector.tsx';
