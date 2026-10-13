@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { createDraftSession, type DraftChannel, type DraftMessage } from '../../web/src/offline/draft-session.ts';
 import { createLocalDraftStore } from '../../web/src/offline/draft-store.ts';
 import {
   forgetDraftOnDevice,
@@ -77,5 +78,31 @@ describe('local drafts of an account', () => {
     expect(await hasDraftOnDevice(store, null, userId)).toBe(true);
     expect(await hasDraftOnDevice(createLocalDraftStore(new MemoryStorage()), storage, userId)).toBe(true);
     expect(await otherAccountDraftIds(store, null, userId)).toEqual([]);
+  });
+
+  it('tells every open workout of the account that its draft was forgotten', async () => {
+    const storage = new MemoryStorage();
+    const store = createLocalDraftStore(storage);
+    const listening: DraftChannel = { onmessage: null, postMessage: () => undefined, close: () => undefined };
+    const announcer: DraftChannel = {
+      onmessage: null,
+      postMessage: (message: DraftMessage) => listening.onmessage?.({ data: message } as MessageEvent<unknown>),
+      close: () => undefined,
+    };
+    const session = createDraftSession({
+      userId,
+      openStore: async () => store,
+      fallbackStore: () => createLocalDraftStore(new MemoryStorage()),
+      channel: listening,
+      onChange: () => undefined,
+    });
+    await session.ready;
+    session.changeDraft(workout('session-a'));
+    await session.flush();
+
+    await forgetDraftOnDevice(store, storage, userId, announcer);
+
+    await vi.waitFor(() => expect(session.snapshot().state).toMatchObject({ status: 'ready', draft: null }));
+    session.close();
   });
 });

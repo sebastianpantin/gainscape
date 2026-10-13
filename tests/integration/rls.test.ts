@@ -357,6 +357,7 @@ describe('function execution rights', () => {
       'recent_lift_sets',
       'remove_friend',
       'reorder_pins',
+      'reset_account_data',
       'respond_friend_request',
       'save_custom_exercise',
       'save_exercise_note',

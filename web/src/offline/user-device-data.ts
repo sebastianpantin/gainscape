@@ -11,6 +11,7 @@ import { forgetSessionBaseline } from '../lib/session-baseline-store.ts';
 import { forgetTrainingDevice } from '../lib/training-device-store.ts';
 import { forgetInstallCard } from '../pwa/install-state.ts';
 import { collectionCache } from './collection-cache.ts';
+import { type DraftChannel } from './draft-session.ts';
 import { type DraftStore } from './draft-store.ts';
 import { forgetItemsCache } from './items-cache.ts';
 import { forgetDraftOnDevice } from './local-drafts.ts';
@@ -23,9 +24,10 @@ export interface UserDevice {
   localStorage: Storage;
   sessionStorage: Storage | null;
   draftStore: DraftStore;
+  draftChannel?: Pick<DraftChannel, 'postMessage'> | null;
 }
 
-export async function forgetUserDeviceData(device: UserDevice, userId: string): Promise<void> {
+export async function forgetUserProgressData(device: UserDevice, userId: string): Promise<void> {
   const storage = device.localStorage;
   forgetCachedExercises(storage, userId);
   forgetCachedExerciseNotes(storage, userId);
@@ -35,15 +37,20 @@ export async function forgetUserDeviceData(device: UserDevice, userId: string): 
   standingCache.forget(storage, userId);
   profileCache.forget(storage, userId);
   collectionCache.forget(storage, userId);
+  forgetSessionBaseline(storage, userId);
+  forgetDismissedSummaries(storage, userId);
+  forgetLastSummaryOf(device.sessionStorage, userId);
+  await forgetDraftOnDevice(device.draftStore, storage, userId, device.draftChannel ?? null);
+}
+
+export async function forgetUserDeviceData(device: UserDevice, userId: string): Promise<void> {
+  const storage = device.localStorage;
   forgetCachedPreferences(storage, userId);
   forgetPlateSettings(storage, userId);
   forgetRestState(storage, userId);
-  forgetSessionBaseline(storage, userId);
   forgetTrainingDevice(storage, userId);
-  forgetDismissedSummaries(storage, userId);
   forgetLastSeenRelease(storage, userId);
   forgetOnboarding(storage, userId);
   forgetInstallCard(storage, userId);
-  forgetLastSummaryOf(device.sessionStorage, userId);
-  await forgetDraftOnDevice(device.draftStore, storage, userId);
+  await forgetUserProgressData(device, userId);
 }
