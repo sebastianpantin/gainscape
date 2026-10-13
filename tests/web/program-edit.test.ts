@@ -9,6 +9,7 @@ import {
   DEFAULT_INCREMENT,
   docFor,
   exerciseIssue,
+  hasUnsavedChanges,
   isPlannableExercise,
   MAX_DAYS,
   MAX_EXERCISES_PER_DAY,
@@ -290,5 +291,54 @@ describe('pairedIncrement', () => {
 
   it('keeps a typed increment to two decimals', () => {
     expect(pairedIncrement(1.333, 'kg')).toEqual({ kg: 1.33, lb: 3 });
+  });
+});
+
+describe('hasUnsavedChanges', () => {
+  it('sees no change in an untouched program', () => {
+    expect(hasUnsavedChanges(doc, doc)).toBe(false);
+  });
+
+  it('sees no change after an edit is undone', () => {
+    const edited = changePlannedExercise(doc, 0, 1, { targetSets: 5 });
+    expect(hasUnsavedChanges(doc, changePlannedExercise(edited, 0, 1, { targetSets: 3 }))).toBe(false);
+  });
+
+  it('ignores whitespace that saving trims', () => {
+    expect(hasUnsavedChanges(doc, { ...renameDay(doc, 0, ' Upper '), name: 'Upper Lower ' })).toBe(false);
+  });
+
+  it('ignores the key order of a planned exercise', () => {
+    const reordered: ProgramDoc = {
+      ...doc,
+      days: doc.days.map((day) => ({
+        ...day,
+        exercises: day.exercises.map(({ progression, targetRepsMax, targetRepsMin, targetSets, exerciseId }) => ({
+          progression,
+          targetRepsMax,
+          targetRepsMin,
+          targetSets,
+          exerciseId,
+        })),
+      })),
+    };
+    expect(hasUnsavedChanges(doc, reordered)).toBe(false);
+  });
+
+  it('sees a renamed program', () => {
+    expect(hasUnsavedChanges(doc, { ...doc, name: 'Push Pull' })).toBe(true);
+  });
+
+  it('sees a changed target', () => {
+    expect(hasUnsavedChanges(doc, changePlannedExercise(doc, 1, 0, { targetRepsMax: 10 }))).toBe(true);
+  });
+
+  it('sees an added exercise and an added day', () => {
+    expect(hasUnsavedChanges(doc, addPlannedExercise(doc, 1, 'deadlift'))).toBe(true);
+    expect(hasUnsavedChanges(doc, addDay(doc, 'day-c'))).toBe(true);
+  });
+
+  it('sees reordered days', () => {
+    expect(hasUnsavedChanges(doc, moveDay(doc, 0, 1))).toBe(true);
   });
 });

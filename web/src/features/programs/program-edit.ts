@@ -197,3 +197,15 @@ export function trimmedDoc(doc: ProgramDoc): ProgramDoc {
     days: doc.days.map((day) => ({ ...day, name: trimmedName(day.name) })),
   };
 }
+
+function sortedKeysJson(value: unknown): string {
+  return JSON.stringify(value, (_key, inner: unknown) =>
+    inner && typeof inner === 'object' && !Array.isArray(inner)
+      ? Object.fromEntries(Object.entries(inner).sort(([left], [right]) => left.localeCompare(right)))
+      : inner,
+  );
+}
+
+export function hasUnsavedChanges(saved: ProgramDoc, current: ProgramDoc): boolean {
+  return sortedKeysJson(trimmedDoc(saved)) !== sortedKeysJson(trimmedDoc(current));
+}
