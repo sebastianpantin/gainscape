@@ -7,7 +7,7 @@ async function sendRequest(page: Page, username: string) {
   await openTab(page, 'Friends');
   await page.getByLabel('Add a friend by exact username').fill(username);
   await page.getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByRole('status')).toHaveText(`Request sent to ${username}`);
+  await expect(page.getByRole('status').getByText(`Request sent to ${username}`, { exact: true })).toBeVisible();
 }
 
 function sentRequests(page: Page) {
@@ -27,7 +27,7 @@ test('declining an incoming request removes it and leaves no friendship on eithe
   await expect(bob.getByText(`${aliceName} wants to be friends`)).toBeVisible();
   await bob.getByRole('button', { name: 'Decline' }).click();
 
-  await expect(bob.getByRole('status')).toHaveText(`Declined ${aliceName}`);
+  await expect(bob.getByRole('status').getByText(`Declined ${aliceName}`, { exact: true })).toBeVisible();
   await expect(bob.getByText(`${aliceName} wants to be friends`)).toHaveCount(0);
   await expect.poll(() => friendshipStatus(aliceName, bobName)).toBe('declined');
   await bob.reload();
@@ -53,7 +53,9 @@ test('cancelling a sent request removes it for the sender and the recipient', as
   await expect(bob.getByText(`${aliceName} wants to be friends`)).toBeVisible();
 
   await sentRequests(alice).getByRole('button', { name: 'Cancel' }).click();
-  await expect(alice.getByRole('status')).toHaveText(`Cancelled the request to ${bobName}`);
+  await expect(
+    alice.getByRole('status').getByText(`Cancelled the request to ${bobName}`, { exact: true }),
+  ).toBeVisible();
   await expect(sentRequests(alice)).toHaveCount(0);
   await expect.poll(() => friendshipStatus(aliceName, bobName)).toBeNull();
 

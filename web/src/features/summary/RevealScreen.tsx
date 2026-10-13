@@ -12,6 +12,7 @@ import {
   LEVEL_UP_CELEBRATION,
   primeCelebrationAudio,
 } from '../../lib/celebration-effects.ts';
+import { prefersReducedMotion } from '../../lib/device-effects.ts';
 import { formatXp, sessionXp } from '../../lib/format.ts';
 import { GLOSSARY } from '../../lib/glossary.ts';
 import { fetchSession } from '../../lib/history.ts';
@@ -54,10 +55,6 @@ const INTERACTIVE_ELEMENTS = 'a[href], button, input, select, textarea, summary,
 
 async function savedWhenOffline<Loaded>(saved: Loaded | null, loadLive: () => Promise<Loaded>): Promise<Loaded> {
   return (await loadCacheFirstWhenOffline(isDeviceOffline, () => saved, loadLive)).loaded;
-}
-
-function prefersReducedMotion(): boolean {
-  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 type RevealPhase = 'playing' | 'settled' | 'skipped';

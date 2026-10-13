@@ -10,6 +10,7 @@ const {
   collectionQuery,
   enrollChoicesQuery,
   FEED_QUERY_PREFIX,
+  feedPreviewQuery,
   feedQuery,
   FRIENDS_QUERY_PREFIX,
   friendsQuery,
@@ -48,6 +49,12 @@ describe('query factories', () => {
     const percent = collectionPercentQuery(USER_ID);
     expect(percent.queryKey).toEqual(collectionQuery(USER_ID).queryKey);
     expect(percent.select?.({ loaded: COLLECTION, fromCache: false })).toBe(10);
+  });
+
+  it('keeps the Today feed preview fresh for a minute under the feed prefix, so feed changes still reach it', () => {
+    const preview = feedPreviewQuery(USER_ID);
+    expect(preview.queryKey.slice(0, FEED_QUERY_PREFIX.length)).toEqual([...FEED_QUERY_PREFIX]);
+    expect(preview.staleTime).toBe(60_000);
   });
 
   it('drops every friends list and feed under the exported prefixes', () => {

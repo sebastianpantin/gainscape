@@ -4,10 +4,12 @@ import { Link } from 'react-router-dom';
 import { usePreferences } from '../../lib/preferences.ts';
 import { initialsFor } from '../../lib/profile.ts';
 import { feedQuery, friendsQuery } from '../../lib/queries.ts';
+import { useToast } from '../../lib/toast.ts';
 import { removeFriend, respondToFriendRequest, sendFriendRequest, setGz } from '../../lib/social.ts';
 import {
   type FeedItem,
   feedBadge,
+  feedBadgeKind,
   feedText,
   type FriendRow,
   relativeTime,
@@ -37,10 +39,9 @@ interface FeedEntryProps {
 function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
   const { unitPref } = usePreferences();
   const text = feedText(item, unitPref);
-  const kind = item.type === 'level_up' || item.type === 'level_99' ? 'level' : item.type;
   return (
     <li className="panel feed-item">
-      <span className={`feed-badge ${kind}`} aria-hidden="true">
+      <span className={`feed-badge ${feedBadgeKind(item)}`} aria-hidden="true">
         {feedBadge(item)}
       </span>
       <div className="feed-body">
@@ -92,7 +93,7 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
   const [busy, setBusy] = useState(false);
   const [gzPending, setGzPending] = useState<ReadonlySet<string>>(() => new Set());
   const [username, setUsername] = useState('');
-  const [status, setStatus] = useState('');
+  const { showToast, dismissToast } = useToast();
   const [problem, setProblem] = useState<string | null>(null);
 
   const friends = friendsList.data ?? [];
@@ -105,11 +106,11 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
     if (busy) return;
     setBusy(true);
     setProblem(null);
-    setStatus('');
+    dismissToast();
     let actionProblem: string | null = null;
     try {
       const done = await action();
-      if (done !== null) setStatus(done);
+      if (done !== null) showToast(done);
     } catch (error) {
       actionProblem = problemText(error);
     }
@@ -177,7 +178,7 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
     const rollBack = (current: FeedItem) =>
       stillOptimistic(current) ? { ...current, gzGiven: item.gzGiven, gzCount: item.gzCount } : current;
     setProblem(null);
-    setStatus('');
+    dismissToast();
     markGzPending(item.eventId, true);
     replaceItem(item.eventId, (current) => ({ ...current, gzGiven: given, gzCount: optimisticCount }));
     try {
@@ -207,9 +208,6 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
     <main className="screen stack">
       <h1 className="title">Friends</h1>
       <FriendsTabs />
-      <p className="muted" role="status">
-        {status}
-      </p>
       {problem && (
         <p className="problem" role="alert">
           {problem}

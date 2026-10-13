@@ -25,6 +25,7 @@ import {
   type ProfileView,
   listFriends,
 } from './social.ts';
+import { FRESH_FOR_MS } from './query-freshness-rules.ts';
 import { type FeedCursor, feedCursor } from './social-rules.ts';
 import { fetchWeeklyGoalStatus } from './weekly-goal.ts';
 
@@ -77,6 +78,14 @@ export function feedQuery(userId: string) {
       const lastItem = lastPage.at(-1);
       return lastItem && lastPage.length >= FEED_PAGE_SIZE ? feedCursor(lastItem) : undefined;
     },
+  });
+}
+
+export function feedPreviewQuery(userId: string) {
+  return queryOptions({
+    queryKey: [...FEED_QUERY_PREFIX, userId, 'preview'] as const,
+    queryFn: () => fetchFeedPage(null),
+    staleTime: FRESH_FOR_MS,
   });
 }
 

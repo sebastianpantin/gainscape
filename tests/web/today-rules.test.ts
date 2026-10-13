@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Skill } from '../../web/src/lib/catalog-rules.ts';
 import {
   greetingFor,
+  levelCountStart,
   nearestLevelUp,
   nearestLevelUpText,
   streakRiskText,
@@ -27,6 +28,18 @@ describe('greetingFor', () => {
     expect(greetingFor(23)).toBe('Late one tonight');
     expect(greetingFor(4)).toBe('Late one tonight');
     expect(greetingFor(5)).toBe('Good morning');
+  });
+});
+
+describe('levelCountStart', () => {
+  it('counts up from the level last seen on this device', () => {
+    expect(levelCountStart(31, 34)).toBe(31);
+  });
+
+  it('shows the level at once when nothing was seen yet or it did not rise', () => {
+    expect(levelCountStart(null, 34)).toBe(34);
+    expect(levelCountStart(34, 34)).toBe(34);
+    expect(levelCountStart(40, 34)).toBe(34);
   });
 });
 

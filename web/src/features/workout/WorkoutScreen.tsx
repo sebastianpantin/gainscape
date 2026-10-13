@@ -22,6 +22,8 @@ import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-ru
 import { fetchProfile, type UnitPref } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
+import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
+import { LevelStat } from './LevelStat.tsx';
 import { greetingFor, nearestLevelUp, nearestLevelUpText } from './today-rules.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
 import { stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
@@ -495,12 +497,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             <h1 className="title">Today</h1>
           </div>
           {standing.status === 'ready' && (
-            <Link className="header-stat" to="/skills">
-              <span className="muted tiny">Total · Combat</span>
-              <strong>
-                {standing.standing.totalLevel} · {standing.standing.combatLevel}
-              </strong>
-            </Link>
+            <LevelStat
+              userId={userId}
+              totalLevel={standing.standing.totalLevel}
+              combatLevel={standing.standing.combatLevel}
+            />
           )}
         </div>
         {deviceNotices}
@@ -521,6 +522,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </Link>
         )}
         <WeeklyGoalCard />
+        <FriendActivityStrip userId={userId} />
         <ProgramSummary userId={userId} program={activeProgram} />
         <ProgramToday
           program={activeProgram}
