@@ -1,0 +1,223 @@
+.menu-list .button {
+  width: 100%;
+  min-height: 56px;
+  justify-content: space-between;
+  font-size: var(--font-size-md);
+}
+
+.exercise-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.program-exercise {
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--color-panel-border);
+}
+
+.profile-badge {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent);
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 700;
+  border: var(--border-width) solid var(--color-outline);
+  box-shadow:
+    var(--bevel-accent),
+    3px 3px 0 var(--color-bevel);
+}
+
+.profile-name {
+  color: var(--color-text);
+  font-size: var(--font-size-3xl);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1-5);
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-0-5);
+  padding: var(--space-2) var(--space-1);
+  background: var(--color-well);
+  border: var(--border-width) solid var(--color-outline);
+}
+
+.stat-tile dd {
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: 500;
+  color: var(--color-accent);
+  text-shadow: var(--text-shadow);
+}
+
+.private-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.public-tag {
+  font-size: var(--font-size-xs);
+  color: var(--color-xp);
+}
+
+.body-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1-5);
+}
+
+.body-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  padding: var(--space-2) var(--space-2-5);
+  background: var(--color-well);
+  border: var(--border-width) solid var(--color-outline);
+}
+
+.gear-bonus-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
+.body-stat dd {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: 500;
+}
+
+.back-link {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.back-link,
+a.tiny,
+a.standalone-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: var(--tap-target);
+}
+
+button.back-link {
+  padding: 0;
+  font-family: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.line-chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.line-chart svg {
+  width: 100%;
+  height: auto;
+  background: var(--color-well);
+  border: var(--border-width) solid var(--color-outline);
+}
+
+.line-chart text {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.line-chart-grid line {
+  stroke: var(--color-panel-border);
+  stroke-width: 1;
+}
+
+.line-chart-series path {
+  fill: none;
+  stroke-width: 2;
+}
+
+.line-chart-series.series-0 path {
+  stroke: var(--color-accent);
+}
+
+.line-chart-series.series-0 circle,
+.line-chart-swatch.series-0 {
+  fill: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.line-chart-series.series-1 path {
+  stroke: var(--color-rare);
+  stroke-dasharray: 4 3;
+}
+
+.line-chart-series.series-1 circle,
+.line-chart-swatch.series-1 {
+  fill: var(--color-rare);
+  background: var(--color-rare);
+}
+
+.line-chart-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.line-chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.line-chart-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--color-outline);
+}
+
+.rep-max-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.rep-max-table th,
+.rep-max-table td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-panel-border);
+}
+
+.rep-max-table thead th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}

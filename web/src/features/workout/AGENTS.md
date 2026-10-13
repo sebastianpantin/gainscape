@@ -9,7 +9,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 
 ## Map
 
-- Entry point: `WorkoutScreen.tsx` (about 47 KB). It composes the draft, finish sync, program day starts, supersets, the challenge banner (`ChallengeBanner` is defined inside it), the rest timer and the Today cards.
+- Entry point: `WorkoutScreen.tsx`. It owns the draft, finish sync, the session-id state reset, supersets, the lift cards and the rest timer, and renders `TodayView` (no draft), `SavingWorkoutView` (finished or syncing), `CardioExerciseCard`, `HoldExerciseCard` and `ChallengeBanner`. Each data effect lives in its own `use-*.ts` hook, called in a fixed order before the loading early return.
 - Pure rules, each tested in `tests/web/<name>.test.ts`:
   - Finish text and steps: `workout-rules.ts`.
   - Lift card decisions (menu, advice, warm-ups, when rest starts): `exercise-card-rules.ts`.
@@ -60,7 +60,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - A finished draft away from `/` shows `Workout not saved yet` in `ActiveWorkoutBar`, because finish sync runs only on `/`.
 - `NotifyPrompt` decides once per mount, not on each timer tick. Turn on must call `askToNotify` inside the click handler, which the permission prompt requires.
 - `use-wake-lock.ts` requests the lock again when the browser releases it while the page is visible.
-- `SetMenu` uses `popover="auto"`. A passive capturing `scroll` listener closes it, because the fixed panel would drift. Without popover support (iOS before 17), `app.css` (`@supports not selector(:popover-open)`) hides the button and shows the actions inline.
+- `SetMenu` uses `popover="auto"`. A passive capturing `scroll` listener closes it, because the fixed panel would drift. Without popover support (iOS before 17), `../../styles/workout.css` (`@supports not selector(:popover-open)`) hides the button and shows the actions inline.
 - Layout:
   - Live set rows are a compact grid that must fit a 360 px phone.
   - Controls between sets stay 44 px touch targets (`e2e/a11y.spec.ts`).

@@ -9,7 +9,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
 
 ## Map
 
-- Screens: `ProfileScreen.tsx`, `EditProfileScreen.tsx`, `FriendPreviewScreen.tsx`, `SettingsScreen.tsx` (the largest file here).
+- Screens: `ProfileScreen.tsx`, `EditProfileScreen.tsx`, `FriendPreviewScreen.tsx`, `SettingsScreen.tsx` (a thin composition of the sections in `settings/`: one component per section, forms and choices, and one `use-*.ts` hook per piece of state).
 - Hooks:
   - `use-profile.ts`: a cache-first load; `replace` applies optimistic updates and saves the cache.
   - `use-optimistic-profile-save.ts`: applies the change, persists it, and rolls back on failure.

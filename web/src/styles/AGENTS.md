@@ -5,17 +5,17 @@
 
 ## Purpose
 
-The whole visual layer. `tokens.css` defines the design tokens as CSS custom properties on `:root`. `app.css` is the single global stylesheet with plain class selectors for every screen. `../main.tsx` imports both once. The look is OSRS-inspired: dark brown parchment palette, pixel display font (`--font-display`, Silkscreen) over IBM Plex Mono, square corners (`--radius: 0`), bevelled panels (`var(--bevel)`, `var(--bevel-sunken)`).
+The whole visual layer. `tokens.css` defines the design tokens as CSS custom properties on `:root`. `app.css` is only an ordered list of `@import`s of the per-area stylesheets, plain class selectors for every screen.css`is the single global stylesheet with plain class selectors for every screen.`../main.tsx` imports both once. The look is OSRS-inspired: dark brown parchment palette, pixel display font (`--font-display`, Silkscreen) over IBM Plex Mono, square corners (`--radius: 0`), bevelled panels (`var(--bevel)`, `var(--bevel-sunken)`).
 
 ## Map
 
 - `tokens.css`: the colour palette, spacing (`--space-0-5` to `--space-6`; there is no `--space-5`), the type scale (`--font-size-2xs` 0.75rem to `--font-size-4xl` 2rem), `--tap-target`, `--tab-bar-height`, and the bevel and text-shadow recipes.
-- `app.css`: base elements, then component and screen classes, then one `prefers-reduced-motion: reduce` block at the end. Flat class selectors, no preprocessor, no CSS modules.
+- `app.css` imports, in cascade order: `base.css`, `chrome.css`, `workout.css`, `reveal.css`, `skills.css`, `collection.css`, `friends.css`, `profile.css`, `settings.css`, `history.css`, then `motion.css` (the one `prefers-reduced-motion: reduce` block) last. Import order is cascade order: add a rule to its area file, and add a new file to `app.css` in the right place. Flat class selectors, no preprocessor, no CSS modules.
 
 ## Rules and gotchas
 
-- Use tokens (`var(--color-*)`, `var(--space-*)`, `var(--font-size-*)`), never literal colours or sizes. New colours go into `tokens.css` first, and `app.css` has no hex literals. Use a spacing or type token whenever one is within about 1px of the value you need.
-- The raw values left in `app.css` are deliberate one-offs:
+- Use tokens (`var(--color-*)`, `var(--space-*)`, `var(--font-size-*)`), never literal colours or sizes. New colours go into `tokens.css` first, and the area stylesheets have no hex literals. Use a spacing or type token whenever one is within about 1px of the value you need.
+- The raw values left in the area stylesheets are deliberate one-offs:
   - display sizes from 1.6rem to 2.9rem (brand, reveal total, profile badge, standing and skill level numbers);
   - `0.65rem` in the drop badge;
   - `1.15rem` on `.button.primary` and `.first-run-choice h3`;
@@ -38,7 +38,7 @@ The whole visual layer. `tokens.css` defines the design tokens as CSS custom pro
 - `.route-view`'s `route-enter` is an opacity-only fade. A transform would make it the containing block of its `position: fixed` children.
 - `.toast-region` sits fixed above the tab bar, the active workout bar slot and the safe area, with `z-index: 25` and `pointer-events: none`.
 - `.reveal-still` turns off the reveal's `rise`, `pop` and `gain-added` animations once the reveal is skipped or settled.
-- Put every new animation inside the existing `prefers-reduced-motion: reduce` block at the end of `app.css`.
+- Put every new animation inside the existing `prefers-reduced-motion: reduce` block in `motion.css`, which `app.css` imports last.
 - Class names are the contract with the TSX in `../components/`, `../features/` and `../pwa/`. Rename them in both places and check `e2e/` selectors that use class names.
 - Token values are copied elsewhere. Keep these in sync:
   - `web/public/licenses/index.html` has `--color-background`, `--color-panel`, `--color-text` and `--color-accent` inline, because it does not load these files.
@@ -47,7 +47,7 @@ The whole visual layer. `tokens.css` defines the design tokens as CSS custom pro
 ## Testing
 
 - `tests/web/contrast.test.ts` checks WCAG contrast for every text token on every surface token (`--color-backdrop`, `--color-background`, `--color-background-dots`, `--color-panel`, `--color-panel-shade`, `--color-chrome`, `--color-well`). Body text needs 4.5:1. The secondary tokens (`--color-text-muted`, `--color-text-faint`, `--color-rare`, `--color-danger`) need 5:1. Add a failing case there before changing a colour token (`make test-web`).
-- `app.css` has no unit test. Axe scans in `e2e/a11y.spec.ts` (`make e2e`, needs the stack) catch layout and accessibility regressions.
+- The stylesheets have no unit test. Axe scans in `e2e/a11y.spec.ts` (`make e2e`, needs the stack) catch layout and accessibility regressions.
 
 ## Manual Notes
 
