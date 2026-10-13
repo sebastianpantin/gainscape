@@ -19,7 +19,7 @@ The React 19 PWA and its Vite root. Source lives in `src/`, static assets in `pu
 - `.env.development` holds the local CLI stack's publishable key, the same for every local install. `VITE_SUPABASE_URL` is deliberately unset locally so the client uses the `/sb` proxy. Never commit a hosted URL or key; production values come from the build environment (`../docs/production-auth.md`).
 - `@vitejs/plugin-basic-ssl` is skipped when `GAINSCAPE_PLAIN_HTTP` is set (PWA e2e serves plain http).
 - `sw.js` exists only after `vite build`; the dev server registers no worker.
-- `vite.config.ts` reads `changelog.yaml` once at startup: restart `make dev` after editing it. `src/lib/changelog-rules.ts` validates it on every build, and `make deploy` refuses until every user-facing merged PR is in some entry's `prs`.
+- `vite.config.ts` reads `changelog.yaml` once at startup: restart `make dev` after editing it. `src/lib/platform/changelog-rules.ts` validates it on every build, and `make deploy` refuses until every user-facing merged PR is in some entry's `prs`.
 - A new build-time constant is declared in both `src/vite-env.d.ts` and `vite.config.ts`.
 - Node-loaded files (`vite.config.ts`, `build/*.ts`) use `.ts` extensions and `import.meta.dirname`.
 - The `@domain` alias is also in `tsconfig.json` and `vitest.config.ts`. Change all three together.

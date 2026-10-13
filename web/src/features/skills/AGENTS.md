@@ -9,8 +9,8 @@ The Skills tab (`/skills`): every skill's level, XP and progress, total level, t
 
 ## Map
 
-- `SkillsScreen.tsx`: standing from `useStanding(userId)` (`../../lib/standing.ts`), exercises from `../../lib/skill-map.ts`.
-- `RecoveryPanel.tsx`: rules in `../../lib/recovery-rules.ts`, drawn with `components/BodyMap.tsx`.
+- `SkillsScreen.tsx`: standing from `useStanding(userId)` (`../../lib/progress/standing.ts`), exercises from `../../lib/progress/skill-map.ts`.
+- `RecoveryPanel.tsx`: rules in `../../lib/progress/recovery-rules.ts`, drawn with `components/BodyMap.tsx`.
 
 ## Rules and gotchas
 
