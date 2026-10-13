@@ -3,7 +3,7 @@ import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from 
 import { programListCache, withSavedProgramDoc } from '../offline/program-list-cache.ts';
 import { PROGRAM_SELECT, programPayload, type ProgramRow, toProgram } from './program-row-rules.ts';
 import { rateLimitedMessage } from './rate-limit.ts';
-import { deviceStorage } from './rest-timer-store.ts';
+import { deviceStorage } from './keyed-store.ts';
 import { supabase } from './supabase.ts';
 
 export interface ProgramDay {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { deviceStorage } from '../../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../../lib/keyed-store.ts';
 import { type TrainingDeviceSettings } from '../../../lib/training-device-rules.ts';
 import { readTrainingDeviceSettings, saveTrainingDeviceSettings } from '../../../lib/training-device-store.ts';
 import { askToNotify } from '../../workout/rest-alert-effects.ts';

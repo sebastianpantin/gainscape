@@ -8,7 +8,8 @@ import {
   type RestTimer,
   startRest,
 } from '../../lib/rest-timer-rules.ts';
-import { deviceStorage, readRestState, restStateKey, saveRestState } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
+import { readRestState, restStateKey, saveRestState } from '../../lib/rest-timer-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { primeAudio } from '../../lib/device-effects.ts';
 

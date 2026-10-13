@@ -15,7 +15,7 @@ import {
 import { withFriendlyRateLimit } from './rate-limit.ts';
 import { RECORD_BASELINE_COLUMNS, type RecordBaseline, recordBaselineFrom } from './session-baseline-rules.ts';
 import { nullableNumber } from './rows.ts';
-import { deviceStorage } from './rest-timer-store.ts';
+import { deviceStorage } from './keyed-store.ts';
 import { supabase } from './supabase.ts';
 
 export interface RepMaxSlotView {

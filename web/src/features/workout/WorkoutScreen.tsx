@@ -10,7 +10,7 @@ import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-ru
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { barbellPlates, barbellPlatesText } from '../../lib/plate-rules.ts';
 import { readPlateSettings } from '../../lib/plate-settings-store.ts';

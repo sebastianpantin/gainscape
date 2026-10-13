@@ -4,7 +4,7 @@ import { type Release, whatsNewDecision, whatsNewMayOpen } from '../../lib/chang
 import { openChannel } from '../../lib/channel.ts';
 import { readLastSeenRelease, saveLastSeenRelease } from '../../lib/last-seen-release-store.ts';
 import { readOnboarding } from '../../lib/onboarding-store.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
 import { DRAFT_CHANNEL_NAME } from '../../offline/draft-session.ts';
 import { hasDraftOnDevice } from '../../offline/local-drafts.ts';

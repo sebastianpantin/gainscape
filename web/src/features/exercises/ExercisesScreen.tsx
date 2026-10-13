@@ -8,7 +8,7 @@ import { type Exercise, exerciseLabels, type Skill } from '../../lib/catalog-rul
 import { setCustomExerciseArchived } from '../../lib/custom-exercises.ts';
 import { CustomExerciseForm } from './CustomExerciseForm.tsx';
 import { messageOf } from '../../lib/error-text.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { useOnlineSignal } from '../../lib/use-online.ts';
 import { cacheFirstNotice, isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';

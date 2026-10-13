@@ -6,7 +6,7 @@ import {
   fetchRecordBaseline,
   fetchStrengthState,
 } from '../../lib/collection-data.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { type SessionBaseline, sessionBaselineAsOf } from '../../lib/session-baseline-rules.ts';
 import { readSessionBaseline, saveSessionBaseline } from '../../lib/session-baseline-store.ts';
 

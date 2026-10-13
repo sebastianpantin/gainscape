@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { REST_CHOICES_S, REST_OFF, restClock, withChosenRest } from '../../../lib/rest-timer-rules.ts';
-import { deviceStorage, readRestState, saveRestState } from '../../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../../lib/keyed-store.ts';
+import { readRestState, saveRestState } from '../../../lib/rest-timer-store.ts';
 import { Choice } from './Choice.tsx';
 
 const REST_OPTIONS = REST_CHOICES_S.map((restS) => ({
