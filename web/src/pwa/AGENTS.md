@@ -18,7 +18,7 @@ The page-side PWA runtime: service worker registration, the update flow that swa
 ## Rules and gotchas
 
 - `shell-rules.ts` runs in the page, the worker and Node. Keep it free of DOM and Node APIs and inside `tsconfig.sw.json`'s include.
-- `precacheEntries` skips unpublished files such as `AGENTS.md`, which the Pages build deletes; `scripts/deploy/pages-headers.ts` uses the same predicate. Keep them in step or the worker precaches a 404.
+- `precacheEntries` skips unpublished files such as `AGENTS.md`, which the Pages build deletes; `scripts/deploy/pages-headers.ts` imports the same `isUnpublished` predicate; keep using it there, or the worker precaches a 404.
 - `update-flow.ts` only touches injected ports so tests can pass plain objects. Put new browser access in `register-service-worker.ts`.
 - Updates never apply silently. The user clicks Reload, then the flow takes the finish lock (`../offline/finish-lock.ts`) so a workout finish is not interrupted, flushes open drafts (`flushOpenDraftSessions`), reloads and pings other tabs. Do not bypass these or a finish can be lost.
 - `registerServiceWorker()` runs only in production builds, after `load`. `setUpdateUser` (from `App.tsx`) supplies the user id for the finish lock name.

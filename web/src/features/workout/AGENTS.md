@@ -71,8 +71,8 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - Holds take no superset, warm-ups, quick fill or swap. Cardio cards keep a plain `Remove` instead of `ExerciseMenu`.
 - At the set limit (`MAX_SETS_PER_SESSION`), or at 4 hours of bouts, the add buttons are disabled and the picker stops offering what will not fit. History edit behaves the same way.
 - `PetCompanion` uses `ownedPetsQuery`, not `itemsQuery`, so Items and the reveal keep their own cache.
-- `streakRiskText` counts from the server's `weekStart`, which follows the profile timezone, against the device's day. The two can disagree near midnight on Sunday. In that case it returns null.
-- The picker gets only active exercises, but `loadExercisesCacheFirst` saves the archived ones too, because history and the reveal need them offline.
+- `streakRiskText` counts from the server's `weekStart`, which follows the profile timezone, against the device's day. It returns null when the device day falls outside that week (possible near midnight on Sunday).
+- The picker gets only active exercises, but `loadExercisesCacheFirst` saves the archived ones too, because the Exercises screen, program editor and reveal need them offline.
 - `Discard workout` is left out on a challenge draft, whose banner has its own discard. Discarding a challenge keeps the scroll.
 - `BodyweightPrompt` answers save through `../profile/save-bodyweight.ts`, the same path as session detail.
 

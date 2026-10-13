@@ -13,7 +13,7 @@ Playwright specs for installed-app behaviour: manifest installability, the servi
 
 ## Rules and gotchas
 
-- Config: 120 s timeout, one worker, no retries, `serviceWorkers: 'allow'`, `GAINSCAPE_PLAIN_HTTP=1`, `reuseExistingServer: false` so a stale preview is never reused.
+- Config: 120 s timeout, one worker, no retries locally and one on CI (`runSettings`), `serviceWorkers: 'allow'`, `GAINSCAPE_PLAIN_HTTP=1`, `reuseExistingServer: false` so a stale preview is never reused.
 - These tests use whatever is in `web/dist`. `make e2e-pwa` runs `make build-local` first; when running one file directly, rebuild after any change to `web/src`, `web/build/service-worker-plugin.ts` or `web/src/pwa/`.
 - Specs rewrite the built service worker. Every spec that does must restore it in `test.afterEach` (`restoreServiceWorker(original)`), or later runs break.
 - Go offline with `context.setOffline(true)` plus CDP `markPageOffline` on cold pages, so a freshly opened page is offline too. Call `waitForController(page)` first so the worker controls the page.

@@ -29,7 +29,7 @@
 - `clientId` is the stable React key of an exercise card and is never sent to the server. The parser gives an exercise stored without one the positional `exercise-<index>`, so boot compares records deterministically.
 - `withValidSupersets` runs on every parse and after every group change, remove or swap. A superset id survives only on one adjacent run of two or more lifts. Cardio never keeps a `supersetId`.
 - `startDraftFromDay` ignores `PlannedExercise.progression`, so it is never stored and needs no bump.
-- The set cap must match the server's `MAX_SETS_PER_SESSION`, counting planned sets too. Bouts are capped at 4 hours in total. The add functions silently add nothing past either cap.
+- The set cap must match the server's `MAX_SETS_PER_SESSION`, counting planned sets too. Bouts are capped at 4 hours in total; the cap is checked only when adding, and making an existing bout longer is not guarded. The add functions silently add nothing past either cap.
 - `startDraftFromChallenge` never rounds a barbell load below the bar. An exercise with no `equipment` counts as a barbell, because older items caches lack equipment.
 - `markPlannedSetsDone` skips 5RM tests and optional program sets, because their numbers are placeholders.
 - Drafts carry no gear. `complete-session` snapshots the loadout equipped at sync time, so a workout synced after a gear change gets the new gear's bonus.
@@ -46,6 +46,7 @@
 - Once a session has written to the fallback in this page load, `openDraftSessionStore` rejects with `SESSION_STAYS_ON_FALLBACK`. Otherwise a late IndexedDB open would hide the workout being logged.
 - No unsynced draft stays hidden. When the main store has none and the fallback has one, the session opens the fallback draft instead of a fresh workout. The exception is a stale copy of a synced or discarded session. A copy older than a discard is not resurrected, but fallback edits newer than the discard still open. `waitingDraft` and the `opened_waiting` start outcome tell the screen.
 - Persistence failures degrade instead of throwing into React. If IndexedDB fails, the session uses `localStorage`. An unreadable boot sets `saveProblem` to `unreadable`, which is never shown as "no draft". If both stores fail, it sets `unsaved`.
+- `openDraftStore` rejects when IndexedDB exists but cannot open; only the session fallback and `openDraftStoreOrFallback` degrade to `localStorage`. Boot moves a fallback draft in regardless of age when the stored record is another session's tombstone, because it is the only copy of that workout.
 - Only `draft-boot.ts` and `use-workout-draft.ts` touch browser globals (`indexedDB`, `localStorage`, `BroadcastChannel`, `navigator.storage`). Everything else takes injected ports.
 - Cross-tab sync uses the `BroadcastChannel` `gainscape.drafts`. Within a session, one promise chain (`enqueue`) serialises store work. `flush` waits until the chain stops growing. `flushOpenDraftSessions` runs before a service worker update.
 
@@ -63,7 +64,7 @@
 - The session id is the idempotency key, and set ids come from the draft. A `session-payload.ts` change needs the matching `complete-session` schema change and an integration test. `ci-changes` treats `session-payload.ts` as backend input for this reason.
 - The payload sends only done sets, renumbered. Supersets are display only and never sent. An interval bout never sends `durationS`, because the server derives it.
 - When the server already holds the session with other content, the summary carries `storedContentDiffers`. The draft is still marked synced, and the reveal says the local copy was not applied.
-- After a synced challenge, `syncFinishedWorkout` lowers the scroll count in the items cache (`spendCachedScroll`, never below 0), so an offline Items tab does not offer a used scroll.
+- After a synced challenge, `syncFinishedWorkout` lowers the scroll count in the items cache (`spendCachedScroll`, never below 0 and never removing the entry, matching `user_items`, which keeps the row at quantity 0), so an offline Items tab does not offer a used scroll.
 
 ### Screen caches
 
