@@ -40,6 +40,7 @@ test('equip and unequip gear in the Items tab and see the bonus per skill', asyn
   await page.getByRole('main').getByRole('button', { name: 'Rookie belt', exact: true }).click();
   const details = page.getByRole('region', { name: 'Item details' });
   await details.getByRole('button', { name: 'Equip', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Equipped Rookie belt' })).toBeVisible();
 
   const loadout = page.getByRole('region', { name: 'Loadout' });
   await expect(definitionOf(loadout, 'Belt')).toHaveText('Rookie belt');
@@ -47,6 +48,7 @@ test('equip and unequip gear in the Items tab and see the bonus per skill', asyn
   await expect(bonus.getByRole('listitem')).toHaveText(['Back +0.5%', 'Legs +0.5%', 'Core +1.4%']);
 
   await details.getByRole('button', { name: 'Unequip', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Unequipped Rookie belt' })).toBeVisible();
   await expect(definitionOf(loadout, 'Belt')).toHaveText('Empty');
   await expect(loadout.getByText('No gear bonus', { exact: true })).toBeVisible();
   await expect(details.getByRole('button', { name: 'Equip', exact: true })).toBeVisible();
@@ -91,7 +93,7 @@ test('the loadout shows on your profile, the friend preview and a friend profile
   await openTab(page, 'Friends');
   await page.getByLabel('Add a friend by exact username').fill(friendName);
   await page.getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByRole('status')).toHaveText(`Request sent to ${friendName}`);
+  await expect(page.getByRole('status').getByText(`Request sent to ${friendName}`, { exact: true })).toBeVisible();
   await openTab(friend, 'Friends');
   await friend.getByRole('button', { name: 'Accept' }).click();
   await friend

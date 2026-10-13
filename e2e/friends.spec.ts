@@ -23,7 +23,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await openTab(alice, 'Friends');
   await alice.getByLabel('Add a friend by exact username').fill(`@${bobName}`);
   await alice.getByRole('button', { name: 'Send' }).click();
-  await expect(alice.getByRole('status')).toHaveText(`Request sent to ${bobName}`);
+  await expect(alice.getByRole('status').getByText(`Request sent to ${bobName}`, { exact: true })).toBeVisible();
 
   await openTab(bob, 'Friends');
   await expect(bob.getByText(`${aliceName} wants to be friends`)).toBeVisible();
@@ -39,6 +39,11 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
 
   await alice.reload();
   await expect(feedItem(alice, 'New Running record: 6 km · 36 min')).toBeVisible();
+  await openTab(alice, 'Train');
+  const friendActivity = alice.getByRole('region', { name: 'Friends' });
+  await expect(friendActivity.getByRole('listitem')).toHaveCount(3);
+  await expect(friendActivity.getByRole('listitem').filter({ hasText: bobName })).toHaveCount(3);
+  await friendActivity.getByRole('link', { name: 'See all' }).click();
   const pr = feedItem(alice, 'New 5RM Barbell Bench Press: 80 kg');
   await expect(pr).toBeVisible();
   await expect(pr).toContainText(`${bobName} @${bobName}`);

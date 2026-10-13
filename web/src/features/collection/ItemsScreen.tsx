@@ -54,6 +54,7 @@ import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { useLoadout } from '../profile/use-loadout.ts';
 import { announceDataChange } from '../../lib/data-changes.ts';
 import { itemsQuery } from '../../lib/queries.ts';
+import { useToast } from '../../lib/toast.ts';
 import { loadedState } from '../../lib/query-state-rules.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
@@ -158,6 +159,7 @@ function ItemDetail({
 }: ItemDetailProps) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const { showToast } = useToast();
   const nameOf = itemNameLookup(catalog.items, 'Unknown item');
   const recipe = recipeFor(item.id, catalog.recipes, tiersOf(catalog.items));
   const inventory = quantities(held);
@@ -191,6 +193,7 @@ function ItemDetail({
     try {
       if (equipped) await unequipGear(item.gearSlot);
       else await equipGear(item.gearSlot, item.id);
+      showToast(`${equipped ? 'Unequipped' : 'Equipped'} ${item.name}`);
     } catch (error) {
       setProblem(`Couldn't change your gear: ${messageOf(error, 'try again.')}`);
     }

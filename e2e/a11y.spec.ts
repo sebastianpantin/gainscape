@@ -81,7 +81,7 @@ async function befriend(friend: Page, page: Page, username: string): Promise<str
   await openTab(page, 'Friends');
   await page.getByLabel('Add a friend by exact username').fill(friendName);
   await page.getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByRole('status')).toHaveText(`Request sent to ${friendName}`);
+  await expect(page.getByRole('status').getByText(`Request sent to ${friendName}`, { exact: true })).toBeVisible();
   await openTab(friend, 'Friends');
   await friend.getByRole('button', { name: 'Accept' }).click();
   await expect(friend.getByRole('list', { name: 'Friends list' })).toContainText(username);

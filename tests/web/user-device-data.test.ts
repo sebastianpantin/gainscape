@@ -29,6 +29,7 @@ import { type ItemsCache, saveItemsCache } from '../../web/src/offline/items-cac
 import { profileCache } from '../../web/src/offline/profile-cache.ts';
 import { EMPTY_PROGRAM_CACHE, saveProgramCache } from '../../web/src/offline/program-cache.ts';
 import { programListCache } from '../../web/src/offline/program-list-cache.ts';
+import { seenLevelsCache } from '../../web/src/offline/seen-levels-cache.ts';
 import { standingCache } from '../../web/src/offline/standing-cache.ts';
 import { forgetUserDeviceData, forgetUserProgressData } from '../../web/src/offline/user-device-data.ts';
 import { installCardKey } from '../../web/src/pwa/install-state.ts';
@@ -104,6 +105,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   saveProgramCache(local, userId, EMPTY_PROGRAM_CACHE);
   programListCache.save(local, userId, []);
   standingCache.save(local, userId, { skills: [], xpBySkillId: {} });
+  seenLevelsCache.save(local, userId, { totalLevel: 12, combatLevel: 4 });
   local.setItem(installCardKey(userId), 'due');
   await createLocalDraftStore(local).put(userId, 10, workout(`session-of-${userId}`));
   rememberLastSummary(userId, SUMMARY);

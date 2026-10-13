@@ -3,12 +3,13 @@ import { countUpValue } from '../lib/count-up-rules.ts';
 
 interface CountUpProps {
   value: number;
+  from?: number;
   durationMs: number;
   animate: boolean;
   format: (value: number) => string;
 }
 
-export function CountUp({ value, durationMs, animate, format }: CountUpProps) {
+export function CountUp({ value, from = 0, durationMs, animate, format }: CountUpProps) {
   const [elapsedMs, setElapsedMs] = useState(0);
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export function CountUp({ value, durationMs, animate, format }: CountUpProps) {
   if (!animate || elapsedMs >= durationMs) return format(value);
   return (
     <>
-      <span aria-hidden="true">{format(countUpValue(value, elapsedMs, durationMs))}</span>
+      <span aria-hidden="true">{format(countUpValue(value, elapsedMs, durationMs, from))}</span>
       <span className="visually-hidden">{format(value)}</span>
     </>
   );

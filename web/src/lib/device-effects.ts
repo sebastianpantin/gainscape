@@ -53,6 +53,10 @@ export function playTones(tones: readonly Tone[], volume: number, wave: Oscillat
   );
 }
 
+export function prefersReducedMotion(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 export function vibrate(pattern: readonly number[]): void {
   try {
     navigator.vibrate?.([...pattern]);
