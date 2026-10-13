@@ -13,7 +13,7 @@ import { type SkipDayEvent } from './program-skip-rules.ts';
 import { fetchExercises } from './catalog.ts';
 import { readCachedExercises } from './catalog-cache.ts';
 import { activeExercises, type Exercise } from './catalog-rules.ts';
-import { deviceStorage } from './rest-timer-store.ts';
+import { deviceStorage } from './keyed-store.ts';
 import { supabase } from './supabase.ts';
 
 const ENROLLMENT_COLUMNS =

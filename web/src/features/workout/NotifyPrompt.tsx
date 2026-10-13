@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { offersNotifyPrompt } from '../../lib/training-device-rules.ts';
 import {
   answerNotifyPrompt,

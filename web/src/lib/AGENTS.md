@@ -89,6 +89,7 @@
 ### Device storage and offline
 
 - Per-user keys follow `gainscape.<name>[.vN].<userId>` (`gainscape.last-summary` and `gainscape.chunk-reload-at` are not per user). To change a stored shape, bump the version and remove the retired keys (`catalog-cache.ts` drops v1 and v2). Parse stored JSON defensively (zod, or a guard via `parsedJson`), because it can be stale, corrupt or another user's.
+- Per-user `Storage` records go through `keyedStore(prefix, parse, format?)` in `keyed-store.ts`: `read` never throws and falls back to `parse(null, userId)`, `save` and `forget` swallow storage errors. Never hand-roll a store. Get storage from `deviceStorage()`/`tabStorage()` there (null when blocked).
 - Every new per-user `gainscape.` key needs two changes:
   - `tests/web/user-device-data.test.ts` must write it. The test scans `web/src` for key names and fails on a key it does not write.
   - `forgetUserDeviceData` in `../offline/user-device-data.ts` must forget it.

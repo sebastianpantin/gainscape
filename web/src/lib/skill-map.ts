@@ -3,7 +3,7 @@ import { fetchExercises } from './catalog.ts';
 import { readCachedExercises } from './catalog-cache.ts';
 import { activeExercises, type Exercise } from './catalog-rules.ts';
 import { type LoadedState, loadedState } from './query-state-rules.ts';
-import { deviceStorage } from './rest-timer-store.ts';
+import { deviceStorage } from './keyed-store.ts';
 import { skillPanelSeed } from './skill-map-rules.ts';
 
 function cachedSeed(userId: string): Exercise[] | undefined {
