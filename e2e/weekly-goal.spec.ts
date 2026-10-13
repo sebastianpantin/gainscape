@@ -6,6 +6,10 @@ function weeklyGoalCard(page: Page) {
   return page.getByRole('region', { name: 'Weekly goal' });
 }
 
+function levelNudge(page: Page) {
+  return page.getByRole('link', { name: /^\w[\w ]* is [\d,]+ XP from level \d+$/ });
+}
+
 function goalChoice(page: Page, name: string) {
   return page.getByRole('radiogroup', { name: 'Workouts per week' }).getByRole('radio', { name, exact: true });
 }
@@ -14,6 +18,7 @@ test('a weekly goal counts workouts on Today and a change waits for next week', 
   await register(page, uniqueUsername('goal'));
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
   await expect(weeklyGoalCard(page)).toHaveCount(0);
+  await expect(levelNudge(page)).toHaveCount(0);
 
   await openFromProfile(page, 'Settings');
   await expect(goalChoice(page, 'Off')).toHaveAttribute('aria-checked', 'true');
@@ -28,6 +33,7 @@ test('a weekly goal counts workouts on Today and a change waits for next week', 
   await logBench(page);
   await openTab(page, 'Train');
   await expect(weeklyGoalCard(page)).toContainText('1 of 2 workouts this week');
+  await expect(levelNudge(page)).toBeVisible();
 
   await logBench(page);
   await openTab(page, 'Train');

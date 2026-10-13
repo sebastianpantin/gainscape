@@ -8,6 +8,7 @@ import {
   craftProblem,
   craftProblemText,
   describeDrops,
+  fanfareFor,
   firstPickedItemId,
   groupItems,
   type HeldItem,
@@ -241,5 +242,17 @@ describe('craft errors', () => {
       kind: 'insufficient_items',
       shortfall: [],
     });
+  });
+});
+
+describe('fanfareFor', () => {
+  it('celebrates the rarest item found', () => {
+    expect(fanfareFor(['common', 'rare', 'uncommon'])).toBe('rare');
+    expect(fanfareFor(['rare', 'legendary', 'common'])).toBe('legendary');
+  });
+
+  it('stays quiet for common and uncommon finds', () => {
+    expect(fanfareFor(['common', 'uncommon'])).toBeNull();
+    expect(fanfareFor([])).toBeNull();
   });
 });

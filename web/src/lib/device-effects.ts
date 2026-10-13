@@ -15,10 +15,7 @@ export function primeAudio(): void {
   }
 }
 
-export function playTones(tones: readonly Tone[], volume: number, wave: OscillatorType = 'sine'): void {
-  primeAudio();
-  const context = audio;
-  if (context === null || context.state !== 'running') return;
+function scheduleTones(context: AudioContext, tones: readonly Tone[], volume: number, wave: OscillatorType): void {
   try {
     for (const tone of tones) {
       const toneStart = context.currentTime + tone.startS;
@@ -34,6 +31,26 @@ export function playTones(tones: readonly Tone[], volume: number, wave: Oscillat
   } catch {
     return;
   }
+}
+
+const RESUME_GRACE_MS = 500;
+
+export function playTones(tones: readonly Tone[], volume: number, wave: OscillatorType = 'sine'): void {
+  primeAudio();
+  const context = audio;
+  if (context === null) return;
+  if (context.state === 'running') {
+    scheduleTones(context, tones, volume, wave);
+    return;
+  }
+  if (context.state !== 'suspended') return;
+  const askedAt = performance.now();
+  context.resume().then(
+    () => {
+      if (performance.now() - askedAt <= RESUME_GRACE_MS) scheduleTones(context, tones, volume, wave);
+    },
+    () => undefined,
+  );
 }
 
 export function vibrate(pattern: readonly number[]): void {

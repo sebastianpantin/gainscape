@@ -20,6 +20,7 @@ describe('weekly goal status', () => {
 
   it('reads this week from the current row', () => {
     expect(weeklyGoalStatus([week('2026-10-05', 3, 2, true)])).toEqual({
+      weekStart: '2026-10-05',
       goal: 3,
       sessionsThisWeek: 2,
       streakWeeks: 0,
@@ -88,15 +89,15 @@ describe('weekly goal status', () => {
 
 describe('weekly goal texts', () => {
   it('describes progress this week', () => {
-    expect(weekProgressText({ goal: 3, sessionsThisWeek: 1, streakWeeks: 0, nextGoal: null })).toBe(
-      '1 of 3 workouts this week',
-    );
-    expect(weekProgressText({ goal: 1, sessionsThisWeek: 0, streakWeeks: 0, nextGoal: null })).toBe(
-      '0 of 1 workout this week',
-    );
-    expect(weekProgressText({ goal: 3, sessionsThisWeek: 4, streakWeeks: 1, nextGoal: null })).toBe(
-      'Goal met: 4 of 3 workouts this week',
-    );
+    expect(
+      weekProgressText({ weekStart: '2026-10-12', goal: 3, sessionsThisWeek: 1, streakWeeks: 0, nextGoal: null }),
+    ).toBe('1 of 3 workouts this week');
+    expect(
+      weekProgressText({ weekStart: '2026-10-12', goal: 1, sessionsThisWeek: 0, streakWeeks: 0, nextGoal: null }),
+    ).toBe('0 of 1 workout this week');
+    expect(
+      weekProgressText({ weekStart: '2026-10-12', goal: 3, sessionsThisWeek: 4, streakWeeks: 1, nextGoal: null }),
+    ).toBe('Goal met: 4 of 3 workouts this week');
   });
 
   it('describes the streak in weeks', () => {
@@ -114,14 +115,21 @@ describe('weekly goal texts', () => {
 
   it('explains when a change takes effect', () => {
     expect(goalSettingHint(null)).toBe('Pick how many workouts a week to aim for. Weeks that hit it build a streak.');
-    expect(goalSettingHint({ goal: 3, sessionsThisWeek: 0, streakWeeks: 0, nextGoal: null })).toBe(
-      'A change starts next Monday, so this week keeps its goal of 3.',
-    );
     expect(
-      goalSettingHint({ goal: 3, sessionsThisWeek: 0, streakWeeks: 0, nextGoal: { goal: 5, startsOn: '2026-10-12' } }),
+      goalSettingHint({ weekStart: '2026-10-12', goal: 3, sessionsThisWeek: 0, streakWeeks: 0, nextGoal: null }),
+    ).toBe('A change starts next Monday, so this week keeps its goal of 3.');
+    expect(
+      goalSettingHint({
+        weekStart: '2026-10-12',
+        goal: 3,
+        sessionsThisWeek: 0,
+        streakWeeks: 0,
+        nextGoal: { goal: 5, startsOn: '2026-10-12' },
+      }),
     ).toBe('Your goal of 5 starts on Mon 12 Oct. This week keeps its goal of 3.');
     expect(
       goalSettingHint({
+        weekStart: '2026-10-05',
         goal: 3,
         sessionsThisWeek: 0,
         streakWeeks: 0,
