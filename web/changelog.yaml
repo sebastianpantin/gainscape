@@ -1,3 +1,9 @@
+- prs: [101]
+  version: 0.6.3
+  date: 2026-10-13
+  title: A way out of the program builder
+  items:
+    - The program builder has a Cancel button. It leaves at once when nothing changed, and asks before throwing away unsaved changes.
 - prs: [100]
   version: 0.6.2
   date: 2026-10-13
