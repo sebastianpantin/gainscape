@@ -18,6 +18,7 @@ import { useAuthSession } from './lib/use-auth-session.ts';
 import { useRouteFocusAndTitle } from './lib/use-route-focus.ts';
 import { OfflineBanner } from './pwa/OfflineBanner.tsx';
 import { setUpdateUser } from './pwa/register-service-worker.ts';
+import { useLaunchRouting } from './pwa/use-launch-routing.ts';
 import { UpdateBanner } from './pwa/UpdateBanner.tsx';
 
 const SCREEN_PRELOAD_DELAY_MS = 1_000;
@@ -99,6 +100,11 @@ function RouteFocusAndTitle() {
   return null;
 }
 
+function LaunchRouting() {
+  useLaunchRouting();
+  return null;
+}
+
 function RouteView({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   return (
@@ -140,6 +146,7 @@ function Screens() {
       <BrowserRouter>
         <ToastProvider>
           <RouteFocusAndTitle />
+          <LaunchRouting />
           <nav className="tab-bar" aria-label="Main">
             {TABS.map((tab) => (
               <NavLink key={tab.to} to={tab.to} end={tab.end} className="tab">
