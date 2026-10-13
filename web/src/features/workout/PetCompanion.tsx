@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon } from '../../components/PixelArt.tsx';
-import { companionPetStore } from '../../lib/companion-pet-store.ts';
-import { colorFor, companionPet } from '../../lib/item-rules.ts';
-import { ownedPetsQuery } from '../../lib/queries.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
+import { companionPetStore } from '../../lib/collection/companion-pet-store.ts';
+import { colorFor, companionPet } from '../../lib/collection/item-rules.ts';
+import { ownedPetsQuery } from '../../lib/query/queries.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 
 export function PetCompanion({ userId }: { userId: string }) {
   const pets = useQuery(ownedPetsQuery(userId));

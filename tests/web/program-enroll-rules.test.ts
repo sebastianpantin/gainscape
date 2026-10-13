@@ -17,7 +17,7 @@ import {
   templateListEntries,
   withOption,
   withUnit,
-} from '../../web/src/lib/program-enroll-rules.ts';
+} from '../../web/src/lib/programs/program-enroll-rules.ts';
 import {
   BENCH_ID,
   BENCH_LIFT,

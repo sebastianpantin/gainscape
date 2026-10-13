@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PROGRESS_PAGE_SIZE, queryProgressSets, sessionProgress } from '../../web/src/lib/exercise-progress-rules.ts';
+import {
+  PROGRESS_PAGE_SIZE,
+  queryProgressSets,
+  sessionProgress,
+} from '../../web/src/lib/progress/exercise-progress-rules.ts';
 import { builtInExerciseId, createTestUser, db, type TestUser } from './local-stack.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

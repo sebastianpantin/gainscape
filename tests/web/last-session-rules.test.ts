@@ -3,7 +3,7 @@ import {
   firstSetFromLastSession,
   lastTimeText,
   recentSessionsByExercise,
-} from '../../web/src/lib/last-session-rules.ts';
+} from '../../web/src/lib/history/last-session-rules.ts';
 
 describe('last session sets', () => {
   it('groups the rows by exercise and session, newest session first, keeping set order', () => {

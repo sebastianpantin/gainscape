@@ -1,7 +1,7 @@
 import { REP_MAX_SLOT_COUNT } from '@domain/types.ts';
-import type { LoadType } from '../../lib/catalog-rules.ts';
+import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
-import type { UnitPref } from '../../lib/profile-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 
 export function slotClass(slot: { exact: boolean } | null): string {
   if (!slot) return 'record-slot empty';

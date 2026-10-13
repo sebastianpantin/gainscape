@@ -10,13 +10,13 @@ import {
   ownPrograms,
   type Program,
   templates,
-} from '../../lib/programs.ts';
+} from '../../lib/programs/programs.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
-import { forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
-import { isEnrolledIn, isFollowing } from '../../lib/program-follow-rules.ts';
-import { publishForEnroll } from '../../lib/queries.ts';
-import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
+import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
+import { forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
+import { isEnrolledIn, isFollowing } from '../../lib/programs/program-follow-rules.ts';
+import { publishForEnroll } from '../../lib/query/queries.ts';
+import { useIsOffline, useOnlineSignal } from '../../lib/platform/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
 import { readProgramCache } from '../../offline/program-cache.ts';

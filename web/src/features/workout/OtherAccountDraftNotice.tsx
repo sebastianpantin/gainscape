@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { deviceStorage } from '../../lib/keyed-store.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import type { DraftStore } from '../../offline/draft-store.ts';
 import { forgetOtherAccountDrafts, otherAccountDraftIds } from '../../offline/local-drafts.ts';
 

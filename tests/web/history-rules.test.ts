@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { InvokeOutcome } from '../../web/src/lib/function-client-rules.ts';
+import type { InvokeOutcome } from '../../web/src/lib/platform/function-client-rules.ts';
 import {
   invokeWithRetries,
   parseSessionDetailRow,
   parseSessionPageRows,
   withoutHistorySession,
-} from '../../web/src/lib/history-rules.ts';
+} from '../../web/src/lib/history/history-rules.ts';
 
 type Outcome = InvokeOutcome<{ saved: true }>;
 

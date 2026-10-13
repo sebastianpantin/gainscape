@@ -7,7 +7,7 @@ import {
   programStateAt,
   type ReferenceChange,
 } from '@domain/index.ts';
-import { rolloverSummary } from '../../web/src/lib/program-summary-rules.ts';
+import { rolloverSummary } from '../../web/src/lib/programs/program-summary-rules.ts';
 import {
   factClock,
   sessionFact,

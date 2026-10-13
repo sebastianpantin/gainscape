@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type Position, type ProgramFact, programStateAt } from '@domain/index.ts';
-import { dayChoices } from '../../web/src/lib/program-today-rules.ts';
-import { skipDayEvent, skipDialogTitle, skipLabel } from '../../web/src/lib/program-skip-rules.ts';
+import { dayChoices } from '../../web/src/lib/programs/program-today-rules.ts';
+import { skipDayEvent, skipDialogTitle, skipLabel } from '../../web/src/lib/programs/program-skip-rules.ts';
 import { factClock, sessionFact, skipDayFact } from '../domain/program-fixtures/facts.ts';
 import { cyclePosition, FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { MADCOW_5X5, madcowDaySets, madcowEnrollment, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';

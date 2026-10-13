@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exerciseKeys } from '../../web/src/lib/exercise-key-rules.ts';
+import { exerciseKeys } from '../../web/src/lib/exercises/exercise-key-rules.ts';
 
 const listOf = (...exerciseIds: string[]) => exerciseIds.map((exerciseId) => ({ exerciseId }));
 

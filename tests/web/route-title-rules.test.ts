@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APP_TITLE, routeTitle } from '../../web/src/lib/route-title-rules.ts';
+import { APP_TITLE, routeTitle } from '../../web/src/lib/platform/route-title-rules.ts';
 
 describe('routeTitle', () => {
   it('names each tab screen before the app name', () => {

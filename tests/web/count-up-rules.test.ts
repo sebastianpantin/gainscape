@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { countUpValue } from '../../web/src/lib/count-up-rules.ts';
+import { countUpValue } from '../../web/src/lib/ui/count-up-rules.ts';
 
 describe('countUpValue', () => {
   it('starts at zero and lands on the target', () => {

@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
-import { announceDataChange } from '../../lib/data-changes.ts';
+import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { characterCount, nameProblem, trimmedName } from '../../lib/names.ts';
 import {
   BADGE_COLORS,
@@ -29,7 +29,7 @@ import {
   trainingSinceProblem,
   updatePrivateProfile,
   updatePublicProfile,
-} from '../../lib/profile.ts';
+} from '../../lib/profile/profile.ts';
 import { shownWeight } from '../../lib/units.ts';
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileBadge } from './ProfileCard.tsx';

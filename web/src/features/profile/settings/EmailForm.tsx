@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react';
-import { requestEmailChange } from '../../../lib/account.ts';
+import { requestEmailChange } from '../../../lib/profile/account.ts';
 import { messageOf } from '../../../lib/error-text.ts';
 
 export function EmailForm({ email, onDone }: { email: string; onDone: (text: string) => void }) {

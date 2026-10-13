@@ -8,7 +8,7 @@ import {
   toBundledReleases,
   whatsNewDecision,
   whatsNewMayOpen,
-} from '../../web/src/lib/changelog-rules.ts';
+} from '../../web/src/lib/platform/changelog-rules.ts';
 
 function validEntries() {
   return [

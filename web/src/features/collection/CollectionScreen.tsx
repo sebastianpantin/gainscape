@@ -1,13 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { announceDataChange } from '../../lib/data-changes.ts';
-import { type CardioRecordCard, cardioRecordCards, holdRecordCards } from '../../lib/cardio-rules.ts';
-import { type Exercise, isCardioExercise, isLiftExercise } from '../../lib/catalog-rules.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { collectionPercent, countCollection } from '../../lib/collection-rules.ts';
+import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { type CardioRecordCard, cardioRecordCards, holdRecordCards } from '../../lib/workout/cardio-rules.ts';
+import { type Exercise, isCardioExercise, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { collectionPercent, countCollection } from '../../lib/collection/collection-rules.ts';
 import { moved } from '../../lib/reorder.ts';
-import { pinExercise, reorderPins, unpinExercise } from '../../lib/collection-data.ts';
-import { collectionQuery } from '../../lib/queries.ts';
+import { pinExercise, reorderPins, unpinExercise } from '../../lib/collection/collection-data.ts';
+import { collectionQuery } from '../../lib/query/queries.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_COLLECTION_NOTICE } from '../../offline/collection-cache.ts';
 import { EmptyState } from '../../components/EmptyState.tsx';
@@ -16,7 +16,7 @@ import { SegmentedNav } from '../../components/SegmentedNav.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { ExerciseRecordCard } from './ExerciseRecordCard.tsx';
 import { messageOf } from '../../lib/error-text.ts';
-import { loadedState } from '../../lib/query-state-rules.ts';
+import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { CollectionHeading } from './CollectionHeading.tsx';
 
 interface CollectionScreenProps {

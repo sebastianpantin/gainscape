@@ -11,9 +11,9 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 import { CARDIO_EFFORT_LEVELS, type EffortInput, isRecord } from '@domain/types.ts';
-import type { CardioActivity, HoldMeasure, LoadType } from '../lib/catalog-rules.ts';
-import { type CatalogChallenge, challengeLoadKg, parsedDraftChallenge } from '../lib/challenge-rules.ts';
-import { EFFORT_LEVELS } from '../lib/effort-labels.ts';
+import type { CardioActivity, HoldMeasure, LoadType } from '../lib/exercises/catalog-rules.ts';
+import { type CatalogChallenge, challengeLoadKg, parsedDraftChallenge } from '../lib/collection/challenge-rules.ts';
+import { EFFORT_LEVELS } from '../lib/workout/effort-labels.ts';
 import {
   type BoutValues,
   canAddSetTo,
@@ -28,8 +28,8 @@ import {
   updateSet,
   withLoadType,
   withSets,
-} from '../lib/exercise-edit-rules.ts';
-import { isSessionRpe } from '../lib/session-timing-rules.ts';
+} from '../lib/workout/exercise-edit-rules.ts';
+import { isSessionRpe } from '../lib/workout/session-timing-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 5;
 const HOLD_FORMAT_VERSION = 6;

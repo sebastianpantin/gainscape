@@ -1,20 +1,20 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { fetchExercises } from '../../lib/catalog.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
-import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
+import { fetchExercises } from '../../lib/exercises/catalog.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { useIsOffline, useOnlineSignal } from '../../lib/platform/use-online.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
-import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/catalog-rules.ts';
-import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs.ts';
-import { type CarriedFollow, followStatus, workingWeights } from '../../lib/program-follow-rules.ts';
-import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
+import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs/programs.ts';
+import { type CarriedFollow, followStatus, workingWeights } from '../../lib/programs/program-follow-rules.ts';
+import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
-import { usePreferences } from '../../lib/preferences.ts';
-import { publishForEnroll } from '../../lib/queries.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { publishForEnroll } from '../../lib/query/queries.ts';
 import type { PlannedExercise, ProgressionKind } from '../../offline/draft-format.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import {
@@ -49,7 +49,7 @@ import {
   trimmedDoc,
 } from './program-edit.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
+import { exerciseKeys } from '../../lib/exercises/exercise-key-rules.ts';
 import { useActiveProgram } from './use-active-program.ts';
 
 const PROGRESSION_OPTIONS: { value: ProgressionKind; label: string }[] = [

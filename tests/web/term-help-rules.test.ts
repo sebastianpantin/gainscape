@@ -1,13 +1,13 @@
 import { programStateAt } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
-import { initialEnrollForm, inputFields } from '../../web/src/lib/program-enroll-rules.ts';
-import { referenceFields } from '../../web/src/lib/program-reference-rules.ts';
+import { initialEnrollForm, inputFields } from '../../web/src/lib/programs/program-enroll-rules.ts';
+import { referenceFields } from '../../web/src/lib/programs/program-reference-rules.ts';
 import {
   INPUT_KIND_GLOSSARY,
   inputHelpKeys,
   REFERENCE_VAR_GLOSSARY,
   referenceHelpKeys,
-} from '../../web/src/lib/term-help-rules.ts';
+} from '../../web/src/lib/ui/term-help-rules.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from '../domain/program-fixtures/five_three_one.ts';
 import { STRONGLIFTS_5X5, strongLiftsEnrollment } from '../domain/program-fixtures/stronglifts_5x5.ts';
 

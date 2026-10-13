@@ -5,7 +5,7 @@ import {
   EXERCISE_NOTE_OFFLINE_TEXT,
   noteActionLabel,
   noteChanged,
-} from '../../lib/exercise-note-rules.ts';
+} from '../../lib/exercises/exercise-note-rules.ts';
 
 interface ExerciseNoteProps {
   exerciseName: string;

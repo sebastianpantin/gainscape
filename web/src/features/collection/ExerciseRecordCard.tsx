@@ -1,7 +1,7 @@
-import { exerciseLabels, type LiftExercise } from '../../lib/catalog-rules.ts';
-import type { CollectionData } from '../../lib/collection-data.ts';
-import { emptySlots, strengthText } from '../../lib/collection-rules.ts';
-import { usePreferences } from '../../lib/preferences.ts';
+import { exerciseLabels, type LiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import type { CollectionData } from '../../lib/collection/collection-data.ts';
+import { emptySlots, strengthText } from '../../lib/collection/collection-rules.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
 import { ExerciseProgressLink } from './ExerciseProgressLink.tsx';
 import { RecordSlots } from './RecordSlots.tsx';
 

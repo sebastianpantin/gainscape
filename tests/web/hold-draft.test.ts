@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE, MAX_SETS_PER_SESSION } from '@domain/index.ts';
 import { previewSession } from '../../web/src/features/workout/xp-preview.ts';
-import { toExercise } from '../../web/src/lib/catalog-rules.ts';
+import { toExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   addHoldExercise,
   addSet,
@@ -12,7 +12,7 @@ import {
   toggleSetDone,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
-import { removeSet, updateHoldSet } from '../../web/src/lib/exercise-edit-rules.ts';
+import { removeSet, updateHoldSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 
 const userId = 'user-1';

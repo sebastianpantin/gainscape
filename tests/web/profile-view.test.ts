@@ -1,8 +1,8 @@
 import { xpForLevel } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
-import type { Skill } from '../../web/src/lib/catalog-rules.ts';
-import { cardProfileOf, standingOfView } from '../../web/src/lib/profile-view.ts';
-import type { ProfileView } from '../../web/src/lib/social.ts';
+import type { Skill } from '../../web/src/lib/exercises/catalog-rules.ts';
+import { cardProfileOf, standingOfView } from '../../web/src/lib/profile/profile-view.ts';
+import type { ProfileView } from '../../web/src/lib/social/social.ts';
 
 const view: ProfileView = {
   userId: '11111111-1111-4111-8111-111111111111',

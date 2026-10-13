@@ -5,14 +5,14 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
-import { isLiftExercise } from '../../lib/catalog-rules.ts';
-import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
-import { inputHelpKeys } from '../../lib/term-help-rules.ts';
-import { useIsOffline } from '../../lib/use-online.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { type EnrollChoices, enrollProgram, forgetCachedEnrollment } from '../../lib/program-enrollment.ts';
-import { enrollChoicesQuery } from '../../lib/queries.ts';
-import { type LoadedState, loadedState } from '../../lib/query-state-rules.ts';
+import { isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
+import { inputHelpKeys } from '../../lib/ui/term-help-rules.ts';
+import { useIsOffline } from '../../lib/platform/use-online.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { type EnrollChoices, enrollProgram, forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
+import { enrollChoicesQuery } from '../../lib/query/queries.ts';
+import { type LoadedState, loadedState } from '../../lib/query/query-state-rules.ts';
 import {
   barWeightLabel,
   type BindableExercise,
@@ -33,8 +33,8 @@ import {
   type TemplateListEntry,
   withOption,
   withUnit,
-} from '../../lib/program-enroll-rules.ts';
-import { carriedFollowOf, carriedInputs } from '../../lib/program-follow-rules.ts';
+} from '../../lib/programs/program-enroll-rules.ts';
+import { carriedFollowOf, carriedInputs } from '../../lib/programs/program-follow-rules.ts';
 import { readProgramCache } from '../../offline/program-cache.ts';
 
 interface ProgramEnrollScreenProps {

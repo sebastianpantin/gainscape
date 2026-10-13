@@ -9,7 +9,7 @@
 
 ## Map
 
-- Draft model and every draft mutation: `draft-format.ts` (pure). The set-editing rules it shares with history edit (`updateSet`, `addSet` seeding, the set limit, `withLoadType`, ...) live in `../lib/exercise-edit-rules.ts`. Import them from there.
+- Draft model and every draft mutation: `draft-format.ts` (pure). The set-editing rules it shares with history edit (`updateSet`, `addSet` seeding, the set limit, `withLoadType`, ...) live in `../lib/workout/exercise-edit-rules.ts`. Import them from there.
 - Storage: `draft-store.ts` defines the `DraftStore` contract with an IndexedDB store and a `localStorage` store. `draft-boot.ts` opens and migrates them.
 - Per-tab state machine: `draft-session.ts`, wrapped by the thin hook `use-workout-draft.ts` (`useWorkoutDraft`).
 - Finish pipeline: `session-payload.ts` builds the request, `finish-lock.ts` (`attemptFinish`, `sendOutcomeFrom`) sends it, `finish-retries.ts` (`startFinishRetries`) retries it, and `sync-workout.ts` does the real I/O.
@@ -68,7 +68,7 @@
 
 ### Screen caches
 
-- Every screen cache is per user. Build it with `userCache` (a `keyedStore` holding `{ userId, value }`), or `keyedStore` from `../lib/keyed-store.ts` directly for another record shape (zod-checked; another user's data or malformed data reads as null; storage errors never throw). Save it after each online load and show the module's `Offline: using your saved …` notice. Add its `forget` to `forgetUserDeviceData` or `forgetUserProgressData`: `tests/web/user-device-data.test.ts` fails on any `gainscape.` key that is not cleared.
+- Every screen cache is per user. Build it with `userCache` (a `keyedStore` holding `{ userId, value }`), or `keyedStore` from `../lib/platform/keyed-store.ts` directly for another record shape (zod-checked; another user's data or malformed data reads as null; storage errors never throw). Save it after each online load and show the module's `Offline: using your saved …` notice. Add its `forget` to `forgetUserDeviceData` or `forgetUserProgressData`: `tests/web/user-device-data.test.ts` fails on any `gainscape.` key that is not cleared.
 - Cache keys carry a version (`gainscape.items.v1.` and similar). Bump it when the stored shape changes incompatibly.
 - `forgetUserProgressData` (Reset all data) clears only what mirrors server progress and keeps the device choices. `forgetUserDeviceData` (account deletion) clears that plus the preference stores. With a `draftChannel`, forgetting posts `discarded` so every open session, including the active workout bar, drops the workout.
 - `loadCacheFirstWhenOffline` returns the saved copy at once while offline, or throws `OfflineError` when nothing is saved. Otherwise the request would wait about 7 s on postgrest-js's GET retries.
@@ -76,11 +76,11 @@
   - A server or RLS error gives the saved copy with a `problem`.
   - Screens without a cache call `failFastWhenOffline` first. Do not change postgrest-js retries globally.
 - `profileCache` is not saved when its load was cancelled, so an older answer cannot overwrite a newer edit.
-- `program-list-cache` defaults a missing `progression` to `{ kind: 'none' }` so old lists still load. `lib/programs.ts` updates the list right after a save or delete, so a failed refresh cannot keep the old program.
+- `program-list-cache` defaults a missing `progression` to `{ kind: 'none' }` so old lists still load. `lib/programs/programs.ts` updates the list right after a save or delete, so a failed refresh cannot keep the old program.
 - `program-cache.ts`: `refreshed: true` means a full refresh has written the cache at least once. Only then does offline `useActiveProgram` treat a missing enrollment as "not following". `withEnrollment` keeps facts only for the same enrollment.
 - `program-facts-cache.ts`: a local fact is appended once per linked synced outcome. A fetch keeps a local append only when the snapshot lacks its id and `appendedAt >= ticket.startedAt`. A delete bumps `generation` so a stale fetch ticket is dropped. Facts use the domain `resolveEffort`/`storableSnapshots`, exactly as the server stores them. Only rep lifts become facts.
 - `program-refresh.ts` saves the enrollment before fetching its facts, keeps the cache when a fetch fails, and clears it when the enrollment ended elsewhere.
-- `collection-cache.ts` merges with the newer exercise list from `lib/catalog-cache.ts`. That list wins for the exercises it has.
+- `collection-cache.ts` merges with the newer exercise list from `lib/exercises/catalog-cache.ts`. That list wins for the exercises it has.
 
 ## Testing
 

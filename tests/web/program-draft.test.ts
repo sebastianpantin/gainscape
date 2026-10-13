@@ -21,8 +21,8 @@ import {
   withCurrentLoadTypes,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
-import { removeSet, updateBout, updateSet } from '../../web/src/lib/exercise-edit-rules.ts';
-import { type CardioActivity } from '../../web/src/lib/catalog-rules.ts';
+import { removeSet, updateBout, updateSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
+import { type CardioActivity } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 import { snapshot } from '../domain/program-fixtures/facts.ts';
 import { GZCLP, gzclpEnrollment } from '../domain/program-fixtures/gzclp.ts';

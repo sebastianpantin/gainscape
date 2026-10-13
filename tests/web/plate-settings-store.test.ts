@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PLATE_SETTINGS } from '../../web/src/lib/plate-rules.ts';
-import { readPlateSettings, savePlateSettings } from '../../web/src/lib/plate-settings-store.ts';
+import { DEFAULT_PLATE_SETTINGS } from '../../web/src/lib/workout/plate-rules.ts';
+import { readPlateSettings, savePlateSettings } from '../../web/src/lib/workout/plate-settings-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 describe('stored plate settings', () => {

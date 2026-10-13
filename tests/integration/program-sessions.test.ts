@@ -5,7 +5,7 @@ import {
   type EnrollmentFactsRows,
   enrollmentFromRow,
   programFactsFromRows,
-} from '../../web/src/lib/program-facts-rules.ts';
+} from '../../web/src/lib/programs/program-facts-rules.ts';
 import {
   builtInExerciseId,
   createTestUser,

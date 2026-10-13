@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { restoredScrollY, shouldScrollToTop } from '../../web/src/lib/route-scroll-rules.ts';
+import { restoredScrollY, shouldScrollToTop } from '../../web/src/lib/platform/route-scroll-rules.ts';
 
 describe('shouldScrollToTop', () => {
   it('starts a newly opened screen at the top', () => {

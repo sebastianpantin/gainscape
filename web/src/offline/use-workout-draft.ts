@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { openChannel } from '../lib/channel.ts';
+import { openChannel } from '../lib/platform/channel.ts';
 import { openDraftSessionFallback, openDraftSessionStore } from './draft-boot.ts';
 import { createDraftSession, DRAFT_CHANNEL_NAME, type DraftSession, type DraftSnapshot } from './draft-session.ts';
 

@@ -1,8 +1,8 @@
 import { type Ref, useMemo, useState } from 'react';
 import { Icon } from '../../components/Icon.tsx';
-import { type Exercise } from '../../lib/catalog-rules.ts';
-import { exerciseSearchMatches, hiddenMatchesText } from '../../lib/exercise-search-rules.ts';
-import { pickerRowDetail } from '../../lib/skill-map-rules.ts';
+import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
+import { exerciseSearchMatches, hiddenMatchesText } from '../../lib/exercises/exercise-search-rules.ts';
+import { pickerRowDetail } from '../../lib/progress/skill-map-rules.ts';
 
 interface ExercisePickerProps {
   exercises: Exercise[];

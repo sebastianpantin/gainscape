@@ -1,4 +1,4 @@
-import { type BodySkill, type RecoveryState } from '../lib/recovery-rules.ts';
+import { type BodySkill, type RecoveryState } from '../lib/progress/recovery-rules.ts';
 
 type Block = readonly [x: number, y: number, width: number, height: number];
 

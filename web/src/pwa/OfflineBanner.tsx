@@ -1,4 +1,4 @@
-import { useIsOffline } from '../lib/use-online.ts';
+import { useIsOffline } from '../lib/platform/use-online.ts';
 
 export function OfflineBanner() {
   const offline = useIsOffline();

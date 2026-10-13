@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { countUpValue } from '../lib/count-up-rules.ts';
+import { countUpValue } from '../lib/ui/count-up-rules.ts';
 
 interface CountUpProps {
   value: number;

@@ -8,7 +8,7 @@ import {
   PLATE_CHOICES,
   plateLook,
   platesPerSide,
-} from '../../web/src/lib/plate-rules.ts';
+} from '../../web/src/lib/workout/plate-rules.ts';
 
 describe('plates per side with the standard plates', () => {
   it('loads 100 kg on a 20 kg bar as 25 + 15 per side (40 kg a side)', () => {

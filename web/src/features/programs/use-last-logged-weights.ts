@@ -1,7 +1,7 @@
 import { type LastLoggedWeights } from '@domain/index.ts';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { type ActiveProgram } from '../../lib/program-today-rules.ts';
-import { lastLoggedWeightsQuery } from '../../lib/queries.ts';
+import { type ActiveProgram } from '../../lib/programs/program-today-rules.ts';
+import { lastLoggedWeightsQuery } from '../../lib/query/queries.ts';
 
 const NO_WEIGHTS: LastLoggedWeights = {};
 

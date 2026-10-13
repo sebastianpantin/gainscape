@@ -10,9 +10,9 @@ The signed-out experience and email-link handling. `AuthScreen.tsx` covers sign-
 ## Rules and gotchas
 
 - Both screens sit outside the router; `App.tsx` swaps them in by session state and `parseAuthCallback`. Do not use `Link` or `useNavigate` here.
-- Link parsing and URLs live in `../../lib/auth-links.ts`, session restore and sign-out in `../../lib/auth-restore.ts`. Keep logic there so it stays unit testable. Redirect URLs must match the Supabase config (`docs/production-auth.md`).
+- Link parsing and URLs live in `../../lib/platform/auth-links.ts`, session restore and sign-out in `../../lib/platform/auth-restore.ts`. Keep logic there so it stays unit testable. Redirect URLs must match the Supabase config (`docs/production-auth.md`).
 - A signed-out user's drafts must survive: sign out through `signOutSettled`/`signOutKeepingDrafts`, never a bare `supabase.auth.signOut()`.
-- Stale links are guarded with `confirmedRecently`. A failed password reset request stays on the form with its error. Rate limits use `tryAgainIn` from `../../lib/rate-limit.ts`.
+- Stale links are guarded with `confirmedRecently`. A failed password reset request stays on the form with its error. Rate limits use `tryAgainIn` from `../../lib/platform/rate-limit.ts`.
 - A username change through `change_username` announces `profile-saved`.
 
 ## Testing

@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
-import { BOUTS_FULL_TEXT } from '../../lib/cardio-rules.ts';
-import { updateBout } from '../../lib/exercise-edit-rules.ts';
-import { type UnitPref } from '../../lib/profile.ts';
+import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
+import { updateBout } from '../../lib/workout/exercise-edit-rules.ts';
+import { type UnitPref } from '../../lib/profile/profile.ts';
 import { addSet, type CardioDraftExercise, toggleSetDone, type WorkoutDraft } from '../../offline/draft-format.ts';
 import { CardioSetRow } from './CardioSetRow.tsx';
 import { type ExerciseCardActions } from './exercise-card-actions.ts';

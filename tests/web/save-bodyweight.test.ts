@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Profile } from '../../web/src/lib/profile-rules.ts';
+import type { Profile } from '../../web/src/lib/profile/profile-rules.ts';
 import type { CacheFirstLoad } from '../../web/src/offline/cache-first.ts';
 import { profileCache } from '../../web/src/offline/profile-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
@@ -10,7 +10,7 @@ const server = vi.hoisted(() => ({
   error: null as { message: string } | null,
 }));
 
-vi.mock('../../web/src/lib/supabase.ts', () => ({
+vi.mock('../../web/src/lib/platform/supabase.ts', () => ({
   supabase: {
     from: (table: string) => ({
       update: (row: unknown) => ({

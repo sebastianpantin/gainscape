@@ -4,27 +4,27 @@ import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom';
 import { CountUp } from '../../components/CountUp.tsx';
 import { ItemIcon, LevelUpIcon, LootChestIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
-import { fetchExercises, fetchSkills, fetchSkillXp } from '../../lib/catalog.ts';
-import type { Exercise, Skill } from '../../lib/catalog-rules.ts';
+import { fetchExercises, fetchSkills, fetchSkillXp } from '../../lib/exercises/catalog.ts';
+import type { Exercise, Skill } from '../../lib/exercises/catalog-rules.ts';
 import {
   celebrate,
   FANFARE_CELEBRATIONS,
   LEVEL_UP_CELEBRATION,
   primeCelebrationAudio,
-} from '../../lib/celebration-effects.ts';
-import { prefersReducedMotion } from '../../lib/device-effects.ts';
+} from '../../lib/platform/celebration-effects.ts';
+import { prefersReducedMotion } from '../../lib/platform/device-effects.ts';
 import { formatXp, sessionXp } from '../../lib/format.ts';
-import { GLOSSARY } from '../../lib/glossary.ts';
-import { fetchSession } from '../../lib/history.ts';
-import { type CatalogItem, colorFor, fanfareFor } from '../../lib/item-rules.ts';
-import { fetchItemCatalog } from '../../lib/items.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
+import { GLOSSARY } from '../../lib/ui/glossary.ts';
+import { fetchSession } from '../../lib/history/history.ts';
+import { type CatalogItem, colorFor, fanfareFor } from '../../lib/collection/item-rules.ts';
+import { fetchItemCatalog } from '../../lib/collection/items.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { readItemsCache } from '../../offline/items-cache.ts';
 import { standingCache } from '../../offline/standing-cache.ts';
-import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
+import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
 import type { CompletedSessionSummary } from '../../offline/finish-lock.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';

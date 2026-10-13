@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { openChannel } from '../lib/channel.ts';
+import { openChannel } from '../lib/platform/channel.ts';
 import { flushOpenDraftSessions } from '../offline/draft-session.ts';
 import { SERVICE_WORKER_FILE } from './shell-rules.ts';
 import { createUpdateFlow, UPDATE_CHANNEL_NAME, type UpdateFlow, type UpdateState } from './update-flow.ts';

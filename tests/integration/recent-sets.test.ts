@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { queryRecentSets } from '../../web/src/lib/recovery-rules.ts';
+import { queryRecentSets } from '../../web/src/lib/progress/recovery-rules.ts';
 import { builtInExerciseId, createTestUser, db, type TestUser } from './local-stack.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

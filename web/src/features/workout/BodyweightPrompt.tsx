@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react';
-import { bodyweightRangeInUnit, type UnitPref } from '../../lib/profile.ts';
+import { bodyweightRangeInUnit, type UnitPref } from '../../lib/profile/profile.ts';
 import { unitToKg } from '../../lib/units.ts';
 import { messageOf } from '../../lib/error-text.ts';
 

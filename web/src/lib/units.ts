@@ -2,8 +2,8 @@ import { SECONDS_PER_MINUTE } from '@domain/cardio.ts';
 import { roundTo } from '@domain/math.ts';
 import { MAX_SET_REPS } from '@domain/types.ts';
 import { kgToUnit, shownWeight } from '@domain/units.ts';
-import type { PaceUnit } from './catalog-rules.ts';
-import type { UnitPref } from './profile-rules.ts';
+import type { PaceUnit } from './exercises/catalog-rules.ts';
+import type { UnitPref } from './profile/profile-rules.ts';
 
 export { KG_PER_LB, kgToUnit, shownWeight, unitToKg } from '@domain/units.ts';
 

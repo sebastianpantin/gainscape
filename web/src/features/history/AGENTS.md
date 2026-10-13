@@ -14,7 +14,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 - `session-edit.ts`: the pure edit model. Every new edit rule goes here as a pure function.
 - `session-editor.ts`: `createSessionEditor(ports)`, the save and delete flow with every I/O injected. Every save or delete outcome goes here.
 - `HistorySetRow.tsx`: editable set, bout and hold rows reusing the workout field components.
-- Fetches and mutations live in `../../lib/history.ts`, row mapping in `../../lib/history-rules.ts`, set-editing rules shared with the live draft in `../../lib/exercise-edit-rules.ts`.
+- Fetches and mutations live in `../../lib/history/history.ts`, row mapping in `../../lib/history/history-rules.ts`, set-editing rules shared with the live draft in `../../lib/workout/exercise-edit-rules.ts`.
 
 ## Rules and gotchas
 

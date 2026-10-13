@@ -1,4 +1,4 @@
-import { GLOSSARY, type GlossaryKey } from '../lib/glossary.ts';
+import { GLOSSARY, type GlossaryKey } from '../lib/ui/glossary.ts';
 import { TermHelp } from './TermHelp.tsx';
 
 interface TermHelpRowProps {

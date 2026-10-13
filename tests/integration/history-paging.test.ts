@@ -5,7 +5,7 @@ import {
   type HistorySession,
   querySession,
   querySessionPage,
-} from '../../web/src/lib/history-rules.ts';
+} from '../../web/src/lib/history/history-rules.ts';
 import { builtInExerciseId, createTestUser, db, type TestUser } from './local-stack.ts';
 
 const SESSION_COUNT = HISTORY_PAGE_SIZE + 7;

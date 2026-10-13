@@ -21,7 +21,7 @@ import {
   toCatalogItem,
   toHeldItems,
   toRecipe,
-} from '../../web/src/lib/item-rules.ts';
+} from '../../web/src/lib/collection/item-rules.ts';
 
 const fixture: CatalogItem[] = loadCatalogData().items.map((item, index) => ({
   id: `id-${item.key}`,

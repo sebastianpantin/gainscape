@@ -15,7 +15,7 @@ import {
   updateHoldSet,
   updateSet,
   withLoadType,
-} from '../../web/src/lib/exercise-edit-rules.ts';
+} from '../../web/src/lib/workout/exercise-edit-rules.ts';
 import type { SessionEdit } from '../../web/src/features/history/session-edit.ts';
 import type { WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 

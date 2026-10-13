@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { refreshProgramCache } from '../../lib/program-enrollment.ts';
+import { refreshProgramCache } from '../../lib/programs/program-enrollment.ts';
 import {
   offlineRefreshState,
   programLoadStatus,
   type ProgramRefreshState,
   programStatusText,
-} from '../../lib/program-status-rules.ts';
-import { activeProgram } from '../../lib/program-today-rules.ts';
-import { useOnlineSignal } from '../../lib/use-online.ts';
+} from '../../lib/programs/program-status-rules.ts';
+import { activeProgram } from '../../lib/programs/program-today-rules.ts';
+import { useOnlineSignal } from '../../lib/platform/use-online.ts';
 import { isDeviceOffline } from '../../offline/cache-first.ts';
 import { type ProgramCache, readProgramCache } from '../../offline/program-cache.ts';
 import { cachedProgramFacts } from '../../offline/program-facts-cache.ts';

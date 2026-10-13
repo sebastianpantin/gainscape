@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchRecentLiftSessions } from '../../lib/last-session.ts';
-import type { RecentSessions, RecentSet } from '../../lib/last-session-rules.ts';
+import { fetchRecentLiftSessions } from '../../lib/history/last-session.ts';
+import type { RecentSessions, RecentSet } from '../../lib/history/last-session-rules.ts';
 import { isDeviceOffline } from '../../offline/cache-first.ts';
 
 const RECENT_SESSIONS_TIMEOUT_MS = 3000;

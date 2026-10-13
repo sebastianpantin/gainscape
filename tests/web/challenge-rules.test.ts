@@ -12,7 +12,7 @@ import {
   parsedChallengeDefinition,
   parsedDraftChallenge,
   toCatalogChallenge,
-} from '../../web/src/lib/challenge-rules.ts';
+} from '../../web/src/lib/collection/challenge-rules.ts';
 import {
   addExercise,
   addSet,
@@ -21,7 +21,7 @@ import {
   startDraftFromChallenge,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
-import { updateSet } from '../../web/src/lib/exercise-edit-rules.ts';
+import { updateSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
 
 const NOW = new Date('2026-10-08T09:00:00.000Z');
 const KG = DEFAULT_ROUNDING.kg;

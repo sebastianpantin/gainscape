@@ -8,7 +8,7 @@ import {
   sessionRpeChoiceLabel,
   sessionRpeFromChoice,
   sessionTimingParts,
-} from '../../web/src/lib/session-timing-rules.ts';
+} from '../../web/src/lib/workout/session-timing-rules.ts';
 
 const start = '2026-10-05T10:00:00.000Z';
 

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
-import type { Exercise } from '../../web/src/lib/catalog-rules.ts';
-import type { RecentSet } from '../../web/src/lib/last-session-rules.ts';
-import { fatigueAdvice, nextWeightHint } from '../../web/src/lib/progression-rules.ts';
-import type { DraftBarbellSetup } from '../../web/src/lib/program-set-rules.ts';
+import type { Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import type { RecentSet } from '../../web/src/lib/history/last-session-rules.ts';
+import { fatigueAdvice, nextWeightHint } from '../../web/src/lib/workout/progression-rules.ts';
+import type { DraftBarbellSetup } from '../../web/src/lib/programs/program-set-rules.ts';
 import type { DraftSet, LiftDraftExercise, WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import {
   exerciseMenuChoices,

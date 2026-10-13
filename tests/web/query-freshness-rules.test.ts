@@ -7,12 +7,12 @@ import {
   QUERY_ROOTS_CHANGED_BY,
   queryRootsToInvalidate,
   staleTimeFor,
-} from '../../web/src/lib/query-freshness-rules.ts';
+} from '../../web/src/lib/query/query-freshness-rules.ts';
 
-vi.mock('../../web/src/lib/supabase.ts', () => ({ supabase: {} }));
+vi.mock('../../web/src/lib/platform/supabase.ts', () => ({ supabase: {} }));
 
-const queries = await import('../../web/src/lib/queries.ts');
-const { standingQuery } = await import('../../web/src/lib/standing.ts');
+const queries = await import('../../web/src/lib/query/queries.ts');
+const { standingQuery } = await import('../../web/src/lib/progress/standing.ts');
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const FRIEND_ID = '22222222-2222-4222-8222-222222222222';

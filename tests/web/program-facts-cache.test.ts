@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE, type Position, programStateAt } from '@domain/index.ts';
 import { orderFacts } from '@domain/program-state.ts';
-import { type CardioActivity } from '../../web/src/lib/catalog-rules.ts';
+import { type CardioActivity } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { type DraftSet, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import {
   appendFinishedSession,

@@ -3,11 +3,16 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
-import { type Exercise } from '../../lib/catalog-rules.ts';
-import { type UnitPref } from '../../lib/profile.ts';
-import { programErrorText } from '../../lib/program-error-rules.ts';
-import { SKIP_CONFIRM_LABEL, SKIP_OFFLINE_TEXT, skipDialogTitle, skipLabel } from '../../lib/program-skip-rules.ts';
-import { useIsOffline } from '../../lib/use-online.ts';
+import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
+import { type UnitPref } from '../../lib/profile/profile.ts';
+import { programErrorText } from '../../lib/programs/program-error-rules.ts';
+import {
+  SKIP_CONFIRM_LABEL,
+  SKIP_OFFLINE_TEXT,
+  skipDialogTitle,
+  skipLabel,
+} from '../../lib/programs/program-skip-rules.ts';
+import { useIsOffline } from '../../lib/platform/use-online.ts';
 import {
   type ActiveProgram,
   dayChoices,
@@ -15,7 +20,7 @@ import {
   positionLabel,
   prescriptionCards,
   startLabel,
-} from '../../lib/program-today-rules.ts';
+} from '../../lib/programs/program-today-rules.ts';
 import { type PrescribedDayStart } from '../../offline/draft-format.ts';
 import { PrescriptionCards } from '../programs/PrescriptionCards.tsx';
 import { useLastLoggedWeights } from '../programs/use-last-logged-weights.ts';

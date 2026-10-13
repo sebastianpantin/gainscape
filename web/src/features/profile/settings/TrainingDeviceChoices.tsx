@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { type TrainingDeviceSettings } from '../../../lib/training-device-rules.ts';
+import { type TrainingDeviceSettings } from '../../../lib/workout/training-device-rules.ts';
 import { Choice } from './Choice.tsx';
 import { useTrainingDeviceSettings } from './use-training-device-settings.ts';
 

@@ -1,8 +1,8 @@
 import { CARDIO_RECORD_KINDS } from '@domain/types.ts';
 import { z } from 'zod';
-import { cachedExerciseSchema, readCachedExercises } from '../lib/catalog-cache.ts';
-import { type Exercise } from '../lib/catalog-rules.ts';
-import { type CollectionRows } from '../lib/collection-rules.ts';
+import { cachedExerciseSchema, readCachedExercises } from '../lib/exercises/catalog-cache.ts';
+import { type Exercise } from '../lib/exercises/catalog-rules.ts';
+import { type CollectionRows } from '../lib/collection/collection-rules.ts';
 import { userCache } from './cache-first.ts';
 
 export const OFFLINE_COLLECTION_NOTICE = 'Offline: using your saved collection log.';

@@ -18,7 +18,7 @@ import {
   type SkillDef,
   type StrengthState,
 } from '@domain/index.ts';
-import { isLoggableBout } from '../../lib/cardio-rules.ts';
+import { isLoggableBout } from '../../lib/workout/cardio-rules.ts';
 import { formatXp } from '../../lib/format.ts';
 import type {
   CardioDraftExercise,

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { queryExerciseNotes, saveExerciseNoteWith } from '../../web/src/lib/exercise-note-rules.ts';
+import { queryExerciseNotes, saveExerciseNoteWith } from '../../web/src/lib/exercises/exercise-note-rules.ts';
 import { builtInExerciseId, createTestUser, db, type TestUser } from './local-stack.ts';
 import { createCustomExercise } from './session-support.ts';
 

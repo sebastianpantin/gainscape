@@ -12,7 +12,7 @@ Small shared UI pieces used across feature screens: icons, the pixel-art sprites
 - `pixel-sprites.ts` is pure sprite data (no React). `scripts/icons/render.ts` also uses it to generate `web/public/icons/*`. `PixelArt.tsx` renders the sprites.
 - `Icon.tsx`: line icons in a `PATHS` record. To add an icon, add a name and its path there.
 - Providers wrapping the app in `App.tsx`: `PreferencesProvider.tsx` (unit and effort mode) and `ToastProvider.tsx` (inside the `BrowserRouter`). `ScreenErrorBoundary.tsx` wraps the routes.
-- The decisions behind these components live in `../lib/`: `number-field-rules.ts`, `count-up-rules.ts`, `toast-rules.ts`, `line-chart-rules.ts`, `glossary.ts` and `term-help-rules.ts`.
+- The decisions behind these components live in `../lib/ui/`: `number-field-rules.ts`, `count-up-rules.ts`, `toast-rules.ts`, `line-chart-rules.ts`, `glossary.ts` and `term-help-rules.ts`.
 
 ## Rules and gotchas
 
@@ -29,7 +29,7 @@ Small shared UI pieces used across feature screens: icons, the pixel-art sprites
 - `TermHelp`:
   - It uses a native `popover="auto"`, shown in the top layer and pinned to the top edge, so opening it shifts nothing and it stays clear of the finish bar and tab bar. The button is hidden where `:popover-open` is unsupported.
   - Place it next to the term in a `.row` or after a heading, never inside a label or a set row.
-  - Decide which keys a screen shows in a pure rule (`../lib/term-help-rules.ts`, `../features/workout/workout-help.ts`).
+  - Decide which keys a screen shows in a pure rule (`../lib/ui/term-help-rules.ts`, `../features/workout/workout-help.ts`).
   - In e2e, locate the button by its `question` and check the panel by visibility, not by `aria-expanded`.
 - `NumberTextField`:
   - It keeps the typed text while focused and reads a comma as a decimal point.
@@ -37,7 +37,7 @@ Small shared UI pieces used across feature screens: icons, the pixel-art sprites
   - It flags text that differs from the saved value (`aria-invalid`, plus a "Saved as" hint announced once).
   - Focus selects the whole value, again on the first mouseup so a tap keeps the selection.
   - Enter moves to the next `NumberTextField` in document order; with `lastInGroup` it stays put.
-- `PreferencesProvider` ignores the server's profile result if the user changed preferences locally in the meantime. Keep storage and network logic in `../lib/preferences.ts` and `../lib/profile.ts`.
+- `PreferencesProvider` ignores the server's profile result if the user changed preferences locally in the meantime. Keep storage and network logic in `../lib/profile/preferences.ts` and `../lib/profile/profile.ts`.
 - Components take plain props and fetch no data (except `PreferencesProvider`). Props interfaces sit next to the component and are not exported.
 
 ## Testing
