@@ -72,8 +72,15 @@ export function canAddDay(doc: ProgramDoc): boolean {
   return doc.days.length < MAX_DAYS;
 }
 
+function unusedDayName(days: readonly EditorDay[]): string {
+  const taken = new Set(days.map((day) => trimmedName(day.name)));
+  let number = days.length + 1;
+  while (taken.has(`Day ${number}`)) number += 1;
+  return `Day ${number}`;
+}
+
 export function addDay(doc: ProgramDoc, dayId: string): ProgramDoc {
-  return { ...doc, days: [...doc.days, { id: dayId, name: `Day ${doc.days.length + 1}`, exercises: [] }] };
+  return { ...doc, days: [...doc.days, { id: dayId, name: unusedDayName(doc.days), exercises: [] }] };
 }
 
 export function canAddPlannedExercise(day: EditorDay): boolean {
@@ -151,6 +158,10 @@ export function nameIssue(doc: ProgramDoc): string | null {
     doc.days.map((day) => nameProblem(day.name, DAY_NAME_MAX_LENGTH)).find((issue) => issue !== null) ??
     null
   );
+}
+
+export function exerciseIssue(doc: ProgramDoc): string | null {
+  return doc.days.some((day) => day.exercises.length > 0) ? null : 'Add at least one exercise.';
 }
 
 export function targetIssue(doc: ProgramDoc, nameOf: (exerciseId: string) => string): string | null {

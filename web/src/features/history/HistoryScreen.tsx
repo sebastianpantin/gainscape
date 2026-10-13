@@ -1,12 +1,15 @@
 import { isSessionEditable } from '@domain/edit-window.ts';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { fetchSessionPage } from '../../lib/history.ts';
-import { HISTORY_PAGE_SIZE, type HistorySession } from '../../lib/history-rules.ts';
+import { type HistorySession } from '../../lib/history-rules.ts';
+import { historyQuery } from '../../lib/queries.ts';
+import { loadedState } from '../../lib/query-state-rules.ts';
 import { EmptyState } from '../../components/EmptyState.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { CollectionTabs } from '../collection/CollectionScreen.tsx';
+import { CollectionHeading } from '../collection/CollectionHeading.tsx';
 import { formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
@@ -68,51 +71,26 @@ function SessionItem({ session, now, unit, cardRef }: SessionItemProps) {
   );
 }
 
-export function HistoryScreen() {
+export function HistoryScreen({ userId }: { userId: string }) {
   const location = useLocation();
   const notice = (location.state as { notice?: string } | null)?.notice ?? null;
-  const [sessions, setSessions] = useState<HistorySession[] | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const pages = useInfiniteQuery(historyQuery(userId));
+  const [moreProblem, setMoreProblem] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
   const [autoLoad, setAutoLoad] = useState(true);
   const { unitPref } = usePreferences();
-  const loadingRef = useRef(false);
-
-  useEffect(() => {
-    let active = true;
-    fetchSessionPage(null).then(
-      (page) => {
-        if (!active) return;
-        setSessions(page);
-        setHasMore(page.length === HISTORY_PAGE_SIZE);
-      },
-      (error: Error) => active && setProblem(error.message),
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
+  const loaded = loadedState(pages.data?.pages.flat(), pages.error);
+  const sessions = loaded.status === 'ready' ? loaded.data : null;
+  const problem = moreProblem ?? (loaded.status === 'failed' ? loaded.problem : null);
+  const { hasNextPage: hasMore, isFetching, isFetchingNextPage: loadingMore, fetchNextPage } = pages;
 
   const loadMore = useCallback(async () => {
-    if (!sessions || sessions.length === 0 || loadingRef.current) return;
-    loadingRef.current = true;
-    setLoadingMore(true);
-    setProblem(null);
-    try {
-      const page = await fetchSessionPage(sessions.at(-1)!);
-      setSessions([...sessions, ...page]);
-      setHasMore(page.length === HISTORY_PAGE_SIZE);
-      setAutoLoad(true);
-    } catch (error) {
-      setProblem(messageOf(error, 'Could not load more workouts.'));
-      setAutoLoad(false);
-    } finally {
-      loadingRef.current = false;
-      setLoadingMore(false);
-    }
-  }, [sessions]);
+    if (isFetching) return;
+    setMoreProblem(null);
+    const result = await fetchNextPage();
+    if (result.isError) setMoreProblem(messageOf(result.error, 'Could not load more workouts.'));
+    setAutoLoad(!result.isError);
+  }, [isFetching, fetchNextPage]);
 
   const lastCardRef = useRef<HTMLLIElement | null>(null);
   useEffect(() => {
@@ -127,7 +105,7 @@ export function HistoryScreen() {
 
   return (
     <main className="screen stack">
-      <h1 className="title">Collection log</h1>
+      <CollectionHeading tab="History" />
       <CollectionTabs />
       <p className="history-edit-note">
         <Icon name="pencil" size={12} />

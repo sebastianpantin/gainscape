@@ -1,3 +1,5 @@
+import { flushOpenDraftSessions } from '../offline/draft-session.ts';
+
 export const CHUNK_RELOAD_KEY = 'gainscape.chunk-reload-at';
 export const CHUNK_RELOAD_COOLDOWN_MS = 10_000;
 
@@ -21,10 +23,12 @@ function tabStorage(): Storage | null {
   }
 }
 
-export function reloadOnChunkLoadError(): void {
+export function reloadOnChunkLoadError(flushDrafts: () => Promise<void> = flushOpenDraftSessions): void {
   window.addEventListener('vite:preloadError', (event) => {
     if (!claimChunkReload(tabStorage(), Date.now())) return;
     event.preventDefault();
-    window.location.reload();
+    void flushDrafts()
+      .catch(() => undefined)
+      .finally(() => window.location.reload());
   });
 }

@@ -1,3 +1,13 @@
+- prs: [100]
+  version: 0.6.2
+  date: 2026-10-13
+  title: History that remembers your place
+  items:
+    - Going back from an older workout returns you to the same spot in History, with every workout you loaded still there. A deleted workout leaves the list at once.
+    - The Progress link waits until your changes to a workout are saved, so it can no longer drop them.
+    - The program builder asks for at least one exercise, never repeats a day name, and clears an error once you fix it.
+    - Number fields only take plain numbers, so text like 1e2 is no longer read as 100.
+    - Screen readers hear which Collection tab you are on.
 - prs: [98]
   version: 0.6.1
   date: 2026-10-12
