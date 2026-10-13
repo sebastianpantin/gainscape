@@ -1,5 +1,6 @@
 import { forgetLastSummaryOf } from '../features/summary/last-summary.ts';
 import { forgetCachedExercises } from '../lib/catalog-cache.ts';
+import { companionPetStore } from '../lib/companion-pet-store.ts';
 import { forgetCachedExerciseNotes } from '../lib/exercise-note-cache.ts';
 import { forgetLastSeenRelease } from '../lib/last-seen-release-store.ts';
 import { forgetOnboarding } from '../lib/onboarding-store.ts';
@@ -54,5 +55,6 @@ export async function forgetUserDeviceData(device: UserDevice, userId: string): 
   forgetLastSeenRelease(storage, userId);
   forgetOnboarding(storage, userId);
   forgetInstallCard(storage, userId);
+  companionPetStore.forget(storage, userId);
   await forgetUserProgressData(device, userId);
 }

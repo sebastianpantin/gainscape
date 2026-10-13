@@ -15,6 +15,7 @@ import {
 import {
   type CatalogItem,
   colorFor,
+  companionPet,
   craftProblemText,
   fanfareFor,
   firstPickedItemId,
@@ -35,6 +36,7 @@ import {
   FANFARE_CELEBRATIONS,
   primeCelebrationAudio,
 } from '../../lib/celebration-effects.ts';
+import { companionPetStore } from '../../lib/companion-pet-store.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import {
   craftItem,
@@ -132,6 +134,8 @@ interface ItemDetailProps {
   offline: boolean;
   draftOpen: boolean | null;
   justCrafted: boolean;
+  shownOnToday: boolean | null;
+  onShowOnToday: () => void;
   onCraftStarted: () => void;
   onCrafted: (outputItemId: string) => Promise<void>;
   onCraftFailed: () => Promise<void>;
@@ -150,6 +154,8 @@ function ItemDetail({
   offline,
   draftOpen,
   justCrafted,
+  shownOnToday,
+  onShowOnToday,
   onCraftStarted,
   onCrafted,
   onCraftFailed,
@@ -229,6 +235,11 @@ function ItemDetail({
           onStart={onStartChallenge}
         />
       )}
+      {shownOnToday !== null && (
+        <button className="button" type="button" disabled={shownOnToday} onClick={onShowOnToday}>
+          {shownOnToday ? 'Shown on Today' : 'Show on Today'}
+        </button>
+      )}
       {item.gearSlot && quantity >= 1 && equipped !== null && (
         <button className="button" type="button" disabled={busy || offline} onClick={() => void changeGear()}>
           {equipped ? 'Unequip' : 'Equip'}
@@ -278,6 +289,8 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [craftedId, setCraftedId] = useState<string | null>(null);
+  const [chosenPetId, setChosenPetId] = useState(() => companionPetStore.read(deviceStorage(), userId));
+  const { showToast } = useToast();
   const [refetchProblem, setRefetchProblem] = useState<string | null>(null);
   const [newIds] = useState(() => newItemIds(recallLastSummary(userId)?.drops));
   const queryClient = useQueryClient();
@@ -290,7 +303,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
 
   const showLoaded = (change: (loaded: LoadedItems) => LoadedItems) => {
     const { queryKey } = itemsQuery(userId);
-    void queryClient.cancelQueries({ queryKey });
+    void queryClient.cancelQueries({ queryKey, exact: true });
     queryClient.setQueryData<CacheFirstLoad<LoadedItems>>(
       queryKey,
       (current) => current && { ...current, loaded: change(current.loaded) },
@@ -440,6 +453,12 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           offline={offline}
           draftOpen={draftOpen}
           justCrafted={picked.id === craftedId}
+          shownOnToday={picked.kind === 'pet' ? companionPet(catalog.items, held, chosenPetId)?.id === picked.id : null}
+          onShowOnToday={() => {
+            companionPetStore.save(deviceStorage(), userId, picked.id);
+            setChosenPetId(picked.id);
+            showToast(`${picked.name} now follows you on Today`);
+          }}
           onCraftStarted={() => {
             primeCelebrationAudio(userId);
             setCraftedId(null);

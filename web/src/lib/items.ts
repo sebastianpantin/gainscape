@@ -7,6 +7,8 @@ import {
   type InventoryRow,
   type ItemCatalog,
   type ItemRow,
+  type OwnedPets,
+  queryOwnedPets,
   RECIPE_COLUMNS,
   type RecipeRow,
   toCatalogItem,
@@ -16,7 +18,12 @@ import {
 import type { GearSlot } from '@domain/crafting.ts';
 import { DEFAULT_BALANCE } from '@domain/index.ts';
 import type { StrengthState } from '@domain/types.ts';
-import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
+import {
+  type CacheFirstLoad,
+  failFastWhenOffline,
+  isDeviceOffline,
+  loadCacheFirstWhenOffline,
+} from '../offline/cache-first.ts';
 import {
   type ChallengeExerciseEntry,
   type ItemsCache,
@@ -46,6 +53,11 @@ export async function fetchItemCatalog(): Promise<ItemCatalog> {
     recipes: (recipes.data as RecipeRow[]).map(toRecipe),
     challenges: (challenges.data as ChallengeRow[]).flatMap((row) => toCatalogChallenge(row) ?? []),
   };
+}
+
+export async function fetchOwnedPets(userId: string): Promise<OwnedPets> {
+  failFastWhenOffline();
+  return queryOwnedPets(supabase, userId);
 }
 
 export async function fetchInventory(userId: string): Promise<Map<string, HeldItem>> {

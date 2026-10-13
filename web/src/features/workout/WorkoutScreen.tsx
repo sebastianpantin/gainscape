@@ -24,6 +24,7 @@ import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
 import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
 import { LevelStat } from './LevelStat.tsx';
+import { PetCompanion } from './PetCompanion.tsx';
 import { greetingFor, nearestLevelUp, nearestLevelUpText } from './today-rules.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
 import { stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
@@ -516,11 +517,14 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </p>
         )}
         <InstallCard userId={userId} />
-        {levelNudge && (
-          <Link className="level-nudge" to="/skills">
-            {nearestLevelUpText(levelNudge)}
-          </Link>
-        )}
+        <div className="today-row">
+          {levelNudge && (
+            <Link className="level-nudge" to="/skills">
+              {nearestLevelUpText(levelNudge)}
+            </Link>
+          )}
+          <PetCompanion userId={userId} />
+        </div>
         <WeeklyGoalCard />
         <FriendActivityStrip userId={userId} />
         <ProgramSummary userId={userId} program={activeProgram} />
