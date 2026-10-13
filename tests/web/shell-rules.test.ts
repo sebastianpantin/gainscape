@@ -45,6 +45,7 @@ describe('precacheEntries', () => {
     'icons/icon-192.png',
     'icons/maskable-512.png',
     'screenshots/train.png',
+    'splash/splash-750x1334.png',
     'licenses/index.html',
     'licenses/silkscreen-OFL.txt',
     'assets/index-abc.js',
@@ -77,6 +78,7 @@ describe('precacheEntries', () => {
       '/assets/index-abc.js.map',
       '/robots.txt',
       '/screenshots/train.png',
+      '/splash/splash-750x1334.png',
     ])
       expect(entries).not.toContain(excluded);
   });

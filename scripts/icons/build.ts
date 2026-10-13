@@ -1,10 +1,11 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { encodePng, samePixels } from './png.ts';
-import { APP_ICONS, faviconSvg, renderAppIcon } from './render.ts';
+import { APP_ICONS, faviconSvg, renderAppIcon, renderSplash, SPLASH_SCREENS, splashFile } from './render.ts';
 
 const publicDir = join(import.meta.dirname, '../../web/public');
 const iconsDir = join(publicDir, 'icons');
+const splashDir = join(publicDir, 'splash');
 const faviconPath = join(publicDir, 'favicon.svg');
 
 function readOrNull(path: string): Buffer | null {
@@ -21,13 +22,20 @@ function check(): string[] {
     const committed = readOrNull(join(iconsDir, layout.file));
     if (!committed || !samePixels(committed, renderAppIcon(layout))) stale.push(`icons/${layout.file}`);
   }
+  for (const layout of SPLASH_SCREENS) {
+    const committed = readOrNull(join(splashDir, splashFile(layout)));
+    if (!committed || !samePixels(committed, renderSplash(layout))) stale.push(`splash/${splashFile(layout)}`);
+  }
   if (readOrNull(faviconPath)?.toString('utf8') !== faviconSvg()) stale.push('favicon.svg');
   return stale;
 }
 
 function write(): void {
   mkdirSync(iconsDir, { recursive: true });
+  mkdirSync(splashDir, { recursive: true });
   for (const layout of APP_ICONS) writeFileSync(join(iconsDir, layout.file), encodePng(renderAppIcon(layout)));
+  for (const layout of SPLASH_SCREENS)
+    writeFileSync(join(splashDir, splashFile(layout)), encodePng(renderSplash(layout)));
   writeFileSync(faviconPath, faviconSvg());
 }
 
@@ -37,8 +45,10 @@ if (process.argv.includes('--check')) {
     console.error(`Icons are out of date: ${stale.join(', ')}. Run make icons.`);
     process.exit(1);
   }
-  console.log('Icons match the sprites.');
+  console.log('Icons and splash screens match the sprites.');
 } else {
   write();
-  console.log(`Wrote ${APP_ICONS.length} icons and favicon.svg to web/public.`);
+  console.log(
+    `Wrote ${APP_ICONS.length} icons, ${SPLASH_SCREENS.length} splash screens and favicon.svg to web/public.`,
+  );
 }

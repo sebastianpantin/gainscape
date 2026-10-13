@@ -30,7 +30,7 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 | `make deploy`               | Deploy the test environment (Supabase Free and Cloudflare Pages); admin only, see `docs/deploy.md`                                                                           |
 | `make changelog-unreleased` | List user-facing PRs no changelog entry covers yet, for writing the next one                                                                                                 |
 | `make preview`              | Production build served by `vite preview` (https, preview port = web port - 1000, so 4173 by default)                                                                        |
-| `make icons`                | Regenerate the app icons and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                                                   |
+| `make icons`                | Regenerate the app icons, iOS launch images and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                                |
 | `make screenshots`          | Recapture the install screenshots in `web/public/screenshots/` against the local stack                                                                                       |
 | `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                                               |
 | `make rebuild-caches`       | Recompute XP, e1RM, records and feed events from logged sets for every user with sessions behind `BALANCE_VERSION` (run after a bump); `ALL=1` rebuilds every user with data |
@@ -85,7 +85,7 @@ The free test environment (Supabase Free and Cloudflare Pages, invite-only) is d
 - `supabase/functions/export-data/`, `supabase/functions/delete-account/`: account export (JSON of the caller's rows) and deletion (requires typing your username).
 - `supabase/migrations/`: schema and row-level security.
 - `catalog/*.yaml`: the single source of seed data (skills, exercises, programs, items, drop tables); `scripts/catalog/generate.ts` writes `supabase/seed.sql` from it.
-- `web/`: the React PWA (Vite root). `web/public/` holds the manifest, the generated icons and the font licenses; `web/src/pwa/` the shell rules, update flow and install prompt; `web/src/sw/` the service worker; `web/build/` the Vite plugin that builds `sw.js` with its precache list.
+- `web/`: the React PWA (Vite root). `web/public/` holds the manifest, the generated icons and iOS launch images, and the font licenses; `web/src/pwa/` the shell rules, update flow and install prompt; `web/src/sw/` the service worker; `web/build/` the Vite plugin that builds `sw.js` with its precache list.
 - `scripts/icons/`: the PNG encoder and icon renderer behind `make icons`.
 - `tests/`: Vitest domain tests, plus integration tests against the local stack.
 
