@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchProfile } from '../../lib/profile.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { isDeviceOffline } from '../../offline/cache-first.ts';
 import { profileCache } from '../../offline/profile-cache.ts';
 

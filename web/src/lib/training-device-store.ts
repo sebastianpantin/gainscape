@@ -1,30 +1,9 @@
-import { parseTrainingDeviceSettings, type TrainingDeviceSettings } from './training-device-rules.ts';
+import { keyedStore } from './keyed-store.ts';
+import { parseTrainingDeviceSettings } from './training-device-rules.ts';
 
-const TRAINING_DEVICE_KEY_PREFIX = 'gainscape.training-device.';
+const trainingDeviceSettings = keyedStore('gainscape.training-device.', parseTrainingDeviceSettings);
 
-function trainingDeviceKey(userId: string): string {
-  return `${TRAINING_DEVICE_KEY_PREFIX}${userId}`;
-}
-
-export function readTrainingDeviceSettings(storage: Storage | null, userId: string): TrainingDeviceSettings {
-  try {
-    return parseTrainingDeviceSettings(storage?.getItem(trainingDeviceKey(userId)) ?? null);
-  } catch {
-    return parseTrainingDeviceSettings(null);
-  }
-}
-
-export function saveTrainingDeviceSettings(
-  storage: Storage | null,
-  userId: string,
-  settings: TrainingDeviceSettings,
-): void {
-  try {
-    storage?.setItem(trainingDeviceKey(userId), JSON.stringify(settings));
-  } catch {
-    return;
-  }
-}
+export const { read: readTrainingDeviceSettings, save: saveTrainingDeviceSettings } = trainingDeviceSettings;
 
 const REST_ALERTED_KEY_PREFIX = 'gainscape.rest-alerted.';
 
@@ -67,8 +46,8 @@ export function answerNotifyPrompt(storage: Storage | null, userId: string): voi
 }
 
 export function forgetTrainingDevice(storage: Storage | null, userId: string): void {
+  trainingDeviceSettings.forget(storage, userId);
   try {
-    storage?.removeItem(trainingDeviceKey(userId));
     storage?.removeItem(restAlertedKey(userId));
     storage?.removeItem(notifyPromptKey(userId));
   } catch {

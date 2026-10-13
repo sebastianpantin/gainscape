@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { type UnitPref } from '../../../lib/profile.ts';
 import { type BarbellSetup, isUsableBarOrPlate } from '../../../lib/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../../lib/plate-settings-store.ts';
-import { deviceStorage } from '../../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../../lib/keyed-store.ts';
 
 export function usePlateSetup(userId: string, unit: UnitPref) {
   const [setup, setSetup] = useState(() => readPlateSettings(deviceStorage(), userId)[unit]);

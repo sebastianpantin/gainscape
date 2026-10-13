@@ -3,13 +3,13 @@ import { join } from 'node:path';
 import { type Page } from '@playwright/test';
 import { expect, test } from '../../e2e/support/fixtures.ts';
 import { finishWorkout, logExercise, openTab, register, uniqueUsername } from '../../e2e/support/app.ts';
-import { SCREENSHOT_MAX_BYTES, SCREENSHOTS_DIR } from './screens.ts';
+import { SCREENSHOT_MAX_BYTES, SCREENSHOTS_DIR, WIDE_SCREENSHOT_SIZE } from './screens.ts';
 
 const outputDir = join(import.meta.dirname, '../..', SCREENSHOTS_DIR);
 
-async function capture(page: Page, file: string): Promise<void> {
+async function capture(page: Page, file: string, scale: 'css' | 'device' = 'device'): Promise<void> {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-  const png = await page.screenshot({ path: join(outputDir, file), animations: 'disabled', caret: 'hide' });
+  const png = await page.screenshot({ path: join(outputDir, file), animations: 'disabled', caret: 'hide', scale });
   expect(png.length, file).toBeLessThan(SCREENSHOT_MAX_BYTES);
 }
 
@@ -50,4 +50,8 @@ test('capture the manifest screenshots', async ({ page }) => {
   ]);
   await page.evaluate(() => window.scrollTo(0, 0));
   await capture(page, 'train.png');
+
+  await page.setViewportSize(WIDE_SCREENSHOT_SIZE);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await capture(page, 'train-wide.png', 'css');
 });

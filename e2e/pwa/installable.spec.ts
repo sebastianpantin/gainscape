@@ -22,12 +22,17 @@ test('the app is installable', async ({ baseURL }) => {
     const manifest = await cdp.send('Page.getAppManifest');
     expect(manifest.errors).toEqual([]);
     expect(manifest.url.endsWith('/manifest.webmanifest')).toBe(true);
-    const icons = JSON.parse(manifest.data ?? '{}').icons as { src: string }[];
-    expect(icons.length).toBeGreaterThan(0);
-    for (const icon of icons) {
-      const response = await page.request.get(icon.src);
-      expect(response.status(), icon.src).toBe(200);
-      expect(response.headers()['content-type'], icon.src).toContain('image/png');
+    const parsed = JSON.parse(manifest.data ?? '{}') as {
+      icons: { src: string }[];
+      shortcuts: { icons: { src: string }[] }[];
+      screenshots: { src: string }[];
+    };
+    expect(parsed.icons.length).toBeGreaterThan(0);
+    const images = [...parsed.icons, ...parsed.shortcuts.flatMap((shortcut) => shortcut.icons), ...parsed.screenshots];
+    for (const image of images) {
+      const response = await page.request.get(image.src);
+      expect(response.status(), image.src).toBe(200);
+      expect(response.headers()['content-type'], image.src).toContain('image/png');
     }
   } finally {
     await context.close();
