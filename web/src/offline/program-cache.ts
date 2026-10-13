@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { keyedStore } from '../lib/keyed-store.ts';
 import { type EnrollmentRow, programFactSchema, sessionFactSchema } from '../lib/program-facts-rules.ts';
 import { type ProgramTemplateRow } from '../lib/program-enroll-rules.ts';
 import { type WorkoutDraft } from './draft-format.ts';
@@ -12,7 +13,6 @@ import {
 } from './program-facts-cache.ts';
 
 const CACHE_VERSION = 1;
-const CACHE_KEY_PREFIX = 'gainscape.powerlifting-programs.v1.';
 
 export interface ProgramCache {
   templates: ProgramTemplateRow[];
@@ -62,13 +62,14 @@ const cachedProgramsSchema = z.object({
   refreshed: z.literal(true).optional(),
 });
 
-export function programCacheKey(userId: string): string {
-  return `${CACHE_KEY_PREFIX}${userId}`;
-}
-
-export function readProgramCache(storage: Storage, userId: string): ProgramCache {
-  try {
-    const raw = storage.getItem(programCacheKey(userId));
+export const {
+  key: programCacheKey,
+  read: readProgramCache,
+  save: saveProgramCache,
+  forget: forgetProgramCache,
+} = keyedStore<ProgramCache>(
+  'gainscape.powerlifting-programs.v1.',
+  (raw, userId) => {
     if (!raw) return EMPTY_PROGRAM_CACHE;
     const parsed = cachedProgramsSchema.safeParse(JSON.parse(raw));
     if (!parsed.success || parsed.data.userId !== userId) return EMPTY_PROGRAM_CACHE;
@@ -79,18 +80,9 @@ export function readProgramCache(storage: Storage, userId: string): ProgramCache
       facts,
       refreshed,
     };
-  } catch {
-    return EMPTY_PROGRAM_CACHE;
-  }
-}
-
-export function saveProgramCache(storage: Storage, userId: string, cache: ProgramCache): void {
-  try {
-    storage.setItem(programCacheKey(userId), JSON.stringify({ v: CACHE_VERSION, userId, ...cache }));
-  } catch {
-    return;
-  }
-}
+  },
+  (cache, userId) => ({ v: CACHE_VERSION, userId, ...cache }),
+);
 
 export function updateProgramCache(
   storage: Storage,
@@ -100,14 +92,6 @@ export function updateProgramCache(
   const changed = change(readProgramCache(storage, userId));
   saveProgramCache(storage, userId, changed);
   return changed;
-}
-
-export function forgetProgramCache(storage: Storage, userId: string): void {
-  try {
-    storage.removeItem(programCacheKey(userId));
-  } catch {
-    return;
-  }
 }
 
 export function withEnrollment(cache: ProgramCache, enrollment: EnrollmentRow | null): ProgramCache {

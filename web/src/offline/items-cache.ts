@@ -5,11 +5,11 @@ import type { ItemIconKind } from '../components/pixel-sprites.ts';
 import { type Exercise, isLiftExercise, LOAD_TYPES, type LoadType } from '../lib/catalog-rules.ts';
 import { type CatalogChallenge, catalogChallengeSchema } from '../lib/challenge-rules.ts';
 import type { HeldItem, ItemCatalog } from '../lib/item-rules.ts';
+import { keyedStore } from '../lib/keyed-store.ts';
 
 export const OFFLINE_ITEMS_NOTICE = 'Offline: using your saved items.';
 
 const CACHE_VERSION = 1;
-const ITEMS_CACHE_PREFIX = 'gainscape.items.v1.';
 
 export interface ChallengeExerciseEntry {
   id: string;
@@ -78,37 +78,19 @@ const itemsCacheSchema = z.object({
   }),
 });
 
-function itemsCacheKey(userId: string): string {
-  return `${ITEMS_CACHE_PREFIX}${userId}`;
-}
-
-export function readItemsCache(storage: Storage | null, userId: string): ItemsCache | null {
-  try {
-    const raw = storage?.getItem(itemsCacheKey(userId));
+export const {
+  read: readItemsCache,
+  save: saveItemsCache,
+  forget: forgetItemsCache,
+} = keyedStore<ItemsCache | null, ItemsCache>(
+  'gainscape.items.v1.',
+  (raw, userId) => {
     if (!raw) return null;
     const parsed = itemsCacheSchema.safeParse(JSON.parse(raw));
-    if (!parsed.success || parsed.data.userId !== userId) return null;
-    return parsed.data.cache;
-  } catch {
-    return null;
-  }
-}
-
-export function saveItemsCache(storage: Storage | null, userId: string, cache: ItemsCache): void {
-  try {
-    storage?.setItem(itemsCacheKey(userId), JSON.stringify({ v: CACHE_VERSION, userId, cache }));
-  } catch {
-    return;
-  }
-}
-
-export function forgetItemsCache(storage: Storage, userId: string): void {
-  try {
-    storage.removeItem(itemsCacheKey(userId));
-  } catch {
-    return;
-  }
-}
+    return parsed.success && parsed.data.userId === userId ? parsed.data.cache : null;
+  },
+  (cache, userId) => ({ v: CACHE_VERSION, userId, cache }),
+);
 
 export function updateItemsCache(
   storage: Storage | null,

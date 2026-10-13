@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { type KeyedStore, keyedStore } from '../lib/keyed-store.ts';
 
 export const OFFLINE_PROBLEM = 'Offline: connect to load this screen.';
 
@@ -86,40 +87,15 @@ export async function loadCacheFirstWhenOffline<Loaded>(
   }
 }
 
-export interface UserCache<Value> {
-  read(storage: Storage | null, userId: string): Value | null;
-  save(storage: Storage | null, userId: string, value: Value): void;
-  forget(storage: Storage | null, userId: string): void;
-}
-
-export function userCache<Value>(keyPrefix: string, valueSchema: z.ZodType<Value>): UserCache<Value> {
-  const keyFor = (userId: string) => `${keyPrefix}${userId}`;
+export function userCache<Value>(keyPrefix: string, valueSchema: z.ZodType<Value>): KeyedStore<Value | null, Value> {
   const recordSchema = z.object({ userId: z.string(), value: valueSchema });
-  return {
-    read(storage, userId) {
-      try {
-        const raw = storage?.getItem(keyFor(userId));
-        if (!raw) return null;
-        const parsed = recordSchema.safeParse(JSON.parse(raw));
-        if (!parsed.success || parsed.data.userId !== userId) return null;
-        return parsed.data.value as Value;
-      } catch {
-        return null;
-      }
+  return keyedStore<Value | null, Value>(
+    keyPrefix,
+    (raw, userId) => {
+      if (!raw) return null;
+      const parsed = recordSchema.safeParse(JSON.parse(raw));
+      return parsed.success && parsed.data.userId === userId ? (parsed.data.value as Value) : null;
     },
-    save(storage, userId, value) {
-      try {
-        storage?.setItem(keyFor(userId), JSON.stringify({ userId, value }));
-      } catch {
-        return;
-      }
-    },
-    forget(storage, userId) {
-      try {
-        storage?.removeItem(keyFor(userId));
-      } catch {
-        return;
-      }
-    },
-  };
+    (value, userId) => ({ userId, value }),
+  );
 }
