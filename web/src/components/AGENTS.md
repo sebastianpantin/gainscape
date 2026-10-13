@@ -58,7 +58,7 @@ Small shared UI pieces used across feature screens: the line icon set, the pixel
 ### Internal
 
 - `../lib/preferences.ts`, `../lib/profile.ts`, `../lib/standing-rules.ts` (`monogramFor`), `../lib/glossary.ts`, `@domain/crafting.ts`
-- Class names defined in `../styles/app.css`
+- Class names defined in the `../styles/` stylesheets
 
 ### External
 

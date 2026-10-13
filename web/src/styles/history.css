@@ -1,0 +1,120 @@
+.history-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-3);
+  text-align: left;
+  text-decoration: none;
+}
+
+.history-notes {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-tag {
+  font-size: var(--font-size-xs);
+  color: var(--color-xp);
+}
+
+.history-tag.history-only {
+  color: var(--color-text-muted);
+}
+
+.notes-field textarea {
+  font: inherit;
+  font-size: var(--font-size-md);
+  min-height: calc(var(--tap-target) * 2);
+  padding: var(--space-2);
+  background: var(--color-parchment);
+  color: var(--color-ink);
+  border: var(--border-width) solid var(--color-outline);
+  border-radius: var(--radius);
+  box-shadow: inset 2px 2px 0 var(--color-parchment-shade);
+  width: 100%;
+  resize: vertical;
+}
+
+.stored-set-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.exercise-note {
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+
+.exercise-note-text {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.exercise-note .notes-field {
+  align-self: stretch;
+}
+
+.history-edit-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.history-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.history-tag.history-locked {
+  color: var(--color-text-faint);
+}
+
+.history-exercises {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.history-exercise-names {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.history-exercise-more {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.history-record-badge {
+  flex-shrink: 0;
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-ink);
+  background: var(--color-accent);
+  border-radius: var(--radius);
+}
+
+.route-focus-target:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.route-focus-target:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: var(--space-0-5);
+}
