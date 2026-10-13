@@ -5,7 +5,7 @@ import { ItemIcon } from '../../components/PixelArt.tsx';
 import { companionPetStore } from '../../lib/companion-pet-store.ts';
 import { colorFor, companionPet } from '../../lib/item-rules.ts';
 import { ownedPetsQuery } from '../../lib/queries.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 
 export function PetCompanion({ userId }: { userId: string }) {
   const pets = useQuery(ownedPetsQuery(userId));
