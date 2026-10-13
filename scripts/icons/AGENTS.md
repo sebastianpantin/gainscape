@@ -9,11 +9,11 @@ Renders the pixel-art `LOGO` sprite from `web/src/components/pixel-sprites.ts` i
 
 ## Key Files
 
-| File        | Description                                                                                                                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `build.ts`  | CLI. `make icons` writes `web/public/icons/*` and `web/public/favicon.svg`; `make icons-check` (`--check`) compares pixel data and exits 1 listing stale files.                                   |
-| `render.ts` | `APP_ICONS` layouts (`icon-192.png`, `icon-512.png`, `maskable-512.png`, `apple-touch-icon-180.png`, `favicon-32.png`), `renderAppIcon`, `renderSprite`, `faviconSvg`, `spriteSvg`, `parseColor`. |
-| `png.ts`    | `encodePng`, `decodePng`, `readChunks`, `scanlines`, `samePixels`, `PNG_SIGNATURE`. Uses RGBA 8-bit, filter 0, deflate level 9.                                                                   |
+| File        | Description                                                                                                                                                                                                                                                                                                                             |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `build.ts`  | CLI. `make icons` writes `web/public/icons/*` and `web/public/favicon.svg`; `make icons-check` (`--check`) compares pixel data and exits 1 listing stale files.                                                                                                                                                                         |
+| `render.ts` | `APP_ICONS` layouts (`icon-192.png`, `icon-512.png`, `maskable-512.png`, `apple-touch-icon-180.png`, `favicon-32.png`, and the manifest shortcut icons `shortcut-program-192.png` and `shortcut-skills-192.png`, which set `sprite`; the others draw `LOGO`), `renderAppIcon`, `renderSprite`, `faviconSvg`, `spriteSvg`, `parseColor`. |
+| `png.ts`    | `encodePng`, `decodePng`, `readChunks`, `scanlines`, `samePixels`, `PNG_SIGNATURE`. Uses RGBA 8-bit, filter 0, deflate level 9.                                                                                                                                                                                                         |
 
 ## For AI Agents
 
