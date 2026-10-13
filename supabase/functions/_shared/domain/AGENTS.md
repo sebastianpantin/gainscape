@@ -51,12 +51,14 @@ Balance and versioning:
 - Bump `BALANCE_VERSION` whenever a change alters stored derived values (XP, RIR, e1RM, effective reps, records, bonuses). After a bump `replayFrom` in `../stores/replay.ts` answers `503 rebuild_required` for users with stale sessions until `make rebuild-caches` replays them (`ALL=1` replays every profile). Bump `LOOT_VERSION` when loot semantics change.
 - Changing `GEAR_SLOT_SKILLS`, `ITEM_TIERS` order, `gearBonusPercentAtFullTier`, `challengeBonusPercent`, `CHALLENGE_LOAD_STEP_KG` or what `judgeChallenge` counts changes replayed XP: bump `BALANCE_VERSION` and run `make rebuild-caches ALL=1`. Both percents must stay non-negative integers (`RangeError` otherwise).
 - `effortLevelRir` (easy 5, hard 3, near_failure 1, failure 0) is stored in `sets.effort_value`; changing it needs a data migration.
-- A challenge is judged only from its `sessions.challenge` snapshot (definition and e1RM taken at sync) and the replayed sets, never the live catalog. A set never meets a load percent without an e1RM in the snapshot; kg volume counts `weightKg × reps`, so bodyweight adds nothing. The judge floor rounds `'down'`; `'up'` exists only on `roundLoad` for the web challenge prefill and is not a `RoundingMode`.
+- A challenge is judged only from its `sessions.challenge` snapshot (definition and e1RM taken at sync) and the replayed sets, never the live catalog. A set never meets a load percent without an e1RM in the snapshot; kg volume counts `weightKg × reps`, so bodyweight adds nothing. The judge floor rounds `'down'`; `'up'` exists only on `roundLoad` for the web challenge prefill and is not a `RoundingMode`. An edit can flip the verdict; replaying a later session never changes an earlier one.
+- Feed event keys (`pr:<exerciseId>` for lifts, `pr:<setId>` for each cardio bout, level keys) are persisted identity: `syncSessionEvents` deletes events whose key is no longer produced and `reactions` cascade, so changing a key format drops friends' existing reactions on replay.
+- `xpPerEffectiveRep` is the main pacing lever: tune it first, then `make sim-check`.
 - `make sim-check` asserts the design bands in `scripts/balance/bands.ts` (for example 2 to 3 years to legs 99 for a balanced lifter); run it after any `balance.ts` change.
 
 Rules restated elsewhere (change both sides together):
 
-- `isPositionInSchedule` = SQL `private.is_valid_program_position`; `validateEnrollment` = `private.is_valid_enrollment`, and `MAX_REFERENCE_VALUE` (1000 kg, 2205 lb) = `private.max_program_reference`. SQL also requires bindings to be a UUID or null.
+- `isPositionInSchedule` = SQL `private.is_valid_program_position` (including the 520-week horizon, `MAX_PROGRAM_WEEKS`); `validateEnrollment` = `private.is_valid_enrollment`, and `MAX_REFERENCE_VALUE` (1000 kg, 2205 lb) = `private.max_program_reference`. SQL also requires bindings to be a UUID or null.
 - `CARDIO_BOUNDS`, `countedWorkSeconds`, `intervalDurationSeconds` = migration check `cardio_duration_within_bounds`; `HOLD_BOUNDS` = the hold checks of migration 044.
 - `strengthStateAt` = SQL `exercise_strength_state`.
 - `storableSnapshot` is the single snapshot rule for the server and the web cache.
