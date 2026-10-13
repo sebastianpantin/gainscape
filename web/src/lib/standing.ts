@@ -8,7 +8,7 @@ import {
 import { OFFLINE_SKILLS_NOTICE, type SavedStanding, standingCache } from '../offline/standing-cache.ts';
 import { fetchSkills, fetchSkillXp } from './catalog.ts';
 import { loadedState } from './query-state-rules.ts';
-import { deviceStorage } from './rest-timer-store.ts';
+import { deviceStorage } from './keyed-store.ts';
 import { type Standing, standingFrom } from './standing-rules.ts';
 
 async function fetchSavedStanding(userId: string): Promise<SavedStanding> {

@@ -1,6 +1,6 @@
 import { playTones, primeAudio, type Tone, vibrate } from './device-effects.ts';
 import type { Fanfare } from './item-rules.ts';
-import { deviceStorage } from './rest-timer-store.ts';
+import { deviceStorage } from './keyed-store.ts';
 import { celebrationCues } from './training-device-rules.ts';
 import { readTrainingDeviceSettings } from './training-device-store.ts';
 
