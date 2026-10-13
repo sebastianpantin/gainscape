@@ -3,7 +3,7 @@ import {
   DEFAULT_TRAINING_DEVICE_SETTINGS,
   holdsWakeLock,
   offersNotifyPrompt,
-  levelUpCues,
+  celebrationCues,
   parseTrainingDeviceSettings,
   restAlertActions,
   restAlertDelayMs,
@@ -147,14 +147,14 @@ describe('notification prompt', () => {
   });
 });
 
-describe('levelUpCues', () => {
+describe('celebrationCues', () => {
   it('vibrates and chimes with the default settings', () => {
-    expect(levelUpCues(DEFAULT_TRAINING_DEVICE_SETTINGS)).toEqual(['vibrate', 'sound']);
+    expect(celebrationCues(DEFAULT_TRAINING_DEVICE_SETTINGS)).toEqual(['vibrate', 'sound']);
   });
 
   it('follows the vibrate and sound switches and ignores notifications', () => {
     const quiet = { ...DEFAULT_TRAINING_DEVICE_SETTINGS, sound: false, notify: true };
-    expect(levelUpCues(quiet)).toEqual(['vibrate']);
-    expect(levelUpCues({ ...quiet, vibrate: false })).toEqual([]);
+    expect(celebrationCues(quiet)).toEqual(['vibrate']);
+    expect(celebrationCues({ ...quiet, vibrate: false })).toEqual([]);
   });
 });
