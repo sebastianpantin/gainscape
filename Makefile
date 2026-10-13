@@ -12,7 +12,7 @@ endif
 PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
 CI_EXCLUDED := studio,imgproxy,vector,logflare,postgres-meta,supavisor
 
-.PHONY: start ci-start ci-changes ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy changelog-unreleased test-integration test-db rebuild-caches sim sim-check e2e e2e-webkit e2e-pwa screenshots secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
+.PHONY: start ci-start ci-changes docs-check ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy changelog-unreleased test-integration test-db rebuild-caches sim sim-check e2e e2e-webkit e2e-pwa screenshots secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
 
 start:
 	$(SUPABASE) start
@@ -108,7 +108,7 @@ format:
 format-check:
 	npx prettier --check --ignore-unknown .
 
-check: format-check lint typecheck check-functions catalog-check icons-check secrets-scan
+check: format-check lint typecheck check-functions catalog-check icons-check docs-check secrets-scan
 
 hooks:
 	git config core.hooksPath .githooks
@@ -127,6 +127,9 @@ icons:
 
 icons-check:
 	node scripts/icons/build.ts --check
+
+docs-check:
+	node scripts/docs/agents-size.ts
 
 check-functions:
 	@for function_dir in supabase/functions/*/; do \
