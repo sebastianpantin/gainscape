@@ -1,3 +1,4 @@
+import { type DraftChannel } from './draft-session.ts';
 import { createLocalDraftStore, type DraftStore } from './draft-store.ts';
 
 export async function hasUnsyncedDraft(store: DraftStore, userId: string): Promise<boolean> {
@@ -9,9 +10,31 @@ export async function hasDraftOnDevice(store: DraftStore, storage: Storage | nul
   return storage !== null && hasUnsyncedDraft(createLocalDraftStore(storage), userId);
 }
 
-export async function forgetDraftOnDevice(store: DraftStore, storage: Storage | null, userId: string): Promise<void> {
-  await store.forget(userId);
-  if (storage !== null) await createLocalDraftStore(storage).forget(userId);
+async function announceForgottenDraft(
+  stores: DraftStore[],
+  userId: string,
+  channel: Pick<DraftChannel, 'postMessage'>,
+): Promise<void> {
+  const records = await Promise.all(stores.map((store) => store.get(userId).catch(() => null)));
+  for (const record of records)
+    if (record?.kind === 'forgotten')
+      channel.postMessage({
+        userId,
+        sessionId: record.forgottenSessionId,
+        updatedAt: record.updatedAt,
+        change: 'discarded',
+      });
+}
+
+export async function forgetDraftOnDevice(
+  store: DraftStore,
+  storage: Storage | null,
+  userId: string,
+  channel: Pick<DraftChannel, 'postMessage'> | null = null,
+): Promise<void> {
+  const stores = storage === null ? [store] : [store, createLocalDraftStore(storage)];
+  for (const each of stores) await each.forget(userId);
+  if (channel !== null) await announceForgottenDraft(stores, userId, channel);
 }
 
 export async function otherAccountDraftIds(

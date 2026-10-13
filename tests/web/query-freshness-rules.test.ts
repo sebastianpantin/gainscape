@@ -111,6 +111,11 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     );
   });
 
+  it('refreshes every query that holds account data after an account reset', () => {
+    const accountRoots = QUERY_ROOTS.filter((root) => !CATALOG_ROOTS.includes(root));
+    expect([...QUERY_ROOTS_CHANGED_BY['account-reset']].sort()).toEqual([...new Set(accountRoots)].sort());
+  });
+
   it('names only real query keys', () => {
     for (const roots of Object.values(QUERY_ROOTS_CHANGED_BY))
       for (const root of roots) expect(QUERY_ROOTS).toContain(root);
