@@ -1,3 +1,14 @@
+- prs: [109, 110, 111]
+  version: 0.8.0
+  date: 2026-10-13
+  title: A livelier app
+  items:
+    - Rare and legendary loot glows when you open the chest and plays its own fanfare. Crafting shows what you made with an anvil chime.
+    - Your workout XP counts up on the summary, and your Total and Combat levels count up on Today when they rise.
+    - Today greets you, shows the skill closest to its next level, warns when your weekly streak is at risk, and shows what your friends have been up to.
+    - Short messages confirm things like friend requests, saved changes and equipped gear, and screens fade in as you move between them.
+    - Skills has a Recovery map that shows which muscles are still recovering from your recent hard sets.
+    - Your newest pet follows you on Today. Pick a different one from its page in Items.
 - prs: [105, 107]
   version: 0.7.0
   date: 2026-10-13
