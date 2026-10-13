@@ -1,3 +1,9 @@
+- prs: [103]
+  version: 0.6.4
+  date: 2026-10-13
+  title: Numbers you can read at a glance
+  items:
+    - Titles, XP, levels and the rest timer use a new pixel font where every digit is easy to tell apart.
 - prs: [101]
   version: 0.6.3
   date: 2026-10-13
