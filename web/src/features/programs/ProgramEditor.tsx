@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchExercises } from '../../lib/catalog.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';

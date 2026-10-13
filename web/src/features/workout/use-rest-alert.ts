@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { RestTimer } from '../../lib/rest-timer-rules.ts';
-import { deviceStorage } from '../../lib/rest-timer-store.ts';
+import { deviceStorage } from '../../lib/keyed-store.ts';
 import { restAlertActions, restAlertDelayMs, restAlertIsFresh } from '../../lib/training-device-rules.ts';
 import { claimRestAlert, readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { notificationsAllowed, notifyRestOver, playRestSound, vibrateRestOver } from './rest-alert-effects.ts';

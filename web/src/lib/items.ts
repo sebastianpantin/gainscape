@@ -36,7 +36,7 @@ import { readCachedExercises } from './catalog-cache.ts';
 import { CHALLENGE_COLUMNS, type ChallengeRow, toCatalogChallenge } from './challenge-rules.ts';
 import { fetchStrengthState } from './collection-data.ts';
 import type { LoadoutView } from './gear-rules.ts';
-import { deviceStorage } from './rest-timer-store.ts';
+import { deviceStorage } from './keyed-store.ts';
 import { supabase } from './supabase.ts';
 
 export async function fetchItemCatalog(): Promise<ItemCatalog> {
