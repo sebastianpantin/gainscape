@@ -104,6 +104,12 @@ async function keptProfile(userId: string) {
   return row;
 }
 
+async function ownerPostsInFeedOf(viewer: TestUser): Promise<number> {
+  const { data, error } = await viewer.client.rpc('get_feed', {});
+  expect(error).toBeNull();
+  return (data as { user_id: string }[]).filter((post) => post.user_id === owner.id).length;
+}
+
 async function skillXp(userId: string) {
   return await db`select skill_id, xp from public.user_skills where user_id = ${userId} order by skill_id`;
 }
@@ -203,8 +209,11 @@ describe('reset_account_data', () => {
     wipedSessionIds = (await db`select id from public.sessions where user_id = ${owner.id}`).map((row) => row.id);
     const tombstonesBefore = ownerBefore.deleted_sessions;
 
+    expect(await ownerPostsInFeedOf(bystander)).toBeGreaterThan(0);
+
     const { error } = await owner.client.rpc('reset_account_data', { confirmation: 'RESET' });
     expect(error).toBeNull();
+    expect(await ownerPostsInFeedOf(bystander)).toBe(0);
 
     const ownerAfter = await userRowCounts(owner.id);
     for (const table of WIPED_TABLES.filter((name) => name in ownerAfter)) expect(ownerAfter[table], table).toBe(0);
