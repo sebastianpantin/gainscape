@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MODALITIES, type Skill } from '../lib/catalog-rules.ts';
+import { MODALITIES, type Skill } from '../lib/exercises/catalog-rules.ts';
 import { userCache } from './cache-first.ts';
 
 export const OFFLINE_SKILLS_NOTICE = 'Offline: using your saved skills.';

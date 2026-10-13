@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { deviceStorage } from '../../lib/keyed-store.ts';
-import { offersNotifyPrompt } from '../../lib/training-device-rules.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { offersNotifyPrompt } from '../../lib/workout/training-device-rules.ts';
 import {
   answerNotifyPrompt,
   notifyPromptAnswered,
   readTrainingDeviceSettings,
   saveTrainingDeviceSettings,
-} from '../../lib/training-device-store.ts';
+} from '../../lib/workout/training-device-store.ts';
 import { runsStandalone } from '../../pwa/install.ts';
 import { askToNotify, notificationPermission } from './rest-alert-effects.ts';
 

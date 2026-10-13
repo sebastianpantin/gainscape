@@ -14,7 +14,7 @@ import {
   signOutOnThisDevice,
   signOutSettled,
   storedSessionFrom,
-} from '../../web/src/lib/auth-restore.ts';
+} from '../../web/src/lib/platform/auth-restore.ts';
 
 const nowInSeconds = () => Math.floor(Date.now() / 1000);
 

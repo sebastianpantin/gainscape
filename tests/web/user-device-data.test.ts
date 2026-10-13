@@ -4,32 +4,32 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHUNK_RELOAD_KEY } from '../../web/src/pwa/chunk-reload.ts';
 import { rememberLastSummary } from '../../web/src/features/summary/last-summary.ts';
-import { saveCachedExercises } from '../../web/src/lib/catalog-cache.ts';
-import { type Exercise } from '../../web/src/lib/catalog-rules.ts';
-import { saveCachedExerciseNotes } from '../../web/src/lib/exercise-note-cache.ts';
-import { saveLastSeenRelease } from '../../web/src/lib/last-seen-release-store.ts';
-import { saveOnboardingDone } from '../../web/src/lib/onboarding-store.ts';
-import { parsePlateSettings } from '../../web/src/lib/plate-rules.ts';
-import { savePlateSettings } from '../../web/src/lib/plate-settings-store.ts';
-import { cachePreferences } from '../../web/src/lib/preferences.ts';
-import { type Profile } from '../../web/src/lib/profile-rules.ts';
-import { dismissSummary } from '../../web/src/lib/program-summary-store.ts';
-import { parseRestState } from '../../web/src/lib/rest-timer-rules.ts';
-import { saveRestState } from '../../web/src/lib/rest-timer-store.ts';
-import { saveSessionBaseline } from '../../web/src/lib/session-baseline-store.ts';
-import { parseTrainingDeviceSettings } from '../../web/src/lib/training-device-rules.ts';
+import { saveCachedExercises } from '../../web/src/lib/exercises/catalog-cache.ts';
+import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import { saveCachedExerciseNotes } from '../../web/src/lib/exercises/exercise-note-cache.ts';
+import { saveLastSeenRelease } from '../../web/src/lib/platform/last-seen-release-store.ts';
+import { saveOnboardingDone } from '../../web/src/lib/profile/onboarding-store.ts';
+import { parsePlateSettings } from '../../web/src/lib/workout/plate-rules.ts';
+import { savePlateSettings } from '../../web/src/lib/workout/plate-settings-store.ts';
+import { cachePreferences } from '../../web/src/lib/profile/preferences.ts';
+import { type Profile } from '../../web/src/lib/profile/profile-rules.ts';
+import { dismissSummary } from '../../web/src/lib/programs/program-summary-store.ts';
+import { parseRestState } from '../../web/src/lib/workout/rest-timer-rules.ts';
+import { saveRestState } from '../../web/src/lib/workout/rest-timer-store.ts';
+import { saveSessionBaseline } from '../../web/src/lib/workout/session-baseline-store.ts';
+import { parseTrainingDeviceSettings } from '../../web/src/lib/workout/training-device-rules.ts';
 import {
   answerNotifyPrompt,
   claimRestAlert,
   saveTrainingDeviceSettings,
-} from '../../web/src/lib/training-device-store.ts';
+} from '../../web/src/lib/workout/training-device-store.ts';
 import { collectionCache, type SavedCollection } from '../../web/src/offline/collection-cache.ts';
 import { createLocalDraftStore, fallbackKeyFor, readFallbackRecord } from '../../web/src/offline/draft-store.ts';
 import { type ItemsCache, saveItemsCache } from '../../web/src/offline/items-cache.ts';
 import { profileCache } from '../../web/src/offline/profile-cache.ts';
 import { EMPTY_PROGRAM_CACHE, saveProgramCache } from '../../web/src/offline/program-cache.ts';
 import { programListCache } from '../../web/src/offline/program-list-cache.ts';
-import { companionPetStore } from '../../web/src/lib/companion-pet-store.ts';
+import { companionPetStore } from '../../web/src/lib/collection/companion-pet-store.ts';
 import { seenLevelsCache } from '../../web/src/offline/seen-levels-cache.ts';
 import { standingCache } from '../../web/src/offline/standing-cache.ts';
 import { forgetUserDeviceData, forgetUserProgressData } from '../../web/src/offline/user-device-data.ts';

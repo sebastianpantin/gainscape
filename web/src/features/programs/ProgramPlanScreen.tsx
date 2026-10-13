@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { readCachedExercises } from '../../lib/catalog-cache.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { type PlanDay, planStatusText, programPlan } from '../../lib/program-plan-rules.ts';
-import { exerciseListQuery } from '../../lib/queries.ts';
+import { readCachedExercises } from '../../lib/exercises/catalog-cache.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { type PlanDay, planStatusText, programPlan } from '../../lib/programs/program-plan-rules.ts';
+import { exerciseListQuery } from '../../lib/query/queries.ts';
 import { PrescriptionCards } from './PrescriptionCards.tsx';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';

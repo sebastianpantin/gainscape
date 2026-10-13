@@ -5,7 +5,7 @@ import {
   CARDIO_EFFORT_LABELS,
   EFFORT_LEVEL_LABELS,
   effortLabel,
-} from '../../web/src/lib/effort-labels.ts';
+} from '../../web/src/lib/workout/effort-labels.ts';
 
 describe('effortLabel', () => {
   it('labels stored effort', () => {

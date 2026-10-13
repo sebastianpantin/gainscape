@@ -4,17 +4,17 @@ import { MAX_SETS_PER_SESSION } from '@domain/index.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
-import { BOUTS_FULL_TEXT } from '../../lib/cardio-rules.ts';
-import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
-import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-rules.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { useStanding } from '../../lib/standing.ts';
-import { stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
-import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
-import { barbellPlates, barbellPlatesText } from '../../lib/plate-rules.ts';
-import { readPlateSettings } from '../../lib/plate-settings-store.ts';
-import { useIsOffline, useOnlineSignal } from '../../lib/use-online.ts';
+import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
+import { type Exercise, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import { firstSetFromLastSession, lastTimeText } from '../../lib/history/last-session-rules.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { useStanding } from '../../lib/progress/standing.ts';
+import { stopsRestForWarmup } from '../../lib/workout/rest-timer-rules.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { readTrainingDeviceSettings } from '../../lib/workout/training-device-store.ts';
+import { barbellPlates, barbellPlatesText } from '../../lib/workout/plate-rules.ts';
+import { readPlateSettings } from '../../lib/workout/plate-settings-store.ts';
+import { useIsOffline, useOnlineSignal } from '../../lib/platform/use-online.ts';
 import { formatXp } from '../../lib/format.ts';
 import { shownWeight } from '../../lib/units.ts';
 import {
@@ -41,8 +41,19 @@ import {
   type WorkoutDraft,
   type DraftExercise,
 } from '../../offline/draft-format.ts';
-import { addableExercises, canAddSetTo, removeSet, roomForSets, updateSet } from '../../lib/exercise-edit-rules.ts';
-import { barbellSetupFor, draftBar, programSetMarkers, programSetMarkerTexts } from '../../lib/program-set-rules.ts';
+import {
+  addableExercises,
+  canAddSetTo,
+  removeSet,
+  roomForSets,
+  updateSet,
+} from '../../lib/workout/exercise-edit-rules.ts';
+import {
+  barbellSetupFor,
+  draftBar,
+  programSetMarkers,
+  programSetMarkerTexts,
+} from '../../lib/programs/program-set-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import {
   addRound,
@@ -52,7 +63,7 @@ import {
   roundRows,
   supersetGroups,
   ungroup,
-} from '../../lib/superset-rules.ts';
+} from '../../lib/workout/superset-rules.ts';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { useOnboarding } from '../onboarding/use-onboarding.ts';
@@ -110,7 +121,7 @@ import {
   loadTypeChangedText,
   WAITING_DRAFT_TEXT,
 } from './workout-rules.ts';
-import { vibrate } from '../../lib/device-effects.ts';
+import { vibrate } from '../../lib/platform/device-effects.ts';
 import { becomesRecord, previewRecords } from './record-preview.ts';
 import { feedbackLabel, setFeedback } from './set-feedback-rules.ts';
 import { donePreviewTotal, previewSession } from './xp-preview.ts';

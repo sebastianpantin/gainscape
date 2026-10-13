@@ -1,4 +1,9 @@
-import { goalFromChoice, goalSettingHint, goalToChoice, WEEKLY_GOAL_CHOICES } from '../../../lib/weekly-goal-rules.ts';
+import {
+  goalFromChoice,
+  goalSettingHint,
+  goalToChoice,
+  WEEKLY_GOAL_CHOICES,
+} from '../../../lib/progress/weekly-goal-rules.ts';
 import { Choice } from './Choice.tsx';
 import { useWeeklyGoalSetting } from './use-weekly-goal-setting.ts';
 

@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
-import { type UnitPref } from '../../lib/profile.ts';
-import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
+import { type UnitPref } from '../../lib/profile/profile.ts';
+import { RATE_LIMITED_CODE } from '../../lib/platform/rate-limit.ts';
 import { type FinishStatus } from '../../offline/finish-retries.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { rejectionText, stalledSyncText, syncProblemText } from './workout-rules.ts';

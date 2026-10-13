@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { type Position } from '@domain/index.ts';
-import { fetchExercises } from '../../lib/catalog.ts';
-import { type Exercise } from '../../lib/catalog-rules.ts';
-import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program-enrollment.ts';
-import { skipDayEvent } from '../../lib/program-skip-rules.ts';
-import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs.ts';
+import { fetchExercises } from '../../lib/exercises/catalog.ts';
+import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
+import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/programs/program-enrollment.ts';
+import { skipDayEvent } from '../../lib/programs/program-skip-rules.ts';
+import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs/programs.ts';
 import {
   type PrescribedDayStart,
   startDraft,

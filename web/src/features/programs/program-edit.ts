@@ -1,12 +1,12 @@
-import { type Exercise, isLiftExercise, type LiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
+import { type Exercise, isLiftExercise, type LiftExercise, type LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
-import type { UnitPref } from '../../lib/profile-rules.ts';
-import type { Program, ProgramDoc } from '../../lib/programs.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
+import type { Program, ProgramDoc } from '../../lib/programs/programs.ts';
 import { moved } from '../../lib/reorder.ts';
 import { KG_PER_LB } from '../../lib/units.ts';
 import { roundTo } from '@domain/math.ts';
 import type { PlannedExercise, ProgressionKind } from '../../offline/draft-format.ts';
-import { updateExerciseAt } from '../../lib/exercise-edit-rules.ts';
+import { updateExerciseAt } from '../../lib/workout/exercise-edit-rules.ts';
 
 type EditorDay = ProgramDoc['days'][number];
 

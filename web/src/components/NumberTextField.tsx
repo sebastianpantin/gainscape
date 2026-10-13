@@ -7,7 +7,7 @@ import {
   steppedFieldValue,
   typedNumberChange,
   type TypedNumberText,
-} from '../lib/number-field-rules.ts';
+} from '../lib/ui/number-field-rules.ts';
 
 interface NumberTextFieldProps {
   label: ReactNode;

@@ -1,6 +1,6 @@
 import type { SessionSummary } from '@domain/types.ts';
-import type { RememberedTiming } from '../../lib/session-timing-rules.ts';
-import { parsedDraftChallenge } from '../../lib/challenge-rules.ts';
+import type { RememberedTiming } from '../../lib/workout/session-timing-rules.ts';
+import { parsedDraftChallenge } from '../../lib/collection/challenge-rules.ts';
 import type { DraftChallenge } from '../../offline/draft-format.ts';
 
 export interface PlannedChallenge {

@@ -1,6 +1,6 @@
 import { onlineManager } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createQueryClient } from '../../web/src/lib/query-client.ts';
+import { createQueryClient } from '../../web/src/lib/query/query-client.ts';
 
 const KEY = ['probe'];
 

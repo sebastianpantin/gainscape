@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chartLayout, chartSummary, niceTicks } from '../../web/src/lib/line-chart-rules.ts';
+import { chartLayout, chartSummary, niceTicks } from '../../web/src/lib/ui/line-chart-rules.ts';
 
 const FRAME = { width: 200, height: 100, left: 20, right: 10, top: 10, bottom: 20 };
 

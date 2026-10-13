@@ -11,7 +11,7 @@ import {
   challengeSummaryText,
   exercisesWithoutE1rm,
   missingE1rmText,
-} from '../../lib/challenge-rules.ts';
+} from '../../lib/collection/challenge-rules.ts';
 import {
   type CatalogItem,
   colorFor,
@@ -29,14 +29,14 @@ import {
   quantities,
   showsQuantity,
   tiersOf,
-} from '../../lib/item-rules.ts';
+} from '../../lib/collection/item-rules.ts';
 import {
   celebrate,
   CRAFTED_CELEBRATION,
   FANFARE_CELEBRATIONS,
   primeCelebrationAudio,
-} from '../../lib/celebration-effects.ts';
-import { companionPetStore } from '../../lib/companion-pet-store.ts';
+} from '../../lib/platform/celebration-effects.ts';
+import { companionPetStore } from '../../lib/collection/companion-pet-store.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import {
   craftItem,
@@ -45,19 +45,19 @@ import {
   fetchItemCatalog,
   type LoadedItems,
   unequipGear,
-} from '../../lib/items.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
+} from '../../lib/collection/items.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { startDraftFromChallenge } from '../../offline/draft-format.ts';
 import { type ChallengeExerciseEntry, OFFLINE_ITEMS_NOTICE, updateItemsCache } from '../../offline/items-cache.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { useLoadout } from '../profile/use-loadout.ts';
-import { announceDataChange } from '../../lib/data-changes.ts';
-import { itemsQuery } from '../../lib/queries.ts';
-import { useToast } from '../../lib/toast.ts';
-import { loadedState } from '../../lib/query-state-rules.ts';
+import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { itemsQuery } from '../../lib/query/queries.ts';
+import { useToast } from '../../lib/ui/toast.ts';
+import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { recallLastSummary } from '../summary/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';

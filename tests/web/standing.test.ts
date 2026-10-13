@@ -1,7 +1,7 @@
 import { combatLevel, levelForXp, xpForLevel } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
-import type { Skill } from '../../web/src/lib/catalog-rules.ts';
-import { monogramFor, standingFrom } from '../../web/src/lib/standing-rules.ts';
+import type { Skill } from '../../web/src/lib/exercises/catalog-rules.ts';
+import { monogramFor, standingFrom } from '../../web/src/lib/progress/standing-rules.ts';
 
 const skills: Skill[] = [
   { id: 'chest-id', key: 'chest', name: 'Chest', sortOrder: 1, combatWeight: 1, modality: 'lift' },

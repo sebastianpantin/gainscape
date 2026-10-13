@@ -7,11 +7,11 @@ import {
   type RestState,
   type RestTimer,
   startRest,
-} from '../../lib/rest-timer-rules.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
-import { readRestState, restStateKey, saveRestState } from '../../lib/rest-timer-store.ts';
-import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
-import { primeAudio } from '../../lib/device-effects.ts';
+} from '../../lib/workout/rest-timer-rules.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { readRestState, restStateKey, saveRestState } from '../../lib/workout/rest-timer-store.ts';
+import { readTrainingDeviceSettings } from '../../lib/workout/training-device-store.ts';
+import { primeAudio } from '../../lib/platform/device-effects.ts';
 
 export interface RestTimerControls {
   timer: RestTimer | null;

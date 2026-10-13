@@ -7,7 +7,7 @@ import {
   ownPrograms,
   type Program,
   type ProgramDay,
-} from '../../lib/programs.ts';
+} from '../../lib/programs/programs.ts';
 import { programLabelFor } from '../../offline/draft-format.ts';
 
 interface ProgramDayStartsProps {

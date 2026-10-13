@@ -1,4 +1,4 @@
-import { type ChartFrame, chartLayout, type ChartSeries, chartSummary } from '../lib/line-chart-rules.ts';
+import { type ChartFrame, chartLayout, type ChartSeries, chartSummary } from '../lib/ui/line-chart-rules.ts';
 
 interface LineChartProps {
   title: string;

@@ -21,7 +21,7 @@ import {
   latestBirthYear,
   nextTimezoneChangeAt,
   trainingSinceProblem,
-} from '../../web/src/lib/profile-rules.ts';
+} from '../../web/src/lib/profile/profile-rules.ts';
 
 const now = new Date('2026-09-30T12:00:00Z');
 

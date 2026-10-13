@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
-import { fetchWeeklyGoalStatus } from '../../lib/weekly-goal.ts';
+import { fetchWeeklyGoalStatus } from '../../lib/progress/weekly-goal.ts';
 import { streakRiskText } from './today-rules.ts';
-import { streakText, type WeeklyGoalStatus, weekProgressText } from '../../lib/weekly-goal-rules.ts';
+import { streakText, type WeeklyGoalStatus, weekProgressText } from '../../lib/progress/weekly-goal-rules.ts';
 
 export function WeeklyGoalCard() {
   const headingId = useId();

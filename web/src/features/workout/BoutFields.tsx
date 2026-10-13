@@ -1,17 +1,17 @@
 import { roundTo } from '@domain/math.ts';
 import { CARDIO_BOUNDS, SECONDS_PER_MINUTE } from '@domain/cardio.ts';
 import { useState } from 'react';
-import type { PaceUnit } from '../../lib/catalog-rules.ts';
+import type { PaceUnit } from '../../lib/exercises/catalog-rules.ts';
 import {
   type BoutMode,
   boutModeChanges,
   clampedInterval,
   clampedSteadyDurationS,
   distanceFromInput,
-} from '../../lib/cardio-rules.ts';
-import type { UnitPref } from '../../lib/profile.ts';
+} from '../../lib/workout/cardio-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile.ts';
 import { distanceInputStep, distanceUnitFor, shownDistance } from '../../lib/units.ts';
-import type { BoutValues } from '../../lib/exercise-edit-rules.ts';
+import type { BoutValues } from '../../lib/workout/exercise-edit-rules.ts';
 
 const SHOWN_MINUTE_DECIMALS = 1;
 

@@ -1,9 +1,9 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { type ProgramFact } from '@domain/index.ts';
-import { type ProgramTemplateRow } from '../../web/src/lib/program-enroll-rules.ts';
-import { type EnrollmentRow } from '../../web/src/lib/program-facts-rules.ts';
-import { activeProgram } from '../../web/src/lib/program-today-rules.ts';
+import { type ProgramTemplateRow } from '../../web/src/lib/programs/program-enroll-rules.ts';
+import { type EnrollmentRow } from '../../web/src/lib/programs/program-facts-rules.ts';
+import { activeProgram } from '../../web/src/lib/programs/program-today-rules.ts';
 import { factClock, sessionFact } from '../domain/program-fixtures/facts.ts';
 import { MADCOW_5X5, madcowDaySets, MADCOW_EXERCISES, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
 

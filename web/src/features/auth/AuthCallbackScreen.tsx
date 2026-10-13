@@ -9,11 +9,11 @@ import {
   passwordProblem,
   USERNAME_HINT,
   USERNAME_PATTERN,
-} from '../../lib/auth-links.ts';
-import { announceDataChange } from '../../lib/data-changes.ts';
-import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/rate-limit.ts';
-import { signOutSettled } from '../../lib/auth-restore.ts';
-import { supabase } from '../../lib/supabase.ts';
+} from '../../lib/platform/auth-links.ts';
+import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/platform/rate-limit.ts';
+import { signOutSettled } from '../../lib/platform/auth-restore.ts';
+import { supabase } from '../../lib/platform/supabase.ts';
 
 type Step =
   | { kind: 'verifying' }

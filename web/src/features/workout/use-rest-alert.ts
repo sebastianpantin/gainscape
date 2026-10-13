@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import type { RestTimer } from '../../lib/rest-timer-rules.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
-import { restAlertActions, restAlertDelayMs, restAlertIsFresh } from '../../lib/training-device-rules.ts';
-import { claimRestAlert, readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
+import type { RestTimer } from '../../lib/workout/rest-timer-rules.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { restAlertActions, restAlertDelayMs, restAlertIsFresh } from '../../lib/workout/training-device-rules.ts';
+import { claimRestAlert, readTrainingDeviceSettings } from '../../lib/workout/training-device-store.ts';
 import { notificationsAllowed, notifyRestOver, playRestSound, vibrateRestOver } from './rest-alert-effects.ts';
 
 const REST_ALERT_LOCK = 'gainscape.rest-alert';

@@ -1,6 +1,6 @@
 import { measuresRepsCapacity } from '@domain/types.ts';
-import type { LoadType } from '../../lib/catalog-rules.ts';
-import type { UnitPref } from '../../lib/profile-rules.ts';
+import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import { slotClass, slotLabel, slotText } from './record-slots.ts';
 
 interface RecordSlotsProps {

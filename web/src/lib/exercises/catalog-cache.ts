@@ -1,0 +1,147 @@
+import { CARDIO_EFFORT_LEVELS } from '@domain/types.ts';
+import { z } from 'zod';
+import { isNetworkError, OFFLINE_PROBLEM } from '../../offline/cache-first.ts';
+import { activeExercises, type Exercise, LOAD_TYPES, PACE_UNITS } from './catalog-rules.ts';
+
+const CACHE_VERSION = 3;
+const CACHE_KEY_PREFIX = 'gainscape.exercises.v3.';
+const RETIRED_CACHE_KEY_PREFIXES = ['gainscape.exercises.v1.', 'gainscape.exercises.v2.'];
+
+export const OFFLINE_EXERCISES_NOTICE = 'Offline: using your saved exercise list.';
+export const SAVED_EXERCISES_NOTICE = 'Using your saved exercise list.';
+export const OFFLINE_EXERCISES_WITHOUT_SKILLS_NOTICE =
+  'Offline: using your saved exercise list. Skills load once you are back online.';
+
+const cachedExerciseBase = {
+  id: z.string(),
+  key: z.string().nullable().optional(),
+  name: z.string(),
+  equipment: z.string(),
+  custom: z.boolean(),
+  archived: z.boolean(),
+  skillShares: z
+    .array(z.object({ skillKey: z.string(), skillName: z.string(), shareBasisPoints: z.number() }))
+    .default([]),
+};
+
+export const cachedExerciseSchema = z.discriminatedUnion('modality', [
+  z.object({
+    ...cachedExerciseBase,
+    modality: z.literal('lift'),
+    loadType: z.enum(LOAD_TYPES),
+    compound: z.boolean().optional(),
+    measure: z.enum(['time', 'distance']).optional(),
+  }),
+  z.object({
+    ...cachedExerciseBase,
+    modality: z.literal('cardio'),
+    activity: z.object({
+      paceUnit: z.enum(PACE_UNITS),
+      referencePaceSPerKm: z.number().nullable(),
+      maxEffort: z.enum(CARDIO_EFFORT_LEVELS),
+      tracksDistance: z.boolean().default(true),
+      shares: z.array(z.object({ skillKey: z.string(), shareBasisPoints: z.number() })),
+    }),
+  }),
+]);
+
+const cachedExercisesSchema = z.object({
+  v: z.literal(CACHE_VERSION),
+  savedAt: z.string(),
+  userId: z.string(),
+  exercises: z.array(cachedExerciseSchema),
+});
+
+export function exerciseCacheKey(userId: string): string {
+  return `${CACHE_KEY_PREFIX}${userId}`;
+}
+
+export function readCachedExercises(storage: Storage, userId: string): Exercise[] | null {
+  try {
+    const raw = storage.getItem(exerciseCacheKey(userId));
+    if (!raw) return null;
+    const parsed = cachedExercisesSchema.safeParse(JSON.parse(raw));
+    if (!parsed.success || parsed.data.userId !== userId) return null;
+    return parsed.data.exercises;
+  } catch {
+    return null;
+  }
+}
+
+export function cachedExerciseFields(exercise: Exercise): Exercise {
+  const { id, key, name, equipment, custom, archived, skillShares } = exercise;
+  const base = { id, key, name, equipment, custom, archived, skillShares };
+  return exercise.modality === 'lift'
+    ? {
+        ...base,
+        modality: 'lift',
+        loadType: exercise.loadType,
+        compound: exercise.compound,
+        ...(exercise.measure === undefined ? {} : { measure: exercise.measure }),
+      }
+    : { ...base, modality: 'cardio', activity: exercise.activity };
+}
+
+export function saveCachedExercises(storage: Storage, userId: string, exercises: Exercise[]): void {
+  const record = {
+    v: CACHE_VERSION,
+    savedAt: new Date().toISOString(),
+    userId,
+    exercises: exercises.map(cachedExerciseFields),
+  };
+  try {
+    for (const prefix of RETIRED_CACHE_KEY_PREFIXES) storage.removeItem(`${prefix}${userId}`);
+    storage.setItem(exerciseCacheKey(userId), JSON.stringify(record));
+  } catch {
+    return;
+  }
+}
+
+export function forgetCachedExercises(storage: Storage, userId: string): void {
+  try {
+    for (const prefix of RETIRED_CACHE_KEY_PREFIXES) storage.removeItem(`${prefix}${userId}`);
+    storage.removeItem(exerciseCacheKey(userId));
+  } catch {
+    return;
+  }
+}
+
+export interface ExerciseList {
+  exercises: Exercise[];
+  notice: string | null;
+  problem: string | null;
+}
+
+export async function loadExercisesCacheFirst(
+  storage: Storage,
+  userId: string,
+  fetchAll: () => Promise<Exercise[]>,
+  show: (list: ExerciseList) => void,
+  isOffline: () => boolean = () => false,
+): Promise<void> {
+  const cached = readCachedExercises(storage, userId);
+  if (isOffline()) {
+    show(
+      cached
+        ? { exercises: activeExercises(cached), notice: OFFLINE_EXERCISES_NOTICE, problem: null }
+        : { exercises: [], notice: null, problem: OFFLINE_PROBLEM },
+    );
+    return;
+  }
+  if (cached) show({ exercises: activeExercises(cached), notice: null, problem: null });
+  try {
+    const all = await fetchAll();
+    saveCachedExercises(storage, userId, all);
+    show({ exercises: activeExercises(all), notice: null, problem: null });
+  } catch (error) {
+    show(
+      cached
+        ? {
+            exercises: activeExercises(cached),
+            notice: isOffline() || isNetworkError(error) ? OFFLINE_EXERCISES_NOTICE : SAVED_EXERCISES_NOTICE,
+            problem: null,
+          }
+        : { exercises: [], notice: null, problem: (error as Error).message },
+    );
+  }
+}

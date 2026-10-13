@@ -4,7 +4,7 @@ import {
   onboardingKey,
   readOnboarding,
   saveOnboardingDone,
-} from '../../web/src/lib/onboarding-store.ts';
+} from '../../web/src/lib/profile/onboarding-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 function blocked(): never {

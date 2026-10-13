@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { templateListEntries } from '../../lib/program-enroll-rules.ts';
-import { programTemplatesQuery } from '../../lib/queries.ts';
+import { templateListEntries } from '../../lib/programs/program-enroll-rules.ts';
+import { programTemplatesQuery } from '../../lib/query/queries.ts';
 import { readProgramCache } from '../../offline/program-cache.ts';
 
 interface PowerliftingProgramsProps {

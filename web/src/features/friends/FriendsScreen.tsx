@@ -1,11 +1,11 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { usePreferences } from '../../lib/preferences.ts';
-import { initialsFor } from '../../lib/profile.ts';
-import { feedQuery, friendsQuery } from '../../lib/queries.ts';
-import { useToast } from '../../lib/toast.ts';
-import { removeFriend, respondToFriendRequest, sendFriendRequest, setGz } from '../../lib/social.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { initialsFor } from '../../lib/profile/profile.ts';
+import { feedQuery, friendsQuery } from '../../lib/query/queries.ts';
+import { useToast } from '../../lib/ui/toast.ts';
+import { removeFriend, respondToFriendRequest, sendFriendRequest, setGz } from '../../lib/social/social.ts';
 import {
   type FeedItem,
   feedBadge,
@@ -16,12 +16,12 @@ import {
   requestedUsername,
   sendRequestText,
   socialErrorMessage,
-} from '../../lib/social-rules.ts';
+} from '../../lib/social/social-rules.ts';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProfileBadge } from '../profile/ProfileCard.tsx';
 import { FriendsTabs } from './FriendsTabs.tsx';
 import { messageOf } from '../../lib/error-text.ts';
-import { loadedState } from '../../lib/query-state-rules.ts';
+import { loadedState } from '../../lib/query/query-state-rules.ts';
 
 const REQUEST_BADGE_SIZE = 36;
 const GONE_POST = socialErrorMessage({ message: 'event_not_found' });

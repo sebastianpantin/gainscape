@@ -7,7 +7,7 @@ const server = vi.hoisted(() => ({
   rpcArgs: [] as unknown[],
 }));
 
-vi.mock('../../web/src/lib/supabase.ts', () => {
+vi.mock('../../web/src/lib/platform/supabase.ts', () => {
   function query(table: string) {
     let single = false;
     const builder: Record<string, unknown> = {};
@@ -36,16 +36,16 @@ vi.mock('../../web/src/lib/supabase.ts', () => {
   };
 });
 
-const { loadProfileCacheFirst, fetchProfile } = await import('../../web/src/lib/profile.ts');
-const { fetchPrograms, deleteProgram, saveProgram } = await import('../../web/src/lib/programs.ts');
-const { loadStanding } = await import('../../web/src/lib/standing.ts');
-const { loadCollectionCacheFirst } = await import('../../web/src/lib/collection-data.ts');
+const { loadProfileCacheFirst, fetchProfile } = await import('../../web/src/lib/profile/profile.ts');
+const { fetchPrograms, deleteProgram, saveProgram } = await import('../../web/src/lib/programs/programs.ts');
+const { loadStanding } = await import('../../web/src/lib/progress/standing.ts');
+const { loadCollectionCacheFirst } = await import('../../web/src/lib/collection/collection-data.ts');
 const { profileCache } = await import('../../web/src/offline/profile-cache.ts');
 const { programListCache } = await import('../../web/src/offline/program-list-cache.ts');
 const { standingCache } = await import('../../web/src/offline/standing-cache.ts');
 const { collectionCache } = await import('../../web/src/offline/collection-cache.ts');
-const { loadItemsCacheFirst } = await import('../../web/src/lib/items.ts');
-const { loadProgramTemplatesCacheFirst } = await import('../../web/src/lib/program-enrollment.ts');
+const { loadItemsCacheFirst } = await import('../../web/src/lib/collection/items.ts');
+const { loadProgramTemplatesCacheFirst } = await import('../../web/src/lib/programs/program-enrollment.ts');
 const { readItemsCache } = await import('../../web/src/offline/items-cache.ts');
 const { readProgramCache } = await import('../../web/src/offline/program-cache.ts');
 

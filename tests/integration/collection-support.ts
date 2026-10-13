@@ -1,6 +1,10 @@
 import { expect } from 'vitest';
-import { EXERCISE_COLUMNS, type ExerciseRow, toExercise } from '../../web/src/lib/catalog-rules.ts';
-import { COLLECTION_COLUMNS, collectionDataFrom, countCollection } from '../../web/src/lib/collection-rules.ts';
+import { EXERCISE_COLUMNS, type ExerciseRow, toExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import {
+  COLLECTION_COLUMNS,
+  collectionDataFrom,
+  countCollection,
+} from '../../web/src/lib/collection/collection-rules.ts';
 import type { TestUser } from './local-stack.ts';
 
 async function visibleExercises(user: TestUser) {

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { hiscoresQuery, skillsQuery } from '../../lib/queries.ts';
-import { loadedState } from '../../lib/query-state-rules.ts';
-import { type HiscoreMetric, rankHiscores, skillMetric } from '../../lib/social-rules.ts';
+import { hiscoresQuery, skillsQuery } from '../../lib/query/queries.ts';
+import { loadedState } from '../../lib/query/query-state-rules.ts';
+import { type HiscoreMetric, rankHiscores, skillMetric } from '../../lib/social/social-rules.ts';
 import { FriendsTabs } from './FriendsTabs.tsx';
 
 export function HiscoresScreen() {

@@ -1,5 +1,5 @@
 import { type ReactNode, type RefObject, useEffect, useState } from 'react';
-import { REST_STEP_S, restClock, restLeftFraction, restView } from '../../lib/rest-timer-rules.ts';
+import { REST_STEP_S, restClock, restLeftFraction, restView } from '../../lib/workout/rest-timer-rules.ts';
 import type { RestTimerControls } from './use-rest-timer.ts';
 
 const TICK_MS = 250;

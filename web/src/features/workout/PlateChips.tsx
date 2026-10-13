@@ -1,5 +1,5 @@
-import { plateLook } from '../../lib/plate-rules.ts';
-import type { UnitPref } from '../../lib/profile-rules.ts';
+import { plateLook } from '../../lib/workout/plate-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 
 interface PlateChipsProps {
   plates: readonly number[];

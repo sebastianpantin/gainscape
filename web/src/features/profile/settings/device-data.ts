@@ -1,6 +1,6 @@
 import { type NavigateFunction } from 'react-router-dom';
-import { openChannel } from '../../../lib/channel.ts';
-import { deviceStorage } from '../../../lib/keyed-store.ts';
+import { openChannel } from '../../../lib/platform/channel.ts';
+import { deviceStorage } from '../../../lib/platform/keyed-store.ts';
 import { openDraftStoreOrFallback } from '../../../offline/draft-boot.ts';
 import { DRAFT_CHANNEL_NAME } from '../../../offline/draft-session.ts';
 import { hasDraftOnDevice } from '../../../offline/local-drafts.ts';

@@ -1,6 +1,6 @@
-import { invokeAsOwner } from '../lib/function-client.ts';
-import { forceSignedOut, REQUEST_TIMEOUT_MS, signOutOnThisDevice } from '../lib/auth-restore.ts';
-import { AUTH_STORAGE_KEY, readStoredSession, supabase } from '../lib/supabase.ts';
+import { invokeAsOwner } from '../lib/platform/function-client.ts';
+import { forceSignedOut, REQUEST_TIMEOUT_MS, signOutOnThisDevice } from '../lib/platform/auth-restore.ts';
+import { AUTH_STORAGE_KEY, readStoredSession, supabase } from '../lib/platform/supabase.ts';
 import type { WorkoutDraft } from './draft-format.ts';
 import { type CompletedSessionSummary, type SendOutcome, sendOutcomeFrom } from './finish-lock.ts';
 import { spendCachedScroll } from './items-cache.ts';

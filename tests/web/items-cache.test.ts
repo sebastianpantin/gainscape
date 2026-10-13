@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Exercise } from '../../web/src/lib/catalog-rules.ts';
+import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   forgetItemsCache,
   type ItemsCache,

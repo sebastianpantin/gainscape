@@ -33,7 +33,7 @@ const JARGON_HELP_FILES = [
   'tests/web/glossary.test.ts',
   'web/src/components/TermHelp.tsx',
   'web/src/features/workout/WorkoutScreen.tsx',
-  'web/src/lib/glossary.ts',
+  'web/src/lib/ui/glossary.ts',
   'web/src/styles/app.css',
 ];
 

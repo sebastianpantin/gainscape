@@ -1,5 +1,5 @@
-import type { Modality } from '../../lib/catalog-rules.ts';
-import type { SkillShare } from '../../lib/custom-exercises.ts';
+import type { Modality } from '../../lib/exercises/catalog-rules.ts';
+import type { SkillShare } from '../../lib/exercises/custom-exercises.ts';
 
 const BASIS_POINTS_PER_PERCENT = 100;
 

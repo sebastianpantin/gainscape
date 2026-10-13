@@ -16,8 +16,8 @@ import {
   startRest,
   startsRest,
   stopsRestForWarmup,
-} from '../../web/src/lib/rest-timer-rules.ts';
-import { readRestState, saveRestState } from '../../web/src/lib/rest-timer-store.ts';
+} from '../../web/src/lib/workout/rest-timer-rules.ts';
+import { readRestState, saveRestState } from '../../web/src/lib/workout/rest-timer-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const now = Date.UTC(2026, 9, 2, 18, 0, 0);

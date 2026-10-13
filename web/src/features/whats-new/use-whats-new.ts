@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { type Release, whatsNewDecision, whatsNewMayOpen } from '../../lib/changelog-rules.ts';
-import { openChannel } from '../../lib/channel.ts';
-import { readLastSeenRelease, saveLastSeenRelease } from '../../lib/last-seen-release-store.ts';
-import { readOnboarding } from '../../lib/onboarding-store.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
+import { type Release, whatsNewDecision, whatsNewMayOpen } from '../../lib/platform/changelog-rules.ts';
+import { openChannel } from '../../lib/platform/channel.ts';
+import { readLastSeenRelease, saveLastSeenRelease } from '../../lib/platform/last-seen-release-store.ts';
+import { readOnboarding } from '../../lib/profile/onboarding-store.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
 import { DRAFT_CHANNEL_NAME } from '../../offline/draft-session.ts';
 import { hasDraftOnDevice } from '../../offline/local-drafts.ts';

@@ -36,7 +36,7 @@ import {
   type DraftSet,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
-import { canAddSet, removeSet, updateSet } from '../../web/src/lib/exercise-edit-rules.ts';
+import { canAddSet, removeSet, updateSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 

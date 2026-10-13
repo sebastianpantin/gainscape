@@ -14,7 +14,7 @@ import {
   formatDuration,
   holdRecordCards,
   isLoggableBout,
-} from '../../web/src/lib/cardio-rules.ts';
+} from '../../web/src/lib/workout/cardio-rules.ts';
 
 const steady = { durationS: 1800, distanceM: 5000, interval: null, effort: null };
 const intervals = { durationS: 1800, distanceM: null, interval: { workS: 30, restS: 30, rounds: 10 }, effort: null };

@@ -8,7 +8,7 @@ import {
   restAlertActions,
   restAlertDelayMs,
   restAlertIsFresh,
-} from '../../web/src/lib/training-device-rules.ts';
+} from '../../web/src/lib/workout/training-device-rules.ts';
 import {
   answerNotifyPrompt,
   claimRestAlert,
@@ -16,7 +16,7 @@ import {
   notifyPromptAnswered,
   readTrainingDeviceSettings,
   saveTrainingDeviceSettings,
-} from '../../web/src/lib/training-device-store.ts';
+} from '../../web/src/lib/workout/training-device-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const now = Date.UTC(2026, 9, 5, 18, 0, 0);

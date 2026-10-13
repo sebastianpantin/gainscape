@@ -12,7 +12,7 @@ import {
   eitherSignal,
   invokeAsOwnerWith,
   type OwnerClient,
-} from '../../web/src/lib/function-client-rules.ts';
+} from '../../web/src/lib/platform/function-client-rules.ts';
 
 const owner = '11111111-1111-4111-8111-111111111111';
 const someoneElse = '22222222-2222-4222-8222-222222222222';

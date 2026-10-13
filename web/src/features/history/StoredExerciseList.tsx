@@ -1,8 +1,8 @@
-import { describeBout } from '../../lib/cardio-rules.ts';
-import { effortLabel } from '../../lib/effort-labels.ts';
-import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
+import { describeBout } from '../../lib/workout/cardio-rules.ts';
+import { effortLabel } from '../../lib/workout/effort-labels.ts';
+import { exerciseKeys } from '../../lib/exercises/exercise-key-rules.ts';
 import { formatLoad, formatXp } from '../../lib/format.ts';
-import { type UnitPref } from '../../lib/profile.ts';
+import { type UnitPref } from '../../lib/profile/profile.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { describeHold, type SessionEdit } from './session-edit.ts';

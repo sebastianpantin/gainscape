@@ -1,17 +1,22 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import type { Skill } from '../../lib/catalog-rules.ts';
-import { isUuid } from '../../lib/history-rules.ts';
+import type { Skill } from '../../lib/exercises/catalog-rules.ts';
+import { isUuid } from '../../lib/history/history-rules.ts';
 import {
   FEED_QUERY_PREFIX,
   type FriendProfileLoad,
   friendProfileQuery,
   FRIENDS_QUERY_PREFIX,
-} from '../../lib/queries.ts';
-import { loadedState } from '../../lib/query-state-rules.ts';
-import { usePreferences } from '../../lib/preferences.ts';
-import { type CollectionView, type CollectionViewExercise, type ProfileView, removeFriend } from '../../lib/social.ts';
+} from '../../lib/query/queries.ts';
+import { loadedState } from '../../lib/query/query-state-rules.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import {
+  type CollectionView,
+  type CollectionViewExercise,
+  type ProfileView,
+  removeFriend,
+} from '../../lib/social/social.ts';
 import { slotsByReps } from '../collection/record-slots.ts';
 import { RecordSlots } from '../collection/RecordSlots.tsx';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';

@@ -3,7 +3,7 @@ import {
   lastSeenReleaseKey,
   readLastSeenRelease,
   saveLastSeenRelease,
-} from '../../web/src/lib/last-seen-release-store.ts';
+} from '../../web/src/lib/platform/last-seen-release-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 function blocked(): never {

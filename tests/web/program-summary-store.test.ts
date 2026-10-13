@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dismissSummary, isSummaryDismissed } from '../../web/src/lib/program-summary-store.ts';
+import { dismissSummary, isSummaryDismissed } from '../../web/src/lib/programs/program-summary-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const USER = 'user-a';

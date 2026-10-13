@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { type ProgramTemplateRow } from '../../web/src/lib/program-enroll-rules.ts';
+import { type ProgramTemplateRow } from '../../web/src/lib/programs/program-enroll-rules.ts';
 import {
   type EnrollmentFactsRows,
   type EnrollmentRow,
   type LinkedSessionRow,
-} from '../../web/src/lib/program-facts-rules.ts';
+} from '../../web/src/lib/programs/program-facts-rules.ts';
 import {
   forgetDeletedProgramSession,
   type ProgramCache,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PLATE_SETTINGS } from '../../web/src/lib/plate-rules.ts';
-import { warmupPlan, warmupSets } from '../../web/src/lib/warmup-rules.ts';
+import { DEFAULT_PLATE_SETTINGS } from '../../web/src/lib/workout/plate-rules.ts';
+import { warmupPlan, warmupSets } from '../../web/src/lib/workout/warmup-rules.ts';
 
 const kgSetup = DEFAULT_PLATE_SETTINGS.kg;
 

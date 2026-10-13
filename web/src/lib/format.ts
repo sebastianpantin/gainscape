@@ -1,6 +1,6 @@
 import type { SessionSummary } from '@domain/types.ts';
-import type { LoadType } from './catalog-rules.ts';
-import type { UnitPref } from './profile.ts';
+import type { LoadType } from './exercises/catalog-rules.ts';
+import type { UnitPref } from './profile/profile.ts';
 import { formatWeight } from './units.ts';
 
 export function formatLoad(loadKg: number, loadType: LoadType, unit: UnitPref = 'kg'): string {

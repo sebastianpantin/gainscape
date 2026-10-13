@@ -1,4 +1,4 @@
-import type { BoutValues, HoldValues } from '../lib/exercise-edit-rules.ts';
+import type { BoutValues, HoldValues } from '../lib/workout/exercise-edit-rules.ts';
 import type { DraftSet, WorkoutDraft } from './draft-format.ts';
 
 export function boutPayload(bout: BoutValues & { id: string }, exerciseId: string, position: number) {

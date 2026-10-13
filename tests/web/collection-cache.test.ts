@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { saveCachedExercises } from '../../web/src/lib/catalog-cache.ts';
-import { type Exercise } from '../../web/src/lib/catalog-rules.ts';
-import { type CollectionRows } from '../../web/src/lib/collection-rules.ts';
+import { saveCachedExercises } from '../../web/src/lib/exercises/catalog-cache.ts';
+import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import { type CollectionRows } from '../../web/src/lib/collection/collection-rules.ts';
 import { collectionCache, savedExerciseList } from '../../web/src/offline/collection-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
 

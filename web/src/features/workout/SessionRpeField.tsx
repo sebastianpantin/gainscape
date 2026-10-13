@@ -1,6 +1,10 @@
 import { useId } from 'react';
 import { TermHelp } from '../../components/TermHelp.tsx';
-import { SESSION_RPE_VALUES, sessionRpeChoiceLabel, sessionRpeFromChoice } from '../../lib/session-timing-rules.ts';
+import {
+  SESSION_RPE_VALUES,
+  sessionRpeChoiceLabel,
+  sessionRpeFromChoice,
+} from '../../lib/workout/session-timing-rules.ts';
 
 interface SessionRpeFieldProps {
   sessionRpe: number | null;

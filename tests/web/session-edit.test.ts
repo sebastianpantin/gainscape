@@ -36,10 +36,10 @@ import {
   nextPageFilter,
   type StoredSetRow,
   transientReason,
-} from '../../web/src/lib/history-rules.ts';
-import { boutModeChanges } from '../../web/src/lib/cardio-rules.ts';
-import { canAddSet, updateBout, updateHoldSet, updateSet } from '../../web/src/lib/exercise-edit-rules.ts';
-import type { CatalogItem } from '../../web/src/lib/item-rules.ts';
+} from '../../web/src/lib/history/history-rules.ts';
+import { boutModeChanges } from '../../web/src/lib/workout/cardio-rules.ts';
+import { canAddSet, updateBout, updateHoldSet, updateSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
+import type { CatalogItem } from '../../web/src/lib/collection/item-rules.ts';
 
 const benchId = 'aaaaaaaa-0000-4000-8000-000000000001';
 const pullUpId = 'aaaaaaaa-0000-4000-8000-000000000002';

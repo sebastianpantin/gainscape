@@ -1,9 +1,9 @@
 import { type ReactNode, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { type Exercise } from '../../lib/catalog-rules.ts';
-import { type ActiveProgram } from '../../lib/program-today-rules.ts';
-import { type UnitPref } from '../../lib/profile.ts';
-import { type StandingState } from '../../lib/standing.ts';
+import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
+import { type ActiveProgram } from '../../lib/programs/program-today-rules.ts';
+import { type UnitPref } from '../../lib/profile/profile.ts';
+import { type StandingState } from '../../lib/progress/standing.ts';
 import { type DraftNotice } from '../../offline/draft-session.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';

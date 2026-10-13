@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../web/src/lib/program-error-rules.ts';
+import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../web/src/lib/programs/program-error-rules.ts';
 
 function databaseError(message: string, code = 'P0001') {
   return { code, message, details: null, hint: null };

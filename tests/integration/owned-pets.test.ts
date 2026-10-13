@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { queryOwnedPets } from '../../web/src/lib/item-rules.ts';
+import { queryOwnedPets } from '../../web/src/lib/collection/item-rules.ts';
 import { createTestUser, db, type TestUser } from './local-stack.ts';
 
 async function hold(user: TestUser, key: string, quantity: number, firstObtainedAt: string) {

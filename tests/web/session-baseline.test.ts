@@ -4,8 +4,8 @@ import {
   recordBaselineFrom,
   type SessionBaseline,
   sessionBaselineAsOf,
-} from '../../web/src/lib/session-baseline-rules.ts';
-import { readSessionBaseline, saveSessionBaseline } from '../../web/src/lib/session-baseline-store.ts';
+} from '../../web/src/lib/workout/session-baseline-rules.ts';
+import { readSessionBaseline, saveSessionBaseline } from '../../web/src/lib/workout/session-baseline-store.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const baseline: SessionBaseline = {

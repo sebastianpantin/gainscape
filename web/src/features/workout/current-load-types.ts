@@ -1,5 +1,5 @@
-import { fetchExercises } from '../../lib/catalog.ts';
-import { type Exercise, isLiftExercise, type LoadType } from '../../lib/catalog-rules.ts';
+import { fetchExercises } from '../../lib/exercises/catalog.ts';
+import { type Exercise, isLiftExercise, type LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { isDeviceOffline } from '../../offline/cache-first.ts';
 import { type WorkoutDraft } from '../../offline/draft-format.ts';
 

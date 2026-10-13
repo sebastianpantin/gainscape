@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { type Profile } from '../../lib/profile.ts';
-import { profileQuery } from '../../lib/queries.ts';
-import { loadedState } from '../../lib/query-state-rules.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
+import { type Profile } from '../../lib/profile/profile.ts';
+import { profileQuery } from '../../lib/query/queries.ts';
+import { loadedState } from '../../lib/query/query-state-rules.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROFILE_NOTICE, profileCache } from '../../offline/profile-cache.ts';
 

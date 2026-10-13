@@ -8,8 +8,13 @@ import {
   type LoadType,
   type Modality,
   type Skill,
-} from '../../lib/catalog-rules.ts';
-import { fetchExerciseShares, hasLoggedSet, saveCustomExercise, type SkillShare } from '../../lib/custom-exercises.ts';
+} from '../../lib/exercises/catalog-rules.ts';
+import {
+  fetchExerciseShares,
+  hasLoggedSet,
+  saveCustomExercise,
+  type SkillShare,
+} from '../../lib/exercises/custom-exercises.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import { mixedSoloShareText, percentsFromShares, shareTotal, sharesToSave, skillsForModality } from './share-form.ts';
 import { messageOf } from '../../lib/error-text.ts';

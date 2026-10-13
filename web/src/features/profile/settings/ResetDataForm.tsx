@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
-import { RESET_CONFIRMATION, resetMyData } from '../../../lib/account.ts';
-import { announceDataChange } from '../../../lib/data-changes.ts';
+import { RESET_CONFIRMATION, resetMyData } from '../../../lib/profile/account.ts';
+import { announceDataChange } from '../../../lib/query/data-changes.ts';
 import { messageOf } from '../../../lib/error-text.ts';
 import { forgetUserProgressData } from '../../../offline/user-device-data.ts';
 import { forgetOnThisDevice, hasUnsyncedDraftHere } from './device-data.ts';

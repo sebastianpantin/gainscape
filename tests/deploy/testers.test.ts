@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MINIMUM_PASSWORD_LENGTH } from '../../web/src/lib/auth-links.ts';
+import { MINIMUM_PASSWORD_LENGTH } from '../../web/src/lib/platform/auth-links.ts';
 import { inviteProblems, oneTimePassword, testerArguments } from '../../scripts/deploy/testers.ts';
 
 describe('tester arguments', () => {

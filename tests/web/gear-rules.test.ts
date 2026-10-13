@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { bonusRows, type EquippedGear, formatGearBonusPercent, loadoutBySlot } from '../../web/src/lib/gear-rules.ts';
+import {
+  bonusRows,
+  type EquippedGear,
+  formatGearBonusPercent,
+  loadoutBySlot,
+} from '../../web/src/lib/collection/gear-rules.ts';
 
 const SKILLS = [
   { key: 'chest', name: 'Chest' },

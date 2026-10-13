@@ -1,6 +1,6 @@
 import { levelProgress } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
-import type { Skill } from '../../web/src/lib/catalog-rules.ts';
+import type { Skill } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   greetingFor,
   levelCountStart,

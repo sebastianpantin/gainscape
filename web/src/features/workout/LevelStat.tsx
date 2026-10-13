@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CountUp } from '../../components/CountUp.tsx';
-import { prefersReducedMotion } from '../../lib/device-effects.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
+import { prefersReducedMotion } from '../../lib/platform/device-effects.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { seenLevelsCache } from '../../offline/seen-levels-cache.ts';
 import { levelCountStart } from './today-rules.ts';
 

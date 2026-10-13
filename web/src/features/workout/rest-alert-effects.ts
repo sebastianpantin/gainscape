@@ -1,4 +1,4 @@
-import { playTones, type Tone, vibrate } from '../../lib/device-effects.ts';
+import { playTones, type Tone, vibrate } from '../../lib/platform/device-effects.ts';
 
 const VIBRATION_PATTERN_MS = [200, 100, 200];
 const BEEP_LENGTH_S = 0.15;

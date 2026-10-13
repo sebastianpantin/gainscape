@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type ExerciseStrength } from '@domain/index.ts';
-import type { LoadType } from '../../web/src/lib/catalog-rules.ts';
-import { type RecordBaseline } from '../../web/src/lib/session-baseline-rules.ts';
+import type { LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
+import { type RecordBaseline } from '../../web/src/lib/workout/session-baseline-rules.ts';
 import type {
   CardioDraftExercise,
   DraftSet,

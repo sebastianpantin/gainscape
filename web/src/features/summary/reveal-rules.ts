@@ -1,10 +1,10 @@
 import { FLOAT_TOLERANCE } from '@domain/math.ts';
 import type { PersonalRecordSummary, SessionSummary } from '@domain/types.ts';
 import type { DraftChallenge } from '../../offline/draft-format.ts';
-import { describeCardioGains } from '../../lib/cardio-rules.ts';
-import type { Exercise } from '../../lib/catalog-rules.ts';
+import { describeCardioGains } from '../../lib/workout/cardio-rules.ts';
+import type { Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { formatLoad, formatXp } from '../../lib/format.ts';
-import type { UnitPref } from '../../lib/profile-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import { type DistanceUnit, distanceUnitFor, formatWeight, HOLD_DISTANCE_UNIT } from '../../lib/units.ts';
 
 export interface DescribedRecord {

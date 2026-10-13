@@ -6,7 +6,7 @@ import {
   sessionVolumeKg,
   topExerciseNames,
   volumeText,
-} from '../../web/src/lib/history-overview-rules.ts';
+} from '../../web/src/lib/history/history-overview-rules.ts';
 
 function liftSet(exerciseName: string, position: number, loadKg = 100, reps = 5, isWarmup = false): OverviewSet {
   return { exerciseName, position, effectiveLoadKg: loadKg, reps, isWarmup };
