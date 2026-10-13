@@ -1,3 +1,10 @@
+- prs: [113, 114, 116, 117]
+  version: 0.8.1
+  date: 2026-10-13
+  title: Smoother shortcuts
+  items:
+    - The Program and Skills shortcuts on your home screen have their own icons, and opening one while the app is already open takes you there without starting it again.
+    - Installing the app on a computer shows a preview of a workout.
 - prs: [109, 110, 111]
   version: 0.8.0
   date: 2026-10-13
