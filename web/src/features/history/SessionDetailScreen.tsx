@@ -3,11 +3,9 @@ import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { BOUTS_FULL_TEXT, describeBout } from '../../lib/cardio-rules.ts';
+import { BOUTS_FULL_TEXT } from '../../lib/cardio-rules.ts';
 import { fetchExercises } from '../../lib/catalog.ts';
-import type { Exercise } from '../../lib/catalog-rules.ts';
 import { announceDataChange } from '../../lib/data-changes.ts';
-import { effortLabel } from '../../lib/effort-labels.ts';
 import {
   addableExercises,
   canAddSetTo,
@@ -17,23 +15,14 @@ import {
   updateSet,
 } from '../../lib/exercise-edit-rules.ts';
 import { exerciseKeys } from '../../lib/exercise-key-rules.ts';
-import {
-  formatLoad,
-  formatSessionDate,
-  formatXp,
-  sessionChallengeBonus,
-  sessionGearBonus,
-  sessionXp,
-} from '../../lib/format.ts';
-import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
-import { deleteSession, editSession, fetchSession, fetchSessionSets } from '../../lib/history.ts';
-import { isUuid, type SessionDetail, type StoredSetRow, withoutHistorySession } from '../../lib/history-rules.ts';
+import { formatXp } from '../../lib/format.ts';
+import { deleteSession, editSession } from '../../lib/history.ts';
+import { isUuid, withoutHistorySession } from '../../lib/history-rules.ts';
 import type { CatalogItem } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { historyQuery } from '../../lib/queries.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
-import { distanceUnitFor } from '../../lib/units.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
@@ -42,12 +31,11 @@ import { forgetLastSummary, recallLastSummary } from '../summary/last-summary.ts
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { HistoryBoutRow, HistoryHoldRow, HistorySetRow } from './HistorySetRow.tsx';
+import { type Loaded, loadSession } from './load-session.ts';
 import {
   addEditExercise,
   addEditSet,
-  describeHold,
   dropsAtRisk,
-  editFromSession,
   type EditBout,
   type EditHold,
   type EditSet,
@@ -69,29 +57,11 @@ import {
   type SessionEditorChange,
   type SessionProblem,
 } from './session-editor.ts';
+import { SessionHeader } from './SessionHeader.tsx';
+import { StoredExerciseList } from './StoredExerciseList.tsx';
 
 const HISTORY_PATH = '/collection/history';
 const MAX_NOTES_LENGTH = 2000;
-
-interface Loaded {
-  session: SessionDetail;
-  sets: StoredSetRow[];
-  exercises: Exercise[];
-  original: SessionEdit;
-  xpBasis: SessionEdit;
-}
-
-async function loadSession(sessionId: string): Promise<Loaded | null> {
-  const [session, sets, exercises] = await Promise.all([
-    fetchSession(sessionId),
-    fetchSessionSets(sessionId),
-    fetchExercises({ includeArchived: true }),
-  ]);
-  if (!session) return null;
-  const exercisesById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
-  const original = editFromSession(session, sets, exercisesById);
-  return { session, sets, exercises, original, xpBasis: original };
-}
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
 
@@ -251,38 +221,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const editWarning = removalText(dropsAtRisk(edit, loaded.original, activeDrops), items);
   const deleteWarning = removalText(activeDrops, items);
 
-  const timingText = sessionTimingParts(session).join(' · ');
-  const gearBonus = session.historyOnly ? 0 : sessionGearBonus(session.summary);
-  const challengeBonus = session.historyOnly ? 0 : sessionChallengeBonus(session.summary);
-  const header = (
-    <>
-      <Link className="back-link" to={HISTORY_PATH}>
-        ← History
-      </Link>
-      <header className="workout-header">
-        <div className="stack" style={{ gap: 4 }}>
-          <span className="muted">{formatSessionDate(session.localDate)}</span>
-          <h1 className="title">Workout</h1>
-          {timingText && <span className="muted tiny">{timingText}</span>}
-        </div>
-        <div className="live-xp">
-          <output aria-label="Workout XP">
-            {session.historyOnly ? 'No XP' : `+${formatXp(sessionXp(session.summary))} XP`}
-          </output>
-          {challengeBonus > 0 && (
-            <span className="muted tiny">includes Challenge bonus +{formatXp(challengeBonus)} XP</span>
-          )}
-          {gearBonus > 0 && <span className="muted tiny">includes Gear bonus +{formatXp(gearBonus)} XP</span>}
-          <span className="muted tiny">{session.setCount} sets</span>
-        </div>
-      </header>
-      {session.historyOnly && (
-        <p className="notice" role="status">
-          Saved to history, no XP
-        </p>
-      )}
-    </>
-  );
+  const header = <SessionHeader session={session} backTo={HISTORY_PATH} />;
 
   const problemPanel = problem && (
     <>
@@ -350,7 +289,6 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   );
 
   if (readOnly) {
-    const storedKeys = exerciseKeys(loaded.original.exercises);
     return (
       <main className="screen stack">
         {header}
@@ -360,52 +298,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
             Only workouts from the last 7 days can be changed.
           </p>
         )}
-        {loaded.original.exercises.map((exercise, exerciseIndex) => (
-          <section className="panel stack exercise-card" key={storedKeys[exerciseIndex]}>
-            <header>
-              <h2>{exercise.name}</h2>
-              {exercise.modality === 'lift' && (
-                <ExerciseProgressLink exerciseId={exercise.exerciseId} exerciseName={exercise.name} />
-              )}
-            </header>
-            <ol className="stored-set-list">
-              {exercise.modality === 'cardio'
-                ? exercise.sets.map((bout, boutIndex) => (
-                    <li className="row spread" key={bout.id}>
-                      <span>
-                        {boutIndex + 1}. {describeBout(bout, distanceUnitFor(unitPref, exercise.paceUnit))}
-                        {effortLabel(bout.effort) && ` · ${effortLabel(bout.effort)}`}
-                      </span>
-                      <span className="xp-text">{formatXp(storedXp.get(bout.id) ?? 0)} XP</span>
-                    </li>
-                  ))
-                : exercise.modality === 'hold'
-                  ? exercise.sets.map((set, setIndex) => (
-                      <li className="row spread" key={set.id}>
-                        <span>
-                          {setIndex + 1}. {describeHold(set, exercise.loadType, unitPref)}
-                          {effortLabel(set.effort) && ` · ${effortLabel(set.effort)}`}
-                        </span>
-                        <span className="xp-text">{formatXp(storedXp.get(set.id) ?? 0)} XP</span>
-                      </li>
-                    ))
-                  : exercise.sets.map((set, setIndex) => (
-                      <li className="row spread" key={set.id}>
-                        <span>
-                          {setIndex + 1}.{' '}
-                          {exercise.loadType === 'bodyweight'
-                            ? 'bodyweight'
-                            : formatLoad(set.weightKg, exercise.loadType, unitPref)}{' '}
-                          × {set.reps}
-                          {set.isWarmup && ' · warm-up'}
-                          {effortLabel(set.effort) && ` · ${effortLabel(set.effort)}`}
-                        </span>
-                        <span className="xp-text">{formatXp(storedXp.get(set.id) ?? 0)} XP</span>
-                      </li>
-                    ))}
-            </ol>
-          </section>
-        ))}
+        <StoredExerciseList exercises={loaded.original.exercises} storedXp={storedXp} unit={unitPref} />
         {session.notes && <p className="panel">{session.notes}</p>}
       </main>
     );
