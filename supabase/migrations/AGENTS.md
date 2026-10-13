@@ -10,7 +10,7 @@ The ordered, append-only history of the Postgres schema: tables, RLS policies, g
 ## Map
 
 - File names are `YYYYMMDDHHMMSS_NNN_name.sql`. The timestamp orders them; `NNN` is a three-digit sequence. List the directory to see the history.
-- To find the current definition of a function, grep for `function public.<name>(` (or `private.`) and take the highest-numbered file. Many functions were redefined several times (for example `save_program` in 005, 018, 031, 039, 047; `craft` in 010, 030, 031, 037; `publish_program`, `enroll_program`, `delete_program` last in 049).
+- To find the current definition of a function, grep for `function public.<name>(` (or `private.`) and take the highest-numbered file. Many functions were redefined several times (for example `save_program` in 005, 010, 018, 031, 039, 047; `craft` in 010, 030, 031, 037; `publish_program`, `enroll_program`, `delete_program` last in 049).
 - Server-only helpers live in the `private` schema (`private.limit_client_write`, `private.cap_pins`, `private.account_active`, `private.can_view_user`, `private.is_valid_enrollment`, `private.is_valid_program_position`, `private.resetting_account`).
 - Rate limit rules live in `private.rate_limit_rules` (011 and later); client write limits run through `private.limit_client_write` triggers (020).
 

@@ -30,7 +30,7 @@ The database access layer for the Edge Functions. Each module wraps the SQL for 
 - Loot needs `LOOT_SECRET` (at least 32 characters) or fails with 500 `loot_secret_missing`. Seeds come from `../loot-seeds.ts`, so rolls are reproducible per user and set.
 - Anything that changes a session summary (`writeSummaries`, `refreshSummaryDrops`, `revokeDrops`) must end with `syncSessionEvents` for the affected sessions, so `public.events` matches the summaries.
 - `claimChallengeRun` locks the caller's scroll row (`for update`), takes one scroll (`user_items` minus 1, `item_ledger` delta -1, reason `challenge`) and snapshots the e1RM at the session. Retired challenges or scrolls cannot be claimed.
-- `isUniqueViolation` detects Postgres `23505` so handlers can map it. Failures are `HttpError(status, snake_case_code)`.
+- Postgres `23505` on a client-id constraint is mapped to an HTTP error in `../http-errors.ts`. Failures are `HttpError(status, snake_case_code)`.
 - `StoredSet` lives in the domain `edit-diff.ts`, not here, because the no-op edit check needs it.
 
 ## Testing
