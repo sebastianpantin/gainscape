@@ -10,7 +10,7 @@ GitHub configuration: two workflows (see `workflows/AGENTS.md`). `workflows/ci.y
 ## Rules and gotchas
 
 - `main` has no branch protection, so merge only after `checks` and `backend` pass; a skipped `backend` counts as fine. If protection is ever added, note that a job skipped by `if:` counts as passing.
-- `checks` runs `make ci-changes` first. A documentation-only PR (`*.md`, `docs/`) runs only `make format-check secrets-scan`. Otherwise it runs `make check`, the unit layers, `make sim-check` and `make build`.
+- `checks` runs `make ci-changes` first. A documentation-only PR (`*.md`, `docs/`) runs only `make format-check docs-check secrets-scan`. Otherwise it runs `make check`, the unit layers, `make sim-check` and `make build`.
 - `backend` needs `checks` and runs unless `ci-changes` reports `backend=false`; an empty output still runs it. Add a new backend-relevant path to `scripts/ci-changes.ts`; `tests/deploy/ci-changes.test.ts` fails when a value import of the integration tests or stack scripts falls outside the list.
 - CI only calls `make` targets. Add a Makefile target first, then a step, so local and CI runs stay identical.
 - Third-party actions are pinned to full commit SHAs with a version comment (YAML is not covered by `no-comments`). Keep that when updating them.
