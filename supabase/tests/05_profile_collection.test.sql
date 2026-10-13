@@ -123,8 +123,13 @@ select is(
 reset role;
 
 select tests.create_user('pc_counts') as counted \gset
+select tests.add_session(:'counted', now() - interval '1 hour') as counted_session \gset
+insert into public.sets
+  (id, session_id, user_id, exercise_id, position, weight_kg, effective_load_kg, reps, rir, rir_source, effective_reps, xp_awarded)
+values (gen_random_uuid(), :'counted_session', :'counted', :'bench', 0, 50, 50, 3, 2, 'logged', 3, 0)
+returning id as counted_set \gset
 insert into public.rep_maxes (user_id, exercise_id, reps, load_kg, set_id, achieved_at, exact_set_id)
-select :'counted', :'bench', r, 50, null, now(), case when r <= 3 then :'set_id'::uuid end from generate_series(1, 5) r;
+select :'counted', :'bench', r, 50, null, now(), case when r <= 3 then :'counted_set'::uuid end from generate_series(1, 5) r;
 insert into public.pinned_exercises (user_id, exercise_id, position) values (:'counted', :'squat', 0);
 insert into public.bodyweight_rep_records (user_id, exercise_id, max_reps, set_id, achieved_at)
 values (:'counted', :'pull_up', 8, null, now());
