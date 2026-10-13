@@ -10,7 +10,7 @@ import { collectionPercent, countCollection } from './collection-rules.ts';
 import { fetchExerciseProgress } from './exercise-progress.ts';
 import { fetchSessionPage } from './history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession, isUuid } from './history-rules.ts';
-import { fetchLoadout, loadItemsCacheFirst } from './items.ts';
+import { fetchLoadout, fetchOwnedPets, loadItemsCacheFirst } from './items.ts';
 import { fetchTrainingHistory } from './onboarding.ts';
 import { loadProfileCacheFirst } from './profile.ts';
 import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from './program-enrollment.ts';
@@ -26,6 +26,7 @@ import {
   listFriends,
 } from './social.ts';
 import { FRESH_FOR_MS } from './query-freshness-rules.ts';
+import { fetchRecentSets } from './recovery.ts';
 import { type FeedCursor, feedCursor } from './social-rules.ts';
 import { fetchWeeklyGoalStatus } from './weekly-goal.ts';
 
@@ -86,6 +87,20 @@ export function feedPreviewQuery(userId: string) {
     queryKey: [...FEED_QUERY_PREFIX, userId, 'preview'] as const,
     queryFn: () => fetchFeedPage(null),
     staleTime: FRESH_FOR_MS,
+  });
+}
+
+export function ownedPetsQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['items', userId, 'pets'] as const,
+    queryFn: () => fetchOwnedPets(userId),
+  });
+}
+
+export function recentSetsQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['history', userId, 'recent-sets'] as const,
+    queryFn: () => fetchRecentSets(Date.now()),
   });
 }
 

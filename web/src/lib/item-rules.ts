@@ -1,3 +1,4 @@
+import { type SupabaseClient } from '@supabase/supabase-js';
 import { rateLimitedMessage } from './rate-limit.ts';
 import { GEAR_SLOTS, type GearSlot, ITEM_TIERS, type ItemTier, type Recipe } from '@domain/crafting.ts';
 import type { DropSummary } from '@domain/types.ts';
@@ -147,6 +148,55 @@ export function itemNameLookup(items: readonly CatalogItem[], fallback: string):
 
 export function colorFor(item: Pick<CatalogItem, 'tier'>): string {
   return item.tier ? TIER_COLORS[item.tier] : UNTIERED_COLOR;
+}
+
+export function companionPet(
+  items: readonly CatalogItem[],
+  held: HeldItems,
+  chosenId: string | null,
+): CatalogItem | null {
+  const pets = items.filter((item) => item.kind === 'pet' && held.has(item.id));
+  const chosen = pets.find((pet) => pet.id === chosenId);
+  if (chosen) return chosen;
+  const foundAt = (pet: CatalogItem) => {
+    const time = Date.parse(held.get(pet.id)?.firstObtainedAt ?? '');
+    return Number.isNaN(time) ? -Infinity : time;
+  };
+  return pets.reduce<CatalogItem | null>(
+    (newest, pet) => (newest && foundAt(newest) >= foundAt(pet) ? newest : pet),
+    null,
+  );
+}
+
+export interface OwnedPets {
+  items: CatalogItem[];
+  held: Map<string, HeldItem>;
+}
+
+interface OwnedPetRow {
+  quantity: number;
+  first_obtained_at: string;
+  items: ItemRow;
+}
+
+export async function queryOwnedPets(client: SupabaseClient, userId: string): Promise<OwnedPets> {
+  const { data, error } = await client
+    .from('user_items')
+    .select(`quantity,first_obtained_at,items!inner(${ITEM_COLUMNS})`)
+    .eq('user_id', userId)
+    .eq('items.kind', 'pet')
+    .gt('quantity', 0);
+  if (error) throw error;
+  const rows = data as unknown as OwnedPetRow[];
+  return {
+    items: rows.map((row) => toCatalogItem(row.items)),
+    held: new Map(
+      rows.map((row) => [
+        row.items.id,
+        { itemId: row.items.id, quantity: row.quantity, firstObtainedAt: row.first_obtained_at },
+      ]),
+    ),
+  };
 }
 
 const RARITY_ORDER: readonly ItemRarity[] = ['common', 'uncommon', 'rare', 'legendary'];
