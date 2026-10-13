@@ -13,7 +13,7 @@ const importedFamilies = [
 
 describe('font licenses', () => {
   it('finds the imported font families', () => {
-    expect(importedFamilies.sort()).toEqual(['ibm-plex-mono', 'pixelify-sans']);
+    expect(importedFamilies.sort()).toEqual(['ibm-plex-mono', 'silkscreen']);
   });
 
   it.each(importedFamilies)('ships the %s license byte for byte and links it', (family) => {
