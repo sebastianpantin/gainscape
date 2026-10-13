@@ -1,3 +1,9 @@
+- prs: [119]
+  version: 0.8.2
+  date: 2026-10-13
+  title: A proper launch screen
+  items:
+    - On iPhone and iPad, the app shows its logo while it starts from your home screen instead of a blank screen.
 - prs: [113, 114, 116, 117]
   version: 0.8.1
   date: 2026-10-13
