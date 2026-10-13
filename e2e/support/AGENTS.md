@@ -22,7 +22,7 @@ Helpers shared by the Playwright specs: user flows (register, sign in, navigate,
 - `stack-guard.ts` throws when `.stack.env` sets `SUPABASE_PROJECT_ID` and the process environment differs, so e2e never drives another worktree's stack. It has no stack dependency, which is why the configs can import it.
 - `db.ts` and `mailbox.ts` import `tests/integration/*`. Importing `local-stack.ts` runs `npx supabase status` and opens a database pool, so import them only from specs.
 - `app.ts` hard-codes the draft store contract: IndexedDB `gainscape` version 1 store `drafts`, fallback key prefix `gainscape.workout-draft.v2.`, record `v: 3`, and the auth storage key `sb-localhost-auth-token`. Change these in the same commit as `web/src/offline/draft-store.ts`, `draft-format.ts` or the Supabase URL, or the drafts, multi-tab and token-refresh specs fail.
-- Helpers repeat user-visible strings (button names, tab names, `Set N`, `Bout N`, `kg`/`reps` labels, the `Hard` effort radio). Renaming UI text in `web/src` means updating them.
+- Helpers repeat user-visible strings (button names, tab names, `Set N`, `Bout N`, `kg`/`reps` labels, the `Hard` effort radio, `+ Add bout`, Steady/Intervals, `Start workout`, `Create account`, `Sign in`). Renaming UI text in `web/src` means updating them.
 - Locate set and bout rows with `setRow`, `setRows` and `boutRow`, not CSS. CSS selectors stay only in `a11y.ts`, which measures rendered controls.
 - Extend `logExercise` and `logCardio` with parameters rather than copying them into specs.
 - `register` creates a confirmed account through the admin API in the browser's time zone and skips onboarding, then signs in through the form. Use `fillRegistration` and `submitRegistration` to test the form itself.

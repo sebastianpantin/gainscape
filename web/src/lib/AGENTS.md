@@ -20,7 +20,7 @@
 - `program-*-rules.ts`: following a program (enroll form, Train cards, plan, references, skip, set markers, rollover summary, follow status, facts, error text). The program engine itself is `@domain/program-*.ts`.
 - Only a few files use React: the contexts in `preferences.ts` and `toast.ts`, and the hooks in `standing.ts`, `skill-map.ts`, `use-auth-session.ts`, `use-online.ts`, `use-route-focus.ts` and `data-changes.ts`.
 - `glossary.ts` is the only home of jargon help text (`TermHelp`, the Settings effort hints, the first-run cards).
-- `device-effects.ts` and `celebration-effects.ts`: audio, vibration and reduced motion. They are I/O only.
+- `device-effects.ts` and `celebration-effects.ts`: audio, vibration and reduced motion. They are I/O only. `e2e/reveal.spec.ts` covers only the level-up cue; the loot and craft fanfares have no automated coverage.
 
 ## Rules and gotchas
 
@@ -35,6 +35,8 @@
   - The set cap is `MAX_SETS_PER_SESSION`.
   - `finishedAtFor` caps a workout at `MAX_SESSION_DURATION_MS`, so a workout left open overnight still syncs.
 - `recovery-rules.ts` (recent days, on the client) is separate from the server's within-session `domain/fatigue.ts`. They share only `effortProximity`.
+- `queryRecentSets` has no user filter; it relies on the owner-only `sets` RLS policy. Add an owner filter if `sets` ever becomes readable by friends.
+- `feedPreviewQuery` deliberately uses `FRESH_FOR_MS` although the feed root is always stale.
 
 ### Server calls and errors
 
@@ -86,7 +88,7 @@
 
 ### Device storage and offline
 
-- Keys follow `gainscape.<name>[.vN].<userId>`. To change a stored shape, bump the version and remove the retired keys (`catalog-cache.ts` drops v1 and v2). Parse stored JSON defensively (zod, or a guard via `parsedJson`), because it can be stale, corrupt or another user's.
+- Per-user keys follow `gainscape.<name>[.vN].<userId>` (`gainscape.last-summary` and `gainscape.chunk-reload-at` are not per user). To change a stored shape, bump the version and remove the retired keys (`catalog-cache.ts` drops v1 and v2). Parse stored JSON defensively (zod, or a guard via `parsedJson`), because it can be stale, corrupt or another user's.
 - Every new per-user `gainscape.` key needs two changes:
   - `tests/web/user-device-data.test.ts` must write it. The test scans `web/src` for key names and fails on a key it does not write.
   - `forgetUserDeviceData` in `../offline/user-device-data.ts` must forget it.

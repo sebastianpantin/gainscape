@@ -37,6 +37,8 @@ Isolation and fixtures:
 
 Selectors (no test ids: ESLint fails on `getByTestId` here and on `data-testid` in `web/src`):
 
+- Only the profile card badge has a role (`getByRole('img', { name: 'Blue badge', exact: true })`); badges elsewhere are `aria-hidden`.
+
 - Locate by role and accessible name (`getByRole`, `getByLabel`, then `getByText`), so tests double as accessibility checks. When a value has no role or name, give it one in the app.
 - Label and value pairs are `<dl>`; read a value with `definitionOf(scope, term)`.
 - Workout rows are list items named `Set N` and `Bout N` (`<exercise>, set N` inside a superset round). Use `setRow`, `setRows`, `boutRow` inside `exerciseCard(page, name)`, never `li.set-row` or `.nth()`. A done set is a pressed `Done set N` button. Warm-up toggle and Remove are in the row's options menu (`openSetOptions`).
@@ -46,6 +48,8 @@ Selectors (no test ids: ESLint fails on `getByTestId` here and on `data-testid` 
 - Disclosure open state (`term-help.spec.ts`) is checked through visibility, not `aria-expanded`.
 
 Races and flakes:
+
+- Simulate failures with the existing helpers: `breakIndexedDbOpen`/`setIndexedDbBroken` (storage), `resignedWithAnotherKey` (bad token), `editElsewhere`/`sessionRow` from `support/db.ts` (another device's edit).
 
 - A database read after a UI action races the write: `await expect.poll(() => sessionCount(username)).toBe(1)`, not `expect(await ...)`. The same for values read from the page or browser storage. A check that something did not change stays a plain `expect(await ...)`: a poll passes on its first read and only pretends to wait.
 - Data a spec seeds straight into the database (`grantItems`, `equipGear`) after the app loaded shows only after `page.reload()` or once the fresh window (`FRESH_FOR_MS`) passes, like a change from another device.
