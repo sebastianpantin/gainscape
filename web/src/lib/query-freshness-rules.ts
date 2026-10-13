@@ -8,6 +8,7 @@ export const DATA_CHANGES = [
   'exercise-saved',
   'weekly-goal-saved',
   'pins-changed',
+  'account-reset',
 ] as const;
 
 export type DataChange = (typeof DATA_CHANGES)[number];
@@ -33,6 +34,27 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
   'exercise-saved': ['exercises', 'collection', 'enroll-choices', 'exercise-progress', 'profile-preview', 'history'],
   'weekly-goal-saved': ['weekly-goal'],
   'pins-changed': ['collection'],
+  'account-reset': [
+    'standing',
+    'profile',
+    'collection',
+    'loadout',
+    'items',
+    'friends',
+    'feed',
+    'hiscores',
+    'friend-profile',
+    'profile-preview',
+    'bodyweight-trend',
+    'exercise-progress',
+    'program-templates',
+    'enroll-choices',
+    'weekly-goal',
+    'exercises',
+    'last-logged-weights',
+    'training-history',
+    'history',
+  ],
 };
 
 const ROOTS_THE_WRITING_TAB_UPDATES_ITSELF: Partial<Record<DataChange, readonly string[]>> = {

@@ -3,15 +3,17 @@ import { expect, test } from './support/fixtures.ts';
 import {
   definitionOf,
   emailOf,
+  logBench,
   logExercise,
   openFromProfile,
+  openTab,
   readSession,
   readStoredDraft,
   register,
   TEST_PASSWORD,
   uniqueUsername,
 } from './support/app.ts';
-import { accountRowCount } from './support/db.ts';
+import { accountRowCount, sessionCount } from './support/db.ts';
 
 const UNSYNCED_WARNING = 'You have a workout that has not synced yet. It will be lost. Delete anyway?';
 
@@ -54,6 +56,34 @@ test('deleting the account warns about an unsynced workout and only deletes once
   await expect.poll(() => accountRowCount(username)).toBe(0);
   expect(await readStoredDraft(page, user.id)).toMatchObject({ kind: 'synced', tombstone: 'forgotten' });
   await expect(page.getByText('Your unsynced workout is saved on this device.')).toHaveCount(0);
+});
+
+async function openHistory(page: Page) {
+  await openTab(page, 'Collection');
+  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+}
+
+test('resetting all data needs RESET typed, wipes the workouts and keeps the account signed in', async ({ page }) => {
+  const username = uniqueUsername('st_rst');
+  await register(page, username);
+  await logBench(page);
+  await openHistory(page);
+  await expect(page.getByText('No workouts yet. Finish one and it shows up here.')).toHaveCount(0);
+
+  await openFromProfile(page, 'Settings');
+  await page.getByRole('button', { name: 'Reset all data' }).click();
+  const confirm = page.getByLabel('Type RESET to confirm');
+  await confirm.fill('reset');
+  await expect(page.getByRole('button', { name: 'Reset everything' })).toBeDisabled();
+  await confirm.fill('RESET');
+  await page.getByRole('button', { name: 'Reset everything' }).click();
+
+  await expect(page.getByRole('status')).toHaveText('Your data was reset. You start again from level 1.');
+  await expect(page.getByLabel('Type RESET to confirm')).toHaveCount(0);
+  expect(await sessionCount(username)).toBe(0);
+  expect(await accountRowCount(username)).toBe(1);
+  await openHistory(page);
+  await expect(page.getByText('No workouts yet. Finish one and it shows up here.')).toBeVisible();
 });
 
 test('a failed email change says so and keeps the form open with the old email', async ({ page }) => {

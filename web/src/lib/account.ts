@@ -1,7 +1,7 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { authCallbackUrl, authErrorMessage, emailChangeProblem } from './auth-links.ts';
 import { httpErrorBody } from './function-client-rules.ts';
-import { RATE_LIMITED_STATUS, retryAfterSeconds, tryAgainIn } from './rate-limit.ts';
+import { RATE_LIMITED_STATUS, rateLimitedMessage, retryAfterSeconds, tryAgainIn } from './rate-limit.ts';
 import { supabase } from './supabase.ts';
 
 async function functionProblem(error: unknown, reasons: Record<string, string>, fallback: string): Promise<string> {
@@ -64,4 +64,11 @@ export async function deleteMyAccount(confirmUsername: string, password: string)
   const { error } = await supabase.functions.invoke('delete-account', { body: { confirmUsername, password } });
   if (!error) return;
   throw new Error(await functionProblem(error, DELETE_REASONS, 'Could not delete your account.'));
+}
+
+export const RESET_CONFIRMATION = 'RESET';
+
+export async function resetMyData(): Promise<void> {
+  const { error } = await supabase.rpc('reset_account_data', { confirmation: RESET_CONFIRMATION });
+  if (error) throw new Error(rateLimitedMessage(error) ?? 'Could not reset your data.');
 }

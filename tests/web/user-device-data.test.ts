@@ -30,7 +30,7 @@ import { profileCache } from '../../web/src/offline/profile-cache.ts';
 import { EMPTY_PROGRAM_CACHE, saveProgramCache } from '../../web/src/offline/program-cache.ts';
 import { programListCache } from '../../web/src/offline/program-list-cache.ts';
 import { standingCache } from '../../web/src/offline/standing-cache.ts';
-import { forgetUserDeviceData } from '../../web/src/offline/user-device-data.ts';
+import { forgetUserDeviceData, forgetUserProgressData } from '../../web/src/offline/user-device-data.ts';
 import { installCardKey } from '../../web/src/pwa/install-state.ts';
 import { workout } from './draft-store.contract.ts';
 import { MemoryStorage } from './memory-storage.ts';
@@ -172,5 +172,33 @@ describe('forgetting a user on this device', () => {
       .map(([key]) => key);
     const unwritten = storageKeyNamesInSource().filter((name) => !writtenKeys.some((key) => key.startsWith(name)));
     expect(unwritten).toEqual([]);
+  });
+
+  it('forgets the progress of a reset account and keeps its device choices', async () => {
+    await writeEveryStore(LEAVING_USER);
+    await writeEveryStore(STAYING_USER);
+    const stayingBefore = entriesMentioning(local, STAYING_USER);
+
+    await forgetUserProgressData(
+      { localStorage: local, sessionStorage: session, draftStore: createLocalDraftStore(local) },
+      LEAVING_USER,
+    );
+
+    const kept = entriesMentioning(local, LEAVING_USER).map(([key]) => key.replace(LEAVING_USER, '<user>'));
+    expect(kept.sort()).toEqual([
+      'gainscape.install-card.<user>',
+      'gainscape.notify-prompt.<user>',
+      'gainscape.onboarding.<user>',
+      'gainscape.plates.<user>',
+      'gainscape.preferences.<user>',
+      'gainscape.rest-alerted.<user>',
+      'gainscape.rest.<user>',
+      'gainscape.training-device.<user>',
+      'gainscape.whats-new.last-seen.<user>',
+      fallbackKeyFor('<user>'),
+    ]);
+    expect(readFallbackRecord(local, LEAVING_USER)?.kind).toBe('forgotten');
+    expect(entriesMentioning(session, LEAVING_USER)).toEqual([]);
+    expect(entriesMentioning(local, STAYING_USER)).toEqual(stayingBefore);
   });
 });
