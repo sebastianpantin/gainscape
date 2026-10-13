@@ -67,10 +67,10 @@ export function offersNotifyPrompt(facts: NotifyPromptFacts): boolean {
   return facts.standalone && facts.permission === 'default' && !facts.notifyOn && !facts.answered;
 }
 
-export type LevelUpCue = 'vibrate' | 'sound';
+export type CelebrationCue = 'vibrate' | 'sound';
 
-export function levelUpCues(settings: TrainingDeviceSettings): LevelUpCue[] {
-  const cues: LevelUpCue[] = [];
+export function celebrationCues(settings: TrainingDeviceSettings): CelebrationCue[] {
+  const cues: CelebrationCue[] = [];
   if (settings.vibrate) cues.push('vibrate');
   if (settings.sound) cues.push('sound');
   return cues;

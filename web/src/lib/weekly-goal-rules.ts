@@ -14,6 +14,7 @@ export interface PendingGoal {
 }
 
 export interface WeeklyGoalStatus {
+  weekStart: string;
   goal: number | null;
   sessionsThisWeek: number;
   streakWeeks: number;
@@ -36,6 +37,7 @@ export function weeklyGoalStatus(rows: readonly WeeklyGoalWeekRow[]): WeeklyGoal
   const current = rows[currentIndex];
   const pending = rows[currentIndex + 1];
   return {
+    weekStart: current.week_start,
     goal: current.goal,
     sessionsThisWeek: current.sessions,
     streakWeeks: metWeeksBefore(rows, currentIndex) + (isMet(current) ? 1 : 0),

@@ -16,6 +16,7 @@ import {
   type CatalogItem,
   colorFor,
   craftProblemText,
+  fanfareFor,
   firstPickedItemId,
   groupItems,
   type HeldItem,
@@ -28,6 +29,12 @@ import {
   showsQuantity,
   tiersOf,
 } from '../../lib/item-rules.ts';
+import {
+  celebrate,
+  CRAFTED_CELEBRATION,
+  FANFARE_CELEBRATIONS,
+  primeCelebrationAudio,
+} from '../../lib/celebration-effects.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import {
   craftItem,
@@ -123,7 +130,10 @@ interface ItemDetailProps {
   equipped: boolean | null;
   offline: boolean;
   draftOpen: boolean | null;
+  justCrafted: boolean;
+  onCraftStarted: () => void;
   onCrafted: (outputItemId: string) => Promise<void>;
+  onCraftFailed: () => Promise<void>;
   onCatalogStale: () => Promise<void>;
   onLoadoutChanged: () => Promise<void>;
   onStartChallenge: (challenge: CatalogChallenge) => Promise<void>;
@@ -138,7 +148,10 @@ function ItemDetail({
   equipped,
   offline,
   draftOpen,
+  justCrafted,
+  onCraftStarted,
   onCrafted,
+  onCraftFailed,
   onCatalogStale,
   onLoadoutChanged,
   onStartChallenge,
@@ -157,6 +170,7 @@ function ItemDetail({
 
   const craft = async () => {
     if (!recipe) return;
+    onCraftStarted();
     setBusy(true);
     setProblem(null);
     const outcome = await craftItem(recipe.id);
@@ -165,7 +179,7 @@ function ItemDetail({
     } else {
       setProblem(craftProblemText(outcome.problem, nameOf));
       if (outcome.problem.kind === 'unknown_recipe') await onCatalogStale();
-      else await onCrafted(item.id);
+      else await onCraftFailed();
     }
     setBusy(false);
   };
@@ -186,6 +200,14 @@ function ItemDetail({
 
   return (
     <section className="panel stack" aria-live="polite" aria-label="Item details">
+      {justCrafted && (
+        <p className={`craft-result pop rarity-${item.rarity}`}>
+          <span className="craft-result-art">
+            <ItemIcon kind={item.icon} color={colorFor(item)} />
+          </span>
+          Crafted!
+        </p>
+      )}
       <span className="stack" style={{ gap: 2 }}>
         <span className="muted tiny">{kindLabel(item)}</span>
         <h2 className="accent-text">
@@ -252,6 +274,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const items = useQuery(itemsQuery(userId));
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const [craftedId, setCraftedId] = useState<string | null>(null);
   const [refetchProblem, setRefetchProblem] = useState<string | null>(null);
   const [newIds] = useState(() => newItemIds(recallLastSummary(userId)?.drops));
   const queryClient = useQueryClient();
@@ -291,6 +314,10 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
     } catch (error) {
       setRefetchProblem((error as Error).message);
     }
+  };
+
+  const refreshAfterCraft = async () => {
+    await Promise.all([refetchInventory(), announceGearChanged()]);
   };
 
   const state = loadedState(items.data, items.isFetching ? null : items.error);
@@ -375,10 +402,13 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
                 <li key={item.id}>
                   <button
                     type="button"
-                    className={isNew ? 'item-slot new' : 'item-slot'}
+                    className={`item-slot rarity-${item.rarity}${isNew ? ' new' : ''}`}
                     aria-pressed={item.id === picked?.id}
                     aria-label={showsQuantity(item, entry) ? `${item.name} ×${entry.quantity}` : item.name}
-                    onClick={() => setPickedId(item.id)}
+                    onClick={() => {
+                      setPickedId(item.id);
+                      setCraftedId(null);
+                    }}
                   >
                     <ItemIcon kind={item.icon} color={colorFor(item)} />
                     {showsQuantity(item, entry) && <span className="item-qty">{entry.quantity}</span>}
@@ -406,10 +436,20 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           equipped={loadout.data ? loadout.data.slots.some((equippedGear) => equippedGear.itemId === picked.id) : null}
           offline={offline}
           draftOpen={draftOpen}
-          onCrafted={async (itemId) => {
-            await Promise.all([refetchInventory(), announceGearChanged()]);
-            setPickedId(itemId);
+          justCrafted={picked.id === craftedId}
+          onCraftStarted={() => {
+            primeCelebrationAudio(userId);
+            setCraftedId(null);
           }}
+          onCrafted={async (itemId) => {
+            const rarity = catalog.items.find((candidate) => candidate.id === itemId)?.rarity;
+            const fanfare = rarity ? fanfareFor([rarity]) : null;
+            celebrate(userId, fanfare ? FANFARE_CELEBRATIONS[fanfare] : CRAFTED_CELEBRATION);
+            await refreshAfterCraft();
+            setPickedId(itemId);
+            setCraftedId(itemId);
+          }}
+          onCraftFailed={refreshAfterCraft}
           onCatalogStale={refetchCatalog}
           onLoadoutChanged={announceGearChanged}
           onStartChallenge={startChallenge}

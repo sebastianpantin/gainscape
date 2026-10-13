@@ -22,6 +22,7 @@ import { firstSetFromLastSession, lastTimeText } from '../../lib/last-session-ru
 import { fetchProfile, type UnitPref } from '../../lib/profile.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { useStanding } from '../../lib/standing.ts';
+import { greetingFor, nearestLevelUp, nearestLevelUpText } from './today-rules.ts';
 import { RATE_LIMITED_CODE } from '../../lib/rate-limit.ts';
 import { stopsRestForWarmup } from '../../lib/rest-timer-rules.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
@@ -481,12 +482,15 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   };
 
   if (!draft) {
+    const now = new Date();
+    const levelNudge = standing.status === 'ready' ? nearestLevelUp(standing.standing.skills) : null;
     return (
       <main className="screen stack">
         <div className="screen-header">
           <div className="stack" style={{ gap: 4 }}>
             <span className="muted">
-              {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+              {greetingFor(now.getHours())} ·{' '}
+              {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
             </span>
             <h1 className="title">Today</h1>
           </div>
@@ -511,6 +515,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           </p>
         )}
         <InstallCard userId={userId} />
+        {levelNudge && (
+          <Link className="level-nudge" to="/skills">
+            {nearestLevelUpText(levelNudge)}
+          </Link>
+        )}
         <WeeklyGoalCard />
         <ProgramSummary userId={userId} program={activeProgram} />
         <ProgramToday

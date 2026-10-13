@@ -2,19 +2,23 @@ import { levelProgress } from '@domain/index.ts';
 import type { DropSummary } from '@domain/types.ts';
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { CountUp } from '../../components/CountUp.tsx';
 import { ItemIcon, LevelUpIcon, LootChestIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { fetchExercises, fetchSkills, fetchSkillXp } from '../../lib/catalog.ts';
 import type { Exercise, Skill } from '../../lib/catalog-rules.ts';
-import { playTones, primeAudio, type Tone, vibrate } from '../../lib/device-effects.ts';
+import {
+  celebrate,
+  FANFARE_CELEBRATIONS,
+  LEVEL_UP_CELEBRATION,
+  primeCelebrationAudio,
+} from '../../lib/celebration-effects.ts';
 import { formatXp, sessionXp } from '../../lib/format.ts';
 import { GLOSSARY } from '../../lib/glossary.ts';
 import { fetchSession } from '../../lib/history.ts';
-import { type CatalogItem, colorFor } from '../../lib/item-rules.ts';
+import { type CatalogItem, colorFor, fanfareFor } from '../../lib/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/items.ts';
 import { usePreferences } from '../../lib/preferences.ts';
 import { deviceStorage } from '../../lib/rest-timer-store.ts';
-import { levelUpCues } from '../../lib/training-device-rules.ts';
-import { readTrainingDeviceSettings } from '../../lib/training-device-store.ts';
 import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { readItemsCache } from '../../offline/items-cache.ts';
@@ -39,13 +43,12 @@ import {
   unappliedChangesText,
 } from './reveal-rules.ts';
 
-const LEVEL_UP_CHIME: Tone[] = [523, 659, 784, 1047].map((frequencyHz, index, notes) => ({
-  frequencyHz,
-  startS: index * 0.08,
-  lengthS: index === notes.length - 1 ? 0.3 : 0.08,
-}));
-const LEVEL_UP_CHIME_VOLUME = 0.18;
-const LEVEL_UP_VIBRATION_MS = [40, 50, 40, 50, 140];
+const TOTAL_COUNT_UP_MS = 900;
+const LEGENDARY_GLOW_AFTER_POP_S = 0.35;
+
+function dropAnimationDelay(popDelayS: number, glows: boolean): string {
+  return glows ? `${popDelayS}s, ${popDelayS + LEGENDARY_GLOW_AFTER_POP_S}s` : `${popDelayS}s`;
+}
 const LOOT_DROP_STAGGER_S = 0.08;
 const INTERACTIVE_ELEMENTS = 'a[href], button, input, select, textarea, summary, [role="button"], [role="link"]';
 
@@ -55,13 +58,6 @@ async function savedWhenOffline<Loaded>(saved: Loaded | null, loadLive: () => Pr
 
 function prefersReducedMotion(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function cueLevelUp(userId: string): void {
-  for (const cue of levelUpCues(readTrainingDeviceSettings(deviceStorage(), userId))) {
-    if (cue === 'vibrate') vibrate(LEVEL_UP_VIBRATION_MS);
-    if (cue === 'sound') playTones(LEVEL_UP_CHIME, LEVEL_UP_CHIME_VOLUME, 'triangle');
-  }
 }
 
 type RevealPhase = 'playing' | 'settled' | 'skipped';
@@ -80,9 +76,9 @@ function useRevealPlayback(
 
   useEffect(() => {
     if (cueDelayMs === null) return;
-    if (readTrainingDeviceSettings(deviceStorage(), userId).sound) primeAudio();
+    primeCelebrationAudio(userId);
     const cue = setTimeout(() => {
-      if (!skipped.current) cueLevelUp(userId);
+      if (!skipped.current) celebrate(userId, LEVEL_UP_CELEBRATION);
     }, cueDelayMs);
     return () => clearTimeout(cue);
   }, [cueDelayMs, userId]);
@@ -158,7 +154,11 @@ function LootDrops({ drops, items }: { drops: readonly DropSummary[]; items: Loa
       {drops.map((drop, index) => {
         const item = items.find((candidate) => candidate.id === drop.itemId);
         return (
-          <li key={drop.dropId} className="loot-drop" style={{ animationDelay: `${index * LOOT_DROP_STAGGER_S}s` }}>
+          <li
+            key={drop.dropId}
+            className={item ? `loot-drop rarity-${item.rarity}` : 'loot-drop'}
+            style={{ animationDelay: dropAnimationDelay(index * LOOT_DROP_STAGGER_S, item?.rarity === 'legendary') }}
+          >
             <ItemIcon kind={item?.icon ?? 'scraps'} color={item ? colorFor(item) : colorFor({ tier: null })} />
             <span style={{ flex: 1 }}>{item?.name ?? 'Unknown item'}</span>
             <span className="pixel">×{drop.quantity}</span>
@@ -174,18 +174,35 @@ function LootDrops({ drops, items }: { drops: readonly DropSummary[]; items: Loa
   );
 }
 
-function LootPanel({ drops, items, delayS }: { drops: readonly DropSummary[]; items: LoadedItems; delayS: number }) {
+interface LootPanelProps {
+  userId: string;
+  drops: readonly DropSummary[];
+  items: LoadedItems;
+  delayS: number;
+}
+
+function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
   const [open, setOpen] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const hasDrops = drops.length > 0;
+  const fanfare = Array.isArray(items)
+    ? fanfareFor(drops.flatMap((drop) => items.find((candidate) => candidate.id === drop.itemId)?.rarity ?? []))
+    : null;
+
+  const flashes = open && fanfare !== null;
 
   const openLoot = () => {
     setOpen(true);
     heading.current?.focus();
+    if (fanfare) celebrate(userId, FANFARE_CELEBRATIONS[fanfare]);
   };
 
   return (
-    <section className="panel stack rise" aria-label="Loot" style={{ animationDelay: `${delayS}s` }}>
+    <section
+      className={flashes ? `panel stack loot-${fanfare}` : 'panel stack rise'}
+      aria-label="Loot"
+      style={flashes ? undefined : { animationDelay: `${delayS}s` }}
+    >
       <div className="row spread">
         <h2 ref={heading} tabIndex={-1}>
           Loot
@@ -328,7 +345,9 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         <h1 className="title" ref={title} tabIndex={-1}>
           Workout complete!
         </h1>
-        <span className="reveal-total pop">+{formatXp(totalXp)} XP</span>
+        <span className="reveal-total pop">
+          +<CountUp value={totalXp} durationMs={TOTAL_COUNT_UP_MS} animate={phase === 'playing'} format={formatXp} /> XP
+        </span>
         {phase === 'playing' && (
           <button type="button" className="button reveal-skip" onClick={skip}>
             Skip
@@ -429,7 +448,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           })}
         </ul>
       )}
-      <LootPanel drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />
+      <LootPanel userId={userId} drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />
       <Link className="button primary big" to="/skills">
         See skills
       </Link>
