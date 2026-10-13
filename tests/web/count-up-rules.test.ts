@@ -17,6 +17,12 @@ describe('countUpValue', () => {
     expect(countUpValue(80, 0, 0)).toBe(80);
   });
 
+  it('counts from a starting value', () => {
+    expect(countUpValue(12, 0, 900, 10)).toBe(10);
+    expect(countUpValue(12, 900, 900, 10)).toBe(12);
+    expect(countUpValue(110, 450, 900, 10)).toBe(98);
+  });
+
   it('never goes backwards and never passes the target', () => {
     fc.assert(
       fc.property(

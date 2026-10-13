@@ -10,10 +10,12 @@ import {
 import {
   type FeedItem,
   feedBadge,
+  feedBadgeKind,
   feedCursor,
   feedText,
   type HiscoreRow,
   rankHiscores,
+  recentFriendActivity,
   relativeTime,
   requestedUsername,
   sendRequestText,
@@ -180,6 +182,28 @@ describe('feedText', () => {
       headline: 'Found Titan gloves',
       detail: 'Rare drop',
     });
+  });
+});
+
+describe('feedBadgeKind', () => {
+  it('groups both level events under one badge style', () => {
+    expect(feedBadgeKind({ type: 'level_up' })).toBe('level');
+    expect(feedBadgeKind({ type: 'level_99' })).toBe('level');
+    expect(feedBadgeKind({ type: 'pr' })).toBe('pr');
+    expect(feedBadgeKind({ type: 'drop' })).toBe('drop');
+  });
+});
+
+describe('recentFriendActivity', () => {
+  const entry = (eventId: string, isOwn = false): FeedItem => ({ ...item('pr', bench), eventId, isOwn });
+
+  it("keeps the newest friends' events, skipping your own and repeats", () => {
+    const feed = [entry('a'), entry('own', true), entry('b'), entry('a'), entry('c'), entry('d')];
+    expect(recentFriendActivity(feed, 3).map((event) => event.eventId)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('is empty without friend events', () => {
+    expect(recentFriendActivity([entry('own', true)], 3)).toEqual([]);
   });
 });
 

@@ -581,6 +581,39 @@ a:focus-visible {
   color: var(--color-text);
 }
 
+.level-rose strong {
+  animation: level-glow 1.6s ease-out both;
+}
+
+.route-view {
+  animation: route-enter 180ms ease-out;
+}
+
+.toast-region {
+  position: fixed;
+  bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + var(--tap-target) + var(--space-3));
+  left: var(--space-4);
+  right: var(--space-4);
+  z-index: 25;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.toast {
+  max-width: 528px;
+  margin: 0;
+  padding: var(--space-2-5) var(--space-4);
+  background: var(--color-panel);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  box-shadow:
+    var(--bevel),
+    3px 3px 0 var(--color-bevel);
+  animation: toast-in 220ms ease-out both;
+}
+
 .segmented {
   display: grid;
   grid-auto-flow: column;
@@ -1998,6 +2031,38 @@ body:has(.active-workout-bar) .screen {
   }
 }
 
+@keyframes route-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes level-glow {
+  0%,
+  70% {
+    color: var(--color-xp);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--color-xp) 80%, transparent);
+  }
+  100% {
+    color: var(--color-text);
+    text-shadow: none;
+  }
+}
+
 @keyframes rise {
   from {
     transform: translateY(12px);
@@ -2261,6 +2326,33 @@ body:has(.active-workout-bar) .screen {
 .feed-badge.drop {
   background: var(--color-rare);
   font-size: 0.65rem;
+}
+
+.friend-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.friend-activity-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+
+.friend-activity-list .feed-badge {
+  width: 36px;
+  height: 36px;
+  font-size: var(--font-size-xs);
+}
+
+.friend-activity-text {
+  flex-grow: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .gz-button {

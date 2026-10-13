@@ -23,6 +23,7 @@ import { REST_CHOICES_S, REST_OFF, restClock, withChosenRest } from '../../lib/r
 import { deviceStorage, readRestState, saveRestState } from '../../lib/rest-timer-store.ts';
 import type { TrainingDeviceSettings } from '../../lib/training-device-rules.ts';
 import { readTrainingDeviceSettings, saveTrainingDeviceSettings } from '../../lib/training-device-store.ts';
+import { useToast } from '../../lib/toast.ts';
 import { APP_VERSION } from '../whats-new/changelog-data.ts';
 import { askToNotify } from '../workout/rest-alert-effects.ts';
 import {
@@ -827,26 +828,27 @@ function AccountSection({
 }) {
   const navigate = useNavigate();
   const [panel, setPanel] = useState<AccountPanel>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const { showToast, dismissToast } = useToast();
   const [exporting, setExporting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   const toggle = (next: AccountPanel) => {
-    setStatus(null);
+    dismissToast();
     setPanel(panel === next ? null : next);
   };
 
   const done = (text: string) => {
     setPanel(null);
-    setStatus(text);
+    showToast(text);
   };
 
   const exportData = async () => {
     setExporting(true);
     setProblem(null);
+    dismissToast();
     try {
       saveBlob(await exportMyData(), exportFileName());
-      setStatus('Your data was downloaded.');
+      showToast('Your data was downloaded.');
     } catch (error) {
       setProblem(messageOf(error, 'Could not export your data.'));
     }
@@ -860,11 +862,6 @@ function AccountSection({
         <dt className="muted tiny">Email</dt>
         <dd>{email ?? '—'}</dd>
       </dl>
-      {status && (
-        <p className="notice" role="status">
-          {status}
-        </p>
-      )}
       {problem && (
         <p className="problem" role="alert">
           {problem}

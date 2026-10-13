@@ -205,6 +205,22 @@ export function feedBadge(item: FeedItem): string {
   return to === null ? LEVEL_BADGE : String(to);
 }
 
+export function feedBadgeKind(item: Pick<FeedItem, 'type'>): 'pr' | 'drop' | 'level' {
+  return item.type === 'level_up' || item.type === 'level_99' ? 'level' : item.type;
+}
+
+export function recentFriendActivity(items: readonly FeedItem[], limit: number): FeedItem[] {
+  const seen = new Set<string>();
+  const recent: FeedItem[] = [];
+  for (const item of items) {
+    if (recent.length >= limit) break;
+    if (item.isOwn || seen.has(item.eventId)) continue;
+    seen.add(item.eventId);
+    recent.push(item);
+  }
+  return recent;
+}
+
 export function feedCursor(lastItem: FeedItem): FeedCursor {
   return { beforeAt: lastItem.occurredAt, beforeId: lastItem.eventId };
 }
