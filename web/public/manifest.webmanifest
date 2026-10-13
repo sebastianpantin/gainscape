@@ -3,12 +3,18 @@
   "name": "Gainscape",
   "short_name": "Gainscape",
   "description": "Strength training log with skills, levels and loot.",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["health", "fitness", "sports"],
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#241b13",
   "theme_color": "#241b13",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -46,7 +52,7 @@
       "url": "/programs/active",
       "icons": [
         {
-          "src": "/icons/icon-192.png",
+          "src": "/icons/shortcut-program-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -57,7 +63,7 @@
       "url": "/skills",
       "icons": [
         {
-          "src": "/icons/icon-192.png",
+          "src": "/icons/shortcut-skills-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -85,6 +91,13 @@
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Personal records"
+    },
+    {
+      "src": "/screenshots/train-wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Logging a workout on a wide screen"
     }
   ]
 }

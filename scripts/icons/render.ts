@@ -1,4 +1,11 @@
-import { APP_ICON_BACKGROUND, APP_ICON_FRAME, LOGO, type Sprite } from '../../web/src/components/pixel-sprites.ts';
+import {
+  APP_ICON_BACKGROUND,
+  APP_ICON_FRAME,
+  itemSprite,
+  LEVEL_UP,
+  LOGO,
+  type Sprite,
+} from '../../web/src/components/pixel-sprites.ts';
 import type { RgbaImage } from './png.ts';
 
 export interface IconLayout {
@@ -6,6 +13,7 @@ export interface IconLayout {
   size: number;
   scale: number;
   frame: boolean;
+  sprite?: Sprite;
 }
 
 const FRAME_INSET_FRACTION = 0.08;
@@ -17,6 +25,8 @@ export const APP_ICONS: readonly IconLayout[] = [
   { file: 'maskable-512.png', size: 512, scale: 12, frame: false },
   { file: 'apple-touch-icon-180.png', size: 180, scale: 4, frame: false },
   { file: 'favicon-32.png', size: 32, scale: 1, frame: false },
+  { file: 'shortcut-program-192.png', size: 192, scale: 10, frame: true, sprite: itemSprite('scroll', APP_ICON_FRAME) },
+  { file: 'shortcut-skills-192.png', size: 192, scale: 10, frame: true, sprite: LEVEL_UP },
 ];
 
 type Rgba = [number, number, number, number];
@@ -70,7 +80,7 @@ function renderSprite(sprite: Sprite, size: number, scale: number, frame: boolea
 }
 
 export function renderAppIcon(layout: IconLayout): RgbaImage {
-  return renderSprite(LOGO, layout.size, layout.scale, layout.frame);
+  return renderSprite(layout.sprite ?? LOGO, layout.size, layout.scale, layout.frame);
 }
 
 function spriteSvg(sprite: Sprite): string {

@@ -68,7 +68,7 @@
 
 ### Screen caches
 
-- Every screen cache is per user. Build it with `userCache` (zod-checked; another user's data or malformed data reads as null; storage errors never throw). Save it after each online load and show the module's `Offline: using your saved …` notice. Add its `forget` to `forgetUserDeviceData` or `forgetUserProgressData`: `tests/web/user-device-data.test.ts` fails on any `gainscape.` key that is not cleared.
+- Every screen cache is per user. Build it with `userCache` (a `keyedStore` holding `{ userId, value }`), or `keyedStore` from `../lib/keyed-store.ts` directly for another record shape (zod-checked; another user's data or malformed data reads as null; storage errors never throw). Save it after each online load and show the module's `Offline: using your saved …` notice. Add its `forget` to `forgetUserDeviceData` or `forgetUserProgressData`: `tests/web/user-device-data.test.ts` fails on any `gainscape.` key that is not cleared.
 - Cache keys carry a version (`gainscape.items.v1.` and similar). Bump it when the stored shape changes incompatibly.
 - `forgetUserProgressData` (Reset all data) clears only what mirrors server progress and keeps the device choices. `forgetUserDeviceData` (account deletion) clears that plus the preference stores. With a `draftChannel`, forgetting posts `discarded` so every open session, including the active workout bar, drops the workout.
 - `loadCacheFirstWhenOffline` returns the saved copy at once while offline, or throws `OfflineError` when nothing is saved. Otherwise the request would wait about 7 s on postgrest-js's GET retries.

@@ -1,7 +1,7 @@
 import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../offline/cache-first.ts';
 import { profileCache } from '../offline/profile-cache.ts';
 import { withFriendlyRateLimit } from './rate-limit.ts';
-import { deviceStorage } from './rest-timer-store.ts';
+import { deviceStorage } from './keyed-store.ts';
 import { supabase } from './supabase.ts';
 import type { Profile } from './profile-rules.ts';
 

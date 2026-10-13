@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { type ExerciseNotes, type LocalNoteSaves, withLocalSaves } from './exercise-note-rules.ts';
+import { keyedStore } from './keyed-store.ts';
 
 const CACHE_VERSION = 1;
-const CACHE_KEY_PREFIX = 'gainscape.exercise-notes.v1.';
 
 const cachedNotesSchema = z.object({
   v: z.literal(CACHE_VERSION),
@@ -11,38 +11,20 @@ const cachedNotesSchema = z.object({
   notes: z.record(z.string(), z.string()),
 });
 
-export function exerciseNotesCacheKey(userId: string): string {
-  return `${CACHE_KEY_PREFIX}${userId}`;
-}
-
-export function readCachedExerciseNotes(storage: Storage, userId: string): ExerciseNotes | null {
-  try {
-    const raw = storage.getItem(exerciseNotesCacheKey(userId));
+export const {
+  key: exerciseNotesCacheKey,
+  read: readCachedExerciseNotes,
+  save: saveCachedExerciseNotes,
+  forget: forgetCachedExerciseNotes,
+} = keyedStore<ExerciseNotes | null, ExerciseNotes>(
+  'gainscape.exercise-notes.v1.',
+  (raw, userId) => {
     if (!raw) return null;
     const parsed = cachedNotesSchema.safeParse(JSON.parse(raw));
-    if (!parsed.success || parsed.data.userId !== userId) return null;
-    return parsed.data.notes;
-  } catch {
-    return null;
-  }
-}
-
-export function saveCachedExerciseNotes(storage: Storage, userId: string, notes: ExerciseNotes): void {
-  const record = { v: CACHE_VERSION, savedAt: new Date().toISOString(), userId, notes };
-  try {
-    storage.setItem(exerciseNotesCacheKey(userId), JSON.stringify(record));
-  } catch {
-    return;
-  }
-}
-
-export function forgetCachedExerciseNotes(storage: Storage, userId: string): void {
-  try {
-    storage.removeItem(exerciseNotesCacheKey(userId));
-  } catch {
-    return;
-  }
-}
+    return parsed.success && parsed.data.userId === userId ? parsed.data.notes : null;
+  },
+  (notes, userId) => ({ v: CACHE_VERSION, savedAt: new Date().toISOString(), userId, notes }),
+);
 
 export async function loadExerciseNotesCacheFirst(
   storage: Storage,

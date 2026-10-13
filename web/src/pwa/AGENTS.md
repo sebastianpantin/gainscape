@@ -13,6 +13,7 @@ The page-side PWA runtime: service worker registration, the update flow that swa
 - `update-flow.ts`: the update state machine over injected ports; `register-service-worker.ts` wires the real browser objects into it.
 - `install-state.ts` (pure) and `install.ts` (module-level store of `beforeinstallprompt`): install card logic.
 - `chunk-reload.ts`: reload once on Vite's `vite:preloadError`.
+- `launch-rules.ts` (pure) and `use-launch-routing.ts`: with the manifest's `launch_handler` `focus-existing`, a shortcut or link launch is routed inside the open window through `window.launchQueue` and `navigate`, so an open workout is never reloaded.
 - `*.tsx`: the install card and the update and offline banners.
 
 ## Rules and gotchas
@@ -25,11 +26,12 @@ The page-side PWA runtime: service worker registration, the update flow that swa
 - `install.ts` must be the first import in `../main.tsx`, or `beforeinstallprompt` can fire before the listener exists.
 - `claimChunkReload` allows one reload per 10 s and returns false when storage is missing or throws, so a broken chunk never loops. It reloads only after open drafts flush; otherwise the error reaches `ScreenErrorBoundary`.
 - `isIosSafari` also matches iPadOS, which reports a desktop user agent.
+- The launch consumer is mounted only inside the signed-in router: while signed out a launch waits in the queue and routes after sign-in. It is set once per router mount and reads `navigate` through a ref. No-op where `launchQueue` is missing (Firefox, Safari).
 - Guard every localStorage access with try/catch for private-mode browsers.
 
 ## Testing
 
-- Pure modules: `tests/web/shell-rules.test.ts`, `update-flow.test.ts`, `install-state.test.ts` (`make test-web`, no stack). Write the failing test there.
+- Pure modules: `tests/web/shell-rules.test.ts`, `update-flow.test.ts`, `install-state.test.ts`, `launch-rules.test.ts` (`make test-web`, no stack). Write the failing test there.
 - `install.ts`, `register-service-worker.ts` and the components: `e2e/pwa/` (`make e2e-pwa`, needs the stack).
 
 ## Manual Notes
