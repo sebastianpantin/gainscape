@@ -2174,15 +2174,16 @@ body:has(.active-workout-bar) .screen {
   box-shadow: var(--bevel-sunken);
 }
 
-.item-slot.new {
-  border-color: var(--color-xp);
-}
-
 .item-slot.rarity-rare,
 .item-slot.rarity-legendary {
   box-shadow:
     var(--bevel-sunken),
-    inset 0 0 8px color-mix(in srgb, var(--rarity-color) 50%, transparent);
+    inset 0 0 16px color-mix(in srgb, var(--rarity-color) 80%, transparent),
+    0 0 10px color-mix(in srgb, var(--rarity-color) 70%, transparent);
+}
+
+.item-slot.new {
+  border-color: var(--color-xp);
 }
 
 .item-slot[aria-pressed='true'] {
