@@ -28,11 +28,19 @@ test('the app is installable', async ({ baseURL }) => {
       screenshots: { src: string }[];
     };
     expect(parsed.icons.length).toBeGreaterThan(0);
-    const images = [...parsed.icons, ...parsed.shortcuts.flatMap((shortcut) => shortcut.icons), ...parsed.screenshots];
-    for (const image of images) {
-      const response = await page.request.get(image.src);
-      expect(response.status(), image.src).toBe(200);
-      expect(response.headers()['content-type'], image.src).toContain('image/png');
+    const startupImages = await page
+      .locator('link[rel="apple-touch-startup-image"]')
+      .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''));
+    expect(startupImages.length).toBeGreaterThan(0);
+    const manifestImages = [
+      ...parsed.icons,
+      ...parsed.shortcuts.flatMap((shortcut) => shortcut.icons),
+      ...parsed.screenshots,
+    ];
+    for (const src of [...manifestImages.map((image) => image.src), ...startupImages]) {
+      const response = await page.request.get(src);
+      expect(response.status(), src).toBe(200);
+      expect(response.headers()['content-type'], src).toContain('image/png');
     }
   } finally {
     await context.close();

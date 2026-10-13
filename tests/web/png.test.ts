@@ -1,7 +1,14 @@
 import { crc32, inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { decodePng, encodePng, PNG_SIGNATURE, readChunks, scanlines } from '../../scripts/icons/png.ts';
-import { APP_ICONS, MASKABLE_SAFE_RADIUS_FRACTION, parseColor, renderAppIcon } from '../../scripts/icons/render.ts';
+import {
+  APP_ICONS,
+  MASKABLE_SAFE_RADIUS_FRACTION,
+  parseColor,
+  renderAppIcon,
+  renderSplash,
+  SPLASH_SCREENS,
+} from '../../scripts/icons/render.ts';
 import { APP_ICON_BACKGROUND } from '../../web/src/components/pixel-sprites.ts';
 
 const image = {
@@ -58,6 +65,29 @@ describe('app icon layout', () => {
     for (const layout of APP_ICONS) {
       const rendered = renderAppIcon(layout);
       expect([rendered.width, rendered.height]).toEqual([layout.size, layout.size]);
+    }
+  });
+});
+
+describe('splash screen layout', () => {
+  it('renders every splash at its device pixel size with the logo centred at 30 to 40 percent of the width', () => {
+    const background = parseColor(APP_ICON_BACKGROUND);
+    for (const layout of SPLASH_SCREENS) {
+      const rendered = renderSplash(layout);
+      expect([rendered.width, rendered.height]).toEqual([layout.width * layout.ratio, layout.height * layout.ratio]);
+      let [left, right, top, bottom] = [rendered.width, -1, rendered.height, -1];
+      for (let y = 0; y < rendered.height; y++) {
+        for (let x = 0; x < rendered.width; x++) {
+          const offset = (y * rendered.width + x) * 4;
+          if ([0, 1, 2].every((channel) => rendered.rgba[offset + channel] === background[channel])) continue;
+          [left, right, top, bottom] = [Math.min(left, x), Math.max(right, x), Math.min(top, y), Math.max(bottom, y)];
+        }
+      }
+      const logoWidth = right - left + 1;
+      expect(logoWidth / rendered.width).toBeGreaterThanOrEqual(0.3);
+      expect(logoWidth / rendered.width).toBeLessThanOrEqual(0.4);
+      expect(Math.abs(left - (rendered.width - 1 - right))).toBeLessThanOrEqual(1);
+      expect(Math.abs(top - (rendered.height - 1 - bottom))).toBeLessThanOrEqual(1);
     }
   });
 });

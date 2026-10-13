@@ -32,7 +32,7 @@ Stack-free Vitest suites for the web app's pure logic and its static build input
   - `screen-cache-saves.test.ts`: the online cache saves of the cache-first loaders and of `programs.ts`
   - `program-list-cache.test.ts`, `standing-cache.test.ts`, `profile-cache.test.ts`, `collection-cache.test.ts`: zod schemas of the `offline/*-cache.ts` modules
 - Static inputs:
-  - `pixel-sprites.test.ts`, `png.test.ts`, `manifest.test.ts`: sprites, icon rendering, manifest, shortcuts and screenshots.
+  - `pixel-sprites.test.ts`, `png.test.ts`, `manifest.test.ts`, `splash.test.ts`: sprites, icon and splash rendering, manifest, shortcuts, screenshots and the iOS launch image links.
   - `licenses.test.ts`: fonts.
   - `contrast.test.ts`: `styles/tokens.css`.
   - `changelog-file.test.ts`: the committed `web/changelog.yaml`.
