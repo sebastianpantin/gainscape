@@ -171,6 +171,16 @@ describe('reset_account_data', () => {
     expect(await userRowCounts(owner.id)).toEqual(before);
   });
 
+  it('takes no user id, so a caller cannot point it at someone else', async () => {
+    const before = await userRowCounts(bystander.id);
+    for (const target of [{ user_id: bystander.id }, { target: bystander.id }, { caller: bystander.id }]) {
+      const { error } = await owner.client.rpc('reset_account_data', { confirmation: 'RESET', ...target });
+      expect(error, JSON.stringify(target)).not.toBeNull();
+    }
+    expect(await userRowCounts(bystander.id)).toEqual(before);
+    expect(await rateLimitHits('reset_account_hour', owner.id)).toBe(0);
+  });
+
   it('refuses once the hourly limit is spent', async () => {
     const limited = await createTestUser();
     await seedRateLimitHits('reset_account_hour', limited.id, 5);
