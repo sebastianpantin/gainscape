@@ -1,8 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { BodyMap } from '../../components/BodyMap.tsx';
-import { exerciseListQuery, recentSetsQuery } from '../../lib/queries.ts';
-import { type BodySkill, recoveryBySkill, recoveryGroups, type RecoveryState } from '../../lib/recovery-rules.ts';
+import { exerciseListQuery, recentSetsQuery } from '../../lib/query/queries.ts';
+import {
+  type BodySkill,
+  recoveryBySkill,
+  recoveryGroups,
+  type RecoveryState,
+} from '../../lib/progress/recovery-rules.ts';
 
 const GROUP_LABELS: Record<RecoveryState, string> = {
   recovering: 'Recovering',

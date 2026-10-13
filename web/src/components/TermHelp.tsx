@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { GLOSSARY, type GlossaryKey } from '../lib/glossary.ts';
+import { GLOSSARY, type GlossaryKey } from '../lib/ui/glossary.ts';
 
 interface TermHelpProps {
   glossaryKey: GlossaryKey;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { type Program, type ProgramDoc } from '../lib/programs.ts';
+import { type Program, type ProgramDoc } from '../lib/programs/programs.ts';
 import { userCache } from './cache-first.ts';
 
 export const OFFLINE_PROGRAMS_NOTICE = 'Offline: using your saved programs.';

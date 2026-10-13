@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { announceDataChange } from '../../lib/data-changes.ts';
-import { type Profile, updatePrivateProfile } from '../../lib/profile.ts';
-import { profileQuery } from '../../lib/queries.ts';
+import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { type Profile, updatePrivateProfile } from '../../lib/profile/profile.ts';
+import { profileQuery } from '../../lib/query/queries.ts';
 import type { CacheFirstLoad } from '../../offline/cache-first.ts';
 import { rememberSavedBodyweight } from '../../offline/profile-cache.ts';
 

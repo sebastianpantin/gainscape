@@ -2,10 +2,10 @@ import { type ReactNode, type Ref, useEffect, useId, useRef, useState } from 're
 import { DEFAULT_BALANCE, MAX_SET_LOAD_KG } from '@domain/index.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
-import type { LoadType } from '../../lib/catalog-rules.ts';
-import { assumedEffort } from '../../lib/effort-labels.ts';
-import { GLOSSARY } from '../../lib/glossary.ts';
-import type { EffortInputMode, UnitPref } from '../../lib/profile.ts';
+import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
+import { assumedEffort } from '../../lib/workout/effort-labels.ts';
+import { GLOSSARY } from '../../lib/ui/glossary.ts';
+import type { EffortInputMode, UnitPref } from '../../lib/profile/profile.ts';
 import {
   HIGHEST_REPS,
   highestWeightInUnit,
@@ -16,8 +16,8 @@ import {
   unitToKg,
   WEIGHT_STEPPER_STEP,
 } from '../../lib/units.ts';
-import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
-import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
+import { amrapBadgeOf } from '../../lib/programs/program-today-rules.ts';
+import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts';
 import type { DraftSet, LastLoggedSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './last-set-rules.ts';

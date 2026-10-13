@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MODALITIES } from '../../web/src/lib/catalog-rules.ts';
+import { MODALITIES } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { type SavedStanding, standingCache } from '../../web/src/offline/standing-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { keyedStore } from '../lib/keyed-store.ts';
-import { type EnrollmentRow, programFactSchema, sessionFactSchema } from '../lib/program-facts-rules.ts';
-import { type ProgramTemplateRow } from '../lib/program-enroll-rules.ts';
+import { keyedStore } from '../lib/platform/keyed-store.ts';
+import { type EnrollmentRow, programFactSchema, sessionFactSchema } from '../lib/programs/program-facts-rules.ts';
+import { type ProgramTemplateRow } from '../lib/programs/program-enroll-rules.ts';
 import { type WorkoutDraft } from './draft-format.ts';
 import { type SendOutcome } from './finish-lock.ts';
 import {

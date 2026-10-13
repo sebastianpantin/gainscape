@@ -1,5 +1,5 @@
 import { CARDIO_EFFORT_LEVELS, type EffortInput } from '@domain/types.ts';
-import { CARDIO_EFFORT_LABELS } from '../../lib/effort-labels.ts';
+import { CARDIO_EFFORT_LABELS } from '../../lib/workout/effort-labels.ts';
 
 interface CardioEffortSelectorProps {
   selected: EffortInput;

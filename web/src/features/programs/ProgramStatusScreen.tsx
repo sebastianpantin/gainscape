@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { type ProgramLoadStatus } from '../../lib/program-status-rules.ts';
+import { type ProgramLoadStatus } from '../../lib/programs/program-status-rules.ts';
 
 interface ProgramStatusScreenProps {
   text: string | null;

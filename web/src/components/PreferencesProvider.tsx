@@ -5,8 +5,8 @@ import {
   DEFAULT_PREFERENCES,
   type Preferences,
   PreferencesContext,
-} from '../lib/preferences.ts';
-import { fetchProfile } from '../lib/profile.ts';
+} from '../lib/profile/preferences.ts';
+import { fetchProfile } from '../lib/profile/profile.ts';
 
 interface PreferencesProviderProps {
   userId: string;

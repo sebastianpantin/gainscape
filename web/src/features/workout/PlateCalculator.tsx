@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { barbellPlatesText, nearestLoadable } from '../../lib/plate-rules.ts';
-import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
-import type { UnitPref } from '../../lib/profile.ts';
+import { barbellPlatesText, nearestLoadable } from '../../lib/workout/plate-rules.ts';
+import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile.ts';
 import { highestWeightInUnit, shownWeight, unitToKg, WEIGHT_INPUT_STEP } from '../../lib/units.ts';
 
 interface PlateCalculatorProps {

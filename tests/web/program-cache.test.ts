@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type EnrollmentRow } from '../../web/src/lib/program-facts-rules.ts';
+import { type EnrollmentRow } from '../../web/src/lib/programs/program-facts-rules.ts';
 import {
   EMPTY_PROGRAM_CACHE,
   factsOutcomeOf,

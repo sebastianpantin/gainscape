@@ -11,7 +11,7 @@ The Friends tab: requests and the activity feed (`/friends`), hiscores across fr
 
 - `FriendsScreen.tsx`, `HiscoresScreen.tsx`, `FriendProfileScreen.tsx`, `FriendsTabs.tsx` (Feed and Hiscores).
 - `FriendActivityStrip.tsx`: the `Friends` panel on Train; renders nothing without a friend event and leaves out your own events.
-- Ranking, feed text and percent logic: `../../lib/social-rules.ts`. Queries: `../../lib/queries.ts`.
+- Ranking, feed text and percent logic: `../../lib/social/social-rules.ts`. Queries: `../../lib/query/queries.ts`.
 
 ## Rules and gotchas
 

@@ -11,8 +11,8 @@ import {
   type SetPersonalRecord,
   type StrengthState,
 } from '@domain/index.ts';
-import type { RecordBaseline } from '../../lib/session-baseline-rules.ts';
-import { formatCardioRecord } from '../../lib/cardio-rules.ts';
+import type { RecordBaseline } from '../../lib/workout/session-baseline-rules.ts';
+import { formatCardioRecord } from '../../lib/workout/cardio-rules.ts';
 import { capitalized } from '../../lib/names.ts';
 import { HOLD_DISTANCE_UNIT } from '../../lib/units.ts';
 import type { DraftExercise, DraftSet, HoldDraftExercise, HoldDraftSet } from '../../offline/draft-format.ts';

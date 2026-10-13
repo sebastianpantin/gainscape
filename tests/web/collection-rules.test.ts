@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Exercise, LiftExercise } from '../../web/src/lib/catalog-rules.ts';
-import type { CollectionData } from '../../web/src/lib/collection-data.ts';
+import type { Exercise, LiftExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import type { CollectionData } from '../../web/src/lib/collection/collection-data.ts';
 import {
   collectionDataFrom,
   collectionPercent,
@@ -8,7 +8,7 @@ import {
   emptySlots,
   pinProblemText,
   strengthText,
-} from '../../web/src/lib/collection-rules.ts';
+} from '../../web/src/lib/collection/collection-rules.ts';
 
 function exercise(id: string): LiftExercise {
   return {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type Exercise } from '../../web/src/lib/catalog-rules.ts';
+import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   exerciseCacheKey,
   type ExerciseList,
@@ -9,7 +9,7 @@ import {
   readCachedExercises,
   SAVED_EXERCISES_NOTICE,
   saveCachedExercises,
-} from '../../web/src/lib/catalog-cache.ts';
+} from '../../web/src/lib/exercises/catalog-cache.ts';
 import { OFFLINE_PROBLEM } from '../../web/src/offline/cache-first.ts';
 import { MemoryStorage } from './memory-storage.ts';
 

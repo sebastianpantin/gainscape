@@ -64,21 +64,21 @@ Every behaviour change follows red, green, refactor:
 3. **Refactor.** Clean up names and structure with the test still green. No comments; rename instead.
 4. **Widen.** Run `make check`, then every layer the change touches. Run the stack layers when the change touches SQL, Edge Functions or UI flows.
 
-| Change touches                                                               | Test layer and command                                                         | Stack needed        |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------- |
-| Game rules: XP, levels, strength, records, loot, crafting, replay, events    | `tests/domain/` with `make test-domain` (fast-check available for properties)  | No                  |
-| Balance constants in `domain/balance.ts`                                     | `make test-domain` and `make sim-check` (about 1 s)                            | No                  |
-| `catalog/*.yaml` or `scripts/catalog/`                                       | `tests/catalog/` with `make test-catalog`, then `make catalog`                 | No                  |
-| Pure web logic: `web/src/lib/*-rules.ts`, `web/src/offline/`, `web/src/pwa/` | `tests/web/` with `make test-web`                                              | No                  |
-| Deploy tooling and secrets rules: `scripts/deploy/`                          | `tests/deploy/` with `make test-deploy`; the Pages build with `make e2e-pages` | No (e2e-pages: yes) |
-| Edge Functions, stores, SQL RPCs, RLS                                        | `tests/integration/` with `make test-integration`                              | Yes                 |
-| Grants, policies, triggers, SQL functions                                    | `supabase/tests/*.test.sql` (pgTAP) with `make test-db`                        | Yes                 |
-| Screens, navigation, user flows, accessibility                               | `e2e/*.spec.ts` with `make e2e`                                                | Yes                 |
-| Service worker, offline shell, update flow, manifest                         | `e2e/pwa/*.spec.ts` with `make e2e-pwa`                                        | Yes                 |
+| Change touches                                                                  | Test layer and command                                                         | Stack needed        |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------- |
+| Game rules: XP, levels, strength, records, loot, crafting, replay, events       | `tests/domain/` with `make test-domain` (fast-check available for properties)  | No                  |
+| Balance constants in `domain/balance.ts`                                        | `make test-domain` and `make sim-check` (about 1 s)                            | No                  |
+| `catalog/*.yaml` or `scripts/catalog/`                                          | `tests/catalog/` with `make test-catalog`, then `make catalog`                 | No                  |
+| Pure web logic: `web/src/lib/**/*-rules.ts`, `web/src/offline/`, `web/src/pwa/` | `tests/web/` with `make test-web`                                              | No                  |
+| Deploy tooling and secrets rules: `scripts/deploy/`                             | `tests/deploy/` with `make test-deploy`; the Pages build with `make e2e-pages` | No (e2e-pages: yes) |
+| Edge Functions, stores, SQL RPCs, RLS                                           | `tests/integration/` with `make test-integration`                              | Yes                 |
+| Grants, policies, triggers, SQL functions                                       | `supabase/tests/*.test.sql` (pgTAP) with `make test-db`                        | Yes                 |
+| Screens, navigation, user flows, accessibility                                  | `e2e/*.spec.ts` with `make e2e`                                                | Yes                 |
+| Service worker, offline shell, update flow, manifest                            | `e2e/pwa/*.spec.ts` with `make e2e-pwa`                                        | Yes                 |
 
 Run a single file while iterating: `npx vitest run tests/domain/xp.test.ts`, `npx playwright test e2e/history.spec.ts`. Integration tests need `make functions` (or `make start`) first.
 
-Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib/*-rules.ts`, `web/src/offline/draft-format.ts`) and keep React components and Edge Function handlers thin. Logic that is pure gets a fast unit test; only I/O wiring needs the stack.
+Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib/**/*-rules.ts`, `web/src/offline/draft-format.ts`) and keep React components and Edge Function handlers thin. Logic that is pure gets a fast unit test; only I/O wiring needs the stack.
 
 ### Local stack
 

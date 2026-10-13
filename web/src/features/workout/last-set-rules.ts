@@ -1,6 +1,6 @@
 import { roundTo } from '@domain/math.ts';
-import type { LoadType } from '../../lib/catalog-rules.ts';
-import type { UnitPref } from '../../lib/profile-rules.ts';
+import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import { shownWeight } from '../../lib/units.ts';
 import type { DraftSet, LastLoggedSet } from '../../offline/draft-format.ts';
 

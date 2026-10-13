@@ -1,8 +1,8 @@
 import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
-import { BODYWEIGHT_LOAD_NOT_ZERO_CODE, UNKNOWN_EXERCISE_CODE } from '../../lib/exercise-edit-rules.ts';
-import { RATE_LIMITED_CODE, waitText } from '../../lib/rate-limit.ts';
-import type { LoadType } from '../../lib/catalog-rules.ts';
-import { finishedAtFor } from '../../lib/session-timing-rules.ts';
+import { BODYWEIGHT_LOAD_NOT_ZERO_CODE, UNKNOWN_EXERCISE_CODE } from '../../lib/workout/exercise-edit-rules.ts';
+import { RATE_LIMITED_CODE, waitText } from '../../lib/platform/rate-limit.ts';
+import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
+import { finishedAtFor } from '../../lib/workout/session-timing-rules.ts';
 import { markPlannedSetsDone, withCurrentLoadTypes, type WorkoutDraft } from '../../offline/draft-format.ts';
 import type { DraftSaveProblem, StartOutcome } from '../../offline/draft-session.ts';
 

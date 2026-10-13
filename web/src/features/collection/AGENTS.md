@@ -17,7 +17,7 @@ The Collection tab: personal records per exercise (`/collection`), the per-exerc
 
 ## Rules and gotchas
 
-- The server is authoritative for crafting; the UI only pre-checks with `canCraft` from `@domain/crafting.ts`. Item presentation lives in `lib/item-rules.ts`, fetches in `lib/items.ts` and `lib/collection-data.ts`; do not duplicate them here.
+- The server is authoritative for crafting; the UI only pre-checks with `canCraft` from `@domain/crafting.ts`. Item presentation lives in `lib/collection/item-rules.ts`, fetches in `lib/collection/items.ts` and `lib/collection/collection-data.ts`; do not duplicate them here.
 - Records and Items load cache first and keep working offline from the saved copy. Offline, Equip, Unequip and craft are disabled because they need the server; Start challenge keeps working because it only builds a local draft.
 - Equip, unequip and craft (a craft can auto-equip the upgrade) must invalidate the `['loadout', userId]` query.
 - After a craft or a stale catalog, refetch, show the result with `setQueryData` and save it with `updateItemsCache`, so the offline copy stays current.

@@ -1,5 +1,5 @@
 import { Switch } from '../../../components/Switch.tsx';
-import { updatePublicProfile } from '../../../lib/profile.ts';
+import { updatePublicProfile } from '../../../lib/profile/profile.ts';
 import { useOptimisticProfileSave } from '../use-optimistic-profile-save.ts';
 import { type SectionProps } from './section-props.ts';
 

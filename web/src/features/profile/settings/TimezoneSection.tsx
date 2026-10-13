@@ -1,4 +1,4 @@
-import { formatDay, nextTimezoneChangeAt, TIMEZONE_CHANGE_COOLDOWN_DAYS } from '../../../lib/profile.ts';
+import { formatDay, nextTimezoneChangeAt, TIMEZONE_CHANGE_COOLDOWN_DAYS } from '../../../lib/profile/profile.ts';
 import { type SectionProps } from './section-props.ts';
 import { useTimezoneChange } from './use-timezone-change.ts';
 

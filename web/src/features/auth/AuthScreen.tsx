@@ -8,10 +8,10 @@ import {
   RESEND_COOLDOWN_SECONDS,
   USERNAME_HINT,
   USERNAME_PATTERN,
-} from '../../lib/auth-links.ts';
-import { signOutSettled } from '../../lib/auth-restore.ts';
-import { RATE_LIMITED_STATUS } from '../../lib/rate-limit.ts';
-import { supabase } from '../../lib/supabase.ts';
+} from '../../lib/platform/auth-links.ts';
+import { signOutSettled } from '../../lib/platform/auth-restore.ts';
+import { RATE_LIMITED_STATUS } from '../../lib/platform/rate-limit.ts';
+import { supabase } from '../../lib/platform/supabase.ts';
 import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
 
 type Mode = 'sign-in' | 'register' | 'check-email' | 'forgot' | 'reset-sent';

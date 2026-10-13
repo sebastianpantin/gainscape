@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toastDurationMs } from '../../web/src/lib/toast-rules.ts';
+import { toastDurationMs } from '../../web/src/lib/ui/toast-rules.ts';
 
 describe('toastDurationMs', () => {
   it('shows a short message for five seconds', () => {

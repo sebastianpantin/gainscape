@@ -1,14 +1,14 @@
-import { type Exercise, isLiftExercise } from '../../lib/catalog-rules.ts';
-import type { ExerciseStrengthView } from '../../lib/collection-data.ts';
-import { strengthText } from '../../lib/collection-rules.ts';
-import type { RecentSessions } from '../../lib/last-session-rules.ts';
-import type { UnitPref } from '../../lib/profile.ts';
-import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/progression-rules.ts';
-import type { DraftBarbellSetup } from '../../lib/program-set-rules.ts';
-import { REST_OFF, restClock, type RestTimer, startsRest } from '../../lib/rest-timer-rules.ts';
-import { restsAfter, supersetGroups } from '../../lib/superset-rules.ts';
+import { type Exercise, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import type { ExerciseStrengthView } from '../../lib/collection/collection-data.ts';
+import { strengthText } from '../../lib/collection/collection-rules.ts';
+import type { RecentSessions } from '../../lib/history/last-session-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile.ts';
+import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/workout/progression-rules.ts';
+import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts';
+import { REST_OFF, restClock, type RestTimer, startsRest } from '../../lib/workout/rest-timer-rules.ts';
+import { restsAfter, supersetGroups } from '../../lib/workout/superset-rules.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
-import { warmupPlan } from '../../lib/warmup-rules.ts';
+import { warmupPlan } from '../../lib/workout/warmup-rules.ts';
 import {
   canSwapExercise,
   type DraftSet,

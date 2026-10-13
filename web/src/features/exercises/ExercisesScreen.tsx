@@ -1,15 +1,18 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { fetchExercises, fetchSkills } from '../../lib/catalog.ts';
-import { announceDataChange } from '../../lib/data-changes.ts';
-import { OFFLINE_EXERCISES_NOTICE, OFFLINE_EXERCISES_WITHOUT_SKILLS_NOTICE } from '../../lib/catalog-cache.ts';
-import { type Exercise, exerciseLabels, type Skill } from '../../lib/catalog-rules.ts';
-import { setCustomExerciseArchived } from '../../lib/custom-exercises.ts';
+import { fetchExercises, fetchSkills } from '../../lib/exercises/catalog.ts';
+import { announceDataChange } from '../../lib/query/data-changes.ts';
+import {
+  OFFLINE_EXERCISES_NOTICE,
+  OFFLINE_EXERCISES_WITHOUT_SKILLS_NOTICE,
+} from '../../lib/exercises/catalog-cache.ts';
+import { type Exercise, exerciseLabels, type Skill } from '../../lib/exercises/catalog-rules.ts';
+import { setCustomExerciseArchived } from '../../lib/exercises/custom-exercises.ts';
 import { CustomExerciseForm } from './CustomExerciseForm.tsx';
 import { messageOf } from '../../lib/error-text.ts';
-import { deviceStorage } from '../../lib/keyed-store.ts';
-import { useOnlineSignal } from '../../lib/use-online.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { useOnlineSignal } from '../../lib/platform/use-online.ts';
 import { cacheFirstNotice, isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { standingCache } from '../../offline/standing-cache.ts';

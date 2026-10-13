@@ -6,7 +6,7 @@ import {
   recoveryState,
   type RecentSet,
   rirForRecovery,
-} from '../../web/src/lib/recovery-rules.ts';
+} from '../../web/src/lib/progress/recovery-rules.ts';
 
 const NOW = Date.parse('2026-10-13T12:00:00.000Z');
 

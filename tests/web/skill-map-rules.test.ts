@@ -1,13 +1,17 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { type CardioExercise, type ExerciseSkill, type LiftExercise } from '../../web/src/lib/catalog-rules.ts';
+import {
+  type CardioExercise,
+  type ExerciseSkill,
+  type LiftExercise,
+} from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   exercisesTrainingSkill,
   pickerRowDetail,
   sharePercentText,
   skillPanelSeed,
   skillShareRows,
-} from '../../web/src/lib/skill-map-rules.ts';
+} from '../../web/src/lib/progress/skill-map-rules.ts';
 
 function skill(skillKey: string, shareBasisPoints: number): ExerciseSkill {
   return { skillKey, skillName: skillKey[0].toUpperCase() + skillKey.slice(1), shareBasisPoints };

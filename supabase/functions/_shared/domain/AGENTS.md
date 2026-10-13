@@ -23,7 +23,7 @@ Purity and structure:
 
 - A domain file imports only siblings as `./name.ts`, never touches `Deno`, `process`, `window`, `document`, `localStorage` or `require`, and never reads the clock, calls `Math.random` or does I/O. Time is a parameter (`isWithinEditWindow(startedAt, now)`), randomness an `Rng` (`LootRngFor`). `tests/domain/purity.test.ts` and ESLint enforce imports and globals; nothing enforces the clock and `Math.random` rule, so reviewers must. Deno, crypto or database work goes in `../loot-seeds.ts` or `../stores/`.
 - `purity.test.ts` also fails on a runtime import cycle anywhere here and on any import cycle (type imports included) among `program-*.ts`. Keep the program modules a DAG: `program-fold.ts` sits on top of `program-progression.ts` and `program-state.ts`; `program-state.ts` imports no program module that imports it back. `strength.ts` and `records.ts` import only the `Step` type from `pipeline.ts`, which imports their steps back; keep that import type-only or it becomes a runtime cycle.
-- Add a name to `index.ts` only when a production caller needs it. Changing a type or export can break the web type-check (`web/src/lib/*-rules.ts`, `web/src/offline/`); run `make typecheck`.
+- Add a name to `index.ts` only when a production caller needs it. Changing a type or export can break the web type-check (`web/src/lib/**/*-rules.ts`, `web/src/offline/`); run `make typecheck`.
 - Web rules import the domain too: after a behaviour change here also run `make test-web`.
 - Config is an explicit parameter (`cfg: BalanceConfig`); no module reads `DEFAULT_*` except as a parameter default. Pipeline steps return new context objects, never mutate.
 - Iteration order must be explicit for anything persisted: sets by `position`, skills by `sortOrder`, sessions by `compareSessionKeys` (`startedAt`, then id), loot entries by `itemKey`. Never rely on Map or object key order.
@@ -59,7 +59,7 @@ Balance and versioning:
 
 Rules restated elsewhere (change both sides together):
 
-- `boutDurationSeconds` is shared by `../session-payload.ts` and `web/src/lib/cardio-rules.ts`; changing it changes stored and displayed bout durations.
+- `boutDurationSeconds` is shared by `../session-payload.ts` and `web/src/lib/workout/cardio-rules.ts`; changing it changes stored and displayed bout durations.
 
 - `isPositionInSchedule` = SQL `private.is_valid_program_position` (including the 520-week horizon, `MAX_PROGRAM_WEEKS`); `validateEnrollment` = `private.is_valid_enrollment`, and `MAX_REFERENCE_VALUE` (1000 kg, 2205 lb) = `private.max_program_reference`. SQL also requires bindings to be a UUID or null.
 - `CARDIO_BOUNDS`, `countedWorkSeconds`, `intervalDurationSeconds` = migration check `cardio_duration_within_bounds`; `HOLD_BOUNDS` = the hold checks of migration 044.

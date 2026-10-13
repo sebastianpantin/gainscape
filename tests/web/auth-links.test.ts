@@ -9,7 +9,7 @@ import {
   parseAuthCallback,
   passwordProblem,
   passwordResetProblem,
-} from '../../web/src/lib/auth-links.ts';
+} from '../../web/src/lib/platform/auth-links.ts';
 
 describe('authCallbackUrl', () => {
   it('points at /auth/confirm on the given origin', () => {

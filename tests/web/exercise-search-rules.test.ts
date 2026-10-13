@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { loadCatalogData } from '../../scripts/catalog/load.ts';
-import { exerciseSearchMatches, hiddenMatchesText } from '../../web/src/lib/exercise-search-rules.ts';
+import { exerciseSearchMatches, hiddenMatchesText } from '../../web/src/lib/exercises/exercise-search-rules.ts';
 
 const PICKER_LIMIT = 12;
 

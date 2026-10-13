@@ -1,6 +1,6 @@
-import { GLOSSARY } from '../../../lib/glossary.ts';
-import { usePreferences } from '../../../lib/preferences.ts';
-import { type EffortInputMode, type UnitPref, updatePrivateProfile } from '../../../lib/profile.ts';
+import { GLOSSARY } from '../../../lib/ui/glossary.ts';
+import { usePreferences } from '../../../lib/profile/preferences.ts';
+import { type EffortInputMode, type UnitPref, updatePrivateProfile } from '../../../lib/profile/profile.ts';
 import { useOptimisticProfileSave } from '../use-optimistic-profile-save.ts';
 import { Choice } from './Choice.tsx';
 import { PlateChoices } from './PlateChoices.tsx';

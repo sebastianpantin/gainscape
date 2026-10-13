@@ -12,7 +12,7 @@ import {
   syncProblemText,
   WAITING_DRAFT_TEXT,
 } from '../../web/src/features/workout/workout-rules.ts';
-import type { LoadType } from '../../web/src/lib/catalog-rules.ts';
+import type { LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 
 describe('syncProblemText', () => {

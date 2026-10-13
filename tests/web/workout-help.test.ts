@@ -9,7 +9,7 @@ import {
 } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
 import { type WorkoutHelpInputs, workoutHelpKeys } from '../../web/src/features/workout/workout-help.ts';
-import type { EffortInputMode } from '../../web/src/lib/profile-rules.ts';
+import type { EffortInputMode } from '../../web/src/lib/profile/profile-rules.ts';
 import type {
   CardioDraftExercise,
   DraftExercise,

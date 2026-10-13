@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readChangelog, readChangelogEntries } from '../../web/build/changelog.ts';
-import { ChangelogError } from '../../web/src/lib/changelog-rules.ts';
+import { ChangelogError } from '../../web/src/lib/platform/changelog-rules.ts';
 
 describe('the changelog file', () => {
   it('holds at least one release, without prs in the bundled form', () => {

@@ -1,6 +1,6 @@
 import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTH_MESSAGES } from '../../web/src/lib/auth-links.ts';
+import { AUTH_MESSAGES } from '../../web/src/lib/platform/auth-links.ts';
 
 const auth = vi.hoisted(() => ({
   currentEmail: 'new@example.com' as string | undefined,
@@ -11,7 +11,7 @@ const auth = vi.hoisted(() => ({
   invokeError: null as unknown,
 }));
 
-vi.mock('../../web/src/lib/supabase.ts', () => ({
+vi.mock('../../web/src/lib/platform/supabase.ts', () => ({
   supabase: {
     auth: {
       getUser: async () => ({
@@ -33,7 +33,7 @@ vi.mock('../../web/src/lib/supabase.ts', () => ({
   },
 }));
 
-const { changePassword, deleteMyAccount, exportMyData } = await import('../../web/src/lib/account.ts');
+const { changePassword, deleteMyAccount, exportMyData } = await import('../../web/src/lib/profile/account.ts');
 
 function httpFailure(status: number, body: object): FunctionsHttpError {
   return new FunctionsHttpError(new Response(JSON.stringify(body), { status }));

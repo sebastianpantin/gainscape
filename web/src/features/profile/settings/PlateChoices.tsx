@@ -1,6 +1,6 @@
 import { useId } from 'react';
-import { HEAVIEST_BAR_OR_PLATE, PLATE_CHOICES } from '../../../lib/plate-rules.ts';
-import { type UnitPref } from '../../../lib/profile.ts';
+import { HEAVIEST_BAR_OR_PLATE, PLATE_CHOICES } from '../../../lib/workout/plate-rules.ts';
+import { type UnitPref } from '../../../lib/profile/profile.ts';
 import { usePlateSetup } from './use-plate-setup.ts';
 
 export function PlateChoices({ userId, unit }: { userId: string; unit: UnitPref }) {

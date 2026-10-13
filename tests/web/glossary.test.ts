@@ -1,7 +1,7 @@
 import { DEFAULT_BALANCE } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
-import { assumedEffort } from '../../web/src/lib/effort-labels.ts';
-import { GLOSSARY, type GlossaryKey } from '../../web/src/lib/glossary.ts';
+import { assumedEffort } from '../../web/src/lib/workout/effort-labels.ts';
+import { GLOSSARY, type GlossaryKey } from '../../web/src/lib/ui/glossary.ts';
 
 const ENTRIES = Object.entries(GLOSSARY);
 const QUESTIONS = ENTRIES.map(([, entry]) => entry.question);

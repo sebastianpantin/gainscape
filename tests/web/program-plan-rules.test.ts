@@ -7,7 +7,7 @@ import {
   programStateAt,
   type WeightUnit,
 } from '@domain/index.ts';
-import { type PlanDay, planStatusText, programPlan } from '../../web/src/lib/program-plan-rules.ts';
+import { type PlanDay, planStatusText, programPlan } from '../../web/src/lib/programs/program-plan-rules.ts';
 import { factClock, jumpToFact, sessionFact, skipDayFact } from '../domain/program-fixtures/facts.ts';
 import {
   cyclePosition,

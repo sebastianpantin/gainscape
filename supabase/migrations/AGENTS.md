@@ -32,7 +32,7 @@ Security patterns:
 - An RPC that acts on the caller takes no user id; it scopes every statement to `auth.uid()` (`reset_account_data`).
 - `loot_rolls` and `item_ledger` are append-only: `private.forbid_append_only_changes` refuses update and delete, `private.forbid_append_only_truncate` refuses truncate (009, 010). The only bypass is the account reset marker: `private.resetting_account(subject)` is true only when a `private.account_resets` row for the current `pg_current_xact_id()` names that user, so a client cannot forge it even with raw SQL as `authenticated` (050). `private.limit_client_write` skips limits under the same marker.
 - Since 051 every foreign key between two user-owned tables is a composite on `(id, user_id)` (with `unique (id, user_id)` on the parent), so a child cannot point at another user's row and a delete cannot cascade into another user's data. New user-owned child tables must follow this. The one cross-user link is `reactions.event_id`. Record links use `on delete set null (<column>)` so only the link clears.
-- 051 kept the original constraint names on purpose: `web/src/lib/exercise-progress-rules.ts` embeds `sets!rep_maxes_set_id_fkey`. Renaming an FK breaks PostgREST embeds.
+- 051 kept the original constraint names on purpose: `web/src/lib/progress/exercise-progress-rules.ts` embeds `sets!rep_maxes_set_id_fkey`. Renaming an FK breaks PostgREST embeds.
 - Display names: check `profiles_display_name_visible` (036) refuses control, bidi control and blank-only names; `private.create_profile_for_new_user` falls back to the username.
 - `private.rotate_password_on_confirm` (014) is the pre-hijack fix: confirming an email through its link replaces the password set at signup with a random one, so a squatter who signed up with someone else's email cannot sign in after the owner confirms.
 - `craft` and `equip_gear` require `private.account_active(caller)`, so banned or unconfirmed accounts cannot use them; friend counts also count only active counterparts.
@@ -50,7 +50,7 @@ SQL that restates domain or web rules (change both sides together, with a new mi
 - `profiles_display_name_visible` restates `nameProblem` in `web/src/lib/names.ts`.
 - `cardio_duration_within_bounds` restates `countedWorkSeconds`, `intervalDurationSeconds` and `CARDIO_BOUNDS` (`domain/cardio.ts`).
 - `set_is_lift_cardio_or_hold` and the hold branches (044) restate `HOLD_BOUNDS` in `domain/types.ts`.
-- `save_exercise_note` trims an explicit, locale-independent whitespace set (ECMAScript whitespace and line terminators including U+FEFF, plus U+0085), the same set as `trimNote` in `web/src/lib/exercise-note-rules.ts`; never use `\s` (038).
+- `save_exercise_note` trims an explicit, locale-independent whitespace set (ECMAScript whitespace and line terminators including U+FEFF, plus U+0085), the same set as `trimNote` in `web/src/lib/exercises/exercise-note-rules.ts`; never use `\s` (038).
 - `exercise_strength_state` (016) matches the domain `strengthStateAt`.
 - `private.compiled_program_definition` (040) compiles a user program into a domain rotation definition; its output must parse with `parseProgramDefinition` and match the web `customTemplateKey` / `customLiftKey` (`tests/integration/program-follow-parity.test.ts`).
 - Stored level efforts hold the RIR of `effortLevelRir` in `domain/balance.ts`; changing that mapping needs a data migration of `sets.effort_value` (015 did this for `easy`).

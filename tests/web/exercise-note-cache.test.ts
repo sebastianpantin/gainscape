@@ -5,8 +5,8 @@ import {
   loadExerciseNotesCacheFirst,
   readCachedExerciseNotes,
   saveCachedExerciseNotes,
-} from '../../web/src/lib/exercise-note-cache.ts';
-import type { ExerciseNotes } from '../../web/src/lib/exercise-note-rules.ts';
+} from '../../web/src/lib/exercises/exercise-note-cache.ts';
+import type { ExerciseNotes } from '../../web/src/lib/exercises/exercise-note-rules.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';

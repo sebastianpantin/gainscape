@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { activeWorkoutBar, showsActiveWorkoutBarOn } from '../../lib/active-workout-bar-rules.ts';
+import { activeWorkoutBar, showsActiveWorkoutBarOn } from '../../lib/workout/active-workout-bar-rules.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';

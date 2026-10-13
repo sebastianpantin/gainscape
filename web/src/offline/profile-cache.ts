@@ -5,7 +5,7 @@ import {
   type Profile,
   TRAINING_FOCUSES,
   UNIT_PREFS,
-} from '../lib/profile-rules.ts';
+} from '../lib/profile/profile-rules.ts';
 import { userCache } from './cache-first.ts';
 
 export const OFFLINE_PROFILE_NOTICE = 'Offline: using your saved profile.';

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type ProgramDefinition, programStateAt } from '@domain/index.ts';
-import { type ProgramDoc } from '../../web/src/lib/programs.ts';
-import { type EnrollmentRow, enrollmentFromRow } from '../../web/src/lib/program-facts-rules.ts';
+import { type ProgramDoc } from '../../web/src/lib/programs/programs.ts';
+import { type EnrollmentRow, enrollmentFromRow } from '../../web/src/lib/programs/program-facts-rules.ts';
 import {
   carriedFollowOf,
   carriedInputs,
@@ -9,9 +9,9 @@ import {
   isEnrolledIn,
   isFollowing,
   workingWeights,
-} from '../../web/src/lib/program-follow-rules.ts';
-import { type LoadType } from '../../web/src/lib/catalog-rules.ts';
-import { customTemplateKey } from '../../web/src/lib/program-enroll-rules.ts';
+} from '../../web/src/lib/programs/program-follow-rules.ts';
+import { type LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
+import { customTemplateKey } from '../../web/src/lib/programs/program-enroll-rules.ts';
 import { type PlannedExercise } from '../../web/src/offline/draft-format.ts';
 import {
   BENCH_ID,

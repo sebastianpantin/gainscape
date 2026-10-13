@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EXERCISE_COLUMNS, type ExerciseRow, toExercise } from '../../web/src/lib/catalog-rules.ts';
+import { EXERCISE_COLUMNS, type ExerciseRow, toExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { builtInExerciseId, createTestUser, db, postCompleteSession, type TestUser } from './local-stack.ts';
 import { aSet, hoursAgo, payloadAt } from './session-support.ts';
 

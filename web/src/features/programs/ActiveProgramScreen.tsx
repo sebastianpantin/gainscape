@@ -2,17 +2,17 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
-import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/program-error-rules.ts';
+import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import {
   adjustEnrollment,
   endEnrollment,
   forgetCachedEnrollment,
   refreshProgramFactsOrCached,
-} from '../../lib/program-enrollment.ts';
-import { referenceEvents, referenceFieldKey, referenceFields } from '../../lib/program-reference-rules.ts';
-import { referenceHelpKeys } from '../../lib/term-help-rules.ts';
-import { useIsOffline } from '../../lib/use-online.ts';
-import { useToast } from '../../lib/toast.ts';
+} from '../../lib/programs/program-enrollment.ts';
+import { referenceEvents, referenceFieldKey, referenceFields } from '../../lib/programs/program-reference-rules.ts';
+import { referenceHelpKeys } from '../../lib/ui/term-help-rules.ts';
+import { useIsOffline } from '../../lib/platform/use-online.ts';
+import { useToast } from '../../lib/ui/toast.ts';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';
 

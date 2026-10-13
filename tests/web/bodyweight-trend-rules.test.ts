@@ -5,7 +5,7 @@ import {
   bodyweightTrend,
   trendDayText,
   type WorkoutBodyweightRow,
-} from '../../web/src/lib/bodyweight-trend-rules.ts';
+} from '../../web/src/lib/progress/bodyweight-trend-rules.ts';
 
 function workoutRow(localDate: string, bodyweightKg: string): WorkoutBodyweightRow {
   return { local_date: localDate, bodyweight_kg: bodyweightKg };

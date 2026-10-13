@@ -1,9 +1,9 @@
 import type { ChallengeDefinition } from '@domain/challenges.ts';
 import type { StrengthState } from '@domain/types.ts';
-import { mentionsE1rm } from '../../lib/challenge-rules.ts';
-import type { GlossaryKey } from '../../lib/glossary.ts';
-import type { EffortInputMode } from '../../lib/profile-rules.ts';
-import { amrapBadgeOf } from '../../lib/program-today-rules.ts';
+import { mentionsE1rm } from '../../lib/collection/challenge-rules.ts';
+import type { GlossaryKey } from '../../lib/ui/glossary.ts';
+import type { EffortInputMode } from '../../lib/profile/profile-rules.ts';
+import { amrapBadgeOf } from '../../lib/programs/program-today-rules.ts';
 import type { DraftExercise, LiftDraftExercise } from '../../offline/draft-format.ts';
 
 export interface WorkoutHelpInputs {

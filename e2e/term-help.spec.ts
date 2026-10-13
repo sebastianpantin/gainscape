@@ -1,6 +1,6 @@
 import { type Locator, type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { GLOSSARY } from '../web/src/lib/glossary.ts';
+import { GLOSSARY } from '../web/src/lib/ui/glossary.ts';
 import { expectNoAxeViolations, expectTouchTargets } from './support/a11y.ts';
 import {
   addExercise,

@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode, type Ref } from 'react';
 import { TermHelp } from '../../components/TermHelp.tsx';
-import type { RoundCell, RoundRow } from '../../lib/superset-rules.ts';
+import type { RoundCell, RoundRow } from '../../lib/workout/superset-rules.ts';
 
 const NAME_LIST = new Intl.ListFormat('en-GB', { type: 'conjunction' });
 

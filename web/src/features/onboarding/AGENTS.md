@@ -10,7 +10,7 @@ The first-run flow for a brand-new user. Train (`../workout/WorkoutScreen.tsx`) 
 ## Map
 
 - `use-onboarding.ts`: decides whether to show it. `FirstRunDialog.tsx`: the dialog.
-- Decisions in `../../lib/onboarding-rules.ts`, the done flag in `../../lib/onboarding-store.ts` (forgotten by `forgetUserDeviceData`), the history query in `../../lib/onboarding.ts`. Keep these files wiring and markup.
+- Decisions in `../../lib/profile/onboarding-rules.ts`, the done flag in `../../lib/profile/onboarding-store.ts` (forgotten by `forgetUserDeviceData`), the history query in `../../lib/profile/onboarding.ts`. Keep these files wiring and markup.
 
 ## Rules and gotchas
 

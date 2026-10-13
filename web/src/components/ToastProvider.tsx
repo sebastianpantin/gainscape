@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ToastContext } from '../lib/toast.ts';
-import { toastDurationMs } from '../lib/toast-rules.ts';
+import { ToastContext } from '../lib/ui/toast.ts';
+import { toastDurationMs } from '../lib/ui/toast-rules.ts';
 
 interface ShownToast {
   id: number;

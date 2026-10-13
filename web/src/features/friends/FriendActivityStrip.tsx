@@ -1,9 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { usePreferences } from '../../lib/preferences.ts';
-import { feedPreviewQuery } from '../../lib/queries.ts';
-import { feedBadge, feedBadgeKind, feedText, recentFriendActivity, relativeTime } from '../../lib/social-rules.ts';
+import { usePreferences } from '../../lib/profile/preferences.ts';
+import { feedPreviewQuery } from '../../lib/query/queries.ts';
+import {
+  feedBadge,
+  feedBadgeKind,
+  feedText,
+  recentFriendActivity,
+  relativeTime,
+} from '../../lib/social/social-rules.ts';
 
 const STRIP_SIZE = 3;
 

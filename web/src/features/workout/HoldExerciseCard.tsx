@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
-import { updateHoldSet } from '../../lib/exercise-edit-rules.ts';
-import { type UnitPref } from '../../lib/profile.ts';
+import { updateHoldSet } from '../../lib/workout/exercise-edit-rules.ts';
+import { type UnitPref } from '../../lib/profile/profile.ts';
 import { addSet, type HoldDraftExercise, toggleSetDone, type WorkoutDraft } from '../../offline/draft-format.ts';
 import { type ExerciseCardActions } from './exercise-card-actions.ts';
 import { HoldSetRow } from './HoldSetRow.tsx';

@@ -1,4 +1,4 @@
-import { monogramFor } from '../lib/standing-rules.ts';
+import { monogramFor } from '../lib/progress/standing-rules.ts';
 import {
   isSkillKey,
   type ItemIconKind,

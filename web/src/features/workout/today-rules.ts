@@ -1,6 +1,6 @@
 import { formatXp } from '../../lib/format.ts';
-import type { SkillStanding } from '../../lib/standing-rules.ts';
-import type { WeeklyGoalStatus } from '../../lib/weekly-goal-rules.ts';
+import type { SkillStanding } from '../../lib/progress/standing-rules.ts';
+import type { WeeklyGoalStatus } from '../../lib/progress/weekly-goal-rules.ts';
 
 export function greetingFor(hour: number): string {
   if (hour >= 5 && hour < 12) return 'Good morning';

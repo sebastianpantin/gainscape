@@ -1,9 +1,9 @@
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
-import type { LiftExercise } from '../../web/src/lib/catalog-rules.ts';
-import type { Collection } from '../../web/src/lib/collection-data.ts';
+import type { LiftExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import type { Collection } from '../../web/src/lib/collection/collection-data.ts';
 
-vi.mock('../../web/src/lib/supabase.ts', () => ({ supabase: {} }));
+vi.mock('../../web/src/lib/platform/supabase.ts', () => ({ supabase: {} }));
 
 const {
   collectionPercentQuery,
@@ -15,7 +15,7 @@ const {
   FRIENDS_QUERY_PREFIX,
   friendsQuery,
   publishForEnroll,
-} = await import('../../web/src/lib/queries.ts');
+} = await import('../../web/src/lib/query/queries.ts');
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 

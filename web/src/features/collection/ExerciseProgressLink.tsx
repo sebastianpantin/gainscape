@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { exerciseProgressPath } from '../../lib/exercise-progress-rules.ts';
+import { exerciseProgressPath } from '../../lib/progress/exercise-progress-rules.ts';
 
 interface ExerciseProgressLinkProps {
   exerciseId: string;

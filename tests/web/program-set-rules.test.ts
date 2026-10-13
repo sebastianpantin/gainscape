@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { unitToKg } from '@domain/index.ts';
-import { type PlateSettings } from '../../web/src/lib/plate-rules.ts';
+import { type PlateSettings } from '../../web/src/lib/workout/plate-rules.ts';
 import {
   barbellSetupFor,
   type BarSetting,
   type MarkedSet,
   programSetMarkers,
   programSetMarkerTexts,
-} from '../../web/src/lib/program-set-rules.ts';
+} from '../../web/src/lib/programs/program-set-rules.ts';
 import { snapshot } from '../domain/program-fixtures/facts.ts';
 
 const KG_BAR: BarSetting = { weight: 20, unit: 'kg' };

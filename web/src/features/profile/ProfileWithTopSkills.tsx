@@ -1,8 +1,8 @@
-import type { Skill } from '../../lib/catalog-rules.ts';
-import { cardProfileOf, standingOfView } from '../../lib/profile-view.ts';
-import type { ProfileView } from '../../lib/social.ts';
-import { collectionPercent } from '../../lib/collection-rules.ts';
-import { monogramFor } from '../../lib/standing-rules.ts';
+import type { Skill } from '../../lib/exercises/catalog-rules.ts';
+import { cardProfileOf, standingOfView } from '../../lib/profile/profile-view.ts';
+import type { ProfileView } from '../../lib/social/social.ts';
+import { collectionPercent } from '../../lib/collection/collection-rules.ts';
+import { monogramFor } from '../../lib/progress/standing-rules.ts';
 import { ProfileCard } from './ProfileCard.tsx';
 
 const TOP_SKILL_COUNT = 3;

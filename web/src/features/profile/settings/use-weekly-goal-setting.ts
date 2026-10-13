@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useState } from 'react';
-import { announceDataChange } from '../../../lib/data-changes.ts';
+import { announceDataChange } from '../../../lib/query/data-changes.ts';
 import { messageOf } from '../../../lib/error-text.ts';
-import { weeklyGoalQuery } from '../../../lib/queries.ts';
-import { fetchWeeklyGoalStatus, setWeeklyGoal } from '../../../lib/weekly-goal.ts';
-import { type WeeklyGoalStatus } from '../../../lib/weekly-goal-rules.ts';
+import { weeklyGoalQuery } from '../../../lib/query/queries.ts';
+import { fetchWeeklyGoalStatus, setWeeklyGoal } from '../../../lib/progress/weekly-goal.ts';
+import { type WeeklyGoalStatus } from '../../../lib/progress/weekly-goal-rules.ts';
 
 type LoadedGoal =
   { kind: 'loading' } | { kind: 'failed'; message: string } | { kind: 'ready'; status: WeeklyGoalStatus | null };

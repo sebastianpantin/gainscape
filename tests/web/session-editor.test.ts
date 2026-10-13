@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Exercise } from '../../web/src/lib/catalog-rules.ts';
-import type { InvokeOutcome } from '../../web/src/lib/function-client-rules.ts';
+import type { Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import type { InvokeOutcome } from '../../web/src/lib/platform/function-client-rules.ts';
 import type { SessionEdit } from '../../web/src/features/history/session-edit.ts';
 import {
   createSessionEditor,

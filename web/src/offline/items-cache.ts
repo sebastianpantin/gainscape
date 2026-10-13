@@ -2,10 +2,10 @@ import { GEAR_SLOTS, ITEM_TIERS } from '@domain/crafting.ts';
 import type { StrengthState } from '@domain/types.ts';
 import { z } from 'zod';
 import type { ItemIconKind } from '../components/pixel-sprites.ts';
-import { type Exercise, isLiftExercise, LOAD_TYPES, type LoadType } from '../lib/catalog-rules.ts';
-import { type CatalogChallenge, catalogChallengeSchema } from '../lib/challenge-rules.ts';
-import type { HeldItem, ItemCatalog } from '../lib/item-rules.ts';
-import { keyedStore } from '../lib/keyed-store.ts';
+import { type Exercise, isLiftExercise, LOAD_TYPES, type LoadType } from '../lib/exercises/catalog-rules.ts';
+import { type CatalogChallenge, catalogChallengeSchema } from '../lib/collection/challenge-rules.ts';
+import type { HeldItem, ItemCatalog } from '../lib/collection/item-rules.ts';
+import { keyedStore } from '../lib/platform/keyed-store.ts';
 
 export const OFFLINE_ITEMS_NOTICE = 'Offline: using your saved items.';
 

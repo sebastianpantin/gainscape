@@ -6,7 +6,7 @@ import {
   trimNote,
   withLocalSaves,
   withNote,
-} from '../../web/src/lib/exercise-note-rules.ts';
+} from '../../web/src/lib/exercises/exercise-note-rules.ts';
 
 describe('exercise note rules', () => {
   it('maps the rows to a note per exercise', () => {

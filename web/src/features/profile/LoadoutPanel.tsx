@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
-import { bonusRows, loadoutBySlot } from '../../lib/gear-rules.ts';
-import { skillsQuery } from '../../lib/queries.ts';
+import { bonusRows, loadoutBySlot } from '../../lib/collection/gear-rules.ts';
+import { skillsQuery } from '../../lib/query/queries.ts';
 import { useLoadout } from './use-loadout.ts';
 
 interface LoadoutPanelProps {

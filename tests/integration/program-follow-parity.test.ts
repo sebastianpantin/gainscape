@@ -1,10 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EXERCISE_COLUMNS, type ExerciseRow, isLiftExercise, toExercise } from '../../web/src/lib/catalog-rules.ts';
-import { customLiftKey, customTemplateKey, type ProgramTemplateRow } from '../../web/src/lib/program-enroll-rules.ts';
-import { type EnrollmentRow } from '../../web/src/lib/program-facts-rules.ts';
-import { followStatus } from '../../web/src/lib/program-follow-rules.ts';
-import { PROGRAM_SELECT, type ProgramRow, toProgram } from '../../web/src/lib/program-row-rules.ts';
+import {
+  EXERCISE_COLUMNS,
+  type ExerciseRow,
+  isLiftExercise,
+  toExercise,
+} from '../../web/src/lib/exercises/catalog-rules.ts';
+import {
+  customLiftKey,
+  customTemplateKey,
+  type ProgramTemplateRow,
+} from '../../web/src/lib/programs/program-enroll-rules.ts';
+import { type EnrollmentRow } from '../../web/src/lib/programs/program-facts-rules.ts';
+import { followStatus } from '../../web/src/lib/programs/program-follow-rules.ts';
+import { PROGRAM_SELECT, type ProgramRow, toProgram } from '../../web/src/lib/programs/program-row-rules.ts';
 import { createTestUser, db, type TestUser } from './local-stack.ts';
 import { createCustomExercise } from './session-support.ts';
 import {

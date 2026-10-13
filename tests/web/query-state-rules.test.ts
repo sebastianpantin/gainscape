@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadedState } from '../../web/src/lib/query-state-rules.ts';
+import { loadedState } from '../../web/src/lib/query/query-state-rules.ts';
 
 describe('loadedState', () => {
   it('is loading before any data or error', () => {

@@ -7,7 +7,7 @@ import {
   weeklyGoalStatus,
   type WeeklyGoalWeekRow,
   weekProgressText,
-} from '../../web/src/lib/weekly-goal-rules.ts';
+} from '../../web/src/lib/progress/weekly-goal-rules.ts';
 
 function week(weekStart: string, goal: number | null, sessions: number, isCurrent = false): WeeklyGoalWeekRow {
   return { week_start: weekStart, goal, sessions, is_current: isCurrent };

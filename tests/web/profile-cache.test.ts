@@ -5,7 +5,7 @@ import {
   type Profile,
   TRAINING_FOCUSES,
   UNIT_PREFS,
-} from '../../web/src/lib/profile-rules.ts';
+} from '../../web/src/lib/profile/profile-rules.ts';
 import { profileCache, rememberSavedBodyweight } from '../../web/src/offline/profile-cache.ts';
 import { MemoryStorage } from './memory-storage.ts';
 

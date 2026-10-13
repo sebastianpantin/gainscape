@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { offlineRefreshState, programLoadStatus, programStatusText } from '../../web/src/lib/program-status-rules.ts';
+import {
+  offlineRefreshState,
+  programLoadStatus,
+  programStatusText,
+} from '../../web/src/lib/programs/program-status-rules.ts';
 
 describe('program load status', () => {
   it('shows the cache while a refresh runs when an enrollment is cached', () => {

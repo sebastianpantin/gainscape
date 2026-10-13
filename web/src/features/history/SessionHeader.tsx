@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { formatSessionDate, formatXp, sessionChallengeBonus, sessionGearBonus, sessionXp } from '../../lib/format.ts';
-import { type SessionDetail } from '../../lib/history-rules.ts';
-import { sessionTimingParts } from '../../lib/session-timing-rules.ts';
+import { type SessionDetail } from '../../lib/history/history-rules.ts';
+import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
 
 export function SessionHeader({ session, backTo }: { session: SessionDetail; backTo: string }) {
   const timingText = sessionTimingParts(session).join(' · ');

@@ -6,7 +6,7 @@ import {
   steppedFieldValue,
   stepDirectionForKey,
   typedNumberChange,
-} from '../../web/src/lib/number-field-rules.ts';
+} from '../../web/src/lib/ui/number-field-rules.ts';
 
 const reps = { lowest: 1, highest: 100, wholeNumber: true };
 const weight = { lowest: 0, highest: 2000, wholeNumber: false };

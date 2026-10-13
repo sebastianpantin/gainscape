@@ -8,7 +8,7 @@ import {
   type FactSetRow,
   type LinkedSessionRow,
   programFactsFromRows,
-} from '../../web/src/lib/program-facts-rules.ts';
+} from '../../web/src/lib/programs/program-facts-rules.ts';
 import { MADCOW_5X5, MADCOW_EXERCISES, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
 
 const ENROLLMENT_ID = '7a2f0c1e-1111-4111-8111-111111111111';

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodePng } from '../../scripts/icons/png.ts';
 import { SCREENSHOT_MAX_BYTES, SCREENSHOT_SIZE, WIDE_SCREENSHOT_SIZE } from '../../scripts/screenshots/screens.ts';
-import { APP_TITLE, routeTitle } from '../../web/src/lib/route-title-rules.ts';
+import { APP_TITLE, routeTitle } from '../../web/src/lib/platform/route-title-rules.ts';
 
 const shortcutIcon = (src: string) => ({ src, sizes: '192x192', type: 'image/png' });
 const narrowScreenshot = {

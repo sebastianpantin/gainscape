@@ -1,7 +1,7 @@
-import { fetchExercises } from '../../lib/catalog.ts';
-import { type Exercise } from '../../lib/catalog-rules.ts';
-import { fetchSession, fetchSessionSets } from '../../lib/history.ts';
-import { type SessionDetail, type StoredSetRow } from '../../lib/history-rules.ts';
+import { fetchExercises } from '../../lib/exercises/catalog.ts';
+import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
+import { fetchSession, fetchSessionSets } from '../../lib/history/history.ts';
+import { type SessionDetail, type StoredSetRow } from '../../lib/history/history-rules.ts';
 import { editFromSession, type SessionEdit } from './session-edit.ts';
 
 export interface Loaded {

@@ -1,4 +1,4 @@
-import { type Profile } from '../../../lib/profile.ts';
+import { type Profile } from '../../../lib/profile/profile.ts';
 import { type ProfileUpdate } from '../use-profile.ts';
 
 export interface SectionProps {

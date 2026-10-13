@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { LineChart } from '../../components/LineChart.tsx';
-import { bodyweightChartSeries, trendDayText } from '../../lib/bodyweight-trend-rules.ts';
+import { bodyweightChartSeries, trendDayText } from '../../lib/progress/bodyweight-trend-rules.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import type { UnitPref } from '../../lib/profile-rules.ts';
-import { bodyweightTrendQuery } from '../../lib/queries.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
+import { bodyweightTrendQuery } from '../../lib/query/queries.ts';
 
 interface BodyweightTrendProps {
   userId: string;
