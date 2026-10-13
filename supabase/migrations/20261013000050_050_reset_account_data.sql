@@ -1,13 +1,25 @@
 insert into private.rate_limit_rules (bucket, max_hits, window_seconds) values
   ('reset_account_hour', 5, 3600);
 
-create or replace function private.resetting_account(subject uuid)
+create table private.account_resets (
+  transaction_id xid8 primary key,
+  user_id uuid not null
+);
+
+alter table private.account_resets enable row level security;
+revoke all on private.account_resets from public, anon, authenticated;
+
+create function private.resetting_account(subject uuid)
 returns boolean
 language sql
 stable
+security definer
 set search_path = ''
 as $$
-  select subject is not null and current_setting('gainscape.resetting_account', true) = subject::text;
+  select subject is not null and exists (
+    select 1 from private.account_resets r
+    where r.transaction_id = pg_catalog.pg_current_xact_id() and r.user_id = subject
+  );
 $$;
 
 revoke execute on function private.resetting_account(uuid) from public, anon, authenticated;
@@ -78,7 +90,7 @@ begin
     raise exception 'profile_not_found' using errcode = 'P0001';
   end if;
   perform private.take_rate_limit('reset_account_hour', caller);
-  perform set_config('gainscape.resetting_account', caller::text, true);
+  insert into private.account_resets (transaction_id, user_id) values (pg_catalog.pg_current_xact_id(), caller);
 
   delete from public.reactions where user_id = caller;
   delete from public.events where user_id = caller;
@@ -103,9 +115,9 @@ begin
   delete from public.drop_luck where user_id = caller;
   delete from public.loot_rolls where user_id = caller;
 
-  perform set_config('gainscape.resetting_account', '', true);
+  delete from private.account_resets r where r.transaction_id = pg_catalog.pg_current_xact_id();
 end;
 $$;
 
-revoke execute on function public.reset_account_data(text) from public, anon;
+revoke execute on function public.reset_account_data(text) from public, anon, service_role;
 grant execute on function public.reset_account_data(text) to authenticated;
