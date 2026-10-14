@@ -30,12 +30,12 @@ test('start a quest, finish it with a workout and see it on the reveal, the prof
   const locked = questCard(group(page, 'Locked'), HEAVY_SINGLE);
   await expect(locked.getByRole('list', { name: 'Requirements' })).toContainText('Not met Legs level 15 (now 1)');
   await expect(locked.getByRole('list', { name: 'Requirements' })).toContainText(`Not met Complete ${INITIATION}`);
-  await expect(locked.getByRole('button', { name: 'Start quest' })).toHaveCount(0);
+  await expect(locked.getByRole('button', { name: /^Start/ })).toHaveCount(0);
 
   const available = questCard(page, INITIATION);
   await expect(available.getByRole('list', { name: 'Rewards' })).toContainText('800 Legs XP');
   await expect(available).toContainText(`Unlocks ${HEAVY_SINGLE}`);
-  await available.getByRole('button', { name: 'Start quest' }).click();
+  await available.getByRole('button', { name: `Start ${INITIATION}` }).click();
   await expect(page.getByRole('status').getByText(`Started ${INITIATION}`, { exact: true })).toBeVisible();
 
   const started = questCard(group(page, 'In progress'), INITIATION);
@@ -66,14 +66,14 @@ test('start a quest, finish it with a workout and see it on the reveal, the prof
 test('offline the saved quests show and no quest can start', async ({ context, page }) => {
   await register(page, uniqueUsername('quest_off'));
   await openQuests(page);
-  await expect(questCard(page, INITIATION).getByRole('button', { name: 'Start quest' })).toBeEnabled();
+  await expect(questCard(page, INITIATION).getByRole('button', { name: `Start ${INITIATION}` })).toBeEnabled();
 
   await context.setOffline(true);
   await openTab(page, 'Skills');
   await page.getByRole('link', { name: 'Quests', exact: true }).click();
   await expect(page.getByRole('main').getByText('Offline: using your saved quests.', { exact: true })).toBeVisible();
   const card = questCard(page, INITIATION);
-  await expect(card.getByRole('button', { name: 'Start quest' })).toBeDisabled();
+  await expect(card.getByRole('button', { name: `Start ${INITIATION}` })).toBeDisabled();
   await expect(card).toContainText('Connect to start this quest.');
   await context.setOffline(false);
 });
@@ -89,7 +89,7 @@ test('a refused start says which requirement is missing', async ({ page }) => {
     }),
   );
   const card = questCard(page, INITIATION);
-  await card.getByRole('button', { name: 'Start quest' }).click();
+  await card.getByRole('button', { name: `Start ${INITIATION}` }).click();
   await expect(card.getByRole('alert')).toHaveText("You don't meet this quest's requirements yet.");
-  await expect(card.getByRole('button', { name: 'Start quest' })).toBeEnabled();
+  await expect(card.getByRole('button', { name: `Start ${INITIATION}` })).toBeEnabled();
 });

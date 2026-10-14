@@ -72,7 +72,7 @@ export function QuestCard({ card, offline, onStart }: QuestCardProps) {
             disabled={!canStartQuest(status, offline) || starting}
             onClick={() => void start()}
           >
-            {starting ? 'Starting…' : 'Start quest'}
+            {starting ? 'Starting…' : `Start ${quest.name}`}
           </button>
           {offline && <p className="muted tiny">Connect to start this quest.</p>}
           {!offline && <p className="muted tiny">Only workouts you finish after starting count.</p>}

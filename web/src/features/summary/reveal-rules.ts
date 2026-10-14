@@ -119,6 +119,7 @@ export function unappliedChangesText(
 }
 
 export interface QuestRevealLine {
+  questId: string;
   text: string;
   detail: string | null;
 }
@@ -141,6 +142,7 @@ function progressedLine(
   const step = quest?.steps[stepIndex];
   if (!quest || !step) {
     return {
+      questId,
       text: `${UNKNOWN_QUEST}: step ${stepIndex + 1}`,
       detail: stepTarget > 1 ? `${formatXp(stepProgress)} / ${formatXp(stepTarget)}` : null,
     };
@@ -148,6 +150,7 @@ function progressedLine(
   const nameOf = (exerciseId: string) => log?.exerciseNames[exerciseId] ?? 'Exercise';
   const progress = questStepProgress(step, stepProgress, unit);
   return {
+    questId,
     text: `${quest.name}: step ${stepIndex + 1} of ${quest.steps.length}`,
     detail: progress?.text ?? questStepText(step, nameOf, unit),
   };
@@ -165,6 +168,7 @@ export function questRevealLines(
   const questName = (questId: string) => log?.quests.find((quest) => quest.questId === questId)?.name;
   const reveal: QuestReveal = {
     completed: quests.completed.map((completed) => ({
+      questId: completed.questId,
       text: `Quest complete: ${completed.name}`,
       detail: [
         `+${questPointsText(completed.questPoints)}`,

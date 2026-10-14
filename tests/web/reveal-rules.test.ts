@@ -397,7 +397,11 @@ describe('questRevealLines', () => {
     };
     expect(questRevealLines({ quests }, null, skills, 'kg')).toEqual({
       completed: [
-        { text: 'Quest complete: Squat Rack Initiation', detail: '+1 quest point · +800 Legs XP, +200 Core XP' },
+        {
+          questId: 'quest-initiation',
+          text: 'Quest complete: Squat Rack Initiation',
+          detail: '+1 quest point · +800 Legs XP, +200 Core XP',
+        },
       ],
       progressed: [],
       unlocked: [],
@@ -414,16 +418,29 @@ describe('questRevealLines', () => {
       ],
     };
     expect(questRevealLines({ quests }, log, skills, 'kg')?.progressed).toEqual([
-      { text: 'Squat Rack Initiation: step 1 of 2', detail: '1 / 2 workouts' },
-      { text: 'The Heavy Single: step 1 of 1', detail: 'Set a new Back Squat record' },
+      { questId: 'quest-initiation', text: 'Squat Rack Initiation: step 1 of 2', detail: '1 / 2 workouts' },
+      { questId: 'quest-heavy', text: 'The Heavy Single: step 1 of 1', detail: 'Set a new Back Squat record' },
     ]);
   });
 
   it('falls back to the bare counts when the quest list is not loaded', () => {
     const quests = { ...empty, progressed: [{ questId: 'quest-x', stepIndex: 1, stepProgress: 30, stepTarget: 100 }] };
     expect(questRevealLines({ quests }, null, skills, 'kg')?.progressed).toEqual([
-      { text: 'A quest: step 2', detail: '30 / 100' },
+      { questId: 'quest-x', text: 'A quest: step 2', detail: '30 / 100' },
     ]);
+  });
+
+  it('keeps two unnamed quests on the same step apart by their quest ids', () => {
+    const quests = {
+      ...empty,
+      progressed: [
+        { questId: 'quest-x', stepIndex: 0, stepProgress: 1, stepTarget: 3 },
+        { questId: 'quest-y', stepIndex: 0, stepProgress: 1, stepTarget: 3 },
+      ],
+    };
+    const lines = questRevealLines({ quests }, null, skills, 'kg')?.progressed ?? [];
+    expect(lines.map((line) => line.text)).toEqual(['A quest: step 1', 'A quest: step 1']);
+    expect(lines.map((line) => line.questId)).toEqual(['quest-x', 'quest-y']);
   });
 
   it('names newly available quests', () => {

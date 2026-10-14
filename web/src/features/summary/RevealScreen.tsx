@@ -245,7 +245,7 @@ function QuestPanel({ reveal, delayS }: QuestPanelProps) {
         </Link>
       </div>
       {reveal.completed.map((line) => (
-        <p className="stack" key={line.text}>
+        <p className="stack" key={line.questId}>
           <strong className="accent-text">{line.text}</strong>
           {line.detail && <span className="muted">{line.detail}</span>}
         </p>
@@ -253,7 +253,7 @@ function QuestPanel({ reveal, delayS }: QuestPanelProps) {
       {reveal.progressed.length > 0 && (
         <ul className="quest-list" aria-label="Quest progress">
           {reveal.progressed.map((line) => (
-            <li key={line.text}>
+            <li key={line.questId}>
               {line.text}
               {line.detail && <span className="muted"> · {line.detail}</span>}
             </li>
