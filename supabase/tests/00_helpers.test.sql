@@ -131,6 +131,8 @@ declare
   gear_item uuid;
   friend_event uuid;
   enrollment_id uuid := gen_random_uuid();
+  completed_quest uuid := gen_random_uuid();
+  started_quest uuid := gen_random_uuid();
 begin
   select e.id into lift from public.exercises e where e.key is not null and e.load_type = 'external' order by e.key limit 1;
   select e.id into bodyweight_lift from public.exercises e where e.key is not null and e.load_type = 'bodyweight' order by e.key limit 1;
@@ -194,6 +196,21 @@ begin
   from public.program_templates t where t.key = 'madcow_5x5' and t.version = 1;
   insert into public.program_enrollment_events (enrollment_id, kind, payload)
   values (enrollment_id, 'skip_day', '{"position": {"week": 1, "day": "mon"}}');
+  insert into public.quests (id, key, name, description, quest_points, sort_order, definition)
+  values
+    (completed_quest, 'test_done_' || replace(completed_quest::text, '-', ''),
+     'Done ' || replace(completed_quest::text, '-', ''), 'A completed test quest.', 1, 1000,
+     '{"requiredLevels": [], "requiredQuestIds": [], "steps": [{"kind": "record", "exerciseId": null}], "rewardXp": {}}'),
+    (started_quest, 'test_started_' || replace(started_quest::text, '-', ''),
+     'Started ' || replace(started_quest::text, '-', ''), 'A started test quest.', 1, 1001,
+     '{"requiredLevels": [], "requiredQuestIds": [], "steps": [{"kind": "record", "exerciseId": null}], "rewardXp": {}}');
+  insert into public.quest_progress (user_id, quest_id) values (give_everything.owner, started_quest);
+  insert into public.quest_completions
+    (user_id, quest_id, started_at, session_id, anchor_started_at, anchor_session_id, quest_points)
+  select give_everything.owner, completed_quest, s.started_at, s.id, s.started_at, s.id, 1
+  from public.sessions s where s.id = session_id;
+  insert into public.quest_completion_xp (user_id, quest_id, skill_id, xp)
+  values (give_everything.owner, completed_quest, skill, 100);
 end;
 $$;
 
