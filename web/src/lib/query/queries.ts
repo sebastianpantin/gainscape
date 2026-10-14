@@ -3,7 +3,7 @@ import { infiniteQueryOptions, type QueryClient, queryOptions } from '@tanstack/
 import { type CacheFirstLoad } from '../../offline/cache-first.ts';
 import { fetchBodyweightTrend } from '../progress/bodyweight-trend.ts';
 import { fetchExercises, fetchSkills } from '../exercises/catalog.ts';
-import { saveCachedExercises } from '../exercises/catalog-cache.ts';
+import { readCachedExercises, saveCachedExercises } from '../exercises/catalog-cache.ts';
 import { type Skill } from '../exercises/catalog-rules.ts';
 import { type Collection, loadCollectionCacheFirst } from '../collection/collection-data.ts';
 import { collectionPercent, countCollection } from '../collection/collection-rules.ts';
@@ -31,6 +31,8 @@ import { type FeedCursor, feedCursor } from '../social/social-rules.ts';
 import { fetchWeeklyGoalStatus } from '../progress/weekly-goal.ts';
 import { loadQuestsCacheFirst } from '../quests/quests.ts';
 import { type QuestLog } from '../quests/quest-rules.ts';
+import { deviceStorage } from '../platform/keyed-store.ts';
+import { skillExercisesSeed } from '../progress/skill-map-rules.ts';
 
 export const FRIENDS_QUERY_PREFIX = ['friends'] as const;
 export const FEED_QUERY_PREFIX = ['feed'] as const;
@@ -210,6 +212,11 @@ export function exerciseListQuery(userId: string) {
       saveCachedExercises(localStorage, userId, exercises);
       return exercises;
     },
+    initialData: () => {
+      const storage = deviceStorage();
+      return skillExercisesSeed(storage && readCachedExercises(storage, userId));
+    },
+    initialDataUpdatedAt: 0,
   });
 }
 

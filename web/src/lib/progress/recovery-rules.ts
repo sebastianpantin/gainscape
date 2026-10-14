@@ -79,6 +79,11 @@ export function recoveryTimeLabel(hours: number): string {
   return remainingHours === 0 ? `${days}d` : `${days}d ${remainingHours}h`;
 }
 
+export function muscleRecoveryText(hardSetsLeft: number): string {
+  const hours = hoursUntilFresh(hardSetsLeft);
+  return hours === 0 ? 'Fresh' : `Fresh in ${recoveryTimeLabel(hours)}`;
+}
+
 export function recoveryGroups(
   load: Readonly<Record<BodySkill, number>>,
   nameOf: (skill: BodySkill) => string,

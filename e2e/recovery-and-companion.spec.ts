@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
+import { logExercise, logWorkout, openBody, openTab, register, uniqueUsername } from './support/app.ts';
 import { grantItems } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
 
@@ -12,9 +12,9 @@ function companion(page: Page, name: string) {
   return page.getByRole('link', { name: `${name}, your companion` });
 }
 
-test('the Skills tab shows which muscles a recent workout trained', async ({ page }) => {
+test('the Body page shows which muscles a recent workout trained', async ({ page }) => {
   await register(page, uniqueUsername('rec'));
-  await openTab(page, 'Skills');
+  await openBody(page);
   await expect(recovery(page)).toContainText('Fresh: Chest, Back, Shoulders, Arms, Legs, Core, Grip');
 
   await openTab(page, 'Train');
@@ -25,7 +25,7 @@ test('the Skills tab shows which muscles a recent workout trained', async ({ pag
       { weightKg: 60, reps: 5 },
     ]),
   );
-  await openTab(page, 'Skills');
+  await openBody(page);
   await expect(recovery(page).getByRole('listitem').filter({ hasText: 'Recovering:' })).toContainText(
     /Chest \((\d+d( \d+h)?|\d+h)\)/,
   );

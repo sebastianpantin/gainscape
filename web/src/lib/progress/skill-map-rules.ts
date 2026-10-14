@@ -52,6 +52,6 @@ export function exercisesTrainingSkill(exercises: readonly Exercise[], skillKey:
     }));
 }
 
-export function skillPanelSeed(cached: Exercise[] | null): Exercise[] | undefined {
+export function skillExercisesSeed(cached: Exercise[] | null): Exercise[] | undefined {
   return cached?.some((exercise) => exercise.skillShares.length > 0) ? cached : undefined;
 }

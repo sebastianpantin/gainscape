@@ -12,6 +12,7 @@ import {
   readStoredDraft,
   register,
   setRow,
+  skillCard,
   type Tab,
   uniqueUsername,
   writeSession,
@@ -270,5 +271,31 @@ test('signing out offline with an expired token stays signed out after a cold st
   expect((await again.goto('/'))?.fromServiceWorker()).toBe(true);
   await expect(again.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(again.getByRole('link', { name: 'Train', exact: true })).toHaveCount(0);
+  await context.setOffline(false);
+});
+
+test('a skill page opened offline lists the exercises saved on an earlier online visit', async ({ context, page }) => {
+  test.setTimeout(120_000);
+  await register(page, uniqueUsername('pwa_sk'));
+  await waitForController(page);
+  await openTab(page, 'Skills');
+  await expect(page.getByRole('main').getByRole('link', { name: /^Body, / })).toBeVisible();
+  await openTab(page, 'Train');
+
+  await context.setOffline(true);
+  expect((await page.reload())?.fromServiceWorker()).toBe(true);
+  const markOnline = await markPageOffline(page);
+  await expectProvenOffline(page);
+  await openTab(page, 'Skills');
+  await expect(page.getByRole('main').getByText(OFFLINE_SKILLS_NOTICE)).toBeVisible();
+  await skillCard(page, 'Chest').click();
+  await expect(page.getByRole('list', { name: 'Exercises that train Chest' })).toContainText(
+    'Barbell Bench Press 70%',
+    {
+      timeout: OFFLINE_TAB_BUDGET_MS,
+    },
+  );
+  await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0);
+  await markOnline();
   await context.setOffline(false);
 });
