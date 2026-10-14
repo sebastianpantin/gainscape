@@ -1,5 +1,7 @@
 import { MAX_LEVEL, xpForLevel } from '@domain/index.ts';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Icon } from '../../components/Icon.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
@@ -83,6 +85,14 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
           <strong>{standing.combatLevel}</strong>
         </div>
       </div>
+      <ul className="menu-list">
+        <li>
+          <Link className="button" to="/skills/quests">
+            Quests
+            <Icon name="chevron" size={18} />
+          </Link>
+        </li>
+      </ul>
       <RecoveryPanel
         userId={userId}
         nameOf={(key) => standing.skills.find(({ skill }) => skill.key === key)?.skill.name ?? key}

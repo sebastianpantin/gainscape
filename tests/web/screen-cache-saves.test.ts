@@ -11,7 +11,7 @@ vi.mock('../../web/src/lib/platform/supabase.ts', () => {
   function query(table: string) {
     let single = false;
     const builder: Record<string, unknown> = {};
-    for (const method of ['select', 'eq', 'is', 'order', 'limit', 'abortSignal']) builder[method] = () => builder;
+    for (const method of ['select', 'eq', 'in', 'is', 'order', 'limit', 'abortSignal']) builder[method] = () => builder;
     builder.single = () => {
       single = true;
       return builder;
@@ -48,6 +48,8 @@ const { loadItemsCacheFirst } = await import('../../web/src/lib/collection/items
 const { loadProgramTemplatesCacheFirst } = await import('../../web/src/lib/programs/program-enrollment.ts');
 const { readItemsCache } = await import('../../web/src/offline/items-cache.ts');
 const { readProgramCache } = await import('../../web/src/offline/program-cache.ts');
+const { loadQuestsCacheFirst } = await import('../../web/src/lib/quests/quests.ts');
+const { questsCache } = await import('../../web/src/offline/quests-cache.ts');
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -256,6 +258,52 @@ describe('saving the items and program templates after an online load', () => {
     server.tables = { program_templates: [template] };
     expect(await loadProgramTemplatesCacheFirst(USER_ID)).toEqual([template]);
     expect(readProgramCache(storage, USER_ID).templates).toEqual([template]);
+  });
+});
+
+describe('saving the quest log after an online load', () => {
+  const quest = {
+    id: 'quest-1',
+    key: 'x_marks_the_squat',
+    name: 'X Marks the Squat',
+    description: 'Squat twice.',
+    quest_points: 1,
+    sort_order: 1,
+    retired_at: null,
+    definition: {
+      steps: [{ kind: 'sessions', target: 2, exerciseId: 'squat' }],
+      rewardXp: { 'skill-legs': 800 },
+      requiredLevels: [],
+      requiredQuestIds: [],
+    },
+  };
+
+  it('saves the quests, your progress and the names of the exercises their steps name', async () => {
+    server.tables = {
+      quests: [quest],
+      quest_progress: [
+        { quest_id: 'quest-1', started_at: '2026-10-10T10:00:00.000Z', step_index: 0, step_progress: '1.00' },
+      ],
+      quest_completions: [],
+      exercises: [{ id: 'squat', name: 'Back Squat' }],
+    };
+    const load = await loadQuestsCacheFirst(USER_ID);
+    expect(load.fromCache).toBe(false);
+    expect(load.loaded.progress).toEqual([
+      { questId: 'quest-1', startedAt: '2026-10-10T10:00:00.000Z', stepIndex: 0, stepProgress: 1 },
+    ]);
+    expect(questsCache.read(storage, USER_ID)).toMatchObject({
+      quests: [quest],
+      exerciseNames: { squat: 'Back Squat' },
+    });
+  });
+
+  it('shows the saved quest log when the device is offline', async () => {
+    questsCache.save(storage, USER_ID, { quests: [quest], progress: [], completions: [], exerciseNames: {} });
+    vi.stubGlobal('navigator', { onLine: false });
+    const load = await loadQuestsCacheFirst(USER_ID);
+    expect(load).toMatchObject({ fromCache: true, offline: true });
+    expect(load.loaded.quests.map((saved) => saved.name)).toEqual(['X Marks the Squat']);
   });
 });
 

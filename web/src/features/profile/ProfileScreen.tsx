@@ -6,7 +6,7 @@ import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { ageFrom, BODYWEIGHT_NUDGE_STEP, nudgedBodyweightKg, updatePrivateProfile } from '../../lib/profile/profile.ts';
-import { collectionPercentQuery } from '../../lib/query/queries.ts';
+import { collectionPercentQuery, questPointsQuery } from '../../lib/query/queries.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { formatHeight, formatWeight } from '../../lib/units.ts';
@@ -36,6 +36,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
   const { state, replace } = useProfile(userId);
   const standing = useStanding(userId);
   const collection = useQuery(collectionPercentQuery(userId));
+  const questPoints = useQuery(questPointsQuery(userId));
   const { unitPref } = usePreferences();
   const queryClient = useQueryClient();
   const [draftKg, setDraftKg] = useState<number | null>(null);
@@ -93,6 +94,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         totalLevel={levels?.totalLevel ?? null}
         combatLevel={levels?.combatLevel ?? null}
         collectionPercent={collection.data ?? null}
+        questPoints={questPoints.data ?? null}
       />
       <LoadoutPanel userId={userId} />
       <section className="panel stack" aria-labelledby="body-heading">

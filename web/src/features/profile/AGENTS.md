@@ -1,7 +1,7 @@
 # Profile Feature
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-13
+**Generated:** 2026-10-01 · **Updated:** 2026-10-14
 
 ## Purpose
 
@@ -15,7 +15,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
   - `use-optimistic-profile-save.ts`: applies the change, persists it, and rolls back on failure.
   - `use-loadout.ts`: the loadout query.
 - Shared with other features:
-  - `ProfileCard.tsx` and `ProfileBadge` (friends use them).
+  - `ProfileCard.tsx` and `ProfileBadge` (friends use them). Its stat tiles (2 by 2) include quest points: your own from `questPointsQuery`, a friend's from `get_profile`.
   - `LoadoutPanel.tsx` (Items, Profile, Preview and the friend profile).
   - `save-bodyweight.ts` (workout finish and history edit).
 - Logic lives outside this folder:

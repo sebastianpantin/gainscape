@@ -16,6 +16,8 @@ import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { claimChallengeRun } from '../_shared/stores/challenges.ts';
 import { loadEquippedLoadout } from '../_shared/stores/gear.ts';
+import { loadSkillXp } from '../_shared/stores/history.ts';
+import { advanceQuestsForSession } from '../_shared/stores/quests.ts';
 import { deriveNewSession } from '../_shared/stores/replay.ts';
 import {
   assertSetIdsUnused,
@@ -31,6 +33,7 @@ import {
   placeholderSetRow,
   type SessionTiming,
   type StoredSession,
+  storedSummary,
   tombstoneOwner,
 } from '../_shared/stores/sessions.ts';
 import {
@@ -81,6 +84,7 @@ async function storeAndReplay(
   session: WritableSession,
   snapshots: SnapshotsBySetId,
 ): Promise<InsertedSession> {
+  const skillXpBeforeSync = await loadSkillXp(tx, row.userId);
   const { completedAt } = await insertSession(
     tx,
     row,
@@ -89,8 +93,9 @@ async function storeAndReplay(
       ...snapshots.get(set.id)!,
     })),
   );
-  const summary = await deriveNewSession(tx, row.userId, { id: session.id, startedAt: session.startedAt });
-  return { summary, completedAt };
+  const replayed = await deriveNewSession(tx, row.userId, { id: session.id, startedAt: session.startedAt });
+  await advanceQuestsForSession(tx, row.userId, { endedAt: row.endedAt, replayed }, skillXpBeforeSync, DEFAULT_BALANCE);
+  return { summary: await storedSummary(tx, session.id), completedAt };
 }
 
 async function claimedChallenge(

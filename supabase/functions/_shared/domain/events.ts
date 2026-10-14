@@ -4,8 +4,10 @@ import {
   CARDIO_RECORD_KINDS,
   type CardioRecordKind,
   type CardioRecordSummary,
+  type LevelUp,
   type LiftRecordSummary,
   type LoadType,
+  type QuestIdentity,
   type SessionSummary,
 } from './types.ts';
 
@@ -14,13 +16,25 @@ export interface FeedSourceSet {
   effectiveLoadKg: number | null;
 }
 
-export type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop';
+export type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop' | 'quest';
 
 export interface FeedEventDraft {
   key: string;
   type: FeedEventType;
   setId: string | null;
   payload: Record<string, string | number | null>;
+}
+
+export interface QuestEventDraft {
+  key: string;
+  type: 'quest';
+  payload: {
+    questId: string;
+    questKey: string;
+    name: string;
+    questPoints: number;
+    levelUps: LevelUp[];
+  };
 }
 
 export interface FeedExercise {
@@ -133,4 +147,18 @@ export function feedEventsForSession(
 ): FeedEventDraft[] {
   if (summary.historyOnly) return [];
   return [...levelEvents(summary, cfg), ...prEvents(summary, sets, exercises), ...dropEvents(summary, itemRarity, cfg)];
+}
+
+export function questCompletedEvent(quest: QuestIdentity, levelUps: readonly LevelUp[]): QuestEventDraft {
+  return {
+    key: `quest:${quest.key}`,
+    type: 'quest',
+    payload: {
+      questId: quest.questId,
+      questKey: quest.key,
+      name: quest.name,
+      questPoints: quest.questPoints,
+      levelUps: [...levelUps],
+    },
+  };
 }

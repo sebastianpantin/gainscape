@@ -1,7 +1,7 @@
 # lib
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-13
+**Generated:** 2026-10-01 · **Updated:** 2026-10-14
 
 ## Purpose
 
@@ -21,6 +21,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `collection/`: items, gear, challenges, the companion pet and the records collection.
 - `profile/`: profile and its view, account actions, preferences and onboarding.
 - `social/`: friends, feed and hiscores.
+- `quests/`: the quest log (cache-first), `start-quest` and `quest-rules.ts` (board, step and requirement text, start errors).
 - `ui/`: pure helpers behind shared components (number field, count-up, line chart, toast, term help) and `glossary.ts`.
 - The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`.
 - Start here:

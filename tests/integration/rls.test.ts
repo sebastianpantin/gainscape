@@ -236,6 +236,78 @@ describe('events', () => {
   });
 });
 
+describe('quest tables', () => {
+  const questTables = ['quest_progress', 'quest_completions', 'quest_completion_xp'];
+
+  beforeAll(async () => {
+    await db`
+      insert into public.quest_progress (user_id, quest_id)
+      select ${owner.id}, id from public.quests where key = 'bench_mysteries'
+      on conflict do nothing`;
+    await db`
+      insert into public.quest_completions
+        (user_id, quest_id, started_at, session_id, anchor_started_at, anchor_session_id, quest_points)
+      select ${owner.id}, q.id, s.started_at, s.id, s.started_at, s.id, q.quest_points
+      from public.quests q, public.sessions s where q.key = 'yogic_ritual' and s.id = ${ownerSessionId}
+      on conflict do nothing`;
+    await db`
+      insert into public.quest_completion_xp (user_id, quest_id, skill_id, xp)
+      select ${owner.id}, q.id, k.id, 600 from public.quests q, public.skills k
+      where q.key = 'yogic_ritual' and k.key = 'mobility'
+      on conflict do nothing`;
+  });
+
+  async function ownerRows(table: string) {
+    return await db`select * from ${db('public.' + table)} where user_id = ${owner.id}`;
+  }
+
+  async function insertableRows(): Promise<Record<string, object>> {
+    const [quest] = await db`select id from public.quests where key = 'monkey_bar_madness'`;
+    const [completed] = await db`select id from public.quests where key = 'yogic_ritual'`;
+    const [skill] = await db`select id from public.skills where key = 'grip'`;
+    const now = new Date().toISOString();
+    return {
+      quest_progress: { user_id: owner.id, quest_id: quest.id },
+      quest_completions: {
+        user_id: owner.id,
+        quest_id: quest.id,
+        started_at: now,
+        anchor_started_at: now,
+        anchor_session_id: ownerSessionId,
+        quest_points: 10,
+      },
+      quest_completion_xp: { user_id: owner.id, quest_id: completed.id, skill_id: skill.id, xp: 5000 },
+    };
+  }
+
+  it.each(questTables)('insert into %s is denied', async (table) => {
+    const rows = await insertableRows();
+    const before = await ownerRows(table);
+    const { error } = await owner.client.from(table).insert(rows[table]);
+    expect(error?.code).toBe('42501');
+    expect(await ownerRows(table)).toEqual(before);
+  });
+
+  it.each(questTables)('update and delete of %s are denied', async (table) => {
+    const before = await ownerRows(table);
+    expect(before.length).toBeGreaterThan(0);
+    const updated = await owner.client.from(table).update({ user_id: owner.id }).eq('user_id', owner.id);
+    expect(updated.error?.code).toBe('42501');
+    const deleted = await owner.client.from(table).delete().eq('user_id', owner.id);
+    expect(deleted.error?.code).toBe('42501');
+    expect(await ownerRows(table)).toEqual(before);
+  });
+
+  it.each(questTables)('shows %s to its owner only', async (table) => {
+    const own = await owner.client.from(table).select('user_id');
+    expect(own.error).toBeNull();
+    expect(own.data?.length).toBeGreaterThan(0);
+    const foreign = await stranger.client.from(table).select('user_id').eq('user_id', owner.id);
+    expect(foreign.error).toBeNull();
+    expect(foreign.data).toEqual([]);
+  });
+});
+
 describe('friendships', () => {
   async function pairRows() {
     return await db`
@@ -376,10 +448,11 @@ describe('function execution rights', () => {
 });
 
 describe('item catalog tables', () => {
-  const catalogTables = ['challenges', 'items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs'];
+  const catalogTables = ['challenges', 'quests', 'items', 'drop_tables', 'drop_entries', 'recipes', 'recipe_inputs'];
 
   const everyRowColumn: Record<string, string> = {
     challenges: 'id',
+    quests: 'id',
     items: 'id',
     drop_tables: 'id',
     drop_entries: 'item_id',
@@ -402,6 +475,15 @@ describe('item catalog tables', () => {
     const { item, table: dropTable, recipe } = await sampleRows();
     const rowsByTable: Record<string, object> = {
       challenges: { id: randomUUID(), key: 'free_xp', name: 'Free XP', kind: 'volume', definition: {} },
+      quests: {
+        id: randomUUID(),
+        key: 'free_points',
+        name: 'Free points',
+        description: 'Nothing to do.',
+        quest_points: 10,
+        sort_order: 99,
+        definition: {},
+      },
       items: { ...item, id: randomUUID(), key: 'forged_crown', name: 'Forged crown' },
       drop_tables: { id: randomUUID(), key: 'jackpot', name: 'Jackpot' },
       drop_entries: {
@@ -423,6 +505,7 @@ describe('item catalog tables', () => {
   it.each(catalogTables)('update of %s is denied', async (table) => {
     const updates: Record<string, object> = {
       challenges: { name: 'Free XP' },
+      quests: { quest_points: 10 },
       items: { name: 'Free loot' },
       drop_tables: { name: 'Free loot' },
       drop_entries: { weight: 1000000 },

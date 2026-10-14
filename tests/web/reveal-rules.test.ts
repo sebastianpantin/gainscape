@@ -10,12 +10,14 @@ import {
   gearBonusText,
   levelUpCueDelayMs,
   playsReveal,
+  questRevealLines,
   REVEAL_MAX_PRE_LOOT_S,
   revealShape,
   revealTimeline,
   skipsRevealOnKey,
   unappliedChangesText,
 } from '../../web/src/features/summary/reveal-rules.ts';
+import { questLogFrom } from '../../web/src/lib/quests/quest-rules.ts';
 
 const base = { equipment: 'barbell', custom: false, archived: false, skillShares: [] };
 const dip: LiftExercise = { ...base, id: 'dip', name: 'Weighted Dip', modality: 'lift', loadType: 'bodyweight_plus' };
@@ -341,5 +343,111 @@ describe('reveal playback', () => {
     expect(skipsRevealOnKey({ key: 'Enter', onInteractiveElement: true })).toBe(false);
     expect(skipsRevealOnKey({ key: 'Tab', onInteractiveElement: false })).toBe(false);
     expect(skipsRevealOnKey({ key: ' ', onInteractiveElement: false })).toBe(false);
+  });
+});
+
+describe('questRevealLines', () => {
+  const skills = [
+    { id: 'skill-legs', key: 'legs', name: 'Legs' },
+    { id: 'skill-core', key: 'core', name: 'Core' },
+  ];
+  const squat = 'exercise-squat';
+  const quest = (id: string, name: string, steps: unknown[]) => ({
+    id,
+    key: id.replace('-', '_'),
+    name,
+    description: 'A quest.',
+    quest_points: 1,
+    sort_order: 1,
+    retired_at: null,
+    definition: { steps, rewardXp: { 'skill-legs': 800 }, requiredLevels: [], requiredQuestIds: [] },
+  });
+  const log = questLogFrom({
+    quests: [
+      quest('quest-initiation', 'X Marks the Squat', [
+        { kind: 'sessions', target: 2, exerciseId: squat },
+        { kind: 'volume', metric: 'reps', target: 100, exerciseId: squat },
+      ]),
+      quest('quest-heavy', 'The Restless Squat', [{ kind: 'record', exerciseId: squat }]),
+    ],
+    progress: [],
+    completions: [],
+    exerciseNames: { [squat]: 'Back Squat' },
+  });
+  const empty = { completed: [], progressed: [], unlocked: [], levelUps: [] };
+
+  it('has nothing to show without quest news', () => {
+    expect(questRevealLines({}, log, skills, 'kg')).toBeNull();
+    expect(questRevealLines({ quests: empty }, log, skills, 'kg')).toBeNull();
+  });
+
+  it('describes completions with their quest points and XP in skill order', () => {
+    const quests = {
+      ...empty,
+      completed: [
+        {
+          questId: 'quest-initiation',
+          key: 'x_marks_the_squat',
+          name: 'X Marks the Squat',
+          questPoints: 1,
+          xpBySkill: { 'skill-core': 200, 'skill-legs': 800 },
+        },
+      ],
+      levelUps: [{ skill: 'legs', from: 14, to: 15 }],
+    };
+    expect(questRevealLines({ quests }, null, skills, 'kg')).toEqual({
+      completed: [
+        {
+          questId: 'quest-initiation',
+          text: 'Quest complete: X Marks the Squat',
+          detail: '+1 quest point · +800 Legs XP, +200 Core XP',
+        },
+      ],
+      progressed: [],
+      unlocked: [],
+      levelUps: [{ skillName: 'Legs', from: 14, to: 15 }],
+    });
+  });
+
+  it('counts progress on the current step and names the next one', () => {
+    const quests = {
+      ...empty,
+      progressed: [
+        { questId: 'quest-initiation', stepIndex: 0, stepProgress: 1, stepTarget: 2 },
+        { questId: 'quest-heavy', stepIndex: 0, stepProgress: 0, stepTarget: 1 },
+      ],
+    };
+    expect(questRevealLines({ quests }, log, skills, 'kg')?.progressed).toEqual([
+      { questId: 'quest-initiation', text: 'X Marks the Squat: step 1 of 2', detail: '1 / 2 workouts' },
+      { questId: 'quest-heavy', text: 'The Restless Squat: step 1 of 1', detail: 'Set a new Back Squat record' },
+    ]);
+  });
+
+  it('falls back to the bare counts when the quest list is not loaded', () => {
+    const quests = { ...empty, progressed: [{ questId: 'quest-x', stepIndex: 1, stepProgress: 30, stepTarget: 100 }] };
+    expect(questRevealLines({ quests }, null, skills, 'kg')?.progressed).toEqual([
+      { questId: 'quest-x', text: 'A quest: step 2', detail: '30 / 100' },
+    ]);
+  });
+
+  it('keeps two unnamed quests on the same step apart by their quest ids', () => {
+    const quests = {
+      ...empty,
+      progressed: [
+        { questId: 'quest-x', stepIndex: 0, stepProgress: 1, stepTarget: 3 },
+        { questId: 'quest-y', stepIndex: 0, stepProgress: 1, stepTarget: 3 },
+      ],
+    };
+    const lines = questRevealLines({ quests }, null, skills, 'kg')?.progressed ?? [];
+    expect(lines.map((line) => line.text)).toEqual(['A quest: step 1', 'A quest: step 1']);
+    expect(lines.map((line) => line.questId)).toEqual(['quest-x', 'quest-y']);
+  });
+
+  it('names newly available quests', () => {
+    const quests = { ...empty, unlocked: ['quest-heavy', 'quest-unknown'] };
+    expect(questRevealLines({ quests }, log, skills, 'kg')?.unlocked).toEqual([
+      'New quest available: The Restless Squat',
+      'New quest available: a new quest',
+    ]);
   });
 });

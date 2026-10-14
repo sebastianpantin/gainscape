@@ -27,6 +27,7 @@ async function userIdsWithDerivedData(tx: Transaction, after: string | null, lim
         or exists (select 1 from public.rep_maxes x where x.user_id = p.id)
         or exists (select 1 from public.bodyweight_rep_records x where x.user_id = p.id)
         or exists (select 1 from public.cardio_records x where x.user_id = p.id)
+        or exists (select 1 from public.quest_completions x where x.user_id = p.id)
       )
     order by p.id
     limit ${limit}`;

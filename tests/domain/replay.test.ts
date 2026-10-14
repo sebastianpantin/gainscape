@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
+  applyXpGrant,
   type Catalog,
   challengeBonusXp,
   compareSessionKeys,
@@ -10,6 +11,8 @@ import {
   isLiftSet,
   type LiftExerciseDef,
   type LiftSetInput,
+  levelForXp,
+  levelUpsBetween,
   priorSkillXp,
   type RecordHistoryRow,
   recordsFromHistory,
@@ -18,8 +21,10 @@ import {
   type SessionInput,
   type SessionKey,
   type SetInput,
+  type SkillXpGrant,
   strengthHistoryRows,
   type StrengthHistoryRow,
+  xpForLevel,
 } from '@domain/index.ts';
 import { aSet, catalog as fixtureCatalog, DAY_MS, hard, HOUR_MS, nearFailure, TEST_BALANCE } from './fixtures.ts';
 
@@ -483,6 +488,144 @@ describe('replayHistory with challenge snapshots', () => {
     );
     expect(replayHistory([challengeSession, heavyPull], challengeCatalog, TEST_BALANCE)).toEqual(
       replayHistory([heavyPull, challengeSession], challengeCatalog, TEST_BALANCE),
+    );
+  });
+});
+
+describe('applyXpGrant', () => {
+  it('adds the granted XP per skill without touching the input', () => {
+    const before = { 'skill-legs': 100, 'skill-core': 5 };
+    expect(applyXpGrant(before, { 'skill-legs': 800, 'skill-grip': 50 }, cfg)).toEqual({
+      'skill-legs': 900,
+      'skill-core': 5,
+      'skill-grip': 50,
+    });
+    expect(before).toEqual({ 'skill-legs': 100, 'skill-core': 5 });
+  });
+
+  it('caps every skill at maxXp', () => {
+    expect(applyXpGrant({ 'skill-legs': 990 }, { 'skill-legs': 50, 'skill-core': 2000 }, { maxXp: 1000 })).toEqual({
+      'skill-legs': 1000,
+      'skill-core': 1000,
+    });
+  });
+});
+
+describe('levelUpsBetween', () => {
+  it('lists every skill that gained a level, in display order, by skill key', () => {
+    const before = { 'skill-legs': xpForLevel(14), 'skill-chest': xpForLevel(3), 'skill-core': xpForLevel(9) };
+    const after = { 'skill-legs': xpForLevel(15), 'skill-chest': xpForLevel(3), 'skill-core': xpForLevel(11) };
+    expect(levelUpsBetween(before, after, catalog)).toEqual([
+      { skill: 'legs', from: 14, to: 15 },
+      { skill: 'core', from: 9, to: 11 },
+    ]);
+  });
+});
+
+describe('replayHistory with XP grants', () => {
+  const legs = 'skill-legs';
+  const first: SessionInput = {
+    id: 'first',
+    startedAt: '2026-03-01T10:00:00Z',
+    sets: [aSet('squat', 100, 5, hard), aSet('squat', 100, 5, nearFailure)],
+  };
+  const second: SessionInput = {
+    id: 'second',
+    startedAt: '2026-03-03T10:00:00Z',
+    sets: [aSet('squat', 105, 5, hard), aSet('squat', 105, 5, nearFailure)],
+  };
+  const grantXp = xpForLevel(30);
+  const grantAt = (session: SessionInput): SkillXpGrant => ({ at: keyOf(session), xpBySkill: { [legs]: grantXp } });
+
+  it('gives the same result with no grants as without the argument', () => {
+    fc.assert(
+      fc.property(historyArb, ({ sessions }) => {
+        expect(replayHistory(sessions, catalog, cfg, undefined, [], [])).toEqual(replayHistory(sessions, catalog, cfg));
+      }),
+      { numRuns: 100 },
+    );
+  });
+
+  it('applies a grant after its anchor session, so only later sessions see the new level', () => {
+    const plain = replayHistory([first, second], catalog, cfg);
+    const granted = replayHistory([second, first], catalog, cfg, undefined, [], [grantAt(first)]);
+    const grantedUpFront = replayHistory([first, second], catalog, cfg, {
+      skillXp: { [legs]: grantXp },
+      bodyweightKg: null,
+    });
+    expect(granted.sessions[0]).toEqual(plain.sessions[0]);
+    expect(granted.sessions[1]).toEqual(grantedUpFront.sessions[1]);
+    expect(granted.sessions[1].outputs.levelUps.filter((levelUp) => levelUp.skill === 'legs')).not.toEqual(
+      plain.sessions[1].outputs.levelUps.filter((levelUp) => levelUp.skill === 'legs'),
+    );
+    expect(granted.finalState.skillXp[legs]).toBe(plain.finalState.skillXp[legs] + grantXp);
+    expect(levelForXp(granted.finalState.skillXp[legs])).toBeGreaterThanOrEqual(30);
+  });
+
+  it('applies a grant anchored at the last session to the final state only', () => {
+    const plain = replayHistory([first, second], catalog, cfg);
+    const granted = replayHistory([first, second], catalog, cfg, undefined, [], [grantAt(second)]);
+    expect(granted.sessions).toEqual(plain.sessions);
+    expect(granted.finalState).toEqual({
+      ...plain.finalState,
+      skillXp: { ...plain.finalState.skillXp, [legs]: plain.finalState.skillXp[legs] + grantXp },
+    });
+  });
+
+  it('applies a grant anchored before every session up front', () => {
+    const earlier = { at: { id: 'earlier', startedAt: '2026-02-01T10:00:00Z' }, xpBySkill: { [legs]: grantXp } };
+    const granted = replayHistory([first, second], catalog, cfg, undefined, [], [earlier]);
+    expect(granted).toEqual(
+      replayHistory([first, second], catalog, cfg, { skillXp: { [legs]: grantXp }, bodyweightKg: null }),
+    );
+  });
+
+  it('caps granted XP at maxXp', () => {
+    const small = { ...cfg, maxXp: 1000 };
+    const granted = replayHistory([first], catalog, small, undefined, [], [grantAt(first)]);
+    expect(granted.finalState.skillXp[legs]).toBe(1000);
+  });
+
+  it('replays a suffix like the full history when the grants before it are folded into the prior XP', () => {
+    const grantArb = fc.array(
+      fc.record({
+        index: fc.nat(11),
+        skillId: fc.constantFrom('skill-legs', 'skill-chest', 'skill-grip'),
+        xp: fc.integer({ min: 1, max: 50_000 }),
+      }),
+      { maxLength: 4 },
+    );
+    fc.assert(
+      fc.property(historyArb, grantArb, ({ sessions, cut }, drafts) => {
+        const grants: SkillXpGrant[] = drafts.map(({ index, skillId, xp }) => ({
+          at: keyOf(sessions[index % sessions.length]),
+          xpBySkill: { [skillId]: xp },
+        }));
+        const expected = replayHistory(sessions, catalog, cfg, undefined, [], grants);
+        const from = keyOf(sessions[cut]);
+        const grantsBefore = grants.filter((grant) => isBefore(grant.at, from));
+        const prefixSessions = sessions.slice(0, cut);
+        const prefix = replayHistory(prefixSessions, catalog, cfg, undefined, [], grantsBefore);
+        const sums = grantsBefore.reduce(
+          (total, grant) => applyXpGrant(total, grant.xpBySkill, cfg),
+          skillXpSumsOf(prefix.sessions),
+        );
+        const suffix = replayHistory(
+          sessions.slice(cut),
+          catalog,
+          cfg,
+          {
+            skillXp: priorSkillXp(sums, cfg),
+            bodyweightKg: null,
+            records: recordsFromHistory(recordRowsOf(prefixSessions), catalog, cfg),
+          },
+          strengthRowsOf(prefix.sessions),
+          grants.filter((grant) => !isBefore(grant.at, from)),
+        );
+        expect(suffix.sessions).toEqual(expected.sessions.slice(cut));
+        expect(suffix.finalState).toEqual(expected.finalState);
+      }),
+      { numRuns: 100 },
     );
   });
 });

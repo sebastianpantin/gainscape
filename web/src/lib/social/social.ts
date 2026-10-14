@@ -38,6 +38,7 @@ export interface ProfileView {
   friendsSince: string | null;
   skillXp: Record<string, number>;
   collection: { filledSlots: number; totalSlots: number };
+  questPoints: number;
 }
 
 export interface CollectionViewExercise {
