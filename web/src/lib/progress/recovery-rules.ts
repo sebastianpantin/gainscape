@@ -59,24 +59,36 @@ export function recoveryState(hardSetsLeft: number): RecoveryState {
   return hardSetsLeft >= EASING_HARD_SETS ? 'easing' : 'fresh';
 }
 
-export function recoveryBySkill(
-  sets: readonly RecentSet[],
-  sharesByExerciseId: ReadonlyMap<string, readonly SkillShare[]>,
-  now: number,
-): Record<BodySkill, RecoveryState> {
-  const load = hardSetLoad(sets, sharesByExerciseId, now);
+export function recoveryBySkill(load: Readonly<Record<BodySkill, number>>): Record<BodySkill, RecoveryState> {
   return Object.fromEntries(BODY_SKILLS.map((skill) => [skill, recoveryState(load[skill])])) as Record<
     BodySkill,
     RecoveryState
   >;
 }
 
+export function hoursUntilFresh(hardSetsLeft: number): number {
+  if (hardSetsLeft < EASING_HARD_SETS) return 0;
+  return Math.max(1, Math.ceil(HALF_LIFE_HOURS * Math.log2(hardSetsLeft / EASING_HARD_SETS)));
+}
+
+export function recoveryTimeLabel(hours: number): string {
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  if (days === 0) return `${remainingHours}h`;
+  return remainingHours === 0 ? `${days}d` : `${days}d ${remainingHours}h`;
+}
+
 export function recoveryGroups(
-  states: Readonly<Record<BodySkill, RecoveryState>>,
+  load: Readonly<Record<BodySkill, number>>,
   nameOf: (skill: BodySkill) => string,
 ): Record<RecoveryState, string[]> {
   const groups: Record<RecoveryState, string[]> = { recovering: [], easing: [], fresh: [] };
-  for (const skill of BODY_SKILLS) groups[states[skill]].push(nameOf(skill));
+  for (const skill of BODY_SKILLS) {
+    const state = recoveryState(load[skill]);
+    groups[state].push(
+      state === 'fresh' ? nameOf(skill) : `${nameOf(skill)} (${recoveryTimeLabel(hoursUntilFresh(load[skill]))})`,
+    );
+  }
   return groups;
 }
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  recoveryTimeLabel,
   hardSetLoad,
+  hoursUntilFresh,
   recoveryBySkill,
   recoveryGroups,
   recoveryState,
@@ -82,30 +84,53 @@ describe('recoveryState', () => {
 
 describe('recoveryBySkill', () => {
   it('keeps a hard-hit muscle recovering longer than a lightly trained one', () => {
-    const states = recoveryBySkill(sets(6, 'bench', 50), SHARES, NOW);
+    const states = recoveryBySkill(hardSetLoad(sets(6, 'bench', 50), SHARES, NOW));
     expect(states.chest).toBe('recovering');
     expect(states.arms).toBe('easing');
     expect(states.shoulders).toBe('fresh');
   });
 
   it('keeps six sets to failure recovering for about four days and easing for two more', () => {
-    expect(recoveryBySkill(sets(6, 'press', 93), SHARES, NOW).chest).toBe('recovering');
-    expect(recoveryBySkill(sets(6, 'press', 94), SHARES, NOW).chest).toBe('easing');
-    expect(recoveryBySkill(sets(6, 'press', 140), SHARES, NOW).chest).toBe('easing');
-    expect(recoveryBySkill(sets(6, 'press', 141), SHARES, NOW).chest).toBe('fresh');
+    expect(recoveryBySkill(hardSetLoad(sets(6, 'press', 93), SHARES, NOW)).chest).toBe('recovering');
+    expect(recoveryBySkill(hardSetLoad(sets(6, 'press', 94), SHARES, NOW)).chest).toBe('easing');
+    expect(recoveryBySkill(hardSetLoad(sets(6, 'press', 140), SHARES, NOW)).chest).toBe('easing');
+    expect(recoveryBySkill(hardSetLoad(sets(6, 'press', 141), SHARES, NOW)).chest).toBe('fresh');
   });
 
   it('is fresh everywhere without recent sets', () => {
-    expect(Object.values(recoveryBySkill([], SHARES, NOW))).toEqual(Array(7).fill('fresh'));
+    expect(Object.values(recoveryBySkill(hardSetLoad([], SHARES, NOW)))).toEqual(Array(7).fill('fresh'));
+  });
+});
+
+describe('hoursUntilFresh', () => {
+  it('counts whole hours until the load fades below 0.4 hard sets', () => {
+    expect(hoursUntilFresh(0.8)).toBe(36);
+    expect(hoursUntilFresh(1.6)).toBe(72);
+    expect(hoursUntilFresh(6)).toBe(141);
+  });
+
+  it('is at least one hour while not fresh and zero once fresh', () => {
+    expect(hoursUntilFresh(0.4)).toBe(1);
+    expect(hoursUntilFresh(0.399)).toBe(0);
+    expect(hoursUntilFresh(0)).toBe(0);
+  });
+});
+
+describe('recoveryTimeLabel', () => {
+  it('shows hours under a day, then days and hours', () => {
+    expect(recoveryTimeLabel(1)).toBe('1h');
+    expect(recoveryTimeLabel(23)).toBe('23h');
+    expect(recoveryTimeLabel(24)).toBe('1d');
+    expect(recoveryTimeLabel(141)).toBe('5d 21h');
   });
 });
 
 describe('recoveryGroups', () => {
-  it('lists skill names by state in body order', () => {
-    const states = recoveryBySkill([...sets(6, 'press', 0), ...sets(6, 'bench', 0)], SHARES, NOW);
-    expect(recoveryGroups(states, (key) => key.toUpperCase())).toEqual({
-      recovering: ['CHEST', 'ARMS'],
-      easing: ['SHOULDERS'],
+  it('lists skill names by state in body order, with the time until fresh for tired muscles', () => {
+    const load = hardSetLoad([...sets(6, 'press', 0), ...sets(6, 'bench', 0)], SHARES, NOW);
+    expect(recoveryGroups(load, (key) => key.toUpperCase())).toEqual({
+      recovering: ['CHEST (6d 22h)', 'ARMS (2d 21h)'],
+      easing: ['SHOULDERS (1d 19h)'],
       fresh: ['BACK', 'LEGS', 'CORE', 'GRIP'],
     });
   });
