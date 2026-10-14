@@ -59,7 +59,10 @@ export function SkillScreen({ userId }: SkillScreenProps) {
   if (state.status === 'failed')
     return (
       <main className="screen stack">
-        <BackToSkills />
+        <div className="stack" style={{ gap: 4 }}>
+          <BackToSkills />
+          <h1 className="title">Skill</h1>
+        </div>
         <p className="problem" role="alert">
           {state.problem}
         </p>

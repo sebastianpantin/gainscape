@@ -1,8 +1,8 @@
-import { useId, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useId } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
 import { type LoadedState } from '../../lib/query/query-state-rules.ts';
-import { BODY_SKILLS, type BodySkill } from '../../lib/progress/recovery-rules.ts';
+import { BODY_SKILLS, type BodySkill, isBodySkill } from '../../lib/progress/recovery-rules.ts';
 import {
   type MuscleVolume,
   VOLUME_BAND_TEXT,
@@ -12,6 +12,8 @@ import {
 import { VolumeBar } from './VolumeBar.tsx';
 import { StatusSection } from './StatusSection.tsx';
 import { VolumeContributionList } from './VolumeContributionList.tsx';
+
+const OPEN_PARAM = 'open';
 
 interface WeeklyVolumePanelProps {
   volume: LoadedState<Record<BodySkill, MuscleVolume>>;
@@ -52,7 +54,11 @@ function MuscleRow({ skill, name, volume, open, onToggle }: MuscleRowProps) {
 }
 
 export function WeeklyVolumePanel({ volume, nameOf }: WeeklyVolumePanelProps) {
-  const [openSkill, setOpenSkill] = useState<BodySkill | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openParam = searchParams.get(OPEN_PARAM) ?? '';
+  const openSkill = isBodySkill(openParam) ? openParam : null;
+  const toggle = (skill: BodySkill) =>
+    setSearchParams(openSkill === skill ? {} : { [OPEN_PARAM]: skill }, { replace: true });
   return (
     <StatusSection title="Sets this week" state={volume}>
       {(bySkill) => (
@@ -65,7 +71,7 @@ export function WeeklyVolumePanel({ volume, nameOf }: WeeklyVolumePanelProps) {
                 name={nameOf(skill)}
                 volume={bySkill[skill]}
                 open={openSkill === skill}
-                onToggle={() => setOpenSkill(openSkill === skill ? null : skill)}
+                onToggle={() => toggle(skill)}
               />
             ))}
           </ul>

@@ -27,4 +27,13 @@ test('the Body page counts this week’s sets per muscle and lists the exercises
   await volume.getByRole('link', { name: 'Chest skill', exact: true }).click();
   await expect(page).toHaveURL(/\/skills\/chest$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Chest', exact: true })).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/skills\/body\?open=chest$/);
+  await expect(chest).toHaveAttribute('aria-expanded', 'true');
+  await expect(counted).toContainText('Barbell Bench Press');
+
+  await chest.click();
+  await expect(chest).toHaveAttribute('aria-expanded', 'false');
+  await expect(page).toHaveURL(/\/skills\/body$/);
 });
