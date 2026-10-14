@@ -47,6 +47,10 @@
   gap: var(--space-1);
 }
 
+.stored-set-list > .warmup {
+  color: var(--color-text-muted);
+}
+
 .exercise-note {
   gap: var(--space-1);
   align-items: flex-start;
