@@ -1,3 +1,12 @@
+- prs: [126]
+  version: 0.11.0
+  date: 2026-10-14
+  title: Smarter training
+  items:
+    - Skills has a Weekly volume panel that counts your sets for each muscle this week against a target of 10 to 20. Tap a muscle to see which exercises counted.
+    - A lift that has not improved for at least 4 workouts and 3 weeks shows as Stalled on its progress page, with tips to deload, change your rep range or try a variation. Lifts your program runs are left to the program.
+    - Add warm-ups now builds a warm-up ramp for dumbbell, machine and cable lifts too, not just barbell lifts.
+    - Warm-up sets look lighter in History, so your working sets stand out.
 - prs: [124]
   version: 0.10.0
   date: 2026-10-14
