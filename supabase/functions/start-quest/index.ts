@@ -21,12 +21,13 @@ async function startQuest(userId: string, { questId }: StartQuestPayload): Promi
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId);
     const stored = await loadQuest(tx, questId);
-    if (stored === null || stored.retired) throw new HttpError(404, 'quest_not_found');
-    const completedQuestIds = await loadCompletedQuestIds(tx, userId);
-    if (completedQuestIds.includes(questId)) throw new HttpError(409, 'quest_completed');
+    if (stored === null) throw new HttpError(404, 'quest_not_found');
     const progress = await loadQuestProgress(tx, userId);
     const started = progress.find((entry) => entry.questId === questId);
     if (started !== undefined) return started;
+    if (stored.retired) throw new HttpError(404, 'quest_not_found');
+    const completedQuestIds = await loadCompletedQuestIds(tx, userId);
+    if (completedQuestIds.includes(questId)) throw new HttpError(409, 'quest_completed');
 
     await takeRateLimit(tx, 'quest_start_hour', userId);
     const missing = questStartProblems(stored.quest, {

@@ -29,15 +29,20 @@ interface QuestRow {
   retired_at: string | null;
 }
 
-function storedQuestFromRow(row: QuestRow): StoredQuest {
+function storedQuestFromRow(row: QuestRow): StoredQuest | null {
   const identity = { questId: row.id, key: row.key, name: row.name, questPoints: row.quest_points };
-  return { quest: questDefinitionFromStored(identity, row.definition), retired: row.retired_at !== null };
+  try {
+    return { quest: questDefinitionFromStored(identity, row.definition), retired: row.retired_at !== null };
+  } catch (error) {
+    console.error(`skipping quest ${row.key}: its stored definition cannot be read`, error);
+    return null;
+  }
 }
 
 async function loadQuests(tx: Transaction): Promise<StoredQuest[]> {
   const rows = await tx<QuestRow[]>`
     select id, key, name, quest_points, definition, retired_at from public.quests order by sort_order, id`;
-  return rows.map(storedQuestFromRow);
+  return rows.flatMap((row) => storedQuestFromRow(row) ?? []);
 }
 
 export async function loadQuest(tx: Transaction, questId: string): Promise<StoredQuest | null> {
