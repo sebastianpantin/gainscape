@@ -11,6 +11,7 @@ import {
   type SessionKey,
   type SkillXpGrant,
 } from '../domain/index.ts';
+import { logUnexpectedError } from '../http.ts';
 import { loadCatalog } from './catalog.ts';
 import { insertQuestEvent } from './events.ts';
 import { loadSkillXp } from './history.ts';
@@ -34,7 +35,7 @@ function storedQuestFromRow(row: QuestRow): StoredQuest | null {
   try {
     return { quest: questDefinitionFromStored(identity, row.definition), retired: row.retired_at !== null };
   } catch (error) {
-    console.error(`skipping quest ${row.key}: its stored definition cannot be read`, error);
+    logUnexpectedError(new Error(`skipping quest ${row.key}: its stored definition cannot be read`, { cause: error }));
     return null;
   }
 }
