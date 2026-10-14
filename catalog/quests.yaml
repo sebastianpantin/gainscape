@@ -1,0 +1,88 @@
+- key: squat_rack_initiation
+  name: Squat Rack Initiation
+  description: Step into the squat rack. Squat in two workouts, then put a hundred squat reps behind you.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 2, exercise: back_squat }
+    - { kind: volume, metric: reps, target: 100, exercise: back_squat }
+  rewards:
+    xp: { legs: 800, core: 200 }
+- key: the_heavy_single
+  name: The Heavy Single
+  description: Set a new back squat record, then squat fifty reps at 70% of your best in one workout.
+  quest_points: 2
+  requires:
+    levels: { legs: 15 }
+    quests: [squat_rack_initiation]
+  steps:
+    - { kind: record, exercise: back_squat }
+    - kind: workout
+      volume: { metric: reps, target: 50, exercise: back_squat, min_pct: 70 }
+  rewards:
+    xp: { legs: 1500, back: 300 }
+- key: iron_foundation
+  name: Iron Foundation
+  description: Move twenty tonnes on the deadlift, then finish three rounds of heavy squats and deadlifts in one workout.
+  quest_points: 3
+  requires:
+    levels: { legs: 25, back: 20 }
+    quests: [the_heavy_single]
+  steps:
+    - { kind: volume, metric: kg, target: 20000, exercise: deadlift }
+    - kind: workout
+      supersets:
+        - rounds: 3
+          exercises:
+            - { exercise: back_squat, reps: 5, pct: 75 }
+            - { exercise: deadlift, reps: 5, pct: 70 }
+  rewards:
+    xp: { legs: 2500, back: 1500, grip: 500 }
+- key: bench_apprentice
+  name: Bench Apprentice
+  description: Bench press in three workouts, then set a new bench press record.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 3, exercise: barbell_bench_press }
+    - { kind: record, exercise: barbell_bench_press }
+  rewards:
+    xp: { chest: 800, arms: 200 }
+- key: hang_tough
+  name: Hang Tough
+  description: Hang from the bar in three workouts, then pull yourself up fifty times.
+  quest_points: 1
+  requires:
+    levels: { grip: 5 }
+  steps:
+    - { kind: sessions, target: 3, exercise: dead_hang }
+    - { kind: volume, metric: reps, target: 50, exercise: pull_up }
+  rewards:
+    xp: { grip: 700, back: 300 }
+- key: the_long_road
+  name: The Long Road
+  description: Go for a run four times, then set a new running record.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 4, exercise: running }
+    - { kind: record, exercise: running }
+  rewards:
+    xp: { endurance: 1000 }
+- key: loose_limbs
+  name: Loose Limbs
+  description: Work through a mobility flow in three workouts.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 3, exercise: mobility_flow }
+  rewards:
+    xp: { mobility: 600 }
+- key: core_curriculum
+  name: Core Curriculum
+  description: Do sixty hanging leg raises in one workout, then train them in three more workouts.
+  quest_points: 1
+  requires:
+    levels: { core: 10 }
+  steps:
+    - kind: workout
+      volume: { metric: reps, target: 60, exercise: hanging_leg_raise }
+    - { kind: sessions, target: 3, exercise: hanging_leg_raise }
+  rewards:
+    xp: { core: 800, shoulders: 200 }

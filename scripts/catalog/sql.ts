@@ -1,4 +1,10 @@
-import { type CatalogChallenge, type CatalogData, catalogNames } from './load.ts';
+import {
+  type CatalogChallengeDefinition,
+  type CatalogData,
+  type CatalogQuest,
+  type CatalogQuestStep,
+  catalogNames,
+} from './load.ts';
 import { CATALOG_NAMESPACE } from './namespace.ts';
 
 type SqlValue = string | number | boolean | null | { raw: string };
@@ -42,25 +48,49 @@ function retireAllExcept(table: string, names: readonly string[]): string {
   return `update public.${table} set retired_at = coalesce(retired_at, now())\nwhere id <> all(array[\n  ${ids}\n]);`;
 }
 
-function jsonObject(entries: readonly [string, SqlValue][]): { raw: string } {
-  return {
-    raw: `jsonb_build_object(${entries.map(([key, value]) => `${literal(key)}, ${render(value)}`).join(', ')})`,
-  };
+export class CatalogRef {
+  readonly name: string;
+
+  constructor(name: string) {
+    this.name = name;
+  }
 }
 
-function jsonArray(values: readonly SqlValue[]): { raw: string } {
-  return { raw: `jsonb_build_array(${values.map(render).join(', ')})` };
+export type StoredJson = string | number | null | CatalogRef | StoredJson[] | Map<string | CatalogRef, StoredJson>;
+
+function renderJson(value: StoredJson): string {
+  if (value instanceof CatalogRef) return render(idFor(value.name));
+  if (value instanceof Map) {
+    return `jsonb_build_object(${[...value].map(([key, entry]) => `${renderJson(key)}, ${renderJson(entry)}`).join(', ')})`;
+  }
+  if (Array.isArray(value)) return `jsonb_build_array(${value.map(renderJson).join(', ')})`;
+  return render(value);
 }
 
-function challengeDefinition(challenge: CatalogChallenge): { raw: string } {
-  const exerciseId = (key: string) => idFor(catalogNames.exercise(key));
+function storedJson(value: StoredJson): { raw: string } {
+  return { raw: renderJson(value) };
+}
+
+function jsonObject(entries: readonly (readonly [string | CatalogRef, StoredJson])[]): StoredJson {
+  return new Map(entries);
+}
+
+function exerciseRef(key: string | null): CatalogRef | null {
+  return key === null ? null : new CatalogRef(catalogNames.exercise(key));
+}
+
+function skillRef(key: string): CatalogRef {
+  return new CatalogRef(catalogNames.skill(key));
+}
+
+function challengeDefinition(challenge: CatalogChallengeDefinition): StoredJson {
   if (challenge.volume !== null) {
     const volume = challenge.volume;
     return jsonObject([
       ['kind', 'volume'],
       ['metric', volume.metric],
       ['target', volume.target],
-      ['exerciseId', volume.exercise === null ? null : exerciseId(volume.exercise)],
+      ['exerciseId', exerciseRef(volume.exercise)],
       ['minPct', volume.minPct],
     ]);
   }
@@ -68,26 +98,67 @@ function challengeDefinition(challenge: CatalogChallenge): { raw: string } {
     ['kind', 'prescription'],
     [
       'groups',
-      jsonArray(
-        challenge.supersets.map((superset) =>
-          jsonObject([
-            ['rounds', superset.rounds],
-            [
-              'exercises',
-              jsonArray(
-                superset.exercises.map((entry) =>
-                  jsonObject([
-                    ['exerciseId', exerciseId(entry.exercise)],
-                    ['reps', entry.reps],
-                    ['pct', entry.pct],
-                  ]),
-                ),
-              ),
-            ],
-          ]),
-        ),
+      challenge.supersets.map((superset) =>
+        jsonObject([
+          ['rounds', superset.rounds],
+          [
+            'exercises',
+            superset.exercises.map((entry) =>
+              jsonObject([
+                ['exerciseId', exerciseRef(entry.exercise)],
+                ['reps', entry.reps],
+                ['pct', entry.pct],
+              ]),
+            ),
+          ],
+        ]),
       ),
     ],
+  ]);
+}
+
+function questStep(step: CatalogQuestStep): StoredJson {
+  switch (step.kind) {
+    case 'workout':
+      return jsonObject([
+        ['kind', 'workout'],
+        ['challenge', challengeDefinition(step.challenge)],
+      ]);
+    case 'volume':
+      return jsonObject([
+        ['kind', 'volume'],
+        ['metric', step.metric],
+        ['target', step.target],
+        ['exerciseId', exerciseRef(step.exercise)],
+      ]);
+    case 'record':
+      return jsonObject([
+        ['kind', 'record'],
+        ['exerciseId', exerciseRef(step.exercise)],
+      ]);
+    case 'sessions':
+      return jsonObject([
+        ['kind', 'sessions'],
+        ['target', step.target],
+        ['exerciseId', exerciseRef(step.exercise)],
+      ]);
+  }
+}
+
+export function questDefinition(quest: CatalogQuest): StoredJson {
+  return jsonObject([
+    [
+      'requiredLevels',
+      quest.requiredLevels.map((required) =>
+        jsonObject([
+          ['skillId', skillRef(required.skill)],
+          ['level', required.level],
+        ]),
+      ),
+    ],
+    ['requiredQuestIds', quest.requiredQuests.map((key) => new CatalogRef(catalogNames.quest(key)))],
+    ['steps', quest.steps.map(questStep)],
+    ['rewardXp', jsonObject(quest.rewardXp.map((reward) => [skillRef(reward.skill), reward.xp]))],
   ]);
 }
 
@@ -127,6 +198,7 @@ export function renderStatements(catalog: CatalogData): string[] {
   const skillId = (key: string) => idFor(catalogNames.skill(key));
   const programId = (key: string) => idFor(catalogNames.program(key));
   const challengeId = (key: string) => idFor(catalogNames.challenge(key));
+  const questId = (key: string) => idFor(catalogNames.quest(key));
   const itemId = (key: string) => idFor(catalogNames.item(key));
   const tableId = (key: string) => idFor(catalogNames.dropTable(key));
   const recipeId = (key: string) => idFor(catalogNames.recipe(key));
@@ -217,10 +289,25 @@ export function renderStatements(catalog: CatalogData): string[] {
         challenge.key,
         challenge.name,
         challenge.kind,
-        challengeDefinition(challenge),
+        storedJson(challengeDefinition(challenge)),
         null,
       ]),
       `${upsertSuffix(['key', 'name', 'kind', 'definition'], true)}, ${retiredAtAssignment('challenges')}`,
+    ),
+    insert(
+      'quests',
+      ['id', 'key', 'name', 'description', 'quest_points', 'sort_order', 'definition', 'retired_at'],
+      catalog.quests.map((quest, index) => [
+        questId(quest.key),
+        quest.key,
+        quest.name,
+        quest.description,
+        quest.questPoints,
+        index + 1,
+        storedJson(questDefinition(quest)),
+        null,
+      ]),
+      `${upsertSuffix(['key', 'name', 'description', 'quest_points', 'sort_order', 'definition'], true)}, ${retiredAtAssignment('quests')}`,
     ),
     insert(
       'items',
@@ -281,6 +368,10 @@ export function renderStatements(catalog: CatalogData): string[] {
     retireAllExcept(
       'challenges',
       catalog.challenges.map((challenge) => catalogNames.challenge(challenge.key)),
+    ),
+    retireAllExcept(
+      'quests',
+      catalog.quests.map((quest) => catalogNames.quest(quest.key)),
     ),
     retireAllExcept(
       'items',

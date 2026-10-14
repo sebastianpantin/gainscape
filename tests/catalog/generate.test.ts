@@ -1,11 +1,30 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { questDefinitionFromStored } from '@domain/index.ts';
 import { generateSeed, SEED_PATH } from '../../scripts/catalog/generate.ts';
 import { catalogNames, expandCatalog, loadCatalogData, readCatalogSources } from '../../scripts/catalog/load.ts';
 import { CATALOG_NAMESPACE } from '../../scripts/catalog/namespace.ts';
-import { idFor, renderSeed, renderStatements } from '../../scripts/catalog/sql.ts';
+import {
+  CatalogRef,
+  idFor,
+  questDefinition,
+  renderSeed,
+  renderStatements,
+  type StoredJson,
+} from '../../scripts/catalog/sql.ts';
 
 const PINNED_NAMESPACE = '67cd74e5-e6ca-47c9-831c-1f8d246d8948';
+
+function storedValue(value: StoredJson): unknown {
+  if (value instanceof CatalogRef) return value.name;
+  if (value instanceof Map) {
+    return Object.fromEntries(
+      [...value].map(([key, entry]) => [key instanceof CatalogRef ? key.name : key, storedValue(entry)]),
+    );
+  }
+  if (Array.isArray(value)) return value.map(storedValue);
+  return value;
+}
 
 function retireStatement(statements: string[], table: string): string {
   const statement = statements.find((candidate) => candidate.startsWith(`update public.${table} set retired_at`));
@@ -263,6 +282,88 @@ describe('catalog generator', () => {
     );
   });
 
+  it('renders the quests after the challenges, in catalog order, with their points and definitions', () => {
+    const catalog = loadCatalogData();
+    expect(catalog.quests.map((quest) => quest.key)).toEqual([
+      'squat_rack_initiation',
+      'the_heavy_single',
+      'iron_foundation',
+      'bench_apprentice',
+      'hang_tough',
+      'the_long_road',
+      'loose_limbs',
+      'core_curriculum',
+    ]);
+    const statements = renderStatements(catalog);
+    const challengesAt = statements.findIndex((statement) => statement.startsWith('insert into public.challenges'));
+    const questsAt = statements.findIndex((statement) => statement.startsWith('insert into public.quests'));
+    expect(questsAt).toBeGreaterThan(challengesAt);
+    const quests = statements[questsAt];
+    const id = (name: string) => idFor(name).raw;
+    expect(quests).toContain('(id, key, name, description, quest_points, sort_order, definition, retired_at)');
+    expect(quests).toContain(
+      `(${id('quest:squat_rack_initiation')}, 'squat_rack_initiation', 'Squat Rack Initiation', 'Step into the squat rack. Squat in two workouts, then put a hundred squat reps behind you.', 1, 1, jsonb_build_object('requiredLevels', jsonb_build_array(), 'requiredQuestIds', jsonb_build_array(), 'steps', jsonb_build_array(jsonb_build_object('kind', 'sessions', 'target', 2, 'exerciseId', ${id('back_squat')}), jsonb_build_object('kind', 'volume', 'metric', 'reps', 'target', 100, 'exerciseId', ${id('back_squat')})), 'rewardXp', jsonb_build_object(${id('legs')}, 800, ${id('core')}, 200)), null)`,
+    );
+    expect(quests).toContain(
+      `'the_heavy_single', 'The Heavy Single', 'Set a new back squat record, then squat fifty reps at 70% of your best in one workout.', 2, 2, jsonb_build_object('requiredLevels', jsonb_build_array(jsonb_build_object('skillId', ${id('legs')}, 'level', 15)), 'requiredQuestIds', jsonb_build_array(${id('quest:squat_rack_initiation')}), 'steps', jsonb_build_array(jsonb_build_object('kind', 'record', 'exerciseId', ${id('back_squat')}), jsonb_build_object('kind', 'workout', 'challenge', jsonb_build_object('kind', 'volume', 'metric', 'reps', 'target', 50, 'exerciseId', ${id('back_squat')}, 'minPct', 70)))`,
+    );
+    expect(quests).toContain('definition = excluded.definition');
+    expect(quests).toContain('quest_points = excluded.quest_points');
+    expect(quests).toContain('retired_at = case when excluded.retired_at is null then null');
+    expect(retireStatement(statements, 'quests').match(/extensions\.uuid_generate_v5\([^)]*\)/g)).toEqual(
+      catalog.quests.map((quest) => id(catalogNames.quest(quest.key))),
+    );
+  });
+
+  it('stores every quest definition in the shape the domain reads', () => {
+    const catalog = loadCatalogData();
+    const definitions = catalog.quests.map((quest) =>
+      questDefinitionFromStored(
+        { questId: catalogNames.quest(quest.key), key: quest.key, name: quest.name, questPoints: quest.questPoints },
+        storedValue(questDefinition(quest)),
+      ),
+    );
+    expect(definitions.map((definition) => definition.steps.length)).toEqual(
+      catalog.quests.map((quest) => quest.steps.length),
+    );
+    expect(definitions.find((definition) => definition.key === 'the_heavy_single')).toEqual({
+      questId: 'quest:the_heavy_single',
+      key: 'the_heavy_single',
+      name: 'The Heavy Single',
+      questPoints: 2,
+      requiredLevels: [{ skillId: 'legs', level: 15 }],
+      requiredQuestIds: ['quest:squat_rack_initiation'],
+      steps: [
+        { kind: 'record', exerciseId: 'back_squat' },
+        {
+          kind: 'workout',
+          challenge: { kind: 'volume', metric: 'reps', target: 50, exerciseId: 'back_squat', minPct: 70 },
+        },
+      ],
+      rewardXp: { legs: 1500, back: 300 },
+    });
+    expect(definitions.find((definition) => definition.key === 'iron_foundation')?.steps[1]).toEqual({
+      kind: 'workout',
+      challenge: {
+        kind: 'prescription',
+        groups: [
+          {
+            rounds: 3,
+            exercises: [
+              { exerciseId: 'back_squat', reps: 5, pct: 75 },
+              { exerciseId: 'deadlift', reps: 5, pct: 70 },
+            ],
+          },
+        ],
+      },
+    });
+    expect(definitions.find((definition) => definition.key === 'loose_limbs')).toMatchObject({
+      requiredLevels: [],
+      steps: [{ kind: 'sessions', target: 3, exerciseId: 'mobility_flow' }],
+      rewardXp: { mobility: 600 },
+    });
+  });
+
   it('expands every gear shorthand into the 6 slots of that tier', () => {
     const catalog = loadCatalogData();
     const entriesOf = (table: string) => catalog.dropTables.find((candidate) => candidate.key === table)!.entries;
@@ -341,17 +442,21 @@ describe('catalog generator', () => {
       catalog.dropTables.map((table) => idFor(catalogNames.dropTable(table.key)).raw),
     );
     expect(listedIds('recipes')).toEqual(catalog.recipes.map((recipe) => idFor(catalogNames.recipe(recipe.key)).raw));
+    const looseLimbs = idFor(catalogNames.quest('loose_limbs')).raw;
+    expect(retireStatement(statements, 'quests')).toContain(looseLimbs);
 
     const trimmed = expandCatalog({
       ...sources,
       items: (sources.items as { key: string }[]).filter((item) => item.key !== 'plate_crab'),
       dropTables: (sources.dropTables as { key: string }[]).filter((table) => table.key !== 'regular'),
+      quests: (sources.quests as { key: string }[]).filter((quest) => quest.key !== 'loose_limbs'),
     });
     trimmed.recipes = trimmed.recipes.filter((recipe) => recipe.key !== 'grinder_belt');
     const trimmedStatements = renderStatements(trimmed);
     expect(retireStatement(trimmedStatements, 'items')).not.toContain(plateCrab);
     expect(retireStatement(trimmedStatements, 'drop_tables')).not.toContain(regular);
     expect(retireStatement(trimmedStatements, 'recipes')).not.toContain(grinderBelt);
+    expect(retireStatement(trimmedStatements, 'quests')).not.toContain(looseLimbs);
     expect(retireStatement(trimmedStatements, 'items')).toMatch(
       /^update public\.items set retired_at = coalesce\(retired_at, now\(\)\)\nwhere id <> all\(array\[/,
     );
