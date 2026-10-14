@@ -17,7 +17,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `workout/`: live-workout rules and stores: set editing, cardio, effort labels, supersets, warm-ups, plates, rest timer, training device, session timing and baseline, progression hints, the active workout bar.
 - `programs/`: program persistence, enrollment and every `program-*-rules.ts`.
 - `history/`: past sessions, the history overview and the last session of an exercise.
-- `progress/`: standing, the skill map, recovery, weekly goal, bodyweight trend and exercise progress.
+- `progress/`: standing, the skill map, recovery, weekly goal, weekly muscle volume, bodyweight trend and exercise progress.
 - `collection/`: items, gear, challenges, the companion pet and the records collection.
 - `profile/`: profile and its view, account actions, preferences and onboarding.
 - `social/`: friends, feed and hiscores.

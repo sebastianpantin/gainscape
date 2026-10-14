@@ -71,9 +71,9 @@ describe('recent sets for the recovery map', () => {
     expect(sets).toHaveLength(3);
     expect(sets).toEqual(
       expect.arrayContaining([
-        { exerciseId: squatId, rir: 0.5, endedAt: expect.any(String) },
-        { exerciseId: benchId, rir: 2, endedAt: expect.any(String) },
-        { exerciseId: squatId, rir: 2, endedAt: expect.any(String) },
+        { exerciseId: squatId, rir: 0.5, endedAt: expect.any(String), localDate: recentEndedAt.slice(0, 10) },
+        { exerciseId: benchId, rir: 2, endedAt: expect.any(String), localDate: recentEndedAt.slice(0, 10) },
+        { exerciseId: squatId, rir: 2, endedAt: expect.any(String), localDate: recentEndedAt.slice(0, 10) },
       ]),
     );
     expect(sets.every((set) => Date.parse(set.endedAt) === Date.parse(recentEndedAt))).toBe(true);
