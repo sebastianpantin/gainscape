@@ -1,5 +1,6 @@
 import type { JsonValue, Transaction } from '../db.ts';
 import {
+  applyXpGrant,
   type BalanceConfig,
   type Catalog,
   challengeSummary,
@@ -10,6 +11,7 @@ import {
   priorSkillXp,
   type RecordState,
   recordsFromHistory,
+  type ReplayedSession,
   replayHistory,
   revokedInReplayOrder,
   type SessionKey,
@@ -31,6 +33,7 @@ import {
   loadReplayableSessions,
   loadSkillXp,
 } from './history.ts';
+import { hasLaterQuestGrants, loadQuestGrantsFrom, loadQuestXpBefore } from './quests.ts';
 import { clearRecordCaches, loadRecords, replaceRecordsFor } from './records.ts';
 import { derivedSetColumns, setSkillXpRows } from './set-columns.ts';
 import {
@@ -43,6 +46,7 @@ import {
 import { clearStrengthCache, loadStrengthHistory, refreshStrengthCache } from './strength.ts';
 
 interface ReplayOutcome {
+  replayed: ReplayedSession[];
   sessionsReplayed: number;
   setsRewritten: number;
   replayedSessionIds: string[];
@@ -80,14 +84,18 @@ async function loadPriorState(
 ): Promise<PriorState> {
   if (from === null) return { strength: [], records: NO_RECORDS, skillXp: {} };
   const strength = await loadStrengthHistory(tx, userId, suffixExerciseIds, from, cfg);
-  const suffixIsOnlyTheAnchor = anchorIsNew && !(await hasLaterSessions(tx, userId, from));
+  const suffixIsOnlyTheAnchor =
+    anchorIsNew && !(await hasLaterSessions(tx, userId, from)) && !(await hasLaterQuestGrants(tx, userId, from));
   if (suffixIsOnlyTheAnchor) {
     return { strength, records: await loadRecords(tx, userId, allTouched), skillXp: await loadSkillXp(tx, userId) };
   }
   return {
     strength,
     records: recordsFromHistory(await loadRecordHistory(tx, userId, allTouched, from), catalog, cfg),
-    skillXp: priorSkillXp(await loadPriorSkillXpSums(tx, userId, from), cfg),
+    skillXp: priorSkillXp(
+      applyXpGrant(await loadPriorSkillXpSums(tx, userId, from), await loadQuestXpBefore(tx, userId, from), cfg),
+      cfg,
+    ),
   };
 }
 
@@ -152,6 +160,7 @@ async function replayFrom(
     cfg,
     { skillXp: prior.skillXp, bodyweightKg: null, records: prior.records },
     prior.strength,
+    await loadQuestGrantsFrom(tx, userId, from),
   );
   const results = replay.sessions.flatMap((entry) => entry.outputs.sets);
 
@@ -203,6 +212,7 @@ async function replayFrom(
   await syncSessionEvents(tx, userId, replayedSessionIds);
 
   return {
+    replayed: replay.sessions,
     sessionsReplayed: replay.sessions.length,
     setsRewritten: results.length,
     replayedSessionIds,
@@ -213,7 +223,7 @@ async function replayFrom(
 
 const NOTHING_PREVIOUS = { previousExerciseIds: [], deletedSessionIds: [], unchangedSetIds: [] };
 
-export async function deriveNewSession(tx: Transaction, userId: string, key: SessionKey): Promise<SessionSummary> {
+export async function deriveNewSession(tx: Transaction, userId: string, key: SessionKey): Promise<ReplayedSession> {
   const outcome = await replayFrom(tx, userId, { from: key, anchorIsNew: true, ...NOTHING_PREVIOUS }, DEFAULT_BALANCE);
   await rollNewSessionLoot(
     tx,
@@ -221,7 +231,7 @@ export async function deriveNewSession(tx: Transaction, userId: string, key: Ses
     key.id,
     outcome.sets.filter((set) => set.sessionId === key.id),
   );
-  return await storedSummary(tx, key.id);
+  return outcome.replayed.find((entry) => entry.session.id === key.id)!;
 }
 
 export async function deriveEditedSession(

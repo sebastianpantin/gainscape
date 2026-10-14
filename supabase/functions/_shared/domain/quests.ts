@@ -1,3 +1,4 @@
+import type { BalanceConfig } from './balance.ts';
 import {
   type ChallengeDefinition,
   challengeDefinitionFromStored,
@@ -8,11 +9,17 @@ import {
 } from './challenges.ts';
 import { levelForXp } from './levels.ts';
 import { FLOAT_TOLERANCE, roundTo } from './math.ts';
+import { levelUpsBetween } from './pipeline.ts';
+import { applyXpGrant } from './replay.ts';
 import {
+  type Catalog,
   isLiftSet,
   isRecord,
+  type LevelUp,
   type PersonalRecordSummary,
   type QuestIdentity,
+  type QuestProgressSummary,
+  type QuestSessionSummary,
   type SetResult,
   type StrengthState,
 } from './types.ts';
@@ -149,6 +156,100 @@ export function advanceQuest(quest: QuestDefinition, progress: QuestProgress, fa
   const nextIndex = progress.stepIndex + 1;
   if (nextIndex >= quest.steps.length) return { outcome: 'completed' };
   return { outcome: 'progressed', progress: { ...progress, stepIndex: nextIndex, stepProgress: 0 } };
+}
+
+export interface QuestSessionInput {
+  quests: readonly QuestDefinition[];
+  retiredQuestIds: readonly string[];
+  progress: readonly QuestProgress[];
+  completedQuestIds: readonly string[];
+  skillXpBeforeSync: Readonly<Record<string, number>>;
+  skillXpAfterSync: Readonly<Record<string, number>>;
+  facts: QuestSessionFacts;
+}
+
+export interface QuestCompletion {
+  quest: QuestDefinition;
+  startedAt: string;
+  xpBySkill: Record<string, number>;
+  levelUps: LevelUp[];
+}
+
+export interface QuestSessionOutcome {
+  progressed: QuestProgress[];
+  completions: QuestCompletion[];
+  skillXp: Record<string, number>;
+  summary: QuestSessionSummary | null;
+}
+
+function grantedXp(quest: QuestDefinition): Record<string, number> {
+  return Object.fromEntries(Object.entries(quest.rewardXp).filter(([, xp]) => xp > 0));
+}
+
+function progressSummary(quest: QuestDefinition, progress: QuestProgress): QuestProgressSummary {
+  return {
+    questId: quest.questId,
+    stepIndex: progress.stepIndex,
+    stepProgress: progress.stepProgress,
+    stepTarget: stepTarget(quest.steps[progress.stepIndex]),
+  };
+}
+
+export function questsAfterSession(
+  input: QuestSessionInput,
+  catalog: Catalog,
+  cfg: Pick<BalanceConfig, 'maxXp'>,
+): QuestSessionOutcome {
+  const questsById = new Map(input.quests.map((quest) => [quest.questId, quest]));
+  const progressed: { quest: QuestDefinition; progress: QuestProgress }[] = [];
+  const completions: QuestCompletion[] = [];
+  let skillXp: Record<string, number> = { ...input.skillXpAfterSync };
+
+  for (const progress of input.progress) {
+    const quest = questsById.get(progress.questId);
+    if (quest === undefined) continue;
+    const advance = advanceQuest(quest, progress, input.facts);
+    if (advance.outcome === 'progressed') progressed.push({ quest, progress: advance.progress });
+    if (advance.outcome !== 'completed') continue;
+    const xpBySkill = grantedXp(quest);
+    const granted = applyXpGrant(skillXp, xpBySkill, cfg);
+    completions.push({
+      quest,
+      startedAt: progress.startedAt,
+      xpBySkill,
+      levelUps: levelUpsBetween(skillXp, granted, catalog),
+    });
+    skillXp = granted;
+  }
+
+  const completedIds = completions.map((completion) => completion.quest.questId);
+  const startedIds = input.progress.map((progress) => progress.questId);
+  const openQuests = input.quests.filter((quest) => !input.retiredQuestIds.includes(quest.questId));
+  const unlocked = questsUnlockedBy(
+    openQuests,
+    { skillXp: input.skillXpBeforeSync, completedQuestIds: input.completedQuestIds, startedQuestIds: startedIds },
+    {
+      skillXp,
+      completedQuestIds: [...input.completedQuestIds, ...completedIds],
+      startedQuestIds: startedIds.filter((questId) => !completedIds.includes(questId)),
+    },
+  );
+  const summary: QuestSessionSummary | null =
+    progressed.length === 0 && completions.length === 0 && unlocked.length === 0
+      ? null
+      : {
+          completed: completions.map(({ quest, xpBySkill }) => ({
+            questId: quest.questId,
+            key: quest.key,
+            name: quest.name,
+            questPoints: quest.questPoints,
+            xpBySkill,
+          })),
+          progressed: progressed.map(({ quest, progress }) => progressSummary(quest, progress)),
+          unlocked,
+          levelUps: levelUpsBetween(input.skillXpAfterSync, skillXp, catalog),
+        };
+  return { progressed: progressed.map(({ progress }) => progress), completions, skillXp, summary };
 }
 
 function storedRecord(value: unknown, field: string): Record<string, unknown> {

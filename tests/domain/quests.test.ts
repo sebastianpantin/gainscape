@@ -12,6 +12,7 @@ import {
   questStartProblems,
   questStatus,
   type QuestStep,
+  questsAfterSession,
   questsUnlockedBy,
   sessionCountsForQuest,
   type SetInput,
@@ -340,5 +341,169 @@ describe('questDefinitionFromStored', () => {
     ['a negative reward', { ...stored, rewardXp: { 'skill-legs': -1 } }],
   ])('rejects %s', (_label, value) => {
     expect(() => questDefinitionFromStored(identity, value)).toThrow(RangeError);
+  });
+});
+
+describe('questsAfterSession', () => {
+  const legsGate: QuestDefinition = {
+    questId: 'quest-legs-gate',
+    key: 'legs_gate',
+    name: 'Legs Gate',
+    questPoints: 1,
+    requiredLevels: [{ skillId: 'skill-legs', level: 15 }],
+    requiredQuestIds: [],
+    steps: [twoSquatSessions],
+    rewardXp: { 'skill-legs': 100 },
+  };
+  const board = { quests: [initiation, heavySingle, legsGate], retiredQuestIds: [] };
+  const sessionFacts = (sets: SetInput[]) => factsFor(sets);
+  const noXp = { skillXpBeforeSync: {}, skillXpAfterSync: {} };
+
+  it('changes nothing and writes no summary when no quest moves or unlocks', () => {
+    const outcome = questsAfterSession(
+      { ...board, ...noXp, progress: [], completedQuestIds: [], facts: sessionFacts([aSet('squat', 60, 5, hard)]) },
+      catalog,
+      TEST_BALANCE,
+    );
+    expect(outcome).toEqual({ progressed: [], completions: [], skillXp: {}, summary: null });
+  });
+
+  it('records progress within a step with the target of the step it is on', () => {
+    const outcome = questsAfterSession(
+      {
+        ...board,
+        ...noXp,
+        progress: [progressAt(0)],
+        completedQuestIds: [],
+        facts: sessionFacts([aSet('squat', 60, 5, hard)]),
+      },
+      catalog,
+      TEST_BALANCE,
+    );
+    expect(outcome.progressed).toEqual([progressAt(0, 1)]);
+    expect(outcome.summary).toEqual({
+      completed: [],
+      progressed: [{ questId: initiation.questId, stepIndex: 0, stepProgress: 1, stepTarget: 2 }],
+      unlocked: [],
+      levelUps: [],
+    });
+  });
+
+  it('leaves a quest that the session does not move out of the summary', () => {
+    const outcome = questsAfterSession(
+      {
+        ...board,
+        ...noXp,
+        progress: [progressAt(0)],
+        completedQuestIds: [],
+        facts: sessionFacts([aSet('bench', 60, 5, hard)]),
+      },
+      catalog,
+      TEST_BALANCE,
+    );
+    expect(outcome).toEqual({ progressed: [], completions: [], skillXp: {}, summary: null });
+  });
+
+  it('grants the reward on completion with the level-ups it causes and the quests it unlocks', () => {
+    const skillXp = { 'skill-legs': xpForLevel(15) - 100 };
+    const outcome = questsAfterSession(
+      {
+        ...board,
+        skillXpBeforeSync: skillXp,
+        skillXpAfterSync: skillXp,
+        progress: [progressAt(1, 70)],
+        completedQuestIds: [],
+        facts: sessionFacts(squatTens(3)),
+      },
+      catalog,
+      TEST_BALANCE,
+    );
+    const levelUps = [
+      { skill: 'legs', from: 14, to: 18 },
+      { skill: 'core', from: 1, to: 3 },
+    ];
+    expect(outcome.completions).toEqual([
+      { quest: initiation, startedAt: STARTED_AT, xpBySkill: { 'skill-legs': 800, 'skill-core': 200 }, levelUps },
+    ]);
+    expect(outcome.skillXp).toEqual({ 'skill-legs': xpForLevel(15) + 700, 'skill-core': 200 });
+    expect(outcome.progressed).toEqual([]);
+    expect(outcome.summary).toEqual({
+      completed: [
+        {
+          questId: initiation.questId,
+          key: initiation.key,
+          name: initiation.name,
+          questPoints: 1,
+          xpBySkill: { 'skill-legs': 800, 'skill-core': 200 },
+        },
+      ],
+      progressed: [],
+      unlocked: [heavySingle.questId, legsGate.questId],
+      levelUps,
+    });
+  });
+
+  it('caps granted xp at the maximum and counts level-ups from the running total', () => {
+    const second = { ...legsGate, questId: 'quest-second', requiredLevels: [], rewardXp: { 'skill-legs': 900 } };
+    const secondProgress = { ...progressAt(0, 1), questId: second.questId };
+    const cappedBalance = { ...TEST_BALANCE, maxXp: xpForLevel(18) + 100 };
+    const skillXp = { 'skill-legs': xpForLevel(15) - 100 };
+    const outcome = questsAfterSession(
+      {
+        quests: [initiation, second],
+        retiredQuestIds: [],
+        skillXpBeforeSync: skillXp,
+        skillXpAfterSync: skillXp,
+        progress: [progressAt(1, 70), secondProgress],
+        completedQuestIds: [],
+        facts: sessionFacts(squatTens(3)),
+      },
+      catalog,
+      cappedBalance,
+    );
+    const initiationLevelUps = [
+      { skill: 'legs', from: 14, to: 18 },
+      { skill: 'core', from: 1, to: 3 },
+    ];
+    expect(outcome.completions.map((completion) => completion.levelUps)).toEqual([initiationLevelUps, []]);
+    expect(outcome.skillXp['skill-legs']).toBe(cappedBalance.maxXp);
+    expect(outcome.summary?.levelUps).toEqual(initiationLevelUps);
+  });
+
+  it('reports a quest unlocked by the session xp alone but never a retired one', () => {
+    const facts = sessionFacts([aSet('bench', 60, 5, hard)]);
+    const input = {
+      ...board,
+      skillXpBeforeSync: { 'skill-legs': xpForLevel(14) },
+      skillXpAfterSync: { 'skill-legs': xpForLevel(15) },
+      progress: [],
+      completedQuestIds: [],
+      facts,
+    };
+    expect(questsAfterSession(input, catalog, TEST_BALANCE).summary).toEqual({
+      completed: [],
+      progressed: [],
+      unlocked: [legsGate.questId],
+      levelUps: [],
+    });
+    expect(
+      questsAfterSession({ ...input, retiredQuestIds: [legsGate.questId] }, catalog, TEST_BALANCE).summary,
+    ).toBeNull();
+  });
+
+  it('keeps advancing a started quest after it is retired', () => {
+    const outcome = questsAfterSession(
+      {
+        ...board,
+        ...noXp,
+        retiredQuestIds: [initiation.questId],
+        progress: [progressAt(0)],
+        completedQuestIds: [],
+        facts: sessionFacts([aSet('squat', 60, 5, hard)]),
+      },
+      catalog,
+      TEST_BALANCE,
+    );
+    expect(outcome.progressed).toEqual([progressAt(0, 1)]);
   });
 });

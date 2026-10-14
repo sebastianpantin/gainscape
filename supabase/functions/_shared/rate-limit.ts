@@ -7,7 +7,8 @@ export type RateLimitBucket =
   | 'session_edit_hour'
   | 'session_delete_hour'
   | 'export_data_hour'
-  | 'delete_account_hour';
+  | 'delete_account_hour'
+  | 'quest_start_hour';
 
 const RATE_LIMITED = 'PT429';
 const FOREIGN_KEY_VIOLATION = '23503';
