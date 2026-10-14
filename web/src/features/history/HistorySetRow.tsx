@@ -32,7 +32,7 @@ export function HistorySetRow({
   onRemove,
 }: HistorySetRowProps) {
   return (
-    <li className={`set-row${set.isWarmup ? ' warmup' : ''}`} aria-label={`Set ${setNumber}`}>
+    <li className={`set-row history-set-row${set.isWarmup ? ' warmup' : ''}`} aria-label={`Set ${setNumber}`}>
       <span className="set-number">{setNumber}</span>
       <WeightField
         loadType={loadType}

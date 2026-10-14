@@ -8,7 +8,6 @@ import {
   volumeBarFraction,
   volumeSetsLabel,
   volumeSetsText,
-  volumeSummary,
   VOLUME_TARGET,
   weeklySetsByMuscle,
   weekStartIn,
@@ -126,6 +125,11 @@ describe('weekStartIn', () => {
     expect(weekStartIn('Europe/Stockholm', sundayEveningInNewYork)).toBe('2026-10-19');
   });
 
+  it('falls back to UTC for a time zone this device does not know', () => {
+    const sundayEveningInNewYork = Date.parse('2026-10-19T02:00:00Z');
+    expect(weekStartIn('Mars/Olympus_Mons', sundayEveningInNewYork)).toBe(weekStartIn('UTC', sundayEveningInNewYork));
+  });
+
   it('crosses a month and a year boundary', () => {
     expect(weekStartIn('UTC', Date.parse('2026-11-01T10:00:00Z'))).toBe('2026-10-26');
     expect(weekStartIn('UTC', Date.parse('2027-01-02T10:00:00Z'))).toBe('2026-12-28');
@@ -165,13 +169,5 @@ describe('volumeSetsLabel', () => {
     expect(volumeSetsLabel(1)).toBe('1 set');
     expect(volumeSetsLabel(0.7)).toBe('0.7 sets');
     expect(volumeSetsLabel(0)).toBe('0 sets');
-  });
-});
-
-describe('volumeSummary', () => {
-  it('gives the sets this week, the muscle and its band in words, leading with the count', () => {
-    expect(volumeSummary('Chest', 12.5)).toBe('12.5 sets for Chest this week, within target');
-    expect(volumeSummary('Legs', 1)).toBe('1 set for Legs this week, below target');
-    expect(volumeSummary('Back', 22)).toBe('22 sets for Back this week, above target');
   });
 });

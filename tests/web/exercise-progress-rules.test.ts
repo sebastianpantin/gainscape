@@ -44,6 +44,7 @@ describe('session progress', () => {
         startedAt: '2026-10-01T08:00:00Z',
         e1rmKg: 111,
         topSetKg: 100,
+        topSetReps: 3,
         mostReps: 8,
         programDriven: false,
       },
@@ -52,10 +53,23 @@ describe('session progress', () => {
         startedAt: '2026-10-03T08:00:00Z',
         e1rmKg: 112,
         topSetKg: 105,
+        topSetReps: 3,
         mostReps: 3,
         programDriven: false,
       },
     ]);
+  });
+
+  it('keeps the reps of the heaviest set, the most reps when several sets tie for heaviest', () => {
+    const [session] = sessionProgress(
+      [
+        setRow({ session_id: 'day-1', weight_kg: '100', reps: 3 }),
+        setRow({ session_id: 'day-1', weight_kg: '80', reps: 10 }),
+        setRow({ session_id: 'day-1', weight_kg: '100', reps: 5 }),
+      ],
+      'external',
+    );
+    expect(session).toMatchObject({ topSetKg: 100, topSetReps: 5, mostReps: 10 });
   });
 
   it('counts at most the reps in reserve the strength model trusts', () => {
@@ -122,10 +136,19 @@ describe('plateau sessions', () => {
       startedAt: '2026-10-01T12:00:00Z',
       e1rmKg: null,
       topSetKg: 60,
+      topSetReps: 12,
       mostReps: 12,
       programDriven: true,
     },
-    { sessionId: 'b', startedAt: '2026-10-03T12:00:00Z', e1rmKg: 100, topSetKg: 90, mostReps: 5, programDriven: false },
+    {
+      sessionId: 'b',
+      startedAt: '2026-10-03T12:00:00Z',
+      e1rmKg: 100,
+      topSetKg: 90,
+      topSetReps: 5,
+      mostReps: 5,
+      programDriven: false,
+    },
   ];
 
   it('tracks the e1RM of a loaded lift', () => {
@@ -148,10 +171,19 @@ describe('progress chart series', () => {
       startedAt: '2026-10-01T12:00:00Z',
       e1rmKg: null,
       topSetKg: 60,
+      topSetReps: 12,
       mostReps: 12,
       programDriven: false,
     },
-    { sessionId: 'b', startedAt: '2026-10-03T12:00:00Z', e1rmKg: 100, topSetKg: 90, mostReps: 5, programDriven: false },
+    {
+      sessionId: 'b',
+      startedAt: '2026-10-03T12:00:00Z',
+      e1rmKg: 100,
+      topSetKg: 90,
+      topSetReps: 5,
+      mostReps: 5,
+      programDriven: false,
+    },
   ];
   const october = (day: number) => Date.UTC(2026, 9, day, 12);
 

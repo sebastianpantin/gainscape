@@ -13,6 +13,8 @@ import {
   readSession,
   register,
   signOut,
+  skillCard,
+  skillLevels,
   uniqueUsername,
 } from './support/app.ts';
 import { activeEnrollmentIdOf, equipGear, grantItems } from './support/db.ts';
@@ -225,7 +227,7 @@ test.describe('signed-in screens', () => {
 
     await page.goto('/skills');
     await checkScreen(page, 'skills (chest panel)', async () => {
-      await page.getByRole('button', { name: /^Chest\b/ }).click();
+      await skillCard(page, 'Chest').click();
       await expect(page.getByRole('list', { name: 'Exercises that train Chest' })).toBeVisible();
       await expect(page.getByRole('main').getByText('Loading…', { exact: true })).toHaveCount(0);
     });
@@ -422,12 +424,12 @@ test('the reveal runs no animation under reduced motion', async ({ page }) => {
 test('the skills screen shows pixel art for the ten skills', async ({ page }) => {
   await register(page, uniqueUsername('a11y_sk'));
   await openTab(page, 'Skills');
-  const chest = page.getByRole('button', { name: /^Chest\b/ });
-  const skills = page.getByRole('list').filter({ has: chest });
+  const chest = skillCard(page, 'Chest');
+  const skills = skillLevels(page);
   await expect(skills.getByRole('listitem')).toHaveCount(10);
   await expect(skills.locator('li svg')).toHaveCount(10);
   await expect(skills.locator('.monogram')).toHaveCount(0);
-  await page.getByRole('button', { name: /^Endurance\b/ }).click();
+  await skillCard(page, 'Endurance').click();
   await expect(page.getByText('does not count toward combat')).toBeVisible();
   await chest.click();
   await expect(page.getByText('counts double toward combat')).toBeVisible();

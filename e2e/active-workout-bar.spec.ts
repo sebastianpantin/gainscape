@@ -8,6 +8,7 @@ import {
   pauseClockNow,
   register,
   restTimer,
+  skillLevels,
   uniqueUsername,
 } from './support/app.ts';
 
@@ -39,7 +40,7 @@ function workoutBar(page: Page) {
 }
 
 function skillsList(page: Page) {
-  return page.getByRole('list').filter({ has: page.getByRole('button', { name: /^Chest\b/ }) });
+  return skillLevels(page);
 }
 
 test('an open workout and its rest follow the lifter to other screens, alert there once, and lead back', async ({

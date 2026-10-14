@@ -25,7 +25,12 @@ The Collection tab: personal records per exercise (`/collection`), the per-exerc
 - Start challenge is disabled while a draft is open, and while a lift in the challenge has no e1RM (the judge fails a load percent without one). When neither the live fetch nor the cache has a strength state, nothing is blocked and the draft starts from `{}`. If a waiting unsynced workout opens instead, the Items tab says so.
 - The progress chart's `e1RM` legend text is part of the chart's accessible name, so keep it unchanged.
 - Collection completion counts lifts only, and must match the server count (see Testing).
-- Stalled (client only, no server state or reward): at least 4 sessions and 21 days since the last session that beat the previous best by more than 0.5% (e1RM, or most reps for a `bodyweight` lift; holds are skipped). Sessions with no e1RM still count toward the 4, so "trained but not stronger" stays honest. No tag when the latest session is program-driven (any set with a `prescription_ref`), because the program owns its deloads; going back to manual logging brings the tag back. No tag when the lift was last trained more than 28 days ago, so a dropped lift is not called stalled. The Today screen shows no hint: `recent_lift_sets` holds at most 5 sessions, too few for the 21-day rule.
+- Stalled (client only, no server state or reward). The thresholds are the constants in `plateau-rules.ts` (`STALL_SESSIONS`, `STALL_DAYS`, `STALE_DAYS`, `IMPROVEMENT_RATIO`); the reasons behind the rule:
+  - Sessions with no e1RM still count toward `STALL_SESSIONS`, so "trained but not stronger" stays honest. Holds are skipped; a `bodyweight` lift is judged on most reps.
+  - No tag when the latest session is program-driven (any set with a `prescription_ref`), because the program owns its deloads. Going back to manual logging brings the tag back.
+  - No tag past `STALE_DAYS` since the lift was last trained, so a dropped lift is not called stalled.
+  - The tips read only the sessions since the last gain (`plateauAdviceBasis`), and the deload always drops at least one load step or falls back to cutting reps.
+  - The Today screen shows no hint: `recent_lift_sets` holds too few sessions for `STALL_DAYS`.
 
 ## Testing
 

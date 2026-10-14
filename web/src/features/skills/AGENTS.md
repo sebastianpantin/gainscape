@@ -24,7 +24,8 @@ The Skills tab (`/skills`): every skill's level, XP and progress, total level, t
 - Weekly volume:
   - "This week" is sessions with `local_date` on or after the Monday of the profile time zone (`weekStartIn`), the same week as `weekly_goal_weeks()`. It cannot read the weekly goal's `weekStart`, because that RPC returns no rows for a user who never set a goal.
   - Every working lift or hold set counts, whatever its effort, and adds `share / 10000` to each body skill it trains, so one bench set is 0.7 chest. Sums run in basis points, so totals are exact. Cardio trains no body skill and adds nothing.
-  - The band (10 to 20 sets) is shown in words as well as on the bar. Row names lead with the count ("0.7 sets for Chest ..."), because many e2e specs locate the skill cards by `/^Chest\b/`.
+  - The band (10 to 20 sets) is shown in words as well as on the bar. Each row's visible text is its accessible name (WCAG 2.5.3), so it starts with the muscle, like the skill cards. e2e specs therefore find skill cards inside the `Skill levels` list (`skillCard` in `e2e/support/app.ts`), never with a page-wide `/^Chest\b/`.
+  - The contribution list is always rendered (toggled with `hidden`), so the row's `aria-controls` always points at an element.
 
 ## Testing
 

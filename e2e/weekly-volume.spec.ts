@@ -7,14 +7,15 @@ test('the Skills tab counts this week’s sets per muscle and lists the exercise
   await openTab(page, 'Skills');
 
   const volume = page.getByRole('region', { name: 'Sets this week' });
-  const chest = volume.getByRole('button', { name: '0.7 sets for Chest this week, below target', exact: true });
+  const chest = volume.getByRole('button', { name: 'Chest 0.7 sets this week · below target', exact: true });
   await expect(chest).toHaveAttribute('aria-expanded', 'false');
+  await expect(chest).toContainText('Chest');
+  await expect(chest).toContainText('0.7 sets');
+  await expect(volume.getByRole('list', { name: 'Exercises counted for Chest', exact: true })).toBeHidden();
   await expect(
-    volume.getByRole('button', { name: '0.2 sets for Shoulders this week, below target', exact: true }),
+    volume.getByRole('button', { name: 'Shoulders 0.2 sets this week · below target', exact: true }),
   ).toBeVisible();
-  await expect(
-    volume.getByRole('button', { name: '0 sets for Legs this week, below target', exact: true }),
-  ).toBeVisible();
+  await expect(volume.getByRole('button', { name: 'Legs 0 sets this week · below target', exact: true })).toBeVisible();
 
   await chest.click();
   await expect(chest).toHaveAttribute('aria-expanded', 'true');

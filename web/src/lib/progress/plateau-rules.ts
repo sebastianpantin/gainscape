@@ -56,14 +56,38 @@ export function plateauOf(sessions: readonly PlateauSession[], now: number): Pla
   return { sinceStartedAt: since.startedAt, sessionsSince };
 }
 
+export interface PlateauTopSet {
+  startedAt: string;
+  topSetKg: number;
+  topSetReps: number;
+}
+
+function median(values: readonly number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+export function plateauAdviceBasis(
+  sessions: readonly PlateauTopSet[],
+  plateau: Plateau,
+): Pick<PlateauAdviceInput, 'recentTopSetKg' | 'typicalReps'> {
+  const sinceGain = sessions.filter(({ startedAt }) => Date.parse(startedAt) > Date.parse(plateau.sinceStartedAt));
+  return {
+    recentTopSetKg: Math.max(...sinceGain.map(({ topSetKg }) => topSetKg)),
+    typicalReps: median(sinceGain.map(({ topSetReps }) => topSetReps)),
+  };
+}
+
+const REPS_DELOAD = 'Deload: cut about 10% of your reps for a week, then build back up.';
+
 function deloadAdvice({ loadType, unit, recentTopSetKg }: PlateauAdviceInput): string {
-  if (measuresRepsCapacity(loadType)) return 'Deload: cut about 10% of your reps for a week, then build back up.';
-  const lighter = roundLoad(
-    shownWeight(recentTopSetKg, unit) * DELOAD_FRACTION,
-    progressionStep(unit, null),
-    'nearest',
-  );
-  return `Deload: drop to about ${loadType === 'bodyweight_plus' ? '+' : ''}${lighter} ${unit} for a week, then build back up.`;
+  if (measuresRepsCapacity(loadType)) return REPS_DELOAD;
+  const shown = shownWeight(recentTopSetKg, unit);
+  const step = progressionStep(unit, null);
+  const lighter = Math.min(shown - step, roundLoad(shown * DELOAD_FRACTION, step, 'nearest'));
+  if (lighter <= 0) return REPS_DELOAD;
+  return `Deload: drop to about ${loadType === 'bodyweight_plus' ? '+' : ''}${roundLoad(lighter, step, 'nearest')} ${unit} for a week, then build back up.`;
 }
 
 export function plateauAdvice(input: PlateauAdviceInput): string[] {

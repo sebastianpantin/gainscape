@@ -112,20 +112,20 @@ describe('warm-up plan', () => {
 });
 
 describe('warm-up ramp properties', () => {
-  const stepCounts = fc.integer({ min: 0, max: 200 });
+  const workingWeights = fc.double({ min: 0, max: 500, noNaN: true, noDefaultInfinity: true });
   const reps = fc.integer({ min: 1, max: 30 });
   const ramps: fc.Arbitrary<{ ramp: WarmupRamp; isOnGrid: (weight: number) => boolean; weight: number }> = fc.oneof(
-    fc.tuple(fc.constantFrom(2.5, 5), stepCounts).map(([step, count]) => ({
+    fc.tuple(fc.constantFrom(2.5, 5), workingWeights).map(([step, weight]) => ({
       ramp: { kind: 'increment' as const, step },
       isOnGrid: (weight: number) => Math.abs(weight / step - Math.round(weight / step)) < 1e-9,
-      weight: count * step,
+      weight,
     })),
     fc
-      .tuple(fc.constantFrom(DEFAULT_PLATE_SETTINGS.kg, DEFAULT_PLATE_SETTINGS.lb), stepCounts)
-      .map(([setup, count]) => ({
+      .tuple(fc.constantFrom(DEFAULT_PLATE_SETTINGS.kg, DEFAULT_PLATE_SETTINGS.lb), workingWeights)
+      .map(([setup, weight]) => ({
         ramp: { kind: 'barbell' as const, setup },
         isOnGrid: (weight: number) => nearestLoadable(weight, setup.barWeight, setup.plates) === weight,
-        weight: setup.barWeight + count * 2.5,
+        weight,
       })),
   );
 
@@ -135,7 +135,7 @@ describe('warm-up ramp properties', () => {
     );
   }
 
-  it('ramps strictly upward below the working weight, on the load grid, in at most 4 sets', () => {
+  it('ramps strictly upward below any working weight, on or off the load grid, in loadable steps and at most 4 sets', () => {
     fc.assert(
       fc.property(ramps, reps, ({ ramp, isOnGrid, weight }, workingReps) => {
         const plan = warmupPlan({ weight, reps: workingReps }, ramp);
