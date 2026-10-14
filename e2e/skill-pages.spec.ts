@@ -10,6 +10,9 @@ import {
   skillCard,
   uniqueUsername,
 } from './support/app.ts';
+import { failRequests, restTable } from './support/network.ts';
+
+const RECENT_SETS_FAILED = 'Recovery and weekly sets need a connection to load your recent sets.';
 
 const THREE_BENCH_SETS = [
   { weightKg: 60, reps: 5 },
@@ -87,4 +90,36 @@ test('an unknown skill address says so and links back to Skills', async ({ page 
   await expect(heading(page, 'Skill not found')).toBeVisible();
   await page.getByRole('main').getByRole('link', { name: 'Back to skills', exact: true }).click();
   await expect(heading(page, 'Skills')).toBeVisible();
+});
+
+test('a body skill page loads the exercise list once for its exercises, recovery and weekly sets', async ({ page }) => {
+  await register(page, uniqueUsername('skp_once'));
+  let exerciseReads = 0;
+  page.on('request', (request) => {
+    if (restTable('exercises').test(request.url()) && request.method() === 'GET') exerciseReads += 1;
+  });
+
+  await page.goto('/skills/chest');
+  await expect(page.getByRole('list', { name: 'Exercises that train Chest' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Recovery' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Sets this week' })).toBeVisible();
+  await expect(page.getByRole('main').getByText('Loading…', { exact: true })).toHaveCount(0);
+  expect(exerciseReads).toBe(1);
+});
+
+test('recovery and weekly sets say the same thing when recent sets fail to load', async ({ page }) => {
+  await register(page, uniqueUsername('skp_fail'));
+  await failRequests(page, restTable('sets'), 'GET');
+
+  await page.goto('/skills/body');
+  await expect(heading(page, 'Body')).toBeVisible();
+  for (const region of ['Recovery', 'Sets this week']) {
+    await expect(page.getByRole('region', { name: region })).toContainText(RECENT_SETS_FAILED);
+  }
+
+  await page.goto('/skills/chest');
+  await expect(heading(page, 'Chest')).toBeVisible();
+  for (const region of ['Recovery', 'Sets this week']) {
+    await expect(page.getByRole('region', { name: region })).toContainText(RECENT_SETS_FAILED);
+  }
 });

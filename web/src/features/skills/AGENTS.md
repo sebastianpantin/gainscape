@@ -12,7 +12,7 @@ The Skills tab (`/skills`) and its subpages. The tab itself stays short: totals,
 - `SkillsScreen.tsx`: standing from `useStanding(userId)`; the Body summary from `../../lib/progress/body-summary-rules.ts`.
 - `SkillScreen.tsx`: one skill; exercises from `../../lib/progress/skill-map.ts`; `MuscleStatus.tsx` for body skills.
 - `BodyScreen.tsx`: `RecoveryPanel.tsx` (rules in `recovery-rules.ts`, drawn with `components/BodyMap.tsx`) and `WeeklyVolumePanel.tsx` (rules in `weekly-volume-rules.ts`).
-- `body-status.ts`: `useBodyStatus`, the one place that loads recent sets, exercises and profile and computes recovery load and weekly volume for the summary, the skill page and the Body page. `VolumeBar.tsx` and `VolumeContributionList.tsx` are shared by the Body page rows and the skill page.
+- `body-status.ts`: `useBodyStatus`, the one place that loads recent sets, exercises and profile and computes recovery load and weekly volume for the summary, the skill page and the Body page. `VolumeBar.tsx` and `VolumeContributionList.tsx` are shared by the Body page rows and the skill page. `StatusSection.tsx` is the one loading and failure scaffold for Recovery and Sets this week on both pages, so they fail with the same sentence (`RECENT_SETS_FAILED_TEXT`).
 
 ## Rules and gotchas
 
@@ -20,6 +20,7 @@ The Skills tab (`/skills`) and its subpages. The tab itself stays short: totals,
 - A skill with `combat_weight` 0 reads "Does not count toward combat".
 - Offline, the saved standing shows at once with its notice. Recovery and weekly sets need a connection and say so.
 - `/skills/quests` and `/skills/body` are static routes, so React Router ranks them above `/skills/:skillKey`; `route-title-rules.ts` also matches fixed patterns first. A key that is no skill renders "Skill not found" with a link back.
+- The skill page reads exercises through `useSkillMapExercises`, which shares `exerciseListQuery`'s key with `useBodyStatus`, so a body skill page loads the list once. It seeds from the device's exercise cache, and `exercisesTrainingSkill` drops archived ones.
 - Only body skills (`isBodySkill`) get recovery and weekly sets; cardio skills train no muscle. `MuscleStatus` owns the `useBodyStatus` call, so a cardio page fetches no recent sets.
 - The Body summary counts every muscle that is not fresh as recovering (the skill page's "Fresh in 14h" covers both recovering and almost fresh) and every muscle below the band as under target. Until either half loads the link reads just "Body". Its `aria-label` (`Body, <summary>`) supplies the pause; a visually hidden comma inside the flex label comes out as `Body ,`.
 - Recovery computes at the later of mount time and the recent sets' `dataUpdatedAt`. The panels render nothing while loading. The body map's colour is the only state cue in the figure, so the legend must list skill names.
