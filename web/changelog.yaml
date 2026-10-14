@@ -1,3 +1,9 @@
+- prs: [121, 122]
+  version: 0.9.0
+  date: 2026-10-14
+  title: Recovery countdown
+  items:
+    - The Recovery panel on Skills shows how long until each tired muscle is fresh again.
 - prs: [119]
   version: 0.8.2
   date: 2026-10-13
