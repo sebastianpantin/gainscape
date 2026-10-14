@@ -199,3 +199,60 @@ export function evaluateMobilityBands(regular: Pick<CardioSimulationResult, 'cum
     },
   };
 }
+
+export const QUEST_BANDS = Object.freeze({
+  maxCatalogShareOfLevel99: 0.01,
+  maxStarterXpPerSkill: 1000,
+});
+
+export interface QuestRewardSource {
+  key: string;
+  requiredLevels: readonly unknown[];
+  requiredQuests: readonly string[];
+  rewardXp: readonly { skill: string; xp: number }[];
+}
+
+export interface QuestBudgetReport {
+  catalogXpBySkill: Record<string, number>;
+  starterXpBySkill: Record<string, number>;
+  oversizedSkills: string[];
+  oversizedStarterRewards: string[];
+  passes: { catalogTotal: boolean; starterRewards: boolean };
+}
+
+function isStarterQuest(quest: QuestRewardSource): boolean {
+  return quest.requiredLevels.length === 0 && quest.requiredQuests.length === 0;
+}
+
+function xpBySkillOf(quests: readonly QuestRewardSource[]): Record<string, number> {
+  const totals: Record<string, number> = {};
+  for (const { skill, xp } of quests.flatMap((quest) => quest.rewardXp)) totals[skill] = (totals[skill] ?? 0) + xp;
+  return totals;
+}
+
+export function evaluateQuestBudget(quests: readonly QuestRewardSource[]): QuestBudgetReport {
+  const catalogXpBySkill = xpBySkillOf(quests);
+  const starters = quests.filter(isStarterQuest);
+  const maxCatalogXp = QUEST_BANDS.maxCatalogShareOfLevel99 * LEVEL_99_XP;
+  const oversizedSkills = Object.keys(catalogXpBySkill).filter((skill) => catalogXpBySkill[skill] > maxCatalogXp);
+  const oversizedStarterRewards = starters.flatMap((quest) =>
+    quest.rewardXp
+      .filter(({ xp }) => xp > QUEST_BANDS.maxStarterXpPerSkill)
+      .map(({ skill }) => `${quest.key}.${skill}`),
+  );
+  return {
+    catalogXpBySkill,
+    starterXpBySkill: xpBySkillOf(starters),
+    oversizedSkills,
+    oversizedStarterRewards,
+    passes: { catalogTotal: oversizedSkills.length === 0, starterRewards: oversizedStarterRewards.length === 0 },
+  };
+}
+
+export function weekOneLevelWithQuestXp(
+  result: Pick<SimulationResult, 'cumulativeXpByWeek'>,
+  skill: string,
+  questXpBySkill: Readonly<Record<string, number>>,
+): number {
+  return levelForXp(result.cumulativeXpByWeek[skill][0] + (questXpBySkill[skill] ?? 0));
+}
