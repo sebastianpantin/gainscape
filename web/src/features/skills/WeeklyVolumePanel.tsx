@@ -1,38 +1,35 @@
-import { useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import { exerciseListQuery, profileQuery, recentSetsQuery } from '../../lib/query/queries.ts';
+import { Link } from 'react-router-dom';
+import { Icon } from '../../components/Icon.tsx';
+import { type LoadedState } from '../../lib/query/query-state-rules.ts';
 import { BODY_SKILLS, type BodySkill } from '../../lib/progress/recovery-rules.ts';
 import {
   type MuscleVolume,
   VOLUME_BAND_TEXT,
   VOLUME_TARGET,
-  volumeBarFraction,
   volumeSetsLabel,
-  weeklySetsByMuscle,
-  weekStartIn,
 } from '../../lib/progress/weekly-volume-rules.ts';
+import { VolumeBar } from './VolumeBar.tsx';
+import { VolumeContributionList } from './VolumeContributionList.tsx';
 
 interface WeeklyVolumePanelProps {
-  userId: string;
+  volume: LoadedState<Record<BodySkill, MuscleVolume>>;
   nameOf: (skill: BodySkill) => string;
 }
 
-function percent(sets: number): string {
-  return `${Math.round(volumeBarFraction(sets) * 100)}%`;
-}
-
 interface MuscleRowProps {
+  skill: BodySkill;
   name: string;
   volume: MuscleVolume;
   open: boolean;
   onToggle: () => void;
 }
 
-function MuscleRow({ name, volume, open, onToggle }: MuscleRowProps) {
-  const listId = useId();
+function MuscleRow({ skill, name, volume, open, onToggle }: MuscleRowProps) {
+  const detailsId = useId();
   return (
     <li className="volume-row">
-      <button type="button" className="volume-toggle" aria-expanded={open} aria-controls={listId} onClick={onToggle}>
+      <button type="button" className="volume-toggle" aria-expanded={open} aria-controls={detailsId} onClick={onToggle}>
         <span className="row spread">
           <span>{name}</span>
           <span className="muted">
@@ -40,51 +37,30 @@ function MuscleRow({ name, volume, open, onToggle }: MuscleRowProps) {
             <span className="visually-hidden"> this week</span> · {VOLUME_BAND_TEXT[volume.band]}
           </span>
         </span>
-        <span className="volume-bar" aria-hidden="true">
-          <span
-            className="volume-band"
-            style={{ left: percent(VOLUME_TARGET.min), right: `calc(100% - ${percent(VOLUME_TARGET.max)})` }}
-          />
-          <span className={`volume-fill ${volume.band}`} style={{ width: percent(volume.sets) }} />
-        </span>
+        <VolumeBar volume={volume} />
       </button>
-      <ul id={listId} className="volume-contributions" aria-label={`Exercises counted for ${name}`} hidden={!open}>
-        {volume.contributions.length === 0 ? (
-          <li className="muted">No sets yet this week.</li>
-        ) : (
-          volume.contributions.map((part) => (
-            <li key={part.exerciseId} className="row spread">
-              <span>{part.name}</span>
-              <span className="muted">{volumeSetsLabel(part.sets)}</span>
-            </li>
-          ))
-        )}
-      </ul>
+      <div id={detailsId} className="volume-details" hidden={!open}>
+        <VolumeContributionList name={name} volume={volume} />
+        <Link className="tiny" to={`/skills/${skill}`}>
+          {name} skill
+          <Icon name="chevron" size={16} />
+        </Link>
+      </div>
     </li>
   );
 }
 
-export function WeeklyVolumePanel({ userId, nameOf }: WeeklyVolumePanelProps) {
+export function WeeklyVolumePanel({ volume, nameOf }: WeeklyVolumePanelProps) {
   const headingId = useId();
-  const recent = useQuery(recentSetsQuery(userId));
-  const exercises = useQuery(exerciseListQuery(userId));
-  const profile = useQuery(profileQuery(userId));
-  const [openedAt] = useState(Date.now);
   const [openSkill, setOpenSkill] = useState<BodySkill | null>(null);
-  if (!recent.data || !exercises.data || !profile.data) {
-    if (!recent.isError && !exercises.isError && !profile.isError) return null;
+  if (volume.status === 'loading') return null;
+  if (volume.status === 'failed')
     return (
       <section className="panel stack" aria-labelledby={headingId}>
         <h2 id={headingId}>Sets this week</h2>
         <p className="muted">Weekly sets need a connection to load your recent sets.</p>
       </section>
     );
-  }
-  const volume = weeklySetsByMuscle(
-    recent.data,
-    new Map(exercises.data.map((exercise) => [exercise.id, exercise])),
-    weekStartIn(profile.data.loaded.timezone, Math.max(openedAt, recent.dataUpdatedAt)),
-  );
   return (
     <section className="panel stack" aria-labelledby={headingId}>
       <h2 id={headingId}>Sets this week</h2>
@@ -92,8 +68,9 @@ export function WeeklyVolumePanel({ userId, nameOf }: WeeklyVolumePanelProps) {
         {BODY_SKILLS.map((skill) => (
           <MuscleRow
             key={skill}
+            skill={skill}
             name={nameOf(skill)}
-            volume={volume[skill]}
+            volume={volume.data[skill]}
             open={openSkill === skill}
             onToggle={() => setOpenSkill(openSkill === skill ? null : skill)}
           />

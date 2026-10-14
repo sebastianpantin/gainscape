@@ -12,11 +12,10 @@ function cachedSeed(userId: string): Exercise[] | undefined {
   return cached ? skillPanelSeed(activeExercises(cached)) : undefined;
 }
 
-export function useActiveExercises(userId: string, enabled: boolean): LoadedState<Exercise[]> {
+export function useActiveExercises(userId: string): LoadedState<Exercise[]> {
   const query = useQuery({
     queryKey: ['exercises', userId, 'active'],
     queryFn: () => fetchExercises({ includeArchived: false }),
-    enabled,
     initialData: () => cachedSeed(userId),
     initialDataUpdatedAt: 0,
   });

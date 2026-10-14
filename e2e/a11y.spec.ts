@@ -218,6 +218,8 @@ test.describe('signed-in screens', () => {
     await checkScreens(page, [
       ['/skills', 'Skills'],
       ['/skills/quests', 'Quests'],
+      ['/skills/endurance', 'Endurance'],
+      ['/skills/no_such_skill', 'Skill not found'],
       ['/collection', 'Collection log: Records'],
       ['/collection/items', 'Collection log: Items'],
       ['/collection/history', 'Collection log: History'],
@@ -225,11 +227,20 @@ test.describe('signed-in screens', () => {
       [progressPath!, 'Barbell Bench Press'],
     ]);
 
-    await page.goto('/skills');
-    await checkScreen(page, 'skills (chest panel)', async () => {
-      await skillCard(page, 'Chest').click();
+    await page.goto('/skills/chest');
+    await checkScreen(page, 'skill page (chest)', async () => {
       await expect(page.getByRole('list', { name: 'Exercises that train Chest' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Recovery' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Sets this week' })).toBeVisible();
       await expect(page.getByRole('main').getByText('Loading…', { exact: true })).toHaveCount(0);
+    });
+
+    await page.goto('/skills/body');
+    await checkScreen(page, 'body (chest opened)', async () => {
+      await expect(page.getByRole('region', { name: 'Recovery' })).toBeVisible();
+      const volume = page.getByRole('region', { name: 'Sets this week' });
+      await volume.getByRole('button', { name: /^Chest\b/ }).click();
+      await expect(volume.getByRole('link', { name: 'Chest skill', exact: true })).toBeVisible();
     });
   });
 
@@ -429,8 +440,8 @@ test('the skills screen shows pixel art for the ten skills', async ({ page }) =>
   await expect(skills.getByRole('listitem')).toHaveCount(10);
   await expect(skills.locator('li svg')).toHaveCount(10);
   await expect(skills.locator('.monogram')).toHaveCount(0);
-  await skillCard(page, 'Endurance').click();
-  await expect(page.getByText('does not count toward combat')).toBeVisible();
+  await expect(chest).toHaveAttribute('href', '/skills/chest');
   await chest.click();
-  await expect(page.getByText('counts double toward combat')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Chest', exact: true })).toBeVisible();
+  await expect(page.getByRole('main').locator('.skill-icon svg')).toHaveCount(1);
 });

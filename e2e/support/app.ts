@@ -131,7 +131,23 @@ export function skillLevels(page: Page): Locator {
 }
 
 export function skillCard(page: Page, skillName: string): Locator {
-  return skillLevels(page).getByRole('button', { name: new RegExp(`^${skillName}\\b`) });
+  return skillLevels(page).getByRole('link', { name: new RegExp(`^${skillName}\\b`) });
+}
+
+export function bodyLink(page: Page): Locator {
+  return page.getByRole('main').getByRole('link', { name: /^Body\b/ });
+}
+
+export async function openSkill(page: Page, skillName: string) {
+  await openTab(page, 'Skills');
+  await skillCard(page, skillName).click();
+  await expect(page.getByRole('heading', { level: 1, name: skillName, exact: true })).toBeVisible();
+}
+
+export async function openBody(page: Page) {
+  await openTab(page, 'Skills');
+  await bodyLink(page).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Body', exact: true })).toBeVisible();
 }
 
 export function setRows(scope: Page | Locator): Locator {

@@ -6,9 +6,9 @@ import {
   logExercise,
   logWorkout,
   openFromProfile,
+  openSkill,
   openTab,
   register,
-  skillCard,
   uniqueUsername,
 } from './support/app.ts';
 
@@ -22,8 +22,7 @@ function collectionHeadings(page: Page) {
 }
 
 async function openChestExercises(page: Page) {
-  await openTab(page, 'Skills');
-  await skillCard(page, 'Chest').click();
+  await openSkill(page, 'Chest');
   return page.getByRole('list', { name: 'Exercises that train Chest' }).getByRole('listitem');
 }
 
