@@ -12,7 +12,7 @@ import {
 } from './support/app.ts';
 import { failRequests, restTable } from './support/network.ts';
 
-const RECENT_SETS_FAILED = 'Recovery and weekly sets need a connection to load your recent sets.';
+const RECENT_SETS_FAILED = "Couldn't load your recent sets and exercises for recovery and weekly sets.";
 
 const THREE_BENCH_SETS = [
   { weightKg: 60, reps: 5 },
@@ -122,4 +122,14 @@ test('recovery and weekly sets say the same thing when recent sets fail to load'
   for (const region of ['Recovery', 'Sets this week']) {
     await expect(page.getByRole('region', { name: region })).toContainText(RECENT_SETS_FAILED);
   }
+});
+
+test('a skill page that cannot load the skills says so under a heading', async ({ page }) => {
+  await failRequests(page, restTable('user_skills'), 'GET');
+  await register(page, uniqueUsername('skp_err'));
+
+  await page.goto('/skills/chest');
+  await expect(heading(page, 'Skill')).toBeVisible();
+  await expect(page.getByRole('main').getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('main').getByRole('link', { name: '‹ Skills', exact: true })).toBeVisible();
 });

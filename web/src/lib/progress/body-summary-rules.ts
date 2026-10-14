@@ -1,9 +1,15 @@
-import { BODY_SKILLS, type BodySkill, recoveryState } from './recovery-rules.ts';
+import { BODY_SKILLS, type BodySkill, recoveryState, type RecoveryState } from './recovery-rules.ts';
 import { type MuscleVolume } from './weekly-volume-rules.ts';
 
+function countIn(load: Readonly<Record<BodySkill, number>>, state: RecoveryState): number {
+  return BODY_SKILLS.filter((skill) => recoveryState(load[skill]) === state).length;
+}
+
 function recoveryPart(load: Readonly<Record<BodySkill, number>>): string {
-  const recovering = BODY_SKILLS.filter((skill) => recoveryState(load[skill]) !== 'fresh').length;
-  return recovering === 0 ? 'all fresh' : `${recovering} recovering`;
+  const recovering = countIn(load, 'recovering');
+  if (recovering > 0) return `${recovering} recovering`;
+  const easing = countIn(load, 'easing');
+  return easing > 0 ? `${easing} almost fresh` : 'all fresh';
 }
 
 function volumePart(volume: Readonly<Record<BodySkill, MuscleVolume>>): string {
@@ -20,5 +26,3 @@ export function bodySummaryText(
   const text = parts.join(' · ');
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
-
-export const RECENT_SETS_FAILED_TEXT = 'Recovery and weekly sets need a connection to load your recent sets.';

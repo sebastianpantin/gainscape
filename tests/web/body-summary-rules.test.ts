@@ -19,9 +19,13 @@ const ON_TARGET = volumeOf(Object.fromEntries(BODY_SKILLS.map((skill) => [skill,
 
 describe('bodySummaryText', () => {
   it('counts muscles still recovering and muscles under the weekly set target', () => {
-    const load = { ...RESTED, chest: 3, arms: 0.5 };
+    const load = { ...RESTED, chest: 3, back: 1, arms: 0.5 };
     const volume = volumeOf({ chest: 12, back: 25, shoulders: 10, arms: 20 });
     expect(bodySummaryText(load, volume)).toBe('2 recovering · 3 under target');
+  });
+
+  it('names muscles that are only almost fresh the way the Recovery legend does', () => {
+    expect(bodySummaryText({ ...RESTED, arms: 0.5, legs: 0.6 }, ON_TARGET)).toBe('2 almost fresh · none under target');
   });
 
   it('says so when every muscle is fresh and none is under target', () => {
