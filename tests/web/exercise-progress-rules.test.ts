@@ -3,6 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   chartDateText,
   maxRepsRecord,
+  plateauSessions,
+  PROGRESS_COLUMNS,
   progressChartSeries,
   progressValueText,
   PROGRESS_PAGE_SIZE,
@@ -20,6 +22,7 @@ function setRow(changes: Partial<ProgressSetRow> & { session_id: string }): Prog
     reps: 5,
     rir: null,
     rir_source: 'estimated',
+    prescription_ref: null,
     sessions: { started_at: `2026-10-0${day}T08:00:00Z` },
     ...changes,
   };
@@ -36,8 +39,22 @@ describe('session progress', () => {
       'external',
     );
     expect(sessions).toEqual([
-      { sessionId: 'day-1', startedAt: '2026-10-01T08:00:00Z', e1rmKg: 111, topSetKg: 100, mostReps: 8 },
-      { sessionId: 'day-3', startedAt: '2026-10-03T08:00:00Z', e1rmKg: 112, topSetKg: 105, mostReps: 3 },
+      {
+        sessionId: 'day-1',
+        startedAt: '2026-10-01T08:00:00Z',
+        e1rmKg: 111,
+        topSetKg: 100,
+        mostReps: 8,
+        programDriven: false,
+      },
+      {
+        sessionId: 'day-3',
+        startedAt: '2026-10-03T08:00:00Z',
+        e1rmKg: 112,
+        topSetKg: 105,
+        mostReps: 3,
+        programDriven: false,
+      },
     ]);
   });
 
@@ -80,10 +97,61 @@ describe('session progress', () => {
   });
 });
 
+describe('program-driven sessions', () => {
+  it('reads the prescription of each set', () => {
+    expect(PROGRESS_COLUMNS.sets).toContain('prescription_ref');
+  });
+
+  it('marks a session program-driven when any of its sets came from a prescription', () => {
+    const sessions = sessionProgress(
+      [
+        setRow({ session_id: 'day-1' }),
+        setRow({ session_id: 'day-2' }),
+        setRow({ session_id: 'day-2', prescription_ref: 'w1:d1:squat:0' }),
+      ],
+      'external',
+    );
+    expect(sessions.map((session) => session.programDriven)).toEqual([false, true]);
+  });
+});
+
+describe('plateau sessions', () => {
+  const sessions = [
+    {
+      sessionId: 'a',
+      startedAt: '2026-10-01T12:00:00Z',
+      e1rmKg: null,
+      topSetKg: 60,
+      mostReps: 12,
+      programDriven: true,
+    },
+    { sessionId: 'b', startedAt: '2026-10-03T12:00:00Z', e1rmKg: 100, topSetKg: 90, mostReps: 5, programDriven: false },
+  ];
+
+  it('tracks the e1RM of a loaded lift', () => {
+    expect(plateauSessions(sessions, 'external')).toEqual([
+      { startedAt: '2026-10-01T12:00:00Z', value: null, programDriven: true },
+      { startedAt: '2026-10-03T12:00:00Z', value: 100, programDriven: false },
+    ]);
+    expect(plateauSessions(sessions, 'bodyweight_plus').map((session) => session.value)).toEqual([null, 100]);
+  });
+
+  it('tracks the most reps of a bodyweight lift', () => {
+    expect(plateauSessions(sessions, 'bodyweight').map((session) => session.value)).toEqual([12, 5]);
+  });
+});
+
 describe('progress chart series', () => {
   const sessions = [
-    { sessionId: 'a', startedAt: '2026-10-01T12:00:00Z', e1rmKg: null, topSetKg: 60, mostReps: 12 },
-    { sessionId: 'b', startedAt: '2026-10-03T12:00:00Z', e1rmKg: 100, topSetKg: 90, mostReps: 5 },
+    {
+      sessionId: 'a',
+      startedAt: '2026-10-01T12:00:00Z',
+      e1rmKg: null,
+      topSetKg: 60,
+      mostReps: 12,
+      programDriven: false,
+    },
+    { sessionId: 'b', startedAt: '2026-10-03T12:00:00Z', e1rmKg: 100, topSetKg: 90, mostReps: 5, programDriven: false },
   ];
   const october = (day: number) => Date.UTC(2026, 9, day, 12);
 

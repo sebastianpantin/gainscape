@@ -11,7 +11,8 @@ export type GlossaryKey =
   | 'superset'
   | 'pr'
   | 'xp'
-  | 'loot';
+  | 'loot'
+  | 'stalled';
 
 export interface GlossaryEntry {
   term: string;
@@ -108,5 +109,12 @@ export const GLOSSARY: Readonly<Record<GlossaryKey, GlossaryEntry>> = {
     name: 'Loot',
     definition:
       'Loot: hard sets can drop items when you finish a workout. Equip gear for bonus XP and craft it into better tiers.',
+  },
+  stalled: {
+    term: 'Stalled',
+    question: 'What does Stalled mean?',
+    name: 'Stalled lift',
+    definition:
+      'Stalled lift: it has not beaten its best by more than 0.5% in at least 4 workouts over 3 weeks. Lifts a program runs are left to the program.',
   },
 };

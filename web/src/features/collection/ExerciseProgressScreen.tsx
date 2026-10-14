@@ -1,11 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { measuresRepsCapacity } from '@domain/types.ts';
 import { LineChart } from '../../components/LineChart.tsx';
 import { TermHelp } from '../../components/TermHelp.tsx';
 import { messageOf } from '../../lib/error-text.ts';
 import { type ExerciseProgress } from '../../lib/progress/exercise-progress.ts';
-import { chartDateText, progressChartSeries, progressValueText } from '../../lib/progress/exercise-progress-rules.ts';
+import {
+  chartDateText,
+  plateauSessions,
+  progressChartSeries,
+  progressValueText,
+} from '../../lib/progress/exercise-progress-rules.ts';
+import { plateauAdvice, plateauOf } from '../../lib/progress/plateau-rules.ts';
 import { formatLoad, formatSessionDate } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { exerciseProgressQuery } from '../../lib/query/queries.ts';
@@ -42,6 +49,7 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
   const { exerciseId = '' } = useParams();
   const { unitPref } = usePreferences();
   const progress = useQuery(exerciseProgressQuery(userId, exerciseId));
+  const [openedAt] = useState(Date.now);
   const loaded = loadedOf(progress.data, progress.isFetching ? null : progress.error);
 
   if (loaded.kind !== 'ready')
@@ -63,11 +71,36 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
   const series = progressChartSeries(sessions, exercise.loadType, unitPref);
   const formatY = (value: number) => progressValueText(value, exercise.loadType, unitPref);
   const trains = skillShareRows(exercise);
+  const latest = sessions.at(-1);
+  const plateau =
+    exercise.measure === undefined ? plateauOf(plateauSessions(sessions, exercise.loadType), openedAt) : null;
 
   return (
     <main className="screen stack">
       <BackButton />
-      <h1 className="title">{exercise.name}</h1>
+      <div className="row">
+        <h1 className="title">{exercise.name}</h1>
+        {plateau && <span className="stalled-tag">Stalled</span>}
+      </div>
+      {plateau && latest && (
+        <section className="panel stack" aria-labelledby="stall-heading">
+          <div className="row">
+            <h2 id="stall-heading">Get past the stall</h2>
+            <TermHelp glossaryKey="stalled" />
+          </div>
+          <p className="muted">No gain in your last {plateau.sessionsSince} workouts of this lift.</p>
+          <ul>
+            {plateauAdvice({
+              loadType: exercise.loadType,
+              unit: unitPref,
+              recentTopSetKg: latest.topSetKg,
+              typicalReps: latest.mostReps,
+            }).map((tip) => (
+              <li key={tip}>{tip}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       {trains.length > 0 && (
         <section className="panel stack" aria-labelledby="trains-heading">
           <h2 id="trains-heading">Trains</h2>
