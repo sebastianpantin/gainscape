@@ -74,6 +74,22 @@ export async function backdateSessions(username: string, days: number): Promise<
     where p.id = s.user_id and p.username = ${username}`;
 }
 
+export async function spreadSessionsDays(username: string, daysApart: number): Promise<void> {
+  await db`
+    with ranked as (
+      select s.id, (row_number() over (order by s.started_at desc) - 1) * ${daysApart} + 1 as days_back
+      from public.sessions s
+      join public.profiles p on p.id = s.user_id
+      where p.username = ${username}
+    )
+    update public.sessions s
+    set started_at = s.started_at - make_interval(days => r.days_back::int),
+      ended_at = s.ended_at - make_interval(days => r.days_back::int),
+      local_date = ((s.started_at - make_interval(days => r.days_back::int)) at time zone s.timezone)::date
+    from ranked r
+    where r.id = s.id`;
+}
+
 export async function setsOf(sessionId: string) {
   return db`
     select reps, effort_input_type, effort_value::float as effort_value

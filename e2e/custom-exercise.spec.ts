@@ -8,6 +8,7 @@ import {
   openFromProfile,
   openTab,
   register,
+  skillCard,
   uniqueUsername,
 } from './support/app.ts';
 
@@ -22,7 +23,7 @@ function collectionHeadings(page: Page) {
 
 async function openChestExercises(page: Page) {
   await openTab(page, 'Skills');
-  await page.getByRole('button', { name: /^Chest\b/ }).click();
+  await skillCard(page, 'Chest').click();
   return page.getByRole('list', { name: 'Exercises that train Chest' }).getByRole('listitem');
 }
 

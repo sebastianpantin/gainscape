@@ -1,5 +1,5 @@
 import { expect, test } from './support/fixtures.ts';
-import { logCardio, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
+import { logCardio, logWorkout, openTab, register, skillCard, uniqueUsername } from './support/app.ts';
 import { activeDropsOfLatestSession, grantItems } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
 import { db } from '../tests/integration/local-stack.ts';
@@ -64,7 +64,7 @@ test('a skill with no exercises that train it says so', async ({ page }) => {
   );
 
   await openTab(page, 'Skills');
-  await page.getByRole('button', { name: /^Chest\b/ }).click();
+  await skillCard(page, 'Chest').click();
 
   await expect(page.getByText('No exercises train Chest yet.')).toBeVisible();
   await expect(page.getByRole('list', { name: 'Exercises that train Chest' })).toHaveCount(0);

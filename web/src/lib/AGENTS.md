@@ -17,7 +17,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `workout/`: live-workout rules and stores: set editing, cardio, effort labels, supersets, warm-ups, plates, rest timer, training device, session timing and baseline, progression hints, the active workout bar.
 - `programs/`: program persistence, enrollment and every `program-*-rules.ts`.
 - `history/`: past sessions, the history overview and the last session of an exercise.
-- `progress/`: standing, the skill map, recovery, weekly goal, bodyweight trend and exercise progress.
+- `progress/`: standing, the skill map, recovery, weekly goal, weekly muscle volume, bodyweight trend and exercise progress.
 - `collection/`: items, gear, challenges, the companion pet and the records collection.
 - `profile/`: profile and its view, account actions, preferences and onboarding.
 - `social/`: friends, feed and hiscores.
@@ -76,6 +76,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `collection/challenge-rules.ts` volume rounds each weight to 2 decimals, as the server stores it, and bodyweight counts nothing. It shows the target as met only within the judge's `FLOAT_TOLERANCE`. `challengeLoadKg` rounds up, the way `roundPrescribedLoad` rounds program loads down.
 - Exercise progress and bodyweight trend:
   - `progress/exercise-progress-rules.ts` uses RIR for e1RM only when `rir_source` is `logged`.
+  - `progress/plateau-rules.ts` never flags a lift whose latest session a program drove (`prescription_ref`), so it cannot second-guess the program's deloads.
   - `PROGRESS_PAGE_SIZE` (1000) is the PostgREST `max_rows`. `queryProgressSets` keeps paging until it gets a short page; otherwise long histories lose their oldest sessions.
   - `progress/bodyweight-trend.ts` reads newest first, so a row cap drops the oldest days.
 - `BODYWEIGHT_LOAD_NOT_ZERO_CODE` and `UNKNOWN_EXERCISE_CODE` (in `workout/exercise-edit-rules.ts`) are mapped by both the finish flow and the history save.

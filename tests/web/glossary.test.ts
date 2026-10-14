@@ -21,6 +21,7 @@ describe('GLOSSARY', () => {
     ['pr', 'What is a PR?'],
     ['xp', 'What is XP?'],
     ['loot', 'What is loot?'],
+    ['stalled', 'What does Stalled mean?'],
   ])('asks %s as %j', (key, question) => {
     expect(GLOSSARY[key].question).toBe(question);
   });
