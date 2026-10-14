@@ -139,16 +139,24 @@ function prescriptionMet(
   );
 }
 
+export function liftVolume(
+  sets: readonly SetResult[],
+  metric: VolumeMetric,
+  exerciseId: string | null,
+  minPct: number | null,
+  e1rmSnapshot: E1rmSnapshot,
+): number {
+  return workingLiftSets(sets)
+    .filter(
+      (result) =>
+        (exerciseId === null || result.set.exerciseId === exerciseId) &&
+        meetsPercentTarget(result, minPct, e1rmSnapshot),
+    )
+    .reduce((sum, result) => sum + (metric === 'reps' ? result.set.reps : result.set.weightKg * result.set.reps), 0);
+}
+
 function volumeMet(challenge: VolumeChallenge, sets: readonly LiftSetResult[], e1rmSnapshot: E1rmSnapshot): boolean {
-  const qualifying = sets.filter(
-    (result) =>
-      (challenge.exerciseId === null || result.set.exerciseId === challenge.exerciseId) &&
-      meetsPercentTarget(result, challenge.minPct, e1rmSnapshot),
-  );
-  const volume = qualifying.reduce(
-    (sum, result) => sum + (challenge.metric === 'reps' ? result.set.reps : result.set.weightKg * result.set.reps),
-    0,
-  );
+  const volume = liftVolume(sets, challenge.metric, challenge.exerciseId, challenge.minPct, e1rmSnapshot);
   return volume + FLOAT_TOLERANCE >= challenge.target;
 }
 
