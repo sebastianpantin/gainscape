@@ -1,4 +1,4 @@
-import { isoTimestamp, type JsonValue, type Transaction } from '../db.ts';
+import { type DbRow, isoTimestamp, type JsonValue, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   type QuestCompletion,
@@ -46,16 +46,20 @@ export async function loadQuest(tx: Transaction, questId: string): Promise<Store
   return row === undefined ? null : storedQuestFromRow(row);
 }
 
-export async function loadQuestProgress(tx: Transaction, userId: string): Promise<QuestProgress[]> {
-  const rows = await tx`
-    select quest_id, started_at, step_index, step_progress from public.quest_progress
-    where user_id = ${userId} order by started_at, quest_id`;
-  return rows.map((row) => ({
+function progressFromRow(row: DbRow): QuestProgress {
+  return {
     questId: row.quest_id,
     startedAt: isoTimestamp(row.started_at),
     stepIndex: row.step_index,
     stepProgress: Number(row.step_progress),
-  }));
+  };
+}
+
+export async function loadQuestProgress(tx: Transaction, userId: string): Promise<QuestProgress[]> {
+  const rows = await tx`
+    select quest_id, started_at, step_index, step_progress from public.quest_progress
+    where user_id = ${userId} order by started_at, quest_id`;
+  return rows.map(progressFromRow);
 }
 
 export async function loadCompletedQuestIds(tx: Transaction, userId: string): Promise<string[]> {
@@ -66,13 +70,8 @@ export async function loadCompletedQuestIds(tx: Transaction, userId: string): Pr
 export async function insertQuestProgress(tx: Transaction, userId: string, questId: string): Promise<QuestProgress> {
   const [row] = await tx`
     insert into public.quest_progress (user_id, quest_id) values (${userId}, ${questId})
-    returning started_at, step_index, step_progress`;
-  return {
-    questId,
-    startedAt: isoTimestamp(row.started_at),
-    stepIndex: row.step_index,
-    stepProgress: Number(row.step_progress),
-  };
+    returning quest_id, started_at, step_index, step_progress`;
+  return progressFromRow(row);
 }
 
 export async function loadQuestXpBefore(

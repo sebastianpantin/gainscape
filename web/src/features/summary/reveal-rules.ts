@@ -12,6 +12,7 @@ import {
   type QuestSkill,
   questStepProgress,
   questStepText,
+  rewardXpTexts,
 } from '../../lib/quests/quest-rules.ts';
 
 export interface DescribedRecord {
@@ -167,11 +168,8 @@ export function questRevealLines(
       text: `Quest complete: ${completed.name}`,
       detail: [
         `+${questPointsText(completed.questPoints)}`,
-        skills
-          .flatMap((skill) => {
-            const xp = completed.xpBySkill[skill.id] ?? 0;
-            return xp > 0 ? [`+${formatXp(xp)} ${skill.name} XP`] : [];
-          })
+        rewardXpTexts(completed.xpBySkill, skills)
+          .map((text) => `+${text}`)
           .join(', '),
       ]
         .filter((part) => part !== '')

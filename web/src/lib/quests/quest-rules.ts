@@ -238,12 +238,15 @@ function requirementLines(
   return [...levels, ...quests];
 }
 
-function rewardLines(quest: CatalogQuest, skills: readonly QuestSkill[]): string[] {
-  const xpLines = skills.flatMap((skill) => {
-    const xp = quest.rewardXp[skill.id] ?? 0;
+export function rewardXpTexts(xpBySkill: Readonly<Record<string, number>>, skills: readonly QuestSkill[]): string[] {
+  return skills.flatMap((skill) => {
+    const xp = xpBySkill[skill.id] ?? 0;
     return xp > 0 ? [`${formatXp(xp)} ${skill.name} XP`] : [];
   });
-  return [questPointsText(quest.questPoints), ...xpLines];
+}
+
+function rewardLines(quest: CatalogQuest, skills: readonly QuestSkill[]): string[] {
+  return [questPointsText(quest.questPoints), ...rewardXpTexts(quest.rewardXp, skills)];
 }
 
 function isShown(quest: CatalogQuest, status: QuestStatus): boolean {
