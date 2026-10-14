@@ -10,6 +10,7 @@ import {
   distanceFromInput,
 } from '../../lib/workout/cardio-rules.ts';
 import type { UnitPref } from '../../lib/profile/profile.ts';
+import { optionalNumber } from '../../lib/profile/profile-rules.ts';
 import { distanceInputStep, distanceUnitFor, shownDistance } from '../../lib/units.ts';
 import type { BoutValues } from '../../lib/workout/exercise-edit-rules.ts';
 
@@ -24,10 +25,6 @@ interface BoundedNumberFieldProps {
   inputMode: 'numeric' | 'decimal';
   emptyAllowed?: boolean;
   onCommit: (value: number | null, settled: boolean) => void;
-}
-
-function parsed(raw: string): number | null {
-  return raw.trim() === '' ? null : Number(raw);
 }
 
 function BoundedNumberField({
@@ -45,7 +42,7 @@ function BoundedNumberField({
     candidate === null ? emptyAllowed : Number.isFinite(candidate) && candidate >= min && candidate <= max;
   const settle = () => {
     if (typed === null) return;
-    const candidate = parsed(typed);
+    const candidate = optionalNumber(typed);
     if (candidate === null) {
       if (emptyAllowed) onCommit(null, true);
     } else if (Number.isFinite(candidate)) onCommit(Math.min(max, Math.max(min, candidate)), true);
@@ -63,7 +60,7 @@ function BoundedNumberField({
         value={typed ?? (value === null ? '' : String(value))}
         onChange={(event) => {
           setTyped(event.target.value);
-          const candidate = parsed(event.target.value);
+          const candidate = optionalNumber(event.target.value);
           if (isAcceptable(candidate)) onCommit(candidate, false);
         }}
         onBlur={settle}

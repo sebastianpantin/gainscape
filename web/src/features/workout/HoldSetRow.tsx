@@ -1,12 +1,12 @@
 import type { Ref } from 'react';
 import { HOLD_BOUNDS } from '@domain/types.ts';
-import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import type { HoldMeasure, LoadType } from '../../lib/exercises/catalog-rules.ts';
 import type { HoldValues } from '../../lib/workout/exercise-edit-rules.ts';
 import type { UnitPref } from '../../lib/profile/profile.ts';
 import type { HoldDraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
+import { DoneToggle } from './DoneToggle.tsx';
 import { SetMenu } from './SetMenu.tsx';
 import { WeightField } from './SetRow.tsx';
 import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
@@ -103,20 +103,7 @@ export function HoldSetRow({
           </span>
         )}
       </span>
-      <button
-        type="button"
-        className={`button done-toggle ${set.done ? 'selected' : ''}`}
-        aria-pressed={set.done}
-        aria-label={`Done set ${setNumber}`}
-        onClick={onToggleDone}
-      >
-        <Icon name="check" size={20} strokeWidth={3} />
-      </button>
-      {drop?.xpText && (
-        <span key={drop.key} className="xp-drop" aria-hidden="true">
-          {drop.xpText}
-        </span>
-      )}
+      <DoneToggle done={set.done} label={`Done set ${setNumber}`} drop={drop} onToggle={onToggleDone} />
       <SetMenu
         buttonRef={menuRef}
         name={`Set ${setNumber} options`}

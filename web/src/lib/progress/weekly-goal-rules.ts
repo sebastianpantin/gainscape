@@ -45,13 +45,13 @@ export function weeklyGoalStatus(rows: readonly WeeklyGoalWeekRow[]): WeeklyGoal
   };
 }
 
-function workouts(count: number): string {
+export function workoutWord(count: number): string {
   return count === 1 ? 'workout' : 'workouts';
 }
 
 export function weekProgressText(status: WeeklyGoalStatus): string {
   const goal = status.goal ?? 0;
-  const progress = `${status.sessionsThisWeek} of ${goal} ${workouts(goal)} this week`;
+  const progress = `${status.sessionsThisWeek} of ${goal} ${workoutWord(goal)} this week`;
   return status.sessionsThisWeek >= goal ? `Goal met: ${progress}` : progress;
 }
 

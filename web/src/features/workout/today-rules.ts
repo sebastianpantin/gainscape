@@ -1,6 +1,7 @@
+import { MS_PER_DAY } from '@domain/edit-window.ts';
 import { formatXp } from '../../lib/format.ts';
 import type { SkillStanding } from '../../lib/progress/standing-rules.ts';
-import type { WeeklyGoalStatus } from '../../lib/progress/weekly-goal-rules.ts';
+import { type WeeklyGoalStatus, workoutWord } from '../../lib/progress/weekly-goal-rules.ts';
 
 export function greetingFor(hour: number): string {
   if (hour >= 5 && hour < 12) return 'Good morning';
@@ -36,7 +37,6 @@ export function nearestLevelUpText({ skillName, xpToGo, nextLevel }: NearestLeve
 }
 
 const DAYS_IN_WEEK = 7;
-const MS_PER_DAY = 86_400_000;
 const WARNING_DAYS = 3;
 const SPARE_DAYS_BEFORE_WARNING = 1;
 const MOST_WORKOUTS_A_DAY = 2;
@@ -54,8 +54,7 @@ export function streakRiskText(status: WeeklyGoalStatus, now: Date): string | nu
   const daysLeft = daysLeftInWeek(status.weekStart, now);
   if (needed <= 0 || daysLeft === null || daysLeft > WARNING_DAYS) return null;
   if (daysLeft - needed > SPARE_DAYS_BEFORE_WARNING || needed > daysLeft * MOST_WORKOUTS_A_DAY) return null;
-  const workouts = needed === 1 ? 'workout' : 'workouts';
   const deadline = daysLeft === 1 ? 'today' : 'by Sunday';
   const stakes = status.streakWeeks > 0 ? `keeps your ${status.streakWeeks} week streak` : 'hits your weekly goal';
-  return `${needed} more ${workouts} ${deadline} ${stakes}`;
+  return `${needed} more ${workoutWord(needed)} ${deadline} ${stakes}`;
 }

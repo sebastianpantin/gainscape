@@ -1,10 +1,10 @@
 import type { Ref } from 'react';
-import { Icon } from '../../components/Icon.tsx';
 import type { PaceUnit } from '../../lib/exercises/catalog-rules.ts';
 import type { UnitPref } from '../../lib/profile/profile.ts';
 import type { CardioDraftSet } from '../../offline/draft-format.ts';
 import { BoutFields, BoutModeToggle } from './BoutFields.tsx';
 import { CardioEffortSelector } from './CardioEffortSelector.tsx';
+import { DoneToggle } from './DoneToggle.tsx';
 import { SetMenu } from './SetMenu.tsx';
 import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
@@ -41,20 +41,7 @@ export function CardioSetRow({
       <span className="set-number">{boutNumber}</span>
       <BoutFields bout={bout} paceUnit={paceUnit} tracksDistance={tracksDistance} unit={unit} onChange={onChange} />
       <span className={bout.done ? 'set-xp earned' : 'set-xp'}>{previewXpLabel(preview)}</span>
-      <button
-        type="button"
-        className={`button done-toggle ${bout.done ? 'selected' : ''}`}
-        aria-pressed={bout.done}
-        aria-label={`Done bout ${boutNumber}`}
-        onClick={onToggleDone}
-      >
-        <Icon name="check" size={20} strokeWidth={3} />
-      </button>
-      {drop?.xpText && (
-        <span key={drop.key} className="xp-drop" aria-hidden="true">
-          {drop.xpText}
-        </span>
-      )}
+      <DoneToggle done={bout.done} label={`Done bout ${boutNumber}`} drop={drop} onToggle={onToggleDone} />
       <BoutModeToggle boutNumber={boutNumber} bout={bout} onChange={onChange} />
       <SetMenu
         buttonRef={menuRef}
