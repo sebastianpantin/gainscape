@@ -1,3 +1,4 @@
+import { shownWeight, unitToKg } from '../../web/src/lib/units.ts';
 import { describe, expect, it } from 'vitest';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 import type { Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
@@ -162,6 +163,20 @@ describe('warmupsToOffer', () => {
       { weightKg: 12.5, reps: 5 },
       { weightKg: 17.5, reps: 3 },
       { weightKg: 25, reps: 2 },
+    ]);
+  });
+
+  it('ramps a dumbbell lift in pounds at 5 lb steps and stores the weights in kg', () => {
+    const warmups = warmupsToOffer(
+      lift('curl', [set('c1', { weightKg: unitToKg(50, 'lb'), reps: 10 })]),
+      'lb',
+      null,
+      10,
+    );
+    expect(warmups.map(({ weightKg, reps }) => [shownWeight(weightKg, 'lb'), reps])).toEqual([
+      [20, 5],
+      [30, 3],
+      [40, 2],
     ]);
   });
 

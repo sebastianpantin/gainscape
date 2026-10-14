@@ -77,6 +77,7 @@ export interface SessionProgress {
   startedAt: string;
   e1rmKg: number | null;
   topSetKg: number;
+  topSetReps: number;
   mostReps: number;
   programDriven: boolean;
 }
@@ -113,11 +114,17 @@ export function sessionProgress(rows: readonly ProgressSetRow[], loadType: LoadT
     const weightKg = Number(row.weight_kg);
     const e1rmKg = setE1rmKg(row, loadType);
     const seen = bySession.get(row.session_id);
+    const topSetKg = Math.max(seen?.topSetKg ?? weightKg, weightKg);
+    const topSetReps = Math.max(
+      seen !== undefined && seen.topSetKg === topSetKg ? seen.topSetReps : 0,
+      weightKg === topSetKg ? row.reps : 0,
+    );
     bySession.set(row.session_id, {
       sessionId: row.session_id,
       startedAt: row.sessions.started_at,
       e1rmKg: higher(seen?.e1rmKg ?? null, e1rmKg),
-      topSetKg: Math.max(seen?.topSetKg ?? weightKg, weightKg),
+      topSetKg,
+      topSetReps,
       mostReps: Math.max(seen?.mostReps ?? row.reps, row.reps),
       programDriven: (seen?.programDriven ?? false) || row.prescription_ref !== null,
     });

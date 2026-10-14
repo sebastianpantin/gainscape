@@ -115,6 +115,6 @@ export const GLOSSARY: Readonly<Record<GlossaryKey, GlossaryEntry>> = {
     question: 'What does Stalled mean?',
     name: 'Stalled lift',
     definition:
-      'Stalled lift: it has not beaten its best by more than 0.5% in at least 4 workouts over 3 weeks. Lifts a program runs are left to the program.',
+      'Stalled lift: it has not gained more than 0.5% since its last gain, over at least 4 workouts and 3 weeks. Lifts a program runs are left to the program.',
   },
 };

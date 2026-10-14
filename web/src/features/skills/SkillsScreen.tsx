@@ -97,7 +97,7 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
       </ul>
       <RecoveryPanel userId={userId} nameOf={skillName} />
       <WeeklyVolumePanel userId={userId} nameOf={skillName} />
-      <ul className="skill-grid">
+      <ul className="skill-grid" aria-label="Skill levels">
         {standing.skills.map(({ skill, progress }) => (
           <li key={skill.id}>
             <button

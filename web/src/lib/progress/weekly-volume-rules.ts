@@ -55,18 +55,22 @@ export function volumeSetsLabel(sets: number): string {
   return `${shown} ${shown === '1' ? 'set' : 'sets'}`;
 }
 
-export function volumeSummary(muscleName: string, sets: number): string {
-  return `${volumeSetsLabel(sets)} for ${muscleName} this week, ${VOLUME_BAND_TEXT[volumeBand(sets)]}`;
+function dayFormat(timeZone: string): Intl.DateTimeFormat {
+  const options = { year: 'numeric', month: 'numeric', day: 'numeric' } as const;
+  try {
+    return new Intl.DateTimeFormat('en-US', { ...options, timeZone });
+  } catch {
+    return new Intl.DateTimeFormat('en-US', { ...options, timeZone: 'UTC' });
+  }
 }
 
 export function weekStartIn(timeZone: string, now: number): string {
-  const localDay = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now);
-  const localMidnight = Date.parse(`${localDay}T00:00:00Z`);
+  const parts = Object.fromEntries(
+    dayFormat(timeZone)
+      .formatToParts(now)
+      .map(({ type, value }) => [type, value]),
+  );
+  const localMidnight = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
   const daysSinceMonday = (new Date(localMidnight).getUTCDay() + 6) % 7;
   return new Date(localMidnight - daysSinceMonday * MS_PER_DAY).toISOString().slice(0, 10);
 }

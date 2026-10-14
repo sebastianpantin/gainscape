@@ -64,8 +64,9 @@ test('edit a logged set from history, see the XP change, then delete the workout
   await expect.poll(() => sessionCount(username)).toBe(0);
 });
 
-test('a warm-up set keeps its warm-up cue in the session detail', async ({ page }) => {
-  await register(page, uniqueUsername('hw'));
+test('a warm-up set keeps its warm-up cue in the session detail, editable or locked', async ({ page }) => {
+  const username = uniqueUsername('hw');
+  await register(page, username);
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [
     { weightKg: 40, reps: 8 },
@@ -85,6 +86,13 @@ test('a warm-up set keeps its warm-up cue in the session detail', async ({ page 
     'aria-pressed',
     'false',
   );
+
+  await backdateSessions(username, 8);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
+  const warmupRows = page.getByRole('main').getByRole('listitem').filter({ hasText: '· warm-up' });
+  await expect(warmupRows).toHaveCount(1);
+  await expect(warmupRows).toContainText('40 kg × 8');
 });
 
 test('a workout older than the edit window shows as locked in History', async ({ page }) => {

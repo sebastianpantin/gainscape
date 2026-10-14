@@ -7,6 +7,7 @@ import {
   openTab,
   register,
   setRow,
+  skillCard,
   uniqueUsername,
 } from './support/app.ts';
 
@@ -37,7 +38,7 @@ function countRequests(page: Page, url: RegExp): () => number {
 }
 
 function chestCard(page: Page) {
-  return page.getByRole('main').getByRole('button', { name: /^Chest/ });
+  return skillCard(page, 'Chest');
 }
 
 async function chestCardText(page: Page): Promise<string> {

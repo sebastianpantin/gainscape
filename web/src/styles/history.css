@@ -47,7 +47,8 @@
   gap: var(--space-1);
 }
 
-.stored-set-list > .warmup {
+.stored-set-list > .warmup,
+.history-set-row.warmup {
   color: var(--color-text-muted);
 }
 

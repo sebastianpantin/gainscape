@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   IMPROVEMENT_RATIO,
   plateauAdvice,
+  plateauAdviceBasis,
   plateauOf,
   type PlateauSession,
   STALE_DAYS,
@@ -174,6 +175,28 @@ describe('plateauOf properties', () => {
   });
 });
 
+describe('plateauAdviceBasis', () => {
+  const plateau = { sinceStartedAt: daysAgo(29), sessionsSince: 4 };
+  const top = (days: number, topSetKg: number, topSetReps: number) => ({
+    startedAt: daysAgo(days),
+    topSetKg,
+    topSetReps,
+  });
+
+  it('takes the heaviest top set and the median top-set reps of the sessions since the last gain', () => {
+    expect(
+      plateauAdviceBasis([top(29, 120, 1), top(22, 100, 5), top(15, 95, 8), top(8, 100, 3), top(1, 90, 6)], plateau),
+    ).toEqual({ recentTopSetKg: 100, typicalReps: 5.5 });
+  });
+
+  it('uses the middle value for an odd count, whatever the order', () => {
+    expect(plateauAdviceBasis([top(1, 90, 8), top(15, 95, 3), top(8, 100, 5)], plateau)).toEqual({
+      recentTopSetKg: 100,
+      typicalReps: 5,
+    });
+  });
+});
+
 describe('plateauAdvice', () => {
   it('suggests a deload week at about 90% of the recent top set, rounded to the load step', () => {
     const [deload] = plateauAdvice({ loadType: 'external', unit: 'kg', recentTopSetKg: 100, typicalReps: 5 });
@@ -205,6 +228,27 @@ describe('plateauAdvice', () => {
       typicalReps: 6,
     });
     expect(deload).toContain('about +17.5 kg');
+  });
+
+  it('always drops at least one load step, even when 90% rounds back to the top set', () => {
+    expect(plateauAdvice({ loadType: 'external', unit: 'kg', recentTopSetKg: 10, typicalReps: 10 })[0]).toContain(
+      'about 7.5 kg',
+    );
+    expect(
+      plateauAdvice({ loadType: 'external', unit: 'lb', recentTopSetKg: 9.0718474, typicalReps: 10 })[0],
+    ).toContain('about 15 lb');
+  });
+
+  it('cuts reps instead when one load step down leaves no load', () => {
+    const [light] = plateauAdvice({ loadType: 'external', unit: 'kg', recentTopSetKg: 2, typicalReps: 12 });
+    expect(light).toBe('Deload: cut about 10% of your reps for a week, then build back up.');
+    const [unweightedDip] = plateauAdvice({
+      loadType: 'bodyweight_plus',
+      unit: 'kg',
+      recentTopSetKg: 0,
+      typicalReps: 10,
+    });
+    expect(unweightedDip).toBe('Deload: cut about 10% of your reps for a week, then build back up.');
   });
 
   it('cuts reps rather than load for a bodyweight lift', () => {

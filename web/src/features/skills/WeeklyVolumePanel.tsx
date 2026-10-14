@@ -8,7 +8,6 @@ import {
   VOLUME_TARGET,
   volumeBarFraction,
   volumeSetsLabel,
-  volumeSummary,
   weeklySetsByMuscle,
   weekStartIn,
 } from '../../lib/progress/weekly-volume-rules.ts';
@@ -33,18 +32,12 @@ function MuscleRow({ name, volume, open, onToggle }: MuscleRowProps) {
   const listId = useId();
   return (
     <li className="volume-row">
-      <button
-        type="button"
-        className="volume-toggle"
-        aria-expanded={open}
-        aria-controls={listId}
-        aria-label={volumeSummary(name, volume.sets)}
-        onClick={onToggle}
-      >
+      <button type="button" className="volume-toggle" aria-expanded={open} aria-controls={listId} onClick={onToggle}>
         <span className="row spread">
           <span>{name}</span>
           <span className="muted">
-            {volumeSetsLabel(volume.sets)} · {VOLUME_BAND_TEXT[volume.band]}
+            {volumeSetsLabel(volume.sets)}
+            <span className="visually-hidden"> this week</span> · {VOLUME_BAND_TEXT[volume.band]}
           </span>
         </span>
         <span className="volume-bar" aria-hidden="true">
@@ -55,20 +48,18 @@ function MuscleRow({ name, volume, open, onToggle }: MuscleRowProps) {
           <span className={`volume-fill ${volume.band}`} style={{ width: percent(volume.sets) }} />
         </span>
       </button>
-      {open && (
-        <ul id={listId} className="volume-contributions" aria-label={`Exercises counted for ${name}`}>
-          {volume.contributions.length === 0 ? (
-            <li className="muted">No sets yet this week.</li>
-          ) : (
-            volume.contributions.map((part) => (
-              <li key={part.exerciseId} className="row spread">
-                <span>{part.name}</span>
-                <span className="muted">{volumeSetsLabel(part.sets)}</span>
-              </li>
-            ))
-          )}
-        </ul>
-      )}
+      <ul id={listId} className="volume-contributions" aria-label={`Exercises counted for ${name}`} hidden={!open}>
+        {volume.contributions.length === 0 ? (
+          <li className="muted">No sets yet this week.</li>
+        ) : (
+          volume.contributions.map((part) => (
+            <li key={part.exerciseId} className="row spread">
+              <span>{part.name}</span>
+              <span className="muted">{volumeSetsLabel(part.sets)}</span>
+            </li>
+          ))
+        )}
+      </ul>
     </li>
   );
 }
