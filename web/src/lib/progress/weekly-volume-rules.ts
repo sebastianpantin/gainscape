@@ -1,4 +1,5 @@
 import { MS_PER_DAY } from '@domain/edit-window.ts';
+import { FULL_SHARE_BASIS_POINTS } from '@domain/index.ts';
 import type { ExerciseSkill } from '../exercises/catalog-rules.ts';
 import { BODY_SKILLS, type BodySkill, isBodySkill } from './recovery-rules.ts';
 
@@ -28,7 +29,6 @@ export interface MuscleVolume {
   contributions: VolumeContribution[];
 }
 
-const BASIS_POINTS = 10_000;
 const BAR_FULL_SETS = 25;
 
 export const VOLUME_BAND_TEXT: Readonly<Record<VolumeBand, string>> = {
@@ -98,13 +98,13 @@ export function weeklySetsByMuscle(
       contributions[skillKey].push({
         exerciseId,
         name: exercise.name,
-        sets: (count * shareBasisPoints) / BASIS_POINTS,
+        sets: (count * shareBasisPoints) / FULL_SHARE_BASIS_POINTS,
       });
     }
   }
   return Object.fromEntries(
     BODY_SKILLS.map((skill) => {
-      const total = basisPoints[skill] / BASIS_POINTS;
+      const total = basisPoints[skill] / FULL_SHARE_BASIS_POINTS;
       const parts = contributions[skill].sort((a, b) => b.sets - a.sets || a.name.localeCompare(b.name));
       return [skill, { sets: total, band: volumeBand(total), contributions: parts }];
     }),

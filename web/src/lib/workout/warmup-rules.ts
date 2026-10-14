@@ -21,7 +21,7 @@ function rampFrom(start: WarmupSet[], workingWeight: number, loadable: (weight: 
   const sets = [...start];
   for (const { fraction, reps } of WARMUP_RAMP) {
     const weight = loadable(workingWeight * fraction);
-    const previous = sets.length > 0 ? sets[sets.length - 1].weight : 0;
+    const previous = sets.at(-1)?.weight ?? 0;
     if (weight > previous && weight < workingWeight) sets.push({ weight, reps });
   }
   return sets;
