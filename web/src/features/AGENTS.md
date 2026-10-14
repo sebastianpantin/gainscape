@@ -1,11 +1,11 @@
 # Features
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-13
+**Generated:** 2026-10-01 · **Updated:** 2026-10-14
 
 ## Purpose
 
-Feature-sliced screens of the PWA. Each subdirectory owns one area of the UI (auth, collection, exercises, friends, history, onboarding, profile, programs, skills, summary, what's new, workout) and has its own `AGENTS.md`. Screens are React components named `*Screen`, exported by name and mounted by `web/src/App.tsx`. Data access, formatting and decisions live in `../lib/`, `../offline/` and the shared domain, so feature files stay mostly wiring and markup.
+Feature-sliced screens of the PWA. Each subdirectory owns one area of the UI (auth, collection, exercises, friends, history, onboarding, profile, programs, quests, skills, summary, what's new, workout) and has its own `AGENTS.md`. Screens are React components named `*Screen`, exported by name and mounted by `web/src/App.tsx`. Data access, formatting and decisions live in `../lib/`, `../offline/` and the shared domain, so feature files stay mostly wiring and markup.
 
 ## Rules and gotchas
 

@@ -1,7 +1,7 @@
 # Summary Feature
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-13
+**Generated:** 2026-10-01 · **Updated:** 2026-10-14
 
 ## Purpose
 
@@ -26,6 +26,7 @@ The post-workout reveal at `/reveal`: XP per skill, level-ups, gear and challeng
 - `challengeFailReason` says the target rose when the server's `targetLoadsKg` floor is above the planned load, which happens when the e1RM rose since the challenge started.
 - A hold or carry record (a `cardio` summary on a lift with a measure) reads in metres or seconds in either unit setting.
 - The gear bonus line is hidden when the bonus is 0 or the summary predates gear.
+- The Quests panel (`questRevealLines`) shows `summary.quests`: completions with quest points and XP in skill order, step progress, newly available quests and level ups from quest XP. Quest XP is not in `xpBySkill`, so these level ups are listed in the panel, not in `Level up!`, and play no cue. Quest names come from the cache-first quest log, loaded only when the summary has quest news.
 - The reveal marks the PWA install card due (`markInstallCardDue`).
 
 ## Testing

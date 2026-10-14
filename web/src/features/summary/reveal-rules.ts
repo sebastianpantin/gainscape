@@ -160,7 +160,6 @@ export function questRevealLines(
 ): QuestReveal | null {
   const quests = summary.quests;
   if (!quests) return null;
-  const skillById = (skillId: string) => skills.find((skill) => skill.id === skillId)?.name ?? 'Skill';
   const skillByKey = (skillKey: string) => skills.find((skill) => skill.key === skillKey)?.name ?? skillKey;
   const questName = (questId: string) => log?.quests.find((quest) => quest.questId === questId)?.name;
   const reveal: QuestReveal = {
@@ -168,8 +167,11 @@ export function questRevealLines(
       text: `Quest complete: ${completed.name}`,
       detail: [
         `+${questPointsText(completed.questPoints)}`,
-        Object.entries(completed.xpBySkill)
-          .map(([skillId, xp]) => `+${formatXp(xp)} ${skillById(skillId)} XP`)
+        skills
+          .flatMap((skill) => {
+            const xp = completed.xpBySkill[skill.id] ?? 0;
+            return xp > 0 ? [`+${formatXp(xp)} ${skill.name} XP`] : [];
+          })
           .join(', '),
       ]
         .filter((part) => part !== '')

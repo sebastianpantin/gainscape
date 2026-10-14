@@ -215,6 +215,7 @@ test.describe('signed-in screens', () => {
 
     await checkScreens(page, [
       ['/skills', 'Skills'],
+      ['/skills/quests', 'Quests'],
       ['/collection', 'Collection log: Records'],
       ['/collection/items', 'Collection log: Items'],
       ['/collection/history', 'Collection log: History'],

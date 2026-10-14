@@ -5,6 +5,7 @@ describe('routeTitle', () => {
   it('names each tab screen before the app name', () => {
     expect(routeTitle('/')).toBe('Train · Gainscape');
     expect(routeTitle('/skills')).toBe('Skills · Gainscape');
+    expect(routeTitle('/skills/quests')).toBe('Quests · Gainscape');
     expect(routeTitle('/collection')).toBe('Collection · Gainscape');
     expect(routeTitle('/friends')).toBe('Friends · Gainscape');
     expect(routeTitle('/profile')).toBe('Profile · Gainscape');
