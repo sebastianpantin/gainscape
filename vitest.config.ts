@@ -7,6 +7,7 @@ const INTEGRATION_FILES_SHARING_GLOBAL_STATE = [
   'crafting',
   'loot',
   'program-enrollments',
+  'quest-retirement',
   'rate-limits',
 ].map((name) => `tests/integration/${name}.test.ts`);
 const INTEGRATION_WORKERS = 4;

@@ -187,6 +187,8 @@ export async function ageSession(sessionId: string, interval: string): Promise<s
   return new Date(row.started_at).toISOString();
 }
 
+const SYNC_TIME_SUMMARY_KEYS = new Set(['drops', 'quests']);
+
 export async function normalizedSnapshot(userId: string) {
   const sessions = await db`
     select id, summary, history_only, derived_balance_version
@@ -220,7 +222,7 @@ export async function normalizedSnapshot(userId: string) {
       return 0;
     });
   const summaryOf = (stored: Record<string, unknown>) => {
-    const summary = Object.fromEntries(Object.entries(stored).filter(([key]) => key !== 'drops'));
+    const summary = Object.fromEntries(Object.entries(stored).filter(([key]) => !SYNC_TIME_SUMMARY_KEYS.has(key)));
     return {
       ...summary,
       ...(summary.sessionId === undefined ? {} : { sessionId: sessionOrdinal.get(summary.sessionId as string) }),
@@ -296,6 +298,20 @@ export async function normalizedSnapshot(userId: string) {
       'exercise_id',
       'kind',
     ),
+    questProgress: await db`
+      select quest_id, started_at, step_index, step_progress::float
+      from public.quest_progress where user_id = ${userId} order by quest_id`,
+    questCompletions: (
+      await db`
+        select quest_id, started_at, completed_at, session_id, anchor_started_at, anchor_session_id, quest_points
+        from public.quest_completions where user_id = ${userId} order by quest_id`
+    ).map(({ session_id, anchor_session_id, ...rest }) => ({
+      ...rest,
+      session: session_id === null ? null : sessionOrdinal.get(session_id),
+      anchorSession: sessionOrdinal.get(anchor_session_id) ?? 'deleted',
+    })),
+    questCompletionXp: await db`
+      select quest_id, skill_id, xp from public.quest_completion_xp where user_id = ${userId} order by quest_id, skill_id`,
   };
 }
 

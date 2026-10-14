@@ -13,6 +13,7 @@ The database access layer for the Edge Functions. Each module wraps the SQL for 
 - `sessions.ts` (session and set rows, `lockUser`, edit writes) and `set-columns.ts` (pure row mappers, no SQL).
 - `history.ts`, `records.ts`, `strength.ts`: replay inputs and derived caches.
 - `loot.ts`, `events.ts`, `gear.ts`, `challenges.ts`, `catalog.ts`, `rebuild.ts`: one concern each.
+- `quests.ts`: quest definitions and progress, quest XP grants for replay, and `advanceQuestsForSession` for `complete-session`.
 
 ## Rules and gotchas
 
@@ -31,6 +32,7 @@ The database access layer for the Edge Functions. Each module wraps the SQL for 
 - Anything that changes a session summary (`writeSummaries`, `refreshSummaryDrops`, `revokeDrops`) must end with `syncSessionEvents` for the affected sessions, so `public.events` matches the summaries.
 - `claimChallengeRun` locks the caller's scroll row (`for update`), takes one scroll (`user_items` minus 1, `item_ledger` delta -1, reason `challenge`) and snapshots the e1RM at the session. Retired challenges or scrolls cannot be claimed.
 - Postgres `23505` on a client-id constraint is mapped to an HTTP error in `../http-errors.ts`. Failures are `HttpError(status, snake_case_code)`.
+- Quest XP is a grant anchored at a session key (`quest_completions.anchor_*`, no foreign key, so it outlives a deleted anchor). Replay adds grants anchored before `from` to the prior sums and passes later ones to `replayHistory`; the new-session fast path also needs no grant at or after `from`, or `user_skills` would count it twice. Only `complete-session` writes quest rows; replay, edit, delete and rebuild only read grants. The quest event has no session, so `syncSessionEvents` never prunes it, and `summary.quests` survives replays because `writeSummaries` merges.
 - `StoredSet` lives in the domain `edit-diff.ts`, not here, because the no-op edit check needs it.
 
 ## Testing

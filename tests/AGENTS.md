@@ -22,7 +22,7 @@ All Vitest suites, split by layer: `catalog/` (catalog generator and validator),
 ## Rules and gotchas
 
 - Only `tests/**/*.test.ts` run. Helpers (`fixtures.ts`, `local-stack.ts`, `draft-store.contract.ts`, ...) must not end in `.test.ts`.
-- `vitest.config.ts` runs three projects in order: `unit` (parallel files), `integration` (4 workers; isolation comes from fresh users), then `integration-serial`, one file at a time, for files that change or count global state (`auth-email`, `catalog`, `crafting`, `loot` truncates loot tables to prove they are append-only, `program-enrollments` inserts and deletes a template row, `rate-limits`). A new integration file that edits shared rows (catalog retirement, rate-limit rules, Mailpit) belongs in `INTEGRATION_FILES_SHARING_GLOBAL_STATE`.
+- `vitest.config.ts` runs three projects in order: `unit` (parallel files), `integration` (4 workers; isolation comes from fresh users), then `integration-serial`, one file at a time, for files that change or count global state (`auth-email`, `catalog`, `crafting`, `loot` truncates loot tables to prove they are append-only, `program-enrollments` inserts and deletes a template row, `quest-retirement` retires a seeded quest, `rate-limits`). A new integration file that edits shared rows (catalog retirement, rate-limit rules, Mailpit) belongs in `INTEGRATION_FILES_SHARING_GLOBAL_STATE`.
 - `testTimeout` is 30 s and `hookTimeout` 60 s; a slower test (the balance simulation) passes an explicit timeout.
 - Import engine code as `@domain/index.ts`, or a program-engine module that `index.ts` does not export (`@domain/program-state.ts`). Import web and script code by relative path.
 - No comments, `it.skip` or `.only`.
