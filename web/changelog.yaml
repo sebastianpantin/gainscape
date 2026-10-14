@@ -1,3 +1,12 @@
+- prs: [124]
+  version: 0.10.0
+  date: 2026-10-14
+  title: Quests
+  items:
+    - Quests are here. Open Quests from the Skills tab and start one once you meet its level and quest requirements.
+    - Each quest has steps, like a set number of workouts, a total of reps or kilos, a new record or a set workout. Workouts you finish after starting count toward the next step.
+    - Finishing a quest gives bonus skill XP and quest points, and some quests unlock the next one in a chain.
+    - Your quest points show on your profile, and friends see your finished quests in the feed.
 - prs: [121, 122]
   version: 0.9.0
   date: 2026-10-14
