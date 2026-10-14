@@ -29,6 +29,7 @@ import { type ItemsCache, saveItemsCache } from '../../web/src/offline/items-cac
 import { profileCache } from '../../web/src/offline/profile-cache.ts';
 import { EMPTY_PROGRAM_CACHE, saveProgramCache } from '../../web/src/offline/program-cache.ts';
 import { programListCache } from '../../web/src/offline/program-list-cache.ts';
+import { questsCache } from '../../web/src/offline/quests-cache.ts';
 import { companionPetStore } from '../../web/src/lib/collection/companion-pet-store.ts';
 import { seenLevelsCache } from '../../web/src/offline/seen-levels-cache.ts';
 import { standingCache } from '../../web/src/offline/standing-cache.ts';
@@ -106,6 +107,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   saveProgramCache(local, userId, EMPTY_PROGRAM_CACHE);
   programListCache.save(local, userId, []);
   standingCache.save(local, userId, { skills: [], xpBySkillId: {} });
+  questsCache.save(local, userId, { quests: [], progress: [], completions: [], exerciseNames: {} });
   seenLevelsCache.save(local, userId, { totalLevel: 12, combatLevel: 4 });
   companionPetStore.save(local, userId, 'pet-item');
   local.setItem(installCardKey(userId), 'due');

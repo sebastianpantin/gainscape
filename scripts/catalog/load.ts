@@ -121,12 +121,42 @@ export interface CatalogChallengeVolume {
   minPct: number | null;
 }
 
-export interface CatalogChallenge {
-  key: string;
-  name: string;
+export interface CatalogChallengeDefinition {
   kind: 'prescription' | 'volume';
   supersets: CatalogChallengeSuperset[];
   volume: CatalogChallengeVolume | null;
+}
+
+export interface CatalogChallenge extends CatalogChallengeDefinition {
+  key: string;
+  name: string;
+}
+
+export interface CatalogQuestLevel {
+  skill: string;
+  level: number;
+}
+
+export interface CatalogQuestReward {
+  skill: string;
+  xp: number;
+}
+
+export type CatalogQuestStep =
+  | { kind: 'workout'; challenge: CatalogChallengeDefinition }
+  | { kind: 'volume'; metric: 'reps' | 'kg'; target: number; exercise: string | null }
+  | { kind: 'record'; exercise: string | null }
+  | { kind: 'sessions'; target: number; exercise: string | null };
+
+export interface CatalogQuest {
+  key: string;
+  name: string;
+  description: string;
+  questPoints: number;
+  requiredLevels: CatalogQuestLevel[];
+  requiredQuests: string[];
+  steps: CatalogQuestStep[];
+  rewardXp: CatalogQuestReward[];
 }
 
 export interface CatalogData {
@@ -134,6 +164,7 @@ export interface CatalogData {
   exercises: CatalogExercise[];
   programs: CatalogProgram[];
   challenges: CatalogChallenge[];
+  quests: CatalogQuest[];
   items: CatalogItem[];
   dropTables: CatalogDropTable[];
   recipes: CatalogRecipe[];
@@ -200,29 +231,112 @@ const gearSchema = z.strictObject({
 
 const percentage = z.int().min(1).max(100);
 
+const volumeMetric = z.enum(['reps', 'kg']);
+
+const challengeSupersetsSchema = z.array(
+  z.strictObject({
+    rounds: z.int(),
+    exercises: z.array(z.strictObject({ exercise: z.string(), reps: z.int(), pct: percentage.optional() })),
+  }),
+);
+
+const challengeVolumeSchema = z.strictObject({
+  metric: volumeMetric,
+  target: z.number(),
+  exercise: z.string().optional(),
+  min_pct: percentage.optional(),
+});
+
 const challengesSchema = z.array(
   z.strictObject({
     key: z.string(),
     name: z.string(),
     kind: z.enum(['prescription', 'volume']),
-    supersets: z
-      .array(
-        z.strictObject({
-          rounds: z.int(),
-          exercises: z.array(z.strictObject({ exercise: z.string(), reps: z.int(), pct: percentage.optional() })),
-        }),
-      )
-      .optional(),
-    volume: z
-      .strictObject({
-        metric: z.enum(['reps', 'kg']),
-        target: z.number(),
-        exercise: z.string().optional(),
-        min_pct: percentage.optional(),
-      })
-      .optional(),
+    supersets: challengeSupersetsSchema.optional(),
+    volume: challengeVolumeSchema.optional(),
   }),
 );
+
+const questsSchema = z.array(
+  z.strictObject({
+    key: z.string(),
+    name: z.string(),
+    description: z.string(),
+    quest_points: z.number(),
+    requires: z
+      .strictObject({ levels: z.record(z.string(), z.number()).optional(), quests: z.array(z.string()).optional() })
+      .optional(),
+    steps: z.array(
+      z.discriminatedUnion('kind', [
+        z.strictObject({
+          kind: z.literal('workout'),
+          supersets: challengeSupersetsSchema.optional(),
+          volume: challengeVolumeSchema.optional(),
+        }),
+        z.strictObject({
+          kind: z.literal('volume'),
+          metric: volumeMetric,
+          target: z.number(),
+          exercise: z.string().optional(),
+        }),
+        z.strictObject({ kind: z.literal('record'), exercise: z.string().optional() }),
+        z.strictObject({ kind: z.literal('sessions'), target: z.number(), exercise: z.string().optional() }),
+      ]),
+    ),
+    rewards: z.strictObject({ xp: z.record(z.string(), z.number()) }),
+  }),
+);
+
+type ChallengeSupersetsSource = z.infer<typeof challengeSupersetsSchema>;
+type ChallengeVolumeSource = z.infer<typeof challengeVolumeSchema>;
+type QuestStepSource = z.infer<typeof questsSchema>[number]['steps'][number];
+
+function expandChallengeDefinition(
+  kind: CatalogChallengeDefinition['kind'],
+  supersets: ChallengeSupersetsSource | undefined,
+  volume: ChallengeVolumeSource | undefined,
+): CatalogChallengeDefinition {
+  return {
+    kind,
+    supersets: (supersets ?? []).map((superset) => ({
+      rounds: superset.rounds,
+      exercises: superset.exercises.map((entry) => ({
+        exercise: entry.exercise,
+        reps: entry.reps,
+        pct: entry.pct ?? null,
+      })),
+    })),
+    volume:
+      volume === undefined
+        ? null
+        : {
+            metric: volume.metric,
+            target: volume.target,
+            exercise: volume.exercise ?? null,
+            minPct: volume.min_pct ?? null,
+          },
+  };
+}
+
+function expandQuestStep(step: QuestStepSource): CatalogQuestStep {
+  switch (step.kind) {
+    case 'workout':
+      return {
+        kind: 'workout',
+        challenge: expandChallengeDefinition(
+          step.volume === undefined ? 'prescription' : 'volume',
+          step.supersets,
+          step.volume,
+        ),
+      };
+    case 'volume':
+      return { kind: 'volume', metric: step.metric, target: step.target, exercise: step.exercise ?? null };
+    case 'record':
+      return { kind: 'record', exercise: step.exercise ?? null };
+    case 'sessions':
+      return { kind: 'sessions', target: step.target, exercise: step.exercise ?? null };
+  }
+}
 
 const itemsSchema = z.array(
   z.strictObject({
@@ -254,6 +368,7 @@ export interface CatalogSources {
   programs: unknown;
   gear: unknown;
   challenges: unknown;
+  quests: unknown;
   items: unknown;
   dropTables: unknown;
 }
@@ -266,6 +381,7 @@ export function readCatalogSources(): CatalogSources {
     programs: read('programs'),
     gear: read('gear'),
     challenges: read('challenges'),
+    quests: read('quests'),
     items: read('items'),
     dropTables: read('drop_tables'),
   };
@@ -399,24 +515,17 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
     challenges: challengesSchema.parse(sources.challenges).map((challenge) => ({
       key: challenge.key,
       name: challenge.name,
-      kind: challenge.kind,
-      supersets: (challenge.supersets ?? []).map((superset) => ({
-        rounds: superset.rounds,
-        exercises: superset.exercises.map((entry) => ({
-          exercise: entry.exercise,
-          reps: entry.reps,
-          pct: entry.pct ?? null,
-        })),
-      })),
-      volume:
-        challenge.volume === undefined
-          ? null
-          : {
-              metric: challenge.volume.metric,
-              target: challenge.volume.target,
-              exercise: challenge.volume.exercise ?? null,
-              minPct: challenge.volume.min_pct ?? null,
-            },
+      ...expandChallengeDefinition(challenge.kind, challenge.supersets, challenge.volume),
+    })),
+    quests: questsSchema.parse(sources.quests).map((quest) => ({
+      key: quest.key,
+      name: quest.name,
+      description: quest.description,
+      questPoints: quest.quest_points,
+      requiredLevels: Object.entries(quest.requires?.levels ?? {}).map(([skill, level]) => ({ skill, level })),
+      requiredQuests: quest.requires?.quests ?? [],
+      steps: quest.steps.map(expandQuestStep),
+      rewardXp: Object.entries(quest.rewards.xp).map(([skill, xp]) => ({ skill, xp })),
     })),
     items,
     dropTables,
@@ -436,6 +545,7 @@ export const catalogNames = {
   program: (key: string) => `program:${key}`,
   programDay: (programKey: string, dayKey: string) => `program:${programKey}:${dayKey}`,
   challenge: (key: string) => `challenge:${key}`,
+  quest: (key: string) => `quest:${key}`,
   item: (key: string) => `item:${key}`,
   dropTable: (key: string) => `drop_table:${key}`,
   recipe: (key: string) => `recipe:${key}`,

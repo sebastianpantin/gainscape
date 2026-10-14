@@ -1,11 +1,19 @@
 import { FLOAT_TOLERANCE } from '@domain/math.ts';
-import type { PersonalRecordSummary, SessionSummary } from '@domain/types.ts';
+import type { PersonalRecordSummary, QuestProgressSummary, SessionSummary } from '@domain/types.ts';
 import type { DraftChallenge } from '../../offline/draft-format.ts';
 import { describeCardioGains } from '../../lib/workout/cardio-rules.ts';
 import type { Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { formatLoad, formatXp } from '../../lib/format.ts';
 import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import { type DistanceUnit, distanceUnitFor, formatWeight, HOLD_DISTANCE_UNIT } from '../../lib/units.ts';
+import {
+  type QuestLog,
+  questPointsText,
+  type QuestSkill,
+  questStepProgress,
+  questStepText,
+  rewardXpTexts,
+} from '../../lib/quests/quest-rules.ts';
 
 export interface DescribedRecord {
   headline: string;
@@ -108,6 +116,76 @@ export function unappliedChangesText(
   const notApplied =
     "This workout was already saved, and the saved version differs from this device's copy, so this copy was not applied.";
   return summary.historyOnly ? notApplied : `${notApplied} Check it in History.`;
+}
+
+export interface QuestRevealLine {
+  questId: string;
+  text: string;
+  detail: string | null;
+}
+
+export interface QuestReveal {
+  completed: QuestRevealLine[];
+  progressed: QuestRevealLine[];
+  unlocked: string[];
+  levelUps: { skillName: string; from: number; to: number }[];
+}
+
+const UNKNOWN_QUEST = 'A quest';
+
+function progressedLine(
+  { questId, stepIndex, stepProgress, stepTarget }: QuestProgressSummary,
+  log: QuestLog | null,
+  unit: UnitPref,
+): QuestRevealLine {
+  const quest = log?.quests.find((candidate) => candidate.questId === questId);
+  const step = quest?.steps[stepIndex];
+  if (!quest || !step) {
+    return {
+      questId,
+      text: `${UNKNOWN_QUEST}: step ${stepIndex + 1}`,
+      detail: stepTarget > 1 ? `${formatXp(stepProgress)} / ${formatXp(stepTarget)}` : null,
+    };
+  }
+  const nameOf = (exerciseId: string) => log?.exerciseNames[exerciseId] ?? 'Exercise';
+  const progress = questStepProgress(step, stepProgress, unit);
+  return {
+    questId,
+    text: `${quest.name}: step ${stepIndex + 1} of ${quest.steps.length}`,
+    detail: progress?.text ?? questStepText(step, nameOf, unit),
+  };
+}
+
+export function questRevealLines(
+  summary: Pick<SessionSummary, 'quests'>,
+  log: QuestLog | null,
+  skills: readonly QuestSkill[],
+  unit: UnitPref,
+): QuestReveal | null {
+  const quests = summary.quests;
+  if (!quests) return null;
+  const skillByKey = (skillKey: string) => skills.find((skill) => skill.key === skillKey)?.name ?? skillKey;
+  const questName = (questId: string) => log?.quests.find((quest) => quest.questId === questId)?.name;
+  const reveal: QuestReveal = {
+    completed: quests.completed.map((completed) => ({
+      questId: completed.questId,
+      text: `Quest complete: ${completed.name}`,
+      detail: [
+        `+${questPointsText(completed.questPoints)}`,
+        rewardXpTexts(completed.xpBySkill, skills)
+          .map((text) => `+${text}`)
+          .join(', '),
+      ]
+        .filter((part) => part !== '')
+        .join(' · '),
+    })),
+    progressed: quests.progressed.map((progressed) => progressedLine(progressed, log, unit)),
+    unlocked: quests.unlocked.map((questId) => `New quest available: ${questName(questId) ?? 'a new quest'}`),
+    levelUps: quests.levelUps.map(({ skill, from, to }) => ({ skillName: skillByKey(skill), from, to })),
+  };
+  const hasNews =
+    reveal.completed.length + reveal.progressed.length + reveal.unlocked.length + reveal.levelUps.length > 0;
+  return hasNews ? reveal : null;
 }
 
 export const REVEAL_MAX_PRE_LOOT_S = 1.5;

@@ -64,7 +64,7 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);
@@ -104,6 +104,10 @@ describe('export-data', () => {
       { effective_from: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), goal: 3, updated_at: expect.any(String) },
     ]);
     expect(exported.crafts).toHaveLength(1);
+    expect(exported.quests.inProgress).toEqual([expect.objectContaining({ quest: 'bench_mysteries', step_index: 0 })]);
+    expect(exported.quests.completed).toEqual([
+      expect.objectContaining({ quest: 'yogic_ritual', quest_points: 1, xp: { mobility: 600 } }),
+    ]);
     expect(exported.reactionsGiven).toHaveLength(1);
     expect(Object.keys(exported.reactionsGiven[0]).sort()).toEqual(['created_at', 'event_id']);
     expect(

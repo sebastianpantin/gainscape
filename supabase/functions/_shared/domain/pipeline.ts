@@ -332,16 +332,24 @@ const applyXp: Step = (ctx) => {
   return { ...ctx, state: { ...ctx.state, skillXp } };
 };
 
-const detectLevelUps: Step = (ctx) => {
-  const levelUps = skillsInDisplayOrder(ctx.deps.catalog)
+export function levelUpsBetween(
+  before: Readonly<Record<string, number>>,
+  after: Readonly<Record<string, number>>,
+  catalog: Catalog,
+): LevelUp[] {
+  return skillsInDisplayOrder(catalog)
     .map((skill) => ({
       skill: skill.key,
-      from: levelForXp(ctx.stateBeforeSession.skillXp[skill.id] ?? 0),
-      to: levelForXp(ctx.state.skillXp[skill.id] ?? 0),
+      from: levelForXp(before[skill.id] ?? 0),
+      to: levelForXp(after[skill.id] ?? 0),
     }))
     .filter((levelUp) => levelUp.to > levelUp.from);
-  return { ...ctx, levelUps };
-};
+}
+
+const detectLevelUps: Step = (ctx) => ({
+  ...ctx,
+  levelUps: levelUpsBetween(ctx.stateBeforeSession.skillXp, ctx.state.skillXp, ctx.deps.catalog),
+});
 
 const SESSION_STEPS: readonly Step[] = Object.freeze([
   resolveSets,

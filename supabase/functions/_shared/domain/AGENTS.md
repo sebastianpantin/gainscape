@@ -1,7 +1,7 @@
 # Domain
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-13
+**Generated:** 2026-10-01 · **Updated:** 2026-10-14
 
 ## Purpose
 
@@ -12,7 +12,7 @@ The pure, deterministic game engine. It turns logged sets into effective reps, X
 - `index.ts`: the barrel production code imports. It re-exports the core modules and, for the program modules, units and load rounding, only the names used by `web/src`, `supabase/functions`, `scripts` or `e2e`. Fold internals (`advanceProgram`, `initialProgramState`, `orderFacts`, `ruleKeyOf`) stay unexported; tests import them from their module.
 - Session pipeline: `pipeline.ts` (the `Step` list and `processSession`), with steps in `strength.ts` (`trackStrength`), `fatigue.ts` (`checkFatigue`), `records.ts` (`detectPersonalRecords`). Supporting rules: `xp.ts`, `effort.ts`, `cardio.ts`, `levels.ts`, `combat.ts`, `math.ts`.
 - Server flow helpers: `new-session.ts` (scored vs `history_only`), `replay.ts`, `ordering.ts`, `edit-window.ts`, `edit-diff.ts`, `session-timing.ts`, `exercise-lookup.ts`, `errors.ts`.
-- Items: `loot.ts`, `rng.ts`, `crafting.ts`, `gear.ts`, `challenges.ts`, `collection.ts`. Feed: `events.ts`.
+- Items: `loot.ts`, `rng.ts`, `crafting.ts`, `gear.ts`, `challenges.ts`, `collection.ts`. Quests: `quests.ts`. Feed: `events.ts`.
 - Programs (`program-*.ts`): `program-definition.ts` (template type, validation, `validateEnrollment`), `program-schedule.ts` (positions), `program-prescription.ts` (a day's sets), `program-progression.ts` (`advanceProgram`, rule handlers), `program-stages.ts` (stage machine and 5RM retests), `program-state.ts` (facts and state), `program-fold.ts` (`programStateAt`), plus `rpe-chart.ts`, `prescription-snapshot.ts`, `units.ts`, `load-rounding.ts`.
 - Tuning surface: `balance.ts` (`DEFAULT_BALANCE`, `DEFAULT_LOOT`, `DEFAULT_FEED`, `BALANCE_VERSION`, `LOOT_VERSION`).
 - Shared types and payload limits: `types.ts` (`MAX_SETS_PER_SESSION`, `MAX_SET_LOAD_KG`, `MAX_SET_REPS`, `HOLD_BOUNDS`; enforced by `../session-payload.ts` and shared with the web set editors).
@@ -54,6 +54,7 @@ Balance and versioning:
 - `effortLevelRir` (easy 5, hard 3, near_failure 1, failure 0) is stored in `sets.effort_value`; changing it needs a data migration.
 - A challenge is judged only from its `sessions.challenge` snapshot (definition and e1RM taken at sync) and the replayed sets, never the live catalog. A set never meets a load percent without an e1RM in the snapshot; kg volume counts `weightKg × reps`, so bodyweight adds nothing. The judge floor rounds `'down'`; `'up'` exists only on `roundLoad` for the web challenge prefill and is not a `RoundingMode`. An edit can flip the verdict; replaying a later session never changes an earlier one.
 - Feed event keys (`pr:<exerciseId>` for lifts, `pr:<setId>` for each cardio bout, level keys) are persisted identity: `syncSessionEvents` deletes events whose key is no longer produced and `reactions` cascade, so changing a key format drops friends' existing reactions on replay.
+- Quests (`quests.ts`): quest XP is a time-anchored grant (`SkillXpGrant`), applied by `replayHistory` after every session at or before its anchor and capped like session XP; empty grants must give output identical to no grants, so quests never need a `BALANCE_VERSION` bump. Quest progress is advanced once per scored session at sync (`questsAfterSession`, called only by `complete-session`); edits, deletes and rebuilds never touch it. A session counts only if it ended strictly after the quest started, advances at most one step and discards the surplus. `questStatus` and `questStartProblems` are the single start rule for `start-quest` and the web quest board. Stored definitions key `rewardXp` and required levels by skill id; `summary.quests.levelUps` and the quest feed event's `levelUps` key by skill key. The quest event key `quest:<questKey>` is persisted identity, and its level ups ride in its payload so they never collide with session `level:` keys.
 - `xpPerEffectiveRep` is the main pacing lever: tune it first, then `make sim-check`.
 - `make sim-check` asserts the design bands in `scripts/balance/bands.ts` (for example 2 to 3 years to legs 99 for a balanced lifter); run it after any `balance.ts` change.
 
@@ -71,7 +72,7 @@ Rules restated elsewhere (change both sides together):
 
 ## Testing
 
-- `tests/domain/` with `make test-domain` (no stack); one file with `npx vitest run tests/domain/xp.test.ts`. Tests are named after the module; non-obvious homes: `levels.test.ts` covers `combat.ts`, `xp.test.ts` covers `effort.ts`, `records.test.ts` covers `collection.ts`, `replay.test.ts` covers `ordering.ts`, `pipeline.test.ts` covers `exercise-lookup.ts`, `loot-seeds.test.ts` covers `../loot-seeds.ts`, program modules use `program-*.test.ts` with `tests/domain/program-fixtures/`.
+- `tests/domain/` with `make test-domain` (no stack); one file with `npx vitest run tests/domain/xp.test.ts`. Tests are named after the module; non-obvious homes: `levels.test.ts` covers `combat.ts`, `xp.test.ts` covers `effort.ts`, `records.test.ts` covers `collection.ts`, `replay.test.ts` covers `ordering.ts`, `pipeline.test.ts` covers `exercise-lookup.ts`, `quests.test.ts` and `replay.test.ts` cover quest grants, `loot-seeds.test.ts` covers `../loot-seeds.ts`, program modules use `program-*.test.ts` with `tests/domain/program-fixtures/`.
 - Builders: `tests/domain/fixtures.ts` (catalog, sessions), `tests/domain/loot-fixtures.ts`. fast-check is available.
 - `balance.ts`: `make sim-check` (`tests/balance/balance-bands.test.ts`, about 1 s).
 - Gap: `effortInputFromStored` has a direct test only for cardio; add a domain test before changing it.

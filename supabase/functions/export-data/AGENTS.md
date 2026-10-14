@@ -20,6 +20,7 @@ POST endpoint returning a JSON export of everything the caller owns, read in one
   - `sets.xp_awarded` is base XP before any gear or challenge bonus; `set_skill_xp.xp` includes the bonuses, so it can exceed `xp_awarded`.
   - `sessions.gear_loadout` is the slot-to-tier snapshot at sync: `null` predates gear, `{}` means nothing equipped.
   - `sessions.challenge` is the snapshot at sync (id, key, name, definition, `e1rmKg`), `null` without a challenge. The verdict is in `sessions.summary.challenge` and the bonus in `summary.challengeBonusBySkill`.
+  - `quests.completed[].xp` is the quest reward by skill key. It is part of `skills` (user totals) but of no `setSkillXp` row; the completion's `anchor_*` columns name the session after which replay adds it.
   - A scroll used for a challenge is an `item_ledger` row with reason `challenge` and delta -1.
   - `bodyweightEntries.logged_on` and `weeklyGoals.effective_from` are `YYYY-MM-DD` dates (the latter a Monday; `goal` null means off).
 

@@ -9,7 +9,7 @@ import type { BadgeColor, UnitPref } from '../profile/profile-rules.ts';
 import { RATE_LIMITED_CODE } from '../platform/rate-limit.ts';
 import { type DistanceUnit, distanceUnitFor, formatWeight, HOLD_DISTANCE_UNIT } from '../units.ts';
 
-export type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop';
+export type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop' | 'quest';
 
 export interface FeedItem {
   eventId: string;
@@ -184,7 +184,26 @@ export function feedText(item: FeedItem, unit: UnitPref): FeedText {
       const headline = textOf(payload.itemName) ? `Found ${textOf(payload.itemName)}` : 'Found an item';
       return rarity ? { headline, detail: `${capitalized(rarity)} drop` } : { headline };
     }
+    case 'quest':
+      return questText(payload);
   }
+}
+
+function questLevelText(levelUp: unknown): string[] {
+  if (typeof levelUp !== 'object' || levelUp === null) return [];
+  const { to, skillName } = levelUp as Record<string, unknown>;
+  const level = numberOf(to);
+  const name = textOf(skillName);
+  return level === null || name === '' ? [] : [`level ${level} ${name}`];
+}
+
+function questText(payload: Record<string, unknown>): FeedText {
+  const name = textOf(payload.questName);
+  const headline = name ? `Completed the quest ${name}` : 'Completed a quest';
+  const levels = Array.isArray(payload.levelUps) ? payload.levelUps.flatMap(questLevelText) : [];
+  if (levels.length === 0) return { headline };
+  const reached = levels.length === 1 ? levels[0] : `${levels.slice(0, -1).join(', ')} and ${levels.at(-1)}`;
+  return { headline, detail: `Reached ${reached}` };
 }
 
 function levelHeadline(type: 'level_up' | 'level_99', to: number | null, skillName: string): string {
@@ -197,15 +216,18 @@ const RARITY_BADGES: Record<string, string> = { common: 'COM', uncommon: 'UNC', 
 const LEVEL_99_BADGE = '99';
 const LEVEL_BADGE = 'LVL';
 
+const QUEST_BADGE = 'QP';
+
 export function feedBadge(item: FeedItem): string {
   if (item.type === 'pr') return 'PR';
+  if (item.type === 'quest') return QUEST_BADGE;
   if (item.type === 'drop') return RARITY_BADGES[textOf(item.payload.rarity)] ?? 'DROP';
   if (item.type === 'level_99') return LEVEL_99_BADGE;
   const to = numberOf(item.payload.to);
   return to === null ? LEVEL_BADGE : String(to);
 }
 
-export function feedBadgeKind(item: Pick<FeedItem, 'type'>): 'pr' | 'drop' | 'level' {
+export function feedBadgeKind(item: Pick<FeedItem, 'type'>): 'pr' | 'drop' | 'level' | 'quest' {
   return item.type === 'level_up' || item.type === 'level_99' ? 'level' : item.type;
 }
 

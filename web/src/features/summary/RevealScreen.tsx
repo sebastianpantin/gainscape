@@ -27,6 +27,8 @@ import { standingCache } from '../../offline/standing-cache.ts';
 import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
 import type { CompletedSessionSummary } from '../../offline/finish-lock.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
+import type { QuestLog } from '../../lib/quests/quest-rules.ts';
+import { loadQuestsCacheFirst } from '../../lib/quests/quests.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
 import {
   challengeBonusText,
@@ -37,6 +39,8 @@ import {
   gearBonusText,
   levelUpCueDelayMs,
   playsReveal,
+  type QuestReveal,
+  questRevealLines,
   type RevealTimeline,
   revealShape,
   revealTimeline,
@@ -222,6 +226,59 @@ function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
   );
 }
 
+interface QuestPanelProps {
+  reveal: QuestReveal;
+  delayS: number;
+}
+
+function QuestPanel({ reveal, delayS }: QuestPanelProps) {
+  return (
+    <section
+      className="panel stack rise"
+      aria-labelledby="reveal-quests-heading"
+      style={{ animationDelay: `${delayS}s` }}
+    >
+      <div className="row spread">
+        <h2 id="reveal-quests-heading">Quests</h2>
+        <Link className="tiny" to="/skills/quests">
+          See quests
+        </Link>
+      </div>
+      {reveal.completed.map((line) => (
+        <p className="stack" key={line.questId}>
+          <strong className="accent-text">{line.text}</strong>
+          {line.detail && <span className="muted">{line.detail}</span>}
+        </p>
+      ))}
+      {reveal.progressed.length > 0 && (
+        <ul className="quest-list" aria-label="Quest progress">
+          {reveal.progressed.map((line) => (
+            <li key={line.questId}>
+              {line.text}
+              {line.detail && <span className="muted"> · {line.detail}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {reveal.unlocked.map((text) => (
+        <p key={text}>{text}</p>
+      ))}
+      {reveal.levelUps.length > 0 && (
+        <ul className="level-up-grid" aria-label="Level ups from quests">
+          {reveal.levelUps.map((levelUp) => (
+            <li key={levelUp.skillName}>
+              {levelUp.skillName}
+              <span className="pixel">
+                {levelUp.from} → {levelUp.to}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 interface RevealScreenProps {
   userId: string;
 }
@@ -235,6 +292,8 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const [xpBySkillId, setXpBySkillId] = useState<Map<string, number> | null>(null);
   const [items, setItems] = useState<LoadedItems>('loading');
   const [freshDrops, setFreshDrops] = useState<DropSummary[] | null>(null);
+  const [questLog, setQuestLog] = useState<QuestLog | null>(null);
+  const hasQuestNews = summary?.quests !== undefined;
   const sessionId = summary?.sessionId;
   const timeline = revealTimeline(revealShape(summary));
   const title = useRef<HTMLHeadingElement>(null);
@@ -261,6 +320,20 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       () => setItems('failed'),
     );
   }, [userId]);
+
+  useEffect(() => {
+    if (!hasQuestNews) return;
+    let active = true;
+    loadQuestsCacheFirst(userId).then(
+      (load) => {
+        if (active) setQuestLog(load.loaded);
+      },
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [hasQuestNews, userId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -329,6 +402,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const totalXp = sessionXp(summary);
   const leveledUp = new Map(summary.levelUps.map((levelUp) => [levelUp.skill, levelUp]));
   const headline = challengeHeadline(summary);
+  const questReveal = questRevealLines(summary, questLog, skills, unitPref);
   const failReason = challengeFailReason(
     summary,
     summary.plannedChallenge ?? null,
@@ -445,6 +519,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           })}
         </ul>
       )}
+      {questReveal && <QuestPanel reveal={questReveal} delayS={timeline.lootDelayS} />}
       <LootPanel userId={userId} drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />
       <Link className="button primary big" to="/skills">
         See skills

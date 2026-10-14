@@ -77,6 +77,17 @@ async function exportFor(userId: string) {
     const userLoadout = await tx`
       select slot, item_id, equipped_at from public.user_loadout where user_id = ${userId} order by slot`;
     const crafts = await tx`select * from public.crafts where user_id = ${userId} order by created_at, id`;
+    const questProgress = await tx`
+      select p.quest_id, q.key as quest, p.started_at, p.step_index, p.step_progress::float, p.updated_at
+      from public.quest_progress p join public.quests q on q.id = p.quest_id
+      where p.user_id = ${userId} order by p.started_at, q.key`;
+    const questCompletions = await tx`
+      select q.key as quest, c.*, coalesce(
+        (select json_object_agg(s.key, x.xp order by s.sort_order)
+         from public.quest_completion_xp x join public.skills s on s.id = x.skill_id
+         where x.user_id = c.user_id and x.quest_id = c.quest_id), '{}'::json) as xp
+      from public.quest_completions c join public.quests q on q.id = c.quest_id
+      where c.user_id = ${userId} order by c.completed_at, q.key`;
     const events = await tx`select * from public.events where user_id = ${userId} order by occurred_at, id`;
     const friendships = await tx`
       select case when f.requester_id = ${userId} then f.addressee_id else f.requester_id end as "otherUserId",
@@ -124,6 +135,7 @@ async function exportFor(userId: string) {
       itemLedger,
       userLoadout,
       crafts,
+      quests: { inProgress: questProgress, completed: questCompletions },
       events,
       friendships,
       reactionsGiven,

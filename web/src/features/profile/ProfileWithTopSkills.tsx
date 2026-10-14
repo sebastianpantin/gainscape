@@ -25,6 +25,7 @@ export function ProfileWithTopSkills({ skills, profile, headingId, nameIsPageTit
         totalLevel={standing.totalLevel}
         combatLevel={standing.combatLevel}
         collectionPercent={collectionPercent(profile.collection.filledSlots, profile.collection.totalSlots)}
+        questPoints={profile.questPoints}
       />
       <section className="panel stack" aria-labelledby={headingId}>
         <h2 id={headingId}>Top skills</h2>

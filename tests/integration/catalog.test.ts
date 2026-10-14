@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
+import { questDefinitionFromStored } from '@domain/index.ts';
 import { catalogNames, expandCatalog, loadCatalogData, readCatalogSources } from '../../scripts/catalog/load.ts';
 import { CATALOG_NAMESPACE } from '../../scripts/catalog/namespace.ts';
 import { renderStatements } from '../../scripts/catalog/sql.ts';
@@ -24,6 +25,7 @@ describe('catalog ids', () => {
     ['exercises', 'key', 'owner_user_id is null'],
     ['programs', "'program:' || key", 'owner_user_id is null'],
     ['challenges', "'challenge:' || key", 'true'],
+    ['quests', "'quest:' || key", 'true'],
     ['items', "'item:' || key", 'true'],
     ['drop_tables', "'drop_table:' || key", 'true'],
     ['recipes', "'recipe:' || key", 'true'],
@@ -99,6 +101,34 @@ describe('catalog ids', () => {
     });
     const [tenTon] = await db`select definition from public.challenges where key = 'ten_ton_day'`;
     expect(tenTon.definition).toEqual({ kind: 'volume', metric: 'kg', target: 10000, exerciseId: null, minPct: null });
+  });
+
+  it('seeds the starter quests, each stored in the shape the domain reads', async () => {
+    const quests = await db`
+      select id, key, name, quest_points, definition from public.quests where retired_at is null order by sort_order`;
+    expect(quests.map((quest) => quest.key)).toEqual(loadCatalogData().quests.map((quest) => quest.key));
+    const definitions = quests.map((quest) =>
+      questDefinitionFromStored(
+        { questId: quest.id, key: quest.key, name: quest.name, questPoints: quest.quest_points },
+        quest.definition,
+      ),
+    );
+    const [backSquat] = await db`select id from public.exercises where key = 'back_squat' and owner_user_id is null`;
+    const [legs] = await db`select id from public.skills where key = 'legs'`;
+    const [back] = await db`select id from public.skills where key = 'back'`;
+    const [squatRack] = quests;
+    expect(definitions.find((definition) => definition.key === 'the_restless_squat')).toMatchObject({
+      requiredLevels: [{ skillId: legs.id, level: 15 }],
+      requiredQuestIds: [squatRack.id],
+      steps: [
+        { kind: 'record', exerciseId: backSquat.id },
+        {
+          kind: 'workout',
+          challenge: { kind: 'volume', metric: 'reps', target: 50, exerciseId: backSquat.id, minPct: 70 },
+        },
+      ],
+      rewardXp: { [legs.id]: 1500, [back.id]: 300 },
+    });
   });
 });
 
@@ -184,10 +214,11 @@ describe('cardio catalog', () => {
 });
 
 describe('seed retirement', () => {
-  it('retires an item, a drop table and a recipe removed from the YAML, and keeps the rest active', async () => {
+  it('retires an item, a drop table, a recipe and a quest removed from the YAML, and keeps the rest active', async () => {
     const sources = readCatalogSources();
     const trimmed = expandCatalog({
       ...sources,
+      quests: (sources.quests as { key: string }[]).filter((quest) => quest.key !== 'yogic_ritual'),
       items: (sources.items as { key: string }[]).filter((item) => item.key !== 'plate_crab'),
       dropTables: (sources.dropTables as { key: string; entries: { item: string }[] }[])
         .filter((table) => table.key !== 'regular')
@@ -201,6 +232,7 @@ describe('seed retirement', () => {
         select 'item' as kind, key from public.items where retired_at is not null
         union all select 'drop_table', key from public.drop_tables where retired_at is not null
         union all select 'recipe', key from public.recipes where retired_at is not null
+        union all select 'quest', key from public.quests where retired_at is not null
         order by 1, 2`;
       const [inputs] = await tx`
         select count(*)::int as count from public.recipe_inputs i join public.recipes r on r.id = i.recipe_id
@@ -216,11 +248,14 @@ describe('seed retirement', () => {
       retired: [
         { kind: 'drop_table', key: 'regular' },
         { kind: 'item', key: 'plate_crab' },
+        { kind: 'quest', key: 'yogic_ritual' },
         { kind: 'recipe', key: 'grinder_belt' },
       ],
       grinderBeltInputs: 0,
     });
-    const [still] = await db`select count(*)::int as count from public.items where retired_at is not null`;
+    const [still] = await db`
+      select (select count(*)::int from public.items where retired_at is not null)
+        + (select count(*)::int from public.quests where retired_at is not null) as count`;
     expect(still.count).toBe(0);
   });
 });

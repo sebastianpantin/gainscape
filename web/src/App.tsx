@@ -73,6 +73,7 @@ const ProgramEnrollScreen = lazyScreen(
 );
 const ProgramsScreen = lazyScreen(() => import('./features/programs/ProgramsScreen.tsx'), 'ProgramsScreen');
 const SkillsScreen = lazyScreen(() => import('./features/skills/SkillsScreen.tsx'), 'SkillsScreen');
+const QuestsScreen = lazyScreen(() => import('./features/quests/QuestsScreen.tsx'), 'QuestsScreen');
 const RevealScreen = lazyScreen(() => import('./features/summary/RevealScreen.tsx'), 'RevealScreen');
 const WhatsNewScreen = lazyScreen(() => import('./features/whats-new/WhatsNewScreen.tsx'), 'WhatsNewScreen');
 
@@ -163,6 +164,7 @@ function Screens() {
                   <Route path="/" element={<WorkoutScreen key={userId} userId={userId} />} />
                   <Route path="/reveal" element={<RevealScreen userId={userId} />} />
                   <Route path="/skills" element={<SkillsScreen userId={userId} />} />
+                  <Route path="/skills/quests" element={<QuestsScreen userId={userId} />} />
                   <Route path="/collection" element={<CollectionScreen userId={userId} />} />
                   <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
                   <Route

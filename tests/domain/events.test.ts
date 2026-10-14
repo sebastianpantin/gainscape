@@ -8,6 +8,7 @@ import {
   type ItemRarityRank,
   isFeedLevelUp,
   type PersonalRecordSummary,
+  questCompletedEvent,
   type SessionSummary,
 } from '@domain/index.ts';
 
@@ -274,5 +275,35 @@ describe('feedEventsForSession', () => {
       { key: 'drop:drop-1', type: 'drop', setId: 'set-a', payload: dropPayload('drop-1', 'item-legendary') },
       { key: 'drop:drop-2', type: 'drop', setId: 'set-a', payload: dropPayload('drop-2', 'item-rare') },
     ]);
+  });
+});
+
+describe('questCompletedEvent', () => {
+  const quest = { questId: 'quest-1', key: 'x_marks_the_squat', name: 'X Marks the Squat', questPoints: 1 };
+
+  it('keys the event by quest key and carries the quest and its level-ups', () => {
+    expect(questCompletedEvent(quest, [{ skill: 'legs', from: 14, to: 15 }])).toEqual({
+      key: 'quest:x_marks_the_squat',
+      type: 'quest',
+      payload: {
+        questId: 'quest-1',
+        questKey: 'x_marks_the_squat',
+        name: 'X Marks the Squat',
+        questPoints: 1,
+        levelUps: [{ skill: 'legs', from: 14, to: 15 }],
+      },
+    });
+  });
+
+  it('keeps every level-up, not only feed milestones', () => {
+    const levelUps = [
+      { skill: 'core', from: 3, to: 4 },
+      { skill: 'legs', from: 98, to: 99 },
+    ];
+    expect(questCompletedEvent(quest, levelUps).payload.levelUps).toEqual(levelUps);
+  });
+
+  it('never collides with the level event key of a session', () => {
+    expect(questCompletedEvent({ ...quest, key: 'legs' }, []).key).not.toBe('level:legs');
   });
 });

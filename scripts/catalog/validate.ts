@@ -5,10 +5,12 @@ import { GEAR_SLOT_SKILLS, SKILLS_WITHOUT_GEAR } from '../../supabase/functions/
 import { CARDIO_EFFORT_LEVELS } from '../../supabase/functions/_shared/domain/types.ts';
 import { MOBILITY_SKILL_KEY } from '../../supabase/functions/_shared/domain/cardio.ts';
 import {
-  type CatalogChallenge,
+  type CatalogChallengeDefinition,
   type CatalogData,
   type CatalogExercise,
   type CatalogItem,
+  type CatalogQuest,
+  type CatalogQuestStep,
   catalogNames,
 } from './load.ts';
 
@@ -25,6 +27,13 @@ const MAX_DAY_EXERCISES = 20;
 const MAX_PROGRAM_DAYS = 14;
 const MAX_DAY_NAME_LENGTH = 40;
 const REQUIRED_TABLES = ['regular', 'rare'];
+const MAX_QUEST_DESCRIPTION_LENGTH = 280;
+const MAX_QUEST_POINTS = 10;
+const MIN_REQUIRED_LEVEL = 2;
+const MAX_REQUIRED_LEVEL = 99;
+const MAX_QUEST_STEPS = 10;
+const MAX_SESSIONS_TARGET = 100;
+const MAX_QUEST_REWARD_XP = 5000;
 
 export class CatalogValidationError extends Error {
   readonly problems: string[];
@@ -219,56 +228,60 @@ function checkItems(catalog: CatalogData, problems: string[]): void {
 }
 
 function checkChallengeExercise(
-  challenge: CatalogChallenge,
+  where: string,
   exercisesByKey: ReadonlyMap<string, CatalogExercise>,
   key: string,
   hasPercentage: boolean,
   problems: string[],
 ): void {
   const exercise = exercisesByKey.get(key);
-  if (exercise === undefined) problems.push(`challenge "${challenge.key}" uses unknown exercise "${key}"`);
-  else if (exercise.modality !== 'lift') problems.push(`challenge "${challenge.key}" uses cardio exercise "${key}"`);
-  else if (exercise.measure !== 'reps') problems.push(`challenge "${challenge.key}" uses hold exercise "${key}"`);
+  if (exercise === undefined) problems.push(`${where} uses unknown exercise "${key}"`);
+  else if (exercise.modality !== 'lift') problems.push(`${where} uses cardio exercise "${key}"`);
+  else if (exercise.measure !== 'reps') problems.push(`${where} uses hold exercise "${key}"`);
   else if (hasPercentage && exercise.loadType !== 'external') {
-    problems.push(`challenge "${challenge.key}" sets a percentage on "${key}", which has no external load`);
+    problems.push(`${where} sets a percentage on "${key}", which has no external load`);
   }
 }
 
-function checkChallengeShape(
-  challenge: CatalogChallenge,
+function checkChallengeContents(
+  where: string,
+  challenge: CatalogChallengeDefinition,
   exercisesByKey: ReadonlyMap<string, CatalogExercise>,
   problems: string[],
 ): void {
-  if (challenge.kind === 'prescription') {
-    if (challenge.supersets.length === 0 || challenge.volume !== null) {
-      problems.push(`challenge "${challenge.key}" of kind prescription needs supersets and no volume`);
-    }
-  } else if (challenge.volume === null || challenge.supersets.length > 0) {
-    problems.push(`challenge "${challenge.key}" of kind volume needs a volume and no supersets`);
-  }
   const seenExercises = new Set<string>();
   for (const superset of challenge.supersets) {
     if (superset.exercises.length < 2) {
-      problems.push(`challenge "${challenge.key}" superset needs at least 2 exercises`);
+      problems.push(`${where} superset needs at least 2 exercises`);
     }
     if (superset.rounds < 1 || superset.exercises.some((entry) => entry.reps < 1)) {
-      problems.push(`challenge "${challenge.key}" needs rounds and reps of at least 1`);
+      problems.push(`${where} needs rounds and reps of at least 1`);
     }
     for (const entry of superset.exercises) {
-      checkChallengeExercise(challenge, exercisesByKey, entry.exercise, entry.pct !== null, problems);
+      checkChallengeExercise(where, exercisesByKey, entry.exercise, entry.pct !== null, problems);
       if (seenExercises.has(entry.exercise)) {
-        problems.push(`challenge "${challenge.key}" repeats exercise "${entry.exercise}"`);
+        problems.push(`${where} repeats exercise "${entry.exercise}"`);
       }
       seenExercises.add(entry.exercise);
     }
   }
   const volume = challenge.volume;
   if (volume === null) return;
-  if (!(volume.target > 0)) problems.push(`challenge "${challenge.key}" needs a volume target above 0`);
+  if (!(volume.target > 0)) problems.push(`${where} needs a volume target above 0`);
   if (volume.exercise !== null) {
-    checkChallengeExercise(challenge, exercisesByKey, volume.exercise, volume.minPct !== null, problems);
+    checkChallengeExercise(where, exercisesByKey, volume.exercise, volume.minPct !== null, problems);
   } else if (volume.minPct !== null) {
-    problems.push(`challenge "${challenge.key}" sets min_pct without an exercise`);
+    problems.push(`${where} sets min_pct without an exercise`);
+  }
+}
+
+function checkChallengeKind(where: string, challenge: CatalogChallengeDefinition, problems: string[]): void {
+  if (challenge.kind === 'prescription') {
+    if (challenge.supersets.length === 0 || challenge.volume !== null) {
+      problems.push(`${where} of kind prescription needs supersets and no volume`);
+    }
+  } else if (challenge.volume === null || challenge.supersets.length > 0) {
+    problems.push(`${where} of kind volume needs a volume and no supersets`);
   }
 }
 
@@ -288,10 +301,107 @@ function checkChallenges(catalog: CatalogData, problems: string[]): void {
     scrollsByChallenge.set(item.grants, [...(scrollsByChallenge.get(item.grants) ?? []), item.key]);
   }
   for (const challenge of catalog.challenges) {
-    checkChallengeShape(challenge, exercisesByKey, problems);
+    const where = `challenge "${challenge.key}"`;
+    checkChallengeKind(where, challenge, problems);
+    checkChallengeContents(where, challenge, exercisesByKey, problems);
     const scrolls = scrollsByChallenge.get(challenge.key) ?? [];
     if (scrolls.length !== 1) {
       problems.push(`challenge "${challenge.key}" needs exactly one scroll, has ${scrolls.length}`);
+    }
+  }
+}
+
+function checkKnownExercise(
+  where: string,
+  exercisesByKey: ReadonlyMap<string, CatalogExercise>,
+  key: string | null,
+  problems: string[],
+): void {
+  if (key !== null && !exercisesByKey.has(key)) problems.push(`${where} uses unknown exercise "${key}"`);
+}
+
+function checkQuestStep(
+  where: string,
+  step: CatalogQuestStep,
+  exercisesByKey: ReadonlyMap<string, CatalogExercise>,
+  problems: string[],
+): void {
+  switch (step.kind) {
+    case 'workout':
+      if (step.challenge.supersets.length > 0 === (step.challenge.volume !== null)) {
+        problems.push(`${where} needs supersets or a volume, not both`);
+      }
+      checkChallengeContents(where, step.challenge, exercisesByKey, problems);
+      return;
+    case 'volume':
+      if (!(step.target > 0)) problems.push(`${where} needs a volume target above 0`);
+      if (step.exercise !== null) checkChallengeExercise(where, exercisesByKey, step.exercise, false, problems);
+      return;
+    case 'record':
+      checkKnownExercise(where, exercisesByKey, step.exercise, problems);
+      return;
+    case 'sessions':
+      if (!inRange(step.target, 1, MAX_SESSIONS_TARGET)) {
+        problems.push(`${where} needs a sessions target that is an integer in 1-${MAX_SESSIONS_TARGET}`);
+      }
+      checkKnownExercise(where, exercisesByKey, step.exercise, problems);
+  }
+}
+
+function questsInRequirementCycles(quests: readonly CatalogQuest[]): Set<string> {
+  const requiredBy = new Map(quests.map((quest) => [quest.key, quest.requiredQuests]));
+  const leadsBackTo = (start: string): boolean => {
+    const seen = new Set<string>();
+    const pending = [...(requiredBy.get(start) ?? [])];
+    for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
+      if (next === start) return true;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      pending.push(...(requiredBy.get(next) ?? []));
+    }
+    return false;
+  };
+  return new Set(quests.map((quest) => quest.key).filter(leadsBackTo));
+}
+
+function checkQuests(catalog: CatalogData, problems: string[]): void {
+  const exercisesByKey = exercisesByKeyOf(catalog);
+  const skillKeys = new Set(catalog.skills.map((skill) => skill.key));
+  const questKeys = new Set(catalog.quests.map((quest) => quest.key));
+  const inCycles = questsInRequirementCycles(catalog.quests);
+  for (const quest of catalog.quests) {
+    const where = `quest "${quest.key}"`;
+    if (quest.description.length < 1 || quest.description.length > MAX_QUEST_DESCRIPTION_LENGTH) {
+      problems.push(`${where} description must be 1-${MAX_QUEST_DESCRIPTION_LENGTH} characters`);
+    }
+    if (!inRange(quest.questPoints, 1, MAX_QUEST_POINTS)) {
+      problems.push(`${where} quest_points must be an integer in 1-${MAX_QUEST_POINTS}`);
+    }
+    for (const required of quest.requiredLevels) {
+      if (!skillKeys.has(required.skill)) problems.push(`${where} requires unknown skill "${required.skill}"`);
+      if (!inRange(required.level, MIN_REQUIRED_LEVEL, MAX_REQUIRED_LEVEL)) {
+        problems.push(
+          `${where} requires skill "${required.skill}" at level ${required.level}, which must be an integer in ${MIN_REQUIRED_LEVEL}-${MAX_REQUIRED_LEVEL}`,
+        );
+      }
+    }
+    for (const required of quest.requiredQuests) {
+      if (required === quest.key) problems.push(`${where} requires itself`);
+      else if (!questKeys.has(required)) problems.push(`${where} requires unknown quest "${required}"`);
+    }
+    if (inCycles.has(quest.key)) problems.push(`${where} is part of a requirement cycle`);
+    if (quest.steps.length < 1 || quest.steps.length > MAX_QUEST_STEPS) {
+      problems.push(`${where} needs 1-${MAX_QUEST_STEPS} steps, has ${quest.steps.length}`);
+    }
+    quest.steps.forEach((step, index) => checkQuestStep(`${where} step ${index + 1}`, step, exercisesByKey, problems));
+    if (quest.rewardXp.length === 0) problems.push(`${where} rewards no XP`);
+    for (const reward of quest.rewardXp) {
+      if (!skillKeys.has(reward.skill)) problems.push(`${where} rewards unknown skill "${reward.skill}"`);
+      if (!inRange(reward.xp, 1, MAX_QUEST_REWARD_XP)) {
+        problems.push(
+          `${where} rewards skill "${reward.skill}" ${reward.xp} XP, which must be an integer in 1-${MAX_QUEST_REWARD_XP}`,
+        );
+      }
     }
   }
 }
@@ -368,6 +478,7 @@ function checkDenylist(catalog: CatalogData, denylist: readonly string[], proble
     ...catalog.programs.flatMap((row) => [row.key, row.name]),
     ...programDays(catalog).flatMap(({ day }) => [day.key, day.name]),
     ...catalog.challenges.flatMap((row) => [row.key, row.name]),
+    ...catalog.quests.flatMap((row) => [row.key, row.name, row.description]),
     ...catalog.items.flatMap((row) => [row.key, row.name, row.description]),
     ...catalog.dropTables.flatMap((row) => [row.key, row.name]),
     ...catalog.recipes.map((row) => row.key),
@@ -390,6 +501,7 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
   checkKeysAndNames('program', catalog.programs, problems);
   for (const program of catalog.programs) checkKeysAndNames(`program ${program.key} day`, program.days, problems);
   checkKeysAndNames('challenge', catalog.challenges, problems);
+  checkKeysAndNames('quest', catalog.quests, problems);
   checkKeysAndNames('item', catalog.items, problems);
   checkKeysAndNames('drop table', catalog.dropTables, problems);
   checkKeysAndNames(
@@ -404,6 +516,7 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
     ...catalog.programs.map((row) => catalogNames.program(row.key)),
     ...programDays(catalog).map(({ program, day }) => catalogNames.programDay(program.key, day.key)),
     ...catalog.challenges.map((row) => catalogNames.challenge(row.key)),
+    ...catalog.quests.map((row) => catalogNames.quest(row.key)),
     ...catalog.items.map((row) => catalogNames.item(row.key)),
     ...catalog.dropTables.map((row) => catalogNames.dropTable(row.key)),
     ...catalog.recipes.map((row) => catalogNames.recipe(row.key)),
@@ -417,6 +530,7 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
   checkChallenges(catalog, problems);
   checkDropTables(catalog, problems);
   checkRecipes(catalog, problems);
+  checkQuests(catalog, problems);
   checkDenylist(catalog, denylist, problems);
   return problems;
 }

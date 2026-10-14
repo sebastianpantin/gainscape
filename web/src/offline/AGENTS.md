@@ -1,7 +1,7 @@
 # offline
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-13
+**Generated:** 2026-10-01 · **Updated:** 2026-10-14
 
 ## Purpose
 
@@ -80,6 +80,7 @@
 - `program-cache.ts`: `refreshed: true` means a full refresh has written the cache at least once. Only then does offline `useActiveProgram` treat a missing enrollment as "not following". `withEnrollment` keeps facts only for the same enrollment.
 - `program-facts-cache.ts`: a local fact is appended once per linked synced outcome. A fetch keeps a local append only when the snapshot lacks its id and `appendedAt >= ticket.startedAt`. A delete bumps `generation` so a stale fetch ticket is dropped. Facts use the domain `resolveEffort`/`storableSnapshots`, exactly as the server stores them. Only rep lifts become facts.
 - `program-refresh.ts` saves the enrollment before fetching its facts, keeps the cache when a fetch fails, and clears it when the enrollment ended elsewhere.
+- `quests-cache.ts` saves the raw quest rows plus the names of the exercises their steps name, so the board and the reveal read offline.
 - `collection-cache.ts` merges with the newer exercise list from `lib/exercises/catalog-cache.ts`. That list wins for the exercises it has.
 
 ## Testing

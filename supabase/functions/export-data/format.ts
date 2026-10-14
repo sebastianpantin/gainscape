@@ -1,4 +1,4 @@
-export const EXPORT_FORMAT_VERSION = 7;
+export const EXPORT_FORMAT_VERSION = 8;
 
 export const EXPORT_SECTIONS = [
   'account',
@@ -29,6 +29,7 @@ export const EXPORT_SECTIONS = [
   'itemLedger',
   'userLoadout',
   'crafts',
+  'quests',
   'events',
   'friendships',
   'reactionsGiven',

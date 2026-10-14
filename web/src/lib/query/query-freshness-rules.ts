@@ -8,6 +8,7 @@ export const DATA_CHANGES = [
   'exercise-saved',
   'weekly-goal-saved',
   'pins-changed',
+  'quest-started',
   'account-reset',
 ] as const;
 
@@ -27,6 +28,7 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
     'profile-preview',
     'feed',
     'hiscores',
+    'quests',
   ],
   'profile-saved': ['profile', 'profile-preview', 'bodyweight-trend', 'feed', 'hiscores'],
   'timezone-changed': ['profile', 'weekly-goal'],
@@ -34,6 +36,7 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
   'exercise-saved': ['exercises', 'collection', 'enroll-choices', 'exercise-progress', 'profile-preview', 'history'],
   'weekly-goal-saved': ['weekly-goal'],
   'pins-changed': ['collection'],
+  'quest-started': ['quests'],
   'account-reset': [
     'standing',
     'profile',
@@ -54,6 +57,7 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
     'last-logged-weights',
     'training-history',
     'history',
+    'quests',
   ],
 };
 

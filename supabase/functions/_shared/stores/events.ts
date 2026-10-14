@@ -5,6 +5,7 @@ import {
   type FeedSourceSet,
   type ItemRarityRank,
   type LoadType,
+  type QuestEventDraft,
   type SessionSummary,
 } from '../domain/index.ts';
 
@@ -96,4 +97,17 @@ export async function syncSessionEvents(tx: Transaction, userId: string, session
       and not exists (
         select 1 from jsonb_to_recordset(${keepJson}) as k (session_id uuid, event_key text)
         where k.session_id = e.session_id and k.event_key = e.event_key)`;
+}
+
+export async function insertQuestEvent(
+  tx: Transaction,
+  userId: string,
+  draft: QuestEventDraft,
+  occurredAt: string,
+): Promise<void> {
+  await tx`
+    insert into public.events (user_id, session_id, event_key, type, set_id, occurred_at, payload)
+    values (${userId}, null, ${draft.key}, ${draft.type}, null, ${occurredAt},
+            ${tx.json(draft.payload as unknown as JsonValue)})
+    on conflict (user_id, event_key) where session_id is null do nothing`;
 }

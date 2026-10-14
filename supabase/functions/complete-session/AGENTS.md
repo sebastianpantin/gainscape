@@ -23,13 +23,14 @@ POST endpoint that accepts a finished workout draft from the web app, validates 
 - `linkedProgram` keeps the link only for an owned enrollment (ended ones too) whose template accepts the position (`private.is_valid_program_position`).
 - Challenges: the client sends only `{ challengeId }`. A scored session claims one scroll with `claimChallengeRun` in the same transaction, at sync and never when the draft starts, and snapshots the definition and pre-session e1RM into `sessions.challenge`. The scroll is used whether the verdict passes or fails, and an edit or delete refunds nothing. With no scroll left, a retired challenge, or a history-only session, the session is stored as a normal one and no scroll is used.
 - `sessionRpe` and `challenge` are optional and default to `null` for older clients. Notes strip NUL characters.
+- Quests: a scored session, after replay and loot, runs `advanceQuestsForSession` once (domain `questsAfterSession`): it advances started quests, records completions with their XP grant anchored at the latest scored session, posts the sessionless `quest:<key>` event and merges `summary.quests`. History-only sessions and resubmissions never touch quests; edits and deletes never do either.
 - Needs `LOOT_SECRET` (loot is rolled in `rollNewSessionLoot`).
 - The payload shape must match `web/src/offline/session-payload.ts`.
 - Keep the handler thin: auth, parse, one transaction function, `errorResponse`.
 
 ## Testing
 
-`tests/integration/complete-session.test.ts`, `program-sessions.test.ts`, `challenges.test.ts`, plus `rate-limits`, `loot` and `replay`. Add the failing case there; `make test-integration` (stack).
+`tests/integration/complete-session.test.ts`, `program-sessions.test.ts`, `challenges.test.ts`, `quests.test.ts`, plus `rate-limits`, `loot` and `replay`. Add the failing case there; `make test-integration` (stack).
 
 ## Manual Notes
 
