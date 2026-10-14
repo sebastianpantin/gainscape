@@ -36,7 +36,7 @@ insert into public.pinned_exercises (user_id, exercise_id, position) values (:'a
 create temporary table profile_keys (key text) on commit drop;
 insert into profile_keys values
   ('userId'), ('username'), ('displayName'), ('bio'), ('trainingFocus'), ('trainingSince'), ('badgeColor'),
-  ('joinedAt'), ('showWeights'), ('relation'), ('friendsSince'), ('skillXp'), ('collection');
+  ('joinedAt'), ('showWeights'), ('relation'), ('friendsSince'), ('skillXp'), ('collection'), ('questPoints');
 grant select on profile_keys to authenticated;
 
 select tests.authenticate_as(:'a');
