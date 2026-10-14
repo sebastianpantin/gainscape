@@ -4,6 +4,7 @@ import { BodyMap } from '../../components/BodyMap.tsx';
 import { exerciseListQuery, recentSetsQuery } from '../../lib/query/queries.ts';
 import {
   type BodySkill,
+  hardSetLoad,
   recoveryBySkill,
   recoveryGroups,
   type RecoveryState,
@@ -35,8 +36,9 @@ export function RecoveryPanel({ userId, nameOf }: RecoveryPanelProps) {
     );
   }
   const shares = new Map(exercises.data.map((exercise) => [exercise.id, exercise.skillShares]));
-  const states = recoveryBySkill(recent.data, shares, Math.max(openedAt, recent.dataUpdatedAt));
-  const groups = recoveryGroups(states, nameOf);
+  const load = hardSetLoad(recent.data, shares, Math.max(openedAt, recent.dataUpdatedAt));
+  const states = recoveryBySkill(load);
+  const groups = recoveryGroups(load, nameOf);
   return (
     <section className="panel stack" aria-labelledby={headingId}>
       <h2 id={headingId}>Recovery</h2>
@@ -53,7 +55,10 @@ export function RecoveryPanel({ userId, nameOf }: RecoveryPanelProps) {
             </li>
           ))}
       </ul>
-      <p className="muted tiny">Hard sets each muscle took in the last week, fading by half every day and a half.</p>
+      <p className="muted tiny">
+        Hard sets each muscle took in the last week, fading by half every day and a half. Times show how long until each
+        muscle is fresh.
+      </p>
     </section>
   );
 }
