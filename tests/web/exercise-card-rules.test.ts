@@ -148,10 +148,40 @@ describe('warmupsToOffer', () => {
     expect(warmups[0]).toEqual({ weightKg: 20, reps: 10 });
   });
 
-  it('offers the working set itself without a barbell', () => {
-    expect(warmupsToOffer(lift('curl', [set('c1', { weightKg: 20, reps: 10 })]), 'kg', null, 10)).toEqual([
+  it('offers a barbell lift the plate ramp from the bar', () => {
+    expect(warmupsToOffer(lift('squat', [set('s1')]), 'kg', barbell, 10)).toEqual([
       { weightKg: 20, reps: 10 },
+      { weightKg: 40, reps: 5 },
+      { weightKg: 60, reps: 3 },
+      { weightKg: 80, reps: 2 },
     ]);
+  });
+
+  it('offers a dumbbell or machine lift a ramp in load steps with no bar step', () => {
+    expect(warmupsToOffer(lift('curl', [set('c1', { weightKg: 30, reps: 10 })]), 'kg', null, 10)).toEqual([
+      { weightKg: 12.5, reps: 5 },
+      { weightKg: 17.5, reps: 3 },
+      { weightKg: 25, reps: 2 },
+    ]);
+  });
+
+  it('offers a bodyweight lift one warm-up set at its working weight and reps', () => {
+    expect(
+      warmupsToOffer(
+        lift('pull_up', [set('p1', { weightKg: 0, reps: 8 })], { loadType: 'bodyweight' }),
+        'kg',
+        null,
+        10,
+      ),
+    ).toEqual([{ weightKg: 0, reps: 8 }]);
+    expect(
+      warmupsToOffer(
+        lift('dip', [set('d1', { weightKg: 10, reps: 6 })], { loadType: 'bodyweight_plus' }),
+        'kg',
+        null,
+        10,
+      ),
+    ).toEqual([{ weightKg: 10, reps: 6 }]);
   });
 
   it('offers nothing without a working set, once warm-ups exist or when they would not fit', () => {

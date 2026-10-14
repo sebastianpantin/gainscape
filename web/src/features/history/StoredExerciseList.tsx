@@ -45,7 +45,7 @@ export function StoredExerciseList({ exercises, storedXp, unit }: StoredExercise
                 </li>
               ))
             : exercise.sets.map((set, setIndex) => (
-                <li className="row spread" key={set.id}>
+                <li className={`row spread${set.isWarmup ? ' warmup' : ''}`} key={set.id}>
                   <span>
                     {setIndex + 1}.{' '}
                     {exercise.loadType === 'bodyweight'

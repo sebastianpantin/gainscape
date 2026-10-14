@@ -90,14 +90,37 @@ test('a lift with no ramp to build still offers one warm-up set to edit', async 
   await expect(weightOf(setRow(squat, 1))).toHaveValue('20');
   await expect(warmupBadge(setRow(squat, 1))).toBeVisible();
 
+  const pullUp = await addExercise(page, 'pull-up', 'Pull-up');
+  const reps = (row: Locator) => row.getByRole('spinbutton', { name: 'reps', exact: true });
+  await reps(setRow(pullUp, 1)).fill('8');
+  await pullUp.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
+  await expect(setRows(pullUp)).toHaveCount(2);
+  await expect(reps(setRow(pullUp, 1))).toHaveValue('8');
+  await expect(warmupBadge(setRow(pullUp, 1))).toBeVisible();
+  await expect(warmupBadge(setRow(pullUp, 2))).toHaveCount(0);
+  await expect(pullUp.getByRole('button', { name: '+ Add warm-ups' })).toHaveCount(0);
+});
+
+test('warm-ups ramp a dumbbell lift in load steps with no bar step', async ({ page }) => {
+  await register(page, uniqueUsername('wd'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
   const curl = await addExercise(page, 'dumbbell curl', 'Dumbbell Curl');
-  await weightOf(setRow(curl, 1)).fill('12');
+  await weightOf(setRow(curl, 1)).fill('30');
+
   await curl.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
-  await expect(setRows(curl)).toHaveCount(2);
-  await expect(weightOf(setRow(curl, 1))).toHaveValue('12');
-  await expect(warmupBadge(setRow(curl, 1))).toBeVisible();
-  await expect(warmupBadge(setRow(curl, 2))).toHaveCount(0);
-  await expect(curl.getByRole('button', { name: '+ Add warm-ups' })).toHaveCount(0);
+  await expect(setRows(curl)).toHaveCount(4);
+  for (const [index, [weight, reps]] of [
+    ['12.5', '5'],
+    ['17.5', '3'],
+    ['25', '2'],
+  ].entries()) {
+    const row = setRow(curl, index + 1);
+    await expect(weightOf(row), `warm-up ${index + 1} weight`).toHaveValue(weight);
+    await expect(row.getByRole('spinbutton', { name: 'reps', exact: true })).toHaveValue(reps);
+    await expect(warmupBadge(row), `warm-up ${index + 1} flag`).toBeVisible();
+  }
+  await expect(weightOf(setRow(curl, 4))).toHaveValue('30');
+  await expect(warmupBadge(setRow(curl, 4))).toHaveCount(0);
 });
 
 test('a freestyle barbell set shows plates per side with the plates set on this device', async ({ page }) => {

@@ -29,6 +29,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 - In edit mode a lift's `Progress` link hides while there are unsaved changes, so leaving cannot drop edits.
 - Limits match the live draft: `canAddSetTo` caps sets and 4 hours of bouts; the picker then stops offering cardio.
 - Swaps stay within one kind; a hold only swaps for a hold of the same measure. Swapping bouts onto an activity without distance tracking clears their distances. A row with `durationS` is a bout; a row with a weight and no reps or counted work is a hold.
+- Warm-up rows carry a `warmup` class (muted) but always keep their non-colour cue: the ` · warm-up` text in the read-only list and the pressed `Warm-up set N` toggle when editing.
 - An edit never changes the session length or RPE.
 - Handle failures through `failureAction` and `failureText`, not ad hoc branches. New set ids come from `withNewSetIds`.
 
