@@ -26,7 +26,9 @@ test('the Skills tab shows which muscles a recent workout trained', async ({ pag
     ]),
   );
   await openTab(page, 'Skills');
-  await expect(recovery(page).getByRole('listitem').filter({ hasText: 'Recovering:' })).toContainText('Chest');
+  await expect(recovery(page).getByRole('listitem').filter({ hasText: 'Recovering:' })).toContainText(
+    /Chest \((\d+d( \d+h)?|\d+h)\)/,
+  );
   await expect(recovery(page).getByRole('listitem').filter({ hasText: 'Fresh:' })).not.toContainText('Chest');
 });
 
