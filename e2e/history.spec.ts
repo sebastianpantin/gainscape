@@ -5,6 +5,7 @@ import {
   logBench,
   logExercise,
   openLatestWorkout,
+  openSetOptions,
   openTab,
   readSession,
   readStoredDraft,
@@ -61,6 +62,37 @@ test('edit a logged set from history, see the XP change, then delete the workout
   await expect(page.getByText('Workout deleted.')).toBeVisible();
   await expect(page.getByText('No workouts yet.', { exact: false })).toBeVisible();
   await expect.poll(() => sessionCount(username)).toBe(0);
+});
+
+test('a warm-up set keeps its warm-up cue in the session detail, editable or locked', async ({ page }) => {
+  const username = uniqueUsername('hw');
+  await register(page, username);
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [
+    { weightKg: 40, reps: 8 },
+    { weightKg: 60, reps: 5 },
+  ]);
+  const warmup = setRow(page, 1);
+  await openSetOptions(warmup, 1);
+  await warmup.getByRole('button', { name: 'Warm-up set 1', exact: true }).click();
+  await finishWorkout(page);
+
+  await openLatestWorkout(page);
+  await expect(page.getByRole('button', { name: 'Warm-up set 1', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByRole('button', { name: 'Warm-up set 2', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+
+  await backdateSessions(username, 8);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
+  const warmupRows = page.getByRole('main').getByRole('listitem').filter({ hasText: '· warm-up' });
+  await expect(warmupRows).toHaveCount(1);
+  await expect(warmupRows).toContainText('40 kg × 8');
 });
 
 test('a workout older than the edit window shows as locked in History', async ({ page }) => {

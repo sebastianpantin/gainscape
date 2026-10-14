@@ -8,7 +8,7 @@ import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts'
 import { REST_OFF, restClock, type RestTimer, startsRest } from '../../lib/workout/rest-timer-rules.ts';
 import { restsAfter, supersetGroups } from '../../lib/workout/superset-rules.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
-import { warmupPlan } from '../../lib/workout/warmup-rules.ts';
+import { warmupPlan, type WarmupRamp } from '../../lib/workout/warmup-rules.ts';
 import {
   canSwapExercise,
   type DraftSet,
@@ -91,6 +91,12 @@ export function liftAdvice(
   );
 }
 
+function warmupRampFor(exercise: LiftDraftExercise, unit: UnitPref, barbell: DraftBarbellSetup | null): WarmupRamp {
+  if (barbell !== null) return { kind: 'barbell', setup: barbell };
+  if (exercise.loadType === 'external') return { kind: 'increment', step: progressionStep(unit, null) };
+  return { kind: 'single' };
+}
+
 export function warmupsToOffer(
   exercise: LiftDraftExercise,
   unit: UnitPref,
@@ -99,7 +105,10 @@ export function warmupsToOffer(
 ): LastLoggedSet[] {
   const workingSet = firstWorkingSet(exercise);
   if (workingSet === undefined || exercise.sets.some((set) => set.isWarmup)) return [];
-  const plan = warmupPlan({ weight: shownWeight(workingSet.weightKg, unit), reps: workingSet.reps }, barbell);
+  const plan = warmupPlan(
+    { weight: shownWeight(workingSet.weightKg, unit), reps: workingSet.reps },
+    warmupRampFor(exercise, unit, barbell),
+  );
   if (plan.length > roomForSets) return [];
   return plan.map(({ weight, reps }) => ({ weightKg: unitToKg(weight, unit), reps }));
 }

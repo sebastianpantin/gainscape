@@ -13,11 +13,12 @@ const SESSION_COUNT = Math.ceil(PROGRESS_PAGE_SIZE / SETS_PER_SESSION) + 1;
 
 describe('exercise progress sets', () => {
   let user: TestUser;
+  let programUser: TestUser;
   let benchId: string;
   let sessionIds: string[];
 
   beforeAll(async () => {
-    user = await createTestUser();
+    [user, programUser] = await Promise.all([createTestUser(), createTestUser()]);
     benchId = await builtInExerciseId('barbell_bench_press');
     const newest = Date.parse('2026-09-29T12:00:00.000Z');
     const sessions = Array.from({ length: SESSION_COUNT }, (_, index) => {
@@ -55,6 +56,41 @@ describe('exercise progress sets', () => {
       await tx`insert into public.sessions ${tx(sessions)}`;
       await tx`insert into public.sets ${tx(sets)}`;
     });
+    const programSessionId = randomUUID();
+    const programStartedAt = '2026-09-29T12:00:00.000Z';
+    await db.begin(async (tx) => {
+      await tx`insert into public.sessions ${tx({
+        id: programSessionId,
+        user_id: programUser.id,
+        started_at: programStartedAt,
+        ended_at: programStartedAt,
+        local_date: programStartedAt.slice(0, 10),
+        timezone: 'UTC',
+        balance_version: 2,
+        derived_balance_version: 2,
+        summary: tx.json({ xpBySkill: {}, levelUps: [], prs: [], drops: [] }),
+      })}`;
+      await tx`insert into public.sets ${tx(
+        [null, 'w1:d1:bench:0'].map((prescriptionRef, position) => ({
+          id: randomUUID(),
+          session_id: programSessionId,
+          user_id: programUser.id,
+          exercise_id: benchId,
+          position,
+          weight_kg: 60,
+          effective_load_kg: 60,
+          reps: 5,
+          rir: 3,
+          rir_source: 'default',
+          effective_reps: 3,
+          xp_awarded: 10,
+          prescription_ref: prescriptionRef,
+          prescribed_weight_kg: prescriptionRef === null ? null : 60,
+          prescribed_reps: prescriptionRef === null ? null : 5,
+          prescribed_amrap: prescriptionRef === null ? null : false,
+        })),
+      )}`;
+    });
   });
 
   afterAll(async () => {
@@ -67,5 +103,11 @@ describe('exercise progress sets', () => {
     expect(rows.length).toBeGreaterThan(PROGRESS_PAGE_SIZE);
     const progress = sessionProgress(rows, 'external');
     expect(progress.map((session) => session.sessionId)).toEqual([...sessionIds].reverse());
+  });
+
+  it('reads the prescription of each set, so a program-driven workout is told apart', async () => {
+    const rows = await queryProgressSets(programUser.client, programUser.id, benchId, new AbortController().signal);
+    expect(rows.map((row) => row.prescription_ref).sort()).toEqual([null, 'w1:d1:bench:0'].sort());
+    expect(sessionProgress(rows, 'external').map((session) => session.programDriven)).toEqual([true]);
   });
 });

@@ -126,6 +126,14 @@ export function warmupBadge(row: Locator): Locator {
   return row.getByRole('img', { name: 'Warm-up', exact: true });
 }
 
+export function skillLevels(page: Page): Locator {
+  return page.getByRole('list', { name: 'Skill levels', exact: true });
+}
+
+export function skillCard(page: Page, skillName: string): Locator {
+  return skillLevels(page).getByRole('button', { name: new RegExp(`^${skillName}\\b`) });
+}
+
 export function setRows(scope: Page | Locator): Locator {
   return scope.getByRole('listitem', { name: /^Set \d+$/ });
 }

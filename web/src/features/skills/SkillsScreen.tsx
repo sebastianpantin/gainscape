@@ -12,6 +12,7 @@ import { formatXp } from '../../lib/format.ts';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { type LoadedState } from '../../lib/query/query-state-rules.ts';
 import { RecoveryPanel } from './RecoveryPanel.tsx';
+import { WeeklyVolumePanel } from './WeeklyVolumePanel.tsx';
 
 interface SkillsScreenProps {
   userId: string;
@@ -66,6 +67,7 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
 
   const { standing } = state;
   const picked = standing.skills.find(({ skill }) => skill.key === pickedKey) ?? null;
+  const skillName = (key: string) => standing.skills.find(({ skill }) => skill.key === key)?.skill.name ?? key;
 
   return (
     <main className="screen stack">
@@ -93,11 +95,9 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
           </Link>
         </li>
       </ul>
-      <RecoveryPanel
-        userId={userId}
-        nameOf={(key) => standing.skills.find(({ skill }) => skill.key === key)?.skill.name ?? key}
-      />
-      <ul className="skill-grid">
+      <RecoveryPanel userId={userId} nameOf={skillName} />
+      <WeeklyVolumePanel userId={userId} nameOf={skillName} />
+      <ul className="skill-grid" aria-label="Skill levels">
         {standing.skills.map(({ skill, progress }) => (
           <li key={skill.id}>
             <button

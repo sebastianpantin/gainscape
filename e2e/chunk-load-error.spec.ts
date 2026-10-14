@@ -1,5 +1,5 @@
 import { expect, test } from './support/fixtures.ts';
-import { openTab, register, uniqueUsername } from './support/app.ts';
+import { openTab, register, skillCard, uniqueUsername } from './support/app.ts';
 
 const SKILLS_SCREEN_CHUNK = '**/src/features/skills/SkillsScreen.tsx*';
 
@@ -20,6 +20,6 @@ test('a screen whose code fails to load offers a reload instead of a blank page'
   await expect(reload).toBeVisible();
   await page.unroute(SKILLS_SCREEN_CHUNK);
   await reload.click();
-  await expect(page.getByRole('main').getByRole('button', { name: /^Chest\b/ })).toBeVisible();
+  await expect(skillCard(page, 'Chest')).toBeVisible();
   await expect(page.getByRole('alert')).toHaveCount(0);
 });

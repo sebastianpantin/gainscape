@@ -11,7 +11,7 @@ The Collection tab: personal records per exercise (`/collection`), the per-exerc
 
 - `CollectionScreen.tsx`: Records tab and the exported `CollectionTabs`. Adding a tab means editing the `links` array there and a route in `App.tsx`.
 - `ItemsScreen.tsx`: inventory, item details, crafting, equip and unequip, Start challenge for scrolls, Show on Today for pets.
-- `ExerciseProgressScreen.tsx`: e1RM and top-set chart plus the rep-max table.
+- `ExerciseProgressScreen.tsx`: e1RM and top-set chart, the rep-max table, and the Stalled tag with its tips (`../../lib/progress/plateau-rules.ts`).
 - `RecordSlots.tsx` and `record-slots.ts` (pure): the rep-max slot grid, shared with `friends/FriendProfileScreen.tsx`. Do not rebuild slots inline.
 - `CollectionHeading.tsx`: the shared h1, named `Collection log: <tab>` so route focus announces which tab opened.
 
@@ -25,12 +25,18 @@ The Collection tab: personal records per exercise (`/collection`), the per-exerc
 - Start challenge is disabled while a draft is open, and while a lift in the challenge has no e1RM (the judge fails a load percent without one). When neither the live fetch nor the cache has a strength state, nothing is blocked and the draft starts from `{}`. If a waiting unsynced workout opens instead, the Items tab says so.
 - The progress chart's `e1RM` legend text is part of the chart's accessible name, so keep it unchanged.
 - Collection completion counts lifts only, and must match the server count (see Testing).
+- Stalled (client only, no server state or reward). The thresholds are the constants in `plateau-rules.ts` (`STALL_SESSIONS`, `STALL_DAYS`, `STALE_DAYS`, `IMPROVEMENT_RATIO`); the reasons behind the rule:
+  - Sessions with no e1RM still count toward `STALL_SESSIONS`, so "trained but not stronger" stays honest. Holds are skipped; a `bodyweight` lift is judged on most reps.
+  - No tag when the latest session is program-driven (any set with a `prescription_ref`), because the program owns its deloads. Going back to manual logging brings the tag back.
+  - No tag past `STALE_DAYS` since the lift was last trained, so a dropped lift is not called stalled.
+  - The tips read only the sessions since the last gain (`plateauAdviceBasis`), and the deload always drops at least one load step or falls back to cutting reps.
+  - The Today screen shows no hint: `recent_lift_sets` holds too few sessions for `STALL_DAYS`.
 
 ## Testing
 
-- Unit (`make test-web`): `tests/web/items.test.ts`, `items-cache.test.ts`, `collection-rules.test.ts`, `record-slots.test.ts`.
+- Unit (`make test-web`): `tests/web/plateau-rules.test.ts`, `exercise-progress-rules.test.ts`, `tests/web/items.test.ts`, `items-cache.test.ts`, `collection-rules.test.ts`, `record-slots.test.ts`.
 - Server parity of collection counting: `tests/integration/collection-parity.test.ts` (stack).
-- E2E (stack): `workout-records.spec.ts`, `loot.spec.ts` (crafting and the banner), `challenges.spec.ts`, `term-help.spec.ts`, `custom-exercise.spec.ts`, `a11y.spec.ts`, and `e2e/pwa/offline.spec.ts` for Items offline.
+- E2E (stack): `exercise-progress.spec.ts` (Stalled, using `spreadSessionsDays`), `workout-records.spec.ts`, `loot.spec.ts` (crafting and the banner), `challenges.spec.ts`, `term-help.spec.ts`, `custom-exercise.spec.ts`, `a11y.spec.ts`, and `e2e/pwa/offline.spec.ts` for Items offline.
 
 ## Manual Notes
 

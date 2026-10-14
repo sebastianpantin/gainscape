@@ -5,11 +5,12 @@ import { epley } from '@domain/strength.ts';
 import { measuresRepsCapacity, REP_MAX_SLOT_COUNT, type RirSource } from '@domain/types.ts';
 import type { LoadType } from '../exercises/catalog-rules.ts';
 import type { ChartSeries } from '../ui/line-chart-rules.ts';
+import type { PlateauSession } from './plateau-rules.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
 import { shownWeight } from '../units.ts';
 
 export const PROGRESS_COLUMNS = {
-  sets: 'session_id, weight_kg, effective_load_kg, reps, rir, rir_source, sessions(started_at)',
+  sets: 'session_id, weight_kg, effective_load_kg, reps, rir, rir_source, prescription_ref, sessions(started_at)',
   repMaxes: 'reps, load_kg, achieved_at, sets!rep_maxes_set_id_fkey(sessions(local_date))',
   maxReps: 'max_reps, achieved_at, sets(sessions(local_date))',
 } as const;
@@ -52,6 +53,7 @@ export interface ProgressSetRow {
   reps: number;
   rir: number | string | null;
   rir_source: RirSource;
+  prescription_ref: string | null;
   sessions: { started_at: string };
 }
 
@@ -75,7 +77,9 @@ export interface SessionProgress {
   startedAt: string;
   e1rmKg: number | null;
   topSetKg: number;
+  topSetReps: number;
   mostReps: number;
+  programDriven: boolean;
 }
 
 export interface RepMaxEntry {
@@ -110,15 +114,30 @@ export function sessionProgress(rows: readonly ProgressSetRow[], loadType: LoadT
     const weightKg = Number(row.weight_kg);
     const e1rmKg = setE1rmKg(row, loadType);
     const seen = bySession.get(row.session_id);
+    const topSetKg = Math.max(seen?.topSetKg ?? weightKg, weightKg);
+    const topSetReps = Math.max(
+      seen !== undefined && seen.topSetKg === topSetKg ? seen.topSetReps : 0,
+      weightKg === topSetKg ? row.reps : 0,
+    );
     bySession.set(row.session_id, {
       sessionId: row.session_id,
       startedAt: row.sessions.started_at,
       e1rmKg: higher(seen?.e1rmKg ?? null, e1rmKg),
-      topSetKg: Math.max(seen?.topSetKg ?? weightKg, weightKg),
+      topSetKg,
+      topSetReps,
       mostReps: Math.max(seen?.mostReps ?? row.reps, row.reps),
+      programDriven: (seen?.programDriven ?? false) || row.prescription_ref !== null,
     });
   }
   return [...bySession.values()];
+}
+
+export function plateauSessions(sessions: readonly SessionProgress[], loadType: LoadType): PlateauSession[] {
+  return sessions.map(({ startedAt, e1rmKg, mostReps, programDriven }) => ({
+    startedAt,
+    value: measuresRepsCapacity(loadType) ? mostReps : e1rmKg,
+    programDriven,
+  }));
 }
 
 export function progressChartSeries(

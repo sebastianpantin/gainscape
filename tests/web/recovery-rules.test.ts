@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
 import {
   recoveryTimeLabel,
@@ -6,6 +7,7 @@ import {
   recoveryBySkill,
   recoveryGroups,
   recoveryState,
+  queryRecentSets,
   type RecentSet,
   rirForRecovery,
 } from '../../web/src/lib/progress/recovery-rules.ts';
@@ -27,7 +29,7 @@ const SHARES = new Map([
 
 function sets(count: number, exerciseId: string, hoursAgo: number, rir = 0): RecentSet[] {
   const endedAt = new Date(NOW - hoursAgo * 3_600_000).toISOString();
-  return Array.from({ length: count }, () => ({ exerciseId, endedAt, rir }));
+  return Array.from({ length: count }, () => ({ exerciseId, endedAt, localDate: endedAt.slice(0, 10), rir }));
 }
 
 describe('hardSetLoad', () => {
@@ -133,5 +135,42 @@ describe('recoveryGroups', () => {
       easing: ['SHOULDERS (1d 19h)'],
       fresh: ['BACK', 'LEGS', 'CORE', 'GRIP'],
     });
+  });
+});
+
+describe('queryRecentSets', () => {
+  function clientReturning(rows: unknown[]) {
+    const calls: { select?: string; filters: [string, unknown][] } = { filters: [] };
+    const builder = {
+      select(columns: string) {
+        calls.select = columns;
+        return builder;
+      },
+      eq(column: string, value: unknown) {
+        calls.filters.push([column, value]);
+        return builder;
+      },
+      gte(column: string, value: unknown) {
+        calls.filters.push([column, value]);
+        return Promise.resolve({ data: rows, error: null });
+      },
+    };
+    return { client: { from: () => builder } as unknown as SupabaseClient, calls };
+  }
+
+  it("maps each working set's session day to localDate", async () => {
+    const { client, calls } = clientReturning([
+      {
+        exercise_id: 'bench',
+        rir: '2',
+        rir_source: 'logged',
+        sessions: { ended_at: '2026-10-12T22:30:00Z', local_date: '2026-10-13' },
+      },
+    ]);
+    expect(await queryRecentSets(client, new Date('2026-10-06T00:00:00Z'))).toEqual([
+      { exerciseId: 'bench', rir: 2, endedAt: '2026-10-12T22:30:00Z', localDate: '2026-10-13' },
+    ]);
+    expect(calls.select).toContain('local_date');
+    expect(calls.filters).toContainEqual(['is_warmup', false]);
   });
 });
