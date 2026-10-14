@@ -1,4 +1,5 @@
 import { MAX_LEVEL, xpForLevel } from '@domain/index.ts';
+import { useId } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
@@ -10,6 +11,7 @@ import { isBodySkill } from '../../lib/progress/recovery-rules.ts';
 import { exercisesTrainingSkill } from '../../lib/progress/skill-map-rules.ts';
 import { useActiveExercises } from '../../lib/progress/skill-map.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
+import { BackToSkills } from './BackToSkills.tsx';
 import { MuscleStatus } from './MuscleStatus.tsx';
 
 interface SkillScreenProps {
@@ -48,18 +50,11 @@ function SkillExercises({ skillKey, skillName, exercises }: SkillExercisesProps)
   );
 }
 
-function BackToSkills() {
-  return (
-    <Link className="back-link" to="/skills">
-      ‹ Skills
-    </Link>
-  );
-}
-
 export function SkillScreen({ userId }: SkillScreenProps) {
   const { skillKey = '' } = useParams();
   const state = useStanding(userId);
   const exercises = useActiveExercises(userId);
+  const exercisesHeadingId = useId();
 
   if (state.status === 'failed')
     return (
@@ -76,7 +71,6 @@ export function SkillScreen({ userId }: SkillScreenProps) {
   if (!picked)
     return (
       <main className="screen stack">
-        <BackToSkills />
         <section className="panel stack">
           <h1 className="title">Skill not found</h1>
           <p className="muted">There is no skill at this address.</p>
@@ -118,8 +112,8 @@ export function SkillScreen({ userId }: SkillScreenProps) {
         </span>
       </section>
       {isBodySkill(skill.key) && <MuscleStatus userId={userId} skill={skill.key} name={skill.name} />}
-      <section className="panel stack" aria-labelledby="skill-exercises">
-        <h2 id="skill-exercises">Exercises</h2>
+      <section className="panel stack" aria-labelledby={exercisesHeadingId}>
+        <h2 id={exercisesHeadingId}>Exercises</h2>
         <SkillExercises skillKey={skill.key} skillName={skill.name} exercises={exercises} />
       </section>
     </main>

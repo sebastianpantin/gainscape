@@ -56,7 +56,7 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
           </Link>
         </li>
         <li>
-          <Link className="button" to="/skills/body">
+          <Link className="button" to="/skills/body" aria-label={bodySummary ? `Body, ${bodySummary}` : undefined}>
             <span className="menu-label">
               Body
               {bodySummary && <span className="muted tiny">{bodySummary}</span>}

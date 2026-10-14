@@ -69,7 +69,7 @@ test('the Body link sums up recovery and weekly sets and opens the Body page', a
   await register(page, uniqueUsername('skp_sum'));
 
   await openTab(page, 'Skills');
-  await expect(bodyLink(page)).toHaveAccessibleName('Body All fresh · 7 under target');
+  await expect(bodyLink(page)).toHaveAccessibleName('Body, All fresh · 7 under target');
   await bodyLink(page).click();
   await expect(page).toHaveURL(/\/skills\/body$/);
   await expect(heading(page, 'Body')).toBeFocused();
