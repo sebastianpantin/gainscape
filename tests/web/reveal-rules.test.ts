@@ -364,11 +364,11 @@ describe('questRevealLines', () => {
   });
   const log = questLogFrom({
     quests: [
-      quest('quest-initiation', 'Squat Rack Initiation', [
+      quest('quest-initiation', 'X Marks the Squat', [
         { kind: 'sessions', target: 2, exerciseId: squat },
         { kind: 'volume', metric: 'reps', target: 100, exerciseId: squat },
       ]),
-      quest('quest-heavy', 'The Heavy Single', [{ kind: 'record', exerciseId: squat }]),
+      quest('quest-heavy', 'The Restless Squat', [{ kind: 'record', exerciseId: squat }]),
     ],
     progress: [],
     completions: [],
@@ -387,8 +387,8 @@ describe('questRevealLines', () => {
       completed: [
         {
           questId: 'quest-initiation',
-          key: 'squat_rack_initiation',
-          name: 'Squat Rack Initiation',
+          key: 'x_marks_the_squat',
+          name: 'X Marks the Squat',
           questPoints: 1,
           xpBySkill: { 'skill-core': 200, 'skill-legs': 800 },
         },
@@ -399,7 +399,7 @@ describe('questRevealLines', () => {
       completed: [
         {
           questId: 'quest-initiation',
-          text: 'Quest complete: Squat Rack Initiation',
+          text: 'Quest complete: X Marks the Squat',
           detail: '+1 quest point · +800 Legs XP, +200 Core XP',
         },
       ],
@@ -418,8 +418,8 @@ describe('questRevealLines', () => {
       ],
     };
     expect(questRevealLines({ quests }, log, skills, 'kg')?.progressed).toEqual([
-      { questId: 'quest-initiation', text: 'Squat Rack Initiation: step 1 of 2', detail: '1 / 2 workouts' },
-      { questId: 'quest-heavy', text: 'The Heavy Single: step 1 of 1', detail: 'Set a new Back Squat record' },
+      { questId: 'quest-initiation', text: 'X Marks the Squat: step 1 of 2', detail: '1 / 2 workouts' },
+      { questId: 'quest-heavy', text: 'The Restless Squat: step 1 of 1', detail: 'Set a new Back Squat record' },
     ]);
   });
 
@@ -446,7 +446,7 @@ describe('questRevealLines', () => {
   it('names newly available quests', () => {
     const quests = { ...empty, unlocked: ['quest-heavy', 'quest-unknown'] };
     expect(questRevealLines({ quests }, log, skills, 'kg')?.unlocked).toEqual([
-      'New quest available: The Heavy Single',
+      'New quest available: The Restless Squat',
       'New quest available: a new quest',
     ]);
   });

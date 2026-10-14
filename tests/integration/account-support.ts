@@ -109,16 +109,16 @@ export async function giveUserEverything(user: TestUser): Promise<void> {
   expect(equipped.error).toBeNull();
   await db`
     insert into public.quest_progress (user_id, quest_id)
-    select ${user.id}, id from public.quests where key = 'bench_apprentice'`;
+    select ${user.id}, id from public.quests where key = 'bench_mysteries'`;
   await db`
     insert into public.quest_completions
       (user_id, quest_id, started_at, session_id, anchor_started_at, anchor_session_id, quest_points)
     select ${user.id}, q.id, s.started_at, s.id, s.started_at, s.id, q.quest_points
-    from public.quests q, public.sessions s where q.key = 'loose_limbs' and s.id = ${keptSessionId}`;
+    from public.quests q, public.sessions s where q.key = 'yogic_ritual' and s.id = ${keptSessionId}`;
   await db`
     insert into public.quest_completion_xp (user_id, quest_id, skill_id, xp)
     select ${user.id}, q.id, k.id, 600 from public.quests q, public.skills k
-    where q.key = 'loose_limbs' and k.key = 'mobility'`;
+    where q.key = 'yogic_ritual' and k.key = 'mobility'`;
   const removed = await postFunction('delete-session', user.accessToken, { sessionId: await logOneSession(user) });
   expect(removed.status).toBe(200);
   const benchId = await builtInExerciseId('barbell_bench_press');

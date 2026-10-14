@@ -186,7 +186,7 @@ describe('feedText', () => {
 });
 
 describe('feedText for quests', () => {
-  const quest = { questId: 'quest-1', questKey: 'squat_rack_initiation', questName: 'Squat Rack Initiation' };
+  const quest = { questId: 'quest-1', questKey: 'x_marks_the_squat', questName: 'X Marks the Squat' };
 
   it('names the completed quest and the levels its XP reached', () => {
     const levelUps = [
@@ -194,14 +194,14 @@ describe('feedText for quests', () => {
       { skill: 'core', skillName: 'Core', from: 4, to: 5 },
     ];
     expect(feedText(item('quest', { ...quest, questPoints: 1, levelUps }), 'kg')).toEqual({
-      headline: 'Completed the quest Squat Rack Initiation',
+      headline: 'Completed the quest X Marks the Squat',
       detail: 'Reached level 15 Legs and level 5 Core',
     });
   });
 
   it('has no detail when the quest XP reached no new level', () => {
     expect(feedText(item('quest', { ...quest, questPoints: 1, levelUps: [] }), 'kg')).toEqual({
-      headline: 'Completed the quest Squat Rack Initiation',
+      headline: 'Completed the quest X Marks the Squat',
     });
   });
 

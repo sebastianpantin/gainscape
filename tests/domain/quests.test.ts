@@ -65,8 +65,8 @@ const heavySquatWorkout: QuestStep = {
 
 const initiation: QuestDefinition = {
   questId: 'quest-initiation',
-  key: 'squat_rack_initiation',
-  name: 'Squat Rack Initiation',
+  key: 'x_marks_the_squat',
+  name: 'X Marks the Squat',
   questPoints: 1,
   requiredLevels: [],
   requiredQuestIds: [],
@@ -76,8 +76,8 @@ const initiation: QuestDefinition = {
 
 const heavySingle: QuestDefinition = {
   questId: 'quest-heavy-single',
-  key: 'the_heavy_single',
-  name: 'The Heavy Single',
+  key: 'the_restless_squat',
+  name: 'The Restless Squat',
   questPoints: 2,
   requiredLevels: [{ skillId: 'skill-legs', level: 15 }],
   requiredQuestIds: ['quest-initiation'],

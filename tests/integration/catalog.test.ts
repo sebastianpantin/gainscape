@@ -117,7 +117,7 @@ describe('catalog ids', () => {
     const [legs] = await db`select id from public.skills where key = 'legs'`;
     const [back] = await db`select id from public.skills where key = 'back'`;
     const [squatRack] = quests;
-    expect(definitions.find((definition) => definition.key === 'the_heavy_single')).toMatchObject({
+    expect(definitions.find((definition) => definition.key === 'the_restless_squat')).toMatchObject({
       requiredLevels: [{ skillId: legs.id, level: 15 }],
       requiredQuestIds: [squatRack.id],
       steps: [
@@ -218,7 +218,7 @@ describe('seed retirement', () => {
     const sources = readCatalogSources();
     const trimmed = expandCatalog({
       ...sources,
-      quests: (sources.quests as { key: string }[]).filter((quest) => quest.key !== 'loose_limbs'),
+      quests: (sources.quests as { key: string }[]).filter((quest) => quest.key !== 'yogic_ritual'),
       items: (sources.items as { key: string }[]).filter((item) => item.key !== 'plate_crab'),
       dropTables: (sources.dropTables as { key: string; entries: { item: string }[] }[])
         .filter((table) => table.key !== 'regular')
@@ -248,7 +248,7 @@ describe('seed retirement', () => {
       retired: [
         { kind: 'drop_table', key: 'regular' },
         { kind: 'item', key: 'plate_crab' },
-        { kind: 'quest', key: 'loose_limbs' },
+        { kind: 'quest', key: 'yogic_ritual' },
         { kind: 'recipe', key: 'grinder_belt' },
       ],
       grinderBeltInputs: 0,

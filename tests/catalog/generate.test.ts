@@ -285,14 +285,14 @@ describe('catalog generator', () => {
   it('renders the quests after the challenges, in catalog order, with their points and definitions', () => {
     const catalog = loadCatalogData();
     expect(catalog.quests.map((quest) => quest.key)).toEqual([
-      'squat_rack_initiation',
-      'the_heavy_single',
-      'iron_foundation',
-      'bench_apprentice',
-      'hang_tough',
-      'the_long_road',
-      'loose_limbs',
-      'core_curriculum',
+      'x_marks_the_squat',
+      'the_restless_squat',
+      'back_slayer',
+      'bench_mysteries',
+      'monkey_bar_madness',
+      'the_grand_tread',
+      'yogic_ritual',
+      'ernest_the_crunch',
     ]);
     const statements = renderStatements(catalog);
     const challengesAt = statements.findIndex((statement) => statement.startsWith('insert into public.challenges'));
@@ -302,10 +302,10 @@ describe('catalog generator', () => {
     const id = (name: string) => idFor(name).raw;
     expect(quests).toContain('(id, key, name, description, quest_points, sort_order, definition, retired_at)');
     expect(quests).toContain(
-      `(${id('quest:squat_rack_initiation')}, 'squat_rack_initiation', 'Squat Rack Initiation', 'Step into the squat rack. Squat in two workouts, then put a hundred squat reps behind you.', 1, 1, jsonb_build_object('requiredLevels', jsonb_build_array(), 'requiredQuestIds', jsonb_build_array(), 'steps', jsonb_build_array(jsonb_build_object('kind', 'sessions', 'target', 2, 'exerciseId', ${id('back_squat')}), jsonb_build_object('kind', 'volume', 'metric', 'reps', 'target', 100, 'exerciseId', ${id('back_squat')})), 'rewardXp', jsonb_build_object(${id('legs')}, 800, ${id('core')}, 200)), null)`,
+      `(${id('quest:x_marks_the_squat')}, 'x_marks_the_squat', 'X Marks the Squat', 'The old spotter left a map to buried gains. Squat in two workouts, then dig up a hundred squat reps.', 1, 1, jsonb_build_object('requiredLevels', jsonb_build_array(), 'requiredQuestIds', jsonb_build_array(), 'steps', jsonb_build_array(jsonb_build_object('kind', 'sessions', 'target', 2, 'exerciseId', ${id('back_squat')}), jsonb_build_object('kind', 'volume', 'metric', 'reps', 'target', 100, 'exerciseId', ${id('back_squat')})), 'rewardXp', jsonb_build_object(${id('legs')}, 800, ${id('core')}, 200)), null)`,
     );
     expect(quests).toContain(
-      `'the_heavy_single', 'The Heavy Single', 'Set a new back squat record, then squat fifty reps at 70% of your best in one workout.', 2, 2, jsonb_build_object('requiredLevels', jsonb_build_array(jsonb_build_object('skillId', ${id('legs')}, 'level', 15)), 'requiredQuestIds', jsonb_build_array(${id('quest:squat_rack_initiation')}), 'steps', jsonb_build_array(jsonb_build_object('kind', 'record', 'exerciseId', ${id('back_squat')}), jsonb_build_object('kind', 'workout', 'challenge', jsonb_build_object('kind', 'volume', 'metric', 'reps', 'target', 50, 'exerciseId', ${id('back_squat')}, 'minPct', 70)))`,
+      `'the_restless_squat', 'The Restless Squat', 'A restless squat haunts the rack. Set a new back squat record, then lay it to rest with fifty reps at 70% of your best in one workout.', 2, 2, jsonb_build_object('requiredLevels', jsonb_build_array(jsonb_build_object('skillId', ${id('legs')}, 'level', 15)), 'requiredQuestIds', jsonb_build_array(${id('quest:x_marks_the_squat')}), 'steps', jsonb_build_array(jsonb_build_object('kind', 'record', 'exerciseId', ${id('back_squat')}), jsonb_build_object('kind', 'workout', 'challenge', jsonb_build_object('kind', 'volume', 'metric', 'reps', 'target', 50, 'exerciseId', ${id('back_squat')}, 'minPct', 70)))`,
     );
     expect(quests).toContain('definition = excluded.definition');
     expect(quests).toContain('quest_points = excluded.quest_points');
@@ -326,13 +326,13 @@ describe('catalog generator', () => {
     expect(definitions.map((definition) => definition.steps.length)).toEqual(
       catalog.quests.map((quest) => quest.steps.length),
     );
-    expect(definitions.find((definition) => definition.key === 'the_heavy_single')).toEqual({
-      questId: 'quest:the_heavy_single',
-      key: 'the_heavy_single',
-      name: 'The Heavy Single',
+    expect(definitions.find((definition) => definition.key === 'the_restless_squat')).toEqual({
+      questId: 'quest:the_restless_squat',
+      key: 'the_restless_squat',
+      name: 'The Restless Squat',
       questPoints: 2,
       requiredLevels: [{ skillId: 'legs', level: 15 }],
-      requiredQuestIds: ['quest:squat_rack_initiation'],
+      requiredQuestIds: ['quest:x_marks_the_squat'],
       steps: [
         { kind: 'record', exerciseId: 'back_squat' },
         {
@@ -342,7 +342,7 @@ describe('catalog generator', () => {
       ],
       rewardXp: { legs: 1500, back: 300 },
     });
-    expect(definitions.find((definition) => definition.key === 'iron_foundation')?.steps[1]).toEqual({
+    expect(definitions.find((definition) => definition.key === 'back_slayer')?.steps[1]).toEqual({
       kind: 'workout',
       challenge: {
         kind: 'prescription',
@@ -357,7 +357,7 @@ describe('catalog generator', () => {
         ],
       },
     });
-    expect(definitions.find((definition) => definition.key === 'loose_limbs')).toMatchObject({
+    expect(definitions.find((definition) => definition.key === 'yogic_ritual')).toMatchObject({
       requiredLevels: [],
       steps: [{ kind: 'sessions', target: 3, exerciseId: 'mobility_flow' }],
       rewardXp: { mobility: 600 },
@@ -442,14 +442,14 @@ describe('catalog generator', () => {
       catalog.dropTables.map((table) => idFor(catalogNames.dropTable(table.key)).raw),
     );
     expect(listedIds('recipes')).toEqual(catalog.recipes.map((recipe) => idFor(catalogNames.recipe(recipe.key)).raw));
-    const looseLimbs = idFor(catalogNames.quest('loose_limbs')).raw;
+    const looseLimbs = idFor(catalogNames.quest('yogic_ritual')).raw;
     expect(retireStatement(statements, 'quests')).toContain(looseLimbs);
 
     const trimmed = expandCatalog({
       ...sources,
       items: (sources.items as { key: string }[]).filter((item) => item.key !== 'plate_crab'),
       dropTables: (sources.dropTables as { key: string }[]).filter((table) => table.key !== 'regular'),
-      quests: (sources.quests as { key: string }[]).filter((quest) => quest.key !== 'loose_limbs'),
+      quests: (sources.quests as { key: string }[]).filter((quest) => quest.key !== 'yogic_ritual'),
     });
     trimmed.recipes = trimmed.recipes.filter((recipe) => recipe.key !== 'grinder_belt');
     const trimmedStatements = renderStatements(trimmed);
