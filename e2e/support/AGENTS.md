@@ -10,7 +10,7 @@ Helpers shared by the Playwright specs: user flows (register, sign in, navigate,
 ## Map
 
 - `fixtures.ts`: the `test` and `expect` every spec imports. Each page fails its test on an uncaught page error (asserted before the context closes, so the trace is kept), a blocked service worker registration rejects like a real browser, and `newPerson()` opens a fresh browser context that teardown closes, so a failing test never leaks a context.
-- `app.ts`: UI flows and locators (`register`, `signIn`, `logExercise`, `logCardio`, `finishWorkout`, `exerciseCard`, `setRow`, `boutRow`, ...) plus raw draft and auth storage helpers.
+- `app.ts`: UI flows and locators (`register`, `signIn`, `logExercise`, `logCardio`, `finishWorkout`, `exerciseCard`, `setRow`, `boutRow`, `skillCard`, `openSkill`, `openBody`, ...) plus raw draft and auth storage helpers.
 - `db.ts`: direct SQL and admin API for setup and assertions (accounts, sessions, items, programs, quest progress, rate limits).
 - Feature helpers: `challenge.ts` (scroll challenge), `program-enrollment.ts` and `program-seed.ts` (programs; the seed posts through `complete-session`), `friendship.ts`, `network.ts` (`failRequests` injects a PostgREST-shaped 500), `mailbox.ts`.
 - Assertions: `a11y.ts` (axe, WCAG A/AA, fails on serious or critical; 44 px touch targets), `fonts.ts`.
