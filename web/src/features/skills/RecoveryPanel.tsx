@@ -1,10 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import { BodyMap } from '../../components/BodyMap.tsx';
-import { exerciseListQuery, recentSetsQuery } from '../../lib/query/queries.ts';
+import { type LoadedState } from '../../lib/query/query-state-rules.ts';
 import {
   type BodySkill,
-  hardSetLoad,
   recoveryBySkill,
   recoveryGroups,
   type RecoveryState,
@@ -17,32 +15,25 @@ const GROUP_LABELS: Record<RecoveryState, string> = {
 };
 
 interface RecoveryPanelProps {
-  userId: string;
+  recovery: LoadedState<Record<BodySkill, number>>;
   nameOf: (skill: BodySkill) => string;
 }
 
-export function RecoveryPanel({ userId, nameOf }: RecoveryPanelProps) {
+export function RecoveryPanel({ recovery, nameOf }: RecoveryPanelProps) {
   const headingId = useId();
-  const recent = useQuery(recentSetsQuery(userId));
-  const exercises = useQuery(exerciseListQuery(userId));
-  const [openedAt] = useState(Date.now);
-  if (!recent.data || !exercises.data) {
-    if (!recent.isError && !exercises.isError) return null;
+  if (recovery.status === 'loading') return null;
+  if (recovery.status === 'failed')
     return (
       <section className="panel stack" aria-labelledby={headingId}>
         <h2 id={headingId}>Recovery</h2>
         <p className="muted">Recovery needs a connection to load your recent sets.</p>
       </section>
     );
-  }
-  const shares = new Map(exercises.data.map((exercise) => [exercise.id, exercise.skillShares]));
-  const load = hardSetLoad(recent.data, shares, Math.max(openedAt, recent.dataUpdatedAt));
-  const states = recoveryBySkill(load);
-  const groups = recoveryGroups(load, nameOf);
+  const groups = recoveryGroups(recovery.data, nameOf);
   return (
     <section className="panel stack" aria-labelledby={headingId}>
       <h2 id={headingId}>Recovery</h2>
-      <BodyMap states={states} />
+      <BodyMap states={recoveryBySkill(recovery.data)} />
       <ul className="recovery-legend">
         {(Object.keys(GROUP_LABELS) as RecoveryState[])
           .filter((state) => groups[state].length > 0)

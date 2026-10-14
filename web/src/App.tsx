@@ -73,6 +73,8 @@ const ProgramEnrollScreen = lazyScreen(
 );
 const ProgramsScreen = lazyScreen(() => import('./features/programs/ProgramsScreen.tsx'), 'ProgramsScreen');
 const SkillsScreen = lazyScreen(() => import('./features/skills/SkillsScreen.tsx'), 'SkillsScreen');
+const SkillScreen = lazyScreen(() => import('./features/skills/SkillScreen.tsx'), 'SkillScreen');
+const BodyScreen = lazyScreen(() => import('./features/skills/BodyScreen.tsx'), 'BodyScreen');
 const QuestsScreen = lazyScreen(() => import('./features/quests/QuestsScreen.tsx'), 'QuestsScreen');
 const RevealScreen = lazyScreen(() => import('./features/summary/RevealScreen.tsx'), 'RevealScreen');
 const WhatsNewScreen = lazyScreen(() => import('./features/whats-new/WhatsNewScreen.tsx'), 'WhatsNewScreen');
@@ -165,6 +167,8 @@ function Screens() {
                   <Route path="/reveal" element={<RevealScreen userId={userId} />} />
                   <Route path="/skills" element={<SkillsScreen userId={userId} />} />
                   <Route path="/skills/quests" element={<QuestsScreen userId={userId} />} />
+                  <Route path="/skills/body" element={<BodyScreen userId={userId} />} />
+                  <Route path="/skills/:skillKey" element={<SkillScreen userId={userId} />} />
                   <Route path="/collection" element={<CollectionScreen userId={userId} />} />
                   <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
                   <Route

@@ -31,11 +31,19 @@
   background: var(--color-panel);
   border: var(--border-width) solid var(--color-outline);
   box-shadow: var(--bevel);
-  cursor: pointer;
+  text-decoration: none;
 }
 
-.skill-card[aria-pressed='true'] {
+.skill-card:hover {
+  color: var(--color-text);
   border-color: var(--color-accent);
+}
+
+.menu-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  text-align: left;
 }
 
 .skill-card-top {
@@ -236,7 +244,13 @@
   background: var(--color-xp);
 }
 
-.volume-contributions[hidden] {
+.volume-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.volume-details[hidden] {
   display: none;
 }
 

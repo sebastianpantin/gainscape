@@ -1,5 +1,5 @@
 import { expect, test } from './support/fixtures.ts';
-import { openTab, register, skillCard, uniqueUsername } from './support/app.ts';
+import { openSkill, register, uniqueUsername } from './support/app.ts';
 import { builtInExerciseId } from './support/db.ts';
 
 test('the picker and the exercise screen show the skills an exercise trains', async ({ page }) => {
@@ -17,11 +17,10 @@ test('the picker and the exercise screen show the skills an exercise trains', as
   await expect(page.getByText('Log this exercise to see your progress.')).toBeVisible();
 });
 
-test('the skill panel lists the exercises that train the skill, highest share first', async ({ page }) => {
+test('the skill page lists the exercises that train the skill, highest share first', async ({ page }) => {
   await register(page, uniqueUsername('skpanel'));
 
-  await openTab(page, 'Skills');
-  await skillCard(page, 'Chest').click();
+  await openSkill(page, 'Chest');
   const chest = page.getByRole('list', { name: 'Exercises that train Chest' });
   const items = chest.getByRole('listitem');
   await expect(items).toHaveCount(41);
