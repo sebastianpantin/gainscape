@@ -68,3 +68,13 @@
 .have-too-few {
   color: var(--color-danger);
 }
+
+.stalled-tag {
+  flex-shrink: 0;
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-ink);
+  background: var(--color-accent);
+  border-radius: var(--radius);
+}
