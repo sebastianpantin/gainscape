@@ -1,3 +1,11 @@
+- prs: [128]
+  version: 0.12.0
+  date: 2026-10-14
+  title: A tidier Skills tab
+  items:
+    - The Skills tab is less crowded. It shows your levels, Quests and a new Body page, with a short summary of how your muscles are doing.
+    - Tap a skill to open its own page with your level, XP and the exercises that train it. Muscle skills also show when that muscle is fresh again and your sets for it this week.
+    - The Body page holds the Recovery map and your weekly sets, and each muscle links to its skill page.
 - prs: [126]
   version: 0.11.0
   date: 2026-10-14
