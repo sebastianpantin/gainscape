@@ -324,6 +324,31 @@ export interface ChallengeSummary {
   targetLoadsKg: Record<string, number | null>;
 }
 
+export interface QuestIdentity {
+  questId: string;
+  key: string;
+  name: string;
+  questPoints: number;
+}
+
+export interface QuestCompletionSummary extends QuestIdentity {
+  xpBySkill: Record<string, number>;
+}
+
+export interface QuestProgressSummary {
+  questId: string;
+  stepIndex: number;
+  stepProgress: number;
+  stepTarget: number;
+}
+
+export interface QuestSessionSummary {
+  completed: QuestCompletionSummary[];
+  progressed: QuestProgressSummary[];
+  unlocked: string[];
+  levelUps: LevelUp[];
+}
+
 export interface SessionSummary {
   sessionId: string;
   xpBySkill: Record<string, number>;
@@ -333,6 +358,7 @@ export interface SessionSummary {
   gearBonusBySkill?: Record<string, number>;
   challenge?: ChallengeSummary | null;
   challengeBonusBySkill?: Record<string, number>;
+  quests?: QuestSessionSummary;
   historyOnly?: true;
 }
 

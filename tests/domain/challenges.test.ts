@@ -13,6 +13,7 @@ import {
   e1rmAtSessionStart,
   type E1rmSnapshot,
   judgeChallenge,
+  liftVolume,
   type LiftSetResult,
   loadTargetKg,
   meetsLoadTarget,
@@ -203,6 +204,57 @@ describe('judgeChallenge volume', () => {
     expect(passed(tenTonDay, [...squats, ...bodyweightOnly], {})).toBe(false);
     expect(passed(tenTonDay, [...squats, ...times(9, () => weightedPullUp(20, 5))], {})).toBe(false);
     expect(passed(tenTonDay, [...squats, ...times(10, () => weightedPullUp(20, 5))], {})).toBe(true);
+  });
+});
+
+describe('liftVolume', () => {
+  it('sums reps of the named exercise at the load floor, never warm-ups', () => {
+    const sets = [
+      ...times(3, () => liftResult('squat', 50, 10)),
+      liftResult('squat', 45, 10),
+      liftResult('squat', 50, 10, true),
+      liftResult('deadlift', 200, 10),
+    ];
+    expect(liftVolume(sets, 'reps', 'squat', 50, squatE1rm)).toBe(30);
+  });
+
+  it('sums kg as weight times reps across every lift when no exercise is named', () => {
+    const sets = [liftResult('squat', 100, 5), liftResult('bench', 60, 8), weightedPullUp(20, 5)];
+    expect(liftVolume(sets, 'kg', null, null, {})).toBe(500 + 480 + 100);
+  });
+
+  it('ignores cardio and hold results', () => {
+    const bout: SetResult = {
+      ...liftResult('run', 0, 0),
+      set: {
+        kind: 'cardio',
+        id: 'bout',
+        exerciseId: 'run',
+        position: 0,
+        durationS: 600,
+        distanceM: null,
+        interval: null,
+        effort: null,
+      },
+    };
+    expect(liftVolume([bout, liftResult('squat', 100, 5)], 'reps', null, null, {})).toBe(5);
+  });
+
+  it('agrees with the volume judge for any target', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.tuple(fc.integer({ min: 0, max: 40 }), fc.integer({ min: 1, max: 12 }), fc.boolean()), {
+          maxLength: 12,
+        }),
+        fc.integer({ min: 1, max: 5000 }),
+        fc.constantFrom('reps' as const, 'kg' as const),
+        (drafts, target, metric) => {
+          const sets = drafts.map(([steps, reps, isWarmup]) => liftResult('squat', steps * 2.5, reps, isWarmup));
+          const challenge: ChallengeDefinition = { kind: 'volume', metric, target, exerciseId: 'squat', minPct: 50 };
+          expect(passed(challenge, sets, squatE1rm)).toBe(liftVolume(sets, metric, 'squat', 50, squatE1rm) >= target);
+        },
+      ),
+    );
   });
 });
 
