@@ -264,8 +264,8 @@ describe('saving the items and program templates after an online load', () => {
 describe('saving the quest log after an online load', () => {
   const quest = {
     id: 'quest-1',
-    key: 'squat_rack_initiation',
-    name: 'Squat Rack Initiation',
+    key: 'x_marks_the_squat',
+    name: 'X Marks the Squat',
     description: 'Squat twice.',
     quest_points: 1,
     sort_order: 1,
@@ -303,7 +303,7 @@ describe('saving the quest log after an online load', () => {
     vi.stubGlobal('navigator', { onLine: false });
     const load = await loadQuestsCacheFirst(USER_ID);
     expect(load).toMatchObject({ fromCache: true, offline: true });
-    expect(load.loaded.quests.map((saved) => saved.name)).toEqual(['Squat Rack Initiation']);
+    expect(load.loaded.quests.map((saved) => saved.name)).toEqual(['X Marks the Squat']);
   });
 });
 

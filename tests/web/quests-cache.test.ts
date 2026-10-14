@@ -10,8 +10,8 @@ const SAVED: QuestRows = {
   quests: [
     {
       id: 'quest-1',
-      key: 'loose_limbs',
-      name: 'Loose Limbs',
+      key: 'yogic_ritual',
+      name: 'Yogic Ritual',
       description: 'Stretch.',
       quest_points: 1,
       sort_order: 7,

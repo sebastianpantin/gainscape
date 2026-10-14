@@ -21,8 +21,8 @@ const NAMES = { [SQUAT]: 'Back Squat' };
 
 const INITIATION = {
   id: 'quest-initiation',
-  key: 'squat_rack_initiation',
-  name: 'Squat Rack Initiation',
+  key: 'x_marks_the_squat',
+  name: 'X Marks the Squat',
   description: 'Squat twice, then a hundred reps.',
   quest_points: 1,
   sort_order: 1,
@@ -40,8 +40,8 @@ const INITIATION = {
 
 const HEAVY_SINGLE = {
   id: 'quest-heavy',
-  key: 'the_heavy_single',
-  name: 'The Heavy Single',
+  key: 'the_restless_squat',
+  name: 'The Restless Squat',
   description: 'A record, then a heavy workout.',
   quest_points: 2,
   sort_order: 2,
@@ -122,7 +122,7 @@ describe('questLogFrom', () => {
 
   it('keeps the quests in their catalog order', () => {
     const log = questLogFrom(rows({ quests: [OPEN_QUEST, HEAVY_SINGLE, INITIATION] }));
-    expect(log.quests.map((quest) => quest.key)).toEqual(['squat_rack_initiation', 'the_heavy_single', 'open_quest']);
+    expect(log.quests.map((quest) => quest.key)).toEqual(['x_marks_the_squat', 'the_restless_squat', 'open_quest']);
   });
 });
 
@@ -200,18 +200,18 @@ describe('questBoard', () => {
     );
     expect(board.map((group) => [group.title, group.cards.map((card) => card.quest.name)])).toEqual([
       ['In progress', ['Open Quest']],
-      ['Available', ['Squat Rack Initiation']],
-      ['Locked', ['The Heavy Single']],
+      ['Available', ['X Marks the Squat']],
+      ['Locked', ['The Restless Squat']],
       ['Completed', ['Done Quest']],
     ]);
   });
 
   it('shows each requirement against your level and finished quests', () => {
     const board = questBoard(questLogFrom(rows()), SKILLS, { [LEGS.id]: LEVEL_10_XP }, 'kg');
-    const heavy = board.flatMap((group) => group.cards).find((card) => card.quest.key === 'the_heavy_single');
+    const heavy = board.flatMap((group) => group.cards).find((card) => card.quest.key === 'the_restless_squat');
     expect(heavy?.requirements).toEqual([
       { text: 'Legs level 15 (now 10)', met: false },
-      { text: 'Complete Squat Rack Initiation', met: false },
+      { text: 'Complete X Marks the Squat', met: false },
     ]);
   });
 
@@ -219,7 +219,7 @@ describe('questBoard', () => {
     const board = questBoard(questLogFrom(rows()), SKILLS, {}, 'kg');
     const initiation = board.flatMap((group) => group.cards).find((card) => card.quest.key === INITIATION.key);
     expect(initiation?.rewards).toEqual(['1 quest point', '800 Legs XP', '200 Core XP']);
-    expect(initiation?.unlocks).toEqual(['The Heavy Single']);
+    expect(initiation?.unlocks).toEqual(['The Restless Squat']);
   });
 
   it('marks finished steps done and counts the current one', () => {
@@ -279,7 +279,7 @@ describe('questBoard', () => {
     );
     expect(board.flatMap((group) => group.cards.map((card) => card.quest.name))).toEqual([
       'Open Quest',
-      'Squat Rack Initiation',
+      'X Marks the Squat',
     ]);
   });
 });
@@ -317,7 +317,7 @@ describe('startQuestProblemText', () => {
       { kind: 'missing_quest', questId: INITIATION.id },
     ];
     expect(startQuestProblemText(httpError('quest_requirements_not_met', { missing }), names)).toBe(
-      "You don't meet this quest's requirements yet: Legs level 15, complete Squat Rack Initiation.",
+      "You don't meet this quest's requirements yet: Legs level 15, complete X Marks the Squat.",
     );
     expect(startQuestProblemText(httpError('quest_requirements_not_met'), names)).toBe(
       "You don't meet this quest's requirements yet.",

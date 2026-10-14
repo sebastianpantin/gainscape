@@ -32,8 +32,8 @@ beforeAll(async () => {
   [squatId, benchId, initiationId, heavySingleId, legsId, coreId] = await Promise.all([
     builtInExerciseId('back_squat'),
     builtInExerciseId('barbell_bench_press'),
-    idOf('quests', 'squat_rack_initiation'),
-    idOf('quests', 'the_heavy_single'),
+    idOf('quests', 'x_marks_the_squat'),
+    idOf('quests', 'the_restless_squat'),
     idOf('skills', 'legs'),
     idOf('skills', 'core'),
   ]);
@@ -213,8 +213,8 @@ describe('complete-session advances quests', () => {
     expect(quests?.completed).toEqual([
       {
         questId: initiationId,
-        key: 'squat_rack_initiation',
-        name: 'Squat Rack Initiation',
+        key: 'x_marks_the_squat',
+        name: 'X Marks the Squat',
         questPoints: 1,
         xpBySkill: { [legsId]: 800, [coreId]: 200 },
       },
@@ -235,12 +235,12 @@ describe('complete-session advances quests', () => {
 
     const events = await questEventsOf(user.id);
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ session_id: null, event_key: 'quest:squat_rack_initiation', type: 'quest' });
+    expect(events[0]).toMatchObject({ session_id: null, event_key: 'quest:x_marks_the_squat', type: 'quest' });
     expect(new Date(events[0].occurred_at).toISOString()).toBe(finishing.endedAt);
     expect(events[0].payload).toEqual({
       questId: initiationId,
-      questKey: 'squat_rack_initiation',
-      name: 'Squat Rack Initiation',
+      questKey: 'x_marks_the_squat',
+      name: 'X Marks the Squat',
       questPoints: 1,
       levelUps: quests?.levelUps,
     });

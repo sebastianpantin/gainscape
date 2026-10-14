@@ -242,18 +242,18 @@ describe('quest tables', () => {
   beforeAll(async () => {
     await db`
       insert into public.quest_progress (user_id, quest_id)
-      select ${owner.id}, id from public.quests where key = 'bench_apprentice'
+      select ${owner.id}, id from public.quests where key = 'bench_mysteries'
       on conflict do nothing`;
     await db`
       insert into public.quest_completions
         (user_id, quest_id, started_at, session_id, anchor_started_at, anchor_session_id, quest_points)
       select ${owner.id}, q.id, s.started_at, s.id, s.started_at, s.id, q.quest_points
-      from public.quests q, public.sessions s where q.key = 'loose_limbs' and s.id = ${ownerSessionId}
+      from public.quests q, public.sessions s where q.key = 'yogic_ritual' and s.id = ${ownerSessionId}
       on conflict do nothing`;
     await db`
       insert into public.quest_completion_xp (user_id, quest_id, skill_id, xp)
       select ${owner.id}, q.id, k.id, 600 from public.quests q, public.skills k
-      where q.key = 'loose_limbs' and k.key = 'mobility'
+      where q.key = 'yogic_ritual' and k.key = 'mobility'
       on conflict do nothing`;
   });
 
@@ -262,8 +262,8 @@ describe('quest tables', () => {
   }
 
   async function insertableRows(): Promise<Record<string, object>> {
-    const [quest] = await db`select id from public.quests where key = 'hang_tough'`;
-    const [completed] = await db`select id from public.quests where key = 'loose_limbs'`;
+    const [quest] = await db`select id from public.quests where key = 'monkey_bar_madness'`;
+    const [completed] = await db`select id from public.quests where key = 'yogic_ritual'`;
     const [skill] = await db`select id from public.skills where key = 'grip'`;
     const now = new Date().toISOString();
     return {

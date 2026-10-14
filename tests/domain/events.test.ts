@@ -279,16 +279,16 @@ describe('feedEventsForSession', () => {
 });
 
 describe('questCompletedEvent', () => {
-  const quest = { questId: 'quest-1', key: 'squat_rack_initiation', name: 'Squat Rack Initiation', questPoints: 1 };
+  const quest = { questId: 'quest-1', key: 'x_marks_the_squat', name: 'X Marks the Squat', questPoints: 1 };
 
   it('keys the event by quest key and carries the quest and its level-ups', () => {
     expect(questCompletedEvent(quest, [{ skill: 'legs', from: 14, to: 15 }])).toEqual({
-      key: 'quest:squat_rack_initiation',
+      key: 'quest:x_marks_the_squat',
       type: 'quest',
       payload: {
         questId: 'quest-1',
-        questKey: 'squat_rack_initiation',
-        name: 'Squat Rack Initiation',
+        questKey: 'x_marks_the_squat',
+        name: 'X Marks the Squat',
         questPoints: 1,
         levelUps: [{ skill: 'legs', from: 14, to: 15 }],
       },

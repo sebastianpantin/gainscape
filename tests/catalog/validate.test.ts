@@ -457,179 +457,179 @@ describe('catalog validation', () => {
   it.each<[string, (catalog: CatalogData) => void, RegExp]>([
     [
       'quest keys match the key pattern',
-      (c) => (find(c.quests, 'hang_tough').key = 'Hang-Tough'),
+      (c) => (find(c.quests, 'monkey_bar_madness').key = 'Hang-Tough'),
       /quest key "Hang-Tough" must match/,
     ],
     [
       'quest names are unique',
-      (c) => (find(c.quests, 'loose_limbs').name = 'hang tough'),
-      /quest name "hang tough" is not unique/,
+      (c) => (find(c.quests, 'yogic_ritual').name = 'monkey bar madness'),
+      /quest name "monkey bar madness" is not unique/,
     ],
     [
       'a quest has a description',
-      (c) => (find(c.quests, 'loose_limbs').description = ''),
-      /quest "loose_limbs" description must be 1-280 characters/,
+      (c) => (find(c.quests, 'yogic_ritual').description = ''),
+      /quest "yogic_ritual" description must be 1-280 characters/,
     ],
     [
       'a quest description is at most 280 characters',
-      (c) => (find(c.quests, 'loose_limbs').description = 'x'.repeat(281)),
-      /quest "loose_limbs" description must be 1-280 characters/,
+      (c) => (find(c.quests, 'yogic_ritual').description = 'x'.repeat(281)),
+      /quest "yogic_ritual" description must be 1-280 characters/,
     ],
     [
       'a quest is worth at least one quest point',
-      (c) => (find(c.quests, 'loose_limbs').questPoints = 0),
-      /quest "loose_limbs" quest_points must be an integer in 1-10/,
+      (c) => (find(c.quests, 'yogic_ritual').questPoints = 0),
+      /quest "yogic_ritual" quest_points must be an integer in 1-10/,
     ],
     [
       'a quest is worth at most ten quest points',
-      (c) => (find(c.quests, 'loose_limbs').questPoints = 11),
-      /quest "loose_limbs" quest_points must be an integer in 1-10/,
+      (c) => (find(c.quests, 'yogic_ritual').questPoints = 11),
+      /quest "yogic_ritual" quest_points must be an integer in 1-10/,
     ],
     [
       'a required level names a known skill',
-      (c) => (find(c.quests, 'hang_tough').requiredLevels[0].skill = 'forearms'),
-      /quest "hang_tough" requires unknown skill "forearms"/,
+      (c) => (find(c.quests, 'monkey_bar_madness').requiredLevels[0].skill = 'forearms'),
+      /quest "monkey_bar_madness" requires unknown skill "forearms"/,
     ],
     [
       'a required level is at least 2',
-      (c) => (find(c.quests, 'hang_tough').requiredLevels[0].level = 1),
-      /quest "hang_tough" requires skill "grip" at level 1, which must be an integer in 2-99/,
+      (c) => (find(c.quests, 'monkey_bar_madness').requiredLevels[0].level = 1),
+      /quest "monkey_bar_madness" requires skill "grip" at level 1, which must be an integer in 2-99/,
     ],
     [
       'a required level is at most 99',
-      (c) => (find(c.quests, 'hang_tough').requiredLevels[0].level = 100),
-      /quest "hang_tough" requires skill "grip" at level 100, which must be an integer in 2-99/,
+      (c) => (find(c.quests, 'monkey_bar_madness').requiredLevels[0].level = 100),
+      /quest "monkey_bar_madness" requires skill "grip" at level 100, which must be an integer in 2-99/,
     ],
     [
       'a required quest exists',
-      (c) => (find(c.quests, 'the_heavy_single').requiredQuests[0] = 'squat_rack'),
-      /quest "the_heavy_single" requires unknown quest "squat_rack"/,
+      (c) => (find(c.quests, 'the_restless_squat').requiredQuests[0] = 'squat_rack'),
+      /quest "the_restless_squat" requires unknown quest "squat_rack"/,
     ],
     [
       'a quest does not require itself',
-      (c) => find(c.quests, 'loose_limbs').requiredQuests.push('loose_limbs'),
-      /quest "loose_limbs" requires itself/,
+      (c) => find(c.quests, 'yogic_ritual').requiredQuests.push('yogic_ritual'),
+      /quest "yogic_ritual" requires itself/,
     ],
     [
       'quest requirements have no cycle',
-      (c) => find(c.quests, 'squat_rack_initiation').requiredQuests.push('iron_foundation'),
-      /quest "squat_rack_initiation" is part of a requirement cycle/,
+      (c) => find(c.quests, 'x_marks_the_squat').requiredQuests.push('back_slayer'),
+      /quest "x_marks_the_squat" is part of a requirement cycle/,
     ],
     [
       'a quest has a step',
-      (c) => (find(c.quests, 'loose_limbs').steps = []),
-      /quest "loose_limbs" needs 1-10 steps, has 0/,
+      (c) => (find(c.quests, 'yogic_ritual').steps = []),
+      /quest "yogic_ritual" needs 1-10 steps, has 0/,
     ],
     [
       'a quest has at most ten steps',
       (c) => {
-        const quest = find(c.quests, 'loose_limbs');
+        const quest = find(c.quests, 'yogic_ritual');
         quest.steps = Array.from({ length: 11 }, () => structuredClone(quest.steps[0]));
       },
-      /quest "loose_limbs" needs 1-10 steps, has 11/,
+      /quest "yogic_ritual" needs 1-10 steps, has 11/,
     ],
     [
       'a sessions target is at least 1',
-      (c) => Object.assign(find(c.quests, 'loose_limbs').steps[0], { target: 0 }),
-      /quest "loose_limbs" step 1 needs a sessions target that is an integer in 1-100/,
+      (c) => Object.assign(find(c.quests, 'yogic_ritual').steps[0], { target: 0 }),
+      /quest "yogic_ritual" step 1 needs a sessions target that is an integer in 1-100/,
     ],
     [
       'a sessions target is at most 100',
-      (c) => Object.assign(find(c.quests, 'loose_limbs').steps[0], { target: 101 }),
-      /quest "loose_limbs" step 1 needs a sessions target that is an integer in 1-100/,
+      (c) => Object.assign(find(c.quests, 'yogic_ritual').steps[0], { target: 101 }),
+      /quest "yogic_ritual" step 1 needs a sessions target that is an integer in 1-100/,
     ],
     [
       'a sessions target is whole',
-      (c) => Object.assign(find(c.quests, 'loose_limbs').steps[0], { target: 2.5 }),
-      /quest "loose_limbs" step 1 needs a sessions target that is an integer in 1-100/,
+      (c) => Object.assign(find(c.quests, 'yogic_ritual').steps[0], { target: 2.5 }),
+      /quest "yogic_ritual" step 1 needs a sessions target that is an integer in 1-100/,
     ],
     [
       'a sessions step names a known exercise',
-      (c) => Object.assign(find(c.quests, 'loose_limbs').steps[0], { exercise: 'mobility_flo' }),
-      /quest "loose_limbs" step 1 uses unknown exercise "mobility_flo"/,
+      (c) => Object.assign(find(c.quests, 'yogic_ritual').steps[0], { exercise: 'mobility_flo' }),
+      /quest "yogic_ritual" step 1 uses unknown exercise "mobility_flo"/,
     ],
     [
       'a volume step has a target above 0',
-      (c) => Object.assign(find(c.quests, 'squat_rack_initiation').steps[1], { target: 0 }),
-      /quest "squat_rack_initiation" step 2 needs a volume target above 0/,
+      (c) => Object.assign(find(c.quests, 'x_marks_the_squat').steps[1], { target: 0 }),
+      /quest "x_marks_the_squat" step 2 needs a volume target above 0/,
     ],
     [
       'a volume step counts a lift',
-      (c) => Object.assign(find(c.quests, 'squat_rack_initiation').steps[1], { exercise: 'running' }),
-      /quest "squat_rack_initiation" step 2 uses cardio exercise "running"/,
+      (c) => Object.assign(find(c.quests, 'x_marks_the_squat').steps[1], { exercise: 'running' }),
+      /quest "x_marks_the_squat" step 2 uses cardio exercise "running"/,
     ],
     [
       'a volume step counts reps, not a hold',
-      (c) => Object.assign(find(c.quests, 'squat_rack_initiation').steps[1], { exercise: 'dead_hang' }),
-      /quest "squat_rack_initiation" step 2 uses hold exercise "dead_hang"/,
+      (c) => Object.assign(find(c.quests, 'x_marks_the_squat').steps[1], { exercise: 'dead_hang' }),
+      /quest "x_marks_the_squat" step 2 uses hold exercise "dead_hang"/,
     ],
     [
       'a record step names a known exercise',
-      (c) => Object.assign(find(c.quests, 'bench_apprentice').steps[1], { exercise: 'bench' }),
-      /quest "bench_apprentice" step 2 uses unknown exercise "bench"/,
+      (c) => Object.assign(find(c.quests, 'bench_mysteries').steps[1], { exercise: 'bench' }),
+      /quest "bench_mysteries" step 2 uses unknown exercise "bench"/,
     ],
     [
       'a workout superset has at least 2 exercises',
       (c) => {
-        const step = find(c.quests, 'iron_foundation').steps[1];
+        const step = find(c.quests, 'back_slayer').steps[1];
         if (step.kind === 'workout') step.challenge.supersets[0].exercises.pop();
       },
-      /quest "iron_foundation" step 2 superset needs at least 2 exercises/,
+      /quest "back_slayer" step 2 superset needs at least 2 exercises/,
     ],
     [
       'a workout percentage needs an external load',
       (c) => {
-        const step = find(c.quests, 'iron_foundation').steps[1];
+        const step = find(c.quests, 'back_slayer').steps[1];
         if (step.kind === 'workout') step.challenge.supersets[0].exercises[1].exercise = 'pull_up';
       },
-      /quest "iron_foundation" step 2 sets a percentage on "pull_up", which has no external load/,
+      /quest "back_slayer" step 2 sets a percentage on "pull_up", which has no external load/,
     ],
     [
       'a workout has supersets or a volume',
       (c) => {
-        const step = find(c.quests, 'iron_foundation').steps[1];
+        const step = find(c.quests, 'back_slayer').steps[1];
         if (step.kind === 'workout') step.challenge.supersets = [];
       },
-      /quest "iron_foundation" step 2 needs supersets or a volume, not both/,
+      /quest "back_slayer" step 2 needs supersets or a volume, not both/,
     ],
     [
       'a workout has not both supersets and a volume',
       (c) => {
-        const step = find(c.quests, 'iron_foundation').steps[1];
+        const step = find(c.quests, 'back_slayer').steps[1];
         if (step.kind === 'workout')
           step.challenge.volume = { metric: 'reps', target: 10, exercise: null, minPct: null };
       },
-      /quest "iron_foundation" step 2 needs supersets or a volume, not both/,
+      /quest "back_slayer" step 2 needs supersets or a volume, not both/,
     ],
-    ['a quest rewards XP', (c) => (find(c.quests, 'loose_limbs').rewardXp = []), /quest "loose_limbs" rewards no XP/],
+    ['a quest rewards XP', (c) => (find(c.quests, 'yogic_ritual').rewardXp = []), /quest "yogic_ritual" rewards no XP/],
     [
       'a quest rewards a known skill',
-      (c) => (find(c.quests, 'loose_limbs').rewardXp[0].skill = 'flexibility'),
-      /quest "loose_limbs" rewards unknown skill "flexibility"/,
+      (c) => (find(c.quests, 'yogic_ritual').rewardXp[0].skill = 'flexibility'),
+      /quest "yogic_ritual" rewards unknown skill "flexibility"/,
     ],
     [
       'a quest reward is at least 1 XP',
-      (c) => (find(c.quests, 'loose_limbs').rewardXp[0].xp = 0),
-      /quest "loose_limbs" rewards skill "mobility" 0 XP, which must be an integer in 1-5000/,
+      (c) => (find(c.quests, 'yogic_ritual').rewardXp[0].xp = 0),
+      /quest "yogic_ritual" rewards skill "mobility" 0 XP, which must be an integer in 1-5000/,
     ],
     [
       'a quest reward is at most 5000 XP',
-      (c) => (find(c.quests, 'loose_limbs').rewardXp[0].xp = 5001),
-      /quest "loose_limbs" rewards skill "mobility" 5001 XP, which must be an integer in 1-5000/,
+      (c) => (find(c.quests, 'yogic_ritual').rewardXp[0].xp = 5001),
+      /quest "yogic_ritual" rewards skill "mobility" 5001 XP, which must be an integer in 1-5000/,
     ],
     [
       'a quest reward is whole XP',
-      (c) => (find(c.quests, 'loose_limbs').rewardXp[0].xp = 1.5),
-      /quest "loose_limbs" rewards skill "mobility" 1.5 XP, which must be an integer in 1-5000/,
+      (c) => (find(c.quests, 'yogic_ritual').rewardXp[0].xp = 1.5),
+      /quest "yogic_ritual" rewards skill "mobility" 1.5 XP, which must be an integer in 1-5000/,
     ],
     [
       'no denylisted term appears in a quest name',
-      (c) => (find(c.quests, 'loose_limbs').name = 'Dragon Limbs'),
+      (c) => (find(c.quests, 'yogic_ritual').name = 'Dragon Limbs'),
       /"Dragon Limbs" matches denylisted term "dragon"/,
     ],
     [
       'no denylisted term appears in a quest description',
-      (c) => (find(c.quests, 'loose_limbs').description = 'Stretch like a dragon.'),
+      (c) => (find(c.quests, 'yogic_ritual').description = 'Stretch like a dragon.'),
       /"Stretch like a dragon." matches denylisted term "dragon"/,
     ],
   ])('rejects a catalog when the quest rule "%s" is broken', (_rule, mutate, expected) => {
@@ -649,7 +649,7 @@ describe('catalog validation', () => {
   ])('refuses to load a quest with %s', (_case, mutate) => {
     const sources = readCatalogSources();
     const quests = structuredClone(sources.quests) as Record<string, unknown>[];
-    mutate(quests.find((quest) => quest.key === 'squat_rack_initiation')!);
+    mutate(quests.find((quest) => quest.key === 'x_marks_the_squat')!);
     expect(() => expandCatalog({ ...sources, quests })).toThrow();
   });
 

@@ -3,8 +3,8 @@ import { expect, test } from './support/fixtures.ts';
 import { definitionOf, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 import { seedQuestProgress } from './support/db.ts';
 
-const INITIATION = 'Squat Rack Initiation';
-const HEAVY_SINGLE = 'The Heavy Single';
+const INITIATION = 'X Marks the Squat';
+const HEAVY_SINGLE = 'The Restless Squat';
 
 async function openQuests(page: Page) {
   await openTab(page, 'Skills');
@@ -43,7 +43,7 @@ test('start a quest, finish it with a workout and see it on the reveal, the prof
   await expect(started).toContainText('0 / 2 workouts');
   await expect(started.getByRole('progressbar', { name: `${INITIATION} step 1 progress` })).toBeVisible();
 
-  await seedQuestProgress(username, 'squat_rack_initiation', { stepIndex: 1, stepProgress: 90 });
+  await seedQuestProgress(username, 'x_marks_the_squat', { stepIndex: 1, stepProgress: 90 });
   await openTab(page, 'Train');
   await logWorkout(page, () => logExercise(page, 'squat', 'Back Squat', [{ weightKg: 60, reps: 10 }]));
 
