@@ -9,6 +9,7 @@ export type RecoveryState = 'recovering' | 'easing' | 'fresh';
 export interface RecentSet {
   exerciseId: string;
   endedAt: string;
+  localDate: string;
   rir: number;
 }
 
@@ -25,7 +26,7 @@ const RECOVERING_HARD_SETS = 1;
 const EASING_HARD_SETS = 0.4;
 const BASIS_POINTS = 10_000;
 
-function isBodySkill(skillKey: string): skillKey is BodySkill {
+export function isBodySkill(skillKey: string): skillKey is BodySkill {
   return (BODY_SKILLS as readonly string[]).includes(skillKey);
 }
 
@@ -92,13 +93,13 @@ export function recoveryGroups(
   return groups;
 }
 
-const RECENT_SET_COLUMNS = 'exercise_id,rir,rir_source,sessions!inner(ended_at)';
+const RECENT_SET_COLUMNS = 'exercise_id,rir,rir_source,sessions!inner(ended_at,local_date)';
 
 interface RecentSetRow {
   exercise_id: string;
   rir: number | string | null;
   rir_source: RirSource;
-  sessions: { ended_at: string };
+  sessions: { ended_at: string; local_date: string };
 }
 
 export async function queryRecentSets(client: SupabaseClient, since: Date): Promise<RecentSet[]> {
@@ -112,5 +113,6 @@ export async function queryRecentSets(client: SupabaseClient, since: Date): Prom
     exerciseId: row.exercise_id,
     rir: rirForRecovery(row.rir, row.rir_source),
     endedAt: row.sessions.ended_at,
+    localDate: row.sessions.local_date,
   }));
 }
