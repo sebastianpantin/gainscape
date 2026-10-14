@@ -1,7 +1,7 @@
 import { kgToUnit } from '@domain/units.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
 
-export const SHOWN_EXERCISE_NAMES = 3;
+const SHOWN_EXERCISE_NAMES = 3;
 
 export interface OverviewSet {
   exerciseName: string;

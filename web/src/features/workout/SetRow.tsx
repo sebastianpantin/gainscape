@@ -1,6 +1,5 @@
 import { type ReactNode, type Ref, useEffect, useId, useRef, useState } from 'react';
 import { DEFAULT_BALANCE, MAX_SET_LOAD_KG } from '@domain/index.ts';
-import { Icon } from '../../components/Icon.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { assumedEffort } from '../../lib/workout/effort-labels.ts';
@@ -20,6 +19,7 @@ import { amrapBadgeOf } from '../../lib/programs/program-today-rules.ts';
 import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts';
 import type { DraftSet, LastLoggedSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
+import { DoneToggle } from './DoneToggle.tsx';
 import { lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './last-set-rules.ts';
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
@@ -222,21 +222,7 @@ export function SetRow({
       <div className="reps-field">
         <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} />
       </div>
-      <button
-        ref={doneButton}
-        type="button"
-        className={`button done-toggle ${set.done ? 'selected' : ''}`}
-        aria-pressed={set.done}
-        aria-label={doneLabel}
-        onClick={onToggleDone}
-      >
-        <Icon name="check" size={20} strokeWidth={3} />
-      </button>
-      {drop?.xpText && (
-        <span key={drop.key} className="xp-drop" aria-hidden="true">
-          {drop.xpText}
-        </span>
-      )}
+      <DoneToggle done={set.done} label={doneLabel} drop={drop} onToggle={onToggleDone} buttonRef={doneButton} />
       <div className="set-info">
         {marked && (
           <span className="set-markers">

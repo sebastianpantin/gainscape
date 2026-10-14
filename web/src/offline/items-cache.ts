@@ -143,7 +143,7 @@ export function itemsFromLiveAndCache(
   };
 }
 
-export function challengeExercisesOf(
+function challengeExercisesOf(
   challenges: readonly CatalogChallenge[],
   exercises: readonly Exercise[],
 ): ChallengeExerciseEntry[] {

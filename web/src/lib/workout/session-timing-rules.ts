@@ -1,3 +1,4 @@
+import { isWholeNumberBetween } from '@domain/math.ts';
 import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
 
 export const SESSION_RPE_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
@@ -18,7 +19,7 @@ export function sessionRpeChoiceLabel(value: number): string {
 }
 
 export function isSessionRpe(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 10;
+  return isWholeNumberBetween(value, 1, 10);
 }
 
 export function sessionRpeFromChoice(choice: string): number | null {
