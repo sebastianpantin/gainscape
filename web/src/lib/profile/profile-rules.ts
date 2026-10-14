@@ -1,3 +1,5 @@
+import { MS_PER_DAY } from '@domain/edit-window.ts';
+import { roundTo } from '@domain/math.ts';
 import { CONTROL_CHARACTER, characterCount } from '../names.ts';
 import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, parsedDecimal, unitToKg } from '../units.ts';
 
@@ -112,8 +114,6 @@ export function initialsFor(displayName: string, username: string): string {
   return (words[0] ?? username).slice(0, 2).toUpperCase();
 }
 
-const DAY_MS = 86_400_000;
-
 export function nextTimezoneChangeAt(profile: Pick<Profile, 'timezoneChangedAt'>, now = new Date()): Date | null {
   if (!profile.timezoneChangedAt) return null;
   const next = new Date(profile.timezoneChangedAt);
@@ -122,7 +122,7 @@ export function nextTimezoneChangeAt(profile: Pick<Profile, 'timezoneChangedAt'>
 }
 
 export function cooldownStartFor(nextAllowedAt: string): string {
-  return new Date(new Date(nextAllowedAt).getTime() - TIMEZONE_CHANGE_COOLDOWN_DAYS * DAY_MS).toISOString();
+  return new Date(new Date(nextAllowedAt).getTime() - TIMEZONE_CHANGE_COOLDOWN_DAYS * MS_PER_DAY).toISOString();
 }
 
 export function formatDay(date: Date): string {
@@ -159,7 +159,7 @@ export const BODYWEIGHT_NUDGE_STEP: Record<UnitPref, number> = { kg: 0.1, lb: 0.
 
 export function nudgedBodyweightKg(bodyweightKg: number, direction: 1 | -1, unit: UnitPref): number {
   const inUnit = kgToUnit(bodyweightKg, unit) + direction * BODYWEIGHT_NUDGE_STEP[unit];
-  const nextKg = unitToKg(Math.round(inUnit * 10) / 10, unit);
+  const nextKg = unitToKg(roundTo(1, inUnit), unit);
   return Math.min(HIGHEST_BODYWEIGHT_KG, Math.max(LOWEST_BODYWEIGHT_KG, nextKg));
 }
 

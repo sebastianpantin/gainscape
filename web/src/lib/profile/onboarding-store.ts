@@ -1,6 +1,6 @@
 import { type OnboardingRecord } from './onboarding-rules.ts';
 
-export const ONBOARDING_KEY_PREFIX = 'gainscape.onboarding.';
+const ONBOARDING_KEY_PREFIX = 'gainscape.onboarding.';
 const DONE = 'done';
 
 export function onboardingKey(userId: string): string {

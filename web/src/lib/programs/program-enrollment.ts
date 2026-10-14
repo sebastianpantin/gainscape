@@ -24,7 +24,7 @@ import { supabase } from '../platform/supabase.ts';
 const ENROLLMENT_COLUMNS =
   'id, template_key, template_version, unit, options, lift_bindings, inputs, rounding, started_at, ended_at';
 
-export async function fetchProgramTemplates(): Promise<ProgramTemplateRow[]> {
+async function fetchProgramTemplates(): Promise<ProgramTemplateRow[]> {
   const { data, error } = await supabase
     .from('program_templates')
     .select('key, version, name, definition, owner_user_id');
