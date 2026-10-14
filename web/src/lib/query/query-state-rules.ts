@@ -6,3 +6,7 @@ export function loadedState<T>(data: T | undefined, error: Error | null): Loaded
   if (error) return { status: 'failed', problem: error.message };
   return { status: 'loading' };
 }
+
+export function readyData<T>(state: LoadedState<T>): T | null {
+  return state.status === 'ready' ? state.data : null;
+}

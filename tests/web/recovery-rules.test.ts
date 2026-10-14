@@ -4,6 +4,7 @@ import {
   recoveryTimeLabel,
   hardSetLoad,
   hoursUntilFresh,
+  muscleRecoveryText,
   recoveryBySkill,
   recoveryGroups,
   recoveryState,
@@ -124,6 +125,15 @@ describe('recoveryTimeLabel', () => {
     expect(recoveryTimeLabel(23)).toBe('23h');
     expect(recoveryTimeLabel(24)).toBe('1d');
     expect(recoveryTimeLabel(141)).toBe('5d 21h');
+  });
+});
+
+describe('muscleRecoveryText', () => {
+  it('says a muscle is fresh, or how long until it is', () => {
+    expect(muscleRecoveryText(0)).toBe('Fresh');
+    expect(muscleRecoveryText(0.399)).toBe('Fresh');
+    expect(muscleRecoveryText(0.8)).toBe('Fresh in 1d 12h');
+    expect(muscleRecoveryText(0.4)).toBe('Fresh in 1h');
   });
 });
 
