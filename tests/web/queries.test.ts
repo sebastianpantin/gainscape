@@ -1,5 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { saveCachedExercises } from '../../web/src/lib/exercises/catalog-cache.ts';
+import { MemoryStorage } from './memory-storage.ts';
 import type { LiftExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { Collection } from '../../web/src/lib/collection/collection-data.ts';
 
@@ -9,6 +11,7 @@ const {
   collectionPercentQuery,
   collectionQuery,
   enrollChoicesQuery,
+  exerciseListQuery,
   FEED_QUERY_PREFIX,
   feedPreviewQuery,
   feedQuery,
@@ -85,5 +88,31 @@ describe('query factories', () => {
       publishForEnroll(queryClient, USER_ID, 'program-1', () => Promise.reject(new Error('offline'))),
     ).rejects.toThrow('offline');
     expect(queryClient.getQueryData(enrollChoicesQuery(USER_ID).queryKey)).toBe(cached);
+  });
+});
+
+describe('exerciseListQuery', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function deviceWith(exercises: LiftExercise[]) {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, USER_ID, exercises);
+    vi.stubGlobal('window', { localStorage: storage });
+  }
+
+  it('starts from the saved exercise list as stale data, so every screen sees it offline and refetches', () => {
+    const chestBench = { ...BENCH, skillShares: [{ skillKey: 'chest', skillName: 'Chest', shareBasisPoints: 7000 }] };
+    deviceWith([chestBench]);
+    const query = exerciseListQuery(USER_ID);
+    expect(typeof query.initialData === 'function' && query.initialData()).toEqual([chestBench]);
+    expect(query.initialDataUpdatedAt).toBe(0);
+  });
+
+  it('starts empty when the saved list predates skill shares or the device has none', () => {
+    deviceWith([BENCH]);
+    const query = exerciseListQuery(USER_ID);
+    expect(typeof query.initialData === 'function' && query.initialData()).toBeUndefined();
+    vi.stubGlobal('window', undefined);
+    expect(typeof query.initialData === 'function' && query.initialData()).toBeUndefined();
   });
 });

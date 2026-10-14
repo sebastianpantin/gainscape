@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { readCachedExercises } from '../../lib/exercises/catalog-cache.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { type PlanDay, planStatusText, programPlan } from '../../lib/programs/program-plan-rules.ts';
 import { exerciseListQuery } from '../../lib/query/queries.ts';
@@ -30,11 +29,7 @@ export function ProgramPlanScreen({ userId }: ProgramPlanScreenProps) {
   const { program, loadStatus, statusText } = useActiveProgram(userId);
   const { unitPref } = usePreferences();
   const lastLogged = useLastLoggedWeights(program);
-  const exerciseList = useQuery({
-    ...exerciseListQuery(userId),
-    initialData: () => readCachedExercises(localStorage, userId) ?? undefined,
-    initialDataUpdatedAt: 0,
-  });
+  const exerciseList = useQuery(exerciseListQuery(userId));
   const exercises = exerciseList.data ?? [];
 
   if (program.kind !== 'ready')

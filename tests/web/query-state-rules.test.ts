@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadedState } from '../../web/src/lib/query/query-state-rules.ts';
+import { loadedState, readyData } from '../../web/src/lib/query/query-state-rules.ts';
 
 describe('loadedState', () => {
   it('is loading before any data or error', () => {
@@ -16,5 +16,13 @@ describe('loadedState', () => {
 
   it('keeps showing the last data when a background refresh failed', () => {
     expect(loadedState({ level: 3 }, new Error('offline'))).toEqual({ status: 'ready', data: { level: 3 } });
+  });
+});
+
+describe('readyData', () => {
+  it('is the data of a ready state and null otherwise', () => {
+    expect(readyData({ status: 'ready', data: 3 })).toBe(3);
+    expect(readyData({ status: 'loading' })).toBeNull();
+    expect(readyData({ status: 'failed', problem: 'offline' })).toBeNull();
   });
 });

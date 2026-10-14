@@ -5,7 +5,7 @@
 
 ## Purpose
 
-The quest board at `/skills/quests`, linked from the Skills tab: quest points, then every quest grouped in progress, available, locked and completed, with its requirements (your level against the required one, prerequisite quests), steps and progress, rewards (quest points, XP per skill) and the quests it unlocks. Available quests have a Start button that calls the `start-quest` Edge Function.
+The quest board at `/skills/quests`, linked from the Skills tab (a sibling of the Body page and the skill pages in `../skills/`): quest points, then every quest grouped in progress, available, locked and completed, with its requirements (your level against the required one, prerequisite quests), steps and progress, rewards (quest points, XP per skill) and the quests it unlocks. Available quests have a Start button that calls the `start-quest` Edge Function.
 
 ## Map
 

@@ -9,7 +9,7 @@ import {
   exercisesTrainingSkill,
   pickerRowDetail,
   sharePercentText,
-  skillPanelSeed,
+  skillExercisesSeed,
   skillShareRows,
 } from '../../web/src/lib/progress/skill-map-rules.ts';
 
@@ -125,18 +125,18 @@ describe('exercisesTrainingSkill', () => {
   });
 });
 
-describe('skillPanelSeed', () => {
+describe('skillExercisesSeed', () => {
   it('seeds the panel with a cached list that carries skill shares', () => {
     const cached = [bench, lift('Old', [])];
-    expect(skillPanelSeed(cached)).toBe(cached);
+    expect(skillExercisesSeed(cached)).toBe(cached);
   });
 
   it('skips the seed when nothing is cached', () => {
-    expect(skillPanelSeed(null)).toBeUndefined();
-    expect(skillPanelSeed([])).toBeUndefined();
+    expect(skillExercisesSeed(null)).toBeUndefined();
+    expect(skillExercisesSeed([])).toBeUndefined();
   });
 
   it('skips the seed when the cache predates skill shares', () => {
-    expect(skillPanelSeed([lift('Bench', []), { ...running, skillShares: [] }])).toBeUndefined();
+    expect(skillExercisesSeed([lift('Bench', []), { ...running, skillShares: [] }])).toBeUndefined();
   });
 });

@@ -25,12 +25,14 @@ describe('routeTitle', () => {
     expect(routeTitle('/programs/active')).toBe('Program · Gainscape');
     expect(routeTitle('/programs/active/plan')).toBe('Program plan · Gainscape');
     expect(routeTitle('/programs/new')).toBe('New program · Gainscape');
+    expect(routeTitle('/skills/body')).toBe('Body · Gainscape');
   });
 
   it('matches routes with a parameter after the fixed routes they overlap', () => {
     expect(routeTitle('/collection/exercises/bench_press')).toBe('Exercise progress · Gainscape');
     expect(routeTitle('/collection/history/abc-123')).toBe('Workout · Gainscape');
     expect(routeTitle('/friends/abc-123')).toBe('Friend · Gainscape');
+    expect(routeTitle('/skills/chest')).toBe('Skill · Gainscape');
     expect(routeTitle('/programs/enroll/stronglifts_5x5')).toBe('Follow program · Gainscape');
     expect(routeTitle('/programs/abc-123')).toBe('Edit program · Gainscape');
   });
