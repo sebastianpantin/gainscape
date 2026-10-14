@@ -1,5 +1,3 @@
-import { type ReactNode, useId } from 'react';
-import { type LoadedState } from '../../lib/query/query-state-rules.ts';
 import { type BodySkill, muscleRecoveryText } from '../../lib/progress/recovery-rules.ts';
 import {
   type MuscleVolume,
@@ -8,29 +6,9 @@ import {
   volumeSetsLabel,
 } from '../../lib/progress/weekly-volume-rules.ts';
 import { useBodyStatus } from './body-status.ts';
+import { StatusSection } from './StatusSection.tsx';
 import { VolumeBar } from './VolumeBar.tsx';
 import { VolumeContributionList } from './VolumeContributionList.tsx';
-
-interface StatusSectionProps<T> {
-  title: string;
-  state: LoadedState<T>;
-  children: (data: T) => ReactNode;
-}
-
-function StatusSection<T>({ title, state, children }: StatusSectionProps<T>) {
-  const headingId = useId();
-  if (state.status === 'loading') return null;
-  return (
-    <section className="panel stack" aria-labelledby={headingId}>
-      <h2 id={headingId}>{title}</h2>
-      {state.status === 'failed' ? (
-        <p className="muted">This needs a connection to load your recent sets.</p>
-      ) : (
-        children(state.data)
-      )}
-    </section>
-  );
-}
 
 function MuscleWeek({ name, volume }: { name: string; volume: MuscleVolume }) {
   return (

@@ -1,4 +1,3 @@
-import { useId } from 'react';
 import { BodyMap } from '../../components/BodyMap.tsx';
 import { type LoadedState } from '../../lib/query/query-state-rules.ts';
 import {
@@ -7,6 +6,7 @@ import {
   recoveryGroups,
   type RecoveryState,
 } from '../../lib/progress/recovery-rules.ts';
+import { StatusSection } from './StatusSection.tsx';
 
 const GROUP_LABELS: Record<RecoveryState, string> = {
   recovering: 'Recovering',
@@ -19,21 +19,11 @@ interface RecoveryPanelProps {
   nameOf: (skill: BodySkill) => string;
 }
 
-export function RecoveryPanel({ recovery, nameOf }: RecoveryPanelProps) {
-  const headingId = useId();
-  if (recovery.status === 'loading') return null;
-  if (recovery.status === 'failed')
-    return (
-      <section className="panel stack" aria-labelledby={headingId}>
-        <h2 id={headingId}>Recovery</h2>
-        <p className="muted">Recovery needs a connection to load your recent sets.</p>
-      </section>
-    );
-  const groups = recoveryGroups(recovery.data, nameOf);
+function RecoveryDetails({ load, nameOf }: { load: Record<BodySkill, number>; nameOf: (skill: BodySkill) => string }) {
+  const groups = recoveryGroups(load, nameOf);
   return (
-    <section className="panel stack" aria-labelledby={headingId}>
-      <h2 id={headingId}>Recovery</h2>
-      <BodyMap states={recoveryBySkill(recovery.data)} />
+    <>
+      <BodyMap states={recoveryBySkill(load)} />
       <ul className="recovery-legend">
         {(Object.keys(GROUP_LABELS) as RecoveryState[])
           .filter((state) => groups[state].length > 0)
@@ -50,6 +40,14 @@ export function RecoveryPanel({ recovery, nameOf }: RecoveryPanelProps) {
         Hard sets each muscle took in the last week, fading by half every day and a half. Times show how long until each
         muscle is fresh.
       </p>
-    </section>
+    </>
+  );
+}
+
+export function RecoveryPanel({ recovery, nameOf }: RecoveryPanelProps) {
+  return (
+    <StatusSection title="Recovery" state={recovery}>
+      {(load) => <RecoveryDetails load={load} nameOf={nameOf} />}
+    </StatusSection>
   );
 }

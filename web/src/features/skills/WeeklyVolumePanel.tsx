@@ -10,6 +10,7 @@ import {
   volumeSetsLabel,
 } from '../../lib/progress/weekly-volume-rules.ts';
 import { VolumeBar } from './VolumeBar.tsx';
+import { StatusSection } from './StatusSection.tsx';
 import { VolumeContributionList } from './VolumeContributionList.tsx';
 
 interface WeeklyVolumePanelProps {
@@ -51,35 +52,29 @@ function MuscleRow({ skill, name, volume, open, onToggle }: MuscleRowProps) {
 }
 
 export function WeeklyVolumePanel({ volume, nameOf }: WeeklyVolumePanelProps) {
-  const headingId = useId();
   const [openSkill, setOpenSkill] = useState<BodySkill | null>(null);
-  if (volume.status === 'loading') return null;
-  if (volume.status === 'failed')
-    return (
-      <section className="panel stack" aria-labelledby={headingId}>
-        <h2 id={headingId}>Sets this week</h2>
-        <p className="muted">Weekly sets need a connection to load your recent sets.</p>
-      </section>
-    );
   return (
-    <section className="panel stack" aria-labelledby={headingId}>
-      <h2 id={headingId}>Sets this week</h2>
-      <ul className="volume-list">
-        {BODY_SKILLS.map((skill) => (
-          <MuscleRow
-            key={skill}
-            skill={skill}
-            name={nameOf(skill)}
-            volume={volume.data[skill]}
-            open={openSkill === skill}
-            onToggle={() => setOpenSkill(openSkill === skill ? null : skill)}
-          />
-        ))}
-      </ul>
-      <p className="muted tiny">
-        Working sets since Monday, split across the muscles each exercise trains. The marked band is a target of{' '}
-        {VOLUME_TARGET.min} to {VOLUME_TARGET.max} sets a week per muscle.
-      </p>
-    </section>
+    <StatusSection title="Sets this week" state={volume}>
+      {(bySkill) => (
+        <>
+          <ul className="volume-list">
+            {BODY_SKILLS.map((skill) => (
+              <MuscleRow
+                key={skill}
+                skill={skill}
+                name={nameOf(skill)}
+                volume={bySkill[skill]}
+                open={openSkill === skill}
+                onToggle={() => setOpenSkill(openSkill === skill ? null : skill)}
+              />
+            ))}
+          </ul>
+          <p className="muted tiny">
+            Working sets since Monday, split across the muscles each exercise trains. The marked band is a target of{' '}
+            {VOLUME_TARGET.min} to {VOLUME_TARGET.max} sets a week per muscle.
+          </p>
+        </>
+      )}
+    </StatusSection>
   );
 }

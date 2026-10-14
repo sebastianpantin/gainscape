@@ -20,3 +20,5 @@ export function bodySummaryText(
   const text = parts.join(' · ');
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+export const RECENT_SETS_FAILED_TEXT = 'Recovery and weekly sets need a connection to load your recent sets.';

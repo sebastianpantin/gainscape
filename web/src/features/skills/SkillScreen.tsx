@@ -9,7 +9,7 @@ import { formatXp } from '../../lib/format.ts';
 import { type LoadedState } from '../../lib/query/query-state-rules.ts';
 import { isBodySkill } from '../../lib/progress/recovery-rules.ts';
 import { exercisesTrainingSkill } from '../../lib/progress/skill-map-rules.ts';
-import { useActiveExercises } from '../../lib/progress/skill-map.ts';
+import { useSkillMapExercises } from '../../lib/progress/skill-map.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { BackToSkills } from './BackToSkills.tsx';
 import { MuscleStatus } from './MuscleStatus.tsx';
@@ -53,7 +53,7 @@ function SkillExercises({ skillKey, skillName, exercises }: SkillExercisesProps)
 export function SkillScreen({ userId }: SkillScreenProps) {
   const { skillKey = '' } = useParams();
   const state = useStanding(userId);
-  const exercises = useActiveExercises(userId);
+  const exercises = useSkillMapExercises(userId);
   const exercisesHeadingId = useId();
 
   if (state.status === 'failed')
