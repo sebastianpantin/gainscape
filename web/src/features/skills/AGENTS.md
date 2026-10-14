@@ -21,7 +21,7 @@ The Skills tab (`/skills`) and its subpages. The tab itself stays short: totals,
 - Offline, the saved standing shows at once with its notice. Recovery and weekly sets need a connection and say so.
 - `/skills/quests` and `/skills/body` are static routes, so React Router ranks them above `/skills/:skillKey`; `route-title-rules.ts` also matches fixed patterns first. A key that is no skill renders "Skill not found" with a link back.
 - Only body skills (`isBodySkill`) get recovery and weekly sets; cardio skills train no muscle. `MuscleStatus` owns the `useBodyStatus` call, so a cardio page fetches no recent sets.
-- The Body summary counts every muscle that is not fresh as recovering (the skill page's "Fresh in 14h" covers both recovering and almost fresh) and every muscle below the band as under target. Until either half loads the link reads just "Body".
+- The Body summary counts every muscle that is not fresh as recovering (the skill page's "Fresh in 14h" covers both recovering and almost fresh) and every muscle below the band as under target. Until either half loads the link reads just "Body". Its `aria-label` (`Body, <summary>`) supplies the pause; a visually hidden comma inside the flex label comes out as `Body ,`.
 - Recovery computes at the later of mount time and the recent sets' `dataUpdatedAt`. The panels render nothing while loading. The body map's colour is the only state cue in the figure, so the legend must list skill names.
 - Recovery here (recent days) is separate from the server's in-session fatigue check.
 - Weekly volume:
