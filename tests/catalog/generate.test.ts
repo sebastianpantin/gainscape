@@ -293,6 +293,18 @@ describe('catalog generator', () => {
       'the_grand_tread',
       'yogic_ritual',
       'ernest_the_crunch',
+      'sheep_shrugger',
+      'imp_curler',
+      'the_rowing_waterfall',
+      'bikehazard',
+      'swimming_contest',
+      'hiit_arena',
+      'shoulders_of_arrav',
+      'haunted_mine_carry',
+      'nature_stretch',
+      'the_pressennik_trials',
+      'monkey_bar_madness_ii',
+      'recipe_for_leg_day',
     ]);
     const statements = renderStatements(catalog);
     const challengesAt = statements.findIndex((statement) => statement.startsWith('insert into public.challenges'));

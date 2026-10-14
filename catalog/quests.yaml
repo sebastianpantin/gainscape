@@ -86,3 +86,135 @@
     - { kind: sessions, target: 3, exercise: hanging_leg_raise }
   rewards:
     xp: { core: 800, shoulders: 200 }
+
+- key: sheep_shrugger
+  name: Sheep Shrugger
+  description: The farmer needs a hundred and fifty shrugs before market day. Shrug in three workouts, then pile up the reps.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 3, exercise: barbell_shrug }
+    - { kind: volume, metric: reps, target: 150, exercise: barbell_shrug }
+  rewards:
+    xp: { back: 500, grip: 300 }
+- key: imp_curler
+  name: Imp Curler
+  description: Imps stole the wizard's dumbbells. Curl in three workouts, then win them back with a hundred and fifty curls.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 3, exercise: barbell_curl }
+    - { kind: volume, metric: reps, target: 150, exercise: barbell_curl }
+  rewards:
+    xp: { arms: 800 }
+- key: the_rowing_waterfall
+  name: The Rowing Waterfall
+  description: The waterfall hides a rowing machine. Row in four workouts, then set a new rowing record.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 4, exercise: rowing }
+    - { kind: record, exercise: rowing }
+  rewards:
+    xp: { endurance: 800, back: 200 }
+- key: bikehazard
+  name: Bikehazard
+  description: A strange plague of spin classes has hit the city. Ride in four workouts, then set a new cycling record.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 4, exercise: cycling }
+    - { kind: record, exercise: cycling }
+  rewards:
+    xp: { endurance: 800, legs: 200 }
+- key: swimming_contest
+  name: Swimming Contest
+  description: The village holds a contest by the lake. Swim in three workouts, then set a new swimming record.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 3, exercise: swimming }
+    - { kind: record, exercise: swimming }
+  rewards:
+    xp: { endurance: 600, shoulders: 200 }
+- key: hiit_arena
+  name: HIIT Arena
+  description: The arena master wants to see you sweat. Finish three HIIT circuits, then two rounds of sprint intervals.
+  quest_points: 1
+  steps:
+    - { kind: sessions, target: 3, exercise: hiit_circuit }
+    - { kind: sessions, target: 2, exercise: sprint_intervals }
+  rewards:
+    xp: { agility: 800 }
+- key: shoulders_of_arrav
+  name: Shoulders of Arrav
+  description: Two gangs fight over an old pressing technique. Press overhead in three workouts, then set a new overhead press record.
+  quest_points: 1
+  requires:
+    levels: { shoulders: 10 }
+  steps:
+    - { kind: sessions, target: 3, exercise: overhead_press }
+    - { kind: record, exercise: overhead_press }
+  rewards:
+    xp: { shoulders: 1200, arms: 200 }
+- key: haunted_mine_carry
+  name: Haunted Mine Carry
+  description: Ore carts no longer run in the haunted mine, so the ore goes out by hand. Carry it in three workouts, then set a new farmer's carry record.
+  quest_points: 1
+  requires:
+    levels: { grip: 10 }
+  steps:
+    - { kind: sessions, target: 3, exercise: farmers_carry }
+    - { kind: record, exercise: farmers_carry }
+  rewards:
+    xp: { grip: 900, core: 200 }
+- key: nature_stretch
+  name: Nature Stretch
+  description: The spirit of the forest is stiff and needs your help. Do yoga in four workouts, then stretch in three more.
+  quest_points: 2
+  requires:
+    levels: { mobility: 15 }
+    quests: [yogic_ritual]
+  steps:
+    - { kind: sessions, target: 4, exercise: yoga }
+    - { kind: sessions, target: 3, exercise: static_stretching }
+  rewards:
+    xp: { mobility: 1200 }
+- key: the_pressennik_trials
+  name: The Pressennik Trials
+  description: The northern tribe only accepts those who press. Bench fifteen tonnes, then pass the trial of bench and row in one workout.
+  quest_points: 2
+  requires:
+    levels: { chest: 20 }
+    quests: [bench_mysteries]
+  steps:
+    - { kind: volume, metric: kg, target: 15000, exercise: barbell_bench_press }
+    - kind: workout
+      supersets:
+        - rounds: 4
+          exercises:
+            - { exercise: barbell_bench_press, reps: 8, pct: 65 }
+            - { exercise: barbell_row, reps: 8, pct: 65 }
+  rewards:
+    xp: { chest: 2000, shoulders: 500, arms: 300 }
+- key: monkey_bar_madness_ii
+  name: Monkey Bar Madness II
+  description: The monkeys are back, and they brought weights. Set a new weighted pull-up record, then do forty chin-ups in one workout.
+  quest_points: 3
+  requires:
+    levels: { grip: 20, back: 20 }
+    quests: [monkey_bar_madness]
+  steps:
+    - { kind: record, exercise: weighted_pull_up }
+    - kind: workout
+      volume: { metric: reps, target: 40, exercise: chin_up }
+  rewards:
+    xp: { grip: 1500, back: 1500, arms: 500 }
+- key: recipe_for_leg_day
+  name: Recipe for Leg Day
+  description: The final feast needs fifty tonnes of squats. Squat them, then finish a hundred squats at half your best in one workout.
+  quest_points: 5
+  requires:
+    levels: { legs: 40 }
+    quests: [back_slayer]
+  steps:
+    - { kind: volume, metric: kg, target: 50000, exercise: back_squat }
+    - kind: workout
+      volume: { metric: reps, target: 100, exercise: back_squat, min_pct: 50 }
+  rewards:
+    xp: { legs: 3000, core: 500 }
