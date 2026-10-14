@@ -185,6 +185,38 @@ describe('feedText', () => {
   });
 });
 
+describe('feedText for quests', () => {
+  const quest = { questId: 'quest-1', questKey: 'squat_rack_initiation', questName: 'Squat Rack Initiation' };
+
+  it('names the completed quest and the levels its XP reached', () => {
+    const levelUps = [
+      { skill: 'legs', skillName: 'Legs', from: 14, to: 15 },
+      { skill: 'core', skillName: 'Core', from: 4, to: 5 },
+    ];
+    expect(feedText(item('quest', { ...quest, questPoints: 1, levelUps }), 'kg')).toEqual({
+      headline: 'Completed the quest Squat Rack Initiation',
+      detail: 'Reached level 15 Legs and level 5 Core',
+    });
+  });
+
+  it('has no detail when the quest XP reached no new level', () => {
+    expect(feedText(item('quest', { ...quest, questPoints: 1, levelUps: [] }), 'kg')).toEqual({
+      headline: 'Completed the quest Squat Rack Initiation',
+    });
+  });
+
+  it('copes with a missing name and malformed level ups', () => {
+    expect(feedText(item('quest', { levelUps: [{ skillName: 'Legs' }, 'x'] }), 'kg')).toEqual({
+      headline: 'Completed a quest',
+    });
+  });
+
+  it('labels the quest badge', () => {
+    expect(feedBadge(item('quest', quest))).toBe('QP');
+    expect(feedBadgeKind({ type: 'quest' })).toBe('quest');
+  });
+});
+
 describe('feedBadgeKind', () => {
   it('groups both level events under one badge style', () => {
     expect(feedBadgeKind({ type: 'level_up' })).toBe('level');

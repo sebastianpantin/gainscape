@@ -29,6 +29,8 @@ import { FRESH_FOR_MS } from './query-freshness-rules.ts';
 import { fetchRecentSets } from '../progress/recovery.ts';
 import { type FeedCursor, feedCursor } from '../social/social-rules.ts';
 import { fetchWeeklyGoalStatus } from '../progress/weekly-goal.ts';
+import { loadQuestsCacheFirst } from '../quests/quests.ts';
+import { type QuestLog } from '../quests/quest-rules.ts';
 
 export const FRIENDS_QUERY_PREFIX = ['friends'] as const;
 export const FEED_QUERY_PREFIX = ['feed'] as const;
@@ -220,4 +222,16 @@ export function lastLoggedWeightsQuery(exerciseIds: readonly string[]) {
     },
     enabled: exerciseIds.length > 0,
   });
+}
+
+export function questsQuery(userId: string) {
+  return queryOptions({ queryKey: ['quests', userId] as const, queryFn: () => loadQuestsCacheFirst(userId) });
+}
+
+function questPointsOf({ loaded }: CacheFirstLoad<QuestLog>): number {
+  return loaded.questPoints;
+}
+
+export function questPointsQuery(userId: string) {
+  return queryOptions({ ...questsQuery(userId), select: questPointsOf });
 }

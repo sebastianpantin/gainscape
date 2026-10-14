@@ -39,6 +39,7 @@ const QUERY_ROOTS = [
   queries.lastLoggedWeightsQuery(['bench']),
   queries.trainingHistoryQuery(USER_ID),
   queries.historyQuery(USER_ID),
+  queries.questsQuery(USER_ID),
 ].map(({ queryKey }) => String(queryKey[0]));
 
 function draftMessage(change: string) {
@@ -109,6 +110,11 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toEqual(
       expect.arrayContaining(['exercises', 'collection', 'enroll-choices', 'exercise-progress', 'history']),
     );
+  });
+
+  it('refreshes the quest log after a quest starts and after a workout moves a quest along', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['quest-started']).toEqual(['quests']);
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('quests');
   });
 
   it('refreshes every query that holds account data after an account reset', () => {

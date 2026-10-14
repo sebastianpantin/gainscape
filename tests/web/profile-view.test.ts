@@ -18,6 +18,7 @@ const view: ProfileView = {
   friendsSince: '2026-09-10T10:00:00.000Z',
   skillXp: { legs: xpForLevel(12) },
   collection: { filledSlots: 3, totalSlots: 10 },
+  questPoints: 4,
 };
 
 const skills: Skill[] = [
