@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Simulation-backed tests. `balance-bands.test.ts` proves the committed constants in `domain/balance.ts` still meet the progression design bands (lifters, gear, challenges, cardio, mobility). `seeded-simulation.test.ts` locks the seeded simulator output exactly. Both run behind `make sim-check` in about 1 s.
+Simulation-backed tests. `quest-budget.test.ts` holds the quest XP rewards in `catalog/quests.yaml` to `QUEST_BANDS`. `balance-bands.test.ts` proves the committed constants in `domain/balance.ts` still meet the progression design bands (lifters, gear, challenges, cardio, mobility). `seeded-simulation.test.ts` locks the seeded simulator output exactly. Both run behind `make sim-check` in about 1 s.
 
 ## Rules and gotchas
 

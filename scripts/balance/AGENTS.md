@@ -9,7 +9,7 @@ Simulates years of training for lifter, cardio and mobility profiles with the re
 
 ## Map
 
-- `bands.ts`: the design targets and their evaluation (strength, gear, challenge, cardio, mobility). Example: a balanced 3x/week lifter reaches legs 99 in 2 to 3 years and ends week 1 between legs level 20 and 40.
+- `bands.ts`: the design targets and their evaluation (strength, gear, challenge, cardio, mobility, quest XP budget). Example: a balanced 3x/week lifter reaches legs 99 in 2 to 3 years and ends week 1 between legs level 20 and 40.
 - `simulate.ts` and `cardio-simulate.ts`: seeded week-by-week simulations; `profiles.ts`: the profiles; `tune.ts`: grid search and closed-form cardio tuning (CLI-free, so tests import it).
 - `catalog.ts`: a hard-coded subset of the real catalog for the simulator.
 - `random.ts` and `progress.ts`: the seeded RNG and shared bookkeeping.
@@ -22,6 +22,7 @@ Simulates years of training for lifter, cardio and mobility profiles with the re
 - Keep it deterministic: `seededRandom` (seed 42) and a constant start date, never `Math.random` or the real clock.
 - When `make sim-check` fails after a balance change, tune with `make sim` and change `domain/balance.ts`, not the bands, unless the design targets change.
 - Hypertrophy and strength years are informational except band (b), the gap between them.
+- Quest XP is a one-off reward outside the simulation, so `QUEST_BANDS` bound the catalog instead: each skill's total quest XP stays within 1% of level 99, a quest without requirements grants at most 1000 XP per skill, and week one with every such quest done still ends between legs level 20 and 40. `evaluateQuestBudget` takes the loaded catalog quests, so a new quest in `catalog/quests.yaml` is checked by `make sim-check`.
 
 ## Testing
 
