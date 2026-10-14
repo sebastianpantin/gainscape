@@ -294,3 +294,17 @@ export async function seedWorkouts(username: string, count: number, oldestNote: 
   });
   await db`insert into public.sessions ${db(rows)}`;
 }
+
+export async function seedQuestProgress(
+  username: string,
+  questKey: string,
+  { stepIndex, stepProgress }: { stepIndex: number; stepProgress: number },
+): Promise<void> {
+  await db`
+    insert into public.quest_progress (user_id, quest_id, started_at, step_index, step_progress)
+    select p.id, q.id, now() - interval '1 hour', ${stepIndex}, ${stepProgress}
+    from public.profiles p, public.quests q
+    where p.username = ${username} and q.key = ${questKey}
+    on conflict (user_id, quest_id) do update
+      set started_at = excluded.started_at, step_index = excluded.step_index, step_progress = excluded.step_progress`;
+}

@@ -381,7 +381,7 @@ describe('questRevealLines', () => {
     expect(questRevealLines({ quests: empty }, log, skills, 'kg')).toBeNull();
   });
 
-  it('describes completions with their quest points and XP', () => {
+  it('describes completions with their quest points and XP in skill order', () => {
     const quests = {
       ...empty,
       completed: [
@@ -390,7 +390,7 @@ describe('questRevealLines', () => {
           key: 'squat_rack_initiation',
           name: 'Squat Rack Initiation',
           questPoints: 1,
-          xpBySkill: { 'skill-legs': 800, 'skill-core': 200 },
+          xpBySkill: { 'skill-core': 200, 'skill-legs': 800 },
         },
       ],
       levelUps: [{ skill: 'legs', from: 14, to: 15 }],

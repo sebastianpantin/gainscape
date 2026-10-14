@@ -6,6 +6,7 @@ interface ProfileCardProps {
   totalLevel: number | null;
   combatLevel: number | null;
   collectionPercent: number | null;
+  questPoints: number | null;
   nameIsPageTitle?: boolean;
 }
 
@@ -61,6 +62,7 @@ export function ProfileCard({
   totalLevel,
   combatLevel,
   collectionPercent,
+  questPoints,
   nameIsPageTitle = false,
 }: ProfileCardProps) {
   const NameHeading = nameIsPageTitle ? 'h1' : 'h2';
@@ -79,6 +81,7 @@ export function ProfileCard({
         <StatTile label="Total" value={totalLevel === null ? '—' : String(totalLevel)} />
         <StatTile label="Combat" value={combatLevel === null ? '—' : String(combatLevel)} />
         <StatTile label="Collection" value={collectionPercent === null ? '—' : `${collectionPercent}%`} />
+        <StatTile label="Quest points" value={questPoints === null ? '—' : String(questPoints)} />
       </dl>
     </section>
   );

@@ -41,6 +41,11 @@
   font-size: 0.65rem;
 }
 
+.feed-badge.quest {
+  background: var(--color-well);
+  color: var(--color-xp);
+}
+
 .friend-activity-list {
   list-style: none;
   margin: 0;

@@ -6,6 +6,7 @@ const SCREEN_TITLES: readonly (readonly [pattern: string, screen: string])[] = [
   ['/', 'Train'],
   ['/reveal', 'Workout saved'],
   ['/skills', 'Skills'],
+  ['/skills/quests', 'Quests'],
   ['/collection', 'Collection'],
   ['/collection/items', 'Items'],
   ['/collection/exercises/:exerciseId', 'Exercise progress'],

@@ -1,11 +1,11 @@
 # Skills Feature
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-13
+**Generated:** 2026-10-01 · **Updated:** 2026-10-14
 
 ## Purpose
 
-The Skills tab (`/skills`): every skill's level, XP and progress, total level, the exercises that train a picked skill, and the Recovery panel (a body map of recent hard sets).
+The Skills tab (`/skills`): every skill's level, XP and progress, total level, the exercises that train a picked skill, the Recovery panel (a body map of recent hard sets), and the link to the quest board (`../quests/`, `/skills/quests`).
 
 ## Map
 

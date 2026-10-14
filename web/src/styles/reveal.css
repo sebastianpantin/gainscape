@@ -201,6 +201,7 @@
 }
 
 .level-up-grid li {
+  color: var(--color-ink);
   display: flex;
   flex-direction: column;
   gap: var(--space-0-5);
