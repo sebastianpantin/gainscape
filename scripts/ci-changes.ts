@@ -14,6 +14,7 @@ const BACKEND_FILES = [
   'Makefile',
   'package.json',
   'package-lock.json',
+  '.nvmrc',
   'vitest.config.ts',
   'tsconfig.json',
   '.github/workflows/ci.yml',

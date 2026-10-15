@@ -109,6 +109,7 @@ Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib
 - React 19, React Router 7, Vite 8 (with `@vitejs/plugin-react`, `@vitejs/plugin-basic-ssl`)
 - TanStack Query 5 (`@tanstack/react-query`) for server data in screens
 - `@supabase/supabase-js` 2, Supabase CLI (local stack, `functions serve`, `test db`)
+- Node 24.2 or later (`.nvmrc`, `engines`; CI reads `.nvmrc`), because scripts rely on native type stripping and `import.meta.main`. `@types/node` stays on the same major as `.nvmrc` so `tsc` rejects APIs the runtime lacks.
 - Deno 2 for Edge Function type checks
 - Zod 4 for payload validation
 - Vitest 5, fast-check, fake-indexeddb, `postgres` (direct SQL in integration tests)

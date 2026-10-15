@@ -149,6 +149,7 @@ describe('which paths are internal', () => {
     'eslint.config.js',
     'tsconfig.json',
     'tsconfig.sw.json',
+    '.nvmrc',
     '.prettierrc.json',
     '.gitleaks.toml',
     'playwright.config.ts',

@@ -4,6 +4,8 @@ A strength-training logger with OSRS-inspired skills, XP, levels, loot, crafting
 
 ## Run it
 
+Needs Node 24.2 or later (`.nvmrc`; the scripts run TypeScript natively and use `import.meta.main`), Docker and Deno.
+
 ```sh
 npm install
 make start   # Supabase stack + edge functions (first run downloads Docker images)
