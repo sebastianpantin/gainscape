@@ -13,7 +13,7 @@ import {
   type UnitAmountExpr,
   type WeekTableRow,
   type WeekTableSet,
-} from '@domain/program-definition.ts';
+} from '@domain/program-types.ts';
 
 const JUGGERNAUT_BOOK = 'https://pdfcoffee.com/juggernaut-method-20-pdf-free.html';
 const JTS_GOING_HEAVY = 'https://www.jtsstrength.com/going-heavy-on-the-juggernaut-method/';

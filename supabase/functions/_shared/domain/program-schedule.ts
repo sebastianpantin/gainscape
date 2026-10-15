@@ -1,5 +1,5 @@
 import { isWholeNumberBetween } from './math.ts';
-import { type DayDecl, type ProgramDefinition } from './program-definition.ts';
+import { type DayDecl, type ProgramDefinition } from './program-types.ts';
 
 export interface CyclePosition {
   cycle: number;

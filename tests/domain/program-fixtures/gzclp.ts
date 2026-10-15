@@ -5,7 +5,7 @@ import {
   type RoundingSetting,
   type WeightUnit,
 } from '@domain/index.ts';
-import { type DayDecl, type ProgressionRule, type SlotDecl } from '@domain/program-definition.ts';
+import { type DayDecl, type ProgressionRule, type SlotDecl } from '@domain/program-types.ts';
 
 const GZCLP_WIKI = 'https://thefitness.wiki/routines/gzclp/';
 const GZCL_ARCHIVE = 'https://thefitness.wiki/reddit-archive/gzcl-method-novice-to-elite/';

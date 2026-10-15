@@ -1,5 +1,5 @@
 import { DEFAULT_ROUNDING, type ProgramDefinition, type ProgramEnrollment, type WeightUnit } from '@domain/index.ts';
-import { type LiftDecl, type ProgressionRule, type SlotDecl } from '@domain/program-definition.ts';
+import { type LiftDecl, type ProgressionRule, type SlotDecl } from '@domain/program-types.ts';
 
 const LIFTOSAUR_SS = 'https://www.liftosaur.com/programs/ss1';
 

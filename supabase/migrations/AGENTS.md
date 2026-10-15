@@ -46,7 +46,7 @@ Concurrency:
 
 SQL that restates domain or web rules (change both sides together, with a new migration for the SQL side):
 
-- `private.is_valid_enrollment` and `private.is_valid_program_position` restate `validateEnrollment` and `isPositionInSchedule` (`functions/_shared/domain/program-definition.ts`, `program-schedule.ts`). The position check also gates the session link in `complete-session`. SQL additionally requires bindings to be a UUID or null, which `validateEnrollment` does not check. Parity is tested in `tests/integration/program-validation-parity.test.ts` and `program-enrollments.test.ts`.
+- `private.is_valid_enrollment` and `private.is_valid_program_position` restate `validateEnrollment` and `isPositionInSchedule` (`functions/_shared/domain/program-validate.ts`, `program-schedule.ts`). The position check also gates the session link in `complete-session`. SQL additionally requires bindings to be a UUID or null, which `validateEnrollment` does not check. Parity is tested in `tests/integration/program-validation-parity.test.ts` and `program-enrollments.test.ts`.
 - `private.max_program_reference(unit)` (1000 kg, 2205 lb) equals the domain `MAX_REFERENCE_VALUE`.
 - `profiles_display_name_visible` restates `nameProblem` in `web/src/lib/names.ts`.
 - `cardio_duration_within_bounds` restates `countedWorkSeconds`, `intervalDurationSeconds` and `CARDIO_BOUNDS` (`domain/cardio.ts`).

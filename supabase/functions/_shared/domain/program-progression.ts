@@ -2,20 +2,22 @@ import { halfIncrementKg, roundPrescribedLoad, type RoundingSetting } from './lo
 import { FLOAT_TOLERANCE } from './math.ts';
 import {
   type Adjustment,
-  evaluateAmount,
-  evaluateNumber,
-  isBarbellLift,
-  parseSetRef,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgressionRule,
   type IncrementByAmount,
   type IncrementByPct,
-  type NumberContext,
   type SlotDecl,
   type StageRetest,
+} from './program-types.ts';
+import {
+  evaluateAmount,
+  evaluateNumber,
+  isBarbellLift,
+  parseSetRef,
+  type NumberContext,
   stageRetestOf,
-} from './program-definition.ts';
+} from './program-eval.ts';
 import {
   isRetestRef,
   isSlotActive,

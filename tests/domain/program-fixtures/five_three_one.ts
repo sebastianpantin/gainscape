@@ -9,7 +9,7 @@ import {
   type RoundingSetting,
   type WeightUnit,
 } from '@domain/index.ts';
-import { type LiftDecl, type ProgressionRule, type SlotDecl, type WeekTableRow } from '@domain/program-definition.ts';
+import { type LiftDecl, type ProgressionRule, type SlotDecl, type WeekTableRow } from '@domain/program-types.ts';
 import { type FactClock, sessionFact, setAsPrescribed } from './facts.ts';
 
 const WENDLER_BBB = 'https://www.jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big';

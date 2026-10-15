@@ -6,7 +6,7 @@ import {
   type WeeklyPosition,
   type WeightUnit,
 } from '@domain/index.ts';
-import { type DayDecl, type ProgressionRule } from '@domain/program-definition.ts';
+import { type DayDecl, type ProgressionRule } from '@domain/program-types.ts';
 
 const FITNESSVOLT_RTS_CHART = 'https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/';
 

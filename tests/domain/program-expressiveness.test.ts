@@ -6,7 +6,7 @@ import {
   type ProgramEnrollment,
   validateProgramDefinition,
 } from '@domain/index.ts';
-import { validateEnrollment } from '@domain/program-definition.ts';
+import { validateEnrollment } from '@domain/program-validate.ts';
 import { initialProgramState } from '@domain/program-state.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from './program-fixtures/five_three_one.ts';
 import { resolveAt } from './program-fixtures/follow.ts';

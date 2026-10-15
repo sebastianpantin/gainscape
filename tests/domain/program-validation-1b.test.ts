@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type Load, type ProgramDefinition, validateProgramDefinition } from '@domain/index.ts';
-import { type Adjustment, type ChoiceOptionDecl, type SlotDecl } from '@domain/program-definition.ts';
+import { type Adjustment, type ChoiceOptionDecl, type SlotDecl } from '@domain/program-types.ts';
 import { FULL_PRIMITIVES } from './program-fixtures/full_primitives.ts';
 import { GZCLP } from './program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2 } from './program-fixtures/juggernaut_2.ts';
