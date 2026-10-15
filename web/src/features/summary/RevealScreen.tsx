@@ -305,17 +305,29 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   }, [sessionId, userId]);
 
   useEffect(() => {
+    let active = true;
+    function showWhileActive<Loaded>(show: (loaded: Loaded) => void) {
+      return (loaded: Loaded) => {
+        if (active) show(loaded);
+      };
+    }
     const storage = deviceStorage();
     const standing = standingCache.read(storage, userId);
-    savedWhenOffline(standing?.skills ?? null, fetchSkills).then(setSkills, () => setSkills([]));
+    savedWhenOffline(standing?.skills ?? null, fetchSkills).then(
+      showWhileActive(setSkills),
+      showWhileActive(() => setSkills([])),
+    );
     savedWhenOffline(standing && new Map(Object.entries(standing.xpBySkillId)), () => fetchSkillXp(userId)).then(
-      setXpBySkillId,
-      () => setXpBySkillId(null),
+      showWhileActive(setXpBySkillId),
+      showWhileActive(() => setXpBySkillId(null)),
     );
     savedWhenOffline(readItemsCache(storage, userId)?.catalog ?? null, fetchItemCatalog).then(
-      (catalog) => setItems(catalog.items),
-      () => setItems('failed'),
+      showWhileActive((catalog) => setItems(catalog.items)),
+      showWhileActive(() => setItems('failed')),
     );
+    return () => {
+      active = false;
+    };
   }, [userId]);
 
   useEffect(() => {

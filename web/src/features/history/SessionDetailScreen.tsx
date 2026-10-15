@@ -85,10 +85,14 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const controllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    let active = true;
     fetchItemCatalog().then(
-      (catalog) => setItems(catalog.items),
-      () => setItems([]),
+      (catalog) => active && setItems(catalog.items),
+      () => active && setItems([]),
     );
+    return () => {
+      active = false;
+    };
   }, []);
 
   const loadWithCatalog = useCallback(
