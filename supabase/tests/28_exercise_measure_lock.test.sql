@@ -5,7 +5,12 @@ select plan(6);
 select tests.create_user('measure_lock_owner') as owner \gset
 select tests.add_session(:'owner', now() - interval '1 hour') as s \gset
 select id as bench from public.exercises where key = 'barbell_bench_press' \gset
-select id as squat from public.exercises where key = 'front_squat' \gset
+select id as unlogged_lift from public.exercises exercise
+where exercise.owner_user_id is null
+  and exercise.modality = 'lift'
+  and not exists (select 1 from public.sets where sets.exercise_id = exercise.id)
+order by exercise.key
+limit 1 \gset
 select id as running from public.exercises where key = 'running' \gset
 select id as swimming from public.exercises where key = 'swimming' \gset
 
@@ -30,7 +35,7 @@ select lives_ok(
   'rewriting the same measure of a logged exercise is allowed, as the seed does'
 );
 select lives_ok(
-  format($$update public.exercises set measure = 'time' where id = %L$$, :'squat'),
+  format($$update public.exercises set measure = 'time' where id = %L$$, :'unlogged_lift'),
   'the measure of an exercise nobody logged can change'
 );
 select throws_ok(
