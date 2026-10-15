@@ -5,7 +5,7 @@
 
 ## Purpose
 
-GitHub Actions workflow definitions: `ci.yml` (pull request CI: `checks` and `backend`) and `e2e.yml` (weekly and manual browser, PWA and Pages suites). `../AGENTS.md` describes both and their rules.
+GitHub Actions workflow definitions: `ci.yml` (pull request CI: `checks` and `backend`) and `e2e.yml` (nightly and manual browser, PWA and Pages suites). `../AGENTS.md` describes both and their rules.
 
 ## Rules and gotchas
 

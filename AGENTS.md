@@ -23,7 +23,7 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 - `scripts/docs/agents-size.ts`: `make docs-check` (part of `make check`) fails when a tracked `AGENTS.md` is over 16 KiB, so these files stay readable in one pass.
 - `README.md`: human-facing run instructions, command table, PWA, loot secret and auth notes.
 - `.github/workflows/ci.yml`: CI on every pull request: `checks` (no stack; runs `make ci-changes` first, then only `make format-check docs-check secrets-scan` for a documentation-only PR, otherwise the full gate including `make build`) and `backend` (integration, pgTAP; needs `checks`, skipped when `ci-changes` finds no backend input).
-- `.github/workflows/e2e.yml`: weekly and manual `e2e` workflow (sharded chromium and webkit, e2e-pwa, e2e-pages), started by hand with `gh workflow run e2e.yml --ref <branch>`.
+- `.github/workflows/e2e.yml`: nightly and manual `e2e` workflow (sharded chromium and webkit, e2e-pwa, e2e-pages), started by hand with `gh workflow run e2e.yml --ref <branch>`.
 
 ## Subdirectories
 
@@ -97,7 +97,7 @@ Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib
 
 ### Git and delivery
 
-- Never push directly to `main`; every change lands through a PR. Work on a branch, open a PR against `main`. `checks` and `backend` must pass before a merge; `backend` may show as skipped when no backend-relevant path changed (`scripts/ci-changes.ts`), which counts as fine. Run `make e2e` and `make e2e-pwa` locally for UI work; the `e2e` workflow runs them weekly on `main` (Mondays), plus WebKit and the Pages suite; start it on a branch with `gh workflow run e2e.yml --ref <branch>`, for example before a release. The `Protect main` ruleset enforces this: no direct or force pushes, no deletion, and a PR merges only when both checks pass (a skipped `backend` counts as passing). Nobody can bypass it; in an emergency an admin disables it in the repository settings and re-enables it afterwards.
+- Never push directly to `main`; every change lands through a PR. Work on a branch, open a PR against `main`. `checks` and `backend` must pass before a merge; `backend` may show as skipped when no backend-relevant path changed (`scripts/ci-changes.ts`), which counts as fine. Run `make e2e` and `make e2e-pwa` locally for UI work; the `e2e` workflow runs them nightly on `main`, plus WebKit and the Pages suite; start it on a branch with `gh workflow run e2e.yml --ref <branch>`, for example before a release. The `Protect main` ruleset enforces this: no direct or force pushes, no deletion, and a PR merges only when both checks pass (a skipped `backend` counts as passing). Nobody can bypass it; in an emergency an admin disables it in the repository settings and re-enables it afterwards.
 - Cutting a release: before a deploy, ask Claude to "write the changelog" (`.claude/skills/changelog/SKILL.md`, helper `make changelog-unreleased`). `make deploy` refuses while a user-facing merged PR is in no entry's `prs` in `web/changelog.yaml`. A hand-written entry works the same way: one entry at the top of `web/changelog.yaml` with a higher version and the covered PR numbers in `prs`. Never edit a shipped entry's version. A PR is covered once its number appears in any entry's `prs`.
 - Commit subjects are short imperative or slice-prefixed sentences (for example `S7a: web manifest, ...` or `Catalog validator checks gear tiers ...`).
 - Never deploy or push config to a hosted Supabase project. See `docs/production-auth.md`.
