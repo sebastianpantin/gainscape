@@ -1,3 +1,9 @@
+- prs: [138]
+  version: 0.13.0
+  date: 2026-10-15
+  title: Easier swaps
+  items:
+    - When you swap an exercise during a workout, the picker now suggests similar lifts that train the same muscles, before you type anything.
 - prs: [128, 130]
   version: 0.12.0
   date: 2026-10-14
