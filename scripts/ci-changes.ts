@@ -19,6 +19,8 @@ const BACKEND_FILES = [
   'tsconfig.json',
   'tsconfig.base.json',
   'tsconfig.node.json',
+  'tsconfig.web.json',
+  'tsconfig.domain.json',
   '.github/workflows/ci.yml',
   'web/src/offline/session-payload.ts',
 ];
@@ -36,6 +38,8 @@ const UI_FILES = [
   'tsconfig.json',
   'tsconfig.base.json',
   'tsconfig.web.json',
+  'tsconfig.node.json',
+  'tsconfig.domain.json',
   'supabase/config.toml',
   'supabase/seed.sql',
   'scripts/local-stack.ts',

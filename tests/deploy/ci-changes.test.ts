@@ -56,6 +56,8 @@ describe('which pull requests run the backend job', () => {
     'tsconfig.json',
     'tsconfig.base.json',
     'tsconfig.node.json',
+    'tsconfig.web.json',
+    'tsconfig.domain.json',
     '.github/workflows/ci.yml',
   ])('runs for a change to %s', (path) => {
     expect(needsBackend([path])).toBe(true);
@@ -138,6 +140,8 @@ describe('which pull requests run the browser smoke tests', () => {
     'tsconfig.json',
     'tsconfig.base.json',
     'tsconfig.web.json',
+    'tsconfig.node.json',
+    'tsconfig.domain.json',
     'supabase/functions/complete-session/index.ts',
     'supabase/migrations/20261007000029_029_weekly_goals.sql',
     'catalog/exercises.yaml',
@@ -162,7 +166,6 @@ describe('which pull requests run the browser smoke tests', () => {
     'docs/deploy.md',
     '.github/workflows/e2e.yml',
     'eslint.config.js',
-    'tsconfig.domain.json',
   ])('skips them for a change only to %s', (path) => {
     expect(needsUi([path])).toBe(false);
   });
