@@ -80,3 +80,23 @@ test('discard an ongoing workout behind a confirm, and start the next one fresh'
   await addExercise(page, 'bench', BENCH);
   await expect(swapPicker(page)).toHaveCount(0);
 });
+
+test('the swap picker suggests similar exercises until the user types, and a suggestion swaps the lift', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('swap_similar'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await addUnloggedExercise(page, 'back squat', SQUAT);
+
+  await chooseFromMenu(page, SQUAT, 'Swap');
+  const similar = exerciseCard(page, SQUAT).getByRole('region', { name: 'Similar exercises' });
+  await expect(similar.getByRole('button', { name: /^Box Squat\b/ })).toBeVisible();
+  await expect(similar.getByRole('button', { name: /^Barbell Bench Press\b/ })).toHaveCount(0);
+
+  await swapPicker(page).fill('dead');
+  await expect(similar).toHaveCount(0);
+  await swapPicker(page).fill('');
+
+  await similar.getByRole('button', { name: /^Box Squat\b/ }).click();
+  await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(['Box Squat']);
+});

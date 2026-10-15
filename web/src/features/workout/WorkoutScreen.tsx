@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
 import { type Exercise, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import { similarExercises } from '../../lib/exercises/substitute-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/history/last-session-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
@@ -132,6 +133,7 @@ interface WorkoutScreenProps {
 
 const DEFAULT_QUICK_FILL_SETS = 3;
 const DEFAULT_QUICK_FILL_REPS = 8;
+const MAX_SWAP_SUGGESTIONS = 6;
 
 export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const navigate = useNavigate();
@@ -320,6 +322,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const roomForBout = canAddSetTo(draft, 'cardio');
   const liftExercises = exercises.filter(isLiftExercise).filter((exercise) => exercise.measure === undefined);
   const equipment = liftEquipment(exercises);
+  const swapSuggestions = (exerciseId: string) => {
+    const original = liftExercises.find((candidate) => candidate.id === exerciseId);
+    return original ? similarExercises(original, liftExercises, MAX_SWAP_SUGGESTIONS) : [];
+  };
   const barbellSetup = barbellSetupFor(plateSettings, unitPref, programBar);
   const addPicked = async (exercise: Exercise) => {
     if (exercise.modality === 'cardio') {
@@ -441,6 +447,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         {swappingKey === cardKeys[exerciseIndex] && canSwapExercise(draft, exerciseIndex) && (
           <ExercisePicker
             exercises={liftExercises}
+            suggestions={swapSuggestions(exercise.exerciseId)}
             placeholder="Swap for…"
             onPick={(replacement) => {
               if (!isLiftExercise(replacement)) return;

@@ -8,7 +8,7 @@ export interface ExerciseSearchResult<T> {
   hiddenCount: number;
 }
 
-function searchWords(text: string): string[] {
+export function searchWords(text: string): string[] {
   return text
     .normalize('NFKD')
     .replace(/\p{M}/gu, '')

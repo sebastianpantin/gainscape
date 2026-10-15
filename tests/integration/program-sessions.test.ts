@@ -59,7 +59,15 @@ const RIR_2: LiftEffort = { type: 'rir', value: 2 };
 let exerciseIds: Record<string, string>;
 
 beforeAll(async () => {
-  const keys = ['back_squat', 'barbell_bench_press', 'barbell_row', 'overhead_press', 'deadlift', 'running'];
+  const keys = [
+    'back_squat',
+    'front_squat',
+    'barbell_bench_press',
+    'barbell_row',
+    'overhead_press',
+    'deadlift',
+    'running',
+  ];
   exerciseIds = Object.fromEntries(await Promise.all(keys.map(async (key) => [key, await builtInExerciseId(key)])));
 });
 
@@ -862,7 +870,7 @@ describe('complete-session following a custom program snapshot', () => {
     expect(response.body.programLinked).toBe(true);
   }
 
-  async function workingWeightOf(user: TestUser, enrollmentId: string, liftKey: string): Promise<number | undefined> {
+  async function programStateOf(user: TestUser, enrollmentId: string) {
     const facts = await linkedFacts(user, enrollmentId);
     const { data, error } = await user.client
       .from('program_templates')
@@ -872,12 +880,15 @@ describe('complete-session following a custom program snapshot', () => {
       .single();
     expect(error).toBeNull();
     const rows = facts as unknown as EnrollmentFactsRows;
-    const state = programStateAt(
+    return programStateAt(
       data?.definition as ProgramDefinition,
       enrollmentFromRow(rows.enrollment),
       programFactsFromRows(rows),
     );
-    return state.refs[liftKey]?.workingWeight;
+  }
+
+  async function workingWeightOf(user: TestUser, enrollmentId: string, liftKey: string): Promise<number | undefined> {
+    return (await programStateOf(user, enrollmentId)).refs[liftKey]?.workingWeight;
   }
 
   it('moves the working weight up by the increment after a met 5x5 and holds it after a miss', async () => {
@@ -889,6 +900,23 @@ describe('complete-session following a custom program snapshot', () => {
     expect(await workingWeightOf(user, enrollmentId, liftKey)).toBe(102.5);
 
     await completeLinked(user, enrollmentId, 1, fiveByFive(102.5, [5, 5, 5, 4, 3]));
+    expect(await workingWeightOf(user, enrollmentId, liftKey)).toBe(102.5);
+  });
+
+  it('keeps the working weight of a lift swapped for another exercise, and moves it up after the next met 5x5', async () => {
+    const user = await createTestUser();
+    const { enrollmentId, liftKey } = await followFiveByFive(user);
+    const swapped = fiveByFive(START_KG, [5, 5, 3, 2, 1]).map((set) => ({
+      ...set,
+      exerciseId: exerciseIds.front_squat,
+    }));
+
+    await completeLinked(user, enrollmentId, 0, swapped);
+    const afterSwap = await programStateOf(user, enrollmentId);
+    expect(afterSwap.refs[liftKey]?.workingWeight).toBe(START_KG);
+    expect(Object.values(afterSwap.consecutiveMisses)).toEqual([0]);
+
+    await completeLinked(user, enrollmentId, 1, fiveByFive(START_KG));
     expect(await workingWeightOf(user, enrollmentId, liftKey)).toBe(102.5);
   });
 

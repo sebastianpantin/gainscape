@@ -831,6 +831,11 @@
   padding-left: 38px;
 }
 
+.picker-suggestions-heading {
+  margin: var(--space-2) 0 0;
+  font-weight: 600;
+}
+
 .picker-results {
   list-style: none;
   margin: var(--space-2) 0 0;
