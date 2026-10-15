@@ -9,6 +9,8 @@ const INTEGRATION_FILES_SHARING_GLOBAL_STATE = [
   'quest-retirement',
   'rate-limits',
 ].map((name) => `tests/integration/${name}.test.ts`);
+const INTEGRATION_BENCHMARKS = ['replay-scale'].map((name) => `tests/integration/${name}.test.ts`);
+const INTEGRATION_SERIAL_FILES = [...INTEGRATION_FILES_SHARING_GLOBAL_STATE, ...INTEGRATION_BENCHMARKS];
 const INTEGRATION_WORKERS = 4;
 
 export default defineConfig({
@@ -30,7 +32,7 @@ export default defineConfig({
         test: {
           name: 'integration',
           include: ['tests/integration/**/*.test.ts'],
-          exclude: INTEGRATION_FILES_SHARING_GLOBAL_STATE,
+          exclude: INTEGRATION_SERIAL_FILES,
           maxWorkers: INTEGRATION_WORKERS,
           sequence: { groupOrder: 1 },
         },
@@ -39,7 +41,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'integration-serial',
-          include: INTEGRATION_FILES_SHARING_GLOBAL_STATE,
+          include: INTEGRATION_SERIAL_FILES,
           fileParallelism: false,
           sequence: { groupOrder: 2 },
         },
