@@ -14,7 +14,7 @@ interface WorkoutPreviewsOptions {
   bodyweightKg: number | null;
 }
 
-export interface SetChange {
+interface SetChange {
   previous: WorkoutDraft;
   next: WorkoutDraft;
   setId: string;

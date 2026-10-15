@@ -12,7 +12,7 @@ import {
 
 const MAX_SWAP_SUGGESTIONS = 6;
 
-export interface SupersetMember {
+interface SupersetMember {
   index: number;
   exercise: LiftDraftExercise;
 }

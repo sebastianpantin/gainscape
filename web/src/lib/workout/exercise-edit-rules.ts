@@ -74,7 +74,7 @@ interface GrowableOwner {
   exercises: GrowableExercise[];
 }
 
-export type OwnSetFields<Owner extends GrowableOwner> = Omit<
+type OwnSetFields<Owner extends GrowableOwner> = Omit<
   Owner['exercises'][number]['sets'][number],
   keyof LiftSet | keyof BoutSet | keyof HoldSet
 >;

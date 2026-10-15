@@ -12,7 +12,7 @@ import { type PreviewRecord } from './record-preview.ts';
 import { type RestTimerControls } from './use-rest-timer.ts';
 import { type SetPreview } from './xp-preview.ts';
 
-export interface LiftSwap {
+interface LiftSwap {
   openKey: string | null;
   lifts: LiftExercise[];
   swapTo: (exerciseIndex: number, replacement: Exercise) => void;
