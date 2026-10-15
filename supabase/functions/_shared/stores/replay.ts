@@ -232,17 +232,27 @@ async function replaySessions(
   };
 }
 
-async function rebuildAndReplay(tx: Transaction, userId: string, scope: ReplayScope): Promise<ReplayOutcome> {
+async function rebuildAndReplay(
+  tx: Transaction,
+  userId: string,
+  scope: ReplayScope,
+  cfg: BalanceConfig,
+): Promise<ReplayOutcome> {
   await clearStrengthCache(tx, userId);
   await clearRecordCaches(tx, userId);
-  const outcome = await replaySessions(tx, userId, scope, null, DEFAULT_BALANCE);
-  await markSessionsDerivedAt(tx, userId, DEFAULT_BALANCE.version);
+  const outcome = await replaySessions(tx, userId, scope, null, cfg);
+  await markSessionsDerivedAt(tx, userId, cfg.version);
   return outcome;
 }
 
-async function rebuildAndReplayOrRefuse(tx: Transaction, userId: string, scope: ReplayScope): Promise<ReplayOutcome> {
+async function rebuildAndReplayOrRefuse(
+  tx: Transaction,
+  userId: string,
+  scope: ReplayScope,
+  cfg: BalanceConfig,
+): Promise<ReplayOutcome> {
   try {
-    return await rebuildAndReplay(tx, userId, scope);
+    return await rebuildAndReplay(tx, userId, scope, cfg);
   } catch (error) {
     if (error instanceof HttpError) throw error;
     logUnexpectedError(error);
@@ -257,7 +267,7 @@ async function replayFrom(
   cfg: BalanceConfig,
 ): Promise<ReplayOutcome> {
   if (scope.from !== null && (await hasStaleDerivedSessions(tx, userId, cfg.version))) {
-    return await rebuildAndReplayOrRefuse(tx, userId, scope);
+    return await rebuildAndReplayOrRefuse(tx, userId, scope, cfg);
   }
   return await replaySessions(tx, userId, scope, scope.from, cfg);
 }
@@ -314,10 +324,11 @@ export async function deleteSessionAndRederive(
 }
 
 export async function rebuildDerivedState(tx: Transaction, userId: string) {
-  const { sessionsReplayed, setsRewritten } = await rebuildAndReplay(tx, userId, {
-    from: null,
-    anchorIsNew: false,
-    ...NOTHING_PREVIOUS,
-  });
+  const { sessionsReplayed, setsRewritten } = await rebuildAndReplay(
+    tx,
+    userId,
+    { from: null, anchorIsNew: false, ...NOTHING_PREVIOUS },
+    DEFAULT_BALANCE,
+  );
   return { sessionsReplayed, setsRewritten };
 }
