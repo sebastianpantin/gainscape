@@ -14,7 +14,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 - `session-edit.ts`: the pure edit model. Every new edit rule goes here as a pure function.
 - `session-editor.ts`: `createSessionEditor(ports)`, the save and delete flow with every I/O injected. Every save or delete outcome goes here.
 - `HistorySetRow.tsx`: editable set, bout and hold rows reusing the workout field components.
-- Fetches and mutations live in `../../lib/history/history.ts`, row mapping in `../../lib/history/history-rules.ts`, set-editing rules shared with the live draft in `../../lib/workout/exercise-edit-rules.ts`.
+- Fetches and mutations live in `../../lib/history/history.ts`, row mapping in `../../lib/history/history-rules.ts`, set and exercise editing shared with the live draft in `../../lib/workout/exercise-edit-rules.ts`.
 
 ## Rules and gotchas
 
@@ -28,6 +28,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 - `set_id_conflict`: give the clashing sets new ids and resend, at most twice. `bodyweight_load_not_zero`: reset bodyweight loads from the latest exercises. Nothing changes once the abort signal fires.
 - `summariesToForget` includes any remembered summary when a save was retried, because a retry after a lost reply gets the no-op answer with empty `replayedSessionIds` and `revokedDrops`. Deleting or syncing must call `forgetLastSummary` so the reveal never shows a removed session.
 - In edit mode a lift's `Progress` link hides while there are unsaved changes, so leaving cannot drop edits.
+- The edit model reuses the draft's shapes from `exercise-edit-rules.ts`: sets are `LiftSet`, `BoutSet` and `HoldSet`, lifts and holds are `LiftExerciseOf`/`HoldExerciseOf`, and adding a set or exercise and swapping loads go through `addSetTo`, `addExerciseTo` and `swapLoadedExercise`. Only the deliberate differences stay local: draft sets add `done` and program fields and draft exercises a `clientId`, because a draft is unsaved local state; an edit holds stored rows by their server ids under a `revision`; a cardio edit keeps only `paceUnit` and `tracksDistance`, because stored rows carry no activity. A draft swap always resets loads (no set is done yet), an edit swap keeps them for the same load type.
 - Limits match the live draft: `canAddSetTo` caps sets and 4 hours of bouts; the picker then stops offering cardio.
 - Swaps stay within one kind; a hold only swaps for a hold of the same measure. Swapping bouts onto an activity without distance tracking clears their distances. A row with `durationS` is a bout; a row with a weight and no reps or counted work is a hold.
 - Warm-up rows are muted (`warmup` class) in both the read-only list and the edit rows, and always keep a non-colour cue: the ` · warm-up` text in the read-only list and the pressed `Warm-up set N` toggle when editing.

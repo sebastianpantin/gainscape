@@ -11,7 +11,6 @@ import {
   failureAction,
   failureText,
   hasChanges,
-  type EditBout,
   type KnownExercise,
   type LiftEditExercise,
   rebaseEdit,
@@ -38,7 +37,13 @@ import {
   transientReason,
 } from '../../web/src/lib/history/history-rules.ts';
 import { boutModeChanges } from '../../web/src/lib/workout/cardio-rules.ts';
-import { canAddSet, updateBout, updateHoldSet, updateSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
+import {
+  type BoutSet,
+  canAddSet,
+  updateBout,
+  updateHoldSet,
+  updateSet,
+} from '../../web/src/lib/workout/exercise-edit-rules.ts';
 import type { CatalogItem } from '../../web/src/lib/collection/item-rules.ts';
 
 const benchId = 'aaaaaaaa-0000-4000-8000-000000000001';
@@ -669,7 +674,7 @@ describe('cardio bouts in an edit', () => {
       }),
     ];
     const stored = editFromSession(session, sprintRows, known);
-    const steady = updateBout(stored, 0, 'bout-s', boutModeChanges(stored.exercises[0].sets[0] as EditBout, 'steady'));
+    const steady = updateBout(stored, 0, 'bout-s', boutModeChanges(stored.exercises[0].sets[0] as BoutSet, 'steady'));
     expect(editPayload(steady).sets[0]).toMatchObject({ kind: 'cardio', durationS: 60, interval: null });
   });
 
@@ -886,5 +891,103 @@ describe('hold sets in an edit', () => {
     expect(sameKindOfExercise(carry, { modality: 'hold', measure: 'time' })).toBe(false);
     expect(sameKindOfExercise(carry, { modality: 'lift' })).toBe(false);
     expect(sameKindOfExercise(lift, { modality: 'lift' })).toBe(true);
+  });
+});
+
+describe('the exact shape of what an edit adds, swaps and removes', () => {
+  const pinned: SessionEdit = {
+    sessionId: session.id,
+    revision: 3,
+    notes: '',
+    exercises: [
+      {
+        exerciseId: benchId,
+        name: 'Bench',
+        modality: 'lift',
+        loadType: 'external',
+        sets: [{ id: 'lift-a', weightKg: 62.5, reps: 6, isWarmup: true, effort: { type: 'rir', value: 2 } }],
+      },
+      {
+        exerciseId: 'plank',
+        name: 'Plank',
+        modality: 'hold',
+        measure: 'time',
+        loadType: 'external',
+        sets: [
+          {
+            id: 'hold-a',
+            kind: 'hold',
+            weightKg: 10,
+            durationS: 45,
+            distanceM: null,
+            effort: { type: 'level', level: 'hard' },
+          },
+        ],
+      },
+    ],
+  };
+
+  it('adds a working lift set copying the last set, keys in the order loaded rows use', () => {
+    const added = addEditSet(pinned, 0).exercises[0].sets.at(-1);
+    expect(added).toStrictEqual({ id: expect.any(String), weightKg: 62.5, reps: 6, isWarmup: false, effort: null });
+    expect(Object.keys(added ?? {})).toEqual(['id', 'weightKg', 'reps', 'isWarmup', 'effort']);
+  });
+
+  it('adds a hold set copying the last hold without its effort', () => {
+    expect(addEditSet(pinned, 1).exercises[1].sets.at(-1)).toStrictEqual({
+      id: expect.any(String),
+      kind: 'hold',
+      weightKg: 10,
+      durationS: 45,
+      distanceM: null,
+      effort: null,
+    });
+  });
+
+  it('adds a lift or hold exercise with exactly one starting set', () => {
+    expect(
+      addEditExercise(pinned, { id: 'squat', name: 'Squat', loadType: 'external' }).exercises.at(-1),
+    ).toStrictEqual({
+      exerciseId: 'squat',
+      name: 'Squat',
+      modality: 'lift',
+      loadType: 'external',
+      sets: [{ id: expect.any(String), weightKg: 20, reps: 8, isWarmup: false, effort: null }],
+    });
+    const carry = { id: 'carry', name: 'Carry', loadType: 'external' as const, measure: 'distance' as const };
+    expect(addEditExercise(pinned, carry).exercises.at(-1)).toStrictEqual({
+      exerciseId: 'carry',
+      name: 'Carry',
+      modality: 'hold',
+      measure: 'distance',
+      loadType: 'external',
+      sets: [{ id: expect.any(String), kind: 'hold', weightKg: 20, durationS: null, distanceM: 20, effort: null }],
+    });
+  });
+
+  it('swaps a lift keeping its weights for the same load type and resetting them for another', () => {
+    const same = swapEditExercise(pinned, 0, { id: 'incline', name: 'Incline', loadType: 'external' });
+    expect(same.exercises[0]).toStrictEqual({ ...pinned.exercises[0], exerciseId: 'incline', name: 'Incline' });
+    const other = swapEditExercise(pinned, 0, { id: 'dip', name: 'Dip', loadType: 'bodyweight' });
+    expect(other.exercises[0]).toStrictEqual({
+      ...pinned.exercises[0],
+      exerciseId: 'dip',
+      name: 'Dip',
+      loadType: 'bodyweight',
+      sets: [{ ...pinned.exercises[0].sets[0], weightKg: 0 }],
+    });
+    const plank = { id: 'plank', name: 'Plank', loadType: 'external' as const, measure: 'time' as const };
+    expect(swapEditExercise(pinned, 0, plank)).toStrictEqual(pinned);
+  });
+
+  it('swaps a hold within its measure, keeping weights for the same load type and resetting them for another', () => {
+    const same = swapEditExercise(pinned, 1, { id: 'side', name: 'Side plank', loadType: 'external', measure: 'time' });
+    expect(same.exercises[1]).toStrictEqual({ ...pinned.exercises[1], exerciseId: 'side', name: 'Side plank' });
+    const other = swapEditExercise(pinned, 1, { id: 'hang', name: 'Hang', loadType: 'bodyweight', measure: 'time' });
+    expect(other.exercises[1].sets).toStrictEqual([{ ...pinned.exercises[1].sets[0], weightKg: 0 }]);
+  });
+
+  it('removes a set and drops the exercise it emptied', () => {
+    expect(removeEditSet(pinned, 0, 'lift-a').exercises).toStrictEqual([pinned.exercises[1]]);
   });
 });

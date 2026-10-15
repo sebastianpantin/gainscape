@@ -13,7 +13,7 @@
   - `draft-format.ts`: the `WorkoutDraft` types, the stored record, `parseStoredDraft` and the format versions, `withValidSupersets`.
   - `draft-edits.ts`: every mutation and count on an open draft (add, remove, swap, toggle, quick fill, finish checks).
   - `draft-starts.ts`: new drafts from nothing, a program day, a prescription or a challenge, plus the `PlannedExercise` and `CatalogEntry` inputs.
-  - Set rules shared with history edit (`updateSet`, new set values, the set limit, `withLoadType`, ...) live in `../lib/workout/exercise-edit-rules.ts`.
+  - The base set and exercise types and the edits shared with history edit (`addSetTo`, `addExerciseTo`, `swapLoadedExercise`, `updateSet`, the set limit, `withLoadType`, ...) live in `../lib/workout/exercise-edit-rules.ts`. `../features/history/AGENTS.md` lists which shapes differ on purpose.
 - Storage: `draft-store.ts` defines the `DraftStore` contract with an IndexedDB store and a `localStorage` store. `draft-boot.ts` opens and migrates them.
 - Per-tab state machine: `draft-session.ts`, wrapped by the thin hook `use-workout-draft.ts` (`useWorkoutDraft`).
 - Finish pipeline: `session-payload.ts` builds the request, `finish-lock.ts` (`attemptFinish`, `sendOutcomeFrom`) sends it, `finish-retries.ts` (`startFinishRetries`) retries it, and `sync-workout.ts` does the real I/O.

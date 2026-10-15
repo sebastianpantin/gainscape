@@ -1,12 +1,11 @@
 import { isRetestRef } from '@domain/index.ts';
 import type { CardioActivity, HoldMeasure, LoadType } from '../lib/exercises/catalog-rules.ts';
 import {
-  canAddSetTo,
-  defaultWeightKg,
-  nextBoutValues,
-  nextHoldValues,
+  addExerciseTo,
+  addSetTo,
   nextSetValues,
   roomForSets,
+  swapLoadedExercise,
   updateExerciseAt,
   updateSet,
   withLoadType,
@@ -34,7 +33,6 @@ export function withSessionRpe(draft: WorkoutDraft, sessionRpe: number | null): 
 }
 
 export function addExercise(draft: WorkoutDraft, exerciseId: string, name: string, loadType: LoadType): WorkoutDraft {
-  if (!canAddSetTo(draft, 'lift')) return draft;
   const added: LiftDraftExercise = {
     clientId: crypto.randomUUID(),
     exerciseId,
@@ -44,7 +42,7 @@ export function addExercise(draft: WorkoutDraft, exerciseId: string, name: strin
     target: null,
     sets: [],
   };
-  return { ...draft, exercises: [...draft.exercises, added] };
+  return addExerciseTo(draft, added);
 }
 
 export function addCardioExercise(
@@ -53,7 +51,6 @@ export function addCardioExercise(
   name: string,
   activity: CardioActivity,
 ): WorkoutDraft {
-  if (!canAddSetTo(draft, 'cardio')) return draft;
   const added: CardioDraftExercise = {
     clientId: crypto.randomUUID(),
     exerciseId,
@@ -62,7 +59,7 @@ export function addCardioExercise(
     activity,
     sets: [],
   };
-  return { ...draft, exercises: [...draft.exercises, added] };
+  return addExerciseTo(draft, added);
 }
 
 export function addHoldExercise(
@@ -72,7 +69,6 @@ export function addHoldExercise(
   loadType: LoadType,
   measure: HoldMeasure,
 ): WorkoutDraft {
-  if (!canAddSetTo(draft, 'hold')) return draft;
   const added: HoldDraftExercise = {
     clientId: crypto.randomUUID(),
     exerciseId,
@@ -82,7 +78,7 @@ export function addHoldExercise(
     loadType,
     sets: [],
   };
-  return { ...draft, exercises: [...draft.exercises, added] };
+  return addExerciseTo(draft, added);
 }
 
 export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
@@ -90,36 +86,7 @@ export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): Work
 }
 
 export function addSet(draft: WorkoutDraft, exerciseIndex: number, firstSet?: LastLoggedSet): WorkoutDraft {
-  const target = draft.exercises[exerciseIndex];
-  if (target === undefined || !canAddSetTo(draft, target.modality)) return draft;
-  return updateExerciseAt(draft, exerciseIndex, (exercise) => {
-    if (exercise.modality === 'cardio') {
-      const newBout: CardioDraftSet = {
-        id: crypto.randomUUID(),
-        kind: 'cardio',
-        ...nextBoutValues(exercise.sets.at(-1)),
-        done: true,
-      };
-      return { ...exercise, sets: [...exercise.sets, newBout] };
-    }
-    if (exercise.modality === 'hold') {
-      const newHold: HoldDraftSet = {
-        id: crypto.randomUUID(),
-        kind: 'hold',
-        ...nextHoldValues(exercise.sets.at(-1), exercise.loadType, exercise.measure),
-        done: true,
-      };
-      return { ...exercise, sets: [...exercise.sets, newHold] };
-    }
-    const newSet: DraftSet = {
-      id: crypto.randomUUID(),
-      ...nextSetValues(exercise.sets.at(-1) ?? firstSet, exercise.loadType),
-      effort: null,
-      done: true,
-      isWarmup: false,
-    };
-    return { ...exercise, sets: [...exercise.sets, newSet] };
-  });
+  return addSetTo(draft, exerciseIndex, { done: true }, firstSet);
 }
 
 export function addWarmupSets(
@@ -258,15 +225,7 @@ export function swapExercise(
 ): WorkoutDraft | null {
   if (!canSwapExercise(draft, exerciseIndex)) return null;
   const swapped = updateExerciseAt(draft, exerciseIndex, (exercise) =>
-    exercise.modality !== 'lift'
-      ? exercise
-      : {
-          ...exercise,
-          exerciseId: replacement.id,
-          name: replacement.name,
-          loadType: replacement.loadType,
-          sets: exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) })),
-        },
+    exercise.modality === 'lift' ? swapLoadedExercise(exercise, replacement, { keepLoads: false }) : exercise,
   );
   return { ...swapped, exercises: withValidSupersets(swapped.exercises) };
 }

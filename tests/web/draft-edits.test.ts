@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { type LiftDraftExercise, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
+import {
+  type HoldDraftExercise,
+  type LiftDraftExercise,
+  type WorkoutDraft,
+} from '../../web/src/offline/draft-format.ts';
 import {
   addCardioExercise,
   addExercise,
@@ -288,5 +292,122 @@ describe('set limit', () => {
     expect(mostQuickFillSets(full, 1)).toBe(1);
     expect(mostQuickFillSets(workout({ exercises: [freshLift()] }), 0)).toBe(20);
     expect(mostQuickFillSets(workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION), freshLift()] }), 1)).toBe(0);
+  });
+});
+
+describe('the exact shape of what a draft adds, swaps and removes', () => {
+  const plank: HoldDraftExercise = {
+    clientId: 'card-plank',
+    exerciseId: 'plank',
+    name: 'Plank',
+    modality: 'hold',
+    measure: 'time',
+    loadType: 'external',
+    sets: [
+      {
+        id: 'hold-a',
+        kind: 'hold',
+        weightKg: 10,
+        durationS: 45,
+        distanceM: null,
+        effort: { type: 'level', level: 'hard' },
+        done: false,
+      },
+    ],
+  };
+
+  it('adds a done working lift set copying the last set, with no prescription', () => {
+    expect(addSet(workout(), 1).exercises[1].sets.at(-1)).toStrictEqual({
+      id: expect.any(String),
+      weightKg: 55,
+      reps: 9,
+      effort: null,
+      done: true,
+      isWarmup: false,
+    });
+  });
+
+  it('seeds a first lift set from the last session only when the exercise has no set yet', () => {
+    const empty = addExercise(workout({ exercises: [] }), 'squat', 'Squat', 'external');
+    expect(addSet(empty, 0, { weightKg: 100, reps: 3 }).exercises[0].sets).toStrictEqual([
+      { id: expect.any(String), weightKg: 100, reps: 3, effort: null, done: true, isWarmup: false },
+    ]);
+    expect(addSet(empty, 0).exercises[0].sets[0]).toMatchObject({ weightKg: 20, reps: 8 });
+    expect(addSet(workout(), 0, { weightKg: 100, reps: 3 }).exercises[0].sets.at(-1)).toMatchObject({
+      weightKg: 60,
+      reps: 8,
+    });
+  });
+
+  it('adds a done bout copying the last bout, and a done hold copying the last hold without its effort', () => {
+    const draft = workout({ exercises: [cardioExercise(), plank] });
+    expect(addSet(draft, 0).exercises[0].sets.at(-1)).toStrictEqual({
+      id: expect.any(String),
+      kind: 'cardio',
+      durationS: 600,
+      distanceM: null,
+      interval: null,
+      effort: null,
+      done: true,
+    });
+    expect(addSet(draft, 1).exercises[1].sets.at(-1)).toStrictEqual({
+      id: expect.any(String),
+      kind: 'hold',
+      weightKg: 10,
+      durationS: 45,
+      distanceM: null,
+      effort: null,
+      done: true,
+    });
+  });
+
+  it('adds each kind of exercise empty, under a fresh client id', () => {
+    const empty = workout({ exercises: [] });
+    expect(addExercise(empty, 'squat', 'Squat', 'external').exercises).toStrictEqual([
+      {
+        clientId: expect.any(String),
+        exerciseId: 'squat',
+        name: 'Squat',
+        modality: 'lift',
+        loadType: 'external',
+        target: null,
+        sets: [],
+      },
+    ]);
+    const { activity } = cardioExercise();
+    expect(addCardioExercise(empty, 'run', 'Running', activity).exercises).toStrictEqual([
+      { clientId: expect.any(String), exerciseId: 'run', name: 'Running', modality: 'cardio', activity, sets: [] },
+    ]);
+    expect(addHoldExercise(empty, 'plank', 'Plank', 'bodyweight', 'time').exercises).toStrictEqual([
+      {
+        clientId: expect.any(String),
+        exerciseId: 'plank',
+        name: 'Plank',
+        modality: 'hold',
+        measure: 'time',
+        loadType: 'bodyweight',
+        sets: [],
+      },
+    ]);
+  });
+
+  it('swaps an untouched lift to the start weight of its replacement, even for the same load type', () => {
+    const untouched = liftsOf(workout())[1];
+    const row = { ...untouched, sets: untouched.sets.map((set) => ({ ...set, done: false })) };
+    const draft = workout({ exercises: [workout().exercises[0], row] });
+    expect(swapExercise(draft, 1, { id: 'press', name: 'Press', loadType: 'external' })?.exercises[1]).toStrictEqual({
+      ...row,
+      exerciseId: 'press',
+      name: 'Press',
+      loadType: 'external',
+      sets: row.sets.map((set) => ({ ...set, weightKg: 20 })),
+    });
+    const toBodyweight = liftsOf(swapExercise(draft, 1, { id: 'dip', name: 'Dip', loadType: 'bodyweight' }))[1];
+    expect(toBodyweight.sets.map((set) => set.weightKg)).toEqual([0, 0, 0]);
+  });
+
+  it('removes an exercise and leaves the others as they were', () => {
+    const draft = workout();
+    expect(removeExercise(draft, 0).exercises).toStrictEqual([draft.exercises[1]]);
   });
 });

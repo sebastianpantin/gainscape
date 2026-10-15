@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 import {
   addableExercises,
+  addExerciseTo,
+  addSetTo,
   canAddSet,
   canAddSetTo,
   defaultWeightKg,
@@ -11,6 +13,7 @@ import {
   removeSet,
   roomForSets,
   setCount,
+  swapLoadedExercise,
   updateBout,
   updateHoldSet,
   updateSet,
@@ -179,5 +182,67 @@ describe('exercise edit rules', () => {
     expect(defaultWeightKg('bodyweight_plus')).toBe(0);
     expect(nextBoutValues(undefined)).toEqual({ durationS: 1800, distanceM: null, interval: null, effort: null });
     expect(nextBoutValues(bout)).toEqual({ durationS: 600, distanceM: 2000, interval: null, effort: null });
+  });
+});
+
+describe('exercise-level edits shared by a live draft and a history edit', () => {
+  it('add a set of each kind from the previous one, with the fields only the owner keeps', () => {
+    const fromDraft = addSetTo(draftWithHold(), 0, { done: true });
+    expect(fromDraft.exercises[0].sets.at(-1)).toStrictEqual({
+      id: expect.any(String),
+      weightKg: 60,
+      reps: 8,
+      isWarmup: false,
+      effort: null,
+      done: true,
+    });
+    expect(addSetTo(draftWithHold(), 1, { done: true }).exercises[1].sets.at(-1)).toStrictEqual({
+      ...bout,
+      id: expect.any(String),
+      done: true,
+    });
+    expect(addSetTo(editWithHold(), 2, {}).exercises[2].sets.at(-1)).toStrictEqual({ ...hold, id: expect.any(String) });
+  });
+
+  it('seed only a first lift set from the given values', () => {
+    const empty = { exercises: [{ ...edit().exercises[0], sets: [] }] };
+    expect(addSetTo(empty, 0, {}, { weightKg: 90, reps: 3 }).exercises[0].sets).toStrictEqual([
+      { id: expect.any(String), weightKg: 90, reps: 3, isWarmup: false, effort: null },
+    ]);
+    expect(addSetTo(edit(), 0, {}, { weightKg: 90, reps: 3 }).exercises[0].sets.at(-1)).toMatchObject({
+      weightKg: 60,
+      reps: 8,
+    });
+  });
+
+  it('add no set past the limits or to a missing exercise', () => {
+    const fourHours = updateBout(edit(), 1, 'bout-1', { durationS: 14_400 });
+    expect(addSetTo(fourHours, 1, {})).toBe(fourHours);
+    expect(addSetTo(edit(), 5, {})).toEqual(edit());
+  });
+
+  it('append an exercise only while a set of its kind still fits', () => {
+    const squat = { ...edit().exercises[0], exerciseId: 'squat', sets: [] };
+    expect(addExerciseTo(edit(), squat).exercises.at(-1)).toBe(squat);
+    const fourHours = updateBout(edit(), 1, 'bout-1', { durationS: 14_400 });
+    const run = { ...edit().exercises[1], sets: [] };
+    expect(addExerciseTo(fourHours, run)).toBe(fourHours);
+  });
+
+  it('swap a loaded exercise, keeping its weights or starting from the replacement default', () => {
+    const lift = {
+      exerciseId: 'bench',
+      name: 'Bench',
+      loadType: 'external' as const,
+      sets: [{ id: 'a', weightKg: 60 }],
+    };
+    const replacement = { id: 'dip', name: 'Dip', loadType: 'bodyweight_plus' as const };
+    expect(swapLoadedExercise(lift, replacement, { keepLoads: true })).toStrictEqual({
+      exerciseId: 'dip',
+      name: 'Dip',
+      loadType: 'bodyweight_plus',
+      sets: [{ id: 'a', weightKg: 60 }],
+    });
+    expect(swapLoadedExercise(lift, replacement, { keepLoads: false }).sets).toStrictEqual([{ id: 'a', weightKg: 0 }]);
   });
 });

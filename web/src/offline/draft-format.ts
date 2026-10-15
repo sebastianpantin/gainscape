@@ -1,9 +1,15 @@
 import { type ChallengeDefinition, type Position, type PrescriptionSnapshot } from '@domain/index.ts';
 import { CARDIO_EFFORT_LEVELS, type EffortInput, isRecord } from '@domain/types.ts';
-import type { CardioActivity, HoldMeasure, LoadType } from '../lib/exercises/catalog-rules.ts';
+import type { CardioActivity } from '../lib/exercises/catalog-rules.ts';
 import { parsedDraftChallenge } from '../lib/collection/challenge-rules.ts';
 import { EFFORT_LEVELS } from '../lib/workout/effort-labels.ts';
-import { type BoutValues, type HoldValues } from '../lib/workout/exercise-edit-rules.ts';
+import {
+  type BoutSet,
+  type HoldExerciseOf,
+  type HoldSet,
+  type LiftExerciseOf,
+  type LiftSet,
+} from '../lib/workout/exercise-edit-rules.ts';
 import { isSessionRpe } from '../lib/workout/session-timing-rules.ts';
 
 const DRAFT_FORMAT_VERSION = 5;
@@ -17,13 +23,8 @@ export interface PrescriptionDetail {
   optional: boolean;
 }
 
-export interface DraftSet {
-  id: string;
-  weightKg: number;
-  reps: number;
-  effort: EffortInput;
+export interface DraftSet extends LiftSet {
   done: boolean;
-  isWarmup: boolean;
   prescription?: PrescriptionSnapshot | null;
   prescriptionDetail?: PrescriptionDetail;
 }
@@ -34,21 +35,14 @@ export interface DraftTarget {
   repsMax: number;
 }
 
-export interface CardioDraftSet extends BoutValues {
-  id: string;
-  kind: 'cardio';
+export interface CardioDraftSet extends BoutSet {
   done: boolean;
 }
 
-export interface LiftDraftExercise {
+export interface LiftDraftExercise extends LiftExerciseOf<DraftSet> {
   clientId: string;
-  exerciseId: string;
-  name: string;
-  modality: 'lift';
-  loadType: LoadType;
   target: DraftTarget | null;
   supersetId?: string | null;
-  sets: DraftSet[];
 }
 
 export interface CardioDraftExercise {
@@ -60,20 +54,12 @@ export interface CardioDraftExercise {
   sets: CardioDraftSet[];
 }
 
-export interface HoldDraftSet extends HoldValues {
-  id: string;
-  kind: 'hold';
+export interface HoldDraftSet extends HoldSet {
   done: boolean;
 }
 
-export interface HoldDraftExercise {
+export interface HoldDraftExercise extends HoldExerciseOf<HoldDraftSet> {
   clientId: string;
-  exerciseId: string;
-  name: string;
-  modality: 'hold';
-  measure: HoldMeasure;
-  loadType: LoadType;
-  sets: HoldDraftSet[];
 }
 
 export type DraftExercise = LiftDraftExercise | CardioDraftExercise | HoldDraftExercise;
