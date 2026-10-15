@@ -11,6 +11,10 @@ export function passwordMatchesAfterSignIn(error: SignInError | null, signedIn: 
   if (error === null) return signedIn;
   if (error.code === 'invalid_credentials') return false;
   if (error.status === TOO_MANY_REQUESTS) throw new HttpError(429, 'auth_rate_limited');
+  throw authServiceFailure(error);
+}
+
+export function authServiceFailure(error: unknown): HttpError {
   logUnexpectedError(error);
-  throw new HttpError(503, 'auth_unavailable');
+  return new HttpError(503, 'auth_unavailable');
 }

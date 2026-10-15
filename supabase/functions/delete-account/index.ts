@@ -7,7 +7,7 @@ import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import { parseOr422 } from '../_shared/session-payload.ts';
-import { passwordMatchesAfterSignIn } from './password-check.ts';
+import { authServiceFailure, passwordMatchesAfterSignIn } from './password-check.ts';
 
 const deleteAccountSchema = z
   .object({ confirmUsername: z.string().min(1).max(40), password: z.string().min(1).max(200) })
@@ -42,7 +42,7 @@ async function deleteAccount(
   if (account.username !== confirmUsername.trim().toLowerCase()) throw new HttpError(403, 'confirmation_mismatch');
   if (!account.email || !(await passwordMatches(account.email, password))) throw new HttpError(403, 'wrong_password');
   const { error } = await admin().auth.admin.deleteUser(userId);
-  if (error) throw error;
+  if (error) throw authServiceFailure(error);
   return { deleted: true };
 }
 
