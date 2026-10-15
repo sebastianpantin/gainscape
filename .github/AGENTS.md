@@ -5,7 +5,7 @@
 
 ## Purpose
 
-GitHub configuration: two workflows (see `workflows/AGENTS.md`). `workflows/ci.yml` runs on every pull request with two sequential jobs, `checks` (no stack) and `backend` (Supabase in Docker: integration and pgTAP). `workflows/e2e.yml` runs the browser suites weekly on `main` (Mondays) and by hand (`gh workflow run e2e.yml --ref <branch>`), for example before a release.
+GitHub configuration: two workflows (see `workflows/AGENTS.md`). `workflows/ci.yml` runs on every pull request with two sequential jobs, `checks` (no stack) and `backend` (Supabase in Docker: integration and pgTAP). `workflows/e2e.yml` runs the browser suites nightly on `main` and by hand (`gh workflow run e2e.yml --ref <branch>`), for example before a release.
 
 ## Rules and gotchas
 

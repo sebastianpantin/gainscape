@@ -68,7 +68,7 @@ Structure:
 ## Testing
 
 - Prerequisite: `make start`. `make e2e` runs `make functions`, then `npx playwright test --project=chromium $(E2E_ARGS)` with `CHROMIUM_PATH` set to the system `chromium` if found (CI passes it empty to use Playwright's browser). The web server starts itself.
-- `make e2e-webkit`: Playwright's WebKit needs Ubuntu libraries. On other hosts run it in the `mcr.microsoft.com/playwright` image of the installed Playwright version with `--network host` and the Docker socket and CLI mounted (the stack guard calls `supabase status`), or leave it to the weekly e2e workflow.
+- `make e2e-webkit`: Playwright's WebKit needs Ubuntu libraries. On other hosts run it in the `mcr.microsoft.com/playwright` image of the installed Playwright version with `--network host` and the Docker socket and CLI mounted (the stack guard calls `supabase status`), or leave it to the nightly e2e workflow.
 - One spec: `npx playwright test e2e/history.spec.ts`; one test: add `-g "part of the title"`; debug with `--headed` or `--trace on` (traces on failure are in `test-results/`).
 - Red-green: add a failing `test(...)` in the spec for the screen, run only it, implement in `web/src`, rerun, then `make e2e`. Put logic in `web/src/lib/**/*-rules.ts` and cover it in `../tests/web/` first; keep e2e for wiring and flows.
 - Service worker, shell, manifest or update flow changes are covered in `pwa/` (`make e2e-pwa`), not here.
