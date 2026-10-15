@@ -101,7 +101,11 @@ export function deleteProgram(userId: string, programId: string): Promise<void> 
   );
 }
 
-const lastLoggedSetRowSchema = z.object({ exercise_id: z.string(), weight_kg: numericColumn, reps: z.number() });
+const lastLoggedSetRowSchema = z.object({
+  exercise_id: z.string(),
+  weight_kg: numericColumn,
+  reps: z.number().nullable(),
+});
 
 export async function fetchLastLoggedSets(exerciseIds: string[]): Promise<Map<string, LastLoggedSet>> {
   const { data, error } = await supabase.rpc('last_logged_sets', { exercise_ids: exerciseIds });
@@ -109,7 +113,7 @@ export async function fetchLastLoggedSets(exerciseIds: string[]): Promise<Map<st
   return new Map(
     parsedRows(lastLoggedSetRowSchema, data).map((row) => [
       row.exercise_id,
-      { weightKg: Number(row.weight_kg), reps: row.reps },
+      { weightKg: Number(row.weight_kg), reps: row.reps ?? 0 },
     ]),
   );
 }

@@ -53,7 +53,7 @@ export const progressSetRowSchema = z.object({
   session_id: z.string(),
   weight_kg: numericColumn,
   effective_load_kg: numericColumn,
-  reps: z.number(),
+  reps: z.number().nullable(),
   rir: numericColumn.nullable(),
   rir_source: z.enum(RIR_SOURCES),
   prescription_ref: z.string().nullable(),
@@ -107,7 +107,7 @@ export interface MaxRepsRecord {
 function setE1rmKg(row: ProgressSetRow, loadType: LoadType): number | null {
   const effectiveLoadKg = Number(row.effective_load_kg);
   const trustedRir = row.rir_source === 'logged' ? Math.min(Number(row.rir), DEFAULT_BALANCE.maxRirForStrength) : 0;
-  const repsToFailure = row.reps + trustedRir;
+  const repsToFailure = (row.reps ?? 0) + trustedRir;
   if (effectiveLoadKg <= 0 || repsToFailure > DEFAULT_BALANCE.epleyMaxRepsToFailure) return null;
   const bodyweightKg = loadType === 'bodyweight_plus' ? effectiveLoadKg - Number(row.weight_kg) : 0;
   return roundTo(2, epley(effectiveLoadKg, repsToFailure) - bodyweightKg);
@@ -123,12 +123,13 @@ export function sessionProgress(rows: readonly ProgressSetRow[], loadType: LoadT
   const oldestFirst = [...rows].sort((a, b) => Date.parse(a.sessions.started_at) - Date.parse(b.sessions.started_at));
   for (const row of oldestFirst) {
     const weightKg = Number(row.weight_kg);
+    const reps = row.reps ?? 0;
     const e1rmKg = setE1rmKg(row, loadType);
     const seen = bySession.get(row.session_id);
     const topSetKg = Math.max(seen?.topSetKg ?? weightKg, weightKg);
     const topSetReps = Math.max(
       seen !== undefined && seen.topSetKg === topSetKg ? seen.topSetReps : 0,
-      weightKg === topSetKg ? row.reps : 0,
+      weightKg === topSetKg ? reps : 0,
     );
     bySession.set(row.session_id, {
       sessionId: row.session_id,
@@ -136,7 +137,7 @@ export function sessionProgress(rows: readonly ProgressSetRow[], loadType: LoadT
       e1rmKg: higher(seen?.e1rmKg ?? null, e1rmKg),
       topSetKg,
       topSetReps,
-      mostReps: Math.max(seen?.mostReps ?? row.reps, row.reps),
+      mostReps: Math.max(seen?.mostReps ?? reps, reps),
       programDriven: (seen?.programDriven ?? false) || row.prescription_ref !== null,
     });
   }

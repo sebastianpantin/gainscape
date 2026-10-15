@@ -9,7 +9,7 @@ export const recentLiftRowSchema = z.object({
   exercise_id: z.string(),
   session_rank: z.number(),
   weight_kg: numericColumn,
-  reps: z.number(),
+  reps: z.number().nullable(),
   logged_rir: numericColumn.nullable(),
 });
 
@@ -28,7 +28,7 @@ export function recentSessionsByExercise(rows: readonly RecentLiftRow[]): Map<st
     const sets = (sessions[row.session_rank - 1] ??= []);
     sets.push({
       weightKg: Number(row.weight_kg),
-      reps: row.reps,
+      reps: row.reps ?? 0,
       loggedRir: nullableNumber(row.logged_rir),
     });
     byExercise.set(row.exercise_id, sessions);

@@ -5,7 +5,7 @@ import { exerciseRowSchema } from '../../web/src/lib/exercises/catalog-rules.ts'
 import { queryExerciseNotes } from '../../web/src/lib/exercises/exercise-note-rules.ts';
 import { challengeRowSchema } from '../../web/src/lib/collection/challenge-rules.ts';
 import { inventoryRowSchema, itemRowSchema, recipeRowSchema } from '../../web/src/lib/collection/item-rules.ts';
-import { recentLiftRowSchema } from '../../web/src/lib/history/last-session-rules.ts';
+import { recentLiftRowSchema, recentSessionsByExercise } from '../../web/src/lib/history/last-session-rules.ts';
 import { programTemplateRowSchema } from '../../web/src/lib/programs/program-enroll-rules.ts';
 import { enrollmentFactsRowsSchema, enrollmentRowSchema } from '../../web/src/lib/programs/program-facts-rules.ts';
 import { programRowSchema } from '../../web/src/lib/programs/program-row-rules.ts';
@@ -17,6 +17,7 @@ import {
   maxRepsRowSchema,
   progressSetRowSchema,
   repMaxRowSchema,
+  sessionProgress,
 } from '../../web/src/lib/progress/exercise-progress-rules.ts';
 import { queryRecentSets } from '../../web/src/lib/progress/recovery-rules.ts';
 import { weeklyGoalWeekRowSchema } from '../../web/src/lib/progress/weekly-goal-rules.ts';
@@ -284,6 +285,35 @@ function clientAnswering(data: unknown): SupabaseClient {
   };
   return { from: () => query } as unknown as SupabaseClient;
 }
+
+describe('hold sets, which are lift sets without reps', () => {
+  it('read in the progress, recent lift and session progress paths instead of failing the whole answer', () => {
+    const holdSet = {
+      session_id: ID,
+      weight_kg: '20',
+      effective_load_kg: 20,
+      reps: null,
+      rir: null,
+      rir_source: 'default',
+      prescription_ref: null,
+      sessions: { started_at: '2026-10-01T08:00:00Z' },
+    };
+    expect(progressSetRowSchema.safeParse(holdSet).success).toBe(true);
+    expect(
+      recentLiftRowSchema.safeParse({ exercise_id: ID, session_rank: 1, weight_kg: 20, reps: null, logged_rir: null })
+        .success,
+    ).toBe(true);
+    const [session] = sessionProgress([progressSetRowSchema.parse(holdSet)], 'external');
+    expect(session).toMatchObject({ topSetKg: 20, topSetReps: 0, mostReps: 0 });
+  });
+
+  it('count as zero reps in the last session view', () => {
+    const sessions = recentSessionsByExercise([
+      { exercise_id: ID, session_rank: 1, weight_kg: '20', reps: null, logged_rir: null },
+    ]);
+    expect(sessions.get(ID)).toEqual([[{ weightKg: 20, reps: 0, loggedRir: null }]]);
+  });
+});
 
 describe('query functions with an injected client', () => {
   it('turn a malformed answer into a sentence for the user instead of passing it on', async () => {
