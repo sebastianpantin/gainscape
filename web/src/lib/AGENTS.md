@@ -13,7 +13,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 - `platform/`: the Supabase client, Edge Function calls, auth, `keyedStore`, rate limits, cross-tab channels, online and route-focus hooks, device and celebration effects, and the changelog rules with the last seen release.
 - `query/`: the TanStack Query client, every query definition, freshness and state rules, and `data-changes.ts`.
-- `exercises/`: the exercise catalog and its device cache, custom exercises, exercise notes, search and repeat keys.
+- `exercises/`: the exercise catalog and its device cache, custom exercises, exercise notes, search, swap substitutes and repeat keys.
 - `workout/`: live-workout rules and stores: set editing, cardio, effort labels, supersets, warm-ups, plates, rest timer, training device, session timing and baseline, progression hints, the active workout bar.
 - `programs/`: program persistence, enrollment and every `program-*-rules.ts`.
 - `history/`: past sessions, the history overview and the last session of an exercise.
