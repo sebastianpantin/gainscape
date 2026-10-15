@@ -83,10 +83,10 @@ export function programsQuery(userId: string) {
   return queryOptions({ queryKey: ['programs', userId] as const, queryFn: () => loadProgramsCacheFirst(userId) });
 }
 
-export function showChangedPrograms(queryClient: QueryClient, userId: string): Promise<void> {
+export function showChangedPrograms(queryClient: QueryClient, userId: string): void {
   const saved = cachedPrograms(userId);
   if (saved) queryClient.setQueryData(programsQuery(userId).queryKey, { loaded: saved, fromCache: false });
-  return announceDataChange(queryClient, 'programs-changed');
+  void announceDataChange(queryClient, 'programs-changed');
 }
 
 export function collectionQuery(userId: string) {

@@ -4,6 +4,7 @@ import {
   cachedPreferences,
   cachePreferences,
   DEFAULT_PREFERENCES,
+  pendingLocalPreferences,
   type Preferences,
   PreferencesContext,
 } from '../lib/profile/preferences.ts';
@@ -14,28 +15,24 @@ interface PreferencesProviderProps {
   children: ReactNode;
 }
 
-interface LocalPreferences {
-  loadedWhenApplied: Preferences | undefined;
-  preferences: Preferences;
-}
-
 export function PreferencesProvider({ userId, children }: PreferencesProviderProps) {
   const { data: loaded } = useQuery(preferencesQuery(userId));
   const [saved] = useState<Preferences>(() => cachedPreferences(userId) ?? DEFAULT_PREFERENCES);
-  const [local, setLocal] = useState<LocalPreferences | null>(null);
-  const preferences = local && local.loadedWhenApplied === loaded ? local.preferences : (loaded ?? saved);
+  const [local, setLocal] = useState<Preferences | null>(null);
+  const pending = pendingLocalPreferences(local, loaded);
+  if (pending !== local) setLocal(pending);
+  const preferences = pending ?? loaded ?? saved;
 
   useEffect(() => {
-    if (loaded) cachePreferences(userId, loaded);
-  }, [userId, loaded]);
+    if (loaded && !pending) cachePreferences(userId, loaded);
+  }, [userId, loaded, pending]);
 
   const applyPreferences = useCallback(
     (changes: Partial<Preferences>) => {
       setLocal((current) => {
-        const base = current && current.loadedWhenApplied === loaded ? current.preferences : (loaded ?? saved);
-        const next = { ...base, ...changes };
+        const next = { ...(current ?? loaded ?? saved), ...changes };
         cachePreferences(userId, next);
-        return { loadedWhenApplied: loaded, preferences: next };
+        return next;
       });
     },
     [userId, loaded, saved],

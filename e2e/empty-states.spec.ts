@@ -56,12 +56,12 @@ test('a found item replaces its locked slot', async ({ page }) => {
 });
 
 test('a skill with no exercises that train it says so', async ({ page }) => {
-  await register(page, uniqueUsername('es_skill'));
   await page.route(/\/rest\/v1\/exercises\?/, (route) =>
     route.request().method() === 'GET'
       ? route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
       : route.fallback(),
   );
+  await register(page, uniqueUsername('es_skill'));
 
   await openSkill(page, 'Chest');
 

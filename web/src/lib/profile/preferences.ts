@@ -21,6 +21,18 @@ export function usePreferences(): PreferencesValue {
   return useContext(PreferencesContext);
 }
 
+export function pendingLocalPreferences(
+  local: Preferences | null,
+  loaded: Preferences | undefined,
+): Preferences | null {
+  const caughtUp =
+    local !== null &&
+    loaded !== undefined &&
+    local.unitPref === loaded.unitPref &&
+    local.effortInputMode === loaded.effortInputMode;
+  return caughtUp ? null : local;
+}
+
 const CACHE_KEY_PREFIX = 'gainscape.preferences.';
 
 function isPreferences(value: unknown): value is Preferences {

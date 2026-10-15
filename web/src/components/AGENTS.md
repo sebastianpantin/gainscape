@@ -37,7 +37,7 @@ Small shared UI pieces used across feature screens: icons, the pixel-art sprites
   - It flags text that differs from the saved value (`aria-invalid`, plus a "Saved as" hint announced once).
   - Focus selects the whole value, again on the first mouseup so a tap keeps the selection.
   - Enter moves to the next `NumberTextField` in document order; with `lastInGroup` it stays put.
-- `PreferencesProvider` reads `preferencesQuery` (a `select` over the cached profile). A local change wins until the loaded preferences change, so an older profile answer cannot undo it. Keep storage and network logic in `../lib/profile/preferences.ts` and `../lib/profile/profile.ts`.
+- `PreferencesProvider` reads `preferencesQuery` (a `select` over the cached profile). A local change wins until the loaded preferences match it (`pendingLocalPreferences`), so an older profile answer cannot undo it. Keep storage and network logic in `../lib/profile/preferences.ts` and `../lib/profile/profile.ts`.
 - Components take plain props and fetch no data (except `PreferencesProvider`, through the query cache). Props interfaces sit next to the component and are not exported.
 
 ## Testing

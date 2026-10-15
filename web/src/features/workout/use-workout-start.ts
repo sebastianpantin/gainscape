@@ -5,7 +5,7 @@ import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/programs/program-enrollment.ts';
 import { skipDayEvent } from '../../lib/programs/program-skip-rules.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs/programs.ts';
-import { exerciseListLoadQuery } from '../../lib/query/queries.ts';
+import { fetchLatestExerciseList } from '../../lib/query/queries.ts';
 import {
   type PrescribedDayStart,
   startDraft,
@@ -46,7 +46,7 @@ export function useWorkoutStart({
     setStartingDay(true);
     const exerciseIds = [...new Set(day.exercises.map((planned) => planned.exerciseId))];
     const [catalog, lastSets] = await Promise.all([
-      queryClient.fetchQuery(exerciseListLoadQuery(userId)).then(
+      fetchLatestExerciseList(queryClient, userId).then(
         ({ loaded }) => loaded,
         () => exercises,
       ),

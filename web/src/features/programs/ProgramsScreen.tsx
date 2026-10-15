@@ -59,7 +59,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
     try {
       const copiedId = await copyProgram(userId, template.id, newId);
       pendingCopyIds.current.delete(template.id);
-      void showChangedPrograms(queryClient, userId);
+      showChangedPrograms(queryClient, userId);
       navigate(`/programs/${copiedId}`);
     } catch (error) {
       setActionProblem(messageOf(error, 'Could not copy the template.'));
@@ -94,7 +94,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
     try {
       await deleteProgram(userId, program.id);
       if (cachedEnrollmentInProgram) forgetCachedEnrollment(userId);
-      await showChangedPrograms(queryClient, userId);
+      showChangedPrograms(queryClient, userId);
     } catch (error) {
       setActionProblem(messageOf(error, 'Could not delete the program.'));
     }

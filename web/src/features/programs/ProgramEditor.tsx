@@ -143,7 +143,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
-      await showChangedPrograms(queryClient, userId);
+      showChangedPrograms(queryClient, userId);
       navigate('/programs');
     } catch (error) {
       setProblem({ text: messageOf(error, 'Could not save the program.'), shownFor: doc });
@@ -172,7 +172,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
-      void showChangedPrograms(queryClient, userId);
+      showChangedPrograms(queryClient, userId);
       const { key } = await publishForEnroll(queryClient, userId, doc.id);
       navigate(`/programs/enroll/${key}`, { state: { carried } });
     } catch (error) {

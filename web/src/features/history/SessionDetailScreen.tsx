@@ -20,7 +20,7 @@ import { isUuid, withoutHistorySession } from '../../lib/history/history-rules.t
 import { type CatalogItem } from '../../lib/collection/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/collection/items.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { exerciseListLoadQuery, fetchLatestExerciseList, historyQuery } from '../../lib/query/queries.ts';
+import { fetchLatestExerciseList, historyQuery } from '../../lib/query/queries.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
@@ -98,7 +98,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const loadWithCatalog = useCallback(
     () =>
       loadSession(sessionId, () =>
-        queryClient.fetchQuery(exerciseListLoadQuery(userId)).then(({ loaded: exercises }) => exercises),
+        fetchLatestExerciseList(queryClient, userId).then(({ loaded: exercises }) => exercises),
       ),
     [queryClient, sessionId, userId],
   );
