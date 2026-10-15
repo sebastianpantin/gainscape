@@ -1,12 +1,15 @@
+import { z } from 'zod';
 export const WEEKLY_GOAL_CHOICES = ['off', '1', '2', '3', '4', '5', '6', '7'] as const;
 export type WeeklyGoalChoice = (typeof WEEKLY_GOAL_CHOICES)[number];
 
-export interface WeeklyGoalWeekRow {
-  week_start: string;
-  goal: number | null;
-  sessions: number;
-  is_current: boolean;
-}
+export const weeklyGoalWeekRowSchema = z.object({
+  week_start: z.string(),
+  goal: z.number().nullable(),
+  sessions: z.number(),
+  is_current: z.boolean(),
+});
+
+export type WeeklyGoalWeekRow = z.infer<typeof weeklyGoalWeekRowSchema>;
 
 export interface PendingGoal {
   goal: number | null;

@@ -1,18 +1,18 @@
 import type { ChartSeries } from '../ui/line-chart-rules.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
 import { shownWeight } from '../units.ts';
+import { z } from 'zod';
+import { numericColumn } from '../rows.ts';
 
 export const BODYWEIGHT_ENTRY_COLUMNS = 'logged_on, bodyweight_kg';
 
-export interface BodyweightEntryRow {
-  logged_on: string;
-  bodyweight_kg: number | string;
-}
+export const bodyweightEntryRowSchema = z.object({ logged_on: z.string(), bodyweight_kg: numericColumn });
 
-export interface WorkoutBodyweightRow {
-  local_date: string;
-  bodyweight_kg: number | string;
-}
+export type BodyweightEntryRow = z.infer<typeof bodyweightEntryRowSchema>;
+
+export const workoutBodyweightRowSchema = z.object({ local_date: z.string(), bodyweight_kg: numericColumn });
+
+export type WorkoutBodyweightRow = z.infer<typeof workoutBodyweightRowSchema>;
 
 export interface BodyweightDay {
   day: string;

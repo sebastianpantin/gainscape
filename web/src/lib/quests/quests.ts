@@ -6,6 +6,8 @@ import { invokeAsOwner } from '../platform/function-client.ts';
 import type { InvokeOutcome } from '../platform/function-client-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { supabase } from '../platform/supabase.ts';
+import { z } from 'zod';
+import { parsedRows } from '../rows.ts';
 import {
   QUEST_COLUMNS,
   QUEST_COMPLETION_COLUMNS,
@@ -13,16 +15,20 @@ import {
   questExerciseIds,
   type QuestLog,
   questLogFrom,
-  type QuestRow,
+  questCompletionRowSchema,
+  questProgressRowSchema,
+  questRowSchema,
   type QuestRows,
   toCatalogQuest,
 } from './quest-rules.ts';
+
+const exerciseNameRowSchema = z.object({ id: z.string(), name: z.string() });
 
 async function fetchExerciseNames(exerciseIds: string[]): Promise<Record<string, string>> {
   if (exerciseIds.length === 0) return {};
   const { data, error } = await supabase.from('exercises').select('id,name').in('id', exerciseIds);
   if (error) throw error;
-  return Object.fromEntries(data.map((row) => [row.id, row.name]));
+  return Object.fromEntries(parsedRows(exerciseNameRowSchema, data).map((row) => [row.id, row.name]));
 }
 
 async function fetchQuestRows(userId: string): Promise<QuestRows> {
@@ -34,11 +40,16 @@ async function fetchQuestRows(userId: string): Promise<QuestRows> {
   if (quests.error) throw quests.error;
   if (progress.error) throw progress.error;
   if (completions.error) throw completions.error;
-  const questRows = quests.data as QuestRow[];
+  const questRows = parsedRows(questRowSchema, quests.data);
   const exerciseNames = await fetchExerciseNames(
     questExerciseIds(questRows.flatMap((row) => toCatalogQuest(row) ?? [])),
   );
-  const rows = { quests: questRows, progress: progress.data, completions: completions.data, exerciseNames };
+  const rows = {
+    quests: questRows,
+    progress: parsedRows(questProgressRowSchema, progress.data),
+    completions: parsedRows(questCompletionRowSchema, completions.data),
+    exerciseNames,
+  };
   questsCache.save(deviceStorage(), userId, rows);
   return rows;
 }

@@ -1,28 +1,38 @@
 import type { PlannedExercise, PlannedProgression, ProgressionKind } from '../../offline/draft-format.ts';
 import type { Program, ProgramDoc } from './programs.ts';
+import { z } from 'zod';
+import { numericColumn } from '../rows.ts';
 
-export interface ProgramRow {
-  id: string;
-  key: string | null;
-  name: string;
-  owner_user_id: string | null;
-  copied_from_id: string | null;
-  program_days: {
-    id: string;
-    name: string;
-    position: number;
-    program_day_exercises: {
-      position: number;
-      exercise_id: string;
-      target_sets: number;
-      target_reps_min: number;
-      target_reps_max: number;
-      progression: ProgressionKind;
-      increment_kg: number | string | null;
-      increment_lb: number | string | null;
-    }[];
-  }[];
-}
+const PROGRESSION_KINDS = ['none', 'fixed', 'linear'] as const satisfies readonly ProgressionKind[];
+
+export const programRowSchema = z.object({
+  id: z.string(),
+  key: z.string().nullable(),
+  name: z.string(),
+  owner_user_id: z.string().nullable(),
+  copied_from_id: z.string().nullable(),
+  program_days: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      position: z.number(),
+      program_day_exercises: z.array(
+        z.object({
+          position: z.number(),
+          exercise_id: z.string(),
+          target_sets: z.number(),
+          target_reps_min: z.number(),
+          target_reps_max: z.number(),
+          progression: z.enum(PROGRESSION_KINDS),
+          increment_kg: numericColumn.nullable(),
+          increment_lb: numericColumn.nullable(),
+        }),
+      ),
+    }),
+  ),
+});
+
+export type ProgramRow = z.infer<typeof programRowSchema>;
 
 export const PROGRAM_SELECT =
   'id,key,name,owner_user_id,copied_from_id,program_days(id,name,position,program_day_exercises(position,exercise_id,target_sets,target_reps_min,target_reps_max,progression,increment_kg,increment_lb))';

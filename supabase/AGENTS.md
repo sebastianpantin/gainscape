@@ -19,7 +19,7 @@ The backend: local Supabase stack configuration, append-only SQL migrations, the
 - `config.toml` holds values that are only safe locally: `site_url = "https://localhost:5173"`, loopback redirect URLs, `[auth.rate_limit]` raised to 1000 so test suites never hit limits, and `max_frequency = "1s"`. Never run `supabase config push` with it; `docs/production-auth.md` lists the hosted values.
 - Email confirmations stay on (`[auth.email] enable_confirmations = true`): the pre-hijack password rotation in migration 014 only protects accounts when sign-ups must confirm.
 - Storage and realtime are disabled: the app uses neither, and skipping them speeds up `supabase start`.
-- After any migration change run `make reset`. There are no generated DB types: update the hand-written `*Row` interfaces and `*_COLUMNS` in `web/src/lib/` and the SQL strings in `functions/_shared/stores/` by hand.
+- After any migration change run `make reset`. There are no generated DB types: update the hand-written `*RowSchema`s and `*_COLUMNS` in `web/src/lib/` and the SQL strings in `functions/_shared/stores/` by hand.
 - Tables are exposed through `public` with RLS; server-only objects live in `private`.
 - Invoke the CLI as `npx supabase` (Makefile `SUPABASE` variable); do not assume a global install.
 - Local ports: API 54321, DB 54322, Studio 54323, Mailpit 54324. A second worktree stack uses a gitignored `.stack.env` with a distinct `SUPABASE_PROJECT_ID` and ports.

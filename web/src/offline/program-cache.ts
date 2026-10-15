@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { keyedStore } from '../lib/platform/keyed-store.ts';
-import { type EnrollmentRow, programFactSchema, sessionFactSchema } from '../lib/programs/program-facts-rules.ts';
-import { type ProgramTemplateRow } from '../lib/programs/program-enroll-rules.ts';
+import {
+  type EnrollmentRow,
+  enrollmentRowSchema,
+  programFactSchema,
+  sessionFactSchema,
+} from '../lib/programs/program-facts-rules.ts';
+import { type ProgramTemplateRow, programTemplateRowSchema } from '../lib/programs/program-enroll-rules.ts';
 import { type WorkoutDraft } from './draft-format.ts';
 import { type SendOutcome } from './finish-lock.ts';
 import {
@@ -23,34 +28,11 @@ export interface ProgramCache {
 
 export const EMPTY_PROGRAM_CACHE: ProgramCache = { templates: [], enrollment: null, facts: null };
 
-const numberRecord = z.record(z.string(), z.number());
-
-const enrollmentSchema = z.object({
-  id: z.string(),
-  template_key: z.string(),
-  template_version: z.number(),
-  unit: z.enum(['kg', 'lb']),
-  options: z.record(z.string(), z.union([z.string(), z.number()])),
-  lift_bindings: z.record(z.string(), z.string().nullable()),
-  inputs: z.record(z.string(), numberRecord),
-  rounding: z.object({ increment: z.number(), mode: z.enum(['nearest', 'down']), barWeight: z.number() }),
-  started_at: z.string(),
-  ended_at: z.string().nullable(),
-});
-
 const cachedProgramsSchema = z.object({
   v: z.literal(CACHE_VERSION),
   userId: z.string(),
-  templates: z.array(
-    z.object({
-      key: z.string(),
-      version: z.number(),
-      name: z.string(),
-      definition: z.unknown(),
-      owner_user_id: z.string().nullable().optional(),
-    }),
-  ),
-  enrollment: enrollmentSchema.nullable(),
+  templates: z.array(programTemplateRowSchema),
+  enrollment: enrollmentRowSchema.nullable(),
   facts: z
     .object({
       enrollmentId: z.string(),

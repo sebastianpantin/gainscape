@@ -11,8 +11,18 @@ import {
   refreshProgramCacheWith,
   refreshProgramFactsWith,
 } from '../../offline/program-refresh.ts';
-import { type EnrollProgramPayload, type ProgramTemplateRow } from './program-enroll-rules.ts';
-import { type EnrollmentFactsRows, type EnrollmentRow } from './program-facts-rules.ts';
+import {
+  type EnrollProgramPayload,
+  type ProgramTemplateRow,
+  programTemplateRowSchema,
+} from './program-enroll-rules.ts';
+import {
+  type EnrollmentFactsRows,
+  enrollmentFactsRowsSchema,
+  type EnrollmentRow,
+  enrollmentRowSchema,
+} from './program-facts-rules.ts';
+import { parsedRow, parsedRows } from '../rows.ts';
 import { type SetReferenceEvent } from './program-reference-rules.ts';
 import { type SkipDayEvent } from './program-skip-rules.ts';
 import { fetchExercises } from '../exercises/catalog.ts';
@@ -29,7 +39,7 @@ async function fetchProgramTemplates(): Promise<ProgramTemplateRow[]> {
     .from('program_templates')
     .select('key, version, name, definition, owner_user_id');
   if (error) throw error;
-  return data as ProgramTemplateRow[];
+  return parsedRows(programTemplateRowSchema, data);
 }
 
 async function fetchAndSaveProgramTemplates(userId: string): Promise<ProgramTemplateRow[]> {
@@ -86,13 +96,13 @@ async function fetchActiveEnrollment(): Promise<EnrollmentRow | null> {
     .is('ended_at', null)
     .maybeSingle();
   if (error) throw error;
-  return data as EnrollmentRow | null;
+  return data === null ? null : parsedRow(enrollmentRowSchema, data);
 }
 
 async function fetchEnrollmentFacts(enrollmentId: string): Promise<EnrollmentFactsRows> {
   const { data, error } = await supabase.rpc('enrollment_facts', { enrollment_id: enrollmentId });
   if (error) throw error;
-  return data as EnrollmentFactsRows;
+  return parsedRow(enrollmentFactsRowsSchema, data);
 }
 
 export async function enrollProgram(payload: EnrollProgramPayload): Promise<string> {

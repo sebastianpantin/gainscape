@@ -1,29 +1,28 @@
 import {
   type EffortInputType,
-  type OptionValue,
   type FactSet,
   type Position,
   type PrescriptionSnapshot,
   type ProgramEnrollment,
   type ProgramFact,
   type ReferenceVar,
-  type RoundingSetting,
-  type WeightUnit,
 } from '@domain/index.ts';
 import { z } from 'zod';
 
-export interface EnrollmentRow {
-  id: string;
-  template_key: string;
-  template_version: number;
-  unit: WeightUnit;
-  options: Record<string, OptionValue>;
-  lift_bindings: Record<string, string | null>;
-  inputs: Record<string, Record<string, number>>;
-  rounding: RoundingSetting;
-  started_at: string;
-  ended_at: string | null;
-}
+export const enrollmentRowSchema = z.object({
+  id: z.string(),
+  template_key: z.string(),
+  template_version: z.number(),
+  unit: z.enum(['kg', 'lb']),
+  options: z.record(z.string(), z.union([z.string(), z.number()])),
+  lift_bindings: z.record(z.string(), z.string().nullable()),
+  inputs: z.record(z.string(), z.record(z.string(), z.number())),
+  rounding: z.object({ increment: z.number(), mode: z.enum(['nearest', 'down']), barWeight: z.number() }),
+  started_at: z.string(),
+  ended_at: z.string().nullable(),
+});
+
+export type EnrollmentRow = z.infer<typeof enrollmentRowSchema>;
 
 export interface EnrollmentEventRow {
   id: string;
@@ -174,6 +173,39 @@ export const programFactSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('skip_day'), ...factStamp, position: positionSchema }),
   z.object({ kind: z.literal('jump_to'), ...factStamp, position: positionSchema }),
 ]);
+
+export const enrollmentFactsRowsSchema: z.ZodType<EnrollmentFactsRows> = z.object({
+  enrollment: enrollmentRowSchema,
+  events: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.string(),
+      payload: z.record(z.string(), z.unknown()),
+      effective_at: z.string(),
+    }),
+  ),
+  sessions: z.array(
+    z.object({
+      id: z.string(),
+      completed_at: z.string(),
+      program_position: positionSchema,
+      sets: z.array(
+        z.object({
+          ref: z.string().nullable(),
+          exercise_id: z.string(),
+          weight_kg: z.number(),
+          reps: z.number().nullable(),
+          effort_input_type: z.enum(['level', 'rir', 'rpe', 'cardio']).nullable(),
+          effort_value: z.number().nullable(),
+          prescribed_weight_kg: z.number().nullable(),
+          prescribed_reps: z.number().nullable(),
+          prescribed_min_reps: z.number().nullable(),
+          prescribed_amrap: z.boolean().nullable(),
+        }),
+      ),
+    }),
+  ),
+});
 
 export function isProgramFact(value: unknown): value is ProgramFact {
   return programFactSchema.safeParse(value).success;

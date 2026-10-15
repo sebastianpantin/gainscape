@@ -2,12 +2,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { roundTo } from '@domain/math.ts';
 import { epley } from '@domain/strength.ts';
-import { measuresRepsCapacity, REP_MAX_SLOT_COUNT, type RirSource } from '@domain/types.ts';
+import { measuresRepsCapacity, REP_MAX_SLOT_COUNT } from '@domain/types.ts';
+import { z } from 'zod';
 import type { LoadType } from '../exercises/catalog-rules.ts';
 import type { ChartSeries } from '../ui/line-chart-rules.ts';
 import type { PlateauSession } from './plateau-rules.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
 import { shownWeight } from '../units.ts';
+import { numericColumn, parsedRows } from '../rows.ts';
+import { RIR_SOURCES } from './recovery-rules.ts';
 
 export const PROGRESS_COLUMNS = {
   sets: 'session_id, weight_kg, effective_load_kg, reps, rir, rir_source, prescription_ref, sessions(started_at)',
@@ -36,7 +39,7 @@ export async function queryProgressSets(
       .range(from, from + PROGRESS_PAGE_SIZE - 1)
       .abortSignal(signal);
     if (error) throw error;
-    const page = data as unknown as ProgressSetRow[];
+    const page = parsedRows(progressSetRowSchema, data);
     rows.push(...page);
     if (page.length < PROGRESS_PAGE_SIZE) return rows;
   }
@@ -46,31 +49,39 @@ export function exerciseProgressPath(exerciseId: string): string {
   return `/collection/exercises/${exerciseId}`;
 }
 
-export interface ProgressSetRow {
-  session_id: string;
-  weight_kg: number | string;
-  effective_load_kg: number | string;
-  reps: number;
-  rir: number | string | null;
-  rir_source: RirSource;
-  prescription_ref: string | null;
-  sessions: { started_at: string };
-}
+export const progressSetRowSchema = z.object({
+  session_id: z.string(),
+  weight_kg: numericColumn,
+  effective_load_kg: numericColumn,
+  reps: z.number(),
+  rir: numericColumn.nullable(),
+  rir_source: z.enum(RIR_SOURCES),
+  prescription_ref: z.string().nullable(),
+  sessions: z.object({ started_at: z.string() }),
+});
 
-type RecordSessionRef = { sessions: { local_date: string } | null } | null;
+export type ProgressSetRow = z.infer<typeof progressSetRowSchema>;
 
-export interface RepMaxRow {
-  reps: number;
-  load_kg: number | string;
-  achieved_at: string;
-  sets: RecordSessionRef;
-}
+const recordSessionRefSchema = z.object({ sessions: z.object({ local_date: z.string() }).nullable() }).nullable();
 
-export interface MaxRepsRow {
-  max_reps: number;
-  achieved_at: string;
-  sets: RecordSessionRef;
-}
+type RecordSessionRef = z.infer<typeof recordSessionRefSchema>;
+
+export const repMaxRowSchema = z.object({
+  reps: z.number(),
+  load_kg: numericColumn,
+  achieved_at: z.string(),
+  sets: recordSessionRefSchema,
+});
+
+export type RepMaxRow = z.infer<typeof repMaxRowSchema>;
+
+export const maxRepsRowSchema = z.object({
+  max_reps: z.number(),
+  achieved_at: z.string(),
+  sets: recordSessionRefSchema,
+});
+
+export type MaxRepsRow = z.infer<typeof maxRepsRowSchema>;
 
 export interface SessionProgress {
   sessionId: string;

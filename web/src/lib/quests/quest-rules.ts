@@ -10,6 +10,8 @@ import {
 import { kgToUnit, type WeightUnit } from '@domain/units.ts';
 import { challengeSummaryText } from '../collection/challenge-rules.ts';
 import { formatXp } from '../format.ts';
+import { z } from 'zod';
+import { numericColumn } from '../rows.ts';
 import type { InvokeOutcome } from '../platform/function-client-rules.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../platform/rate-limit.ts';
 
@@ -17,36 +19,44 @@ export const QUEST_COLUMNS = 'id,key,name,description,quest_points,sort_order,de
 export const QUEST_PROGRESS_COLUMNS = 'quest_id,started_at,step_index,step_progress';
 export const QUEST_COMPLETION_COLUMNS = 'quest_id,completed_at,quest_points';
 
-export interface QuestRow {
-  id: string;
-  key: string;
-  name: string;
-  description: string;
-  quest_points: number;
-  sort_order: number;
-  definition: unknown;
-  retired_at: string | null;
-}
+export const questRowSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  name: z.string(),
+  description: z.string(),
+  quest_points: z.number(),
+  sort_order: z.number(),
+  definition: z.unknown(),
+  retired_at: z.string().nullable(),
+});
 
-export interface QuestProgressRow {
-  quest_id: string;
-  started_at: string;
-  step_index: number;
-  step_progress: number | string;
-}
+export type QuestRow = z.infer<typeof questRowSchema>;
 
-export interface QuestCompletionRow {
-  quest_id: string;
-  completed_at: string;
-  quest_points: number;
-}
+export const questProgressRowSchema = z.object({
+  quest_id: z.string(),
+  started_at: z.string(),
+  step_index: z.number(),
+  step_progress: numericColumn,
+});
 
-export interface QuestRows {
-  quests: QuestRow[];
-  progress: QuestProgressRow[];
-  completions: QuestCompletionRow[];
-  exerciseNames: Record<string, string>;
-}
+export type QuestProgressRow = z.infer<typeof questProgressRowSchema>;
+
+export const questCompletionRowSchema = z.object({
+  quest_id: z.string(),
+  completed_at: z.string(),
+  quest_points: z.number(),
+});
+
+export type QuestCompletionRow = z.infer<typeof questCompletionRowSchema>;
+
+export const questRowsSchema = z.object({
+  quests: z.array(questRowSchema),
+  progress: z.array(questProgressRowSchema),
+  completions: z.array(questCompletionRowSchema),
+  exerciseNames: z.record(z.string(), z.string()),
+});
+
+export type QuestRows = z.infer<typeof questRowsSchema>;
 
 export interface CatalogQuest extends QuestDefinition {
   description: string;

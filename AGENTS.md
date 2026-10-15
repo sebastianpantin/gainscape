@@ -85,7 +85,7 @@ Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib
 - `make start` starts Supabase in Docker and serves the Edge Functions. `make reset` recreates the DB from migrations and seed. `make stop` stops everything.
 - A second stack (for a git worktree) needs a gitignored `.stack.env` with a distinct `SUPABASE_PROJECT_ID`, port overrides and `GAINSCAPE_WEB_PORT`. The Makefile exports it.
 - `make test-db` refuses non-local database hosts (`scripts/assert-local-db.mjs`). The e2e stack guard only checks that `SUPABASE_PROJECT_ID` matches `.stack.env`. Never point tests at a hosted project.
-- After a schema change: `make reset`. There are no generated DB types. Row types are hand-written `*Row` interfaces and `*_COLUMNS` select strings in `web/src/lib/`; update them by hand.
+- After a schema change: `make reset`. There are no generated DB types. Row types are hand-written zod `*RowSchema`s (parsed at every read) and `*_COLUMNS` select strings in `web/src/lib/`; update them by hand.
 
 ### Definition of done
 

@@ -61,7 +61,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Users never see a raw error code or database text. Every failure maps to a sentence, with a generic fallback (`programErrorText`, `pinProblemText`, the account export and delete messages).
 - `emailChangeProblem` does not use `authErrorMessage` on purpose: `authErrorMessage` would call a 403 an invalid link.
 - A password change re-checks the current password against the email `getUser()` returns now, not a cached one. Only `invalid_credentials` means the password was wrong.
-- Row types are hand-written. Each module has its own `*Row` interfaces and `*_COLUMNS` select strings, so a schema change needs both updated by hand. Postgres numerics arrive as strings; coerce with `Number(...)`.
+- Row shapes are hand-written zod schemas (`*RowSchema`, the `*Row` type inferred from it) next to the `*_COLUMNS` select strings; a schema change needs both updated by hand. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast: a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Postgres numerics arrive as strings (`numericColumn`); coerce with `Number(...)`.
 
 ### Must stay in sync with SQL
 
