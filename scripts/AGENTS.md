@@ -14,7 +14,7 @@ Node tooling run by the Makefile: stack helpers and guards, the cache rebuilder,
 - `build-kill-switch.ts` (`make sw-kill-switch`): replaces `web/dist/sw.js` with the kill-switch worker.
 - `ci-changes.ts` (`make ci-changes`): prints `code=`, `backend=` and `ui=` for CI.
 - `changelog/unreleased.ts` (`make changelog-unreleased`): user-facing PRs not yet in `web/changelog.yaml`; used by `deploy/deploy.ts` and the changelog skill.
-- `docs/agents-size.ts` (`make docs-check`, part of `make check`): fails when a tracked `AGENTS.md` is over 16 KiB.
+- `docs/agents-size.ts` (`make docs-check`, part of `make check`): fails when a tracked `AGENTS.md` is over 16 KiB and warns, without failing, over 12 KiB.
 - `catalog/`: YAML to `supabase/seed.sql` (see `catalog/AGENTS.md`). `icons/`: logo sprite to PNG icons and `favicon.svg` (see `icons/AGENTS.md`). `balance/`: XP simulator and tuner (see `balance/AGENTS.md`).
 - `screenshots/` (`make screenshots`, needs the stack): captures the manifest screenshots into `web/public/screenshots/`. The PNGs are committed but not freshness-checked; rerun after a visible UI change. `screens.ts` holds the viewport and the 200 KB cap, shared with `tests/web/manifest.test.ts`.
 - `deploy/`: admin-only hosted tooling (see `docs/deploy.md`). Pure parts in `rules.ts`, `pages-headers.ts`, `testers.ts`, `deploy-env.ts`, tested in `tests/deploy/`.
