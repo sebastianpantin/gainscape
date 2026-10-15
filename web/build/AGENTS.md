@@ -13,7 +13,7 @@ Node-side build tooling for the PWA: port resolution shared by Vite and Playwrig
 - The build id is the first `BUILD_ID_LENGTH` hex chars of the SHA-256 over the shell manifest text. `sw.js` embeds it, so any asset change yields a new worker and triggers the update flow.
 - The build throws if `/index.html` or `/manifest.webmanifest` is missing from the precache list or the compiled worker lacks the build id. Keep those guards.
 - `killSwitchRefusal` blocks the kill switch unless the build marker says production mode with a hosted `VITE_SUPABASE_URL`, or `GAINSCAPE_KILL_SWITCH_ALLOW_LOCAL=1`. Only the e2e suite sets that flag.
-- `changelog.ts` keeps each entry's `prs` for `scripts/changelog/unreleased.ts` and strips them from the bundle. It is loaded by plain Node (`make deploy`), without Vite's `@domain` alias.
+- `changelog.ts` keeps each entry's `prs` for `scripts/changelog/unreleased.ts` and strips them from the bundle. It is loaded by plain Node (`make deploy`), without Vite's `@domain` path resolution.
 - `scripts/build-kill-switch.ts`, the Playwright configs and `e2e/support/pwa.ts` import from here. Keep exported names stable or update them together.
 - Functions that touch the filesystem take `outDir` as a parameter.
 

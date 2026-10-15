@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 const INTEGRATION_FILES_SHARING_GLOBAL_STATE = [
@@ -13,9 +12,7 @@ const INTEGRATION_FILES_SHARING_GLOBAL_STATE = [
 const INTEGRATION_WORKERS = 4;
 
 export default defineConfig({
-  resolve: {
-    alias: { '@domain': fileURLToPath(new URL('./supabase/functions/_shared/domain', import.meta.url)) },
-  },
+  resolve: { tsconfigPaths: true },
   test: {
     testTimeout: 30_000,
     hookTimeout: 60_000,

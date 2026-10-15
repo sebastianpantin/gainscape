@@ -26,43 +26,47 @@ import {
   setsOf,
 } from './support/db.ts';
 
-test('edit a logged set from history, see the XP change, then delete the workout', async ({ page }) => {
-  const username = `hist_${Date.now().toString(36)}`;
-  await register(page, username);
+test(
+  'edit a logged set from history, see the XP change, then delete the workout',
+  { tag: '@smoke' },
+  async ({ page }) => {
+    const username = `hist_${Date.now().toString(36)}`;
+    await register(page, username);
 
-  await logBench(page);
+    await logBench(page);
 
-  await openTab(page, 'Collection');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
-  const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
-  await expect(workouts).toHaveCount(1);
-  await expect(workouts.first()).toContainText('Editable');
-  await expect(workouts.first()).toContainText('1 set');
-  await expect(workouts.first()).toContainText('Barbell Bench Press');
-  await expect(workouts.first()).toContainText('300 kg volume');
-  await expect(page.getByText('You can change or delete workouts from the last 7 days.')).toBeVisible();
-  await workouts.first().click();
+    await openTab(page, 'Collection');
+    await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+    const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
+    await expect(workouts).toHaveCount(1);
+    await expect(workouts.first()).toContainText('Editable');
+    await expect(workouts.first()).toContainText('1 set');
+    await expect(workouts.first()).toContainText('Barbell Bench Press');
+    await expect(workouts.first()).toContainText('300 kg volume');
+    await expect(page.getByText('You can change or delete workouts from the last 7 days.')).toBeVisible();
+    await workouts.first().click();
 
-  const sessionXp = page.getByRole('status', { name: 'Workout XP' });
-  await expect(sessionXp).toHaveText(/^\+[\d,]+ XP$/);
-  const xpBefore = xpValue(await sessionXp.textContent());
+    const sessionXp = page.getByRole('status', { name: 'Workout XP' });
+    await expect(sessionXp).toHaveText(/^\+[\d,]+ XP$/);
+    const xpBefore = xpValue(await sessionXp.textContent());
 
-  const firstSet = setRow(page, 1);
-  await firstSet.getByLabel('reps', { exact: true }).fill('8');
-  await firstSet.getByRole('radio', { name: 'Failure' }).click();
-  await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByText('Changes saved.')).toBeVisible();
-  await expect.poll(async () => xpValue(await sessionXp.textContent())).toBeGreaterThan(xpBefore);
-  await expect
-    .poll(() => latestSetOf(username))
-    .toMatchObject({ reps: 8, effort_input_type: 'level', effort_value: 0 });
+    const firstSet = setRow(page, 1);
+    await firstSet.getByLabel('reps', { exact: true }).fill('8');
+    await firstSet.getByRole('radio', { name: 'Failure' }).click();
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByText('Changes saved.')).toBeVisible();
+    await expect.poll(async () => xpValue(await sessionXp.textContent())).toBeGreaterThan(xpBefore);
+    await expect
+      .poll(() => latestSetOf(username))
+      .toMatchObject({ reps: 8, effort_input_type: 'level', effort_value: 0 });
 
-  await page.getByRole('button', { name: 'Delete workout' }).click();
-  await page.getByRole('button', { name: 'Delete for good' }).click();
-  await expect(page.getByText('Workout deleted.')).toBeVisible();
-  await expect(page.getByText('No workouts yet.', { exact: false })).toBeVisible();
-  await expect.poll(() => sessionCount(username)).toBe(0);
-});
+    await page.getByRole('button', { name: 'Delete workout' }).click();
+    await page.getByRole('button', { name: 'Delete for good' }).click();
+    await expect(page.getByText('Workout deleted.')).toBeVisible();
+    await expect(page.getByText('No workouts yet.', { exact: false })).toBeVisible();
+    await expect.poll(() => sessionCount(username)).toBe(0);
+  },
+);
 
 test('a warm-up set keeps its warm-up cue in the session detail, editable or locked', async ({ page }) => {
   const username = uniqueUsername('hw');

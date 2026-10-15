@@ -11,18 +11,18 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 - `Makefile`: entry point for every workflow: stack, dev server, checks, every test layer, codegen.
 - `package.json`: npm dependencies only; every workflow runs through a `make` target.
 - `eslint.config.js`: ESLint flat config, including the custom `gainscape/no-comments` rule, the test id bans for `web/src` and `e2e/`, the domain purity globals ban and the `__CHANGELOG__` global ban.
-- `tsconfig.json`: type-checks app, tests, e2e, scripts and domain; `@domain/*` path alias.
+- `tsconfig.json`: solution file for editors and Vite; `make typecheck` runs each referenced config, so `tsc` fails on a global from the wrong environment. `tsconfig.web.json`: `web/src` with DOM and no Node types. `tsconfig.domain.json`: the domain with neither DOM nor Node. `tsconfig.node.json`: scripts, tests, e2e, `web/build` and the root configs with Node and DOM (tests and e2e drive DOM code). Shared options and the `@domain/*` path alias live in `tsconfig.base.json`.
 - `tsconfig.sw.json`: separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`.
-- `vitest.config.ts`: Vitest projects with the `@domain` alias: `unit` (balance, catalog, deploy, domain, web; parallel), `integration` (4 workers in parallel), then `integration-serial` (files that touch global state, one at a time).
+- `vitest.config.ts`: Vitest projects (`@domain` resolves through `resolve.tsconfigPaths`): `unit` (balance, catalog, deploy, domain, web; parallel), `integration` (4 workers in parallel), then `integration-serial` (files that touch global state, one at a time).
 - `playwright.config.ts`: E2E against the `vite web` dev server (https, service workers blocked); projects `chromium` (Pixel 7, `make e2e`) and `webkit` (iPhone 14, `make e2e-webkit`); shared CI settings in `e2e/support/run-settings.ts`.
 - `playwright.pwa.config.ts`: PWA E2E against `vite preview` over plain http with service workers allowed.
 - `playwright.pages.config.ts`: Pages E2E: builds with `scripts/deploy/build-pages.ts` against the local stack and serves `web/dist` with `wrangler pages dev`.
 - `.prettierrc.json`: Prettier: single quotes, width 120, trailing commas.
 - `.gitleaks.toml`: gitleaks rules for `make secrets-scan`: default rules plus allowlists for Supabase's public local-demo keys and the `stronglifts_5x5` template key in the catalog templates and seed.
 - `.claude/skills/changelog/SKILL.md`: the skill behind "write the changelog": lists uncovered user-facing PRs with `make changelog-unreleased`, writes the next entry of `web/changelog.yaml` and opens a PR.
-- `scripts/docs/agents-size.ts`: `make docs-check` (part of `make check`) fails when a tracked `AGENTS.md` is over 16 KiB, so these files stay readable in one pass.
+- `scripts/docs/agents-size.ts`: `make docs-check` (part of `make check`) fails when a tracked `AGENTS.md` is over 16 KiB, so these files stay readable in one pass, and warns over 12 KiB so trimming starts before a change is blocked.
 - `README.md`: human-facing run instructions, command table, PWA, loot secret and auth notes.
-- `.github/workflows/ci.yml`: CI on every pull request: `checks` (no stack; runs `make ci-changes` first, then only `make format-check docs-check secrets-scan` for a documentation-only PR, otherwise the full gate including `make build`) and `backend` (integration, pgTAP; needs `checks`, skipped when `ci-changes` finds no backend input).
+- `.github/workflows/ci.yml`: CI on every pull request: `checks` (no stack; runs `make ci-changes` first, then only `make format-check docs-check secrets-scan` for a documentation-only PR, otherwise the full gate including `make build`), `backend` (integration, pgTAP; needs `checks`, skipped when `ci-changes` finds no backend input) and `smoke` (`make e2e-smoke`, the `@smoke` e2e tests; needs `checks`, skipped when `ci-changes` finds no UI input).
 - `.github/workflows/e2e.yml`: nightly and manual `e2e` workflow (sharded chromium and webkit, e2e-pwa, e2e-pages), started by hand with `gh workflow run e2e.yml --ref <branch>`.
 
 ## Subdirectories
@@ -109,6 +109,7 @@ Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib
 - React 19, React Router 7, Vite 8 (with `@vitejs/plugin-react`, `@vitejs/plugin-basic-ssl`)
 - TanStack Query 5 (`@tanstack/react-query`) for server data in screens
 - `@supabase/supabase-js` 2, Supabase CLI (local stack, `functions serve`, `test db`)
+- Node 24.2 or later (`.nvmrc`, `engines`; CI reads `.nvmrc`), because scripts rely on native type stripping and `import.meta.main`. `@types/node` stays on the same major as `.nvmrc` so `tsc` rejects APIs the runtime lacks.
 - Deno 2 for Edge Function type checks
 - Zod 4 for payload validation
 - Vitest 5, fast-check, fake-indexeddb, `postgres` (direct SQL in integration tests)

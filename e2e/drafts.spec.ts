@@ -17,7 +17,7 @@ const completeSession = '**/functions/v1/complete-session';
 const LONGEST_RETRY_WAIT_MS = 30_000;
 const LATE_REQUEST_GRACE_MS = 1_000;
 
-test('a finished workout survives an outage and a reload', async ({ page }) => {
+test('a finished workout survives an outage and a reload', { tag: '@smoke' }, async ({ page }) => {
   const username = uniqueUsername('dr_a');
   await register(page, username);
   const { user } = await readSession(page);
