@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE } from '@domain/index.ts';
 import {
@@ -5,6 +6,7 @@ import {
   builtInExerciseId,
   createTestUser,
   db,
+  grantDrop,
   lootSnapshot,
   normalizedSnapshot,
   postCompleteSession,
@@ -325,6 +327,28 @@ describe('replay guards', () => {
     expect(response.status, response.rawBody).toBe(200);
 
     await expectHealed(user.id);
+  });
+
+  it('answers a self-healing edit or delete only for sessions from the changed one on', async () => {
+    const user = await createTestUser();
+    const sessions = [7, 5, 3, 1].map((hours) => withFreshIds(payloadAt(hoursAgo(hours), [aSet(benchId, 0, 60)])));
+    for (const payload of sessions) await postSession(user, payload);
+    const [first, second, third, fourth] = sessions;
+    const dropOnRemovedSet = await grantDrop(user.id, first.id, randomUUID(), 'forged_scraps', 2, 'pr');
+
+    await staleAndCorrupted(user.id);
+    const edited = await editSession(user, second, [{ ...second.sets[0], weightKg: 75 }]);
+    expect(edited.body.replayedSessionIds).toEqual([second.id, third.id, fourth.id]);
+    expect(edited.body.revokedDrops).toEqual([]);
+
+    await staleAndCorrupted(user.id);
+    const deleted = await postFunction('delete-session', user.accessToken, { sessionId: third.id });
+    expect(deleted.status, deleted.rawBody).toBe(200);
+    expect(deleted.body.replayedSessionIds).toEqual([fourth.id]);
+    expect(deleted.body.revokedDrops).toEqual([]);
+
+    const [drop] = await db`select revoked_at from public.drops where id = ${dropOnRemovedSet.dropId}`;
+    expect(drop.revoked_at).toBeNull();
   });
 
   it('serialises concurrent out-of-order syncs for one user', async () => {
