@@ -40,11 +40,11 @@ const UI_FILES = [
   'supabase/seed.sql',
   'scripts/local-stack.ts',
   'scripts/function-batch.ts',
-  'tests/integration/local-stack.ts',
-  'tests/integration/mailbox.ts',
   'scripts/ci-web-env.mjs',
   'scripts/ensure-loot-secret.mjs',
   'scripts/wait-for-functions.mjs',
+  'tests/integration/local-stack.ts',
+  'tests/integration/mailbox.ts',
   '.github/workflows/ci.yml',
 ];
 
