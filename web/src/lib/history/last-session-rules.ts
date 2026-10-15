@@ -3,7 +3,7 @@ import type { UnitPref } from '../profile/profile-rules.ts';
 import { formatLoad } from '../format.ts';
 import { z } from 'zod';
 import { nullableNumber, numericColumn } from '../rows.ts';
-import type { LastLoggedSet } from '../../offline/draft-format.ts';
+import type { LastLoggedSet } from '../../offline/draft-edits.ts';
 
 export const recentLiftRowSchema = z.object({
   exercise_id: z.string(),

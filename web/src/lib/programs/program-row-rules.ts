@@ -1,4 +1,4 @@
-import type { PlannedExercise, PlannedProgression, ProgressionKind } from '../../offline/draft-format.ts';
+import type { PlannedExercise, PlannedProgression, ProgressionKind } from '../../offline/draft-starts.ts';
 import type { Program, ProgramDoc } from './programs.ts';
 import { z } from 'zod';
 import { numericColumn } from '../rows.ts';

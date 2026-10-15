@@ -78,7 +78,7 @@ Every behaviour change follows red, green, refactor:
 
 Run a single file while iterating: `npx vitest run tests/domain/xp.test.ts`, `npx playwright test e2e/history.spec.ts`. Integration tests need `make functions` (or `make start`) first.
 
-Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib/**/*-rules.ts`, `web/src/offline/draft-format.ts`) and keep React components and Edge Function handlers thin. Logic that is pure gets a fast unit test; only I/O wiring needs the stack.
+Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib/**/*-rules.ts`, `web/src/offline/draft-*.ts`) and keep React components and Edge Function handlers thin. Logic that is pure gets a fast unit test; only I/O wiring needs the stack.
 
 ### Local stack
 

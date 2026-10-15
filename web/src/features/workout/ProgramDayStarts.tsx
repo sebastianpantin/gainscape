@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
 import { cachedPrograms, ownPrograms, type Program, type ProgramDay } from '../../lib/programs/programs.ts';
 import { programsQuery } from '../../lib/query/queries.ts';
-import { programLabelFor } from '../../offline/draft-format.ts';
+import { programLabelFor } from '../../offline/draft-starts.ts';
 
 interface ProgramDayStartsProps {
   userId: string;

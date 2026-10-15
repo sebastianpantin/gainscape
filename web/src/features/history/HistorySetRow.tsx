@@ -6,17 +6,17 @@ import { CardioEffortSelector } from '../workout/CardioEffortSelector.tsx';
 import { EffortSelector } from '../workout/EffortSelector.tsx';
 import { RepsField, WeightField } from '../workout/SetRow.tsx';
 import { HoldFields } from '../workout/HoldSetRow.tsx';
-import type { EditBout, EditHold, EditSet } from './session-edit.ts';
+import type { BoutSet, HoldSet, LiftSet } from '../../lib/workout/exercise-edit-rules.ts';
 
 interface HistorySetRowProps {
   setNumber: number;
   loadType: LoadType;
-  set: EditSet;
+  set: LiftSet;
   xpLabel: string;
   xpNote: string;
   unit: UnitPref;
   effortMode: EffortInputMode;
-  onChange: (changes: Partial<Omit<EditSet, 'id'>>) => void;
+  onChange: (changes: Partial<Omit<LiftSet, 'id'>>) => void;
   onRemove: () => void;
 }
 
@@ -64,7 +64,7 @@ export function HistorySetRow({
 
 interface HistoryBoutRowProps {
   boutNumber: number;
-  bout: EditBout;
+  bout: BoutSet;
   paceUnit: PaceUnit;
   tracksDistance: boolean;
   xpLabel: string;
@@ -104,7 +104,7 @@ export function HistoryBoutRow({
 
 interface HistoryHoldRowProps {
   setNumber: number;
-  set: EditHold;
+  set: HoldSet;
   measure: HoldMeasure;
   loadType: LoadType;
   xpLabel: string;

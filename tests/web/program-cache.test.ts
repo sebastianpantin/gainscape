@@ -11,7 +11,8 @@ import {
   saveProgramCache,
   withEnrollment,
 } from '../../web/src/offline/program-cache.ts';
-import { startDraftFromPrescription, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
+import { type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
+import { startDraftFromPrescription } from '../../web/src/offline/draft-starts.ts';
 import { emptyProgramFactsCache } from '../../web/src/offline/program-facts-cache.ts';
 import { type SendOutcome } from '../../web/src/offline/finish-lock.ts';
 import { factClock, sessionFact, setReferenceFact } from '../domain/program-fixtures/facts.ts';

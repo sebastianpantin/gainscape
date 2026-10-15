@@ -7,20 +7,21 @@ import {
 } from '@domain/index.ts';
 import { initialProgramState } from '@domain/program-state.ts';
 import {
-  addCardioExercise,
-  addExercise,
-  addSet,
-  type CatalogEntry,
   type DraftProgram,
   type LiftDraftExercise,
   parseStoredDraft,
+  type WorkoutDraft,
+} from '../../web/src/offline/draft-format.ts';
+import {
+  addCardioExercise,
+  addExercise,
+  addSet,
   removeExercise,
-  startDraftFromPrescription,
   swapExercise,
   toggleSetDone,
   withCurrentLoadTypes,
-  type WorkoutDraft,
-} from '../../web/src/offline/draft-format.ts';
+} from '../../web/src/offline/draft-edits.ts';
+import { type CatalogEntry, startDraftFromPrescription } from '../../web/src/offline/draft-starts.ts';
 import { removeSet, updateBout, updateSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
 import { type CardioActivity } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';

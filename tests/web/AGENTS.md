@@ -13,6 +13,7 @@ Stack-free Vitest suites for the web app's pure logic and its static build input
 - Helpers, not suites:
   - `draft-store.contract.ts`: `describeDraftStoreContract`, the shared `DraftStore` contract.
   - `memory-storage.ts`: an in-memory `Storage`.
+  - `draft-fixtures.ts`: the sample drafts shared by `draft-format`, `draft-edits` and `draft-starts` tests.
   - `custom-program-fixture.ts`: a custom template shaped like the output of `publish_program`, shared by the enroll and follow tests.
 - The draft store contract runs twice: `draft-store.idb.test.ts` (fake-indexeddb) and `draft-store.local.test.ts` (`MemoryStorage`).
 - Test files whose names do not match the module:
@@ -22,7 +23,7 @@ Stack-free Vitest suites for the web app's pure logic and its static build input
   - `profile.test.ts`: `lib/profile/profile-rules.ts`
   - `program-active.test.ts`: `activeProgram`
   - `program-rule-boundaries.test.ts`: label and boundary helpers of `program-enroll-rules.ts`
-  - `hold-draft.test.ts`: hold drafts in `offline/draft-format.ts`
+  - `hold-draft.test.ts`: hold drafts in `offline/draft-format.ts` and `draft-edits.ts`
   - `program-draft.test.ts`: the draft's program fields
   - `social-rules.test.ts`: also `lib/platform/rate-limit.ts`
   - `rest-timer-rules.test.ts`: also `rest-timer-store.ts`

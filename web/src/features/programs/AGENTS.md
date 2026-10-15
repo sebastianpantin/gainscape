@@ -16,7 +16,7 @@ Training programs: list, copy from templates, create and edit own programs (days
 
 ## Rules and gotchas
 
-- `PlannedExercise` is defined in `../../offline/draft-format.ts` and is what a started day copies into the draft. Its `progression` is not copied, so adding it needed no draft format bump; changing what the draft stores needs the draft versioning and `tests/web/draft-format.test.ts` updated.
+- `PlannedExercise` is defined in `../../offline/draft-starts.ts` and is what a started day copies into the draft. Its `progression` is not copied, so adding it needed no draft format bump; changing what the draft stores needs the draft versioning and `tests/web/draft-format.test.ts` updated.
 - Only rep lifts are plannable (`isPlannableExercise`): `save_program` plans sets of reps and refuses holds and cardio.
 - Following an own program publishes a snapshot first (`publishForEnroll`), then drops the cached `enrollChoicesQuery` so the enroll screen loads the new version. Publishing and enrolling need a connection and are disabled offline.
 - Editing a followed program shows `You're following an earlier version`. The `followStatus` check passes `null` until the exercise list has loaded (status `undecided`, notice hidden), and uses `loadTypeOf` over the whole exercise list, holds included, so a legacy hold slot clamps like the server. "Use these changes" saves, publishes and opens the enroll form with router state `{ carried }` (unit and current working weights), which then re-follows the same template without the replace dialog.
@@ -30,7 +30,7 @@ Training programs: list, copy from templates, create and edit own programs (days
 
 ## Testing
 
-- Unit (`make test-web`): `tests/web/program-edit.test.ts`, the `program-*-rules.test.ts` files for the lib rules, `names.test.ts`, `draft-format.test.ts`, `reorder.test.ts`, `term-help-rules.test.ts`.
+- Unit (`make test-web`): `tests/web/program-edit.test.ts`, the `program-*-rules.test.ts` files for the lib rules, `names.test.ts`, `draft-starts.test.ts`, `reorder.test.ts`, `term-help-rules.test.ts`.
 - Integration (stack): `tests/integration/programs.test.ts` and the enrollment tests.
 - E2E (stack): `programs.spec.ts`, `program-enrollment.spec.ts`, `term-help.spec.ts`, `a11y.spec.ts`.
 

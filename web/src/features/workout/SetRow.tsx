@@ -17,7 +17,8 @@ import {
 } from '../../lib/units.ts';
 import { amrapBadgeOf } from '../../lib/programs/program-today-rules.ts';
 import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts';
-import type { DraftSet, LastLoggedSet } from '../../offline/draft-format.ts';
+import type { DraftSet } from '../../offline/draft-format.ts';
+import type { LastLoggedSet } from '../../offline/draft-edits.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
 import { lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './last-set-rules.ts';

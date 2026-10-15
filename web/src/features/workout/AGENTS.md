@@ -9,9 +9,12 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 
 ## Map
 
-- Entry point: `WorkoutScreen.tsx`. It owns the draft, finish sync, the session-id state reset, supersets, the lift cards and the rest timer, and renders `TodayView` (no draft), `SavingWorkoutView` (finished or syncing), `CardioExerciseCard`, `HoldExerciseCard` and `ChallengeBanner`. Each data effect lives in its own `use-*.ts` hook, called in a fixed order before the loading early return.
+- Entry point: `WorkoutScreen.tsx`. It composes: it calls the hooks, builds the `LiftCardContext` and renders `TodayView` (no draft), `SavingWorkoutView` (finished or syncing), `LiftExerciseCard`, `LiftSupersetCard`, `CardioExerciseCard`, `HoldExerciseCard` and `ChallengeBanner`. Each data effect and each group of commands lives in its own `use-*.ts` hook, called in a fixed order before the loading early return, so the hooks take a nullable draft.
+- Commands: `use-workout-commands.ts` (add, remove, swap, superset menu, set changes with feedback, discard) and `use-finish-workout.ts` (load type check, the planned-sets prompt, finish). `use-workout-previews.ts` holds the XP and record previews and builds set feedback. Per-workout state goes through `useSessionState`, which resets when `sessionId` changes.
+- Lift cards: `LiftExerciseCard.tsx` (one lift), `LiftSupersetCard.tsx` (a group, around `SupersetCard`), both built from `LiftExerciseIntro.tsx` and `LiftSetRow.tsx`. They read everything from one `LiftCardContext` prop (`lift-card-context.ts`), as the cardio and hold cards read `ExerciseCardActions`.
 - Pure rules, each tested in `tests/web/<name>.test.ts`:
-  - Finish text and steps: `workout-rules.ts`.
+  - Finish text, counts and steps: `workout-rules.ts`.
+  - Screen decisions (picked exercise, swap list, add-button focus key, superset members): `workout-screen-rules.ts`.
   - Lift card decisions (menu, advice, warm-ups, when rest starts): `exercise-card-rules.ts`.
   - Today nudges: `today-rules.ts`.
   - Last-session chips: `last-set-rules.ts`.
@@ -35,13 +38,13 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 
 ## Rules and gotchas
 
-- Draft shape and mutations belong to `../../offline/draft-format.ts` and `draft-session.ts`. Never mutate a draft in a component; call the functions from `useWorkoutDraft`. Retry, lock and sync logic stays in `../../offline/`. A finished draft must never be lost or sent twice.
+- Draft shape and mutations belong to `../../offline/` (`draft-format.ts`, `draft-edits.ts`, `draft-starts.ts`) and `draft-session.ts`. Never mutate a draft in a component; call the functions from `useWorkoutDraft`. Retry, lock and sync logic stays in `../../offline/`. A finished draft must never be lost or sent twice.
 - The XP preview is only a hint. `xp-preview.ts` runs the domain `processSession` with the server's inputs: `exercise_strength_state` as of the draft start, and the profile bodyweight. That keeps the cold-start cap, fatigue check, cardio caps and bonuses at parity. Keep the rules in the domain. `tests/web/xp-preview.test.ts` has a parity test.
 - In the preview, only `unknown` shows `~?` and adds nothing to the total. `cold_start` and `unrated` show flat XP, and warm-ups show 0 XP.
 - Hold record previews match the server through the domain `applyHoldToRecords`: a 20 kg floor for an external load, gains of 1 s or 1 m, and nothing in a hold's first session.
 - Cards are keyed by the draft exercise's stable `clientId`, and so is the open Swap picker. Removing an identical exercise then leaves the others in place.
 - The Swap picker lists up to 6 similar lifts until the user types (`similarExercises`): a shared top skill only (ties count), lifts that share a name word other than a setup word such as `barbell` or `seated` first, then by skill-share overlap. There is no movement-pattern field, so the name stands in for one.
-- A replaced draft does not remount the screen. All per-workout state therefore resets when `sessionId` changes: the finish problem, Swap picker, focus, discard confirm, strength views and the `useRecentLiftSessions` scope.
+- A replaced draft does not remount the screen. All per-workout state therefore resets when `sessionId` changes (`useSessionState`): the finish problem, Swap picker, focus, discard confirm, strength views and the `useRecentLiftSessions` scope.
 - `finishDraft` runs inside `updateDraft`. It leaves another session or an already finished draft alone. When a load type changed, it returns the draft unfinished with `changedNames`.
 - `setFeedback` passes `preview`, `record` and `becameRecord` as thunks, so typing into a set costs no preview work. Feedback fires only on the not-done to done transition, so Add set and new exercises create done sets without a drop. The `role="status"` text is keyed by the drop count, so re-logging the same set announces again.
 - `workoutHelpKeys` reads only session-stable inputs, never set efforts, done flags, values or previews, so logging never adds or removes the help row. A fast-check property enforces this.

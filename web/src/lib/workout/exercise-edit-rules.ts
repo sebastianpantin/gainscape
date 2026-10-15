@@ -11,6 +11,11 @@ const STARTING_CARRY_DISTANCE_M = 20;
 export const BODYWEIGHT_LOAD_NOT_ZERO_CODE = 'bodyweight_load_not_zero';
 export const UNKNOWN_EXERCISE_CODE = 'unknown_exercise';
 
+interface WeightAndReps {
+  weightKg: number;
+  reps: number;
+}
+
 export interface BoutValues {
   durationS: number;
   distanceM: number | null;
@@ -24,6 +29,55 @@ export interface HoldValues {
   distanceM: number | null;
   effort: EffortInput;
 }
+
+export interface LiftSet {
+  id: string;
+  weightKg: number;
+  reps: number;
+  isWarmup: boolean;
+  effort: EffortInput;
+}
+
+export interface BoutSet extends BoutValues {
+  id: string;
+  kind: 'cardio';
+}
+
+export interface HoldSet extends HoldValues {
+  id: string;
+  kind: 'hold';
+}
+
+export interface LiftExerciseOf<S extends LiftSet> {
+  exerciseId: string;
+  name: string;
+  modality: 'lift';
+  loadType: LoadType;
+  sets: S[];
+}
+
+export interface HoldExerciseOf<S extends HoldSet> {
+  exerciseId: string;
+  name: string;
+  modality: 'hold';
+  measure: HoldMeasure;
+  loadType: LoadType;
+  sets: S[];
+}
+
+type GrowableExercise =
+  | { modality: 'lift'; loadType: LoadType; sets: LiftSet[] }
+  | { modality: 'cardio'; sets: BoutSet[] }
+  | { modality: 'hold'; loadType: LoadType; measure: HoldMeasure; sets: HoldSet[] };
+
+interface GrowableOwner {
+  exercises: GrowableExercise[];
+}
+
+type OwnSetFields<Owner extends GrowableOwner> = Omit<
+  Owner['exercises'][number]['sets'][number],
+  keyof LiftSet | keyof BoutSet | keyof HoldSet
+>;
 
 interface ExerciseWithSets {
   modality: 'lift' | 'cardio' | 'hold';
@@ -54,10 +108,7 @@ export function defaultWeightKg(loadType: LoadType): number {
   return loadType === 'external' ? STARTING_EXTERNAL_LOAD_KG : 0;
 }
 
-export function nextSetValues(
-  previous: { weightKg: number; reps: number } | undefined,
-  loadType: LoadType,
-): { weightKg: number; reps: number } {
+export function nextSetValues(previous: WeightAndReps | undefined, loadType: LoadType): WeightAndReps {
   return { weightKg: previous?.weightKg ?? defaultWeightKg(loadType), reps: previous?.reps ?? STARTING_REPS };
 }
 
@@ -170,6 +221,46 @@ export function removeSet<Owner extends ExerciseOwner>(owner: Owner, exerciseInd
   return updateExerciseAt(owner, exerciseIndex, (exercise) =>
     withSets(exercise, (sets) => sets.filter((set) => set.id !== setId)),
   );
+}
+
+function newSetFor(exercise: GrowableExercise, firstSet: WeightAndReps | undefined): LiftSet | BoutSet | HoldSet {
+  const id = crypto.randomUUID();
+  if (exercise.modality === 'cardio') return { id, kind: 'cardio', ...nextBoutValues(exercise.sets.at(-1)) };
+  if (exercise.modality === 'hold')
+    return { id, kind: 'hold', ...nextHoldValues(exercise.sets.at(-1), exercise.loadType, exercise.measure) };
+  return { id, ...nextSetValues(exercise.sets.at(-1) ?? firstSet, exercise.loadType), isWarmup: false, effort: null };
+}
+
+export function addSetTo<Owner extends GrowableOwner>(
+  owner: Owner,
+  exerciseIndex: number,
+  ownFields: OwnSetFields<Owner>,
+  firstSet?: WeightAndReps,
+): Owner {
+  const target = owner.exercises[exerciseIndex];
+  if (target === undefined || !canAddSetTo(owner, target.modality)) return owner;
+  return updateExerciseAt(owner, exerciseIndex, (exercise) => ({
+    ...exercise,
+    sets: [...exercise.sets, { ...newSetFor(exercise, firstSet), ...ownFields }],
+  }));
+}
+
+export function addExerciseTo<Owner extends GrowableOwner>(owner: Owner, exercise: Owner['exercises'][number]): Owner {
+  if (!canAddSetTo(owner, exercise.modality)) return owner;
+  return { ...owner, exercises: [...owner.exercises, exercise] };
+}
+
+export function swapLoadedExercise<
+  E extends { exerciseId: string; name: string; loadType: LoadType; sets: { weightKg: number }[] },
+>(
+  exercise: E,
+  replacement: { id: string; name: string; loadType: LoadType },
+  { keepLoads }: { keepLoads: boolean },
+): E {
+  const sets = keepLoads
+    ? exercise.sets
+    : exercise.sets.map((set) => ({ ...set, weightKg: defaultWeightKg(replacement.loadType) }));
+  return { ...exercise, exerciseId: replacement.id, name: replacement.name, loadType: replacement.loadType, sets };
 }
 
 export function withLoadType<E extends { loadType: LoadType; sets: { weightKg: number }[] }>(

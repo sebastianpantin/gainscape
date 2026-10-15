@@ -7,7 +7,10 @@ import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import {
   addableExercises,
+  type BoutSet,
   canAddSetTo,
+  type HoldSet,
+  type LiftSet,
   setCount,
   updateBout,
   updateHoldSet,
@@ -35,9 +38,6 @@ import {
   addEditExercise,
   addEditSet,
   dropsAtRisk,
-  type EditBout,
-  type EditHold,
-  type EditSet,
   hasChanges,
   rebaseEdit,
   rebaseNotice,
@@ -212,12 +212,12 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const scoredSets = new Map(
     loaded.xpBasis.exercises.flatMap((exercise) =>
       exercise.sets.map(
-        (set: EditSet | EditBout | EditHold) => [set.id, { exerciseId: exercise.exerciseId, set }] as const,
+        (set: LiftSet | BoutSet | HoldSet) => [set.id, { exerciseId: exercise.exerciseId, set }] as const,
       ),
     ),
   );
   const storedXp = new Map(loaded.sets.map((row) => [row.id, row.xpAwarded]));
-  const xpShownFor = (exerciseId: string, set: EditSet | EditBout | EditHold) => {
+  const xpShownFor = (exerciseId: string, set: LiftSet | BoutSet | HoldSet) => {
     const scored = scoredSets.get(set.id);
     const unchanged = scored?.exerciseId === exerciseId && sameSetValues(scored.set, set);
     return unchanged ? { label: formatXp(storedXp.get(set.id) ?? 0), note: 'XP' } : { label: '~?', note: 'after save' };

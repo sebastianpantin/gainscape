@@ -48,7 +48,7 @@ import {
 } from '../../lib/collection/items.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
-import { startDraftFromChallenge } from '../../offline/draft-format.ts';
+import { startDraftFromChallenge } from '../../offline/draft-starts.ts';
 import { type ChallengeExerciseEntry, OFFLINE_ITEMS_NOTICE, updateItemsCache } from '../../offline/items-cache.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first.ts';
