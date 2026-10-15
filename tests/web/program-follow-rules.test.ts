@@ -12,7 +12,7 @@ import {
 } from '../../web/src/lib/programs/program-follow-rules.ts';
 import { type LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { customTemplateKey } from '../../web/src/lib/programs/program-enroll-rules.ts';
-import { type PlannedExercise } from '../../web/src/offline/draft-format.ts';
+import { type PlannedExercise } from '../../web/src/offline/draft-starts.ts';
 import {
   BENCH_ID,
   BENCH_LIFT,

@@ -1,15 +1,14 @@
 import { type Exercise, isLiftExercise, type LiftExercise } from '../../lib/exercises/catalog-rules.ts';
 import { similarExercises } from '../../lib/exercises/substitute-rules.ts';
 import { type SupersetGroup, supersetGroups } from '../../lib/workout/superset-rules.ts';
+import { type LiftDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
 import {
   addCardioExercise,
   addExercise,
   addHoldExercise,
   addSet,
   type LastLoggedSet,
-  type LiftDraftExercise,
-  type WorkoutDraft,
-} from '../../offline/draft-format.ts';
+} from '../../offline/draft-edits.ts';
 
 const MAX_SWAP_SUGGESTIONS = 6;
 

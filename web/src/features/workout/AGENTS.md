@@ -38,7 +38,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 
 ## Rules and gotchas
 
-- Draft shape and mutations belong to `../../offline/draft-format.ts` and `draft-session.ts`. Never mutate a draft in a component; call the functions from `useWorkoutDraft`. Retry, lock and sync logic stays in `../../offline/`. A finished draft must never be lost or sent twice.
+- Draft shape and mutations belong to `../../offline/` (`draft-format.ts`, `draft-edits.ts`, `draft-starts.ts`) and `draft-session.ts`. Never mutate a draft in a component; call the functions from `useWorkoutDraft`. Retry, lock and sync logic stays in `../../offline/`. A finished draft must never be lost or sent twice.
 - The XP preview is only a hint. `xp-preview.ts` runs the domain `processSession` with the server's inputs: `exercise_strength_state` as of the draft start, and the profile bodyweight. That keeps the cold-start cap, fatigue check, cardio caps and bonuses at parity. Keep the rules in the domain. `tests/web/xp-preview.test.ts` has a parity test.
 - In the preview, only `unknown` shows `~?` and adds nothing to the total. `cold_start` and `unrated` show flat XP, and warm-ups show 0 XP.
 - Hold record previews match the server through the domain `applyHoldToRecords`: a 20 kg floor for an external load, gains of 1 s or 1 m, and nothing in a hold's first session.

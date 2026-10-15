@@ -3,14 +3,14 @@ import { BODYWEIGHT_LOAD_NOT_ZERO_CODE, UNKNOWN_EXERCISE_CODE } from '../../lib/
 import { RATE_LIMITED_CODE, waitText } from '../../lib/platform/rate-limit.ts';
 import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { finishedAtFor } from '../../lib/workout/session-timing-rules.ts';
+import { type WorkoutDraft } from '../../offline/draft-format.ts';
 import {
   doneSetCount,
   markPlannedSetsDone,
   notDoneSetCount,
   plannedSetsLeftToLifter,
   withCurrentLoadTypes,
-  type WorkoutDraft,
-} from '../../offline/draft-format.ts';
+} from '../../offline/draft-edits.ts';
 import type { DraftSaveProblem, StartOutcome } from '../../offline/draft-session.ts';
 
 const EXERCISE_CHANGED_REASONS = new Set([BODYWEIGHT_LOAD_NOT_ZERO_CODE, UNKNOWN_EXERCISE_CODE]);

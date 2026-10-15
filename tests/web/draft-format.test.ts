@@ -1,116 +1,45 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addCardioExercise,
-  addExercise,
-  addHoldExercise,
-  addSet,
-  addWarmupSets,
-  canSwapExercise,
   type CardioDraftExercise,
-  type CatalogEntry,
   type DraftExercise,
-  doneSetCount,
-  firstWorkingSet,
   type LiftDraftExercise,
-  type PlannedProgression,
   nextUpdatedAt,
-  canQuickFill,
-  fillWorkingSets,
-  mostQuickFillSets,
-  markPlannedSetsDone,
-  notDoneSetCount,
-  plannedSetsLeftToLifter,
   parseStoredDraft,
   discardedRecord,
   forgottenRecord,
   storableRecord,
   syncedRecord,
-  programLabelFor,
+  type DraftSet,
+} from '../../web/src/offline/draft-format.ts';
+import {
+  addCardioExercise,
+  addExercise,
+  addSet,
+  canSwapExercise,
+  doneSetCount,
+  markPlannedSetsDone,
+  notDoneSetCount,
+  plannedSetsLeftToLifter,
   removeExercise,
-  seedUntouchedSet,
-  startDraftFromDay,
   swapExercise,
   toggleSetDone,
   withCurrentLoadTypes,
   withSessionRpe,
-  type DraftSet,
-  type WorkoutDraft,
-} from '../../web/src/offline/draft-format.ts';
-import { canAddSet, removeSet, updateSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
+} from '../../web/src/offline/draft-edits.ts';
+import { type CatalogEntry, startDraftFromDay } from '../../web/src/offline/draft-starts.ts';
+import { removeSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
-import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
+import {
+  cardioExercise,
+  DRAFT_USER_ID as userId,
+  liftsOf,
+  mixedWorkout,
+  withoutModality,
+  withoutSupersetId,
+  workout,
+} from './draft-fixtures.ts';
 
-const userId = '11111111-1111-4111-8111-111111111111';
-
-function workout(overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
-  return {
-    sessionId: '22222222-2222-4222-8222-222222222222',
-    startedAt: '2026-09-30T10:00:00.000Z',
-    finishedAt: '2026-09-30T11:00:00.000Z',
-    programDayId: null,
-    programLabel: null,
-    program: null,
-    challenge: null,
-    exercises: [
-      {
-        clientId: 'card-bench',
-        exerciseId: 'bench',
-        name: 'Bench',
-        modality: 'lift',
-        loadType: 'external',
-        target: null,
-        supersetId: null,
-        sets: [
-          {
-            id: 'set-a',
-            weightKg: 60,
-            reps: 8,
-            effort: { type: 'level', level: 'hard' },
-            done: true,
-            isWarmup: false,
-            prescription: null,
-          },
-          { id: 'set-b', weightKg: 60, reps: 8, effort: null, done: false, isWarmup: false, prescription: null },
-        ],
-      },
-      {
-        clientId: 'card-row',
-        exerciseId: 'row',
-        name: 'Row',
-        modality: 'lift',
-        loadType: 'external',
-        target: { sets: 3, repsMin: 8, repsMax: 12 },
-        supersetId: null,
-        sets: [
-          { id: 'set-c', weightKg: 50, reps: 10, effort: null, done: false, isWarmup: false, prescription: null },
-          {
-            id: 'set-d',
-            weightKg: 50,
-            reps: 10,
-            effort: { type: 'level', level: 'easy' },
-            done: true,
-            isWarmup: false,
-            prescription: null,
-          },
-          { id: 'set-e', weightKg: 55, reps: 9, effort: null, done: true, isWarmup: false, prescription: null },
-        ],
-      },
-    ],
-    ...overrides,
-  };
-}
-
-function withoutModality(value: object): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'modality'));
-}
-
-function withoutSupersetId(value: object): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'supersetId'));
-}
-
-function liftsOf(draft: WorkoutDraft | null | undefined): LiftDraftExercise[] {
-  return (draft?.exercises ?? []).filter((exercise): exercise is LiftDraftExercise => exercise.modality === 'lift');
-}
+const NO_PROGRESSION = { kind: 'none' } as const;
 
 describe('parseStoredDraft', () => {
   it('accepts a v5 draft for the same user', () => {
@@ -457,273 +386,6 @@ describe('completeSessionPayload', () => {
   });
 });
 
-describe('programLabelFor', () => {
-  it('joins the program and day names with a dash', () => {
-    expect(programLabelFor('Upper Lower', 'Upper A')).toBe('Upper Lower — Upper A');
-  });
-});
-
-const NO_PROGRESSION = { kind: 'none' } as const;
-
-describe('startDraftFromDay', () => {
-  const day = {
-    id: '55555555-5555-4555-8555-555555555555',
-    name: 'Upper',
-    programName: 'My UL',
-    exercises: [
-      { exerciseId: 'bench', targetSets: 3, targetRepsMin: 6, targetRepsMax: 10, progression: NO_PROGRESSION },
-      { exerciseId: 'pullup', targetSets: 2, targetRepsMin: 5, targetRepsMax: 8, progression: NO_PROGRESSION },
-      { exerciseId: 'old', targetSets: 1, targetRepsMin: 10, targetRepsMax: 12, progression: NO_PROGRESSION },
-      { exerciseId: 'gone', targetSets: 2, targetRepsMin: 8, targetRepsMax: 12, progression: NO_PROGRESSION },
-      { exerciseId: 'dip', targetSets: 2, targetRepsMin: 8, targetRepsMax: 12, progression: NO_PROGRESSION },
-    ],
-  };
-  const catalog = new Map<string, CatalogEntry>([
-    ['bench', { name: 'Bench', loadType: 'external', archived: false }],
-    ['pullup', { name: 'Pull-up', loadType: 'bodyweight', archived: false }],
-    ['old', { name: 'Old Press', loadType: 'external', archived: true }],
-    ['dip', { name: 'Weighted Dip', loadType: 'bodyweight_plus', archived: false }],
-  ]);
-  const lastSets = new Map([
-    ['bench', { weightKg: 72.5, reps: 6 }],
-    ['pullup', { weightKg: 0, reps: 9 }],
-  ]);
-  const started = startDraftFromDay(day, catalog, lastSets, new Date('2026-09-30T10:00:00.000Z'));
-
-  it('labels the draft with the program day', () => {
-    expect(started.draft).toMatchObject({
-      programDayId: day.id,
-      programLabel: 'My UL — Upper',
-      startedAt: '2026-09-30T10:00:00.000Z',
-      finishedAt: null,
-    });
-  });
-
-  it('plans target.sets not-done sets per exercise with the target', () => {
-    expect(started.draft.exercises.map((exercise) => exercise.sets.length)).toEqual([3, 2, 1, 2]);
-    expect(liftsOf(started.draft)[0].target).toEqual({ sets: 3, repsMin: 6, repsMax: 10 });
-    expect(
-      started.draft.exercises.flatMap((exercise): { done: boolean }[] => exercise.sets).every((set) => !set.done),
-    ).toBe(true);
-    expect(doneSetCount(started.draft)).toBe(0);
-    expect(notDoneSetCount(started.draft)).toBe(8);
-  });
-
-  it('carries the last logged weight, else 20 kg external or 0 for bodyweight, with reps at the target minimum', () => {
-    const [bench, pullup, old, dip] = liftsOf(started.draft);
-    expect(bench.sets.map((set) => [set.weightKg, set.reps])).toEqual([
-      [72.5, 6],
-      [72.5, 6],
-      [72.5, 6],
-    ]);
-    expect(pullup.sets[0]).toMatchObject({ weightKg: 0, reps: 5 });
-    expect(old.sets[0]).toMatchObject({ weightKg: 20, reps: 10 });
-    expect(dip.sets[0]).toMatchObject({ weightKg: 0, reps: 8 });
-  });
-
-  it('starts a day the same way whatever progression its exercises have', () => {
-    const plainExercises = (progressions: PlannedProgression[]) =>
-      liftsOf(
-        startDraftFromDay(
-          {
-            ...day,
-            exercises: day.exercises.map((planned, index) => ({
-              ...planned,
-              targetRepsMax: planned.targetRepsMin,
-              progression: progressions[index % progressions.length],
-            })),
-          },
-          catalog,
-          lastSets,
-          new Date('2026-09-30T10:00:00.000Z'),
-        ).draft,
-      ).map((exercise) => ({
-        name: exercise.name,
-        target: exercise.target,
-        sets: exercise.sets.map((set) => ({ ...set, id: 'set' })),
-      }));
-    const linear: PlannedProgression = { kind: 'linear', incrementKg: 2.5, incrementLb: 5 };
-    expect(plainExercises([linear, { kind: 'fixed' }])).toEqual(plainExercises([NO_PROGRESSION]));
-  });
-
-  it('labels archived exercises and skips missing ones', () => {
-    expect(started.draft.exercises.map((exercise) => exercise.name)).toEqual([
-      'Bench',
-      'Pull-up',
-      'Old Press (archived)',
-      'Weighted Dip',
-    ]);
-    expect(started.skippedExerciseIds).toEqual(['gone']);
-  });
-
-  it('sends only the done sets and the day id', () => {
-    const [bench] = started.draft.exercises;
-    const oneDone = toggleSetDone(started.draft, 0, bench.sets[1].id);
-    const payload = completeSessionPayload({ ...oneDone, finishedAt: '2026-09-30T11:00:00.000Z' });
-    expect(payload.programDayId).toBe(day.id);
-    expect(payload.sets.map((set) => [set.id, set.position])).toEqual([[bench.sets[1].id, 0]]);
-  });
-});
-
-describe('planned set editing', () => {
-  const planned = startDraftFromDay(
-    {
-      id: 'day',
-      name: 'Push',
-      programName: 'PPL',
-      exercises: [
-        { exerciseId: 'bench', targetSets: 2, targetRepsMin: 8, targetRepsMax: 12, progression: NO_PROGRESSION },
-      ],
-    },
-    new Map<string, CatalogEntry>([['bench', { name: 'Bench', loadType: 'external', archived: false }]]),
-    new Map(),
-    new Date(),
-  ).draft;
-  const setId = planned.exercises[0].sets[0].id;
-
-  it('lets the Done toggle undo itself', () => {
-    const done = toggleSetDone(planned, 0, setId);
-    expect(done.exercises[0].sets[0].done).toBe(true);
-    expect(toggleSetDone(done, 0, setId).exercises[0].sets[0].done).toBe(false);
-  });
-
-  it('swaps an exercise with no done sets, keeping the target and set count and resetting weights', () => {
-    const heavy = updateSet(planned, 0, setId, { weightKg: 100 });
-    const swapped = swapExercise(heavy, 0, { id: 'dip', name: 'Dip', loadType: 'bodyweight' });
-    expect(swapped?.exercises[0]).toMatchObject({
-      exerciseId: 'dip',
-      name: 'Dip',
-      loadType: 'bodyweight',
-      target: { sets: 2, repsMin: 8, repsMax: 12 },
-    });
-    expect(liftsOf(swapped)[0].sets.map((set) => set.weightKg)).toEqual([0, 0]);
-  });
-
-  it('refuses a swap once a set is done', () => {
-    const done = toggleSetDone(planned, 0, setId);
-    expect(canSwapExercise(done, 0)).toBe(false);
-    expect(swapExercise(done, 0, { id: 'dip', name: 'Dip', loadType: 'bodyweight' })).toBeNull();
-  });
-
-  it('plans every set as a working set', () => {
-    expect(liftsOf(planned)[0].sets.map((set) => set.isWarmup)).toEqual([false, false]);
-  });
-
-  it('marks a set as a warm-up and back', () => {
-    const warmup = updateSet(planned, 0, setId, { isWarmup: true });
-    expect(liftsOf(warmup)[0].sets.map((set) => set.isWarmup)).toEqual([true, false]);
-    expect(liftsOf(updateSet(warmup, 0, setId, { isWarmup: false }))[0].sets[0].isWarmup).toBe(false);
-  });
-
-  it('adds a working set after a warm-up', () => {
-    const warmup = updateSet(planned, 0, planned.exercises[0].sets[1].id, { isWarmup: true });
-    expect(liftsOf(addSet(warmup, 0))[0].sets.at(-1)?.isWarmup).toBe(false);
-  });
-
-  it('puts generated warm-ups before the sets as planned warm-up sets', () => {
-    const withWarmups = addWarmupSets(planned, 0, [
-      { weightKg: 20, reps: 10 },
-      { weightKg: 40, reps: 5 },
-    ]);
-    const sets = liftsOf(withWarmups)[0].sets;
-    expect(sets.map(({ weightKg, reps, isWarmup, done, effort }) => [weightKg, reps, isWarmup, done, effort])).toEqual([
-      [20, 10, true, false, null],
-      [40, 5, true, false, null],
-      [20, 8, false, false, null],
-      [20, 8, false, false, null],
-    ]);
-    expect(new Set(sets.map((set) => set.id)).size).toBe(4);
-  });
-
-  it('finds the first working set after the warm-ups', () => {
-    const [first, second] = planned.exercises[0].sets;
-    const warmedUp = updateSet(updateSet(planned, 0, first.id, { isWarmup: true }), 0, second.id, { weightKg: 90 });
-    expect(firstWorkingSet(liftsOf(warmedUp)[0])?.weightKg).toBe(90);
-    const allWarmups = updateSet(warmedUp, 0, second.id, { isWarmup: true });
-    expect(firstWorkingSet(liftsOf(allWarmups)[0])).toBeUndefined();
-  });
-
-  it('marks sets added with + Add set as done', () => {
-    const added = addSet(planned, 0);
-    expect(added.exercises[0].sets.at(-1)?.done).toBe(true);
-  });
-
-  it('seeds a set with last session values only while it is untouched', () => {
-    const empty = workout({ exercises: [{ ...liftsOf(planned)[0], sets: [] }] });
-    const added = addSet(empty, 0);
-    const original = liftsOf(added)[0].sets[0];
-    const seed = { weightKg: 72.5, reps: 6 };
-    const seeded = seedUntouchedSet(added, 0, original, seed);
-    expect(liftsOf(seeded)[0].sets[0]).toEqual({ ...original, ...seed });
-
-    const edited = updateSet(added, 0, original.id, { reps: 3 });
-    expect(seedUntouchedSet(edited, 0, original, seed)).toBe(edited);
-    const removed = removeSet(added, 0, original.id);
-    expect(seedUntouchedSet(removed, 0, original, seed)).toBe(removed);
-  });
-
-  it('seeds the first set of an exercise and copies the previous set after that', () => {
-    const empty = workout({ exercises: [{ ...liftsOf(planned)[0], sets: [] }] });
-    const seeded = addSet(empty, 0, { weightKg: 72.5, reps: 6 });
-    expect(liftsOf(seeded)[0].sets.map(({ weightKg, reps }) => [weightKg, reps])).toEqual([[72.5, 6]]);
-    const next = addSet(seeded, 0, { weightKg: 100, reps: 1 });
-    expect(liftsOf(next)[0].sets.map(({ weightKg, reps }) => [weightKg, reps])).toEqual([
-      [72.5, 6],
-      [72.5, 6],
-    ]);
-  });
-});
-
-function cardioExercise(overrides: Partial<CardioDraftExercise> = {}): CardioDraftExercise {
-  return {
-    clientId: 'card-run',
-    exerciseId: 'run',
-    name: 'Running',
-    modality: 'cardio',
-    activity: {
-      paceUnit: 'per_km',
-      referencePaceSPerKm: 360,
-      maxEffort: 'max',
-      tracksDistance: true,
-      shares: [{ skillKey: 'endurance', shareBasisPoints: 10_000 }],
-    },
-    sets: [
-      {
-        id: 'bout-a',
-        kind: 'cardio',
-        durationS: 1800,
-        distanceM: 5000,
-        interval: null,
-        effort: { type: 'cardio', level: 'moderate' },
-        done: true,
-      },
-      {
-        id: 'bout-b',
-        kind: 'cardio',
-        durationS: 1800,
-        distanceM: null,
-        interval: { workS: 30, restS: 30, rounds: 10 },
-        effort: null,
-        done: true,
-      },
-      {
-        id: 'bout-c',
-        kind: 'cardio',
-        durationS: 600,
-        distanceM: null,
-        interval: null,
-        effort: null,
-        done: false,
-      },
-    ],
-    ...overrides,
-  };
-}
-
-function mixedWorkout(): WorkoutDraft {
-  return workout({ exercises: [cardioExercise(), ...workout().exercises] });
-}
-
 describe('cardio drafts', () => {
   it('keeps cardio bouts through a parse', () => {
     const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft: mixedWorkout() };
@@ -915,91 +577,6 @@ describe('completeSessionPayload with cardio', () => {
   });
 });
 
-describe('fillWorkingSets', () => {
-  const liftAt = (draft: WorkoutDraft, index: number) => {
-    const exercise = draft.exercises[index];
-    if (exercise.modality !== 'lift') throw new Error('expected a lift');
-    return exercise;
-  };
-  const freshBench = () => {
-    const lift = liftAt(workout(), 0);
-    return workout({ exercises: [{ ...lift, sets: [lift.sets[0]] }] });
-  };
-
-  it('turns a fresh lift into the count of done sets at its weight and the reps', () => {
-    const filled = liftAt(fillWorkingSets(freshBench(), 0, 3, 5), 0);
-    expect(filled.sets.map(({ id, weightKg, reps, done, effort }) => ({ id, weightKg, reps, done, effort }))).toEqual([
-      { id: 'set-a', weightKg: 60, reps: 5, done: true, effort: { type: 'level', level: 'hard' } },
-      { id: expect.any(String), weightKg: 60, reps: 5, done: true, effort: null },
-      { id: expect.any(String), weightKg: 60, reps: 5, done: true, effort: null },
-    ]);
-    expect(new Set(filled.sets.map((set) => set.id)).size).toBe(3);
-  });
-
-  it('leaves warm-ups alone and starts an empty lift at the default weight', () => {
-    const warmup = { id: 'w', weightKg: 20, reps: 10, effort: null, done: false, isWarmup: true, prescription: null };
-    const draft = workout({ exercises: [{ ...liftAt(workout(), 0), sets: [warmup] }] });
-    const sets = liftAt(fillWorkingSets(draft, 0, 3, 8), 0).sets;
-    expect(sets[0]).toEqual(warmup);
-    expect(sets.slice(1).map(({ weightKg, reps, done, isWarmup }) => [weightKg, reps, done, isWarmup])).toEqual([
-      [20, 8, true, false],
-      [20, 8, true, false],
-      [20, 8, true, false],
-    ]);
-  });
-
-  it('only fills a fresh freestyle lift, so logged sets and program sets stay as they are', () => {
-    expect(canQuickFill(liftAt(freshBench(), 0))).toBe(true);
-    expect(canQuickFill(liftAt(workout(), 0))).toBe(false);
-    expect(fillWorkingSets(workout(), 0, 3, 5)).toEqual(workout());
-    const lift = liftAt(freshBench(), 0);
-    const prescribed = {
-      ...lift.sets[0],
-      prescription: { ref: 't1-1', weightKg: 60, reps: 3, minReps: null, amrap: true },
-    };
-    const programDraft = workout({ exercises: [{ ...lift, sets: [prescribed] }] });
-    expect(canQuickFill(liftAt(programDraft, 0))).toBe(false);
-    expect(fillWorkingSets(programDraft, 0, 3, 8)).toEqual(programDraft);
-  });
-
-  it('does not quick fill a lift that is part of a superset', () => {
-    const grouped = { ...liftAt(freshBench(), 0), supersetId: 'g' };
-    expect(canQuickFill(grouped)).toBe(false);
-    expect(fillWorkingSets(workout({ exercises: [grouped] }), 0, 3, 8).exercises).toEqual([grouped]);
-  });
-});
-
-describe('superset leftovers', () => {
-  function supersetIdsOf(draft: WorkoutDraft | null): (string | null | undefined)[] {
-    return liftsOf(draft).map((lift) => lift.supersetId);
-  }
-
-  function undone(exercise: LiftDraftExercise, supersetId: string | null): LiftDraftExercise {
-    return { ...exercise, supersetId, sets: exercise.sets.map((set) => ({ ...set, done: false })) };
-  }
-
-  const [bench, row] = liftsOf(workout());
-
-  it('ungroups the member left alone when its partner is removed', () => {
-    const singleSetBench = { ...bench, sets: bench.sets.slice(0, 1) };
-    const draft = workout({ exercises: [undone(singleSetBench, 'g'), undone(row, 'g')] });
-    const removed = removeExercise(draft, 1);
-    expect(supersetIdsOf(removed)).toEqual([null]);
-    expect(canQuickFill(liftsOf(removed)[0])).toBe(true);
-  });
-
-  it('keeps a group that still has two members after a removal', () => {
-    const draft = workout({ exercises: [undone(bench, 'g'), undone(row, 'g'), undone(row, 'g')] });
-    expect(supersetIdsOf(removeExercise(draft, 0))).toEqual(['g', 'g']);
-  });
-
-  it('drops a lone superset id when an exercise is swapped', () => {
-    const draft = workout({ exercises: [undone(bench, 'g'), undone(row, null)] });
-    const swapped = swapExercise(draft, 0, { id: 'dip', name: 'Dip', loadType: 'bodyweight' });
-    expect(supersetIdsOf(swapped)).toEqual([null, null]);
-  });
-});
-
 describe('exercise client ids', () => {
   const withoutClientId = (exercise: DraftExercise) =>
     Object.fromEntries(Object.entries(exercise).filter(([key]) => key !== 'clientId'));
@@ -1049,79 +626,5 @@ describe('exercise client ids', () => {
     );
     const [first, second] = benchTwice.draft.exercises.map((exercise) => exercise.clientId);
     expect(first).not.toBe(second);
-  });
-});
-
-describe('set limit', () => {
-  const liftWithSets = (count: number): LiftDraftExercise => ({
-    clientId: 'card-squat',
-    exerciseId: 'squat',
-    name: 'Squat',
-    modality: 'lift',
-    loadType: 'external',
-    target: null,
-    supersetId: null,
-    sets: Array.from({ length: count }, (_, index) => ({
-      id: `squat-${index}`,
-      weightKg: 100,
-      reps: 5,
-      effort: null,
-      done: true,
-      isWarmup: false,
-      prescription: null,
-    })),
-  });
-  const freshLift = (): LiftDraftExercise => ({ ...liftWithSets(0), clientId: 'card-press', exerciseId: 'press' });
-  const fullDraft = () => workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 2), cardioExercise()] });
-
-  it('allows a set only while the workout holds fewer sets than the server accepts', () => {
-    expect(canAddSet(workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 1)] }))).toBe(true);
-    expect(canAddSet(fullDraft())).toBe(false);
-  });
-
-  it('adds no set or bout once the workout is full', () => {
-    expect(addSet(fullDraft(), 0)).toEqual(fullDraft());
-    expect(addSet(fullDraft(), 1)).toEqual(fullDraft());
-  });
-
-  it('adds no bout and no cardio exercise once the bouts add up to 4 hours, but still adds a lift', () => {
-    const fourHours = workout({
-      exercises: [cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 14_400 }] })],
-    });
-    expect(addSet(fourHours, 0)).toBe(fourHours);
-    expect(addCardioExercise(fourHours, 'row', 'Rowing', cardioExercise().activity)).toBe(fourHours);
-    const withLift = addSet(addExercise(fourHours, 'press', 'Press', 'external'), 1);
-    expect(withLift.exercises[1].sets).toHaveLength(1);
-  });
-
-  it('adds no lift or hold exercise once the workout holds as many sets as the server accepts', () => {
-    const full = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION)] });
-    expect(addExercise(full, 'press', 'Press', 'external')).toBe(full);
-    expect(addHoldExercise(full, 'plank', 'Plank', 'bodyweight', 'time')).toBe(full);
-  });
-
-  it('adds no warm-ups that would not fit', () => {
-    const draft = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 1)] });
-    const warmups = [
-      { weightKg: 20, reps: 10 },
-      { weightKg: 60, reps: 5 },
-    ];
-    expect(addWarmupSets(draft, 0, warmups)).toEqual(draft);
-    expect(addWarmupSets(draft, 0, warmups.slice(0, 1)).exercises[0].sets).toHaveLength(MAX_SETS_PER_SESSION);
-  });
-
-  it('quick fills only up to the set limit', () => {
-    const draft = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 2), freshLift()] });
-    expect(fillWorkingSets(draft, 1, 5, 8).exercises[1].sets).toHaveLength(2);
-  });
-
-  it('offers a quick fill of only as many working sets as still fit', () => {
-    const nearlyFull = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 2), freshLift()] });
-    expect(mostQuickFillSets(nearlyFull, 1)).toBe(2);
-    const oneWorkingSet = { ...freshLift(), sets: liftWithSets(1).sets };
-    const full = workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION - 1), oneWorkingSet] });
-    expect(mostQuickFillSets(full, 1)).toBe(1);
-    expect(mostQuickFillSets(workout({ exercises: [freshLift()] }), 0)).toBe(20);
-    expect(mostQuickFillSets(workout({ exercises: [liftWithSets(MAX_SETS_PER_SESSION), freshLift()] }), 1)).toBe(0);
   });
 });

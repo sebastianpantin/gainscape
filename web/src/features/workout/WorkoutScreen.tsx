@@ -16,7 +16,7 @@ import { addableExercises, canAddSetTo } from '../../lib/workout/exercise-edit-r
 import { readPlateSettings } from '../../lib/workout/plate-settings-store.ts';
 import { supersetGroups } from '../../lib/workout/superset-rules.ts';
 import { readTrainingDeviceSettings } from '../../lib/workout/training-device-store.ts';
-import { doneSetCount, withSessionRpe } from '../../offline/draft-format.ts';
+import { doneSetCount, withSessionRpe } from '../../offline/draft-edits.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { useOnboarding } from '../onboarding/use-onboarding.ts';
 import { useActiveProgram } from '../programs/use-active-program.ts';

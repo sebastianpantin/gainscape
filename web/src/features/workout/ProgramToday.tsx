@@ -21,7 +21,7 @@ import {
   prescriptionCards,
   startLabel,
 } from '../../lib/programs/program-today-rules.ts';
-import { type PrescribedDayStart } from '../../offline/draft-format.ts';
+import { type PrescribedDayStart } from '../../offline/draft-starts.ts';
 import { PrescriptionCards } from '../programs/PrescriptionCards.tsx';
 import { useLastLoggedWeights } from '../programs/use-last-logged-weights.ts';
 

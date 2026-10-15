@@ -1,4 +1,5 @@
-import type { LastLoggedSet, PlannedExercise } from '../../offline/draft-format.ts';
+import type { LastLoggedSet } from '../../offline/draft-edits.ts';
+import type { PlannedExercise } from '../../offline/draft-starts.ts';
 import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { programListCache, withSavedProgramDoc } from '../../offline/program-list-cache.ts';
 import { PROGRAM_SELECT, programPayload, programRowSchema, toProgram } from './program-row-rules.ts';

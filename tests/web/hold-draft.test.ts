@@ -3,15 +3,13 @@ import { DEFAULT_BALANCE, MAX_SETS_PER_SESSION } from '@domain/index.ts';
 import { previewSession } from '../../web/src/features/workout/xp-preview.ts';
 import { toExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
-  addHoldExercise,
-  addSet,
   draftRecord,
   type HoldDraftExercise,
   parseStoredDraft,
-  startDraft,
-  toggleSetDone,
   type WorkoutDraft,
 } from '../../web/src/offline/draft-format.ts';
+import { addHoldExercise, addSet, toggleSetDone } from '../../web/src/offline/draft-edits.ts';
+import { startDraft } from '../../web/src/offline/draft-starts.ts';
 import { removeSet, updateHoldSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 

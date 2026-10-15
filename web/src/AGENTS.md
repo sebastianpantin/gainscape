@@ -21,7 +21,7 @@ All application source for the React PWA. `main.tsx` boots the app, `App.tsx` ow
 - `RouteFocusAndTitle` sets the page title and focuses the new screen's `h1` on each route change.
 - Screens take `userId` as a prop; `WorkoutScreen` is keyed on it and `PreferencesProvider` by user id so state resets on account switch.
 - Read the changelog through `features/whats-new/changelog-data.ts`, never the `__CHANGELOG__` global (ESLint bans it).
-- Keep components thin: decisions go in `lib/**/*-rules.ts`, `offline/draft-format.ts` or `pwa/*` pure modules, tested in `tests/web/`.
+- Keep components thin: decisions go in `lib/**/*-rules.ts`, `offline/draft-*.ts` or `pwa/*` pure modules, tested in `tests/web/`.
 - Use `@domain/*` for game rules; never reimplement XP, levels or loot in the web layer. The server is authoritative.
 - Named exports only, one component per file named like the file. External stores use `useSyncExternalStore`. Wrap browser storage access in try/catch and degrade silently.
 

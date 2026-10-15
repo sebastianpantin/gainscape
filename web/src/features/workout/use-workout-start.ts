@@ -6,13 +6,13 @@ import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/program
 import { skipDayEvent } from '../../lib/programs/program-skip-rules.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs/programs.ts';
 import { fetchLatestExerciseList } from '../../lib/query/queries.ts';
+import { type WorkoutDraft } from '../../offline/draft-format.ts';
 import {
   type PrescribedDayStart,
   startDraft,
   startDraftFromDay,
   startDraftFromPrescription,
-  type WorkoutDraft,
-} from '../../offline/draft-format.ts';
+} from '../../offline/draft-starts.ts';
 import { type ProgramCache } from '../../offline/program-cache.ts';
 import { type WorkoutDraftHandle } from '../../offline/use-workout-draft.ts';
 import { startNoticeText } from './workout-rules.ts';

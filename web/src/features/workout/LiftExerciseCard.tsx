@@ -1,13 +1,13 @@
 import { roomForSets } from '../../lib/workout/exercise-edit-rules.ts';
+import { type LiftDraftExercise } from '../../offline/draft-format.ts';
 import {
   addSet,
   addWarmupSets,
   canQuickFill,
   fillWorkingSets,
   firstWorkingSet,
-  type LiftDraftExercise,
   mostQuickFillSets,
-} from '../../offline/draft-format.ts';
+} from '../../offline/draft-edits.ts';
 import { isBarbellLift, warmupsToOffer } from './exercise-card-rules.ts';
 import { type LiftCardContext } from './lift-card-context.ts';
 import { LiftExerciseIntro } from './LiftExerciseIntro.tsx';

@@ -4,7 +4,8 @@ import { barbellPlates, barbellPlatesText } from '../../lib/workout/plate-rules.
 import { stopsRestForWarmup } from '../../lib/workout/rest-timer-rules.ts';
 import { nextInRound } from '../../lib/workout/superset-rules.ts';
 import { shownWeight } from '../../lib/units.ts';
-import { type DraftSet, type LiftDraftExercise, toggleSetDone } from '../../offline/draft-format.ts';
+import { type DraftSet, type LiftDraftExercise } from '../../offline/draft-format.ts';
+import { toggleSetDone } from '../../offline/draft-edits.ts';
 import { isBarbellLift, restStartsAfterChange } from './exercise-card-rules.ts';
 import { lastSetForRow } from './last-set-rules.ts';
 import { type LiftCardContext } from './lift-card-context.ts';

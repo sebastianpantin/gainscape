@@ -13,14 +13,9 @@ import {
   parsedDraftChallenge,
   toCatalogChallenge,
 } from '../../web/src/lib/collection/challenge-rules.ts';
-import {
-  addExercise,
-  addSet,
-  type CatalogEntry,
-  type LiftDraftExercise,
-  startDraftFromChallenge,
-  type WorkoutDraft,
-} from '../../web/src/offline/draft-format.ts';
+import { type LiftDraftExercise, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
+import { addExercise, addSet } from '../../web/src/offline/draft-edits.ts';
+import { type CatalogEntry, startDraftFromChallenge } from '../../web/src/offline/draft-starts.ts';
 import { updateSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
 
 const NOW = new Date('2026-10-08T09:00:00.000Z');

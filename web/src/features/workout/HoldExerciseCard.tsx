@@ -1,7 +1,8 @@
 import { type ReactNode } from 'react';
 import { updateHoldSet } from '../../lib/workout/exercise-edit-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
-import { addSet, type HoldDraftExercise, toggleSetDone, type WorkoutDraft } from '../../offline/draft-format.ts';
+import { type HoldDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
+import { addSet, toggleSetDone } from '../../offline/draft-edits.ts';
 import { type ExerciseCardActions } from './exercise-card-actions.ts';
 import { HoldSetRow } from './HoldSetRow.tsx';
 import { type PreviewRecord } from './record-preview.ts';

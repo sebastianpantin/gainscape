@@ -46,7 +46,7 @@ import {
   toProgram,
 } from '../../web/src/lib/programs/program-row-rules.ts';
 import type { ProgramDoc as WebProgramDoc } from '../../web/src/lib/programs/programs.ts';
-import type { PlannedProgression } from '../../web/src/offline/draft-format.ts';
+import type { PlannedProgression } from '../../web/src/offline/draft-starts.ts';
 
 interface EnrollmentPayload {
   templateKey: string;

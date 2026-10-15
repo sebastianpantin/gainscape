@@ -11,7 +11,7 @@ import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { exerciseListQuery, programsQuery, publishForEnroll, showChangedPrograms } from '../../lib/query/queries.ts';
-import type { PlannedExercise, ProgressionKind } from '../../offline/draft-format.ts';
+import type { PlannedExercise, ProgressionKind } from '../../offline/draft-starts.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import {
   addDay,

@@ -1,5 +1,6 @@
 import { lastTimeText } from '../../lib/history/last-session-rules.ts';
-import { canSwapExercise, type LiftDraftExercise } from '../../offline/draft-format.ts';
+import { type LiftDraftExercise } from '../../offline/draft-format.ts';
+import { canSwapExercise } from '../../offline/draft-edits.ts';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { isBarbellLift, liftAdvice, liftDetailsText } from './exercise-card-rules.ts';
 import { ExerciseMenu } from './ExerciseMenu.tsx';

@@ -9,14 +9,8 @@ import { REST_OFF, restClock, type RestTimer, startsRest } from '../../lib/worko
 import { restsAfter, supersetGroups } from '../../lib/workout/superset-rules.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
 import { warmupPlan, type WarmupRamp } from '../../lib/workout/warmup-rules.ts';
-import {
-  canSwapExercise,
-  type DraftSet,
-  firstWorkingSet,
-  type LastLoggedSet,
-  type LiftDraftExercise,
-  type WorkoutDraft,
-} from '../../offline/draft-format.ts';
+import { type DraftSet, type LiftDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
+import { canSwapExercise, firstWorkingSet, type LastLoggedSet } from '../../offline/draft-edits.ts';
 
 export interface LiftEquipment {
   barbellIds: ReadonlySet<string>;
