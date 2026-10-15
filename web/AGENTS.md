@@ -9,7 +9,7 @@ The React 19 PWA and its Vite root. Source lives in `src/`, static assets in `pu
 
 ## Map
 
-- `vite.config.ts`: root, `@domain` alias, the `/sb` proxy to the local Supabase API (for both `server` and `preview`; the PWA e2e suite runs on preview), the service worker plugin, the `__CHANGELOG__` and `__APP_BUILD__` defines, and vendor chunk groups.
+- `vite.config.ts`: root, `resolve.tsconfigPaths` for `@domain`, the `/sb` proxy to the local Supabase API (for both `server` and `preview`; the PWA e2e suite runs on preview), the service worker plugin, the `__CHANGELOG__` and `__APP_BUILD__` defines, and vendor chunk groups.
 - `changelog.yaml`: release history shown in the app, newest first; each entry's `prs` lists covered PR numbers and is kept out of the bundle. The app version is the newest entry (`APP_VERSION`); there is no other version constant.
 - `index.html`, `.env.development`.
 
@@ -22,7 +22,7 @@ The React 19 PWA and its Vite root. Source lives in `src/`, static assets in `pu
 - `vite.config.ts` reads `changelog.yaml` once at startup: restart `make dev` after editing it. `src/lib/platform/changelog-rules.ts` validates it on every build, and `make deploy` refuses until every user-facing merged PR is in some entry's `prs`.
 - A new build-time constant is declared in both `src/vite-env.d.ts` and `vite.config.ts`.
 - Node-loaded files (`vite.config.ts`, `build/*.ts`) use `.ts` extensions and `import.meta.dirname`.
-- The `@domain` alias is also in `tsconfig.base.json` and `vitest.config.ts`. Change all three together.
+- The `@domain` alias is defined once, in `tsconfig.base.json` `paths`; `vite.config.ts` and `vitest.config.ts` read it through `resolve.tsconfigPaths`, so `tsc`, Vite and Vitest cannot drift.
 - Ports come from `GAINSCAPE_WEB_PORT` and `GAINSCAPE_PREVIEW_PORT` (`build/ports.ts`) so a second worktree stack can run side by side.
 - Use `make dev`, `make build-local` (development-mode build for the PWA e2e suite) and `make preview`, never `npm run` variants.
 

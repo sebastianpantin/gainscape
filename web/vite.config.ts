@@ -37,9 +37,7 @@ function appBuild(): string {
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
   plugins: [react(), ...(process.env.GAINSCAPE_PLAIN_HTTP ? [] : [basicSsl()]), serviceWorkerPlugin()],
-  resolve: {
-    alias: { '@domain': fileURLToPath(new URL('../supabase/functions/_shared/domain', import.meta.url)) },
-  },
+  resolve: { tsconfigPaths: true },
   define: { __CHANGELOG__: JSON.stringify(readChangelog()), __APP_BUILD__: JSON.stringify(appBuild()) },
   server: {
     host: true,
