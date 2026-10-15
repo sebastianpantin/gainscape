@@ -12,35 +12,18 @@ import {
 vi.mock('../../web/src/lib/platform/supabase.ts', () => ({ supabase: {} }));
 
 const queries = await import('../../web/src/lib/query/queries.ts');
-const { standingQuery } = await import('../../web/src/lib/progress/standing.ts');
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
-const FRIEND_ID = '22222222-2222-4222-8222-222222222222';
 const CATALOG_ROOTS = ['skills'];
 
-const QUERY_ROOTS = [
-  standingQuery(USER_ID),
-  queries.profileQuery(USER_ID),
-  queries.collectionQuery(USER_ID),
-  queries.loadoutQuery(USER_ID),
-  queries.itemsQuery(USER_ID),
-  queries.skillsQuery,
-  queries.friendsQuery(USER_ID),
-  queries.feedQuery(USER_ID),
-  queries.hiscoresQuery,
-  queries.friendProfileQuery(FRIEND_ID),
-  queries.profilePreviewQuery(USER_ID),
-  queries.bodyweightTrendQuery(USER_ID),
-  queries.exerciseProgressQuery(USER_ID, 'bench'),
-  queries.programTemplatesQuery(USER_ID),
-  queries.enrollChoicesQuery(USER_ID),
-  queries.weeklyGoalQuery,
-  queries.exerciseListQuery(USER_ID),
-  queries.lastLoggedWeightsQuery(['bench']),
-  queries.trainingHistoryQuery(USER_ID),
-  queries.historyQuery(USER_ID),
-  queries.questsQuery(USER_ID),
-].map(({ queryKey }) => String(queryKey[0]));
+type QueryFactory = (...args: string[]) => { queryKey: readonly unknown[] };
+
+function rootOf(query: (typeof queries.EVERY_QUERY)[number]): string {
+  const options = typeof query === 'function' ? (query as unknown as QueryFactory)(USER_ID, USER_ID) : query;
+  return String(options.queryKey[0]);
+}
+
+const QUERY_ROOTS = queries.EVERY_QUERY.map(rootOf);
 
 function draftMessage(change: string) {
   return { userId: USER_ID, sessionId: 'session-1', updatedAt: 5, change };
@@ -64,6 +47,16 @@ describe('dataChangeOf', () => {
   it('ignores anything else on the channels', () => {
     for (const message of [null, 'synced', 42, {}, { change: 'reloaded' }, { change: 7 }])
       expect(dataChangeOf(message)).toBeNull();
+  });
+});
+
+describe('EVERY_QUERY', () => {
+  it('lists every query factory queries.ts exports, so no query can skip the invalidation map', () => {
+    const exported = Object.entries(queries)
+      .filter(([name]) => name.endsWith('Query'))
+      .map(([, query]) => query);
+    expect(exported.length).toBeGreaterThan(0);
+    for (const query of exported) expect(queries.EVERY_QUERY).toContain(query);
   });
 });
 
@@ -110,6 +103,14 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toEqual(
       expect.arrayContaining(['exercises', 'collection', 'enroll-choices', 'exercise-progress', 'history']),
     );
+  });
+
+  it('refreshes the program list after a program is saved, copied or deleted', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['programs-changed']).toEqual(['programs']);
+  });
+
+  it('refreshes the strength the workout preview uses after a workout changes', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('strength');
   });
 
   it('refreshes the quest log after a quest starts and after a workout moves a quest along', () => {

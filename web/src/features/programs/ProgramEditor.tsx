@@ -1,20 +1,16 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { fetchExercises } from '../../lib/exercises/catalog.ts';
-import { deviceStorage } from '../../lib/platform/keyed-store.ts';
-import { useIsOffline, useOnlineSignal } from '../../lib/platform/use-online.ts';
-import { savedExerciseList } from '../../offline/collection-cache.ts';
-import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
-import { type Exercise, exerciseLabels, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
-import { cachedPrograms, loadProgramsCacheFirst, type ProgramDoc, saveProgram } from '../../lib/programs/programs.ts';
+import { useIsOffline } from '../../lib/platform/use-online.ts';
+import { exerciseLabels, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import { cachedPrograms, type ProgramDoc, saveProgram } from '../../lib/programs/programs.ts';
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/programs/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { publishForEnroll } from '../../lib/query/queries.ts';
+import { exerciseListQuery, programsQuery, publishForEnroll, showChangedPrograms } from '../../lib/query/queries.ts';
 import type { PlannedExercise, ProgressionKind } from '../../offline/draft-format.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import {
@@ -80,39 +76,29 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   );
   const [savedDoc, setSavedDoc] = useState(doc);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
-  const [exercises, setExercises] = useState<Exercise[] | null>(null);
-  const [problem, setProblem] = useState<{ text: string; shownFor: ProgramDoc | null } | null>(null);
+  const [problem, setProblem] = useState<{ text: string; shownFor: ProgramDoc } | null>(null);
   const [missing, setMissing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const onlineSignal = useOnlineSignal();
   const { unitPref } = usePreferences();
   const offline = useIsOffline();
   const { cache: programCache, program: followed } = useActiveProgram(userId);
+  const exerciseList = useQuery(exerciseListQuery(userId));
+  const programList = useQuery(programsQuery(userId));
+  const exercises = exerciseList.data ?? null;
+  const loadedPrograms = programList.data?.loaded;
 
-  useEffect(() => {
-    loadCacheFirstWhenOffline(
-      isDeviceOffline,
-      () => savedExerciseList(deviceStorage(), userId),
-      () => fetchExercises({ includeArchived: true }),
-    ).then(
-      ({ loaded }) => setExercises(loaded),
-      (error: Error) => setProblem({ text: error.message, shownFor: null }),
-    );
-  }, [userId, onlineSignal]);
+  if (!doc && !missing && loadedPrograms && !programList.isFetching) {
+    const loaded = docFor(loadedPrograms, userId, programId);
+    if (loaded) {
+      setDoc(loaded);
+      setSavedDoc(loaded);
+    } else setMissing(true);
+  }
 
-  useEffect(() => {
-    if (doc) return;
-    loadProgramsCacheFirst(userId).then(
-      ({ loaded: programs }) => {
-        const loaded = docFor(programs, userId, programId);
-        if (loaded) {
-          setDoc(loaded);
-          setSavedDoc(loaded);
-        } else setMissing(true);
-      },
-      (error: Error) => setProblem({ text: error.message, shownFor: null }),
-    );
-  }, [doc, userId, programId, onlineSignal]);
+  const loadProblem =
+    (doc || programList.data ? null : programList.error?.message) ??
+    (exercises ? null : exerciseList.error?.message) ??
+    null;
 
   if (missing)
     return (
@@ -123,9 +109,9 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   if (!doc)
     return (
       <main className="screen">
-        {problem ? (
+        {loadProblem ? (
           <p className="problem" role="alert">
-            {problem.text}
+            {loadProblem}
           </p>
         ) : (
           <p>Loading…</p>
@@ -143,7 +129,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   };
   const issue =
     nameIssue(doc) ?? exerciseIssue(doc) ?? targetIssue(doc, nameOf) ?? progressionIssue(doc, nameOf, loadTypeOf);
-  const shownProblem = problem && (problem.shownFor === null || problem.shownFor === doc) ? problem.text : null;
+  const shownProblem = problem?.shownFor === doc ? problem.text : loadProblem;
   const changeAt = (dayIndex: number, exerciseIndex: number, changes: Partial<PlannedExercise>) =>
     setDoc(changePlannedExercise(doc, dayIndex, exerciseIndex, changes));
   const changeIncrement = (dayIndex: number, exerciseIndex: number, value: number) => {
@@ -157,6 +143,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
+      await showChangedPrograms(queryClient, userId);
       navigate('/programs');
     } catch (error) {
       setProblem({ text: messageOf(error, 'Could not save the program.'), shownFor: doc });
@@ -185,6 +172,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
+      void showChangedPrograms(queryClient, userId);
       const { key } = await publishForEnroll(queryClient, userId, doc.id);
       navigate(`/programs/enroll/${key}`, { state: { carried } });
     } catch (error) {

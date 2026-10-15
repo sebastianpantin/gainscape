@@ -9,6 +9,7 @@ export const DATA_CHANGES = [
   'weekly-goal-saved',
   'pins-changed',
   'quest-started',
+  'programs-changed',
   'account-reset',
 ] as const;
 
@@ -18,6 +19,7 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
   'workout-changed': [
     'history',
     'standing',
+    'strength',
     'collection',
     'items',
     'loadout',
@@ -37,8 +39,11 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
   'weekly-goal-saved': ['weekly-goal'],
   'pins-changed': ['collection'],
   'quest-started': ['quests'],
+  'programs-changed': ['programs'],
   'account-reset': [
     'standing',
+    'strength',
+    'programs',
     'profile',
     'collection',
     'loadout',

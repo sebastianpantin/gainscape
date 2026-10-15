@@ -4,7 +4,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
-import { fetchExercises } from '../../lib/exercises/catalog.ts';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import {
   addableExercises,
@@ -21,7 +20,7 @@ import { isUuid, withoutHistorySession } from '../../lib/history/history-rules.t
 import { type CatalogItem } from '../../lib/collection/item-rules.ts';
 import { fetchItemCatalog } from '../../lib/collection/items.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { historyQuery } from '../../lib/query/queries.ts';
+import { exerciseListLoadQuery, fetchLatestExerciseList, historyQuery } from '../../lib/query/queries.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
@@ -92,6 +91,14 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     );
   }, []);
 
+  const loadWithCatalog = useCallback(
+    () =>
+      loadSession(sessionId, () =>
+        queryClient.fetchQuery(exerciseListLoadQuery(userId)).then(({ loaded: exercises }) => exercises),
+      ),
+    [queryClient, sessionId, userId],
+  );
+
   const adopt = useCallback((next: Loaded) => {
     setLoaded(next);
     setEdit(next.original);
@@ -110,7 +117,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       goBackGone();
       return () => controller.abort();
     }
-    loadSession(sessionId).then(
+    loadWithCatalog().then(
       (next) => {
         if (controller.signal.aborted) return;
         if (next) adopt(next);
@@ -119,7 +126,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       (error: Error) => !controller.signal.aborted && setLoadProblem(error.message),
     );
     return () => controller.abort();
-  }, [sessionId, adopt, goBackGone]);
+  }, [sessionId, adopt, goBackGone, loadWithCatalog]);
 
   if (loadProblem)
     return (
@@ -145,8 +152,12 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       signal: () => controllerRef.current!.signal,
       editSession: (payload, signal, onRetry) => editSession(userId, payload, signal, onRetry),
       deleteSession: (payload, signal, onRetry) => deleteSession(userId, payload, signal, onRetry),
-      loadSession: () => loadSession(sessionId),
-      latestExercises: () => fetchExercises({ includeArchived: true }).catch(() => loaded.exercises),
+      loadSession: loadWithCatalog,
+      latestExercises: () =>
+        fetchLatestExerciseList(queryClient, userId).then(
+          (latest) => (latest.fromCache ? loaded.exercises : latest.loaded),
+          () => loaded.exercises,
+        ),
       rememberedSummaryId: () => recallLastSummary(userId)?.sessionId,
       forgetSummaries: forgetLastSummary,
       forgetDeletedSession: () => forgetDeletedProgramSession(localStorage, userId, sessionId),

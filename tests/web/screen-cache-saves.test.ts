@@ -38,7 +38,7 @@ vi.mock('../../web/src/lib/platform/supabase.ts', () => {
 
 const { loadProfileCacheFirst, fetchProfile } = await import('../../web/src/lib/profile/profile.ts');
 const { fetchPrograms, deleteProgram, saveProgram } = await import('../../web/src/lib/programs/programs.ts');
-const { loadStanding } = await import('../../web/src/lib/progress/standing.ts');
+const { loadStanding } = await import('../../web/src/lib/progress/standing-data.ts');
 const { loadCollectionCacheFirst } = await import('../../web/src/lib/collection/collection-data.ts');
 const { profileCache } = await import('../../web/src/offline/profile-cache.ts');
 const { programListCache } = await import('../../web/src/offline/program-list-cache.ts');

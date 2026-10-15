@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   exerciseCacheKey,
-  type ExerciseList,
+  exercisePickerList,
   forgetCachedExercises,
   loadExercisesCacheFirst,
   OFFLINE_EXERCISES_NOTICE,
@@ -179,149 +179,129 @@ describe('exercise list cache', () => {
   });
 });
 
-describe('cache-first exercise picker', () => {
-  it('shows the cached list before the live list arrives, then swaps in the live list', async () => {
+function loadWith(
+  storage: MemoryStorage,
+  fetchAll: () => Promise<Exercise[]>,
+  isOffline: () => boolean = () => false,
+  readSaved: () => Exercise[] | null = () => readCachedExercises(storage, userId),
+) {
+  return loadExercisesCacheFirst(storage, userId, fetchAll, readSaved, isOffline);
+}
+
+describe('loadExercisesCacheFirst', () => {
+  it('saves the full live list, archived exercises included', async () => {
     const storage = new MemoryStorage();
-    saveCachedExercises(storage, userId, exercises.slice(0, 1));
-    const shown: ExerciseList[] = [];
-    let resolveLive: (list: Exercise[]) => void = () => undefined;
-    const loading = loadExercisesCacheFirst(
-      storage,
-      userId,
-      () => new Promise((resolve) => (resolveLive = resolve)),
-      (list) => shown.push(list),
-    );
-    expect(shown).toEqual([{ exercises: exercises.slice(0, 1), notice: null, problem: null }]);
-    resolveLive(exercises);
-    await loading;
-    expect(shown.at(-1)).toEqual({ exercises, notice: null, problem: null });
-    expect(readCachedExercises(storage, userId)).toEqual(exercises);
+    const load = await loadWith(storage, () => Promise.resolve([...exercises, archivedCustom]));
+    expect(load).toEqual({ loaded: [...exercises, archivedCustom], fromCache: false });
+    expect(readCachedExercises(storage, userId)).toEqual([...exercises, archivedCustom]);
   });
 
-  it('keeps the cached list with the offline notice when the fetch fails', async () => {
+  it('falls back to the saved list as an offline copy when the fetch fails on the network', async () => {
     const storage = new MemoryStorage();
     saveCachedExercises(storage, userId, exercises);
-    const shown: ExerciseList[] = [];
-    await loadExercisesCacheFirst(
-      storage,
-      userId,
-      () => Promise.reject(new Error('Failed to fetch')),
-      (list) => shown.push(list),
-    );
-    expect(shown.at(-1)).toEqual({ exercises, notice: OFFLINE_EXERCISES_NOTICE, problem: null });
+    const load = await loadWith(storage, () => Promise.reject(new Error('Failed to fetch')));
+    expect(load).toEqual({ loaded: exercises, fromCache: true, offline: true });
   });
 
-  it('uses neutral wording when the server answered with an error while online', async () => {
+  it('keeps the server problem when the server answered with an error while online', async () => {
     const storage = new MemoryStorage();
     saveCachedExercises(storage, userId, exercises);
-    const shown: ExerciseList[] = [];
-    await loadExercisesCacheFirst(
-      storage,
-      userId,
-      () => Promise.reject({ message: 'permission denied for table exercises', code: '42501' }),
-      (list) => shown.push(list),
-      () => false,
+    const load = await loadWith(storage, () =>
+      Promise.reject({ message: 'permission denied for table exercises', code: '42501' }),
     );
-    expect(shown.at(-1)?.notice).toBe(SAVED_EXERCISES_NOTICE);
+    expect(load).toEqual({
+      loaded: exercises,
+      fromCache: true,
+      offline: false,
+      problem: 'permission denied for table exercises',
+    });
   });
 
-  it('shows the saved list with the offline notice at once and sends no request while offline', async () => {
+  it('answers with the saved list at once and sends no request while offline', async () => {
     const storage = new MemoryStorage();
     saveCachedExercises(storage, userId, exercises);
     const fetchLive = vi.fn(() => new Promise<Exercise[]>(() => undefined));
-    const shown: ExerciseList[] = [];
-    await loadExercisesCacheFirst(
-      storage,
-      userId,
-      fetchLive,
-      (list) => shown.push(list),
-      () => true,
-    );
-    expect(shown).toEqual([{ exercises, notice: OFFLINE_EXERCISES_NOTICE, problem: null }]);
+    expect(await loadWith(storage, fetchLive, () => true)).toEqual({
+      loaded: exercises,
+      fromCache: true,
+      offline: true,
+    });
     expect(fetchLive).not.toHaveBeenCalled();
   });
 
   it('fails fast with the offline problem while offline with nothing saved', async () => {
     const fetchLive = vi.fn(() => new Promise<Exercise[]>(() => undefined));
-    const shown: ExerciseList[] = [];
-    await loadExercisesCacheFirst(
-      new MemoryStorage(),
-      userId,
-      fetchLive,
-      (list) => shown.push(list),
-      () => true,
-    );
-    expect(shown).toEqual([{ exercises: [], notice: null, problem: OFFLINE_PROBLEM }]);
+    await expect(loadWith(new MemoryStorage(), fetchLive, () => true)).rejects.toThrow(OFFLINE_PROBLEM);
     expect(fetchLive).not.toHaveBeenCalled();
   });
 
-  it('says offline when the device went offline while the request ran, whatever the error says', async () => {
-    const storage = new MemoryStorage();
-    saveCachedExercises(storage, userId, exercises);
-    let offlineChecks = 0;
-    const shown: ExerciseList[] = [];
-    await loadExercisesCacheFirst(
-      storage,
-      userId,
-      () => Promise.reject({ message: 'server error' }),
-      (list) => shown.push(list),
-      () => offlineChecks++ > 0,
+  it('reads the saved copy from the given reader, so other saved lists can fill in', async () => {
+    const load = await loadWith(
+      new MemoryStorage(),
+      () => Promise.reject(new Error('Failed to fetch')),
+      () => false,
+      () => [archivedCustom],
     );
-    expect(shown).toEqual([
-      { exercises, notice: null, problem: null },
-      { exercises, notice: OFFLINE_EXERCISES_NOTICE, problem: null },
-    ]);
+    expect(load.loaded).toEqual([archivedCustom]);
   });
 
-  it('says offline when the request timed out', async () => {
-    const storage = new MemoryStorage();
-    saveCachedExercises(storage, userId, exercises);
-    const notices: (string | null)[] = [];
-    await loadExercisesCacheFirst(
-      storage,
+  it('still answers when device storage is blocked', async () => {
+    const load = await loadExercisesCacheFirst(
+      null,
       userId,
-      () => Promise.reject(new DOMException('signal timed out', 'TimeoutError')),
-      (list) => notices.push(list.notice),
+      () => Promise.resolve(exercises),
+      () => null,
       () => false,
     );
-    expect(notices.at(-1)).toBe(OFFLINE_EXERCISES_NOTICE);
-  });
-
-  it('offers only active exercises offline after the full list, archived ones included, was saved', async () => {
-    const storage = new MemoryStorage();
-    saveCachedExercises(storage, userId, [...exercises, archivedCustom]);
-    const shown: ExerciseList[] = [];
-    await loadExercisesCacheFirst(
-      storage,
-      userId,
-      () => Promise.reject(new Error('Failed to fetch')),
-      (list) => shown.push(list),
-      () => true,
-    );
-    expect(shown).toEqual([{ exercises, notice: OFFLINE_EXERCISES_NOTICE, problem: null }]);
-  });
-
-  it('saves the full live list and shows only its active exercises', async () => {
-    const storage = new MemoryStorage();
-    const shown: ExerciseList[] = [];
-    await loadExercisesCacheFirst(
-      storage,
-      userId,
-      () => Promise.resolve([...exercises, archivedCustom]),
-      (list) => shown.push(list),
-    );
-    expect(shown).toEqual([{ exercises, notice: null, problem: null }]);
-    expect(readCachedExercises(storage, userId)).toEqual([...exercises, archivedCustom]);
+    expect(load).toEqual({ loaded: exercises, fromCache: false });
   });
 
   it('reports the load problem when the fetch fails and nothing is cached', async () => {
-    const shown: ExerciseList[] = [];
-    await loadExercisesCacheFirst(
-      new MemoryStorage(),
-      userId,
-      () => Promise.reject(new Error('Failed to fetch')),
-      (list) => shown.push(list),
+    await expect(loadWith(new MemoryStorage(), () => Promise.reject(new Error('Failed to fetch')))).rejects.toThrow(
+      'Failed to fetch',
     );
-    expect(shown).toEqual([{ exercises: [], notice: null, problem: 'Failed to fetch' }]);
+  });
+});
+
+describe('exercisePickerList', () => {
+  it('offers only the active exercises of a live list, with no notice', () => {
+    expect(exercisePickerList({ loaded: [...exercises, archivedCustom], fromCache: false }, null)).toEqual({
+      exercises,
+      notice: null,
+      problem: null,
+    });
+  });
+
+  it('says offline for a saved copy the device fell back to offline or on the network', () => {
+    expect(exercisePickerList({ loaded: exercises, fromCache: true, offline: true }, null)).toEqual({
+      exercises,
+      notice: OFFLINE_EXERCISES_NOTICE,
+      problem: null,
+    });
+  });
+
+  it('uses neutral wording for a saved copy the server refused to refresh', () => {
+    expect(
+      exercisePickerList({ loaded: exercises, fromCache: true, offline: false, problem: 'permission denied' }, null)
+        .notice,
+    ).toBe(SAVED_EXERCISES_NOTICE);
+  });
+
+  it('shows the load problem while there is no list at all', () => {
+    expect(exercisePickerList(undefined, new Error(OFFLINE_PROBLEM))).toEqual({
+      exercises: [],
+      notice: null,
+      problem: OFFLINE_PROBLEM,
+    });
+  });
+
+  it('keeps showing a list after a later refresh failed', () => {
+    expect(
+      exercisePickerList({ loaded: exercises, fromCache: false }, new Error('Failed to fetch')).problem,
+    ).toBeNull();
+  });
+
+  it('shows an empty list without a problem while the first load runs', () => {
+    expect(exercisePickerList(undefined, null)).toEqual({ exercises: [], notice: null, problem: null });
   });
 });

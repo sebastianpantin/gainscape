@@ -1,6 +1,6 @@
 import { CARDIO_EFFORT_LEVELS } from '@domain/types.ts';
 import { z } from 'zod';
-import { isNetworkError, OFFLINE_PROBLEM } from '../../offline/cache-first.ts';
+import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { activeExercises, type Exercise, LOAD_TYPES, PACE_UNITS } from './catalog-rules.ts';
 
 const CACHE_VERSION = 3;
@@ -106,42 +106,28 @@ export function forgetCachedExercises(storage: Storage, userId: string): void {
   }
 }
 
+export function loadExercisesCacheFirst(
+  storage: Storage | null,
+  userId: string,
+  fetchAll: () => Promise<Exercise[]>,
+  readSaved: () => Exercise[] | null,
+  isOffline: () => boolean = isDeviceOffline,
+): Promise<CacheFirstLoad<Exercise[]>> {
+  return loadCacheFirstWhenOffline(isOffline, readSaved, async () => {
+    const all = await fetchAll();
+    if (storage) saveCachedExercises(storage, userId, all);
+    return all;
+  });
+}
+
 export interface ExerciseList {
   exercises: Exercise[];
   notice: string | null;
   problem: string | null;
 }
 
-export async function loadExercisesCacheFirst(
-  storage: Storage,
-  userId: string,
-  fetchAll: () => Promise<Exercise[]>,
-  show: (list: ExerciseList) => void,
-  isOffline: () => boolean = () => false,
-): Promise<void> {
-  const cached = readCachedExercises(storage, userId);
-  if (isOffline()) {
-    show(
-      cached
-        ? { exercises: activeExercises(cached), notice: OFFLINE_EXERCISES_NOTICE, problem: null }
-        : { exercises: [], notice: null, problem: OFFLINE_PROBLEM },
-    );
-    return;
-  }
-  if (cached) show({ exercises: activeExercises(cached), notice: null, problem: null });
-  try {
-    const all = await fetchAll();
-    saveCachedExercises(storage, userId, all);
-    show({ exercises: activeExercises(all), notice: null, problem: null });
-  } catch (error) {
-    show(
-      cached
-        ? {
-            exercises: activeExercises(cached),
-            notice: isOffline() || isNetworkError(error) ? OFFLINE_EXERCISES_NOTICE : SAVED_EXERCISES_NOTICE,
-            problem: null,
-          }
-        : { exercises: [], notice: null, problem: (error as Error).message },
-    );
-  }
+export function exercisePickerList(load: CacheFirstLoad<Exercise[]> | undefined, error: Error | null): ExerciseList {
+  if (!load) return { exercises: [], notice: null, problem: error ? error.message : null };
+  const notice = load.fromCache ? (load.offline ? OFFLINE_EXERCISES_NOTICE : SAVED_EXERCISES_NOTICE) : null;
+  return { exercises: activeExercises(load.loaded), notice, problem: null };
 }

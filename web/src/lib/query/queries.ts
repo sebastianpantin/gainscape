@@ -1,20 +1,28 @@
 import { type LastLoggedWeights } from '@domain/index.ts';
 import { infiniteQueryOptions, type QueryClient, queryOptions } from '@tanstack/react-query';
 import { type CacheFirstLoad } from '../../offline/cache-first.ts';
+import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { fetchBodyweightTrend } from '../progress/bodyweight-trend.ts';
 import { fetchExercises, fetchSkills } from '../exercises/catalog.ts';
-import { readCachedExercises, saveCachedExercises } from '../exercises/catalog-cache.ts';
-import { type Skill } from '../exercises/catalog-rules.ts';
-import { type Collection, loadCollectionCacheFirst } from '../collection/collection-data.ts';
+import { loadExercisesCacheFirst, readCachedExercises } from '../exercises/catalog-cache.ts';
+import { type Exercise, type Skill } from '../exercises/catalog-rules.ts';
+import { type Collection, fetchExerciseStrength, loadCollectionCacheFirst } from '../collection/collection-data.ts';
 import { collectionPercent, countCollection } from '../collection/collection-rules.ts';
 import { fetchExerciseProgress } from '../progress/exercise-progress.ts';
 import { fetchSessionPage } from '../history/history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession, isUuid } from '../history/history-rules.ts';
 import { fetchLoadout, fetchOwnedPets, loadItemsCacheFirst } from '../collection/items.ts';
 import { fetchTrainingHistory } from '../profile/onboarding.ts';
-import { loadProfileCacheFirst } from '../profile/profile.ts';
+import { loadProfileCacheFirst, type Profile } from '../profile/profile.ts';
+import { type Preferences } from '../profile/preferences.ts';
 import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from '../programs/program-enrollment.ts';
-import { fetchLastLoggedSets, type PublishedProgram, publishProgram } from '../programs/programs.ts';
+import {
+  cachedPrograms,
+  fetchLastLoggedSets,
+  loadProgramsCacheFirst,
+  type PublishedProgram,
+  publishProgram,
+} from '../programs/programs.ts';
 import {
   FEED_PAGE_SIZE,
   fetchCollectionView,
@@ -33,6 +41,9 @@ import { loadQuestsCacheFirst } from '../quests/quests.ts';
 import { type QuestLog } from '../quests/quest-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { skillExercisesSeed } from '../progress/skill-map-rules.ts';
+import { loadStanding } from '../progress/standing-data.ts';
+import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
+import { announceDataChange } from './data-changes.ts';
 
 export const FRIENDS_QUERY_PREFIX = ['friends'] as const;
 export const FEED_QUERY_PREFIX = ['feed'] as const;
@@ -42,6 +53,40 @@ export function profileQuery(userId: string) {
     queryKey: ['profile', userId] as const,
     queryFn: ({ signal }) => loadProfileCacheFirst(userId, signal),
   });
+}
+
+function preferencesOf({ loaded }: CacheFirstLoad<Profile>): Preferences {
+  return { unitPref: loaded.unitPref, effortInputMode: loaded.effortInputMode };
+}
+
+export function preferencesQuery(userId: string) {
+  return queryOptions({ ...profileQuery(userId), select: preferencesOf });
+}
+
+function bodyweightOf({ loaded }: CacheFirstLoad<Profile>): number | null {
+  return loaded.bodyweightKg;
+}
+
+export function latestBodyweightQuery(userId: string) {
+  return queryOptions({ ...profileQuery(userId), select: bodyweightOf });
+}
+
+export function standingQuery(userId: string) {
+  return queryOptions({ queryKey: ['standing', userId] as const, queryFn: () => loadStanding(userId) });
+}
+
+export function strengthQuery(userId: string) {
+  return queryOptions({ queryKey: ['strength', userId] as const, queryFn: () => fetchExerciseStrength(userId) });
+}
+
+export function programsQuery(userId: string) {
+  return queryOptions({ queryKey: ['programs', userId] as const, queryFn: () => loadProgramsCacheFirst(userId) });
+}
+
+export function showChangedPrograms(queryClient: QueryClient, userId: string): Promise<void> {
+  const saved = cachedPrograms(userId);
+  if (saved) queryClient.setQueryData(programsQuery(userId).queryKey, { loaded: saved, fromCache: false });
+  return announceDataChange(queryClient, 'programs-changed');
 }
 
 export function collectionQuery(userId: string) {
@@ -204,20 +249,36 @@ export const weeklyGoalQuery = queryOptions({
   queryFn: ({ signal }) => fetchWeeklyGoalStatus(signal),
 });
 
-export function exerciseListQuery(userId: string) {
+function liveExercises(): Promise<Exercise[]> {
+  return fetchExercises({ includeArchived: true, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+}
+
+export function exerciseListLoadQuery(userId: string) {
   return queryOptions({
     queryKey: ['exercises', userId, 'all'] as const,
-    queryFn: async () => {
-      const exercises = await fetchExercises({ includeArchived: true });
-      saveCachedExercises(localStorage, userId, exercises);
-      return exercises;
-    },
-    initialData: () => {
+    queryFn: (): Promise<CacheFirstLoad<Exercise[]>> => {
       const storage = deviceStorage();
-      return skillExercisesSeed(storage && readCachedExercises(storage, userId));
+      return loadExercisesCacheFirst(storage, userId, liveExercises, () => savedExerciseList(storage, userId));
+    },
+    initialData: (): CacheFirstLoad<Exercise[]> | undefined => {
+      const storage = deviceStorage();
+      const seed = skillExercisesSeed(storage && readCachedExercises(storage, userId));
+      return seed && { loaded: seed, fromCache: false };
     },
     initialDataUpdatedAt: 0,
   });
+}
+
+function loadedExercises({ loaded }: CacheFirstLoad<Exercise[]>): Exercise[] {
+  return loaded;
+}
+
+export function exerciseListQuery(userId: string) {
+  return queryOptions({ ...exerciseListLoadQuery(userId), select: loadedExercises });
+}
+
+export function fetchLatestExerciseList(queryClient: QueryClient, userId: string): Promise<CacheFirstLoad<Exercise[]>> {
+  return queryClient.fetchQuery({ ...exerciseListLoadQuery(userId), staleTime: 0 });
 }
 
 export function lastLoggedWeightsQuery(exerciseIds: readonly string[]) {
@@ -242,3 +303,37 @@ function questPointsOf({ loaded }: CacheFirstLoad<QuestLog>): number {
 export function questPointsQuery(userId: string) {
   return queryOptions({ ...questsQuery(userId), select: questPointsOf });
 }
+
+export const EVERY_QUERY = [
+  profileQuery,
+  preferencesQuery,
+  latestBodyweightQuery,
+  standingQuery,
+  strengthQuery,
+  programsQuery,
+  collectionQuery,
+  collectionPercentQuery,
+  loadoutQuery,
+  itemsQuery,
+  skillsQuery,
+  friendsQuery,
+  feedQuery,
+  feedPreviewQuery,
+  ownedPetsQuery,
+  recentSetsQuery,
+  historyQuery,
+  hiscoresQuery,
+  friendProfileQuery,
+  profilePreviewQuery,
+  bodyweightTrendQuery,
+  exerciseProgressQuery,
+  trainingHistoryQuery,
+  programTemplatesQuery,
+  enrollChoicesQuery,
+  weeklyGoalQuery,
+  exerciseListLoadQuery,
+  exerciseListQuery,
+  lastLoggedWeightsQuery,
+  questsQuery,
+  questPointsQuery,
+] as const;

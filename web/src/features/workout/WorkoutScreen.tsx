@@ -9,6 +9,7 @@ import { type Exercise, isLiftExercise } from '../../lib/exercises/catalog-rules
 import { similarExercises } from '../../lib/exercises/substitute-rules.ts';
 import { firstSetFromLastSession, lastTimeText } from '../../lib/history/last-session-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
+import { fetchLatestExerciseList } from '../../lib/query/queries.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { stopsRestForWarmup } from '../../lib/workout/rest-timer-rules.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
@@ -189,11 +190,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
 
   const { exercises, loadProblem, listNotice } = useExerciseList(userId);
   const { notes, saveNote } = useExerciseNotes(userId);
-  const strength = useExerciseStrength(userId, draftSessionId);
+  const strength = useExerciseStrength(userId);
   const sessionBaseline = useSessionBaseline(userId, draft?.startedAt ?? null, onlineSignal);
   const previewStrength = sessionBaseline?.strength ?? null;
   const recordBaseline = sessionBaseline?.records ?? null;
-  const [bodyweightKg, setBodyweightKg] = useLatestBodyweight(userId, onlineSignal);
+  const bodyweightKg = useLatestBodyweight(userId);
   const start = useWorkoutStart({ userId, exercises, startWorkout, programCache, showProgramCache });
 
   const draftExercises = draft?.exercises ?? null;
@@ -281,7 +282,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         onBackToEditing={backToEditing}
         onSaveBodyweight={async (bodyweightKg) => {
           await saveBodyweight({ userId, bodyweightKg, storage: deviceStorage(), queryClient });
-          setBodyweightKg(bodyweightKg);
           retryNow();
         }}
         onDiscard={() => discardDraft(draft.sessionId)}
@@ -305,7 +305,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     setFinishPromptFor(null);
     setCheckingFinish(true);
     setFinishProblem(null);
-    const loadTypes = await currentLoadTypes(draft, exercises);
+    const loadTypes = await currentLoadTypes(draft, exercises, () => fetchLatestExerciseList(queryClient, userId));
     setCheckingFinish(false);
     let changedNames: string[] = [];
     updateDraft((latest) => {

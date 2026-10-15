@@ -1,13 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
-import {
-  cachedPrograms,
-  loadProgramsCacheFirst,
-  ownPrograms,
-  type Program,
-  type ProgramDay,
-} from '../../lib/programs/programs.ts';
+import { cachedPrograms, ownPrograms, type Program, type ProgramDay } from '../../lib/programs/programs.ts';
+import { programsQuery } from '../../lib/query/queries.ts';
 import { programLabelFor } from '../../offline/draft-format.ts';
 
 interface ProgramDayStartsProps {
@@ -21,19 +17,10 @@ function exerciseCount(day: ProgramDay): string {
 }
 
 export function ProgramDayStarts({ userId, disabled, onStart }: ProgramDayStartsProps) {
-  const [programs, setPrograms] = useState<Program[] | null>(() => cachedPrograms(userId));
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    loadProgramsCacheFirst(userId).then(
-      ({ loaded }) => active && setPrograms(loaded),
-      () => active && setFailed(true),
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId]);
+  const programList = useQuery(programsQuery(userId));
+  const [savedPrograms] = useState(() => cachedPrograms(userId));
+  const programs = programList.data?.loaded ?? savedPrograms;
+  const failed = programList.isError;
 
   if (!programs)
     return failed ? (
