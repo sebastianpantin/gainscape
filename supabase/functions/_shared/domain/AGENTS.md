@@ -64,7 +64,7 @@ Rules restated elsewhere (change both sides together):
 
 - `isPositionInSchedule` = SQL `private.is_valid_program_position` (including the 520-week horizon, `MAX_PROGRAM_WEEKS`); `validateEnrollment` = `private.is_valid_enrollment`, and `MAX_REFERENCE_VALUE` (1000 kg, 2205 lb) = `private.max_program_reference`. SQL also requires bindings to be a UUID or null.
 - `CARDIO_BOUNDS`, `countedWorkSeconds`, `intervalDurationSeconds` = migration check `cardio_duration_within_bounds`; `HOLD_BOUNDS` = the hold checks of migration 044.
-- `strengthStateAt` = SQL `exercise_strength_state`.
+- `strengthStateAt` = SQL `exercise_strength_state`. `replayHistory` gets the same state from `strength-tracker.ts`, a forward fold that admits rows once and keeps a monotonic window-max per exercise, because rescanning history per session made replay quadratic (about 6 s for 2,000 sessions). `tests/domain/strength-tracker.test.ts` proves both agree; `strengthStateAt` stays the reference and the simulator's entry point.
 - `storableSnapshot` is the single snapshot rule for the server and the web cache.
 - `crafting.ts` tiers and slots are checked against the catalog by `scripts/catalog/`.
 - `advanceProgram` ignores facts at invalid positions and references to an undeclared var or a lift without inputs.

@@ -1,7 +1,8 @@
 import type { BalanceConfig } from './balance.ts';
 import { compareSessionKeys } from './ordering.ts';
 import { processSession, type SessionOutputs } from './pipeline.ts';
-import { strengthHistoryRows, strengthStateAt } from './strength.ts';
+import { strengthHistoryRows } from './strength.ts';
+import { strengthTracker } from './strength-tracker.ts';
 import type { Catalog, SessionInput, SessionKey, StrengthHistoryRow, StrengthState, UserState } from './types.ts';
 
 export interface ReplayedSession {
@@ -47,16 +48,16 @@ export function replayHistory(
 ): ReplayResult {
   const ordered = [...sessions].sort(compareSessionKeys);
   const pendingGrants = [...grants].sort((a, b) => compareSessionKeys(a.at, b.at));
-  const history: StrengthHistoryRow[] = [...priorStrength];
+  const strengthSoFar = strengthTracker(priorStrength, cfg);
   const replayed: ReplayedSession[] = [];
   let state = initialState;
 
   for (const session of ordered) {
     const dueCount = pendingGrants.findIndex((grant) => compareSessionKeys(grant.at, session) >= 0);
     state = withGrants(state, pendingGrants.splice(0, dueCount === -1 ? pendingGrants.length : dueCount), cfg);
-    const strength = strengthStateAt(history, session, cfg);
+    const strength = strengthSoFar.stateAt(session);
     const { nextState, outputs } = processSession(state, session, cfg, { catalog, strength });
-    history.push(...strengthHistoryRows(session, outputs.sets));
+    strengthSoFar.record(strengthHistoryRows(session, outputs.sets));
     replayed.push({ session, strengthAtStart: strength, outputs });
     state = nextState;
   }
