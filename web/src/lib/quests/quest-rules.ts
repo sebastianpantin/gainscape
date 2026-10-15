@@ -39,15 +39,11 @@ export const questProgressRowSchema = z.object({
   step_progress: numericColumn,
 });
 
-export type QuestProgressRow = z.infer<typeof questProgressRowSchema>;
-
 export const questCompletionRowSchema = z.object({
   quest_id: z.string(),
   completed_at: z.string(),
   quest_points: z.number(),
 });
-
-export type QuestCompletionRow = z.infer<typeof questCompletionRowSchema>;
 
 export const questRowsSchema = z.object({
   quests: z.array(questRowSchema),

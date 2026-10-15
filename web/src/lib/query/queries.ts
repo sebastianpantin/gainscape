@@ -249,16 +249,17 @@ export const weeklyGoalQuery = queryOptions({
   queryFn: ({ signal }) => fetchWeeklyGoalStatus(signal),
 });
 
-function liveExercises(): Promise<Exercise[]> {
-  return fetchExercises({ includeArchived: true, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-}
-
 export function exerciseListLoadQuery(userId: string) {
   return queryOptions({
     queryKey: ['exercises', userId, 'all'] as const,
     queryFn: (): Promise<CacheFirstLoad<Exercise[]>> => {
       const storage = deviceStorage();
-      return loadExercisesCacheFirst(storage, userId, liveExercises, () => savedExerciseList(storage, userId));
+      return loadExercisesCacheFirst(
+        storage,
+        userId,
+        () => fetchExercises({ includeArchived: true, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
+        () => savedExerciseList(storage, userId),
+      );
     },
     initialData: (): CacheFirstLoad<Exercise[]> | undefined => {
       const storage = deviceStorage();
