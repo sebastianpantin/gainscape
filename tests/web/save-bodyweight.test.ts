@@ -69,6 +69,16 @@ describe('saveBodyweight', () => {
     expect(loadedProfile(queryClient)?.bodyweightKg).toBe(81.5);
   });
 
+  it('refetches the profile when it had not loaded, so the latest bodyweight still shows the saved weight', async () => {
+    const queryClient = new QueryClient();
+    queryClient.getQueryCache().build(queryClient, { queryKey: ['profile', USER_ID] });
+    expect(queryClient.getQueryState(['profile', USER_ID])?.isInvalidated).toBe(false);
+
+    await saveBodyweight({ userId: USER_ID, bodyweightKg: 81.5, storage: new MemoryStorage(), queryClient });
+
+    expect(queryClient.getQueryState(['profile', USER_ID])?.isInvalidated).toBe(true);
+  });
+
   it('marks the bodyweight trend stale so the Profile chart shows the new weight', async () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData(['bodyweight-trend', USER_ID], []);
