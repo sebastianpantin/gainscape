@@ -90,3 +90,7 @@ The free test environment (Supabase Free and Cloudflare Pages, invite-only) is d
 - `tests/`: Vitest domain tests, plus integration tests against the local stack.
 
 The full plan lives in `../.omc/plans/2026-09-28-gainscape.md`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
