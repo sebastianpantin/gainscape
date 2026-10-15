@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cachedPreferences, cachePreferences } from '../../web/src/lib/profile/preferences.ts';
+import { cachedPreferences, cachePreferences, pendingLocalPreferences } from '../../web/src/lib/profile/preferences.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -49,5 +49,23 @@ describe('cached preferences', () => {
     });
     expect(() => cachePreferences(userId, { unitPref: 'kg', effortInputMode: 'level' })).not.toThrow();
     expect(cachedPreferences(userId)).toBeNull();
+  });
+});
+
+describe('pendingLocalPreferences', () => {
+  const kg = { unitPref: 'kg', effortInputMode: 'level' } as const;
+  const lb = { unitPref: 'lb', effortInputMode: 'level' } as const;
+
+  it('keeps a local change while the loaded profile still says otherwise, so an older answer cannot undo it', () => {
+    expect(pendingLocalPreferences(lb, kg)).toBe(lb);
+    expect(pendingLocalPreferences(lb, undefined)).toBe(lb);
+  });
+
+  it('lets go of the local change once the loaded profile agrees with it', () => {
+    expect(pendingLocalPreferences(lb, { ...lb })).toBeNull();
+  });
+
+  it('has nothing pending without a local change', () => {
+    expect(pendingLocalPreferences(null, kg)).toBeNull();
   });
 });

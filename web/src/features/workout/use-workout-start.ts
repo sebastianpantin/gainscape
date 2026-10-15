@@ -1,10 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { type Position } from '@domain/index.ts';
-import { fetchExercises } from '../../lib/exercises/catalog.ts';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/programs/program-enrollment.ts';
 import { skipDayEvent } from '../../lib/programs/program-skip-rules.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs/programs.ts';
+import { fetchLatestExerciseList } from '../../lib/query/queries.ts';
 import {
   type PrescribedDayStart,
   startDraft,
@@ -31,6 +32,7 @@ export function useWorkoutStart({
   programCache,
   showProgramCache,
 }: WorkoutStartInput) {
+  const queryClient = useQueryClient();
   const [startingDay, setStartingDay] = useState(false);
   const [startNotice, setStartNotice] = useState<string | null>(null);
 
@@ -44,7 +46,10 @@ export function useWorkoutStart({
     setStartingDay(true);
     const exerciseIds = [...new Set(day.exercises.map((planned) => planned.exerciseId))];
     const [catalog, lastSets] = await Promise.all([
-      fetchExercises({ includeArchived: true }).catch(() => exercises),
+      fetchLatestExerciseList(queryClient, userId).then(
+        ({ loaded }) => loaded,
+        () => exercises,
+      ),
       fetchLastLoggedSets(exerciseIds).catch(() => new Map()),
     ]);
     const started = startDraftFromDay(

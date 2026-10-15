@@ -5,9 +5,13 @@ import type { DropSummary } from '@domain/types.ts';
 import type { ItemIconKind } from '../../components/pixel-sprites.ts';
 import type { CatalogChallenge } from './challenge-rules.ts';
 import { capitalized } from '../names.ts';
+import { z } from 'zod';
+import { parsedRows } from '../rows.ts';
 
-export type ItemKind = 'gear' | 'material' | 'pet' | 'scroll';
-export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
+const ITEM_KINDS = ['gear', 'material', 'pet', 'scroll'] as const;
+export type ItemKind = (typeof ITEM_KINDS)[number];
+const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'legendary'] as const;
+export type ItemRarity = (typeof ITEM_RARITIES)[number];
 
 export const ITEM_COLUMNS =
   'id,key,name,kind,rarity,tier,gear_slot,icon_key,description,grants_challenge_id,sort_order';
@@ -68,33 +72,39 @@ export interface ItemGroup {
   entries: ItemSlot[];
 }
 
-export interface ItemRow {
-  id: string;
-  key: string;
-  name: string;
-  kind: ItemKind;
-  rarity: ItemRarity;
-  tier: ItemTier | null;
-  gear_slot: GearSlot | null;
-  icon_key: string;
-  description: string;
-  grants_challenge_id: string | null;
-  sort_order: number;
-}
+export const itemRowSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  name: z.string(),
+  kind: z.enum(ITEM_KINDS),
+  rarity: z.enum(ITEM_RARITIES),
+  tier: z.enum(ITEM_TIERS).nullable(),
+  gear_slot: z.enum(GEAR_SLOTS).nullable(),
+  icon_key: z.string(),
+  description: z.string(),
+  grants_challenge_id: z.string().nullable(),
+  sort_order: z.number(),
+});
 
-export interface RecipeRow {
-  id: string;
-  key: string;
-  output_item_id: string;
-  output_quantity: number;
-  recipe_inputs: { item_id: string; quantity: number }[];
-}
+export type ItemRow = z.infer<typeof itemRowSchema>;
 
-export interface InventoryRow {
-  item_id: string;
-  quantity: number;
-  first_obtained_at: string;
-}
+export const recipeRowSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  output_item_id: z.string(),
+  output_quantity: z.number(),
+  recipe_inputs: z.array(z.object({ item_id: z.string(), quantity: z.number() })),
+});
+
+export type RecipeRow = z.infer<typeof recipeRowSchema>;
+
+export const inventoryRowSchema = z.object({
+  item_id: z.string(),
+  quantity: z.number(),
+  first_obtained_at: z.string(),
+});
+
+export type InventoryRow = z.infer<typeof inventoryRowSchema>;
 
 export function toCatalogItem(row: ItemRow): CatalogItem {
   return {
@@ -173,11 +183,11 @@ export interface OwnedPets {
   held: Map<string, HeldItem>;
 }
 
-interface OwnedPetRow {
-  quantity: number;
-  first_obtained_at: string;
-  items: ItemRow;
-}
+const ownedPetRowSchema = z.object({
+  quantity: z.number(),
+  first_obtained_at: z.string(),
+  items: itemRowSchema,
+});
 
 export async function queryOwnedPets(client: SupabaseClient, userId: string): Promise<OwnedPets> {
   const { data, error } = await client
@@ -187,7 +197,7 @@ export async function queryOwnedPets(client: SupabaseClient, userId: string): Pr
     .eq('items.kind', 'pet')
     .gt('quantity', 0);
   if (error) throw error;
-  const rows = data as unknown as OwnedPetRow[];
+  const rows = parsedRows(ownedPetRowSchema, data);
   return {
     items: rows.map((row) => toCatalogItem(row.items)),
     held: new Map(

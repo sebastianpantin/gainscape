@@ -1,4 +1,3 @@
-import { fetchExercises } from '../../lib/exercises/catalog.ts';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { fetchSession, fetchSessionSets } from '../../lib/history/history.ts';
 import { type SessionDetail, type StoredSetRow } from '../../lib/history/history-rules.ts';
@@ -12,11 +11,11 @@ export interface Loaded {
   xpBasis: SessionEdit;
 }
 
-export async function loadSession(sessionId: string): Promise<Loaded | null> {
+export async function loadSession(sessionId: string, loadExercises: () => Promise<Exercise[]>): Promise<Loaded | null> {
   const [session, sets, exercises] = await Promise.all([
     fetchSession(sessionId),
     fetchSessionSets(sessionId),
-    fetchExercises({ includeArchived: true }),
+    loadExercises(),
   ]);
   if (!session) return null;
   const exercisesById = new Map(exercises.map((exercise) => [exercise.id, exercise]));

@@ -17,12 +17,14 @@ export interface CatalogChallenge {
   definition: ChallengeDefinition;
 }
 
-export interface ChallengeRow {
-  id: string;
-  key: string;
-  name: string;
-  definition: unknown;
-}
+export const challengeRowSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  name: z.string(),
+  definition: z.unknown(),
+});
+
+export type ChallengeRow = z.infer<typeof challengeRowSchema>;
 
 const challengeExerciseSchema = z.object({
   exerciseId: z.string(),

@@ -4,13 +4,13 @@ import {
   type HeldItem,
   INVENTORY_COLUMNS,
   ITEM_COLUMNS,
-  type InventoryRow,
+  inventoryRowSchema,
   type ItemCatalog,
-  type ItemRow,
+  itemRowSchema,
   type OwnedPets,
   queryOwnedPets,
   RECIPE_COLUMNS,
-  type RecipeRow,
+  recipeRowSchema,
   toCatalogItem,
   toHeldItems,
   toRecipe,
@@ -33,7 +33,8 @@ import {
 } from '../../offline/items-cache.ts';
 import { fetchExercises } from '../exercises/catalog.ts';
 import { readCachedExercises } from '../exercises/catalog-cache.ts';
-import { CHALLENGE_COLUMNS, type ChallengeRow, toCatalogChallenge } from './challenge-rules.ts';
+import { CHALLENGE_COLUMNS, challengeRowSchema, toCatalogChallenge } from './challenge-rules.ts';
+import { parsedRows } from '../rows.ts';
 import { fetchStrengthState } from './collection-data.ts';
 import type { LoadoutView } from './gear-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
@@ -49,9 +50,9 @@ export async function fetchItemCatalog(): Promise<ItemCatalog> {
   if (recipes.error) throw recipes.error;
   if (challenges.error) throw challenges.error;
   return {
-    items: (items.data as ItemRow[]).map(toCatalogItem),
-    recipes: (recipes.data as RecipeRow[]).map(toRecipe),
-    challenges: (challenges.data as ChallengeRow[]).flatMap((row) => toCatalogChallenge(row) ?? []),
+    items: parsedRows(itemRowSchema, items.data).map(toCatalogItem),
+    recipes: parsedRows(recipeRowSchema, recipes.data).map(toRecipe),
+    challenges: parsedRows(challengeRowSchema, challenges.data).flatMap((row) => toCatalogChallenge(row) ?? []),
   };
 }
 
@@ -63,7 +64,7 @@ export async function fetchOwnedPets(userId: string): Promise<OwnedPets> {
 export async function fetchInventory(userId: string): Promise<Map<string, HeldItem>> {
   const { data, error } = await supabase.from('user_items').select(INVENTORY_COLUMNS).eq('user_id', userId);
   if (error) throw error;
-  return toHeldItems(data as InventoryRow[]);
+  return toHeldItems(parsedRows(inventoryRowSchema, data));
 }
 
 export interface CraftResult {

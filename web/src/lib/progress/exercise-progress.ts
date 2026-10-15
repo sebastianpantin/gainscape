@@ -1,18 +1,19 @@
-import { EXERCISE_COLUMNS, type ExerciseRow, type LiftExercise, toExercise } from '../exercises/catalog-rules.ts';
+import { EXERCISE_COLUMNS, exerciseRowSchema, type LiftExercise, toExercise } from '../exercises/catalog-rules.ts';
 import {
   maxRepsRecord,
   type MaxRepsRecord,
-  type MaxRepsRow,
+  maxRepsRowSchema,
   PROGRESS_COLUMNS,
   queryProgressSets,
   repMaxTable,
   type RepMaxEntry,
-  type RepMaxRow,
+  repMaxRowSchema,
   sessionProgress,
   type SessionProgress,
 } from './exercise-progress-rules.ts';
 import { isUuid } from '../history/history-rules.ts';
 import { supabase } from '../platform/supabase.ts';
+import { parsedRow, parsedRows } from '../rows.ts';
 import { failFastWhenOffline } from '../../offline/cache-first.ts';
 
 export interface ExerciseProgress {
@@ -47,12 +48,12 @@ export async function fetchExerciseProgress(
   ]);
   for (const result of [exercise, repMaxes, maxReps]) if (result.error) throw result.error;
   if (!exercise.data) return null;
-  const loaded = toExercise(exercise.data as unknown as ExerciseRow);
+  const loaded = toExercise(parsedRow(exerciseRowSchema, exercise.data));
   if (loaded.modality !== 'lift') return null;
   return {
     exercise: loaded,
     sessions: sessionProgress(sets, loaded.loadType),
-    repMaxes: repMaxTable(repMaxes.data as unknown as RepMaxRow[]),
-    maxReps: maxRepsRecord(maxReps.data as unknown as MaxRepsRow[]),
+    repMaxes: repMaxTable(parsedRows(repMaxRowSchema, repMaxes.data)),
+    maxReps: maxRepsRecord(parsedRows(maxRepsRowSchema, maxReps.data)),
   };
 }

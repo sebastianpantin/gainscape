@@ -1,4 +1,5 @@
-import { type RecentSet, recentSessionsByExercise, type RecentLiftRow } from './last-session-rules.ts';
+import { type RecentSet, recentSessionsByExercise, recentLiftRowSchema } from './last-session-rules.ts';
+import { parsedRows } from '../rows.ts';
 import { supabase } from '../platform/supabase.ts';
 
 const RECENT_SESSION_COUNT = 3;
@@ -11,5 +12,5 @@ export async function fetchRecentLiftSessions(
     .rpc('recent_lift_sets', { exercise_ids: exerciseIds, session_count: RECENT_SESSION_COUNT })
     .abortSignal(signal);
   if (error) throw error;
-  return recentSessionsByExercise(data as RecentLiftRow[]);
+  return recentSessionsByExercise(parsedRows(recentLiftRowSchema, data));
 }

@@ -14,7 +14,7 @@ export interface SavedCollection {
 
 const numeric = z.union([z.number(), z.string()]);
 
-const collectionRowsSchema = z.object({
+export const collectionRowsSchema = z.object({
   repMaxes: z.array(
     z.object({ exercise_id: z.string(), reps: z.number(), load_kg: numeric, exact_set_id: z.string().nullable() }),
   ),

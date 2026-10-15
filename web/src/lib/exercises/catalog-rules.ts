@@ -1,4 +1,5 @@
-import type { CardioEffortLevel } from '@domain/types.ts';
+import { type CardioEffortLevel, CARDIO_EFFORT_LEVELS } from '@domain/types.ts';
+import { z } from 'zod';
 
 export const MODALITIES = ['lift', 'cardio'] as const;
 export type Modality = (typeof MODALITIES)[number];
@@ -80,22 +81,26 @@ export function isCardioExercise(exercise: Exercise): exercise is CardioExercise
 export const EXERCISE_COLUMNS =
   'id, key, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, tracks_distance, measure, exercise_skills(share_bp, skills(key, name))';
 
-export interface ExerciseRow {
-  id: string;
-  key?: string | null;
-  name: string;
-  equipment: string;
-  modality: Modality;
-  load_type: LoadType | null;
-  owner_user_id: string | null;
-  archived_at: string | null;
-  reference_pace_s_per_km: number | null;
-  pace_unit: PaceUnit | null;
-  max_effort: CardioEffortLevel | null;
-  tracks_distance: boolean;
-  measure?: 'reps' | HoldMeasure;
-  exercise_skills: { share_bp: number; skills: { key: string; name: string } | null }[];
-}
+export const exerciseRowSchema = z.object({
+  id: z.string(),
+  key: z.string().nullable().optional(),
+  name: z.string(),
+  equipment: z.string(),
+  modality: z.enum(MODALITIES),
+  load_type: z.enum(LOAD_TYPES).nullable(),
+  owner_user_id: z.string().nullable(),
+  archived_at: z.string().nullable(),
+  reference_pace_s_per_km: z.number().nullable(),
+  pace_unit: z.enum(PACE_UNITS).nullable(),
+  max_effort: z.enum(CARDIO_EFFORT_LEVELS).nullable(),
+  tracks_distance: z.boolean(),
+  measure: z.enum(['reps', 'time', 'distance']).optional(),
+  exercise_skills: z.array(
+    z.object({ share_bp: z.number(), skills: z.object({ key: z.string(), name: z.string() }).nullable() }),
+  ),
+});
+
+export type ExerciseRow = z.infer<typeof exerciseRowSchema>;
 
 const WHOLE_SHARE_BP = 10_000;
 const SINGLE_SKILL_SHARE_BP = 8_000;

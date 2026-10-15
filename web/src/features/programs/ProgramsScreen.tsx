@@ -1,12 +1,11 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import {
   cachedPrograms,
   copyProgram,
   deleteProgram,
-  loadProgramsCacheFirst,
   ownPrograms,
   type Program,
   templates,
@@ -15,8 +14,8 @@ import { messageOf } from '../../lib/error-text.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
 import { isEnrolledIn, isFollowing } from '../../lib/programs/program-follow-rules.ts';
-import { publishForEnroll } from '../../lib/query/queries.ts';
-import { useIsOffline, useOnlineSignal } from '../../lib/platform/use-online.ts';
+import { programsQuery, publishForEnroll, showChangedPrograms } from '../../lib/query/queries.ts';
+import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
 import { readProgramCache } from '../../offline/program-cache.ts';
@@ -39,49 +38,43 @@ function daySummary(program: Program): string {
 export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [programs, setPrograms] = useState<Program[] | null>(() => cachedPrograms(userId));
-  const [savedNotice, setSavedNotice] = useState<string | null>(null);
-  const onlineSignal = useOnlineSignal();
+  const programList = useQuery(programsQuery(userId));
+  const [savedPrograms] = useState(() => cachedPrograms(userId));
   const offline = useIsOffline();
-  const [problem, setProblem] = useState<string | null>(null);
+  const [actionProblem, setActionProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const pendingCopyIds = useRef(new Map<string, string>());
 
-  useEffect(() => {
-    loadProgramsCacheFirst(userId).then(
-      (load) => {
-        setPrograms(load.loaded);
-        setSavedNotice(cacheFirstNotice(load, OFFLINE_PROGRAMS_NOTICE));
-        setProblem(null);
-      },
-      (error: Error) => setProblem(error.message),
-    );
-  }, [userId, onlineSignal]);
+  const load = programList.data;
+  const programs = load?.loaded ?? savedPrograms;
+  const savedNotice = load ? cacheFirstNotice(load, OFFLINE_PROGRAMS_NOTICE) : null;
+  const problem = actionProblem ?? (load ? null : (programList.error?.message ?? null));
 
   const copyTemplate = async (template: Program) => {
     setBusy(true);
-    setProblem(null);
+    setActionProblem(null);
     const newId = pendingCopyIds.current.get(template.id) ?? crypto.randomUUID();
     pendingCopyIds.current.set(template.id, newId);
     try {
       const copiedId = await copyProgram(userId, template.id, newId);
       pendingCopyIds.current.delete(template.id);
+      showChangedPrograms(queryClient, userId);
       navigate(`/programs/${copiedId}`);
     } catch (error) {
-      setProblem(messageOf(error, 'Could not copy the template.'));
+      setActionProblem(messageOf(error, 'Could not copy the template.'));
       setBusy(false);
     }
   };
 
   const follow = async (program: Program) => {
     setBusy(true);
-    setProblem(null);
+    setActionProblem(null);
     try {
       const { key } = await publishForEnroll(queryClient, userId, program.id);
       navigate(`/programs/enroll/${key}`);
     } catch (error) {
-      setProblem(programErrorText(error));
+      setActionProblem(programErrorText(error));
       setBusy(false);
     }
   };
@@ -97,13 +90,13 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
 
   const remove = async ({ program, cachedEnrollmentInProgram }: PendingDelete) => {
     setBusy(true);
-    setProblem(null);
+    setActionProblem(null);
     try {
       await deleteProgram(userId, program.id);
       if (cachedEnrollmentInProgram) forgetCachedEnrollment(userId);
-      setPrograms(cachedPrograms(userId));
+      showChangedPrograms(queryClient, userId);
     } catch (error) {
-      setProblem(messageOf(error, 'Could not delete the program.'));
+      setActionProblem(messageOf(error, 'Could not delete the program.'));
     }
     setPendingDelete(null);
     setBusy(false);

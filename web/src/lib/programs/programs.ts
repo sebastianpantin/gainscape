@@ -1,7 +1,9 @@
 import type { LastLoggedSet, PlannedExercise } from '../../offline/draft-format.ts';
 import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { programListCache, withSavedProgramDoc } from '../../offline/program-list-cache.ts';
-import { PROGRAM_SELECT, programPayload, type ProgramRow, toProgram } from './program-row-rules.ts';
+import { PROGRAM_SELECT, programPayload, programRowSchema, toProgram } from './program-row-rules.ts';
+import { z } from 'zod';
+import { numericColumn, parsedRows } from '../rows.ts';
 import { rateLimitedMessage } from '../platform/rate-limit.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { supabase } from '../platform/supabase.ts';
@@ -35,7 +37,9 @@ export function cachedPrograms(userId: string): Program[] | null {
 export async function fetchPrograms(userId: string): Promise<Program[]> {
   const { data, error } = await supabase.from('programs').select(PROGRAM_SELECT);
   if (error) throw error;
-  const programs = (data as ProgramRow[]).map(toProgram).sort((a, b) => a.name.localeCompare(b.name));
+  const programs = parsedRows(programRowSchema, data)
+    .map(toProgram)
+    .sort((a, b) => a.name.localeCompare(b.name));
   programListCache.save(deviceStorage(), userId, programs);
   return programs;
 }
@@ -97,13 +101,19 @@ export function deleteProgram(userId: string, programId: string): Promise<void> 
   );
 }
 
+const lastLoggedSetRowSchema = z.object({
+  exercise_id: z.string(),
+  weight_kg: numericColumn,
+  reps: z.number().nullable(),
+});
+
 export async function fetchLastLoggedSets(exerciseIds: string[]): Promise<Map<string, LastLoggedSet>> {
   const { data, error } = await supabase.rpc('last_logged_sets', { exercise_ids: exerciseIds });
   if (error) throw error;
   return new Map(
-    (data as { exercise_id: string; weight_kg: number; reps: number }[]).map((row) => [
+    parsedRows(lastLoggedSetRowSchema, data).map((row) => [
       row.exercise_id,
-      { weightKg: Number(row.weight_kg), reps: row.reps },
+      { weightKg: Number(row.weight_kg), reps: row.reps ?? 0 },
     ]),
   );
 }

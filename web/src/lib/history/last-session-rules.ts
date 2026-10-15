@@ -1,16 +1,19 @@
 import type { LoadType } from '../exercises/catalog-rules.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
 import { formatLoad } from '../format.ts';
-import { nullableNumber } from '../rows.ts';
+import { z } from 'zod';
+import { nullableNumber, numericColumn } from '../rows.ts';
 import type { LastLoggedSet } from '../../offline/draft-format.ts';
 
-export interface RecentLiftRow {
-  exercise_id: string;
-  session_rank: number;
-  weight_kg: number | string;
-  reps: number;
-  logged_rir: number | string | null;
-}
+export const recentLiftRowSchema = z.object({
+  exercise_id: z.string(),
+  session_rank: z.number(),
+  weight_kg: numericColumn,
+  reps: z.number().nullable(),
+  logged_rir: numericColumn.nullable(),
+});
+
+export type RecentLiftRow = z.infer<typeof recentLiftRowSchema>;
 
 export interface RecentSet extends LastLoggedSet {
   loggedRir: number | null;
@@ -25,7 +28,7 @@ export function recentSessionsByExercise(rows: readonly RecentLiftRow[]): Map<st
     const sets = (sessions[row.session_rank - 1] ??= []);
     sets.push({
       weightKg: Number(row.weight_kg),
-      reps: row.reps,
+      reps: row.reps ?? 0,
       loggedRir: nullableNumber(row.logged_rir),
     });
     byExercise.set(row.exercise_id, sessions);

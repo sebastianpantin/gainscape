@@ -1,5 +1,19 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { APP_TITLE, routeTitle } from '../../web/src/lib/platform/route-title-rules.ts';
+import { APP_TITLE, routeTitle, SCREEN_PATHS } from '../../web/src/lib/platform/route-title-rules.ts';
+
+const appSource = readFileSync(join(import.meta.dirname, '../../web/src/App.tsx'), 'utf8');
+const ROUTE_PATHS = [...appSource.matchAll(/<Route\s+path="([^"]+)"/g)]
+  .map(([, path]) => path)
+  .filter((path) => path !== '*');
+
+describe('SCREEN_PATHS', () => {
+  it('lists exactly the routes App.tsx declares, so no screen falls back to the bare app title', () => {
+    expect(ROUTE_PATHS.length).toBeGreaterThan(20);
+    expect([...SCREEN_PATHS].sort()).toEqual([...ROUTE_PATHS].sort());
+  });
+});
 
 describe('routeTitle', () => {
   it('names each tab screen before the app name', () => {

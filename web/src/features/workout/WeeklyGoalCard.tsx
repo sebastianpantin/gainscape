@@ -1,17 +1,12 @@
-import { useEffect, useId, useState } from 'react';
-import { fetchWeeklyGoalStatus } from '../../lib/progress/weekly-goal.ts';
+import { useQuery } from '@tanstack/react-query';
+import { useId } from 'react';
+import { weeklyGoalQuery } from '../../lib/query/queries.ts';
 import { streakRiskText } from './today-rules.ts';
-import { streakText, type WeeklyGoalStatus, weekProgressText } from '../../lib/progress/weekly-goal-rules.ts';
+import { streakText, weekProgressText } from '../../lib/progress/weekly-goal-rules.ts';
 
 export function WeeklyGoalCard() {
   const headingId = useId();
-  const [status, setStatus] = useState<WeeklyGoalStatus | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchWeeklyGoalStatus(controller.signal).then(setStatus, () => setStatus(null));
-    return () => controller.abort();
-  }, []);
+  const status = useQuery(weeklyGoalQuery).data;
 
   if (status?.goal == null) return null;
   const risk = streakRiskText(status, new Date());

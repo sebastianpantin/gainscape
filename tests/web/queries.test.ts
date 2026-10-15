@@ -11,12 +11,16 @@ const {
   collectionPercentQuery,
   collectionQuery,
   enrollChoicesQuery,
+  exerciseListLoadQuery,
   exerciseListQuery,
   FEED_QUERY_PREFIX,
   feedPreviewQuery,
   feedQuery,
   FRIENDS_QUERY_PREFIX,
   friendsQuery,
+  latestBodyweightQuery,
+  preferencesQuery,
+  profileQuery,
   publishForEnroll,
 } = await import('../../web/src/lib/query/queries.ts');
 
@@ -91,6 +95,37 @@ describe('query factories', () => {
   });
 });
 
+describe('profile reads', () => {
+  const profile = {
+    username: 'lifter',
+    displayName: 'Lifter',
+    bio: null,
+    trainingFocus: null,
+    trainingSince: null,
+    badgeColor: 'blue',
+    showWeights: true,
+    showBodyweight: false,
+    createdAt: '2026-01-01T00:00:00Z',
+    bodyweightKg: 82.5,
+    heightCm: null,
+    birthYear: null,
+    unitPref: 'lb',
+    effortInputMode: 'rir',
+    timezone: 'UTC',
+    timezoneChangedAt: null,
+  } as const;
+
+  it('reads the preferences and the latest bodyweight from the cached profile, so a profile save reaches them', () => {
+    const preferences = preferencesQuery(USER_ID);
+    const bodyweight = latestBodyweightQuery(USER_ID);
+    expect(preferences.queryKey).toEqual(profileQuery(USER_ID).queryKey);
+    expect(bodyweight.queryKey).toEqual(profileQuery(USER_ID).queryKey);
+    const load = { loaded: profile, fromCache: false } as const;
+    expect(preferences.select?.(load)).toEqual({ unitPref: 'lb', effortInputMode: 'rir' });
+    expect(bodyweight.select?.(load)).toBe(82.5);
+  });
+});
+
 describe('exerciseListQuery', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -103,14 +138,23 @@ describe('exerciseListQuery', () => {
   it('starts from the saved exercise list as stale data, so every screen sees it offline and refetches', () => {
     const chestBench = { ...BENCH, skillShares: [{ skillKey: 'chest', skillName: 'Chest', shareBasisPoints: 7000 }] };
     deviceWith([chestBench]);
-    const query = exerciseListQuery(USER_ID);
-    expect(typeof query.initialData === 'function' && query.initialData()).toEqual([chestBench]);
+    const query = exerciseListLoadQuery(USER_ID);
+    expect(typeof query.initialData === 'function' && query.initialData()).toEqual({
+      loaded: [chestBench],
+      fromCache: false,
+    });
     expect(query.initialDataUpdatedAt).toBe(0);
+  });
+
+  it('hands screens that need only the list the exercises of the same cached load', () => {
+    const list = exerciseListQuery(USER_ID);
+    expect(list.queryKey).toEqual(exerciseListLoadQuery(USER_ID).queryKey);
+    expect(list.select?.({ loaded: [BENCH], fromCache: true, offline: true })).toEqual([BENCH]);
   });
 
   it('starts empty when the saved list predates skill shares or the device has none', () => {
     deviceWith([BENCH]);
-    const query = exerciseListQuery(USER_ID);
+    const query = exerciseListLoadQuery(USER_ID);
     expect(typeof query.initialData === 'function' && query.initialData()).toBeUndefined();
     vi.stubGlobal('window', undefined);
     expect(typeof query.initialData === 'function' && query.initialData()).toBeUndefined();

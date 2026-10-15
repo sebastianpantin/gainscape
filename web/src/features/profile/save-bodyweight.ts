@@ -15,9 +15,9 @@ interface BodyweightSave {
 export async function saveBodyweight({ userId, bodyweightKg, storage, queryClient }: BodyweightSave): Promise<void> {
   await updatePrivateProfile(userId, { bodyweightKg });
   rememberSavedBodyweight(storage, userId, bodyweightKg);
-  queryClient.setQueryData<CacheFirstLoad<Profile>>(
-    profileQuery(userId).queryKey,
-    (current) => current && { ...current, loaded: { ...current.loaded, bodyweightKg } },
-  );
+  const { queryKey } = profileQuery(userId);
+  const current = queryClient.getQueryData<CacheFirstLoad<Profile>>(queryKey);
+  if (current) queryClient.setQueryData(queryKey, { ...current, loaded: { ...current.loaded, bodyweightKg } });
+  else void queryClient.invalidateQueries({ queryKey });
   void announceDataChange(queryClient, 'profile-saved');
 }

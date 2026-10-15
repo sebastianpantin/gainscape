@@ -1,4 +1,5 @@
 import { evaluateNumber } from '@domain/program-eval.ts';
+import { z } from 'zod';
 import {
   DEFAULT_ROUNDING,
   type InputKind,
@@ -18,13 +19,15 @@ export const UPDATE_APP_TEXT = 'Update the app to use this program';
 
 const UNUSABLE_TEMPLATE_TEXT = "This program can't be used right now";
 
-export interface ProgramTemplateRow {
-  key: string;
-  version: number;
-  name: string;
-  definition: unknown;
-  owner_user_id?: string | null;
-}
+export const programTemplateRowSchema = z.object({
+  key: z.string(),
+  version: z.number(),
+  name: z.string(),
+  definition: z.unknown(),
+  owner_user_id: z.string().nullable().optional(),
+});
+
+export type ProgramTemplateRow = z.infer<typeof programTemplateRowSchema>;
 
 export type TemplateListEntry =
   | { kind: 'enrollable'; key: string; version: number; name: string; definition: ProgramDefinition }

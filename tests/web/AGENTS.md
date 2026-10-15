@@ -42,7 +42,7 @@ Stack-free Vitest suites for the web app's pure logic and its static build input
 - Only `*.test.ts` files are suites. Helper files must not match that pattern.
 - To change how drafts are stored, add the failing case to `draft-store.contract.ts` first. Both store suites then turn red, and both IndexedDB and the `localStorage` fallback are held to it.
 - `user-device-data.test.ts` scans `web/src` for every `gainscape.` key name and fails on one it does not write. A new per-user store must be added both to this test and to `forgetUserDeviceData`.
-- `query-freshness-rules.test.ts` fails until every query key is placed in `QUERY_ROOTS_CHANGED_BY`, `ALWAYS_STALE_QUERY_ROOTS` or the `skills` catalog. Place the new query; do not loosen the test.
+- `query-freshness-rules.test.ts` fails until every query factory is in `EVERY_QUERY` and its key in `QUERY_ROOTS_CHANGED_BY`, `ALWAYS_STALE_QUERY_ROOTS` or the `skills` catalog. Place the new query; do not loosen the test.
 - `query-client.test.ts` pins the client defaults: no retry, `networkMode: 'always'`, and `staleTime` from `staleTimeFor`.
 - `licenses.test.ts`, `contrast.test.ts`, `pixel-sprites.test.ts` and `manifest.test.ts` read source files as text.
   - A new font import, colour token, sprite colour or icon changes what they assert. Fix the licenses folder, the tokens or the assets, not the test.

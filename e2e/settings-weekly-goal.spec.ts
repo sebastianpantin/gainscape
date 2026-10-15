@@ -17,8 +17,8 @@ function goalChoice(page: Page, name: string) {
 }
 
 test('a weekly goal that fails to load offers a retry that loads it', async ({ page }) => {
-  await register(page, uniqueUsername('wg_ld'));
   await failRequests(page, WEEKLY_GOAL_WEEKS);
+  await register(page, uniqueUsername('wg_ld'));
   await openFromProfile(page, 'Settings');
 
   await expect(weeklyGoalSection(page).getByRole('alert')).toHaveText('Could not load your weekly goal.');

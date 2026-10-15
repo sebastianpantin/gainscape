@@ -30,7 +30,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
   - `platform/function-client.ts` over `platform/function-client-rules.ts`: `invokeAsOwner` for Edge Functions.
   - `query/query-client.ts`, `query/queries.ts`, `query/query-freshness-rules.ts` and `query/data-changes.ts`: the server data cache and its invalidation.
 - `*-rules.ts` files are pure. These are pure too, without the suffix: `units.ts`, `format.ts`, `workout/effort-labels.ts`, `error-text.ts`, `names.ts`, `platform/rate-limit.ts`, `platform/auth-links.ts`, `platform/auth-restore.ts`, `exercises/catalog-cache.ts`, `exercises/exercise-note-cache.ts`, `ui/glossary.ts`, `reorder.ts`, `rows.ts`.
-- A `<feature>.ts` beside a `<feature>-rules.ts` is the I/O half (catalog, history, items, social, profile, standing, skill-map, last-session, exercise-progress, bodyweight-trend, weekly-goal, recovery, onboarding, exercise-notes). Other I/O modules: `programs/programs.ts`, `programs/program-enrollment.ts`, `collection/collection-data.ts`, `exercises/custom-exercises.ts`, `profile/account.ts`.
+- A `<feature>.ts` beside a `<feature>-rules.ts` is the I/O half (catalog, history, items, social, profile, standing, skill-map, last-session, exercise-progress, bodyweight-trend, weekly-goal, recovery, onboarding, exercise-notes). Other I/O modules: `progress/standing-data.ts`, `programs/programs.ts`, `programs/program-enrollment.ts`, `collection/collection-data.ts`, `exercises/custom-exercises.ts`, `profile/account.ts`.
 - `*-store.ts`: per-user settings kept only in this device's `localStorage` (rest timer, plates, training device, onboarding, last seen release, program summary dismissals, companion pet). They are never synced.
 - `programs/program-*-rules.ts`: following a program (enroll form, Train cards, plan, references, skip, set markers, rollover summary, follow status, facts, error text). The program engine itself is `@domain/program-*.ts`.
 - Only a few files use React: the contexts in `profile/preferences.ts` and `ui/toast.ts`, and the hooks in `progress/standing.ts`, `progress/skill-map.ts`, `platform/use-auth-session.ts`, `platform/use-online.ts`, `platform/use-route-focus.ts` and `query/data-changes.ts`.
@@ -61,7 +61,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Users never see a raw error code or database text. Every failure maps to a sentence, with a generic fallback (`programErrorText`, `pinProblemText`, the account export and delete messages).
 - `emailChangeProblem` does not use `authErrorMessage` on purpose: `authErrorMessage` would call a 403 an invalid link.
 - A password change re-checks the current password against the email `getUser()` returns now, not a cached one. Only `invalid_credentials` means the password was wrong.
-- Row types are hand-written. Each module has its own `*Row` interfaces and `*_COLUMNS` select strings, so a schema change needs both updated by hand. Postgres numerics arrive as strings; coerce with `Number(...)`.
+- Row shapes are hand-written zod `*RowSchema`s (`*Row` is inferred) beside the `*_COLUMNS` strings; update both on a schema change. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a row with a new server value and falls back to its saved copy: ship the client value a release before the server writes it. Numerics may arrive as strings (`numericColumn`); coerce with `Number(...)`.
 
 ### Must stay in sync with SQL
 
@@ -85,7 +85,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 - `createQueryClient` has no retries and uses `networkMode: 'always'`. A failed or offline load then shows its problem at once instead of waiting on the skeleton; supabase-js already retries GETs. `tests/web/query-client.test.ts` pins this.
 - `FRESH_FOR_MS` (60 s) only limits how long changes from other devices take to show. Every write this device makes to queried data must call `announceDataChange` (`query/data-changes.ts`). It invalidates locally and broadcasts on `gainscape.data-changes`.
-- A new query must go in `QUERY_ROOTS_CHANGED_BY` or `ALWAYS_STALE_QUERY_ROOTS`. `tests/web/query-freshness-rules.test.ts` fails until it does.
+- Every query factory is defined in `query/queries.ts` and listed in `EVERY_QUERY`, and its root is in `QUERY_ROOTS_CHANGED_BY` or `ALWAYS_STALE_QUERY_ROOTS`. `tests/web/query-freshness-rules.test.ts` fails on a `*Query` export missing from either.
 - The tab that made a write skips the roots it already updated optimistically (profile, items after a craft, weekly goal, pins). This stops a refetch that started before a second optimistic write from undoing it. Optimistic writes call `cancelQueries` before `setQueryData`.
 - `account-reset` resets the roots instead of invalidating them, so no screen shows pre-reset data while it refetches.
 - A cache-first result with `fromCache: true` gets a `staleTime` of 0, so it is retried on the next visit and on reconnect. Everything is stale while the device is offline.
@@ -93,6 +93,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
   - friends, feed, hiscores and friend profile, because other people change them;
   - program templates and enroll choices, because their cache-first loaders drop `fromCache`;
   - the first-run training history check, so the intro never comes back after a first workout.
+- Program saves, copies and deletes call `showChangedPrograms`: it puts the saved list into `programsQuery` and announces `programs-changed`.
 - These writes need no announcement: enrollment writes (no query reads enrollments), program publishing (`publishForEnroll` removes the enroll choices) and friend actions.
 - A finished workout refreshes every tab through `useDataChangeInvalidation`, which listens for `synced` and `deleted` on the `gainscape.drafts` channel. The finish flow has no hook of its own.
 - Query keys carry the user id, and `App.tsx` clears the client when the user changes.
@@ -114,7 +115,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
   - Blocked storage reads as the defaults, and `deviceStorage()` returns null.
   - `readOnboarding` and `readLastSeenRelease` write the value back to tell `absent` from `unavailable`.
   - A blocked notify prompt counts as answered, so the prompt never nags.
-- The exercise cache holds every exercise, archived ones included. Every reader that wants the training list applies `activeExercises`. A cached activity without `tracksDistance` reads as true.
+- Only `exerciseListLoadQuery` reads and writes the exercise cache (`loadExercisesCacheFirst`); imperative code uses `fetchQuery` or `fetchLatestExerciseList`. The cache holds every exercise, archived ones included. Every reader that wants the training list applies `activeExercises`. A cached activity without `tracksDistance` reads as true.
 - Offline, fetchers fail at once (`failFastWhenOffline`, `OfflineError`), and cache-first loaders show the saved copy without sending a request. `useOnlineSignal` (`platform/use-online.ts`) gives loaders a reconnect counter to reload on.
 
 ### Browser behaviour
@@ -126,7 +127,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `playTones` plays only if a suspended `AudioContext` resumes within 500 ms, so a frozen page never beeps late. Every device call is guarded with try/catch.
 - `restAlertIsFresh` gives a 5 s grace, so a page that thaws late stays quiet. `claimRestAlert` lets only one tab alert per rest.
 - `platesPerSide` loads the heaviest plates first, like a gym, and falls back to the fewest plates when that fails. It is not greedy.
-- React keys for repeated exercises come from `exerciseKeys` (history edit, program editor). Workout cards key by the draft's `clientId`.
+- React keys for repeated exercises come from `exerciseKeys`; workout cards key by the draft's `clientId`.
 - The enroll form is generated from the template definition, with no code per program. Custom templates bind `x_<exercise hex>` lifts, and a `<lift>Lift` option picks a lift's key. Archived and custom exercises never bind.
 
 ## Testing

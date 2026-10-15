@@ -31,6 +31,8 @@ const SCREEN_TITLES: readonly (readonly [pattern: string, screen: string])[] = [
   ['/programs/:programId', 'Edit program'],
 ];
 
+export const SCREEN_PATHS: readonly string[] = SCREEN_TITLES.map(([pattern]) => pattern);
+
 function segments(path: string): string[] {
   return path.split('/').filter((segment) => segment !== '');
 }

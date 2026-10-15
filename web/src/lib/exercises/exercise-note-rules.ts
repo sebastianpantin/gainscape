@@ -1,13 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import { parsedRows } from '../rows.ts';
 
 export const EXERCISE_NOTE_MAX_LENGTH = 500;
 export const EXERCISE_NOTE_OFFLINE_TEXT = 'Notes can be edited when you are online.';
 const EXERCISE_NOTE_COLUMNS = 'exercise_id, body';
 
-export interface ExerciseNoteRow {
-  exercise_id: string;
-  body: string;
-}
+const exerciseNoteRowSchema = z.object({ exercise_id: z.string(), body: z.string() });
+
+export type ExerciseNoteRow = z.infer<typeof exerciseNoteRowSchema>;
 
 export type ExerciseNotes = Readonly<Record<string, string>>;
 
@@ -43,7 +44,7 @@ export function noteActionLabel(note: string | undefined): string {
 export async function queryExerciseNotes(client: SupabaseClient): Promise<ExerciseNotes> {
   const { data, error } = await client.from('exercise_notes').select(EXERCISE_NOTE_COLUMNS);
   if (error) throw error;
-  return toExerciseNotes(data as ExerciseNoteRow[]);
+  return toExerciseNotes(parsedRows(exerciseNoteRowSchema, data));
 }
 
 export async function saveExerciseNoteWith(

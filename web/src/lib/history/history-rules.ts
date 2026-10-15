@@ -3,7 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { type InvokeOutcome, retryDelayMs } from '../platform/function-client-rules.ts';
 import type { OverviewSet } from './history-overview-rules.ts';
-import { nullableNumber } from '../rows.ts';
+import { nullableNumber, numericColumn, parsedRows } from '../rows.ts';
+import { RIR_SOURCES } from '../progress/recovery-rules.ts';
 
 export const HISTORY_PAGE_SIZE = 50;
 
@@ -126,30 +127,34 @@ const sessionDetailRowSchema = sessionColumnsSchema.extend({
   sets: z.tuple([z.object({ count: z.number() })]),
 });
 
-interface SetRow {
-  id: string;
-  exercise_id: string;
-  position: number;
-  weight_kg: number | string | null;
-  effective_load_kg: number | string | null;
-  reps: number | null;
-  is_warmup: boolean;
-  effort_input_type: EffortInputType | null;
-  effort_value: number | string | null;
-  rir: number | string | null;
-  rir_source: RirSource;
-  rir_flagged: boolean;
-  e1rm_before_kg: number | string | null;
-  effective_reps: number;
-  xp_awarded: number;
-  duration_s: number | null;
-  distance_m: number | string | null;
-  interval_work_s: number | null;
-  interval_rest_s: number | null;
-  interval_rounds: number | null;
-  counted_work_s: number | null;
-  pace_flagged: boolean;
-}
+const EFFORT_INPUT_TYPES = ['level', 'rir', 'rpe', 'cardio'] as const satisfies readonly EffortInputType[];
+
+const setRowSchema = z.object({
+  id: z.string(),
+  exercise_id: z.string(),
+  position: z.number(),
+  weight_kg: numericColumn.nullable(),
+  effective_load_kg: numericColumn.nullable(),
+  reps: z.number().nullable(),
+  is_warmup: z.boolean(),
+  effort_input_type: z.enum(EFFORT_INPUT_TYPES).nullable(),
+  effort_value: numericColumn.nullable(),
+  rir: numericColumn.nullable(),
+  rir_source: z.enum(RIR_SOURCES),
+  rir_flagged: z.boolean(),
+  e1rm_before_kg: numericColumn.nullable(),
+  effective_reps: z.number(),
+  xp_awarded: z.number(),
+  duration_s: z.number().nullable(),
+  distance_m: numericColumn.nullable(),
+  interval_work_s: z.number().nullable(),
+  interval_rest_s: z.number().nullable(),
+  interval_rounds: z.number().nullable(),
+  counted_work_s: z.number().nullable(),
+  pace_flagged: z.boolean(),
+});
+
+type SetRow = z.infer<typeof setRowSchema>;
 
 export function withoutHistorySession<Pages extends { pages: { id: string }[][] }>(
   loaded: Pages | undefined,
@@ -259,7 +264,7 @@ export async function querySession(client: SupabaseClient, sessionId: string): P
 export async function querySessionSets(client: SupabaseClient, sessionId: string): Promise<StoredSetRow[]> {
   const { data, error } = await client.from('sets').select(SET_COLUMNS).eq('session_id', sessionId).order('position');
   if (error) throw error;
-  return (data as SetRow[]).map(toStoredSet);
+  return parsedRows(setRowSchema, data).map(toStoredSet);
 }
 
 export function transientReason(outcome: InvokeOutcome<unknown>): string | null {

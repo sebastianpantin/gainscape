@@ -1,12 +1,14 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   cachedPreferences,
   cachePreferences,
   DEFAULT_PREFERENCES,
+  pendingLocalPreferences,
   type Preferences,
   PreferencesContext,
 } from '../lib/profile/preferences.ts';
-import { fetchProfile } from '../lib/profile/profile.ts';
+import { preferencesQuery } from '../lib/query/queries.ts';
 
 interface PreferencesProviderProps {
   userId: string;
@@ -14,36 +16,26 @@ interface PreferencesProviderProps {
 }
 
 export function PreferencesProvider({ userId, children }: PreferencesProviderProps) {
-  const [preferences, setPreferences] = useState<Preferences>(() => cachedPreferences(userId) ?? DEFAULT_PREFERENCES);
-  const localChanges = useRef(0);
+  const { data: loaded } = useQuery(preferencesQuery(userId));
+  const [saved] = useState<Preferences>(() => cachedPreferences(userId) ?? DEFAULT_PREFERENCES);
+  const [local, setLocal] = useState<Preferences | null>(null);
+  const pending = pendingLocalPreferences(local, loaded);
+  if (pending !== local) setLocal(pending);
+  const preferences = pending ?? loaded ?? saved;
 
   useEffect(() => {
-    let active = true;
-    const changesAtStart = localChanges.current;
-    fetchProfile(userId).then(
-      (profile) => {
-        if (!active || localChanges.current !== changesAtStart) return;
-        const loaded = { unitPref: profile.unitPref, effortInputMode: profile.effortInputMode };
-        cachePreferences(userId, loaded);
-        setPreferences(loaded);
-      },
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId]);
+    if (loaded && !pending) cachePreferences(userId, loaded);
+  }, [userId, loaded, pending]);
 
   const applyPreferences = useCallback(
     (changes: Partial<Preferences>) => {
-      localChanges.current += 1;
-      setPreferences((current) => {
-        const next = { ...current, ...changes };
+      setLocal((current) => {
+        const next = { ...(current ?? loaded ?? saved), ...changes };
         cachePreferences(userId, next);
         return next;
       });
     },
-    [userId],
+    [userId, loaded, saved],
   );
 
   const value = useMemo(() => ({ ...preferences, applyPreferences }), [preferences, applyPreferences]);

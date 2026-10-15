@@ -1,6 +1,8 @@
 import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { effortProximity } from '@domain/fatigue.ts';
 import { type SupabaseClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import { numericColumn, parsedRows } from '../rows.ts';
 
 export const BODY_SKILLS = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core', 'grip'] as const;
 export type BodySkill = (typeof BODY_SKILLS)[number];
@@ -46,7 +48,8 @@ export function hardSetLoad(
   return load;
 }
 
-export type RirSource = 'logged' | 'estimated' | 'cold_start' | 'default';
+export const RIR_SOURCES = ['logged', 'estimated', 'cold_start', 'default'] as const;
+export type RirSource = (typeof RIR_SOURCES)[number];
 
 export function rirForRecovery(rir: number | string | null, source: RirSource): number {
   if (rir !== null) return Number(rir);
@@ -100,12 +103,12 @@ export function recoveryGroups(
 
 const RECENT_SET_COLUMNS = 'exercise_id,rir,rir_source,sessions!inner(ended_at,local_date)';
 
-interface RecentSetRow {
-  exercise_id: string;
-  rir: number | string | null;
-  rir_source: RirSource;
-  sessions: { ended_at: string; local_date: string };
-}
+const recentSetRowSchema = z.object({
+  exercise_id: z.string(),
+  rir: numericColumn.nullable(),
+  rir_source: z.enum(RIR_SOURCES),
+  sessions: z.object({ ended_at: z.string(), local_date: z.string() }),
+});
 
 export async function queryRecentSets(client: SupabaseClient, since: Date): Promise<RecentSet[]> {
   const { data, error } = await client
@@ -114,7 +117,7 @@ export async function queryRecentSets(client: SupabaseClient, since: Date): Prom
     .eq('is_warmup', false)
     .gte('sessions.ended_at', since.toISOString());
   if (error) throw error;
-  return (data as unknown as RecentSetRow[]).map((row) => ({
+  return parsedRows(recentSetRowSchema, data).map((row) => ({
     exerciseId: row.exercise_id,
     rir: rirForRecovery(row.rir, row.rir_source),
     endedAt: row.sessions.ended_at,

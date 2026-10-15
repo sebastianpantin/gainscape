@@ -20,6 +20,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 
 - Editability uses `isSessionEditable` from `@domain/edit-window.ts`, the same rule the `edit-session` and `delete-session` functions apply.
 - Both screens fail fast offline (`Offline: connect to load this screen.`); edits need the server.
+- The detail screen reads the exercise catalog through `exerciseListLoadQuery` and accepts its saved copy without a notice, like the program editor: names and load types only seed the edit, and every save re-checks load types against the live catalog (`latestExercises` falls back to the loaded list only when that live fetch fails).
 - The list uses `useInfiniteQuery(historyQuery(userId))`, so loaded pages and scroll survive Back from a workout. Loading more waits while any fetch runs so it never cancels a refresh. The detail screen drops a deleted workout from the cached pages. After a failed page load only the `Load more` button retries.
 - Save: an accepted save makes the sent sets the new original at the new revision before the refresh, so a failed refresh keeps Save disabled and Undo cannot write old values back. Per-set XP labels compare against `xpBasis`, the sets the stored XP belongs to.
 - The `Workout XP` total includes the gear bonus; per-set labels show `xp_awarded`, the base XP.
