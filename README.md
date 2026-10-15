@@ -81,6 +81,7 @@ The free test environment (Supabase Free and Cloudflare Pages, invite-only) is d
 ## Layout
 
 - `supabase/functions/_shared/domain/`: the pure game engine, shared by the Edge Function and the web app. All tuning constants are in `balance.ts`.
+- `docs/game-mechanics.md`: how a logged workout becomes XP, levels, records, loot and quest progress, and where each rule lives.
 - `supabase/functions/complete-session/`: the server-authoritative sync endpoint.
 - `supabase/functions/export-data/`, `supabase/functions/delete-account/`: account export (JSON of the caller's rows) and deletion (requires typing your username).
 - `supabase/migrations/`: schema and row-level security.
