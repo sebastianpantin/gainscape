@@ -22,7 +22,7 @@ The React 19 PWA and its Vite root. Source lives in `src/`, static assets in `pu
 - `vite.config.ts` reads `changelog.yaml` once at startup: restart `make dev` after editing it. `src/lib/platform/changelog-rules.ts` validates it on every build, and `make deploy` refuses until every user-facing merged PR is in some entry's `prs`.
 - A new build-time constant is declared in both `src/vite-env.d.ts` and `vite.config.ts`.
 - Node-loaded files (`vite.config.ts`, `build/*.ts`) use `.ts` extensions and `import.meta.dirname`.
-- The `@domain` alias is also in `tsconfig.json` and `vitest.config.ts`. Change all three together.
+- The `@domain` alias is also in `tsconfig.base.json` and `vitest.config.ts`. Change all three together.
 - Ports come from `GAINSCAPE_WEB_PORT` and `GAINSCAPE_PREVIEW_PORT` (`build/ports.ts`) so a second worktree stack can run side by side.
 - Use `make dev`, `make build-local` (development-mode build for the PWA e2e suite) and `make preview`, never `npm run` variants.
 

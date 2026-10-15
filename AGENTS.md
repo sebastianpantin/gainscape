@@ -11,7 +11,7 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 - `Makefile`: entry point for every workflow: stack, dev server, checks, every test layer, codegen.
 - `package.json`: npm dependencies only; every workflow runs through a `make` target.
 - `eslint.config.js`: ESLint flat config, including the custom `gainscape/no-comments` rule, the test id bans for `web/src` and `e2e/`, the domain purity globals ban and the `__CHANGELOG__` global ban.
-- `tsconfig.json`: type-checks app, tests, e2e, scripts and domain; `@domain/*` path alias.
+- `tsconfig.json`: solution file for editors and Vite; `make typecheck` runs each referenced config, so `tsc` fails on a global from the wrong environment. `tsconfig.web.json`: `web/src` with DOM and no Node types. `tsconfig.domain.json`: the domain with neither DOM nor Node. `tsconfig.node.json`: scripts, tests, e2e, `web/build` and the root configs with Node and DOM (tests and e2e drive DOM code). Shared options and the `@domain/*` path alias live in `tsconfig.base.json`.
 - `tsconfig.sw.json`: separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`.
 - `vitest.config.ts`: Vitest projects with the `@domain` alias: `unit` (balance, catalog, deploy, domain, web; parallel), `integration` (4 workers in parallel), then `integration-serial` (files that touch global state, one at a time).
 - `playwright.config.ts`: E2E against the `vite web` dev server (https, service workers blocked); projects `chromium` (Pixel 7, `make e2e`) and `webkit` (iPhone 14, `make e2e-webkit`); shared CI settings in `e2e/support/run-settings.ts`.

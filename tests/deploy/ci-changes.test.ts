@@ -54,6 +54,8 @@ describe('which pull requests run the backend job', () => {
     '.nvmrc',
     'vitest.config.ts',
     'tsconfig.json',
+    'tsconfig.base.json',
+    'tsconfig.node.json',
     '.github/workflows/ci.yml',
   ])('runs for a change to %s', (path) => {
     expect(needsBackend([path])).toBe(true);
@@ -133,6 +135,9 @@ describe('which pull requests run the browser smoke tests', () => {
     'e2e/history.spec.ts',
     'e2e/support/app.ts',
     'playwright.config.ts',
+    'tsconfig.json',
+    'tsconfig.base.json',
+    'tsconfig.web.json',
     'supabase/functions/complete-session/index.ts',
     'supabase/migrations/20261007000029_029_weekly_goals.sql',
     'catalog/exercises.yaml',
@@ -157,6 +162,7 @@ describe('which pull requests run the browser smoke tests', () => {
     'docs/deploy.md',
     '.github/workflows/e2e.yml',
     'eslint.config.js',
+    'tsconfig.domain.json',
   ])('skips them for a change only to %s', (path) => {
     expect(needsUi([path])).toBe(false);
   });

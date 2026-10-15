@@ -16,29 +16,29 @@ Open the printed URL, accept the self-signed certificate, create an account, log
 
 ## Everyday commands
 
-| Command                     | What it does                                                                                                                                                                 |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make reset`                | Recreate the local database from migrations and seed                                                                                                                         |
-| `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc` (app and service worker), `deno check`, catalog and icons checks, gitleaks secrets scan         |
-| `make test`                 | `make check`, then catalog, domain, web and deploy tests, integration/RLS tests and `make test-db`                                                                           |
-| `make test-db`              | pgTAP tests in `supabase/tests/` against the local database (refuses any non-local host)                                                                                     |
-| `make sim-check`            | Balance band test (about 1 s)                                                                                                                                                |
-| `make sim`                  | Full balance tuning report (about 2 min)                                                                                                                                     |
-| `make e2e`                  | Playwright end-to-end flow in a headless phone-sized Chromium (Pixel 7)                                                                                                      |
-| `make e2e-smoke`            | Only the `@smoke`-tagged end-to-end tests in Chromium (sign-up, logging and finishing a workout, an offline draft, history); CI runs it on UI pull requests                  |
-| `make e2e-webkit`           | The same end-to-end flow in WebKit (iPhone 14); needs Playwright's WebKit and its system libraries, so it runs in the nightly e2e workflow                                   |
-| `make e2e-pwa`              | Builds the production bundle and runs the offline, update and installability tests against `vite preview`                                                                    |
-| `make e2e-pages`            | Builds for Cloudflare Pages against the local stack, serves it with `wrangler pages dev` and checks the `_headers` and a whole workout without a CSP violation               |
-| `make build`                | Production build of the web app into `web/dist` (CI runs it in `checks`)                                                                                                     |
-| `make deploy`               | Deploy the test environment (Supabase Free and Cloudflare Pages); admin only, see `docs/deploy.md`                                                                           |
-| `make changelog-unreleased` | List user-facing PRs no changelog entry covers yet, for writing the next one                                                                                                 |
-| `make preview`              | Production build served by `vite preview` (https, preview port = web port - 1000, so 4173 by default)                                                                        |
-| `make icons`                | Regenerate the app icons, iOS launch images and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                                |
-| `make screenshots`          | Recapture the install screenshots in `web/public/screenshots/` against the local stack                                                                                       |
-| `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                                               |
-| `make rebuild-caches`       | Recompute XP, e1RM, records and feed events from logged sets for every user with sessions behind `BALANCE_VERSION` (run after a bump); `ALL=1` rebuilds every user with data |
-| `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)                                                                           |
-| `make stop`                 | Stop the functions server and the Supabase stack                                                                                                                             |
+| Command                     | What it does                                                                                                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `make reset`                | Recreate the local database from migrations and seed                                                                                                                                                    |
+| `make check`                | Static gates: Prettier check, ESLint (including the no-comments rule), `tsc` per environment (web, domain, Node tooling, service worker), `deno check`, catalog and icons checks, gitleaks secrets scan |
+| `make test`                 | `make check`, then catalog, domain, web and deploy tests, integration/RLS tests and `make test-db`                                                                                                      |
+| `make test-db`              | pgTAP tests in `supabase/tests/` against the local database (refuses any non-local host)                                                                                                                |
+| `make sim-check`            | Balance band test (about 1 s)                                                                                                                                                                           |
+| `make sim`                  | Full balance tuning report (about 2 min)                                                                                                                                                                |
+| `make e2e`                  | Playwright end-to-end flow in a headless phone-sized Chromium (Pixel 7)                                                                                                                                 |
+| `make e2e-smoke`            | Only the `@smoke`-tagged end-to-end tests in Chromium (sign-up, logging and finishing a workout, an offline draft, history); CI runs it on UI pull requests                                             |
+| `make e2e-webkit`           | The same end-to-end flow in WebKit (iPhone 14); needs Playwright's WebKit and its system libraries, so it runs in the nightly e2e workflow                                                              |
+| `make e2e-pwa`              | Builds the production bundle and runs the offline, update and installability tests against `vite preview`                                                                                               |
+| `make e2e-pages`            | Builds for Cloudflare Pages against the local stack, serves it with `wrangler pages dev` and checks the `_headers` and a whole workout without a CSP violation                                          |
+| `make build`                | Production build of the web app into `web/dist` (CI runs it in `checks`)                                                                                                                                |
+| `make deploy`               | Deploy the test environment (Supabase Free and Cloudflare Pages); admin only, see `docs/deploy.md`                                                                                                      |
+| `make changelog-unreleased` | List user-facing PRs no changelog entry covers yet, for writing the next one                                                                                                                            |
+| `make preview`              | Production build served by `vite preview` (https, preview port = web port - 1000, so 4173 by default)                                                                                                   |
+| `make icons`                | Regenerate the app icons, iOS launch images and favicon from the pixel sprites (`make icons-check` fails when they are stale)                                                                           |
+| `make screenshots`          | Recapture the install screenshots in `web/public/screenshots/` against the local stack                                                                                                                  |
+| `make format` / `make lint` | Auto-format the repo / lint it                                                                                                                                                                          |
+| `make rebuild-caches`       | Recompute XP, e1RM, records and feed events from logged sets for every user with sessions behind `BALANCE_VERSION` (run after a bump); `ALL=1` rebuilds every user with data                            |
+| `make catalog`              | Regenerate `supabase/seed.sql` from `catalog/*.yaml` (`make catalog-check` fails when it is stale)                                                                                                      |
+| `make stop`                 | Stop the functions server and the Supabase stack                                                                                                                                                        |
 
 Studio (the database UI) runs at http://127.0.0.1:54323 while the stack is up.
 

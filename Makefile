@@ -96,7 +96,9 @@ preview: build-local
 	npx vite preview web --host
 
 typecheck:
-	npx tsc --noEmit -p tsconfig.json
+	npx tsc --noEmit -p tsconfig.web.json
+	npx tsc --noEmit -p tsconfig.domain.json
+	npx tsc --noEmit -p tsconfig.node.json
 	npx tsc --noEmit -p tsconfig.sw.json
 
 lint:

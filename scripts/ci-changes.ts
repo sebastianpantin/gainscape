@@ -17,6 +17,8 @@ const BACKEND_FILES = [
   '.nvmrc',
   'vitest.config.ts',
   'tsconfig.json',
+  'tsconfig.base.json',
+  'tsconfig.node.json',
   '.github/workflows/ci.yml',
   'web/src/offline/session-payload.ts',
 ];
@@ -31,6 +33,9 @@ const UI_FILES = [
   'package-lock.json',
   '.nvmrc',
   'playwright.config.ts',
+  'tsconfig.json',
+  'tsconfig.base.json',
+  'tsconfig.web.json',
   'supabase/config.toml',
   'supabase/seed.sql',
   'scripts/local-stack.ts',

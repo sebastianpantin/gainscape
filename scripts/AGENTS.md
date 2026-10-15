@@ -34,7 +34,7 @@ Node tooling run by the Makefile: stack helpers and guards, the cache rebuilder,
 - `ci-changes.ts` diffs `HEAD^1`, which is right only on the CI merge commit; use `make ci-changes CI_BASE=main` locally. Documentation (`*.md`, `docs/`) never needs the backend job. An empty diff or a git failure means run everything.
 - `changelog/unreleased.ts` refuses a shallow clone and lists files with `--no-renames`, so a file moved out of the app still counts. `gitIn` strips repo-locating `GIT_*` variables (such as `GIT_DIR` from a hook) so it reads the repository at `cwd`. A direct commit touching a user-facing path blocks deploy until a later commit changes `web/changelog.yaml`.
 - `build-kill-switch.ts` refuses a local build unless `KILL_SWITCH_ALLOW_LOCAL_FLAG` is `1`.
-- Scripts import from `web/build/`, `web/src/components/` and the domain, so a rename there breaks them. `tsconfig.json` type-checks this directory.
+- Scripts import from `web/build/`, `web/src/components/` and the domain, so a rename there breaks them. `tsconfig.node.json` type-checks this directory.
 - Testable CLIs either guard their CLI part with `import.meta.main` (`catalog/generate.ts`, `ci-changes.ts`, `changelog/unreleased.ts`, `docs/agents-size.ts`) or keep logic in CLI-free modules (`balance/tune.ts`, `balance/bands.ts`). Use one of these patterns.
 - `--check` compares generated output with the committed file and exits 1 when stale (`catalog/generate.ts`, `icons/build.ts`).
 - Resolve paths from `import.meta.dirname`.
