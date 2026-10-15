@@ -74,9 +74,14 @@ export function strengthTracker(priorRows: readonly StrengthHistoryRow[], cfg: B
   const recorded: StrengthHistoryRow[] = [];
   let priorAdmitted = 0;
   let recordedAdmitted = 0;
+  let lastAnswered: SessionKey | null = null;
 
   return {
     stateAt(session) {
+      if (lastAnswered !== null && isBefore(session, lastAnswered)) {
+        throw new RangeError(`strength asked for session ${session.id} after the later ${lastAnswered.id}`);
+      }
+      lastAnswered = session;
       while (priorAdmitted < prior.length && isBefore(prior[priorAdmitted].session, session)) {
         admit(tracks, prior[priorAdmitted]);
         priorAdmitted += 1;
@@ -98,7 +103,13 @@ export function strengthTracker(priorRows: readonly StrengthHistoryRow[], cfg: B
       return state;
     },
     record(rows) {
-      recorded.push(...rows);
+      for (const row of rows) {
+        const previous = recorded.at(-1);
+        if (previous !== undefined && isBefore(row.session, previous.session)) {
+          throw new RangeError(`strength row of session ${row.session.id} recorded after ${previous.session.id}`);
+        }
+        recorded.push(row);
+      }
     },
   };
 }

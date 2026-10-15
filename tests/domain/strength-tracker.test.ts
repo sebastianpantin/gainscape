@@ -68,6 +68,38 @@ describe('strengthTracker', () => {
   });
 });
 
+describe('strengthTracker order contract', () => {
+  const earlier: SessionKey = { id: 'earlier', startedAt: '2026-01-01T06:00:00.000Z' };
+  const later: SessionKey = { id: 'later', startedAt: '2026-01-02T06:00:00.000Z' };
+  const rowAt = (session: SessionKey): StrengthHistoryRow => ({
+    exerciseId: 'bench',
+    session,
+    isWarmup: false,
+    strengthCandidate: 100,
+  });
+
+  it('accepts the same session twice and later sessions after it', () => {
+    const tracker = strengthTracker([], cfg);
+    tracker.stateAt(earlier);
+    tracker.stateAt(earlier);
+    tracker.record([rowAt(earlier), rowAt(earlier)]);
+    expect(tracker.stateAt(later).bench.windowMax).toBe(100);
+  });
+
+  it('refuses a session before the last one it answered', () => {
+    const tracker = strengthTracker([], cfg);
+    tracker.stateAt(later);
+    expect(() => tracker.stateAt(earlier)).toThrow(RangeError);
+  });
+
+  it('refuses rows recorded out of session order', () => {
+    expect(() => strengthTracker([], cfg).record([rowAt(later), rowAt(earlier)])).toThrow(RangeError);
+    const tracker = strengthTracker([], cfg);
+    tracker.record([rowAt(later)]);
+    expect(() => tracker.record([rowAt(earlier)])).toThrow(RangeError);
+  });
+});
+
 const liftSetArb = fc.record({
   exerciseId: fc.constantFrom('bench', 'squat', 'custom-press'),
   weightKg: fc.integer({ min: 8, max: 80 }).map((plates) => plates * 2.5),
