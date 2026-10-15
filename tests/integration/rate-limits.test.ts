@@ -72,6 +72,22 @@ describe('complete-session', () => {
     expect(await rateLimitHits('session_create_hour', user.id)).toBe(19);
   });
 
+  it('refuses at the cap before reading the catalog', async () => {
+    const capped = await createTestUser();
+    await seedRateLimitHits('session_create_hour', capped.id, 20);
+    const refused = await postCompleteSession(capped.accessToken, payloadAt(hoursAgo(2), [aSet(randomUUID(), 0, 60)]));
+    expectRateLimited(refused, 'session_create_hour', 3600);
+  });
+
+  it('does not count an identical resubmission', async () => {
+    const resubmitter = await createTestUser();
+    const stored = payloadAt(hoursAgo(2), [aSet(benchId, 0, 60)]);
+    await postSession(resubmitter, stored);
+    expect(await rateLimitHits('session_create_hour', resubmitter.id)).toBe(1);
+    expect((await postCompleteSession(resubmitter.accessToken, stored)).status).toBe(200);
+    expect(await rateLimitHits('session_create_hour', resubmitter.id)).toBe(1);
+  });
+
   it('accepts sessions again once the window has passed', async () => {
     await seedRateLimitHits('session_create_hour', user.id, 20);
     await db`
@@ -115,6 +131,24 @@ describe('edit-session', () => {
     const [row] = await db`select revision from public.sessions where id = ${session.id}`;
     expect(row.revision).toBe(0);
     expect((await edit(60)).status).toBe(200);
+  });
+
+  it('refuses at the cap before reading the catalog and never counts a no-op', async () => {
+    const user = await createTestUser();
+    const session = payloadAt(hoursAgo(1), [aSet(benchId, 0, 60)]);
+    await postSession(user, session);
+    const edit = (exerciseId: string) =>
+      postFunction('edit-session', user.accessToken, {
+        sessionId: session.id,
+        ifRevision: 0,
+        notes: null,
+        sets: [{ ...session.sets[0], exerciseId }],
+      });
+
+    expect((await edit(benchId)).status).toBe(200);
+    expect(await rateLimitHits('session_edit_hour', user.id)).toBe(0);
+    await seedRateLimitHits('session_edit_hour', user.id, 60);
+    expectRateLimited(await edit(randomUUID()), 'session_edit_hour', 3600);
   });
 });
 

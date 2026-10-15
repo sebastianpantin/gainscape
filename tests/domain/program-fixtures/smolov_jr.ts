@@ -5,7 +5,7 @@ import {
   type ProgramEnrollment,
   type WeightUnit,
 } from '@domain/index.ts';
-import { type DayDecl } from '@domain/program-definition.ts';
+import { type DayDecl } from '@domain/program-types.ts';
 import { type UnitAmount } from '@domain/units.ts';
 
 const LIFTVAULT_SMOLOV = 'https://liftvault.com/programs/powerlifting/peaking/smolov/';

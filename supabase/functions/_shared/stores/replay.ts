@@ -5,6 +5,7 @@ import {
   type Catalog,
   challengeSummary,
   DEFAULT_BALANCE,
+  isBefore,
   type RevokedDrop,
   lootCandidates,
   NO_RECORDS,
@@ -21,7 +22,7 @@ import {
   type StoredSet,
   type StrengthHistoryRow,
 } from '../domain/index.ts';
-import { HttpError } from '../http.ts';
+import { HttpError, logUnexpectedError } from '../http.ts';
 import { loadCatalog } from './catalog.ts';
 import { syncSessionEvents } from './events.ts';
 import { revokeDisqualifiedDrops, rollNewSessionLoot } from './loot.ts';
@@ -137,22 +138,27 @@ async function replaceSkillXp(tx: Transaction, userId: string, skillXp: Readonly
   if (rows.length > 0) await tx`insert into public.user_skills ${tx(rows)}`;
 }
 
-async function replayFrom(
+async function replaySessions(
   tx: Transaction,
   userId: string,
   scope: ReplayScope,
+  replayStart: SessionKey | null,
   cfg: BalanceConfig,
 ): Promise<ReplayOutcome> {
   const { from } = scope;
-  if (from !== null && (await hasStaleDerivedSessions(tx, userId, cfg.version))) {
-    throw new HttpError(503, 'rebuild_required');
-  }
-
-  const suffix = await loadReplayableSessions(tx, userId, from, cfg);
+  const suffix = await loadReplayableSessions(tx, userId, replayStart, cfg);
   const suffixExerciseIds = [...new Set(suffix.flatMap((session) => session.sets.map((set) => set.exerciseId)))];
   const touched = [...new Set([...suffixExerciseIds, ...scope.previousExerciseIds])];
   const catalog = await loadCatalog(tx, userId, touched);
-  const prior = await loadPriorState(tx, userId, scope, suffixExerciseIds, touched, catalog, cfg);
+  const prior = await loadPriorState(
+    tx,
+    userId,
+    { ...scope, from: replayStart },
+    suffixExerciseIds,
+    touched,
+    catalog,
+    cfg,
+  );
 
   const replay = replayHistory(
     suffix,
@@ -160,7 +166,7 @@ async function replayFrom(
     cfg,
     { skillXp: prior.skillXp, bodyweightKg: null, records: prior.records },
     prior.strength,
-    await loadQuestGrantsFrom(tx, userId, from),
+    await loadQuestGrantsFrom(tx, userId, replayStart),
   );
   const results = replay.sessions.flatMap((entry) => entry.outputs.sets);
 
@@ -190,8 +196,9 @@ async function replayFrom(
     cfg.version,
   );
 
-  const replayedSessionIds = replay.sessions.map((entry) => entry.session.id);
-  const sets = replay.sessions.flatMap((entry) =>
+  const requestedSuffix = replay.sessions.filter((entry) => from === null || !isBefore(entry.session, from));
+  const replayedSessionIds = requestedSuffix.map((entry) => entry.session.id);
+  const sets = requestedSuffix.flatMap((entry) =>
     lootCandidates(entry.outputs.sets, catalog).map((candidate) => ({ ...candidate, sessionId: entry.session.id })),
   );
   const revoked =
@@ -209,7 +216,11 @@ async function replayFrom(
           },
           cfg.version,
         );
-  await syncSessionEvents(tx, userId, replayedSessionIds);
+  await syncSessionEvents(
+    tx,
+    userId,
+    replay.sessions.map((entry) => entry.session.id),
+  );
 
   return {
     replayed: replay.sessions,
@@ -219,6 +230,46 @@ async function replayFrom(
     sets,
     revokedDrops: revokedInReplayOrder(revoked, sets, replayedSessionIds),
   };
+}
+
+async function rebuildAndReplay(
+  tx: Transaction,
+  userId: string,
+  scope: ReplayScope,
+  cfg: BalanceConfig,
+): Promise<ReplayOutcome> {
+  await clearStrengthCache(tx, userId);
+  await clearRecordCaches(tx, userId);
+  const outcome = await replaySessions(tx, userId, scope, null, cfg);
+  await markSessionsDerivedAt(tx, userId, cfg.version);
+  return outcome;
+}
+
+async function rebuildAndReplayOrRefuse(
+  tx: Transaction,
+  userId: string,
+  scope: ReplayScope,
+  cfg: BalanceConfig,
+): Promise<ReplayOutcome> {
+  try {
+    return await rebuildAndReplay(tx, userId, scope, cfg);
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    logUnexpectedError(error);
+    throw new HttpError(503, 'rebuild_required');
+  }
+}
+
+async function replayFrom(
+  tx: Transaction,
+  userId: string,
+  scope: ReplayScope,
+  cfg: BalanceConfig,
+): Promise<ReplayOutcome> {
+  if (scope.from !== null && (await hasStaleDerivedSessions(tx, userId, cfg.version))) {
+    return await rebuildAndReplayOrRefuse(tx, userId, scope, cfg);
+  }
+  return await replaySessions(tx, userId, scope, scope.from, cfg);
 }
 
 const NOTHING_PREVIOUS = { previousExerciseIds: [], deletedSessionIds: [], unchangedSetIds: [] };
@@ -273,14 +324,11 @@ export async function deleteSessionAndRederive(
 }
 
 export async function rebuildDerivedState(tx: Transaction, userId: string) {
-  await clearStrengthCache(tx, userId);
-  await clearRecordCaches(tx, userId);
-  const { sessionsReplayed, setsRewritten } = await replayFrom(
+  const { sessionsReplayed, setsRewritten } = await rebuildAndReplay(
     tx,
     userId,
     { from: null, anchorIsNew: false, ...NOTHING_PREVIOUS },
     DEFAULT_BALANCE,
   );
-  await markSessionsDerivedAt(tx, userId, DEFAULT_BALANCE.version);
   return { sessionsReplayed, setsRewritten };
 }

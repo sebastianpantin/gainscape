@@ -1,12 +1,12 @@
 import {
-  evaluateNumber,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramReferences,
   type ProgressionRule,
   type ProgressionTrigger,
   type ReferenceVar,
-} from './program-definition.ts';
+} from './program-types.ts';
+import { evaluateNumber } from './program-eval.ts';
 import { type PrescriptionSnapshot, type StageIndices } from './program-prescription.ts';
 import { firstPosition, type Position, type ScheduleCursor } from './program-schedule.ts';
 import { type EffortInputType } from './types.ts';

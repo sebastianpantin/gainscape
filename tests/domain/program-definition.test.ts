@@ -5,7 +5,7 @@ import {
   resolvePrescription,
   validateProgramDefinition,
 } from '@domain/index.ts';
-import { type Adjustment, type SetListScheme } from '@domain/program-definition.ts';
+import { type Adjustment, type SetListScheme } from '@domain/program-types.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from './program-fixtures/five_three_one.ts';
 import {
   FULL_PRIMITIVES,

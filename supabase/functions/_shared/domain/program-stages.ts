@@ -3,8 +3,8 @@ import {
   type ProgressionRule,
   type ReferenceVar,
   type StageLastFail,
-  stageRetestOf,
-} from './program-definition.ts';
+} from './program-types.ts';
+import { stageRetestOf } from './program-eval.ts';
 import { type Position } from './program-schedule.ts';
 import { type ProgramState, type SetReferenceFact, setReference } from './program-state.ts';
 import { type WeightUnit } from './units.ts';

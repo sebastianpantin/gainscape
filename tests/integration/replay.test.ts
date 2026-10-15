@@ -1,21 +1,25 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { DEFAULT_BALANCE } from '@domain/index.ts';
 import {
   ageSession,
   builtInExerciseId,
   createTestUser,
   db,
+  grantDrop,
   lootSnapshot,
   normalizedSnapshot,
   postCompleteSession,
+  postFunction,
   rebuildCaches,
   setBodyweight,
   type TestUser,
-  rowCounts,
 } from './local-stack.ts';
 import {
   aBout,
   anIntervalBout,
   aSet,
+  editSession,
   hoursAgo,
   payloadAt,
   postSession,
@@ -32,8 +36,6 @@ async function storedSummary(sessionId: string) {
   const [row] = await db`select summary from public.sessions where id = ${sessionId}`;
   return row.summary;
 }
-
-const countedTables = ['sessions', 'sets', 'set_skill_xp', 'user_skills', 'rep_maxes', 'exercise_maxes'] as const;
 
 let benchId: string;
 let squatId: string;
@@ -274,21 +276,79 @@ describe('prior state loaded from stored rows', () => {
 });
 
 describe('replay guards', () => {
-  it('refuses to replay over derived rows from an older balance version until a rebuild', async () => {
+  async function staleAndCorrupted(userId: string) {
+    await db`update public.sessions set derived_balance_version = ${DEFAULT_BALANCE.version - 1} where user_id = ${userId}`;
+    await db`update public.set_skill_xp set xp = xp + 1000 where user_id = ${userId}`;
+    await db`update public.user_skills set xp = xp + 5000 where user_id = ${userId}`;
+  }
+
+  async function expectHealed(userId: string) {
+    const healed = await normalizedSnapshot(userId);
+    expect(healed.sessions.map((session) => session.derivedBalanceVersion)).toEqual(
+      healed.sessions.map(() => DEFAULT_BALANCE.version),
+    );
+    expect((await rebuildCaches(userId)).status).toBe(200);
+    expect(await normalizedSnapshot(userId)).toEqual(healed);
+  }
+
+  it('rebuilds stale derived rows before replaying a late sync', async () => {
     const user = await createTestUser();
-    const first = withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 60)]));
+    await postSession(user, withFreshIds(payloadAt(hoursAgo(5), [aSet(benchId, 0, 60)])));
+    await postSession(user, withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 70)])));
+    await staleAndCorrupted(user.id);
+
+    await postSession(user, withFreshIds(payloadAt(hoursAgo(1), [aSet(benchId, 0, 62.5)])));
+
+    await expectHealed(user.id);
+  });
+
+  it('rebuilds stale derived rows before replaying an edit', async () => {
+    const user = await createTestUser();
+    const first = withFreshIds(payloadAt(hoursAgo(5), [aSet(benchId, 0, 60)]));
+    const second = withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 70)]));
     await postSession(user, first);
-    await db`update public.sessions set derived_balance_version = 1 where id = ${first.id}`;
-    const before = await rowCounts(user.id, countedTables);
+    await postSession(user, second);
+    await staleAndCorrupted(user.id);
 
-    const next = withFreshIds(payloadAt(hoursAgo(1), [aSet(benchId, 0, 62.5)]));
-    const refused = await postCompleteSession(user.accessToken, next);
-    expect(refused.status).toBe(503);
-    expect(refused.body.error).toBe('rebuild_required');
-    expect(await rowCounts(user.id, countedTables)).toEqual(before);
+    await editSession(user, second, [{ ...second.sets[0], weightKg: 75 }]);
 
-    expect((await rebuildCaches(user.id)).status).toBe(200);
-    expect((await postCompleteSession(user.accessToken, next)).status).toBe(200);
+    await expectHealed(user.id);
+  });
+
+  it('rebuilds stale derived rows before replaying a delete', async () => {
+    const user = await createTestUser();
+    const first = withFreshIds(payloadAt(hoursAgo(5), [aSet(benchId, 0, 60)]));
+    const second = withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 70)]));
+    const third = withFreshIds(payloadAt(hoursAgo(1), [aSet(benchId, 0, 80)]));
+    for (const payload of [first, second, third]) await postSession(user, payload);
+    await staleAndCorrupted(user.id);
+
+    const response = await postFunction('delete-session', user.accessToken, { sessionId: second.id });
+    expect(response.status, response.rawBody).toBe(200);
+
+    await expectHealed(user.id);
+  });
+
+  it('answers a self-healing edit or delete only for sessions from the changed one on', async () => {
+    const user = await createTestUser();
+    const sessions = [7, 5, 3, 1].map((hours) => withFreshIds(payloadAt(hoursAgo(hours), [aSet(benchId, 0, 60)])));
+    for (const payload of sessions) await postSession(user, payload);
+    const [first, second, third, fourth] = sessions;
+    const dropOnRemovedSet = await grantDrop(user.id, first.id, randomUUID(), 'forged_scraps', 2, 'pr');
+
+    await staleAndCorrupted(user.id);
+    const edited = await editSession(user, second, [{ ...second.sets[0], weightKg: 75 }]);
+    expect(edited.body.replayedSessionIds).toEqual([second.id, third.id, fourth.id]);
+    expect(edited.body.revokedDrops).toEqual([]);
+
+    await staleAndCorrupted(user.id);
+    const deleted = await postFunction('delete-session', user.accessToken, { sessionId: third.id });
+    expect(deleted.status, deleted.rawBody).toBe(200);
+    expect(deleted.body.replayedSessionIds).toEqual([fourth.id]);
+    expect(deleted.body.revokedDrops).toEqual([]);
+
+    const [drop] = await db`select revoked_at from public.drops where id = ${dropOnRemovedSet.dropId}`;
+    expect(drop.revoked_at).toBeNull();
   });
 
   it('serialises concurrent out-of-order syncs for one user', async () => {

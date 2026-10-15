@@ -126,6 +126,8 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
     const deletedBy = await tombstoneOwner(tx, payload.id);
     if (deletedBy === userId) throw new HttpError(410, 'session_deleted');
     if (deletedBy !== null) throw new HttpError(409, 'session_id_conflict');
+    await takeRateLimit(tx, 'session_create_hour', userId);
+    await takeRateLimit(tx, 'session_create_day', userId);
 
     const now = new Date();
     assertPlausibleTiming(payload, now);
@@ -155,8 +157,6 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       challenge: null,
     };
 
-    await takeRateLimit(tx, 'session_create_hour', userId);
-    await takeRateLimit(tx, 'session_create_day', userId);
     const stored =
       plan.mode === 'scored'
         ? await storeAndReplay(

@@ -1,4 +1,4 @@
-import { evaluateNumber } from '@domain/program-definition.ts';
+import { evaluateNumber } from '@domain/program-eval.ts';
 import {
   DEFAULT_ROUNDING,
   type InputKind,

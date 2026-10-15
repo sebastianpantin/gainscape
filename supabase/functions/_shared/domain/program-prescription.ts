@@ -1,15 +1,8 @@
 import { roundPrescribedLoad } from './load-rounding.ts';
 import { roundTo } from './math.ts';
 import {
-  evaluateAmount,
-  evaluateNumber,
-  findSlot,
-  isBarbellLift,
   type Load,
-  type NumberContext,
   type NumberExpr,
-  optionValue,
-  parseSetRef,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramReferences,
@@ -18,8 +11,17 @@ import {
   type SlotRole,
   type StageDecl,
   type StageScheme,
+} from './program-types.ts';
+import {
+  evaluateAmount,
+  evaluateNumber,
+  findSlot,
+  isBarbellLift,
+  type NumberContext,
+  optionValue,
+  parseSetRef,
   stageRetestOf,
-} from './program-definition.ts';
+} from './program-eval.ts';
 import { dayOf, isCyclePosition, isRotationPosition, type Position, positionAt } from './program-schedule.ts';
 import { rpeChartPct } from './rpe-chart.ts';
 import { shownWeight, unitToKg } from './units.ts';

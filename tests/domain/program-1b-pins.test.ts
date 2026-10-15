@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { programStateAt, type ProgramDefinition, type ProgramState, type ReferenceChange } from '@domain/index.ts';
-import { type SlotDecl } from '@domain/program-definition.ts';
+import { type SlotDecl } from '@domain/program-types.ts';
 import { recomputeRelativeSets } from '@domain/program-prescription.ts';
 import { factClock, setReferenceFact } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, resolveAt } from './program-fixtures/follow.ts';

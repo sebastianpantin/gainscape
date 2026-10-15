@@ -1,4 +1,4 @@
-import { type ProgramDefinition, type ProgramEnrollment } from './program-definition.ts';
+import { type ProgramDefinition, type ProgramEnrollment } from './program-types.ts';
 import { advanceProgram, finalDaySets } from './program-progression.ts';
 import { initialProgramState, orderFacts, type ProgramFact, type ProgramState } from './program-state.ts';
 

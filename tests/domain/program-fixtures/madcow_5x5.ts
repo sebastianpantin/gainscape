@@ -9,7 +9,7 @@ import {
   type WeeklyPosition,
   type WeightUnit,
 } from '@domain/index.ts';
-import { type LiftDecl, type ProgressionRule, type SetSpec, type SlotDecl } from '@domain/program-definition.ts';
+import { type LiftDecl, type ProgressionRule, type SetSpec, type SlotDecl } from '@domain/program-types.ts';
 import { type FactClock, sessionFact, setAsPrescribed, skipDayFact } from './facts.ts';
 
 const MADCOW_PRIMARY = 'https://www.oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm';

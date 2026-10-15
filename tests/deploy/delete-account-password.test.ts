@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { passwordMatchesAfterSignIn } from '../../supabase/functions/delete-account/password-check.ts';
+import {
+  authServiceFailure,
+  passwordMatchesAfterSignIn,
+} from '../../supabase/functions/delete-account/password-check.ts';
 import { HttpError } from '../../supabase/functions/_shared/http.ts';
 
 function thrownBy(check: () => boolean): unknown {
@@ -42,4 +45,21 @@ describe('passwordMatchesAfterSignIn', () => {
     expect(thrown).toMatchObject({ status: 503, code: 'auth_unavailable' });
     expect(logged).toHaveBeenCalledWith(error);
   });
+});
+
+describe('authServiceFailure', () => {
+  it.each([
+    ['a server error', { status: 500, code: 'unexpected_failure' }],
+    ['a network failure', { status: 0 }],
+    ['a bad gateway', { status: 502 }],
+  ])(
+    'answers 503 auth_unavailable when the auth server fails to delete the user with %s and logs it',
+    (_label, error) => {
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const failure = authServiceFailure(error);
+      expect(failure).toBeInstanceOf(HttpError);
+      expect(failure).toMatchObject({ status: 503, code: 'auth_unavailable' });
+      expect(logged).toHaveBeenCalledWith(error);
+    },
+  );
 });

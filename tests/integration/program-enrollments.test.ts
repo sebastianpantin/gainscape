@@ -7,7 +7,7 @@ import {
   type ProgramDefinition,
   type ProgramEnrollment,
 } from '@domain/index.ts';
-import { validateEnrollment } from '@domain/program-definition.ts';
+import { validateEnrollment } from '@domain/program-validate.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { GZCLP } from '../domain/program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';

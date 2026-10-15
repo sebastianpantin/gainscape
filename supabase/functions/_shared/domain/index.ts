@@ -31,15 +31,13 @@ export { DEFAULT_ROUNDING, type RoundingMode, type RoundingSetting, roundLoad } 
 export {
   type InputKind,
   type Load,
-  MAX_REFERENCE_VALUE,
   type OptionDecl,
   type OptionValue,
-  parseProgramDefinition,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ReferenceVar,
-  validateProgramDefinition,
-} from './program-definition.ts';
+} from './program-types.ts';
+export { MAX_REFERENCE_VALUE, parseProgramDefinition, validateProgramDefinition } from './program-validate.ts';
 export {
   availableDays,
   comparePositions,
