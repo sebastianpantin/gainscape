@@ -21,7 +21,7 @@ import {
   type StoredSet,
   type StrengthHistoryRow,
 } from '../domain/index.ts';
-import { HttpError } from '../http.ts';
+import { HttpError, logUnexpectedError } from '../http.ts';
 import { loadCatalog } from './catalog.ts';
 import { syncSessionEvents } from './events.ts';
 import { revokeDisqualifiedDrops, rollNewSessionLoot } from './loot.ts';
@@ -137,16 +137,25 @@ async function replaceSkillXp(tx: Transaction, userId: string, skillXp: Readonly
   if (rows.length > 0) await tx`insert into public.user_skills ${tx(rows)}`;
 }
 
+async function rebuildOrRefuse(tx: Transaction, userId: string): Promise<void> {
+  try {
+    await rebuildDerivedState(tx, userId);
+  } catch (error) {
+    logUnexpectedError(error);
+    throw new HttpError(503, 'rebuild_required');
+  }
+}
+
 async function replayFrom(
   tx: Transaction,
   userId: string,
-  scope: ReplayScope,
+  requestedScope: ReplayScope,
   cfg: BalanceConfig,
 ): Promise<ReplayOutcome> {
-  const { from } = scope;
-  if (from !== null && (await hasStaleDerivedSessions(tx, userId, cfg.version))) {
-    throw new HttpError(503, 'rebuild_required');
-  }
+  const { from } = requestedScope;
+  const isStale = from !== null && (await hasStaleDerivedSessions(tx, userId, cfg.version));
+  if (isStale) await rebuildOrRefuse(tx, userId);
+  const scope = isStale ? { ...requestedScope, anchorIsNew: false } : requestedScope;
 
   const suffix = await loadReplayableSessions(tx, userId, from, cfg);
   const suffixExerciseIds = [...new Set(suffix.flatMap((session) => session.sets.map((set) => set.exerciseId)))];
