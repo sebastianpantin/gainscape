@@ -61,7 +61,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Users never see a raw error code or database text. Every failure maps to a sentence, with a generic fallback (`programErrorText`, `pinProblemText`, the account export and delete messages).
 - `emailChangeProblem` does not use `authErrorMessage` on purpose: `authErrorMessage` would call a 403 an invalid link.
 - A password change re-checks the current password against the email `getUser()` returns now, not a cached one. Only `invalid_credentials` means the password was wrong.
-- Row shapes are hand-written zod schemas (`*RowSchema`, the `*Row` type inferred from it) next to the `*_COLUMNS` select strings; a schema change needs both updated by hand. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast: a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Postgres numerics arrive as strings (`numericColumn`); coerce with `Number(...)`.
+- Row shapes are hand-written zod `*RowSchema`s (`*Row` is inferred) beside the `*_COLUMNS` strings; update both on a schema change. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a row with a new server value and falls back to its saved copy: ship the client value a release before the server writes it. Numerics may arrive as strings (`numericColumn`); coerce with `Number(...)`.
 
 ### Must stay in sync with SQL
 
@@ -127,7 +127,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `playTones` plays only if a suspended `AudioContext` resumes within 500 ms, so a frozen page never beeps late. Every device call is guarded with try/catch.
 - `restAlertIsFresh` gives a 5 s grace, so a page that thaws late stays quiet. `claimRestAlert` lets only one tab alert per rest.
 - `platesPerSide` loads the heaviest plates first, like a gym, and falls back to the fewest plates when that fails. It is not greedy.
-- React keys for repeated exercises come from `exerciseKeys` (history edit, program editor). Workout cards key by the draft's `clientId`.
+- React keys for repeated exercises come from `exerciseKeys`; workout cards key by the draft's `clientId`.
 - The enroll form is generated from the template definition, with no code per program. Custom templates bind `x_<exercise hex>` lifts, and a `<lift>Lift` option picks a lift's key. Archived and custom exercises never bind.
 
 ## Testing
