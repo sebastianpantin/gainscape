@@ -44,7 +44,7 @@ async function registerThroughEmail(page: Page, username: string): Promise<strin
   return link;
 }
 
-test('register and confirm through the emailed link', async ({ page }) => {
+test('register and confirm through the emailed link', { tag: '@smoke' }, async ({ page }) => {
   await registerThroughEmail(page, uniqueUsername('au_cf'));
   await expect(page).toHaveURL(/\/$/);
 });

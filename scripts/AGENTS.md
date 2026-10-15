@@ -12,7 +12,7 @@ Node tooling run by the Makefile: stack helpers and guards, the cache rebuilder,
 - Stack helpers: `ensure-loot-secret.mjs` (`make functions`), `wait-for-functions.mjs`, `assert-local-db.mjs` (`make test-db`), `ci-web-env.mjs` (`make ci-start`), `lan-url.mjs` (`make dev`, `make preview`). Shared pure rules in `local-stack.ts` and `loot-secret.ts`.
 - `rebuild-caches.mjs` (`make rebuild-caches`, `ALL=1` for every user) and `function-batch.ts` (paging, batching, concurrency and Edge Runtime drop retries, shared with `deploy/rebuild-hosted.ts` and `tests/integration/local-stack.ts`).
 - `build-kill-switch.ts` (`make sw-kill-switch`): replaces `web/dist/sw.js` with the kill-switch worker.
-- `ci-changes.ts` (`make ci-changes`): prints `code=` and `backend=` for CI.
+- `ci-changes.ts` (`make ci-changes`): prints `code=`, `backend=` and `ui=` for CI.
 - `changelog/unreleased.ts` (`make changelog-unreleased`): user-facing PRs not yet in `web/changelog.yaml`; used by `deploy/deploy.ts` and the changelog skill.
 - `docs/agents-size.ts` (`make docs-check`, part of `make check`): fails when a tracked `AGENTS.md` is over 16 KiB.
 - `catalog/`: YAML to `supabase/seed.sql` (see `catalog/AGENTS.md`). `icons/`: logo sprite to PNG icons and `favicon.svg` (see `icons/AGENTS.md`). `balance/`: XP simulator and tuner (see `balance/AGENTS.md`).

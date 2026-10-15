@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { changedPathsOutput, needsBackend, needsCode } from '../../scripts/ci-changes.ts';
+import { changedPathsOutput, needsBackend, needsCode, needsUi } from '../../scripts/ci-changes.ts';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const DOMAIN_ALIAS = '@domain/';
@@ -120,10 +120,63 @@ describe('which pull requests run the code checks', () => {
   });
 });
 
+describe('which pull requests run the browser smoke tests', () => {
+  it.each([
+    'web/src/features/workout/WorkoutScreen.tsx',
+    'web/src/lib/history/history-rules.ts',
+    'web/src/offline/draft-format.ts',
+    'web/index.html',
+    'web/vite.config.ts',
+    'web/build/ports.ts',
+    'web/public/manifest.webmanifest',
+    'e2e/history.spec.ts',
+    'e2e/support/app.ts',
+    'playwright.config.ts',
+    'supabase/functions/complete-session/index.ts',
+    'supabase/migrations/20261007000029_029_weekly_goals.sql',
+    'catalog/exercises.yaml',
+    'scripts/local-stack.ts',
+    'Makefile',
+    'package.json',
+    'package-lock.json',
+    '.nvmrc',
+    '.github/workflows/ci.yml',
+  ])('runs them for a change to %s', (path) => {
+    expect(needsUi([path])).toBe(true);
+  });
+
+  it.each([
+    'tests/domain/xp.test.ts',
+    'tests/integration/account.test.ts',
+    'tests/web/weekly-goal-rules.test.ts',
+    'scripts/balance/report.ts',
+    'supabase/tests/16_weekly_goals.test.sql',
+    'e2e/pwa/offline.spec.ts',
+    'e2e/AGENTS.md',
+    'docs/deploy.md',
+    '.github/workflows/e2e.yml',
+    'eslint.config.js',
+  ])('skips them for a change only to %s', (path) => {
+    expect(needsUi([path])).toBe(false);
+  });
+
+  it('runs them when the changed paths are unknown', () => {
+    expect(needsUi([])).toBe(true);
+  });
+
+  it('covers every file the chromium e2e suite imports at runtime', () => {
+    const entries = [...filesUnder('e2e').filter((file) => !/^e2e\/(pwa|pages)\//.test(file)), 'playwright.config.ts'];
+    const closure = valueImportClosure(entries);
+    expect(closure).toContain('scripts/local-stack.ts');
+    expect([...closure].filter((file) => !needsUi([file]))).toEqual([]);
+  });
+});
+
 describe('the step output', () => {
-  it('writes both decisions for GitHub', () => {
-    expect(changedPathsOutput(['supabase/seed.sql'])).toBe('code=true\nbackend=true\n');
-    expect(changedPathsOutput(['e2e/history.spec.ts'])).toBe('code=true\nbackend=false\n');
-    expect(changedPathsOutput(['README.md', 'docs/deploy.md'])).toBe('code=false\nbackend=false\n');
+  it('writes every decision for GitHub', () => {
+    expect(changedPathsOutput(['supabase/seed.sql'])).toBe('code=true\nbackend=true\nui=true\n');
+    expect(changedPathsOutput(['e2e/history.spec.ts'])).toBe('code=true\nbackend=false\nui=true\n');
+    expect(changedPathsOutput(['tests/domain/xp.test.ts'])).toBe('code=true\nbackend=false\nui=false\n');
+    expect(changedPathsOutput(['README.md', 'docs/deploy.md'])).toBe('code=false\nbackend=false\nui=false\n');
   });
 });

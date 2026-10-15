@@ -20,6 +20,28 @@ const BACKEND_FILES = [
   'web/src/offline/session-payload.ts',
 ];
 
+const UI_PREFIXES = ['web/', 'e2e/', 'supabase/functions/', 'supabase/migrations/', 'supabase/templates/', 'catalog/'];
+
+const UI_EXCLUDED_PREFIXES = ['e2e/pwa/', 'e2e/pages/'];
+
+const UI_FILES = [
+  'Makefile',
+  'package.json',
+  'package-lock.json',
+  '.nvmrc',
+  'playwright.config.ts',
+  'supabase/config.toml',
+  'supabase/seed.sql',
+  'scripts/local-stack.ts',
+  'scripts/function-batch.ts',
+  'tests/integration/local-stack.ts',
+  'tests/integration/mailbox.ts',
+  'scripts/ci-web-env.mjs',
+  'scripts/ensure-loot-secret.mjs',
+  'scripts/wait-for-functions.mjs',
+  '.github/workflows/ci.yml',
+];
+
 export function isDocumentation(path: string): boolean {
   return path.endsWith('.md') || path.startsWith('docs/');
 }
@@ -29,8 +51,17 @@ function isBackendInput(path: string): boolean {
   return BACKEND_FILES.includes(path) || BACKEND_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
+function isUiInput(path: string): boolean {
+  if (isDocumentation(path) || UI_EXCLUDED_PREFIXES.some((prefix) => path.startsWith(prefix))) return false;
+  return UI_FILES.includes(path) || UI_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
 export function needsBackend(changedPaths: readonly string[]): boolean {
   return changedPaths.length === 0 || changedPaths.some(isBackendInput);
+}
+
+export function needsUi(changedPaths: readonly string[]): boolean {
+  return changedPaths.length === 0 || changedPaths.some(isUiInput);
 }
 
 export function needsCode(changedPaths: readonly string[]): boolean {
@@ -38,7 +69,7 @@ export function needsCode(changedPaths: readonly string[]): boolean {
 }
 
 export function changedPathsOutput(changedPaths: readonly string[]): string {
-  return `code=${needsCode(changedPaths)}\nbackend=${needsBackend(changedPaths)}\n`;
+  return `code=${needsCode(changedPaths)}\nbackend=${needsBackend(changedPaths)}\nui=${needsUi(changedPaths)}\n`;
 }
 
 function changedSince(base: string): string[] {

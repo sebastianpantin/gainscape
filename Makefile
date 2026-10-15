@@ -12,7 +12,7 @@ endif
 PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
 CI_EXCLUDED := studio,imgproxy,vector,logflare,postgres-meta,supavisor
 
-.PHONY: start ci-start ci-changes docs-check ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy changelog-unreleased test-integration test-db rebuild-caches sim sim-check e2e e2e-webkit e2e-pwa screenshots secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
+.PHONY: start ci-start ci-changes docs-check ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy changelog-unreleased test-integration test-db rebuild-caches sim sim-check e2e e2e-smoke e2e-webkit e2e-pwa screenshots secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
 
 start:
 	$(SUPABASE) start
@@ -168,6 +168,9 @@ CHROMIUM_PATH ?= $(shell command -v chromium 2>/dev/null)
 
 e2e: functions
 	CHROMIUM_PATH="$(CHROMIUM_PATH)" npx playwright test --project=chromium $(E2E_ARGS)
+
+e2e-smoke: functions
+	CHROMIUM_PATH="$(CHROMIUM_PATH)" npx playwright test --project=chromium --grep @smoke $(E2E_ARGS)
 
 e2e-webkit: functions
 	npx playwright test --project=webkit $(E2E_ARGS)

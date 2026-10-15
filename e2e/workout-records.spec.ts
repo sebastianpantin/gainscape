@@ -12,7 +12,7 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 
-test('bodyweight prompt, live record chips, records and the collection log', async ({ page }) => {
+test('bodyweight prompt, live record chips, records and the collection log', { tag: '@smoke' }, async ({ page }) => {
   await register(page, `e2e_${Date.now().toString(36)}`);
 
   await page.getByRole('button', { name: 'Start workout' }).click();
