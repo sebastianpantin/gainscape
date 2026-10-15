@@ -5,7 +5,7 @@
 
 ## Purpose
 
-The whole visual layer. `tokens.css` defines the design tokens as CSS custom properties on `:root`. `app.css` is only an ordered list of `@import`s of the per-area stylesheets, plain class selectors for every screen.css`is the single global stylesheet with plain class selectors for every screen.`../main.tsx` imports both once. The look is OSRS-inspired: dark brown parchment palette, pixel display font (`--font-display`, Silkscreen) over IBM Plex Mono, square corners (`--radius: 0`), bevelled panels (`var(--bevel)`, `var(--bevel-sunken)`).
+The whole visual layer. `tokens.css` defines the design tokens as CSS custom properties on `:root`. `app.css` is only an ordered list of `@import`s of the per-area stylesheets, which hold plain class selectors for every screen. `../main.tsx` imports both once. The look is OSRS-inspired: dark brown parchment palette, pixel display font (`--font-display`, Silkscreen) over IBM Plex Mono, square corners (`--radius: 0`), bevelled panels (`var(--bevel)`, `var(--bevel-sunken)`).
 
 ## Map
 
