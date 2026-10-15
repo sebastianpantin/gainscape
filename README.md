@@ -1,6 +1,6 @@
 # Gainscape
 
-A strength-training logger with OSRS-inspired skills, XP and levels. Slices S1–S2 run fully locally on the Supabase stack in Docker. No cloud account is needed.
+A strength-training logger with OSRS-inspired skills, XP, levels, loot, crafting and a friends feed. It is an installable PWA that logs workouts offline and syncs them to a Supabase backend, which computes XP, records and loot. Everything runs locally on the Supabase stack in Docker; no cloud account is needed.
 
 ## Run it
 
@@ -81,6 +81,7 @@ The free test environment (Supabase Free and Cloudflare Pages, invite-only) is d
 ## Layout
 
 - `supabase/functions/_shared/domain/`: the pure game engine, shared by the Edge Function and the web app. All tuning constants are in `balance.ts`.
+- `docs/game-mechanics.md`: how a logged workout becomes XP, levels, records, loot and quest progress, and where each rule lives.
 - `supabase/functions/complete-session/`: the server-authoritative sync endpoint.
 - `supabase/functions/export-data/`, `supabase/functions/delete-account/`: account export (JSON of the caller's rows) and deletion (requires typing your username).
 - `supabase/migrations/`: schema and row-level security.
@@ -89,7 +90,9 @@ The free test environment (Supabase Free and Cloudflare Pages, invite-only) is d
 - `scripts/icons/`: the PNG encoder and icon renderer behind `make icons`.
 - `tests/`: Vitest domain tests, plus integration tests against the local stack.
 
-The full plan lives in `../.omc/plans/2026-09-28-gainscape.md`.
+## Contributing
+
+Bug reports and ideas are welcome as [issues](https://github.com/sebastianpantin/gainscape/issues). Please open an issue and agree on the change before writing a pull request. The project rules (no code comments, test first, `make check` before every PR) are in [AGENTS.md](AGENTS.md). Report security problems privately; see [SECURITY.md](SECURITY.md).
 
 ## License
 
