@@ -3,13 +3,13 @@ import { DEFAULT_BALANCE } from '@domain/index.ts';
 import { builtInExerciseId, createTestUser, db, rebuildCaches, type TestUser } from './local-stack.ts';
 import { editSession, hard, type SetShape } from './session-support.ts';
 
-const SESSION_COUNT = 250;
+const SESSION_COUNT = 2_000;
 const MINUTES_BETWEEN_SESSIONS = 4;
 const FIRST_SESSION_DAYS_AGO = 6.5;
-const REBUILD_BUDGET_MS = 5_000;
-const EDIT_BUDGET_MS = 5_000;
+const REBUILD_BUDGET_MS = 10_000;
+const EDIT_BUDGET_MS = 10_000;
 const SELF_HEALING_EDIT_BUDGET_MS = 10_000;
-const BENCHMARK_TIMEOUT_MS = 60_000;
+const BENCHMARK_TIMEOUT_MS = 120_000;
 
 let benchId: string;
 let squatId: string;
