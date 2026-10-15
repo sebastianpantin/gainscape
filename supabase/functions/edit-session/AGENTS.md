@@ -13,7 +13,7 @@ POST endpoint that edits the notes and sets of an existing session inside the ed
 
 ## Rules and gotchas
 
-- Bucket `session_edit_hour`. Closed edit windows and history-only sessions are rejected.
+- Bucket `session_edit_hour`, taken right after the no-op answer and before any catalog or profile read. Closed edit windows and history-only sessions are rejected.
 - The domain `isNoOpEdit` skips an unchanged edit (no write, no replay); a retried save gets that no-op answer.
 - `unchangedSetIds` tells replay which sets keep drops rolled under older rules; it uses the same test as the web `dropsAtRisk` warning.
 - Unlike `complete-session`, prescriptions are strict here: a malformed one is 422 `invalid_payload`, a ref repeated among added sets is 422 `duplicate_prescription_ref`.

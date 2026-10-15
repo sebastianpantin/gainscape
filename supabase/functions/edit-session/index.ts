@@ -53,6 +53,7 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     if (isNoOpEdit(payload, session.notes, storedById, DEFAULT_BALANCE)) {
       return { summary: session.summary, revision: session.revision, replayedSessionIds: [], revokedDrops: [] };
     }
+    await takeRateLimit(tx, 'session_edit_hour', userId);
 
     if (!isOwnedSessionEditable(session, Date.now())) throw new HttpError(409, 'edit_window_closed');
     if (payload.ifRevision !== session.revision) {
@@ -83,7 +84,6 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
       );
     });
 
-    await takeRateLimit(tx, 'session_edit_hour', userId);
     await writeEditedSets(tx, userId, payload.sessionId, storedSets, requested, addedSnapshots, DEFAULT_BALANCE);
     const revision = await bumpRevision(tx, payload.sessionId, payload.notes);
 
