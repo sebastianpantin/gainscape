@@ -84,8 +84,12 @@ export function programsQuery(userId: string) {
 }
 
 export function showChangedPrograms(queryClient: QueryClient, userId: string): void {
+  const { queryKey } = programsQuery(userId);
   const saved = cachedPrograms(userId);
-  if (saved) queryClient.setQueryData(programsQuery(userId).queryKey, { loaded: saved, fromCache: false });
+  if (saved) {
+    void queryClient.cancelQueries({ queryKey });
+    queryClient.setQueryData(queryKey, { loaded: saved, fromCache: false });
+  }
   void announceDataChange(queryClient, 'programs-changed');
 }
 
