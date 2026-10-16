@@ -21,6 +21,25 @@ function vibrations(page: Page): Promise<number[][]> {
   return page.evaluate(() => [...(window as unknown as VibrationLog).vibrations]);
 }
 
+type GainBarLog = { gainBarLabels: string[] };
+
+async function recordGainBarLabels(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const log = window as unknown as GainBarLog;
+    log.gainBarLabels = [];
+    const record = () => {
+      const label = document.querySelector('[aria-label="XP gained"] [role="img"]')?.getAttribute('aria-label');
+      if (label && log.gainBarLabels.at(-1) !== label) log.gainBarLabels.push(label);
+    };
+    new MutationObserver(record).observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-label'],
+    });
+  });
+}
+
 function skipButton(page: Page) {
   return page.getByRole('button', { name: 'Skip', exact: true });
 }
@@ -104,4 +123,20 @@ test('loot waits for its own tap after Escape skips the reveal, also under reduc
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   await openLoot.click();
   await expect(loot.getByRole('list', { name: 'Loot drops' })).toBeVisible();
+});
+
+test('the reveal shows the XP after this workout even when the skills were loaded before it', async ({ page }) => {
+  await register(page, uniqueUsername('rv_fresh'));
+  await logBench(page);
+  await openTab(page, 'Skills');
+  await openTab(page, 'Train');
+  await recordGainBarLabels(page);
+
+  await logBench(page, 62);
+  const gainBar = page.getByRole('list', { name: 'XP gained' }).getByRole('img').first();
+  await expect(gainBar).toBeVisible();
+  const shownAfterFinish = await page.evaluate(() => (window as unknown as GainBarLog).gainBarLabels);
+  await page.reload();
+
+  expect(shownAfterFinish).toEqual([await gainBar.getAttribute('aria-label')]);
 });

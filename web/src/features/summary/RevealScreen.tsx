@@ -22,7 +22,13 @@ import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
 import { type CacheFirstLoad } from '../../offline/cache-first.ts';
 import type { CompletedSessionSummary } from '../../offline/finish-lock.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
-import { exerciseListQuery, itemCatalogQuery, questsQuery, standingQuery } from '../../lib/query/queries.ts';
+import {
+  exerciseListQuery,
+  itemCatalogQuery,
+  questsQuery,
+  skillsQuery,
+  standingQuery,
+} from '../../lib/query/queries.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
 import {
   challengeBonusText,
@@ -51,7 +57,7 @@ function dropAnimationDelay(popDelayS: number, glows: boolean): string {
 const LOOT_DROP_STAGGER_S = 0.08;
 const INTERACTIVE_ELEMENTS = 'a[href], button, input, select, textarea, summary, [role="button"], [role="link"]';
 
-const NO_SKILLS: Skill[] = [];
+const NO_SKILLS: readonly Skill[] = [];
 
 function loadedAfterMount<Loaded>(query: UseQueryResult<CacheFirstLoad<Loaded>>): Loaded | null {
   return query.isFetchedAfterMount && query.isSuccess ? query.data.loaded : null;
@@ -285,7 +291,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const { unitPref } = usePreferences();
   const exercises = useQuery(exerciseListQuery(userId)).data ?? [];
   const standing = loadedAfterMount(useQuery({ ...standingQuery(userId), refetchOnMount: 'always' }));
-  const skills = standing?.skills.map(({ skill }) => skill) ?? NO_SKILLS;
+  const skills = useQuery(skillsQuery).data ?? NO_SKILLS;
   const xpBySkillId = standing && new Map(standing.skills.map(({ skill, progress }) => [skill.id, progress.xp]));
   const itemCatalog = useQuery(itemCatalogQuery(userId));
   const items: LoadedItems = itemCatalog.data?.loaded.items ?? (itemCatalog.isError ? 'failed' : 'loading');
