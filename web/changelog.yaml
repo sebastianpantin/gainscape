@@ -1,3 +1,11 @@
+- prs: [140, 141, 142, 143]
+  version: 0.13.1
+  date: 2026-10-16
+  title: Smoother saves
+  items:
+    - Workouts no longer get stuck waiting to sync after a game update. They save straight away.
+    - Editing an older workout is much faster when you have a long training history.
+    - A new bodyweight, unit setting or program change now shows up on every screen straight away.
 - prs: [138]
   version: 0.13.0
   date: 2026-10-15
