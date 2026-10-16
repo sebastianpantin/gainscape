@@ -312,7 +312,7 @@ test('leaving an edited workout asks first, and leaving after a save does not', 
   await register(page, uniqueUsername('hist_leave'));
   await logBench(page);
   await openLatestWorkout(page);
-  const reps = setRow(page, 1).getByLabel('reps', { exact: true });
+  const reps = setRow(page, 1).getByRole('spinbutton', { name: 'Reps, set 1', exact: true });
   const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
   await reps.fill('8');
 
@@ -326,7 +326,7 @@ test('leaving an edited workout asks first, and leaving after a save does not', 
   await expect(page).toHaveURL(/\/profile$/);
 
   await openLatestWorkout(page);
-  await setRow(page, 1).getByLabel('reps', { exact: true }).fill('9');
+  await setRow(page, 1).getByRole('spinbutton', { name: 'Reps, set 1', exact: true }).fill('9');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Changes saved.')).toBeVisible();
   await page.getByRole('link', { name: '‹ History' }).click();
