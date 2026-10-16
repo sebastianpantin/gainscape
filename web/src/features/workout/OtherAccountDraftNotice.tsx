@@ -33,11 +33,13 @@ export function OtherAccountDraftNotice({ store, userId }: OtherAccountDraftNoti
   };
 
   return (
-    <div className="panel stack" role="status">
-      <p>An unsynced workout from another account is saved on this device.</p>
-      <button className="button danger" type="button" onClick={() => setConfirming(true)}>
-        Discard it
-      </button>
+    <>
+      <div className="panel stack" role="status">
+        <p>An unsynced workout from another account is saved on this device.</p>
+        <button className="button danger" type="button" onClick={() => setConfirming(true)}>
+          Discard it
+        </button>
+      </div>
       {confirming && (
         <ConfirmDialog
           title="Discard the other account's workout?"
@@ -50,6 +52,6 @@ export function OtherAccountDraftNotice({ store, userId }: OtherAccountDraftNoti
           <p>This cannot be undone.</p>
         </ConfirmDialog>
       )}
-    </div>
+    </>
   );
 }
