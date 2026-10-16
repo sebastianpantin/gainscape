@@ -48,11 +48,13 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await page.getByLabel('Training since').fill('2019');
   await page.getByRole('radio', { name: 'Blue' }).click();
   await page.getByLabel('Bodyweight (kg)').fill('500');
-  await expect(page.getByText('Bodyweight must be between 20 and 400 kg.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByLabel('Bodyweight (kg)')).toHaveAccessibleDescription(
+    'Bodyweight must be between 20 and 400 kg.',
+  );
+  await expect(page.getByLabel('Bodyweight (kg)')).toBeFocused();
   await page.getByLabel('Bodyweight (kg)').fill('8o');
   await expect(page.getByText('Bodyweight must be between 20 and 400 kg.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
   await page.getByLabel('Bodyweight (kg)').fill('82,4');
   await page.getByLabel('Height (cm)').fill('181');
   await page.getByLabel('Birth year (optional)').fill(String(new Date().getFullYear() - 12));
@@ -223,4 +225,32 @@ test('leaving Edit profile with a change asks first, and Save leaves without ask
   await expect(page).toHaveURL(/\/profile$/);
   await expect(profileCard(page)).toContainText('Saved Name');
   await expect(confirmation).toHaveCount(0);
+});
+
+test('Edit profile shows a field problem only after leaving the field or saving, and Save goes to it', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('pf_valid'));
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  const trainingSince = page.getByLabel('Training since');
+  const birthYear = page.getByLabel('Birth year (optional)');
+
+  await birthYear.fill('12');
+  await expect(page.getByText(/Birth year must be between/)).toHaveCount(0);
+  await expect(birthYear).not.toHaveAttribute('aria-invalid', 'true');
+  await birthYear.blur();
+  await expect(birthYear).toHaveAttribute('aria-invalid', 'true');
+  await expect(birthYear).toHaveAccessibleDescription(/^Birth year must be between/);
+
+  await trainingSince.fill('1800');
+  await expect(page.getByText(/Training since must be between/)).toHaveCount(0);
+  const save = page.getByRole('button', { name: 'Save' });
+  await expect(save).toBeEnabled();
+  await save.click();
+
+  await expect(trainingSince).toBeFocused();
+  await expect(trainingSince).toHaveAttribute('aria-invalid', 'true');
+  await expect(trainingSince).toHaveAccessibleDescription(/^Training since must be between/);
+  await expect(page).toHaveURL(/\/profile\/edit$/);
 });
