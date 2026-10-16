@@ -35,25 +35,12 @@ export interface DayChoice {
   suggested: boolean;
 }
 
-export interface PrescriptionRow {
-  ref: string;
-  setNumber: number;
-  weight: number | null;
-  unit: WeightUnit;
-  repsLabel: string;
-  amrapBadge: string | null;
-  pctLabel: string | null;
-  optional: boolean;
-  line: string;
-}
-
 export type PrescriptionCard =
   | {
       kind: 'exercise';
       slotId: string;
       title: string;
       exerciseName: string;
-      rows: PrescriptionRow[];
       lines: string[];
     }
   | { kind: 'unsupported'; slotId: string; title: string; message: string };
@@ -105,25 +92,6 @@ function repsLabelOf(set: PrescribedSet): string {
   return set.maxReps === null ? String(set.reps) : `${set.reps}–${set.maxReps}`;
 }
 
-function prescriptionRow(set: PrescribedSet, index: number, unit: WeightUnit): PrescriptionRow {
-  const weight = set.weightKg === null ? null : shownWeight(set.weightKg, unit);
-  const repsLabel = repsLabelOf(set);
-  const shownPct = set.pct === null ? null : pctLabel(set.pct);
-  const load = weight === null ? 'any weight' : `${weight} ${unit}`;
-  const details = setDetails(set, shownPct);
-  return {
-    ref: set.ref,
-    setNumber: index + 1,
-    weight,
-    unit,
-    repsLabel,
-    amrapBadge: set.amrap ? repsLabel : null,
-    pctLabel: shownPct,
-    optional: set.optional,
-    line: [`${load} × ${repsLabel}`, ...details].join(' · '),
-  };
-}
-
 function setDetails(set: PrescribedSet, shownPct: string | null): string[] {
   return [shownPct, set.optional ? 'optional' : null, isRetestRef(set.ref) ? '5RM test' : null].filter(
     (detail) => detail !== null,
@@ -160,7 +128,6 @@ function exerciseCard(
     slotId: slot.slotId,
     title: slot.role === 'main' ? exerciseName : `${exerciseName} — ${slot.role}`,
     exerciseName,
-    rows: slot.sets.map((set, index) => prescriptionRow(set, index, unit)),
     lines: groupedLines(slot.sets, unit),
   };
 }
