@@ -12,6 +12,7 @@ import {
   openTab,
   readSession,
   register,
+  setRow,
   signOut,
   skillCard,
   skillLevels,
@@ -430,6 +431,9 @@ test.describe('on a 320x640 phone', () => {
     expect(weightBox?.height).toBeGreaterThanOrEqual(44);
     await weight.fill('102.5');
     await expect(weight).toHaveValue('102.5');
+    const nearFail = setRow(bench, 1).getByRole('radio', { name: 'Near fail', exact: true });
+    await expect(nearFail).toHaveText('Near fail');
+    await expect(nearFail.getByText('Near fail', { exact: true })).toBeVisible();
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     const clipped = await page

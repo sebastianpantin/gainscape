@@ -675,28 +675,10 @@
   grid-area: effort;
 }
 
-.effort-selector {
-  container-type: inline-size;
-}
-
 .set-row .effort-option {
-  padding: 0;
+  padding: 0 var(--space-0-5);
   letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-
-.effort-short {
-  display: none;
-}
-
-@container (max-width: 319px) {
-  .effort-full {
-    display: none;
-  }
-
-  .effort-short {
-    display: inline;
-  }
+  line-height: 1.1;
 }
 
 .effort-selector,
