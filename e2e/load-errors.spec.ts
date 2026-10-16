@@ -217,6 +217,22 @@ test('the reveal says it could not load the loot names when the item catalog fai
   await expect(loot.getByRole('list', { name: 'Loot drops' })).toHaveCount(0);
 });
 
+test('History says it could not connect without waiting out retries, and Try again loads the workouts', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('le_history'));
+  await page.route(EVERY_TABLE, (route) => route.abort('connectionrefused'));
+
+  await page.goto('/collection/history');
+
+  await expect(page.getByRole('heading', { name: 'Collection log: History', level: 1 })).toBeVisible();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await page.unroute(EVERY_TABLE);
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByText('No workouts yet. Finish one and it shows up here.')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
 async function signInWithEveryTableFailing(page: Page, prefix: string): Promise<void> {
   const username = uniqueUsername(prefix);
   await skipOnboarding(page, await registerWithoutSigningIn(page, username));
