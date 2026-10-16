@@ -19,6 +19,7 @@ import {
 } from '../../lib/social/social-rules.ts';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProfileBadge } from '../profile/ProfileCard.tsx';
+import { TermHelp } from '../../components/TermHelp.tsx';
 import { FriendsTabs } from './FriendsTabs.tsx';
 import { messageOf } from '../../lib/error-text.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
@@ -52,7 +53,7 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
         {text.detail && <span className="muted tiny">{text.detail}</span>}
       </div>
       {item.isOwn ? (
-        <span className="gz-count" aria-label={`${item.gzCount} gz`}>
+        <span className="gz-count" role="img" aria-label={`${item.gzCount} gz`}>
           <span className="pixel">gz</span> <span className="tiny">{item.gzCount}</span>
         </span>
       ) : (
@@ -62,7 +63,7 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
           aria-pressed={item.gzGiven}
           aria-busy={pending}
           disabled={pending}
-          aria-label={`${item.gzGiven ? 'Remove gz from' : 'Say gz to'} ${item.displayName} @${item.username}, ${item.gzCount} so far`}
+          aria-label={`${item.gzGiven ? 'Remove your gz from' : 'Congratulate (gz)'} ${item.displayName} @${item.username}, ${item.gzCount} so far`}
           onClick={() => onToggleGz(item)}
         >
           <span className="pixel">gz</span>
@@ -286,6 +287,11 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
             </section>
           )}
           {feed.length === 0 && <p className="muted">No posts yet. Add friends, or log a personal record (PR).</p>}
+          {feed.length > 0 && (
+            <p className="row muted tiny">
+              Tap gz to congratulate a friend <TermHelp glossaryKey="gz" />
+            </p>
+          )}
           {feed.length > 0 && (
             <ul className="feed" aria-label="Feed">
               {feed.map((item) => (

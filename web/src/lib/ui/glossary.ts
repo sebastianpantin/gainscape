@@ -12,7 +12,13 @@ export type GlossaryKey =
   | 'pr'
   | 'xp'
   | 'loot'
-  | 'stalled';
+  | 'stalled'
+  | 'totalLevel'
+  | 'combatLevel'
+  | 'hiscores'
+  | 'scroll'
+  | 'gearBonus'
+  | 'gz';
 
 export interface GlossaryEntry {
   term: string;
@@ -116,5 +122,45 @@ export const GLOSSARY: Readonly<Record<GlossaryKey, GlossaryEntry>> = {
     name: 'Stalled lift',
     definition:
       'Stalled lift: it has not gained more than 0.5% since its last gain, over at least 4 workouts and 3 weeks. Lifts a program runs are left to the program.',
+  },
+  totalLevel: {
+    term: 'Total level',
+    question: 'What is total level?',
+    name: 'Total level',
+    definition: 'All your skill levels added up. It goes up by one every time any skill levels up.',
+  },
+  combatLevel: {
+    term: 'Combat level',
+    question: 'What is combat level?',
+    name: 'Combat level',
+    definition:
+      'A weighted average of your strength skills on a 3 to 126 scale. Chest, Back, Shoulders and Legs count double, Arms, Core and Grip once, and Endurance, Agility and Mobility not at all.',
+  },
+  hiscores: {
+    term: 'Hiscores',
+    question: 'What are hiscores?',
+    name: 'Hiscores',
+    definition:
+      'Hiscores: a ranking of you and your friends by total level, combat level, collection or any single skill.',
+  },
+  scroll: {
+    term: 'Scroll',
+    question: 'What is a scroll?',
+    name: 'Challenge scroll',
+    definition:
+      'Challenge scroll: a rare loot drop that unlocks one challenge. It is used up when the challenge workout is saved, pass or fail.',
+  },
+  gearBonus: {
+    term: 'Gear bonus',
+    question: 'What is the gear bonus?',
+    name: 'Gear bonus',
+    definition:
+      'Gear bonus: equipped gear adds bonus XP to the skills its slot trains. A higher tier adds more, so craft gear up a tier with scraps.',
+  },
+  gz: {
+    term: 'gz',
+    question: 'What does gz mean?',
+    name: 'Congratulations',
+    definition: 'Congratulations: gz is gamer shorthand for "grats". Tap gz on a friend\'s post to congratulate them.',
   },
 };

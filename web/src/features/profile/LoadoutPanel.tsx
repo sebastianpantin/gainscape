@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { bonusRows, loadoutBySlot } from '../../lib/collection/gear-rules.ts';
 import { skillsQuery } from '../../lib/query/queries.ts';
+import { TermHelp } from '../../components/TermHelp.tsx';
 import { useLoadout } from './use-loadout.ts';
 
 interface LoadoutPanelProps {
@@ -35,8 +36,11 @@ export function LoadoutPanel({ userId }: LoadoutPanelProps) {
               </div>
             ))}
           </dl>
-          <span className="muted tiny" id={bonusHeadingId}>
-            Gear bonus
+          <span className="row">
+            <span className="muted tiny" id={bonusHeadingId}>
+              Gear bonus
+            </span>
+            <TermHelp glossaryKey="gearBonus" />
           </span>
           {loadout.isPending ? (
             <p className="muted" aria-hidden="true">

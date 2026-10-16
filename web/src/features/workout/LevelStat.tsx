@@ -33,26 +33,32 @@ export function LevelStat({ userId, totalLevel, combatLevel }: LevelStatProps) {
 
   return (
     <Link className={rose ? 'header-stat level-rose' : 'header-stat'} to="/skills">
-      <span className="muted tiny">Total · Combat</span>
-      <strong>
-        <CountUp
-          key={`${totalFrom}:${totalLevel}`}
-          value={totalLevel}
-          from={totalFrom}
-          durationMs={LEVEL_COUNT_MS}
-          animate={rose}
-          format={String}
-        />{' '}
-        ·{' '}
-        <CountUp
-          key={`${combatFrom}:${combatLevel}`}
-          value={combatLevel}
-          from={combatFrom}
-          durationMs={LEVEL_COUNT_MS}
-          animate={rose}
-          format={String}
-        />
-      </strong>
+      <span className="header-stat-part">
+        <span className="muted tiny">Total level</span>{' '}
+        <strong>
+          <CountUp
+            key={`${totalFrom}:${totalLevel}`}
+            value={totalLevel}
+            from={totalFrom}
+            durationMs={LEVEL_COUNT_MS}
+            animate={rose}
+            format={String}
+          />
+        </strong>
+      </span>
+      <span className="header-stat-part">
+        <span className="muted tiny">Combat</span>{' '}
+        <strong>
+          <CountUp
+            key={`${combatFrom}:${combatLevel}`}
+            value={combatLevel}
+            from={combatFrom}
+            durationMs={LEVEL_COUNT_MS}
+            animate={rose}
+            format={String}
+          />
+        </strong>
+      </span>
     </Link>
   );
 }

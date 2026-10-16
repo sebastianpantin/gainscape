@@ -22,6 +22,12 @@ describe('GLOSSARY', () => {
     ['xp', 'What is XP?'],
     ['loot', 'What is loot?'],
     ['stalled', 'What does Stalled mean?'],
+    ['totalLevel', 'What is total level?'],
+    ['combatLevel', 'What is combat level?'],
+    ['hiscores', 'What are hiscores?'],
+    ['scroll', 'What is a scroll?'],
+    ['gearBonus', 'What is the gear bonus?'],
+    ['gz', 'What does gz mean?'],
   ])('asks %s as %j', (key, question) => {
     expect(GLOSSARY[key].question).toBe(question);
   });
@@ -59,6 +65,14 @@ describe('GLOSSARY', () => {
   it('explains skill levels and loot for a first-time lifter', () => {
     expect(GLOSSARY.xp.definition).toContain('1 to 99');
     expect(GLOSSARY.loot.definition).toContain('hard sets can drop items');
+  });
+
+  it('explains the game words a new player meets on Today, Skills and Friends', () => {
+    expect(GLOSSARY.totalLevel.definition).toContain('All your skill levels added up');
+    expect(GLOSSARY.combatLevel.definition).toContain('3 to 126');
+    expect(GLOSSARY.scroll.definition).toContain('one challenge');
+    expect(GLOSSARY.gearBonus.definition).toContain('tier');
+    expect(GLOSSARY.gz.definition.toLowerCase()).toContain('congratulations');
   });
 
   it('defines RIR and RPE for a beginner', () => {

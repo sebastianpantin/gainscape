@@ -7,6 +7,7 @@ import { bodySummaryText } from '../../lib/progress/body-summary-rules.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { readyData } from '../../lib/query/query-state-rules.ts';
 import { formatXp } from '../../lib/format.ts';
+import { TermHelp } from '../../components/TermHelp.tsx';
 import { useBodyStatus } from './body-status.ts';
 
 interface SkillsScreenProps {
@@ -40,11 +41,15 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
       )}
       <div className="standing totals">
         <div className="panel">
-          <span className="muted">Total level</span>
+          <span className="muted row">
+            Total level <TermHelp glossaryKey="totalLevel" />
+          </span>
           <strong>{standing.totalLevel}</strong>
         </div>
         <div className="panel">
-          <span className="muted">Combat level</span>
+          <span className="muted row">
+            Combat level <TermHelp glossaryKey="combatLevel" />
+          </span>
           <strong>{standing.combatLevel}</strong>
         </div>
       </div>
