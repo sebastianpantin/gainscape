@@ -80,8 +80,8 @@ test('an installed shell cold-starts offline and syncs later', async ({ context,
   const benchCard = exerciseCard(cold, 'Barbell Bench Press');
   await expect(benchCard).toBeVisible();
   await expect(cold.getByRole('heading', { name: 'Workout', exact: true })).toBeVisible();
-  await expect(setRow(benchCard, 1).getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
-  await expect(setRow(benchCard, 1).getByLabel('reps', { exact: true })).toHaveValue('5');
+  await expect(setRow(benchCard, 1).getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })).toHaveValue('60');
+  await expect(setRow(benchCard, 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue('5');
   expect((await readSession(cold)).expires_at).toBeLessThan(nowInSeconds());
   await expectFontsLoaded(cold);
 

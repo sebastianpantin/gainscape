@@ -94,11 +94,11 @@ test('an exercise shows last session and starts from its first set', async ({ pa
   const bench = await addExercise(page, 'bench', 'Barbell Bench Press');
   await expect(bench.getByText('Last: 2 sets, top 62.5 kg × 4')).toBeVisible();
   const firstSet = setRow(bench, 1);
-  await expect(firstSet.getByLabel('kg', { exact: true })).toHaveValue('60');
-  await expect(firstSet.getByLabel('reps', { exact: true })).toHaveValue('5');
+  await expect(firstSet.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })).toHaveValue('60');
+  await expect(firstSet.getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue('5');
 
   const squat = await addExercise(page, 'squat', 'Back Squat');
-  await expect(setRow(squat, 1).getByLabel('kg', { exact: true })).toHaveValue('20');
+  await expect(setRow(squat, 1).getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })).toHaveValue('20');
   await expect(squat.getByText(/^Last:/)).toHaveCount(0);
 });
 
@@ -152,8 +152,8 @@ test('steppers change weight by a plate step and the arrow keys change reps by o
   await register(page, uniqueUsername('st'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   const firstSet = setRow(await addExercise(page, 'bench', 'Barbell Bench Press'), 1);
-  const weight = firstSet.getByLabel('kg', { exact: true });
-  const reps = firstSet.getByLabel('reps', { exact: true });
+  const weight = firstSet.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ });
+  const reps = firstSet.getByRole('spinbutton', { name: /^Reps, set \d+$/ });
 
   await firstSet.getByRole('button', { name: 'Heavier, set 1' }).click();
   await firstSet.getByRole('button', { name: 'Heavier, set 1' }).click();
@@ -260,7 +260,7 @@ test('a lift fills to sets × reps in one go, every set done', async ({ page }) 
   await register(page, uniqueUsername('qf'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   const squat = await addExercise(page, 'squat', 'Back Squat');
-  await squat.getByRole('spinbutton', { name: 'kg', exact: true }).fill('80');
+  await squat.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('80');
 
   const quickFill = squat.getByRole('group', { name: 'Quick fill' });
   await quickFill.getByRole('spinbutton', { name: 'sets' }).fill('3');
@@ -270,8 +270,8 @@ test('a lift fills to sets × reps in one go, every set done', async ({ page }) 
   const rows = setRows(squat);
   await expect(rows).toHaveCount(3);
   for (const [index, row] of (await rows.all()).entries()) {
-    await expect(row.getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('80');
-    await expect(row.getByRole('spinbutton', { name: 'reps', exact: true })).toHaveValue('8');
+    await expect(row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })).toHaveValue('80');
+    await expect(row.getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue('8');
     await expect(row.getByRole('button', { name: `Done set ${index + 1}` })).toHaveAttribute('aria-pressed', 'true');
   }
   await expect(quickFill).toHaveCount(0);

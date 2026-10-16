@@ -112,8 +112,8 @@ test('pounds are shown everywhere while kilograms are stored, without false reco
     await page.getByRole('button', { name: 'Start workout' }).click();
     await addExercise(page, 'bench', 'Barbell Bench Press');
     const row = setRow(page, 1);
-    await row.getByRole('spinbutton', { name: 'lb', exact: true }).fill('135');
-    await row.getByLabel('reps', { exact: true }).fill('5');
+    await row.getByRole('spinbutton', { name: /^Weight in lb, set \d+$/ }).fill('135');
+    await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('5');
     await row.getByRole('radio', { name: 'Hard' }).click();
     await finishWorkout(page);
     await expect(page.getByLabel('New records')).toHaveCount(0);
@@ -133,8 +133,8 @@ test('RPE effort is logged as RPE and stored as reps in reserve', async ({ page 
   await page.getByRole('button', { name: 'Start workout' }).click();
   await addExercise(page, 'bench', 'Barbell Bench Press');
   const row = setRow(page, 1);
-  await row.getByRole('spinbutton', { name: 'kg', exact: true }).fill('60');
-  await row.getByLabel('reps', { exact: true }).fill('8');
+  await row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('60');
+  await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('8');
   await expect(row.getByRole('radio', { name: 'Hard' })).toHaveCount(0);
   await row.getByRole('radio', { name: 'RPE 8', exact: true }).click();
   await finishWorkout(page);

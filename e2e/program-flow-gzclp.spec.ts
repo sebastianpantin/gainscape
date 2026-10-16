@@ -336,11 +336,15 @@ test('GZCLP: after a T1 squat fails 10×1 the Train card prescribes a 5RM test, 
     await expect(squat).toHaveCount(1);
     await expect(setRows(squat)).toHaveCount(1);
     await expect.poll(() => weightsIn(squat)).toEqual(['100']);
-    await setRow(squat, 1).getByRole('spinbutton', { name: 'kg', exact: true }).fill('100');
-    await expect(setRow(squat, 1).getByRole('spinbutton', { name: 'reps', exact: true })).toHaveValue('5');
+    await setRow(squat, 1)
+      .getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })
+      .fill('100');
+    await expect(setRow(squat, 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue('5');
     await markEverySetDone(page);
     await squat.getByRole('button', { name: '+ Add set' }).click();
-    await setRow(squat, 2).getByRole('spinbutton', { name: 'kg', exact: true }).fill('110');
+    await setRow(squat, 2)
+      .getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })
+      .fill('110');
     await expect.poll(() => weightsIn(squat)).toEqual(['100', '110']);
     await expect.poll(() => repsIn(squat)).toEqual(['5', '5']);
     await setRow(squat, 2).getByRole('button', { name: 'Done set 2' }).click();

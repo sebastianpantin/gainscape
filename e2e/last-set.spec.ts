@@ -12,11 +12,11 @@ import {
 } from './support/app.ts';
 
 function weightOf(row: Locator): Locator {
-  return row.getByRole('spinbutton', { name: 'kg', exact: true });
+  return row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ });
 }
 
 function repsOf(row: Locator): Locator {
-  return row.getByRole('spinbutton', { name: 'reps', exact: true });
+  return row.getByRole('spinbutton', { name: /^Reps, set \d+$/ });
 }
 
 test('each set compares with last session’s set and a planned set fills it in one tap', async ({ page }) => {

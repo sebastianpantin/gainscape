@@ -33,8 +33,8 @@ test('marking a set done drops its XP and announces it with the exercise name, a
 
   await page.getByRole('button', { name: 'Start workout' }).click();
   const row = setRow(await addExercise(page, 'bench', BENCH), 1);
-  await row.getByRole('spinbutton', { name: 'kg', exact: true }).fill('60');
-  await row.getByRole('spinbutton', { name: 'reps', exact: true }).fill('5');
+  await row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('60');
+  await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('5');
   const announcement = page.getByRole('status').filter({ hasText: 'logged' });
   await vibrations(page);
 
@@ -58,7 +58,7 @@ test('marking a set done drops its XP and announces it with the exercise name, a
   expect(await vibrations(page)).toEqual([[12]]);
 
   await done.click();
-  await row.getByRole('spinbutton', { name: 'kg', exact: true }).fill('70');
+  await row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('70');
   await done.click();
   await expect(announcement).toHaveText(
     /^Barbell Bench Press, set 1 logged, about [\d,]+ XP\. Predicted new 5 rep max$/,

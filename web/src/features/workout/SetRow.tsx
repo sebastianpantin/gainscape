@@ -78,16 +78,18 @@ interface WeightFieldProps {
   weightKg: number;
   unit: UnitPref;
   onChange: (weightKg: number) => void;
-  stepperSetNumber?: number;
+  setNumber: number;
+  withStepper?: boolean;
 }
 
-export function WeightField({ loadType, weightKg, unit, onChange, stepperSetNumber }: WeightFieldProps) {
+export function WeightField({ loadType, weightKg, unit, onChange, setNumber, withStepper = false }: WeightFieldProps) {
   if (loadType === 'bodyweight') return <span className="compact-field set-number weight-field">bodyweight</span>;
   const shown = shownWeight(weightKg, unit);
   const highest = highestWeightInUnit(MAX_SET_LOAD_KG, unit);
   const field = (
     <NumberTextField
       label={loadType === 'bodyweight_plus' ? `+${unit}` : unit}
+      accessibleName={`${loadType === 'bodyweight_plus' ? 'Added weight' : 'Weight'} in ${unit}, set ${setNumber}`}
       value={shown}
       lowest={0}
       highest={highest}
@@ -95,12 +97,12 @@ export function WeightField({ loadType, weightKg, unit, onChange, stepperSetNumb
       onCommit={(typed) => onChange(unitToKg(typed, unit))}
     />
   );
-  if (stepperSetNumber === undefined) return field;
+  if (!withStepper) return field;
   return (
     <Stepper
       className="weight-field"
-      lowerLabel={`Lighter, set ${stepperSetNumber}`}
-      higherLabel={`Heavier, set ${stepperSetNumber}`}
+      lowerLabel={`Lighter, set ${setNumber}`}
+      higherLabel={`Heavier, set ${setNumber}`}
       onStep={(direction) => onChange(unitToKg(steppedWeight(shown, unit, direction, highest), unit))}
     >
       {field}
@@ -111,12 +113,14 @@ export function WeightField({ loadType, weightKg, unit, onChange, stepperSetNumb
 interface RepsFieldProps {
   reps: number;
   onChange: (reps: number) => void;
+  setNumber: number;
 }
 
-export function RepsField({ reps, onChange }: RepsFieldProps) {
+export function RepsField({ reps, onChange, setNumber }: RepsFieldProps) {
   return (
     <NumberTextField
       label="reps"
+      accessibleName={`Reps, set ${setNumber}`}
       value={reps}
       lowest={LOWEST_REPS}
       highest={HIGHEST_REPS}
@@ -218,10 +222,11 @@ export function SetRow({
         weightKg={set.weightKg}
         unit={unit}
         onChange={(weightKg) => onChange({ weightKg })}
-        stepperSetNumber={setNumber}
+        setNumber={setNumber}
+        withStepper
       />
       <div className="reps-field">
-        <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} />
+        <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} setNumber={setNumber} />
       </div>
       <DoneToggle done={set.done} label={doneLabel} drop={drop} onToggle={onToggleDone} buttonRef={doneButton} />
       <div className="set-info">
