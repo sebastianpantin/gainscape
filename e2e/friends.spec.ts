@@ -39,6 +39,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
 
   await alice.reload();
   await expect(feedItem(alice, 'New Running record: 6 km · 36 min')).toBeVisible();
+  await expect(alice.getByRole('heading', { level: 2, name: 'Feed', exact: true })).toBeVisible();
   await openTab(alice, 'Train');
   const friendActivity = alice.getByRole('region', { name: 'Friends' });
   await expect(friendActivity.getByRole('listitem')).toHaveCount(3);

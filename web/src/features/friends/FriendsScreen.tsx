@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { initialsFor } from '../../lib/profile/profile.ts';
@@ -18,6 +18,7 @@ import {
   sendRequestText,
   socialErrorMessage,
 } from '../../lib/social/social-rules.ts';
+import { FieldProblem } from '../../components/FieldProblem.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProfileBadge } from '../profile/ProfileCard.tsx';
@@ -97,6 +98,9 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
   const [busy, setBusy] = useState(false);
   const [gzPending, setGzPending] = useState<ReadonlySet<string>>(() => new Set());
   const [username, setUsername] = useState('');
+  const [usernameMissing, setUsernameMissing] = useState(false);
+  const usernameField = useRef<HTMLInputElement>(null);
+  const usernameProblemId = useId();
   const { showToast, dismissToast } = useToast();
   const [problem, setProblem] = useState<string | null>(null);
   const offline = useIsOffline();
@@ -127,7 +131,11 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
   const sendRequest = (event: FormEvent) => {
     event.preventDefault();
     const wanted = requestedUsername(username);
-    if (!wanted) return;
+    if (!wanted) {
+      setUsernameMissing(true);
+      usernameField.current?.focus();
+      return;
+    }
     void act(async () => {
       const result = await sendFriendRequest(wanted);
       if (result.status === 'sent' || result.status === 'accepted') setUsername('');
@@ -232,10 +240,22 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
                 size={REQUEST_BADGE_SIZE}
               />
               <span style={{ flexGrow: 1 }}>{friend.username} wants to be friends</span>
-              <button className="button primary" type="button" disabled={busy} onClick={() => respond(friend, true)}>
+              <button
+                className="button primary"
+                type="button"
+                aria-label={`Accept ${friend.username}`}
+                disabled={busy}
+                onClick={() => respond(friend, true)}
+              >
                 Accept
               </button>
-              <button className="button" type="button" disabled={busy} onClick={() => respond(friend, false)}>
+              <button
+                className="button"
+                type="button"
+                aria-label={`Decline ${friend.username}`}
+                disabled={busy}
+                onClick={() => respond(friend, false)}
+              >
                 Decline
               </button>
             </div>
@@ -244,16 +264,23 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
             <label className="field" style={{ flexGrow: 1 }}>
               Add a friend by exact username
               <input
+                ref={usernameField}
                 value={username}
-                onChange={(event) => setUsername(event.target.value)}
+                onChange={(event) => {
+                  setUsername(event.target.value);
+                  setUsernameMissing(false);
+                }}
                 autoCapitalize="none"
                 placeholder="username"
+                aria-invalid={usernameMissing || undefined}
+                aria-describedby={usernameMissing ? usernameProblemId : undefined}
               />
             </label>
             <button className="button" type="submit" disabled={busy}>
               Send
             </button>
           </form>
+          <FieldProblem id={usernameProblemId} problem={usernameMissing ? 'Enter a username.' : null} />
           {outgoing.length > 0 && (
             <section className="panel stack" aria-labelledby="outgoing-heading">
               <h2 id="outgoing-heading">Sent requests</h2>
@@ -283,29 +310,37 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
               </ul>
             </section>
           )}
-          {feed.length === 0 && <p className="muted">No posts yet. Add friends, or log a personal record (PR).</p>}
-          {feed.length > 0 && (
-            <p className="row muted tiny">
-              Tap gz to congratulate a friend <TermHelp glossaryKey="gz" />
-            </p>
-          )}
-          {feed.length > 0 && (
-            <ul className="feed" aria-label="Feed">
-              {feed.map((item) => (
-                <FeedEntry
-                  key={item.eventId}
-                  item={item}
-                  pending={busy || gzPending.has(item.eventId)}
-                  onToggleGz={toggleGz}
-                />
-              ))}
-            </ul>
-          )}
-          {feed.length > 0 && feedPages.hasNextPage && (
-            <button className="button" type="button" disabled={busy || feedPages.isFetchingNextPage} onClick={loadMore}>
-              Load more
-            </button>
-          )}
+          <section className="stack" aria-labelledby="feed-heading">
+            <h2 id="feed-heading">Feed</h2>
+            {feed.length === 0 && <p className="muted">No posts yet. Add friends, or log a personal record (PR).</p>}
+            {feed.length > 0 && (
+              <p className="row muted tiny">
+                Tap gz to congratulate a friend <TermHelp glossaryKey="gz" />
+              </p>
+            )}
+            {feed.length > 0 && (
+              <ul className="feed" aria-label="Feed">
+                {feed.map((item) => (
+                  <FeedEntry
+                    key={item.eventId}
+                    item={item}
+                    pending={busy || gzPending.has(item.eventId)}
+                    onToggleGz={toggleGz}
+                  />
+                ))}
+              </ul>
+            )}
+            {feed.length > 0 && feedPages.hasNextPage && (
+              <button
+                className="button"
+                type="button"
+                disabled={busy || feedPages.isFetchingNextPage}
+                onClick={loadMore}
+              >
+                Load more
+              </button>
+            )}
+          </section>
         </>
       )}
     </main>
