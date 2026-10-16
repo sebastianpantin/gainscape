@@ -49,6 +49,7 @@ const TAB_BAR = ['.tab-bar a[href]'];
 
 async function checkScreen(page: Page, screen: string, ready: () => Promise<void>) {
   await ready();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expectNoAxeViolations(page, screen);
   if ((await page.locator('.tab-bar').count()) > 0) await expectTouchTargets(page, TAB_BAR);
 }
