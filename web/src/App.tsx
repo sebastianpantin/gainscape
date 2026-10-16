@@ -178,9 +178,11 @@ function Screens() {
 
 const SignedInAccount = createContext({ userId: '', email: null as string | null });
 
+let signedInRouter: ReturnType<typeof createBrowserRouter> | null = null;
+
 function SignedInRouter() {
-  const [router] = useState(() => createBrowserRouter([{ path: '*', element: <SignedInShell /> }]));
-  return <RouterProvider router={router} />;
+  signedInRouter ??= createBrowserRouter([{ path: '*', element: <SignedInShell /> }]);
+  return <RouterProvider router={signedInRouter} />;
 }
 
 function SignedInShell() {
