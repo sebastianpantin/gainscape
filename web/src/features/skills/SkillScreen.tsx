@@ -3,6 +3,7 @@ import { useId } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { formatXp } from '../../lib/format.ts';
@@ -58,15 +59,16 @@ export function SkillScreen({ userId }: SkillScreenProps) {
 
   if (state.status === 'failed')
     return (
-      <main className="screen stack">
-        <div className="stack" style={{ gap: 4 }}>
-          <BackToSkills />
-          <h1 className="title">Skill</h1>
-        </div>
-        <p className="problem" role="alert">
-          {state.problem}
-        </p>
-      </main>
+      <ScreenProblem
+        heading={
+          <div className="stack" style={{ gap: 4 }}>
+            <BackToSkills />
+            <h1 className="title">Skill</h1>
+          </div>
+        }
+        problem={state.problem}
+        onRetry={state.retry}
+      />
     );
   if (state.status === 'loading') return <ScreenSkeleton panels={2} />;
 

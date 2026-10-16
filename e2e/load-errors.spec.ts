@@ -249,6 +249,12 @@ const SCREENS_THAT_RETRY_A_FAILED_LOAD: {
   loaded: (page: Page) => Locator;
 }[] = [
   { path: '/skills', heading: 'Skills', loaded: (page) => page.getByRole('list', { name: 'Skill levels' }) },
+  {
+    path: '/skills/body',
+    heading: 'Body',
+    loaded: (page) => page.getByRole('heading', { name: 'Recovery', level: 2 }),
+  },
+  { path: '/skills/chest', heading: 'Skill', loaded: (page) => page.getByRole('heading', { name: 'Chest', level: 1 }) },
   { path: '/skills/quests', heading: 'Quests', loaded: (page) => page.getByRole('heading', { level: 2 }).first() },
   { path: '/profile', heading: 'Profile', loaded: (page) => page.getByRole('link', { name: 'Edit profile' }) },
   {
