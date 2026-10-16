@@ -17,7 +17,7 @@ import {
 import { warmupFlagsOfLatestSession } from './support/db.ts';
 
 function weightOf(row: Locator): Locator {
-  return row.getByRole('spinbutton', { name: 'kg', exact: true });
+  return row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ });
 }
 
 test('a set flagged as a warm-up is stored as a warm-up and earns no XP', async ({ page }) => {
@@ -72,7 +72,7 @@ test('warm-ups ramp from the bar to the first working set of a barbell lift', as
   ].entries()) {
     const row = setRow(squat, index + 1);
     await expect(weightOf(row), `warm-up ${index + 1} weight`).toHaveValue(weight);
-    await expect(row.getByRole('spinbutton', { name: 'reps', exact: true })).toHaveValue(reps);
+    await expect(row.getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue(reps);
     await expect(warmupBadge(row), `warm-up ${index + 1} flag`).toBeVisible();
     await expect(row.getByRole('button', { name: `Done set ${index + 1}` })).toHaveAttribute('aria-pressed', 'false');
   }
@@ -91,7 +91,7 @@ test('a lift with no ramp to build still offers one warm-up set to edit', async 
   await expect(warmupBadge(setRow(squat, 1))).toBeVisible();
 
   const pullUp = await addExercise(page, 'pull-up', 'Pull-up');
-  const reps = (row: Locator) => row.getByRole('spinbutton', { name: 'reps', exact: true });
+  const reps = (row: Locator) => row.getByRole('spinbutton', { name: /^Reps, set \d+$/ });
   await reps(setRow(pullUp, 1)).fill('8');
   await pullUp.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
   await expect(setRows(pullUp)).toHaveCount(2);
@@ -116,7 +116,7 @@ test('warm-ups ramp a dumbbell lift in load steps with no bar step', async ({ pa
   ].entries()) {
     const row = setRow(curl, index + 1);
     await expect(weightOf(row), `warm-up ${index + 1} weight`).toHaveValue(weight);
-    await expect(row.getByRole('spinbutton', { name: 'reps', exact: true })).toHaveValue(reps);
+    await expect(row.getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue(reps);
     await expect(warmupBadge(row), `warm-up ${index + 1} flag`).toBeVisible();
   }
   await expect(weightOf(setRow(curl, 4))).toHaveValue('30');

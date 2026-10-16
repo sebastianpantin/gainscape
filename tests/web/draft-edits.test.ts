@@ -105,9 +105,9 @@ describe('planned set editing', () => {
     expect(firstWorkingSet(liftsOf(allWarmups)[0])).toBeUndefined();
   });
 
-  it('marks sets added with + Add set as done', () => {
+  it('adds sets with + Add set as not done yet', () => {
     const added = addSet(planned, 0);
-    expect(added.exercises[0].sets.at(-1)?.done).toBe(true);
+    expect(added.exercises[0].sets.at(-1)?.done).toBe(false);
   });
 
   it('seeds a set with last session values only while it is untouched', () => {
@@ -316,13 +316,13 @@ describe('the exact shape of what a draft adds, swaps and removes', () => {
     ],
   };
 
-  it('adds a done working lift set copying the last set, with no prescription', () => {
+  it('adds a not-done working lift set copying the last set, with no prescription', () => {
     expect(addSet(workout(), 1).exercises[1].sets.at(-1)).toStrictEqual({
       id: expect.any(String),
       weightKg: 55,
       reps: 9,
       effort: null,
-      done: true,
+      done: false,
       isWarmup: false,
     });
   });
@@ -330,7 +330,7 @@ describe('the exact shape of what a draft adds, swaps and removes', () => {
   it('seeds a first lift set from the last session only when the exercise has no set yet', () => {
     const empty = addExercise(workout({ exercises: [] }), 'squat', 'Squat', 'external');
     expect(addSet(empty, 0, { weightKg: 100, reps: 3 }).exercises[0].sets).toStrictEqual([
-      { id: expect.any(String), weightKg: 100, reps: 3, effort: null, done: true, isWarmup: false },
+      { id: expect.any(String), weightKg: 100, reps: 3, effort: null, done: false, isWarmup: false },
     ]);
     expect(addSet(empty, 0).exercises[0].sets[0]).toMatchObject({ weightKg: 20, reps: 8 });
     expect(addSet(workout(), 0, { weightKg: 100, reps: 3 }).exercises[0].sets.at(-1)).toMatchObject({
@@ -339,7 +339,7 @@ describe('the exact shape of what a draft adds, swaps and removes', () => {
     });
   });
 
-  it('adds a done bout copying the last bout, and a done hold copying the last hold without its effort', () => {
+  it('adds a not-done bout copying the last bout, and a not-done hold copying the last hold without its effort', () => {
     const draft = workout({ exercises: [cardioExercise(), plank] });
     expect(addSet(draft, 0).exercises[0].sets.at(-1)).toStrictEqual({
       id: expect.any(String),
@@ -348,7 +348,7 @@ describe('the exact shape of what a draft adds, swaps and removes', () => {
       distanceM: null,
       interval: null,
       effort: null,
-      done: true,
+      done: false,
     });
     expect(addSet(draft, 1).exercises[1].sets.at(-1)).toStrictEqual({
       id: expect.any(String),
@@ -357,7 +357,7 @@ describe('the exact shape of what a draft adds, swaps and removes', () => {
       durationS: 45,
       distanceM: null,
       effort: null,
-      done: true,
+      done: false,
     });
   });
 

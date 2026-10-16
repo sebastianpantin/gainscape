@@ -9,7 +9,12 @@ import { type WorkoutDraft } from '../../offline/draft-format.ts';
 import { removeExercise, seedUntouchedSet, swapExercise } from '../../offline/draft-edits.ts';
 import { type WorkoutDraftHandle } from '../../offline/use-workout-draft.ts';
 import { type ExerciseCardActions, type SetPlace } from './exercise-card-actions.ts';
-import { EXERCISE_MENU_LABELS, type ExerciseMenuChoice, exerciseMenuChoices } from './exercise-card-rules.ts';
+import {
+  EXERCISE_MENU_LABELS,
+  type ExerciseMenuChoice,
+  exerciseMenuChoices,
+  removingAsksFirst,
+} from './exercise-card-rules.ts';
 import { type ExerciseMenuAction } from './ExerciseMenu.tsx';
 import { rowToFocusAfterRemoving } from './set-menu-rules.ts';
 import { useFocusAfterRemoval } from './use-focus-after-removal.ts';
@@ -40,11 +45,13 @@ export function useWorkoutCommands({
   const [swappingKey, setSwappingKey] = useSessionState<string | null>(sessionId, null);
   const [focusSetId, setFocusSetId] = useSessionState<string | null>(sessionId, null);
   const [confirmingDiscard, setConfirmingDiscard] = useSessionState(sessionId, false);
+  const [confirmingRemoveKey, setConfirmingRemoveKey] = useSessionState<string | null>(sessionId, null);
   const { announcement, showDrop, dropOn } = useSetDrop();
   const { focusTarget, focusAfterNextChange } = useFocusAfterRemoval(draft?.exercises ?? null);
 
   const cardKeys = draft?.exercises.map((exercise) => exercise.clientId) ?? [];
   if (swappingKey !== null && !cardKeys.includes(swappingKey)) setSwappingKey(null);
+  if (confirmingRemoveKey !== null && !cardKeys.includes(confirmingRemoveKey)) setConfirmingRemoveKey(null);
 
   const edit = (change: (current: WorkoutDraft) => WorkoutDraft) => {
     if (draft !== null) changeDraft(change(draft));
@@ -104,8 +111,25 @@ export function useWorkoutCommands({
     if (choice === 'superset_with_next') return () => edit((current) => groupWithNext(current, exerciseIndex));
     if (choice === 'ungroup') return () => edit((current) => ungroup(current, exerciseIndex));
     if (choice === 'swap') return () => toggleSwap(exerciseIndex);
-    return () => removeExerciseAt(exerciseIndex);
+    return () => {
+      if (draft !== null && removingAsksFirst(draft.exercises[exerciseIndex]))
+        setConfirmingRemoveKey(cardKeys[exerciseIndex]);
+      else removeExerciseAt(exerciseIndex);
+    };
   };
+
+  const removingIndex = confirmingRemoveKey === null ? -1 : cardKeys.indexOf(confirmingRemoveKey);
+  const removeConfirm =
+    draft === null || removingIndex === -1
+      ? null
+      : {
+          exerciseName: draft.exercises[removingIndex].name,
+          confirm: () => {
+            setConfirmingRemoveKey(null);
+            removeExerciseAt(removingIndex);
+          },
+          cancel: () => setConfirmingRemoveKey(null),
+        };
 
   const menuActions = (exerciseIndex: number): ExerciseMenuAction[] =>
     draft === null
@@ -141,6 +165,7 @@ export function useWorkoutCommands({
     setFocusSetId,
     confirmingDiscard,
     setConfirmingDiscard,
+    removeConfirm,
     discardWorkout,
   };
 }

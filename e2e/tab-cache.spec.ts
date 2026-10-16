@@ -146,7 +146,7 @@ test('editing and deleting a workout in History updates the Skills tab', async (
 
   await openLatestWorkout(page);
   const firstSet = setRow(page, 1);
-  await firstSet.getByLabel('reps', { exact: true }).fill('10');
+  await firstSet.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('10');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Changes saved.')).toBeVisible();
   await openTab(page, 'Skills');

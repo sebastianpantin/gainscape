@@ -149,13 +149,13 @@ test('logging and rating sets never moves or changes the workout help', async ({
   expect(before.names).toEqual([GLOSSARY.rir.question, GLOSSARY.repMax.question, GLOSSARY.sessionRpe.question]);
 
   const doneSetTwo = bench.getByRole('button', { name: 'Done set 2' });
-  await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'true');
-  await doneSetTwo.click();
   await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'false');
+  await doneSetTwo.click();
+  await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'true');
   expect(await readHelpLayout()).toEqual(before);
 
   await doneSetTwo.click();
-  await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'true');
+  await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'false');
   expect(await readHelpLayout()).toEqual(before);
 
   const easy = bench.getByRole('radio', { name: 'Easy', exact: true }).first();

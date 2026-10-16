@@ -6,7 +6,7 @@ test('log a farmers carry to failure, earn Grip and lengthen it from history', a
   await page.getByRole('button', { name: 'Start workout' }).click();
   const carry = await addExercise(page, 'farmers', 'Farmers Carry');
   const first = setRow(carry, 1);
-  await first.getByRole('spinbutton', { name: 'kg' }).fill('32');
+  await first.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('32');
   await first.getByRole('spinbutton', { name: 'Metres', exact: true }).fill('40');
   await first.getByRole('radio', { name: 'Failure', exact: true }).click();
   await expect(first.getByText(/^~[\d,]+$/)).toBeVisible();
@@ -40,7 +40,7 @@ test('time a dead hang and a plate pinch in seconds, then see the record chip wh
   await hang.getByRole('spinbutton', { name: 'Seconds', exact: true }).fill('30');
   await hang.getByRole('radio', { name: 'Hard', exact: true }).click();
   const pinch = setRow(await addExercise(page, 'plate pinch', 'Plate Pinch'), 1);
-  await pinch.getByRole('spinbutton', { name: 'kg' }).fill('20');
+  await pinch.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('20');
   await pinch.getByRole('spinbutton', { name: 'Seconds', exact: true }).fill('25');
   await pinch.getByRole('radio', { name: 'Hard', exact: true }).click();
   await page.getByRole('button', { name: 'Finish workout' }).click();

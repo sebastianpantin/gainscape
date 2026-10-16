@@ -49,11 +49,11 @@ export async function fieldValues(fields: Locator): Promise<string[]> {
 }
 
 export async function weightsIn(card: Locator): Promise<string[]> {
-  return fieldValues(card.getByRole('spinbutton', { name: 'kg', exact: true }));
+  return fieldValues(card.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }));
 }
 
 export async function repsIn(card: Locator): Promise<string[]> {
-  return fieldValues(card.getByRole('spinbutton', { name: 'reps', exact: true }));
+  return fieldValues(card.getByRole('spinbutton', { name: /^Reps, set \d+$/ }));
 }
 
 export async function openManageProgram(page: Page, programName: string): Promise<void> {

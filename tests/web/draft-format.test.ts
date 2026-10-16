@@ -454,7 +454,7 @@ describe('cardio drafts', () => {
     );
   });
 
-  it('adds a cardio exercise with one steady 30-minute bout that is done', () => {
+  it('adds a cardio exercise with one steady 30-minute bout that is not done yet', () => {
     const empty = workout({ exercises: [] });
     const { activity } = cardioExercise();
     const added = addSet(addCardioExercise(empty, 'run', 'Running', activity), 0);
@@ -467,7 +467,7 @@ describe('cardio drafts', () => {
         distanceM: null,
         interval: null,
         effort: null,
-        done: true,
+        done: false,
       },
     ]);
   });
@@ -476,7 +476,7 @@ describe('cardio drafts', () => {
     const intervals = cardioExercise({ sets: [cardioExercise().sets[1]] });
     const added = addSet(workout({ exercises: [intervals] }), 0);
     const [previous, copy] = added.exercises[0].sets;
-    expect(copy).toEqual({ ...previous, id: expect.any(String), done: true });
+    expect(copy).toEqual({ ...previous, id: expect.any(String), done: false });
     expect(copy.id).not.toBe(previous.id);
   });
 

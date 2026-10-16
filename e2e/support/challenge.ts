@@ -28,7 +28,7 @@ export function challengeSuperset(page: Page): Locator {
 export function deadliftWeights(page: Page): Locator {
   return challengeSuperset(page)
     .getByRole('list', { name: 'Rounds' })
-    .getByRole('spinbutton', { name: 'kg', exact: true });
+    .getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ });
 }
 
 export async function startChallenge(page: Page) {
@@ -63,7 +63,7 @@ export async function shortenFirstDeadliftSet(page: Page, reps: number) {
   });
   await firstRound
     .getByRole('listitem', { name: 'Deadlift, set 1', exact: true })
-    .getByLabel('reps', { exact: true })
+    .getByRole('spinbutton', { name: /^Reps, set \d+$/ })
     .fill(String(reps));
 }
 
@@ -77,8 +77,8 @@ export async function finishWithBodyweight(page: Page) {
 export async function logDeadliftToFailure(page: Page, weightKg: number) {
   await page.getByRole('button', { name: 'Start workout' }).click();
   const row = setRow(await addExercise(page, 'deadlift', 'Deadlift'), 1);
-  await row.getByRole('spinbutton', { name: /kg/ }).fill(String(weightKg));
-  await row.getByLabel('reps', { exact: true }).fill('1');
+  await row.getByRole('spinbutton', { name: /weight in kg, set \d+$/i }).fill(String(weightKg));
+  await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('1');
   await row.getByRole('radio', { name: 'Failure' }).click();
   await finishWorkout(page);
 }

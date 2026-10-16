@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
-import { formatXp } from '../../lib/format.ts';
+import { formatCount, formatXp } from '../../lib/format.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/platform/use-online.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
@@ -34,6 +34,7 @@ import { LiftSupersetCard } from './LiftSupersetCard.tsx';
 import { NotifyPrompt } from './NotifyPrompt.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
+import { DiscardWorkoutDialog } from './DiscardWorkoutDialog.tsx';
 import { SavingWorkoutView } from './SavingWorkoutView.tsx';
 import { SessionRpeField } from './SessionRpeField.tsx';
 import { TodayView } from './TodayView.tsx';
@@ -237,7 +238,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </div>
         <div className="live-xp">
           <strong>~{formatXp(donePreviewTotal(previews, draft.exercises))} XP</strong>
-          <span className="muted tiny">{doneSetCount(draft)} sets done</span>
+          <span className="muted tiny">{formatCount(doneSetCount(draft), 'set')} done</span>
         </div>
       </header>
       <p className="visually-hidden" role="status">
@@ -360,16 +361,22 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           Discard workout
         </button>
       )}
-      {commands.confirmingDiscard && (
+      {commands.removeConfirm && (
         <ConfirmDialog
-          title="Discard this workout?"
-          confirmLabel="Discard workout"
+          title={`Remove ${commands.removeConfirm.exerciseName}?`}
+          confirmLabel="Remove exercise"
           danger
+          onConfirm={commands.removeConfirm.confirm}
+          onCancel={commands.removeConfirm.cancel}
+        >
+          <p>Its logged sets will be lost.</p>
+        </ConfirmDialog>
+      )}
+      {commands.confirmingDiscard && (
+        <DiscardWorkoutDialog
           onConfirm={commands.discardWorkout}
           onCancel={() => commands.setConfirmingDiscard(false)}
-        >
-          <p>Your logged sets will be lost.</p>
-        </ConfirmDialog>
+        />
       )}
       {prompt && (
         <ConfirmDialog

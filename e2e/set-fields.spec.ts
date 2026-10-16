@@ -7,8 +7,8 @@ test('weight and reps can be cleared and retyped, with a comma as the decimal se
   await register(page, uniqueUsername('fields'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   const row = setRow(await addExercise(page, 'bench', BENCH), 1);
-  const weight = row.getByRole('spinbutton', { name: 'kg', exact: true });
-  const reps = row.getByRole('spinbutton', { name: 'reps', exact: true });
+  const weight = row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ });
+  const reps = row.getByRole('spinbutton', { name: /^Reps, set \d+$/ });
 
   await weight.fill('60');
   await weight.press('Control+A');
@@ -38,14 +38,19 @@ test('weight and reps can be cleared and retyped, with a comma as the decimal se
   await page.reload();
   await expect(weight).toHaveValue('65');
   await expect(reps).toHaveValue('11');
+
+  await page.getByRole('button', { name: '+ Add set' }).click();
+  const second = setRow(page, 2);
+  await expect(second.getByRole('spinbutton', { name: 'Weight in kg, set 2', exact: true })).toHaveValue('65');
+  await expect(second.getByRole('spinbutton', { name: 'Reps, set 2', exact: true })).toHaveValue('11');
 });
 
 test('a field flags text that is not the saved value and steps with the arrow keys', async ({ page }) => {
   await register(page, uniqueUsername('fields'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   const row = setRow(await addExercise(page, 'bench', BENCH), 1);
-  const weight = row.getByRole('spinbutton', { name: 'kg', exact: true });
-  const reps = row.getByRole('spinbutton', { name: 'reps', exact: true });
+  const weight = row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ });
+  const reps = row.getByRole('spinbutton', { name: /^Reps, set \d+$/ });
 
   await weight.fill('60');
   await expect(weight).not.toHaveAttribute('aria-invalid');
@@ -83,8 +88,8 @@ test('focusing a filled field selects it, so typing replaces the value, and Ente
   await register(page, uniqueUsername('fields'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   const row = setRow(await addExercise(page, 'bench', BENCH), 1);
-  const weight = row.getByRole('spinbutton', { name: 'kg', exact: true });
-  const reps = row.getByRole('spinbutton', { name: 'reps', exact: true });
+  const weight = row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ });
+  const reps = row.getByRole('spinbutton', { name: /^Reps, set \d+$/ });
   await expect(weight).toHaveAttribute('enterkeyhint', 'next');
   await expect(reps).toHaveAttribute('enterkeyhint', 'done');
 

@@ -43,7 +43,9 @@ async function logSessionWithBenchAt(page: Page, sessionLabel: string, benchKg: 
   await expect(page.getByText(`${PROGRAM} — ${sessionLabel}`, { exact: true })).toBeVisible();
   const bench = workoutCards(page, 'Barbell Bench Press');
   for (const setNumber of [1, 2, 3])
-    await setRow(bench, setNumber).getByRole('spinbutton', { name: 'kg', exact: true }).fill(String(benchKg));
+    await setRow(bench, setNumber)
+      .getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })
+      .fill(String(benchKg));
 }
 
 async function finishAndReturn(page: Page): Promise<void> {
@@ -83,7 +85,9 @@ test('follow your own program: Squat 5×5 adds 2.5 kg after a met workout and ho
   await openTab(page, 'Train');
   await logSessionWithBenchAt(page, 'Session 2 Day 1', 60);
   await expect.poll(() => weightsIn(workoutCards(page, 'Back Squat'))).toEqual(repeated('102.5', 5));
-  await setRow(workoutCards(page, 'Back Squat'), 5).getByRole('spinbutton', { name: 'reps', exact: true }).fill('3');
+  await setRow(workoutCards(page, 'Back Squat'), 5)
+    .getByRole('spinbutton', { name: /^Reps, set \d+$/ })
+    .fill('3');
   await markEverySetDone(page);
   await context.setOffline(false);
   await finishAndReturn(page);

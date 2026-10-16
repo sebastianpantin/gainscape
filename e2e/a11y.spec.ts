@@ -12,6 +12,7 @@ import {
   openTab,
   readSession,
   register,
+  setRow,
   signOut,
   skillCard,
   skillLevels,
@@ -413,6 +414,40 @@ test.describe('on a 320x640 phone', () => {
       const overflow = await tab.evaluate((link) => link.scrollWidth - link.clientWidth);
       expect(overflow, await tab.innerText()).toBeLessThanOrEqual(0);
     }
+  });
+
+  test('a lift set row keeps a usable weight field and nothing in the workout clips or overflows', async ({ page }) => {
+    await register(page, uniqueUsername('a11y_320w'));
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await logExercise(page, 'bench', 'Barbell Bench Press', [
+      { weightKg: 100, reps: 5 },
+      { weightKg: 100, reps: 5 },
+      { weightKg: 100, reps: 5 },
+    ]);
+    const bench = exerciseCard(page, 'Barbell Bench Press');
+    const weight = bench.getByRole('spinbutton', { name: 'Weight in kg, set 1', exact: true });
+    const weightBox = await weight.boundingBox();
+    expect(weightBox?.width).toBeGreaterThanOrEqual(44);
+    expect(weightBox?.height).toBeGreaterThanOrEqual(44);
+    await weight.fill('102.5');
+    await expect(weight).toHaveValue('102.5');
+    const nearFail = setRow(bench, 1).getByRole('radio', { name: 'Near fail', exact: true });
+    await expect(nearFail).toHaveText('Near fail');
+    await expect(nearFail.getByText('Near fail', { exact: true })).toBeVisible();
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    const clipped = await page
+      .locator('.workout-header, .workout-header *, .set-row, .set-row *')
+      .evaluateAll((elements) =>
+        elements
+          .filter(
+            (element) =>
+              element.scrollWidth > element.clientWidth + 1 ||
+              element.getBoundingClientRect().right > window.innerWidth,
+          )
+          .map((element) => `${element.className}: ${element.textContent?.trim()}`),
+      );
+    expect(clipped).toEqual([]);
   });
 });
 

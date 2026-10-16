@@ -77,6 +77,12 @@ function setValues(exercise: LiftDraftExercise): [number, number][] {
   return exercise.sets.map((set) => [set.weightKg, set.reps]);
 }
 
+function addDoneSet(draft: WorkoutDraft, exerciseIndex: number, values: { weightKg: number; reps: number }) {
+  const added = addSet(draft, exerciseIndex, values);
+  const last = added.exercises[exerciseIndex].sets.at(-1);
+  return last === undefined ? added : updateSet(added, exerciseIndex, last.id, { done: true });
+}
+
 function startOf(challenge: CatalogChallenge, strength: StrengthState) {
   return startDraftFromChallenge(challenge, EXERCISES, strength, KG, 'kg', NOW).draft;
 }
@@ -201,7 +207,7 @@ describe('challengeVolumeSoFarKg', () => {
     for (let index = 0; index < rounds; index++) {
       draft = addExercise(draft, `lift-${index}`, `Lift ${index}`, 'external');
       for (let set = 0; set < 5; set++) {
-        draft = addSet(draft, index, { weightKg: 100, reps: 5 });
+        draft = addDoneSet(draft, index, { weightKg: 100, reps: 5 });
       }
     }
     return extra(draft);
@@ -217,7 +223,7 @@ describe('challengeVolumeSoFarKg', () => {
       const warmup = updateSet(lifted, 0, exercise.sets[0].id, { isWarmup: true });
       const notDone = updateSet(warmup, 0, exercise.sets[1].id, { done: false });
       const withPullUps = addExercise(notDone, 'pull_up', 'Pull-up', 'bodyweight');
-      return addSet(withPullUps, 1, { weightKg: 0, reps: 10 });
+      return addDoneSet(withPullUps, 1, { weightKg: 0, reps: 10 });
     });
     expect(challengeVolumeSoFarKg(draft)).toBe(1500);
   });
@@ -225,14 +231,14 @@ describe('challengeVolumeSoFarKg', () => {
   it('counts the load added to a bodyweight lift: 20 kg × 5 weighted pull-ups is 100 kg', () => {
     const draft = liftedDraft(1, (lifted) => {
       const withWeightedPullUps = addExercise(lifted, 'weighted_pull_up', 'Weighted Pull-up', 'bodyweight_plus');
-      return addSet(withWeightedPullUps, 1, { weightKg: 20, reps: 5 });
+      return addDoneSet(withWeightedPullUps, 1, { weightKg: 20, reps: 5 });
     });
     expect(challengeVolumeSoFarKg(draft)).toBe(2600);
   });
 
   it('rounds each weight to 2 decimals before multiplying, as the server stores it', () => {
     const draft = liftedDraft(0, (empty) =>
-      addSet(addExercise(empty, 'lift', 'Lift', 'external'), 0, { weightKg: 33.334999, reps: 3 }),
+      addDoneSet(addExercise(empty, 'lift', 'Lift', 'external'), 0, { weightKg: 33.334999, reps: 3 }),
     );
     expect(challengeVolumeSoFarKg(draft)).toBeCloseTo(99.99, 9);
   });
@@ -245,11 +251,11 @@ describe('challengeVolumeSoFarKg', () => {
 
   it('never shows the target as reached while the server would judge it short', () => {
     const almost = liftedDraft(0, (empty) =>
-      addSet(addExercise(empty, 'lift', 'Lift', 'external'), 0, { weightKg: 9999.6, reps: 1 }),
+      addDoneSet(addExercise(empty, 'lift', 'Lift', 'external'), 0, { weightKg: 9999.6, reps: 1 }),
     );
     expect(challengeVolumeText(almost, 10000, 'kg')).toBe('Volume so far: 9,999 / 10,000 kg');
     const shortInPounds = liftedDraft(0, (empty) =>
-      addSet(addExercise(empty, 'lift', 'Lift', 'external'), 0, { weightKg: 9999.95, reps: 1 }),
+      addDoneSet(addExercise(empty, 'lift', 'Lift', 'external'), 0, { weightKg: 9999.95, reps: 1 }),
     );
     expect(challengeVolumeText(shortInPounds, 10000, 'lb')).toBe('Volume so far: 22,045 / 22,046 lb');
     expect(challengeVolumeText(liftedDraft(4), 10000, 'kg')).toBe('Volume so far: 10,000 / 10,000 kg');

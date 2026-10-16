@@ -128,7 +128,7 @@ describe('withPickedExercise', () => {
     const added = withPickedExercise(draftOf([]), catalogLift('bench'), { weightKg: 80, reps: 6 });
     const [exercise] = added.exercises;
     expect(exercise).toMatchObject({ exerciseId: 'bench', modality: 'lift', loadType: 'external' });
-    expect(exercise.sets).toEqual([expect.objectContaining({ weightKg: 80, reps: 6, done: true, isWarmup: false })]);
+    expect(exercise.sets).toEqual([expect.objectContaining({ weightKg: 80, reps: 6, done: false, isWarmup: false })]);
   });
 
   it('adds a lift with a default set when nothing was logged before', () => {

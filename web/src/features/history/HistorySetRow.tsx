@@ -39,8 +39,9 @@ export function HistorySetRow({
         weightKg={set.weightKg}
         unit={unit}
         onChange={(weightKg) => onChange({ weightKg })}
+        setNumber={setNumber}
       />
-      <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} />
+      <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} setNumber={setNumber} />
       <span className="set-xp earned">
         {xpLabel}
         <span className="tiny">{xpNote}</span>
@@ -128,7 +129,14 @@ export function HistoryHoldRow({
   return (
     <li className="set-row hold-row" aria-label={`Set ${setNumber}`}>
       <span className="set-number">{setNumber}</span>
-      <HoldFields set={set} measure={measure} loadType={loadType} unit={unit} onChange={onChange} />
+      <HoldFields
+        set={set}
+        measure={measure}
+        loadType={loadType}
+        unit={unit}
+        setNumber={setNumber}
+        onChange={onChange}
+      />
       <span className="set-xp earned">
         {xpLabel}
         <span className="tiny">{xpNote}</span>

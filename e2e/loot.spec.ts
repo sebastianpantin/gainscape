@@ -66,7 +66,9 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await page.getByRole('list', { name: 'Workouts' }).getByRole('link').nth(1).click();
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
   const sessionId = page.url().split('/').at(-1)!;
-  await setRow(page, 1).getByLabel('reps', { exact: true }).fill('4');
+  await setRow(page, 1)
+    .getByRole('spinbutton', { name: /^Reps, set \d+$/ })
+    .fill('4');
   const editWarning = page.getByRole('status').filter({ hasText: 'This may remove' });
   await expect(editWarning).toContainText('This may remove');
   await expect(editWarning).toContainText(drops[0].name);
