@@ -11,7 +11,7 @@ import { collectionPercent, countCollection } from '../collection/collection-rul
 import { fetchExerciseProgress } from '../progress/exercise-progress.ts';
 import { fetchSessionPage } from '../history/history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession, isUuid } from '../history/history-rules.ts';
-import { fetchLoadout, fetchOwnedPets, loadItemsCacheFirst } from '../collection/items.ts';
+import { fetchLoadout, fetchOwnedPets, loadItemCatalogCacheFirst, loadItemsCacheFirst } from '../collection/items.ts';
 import { fetchTrainingHistory } from '../profile/onboarding.ts';
 import { loadProfileCacheFirst, type Profile } from '../profile/profile.ts';
 import { type Preferences } from '../profile/preferences.ts';
@@ -118,6 +118,13 @@ export function itemsQuery(userId: string) {
 }
 
 export const skillsQuery = queryOptions({ queryKey: ['skills'] as const, queryFn: fetchSkills });
+
+export function itemCatalogQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['item-catalog', userId] as const,
+    queryFn: () => loadItemCatalogCacheFirst(userId),
+  });
+}
 
 export function friendsQuery(userId: string) {
   return queryOptions({ queryKey: [...FRIENDS_QUERY_PREFIX, userId] as const, queryFn: listFriends });
@@ -320,6 +327,7 @@ export const EVERY_QUERY = [
   collectionPercentQuery,
   loadoutQuery,
   itemsQuery,
+  itemCatalogQuery,
   skillsQuery,
   friendsQuery,
   feedQuery,

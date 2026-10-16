@@ -1,6 +1,6 @@
 import { isSessionEditable } from '@domain/edit-window.ts';
 import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
@@ -21,9 +21,8 @@ import { formatXp } from '../../lib/format.ts';
 import { deleteSession, editSession } from '../../lib/history/history.ts';
 import { isUuid, withoutHistorySession } from '../../lib/history/history-rules.ts';
 import { type CatalogItem } from '../../lib/collection/item-rules.ts';
-import { fetchItemCatalog } from '../../lib/collection/items.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { fetchLatestExerciseList, historyQuery } from '../../lib/query/queries.ts';
+import { fetchLatestExerciseList, historyQuery, itemCatalogQuery } from '../../lib/query/queries.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
@@ -61,6 +60,7 @@ import { StoredExerciseList } from './StoredExerciseList.tsx';
 
 const HISTORY_PATH = '/collection/history';
 const MAX_NOTES_LENGTH = 2000;
+const NO_ITEMS: readonly CatalogItem[] = [];
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
 
@@ -81,19 +81,8 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const [busy, setBusy] = useState<SessionBusy>(IDLE);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [items, setItems] = useState<CatalogItem[]>([]);
+  const items = useQuery(itemCatalogQuery(userId)).data?.loaded.items ?? NO_ITEMS;
   const controllerRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    fetchItemCatalog().then(
-      (catalog) => active && setItems(catalog.items),
-      () => active && setItems([]),
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const loadWithCatalog = useCallback(
     () =>

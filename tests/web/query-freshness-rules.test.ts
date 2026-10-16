@@ -14,7 +14,7 @@ vi.mock('../../web/src/lib/platform/supabase.ts', () => ({ supabase: {} }));
 const queries = await import('../../web/src/lib/query/queries.ts');
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
-const CATALOG_ROOTS = ['skills'];
+const CATALOG_ROOTS = ['skills', 'item-catalog'];
 
 type QueryFactory = (...args: string[]) => { queryKey: readonly unknown[] };
 
@@ -57,6 +57,10 @@ describe('EVERY_QUERY', () => {
       .map(([, query]) => query);
     expect(exported.length).toBeGreaterThan(0);
     for (const query of exported) expect(queries.EVERY_QUERY).toContain(query);
+  });
+
+  it('loads every catalog through a query, so the reveal and session detail share one item catalog', () => {
+    for (const root of CATALOG_ROOTS) expect(QUERY_ROOTS).toContain(root);
   });
 });
 

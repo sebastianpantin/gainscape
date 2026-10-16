@@ -27,6 +27,7 @@ The post-workout reveal at `/reveal`: XP per skill, level-ups, gear and challeng
 - A hold or carry record (a `cardio` summary on a lift with a measure) reads in metres or seconds in either unit setting.
 - The gear bonus line is hidden when the bonus is 0 or the summary predates gear.
 - The Quests panel (`questRevealLines`) shows `summary.quests`: completions with quest points and XP in skill order, step progress, newly available quests and level ups from quest XP. Quest XP is not in `xpBySkill`, so these level ups are listed in the panel, not in `Level up!`, and play no cue. Quest names come from the cache-first quest log, loaded only when the summary has quest news.
+- Skills, XP and the quest log come from `standingQuery` and `questsQuery` with `refetchOnMount: 'always'`, and the screen uses them only once fetched after mount (`loadedAfterMount`). The cache may still hold the standing from before this workout, which would show the old level. The item catalog comes from `itemCatalogQuery` and may be a cached copy: it changes only on deploy, so loot names stay readable when a later fetch fails.
 - The reveal marks the PWA install card due (`markInstallCardDue`).
 
 ## Testing

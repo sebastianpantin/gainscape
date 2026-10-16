@@ -56,6 +56,14 @@ export async function fetchItemCatalog(): Promise<ItemCatalog> {
   };
 }
 
+export function loadItemCatalogCacheFirst(userId: string): Promise<CacheFirstLoad<ItemCatalog>> {
+  return loadCacheFirstWhenOffline(
+    isDeviceOffline,
+    () => readItemsCache(deviceStorage(), userId)?.catalog ?? null,
+    fetchItemCatalog,
+  );
+}
+
 export async function fetchOwnedPets(userId: string): Promise<OwnedPets> {
   failFastWhenOffline();
   return queryOwnedPets(supabase, userId);

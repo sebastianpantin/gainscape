@@ -1,11 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { type UseQueryResult, useQuery } from '@tanstack/react-query';
 import { levelProgress } from '@domain/index.ts';
 import type { DropSummary } from '@domain/types.ts';
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CountUp } from '../../components/CountUp.tsx';
 import { ItemIcon, LevelUpIcon, LootChestIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
-import { fetchSkills, fetchSkillXp } from '../../lib/exercises/catalog.ts';
 import type { Skill } from '../../lib/exercises/catalog-rules.ts';
 import {
   celebrate,
@@ -18,18 +17,12 @@ import { formatXp, sessionXp } from '../../lib/format.ts';
 import { GLOSSARY } from '../../lib/ui/glossary.ts';
 import { fetchSession } from '../../lib/history/history.ts';
 import { type CatalogItem, colorFor, fanfareFor } from '../../lib/collection/item-rules.ts';
-import { fetchItemCatalog } from '../../lib/collection/items.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { deviceStorage } from '../../lib/platform/keyed-store.ts';
-import { isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
-import { readItemsCache } from '../../offline/items-cache.ts';
-import { standingCache } from '../../offline/standing-cache.ts';
 import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
+import { type CacheFirstLoad } from '../../offline/cache-first.ts';
 import type { CompletedSessionSummary } from '../../offline/finish-lock.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
-import type { QuestLog } from '../../lib/quests/quest-rules.ts';
-import { loadQuestsCacheFirst } from '../../lib/quests/quests.ts';
-import { exerciseListQuery } from '../../lib/query/queries.ts';
+import { exerciseListQuery, itemCatalogQuery, questsQuery, standingQuery } from '../../lib/query/queries.ts';
 import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
 import {
   challengeBonusText,
@@ -58,8 +51,10 @@ function dropAnimationDelay(popDelayS: number, glows: boolean): string {
 const LOOT_DROP_STAGGER_S = 0.08;
 const INTERACTIVE_ELEMENTS = 'a[href], button, input, select, textarea, summary, [role="button"], [role="link"]';
 
-async function savedWhenOffline<Loaded>(saved: Loaded | null, loadLive: () => Promise<Loaded>): Promise<Loaded> {
-  return (await loadCacheFirstWhenOffline(isDeviceOffline, () => saved, loadLive)).loaded;
+const NO_SKILLS: Skill[] = [];
+
+function loadedAfterMount<Loaded>(query: UseQueryResult<CacheFirstLoad<Loaded>>): Loaded | null {
+  return query.isFetchedAfterMount && query.isSuccess ? query.data.loaded : null;
 }
 
 type RevealPhase = 'playing' | 'settled' | 'skipped';
@@ -288,13 +283,17 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const location = useLocation();
   const summary = (location.state as CompletedSessionSummary | null) ?? recallLastSummary(userId);
   const { unitPref } = usePreferences();
-  const [skills, setSkills] = useState<Skill[]>([]);
   const exercises = useQuery(exerciseListQuery(userId)).data ?? [];
-  const [xpBySkillId, setXpBySkillId] = useState<Map<string, number> | null>(null);
-  const [items, setItems] = useState<LoadedItems>('loading');
+  const standing = loadedAfterMount(useQuery({ ...standingQuery(userId), refetchOnMount: 'always' }));
+  const skills = standing?.skills.map(({ skill }) => skill) ?? NO_SKILLS;
+  const xpBySkillId = standing && new Map(standing.skills.map(({ skill, progress }) => [skill.id, progress.xp]));
+  const itemCatalog = useQuery(itemCatalogQuery(userId));
+  const items: LoadedItems = itemCatalog.data?.loaded.items ?? (itemCatalog.isError ? 'failed' : 'loading');
   const [freshDrops, setFreshDrops] = useState<DropSummary[] | null>(null);
-  const [questLog, setQuestLog] = useState<QuestLog | null>(null);
   const hasQuestNews = summary?.quests !== undefined;
+  const questLog = loadedAfterMount(
+    useQuery({ ...questsQuery(userId), enabled: hasQuestNews, refetchOnMount: 'always' }),
+  );
   const sessionId = summary?.sessionId;
   const timeline = revealTimeline(revealShape(summary));
   const title = useRef<HTMLHeadingElement>(null);
@@ -303,46 +302,6 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   useEffect(() => {
     if (sessionId) markInstallCardDue(userId);
   }, [sessionId, userId]);
-
-  useEffect(() => {
-    let active = true;
-    function showWhileActive<Loaded>(show: (loaded: Loaded) => void) {
-      return (loaded: Loaded) => {
-        if (active) show(loaded);
-      };
-    }
-    const storage = deviceStorage();
-    const standing = standingCache.read(storage, userId);
-    savedWhenOffline(standing?.skills ?? null, fetchSkills).then(
-      showWhileActive(setSkills),
-      showWhileActive(() => setSkills([])),
-    );
-    savedWhenOffline(standing && new Map(Object.entries(standing.xpBySkillId)), () => fetchSkillXp(userId)).then(
-      showWhileActive(setXpBySkillId),
-      showWhileActive(() => setXpBySkillId(null)),
-    );
-    savedWhenOffline(readItemsCache(storage, userId)?.catalog ?? null, fetchItemCatalog).then(
-      showWhileActive((catalog) => setItems(catalog.items)),
-      showWhileActive(() => setItems('failed')),
-    );
-    return () => {
-      active = false;
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    if (!hasQuestNews) return;
-    let active = true;
-    loadQuestsCacheFirst(userId).then(
-      (load) => {
-        if (active) setQuestLog(load.loaded);
-      },
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [hasQuestNews, userId]);
 
   useEffect(() => {
     if (!sessionId) return;
