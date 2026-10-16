@@ -1,6 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
-import { MAX_SETS_PER_SESSION } from '@domain/index.ts';
+import { useId, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
@@ -52,7 +51,7 @@ import { useWorkoutCommands } from './use-workout-commands.ts';
 import { useWorkoutPreviews } from './use-workout-previews.ts';
 import { useWorkoutStart } from './use-workout-start.ts';
 import { workoutHelpKeys } from './workout-help.ts';
-import { deviceSaveProblemText, WAITING_DRAFT_TEXT } from './workout-rules.ts';
+import { deviceSaveProblemText, SETS_FULL_TEXT, WAITING_DRAFT_TEXT } from './workout-rules.ts';
 import { liftIdsToRecall, swappableLifts } from './workout-screen-rules.ts';
 import { donePreviewTotal } from './xp-preview.ts';
 
@@ -86,6 +85,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const [plateSettings] = useState(() => readPlateSettings(deviceStorage(), userId));
   const finishButton = useRef<HTMLButtonElement>(null);
   const finishBar = useRef<HTMLDivElement>(null);
+  const finishBlockedId = useId();
   const { unitPref, effortInputMode } = usePreferences();
   const draft = state.status === 'ready' ? state.draft : null;
   const onboarding = useOnboarding(userId, draft !== null);
@@ -323,16 +323,18 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           }}
         />
       ) : (
-        <p className="hint">A workout can hold at most {MAX_SETS_PER_SESSION} sets.</p>
+        <p className="hint">{SETS_FULL_TEXT}</p>
       )}
       {roomForSet && !roomForBout && <p className="hint">Cardio exercises are not offered. {BOUTS_FULL_TEXT}</p>}
       <Link className="button link" to="/exercises?new=1">
         Create custom exercise
       </Link>
-      <SessionRpeField
-        sessionRpe={draft.sessionRpe ?? null}
-        onChange={(sessionRpe) => changeDraft(withSessionRpe(draft, sessionRpe))}
-      />
+      {draft.exercises.length > 0 && (
+        <SessionRpeField
+          sessionRpe={draft.sessionRpe ?? null}
+          onChange={(sessionRpe) => changeDraft(withSessionRpe(draft, sessionRpe))}
+        />
+      )}
       <div ref={finishBar} className="finish-bar" tabIndex={-1}>
         <RestTimerBar
           {...rest}
@@ -345,11 +347,17 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
             {finishing.finishProblem}
           </p>
         )}
+        {finishing.blockedText && (
+          <p className="hint" id={finishBlockedId}>
+            {finishing.blockedText}
+          </p>
+        )}
         <button
           ref={finishButton}
           className="button primary big"
           type="button"
           disabled={!finishing.canFinish}
+          aria-describedby={finishing.blockedText ? finishBlockedId : undefined}
           onClick={finishing.finish}
         >
           Finish workout

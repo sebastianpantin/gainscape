@@ -121,3 +121,20 @@ test('the swap picker suggests similar exercises until the user types, and a sug
   await similar.getByRole('button', { name: /^Box Squat\b/ }).click();
   await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(['Box Squat']);
 });
+
+test('an empty workout says why Finish is off and asks for session RPE only once it has an exercise', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('empty'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const finish = page.getByRole('button', { name: 'Finish workout' });
+  const sessionRpe = page.getByRole('combobox', { name: 'Session RPE (optional)' });
+  await expect(finish).toBeDisabled();
+  await expect(finish).toHaveAccessibleDescription('Add an exercise to finish.');
+  await expect(sessionRpe).toHaveCount(0);
+
+  await addUnloggedExercise(page, 'bench', BENCH);
+  await expect(finish).toBeEnabled();
+  await expect(page.getByText('Add an exercise to finish.')).toHaveCount(0);
+  await expect(sessionRpe).toBeVisible();
+});

@@ -6,7 +6,14 @@ import { type WorkoutDraft } from '../../offline/draft-format.ts';
 import { type WorkoutDraftHandle } from '../../offline/use-workout-draft.ts';
 import { currentLoadTypes } from './current-load-types.ts';
 import { useSessionState } from './use-session-state.ts';
-import { canFinishWorkout, finishCountsOf, finishDraft, finishPrompt, loadTypeChangedText } from './workout-rules.ts';
+import {
+  canFinishWorkout,
+  finishBlockedText,
+  finishCountsOf,
+  finishDraft,
+  finishPrompt,
+  loadTypeChangedText,
+} from './workout-rules.ts';
 
 interface FinishWorkoutOptions {
   userId: string;
@@ -44,6 +51,7 @@ export function useFinishWorkout({ userId, draft, exercises, updateDraft, stopRe
   return {
     finishProblem,
     canFinish: counts !== null && canFinishWorkout(counts) && !checkingFinish,
+    blockedText: counts === null ? null : finishBlockedText(counts),
     prompt: prompt !== null && finishPromptFor === draft ? prompt : null,
     finish: () => {
       if (prompt) setFinishPromptFor(draft);

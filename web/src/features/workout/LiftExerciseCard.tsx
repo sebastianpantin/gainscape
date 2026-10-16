@@ -8,6 +8,7 @@ import {
   firstWorkingSet,
   mostQuickFillSets,
 } from '../../offline/draft-edits.ts';
+import { AddSetButton } from './AddSetButton.tsx';
 import { isBarbellLift, warmupsToOffer } from './exercise-card-rules.ts';
 import { type LiftCardContext } from './lift-card-context.ts';
 import { LiftExerciseIntro } from './LiftExerciseIntro.tsx';
@@ -55,15 +56,11 @@ export function LiftExerciseCard({ exercise, exerciseIndex, lift }: LiftExercise
           />
         ))}
       </ol>
-      <button
-        ref={actions.focusTarget(exercise.clientId)}
-        className="button dashed"
-        type="button"
-        disabled={!lift.roomForSet}
-        onClick={() => actions.changeDraft(addSet(draft, exerciseIndex))}
-      >
-        + Add set
-      </button>
+      <AddSetButton
+        buttonRef={actions.focusTarget(exercise.clientId)}
+        roomForSet={lift.roomForSet}
+        onAdd={() => actions.changeDraft(addSet(draft, exerciseIndex))}
+      />
       {canQuickFill(exercise) && quickFillSets > 0 && (
         <QuickFill
           key={`${defaultSets}x${defaultReps}`}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canFinishWorkout,
+  finishBlockedText,
   deviceSaveProblemText,
   finishDraft,
   finishPrompt,
@@ -120,6 +121,21 @@ describe('canFinishWorkout', () => {
     expect(canFinishWorkout({ done: 1, planned: 1, leftToLifter: 1 })).toBe(true);
     expect(canFinishWorkout({ done: 0, planned: 1, leftToLifter: 1 })).toBe(false);
     expect(canFinishWorkout({ done: 0, planned: 0, leftToLifter: 0 })).toBe(false);
+  });
+});
+
+describe('finishBlockedText', () => {
+  it('asks for an exercise while the workout has no set at all', () => {
+    expect(finishBlockedText({ done: 0, planned: 0, leftToLifter: 0 })).toBe('Add an exercise to finish.');
+  });
+
+  it('asks for a logged set when only 5RM tests or optional sets are left', () => {
+    expect(finishBlockedText({ done: 0, planned: 2, leftToLifter: 2 })).toBe('Log a set to finish.');
+  });
+
+  it('says nothing once the workout can finish', () => {
+    expect(finishBlockedText({ done: 1, planned: 0, leftToLifter: 0 })).toBeNull();
+    expect(finishBlockedText({ done: 0, planned: 3, leftToLifter: 0 })).toBeNull();
   });
 });
 

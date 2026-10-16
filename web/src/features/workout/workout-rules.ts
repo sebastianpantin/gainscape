@@ -1,4 +1,5 @@
 import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
+import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { BODYWEIGHT_LOAD_NOT_ZERO_CODE, UNKNOWN_EXERCISE_CODE } from '../../lib/workout/exercise-edit-rules.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/platform/rate-limit.ts';
 import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
@@ -94,6 +95,8 @@ export interface FinishPrompt {
   alternative: FinishChoice | null;
 }
 
+export const SETS_FULL_TEXT = `A workout can hold at most ${MAX_SETS_PER_SESSION} sets.`;
+
 const MARK_DONE: FinishChoice = { label: 'Mark done and finish', marksPlannedDone: true };
 const WITHOUT_THEM: FinishChoice = { label: 'Finish without them', marksPlannedDone: false };
 const LEFT_TO_LIFTER_TEXT = '5RM tests and optional sets stay skipped until you log them.';
@@ -104,6 +107,11 @@ export function finishCountsOf(draft: WorkoutDraft): FinishCounts {
 
 export function canFinishWorkout({ done, planned, leftToLifter }: FinishCounts): boolean {
   return done + planned - leftToLifter > 0;
+}
+
+export function finishBlockedText(counts: FinishCounts): string | null {
+  if (canFinishWorkout(counts)) return null;
+  return counts.done + counts.planned === 0 ? 'Add an exercise to finish.' : 'Log a set to finish.';
 }
 
 export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): FinishPrompt | null {
