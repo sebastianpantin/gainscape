@@ -291,7 +291,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const { unitPref } = usePreferences();
   const exercises = useQuery(exerciseListQuery(userId)).data ?? [];
   const standing = loadedAfterMount(useQuery({ ...standingQuery(userId), refetchOnMount: 'always' }));
-  const skills = useQuery(skillsQuery).data ?? NO_SKILLS;
+  const skills = useQuery(skillsQuery).data ?? standing?.skills.map(({ skill }) => skill) ?? NO_SKILLS;
   const xpBySkillId = standing && new Map(standing.skills.map(({ skill, progress }) => [skill.id, progress.xp]));
   const itemCatalog = useQuery(itemCatalogQuery(userId));
   const items: LoadedItems = itemCatalog.data?.loaded.items ?? (itemCatalog.isError ? 'failed' : 'loading');
