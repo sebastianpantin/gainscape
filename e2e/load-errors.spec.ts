@@ -163,10 +163,12 @@ test('pinning an exercise that fails says the pins could not be updated, and pin
   await pickExercise(page, 'back squat', 'Back Squat');
 
   await expect(page.getByRole('alert')).toHaveText('Could not update pins.');
+  await expect(page.getByRole('heading', { name: 'Collection log: Records', level: 1 })).toBeVisible();
+  await expect(page.getByText('Completion', { exact: true })).toBeVisible();
   await page.unroute(restTable('pinned_exercises'));
-  await page.reload();
   await pickExercise(page, 'back squat', 'Back Squat');
   await expect(exerciseCard(page, 'Back Squat').getByRole('button', { name: 'Unpin' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
 test('unpinning an exercise that fails says the pins could not be updated', async ({ page }) => {
@@ -198,6 +200,7 @@ test('reordering pins that fails says the pins could not be reordered', async ({
   await deadlift.getByRole('button', { name: 'Up' }).click();
 
   await expect(page.getByRole('alert')).toHaveText('Could not reorder pins.');
+  await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(['Back Squat', 'Deadlift']);
   await page.unroute(rpc('reorder_pins'));
   await page.reload();
   await exerciseCard(page, 'Deadlift').getByRole('button', { name: 'Up' }).click();

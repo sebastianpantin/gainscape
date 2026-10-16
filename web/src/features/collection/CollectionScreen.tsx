@@ -44,14 +44,6 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
   const { unitPref } = usePreferences();
 
   const loaded = loadedState(collection.data, collection.error);
-  if (problem)
-    return (
-      <main className="screen">
-        <p className="problem" role="alert">
-          {problem}
-        </p>
-      </main>
-    );
   if (loaded.status === 'failed')
     return (
       <ScreenProblem
@@ -76,6 +68,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
   const holdCards = holdRecordCards(data.cardioRecords, exercises.filter(isLiftExercise));
 
   const togglePin = async (exercise: Exercise) => {
+    setProblem(null);
     try {
       if (data.pinnedExerciseIds.includes(exercise.id)) await unpinExercise(exercise.id);
       else await pinExercise(exercise.id, data.nextPinPosition);
@@ -90,6 +83,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     const from = pinned.indexOf(exercise.id);
     const to = from + offset;
     if (from < 0 || to < 0 || to >= pinned.length) return;
+    setProblem(null);
     try {
       await reorderPins(moved(pinned, from, offset));
       await reloadPins();
@@ -106,6 +100,11 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     <main className="screen stack">
       <CollectionHeading tab="Records" />
       <CollectionTabs />
+      {problem && (
+        <p className="problem" role="alert">
+          {problem}
+        </p>
+      )}
       {savedNotice && (
         <p className="notice" role="status">
           {savedNotice}
