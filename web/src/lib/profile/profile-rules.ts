@@ -155,6 +155,8 @@ export function bodyweightInUnitProblem(raw: string, unit: UnitPref): string | n
   return null;
 }
 
+export const BODYWEIGHT_OFFLINE_TEXT = "You're offline. Saving bodyweight needs a connection.";
+
 export const BODYWEIGHT_NUDGE_STEP: Record<UnitPref, number> = { kg: 0.1, lb: 0.2 };
 
 export function nudgedBodyweightKg(bodyweightKg: number, direction: 1 | -1, unit: UnitPref): number {

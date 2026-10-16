@@ -107,6 +107,7 @@ test('Follow on your own program is disabled offline and says it needs a connect
   await context.setOffline(true);
   await expect(page.getByText(OFFLINE_TEXT, { exact: true })).toBeVisible();
   await expect(follow).toBeDisabled();
+  await expect(follow).toHaveAccessibleDescription(OFFLINE_TEXT);
   await context.setOffline(false);
   await expect(follow).toBeEnabled();
 });
