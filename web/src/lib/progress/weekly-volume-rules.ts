@@ -31,15 +31,11 @@ export interface MuscleVolume {
 
 const BAR_FULL_SETS = 25;
 
-const VOLUME_BAND_TEXT: Readonly<Record<VolumeBand, string | null>> = {
+export const VOLUME_BAND_TEXT: Readonly<Record<VolumeBand, string | null>> = {
   below: null,
   within: 'within target',
   above: 'above target',
 };
-
-export function volumeBandText(band: VolumeBand): string | null {
-  return VOLUME_BAND_TEXT[band];
-}
 
 export function volumeBand(sets: number): VolumeBand {
   if (sets < VOLUME_TARGET.min) return 'below';

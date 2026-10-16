@@ -6,10 +6,10 @@ import {
   type VolumeSet,
   volumeAmountText,
   volumeBand,
-  volumeBandText,
   volumeBarFraction,
   volumeSetsLabel,
   volumeSetsText,
+  VOLUME_BAND_TEXT,
   VOLUME_TARGET,
   weeklySetsByMuscle,
   weekStartIn,
@@ -158,11 +158,9 @@ describe('volumeAmountText', () => {
   });
 });
 
-describe('volumeBandText', () => {
+describe('VOLUME_BAND_TEXT', () => {
   it('names the band only once the target is reached, so a fresh week reads as progress', () => {
-    expect(volumeBandText('below')).toBeNull();
-    expect(volumeBandText('within')).toBe('within target');
-    expect(volumeBandText('above')).toBe('above target');
+    expect(VOLUME_BAND_TEXT).toEqual({ below: null, within: 'within target', above: 'above target' });
   });
 });
 
