@@ -17,6 +17,7 @@ import {
   referencePreview,
   templateEntry,
   templateListEntries,
+  templateScheduleText,
   withOption,
   withUnit,
 } from '../../web/src/lib/programs/program-enroll-rules.ts';
@@ -33,6 +34,7 @@ import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
 import { GZCLP } from '../domain/program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
+import { STRONGLIFTS_5X5 } from '../domain/program-fixtures/stronglifts_5x5.ts';
 import { TEXAS_METHOD } from '../domain/program-fixtures/texas_method.ts';
 
 function catalogExercise(key: string, name: string, archived = false): BindableExercise {
@@ -94,6 +96,34 @@ function fiveThreeOneForm(unit: WeightUnit, oneRms: Record<string, string>): Enr
 }
 
 const FIVE_THREE_ONE_ONE_RMS_LB = { squat: '315', bench: '225', deadlift: '405', press: '135' };
+
+describe('template schedule text', () => {
+  it('reads a weekly program by its days: Madcow 5x5 is 3 days a week', () => {
+    expect(templateScheduleText(MADCOW_5X5)).toBe('3 days a week');
+  });
+
+  it('adds the cycle length to a cycle program: 5/3/1 is 4 days a week in a 4-week cycle', () => {
+    expect(templateScheduleText(FIVE_THREE_ONE)).toBe('4 days a week · 4-week cycle');
+  });
+
+  it('reads a 16-week Juggernaut cycle', () => {
+    expect(templateScheduleText(JUGGERNAUT_2)).toBe('4 days a week · 16-week cycle');
+  });
+
+  it('reads a rotation by its workouts, since it has no fixed week: StrongLifts alternates 2 workouts', () => {
+    expect(templateScheduleText(STRONGLIFTS_5X5)).toBe('Rotates through 2 workouts');
+    expect(templateScheduleText(GZCLP)).toBe('Rotates through 4 workouts');
+  });
+
+  it('gives a range when some days are optional: 2–3 days a week', () => {
+    const [first, second, third] = MADCOW_5X5.schedule.days;
+    const definition = {
+      ...MADCOW_5X5,
+      schedule: { kind: 'weekly' as const, days: [first, second, { ...third, optional: true }] },
+    };
+    expect(templateScheduleText(definition)).toBe('2–3 days a week');
+  });
+});
 
 describe('template list entries', () => {
   it('lists a template the app understands as enrollable with its parsed definition', () => {

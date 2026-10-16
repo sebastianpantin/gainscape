@@ -207,6 +207,14 @@ export function templateListEntries(rows: readonly ProgramTemplateRow[]): Templa
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export function templateScheduleText({ schedule }: ProgramDefinition): string {
+  const total = schedule.days.length;
+  if (schedule.kind === 'rotation') return `Rotates through ${total} workouts`;
+  const required = schedule.days.filter((day) => day.optional !== true).length;
+  const days = `${required === total ? total : `${required}–${total}`} days a week`;
+  return schedule.kind === 'cycle' ? `${days} · ${schedule.weeksPerCycle}-week cycle` : days;
+}
+
 export function templateEntry(rows: readonly ProgramTemplateRow[], key: string): TemplateListEntry | undefined {
   const row = latestRows(rows.filter((candidate) => candidate.key === key))[0];
   return row ? entryOf(row) : undefined;

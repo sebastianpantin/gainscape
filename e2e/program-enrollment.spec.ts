@@ -290,8 +290,8 @@ test('a template with an unknown primitive kind is listed as "Update the app to 
     await expect(stale).toContainText('Update the app to use this program');
     await expect(stale.getByRole('link')).toHaveCount(0);
     await expect(stale.getByRole('button')).toHaveCount(0);
-    await expect(programs.getByRole('link', { name: 'Follow Madcow 5x5', exact: true })).toBeVisible();
-    await expect(programs.getByRole('link', { name: 'Follow 5/3/1', exact: true })).toBeVisible();
+    await expect(programs.getByRole('link', { name: 'Use Madcow 5x5', exact: true })).toBeVisible();
+    await expect(programs.getByRole('link', { name: 'Use 5/3/1', exact: true })).toBeVisible();
 
     await page.goto(`/programs/enroll/${key}`);
     await expect(page.getByText('Update the app to use this program', { exact: true })).toBeVisible();

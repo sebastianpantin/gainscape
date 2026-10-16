@@ -98,7 +98,7 @@ async function createProgram(page: Page): Promise<string> {
   await page
     .getByRole('listitem')
     .filter({ hasText: 'Upper / Lower' })
-    .getByRole('button', { name: 'Use this template' })
+    .getByRole('button', { name: 'Use Upper / Lower', exact: true })
     .click();
   await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
   await expectNoAxeViolations(page, 'program editor');

@@ -11,6 +11,7 @@ import {
   templates,
 } from '../../lib/programs/programs.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { formatCount } from '../../lib/format.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
 import { isEnrolledIn, isFollowing } from '../../lib/programs/program-follow-rules.ts';
@@ -185,11 +186,14 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
         <ul className="stack exercise-list">
           {templates(programs).map((template) => (
             <li className="panel row spread" key={template.id}>
-              <span>
-                {template.name} <span className="muted">{daySummary(template)}</span>
+              <span className="stack" style={{ gap: 2 }}>
+                <span>{template.name}</span>
+                <span className="muted">
+                  {formatCount(template.days.length, 'day')} a week · {daySummary(template)}
+                </span>
               </span>
               <button className="button" type="button" disabled={busy} onClick={() => copyTemplate(template)}>
-                Use this template
+                Use {template.name}
               </button>
             </li>
           ))}

@@ -38,7 +38,7 @@ async function copyTemplate(page: Page, templateName: string) {
   await page
     .getByRole('listitem')
     .filter({ hasText: templateName })
-    .getByRole('button', { name: 'Use this template' })
+    .getByRole('button', { name: `Use ${templateName}`, exact: true })
     .click();
   await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
 }

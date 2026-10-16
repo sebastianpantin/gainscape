@@ -67,9 +67,9 @@ export function cycleSummary(page: Page, cycle: number): Locator {
 
 export async function openEnrollForm(page: Page, programName: string): Promise<void> {
   await openFromProfile(page, 'Programs');
-  const follow = powerliftingPrograms(page).getByRole('link', { name: `Follow ${programName}`, exact: true });
-  await expect(follow).toBeVisible();
-  await follow.click();
+  const templateLink = powerliftingPrograms(page).getByRole('link', { name: `Use ${programName}`, exact: true });
+  await expect(templateLink).toBeVisible();
+  await templateLink.click();
   await expect(page.getByRole('heading', { level: 1, name: `Follow ${programName}`, exact: true })).toBeVisible();
 }
 

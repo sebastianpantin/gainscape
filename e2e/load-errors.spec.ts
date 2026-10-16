@@ -140,7 +140,7 @@ test('Programs says it could not load the powerlifting programs, and lists them 
   await expect(powerlifting.getByRole('alert')).toHaveText("Couldn't load the powerlifting programs");
   await page.unroute(restTable('program_templates'));
   await page.reload();
-  await expect(powerlifting.getByRole('link', { name: /^Follow / }).first()).toBeVisible();
+  await expect(powerlifting.getByRole('link', { name: /^Use / }).first()).toBeVisible();
   await expect(powerlifting.getByRole('alert')).toHaveCount(0);
 });
 
