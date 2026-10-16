@@ -237,7 +237,7 @@ function ItemDetail({
       )}
       {shownOnToday !== null && (
         <button className="button" type="button" disabled={shownOnToday} onClick={onShowOnToday}>
-          {shownOnToday ? 'Shown on Today' : 'Show on Today'}
+          {shownOnToday ? 'Shown on Train' : 'Show on Train'}
         </button>
       )}
       {item.gearSlot && quantity >= 1 && equipped !== null && (
@@ -457,7 +457,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           onShowOnToday={() => {
             companionPetStore.save(deviceStorage(), userId, picked.id);
             setChosenPetId(picked.id);
-            showToast(`${picked.name} now follows you on Today`);
+            showToast(`${picked.name} now follows you on the Train tab`);
           }}
           onCraftStarted={() => {
             primeCelebrationAudio(userId);

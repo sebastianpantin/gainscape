@@ -53,7 +53,7 @@ export function TodayView({
             {greetingFor(now.getHours())} ·{' '}
             {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
           </span>
-          <h1 className="title">Today</h1>
+          <h1 className="title">Train</h1>
         </div>
         {standing.status === 'ready' && (
           <LevelStat

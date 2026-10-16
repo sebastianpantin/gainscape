@@ -45,7 +45,7 @@ test('Settings offers to install once the browser allows it and opens the browse
 test('the Train install card waits for a first workout, installs, and stays dismissed', async ({ page }) => {
   await register(page, uniqueUsername('in_tr'));
   await offerInstall(page);
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
   await expect(installCard(page)).toHaveCount(0);
 
   await logBench(page);
@@ -61,11 +61,11 @@ test('the Train install card waits for a first workout, installs, and stays dism
   await expect(installCard(page)).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
   await offerInstall(page);
   await openFromProfile(page, 'Settings');
   await expect(page.getByRole('button', { name: 'Install Gainscape' })).toBeVisible();
   await openTab(page, 'Train');
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
   await expect(installCard(page)).toHaveCount(0);
 });

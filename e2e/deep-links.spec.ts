@@ -127,7 +127,7 @@ test('the Back button on a missing exercise without app history goes to the coll
   await page.getByRole('button', { name: '‹ Back' }).click();
 
   await expect(page).toHaveURL(/\/collection$/);
-  await expect(page.getByRole('heading', { name: 'Collection log' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection: Records', exact: true })).toBeVisible();
 });
 
 test('opening the reveal with no finished workout says there is nothing to show', async ({ page }) => {

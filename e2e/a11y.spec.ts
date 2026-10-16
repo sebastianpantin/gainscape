@@ -221,9 +221,9 @@ test.describe('signed-in screens', () => {
       ['/skills/quests', 'Quests'],
       ['/skills/endurance', 'Endurance'],
       ['/skills/no_such_skill', 'Skill not found'],
-      ['/collection', 'Collection log: Records'],
-      ['/collection/items', 'Collection log: Items'],
-      ['/collection/history', 'Collection log: History'],
+      ['/collection', 'Collection: Records'],
+      ['/collection/items', 'Collection: Items'],
+      ['/collection/history', 'Collection: History'],
       [sessionPath!, null],
       [progressPath!, 'Barbell Bench Press'],
     ]);

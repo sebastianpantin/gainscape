@@ -16,7 +16,7 @@ function goalChoice(page: Page, name: string) {
 
 test('a weekly goal counts workouts on Today and a change waits for next week', async ({ page }) => {
   await register(page, uniqueUsername('goal'));
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
   await expect(weeklyGoalCard(page)).toHaveCount(0);
   await expect(levelNudge(page)).toHaveCount(0);
 

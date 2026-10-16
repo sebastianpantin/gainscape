@@ -163,7 +163,7 @@ test('pinning an exercise that fails says the pins could not be updated, and pin
   await pickExercise(page, 'back squat', 'Back Squat');
 
   await expect(page.getByRole('alert')).toHaveText('Could not update pins.');
-  await expect(page.getByRole('heading', { name: 'Collection log: Records', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Collection: Records', level: 1 })).toBeVisible();
   await expect(page.getByText('Completion', { exact: true })).toBeVisible();
   await page.unroute(restTable('pinned_exercises'));
   await pickExercise(page, 'back squat', 'Back Squat');
@@ -228,7 +228,7 @@ test('History says it could not connect without waiting out retries, and Try aga
 
   await page.goto('/collection/history');
 
-  await expect(page.getByRole('heading', { name: 'Collection log: History', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Collection: History', level: 1 })).toBeVisible();
   await expect(page.getByRole('alert')).toBeVisible();
   await page.unroute(EVERY_TABLE);
   await page.getByRole('button', { name: 'Try again' }).click();
@@ -253,7 +253,7 @@ const SCREENS_THAT_RETRY_A_FAILED_LOAD: {
   { path: '/profile', heading: 'Profile', loaded: (page) => page.getByRole('link', { name: 'Edit profile' }) },
   {
     path: '/collection',
-    heading: 'Collection log: Records',
+    heading: 'Collection: Records',
     loaded: (page) => page.getByRole('navigation', { name: 'Collection' }),
   },
   { path: '/profile/settings', heading: 'Settings', loaded: (page) => page.getByRole('heading', { name: 'Privacy' }) },

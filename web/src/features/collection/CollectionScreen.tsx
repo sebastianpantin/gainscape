@@ -54,7 +54,7 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
         <CollectionTabs />
       </ScreenProblem>
     );
-  if (loaded.status !== 'ready') return <ScreenSkeleton title="Collection log" />;
+  if (loaded.status !== 'ready') return <ScreenSkeleton title="Collection" />;
 
   const { exercises, data } = loaded.data.loaded;
   const savedNotice = cacheFirstNotice(loaded.data, OFFLINE_COLLECTION_NOTICE);
