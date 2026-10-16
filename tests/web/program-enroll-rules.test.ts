@@ -123,6 +123,28 @@ describe('template schedule text', () => {
     };
     expect(templateScheduleText(definition)).toBe('2–3 days a week');
   });
+
+  it('says one day and one workout in the singular and never starts a range at 0', () => {
+    const [first, second] = MADCOW_5X5.schedule.days;
+    const oneDay = { ...MADCOW_5X5, schedule: { kind: 'weekly' as const, days: [first] } };
+    expect(templateScheduleText(oneDay)).toBe('1 day a week');
+    const allOptional = {
+      ...MADCOW_5X5,
+      schedule: {
+        kind: 'weekly' as const,
+        days: [
+          { ...first, optional: true },
+          { ...second, optional: true },
+        ],
+      },
+    };
+    expect(templateScheduleText(allOptional)).toBe('1–2 days a week');
+    const oneWorkout = {
+      ...STRONGLIFTS_5X5,
+      schedule: { ...STRONGLIFTS_5X5.schedule, days: [STRONGLIFTS_5X5.schedule.days[0]] },
+    };
+    expect(templateScheduleText(oneWorkout)).toBe('Rotates through 1 workout');
+  });
 });
 
 describe('template list entries', () => {

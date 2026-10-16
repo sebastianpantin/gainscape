@@ -13,6 +13,7 @@ import {
   roundTo,
   type WeightUnit,
 } from '@domain/index.ts';
+import { formatCount } from '../format.ts';
 import { capitalized } from '../names.ts';
 
 export const UPDATE_APP_TEXT = 'Update the app to use this program';
@@ -209,9 +210,9 @@ export function templateListEntries(rows: readonly ProgramTemplateRow[]): Templa
 
 export function templateScheduleText({ schedule }: ProgramDefinition): string {
   const total = schedule.days.length;
-  if (schedule.kind === 'rotation') return `Rotates through ${total} workouts`;
-  const required = schedule.days.filter((day) => day.optional !== true).length;
-  const days = `${required === total ? total : `${required}–${total}`} days a week`;
+  if (schedule.kind === 'rotation') return `Rotates through ${formatCount(total, 'workout')}`;
+  const required = Math.max(1, schedule.days.filter((day) => day.optional !== true).length);
+  const days = required === total ? `${formatCount(total, 'day')} a week` : `${required}–${total} days a week`;
   return schedule.kind === 'cycle' ? `${days} · ${schedule.weeksPerCycle}-week cycle` : days;
 }
 

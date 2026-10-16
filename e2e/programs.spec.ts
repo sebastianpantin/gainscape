@@ -94,6 +94,6 @@ test('each template says how often you train, and both template lists start with
     .getByRole('region', { name: 'Templates', exact: true })
     .getByRole('listitem')
     .filter({ has: page.getByText('Upper / Lower', { exact: true }) });
-  await expect(upperLower.getByText('2 days a week · Upper · Lower', { exact: true })).toBeVisible();
+  await expect(upperLower.getByText('2 workouts · Upper · Lower', { exact: true })).toBeVisible();
   await expect(upperLower.getByRole('button', { name: 'Use Upper / Lower', exact: true })).toBeVisible();
 });

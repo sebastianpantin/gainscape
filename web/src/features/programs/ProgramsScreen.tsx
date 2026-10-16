@@ -195,7 +195,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
               <span className="stack" style={{ gap: 2 }}>
                 <span>{template.name}</span>
                 <span className="muted">
-                  {formatCount(template.days.length, 'day')} a week · {daySummary(template)}
+                  {formatCount(template.days.length, 'workout')} · {daySummary(template)}
                 </span>
               </span>
               <button className="button" type="button" disabled={busy} onClick={() => copyTemplate(template)}>
