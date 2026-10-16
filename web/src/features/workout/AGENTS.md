@@ -66,7 +66,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - `use-wake-lock.ts` requests the lock again when the browser releases it while the page is visible.
 - `SetMenu` uses `popover="auto"`. A passive capturing `scroll` listener closes it, because the fixed panel would drift. Without popover support (iOS before 17), `../../styles/workout.css` (`@supports not selector(:popover-open)`) hides the button and shows the actions inline.
 - Layout:
-  - Live set rows are a compact grid that must fit a 360 px phone.
+  - Live set rows are a compact grid that must fit a 360 px phone. Below 360 px, reps and Done move to a second line and the effort selector takes the full width, so the weight field stays usable at 320 px (`e2e/a11y.spec.ts`).
   - Controls between sets stay 44 px touch targets (`e2e/a11y.spec.ts`).
   - The effort selector is always the last line of a row, because picking an effort also marks the set done.
   - The `~ and new records are previews` note sits below `.finish-bar`, so it never adds sticky height.

@@ -1,11 +1,13 @@
 .workout-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-3);
 }
 
 .live-xp {
+  margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -154,6 +156,25 @@
     'info info info info'
     'calculator calculator calculator calculator'
     'effort effort effort menu';
+}
+
+@media (max-width: 359px) {
+  .set-row.stepped {
+    grid-template-areas:
+      'number weight weight weight'
+      '. reps reps done'
+      'info info info menu'
+      'effort effort effort effort';
+  }
+
+  .set-row.stepped.calculating {
+    grid-template-areas:
+      'number weight weight weight'
+      '. reps reps done'
+      'info info info menu'
+      'calculator calculator calculator calculator'
+      'effort effort effort effort';
+  }
 }
 
 .set-row.stepped > .set-number {
