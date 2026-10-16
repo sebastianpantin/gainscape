@@ -68,6 +68,37 @@ test(
   },
 );
 
+test('removing a saved set from a workout asks first, and a set added in the edit goes straight away', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('hist_rm'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [
+    { weightKg: 60, reps: 5 },
+    { weightKg: 60, reps: 5 },
+  ]);
+  await finishWorkout(page);
+  await openLatestWorkout(page);
+
+  await expect(setRow(page, 1).getByRole('button', { name: 'Warm-up set 1', exact: true })).toHaveText('Warm-up');
+  await setRow(page, 2).getByRole('button', { name: 'Remove set 2', exact: true }).click();
+  const confirm = page.getByRole('dialog', { name: 'Remove set 2 of Barbell Bench Press?', exact: true });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(setRow(page, 2)).toBeVisible();
+
+  await setRow(page, 2).getByRole('button', { name: 'Remove set 2', exact: true }).click();
+  await confirm.getByRole('button', { name: 'Remove', exact: true }).click();
+  await expect(setRow(page, 2)).toHaveCount(0);
+
+  await page.getByRole('button', { name: '+ Add set' }).click();
+  await expect(setRow(page, 2)).toBeVisible();
+  await setRow(page, 2).getByRole('button', { name: 'Remove set 2', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(setRow(page, 2)).toHaveCount(0);
+});
+
 test('a warm-up set keeps its warm-up cue in the session detail, editable or locked', async ({ page }) => {
   const username = uniqueUsername('hw');
   await register(page, username);

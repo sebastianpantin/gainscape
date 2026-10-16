@@ -26,6 +26,7 @@ import { fetchLatestExerciseList, historyQuery, itemCatalogQuery } from '../../l
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
+import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
@@ -45,6 +46,7 @@ import {
   removalText,
   removedText,
   removeEditSet,
+  removingSetAsksFirst,
   sameKindOfExercise,
   sameSetValues,
   type SessionEdit,
@@ -66,6 +68,12 @@ const NO_ITEMS: readonly CatalogItem[] = [];
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
 
+interface PendingRemoval {
+  exerciseIndex: number;
+  setId: string;
+  title: string;
+}
+
 interface SessionDetailScreenProps {
   userId: string;
 }
@@ -84,6 +92,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const [busy, setBusy] = useState<SessionBusy>(IDLE);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
   const items = useQuery(itemCatalogQuery(userId)).data?.loaded.items ?? NO_ITEMS;
   const controllerRef = useRef<AbortController | null>(null);
   const unsaved = useUnsavedChangesGuard(
@@ -240,6 +249,11 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const editWarning = removalText(dropsAtRisk(edit, loaded.original, activeDrops), items);
   const deleteWarning = removalText(activeDrops, items);
 
+  const askToRemove = (removal: PendingRemoval) => {
+    if (removingSetAsksFirst(loaded.original, removal.setId)) setPendingRemoval(removal);
+    else setEdit(removeEditSet(edit, removal.exerciseIndex, removal.setId));
+  };
+
   const header = <SessionHeader session={session} backTo={HISTORY_PATH} />;
 
   const problemPanel = problem && (
@@ -378,7 +392,13 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                         xpNote={xp.note}
                         unit={unitPref}
                         onChange={(changes) => setEdit(updateBout(edit, exerciseIndex, bout.id, changes))}
-                        onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, bout.id))}
+                        onRemove={() =>
+                          askToRemove({
+                            exerciseIndex,
+                            setId: bout.id,
+                            title: `Remove bout ${boutIndex + 1} of ${exercise.name}?`,
+                          })
+                        }
                       />
                     );
                   })
@@ -396,7 +416,13 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                           xpNote={xp.note}
                           unit={unitPref}
                           onChange={(changes) => setEdit(updateHoldSet(edit, exerciseIndex, set.id, changes))}
-                          onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
+                          onRemove={() =>
+                            askToRemove({
+                              exerciseIndex,
+                              setId: set.id,
+                              title: `Remove set ${setIndex + 1} of ${exercise.name}?`,
+                            })
+                          }
                         />
                       );
                     })
@@ -413,7 +439,13 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                           unit={unitPref}
                           effortMode={effortInputMode}
                           onChange={(changes) => setEdit(updateSet(edit, exerciseIndex, set.id, changes))}
-                          onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
+                          onRemove={() =>
+                            askToRemove({
+                              exerciseIndex,
+                              setId: set.id,
+                              title: `Remove set ${setIndex + 1} of ${exercise.name}?`,
+                            })
+                          }
                         />
                       );
                     })}
@@ -474,6 +506,20 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         >
           Undo my changes
         </button>
+      )}
+      {pendingRemoval && (
+        <ConfirmDialog
+          title={pendingRemoval.title}
+          confirmLabel="Remove"
+          danger
+          onConfirm={() => {
+            setEdit(removeEditSet(edit, pendingRemoval.exerciseIndex, pendingRemoval.setId));
+            setPendingRemoval(null);
+          }}
+          onCancel={() => setPendingRemoval(null)}
+        >
+          <p>It goes when you save. Until then, Undo my changes brings it back.</p>
+        </ConfirmDialog>
       )}
       <section className="danger-zone">
         {confirmingDelete ? (
