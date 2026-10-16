@@ -25,6 +25,7 @@ test('a short run drops no loot and the reveal says so', async ({ page }) => {
   const loot = page.getByRole('region', { name: 'Loot' });
   await expect(loot.getByText('No loot this time', { exact: true })).toBeVisible();
   await expect(loot.getByRole('list', { name: 'Loot drops' })).toHaveCount(0);
+  await expect(loot.getByRole('link', { name: 'See items' })).toHaveCount(0);
   expect(await activeDropsOfLatestSession(username)).toEqual([]);
 });
 

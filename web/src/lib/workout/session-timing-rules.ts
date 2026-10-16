@@ -41,10 +41,14 @@ export function formatSessionDuration(startedAt: string, endedAt: string): strin
   return formatMinutes(Math.round(durationMs / MINUTE_MS));
 }
 
-export function sessionTimingParts({ startedAt, endedAt, sessionRpe }: RememberedTiming): string[] {
+export function sessionTimingParts(
+  { startedAt, endedAt, sessionRpe }: RememberedTiming,
+  { labelDuration = false }: { labelDuration?: boolean } = {},
+): string[] {
   const duration = startedAt && endedAt ? formatSessionDuration(startedAt, endedAt) : null;
+  const shownDuration = duration !== null && labelDuration ? `Duration ${duration}` : duration;
   const rpe = isSessionRpe(sessionRpe) ? `Session RPE ${sessionRpe}` : null;
-  return [duration, rpe].filter((part) => part !== null);
+  return [shownDuration, rpe].filter((part) => part !== null);
 }
 
 export function finishedAtFor(startedAt: string, now: Date): string {

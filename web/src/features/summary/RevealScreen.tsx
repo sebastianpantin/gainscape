@@ -46,6 +46,8 @@ import {
   revealTimeline,
   skipsRevealOnKey,
   unappliedChangesText,
+  gainBarLabel,
+  xpToNextLevelText,
 } from './reveal-rules.ts';
 
 const TOTAL_COUNT_UP_MS = 900;
@@ -129,21 +131,22 @@ function GainBar({ skillName, xpAfter, gain, delaySeconds }: GainBarProps) {
   const startFraction = before.level === after.level ? before.fractionToNextLevel : 0;
   const endFraction = after.fractionToNextLevel;
   return (
-    <div
-      className="meter"
-      role="img"
-      aria-label={`${skillName} ${Math.round(endFraction * 100)}% of the way to level ${after.level + 1}`}
-    >
-      <div className="gain-before" style={{ width: percent(startFraction) }} />
-      <div
-        className="gain-added"
-        style={{
-          left: percent(startFraction),
-          width: percent(endFraction - startFraction),
-          animationDelay: `${delaySeconds}s`,
-        }}
-      />
-    </div>
+    <>
+      <div className="meter" role="img" aria-label={gainBarLabel(skillName, xpAfter)}>
+        <div className="gain-before" style={{ width: percent(startFraction) }} />
+        <div
+          className="gain-added"
+          style={{
+            left: percent(startFraction),
+            width: percent(endFraction - startFraction),
+            animationDelay: `${delaySeconds}s`,
+          }}
+        />
+      </div>
+      <span className="muted tiny" aria-hidden="true">
+        {xpToNextLevelText(xpAfter)}
+      </span>
+    </>
   );
 }
 
@@ -210,9 +213,11 @@ function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
         <h2 ref={heading} tabIndex={-1}>
           Loot
         </h2>
-        <Link className="tiny" to="/collection/items">
-          See items
-        </Link>
+        {hasDrops && (
+          <Link className="tiny" to="/collection/items">
+            See items
+          </Link>
+        )}
       </div>
       {!hasDrops && <p className="muted">No loot this time</p>}
       {hasDrops && !open && (
@@ -338,7 +343,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
     );
   }
 
-  const timingText = sessionTimingParts(summary).join(' · ');
+  const timingText = sessionTimingParts(summary, { labelDuration: true }).join(' · ');
   const unappliedText = unappliedChangesText(summary);
   const unappliedNotice = unappliedText && (
     <p className="notice" role="status">

@@ -1,3 +1,4 @@
+import { levelProgress } from '@domain/index.ts';
 import { FLOAT_TOLERANCE } from '@domain/math.ts';
 import type { PersonalRecordSummary, QuestProgressSummary, SessionSummary } from '@domain/types.ts';
 import type { DraftChallenge } from '../../offline/draft-format.ts';
@@ -277,4 +278,17 @@ export function levelUpCueDelayMs(
 ): number | null {
   if (timeline.levelUpDelayS === null) return null;
   return reducedMotion ? 0 : toMs(timeline.levelUpDelayS) + POP_PEAK_MS;
+}
+
+export function xpToNextLevelText(xp: number): string {
+  const { level, nextLevelXp } = levelProgress(xp);
+  if (nextLevelXp === null) return 'Max level';
+  return `${formatXp(Math.ceil(nextLevelXp - xp))} XP to level ${level + 1}`;
+}
+
+export function gainBarLabel(skillName: string, xp: number): string {
+  const { level, nextLevelXp, fractionToNextLevel } = levelProgress(xp);
+  if (nextLevelXp === null) return `${skillName}: Max level`;
+  const xpToGo = formatXp(Math.ceil(nextLevelXp - xp));
+  return `${skillName}: ${Math.round(fractionToNextLevel * 100)}% of the way to level ${level + 1}, ${xpToGo} XP to go`;
 }

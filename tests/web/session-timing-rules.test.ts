@@ -107,6 +107,18 @@ describe('sessionTimingParts', () => {
   });
 });
 
+describe('sessionTimingParts with a labelled duration', () => {
+  it('names the duration so a bare "<1 min" is not a mystery: "Duration <1 min"', () => {
+    expect(
+      sessionTimingParts({ startedAt: start, endedAt: minutesAfterStart(0), sessionRpe: 8 }, { labelDuration: true }),
+    ).toEqual(['Duration <1 min', 'Session RPE 8']);
+  });
+
+  it('leaves out a missing duration rather than labelling nothing', () => {
+    expect(sessionTimingParts({ sessionRpe: 8 }, { labelDuration: true })).toEqual(['Session RPE 8']);
+  });
+});
+
 describe('finishedAtFor', () => {
   it('finishes a workout now', () => {
     expect(finishedAtFor(start, new Date(minutesAfterStart(75)))).toBe(minutesAfterStart(75));
