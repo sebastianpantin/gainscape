@@ -48,11 +48,11 @@ test('the newest pet follows you on Today until you pick another one', async ({ 
   await openItems(page);
   await page.getByRole('main').getByRole('button', { name: 'Spotter Pup', exact: true }).click();
   const details = page.getByRole('region', { name: 'Item details' });
-  await details.getByRole('button', { name: 'Show on Today' }).click();
+  await details.getByRole('button', { name: 'Show on Train' }).click();
   await expect(
-    page.getByRole('status').getByText('Spotter Pup now follows you on Today', { exact: true }),
+    page.getByRole('status').getByText('Spotter Pup now follows you on the Train tab', { exact: true }),
   ).toBeVisible();
-  await expect(details.getByRole('button', { name: 'Shown on Today' })).toBeDisabled();
+  await expect(details.getByRole('button', { name: 'Shown on Train' })).toBeDisabled();
 
   await openTab(page, 'Train');
   await expect(companion(page, 'Spotter Pup')).toBeVisible();

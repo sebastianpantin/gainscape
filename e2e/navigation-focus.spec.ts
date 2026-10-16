@@ -13,7 +13,7 @@ test('opening a tab from the keyboard names the page and focuses the screen head
 
   await page.goBack();
   await expect(page).toHaveTitle('Train · Gainscape');
-  await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+  await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeFocused();
 });
 
 test('a deep link names the page without moving focus', async ({ page }) => {
@@ -44,12 +44,27 @@ test('opening a screen from a scrolled page starts it at the top', async ({ page
 test('each Collection tab focuses a heading that names the tab', async ({ page }) => {
   await register(page, uniqueUsername('nav_tabs'));
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Collection', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Collection log: Records', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection: Records', exact: true })).toBeFocused();
 
   const collectionTabs = page.getByRole('navigation', { name: 'Collection' });
   await collectionTabs.getByRole('link', { name: 'Items' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Collection log: Items', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection: Items', exact: true })).toBeFocused();
 
   await collectionTabs.getByRole('link', { name: 'History' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Collection log: History', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection: History', exact: true })).toBeFocused();
+});
+
+test('the first Tab on a screen lands in its content, and the tab bar comes after it', async ({ page }) => {
+  await register(page, uniqueUsername('nav_order'));
+  await page.goto('/profile/settings');
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+
+  await page.keyboard.press('Tab');
+
+  await expect(page.getByRole('main').locator(':focus')).toHaveCount(1);
+  const tabBarFollowsContent = await page.getByRole('navigation', { name: 'Main' }).evaluate((tabBar) => {
+    const main = document.querySelector('main');
+    return main !== null && (main.compareDocumentPosition(tabBar) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  });
+  expect(tabBarFollowsContent).toBe(true);
 });

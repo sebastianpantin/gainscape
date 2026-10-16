@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
@@ -11,21 +12,11 @@ import { startQuest } from '../../lib/quests/quests.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_QUESTS_NOTICE } from '../../offline/quests-cache.ts';
+import { BackToSkills } from '../skills/BackToSkills.tsx';
 import { QuestCard } from './QuestCard.tsx';
 
 interface QuestsScreenProps {
   userId: string;
-}
-
-function ScreenProblem({ problem }: { problem: string }) {
-  return (
-    <main className="screen stack">
-      <h1 className="title">Quests</h1>
-      <p className="problem" role="alert">
-        {problem}
-      </p>
-    </main>
-  );
 }
 
 export function QuestsScreen({ userId }: QuestsScreenProps) {
@@ -37,8 +28,11 @@ export function QuestsScreen({ userId }: QuestsScreenProps) {
   const { showToast } = useToast();
 
   const loaded = loadedState(quests.data, quests.error);
-  if (loaded.status === 'failed') return <ScreenProblem problem={loaded.problem} />;
-  if (standing.status === 'failed') return <ScreenProblem problem={standing.problem} />;
+  const retry = () => Promise.all([quests.refetch(), standing.status === 'failed' && standing.retry()]);
+  const heading = <h1 className="title">Quests</h1>;
+  if (loaded.status === 'failed') return <ScreenProblem heading={heading} problem={loaded.problem} onRetry={retry} />;
+  if (standing.status === 'failed')
+    return <ScreenProblem heading={heading} problem={standing.problem} onRetry={retry} />;
   if (loaded.status === 'loading' || standing.status === 'loading') return <ScreenSkeleton title="Quests" />;
 
   const log = loaded.data.loaded;
@@ -64,6 +58,7 @@ export function QuestsScreen({ userId }: QuestsScreenProps) {
 
   return (
     <main className="screen stack">
+      <BackToSkills />
       <h1 className="title">Quests</h1>
       {notice && (
         <p className="notice" role="status">

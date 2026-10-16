@@ -15,12 +15,29 @@ for (const failingRpc of ['list_friends', 'get_feed']) {
     await expect(page.getByLabel('Add a friend by exact username')).toHaveCount(0);
 
     await page.unroute(rpc(failingRpc));
-    await page.getByRole('button', { name: 'Retry' }).click();
+    await page.getByRole('button', { name: 'Try again' }).click();
     await expect(page.getByLabel('Add a friend by exact username')).toBeVisible();
     await expect(page.getByText('No posts yet. Add friends, or log a personal record (PR).')).toBeVisible();
     await expect(friendsAlert(page)).toHaveCount(0);
   });
 }
+
+test('the friends screen says it is offline when it cannot load without a connection', async ({ context, page }) => {
+  await register(page, uniqueUsername('ff_off'));
+  await failRequests(page, rpc('list_friends'));
+  await openTab(page, 'Friends');
+  await expect(friendsAlert(page)).toHaveText(GENERIC_PROBLEM);
+
+  await context.setOffline(true);
+  await expect(friendsAlert(page)).toHaveText('Offline: connect to load this screen.');
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+
+  await context.setOffline(false);
+  await page.unroute(rpc('list_friends'));
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByLabel('Add a friend by exact username')).toBeVisible();
+  await expect(friendsAlert(page)).toHaveCount(0);
+});
 
 test('the friend preview shows a retryable problem when the profile view fails', async ({ page }) => {
   const username = uniqueUsername('fp');
@@ -32,7 +49,7 @@ test('the friend preview shows a retryable problem when the profile view fails',
   await expect(friendsAlert(page)).toHaveText(GENERIC_PROBLEM);
 
   await page.unroute(rpc('get_profile'));
-  await page.getByRole('button', { name: 'Retry' }).click();
+  await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('heading', { level: 2, name: username, exact: true })).toBeVisible();
   await expect(friendsAlert(page)).toHaveCount(0);
 });

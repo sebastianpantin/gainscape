@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import {
   definitionOf,
@@ -15,15 +15,18 @@ import {
 } from './support/app.ts';
 import { accountRowCount, sessionCount } from './support/db.ts';
 
-const UNSYNCED_WARNING = 'You have a workout that has not synced yet. It will be lost. Delete anyway?';
+const UNSYNCED_WARNING = 'You have a workout that has not synced yet. It will be lost.';
 
-function answerNextDialog(page: Page, answer: 'accept' | 'dismiss'): string[] {
-  const messages: string[] = [];
-  page.once('dialog', (dialog) => {
-    messages.push(dialog.message());
-    void (answer === 'accept' ? dialog.accept() : dialog.dismiss());
-  });
-  return messages;
+function unsyncedWarning(page: Page, title: string): Locator {
+  return page.getByRole('dialog', { name: title, exact: true });
+}
+
+async function startUnsyncedWorkout(page: Page) {
+  const { user } = await readSession(page);
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+  await expect.poll(async () => (await readStoredDraft(page, user.id))?.kind).toBe('draft');
+  return user;
 }
 
 async function fillDeleteForm(page: Page, username: string) {
@@ -35,27 +38,66 @@ async function fillDeleteForm(page: Page, username: string) {
 test('deleting the account warns about an unsynced workout and only deletes once confirmed', async ({ page }) => {
   const username = uniqueUsername('st_del');
   await register(page, username);
-  const { user } = await readSession(page);
-  await page.getByRole('button', { name: 'Start workout' }).click();
-  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
-  await expect.poll(async () => (await readStoredDraft(page, user.id))?.kind).toBe('draft');
+  const user = await startUnsyncedWorkout(page);
 
   await openFromProfile(page, 'Settings');
   await fillDeleteForm(page, username);
-  const dismissed = answerNextDialog(page, 'dismiss');
   await page.getByRole('button', { name: 'Delete forever' }).click();
-  await expect.poll(() => dismissed).toEqual([UNSYNCED_WARNING]);
+  const warning = unsyncedWarning(page, 'Delete anyway?');
+  await expect(warning).toContainText(UNSYNCED_WARNING);
+  await warning.getByRole('button', { name: 'Cancel' }).click();
+  await expect(warning).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Delete forever' })).toBeEnabled();
   expect(await accountRowCount(username)).toBe(1);
   expect((await readStoredDraft(page, user.id))?.kind).toBe('draft');
 
-  const accepted = answerNextDialog(page, 'accept');
   await page.getByRole('button', { name: 'Delete forever' }).click();
+  await warning.getByRole('button', { name: 'Delete anyway' }).click();
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
-  expect(accepted).toEqual([UNSYNCED_WARNING]);
   await expect.poll(() => accountRowCount(username)).toBe(0);
   expect(await readStoredDraft(page, user.id)).toMatchObject({ kind: 'synced', tombstone: 'forgotten' });
   await expect(page.getByText('Your unsynced workout is saved on this device.')).toHaveCount(0);
+});
+
+test('resetting with an unsynced workout asks in a dialog and keeps everything when cancelled', async ({ page }) => {
+  const username = uniqueUsername('st_rsd');
+  await register(page, username);
+  const user = await startUnsyncedWorkout(page);
+
+  await openFromProfile(page, 'Settings');
+  await page.getByRole('button', { name: 'Reset all data' }).click();
+  await page.getByLabel('Type RESET to confirm').fill('RESET');
+  await page.getByRole('button', { name: 'Reset everything' }).click();
+  const warning = unsyncedWarning(page, 'Reset anyway?');
+  await expect(warning).toContainText(UNSYNCED_WARNING);
+  await warning.getByRole('button', { name: 'Cancel' }).click();
+  await expect(warning).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Reset everything' })).toBeEnabled();
+  expect((await readStoredDraft(page, user.id))?.kind).toBe('draft');
+
+  await page.getByRole('button', { name: 'Reset everything' }).click();
+  await warning.getByRole('button', { name: 'Reset anyway' }).click();
+  await expect(
+    page.getByRole('status').getByText('Your data was reset. You start again from level 1.', { exact: true }),
+  ).toBeVisible();
+});
+
+test('signing out with an unsynced workout asks in a dialog first', async ({ page }) => {
+  const username = uniqueUsername('st_so');
+  await register(page, username);
+  await startUnsyncedWorkout(page);
+
+  await openFromProfile(page, 'Settings');
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  const warning = unsyncedWarning(page, 'Sign out?');
+  await expect(warning).toContainText('Your workout stays on this device.');
+  await warning.getByRole('button', { name: 'Cancel' }).click();
+  await expect(warning).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await warning.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
 });
 
 async function openHistory(page: Page) {
@@ -76,11 +118,16 @@ test('resetting all data needs RESET typed, wipes the workouts and keeps the acc
   await confirm.fill('reset');
   await expect(page.getByRole('button', { name: 'Reset everything' })).toBeDisabled();
   await confirm.fill('RESET');
-  await page.getByRole('button', { name: 'Reset everything' }).click();
+  const resetRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/rpc/reset_account_data')) resetRequests.push(request.url());
+  });
+  await page.getByRole('button', { name: 'Reset everything' }).dblclick();
 
   await expect(
     page.getByRole('status').getByText('Your data was reset. You start again from level 1.', { exact: true }),
   ).toBeVisible();
+  expect(resetRequests).toHaveLength(1);
   await expect(page.getByLabel('Type RESET to confirm')).toHaveCount(0);
   expect(await sessionCount(username)).toBe(0);
   expect(await accountRowCount(username)).toBe(1);

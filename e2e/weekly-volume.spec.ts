@@ -7,15 +7,14 @@ test('the Body page counts this week’s sets per muscle and lists the exercises
   await openBody(page);
 
   const volume = page.getByRole('region', { name: 'Sets this week' });
-  const chest = volume.getByRole('button', { name: 'Chest 0.7 sets this week · below target', exact: true });
+  const chest = volume.getByRole('button', { name: 'Chest 0.7 of 10 sets this week', exact: true });
   await expect(chest).toHaveAttribute('aria-expanded', 'false');
   await expect(chest).toContainText('Chest');
-  await expect(chest).toContainText('0.7 sets');
+  await expect(chest).toContainText('0.7 of 10 sets');
+  await expect(volume).not.toContainText('below target');
   await expect(volume.getByRole('list', { name: 'Exercises counted for Chest', exact: true })).toBeHidden();
-  await expect(
-    volume.getByRole('button', { name: 'Shoulders 0.2 sets this week · below target', exact: true }),
-  ).toBeVisible();
-  await expect(volume.getByRole('button', { name: 'Legs 0 sets this week · below target', exact: true })).toBeVisible();
+  await expect(volume.getByRole('button', { name: 'Shoulders 0.2 of 10 sets this week', exact: true })).toBeVisible();
+  await expect(volume.getByRole('button', { name: 'Legs 0 of 10 sets this week', exact: true })).toBeVisible();
 
   await chest.click();
   await expect(chest).toHaveAttribute('aria-expanded', 'true');

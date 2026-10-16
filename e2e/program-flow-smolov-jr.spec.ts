@@ -9,7 +9,6 @@ import {
   openEnrollForm,
   openProgramToday,
   prescribedRows,
-  repeated,
   startFollowing,
 } from './support/program-enrollment.ts';
 import {
@@ -97,9 +96,9 @@ async function expectWeekDays(today: Locator, label: string, loadsKg: WeekLoads)
     await expect(
       today.getByRole('button', { name: `Start: ${SMOLOV_JR} — ${label} ${day.name}`, exact: true }),
     ).toBeVisible();
-    await expect(prescribedRows(today, 'Back Squat')).toHaveText(
-      repeated(`${loadsKg[dayIndex]} kg × ${day.reps} · ${day.pctLabel}`, day.sets),
-    );
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText([
+      `${day.sets} × ${day.reps} @ ${loadsKg[dayIndex]} kg · ${day.pctLabel}`,
+    ]);
   }
 }
 

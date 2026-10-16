@@ -49,11 +49,11 @@ export async function fieldValues(fields: Locator): Promise<string[]> {
 }
 
 export async function weightsIn(card: Locator): Promise<string[]> {
-  return fieldValues(card.getByRole('spinbutton', { name: 'kg', exact: true }));
+  return fieldValues(card.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }));
 }
 
 export async function repsIn(card: Locator): Promise<string[]> {
-  return fieldValues(card.getByRole('spinbutton', { name: 'reps', exact: true }));
+  return fieldValues(card.getByRole('spinbutton', { name: /^Reps, set \d+$/ }));
 }
 
 export async function openManageProgram(page: Page, programName: string): Promise<void> {
@@ -67,9 +67,9 @@ export function cycleSummary(page: Page, cycle: number): Locator {
 
 export async function openEnrollForm(page: Page, programName: string): Promise<void> {
   await openFromProfile(page, 'Programs');
-  const follow = powerliftingPrograms(page).getByRole('link', { name: `Follow ${programName}`, exact: true });
-  await expect(follow).toBeVisible();
-  await follow.click();
+  const templateLink = powerliftingPrograms(page).getByRole('link', { name: `Use ${programName}`, exact: true });
+  await expect(templateLink).toBeVisible();
+  await templateLink.click();
   await expect(page.getByRole('heading', { level: 1, name: `Follow ${programName}`, exact: true })).toBeVisible();
 }
 
@@ -103,7 +103,14 @@ export async function markEverySetDone(page: Page): Promise<void> {
   }
 }
 
+export async function openExerciseChoices(page: Page): Promise<void> {
+  const choices = page.getByText('Change exercises', { exact: true });
+  const disclosure = page.locator('details').filter({ has: choices });
+  if (!(await disclosure.evaluate((details) => (details as HTMLDetailsElement).open))) await choices.click();
+}
+
 export async function bindExercise(page: Page, liftName: string, exerciseName: string): Promise<void> {
+  await openExerciseChoices(page);
   await page.getByLabel(`${liftName} exercise`, { exact: true }).selectOption({ label: exerciseName });
 }
 

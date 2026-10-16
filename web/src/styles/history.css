@@ -52,6 +52,17 @@
   color: var(--color-text-muted);
 }
 
+.history-set-row .warmup-toggle {
+  font-size: var(--font-size-xs);
+  line-height: 1.1;
+  white-space: normal;
+  color: var(--color-text-muted);
+}
+
+.history-set-row .warmup-toggle.selected {
+  color: var(--color-ink);
+}
+
 .exercise-note {
   gap: var(--space-1);
   align-items: flex-start;

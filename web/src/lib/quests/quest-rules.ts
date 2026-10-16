@@ -9,7 +9,7 @@ import {
 } from '@domain/quests.ts';
 import { kgToUnit, type WeightUnit } from '@domain/units.ts';
 import { challengeSummaryText } from '../collection/challenge-rules.ts';
-import { formatXp } from '../format.ts';
+import { formatCount, formatXp } from '../format.ts';
 import { z } from 'zod';
 import { numericColumn } from '../rows.ts';
 import type { InvokeOutcome } from '../platform/function-client-rules.ts';
@@ -156,12 +156,8 @@ export function questExerciseIds(quests: readonly QuestDefinition[]): string[] {
   return [...new Set(quests.flatMap((quest) => quest.steps.flatMap(stepExerciseIds)))];
 }
 
-function plural(count: number, noun: string): string {
-  return `${formatXp(count)} ${noun}${count === 1 ? '' : 's'}`;
-}
-
 export function questPointsText(points: number): string {
-  return plural(points, 'quest point');
+  return formatCount(points, 'quest point');
 }
 
 function shownWeight(kg: number, unit: WeightUnit): number {
@@ -185,7 +181,7 @@ export function questStepText(step: QuestStep, nameOf: (exerciseId: string) => s
     }
     case 'sessions': {
       const name = exercise(step.exerciseId);
-      const workouts = plural(step.target, 'workout');
+      const workouts = formatCount(step.target, 'workout');
       return name === null ? `Finish ${workouts}` : `Train ${name} in ${workouts}`;
     }
   }
@@ -194,7 +190,8 @@ export function questStepText(step: QuestStep, nameOf: (exerciseId: string) => s
 export function questStepProgress(step: QuestStep, progress: number, unit: WeightUnit): StepProgress | null {
   if (step.kind === 'workout' || step.kind === 'record') return null;
   const fraction = Math.min(1, Math.max(0, progress / step.target));
-  if (step.kind === 'sessions') return { text: `${formatXp(progress)} / ${plural(step.target, 'workout')}`, fraction };
+  if (step.kind === 'sessions')
+    return { text: `${formatXp(progress)} / ${formatCount(step.target, 'workout')}`, fraction };
   if (step.metric === 'reps') {
     return { text: `${formatXp(Math.floor(progress))} / ${formatXp(step.target)} reps`, fraction };
   }

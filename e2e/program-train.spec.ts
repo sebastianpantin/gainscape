@@ -51,13 +51,13 @@ test('a Madcow W1 Day 1 draft shows each squat set with its percentage and the p
 test('changing a prescribed weight marks the set adjusted and updates its plates', async ({ page }) => {
   const squat = await startMadcowMonday(page);
   const top = setRow(squat, 5);
-  await top.getByRole('spinbutton', { name: 'kg', exact: true }).fill('100');
+  await top.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('100');
   await expect(marker(top, 'adjusted')).toBeVisible();
   await expect(marker(top, '25 + 15 kg each side')).toBeVisible();
   await expect(marker(top, '100%')).toBeVisible();
   await expect(marker(setRow(squat, 4), 'adjusted')).toHaveCount(0);
 
-  await top.getByRole('spinbutton', { name: 'kg', exact: true }).fill('92.5');
+  await top.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('92.5');
   await expect(marker(top, 'adjusted')).toHaveCount(0);
   await expect(marker(top, '25 + 10 + 1.25 kg each side')).toBeVisible();
 });

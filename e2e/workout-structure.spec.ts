@@ -9,9 +9,7 @@ const DEADLIFT = 'Deadlift';
 
 async function addUnloggedExercise(page: Page, search: string, exerciseName: string) {
   const card = await addExercise(page, search, exerciseName);
-  const doneButton = card.getByRole('button', { name: 'Done set 1' });
-  await doneButton.click();
-  await expect(doneButton).toHaveAttribute('aria-pressed', 'false');
+  await expect(card.getByRole('button', { name: 'Done set 1' })).toHaveAttribute('aria-pressed', 'false');
 }
 
 function swapPicker(page: Page) {
@@ -27,7 +25,7 @@ test('the swap picker stays with its exercise when an exercise above it is remov
 
   await chooseFromMenu(page, ROW, 'Swap');
   await expect(exerciseCard(page, ROW).getByPlaceholder('Swap for…')).toBeVisible();
-  await chooseFromMenu(page, BENCH, 'Remove');
+  await chooseFromMenu(page, BENCH, 'Remove exercise');
   await expect(page.getByRole('heading', { name: BENCH, exact: true })).toHaveCount(0);
   await expect(swapPicker(page)).toHaveCount(1);
   await expect(exerciseCard(page, ROW).getByPlaceholder('Swap for…')).toBeVisible();
@@ -43,19 +41,42 @@ test('the swap picker stays on the second of two identical exercises when the fi
   await addUnloggedExercise(page, 'bench', BENCH);
   const benchCards = await addExercise(page, 'bench', BENCH);
   await expect(benchCards).toHaveCount(2);
-  const secondDone = benchCards.nth(1).getByRole('button', { name: 'Done set 1' });
-  await secondDone.click();
-  await expect(secondDone).toHaveAttribute('aria-pressed', 'false');
+  await expect(benchCards.nth(1).getByRole('button', { name: 'Done set 1' })).toHaveAttribute('aria-pressed', 'false');
 
   const benchMenus = page.getByLabel(`Exercise menu for ${BENCH}`, { exact: true });
   await benchMenus.nth(1).click();
   await page.getByRole('button', { name: 'Swap', exact: true }).click();
   await expect(benchCards.nth(1).getByPlaceholder('Swap for…')).toBeVisible();
   await benchMenus.nth(0).click();
-  await page.getByRole('button', { name: 'Remove', exact: true }).click();
+  await page.getByRole('button', { name: 'Remove exercise', exact: true }).click();
 
   await expect(benchCards).toHaveCount(1);
   await expect(benchCards.getByPlaceholder('Swap for…')).toBeVisible();
+});
+
+test('removing an exercise with a logged set asks first, and one with nothing logged goes straight away', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('remove_ask'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const bench = await addExercise(page, 'bench', BENCH);
+  await addUnloggedExercise(page, 'barbell row', ROW);
+  await bench.getByRole('button', { name: 'Done set 1' }).click();
+
+  await chooseFromMenu(page, BENCH, 'Remove exercise');
+  const dialog = page.getByRole('dialog', { name: `Remove ${BENCH}?` });
+  await expect(dialog).toContainText('Its sets will be lost.');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: BENCH, exact: true })).toBeVisible();
+
+  await chooseFromMenu(page, BENCH, 'Remove exercise');
+  await dialog.getByRole('button', { name: 'Remove exercise' }).click();
+  await expect(page.getByRole('heading', { name: BENCH, exact: true })).toHaveCount(0);
+
+  await chooseFromMenu(page, ROW, 'Remove exercise');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: ROW, exact: true })).toHaveCount(0);
 });
 
 test('discard an ongoing workout behind a confirm, and start the next one fresh', async ({ page }) => {
@@ -99,4 +120,60 @@ test('the swap picker suggests similar exercises until the user types, and a sug
 
   await similar.getByRole('button', { name: /^Box Squat\b/ }).click();
   await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(['Box Squat']);
+});
+
+test('an empty workout says why Finish is off and asks for session RPE only once it has an exercise', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('empty'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const finish = page.getByRole('button', { name: 'Finish workout' });
+  const sessionRpe = page.getByRole('combobox', { name: 'Session RPE (optional)' });
+  await expect(finish).toBeDisabled();
+  await expect(finish).toHaveAccessibleDescription('Add an exercise to finish.');
+  await expect(sessionRpe).toHaveCount(0);
+
+  await addUnloggedExercise(page, 'bench', BENCH);
+  await expect(finish).toBeEnabled();
+  await expect(page.getByText('Add an exercise to finish.')).toHaveCount(0);
+  await expect(sessionRpe).toBeVisible();
+});
+
+test('the exercise menu closes on Escape and on a tap outside it', async ({ page }) => {
+  await register(page, uniqueUsername('menu'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await addUnloggedExercise(page, 'bench', BENCH);
+  const menu = page.getByLabel(`Exercise menu for ${BENCH}`, { exact: true });
+  const swap = page.getByRole('button', { name: 'Swap', exact: true });
+
+  await menu.click();
+  await expect(swap).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(swap).toBeHidden();
+  await expect(menu).toBeFocused();
+
+  await menu.click();
+  await expect(swap).toBeVisible();
+  await page.getByRole('heading', { level: 1 }).click();
+  await expect(swap).toBeHidden();
+});
+
+test('the exercise picker lists names left-aligned above their details and says when nothing matches', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('pick'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const search = page.getByLabel('Search exercises');
+
+  await search.fill('bench');
+  const bench = page.getByRole('button', { name: new RegExp(`^${BENCH}\\b`) });
+  const benchBox = (await bench.boundingBox())!;
+  const nameBox = (await bench.getByText(BENCH, { exact: true }).boundingBox())!;
+  expect(nameBox.x - benchBox.x).toBeLessThan(24);
+  expect(nameBox.y - benchBox.y).toBeLessThan(benchBox.height / 2);
+
+  await search.fill('zzqx');
+  await expect(page.getByRole('status').filter({ hasText: 'No exercises match "zzqx".' })).toBeVisible();
+  await search.fill('');
+  await expect(page.getByText('No exercises match', { exact: false })).toHaveCount(0);
 });

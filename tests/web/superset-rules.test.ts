@@ -247,7 +247,7 @@ describe('addRound', () => {
     expect(a.sets).toHaveLength(3);
     expect(b.sets).toHaveLength(3);
     expect(c.sets).toHaveLength(1);
-    expect(a.sets[2]).toMatchObject({ weightKg: 60, reps: 8, effort: null, isWarmup: false });
+    expect(a.sets[2]).toMatchObject({ weightKg: 60, reps: 8, effort: null, done: false, isWarmup: false });
     expect(a.sets[2].id).not.toBe(b.sets[2].id);
   });
 

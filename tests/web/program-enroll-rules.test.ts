@@ -6,8 +6,10 @@ import {
   bindingSelectLifts,
   defaultBindings,
   type EnrollForm,
+  enrollFieldProblems,
   enrollPayload,
   initialEnrollForm,
+  startingWeightHint,
   inputFields,
   isCustomTemplate,
   optionControls,
@@ -15,6 +17,7 @@ import {
   referencePreview,
   templateEntry,
   templateListEntries,
+  templateScheduleText,
   withOption,
   withUnit,
 } from '../../web/src/lib/programs/program-enroll-rules.ts';
@@ -28,8 +31,10 @@ import {
   SQUAT_LIFT,
 } from './custom-program-fixture.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
+import { GZCLP } from '../domain/program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
+import { STRONGLIFTS_5X5 } from '../domain/program-fixtures/stronglifts_5x5.ts';
 import { TEXAS_METHOD } from '../domain/program-fixtures/texas_method.ts';
 
 function catalogExercise(key: string, name: string, archived = false): BindableExercise {
@@ -91,6 +96,56 @@ function fiveThreeOneForm(unit: WeightUnit, oneRms: Record<string, string>): Enr
 }
 
 const FIVE_THREE_ONE_ONE_RMS_LB = { squat: '315', bench: '225', deadlift: '405', press: '135' };
+
+describe('template schedule text', () => {
+  it('reads a weekly program by its days: Madcow 5x5 is 3 days a week', () => {
+    expect(templateScheduleText(MADCOW_5X5)).toBe('3 days a week');
+  });
+
+  it('adds the cycle length to a cycle program: 5/3/1 is 4 days a week in a 4-week cycle', () => {
+    expect(templateScheduleText(FIVE_THREE_ONE)).toBe('4 days a week · 4-week cycle');
+  });
+
+  it('reads a 16-week Juggernaut cycle', () => {
+    expect(templateScheduleText(JUGGERNAUT_2)).toBe('4 days a week · 16-week cycle');
+  });
+
+  it('reads a rotation by its workouts, since it has no fixed week: StrongLifts alternates 2 workouts', () => {
+    expect(templateScheduleText(STRONGLIFTS_5X5)).toBe('Rotates through 2 workouts');
+    expect(templateScheduleText(GZCLP)).toBe('Rotates through 4 workouts');
+  });
+
+  it('gives a range when some days are optional: 2–3 days a week', () => {
+    const [first, second, third] = MADCOW_5X5.schedule.days;
+    const definition = {
+      ...MADCOW_5X5,
+      schedule: { kind: 'weekly' as const, days: [first, second, { ...third, optional: true }] },
+    };
+    expect(templateScheduleText(definition)).toBe('2–3 days a week');
+  });
+
+  it('says one day and one workout in the singular and never starts a range at 0', () => {
+    const [first, second] = MADCOW_5X5.schedule.days;
+    const oneDay = { ...MADCOW_5X5, schedule: { kind: 'weekly' as const, days: [first] } };
+    expect(templateScheduleText(oneDay)).toBe('1 day a week');
+    const allOptional = {
+      ...MADCOW_5X5,
+      schedule: {
+        kind: 'weekly' as const,
+        days: [
+          { ...first, optional: true },
+          { ...second, optional: true },
+        ],
+      },
+    };
+    expect(templateScheduleText(allOptional)).toBe('1–2 days a week');
+    const oneWorkout = {
+      ...STRONGLIFTS_5X5,
+      schedule: { ...STRONGLIFTS_5X5.schedule, days: [STRONGLIFTS_5X5.schedule.days[0]] },
+    };
+    expect(templateScheduleText(oneWorkout)).toBe('Rotates through 1 workout');
+  });
+});
 
 describe('template list entries', () => {
   it('lists a template the app understands as enrollable with its parsed definition', () => {
@@ -771,5 +826,57 @@ describe('a template compiled from your own program', () => {
       inputs: { [SQUAT_LIFT]: { workingWeight: 100 } },
     });
     expect(validateEnrollment(CUSTOM_FIVE_BY_FIVE, { id: 'new', ...result.payload })).toEqual([]);
+  });
+});
+
+describe('problems next to the field they belong to', () => {
+  it('names each starting weight field that needs fixing, in form order', () => {
+    expect(enrollFieldProblems(MADCOW_5X5, madcowForm('kg', ['', '80', '70', '50', '1001']))).toEqual([
+      { field: 'input:squat', text: 'Enter Squat 5RM (kg)' },
+      { field: 'input:deadlift', text: 'Deadlift 5RM (kg) must be above 0 and at most 1000' },
+    ]);
+  });
+
+  it('ties a rounding increment that is not offered to the increment field, and a 0 kg bar to the bar field', () => {
+    const form = { ...madcowForm('kg'), roundingText: { increment: '3', barWeight: '0' } };
+    expect(enrollFieldProblems(MADCOW_5X5, form).map((problem) => problem.field)).toEqual(['increment', 'barWeight']);
+  });
+
+  it('ties an lb-only option kept on a kg form to that option', () => {
+    const form = initialEnrollForm(JUGGERNAUT_2, 'kg', CATALOG);
+    const filled = {
+      ...form,
+      inputValues: { squat: '180', bench: '100', deadlift: '200', press: '60' },
+      options: { ...form.options, perRep: 'fine' },
+    };
+    expect(enrollFieldProblems(JUGGERNAUT_2, filled)).toEqual([
+      { field: 'option:perRep', text: expect.stringMatching(/fine.*lb/) },
+    ]);
+  });
+
+  it('finds nothing to fix in a filled-in form, and enrollPayload lists the same texts', () => {
+    expect(enrollFieldProblems(MADCOW_5X5, madcowForm('kg'))).toEqual([]);
+    const broken = madcowForm('kg', ['', '80', '70', '50', '1001']);
+    expect(enrollPayload(MADCOW_5X5, broken)).toEqual({
+      kind: 'invalid',
+      problems: enrollFieldProblems(MADCOW_5X5, broken).map((problem) => problem.text),
+    });
+  });
+});
+
+describe('starting weight hint', () => {
+  it('suggests the empty bar in the form unit when the program asks for working weights: 20 kg', () => {
+    const form = initialEnrollForm(GZCLP, 'kg', CATALOG);
+    expect(startingWeightHint(inputFields(GZCLP, form), form)).toBe('New to a lift? Start with the empty bar: 20 kg.');
+  });
+
+  it('follows the bar weight typed in pounds: 45 lb', () => {
+    const form = initialEnrollForm(GZCLP, 'lb', CATALOG);
+    expect(startingWeightHint(inputFields(GZCLP, form), form)).toBe('New to a lift? Start with the empty bar: 45 lb.');
+  });
+
+  it('gives no bar hint for a max the lifter has to know, such as a Madcow 5RM', () => {
+    const form = madcowForm('kg');
+    expect(startingWeightHint(inputFields(MADCOW_5X5, form), form)).toBeNull();
   });
 });

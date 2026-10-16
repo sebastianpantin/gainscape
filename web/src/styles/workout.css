@@ -1,11 +1,13 @@
 .workout-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-3);
 }
 
 .live-xp {
+  margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -154,6 +156,25 @@
     'info info info info'
     'calculator calculator calculator calculator'
     'effort effort effort menu';
+}
+
+@media (max-width: 359px) {
+  .set-row.stepped {
+    grid-template-areas:
+      'number weight weight weight'
+      '. reps reps done'
+      'info info info menu'
+      'effort effort effort effort';
+  }
+
+  .set-row.stepped.calculating {
+    grid-template-areas:
+      'number weight weight weight'
+      '. reps reps done'
+      'info info info menu'
+      'calculator calculator calculator calculator'
+      'effort effort effort effort';
+  }
 }
 
 .set-row.stepped > .set-number {
@@ -654,28 +675,10 @@
   grid-area: effort;
 }
 
-.effort-selector {
-  container-type: inline-size;
-}
-
 .set-row .effort-option {
-  padding: 0;
+  padding: 0 var(--space-0-5);
   letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-
-.effort-short {
-  display: none;
-}
-
-@container (max-width: 319px) {
-  .effort-full {
-    display: none;
-  }
-
-  .effort-short {
-    display: inline;
-  }
+  line-height: 1.1;
 }
 
 .effort-selector,
@@ -723,6 +726,31 @@
   border-bottom: var(--border-width) solid var(--color-outline);
   text-align: center;
   z-index: 5;
+}
+
+.finish-bar:has(> .rest-timer) {
+  flex-flow: row wrap;
+  align-items: center;
+  padding-block: var(--space-2);
+}
+
+.finish-bar:has(> .rest-timer) > * {
+  flex: 1 1 100%;
+}
+
+.finish-bar:has(> .rest-timer) > .rest-timer {
+  position: static;
+  flex: 1 1 15rem;
+}
+
+.finish-bar:has(> .rest-timer) .rest-progress {
+  inset: 0 0 auto;
+}
+
+.finish-bar:has(> .rest-timer) > .button.big {
+  flex: 1 1 7rem;
+  min-height: var(--tap-target);
+  font-size: var(--font-size-md);
 }
 
 .finish-bar:focus {
@@ -829,6 +857,17 @@
 
 .search-field input {
   padding-left: 38px;
+}
+
+.button.picker-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  text-align: left;
+}
+
+.picker-detail {
+  font-size: var(--font-size-sm);
 }
 
 .picker-suggestions-heading {

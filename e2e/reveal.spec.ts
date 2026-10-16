@@ -140,3 +140,18 @@ test('the reveal shows the XP after this workout even when the skills were loade
 
   expect(shownAfterFinish).toEqual([await gainBar.getAttribute('aria-label')]);
 });
+
+test('each skill on the reveal says how much XP is left to its next level, and the duration is labelled', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('rv_next'));
+  await logBench(page);
+
+  const gains = page.getByRole('list', { name: 'XP gained' });
+  const firstGain = gains.getByRole('listitem').first();
+  await expect(firstGain.getByText(/^[\d,]+ XP to level \d+$/)).toBeVisible();
+  await expect(firstGain.getByRole('img')).toHaveAccessibleName(
+    /^[A-Z][a-z]+: \d+% of the way to level \d+, [\d,]+ XP to go$/,
+  );
+  await expect(page.getByText(/^Duration (<1 min|\d+ min)$/)).toBeVisible();
+});

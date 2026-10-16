@@ -4,25 +4,29 @@ import { RESET_CONFIRMATION, resetMyData } from '../../../lib/profile/account.ts
 import { announceDataChange } from '../../../lib/query/data-changes.ts';
 import { messageOf } from '../../../lib/error-text.ts';
 import { forgetUserProgressData } from '../../../offline/user-device-data.ts';
-import { forgetOnThisDevice, hasUnsyncedDraftHere } from './device-data.ts';
+import { ConfirmDialog } from '../../../components/ConfirmDialog.tsx';
+import { forgetOnThisDevice, hasUnsyncedDraftHere, UNSYNCED_DRAFT_LOSS_TEXT } from './device-data.ts';
 
 export function ResetDataForm({ userId, onDone }: { userId: string; onDone: (text: string) => void }) {
   const queryClient = useQueryClient();
   const [typed, setTyped] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmingDraftLoss, setConfirmingDraftLoss] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    if (!(await hasUnsyncedDraftHere(userId))) return reset();
+    setBusy(false);
+    setConfirmingDraftLoss(true);
+  };
+
+  const reset = async () => {
+    setConfirmingDraftLoss(false);
     setBusy(true);
     setProblem(null);
-    if (
-      (await hasUnsyncedDraftHere(userId)) &&
-      !window.confirm('You have a workout that has not synced yet. It will be lost. Reset anyway?')
-    ) {
-      setBusy(false);
-      return;
-    }
     try {
       await resetMyData();
     } catch (error) {
@@ -53,6 +57,17 @@ export function ResetDataForm({ userId, onDone }: { userId: string; onDone: (tex
       <button className="button danger" type="submit" disabled={busy || typed.trim() !== RESET_CONFIRMATION}>
         Reset everything
       </button>
+      {confirmingDraftLoss && (
+        <ConfirmDialog
+          title="Reset anyway?"
+          confirmLabel="Reset anyway"
+          danger
+          onConfirm={() => void reset()}
+          onCancel={() => setConfirmingDraftLoss(false)}
+        >
+          <p>{UNSYNCED_DRAFT_LOSS_TEXT}</p>
+        </ConfirmDialog>
+      )}
     </form>
   );
 }

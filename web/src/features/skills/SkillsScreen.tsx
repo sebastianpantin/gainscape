@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
@@ -7,6 +8,7 @@ import { bodySummaryText } from '../../lib/progress/body-summary-rules.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { readyData } from '../../lib/query/query-state-rules.ts';
 import { formatXp } from '../../lib/format.ts';
+import { TermHelp } from '../../components/TermHelp.tsx';
 import { useBodyStatus } from './body-status.ts';
 
 interface SkillsScreenProps {
@@ -18,13 +20,7 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
   const body = useBodyStatus(userId);
 
   if (state.status === 'failed')
-    return (
-      <main className="screen">
-        <p className="problem" role="alert">
-          {state.problem}
-        </p>
-      </main>
-    );
+    return <ScreenProblem heading={<h1 className="title">Skills</h1>} problem={state.problem} onRetry={state.retry} />;
   if (state.status === 'loading') return <ScreenSkeleton title="Skills" panels={0} tiles={6} />;
 
   const { standing } = state;
@@ -40,11 +36,15 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
       )}
       <div className="standing totals">
         <div className="panel">
-          <span className="muted">Total level</span>
+          <span className="muted row">
+            Total level <TermHelp glossaryKey="totalLevel" />
+          </span>
           <strong>{standing.totalLevel}</strong>
         </div>
         <div className="panel">
-          <span className="muted">Combat level</span>
+          <span className="muted row">
+            Combat level <TermHelp glossaryKey="combatLevel" />
+          </span>
           <strong>{standing.combatLevel}</strong>
         </div>
       </div>

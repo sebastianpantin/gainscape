@@ -12,6 +12,7 @@ import {
   openTab,
   readSession,
   register,
+  setRow,
   signOut,
   skillCard,
   skillLevels,
@@ -48,6 +49,7 @@ const TAB_BAR = ['.tab-bar a[href]'];
 
 async function checkScreen(page: Page, screen: string, ready: () => Promise<void>) {
   await ready();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expectNoAxeViolations(page, screen);
   if ((await page.locator('.tab-bar').count()) > 0) await expectTouchTargets(page, TAB_BAR);
 }
@@ -97,7 +99,7 @@ async function createProgram(page: Page): Promise<string> {
   await page
     .getByRole('listitem')
     .filter({ hasText: 'Upper / Lower' })
-    .getByRole('button', { name: 'Use this template' })
+    .getByRole('button', { name: 'Use Upper / Lower', exact: true })
     .click();
   await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
   await expectNoAxeViolations(page, 'program editor');
@@ -220,9 +222,9 @@ test.describe('signed-in screens', () => {
       ['/skills/quests', 'Quests'],
       ['/skills/endurance', 'Endurance'],
       ['/skills/no_such_skill', 'Skill not found'],
-      ['/collection', 'Collection log: Records'],
-      ['/collection/items', 'Collection log: Items'],
-      ['/collection/history', 'Collection log: History'],
+      ['/collection', 'Collection: Records'],
+      ['/collection/items', 'Collection: Items'],
+      ['/collection/history', 'Collection: History'],
       [sessionPath!, null],
       [progressPath!, 'Barbell Bench Press'],
     ]);
@@ -328,6 +330,23 @@ test.describe('signed-in screens', () => {
   });
 });
 
+test('the links on Train are 44px tall', async ({ page }) => {
+  test.setTimeout(150_000);
+  await register(page, uniqueUsername('a11y_links'));
+  await logBench(page);
+  await openTab(page, 'Train');
+  await expect(page.getByRole('link', { name: /^\w[\w ]* is [\d,]+ XP from level \d+$/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Copy a template', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Edit programs', exact: true })).toBeVisible();
+  await expectTouchTargets(page, ['main a[href]']);
+
+  await openEnrollForm(page, '5/3/1');
+  await fillProgramInputs(page, FIVE_THREE_ONE_ONE_RMS_KG);
+  await startFollowing(page, '5/3/1');
+  await expect(programToday(page, '5/3/1').getByRole('link', { name: 'Manage program', exact: true })).toBeVisible();
+  await expectTouchTargets(page, ['main a[href]']);
+});
+
 test('the program enrollment screens have no serious axe violations', async ({ page }) => {
   test.setTimeout(150_000);
   await register(page, uniqueUsername('a11y_pe'));
@@ -413,6 +432,40 @@ test.describe('on a 320x640 phone', () => {
       const overflow = await tab.evaluate((link) => link.scrollWidth - link.clientWidth);
       expect(overflow, await tab.innerText()).toBeLessThanOrEqual(0);
     }
+  });
+
+  test('a lift set row keeps a usable weight field and nothing in the workout clips or overflows', async ({ page }) => {
+    await register(page, uniqueUsername('a11y_320w'));
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await logExercise(page, 'bench', 'Barbell Bench Press', [
+      { weightKg: 100, reps: 5 },
+      { weightKg: 100, reps: 5 },
+      { weightKg: 100, reps: 5 },
+    ]);
+    const bench = exerciseCard(page, 'Barbell Bench Press');
+    const weight = bench.getByRole('spinbutton', { name: 'Weight in kg, set 1', exact: true });
+    const weightBox = await weight.boundingBox();
+    expect(weightBox?.width).toBeGreaterThanOrEqual(44);
+    expect(weightBox?.height).toBeGreaterThanOrEqual(44);
+    await weight.fill('102.5');
+    await expect(weight).toHaveValue('102.5');
+    const nearFail = setRow(bench, 1).getByRole('radio', { name: 'Near fail', exact: true });
+    await expect(nearFail).toHaveText('Near fail');
+    await expect(nearFail.getByText('Near fail', { exact: true })).toBeVisible();
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    const clipped = await page
+      .locator('.workout-header, .workout-header *, .set-row, .set-row *')
+      .evaluateAll((elements) =>
+        elements
+          .filter(
+            (element) =>
+              element.scrollWidth > element.clientWidth + 1 ||
+              element.getBoundingClientRect().right > window.innerWidth,
+          )
+          .map((element) => `${element.className}: ${element.textContent?.trim()}`),
+      );
+    expect(clipped).toEqual([]);
   });
 });
 

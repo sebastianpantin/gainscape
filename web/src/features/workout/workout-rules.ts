@@ -1,4 +1,5 @@
 import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
+import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { BODYWEIGHT_LOAD_NOT_ZERO_CODE, UNKNOWN_EXERCISE_CODE } from '../../lib/workout/exercise-edit-rules.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/platform/rate-limit.ts';
 import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
@@ -44,7 +45,7 @@ export function challengeStartNoticeText(outcome: StartOutcome): string | null {
 
 export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
   if (lastProblem !== RATE_LIMITED_CODE) {
-    return `Couldn't reach the server (${lastProblem}). Retrying — your workout is saved on this device.`;
+    return `Couldn't reach the server (${lastProblem}). Retrying while Train is open — your workout is saved on this device.`;
   }
   if (waitMs !== undefined && waitMs > LONG_SYNC_WAIT_MS) {
     return `Sync limit reached; this workout will sync in ${waitText(waitMs / MS_PER_SECOND)}. It's saved on this device.`;
@@ -94,6 +95,8 @@ export interface FinishPrompt {
   alternative: FinishChoice | null;
 }
 
+export const SETS_FULL_TEXT = `A workout can hold at most ${MAX_SETS_PER_SESSION} sets.`;
+
 const MARK_DONE: FinishChoice = { label: 'Mark done and finish', marksPlannedDone: true };
 const WITHOUT_THEM: FinishChoice = { label: 'Finish without them', marksPlannedDone: false };
 const LEFT_TO_LIFTER_TEXT = '5RM tests and optional sets stay skipped until you log them.';
@@ -106,17 +109,20 @@ export function canFinishWorkout({ done, planned, leftToLifter }: FinishCounts):
   return done + planned - leftToLifter > 0;
 }
 
+export function finishBlockedText(counts: FinishCounts): string | null {
+  if (canFinishWorkout(counts)) return null;
+  return counts.done + counts.planned === 0 ? 'Add an exercise to finish.' : 'Log a set to finish.';
+}
+
 export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): FinishPrompt | null {
   if (planned === 0) return null;
-  const title = `${planned} planned ${planned === 1 ? 'set' : 'sets'} not done`;
+  const title = `${planned} ${planned === 1 ? 'set' : 'sets'} not ticked`;
   const leftNote = leftToLifter > 0 ? [LEFT_TO_LIFTER_TEXT] : [];
   if (planned === leftToLifter) {
     return { title, body: leftNote.join(' '), confirm: WITHOUT_THEM, alternative: null };
   }
   const choice =
-    done > 0
-      ? 'Log them as done, or keep only the sets you ticked.'
-      : 'No set is ticked yet. Log the planned sets as done?';
+    done > 0 ? 'Log them as done, or keep only the sets you ticked.' : 'No set is ticked yet. Log them all as done?';
   return {
     title,
     body: [choice, ...leftNote].join(' '),

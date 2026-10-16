@@ -1,3 +1,4 @@
+import { type PrescriptionSnapshot } from '@domain/index.ts';
 import { type Exercise, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
 import type { ExerciseStrengthView } from '../../lib/collection/collection-data.ts';
 import { strengthText } from '../../lib/collection/collection-rules.ts';
@@ -23,8 +24,16 @@ export const EXERCISE_MENU_LABELS: Readonly<Record<ExerciseMenuChoice, string>> 
   superset_with_next: 'Superset with next',
   ungroup: 'Ungroup',
   swap: 'Swap',
-  remove: 'Remove',
+  remove: 'Remove exercise',
 };
+
+const STARTING_SETS = 1;
+
+export function removingAsksFirst(exercise: {
+  sets: readonly { done: boolean; prescription?: PrescriptionSnapshot | null }[];
+}): boolean {
+  return exercise.sets.length > STARTING_SETS || exercise.sets.some((set) => set.done || Boolean(set.prescription));
+}
 
 export function liftEquipment(exercises: readonly Exercise[]): LiftEquipment {
   const lifts = exercises.filter(isLiftExercise).filter((exercise) => exercise.measure === undefined);

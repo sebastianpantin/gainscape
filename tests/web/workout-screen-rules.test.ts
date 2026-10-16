@@ -11,6 +11,9 @@ import { finishCountsOf } from '../../web/src/features/workout/workout-rules.ts'
 import {
   addButtonKey,
   liftIdsToRecall,
+  removedSetAt,
+  removedSetText,
+  restoreRemovedSet,
   supersetMembers,
   swappableLifts,
   swapSuggestions,
@@ -128,7 +131,7 @@ describe('withPickedExercise', () => {
     const added = withPickedExercise(draftOf([]), catalogLift('bench'), { weightKg: 80, reps: 6 });
     const [exercise] = added.exercises;
     expect(exercise).toMatchObject({ exerciseId: 'bench', modality: 'lift', loadType: 'external' });
-    expect(exercise.sets).toEqual([expect.objectContaining({ weightKg: 80, reps: 6, done: true, isWarmup: false })]);
+    expect(exercise.sets).toEqual([expect.objectContaining({ weightKg: 80, reps: 6, done: false, isWarmup: false })]);
   });
 
   it('adds a lift with a default set when nothing was logged before', () => {
@@ -199,5 +202,77 @@ describe('finishCountsOf', () => {
       ]),
     ]);
     expect(finishCountsOf(draft)).toEqual({ done: 1, planned: 2, leftToLifter: 1 });
+  });
+});
+
+describe('removedSetAt and restoreRemovedSet', () => {
+  const bench = lift('bench', [set('a'), set('b', { weightKg: 80 }), set('c')]);
+
+  it('remembers which card the set left and where it sat', () => {
+    expect(removedSetAt(draftOf([bench]), 0, 'b')).toEqual({
+      clientId: 'card-bench',
+      index: 1,
+      set: set('b', { weightKg: 80 }),
+    });
+    expect(removedSetAt(draftOf([bench]), 0, 'missing')).toBeNull();
+  });
+
+  it('puts the set back at its place in the same card, even after cards above it moved', () => {
+    const removed = removedSetAt(draftOf([bench]), 0, 'b')!;
+    const afterRemoval = draftOf([lift('row', [set('r')]), lift('bench', [set('a'), set('c')])]);
+    const restored = restoreRemovedSet(afterRemoval, removed);
+    expect(restored.exercises[1].sets.map((restoredSet) => restoredSet.id)).toEqual(['a', 'b', 'c']);
+    expect(restored.exercises[0]).toBe(afterRemoval.exercises[0]);
+  });
+
+  it('appends the set when sets after it were removed too', () => {
+    const removed = removedSetAt(draftOf([bench]), 0, 'c')!;
+    const restored = restoreRemovedSet(draftOf([lift('bench', [set('a')])]), removed);
+    expect(restored.exercises[0].sets.map((restoredSet) => restoredSet.id)).toEqual(['a', 'c']);
+  });
+
+  it('leaves the draft alone when the card is gone, the set is back already or the workout is finished', () => {
+    const removed = removedSetAt(draftOf([bench]), 0, 'b')!;
+    const withoutCard = draftOf([lift('row', [set('r')])]);
+    expect(restoreRemovedSet(withoutCard, removed)).toBe(withoutCard);
+    const alreadyBack = draftOf([bench]);
+    expect(restoreRemovedSet(alreadyBack, removed)).toBe(alreadyBack);
+    const finished = draftOf([lift('bench', [set('a'), set('c')])], { finishedAt: '2026-10-01T11:00:00.000Z' });
+    expect(restoreRemovedSet(finished, removed)).toBe(finished);
+  });
+
+  it('leaves the draft alone when it is already at the set limit', () => {
+    const removed = removedSetAt(draftOf([bench]), 0, 'b')!;
+    const full = draftOf([
+      lift(
+        'bench',
+        Array.from({ length: MAX_SETS_PER_SESSION }, (_, index) => set(`full-${index}`)),
+      ),
+    ]);
+    expect(restoreRemovedSet(full, removed)).toBe(full);
+  });
+});
+
+describe('removedSetAt and restoreRemovedSet for cardio', () => {
+  const bout = (id: string, durationS: number) => ({
+    id,
+    kind: 'cardio' as const,
+    durationS,
+    distanceM: null,
+    interval: null,
+    effort: null,
+    done: true,
+  });
+
+  it('leaves the draft alone when the bout would go past the cardio time cap', () => {
+    const rowing = { ...cardio('rowing'), sets: [bout('short', 600)] };
+    const removed = removedSetAt(draftOf([rowing]), 0, 'short')!;
+    const full = draftOf([{ ...cardio('rowing'), sets: [bout('long', 4 * 60 * 60)] }]);
+    expect(restoreRemovedSet(full, removed)).toBe(full);
+  });
+
+  it('calls a cardio set a bout and a lift set a set', () => {
+    expect(removedSetText(cardio('Rowing'), 0)).toBe('Removed bout 1 of Rowing.');
+    expect(removedSetText(lift('Barbell Row', [set('a')]), 1)).toBe('Removed set 2 of Barbell Row.');
   });
 });

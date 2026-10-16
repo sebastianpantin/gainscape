@@ -1,7 +1,12 @@
 import { type Ref, useId, useMemo, useState } from 'react';
 import { Icon } from '../../components/Icon.tsx';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
-import { exerciseSearchMatches, hiddenMatchesText, searchWords } from '../../lib/exercises/exercise-search-rules.ts';
+import {
+  exerciseSearchMatches,
+  hiddenMatchesText,
+  noMatchText,
+  searchWords,
+} from '../../lib/exercises/exercise-search-rules.ts';
 import { pickerRowDetail } from '../../lib/progress/skill-map-rules.ts';
 
 interface ExercisePickerProps {
@@ -29,20 +34,24 @@ export function ExercisePicker({
     [exercises, query],
   );
 
+  const searching = searchWords(query).length > 0;
+
   const resultRow = (exercise: Exercise) => {
     const detail = pickerRowDetail(exercise);
     return (
       <li key={exercise.id}>
         <button
           type="button"
-          className="button list-item"
+          className="button list-item picker-row"
           onClick={() => {
             onPick(exercise);
             setQuery('');
           }}
         >
-          {exercise.name} <span className="muted">{detail.kind}</span>
-          {detail.skills !== null && <span className="muted"> {detail.skills}</span>}
+          <span>{exercise.name}</span>{' '}
+          <span className="muted picker-detail">
+            {detail.skills === null ? detail.kind : `${detail.kind} · ${detail.skills}`}
+          </span>
         </button>
       </li>
     );
@@ -62,7 +71,7 @@ export function ExercisePicker({
         />
       </span>
       {matches.length > 0 && <ul className="picker-results">{matches.map(resultRow)}</ul>}
-      {searchWords(query).length === 0 && suggestions.length > 0 && (
+      {!searching && suggestions.length > 0 && (
         <section aria-labelledby={suggestionsHeadingId}>
           <h3 id={suggestionsHeadingId} className="muted tiny picker-suggestions-heading">
             Similar exercises
@@ -70,7 +79,10 @@ export function ExercisePicker({
           <ul className="picker-results">{suggestions.map(resultRow)}</ul>
         </section>
       )}
-      {hiddenCount > 0 && <p className="muted">{hiddenMatchesText(hiddenCount)}</p>}
+      <p className="muted" role="status">
+        {searching && matches.length === 0 && noMatchText(query)}
+        {hiddenCount > 0 && hiddenMatchesText(hiddenCount)}
+      </p>
     </div>
   );
 }

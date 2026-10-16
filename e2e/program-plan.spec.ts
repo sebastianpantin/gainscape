@@ -43,8 +43,7 @@ test('the Madcow plan lists the days of the current week with their rows, a skip
   await expect(prescribedRows(wednesday, 'Back Squat')).toHaveText([
     '47.5 kg × 5 · 50%',
     '57.5 kg × 5 · 62.5%',
-    '70 kg × 5 · 75%',
-    '70 kg × 5 · 75%',
+    '2 × 5 @ 70 kg · 75%',
   ]);
   await expect(wednesday.getByText('Skipped', { exact: true })).toHaveCount(0);
   await expect(wednesday.getByText('Done', { exact: true })).toHaveCount(0);

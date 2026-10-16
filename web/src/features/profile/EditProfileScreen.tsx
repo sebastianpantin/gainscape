@@ -1,7 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useId, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FieldProblem } from '../../components/FieldProblem.tsx';
+import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
+import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { characterCount, nameProblem, trimmedName } from '../../lib/names.ts';
 import {
@@ -41,6 +44,8 @@ interface EditProfileScreenProps {
 
 const BADGE_ORDER = Object.keys(BADGE_COLORS) as BadgeColor[];
 const FOCUS_ORDER = Object.keys(TRAINING_FOCUS_LABELS) as TrainingFocus[];
+const CHECKED_FIELDS = ['displayName', 'bio', 'trainingSince', 'bodyweight', 'height', 'birthYear'] as const;
+type CheckedField = (typeof CHECKED_FIELDS)[number];
 
 interface EditFormProps {
   userId: string;
@@ -58,18 +63,22 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
   const [trainingFocus, setTrainingFocus] = useState<TrainingFocus | ''>(profile.trainingFocus ?? '');
   const [trainingSince, setTrainingSince] = useState(profile.trainingSince?.toString() ?? '');
   const [badgeColor, setBadgeColor] = useState<BadgeColor>(profile.badgeColor);
-  const [bodyweight, setBodyweight] = useState(
+  const [initialBodyweight] = useState(() =>
     profile.bodyweightKg === null ? '' : String(shownWeight(profile.bodyweightKg, unitPref)),
   );
+  const [bodyweight, setBodyweight] = useState(initialBodyweight);
   const [height, setHeight] = useState<HeightInput>(initialHeightInput);
   const [birthYear, setBirthYear] = useState(profile.birthYear?.toString() ?? '');
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [touched, setTouched] = useState<ReadonlySet<CheckedField>>(new Set());
+  const [submitted, setSubmitted] = useState(false);
+  const problemIdPrefix = useId();
 
   const heightCm = sameHeightInput(height, initialHeightInput, unitPref)
     ? profile.heightCm
     : heightInCm(height, unitPref);
-  const issues = {
+  const issues: Record<CheckedField, string | null> = {
     displayName: nameProblem(displayName, DISPLAY_NAME_MAX_LENGTH),
     bio: bioProblem(bio),
     trainingSince: trainingSinceProblem(trainingSince),
@@ -77,11 +86,34 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
     height: feetAndInchesProblem(height, unitPref) ?? (heightCm === null ? null : heightProblem(String(heightCm))),
     birthYear: birthYearProblem(birthYear),
   };
-  const invalid = Object.values(issues).some(Boolean);
+  const shownIssue = (field: CheckedField) => (submitted || touched.has(field) ? issues[field] : null);
+  const problemId = (field: CheckedField) => `${problemIdPrefix}-${field}`;
+  const checkedInput = (field: CheckedField) => ({
+    name: field,
+    onBlur: () => setTouched((fields) => new Set(fields).add(field)),
+    'aria-invalid': shownIssue(field) ? true : undefined,
+    'aria-describedby': shownIssue(field) ? problemId(field) : undefined,
+  });
+  const fieldProblem = (field: CheckedField) => <FieldProblem id={problemId(field)} problem={shownIssue(field)} />;
+  const unsaved = useUnsavedChangesGuard(
+    displayName !== profile.displayName ||
+      bio !== (profile.bio ?? '') ||
+      trainingFocus !== (profile.trainingFocus ?? '') ||
+      trainingSince !== (profile.trainingSince?.toString() ?? '') ||
+      badgeColor !== profile.badgeColor ||
+      bodyweight !== initialBodyweight ||
+      !sameHeightInput(height, initialHeightInput, unitPref) ||
+      birthYear !== (profile.birthYear?.toString() ?? ''),
+  );
 
-  const submit = async (event: FormEvent) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (invalid) return;
+    setSubmitted(true);
+    const firstInvalid = CHECKED_FIELDS.find((field) => issues[field]);
+    if (firstInvalid) {
+      event.currentTarget.querySelector<HTMLInputElement>(`input[name="${firstInvalid}"]`)?.focus();
+      return;
+    }
     setSaving(true);
     setProblem(null);
     try {
@@ -103,7 +135,8 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
       }
       void announceDataChange(queryClient, 'profile-saved');
       await onSaved();
-      navigate('/profile');
+      unsaved.allowLeaving();
+      void navigate('/profile');
     } catch (error) {
       setProblem(saveProblemText(error));
       setSaving(false);
@@ -142,10 +175,14 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
         </div>
         <label className="field">
           Display name
-          <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+          <input
+            {...checkedInput('displayName')}
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+          />
           <span className="hint">Your username @{profile.username} stays the same.</span>
         </label>
-        {issues.displayName && <p className="problem">{issues.displayName}</p>}
+        {fieldProblem('displayName')}
         <label className="field">
           <span className="row spread">
             Bio
@@ -153,9 +190,9 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
               {characterCount(bio)} / {BIO_MAX_LENGTH}
             </span>
           </span>
-          <input value={bio} onChange={(event) => setBio(event.target.value)} />
+          <input {...checkedInput('bio')} value={bio} onChange={(event) => setBio(event.target.value)} />
         </label>
-        {issues.bio && <p className="problem">{issues.bio}</p>}
+        {fieldProblem('bio')}
         <label className="field">
           Training focus
           <select
@@ -173,14 +210,16 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
         <label className="field">
           Training since
           <input
-            type="number"
+            {...checkedInput('trainingSince')}
+            type="text"
             inputMode="numeric"
+            autoComplete="off"
             placeholder="Year"
             value={trainingSince}
             onChange={(event) => setTrainingSince(event.target.value)}
           />
         </label>
-        {issues.trainingSince && <p className="problem">{issues.trainingSince}</p>}
+        {fieldProblem('trainingSince')}
       </section>
 
       <section className="panel stack" aria-labelledby="body-heading">
@@ -191,6 +230,7 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
         <label className="field">
           Bodyweight ({unitPref})
           <input
+            {...checkedInput('bodyweight')}
             type="text"
             inputMode="decimal"
             autoComplete="off"
@@ -199,13 +239,15 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
           />
           <span className="hint">Used as the load for bodyweight exercises.</span>
         </label>
-        {issues.bodyweight && <p className="problem">{issues.bodyweight}</p>}
+        {fieldProblem('bodyweight')}
         {unitPref === 'kg' ? (
           <label className="field">
             Height (cm)
             <input
-              type="number"
+              {...checkedInput('height')}
+              type="text"
               inputMode="decimal"
+              autoComplete="off"
               value={height.cm}
               onChange={(event) => setHeight({ ...height, cm: event.target.value })}
             />
@@ -218,8 +260,10 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
             <div className="row">
               <label className="unit-input" style={{ flexGrow: 1 }}>
                 <input
-                  type="number"
+                  {...checkedInput('height')}
+                  type="text"
                   inputMode="numeric"
+                  autoComplete="off"
                   aria-label="Height feet"
                   value={height.feet}
                   onChange={(event) => setHeight({ ...height, feet: event.target.value })}
@@ -228,8 +272,10 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
               </label>
               <label className="unit-input" style={{ flexGrow: 1 }}>
                 <input
-                  type="number"
+                  {...checkedInput('height')}
+                  type="text"
                   inputMode="numeric"
+                  autoComplete="off"
                   aria-label="Height inches"
                   value={height.inches}
                   onChange={(event) => setHeight({ ...height, inches: event.target.value })}
@@ -239,18 +285,20 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
             </div>
           </fieldset>
         )}
-        {issues.height && <p className="problem">{issues.height}</p>}
+        {fieldProblem('height')}
         <label className="field">
           Birth year (optional)
           <input
-            type="number"
+            {...checkedInput('birthYear')}
+            type="text"
             inputMode="numeric"
+            autoComplete="off"
             placeholder={`1900–${latestBirthYear()}`}
             value={birthYear}
             onChange={(event) => setBirthYear(event.target.value)}
           />
         </label>
-        {issues.birthYear && <p className="problem">{issues.birthYear}</p>}
+        {fieldProblem('birthYear')}
         <span className="hint">Height and age never change your XP. They are only shown to you.</span>
       </section>
 
@@ -259,12 +307,18 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
           {problem}
         </p>
       )}
-      <button className="button primary big" type="submit" disabled={saving || invalid}>
+      <button
+        className="button primary big"
+        type="submit"
+        disabled={saving}
+        onMouseDown={(event) => event.preventDefault()}
+      >
         Save
       </button>
       <Link className="button" to="/profile">
         Cancel
       </Link>
+      {unsaved.prompt}
     </form>
   );
 }
@@ -280,11 +334,7 @@ export function EditProfileScreen({ userId }: EditProfileScreenProps) {
         <h1 className="title">Edit profile</h1>
       </div>
       {state.status === 'loading' && <ListSkeleton panels={4} />}
-      {state.status === 'failed' && (
-        <p className="problem" role="alert">
-          {state.problem}
-        </p>
-      )}
+      {state.status === 'failed' && <ProblemWithRetry problem={state.problem} onRetry={refresh} />}
       {state.status === 'ready' && <EditForm userId={userId} profile={state.profile} onSaved={refresh} />}
     </main>
   );

@@ -195,8 +195,9 @@ export async function logExercise(
   for (let index = 1; index < sets.length; index++) await card.getByRole('button', { name: '+ Add set' }).click();
   for (const [index, set] of sets.entries()) {
     const row = setRow(card, index + 1);
-    if (set.weightKg !== undefined) await row.getByRole('spinbutton', { name: /kg/ }).fill(String(set.weightKg));
-    await row.getByLabel('reps', { exact: true }).fill(String(set.reps));
+    if (set.weightKg !== undefined)
+      await row.getByRole('spinbutton', { name: /weight in kg, set \d+$/i }).fill(String(set.weightKg));
+    await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill(String(set.reps));
     await row.getByRole('radio', { name: 'Hard' }).click();
   }
 }

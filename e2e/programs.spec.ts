@@ -12,6 +12,7 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 import { programDayId, sessionRow, setCount } from './support/db.ts';
+import { powerliftingPrograms } from './support/program-enrollment.ts';
 
 test('copy a template, run a program day with planned sets and finish it', async ({ context, page }) => {
   const username = uniqueUsername('pg');
@@ -22,7 +23,7 @@ test('copy a template, run a program day with planned sets and finish it', async
   await page
     .getByRole('listitem')
     .filter({ hasText: 'Upper / Lower' })
-    .getByRole('button', { name: 'Use this template' })
+    .getByRole('button', { name: 'Use Upper / Lower', exact: true })
     .click();
   await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
   await page.getByLabel('Program name').fill('My UL');
@@ -57,7 +58,7 @@ test('copy a template, run a program day with planned sets and finish it', async
   await expect(doneSetButtons(page)).toHaveCount(3);
 
   await page.getByRole('button', { name: 'Finish workout' }).click();
-  const confirmation = page.getByRole('dialog', { name: '13 planned sets not done' });
+  const confirmation = page.getByRole('dialog', { name: '13 sets not ticked' });
   await confirmation.getByRole('button', { name: 'Finish without them' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
 
@@ -76,4 +77,23 @@ test('copy a template, run a program day with planned sets and finish it', async
   await expect(fresh.getByRole('button', { name: 'Start workout' })).toBeVisible();
   await expect(fresh.getByText("Couldn't load your programs")).toBeVisible({ timeout: 15_000 });
   await expect(fresh.getByRole('button', { name: 'My UL — Upper' })).toHaveCount(0);
+});
+
+test('each template says how often you train, and both template lists start with Use', async ({ page }) => {
+  await register(page, uniqueUsername('pg_tpl'));
+  await openFromProfile(page, 'Programs');
+
+  const powerlifting = powerliftingPrograms(page).getByRole('listitem');
+  const fiveThreeOne = powerlifting.filter({ has: page.getByText('5/3/1', { exact: true }) });
+  await expect(fiveThreeOne.getByText('4 days a week · 4-week cycle', { exact: true })).toBeVisible();
+  await expect(fiveThreeOne.getByRole('link', { name: 'Use 5/3/1', exact: true })).toBeVisible();
+  const strongLifts = powerlifting.filter({ has: page.getByText('StrongLifts 5x5', { exact: true }) });
+  await expect(strongLifts.getByText('Rotates through 2 workouts', { exact: true })).toBeVisible();
+
+  const upperLower = page
+    .getByRole('region', { name: 'Templates', exact: true })
+    .getByRole('listitem')
+    .filter({ has: page.getByText('Upper / Lower', { exact: true }) });
+  await expect(upperLower.getByText('2 workouts · Upper · Lower', { exact: true })).toBeVisible();
+  await expect(upperLower.getByRole('button', { name: 'Use Upper / Lower', exact: true })).toBeVisible();
 });

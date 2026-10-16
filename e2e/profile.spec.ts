@@ -48,11 +48,13 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await page.getByLabel('Training since').fill('2019');
   await page.getByRole('radio', { name: 'Blue' }).click();
   await page.getByLabel('Bodyweight (kg)').fill('500');
-  await expect(page.getByText('Bodyweight must be between 20 and 400 kg.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByLabel('Bodyweight (kg)')).toHaveAccessibleDescription(
+    'Bodyweight must be between 20 and 400 kg.',
+  );
+  await expect(page.getByLabel('Bodyweight (kg)')).toBeFocused();
   await page.getByLabel('Bodyweight (kg)').fill('8o');
   await expect(page.getByText('Bodyweight must be between 20 and 400 kg.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
   await page.getByLabel('Bodyweight (kg)').fill('82,4');
   await page.getByLabel('Height (cm)').fill('181');
   await page.getByLabel('Birth year (optional)').fill(String(new Date().getFullYear() - 12));
@@ -112,8 +114,8 @@ test('pounds are shown everywhere while kilograms are stored, without false reco
     await page.getByRole('button', { name: 'Start workout' }).click();
     await addExercise(page, 'bench', 'Barbell Bench Press');
     const row = setRow(page, 1);
-    await row.getByRole('spinbutton', { name: 'lb', exact: true }).fill('135');
-    await row.getByLabel('reps', { exact: true }).fill('5');
+    await row.getByRole('spinbutton', { name: /^Weight in lb, set \d+$/ }).fill('135');
+    await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('5');
     await row.getByRole('radio', { name: 'Hard' }).click();
     await finishWorkout(page);
     await expect(page.getByLabel('New records')).toHaveCount(0);
@@ -133,8 +135,8 @@ test('RPE effort is logged as RPE and stored as reps in reserve', async ({ page 
   await page.getByRole('button', { name: 'Start workout' }).click();
   await addExercise(page, 'bench', 'Barbell Bench Press');
   const row = setRow(page, 1);
-  await row.getByRole('spinbutton', { name: 'kg', exact: true }).fill('60');
-  await row.getByLabel('reps', { exact: true }).fill('8');
+  await row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('60');
+  await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('8');
   await expect(row.getByRole('radio', { name: 'Hard' })).toHaveCount(0);
   await row.getByRole('radio', { name: 'RPE 8', exact: true }).click();
   await finishWorkout(page);
@@ -198,4 +200,80 @@ test('change password, export data and delete the account', async ({ page }) => 
 
   await submitSignIn(page, emailOf(username), 'a-brand-new-password');
   await expect(page.getByRole('alert')).toBeVisible();
+});
+
+test('leaving Edit profile with a change asks first, and Save leaves without asking', async ({ page }) => {
+  await register(page, uniqueUsername('pf_leave'));
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
+  await page.getByLabel('Display name').fill('Half Typed');
+
+  await page.getByRole('link', { name: 'Cancel', exact: true }).click();
+  await confirmation.getByRole('button', { name: 'Keep editing' }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(page.getByLabel('Display name')).toHaveValue('Half Typed');
+
+  await page.getByRole('link', { name: '‹ Profile' }).click();
+  await confirmation.getByRole('button', { name: 'Discard changes' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(profileCard(page)).not.toContainText('Half Typed');
+
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByLabel('Display name').fill('Saved Name');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(profileCard(page)).toContainText('Saved Name');
+  await expect(confirmation).toHaveCount(0);
+});
+
+test('closing the tab with an unsaved Edit profile change asks first, and not once it is saved', async ({ page }) => {
+  await register(page, uniqueUsername('pf_unload'));
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByLabel('Display name').fill('Half Typed');
+
+  const dialogTypes: string[] = [];
+  page.on('dialog', (dialog) => {
+    dialogTypes.push(dialog.type());
+    void dialog.dismiss();
+  });
+  await page.close({ runBeforeUnload: true });
+  await expect.poll(() => dialogTypes).toEqual(['beforeunload']);
+  expect(page.isClosed()).toBe(false);
+
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(profileCard(page)).toContainText('Half Typed');
+  const closed = page.waitForEvent('close');
+  await page.close({ runBeforeUnload: true });
+  await closed;
+  expect(dialogTypes).toEqual(['beforeunload']);
+});
+
+test('Edit profile shows a field problem only after leaving the field or saving, and Save goes to it', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('pf_valid'));
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  const trainingSince = page.getByLabel('Training since');
+  const birthYear = page.getByLabel('Birth year (optional)');
+
+  await birthYear.fill('12');
+  await expect(page.getByText(/Birth year must be between/)).toHaveCount(0);
+  await expect(birthYear).not.toHaveAttribute('aria-invalid', 'true');
+  await birthYear.blur();
+  await expect(birthYear).toHaveAttribute('aria-invalid', 'true');
+  await expect(birthYear).toHaveAccessibleDescription(/^Birth year must be between/);
+
+  await trainingSince.fill('1800');
+  await expect(page.getByText(/Training since must be between/)).toHaveCount(0);
+  const save = page.getByRole('button', { name: 'Save' });
+  await expect(save).toBeEnabled();
+  await save.click();
+
+  await expect(trainingSince).toBeFocused();
+  await expect(trainingSince).toHaveAttribute('aria-invalid', 'true');
+  await expect(trainingSince).toHaveAccessibleDescription(/^Training since must be between/);
+  await expect(page).toHaveURL(/\/profile\/edit$/);
 });

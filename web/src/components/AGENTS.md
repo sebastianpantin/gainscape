@@ -11,7 +11,7 @@ Small shared UI pieces used across feature screens: icons, the pixel-art sprites
 
 - `pixel-sprites.ts` is pure sprite data (no React). `scripts/icons/render.ts` also uses it to generate `web/public/icons/*`. `PixelArt.tsx` renders the sprites.
 - `Icon.tsx`: line icons in a `PATHS` record. To add an icon, add a name and its path there.
-- Providers wrapping the app in `App.tsx`: `PreferencesProvider.tsx` (unit and effort mode) and `ToastProvider.tsx` (inside the `BrowserRouter`). `ScreenErrorBoundary.tsx` wraps the routes.
+- Providers wrapping the app in `App.tsx`: `PreferencesProvider.tsx` (unit and effort mode) and `ToastProvider.tsx` (inside the data router from `createBrowserRouter`). `ScreenErrorBoundary.tsx` wraps the routes.
 - The decisions behind these components live in `../lib/ui/`: `number-field-rules.ts`, `count-up-rules.ts`, `toast-rules.ts`, `line-chart-rules.ts`, `glossary.ts` and `term-help-rules.ts`.
 
 ## Rules and gotchas
@@ -25,6 +25,8 @@ Small shared UI pieces used across feature screens: icons, the pixel-art sprites
 - `ToastProvider` always renders the `toast-region` (`role="status"`, `aria-live="polite"`), so screen readers register it before the first toast. Because of that, an e2e `getByRole('status')` also matches it: assert exact text inside a status, not the whole status.
 - `ScreenSkeleton` renders an `aria-busy` `main`, which route focus waits on, and a visually hidden "Loading…" status that e2e waits on. Keep both.
 - `ScreenErrorBoundary` catches a lazy chunk that fails to load and resets when the pathname changes.
+- `useUnsavedChangesGuard(dirty)` (`UnsavedChangesGuard.tsx`) needs the data router for `useBlocker`. Render its `prompt`, and call `allowLeaving()` right before navigating away after a successful save or delete, or the prompt blocks it. While dirty it also adds a `beforeunload` prompt for a reload or a closed tab; `allowLeaving()` skips that too.
+- `ScreenProblem` and `ProblemWithRetry` are the load-failure view with Try again; a screen keeps its `h1`. Failed actions stay inline alerts, not a full-screen problem.
 - `ConfirmDialog` uses a native `<dialog>` with `showModal` (keeps focus inside, Escape cancels). Use it instead of `window.confirm`.
 - `TermHelp`:
   - It uses a native `popover="auto"`, shown in the top layer and pinned to the top edge, so opening it shifts nothing and it stays clear of the finish bar and tab bar. The button is hidden where `:popover-open` is unsupported.

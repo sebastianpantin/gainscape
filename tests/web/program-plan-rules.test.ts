@@ -55,7 +55,7 @@ function dayLabelled(days: readonly PlanDay[], label: string): PlanDay {
 function linesOf(day: PlanDay, title: string): string[] {
   const card = day.cards.find((candidate) => candidate.title === title);
   if (!card || card.kind !== 'exercise') throw new Error(`no exercise card titled ${title} on ${day.label}`);
-  return card.rows.map((row) => row.line);
+  return card.lines;
 }
 
 function statusesOf(days: readonly PlanDay[]): [string, string][] {
@@ -123,13 +123,12 @@ describe('plan for a weekly program (Madcow)', () => {
     ]);
   });
 
-  it('shows the light Day 2 squat on the upcoming Day 2: 47.5, 57.5, 70 and 70 kg', () => {
+  it('shows the light Day 2 squat on the upcoming Day 2: 47.5, 57.5, then 2 × 5 at 70 kg', () => {
     const wednesday = dayLabelled(planAfter(MADCOW_5X5, madcowEnrollment(), mondayDone()).days, 'W1 Day 2');
     expect(linesOf(wednesday, 'Back Squat')).toEqual([
       '47.5 kg × 5 · 50%',
       '57.5 kg × 5 · 62.5%',
-      '70 kg × 5 · 75%',
-      '70 kg × 5 · 75%',
+      '2 × 5 @ 70 kg · 75%',
     ]);
   });
 
@@ -199,7 +198,7 @@ describe('plan for a rotation program (StrongLifts)', () => {
 
   it('shows the next session at the working weight: squat 5 × 5 at 100 kg', () => {
     const next = planAfter(STRONGLIFTS_5X5, strongLiftsEnrollment(), []).days[0];
-    expect(linesOf(next, 'Back Squat')).toEqual(Array.from({ length: 5 }, () => '100 kg × 5 · 100%'));
+    expect(linesOf(next, 'Back Squat')).toEqual(['5 × 5 @ 100 kg']);
   });
 });
 

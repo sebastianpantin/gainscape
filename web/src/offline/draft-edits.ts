@@ -86,7 +86,7 @@ export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): Work
 }
 
 export function addSet(draft: WorkoutDraft, exerciseIndex: number, firstSet?: LastLoggedSet): WorkoutDraft {
-  return addSetTo(draft, exerciseIndex, { done: true }, firstSet);
+  return addSetTo(draft, exerciseIndex, { done: false }, firstSet);
 }
 
 export function addWarmupSets(

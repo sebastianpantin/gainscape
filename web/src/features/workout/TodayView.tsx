@@ -53,7 +53,7 @@ export function TodayView({
             {greetingFor(now.getHours())} ·{' '}
             {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
           </span>
-          <h1 className="title">Today</h1>
+          <h1 className="title">Train</h1>
         </div>
         {standing.status === 'ready' && (
           <LevelStat
@@ -77,7 +77,7 @@ export function TodayView({
       <InstallCard userId={userId} />
       <div className="today-row">
         {levelNudge && (
-          <Link className="level-nudge" to="/skills">
+          <Link className="level-nudge tap-link" to="/skills">
             {nearestLevelUpText(levelNudge)}
           </Link>
         )}
@@ -94,7 +94,12 @@ export function TodayView({
         onStart={start.startFromPrescription}
         onSkip={start.skipProgramDay}
       />
-      <ProgramDayStarts userId={userId} disabled={start.startingDay} onStart={start.startFromDay} />
+      <ProgramDayStarts
+        userId={userId}
+        disabled={start.startingDay}
+        followingProgram={program.kind !== 'none'}
+        onStart={start.startFromDay}
+      />
       <button
         ref={startButton}
         className="button primary big"

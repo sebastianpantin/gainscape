@@ -391,6 +391,13 @@ a:hover {
   font-size: var(--font-size-xs);
 }
 
+.tap-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  margin-block: calc((1lh - var(--tap-target)) / 2);
+}
+
 .xp-text {
   color: var(--color-xp);
 }
@@ -402,6 +409,20 @@ a:hover {
 .problem {
   color: var(--color-danger);
   margin: 0;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.disclosure > summary {
+  min-height: var(--tap-target);
+  line-height: var(--tap-target);
+  cursor: pointer;
+}
+
+.disclosure[open] > summary {
+  margin-bottom: var(--space-2);
 }
 
 .field {

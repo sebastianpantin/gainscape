@@ -16,6 +16,8 @@ import {
   revealTimeline,
   skipsRevealOnKey,
   unappliedChangesText,
+  xpToNextLevelText,
+  gainBarLabel,
 } from '../../web/src/features/summary/reveal-rules.ts';
 import { questLogFrom } from '../../web/src/lib/quests/quest-rules.ts';
 
@@ -449,5 +451,31 @@ describe('questRevealLines', () => {
       'New quest available: The Restless Squat',
       'New quest available: a new quest',
     ]);
+  });
+});
+
+describe('XP to the next level under a reveal bar', () => {
+  it('counts the XP left from 0 XP to level 2 at 80 XP: "80 XP to level 2"', () => {
+    expect(xpToNextLevelText(0)).toBe('80 XP to level 2');
+  });
+
+  it('rounds partial XP up, so 80.4 XP (level 2) reads 167 - 80.4 = 86.6 → "87 XP to level 3"', () => {
+    expect(xpToNextLevelText(80.4)).toBe('87 XP to level 3');
+  });
+
+  it('groups thousands: 500,000 XP (level 89) needs 534,888 - 500,000 = "34,888 XP to level 90"', () => {
+    expect(xpToNextLevelText(500_000)).toBe('34,888 XP to level 90');
+  });
+
+  it('reads "Max level" at level 99 (998,458 XP)', () => {
+    expect(xpToNextLevelText(998_458)).toBe('Max level');
+  });
+
+  it('names the bar with the skill, the share of the level and the XP to go: 48 of 80 XP is 60%', () => {
+    expect(gainBarLabel('Strength', 48)).toBe('Strength: 60% of the way to level 2, 32 XP to go');
+  });
+
+  it('names a maxed bar "Max level"', () => {
+    expect(gainBarLabel('Strength', 998_458)).toBe('Strength: Max level');
   });
 });

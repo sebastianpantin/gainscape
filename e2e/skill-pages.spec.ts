@@ -47,8 +47,8 @@ test('a body skill card opens its page with level, recovery, this week’s sets 
 
   await expect(page.getByRole('region', { name: 'Recovery' })).toHaveText(/^RecoveryFresh in (\d+d( \d+h)?|\d+h)$/);
   const week = page.getByRole('region', { name: 'Sets this week' });
-  await expect(week).toContainText('2.1 sets');
-  await expect(week).toContainText('below target');
+  await expect(week).toContainText('2.1 of 10 sets');
+  await expect(week).not.toContainText('below target');
   const counted = week.getByRole('list', { name: 'Exercises counted for Chest', exact: true }).getByRole('listitem');
   await expect(counted).toHaveCount(1);
   await expect(counted).toContainText('Barbell Bench Press');
@@ -72,7 +72,7 @@ test('the Body link sums up recovery and weekly sets and opens the Body page', a
   await register(page, uniqueUsername('skp_sum'));
 
   await openTab(page, 'Skills');
-  await expect(bodyLink(page)).toHaveAccessibleName('Body, All fresh · 7 under target');
+  await expect(bodyLink(page)).toHaveAccessibleName('Body, All fresh · 0 of 7 at target');
   await bodyLink(page).click();
   await expect(page).toHaveURL(/\/skills\/body$/);
   await expect(heading(page, 'Body')).toBeFocused();

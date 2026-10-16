@@ -43,7 +43,7 @@ const MADCOW_W1_MONDAY_SQUAT = [
 
 const FIVE_THREE_ONE_W1_SQUAT_AT_TM_90 = ['57.5 kg × 5 · 65%', '67.5 kg × 5 · 75%', '77.5 kg × 5+ · 85%'];
 
-const BBB_AT_TM_90 = Array.from({ length: 5 }, () => '45 kg × 10 · 50%');
+const BBB_AT_TM_90 = ['5 × 10 @ 45 kg · 50%'];
 
 function staleTemplateDefinition(key: string, name: string) {
   return {
@@ -86,7 +86,7 @@ test('enroll in Madcow in kg, start W1 Day 1 with the ramp rows, finish and see 
   const { user } = await readSession(page);
 
   await openEnrollForm(page, 'Madcow 5x5');
-  await expect(page.getByRole('radiogroup', { name: 'Unit' }).getByRole('radio', { name: 'kg' })).toBeChecked();
+  await expect(page.getByRole('radiogroup', { name: 'Unit' }).getByRole('radio', { name: 'Kilograms' })).toBeChecked();
   await expect(
     page.getByRole('radiogroup', { name: 'Ramp step' }).getByRole('radio', { name: '12.5%', exact: true }),
   ).toBeChecked();
@@ -154,8 +154,7 @@ test('enroll in Madcow in kg, start W1 Day 1 with the ramp rows, finish and see 
   await expect(prescribedRows(after, 'Back Squat')).toHaveText([
     '47.5 kg × 5 · 50%',
     '57.5 kg × 5 · 62.5%',
-    '70 kg × 5 · 75%',
-    '70 kg × 5 · 75%',
+    '2 × 5 @ 70 kg · 75%',
   ]);
 
   await dayPicker(after).getByRole('radio', { name: 'W1 Day 3', exact: true }).click();
@@ -244,9 +243,7 @@ test("edit the training max and see today's weights change", async ({ page }) =>
     '75 kg × 5 · 75%',
     '85 kg × 5+ · 85%',
   ]);
-  await expect(prescribedRows(changed, 'Back Squat — supplemental')).toHaveText(
-    Array.from({ length: 5 }, () => '50 kg × 10 · 50%'),
-  );
+  await expect(prescribedRows(changed, 'Back Squat — supplemental')).toHaveText(['5 × 10 @ 50 kg · 50%']);
 });
 
 test("start today's workout offline after the program facts were loaded once", async ({ context, page }) => {
@@ -293,8 +290,8 @@ test('a template with an unknown primitive kind is listed as "Update the app to 
     await expect(stale).toContainText('Update the app to use this program');
     await expect(stale.getByRole('link')).toHaveCount(0);
     await expect(stale.getByRole('button')).toHaveCount(0);
-    await expect(programs.getByRole('link', { name: 'Follow Madcow 5x5', exact: true })).toBeVisible();
-    await expect(programs.getByRole('link', { name: 'Follow 5/3/1', exact: true })).toBeVisible();
+    await expect(programs.getByRole('link', { name: 'Use Madcow 5x5', exact: true })).toBeVisible();
+    await expect(programs.getByRole('link', { name: 'Use 5/3/1', exact: true })).toBeVisible();
 
     await page.goto(`/programs/enroll/${key}`);
     await expect(page.getByText('Update the app to use this program', { exact: true })).toBeVisible();

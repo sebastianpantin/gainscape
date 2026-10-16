@@ -80,8 +80,8 @@ test('an installed shell cold-starts offline and syncs later', async ({ context,
   const benchCard = exerciseCard(cold, 'Barbell Bench Press');
   await expect(benchCard).toBeVisible();
   await expect(cold.getByRole('heading', { name: 'Workout', exact: true })).toBeVisible();
-  await expect(setRow(benchCard, 1).getByRole('spinbutton', { name: 'kg', exact: true })).toHaveValue('60');
-  await expect(setRow(benchCard, 1).getByLabel('reps', { exact: true })).toHaveValue('5');
+  await expect(setRow(benchCard, 1).getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })).toHaveValue('60');
+  await expect(setRow(benchCard, 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue('5');
   expect((await readSession(cold)).expires_at).toBeLessThan(nowInSeconds());
   await expectFontsLoaded(cold);
 
@@ -107,7 +107,7 @@ test('the items tab reloads offline from its saved items and starts a challenge 
   await register(page, username);
   await waitForController(page);
   await logDeadliftToFailure(page, 140);
-  await grantItems(username, { [SCROLL_KEY]: 1 });
+  await grantItems(username, { [SCROLL_KEY]: 1, rookie_belt: 1, grinder_scraps: 8 });
   await openItems(page);
   await expect(scrollSlot(page)).toBeVisible();
 
@@ -116,6 +116,12 @@ test('the items tab reloads offline from its saved items and starts a challenge 
   const markOnline = await markPageOffline(page);
   await expectProvenOffline(page);
   await expect(page.getByText(OFFLINE_ITEMS_NOTICE)).toBeVisible({ timeout: 60_000 });
+  await page.getByRole('main').getByRole('button', { name: 'Rookie belt', exact: true }).click();
+  const craft = page
+    .getByRole('region', { name: 'Item details' })
+    .getByRole('button', { name: 'Craft Grinder belt', exact: true });
+  await expect(craft).toBeDisabled();
+  await expect(craft).toHaveAccessibleDescription("You're offline. Equipping and crafting need a connection.");
 
   await startChallenge(page);
   await expectDeadliftPrefill(page, 100);

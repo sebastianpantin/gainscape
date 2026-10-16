@@ -149,13 +149,13 @@ test('logging and rating sets never moves or changes the workout help', async ({
   expect(before.names).toEqual([GLOSSARY.rir.question, GLOSSARY.repMax.question, GLOSSARY.sessionRpe.question]);
 
   const doneSetTwo = bench.getByRole('button', { name: 'Done set 2' });
-  await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'true');
-  await doneSetTwo.click();
   await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'false');
+  await doneSetTwo.click();
+  await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'true');
   expect(await readHelpLayout()).toEqual(before);
 
   await doneSetTwo.click();
-  await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'true');
+  await expect(doneSetTwo).toHaveAttribute('aria-pressed', 'false');
   expect(await readHelpLayout()).toEqual(before);
 
   const easy = bench.getByRole('radio', { name: 'Easy', exact: true }).first();
@@ -261,4 +261,19 @@ test('an unlogged lift explains rep maxes but not e1RM on its progress screen', 
 
   await expect(helpButton(page, GLOSSARY.repMax.question)).toBeVisible();
   await expect(page.getByRole('button', { name: /^What is e1RM/ })).toHaveCount(0);
+});
+
+test('Today names each header number, and Skills explains total and combat level', async ({ page }) => {
+  await register(page, uniqueUsername('th_lv'));
+  await expect(page.getByRole('link', { name: /^Total level \d+ Combat \d+$/ })).toBeVisible();
+  await openTab(page, 'Skills');
+  for (const key of ['totalLevel', 'combatLevel'] as const) {
+    const button = helpButton(page, GLOSSARY[key].question);
+    await button.click();
+    const panel = await panelOf(page, button);
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText(GLOSSARY[key].definition);
+    await panel.getByRole('button', { name: 'Got it', exact: true }).click();
+    await expect(panel).toBeHidden();
+  }
 });

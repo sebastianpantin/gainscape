@@ -29,7 +29,8 @@ The Profile tab and everything under it: the user's own profile card and stats (
 - Weights are always stored in kg. Convert only for display and input.
 - Public and private fields live in separate tables or RPCs (`updatePublicProfile` versus `updatePrivateProfile`). A new field goes on the right side, shows on `ProfileCard` only if public, and must stay in sync with RLS and with `PUBLIC_COLUMNS`/`PRIVATE_COLUMNS` in `web/src/lib/profile/profile.ts`.
 - Name and bio inputs have no `maxLength`, because it counts UTF-16 units. The bio counter uses `characterCount`, so both count characters the way the server does.
-- Bodyweight is a text field with a decimal keyboard, so `82,4` saves as 82.4. Unreadable text shows the range problem and disables Save.
+- Bodyweight is a text field with a decimal keyboard, so `82,4` saves as 82.4. Unreadable text shows the range problem. Height, birth year and training since are text fields too (`type="number"` would hide unreadable text from validation).
+- Edit profile shows a field's problem only after that field blurs or after a Save attempt, linked with `aria-describedby` and `aria-invalid`. Save stays enabled; a Save with problems focuses the first invalid field (found by its `name`). Save cancels `mousedown` so the field does not blur first: the problem it would reveal shifts Save down mid-tap and the click is lost.
 - A database trigger logs the profile bodyweight save as today's bodyweight entry. Save is disabled offline. After each save, invalidate `bodyweightTrendQuery`.
 - `saveBodyweight` is the only path for a bodyweight prompt answer. It updates `profile_private`, the device profile cache (`rememberSavedBodyweight`) and the loaded `profileQuery`, then announces `profile-saved`. The trend and the friend preview refresh from that announcement.
 - After an equip, unequip or craft, announce `gear-changed` (`announceDataChange`). That invalidates the loadout here and in other tabs.

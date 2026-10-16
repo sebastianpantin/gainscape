@@ -8,6 +8,7 @@ import { capitalized } from '../names.ts';
 import type { BadgeColor, UnitPref } from '../profile/profile-rules.ts';
 import { RATE_LIMITED_CODE } from '../platform/rate-limit.ts';
 import { type DistanceUnit, distanceUnitFor, formatWeight, HOLD_DISTANCE_UNIT } from '../units.ts';
+import { OFFLINE_PROBLEM } from '../../offline/cache-first.ts';
 
 export type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop' | 'quest';
 
@@ -93,6 +94,10 @@ const GENERIC_SOCIAL_ERROR = 'Something went wrong. Try again.';
 
 export function socialErrorMessage(error: { message?: string } | null | undefined): string {
   return SOCIAL_ERRORS[error?.message ?? ''] ?? GENERIC_SOCIAL_ERROR;
+}
+
+export function friendsLoadProblem(problem: string, offline: boolean): string {
+  return offline ? OFFLINE_PROBLEM : problem;
 }
 
 export function requestedUsername(raw: string): string {

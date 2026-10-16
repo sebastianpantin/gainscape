@@ -3,6 +3,7 @@ import { updateHoldSet } from '../../lib/workout/exercise-edit-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type HoldDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
 import { addSet, toggleSetDone } from '../../offline/draft-edits.ts';
+import { AddSetButton } from './AddSetButton.tsx';
 import { type ExerciseCardActions } from './exercise-card-actions.ts';
 import { HoldSetRow } from './HoldSetRow.tsx';
 import { type PreviewRecord } from './record-preview.ts';
@@ -78,15 +79,11 @@ export function HoldExerciseCard({
           />
         ))}
       </ol>
-      <button
-        ref={actions.focusTarget(cardKey)}
-        className="button dashed"
-        type="button"
-        disabled={!roomForSet}
-        onClick={() => actions.changeDraft(addSet(draft, exerciseIndex))}
-      >
-        + Add set
-      </button>
+      <AddSetButton
+        buttonRef={actions.focusTarget(cardKey)}
+        roomForSet={roomForSet}
+        onAdd={() => actions.changeDraft(addSet(draft, exerciseIndex))}
+      />
     </section>
   );
 }

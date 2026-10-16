@@ -1,8 +1,9 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { RATE_LIMITED_CODE } from '../../lib/platform/rate-limit.ts';
 import { type FinishStatus } from '../../offline/finish-retries.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
+import { DiscardWorkoutDialog } from './DiscardWorkoutDialog.tsx';
 import { rejectionText, stalledSyncText, syncProblemText } from './workout-rules.ts';
 
 interface SavingWorkoutViewProps {
@@ -24,6 +25,7 @@ export function SavingWorkoutView({
   onSaveBodyweight,
   onDiscard,
 }: SavingWorkoutViewProps) {
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   return (
     <main className="screen stack">
       <h1 className="title">Saving workout…</h1>
@@ -66,11 +68,12 @@ export function SavingWorkoutView({
           <button className="button" type="button" onClick={onBackToEditing}>
             Back to editing
           </button>
-          <button className="button danger" type="button" onClick={onDiscard}>
+          <button className="button danger" type="button" onClick={() => setConfirmingDiscard(true)}>
             Discard workout
           </button>
         </div>
       )}
+      {confirmingDiscard && <DiscardWorkoutDialog onConfirm={onDiscard} onCancel={() => setConfirmingDiscard(false)} />}
     </main>
   );
 }

@@ -1,8 +1,8 @@
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { type ComponentType, lazy, type ReactNode, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { type ComponentType, createContext, lazy, type ReactNode, Suspense, use, useEffect, useState } from 'react';
+import { createBrowserRouter, Link, Navigate, Route, RouterProvider, Routes, useLocation } from 'react-router-dom';
 import { Icon, type IconName } from './components/Icon.tsx';
-import { ScreenErrorBoundary } from './components/ScreenErrorBoundary.tsx';
+import { ScreenErrorBoundary, ScreenLoadProblem } from './components/ScreenErrorBoundary.tsx';
 import { ScreenSkeleton } from './components/ScreenSkeleton.tsx';
 import { ToastProvider } from './components/ToastProvider.tsx';
 import { PreferencesProvider } from './components/PreferencesProvider.tsx';
@@ -14,6 +14,7 @@ import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
 import { useDataChangeInvalidation } from './lib/query/data-changes.ts';
 import { createQueryClient } from './lib/query/query-client.ts';
 import { parseAuthCallback } from './lib/platform/auth-links.ts';
+import { activeTabPath } from './lib/platform/tab-rules.ts';
 import { useAuthSession } from './lib/platform/use-auth-session.ts';
 import { useRouteFocusAndTitle } from './lib/platform/use-route-focus.ts';
 import { OfflineBanner } from './pwa/OfflineBanner.tsx';
@@ -79,8 +80,8 @@ const QuestsScreen = lazyScreen(() => import('./features/quests/QuestsScreen.tsx
 const RevealScreen = lazyScreen(() => import('./features/summary/RevealScreen.tsx'), 'RevealScreen');
 const WhatsNewScreen = lazyScreen(() => import('./features/whats-new/WhatsNewScreen.tsx'), 'WhatsNewScreen');
 
-const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
-  { to: '/', label: 'Train', icon: 'train', end: true },
+const TABS: { to: string; label: string; icon: IconName }[] = [
+  { to: '/', label: 'Train', icon: 'train' },
   { to: '/skills', label: 'Skills', icon: 'skills' },
   { to: '/collection', label: 'Collection', icon: 'log' },
   { to: '/friends', label: 'Friends', icon: 'friends' },
@@ -95,6 +96,28 @@ export function App() {
       <OfflineBanner />
       <Screens />
     </QueryClientProvider>
+  );
+}
+
+const TAB_PATHS = TABS.map((tab) => tab.to);
+
+function TabBar() {
+  const { pathname } = useLocation();
+  const active = activeTabPath(pathname, TAB_PATHS);
+  return (
+    <nav className="tab-bar" aria-label="Main">
+      {TABS.map((tab) => (
+        <Link
+          key={tab.to}
+          to={tab.to}
+          className={tab.to === active ? 'tab active' : 'tab'}
+          aria-current={tab.to === active ? 'page' : undefined}
+        >
+          <Icon name={tab.icon} />
+          {tab.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -146,63 +169,68 @@ function Screens() {
   const userId = auth.session.user.id;
   return (
     <PreferencesProvider key={userId} userId={userId}>
-      <BrowserRouter>
-        <ToastProvider>
-          <RouteFocusAndTitle />
-          <LaunchRouting />
-          <nav className="tab-bar" aria-label="Main">
-            {TABS.map((tab) => (
-              <NavLink key={tab.to} to={tab.to} end={tab.end} className="tab">
-                <Icon name={tab.icon} />
-                {tab.label}
-              </NavLink>
-            ))}
-          </nav>
-          <ActiveWorkoutBar userId={userId} />
-          <ScreenErrorBoundary>
-            <Suspense fallback={<ScreenSkeleton />}>
-              <RouteView>
-                <Routes>
-                  <Route path="/" element={<WorkoutScreen key={userId} userId={userId} />} />
-                  <Route path="/reveal" element={<RevealScreen userId={userId} />} />
-                  <Route path="/skills" element={<SkillsScreen userId={userId} />} />
-                  <Route path="/skills/quests" element={<QuestsScreen userId={userId} />} />
-                  <Route path="/skills/body" element={<BodyScreen userId={userId} />} />
-                  <Route path="/skills/:skillKey" element={<SkillScreen userId={userId} />} />
-                  <Route path="/collection" element={<CollectionScreen userId={userId} />} />
-                  <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
-                  <Route
-                    path="/collection/exercises/:exerciseId"
-                    element={<ExerciseProgressScreen userId={userId} />}
-                  />
-                  <Route path="/collection/history" element={<HistoryScreen userId={userId} />} />
-                  <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
-                  <Route path="/friends" element={<FriendsScreen userId={userId} />} />
-                  <Route path="/friends/hiscores" element={<HiscoresScreen />} />
-                  <Route path="/friends/:friendId" element={<FriendProfileScreen />} />
-                  <Route path="/profile" element={<ProfileScreen userId={userId} />} />
-                  <Route path="/profile/edit" element={<EditProfileScreen userId={userId} />} />
-                  <Route path="/profile/preview" element={<FriendPreviewScreen userId={userId} />} />
-                  <Route
-                    path="/profile/settings"
-                    element={<SettingsScreen userId={userId} email={auth.session.user.email ?? null} />}
-                  />
-                  <Route path="/profile/settings/whats-new" element={<WhatsNewScreen />} />
-                  <Route path="/exercises" element={<ExercisesScreen userId={userId} />} />
-                  <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
-                  <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />
-                  <Route path="/programs/active" element={<ActiveProgramScreen userId={userId} />} />
-                  <Route path="/programs/active/plan" element={<ProgramPlanScreen userId={userId} />} />
-                  <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
-                  <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </RouteView>
-            </Suspense>
-          </ScreenErrorBoundary>
-          <WhatsNewSheet userId={userId} />
-        </ToastProvider>
-      </BrowserRouter>
+      <SignedInAccount value={{ userId, email: auth.session.user.email ?? null }}>
+        <SignedInRouter />
+      </SignedInAccount>
     </PreferencesProvider>
+  );
+}
+
+const SignedInAccount = createContext({ userId: '', email: null as string | null });
+
+let signedInRouter: ReturnType<typeof createBrowserRouter> | null = null;
+
+function SignedInRouter() {
+  signedInRouter ??= createBrowserRouter([
+    { path: '*', element: <SignedInShell />, errorElement: <ScreenLoadProblem /> },
+  ]);
+  return <RouterProvider router={signedInRouter} />;
+}
+
+function SignedInShell() {
+  const { userId, email } = use(SignedInAccount);
+  return (
+    <ToastProvider>
+      <RouteFocusAndTitle />
+      <LaunchRouting />
+      <ScreenErrorBoundary>
+        <Suspense fallback={<ScreenSkeleton />}>
+          <RouteView>
+            <Routes>
+              <Route path="/" element={<WorkoutScreen key={userId} userId={userId} />} />
+              <Route path="/reveal" element={<RevealScreen userId={userId} />} />
+              <Route path="/skills" element={<SkillsScreen userId={userId} />} />
+              <Route path="/skills/quests" element={<QuestsScreen userId={userId} />} />
+              <Route path="/skills/body" element={<BodyScreen userId={userId} />} />
+              <Route path="/skills/:skillKey" element={<SkillScreen userId={userId} />} />
+              <Route path="/collection" element={<CollectionScreen userId={userId} />} />
+              <Route path="/collection/items" element={<ItemsScreen userId={userId} />} />
+              <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
+              <Route path="/collection/history" element={<HistoryScreen userId={userId} />} />
+              <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
+              <Route path="/friends" element={<FriendsScreen userId={userId} />} />
+              <Route path="/friends/hiscores" element={<HiscoresScreen />} />
+              <Route path="/friends/:friendId" element={<FriendProfileScreen />} />
+              <Route path="/profile" element={<ProfileScreen userId={userId} />} />
+              <Route path="/profile/edit" element={<EditProfileScreen userId={userId} />} />
+              <Route path="/profile/preview" element={<FriendPreviewScreen userId={userId} />} />
+              <Route path="/profile/settings" element={<SettingsScreen userId={userId} email={email} />} />
+              <Route path="/profile/settings/whats-new" element={<WhatsNewScreen />} />
+              <Route path="/exercises" element={<ExercisesScreen userId={userId} />} />
+              <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
+              <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />
+              <Route path="/programs/active" element={<ActiveProgramScreen userId={userId} />} />
+              <Route path="/programs/active/plan" element={<ProgramPlanScreen userId={userId} />} />
+              <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
+              <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </RouteView>
+        </Suspense>
+      </ScreenErrorBoundary>
+      <ActiveWorkoutBar userId={userId} />
+      <TabBar />
+      <WhatsNewSheet userId={userId} />
+    </ToastProvider>
   );
 }

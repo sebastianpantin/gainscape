@@ -23,18 +23,21 @@ class PathErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   }
 
   render() {
-    if (!this.state.failed) return this.props.children;
-    return (
-      <main className="screen stack">
-        <p className="problem" role="alert">
-          Couldn't load this screen
-        </p>
-        <button className="button primary" type="button" onClick={() => window.location.reload()}>
-          Reload
-        </button>
-      </main>
-    );
+    return this.state.failed ? <ScreenLoadProblem /> : this.props.children;
   }
+}
+
+export function ScreenLoadProblem() {
+  return (
+    <main className="screen stack">
+      <p className="problem" role="alert">
+        Couldn't load this screen
+      </p>
+      <button className="button primary" type="button" onClick={() => window.location.reload()}>
+        Reload
+      </button>
+    </main>
+  );
 }
 
 export function ScreenErrorBoundary({ children }: { children: ReactNode }) {

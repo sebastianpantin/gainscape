@@ -40,7 +40,7 @@ function BackButton() {
   const cameFromApp = location.key !== 'default';
   return (
     <button type="button" className="back-link" onClick={() => (cameFromApp ? navigate(-1) : navigate('/collection'))}>
-      ← Back
+      ‹ Back
     </button>
   );
 }

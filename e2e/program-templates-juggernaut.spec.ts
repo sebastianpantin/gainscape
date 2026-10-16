@@ -6,7 +6,6 @@ import {
   openEnrollForm,
   prescribedRows,
   programToday,
-  repeated,
   repsIn,
   startFollowing,
   weightsIn,
@@ -33,10 +32,7 @@ test('enroll in Juggernaut in kg and see the 10s accumulation as 5×10 at 60% of
 
   const today = programToday(page, JUGGERNAUT);
   await expect(dayPicker(today).getByRole('radio', { name: 'C1 W1 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText([
-    ...repeated('60 kg × 10 · 60%', 4),
-    '60 kg × 10+ · 60%',
-  ]);
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['4 × 10 @ 60 kg · 60%', '60 kg × 10+ · 60%']);
 
   await today.getByRole('button', { name: `Start: ${JUGGERNAUT} — C1 W1 Day 1`, exact: true }).click();
   await expect(page.getByText(`${JUGGERNAUT} — C1 W1 Day 1`, { exact: true })).toBeVisible();
@@ -52,14 +48,14 @@ test('a kg Juggernaut enrollment is not offered the lb-only fine per-rep increme
   await openEnrollForm(page, JUGGERNAUT);
   const options = page.getByRole('region', { name: 'Options', exact: true });
   const unit = page.getByRole('radiogroup', { name: 'Unit', exact: true });
-  await expect(unit.getByRole('radio', { name: 'kg', exact: true })).toBeChecked();
+  await expect(unit.getByRole('radio', { name: 'Kilograms', exact: true })).toBeChecked();
   await expect(options.getByRole('radio', { name: /standard/i })).toBeVisible();
   await expect(options.getByRole('radio', { name: /fine/i })).toHaveCount(0);
 
-  await unit.getByRole('radio', { name: 'lb', exact: true }).click();
+  await unit.getByRole('radio', { name: 'Pounds', exact: true }).click();
   await expect(options.getByRole('radio', { name: /fine/i })).toBeVisible();
 
-  await unit.getByRole('radio', { name: 'kg', exact: true }).click();
+  await unit.getByRole('radio', { name: 'Kilograms', exact: true }).click();
   await expect(options.getByRole('radio', { name: /fine/i })).toHaveCount(0);
 });
 
@@ -68,13 +64,13 @@ test('switching an lb Juggernaut enrollment with the fine increment to kg falls 
   await openEnrollForm(page, JUGGERNAUT);
   const options = page.getByRole('region', { name: 'Options', exact: true });
   const unit = page.getByRole('radiogroup', { name: 'Unit', exact: true });
-  await unit.getByRole('radio', { name: 'lb', exact: true }).click();
+  await unit.getByRole('radio', { name: 'Pounds', exact: true }).click();
   await options.getByRole('radio', { name: /fine/i }).click();
   await expect(options.getByRole('radio', { name: /fine/i })).toBeChecked();
 
-  await unit.getByRole('radio', { name: 'kg', exact: true }).click();
+  await unit.getByRole('radio', { name: 'Kilograms', exact: true }).click();
   await expect(options.getByRole('radio', { name: /standard/i })).toBeChecked();
 
-  await unit.getByRole('radio', { name: 'lb', exact: true }).click();
+  await unit.getByRole('radio', { name: 'Pounds', exact: true }).click();
   await expect(options.getByRole('radio', { name: /standard/i })).toBeChecked();
 });

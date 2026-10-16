@@ -26,6 +26,9 @@ import { fetchLatestExerciseList, historyQuery, itemCatalogQuery } from '../../l
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
+import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { forgetLastSummary, recallLastSummary } from '../summary/last-summary.ts';
@@ -43,6 +46,7 @@ import {
   removalText,
   removedText,
   removeEditSet,
+  removingSetAsksFirst,
   sameKindOfExercise,
   sameSetValues,
   type SessionEdit,
@@ -64,6 +68,12 @@ const NO_ITEMS: readonly CatalogItem[] = [];
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
 
+interface PendingRemoval {
+  exerciseIndex: number;
+  setId: string;
+  title: string;
+}
+
 interface SessionDetailScreenProps {
   userId: string;
 }
@@ -77,12 +87,18 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const [edit, setEdit] = useState<SessionEdit | null>(null);
   const [readOnly, setReadOnly] = useState(true);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [problem, setProblem] = useState<SessionProblem<Loaded> | null>(null);
   const [busy, setBusy] = useState<SessionBusy>(IDLE);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
   const items = useQuery(itemCatalogQuery(userId)).data?.loaded.items ?? NO_ITEMS;
   const controllerRef = useRef<AbortController | null>(null);
+  const unsaved = useUnsavedChangesGuard(
+    !readOnly && loaded !== null && edit !== null && hasChanges(edit, loaded.original),
+  );
+  const { allowLeaving } = unsaved;
 
   const loadWithCatalog = useCallback(
     () =>
@@ -98,10 +114,10 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     setReadOnly(!isSessionEditable(next.session, Date.now()));
   }, []);
 
-  const goBackGone = useCallback(
-    () => navigate(HISTORY_PATH, { replace: true, state: { notice: 'That workout is no longer there.' } }),
-    [navigate],
-  );
+  const goBackGone = useCallback(() => {
+    allowLeaving();
+    void navigate(HISTORY_PATH, { replace: true, state: { notice: 'That workout is no longer there.' } });
+  }, [allowLeaving, navigate]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -119,18 +135,25 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       (error: Error) => !controller.signal.aborted && setLoadProblem(error.message),
     );
     return () => controller.abort();
-  }, [sessionId, adopt, goBackGone, loadWithCatalog]);
+  }, [sessionId, adopt, goBackGone, loadWithCatalog, loadAttempt]);
 
   if (loadProblem)
     return (
-      <main className="screen stack">
-        <Link className="back-link" to={HISTORY_PATH}>
-          ← History
-        </Link>
-        <p className="problem" role="alert">
-          {loadProblem}
-        </p>
-      </main>
+      <ScreenProblem
+        heading={
+          <>
+            <Link className="back-link" to={HISTORY_PATH}>
+              ‹ History
+            </Link>
+            <h1 className="title">Workout</h1>
+          </>
+        }
+        problem={loadProblem}
+        onRetry={() => {
+          setLoadProblem(null);
+          setLoadAttempt((attempt) => attempt + 1);
+        }}
+      />
     );
   if (!loaded || !edit)
     return (
@@ -186,6 +209,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
               withoutHistorySession(loadedPages, sessionId),
             );
             void announceDataChange(queryClient, 'workout-changed');
+            allowLeaving();
             return navigate(HISTORY_PATH, { replace: true, state: { notice: change.notice } });
           case 'gone':
             return goBackGone();
@@ -224,6 +248,11 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const activeDrops = session.summary.drops ?? [];
   const editWarning = removalText(dropsAtRisk(edit, loaded.original, activeDrops), items);
   const deleteWarning = removalText(activeDrops, items);
+
+  const askToRemove = (removal: PendingRemoval) => {
+    if (removingSetAsksFirst(loaded.original, removal.setId)) setPendingRemoval(removal);
+    else setEdit(removeEditSet(edit, removal.exerciseIndex, removal.setId));
+  };
 
   const header = <SessionHeader session={session} backTo={HISTORY_PATH} />;
 
@@ -363,7 +392,13 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                         xpNote={xp.note}
                         unit={unitPref}
                         onChange={(changes) => setEdit(updateBout(edit, exerciseIndex, bout.id, changes))}
-                        onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, bout.id))}
+                        onRemove={() =>
+                          askToRemove({
+                            exerciseIndex,
+                            setId: bout.id,
+                            title: `Remove bout ${boutIndex + 1} of ${exercise.name}?`,
+                          })
+                        }
                       />
                     );
                   })
@@ -381,7 +416,13 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                           xpNote={xp.note}
                           unit={unitPref}
                           onChange={(changes) => setEdit(updateHoldSet(edit, exerciseIndex, set.id, changes))}
-                          onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
+                          onRemove={() =>
+                            askToRemove({
+                              exerciseIndex,
+                              setId: set.id,
+                              title: `Remove set ${setIndex + 1} of ${exercise.name}?`,
+                            })
+                          }
                         />
                       );
                     })
@@ -398,7 +439,13 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
                           unit={unitPref}
                           effortMode={effortInputMode}
                           onChange={(changes) => setEdit(updateSet(edit, exerciseIndex, set.id, changes))}
-                          onRemove={() => setEdit(removeEditSet(edit, exerciseIndex, set.id))}
+                          onRemove={() =>
+                            askToRemove({
+                              exerciseIndex,
+                              setId: set.id,
+                              title: `Remove set ${setIndex + 1} of ${exercise.name}?`,
+                            })
+                          }
                         />
                       );
                     })}
@@ -460,6 +507,20 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           Undo my changes
         </button>
       )}
+      {pendingRemoval && (
+        <ConfirmDialog
+          title={pendingRemoval.title}
+          confirmLabel="Remove"
+          danger
+          onConfirm={() => {
+            setEdit(removeEditSet(edit, pendingRemoval.exerciseIndex, pendingRemoval.setId));
+            setPendingRemoval(null);
+          }}
+          onCancel={() => setPendingRemoval(null)}
+        >
+          <p>It goes when you save. Until then, Undo my changes brings it back.</p>
+        </ConfirmDialog>
+      )}
       <section className="danger-zone">
         {confirmingDelete ? (
           <>
@@ -484,6 +545,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           </button>
         )}
       </section>
+      {unsaved.prompt}
     </main>
   );
 }

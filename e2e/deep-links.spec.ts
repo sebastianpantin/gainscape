@@ -101,7 +101,7 @@ test('an exercise link that is not an exercise id says the exercise is not avail
   await page.goto('/collection/exercises/not-an-exercise');
 
   await expect(page.getByRole('alert')).toHaveText(MISSING_EXERCISE);
-  await expect(page.getByRole('button', { name: '← Back' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '‹ Back' })).toBeVisible();
 });
 
 test('an exercise link to an exercise that does not exist says the exercise is not available', async ({ page }) => {
@@ -124,10 +124,10 @@ test('the Back button on a missing exercise without app history goes to the coll
   await register(page, uniqueUsername('dl_ex_back'));
 
   await page.goto('/collection/exercises/not-an-exercise');
-  await page.getByRole('button', { name: '← Back' }).click();
+  await page.getByRole('button', { name: '‹ Back' }).click();
 
   await expect(page).toHaveURL(/\/collection$/);
-  await expect(page.getByRole('heading', { name: 'Collection log' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection: Records', exact: true })).toBeVisible();
 });
 
 test('opening the reveal with no finished workout says there is nothing to show', async ({ page }) => {
@@ -138,4 +138,39 @@ test('opening the reveal with no finished workout says there is nothing to show'
   await expect(page.getByText('No finished workout to show yet.')).toBeVisible();
   await page.getByRole('link', { name: 'Back to workout' }).click();
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+});
+
+test('Programs, Exercises and the program screens keep the Profile tab lit and lead back with a back link', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('dl_prof'));
+  const profileTab = page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Profile', exact: true });
+  const screens = [
+    { path: '/programs', heading: 'Programs', back: '‹ Profile', backTo: /\/profile$/ },
+    { path: '/exercises', heading: 'Exercises', back: '‹ Profile', backTo: /\/profile$/ },
+    {
+      path: '/programs/enroll/stronglifts_5x5',
+      heading: 'Follow StrongLifts 5x5',
+      back: '‹ Programs',
+      backTo: /\/programs$/,
+    },
+  ];
+  for (const { path, heading, back, backTo } of screens) {
+    await test.step(path, async () => {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`${path}$`));
+      await expect(profileTab).toHaveAttribute('aria-current', 'page');
+      await page.getByRole('main').getByRole('link', { name: back, exact: true }).click();
+      await expect(page).toHaveURL(backTo);
+    });
+  }
+});
+
+test('Quests leads back to Skills', async ({ page }) => {
+  await register(page, uniqueUsername('dl_quest'));
+  await page.goto('/skills/quests');
+  await expect(page.getByRole('heading', { level: 1, name: 'Quests', exact: true })).toBeVisible();
+  await page.getByRole('main').getByRole('link', { name: '‹ Skills', exact: true }).click();
+  await expect(page).toHaveURL(/\/skills$/);
 });

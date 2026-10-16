@@ -59,7 +59,7 @@ test('the progress screen charts e1RM and top set without warm-ups and lists rep
   await expect(rows.nth(5)).toHaveText(['5RM', '60 kg', today].join(''));
   await expect(rows.nth(6)).toHaveText('6RM——');
 
-  await page.getByRole('button', { name: '← Back' }).click();
+  await page.getByRole('button', { name: '‹ Back' }).click();
   await expect(page.getByRole('button', { name: 'Finish workout' })).toBeVisible();
   await finishWorkout(page);
 

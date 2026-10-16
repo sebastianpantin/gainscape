@@ -1,11 +1,18 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { ageFrom, BODYWEIGHT_NUDGE_STEP, nudgedBodyweightKg, updatePrivateProfile } from '../../lib/profile/profile.ts';
+import {
+  ageFrom,
+  BODYWEIGHT_NUDGE_STEP,
+  BODYWEIGHT_OFFLINE_TEXT,
+  nudgedBodyweightKg,
+  updatePrivateProfile,
+} from '../../lib/profile/profile.ts';
 import { collectionPercentQuery, questPointsQuery } from '../../lib/query/queries.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
@@ -33,7 +40,7 @@ function MenuLink({ to, children }: { to: string; children: string }) {
 }
 
 export function ProfileScreen({ userId }: ProfileScreenProps) {
-  const { state, replace } = useProfile(userId);
+  const { state, replace, refresh } = useProfile(userId);
   const standing = useStanding(userId);
   const collection = useQuery(collectionPercentQuery(userId));
   const questPoints = useQuery(questPointsQuery(userId));
@@ -43,15 +50,10 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const offline = useIsOffline();
+  const offlineId = useId();
 
   if (state.status === 'failed')
-    return (
-      <main className="screen">
-        <p className="problem" role="alert">
-          {state.problem}
-        </p>
-      </main>
-    );
+    return <ScreenProblem heading={<h1 className="title">Profile</h1>} problem={state.problem} onRetry={refresh} />;
   if (state.status === 'loading') return <ScreenSkeleton title="Profile" />;
 
   const { profile } = state;
@@ -134,9 +136,20 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
             </>
           )}
         </div>
+        {draftKg !== null && offline && (
+          <p className="notice" id={offlineId}>
+            {BODYWEIGHT_OFFLINE_TEXT}
+          </p>
+        )}
         {draftKg !== null && (
           <div className="row">
-            <button className="button primary" type="button" disabled={saving || offline} onClick={saveNudged}>
+            <button
+              className="button primary"
+              type="button"
+              aria-describedby={offline ? offlineId : undefined}
+              disabled={saving || offline}
+              onClick={saveNudged}
+            >
               Save {formatWeight(draftKg, unitPref)}
             </button>
             <button className="button" type="button" onClick={() => setDraftKg(null)}>

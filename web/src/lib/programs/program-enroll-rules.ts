@@ -13,6 +13,7 @@ import {
   roundTo,
   type WeightUnit,
 } from '@domain/index.ts';
+import { formatCount } from '../format.ts';
 import { capitalized } from '../names.ts';
 
 export const UPDATE_APP_TEXT = 'Update the app to use this program';
@@ -205,6 +206,14 @@ export function templateListEntries(rows: readonly ProgramTemplateRow[]): Templa
   return latestRows(rows.filter((row) => !isCustomTemplate(row)))
     .map(entryOf)
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function templateScheduleText({ schedule }: ProgramDefinition): string {
+  const total = schedule.days.length;
+  if (schedule.kind === 'rotation') return `Rotates through ${formatCount(total, 'workout')}`;
+  const required = Math.max(1, schedule.days.filter((day) => day.optional !== true).length);
+  const days = required === total ? `${formatCount(total, 'day')} a week` : `${required}–${total} days a week`;
+  return schedule.kind === 'cycle' ? `${days} · ${schedule.weeksPerCycle}-week cycle` : days;
 }
 
 export function templateEntry(rows: readonly ProgramTemplateRow[], key: string): TemplateListEntry | undefined {
@@ -435,14 +444,52 @@ export function optionControls(definition: ProgramDefinition, unit: WeightUnit):
   return definition.options.map((option) => optionControl(option, unit));
 }
 
-function unitOptionProblems(definition: ProgramDefinition, form: EnrollForm): string[] {
+export interface EnrollFieldProblem {
+  field: string;
+  text: string;
+}
+
+export function inputFieldKey(lift: string): string {
+  return `input:${lift}`;
+}
+
+export function optionFieldKey(optionKey: string): string {
+  return `option:${optionKey}`;
+}
+
+function unitOptionProblems(definition: ProgramDefinition, form: EnrollForm): EnrollFieldProblem[] {
   return definition.options.flatMap((option) => {
     const value = form.options[option.key];
     const onlyFor = unitOnlyFor(option, value);
     if (value === undefined || onlyFor === undefined || onlyFor === form.unit) return [];
     const label = optionLabel(option.key);
-    return [`${label}: ${choiceLabel(value).toLowerCase()} is only offered for ${onlyFor} enrollments`];
+    return [
+      {
+        field: optionFieldKey(option.key),
+        text: `${label}: ${choiceLabel(value).toLowerCase()} is only offered for ${onlyFor} enrollments`,
+      },
+    ];
   });
+}
+
+export function enrollFieldProblems(definition: ProgramDefinition, form: EnrollForm): EnrollFieldProblem[] {
+  const problems: EnrollFieldProblem[] = [];
+  for (const field of inputFields(definition, form)) {
+    const text = referenceValueProblem(field.label, form.inputValues[field.lift], form.unit);
+    if (text) problems.push({ field: inputFieldKey(field.lift), text });
+  }
+  const { increment, barWeight } = roundingOf(form);
+  if (increment.kind === 'problem') problems.push({ field: 'increment', text: increment.problem });
+  if (barWeight.kind === 'problem') problems.push({ field: 'barWeight', text: barWeight.problem });
+  problems.push(...unitOptionProblems(definition, form));
+  for (const [key, parsed] of Object.entries(numberOptionsOf(definition, form)))
+    if (parsed.kind === 'problem') problems.push({ field: optionFieldKey(key), text: parsed.problem });
+  return problems;
+}
+
+export function startingWeightHint(fields: readonly InputField[], form: EnrollForm): string | null {
+  if (!fields.some((field) => field.kind === 'workingWeight')) return null;
+  return `New to a lift? Start with the empty bar: ${roundingTextOf(form).barWeight} ${form.unit}.`;
 }
 
 function previewedValue(definition: ProgramDefinition, form: EnrollForm, lift: string, value: number) {
@@ -465,26 +512,17 @@ export function referencePreview(definition: ProgramDefinition, form: EnrollForm
 }
 
 export function enrollPayload(definition: ProgramDefinition, form: EnrollForm): EnrollPayloadResult {
-  const problems: string[] = [];
-  const inputs: Record<string, Partial<Record<InputKind, number>>> = {};
-  for (const field of inputFields(definition, form)) {
-    const raw = form.inputValues[field.lift];
-    const problem = referenceValueProblem(field.label, raw, form.unit);
-    if (problem) problems.push(problem);
-    else inputs[field.lift] = { [field.kind]: Number((raw ?? '').trim()) };
-  }
+  const problems = enrollFieldProblems(definition, form).map((problem) => problem.text);
   const { increment, barWeight } = roundingOf(form);
-  const numberOptions = numberOptionsOf(definition, form);
-  const options: Record<string, OptionValue> = { ...form.options };
-  for (const parsed of [increment, barWeight]) if (parsed.kind === 'problem') problems.push(parsed.problem);
-  problems.push(...unitOptionProblems(definition, form));
-  for (const [key, parsed] of Object.entries(numberOptions)) {
-    if (parsed.kind === 'problem') problems.push(parsed.problem);
-    else options[key] = parsed.value;
-  }
   if (problems.length > 0 || increment.kind === 'problem' || barWeight.kind === 'problem') {
     return { kind: 'invalid', problems };
   }
+  const inputs: Record<string, Partial<Record<InputKind, number>>> = {};
+  for (const field of inputFields(definition, form))
+    inputs[field.lift] = { [field.kind]: Number((form.inputValues[field.lift] ?? '').trim()) };
+  const options: Record<string, OptionValue> = { ...form.options };
+  for (const [key, parsed] of Object.entries(numberOptionsOf(definition, form)))
+    if (parsed.kind === 'ok') options[key] = parsed.value;
   return {
     kind: 'ok',
     payload: {

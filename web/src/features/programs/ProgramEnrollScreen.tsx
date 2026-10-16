@@ -1,8 +1,10 @@
 import { type ProgramDefinition, type RoundingMode, type WeightUnit } from '@domain/index.ts';
 import { useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { flushSync } from 'react-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
+import { FieldProblem } from '../../components/FieldProblem.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
 import { isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
@@ -17,18 +19,23 @@ import {
   barWeightLabel,
   type BindableExercise,
   bindingSelectLifts,
+  type EnrollFieldProblem,
+  enrollFieldProblems,
   type EnrollForm,
   enrollPayload,
   type EnrollProgramPayload,
   initialEnrollForm,
+  inputFieldKey,
   inputFields,
   inputKindLabel,
   liftName,
   optionControls,
+  optionFieldKey,
   referencePreview,
   replacedProgramName,
   roundingIncrementLabel,
   roundingTextOf,
+  startingWeightHint,
   templateEntry,
   type TemplateListEntry,
   withOption,
@@ -49,8 +56,8 @@ type Loaded =
   | { status: 'ready'; definition: ProgramDefinition; name: string; exercises: BindableExercise[] };
 
 const UNIT_OPTIONS: { value: WeightUnit; label: string }[] = [
-  { value: 'kg', label: 'kg' },
-  { value: 'lb', label: 'lb' },
+  { value: 'kg', label: 'Kilograms' },
+  { value: 'lb', label: 'Pounds' },
 ];
 
 const ROUNDING_MODES: { value: RoundingMode; label: string }[] = [
@@ -59,6 +66,11 @@ const ROUNDING_MODES: { value: RoundingMode; label: string }[] = [
 ];
 
 const NOT_TRACKED = '';
+
+function describedBy(...ids: (string | false | undefined)[]): string | undefined {
+  const present = ids.filter((id) => typeof id === 'string');
+  return present.length > 0 ? present.join(' ') : undefined;
+}
 
 function loadedEntry(entry: TemplateListEntry | undefined, exercises: BindableExercise[]): Loaded {
   if (!entry) return { status: 'missing' };
@@ -85,6 +97,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const loaded = loadedChoices(loadedState(choices.data, choices.isFetching ? null : choices.error), key);
   const [editedForm, setEditedForm] = useState<EnrollForm | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
+  const [fieldProblems, setFieldProblems] = useState<EnrollFieldProblem[]>([]);
   const [busy, setBusy] = useState(false);
   const idPrefix = useId();
   const offline = useIsOffline();
@@ -107,6 +120,9 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   if (loaded.status === 'blocked')
     return (
       <main className="screen stack">
+        <Link className="back-link" to="/programs">
+          ‹ Programs
+        </Link>
         <h1 className="title">Follow {loaded.name}</h1>
         <p className="panel muted">{loaded.message}</p>
       </main>
@@ -120,9 +136,22 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
       }
     : initialEnrollForm(definition, unitPref, exercises);
   const form = editedForm ?? initialForm;
-  const change = (changes: Partial<EnrollForm>) => setEditedForm({ ...form, ...changes });
+  const change = (changes: Partial<EnrollForm>) => {
+    setFieldProblems([]);
+    setEditedForm({ ...form, ...changes });
+  };
+  const fieldId = (field: string) => `${idPrefix}-${field}`;
+  const problemId = (field: string) => `${idPrefix}-${field}-problem`;
+  const problemOf = (field: string) => fieldProblems.find((problem) => problem.field === field)?.text;
+  const fieldA11y = (field: string, hintId?: string) => ({
+    id: fieldId(field),
+    'aria-invalid': problemOf(field) ? true : undefined,
+    'aria-describedby': describedBy(problemOf(field) && problemId(field), hintId),
+  });
   const roundingText = roundingTextOf(form);
   const fields = inputFields(definition, form);
+  const weightHint = startingWeightHint(fields, form);
+  const weightHintId = `${idPrefix}-weight-hint`;
   const replacing = replacedProgramName(readProgramCache(localStorage, userId).templates, enrolledRow);
   const selectLifts = bindingSelectLifts(definition);
 
@@ -141,6 +170,12 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   };
 
   const start = () => {
+    const issues = enrollFieldProblems(definition, form);
+    if (issues.length > 0) {
+      flushSync(() => setFieldProblems(issues));
+      document.getElementById(fieldId(issues[0].field))?.focus();
+      return;
+    }
     const result = enrollPayload(definition, form);
     if (result.kind === 'invalid') {
       setProblems(result.problems);
@@ -153,6 +188,9 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
 
   return (
     <main className="screen stack">
+      <Link className="back-link" to="/programs">
+        ‹ Programs
+      </Link>
       <h1 className="title">Follow {name}</h1>
       <div className="panel stack">
         <span className="field">Unit</span>
@@ -166,8 +204,15 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
       <section className="panel stack" aria-label="Starting weights">
         <h2>Starting weights</h2>
         <TermHelpRow keys={inputHelpKeys(fields)} />
+        {weightHint && (
+          <p className="hint" id={weightHintId}>
+            {weightHint}
+          </p>
+        )}
         {fields.map((field) => {
           const preview = referencePreview(definition, form, field.lift);
+          const key = inputFieldKey(field.lift);
+          const hinted = weightHint !== null && field.kind === 'workingWeight';
           return (
             <div className="stack" key={field.lift} style={{ gap: 6 }}>
               {field.kinds.length > 1 && (
@@ -185,12 +230,15 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
                   inputMode="decimal"
                   min={0}
                   step="any"
+                  placeholder={hinted ? `e.g. ${roundingText.barWeight}` : undefined}
+                  {...fieldA11y(key, hinted ? weightHintId : undefined)}
                   value={form.inputValues[field.lift] ?? ''}
                   onChange={(event) =>
                     change({ inputValues: { ...form.inputValues, [field.lift]: event.target.value } })
                   }
                 />
               </label>
+              <FieldProblem id={problemId(key)} problem={problemOf(key)} />
               {preview && <p className="hint">{preview}</p>}
             </div>
           );
@@ -201,62 +249,86 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
           <h2>Options</h2>
           {optionControls(definition, form.unit).map((control) =>
             control.kind === 'choice' ? (
-              <div className="stack" key={control.key} style={{ gap: 6 }}>
+              <div
+                className="stack"
+                key={control.key}
+                style={{ gap: 6 }}
+                tabIndex={-1}
+                {...fieldA11y(optionFieldKey(control.key))}
+              >
                 <span className="field">{control.label}</span>
                 <SegmentedChoice
                   label={control.label}
                   options={control.choices}
                   current={form.options[control.key] ?? control.defaultValue}
                   stacked={control.choices.length > 3}
-                  onPick={(value) => setEditedForm(withOption(definition, form, control.key, value, exercises))}
+                  onPick={(value) => {
+                    setFieldProblems([]);
+                    setEditedForm(withOption(definition, form, control.key, value, exercises));
+                  }}
+                />
+                <FieldProblem
+                  id={problemId(optionFieldKey(control.key))}
+                  problem={problemOf(optionFieldKey(control.key))}
                 />
               </div>
             ) : (
-              <label className="field" key={control.key}>
-                {control.label}
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min={control.min}
-                  max={control.max}
-                  step={0.01}
-                  value={form.optionText?.[control.key] ?? String(control.defaultValue)}
-                  onChange={(event) =>
-                    change({ optionText: { ...form.optionText, [control.key]: event.target.value } })
-                  }
+              <div className="stack" key={control.key} style={{ gap: 6 }}>
+                <label className="field">
+                  {control.label}
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={control.min}
+                    max={control.max}
+                    step={0.01}
+                    {...fieldA11y(optionFieldKey(control.key))}
+                    value={form.optionText?.[control.key] ?? String(control.defaultValue)}
+                    onChange={(event) =>
+                      change({ optionText: { ...form.optionText, [control.key]: event.target.value } })
+                    }
+                  />
+                </label>
+                <FieldProblem
+                  id={problemId(optionFieldKey(control.key))}
+                  problem={problemOf(optionFieldKey(control.key))}
                 />
-              </label>
+              </div>
             ),
           )}
         </section>
       )}
       {selectLifts.length > 0 && (
         <section className="panel stack" aria-label="Exercises">
-          <h2>Exercises</h2>
-          {selectLifts.map((lift) => (
-            <div className="field" key={lift.key}>
-              <label htmlFor={`${idPrefix}-${lift.key}`}>{lift.name} exercise</label>
-              <select
-                id={`${idPrefix}-${lift.key}`}
-                value={form.bindings[lift.key] ?? NOT_TRACKED}
-                onChange={(event) =>
-                  change({
-                    bindings: {
-                      ...form.bindings,
-                      [lift.key]: event.target.value === NOT_TRACKED ? null : event.target.value,
-                    },
-                  })
-                }
-              >
-                <option value={NOT_TRACKED}>Not tracked</option>
-                {exercises.map((exercise) => (
-                  <option key={exercise.id} value={exercise.id}>
-                    {exercise.name}
-                  </option>
-                ))}
-              </select>
+          <details className="disclosure">
+            <summary>Change exercises</summary>
+            <div className="stack">
+              {selectLifts.map((lift) => (
+                <div className="field" key={lift.key}>
+                  <label htmlFor={`${idPrefix}-${lift.key}`}>{lift.name} exercise</label>
+                  <select
+                    id={`${idPrefix}-${lift.key}`}
+                    value={form.bindings[lift.key] ?? NOT_TRACKED}
+                    onChange={(event) =>
+                      change({
+                        bindings: {
+                          ...form.bindings,
+                          [lift.key]: event.target.value === NOT_TRACKED ? null : event.target.value,
+                        },
+                      })
+                    }
+                  >
+                    <option value={NOT_TRACKED}>Not tracked</option>
+                    {exercises.map((exercise) => (
+                      <option key={exercise.id} value={exercise.id}>
+                        {exercise.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
             </div>
-          ))}
+          </details>
         </section>
       )}
       <section className="panel stack" aria-label="Rounding">
@@ -268,10 +340,12 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
             inputMode="decimal"
             min={0}
             step="any"
+            {...fieldA11y('increment')}
             value={roundingText.increment}
             onChange={(event) => change({ roundingText: { ...roundingText, increment: event.target.value } })}
           />
         </label>
+        <FieldProblem id={problemId('increment')} problem={problemOf('increment')} />
         <span className="field">Rounding direction</span>
         <SegmentedChoice
           label="Rounding direction"
@@ -286,11 +360,18 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
             inputMode="decimal"
             min={0}
             step="any"
+            {...fieldA11y('barWeight')}
             value={roundingText.barWeight}
             onChange={(event) => change({ roundingText: { ...roundingText, barWeight: event.target.value } })}
           />
         </label>
+        <FieldProblem id={problemId('barWeight')} problem={problemOf('barWeight')} />
       </section>
+      {fieldProblems.length > 0 && (
+        <p className="problem" role="alert">
+          {fieldProblems.length === 1 ? '1 field needs fixing.' : `${fieldProblems.length} fields need fixing.`}
+        </p>
+      )}
       {problems.length > 0 && (
         <div className="problem" role="alert">
           {problems.map((problem) => (

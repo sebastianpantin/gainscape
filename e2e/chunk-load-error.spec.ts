@@ -23,3 +23,24 @@ test('a screen whose code fails to load offers a reload instead of a blank page'
   await expect(skillCard(page, 'Chest')).toBeVisible();
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
+
+const ACTIVE_WORKOUT_BAR_MODULE = '**/src/features/workout/ActiveWorkoutBar.tsx*';
+
+test('a crash outside the screen offers the same reload instead of the router error page', async ({ page }) => {
+  await register(page, uniqueUsername('crash'));
+  await page.route(ACTIVE_WORKOUT_BAR_MODULE, (route) =>
+    route.fulfill({
+      contentType: 'text/javascript',
+      body: 'export function ActiveWorkoutBar() { throw new Error("injected crash"); }',
+    }),
+  );
+
+  await page.reload();
+  await expect(page.getByRole('alert')).toHaveText("Couldn't load this screen");
+  await expect(page.getByText('Unexpected Application Error!')).toHaveCount(0);
+
+  await page.unroute(ACTIVE_WORKOUT_BAR_MODULE);
+  await page.getByRole('button', { name: 'Reload' }).click();
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});

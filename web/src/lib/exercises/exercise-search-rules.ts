@@ -57,3 +57,7 @@ export function exerciseSearchMatches<T extends { name: string }>(
 export function hiddenMatchesText(hiddenCount: number): string {
   return `${hiddenCount} more ${hiddenCount === 1 ? 'match' : 'matches'}. Keep typing to narrow the list.`;
 }
+
+export function noMatchText(query: string): string {
+  return `No exercises match "${query.trim()}".`;
+}

@@ -3,7 +3,7 @@ import {
   type MuscleVolume,
   VOLUME_BAND_TEXT,
   VOLUME_TARGET,
-  volumeSetsLabel,
+  volumeAmountText,
 } from '../../lib/progress/weekly-volume-rules.ts';
 import { useBodyStatus } from './body-status.ts';
 import { StatusSection } from './StatusSection.tsx';
@@ -14,7 +14,7 @@ function MuscleWeek({ name, volume }: { name: string; volume: MuscleVolume }) {
   return (
     <>
       <p className="row spread">
-        <span>{volumeSetsLabel(volume.sets)}</span>
+        <span>{volumeAmountText(volume.sets)}</span>
         <span className="muted">{VOLUME_BAND_TEXT[volume.band]}</span>
       </p>
       <VolumeBar volume={volume} />

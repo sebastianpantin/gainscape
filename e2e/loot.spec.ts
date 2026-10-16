@@ -47,6 +47,8 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await expect(slot(page, 'Grinder belt')).toBeVisible();
   await expect(details).toContainText('Grinder belt');
   await expect(details.getByText('Crafted!')).toBeVisible();
+  await expect(details).not.toHaveAttribute('aria-live');
+  await expect(page.locator('[aria-live="polite"]').getByText('Crafted Grinder belt', { exact: true })).toBeAttached();
   await expect(slot(page, 'Rookie belt', 0)).toBeVisible();
   await expect(slot(page, 'Grinder scraps', 0)).toBeVisible();
   await slot(page, 'Grinder scraps', 0).click();
@@ -66,7 +68,9 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await page.getByRole('list', { name: 'Workouts' }).getByRole('link').nth(1).click();
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
   const sessionId = page.url().split('/').at(-1)!;
-  await setRow(page, 1).getByLabel('reps', { exact: true }).fill('4');
+  await setRow(page, 1)
+    .getByRole('spinbutton', { name: /^Reps, set \d+$/ })
+    .fill('4');
   const editWarning = page.getByRole('status').filter({ hasText: 'This may remove' });
   await expect(editWarning).toContainText('This may remove');
   await expect(editWarning).toContainText(drops[0].name);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canFinishWorkout,
+  finishBlockedText,
   deviceSaveProblemText,
   finishDraft,
   finishPrompt,
@@ -16,9 +17,9 @@ import type { LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 
 describe('syncProblemText', () => {
-  it('names the network problem and reassures the workout is kept', () => {
+  it('names the network problem, says retries run while Train is open and that the workout is kept', () => {
     expect(syncProblemText('offline', 2_000)).toBe(
-      "Couldn't reach the server (offline). Retrying — your workout is saved on this device.",
+      "Couldn't reach the server (offline). Retrying while Train is open — your workout is saved on this device.",
     );
   });
 
@@ -83,9 +84,9 @@ describe('finishPrompt', () => {
     expect(finishPrompt({ done: 3, planned: 0, leftToLifter: 0 })).toBeNull();
   });
 
-  it('offers to mark planned sets done or to finish without them', () => {
+  it('offers to mark the sets not ticked done or to finish without them', () => {
     expect(finishPrompt({ done: 2, planned: 1, leftToLifter: 0 })).toEqual({
-      title: '1 planned set not done',
+      title: '1 set not ticked',
       body: 'Log them as done, or keep only the sets you ticked.',
       confirm: { label: 'Mark done and finish', marksPlannedDone: true },
       alternative: { label: 'Finish without them', marksPlannedDone: false },
@@ -94,8 +95,8 @@ describe('finishPrompt', () => {
 
   it('only offers marking done when nothing is ticked yet', () => {
     expect(finishPrompt({ done: 0, planned: 18, leftToLifter: 0 })).toEqual({
-      title: '18 planned sets not done',
-      body: 'No set is ticked yet. Log the planned sets as done?',
+      title: '18 sets not ticked',
+      body: 'No set is ticked yet. Log them all as done?',
       confirm: { label: 'Mark done and finish', marksPlannedDone: true },
       alternative: null,
     });
@@ -106,7 +107,7 @@ describe('finishPrompt', () => {
       'Log them as done, or keep only the sets you ticked. 5RM tests and optional sets stay skipped until you log them.',
     );
     expect(finishPrompt({ done: 3, planned: 2, leftToLifter: 2 })).toEqual({
-      title: '2 planned sets not done',
+      title: '2 sets not ticked',
       body: '5RM tests and optional sets stay skipped until you log them.',
       confirm: { label: 'Finish without them', marksPlannedDone: false },
       alternative: null,
@@ -120,6 +121,21 @@ describe('canFinishWorkout', () => {
     expect(canFinishWorkout({ done: 1, planned: 1, leftToLifter: 1 })).toBe(true);
     expect(canFinishWorkout({ done: 0, planned: 1, leftToLifter: 1 })).toBe(false);
     expect(canFinishWorkout({ done: 0, planned: 0, leftToLifter: 0 })).toBe(false);
+  });
+});
+
+describe('finishBlockedText', () => {
+  it('asks for an exercise while the workout has no set at all', () => {
+    expect(finishBlockedText({ done: 0, planned: 0, leftToLifter: 0 })).toBe('Add an exercise to finish.');
+  });
+
+  it('asks for a logged set when only 5RM tests or optional sets are left', () => {
+    expect(finishBlockedText({ done: 0, planned: 2, leftToLifter: 2 })).toBe('Log a set to finish.');
+  });
+
+  it('says nothing once the workout can finish', () => {
+    expect(finishBlockedText({ done: 1, planned: 0, leftToLifter: 0 })).toBeNull();
+    expect(finishBlockedText({ done: 0, planned: 3, leftToLifter: 0 })).toBeNull();
   });
 });
 

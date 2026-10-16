@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { hiscoresQuery, skillsQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { type HiscoreMetric, rankHiscores, skillMetric } from '../../lib/social/social-rules.ts';
+import { TermHelp } from '../../components/TermHelp.tsx';
 import { FriendsTabs } from './FriendsTabs.tsx';
 
 export function HiscoresScreen() {
@@ -38,6 +39,9 @@ export function HiscoresScreen() {
       {(!skills || !rows) && !problem && <p>Loading…</p>}
       {skills && rows && (
         <>
+          <p className="row muted">
+            Rank yourself against your friends <TermHelp glossaryKey="hiscores" />
+          </p>
           <div className="metric-grid" role="radiogroup" aria-label="Rank by">
             {metrics.map((entry) => (
               <button

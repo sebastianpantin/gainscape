@@ -20,6 +20,7 @@ import {
   summariesToForget,
   removedText,
   removeEditSet,
+  removingSetAsksFirst,
   sameSetValues,
   type SessionEdit,
   swapEditExercise,
@@ -168,6 +169,12 @@ describe('building the edit from loaded rows', () => {
     const payload = editPayload(removed);
     expect(payload.sets.map((set) => set.id)).toEqual(['set-1', 'set-2', newSet.id, 'set-3']);
     expect(payload.sets.map((set) => set.position)).toEqual([0, 1, 2, 3]);
+  });
+
+  it('asks before removing a saved set, but removes a set added in this edit straight away', () => {
+    const added = addEditSet(edit, 1);
+    expect(removingSetAsksFirst(edit, 'set-2')).toBe(true);
+    expect(removingSetAsksFirst(edit, added.exercises[1].sets[1].id)).toBe(false);
   });
 
   it('drops an exercise once its last set is removed', () => {

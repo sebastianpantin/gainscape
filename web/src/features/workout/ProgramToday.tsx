@@ -85,7 +85,7 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
     <section className="panel stack" aria-label={name}>
       <div className="row spread">
         <h2>{name}</h2>
-        <Link to="/programs/active" className="tiny">
+        <Link to="/programs/active" className="tiny tap-link">
           Manage program
         </Link>
       </div>
@@ -100,7 +100,6 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
           setPicked(choices.find((choice) => choice.label === label)?.position ?? null);
         }}
       />
-      <PrescriptionCards cards={cards} heading="h3" />
       <button
         className="button primary big"
         type="button"
@@ -118,6 +117,7 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
       >
         {startLabel(name, definition, position)}
       </button>
+      <PrescriptionCards cards={cards} heading="h3" />
       {offline && <p className="notice">{SKIP_OFFLINE_TEXT}</p>}
       {skipProblem && (
         <p className="problem" role="alert">

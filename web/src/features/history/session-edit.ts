@@ -214,6 +214,10 @@ export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: s
   return { ...removed, exercises: removed.exercises.filter((exercise) => exercise.sets.length > 0) };
 }
 
+export function removingSetAsksFirst(original: SessionEdit, setId: string): boolean {
+  return original.exercises.some((exercise) => exercise.sets.some((set) => set.id === setId));
+}
+
 export function addEditSet(edit: SessionEdit, exerciseIndex: number): SessionEdit {
   return addSetTo(edit, exerciseIndex, {});
 }

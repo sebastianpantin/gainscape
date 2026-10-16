@@ -18,10 +18,11 @@ interface HoldFieldsProps {
   measure: HoldMeasure;
   loadType: LoadType;
   unit: UnitPref;
+  setNumber: number;
   onChange: (changes: Partial<HoldValues>) => void;
 }
 
-export function HoldFields({ set, measure, loadType, unit, onChange }: HoldFieldsProps) {
+export function HoldFields({ set, measure, loadType, unit, setNumber, onChange }: HoldFieldsProps) {
   return (
     <>
       <WeightField
@@ -29,11 +30,12 @@ export function HoldFields({ set, measure, loadType, unit, onChange }: HoldField
         weightKg={set.weightKg}
         unit={unit}
         onChange={(weightKg) => onChange({ weightKg })}
+        setNumber={setNumber}
       />
       {measure === 'time' ? (
         <NumberTextField
           label="s"
-          accessibleName="Seconds"
+          accessibleName={`Seconds, set ${setNumber}`}
           value={set.durationS ?? HOLD_BOUNDS.durationS.min}
           lowest={HOLD_BOUNDS.durationS.min}
           highest={HOLD_BOUNDS.durationS.max}
@@ -45,7 +47,7 @@ export function HoldFields({ set, measure, loadType, unit, onChange }: HoldField
       ) : (
         <NumberTextField
           label="m"
-          accessibleName="Metres"
+          accessibleName={`Metres, set ${setNumber}`}
           value={set.distanceM ?? HOLD_BOUNDS.distanceM.min}
           lowest={HOLD_BOUNDS.distanceM.min}
           highest={HOLD_BOUNDS.distanceM.max}
@@ -90,7 +92,14 @@ export function HoldSetRow({
   return (
     <li className={set.done ? 'set-row hold-row' : 'set-row hold-row planned'} aria-label={`Set ${setNumber}`}>
       <span className="set-number">{setNumber}</span>
-      <HoldFields set={set} measure={measure} loadType={loadType} unit={unit} onChange={onChange} />
+      <HoldFields
+        set={set}
+        measure={measure}
+        loadType={loadType}
+        unit={unit}
+        setNumber={setNumber}
+        onChange={onChange}
+      />
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
         {previewXpLabel(preview)}
         {record && (

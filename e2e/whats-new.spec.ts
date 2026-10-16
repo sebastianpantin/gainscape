@@ -130,7 +130,7 @@ test('Settings shows the newest changelog version', async ({ page }) => {
 test('a first launch records the current version without a sheet', async ({ page }) => {
   await countDraftReads(page);
   await register(page, uniqueUsername('wn_new'));
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
   await expectNoDialogAcrossTabs(page);
   await expect.poll(() => storedLastSeen(page)).toBe(NEWEST_VERSION);
 });
@@ -148,7 +148,7 @@ test('an older stored version shows the sheet once until dismissed', async ({ pa
   await expect(whatsNewDialog(page)).toHaveCount(0);
   await expect.poll(() => storedLastSeen(page)).toBe(NEWEST_VERSION);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
   await expectNoDialogAcrossTabs(page);
 
   await seedLastSeen(page, '0.0.0');
@@ -158,7 +158,7 @@ test('an older stored version shows the sheet once until dismissed', async ({ pa
   await expect(whatsNewDialog(page)).toHaveCount(0);
   await expect.poll(() => storedLastSeen(page)).toBe(NEWEST_VERSION);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
   await expectNoDialogAcrossTabs(page);
 });
 
@@ -215,7 +215,7 @@ test('blocked storage writes keep the app usable and the sheet closed', async ({
     };
   }, LAST_SEEN_RELEASE_KEY_PREFIX);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
   await expectNoDialogAcrossTabs(page);
   await openFromProfile(page, 'Settings');
   await openReleaseHistory(page);

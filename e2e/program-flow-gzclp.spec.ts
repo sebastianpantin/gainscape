@@ -12,7 +12,6 @@ import {
   openProgramToday,
   prescribedRows,
   programToday,
-  repeated,
   repsIn,
   startFollowing,
   weightsIn,
@@ -138,9 +137,9 @@ async function followGzclp(page: Page, prefix: string) {
 }
 
 function stageRows(weight: string, stage: Stage): string[] {
-  const row = `${weight} kg × ${stage.reps}`;
-  if (!stage.amrapLast) return repeated(`${row} · 100%`, stage.sets);
-  return [...repeated(`${row} · 100%`, stage.sets - 1), `${row}+ · 100%`];
+  const straightSets = stage.amrapLast ? stage.sets - 1 : stage.sets;
+  const straight = `${straightSets} × ${stage.reps} @ ${weight} kg`;
+  return stage.amrapLast ? [straight, `${weight} kg × ${stage.reps}+`] : [straight];
 }
 
 test('GZCLP after one rotation: a met T1 squat 5×3 goes 100 + 5 = 105, a missed T2 bench 3×10 moves to 3×8 at 50, and a T3 pulldown last set of 25 goes 40 + 2.5 = 42.5, then holds at 42.5 after a 15-rep last set', async ({
@@ -336,13 +335,18 @@ test('GZCLP: after a T1 squat fails 10×1 the Train card prescribes a 5RM test, 
     await expect(squat).toHaveCount(1);
     await expect(setRows(squat)).toHaveCount(1);
     await expect.poll(() => weightsIn(squat)).toEqual(['100']);
-    await setRow(squat, 1).getByRole('spinbutton', { name: 'kg', exact: true }).fill('100');
-    await expect(setRow(squat, 1).getByRole('spinbutton', { name: 'reps', exact: true })).toHaveValue('5');
+    await setRow(squat, 1)
+      .getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })
+      .fill('100');
+    await expect(setRow(squat, 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue('5');
     await markEverySetDone(page);
     await squat.getByRole('button', { name: '+ Add set' }).click();
-    await setRow(squat, 2).getByRole('spinbutton', { name: 'kg', exact: true }).fill('110');
+    await setRow(squat, 2)
+      .getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ })
+      .fill('110');
     await expect.poll(() => weightsIn(squat)).toEqual(['100', '110']);
     await expect.poll(() => repsIn(squat)).toEqual(['5', '5']);
+    await setRow(squat, 2).getByRole('button', { name: 'Done set 2' }).click();
     await finishWorkout(page);
     await page.getByRole('link', { name: 'Done' }).click();
   });

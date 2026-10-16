@@ -39,6 +39,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
 
   await alice.reload();
   await expect(feedItem(alice, 'New Running record: 6 km · 36 min')).toBeVisible();
+  await expect(alice.getByRole('heading', { level: 2, name: 'Feed', exact: true })).toBeVisible();
   await openTab(alice, 'Train');
   const friendActivity = alice.getByRole('region', { name: 'Friends' });
   await expect(friendActivity.getByRole('listitem')).toHaveCount(3);
@@ -47,10 +48,11 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   const pr = feedItem(alice, 'New 5RM Barbell Bench Press: 80 kg');
   await expect(pr).toBeVisible();
   await expect(pr).toContainText(`${bobName} @${bobName}`);
+  await expect(alice.getByRole('button', { name: 'What does gz mean?', exact: true })).toBeVisible();
   const gzSaved = alice.waitForResponse((response) => response.url().includes('/rpc/set_gz') && response.ok());
-  await pr.getByRole('button', { name: /Say gz to/ }).click();
+  await pr.getByRole('button', { name: /^Congratulate \(gz\) / }).click();
   await gzSaved;
-  await expect(pr.getByRole('button', { name: /Remove gz from .*, 1 so far/ })).toBeVisible();
+  await expect(pr.getByRole('button', { name: /^Remove your gz from .*, 1 so far$/ })).toBeVisible();
 
   await openTab(bob, 'Friends');
   const ownPr = feedItem(bob, 'New 5RM Barbell Bench Press: 80 kg');
@@ -72,6 +74,7 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await expect(hiddenRun).not.toContainText('6 km');
 
   await alice.getByRole('navigation', { name: 'Friends' }).getByRole('link', { name: 'Hiscores' }).click();
+  await expect(alice.getByRole('button', { name: 'What are hiscores?', exact: true })).toBeVisible();
   await alice.getByRole('radio', { name: 'Chest' }).click();
   const ranking = alice.getByRole('list', { name: 'Ranked by Chest' }).getByRole('listitem');
   await expect(ranking).toHaveCount(2);

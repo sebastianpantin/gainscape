@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
+import { TermHelp } from '../../components/TermHelp.tsx';
 import { challengeSummaryText, challengeVolumeText } from '../../lib/collection/challenge-rules.ts';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
@@ -41,7 +42,9 @@ export function ChallengeBanner({ draft, challenge, exercises, unit, onDiscard }
           onConfirm={onDiscard}
           onCancel={() => setConfirmingDiscard(false)}
         >
-          <p>Your scroll is kept until a challenge workout is saved.</p>
+          <p className="row">
+            Your scroll is kept until a challenge workout is saved. <TermHelp glossaryKey="scroll" />
+          </p>
         </ConfirmDialog>
       )}
     </section>

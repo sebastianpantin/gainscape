@@ -51,7 +51,7 @@ test(
     const xpBefore = xpValue(await sessionXp.textContent());
 
     const firstSet = setRow(page, 1);
-    await firstSet.getByLabel('reps', { exact: true }).fill('8');
+    await firstSet.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('8');
     await firstSet.getByRole('radio', { name: 'Failure' }).click();
     await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByText('Changes saved.')).toBeVisible();
@@ -67,6 +67,37 @@ test(
     await expect.poll(() => sessionCount(username)).toBe(0);
   },
 );
+
+test('removing a saved set from a workout asks first, and a set added in the edit goes straight away', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('hist_rm'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [
+    { weightKg: 60, reps: 5 },
+    { weightKg: 60, reps: 5 },
+  ]);
+  await finishWorkout(page);
+  await openLatestWorkout(page);
+
+  await expect(setRow(page, 1).getByRole('button', { name: 'Warm-up set 1', exact: true })).toHaveText('Warm-up');
+  await setRow(page, 2).getByRole('button', { name: 'Remove set 2', exact: true }).click();
+  const confirm = page.getByRole('dialog', { name: 'Remove set 2 of Barbell Bench Press?', exact: true });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(setRow(page, 2)).toBeVisible();
+
+  await setRow(page, 2).getByRole('button', { name: 'Remove set 2', exact: true }).click();
+  await confirm.getByRole('button', { name: 'Remove', exact: true }).click();
+  await expect(setRow(page, 2)).toHaveCount(0);
+
+  await page.getByRole('button', { name: '+ Add set' }).click();
+  await expect(setRow(page, 2)).toBeVisible();
+  await setRow(page, 2).getByRole('button', { name: 'Remove set 2', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(setRow(page, 2)).toHaveCount(0);
+});
 
 test('a warm-up set keeps its warm-up cue in the session detail, editable or locked', async ({ page }) => {
   const username = uniqueUsername('hw');
@@ -129,7 +160,7 @@ test('Back from an older workout keeps every loaded page of History and its scro
   expect(scrolledTo).toBeGreaterThan(0);
   await olderWorkout.click();
   await expect(page).toHaveURL(/\/collection\/history\/[0-9a-f-]+$/);
-  await expect(page.getByRole('link', { name: '← History' })).toBeVisible();
+  await expect(page.getByRole('link', { name: '‹ History' })).toBeVisible();
 
   await page.goBack();
 
@@ -145,7 +176,9 @@ test('the Progress link waits until edits are saved, so leaving for progress can
   const progress = page.getByRole('link', { name: 'Barbell Bench Press progress' });
   await expect(progress).toBeVisible();
 
-  await setRow(page, 1).getByLabel('reps', { exact: true }).fill('8');
+  await setRow(page, 1)
+    .getByRole('spinbutton', { name: /^Reps, set \d+$/ })
+    .fill('8');
   await expect(progress).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Save changes' }).click();
@@ -218,7 +251,7 @@ test('a save that races an edit from another device keeps both changes after rev
   await page.getByRole('button', { name: 'Apply my changes to the latest version' }).click();
 
   const firstSet = setRow(page, 1);
-  await expect(firstSet.getByLabel('reps', { exact: true })).toHaveValue('7');
+  await expect(firstSet.getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue('7');
   await expect(firstSet.getByRole('radio', { name: 'Failure' })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByLabel('Notes')).toHaveValue('edited elsewhere');
   await expect.poll(() => setsOf(sessionId)).toEqual([{ reps: 7, effort_input_type: 'level', effort_value: 3 }]);
@@ -240,7 +273,9 @@ test('a save whose refresh fails keeps the saved sets as the baseline, so undo c
   const sessionId = page.url().split('/').at(-1)!;
   const sessionReads = /\/rest\/v1\/sessions\?/;
 
-  await setRow(page, 1).getByLabel('reps', { exact: true }).fill('8');
+  await setRow(page, 1)
+    .getByRole('spinbutton', { name: /^Reps, set \d+$/ })
+    .fill('8');
   await page.route(sessionReads, (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Save changes' }).click();
 
@@ -256,7 +291,7 @@ test('a save whose refresh fails keeps the saved sets as the baseline, so undo c
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByText('Changes saved.')).toBeVisible();
-  await expect(setRow(page, 1).getByLabel('reps', { exact: true })).toHaveValue('8');
+  await expect(setRow(page, 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue('8');
 });
 
 test('a delete that races an edit from another device shows the latest version before deleting', async ({ page }) => {
@@ -272,7 +307,7 @@ test('a delete that races an edit from another device shows the latest version b
   await page.getByRole('button', { name: 'Delete for good' }).click();
 
   await expect(page.getByRole('alert')).toContainText('This workout was changed on another device.');
-  await expect(setRow(page, 1).getByLabel('reps', { exact: true })).toHaveValue('7');
+  await expect(setRow(page, 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ })).toHaveValue('7');
   await expect.poll(() => sessionCount(username)).toBe(1);
 
   await page.getByRole('button', { name: 'Delete workout' }).click();
@@ -302,4 +337,30 @@ test('rate the session when finishing, then see its length and RPE on the summar
   await workout.click();
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
   await expect(page.getByText('<1 min · Session RPE 8')).toBeVisible();
+});
+
+test('leaving an edited workout asks first, and leaving after a save does not', async ({ page }) => {
+  await register(page, uniqueUsername('hist_leave'));
+  await logBench(page);
+  await openLatestWorkout(page);
+  const reps = setRow(page, 1).getByRole('spinbutton', { name: 'Reps, set 1', exact: true });
+  const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
+  await reps.fill('8');
+
+  await page.getByRole('link', { name: '‹ History' }).click();
+  await confirmation.getByRole('button', { name: 'Keep editing' }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(reps).toHaveValue('8');
+
+  await openTab(page, 'Profile');
+  await confirmation.getByRole('button', { name: 'Discard changes' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+
+  await openLatestWorkout(page);
+  await setRow(page, 1).getByRole('spinbutton', { name: 'Reps, set 1', exact: true }).fill('9');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Changes saved.')).toBeVisible();
+  await page.getByRole('link', { name: '‹ History' }).click();
+  await expect(page).toHaveURL(/\/collection\/history$/);
+  await expect(confirmation).toHaveCount(0);
 });

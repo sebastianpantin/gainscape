@@ -2,7 +2,7 @@ import { canCraft, recipeFor } from '@domain/crafting.ts';
 import { DEFAULT_ROUNDING } from '@domain/index.ts';
 import type { StrengthState } from '@domain/types.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '../../components/EmptyState.tsx';
 import { ItemIcon } from '../../components/PixelArt.tsx';
@@ -22,6 +22,7 @@ import {
   groupItems,
   type HeldItem,
   type ItemCatalog,
+  ITEM_ACTIONS_OFFLINE_TEXT,
   itemNameLookup,
   kindLabel,
   LOCKED_COLOR,
@@ -165,12 +166,15 @@ function ItemDetail({
 }: ItemDetailProps) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const offlineId = useId();
   const { showToast } = useToast();
   const nameOf = itemNameLookup(catalog.items, 'Unknown item');
   const recipe = recipeFor(item.id, catalog.recipes, tiersOf(catalog.items));
   const inventory = quantities(held);
   const ready = recipe !== undefined && canCraft(recipe, inventory);
   const quantity = held.get(item.id)?.quantity ?? 0;
+  const showsEquip = item.gearSlot !== null && quantity >= 1 && equipped !== null;
+  const offlineReason = offline && (showsEquip || recipe !== undefined) ? offlineId : undefined;
   const challenge =
     item.kind === 'scroll'
       ? catalog.challenges.find((candidate) => candidate.id === item.grantsChallengeId)
@@ -208,7 +212,7 @@ function ItemDetail({
   };
 
   return (
-    <section className="panel stack" aria-live="polite" aria-label="Item details">
+    <section className="panel stack" aria-label="Item details">
       {justCrafted && (
         <p className={`craft-result pop rarity-${item.rarity}`}>
           <span className="craft-result-art">
@@ -237,11 +241,22 @@ function ItemDetail({
       )}
       {shownOnToday !== null && (
         <button className="button" type="button" disabled={shownOnToday} onClick={onShowOnToday}>
-          {shownOnToday ? 'Shown on Today' : 'Show on Today'}
+          {shownOnToday ? 'Shown on Train' : 'Show on Train'}
         </button>
       )}
-      {item.gearSlot && quantity >= 1 && equipped !== null && (
-        <button className="button" type="button" disabled={busy || offline} onClick={() => void changeGear()}>
+      {offlineReason && (
+        <p className="notice" id={offlineReason}>
+          {ITEM_ACTIONS_OFFLINE_TEXT}
+        </p>
+      )}
+      {showsEquip && (
+        <button
+          className="button"
+          type="button"
+          aria-describedby={offlineReason}
+          disabled={busy || offline}
+          onClick={() => void changeGear()}
+        >
           {equipped ? 'Unequip' : 'Equip'}
         </button>
       )}
@@ -264,6 +279,7 @@ function ItemDetail({
           <button
             className={ready ? 'button primary' : 'button'}
             type="button"
+            aria-describedby={offlineReason}
             disabled={!ready || busy || offline}
             onClick={() => void craft()}
           >
@@ -441,6 +457,9 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           </ul>
         </div>
       ))}
+      <p className="visually-hidden" aria-live="polite">
+        {picked && picked.id === craftedId ? `Crafted ${picked.name}` : ''}
+      </p>
       {picked ? (
         <ItemDetail
           key={picked.id}
@@ -457,7 +476,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           onShowOnToday={() => {
             companionPetStore.save(deviceStorage(), userId, picked.id);
             setChosenPetId(picked.id);
-            showToast(`${picked.name} now follows you on Today`);
+            showToast(`${picked.name} now follows you on the Train tab`);
           }}
           onCraftStarted={() => {
             primeCelebrationAudio(userId);

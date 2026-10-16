@@ -38,7 +38,7 @@
 
 .feed-badge.drop {
   background: var(--color-rare);
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
 }
 
 .feed-badge.quest {

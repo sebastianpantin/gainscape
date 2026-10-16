@@ -56,7 +56,7 @@ test('a new user sees what they earn, picks pounds and starts an empty workout',
   await expect(page.getByRole('button', { name: 'Finish workout' })).toBeVisible();
   await expect(page.getByRole('searchbox', { name: 'Search exercises' })).toBeFocused();
   await addExercise(page, 'bench', 'Barbell Bench Press');
-  await expect(setRow(page, 1).getByRole('spinbutton', { name: 'lb', exact: true })).toBeVisible();
+  await expect(setRow(page, 1).getByRole('spinbutton', { name: /^Weight in lb, set \d+$/ })).toBeVisible();
 });
 
 test('pounds picked in the intro show in Settings at once, also after the profile was loaded first', async ({

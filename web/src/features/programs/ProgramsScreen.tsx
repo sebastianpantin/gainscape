@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import {
@@ -11,6 +11,7 @@ import {
   templates,
 } from '../../lib/programs/programs.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { formatCount } from '../../lib/format.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
 import { isEnrolledIn, isFollowing } from '../../lib/programs/program-follow-rules.ts';
@@ -41,6 +42,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   const programList = useQuery(programsQuery(userId));
   const [savedPrograms] = useState(() => cachedPrograms(userId));
   const offline = useIsOffline();
+  const offlineId = useId();
   const [actionProblem, setActionProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
@@ -119,6 +121,9 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
 
   return (
     <main className="screen stack">
+      <Link className="back-link" to="/profile">
+        ‹ Profile
+      </Link>
       <h1 className="title">Programs</h1>
       {savedNotice && (
         <p className="notice" role="status">
@@ -133,7 +138,11 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
       <section className="stack" aria-label="Your programs">
         <h2>Your programs</h2>
         {own.length === 0 && <p className="panel muted">Create a program or copy a template.</p>}
-        {own.length > 0 && offline && <p className="notice">{PROGRAM_OFFLINE_TEXT}</p>}
+        {own.length > 0 && offline && (
+          <p className="notice" id={offlineId}>
+            {PROGRAM_OFFLINE_TEXT}
+          </p>
+        )}
         <ul className="stack exercise-list">
           {own.map((program) => (
             <li className="panel row spread" key={program.id}>
@@ -144,6 +153,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
                 <button
                   className="button link"
                   type="button"
+                  aria-describedby={offline ? offlineId : undefined}
                   disabled={busy || offline}
                   onClick={() => void follow(program)}
                 >
@@ -182,11 +192,14 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
         <ul className="stack exercise-list">
           {templates(programs).map((template) => (
             <li className="panel row spread" key={template.id}>
-              <span>
-                {template.name} <span className="muted">{daySummary(template)}</span>
+              <span className="stack" style={{ gap: 2 }}>
+                <span>{template.name}</span>
+                <span className="muted">
+                  {formatCount(template.days.length, 'workout')} · {daySummary(template)}
+                </span>
               </span>
               <button className="button" type="button" disabled={busy} onClick={() => copyTemplate(template)}>
-                Use this template
+                Use {template.name}
               </button>
             </li>
           ))}

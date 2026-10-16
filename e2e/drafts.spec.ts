@@ -93,21 +93,19 @@ test("another account's draft is kept, never sent, and restored for its owner", 
     if (`${request.url()} ${request.postData() ?? ''}`.includes(ownerSessionId)) leakedRequests.push(request.url());
   });
 
-  page.once('dialog', (dialog) => dialog.accept());
   await signOut(page);
+  await page.getByRole('dialog', { name: 'Sign out?' }).getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
 
   await register(page, other);
   const notice = page.getByText('An unsynced workout from another account is saved on this device.');
   await expect(notice).toBeVisible();
 
-  let confirmShown = false;
-  page.once('dialog', (dialog) => {
-    confirmShown = true;
-    return dialog.dismiss();
-  });
   await page.getByRole('button', { name: 'Discard it' }).click();
-  await expect.poll(() => confirmShown).toBe(true);
+  const confirmation = page.getByRole('dialog', { name: "Discard the other account's workout?" });
+  await expect(confirmation).toContainText('This cannot be undone.');
+  await confirmation.getByRole('button', { name: 'Keep it' }).click();
+  await expect(confirmation).toHaveCount(0);
   await expect(notice).toBeVisible();
   await expect.poll(() => readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
 
@@ -163,4 +161,35 @@ test('a workout started while IndexedDB was unreadable is announced and opens af
   await page.getByRole('button', { name: 'Start workout' }).click();
   await expect(page.getByRole('heading', { name: 'Back Squat', exact: true })).toBeVisible();
   await expect(waiting).toHaveCount(0);
+});
+
+test('a workout the server rejects is discarded only after a confirm', async ({ page }) => {
+  const username = uniqueUsername('dr_rj');
+  await register(page, username);
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+  await page.route(completeSession, (route) =>
+    route.request().method() === 'POST'
+      ? route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ error: 'invalid_payload' }),
+        })
+      : route.continue(),
+  );
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('alert')).toHaveText('The server rejected this workout: invalid_payload');
+
+  await page.getByRole('button', { name: 'Discard workout' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Discard this workout?' });
+  await expect(dialog).toContainText('Your logged sets will be lost.');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Saving workout…' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Discard workout' }).click();
+  await dialog.getByRole('button', { name: 'Discard workout' }).click();
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  expect(await sessionCount(username)).toBe(0);
 });

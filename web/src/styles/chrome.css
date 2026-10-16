@@ -20,6 +20,12 @@
   color: var(--color-text);
 }
 
+.header-stat-part {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
 .level-rose strong {
   animation: level-glow 1.6s ease-out both;
 }
@@ -51,6 +57,17 @@
     var(--bevel),
     3px 3px 0 var(--color-bevel);
   animation: toast-in 220ms ease-out both;
+}
+
+.toast.with-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: 0;
+}
+
+.toast.with-action .button {
+  pointer-events: auto;
 }
 
 .today-row {

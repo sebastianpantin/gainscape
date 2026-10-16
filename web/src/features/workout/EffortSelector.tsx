@@ -1,15 +1,12 @@
-import type { EffortInput, EffortLevel } from '@domain/types.ts';
+import type { EffortInput } from '@domain/types.ts';
 import type { EffortInputMode } from '../../lib/profile/profile.ts';
 import { EFFORT_LEVEL_LABELS, EFFORT_LEVELS } from '../../lib/workout/effort-labels.ts';
 
 interface EffortOption {
   effort: NonNullable<EffortInput>;
   label: string;
-  shortLabel?: string;
   accessibleName: string;
 }
-
-const SHORT_LEVEL_LABELS: Partial<Record<EffortLevel, string>> = { near_failure: 'Near' };
 
 const RIR_CHOICES = [6, 5, 4, 3, 2, 1, 0];
 const RPE_CHOICES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
@@ -17,7 +14,7 @@ const RPE_CHOICES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 const OPTIONS: Record<EffortInputMode, EffortOption[]> = {
   level: EFFORT_LEVELS.map((level) => {
     const label = EFFORT_LEVEL_LABELS[level];
-    return { effort: { type: 'level', level }, label, shortLabel: SHORT_LEVEL_LABELS[level], accessibleName: label };
+    return { effort: { type: 'level', level }, label, accessibleName: label };
   }),
   rir: RIR_CHOICES.map((value) => {
     const label = value === 6 ? '6+' : String(value);
@@ -69,23 +66,12 @@ export function EffortSelector({ mode, selected, assumed = null, onSelect }: Eff
             type="button"
             role="radio"
             aria-checked={checked}
-            aria-label={
-              option.accessibleName === option.label && option.shortLabel === undefined
-                ? undefined
-                : option.accessibleName
-            }
+            aria-label={option.accessibleName === option.label ? undefined : option.accessibleName}
             aria-description={isAssumed ? 'Assumed from your strength' : undefined}
             className={`effort-option ${checked ? 'selected' : ''} ${isAssumed ? 'assumed' : ''}`}
             onClick={() => onSelect(checked ? null : option.effort)}
           >
-            {option.shortLabel === undefined ? (
-              option.label
-            ) : (
-              <>
-                <span className="effort-full">{option.label}</span>
-                <span className="effort-short">{option.shortLabel}</span>
-              </>
-            )}
+            {option.label}
           </button>
         );
       })}
