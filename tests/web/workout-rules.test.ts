@@ -83,9 +83,9 @@ describe('finishPrompt', () => {
     expect(finishPrompt({ done: 3, planned: 0, leftToLifter: 0 })).toBeNull();
   });
 
-  it('offers to mark planned sets done or to finish without them', () => {
+  it('offers to mark the sets not ticked done or to finish without them', () => {
     expect(finishPrompt({ done: 2, planned: 1, leftToLifter: 0 })).toEqual({
-      title: '1 planned set not done',
+      title: '1 set not ticked',
       body: 'Log them as done, or keep only the sets you ticked.',
       confirm: { label: 'Mark done and finish', marksPlannedDone: true },
       alternative: { label: 'Finish without them', marksPlannedDone: false },
@@ -94,8 +94,8 @@ describe('finishPrompt', () => {
 
   it('only offers marking done when nothing is ticked yet', () => {
     expect(finishPrompt({ done: 0, planned: 18, leftToLifter: 0 })).toEqual({
-      title: '18 planned sets not done',
-      body: 'No set is ticked yet. Log the planned sets as done?',
+      title: '18 sets not ticked',
+      body: 'No set is ticked yet. Log them all as done?',
       confirm: { label: 'Mark done and finish', marksPlannedDone: true },
       alternative: null,
     });
@@ -106,7 +106,7 @@ describe('finishPrompt', () => {
       'Log them as done, or keep only the sets you ticked. 5RM tests and optional sets stay skipped until you log them.',
     );
     expect(finishPrompt({ done: 3, planned: 2, leftToLifter: 2 })).toEqual({
-      title: '2 planned sets not done',
+      title: '2 sets not ticked',
       body: '5RM tests and optional sets stay skipped until you log them.',
       confirm: { label: 'Finish without them', marksPlannedDone: false },
       alternative: null,

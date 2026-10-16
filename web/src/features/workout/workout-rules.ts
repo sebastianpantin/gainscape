@@ -108,15 +108,13 @@ export function canFinishWorkout({ done, planned, leftToLifter }: FinishCounts):
 
 export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): FinishPrompt | null {
   if (planned === 0) return null;
-  const title = `${planned} planned ${planned === 1 ? 'set' : 'sets'} not done`;
+  const title = `${planned} ${planned === 1 ? 'set' : 'sets'} not ticked`;
   const leftNote = leftToLifter > 0 ? [LEFT_TO_LIFTER_TEXT] : [];
   if (planned === leftToLifter) {
     return { title, body: leftNote.join(' '), confirm: WITHOUT_THEM, alternative: null };
   }
   const choice =
-    done > 0
-      ? 'Log them as done, or keep only the sets you ticked.'
-      : 'No set is ticked yet. Log the planned sets as done?';
+    done > 0 ? 'Log them as done, or keep only the sets you ticked.' : 'No set is ticked yet. Log them all as done?';
   return {
     title,
     body: [choice, ...leftNote].join(' '),

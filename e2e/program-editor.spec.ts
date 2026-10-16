@@ -284,7 +284,7 @@ test('delete a program through the confirmation and keep the workout logged from
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Upper / Lower — Upper' }).click();
   await page.getByRole('button', { name: 'Finish workout' }).click();
-  const nothingTicked = page.getByRole('dialog', { name: '18 planned sets not done' });
+  const nothingTicked = page.getByRole('dialog', { name: '18 sets not ticked' });
   await expect(nothingTicked.getByRole('button', { name: 'Mark done and finish' })).toBeVisible();
   await expect(nothingTicked.getByRole('button', { name: 'Finish without them' })).toHaveCount(0);
   await nothingTicked.getByRole('button', { name: 'Cancel' }).click();
@@ -292,7 +292,7 @@ test('delete a program through the confirmation and keep the workout logged from
   await setRow(exerciseCard(page, 'Barbell Bench Press'), 1).getByRole('radio', { name: 'Hard' }).click();
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await page
-    .getByRole('dialog', { name: '17 planned sets not done' })
+    .getByRole('dialog', { name: '17 sets not ticked' })
     .getByRole('button', { name: 'Mark done and finish' })
     .click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
