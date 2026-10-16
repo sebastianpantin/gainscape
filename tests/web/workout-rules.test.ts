@@ -17,9 +17,9 @@ import type { LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 
 describe('syncProblemText', () => {
-  it('names the network problem and reassures the workout is kept', () => {
+  it('names the network problem, says retries run while Train is open and that the workout is kept', () => {
     expect(syncProblemText('offline', 2_000)).toBe(
-      "Couldn't reach the server (offline). Retrying — your workout is saved on this device.",
+      "Couldn't reach the server (offline). Retrying while Train is open — your workout is saved on this device.",
     );
   });
 

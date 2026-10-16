@@ -45,7 +45,7 @@ export function challengeStartNoticeText(outcome: StartOutcome): string | null {
 
 export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
   if (lastProblem !== RATE_LIMITED_CODE) {
-    return `Couldn't reach the server (${lastProblem}). Retrying — your workout is saved on this device.`;
+    return `Couldn't reach the server (${lastProblem}). Retrying while Train is open — your workout is saved on this device.`;
   }
   if (waitMs !== undefined && waitMs > LONG_SYNC_WAIT_MS) {
     return `Sync limit reached; this workout will sync in ${waitText(waitMs / MS_PER_SECOND)}. It's saved on this device.`;
