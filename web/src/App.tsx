@@ -2,7 +2,7 @@ import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { type ComponentType, createContext, lazy, type ReactNode, Suspense, use, useEffect, useState } from 'react';
 import { createBrowserRouter, Link, Navigate, Route, RouterProvider, Routes, useLocation } from 'react-router-dom';
 import { Icon, type IconName } from './components/Icon.tsx';
-import { ScreenErrorBoundary } from './components/ScreenErrorBoundary.tsx';
+import { ScreenErrorBoundary, ScreenLoadProblem } from './components/ScreenErrorBoundary.tsx';
 import { ScreenSkeleton } from './components/ScreenSkeleton.tsx';
 import { ToastProvider } from './components/ToastProvider.tsx';
 import { PreferencesProvider } from './components/PreferencesProvider.tsx';
@@ -181,7 +181,9 @@ const SignedInAccount = createContext({ userId: '', email: null as string | null
 let signedInRouter: ReturnType<typeof createBrowserRouter> | null = null;
 
 function SignedInRouter() {
-  signedInRouter ??= createBrowserRouter([{ path: '*', element: <SignedInShell /> }]);
+  signedInRouter ??= createBrowserRouter([
+    { path: '*', element: <SignedInShell />, errorElement: <ScreenLoadProblem /> },
+  ]);
   return <RouterProvider router={signedInRouter} />;
 }
 
