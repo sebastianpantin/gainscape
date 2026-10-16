@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
@@ -33,7 +34,7 @@ function MenuLink({ to, children }: { to: string; children: string }) {
 }
 
 export function ProfileScreen({ userId }: ProfileScreenProps) {
-  const { state, replace } = useProfile(userId);
+  const { state, replace, refresh } = useProfile(userId);
   const standing = useStanding(userId);
   const collection = useQuery(collectionPercentQuery(userId));
   const questPoints = useQuery(questPointsQuery(userId));
@@ -45,13 +46,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
   const offline = useIsOffline();
 
   if (state.status === 'failed')
-    return (
-      <main className="screen">
-        <p className="problem" role="alert">
-          {state.problem}
-        </p>
-      </main>
-    );
+    return <ScreenProblem heading={<h1 className="title">Profile</h1>} problem={state.problem} onRetry={refresh} />;
   if (state.status === 'loading') return <ScreenSkeleton title="Profile" />;
 
   const { profile } = state;

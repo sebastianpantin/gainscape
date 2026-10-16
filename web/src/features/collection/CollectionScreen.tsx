@@ -11,6 +11,7 @@ import { collectionQuery } from '../../lib/query/queries.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_COLLECTION_NOTICE } from '../../offline/collection-cache.ts';
 import { EmptyState } from '../../components/EmptyState.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedNav } from '../../components/SegmentedNav.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
@@ -43,14 +44,23 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
   const { unitPref } = usePreferences();
 
   const loaded = loadedState(collection.data, collection.error);
-  const shownProblem = problem ?? (loaded.status === 'failed' ? loaded.problem : null);
-  if (shownProblem)
+  if (problem)
     return (
       <main className="screen">
         <p className="problem" role="alert">
-          {shownProblem}
+          {problem}
         </p>
       </main>
+    );
+  if (loaded.status === 'failed')
+    return (
+      <ScreenProblem
+        heading={<CollectionHeading tab="Records" />}
+        problem={loaded.problem}
+        onRetry={collection.refetch}
+      >
+        <CollectionTabs />
+      </ScreenProblem>
     );
   if (loaded.status !== 'ready') return <ScreenSkeleton title="Collection log" />;
 

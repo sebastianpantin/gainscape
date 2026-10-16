@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { AccountSection } from './settings/AccountSection.tsx';
 import { AppSection } from './settings/AppSection.tsx';
@@ -14,7 +15,7 @@ interface SettingsScreenProps {
 }
 
 export function SettingsScreen({ userId, email }: SettingsScreenProps) {
-  const { state, replace } = useProfile(userId);
+  const { state, replace, refresh } = useProfile(userId);
 
   return (
     <main className="screen stack">
@@ -25,11 +26,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
         <h1 className="title">Settings</h1>
       </div>
       {state.status === 'loading' && <ListSkeleton />}
-      {state.status === 'failed' && (
-        <p className="problem" role="alert">
-          {state.problem}
-        </p>
-      )}
+      {state.status === 'failed' && <ProblemWithRetry problem={state.problem} onRetry={refresh} />}
       {state.status === 'ready' && (
         <>
           <TrainingSection userId={userId} profile={state.profile} onSaved={replace} />

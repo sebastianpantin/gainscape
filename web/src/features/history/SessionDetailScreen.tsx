@@ -26,6 +26,7 @@ import { fetchLatestExerciseList, historyQuery, itemCatalogQuery } from '../../l
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { forgetLastSummary, recallLastSummary } from '../summary/last-summary.ts';
@@ -77,6 +78,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const [edit, setEdit] = useState<SessionEdit | null>(null);
   const [readOnly, setReadOnly] = useState(true);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [problem, setProblem] = useState<SessionProblem<Loaded> | null>(null);
   const [busy, setBusy] = useState<SessionBusy>(IDLE);
   const [notice, setNotice] = useState<string | null>(null);
@@ -119,18 +121,25 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       (error: Error) => !controller.signal.aborted && setLoadProblem(error.message),
     );
     return () => controller.abort();
-  }, [sessionId, adopt, goBackGone, loadWithCatalog]);
+  }, [sessionId, adopt, goBackGone, loadWithCatalog, loadAttempt]);
 
   if (loadProblem)
     return (
-      <main className="screen stack">
-        <Link className="back-link" to={HISTORY_PATH}>
-          ← History
-        </Link>
-        <p className="problem" role="alert">
-          {loadProblem}
-        </p>
-      </main>
+      <ScreenProblem
+        heading={
+          <>
+            <Link className="back-link" to={HISTORY_PATH}>
+              ← History
+            </Link>
+            <h1 className="title">Workout</h1>
+          </>
+        }
+        problem={loadProblem}
+        onRetry={() => {
+          setLoadProblem(null);
+          setLoadAttempt((attempt) => attempt + 1);
+        }}
+      />
     );
   if (!loaded || !edit)
     return (

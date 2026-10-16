@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { characterCount, nameProblem, trimmedName } from '../../lib/names.ts';
@@ -280,11 +281,7 @@ export function EditProfileScreen({ userId }: EditProfileScreenProps) {
         <h1 className="title">Edit profile</h1>
       </div>
       {state.status === 'loading' && <ListSkeleton panels={4} />}
-      {state.status === 'failed' && (
-        <p className="problem" role="alert">
-          {state.problem}
-        </p>
-      )}
+      {state.status === 'failed' && <ProblemWithRetry problem={state.problem} onRetry={refresh} />}
       {state.status === 'ready' && <EditForm userId={userId} profile={state.profile} onSaved={refresh} />}
     </main>
   );

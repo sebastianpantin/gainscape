@@ -18,6 +18,7 @@ import {
   removeFriend,
 } from '../../lib/social/social.ts';
 import { slotsByReps } from '../collection/record-slots.ts';
+import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { RecordSlots } from '../collection/RecordSlots.tsx';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { ProfileWithTopSkills } from '../profile/ProfileWithTopSkills.tsx';
@@ -91,9 +92,10 @@ function FriendProfile({ friendId }: { friendId: string }) {
       </Link>
       {state.status === 'loading' && <p>Loading…</p>}
       {state.status === 'failed' && (
-        <p className="problem" role="alert">
-          {state.problem}
-        </p>
+        <>
+          <h1 className="title">Friend profile</h1>
+          <ProblemWithRetry problem={state.problem} onRetry={view.refetch} />
+        </>
       )}
       {state.status === 'missing' && (
         <section className="panel stack">

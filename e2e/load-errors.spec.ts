@@ -8,6 +8,9 @@ import {
   openTab,
   pickExercise,
   register,
+  registerWithoutSigningIn,
+  signIn,
+  skipOnboarding,
   uniqueUsername,
 } from './support/app.ts';
 import { builtInExerciseId, grantItems, seedWorkouts } from './support/db.ts';
@@ -17,6 +20,8 @@ import { failRequests, restTable, rpc } from './support/network.ts';
 const HISTORY_PAGE_SIZE = 50;
 const SEEDED_WORKOUTS = HISTORY_PAGE_SIZE + 5;
 const OLDEST_WORKOUT_NOTE = 'oldest seeded workout';
+const EVERY_TABLE = /\/sb\/rest\//;
+const MISSING_ID = '00000000-0000-4000-8000-000000000000';
 
 function loadoutPanel(page: Page): Locator {
   return page.getByRole('region', { name: 'Loadout' });
@@ -211,3 +216,52 @@ test('the reveal says it could not load the loot names when the item catalog fai
   await expect(loot).toContainText("Couldn't load the loot names. See items for what dropped.");
   await expect(loot.getByRole('list', { name: 'Loot drops' })).toHaveCount(0);
 });
+
+async function signInWithEveryTableFailing(page: Page, prefix: string): Promise<void> {
+  const username = uniqueUsername(prefix);
+  await skipOnboarding(page, await registerWithoutSigningIn(page, username));
+  await failRequests(page, EVERY_TABLE);
+  await signIn(page, username);
+}
+
+const SCREENS_THAT_RETRY_A_FAILED_LOAD: {
+  path: string;
+  heading: string;
+  loaded: (page: Page) => Locator;
+}[] = [
+  { path: '/skills', heading: 'Skills', loaded: (page) => page.getByRole('list', { name: 'Skill levels' }) },
+  { path: '/skills/quests', heading: 'Quests', loaded: (page) => page.getByRole('heading', { level: 2 }).first() },
+  { path: '/profile', heading: 'Profile', loaded: (page) => page.getByRole('link', { name: 'Edit profile' }) },
+  {
+    path: '/collection',
+    heading: 'Collection log: Records',
+    loaded: (page) => page.getByRole('navigation', { name: 'Collection' }),
+  },
+  { path: '/profile/settings', heading: 'Settings', loaded: (page) => page.getByRole('heading', { name: 'Privacy' }) },
+  { path: '/profile/edit', heading: 'Edit profile', loaded: (page) => page.getByLabel('Display name') },
+  {
+    path: `/friends/${MISSING_ID}`,
+    heading: 'Friend profile',
+    loaded: (page) => page.getByRole('heading', { name: 'Not available', level: 1 }),
+  },
+  {
+    path: `/collection/history/${MISSING_ID}`,
+    heading: 'Workout',
+    loaded: (page) => page.getByText('That workout is no longer there.'),
+  },
+];
+
+for (const screen of SCREENS_THAT_RETRY_A_FAILED_LOAD) {
+  test(`${screen.path} keeps its heading when it cannot load, and Try again loads it`, async ({ page }) => {
+    await signInWithEveryTableFailing(page, 'le_retry');
+
+    await page.goto(screen.path);
+
+    await expect(page.getByRole('heading', { name: screen.heading, level: 1 })).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: 'injected failure' }).first()).toBeVisible();
+    await page.unroute(EVERY_TABLE);
+    await page.getByRole('button', { name: 'Try again' }).click();
+    await expect(screen.loaded(page)).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: 'injected failure' })).toHaveCount(0);
+  });
+}

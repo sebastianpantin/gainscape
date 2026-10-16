@@ -17,6 +17,7 @@ import {
   sendRequestText,
   socialErrorMessage,
 } from '../../lib/social/social-rules.ts';
+import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProfileBadge } from '../profile/ProfileCard.tsx';
 import { FriendsTabs } from './FriendsTabs.tsx';
@@ -214,16 +215,7 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
         </p>
       )}
       {load.status === 'loading' && <ListSkeleton />}
-      {load.status === 'failed' && (
-        <section className="panel stack">
-          <p className="problem" role="alert">
-            {load.problem}
-          </p>
-          <button className="button" type="button" onClick={() => void refetchAll()}>
-            Retry
-          </button>
-        </section>
-      )}
+      {load.status === 'failed' && <ProblemWithRetry problem={load.problem} onRetry={refetchAll} />}
       {load.status === 'ready' && (
         <>
           {incoming.map((friend) => (

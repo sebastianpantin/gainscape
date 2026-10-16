@@ -7,6 +7,7 @@ import { historyQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { EmptyState } from '../../components/EmptyState.tsx';
 import { Icon } from '../../components/Icon.tsx';
+import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { CollectionTabs } from '../collection/CollectionScreen.tsx';
 import { CollectionHeading } from '../collection/CollectionHeading.tsx';
@@ -86,7 +87,6 @@ export function HistoryScreen({ userId }: { userId: string }) {
   const { unitPref } = usePreferences();
   const loaded = loadedState(pages.data?.pages.flat(), pages.error);
   const sessions = loaded.status === 'ready' ? loaded.data : null;
-  const problem = moreProblem ?? (loaded.status === 'failed' ? loaded.problem : null);
   const { hasNextPage: hasMore, isFetching, isFetchingNextPage: loadingMore, fetchNextPage } = pages;
 
   const loadMore = useCallback(async () => {
@@ -121,12 +121,15 @@ export function HistoryScreen({ userId }: { userId: string }) {
           {notice}
         </p>
       )}
-      {problem && (
+      {moreProblem && (
         <p className="problem" role="alert">
-          {problem}
+          {moreProblem}
         </p>
       )}
-      {!sessions && !problem && <ListSkeleton />}
+      {!moreProblem && loaded.status === 'failed' && (
+        <ProblemWithRetry problem={loaded.problem} onRetry={pages.refetch} />
+      )}
+      {loaded.status === 'loading' && <ListSkeleton />}
       {sessions?.length === 0 && (
         <EmptyState text="No workouts yet. Finish one and it shows up here." startLabel="Start your first workout" />
       )}
