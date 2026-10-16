@@ -147,3 +147,17 @@ test('each lift rests for its own length: compound lifts longer, and an adjusted
   await setRow(bench, 2).getByRole('radio', { name: 'Hard' }).click();
   await expect(remaining).toHaveText('3:15');
 });
+
+test('a running rest shares one row with Finish, so the bottom bar stays short', async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 740 });
+  await register(page, uniqueUsername('rt_row'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'barbell curl', 'Barbell Curl', [{ weightKg: 30, reps: 10 }]);
+  await expect(restTimer(page).getByRole('timer', { name: 'Rest remaining' })).toBeVisible();
+
+  const finish = page.getByRole('button', { name: 'Finish workout' });
+  const finishBox = (await finish.boundingBox())!;
+  const timerBox = (await restTimer(page).boundingBox())!;
+  expect(finishBox.height).toBeGreaterThanOrEqual(44);
+  expect(Math.abs(finishBox.y + finishBox.height / 2 - (timerBox.y + timerBox.height / 2))).toBeLessThan(4);
+});

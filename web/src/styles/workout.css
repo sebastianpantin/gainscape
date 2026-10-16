@@ -728,6 +728,31 @@
   z-index: 5;
 }
 
+.finish-bar:has(> .rest-timer) {
+  flex-flow: row wrap;
+  align-items: center;
+  padding-block: var(--space-2);
+}
+
+.finish-bar:has(> .rest-timer) > * {
+  flex: 1 1 100%;
+}
+
+.finish-bar:has(> .rest-timer) > .rest-timer {
+  position: static;
+  flex: 1 1 15rem;
+}
+
+.finish-bar:has(> .rest-timer) .rest-progress {
+  inset: 0 0 auto;
+}
+
+.finish-bar:has(> .rest-timer) > .button.big {
+  flex: 1 1 7rem;
+  min-height: var(--tap-target);
+  font-size: var(--font-size-md);
+}
+
 .finish-bar:focus {
   outline: none;
 }
