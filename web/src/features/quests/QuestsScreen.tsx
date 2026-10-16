@@ -11,6 +11,7 @@ import { startQuest } from '../../lib/quests/quests.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_QUESTS_NOTICE } from '../../offline/quests-cache.ts';
+import { BackToSkills } from '../skills/BackToSkills.tsx';
 import { QuestCard } from './QuestCard.tsx';
 
 interface QuestsScreenProps {
@@ -64,6 +65,7 @@ export function QuestsScreen({ userId }: QuestsScreenProps) {
 
   return (
     <main className="screen stack">
+      <BackToSkills />
       <h1 className="title">Quests</h1>
       {notice && (
         <p className="notice" role="status">

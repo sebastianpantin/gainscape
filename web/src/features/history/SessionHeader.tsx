@@ -10,7 +10,7 @@ export function SessionHeader({ session, backTo }: { session: SessionDetail; bac
   return (
     <>
       <Link className="back-link" to={backTo}>
-        ← History
+        ‹ History
       </Link>
       <header className="workout-header">
         <div className="stack" style={{ gap: 4 }}>

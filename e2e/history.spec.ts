@@ -129,7 +129,7 @@ test('Back from an older workout keeps every loaded page of History and its scro
   expect(scrolledTo).toBeGreaterThan(0);
   await olderWorkout.click();
   await expect(page).toHaveURL(/\/collection\/history\/[0-9a-f-]+$/);
-  await expect(page.getByRole('link', { name: '← History' })).toBeVisible();
+  await expect(page.getByRole('link', { name: '‹ History' })).toBeVisible();
 
   await page.goBack();
 

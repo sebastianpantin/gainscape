@@ -125,7 +125,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     return (
       <main className="screen stack">
         <Link className="back-link" to={HISTORY_PATH}>
-          ← History
+          ‹ History
         </Link>
         <p className="problem" role="alert">
           {loadProblem}

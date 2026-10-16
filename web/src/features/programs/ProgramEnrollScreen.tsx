@@ -2,7 +2,7 @@ import { type ProgramDefinition, type RoundingMode, type WeightUnit } from '@dom
 import { useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
@@ -128,6 +128,9 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   if (loaded.status === 'blocked')
     return (
       <main className="screen stack">
+        <Link className="back-link" to="/programs">
+          ‹ Programs
+        </Link>
         <h1 className="title">Follow {loaded.name}</h1>
         <p className="panel muted">{loaded.message}</p>
       </main>
@@ -193,6 +196,9 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
 
   return (
     <main className="screen stack">
+      <Link className="back-link" to="/programs">
+        ‹ Programs
+      </Link>
       <h1 className="title">Follow {name}</h1>
       <div className="panel stack">
         <span className="field">Unit</span>

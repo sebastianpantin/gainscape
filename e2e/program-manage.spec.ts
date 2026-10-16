@@ -125,6 +125,7 @@ test('stop following a program through an in-app confirmation dialog', async ({ 
   const nativeDialogs = nativeDialogsOf(page);
   await followProgram(page, '5/3/1', FIVE_THREE_ONE_ONE_RMS_KG);
   await openManageProgram(page, '5/3/1');
+  await expect(page.getByRole('main').getByRole('link', { name: '‹ Train', exact: true })).toHaveAttribute('href', '/');
 
   const stopFollowing = page.getByRole('button', { name: 'Stop following', exact: true });
   await expect(stopFollowing).toBeVisible();

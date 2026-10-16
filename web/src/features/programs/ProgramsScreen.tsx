@@ -119,6 +119,9 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
 
   return (
     <main className="screen stack">
+      <Link className="back-link" to="/profile">
+        ‹ Profile
+      </Link>
       <h1 className="title">Programs</h1>
       {savedNotice && (
         <p className="notice" role="status">

@@ -1,6 +1,6 @@
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { type ComponentType, lazy, type ReactNode, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Icon, type IconName } from './components/Icon.tsx';
 import { ScreenErrorBoundary } from './components/ScreenErrorBoundary.tsx';
 import { ScreenSkeleton } from './components/ScreenSkeleton.tsx';
@@ -14,6 +14,7 @@ import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
 import { useDataChangeInvalidation } from './lib/query/data-changes.ts';
 import { createQueryClient } from './lib/query/query-client.ts';
 import { parseAuthCallback } from './lib/platform/auth-links.ts';
+import { activeTabPath } from './lib/platform/tab-rules.ts';
 import { useAuthSession } from './lib/platform/use-auth-session.ts';
 import { useRouteFocusAndTitle } from './lib/platform/use-route-focus.ts';
 import { OfflineBanner } from './pwa/OfflineBanner.tsx';
@@ -79,8 +80,8 @@ const QuestsScreen = lazyScreen(() => import('./features/quests/QuestsScreen.tsx
 const RevealScreen = lazyScreen(() => import('./features/summary/RevealScreen.tsx'), 'RevealScreen');
 const WhatsNewScreen = lazyScreen(() => import('./features/whats-new/WhatsNewScreen.tsx'), 'WhatsNewScreen');
 
-const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
-  { to: '/', label: 'Train', icon: 'train', end: true },
+const TABS: { to: string; label: string; icon: IconName }[] = [
+  { to: '/', label: 'Train', icon: 'train' },
   { to: '/skills', label: 'Skills', icon: 'skills' },
   { to: '/collection', label: 'Collection', icon: 'log' },
   { to: '/friends', label: 'Friends', icon: 'friends' },
@@ -95,6 +96,28 @@ export function App() {
       <OfflineBanner />
       <Screens />
     </QueryClientProvider>
+  );
+}
+
+const TAB_PATHS = TABS.map((tab) => tab.to);
+
+function TabBar() {
+  const { pathname } = useLocation();
+  const active = activeTabPath(pathname, TAB_PATHS);
+  return (
+    <nav className="tab-bar" aria-label="Main">
+      {TABS.map((tab) => (
+        <Link
+          key={tab.to}
+          to={tab.to}
+          className={tab.to === active ? 'tab active' : 'tab'}
+          aria-current={tab.to === active ? 'page' : undefined}
+        >
+          <Icon name={tab.icon} />
+          {tab.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -150,14 +173,7 @@ function Screens() {
         <ToastProvider>
           <RouteFocusAndTitle />
           <LaunchRouting />
-          <nav className="tab-bar" aria-label="Main">
-            {TABS.map((tab) => (
-              <NavLink key={tab.to} to={tab.to} end={tab.end} className="tab">
-                <Icon name={tab.icon} />
-                {tab.label}
-              </NavLink>
-            ))}
-          </nav>
+          <TabBar />
           <ActiveWorkoutBar userId={userId} />
           <ScreenErrorBoundary>
             <Suspense fallback={<ScreenSkeleton />}>

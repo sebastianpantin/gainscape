@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import {
   OFFLINE_EXERCISES_NOTICE,
@@ -74,6 +74,9 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
 
   return (
     <main className="screen stack">
+      <Link className="back-link" to="/profile">
+        ‹ Profile
+      </Link>
       <h1 className="title">Exercises</h1>
       {savedNotice && (
         <p className="notice" role="status">
