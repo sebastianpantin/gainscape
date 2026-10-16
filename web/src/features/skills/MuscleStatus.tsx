@@ -1,9 +1,9 @@
 import { type BodySkill, muscleRecoveryText } from '../../lib/progress/recovery-rules.ts';
 import {
   type MuscleVolume,
-  VOLUME_BAND_TEXT,
   VOLUME_TARGET,
-  volumeSetsLabel,
+  volumeAmountText,
+  volumeBandText,
 } from '../../lib/progress/weekly-volume-rules.ts';
 import { useBodyStatus } from './body-status.ts';
 import { StatusSection } from './StatusSection.tsx';
@@ -14,8 +14,8 @@ function MuscleWeek({ name, volume }: { name: string; volume: MuscleVolume }) {
   return (
     <>
       <p className="row spread">
-        <span>{volumeSetsLabel(volume.sets)}</span>
-        <span className="muted">{VOLUME_BAND_TEXT[volume.band]}</span>
+        <span>{volumeAmountText(volume.sets)}</span>
+        <span className="muted">{volumeBandText(volume.band)}</span>
       </p>
       <VolumeBar volume={volume} />
       <VolumeContributionList name={name} volume={volume} />

@@ -5,9 +5,9 @@ import { type LoadedState } from '../../lib/query/query-state-rules.ts';
 import { BODY_SKILLS, type BodySkill, isBodySkill } from '../../lib/progress/recovery-rules.ts';
 import {
   type MuscleVolume,
-  VOLUME_BAND_TEXT,
   VOLUME_TARGET,
-  volumeSetsLabel,
+  volumeAmountText,
+  volumeBandText,
 } from '../../lib/progress/weekly-volume-rules.ts';
 import { VolumeBar } from './VolumeBar.tsx';
 import { StatusSection } from './StatusSection.tsx';
@@ -30,14 +30,16 @@ interface MuscleRowProps {
 
 function MuscleRow({ skill, name, volume, open, onToggle }: MuscleRowProps) {
   const detailsId = useId();
+  const bandText = volumeBandText(volume.band);
   return (
     <li className="volume-row">
       <button type="button" className="volume-toggle" aria-expanded={open} aria-controls={detailsId} onClick={onToggle}>
         <span className="row spread">
           <span>{name}</span>
           <span className="muted">
-            {volumeSetsLabel(volume.sets)}
-            <span className="visually-hidden"> this week</span> · {VOLUME_BAND_TEXT[volume.band]}
+            {volumeAmountText(volume.sets)}
+            <span className="visually-hidden"> this week</span>
+            {bandText && ` · ${bandText}`}
           </span>
         </span>
         <VolumeBar volume={volume} />

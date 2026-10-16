@@ -31,11 +31,15 @@ export interface MuscleVolume {
 
 const BAR_FULL_SETS = 25;
 
-export const VOLUME_BAND_TEXT: Readonly<Record<VolumeBand, string>> = {
-  below: 'below target',
+const VOLUME_BAND_TEXT: Readonly<Record<VolumeBand, string | null>> = {
+  below: null,
   within: 'within target',
   above: 'above target',
 };
+
+export function volumeBandText(band: VolumeBand): string | null {
+  return VOLUME_BAND_TEXT[band];
+}
 
 export function volumeBand(sets: number): VolumeBand {
   if (sets < VOLUME_TARGET.min) return 'below';
@@ -53,6 +57,11 @@ export function volumeSetsText(sets: number): string {
 export function volumeSetsLabel(sets: number): string {
   const shown = volumeSetsText(sets);
   return `${shown} ${shown === '1' ? 'set' : 'sets'}`;
+}
+
+export function volumeAmountText(sets: number): string {
+  if (volumeBand(sets) !== 'below') return volumeSetsLabel(sets);
+  return `${volumeSetsText(sets)} of ${VOLUME_TARGET.min} sets`;
 }
 
 function dayFormat(timeZone: string): Intl.DateTimeFormat {

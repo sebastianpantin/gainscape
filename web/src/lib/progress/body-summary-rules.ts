@@ -13,8 +13,8 @@ function recoveryPart(load: Readonly<Record<BodySkill, number>>): string {
 }
 
 function volumePart(volume: Readonly<Record<BodySkill, MuscleVolume>>): string {
-  const under = BODY_SKILLS.filter((skill) => volume[skill].band === 'below').length;
-  return under === 0 ? 'none under target' : `${under} under target`;
+  const reached = BODY_SKILLS.filter((skill) => volume[skill].band !== 'below').length;
+  return `${reached} of ${BODY_SKILLS.length} at target`;
 }
 
 export function bodySummaryText(

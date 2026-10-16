@@ -4,7 +4,9 @@ import { BODY_SKILLS } from '../../web/src/lib/progress/recovery-rules.ts';
 import {
   type VolumeExercise,
   type VolumeSet,
+  volumeAmountText,
   volumeBand,
+  volumeBandText,
   volumeBarFraction,
   volumeSetsLabel,
   volumeSetsText,
@@ -143,6 +145,24 @@ describe('volumeBand', () => {
     expect(volumeBand(10)).toBe('within');
     expect(volumeBand(20)).toBe('within');
     expect(volumeBand(20.1)).toBe('above');
+  });
+});
+
+describe('volumeAmountText', () => {
+  it('shows progress toward the target below it and the plain count from the target on', () => {
+    expect(volumeAmountText(0)).toBe('0 of 10 sets');
+    expect(volumeAmountText(2.7)).toBe('2.7 of 10 sets');
+    expect(volumeAmountText(9.9)).toBe('9.9 of 10 sets');
+    expect(volumeAmountText(10)).toBe('10 sets');
+    expect(volumeAmountText(22.5)).toBe('22.5 sets');
+  });
+});
+
+describe('volumeBandText', () => {
+  it('names the band only once the target is reached, so a fresh week reads as progress', () => {
+    expect(volumeBandText('below')).toBeNull();
+    expect(volumeBandText('within')).toBe('within target');
+    expect(volumeBandText('above')).toBe('above target');
   });
 });
 
