@@ -244,7 +244,8 @@ export async function querySessionPage(
     .select(SESSION_PAGE_COLUMNS)
     .order('started_at', { ascending: false })
     .order('id', { ascending: false })
-    .limit(HISTORY_PAGE_SIZE);
+    .limit(HISTORY_PAGE_SIZE)
+    .retry(false);
   if (after) query = query.or(nextPageFilter(after));
   const { data, error } = await query;
   if (error) throw error;

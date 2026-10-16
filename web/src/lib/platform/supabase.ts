@@ -21,6 +21,5 @@ function fetchWithAuthTimeout(input: RequestInfo | URL, init?: RequestInit): Pro
 
 export const supabase = createClient(supabaseUrl, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, {
   auth: { storageKey: AUTH_STORAGE_KEY },
-  db: { retry: false },
   global: { fetch: fetchWithAuthTimeout },
 });

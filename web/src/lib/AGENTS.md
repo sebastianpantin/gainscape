@@ -83,7 +83,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 ### Query cache
 
-- `createQueryClient` has no retries and uses `networkMode: 'always'`. A failed or offline load then shows its problem at once instead of waiting on the skeleton. The supabase client skips retries too (`db: { retry: false }`). `tests/web/query-client.test.ts` pins this.
+- `createQueryClient` has no retries and uses `networkMode: 'always'`. A failed or offline load then shows its problem at once, not a skeleton; supabase-js retries GETs, except History's list (`.retry(false)`). `tests/web/query-client.test.ts` pins this.
 - `FRESH_FOR_MS` (60 s) only limits how long changes from other devices take to show. Every write this device makes to queried data must call `announceDataChange` (`query/data-changes.ts`). It invalidates locally and broadcasts on `gainscape.data-changes`.
 - Every query factory is defined in `query/queries.ts` and listed in `EVERY_QUERY`, and its root is in `QUERY_ROOTS_CHANGED_BY` or `ALWAYS_STALE_QUERY_ROOTS`. `tests/web/query-freshness-rules.test.ts` fails on a `*Query` export missing from either.
 - The tab that made a write skips the roots it already updated optimistically (profile, items after a craft, weekly goal, pins). This stops a refetch that started before a second optimistic write from undoing it. Optimistic writes call `cancelQueries` before `setQueryData`.
