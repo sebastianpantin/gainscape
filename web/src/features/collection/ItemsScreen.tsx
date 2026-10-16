@@ -212,7 +212,7 @@ function ItemDetail({
   };
 
   return (
-    <section className="panel stack" aria-live="polite" aria-label="Item details">
+    <section className="panel stack" aria-label="Item details">
       {justCrafted && (
         <p className={`craft-result pop rarity-${item.rarity}`}>
           <span className="craft-result-art">
@@ -457,6 +457,9 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           </ul>
         </div>
       ))}
+      <p className="visually-hidden" aria-live="polite">
+        {picked && picked.id === craftedId ? `Crafted ${picked.name}` : ''}
+      </p>
       {picked ? (
         <ItemDetail
           key={picked.id}
