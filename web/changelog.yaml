@@ -1,3 +1,14 @@
+- prs: [147]
+  version: 0.14.0
+  date: 2026-10-16
+  title: Easier logging
+  items:
+    - New sets start unticked with your last weights filled in. Tick Done to log each one and start your rest.
+    - Removed a set by mistake? Tap Undo to put it back. Removing an exercise with sets in it, or discarding a workout, now asks first.
+    - Every screen that fails to load offers Try again, and leaving an edit with unsaved changes asks before throwing them away.
+    - Followed programs show their sets in short lines like 5 × 5 @ 100 kg, with Start at the top, and each template says how often it trains.
+    - The workout summary shows how much XP is left to each next level, and game words like total level, combat level and gz now have help.
+    - Back links on Programs, Exercises and Quests, clearer search results when adding an exercise, and a layout that fits small phones.
 - prs: [145]
   version: 0.13.2
   date: 2026-10-16
