@@ -193,8 +193,6 @@ function SignedInShell() {
     <ToastProvider>
       <RouteFocusAndTitle />
       <LaunchRouting />
-      <TabBar />
-      <ActiveWorkoutBar userId={userId} />
       <ScreenErrorBoundary>
         <Suspense fallback={<ScreenSkeleton />}>
           <RouteView>
@@ -230,6 +228,8 @@ function SignedInShell() {
           </RouteView>
         </Suspense>
       </ScreenErrorBoundary>
+      <ActiveWorkoutBar userId={userId} />
+      <TabBar />
       <WhatsNewSheet userId={userId} />
     </ToastProvider>
   );

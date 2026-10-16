@@ -53,3 +53,18 @@ test('each Collection tab focuses a heading that names the tab', async ({ page }
   await collectionTabs.getByRole('link', { name: 'History' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Collection: History', exact: true })).toBeFocused();
 });
+
+test('the first Tab on a screen lands in its content, and the tab bar comes after it', async ({ page }) => {
+  await register(page, uniqueUsername('nav_order'));
+  await page.goto('/profile/settings');
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+
+  await page.keyboard.press('Tab');
+
+  await expect(page.getByRole('main').locator(':focus')).toHaveCount(1);
+  const tabBarFollowsContent = await page.getByRole('navigation', { name: 'Main' }).evaluate((tabBar) => {
+    const main = document.querySelector('main');
+    return main !== null && (main.compareDocumentPosition(tabBar) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  });
+  expect(tabBarFollowsContent).toBe(true);
+});
