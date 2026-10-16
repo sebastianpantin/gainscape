@@ -11,6 +11,7 @@ import {
   feedBadge,
   feedBadgeKind,
   feedText,
+  friendsLoadProblem,
   type FriendRow,
   relativeTime,
   requestedUsername,
@@ -24,6 +25,7 @@ import { TermHelp } from '../../components/TermHelp.tsx';
 import { FriendsTabs } from './FriendsTabs.tsx';
 import { messageOf } from '../../lib/error-text.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
+import { useIsOffline } from '../../lib/platform/use-online.ts';
 
 const REQUEST_BADGE_SIZE = 36;
 const GONE_POST = socialErrorMessage({ message: 'event_not_found' });
@@ -97,6 +99,7 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
   const [username, setUsername] = useState('');
   const { showToast, dismissToast } = useToast();
   const [problem, setProblem] = useState<string | null>(null);
+  const offline = useIsOffline();
 
   const friends = friendsList.data ?? [];
   const feed = uniqueByEvent(feedPages.data?.pages.flat() ?? []);
@@ -216,7 +219,9 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
         </p>
       )}
       {load.status === 'loading' && <ListSkeleton />}
-      {load.status === 'failed' && <ProblemWithRetry problem={load.problem} onRetry={refetchAll} />}
+      {load.status === 'failed' && (
+        <ProblemWithRetry problem={friendsLoadProblem(load.problem, offline)} onRetry={refetchAll} />
+      )}
       {load.status === 'ready' && (
         <>
           {incoming.map((friend) => (

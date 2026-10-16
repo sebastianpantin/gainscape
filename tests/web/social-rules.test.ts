@@ -13,6 +13,7 @@ import {
   feedBadgeKind,
   feedCursor,
   feedText,
+  friendsLoadProblem,
   type HiscoreRow,
   rankHiscores,
   recentFriendActivity,
@@ -22,6 +23,7 @@ import {
   skillMetric,
   socialErrorMessage,
 } from '../../web/src/lib/social/social-rules.ts';
+import { OFFLINE_PROBLEM } from '../../web/src/offline/cache-first.ts';
 
 function item(type: FeedItem['type'], payload: Record<string, unknown>): FeedItem {
   return {
@@ -315,6 +317,11 @@ describe('rankHiscores', () => {
 });
 
 describe('social helpers', () => {
+  it('says the friends screen needs a connection while offline and keeps the load problem otherwise', () => {
+    expect(friendsLoadProblem('Something went wrong. Try again.', true)).toBe(OFFLINE_PROBLEM);
+    expect(friendsLoadProblem('Something went wrong. Try again.', false)).toBe('Something went wrong. Try again.');
+  });
+
   it('builds the next feed cursor from the last item', () => {
     expect(feedCursor(item('pr', {}))).toEqual({ beforeAt: '2026-09-30T10:00:00.000Z', beforeId: 'event-1' });
   });
