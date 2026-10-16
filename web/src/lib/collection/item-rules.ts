@@ -13,6 +13,8 @@ export type ItemKind = (typeof ITEM_KINDS)[number];
 const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'legendary'] as const;
 export type ItemRarity = (typeof ITEM_RARITIES)[number];
 
+export const ITEM_ACTIONS_OFFLINE_TEXT = "You're offline. Equipping and crafting need a connection.";
+
 export const ITEM_COLUMNS =
   'id,key,name,kind,rarity,tier,gear_slot,icon_key,description,grants_challenge_id,sort_order';
 export const RECIPE_COLUMNS = 'id,key,output_item_id,output_quantity,recipe_inputs(item_id,quantity)';

@@ -1,3 +1,4 @@
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { type BodySkill } from '../../lib/progress/recovery-rules.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
@@ -15,13 +16,16 @@ export function BodyScreen({ userId }: BodyScreenProps) {
   const { recovery, volume } = useBodyStatus(userId);
   if (standing.status === 'failed')
     return (
-      <main className="screen stack">
-        <BackToSkills />
-        <h1 className="title">Body</h1>
-        <p className="problem" role="alert">
-          {standing.problem}
-        </p>
-      </main>
+      <ScreenProblem
+        heading={
+          <div className="stack" style={{ gap: 4 }}>
+            <BackToSkills />
+            <h1 className="title">Body</h1>
+          </div>
+        }
+        problem={standing.problem}
+        onRetry={standing.retry}
+      />
     );
   if (standing.status === 'loading' || (recovery.status === 'loading' && volume.status === 'loading'))
     return <ScreenSkeleton title="Body" panels={2} />;

@@ -93,8 +93,8 @@ test("another account's draft is kept, never sent, and restored for its owner", 
     if (`${request.url()} ${request.postData() ?? ''}`.includes(ownerSessionId)) leakedRequests.push(request.url());
   });
 
-  page.once('dialog', (dialog) => dialog.accept());
   await signOut(page);
+  await page.getByRole('dialog', { name: 'Sign out?' }).getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
 
   await register(page, other);

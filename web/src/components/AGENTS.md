@@ -25,7 +25,7 @@ Small shared UI pieces used across feature screens: icons, the pixel-art sprites
 - `ToastProvider` always renders the `toast-region` (`role="status"`, `aria-live="polite"`), so screen readers register it before the first toast. Because of that, an e2e `getByRole('status')` also matches it: assert exact text inside a status, not the whole status.
 - `ScreenSkeleton` renders an `aria-busy` `main`, which route focus waits on, and a visually hidden "Loading…" status that e2e waits on. Keep both.
 - `ScreenErrorBoundary` catches a lazy chunk that fails to load and resets when the pathname changes.
-- `useUnsavedChangesGuard(dirty)` (`UnsavedChangesGuard.tsx`) needs the data router for `useBlocker`. Render its `prompt`, and call `allowLeaving()` right before navigating away after a successful save or delete, or the prompt blocks it.
+- `useUnsavedChangesGuard(dirty)` (`UnsavedChangesGuard.tsx`) needs the data router for `useBlocker`. Render its `prompt`, and call `allowLeaving()` right before navigating away after a successful save or delete, or the prompt blocks it. While dirty it also adds a `beforeunload` prompt for a reload or a closed tab; `allowLeaving()` skips that too.
 - `ScreenProblem` and `ProblemWithRetry` are the load-failure view with Try again; a screen keeps its `h1`. Failed actions stay inline alerts, not a full-screen problem.
 - `ConfirmDialog` uses a native `<dialog>` with `showModal` (keeps focus inside, Escape cancels). Use it instead of `window.confirm`.
 - `TermHelp`:

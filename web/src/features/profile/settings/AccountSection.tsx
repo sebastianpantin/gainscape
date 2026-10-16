@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { exportFileName, exportMyData, saveBlob } from '../../../lib/profile/account.ts';
 import { messageOf } from '../../../lib/error-text.ts';
 import { useToast } from '../../../lib/ui/toast.ts';
+import { ConfirmDialog } from '../../../components/ConfirmDialog.tsx';
 import { DeleteAccountForm } from './DeleteAccountForm.tsx';
-import { signOut } from './device-data.ts';
+import { hasUnsyncedDraftHere, signOut } from './device-data.ts';
 import { EmailForm } from './EmailForm.tsx';
 import { PasswordForm } from './PasswordForm.tsx';
 import { ResetDataForm } from './ResetDataForm.tsx';
@@ -25,6 +26,12 @@ export function AccountSection({
   const { showToast, dismissToast } = useToast();
   const [exporting, setExporting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+
+  const askToSignOut = async () => {
+    if (await hasUnsyncedDraftHere(userId)) setConfirmingSignOut(true);
+    else await signOut(navigate);
+  };
 
   const toggle = (next: AccountPanel) => {
     dismissToast();
@@ -81,9 +88,19 @@ export function AccountSection({
       <button className="button" type="button" disabled={exporting} onClick={exportData}>
         Export my data
       </button>
-      <button className="button" type="button" onClick={() => signOut(userId, navigate)}>
+      <button className="button" type="button" onClick={askToSignOut}>
         Sign out
       </button>
+      {confirmingSignOut && (
+        <ConfirmDialog
+          title="Sign out?"
+          confirmLabel="Sign out"
+          onConfirm={() => void signOut(navigate)}
+          onCancel={() => setConfirmingSignOut(false)}
+        >
+          <p>Your workout stays on this device.</p>
+        </ConfirmDialog>
+      )}
       <button
         className="button danger-outline"
         type="button"

@@ -32,6 +32,9 @@ test('the profile charts bodyweight from workouts and from saves without a worko
   await page.getByRole('button', { name: 'Increase bodyweight by 0.1 kg' }).click();
   await context.setOffline(true);
   await expect(page.getByRole('button', { name: 'Save 80.1 kg' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save 80.1 kg' })).toHaveAccessibleDescription(
+    "You're offline. Saving bodyweight needs a connection.",
+  );
   await context.setOffline(false);
   await page.getByRole('button', { name: 'Save 80.1 kg' }).click();
   await expect(trendChart(page)).toHaveAccessibleName(

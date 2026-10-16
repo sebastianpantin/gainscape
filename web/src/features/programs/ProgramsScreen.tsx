@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import {
@@ -42,6 +42,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   const programList = useQuery(programsQuery(userId));
   const [savedPrograms] = useState(() => cachedPrograms(userId));
   const offline = useIsOffline();
+  const offlineId = useId();
   const [actionProblem, setActionProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
@@ -137,7 +138,11 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
       <section className="stack" aria-label="Your programs">
         <h2>Your programs</h2>
         {own.length === 0 && <p className="panel muted">Create a program or copy a template.</p>}
-        {own.length > 0 && offline && <p className="notice">{PROGRAM_OFFLINE_TEXT}</p>}
+        {own.length > 0 && offline && (
+          <p className="notice" id={offlineId}>
+            {PROGRAM_OFFLINE_TEXT}
+          </p>
+        )}
         <ul className="stack exercise-list">
           {own.map((program) => (
             <li className="panel row spread" key={program.id}>
@@ -148,6 +153,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
                 <button
                   className="button link"
                   type="button"
+                  aria-describedby={offline ? offlineId : undefined}
                   disabled={busy || offline}
                   onClick={() => void follow(program)}
                 >

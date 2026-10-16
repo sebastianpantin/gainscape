@@ -22,6 +22,23 @@ for (const failingRpc of ['list_friends', 'get_feed']) {
   });
 }
 
+test('the friends screen says it is offline when it cannot load without a connection', async ({ context, page }) => {
+  await register(page, uniqueUsername('ff_off'));
+  await failRequests(page, rpc('list_friends'));
+  await openTab(page, 'Friends');
+  await expect(friendsAlert(page)).toHaveText(GENERIC_PROBLEM);
+
+  await context.setOffline(true);
+  await expect(friendsAlert(page)).toHaveText('Offline: connect to load this screen.');
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+
+  await context.setOffline(false);
+  await page.unroute(rpc('list_friends'));
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByLabel('Add a friend by exact username')).toBeVisible();
+  await expect(friendsAlert(page)).toHaveCount(0);
+});
+
 test('the friend preview shows a retryable problem when the profile view fails', async ({ page }) => {
   const username = uniqueUsername('fp');
   await register(page, username);
