@@ -9,9 +9,7 @@ const DEADLIFT = 'Deadlift';
 
 async function addUnloggedExercise(page: Page, search: string, exerciseName: string) {
   const card = await addExercise(page, search, exerciseName);
-  const doneButton = card.getByRole('button', { name: 'Done set 1' });
-  await doneButton.click();
-  await expect(doneButton).toHaveAttribute('aria-pressed', 'false');
+  await expect(card.getByRole('button', { name: 'Done set 1' })).toHaveAttribute('aria-pressed', 'false');
 }
 
 function swapPicker(page: Page) {
@@ -43,9 +41,7 @@ test('the swap picker stays on the second of two identical exercises when the fi
   await addUnloggedExercise(page, 'bench', BENCH);
   const benchCards = await addExercise(page, 'bench', BENCH);
   await expect(benchCards).toHaveCount(2);
-  const secondDone = benchCards.nth(1).getByRole('button', { name: 'Done set 1' });
-  await secondDone.click();
-  await expect(secondDone).toHaveAttribute('aria-pressed', 'false');
+  await expect(benchCards.nth(1).getByRole('button', { name: 'Done set 1' })).toHaveAttribute('aria-pressed', 'false');
 
   const benchMenus = page.getByLabel(`Exercise menu for ${BENCH}`, { exact: true });
   await benchMenus.nth(1).click();

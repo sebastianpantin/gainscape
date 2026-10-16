@@ -26,11 +26,11 @@ function holdOf(draft: WorkoutDraft): HoldDraftExercise {
 }
 
 describe('hold drafts', () => {
-  it('adds a carry with a first done set of 20 kg over 20 m and a hang with 0 kg for 30 s', () => {
+  it('adds a carry with a first not-done set of 20 kg over 20 m and a hang with 0 kg for 30 s', () => {
     const carry = holdOf(withCarry());
     expect(carry).toMatchObject({ modality: 'hold', measure: 'distance', loadType: 'external' });
     expect(carry.sets).toEqual([
-      { id: expect.any(String), kind: 'hold', weightKg: 20, durationS: null, distanceM: 20, effort: null, done: true },
+      { id: expect.any(String), kind: 'hold', weightKg: 20, durationS: null, distanceM: 20, effort: null, done: false },
     ]);
     const hang = holdOf(addSet(addHoldExercise(startDraft(), 'hang', 'Dead Hang', 'bodyweight', 'time'), 0));
     expect(hang.sets[0]).toMatchObject({ weightKg: 0, durationS: 30, distanceM: null });
@@ -50,7 +50,7 @@ describe('hold drafts', () => {
       { weightKg: 32, distanceM: 40, effort: null },
     ]);
     const second = holdOf(twice).sets[1];
-    expect(holdOf(toggleSetDone(twice, 0, second.id)).sets[1].done).toBe(false);
+    expect(holdOf(toggleSetDone(twice, 0, second.id)).sets[1].done).toBe(true);
     expect(holdOf(removeSet(twice, 0, first.id)).sets.map((set) => set.id)).toEqual([second.id]);
   });
 
@@ -81,9 +81,11 @@ describe('hold drafts', () => {
     expect(parsed?.kind === 'draft' && holdOf(parsed.draft).sets[0].effort).toBeNull();
   });
 
-  it('sends a done hold as a hold set', () => {
-    const draft = withCarry();
-    const [set] = holdOf(draft).sets;
+  it('sends a done hold as a hold set, and no hold that is not done', () => {
+    const notDone = withCarry();
+    const [set] = holdOf(notDone).sets;
+    expect(completeSessionPayload(notDone).sets).toEqual([]);
+    const draft = toggleSetDone(notDone, 0, set.id);
     expect(completeSessionPayload(draft).sets).toEqual([
       {
         kind: 'hold',

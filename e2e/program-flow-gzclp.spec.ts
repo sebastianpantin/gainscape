@@ -343,6 +343,7 @@ test('GZCLP: after a T1 squat fails 10×1 the Train card prescribes a 5RM test, 
     await setRow(squat, 2).getByRole('spinbutton', { name: 'kg', exact: true }).fill('110');
     await expect.poll(() => weightsIn(squat)).toEqual(['100', '110']);
     await expect.poll(() => repsIn(squat)).toEqual(['5', '5']);
+    await setRow(squat, 2).getByRole('button', { name: 'Done set 2' }).click();
     await finishWorkout(page);
     await page.getByRole('link', { name: 'Done' }).click();
   });

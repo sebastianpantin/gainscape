@@ -101,17 +101,12 @@ test('rating a set keeps the rest it started, and focus stays in the bar when th
   const firstSet = setRow(curl, 1);
 
   const doneFirstSet = curl.getByRole('button', { name: 'Done set 1' });
-  await expect(doneFirstSet).toHaveAttribute('aria-pressed', 'true');
-  await doneFirstSet.click();
   await expect(doneFirstSet).toHaveAttribute('aria-pressed', 'false');
+  await expect(restTimer(page)).toHaveCount(0);
   await doneFirstSet.click();
   await expect(remaining).toHaveText('1:30');
   await restTimer(page).getByRole('button', { name: 'Remove 15 seconds' }).click();
   await firstSet.getByRole('radio', { name: 'Hard' }).click();
-  await expect(remaining).toHaveText('1:15');
-
-  await curl.getByRole('button', { name: '+ Add set' }).click();
-  await setRow(curl, 2).getByRole('radio', { name: 'Hard' }).click();
   await expect(remaining).toHaveText('1:15');
 
   const removeTime = restTimer(page).getByRole('button', { name: 'Remove 15 seconds' });

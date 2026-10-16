@@ -183,9 +183,9 @@ test('a workout keeps the screen on and the end of a rest vibrates and beeps, as
 
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await page.clock.runFor(179_000);
-  await expect.poll(() => deviceCalls(page)).toEqual(['lock']);
+  await expect.poll(() => deviceCalls(page)).toEqual(['lock', 'vibrate']);
   await page.clock.runFor(2_000);
-  await expect.poll(() => deviceCalls(page)).toEqual(['lock', 'vibrate', 'beep', 'beep']);
+  await expect.poll(() => deviceCalls(page)).toEqual(['lock', 'vibrate', 'vibrate', 'beep', 'beep']);
 
   await page.clock.resume();
   await finishWorkout(page);
