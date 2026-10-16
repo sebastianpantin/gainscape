@@ -34,6 +34,7 @@ import { LiftSupersetCard } from './LiftSupersetCard.tsx';
 import { NotifyPrompt } from './NotifyPrompt.tsx';
 import { OtherAccountDraftNotice } from './OtherAccountDraftNotice.tsx';
 import { RestTimerBar } from './RestTimerBar.tsx';
+import { DiscardWorkoutDialog } from './DiscardWorkoutDialog.tsx';
 import { SavingWorkoutView } from './SavingWorkoutView.tsx';
 import { SessionRpeField } from './SessionRpeField.tsx';
 import { TodayView } from './TodayView.tsx';
@@ -372,15 +373,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </ConfirmDialog>
       )}
       {commands.confirmingDiscard && (
-        <ConfirmDialog
-          title="Discard this workout?"
-          confirmLabel="Discard workout"
-          danger
+        <DiscardWorkoutDialog
           onConfirm={commands.discardWorkout}
           onCancel={() => commands.setConfirmingDiscard(false)}
-        >
-          <p>Your logged sets will be lost.</p>
-        </ConfirmDialog>
+        />
       )}
       {prompt && (
         <ConfirmDialog
