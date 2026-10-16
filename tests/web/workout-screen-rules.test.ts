@@ -11,6 +11,8 @@ import { finishCountsOf } from '../../web/src/features/workout/workout-rules.ts'
 import {
   addButtonKey,
   liftIdsToRecall,
+  removedSetAt,
+  restoreRemovedSet,
   supersetMembers,
   swappableLifts,
   swapSuggestions,
@@ -199,5 +201,53 @@ describe('finishCountsOf', () => {
       ]),
     ]);
     expect(finishCountsOf(draft)).toEqual({ done: 1, planned: 2, leftToLifter: 1 });
+  });
+});
+
+describe('removedSetAt and restoreRemovedSet', () => {
+  const bench = lift('bench', [set('a'), set('b', { weightKg: 80 }), set('c')]);
+
+  it('remembers which card the set left and where it sat', () => {
+    expect(removedSetAt(draftOf([bench]), 0, 'b')).toEqual({
+      clientId: 'card-bench',
+      index: 1,
+      set: set('b', { weightKg: 80 }),
+    });
+    expect(removedSetAt(draftOf([bench]), 0, 'missing')).toBeNull();
+  });
+
+  it('puts the set back at its place in the same card, even after cards above it moved', () => {
+    const removed = removedSetAt(draftOf([bench]), 0, 'b')!;
+    const afterRemoval = draftOf([lift('row', [set('r')]), lift('bench', [set('a'), set('c')])]);
+    const restored = restoreRemovedSet(afterRemoval, removed);
+    expect(restored.exercises[1].sets.map((restoredSet) => restoredSet.id)).toEqual(['a', 'b', 'c']);
+    expect(restored.exercises[0]).toBe(afterRemoval.exercises[0]);
+  });
+
+  it('appends the set when sets after it were removed too', () => {
+    const removed = removedSetAt(draftOf([bench]), 0, 'c')!;
+    const restored = restoreRemovedSet(draftOf([lift('bench', [set('a')])]), removed);
+    expect(restored.exercises[0].sets.map((restoredSet) => restoredSet.id)).toEqual(['a', 'c']);
+  });
+
+  it('leaves the draft alone when the card is gone, the set is back already or the workout is finished', () => {
+    const removed = removedSetAt(draftOf([bench]), 0, 'b')!;
+    const withoutCard = draftOf([lift('row', [set('r')])]);
+    expect(restoreRemovedSet(withoutCard, removed)).toBe(withoutCard);
+    const alreadyBack = draftOf([bench]);
+    expect(restoreRemovedSet(alreadyBack, removed)).toBe(alreadyBack);
+    const finished = draftOf([lift('bench', [set('a'), set('c')])], { finishedAt: '2026-10-01T11:00:00.000Z' });
+    expect(restoreRemovedSet(finished, removed)).toBe(finished);
+  });
+
+  it('leaves the draft alone when it is already at the set limit', () => {
+    const removed = removedSetAt(draftOf([bench]), 0, 'b')!;
+    const full = draftOf([
+      lift(
+        'bench',
+        Array.from({ length: MAX_SETS_PER_SESSION }, (_, index) => set(`full-${index}`)),
+      ),
+    ]);
+    expect(restoreRemovedSet(full, removed)).toBe(full);
   });
 });

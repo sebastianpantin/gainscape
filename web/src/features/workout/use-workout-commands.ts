@@ -2,6 +2,7 @@ import { type Exercise, isLiftExercise } from '../../lib/exercises/catalog-rules
 import { firstSetFromLastSession } from '../../lib/history/last-session-rules.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { vibrate } from '../../lib/platform/device-effects.ts';
+import { useToast } from '../../lib/ui/toast.ts';
 import { removeSet } from '../../lib/workout/exercise-edit-rules.ts';
 import { groupWithNext, ungroup } from '../../lib/workout/superset-rules.ts';
 import { readTrainingDeviceSettings } from '../../lib/workout/training-device-store.ts';
@@ -22,7 +23,7 @@ import { type RecentLiftSessions } from './use-recent-lift-sessions.ts';
 import { useSessionState } from './use-session-state.ts';
 import { useSetDrop } from './use-set-drop.ts';
 import { type WorkoutPreviews } from './use-workout-previews.ts';
-import { addButtonKey, withPickedExercise } from './workout-screen-rules.ts';
+import { addButtonKey, removedSetAt, restoreRemovedSet, withPickedExercise } from './workout-screen-rules.ts';
 
 interface WorkoutCommandsOptions {
   userId: string;
@@ -47,6 +48,7 @@ export function useWorkoutCommands({
   const [confirmingDiscard, setConfirmingDiscard] = useSessionState(sessionId, false);
   const [confirmingRemoveKey, setConfirmingRemoveKey] = useSessionState<string | null>(sessionId, null);
   const { announcement, showDrop, dropOn } = useSetDrop();
+  const { showToast } = useToast();
   const { focusTarget, focusAfterNextChange } = useFocusAfterRemoval(draft?.exercises ?? null);
 
   const cardKeys = draft?.exercises.map((exercise) => exercise.clientId) ?? [];
@@ -78,6 +80,12 @@ export function useWorkoutCommands({
       addKey: addButtonKey(draft, exerciseIndex),
     });
     changeDraft(removeSet(draft, exerciseIndex, setId));
+    const removed = removedSetAt(draft, exerciseIndex, setId);
+    if (removed === null) return;
+    showToast(`Removed set ${removed.index + 1} of ${draft.exercises[exerciseIndex].name}.`, {
+      label: 'Undo',
+      onAct: () => updateDraft((latest) => restoreRemovedSet(latest, removed)),
+    });
   };
 
   const addPicked = async (exercise: Exercise) => {

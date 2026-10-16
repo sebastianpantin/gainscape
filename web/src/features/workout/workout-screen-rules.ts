@@ -1,7 +1,8 @@
 import { type Exercise, isLiftExercise, type LiftExercise } from '../../lib/exercises/catalog-rules.ts';
 import { similarExercises } from '../../lib/exercises/substitute-rules.ts';
 import { type SupersetGroup, supersetGroups } from '../../lib/workout/superset-rules.ts';
-import { type LiftDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
+import { type DraftExercise, type LiftDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
+import { canAddSet } from '../../lib/workout/exercise-edit-rules.ts';
 import {
   addCardioExercise,
   addExercise,
@@ -57,4 +58,31 @@ export function supersetMembers(draft: WorkoutDraft, group: SupersetGroup): Supe
     const member = draft.exercises[index];
     return member?.modality === 'lift' ? [{ index, exercise: member }] : [];
   });
+}
+
+export interface RemovedSet {
+  clientId: string;
+  index: number;
+  set: DraftExercise['sets'][number];
+}
+
+export function removedSetAt(draft: WorkoutDraft, exerciseIndex: number, setId: string): RemovedSet | null {
+  const exercise = draft.exercises[exerciseIndex];
+  const index = exercise?.sets.findIndex((candidate) => candidate.id === setId) ?? -1;
+  if (exercise === undefined || index === -1) return null;
+  return { clientId: exercise.clientId, index, set: exercise.sets[index] };
+}
+
+export function restoreRemovedSet(draft: WorkoutDraft, removed: RemovedSet): WorkoutDraft {
+  const exerciseIndex = draft.exercises.findIndex((exercise) => exercise.clientId === removed.clientId);
+  const exercise = draft.exercises[exerciseIndex];
+  if (draft.finishedAt !== null || exercise === undefined || !canAddSet(draft)) return draft;
+  if (exercise.sets.some((existing) => existing.id === removed.set.id)) return draft;
+  const at = Math.min(removed.index, exercise.sets.length);
+  const sets = [...exercise.sets.slice(0, at), removed.set, ...exercise.sets.slice(at)];
+  const restored = { ...exercise, sets } as DraftExercise;
+  return {
+    ...draft,
+    exercises: draft.exercises.map((current, index) => (index === exerciseIndex ? restored : current)),
+  };
 }

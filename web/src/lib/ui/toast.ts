@@ -1,7 +1,12 @@
 import { createContext, useContext } from 'react';
 
+export interface ToastAction {
+  label: string;
+  onAct: () => void;
+}
+
 export interface Toasts {
-  showToast: (text: string) => void;
+  showToast: (text: string, action?: ToastAction) => void;
   dismissToast: () => void;
 }
 
