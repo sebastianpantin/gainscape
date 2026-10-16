@@ -157,3 +157,23 @@ test('the exercise menu closes on Escape and on a tap outside it', async ({ page
   await page.getByRole('heading', { level: 1 }).click();
   await expect(swap).toBeHidden();
 });
+
+test('the exercise picker lists names left-aligned above their details and says when nothing matches', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('pick'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const search = page.getByLabel('Search exercises');
+
+  await search.fill('bench');
+  const bench = page.getByRole('button', { name: new RegExp(`^${BENCH}\\b`) });
+  const benchBox = (await bench.boundingBox())!;
+  const nameBox = (await bench.getByText(BENCH, { exact: true }).boundingBox())!;
+  expect(nameBox.x - benchBox.x).toBeLessThan(24);
+  expect(nameBox.y - benchBox.y).toBeLessThan(benchBox.height / 2);
+
+  await search.fill('zzqx');
+  await expect(page.getByRole('status').filter({ hasText: 'No exercises match "zzqx".' })).toBeVisible();
+  await search.fill('');
+  await expect(page.getByText('No exercises match', { exact: false })).toHaveCount(0);
+});

@@ -1,7 +1,11 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { loadCatalogData } from '../../scripts/catalog/load.ts';
-import { exerciseSearchMatches, hiddenMatchesText } from '../../web/src/lib/exercises/exercise-search-rules.ts';
+import {
+  exerciseSearchMatches,
+  hiddenMatchesText,
+  noMatchText,
+} from '../../web/src/lib/exercises/exercise-search-rules.ts';
 
 const PICKER_LIMIT = 12;
 
@@ -126,5 +130,11 @@ describe('hiddenMatchesText', () => {
   it('names one hidden match in the singular and more in the plural', () => {
     expect(hiddenMatchesText(1)).toBe('1 more match. Keep typing to narrow the list.');
     expect(hiddenMatchesText(4)).toBe('4 more matches. Keep typing to narrow the list.');
+  });
+});
+
+describe('noMatchText', () => {
+  it('quotes the trimmed search', () => {
+    expect(noMatchText('  zzqx ')).toBe('No exercises match "zzqx".');
   });
 });

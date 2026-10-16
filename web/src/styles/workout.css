@@ -859,6 +859,17 @@
   padding-left: 38px;
 }
 
+.button.picker-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  text-align: left;
+}
+
+.picker-detail {
+  font-size: var(--font-size-sm);
+}
+
 .picker-suggestions-heading {
   margin: var(--space-2) 0 0;
   font-weight: 600;
