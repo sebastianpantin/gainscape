@@ -6,6 +6,7 @@ import {
   dayPicker,
   followProgram,
   markEverySetDone,
+  openExerciseChoices,
   openEnrollForm,
   fillProgramInputs,
   prescribedRows,
@@ -205,6 +206,7 @@ test('Texas Method: the press exercise follows the press option until the user p
   await options.getByRole('radio', { name: /ohp|overhead/i }).click();
   await expect(pressExercise).toHaveValue(await exerciseIdOfKey('overhead_press'));
 
+  await openExerciseChoices(page);
   await pressExercise.selectOption({ label: 'Incline Barbell Bench Press' });
   await options.getByRole('radio', { name: /bench/i }).click();
   await expect(pressExercise).toHaveValue(await exerciseIdOfKey('incline_barbell_bench_press'));

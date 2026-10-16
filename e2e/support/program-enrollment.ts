@@ -103,7 +103,14 @@ export async function markEverySetDone(page: Page): Promise<void> {
   }
 }
 
+export async function openExerciseChoices(page: Page): Promise<void> {
+  const choices = page.getByText('Change exercises', { exact: true });
+  const disclosure = page.locator('details').filter({ has: choices });
+  if (!(await disclosure.evaluate((details) => (details as HTMLDetailsElement).open))) await choices.click();
+}
+
 export async function bindExercise(page: Page, liftName: string, exerciseName: string): Promise<void> {
+  await openExerciseChoices(page);
   await page.getByLabel(`${liftName} exercise`, { exact: true }).selectOption({ label: exerciseName });
 }
 

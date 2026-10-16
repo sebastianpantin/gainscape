@@ -6,8 +6,10 @@ import {
   bindingSelectLifts,
   defaultBindings,
   type EnrollForm,
+  enrollFieldProblems,
   enrollPayload,
   initialEnrollForm,
+  startingWeightHint,
   inputFields,
   isCustomTemplate,
   optionControls,
@@ -28,6 +30,7 @@ import {
   SQUAT_LIFT,
 } from './custom-program-fixture.ts';
 import { FIVE_THREE_ONE } from '../domain/program-fixtures/five_three_one.ts';
+import { GZCLP } from '../domain/program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2 } from '../domain/program-fixtures/juggernaut_2.ts';
 import { MADCOW_5X5 } from '../domain/program-fixtures/madcow_5x5.ts';
 import { TEXAS_METHOD } from '../domain/program-fixtures/texas_method.ts';
@@ -771,5 +774,57 @@ describe('a template compiled from your own program', () => {
       inputs: { [SQUAT_LIFT]: { workingWeight: 100 } },
     });
     expect(validateEnrollment(CUSTOM_FIVE_BY_FIVE, { id: 'new', ...result.payload })).toEqual([]);
+  });
+});
+
+describe('problems next to the field they belong to', () => {
+  it('names each starting weight field that needs fixing, in form order', () => {
+    expect(enrollFieldProblems(MADCOW_5X5, madcowForm('kg', ['', '80', '70', '50', '1001']))).toEqual([
+      { field: 'input:squat', text: 'Enter Squat 5RM (kg)' },
+      { field: 'input:deadlift', text: 'Deadlift 5RM (kg) must be above 0 and at most 1000' },
+    ]);
+  });
+
+  it('ties a rounding increment that is not offered to the increment field, and a 0 kg bar to the bar field', () => {
+    const form = { ...madcowForm('kg'), roundingText: { increment: '3', barWeight: '0' } };
+    expect(enrollFieldProblems(MADCOW_5X5, form).map((problem) => problem.field)).toEqual(['increment', 'barWeight']);
+  });
+
+  it('ties an lb-only option kept on a kg form to that option', () => {
+    const form = initialEnrollForm(JUGGERNAUT_2, 'kg', CATALOG);
+    const filled = {
+      ...form,
+      inputValues: { squat: '180', bench: '100', deadlift: '200', press: '60' },
+      options: { ...form.options, perRep: 'fine' },
+    };
+    expect(enrollFieldProblems(JUGGERNAUT_2, filled)).toEqual([
+      { field: 'option:perRep', text: expect.stringMatching(/fine.*lb/) },
+    ]);
+  });
+
+  it('finds nothing to fix in a filled-in form, and enrollPayload lists the same texts', () => {
+    expect(enrollFieldProblems(MADCOW_5X5, madcowForm('kg'))).toEqual([]);
+    const broken = madcowForm('kg', ['', '80', '70', '50', '1001']);
+    expect(enrollPayload(MADCOW_5X5, broken)).toEqual({
+      kind: 'invalid',
+      problems: enrollFieldProblems(MADCOW_5X5, broken).map((problem) => problem.text),
+    });
+  });
+});
+
+describe('starting weight hint', () => {
+  it('suggests the empty bar in the form unit when the program asks for working weights: 20 kg', () => {
+    const form = initialEnrollForm(GZCLP, 'kg', CATALOG);
+    expect(startingWeightHint(inputFields(GZCLP, form), form)).toBe('New to a lift? Start with the empty bar: 20 kg.');
+  });
+
+  it('follows the bar weight typed in pounds: 45 lb', () => {
+    const form = initialEnrollForm(GZCLP, 'lb', CATALOG);
+    expect(startingWeightHint(inputFields(GZCLP, form), form)).toBe('New to a lift? Start with the empty bar: 45 lb.');
+  });
+
+  it('gives no bar hint for a max the lifter has to know, such as a Madcow 5RM', () => {
+    const form = madcowForm('kg');
+    expect(startingWeightHint(inputFields(MADCOW_5X5, form), form)).toBeNull();
   });
 });

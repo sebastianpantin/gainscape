@@ -86,7 +86,7 @@ test('enroll in Madcow in kg, start W1 Day 1 with the ramp rows, finish and see 
   const { user } = await readSession(page);
 
   await openEnrollForm(page, 'Madcow 5x5');
-  await expect(page.getByRole('radiogroup', { name: 'Unit' }).getByRole('radio', { name: 'kg' })).toBeChecked();
+  await expect(page.getByRole('radiogroup', { name: 'Unit' }).getByRole('radio', { name: 'Kilograms' })).toBeChecked();
   await expect(
     page.getByRole('radiogroup', { name: 'Ramp step' }).getByRole('radio', { name: '12.5%', exact: true }),
   ).toBeChecked();

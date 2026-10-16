@@ -82,10 +82,41 @@ test('the enroll form refuses a rounding increment that is not offered', async (
   await page.getByLabel('Round to (kg)', { exact: true }).fill('3');
   await page.getByLabel('Bar weight (kg)', { exact: true }).fill('0');
   await page.getByRole('button', { name: 'Start following', exact: true }).click();
-  const alert = page.getByRole('alert');
-  await expect(alert).toContainText('Round to (kg) must be one of 0.5, 1, 1.25, 2.5 or 5');
-  await expect(alert).toContainText('Bar weight (kg) must be above 0');
+  const increment = page.getByLabel('Round to (kg)', { exact: true });
+  const barWeight = page.getByLabel('Bar weight (kg)', { exact: true });
+  await expect(page.getByRole('alert')).toHaveText('2 fields need fixing.');
+  await expect(increment).toBeFocused();
+  await expect(increment).toHaveAttribute('aria-invalid', 'true');
+  await expect(increment).toHaveAccessibleDescription('Round to (kg) must be one of 0.5, 1, 1.25, 2.5 or 5');
+  await expect(barWeight).toHaveAttribute('aria-invalid', 'true');
+  await expect(barWeight).toHaveAccessibleDescription('Bar weight (kg) must be above 0');
   await expect.poll(() => activeEnrollmentOf(username)).toBeNull();
+
+  await increment.fill('2.5');
+  await expect(increment).not.toHaveAttribute('aria-invalid');
+});
+
+test('the enroll form suggests the empty bar for working weights and keeps exercise swaps folded away', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('pm_hint'));
+  await openEnrollForm(page, 'StrongLifts 5x5');
+  await expect(
+    page.getByRole('radiogroup', { name: 'Unit', exact: true }).getByRole('radio', { name: 'Kilograms', exact: true }),
+  ).toBeChecked();
+  const squat = page.getByLabel('Squat working weight (kg)', { exact: true });
+  await expect(squat).toHaveAttribute('placeholder', 'e.g. 20');
+  await expect(squat).toHaveAccessibleDescription('New to a lift? Start with the empty bar: 20 kg.');
+  await page.getByRole('button', { name: 'Start following', exact: true }).click();
+  await expect(squat).toBeFocused();
+  await expect(squat).toHaveAccessibleDescription(
+    'Enter Squat working weight (kg) New to a lift? Start with the empty bar: 20 kg.',
+  );
+
+  const squatExercise = page.getByLabel('Squat exercise', { exact: true });
+  await expect(squatExercise).toBeHidden();
+  await page.getByText('Change exercises', { exact: true }).click();
+  await expect(squatExercise).toBeVisible();
 });
 
 test('stop following a program through an in-app confirmation dialog', async ({ page }) => {
