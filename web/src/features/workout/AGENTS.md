@@ -73,7 +73,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
   - `ActiveWorkoutBar` is one `--tap-target` tall and never wraps. Screens get extra bottom padding while it shows.
 - The number fields (`NumberTextField`, `BoutFields`) keep the typed text while focused, accept a decimal comma, and commit clamped values. Weights are bounded by the domain `MAX_SET_LOAD_KG`.
 - Warm-up ramps (`warmupsToOffer`): a barbell lift ramps from the bar on loadable plates; another external lift (dumbbell, machine, cable) ramps 40/60/80% rounded to the unit's load step, with no bar step; bodyweight and `bodyweight_plus` lifts get one set at the working weight. Any ramp that comes out empty falls back to that single set (deliberate since `9febb3f`).
-- `Remove exercise` asks first (`removingAsksFirst`) only when the exercise has a logged set, so tidying an unused card stays one tap.
+- `Remove exercise` asks first (`removingAsksFirst`) when a set is logged or planned, or sets were added past the starting one, so tidying an unused card stays one tap. Edits to the starting set's values do not count: the draft keeps no baseline to compare with.
 - Holds take no superset, warm-ups, quick fill or swap. Cardio cards keep a plain `Remove` instead of `ExerciseMenu`.
 - At the set limit (`MAX_SETS_PER_SESSION`), or at 4 hours of bouts, the add buttons are disabled and the picker stops offering what will not fit. History edit behaves the same way.
 - `PetCompanion` uses `ownedPetsQuery`, not `itemsQuery`, so Items and the reveal keep their own cache.

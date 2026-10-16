@@ -65,7 +65,7 @@ test('removing an exercise with a logged set asks first, and one with nothing lo
 
   await chooseFromMenu(page, BENCH, 'Remove exercise');
   const dialog = page.getByRole('dialog', { name: `Remove ${BENCH}?` });
-  await expect(dialog).toContainText('Its logged sets will be lost.');
+  await expect(dialog).toContainText('Its sets will be lost.');
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('heading', { name: BENCH, exact: true })).toBeVisible();

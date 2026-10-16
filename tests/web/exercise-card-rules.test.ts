@@ -107,9 +107,21 @@ describe('exerciseMenuChoices', () => {
 });
 
 describe('removingAsksFirst', () => {
-  it('asks before removing an exercise with a logged set, and removes one with nothing logged straight away', () => {
+  it('asks before removing an exercise with a logged set', () => {
     expect(removingAsksFirst(lift('a', [set('a1'), set('a2', { done: true })]))).toBe(true);
-    expect(removingAsksFirst(lift('a', [set('a1'), set('a2')]))).toBe(false);
+  });
+
+  it('asks before removing planned sets, even with none logged', () => {
+    const planned = set('a1', { prescription: { ref: 't1', weightKg: 100, reps: 5, minReps: null, amrap: false } });
+    expect(removingAsksFirst(lift('a', [planned]))).toBe(true);
+  });
+
+  it('asks before removing sets the user added beyond the starting one, even with none logged', () => {
+    expect(removingAsksFirst(lift('a', [set('a1'), set('a2')]))).toBe(true);
+  });
+
+  it('removes a card with only its untouched starting set, or no sets, straight away', () => {
+    expect(removingAsksFirst(lift('a', [set('a1')]))).toBe(false);
     expect(removingAsksFirst(lift('a', []))).toBe(false);
   });
 });

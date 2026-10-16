@@ -369,7 +369,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           onConfirm={commands.removeConfirm.confirm}
           onCancel={commands.removeConfirm.cancel}
         >
-          <p>Its logged sets will be lost.</p>
+          <p>Its sets will be lost.</p>
         </ConfirmDialog>
       )}
       {commands.confirmingDiscard && (
