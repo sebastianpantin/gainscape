@@ -94,7 +94,12 @@ export function TodayView({
         onStart={start.startFromPrescription}
         onSkip={start.skipProgramDay}
       />
-      <ProgramDayStarts userId={userId} disabled={start.startingDay} onStart={start.startFromDay} />
+      <ProgramDayStarts
+        userId={userId}
+        disabled={start.startingDay}
+        followingProgram={program.kind !== 'none'}
+        onStart={start.startFromDay}
+      />
       <button
         ref={startButton}
         className="button primary big"

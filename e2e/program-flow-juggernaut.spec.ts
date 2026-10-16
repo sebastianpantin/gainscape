@@ -2,7 +2,7 @@ import { type Locator, type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
-import { dayPicker, followProgram, openProgramToday, prescribedRows, repeated } from './support/program-enrollment.ts';
+import { dayPicker, followProgram, openProgramToday, prescribedRows } from './support/program-enrollment.ts';
 import {
   nearestPlateKg,
   type SeededDay,
@@ -88,7 +88,7 @@ async function followAndSeedTenRepWave(page: Page, prefix: string, realisationRe
 }
 
 function eightRepAccumulation(weightKg: string): string[] {
-  return [...repeated(`${weightKg} kg × 8 · 65%`, 4), `${weightKg} kg × 8+ · 65%`];
+  return [`4 × 8 @ ${weightKg} kg · 65%`, `${weightKg} kg × 8+ · 65%`];
 }
 
 async function expectWeekFiveDay(today: Locator, day: string, exercise: string, weightKg: string): Promise<void> {

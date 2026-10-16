@@ -2,7 +2,7 @@ import { type Locator, type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
-import { dayPicker, followProgram, prescribedRows, programToday, repeated } from './support/program-enrollment.ts';
+import { dayPicker, followProgram, prescribedRows, programToday } from './support/program-enrollment.ts';
 import { type SeededDay, type SeededSet, seedProgramDays, sessionClock } from './support/program-seed.ts';
 
 const TEXAS = 'Texas Method';
@@ -94,20 +94,20 @@ test('Texas Method after a met W1 Friday (squat 150 + 2.5 = 152.5, bench 100 + 2
   const today = await followTexasThroughWeekOne(page, 'pf_tx', WEEK_ONE);
 
   await test.step('W2 Monday: squat 137.5, bench 92.5, deadlift 182.5', async () => {
-    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('137.5 kg × 5 · 90%', 5));
-    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('92.5 kg × 5 · 90%', 5));
-    await expect(prescribedRows(today, 'Deadlift')).toHaveText(['182.5 kg × 5 · 100%']);
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['5 × 5 @ 137.5 kg · 90%']);
+    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['5 × 5 @ 92.5 kg · 90%']);
+    await expect(prescribedRows(today, 'Deadlift')).toHaveText(['182.5 kg × 5']);
   });
 
   await test.step('W2 Wednesday: squat 110', async () => {
     await showDay(today, 'Day 2');
-    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('110 kg × 5 · 80%', 2));
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['2 × 5 @ 110 kg · 80%']);
   });
 
   await test.step('W2 Friday: squat 155, bench 105', async () => {
     await showDay(today, 'Day 3');
-    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['155 kg × 5 · 100%']);
-    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['105 kg × 5 · 100%']);
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['155 kg × 5']);
+    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['105 kg × 5']);
   });
 });
 
@@ -118,18 +118,18 @@ test('Texas Method with a 4-rep W1 Friday squat holds the squat 5RM at 150 while
   const today = await followTexasThroughWeekOne(page, 'pf_txm', { ...WEEK_ONE, fridaySquatReps: FAILED_FRIDAY_REPS });
 
   await test.step('W2 Monday: squat held at 135, bench 92.5', async () => {
-    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('135 kg × 5 · 90%', 5));
-    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('92.5 kg × 5 · 90%', 5));
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['5 × 5 @ 135 kg · 90%']);
+    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['5 × 5 @ 92.5 kg · 90%']);
   });
 
   await test.step('W2 Wednesday: squat 107.5', async () => {
     await showDay(today, 'Day 2');
-    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('107.5 kg × 5 · 80%', 2));
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['2 × 5 @ 107.5 kg · 80%']);
   });
 
   await test.step('W2 Friday: squat 152.5, bench 105', async () => {
     await showDay(today, 'Day 3');
-    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['152.5 kg × 5 · 100%']);
-    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['105 kg × 5 · 100%']);
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['152.5 kg × 5']);
+    await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['105 kg × 5']);
   });
 });

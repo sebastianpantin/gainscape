@@ -326,6 +326,55 @@ describe('today: prescription rows', () => {
   });
 });
 
+function groupedLinesOf(cards: PrescriptionCard[], title: string): string[] {
+  const card = cards.find((candidate) => candidate.title === title);
+  if (!card || card.kind !== 'exercise') throw new Error(`no exercise card titled ${title}`);
+  return card.lines;
+}
+
+describe('today: grouped prescription lines', () => {
+  it('collapses identical sets at 100% into one line with no bare percentage: the GZCLP T2 bench reads 3 × 10 @ 50 kg', () => {
+    const cards = cardsFor(GZCLP, gzclpEnrollment(), { index: 0 });
+    expect(groupedLinesOf(cards, 'Barbell Bench Press — supplemental')).toEqual(['3 × 10 @ 50 kg']);
+  });
+
+  it('keeps the AMRAP last set apart and marked "+": GZCLP T1 reads 4 × 3 then one 3+ set', () => {
+    const cards = cardsFor(GZCLP, gzclpEnrollment(), { index: 0 });
+    expect(groupedLinesOf(cards, 'Back Squat')).toEqual(['4 × 3 @ 100 kg', '100 kg × 3+']);
+  });
+
+  it('keeps a Madcow ramp one line per set, with its percentages', () => {
+    expect(groupedLinesOf(cardsFor(MADCOW_5X5, madcowEnrollment(), weekDay(1, 'mon')), 'Back Squat')).toEqual([
+      '47.5 kg × 5 · 50%',
+      '57.5 kg × 5 · 62.5%',
+      '70 kg × 5 · 75%',
+      '80 kg × 5 · 87.5%',
+      '92.5 kg × 5 · 100%',
+    ]);
+  });
+
+  it('keeps 5/3/1 week 1 readable (5, 5, 5+) and collapses the BBB 5 × 10 at 50% of a 90 kg TM', () => {
+    const cards = cardsFor(
+      FIVE_THREE_ONE,
+      fiveThreeOneEnrollment({ tms: { squat: 90 } }),
+      cyclePosition(1, 1, 'squat'),
+    );
+    expect(groupedLinesOf(cards, 'Back Squat')).toEqual([
+      '57.5 kg × 5 · 65%',
+      '67.5 kg × 5 · 75%',
+      '77.5 kg × 5+ · 85%',
+    ]);
+    expect(groupedLinesOf(cards, 'Back Squat — supplemental')).toEqual(['5 × 10 @ 45 kg · 50%']);
+  });
+
+  it('collapses optional assistance sets with open weight: 2 × any reps @ any weight · optional', () => {
+    const cards = cardsFor(MADCOW_5X5, madcowEnrollment(), weekDay(1, 'mon'));
+    expect(groupedLinesOf(cards, 'Weighted Hyperextension — assistance')).toEqual([
+      '2 × any reps @ any weight · optional',
+    ]);
+  });
+});
+
 describe('AMRAP badge on a logged set', () => {
   it('reads "5+" for an AMRAP snapshot with a minimum of 5', () => {
     expect(amrapBadgeOf(snapshot('squat-main:2', { weightKg: 77.5, reps: 5, amrap: true, minReps: 5 }))).toBe('5+');

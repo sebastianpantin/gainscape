@@ -15,8 +15,8 @@ export function PrescriptionCards({ cards, heading: Heading }: PrescriptionCards
         <Heading id={headingId}>{card.title}</Heading>
         {card.kind === 'exercise' ? (
           <ul className="prescription-list" aria-labelledby={headingId}>
-            {card.rows.map((row) => (
-              <li key={row.ref}>{row.line}</li>
+            {card.lines.map((line, index) => (
+              <li key={`${index}-${line}`}>{line}</li>
             ))}
           </ul>
         ) : (

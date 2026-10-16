@@ -2,7 +2,7 @@ import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
-import { dayPicker, followProgram, openProgramToday, prescribedRows, repeated } from './support/program-enrollment.ts';
+import { dayPicker, followProgram, openProgramToday, prescribedRows } from './support/program-enrollment.ts';
 import {
   nearestPlateKg,
   type SeededDay,
@@ -86,7 +86,7 @@ async function expectWeekTwo(page: Page, days: readonly WeekTwoDay[]): Promise<v
         .click();
       await expect(today.getByRole('button', { name: `Start: ${RPE} — W2 ${day}`, exact: true })).toBeVisible();
       await expect(prescribedRows(today, exercise)).toHaveText([topRow]);
-      await expect(prescribedRows(today, `${exercise} — supplemental`)).toHaveText(repeated(backOffRow, BACK_OFF_SETS));
+      await expect(prescribedRows(today, `${exercise} — supplemental`)).toHaveText([backOffRow]);
     });
   }
 }
@@ -106,19 +106,19 @@ test('RPE re-estimates each e1RM from the logged top set: squat 172.5 × 5 @ RPE
       day: 'Day 1',
       exercise: 'Back Squat',
       topRow: '182.5 kg × 3 · 86.3%',
-      backOffRow: '172.5 kg × 3 · 95% · optional',
+      backOffRow: '5 × 3 @ 172.5 kg · 95% · optional',
     },
     {
       day: 'Day 2',
       exercise: 'Barbell Bench Press',
       topRow: '107.5 kg × 3 · 86.3%',
-      backOffRow: '102.5 kg × 3 · 95% · optional',
+      backOffRow: '5 × 3 @ 102.5 kg · 95% · optional',
     },
     {
       day: 'Day 3',
       exercise: 'Deadlift',
       topRow: '200 kg × 3 · 86.3%',
-      backOffRow: '190 kg × 3 · 95% · optional',
+      backOffRow: '5 × 3 @ 190 kg · 95% · optional',
     },
   ]);
 });
@@ -138,13 +138,13 @@ test('RPE reads RIR as RPE 10 − RIR but needs a number to re-estimate: squat 1
       day: 'Day 1',
       exercise: 'Back Squat',
       topRow: '182.5 kg × 3 · 86.3%',
-      backOffRow: '172.5 kg × 3 · 95% · optional',
+      backOffRow: '5 × 3 @ 172.5 kg · 95% · optional',
     },
     {
       day: 'Day 2',
       exercise: 'Barbell Bench Press',
       topRow: '102.5 kg × 3 · 86.3%',
-      backOffRow: '97.5 kg × 3 · 95% · optional',
+      backOffRow: '5 × 3 @ 97.5 kg · 95% · optional',
     },
   ]);
 });

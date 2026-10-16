@@ -9,7 +9,6 @@ import {
   followProgram,
   openProgramToday,
   prescribedRows,
-  repeated,
 } from './support/program-enrollment.ts';
 import {
   fiveThreeOneBbbCycle,
@@ -37,25 +36,25 @@ const C2_W1_DAYS: readonly WeekOneDay[] = [
     day: 'Day 1',
     exercise: 'Back Squat',
     main: ['62.5 kg × 5 · 65%', '72.5 kg × 5 · 75%', '80 kg × 5+ · 85%'],
-    bbbRow: '47.5 kg × 10 · 50%',
+    bbbRow: '5 × 10 @ 47.5 kg · 50%',
   },
   {
     day: 'Day 2',
     exercise: 'Barbell Bench Press',
     main: ['47.5 kg × 5 · 65%', '55 kg × 5 · 75%', '62.5 kg × 5+ · 85%'],
-    bbbRow: '37.5 kg × 10 · 50%',
+    bbbRow: '5 × 10 @ 37.5 kg · 50%',
   },
   {
     day: 'Day 3',
     exercise: 'Deadlift',
     main: ['85 kg × 5 · 65%', '97.5 kg × 5 · 75%', '112.5 kg × 5+ · 85%'],
-    bbbRow: '65 kg × 10 · 50%',
+    bbbRow: '5 × 10 @ 65 kg · 50%',
   },
   {
     day: 'Day 4',
     exercise: 'Overhead Press',
     main: ['30 kg × 5 · 65%', '35 kg × 5 · 75%', '40 kg × 5+ · 85%'],
-    bbbRow: '25 kg × 10 · 50%',
+    bbbRow: '5 × 10 @ 25 kg · 50%',
   },
 ];
 
@@ -64,25 +63,25 @@ const C3_W1_DAYS: readonly WeekOneDay[] = [
     day: 'Day 1',
     exercise: 'Back Squat',
     main: ['65 kg × 5 · 65%', '75 kg × 5 · 75%', '85 kg × 5+ · 85%'],
-    bbbRow: '50 kg × 10 · 50%',
+    bbbRow: '5 × 10 @ 50 kg · 50%',
   },
   {
     day: 'Day 2',
     exercise: 'Barbell Bench Press',
     main: ['50 kg × 5 · 65%', '57.5 kg × 5 · 75%', '65 kg × 5+ · 85%'],
-    bbbRow: '37.5 kg × 10 · 50%',
+    bbbRow: '5 × 10 @ 37.5 kg · 50%',
   },
   {
     day: 'Day 3',
     exercise: 'Deadlift',
     main: ['87.5 kg × 5 · 65%', '102.5 kg × 5 · 75%', '115 kg × 5+ · 85%'],
-    bbbRow: '67.5 kg × 10 · 50%',
+    bbbRow: '5 × 10 @ 67.5 kg · 50%',
   },
   {
     day: 'Day 4',
     exercise: 'Overhead Press',
     main: ['32.5 kg × 5 · 65%', '37.5 kg × 5 · 75%', '42.5 kg × 5+ · 85%'],
-    bbbRow: '25 kg × 10 · 50%',
+    bbbRow: '5 × 10 @ 25 kg · 50%',
   },
 ];
 
@@ -127,7 +126,7 @@ async function expectWeekOne(today: Locator, cycle: number, days: readonly WeekO
         today.getByRole('button', { name: `Start: ${FIVE_THREE_ONE} — C${cycle} W1 ${day}`, exact: true }),
       ).toBeVisible();
       await expect(prescribedRows(today, exercise)).toHaveText(main);
-      await expect(prescribedRows(today, `${exercise} — supplemental`)).toHaveText(repeated(bbbRow, 5));
+      await expect(prescribedRows(today, `${exercise} — supplemental`)).toHaveText([bbbRow]);
     });
   }
 }
@@ -195,7 +194,7 @@ test('5/3/1 BBB with a 4-rep C1 W1 squat AMRAP (minimum 5) resets the squat TM t
       day: 'Day 1',
       exercise: 'Back Squat',
       main: ['52.5 kg × 5 · 65%', '60 kg × 5 · 75%', '70 kg × 5+ · 85%'],
-      bbbRow: '40 kg × 10 · 50%',
+      bbbRow: '5 × 10 @ 40 kg · 50%',
     },
     C2_W1_DAYS[1],
   ]);

@@ -12,7 +12,6 @@ import {
   openProgramToday,
   prescribedRows,
   programToday,
-  repeated,
   repsIn,
   startFollowing,
   weightsIn,
@@ -138,9 +137,9 @@ async function followGzclp(page: Page, prefix: string) {
 }
 
 function stageRows(weight: string, stage: Stage): string[] {
-  const row = `${weight} kg × ${stage.reps}`;
-  if (!stage.amrapLast) return repeated(`${row} · 100%`, stage.sets);
-  return [...repeated(`${row} · 100%`, stage.sets - 1), `${row}+ · 100%`];
+  const straightSets = stage.amrapLast ? stage.sets - 1 : stage.sets;
+  const straight = `${straightSets} × ${stage.reps} @ ${weight} kg`;
+  return stage.amrapLast ? [straight, `${weight} kg × ${stage.reps}+`] : [straight];
 }
 
 test('GZCLP after one rotation: a met T1 squat 5×3 goes 100 + 5 = 105, a missed T2 bench 3×10 moves to 3×8 at 50, and a T3 pulldown last set of 25 goes 40 + 2.5 = 42.5, then holds at 42.5 after a 15-rep last set', async ({

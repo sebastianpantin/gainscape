@@ -6,7 +6,6 @@ import {
   openEnrollForm,
   prescribedRows,
   programToday,
-  repeated,
   repsIn,
   startFollowing,
   weightsIn,
@@ -33,10 +32,7 @@ test('enroll in Juggernaut in kg and see the 10s accumulation as 5×10 at 60% of
 
   const today = programToday(page, JUGGERNAUT);
   await expect(dayPicker(today).getByRole('radio', { name: 'C1 W1 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText([
-    ...repeated('60 kg × 10 · 60%', 4),
-    '60 kg × 10+ · 60%',
-  ]);
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['4 × 10 @ 60 kg · 60%', '60 kg × 10+ · 60%']);
 
   await today.getByRole('button', { name: `Start: ${JUGGERNAUT} — C1 W1 Day 1`, exact: true }).click();
   await expect(page.getByText(`${JUGGERNAUT} — C1 W1 Day 1`, { exact: true })).toBeVisible();

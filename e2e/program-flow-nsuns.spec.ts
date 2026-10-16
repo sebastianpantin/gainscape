@@ -178,9 +178,7 @@ test('nSuns raises each TM at the end of week 1 by the 1+ set reps: squat 2 reps
     await expect(prescribedRows(programToday, 'Barbell Bench Press')).toHaveText([
       '67.5 kg × 8 · 65%',
       '77.5 kg × 6 · 75%',
-      '87.5 kg × 4 · 85%',
-      '87.5 kg × 4 · 85%',
-      '87.5 kg × 4 · 85%',
+      '3 × 4 @ 87.5 kg · 85%',
       '82.5 kg × 5 · 80%',
       '77.5 kg × 6 · 75%',
       '72.5 kg × 7 · 70%',
@@ -276,9 +274,7 @@ test('nSuns keeps a TM when its 1+ set gets a single rep, whatever the other AMR
     await expect(prescribedRows(programToday, 'Barbell Bench Press')).toHaveText([
       '65 kg × 8 · 65%',
       '75 kg × 6 · 75%',
-      '85 kg × 4 · 85%',
-      '85 kg × 4 · 85%',
-      '85 kg × 4 · 85%',
+      '3 × 4 @ 85 kg · 85%',
       '80 kg × 5 · 80%',
       '75 kg × 6 · 75%',
       '70 kg × 7 · 70%',

@@ -9,6 +9,7 @@ import { programLabelFor } from '../../offline/draft-starts.ts';
 interface ProgramDayStartsProps {
   userId: string;
   disabled: boolean;
+  followingProgram: boolean;
   onStart: (program: Program, day: ProgramDay) => void;
 }
 
@@ -16,7 +17,7 @@ function exerciseCount(day: ProgramDay): string {
   return day.exercises.length === 1 ? '1 exercise' : `${day.exercises.length} exercises`;
 }
 
-export function ProgramDayStarts({ userId, disabled, onStart }: ProgramDayStartsProps) {
+export function ProgramDayStarts({ userId, disabled, followingProgram, onStart }: ProgramDayStartsProps) {
   const programList = useQuery(programsQuery(userId));
   const [savedPrograms] = useState(() => cachedPrograms(userId));
   const programs = programList.data?.loaded ?? savedPrograms;
@@ -30,6 +31,7 @@ export function ProgramDayStarts({ userId, disabled, onStart }: ProgramDayStarts
     ) : null;
 
   const own = ownPrograms(programs, userId);
+  if (own.length === 0 && followingProgram) return null;
 
   return (
     <div className="panel stack">

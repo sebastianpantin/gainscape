@@ -67,7 +67,7 @@ test('follow your own program: Squat 5×5 adds 2.5 kg after a met workout and ho
     .toMatchObject({ template_key: expect.stringMatching(/^custom_/) });
   const today = programToday(page, PROGRAM);
   await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('100 kg × 5 · 100%', 5));
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['5 × 5 @ 100 kg']);
 
   await logSessionWithBenchAt(page, 'Session 1 Day 1', 60);
   await expect.poll(() => weightsIn(workoutCards(page, 'Back Squat'))).toEqual(repeated('100', 5));
@@ -76,7 +76,7 @@ test('follow your own program: Squat 5×5 adds 2.5 kg after a met workout and ho
 
   const afterMet = programToday(page, PROGRAM);
   await expect(dayPicker(afterMet).getByRole('radio', { name: 'Session 2 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(afterMet, 'Back Squat')).toHaveText(repeated('102.5 kg × 5 · 100%', 5));
+  await expect(prescribedRows(afterMet, 'Back Squat')).toHaveText(['5 × 5 @ 102.5 kg']);
 
   await context.setOffline(true);
   await openTab(page, 'Profile');
@@ -90,7 +90,7 @@ test('follow your own program: Squat 5×5 adds 2.5 kg after a met workout and ho
 
   const afterMiss = programToday(page, PROGRAM);
   await expect(dayPicker(afterMiss).getByRole('radio', { name: 'Session 3 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(afterMiss, 'Back Squat')).toHaveText(repeated('102.5 kg × 5 · 100%', 5));
+  await expect(prescribedRows(afterMiss, 'Back Squat')).toHaveText(['5 × 5 @ 102.5 kg']);
 });
 
 test('Follow on your own program is disabled offline and says it needs a connection', async ({ context, page }) => {
@@ -119,9 +119,7 @@ test('edit a followed program, use the changes keeping Squat at 102.5, then dele
   await logSessionWithBenchAt(page, 'Session 1 Day 1', 60);
   await markEverySetDone(page);
   await finishAndReturn(page);
-  await expect(prescribedRows(programToday(page, PROGRAM), 'Back Squat')).toHaveText(
-    repeated('102.5 kg × 5 · 100%', 5),
-  );
+  await expect(prescribedRows(programToday(page, PROGRAM), 'Back Squat')).toHaveText(['5 × 5 @ 102.5 kg']);
 
   await openFromProfile(page, 'Programs');
   await ownProgram(page, PROGRAM).getByRole('link', { name: 'Edit' }).click();
@@ -141,8 +139,8 @@ test('edit a followed program, use the changes keeping Squat at 102.5, then dele
   expect(nativeDialogs).toEqual([]);
   await expect.poll(() => activeEnrollmentOf(username)).toMatchObject({ template_version: 2 });
   const today = programToday(page, PROGRAM);
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('102.5 kg × 5 · 100%', 5));
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveCount(4);
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['5 × 5 @ 102.5 kg']);
+  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([/^4 × /]);
 
   await openFromProfile(page, 'Programs');
   await ownProgram(page, PROGRAM).getByRole('link', { name: 'Edit' }).click();

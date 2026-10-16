@@ -48,7 +48,14 @@ export interface PrescriptionRow {
 }
 
 export type PrescriptionCard =
-  | { kind: 'exercise'; slotId: string; title: string; exerciseName: string; rows: PrescriptionRow[] }
+  | {
+      kind: 'exercise';
+      slotId: string;
+      title: string;
+      exerciseName: string;
+      rows: PrescriptionRow[];
+      lines: string[];
+    }
   | { kind: 'unsupported'; slotId: string; title: string; message: string };
 
 export function weekLabel(position: Position): string {
@@ -103,9 +110,7 @@ function prescriptionRow(set: PrescribedSet, index: number, unit: WeightUnit): P
   const repsLabel = repsLabelOf(set);
   const shownPct = set.pct === null ? null : pctLabel(set.pct);
   const load = weight === null ? 'any weight' : `${weight} ${unit}`;
-  const details = [shownPct, set.optional ? 'optional' : null, isRetestRef(set.ref) ? '5RM test' : null].filter(
-    (detail) => detail !== null,
-  );
+  const details = setDetails(set, shownPct);
   return {
     ref: set.ref,
     setNumber: index + 1,
@@ -117,6 +122,29 @@ function prescriptionRow(set: PrescribedSet, index: number, unit: WeightUnit): P
     optional: set.optional,
     line: [`${load} × ${repsLabel}`, ...details].join(' · '),
   };
+}
+
+function setDetails(set: PrescribedSet, shownPct: string | null): string[] {
+  return [shownPct, set.optional ? 'optional' : null, isRetestRef(set.ref) ? '5RM test' : null].filter(
+    (detail) => detail !== null,
+  );
+}
+
+function groupedLines(sets: readonly PrescribedSet[], unit: WeightUnit): string[] {
+  const everySetAtFullWeight = sets.every((set) => set.pct === 1);
+  const groups: { count: number; load: string; reps: string; details: string[]; key: string }[] = [];
+  for (const set of sets) {
+    const load = set.weightKg === null ? 'any weight' : `${shownWeight(set.weightKg, unit)} ${unit}`;
+    const reps = repsLabelOf(set);
+    const details = setDetails(set, set.pct === null || everySetAtFullWeight ? null : pctLabel(set.pct));
+    const key = [load, reps, ...details].join('|');
+    const last = groups.at(-1);
+    if (last?.key === key) last.count += 1;
+    else groups.push({ count: 1, load, reps, details, key });
+  }
+  return groups.map(({ count, load, reps, details }) =>
+    [count === 1 ? `${load} × ${reps}` : `${count} × ${reps} @ ${load}`, ...details].join(' · '),
+  );
 }
 
 function exerciseCard(
@@ -133,6 +161,7 @@ function exerciseCard(
     title: slot.role === 'main' ? exerciseName : `${exerciseName} — ${slot.role}`,
     exerciseName,
     rows: slot.sets.map((set, index) => prescriptionRow(set, index, unit)),
+    lines: groupedLines(slot.sets, unit),
   };
 }
 

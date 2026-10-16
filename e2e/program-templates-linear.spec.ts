@@ -10,7 +10,6 @@ import {
   fillProgramInputs,
   prescribedRows,
   programToday,
-  repeated,
   startFollowing,
   weightsIn,
   workoutCards,
@@ -37,9 +36,9 @@ test('StrongLifts: Day 1 is 5×5 at the working weights, and finishing it sugges
 
   const today = programToday(page, STRONGLIFTS);
   await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('60 kg × 5 · 100%', 5));
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('40 kg × 5 · 100%', 5));
-  await expect(prescribedRows(today, 'Barbell Row')).toHaveText(repeated('40 kg × 5 · 100%', 5));
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['5 × 5 @ 60 kg']);
+  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['5 × 5 @ 40 kg']);
+  await expect(prescribedRows(today, 'Barbell Row')).toHaveText(['5 × 5 @ 40 kg']);
 
   await today.getByRole('button', { name: `Start: ${STRONGLIFTS} — Session 1 Day 1`, exact: true }).click();
   await expect(page.getByText(`${STRONGLIFTS} — Session 1 Day 1`, { exact: true })).toBeVisible();
@@ -53,9 +52,32 @@ test('StrongLifts: Day 1 is 5×5 at the working weights, and finishing it sugges
   await expect(
     after.getByRole('button', { name: `Start: ${STRONGLIFTS} — Session 2 Day 2`, exact: true }),
   ).toBeVisible();
-  await expect(prescribedRows(after, 'Back Squat')).toHaveText(repeated('62.5 kg × 5 · 100%', 5));
-  await expect(prescribedRows(after, 'Overhead Press')).toHaveText(repeated('30 kg × 5 · 100%', 5));
-  await expect(prescribedRows(after, 'Deadlift')).toHaveText(['80 kg × 5 · 100%']);
+  await expect(prescribedRows(after, 'Back Squat')).toHaveText(['5 × 5 @ 62.5 kg']);
+  await expect(prescribedRows(after, 'Overhead Press')).toHaveText(['5 × 5 @ 30 kg']);
+  await expect(prescribedRows(after, 'Deadlift')).toHaveText(['80 kg × 5']);
+});
+
+test('StrongLifts on Today: Start sits above the collapsed set lists, and the empty "No programs yet" card is gone', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('pt_slt'));
+  await expect(page.getByText(/^No programs yet\./)).toBeVisible();
+  await followProgram(page, STRONGLIFTS, {
+    'Squat working weight (kg)': 100,
+    'Bench press working weight (kg)': 60,
+    'Barbell row working weight (kg)': 50,
+    'Overhead press working weight (kg)': 40,
+    'Deadlift working weight (kg)': 120,
+  });
+
+  const today = programToday(page, STRONGLIFTS);
+  const squat = today.getByRole('list', { name: 'Back Squat', exact: true });
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['5 × 5 @ 100 kg']);
+  const start = today.getByRole('button', { name: `Start: ${STRONGLIFTS} — Session 1 Day 1`, exact: true });
+  const startBox = await start.boundingBox();
+  const squatBox = await squat.boundingBox();
+  expect(startBox!.y).toBeLessThan(squatBox!.y);
+  await expect(page.getByText(/^No programs yet/)).toHaveCount(0);
 });
 
 test('Starting Strength: Day 1 is squat 3×5, bench 3×5 and deadlift 1×5 at the working weights', async ({ page }) => {
@@ -69,9 +91,9 @@ test('Starting Strength: Day 1 is squat 3×5, bench 3×5 and deadlift 1×5 at th
 
   const today = programToday(page, STARTING_STRENGTH);
   await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('60 kg × 5 · 100%', 3));
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('50 kg × 5 · 100%', 3));
-  await expect(prescribedRows(today, 'Deadlift')).toHaveText(['80 kg × 5 · 100%']);
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['3 × 5 @ 60 kg']);
+  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['3 × 5 @ 50 kg']);
+  await expect(prescribedRows(today, 'Deadlift')).toHaveText(['80 kg × 5']);
   await expect(
     today.getByRole('button', { name: `Start: ${STARTING_STRENGTH} — Session 1 Day 1`, exact: true }),
   ).toBeVisible();
@@ -101,17 +123,9 @@ test('GZCLP: A1 is the T1 squat 5×3 with the last set "3+", the T2 bench 3×10 
 
   const today = programToday(page, GZCLP);
   await expect(dayPicker(today).getByRole('radio', { name: 'Session 1 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText([
-    ...repeated('100 kg × 3 · 100%', 4),
-    '100 kg × 3+ · 100%',
-  ]);
-  await expect(prescribedRows(today, 'Barbell Bench Press — supplemental')).toHaveText(
-    repeated('50 kg × 10 · 100%', 3),
-  );
-  await expect(prescribedRows(today, 'Lat Pulldown — assistance')).toHaveText([
-    ...repeated('40 kg × 15 · 100%', 2),
-    '40 kg × 15+ · 100%',
-  ]);
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['4 × 3 @ 100 kg', '100 kg × 3+']);
+  await expect(prescribedRows(today, 'Barbell Bench Press — supplemental')).toHaveText(['3 × 10 @ 50 kg']);
+  await expect(prescribedRows(today, 'Lat Pulldown — assistance')).toHaveText(['2 × 15 @ 40 kg', '40 kg × 15+']);
 });
 
 test('nSuns 5-day: Day 1 is the T1 bench 9-set list at TM 100 ending "8+", and Day 2 the T1 squat at TM 140 with the 1+ set at 95% (133 → 132.5)', async ({
@@ -131,9 +145,7 @@ test('nSuns 5-day: Day 1 is the T1 bench 9-set list at TM 100 ending "8+", and D
   await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText([
     '65 kg × 8 · 65%',
     '75 kg × 6 · 75%',
-    '85 kg × 4 · 85%',
-    '85 kg × 4 · 85%',
-    '85 kg × 4 · 85%',
+    '3 × 4 @ 85 kg · 85%',
     '80 kg × 5 · 80%',
     '75 kg × 6 · 75%',
     '70 kg × 7 · 70%',
@@ -177,9 +189,9 @@ test('Texas Method: the volume day is squat and bench press 5×5 at 90% of the 5
 
   const today = programToday(page, TEXAS);
   await expect(dayPicker(today).getByRole('radio', { name: 'W1 Day 1', exact: true })).toBeChecked();
-  await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('135 kg × 5 · 90%', 5));
-  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(repeated('90 kg × 5 · 90%', 5));
-  await expect(prescribedRows(today, 'Deadlift')).toHaveText(['180 kg × 5 · 100%']);
+  await expect(prescribedRows(today, 'Back Squat')).toHaveText(['5 × 5 @ 135 kg · 90%']);
+  await expect(prescribedRows(today, 'Barbell Bench Press')).toHaveText(['5 × 5 @ 90 kg · 90%']);
+  await expect(prescribedRows(today, 'Deadlift')).toHaveText(['180 kg × 5']);
   await expect(today.getByRole('button', { name: `Start: ${TEXAS} — W1 Day 1`, exact: true })).toBeVisible();
 });
 

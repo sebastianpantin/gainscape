@@ -2,7 +2,7 @@ import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentIdOf, activeEnrollmentOf } from './support/db.ts';
-import { dayPicker, followProgram, openProgramToday, prescribedRows, repeated } from './support/program-enrollment.ts';
+import { dayPicker, followProgram, openProgramToday, prescribedRows } from './support/program-enrollment.ts';
 import { fiveRepSets, type SeededDay, seedProgramDays, sessionClock } from './support/program-seed.ts';
 
 const STARTING_STRENGTH = 'Starting Strength';
@@ -77,9 +77,9 @@ test('Starting Strength opens the squat at +5 for its first two met sessions (60
   await test.step('session 4 prescribes squat 72.5, press 37.5 and deadlift 87.5', async () => {
     const today = await openProgramToday(page, STARTING_STRENGTH);
     await expect(dayPicker(today).getByRole('radio', { name: 'Session 4 Day 2', exact: true })).toBeChecked();
-    await expect(prescribedRows(today, 'Back Squat')).toHaveText(repeated('72.5 kg × 5 · 100%', 3));
-    await expect(prescribedRows(today, 'Overhead Press')).toHaveText(repeated('37.5 kg × 5 · 100%', 3));
-    await expect(prescribedRows(today, 'Deadlift')).toHaveText(['87.5 kg × 5 · 100%']);
+    await expect(prescribedRows(today, 'Back Squat')).toHaveText(['3 × 5 @ 72.5 kg']);
+    await expect(prescribedRows(today, 'Overhead Press')).toHaveText(['3 × 5 @ 37.5 kg']);
+    await expect(prescribedRows(today, 'Deadlift')).toHaveText(['87.5 kg × 5']);
   });
 });
 
@@ -98,8 +98,8 @@ test('Starting Strength holds a bench missed once at 50, then the second miss in
   await test.step('session 3 holds the bench at 50 and moves the squat to 70', async () => {
     const afterOneMiss = await openProgramToday(page, STARTING_STRENGTH);
     await expect(dayPicker(afterOneMiss).getByRole('radio', { name: 'Session 3 Day 1', exact: true })).toBeChecked();
-    await expect(prescribedRows(afterOneMiss, 'Barbell Bench Press')).toHaveText(repeated('50 kg × 5 · 100%', 3));
-    await expect(prescribedRows(afterOneMiss, 'Back Squat')).toHaveText(repeated('70 kg × 5 · 100%', 3));
+    await expect(prescribedRows(afterOneMiss, 'Barbell Bench Press')).toHaveText(['3 × 5 @ 50 kg']);
+    await expect(prescribedRows(afterOneMiss, 'Back Squat')).toHaveText(['3 × 5 @ 70 kg']);
   });
 
   await test.step('seed sessions 3 and 4 with the bench missed at 50 again', async () => {
@@ -112,8 +112,8 @@ test('Starting Strength holds a bench missed once at 50, then the second miss in
   await test.step('session 5 deloads the bench to 45 while squat goes to 75 and deadlift to 90', async () => {
     const afterTwoMisses = await openProgramToday(page, STARTING_STRENGTH);
     await expect(dayPicker(afterTwoMisses).getByRole('radio', { name: 'Session 5 Day 1', exact: true })).toBeChecked();
-    await expect(prescribedRows(afterTwoMisses, 'Barbell Bench Press')).toHaveText(repeated('45 kg × 5 · 100%', 3));
-    await expect(prescribedRows(afterTwoMisses, 'Back Squat')).toHaveText(repeated('75 kg × 5 · 100%', 3));
-    await expect(prescribedRows(afterTwoMisses, 'Deadlift')).toHaveText(['90 kg × 5 · 100%']);
+    await expect(prescribedRows(afterTwoMisses, 'Barbell Bench Press')).toHaveText(['3 × 5 @ 45 kg']);
+    await expect(prescribedRows(afterTwoMisses, 'Back Squat')).toHaveText(['3 × 5 @ 75 kg']);
+    await expect(prescribedRows(afterTwoMisses, 'Deadlift')).toHaveText(['90 kg × 5']);
   });
 });
