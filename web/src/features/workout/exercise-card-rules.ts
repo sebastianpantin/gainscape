@@ -23,8 +23,12 @@ export const EXERCISE_MENU_LABELS: Readonly<Record<ExerciseMenuChoice, string>> 
   superset_with_next: 'Superset with next',
   ungroup: 'Ungroup',
   swap: 'Swap',
-  remove: 'Remove',
+  remove: 'Remove exercise',
 };
+
+export function removingAsksFirst(exercise: { sets: readonly { done: boolean }[] }): boolean {
+  return exercise.sets.some((set) => set.done);
+}
 
 export function liftEquipment(exercises: readonly Exercise[]): LiftEquipment {
   const lifts = exercises.filter(isLiftExercise).filter((exercise) => exercise.measure === undefined);

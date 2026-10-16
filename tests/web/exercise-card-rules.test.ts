@@ -7,11 +7,13 @@ import { fatigueAdvice, nextWeightHint } from '../../web/src/lib/workout/progres
 import type { DraftBarbellSetup } from '../../web/src/lib/programs/program-set-rules.ts';
 import type { DraftSet, LiftDraftExercise, WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import {
+  EXERCISE_MENU_LABELS,
   exerciseMenuChoices,
   isBarbellLift,
   liftAdvice,
   liftDetailsText,
   liftEquipment,
+  removingAsksFirst,
   restStartsAfterChange,
   warmupsToOffer,
 } from '../../web/src/features/workout/exercise-card-rules.ts';
@@ -97,6 +99,18 @@ describe('exerciseMenuChoices', () => {
     ]);
     expect(exerciseMenuChoices(draft, 0)).toEqual(['ungroup', 'swap', 'remove']);
     expect(exerciseMenuChoices(draft, 1)).toEqual(['superset_with_next', 'ungroup', 'swap', 'remove']);
+  });
+
+  it('names the remove choice after the whole exercise', () => {
+    expect(EXERCISE_MENU_LABELS.remove).toBe('Remove exercise');
+  });
+});
+
+describe('removingAsksFirst', () => {
+  it('asks before removing an exercise with a logged set, and removes one with nothing logged straight away', () => {
+    expect(removingAsksFirst(lift('a', [set('a1'), set('a2', { done: true })]))).toBe(true);
+    expect(removingAsksFirst(lift('a', [set('a1'), set('a2')]))).toBe(false);
+    expect(removingAsksFirst(lift('a', []))).toBe(false);
   });
 });
 

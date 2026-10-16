@@ -360,6 +360,17 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           Discard workout
         </button>
       )}
+      {commands.removeConfirm && (
+        <ConfirmDialog
+          title={`Remove ${commands.removeConfirm.exerciseName}?`}
+          confirmLabel="Remove exercise"
+          danger
+          onConfirm={commands.removeConfirm.confirm}
+          onCancel={commands.removeConfirm.cancel}
+        >
+          <p>Its logged sets will be lost.</p>
+        </ConfirmDialog>
+      )}
       {commands.confirmingDiscard && (
         <ConfirmDialog
           title="Discard this workout?"
