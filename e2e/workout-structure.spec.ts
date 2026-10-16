@@ -138,3 +138,22 @@ test('an empty workout says why Finish is off and asks for session RPE only once
   await expect(page.getByText('Add an exercise to finish.')).toHaveCount(0);
   await expect(sessionRpe).toBeVisible();
 });
+
+test('the exercise menu closes on Escape and on a tap outside it', async ({ page }) => {
+  await register(page, uniqueUsername('menu'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await addUnloggedExercise(page, 'bench', BENCH);
+  const menu = page.getByLabel(`Exercise menu for ${BENCH}`, { exact: true });
+  const swap = page.getByRole('button', { name: 'Swap', exact: true });
+
+  await menu.click();
+  await expect(swap).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(swap).toBeHidden();
+  await expect(menu).toBeFocused();
+
+  await menu.click();
+  await expect(swap).toBeVisible();
+  await page.getByRole('heading', { level: 1 }).click();
+  await expect(swap).toBeHidden();
+});
