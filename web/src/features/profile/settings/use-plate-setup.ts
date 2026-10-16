@@ -3,12 +3,17 @@ import { type UnitPref } from '../../../lib/profile/profile.ts';
 import { type BarbellSetup, isUsableBarOrPlate } from '../../../lib/workout/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../../lib/workout/plate-settings-store.ts';
 import { deviceStorage } from '../../../lib/platform/keyed-store.ts';
+import { parsedDecimal } from '../../../lib/units.ts';
+
+function usableBar(text: string): number | null {
+  const barWeight = parsedDecimal(text);
+  return barWeight !== null && isUsableBarOrPlate(barWeight) ? barWeight : null;
+}
 
 export function usePlateSetup(userId: string, unit: UnitPref) {
   const [setup, setSetup] = useState(() => readPlateSettings(deviceStorage(), userId)[unit]);
   const [barText, setBarText] = useState(() => String(setup.barWeight));
-  const barNumber = Number(barText);
-  const barValid = barText.trim() !== '' && isUsableBarOrPlate(barNumber);
+  const barValid = usableBar(barText) !== null;
   const change = (changes: Partial<BarbellSetup>) => {
     const latest = readPlateSettings(deviceStorage(), userId);
     const next = { ...latest[unit], ...changes };
@@ -17,8 +22,8 @@ export function usePlateSetup(userId: string, unit: UnitPref) {
   };
   const changeBar = (text: string) => {
     setBarText(text);
-    const barWeight = Number(text);
-    if (text.trim() !== '' && isUsableBarOrPlate(barWeight)) change({ barWeight });
+    const barWeight = usableBar(text);
+    if (barWeight !== null) change({ barWeight });
   };
   const togglePlate = (plate: number) => {
     const plates = setup.plates.includes(plate)

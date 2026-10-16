@@ -141,10 +141,12 @@ test('a freestyle barbell set shows plates per side with the plates set on this 
     await plates.getByRole('button', { name: plate, exact: true }).click();
     await expect(plates.getByRole('button', { name: plate, exact: true })).toHaveAttribute('aria-pressed', 'false');
   }
-  const bar = page.getByRole('spinbutton', { name: 'Bar weight (kg)' });
+  const bar = page.getByRole('textbox', { name: 'Bar weight (kg)' });
   await bar.fill('0');
   await expect(bar).toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByText('Enter a bar weight above 0 and up to 100 kg. Using 20 kg.')).toBeVisible();
+  await bar.fill('17,5');
+  await expect(bar).toHaveAttribute('aria-invalid', 'false');
   await bar.fill('15');
   await expect(bar).toHaveAttribute('aria-invalid', 'false');
 

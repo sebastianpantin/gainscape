@@ -12,11 +12,9 @@ export function PlateChoices({ userId, unit }: { userId: string; unit: UnitPref 
       <label className="field">
         {`Bar weight (${unit})`}
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
-          min={0}
-          max={HEAVIEST_BAR_OR_PLATE}
-          step={0.5}
+          autoComplete="off"
           value={barText}
           aria-invalid={!barValid}
           aria-describedby={barValid ? undefined : barHintId}
