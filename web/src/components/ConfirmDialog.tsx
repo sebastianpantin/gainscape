@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useId, useRef } from 'react';
 interface ConfirmDialogProps {
   title: string;
   confirmLabel: string;
+  cancelLabel?: string;
   busy?: boolean;
   danger?: boolean;
   children?: ReactNode;
@@ -14,6 +15,7 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
   title,
   confirmLabel,
+  cancelLabel = 'Cancel',
   busy = false,
   danger = false,
   children,
@@ -44,7 +46,7 @@ export function ConfirmDialog({
       {children}
       <div className="row spread wrap">
         <button className="button" type="button" onClick={onCancel}>
-          Cancel
+          {cancelLabel}
         </button>
         {alternative && (
           <button className="button" type="button" disabled={busy} onClick={alternative.onChoose}>

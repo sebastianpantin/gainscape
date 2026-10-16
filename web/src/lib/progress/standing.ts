@@ -7,13 +7,17 @@ import { type Standing } from './standing-rules.ts';
 
 export type StandingState =
   | { status: 'loading' }
-  | { status: 'failed'; problem: string }
+  | { status: 'failed'; problem: string; retry: () => Promise<unknown> }
   | { status: 'ready'; standing: Standing; notice: string | null };
 
 export function useStanding(userId: string): StandingState {
   const query = useQuery(standingQuery(userId));
   const state = loadedState(query.data, query.error);
-  return state.status === 'ready'
-    ? { status: 'ready', standing: state.data.loaded, notice: cacheFirstNotice(state.data, OFFLINE_SKILLS_NOTICE) }
-    : state;
+  if (state.status === 'ready')
+    return {
+      status: 'ready',
+      standing: state.data.loaded,
+      notice: cacheFirstNotice(state.data, OFFLINE_SKILLS_NOTICE),
+    };
+  return state.status === 'failed' ? { ...state, retry: query.refetch } : state;
 }

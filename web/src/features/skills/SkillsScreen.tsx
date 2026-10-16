@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
@@ -19,13 +20,7 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
   const body = useBodyStatus(userId);
 
   if (state.status === 'failed')
-    return (
-      <main className="screen">
-        <p className="problem" role="alert">
-          {state.problem}
-        </p>
-      </main>
-    );
+    return <ScreenProblem heading={<h1 className="title">Skills</h1>} problem={state.problem} onRetry={state.retry} />;
   if (state.status === 'loading') return <ScreenSkeleton title="Skills" panels={0} tiles={6} />;
 
   const { standing } = state;
