@@ -32,7 +32,7 @@ The whole visual layer. `tokens.css` defines the design tokens as CSS custom pro
   - `--font-size-2xs` is only for decorative captions next to an icon or inside a field that already has an accessible name: tab bar labels, the in-field `kg`/`reps` captions of the stepped set row, and record slot sub-labels.
 - The stepped set row fits at 360px only because `.plate-marker` and `.set-info > .set-xp` use a `--space-1` gap, and `.set-row .effort-option` has no side padding and `-0.02em` letter spacing. Widen any of these and the XP line wraps or `Failure` clips.
 - `.tab-bar` columns are `minmax(min-content, 1fr)`, so the longest label ("Collection") keeps its rem size and fits at 320px.
-- Interactive targets keep `min-height`/`min-width: var(--tap-target)` (44px).
+- Interactive targets keep `min-height`/`min-width: var(--tap-target)` (44px). A text link gets `.tap-link`: a 44px-tall box whose negative block margins (`1lh` minus the target) keep the line at its normal height.
 - Full-width chrome honours `env(safe-area-inset-*)`, as `body`, `.screen` and the licenses page do.
 - `html` sets `touch-action: manipulation` to stop double-tap zoom. `html, body` set `overscroll-behavior-y: none`, so a workout never pull-to-refreshes or bounces. The tap highlight stays, because buttons have no `:active` style.
 - `.route-view`'s `route-enter` is an opacity-only fade. A transform would make it the containing block of its `position: fixed` children.

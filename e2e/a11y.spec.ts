@@ -329,6 +329,23 @@ test.describe('signed-in screens', () => {
   });
 });
 
+test('the links on Train are 44px tall', async ({ page }) => {
+  test.setTimeout(150_000);
+  await register(page, uniqueUsername('a11y_links'));
+  await logBench(page);
+  await openTab(page, 'Train');
+  await expect(page.getByRole('link', { name: /^\w[\w ]* is [\d,]+ XP from level \d+$/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Copy a template', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Edit programs', exact: true })).toBeVisible();
+  await expectTouchTargets(page, ['main a[href]']);
+
+  await openEnrollForm(page, '5/3/1');
+  await fillProgramInputs(page, FIVE_THREE_ONE_ONE_RMS_KG);
+  await startFollowing(page, '5/3/1');
+  await expect(programToday(page, '5/3/1').getByRole('link', { name: 'Manage program', exact: true })).toBeVisible();
+  await expectTouchTargets(page, ['main a[href]']);
+});
+
 test('the program enrollment screens have no serious axe violations', async ({ page }) => {
   test.setTimeout(150_000);
   await register(page, uniqueUsername('a11y_pe'));

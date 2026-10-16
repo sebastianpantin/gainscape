@@ -85,7 +85,7 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
     <section className="panel stack" aria-label={name}>
       <div className="row spread">
         <h2>{name}</h2>
-        <Link to="/programs/active" className="tiny">
+        <Link to="/programs/active" className="tiny tap-link">
           Manage program
         </Link>
       </div>

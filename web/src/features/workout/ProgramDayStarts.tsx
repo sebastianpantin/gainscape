@@ -34,13 +34,17 @@ export function ProgramDayStarts({ userId, disabled, followingProgram, onStart }
     <div className="panel stack">
       <div className="row spread">
         <h2>Program days</h2>
-        <Link to="/programs" className="tiny">
+        <Link to="/programs" className="tiny tap-link">
           Edit programs
         </Link>
       </div>
       {own.length === 0 ? (
         <p className="muted">
-          No programs yet. <Link to="/programs">Copy a template</Link> to plan your days.
+          No programs yet.{' '}
+          <Link to="/programs" className="tap-link">
+            Copy a template
+          </Link>{' '}
+          to plan your days.
         </p>
       ) : (
         <ul className="day-list">

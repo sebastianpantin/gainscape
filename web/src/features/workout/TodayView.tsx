@@ -77,7 +77,7 @@ export function TodayView({
       <InstallCard userId={userId} />
       <div className="today-row">
         {levelNudge && (
-          <Link className="level-nudge" to="/skills">
+          <Link className="level-nudge tap-link" to="/skills">
             {nearestLevelUpText(levelNudge)}
           </Link>
         )}

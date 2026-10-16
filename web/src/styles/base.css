@@ -391,6 +391,13 @@ a:hover {
   font-size: var(--font-size-xs);
 }
 
+.tap-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  margin-block: calc((1lh - var(--tap-target)) / 2);
+}
+
 .xp-text {
   color: var(--color-xp);
 }
