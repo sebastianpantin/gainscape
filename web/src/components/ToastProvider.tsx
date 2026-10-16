@@ -10,6 +10,7 @@ interface ShownToast {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ShownToast | null>(null);
+  const [held, setHeld] = useState(false);
   const lastId = useRef(0);
 
   const showToast = useCallback((text: string, action?: ToastAction) => {
@@ -20,17 +21,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toasts = useMemo(() => ({ showToast, dismissToast }), [showToast, dismissToast]);
 
   useEffect(() => {
-    if (toast === null) return;
-    const hide = setTimeout(() => setToast(null), toastDurationMs(toast.text));
+    if (toast === null || held) return;
+    const hide = setTimeout(() => setToast(null), toastDurationMs(toast.text, toast.action !== null));
     return () => clearTimeout(hide);
-  }, [toast]);
+  }, [toast, held]);
 
   return (
     <ToastContext.Provider value={toasts}>
       {children}
       <div className="toast-region" role="status" aria-live="polite">
         {toast && (
-          <p key={toast.id} className={toast.action ? 'toast with-action' : 'toast'}>
+          <p
+            key={toast.id}
+            className={toast.action ? 'toast with-action' : 'toast'}
+            onFocus={() => setHeld(true)}
+            onBlur={() => setHeld(false)}
+            onPointerEnter={() => setHeld(true)}
+            onPointerLeave={() => setHeld(false)}
+          >
             {toast.text}
             {toast.action && (
               <button
@@ -38,6 +46,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => {
                   toast.action?.onAct();
+                  setHeld(false);
                   setToast(null);
                 }}
               >

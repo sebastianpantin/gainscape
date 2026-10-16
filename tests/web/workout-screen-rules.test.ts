@@ -12,6 +12,7 @@ import {
   addButtonKey,
   liftIdsToRecall,
   removedSetAt,
+  removedSetText,
   restoreRemovedSet,
   supersetMembers,
   swappableLifts,
@@ -249,5 +250,29 @@ describe('removedSetAt and restoreRemovedSet', () => {
       ),
     ]);
     expect(restoreRemovedSet(full, removed)).toBe(full);
+  });
+});
+
+describe('removedSetAt and restoreRemovedSet for cardio', () => {
+  const bout = (id: string, durationS: number) => ({
+    id,
+    kind: 'cardio' as const,
+    durationS,
+    distanceM: null,
+    interval: null,
+    effort: null,
+    done: true,
+  });
+
+  it('leaves the draft alone when the bout would go past the cardio time cap', () => {
+    const rowing = { ...cardio('rowing'), sets: [bout('short', 600)] };
+    const removed = removedSetAt(draftOf([rowing]), 0, 'short')!;
+    const full = draftOf([{ ...cardio('rowing'), sets: [bout('long', 4 * 60 * 60)] }]);
+    expect(restoreRemovedSet(full, removed)).toBe(full);
+  });
+
+  it('calls a cardio set a bout and a lift set a set', () => {
+    expect(removedSetText(cardio('Rowing'), 0)).toBe('Removed bout 1 of Rowing.');
+    expect(removedSetText(lift('Barbell Row', [set('a')]), 1)).toBe('Removed set 2 of Barbell Row.');
   });
 });

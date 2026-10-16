@@ -68,5 +68,6 @@ test('a removed set comes back where it was with Undo', async ({ page }) => {
 
   await expect(setRows(card)).toHaveCount(3);
   await expect(weight(2)).toHaveValue('72.5');
+  await expect(optionsButton(card, 2)).toBeFocused();
   await expect(toast).toHaveCount(0);
 });

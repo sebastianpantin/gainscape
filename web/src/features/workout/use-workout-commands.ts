@@ -23,7 +23,13 @@ import { type RecentLiftSessions } from './use-recent-lift-sessions.ts';
 import { useSessionState } from './use-session-state.ts';
 import { useSetDrop } from './use-set-drop.ts';
 import { type WorkoutPreviews } from './use-workout-previews.ts';
-import { addButtonKey, removedSetAt, restoreRemovedSet, withPickedExercise } from './workout-screen-rules.ts';
+import {
+  addButtonKey,
+  removedSetAt,
+  removedSetText,
+  restoreRemovedSet,
+  withPickedExercise,
+} from './workout-screen-rules.ts';
 
 interface WorkoutCommandsOptions {
   userId: string;
@@ -82,9 +88,12 @@ export function useWorkoutCommands({
     changeDraft(removeSet(draft, exerciseIndex, setId));
     const removed = removedSetAt(draft, exerciseIndex, setId);
     if (removed === null) return;
-    showToast(`Removed set ${removed.index + 1} of ${draft.exercises[exerciseIndex].name}.`, {
+    showToast(removedSetText(draft.exercises[exerciseIndex], removed.index), {
       label: 'Undo',
-      onAct: () => updateDraft((latest) => restoreRemovedSet(latest, removed)),
+      onAct: () => {
+        focusAfterNextChange({ setId: removed.set.id, addKey: addButtonKey(draft, exerciseIndex) });
+        updateDraft((latest) => restoreRemovedSet(latest, removed));
+      },
     });
   };
 

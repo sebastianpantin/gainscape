@@ -2,7 +2,7 @@ import { type Exercise, isLiftExercise, type LiftExercise } from '../../lib/exer
 import { similarExercises } from '../../lib/exercises/substitute-rules.ts';
 import { type SupersetGroup, supersetGroups } from '../../lib/workout/superset-rules.ts';
 import { type DraftExercise, type LiftDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
-import { canAddSet } from '../../lib/workout/exercise-edit-rules.ts';
+import { canAddSetTo } from '../../lib/workout/exercise-edit-rules.ts';
 import {
   addCardioExercise,
   addExercise,
@@ -76,7 +76,7 @@ export function removedSetAt(draft: WorkoutDraft, exerciseIndex: number, setId: 
 export function restoreRemovedSet(draft: WorkoutDraft, removed: RemovedSet): WorkoutDraft {
   const exerciseIndex = draft.exercises.findIndex((exercise) => exercise.clientId === removed.clientId);
   const exercise = draft.exercises[exerciseIndex];
-  if (draft.finishedAt !== null || exercise === undefined || !canAddSet(draft)) return draft;
+  if (draft.finishedAt !== null || exercise === undefined || !canAddSetTo(draft, exercise.modality)) return draft;
   if (exercise.sets.some((existing) => existing.id === removed.set.id)) return draft;
   const at = Math.min(removed.index, exercise.sets.length);
   const sets = [...exercise.sets.slice(0, at), removed.set, ...exercise.sets.slice(at)];
@@ -85,4 +85,8 @@ export function restoreRemovedSet(draft: WorkoutDraft, removed: RemovedSet): Wor
     ...draft,
     exercises: draft.exercises.map((current, index) => (index === exerciseIndex ? restored : current)),
   };
+}
+
+export function removedSetText(exercise: DraftExercise, index: number): string {
+  return `Removed ${exercise.modality === 'cardio' ? 'bout' : 'set'} ${index + 1} of ${exercise.name}.`;
 }

@@ -10,4 +10,9 @@ describe('toastDurationMs', () => {
     expect(toastDurationMs('x'.repeat(60))).toBe(6000);
     expect(toastDurationMs('x'.repeat(400))).toBe(9000);
   });
+
+  it('keeps a toast with an action up for at least twelve seconds so it can be reached', () => {
+    expect(toastDurationMs('Removed set 2 of Barbell Bench Press.', true)).toBe(12000);
+    expect(toastDurationMs('Saved', false)).toBe(5000);
+  });
 });
