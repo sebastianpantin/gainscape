@@ -201,9 +201,9 @@ test('reordering pins that fails says the pins could not be reordered', async ({
 
 test('the reveal says it could not load the loot names when the item catalog fails', async ({ page }) => {
   await register(page, uniqueUsername('le_lootnames'));
+  await failRequests(page, restTable('items'), 'GET');
   await logBench(page);
   await openTab(page, 'Train');
-  await failRequests(page, restTable('items'), 'GET');
 
   await logBench(page, 80);
 
