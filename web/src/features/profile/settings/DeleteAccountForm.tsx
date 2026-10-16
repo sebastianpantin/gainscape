@@ -4,7 +4,8 @@ import { deleteMyAccount } from '../../../lib/profile/account.ts';
 import { messageOf } from '../../../lib/error-text.ts';
 import { signOutKeepingDrafts } from '../../../offline/sync-workout.ts';
 import { forgetUserDeviceData } from '../../../offline/user-device-data.ts';
-import { forgetOnThisDevice, hasUnsyncedDraftHere } from './device-data.ts';
+import { ConfirmDialog } from '../../../components/ConfirmDialog.tsx';
+import { forgetOnThisDevice, hasUnsyncedDraftHere, UNSYNCED_DRAFT_LOSS_TEXT } from './device-data.ts';
 
 export function DeleteAccountForm({ userId, username }: { userId: string; username: string }) {
   const navigate = useNavigate();
@@ -12,14 +13,16 @@ export function DeleteAccountForm({ userId, username }: { userId: string; userna
   const [accountPassword, setAccountPassword] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmingDraftLoss, setConfirmingDraftLoss] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (
-      (await hasUnsyncedDraftHere(userId)) &&
-      !window.confirm('You have a workout that has not synced yet. It will be lost. Delete anyway?')
-    )
-      return;
+    if (await hasUnsyncedDraftHere(userId)) setConfirmingDraftLoss(true);
+    else await deleteAccount();
+  };
+
+  const deleteAccount = async () => {
+    setConfirmingDraftLoss(false);
     setBusy(true);
     setProblem(null);
     try {
@@ -66,6 +69,17 @@ export function DeleteAccountForm({ userId, username }: { userId: string; userna
       >
         Delete forever
       </button>
+      {confirmingDraftLoss && (
+        <ConfirmDialog
+          title="Delete anyway?"
+          confirmLabel="Delete anyway"
+          danger
+          onConfirm={() => void deleteAccount()}
+          onCancel={() => setConfirmingDraftLoss(false)}
+        >
+          <p>{UNSYNCED_DRAFT_LOSS_TEXT}</p>
+        </ConfirmDialog>
+      )}
     </form>
   );
 }
