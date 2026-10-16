@@ -81,9 +81,9 @@ test('cancel a new program: leaves at once when untouched, asks before discardin
   await page.getByRole('button', { name: 'New program' }).click();
   await page.getByLabel('Program name').fill('Half Done');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  const confirmation = page.getByRole('dialog', { name: 'Discard your changes?', exact: true });
+  const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
   await expect(confirmation).toContainText("This program isn't saved yet.");
-  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await confirmation.getByRole('button', { name: 'Keep editing' }).click();
   await expect(confirmation).toHaveCount(0);
   await expect(page.getByLabel('Program name')).toHaveValue('Half Done');
 
@@ -116,7 +116,7 @@ test('cancel edits to a saved program keeps the saved plan', async ({ page }) =>
   await plannedExercise(page, 1, 'Back Squat').getByLabel('Sets').fill('5');
   await plannedExercise(page, 1, 'Back Squat').getByLabel('Reps min').click();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  const confirmation = page.getByRole('dialog', { name: 'Discard your changes?', exact: true });
+  const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
   await expect(confirmation).toContainText('Your edits to this program are not saved.');
   await confirmation.getByRole('button', { name: 'Discard changes' }).click();
   await expect(page).toHaveURL(/\/programs$/);
@@ -343,4 +343,21 @@ test('a target can be cleared and retyped, and reps min above reps max is explai
   await expect(page.getByRole('alert')).toHaveCount(0);
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page).toHaveURL(/\/programs$/);
+});
+
+test('leaving a changed program through the tab bar asks first', async ({ page }) => {
+  await register(page, uniqueUsername('pt'));
+  await openFromProfile(page, 'Programs');
+  await page.getByRole('button', { name: 'New program' }).click();
+  await page.getByLabel('Program name').fill('Wander Off');
+  const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
+
+  await openTab(page, 'Train');
+  await expect(confirmation).toContainText("This program isn't saved yet.");
+  await confirmation.getByRole('button', { name: 'Keep editing' }).click();
+  await expect(page.getByLabel('Program name')).toHaveValue('Wander Off');
+
+  await openTab(page, 'Train');
+  await confirmation.getByRole('button', { name: 'Discard changes' }).click();
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 });

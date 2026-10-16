@@ -6,9 +6,9 @@ import { exerciseLabels, isLiftExercise } from '../../lib/exercises/catalog-rule
 import { cachedPrograms, type ProgramDoc, saveProgram } from '../../lib/programs/programs.ts';
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/programs/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
-import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
+import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { exerciseListQuery, programsQuery, publishForEnroll, showChangedPrograms } from '../../lib/query/queries.ts';
 import type { PlannedExercise, ProgressionKind } from '../../offline/draft-starts.ts';
@@ -75,7 +75,6 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       : docFor(cachedPrograms(userId), userId, programId),
   );
   const [savedDoc, setSavedDoc] = useState(doc);
-  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [problem, setProblem] = useState<{ text: string; shownFor: ProgramDoc } | null>(null);
   const [missing, setMissing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -86,6 +85,10 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   const programList = useQuery(programsQuery(userId));
   const exercises = exerciseList.data ?? null;
   const loadedPrograms = programList.data?.loaded;
+  const unsaved = useUnsavedChangesGuard(
+    doc !== null && savedDoc !== null && hasUnsavedChanges(savedDoc, doc),
+    creating ? "This program isn't saved yet." : 'Your edits to this program are not saved.',
+  );
 
   if (!doc && !missing && loadedPrograms && !programList.isFetching) {
     const loaded = docFor(loadedPrograms, userId, programId);
@@ -144,17 +147,15 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     try {
       await saveProgram(userId, trimmedDoc(doc));
       showChangedPrograms(queryClient, userId);
-      navigate('/programs');
+      unsaved.allowLeaving();
+      void navigate('/programs');
     } catch (error) {
       setProblem({ text: messageOf(error, 'Could not save the program.'), shownFor: doc });
       setSaving(false);
     }
   };
 
-  const cancel = () => {
-    if (savedDoc && hasUnsavedChanges(savedDoc, doc)) setConfirmingCancel(true);
-    else navigate('/programs');
-  };
+  const cancel = () => void navigate('/programs');
 
   const outdated =
     !creating &&
@@ -174,7 +175,8 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       await saveProgram(userId, trimmedDoc(doc));
       showChangedPrograms(queryClient, userId);
       const { key } = await publishForEnroll(queryClient, userId, doc.id);
-      navigate(`/programs/enroll/${key}`, { state: { carried } });
+      unsaved.allowLeaving();
+      void navigate(`/programs/enroll/${key}`, { state: { carried } });
     } catch (error) {
       setProblem({ text: programErrorText(error), shownFor: doc });
       setSaving(false);
@@ -383,18 +385,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       <button className="button primary" type="button" disabled={saving} onClick={save}>
         Save
       </button>
-      {confirmingCancel && (
-        <ConfirmDialog
-          title="Discard your changes?"
-          confirmLabel="Discard changes"
-          danger
-          busy={saving}
-          onConfirm={() => navigate('/programs')}
-          onCancel={() => setConfirmingCancel(false)}
-        >
-          <p>{creating ? "This program isn't saved yet." : 'Your edits to this program are not saved.'}</p>
-        </ConfirmDialog>
-      )}
+      {unsaved.prompt}
     </main>
   );
 }

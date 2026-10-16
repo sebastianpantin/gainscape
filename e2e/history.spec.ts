@@ -303,3 +303,29 @@ test('rate the session when finishing, then see its length and RPE on the summar
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
   await expect(page.getByText('<1 min · Session RPE 8')).toBeVisible();
 });
+
+test('leaving an edited workout asks first, and leaving after a save does not', async ({ page }) => {
+  await register(page, uniqueUsername('hist_leave'));
+  await logBench(page);
+  await openLatestWorkout(page);
+  const reps = setRow(page, 1).getByLabel('reps', { exact: true });
+  const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
+  await reps.fill('8');
+
+  await page.getByRole('link', { name: '← History' }).click();
+  await confirmation.getByRole('button', { name: 'Keep editing' }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(reps).toHaveValue('8');
+
+  await openTab(page, 'Profile');
+  await confirmation.getByRole('button', { name: 'Discard changes' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+
+  await openLatestWorkout(page);
+  await setRow(page, 1).getByLabel('reps', { exact: true }).fill('9');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Changes saved.')).toBeVisible();
+  await page.getByRole('link', { name: '← History' }).click();
+  await expect(page).toHaveURL(/\/collection\/history$/);
+  await expect(confirmation).toHaveCount(0);
+});

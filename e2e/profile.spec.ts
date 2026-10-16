@@ -199,3 +199,28 @@ test('change password, export data and delete the account', async ({ page }) => 
   await submitSignIn(page, emailOf(username), 'a-brand-new-password');
   await expect(page.getByRole('alert')).toBeVisible();
 });
+
+test('leaving Edit profile with a change asks first, and Save leaves without asking', async ({ page }) => {
+  await register(page, uniqueUsername('pf_leave'));
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
+  await page.getByLabel('Display name').fill('Half Typed');
+
+  await page.getByRole('link', { name: 'Cancel', exact: true }).click();
+  await confirmation.getByRole('button', { name: 'Keep editing' }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(page.getByLabel('Display name')).toHaveValue('Half Typed');
+
+  await page.getByRole('link', { name: '‹ Profile' }).click();
+  await confirmation.getByRole('button', { name: 'Discard changes' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(profileCard(page)).not.toContainText('Half Typed');
+
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByLabel('Display name').fill('Saved Name');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(profileCard(page)).toContainText('Saved Name');
+  await expect(confirmation).toHaveCount(0);
+});

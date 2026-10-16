@@ -3,6 +3,7 @@ import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
+import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { characterCount, nameProblem, trimmedName } from '../../lib/names.ts';
 import {
@@ -59,9 +60,10 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
   const [trainingFocus, setTrainingFocus] = useState<TrainingFocus | ''>(profile.trainingFocus ?? '');
   const [trainingSince, setTrainingSince] = useState(profile.trainingSince?.toString() ?? '');
   const [badgeColor, setBadgeColor] = useState<BadgeColor>(profile.badgeColor);
-  const [bodyweight, setBodyweight] = useState(
+  const [initialBodyweight] = useState(() =>
     profile.bodyweightKg === null ? '' : String(shownWeight(profile.bodyweightKg, unitPref)),
   );
+  const [bodyweight, setBodyweight] = useState(initialBodyweight);
   const [height, setHeight] = useState<HeightInput>(initialHeightInput);
   const [birthYear, setBirthYear] = useState(profile.birthYear?.toString() ?? '');
   const [saving, setSaving] = useState(false);
@@ -79,6 +81,16 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
     birthYear: birthYearProblem(birthYear),
   };
   const invalid = Object.values(issues).some(Boolean);
+  const unsaved = useUnsavedChangesGuard(
+    displayName !== profile.displayName ||
+      bio !== (profile.bio ?? '') ||
+      trainingFocus !== (profile.trainingFocus ?? '') ||
+      trainingSince !== (profile.trainingSince?.toString() ?? '') ||
+      badgeColor !== profile.badgeColor ||
+      bodyweight !== initialBodyweight ||
+      !sameHeightInput(height, initialHeightInput, unitPref) ||
+      birthYear !== (profile.birthYear?.toString() ?? ''),
+  );
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -104,7 +116,8 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
       }
       void announceDataChange(queryClient, 'profile-saved');
       await onSaved();
-      navigate('/profile');
+      unsaved.allowLeaving();
+      void navigate('/profile');
     } catch (error) {
       setProblem(saveProblemText(error));
       setSaving(false);
@@ -266,6 +279,7 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
       <Link className="button" to="/profile">
         Cancel
       </Link>
+      {unsaved.prompt}
     </form>
   );
 }

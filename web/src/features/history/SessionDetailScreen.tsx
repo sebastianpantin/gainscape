@@ -27,6 +27,7 @@ import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { forgetLastSummary, recallLastSummary } from '../summary/last-summary.ts';
@@ -85,6 +86,10 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const items = useQuery(itemCatalogQuery(userId)).data?.loaded.items ?? NO_ITEMS;
   const controllerRef = useRef<AbortController | null>(null);
+  const unsaved = useUnsavedChangesGuard(
+    !readOnly && loaded !== null && edit !== null && hasChanges(edit, loaded.original),
+  );
+  const { allowLeaving } = unsaved;
 
   const loadWithCatalog = useCallback(
     () =>
@@ -100,10 +105,10 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     setReadOnly(!isSessionEditable(next.session, Date.now()));
   }, []);
 
-  const goBackGone = useCallback(
-    () => navigate(HISTORY_PATH, { replace: true, state: { notice: 'That workout is no longer there.' } }),
-    [navigate],
-  );
+  const goBackGone = useCallback(() => {
+    allowLeaving();
+    void navigate(HISTORY_PATH, { replace: true, state: { notice: 'That workout is no longer there.' } });
+  }, [allowLeaving, navigate]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -195,6 +200,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
               withoutHistorySession(loadedPages, sessionId),
             );
             void announceDataChange(queryClient, 'workout-changed');
+            allowLeaving();
             return navigate(HISTORY_PATH, { replace: true, state: { notice: change.notice } });
           case 'gone':
             return goBackGone();
@@ -493,6 +499,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           </button>
         )}
       </section>
+      {unsaved.prompt}
     </main>
   );
 }
