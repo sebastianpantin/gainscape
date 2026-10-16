@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useId, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FieldProblem } from '../../components/FieldProblem.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
@@ -93,16 +94,7 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
     'aria-invalid': shownIssue(field) ? true : undefined,
     'aria-describedby': shownIssue(field) ? problemId(field) : undefined,
   });
-  const fieldProblem = (field: CheckedField) => {
-    const issue = shownIssue(field);
-    return (
-      issue && (
-        <p className="problem" id={problemId(field)}>
-          {issue}
-        </p>
-      )
-    );
-  };
+  const fieldProblem = (field: CheckedField) => <FieldProblem id={problemId(field)} problem={shownIssue(field)} />;
   const unsaved = useUnsavedChangesGuard(
     displayName !== profile.displayName ||
       bio !== (profile.bio ?? '') ||

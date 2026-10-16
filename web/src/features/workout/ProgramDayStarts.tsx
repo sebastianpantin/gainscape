@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
+import { formatCount } from '../../lib/format.ts';
 import { cachedPrograms, ownPrograms, type Program, type ProgramDay } from '../../lib/programs/programs.ts';
 import { programsQuery } from '../../lib/query/queries.ts';
 import { programLabelFor } from '../../offline/draft-starts.ts';
@@ -11,10 +12,6 @@ interface ProgramDayStartsProps {
   disabled: boolean;
   followingProgram: boolean;
   onStart: (program: Program, day: ProgramDay) => void;
-}
-
-function exerciseCount(day: ProgramDay): string {
-  return day.exercises.length === 1 ? '1 exercise' : `${day.exercises.length} exercises`;
 }
 
 export function ProgramDayStarts({ userId, disabled, followingProgram, onStart }: ProgramDayStartsProps) {
@@ -58,7 +55,7 @@ export function ProgramDayStarts({ userId, disabled, followingProgram, onStart }
                 >
                   <span className="stack" style={{ gap: 2 }}>
                     <span>{programLabelFor(program.name, day.name)}</span>
-                    <span className="muted tiny">{exerciseCount(day)}</span>
+                    <span className="muted tiny">{formatCount(day.exercises.length, 'exercise')}</span>
                   </span>
                   <Icon name="chevron" size={18} />
                 </button>

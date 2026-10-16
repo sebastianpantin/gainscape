@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
+import { FieldProblem } from '../../components/FieldProblem.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
 import { isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
@@ -65,15 +66,6 @@ const ROUNDING_MODES: { value: RoundingMode; label: string }[] = [
 ];
 
 const NOT_TRACKED = '';
-
-function FieldProblem({ id, problem }: { id: string; problem: string | undefined }) {
-  if (!problem) return null;
-  return (
-    <p className="problem" id={id}>
-      {problem}
-    </p>
-  );
-}
 
 function describedBy(...ids: (string | false | undefined)[]): string | undefined {
   const present = ids.filter((id) => typeof id === 'string');

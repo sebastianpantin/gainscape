@@ -155,8 +155,6 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     }
   };
 
-  const cancel = () => void navigate('/programs');
-
   const outdated =
     !creating &&
     followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates, exercises ? loadTypeOf : null) ===
@@ -186,7 +184,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   return (
     <main className="screen stack">
       <div className="stack" style={{ gap: 4 }}>
-        <button className="back-link" type="button" disabled={saving} onClick={cancel}>
+        <button className="back-link" type="button" disabled={saving} onClick={() => void navigate('/programs')}>
           Cancel
         </button>
         <h1 className="title">{creating ? 'New program' : 'Edit program'}</h1>
