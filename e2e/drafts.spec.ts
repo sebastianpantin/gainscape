@@ -101,13 +101,11 @@ test("another account's draft is kept, never sent, and restored for its owner", 
   const notice = page.getByText('An unsynced workout from another account is saved on this device.');
   await expect(notice).toBeVisible();
 
-  let confirmShown = false;
-  page.once('dialog', (dialog) => {
-    confirmShown = true;
-    return dialog.dismiss();
-  });
   await page.getByRole('button', { name: 'Discard it' }).click();
-  await expect.poll(() => confirmShown).toBe(true);
+  const confirmation = page.getByRole('dialog', { name: "Discard the other account's workout?" });
+  await expect(confirmation).toContainText('This cannot be undone.');
+  await confirmation.getByRole('button', { name: 'Keep it' }).click();
+  await expect(confirmation).toHaveCount(0);
   await expect(notice).toBeVisible();
   await expect.poll(() => readStoredDraft(page, user.id)).toMatchObject({ kind: 'draft' });
 
