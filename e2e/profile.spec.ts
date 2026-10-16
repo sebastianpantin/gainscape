@@ -227,6 +227,29 @@ test('leaving Edit profile with a change asks first, and Save leaves without ask
   await expect(confirmation).toHaveCount(0);
 });
 
+test('closing the tab with an unsaved Edit profile change asks first, and not once it is saved', async ({ page }) => {
+  await register(page, uniqueUsername('pf_unload'));
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByLabel('Display name').fill('Half Typed');
+
+  const dialogTypes: string[] = [];
+  page.on('dialog', (dialog) => {
+    dialogTypes.push(dialog.type());
+    void dialog.dismiss();
+  });
+  await page.close({ runBeforeUnload: true });
+  await expect.poll(() => dialogTypes).toEqual(['beforeunload']);
+  expect(page.isClosed()).toBe(false);
+
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(profileCard(page)).toContainText('Half Typed');
+  const closed = page.waitForEvent('close');
+  await page.close({ runBeforeUnload: true });
+  await closed;
+  expect(dialogTypes).toEqual(['beforeunload']);
+});
+
 test('Edit profile shows a field problem only after leaving the field or saving, and Save goes to it', async ({
   page,
 }) => {
