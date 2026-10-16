@@ -15,14 +15,21 @@ describe('activeTabPath', () => {
     expect(activeTabPath(pathname, TAB_PATHS)).toBe(tab);
   });
 
-  it.each(['/programs', '/programs/active', '/programs/enroll/stronglifts_5x5', '/programs/new', '/exercises'])(
+  it.each(['/programs', '/programs/enroll/stronglifts_5x5', '/programs/new', '/programs/activex', '/exercises'])(
     'puts %s, opened from Profile, under the Profile tab without changing its URL',
     (pathname) => {
       expect(activeTabPath(pathname, TAB_PATHS)).toBe('/profile');
     },
   );
 
-  it('keeps Train for the home screen only, so the reveal lights no tab', () => {
+  it.each(['/programs/active', '/programs/active/plan'])(
+    'puts %s, opened from Train and linking back to it, under the Train tab',
+    (pathname) => {
+      expect(activeTabPath(pathname, TAB_PATHS)).toBe('/');
+    },
+  );
+
+  it('lights no tab for the reveal', () => {
     expect(activeTabPath('/reveal', TAB_PATHS)).toBeNull();
   });
 
