@@ -35,7 +35,7 @@ export function HoldFields({ set, measure, loadType, unit, setNumber, onChange }
       {measure === 'time' ? (
         <NumberTextField
           label="s"
-          accessibleName="Seconds"
+          accessibleName={`Seconds, set ${setNumber}`}
           value={set.durationS ?? HOLD_BOUNDS.durationS.min}
           lowest={HOLD_BOUNDS.durationS.min}
           highest={HOLD_BOUNDS.durationS.max}
@@ -47,7 +47,7 @@ export function HoldFields({ set, measure, loadType, unit, setNumber, onChange }
       ) : (
         <NumberTextField
           label="m"
-          accessibleName="Metres"
+          accessibleName={`Metres, set ${setNumber}`}
           value={set.distanceM ?? HOLD_BOUNDS.distanceM.min}
           lowest={HOLD_BOUNDS.distanceM.min}
           highest={HOLD_BOUNDS.distanceM.max}
