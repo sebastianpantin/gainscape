@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
-import { formatXp } from '../../lib/format.ts';
+import { formatCount, formatXp } from '../../lib/format.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/platform/use-online.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
@@ -237,7 +237,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </div>
         <div className="live-xp">
           <strong>~{formatXp(donePreviewTotal(previews, draft.exercises))} XP</strong>
-          <span className="muted tiny">{doneSetCount(draft)} sets done</span>
+          <span className="muted tiny">{formatCount(doneSetCount(draft), 'set')} done</span>
         </div>
       </header>
       <p className="visually-hidden" role="status">

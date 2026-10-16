@@ -12,6 +12,10 @@ export function formatXp(xp: number): string {
   return xp.toLocaleString('en-US');
 }
 
+export function formatCount(count: number, noun: string): string {
+  return `${formatXp(count)} ${noun}${count === 1 ? '' : 's'}`;
+}
+
 function totalXp(xpBySkill: Readonly<Record<string, number>> | undefined): number {
   return Object.values(xpBySkill ?? {}).reduce((sum, xp) => sum + xp, 0);
 }

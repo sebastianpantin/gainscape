@@ -1,5 +1,12 @@
 import { Link } from 'react-router-dom';
-import { formatSessionDate, formatXp, sessionChallengeBonus, sessionGearBonus, sessionXp } from '../../lib/format.ts';
+import {
+  formatCount,
+  formatSessionDate,
+  formatXp,
+  sessionChallengeBonus,
+  sessionGearBonus,
+  sessionXp,
+} from '../../lib/format.ts';
 import { type SessionDetail } from '../../lib/history/history-rules.ts';
 import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
 
@@ -26,7 +33,7 @@ export function SessionHeader({ session, backTo }: { session: SessionDetail; bac
             <span className="muted tiny">includes Challenge bonus +{formatXp(challengeBonus)} XP</span>
           )}
           {gearBonus > 0 && <span className="muted tiny">includes Gear bonus +{formatXp(gearBonus)} XP</span>}
-          <span className="muted tiny">{session.setCount} sets</span>
+          <span className="muted tiny">{formatCount(session.setCount, 'set')}</span>
         </div>
       </header>
       {session.historyOnly && (

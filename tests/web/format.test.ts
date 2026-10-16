@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatCount,
   formatLoad,
   formatSessionDate,
   formatXp,
@@ -28,6 +29,15 @@ describe('formatXp', () => {
   it('groups thousands with commas', () => {
     expect(formatXp(0)).toBe('0');
     expect(formatXp(1234567)).toBe('1,234,567');
+  });
+});
+
+describe('formatCount', () => {
+  it('names one thing in the singular and any other count in the plural, with grouped thousands', () => {
+    expect(formatCount(1, 'set')).toBe('1 set');
+    expect(formatCount(0, 'set')).toBe('0 sets');
+    expect(formatCount(2, 'set')).toBe('2 sets');
+    expect(formatCount(1500, 'quest point')).toBe('1,500 quest points');
   });
 });
 
