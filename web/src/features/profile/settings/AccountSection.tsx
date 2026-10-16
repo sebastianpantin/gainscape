@@ -27,10 +27,13 @@ export function AccountSection({
   const [exporting, setExporting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const askToSignOut = async () => {
-    if (await hasUnsyncedDraftHere(userId)) setConfirmingSignOut(true);
-    else await signOut(navigate);
+    setSigningOut(true);
+    if (!(await hasUnsyncedDraftHere(userId))) return signOut(navigate);
+    setSigningOut(false);
+    setConfirmingSignOut(true);
   };
 
   const toggle = (next: AccountPanel) => {
@@ -88,7 +91,7 @@ export function AccountSection({
       <button className="button" type="button" disabled={exporting} onClick={exportData}>
         Export my data
       </button>
-      <button className="button" type="button" onClick={askToSignOut}>
+      <button className="button" type="button" disabled={signingOut} onClick={askToSignOut}>
         Sign out
       </button>
       {confirmingSignOut && (

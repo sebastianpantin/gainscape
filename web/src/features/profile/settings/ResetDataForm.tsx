@@ -16,8 +16,11 @@ export function ResetDataForm({ userId, onDone }: { userId: string; onDone: (tex
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (await hasUnsyncedDraftHere(userId)) setConfirmingDraftLoss(true);
-    else await reset();
+    if (busy) return;
+    setBusy(true);
+    if (!(await hasUnsyncedDraftHere(userId))) return reset();
+    setBusy(false);
+    setConfirmingDraftLoss(true);
   };
 
   const reset = async () => {

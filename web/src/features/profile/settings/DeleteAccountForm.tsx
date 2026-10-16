@@ -17,8 +17,11 @@ export function DeleteAccountForm({ userId, username }: { userId: string; userna
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (await hasUnsyncedDraftHere(userId)) setConfirmingDraftLoss(true);
-    else await deleteAccount();
+    if (busy) return;
+    setBusy(true);
+    if (!(await hasUnsyncedDraftHere(userId))) return deleteAccount();
+    setBusy(false);
+    setConfirmingDraftLoss(true);
   };
 
   const deleteAccount = async () => {
