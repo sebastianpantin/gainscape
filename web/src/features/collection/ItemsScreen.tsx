@@ -63,6 +63,7 @@ import { recallLastSummary } from '../summary/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
 import { CollectionHeading } from './CollectionHeading.tsx';
+import { LuckPanel } from './LuckPanel.tsx';
 
 interface ChallengeStartProps {
   challenge: CatalogChallenge;
@@ -420,6 +421,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
         </p>
       )}
       <LoadoutPanel userId={userId} />
+      {loaded && loaded.dryRolls !== null && <LuckPanel dryRolls={loaded.dryRolls} />}
       {groups.map((group) => (
         <div className="panel stack" key={group.title}>
           <div className="row spread">
