@@ -157,6 +157,7 @@ begin
   insert into public.exercise_notes (user_id, exercise_id, body) values (give_everything.owner, lift, 'Seat 4');
   insert into public.weekly_goals (user_id, effective_from, goal)
   values (give_everything.owner, date_trunc('week', now())::date, 3);
+  insert into public.lift_goals (user_id, exercise_id, target_kg, reps) values (give_everything.owner, lift, 100, 5);
   insert into public.exercises (id, owner_user_id, name, load_type, equipment)
   values (custom_id, give_everything.owner, 'Test custom lift', 'external', 'other');
   insert into public.exercise_skills (exercise_id, skill_id, share_bp) values (custom_id, skill, 10000);

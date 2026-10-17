@@ -25,6 +25,7 @@ const WIPED_TABLES = [
   'exercise_maxes',
   'exercise_notes',
   'item_ledger',
+  'lift_goals',
   'loot_rolls',
   'program_enrollments',
   'quest_completion_xp',

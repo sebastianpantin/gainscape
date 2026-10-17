@@ -55,7 +55,18 @@ const V8_KEYS = [
   ...V7_KEYS.slice(V7_KEYS.indexOf('crafts') + 1),
 ];
 
-const TOP_LEVEL_KEYS_BY_VERSION: Record<number, readonly string[]> = { 6: V6_KEYS, 7: V7_KEYS, 8: V8_KEYS };
+const V9_KEYS = [
+  ...V8_KEYS.slice(0, V8_KEYS.indexOf('weeklyGoals') + 1),
+  'liftGoals',
+  ...V8_KEYS.slice(V8_KEYS.indexOf('weeklyGoals') + 1),
+];
+
+const TOP_LEVEL_KEYS_BY_VERSION: Record<number, readonly string[]> = {
+  6: V6_KEYS,
+  7: V7_KEYS,
+  8: V8_KEYS,
+  9: V9_KEYS,
+};
 
 describe('the data export format', () => {
   it('bumps EXPORT_FORMAT_VERSION whenever the top-level keys change', () => {

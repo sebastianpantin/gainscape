@@ -12,6 +12,7 @@ The Collection tab: personal records per exercise (`/collection`), the per-exerc
 - `CollectionScreen.tsx`: Records tab and the exported `CollectionTabs`. Adding a tab means editing the `links` array there and a route in `App.tsx`.
 - `ItemsScreen.tsx`: inventory, item details, crafting, equip and unequip, Start challenge for scrolls, Show on Train for pets.
 - `ExerciseProgressScreen.tsx`: e1RM and top-set chart, the rep-max table, and the Stalled tag with its tips (`../../lib/progress/plateau-rules.ts`).
+- `LiftGoalSection.tsx` and `LiftGoalForm.tsx`: the Goal panel on the progress screen, shown only when `canHaveLiftGoal` (weighted lifts; no bodyweight-rep, hold or cardio). The Train card is `../workout/LiftGoalsCard.tsx`; both read `liftGoalsQuery` and announce `lift-goals-saved`.
 - `RecordSlots.tsx` and `record-slots.ts` (pure): the rep-max slot grid, shared with `friends/FriendProfileScreen.tsx`. Do not rebuild slots inline.
 - `CollectionHeading.tsx`: the shared h1, named `Collection: <tab>` so route focus announces which tab opened.
 

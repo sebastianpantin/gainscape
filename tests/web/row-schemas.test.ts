@@ -20,6 +20,7 @@ import {
   sessionProgress,
 } from '../../web/src/lib/progress/exercise-progress-rules.ts';
 import { queryRecentSets } from '../../web/src/lib/progress/recovery-rules.ts';
+import { goalRepMaxRowSchema, liftGoalRowSchema } from '../../web/src/lib/progress/lift-goal-rules.ts';
 import { weeklyGoalWeekRowSchema } from '../../web/src/lib/progress/weekly-goal-rules.ts';
 import {
   questCompletionRowSchema,
@@ -234,6 +235,24 @@ const CASES: SchemaCase[] = [
     schema: weeklyGoalWeekRowSchema,
     row: { week_start: '2026-09-28', goal: 3, sessions: 2, is_current: true },
     broken: { is_current: 'yes' },
+  },
+  {
+    name: 'lift goal',
+    schema: liftGoalRowSchema,
+    row: {
+      exercise_id: ID,
+      target_kg: '100.00',
+      reps: 5,
+      target_date: '2026-12-01',
+      exercises: { name: 'Bench', load_type: 'external' },
+    },
+    broken: { reps: '5' },
+  },
+  {
+    name: 'lift goal rep max',
+    schema: goalRepMaxRowSchema,
+    row: { exercise_id: ID, reps: 5, load_kg: '100.00', achieved_at: '2026-10-01T08:00:00Z' },
+    broken: { achieved_at: null },
   },
   {
     name: 'quest',

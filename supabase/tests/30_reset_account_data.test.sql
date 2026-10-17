@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(18);
 
 create function tests.reset_rows_referencing(target uuid)
 returns table (column_ref text, row_count int)
@@ -124,6 +124,7 @@ select lives_ok($$select public.reset_account_data('RESET')$$, 'the owner resets
 reset role;
 
 select is((select count(*)::int from public.sessions where user_id = :'owner'), 0, 'the owner''s sessions are gone');
+select is((select count(*)::int from public.lift_goals where user_id = :'owner'), 0, 'the owner''s lift goals are gone');
 select is(
   (select count(*)::int from private.account_resets),
   0,

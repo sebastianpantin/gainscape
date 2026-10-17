@@ -1,4 +1,4 @@
-export const EXPORT_FORMAT_VERSION = 8;
+export const EXPORT_FORMAT_VERSION = 9;
 
 export const EXPORT_SECTIONS = [
   'account',
@@ -17,6 +17,7 @@ export const EXPORT_SECTIONS = [
   'pinnedExercises',
   'exerciseNotes',
   'weeklyGoals',
+  'liftGoals',
   'customExercises',
   'programs',
   'programTemplates',

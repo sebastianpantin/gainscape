@@ -26,6 +26,7 @@ export const USER_TABLES: { table: string; column: string }[] = [
   { table: 'pinned_exercises', column: 'user_id' },
   { table: 'exercise_notes', column: 'user_id' },
   { table: 'weekly_goals', column: 'user_id' },
+  { table: 'lift_goals', column: 'user_id' },
   { table: 'exercises', column: 'owner_user_id' },
   { table: 'programs', column: 'owner_user_id' },
   { table: 'deleted_sessions', column: 'user_id' },
@@ -128,6 +129,13 @@ export async function giveUserEverything(user: TestUser): Promise<void> {
   expect(note.error).toBeNull();
   const goal = await user.client.rpc('set_weekly_session_goal', { goal: 3 });
   expect(goal.error).toBeNull();
+  const liftGoal = await user.client.rpc('save_lift_goal', {
+    exercise_id: benchId,
+    target_kg: 100,
+    reps: 5,
+    target_date: '2026-12-01',
+  });
+  expect(liftGoal.error).toBeNull();
   await createCustomExercise(user, { skillKey: 'shoulders' });
   const [template] = await db`select id from public.programs where owner_user_id is null limit 1`;
   const copy = await user.client.rpc('copy_program', { source_program_id: template.id, new_program_id: randomUUID() });

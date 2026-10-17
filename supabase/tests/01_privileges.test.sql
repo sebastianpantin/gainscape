@@ -41,6 +41,7 @@ select results_eq(
         and c.relname not in ('events', 'reactions', 'friendships', 'drop_luck')
       union all
       values ('exercise_notes', 'INSERT'), ('exercise_notes', 'DELETE'),
+             ('lift_goals', 'INSERT'), ('lift_goals', 'DELETE'),
              ('pinned_exercises', 'INSERT'), ('pinned_exercises', 'DELETE')
     ) t
     order by 1, 2, 3$$,
@@ -54,6 +55,9 @@ select results_eq(
     order by 1, 2$$,
   $$values
     ('exercise_notes', 'body'),
+    ('lift_goals', 'reps'),
+    ('lift_goals', 'target_date'),
+    ('lift_goals', 'target_kg'),
     ('pinned_exercises', 'position'),
     ('profile_private', 'birth_year'),
     ('profile_private', 'bodyweight_kg'),

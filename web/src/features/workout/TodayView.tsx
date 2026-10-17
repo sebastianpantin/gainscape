@@ -9,6 +9,7 @@ import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
 import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
 import { LevelStat } from './LevelStat.tsx';
+import { LiftGoalsCard } from './LiftGoalsCard.tsx';
 import { PetCompanion } from './PetCompanion.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { ProgramSummary } from './ProgramSummary.tsx';
@@ -84,6 +85,7 @@ export function TodayView({
         <PetCompanion userId={userId} />
       </div>
       <WeeklyGoalCard />
+      <LiftGoalsCard userId={userId} unit={unit} />
       <FriendActivityStrip userId={userId} />
       <ProgramSummary userId={userId} program={program} />
       <ProgramToday

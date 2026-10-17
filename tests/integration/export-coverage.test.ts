@@ -19,6 +19,7 @@ const SECTION_OF_USER_TABLE: Record<string, string> = {
   exercises: 'customExercises',
   friendships: 'friendships',
   item_ledger: 'itemLedger',
+  lift_goals: 'liftGoals',
   loot_rolls: 'lootRolls',
   pinned_exercises: 'pinnedExercises',
   profile_private: 'privateProfile',
