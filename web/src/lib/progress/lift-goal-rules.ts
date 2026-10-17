@@ -1,27 +1,35 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { epley } from '@domain/strength.ts';
 import { MAX_SET_LOAD_KG, measuresRepsCapacity, REP_MAX_SLOT_COUNT } from '@domain/types.ts';
 import { z } from 'zod';
-import { type Exercise, LOAD_TYPES, type LoadType } from '../exercises/catalog-rules.ts';
+import { LOAD_TYPES, type LoadType, MODALITIES, type Modality } from '../exercises/catalog-rules.ts';
 import { formatLoad } from '../format.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
 import { numericColumn, parsedRows } from '../rows.ts';
 import { highestWeightInUnit, shownWeight, steppedWeight, unitToKg } from '../units.ts';
-import type { RepMaxEntry } from './exercise-progress-rules.ts';
+import { liftE1rmKg, type RepMaxEntry } from './exercise-progress-rules.ts';
 
-export const LIFT_GOAL_COLUMNS = 'exercise_id, target_kg, reps, target_date, exercises(name, load_type)';
-export const GOAL_REP_MAX_COLUMNS = 'exercise_id, reps, load_kg, achieved_at';
+export const LIFT_GOAL_COLUMNS =
+  'exercise_id, target_kg, reps, target_date, exercises(name, modality, load_type, measure, archived_at)';
+export const GOAL_REP_MAX_COLUMNS = 'exercise_id, reps, load_kg';
 
 export const HIGHEST_GOAL_REPS = REP_MAX_SLOT_COUNT;
 const NEW_GOAL_REPS = 5;
 const MS_PER_DAY = 86_400_000;
+const UNACHIEVED_PROGRESS_CAP = 0.99;
+export const GOAL_REACHED_TEXT = 'Goal reached';
 
 export const liftGoalRowSchema = z.object({
   exercise_id: z.string(),
   target_kg: numericColumn,
   reps: z.number(),
   target_date: z.string().nullable(),
-  exercises: z.object({ name: z.string(), load_type: z.enum(LOAD_TYPES).nullable() }),
+  exercises: z.object({
+    name: z.string(),
+    modality: z.enum(MODALITIES),
+    load_type: z.enum(LOAD_TYPES).nullable(),
+    measure: z.enum(['reps', 'time', 'distance']).optional(),
+    archived_at: z.string().nullable(),
+  }),
 });
 
 export type LiftGoalRow = z.infer<typeof liftGoalRowSchema>;
@@ -30,7 +38,6 @@ export const goalRepMaxRowSchema = z.object({
   exercise_id: z.string(),
   reps: z.number(),
   load_kg: numericColumn,
-  achieved_at: z.string(),
 });
 
 export type GoalRepMaxRow = z.infer<typeof goalRepMaxRowSchema>;
@@ -42,11 +49,18 @@ export interface LiftGoal {
   targetKg: number;
   reps: number;
   targetDate: string | null;
+  archived: boolean;
+  trackable: boolean;
+}
+
+export interface LiftGoalsLoad {
+  goals: LiftGoal[];
+  repMaxes: GoalRepMaxRow[];
 }
 
 export interface LiftGoalStatus {
   goal: LiftGoal;
-  achievedAt: string | null;
+  achieved: boolean;
   bestE1rmKg: number | null;
   targetE1rmKg: number;
   fraction: number;
@@ -65,56 +79,83 @@ export interface LiftGoalInput {
   targetDate: string | null;
 }
 
+interface GoalExercise {
+  modality: Modality;
+  loadType?: LoadType;
+  measure?: string;
+}
+
+export function canHaveLiftGoal({ modality, loadType, measure }: GoalExercise): boolean {
+  return (
+    modality === 'lift' &&
+    (measure === undefined || measure === 'reps') &&
+    loadType !== undefined &&
+    !measuresRepsCapacity(loadType)
+  );
+}
+
 export function toLiftGoal(row: LiftGoalRow): LiftGoal {
+  const loadType = row.exercises.load_type ?? 'external';
   return {
     exerciseId: row.exercise_id,
     exerciseName: row.exercises.name,
-    loadType: row.exercises.load_type ?? 'external',
+    loadType,
     targetKg: Number(row.target_kg),
     reps: row.reps,
     targetDate: row.target_date,
+    archived: row.exercises.archived_at !== null,
+    trackable: canHaveLiftGoal({ modality: row.exercises.modality, loadType, measure: row.exercises.measure }),
   };
 }
 
-export function canHaveLiftGoal(exercise: Exercise): boolean {
-  return exercise.modality === 'lift' && exercise.measure === undefined && !measuresRepsCapacity(exercise.loadType);
-}
-
-export function liftGoalStatus(goal: LiftGoal, repMaxes: readonly GoalRepMaxRow[]): LiftGoalStatus {
+export function liftGoalStatus(
+  goal: LiftGoal,
+  repMaxes: readonly GoalRepMaxRow[],
+  bodyweightKg: number | null,
+): LiftGoalStatus {
+  const countedBodyweightKg = goal.loadType === 'bodyweight_plus' ? (bodyweightKg ?? 0) : 0;
+  const estimate = (loadKg: number, reps: number) =>
+    liftE1rmKg(loadKg + countedBodyweightKg, countedBodyweightKg, reps);
   const records = repMaxes
     .filter((row) => row.exercise_id === goal.exerciseId)
-    .map((row) => ({ reps: row.reps, loadKg: Number(row.load_kg), achievedAt: row.achieved_at }));
-  const achievedAt =
-    records
-      .filter((record) => record.reps >= goal.reps && record.loadKg >= goal.targetKg)
-      .map((record) => record.achievedAt)
-      .sort((a, b) => Date.parse(a) - Date.parse(b))[0] ?? null;
-  const estimates = records.filter((record) => record.loadKg > 0).map((record) => epley(record.loadKg, record.reps));
+    .map((row) => ({ reps: row.reps, loadKg: Number(row.load_kg) }));
+  const achieved = records.some((record) => record.reps >= goal.reps && record.loadKg >= goal.targetKg);
+  const estimates = records.flatMap((record) => estimate(record.loadKg, record.reps) ?? []);
   const bestE1rmKg = estimates.length > 0 ? Math.max(...estimates) : null;
-  const targetE1rmKg = epley(goal.targetKg, goal.reps);
-  const fraction = achievedAt !== null ? 1 : Math.min(1, (bestE1rmKg ?? 0) / targetE1rmKg);
-  return { goal, achievedAt, bestE1rmKg, targetE1rmKg, fraction };
+  const targetE1rmKg = estimate(goal.targetKg, goal.reps) ?? 0;
+  const fraction = achieved ? 1 : Math.min(UNACHIEVED_PROGRESS_CAP, (bestE1rmKg ?? 0) / targetE1rmKg);
+  return { goal, achieved, bestE1rmKg, targetE1rmKg, fraction };
 }
 
-export function liftGoalStatuses(goals: readonly LiftGoal[], repMaxes: readonly GoalRepMaxRow[]): LiftGoalStatus[] {
+export function liftGoalStatuses(
+  goals: readonly LiftGoal[],
+  repMaxes: readonly GoalRepMaxRow[],
+  bodyweightKg: number | null,
+): LiftGoalStatus[] {
   return goals
-    .map((goal) => liftGoalStatus(goal, repMaxes))
-    .sort(
-      (a, b) =>
-        Number(a.achievedAt !== null) - Number(b.achievedAt !== null) ||
-        a.goal.exerciseName.localeCompare(b.goal.exerciseName),
-    );
+    .map((goal) => liftGoalStatus(goal, repMaxes, bodyweightKg))
+    .sort((a, b) => Number(a.achieved) - Number(b.achieved) || a.goal.exerciseName.localeCompare(b.goal.exerciseName));
+}
+
+export function goalsForToday(statuses: readonly LiftGoalStatus[]): LiftGoalStatus[] {
+  return statuses.filter(({ goal }) => goal.trackable && !goal.archived);
+}
+
+export function liftGoalHint(status: LiftGoalStatus, unit: UnitPref): string | null {
+  if (status.achieved || status.bestE1rmKg === null || status.bestE1rmKg < status.targetE1rmKg) return null;
+  const { goal } = status;
+  return `Hit ${goal.reps} reps at ${formatLoad(goal.targetKg, goal.loadType, unit)} to reach it`;
 }
 
 export async function queryLiftGoals(
   client: SupabaseClient,
   userId: string,
   signal: AbortSignal,
-): Promise<LiftGoalStatus[]> {
+): Promise<LiftGoalsLoad> {
   const goals = await client.from('lift_goals').select(LIFT_GOAL_COLUMNS).eq('user_id', userId).abortSignal(signal);
   if (goals.error) throw goals.error;
   const parsedGoals = parsedRows(liftGoalRowSchema, goals.data).map(toLiftGoal);
-  if (parsedGoals.length === 0) return [];
+  if (parsedGoals.length === 0) return { goals: [], repMaxes: [] };
   const repMaxes = await client
     .from('rep_maxes')
     .select(GOAL_REP_MAX_COLUMNS)
@@ -125,7 +166,7 @@ export async function queryLiftGoals(
     )
     .abortSignal(signal);
   if (repMaxes.error) throw repMaxes.error;
-  return liftGoalStatuses(parsedGoals, parsedRows(goalRepMaxRowSchema, repMaxes.data));
+  return { goals: parsedGoals, repMaxes: parsedRows(goalRepMaxRowSchema, repMaxes.data) };
 }
 
 export async function saveLiftGoalWith(client: SupabaseClient, input: LiftGoalInput): Promise<void> {
@@ -174,12 +215,18 @@ export function liftGoalProgressText(status: LiftGoalStatus, unit: UnitPref): st
   return `Best e1RM ${formatLoad(status.bestE1rmKg, status.goal.loadType, unit)} of ${target}`;
 }
 
-export function achievedText(achievedAt: string): string {
-  return `Achieved ${new Date(achievedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+export function todayLocalDate(now: Date, timeZone?: string): string {
+  return now.toLocaleDateString('en-CA', { timeZone });
 }
 
-export function todayLocalDate(now: Date): string {
-  return now.toLocaleDateString('en-CA');
+export function earliestTargetDate(savedDate: string, today: string): string {
+  return savedDate !== '' && savedDate < today ? savedDate : today;
+}
+
+export function goalWeightLabels(loadType: LoadType, unit: UnitPref): { label: string; accessibleName: string } {
+  return loadType === 'bodyweight_plus'
+    ? { label: `Added weight (+${unit})`, accessibleName: `Goal added weight in ${unit}` }
+    : { label: `Weight (${unit})`, accessibleName: `Goal weight in ${unit}` };
 }
 
 export function highestGoalWeight(unit: UnitPref): number {

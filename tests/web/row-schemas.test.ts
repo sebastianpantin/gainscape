@@ -244,15 +244,15 @@ const CASES: SchemaCase[] = [
       target_kg: '100.00',
       reps: 5,
       target_date: '2026-12-01',
-      exercises: { name: 'Bench', load_type: 'external' },
+      exercises: { name: 'Bench', modality: 'lift', load_type: 'external', measure: 'reps', archived_at: null },
     },
     broken: { reps: '5' },
   },
   {
     name: 'lift goal rep max',
     schema: goalRepMaxRowSchema,
-    row: { exercise_id: ID, reps: 5, load_kg: '100.00', achieved_at: '2026-10-01T08:00:00Z' },
-    broken: { achieved_at: null },
+    row: { exercise_id: ID, reps: 5, load_kg: '100.00' },
+    broken: { reps: null },
   },
   {
     name: 'quest',

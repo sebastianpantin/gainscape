@@ -3,15 +3,20 @@ import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   canHaveLiftGoal,
   deadlineText,
+  earliestTargetDate,
+  goalsForToday,
+  goalWeightLabels,
   type GoalRepMaxRow,
   type LiftGoal,
   liftGoalDraft,
+  liftGoalHint,
   liftGoalInput,
   liftGoalProgressText,
   liftGoalStatus,
   liftGoalStatuses,
   liftGoalTargetText,
   type LiftGoalRow,
+  todayLocalDate,
   toLiftGoal,
 } from '../../web/src/lib/progress/lift-goal-rules.ts';
 
@@ -25,10 +30,12 @@ const benchGoal: LiftGoal = {
   targetKg: 100,
   reps: 5,
   targetDate: '2026-12-01',
+  archived: false,
+  trackable: true,
 };
 
-function repMax(reps: number, loadKg: number, achievedAt: string, exerciseId = BENCH): GoalRepMaxRow {
-  return { exercise_id: exerciseId, reps, load_kg: loadKg, achieved_at: achievedAt };
+function repMax(reps: number, loadKg: number, exerciseId = BENCH): GoalRepMaxRow {
+  return { exercise_id: exerciseId, reps, load_kg: loadKg };
 }
 
 function lift(overrides: Partial<Extract<Exercise, { modality: 'lift' }>>): Exercise {
@@ -53,82 +60,118 @@ describe('lift goal rows', () => {
       target_kg: '102.06',
       reps: 3,
       target_date: null,
-      exercises: { name: 'Bench Press', load_type: 'bodyweight_plus' },
+      exercises: { name: 'Dip', modality: 'lift', load_type: 'bodyweight_plus', measure: 'reps', archived_at: null },
     };
     expect(toLiftGoal(row)).toEqual({
       exerciseId: BENCH,
-      exerciseName: 'Bench Press',
+      exerciseName: 'Dip',
       loadType: 'bodyweight_plus',
       targetKg: 102.06,
       reps: 3,
       targetDate: null,
+      archived: false,
+      trackable: true,
+    });
+  });
+
+  it('marks archived exercises and exercises that cannot have a goal', () => {
+    const exercises = {
+      name: 'Plank',
+      modality: 'lift',
+      load_type: 'bodyweight',
+      measure: 'time',
+      archived_at: '2026-10-01',
+    } as const;
+    expect(toLiftGoal({ exercise_id: BENCH, target_kg: 10, reps: 1, target_date: null, exercises })).toMatchObject({
+      archived: true,
+      trackable: false,
     });
   });
 });
 
 describe('lift goal achievement', () => {
   it('is not achieved without any record', () => {
-    expect(liftGoalStatus(benchGoal, [])).toEqual({
+    expect(liftGoalStatus(benchGoal, [], null)).toEqual({
       goal: benchGoal,
-      achievedAt: null,
+      achieved: false,
       bestE1rmKg: null,
       targetE1rmKg: 113.33,
       fraction: 0,
     });
   });
 
-  it('is achieved by a record with at least the goal reps and load, dated by the earliest such record', () => {
-    const status = liftGoalStatus(benchGoal, [
-      repMax(5, 100, '2026-10-10T12:00:00Z'),
-      repMax(6, 100, '2026-10-03T12:00:00Z'),
-      repMax(8, 80, '2026-09-01T12:00:00Z'),
-    ]);
-    expect(status.achievedAt).toBe('2026-10-03T12:00:00Z');
+  it('is achieved by a record with at least the goal reps and load', () => {
+    const status = liftGoalStatus(benchGoal, [repMax(6, 100), repMax(8, 80)], null);
+    expect(status.achieved).toBe(true);
     expect(status.fraction).toBe(1);
   });
 
   it('is not achieved by fewer reps at a heavier load or by the goal reps at a lighter load', () => {
-    const status = liftGoalStatus(benchGoal, [
-      repMax(3, 120, '2026-10-01T12:00:00Z'),
-      repMax(5, 99.5, '2026-10-02T12:00:00Z'),
-    ]);
-    expect(status.achievedAt).toBeNull();
+    expect(liftGoalStatus(benchGoal, [repMax(3, 120), repMax(5, 99.5)], null).achieved).toBe(false);
   });
 
   it('ignores records of other exercises', () => {
-    expect(liftGoalStatus(benchGoal, [repMax(5, 140, '2026-10-01T12:00:00Z', SQUAT)]).achievedAt).toBeNull();
+    expect(liftGoalStatus(benchGoal, [repMax(5, 140, SQUAT)], null).achieved).toBe(false);
   });
 });
 
 describe('lift goal progress', () => {
   it('compares the best estimated 1RM across records with the target estimated 1RM', () => {
-    const status = liftGoalStatus(benchGoal, [
-      repMax(5, 90, '2026-10-01T12:00:00Z'),
-      repMax(8, 80, '2026-10-01T12:00:00Z'),
-    ]);
+    const status = liftGoalStatus(benchGoal, [repMax(5, 90), repMax(8, 80)], null);
     expect(status.bestE1rmKg).toBe(102);
     expect(status.targetE1rmKg).toBe(113.33);
     expect(status.fraction).toBeCloseTo(102 / 113.33, 6);
   });
 
-  it('caps progress at 100%', () => {
-    const status = liftGoalStatus(benchGoal, [repMax(1, 130, '2026-10-01T12:00:00Z')]);
-    expect(status.bestE1rmKg).toBe(130);
-    expect(status.fraction).toBe(1);
+  it('estimates a weighted bodyweight lift on bodyweight plus added weight, like the progress chart', () => {
+    const dipGoal: LiftGoal = { ...benchGoal, loadType: 'bodyweight_plus', targetKg: 20, reps: 5 };
+    const status = liftGoalStatus(dipGoal, [repMax(8, 10)], 80);
+    expect(status.targetE1rmKg).toBe(33.33);
+    expect(status.bestE1rmKg).toBe(31);
+    expect(status.fraction).toBeCloseTo(31 / 33.33, 6);
+  });
+
+  it('keeps an unachieved goal below 100% even when its estimate passes the target', () => {
+    const status = liftGoalStatus(benchGoal, [repMax(2, 112)], null);
+    expect(status.bestE1rmKg).toBe(115.73);
+    expect(status.achieved).toBe(false);
+    expect(status.fraction).toBe(0.99);
+    expect(Math.round(status.fraction * 100)).toBeLessThan(100);
+    expect(liftGoalHint(status, 'kg')).toBe('Hit 5 reps at 100 kg to reach it');
+  });
+
+  it('gives no hint while the estimate is below the target or once the goal is reached', () => {
+    expect(liftGoalHint(liftGoalStatus(benchGoal, [repMax(5, 90)], null), 'kg')).toBeNull();
+    expect(liftGoalHint(liftGoalStatus(benchGoal, [repMax(5, 100)], null), 'kg')).toBeNull();
   });
 
   it('lists active goals first, then achieved ones, each by exercise name', () => {
     const squatGoal = { ...benchGoal, exerciseId: SQUAT, exerciseName: 'Back Squat' };
     const deadliftGoal = { ...benchGoal, exerciseId: 'deadlift-id', exerciseName: 'Deadlift' };
-    const statuses = liftGoalStatuses(
-      [deadliftGoal, benchGoal, squatGoal],
-      [repMax(5, 100, '2026-10-01T12:00:00Z', SQUAT)],
-    );
+    const statuses = liftGoalStatuses([deadliftGoal, benchGoal, squatGoal], [repMax(5, 100, SQUAT)], null);
     expect(statuses.map((status) => status.goal.exerciseName)).toEqual(['Bench Press', 'Deadlift', 'Back Squat']);
+  });
+
+  it('leaves goals on archived or untrackable exercises off Today', () => {
+    const archived = { ...benchGoal, exerciseId: 'old', exerciseName: 'Old lift', archived: true };
+    const plank = { ...benchGoal, exerciseId: 'plank', exerciseName: 'Plank', trackable: false };
+    const statuses = liftGoalStatuses([archived, plank, benchGoal], [], null);
+    expect(goalsForToday(statuses).map((status) => status.goal.exerciseName)).toEqual(['Bench Press']);
   });
 });
 
 describe('lift goal deadline', () => {
+  it('reads today in the profile time zone', () => {
+    expect(todayLocalDate(new Date('2026-10-17T23:30:00Z'), 'Asia/Tokyo')).toBe('2026-10-18');
+    expect(todayLocalDate(new Date('2026-10-17T23:30:00Z'), 'America/Los_Angeles')).toBe('2026-10-17');
+  });
+
+  it('lets a new date start today but keeps an earlier saved date valid', () => {
+    expect(earliestTargetDate('', '2026-10-17')).toBe('2026-10-17');
+    expect(earliestTargetDate('2026-12-01', '2026-10-17')).toBe('2026-10-17');
+    expect(earliestTargetDate('2026-10-01', '2026-10-17')).toBe('2026-10-01');
+  });
+
   it('has no deadline text without a date', () => {
     expect(deadlineText(null, '2026-10-17')).toBeNull();
   });
@@ -159,16 +202,24 @@ describe('lift goal text', () => {
 
 describe('lift goal progress text', () => {
   it('compares the best estimated 1RM with the target in the user unit', () => {
-    const status = liftGoalStatus(benchGoal, [repMax(5, 60, '2026-10-01T12:00:00Z')]);
+    const status = liftGoalStatus(benchGoal, [repMax(5, 60)], null);
     expect(liftGoalProgressText(status, 'kg')).toBe('Best e1RM 68 kg of 113.33 kg');
   });
 
   it('says when there is no estimate yet', () => {
-    expect(liftGoalProgressText(liftGoalStatus(benchGoal, []), 'kg')).toBe('No e1RM yet for 113.33 kg');
+    expect(liftGoalProgressText(liftGoalStatus(benchGoal, [], null), 'kg')).toBe('No e1RM yet for 113.33 kg');
   });
 });
 
 describe('lift goal form', () => {
+  it('labels the weight like the set row', () => {
+    expect(goalWeightLabels('external', 'kg')).toEqual({ label: 'Weight (kg)', accessibleName: 'Goal weight in kg' });
+    expect(goalWeightLabels('bodyweight_plus', 'lb')).toEqual({
+      label: 'Added weight (+lb)',
+      accessibleName: 'Goal added weight in lb',
+    });
+  });
+
   it('starts a new goal one step above the current 5 rep max', () => {
     expect(liftGoalDraft(null, [{ reps: 5, loadKg: 60, localDate: '2026-10-01' }], 'kg')).toEqual({
       weight: 62.5,
@@ -203,6 +254,17 @@ describe('lift goal form', () => {
   });
 });
 
+const running: Exercise = {
+  id: 'run',
+  name: 'Running',
+  equipment: 'none',
+  custom: false,
+  archived: false,
+  skillShares: [],
+  modality: 'cardio',
+  activity: { paceUnit: 'per_km', referencePaceSPerKm: null, maxEffort: 'max', tracksDistance: true, shares: [] },
+};
+
 describe('lift goal eligibility', () => {
   it('allows weighted lifts', () => {
     expect(canHaveLiftGoal(lift({ loadType: 'external' }))).toBe(true);
@@ -213,23 +275,6 @@ describe('lift goal eligibility', () => {
     expect(canHaveLiftGoal(lift({ loadType: 'bodyweight' }))).toBe(false);
     expect(canHaveLiftGoal(lift({ measure: 'time' }))).toBe(false);
     expect(canHaveLiftGoal(lift({ measure: 'distance' }))).toBe(false);
-    expect(
-      canHaveLiftGoal({
-        id: 'run',
-        name: 'Running',
-        equipment: 'none',
-        custom: false,
-        archived: false,
-        skillShares: [],
-        modality: 'cardio',
-        activity: {
-          paceUnit: 'per_km',
-          referencePaceSPerKm: null,
-          maxEffort: 'max',
-          tracksDistance: true,
-          shares: [],
-        },
-      }),
-    ).toBe(false);
+    expect(canHaveLiftGoal(running)).toBe(false);
   });
 });

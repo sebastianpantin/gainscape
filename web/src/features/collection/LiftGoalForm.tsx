@@ -1,19 +1,29 @@
 import { type FormEvent, useState } from 'react';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
-import { HIGHEST_GOAL_REPS, highestGoalWeight, type LiftGoalDraft } from '../../lib/progress/lift-goal-rules.ts';
+import { type LoadType } from '../../lib/exercises/catalog-rules.ts';
+import {
+  earliestTargetDate,
+  goalWeightLabels,
+  HIGHEST_GOAL_REPS,
+  highestGoalWeight,
+  type LiftGoalDraft,
+} from '../../lib/progress/lift-goal-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile-rules.ts';
 import { LOWEST_REPS, WEIGHT_INPUT_STEP, WEIGHT_STEPPER_STEP } from '../../lib/units.ts';
 
 interface LiftGoalFormProps {
   initial: LiftGoalDraft;
+  loadType: LoadType;
   unit: UnitPref;
+  today: string;
   busy: boolean;
   onSave: (draft: LiftGoalDraft) => void;
   onCancel: () => void;
 }
 
-export function LiftGoalForm({ initial, unit, busy, onSave, onCancel }: LiftGoalFormProps) {
+export function LiftGoalForm({ initial, loadType, unit, today, busy, onSave, onCancel }: LiftGoalFormProps) {
   const [draft, setDraft] = useState(initial);
+  const weightLabels = goalWeightLabels(loadType, unit);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -24,8 +34,8 @@ export function LiftGoalForm({ initial, unit, busy, onSave, onCancel }: LiftGoal
     <form className="stack" onSubmit={submit}>
       <div className="row wrap">
         <NumberTextField
-          label={`Weight (${unit})`}
-          accessibleName={`Goal weight in ${unit}`}
+          label={weightLabels.label}
+          accessibleName={weightLabels.accessibleName}
           value={draft.weight}
           lowest={WEIGHT_INPUT_STEP}
           highest={highestGoalWeight(unit)}
@@ -47,6 +57,7 @@ export function LiftGoalForm({ initial, unit, busy, onSave, onCancel }: LiftGoal
         Target date (optional)
         <input
           type="date"
+          min={earliestTargetDate(initial.targetDate, today)}
           value={draft.targetDate}
           onChange={(event) => setDraft({ ...draft, targetDate: event.target.value })}
         />

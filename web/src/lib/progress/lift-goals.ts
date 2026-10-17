@@ -3,13 +3,13 @@ import { withFriendlyRateLimit } from '../platform/rate-limit.ts';
 import { supabase } from '../platform/supabase.ts';
 import {
   type LiftGoalInput,
-  type LiftGoalStatus,
+  type LiftGoalsLoad,
   queryLiftGoals,
   removeLiftGoalWith,
   saveLiftGoalWith,
 } from './lift-goal-rules.ts';
 
-export function fetchLiftGoals(userId: string, signal: AbortSignal): Promise<LiftGoalStatus[]> {
+export function fetchLiftGoals(userId: string, signal: AbortSignal): Promise<LiftGoalsLoad> {
   failFastWhenOffline();
   return queryLiftGoals(supabase, userId, signal);
 }

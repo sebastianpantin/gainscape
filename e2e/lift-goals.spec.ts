@@ -5,14 +5,13 @@ import { logBench, logExercise, openTab, register, uniqueUsername } from './supp
 
 const BENCH = 'Barbell Bench Press';
 
-function localDateInDays(page: Page, days: number): Promise<{ iso: string; short: string; long: string }> {
+function localDateInDays(page: Page, days: number): Promise<{ iso: string; short: string }> {
   return page.evaluate((offset) => {
     const day = new Date();
     day.setDate(day.getDate() + offset);
     return {
       iso: day.toLocaleDateString('en-CA'),
       short: day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-      long: day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
     };
   }, days);
 }
@@ -75,15 +74,14 @@ test('a lift goal is set from the progress screen, shown on Train, edited until 
   await goal.getByLabel('Target date (optional)').fill('');
   await saveGoal(page, 60, 5);
   await expect(goal.getByText('60 kg × 5', { exact: true })).toBeVisible();
-  const today = await localDateInDays(page, 0);
-  await expect(goal.getByText(`Achieved ${today.long}`, { exact: true })).toBeVisible();
+  await expect(goal.getByText('Goal reached', { exact: true })).toBeVisible();
   await expect(goal.getByRole('progressbar', { name: `${BENCH} goal progress` })).toHaveAttribute(
     'aria-valuenow',
     '100',
   );
 
   await openTab(page, 'Train');
-  await expect(goals.getByText(`Achieved ${today.long}`, { exact: true })).toBeVisible();
+  await expect(goals.getByText('Goal reached', { exact: true })).toBeVisible();
 
   await openBenchProgress(page);
   await goal.getByRole('button', { name: 'Remove goal' }).click();

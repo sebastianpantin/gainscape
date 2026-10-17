@@ -1,7 +1,7 @@
 create table public.lift_goals (
   user_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
   exercise_id uuid not null references public.exercises (id) on delete cascade,
-  target_kg numeric(6, 2) not null constraint lift_goal_target_above_zero check (target_kg > 0),
+  target_kg numeric(6, 2) not null constraint lift_goal_target_within_set_load check (target_kg > 0 and target_kg <= 2000),
   reps int not null constraint lift_goal_reps_one_to_ten check (reps between 1 and 10),
   target_date date,
   created_at timestamptz not null default now(),

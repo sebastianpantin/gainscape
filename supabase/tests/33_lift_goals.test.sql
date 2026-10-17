@@ -1,11 +1,12 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(32);
 
 select tests.create_user('goal_alpha') as a \gset
 select tests.create_user('goal_bravo') as b \gset
 select id as bench from public.exercises where key = 'barbell_bench_press' \gset
 select id as squat from public.exercises where key = 'back_squat' \gset
+select id as deadlift from public.exercises where key = 'deadlift' \gset
 select gen_random_uuid() as custom_b \gset
 select gen_random_uuid() as archived_a \gset
 insert into public.exercises (id, owner_user_id, name, load_type, equipment)
@@ -91,6 +92,14 @@ select throws_ok(
   '23514', null, 'a goal weight must be above zero'
 );
 select throws_ok(
+  format('select public.save_lift_goal(%L, 2000.01, 1, null)', :'squat'),
+  '23514', null, 'a goal weight is at most the 2000 kg set load cap'
+);
+select lives_ok(
+  format('select public.save_lift_goal(%L, 2000, 1, null)', :'deadlift'),
+  'a goal weight of exactly 2000 kg is saved'
+);
+select throws_ok(
   format('select public.save_lift_goal(%L, 100, 11, null)', :'squat'),
   '23514', null, 'a goal is for 1 to 10 reps'
 );
@@ -130,13 +139,13 @@ reset role;
 
 select is(
   (select count(*)::int from public.lift_goals where user_id = :'a' and target_kg > 1),
-  2,
+  3,
   'the owner''s goals survive the other user''s edit and delete'
 );
 
 select tests.authenticate_as(:'a');
 select lives_ok(
-  format('delete from public.lift_goals where exercise_id = %L', :'squat'),
+  format('delete from public.lift_goals where exercise_id in (%L, %L)', :'squat', :'deadlift'),
   'the owner removes a goal'
 );
 reset role;

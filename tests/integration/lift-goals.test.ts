@@ -1,5 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { queryLiftGoals, removeLiftGoalWith, saveLiftGoalWith } from '../../web/src/lib/progress/lift-goal-rules.ts';
+import {
+  liftGoalStatuses,
+  queryLiftGoals,
+  removeLiftGoalWith,
+  saveLiftGoalWith,
+} from '../../web/src/lib/progress/lift-goal-rules.ts';
 import { logOneSession } from './account-support.ts';
 import { builtInExerciseId, createTestUser, db, type TestUser } from './local-stack.ts';
 
@@ -24,7 +29,8 @@ describe('lift goals', () => {
     await saveLiftGoalWith(owner.client, { exerciseId: squatId, targetKg: 140, reps: 5, targetDate: '2026-12-01' });
     await saveLiftGoalWith(bystander.client, { exerciseId: squatId, targetKg: 60, reps: 1, targetDate: null });
 
-    const statuses = await queryLiftGoals(owner.client, owner.id, AbortSignal.timeout(10_000));
+    const { goals, repMaxes } = await queryLiftGoals(owner.client, owner.id, AbortSignal.timeout(10_000));
+    const statuses = liftGoalStatuses(goals, repMaxes, null);
 
     expect(statuses.map(({ goal }) => goal)).toEqual([
       {
@@ -34,6 +40,8 @@ describe('lift goals', () => {
         targetKg: 140,
         reps: 5,
         targetDate: '2026-12-01',
+        archived: false,
+        trackable: true,
       },
       {
         exerciseId: benchId,
@@ -42,19 +50,21 @@ describe('lift goals', () => {
         targetKg: 80,
         reps: 8,
         targetDate: null,
+        archived: false,
+        trackable: true,
       },
     ]);
-    expect(statuses[0]).toMatchObject({ achievedAt: null, bestE1rmKg: null, fraction: 0 });
-    expect(statuses[1]).toMatchObject({ achievedAt: expect.any(String), bestE1rmKg: 98.67, fraction: 1 });
+    expect(statuses[0]).toMatchObject({ achieved: false, bestE1rmKg: null, fraction: 0 });
+    expect(statuses[1]).toMatchObject({ achieved: true, bestE1rmKg: 98.67, fraction: 1 });
   });
 
   it('edits a goal in place and removes it', async () => {
     await saveLiftGoalWith(owner.client, { exerciseId: benchId, targetKg: 90, reps: 5, targetDate: null });
-    let statuses = await queryLiftGoals(owner.client, owner.id, AbortSignal.timeout(10_000));
-    expect(statuses.filter(({ goal }) => goal.exerciseId === benchId).map(({ goal }) => goal.targetKg)).toEqual([90]);
+    let { goals } = await queryLiftGoals(owner.client, owner.id, AbortSignal.timeout(10_000));
+    expect(goals.filter((goal) => goal.exerciseId === benchId).map((goal) => goal.targetKg)).toEqual([90]);
 
     await removeLiftGoalWith(owner.client, benchId);
-    statuses = await queryLiftGoals(owner.client, owner.id, AbortSignal.timeout(10_000));
-    expect(statuses.map(({ goal }) => goal.exerciseId)).toEqual([squatId]);
+    ({ goals } = await queryLiftGoals(owner.client, owner.id, AbortSignal.timeout(10_000)));
+    expect(goals.map((goal) => goal.exerciseId)).toEqual([squatId]);
   });
 });
