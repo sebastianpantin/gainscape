@@ -1,10 +1,12 @@
 import { chance, DEFAULT_LOOT } from '@domain/index.ts';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { formatCount } from '../format.ts';
+import { parsedRows } from '../rows.ts';
 
-export const REGULAR_DROP_TABLE_KEY = 'regular';
+const REGULAR_DROP_TABLE_KEY = 'regular';
 
-export const DROP_LUCK_COLUMNS = 'dry_rolls, drop_tables!inner(key)';
+const DROP_LUCK_COLUMNS = 'dry_rolls, drop_tables!inner(key)';
 
 export const dropLuckRowSchema = z.object({ dry_rolls: z.number() });
 
@@ -12,6 +14,16 @@ export type DropLuckRow = z.infer<typeof dropLuckRowSchema>;
 
 export function dryRollsOf(rows: readonly DropLuckRow[]): number {
   return rows[0]?.dry_rolls ?? 0;
+}
+
+export async function queryDryRolls(client: SupabaseClient, userId: string): Promise<number> {
+  const { data, error } = await client
+    .from('drop_luck')
+    .select(DROP_LUCK_COLUMNS)
+    .eq('user_id', userId)
+    .eq('drop_tables.key', REGULAR_DROP_TABLE_KEY);
+  if (error) throw error;
+  return dryRollsOf(parsedRows(dropLuckRowSchema, data));
 }
 
 export interface LuckView {

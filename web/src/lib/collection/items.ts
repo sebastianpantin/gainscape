@@ -34,7 +34,7 @@ import {
 import { fetchExercises } from '../exercises/catalog.ts';
 import { readCachedExercises } from '../exercises/catalog-cache.ts';
 import { CHALLENGE_COLUMNS, challengeRowSchema, toCatalogChallenge } from './challenge-rules.ts';
-import { DROP_LUCK_COLUMNS, dropLuckRowSchema, dryRollsOf, REGULAR_DROP_TABLE_KEY } from './luck-rules.ts';
+import { queryDryRolls } from './luck-rules.ts';
 import { parsedRows } from '../rows.ts';
 import { fetchStrengthState } from './collection-data.ts';
 import type { LoadoutView } from './gear-rules.ts';
@@ -74,16 +74,6 @@ export async function fetchInventory(userId: string): Promise<Map<string, HeldIt
   const { data, error } = await supabase.from('user_items').select(INVENTORY_COLUMNS).eq('user_id', userId);
   if (error) throw error;
   return toHeldItems(parsedRows(inventoryRowSchema, data));
-}
-
-async function fetchDryRolls(userId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from('drop_luck')
-    .select(DROP_LUCK_COLUMNS)
-    .eq('user_id', userId)
-    .eq('drop_tables.key', REGULAR_DROP_TABLE_KEY);
-  if (error) throw error;
-  return dryRollsOf(parsedRows(dropLuckRowSchema, data));
 }
 
 export interface CraftResult {
@@ -142,7 +132,7 @@ async function loadItemsOnline(userId: string, signal: AbortSignal | undefined):
     fetchInventory(userId),
     fetchExercises({ includeArchived: true }).catch(() => null),
     fetchStrengthState(strengthAsOf, DEFAULT_BALANCE.e1rmWindowDays).catch(() => null),
-    fetchDryRolls(userId).catch(() => null),
+    queryDryRolls(supabase, userId).catch(() => null),
   ]);
   const storage = deviceStorage();
   const cached = readItemsCache(storage, userId);
