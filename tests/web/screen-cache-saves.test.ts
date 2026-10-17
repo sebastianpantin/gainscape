@@ -46,7 +46,7 @@ const { standingCache } = await import('../../web/src/offline/standing-cache.ts'
 const { collectionCache } = await import('../../web/src/offline/collection-cache.ts');
 const { loadItemsCacheFirst } = await import('../../web/src/lib/collection/items.ts');
 const { loadProgramTemplatesCacheFirst } = await import('../../web/src/lib/programs/program-enrollment.ts');
-const { readItemsCache } = await import('../../web/src/offline/items-cache.ts');
+const { readItemsCache, saveItemsCache } = await import('../../web/src/offline/items-cache.ts');
 const { readProgramCache } = await import('../../web/src/offline/program-cache.ts');
 const { loadQuestsCacheFirst } = await import('../../web/src/lib/quests/quests.ts');
 const { questsCache } = await import('../../web/src/offline/quests-cache.ts');
@@ -242,6 +242,7 @@ describe('saving the items and program templates after an online load', () => {
       ],
       user_items: [{ item_id: 'belt-1', quantity: 1, first_obtained_at: '2026-10-09T10:00:00.000Z' }],
       exercises: [exerciseRow('bench', null)],
+      drop_luck: [{ dry_rolls: 4, drop_tables: { key: 'regular' } }],
     };
     const load = await loadItemsCacheFirst(USER_ID);
     expect(load.fromCache).toBe(false);
@@ -250,6 +251,22 @@ describe('saving the items and program templates after an online load', () => {
     ]);
     expect(load.loaded.held.get('belt-1')?.quantity).toBe(1);
     expect(load.loaded.strength).toBeNull();
+    expect(load.loaded.dryRolls).toBe(4);
+    expect(readItemsCache(storage, USER_ID)?.dryRolls).toBe(4);
+  });
+
+  it('keeps the saved dry rolls when the luck load fails', async () => {
+    saveItemsCache(storage, USER_ID, {
+      catalog: { items: [], recipes: [], challenges: [] },
+      inventory: [],
+      strength: {},
+      strengthAsOf: '2026-10-09T10:00:00.000Z',
+      challengeExercises: [],
+      dryRolls: 6,
+    });
+    server.tables = { drop_luck: { error: { message: 'down' } } };
+    const load = await loadItemsCacheFirst(USER_ID);
+    expect(load.loaded.dryRolls).toBe(6);
   });
 
   it('saves the program templates to the program cache', async () => {

@@ -34,6 +34,7 @@ import {
 import { fetchExercises } from '../exercises/catalog.ts';
 import { readCachedExercises } from '../exercises/catalog-cache.ts';
 import { CHALLENGE_COLUMNS, challengeRowSchema, toCatalogChallenge } from './challenge-rules.ts';
+import { DROP_LUCK_COLUMNS, dropLuckRowSchema, dryRollsOf, REGULAR_DROP_TABLE_KEY } from './luck-rules.ts';
 import { parsedRows } from '../rows.ts';
 import { fetchStrengthState } from './collection-data.ts';
 import type { LoadoutView } from './gear-rules.ts';
@@ -75,6 +76,16 @@ export async function fetchInventory(userId: string): Promise<Map<string, HeldIt
   return toHeldItems(parsedRows(inventoryRowSchema, data));
 }
 
+async function fetchDryRolls(userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('drop_luck')
+    .select(DROP_LUCK_COLUMNS)
+    .eq('user_id', userId)
+    .eq('drop_tables.key', REGULAR_DROP_TABLE_KEY);
+  if (error) throw error;
+  return dryRollsOf(parsedRows(dropLuckRowSchema, data));
+}
+
 export interface CraftResult {
   craftId: string;
   itemId: string;
@@ -111,6 +122,7 @@ export interface LoadedItems {
   held: Map<string, HeldItem>;
   challengeExercises: ChallengeExerciseEntry[];
   strength: StrengthState | null;
+  dryRolls: number | null;
 }
 
 function loadedFrom(cache: ItemsCache, strength: StrengthState | null): LoadedItems {
@@ -119,20 +131,22 @@ function loadedFrom(cache: ItemsCache, strength: StrengthState | null): LoadedIt
     held: new Map(cache.inventory.map((entry) => [entry.itemId, entry])),
     challengeExercises: cache.challengeExercises,
     strength,
+    dryRolls: cache.dryRolls,
   };
 }
 
 async function loadItemsOnline(userId: string, signal: AbortSignal | undefined): Promise<LoadedItems> {
   const strengthAsOf = new Date().toISOString();
-  const [catalog, held, exercises, strength] = await Promise.all([
+  const [catalog, held, exercises, strength, dryRolls] = await Promise.all([
     fetchItemCatalog(),
     fetchInventory(userId),
     fetchExercises({ includeArchived: true }).catch(() => null),
     fetchStrengthState(strengthAsOf, DEFAULT_BALANCE.e1rmWindowDays).catch(() => null),
+    fetchDryRolls(userId).catch(() => null),
   ]);
   const storage = deviceStorage();
   const cached = readItemsCache(storage, userId);
-  const live = { catalog, inventory: [...held.values()], exercises, strength, strengthAsOf };
+  const live = { catalog, inventory: [...held.values()], exercises, strength, strengthAsOf, dryRolls };
   const saved = itemsFromLiveAndCache(live, cached, storage && readCachedExercises(storage, userId));
   if (!signal?.aborted) saveItemsCache(storage, userId, saved);
   return loadedFrom(saved, strength ?? cached?.strength ?? null);

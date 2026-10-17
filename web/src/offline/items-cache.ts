@@ -26,6 +26,7 @@ export interface ItemsCache {
   strength: StrengthState;
   strengthAsOf: string;
   challengeExercises: ChallengeExerciseEntry[];
+  dryRolls: number | null;
 }
 
 const catalogItemSchema = z.object({
@@ -75,6 +76,7 @@ const itemsCacheSchema = z.object({
         equipment: z.string().optional(),
       }),
     ),
+    dryRolls: z.number().nullable().default(null),
   }),
 });
 
@@ -117,6 +119,7 @@ export interface LiveItems {
   exercises: readonly Exercise[] | null;
   strength: StrengthState | null;
   strengthAsOf: string;
+  dryRolls: number | null;
 }
 
 function challengeExercisesFrom(
@@ -140,6 +143,7 @@ export function itemsFromLiveAndCache(
     strength: live.strength ?? cached?.strength ?? {},
     strengthAsOf: live.strength ? live.strengthAsOf : (cached?.strengthAsOf ?? live.strengthAsOf),
     challengeExercises: challengeExercisesFrom(live, cached, savedExercises),
+    dryRolls: live.dryRolls ?? cached?.dryRolls ?? null,
   };
 }
 

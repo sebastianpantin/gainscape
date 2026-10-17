@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { finishWorkout, logBench, logExercise, openLoot, openTab, register, setRow } from './support/app.ts';
-import { activeDropCount, activeDropsOfLatestSession, grantItems } from './support/db.ts';
+import { activeDropCount, activeDropsOfLatestSession, grantItems, setDryRolls } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
 
 function slot(page: Page, name: string, quantity?: number) {
@@ -85,4 +85,16 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await page.getByRole('button', { name: 'Delete for good' }).click();
   await expect(page.getByText('Workout deleted.')).toBeVisible();
   await expect.poll(() => activeDropCount(sessionId)).toBe(0);
+});
+
+test('the luck panel shows the next drop chance and the rolls without a drop', async ({ page }) => {
+  const username = `luck_${Date.now().toString(36)}`;
+  await register(page, username);
+  await setDryRolls(username, 3);
+  await openItems(page);
+  const luck = page.getByRole('region', { name: 'Luck' });
+  await expect(luck).toContainText('Next drop chance 19%');
+  await expect(luck).toContainText('3 rolls without a drop');
+  await expect(luck).toContainText('Every set without a drop raises the chance, up to 40%.');
+  await expect(luck.getByRole('progressbar', { name: 'Next drop chance' })).toHaveAttribute('aria-valuenow', '30');
 });

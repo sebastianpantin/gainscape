@@ -119,6 +119,14 @@ export async function activeDropsOfLatestSession(username: string) {
     order by d.created_at, d.id`;
 }
 
+export async function setDryRolls(username: string, dryRolls: number): Promise<void> {
+  await db`
+    insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
+    select p.id, t.id, ${dryRolls} from public.profiles p, public.drop_tables t
+    where p.username = ${username} and t.key = 'regular'
+    on conflict (user_id, drop_table_id) do update set dry_rolls = excluded.dry_rolls, updated_at = now()`;
+}
+
 export async function grantItems(username: string, holdings: Record<string, number>): Promise<void> {
   await db.begin(async (tx) => {
     const [profile] = await tx`select id from public.profiles where username = ${username}`;

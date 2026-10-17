@@ -71,6 +71,7 @@ const CACHE: ItemsCache = {
     { id: 'deadlift', name: 'Deadlift', archived: false, modality: 'lift', loadType: 'external', equipment: 'barbell' },
     { id: 'pull_up', name: 'Pull-up', archived: false, modality: 'lift', loadType: 'bodyweight' },
   ],
+  dryRolls: 2,
 };
 
 describe('items cache', () => {
@@ -78,6 +79,16 @@ describe('items cache', () => {
     const storage = new MemoryStorage();
     saveItemsCache(storage, USER, CACHE);
     expect(readItemsCache(storage, USER)).toEqual(CACHE);
+  });
+
+  it('reads a copy saved before the luck meter with unknown dry rolls', () => {
+    const storage = new MemoryStorage();
+    saveItemsCache(storage, USER, CACHE);
+    const key = storage.key(0)!;
+    const withoutLuck: Partial<ItemsCache> = { ...CACHE };
+    delete withoutLuck.dryRolls;
+    storage.setItem(key, JSON.stringify({ v: 1, userId: USER, cache: withoutLuck }));
+    expect(readItemsCache(storage, USER)).toEqual({ ...CACHE, dryRolls: null });
   });
 
   it('reads nothing for another user', () => {
@@ -170,6 +181,7 @@ const LIVE = {
   exercises: [DEADLIFT],
   strength: { deadlift: { windowMax: 150, fallbackMax: null, hasPriorSession: true } },
   strengthAsOf: LIVE_AS_OF,
+  dryRolls: 5,
 };
 
 describe('items from live data and the saved copy', () => {
@@ -189,6 +201,7 @@ describe('items from live data and the saved copy', () => {
           equipment: 'barbell',
         },
       ],
+      dryRolls: 5,
     });
   });
 
@@ -197,6 +210,11 @@ describe('items from live data and the saved copy', () => {
     expect(merged.challengeExercises).toEqual(CACHE.challengeExercises);
     expect(merged.strength).toEqual(CACHE.strength);
     expect(merged.strengthAsOf).toBe(CACHE.strengthAsOf);
+  });
+
+  it('keeps the saved dry rolls when the live luck load failed, and has none without a saved copy', () => {
+    expect(itemsFromLiveAndCache({ ...LIVE, dryRolls: null }, CACHE, null).dryRolls).toBe(2);
+    expect(itemsFromLiveAndCache({ ...LIVE, dryRolls: null }, null, null).dryRolls).toBeNull();
   });
 
   it('falls back to the saved exercise list and no strength without a saved copy', () => {

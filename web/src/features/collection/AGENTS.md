@@ -23,6 +23,7 @@ The Collection tab: personal records per exercise (`/collection`), the per-exerc
 - After a craft or a stale catalog, refetch, show the result with `setQueryData` and save it with `updateItemsCache`, so the offline copy stays current.
 - Craft celebration: `onCraftStarted` primes audio inside the click (`primeCelebrationAudio`), because browsers only allow audio started from a user gesture. It also clears the `Crafted!` banner so a repeat craft shows it again.
 - Start challenge is disabled while a draft is open, and while a lift in the challenge has no e1RM (the judge fails a load percent without one). When neither the live fetch nor the cache has a strength state, nothing is blocked and the draft starts from `{}`. If a waiting unsynced workout opens instead, the Items tab says so.
+- The Luck panel (`LuckPanel.tsx`) shows the server's `drop_luck` dry rolls through `chance()` and `DEFAULT_LOOT` (`lib/collection/luck-rules.ts`); never copy the formula. It has no "rolls left today" line: the server's day comes from the profile timezone at sync and the session start, and unsynced drafts are invisible here, so a client count could be wrong. It hides when neither the live load nor the cache knows the dry rolls.
 - The progress chart's `e1RM` legend text is part of the chart's accessible name, so keep it unchanged.
 - Collection completion counts lifts only, and must match the server count (see Testing).
 - Stalled (client only, no server state or reward). The thresholds are the constants in `plateau-rules.ts` (`STALL_SESSIONS`, `STALL_DAYS`, `STALE_DAYS`, `IMPROVEMENT_RATIO`); the reasons behind the rule:
@@ -34,9 +35,9 @@ The Collection tab: personal records per exercise (`/collection`), the per-exerc
 
 ## Testing
 
-- Unit (`make test-web`): `tests/web/plateau-rules.test.ts`, `exercise-progress-rules.test.ts`, `tests/web/items.test.ts`, `items-cache.test.ts`, `collection-rules.test.ts`, `record-slots.test.ts`.
+- Unit (`make test-web`): `tests/web/plateau-rules.test.ts`, `exercise-progress-rules.test.ts`, `tests/web/items.test.ts`, `items-cache.test.ts`, `luck-rules.test.ts`, `collection-rules.test.ts`, `record-slots.test.ts`.
 - Server parity of collection counting: `tests/integration/collection-parity.test.ts` (stack).
-- E2E (stack): `exercise-progress.spec.ts` (Stalled, using `spreadSessionsDays`), `workout-records.spec.ts`, `loot.spec.ts` (crafting and the banner), `challenges.spec.ts`, `term-help.spec.ts`, `custom-exercise.spec.ts`, `a11y.spec.ts`, and `e2e/pwa/offline.spec.ts` for Items offline.
+- E2E (stack): `exercise-progress.spec.ts` (Stalled, using `spreadSessionsDays`), `workout-records.spec.ts`, `loot.spec.ts` (crafting, the banner and the Luck panel), `challenges.spec.ts`, `term-help.spec.ts`, `custom-exercise.spec.ts`, `a11y.spec.ts`, and `e2e/pwa/offline.spec.ts` for Items offline.
 
 ## Manual Notes
 
