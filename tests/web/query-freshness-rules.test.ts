@@ -117,6 +117,12 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('strength');
   });
 
+  it('refreshes lift goals after a goal change and after a workout sets new rep maxes', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['lift-goals-saved']).toEqual(['lift-goals']);
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('lift-goals');
+    expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toContain('lift-goals');
+  });
+
   it('refreshes the quest log after a quest starts and after a workout moves a quest along', () => {
     expect(QUERY_ROOTS_CHANGED_BY['quest-started']).toEqual(['quests']);
     expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('quests');

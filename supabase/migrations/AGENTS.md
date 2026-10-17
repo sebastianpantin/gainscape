@@ -64,6 +64,7 @@ Data and seed coupling:
 - Never change a built-in exercise's `measure` once sets exist: `set_matches_exercise_measure` (046) would make its old sets uneditable, and `lock_measure_once_logged` (048) refuses the change (also turning `tracks_distance` off once a set has a distance), so such a catalog edit fails the seed instead of breaking replay. Check constraints still report first.
 - Holds and mobility: an exercise with a `mobility` share has no other share (045); `save_program` refuses any exercise whose `measure` is not `reps` (047) and any progression on a non-`external` exercise (039).
 - `reset_account_data` tombstones every deleted session in `deleted_sessions` so a stale device resubmitting one gets `410 session_deleted`. A new user-owned table must be added to its delete list or to the kept list in `tests/integration/reset-account.test.ts`.
+- `lift_goals` (055) stores only the target; achieved and progress are derived from `rep_maxes` (which keep only each slot's current best, so no first-reached date) in `web/src/lib/progress/lift-goal-rules.ts`. `target_kg` restates the 2000 kg set load cap (`MAX_SET_LOAD_KG`). `save_lift_goal` upserts, so the insert policy applies to edits too: a goal on an archived exercise can be removed but not edited.
 - `sessions.completed_at` defaults to a value truncated to milliseconds (023), matching JavaScript `Date` precision; resubmits answer the stored `completedAt` byte for byte.
 
 After a change:

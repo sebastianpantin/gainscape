@@ -37,6 +37,7 @@ import { FRESH_FOR_MS } from './query-freshness-rules.ts';
 import { fetchRecentSets } from '../progress/recovery.ts';
 import { type FeedCursor, feedCursor } from '../social/social-rules.ts';
 import { fetchWeeklyGoalStatus } from '../progress/weekly-goal.ts';
+import { fetchLiftGoals } from '../progress/lift-goals.ts';
 import { loadQuestsCacheFirst } from '../quests/quests.ts';
 import { type QuestLog } from '../quests/quest-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
@@ -260,6 +261,13 @@ export const weeklyGoalQuery = queryOptions({
   queryFn: ({ signal }) => fetchWeeklyGoalStatus(signal),
 });
 
+export function liftGoalsQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['lift-goals', userId] as const,
+    queryFn: ({ signal }) => fetchLiftGoals(userId, signal),
+  });
+}
+
 export function exerciseListLoadQuery(userId: string) {
   return queryOptions({
     queryKey: ['exercises', userId, 'all'] as const,
@@ -344,6 +352,7 @@ export const EVERY_QUERY = [
   programTemplatesQuery,
   enrollChoicesQuery,
   weeklyGoalQuery,
+  liftGoalsQuery,
   exerciseListLoadQuery,
   exerciseListQuery,
   lastLoggedWeightsQuery,

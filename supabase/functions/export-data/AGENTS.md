@@ -22,7 +22,7 @@ POST endpoint returning a JSON export of everything the caller owns, read in one
   - `sessions.challenge` is the snapshot at sync (id, key, name, definition, `e1rmKg`), `null` without a challenge. The verdict is in `sessions.summary.challenge` and the bonus in `summary.challengeBonusBySkill`.
   - `quests.completed[].xp` is the quest reward by skill key. It is part of `skills` (user totals) but of no `setSkillXp` row; the completion's `anchor_*` columns name the session after which replay adds it.
   - A scroll used for a challenge is an `item_ledger` row with reason `challenge` and delta -1.
-  - `bodyweightEntries.logged_on` and `weeklyGoals.effective_from` are `YYYY-MM-DD` dates (the latter a Monday; `goal` null means off).
+  - `bodyweightEntries.logged_on`, `weeklyGoals.effective_from` and `liftGoals.target_date` are `YYYY-MM-DD` dates (`effective_from` is a Monday; `goal` null means off; `target_date` null means no deadline). A lift goal stores no achievement: it is derived from `repMaxes`.
 
 ## Testing
 

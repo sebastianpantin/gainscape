@@ -64,7 +64,7 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(8);
+    expect(exported.version).toBe(9);
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);
@@ -102,6 +102,16 @@ describe('export-data', () => {
     ]);
     expect(exported.weeklyGoals).toEqual([
       { effective_from: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), goal: 3, updated_at: expect.any(String) },
+    ]);
+    expect(exported.liftGoals).toEqual([
+      {
+        exercise_id: expect.any(String),
+        target_kg: 100,
+        reps: 5,
+        target_date: '2026-12-01',
+        created_at: expect.any(String),
+        updated_at: expect.any(String),
+      },
     ]);
     expect(exported.crafts).toHaveLength(1);
     expect(exported.quests.inProgress).toEqual([expect.objectContaining({ quest: 'bench_mysteries', step_index: 0 })]);

@@ -44,6 +44,9 @@ async function exportFor(userId: string) {
     const weeklyGoals = await tx`
       select effective_from::text, goal, updated_at
       from public.weekly_goals where user_id = ${userId} order by effective_from`;
+    const liftGoals = await tx`
+      select exercise_id, target_kg::float, reps, target_date::text, created_at, updated_at
+      from public.lift_goals where user_id = ${userId} order by exercise_id`;
     const customExercises = await tx`
       select e.*, coalesce(
         (select json_agg(json_build_object('skill', k.key, 'share_bp', es.share_bp) order by k.sort_order)
@@ -123,6 +126,7 @@ async function exportFor(userId: string) {
       pinnedExercises,
       exerciseNotes,
       weeklyGoals,
+      liftGoals,
       customExercises,
       programs,
       programTemplates,

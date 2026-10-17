@@ -17,6 +17,8 @@ import { formatLoad, formatSessionDate } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { exerciseProgressQuery } from '../../lib/query/queries.ts';
 import { skillShareRows } from '../../lib/progress/skill-map-rules.ts';
+import { canHaveLiftGoal } from '../../lib/progress/lift-goal-rules.ts';
+import { LiftGoalSection } from './LiftGoalSection.tsx';
 
 interface ExerciseProgressScreenProps {
   userId: string;
@@ -111,6 +113,7 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
           </ul>
         </section>
       )}
+      {canHaveLiftGoal(exercise) && <LiftGoalSection userId={userId} exercise={exercise} repMaxes={repMaxes} />}
       <section className="panel stack" aria-labelledby="progress-chart-heading">
         <div className="row">
           <h2 id="progress-chart-heading">{repsOnly ? 'Reps over time' : 'Strength over time'}</h2>

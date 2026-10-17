@@ -104,13 +104,16 @@ export interface MaxRepsRecord {
   localDate: string;
 }
 
+export function liftE1rmKg(effectiveLoadKg: number, bodyweightKg: number, repsToFailure: number): number | null {
+  if (effectiveLoadKg <= 0 || repsToFailure > DEFAULT_BALANCE.epleyMaxRepsToFailure) return null;
+  return roundTo(2, epley(effectiveLoadKg, repsToFailure) - bodyweightKg);
+}
+
 function setE1rmKg(row: ProgressSetRow, loadType: LoadType): number | null {
   const effectiveLoadKg = Number(row.effective_load_kg);
   const trustedRir = row.rir_source === 'logged' ? Math.min(Number(row.rir), DEFAULT_BALANCE.maxRirForStrength) : 0;
-  const repsToFailure = (row.reps ?? 0) + trustedRir;
-  if (effectiveLoadKg <= 0 || repsToFailure > DEFAULT_BALANCE.epleyMaxRepsToFailure) return null;
   const bodyweightKg = loadType === 'bodyweight_plus' ? effectiveLoadKg - Number(row.weight_kg) : 0;
-  return roundTo(2, epley(effectiveLoadKg, repsToFailure) - bodyweightKg);
+  return liftE1rmKg(effectiveLoadKg, bodyweightKg, (row.reps ?? 0) + trustedRir);
 }
 
 function higher(current: number | null, candidate: number | null): number | null {

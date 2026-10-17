@@ -12,6 +12,7 @@ The Collection tab: personal records per exercise (`/collection`), the per-exerc
 - `CollectionScreen.tsx`: Records tab and the exported `CollectionTabs`. Adding a tab means editing the `links` array there and a route in `App.tsx`.
 - `ItemsScreen.tsx`: inventory, item details, crafting, equip and unequip, Start challenge for scrolls, Show on Train for pets.
 - `ExerciseProgressScreen.tsx`: e1RM and top-set chart, the rep-max table, and the Stalled tag with its tips (`../../lib/progress/plateau-rules.ts`).
+- Lift goals stay removable from the progress screen even when the exercise is archived or no longer weighted; Today hides those goals (`goalsForToday`), so this screen is the only way to remove them.
 - `RecordSlots.tsx` and `record-slots.ts` (pure): the rep-max slot grid, shared with `friends/FriendProfileScreen.tsx`. Do not rebuild slots inline.
 - `CollectionHeading.tsx`: the shared h1, named `Collection: <tab>` so route focus announces which tab opened.
 
