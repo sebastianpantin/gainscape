@@ -16,6 +16,7 @@ export function dryRollsOf(rows: readonly DropLuckRow[]): number {
 
 export interface LuckView {
   chanceText: string;
+  chancePercentText: string;
   meterFraction: number;
   dryRollsText: string;
   explanation: string;
@@ -30,8 +31,9 @@ export function luckView(dryRolls: number): LuckView {
   const nextChance = chance(dryRolls, DEFAULT_LOOT);
   return {
     chanceText: `Next drop chance ${percentText(nextChance)}`,
+    chancePercentText: percentText(nextChance),
     meterFraction: (nextChance - baseChance) / (maxChance - baseChance),
-    dryRollsText: `${formatCount(dryRolls, 'roll')} without a drop`,
-    explanation: `Every set without a drop raises the chance, up to ${percentText(maxChance)}.`,
+    dryRollsText: `${formatCount(dryRolls, 'loot roll')} without a drop`,
+    explanation: `Each loot roll that misses raises the chance, up to ${percentText(maxChance)}.`,
   };
 }

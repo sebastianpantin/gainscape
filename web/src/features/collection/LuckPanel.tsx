@@ -15,7 +15,7 @@ export function LuckPanel({ dryRolls }: LuckPanelProps) {
         <h2 id={headingId}>Luck</h2>
         <span className="accent-text">{view.chanceText}</span>
       </div>
-      <ProgressBar fraction={view.meterFraction} label="Next drop chance" />
+      <ProgressBar fraction={view.meterFraction} label="Next drop chance" valueText={view.chancePercentText} />
       <span>{view.dryRollsText}</span>
       <span className="muted tiny">{view.explanation}</span>
     </section>

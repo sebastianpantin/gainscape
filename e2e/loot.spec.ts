@@ -87,14 +87,14 @@ test('loot on the reveal, the items screen, crafting and a former scroll variati
   await expect.poll(() => activeDropCount(sessionId)).toBe(0);
 });
 
-test('the luck panel shows the next drop chance and the rolls without a drop', async ({ page }) => {
+test('the luck panel shows the next drop chance and the loot rolls without a drop', async ({ page }) => {
   const username = `luck_${Date.now().toString(36)}`;
   await register(page, username);
   await setDryRolls(username, 3);
   await openItems(page);
   const luck = page.getByRole('region', { name: 'Luck' });
   await expect(luck).toContainText('Next drop chance 19%');
-  await expect(luck).toContainText('3 rolls without a drop');
-  await expect(luck).toContainText('Every set without a drop raises the chance, up to 40%.');
-  await expect(luck.getByRole('progressbar', { name: 'Next drop chance' })).toHaveAttribute('aria-valuenow', '30');
+  await expect(luck).toContainText('3 loot rolls without a drop');
+  await expect(luck).toContainText('Each loot roll that misses raises the chance, up to 40%.');
+  await expect(luck.getByRole('progressbar', { name: 'Next drop chance' })).toHaveAttribute('aria-valuetext', '19%');
 });

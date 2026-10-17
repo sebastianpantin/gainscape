@@ -5,28 +5,30 @@ describe('the loot luck meter', () => {
   it('starts at the base chance with an empty meter when no roll has missed', () => {
     expect(luckView(0)).toEqual({
       chanceText: 'Next drop chance 10%',
+      chancePercentText: '10%',
       meterFraction: 0,
-      dryRollsText: '0 rolls without a drop',
-      explanation: 'Every set without a drop raises the chance, up to 40%.',
+      dryRollsText: '0 loot rolls without a drop',
+      explanation: 'Each loot roll that misses raises the chance, up to 40%.',
     });
   });
 
   it('adds three points per roll without a drop', () => {
     const view = luckView(3);
     expect(view.chanceText).toBe('Next drop chance 19%');
+    expect(view.chancePercentText).toBe('19%');
     expect(view.meterFraction).toBeCloseTo(0.3, 10);
-    expect(view.dryRollsText).toBe('3 rolls without a drop');
+    expect(view.dryRollsText).toBe('3 loot rolls without a drop');
   });
 
   it('says roll, not rolls, after one miss', () => {
-    expect(luckView(1).dryRollsText).toBe('1 roll without a drop');
+    expect(luckView(1).dryRollsText).toBe('1 loot roll without a drop');
   });
 
   it('caps the chance at the maximum and fills the meter', () => {
     const view = luckView(25);
     expect(view.chanceText).toBe('Next drop chance 40%');
     expect(view.meterFraction).toBe(1);
-    expect(view.dryRollsText).toBe('25 rolls without a drop');
+    expect(view.dryRollsText).toBe('25 loot rolls without a drop');
   });
 });
 
