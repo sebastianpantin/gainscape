@@ -1,3 +1,11 @@
+- prs: [149, 150]
+  version: 0.15.0
+  date: 2026-10-17
+  title: Goals and luck
+  items:
+    - Set a goal on any weighted lift, like 100 kg for 5 reps by a date you choose. Its progress page shows how close you are, and Today lists your goals.
+    - A goal counts as reached once you lift the weight for the reps. Weighted pull-ups and dips take a goal for the added weight.
+    - Items has a Luck panel that shows your chance of a drop on the next loot roll. Every roll that misses raises it, up to 40%.
 - prs: [147]
   version: 0.14.0
   date: 2026-10-16
