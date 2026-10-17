@@ -664,7 +664,7 @@ describe('loot tables', () => {
     expect(await ownerRows(table)).toEqual(before);
   });
 
-  it.each(lootTables.filter((table) => table !== 'drop_luck'))("hides another user's %s", async (table) => {
+  it.each(lootTables)("hides another user's %s", async (table) => {
     const theirs = await stranger.client.from(table).select('user_id').eq('user_id', owner.id);
     expect(theirs.error).toBeNull();
     expect(theirs.data).toEqual([]);
@@ -672,13 +672,6 @@ describe('loot tables', () => {
     expect(own.error).toBeNull();
     expect((own.data ?? []).length).toBe((await ownerRows(table)).length);
     expect((own.data ?? []).length).toBeGreaterThan(0);
-  });
-
-  it('grants nobody a read of drop_luck', async () => {
-    for (const user of [owner, stranger]) {
-      const { error } = await user.client.from('drop_luck').select('dry_rolls');
-      expect(error?.code).toBe('42501');
-    }
   });
 });
 

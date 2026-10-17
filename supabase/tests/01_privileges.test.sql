@@ -38,7 +38,7 @@ select results_eq(
       select c.relname::text collate "default" as table_name, 'SELECT' as privilege_type
       from pg_class c join pg_namespace n on n.oid = c.relnamespace
       where c.relkind in ('r', 'p') and n.nspname = 'public'
-        and c.relname not in ('events', 'reactions', 'friendships', 'drop_luck')
+        and c.relname not in ('events', 'reactions', 'friendships')
       union all
       values ('exercise_notes', 'INSERT'), ('exercise_notes', 'DELETE'),
              ('lift_goals', 'INSERT'), ('lift_goals', 'DELETE'),

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(24);
 
 create function tests.owned_row_counts(owner uuid, only_granted boolean)
 returns table (table_name text, row_count int)
@@ -72,7 +72,7 @@ select is(
 select throws_ok('select * from public.events', '42501', null, 'a friend cannot select events');
 select throws_ok('select * from public.reactions', '42501', null, 'a friend cannot select reactions');
 select throws_ok('select * from public.friendships', '42501', null, 'a friend cannot select friendships');
-select throws_ok('select * from public.drop_luck', '42501', null, 'a friend cannot select drop_luck');
+select is((select count(*)::int from public.drop_luck where user_id = :'a'), 0, 'a friend cannot read drop_luck');
 reset role;
 
 select tests.authenticate_as(:'c');
@@ -127,6 +127,19 @@ select throws_ok(
   '42501',
   null,
   'a client cannot insert user_items'
+);
+select is((select count(*)::int from public.drop_luck where user_id = :'a'), 1, 'the owner reads their drop luck');
+select throws_ok(
+  format('insert into public.drop_luck (user_id, drop_table_id) select %L, t.id from public.drop_tables t where t.key = ''rare''', :'a'),
+  '42501',
+  null,
+  'a client cannot insert drop_luck'
+);
+select throws_ok(
+  format('update public.drop_luck set dry_rolls = 0 where user_id = %L', :'a'),
+  '42501',
+  null,
+  'a client cannot update drop_luck'
 );
 reset role;
 
