@@ -389,11 +389,16 @@ describe('replay guards', () => {
     expect(edited.body.replayedSessionIds).toEqual([second.id, third.id, fourth.id]);
     expect(edited.body.revokedDrops).toEqual([]);
 
+    await grantDrop(user.id, third.id, third.sets[0].id, 'grinder_scraps', 4, 'pr');
+    const dropsOnDeletedSession = await db`
+      select id from public.drops where session_id = ${third.id} and revoked_at is null`;
     await staleAndCorrupted(user.id);
     const deleted = await postFunction('delete-session', user.accessToken, { sessionId: third.id });
     expect(deleted.status, deleted.rawBody).toBe(200);
     expect(deleted.body.replayedSessionIds).toEqual([fourth.id]);
-    expect(deleted.body.revokedDrops).toEqual([]);
+    expect(deleted.body.revokedDrops?.map((revoked) => revoked.dropId).sort()).toEqual(
+      dropsOnDeletedSession.map((row) => row.id as string).sort(),
+    );
 
     const [drop] = await db`select revoked_at from public.drops where id = ${dropOnRemovedSet.dropId}`;
     expect(drop.revoked_at).toBeNull();
