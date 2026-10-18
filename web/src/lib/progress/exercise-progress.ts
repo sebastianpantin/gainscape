@@ -32,7 +32,7 @@ export async function fetchExerciseProgress(
   failFastWhenOffline();
   const [exercise, sets, repMaxes, maxReps] = await Promise.all([
     supabase.from('exercises').select(EXERCISE_COLUMNS).eq('id', exerciseId).abortSignal(signal).maybeSingle(),
-    queryProgressSets(supabase, userId, exerciseId, signal),
+    queryProgressSets(supabase, exerciseId, signal),
     supabase
       .from('rep_maxes')
       .select(PROGRESS_COLUMNS.repMaxes)

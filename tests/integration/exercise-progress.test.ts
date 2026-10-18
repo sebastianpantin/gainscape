@@ -1,15 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  PROGRESS_PAGE_SIZE,
-  queryProgressSets,
-  sessionProgress,
-} from '../../web/src/lib/progress/exercise-progress-rules.ts';
+import { queryProgressSets, sessionProgress } from '../../web/src/lib/progress/exercise-progress-rules.ts';
 import { builtInExerciseId, createTestUser, db, type TestUser } from './local-stack.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const SERVER_ROW_LIMIT = 1000;
 const SETS_PER_SESSION = 200;
-const SESSION_COUNT = Math.ceil(PROGRESS_PAGE_SIZE / SETS_PER_SESSION) + 1;
+const SESSION_COUNT = Math.ceil(SERVER_ROW_LIMIT / SETS_PER_SESSION) + 1;
 
 describe('exercise progress sets', () => {
   let user: TestUser;
@@ -98,15 +95,15 @@ describe('exercise progress sets', () => {
   });
 
   it('reads every set past the server row limit, so the oldest workout stays in the progress', async () => {
-    const rows = await queryProgressSets(user.client, user.id, benchId, new AbortController().signal);
+    const rows = await queryProgressSets(user.client, benchId, new AbortController().signal);
     expect(rows).toHaveLength(SESSION_COUNT * SETS_PER_SESSION);
-    expect(rows.length).toBeGreaterThan(PROGRESS_PAGE_SIZE);
+    expect(rows.length).toBeGreaterThan(SERVER_ROW_LIMIT);
     const progress = sessionProgress(rows, 'external');
     expect(progress.map((session) => session.sessionId)).toEqual([...sessionIds].reverse());
   });
 
   it('reads the prescription of each set, so a program-driven workout is told apart', async () => {
-    const rows = await queryProgressSets(programUser.client, programUser.id, benchId, new AbortController().signal);
+    const rows = await queryProgressSets(programUser.client, benchId, new AbortController().signal);
     expect(rows.map((row) => row.prescription_ref).sort()).toEqual([null, 'w1:d1:bench:0'].sort());
     expect(sessionProgress(rows, 'external').map((session) => session.programDriven)).toEqual([true]);
   });
