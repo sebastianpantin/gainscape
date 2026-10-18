@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { type Release, whatsNewDecision, whatsNewMayOpen } from '../../lib/platform/changelog-rules.ts';
+import {
+  type Release,
+  type WhatsNewDecision,
+  whatsNewDecision,
+  whatsNewMayOpen,
+} from '../../lib/platform/changelog-rules.ts';
 import { openChannel } from '../../lib/platform/channel.ts';
 import { readLastSeenRelease, saveLastSeenRelease } from '../../lib/platform/last-seen-release-store.ts';
 import { readOnboarding } from '../../lib/profile/onboarding-store.ts';
@@ -8,7 +13,6 @@ import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
 import { DRAFT_CHANNEL_NAME } from '../../offline/draft-session.ts';
 import { hasDraftOnDevice } from '../../offline/local-drafts.ts';
-import { APP_VERSION, CHANGELOG } from './changelog-data.ts';
 
 async function draftOnDevice(userId: string): Promise<boolean> {
   try {
@@ -21,7 +25,8 @@ async function draftOnDevice(userId: string): Promise<boolean> {
 export function useWhatsNew(userId: string): { releases: readonly Release[] | null; dismiss: () => void } {
   const { pathname, key: visitKey } = useLocation();
   const currentVisit = useRef(visitKey);
-  const [decision] = useState(() => whatsNewDecision(CHANGELOG, readLastSeenRelease(deviceStorage(), userId)));
+  const [loaded, setLoaded] = useState<{ decision: WhatsNewDecision; appVersion: string } | null>(null);
+  const decision = loaded?.decision ?? { kind: 'none' };
   const [draftChange, setDraftChange] = useState({ count: 0, visitKey: '' });
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -32,8 +37,19 @@ export function useWhatsNew(userId: string): { releases: readonly Release[] | nu
   }, [visitKey]);
 
   useEffect(() => {
-    if (decision.kind === 'record') saveLastSeenRelease(deviceStorage(), userId, decision.version);
-  }, [decision, userId]);
+    let superseded = false;
+    import('./changelog-data.ts')
+      .then(({ APP_VERSION, CHANGELOG }) => {
+        if (superseded) return;
+        const loadedDecision = whatsNewDecision(CHANGELOG, readLastSeenRelease(deviceStorage(), userId));
+        if (loadedDecision.kind === 'record') saveLastSeenRelease(deviceStorage(), userId, loadedDecision.version);
+        setLoaded({ decision: loadedDecision, appVersion: APP_VERSION });
+      })
+      .catch(() => undefined);
+    return () => {
+      superseded = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     if (!pending) return;
@@ -63,7 +79,7 @@ export function useWhatsNew(userId: string): { releases: readonly Release[] | nu
   }, [pending, open, pathname, visitKey, draftChange, userId]);
 
   const dismiss = () => {
-    saveLastSeenRelease(deviceStorage(), userId, APP_VERSION);
+    if (loaded) saveLastSeenRelease(deviceStorage(), userId, loaded.appVersion);
     setDismissed(true);
     setOpen(false);
   };
