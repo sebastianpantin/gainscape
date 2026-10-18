@@ -1,77 +1,15 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { canCraft, type Recipe } from '@domain/index.ts';
-import {
-  anon,
-  builtInExerciseId,
-  db,
-  grantDrop,
-  postFunction,
-  type TestUser,
-  seedRateLimitHits,
-} from './local-stack.ts';
-import { aSet, expectLedgerMatchesItems, payloadAt, postSession, trackedUsers } from './session-support.ts';
+import { anon, db, postFunction, seedRateLimitHits } from './local-stack.ts';
+import { craft, grant, held, loadRecipe, lootState, quietSession } from './crafting-support.ts';
+import { expectLedgerMatchesItems, trackedUsers } from './session-support.ts';
 
-let benchId: string;
 let grinderBelt: Recipe;
 const itemIds = new Map<string, string>();
 
 const { freshUser, checkAndClear } = trackedUsers(expectLedgerMatchesItems);
 
-async function quietSession(user: TestUser): Promise<string> {
-  const payload = payloadAt(new Date(Date.now() - 60 * 60 * 1000), [aSet(benchId, 0, 40, { isWarmup: true })]);
-  await postSession(user, payload);
-  return payload.id;
-}
-
-async function grant(user: TestUser, sessionId: string, items: Record<string, number>): Promise<string[]> {
-  const dropIds: string[] = [];
-  for (const [key, quantity] of Object.entries(items)) {
-    if (quantity > 0) dropIds.push((await grantDrop(user.id, sessionId, randomUUID(), key, quantity)).dropId);
-  }
-  return dropIds;
-}
-
-async function held(userId: string): Promise<Record<string, number>> {
-  const rows = await db`
-    select i.key, u.quantity from public.user_items u join public.items i on i.id = u.item_id
-    where u.user_id = ${userId} order by i.key`;
-  return Object.fromEntries(rows.map((row) => [row.key, row.quantity]));
-}
-
-async function lootState(userId: string) {
-  const [crafts, userItems, itemLedger, drops, lootRolls] = await Promise.all([
-    db`select * from public.crafts where user_id = ${userId} order by id`,
-    db`select * from public.user_items where user_id = ${userId} order by item_id`,
-    db`select * from public.item_ledger where user_id = ${userId} order by id`,
-    db`select * from public.drops where user_id = ${userId} order by id`,
-    db`select * from public.loot_rolls where user_id = ${userId} order by id`,
-  ]);
-  return { crafts, userItems, itemLedger, drops, lootRolls };
-}
-
-async function loadRecipe(key: string): Promise<Recipe> {
-  const [row] = await db`
-    select r.id, r.key, r.output_item_id, r.output_quantity,
-           coalesce(jsonb_agg(jsonb_build_object('itemId', i.item_id, 'quantity', i.quantity) order by i.item_id)
-             filter (where i.item_id is not null), '[]'::jsonb) as inputs
-    from public.recipes r left join public.recipe_inputs i on i.recipe_id = r.id
-    where r.key = ${key} group by r.id`;
-  return {
-    id: row.id,
-    key: row.key,
-    outputItemId: row.output_item_id,
-    outputQuantity: row.output_quantity,
-    inputs: row.inputs,
-  };
-}
-
-function craft(user: TestUser, recipeId: string) {
-  return user.client.rpc('craft', { recipe_id: recipeId });
-}
-
 beforeAll(async () => {
-  benchId = await builtInExerciseId('barbell_bench_press');
   grinderBelt = await loadRecipe('grinder_belt');
   const rows = await db`select id, key from public.items`;
   for (const row of rows) itemIds.set(row.key, row.id);
@@ -137,60 +75,6 @@ describe('craft', () => {
     expect(await lootState(user.id)).toEqual(before);
   });
 
-  it('refuses an unknown, a retired and an input-less recipe', async () => {
-    const user = await freshUser();
-    await grant(user, await quietSession(user), {
-      titan_gloves: 1,
-      mythic_gloves: 1,
-      mythic_scraps: 8,
-      ascendant_scraps: 8,
-    });
-    const before = await lootState(user.id);
-
-    const unknown = await craft(user, randomUUID());
-    expect(unknown.error?.message).toBe('unknown_recipe');
-    expect(unknown.error?.code).toBe('22023');
-
-    const retired = await loadRecipe('mythic_gloves');
-    await db`update public.recipes set retired_at = now() where id = ${retired.id}`;
-    try {
-      expect((await craft(user, retired.id)).error?.message).toBe('unknown_recipe');
-    } finally {
-      await db`update public.recipes set retired_at = null where id = ${retired.id}`;
-    }
-
-    const inputless = await loadRecipe('ascendant_gloves');
-    await db`delete from public.recipe_inputs where recipe_id = ${inputless.id}`;
-    try {
-      expect((await craft(user, inputless.id)).error?.message).toBe('unknown_recipe');
-    } finally {
-      await db`
-        insert into public.recipe_inputs ${db(
-          inputless.inputs.map((input) => ({
-            recipe_id: inputless.id,
-            item_id: input.itemId,
-            quantity: input.quantity,
-          })),
-        )}`;
-    }
-    expect(await lootState(user.id)).toEqual(before);
-  });
-
-  it('refuses a recipe whose output item is retired', async () => {
-    const user = await freshUser();
-    const recipe = await loadRecipe('titan_shoes');
-    await grant(user, await quietSession(user), { forged_shoes: 1, titan_scraps: 6 });
-    const before = await lootState(user.id);
-    await db`update public.items set retired_at = now() where id = ${recipe.outputItemId}`;
-    try {
-      expect((await craft(user, recipe.id)).error?.message).toBe('unknown_recipe');
-    } finally {
-      await db`update public.items set retired_at = null where id = ${recipe.outputItemId}`;
-    }
-    expect(await lootState(user.id)).toEqual(before);
-    expect((await craft(user, recipe.id)).error).toBeNull();
-  });
-
   it('is not executable by anon', async () => {
     const { error } = await anon.rpc('craft', { recipe_id: grinderBelt.id });
     expect(error?.code).toBe('42501');
@@ -238,30 +122,6 @@ describe('craft and the loadout', () => {
     expect(error).toBeNull();
     expect(data.equippedSlot).toBeNull();
     expect(await loadout(user.id)).toEqual([{ slot: 'belt', key: 'rookie_belt' }]);
-  });
-
-  it('ignores a retired equipped item in get_loadout and in the session bonus', async () => {
-    const user = await freshUser();
-    await grant(user, await quietSession(user), { ascendant_belt: 1 });
-    const beltId = itemIds.get('ascendant_belt')!;
-    const equipped = await user.client.rpc('equip_gear', { slot: 'belt', item_id: beltId });
-    expect(equipped.error).toBeNull();
-    const squatId = await builtInExerciseId('back_squat');
-    const session = payloadAt(new Date(Date.now() - 30 * 60 * 1000), [aSet(squatId, 0, 100), aSet(squatId, 1, 100)]);
-
-    await db`update public.items set retired_at = now() where id = ${beltId}`;
-    try {
-      const shown = await user.client.rpc('get_loadout', { target: user.id });
-      expect(shown.error).toBeNull();
-      expect(shown.data.slots).toEqual([]);
-      await postSession(user, session);
-    } finally {
-      await db`update public.items set retired_at = null where id = ${beltId}`;
-    }
-
-    const [stored] = await db`select gear_loadout, summary from public.sessions where id = ${session.id}`;
-    expect(stored.gear_loadout).toEqual({});
-    expect(stored.summary.gearBonusBySkill).toEqual({});
   });
 });
 

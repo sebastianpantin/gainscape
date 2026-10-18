@@ -431,16 +431,6 @@ describe('immutability', () => {
     expect(await db`select * from public.item_ledger where user_id = ${user.id} order by id`).toEqual(before);
     expect(before.length).toBeGreaterThan(0);
   });
-
-  it('rejects truncating the loot rolls or the ledger', async () => {
-    const [rollsBefore] = await db`select count(*)::int as count from public.loot_rolls`;
-    const [ledgerBefore] = await db`select count(*)::int as count from public.item_ledger`;
-    await expect(db`truncate public.loot_rolls cascade`).rejects.toThrow('append_only');
-    await expect(db`truncate public.item_ledger`).rejects.toThrow('append_only');
-    expect((await db`select count(*)::int as count from public.loot_rolls`)[0]).toEqual(rollsBefore);
-    expect((await db`select count(*)::int as count from public.item_ledger`)[0]).toEqual(ledgerBefore);
-    expect(rollsBefore.count).toBeGreaterThan(0);
-  });
 });
 
 describe('rebuild', () => {

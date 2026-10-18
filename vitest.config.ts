@@ -3,9 +3,9 @@ import { defineConfig } from 'vitest/config';
 const INTEGRATION_FILES_SHARING_GLOBAL_STATE = [
   'auth-email',
   'catalog',
-  'crafting',
-  'loot',
-  'program-enrollments',
+  'challenges-global',
+  'crafting-global',
+  'loot-global',
   'quest-retirement',
   'rate-limits',
 ].map((name) => `tests/integration/${name}.test.ts`);

@@ -13,7 +13,6 @@ import {
   setBodyweight,
   type TestUser,
 } from './local-stack.ts';
-import { DEFAULT_LOOT } from '@domain/index.ts';
 import {
   aSet,
   DAY_MS,
@@ -29,11 +28,17 @@ import {
   trackedUsers,
   withFreshIds,
 } from './session-support.ts';
+import {
+  BODYWEIGHT_KG,
+  CHALLENGE_KEY,
+  challengeLedger,
+  SCROLL_KEY,
+  scrollsHeld,
+  storedSession,
+  usePrRollsOfTheDay,
+} from './challenge-support.ts';
 
-const SCROLL_KEY = 'scroll_deficit_deadlift';
-const CHALLENGE_KEY = 'deadlift_and_pull_up';
 const CHALLENGE_NAME = 'Deadlift and Pull-up';
-const BODYWEIGHT_KG = 80;
 const atFailure: Effort = { type: 'rir', value: 0 };
 
 let deadliftId: string;
@@ -61,17 +66,6 @@ afterAll(async () => {
   await db.end();
 });
 
-async function usePrRollsOfTheDay(userId: string, sessionId: string): Promise<void> {
-  await db`
-    insert into public.loot_rolls
-      (user_id, session_id, set_id, kind, local_date, roll_index, drop_table_id, chance, hit, loot_version)
-    select ${userId}, s.id, gen_random_uuid(), 'pr', s.local_date, roll_index, t.id, 0.5, false, ${DEFAULT_LOOT.version}
-    from public.sessions s
-    cross join public.drop_tables t
-    cross join generate_series(0, 1) as roll_index
-    where s.id = ${sessionId} and t.key = 'rare'`;
-}
-
 async function lifter(scrolls: number, quietAt: Date): Promise<TestUser> {
   const user = await freshUser();
   await setBodyweight(user, BODYWEIGHT_KG);
@@ -84,24 +78,6 @@ async function lifter(scrolls: number, quietAt: Date): Promise<TestUser> {
 
 async function openWithDeadlift(user: TestUser, openerAt: Date): Promise<void> {
   await postSession(user, payloadAt(openerAt, [aSet(deadliftId, 0, 100)]));
-}
-
-async function scrollsHeld(userId: string): Promise<number> {
-  const [row] = await db`
-    select u.quantity from public.user_items u join public.items i on i.id = u.item_id
-    where u.user_id = ${userId} and i.key = ${SCROLL_KEY}`;
-  return row?.quantity ?? 0;
-}
-
-async function challengeLedger(userId: string) {
-  return await db`
-    select delta, reason::text, ref_id from public.item_ledger
-    where user_id = ${userId} and reason = 'challenge' order by created_at, id`;
-}
-
-async function storedSession(sessionId: string) {
-  const [row] = await db`select challenge, summary, history_only from public.sessions where id = ${sessionId}`;
-  return row;
 }
 
 function challengeSets(deadliftKg: number, deadliftSets = 5): SetShape[] {
@@ -277,24 +253,6 @@ describe('claiming a scroll at sync', () => {
     expect(stored.filter((row) => row.challenge !== null)).toHaveLength(1);
     expect(await scrollsHeld(user.id)).toBe(0);
     expect(await challengeLedger(user.id)).toHaveLength(1);
-  });
-
-  it('completes a normal session when the scroll item is retired', async () => {
-    const [quietAt, sessionAt] = startsOnOneLocalDay(2);
-    const user = await lifter(1, quietAt);
-    const session = challengePayload(sessionAt);
-
-    await db`update public.items set retired_at = now() where key = ${SCROLL_KEY}`;
-    try {
-      const response = await postSession(user, session);
-      expect(response.body.challenge).toBeNull();
-    } finally {
-      await db`update public.items set retired_at = null where key = ${SCROLL_KEY}`;
-    }
-
-    expect((await storedSession(session.id)).challenge).toBeNull();
-    expect(await scrollsHeld(user.id)).toBe(1);
-    expect(await challengeLedger(user.id)).toEqual([]);
   });
 
   it('does not refund the scroll when the challenge session is deleted', async () => {
