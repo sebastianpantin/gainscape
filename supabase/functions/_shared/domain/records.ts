@@ -201,6 +201,9 @@ export function applySetToRecords(
 
   const before = records.repMaxes[set.exerciseId] ?? emptyRepMaxSlots();
   const { slots, improvedReps } = applyRepMaxSet(before, set, achievedAt, cfg);
+  const slotsUnchanged =
+    records.repMaxes[set.exerciseId] === before && slots.every((slot, index) => slot === before[index]);
+  if (slotsUnchanged) return { records, personalRecord: null };
   const highestImproved = improvedReps.at(-1);
   return {
     records: { ...records, repMaxes: { ...records.repMaxes, [set.exerciseId]: slots } },

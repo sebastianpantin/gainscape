@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(52);
+select plan(53);
 
 select tests.create_user('fd_owner') as a \gset
 select tests.create_user('fd_friend') as b \gset
@@ -311,6 +311,19 @@ select array_agg(e.id order by e.occurred_at desc, e.id desc)::text as expected_
 from public.events e where e.user_id = :'a' \gset
 select tests.authenticate_as(:'b');
 select is(pg_temp.page_through(2), :'expected_order'::uuid[], 'keyset pages of 2 return every event once, in order');
+reset role;
+select tests.add_session(:'b', now() - interval '3 hours') as bs \gset
+insert into public.events (user_id, session_id, event_key, type, occurred_at, payload)
+select :'b', :'bs', 'level:mix_' || n, 'level_up', now() - interval '3 hours' + make_interval(secs => (n % 3) - 1), '{}'::jsonb
+from generate_series(1, 9) n;
+select array_agg(e.id order by e.occurred_at desc, e.id desc)::text as mixed_order
+from public.events e where e.user_id in (:'a', :'b') \gset
+select tests.authenticate_as(:'b');
+select is(
+  pg_temp.page_through(3),
+  :'mixed_order'::uuid[],
+  'keyset pages of 3 interleave several users by time and id, every event once'
+);
 select is((select count(*)::int from public.get_feed(lim => 500)), 50, 'lim is capped at 50');
 select throws_ok(
   'select * from public.get_feed(now(), null)',

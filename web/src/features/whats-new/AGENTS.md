@@ -9,7 +9,7 @@ The in-app changelog: the release history screen under Settings (`/profile/setti
 
 ## Map
 
-- `changelog-data.ts`: the only reader of `__CHANGELOG__` (ESLint bans it elsewhere). Import `CHANGELOG` and `APP_VERSION` from here.
+- `changelog-data.ts`: the only reader of `__CHANGELOG__` (ESLint bans it elsewhere). Import `CHANGELOG` and `APP_VERSION` from here, and only from lazy code: `use-whats-new.ts` imports it dynamically so the changelog stays out of the entry chunk.
 - `WhatsNewSheet.tsx` (mounted once in `App.tsx`) with `use-whats-new.ts`; `WhatsNewScreen.tsx`; `ReleaseList.tsx`.
 - Decisions: `../../lib/platform/changelog-rules.ts`. Storage: `../../lib/platform/last-seen-release-store.ts`. Keep the `.tsx` files thin.
 

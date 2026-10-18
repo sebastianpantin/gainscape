@@ -21,7 +21,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 - Editability uses `isSessionEditable` from `@domain/edit-window.ts`, the same rule the `edit-session` and `delete-session` functions apply.
 - Both screens fail fast offline (`Offline: connect to load this screen.`); edits need the server.
 - The detail screen reads the exercise catalog through `exerciseListLoadQuery` and accepts its saved copy without a notice, like the program editor: names and load types only seed the edit, and every save re-checks load types against the live catalog (`latestExercises` falls back to the loaded list only when that live fetch fails).
-- The list uses `useInfiniteQuery(historyQuery(userId))`, so loaded pages and scroll survive Back from a workout. Loading more waits while any fetch runs so it never cancels a refresh. The detail screen drops a deleted workout from the cached pages. After a failed page load only the `Load more` button retries.
+- The list uses `useInfiniteQuery(historyQuery(userId))`, so loaded pages and scroll survive Back from a workout. Loading more waits while any fetch runs so it never cancels a refresh. The detail screen drops a deleted workout from the cached pages. After a failed page load only the `Load more` button retries. List items keep normal rendering, not `content-visibility: auto`: Back rebuilds the list, so its estimated item heights would move the restored scroll position off the workout.
 - Save: an accepted save makes the sent sets the new original at the new revision before the refresh, so a failed refresh keeps Save disabled and Undo cannot write old values back. Per-set XP labels compare against `xpBasis`, the sets the stored XP belongs to.
 - The `Workout XP` total includes the gear bonus; per-set labels show `xp_awarded`, the base XP.
 - Delete sends the loaded revision as `ifRevision`; on `revision_conflict` it loads the latest version and asks again. A concurrent edit is rebased (`rebaseEdit`) with a notice.
@@ -40,7 +40,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 
 - Unit (`make test-web`): `tests/web/session-edit.test.ts` is the place for the first failing test; `session-editor.test.ts` for the save and delete flow (fake ports); `history-rules.test.ts`, `history-overview-rules.test.ts`.
 - Integration (stack): `tests/integration/history-paging.test.ts`, `edit-session.test.ts`, `delete-session.test.ts`.
-- E2E (stack): `e2e/history.spec.ts` (edits, Back keeping 55 loaded workouts and scroll, conflicts, deletes elsewhere, a save whose refresh fails), `e2e/a11y.spec.ts`.
+- E2E (stack): `e2e/history.spec.ts` (edits, Back keeping 55 loaded workouts and scroll, also after a save, conflicts, deletes elsewhere, a save whose refresh fails), `e2e/a11y.spec.ts`.
 
 ## Manual Notes
 

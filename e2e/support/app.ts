@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
-import { createConfirmedAccount } from './db.ts';
+import { createConfirmedAccount, signedInSession } from './db.ts';
 
 export { TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 
@@ -77,8 +77,18 @@ export async function registerWithoutSigningIn(page: Page, username: string): Pr
 }
 
 export async function register(page: Page, username: string) {
-  await skipOnboarding(page, await registerWithoutSigningIn(page, username));
-  await submitSignIn(page, emailOf(username));
+  const timezone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const userId = await createConfirmedAccount(emailOf(username), username, timezone);
+  const session = await signedInSession(emailOf(username));
+  const signedInOnFirstLoad = await page.addInitScript(
+    ([sessionKey, storedSession, onboardingKey]) => {
+      localStorage.setItem(sessionKey, storedSession);
+      localStorage.setItem(onboardingKey, 'done');
+    },
+    [authStorageKey, JSON.stringify(session), `${onboardingKeyPrefix}${userId}`],
+  );
+  await page.goto('/');
+  await signedInOnFirstLoad.dispose();
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 }
 

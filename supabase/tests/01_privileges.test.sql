@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(10);
+select plan(13);
 
 select is(
   (select array_agg(n.nspname || '.' || c.relname order by n.nspname, c.relname)
@@ -106,6 +106,22 @@ select ok(
 select ok(
   has_function_privilege('authenticated', 'public.exercise_strength_state(timestamptz, integer)', 'execute'),
   'authenticated can read its own strength state'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.exercise_progress_sets(uuid)', 'execute'),
+  'anon cannot read exercise progress sets'
+);
+
+select ok(
+  has_function_privilege('authenticated', 'public.exercise_progress_sets(uuid)', 'execute'),
+  'authenticated can read its own exercise progress sets'
+);
+
+select is(
+  (select p.prosecdef from pg_proc p where p.oid = 'public.exercise_progress_sets(uuid)'::regprocedure),
+  false,
+  'exercise_progress_sets runs as the caller'
 );
 
 select * from finish();

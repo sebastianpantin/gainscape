@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { admin, db, TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
+import { admin, db, newAnonClient, TEST_PASSWORD } from '../../tests/integration/local-stack.ts';
 
 export { builtInExerciseId, resignedWithAnotherKey } from '../../tests/integration/local-stack.ts';
 
@@ -164,6 +164,12 @@ export async function createConfirmedAccount(email: string, username: string, ti
   });
   if (created.error) throw created.error;
   return created.data.user.id;
+}
+
+export async function signedInSession(email: string) {
+  const signedIn = await newAnonClient().auth.signInWithPassword({ email, password: TEST_PASSWORD });
+  if (signedIn.error) throw signedIn.error;
+  return signedIn.data.session;
 }
 
 export async function forgetEmailSendLimit(email: string): Promise<void> {

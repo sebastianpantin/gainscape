@@ -25,7 +25,7 @@ Helpers shared by the Playwright specs: user flows (register, sign in, navigate,
 - Helpers repeat user-visible strings (button names, tab names, `Set N`, `Bout N`, `kg`/`reps` labels, the `Hard` effort radio, `+ Add bout`, Steady/Intervals, `Start workout`, `Create account`, `Sign in`). Renaming UI text in `web/src` means updating them.
 - Locate set and bout rows with `setRow`, `setRows` and `boutRow`, not CSS. CSS selectors stay only in `a11y.ts`, which measures rendered controls.
 - Extend `logExercise` and `logCardio` with parameters rather than copying them into specs.
-- `register` creates a confirmed account through the admin API in the browser's time zone and skips onboarding, then signs in through the form. Use `fillRegistration` and `submitRegistration` to test the form itself.
+- `register` creates a confirmed account through the admin API in the browser's time zone, signs in through supabase-js (`signedInSession`) and injects the session and the onboarding flag with an init script it disposes after the first load, so a later sign-out or reload is not undone. Use `fillRegistration` and `submitRegistration` to test the form itself.
 - `forgetEmailSendLimit` backdates `confirmation_sent_at` so GoTrue's per-email `max_frequency` lets the next email through without a sleep.
 - `forgetSessionCreateLimits` clears `session_create_*` rate limit hits so a seed can post more than 20 sessions.
 - `grantItems` writes `item_ledger` and `user_items` together so the ledger parity invariants hold. Do the same in any new grant helper.

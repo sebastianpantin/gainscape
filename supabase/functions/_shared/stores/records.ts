@@ -13,18 +13,20 @@ export async function loadRecords(
   userId: string,
   exerciseIds: readonly string[],
 ): Promise<RecordState> {
-  const repMaxRows = await tx`
-    select exercise_id, reps, load_kg, set_id, achieved_at, exact_set_id
-    from public.rep_maxes
-    where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
-  const bodyweightRows = await tx`
-    select exercise_id, max_reps, set_id, achieved_at
-    from public.bodyweight_rep_records
-    where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
-  const cardioRows = await tx`
-    select exercise_id, kind, value, set_id, achieved_at
-    from public.cardio_records
-    where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
+  const [repMaxRows, bodyweightRows, cardioRows] = await Promise.all([
+    tx`
+      select exercise_id, reps, load_kg, set_id, achieved_at, exact_set_id
+      from public.rep_maxes
+      where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`,
+    tx`
+      select exercise_id, max_reps, set_id, achieved_at
+      from public.bodyweight_rep_records
+      where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`,
+    tx`
+      select exercise_id, kind, value, set_id, achieved_at
+      from public.cardio_records
+      where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`,
+  ]);
 
   const repMaxes: Record<string, (RepMaxSlot | null)[]> = {};
   for (const row of repMaxRows) {

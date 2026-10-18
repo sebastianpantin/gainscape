@@ -21,24 +21,26 @@ interface EventRow {
 export async function syncSessionEvents(tx: Transaction, userId: string, sessionIds: readonly string[]): Promise<void> {
   if (sessionIds.length === 0) return;
   const ids = [...sessionIds];
-  const sessions = await tx`
-    select id, summary, ended_at from public.sessions
-    where user_id = ${userId} and id = any(${ids}::uuid[])`;
-  const setRows = await tx`
-    select id, session_id, effective_load_kg
-    from public.sets
-    where user_id = ${userId} and session_id = any(${ids}::uuid[]) and not is_warmup`;
+  const [sessions, setRows] = await Promise.all([
+    tx`
+      select id, summary, ended_at from public.sessions
+      where user_id = ${userId} and id = any(${ids}::uuid[])`,
+    tx`
+      select id, session_id, effective_load_kg
+      from public.sets
+      where user_id = ${userId} and session_id = any(${ids}::uuid[]) and not is_warmup`,
+  ]);
   const summaries = sessions.map((row) => row.summary as SessionSummary);
   const exerciseIds = [...new Set(summaries.flatMap((summary) => (summary.prs ?? []).map((pr) => pr.exerciseId)))];
   const itemIds = [...new Set(summaries.flatMap((summary) => (summary.drops ?? []).map((drop) => drop.itemId)))];
-  const exerciseRows =
+  const [exerciseRows, itemRows] = await Promise.all([
     exerciseIds.length === 0
       ? []
-      : await tx`
+      : tx`
           select id, owner_user_id, load_type from public.exercises
-          where id = any(${exerciseIds}::uuid[]) and (owner_user_id is null or owner_user_id = ${userId})`;
-  const itemRows =
-    itemIds.length === 0 ? [] : await tx`select id, rarity from public.items where id = any(${itemIds}::uuid[])`;
+          where id = any(${exerciseIds}::uuid[]) and (owner_user_id is null or owner_user_id = ${userId})`,
+    itemIds.length === 0 ? [] : tx`select id, rarity from public.items where id = any(${itemIds}::uuid[])`,
+  ]);
 
   const exercises = new Map<string, FeedExercise>(
     exerciseRows.map((row) => [

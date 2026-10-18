@@ -11,8 +11,12 @@ endif
 
 PROJECT_ID = $(or $(SUPABASE_PROJECT_ID),gainscape)
 CI_EXCLUDED := studio,imgproxy,vector,logflare,postgres-meta,supavisor
+PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
+OUTPUT_SYNC := $(if $(filter-out 0 1 2 3,$(firstword $(subst ., ,$(MAKE_VERSION)))),--output-sync=target)
+PARALLEL_MAKE = $(MAKE) --no-print-directory --keep-going $(OUTPUT_SYNC) -j$(PARALLEL_JOBS)
+CHECKS := format-check lint typecheck-web typecheck-domain typecheck-node typecheck-sw check-functions catalog-check icons-check docs-check secrets-scan
 
-.PHONY: start ci-start ci-changes docs-check ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy changelog-unreleased test-integration test-db rebuild-caches sim sim-check e2e e2e-smoke e2e-webkit e2e-pwa screenshots secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
+.PHONY: start ci-start ci-changes docs-check ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy test-unit changelog-unreleased test-integration test-db rebuild-caches sim sim-check typecheck-web typecheck-domain typecheck-node typecheck-sw e2e e2e-smoke e2e-webkit e2e-pwa screenshots secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
 
 start:
 	$(SUPABASE) start
@@ -96,21 +100,34 @@ preview: build-local
 	npx vite preview web --host
 
 typecheck:
+	@$(PARALLEL_MAKE) typecheck-web typecheck-domain typecheck-node typecheck-sw
+
+typecheck-web:
 	npx tsc --noEmit -p tsconfig.web.json
+
+typecheck-domain:
 	npx tsc --noEmit -p tsconfig.domain.json
+
+typecheck-node:
 	npx tsc --noEmit -p tsconfig.node.json
+
+typecheck-sw:
 	npx tsc --noEmit -p tsconfig.sw.json
 
+ESLINT_CACHE := --cache --cache-strategy content --cache-location node_modules/.cache/eslint/
+PRETTIER_CACHE := --cache --cache-strategy content --cache-location node_modules/.cache/prettier/cache.json
+
 lint:
-	npx eslint . --max-warnings 0
+	npx eslint . --max-warnings 0 $(ESLINT_CACHE)
 
 format:
-	npx prettier --write --ignore-unknown .
+	npx prettier --write --ignore-unknown $(PRETTIER_CACHE) .
 
 format-check:
-	npx prettier --check --ignore-unknown .
+	npx prettier --check --ignore-unknown $(PRETTIER_CACHE) .
 
-check: format-check lint typecheck check-functions catalog-check icons-check docs-check secrets-scan
+check:
+	@$(PARALLEL_MAKE) $(CHECKS)
 
 hooks:
 	git config core.hooksPath .githooks
@@ -152,6 +169,9 @@ test-web:
 
 test-deploy:
 	npx vitest run tests/deploy
+
+test-unit:
+	npx vitest run --project unit
 
 ci-changes:
 	@node scripts/ci-changes.ts $(CI_BASE)

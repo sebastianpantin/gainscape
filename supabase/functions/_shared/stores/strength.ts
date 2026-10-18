@@ -2,6 +2,7 @@ import { isoTimestamp, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   currentStrength,
+  type LoadType,
   measuresRepsCapacity,
   MS_PER_DAY,
   type SessionKey,
@@ -58,6 +59,10 @@ export async function loadStrengthHistory(
   }));
 }
 
+export function storesRepsCapacity(loadType: LoadType | null): boolean {
+  return loadType !== null && measuresRepsCapacity(loadType);
+}
+
 interface LatestSessionForExercise {
   exerciseId: string;
   usesRepsCapacity: boolean;
@@ -80,30 +85,89 @@ async function latestSessionPerExercise(
     order by st.exercise_id, s.started_at desc, s.id desc`;
   return rows.map((row) => ({
     exerciseId: row.exercise_id,
-    usesRepsCapacity: measuresRepsCapacity(row.load_type),
+    usesRepsCapacity: storesRepsCapacity(row.load_type),
     session: { id: row.session_id, startedAt: isoTimestamp(row.started_at) },
   }));
 }
 
 async function storedCandidates(
   tx: Transaction,
-  sessionId: string,
-  exerciseIds: readonly string[],
-): Promise<StrengthCandidate[]> {
+  latest: readonly LatestSessionForExercise[],
+): Promise<(StrengthCandidate & { sessionId: string })[]> {
   const rows = await tx`
-    select exercise_id, id, coalesce(e1rm_candidate_kg, reps_capacity_candidate) as candidate
-    from public.sets
-    where session_id = ${sessionId} and exercise_id = any(${exerciseIds as string[]}::uuid[])
-    order by position`;
+    select st.session_id, st.exercise_id, st.id, coalesce(st.e1rm_candidate_kg, st.reps_capacity_candidate) as candidate
+    from public.sets st
+    join unnest(
+      ${latest.map((entry) => entry.session.id)}::uuid[],
+      ${latest.map((entry) => entry.exerciseId)}::uuid[]
+    ) as latest (session_id, exercise_id) on latest.session_id = st.session_id and latest.exercise_id = st.exercise_id
+    order by st.session_id, st.position`;
   return rows.map((row) => ({
+    sessionId: row.session_id,
     exerciseId: row.exercise_id,
     setId: row.id,
     value: nullableNumber(row.candidate),
   }));
 }
 
+function exerciseMaxRows(
+  userId: string,
+  group: readonly LatestSessionForExercise[],
+  history: readonly StrengthHistoryRow[],
+  candidates: readonly StrengthCandidate[],
+  cfg: BalanceConfig,
+) {
+  const strength = currentStrength(strengthStateAt(history, group[0].session, cfg), candidates);
+  return group.flatMap((entry) => {
+    const current = strength[entry.exerciseId];
+    if (!current) return [];
+    return [
+      {
+        user_id: userId,
+        exercise_id: entry.exerciseId,
+        e1rm_kg: entry.usesRepsCapacity ? null : current.value,
+        reps_capacity: entry.usesRepsCapacity ? current.value : null,
+        source_set_id: current.sourceSetId,
+      },
+    ];
+  });
+}
+
+async function replaceExerciseMaxes(
+  tx: Transaction,
+  userId: string,
+  exerciseIds: readonly string[],
+  rows: readonly Record<string, unknown>[],
+): Promise<void> {
+  await tx`delete from public.exercise_maxes where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
+  if (rows.length > 0) await tx`insert into public.exercise_maxes ${tx(rows)}`;
+}
+
 export async function clearStrengthCache(tx: Transaction, userId: string): Promise<void> {
   await tx`delete from public.exercise_maxes where user_id = ${userId}`;
+}
+
+export interface NewestSessionStrength {
+  session: SessionKey;
+  exercises: readonly { exerciseId: string; usesRepsCapacity: boolean }[];
+  history: readonly StrengthHistoryRow[];
+  candidates: readonly StrengthCandidate[];
+}
+
+export async function writeStrengthCacheFromNewestSession(
+  tx: Transaction,
+  userId: string,
+  newest: NewestSessionStrength,
+  cfg: BalanceConfig,
+): Promise<void> {
+  if (newest.exercises.length === 0) return;
+  const group = newest.exercises.map((exercise) => ({ ...exercise, session: newest.session }));
+  await replaceExerciseMaxes(
+    tx,
+    userId,
+    group.map((entry) => entry.exerciseId),
+    exerciseMaxRows(userId, group, newest.history, newest.candidates, cfg),
+  );
 }
 
 export async function refreshStrengthCache(
@@ -113,30 +177,23 @@ export async function refreshStrengthCache(
   cfg: BalanceConfig,
 ): Promise<void> {
   if (exerciseIds.length === 0) return;
-  await tx`delete from public.exercise_maxes where user_id = ${userId} and exercise_id = any(${exerciseIds as string[]}::uuid[])`;
-
   const latest = await latestSessionPerExercise(tx, userId, exerciseIds);
-  const bySession = Map.groupBy(latest, (entry) => entry.session.id);
-  const rows = [];
-  for (const group of bySession.values()) {
-    const session = group[0].session;
-    const groupExerciseIds = group.map((entry) => entry.exerciseId);
-    const history = await loadStrengthHistory(tx, userId, groupExerciseIds, session, cfg);
-    const strength = currentStrength(
-      strengthStateAt(history, session, cfg),
-      await storedCandidates(tx, session.id, groupExerciseIds),
-    );
-    for (const entry of group) {
-      const current = strength[entry.exerciseId];
-      if (!current) continue;
-      rows.push({
-        user_id: userId,
-        exercise_id: entry.exerciseId,
-        e1rm_kg: entry.usesRepsCapacity ? null : current.value,
-        reps_capacity: entry.usesRepsCapacity ? current.value : null,
-        source_set_id: current.sourceSetId,
-      });
-    }
-  }
-  if (rows.length > 0) await tx`insert into public.exercise_maxes ${tx(rows)}`;
+  const groups = [...Map.groupBy(latest, (entry) => entry.session.id).values()];
+  const [candidates, ...histories] = await Promise.all([
+    storedCandidates(tx, latest),
+    ...groups.map((group) =>
+      loadStrengthHistory(
+        tx,
+        userId,
+        group.map((entry) => entry.exerciseId),
+        group[0].session,
+        cfg,
+      ),
+    ),
+  ]);
+  const candidatesBySession = Map.groupBy(candidates, (candidate) => candidate.sessionId);
+  const rows = groups.flatMap((group, index) =>
+    exerciseMaxRows(userId, group, histories[index], candidatesBySession.get(group[0].session.id) ?? [], cfg),
+  );
+  await replaceExerciseMaxes(tx, userId, exerciseIds, rows);
 }

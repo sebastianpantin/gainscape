@@ -149,6 +149,43 @@ describe('rep-max records', () => {
     );
   });
 
+  it('gives the same records whether or not earlier states are shared, and never changes its input', () => {
+    const exercises = ['bench', 'squat', 'pull-up'] as const;
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            exercise: fc.constantFrom(...exercises),
+            quarterKg: fc.integer({ min: 0, max: 800 }),
+            reps: fc.integer({ min: 1, max: 14 }),
+          }),
+          { maxLength: 40 },
+        ),
+        (sets) => {
+          let shared = NO_RECORDS;
+          let isolated = NO_RECORDS;
+          for (const { exercise, quarterKg, reps } of sets) {
+            const loadType = exercise === 'pull-up' ? 'bodyweight' : 'external';
+            const set = aSet(exercise, exercise === 'pull-up' ? 0 : quarterKg / 4, reps, hard);
+            const before = structuredClone(shared);
+            const sharedUpdate = applySetToRecords(shared, set, loadType, achievedAt, TEST_BALANCE);
+            const isolatedUpdate = applySetToRecords(
+              structuredClone(isolated),
+              set,
+              loadType,
+              achievedAt,
+              TEST_BALANCE,
+            );
+            expect(shared).toEqual(before);
+            expect(sharedUpdate).toEqual(isolatedUpdate);
+            shared = sharedUpdate.records;
+            isolated = isolatedUpdate.records;
+          }
+        },
+      ),
+    );
+  });
+
   it('ignores warm-ups', () => {
     const { sessions } = replay([aSet('bench', 90, 5, hard)], [aSet('bench', 120, 5, hard, { isWarmup: true })]);
     expect(sessions[1].outputs.prs).toEqual([]);

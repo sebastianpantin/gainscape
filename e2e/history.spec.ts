@@ -169,6 +169,35 @@ test('Back from an older workout keeps every loaded page of History and its scro
   await expect(olderWorkout).toBeInViewport();
 });
 
+test('Back after saving an older workout keeps every loaded page of History in view', async ({ page }) => {
+  const username = uniqueUsername('hist_back_edit');
+  await register(page, username);
+  await logBench(page);
+  await backdateSessions(username, 2);
+  await seedWorkouts(username, 54);
+  await openTab(page, 'Collection');
+  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
+  await expect(workouts).toHaveCount(50);
+  await workouts.last().scrollIntoViewIfNeeded();
+  await expect(workouts).toHaveCount(55);
+
+  const benchWorkout = workouts.last();
+  await expect(benchWorkout).toContainText('Barbell Bench Press');
+  await benchWorkout.click();
+  await expect(page).toHaveURL(/\/collection\/history\/[0-9a-f-]+$/);
+  await setRow(page, 1)
+    .getByRole('spinbutton', { name: /^Reps, set \d+$/ })
+    .fill('8');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Changes saved.')).toBeVisible();
+
+  await page.goBack();
+
+  await expect(workouts).toHaveCount(55);
+  await expect(benchWorkout).toBeInViewport();
+});
+
 test('the Progress link waits until edits are saved, so leaving for progress cannot drop them', async ({ page }) => {
   await register(page, uniqueUsername('hist_prog'));
   await logBench(page);

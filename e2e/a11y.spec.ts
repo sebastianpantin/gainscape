@@ -43,8 +43,6 @@ import {
 } from './support/program-enrollment.ts';
 import { seedFiveThreeOneCycleSkippingPress } from './support/program-seed.ts';
 
-test.describe.configure({ mode: 'parallel' });
-
 const TAB_BAR = ['.tab-bar a[href]'];
 
 async function checkScreen(page: Page, screen: string, ready: () => Promise<void>) {

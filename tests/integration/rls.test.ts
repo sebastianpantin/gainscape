@@ -417,6 +417,7 @@ describe('function execution rights', () => {
       'enroll_program',
       'enrollment_facts',
       'equip_gear',
+      'exercise_progress_sets',
       'exercise_strength_state',
       'get_collection',
       'get_feed',

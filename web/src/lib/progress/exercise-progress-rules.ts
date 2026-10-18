@@ -13,36 +13,18 @@ import { numericColumn, parsedRows } from '../rows.ts';
 import { RIR_SOURCES } from './recovery-rules.ts';
 
 export const PROGRESS_COLUMNS = {
-  sets: 'session_id, weight_kg, effective_load_kg, reps, rir, rir_source, prescription_ref, sessions(started_at)',
   repMaxes: 'reps, load_kg, achieved_at, sets!rep_maxes_set_id_fkey(sessions(local_date))',
   maxReps: 'max_reps, achieved_at, sets(sessions(local_date))',
 } as const;
 
-export const PROGRESS_PAGE_SIZE = 1000;
-
 export async function queryProgressSets(
   client: SupabaseClient,
-  userId: string,
   exerciseId: string,
   signal: AbortSignal,
 ): Promise<ProgressSetRow[]> {
-  const rows: ProgressSetRow[] = [];
-  for (let from = 0; ; from += PROGRESS_PAGE_SIZE) {
-    const { data, error } = await client
-      .from('sets')
-      .select(PROGRESS_COLUMNS.sets)
-      .eq('user_id', userId)
-      .eq('exercise_id', exerciseId)
-      .eq('is_warmup', false)
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: false })
-      .range(from, from + PROGRESS_PAGE_SIZE - 1)
-      .abortSignal(signal);
-    if (error) throw error;
-    const page = parsedRows(progressSetRowSchema, data);
-    rows.push(...page);
-    if (page.length < PROGRESS_PAGE_SIZE) return rows;
-  }
+  const { data, error } = await client.rpc('exercise_progress_sets', { exercise_id: exerciseId }).abortSignal(signal);
+  if (error) throw error;
+  return parsedRows(progressSetRowSchema, data);
 }
 
 export function exerciseProgressPath(exerciseId: string): string {

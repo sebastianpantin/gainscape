@@ -68,10 +68,25 @@ async function loadExercisesVisibleTo(
 }
 
 export async function loadCatalog(tx: Transaction, userId: string, exerciseIds: readonly string[]): Promise<Catalog> {
-  return {
-    skills: await loadSkills(tx),
-    exercises: await loadExercisesVisibleTo(tx, userId, exerciseIds),
-  };
+  const [skills, exercises] = await Promise.all([loadSkills(tx), loadExercisesVisibleTo(tx, userId, exerciseIds)]);
+  return { skills, exercises };
+}
+
+export async function extendCatalog(
+  tx: Transaction,
+  userId: string,
+  known: Catalog,
+  exerciseIds: readonly string[],
+): Promise<Catalog> {
+  const missing = exerciseIds.filter((id) => !known.exercises.has(id));
+  const loaded =
+    missing.length === 0 ? new Map<string, ExerciseDef>() : await loadExercisesVisibleTo(tx, userId, missing);
+  const exercises = new Map<string, ExerciseDef>();
+  for (const id of exerciseIds) {
+    const exercise = known.exercises.get(id) ?? loaded.get(id);
+    if (exercise) exercises.set(id, exercise);
+  }
+  return { skills: known.skills, exercises };
 }
 
 export async function loadKnownCatalog(

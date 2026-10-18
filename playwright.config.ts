@@ -11,7 +11,7 @@ export default defineConfig({
   testDir: 'e2e',
   testIgnore: ['pwa/**', 'pages/**'],
   timeout: 90_000,
-  fullyParallel: false,
+  fullyParallel: true,
   ...runSettings,
   use: {
     baseURL: localAppUrl,

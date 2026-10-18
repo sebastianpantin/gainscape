@@ -77,16 +77,16 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Exercise progress and bodyweight trend:
   - `progress/exercise-progress-rules.ts` uses RIR for e1RM only when `rir_source` is `logged`.
   - `progress/plateau-rules.ts` never flags a lift whose latest session a program drove (`prescription_ref`), so it cannot second-guess the program's deloads.
-  - `PROGRESS_PAGE_SIZE` (1000) is the PostgREST `max_rows`. `queryProgressSets` keeps paging until it gets a short page; otherwise long histories lose their oldest sessions.
+  - `queryProgressSets` reads the `exercise_progress_sets` RPC (058): one `jsonb` value, which PostgREST's 1000-row `max_rows` does not cap.
   - `progress/bodyweight-trend.ts` reads newest first, so a row cap drops the oldest days.
 - `BODYWEIGHT_LOAD_NOT_ZERO_CODE` and `UNKNOWN_EXERCISE_CODE` (in `workout/exercise-edit-rules.ts`) are mapped by both the finish flow and the history save.
 
 ### Query cache
 
-- `createQueryClient` has no retries and uses `networkMode: 'always'`. A failed or offline load then shows its problem at once, not a skeleton; supabase-js retries GETs, except History's list (`.retry(false)`). `tests/web/query-client.test.ts` pins this.
+- `createQueryClient` has no retries and uses `networkMode: 'always'`. A failed or offline load then shows its problem at once, not a skeleton; supabase-js retries GETs, except History's list (`.retry(false)`); `tests/web/query-client.test.ts` pins it.
 - `FRESH_FOR_MS` (60 s) only limits how long changes from other devices take to show. Every write this device makes to queried data must call `announceDataChange` (`query/data-changes.ts`). It invalidates locally and broadcasts on `gainscape.data-changes`.
 - Every query factory is defined in `query/queries.ts` and listed in `EVERY_QUERY`, and its root is in `QUERY_ROOTS_CHANGED_BY` or `ALWAYS_STALE_QUERY_ROOTS`. `tests/web/query-freshness-rules.test.ts` fails on a `*Query` export missing from either.
-- The tab that made a write skips the roots it already updated optimistically (profile, items after a craft, weekly goal, pins). This stops a refetch that started before a second optimistic write from undoing it. Optimistic writes call `cancelQueries` before `setQueryData`.
+- The tab that made a write skips the roots it already updated optimistically (profile, items after a craft, weekly goal, pins). So a refetch started before a second optimistic write cannot undo it. Optimistic writes call `cancelQueries` before `setQueryData`.
 - `account-reset` resets the roots instead of invalidating them, so no screen shows pre-reset data while it refetches.
 - A cache-first result with `fromCache: true` gets a `staleTime` of 0, so it is retried on the next visit and on reconnect. Everything is stale while the device is offline.
 - Always stale:
@@ -134,7 +134,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 - Run `make test-web` (no stack), or one file with `npx vitest run tests/web/<name>.test.ts`. A new rules module gets `tests/web/<module>.test.ts`. Real queries and RPCs are tested in `tests/integration/`, screen behaviour in `e2e/`.
 - Tests whose file name does not match the module are listed in `tests/web/AGENTS.md`.
-- These have no direct unit test: `profile/account.ts` (except `changePassword`), `exercises/custom-exercises.ts`, `platform/function-client.ts`, `collection/items.ts`, `progress/skill-map.ts`, `progress/standing.ts`, `platform/use-auth-session.ts`, and `platform/device-effects.ts` and `platform/celebration-effects.ts` (covered by e2e only). When you change logic in one of them, move the decision into a pure function and test that.
+- These have no direct unit test: `profile/account.ts` (except `changePassword`), `exercises/custom-exercises.ts`, `platform/function-client.ts`, `collection/items.ts`, `progress/skill-map.ts`, `progress/standing.ts`, `platform/use-auth-session.ts`, and `platform/device-effects.ts` and `platform/celebration-effects.ts` (covered by e2e only). Changing logic in one: move the decision into a tested pure function.
 
 ## Manual Notes
 

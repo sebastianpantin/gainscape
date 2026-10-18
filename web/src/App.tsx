@@ -23,21 +23,37 @@ import { useLaunchRouting } from './pwa/use-launch-routing.ts';
 import { UpdateBanner } from './pwa/UpdateBanner.tsx';
 
 const SCREEN_PRELOAD_DELAY_MS = 1_000;
-const screenLoaders: (() => Promise<unknown>)[] = [];
+const tabScreenLoaders: (() => Promise<unknown>)[] = [];
 
 function lazyScreen<Name extends string, Props extends object>(
   load: () => Promise<Record<Name, ComponentType<Props>>>,
   name: Name,
 ) {
-  screenLoaders.push(load);
   return lazy(async () => ({ default: (await load())[name] }));
 }
 
-function preloadScreens(): void {
-  for (const load of screenLoaders) load().catch(() => undefined);
+function lazyTabScreen<Name extends string, Props extends object>(
+  load: () => Promise<Record<Name, ComponentType<Props>>>,
+  name: Name,
+) {
+  tabScreenLoaders.push(load);
+  return lazyScreen(load, name);
 }
 
-const CollectionScreen = lazyScreen(() => import('./features/collection/CollectionScreen.tsx'), 'CollectionScreen');
+function preloadTabScreens(): void {
+  for (const load of tabScreenLoaders) load().catch(() => undefined);
+}
+
+function whenIdle(run: () => void): () => void {
+  if (typeof window.requestIdleCallback === 'function') {
+    const idle = window.requestIdleCallback(run);
+    return () => window.cancelIdleCallback(idle);
+  }
+  const timer = setTimeout(run, SCREEN_PRELOAD_DELAY_MS);
+  return () => clearTimeout(timer);
+}
+
+const CollectionScreen = lazyTabScreen(() => import('./features/collection/CollectionScreen.tsx'), 'CollectionScreen');
 const ExerciseProgressScreen = lazyScreen(
   () => import('./features/collection/ExerciseProgressScreen.tsx'),
   'ExerciseProgressScreen',
@@ -48,7 +64,7 @@ const FriendProfileScreen = lazyScreen(
   () => import('./features/friends/FriendProfileScreen.tsx'),
   'FriendProfileScreen',
 );
-const FriendsScreen = lazyScreen(() => import('./features/friends/FriendsScreen.tsx'), 'FriendsScreen');
+const FriendsScreen = lazyTabScreen(() => import('./features/friends/FriendsScreen.tsx'), 'FriendsScreen');
 const HiscoresScreen = lazyScreen(() => import('./features/friends/HiscoresScreen.tsx'), 'HiscoresScreen');
 const HistoryScreen = lazyScreen(() => import('./features/history/HistoryScreen.tsx'), 'HistoryScreen');
 const SessionDetailScreen = lazyScreen(
@@ -60,7 +76,7 @@ const FriendPreviewScreen = lazyScreen(
   () => import('./features/profile/FriendPreviewScreen.tsx'),
   'FriendPreviewScreen',
 );
-const ProfileScreen = lazyScreen(() => import('./features/profile/ProfileScreen.tsx'), 'ProfileScreen');
+const ProfileScreen = lazyTabScreen(() => import('./features/profile/ProfileScreen.tsx'), 'ProfileScreen');
 const SettingsScreen = lazyScreen(() => import('./features/profile/SettingsScreen.tsx'), 'SettingsScreen');
 const ActiveProgramScreen = lazyScreen(
   () => import('./features/programs/ActiveProgramScreen.tsx'),
@@ -73,7 +89,7 @@ const ProgramEnrollScreen = lazyScreen(
   'ProgramEnrollScreen',
 );
 const ProgramsScreen = lazyScreen(() => import('./features/programs/ProgramsScreen.tsx'), 'ProgramsScreen');
-const SkillsScreen = lazyScreen(() => import('./features/skills/SkillsScreen.tsx'), 'SkillsScreen');
+const SkillsScreen = lazyTabScreen(() => import('./features/skills/SkillsScreen.tsx'), 'SkillsScreen');
 const SkillScreen = lazyScreen(() => import('./features/skills/SkillScreen.tsx'), 'SkillScreen');
 const BodyScreen = lazyScreen(() => import('./features/skills/BodyScreen.tsx'), 'BodyScreen');
 const QuestsScreen = lazyScreen(() => import('./features/quests/QuestsScreen.tsx'), 'QuestsScreen');
@@ -152,8 +168,7 @@ function Screens() {
   }, [queryClient, signedInUserId]);
   useEffect(() => {
     if (signedInUserId === null) return;
-    const timer = setTimeout(preloadScreens, SCREEN_PRELOAD_DELAY_MS);
-    return () => clearTimeout(timer);
+    return whenIdle(preloadTabScreens);
   }, [signedInUserId]);
   const [callback, setCallback] = useState(() => parseAuthCallback(window.location.href));
 

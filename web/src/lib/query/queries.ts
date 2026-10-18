@@ -302,10 +302,11 @@ export function fetchLatestExerciseList(queryClient: QueryClient, userId: string
 }
 
 export function lastLoggedWeightsQuery(exerciseIds: readonly string[]) {
+  const sortedIds = [...exerciseIds].sort();
   return queryOptions({
-    queryKey: ['last-logged-weights', ...exerciseIds] as const,
+    queryKey: ['last-logged-weights', ...sortedIds] as const,
     queryFn: async (): Promise<LastLoggedWeights> => {
-      const lastSets = await fetchLastLoggedSets([...exerciseIds]);
+      const lastSets = await fetchLastLoggedSets(sortedIds);
       return Object.fromEntries([...lastSets].map(([id, set]) => [id, set.weightKg]));
     },
     enabled: exerciseIds.length > 0,

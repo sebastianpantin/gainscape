@@ -38,7 +38,7 @@ Tests that drive the real local Supabase stack: Edge Functions over HTTP, SQL RP
 - `rebuild-caches` is secret-key only: a caller without the secret key in `apikey` gets 403.
 - Racing unique violations: `complete-session.test.ts` holds an uncommitted row in a second transaction with `session_replication_role = replica` (skips its foreign-key locks). A taken session id is 409 `id_conflict`; a duplicate loot roll key is a 500.
 - Concurrency tests open a second connection pool (`pin-cap.test.ts`: the 51st pin waits on the profile row lock of `private.cap_pins` and fails with `too_many_pins`; `challenges.test.ts`: one winner of two concurrent scroll claims).
-- PostgREST caps responses at 1000 rows (`max_rows`); `exercise-progress.test.ts` holds that `queryProgressSets` pages past it.
+- PostgREST caps responses at 1000 rows (`max_rows`); `exercise-progress.test.ts` holds that `queryProgressSets` (one `jsonb` RPC result) returns more than that.
 - Program links: `complete-session` keeps the link for an ended enrollment, but answers 200 unlinked for another user's or an unknown enrollment, an out-of-bounds position or a malformed `program`. A malformed snapshot is dropped alone. Resubmits answer the stored `programLinked` and `completedAt` byte for byte (millisecond precision).
 - Email flows: note `since = new Date()`, trigger the auth action, `waitForEmail(to, { subject, since })`, then `authLinkFrom(message)`. Fresh addresses keep mailboxes apart, so nothing is deleted. The resend wait is `[auth.email] max_frequency` plus 500 ms.
 - Schema or function changes need `make reset` before these tests pass; they run the migrations, not a snapshot.

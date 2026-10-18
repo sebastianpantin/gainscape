@@ -4,10 +4,8 @@ import {
   chartDateText,
   maxRepsRecord,
   plateauSessions,
-  PROGRESS_COLUMNS,
   progressChartSeries,
   progressValueText,
-  PROGRESS_PAGE_SIZE,
   type ProgressSetRow,
   queryProgressSets,
   repMaxTable,
@@ -112,10 +110,6 @@ describe('session progress', () => {
 });
 
 describe('program-driven sessions', () => {
-  it('reads the prescription of each set', () => {
-    expect(PROGRESS_COLUMNS.sets).toContain('prescription_ref');
-  });
-
   it('marks a session program-driven when any of its sets came from a prescription', () => {
     const sessions = sessionProgress(
       [
@@ -265,47 +259,30 @@ describe('rep max table', () => {
 });
 
 describe('queryProgressSets', () => {
-  function pagedClient(rowCount: number) {
-    const rows = Array.from({ length: rowCount }, (_, index) => setRow({ session_id: `day-${(index % 9) + 1}` }));
-    const ranges: [number, number][] = [];
+  function rpcClient(data: unknown) {
+    const calls: { name: string; args: unknown }[] = [];
     const client = {
-      from: () => {
-        let range: [number, number] = [0, rowCount];
+      rpc: (name: string, args: unknown) => {
+        calls.push({ name, args });
         const builder = {
-          select: () => builder,
-          eq: () => builder,
-          order: () => builder,
-          range: (from: number, to: number) => {
-            range = [from, to];
-            ranges.push(range);
-            return builder;
-          },
           abortSignal: () => builder,
-          then: (resolve: (result: unknown) => unknown) =>
-            Promise.resolve(resolve({ data: rows.slice(range[0], range[1] + 1), error: null })),
+          then: (resolve: (result: unknown) => unknown) => Promise.resolve(resolve({ data, error: null })),
         };
         return builder;
       },
     };
-    return { client: client as unknown as SupabaseClient, rows, ranges };
+    return { client: client as unknown as SupabaseClient, calls };
   }
 
-  it('pages past the server row limit until a page comes back short', async () => {
-    const { client, rows, ranges } = pagedClient(2 * PROGRESS_PAGE_SIZE + 5);
-    const loaded = await queryProgressSets(client, 'user', 'exercise', new AbortController().signal);
-    expect(loaded).toEqual(rows);
-    expect(ranges).toEqual([
-      [0, PROGRESS_PAGE_SIZE - 1],
-      [PROGRESS_PAGE_SIZE, 2 * PROGRESS_PAGE_SIZE - 1],
-      [2 * PROGRESS_PAGE_SIZE, 3 * PROGRESS_PAGE_SIZE - 1],
-    ]);
+  it('reads every set of the exercise in one call, however long the history', async () => {
+    const rows = Array.from({ length: 2505 }, (_, index) => setRow({ session_id: `day-${(index % 9) + 1}` }));
+    const { client, calls } = rpcClient(rows);
+    expect(await queryProgressSets(client, 'exercise', new AbortController().signal)).toEqual(rows);
+    expect(calls).toEqual([{ name: 'exercise_progress_sets', args: { exercise_id: 'exercise' } }]);
   });
 
-  it('asks one more page when the history fills the last page exactly', async () => {
-    const { client, ranges } = pagedClient(PROGRESS_PAGE_SIZE);
-    expect(await queryProgressSets(client, 'user', 'exercise', new AbortController().signal)).toHaveLength(
-      PROGRESS_PAGE_SIZE,
-    );
-    expect(ranges).toHaveLength(2);
+  it('refuses rows this version cannot read', async () => {
+    const { client } = rpcClient([{ session_id: 'day-1' }]);
+    await expect(queryProgressSets(client, 'exercise', new AbortController().signal)).rejects.toThrow();
   });
 });

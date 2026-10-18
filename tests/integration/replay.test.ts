@@ -275,6 +275,54 @@ describe('prior state loaded from stored rows', () => {
   });
 });
 
+describe('strength cache', () => {
+  async function expectStrengthCacheMatchesRebuild(userId: string) {
+    const incremental = (await normalizedSnapshot(userId)).exerciseMaxes;
+    expect((await rebuildCaches(userId)).status).toBe(200);
+    expect((await normalizedSnapshot(userId)).exerciseMaxes).toEqual(incremental);
+    return incremental;
+  }
+
+  it('stores the same exercise maxes as a rebuild through new, back-dated, edited and deleted sessions', async () => {
+    const user = await createTestUser();
+    await setBodyweight(user, 80);
+    const first = withFreshIds(
+      payloadAt(hoursAgo(30), [
+        aSet(benchId, 0, 40, { isWarmup: true }),
+        aSet(benchId, 1, 80),
+        aSet(pullUpId, 2, 0, { reps: 8 }),
+      ]),
+    );
+    const second = withFreshIds(payloadAt(hoursAgo(20), [aSet(squatId, 0, 100), aSet(pullUpId, 1, 0, { reps: 10 })]));
+    const newest = withFreshIds(payloadAt(hoursAgo(10), [aSet(benchId, 0, 85)]));
+    for (const payload of [first, second, newest]) await postSession(user, payload);
+    const afterNewest = await expectStrengthCacheMatchesRebuild(user.id);
+    expect(Object.keys(afterNewest)).toHaveLength(3);
+
+    await postSession(
+      user,
+      withFreshIds(payloadAt(hoursAgo(25), [aSet(benchId, 0, 90, { reps: 3 }), aSet(squatId, 1, 105, { reps: 3 })])),
+    );
+    await expectStrengthCacheMatchesRebuild(user.id);
+
+    const [{ revision }] = await db`select revision from public.sessions where id = ${second.id}`;
+    const edited = await editSession(user, second, [{ ...second.sets[1], position: 0, reps: 12 }], revision);
+    expect(edited.status, edited.rawBody).toBe(200);
+    await expectStrengthCacheMatchesRebuild(user.id);
+
+    const removed = await postFunction('delete-session', user.accessToken, { sessionId: newest.id });
+    expect(removed.status, removed.rawBody).toBe(200);
+    await expectStrengthCacheMatchesRebuild(user.id);
+
+    await postSession(
+      user,
+      withFreshIds(payloadAt(hoursAgo(2), [aSet(squatId, 0, 110), aSet(pullUpId, 1, 0, { reps: 11 })])),
+    );
+    const afterLatest = await expectStrengthCacheMatchesRebuild(user.id);
+    expect(Object.keys(afterLatest)).toHaveLength(3);
+  });
+});
+
 describe('replay guards', () => {
   async function staleAndCorrupted(userId: string) {
     await db`update public.sessions set derived_balance_version = ${DEFAULT_BALANCE.version - 1} where user_id = ${userId}`;
@@ -341,11 +389,16 @@ describe('replay guards', () => {
     expect(edited.body.replayedSessionIds).toEqual([second.id, third.id, fourth.id]);
     expect(edited.body.revokedDrops).toEqual([]);
 
+    await grantDrop(user.id, third.id, third.sets[0].id, 'grinder_scraps', 4, 'pr');
+    const dropsOnDeletedSession = await db`
+      select id from public.drops where session_id = ${third.id} and revoked_at is null`;
     await staleAndCorrupted(user.id);
     const deleted = await postFunction('delete-session', user.accessToken, { sessionId: third.id });
     expect(deleted.status, deleted.rawBody).toBe(200);
     expect(deleted.body.replayedSessionIds).toEqual([fourth.id]);
-    expect(deleted.body.revokedDrops).toEqual([]);
+    expect(deleted.body.revokedDrops?.map((revoked) => revoked.dropId).sort()).toEqual(
+      dropsOnDeletedSession.map((row) => row.id as string).sort(),
+    );
 
     const [drop] = await db`select revoked_at from public.drops where id = ${dropOnRemovedSet.dropId}`;
     expect(drop.revoked_at).toBeNull();
