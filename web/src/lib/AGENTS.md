@@ -83,11 +83,11 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 ### Query cache
 
-- `createQueryClient` has no retries and uses `networkMode: 'always'`. A failed or offline load then shows its problem at once, not a skeleton; supabase-js retries GETs, except History's list (`.retry(false)`). `tests/web/query-client.test.ts` pins this.
+- `createQueryClient` has no retries and uses `networkMode: 'always'`. A failed or offline load then shows its problem at once, not a skeleton; supabase-js retries GETs, except History's list (`.retry(false)`); `tests/web/query-client.test.ts` pins it.
 - `FRESH_FOR_MS` (60 s) only limits how long changes from other devices take to show. Every write this device makes to queried data must call `announceDataChange` (`query/data-changes.ts`). It invalidates locally and broadcasts on `gainscape.data-changes`.
 - Every query factory is defined in `query/queries.ts` and listed in `EVERY_QUERY`, and its root is in `QUERY_ROOTS_CHANGED_BY` or `ALWAYS_STALE_QUERY_ROOTS`. `tests/web/query-freshness-rules.test.ts` fails on a `*Query` export missing from either.
-- The tab that made a write skips the roots it already updated optimistically (profile, items after a craft, weekly goal, pins). This stops a refetch that started before a second optimistic write from undoing it. Optimistic writes call `cancelQueries` before `setQueryData`.
-- `account-reset` resets the roots instead of invalidating them, so no screen shows pre-reset data while it refetches.
+- The tab that made a write skips the roots it already updated optimistically (profile, items after a craft, weekly goal, pins). So a refetch started before a second optimistic write cannot undo it. Optimistic writes call `cancelQueries` before `setQueryData`.
+- `account-reset` resets the roots so no screen shows pre-reset data. Others trim the paged `history` and `feed` to page 1 so a refetch is one request.
 - A cache-first result with `fromCache: true` gets a `staleTime` of 0, so it is retried on the next visit and on reconnect. Everything is stale while the device is offline.
 - Always stale:
   - friends, feed, hiscores and friend profile, because other people change them;
@@ -134,7 +134,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 - Run `make test-web` (no stack), or one file with `npx vitest run tests/web/<name>.test.ts`. A new rules module gets `tests/web/<module>.test.ts`. Real queries and RPCs are tested in `tests/integration/`, screen behaviour in `e2e/`.
 - Tests whose file name does not match the module are listed in `tests/web/AGENTS.md`.
-- These have no direct unit test: `profile/account.ts` (except `changePassword`), `exercises/custom-exercises.ts`, `platform/function-client.ts`, `collection/items.ts`, `progress/skill-map.ts`, `progress/standing.ts`, `platform/use-auth-session.ts`, and `platform/device-effects.ts` and `platform/celebration-effects.ts` (covered by e2e only). When you change logic in one of them, move the decision into a pure function and test that.
+- These have no direct unit test: `profile/account.ts` (except `changePassword`), `exercises/custom-exercises.ts`, `platform/function-client.ts`, `collection/items.ts`, `progress/skill-map.ts`, `progress/standing.ts`, `platform/use-auth-session.ts`, and `platform/device-effects.ts` and `platform/celebration-effects.ts` (covered by e2e only). Changing logic in one: move the decision into a tested pure function.
 
 ## Manual Notes
 

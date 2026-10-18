@@ -95,6 +95,23 @@ export function queryRootsToInvalidate(change: DataChange, origin: ChangeOrigin)
   return roots.filter((root) => !updatedInPlace.includes(root));
 }
 
+export const QUERY_ROOTS_REFETCHED_FROM_THE_FIRST_PAGE: readonly string[] = ['history', 'feed'];
+
+interface LoadedPages {
+  pages: readonly unknown[];
+  pageParams: readonly unknown[];
+}
+
+function isLoadedPages(data: unknown): data is LoadedPages {
+  const candidate = data as Partial<LoadedPages> | null | undefined;
+  return Array.isArray(candidate?.pages) && Array.isArray(candidate.pageParams);
+}
+
+export function keepFirstPage<Data>(data: Data): Data {
+  if (!isLoadedPages(data) || data.pages.length <= 1) return data;
+  return { ...data, pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) };
+}
+
 export const ALWAYS_STALE_QUERY_ROOTS: readonly string[] = [
   'friends',
   'feed',
