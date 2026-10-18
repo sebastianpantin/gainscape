@@ -1,3 +1,10 @@
+- prs: [152]
+  version: 0.15.1
+  date: 2026-10-18
+  title: Faster everywhere
+  items:
+    - Finishing a workout syncs faster, and the friends feed and lift progress pages load quicker.
+    - The app is a smaller download to install and update.
 - prs: [149, 150]
   version: 0.15.0
   date: 2026-10-17
