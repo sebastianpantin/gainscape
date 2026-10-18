@@ -2,14 +2,7 @@ import { type QueryClient, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { DRAFT_CHANNEL_NAME } from '../../offline/draft-session.ts';
 import { openChannel } from '../platform/channel.ts';
-import {
-  type ChangeOrigin,
-  type DataChange,
-  dataChangeOf,
-  keepFirstPage,
-  QUERY_ROOTS_REFETCHED_FROM_THE_FIRST_PAGE,
-  queryRootsToInvalidate,
-} from './query-freshness-rules.ts';
+import { type ChangeOrigin, type DataChange, dataChangeOf, queryRootsToInvalidate } from './query-freshness-rules.ts';
 
 const DATA_CHANGE_CHANNEL_NAME = 'gainscape.data-changes';
 
@@ -22,11 +15,9 @@ function dataChanges(): BroadcastChannel | null {
 
 async function invalidateAfter(queryClient: QueryClient, change: DataChange, origin: ChangeOrigin): Promise<void> {
   const refresh = change === 'account-reset' ? queryClient.resetQueries : queryClient.invalidateQueries;
-  const roots = queryRootsToInvalidate(change, origin);
-  for (const root of roots)
-    if (QUERY_ROOTS_REFETCHED_FROM_THE_FIRST_PAGE.includes(root))
-      queryClient.setQueriesData({ queryKey: [root] }, keepFirstPage);
-  await Promise.all(roots.map((root) => refresh.call(queryClient, { queryKey: [root] })));
+  await Promise.all(
+    queryRootsToInvalidate(change, origin).map((root) => refresh.call(queryClient, { queryKey: [root] })),
+  );
 }
 
 export function announceDataChange(queryClient: QueryClient, change: DataChange): Promise<void> {

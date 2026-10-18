@@ -87,7 +87,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `FRESH_FOR_MS` (60 s) only limits how long changes from other devices take to show. Every write this device makes to queried data must call `announceDataChange` (`query/data-changes.ts`). It invalidates locally and broadcasts on `gainscape.data-changes`.
 - Every query factory is defined in `query/queries.ts` and listed in `EVERY_QUERY`, and its root is in `QUERY_ROOTS_CHANGED_BY` or `ALWAYS_STALE_QUERY_ROOTS`. `tests/web/query-freshness-rules.test.ts` fails on a `*Query` export missing from either.
 - The tab that made a write skips the roots it already updated optimistically (profile, items after a craft, weekly goal, pins). So a refetch started before a second optimistic write cannot undo it. Optimistic writes call `cancelQueries` before `setQueryData`.
-- `account-reset` resets the roots so no screen shows pre-reset data. Others trim the paged `history` and `feed` to page 1 so a refetch is one request.
+- `account-reset` resets the roots instead of invalidating them, so no screen shows pre-reset data while it refetches.
 - A cache-first result with `fromCache: true` gets a `staleTime` of 0, so it is retried on the next visit and on reconnect. Everything is stale while the device is offline.
 - Always stale:
   - friends, feed, hiscores and friend profile, because other people change them;

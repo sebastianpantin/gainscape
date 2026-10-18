@@ -40,7 +40,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 
 - Unit (`make test-web`): `tests/web/session-edit.test.ts` is the place for the first failing test; `session-editor.test.ts` for the save and delete flow (fake ports); `history-rules.test.ts`, `history-overview-rules.test.ts`.
 - Integration (stack): `tests/integration/history-paging.test.ts`, `edit-session.test.ts`, `delete-session.test.ts`.
-- E2E (stack): `e2e/history.spec.ts` (edits, Back keeping 55 loaded workouts and scroll, conflicts, deletes elsewhere, a save whose refresh fails), `e2e/a11y.spec.ts`.
+- E2E (stack): `e2e/history.spec.ts` (edits, Back keeping 55 loaded workouts and scroll, also after a save, conflicts, deletes elsewhere, a save whose refresh fails), `e2e/a11y.spec.ts`.
 
 ## Manual Notes
 
