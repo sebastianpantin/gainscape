@@ -22,7 +22,7 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 - `.claude/skills/changelog/SKILL.md`: the skill behind "write the changelog": lists uncovered user-facing PRs with `make changelog-unreleased`, writes the next entry of `web/changelog.yaml` and opens a PR.
 - `scripts/docs/agents-size.ts`: `make docs-check` (part of `make check`) fails when a tracked `AGENTS.md` is over 16 KiB, so these files stay readable in one pass, and warns over 12 KiB so trimming starts before a change is blocked.
 - `README.md`: human-facing run instructions, command table, PWA, loot secret and auth notes.
-- `.github/workflows/ci.yml`: CI on every pull request: `changes` (`make ci-changes`, Node only), then in parallel `checks` (no stack; only `make format-check docs-check secrets-scan` for a documentation-only PR, otherwise the full gate including `make build`), `backend` (integration, pgTAP; skipped when `ci-changes` finds no backend input) and `smoke` (`make e2e-smoke`, the `@smoke` e2e tests; skipped when `ci-changes` finds no UI input).
+- `.github/workflows/ci.yml`: CI on every pull request: `changes` (`make ci-changes`, Node only), then in parallel `checks` (no stack; only `make format-check docs-check secrets-scan` for a documentation-only PR, otherwise `make check`, `make test-unit` and `make build`), `backend` (integration, pgTAP; skipped when `ci-changes` finds no backend input) and `smoke` (`make e2e-smoke`, the `@smoke` e2e tests; skipped when `ci-changes` finds no UI input).
 - `.github/workflows/e2e.yml`: nightly and manual `e2e` workflow (sharded chromium and webkit, e2e-pwa, e2e-pages), started by hand with `gh workflow run e2e.yml --ref <branch>`.
 
 ## Subdirectories
