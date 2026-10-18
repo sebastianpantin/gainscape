@@ -2,6 +2,7 @@ import { isoTimestamp, nullableNumber, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   currentStrength,
+  type LoadType,
   measuresRepsCapacity,
   MS_PER_DAY,
   type SessionKey,
@@ -58,6 +59,10 @@ export async function loadStrengthHistory(
   }));
 }
 
+export function storesRepsCapacity(loadType: LoadType | null): boolean {
+  return loadType !== null && measuresRepsCapacity(loadType);
+}
+
 interface LatestSessionForExercise {
   exerciseId: string;
   usesRepsCapacity: boolean;
@@ -80,7 +85,7 @@ async function latestSessionPerExercise(
     order by st.exercise_id, s.started_at desc, s.id desc`;
   return rows.map((row) => ({
     exerciseId: row.exercise_id,
-    usesRepsCapacity: measuresRepsCapacity(row.load_type),
+    usesRepsCapacity: storesRepsCapacity(row.load_type),
     session: { id: row.session_id, startedAt: isoTimestamp(row.started_at) },
   }));
 }

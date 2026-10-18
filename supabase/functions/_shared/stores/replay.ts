@@ -8,7 +8,6 @@ import {
   isBefore,
   type RevokedDrop,
   lootCandidates,
-  measuresRepsCapacity,
   NO_RECORDS,
   priorSkillXp,
   type RecordState,
@@ -50,6 +49,7 @@ import {
   loadStrengthHistory,
   type NewestSessionStrength,
   refreshStrengthCache,
+  storesRepsCapacity,
   writeStrengthCacheFromNewestSession,
 } from './strength.ts';
 
@@ -125,7 +125,8 @@ function newestSessionStrength(
 ): NewestSessionStrength {
   const exercises = exerciseIds.map((exerciseId) => {
     const exercise = catalog.exercises.get(exerciseId);
-    return { exerciseId, usesRepsCapacity: exercise?.modality === 'lift' && measuresRepsCapacity(exercise.loadType) };
+    const loadType = exercise && exercise.modality !== 'cardio' ? exercise.loadType : null;
+    return { exerciseId, usesRepsCapacity: storesRepsCapacity(loadType) };
   });
   const candidates = [...anchor.outputs.sets]
     .sort((a, b) => a.set.position - b.set.position)
