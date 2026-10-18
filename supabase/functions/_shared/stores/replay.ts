@@ -320,7 +320,7 @@ async function replayFrom(
 
 const NOTHING_PREVIOUS = { previousExerciseIds: [], deletedSessionIds: [], unchangedSetIds: [] };
 
-export interface NewSessionDerivation {
+interface NewSessionDerivation {
   replayed: ReplayedSession;
   catalog: Catalog;
   skillXp: Record<string, number>;

@@ -209,7 +209,7 @@ export async function advanceQuestsForSession(
         prs: replayed.outputs.prs,
       },
     },
-    { skills: synced.catalog.skills, exercises: new Map() },
+    synced.catalog,
     cfg,
   );
   if (outcome.summary === null) return;
