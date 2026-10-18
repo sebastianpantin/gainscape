@@ -1,6 +1,7 @@
 import { type DbRow, isoTimestamp, type JsonValue, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
+  type Catalog,
   type QuestCompletion,
   questCompletedEvent,
   type QuestDefinition,
@@ -12,9 +13,7 @@ import {
   type SkillXpGrant,
 } from '../domain/index.ts';
 import { logUnexpectedError } from '../http.ts';
-import { loadCatalog } from './catalog.ts';
 import { insertQuestEvent } from './events.ts';
-import { loadSkillXp } from './history.ts';
 
 interface StoredQuest {
   quest: QuestDefinition;
@@ -178,24 +177,29 @@ async function writeSkillXp(
 export interface SyncedSession {
   endedAt: string;
   replayed: ReplayedSession;
+  catalog: Catalog;
+  skillXpBeforeSync: Readonly<Record<string, number>>;
+  skillXpAfterSync: Readonly<Record<string, number>>;
 }
 
 export async function advanceQuestsForSession(
   tx: Transaction,
   userId: string,
   synced: SyncedSession,
-  skillXpBeforeSync: Readonly<Record<string, number>>,
   cfg: BalanceConfig,
 ): Promise<void> {
-  const stored = await loadQuests(tx);
-  const skillXpAfterSync = await loadSkillXp(tx, userId);
-  const { replayed } = synced;
+  const [stored, progress, completedQuestIds] = await Promise.all([
+    loadQuests(tx),
+    loadQuestProgress(tx, userId),
+    loadCompletedQuestIds(tx, userId),
+  ]);
+  const { replayed, skillXpBeforeSync, skillXpAfterSync } = synced;
   const outcome = questsAfterSession(
     {
       quests: stored.map(({ quest }) => quest),
       retiredQuestIds: stored.filter(({ retired }) => retired).map(({ quest }) => quest.questId),
-      progress: await loadQuestProgress(tx, userId),
-      completedQuestIds: await loadCompletedQuestIds(tx, userId),
+      progress,
+      completedQuestIds,
       skillXpBeforeSync,
       skillXpAfterSync,
       facts: {
@@ -205,16 +209,23 @@ export async function advanceQuestsForSession(
         prs: replayed.outputs.prs,
       },
     },
-    await loadCatalog(tx, userId, []),
+    { skills: synced.catalog.skills, exercises: new Map() },
     cfg,
   );
   if (outcome.summary === null) return;
 
-  for (const progress of outcome.progressed) {
+  if (outcome.progressed.length > 0) {
     await tx`
-      update public.quest_progress
-      set step_index = ${progress.stepIndex}, step_progress = ${progress.stepProgress}, updated_at = now()
-      where user_id = ${userId} and quest_id = ${progress.questId}`;
+      update public.quest_progress as target
+      set step_index = derived.step_index, step_progress = derived.step_progress, updated_at = now()
+      from jsonb_to_recordset(${tx.json(
+        outcome.progressed.map((progress) => ({
+          quest_id: progress.questId,
+          step_index: progress.stepIndex,
+          step_progress: progress.stepProgress,
+        })),
+      )}) as derived (quest_id uuid, step_index int, step_progress numeric)
+      where target.user_id = ${userId} and target.quest_id = derived.quest_id`;
   }
   if (outcome.completions.length > 0) {
     const anchor = await latestScoredSession(tx, userId);

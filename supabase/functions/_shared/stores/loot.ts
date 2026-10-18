@@ -62,16 +62,17 @@ async function loadLootDayState(
   regularTableId: string,
   setIds: readonly string[],
 ): Promise<LootDayState> {
-  const used = await tx`
-    select kind, count(*)::int as count from public.loot_rolls
-    where user_id = ${userId} and local_date = ${localDate}::date
-    group by kind`;
+  const [used, [luck], rolled] = await Promise.all([
+    tx`
+      select kind, count(*)::int as count from public.loot_rolls
+      where user_id = ${userId} and local_date = ${localDate}::date
+      group by kind`,
+    tx`select dry_rolls from public.drop_luck where user_id = ${userId} and drop_table_id = ${regularTableId}`,
+    tx`
+      select set_id, kind from public.loot_rolls
+      where user_id = ${userId} and set_id = any(${setIds as string[]}::uuid[])`,
+  ]);
   const usedOf = (kind: RollKind) => used.find((row) => row.kind === kind)?.count ?? 0;
-  const [luck] = await tx`
-    select dry_rolls from public.drop_luck where user_id = ${userId} and drop_table_id = ${regularTableId}`;
-  const rolled = await tx`
-    select set_id, kind from public.loot_rolls
-    where user_id = ${userId} and set_id = any(${setIds as string[]}::uuid[])`;
   return {
     regularUsed: usedOf('regular'),
     prUsed: usedOf('pr'),
@@ -103,8 +104,10 @@ export async function rollNewSessionLoot(
   candidates: readonly LootCandidate[],
 ): Promise<void> {
   const secret = lootSecret();
-  const [session] = await tx`select local_date::text as local_date from public.sessions where id = ${sessionId}`;
-  const tables = await loadLootTables(tx);
+  const [[session], tables] = await Promise.all([
+    tx`select local_date::text as local_date from public.sessions where id = ${sessionId}`,
+    loadLootTables(tx),
+  ]);
   const dayState = await loadLootDayState(
     tx,
     userId,

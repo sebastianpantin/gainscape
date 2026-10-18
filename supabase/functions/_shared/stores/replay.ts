@@ -23,7 +23,7 @@ import {
   type StrengthHistoryRow,
 } from '../domain/index.ts';
 import { HttpError, logUnexpectedError } from '../http.ts';
-import { loadCatalog } from './catalog.ts';
+import { extendCatalog, loadCatalog } from './catalog.ts';
 import { syncSessionEvents } from './events.ts';
 import { revokeDisqualifiedDrops, rollNewSessionLoot } from './loot.ts';
 import {
@@ -48,6 +48,8 @@ import { clearStrengthCache, loadStrengthHistory, refreshStrengthCache } from '.
 
 interface ReplayOutcome {
   replayed: ReplayedSession[];
+  catalog: Catalog;
+  skillXp: Record<string, number>;
   sessionsReplayed: number;
   setsRewritten: number;
   replayedSessionIds: string[];
@@ -61,6 +63,7 @@ interface ReplayScope {
   previousExerciseIds: readonly string[];
   deletedSessionIds: readonly string[];
   unchangedSetIds: readonly string[];
+  knownCatalog?: Catalog;
 }
 
 interface ReplayChanges {
@@ -84,19 +87,24 @@ async function loadPriorState(
   cfg: BalanceConfig,
 ): Promise<PriorState> {
   if (from === null) return { strength: [], records: NO_RECORDS, skillXp: {} };
-  const strength = await loadStrengthHistory(tx, userId, suffixExerciseIds, from, cfg);
-  const suffixIsOnlyTheAnchor =
-    anchorIsNew && !(await hasLaterSessions(tx, userId, from)) && !(await hasLaterQuestGrants(tx, userId, from));
+  const [strength, laterWork] = await Promise.all([
+    loadStrengthHistory(tx, userId, suffixExerciseIds, from, cfg),
+    anchorIsNew ? Promise.all([hasLaterSessions(tx, userId, from), hasLaterQuestGrants(tx, userId, from)]) : null,
+  ]);
+  const suffixIsOnlyTheAnchor = laterWork !== null && !laterWork.includes(true);
   if (suffixIsOnlyTheAnchor) {
-    return { strength, records: await loadRecords(tx, userId, allTouched), skillXp: await loadSkillXp(tx, userId) };
+    const [records, skillXp] = await Promise.all([loadRecords(tx, userId, allTouched), loadSkillXp(tx, userId)]);
+    return { strength, records, skillXp };
   }
+  const [recordHistory, priorSums, questXp] = await Promise.all([
+    loadRecordHistory(tx, userId, allTouched, from),
+    loadPriorSkillXpSums(tx, userId, from),
+    loadQuestXpBefore(tx, userId, from),
+  ]);
   return {
     strength,
-    records: recordsFromHistory(await loadRecordHistory(tx, userId, allTouched, from), catalog, cfg),
-    skillXp: priorSkillXp(
-      applyXpGrant(await loadPriorSkillXpSums(tx, userId, from), await loadQuestXpBefore(tx, userId, from), cfg),
-      cfg,
-    ),
+    records: recordsFromHistory(recordHistory, catalog, cfg),
+    skillXp: priorSkillXp(applyXpGrant(priorSums, questXp, cfg), cfg),
   };
 }
 
@@ -149,16 +157,13 @@ async function replaySessions(
   const suffix = await loadReplayableSessions(tx, userId, replayStart, cfg);
   const suffixExerciseIds = [...new Set(suffix.flatMap((session) => session.sets.map((set) => set.exerciseId)))];
   const touched = [...new Set([...suffixExerciseIds, ...scope.previousExerciseIds])];
-  const catalog = await loadCatalog(tx, userId, touched);
-  const prior = await loadPriorState(
-    tx,
-    userId,
-    { ...scope, from: replayStart },
-    suffixExerciseIds,
-    touched,
-    catalog,
-    cfg,
-  );
+  const catalog = scope.knownCatalog
+    ? await extendCatalog(tx, userId, scope.knownCatalog, touched)
+    : await loadCatalog(tx, userId, touched);
+  const [prior, questGrants] = await Promise.all([
+    loadPriorState(tx, userId, { ...scope, from: replayStart }, suffixExerciseIds, touched, catalog, cfg),
+    loadQuestGrantsFrom(tx, userId, replayStart),
+  ]);
 
   const replay = replayHistory(
     suffix,
@@ -166,7 +171,7 @@ async function replaySessions(
     cfg,
     { skillXp: prior.skillXp, bodyweightKg: null, records: prior.records },
     prior.strength,
-    await loadQuestGrantsFrom(tx, userId, replayStart),
+    questGrants,
   );
   const results = replay.sessions.flatMap((entry) => entry.outputs.sets);
 
@@ -201,6 +206,7 @@ async function replaySessions(
   const sets = requestedSuffix.flatMap((entry) =>
     lootCandidates(entry.outputs.sets, catalog).map((candidate) => ({ ...candidate, sessionId: entry.session.id })),
   );
+  const isNewAnchor = (sessionId: string) => scope.anchorIsNew && sessionId === from?.id;
   const revoked =
     from === null
       ? []
@@ -208,7 +214,7 @@ async function replaySessions(
           tx,
           userId,
           sets,
-          replayedSessionIds,
+          replayedSessionIds.filter((sessionId) => !isNewAnchor(sessionId)),
           {
             editedSessionId: from.id,
             deletedSessionIds: scope.deletedSessionIds,
@@ -219,11 +225,13 @@ async function replaySessions(
   await syncSessionEvents(
     tx,
     userId,
-    replay.sessions.map((entry) => entry.session.id),
+    replay.sessions.map((entry) => entry.session.id).filter((sessionId) => !isNewAnchor(sessionId)),
   );
 
   return {
     replayed: replay.sessions,
+    catalog,
+    skillXp: replay.finalState.skillXp,
     sessionsReplayed: replay.sessions.length,
     setsRewritten: results.length,
     replayedSessionIds,
@@ -274,15 +282,35 @@ async function replayFrom(
 
 const NOTHING_PREVIOUS = { previousExerciseIds: [], deletedSessionIds: [], unchangedSetIds: [] };
 
-export async function deriveNewSession(tx: Transaction, userId: string, key: SessionKey): Promise<ReplayedSession> {
-  const outcome = await replayFrom(tx, userId, { from: key, anchorIsNew: true, ...NOTHING_PREVIOUS }, DEFAULT_BALANCE);
+export interface NewSessionDerivation {
+  replayed: ReplayedSession;
+  catalog: Catalog;
+  skillXp: Record<string, number>;
+}
+
+export async function deriveNewSession(
+  tx: Transaction,
+  userId: string,
+  key: SessionKey,
+  knownCatalog: Catalog,
+): Promise<NewSessionDerivation> {
+  const outcome = await replayFrom(
+    tx,
+    userId,
+    { from: key, anchorIsNew: true, ...NOTHING_PREVIOUS, knownCatalog },
+    DEFAULT_BALANCE,
+  );
   await rollNewSessionLoot(
     tx,
     userId,
     key.id,
     outcome.sets.filter((set) => set.sessionId === key.id),
   );
-  return outcome.replayed.find((entry) => entry.session.id === key.id)!;
+  return {
+    replayed: outcome.replayed.find((entry) => entry.session.id === key.id)!,
+    catalog: outcome.catalog,
+    skillXp: outcome.skillXp,
+  };
 }
 
 export async function deriveEditedSession(

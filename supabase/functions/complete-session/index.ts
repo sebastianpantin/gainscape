@@ -1,5 +1,6 @@
 import { sql, type Transaction } from '../_shared/db.ts';
 import {
+  type Catalog,
   type ChallengeRun,
   DEFAULT_BALANCE,
   historyOnlySummary,
@@ -83,6 +84,7 @@ async function storeAndReplay(
   row: NewSessionRow,
   session: WritableSession,
   snapshots: SnapshotsBySetId,
+  catalog: Catalog,
 ): Promise<InsertedSession> {
   const skillXpBeforeSync = await loadSkillXp(tx, row.userId);
   const { completedAt } = await insertSession(
@@ -93,8 +95,19 @@ async function storeAndReplay(
       ...snapshots.get(set.id)!,
     })),
   );
-  const replayed = await deriveNewSession(tx, row.userId, { id: session.id, startedAt: session.startedAt });
-  await advanceQuestsForSession(tx, row.userId, { endedAt: row.endedAt, replayed }, skillXpBeforeSync, DEFAULT_BALANCE);
+  const derived = await deriveNewSession(tx, row.userId, { id: session.id, startedAt: session.startedAt }, catalog);
+  await advanceQuestsForSession(
+    tx,
+    row.userId,
+    {
+      endedAt: row.endedAt,
+      replayed: derived.replayed,
+      catalog: derived.catalog,
+      skillXpBeforeSync,
+      skillXpAfterSync: derived.skillXp,
+    },
+    DEFAULT_BALANCE,
+  );
   return { summary: await storedSummary(tx, session.id), completedAt };
 }
 
@@ -131,19 +144,23 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
 
     const now = new Date();
     assertPlausibleTiming(payload, now);
-    await assertSetIdsUnused(
-      tx,
-      payload.sets.map((set) => set.id),
-    );
-    const catalog = await loadKnownCatalog(tx, userId, payload.sets);
-    const profile = await loadProfileSettings(tx, userId);
+    const [, catalog, profile, programLink, programDayId, gearLoadout] = await Promise.all([
+      assertSetIdsUnused(
+        tx,
+        payload.sets.map((set) => set.id),
+      ),
+      loadKnownCatalog(tx, userId, payload.sets),
+      loadProfileSettings(tx, userId),
+      linkedProgram(tx, userId, payload.program),
+      ownedProgramDayId(tx, userId, payload.programDayId),
+      loadEquippedLoadout(tx, userId),
+    ]);
     const plan = planNewSession(payload, catalog, profile.bodyweightKg, now.getTime(), DEFAULT_BALANCE);
-    const programLink = await linkedProgram(tx, userId, payload.program);
     const snapshots = prescriptionSnapshotsBySetId(payload.sets, () => programLink !== null);
     const row: NewSessionRow = {
       id: payload.id,
       userId,
-      programDayId: await ownedProgramDayId(tx, userId, payload.programDayId),
+      programDayId,
       programLink,
       startedAt: payload.startedAt,
       endedAt: payload.endedAt,
@@ -153,7 +170,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
       summary: pendingSummary(payload.id),
       notes: payload.notes,
       sessionRpe: payload.sessionRpe,
-      gearLoadout: await loadEquippedLoadout(tx, userId),
+      gearLoadout,
       challenge: null,
     };
 
@@ -164,6 +181,7 @@ async function completeSession(userId: string, payload: CompleteSessionPayload):
             { ...row, challenge: await claimedChallenge(tx, userId, payload) },
             plan.session,
             snapshots,
+            catalog,
           )
         : await storeHistoryOnly(tx, row, plan.sets, snapshots);
     return responseFor(stored, row, programLink !== null);
