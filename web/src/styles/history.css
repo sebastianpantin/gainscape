@@ -9,15 +9,6 @@
   text-decoration: none;
 }
 
-.history-list > li {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 96px;
-}
-
-.history-list .history-item:focus-visible {
-  outline-offset: -3px;
-}
-
 .history-notes {
   overflow: hidden;
   text-overflow: ellipsis;
