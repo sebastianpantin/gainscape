@@ -15,6 +15,7 @@ All Vitest suites, split by layer: `catalog/` (catalog generator and validator),
   - web: `make test-web`
   - deploy: `make test-deploy`
   - balance: `make sim-check`
+  - every unit layer above in one run (what CI runs): `make test-unit`
   - integration (stack): `make test-integration`; run `make start` (or `make functions` on a running stack) before running a single file.
 - `deploy/` also covers secret handling in the Edge Functions: `api-keys.test.ts` stubs `Deno` to test `_shared/api-keys.ts`; `function-secrets.test.ts` checks that no function reads a key at module load; `token-check.test.ts` covers telling a rejected JWT (401) from an auth outage (503); `gitleaks-config.test.ts` checks the `stronglifts_5x5` allowlist matches every template file, frozen `key@version` files included; `export-format.test.ts` pins the export's top-level keys to `EXPORT_FORMAT_VERSION`; `changelog-node-load.test.ts` imports `web/build/changelog.ts` in plain Node without the `@domain` alias, as `make deploy` does; `ci-changes.test.ts` walks the runtime import closure of `tests/integration/` and the stack scripts, which must all trigger `backend`.
 - `ip-denylist.txt`: lowercase terms, one per line. `scripts/catalog/validate.ts` rejects any catalog key, name or text that contains one as a whole word (case-insensitive), to keep third-party IP out of the seed data. After adding a term, run `make test-catalog` and `make catalog`.
