@@ -8,6 +8,7 @@ import {
   isBefore,
   type RevokedDrop,
   lootCandidates,
+  measuresRepsCapacity,
   NO_RECORDS,
   priorSkillXp,
   type RecordState,
@@ -44,7 +45,13 @@ import {
   tombstoneSession,
   writeSummaries,
 } from './sessions.ts';
-import { clearStrengthCache, loadStrengthHistory, refreshStrengthCache } from './strength.ts';
+import {
+  clearStrengthCache,
+  loadStrengthHistory,
+  type NewestSessionStrength,
+  refreshStrengthCache,
+  writeStrengthCacheFromNewestSession,
+} from './strength.ts';
 
 interface ReplayOutcome {
   replayed: ReplayedSession[];
@@ -72,6 +79,7 @@ interface ReplayChanges {
 }
 
 interface PriorState {
+  suffixIsOnlyTheAnchor: boolean;
   strength: StrengthHistoryRow[];
   records: RecordState;
   skillXp: Record<string, number>;
@@ -86,7 +94,7 @@ async function loadPriorState(
   catalog: Catalog,
   cfg: BalanceConfig,
 ): Promise<PriorState> {
-  if (from === null) return { strength: [], records: NO_RECORDS, skillXp: {} };
+  if (from === null) return { suffixIsOnlyTheAnchor: false, strength: [], records: NO_RECORDS, skillXp: {} };
   const [strength, laterWork] = await Promise.all([
     loadStrengthHistory(tx, userId, suffixExerciseIds, from, cfg),
     anchorIsNew ? Promise.all([hasLaterSessions(tx, userId, from), hasLaterQuestGrants(tx, userId, from)]) : null,
@@ -94,7 +102,7 @@ async function loadPriorState(
   const suffixIsOnlyTheAnchor = laterWork !== null && !laterWork.includes(true);
   if (suffixIsOnlyTheAnchor) {
     const [records, skillXp] = await Promise.all([loadRecords(tx, userId, allTouched), loadSkillXp(tx, userId)]);
-    return { strength, records, skillXp };
+    return { suffixIsOnlyTheAnchor, strength, records, skillXp };
   }
   const [recordHistory, priorSums, questXp] = await Promise.all([
     loadRecordHistory(tx, userId, allTouched, from),
@@ -102,10 +110,31 @@ async function loadPriorState(
     loadQuestXpBefore(tx, userId, from),
   ]);
   return {
+    suffixIsOnlyTheAnchor,
     strength,
     records: recordsFromHistory(recordHistory, catalog, cfg),
     skillXp: priorSkillXp(applyXpGrant(priorSums, questXp, cfg), cfg),
   };
+}
+
+function newestSessionStrength(
+  anchor: ReplayedSession,
+  exerciseIds: readonly string[],
+  history: readonly StrengthHistoryRow[],
+  catalog: Catalog,
+): NewestSessionStrength {
+  const exercises = exerciseIds.map((exerciseId) => {
+    const exercise = catalog.exercises.get(exerciseId);
+    return { exerciseId, usesRepsCapacity: exercise?.modality === 'lift' && measuresRepsCapacity(exercise.loadType) };
+  });
+  const candidates = [...anchor.outputs.sets]
+    .sort((a, b) => a.set.position - b.set.position)
+    .map((result) => ({
+      exerciseId: result.set.exerciseId,
+      setId: result.set.id,
+      value: result.e1rmCandidateKg ?? result.repsCapacityCandidate ?? null,
+    }));
+  return { session: anchor.session, exercises, history, candidates };
 }
 
 async function rewriteDerivedSetColumns(tx: Transaction, results: readonly SetResult[]): Promise<void> {
@@ -183,7 +212,16 @@ async function replaySessions(
 
   await replaceSkillXp(tx, userId, replay.finalState.skillXp);
   await replaceRecordsFor(tx, userId, touched, replay.finalState.records ?? NO_RECORDS);
-  await refreshStrengthCache(tx, userId, touched, cfg);
+  if (prior.suffixIsOnlyTheAnchor) {
+    await writeStrengthCacheFromNewestSession(
+      tx,
+      userId,
+      newestSessionStrength(replay.sessions[0], touched, prior.strength, catalog),
+      cfg,
+    );
+  } else {
+    await refreshStrengthCache(tx, userId, touched, cfg);
+  }
 
   await writeSummaries(
     tx,
