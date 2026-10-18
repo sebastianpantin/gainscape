@@ -15,7 +15,7 @@ All application source for the React PWA. `main.tsx` boots the app, `App.tsx` ow
 
 ## Rules and gotchas
 
-- Import order in `main.tsx` matters: `zod-config.ts` first (zod's JIT probe would break the Pages CSP), then `pwa/install.ts` (so `beforeinstallprompt` is never missed), then fonts (latin subsets only, to keep the precache small) and styles.
+- Import order in `main.tsx` matters: `zod-config.ts` first (zod's JIT probe would break the Pages CSP), then `pwa/install.ts` (so `beforeinstallprompt` is never missed), then fonts (latin and latin-ext subsets only, to keep the precache small; latin-ext covers names like ł, ő, ş) and styles.
 - Add a screen in `App.tsx` with `lazyScreen(() => import('./features/...'), 'NamedExport')`; a tab-level screen uses `lazyTabScreen` and also goes in `TABS` with an icon from `components/Icon.tsx`. Every screen except `WorkoutScreen` (the landing route) is a lazy chunk under one `Suspense` with a `ScreenSkeleton` fallback inside `ScreenErrorBoundary`; only the `lazyTabScreen` tab roots preload, when the browser is idle after sign-in (a 1 s timer where Safari lacks `requestIdleCallback`). Unknown paths redirect to `/`. Also add the path to `SCREEN_TITLES` in `lib/platform/route-title-rules.ts`: `tests/web/route-title-rules.test.ts` fails when the two lists differ (it reads the `<Route path="...">` attributes of `App.tsx` as text, so keep `path` the first attribute).
 - `RouteView` keys a div by pathname for a 180 ms opacity-only fade. Never use a transform there: it would become the containing block of `position: fixed` children.
 - `RouteFocusAndTitle` sets the page title and focuses the new screen's `h1` on each route change.
