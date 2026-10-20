@@ -11,7 +11,13 @@ import { collectionPercent, countCollection } from '../collection/collection-rul
 import { fetchExerciseProgress } from '../progress/exercise-progress.ts';
 import { fetchSessionPage } from '../history/history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession, isUuid } from '../history/history-rules.ts';
-import { fetchLoadout, fetchOwnedPets, loadItemCatalogCacheFirst, loadItemsCacheFirst } from '../collection/items.ts';
+import {
+  fetchLoadout,
+  fetchOwnedPets,
+  fetchRarestRecentDrop,
+  loadItemCatalogCacheFirst,
+  loadItemsCacheFirst,
+} from '../collection/items.ts';
 import { fetchTrainingHistory } from '../profile/onboarding.ts';
 import { loadProfileCacheFirst, type Profile } from '../profile/profile.ts';
 import { type Preferences } from '../profile/preferences.ts';
@@ -51,7 +57,7 @@ import {
   RECORD_TIMELINE_PAGE_WORKOUTS,
   type RecordTimelineCursor,
 } from '../stats/pr-timeline-rules.ts';
-import { loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
+import { fetchLatestTrainingDate, loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
 import { loadWeeklyExerciseSetsCacheFirst } from '../stats/volume-history.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
 import { announceDataChange } from './data-changes.ts';
@@ -165,6 +171,13 @@ export function ownedPetsQuery(userId: string) {
   return queryOptions({
     queryKey: ['items', userId, 'pets'] as const,
     queryFn: () => fetchOwnedPets(userId),
+  });
+}
+
+export function rarestDropQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['rarest-drop', userId] as const,
+    queryFn: () => fetchRarestRecentDrop(Date.now()),
   });
 }
 
@@ -342,6 +355,13 @@ export function trainingDaysQuery(userId: string, month: string) {
   });
 }
 
+export function lastWorkoutDateQuery(userId: string, today: string) {
+  return queryOptions({
+    queryKey: ['last-workout-date', userId, today] as const,
+    queryFn: () => fetchLatestTrainingDate(userId, today),
+  });
+}
+
 export function weeklyExerciseSetsQuery(userId: string) {
   return queryOptions({
     queryKey: ['weekly-exercise-sets', userId] as const,
@@ -389,6 +409,7 @@ export const EVERY_QUERY = [
   feedQuery,
   feedPreviewQuery,
   ownedPetsQuery,
+  rarestDropQuery,
   recentSetsQuery,
   historyQuery,
   hiscoresQuery,
@@ -407,6 +428,7 @@ export const EVERY_QUERY = [
   questsQuery,
   questPointsQuery,
   trainingDaysQuery,
+  lastWorkoutDateQuery,
   weeklyExerciseSetsQuery,
   recordTimelineQuery,
   lootStatsQuery,

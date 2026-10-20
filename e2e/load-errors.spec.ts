@@ -69,8 +69,8 @@ test('a failed automatic load on History says so and Load more fetches the older
 });
 
 test('the Items loadout says it could not load, and shows the slots after a reload', async ({ page }) => {
-  await register(page, uniqueUsername('le_loadout'));
   await failRequests(page, rpc('get_loadout'), 'POST');
+  await register(page, uniqueUsername('le_loadout'));
 
   await openItems(page);
 

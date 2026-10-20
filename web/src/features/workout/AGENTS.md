@@ -17,6 +17,8 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
   - Screen decisions (picked exercise, swap list, add-button focus key, superset members): `workout-screen-rules.ts`.
   - Lift card decisions (menu, advice, warm-ups, when rest starts): `exercise-card-rules.ts`.
   - Today nudges: `today-rules.ts`.
+  - This week strip: `week-strip-rules.ts`.
+  - Highlights: `highlight-rules.ts`.
   - Last-session chips: `last-set-rules.ts`.
   - Per-set feedback: `set-feedback-rules.ts`.
   - Set menu: `set-menu-rules.ts`.
@@ -77,8 +79,11 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - `Remove exercise` asks first (`removingAsksFirst`) when a set is logged or planned, or sets were added past the starting one, so tidying an unused card stays one tap. Edits to the starting set's values do not count: the draft keeps no baseline to compare with.
 - Holds take no superset, warm-ups, quick fill or swap. Cardio cards keep a plain `Remove` instead of `ExerciseMenu`.
 - At the set limit (`MAX_SETS_PER_SESSION`), or at 4 hours of bouts, the add buttons are disabled and the picker stops offering what will not fit. History edit behaves the same way.
-- `PetCompanion` uses `ownedPetsQuery`, not `itemsQuery`, so Items and the reveal keep their own cache.
-- `streakRiskText` counts from the server's `weekStart`, which follows the profile timezone, against the device's day. It returns null when the device day falls outside that week (possible near midnight on Sunday).
+- Train home order (checked at 360x780, `e2e/train-home.spec.ts`): header, notices, `ThisWeekCard`, the program summary and today's prescription, then `Start workout`, then program days, the progress and highlight cards, lift goals and friends. Start stays in the first screen for a lifter without a program; a program follower starts from the prescription above it. Keep new cards below Start.
+- `ThisWeekCard` is the only streak: the weekly goal's (weeks in a row that met the goal). `TodayView` reads `trainingDaysQuery` once for the strip and the highlights: this month in the profile time zone (the RPC range includes the month before, so a week that starts there is whole), cache-first. While it loads, the card keeps an `aria-hidden` letter strip so nothing below shifts. Decisions live in `thisWeekView`.
+- `HighlightsCard` rows each hide without data, and the card with them, so a new account never sees it. Last workout: those training days, or `lastWorkoutDateQuery` (one `sessions` row) only when they hold none. Latest record: the first `recordTimelineQuery` page; the exercise list loads only once it holds a record. Rarest drop: the `rarest_recent_drop` RPC ranks the last 30 days on the server; online only.
+- `TrainingHero` (the `Your progress` card) shows the companion pet, the equipped gear (icon = slot sprite in the tier colour, from `loadoutQuery`), an XP bar for the skill nearest its next level and the first quest in progress (`activeQuestLine`). It hides when none of them has data, so a new account does not see an empty card. `useCompanionPet` uses `ownedPetsQuery`, not `itemsQuery`, so Items and the reveal keep their own cache.
+- `streakRiskText` compares the server's `weekStart` with the profile-timezone day from `TodayView`, never the device day; it returns null when that day is outside the week.
 - The picker gets only active exercises (`exercisePickerList`), but `exerciseListLoadQuery` saves the archived ones too, because the Exercises screen, program editor and reveal need them offline.
 - `Discard workout` is left out on a challenge draft, whose banner has its own discard. Discarding a challenge keeps the scroll.
 - `BodyweightPrompt` answers save through `../profile/save-bodyweight.ts`, the same path as session detail.
@@ -93,7 +98,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - The domain math is tested in `tests/domain/`.
 - E2E (stack needed, `make e2e`):
   - `drafts`, `multi-tab`, `token-refresh`, `workout-records`, `programs`, `profile` (RPE, pounds), `training-aids`.
-  - `loot`, `weekly-goal`, `supersets`, `challenges`, `custom-exercise`, `notify-prompt`, `active-workout-bar`, `a11y`, `term-help`.
+  - `train-home`, `loot`, `weekly-goal`, `supersets`, `challenges`, `custom-exercise`, `notify-prompt`, `active-workout-bar`, `a11y`, `term-help`.
   - `e2e/pwa/offline.spec.ts` (`make e2e-pwa`).
 
 ## Manual Notes

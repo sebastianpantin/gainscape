@@ -94,6 +94,7 @@ test('an unknown skill address says so and links back to Skills', async ({ page 
 
 test('a body skill page loads the exercise list once for its exercises, recovery and weekly sets', async ({ page }) => {
   await register(page, uniqueUsername('skp_once'));
+  await page.goto('about:blank');
   let exerciseReads = 0;
   page.on('request', (request) => {
     if (restTable('exercises').test(request.url()) && request.method() === 'GET') exerciseReads += 1;

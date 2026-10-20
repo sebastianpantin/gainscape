@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { monthKey } from '../../web/src/lib/ui/date-bucket-rules.ts';
-import { queryTrainingDays, trainingSessionOf } from '../../web/src/lib/stats/training-days-rules.ts';
+import {
+  queryLatestTrainingDate,
+  queryTrainingDays,
+  trainingSessionOf,
+} from '../../web/src/lib/stats/training-days-rules.ts';
 import { builtInExerciseId, createTestUser, db, postFunction, type TestUser } from './local-stack.ts';
 import {
   aSet,
@@ -65,5 +69,17 @@ describe('training days', () => {
     const removed = await postFunction('delete-session', owner.accessToken, { sessionId: payload.id });
     expect(removed.status, removed.rawBody).toBe(200);
     expect(await trainingDaysOf(owner, localDate)).toEqual([baseline]);
+  });
+
+  it('reads the newest training day on or before today, for a lifter with no workout in the strip range', async () => {
+    const lapsed = await createTestUser(TIMEZONE);
+    const [older, newer] = startsOnOneLocalDay(2) as [Date, Date];
+    const newerDay = localDateOf(newer);
+    await postSession(lapsed, payloadAt(older, [aSet(benchId, 0, 40, { reps: 5 })]));
+    await postSession(lapsed, payloadAt(newer, [aSet(benchId, 0, 40, { reps: 5 })]));
+
+    expect(await queryLatestTrainingDate(lapsed.client, lapsed.id, newerDay)).toBe(newerDay);
+    expect(await queryLatestTrainingDate(lapsed.client, lapsed.id, '2000-01-01')).toBeNull();
+    expect(await queryLatestTrainingDate(stranger.client, lapsed.id, newerDay)).toBeNull();
   });
 });

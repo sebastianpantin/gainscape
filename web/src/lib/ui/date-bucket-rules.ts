@@ -32,6 +32,10 @@ export function weekStartIn(timeZone: string, now: number): string {
   return weekKey(localDateIn(timeZone, now));
 }
 
+export function daysBetween(earlier: string, later: string): number {
+  return Math.round((Date.parse(`${later}T00:00:00Z`) - Date.parse(`${earlier}T00:00:00Z`)) / MS_PER_DAY);
+}
+
 export function weekKey(localDate: string): string {
   return mondayOnOrBefore(Date.parse(`${localDate}T00:00:00Z`));
 }

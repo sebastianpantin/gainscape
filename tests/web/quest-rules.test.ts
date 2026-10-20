@@ -1,6 +1,7 @@
 import { xpForLevel } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
 import {
+  activeQuestLine,
   canStartQuest,
   type QuestRows,
   questBoard,
@@ -350,5 +351,62 @@ describe('startQuestProblemText', () => {
     expect(startQuestProblemText(httpError('internal_error', undefined, 500), names)).toBe(
       "Couldn't start the quest. Try again.",
     );
+  });
+});
+
+describe('activeQuestLine', () => {
+  function progress(questId: string, stepIndex: number, stepProgress: number) {
+    return {
+      quest_id: questId,
+      started_at: '2026-10-01T00:00:00Z',
+      step_index: stepIndex,
+      step_progress: String(stepProgress),
+    };
+  }
+
+  it('shows the current step of the first quest in progress with its counter', () => {
+    const log = questLogFrom(rows({ progress: [progress(OPEN_QUEST.id, 0, 2)] }));
+    expect(activeQuestLine(log, 'kg')).toEqual({
+      questName: 'Open Quest',
+      stepText: 'Step 1 of 1: Finish 3 workouts',
+      progressText: '2 / 3 workouts',
+      fraction: 2 / 3,
+    });
+  });
+
+  it('counts the steps already done into the bar', () => {
+    const log = questLogFrom(rows({ progress: [progress(INITIATION.id, 1, 50)] }));
+    expect(activeQuestLine(log, 'kg')).toEqual({
+      questName: 'X Marks the Squat',
+      stepText: 'Step 2 of 2: 100 reps of Back Squat in total',
+      progressText: '50 / 100 reps',
+      fraction: 0.75,
+    });
+  });
+
+  it('counts steps when the current step has no counter', () => {
+    const log = questLogFrom(rows({ progress: [progress(HEAVY_SINGLE.id, 1, 0)] }));
+    expect(activeQuestLine(log, 'kg')).toMatchObject({ progressText: '1 of 2 steps done', fraction: 0.5 });
+  });
+
+  it('skips a completed quest for the next one in progress', () => {
+    const log = questLogFrom(
+      rows({
+        progress: [progress(OPEN_QUEST.id, 0, 3), progress(INITIATION.id, 1, 50)],
+        completions: [{ quest_id: OPEN_QUEST.id, completed_at: '2026-10-02T00:00:00Z', quest_points: 1 }],
+      }),
+    );
+    expect(activeQuestLine(log, 'kg')).toMatchObject({ questName: 'X Marks the Squat' });
+  });
+
+  it('has nothing to show without a quest in progress', () => {
+    expect(activeQuestLine(questLogFrom(rows()), 'kg')).toBeNull();
+    const completed = questLogFrom(
+      rows({
+        progress: [progress(OPEN_QUEST.id, 0, 3)],
+        completions: [{ quest_id: OPEN_QUEST.id, completed_at: '2026-10-02T00:00:00Z', quest_points: 1 }],
+      }),
+    );
+    expect(activeQuestLine(completed, 'kg')).toBeNull();
   });
 });

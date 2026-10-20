@@ -429,6 +429,7 @@ describe('function execution rights', () => {
       'loot_stats',
       'personal_record_timeline',
       'publish_program',
+      'rarest_recent_drop',
       'recent_lift_sets',
       'remove_friend',
       'reorder_pins',

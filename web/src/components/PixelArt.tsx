@@ -44,8 +44,8 @@ export function TrophyIcon() {
   return <PixelGrid sprite={TROPHY} size={32} />;
 }
 
-export function ItemIcon({ kind, color }: { kind: ItemIconKind; color: string }) {
-  return <PixelGrid sprite={itemSprite(kind, color)} size={36} />;
+export function ItemIcon({ kind, color, size = 36 }: { kind: ItemIconKind; color: string; size?: number }) {
+  return <PixelGrid sprite={itemSprite(kind, color)} size={size} />;
 }
 
 export function SkillIcon({ skillKey }: { skillKey: string }) {

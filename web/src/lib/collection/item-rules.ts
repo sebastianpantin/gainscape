@@ -7,7 +7,7 @@ import type { CatalogChallenge } from './challenge-rules.ts';
 import { capitalized } from '../names.ts';
 import { z } from 'zod';
 import { parsedJson } from '../json-rules.ts';
-import { parsedRows } from '../rows.ts';
+import { parsedRow, parsedRows } from '../rows.ts';
 
 export const ITEM_KINDS = ['gear', 'material', 'pet', 'scroll'] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
@@ -210,6 +210,12 @@ export async function queryOwnedPets(client: SupabaseClient, userId: string): Pr
       ]),
     ),
   };
+}
+
+export async function queryRarestRecentDrop(client: SupabaseClient, since: string): Promise<CatalogItem | null> {
+  const { data, error } = await client.rpc('rarest_recent_drop', { since }).select(ITEM_COLUMNS).maybeSingle();
+  if (error) throw error;
+  return data === null ? null : toCatalogItem(parsedRow(itemRowSchema, data));
 }
 
 export type Fanfare = Extract<ItemRarity, 'rare' | 'legendary'>;

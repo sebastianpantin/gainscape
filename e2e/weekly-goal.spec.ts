@@ -1,9 +1,11 @@
 import { type Page } from '@playwright/test';
+import { expectNoAxeViolations } from './support/a11y.ts';
 import { expect, test } from './support/fixtures.ts';
 import { logBench, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import { rpc } from './support/network.ts';
 
 function weeklyGoalCard(page: Page) {
-  return page.getByRole('region', { name: 'Weekly goal' });
+  return page.getByRole('region', { name: 'This week' });
 }
 
 function levelNudge(page: Page) {
@@ -14,10 +16,36 @@ function goalChoice(page: Page, name: string) {
   return page.getByRole('radiogroup', { name: 'Workouts per week' }).getByRole('radio', { name, exact: true });
 }
 
+function isoDayBefore(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
+}
+
+test('on the last day of a goal week, Train says how many workouts keep the streak', async ({ page }) => {
+  await register(page, uniqueUsername('goal_risk'));
+  const profileToday = await page.evaluate(() => new Date().toLocaleDateString('en-CA'));
+  const lastDayWeekStart = isoDayBefore(profileToday, 6);
+  await page.route(rpc('weekly_goal_weeks'), (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { week_start: isoDayBefore(lastDayWeekStart, 7), goal: 2, sessions: 2, is_current: false },
+        { week_start: lastDayWeekStart, goal: 2, sessions: 0, is_current: true },
+      ]),
+    }),
+  );
+
+  await page.reload();
+  await expect(weeklyGoalCard(page)).toContainText('0 of 2 workouts this week');
+  await expect(weeklyGoalCard(page)).toContainText('1 week streak');
+  await expect(weeklyGoalCard(page)).toContainText('2 more workouts today keeps your 1 week streak');
+  await expectNoAxeViolations(page, 'train home, weekly goal at risk');
+});
+
 test('a weekly goal counts workouts on Today and a change waits for next week', async ({ page }) => {
   await register(page, uniqueUsername('goal'));
   await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
-  await expect(weeklyGoalCard(page)).toHaveCount(0);
+  await expect(weeklyGoalCard(page)).toContainText('0 workouts this week');
+  await expect(weeklyGoalCard(page)).not.toContainText('streak');
   await expect(levelNudge(page)).toHaveCount(0);
 
   await openFromProfile(page, 'Settings');

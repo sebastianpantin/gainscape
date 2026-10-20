@@ -120,12 +120,6 @@
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--rarity-color, var(--color-xp)) 60%, transparent));
 }
 
-.level-nudge {
-  align-self: flex-start;
-  color: var(--color-xp);
-  font-size: var(--font-size-sm);
-}
-
 .reveal-total {
   font-family: var(--font-display);
   font-size: 2.75rem;

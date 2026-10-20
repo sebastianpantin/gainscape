@@ -1,21 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon } from '../../components/PixelArt.tsx';
-import { companionPetStore } from '../../lib/collection/companion-pet-store.ts';
-import { colorFor, companionPet } from '../../lib/collection/item-rules.ts';
-import { ownedPetsQuery } from '../../lib/query/queries.ts';
-import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { type CatalogItem, colorFor } from '../../lib/collection/item-rules.ts';
 
-export function PetCompanion({ userId }: { userId: string }) {
-  const pets = useQuery(ownedPetsQuery(userId));
-  const [chosenId] = useState(() => companionPetStore.read(deviceStorage(), userId));
-  const pet = pets.data ? companionPet(pets.data.items, pets.data.held, chosenId) : null;
-  if (!pet) return null;
+const HERO_PET_SIZE = 72;
+
+export function PetCompanion({ pet }: { pet: CatalogItem }) {
   return (
     <Link className="pet-companion" to="/collection/items" aria-label={`${pet.name}, your companion`}>
       <span className="pet-companion-art" aria-hidden="true">
-        <ItemIcon kind={pet.icon} color={colorFor(pet)} />
+        <ItemIcon kind={pet.icon} color={colorFor(pet)} size={HERO_PET_SIZE} />
       </span>
       <span className="muted tiny" aria-hidden="true">
         {pet.name}

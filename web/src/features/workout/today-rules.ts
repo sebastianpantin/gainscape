@@ -1,7 +1,7 @@
-import { MS_PER_DAY } from '@domain/math.ts';
 import { formatXp } from '../../lib/format.ts';
 import type { SkillStanding } from '../../lib/progress/standing-rules.ts';
 import { type WeeklyGoalStatus, workoutWord } from '../../lib/progress/weekly-goal-rules.ts';
+import { daysBetween } from '../../lib/ui/date-bucket-rules.ts';
 
 export function greetingFor(hour: number): string {
   if (hour >= 5 && hour < 12) return 'Good morning';
@@ -18,6 +18,8 @@ interface NearestLevelUp {
   skillName: string;
   xpToGo: number;
   nextLevel: number;
+  xpIntoLevel: number;
+  levelXp: number;
 }
 
 export function nearestLevelUp(skills: readonly SkillStanding[]): NearestLevelUp | null {
@@ -26,7 +28,13 @@ export function nearestLevelUp(skills: readonly SkillStanding[]): NearestLevelUp
     if (progress.xp <= 0 || progress.nextLevelXp === null) continue;
     const xpToGo = progress.nextLevelXp - progress.xp;
     if (nearest === null || xpToGo < nearest.xpToGo) {
-      nearest = { skillName: skill.name, xpToGo, nextLevel: progress.level + 1 };
+      nearest = {
+        skillName: skill.name,
+        xpToGo,
+        nextLevel: progress.level + 1,
+        xpIntoLevel: progress.xp - progress.levelStartXp,
+        levelXp: progress.nextLevelXp - progress.levelStartXp,
+      };
     }
   }
   return nearest;
@@ -36,22 +44,25 @@ export function nearestLevelUpText({ skillName, xpToGo, nextLevel }: NearestLeve
   return `${skillName} is ${formatXp(xpToGo)} XP from level ${nextLevel}`;
 }
 
+export function nearestLevelUpValueText({ xpIntoLevel, levelXp }: NearestLevelUp): string {
+  return `${formatXp(xpIntoLevel)} of ${formatXp(levelXp)} XP`;
+}
+
 const DAYS_IN_WEEK = 7;
 const WARNING_DAYS = 3;
 const SPARE_DAYS_BEFORE_WARNING = 1;
 const MOST_WORKOUTS_A_DAY = 2;
 
-function daysLeftInWeek(weekStart: string, now: Date): number | null {
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const daysSinceWeekStart = Math.round((today - Date.parse(`${weekStart}T00:00:00Z`)) / MS_PER_DAY);
+function daysLeftInWeek(weekStart: string, today: string): number | null {
+  const daysSinceWeekStart = daysBetween(weekStart, today);
   if (daysSinceWeekStart < 0 || daysSinceWeekStart >= DAYS_IN_WEEK) return null;
   return DAYS_IN_WEEK - daysSinceWeekStart;
 }
 
-export function streakRiskText(status: WeeklyGoalStatus, now: Date): string | null {
+export function streakRiskText(status: WeeklyGoalStatus, today: string): string | null {
   if (status.goal === null) return null;
   const needed = status.goal - status.sessionsThisWeek;
-  const daysLeft = daysLeftInWeek(status.weekStart, now);
+  const daysLeft = daysLeftInWeek(status.weekStart, today);
   if (needed <= 0 || daysLeft === null || daysLeft > WARNING_DAYS) return null;
   if (daysLeft - needed > SPARE_DAYS_BEFORE_WARNING || needed > daysLeft * MOST_WORKOUTS_A_DAY) return null;
   const deadline = daysLeft === 1 ? 'today' : 'by Sunday';

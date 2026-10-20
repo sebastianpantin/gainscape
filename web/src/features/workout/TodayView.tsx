@@ -1,22 +1,25 @@
+import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { type ActiveProgram } from '../../lib/programs/program-today-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
+import { profileQuery, trainingDaysQuery } from '../../lib/query/queries.ts';
+import { localDateIn, monthKey } from '../../lib/ui/date-bucket-rules.ts';
 import { type DraftNotice } from '../../offline/draft-session.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
 import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
+import { HighlightsCard } from './HighlightsCard.tsx';
 import { LevelStat } from './LevelStat.tsx';
 import { LiftGoalsCard } from './LiftGoalsCard.tsx';
-import { PetCompanion } from './PetCompanion.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { ProgramSummary } from './ProgramSummary.tsx';
 import { ProgramToday } from './ProgramToday.tsx';
-import { greetingFor, nearestLevelUp, nearestLevelUpText } from './today-rules.ts';
+import { ThisWeekCard } from './ThisWeekCard.tsx';
+import { greetingFor } from './today-rules.ts';
+import { TrainingHero } from './TrainingHero.tsx';
 import { type useWorkoutStart } from './use-workout-start.ts';
-import { WeeklyGoalCard } from './WeeklyGoalCard.tsx';
 
 interface TodayViewProps {
   userId: string;
@@ -45,7 +48,10 @@ export function TodayView({
 }: TodayViewProps) {
   const startButton = useRef<HTMLButtonElement>(null);
   const now = new Date();
-  const levelNudge = standing.status === 'ready' ? nearestLevelUp(standing.standing.skills) : null;
+  const timezone = useQuery(profileQuery(userId)).data?.loaded.timezone;
+  const today = timezone === undefined ? null : localDateIn(timezone, now.getTime());
+  const trainingDays = useQuery({ ...trainingDaysQuery(userId, monthKey(today ?? '')), enabled: today !== null });
+  const trainedDates = trainingDays.data?.loaded.map((session) => session.localDate);
   return (
     <main className="screen stack">
       <div className="screen-header">
@@ -76,17 +82,7 @@ export function TodayView({
         </p>
       )}
       <InstallCard userId={userId} />
-      <div className="today-row">
-        {levelNudge && (
-          <Link className="level-nudge tap-link" to="/skills">
-            {nearestLevelUpText(levelNudge)}
-          </Link>
-        )}
-        <PetCompanion userId={userId} />
-      </div>
-      <WeeklyGoalCard />
-      <LiftGoalsCard userId={userId} unit={unit} />
-      <FriendActivityStrip userId={userId} />
+      <ThisWeekCard today={today} trainedDates={trainedDates} />
       <ProgramSummary userId={userId} program={program} />
       <ProgramToday
         program={program}
@@ -95,12 +91,6 @@ export function TodayView({
         disabled={start.startingDay}
         onStart={start.startFromPrescription}
         onSkip={start.skipProgramDay}
-      />
-      <ProgramDayStarts
-        userId={userId}
-        disabled={start.startingDay}
-        followingProgram={program.kind !== 'none'}
-        onStart={start.startFromDay}
       />
       <button
         ref={startButton}
@@ -114,6 +104,16 @@ export function TodayView({
       <p className="muted" style={{ textAlign: 'center' }}>
         Freestyle: add exercises as you go.
       </p>
+      <ProgramDayStarts
+        userId={userId}
+        disabled={start.startingDay}
+        followingProgram={program.kind !== 'none'}
+        onStart={start.startFromDay}
+      />
+      <TrainingHero userId={userId} standing={standing} unit={unit} />
+      <HighlightsCard userId={userId} today={today} trainedDates={trainedDates} unit={unit} />
+      <LiftGoalsCard userId={userId} unit={unit} />
+      <FriendActivityStrip userId={userId} />
       {onboarding.open && (
         <FirstRunDialog
           userId={userId}

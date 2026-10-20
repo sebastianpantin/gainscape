@@ -4,6 +4,8 @@ import {
   dataChangeOf,
   FRESH_FOR_MS,
   ALWAYS_STALE_QUERY_ROOTS,
+  HOME_QUERY_ROOTS,
+  HOME_FRESH_FOR_MS,
   QUERY_ROOTS_CHANGED_BY,
   queryRootsToInvalidate,
   staleTimeFor,
@@ -209,6 +211,31 @@ describe('staleTimeFor', () => {
 
   it('reloads while the device is offline so a screen shows its saved copy and offline state', () => {
     expect(staleTimeFor(['items', USER_ID], live, { deviceOffline: true })).toBe(0);
+  });
+
+  it('keeps the reads only Train home adds fresh for longer, since a change on this device invalidates them', () => {
+    expect(HOME_FRESH_FOR_MS).toBeGreaterThan(FRESH_FOR_MS);
+    expect([...HOME_QUERY_ROOTS].sort()).toEqual([
+      'last-workout-date',
+      'loadout',
+      'quests',
+      'rarest-drop',
+      'record-timeline',
+    ]);
+    for (const root of HOME_QUERY_ROOTS) {
+      expect(staleTimeFor([root, USER_ID], live, online)).toBe(HOME_FRESH_FOR_MS);
+      expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain(root);
+      expect(ALWAYS_STALE_QUERY_ROOTS).not.toContain(root);
+    }
+    expect(QUERY_ROOTS_CHANGED_BY['gear-changed']).toContain('loadout');
+    expect(QUERY_ROOTS_CHANGED_BY['quest-started']).toContain('quests');
+  });
+
+  it('still reloads the home reads offline or after a saved copy, like every other read', () => {
+    for (const root of HOME_QUERY_ROOTS) {
+      expect(staleTimeFor([root, USER_ID], live, { deviceOffline: true })).toBe(0);
+      expect(staleTimeFor([root, USER_ID], { loaded: {}, fromCache: true, offline: true }, online)).toBe(0);
+    }
   });
 
   it('refetches on every visit what other people change and what loads cache-first without saying so', () => {
