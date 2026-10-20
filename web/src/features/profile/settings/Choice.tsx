@@ -1,3 +1,5 @@
+import { SegmentedChoice } from '../../../components/SegmentedChoice.tsx';
+
 const MOST_SEGMENTS_IN_ONE_ROW = 6;
 
 export function Choice<T extends string>({
@@ -16,25 +18,14 @@ export function Choice<T extends string>({
   return (
     <div className="stack" style={{ gap: 6 }}>
       <span className="field">{label}</span>
-      <div
-        className={options.length > MOST_SEGMENTS_IN_ONE_ROW ? 'segmented wrapped' : 'segmented'}
-        role="radiogroup"
-        aria-label={label}
-      >
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={current === option.value}
-            className={current === option.value ? 'segment active' : 'segment'}
-            disabled={disabled}
-            onClick={() => onPick(option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedChoice
+        label={label}
+        options={options}
+        current={current}
+        wrapped={options.length > MOST_SEGMENTS_IN_ONE_ROW}
+        disabled={disabled}
+        onPick={onPick}
+      />
     </div>
   );
 }

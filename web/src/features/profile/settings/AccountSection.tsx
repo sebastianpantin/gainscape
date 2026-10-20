@@ -5,7 +5,7 @@ import { messageOf } from '../../../lib/error-text.ts';
 import { useToast } from '../../../lib/ui/toast.ts';
 import { ConfirmDialog } from '../../../components/ConfirmDialog.tsx';
 import { DeleteAccountForm } from './DeleteAccountForm.tsx';
-import { hasUnsyncedDraftHere, signOut } from './device-data.ts';
+import { signOut, useDraftLossGuard } from './device-data.ts';
 import { EmailForm } from './EmailForm.tsx';
 import { PasswordForm } from './PasswordForm.tsx';
 import { ResetDataForm } from './ResetDataForm.tsx';
@@ -26,15 +26,10 @@ export function AccountSection({
   const { showToast, dismissToast } = useToast();
   const [exporting, setExporting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
-
-  const askToSignOut = async () => {
-    setSigningOut(true);
-    if (!(await hasUnsyncedDraftHere(userId))) return signOut(navigate);
-    setSigningOut(false);
-    setConfirmingSignOut(true);
-  };
+  const signOutGuard = useDraftLossGuard(userId, {
+    failureText: 'Could not sign out.',
+    perform: () => signOut(navigate),
+  });
 
   const toggle = (next: AccountPanel) => {
     dismissToast();
@@ -91,15 +86,15 @@ export function AccountSection({
       <button className="button" type="button" disabled={exporting} onClick={exportData}>
         Export my data
       </button>
-      <button className="button" type="button" disabled={signingOut} onClick={askToSignOut}>
+      <button className="button" type="button" disabled={signOutGuard.busy} onClick={() => void signOutGuard.ask()}>
         Sign out
       </button>
-      {confirmingSignOut && (
+      {signOutGuard.confirmingDraftLoss && (
         <ConfirmDialog
           title="Sign out?"
           confirmLabel="Sign out"
-          onConfirm={() => void signOut(navigate)}
-          onCancel={() => setConfirmingSignOut(false)}
+          onConfirm={() => void signOutGuard.run()}
+          onCancel={signOutGuard.cancel}
         >
           <p>Your workout stays on this device.</p>
         </ConfirmDialog>

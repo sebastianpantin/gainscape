@@ -81,8 +81,6 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
   const movePin = async (exercise: Exercise, offset: -1 | 1) => {
     const pinned = data.pinnedExerciseIds;
     const from = pinned.indexOf(exercise.id);
-    const to = from + offset;
-    if (from < 0 || to < 0 || to >= pinned.length) return;
     setProblem(null);
     try {
       await reorderPins(moved(pinned, from, offset));

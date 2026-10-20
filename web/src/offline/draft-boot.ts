@@ -11,6 +11,8 @@ import {
 } from './draft-store.ts';
 import { parseStoredDraft, storableRecord, type StoredDraft, storedSessionId } from './draft-format.ts';
 import { SESSION_STAYS_ON_FALLBACK } from './draft-session.ts';
+import { hasDraftOnDevice } from './local-drafts.ts';
+import { deviceStorage } from '../lib/platform/keyed-store.ts';
 
 const V1_DRAFT_KEY = /^gainscape\.workout-draft\.[0-9a-f-]{36}$/;
 const FORGOTTEN_TOMBSTONE_LIFETIME_MS = 24 * 60 * 60 * 1000;
@@ -112,6 +114,10 @@ export function openPrimaryDraftStore(): Promise<DraftStore> {
 export async function openDraftStoreOrFallback(): Promise<DraftStore> {
   if (bootFailedThisLoad && bootedStore === null) return createLocalDraftStore(localStorage);
   return openPrimaryDraftStore().catch(() => createLocalDraftStore(localStorage));
+}
+
+export async function hasUnsyncedDraftHere(userId: string): Promise<boolean> {
+  return hasDraftOnDevice(await openDraftStoreOrFallback(), deviceStorage(), userId);
 }
 
 let sessionWroteFallbackThisLoad = false;

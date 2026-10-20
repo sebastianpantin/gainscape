@@ -7,6 +7,11 @@ export const UNIT_PREFS = ['kg', 'lb'] as const;
 export const EFFORT_INPUT_MODES = ['level', 'rir', 'rpe'] as const;
 export type UnitPref = (typeof UNIT_PREFS)[number];
 export type EffortInputMode = (typeof EFFORT_INPUT_MODES)[number];
+
+export const UNIT_OPTIONS: { value: UnitPref; label: string }[] = [
+  { value: 'kg', label: 'Kilograms' },
+  { value: 'lb', label: 'Pounds' },
+];
 export type TrainingFocus = 'strength' | 'muscle' | 'powerlifting' | 'general';
 export type BadgeColor = 'gold' | 'blue' | 'green' | 'rust' | 'stone';
 

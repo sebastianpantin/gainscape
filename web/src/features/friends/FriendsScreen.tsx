@@ -17,6 +17,7 @@ import {
   requestedUsername,
   sendRequestText,
   socialErrorMessage,
+  uniqueByEvent,
 } from '../../lib/social/social-rules.ts';
 import { FieldProblem } from '../../components/FieldProblem.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
@@ -80,15 +81,6 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
 
 interface FriendsScreenProps {
   userId: string;
-}
-
-function uniqueByEvent(items: FeedItem[]): FeedItem[] {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    if (seen.has(item.eventId)) return false;
-    seen.add(item.eventId);
-    return true;
-  });
 }
 
 export function FriendsScreen({ userId }: FriendsScreenProps) {

@@ -1,34 +1,18 @@
-import { type FormEvent, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteMyAccount } from '../../../lib/profile/account.ts';
-import { messageOf } from '../../../lib/error-text.ts';
 import { signOutKeepingDrafts } from '../../../offline/sync-workout.ts';
 import { forgetUserDeviceData } from '../../../offline/user-device-data.ts';
 import { ConfirmDialog } from '../../../components/ConfirmDialog.tsx';
-import { forgetOnThisDevice, hasUnsyncedDraftHere, UNSYNCED_DRAFT_LOSS_TEXT } from './device-data.ts';
+import { forgetOnThisDevice, UNSYNCED_DRAFT_LOSS_TEXT, useDraftLossGuard } from './device-data.ts';
 
 export function DeleteAccountForm({ userId, username }: { userId: string; username: string }) {
   const navigate = useNavigate();
   const [typed, setTyped] = useState('');
   const [accountPassword, setAccountPassword] = useState('');
-  const [problem, setProblem] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [confirmingDraftLoss, setConfirmingDraftLoss] = useState(false);
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    if (!(await hasUnsyncedDraftHere(userId))) return deleteAccount();
-    setBusy(false);
-    setConfirmingDraftLoss(true);
-  };
-
-  const deleteAccount = async () => {
-    setConfirmingDraftLoss(false);
-    setBusy(true);
-    setProblem(null);
-    try {
+  const guard = useDraftLossGuard(userId, {
+    failureText: 'Could not delete your account.',
+    perform: async () => {
       await deleteMyAccount(typed, accountPassword);
       navigate('/', { replace: true });
       try {
@@ -36,14 +20,17 @@ export function DeleteAccountForm({ userId, username }: { userId: string; userna
       } finally {
         await forgetOnThisDevice(forgetUserDeviceData, userId).catch(() => undefined);
       }
-    } catch (error) {
-      setProblem(messageOf(error, 'Could not delete your account.'));
-      setBusy(false);
-    }
-  };
+    },
+  });
 
   return (
-    <form className="danger-zone" onSubmit={submit}>
+    <form
+      className="danger-zone"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void guard.ask();
+      }}
+    >
       <p>
         This deletes your workouts, records, programs and custom exercises for good. Export first if you want a copy.
       </p>
@@ -60,25 +47,25 @@ export function DeleteAccountForm({ userId, username }: { userId: string; userna
           onChange={(event) => setAccountPassword(event.target.value)}
         />
       </label>
-      {problem && (
+      {guard.problem && (
         <p className="problem" role="alert">
-          {problem}
+          {guard.problem}
         </p>
       )}
       <button
         className="button danger"
         type="submit"
-        disabled={busy || typed.trim().toLowerCase() !== username || accountPassword === ''}
+        disabled={guard.busy || typed.trim().toLowerCase() !== username || accountPassword === ''}
       >
         Delete forever
       </button>
-      {confirmingDraftLoss && (
+      {guard.confirmingDraftLoss && (
         <ConfirmDialog
           title="Delete anyway?"
           confirmLabel="Delete anyway"
           danger
-          onConfirm={() => void deleteAccount()}
-          onCancel={() => setConfirmingDraftLoss(false)}
+          onConfirm={() => void guard.run()}
+          onCancel={guard.cancel}
         >
           <p>{UNSYNCED_DRAFT_LOSS_TEXT}</p>
         </ConfirmDialog>

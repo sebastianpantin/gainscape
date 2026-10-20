@@ -10,17 +10,8 @@ import { openChannel } from '../../lib/platform/channel.ts';
 import { readLastSeenRelease, saveLastSeenRelease } from '../../lib/platform/last-seen-release-store.ts';
 import { readOnboarding } from '../../lib/profile/onboarding-store.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
-import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
+import { hasUnsyncedDraftHere } from '../../offline/draft-boot.ts';
 import { DRAFT_CHANNEL_NAME } from '../../offline/draft-session.ts';
-import { hasDraftOnDevice } from '../../offline/local-drafts.ts';
-
-async function draftOnDevice(userId: string): Promise<boolean> {
-  try {
-    return await hasDraftOnDevice(await openDraftStoreOrFallback(), deviceStorage(), userId);
-  } catch {
-    return true;
-  }
-}
 
 export function useWhatsNew(userId: string): { releases: readonly Release[] | null; dismiss: () => void } {
   const { pathname, key: visitKey } = useLocation();
@@ -66,11 +57,11 @@ export function useWhatsNew(userId: string): { releases: readonly Release[] | nu
     if (!pending || open) return;
     let superseded = false;
     void (async () => {
-      const hasDraft = await draftOnDevice(userId);
+      const hasDraft = await hasUnsyncedDraftHere(userId).catch(() => true);
       const draftChangedDuringVisit = draftChange.visitKey === visitKey;
       const introPending = readOnboarding(deviceStorage(), userId).status === 'absent';
       if (superseded || !whatsNewMayOpen({ pathname, hasDraft, draftChangedDuringVisit, introPending })) return;
-      const draftAppeared = await draftOnDevice(userId);
+      const draftAppeared = await hasUnsyncedDraftHere(userId).catch(() => true);
       if (!superseded && !draftAppeared) setOpen(true);
     })();
     return () => {
