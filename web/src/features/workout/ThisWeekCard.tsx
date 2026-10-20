@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { streakText, weekProgressText, workoutWord } from '../../lib/progress/weekly-goal-rules.ts';
 import { weeklyGoalQuery } from '../../lib/query/queries.ts';
-import { streakRiskText } from './today-rules.ts';
-import { type WeekStripDay, weekStripDays, weekStripLabel, workoutsThisWeek } from './week-strip-rules.ts';
+import { thisWeekView, WEEKDAY_LETTERS, type WeekStripDay, weekStripLabel } from './week-strip-rules.ts';
 
 function WeekStrip({ days }: { days: readonly WeekStripDay[] }) {
   return (
@@ -22,6 +20,18 @@ function WeekStrip({ days }: { days: readonly WeekStripDay[] }) {
   );
 }
 
+function LoadingWeekStrip() {
+  return (
+    <div className="week-strip" aria-hidden="true">
+      {WEEKDAY_LETTERS.map((letter, index) => (
+        <span key={index} className="week-day">
+          {letter}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 interface ThisWeekCardProps {
   today: string | null;
   trainedDates: readonly string[] | undefined;
@@ -29,30 +39,23 @@ interface ThisWeekCardProps {
 
 export function ThisWeekCard({ today, trainedDates }: ThisWeekCardProps) {
   const headingId = useId();
-  const status = useQuery(weeklyGoalQuery).data;
-  const hasGoal = status?.goal != null;
-
-  if ((today === null || !trainedDates) && !hasGoal) return null;
-  const risk = hasGoal ? streakRiskText(status, new Date()) : null;
-  const workouts = today !== null && trainedDates ? workoutsThisWeek(trainedDates, today) : 0;
+  const view = thisWeekView(useQuery(weeklyGoalQuery).data, today, trainedDates);
   return (
-    <section className="panel stack" aria-labelledby={headingId}>
+    <section className="panel stack" aria-labelledby={headingId} aria-busy={view.summary === null}>
       <div className="row spread wrap">
         <h2 id={headingId}>This week</h2>
-        {hasGoal && <span className="streak-badge">{streakText(status.streakWeeks)}</span>}
+        {view.streak && <span className="streak-badge">{view.streak}</span>}
       </div>
-      {today !== null && trainedDates && <WeekStrip days={weekStripDays(trainedDates, today)} />}
-      {hasGoal ? (
-        <p>{weekProgressText(status)}</p>
-      ) : (
-        <div className="row spread wrap">
-          <span>{`${workouts} ${workoutWord(workouts)} this week`}</span>
+      {view.days ? <WeekStrip days={view.days} /> : <LoadingWeekStrip />}
+      <div className="row spread wrap">
+        <span>{view.summary ?? 'Loading this week'}</span>
+        {view.offerGoal && (
           <Link className="tap-link" to="/profile/settings">
             Set a weekly goal
           </Link>
-        </div>
-      )}
-      {risk && <p className="accent-text">{risk}</p>}
+        )}
+      </div>
+      {view.risk && <p className="accent-text">{view.risk}</p>}
     </section>
   );
 }

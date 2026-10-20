@@ -85,11 +85,11 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 ### Query cache
 
 - `createQueryClient` has no retries and uses `networkMode: 'always'`. A failed or offline load then shows its problem at once, not a skeleton; supabase-js retries GETs, except History's list (`.retry(false)`); `tests/web/query-client.test.ts` pins it.
-- `FRESH_FOR_MS` (60 s) only limits how long changes from other devices take to show. Every write this device makes to queried data must call `announceDataChange` (`query/data-changes.ts`). It invalidates locally and broadcasts on `gainscape.data-changes`.
+- `FRESH_FOR_MS` (60 s) only limits how long changes from other devices take to show; the reads only Train home adds (`HOME_QUERY_ROOTS`) wait 5 min, as this device's writes invalidate them. Every write this device makes to queried data must call `announceDataChange` (`query/data-changes.ts`), which invalidates locally and broadcasts on `gainscape.data-changes`.
 - Every query factory is defined in `query/queries.ts` and listed in `EVERY_QUERY`, and its root is in `QUERY_ROOTS_CHANGED_BY` or `ALWAYS_STALE_QUERY_ROOTS`. `tests/web/query-freshness-rules.test.ts` fails on a `*Query` export missing from either.
 - The tab that made a write skips the roots it already updated optimistically (profile, items after a craft, weekly goal, pins). So a refetch started before a second optimistic write cannot undo it. Optimistic writes call `cancelQueries` before `setQueryData`.
 - `account-reset` resets the roots instead of invalidating them, so no screen shows pre-reset data while it refetches.
-- A cache-first result with `fromCache: true` gets a `staleTime` of 0, so it is retried on the next visit and on reconnect. Everything is stale while the device is offline.
+- A saved copy (`fromCache: true`) and anything read offline get a `staleTime` of 0, so they retry on the next visit and on reconnect.
 - Always stale:
   - friends, feed, hiscores and friend profile, because other people change them;
   - program templates and enroll choices, because their cache-first loaders drop `fromCache`;
@@ -106,7 +106,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 ### Device storage and offline
 
-- Per-user keys follow `gainscape.<name>[.vN].<userId>` (`gainscape.last-summary` and `gainscape.chunk-reload-at` are not per user). To change a stored shape, bump the version and remove the retired keys (`exercises/catalog-cache.ts` drops v1 and v2). Parse stored JSON defensively (zod, or a guard via `parsedJson`), because it can be stale, corrupt or another user's.
+- Per-user keys follow `gainscape.<name>[.vN].<userId>` (`gainscape.last-summary` and `gainscape.chunk-reload-at` are not per user). To change a stored shape, bump the version and remove the retired keys. Parse stored JSON defensively (zod, or a guard via `parsedJson`), because it can be stale, corrupt or another user's.
 - Per-user `Storage` records go through `keyedStore(prefix, parse, format?)` in `platform/keyed-store.ts`: `read` never throws and falls back to `parse(null, userId)`, `save` and `forget` swallow storage errors. Never hand-roll a store. Get storage from `deviceStorage()`/`tabStorage()` there (null when blocked).
 - Every new per-user `gainscape.` key needs two changes:
   - `tests/web/user-device-data.test.ts` must write it. The test scans `web/src` for key names and fails on a key it does not write.

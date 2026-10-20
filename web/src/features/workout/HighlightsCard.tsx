@@ -1,12 +1,16 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { rarestRecentDrop } from '../../lib/collection/item-rules.ts';
 import { capitalized } from '../../lib/names.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
-import { exerciseListQuery, recentDropsQuery, recordTimelineQuery } from '../../lib/query/queries.ts';
+import {
+  exerciseListQuery,
+  lastWorkoutDateQuery,
+  rarestDropQuery,
+  recordTimelineQuery,
+} from '../../lib/query/queries.ts';
 import { recentRecords } from '../../lib/stats/pr-timeline-rules.ts';
-import { lastWorkoutText } from './highlight-rules.ts';
+import { lastWorkoutText, latestTrainedDate } from './highlight-rules.ts';
 
 interface Highlight {
   label: string;
@@ -21,25 +25,26 @@ interface HighlightsCardProps {
   unit: UnitPref;
 }
 
+function useLastWorkoutText(userId: string, today: string | null, trainedDates: readonly string[] | undefined) {
+  const lapsed = today !== null && trainedDates !== undefined && latestTrainedDate(trainedDates, today) === null;
+  const olderWorkout = useQuery({ ...lastWorkoutDateQuery(userId, today ?? ''), enabled: lapsed }).data ?? null;
+  if (today === null || trainedDates === undefined) return null;
+  return lastWorkoutText(trainedDates, today, lapsed ? olderWorkout : null);
+}
+
 function useLatestRecordText(userId: string, unit: UnitPref): string | null {
-  const firstPage = useInfiniteQuery(recordTimelineQuery(userId)).data?.pages[0];
-  const exercises = useQuery(exerciseListQuery(userId)).data;
-  if (!firstPage || !exercises) return null;
-  const [latest] = recentRecords(
-    firstPage.loaded,
-    new Map(exercises.map((exercise) => [exercise.id, exercise])),
-    unit,
-    1,
-  );
+  const records = useInfiniteQuery(recordTimelineQuery(userId)).data?.pages[0]?.loaded;
+  const exercises = useQuery({ ...exerciseListQuery(userId), enabled: records !== undefined && records.length > 0 });
+  if (!records || !exercises.data) return null;
+  const [latest] = recentRecords(records, new Map(exercises.data.map((exercise) => [exercise.id, exercise])), unit, 1);
   return latest ? `${latest.text} · ${latest.dateText}` : null;
 }
 
 export function HighlightsCard({ userId, today, trainedDates, unit }: HighlightsCardProps) {
   const headingId = useId();
-  const lastWorkout = today === null ? null : lastWorkoutText(trainedDates ?? [], today);
+  const lastWorkout = useLastWorkoutText(userId, today, trainedDates);
   const latestRecord = useLatestRecordText(userId, unit);
-  const drops = useQuery(recentDropsQuery(userId)).data;
-  const rarest = drops ? rarestRecentDrop(drops) : null;
+  const rarest = useQuery(rarestDropQuery(userId)).data;
 
   const highlights: Highlight[] = [
     ...(lastWorkout ? [{ label: 'Last workout', text: lastWorkout, to: '/collection/stats' }] : []),
@@ -47,8 +52,8 @@ export function HighlightsCard({ userId, today, trainedDates, unit }: Highlights
     ...(rarest
       ? [
           {
-            label: 'Rarest drop this month',
-            text: `${rarest.item.name} · ${capitalized(rarest.item.rarity)}`,
+            label: 'Rarest drop, last 30 days',
+            text: `${rarest.name} · ${capitalized(rarest.rarity)}`,
             to: '/collection/items',
           },
         ]

@@ -14,7 +14,7 @@ import { HISTORY_PAGE_SIZE, type HistorySession, isUuid } from '../history/histo
 import {
   fetchLoadout,
   fetchOwnedPets,
-  fetchRecentDrops,
+  fetchRarestRecentDrop,
   loadItemCatalogCacheFirst,
   loadItemsCacheFirst,
 } from '../collection/items.ts';
@@ -57,7 +57,7 @@ import {
   RECORD_TIMELINE_PAGE_WORKOUTS,
   type RecordTimelineCursor,
 } from '../stats/pr-timeline-rules.ts';
-import { loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
+import { fetchLatestTrainingDate, loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
 import { loadWeeklyExerciseSetsCacheFirst } from '../stats/volume-history.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
 import { announceDataChange } from './data-changes.ts';
@@ -174,10 +174,10 @@ export function ownedPetsQuery(userId: string) {
   });
 }
 
-export function recentDropsQuery(userId: string) {
+export function rarestDropQuery(userId: string) {
   return queryOptions({
-    queryKey: ['items', userId, 'recent-drops'] as const,
-    queryFn: () => fetchRecentDrops(userId, Date.now()),
+    queryKey: ['rarest-drop', userId] as const,
+    queryFn: () => fetchRarestRecentDrop(Date.now()),
   });
 }
 
@@ -355,6 +355,13 @@ export function trainingDaysQuery(userId: string, month: string) {
   });
 }
 
+export function lastWorkoutDateQuery(userId: string, today: string) {
+  return queryOptions({
+    queryKey: ['last-workout-date', userId, today] as const,
+    queryFn: () => fetchLatestTrainingDate(userId, today),
+  });
+}
+
 export function weeklyExerciseSetsQuery(userId: string) {
   return queryOptions({
     queryKey: ['weekly-exercise-sets', userId] as const,
@@ -402,7 +409,7 @@ export const EVERY_QUERY = [
   feedQuery,
   feedPreviewQuery,
   ownedPetsQuery,
-  recentDropsQuery,
+  rarestDropQuery,
   recentSetsQuery,
   historyQuery,
   hiscoresQuery,
@@ -421,6 +428,7 @@ export const EVERY_QUERY = [
   questsQuery,
   questPointsQuery,
   trainingDaysQuery,
+  lastWorkoutDateQuery,
   weeklyExerciseSetsQuery,
   recordTimelineQuery,
   lootStatsQuery,

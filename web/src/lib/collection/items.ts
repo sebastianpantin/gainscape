@@ -1,4 +1,5 @@
 import {
+  type CatalogItem,
   type CraftProblem,
   type CraftResult,
   craftProblem,
@@ -11,8 +12,7 @@ import {
   itemRowSchema,
   type OwnedPets,
   queryOwnedPets,
-  queryRecentDrops,
-  type RecentDrop,
+  queryRarestRecentDrop,
   RECIPE_COLUMNS,
   recipeRowSchema,
   toCatalogItem,
@@ -77,9 +77,9 @@ export async function fetchOwnedPets(userId: string): Promise<OwnedPets> {
 
 const RECENT_DROP_DAYS = 30;
 
-export async function fetchRecentDrops(userId: string, now: number): Promise<RecentDrop[]> {
+export async function fetchRarestRecentDrop(now: number): Promise<CatalogItem | null> {
   failFastWhenOffline();
-  return queryRecentDrops(supabase, userId, new Date(now - RECENT_DROP_DAYS * MS_PER_DAY).toISOString());
+  return queryRarestRecentDrop(supabase, new Date(now - RECENT_DROP_DAYS * MS_PER_DAY).toISOString());
 }
 
 export async function fetchInventory(userId: string): Promise<Map<string, HeldItem>> {

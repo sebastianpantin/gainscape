@@ -1,8 +1,9 @@
-import { type CacheFirstLoad } from '../../offline/cache-first.ts';
+import { type CacheFirstLoad, failFastWhenOffline } from '../../offline/cache-first.ts';
 import { loadStatCacheFirst } from '../../offline/stats-cache.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { supabase } from '../platform/supabase.ts';
 import {
+  queryLatestTrainingDate,
   queryTrainingDays,
   type TrainingSession,
   trainingDayRowsSchema,
@@ -22,4 +23,9 @@ export async function loadTrainingDaysCacheFirst(
     () => queryTrainingDays(supabase, month, signal),
   );
   return { ...load, loaded: load.loaded.map(trainingSessionOf) };
+}
+
+export async function fetchLatestTrainingDate(userId: string, today: string): Promise<string | null> {
+  failFastWhenOffline();
+  return queryLatestTrainingDate(supabase, userId, today);
 }

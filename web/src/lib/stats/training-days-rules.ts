@@ -52,3 +52,21 @@ export async function queryTrainingDays(
   if (error) throw error;
   return parsedRows(trainingDayRowSchema, data);
 }
+
+const latestTrainingDateRowSchema = z.object({ local_date: z.string() });
+
+export async function queryLatestTrainingDate(
+  client: SupabaseClient,
+  userId: string,
+  today: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from('sessions')
+    .select('local_date')
+    .eq('user_id', userId)
+    .lte('local_date', today)
+    .order('local_date', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return parsedRows(latestTrainingDateRowSchema, data)[0]?.local_date ?? null;
+}

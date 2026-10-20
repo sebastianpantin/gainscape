@@ -7,7 +7,7 @@ import type { CatalogChallenge } from './challenge-rules.ts';
 import { capitalized } from '../names.ts';
 import { z } from 'zod';
 import { parsedJson } from '../json-rules.ts';
-import { parsedRows } from '../rows.ts';
+import { parsedRow, parsedRows } from '../rows.ts';
 
 export const ITEM_KINDS = ['gear', 'material', 'pet', 'scroll'] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
@@ -212,41 +212,10 @@ export async function queryOwnedPets(client: SupabaseClient, userId: string): Pr
   };
 }
 
-const recentDropRowSchema = z.object({ created_at: z.string(), items: itemRowSchema });
-
-const RECENT_DROPS_READ = 100;
-
-export interface RecentDrop {
-  item: CatalogItem;
-  droppedAt: string;
-}
-
-export async function queryRecentDrops(client: SupabaseClient, userId: string, since: string): Promise<RecentDrop[]> {
-  const { data, error } = await client
-    .from('drops')
-    .select(`created_at,items!inner(${ITEM_COLUMNS})`)
-    .eq('user_id', userId)
-    .is('revoked_at', null)
-    .gte('created_at', since)
-    .order('created_at', { ascending: false })
-    .limit(RECENT_DROPS_READ);
+export async function queryRarestRecentDrop(client: SupabaseClient, since: string): Promise<CatalogItem | null> {
+  const { data, error } = await client.rpc('rarest_recent_drop', { since }).select(ITEM_COLUMNS).maybeSingle();
   if (error) throw error;
-  return parsedRows(recentDropRowSchema, data).map((row) => ({
-    item: toCatalogItem(row.items),
-    droppedAt: row.created_at,
-  }));
-}
-
-function isRarerOrNewer(candidate: RecentDrop, best: RecentDrop): boolean {
-  const rarity = ITEM_RARITIES.indexOf(candidate.item.rarity) - ITEM_RARITIES.indexOf(best.item.rarity);
-  return rarity === 0 ? Date.parse(candidate.droppedAt) > Date.parse(best.droppedAt) : rarity > 0;
-}
-
-export function rarestRecentDrop(drops: readonly RecentDrop[]): RecentDrop | null {
-  return drops.reduce<RecentDrop | null>(
-    (best, drop) => (best === null || isRarerOrNewer(drop, best) ? drop : best),
-    null,
-  );
+  return data === null ? null : toCatalogItem(parsedRow(itemRowSchema, data));
 }
 
 export type Fanfare = Extract<ItemRarity, 'rare' | 'legendary'>;

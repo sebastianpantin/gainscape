@@ -16,7 +16,6 @@ import {
   itemNameLookup,
   kindLabel,
   newItemIds,
-  rarestRecentDrop,
   showsQuantity,
   TIER_COLORS,
   toCatalogItem,
@@ -304,24 +303,5 @@ describe('companionPet', () => {
 
   it('has no companion without a pet', () => {
     expect(companionPet(items, held([['belt', '2026-10-09T00:00:00Z']]), null)).toBeNull();
-  });
-});
-
-describe('rarestRecentDrop', () => {
-  function item(key: string): CatalogItem {
-    return fixture.find((candidate) => candidate.key === key)!;
-  }
-
-  it('picks the rarest item, the newest of equally rare ones', () => {
-    const common = { item: item('rookie_belt'), droppedAt: '2026-10-20T10:00:00Z' };
-    const olderPet = { item: item('spotter_pup'), droppedAt: '2026-10-10T10:00:00Z' };
-    const newerPet = { item: item('plate_crab'), droppedAt: '2026-10-12T10:00:00Z' };
-    expect(item('spotter_pup').rarity).toBe(item('plate_crab').rarity);
-    expect(item('spotter_pup').rarity).not.toBe(item('rookie_belt').rarity);
-    expect(rarestRecentDrop([common, olderPet, newerPet])).toEqual(newerPet);
-  });
-
-  it('has nothing without drops', () => {
-    expect(rarestRecentDrop([])).toBeNull();
   });
 });

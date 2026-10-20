@@ -1,5 +1,6 @@
 import { levelProgress } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
+import { localDateIn } from '../../web/src/lib/ui/date-bucket-rules.ts';
 import type { Skill } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   greetingFor,
@@ -84,11 +85,11 @@ describe('nearestLevelUpValueText', () => {
 });
 
 describe('streakRiskText', () => {
-  const monday = new Date(2026, 9, 12, 9);
-  const tuesday = new Date(2026, 9, 13, 9);
-  const friday = new Date(2026, 9, 16, 9);
-  const sunday = new Date(2026, 9, 18, 20);
-  const nextMonday = new Date(2026, 9, 19, 9);
+  const monday = '2026-10-12';
+  const tuesday = '2026-10-13';
+  const friday = '2026-10-16';
+  const sunday = '2026-10-18';
+  const nextMonday = '2026-10-19';
   const status = { weekStart: '2026-10-12', goal: 3, sessionsThisWeek: 1, streakWeeks: 4, nextGoal: null };
 
   it('warns when the workouts left fill the days left', () => {
@@ -121,6 +122,18 @@ describe('streakRiskText', () => {
 
   it('stays quiet once the goal is met', () => {
     expect(streakRiskText({ ...status, sessionsThisWeek: 3 }, sunday)).toBeNull();
+  });
+
+  it('counts the days left from the profile day, not the device day', () => {
+    const saturdayEveningInUtc = Date.parse('2026-10-17T20:00:00Z');
+    const profileToday = localDateIn('Pacific/Auckland', saturdayEveningInUtc);
+    expect(profileToday).toBe(sunday);
+    const deviceToday = localDateIn('America/Los_Angeles', saturdayEveningInUtc);
+    expect(deviceToday).toBe('2026-10-17');
+    expect(streakRiskText({ ...status, goal: 2 }, profileToday)).toBe('1 more workout today keeps your 4 week streak');
+    expect(streakRiskText({ ...status, goal: 2 }, deviceToday)).toBe(
+      '1 more workout by Sunday keeps your 4 week streak',
+    );
   });
 
   it('stays quiet when the status is from another week than today', () => {

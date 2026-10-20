@@ -74,7 +74,10 @@ test('the progress card shows the pet, the gear, the XP to the next level and th
   await expect(page).toHaveURL(/\/skills\/quests$/);
 });
 
-test('highlights show the last workout, the latest record and the rarest drop, each linking on', async ({ page }) => {
+test('highlights show the last workout, the latest record and the rarest drop, each linking on', async ({
+  context,
+  page,
+}) => {
   const username = uniqueUsername('home_high');
   await register(page, username);
   const highlights = page.getByRole('region', { name: 'Highlights' });
@@ -89,7 +92,7 @@ test('highlights show the last workout, the latest record and the rarest drop, e
   await expect(highlights.getByRole('link', { name: 'Last workout Today', exact: true })).toBeVisible();
   await expect(highlights.getByRole('link', { name: /^Latest record Barbell Bench Press.* · / })).toBeVisible();
   await expect(
-    highlights.getByRole('link', { name: /^Rarest drop this month .+ · (Common|Uncommon|Rare|Legendary)$/ }),
+    highlights.getByRole('link', { name: /^Rarest drop, last 30 days .+ · (Common|Uncommon|Rare|Legendary)$/ }),
   ).toBeVisible();
   await expectNoAxeViolations(page, 'train home, highlights');
 
@@ -98,4 +101,11 @@ test('highlights show the last workout, the latest record and the rarest drop, e
   await openTab(page, 'Train');
   await highlights.getByRole('link', { name: /^Rarest drop/ }).click();
   await expect(page).toHaveURL(/\/collection\/items$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection: Items' })).toBeVisible();
+
+  await context.setOffline(true);
+  await openTab(page, 'Train');
+  await expect(highlights.getByRole('link', { name: 'Last workout Today', exact: true })).toBeVisible();
+  await expect(highlights.getByRole('link', { name: /^Latest record Barbell Bench Press.* · / })).toBeVisible();
+  await context.setOffline(false);
 });

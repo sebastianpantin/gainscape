@@ -1,7 +1,7 @@
-import { MS_PER_DAY } from '@domain/math.ts';
 import { formatXp } from '../../lib/format.ts';
 import type { SkillStanding } from '../../lib/progress/standing-rules.ts';
 import { type WeeklyGoalStatus, workoutWord } from '../../lib/progress/weekly-goal-rules.ts';
+import { daysBetween } from '../../lib/ui/date-bucket-rules.ts';
 
 export function greetingFor(hour: number): string {
   if (hour >= 5 && hour < 12) return 'Good morning';
@@ -53,17 +53,16 @@ const WARNING_DAYS = 3;
 const SPARE_DAYS_BEFORE_WARNING = 1;
 const MOST_WORKOUTS_A_DAY = 2;
 
-function daysLeftInWeek(weekStart: string, now: Date): number | null {
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const daysSinceWeekStart = Math.round((today - Date.parse(`${weekStart}T00:00:00Z`)) / MS_PER_DAY);
+function daysLeftInWeek(weekStart: string, today: string): number | null {
+  const daysSinceWeekStart = daysBetween(weekStart, today);
   if (daysSinceWeekStart < 0 || daysSinceWeekStart >= DAYS_IN_WEEK) return null;
   return DAYS_IN_WEEK - daysSinceWeekStart;
 }
 
-export function streakRiskText(status: WeeklyGoalStatus, now: Date): string | null {
+export function streakRiskText(status: WeeklyGoalStatus, today: string): string | null {
   if (status.goal === null) return null;
   const needed = status.goal - status.sessionsThisWeek;
-  const daysLeft = daysLeftInWeek(status.weekStart, now);
+  const daysLeft = daysLeftInWeek(status.weekStart, today);
   if (needed <= 0 || daysLeft === null || daysLeft > WARNING_DAYS) return null;
   if (daysLeft - needed > SPARE_DAYS_BEFORE_WARNING || needed > daysLeft * MOST_WORKOUTS_A_DAY) return null;
   const deadline = daysLeft === 1 ? 'today' : 'by Sunday';
