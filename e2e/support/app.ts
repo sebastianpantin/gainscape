@@ -76,7 +76,7 @@ export async function registerWithoutSigningIn(page: Page, username: string): Pr
   return createConfirmedAccount(emailOf(username), username, timezone);
 }
 
-export async function register(page: Page, username: string) {
+export async function register(page: Page, username: string, sessionKey = authStorageKey) {
   const timezone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   const userId = await createConfirmedAccount(emailOf(username), username, timezone);
   const session = await signedInSession(emailOf(username));
@@ -85,7 +85,7 @@ export async function register(page: Page, username: string) {
       localStorage.setItem(sessionKey, storedSession);
       localStorage.setItem(onboardingKey, 'done');
     },
-    [authStorageKey, JSON.stringify(session), `${onboardingKeyPrefix}${userId}`],
+    [sessionKey, JSON.stringify(session), `${onboardingKeyPrefix}${userId}`],
   );
   await page.goto('/');
   await signedInOnFirstLoad.dispose();
