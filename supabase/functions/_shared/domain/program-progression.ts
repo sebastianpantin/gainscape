@@ -1,5 +1,7 @@
+import { MAX_RPE } from './effort.ts';
 import { halfIncrementKg, roundPrescribedLoad, type RoundingSetting } from './load-rounding.ts';
 import { FLOAT_TOLERANCE } from './math.ts';
+import { compareStrings } from './ordering.ts';
 import {
   type Adjustment,
   type ProgramDefinition,
@@ -164,8 +166,6 @@ function absoluteWeek(definition: ProgramDefinition, position: Position): number
   const schedule = definition.schedule;
   return schedule.kind === 'cycle' ? (cycle - 1) * schedule.weeksPerCycle + week : week;
 }
-
-const MAX_RPE = 10;
 
 function loggedRpeOf(set: FactSet): number | null {
   if (set.effortValue === null) return null;
@@ -551,7 +551,7 @@ function mergeBestSets(context: FoldContext, existing: readonly FactSet[], incom
     const current = bestByRef.get(ref);
     if (!current || isBetterSet(context, set, current)) bestByRef.set(ref, set);
   }
-  return [...bestByRef.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, set]) => set);
+  return [...bestByRef.entries()].sort(([a], [b]) => compareStrings(a, b)).map(([, set]) => set);
 }
 
 function dayStagesOf(definition: ProgramDefinition, state: ProgramState, position: Position): StageIndices {

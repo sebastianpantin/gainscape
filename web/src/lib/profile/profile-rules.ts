@@ -1,4 +1,4 @@
-import { MS_PER_DAY } from '@domain/edit-window.ts';
+import { MS_PER_DAY } from '@domain/math.ts';
 import { roundTo } from '@domain/math.ts';
 import { CONTROL_CHARACTER, characterCount } from '../names.ts';
 import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, parsedDecimal, unitToKg } from '../units.ts';

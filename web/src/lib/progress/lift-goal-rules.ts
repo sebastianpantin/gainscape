@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { MS_PER_DAY } from '@domain/math.ts';
 import { MAX_SET_LOAD_KG, measuresRepsCapacity, REP_MAX_SLOT_COUNT } from '@domain/types.ts';
 import { z } from 'zod';
 import { LOAD_TYPES, type LoadType, MODALITIES, type Modality } from '../exercises/catalog-rules.ts';
@@ -14,7 +15,6 @@ const GOAL_REP_MAX_COLUMNS = 'exercise_id, reps, load_kg';
 
 export const HIGHEST_GOAL_REPS = REP_MAX_SLOT_COUNT;
 const NEW_GOAL_REPS = 5;
-const MS_PER_DAY = 86_400_000;
 const UNACHIEVED_PROGRESS_CAP = 0.99;
 export const GOAL_REACHED_TEXT = 'Goal reached';
 

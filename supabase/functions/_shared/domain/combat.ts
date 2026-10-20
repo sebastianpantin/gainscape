@@ -1,3 +1,5 @@
+import { roundHalfUp } from './math.ts';
+
 interface WeightedLevel {
   level: number;
   weight: number;
@@ -6,10 +8,6 @@ interface WeightedLevel {
 const LOWEST_COMBAT_LEVEL = 3;
 const COMBAT_LEVEL_SPAN = 123;
 const SKILL_LEVEL_SPAN = 98;
-
-function roundHalfUp(value: number): number {
-  return Math.floor(value + 0.5);
-}
 
 export function combatLevel(entries: readonly WeightedLevel[]): number {
   const totalWeight = entries.reduce((sum, entry) => sum + entry.weight, 0);

@@ -15,11 +15,10 @@ import type {
   Catalog,
   ExerciseDef,
   HoldSetInput,
-  HoldSetResult,
   LevelUp,
   LiftExerciseDef,
   LiftSetInput,
-  LiftSetResult,
+  RirSource,
   SessionInput,
   SessionSummary,
   SetInput,
@@ -29,7 +28,7 @@ import type {
   StrengthState,
   UserState,
 } from './types.ts';
-import { isHoldResult, isLiftResult, measuresRepsCapacity, NO_RECORDS } from './types.ts';
+import { measuresRepsCapacity, NO_RECORDS } from './types.ts';
 import { BodyweightLoadNotZeroError, BodyweightRequiredError, DistanceNotTrackedError } from './errors.ts';
 import { challengeBonusXp, type ChallengeVerdict, judgeChallenge } from './challenges.ts';
 import {
@@ -45,7 +44,7 @@ import { checkFatigue } from './fatigue.ts';
 import { gearBonusXp } from './gear.ts';
 import { roundTo } from './math.ts';
 import { liftsNoLoad, trackStrength } from './strength.ts';
-import { effectiveReps, setXp, splitXp } from './xp.ts';
+import { applyXpGrant, effectiveReps, setXp, splitXp } from './xp.ts';
 
 export interface PipelineDeps {
   catalog: Catalog;
@@ -168,8 +167,19 @@ const UNSCORED_RESULT_FIELDS = Object.freeze({
   cardio: null,
 });
 
-function liftResult(set: LiftSetInput, exercise: LiftExerciseDef, ctx: SessionContext): SetResult {
-  const { effortInputType, effortValue, loggedRir } = resolveEffort(set.effort, ctx.cfg, 'lift');
+interface UnloggedRirFallback {
+  rirSource: RirSource;
+  rirForXp: number | null;
+}
+
+function liftOrHoldResult(
+  set: LiftSetInput | HoldSetInput,
+  kind: 'lift' | 'hold',
+  unlogged: UnloggedRirFallback,
+  exercise: LiftExerciseDef,
+  ctx: SessionContext,
+): SetResult {
+  const { effortInputType, effortValue, loggedRir } = resolveEffort(set.effort, ctx.cfg, kind);
   return {
     ...UNSCORED_RESULT_FIELDS,
     set,
@@ -177,25 +187,9 @@ function liftResult(set: LiftSetInput, exercise: LiftExerciseDef, ctx: SessionCo
     effortInputType,
     effortValue,
     rir: loggedRir,
-    rirSource: loggedRir === null ? 'cold_start' : 'logged',
-    rirForXp: loggedRir,
+    rirSource: loggedRir === null ? unlogged.rirSource : 'logged',
+    rirForXp: loggedRir ?? unlogged.rirForXp,
     effectiveLoadKg: effectiveLoadKg(set, exercise, ctx.state),
-  };
-}
-
-function holdResult(hold: HoldSetInput, exercise: LiftExerciseDef, ctx: SessionContext): SetResult {
-  const { effortInputType, effortValue, loggedRir } = resolveEffort(hold.effort, ctx.cfg, 'hold');
-  const rirForXp = loggedRir ?? ctx.cfg.effortLevelRir[ctx.cfg.holdDefaultEffort];
-  return {
-    ...UNSCORED_RESULT_FIELDS,
-    set: hold,
-    skillXp: [],
-    effortInputType,
-    effortValue,
-    rir: loggedRir,
-    rirSource: loggedRir === null ? 'default' : 'logged',
-    rirForXp,
-    effectiveLoadKg: effectiveLoadKg(hold, exercise, ctx.state),
   };
 }
 
@@ -222,7 +216,6 @@ function cardioResult(
       records: [],
       countedWorkS: counted.workS,
       xpCountedWorkS: counted.xpWorkS,
-      cappedWorkS: counted.workS - counted.xpWorkS,
       effort: derivedCardioEffort(bout.effort, exercise.cardio.maxEffort),
       ...boutPace(bout, exercise, ctx.cfg),
     },
@@ -248,15 +241,22 @@ const resolveSets: Step = (ctx) => {
         xpWorkSecondsLeft[pool] -= xpWorkS;
         return cardioResult(set, cardioExercise(exercise), { workS, xpWorkS }, ctx);
       }
-      if (set.kind === 'hold') return holdResult(set, holdExercise(exercise, set), ctx);
-      return liftResult(set, repsExercise(exercise), ctx);
+      if (set.kind === 'hold') {
+        const holdDefault = {
+          rirSource: 'default',
+          rirForXp: ctx.cfg.effortLevelRir[ctx.cfg.holdDefaultEffort],
+        } as const;
+        return liftOrHoldResult(set, 'hold', holdDefault, holdExercise(exercise, set), ctx);
+      }
+      const coldStart = { rirSource: 'cold_start', rirForXp: null } as const;
+      return liftOrHoldResult(set, 'lift', coldStart, repsExercise(exercise), ctx);
     });
   return { ...ctx, sets };
 };
 
-function effectiveRepsOf(result: LiftSetResult | HoldSetResult, rirForXp: number, cfg: BalanceConfig): number {
-  if (isHoldResult(result)) return effectiveReps(holdRepEquivalents(result.set, cfg), rirForXp, false, cfg);
-  return effectiveReps(result.set.reps, rirForXp, result.set.isWarmup, cfg);
+function effectiveRepsOf(set: LiftSetInput | HoldSetInput, rirForXp: number, cfg: BalanceConfig): number {
+  if (set.kind === 'hold') return effectiveReps(holdRepEquivalents(set, cfg), rirForXp, false, cfg);
+  return effectiveReps(set.reps, rirForXp, set.isWarmup, cfg);
 }
 
 const awardXp: Step = (ctx) => {
@@ -264,18 +264,17 @@ const awardXp: Step = (ctx) => {
   const sortOrderOf = (skillId: string) => skillsById.get(skillId)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
   const xpSetsSeenByExercise = new Map<string, number>();
   const sets = ctx.sets.map((result) => {
-    if (result.cardio !== null) {
-      const shares = [...exerciseFor(result.set, ctx.deps.catalog).shares]
+    const { set } = result;
+    if (set.kind === 'cardio') {
+      const shares = [...exerciseFor(set, ctx.deps.catalog).shares]
         .sort((a, b) => sortOrderOf(a.skillId) - sortOrderOf(b.skillId))
         .map((share) => ({ ...share, skillKey: skillsById.get(share.skillId)?.key ?? '' }));
-      const steady = result.set.kind === 'cardio' && result.set.interval === null;
-      const skillXp = cardioSkillXp({ ...result.cardio, steady }, shares, ctx.cfg);
+      const skillXp = cardioSkillXp({ ...result.cardio!, steady: set.interval === null }, shares, ctx.cfg);
       return { ...result, xp: skillXp.reduce((sum, part) => sum + part.xp, 0), skillXp };
     }
-    if (!isLiftResult(result) && !isHoldResult(result)) return result;
-    const exercise = liftExerciseFor(result.set, ctx.deps.catalog);
+    const exercise = liftExerciseFor(set, ctx.deps.catalog);
     const earnsNothing = result.rirForXp === null || liftsNoLoad(exercise, result.effectiveLoadKg);
-    const effectiveRepCount = earnsNothing ? 0 : effectiveRepsOf(result, result.rirForXp!, ctx.cfg);
+    const effectiveRepCount = earnsNothing ? 0 : effectiveRepsOf(set, result.rirForXp!, ctx.cfg);
     const xp = result.rirForXp === null ? result.coldStartXp : setXp(effectiveRepCount, result.intensityBonus, ctx.cfg);
     const xpSetOrdinal = xpSetsSeenByExercise.get(exercise.id) ?? 0;
     if (xp > 0) xpSetsSeenByExercise.set(exercise.id, xpSetOrdinal + 1);
@@ -325,11 +324,11 @@ const awardSessionBonuses: Step = (ctx) => {
 };
 
 const applyXp: Step = (ctx) => {
-  const skillXp: Record<string, number> = { ...ctx.state.skillXp };
+  const sessionXpBySkill: Record<string, number> = {};
   for (const part of ctx.sets.flatMap((result) => result.skillXp)) {
-    skillXp[part.skillId] = Math.min(ctx.cfg.maxXp, (skillXp[part.skillId] ?? 0) + part.xp);
+    sessionXpBySkill[part.skillId] = (sessionXpBySkill[part.skillId] ?? 0) + part.xp;
   }
-  return { ...ctx, state: { ...ctx.state, skillXp } };
+  return { ...ctx, state: { ...ctx.state, skillXp: applyXpGrant(ctx.state.skillXp, sessionXpBySkill, ctx.cfg) } };
 };
 
 export function levelUpsBetween(

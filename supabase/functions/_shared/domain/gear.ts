@@ -1,7 +1,7 @@
 import type { BalanceConfig } from './balance.ts';
 import { MOBILITY_SKILL_KEY } from './cardio.ts';
 import { GEAR_SLOTS, type GearSlot, ITEM_TIERS, type ItemTier } from './crafting.ts';
-import { nonNegativeIntegerPercent } from './math.ts';
+import { nonNegativeIntegerPercent, PERCENT } from './math.ts';
 
 export type GearLoadout = Readonly<Partial<Record<GearSlot, ItemTier>>>;
 
@@ -19,8 +19,6 @@ export const GEAR_SLOT_SKILLS: Readonly<Record<GearSlot, readonly string[]>> = O
 export const SKILLS_WITHOUT_GEAR: readonly string[] = Object.freeze([MOBILITY_SKILL_KEY]);
 
 const BOOSTED_SKILLS: readonly string[] = Object.freeze([...new Set(Object.values(GEAR_SLOT_SKILLS).flat())]);
-
-const PERCENT = 100;
 
 function gearTierPoints(tier: ItemTier | undefined): number {
   return tier === undefined ? 0 : ITEM_TIERS.indexOf(tier) + 1;

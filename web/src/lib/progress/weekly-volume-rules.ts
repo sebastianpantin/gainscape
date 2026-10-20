@@ -1,4 +1,4 @@
-import { MS_PER_DAY } from '@domain/edit-window.ts';
+import { MS_PER_DAY } from '@domain/math.ts';
 import { FULL_SHARE_BASIS_POINTS } from '@domain/index.ts';
 import type { ExerciseSkill } from '../exercises/catalog-rules.ts';
 import { BODY_SKILLS, type BodySkill, isBodySkill } from './recovery-rules.ts';

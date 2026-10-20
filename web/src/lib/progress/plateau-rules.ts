@@ -1,4 +1,4 @@
-import { MS_PER_DAY } from '@domain/edit-window.ts';
+import { MS_PER_DAY } from '@domain/math.ts';
 import { roundLoad } from '@domain/index.ts';
 import { measuresRepsCapacity } from '@domain/types.ts';
 import type { LoadType } from '../exercises/catalog-rules.ts';

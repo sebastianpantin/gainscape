@@ -1,4 +1,4 @@
-import { roundTo } from './math.ts';
+import { FLOAT_TOLERANCE, roundTo } from './math.ts';
 import { KG_PER_LB, type WeightUnit } from './units.ts';
 
 export type RoundingMode = 'nearest' | 'down';
@@ -11,8 +11,6 @@ export interface RoundingSetting {
   barWeight: number;
 }
 
-const ROUNDING_EPSILON = 1e-9;
-
 export const DEFAULT_ROUNDING: Readonly<Record<WeightUnit, RoundingSetting>> = Object.freeze({
   kg: Object.freeze({ increment: 2.5, mode: 'nearest', barWeight: 20 }),
   lb: Object.freeze({ increment: 5, mode: 'nearest', barWeight: 45 }),
@@ -24,10 +22,10 @@ function decimalPlaces(value: number): number {
 }
 
 export function roundLoad(value: number, increment: number, mode: LoadRoundingDirection): number {
-  const steps = value / increment + ROUNDING_EPSILON;
+  const steps = value / increment + FLOAT_TOLERANCE;
   const wholeSteps =
     mode === 'up'
-      ? Math.ceil(value / increment - ROUNDING_EPSILON)
+      ? Math.ceil(value / increment - FLOAT_TOLERANCE)
       : mode === 'nearest'
         ? Math.floor(steps + 0.5)
         : Math.floor(steps);
