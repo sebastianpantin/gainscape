@@ -17,12 +17,12 @@ const FEED = '**/rest/v1/rpc/get_feed*';
 const EMPTY_FEED = 'No posts yet. Add friends, or log a personal record (PR).';
 const PAST_FRESH_WINDOW = '01:05';
 
-function holdRequests(page: Page, url: string, method = 'GET'): () => void {
+async function holdRequests(page: Page, url: string, method = 'GET'): Promise<() => void> {
   let release!: () => void;
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  void page.route(url, async (route) => {
+  await page.route(url, async (route) => {
     if (route.request().method() === method) await held;
     await route.continue();
   });
@@ -50,7 +50,7 @@ async function chestCardText(page: Page): Promise<string> {
 test('a first visit shows a skeleton under the real heading until the data arrives', async ({ newPerson }) => {
   const page = await newPerson();
   await register(page, uniqueUsername('tcf'));
-  const release = holdRequests(page, FEED, 'POST');
+  const release = await holdRequests(page, FEED, 'POST');
 
   await openTab(page, 'Friends');
   await expect(page.getByRole('heading', { level: 1, name: 'Friends' })).toBeVisible();
@@ -89,7 +89,7 @@ test('returning to a tab after a while shows its last data at once while it refr
   await expect(page.getByRole('heading', { level: 1, name: 'Profile' })).toBeVisible();
   await page.clock.fastForward(PAST_FRESH_WINDOW);
 
-  const release = holdRequests(page, SKILL_XP);
+  const release = await holdRequests(page, SKILL_XP);
   const refreshed = page.waitForRequest(SKILL_XP);
   await openTab(page, 'Skills');
   await expect(chestCard(page)).toBeVisible();
@@ -105,9 +105,10 @@ test('a setting changed while a refresh is in flight is not undone by that refre
   await openFromProfile(page, 'Settings');
   await expect(page.getByRole('radio', { name: 'Simple', exact: true })).toHaveAttribute('aria-checked', 'true');
   await openTab(page, 'Train');
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
   await page.clock.fastForward(PAST_FRESH_WINDOW);
 
-  const release = holdRequests(page, PROFILE_READ);
+  const release = await holdRequests(page, PROFILE_READ);
   const refreshStarted = page.waitForRequest(
     (request) => request.url().includes('/rest/v1/profile_private') && request.method() === 'GET',
   );
