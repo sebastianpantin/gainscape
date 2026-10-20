@@ -54,14 +54,15 @@ export function useWorkoutPreviews({
 
   const feedbackFor = ({ previous, next, setId, place, vibrate }: SetChange) => {
     const { exerciseIndex, setIndex } = place;
+    let computedRecords: (PreviewRecord | null)[][] | null = null;
+    const recordsAfter = () => (computedRecords ??= previewRecords(next.exercises, previewStrength, recordBaseline));
     return setFeedback({
       label: place.label,
       wasDone: previous.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
       isDone: next.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
       preview: () => previewsOf(next.exercises)[exerciseIndex][setIndex],
-      record: () => previewRecords(next.exercises, previewStrength, recordBaseline)[exerciseIndex][setIndex],
-      becameRecord: () =>
-        becomesRecord(records, previous.exercises, next.exercises, setId, previewStrength, recordBaseline),
+      record: () => recordsAfter()[exerciseIndex][setIndex],
+      becameRecord: () => becomesRecord(records, previous.exercises, recordsAfter(), next.exercises, setId),
       vibrate,
     });
   };

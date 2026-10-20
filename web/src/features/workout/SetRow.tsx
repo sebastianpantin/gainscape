@@ -25,7 +25,8 @@ import { lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './las
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
 import { SetMenu } from './SetMenu.tsx';
-import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
+import { type PreviewRecord } from './record-preview.ts';
+import { RecordChip } from './RecordChip.tsx';
 import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
@@ -259,15 +260,7 @@ export function SetRow({
         <span className={set.done ? 'set-xp earned' : 'set-xp'}>
           <span className="set-xp-line">
             {previewXpLabel(preview)}
-            {record && (
-              <span
-                className={drop?.record ? 'record-chip pulse' : 'record-chip'}
-                role="img"
-                aria-label={recordChipLabel(record)}
-              >
-                {recordChipText(record)}
-              </span>
-            )}
+            {record && <RecordChip record={record} pulsing={drop?.record === true} />}
           </span>
           <span className="tiny">{previewNote(preview)}</span>
         </span>

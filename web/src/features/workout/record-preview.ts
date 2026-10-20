@@ -132,13 +132,12 @@ export function recordForSet(
 export function becomesRecord(
   recordsBefore: readonly (readonly (PreviewRecord | null)[])[],
   before: readonly DraftExercise[],
+  recordsAfter: readonly (readonly (PreviewRecord | null)[])[],
   after: readonly DraftExercise[],
   setId: string,
-  strength: StrengthState | null,
-  baseline: RecordBaseline | null,
 ): boolean {
   const wasRecord = recordForSet(recordsBefore, before, setId) !== null;
-  return !wasRecord && recordForSet(previewRecords(after, strength, baseline), after, setId) !== null;
+  return !wasRecord && recordForSet(recordsAfter, after, setId) !== null;
 }
 
 function holdRecordName(record: HoldRecordPreview): string {

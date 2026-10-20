@@ -1,11 +1,11 @@
 import { describeBout } from '../../lib/workout/cardio-rules.ts';
 import { effortLabel } from '../../lib/workout/effort-labels.ts';
 import { exerciseKeys } from '../../lib/exercises/exercise-key-rules.ts';
-import { formatLoad, formatXp } from '../../lib/format.ts';
+import { formatXp } from '../../lib/format.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { distanceUnitFor } from '../../lib/units.ts';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
-import { describeHold, type SessionEdit } from './session-edit.ts';
+import { describeHold, describeLoad, type SessionEdit } from './session-edit.ts';
 
 interface StoredExerciseListProps {
   exercises: SessionEdit['exercises'];
@@ -47,11 +47,7 @@ export function StoredExerciseList({ exercises, storedXp, unit }: StoredExercise
             : exercise.sets.map((set, setIndex) => (
                 <li className={`row spread${set.isWarmup ? ' warmup' : ''}`} key={set.id}>
                   <span>
-                    {setIndex + 1}.{' '}
-                    {exercise.loadType === 'bodyweight'
-                      ? 'bodyweight'
-                      : formatLoad(set.weightKg, exercise.loadType, unit)}{' '}
-                    × {set.reps}
+                    {setIndex + 1}. {describeLoad(set.weightKg, exercise.loadType, unit)} × {set.reps}
                     {set.isWarmup && ' · warm-up'}
                     {effortLabel(set.effort) && ` · ${effortLabel(set.effort)}`}
                   </span>

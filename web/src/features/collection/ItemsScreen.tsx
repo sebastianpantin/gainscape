@@ -59,7 +59,7 @@ import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { itemsQuery } from '../../lib/query/queries.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
-import { recallLastSummary } from '../summary/last-summary.ts';
+import { recallLastSummary } from '../../offline/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
 import { CollectionHeading } from './CollectionHeading.tsx';

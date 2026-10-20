@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
-import { exerciseLabels, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import { exerciseLabels, isLiftExercise, isPlannableExercise } from '../../lib/exercises/catalog-rules.ts';
 import { cachedPrograms, type ProgramDoc, saveProgram } from '../../lib/programs/programs.ts';
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/programs/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
@@ -27,7 +27,6 @@ import {
   INCREMENT_PRESETS,
   INCREMENT_RANGE,
   INCREMENT_STEP,
-  isPlannableExercise,
   MAX_EXERCISES_PER_DAY,
   moveDay,
   movePlannedExercise,

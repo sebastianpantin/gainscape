@@ -2,12 +2,11 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { CardioExercise, LiftExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
-  challengeBonusText,
+  bonusText,
   challengeFailReason,
   challengeHeadline,
   challengeNotAppliedText,
   describeRecord,
-  gearBonusText,
   levelUpCueDelayMs,
   playsReveal,
   questRevealLines,
@@ -99,15 +98,15 @@ describe('describeRecord', () => {
   });
 });
 
-describe('gearBonusText', () => {
+describe('bonusText', () => {
   it('shows the gear bonus of a skill with grouped thousands', () => {
-    expect(gearBonusText({ gearBonusBySkill: { core: 1234 } }, 'core')).toBe('Gear bonus +1,234 XP');
+    expect(bonusText('Gear', { core: 1234 }, 'core')).toBe('Gear bonus +1,234 XP');
   });
 
   it('shows nothing for a skill without a bonus or a summary from before gear', () => {
-    expect(gearBonusText({ gearBonusBySkill: { core: 12 } }, 'chest')).toBeNull();
-    expect(gearBonusText({ gearBonusBySkill: { core: 0 } }, 'core')).toBeNull();
-    expect(gearBonusText({}, 'core')).toBeNull();
+    expect(bonusText('Gear', { core: 12 }, 'chest')).toBeNull();
+    expect(bonusText('Gear', { core: 0 }, 'core')).toBeNull();
+    expect(bonusText('Gear', undefined, 'core')).toBeNull();
   });
 });
 
@@ -161,10 +160,10 @@ describe('challenge lines', () => {
   });
 
   it('shows the challenge bonus of a skill', () => {
-    expect(challengeBonusText({ challengeBonusBySkill: { back: 1250 } }, 'back')).toBe('Challenge bonus +1,250 XP');
-    expect(challengeBonusText({ challengeBonusBySkill: { back: 250 } }, 'arms')).toBeNull();
-    expect(challengeBonusText({ challengeBonusBySkill: { back: 0 } }, 'back')).toBeNull();
-    expect(challengeBonusText({}, 'back')).toBeNull();
+    expect(bonusText('Challenge', { back: 1250 }, 'back')).toBe('Challenge bonus +1,250 XP');
+    expect(bonusText('Challenge', { back: 250 }, 'arms')).toBeNull();
+    expect(bonusText('Challenge', { back: 0 }, 'back')).toBeNull();
+    expect(bonusText('Challenge', undefined, 'back')).toBeNull();
   });
 
   it('explains a fail when the target rose above the planned load since the start', () => {
