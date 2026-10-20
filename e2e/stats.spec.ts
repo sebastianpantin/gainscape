@@ -1,6 +1,7 @@
 import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
 import { logBench, openTab, register, uniqueUsername } from './support/app.ts';
+import { lootRollTotals, setDryRolls } from './support/db.ts';
 
 test('Stats opens from Collection, names the page, keeps Collection lit and leads back', async ({ page }) => {
   await register(page, uniqueUsername('stats_nav'));
@@ -137,4 +138,31 @@ test('recent records list a new best, offline too, and the full timeline by mont
   await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
   await expect(recent.getByRole('link', { name: record })).toBeVisible();
   await context.setOffline(false);
+});
+
+test('the loot section counts the rolls and drops of every workout against the odds', async ({ page }) => {
+  const username = uniqueUsername('stats_loot');
+  await register(page, username);
+  await openTab(page, 'Collection');
+  await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
+  const loot = page.getByRole('region', { name: 'Loot', exact: true });
+  await expect(loot).toContainText('No loot rolls yet. Finish a workout to roll for loot.');
+
+  await openTab(page, 'Train');
+  await logBench(page, 60);
+  await openTab(page, 'Train');
+  await logBench(page, 70);
+  const { rolls, hits } = await lootRollTotals(username);
+  await setDryRolls(username, 3);
+  await openTab(page, 'Collection');
+  await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
+
+  await expect(loot.getByText(`${rolls} in 2 workouts`, { exact: true })).toBeVisible();
+  await expect(loot.getByText(new RegExp(`^${hits}, expected \\d+\\.\\d$`))).toBeVisible();
+  await expect(loot.getByText('Drops per workout', { exact: true })).toBeVisible();
+  await expect(loot.getByText('3 loot rolls', { exact: true })).toBeVisible();
+  await expect(
+    loot.getByText(/^(Luckier than expected by|Unluckier than expected by|Right on the odds)/),
+  ).toBeVisible();
+  await expectNoAxeViolations(page, 'stats loot');
 });

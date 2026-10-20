@@ -21,7 +21,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `collection/`: items, gear, challenges, the companion pet and the records collection.
 - `profile/`: profile and its view, account actions, preferences and onboarding.
 - `social/`: friends, feed and hiscores.
-- `stats/`: the Stats screen's aggregate RPC reads (cache-first via `../offline/stats-cache.ts`) and their rules (calendar, month compare, volume history, PR timeline).
+- `stats/`: the Stats screen's aggregate RPC reads (cache-first via `../offline/stats-cache.ts`) and their rules, one pair per section of `../features/stats/AGENTS.md`.
 - `quests/`: the quest log (cache-first), `start-quest` and `quest-rules.ts` (board, step and requirement text, start errors).
 - `ui/`: pure helpers behind shared components (number field, count-up, charts, toast, term help, week and month keys) and `glossary.ts`.
 - The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`.

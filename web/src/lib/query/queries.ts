@@ -43,6 +43,7 @@ import { type QuestLog } from '../quests/quest-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { skillExercisesSeed } from '../progress/skill-map-rules.ts';
 import { loadStanding } from '../progress/standing-data.ts';
+import { loadLootStatsCacheFirst } from '../stats/loot-stats.ts';
 import { loadRecordTimelinePage } from '../stats/pr-timeline.ts';
 import {
   nextRecordTimelineCursor,
@@ -356,6 +357,13 @@ export function recordTimelineQuery(userId: string) {
   });
 }
 
+export function lootStatsQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['loot-stats', userId] as const,
+    queryFn: ({ signal }) => loadLootStatsCacheFirst(userId, signal),
+  });
+}
+
 export const EVERY_QUERY = [
   profileQuery,
   preferencesQuery,
@@ -393,4 +401,5 @@ export const EVERY_QUERY = [
   trainingDaysQuery,
   weeklyExerciseSetsQuery,
   recordTimelineQuery,
+  lootStatsQuery,
 ] as const;

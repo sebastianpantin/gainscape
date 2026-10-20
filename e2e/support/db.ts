@@ -119,6 +119,15 @@ export async function activeDropsOfLatestSession(username: string) {
     order by d.created_at, d.id`;
 }
 
+export async function lootRollTotals(username: string): Promise<{ rolls: number; hits: number }> {
+  const [row] = await db`
+    select count(*)::int as rolls, (count(*) filter (where r.hit))::int as hits
+    from public.loot_rolls r
+    join public.profiles p on p.id = r.user_id
+    where p.username = ${username}`;
+  return { rolls: row.rolls, hits: row.hits };
+}
+
 export async function setDryRolls(username: string, dryRolls: number): Promise<void> {
   await db`
     insert into public.drop_luck (user_id, drop_table_id, dry_rolls)

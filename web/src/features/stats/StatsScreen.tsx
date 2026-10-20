@@ -12,6 +12,7 @@ import { trainingCalendar } from '../../lib/stats/training-calendar-rules.ts';
 import { monthKey, shiftMonth } from '../../lib/ui/date-bucket-rules.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
+import { LootStatsSection } from './LootStatsSection.tsx';
 import { MonthCompareTable } from './MonthCompareTable.tsx';
 import { RecentRecordsSection } from './RecentRecordsSection.tsx';
 import { TrainingCalendarTable } from './TrainingCalendarTable.tsx';
@@ -68,6 +69,7 @@ export function StatsScreen({ userId }: { userId: string }) {
       )}
       <VolumeHistorySection userId={userId} today={today} />
       <RecentRecordsSection userId={userId} />
+      <LootStatsSection userId={userId} />
     </main>
   );
 }

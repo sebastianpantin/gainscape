@@ -141,6 +141,11 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('record-timeline');
   });
 
+  it('refreshes the loot stats after a workout rolls loot, is edited or deleted, like the luck panel', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('loot-stats');
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('items');
+  });
+
   it('refreshes every query that holds account data after an account reset', () => {
     const accountRoots = QUERY_ROOTS.filter((root) => !CATALOG_ROOTS.includes(root));
     expect([...QUERY_ROOTS_CHANGED_BY['account-reset']].sort()).toEqual([...new Set(accountRoots)].sort());
