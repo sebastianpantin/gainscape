@@ -444,6 +444,7 @@ describe('function execution rights', () => {
       'training_days',
       'unequip_gear',
       'username_available',
+      'weekly_exercise_sets',
       'weekly_goal_weeks',
       'workout_bodyweights',
     ]);

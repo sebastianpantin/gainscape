@@ -72,3 +72,30 @@ test('the calendar lights today after a workout and the month compare counts it,
   await expect(today).toHaveText(/: 1 workout, [\d,]+ XP$/);
   await context.setOffline(false);
 });
+
+function thisWeekLabel(): string {
+  const now = new Date();
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  return monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+test('volume history charts this week of the trained muscle and switches muscle', async ({ page }) => {
+  await register(page, uniqueUsername('stats_vol'));
+  await logBench(page);
+  await openTab(page, 'Collection');
+  await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
+
+  const history = page.getByRole('region', { name: 'Volume history', exact: true });
+  const muscle = history.getByRole('combobox', { name: 'Muscle', exact: true });
+  await expect(muscle).toHaveValue('chest');
+  await expect(history.getByRole('img', { name: /^Chest working sets per week\. / })).toHaveAccessibleName(
+    new RegExp(`, ${thisWeekLabel()} 0\\.7\\.$`),
+  );
+  await expect(history.getByText('This week: 0.7 of 10 sets', { exact: true })).toBeVisible();
+  await expect(history.getByText(/target is 10 to 20 sets a week per muscle/)).toBeVisible();
+  await expectNoAxeViolations(page, 'stats volume history');
+
+  await muscle.selectOption({ label: 'Legs' });
+  await expect(history.getByRole('img', { name: /^Legs working sets per week\. / })).toBeVisible();
+  await expect(history.getByText('This week: 0 of 10 sets', { exact: true })).toBeVisible();
+});

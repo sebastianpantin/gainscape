@@ -44,6 +44,7 @@ import { deviceStorage } from '../platform/keyed-store.ts';
 import { skillExercisesSeed } from '../progress/skill-map-rules.ts';
 import { loadStanding } from '../progress/standing-data.ts';
 import { loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
+import { loadWeeklyExerciseSetsCacheFirst } from '../stats/volume-history.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
 import { announceDataChange } from './data-changes.ts';
 
@@ -333,6 +334,13 @@ export function trainingDaysQuery(userId: string, month: string) {
   });
 }
 
+export function weeklyExerciseSetsQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['weekly-exercise-sets', userId] as const,
+    queryFn: ({ signal }) => loadWeeklyExerciseSetsCacheFirst(userId, signal),
+  });
+}
+
 export const EVERY_QUERY = [
   profileQuery,
   preferencesQuery,
@@ -368,4 +376,5 @@ export const EVERY_QUERY = [
   questsQuery,
   questPointsQuery,
   trainingDaysQuery,
+  weeklyExerciseSetsQuery,
 ] as const;

@@ -132,6 +132,11 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('training-days');
   });
 
+  it('refreshes the volume history after a workout changes, and after a time zone change moves its weeks', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('weekly-exercise-sets');
+    expect(QUERY_ROOTS_CHANGED_BY['timezone-changed']).toContain('weekly-exercise-sets');
+  });
+
   it('refreshes every query that holds account data after an account reset', () => {
     const accountRoots = QUERY_ROOTS.filter((root) => !CATALOG_ROOTS.includes(root));
     expect([...QUERY_ROOTS_CHANGED_BY['account-reset']].sort()).toEqual([...new Set(accountRoots)].sort());

@@ -14,6 +14,7 @@ import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
 import { MonthCompareTable } from './MonthCompareTable.tsx';
 import { TrainingCalendarTable } from './TrainingCalendarTable.tsx';
+import { VolumeHistorySection } from './VolumeHistorySection.tsx';
 
 export function StatsScreen({ userId }: { userId: string }) {
   const today = todayLocalDate(new Date());
@@ -64,6 +65,7 @@ export function StatsScreen({ userId }: { userId: string }) {
           <MonthCompareTable compare={monthCompare(month, loaded.data.loaded, unitPref)} />
         </section>
       )}
+      <VolumeHistorySection userId={userId} today={today} />
     </main>
   );
 }
