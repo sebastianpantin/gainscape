@@ -4,7 +4,7 @@ import { sessionXp } from '../format.ts';
 import { numericColumn, parsedRows } from '../rows.ts';
 import { daysInMonth, shiftMonth } from '../ui/date-bucket-rules.ts';
 
-export const trainingDayRowSchema = z.object({
+const trainingDayRowSchema = z.object({
   local_date: z.string(),
   history_only: z.boolean(),
   xp_by_skill: z.record(z.string(), z.number()),

@@ -59,14 +59,10 @@ export function relativeStrengthSeries(points: readonly RelativeStrengthPoint[])
   ];
 }
 
-function multipleText(multiple: number): string {
-  return `${multiple.toFixed(2)} × bodyweight`;
-}
-
 export function currentMultipleText(points: readonly RelativeStrengthPoint[]): string {
   const latest = points.at(-1);
   if (latest === undefined) return 'No e1RM on or after your first bodyweight entry yet.';
-  return `Now ${multipleText(latest.multiple)}`;
+  return `Now ${latest.multiple.toFixed(2)} × bodyweight`;
 }
 
 function competitionOrder(exercise: Exercise): number {

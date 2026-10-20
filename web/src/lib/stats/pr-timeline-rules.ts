@@ -18,7 +18,7 @@ const personalRecordSchema = z.custom<PersonalRecordSummary>(
   (value) => isRecord(value) && typeof value.kind === 'string' && typeof value.exerciseId === 'string',
 );
 
-export const recordTimelineRowSchema = z.object({
+const recordTimelineRowSchema = z.object({
   session_id: z.string(),
   started_at: z.string(),
   local_date: z.string(),

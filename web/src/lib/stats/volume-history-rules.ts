@@ -15,7 +15,7 @@ import { type ChartBar } from '../ui/bar-chart-rules.ts';
 
 const VOLUME_HISTORY_WEEKS = 12;
 
-export const weeklyExerciseSetRowSchema = z.object({
+const weeklyExerciseSetRowSchema = z.object({
   week_start: z.string(),
   exercise_id: z.string(),
   sets: z.number(),
