@@ -1,12 +1,12 @@
-export const EDIT_WINDOW_DAYS = 7;
+import { MS_PER_DAY } from './math.ts';
 
-export const MS_PER_DAY = 24 * 60 * 60 * 1000;
+export const EDIT_WINDOW_DAYS = 7;
 
 export function isWithinEditWindow(startedAt: string, now: number): boolean {
   return Date.parse(startedAt) >= now - EDIT_WINDOW_DAYS * MS_PER_DAY;
 }
 
-export interface EditableSession {
+interface EditableSession {
   historyOnly: boolean;
   startedAt: string;
 }

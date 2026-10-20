@@ -30,7 +30,7 @@ export const questRowSchema = z.object({
   retired_at: z.string().nullable(),
 });
 
-export type QuestRow = z.infer<typeof questRowSchema>;
+type QuestRow = z.infer<typeof questRowSchema>;
 
 export const questProgressRowSchema = z.object({
   quest_id: z.string(),
@@ -81,7 +81,7 @@ export interface RequirementLine {
 
 export type StepState = 'done' | 'current' | 'upcoming';
 
-export interface StepProgress {
+interface StepProgress {
   text: string;
   fraction: number;
 }
@@ -101,7 +101,7 @@ export interface QuestCard {
   unlocks: string[];
 }
 
-export interface QuestGroup {
+interface QuestGroup {
   status: QuestStatus;
   title: string;
   cards: QuestCard[];
@@ -297,7 +297,7 @@ export function canStartQuest(status: QuestStatus, offline: boolean): boolean {
   return status === 'available' && !offline;
 }
 
-export interface QuestProblemNames {
+interface QuestProblemNames {
   skillName: (skillId: string) => string;
   questName: (questId: string) => string;
 }

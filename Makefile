@@ -14,7 +14,8 @@ CI_EXCLUDED := studio,imgproxy,vector,logflare,postgres-meta,supavisor
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 OUTPUT_SYNC := $(if $(filter-out 0 1 2 3,$(firstword $(subst ., ,$(MAKE_VERSION)))),--output-sync=target)
 PARALLEL_MAKE = $(MAKE) --no-print-directory --keep-going $(OUTPUT_SYNC) -j$(PARALLEL_JOBS)
-CHECKS := format-check lint typecheck-web typecheck-domain typecheck-node typecheck-sw check-functions catalog-check icons-check docs-check secrets-scan
+TYPECHECKS := typecheck-web typecheck-domain typecheck-node typecheck-sw
+CHECKS := format-check lint $(TYPECHECKS) check-functions catalog-check icons-check docs-check secrets-scan
 
 .PHONY: start ci-start ci-changes docs-check ci-logs stop reset functions dev build build-local preview sw-kill-switch test typecheck lint format format-check check check-functions catalog catalog-check icons icons-check test-catalog test-domain test-web test-deploy test-unit changelog-unreleased test-integration test-db rebuild-caches sim sim-check typecheck-web typecheck-domain typecheck-node typecheck-sw e2e e2e-smoke e2e-webkit e2e-pwa screenshots secrets-scan hooks build-pages e2e-pages deploy set-loot-secret rebuild-caches-hosted backup-hosted invite-tester ban-tester remove-tester
 
@@ -100,7 +101,7 @@ preview: build-local
 	npx vite preview web --host
 
 typecheck:
-	@$(PARALLEL_MAKE) typecheck-web typecheck-domain typecheck-node typecheck-sw
+	@$(PARALLEL_MAKE) $(TYPECHECKS)
 
 typecheck-web:
 	npx tsc --noEmit -p tsconfig.web.json

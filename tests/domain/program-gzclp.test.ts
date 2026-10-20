@@ -3,21 +3,13 @@ import { programStateAt, type ProgramState, unitToKg } from '@domain/index.ts';
 import { dayKeyOf } from '@domain/program-schedule.ts';
 import { factClock, jumpToFact, sessionFact, setReferenceFact, unprescribedSet } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, loggedAsPrescribed, resolveAt, resolveNext } from './program-fixtures/follow.ts';
-import { GZCLP as def, GZCLP_DEFAULT_WEIGHTS_KG, gzclpEnrollment, type GzclpLift } from './program-fixtures/gzclp.ts';
+import { GZCLP as def, GZCLP_DEFAULT_WEIGHTS_KG, gzclpEnrollment, miss, rounds } from './program-fixtures/gzclp.ts';
 import { refOf, refsState, repsOf, slotIdsOf, slotOf, weightsOf } from './program-fixtures/prescription-helpers.ts';
 
 const kg = gzclpEnrollment();
 const startRefs = Object.fromEntries(
   Object.entries(GZCLP_DEFAULT_WEIGHTS_KG).map(([lift, weight]) => [lift, { workingWeight: weight }]),
 );
-
-function miss(lift: GzclpLift): DayLog {
-  return { missedLifts: [lift] };
-}
-
-function rounds(firstDayLogs: readonly DayLog[]): DayLog[] {
-  return firstDayLogs.flatMap((log) => [log, {}, {}, {}]);
-}
 
 function nextRound(state: ProgramState) {
   expect(dayKeyOf(def, state.position)).toBe('a1');

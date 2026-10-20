@@ -9,7 +9,7 @@ export type StartOutcome = 'started' | 'resumed' | 'opened_waiting';
 
 export type DraftNotice = 'saved_elsewhere' | 'deleted';
 
-export type WorkoutDraftState =
+type WorkoutDraftState =
   { status: 'loading' } | { status: 'ready'; draft: WorkoutDraft | null; notice: DraftNotice | null };
 
 export type DraftSaveProblem = 'unreadable' | 'unsaved';
@@ -25,7 +25,7 @@ type StoredWorkout = Extract<StoredDraft, { kind: 'draft' }>;
 
 export type SyncedChange = 'synced' | 'deleted';
 
-export type DraftChange = 'written' | 'discarded' | SyncedChange;
+type DraftChange = 'written' | 'discarded' | SyncedChange;
 
 export interface DraftMessage {
   userId: string;
@@ -40,7 +40,7 @@ export interface DraftChannel {
   onmessage: ((event: MessageEvent<unknown>) => void) | null;
 }
 
-export interface DraftSessionOptions {
+interface DraftSessionOptions {
   userId: string;
   openStore: () => Promise<DraftStore>;
   fallbackStore: () => DraftStore;
@@ -269,14 +269,18 @@ export function createDraftSession({
     return outcome;
   };
 
+  const announceTombstone = async (store: DraftStore, sessionId: string, updatedAt: number, change: DraftChange) => {
+    const record = await store.get(userId);
+    if (record) seen(record.updatedAt);
+    announce(sessionId, record?.updatedAt ?? updatedAt, change);
+  };
+
   const discardDraft = (sessionId: string) => {
     showDraft(null);
     const updatedAt = claimUpdatedAt();
     void enqueue(async (store) => {
       await store.discard(userId, sessionId, updatedAt);
-      const record = await store.get(userId);
-      if (record) seen(record.updatedAt);
-      announce(sessionId, record?.updatedAt ?? updatedAt, 'discarded');
+      await announceTombstone(store, sessionId, updatedAt, 'discarded');
     });
   };
 
@@ -285,9 +289,7 @@ export function createDraftSession({
     if (change === 'deleted') deletedSessionIds.add(sessionId);
     return enqueue(async (store) => {
       await store.markSynced(userId, sessionId, updatedAt);
-      const record = await store.get(userId);
-      if (record) seen(record.updatedAt);
-      announce(sessionId, record?.updatedAt ?? updatedAt, change);
+      await announceTombstone(store, sessionId, updatedAt, change);
     });
   };
 

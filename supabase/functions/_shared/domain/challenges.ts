@@ -1,23 +1,23 @@
 import type { BalanceConfig } from './balance.ts';
 import { roundLoad } from './load-rounding.ts';
-import { FLOAT_TOLERANCE, nonNegativeIntegerPercent } from './math.ts';
+import { FLOAT_TOLERANCE, nonNegativeIntegerPercent, PERCENT } from './math.ts';
 import { e1rmAtSessionStart } from './strength.ts';
+import { storedValueReader } from './stored-values.ts';
 import {
   type ChallengeSummary,
-  isLiftResult,
-  isRecord,
   type LiftSetResult,
   type SetResult,
   type StrengthState,
+  workingLiftSets,
 } from './types.ts';
 
-export interface ChallengeExercise {
+interface ChallengeExercise {
   exerciseId: string;
   reps: number;
   pct: number | null;
 }
 
-export interface ChallengeGroup {
+interface ChallengeGroup {
   rounds: number;
   exercises: ChallengeExercise[];
 }
@@ -54,8 +54,6 @@ export interface ChallengeVerdict {
 }
 
 export const CHALLENGE_LOAD_STEP_KG = 2.5;
-
-const PERCENT = 100;
 
 type ChallengeBonusConfig = Pick<BalanceConfig, 'challengeBonusPercent'>;
 
@@ -111,10 +109,6 @@ export function challengeSummary(
   };
 }
 
-function workingLiftSets(sets: readonly SetResult[]): LiftSetResult[] {
-  return sets.filter(isLiftResult).filter((result) => !result.set.isWarmup);
-}
-
 function meetsPercentTarget(result: LiftSetResult, pct: number | null, e1rmSnapshot: E1rmSnapshot): boolean {
   if (pct === null) return true;
   const e1rmKg = e1rmSnapshot[result.set.exerciseId] ?? null;
@@ -139,14 +133,14 @@ function prescriptionMet(
   );
 }
 
-export function liftVolume(
-  sets: readonly SetResult[],
+function workingSetVolume(
+  working: readonly LiftSetResult[],
   metric: VolumeMetric,
   exerciseId: string | null,
   minPct: number | null,
   e1rmSnapshot: E1rmSnapshot,
 ): number {
-  return workingLiftSets(sets)
+  return working
     .filter(
       (result) =>
         (exerciseId === null || result.set.exerciseId === exerciseId) &&
@@ -155,8 +149,18 @@ export function liftVolume(
     .reduce((sum, result) => sum + (metric === 'reps' ? result.set.reps : result.set.weightKg * result.set.reps), 0);
 }
 
-function volumeMet(challenge: VolumeChallenge, sets: readonly LiftSetResult[], e1rmSnapshot: E1rmSnapshot): boolean {
-  const volume = liftVolume(sets, challenge.metric, challenge.exerciseId, challenge.minPct, e1rmSnapshot);
+export function liftVolume(
+  sets: readonly SetResult[],
+  metric: VolumeMetric,
+  exerciseId: string | null,
+  minPct: number | null,
+  e1rmSnapshot: E1rmSnapshot,
+): number {
+  return workingSetVolume(workingLiftSets(sets), metric, exerciseId, minPct, e1rmSnapshot);
+}
+
+function volumeMet(challenge: VolumeChallenge, working: readonly LiftSetResult[], e1rmSnapshot: E1rmSnapshot): boolean {
+  const volume = workingSetVolume(working, challenge.metric, challenge.exerciseId, challenge.minPct, e1rmSnapshot);
   return volume + FLOAT_TOLERANCE >= challenge.target;
 }
 
@@ -177,10 +181,13 @@ export function challengeBonusXp(baseXp: number, cfg: ChallengeBonusConfig): num
   return Math.round((baseXp * nonNegativeIntegerPercent('challengeBonusPercent', cfg.challengeBonusPercent)) / PERCENT);
 }
 
-function storedString(value: unknown, field: string): string {
-  if (typeof value !== 'string') throw new RangeError(`a stored challenge needs a string ${field}`);
-  return value;
-}
+const {
+  record: storedRecord,
+  array: storedArray,
+  string: storedString,
+  nullableString: storedNullableString,
+  volumeMetric: storedVolumeMetric,
+} = storedValueReader('challenge');
 
 function storedNumber(value: unknown, field: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -191,16 +198,6 @@ function storedNumber(value: unknown, field: string): number {
 
 function storedNullableNumber(value: unknown, field: string): number | null {
   return value === null || value === undefined ? null : storedNumber(value, field);
-}
-
-function storedRecord(value: unknown, field: string): Record<string, unknown> {
-  if (!isRecord(value)) throw new RangeError(`a stored challenge needs an object ${field}`);
-  return value;
-}
-
-function storedArray(value: unknown, field: string): unknown[] {
-  if (!Array.isArray(value)) throw new RangeError(`a stored challenge needs an array ${field}`);
-  return value;
 }
 
 function storedExercise(value: unknown): ChallengeExercise {
@@ -226,18 +223,11 @@ export function challengeDefinitionFromStored(value: unknown): ChallengeDefiniti
     return { kind: 'prescription', groups: storedArray(definition.groups, 'groups').map(storedGroup) };
   }
   if (definition.kind === 'volume') {
-    const metric = definition.metric;
-    if (metric !== 'reps' && metric !== 'kg') {
-      throw new RangeError(`unknown volume metric ${JSON.stringify(metric)} in a stored challenge`);
-    }
     return {
       kind: 'volume',
-      metric,
+      metric: storedVolumeMetric(definition.metric),
       target: storedNumber(definition.target, 'target'),
-      exerciseId:
-        definition.exerciseId === null || definition.exerciseId === undefined
-          ? null
-          : storedString(definition.exerciseId, 'exerciseId'),
+      exerciseId: storedNullableString(definition.exerciseId, 'exerciseId'),
       minPct: storedNullableNumber(definition.minPct, 'minPct'),
     };
   }

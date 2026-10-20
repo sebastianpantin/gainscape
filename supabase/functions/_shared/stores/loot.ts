@@ -179,7 +179,7 @@ export async function rollNewSessionLoot(
   await syncSessionEvents(tx, userId, [sessionId]);
 }
 
-export type ActiveDrop = DropSummary & { sessionId: string; lootVersion: number; balanceVersion: number | null };
+type ActiveDrop = DropSummary & { sessionId: string; lootVersion: number; balanceVersion: number | null };
 
 async function loadActiveDrops(tx: Transaction, userId: string, sessionIds: readonly string[]): Promise<ActiveDrop[]> {
   if (sessionIds.length === 0) return [];
@@ -205,12 +205,12 @@ async function loadActiveDrops(tx: Transaction, userId: string, sessionIds: read
   }));
 }
 
-export interface Revocation {
+interface Revocation {
   drop: ActiveDrop;
   reason: RevokeReason;
 }
 
-export type RevokedActiveDrop = ActiveDrop & { revokedQuantity: number };
+type RevokedActiveDrop = ActiveDrop & { revokedQuantity: number };
 
 async function revokeDrops(
   tx: Transaction,

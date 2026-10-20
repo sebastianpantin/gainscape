@@ -61,7 +61,7 @@ export function isPaceImplausible(ratio: number, cfg: BalanceConfig): boolean {
   return ratio > cfg.paceImplausibleRatio;
 }
 
-export interface BoutPace {
+interface BoutPace {
   paceBonus: number;
   paceFlagged: boolean;
 }
@@ -78,14 +78,14 @@ export function boutPace(bout: CardioSetInput, exercise: CardioExerciseDef, cfg:
   return { paceBonus: paceBonus(ratio, cfg), paceFlagged: false };
 }
 
-export interface CardioXpBout {
+interface CardioXpBout {
   xpCountedWorkS: number;
   effort: CardioEffortLevel;
   paceBonus: number;
   steady: boolean;
 }
 
-export interface CardioSkillShare {
+interface CardioSkillShare {
   skillId: string;
   skillKey: string;
   shareBasisPoints: number;

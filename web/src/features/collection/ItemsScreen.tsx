@@ -54,12 +54,11 @@ import { type ChallengeExerciseEntry, OFFLINE_ITEMS_NOTICE, updateItemsCache } f
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
-import { useLoadout } from '../profile/use-loadout.ts';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
-import { itemsQuery } from '../../lib/query/queries.ts';
+import { itemsQuery, loadoutQuery } from '../../lib/query/queries.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
-import { recallLastSummary } from '../summary/last-summary.ts';
+import { recallLastSummary } from '../../offline/last-summary.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
 import { CollectionHeading } from './CollectionHeading.tsx';
@@ -315,7 +314,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const { unitPref } = usePreferences();
   const { state: draftState, startWorkout, flush } = useWorkoutDraft(userId);
   const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
-  const loadout = useLoadout(userId);
+  const loadout = useQuery(loadoutQuery(userId));
   const announceGearChanged = () => announceDataChange(queryClient, 'gear-changed');
 
   const showLoaded = (change: (loaded: LoadedItems) => LoadedItems) => {
@@ -334,7 +333,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
       showLoaded((loaded) => ({ ...loaded, held }));
       setRefetchProblem(null);
     } catch (error) {
-      setRefetchProblem((error as Error).message);
+      setRefetchProblem(messageOf(error, 'try again.'));
     }
   };
 
@@ -345,7 +344,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
       showLoaded((loaded) => ({ ...loaded, catalog }));
       setRefetchProblem(null);
     } catch (error) {
-      setRefetchProblem((error as Error).message);
+      setRefetchProblem(messageOf(error, 'try again.'));
     }
   };
 

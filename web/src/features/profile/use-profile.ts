@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { type Profile } from '../../lib/profile/profile.ts';
 import { profileQuery } from '../../lib/query/queries.ts';
@@ -7,7 +7,7 @@ import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROFILE_NOTICE, profileCache } from '../../offline/profile-cache.ts';
 
-export type ProfileState =
+type ProfileState =
   | { status: 'loading' }
   | { status: 'failed'; problem: string }
   | { status: 'ready'; profile: Profile; notice: string | null };
@@ -20,20 +20,23 @@ interface ProfileQuery {
   refresh: () => Promise<unknown>;
 }
 
+export function patchSavedProfile(queryClient: QueryClient, userId: string, change: ProfileUpdate): void {
+  const { queryKey } = profileQuery(userId);
+  void queryClient.cancelQueries({ queryKey });
+  const current = queryClient.getQueryData(queryKey);
+  const base = current?.loaded ?? profileCache.read(deviceStorage(), userId);
+  if (!base) return;
+  const profile = typeof change === 'function' ? change(base) : change;
+  profileCache.save(deviceStorage(), userId, profile);
+  if (current) queryClient.setQueryData(queryKey, { ...current, loaded: profile });
+}
+
 export function useProfile(userId: string): ProfileQuery {
   const queryClient = useQueryClient();
   const query = useQuery(profileQuery(userId));
 
   const replace = useCallback(
-    (change: ProfileUpdate) => {
-      const { queryKey } = profileQuery(userId);
-      void queryClient.cancelQueries({ queryKey });
-      const current = queryClient.getQueryData(queryKey);
-      if (current === undefined) return;
-      const profile = typeof change === 'function' ? change(current.loaded) : change;
-      profileCache.save(deviceStorage(), userId, profile);
-      queryClient.setQueryData(queryKey, { ...current, loaded: profile });
-    },
+    (change: ProfileUpdate) => patchSavedProfile(queryClient, userId, change),
     [queryClient, userId],
   );
 

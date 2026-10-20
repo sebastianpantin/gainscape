@@ -157,7 +157,7 @@ export interface PrescriptionSnapshotColumns {
   prescribed_amrap: boolean | null;
 }
 
-export const NO_PRESCRIPTION_SNAPSHOT: PrescriptionSnapshotColumns = Object.freeze({
+const NO_PRESCRIPTION_SNAPSHOT: PrescriptionSnapshotColumns = Object.freeze({
   prescription_ref: null,
   prescribed_weight_kg: null,
   prescribed_reps: null,

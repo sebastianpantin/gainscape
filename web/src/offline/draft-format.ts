@@ -18,7 +18,7 @@ const PRE_WARMUP_FORMAT_VERSION = 4;
 const PRE_CARDIO_FORMAT_VERSION = 3;
 const PRE_EFFORT_INPUT_FORMAT_VERSION = 2;
 
-export interface PrescriptionDetail {
+interface PrescriptionDetail {
   pct: number | null;
   optional: boolean;
 }
@@ -29,7 +29,7 @@ export interface DraftSet extends LiftSet {
   prescriptionDetail?: PrescriptionDetail;
 }
 
-export interface DraftTarget {
+interface DraftTarget {
   sets: number;
   repsMin: number;
   repsMax: number;

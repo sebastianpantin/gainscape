@@ -1,4 +1,4 @@
-export interface LaunchFacts {
+interface LaunchFacts {
   targetURL: string | undefined;
   origin: string;
   currentPath: string;

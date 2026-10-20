@@ -1,7 +1,7 @@
 import { type Ref, useEffect, useId, useRef, useState } from 'react';
 import { setMenuPlacement } from './set-menu-rules.ts';
 
-export interface SetMenuAction {
+interface SetMenuAction {
   label: string;
   accessibleName: string;
   pressed?: boolean;

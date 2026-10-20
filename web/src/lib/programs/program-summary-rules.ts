@@ -16,7 +16,7 @@ import { weekLabel } from './program-today-rules.ts';
 
 export const DISMISS_SUMMARY_LABEL = 'Dismiss';
 
-export interface RolloverSummary {
+interface RolloverSummary {
   key: string;
   title: string;
   lines: string[];

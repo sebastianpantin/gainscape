@@ -5,13 +5,13 @@ import type { Catalog, SessionInput, SetInput, SetResult } from './types.ts';
 
 export type WritableSession = Omit<SessionInput, 'sets'> & { sets: WritableSet[] };
 
-export interface NewSessionDraft {
+interface NewSessionDraft {
   id: string;
   startedAt: string;
   sets: readonly SetInput[];
 }
 
-export type NewSessionPlan =
+type NewSessionPlan =
   { mode: 'scored'; session: WritableSession } | { mode: 'history_only'; session: WritableSession; sets: SetResult[] };
 
 export function planNewSession(

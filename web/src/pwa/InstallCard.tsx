@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { dismissInstallCard, INSTALL_CARD_DUE, promptInstall, readInstallCard, useInstallState } from './install.ts';
+import { dismissInstallCard, INSTALL_CARD_DUE, promptInstall, useInstallState } from './install.ts';
+import { readInstallCard } from './install-state.ts';
 
 export function InstallCard({ userId }: { userId: string }) {
   const state = useInstallState();

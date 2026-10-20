@@ -16,7 +16,7 @@ import {
   rewardXpTexts,
 } from '../../lib/quests/quest-rules.ts';
 
-export interface DescribedRecord {
+interface DescribedRecord {
   headline: string;
   previous: string;
 }
@@ -49,9 +49,13 @@ export function describeRecord(
   };
 }
 
-export function gearBonusText(summary: Pick<SessionSummary, 'gearBonusBySkill'>, skillKey: string): string | null {
-  const bonus = summary.gearBonusBySkill?.[skillKey] ?? 0;
-  return bonus > 0 ? `Gear bonus +${formatXp(bonus)} XP` : null;
+export function bonusText(
+  label: 'Gear' | 'Challenge',
+  bonusBySkill: Readonly<Record<string, number>> | undefined,
+  skillKey: string,
+): string | null {
+  const bonus = bonusBySkill?.[skillKey] ?? 0;
+  return bonus > 0 ? `${label} bonus +${formatXp(bonus)} XP` : null;
 }
 
 export function challengeHeadline(summary: Pick<SessionSummary, 'challenge'>): string | null {
@@ -68,14 +72,6 @@ export function challengeNotAppliedText(
   return summary.historyOnly
     ? 'Challenge not applied: a workout older than 7 days is saved to history only. Your scroll was kept.'
     : `Challenge not applied: ${planned.name} couldn't be applied to this workout, so it was saved as a normal workout.`;
-}
-
-export function challengeBonusText(
-  summary: Pick<SessionSummary, 'challengeBonusBySkill'>,
-  skillKey: string,
-): string | null {
-  const bonus = summary.challengeBonusBySkill?.[skillKey] ?? 0;
-  return bonus > 0 ? `Challenge bonus +${formatXp(bonus)} XP` : null;
 }
 
 function risenTarget(
@@ -201,7 +197,7 @@ const RISE_S = 0.4;
 const GAIN_FILL_S = 0.6;
 const POP_PEAK_MS = 300;
 
-export interface RevealShape {
+interface RevealShape {
   skillCount: number;
   hasLevelUps: boolean;
   hasRecords: boolean;
@@ -280,15 +276,18 @@ export function levelUpCueDelayMs(
   return reducedMotion ? 0 : toMs(timeline.levelUpDelayS) + POP_PEAK_MS;
 }
 
+function xpToGoText(nextLevelXp: number, xp: number): string {
+  return formatXp(Math.ceil(nextLevelXp - xp));
+}
+
 export function xpToNextLevelText(xp: number): string {
   const { level, nextLevelXp } = levelProgress(xp);
   if (nextLevelXp === null) return 'Max level';
-  return `${formatXp(Math.ceil(nextLevelXp - xp))} XP to level ${level + 1}`;
+  return `${xpToGoText(nextLevelXp, xp)} XP to level ${level + 1}`;
 }
 
 export function gainBarLabel(skillName: string, xp: number): string {
   const { level, nextLevelXp, fractionToNextLevel } = levelProgress(xp);
   if (nextLevelXp === null) return `${skillName}: Max level`;
-  const xpToGo = formatXp(Math.ceil(nextLevelXp - xp));
-  return `${skillName}: ${Math.round(fractionToNextLevel * 100)}% of the way to level ${level + 1}, ${xpToGo} XP to go`;
+  return `${skillName}: ${Math.round(fractionToNextLevel * 100)}% of the way to level ${level + 1}, ${xpToGoText(nextLevelXp, xp)} XP to go`;
 }

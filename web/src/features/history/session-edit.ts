@@ -2,7 +2,7 @@ import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
 import { roundTo } from '@domain/math.ts';
 import type { CardioInterval, DropSummary } from '@domain/types.ts';
-import type { CardioActivity, Exercise, HoldMeasure, LoadType, PaceUnit } from '../../lib/exercises/catalog-rules.ts';
+import type { CardioActivity, HoldMeasure, LoadType, PaceUnit } from '../../lib/exercises/catalog-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
 import type { InvokeOutcome } from '../../lib/platform/function-client-rules.ts';
 import {
@@ -40,13 +40,13 @@ type ExerciseKind =
 
 export type KnownExercise = { name: string } & ExerciseKind;
 
-export type NewExercise = { id: string; name: string } & ExerciseKind;
+type NewExercise = { id: string; name: string } & ExerciseKind;
 
-export type HoldEditExercise = HoldExerciseOf<HoldSet>;
+type HoldEditExercise = HoldExerciseOf<HoldSet>;
 
 export type LiftEditExercise = LiftExerciseOf<LiftSet>;
 
-export interface CardioEditExercise {
+interface CardioEditExercise {
   exerciseId: string;
   name: string;
   modality: 'cardio';
@@ -247,9 +247,7 @@ export function swapEditExercise(edit: SessionEdit, exerciseIndex: number, repla
       return { ...exercise, exerciseId: replacement.id, name: replacement.name, paceUnit, tracksDistance, sets };
     }
     if (replacement.modality === 'cardio') return exercise;
-    const sameKind =
-      exercise.modality === 'hold' ? replacement.measure === exercise.measure : replacement.measure === undefined;
-    if (!sameKind) return exercise;
+    if (!sameKindOfExercise(replacement, exercise)) return exercise;
     return swapLoadedExercise(exercise, replacement, { keepLoads: replacement.loadType === exercise.loadType });
   });
 }
@@ -376,7 +374,7 @@ function grouped(placed: readonly PlacedSet[]): EditExercise[] {
   return exercises;
 }
 
-export interface RebasedEdit {
+interface RebasedEdit {
   edit: SessionEdit;
   droppedSetIds: string[];
 }
@@ -505,11 +503,11 @@ export function removalText(
 }
 
 export function removedText(
-  drops: readonly { itemId: string; revokedQuantity: number }[] | undefined,
+  drops: readonly { itemId: string; revokedQuantity: number }[],
   items: readonly CatalogItem[],
 ): string {
   const described = describeDrops(
-    (drops ?? []).map((drop) => ({ itemId: drop.itemId, quantity: drop.revokedQuantity })),
+    drops.map((drop) => ({ itemId: drop.itemId, quantity: drop.revokedQuantity })),
     itemNameLookup(items, UNKNOWN_ITEM_NAME),
   );
   return described && `Removed ${described} from your collection.`;
@@ -519,14 +517,18 @@ export function sameSetValues(a: LiftSet | BoutSet | HoldSet, b: LiftSet | BoutS
   return JSON.stringify({ ...a, id: '' }) === JSON.stringify({ ...b, id: '' });
 }
 
+export function describeLoad(weightKg: number, loadType: LoadType, unit: UnitPref): string {
+  return loadType === 'bodyweight' ? 'bodyweight' : formatLoad(weightKg, loadType, unit);
+}
+
 export function describeHold(set: HoldValues, loadType: LoadType, unit: UnitPref): string {
-  const load = loadType === 'bodyweight' ? 'bodyweight' : formatLoad(set.weightKg, loadType, unit);
+  const load = describeLoad(set.weightKg, loadType, unit);
   const measured = set.durationS !== null ? `${set.durationS} s` : `${set.distanceM ?? 0} m`;
   return `${load} · ${measured}`;
 }
 
 export function sameKindOfExercise(
-  candidate: Exercise,
+  candidate: ExerciseKind,
   exercise: Pick<EditExercise, 'modality'> & { measure?: HoldMeasure },
 ): boolean {
   if (candidate.modality === 'cardio') return exercise.modality === 'cardio';

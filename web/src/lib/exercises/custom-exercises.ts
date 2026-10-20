@@ -7,7 +7,7 @@ export interface SkillShare {
   shareBp: number;
 }
 
-export interface CustomExerciseDoc {
+interface CustomExerciseDoc {
   id: string;
   name: string;
   modality: Modality;

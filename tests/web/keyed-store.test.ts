@@ -1,20 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { keyedStore } from '../../web/src/lib/platform/keyed-store.ts';
-import { MemoryStorage } from './memory-storage.ts';
-
-function throwingStorage(): MemoryStorage {
-  const storage = new MemoryStorage();
-  storage.getItem = () => {
-    throw new Error('blocked');
-  };
-  storage.setItem = () => {
-    throw new Error('blocked');
-  };
-  storage.removeItem = () => {
-    throw new Error('blocked');
-  };
-  return storage;
-}
+import { MemoryStorage, throwingStorage } from './memory-storage.ts';
 
 const countStore = keyedStore('gainscape.count.', (raw) => {
   const parsed: unknown = raw === null ? 0 : JSON.parse(raw);
@@ -45,9 +31,9 @@ describe('keyed per-user store', () => {
     storage.setItem('gainscape.count.user-1', '{broken');
     expect(countStore.read(storage, 'user-1')).toBe(0);
     expect(countStore.read(null, 'user-1')).toBe(0);
-    expect(countStore.read(throwingStorage(), 'user-1')).toBe(0);
-    expect(() => countStore.save(throwingStorage(), 'user-1', 1)).not.toThrow();
-    expect(() => countStore.forget(throwingStorage(), 'user-1')).not.toThrow();
+    expect(countStore.read(throwingStorage('getItem', 'setItem', 'removeItem'), 'user-1')).toBe(0);
+    expect(() => countStore.save(throwingStorage('getItem', 'setItem', 'removeItem'), 'user-1', 1)).not.toThrow();
+    expect(() => countStore.forget(throwingStorage('getItem', 'setItem', 'removeItem'), 'user-1')).not.toThrow();
     expect(() => countStore.save(null, 'user-1', 1)).not.toThrow();
   });
 

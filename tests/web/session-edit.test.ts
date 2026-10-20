@@ -731,7 +731,6 @@ describe('session detail texts', () => {
       'Removed Chalk ×3 from your collection.',
     );
     expect(removedText([{ itemId: 'item-chalk', revokedQuantity: 0 }], items)).toBe('');
-    expect(removedText(undefined, items)).toBe('');
   });
 
   it('compares set values without their ids', () => {

@@ -27,7 +27,7 @@ import {
   insertSession,
   linkedProgram,
   loadProfileSettings,
-  loadStoredSets,
+  loadStoredSetsById,
   lockUser,
   type NewSessionRow,
   ownedProgramDayId,
@@ -50,8 +50,7 @@ async function resubmissionDiffers(
   payload: CompleteSessionPayload,
 ): Promise<boolean> {
   if (payload.sessionRpe !== stored.sessionRpe) return true;
-  const storedSets = await loadStoredSets(tx, payload.id);
-  const storedById = new Map(storedSets.map((set) => [set.id, set]));
+  const { storedById } = await loadStoredSetsById(tx, payload.id);
   return !isNoOpEdit(payload, stored.notes, storedById, DEFAULT_BALANCE);
 }
 

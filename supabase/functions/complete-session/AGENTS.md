@@ -15,7 +15,7 @@ POST endpoint that accepts a finished workout draft from the web app, validates 
 
 ## Rules and gotchas
 
-- Idempotent on the session id: a resubmission answers the stored summary, `programLinked` and `completedAt` byte for byte. If the resubmitted sets, notes or session RPE differ (domain `isNoOpEdit` against `loadStoredSets`; timing is not compared), it still stores nothing and adds `storedContentDiffers: true`, so a client that re-finished a saved workout can tell its changes were not applied.
+- Idempotent on the session id: a resubmission answers the stored summary, `programLinked` and `completedAt` byte for byte. If the resubmitted sets, notes or session RPE differ (domain `isNoOpEdit` against `loadStoredSetsById`; timing is not compared), it still stores nothing and adds `storedContentDiffers: true`, so a client that re-finished a saved workout can tell its changes were not applied.
 - 409 `session_id_conflict` for an id another user holds or deleted, 410 `session_deleted` for a tombstone. Rate limits `session_create_hour` and `session_create_day`, taken right after the resubmission and tombstone answers and before any catalog or profile read.
 - Never trust client XP. The server computes effective load with the domain `writableSetFor` and stores it as `recordedEffectiveLoadKg`, so history-only sessions keep it for later replay.
 - Gear is snapshotted from `loadEquippedLoadout` into `sessions.gear_loadout` at sync time (always an object, `{}` without gear). The client sends no gear.

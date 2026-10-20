@@ -415,7 +415,10 @@ body:has(.active-workout-bar) .screen {
 .day-list,
 .feed,
 .menu-list,
-.history-list {
+.history-list,
+.first-run-cards,
+.friend-activity-list,
+.set-list {
   list-style: none;
   margin: 0;
   padding: 0;

@@ -9,7 +9,7 @@ export interface CollectionLift {
 
 export type CollectionExercise = CollectionLift | { modality: 'cardio' };
 
-export interface CollectionCompletion {
+interface CollectionCompletion {
   filledSlots: number;
   totalSlots: number;
 }

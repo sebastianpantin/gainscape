@@ -1,10 +1,6 @@
 import type { SessionSummary } from '@domain/types.ts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  forgetLastSummary,
-  recallLastSummary,
-  rememberLastSummary,
-} from '../../web/src/features/summary/last-summary.ts';
+import { forgetLastSummary, recallLastSummary, rememberLastSummary } from '../../web/src/offline/last-summary.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const summary = {

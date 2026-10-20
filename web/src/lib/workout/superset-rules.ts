@@ -34,7 +34,7 @@ export function supersetGroups(draft: WorkoutDraft): SupersetGroup[] {
   return groups.filter((group) => group.exerciseIndexes.length > 1);
 }
 
-function groupOf(draft: WorkoutDraft, exerciseIndex: number): SupersetGroup | undefined {
+export function groupOf(draft: WorkoutDraft, exerciseIndex: number): SupersetGroup | undefined {
   return supersetGroups(draft).find((group) => group.exerciseIndexes.includes(exerciseIndex));
 }
 

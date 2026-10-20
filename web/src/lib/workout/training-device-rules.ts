@@ -39,7 +39,7 @@ export function restAlertIsFresh(endsAt: number, now: number): boolean {
   return now - endsAt <= REST_ALERT_GRACE_MS;
 }
 
-export type RestAlertAction = 'vibrate' | 'sound' | 'notify';
+type RestAlertAction = 'vibrate' | 'sound' | 'notify';
 
 export function restAlertActions(
   settings: TrainingDeviceSettings,
@@ -56,7 +56,7 @@ export function holdsWakeLock(state: { keepAwake: boolean; workoutOpen: boolean;
   return state.keepAwake && state.workoutOpen && state.visible;
 }
 
-export interface NotifyPromptFacts {
+interface NotifyPromptFacts {
   standalone: boolean;
   permission: NotificationPermission | 'unsupported';
   notifyOn: boolean;
@@ -67,7 +67,7 @@ export function offersNotifyPrompt(facts: NotifyPromptFacts): boolean {
   return facts.standalone && facts.permission === 'default' && !facts.notifyOn && !facts.answered;
 }
 
-export type CelebrationCue = 'vibrate' | 'sound';
+type CelebrationCue = 'vibrate' | 'sound';
 
 export function celebrationCues(settings: TrainingDeviceSettings): CelebrationCue[] {
   const cues: CelebrationCue[] = [];

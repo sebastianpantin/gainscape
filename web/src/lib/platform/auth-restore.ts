@@ -45,7 +45,7 @@ export function forceSignedOut(): void {
   for (const listener of forcedSignOutListeners) listener();
 }
 
-export interface SignOutPorts {
+interface SignOutPorts {
   signOut: () => Promise<{ error: unknown }>;
   storedSession: () => Session | null;
   isOnline: () => boolean;
@@ -102,14 +102,14 @@ export interface GetSessionResult {
   error: unknown;
 }
 
-export interface AuthBootPorts {
+interface AuthBootPorts {
   getSession: () => Promise<GetSessionResult>;
   storedSession: () => Session | null;
   isOnline: () => boolean;
   setState: (state: AuthState) => void;
 }
 
-export interface AuthBoot {
+interface AuthBoot {
   onAuthEvent: (event: AuthChangeEvent, session: Session | null) => void;
   stop: () => void;
 }

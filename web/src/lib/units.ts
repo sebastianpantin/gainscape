@@ -43,7 +43,7 @@ export function highestWeightInUnit(highestKg: number, unit: UnitPref): number {
   return Math.floor(kgToUnit(highestKg, unit));
 }
 
-export interface FeetAndInches {
+interface FeetAndInches {
   feet: number;
   inches: number;
 }

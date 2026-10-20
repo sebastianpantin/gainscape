@@ -24,12 +24,12 @@ export interface PlanDay {
   cards: PrescriptionCard[];
 }
 
-export interface ProgramPlan {
+interface ProgramPlan {
   title: string;
   days: PlanDay[];
 }
 
-export interface PlanContext {
+interface PlanContext {
   definition: ProgramDefinition;
   enrollment: ProgramEnrollment;
   state: ProgramState;

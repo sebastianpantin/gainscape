@@ -8,7 +8,7 @@ export function showsActiveWorkoutBarOn(pathname: string): boolean {
   return !ROUTES_WITHOUT_BAR.includes(pathname);
 }
 
-export type ActiveWorkoutBarView =
+type ActiveWorkoutBarView =
   { kind: 'in-progress'; elapsed: string; rest: string | null; name: string } | { kind: 'unsaved'; name: string };
 
 interface ActiveWorkoutBarInput {

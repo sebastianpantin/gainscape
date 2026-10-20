@@ -7,12 +7,18 @@ import {
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramFact,
-  type ProgramState,
   programStateAt,
   type ReferenceVar,
 } from '@domain/index.ts';
 import { initialProgramState } from '@domain/program-state.ts';
-import { factClock, jumpToFact, sessionFact, setReferenceFact, skipDayFact } from './program-fixtures/facts.ts';
+import {
+  factClock,
+  jumpToFact,
+  sessionFact,
+  setReferenceFact,
+  skipDayFact,
+  withoutFactIds,
+} from './program-fixtures/facts.ts';
 import { followProgram, loggedAsPrescribed, resolveAt } from './program-fixtures/follow.ts';
 import {
   cyclePosition,
@@ -251,17 +257,6 @@ function compareOrder(a: number[], b: number[]): number {
     if (a[index] !== b[index]) return a[index] - b[index];
   }
   return 0;
-}
-
-function withoutFactIds(state: ProgramState) {
-  return {
-    position: state.position,
-    completedDays: state.completedDays,
-    refs: state.refs,
-    consecutiveMisses: state.consecutiveMisses,
-    days: state.days,
-    history: state.history,
-  };
 }
 
 const SCENARIOS = [

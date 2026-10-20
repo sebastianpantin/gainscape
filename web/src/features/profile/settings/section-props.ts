@@ -4,5 +4,5 @@ import { type ProfileUpdate } from '../use-profile.ts';
 export interface SectionProps {
   userId: string;
   profile: Profile;
-  onSaved: (update: ProfileUpdate) => void;
+  replaceProfile: (update: ProfileUpdate) => void;
 }

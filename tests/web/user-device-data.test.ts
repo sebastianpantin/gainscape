@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHUNK_RELOAD_KEY } from '../../web/src/pwa/chunk-reload.ts';
-import { rememberLastSummary } from '../../web/src/features/summary/last-summary.ts';
+import { rememberLastSummary } from '../../web/src/offline/last-summary.ts';
 import { saveCachedExercises } from '../../web/src/lib/exercises/catalog-cache.ts';
 import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { saveCachedExerciseNotes } from '../../web/src/lib/exercises/exercise-note-cache.ts';
@@ -11,7 +11,7 @@ import { saveLastSeenRelease } from '../../web/src/lib/platform/last-seen-releas
 import { saveOnboardingDone } from '../../web/src/lib/profile/onboarding-store.ts';
 import { parsePlateSettings } from '../../web/src/lib/workout/plate-rules.ts';
 import { savePlateSettings } from '../../web/src/lib/workout/plate-settings-store.ts';
-import { cachePreferences } from '../../web/src/lib/profile/preferences.ts';
+import { preferencesCache } from '../../web/src/lib/profile/preferences.ts';
 import { type Profile } from '../../web/src/lib/profile/profile-rules.ts';
 import { dismissSummary } from '../../web/src/lib/programs/program-summary-store.ts';
 import { parseRestState } from '../../web/src/lib/workout/rest-timer-rules.ts';
@@ -94,7 +94,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   saveLastSeenRelease(local, userId, '0.4.0');
   saveOnboardingDone(local, userId);
   savePlateSettings(local, userId, parsePlateSettings(null));
-  cachePreferences(userId, { unitPref: 'lb', effortInputMode: 'rpe' });
+  preferencesCache.save(local, userId, { unitPref: 'lb', effortInputMode: 'rpe' });
   dismissSummary(local, userId, 'program-a:week-1');
   saveRestState(local, userId, parseRestState(null));
   saveSessionBaseline(local, userId, { asOf: '2026-10-05T08:00:00.000Z', strength: {}, records: null });

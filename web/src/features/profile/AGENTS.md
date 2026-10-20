@@ -13,7 +13,6 @@ The Profile tab and everything under it: the user's own profile card and stats (
 - Hooks:
   - `use-profile.ts`: a cache-first load; `replace` applies optimistic updates and saves the cache.
   - `use-optimistic-profile-save.ts`: applies the change, persists it, and rolls back on failure.
-  - `use-loadout.ts`: the loadout query.
 - Shared with other features:
   - `ProfileCard.tsx` and `ProfileBadge` (friends use them). Its stat tiles (2 by 2) include quest points: your own from `questPointsQuery`, a friend's from `get_profile`.
   - `LoadoutPanel.tsx` (Items, Profile, Preview and the friend profile).
@@ -47,7 +46,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
   - Notify asks for permission and shows an alert when it is denied.
 - The RIR and RPE hints come from `GLOSSARY` in `../../lib/ui/glossary.ts`, the same text as the workout help.
 - Sign-out must keep drafts (`signOutKeepingDrafts`).
-- Reset and deletion warn about an unsynced draft (`hasDraftOnDevice`), checking both the booted draft store and the `localStorage` fallback.
+- Reset, deletion and sign-out warn about an unsynced draft (`useDraftLossGuard` over `hasDraftOnDevice`), checking both the booted draft store and the `localStorage` fallback.
   - Reset needs `RESET` typed, then calls `resetMyData`, then `forgetUserProgressData`, then `announceDataChange('account-reset')`.
   - Deletion calls `forgetUserDeviceData`, which clears every per-user key and keeps the forgotten-draft tombstone.
 - Account deletion and export call the `delete-account` and `export-data` Edge Functions. A payload change needs the integration test updated too.

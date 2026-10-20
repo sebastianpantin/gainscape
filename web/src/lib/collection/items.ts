@@ -1,6 +1,8 @@
 import {
   type CraftProblem,
+  type CraftResult,
   craftProblem,
+  craftResultSchema,
   type HeldItem,
   INVENTORY_COLUMNS,
   ITEM_COLUMNS,
@@ -35,9 +37,9 @@ import { fetchExercises } from '../exercises/catalog.ts';
 import { readCachedExercises } from '../exercises/catalog-cache.ts';
 import { CHALLENGE_COLUMNS, challengeRowSchema, toCatalogChallenge } from './challenge-rules.ts';
 import { queryDryRolls } from './luck-rules.ts';
-import { parsedRows } from '../rows.ts';
+import { parsedRow, parsedRows } from '../rows.ts';
 import { fetchStrengthState } from './collection-data.ts';
-import type { LoadoutView } from './gear-rules.ts';
+import { type LoadoutView, loadoutViewSchema } from './gear-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { supabase } from '../platform/supabase.ts';
 
@@ -76,25 +78,18 @@ export async function fetchInventory(userId: string): Promise<Map<string, HeldIt
   return toHeldItems(parsedRows(inventoryRowSchema, data));
 }
 
-export interface CraftResult {
-  craftId: string;
-  itemId: string;
-  quantity: number;
-  equippedSlot: GearSlot | null;
-}
-
 export async function craftItem(
   recipeId: string,
 ): Promise<{ kind: 'ok'; result: CraftResult } | { kind: 'problem'; problem: CraftProblem }> {
   const { data, error } = await supabase.rpc('craft', { recipe_id: recipeId });
   if (error) return { kind: 'problem', problem: craftProblem(error) };
-  return { kind: 'ok', result: data as CraftResult };
+  return { kind: 'ok', result: parsedRow(craftResultSchema, data) };
 }
 
 export async function fetchLoadout(userId: string): Promise<LoadoutView | null> {
   const { data, error } = await supabase.rpc('get_loadout', { target: userId });
   if (error) throw error;
-  return data as LoadoutView | null;
+  return parsedRow(loadoutViewSchema, data);
 }
 
 export async function equipGear(slot: GearSlot, itemId: string): Promise<void> {

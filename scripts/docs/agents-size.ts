@@ -17,8 +17,8 @@ export function oversizedAgentsDocs(
   return docs.filter((doc) => doc.bytes > limit).sort((left, right) => right.bytes - left.bytes);
 }
 
-export function sizeReport(doc: AgentsDocSize, limit: number = AGENTS_DOC_BYTE_LIMIT): string {
-  return `${doc.path} is ${doc.bytes} bytes, over the ${limit} byte limit`;
+export function sizeReport(doc: AgentsDocSize): string {
+  return `${doc.path} is ${doc.bytes} bytes, over the ${AGENTS_DOC_BYTE_LIMIT} byte limit`;
 }
 
 export function agentsDocsNearLimit(docs: readonly AgentsDocSize[]): AgentsDocSize[] {

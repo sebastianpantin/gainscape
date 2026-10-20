@@ -28,7 +28,7 @@ export const RECORD_BASELINE_COLUMNS = {
   cardioRecords: 'exercise_id, kind, value',
 } as const;
 
-export interface RecordBaselineRows {
+interface RecordBaselineRows {
   repMaxes: readonly { exercise_id: string; reps: number; load_kg: number | string }[];
   bodyweightRecords: readonly { exercise_id: string; max_reps: number }[];
   cardioRecords: readonly { exercise_id: string; kind: CardioRecordKind; value: number | string }[];

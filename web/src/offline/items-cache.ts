@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { ItemIconKind } from '../components/pixel-sprites.ts';
 import { type Exercise, isLiftExercise, LOAD_TYPES, type LoadType } from '../lib/exercises/catalog-rules.ts';
 import { type CatalogChallenge, catalogChallengeSchema } from '../lib/collection/challenge-rules.ts';
-import type { HeldItem, ItemCatalog } from '../lib/collection/item-rules.ts';
+import { type HeldItem, ITEM_KINDS, ITEM_RARITIES, type ItemCatalog } from '../lib/collection/item-rules.ts';
 import { keyedStore } from '../lib/platform/keyed-store.ts';
 
 export const OFFLINE_ITEMS_NOTICE = 'Offline: using your saved items.';
@@ -33,8 +33,8 @@ const catalogItemSchema = z.object({
   id: z.string(),
   key: z.string(),
   name: z.string(),
-  kind: z.enum(['gear', 'material', 'pet', 'scroll']),
-  rarity: z.enum(['common', 'uncommon', 'rare', 'legendary']),
+  kind: z.enum(ITEM_KINDS),
+  rarity: z.enum(ITEM_RARITIES),
   tier: z.enum(ITEM_TIERS).nullable(),
   gearSlot: z.enum(GEAR_SLOTS).nullable(),
   icon: z.string().transform((icon) => icon as ItemIconKind),
@@ -104,16 +104,17 @@ export function updateItemsCache(
 }
 
 export function spendCachedScroll(storage: Storage | null, userId: string, challengeId: string): void {
-  const cache = readItemsCache(storage, userId);
-  const scroll = cache?.catalog.items.find((item) => item.grantsChallengeId === challengeId);
-  if (!cache || !scroll) return;
-  const inventory = cache.inventory.map((held) =>
-    held.itemId === scroll.id ? { ...held, quantity: Math.max(0, held.quantity - 1) } : held,
-  );
-  saveItemsCache(storage, userId, { ...cache, inventory });
+  updateItemsCache(storage, userId, (cache) => {
+    const scroll = cache.catalog.items.find((item) => item.grantsChallengeId === challengeId);
+    if (!scroll) return cache;
+    const inventory = cache.inventory.map((held) =>
+      held.itemId === scroll.id ? { ...held, quantity: Math.max(0, held.quantity - 1) } : held,
+    );
+    return { ...cache, inventory };
+  });
 }
 
-export interface LiveItems {
+interface LiveItems {
   catalog: ItemCatalog;
   inventory: HeldItem[];
   exercises: readonly Exercise[] | null;

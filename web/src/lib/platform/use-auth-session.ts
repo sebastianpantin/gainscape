@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isDeviceOffline } from '../../offline/cache-first.ts';
 import { type AuthState, bootAuth, onForcedSignOut } from './auth-restore.ts';
 import { readStoredSession, supabase } from './supabase.ts';
 
@@ -9,7 +10,7 @@ export function useAuthSession(): AuthState {
     const boot = bootAuth({
       getSession: () => supabase.auth.getSession(),
       storedSession: readStoredSession,
-      isOnline: () => navigator.onLine !== false,
+      isOnline: () => !isDeviceOffline(),
       setState,
     });
     const { data: subscription } = supabase.auth.onAuthStateChange(boot.onAuthEvent);

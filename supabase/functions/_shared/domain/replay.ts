@@ -3,6 +3,7 @@ import { compareSessionKeys } from './ordering.ts';
 import { processSession, type SessionOutputs } from './pipeline.ts';
 import { strengthHistoryRows } from './strength.ts';
 import { strengthTracker } from './strength-tracker.ts';
+import { applyXpGrant } from './xp.ts';
 import type { Catalog, SessionInput, SessionKey, StrengthHistoryRow, StrengthState, UserState } from './types.ts';
 
 export interface ReplayedSession {
@@ -11,7 +12,7 @@ export interface ReplayedSession {
   outputs: SessionOutputs;
 }
 
-export interface ReplayResult {
+interface ReplayResult {
   sessions: ReplayedSession[];
   finalState: UserState;
 }
@@ -19,18 +20,6 @@ export interface ReplayResult {
 export interface SkillXpGrant {
   at: SessionKey;
   xpBySkill: Readonly<Record<string, number>>;
-}
-
-export function applyXpGrant(
-  skillXp: Readonly<Record<string, number>>,
-  xpBySkill: Readonly<Record<string, number>>,
-  cfg: Pick<BalanceConfig, 'maxXp'>,
-): Record<string, number> {
-  const granted: Record<string, number> = { ...skillXp };
-  for (const [skillId, xp] of Object.entries(xpBySkill)) {
-    granted[skillId] = Math.min(cfg.maxXp, (granted[skillId] ?? 0) + xp);
-  }
-  return granted;
 }
 
 function withGrants(state: UserState, grants: readonly SkillXpGrant[], cfg: BalanceConfig): UserState {
@@ -65,5 +54,5 @@ export function replayHistory(
 }
 
 export function priorSkillXp(sums: Readonly<Record<string, number>>, cfg: BalanceConfig): Record<string, number> {
-  return Object.fromEntries(Object.entries(sums).map(([skillId, xp]) => [skillId, Math.min(cfg.maxXp, xp)]));
+  return applyXpGrant({}, sums, cfg);
 }

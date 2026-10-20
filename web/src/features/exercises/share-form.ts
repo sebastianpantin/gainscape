@@ -3,7 +3,7 @@ import type { SkillShare } from '../../lib/exercises/custom-exercises.ts';
 
 const BASIS_POINTS_PER_PERCENT = 100;
 
-export interface ShareForm {
+interface ShareForm {
   skillIds: string[];
   percents: Record<string, string>;
   locked: boolean;

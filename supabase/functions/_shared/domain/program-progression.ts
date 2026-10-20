@@ -1,5 +1,7 @@
+import { MAX_RPE } from './effort.ts';
 import { halfIncrementKg, roundPrescribedLoad, type RoundingSetting } from './load-rounding.ts';
 import { FLOAT_TOLERANCE } from './math.ts';
+import { compareStrings } from './ordering.ts';
 import {
   type Adjustment,
   type ProgramDefinition,
@@ -57,7 +59,7 @@ import { advanceStage, isRetestPending, retestedStages } from './program-stages.
 import { rpeChartPct } from './rpe-chart.ts';
 import { kgToUnit, shownWeight, type WeightUnit } from './units.ts';
 
-export interface LoggedLoad {
+interface LoggedLoad {
   weightKg: number;
   reps: number;
 }
@@ -165,8 +167,6 @@ function absoluteWeek(definition: ProgramDefinition, position: Position): number
   return schedule.kind === 'cycle' ? (cycle - 1) * schedule.weeksPerCycle + week : week;
 }
 
-const MAX_RPE = 10;
-
 function loggedRpeOf(set: FactSet): number | null {
   if (set.effortValue === null) return null;
   if (set.effortInputType === 'rpe') return set.effortValue;
@@ -179,7 +179,7 @@ function waveIndexOf(definition: ProgramDefinition, position: Position): number 
   return Math.floor((weekContextOf(position).week - 1) / schedule.waveWeeks);
 }
 
-export type FinalDaySets = Readonly<Record<string, readonly FactSet[]>>;
+type FinalDaySets = Readonly<Record<string, readonly FactSet[]>>;
 
 interface FoldContext {
   definition: ProgramDefinition;
@@ -551,7 +551,7 @@ function mergeBestSets(context: FoldContext, existing: readonly FactSet[], incom
     const current = bestByRef.get(ref);
     if (!current || isBetterSet(context, set, current)) bestByRef.set(ref, set);
   }
-  return [...bestByRef.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, set]) => set);
+  return [...bestByRef.entries()].sort(([a], [b]) => compareStrings(a, b)).map(([, set]) => set);
 }
 
 function dayStagesOf(definition: ProgramDefinition, state: ProgramState, position: Position): StageIndices {

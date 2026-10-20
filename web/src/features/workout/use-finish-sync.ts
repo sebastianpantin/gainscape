@@ -6,7 +6,8 @@ import type { DraftStore } from '../../offline/draft-store.ts';
 import { retryDelayMs } from '../../lib/platform/function-client-rules.ts';
 import { attemptFinish } from '../../offline/finish-lock.ts';
 import { type FinishStatus, startFinishRetries } from '../../offline/finish-retries.ts';
-import { signOutKeepingDrafts, syncFinishedWorkout } from '../../offline/sync-workout.ts';
+import { signOutKeepingDrafts } from '../../lib/platform/sign-out.ts';
+import { syncFinishedWorkout } from '../../offline/sync-workout.ts';
 
 interface FinishSyncOptions {
   userId: string;

@@ -1,4 +1,4 @@
-import { type Exercise, isLiftExercise, type LiftExercise, type LoadType } from '../../lib/exercises/catalog-rules.ts';
+import { type LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import type { Program, ProgramDoc } from '../../lib/programs/programs.ts';
@@ -19,7 +19,7 @@ export const TARGET_REPS_RANGE = { lowest: 1, highest: 100 } as const;
 
 const DEFAULT_TARGET = { targetSets: 3, targetRepsMin: 8, targetRepsMax: 12, progression: { kind: 'none' } } as const;
 
-export type Increment = Record<UnitPref, number>;
+type Increment = Record<UnitPref, number>;
 
 export const INCREMENT_PRESETS: readonly Increment[] = [
   { kg: 1.25, lb: 2.5 },
@@ -33,10 +33,6 @@ export const INCREMENT_RANGE: Record<UnitPref, { lowest: number; highest: number
 };
 export const INCREMENT_STEP: Increment = { kg: 0.25, lb: 0.5 };
 const INCREMENT_DECIMALS = 2;
-
-export function isPlannableExercise(exercise: Exercise): exercise is LiftExercise {
-  return isLiftExercise(exercise) && exercise.measure === undefined;
-}
 
 export function newProgramDoc(programId: string, dayId: string): ProgramDoc {
   return { id: programId, name: 'My program', days: [{ id: dayId, name: 'Day 1', exercises: [] }] };

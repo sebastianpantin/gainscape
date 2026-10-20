@@ -183,12 +183,11 @@ describe('program facts cache', () => {
     expect(syncedMonday(1_000).generation).toBe(0);
   });
 
-  it.each<[string, FinishOutcomeForFacts]>([
-    ['a 410 session_deleted', { kind: 'deleted' }],
-    ['an unlinked sync', { kind: 'synced', summary: { programLinked: false, completedAt: MONDAY_COMPLETED_AT } }],
-    ['a retryable failure', { kind: 'retryable' }],
-    ['a rejection', { kind: 'rejected' }],
-  ])('appends nothing for %s', (_, outcome) => {
+  it('appends nothing for an unlinked sync', () => {
+    const outcome: FinishOutcomeForFacts = {
+      kind: 'synced',
+      summary: { programLinked: false, completedAt: MONDAY_COMPLETED_AT },
+    };
     const cache = fetched(emptyProgramFactsCache(ENROLLMENT_ID), 0, []);
     expect(appendFinishedSession(cache, mondayDraft(), outcome, 1_000)).toEqual(cache);
   });

@@ -58,20 +58,20 @@ export interface Conversion {
   note: string;
 }
 
-export interface CopyInitial {
+interface CopyInitial {
   kind: 'copy';
   var: ReferenceVar;
   from: InputKind;
 }
 
-export interface ScaleInitial {
+interface ScaleInitial {
   kind: 'scale';
   var: ReferenceVar;
   from: InputKind;
   factor: NumberExpr;
 }
 
-export interface OnRampInitial {
+interface OnRampInitial {
   kind: 'onRamp';
   var: ReferenceVar;
   from: InputKind;
@@ -223,19 +223,19 @@ export interface DayDecl {
   slots: SlotDecl[];
 }
 
-export interface CycleSchedule {
+interface CycleSchedule {
   kind: 'cycle';
   weeksPerCycle: number;
   waveWeeks?: number;
   days: DayDecl[];
 }
 
-export interface WeeklySchedule {
+interface WeeklySchedule {
   kind: 'weekly';
   days: DayDecl[];
 }
 
-export interface RotationSchedule {
+interface RotationSchedule {
   kind: 'rotation';
   days: DayDecl[];
 }

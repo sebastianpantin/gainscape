@@ -1,5 +1,5 @@
 import type { BalanceConfig } from './balance.ts';
-import { MS_PER_DAY } from './edit-window.ts';
+import { MS_PER_DAY } from './math.ts';
 import { compareSessionKeys, isBefore } from './ordering.ts';
 import type { ExerciseStrength, SessionKey, StrengthHistoryRow, StrengthState } from './types.ts';
 
@@ -15,7 +15,7 @@ interface ExerciseTrack {
   latestSessionMax: number | null;
 }
 
-export interface StrengthTracker {
+interface StrengthTracker {
   stateAt(session: SessionKey): StrengthState;
   record(rows: readonly StrengthHistoryRow[]): void;
 }

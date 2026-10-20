@@ -4,7 +4,7 @@ import { deviceStorage } from './keyed-store.ts';
 import { celebrationCues } from '../workout/training-device-rules.ts';
 import { readTrainingDeviceSettings } from '../workout/training-device-store.ts';
 
-export interface Celebration {
+interface Celebration {
   tones: readonly Tone[];
   volume: number;
   wave: OscillatorType;

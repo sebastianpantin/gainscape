@@ -74,6 +74,10 @@ export function isLiftExercise(exercise: Exercise): exercise is LiftExercise {
   return exercise.modality === 'lift';
 }
 
+export function isPlannableExercise(exercise: Exercise): exercise is LiftExercise {
+  return isLiftExercise(exercise) && exercise.measure === undefined;
+}
+
 export function isCardioExercise(exercise: Exercise): exercise is CardioExercise {
   return exercise.modality === 'cardio';
 }

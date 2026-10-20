@@ -14,7 +14,6 @@ interface HoldExerciseCardProps {
   draft: WorkoutDraft;
   exercise: HoldDraftExercise;
   exerciseIndex: number;
-  cardKey: string;
   previews: SetPreview[];
   records: (PreviewRecord | null)[];
   unit: UnitPref;
@@ -27,7 +26,6 @@ export function HoldExerciseCard({
   draft,
   exercise,
   exerciseIndex,
-  cardKey,
   previews,
   records,
   unit,
@@ -49,38 +47,31 @@ export function HoldExerciseCard({
       <p className="muted">{`${doneHere}/${exercise.sets.length} sets`}</p>
       {note}
       <ol className="set-list">
-        {exercise.sets.map((set, setIndex) => (
-          <HoldSetRow
-            key={set.id}
-            setNumber={setIndex + 1}
-            set={set}
-            measure={exercise.measure}
-            loadType={exercise.loadType}
-            preview={previews[setIndex]}
-            record={records[setIndex]}
-            drop={actions.dropOn(set.id)}
-            unit={unit}
-            onChange={(changes) =>
-              actions.changeSet(updateHoldSet(draft, exerciseIndex, set.id, changes), set.id, {
-                exerciseIndex,
-                setIndex,
-                label: feedbackLabel(exercise.name, 'set', setIndex + 1),
-              })
-            }
-            menuRef={actions.focusTarget(set.id)}
-            onRemove={() => actions.removeSetAt(exerciseIndex, set.id)}
-            onToggleDone={() =>
-              actions.changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id, {
-                exerciseIndex,
-                setIndex,
-                label: feedbackLabel(exercise.name, 'set', setIndex + 1),
-              })
-            }
-          />
-        ))}
+        {exercise.sets.map((set, setIndex) => {
+          const place = { exerciseIndex, setIndex, label: feedbackLabel(exercise.name, 'set', setIndex + 1) };
+          return (
+            <HoldSetRow
+              key={set.id}
+              setNumber={setIndex + 1}
+              set={set}
+              measure={exercise.measure}
+              loadType={exercise.loadType}
+              preview={previews[setIndex]}
+              record={records[setIndex]}
+              drop={actions.dropOn(set.id)}
+              unit={unit}
+              onChange={(changes) =>
+                actions.changeSet(updateHoldSet(draft, exerciseIndex, set.id, changes), set.id, place)
+              }
+              menuRef={actions.focusTarget(set.id)}
+              onRemove={() => actions.removeSetAt(exerciseIndex, set.id)}
+              onToggleDone={() => actions.changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id, place)}
+            />
+          );
+        })}
       </ol>
       <AddSetButton
-        buttonRef={actions.focusTarget(cardKey)}
+        buttonRef={actions.focusTarget(exercise.clientId)}
         roomForSet={roomForSet}
         onAdd={() => actions.changeDraft(addSet(draft, exerciseIndex))}
       />

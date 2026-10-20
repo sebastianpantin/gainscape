@@ -113,7 +113,7 @@ function beatsCardioRecord(
   return value >= previous + minGain - FLOAT_TOLERANCE;
 }
 
-export interface CardioRecordUpdate {
+interface CardioRecordUpdate {
   records: RecordState;
   gains: CardioRecordGain[];
 }
@@ -172,7 +172,7 @@ export function applyHoldToRecords(
   };
 }
 
-export interface RecordUpdate {
+interface RecordUpdate {
   records: RecordState;
   personalRecord: SetPersonalRecord | null;
 }
@@ -224,13 +224,13 @@ export const detectPersonalRecords: Step = (ctx: SessionContext) => {
   let records = recordsAtStart;
 
   const sets = ctx.sets.map((result): SetResult => {
-    if (result.set.kind === 'cardio' && result.cardio !== null) {
+    if (result.set.kind === 'cardio') {
       const exercise = cardioExercise(exerciseFor(result.set, ctx.deps.catalog));
       const update = applyBoutToRecords(records, result.set, exercise, ctx.session.startedAt, ctx.cfg);
       records = update.records;
       const isBaselineSession = recordsAtStart.cardio[exercise.id] === undefined;
       if (isBaselineSession || update.gains.length === 0) return result;
-      return { ...result, cardio: { ...result.cardio, records: update.gains } };
+      return { ...result, cardio: { ...result.cardio!, records: update.gains } };
     }
     if (isHoldResult(result)) {
       const exercise = liftExerciseFor(result.set, ctx.deps.catalog);

@@ -5,7 +5,7 @@ import { HttpError, jsonResponse, logUnexpectedError, readJsonBody } from '../_s
 import { serve } from '../_shared/serve.ts';
 import { assertSecretKey } from '../_shared/service-auth.ts';
 import { lowerUuid, parseOr422 } from '../_shared/session-payload.ts';
-import { listUsersToRebuild } from '../_shared/stores/rebuild.ts';
+import { listUsersToRebuild, REBUILD_SCOPES } from '../_shared/stores/rebuild.ts';
 import { rebuildDerivedState } from '../_shared/stores/replay.ts';
 import { lockUser } from '../_shared/stores/sessions.ts';
 
@@ -27,7 +27,7 @@ const rebuildSchema = z.union([
     .object({
       list: z
         .object({
-          scope: z.enum(['stale', 'all']),
+          scope: z.enum(REBUILD_SCOPES),
           after: lowerUuid.nullable(),
           limit: z.int().min(1).max(MAX_USERS_PER_PAGE),
         })

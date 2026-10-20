@@ -25,7 +25,7 @@ export function challengeSuperset(page: Page): Locator {
   return page.getByRole('region', { name: `Superset: ${CHALLENGE_NAME}` });
 }
 
-export function deadliftWeights(page: Page): Locator {
+function deadliftWeights(page: Page): Locator {
   return challengeSuperset(page)
     .getByRole('list', { name: 'Rounds' })
     .getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ });

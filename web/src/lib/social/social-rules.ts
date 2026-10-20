@@ -1,4 +1,5 @@
 import { combatLevel, levelForXp, totalLevel } from '@domain/index.ts';
+import { MS_PER_DAY } from '@domain/math.ts';
 import { CARDIO_RECORD_KINDS, type CardioRecordKind } from '@domain/types.ts';
 import { formatCardioRecord } from '../workout/cardio-rules.ts';
 import { collectionPercent } from '../collection/collection-rules.ts';
@@ -31,7 +32,7 @@ export interface FeedCursor {
   beforeId: string;
 }
 
-export interface FeedText {
+interface FeedText {
   headline: string;
   detail?: string;
 }
@@ -58,7 +59,7 @@ export interface HiscoreRow {
   collectionTotal: number;
 }
 
-export interface HiscoreSkill {
+interface HiscoreSkill {
   key: string;
   combatWeight: number;
 }
@@ -73,7 +74,7 @@ function metricSkillKey(metric: HiscoreMetric): string | null {
   return metric.startsWith('skill:') ? metric.slice('skill:'.length) : null;
 }
 
-export interface RankedHiscore {
+interface RankedHiscore {
   row: HiscoreRow;
   value: number;
 }
@@ -254,15 +255,14 @@ export function feedCursor(lastItem: FeedItem): FeedCursor {
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
 
 export function relativeTime(occurredAt: string, now: number = Date.now()): string {
   const elapsed = Math.max(0, now - Date.parse(occurredAt));
   if (elapsed < MINUTE_MS) return 'just now';
   if (elapsed < HOUR_MS) return `${Math.floor(elapsed / MINUTE_MS)} min`;
-  if (elapsed < DAY_MS) return `${Math.floor(elapsed / HOUR_MS)} h`;
-  if (elapsed < 2 * DAY_MS) return 'yesterday';
-  return `${Math.floor(elapsed / DAY_MS)} days`;
+  if (elapsed < MS_PER_DAY) return `${Math.floor(elapsed / HOUR_MS)} h`;
+  if (elapsed < 2 * MS_PER_DAY) return 'yesterday';
+  return `${Math.floor(elapsed / MS_PER_DAY)} days`;
 }
 
 function levelsOf(row: HiscoreRow, skills: readonly HiscoreSkill[]): number[] {
@@ -314,4 +314,13 @@ export function rankHiscores(
         (a.row.username < b.row.username ? -1 : a.row.username > b.row.username ? 1 : 0),
     )
     .map(({ row, value }) => ({ row, value }));
+}
+
+export function uniqueByEvent(items: FeedItem[]): FeedItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.eventId)) return false;
+    seen.add(item.eventId);
+    return true;
+  });
 }

@@ -5,11 +5,7 @@ import {
   readOnboarding,
   saveOnboardingDone,
 } from '../../web/src/lib/profile/onboarding-store.ts';
-import { MemoryStorage } from './memory-storage.ts';
-
-function blocked(): never {
-  throw new Error('blocked');
-}
+import { MemoryStorage, throwingStorage } from './memory-storage.ts';
 
 describe('stored onboarding', () => {
   it('round-trips per user', () => {
@@ -22,9 +18,7 @@ describe('stored onboarding', () => {
   });
 
   it('is unavailable without storage or when storage throws', () => {
-    const throwing = new MemoryStorage();
-    throwing.getItem = blocked;
-    throwing.setItem = blocked;
+    const throwing = throwingStorage('getItem', 'setItem');
     expect(readOnboarding(null, 'user-1')).toEqual({ status: 'unavailable' });
     expect(readOnboarding(throwing, 'user-1')).toEqual({ status: 'unavailable' });
     expect(saveOnboardingDone(null, 'user-1')).toBe(false);
@@ -32,8 +26,7 @@ describe('stored onboarding', () => {
   });
 
   it('is unavailable when nothing is stored and storage cannot be written', () => {
-    const readOnly = new MemoryStorage();
-    readOnly.setItem = blocked;
+    const readOnly = throwingStorage('setItem');
     expect(readOnboarding(readOnly, 'user-1')).toEqual({ status: 'unavailable' });
   });
 

@@ -29,10 +29,10 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
       {state.status === 'failed' && <ProblemWithRetry problem={state.problem} onRetry={refresh} />}
       {state.status === 'ready' && (
         <>
-          <TrainingSection userId={userId} profile={state.profile} onSaved={replace} />
+          <TrainingSection userId={userId} profile={state.profile} replaceProfile={replace} />
           <WeeklyGoalSection />
-          <TimezoneSection profile={state.profile} onSaved={replace} />
-          <PrivacySection userId={userId} profile={state.profile} onSaved={replace} />
+          <TimezoneSection profile={state.profile} replaceProfile={replace} />
+          <PrivacySection userId={userId} profile={state.profile} replaceProfile={replace} />
         </>
       )}
       <AppSection />

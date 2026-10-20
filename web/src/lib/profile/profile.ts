@@ -3,50 +3,29 @@ import { profileCache } from '../../offline/profile-cache.ts';
 import { withFriendlyRateLimit } from '../platform/rate-limit.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { supabase } from '../platform/supabase.ts';
-import type { Profile } from './profile-rules.ts';
+import { parsedRow } from '../rows.ts';
+import {
+  PROFILE_COLUMNS,
+  PROFILE_PRIVATE_COLUMNS,
+  type Profile,
+  profileFromRows,
+  profilePrivateRowSchema,
+  profileRowSchema,
+} from './profile-rules.ts';
 
 export * from './profile-rules.ts';
 
-function numberOrNull(value: unknown): number | null {
-  return value === null || value === undefined ? null : Number(value);
-}
-
 export async function fetchProfile(userId: string): Promise<Profile> {
   const [publicPart, privatePart] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select(
-        'username, display_name, bio, training_focus, training_since, badge_color, show_weights, show_bodyweight, created_at',
-      )
-      .eq('id', userId)
-      .single(),
-    supabase
-      .from('profile_private')
-      .select('bodyweight_kg, height_cm, birth_year, unit_pref, effort_input_mode, timezone, timezone_changed_at')
-      .eq('user_id', userId)
-      .single(),
+    supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId).single(),
+    supabase.from('profile_private').select(PROFILE_PRIVATE_COLUMNS).eq('user_id', userId).single(),
   ]);
   if (publicPart.error) throw publicPart.error;
   if (privatePart.error) throw privatePart.error;
-  const profile: Profile = {
-    username: publicPart.data.username,
-    displayName: publicPart.data.display_name,
-    bio: publicPart.data.bio,
-    trainingFocus: publicPart.data.training_focus,
-    trainingSince: publicPart.data.training_since,
-    badgeColor: publicPart.data.badge_color,
-    showWeights: publicPart.data.show_weights,
-    showBodyweight: publicPart.data.show_bodyweight,
-    createdAt: publicPart.data.created_at,
-    bodyweightKg: numberOrNull(privatePart.data.bodyweight_kg),
-    heightCm: numberOrNull(privatePart.data.height_cm),
-    birthYear: privatePart.data.birth_year,
-    unitPref: privatePart.data.unit_pref,
-    effortInputMode: privatePart.data.effort_input_mode,
-    timezone: privatePart.data.timezone,
-    timezoneChangedAt: privatePart.data.timezone_changed_at,
-  };
-  return profile;
+  return profileFromRows(
+    parsedRow(profileRowSchema, publicPart.data),
+    parsedRow(profilePrivateRowSchema, privatePart.data),
+  );
 }
 
 export function loadProfileCacheFirst(userId: string, signal?: AbortSignal): Promise<CacheFirstLoad<Profile>> {
@@ -61,7 +40,7 @@ export function loadProfileCacheFirst(userId: string, signal?: AbortSignal): Pro
   );
 }
 
-export type PublicProfileChanges = Partial<
+type PublicProfileChanges = Partial<
   Pick<
     Profile,
     'displayName' | 'bio' | 'trainingFocus' | 'trainingSince' | 'badgeColor' | 'showWeights' | 'showBodyweight'
@@ -78,7 +57,7 @@ const PUBLIC_COLUMNS: Record<keyof PublicProfileChanges, string> = {
   showBodyweight: 'show_bodyweight',
 };
 
-export type PrivateProfileChanges = Partial<
+type PrivateProfileChanges = Partial<
   Pick<Profile, 'bodyweightKg' | 'heightCm' | 'birthYear' | 'unitPref' | 'effortInputMode'>
 >;
 
@@ -112,7 +91,7 @@ export async function updatePrivateProfile(userId: string, changes: PrivateProfi
   if (error) throw withFriendlyRateLimit(error);
 }
 
-export type TimezoneChangeResult =
+type TimezoneChangeResult =
   | { ok: true }
   | { ok: false; reason: 'too_soon'; nextAllowedAt: string }
   | { ok: false; reason: 'invalid' | 'failed'; message: string };

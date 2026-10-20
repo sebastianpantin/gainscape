@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  authServiceFailure,
-  passwordMatchesAfterSignIn,
-} from '../../supabase/functions/delete-account/password-check.ts';
+import { passwordMatchesAfterSignIn } from '../../supabase/functions/delete-account/password-check.ts';
+import { authServiceFailure } from '../../supabase/functions/_shared/token-check.ts';
 import { HttpError } from '../../supabase/functions/_shared/http.ts';
 
 function thrownBy(check: () => boolean): unknown {

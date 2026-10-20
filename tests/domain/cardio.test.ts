@@ -254,7 +254,7 @@ describe('cardio XP', () => {
     ]);
     const bouts = outputs.sets.filter((result) => result.cardio !== null);
     expect(bouts.map((result) => result.cardio?.xpCountedWorkS)).toEqual([7200, 3600, 0]);
-    expect(bouts.map((result) => result.cardio?.cappedWorkS)).toEqual([0, 1800, 1800]);
+    expect(bouts.map((result) => result.cardio!.countedWorkS - result.cardio!.xpCountedWorkS)).toEqual([0, 1800, 1800]);
     expect(bouts.map((result) => result.cardio?.countedWorkS)).toEqual([7200, 5400, 1800]);
     expect(bouts.map((result) => result.xp)).toEqual([12_000, 6000, 0]);
   });
@@ -277,7 +277,9 @@ describe('cardio XP', () => {
     ]);
     expect(DEFAULT_BALANCE.mobilityMaxCountedMinutesPerSession).toBe(60);
     expect(outputs.sets.map((result) => result.cardio?.xpCountedWorkS)).toEqual([2400, 10_800, 1200, 0]);
-    expect(outputs.sets.map((result) => result.cardio?.cappedWorkS)).toEqual([0, 0, 1200, 600]);
+    expect(outputs.sets.map((result) => result.cardio!.countedWorkS - result.cardio!.xpCountedWorkS)).toEqual([
+      0, 0, 1200, 600,
+    ]);
     expect(outputs.xpBySkill).toEqual({ endurance: 18_000, mobility: 3000 });
   });
 

@@ -1,8 +1,11 @@
 import type { Transaction } from '../db.ts';
+import { staleDerivedSession } from './sessions.ts';
 
-export type RebuildScope = 'stale' | 'all';
+export const REBUILD_SCOPES = ['stale', 'all'] as const;
 
-export interface RebuildPage {
+type RebuildScope = (typeof REBUILD_SCOPES)[number];
+
+interface RebuildPage {
   userIds: string[];
   next: string | null;
 }
@@ -10,7 +13,7 @@ export interface RebuildPage {
 async function staleUserIds(tx: Transaction, after: string | null, limit: number, version: number) {
   return await tx<{ id: string }[]>`
     select distinct user_id as id from public.sessions
-    where not history_only and derived_balance_version <> ${version}
+    where ${staleDerivedSession(tx, version)}
       and (${after}::uuid is null or user_id > ${after}::uuid)
     order by user_id
     limit ${limit}`;

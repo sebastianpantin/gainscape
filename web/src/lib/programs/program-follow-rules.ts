@@ -4,7 +4,7 @@ import { type LoadType } from '../exercises/catalog-rules.ts';
 import { type EnrollmentRow } from './program-facts-rules.ts';
 import type { ProgramDoc } from './programs.ts';
 
-export type FollowStatus = 'not_following' | 'undecided' | 'current' | 'outdated';
+type FollowStatus = 'not_following' | 'undecided' | 'current' | 'outdated';
 
 export interface CarriedFollow {
   unit: WeightUnit;

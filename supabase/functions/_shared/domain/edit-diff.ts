@@ -79,7 +79,7 @@ export function unchangedSetIds(
   });
 }
 
-export interface RequestedEdit {
+interface RequestedEdit {
   notes: string | null;
   sets: readonly SetInput[];
 }

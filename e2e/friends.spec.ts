@@ -1,14 +1,11 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { definitionOf, logBench, logCardio, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
+import { feedItem } from './support/friendship.ts';
 
 async function logRun(page: Page, minutes: number, distance: number) {
   await openTab(page, 'Train');
   await logWorkout(page, () => logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]));
-}
-
-function feedItem(page: Page, text: string) {
-  return page.getByRole('list', { name: 'Feed' }).getByRole('listitem').filter({ hasText: text });
 }
 
 test('friends: request, feed with gz and hidden weights, hiscores, profile and removal', async ({ newPerson }) => {

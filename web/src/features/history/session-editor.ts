@@ -74,7 +74,7 @@ export interface SessionEditorPorts<Fresh> {
   apply: (change: SessionEditorChange<Fresh>) => void;
 }
 
-export interface SessionEditor {
+interface SessionEditor {
   save: (toSend: SessionEdit) => Promise<void>;
   remove: (ifRevision: number) => Promise<void>;
 }

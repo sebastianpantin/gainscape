@@ -24,7 +24,7 @@ export const challengeRowSchema = z.object({
   definition: z.unknown(),
 });
 
-export type ChallengeRow = z.infer<typeof challengeRowSchema>;
+type ChallengeRow = z.infer<typeof challengeRowSchema>;
 
 const challengeExerciseSchema = z.object({
   exerciseId: z.string(),

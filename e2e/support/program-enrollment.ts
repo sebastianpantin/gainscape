@@ -44,7 +44,7 @@ export function workoutCards(page: Page, exerciseName: string): Locator {
   return exerciseCard(page, exerciseName);
 }
 
-export async function fieldValues(fields: Locator): Promise<string[]> {
+async function fieldValues(fields: Locator): Promise<string[]> {
   return fields.evaluateAll((elements) => elements.map((element) => (element as HTMLInputElement).value));
 }
 

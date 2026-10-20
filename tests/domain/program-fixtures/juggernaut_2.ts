@@ -51,9 +51,9 @@ const WAVES: readonly Wave[] = [
   { reps: 3, accumulation: { sets: 7, pct: 0.75 }, intensification: { sets: 5, pct: 0.825 }, realizationPct: 0.9 },
 ];
 
-export const JUGGERNAUT_REP_STANDARDS = WAVES.map((wave) => wave.reps);
+const JUGGERNAUT_REP_STANDARDS = WAVES.map((wave) => wave.reps);
 
-export const JUGGERNAUT_REALIZATION_WEEKS = [3, 7, 11, 15];
+const JUGGERNAUT_REALIZATION_WEEKS = [3, 7, 11, 15];
 
 function straightSets(count: number, reps: number, pct: number, amrapLast: boolean): WeekTableSet[] {
   return Array.from({ length: count }, (_, index) =>
@@ -144,14 +144,14 @@ export const JUGGERNAUT_2: ProgramDefinition = {
   progression: JUGGERNAUT_LIFTS.map(waveRule),
 };
 
-export const JUGGERNAUT_DEFAULT_TMS_KG: Readonly<Record<JuggernautLift, number>> = {
+const JUGGERNAUT_DEFAULT_TMS_KG: Readonly<Record<JuggernautLift, number>> = {
   squat: 180,
   bench: 100,
   deadlift: 200,
   press: 60,
 };
 
-export interface JuggernautEnrollmentOverrides {
+interface JuggernautEnrollmentOverrides {
   unit?: WeightUnit;
   tms?: Partial<Record<JuggernautLift, number>>;
   options?: Readonly<Record<string, OptionValue>>;

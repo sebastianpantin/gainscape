@@ -7,7 +7,7 @@ import {
   saveCachedExerciseNotes,
 } from '../../web/src/lib/exercises/exercise-note-cache.ts';
 import type { ExerciseNotes } from '../../web/src/lib/exercises/exercise-note-rules.ts';
-import { MemoryStorage } from './memory-storage.ts';
+import { MemoryStorage, throwingStorage } from './memory-storage.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
 const otherUserId = '22222222-2222-4222-8222-222222222222';
@@ -45,13 +45,7 @@ describe('exercise note cache', () => {
   });
 
   it('survives a storage that throws', () => {
-    const broken = new MemoryStorage();
-    broken.getItem = () => {
-      throw new Error('denied');
-    };
-    broken.setItem = () => {
-      throw new Error('quota');
-    };
+    const broken = throwingStorage('getItem', 'setItem');
     expect(() => saveCachedExerciseNotes(broken, userId, notes)).not.toThrow();
     expect(readCachedExerciseNotes(broken, userId)).toBeNull();
   });

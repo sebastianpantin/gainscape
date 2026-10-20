@@ -11,7 +11,7 @@ export interface OverviewSet {
   isWarmup: boolean;
 }
 
-export interface TopExercises {
+interface TopExercises {
   names: string[];
   moreCount: number;
 }

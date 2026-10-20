@@ -1,4 +1,4 @@
-import { MS_PER_DAY } from '@domain/edit-window.ts';
+import { MS_PER_DAY } from '@domain/math.ts';
 import { formatXp } from '../../lib/format.ts';
 import type { SkillStanding } from '../../lib/progress/standing-rules.ts';
 import { type WeeklyGoalStatus, workoutWord } from '../../lib/progress/weekly-goal-rules.ts';
@@ -14,7 +14,7 @@ export function levelCountStart(seen: number | null, current: number): number {
   return seen !== null && seen < current ? seen : current;
 }
 
-export interface NearestLevelUp {
+interface NearestLevelUp {
   skillName: string;
   xpToGo: number;
   nextLevel: number;

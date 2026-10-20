@@ -7,7 +7,8 @@ import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import { parseOr422 } from '../_shared/session-payload.ts';
-import { authServiceFailure, passwordMatchesAfterSignIn } from './password-check.ts';
+import { authServiceFailure } from '../_shared/token-check.ts';
+import { passwordMatchesAfterSignIn } from './password-check.ts';
 
 const deleteAccountSchema = z
   .object({ confirmUsername: z.string().min(1).max(40), password: z.string().min(1).max(200) })

@@ -9,6 +9,7 @@ import {
 import {
   customLiftKey,
   customTemplateKey,
+  PROGRAM_TEMPLATE_COLUMNS,
   type ProgramTemplateRow,
 } from '../../web/src/lib/programs/program-enroll-rules.ts';
 import { type EnrollmentRow } from '../../web/src/lib/programs/program-facts-rules.ts';
@@ -90,10 +91,7 @@ async function publishedAfterLoadTypeChange(user: TestUser, loadType: LoadType):
 async function webFollowStatus(user: TestUser, published: PublishedCase) {
   const [programs, templates, exercises] = await Promise.all([
     user.client.from('programs').select(PROGRAM_SELECT).eq('id', published.programId),
-    user.client
-      .from('program_templates')
-      .select('key, version, name, definition, owner_user_id')
-      .eq('key', published.template.key),
+    user.client.from('program_templates').select(PROGRAM_TEMPLATE_COLUMNS).eq('key', published.template.key),
     user.client.from('exercises').select(EXERCISE_COLUMNS).in('id', published.exerciseIds),
   ]);
   for (const result of [programs, templates, exercises]) expect(result.error).toBeNull();

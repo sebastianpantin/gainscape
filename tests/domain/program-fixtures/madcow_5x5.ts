@@ -15,8 +15,8 @@ import { type FactClock, sessionFact, setAsPrescribed, skipDayFact } from './fac
 const MADCOW_PRIMARY = 'https://www.oocities.org/elitemadcow1/5x5_Program/Linear_5x5.htm';
 const STRENGTHLOG_MADCOW = 'https://www.strengthlog.com/madcow-5x5/';
 
-export const MADCOW_MAIN_LIFTS = ['squat', 'bench', 'row', 'press', 'deadlift'] as const;
-export type MadcowMainLift = (typeof MADCOW_MAIN_LIFTS)[number];
+const MADCOW_MAIN_LIFTS = ['squat', 'bench', 'row', 'press', 'deadlift'] as const;
+type MadcowMainLift = (typeof MADCOW_MAIN_LIFTS)[number];
 export const MADCOW_DAYS = ['mon', 'wed', 'fri'] as const;
 export type MadcowDay = (typeof MADCOW_DAYS)[number];
 
@@ -201,7 +201,7 @@ export const MADCOW_5X5: ProgramDefinition = {
   ],
 };
 
-export const MADCOW_DEFAULT_FIVE_RMS_KG: Readonly<Record<MadcowMainLift, number>> = {
+const MADCOW_DEFAULT_FIVE_RMS_KG: Readonly<Record<MadcowMainLift, number>> = {
   squat: 100,
   bench: 80,
   row: 70,
@@ -209,7 +209,7 @@ export const MADCOW_DEFAULT_FIVE_RMS_KG: Readonly<Record<MadcowMainLift, number>
   deadlift: 140,
 };
 
-export interface MadcowEnrollmentOverrides {
+interface MadcowEnrollmentOverrides {
   unit?: WeightUnit;
   options?: Readonly<Record<string, OptionValue>>;
   fiveRms?: Partial<Record<MadcowMainLift, number>>;
@@ -247,7 +247,7 @@ export function rampSets(slotId: string, lift: MadcowMainLift, count: number, to
   );
 }
 
-export function fridaySets(lift: MadcowMainLift, tripleReps = 3): FactSet[] {
+function fridaySets(lift: MadcowMainLift, tripleReps = 3): FactSet[] {
   return [5, 5, 5, 5, 3, 8].map((reps, index) =>
     setAsPrescribed(
       MADCOW_EXERCISES[lift],
@@ -258,7 +258,7 @@ export function fridaySets(lift: MadcowMainLift, tripleReps = 3): FactSet[] {
   );
 }
 
-export function wednesdaySquatSets(lastSetReps = 5): FactSet[] {
+function wednesdaySquatSets(lastSetReps = 5): FactSet[] {
   return [0, 1, 2, 3].map((index) =>
     setAsPrescribed(
       MADCOW_EXERCISES.squat,

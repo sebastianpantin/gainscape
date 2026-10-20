@@ -2,6 +2,7 @@ import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
 import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { BODYWEIGHT_LOAD_NOT_ZERO_CODE, UNKNOWN_EXERCISE_CODE } from '../../lib/workout/exercise-edit-rules.ts';
 import { RATE_LIMITED_CODE, waitText } from '../../lib/platform/rate-limit.ts';
+import { formatCount } from '../../lib/format.ts';
 import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { finishedAtFor } from '../../lib/workout/session-timing-rules.ts';
 import { type WorkoutDraft } from '../../offline/draft-format.ts';
@@ -77,18 +78,18 @@ export function rejectionText(reason: string): string {
     : `The server rejected this workout: ${reason}`;
 }
 
-export interface FinishCounts {
+interface FinishCounts {
   done: number;
   planned: number;
   leftToLifter: number;
 }
 
-export interface FinishChoice {
+interface FinishChoice {
   label: string;
   marksPlannedDone: boolean;
 }
 
-export interface FinishPrompt {
+interface FinishPrompt {
   title: string;
   body: string;
   confirm: FinishChoice;
@@ -116,7 +117,7 @@ export function finishBlockedText(counts: FinishCounts): string | null {
 
 export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): FinishPrompt | null {
   if (planned === 0) return null;
-  const title = `${planned} ${planned === 1 ? 'set' : 'sets'} not ticked`;
+  const title = `${formatCount(planned, 'set')} not ticked`;
   const leftNote = leftToLifter > 0 ? [LEFT_TO_LIFTER_TEXT] : [];
   if (planned === leftToLifter) {
     return { title, body: leftNote.join(' '), confirm: WITHOUT_THEM, alternative: null };
@@ -131,7 +132,7 @@ export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): Fin
   };
 }
 
-export interface FinishOptions {
+interface FinishOptions {
   sessionId: string;
   loadTypes: ReadonlyMap<string, LoadType>;
   markPlannedDone: boolean;

@@ -9,7 +9,7 @@ import {
   savedCopyNotice,
   userCache,
 } from '../../web/src/offline/cache-first.ts';
-import { MemoryStorage } from './memory-storage.ts';
+import { MemoryStorage, throwingStorage } from './memory-storage.ts';
 
 function offlineSwitch() {
   let notifyOffline: () => void = () => undefined;
@@ -209,16 +209,7 @@ describe('a per-user saved copy', () => {
   });
 
   it('works without storage and when storage throws', () => {
-    const throwing = new MemoryStorage();
-    throwing.getItem = () => {
-      throw new Error('blocked');
-    };
-    throwing.setItem = () => {
-      throw new Error('full');
-    };
-    throwing.removeItem = () => {
-      throw new Error('blocked');
-    };
+    const throwing = throwingStorage('getItem', 'setItem', 'removeItem');
     expect(cache.read(null, 'user-a')).toBeNull();
     expect(() => cache.save(null, 'user-a', { count: 1 })).not.toThrow();
     expect(cache.read(throwing, 'user-a')).toBeNull();

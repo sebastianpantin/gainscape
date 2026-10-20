@@ -10,7 +10,6 @@ import {
   docFor,
   exerciseIssue,
   hasUnsavedChanges,
-  isPlannableExercise,
   MAX_DAYS,
   MAX_EXERCISES_PER_DAY,
   moveDay,
@@ -25,7 +24,12 @@ import {
   targetIssue,
   trimmedDoc,
 } from '../../web/src/features/programs/program-edit.ts';
-import type { CardioExercise, LiftExercise, LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
+import {
+  type CardioExercise,
+  isPlannableExercise,
+  type LiftExercise,
+  type LoadType,
+} from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { Program, ProgramDoc } from '../../web/src/lib/programs/programs.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';

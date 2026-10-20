@@ -1,5 +1,6 @@
 import { DEFAULT_BALANCE, type GearLoadout, gearSkillBonus } from '@domain/index.ts';
-import { GEAR_SLOTS, type GearSlot, type ItemTier } from '@domain/crafting.ts';
+import { GEAR_SLOTS, type GearSlot, ITEM_TIERS, type ItemTier } from '@domain/crafting.ts';
+import { z } from 'zod';
 import type { Skill } from '../exercises/catalog-rules.ts';
 import { capitalized } from '../names.ts';
 
@@ -16,13 +17,28 @@ export interface LoadoutView {
   slots: EquippedGear[];
 }
 
-export interface LoadoutSlotRow {
+export const loadoutViewSchema = z
+  .object({
+    userId: z.string(),
+    slots: z.array(
+      z.object({
+        slot: z.enum(GEAR_SLOTS),
+        itemId: z.string(),
+        itemKey: z.string(),
+        name: z.string(),
+        tier: z.enum(ITEM_TIERS),
+      }),
+    ),
+  })
+  .nullable();
+
+interface LoadoutSlotRow {
   slot: GearSlot;
   label: string;
   gear: EquippedGear | null;
 }
 
-export interface GearBonusRow {
+interface GearBonusRow {
   skillKey: string;
   skillName: string;
   percent: string;

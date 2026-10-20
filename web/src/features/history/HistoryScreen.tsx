@@ -11,7 +11,7 @@ import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { CollectionTabs } from '../collection/CollectionScreen.tsx';
 import { CollectionHeading } from '../collection/CollectionHeading.tsx';
-import { formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
+import { formatCount, formatSessionDate, formatXp, sessionXp } from '../../lib/format.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
 import {
@@ -50,7 +50,7 @@ interface SessionItemProps {
 function SessionItem({ session, now, unit, cardRef }: SessionItemProps) {
   const summaryParts = [
     session.historyOnly ? null : `+${formatXp(sessionXp(session.summary))} XP`,
-    `${session.setCount} ${session.setCount === 1 ? 'set' : 'sets'}`,
+    formatCount(session.setCount, 'set'),
     volumeText(sessionVolumeKg(session.overviewSets), unit),
     ...sessionTimingParts(session),
   ].filter(Boolean);

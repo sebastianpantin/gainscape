@@ -9,7 +9,7 @@ import {
 } from '@domain/index.ts';
 import { type WorkoutDraft } from './draft-format.ts';
 
-export interface LocalSessionAppend {
+interface LocalSessionAppend {
   fact: SessionFact;
   appendedAt: number;
 }
@@ -21,16 +21,16 @@ export interface ProgramFactsCache {
   localAppends: readonly LocalSessionAppend[];
 }
 
-export interface FactsFetchTicket {
+interface FactsFetchTicket {
   enrollmentId: string;
   generation: number;
   startedAt: number;
 }
 
-export type FinishOutcomeForFacts =
-  | { kind: 'synced'; summary: { programLinked: boolean; completedAt: string } }
-  | { kind: 'deleted' }
-  | { kind: 'retryable' | 'rejected' | 'needs_sign_in' | 'wrong_account' };
+export interface FinishOutcomeForFacts {
+  kind: 'synced';
+  summary: { programLinked: boolean; completedAt: string };
+}
 
 export function emptyProgramFactsCache(enrollmentId: string): ProgramFactsCache {
   return { enrollmentId, generation: 0, serverFacts: [], localAppends: [] };
@@ -78,7 +78,7 @@ export function appendFinishedSession(
   outcome: FinishOutcomeForFacts,
   appendedAt: number,
 ): ProgramFactsCache {
-  if (outcome.kind !== 'synced' || !outcome.summary.programLinked) return cache;
+  if (!outcome.summary.programLinked) return cache;
   if (draft.program?.enrollmentId !== cache.enrollmentId || isKnown(cache, draft.sessionId)) return cache;
   const fact = syncedSessionFact(draft, outcome.summary.completedAt);
   if (fact === null) return cache;

@@ -10,8 +10,8 @@ import { type LiftDecl, type ProgressionRule, type SetSpec, type SlotDecl } from
 const LIFTOSAUR_NSUNS = 'https://www.liftosaur.com/programs/nsuns';
 const FITNESS_WIKI_NSUNS = 'https://thefitness.wiki/routines/nsuns-lp/';
 
-export const NSUNS_TM_LIFTS = ['bench', 'squat', 'press', 'deadlift'] as const;
-export type NsunsTmLift = (typeof NSUNS_TM_LIFTS)[number];
+const NSUNS_TM_LIFTS = ['bench', 'squat', 'press', 'deadlift'] as const;
+type NsunsTmLift = (typeof NSUNS_TM_LIFTS)[number];
 
 export const NSUNS_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'] as const;
 export type NsunsDay = (typeof NSUNS_DAYS)[number];
@@ -175,7 +175,7 @@ export const NSUNS_5DAY: ProgramDefinition = {
   ],
 };
 
-export const NSUNS_DEFAULT_TMS_KG: Readonly<Record<NsunsTmLift, number>> = {
+const NSUNS_DEFAULT_TMS_KG: Readonly<Record<NsunsTmLift, number>> = {
   bench: 100,
   squat: 140,
   press: 60,

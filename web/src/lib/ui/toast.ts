@@ -5,7 +5,7 @@ export interface ToastAction {
   onAct: () => void;
 }
 
-export interface Toasts {
+interface Toasts {
   showToast: (text: string, action?: ToastAction) => void;
   dismissToast: () => void;
 }

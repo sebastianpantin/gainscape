@@ -13,10 +13,6 @@ const startQuestSchema = z.object({ questId: lowerUuid }).strict();
 
 type StartQuestPayload = z.infer<typeof startQuestSchema>;
 
-function parseStartQuestPayload(body: unknown): StartQuestPayload {
-  return parseOr422(startQuestSchema, body);
-}
-
 async function startQuest(userId: string, { questId }: StartQuestPayload): Promise<QuestProgress> {
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId);
@@ -40,4 +36,4 @@ async function startQuest(userId: string, { questId }: StartQuestPayload): Promi
   });
 }
 
-serveAuthenticated(parseStartQuestPayload, startQuest);
+serveAuthenticated((body) => parseOr422(startQuestSchema, body), startQuest);

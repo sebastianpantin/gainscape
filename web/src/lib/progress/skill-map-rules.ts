@@ -6,7 +6,7 @@ export function sharePercentText(shareBasisPoints: number): string {
   return `${shareBasisPoints / BASIS_POINTS_PER_PERCENT}%`;
 }
 
-export interface PickerRowDetail {
+interface PickerRowDetail {
   kind: string;
   skills: string | null;
 }
@@ -19,7 +19,7 @@ export function pickerRowDetail(exercise: Exercise): PickerRowDetail {
   return { kind, skills: skills || null };
 }
 
-export interface SkillShareRow {
+interface SkillShareRow {
   name: string;
   percent: string;
 }
@@ -31,7 +31,7 @@ export function skillShareRows(exercise: Exercise): SkillShareRow[] {
   }));
 }
 
-export interface SkillExerciseEntry {
+interface SkillExerciseEntry {
   id: string;
   name: string;
   percent: string;

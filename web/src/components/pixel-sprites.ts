@@ -36,7 +36,7 @@ const DANGER = '#e8827a';
 const DANGER_FILL = '#e0554b';
 const XP_DARK = '#4e8f3f';
 
-export type SkillKey =
+type SkillKey =
   'chest' | 'back' | 'shoulders' | 'arms' | 'legs' | 'core' | 'grip' | 'endurance' | 'agility' | 'mobility';
 
 function fromRows(rows: readonly string[], palette: Record<string, string>): Sprite {

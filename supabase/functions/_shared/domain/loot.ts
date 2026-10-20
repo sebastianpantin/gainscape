@@ -1,5 +1,6 @@
 import type { LootConfig } from './balance.ts';
 import { roundTo } from './math.ts';
+import { compareStrings } from './ordering.ts';
 import {
   type Catalog,
   type RevokedDrop,
@@ -51,13 +52,13 @@ export interface LootDayState {
   alreadyRolled: ReadonlySet<string>;
 }
 
-export interface LootDrop {
+interface LootDrop {
   itemId: string;
   itemKey: string;
   quantity: number;
 }
 
-export interface LootRollResult {
+interface LootRollResult {
   setId: string;
   kind: RollKind;
   tableId: string;
@@ -67,12 +68,12 @@ export interface LootRollResult {
   drop: LootDrop | null;
 }
 
-export interface LootPassResult {
+interface LootPassResult {
   rolls: LootRollResult[];
   dryRolls: number;
 }
 
-export type LootRngFor = (setId: string, kind: RollKind) => Rng;
+type LootRngFor = (setId: string, kind: RollKind) => Rng;
 
 export function lootRollKey(setId: string, kind: RollKind): string {
   return `${setId}:${kind}`;
@@ -113,7 +114,7 @@ export function chance(dryRolls: number, cfg: LootConfig): number {
 }
 
 export function pickEntry(table: LootTable, u: number): LootEntry {
-  const entries = [...table.entries].sort((a, b) => (a.itemKey < b.itemKey ? -1 : a.itemKey > b.itemKey ? 1 : 0));
+  const entries = [...table.entries].sort((a, b) => compareStrings(a.itemKey, b.itemKey));
   const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
   const target = Math.floor(u * total);
   let cumulative = 0;
@@ -130,7 +131,7 @@ export function quantityFor(entry: LootEntry, u: number): number {
 
 const ROLL_KINDS: readonly RollKind[] = Object.freeze(['regular', 'pr']);
 
-export interface EligibleRoll {
+interface EligibleRoll {
   candidate: LootCandidate;
   kind: RollKind;
 }
@@ -204,7 +205,7 @@ export interface RollVersions {
   balanceVersion: number;
 }
 
-export type ReplayedSessionRole = 'deleted' | 'edited' | 'edited_unchanged' | 'later';
+type ReplayedSessionRole = 'deleted' | 'edited' | 'edited_unchanged' | 'later';
 
 export function revocationReason(
   source: RollKind,
@@ -232,7 +233,7 @@ export interface DropRevocationScope {
   unchangedSetIds: readonly string[];
 }
 
-export interface HeldDrop {
+interface HeldDrop {
   sessionId: string;
   setId: string;
   source: RollKind;

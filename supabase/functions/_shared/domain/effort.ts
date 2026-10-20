@@ -7,7 +7,9 @@ import {
   type SetKind,
 } from './types.ts';
 
-export interface ResolvedEffort {
+export const MAX_RPE = 10;
+
+interface ResolvedEffort {
   effortInputType: EffortInputType | null;
   effortValue: number | null;
   loggedRir: number | null;
@@ -40,10 +42,10 @@ export function resolveEffort(input: EffortInput, cfg: BalanceConfig, kind: SetK
       }
       return { effortInputType: 'rir', effortValue: input.value, loggedRir: input.value };
     case 'rpe':
-      if (!isHalfStep(input.value) || input.value < 5 || input.value > 10) {
+      if (!isHalfStep(input.value) || input.value < 5 || input.value > MAX_RPE) {
         throw new RangeError(`invalid RPE: ${input.value}`);
       }
-      return { effortInputType: 'rpe', effortValue: input.value, loggedRir: 10 - input.value };
+      return { effortInputType: 'rpe', effortValue: input.value, loggedRir: MAX_RPE - input.value };
   }
 }
 

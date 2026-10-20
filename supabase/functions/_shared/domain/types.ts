@@ -24,7 +24,7 @@ export interface SkillDef {
   combatWeight: number;
 }
 
-export interface SkillShare {
+interface SkillShare {
   skillId: string;
   shareBasisPoints: number;
 }
@@ -123,7 +123,7 @@ export function isLiftSet(set: SetInput): set is LiftSetInput {
   return set.kind === undefined || set.kind === 'lift';
 }
 
-export function isHoldSet(set: SetInput): set is HoldSetInput {
+function isHoldSet(set: SetInput): set is HoldSetInput {
   return set.kind === 'hold';
 }
 
@@ -221,7 +221,6 @@ export interface CardioSetResult {
   records: CardioRecordGain[];
   countedWorkS: number;
   xpCountedWorkS: number;
-  cappedWorkS: number;
   effort: CardioEffortLevel;
   paceBonus: number;
   paceFlagged: boolean;
@@ -256,6 +255,10 @@ export interface LiftSetResult extends SetResult {
 
 export function isLiftResult(result: SetResult): result is LiftSetResult {
   return isLiftSet(result.set);
+}
+
+export function workingLiftSets(sets: readonly SetResult[]): LiftSetResult[] {
+  return sets.filter(isLiftResult).filter((result) => !result.set.isWarmup);
 }
 
 export interface HoldSetResult extends SetResult {

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { userCache } from './cache-first.ts';
 
-export interface SeenLevels {
+interface SeenLevels {
   totalLevel: number;
   combatLevel: number;
 }

@@ -29,6 +29,10 @@ interface QuestRow {
   retired_at: string | null;
 }
 
+function questColumns(tx: Transaction) {
+  return tx`id, key, name, quest_points, definition, retired_at`;
+}
+
 function storedQuestFromRow(row: QuestRow): StoredQuest | null {
   const identity = { questId: row.id, key: row.key, name: row.name, questPoints: row.quest_points };
   try {
@@ -40,14 +44,12 @@ function storedQuestFromRow(row: QuestRow): StoredQuest | null {
 }
 
 async function loadQuests(tx: Transaction): Promise<StoredQuest[]> {
-  const rows = await tx<QuestRow[]>`
-    select id, key, name, quest_points, definition, retired_at from public.quests order by sort_order, id`;
+  const rows = await tx<QuestRow[]>`select ${questColumns(tx)} from public.quests order by sort_order, id`;
   return rows.flatMap((row) => storedQuestFromRow(row) ?? []);
 }
 
 export async function loadQuest(tx: Transaction, questId: string): Promise<StoredQuest | null> {
-  const [row] = await tx<QuestRow[]>`
-    select id, key, name, quest_points, definition, retired_at from public.quests where id = ${questId}`;
+  const [row] = await tx<QuestRow[]>`select ${questColumns(tx)} from public.quests where id = ${questId}`;
   return row === undefined ? null : storedQuestFromRow(row);
 }
 
@@ -174,7 +176,7 @@ async function writeSkillXp(
     on conflict (user_id, skill_id) do update set xp = excluded.xp, updated_at = now()`;
 }
 
-export interface SyncedSession {
+interface SyncedSession {
   endedAt: string;
   replayed: ReplayedSession;
   catalog: Catalog;

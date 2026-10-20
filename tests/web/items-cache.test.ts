@@ -9,7 +9,7 @@ import {
   spendCachedScroll,
   updateItemsCache,
 } from '../../web/src/offline/items-cache.ts';
-import { MemoryStorage } from './memory-storage.ts';
+import { MemoryStorage, throwingStorage } from './memory-storage.ts';
 
 const USER = 'user-a';
 
@@ -109,13 +109,7 @@ describe('items cache', () => {
   });
 
   it('degrades silently when storage throws or is missing', () => {
-    const throwing = new MemoryStorage();
-    throwing.getItem = () => {
-      throw new Error('blocked');
-    };
-    throwing.setItem = () => {
-      throw new Error('blocked');
-    };
+    const throwing = throwingStorage('getItem', 'setItem');
     expect(() => saveItemsCache(throwing, USER, CACHE)).not.toThrow();
     expect(readItemsCache(throwing, USER)).toBeNull();
     expect(() => saveItemsCache(null, USER, CACHE)).not.toThrow();
@@ -132,10 +126,7 @@ describe('items cache', () => {
   });
 
   it('forgets silently when storage throws', () => {
-    const throwing = new MemoryStorage();
-    throwing.removeItem = () => {
-      throw new Error('blocked');
-    };
+    const throwing = throwingStorage('removeItem');
     expect(() => forgetItemsCache(throwing, USER)).not.toThrow();
   });
 

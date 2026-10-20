@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { installCardKey, type InstallState, installState, isIosSafari } from './install-state.ts';
+import { type InstallState, installState, isIosSafari, readInstallCard, writeInstallCard } from './install-state.ts';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -61,27 +61,11 @@ export async function promptInstall(): Promise<void> {
 export const INSTALL_CARD_DUE = 'due';
 const INSTALL_CARD_DISMISSED = 'dismissed';
 
-export function readInstallCard(userId: string): string | null {
-  try {
-    return localStorage.getItem(installCardKey(userId));
-  } catch {
-    return null;
-  }
-}
-
-function writeInstallCard(userId: string, value: string): string {
-  try {
-    localStorage.setItem(installCardKey(userId), value);
-  } catch {
-    return value;
-  }
-  return value;
-}
-
 export function markInstallCardDue(userId: string): void {
   if (readInstallCard(userId) === null) writeInstallCard(userId, INSTALL_CARD_DUE);
 }
 
 export function dismissInstallCard(userId: string): string {
-  return writeInstallCard(userId, INSTALL_CARD_DISMISSED);
+  writeInstallCard(userId, INSTALL_CARD_DISMISSED);
+  return INSTALL_CARD_DISMISSED;
 }
