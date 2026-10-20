@@ -5,7 +5,7 @@ import { openDraftStoreOrFallback } from '../../../offline/draft-boot.ts';
 import { DRAFT_CHANNEL_NAME } from '../../../offline/draft-session.ts';
 import { hasDraftOnDevice } from '../../../offline/local-drafts.ts';
 import { type forgetUserDeviceData } from '../../../offline/user-device-data.ts';
-import { signOutKeepingDrafts } from '../../../offline/sync-workout.ts';
+import { signOutKeepingDrafts } from '../../../lib/platform/sign-out.ts';
 
 export const UNSYNCED_DRAFT_LOSS_TEXT = 'You have a workout that has not synced yet. It will be lost.';
 

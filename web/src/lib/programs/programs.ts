@@ -4,7 +4,7 @@ import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from 
 import { programListCache, withSavedProgramDoc } from '../../offline/program-list-cache.ts';
 import { PROGRAM_SELECT, programPayload, programRowSchema, toProgram } from './program-row-rules.ts';
 import { z } from 'zod';
-import { numericColumn, parsedRows } from '../rows.ts';
+import { numericColumn, parsedRow, parsedRows } from '../rows.ts';
 import { rateLimitedMessage } from '../platform/rate-limit.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { supabase } from '../platform/supabase.ts';
@@ -85,15 +85,14 @@ export async function copyProgram(userId: string, sourceId: string, newId: strin
   return newId;
 }
 
-export interface PublishedProgram {
-  key: string;
-  version: number;
-}
+const publishedProgramSchema = z.object({ key: z.string(), version: z.number() });
+
+export type PublishedProgram = z.infer<typeof publishedProgramSchema>;
 
 export async function publishProgram(programId: string): Promise<PublishedProgram> {
   const { data, error } = await supabase.rpc('publish_program', { program_id: programId });
   if (error) throw error;
-  return data as PublishedProgram;
+  return parsedRow(publishedProgramSchema, data);
 }
 
 export function deleteProgram(userId: string, programId: string): Promise<void> {

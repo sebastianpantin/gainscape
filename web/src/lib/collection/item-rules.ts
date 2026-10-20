@@ -6,11 +6,12 @@ import type { ItemIconKind } from '../../components/pixel-sprites.ts';
 import type { CatalogChallenge } from './challenge-rules.ts';
 import { capitalized } from '../names.ts';
 import { z } from 'zod';
+import { parsedJson } from '../json-rules.ts';
 import { parsedRows } from '../rows.ts';
 
-const ITEM_KINDS = ['gear', 'material', 'pet', 'scroll'] as const;
+export const ITEM_KINDS = ['gear', 'material', 'pet', 'scroll'] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
-const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'legendary'] as const;
+export const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'legendary'] as const;
 export type ItemRarity = (typeof ITEM_RARITIES)[number];
 
 export const ITEM_ACTIONS_OFFLINE_TEXT = "You're offline. Equipping and crafting need a connection.";
@@ -211,13 +212,11 @@ export async function queryOwnedPets(client: SupabaseClient, userId: string): Pr
   };
 }
 
-const RARITY_ORDER: readonly ItemRarity[] = ['common', 'uncommon', 'rare', 'legendary'];
-
 export type Fanfare = Extract<ItemRarity, 'rare' | 'legendary'>;
 
 export function fanfareFor(rarities: readonly ItemRarity[]): Fanfare | null {
-  const rarest = Math.max(-1, ...rarities.map((rarity) => RARITY_ORDER.indexOf(rarity)));
-  const rarity = RARITY_ORDER[rarest];
+  const rarest = Math.max(-1, ...rarities.map((rarity) => ITEM_RARITIES.indexOf(rarity)));
+  const rarity = ITEM_RARITIES[rarest];
   return rarity === 'rare' || rarity === 'legendary' ? rarity : null;
 }
 
@@ -283,6 +282,15 @@ export function kindLabel(item: CatalogItem): string {
   }
 }
 
+export const craftResultSchema = z.object({
+  craftId: z.string(),
+  itemId: z.string(),
+  quantity: z.number(),
+  equippedSlot: z.enum(GEAR_SLOTS).nullable(),
+});
+
+export type CraftResult = z.infer<typeof craftResultSchema>;
+
 export interface CraftShortfall {
   itemId: string;
   have: number;
@@ -296,12 +304,8 @@ export type CraftProblem =
   | { kind: 'other'; message: string };
 
 function parsedShortfall(details: string | null | undefined): CraftShortfall[] {
-  try {
-    const parsed: unknown = JSON.parse(details ?? '[]');
-    return Array.isArray(parsed) ? (parsed as CraftShortfall[]) : [];
-  } catch {
-    return [];
-  }
+  const parsed = parsedJson(details ?? '[]');
+  return Array.isArray(parsed) ? (parsed as CraftShortfall[]) : [];
 }
 
 export function craftProblem(error: { message: string; code?: string; details?: string | null }): CraftProblem {

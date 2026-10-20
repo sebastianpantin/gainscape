@@ -5,7 +5,7 @@ import { forgetCachedExerciseNotes } from '../lib/exercises/exercise-note-cache.
 import { forgetLastSeenRelease } from '../lib/platform/last-seen-release-store.ts';
 import { forgetOnboarding } from '../lib/profile/onboarding-store.ts';
 import { forgetPlateSettings } from '../lib/workout/plate-settings-store.ts';
-import { forgetCachedPreferences } from '../lib/profile/preferences.ts';
+import { preferencesCache } from '../lib/profile/preferences.ts';
 import { forgetDismissedSummaries } from '../lib/programs/program-summary-store.ts';
 import { forgetRestState } from '../lib/workout/rest-timer-store.ts';
 import { forgetSessionBaseline } from '../lib/workout/session-baseline-store.ts';
@@ -50,7 +50,7 @@ export async function forgetUserProgressData(device: UserDevice, userId: string)
 
 export async function forgetUserDeviceData(device: UserDevice, userId: string): Promise<void> {
   const storage = device.localStorage;
-  forgetCachedPreferences(storage, userId);
+  preferencesCache.forget(storage, userId);
   forgetPlateSettings(storage, userId);
   forgetRestState(storage, userId);
   forgetTrainingDevice(storage, userId);

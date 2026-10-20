@@ -13,15 +13,18 @@ import {
 } from '../../offline/program-refresh.ts';
 import {
   type EnrollProgramPayload,
+  PROGRAM_TEMPLATE_COLUMNS,
   type ProgramTemplateRow,
   programTemplateRowSchema,
 } from './program-enroll-rules.ts';
 import {
+  ENROLLMENT_COLUMNS,
   type EnrollmentFactsRows,
   enrollmentFactsRowsSchema,
   type EnrollmentRow,
   enrollmentRowSchema,
 } from './program-facts-rules.ts';
+import { z } from 'zod';
 import { parsedRow, parsedRows } from '../rows.ts';
 import { type SetReferenceEvent } from './program-reference-rules.ts';
 import { type SkipDayEvent } from './program-skip-rules.ts';
@@ -31,13 +34,8 @@ import { activeExercises, type Exercise } from '../exercises/catalog-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { supabase } from '../platform/supabase.ts';
 
-const ENROLLMENT_COLUMNS =
-  'id, template_key, template_version, unit, options, lift_bindings, inputs, rounding, started_at, ended_at';
-
 async function fetchProgramTemplates(): Promise<ProgramTemplateRow[]> {
-  const { data, error } = await supabase
-    .from('program_templates')
-    .select('key, version, name, definition, owner_user_id');
+  const { data, error } = await supabase.from('program_templates').select(PROGRAM_TEMPLATE_COLUMNS);
   if (error) throw error;
   return parsedRows(programTemplateRowSchema, data);
 }
@@ -108,7 +106,7 @@ async function fetchEnrollmentFacts(enrollmentId: string): Promise<EnrollmentFac
 export async function enrollProgram(payload: EnrollProgramPayload): Promise<string> {
   const { data, error } = await supabase.rpc('enroll_program', { enrollment: payload });
   if (error) throw error;
-  return data as string;
+  return parsedRow(z.string(), data);
 }
 
 export async function endEnrollment(enrollmentId: string): Promise<void> {
