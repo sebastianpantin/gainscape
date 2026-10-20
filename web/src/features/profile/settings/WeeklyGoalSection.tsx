@@ -12,12 +12,12 @@ const WEEKLY_GOAL_OPTIONS = WEEKLY_GOAL_CHOICES.map((value) => ({ value, label: 
 export function WeeklyGoalSection() {
   const { loaded, status, chosen, pending, problem, pick, retry } = useWeeklyGoalSetting();
 
-  if (loaded.status === 'failed')
+  if (loaded.kind === 'failed')
     return (
       <section className="panel stack" aria-labelledby="weekly-goal-heading">
         <h2 id="weekly-goal-heading">Weekly goal</h2>
         <p className="problem" role="alert">
-          {loaded.problem}
+          {loaded.message}
         </p>
         <button className="button outline" type="button" onClick={retry}>
           Try again
@@ -32,11 +32,11 @@ export function WeeklyGoalSection() {
         label="Workouts per week"
         options={WEEKLY_GOAL_OPTIONS}
         current={goalToChoice(chosen)}
-        disabled={pending || loaded.status === 'loading'}
+        disabled={pending || loaded.kind === 'loading'}
         onPick={(choice) => void pick(goalFromChoice(choice))}
       />
       <span className="hint" aria-live="polite">
-        {loaded.status === 'ready' ? goalSettingHint(status) : ''}
+        {loaded.kind === 'ready' ? goalSettingHint(status) : ''}
       </span>
       {problem && (
         <p className="problem" role="alert">

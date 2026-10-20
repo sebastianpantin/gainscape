@@ -24,10 +24,11 @@ export function patchSavedProfile(queryClient: QueryClient, userId: string, chan
   const { queryKey } = profileQuery(userId);
   void queryClient.cancelQueries({ queryKey });
   const current = queryClient.getQueryData(queryKey);
-  if (current === undefined) return;
-  const profile = typeof change === 'function' ? change(current.loaded) : change;
+  const base = current?.loaded ?? profileCache.read(deviceStorage(), userId);
+  if (!base) return;
+  const profile = typeof change === 'function' ? change(base) : change;
   profileCache.save(deviceStorage(), userId, profile);
-  queryClient.setQueryData(queryKey, { ...current, loaded: profile });
+  if (current) queryClient.setQueryData(queryKey, { ...current, loaded: profile });
 }
 
 export function useProfile(userId: string): ProfileQuery {

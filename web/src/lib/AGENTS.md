@@ -26,7 +26,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`.
 - Start here:
   - `platform/supabase.ts`: the one client.
-  - `platform/use-auth-session.ts` over `platform/auth-restore.ts`: auth boot, offline fallback, sign-out.
+  - `platform/use-auth-session.ts` over `platform/auth-restore.ts`: auth boot, offline fallback; `platform/sign-out.ts`: sign-out.
   - `platform/function-client.ts` over `platform/function-client-rules.ts`: `invokeAsOwner` for Edge Functions.
   - `query/query-client.ts`, `query/queries.ts`, `query/query-freshness-rules.ts` and `query/data-changes.ts`: the server data cache and its invalidation.
 - `*-rules.ts` files are pure. These are pure too, without the suffix: `units.ts`, `format.ts`, `workout/effort-labels.ts`, `error-text.ts`, `names.ts`, `platform/rate-limit.ts`, `platform/auth-links.ts`, `platform/auth-restore.ts`, `exercises/catalog-cache.ts`, `exercises/exercise-note-cache.ts`, `ui/glossary.ts`, `reorder.ts`, `rows.ts`.

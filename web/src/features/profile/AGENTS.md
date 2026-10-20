@@ -46,7 +46,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
   - Notify asks for permission and shows an alert when it is denied.
 - The RIR and RPE hints come from `GLOSSARY` in `../../lib/ui/glossary.ts`, the same text as the workout help.
 - Sign-out must keep drafts (`signOutKeepingDrafts`).
-- Reset and deletion warn about an unsynced draft (`hasDraftOnDevice`), checking both the booted draft store and the `localStorage` fallback.
+- Reset, deletion and sign-out warn about an unsynced draft (`useDraftLossGuard` over `hasDraftOnDevice`), checking both the booted draft store and the `localStorage` fallback.
   - Reset needs `RESET` typed, then calls `resetMyData`, then `forgetUserProgressData`, then `announceDataChange('account-reset')`.
   - Deletion calls `forgetUserDeviceData`, which clears every per-user key and keeps the forgotten-draft tombstone.
 - Account deletion and export call the `delete-account` and `export-data` Edge Functions. A payload change needs the integration test updated too.
