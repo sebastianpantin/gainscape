@@ -1,3 +1,11 @@
+- prs: [157]
+  version: 0.17.0
+  date: 2026-10-20
+  title: A livelier Train tab
+  items:
+    - Train opens with This week, a strip of the week that lights up the days you trained and shows your weekly goal streak. Tap it to open Stats.
+    - A progress card shows your companion bigger, your equipped gear, an XP bar for the skill closest to levelling up and a bar for your current quest step.
+    - Highlights shows how long since your last workout, your latest record and your rarest drop of the last 30 days.
 - prs: [154, 155]
   version: 0.16.0
   date: 2026-10-20
