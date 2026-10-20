@@ -883,3 +883,26 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+.highlight-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.highlight-list li + li {
+  border-top: 1px solid var(--color-panel-border);
+}
+
+.highlight-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: var(--tap-target);
+  padding-block: var(--space-1-5);
+  color: var(--color-text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}

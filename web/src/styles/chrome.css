@@ -143,6 +143,10 @@
   gap: var(--space-1);
 }
 
+.hero-bar .tap-link {
+  margin-block: 0;
+}
+
 .pet-companion {
   display: flex;
   flex-direction: column;

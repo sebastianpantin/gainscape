@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import { Link } from 'react-router-dom';
 import { streakText, weekProgressText, workoutWord } from '../../lib/progress/weekly-goal-rules.ts';
-import { profileQuery, trainingDaysQuery, weeklyGoalQuery } from '../../lib/query/queries.ts';
-import { localDateIn, monthKey } from '../../lib/ui/date-bucket-rules.ts';
+import { weeklyGoalQuery } from '../../lib/query/queries.ts';
 import { streakRiskText } from './today-rules.ts';
 import { type WeekStripDay, weekStripDays, weekStripLabel, workoutsThisWeek } from './week-strip-rules.ts';
 
@@ -23,18 +22,18 @@ function WeekStrip({ days }: { days: readonly WeekStripDay[] }) {
   );
 }
 
-export function ThisWeekCard({ userId }: { userId: string }) {
+interface ThisWeekCardProps {
+  today: string | null;
+  trainedDates: readonly string[] | undefined;
+}
+
+export function ThisWeekCard({ today, trainedDates }: ThisWeekCardProps) {
   const headingId = useId();
-  const [openedAt] = useState(() => Date.now());
   const status = useQuery(weeklyGoalQuery).data;
-  const timezone = useQuery(profileQuery(userId)).data?.loaded.timezone;
-  const today = timezone === undefined ? null : localDateIn(timezone, openedAt);
-  const trainingDays = useQuery({ ...trainingDaysQuery(userId, monthKey(today ?? '')), enabled: today !== null });
-  const trainedDates = trainingDays.data?.loaded.map((session) => session.localDate);
   const hasGoal = status?.goal != null;
 
   if ((today === null || !trainedDates) && !hasGoal) return null;
-  const risk = hasGoal ? streakRiskText(status, new Date(openedAt)) : null;
+  const risk = hasGoal ? streakRiskText(status, new Date()) : null;
   const workouts = today !== null && trainedDates ? workoutsThisWeek(trainedDates, today) : 0;
   return (
     <section className="panel stack" aria-labelledby={headingId}>

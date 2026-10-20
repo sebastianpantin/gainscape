@@ -11,7 +11,13 @@ import { collectionPercent, countCollection } from '../collection/collection-rul
 import { fetchExerciseProgress } from '../progress/exercise-progress.ts';
 import { fetchSessionPage } from '../history/history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession, isUuid } from '../history/history-rules.ts';
-import { fetchLoadout, fetchOwnedPets, loadItemCatalogCacheFirst, loadItemsCacheFirst } from '../collection/items.ts';
+import {
+  fetchLoadout,
+  fetchOwnedPets,
+  fetchRecentDrops,
+  loadItemCatalogCacheFirst,
+  loadItemsCacheFirst,
+} from '../collection/items.ts';
 import { fetchTrainingHistory } from '../profile/onboarding.ts';
 import { loadProfileCacheFirst, type Profile } from '../profile/profile.ts';
 import { type Preferences } from '../profile/preferences.ts';
@@ -165,6 +171,13 @@ export function ownedPetsQuery(userId: string) {
   return queryOptions({
     queryKey: ['items', userId, 'pets'] as const,
     queryFn: () => fetchOwnedPets(userId),
+  });
+}
+
+export function recentDropsQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['items', userId, 'recent-drops'] as const,
+    queryFn: () => fetchRecentDrops(userId, Date.now()),
   });
 }
 
@@ -389,6 +402,7 @@ export const EVERY_QUERY = [
   feedQuery,
   feedPreviewQuery,
   ownedPetsQuery,
+  recentDropsQuery,
   recentSetsQuery,
   historyQuery,
   hiscoresQuery,

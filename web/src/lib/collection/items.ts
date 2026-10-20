@@ -11,6 +11,8 @@ import {
   itemRowSchema,
   type OwnedPets,
   queryOwnedPets,
+  queryRecentDrops,
+  type RecentDrop,
   RECIPE_COLUMNS,
   recipeRowSchema,
   toCatalogItem,
@@ -19,6 +21,7 @@ import {
 } from './item-rules.ts';
 import type { GearSlot } from '@domain/crafting.ts';
 import { DEFAULT_BALANCE } from '@domain/index.ts';
+import { MS_PER_DAY } from '@domain/math.ts';
 import type { StrengthState } from '@domain/types.ts';
 import {
   type CacheFirstLoad,
@@ -70,6 +73,13 @@ export function loadItemCatalogCacheFirst(userId: string): Promise<CacheFirstLoa
 export async function fetchOwnedPets(userId: string): Promise<OwnedPets> {
   failFastWhenOffline();
   return queryOwnedPets(supabase, userId);
+}
+
+const RECENT_DROP_DAYS = 30;
+
+export async function fetchRecentDrops(userId: string, now: number): Promise<RecentDrop[]> {
+  failFastWhenOffline();
+  return queryRecentDrops(supabase, userId, new Date(now - RECENT_DROP_DAYS * MS_PER_DAY).toISOString());
 }
 
 export async function fetchInventory(userId: string): Promise<Map<string, HeldItem>> {

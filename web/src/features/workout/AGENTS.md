@@ -18,6 +18,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
   - Lift card decisions (menu, advice, warm-ups, when rest starts): `exercise-card-rules.ts`.
   - Today nudges: `today-rules.ts`.
   - This week strip: `week-strip-rules.ts`.
+  - Highlights: `highlight-rules.ts`.
   - Last-session chips: `last-set-rules.ts`.
   - Per-set feedback: `set-feedback-rules.ts`.
   - Set menu: `set-menu-rules.ts`.
@@ -79,7 +80,8 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - Holds take no superset, warm-ups, quick fill or swap. Cardio cards keep a plain `Remove` instead of `ExerciseMenu`.
 - At the set limit (`MAX_SETS_PER_SESSION`), or at 4 hours of bouts, the add buttons are disabled and the picker stops offering what will not fit. History edit behaves the same way.
 - Train home order (checked at 360x780, `e2e/train-home.spec.ts`): header, notices, `ThisWeekCard`, the program summary and today's prescription, then `Start workout`, then program days, the progress and highlight cards, lift goals and friends. Start stays in the first screen for a lifter without a program; a program follower starts from the prescription above it. Keep new cards below Start.
-- `ThisWeekCard` is the only streak: the weekly goal's (weeks in a row that met the goal). Its strip reads `trainingDaysQuery` for the current month in the profile time zone (the RPC range includes the month before, so a week that starts there is whole), cache-first, so it shows offline. Without a goal it counts this week's workouts and links to the goal setting.
+- `ThisWeekCard` is the only streak: the weekly goal's (weeks in a row that met the goal). `TodayView` reads `trainingDaysQuery` once for the strip and the highlights: the current month in the profile time zone (the RPC range includes the month before, so a week that starts there is whole), cache-first, so it shows offline. Without a goal it counts this week's workouts and links to the goal setting.
+- `HighlightsCard` rows (last workout, latest record, rarest drop of the last 30 days) each hide without data, and the card hides when no row is left, so a new account never sees it. The last workout comes from those training days (this and last month only, older reads as no row), the record from the first `recordTimelineQuery` page, the drop from `recentDropsQuery` (own `drops`, not revoked, newest 100, rarest then newest; under the `items` root, so a synced workout refreshes it; online only).
 - `TrainingHero` (the `Your progress` card) shows the companion pet, the equipped gear (icon = slot sprite in the tier colour, from `loadoutQuery`), an XP bar for the skill nearest its next level and the first quest in progress (`activeQuestLine`). It hides when none of them has data, so a new account does not see an empty card. `useCompanionPet` uses `ownedPetsQuery`, not `itemsQuery`, so Items and the reveal keep their own cache.
 - `streakRiskText` counts from the server's `weekStart`, which follows the profile timezone, against the device's day. It returns null when the device day falls outside that week (possible near midnight on Sunday).
 - The picker gets only active exercises (`exercisePickerList`), but `exerciseListLoadQuery` saves the archived ones too, because the Exercises screen, program editor and reveal need them offline.

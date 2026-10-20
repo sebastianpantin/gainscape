@@ -2,7 +2,7 @@ import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
 import { logBench, openTab, register, uniqueUsername } from './support/app.ts';
-import { equipGear, grantItems, seedQuestProgress } from './support/db.ts';
+import { activeDropsOfLatestSession, equipGear, grantItems, seedQuestProgress } from './support/db.ts';
 
 test.use({ viewport: { width: 360, height: 780 } });
 
@@ -72,4 +72,30 @@ test('the progress card shows the pet, the gear, the XP to the next level and th
 
   await hero.getByRole('link', { name: 'X Marks the Squat', exact: true }).click();
   await expect(page).toHaveURL(/\/skills\/quests$/);
+});
+
+test('highlights show the last workout, the latest record and the rarest drop, each linking on', async ({ page }) => {
+  const username = uniqueUsername('home_high');
+  await register(page, username);
+  const highlights = page.getByRole('region', { name: 'Highlights' });
+  await expect(highlights).toHaveCount(0);
+
+  await logBench(page);
+  await openTab(page, 'Train');
+  await logBench(page, 80);
+  await expect.poll(async () => (await activeDropsOfLatestSession(username)).length).toBeGreaterThan(0);
+  await openTab(page, 'Train');
+
+  await expect(highlights.getByRole('link', { name: 'Last workout Today', exact: true })).toBeVisible();
+  await expect(highlights.getByRole('link', { name: /^Latest record Barbell Bench Press.* · / })).toBeVisible();
+  await expect(
+    highlights.getByRole('link', { name: /^Rarest drop this month .+ · (Common|Uncommon|Rare|Legendary)$/ }),
+  ).toBeVisible();
+  await expectNoAxeViolations(page, 'train home, highlights');
+
+  await highlights.getByRole('link', { name: /^Latest record/ }).click();
+  await expect(page).toHaveURL(/\/collection\/stats\/records$/);
+  await openTab(page, 'Train');
+  await highlights.getByRole('link', { name: /^Rarest drop/ }).click();
+  await expect(page).toHaveURL(/\/collection\/items$/);
 });

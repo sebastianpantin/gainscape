@@ -81,6 +81,7 @@ test('the loadout shows on your profile, the friend preview and a friend profile
   await register(page, username);
   await grantItems(username, { rookie_belt: 1 });
   await equipGear(username, 'rookie_belt');
+  await page.reload();
 
   await openTab(page, 'Profile');
   await expectRookieBeltInLoadout(page);

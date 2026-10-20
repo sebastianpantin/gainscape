@@ -1,12 +1,16 @@
+import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useRef } from 'react';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { type ActiveProgram } from '../../lib/programs/program-today-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
+import { profileQuery, trainingDaysQuery } from '../../lib/query/queries.ts';
+import { localDateIn, monthKey } from '../../lib/ui/date-bucket-rules.ts';
 import { type DraftNotice } from '../../offline/draft-session.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
 import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
+import { HighlightsCard } from './HighlightsCard.tsx';
 import { LevelStat } from './LevelStat.tsx';
 import { LiftGoalsCard } from './LiftGoalsCard.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
@@ -44,6 +48,10 @@ export function TodayView({
 }: TodayViewProps) {
   const startButton = useRef<HTMLButtonElement>(null);
   const now = new Date();
+  const timezone = useQuery(profileQuery(userId)).data?.loaded.timezone;
+  const today = timezone === undefined ? null : localDateIn(timezone, now.getTime());
+  const trainingDays = useQuery({ ...trainingDaysQuery(userId, monthKey(today ?? '')), enabled: today !== null });
+  const trainedDates = trainingDays.data?.loaded.map((session) => session.localDate);
   return (
     <main className="screen stack">
       <div className="screen-header">
@@ -74,7 +82,7 @@ export function TodayView({
         </p>
       )}
       <InstallCard userId={userId} />
-      <ThisWeekCard userId={userId} />
+      <ThisWeekCard today={today} trainedDates={trainedDates} />
       <ProgramSummary userId={userId} program={program} />
       <ProgramToday
         program={program}
@@ -103,6 +111,7 @@ export function TodayView({
         onStart={start.startFromDay}
       />
       <TrainingHero userId={userId} standing={standing} unit={unit} />
+      <HighlightsCard userId={userId} today={today} trainedDates={trainedDates} unit={unit} />
       <LiftGoalsCard userId={userId} unit={unit} />
       <FriendActivityStrip userId={userId} />
       {onboarding.open && (

@@ -212,6 +212,43 @@ export async function queryOwnedPets(client: SupabaseClient, userId: string): Pr
   };
 }
 
+const recentDropRowSchema = z.object({ created_at: z.string(), items: itemRowSchema });
+
+const RECENT_DROPS_READ = 100;
+
+export interface RecentDrop {
+  item: CatalogItem;
+  droppedAt: string;
+}
+
+export async function queryRecentDrops(client: SupabaseClient, userId: string, since: string): Promise<RecentDrop[]> {
+  const { data, error } = await client
+    .from('drops')
+    .select(`created_at,items!inner(${ITEM_COLUMNS})`)
+    .eq('user_id', userId)
+    .is('revoked_at', null)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(RECENT_DROPS_READ);
+  if (error) throw error;
+  return parsedRows(recentDropRowSchema, data).map((row) => ({
+    item: toCatalogItem(row.items),
+    droppedAt: row.created_at,
+  }));
+}
+
+function isRarerOrNewer(candidate: RecentDrop, best: RecentDrop): boolean {
+  const rarity = ITEM_RARITIES.indexOf(candidate.item.rarity) - ITEM_RARITIES.indexOf(best.item.rarity);
+  return rarity === 0 ? Date.parse(candidate.droppedAt) > Date.parse(best.droppedAt) : rarity > 0;
+}
+
+export function rarestRecentDrop(drops: readonly RecentDrop[]): RecentDrop | null {
+  return drops.reduce<RecentDrop | null>(
+    (best, drop) => (best === null || isRarerOrNewer(drop, best) ? drop : best),
+    null,
+  );
+}
+
 export type Fanfare = Extract<ItemRarity, 'rare' | 'legendary'>;
 
 export function fanfareFor(rarities: readonly ItemRarity[]): Fanfare | null {
