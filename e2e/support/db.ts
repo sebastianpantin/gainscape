@@ -53,6 +53,14 @@ export async function heightOf(username: string): Promise<number | null> {
   return row?.height_cm ?? null;
 }
 
+export async function sexOf(username: string): Promise<string | null> {
+  const [row] = await db`
+    select pp.sex
+    from public.profile_private pp join public.profiles p on p.id = pp.user_id
+    where p.username = ${username}`;
+  return row?.sex ?? null;
+}
+
 export async function unitPrefOf(username: string): Promise<string | null> {
   const [row] = await db`
     select pp.unit_pref::text as unit_pref

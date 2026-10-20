@@ -146,6 +146,12 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('items');
   });
 
+  it('refreshes relative strength after a workout, a bodyweight save or an exercise edit changes its e1RM or bodyweight', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('relative-strength');
+    expect(QUERY_ROOTS_CHANGED_BY['profile-saved']).toContain('relative-strength');
+    expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toContain('relative-strength');
+  });
+
   it('refreshes every query that holds account data after an account reset', () => {
     const accountRoots = QUERY_ROOTS.filter((root) => !CATALOG_ROOTS.includes(root));
     expect([...QUERY_ROOTS_CHANGED_BY['account-reset']].sort()).toEqual([...new Set(accountRoots)].sort());

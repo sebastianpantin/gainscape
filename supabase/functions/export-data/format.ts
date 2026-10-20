@@ -1,4 +1,4 @@
-export const EXPORT_FORMAT_VERSION = 9;
+export const EXPORT_FORMAT_VERSION = 10;
 
 export const EXPORT_SECTIONS = [
   'account',

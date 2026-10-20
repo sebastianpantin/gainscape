@@ -58,13 +58,14 @@ const PUBLIC_COLUMNS: Record<keyof PublicProfileChanges, string> = {
 };
 
 type PrivateProfileChanges = Partial<
-  Pick<Profile, 'bodyweightKg' | 'heightCm' | 'birthYear' | 'unitPref' | 'effortInputMode'>
+  Pick<Profile, 'bodyweightKg' | 'heightCm' | 'birthYear' | 'sex' | 'unitPref' | 'effortInputMode'>
 >;
 
 const PRIVATE_COLUMNS: Record<keyof PrivateProfileChanges, string> = {
   bodyweightKg: 'bodyweight_kg',
   heightCm: 'height_cm',
   birthYear: 'birth_year',
+  sex: 'sex',
   unitPref: 'unit_pref',
   effortInputMode: 'effort_input_mode',
 };

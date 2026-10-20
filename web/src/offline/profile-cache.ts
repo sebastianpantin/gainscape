@@ -3,6 +3,7 @@ import {
   BADGE_COLOR_KEYS,
   EFFORT_INPUT_MODES,
   type Profile,
+  SEXES,
   TRAINING_FOCUSES,
   UNIT_PREFS,
 } from '../lib/profile/profile-rules.ts';
@@ -23,6 +24,7 @@ const profileSchema = z.object({
   bodyweightKg: z.number().nullable(),
   heightCm: z.number().nullable(),
   birthYear: z.number().nullable(),
+  sex: z.enum(SEXES).nullable().default(null),
   unitPref: z.enum(UNIT_PREFS),
   effortInputMode: z.enum(EFFORT_INPUT_MODES),
   timezone: z.string(),

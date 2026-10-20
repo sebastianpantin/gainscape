@@ -63,6 +63,7 @@ select results_eq(
     ('profile_private', 'bodyweight_kg'),
     ('profile_private', 'effort_input_mode'),
     ('profile_private', 'height_cm'),
+    ('profile_private', 'sex'),
     ('profile_private', 'unit_pref'),
     ('profiles', 'badge_color'),
     ('profiles', 'bio'),

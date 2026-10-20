@@ -7,8 +7,10 @@ import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, parsedDecimal, unitToKg
 
 export const UNIT_PREFS = ['kg', 'lb'] as const;
 export const EFFORT_INPUT_MODES = ['level', 'rir', 'rpe'] as const;
+export const SEXES = ['male', 'female'] as const;
 export type UnitPref = (typeof UNIT_PREFS)[number];
 export type EffortInputMode = (typeof EFFORT_INPUT_MODES)[number];
+export type Sex = (typeof SEXES)[number];
 
 export const UNIT_OPTIONS: { value: UnitPref; label: string }[] = [
   { value: 'kg', label: 'Kilograms' },
@@ -30,6 +32,7 @@ export interface Profile {
   bodyweightKg: number | null;
   heightCm: number | null;
   birthYear: number | null;
+  sex: Sex | null;
   unitPref: UnitPref;
   effortInputMode: EffortInputMode;
   timezone: string;
@@ -68,7 +71,7 @@ export const BADGE_COLOR_KEYS = Object.keys(BADGE_COLORS) as BadgeColor[];
 export const PROFILE_COLUMNS =
   'username, display_name, bio, training_focus, training_since, badge_color, show_weights, show_bodyweight, created_at';
 export const PROFILE_PRIVATE_COLUMNS =
-  'bodyweight_kg, height_cm, birth_year, unit_pref, effort_input_mode, timezone, timezone_changed_at';
+  'bodyweight_kg, height_cm, birth_year, sex, unit_pref, effort_input_mode, timezone, timezone_changed_at';
 
 export const profileRowSchema = z.object({
   username: z.string(),
@@ -86,6 +89,7 @@ export const profilePrivateRowSchema = z.object({
   bodyweight_kg: numericColumn.nullable(),
   height_cm: numericColumn.nullable(),
   birth_year: z.number().nullable(),
+  sex: z.enum(SEXES).nullable(),
   unit_pref: z.enum(UNIT_PREFS),
   effort_input_mode: z.enum(EFFORT_INPUT_MODES),
   timezone: z.string(),
@@ -109,6 +113,7 @@ export function profileFromRows(
     bodyweightKg: nullableNumber(privateRow.bodyweight_kg),
     heightCm: nullableNumber(privateRow.height_cm),
     birthYear: privateRow.birth_year,
+    sex: privateRow.sex,
     unitPref: privateRow.unit_pref,
     effortInputMode: privateRow.effort_input_mode,
     timezone: privateRow.timezone,

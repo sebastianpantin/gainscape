@@ -45,6 +45,7 @@ import { skillExercisesSeed } from '../progress/skill-map-rules.ts';
 import { loadStanding } from '../progress/standing-data.ts';
 import { loadLootStatsCacheFirst } from '../stats/loot-stats.ts';
 import { loadRecordTimelinePage } from '../stats/pr-timeline.ts';
+import { loadRelativeStrengthCacheFirst } from '../stats/relative-strength.ts';
 import {
   nextRecordTimelineCursor,
   RECORD_TIMELINE_PAGE_WORKOUTS,
@@ -364,6 +365,13 @@ export function lootStatsQuery(userId: string) {
   });
 }
 
+export function relativeStrengthQuery(userId: string, exerciseId: string) {
+  return queryOptions({
+    queryKey: ['relative-strength', userId, exerciseId] as const,
+    queryFn: ({ signal }) => loadRelativeStrengthCacheFirst(userId, exerciseId, signal),
+  });
+}
+
 export const EVERY_QUERY = [
   profileQuery,
   preferencesQuery,
@@ -402,4 +410,5 @@ export const EVERY_QUERY = [
   weeklyExerciseSetsQuery,
   recordTimelineQuery,
   lootStatsQuery,
+  relativeStrengthQuery,
 ] as const;

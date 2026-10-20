@@ -15,6 +15,7 @@ import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
 import { LootStatsSection } from './LootStatsSection.tsx';
 import { MonthCompareTable } from './MonthCompareTable.tsx';
 import { RecentRecordsSection } from './RecentRecordsSection.tsx';
+import { RelativeStrengthSection } from './RelativeStrengthSection.tsx';
 import { TrainingCalendarTable } from './TrainingCalendarTable.tsx';
 import { VolumeHistorySection } from './VolumeHistorySection.tsx';
 
@@ -68,6 +69,7 @@ export function StatsScreen({ userId }: { userId: string }) {
         </section>
       )}
       <VolumeHistorySection userId={userId} today={today} />
+      <RelativeStrengthSection userId={userId} />
       <RecentRecordsSection userId={userId} />
       <LootStatsSection userId={userId} />
     </main>

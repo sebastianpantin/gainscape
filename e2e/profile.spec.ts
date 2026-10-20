@@ -19,7 +19,7 @@ import {
   TEST_PASSWORD,
   uniqueUsername,
 } from './support/app.ts';
-import { accountRowCount, heightOf, latestSetOf } from './support/db.ts';
+import { accountRowCount, heightOf, latestSetOf, sexOf } from './support/db.ts';
 
 function profileCard(page: Page) {
   return page.getByRole('region', { name: 'Profile', exact: true });
@@ -142,6 +142,23 @@ test('RPE effort is logged as RPE and stored as reps in reserve', async ({ page 
   await finishWorkout(page);
 
   await expect.poll(() => latestSetOf(username)).toMatchObject({ effort_input_type: 'rpe', effort_value: 8, rir: 2 });
+});
+
+test('sex for the strength score saves, stays after a reload and can be cleared', async ({ page }) => {
+  const username = uniqueUsername('e2e_sex');
+  await register(page, username);
+  await openFromProfile(page, 'Settings');
+  const sex = page.getByRole('radiogroup', { name: 'Sex' });
+  await expect(sex.getByRole('radio', { name: 'Not set' })).toHaveAttribute('aria-checked', 'true');
+
+  await sex.getByRole('radio', { name: 'Female' }).click();
+  await expect(sex.getByRole('radio', { name: 'Female' })).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(() => sexOf(username)).toBe('female');
+  await page.reload();
+  await expect(sex.getByRole('radio', { name: 'Female' })).toHaveAttribute('aria-checked', 'true');
+
+  await sex.getByRole('radio', { name: 'Not set' }).click();
+  await expect.poll(() => sexOf(username)).toBeNull();
 });
 
 test('the time zone can change once, then waits 7 days', async ({ page }) => {

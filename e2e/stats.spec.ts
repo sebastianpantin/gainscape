@@ -166,3 +166,38 @@ test('the loot section counts the rolls and drops of every workout against the o
   ).toBeVisible();
   await expectNoAxeViolations(page, 'stats loot');
 });
+
+test('relative strength charts e1RM per bodyweight and DOTS asks for the sex, then the missing lifts', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('stats_rel'));
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByLabel('Bodyweight (kg)').fill('80');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await openTab(page, 'Train');
+  await logBench(page, 80);
+  await openTab(page, 'Collection');
+  await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
+
+  const relative = page.getByRole('region', { name: 'Relative strength' });
+  await expect(relative.getByLabel('Lift')).toHaveValue(/.+/);
+  await expect(relative.getByRole('option', { name: 'Barbell Bench Press' })).toBeAttached();
+  await expect(relative.getByRole('img', { name: /^Barbell Bench Press e1RM per bodyweight\./ })).toBeVisible();
+  await expect(relative.getByText('Now 1.23 × bodyweight', { exact: true })).toBeVisible();
+  await expect(relative.getByText('Set your sex in Settings to see your DOTS score.')).toBeVisible();
+  await expectNoAxeViolations(page, 'stats relative strength');
+
+  await relative.getByRole('link', { name: 'Settings', exact: true }).click();
+  await expect(page).toHaveURL(/\/profile\/settings$/);
+  await page.getByRole('radiogroup', { name: 'Sex' }).getByRole('radio', { name: 'Male', exact: true }).click();
+  await expect(
+    page.getByRole('radiogroup', { name: 'Sex' }).getByRole('radio', { name: 'Male', exact: true }),
+  ).toHaveAttribute('aria-checked', 'true');
+
+  await openTab(page, 'Collection');
+  await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
+  await expect(relative.getByText('Log a squat and a deadlift to see your DOTS score.', { exact: true })).toBeVisible();
+  await expectNoAxeViolations(page, 'stats DOTS');
+});

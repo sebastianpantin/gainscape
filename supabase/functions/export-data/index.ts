@@ -15,7 +15,7 @@ async function exportFor(userId: string) {
       from public.profiles where id = ${userId}`;
     if (!profile) throw new HttpError(404, 'profile_not_found');
     const [privateProfile] = await tx`
-      select bodyweight_kg::float, height_cm::float, birth_year, unit_pref, effort_input_mode, timezone,
+      select bodyweight_kg::float, height_cm::float, birth_year, sex, unit_pref, effort_input_mode, timezone,
              timezone_changed_at, created_at, updated_at
       from public.profile_private where user_id = ${userId}`;
     const sessions = await tx`select * from public.sessions where user_id = ${userId} order by started_at, id`;
