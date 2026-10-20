@@ -9,7 +9,8 @@ import { EffortSelector } from './EffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
 import { SetMenu } from './SetMenu.tsx';
 import { WeightField } from './SetRow.tsx';
-import { type PreviewRecord, recordChipLabel, recordChipText } from './record-preview.ts';
+import { type PreviewRecord } from './record-preview.ts';
+import { RecordChip } from './RecordChip.tsx';
 import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
@@ -102,15 +103,7 @@ export function HoldSetRow({
       />
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
         {previewXpLabel(preview)}
-        {record && (
-          <span
-            className={drop?.record ? 'record-chip pulse' : 'record-chip'}
-            role="img"
-            aria-label={recordChipLabel(record)}
-          >
-            {recordChipText(record)}
-          </span>
-        )}
+        {record && <RecordChip record={record} pulsing={drop?.record === true} />}
       </span>
       <DoneToggle done={set.done} label={`Done set ${setNumber}`} drop={drop} onToggle={onToggleDone} />
       <SetMenu

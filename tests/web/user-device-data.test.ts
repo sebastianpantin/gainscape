@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHUNK_RELOAD_KEY } from '../../web/src/pwa/chunk-reload.ts';
-import { rememberLastSummary } from '../../web/src/features/summary/last-summary.ts';
+import { rememberLastSummary } from '../../web/src/offline/last-summary.ts';
 import { saveCachedExercises } from '../../web/src/lib/exercises/catalog-cache.ts';
 import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { saveCachedExerciseNotes } from '../../web/src/lib/exercises/exercise-note-cache.ts';

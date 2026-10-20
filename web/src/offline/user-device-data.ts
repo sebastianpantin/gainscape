@@ -1,4 +1,4 @@
-import { forgetLastSummaryOf } from '../features/summary/last-summary.ts';
+import { forgetLastSummaryOf } from './last-summary.ts';
 import { forgetCachedExercises } from '../lib/exercises/catalog-cache.ts';
 import { companionPetStore } from '../lib/collection/companion-pet-store.ts';
 import { forgetCachedExerciseNotes } from '../lib/exercises/exercise-note-cache.ts';

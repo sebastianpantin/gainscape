@@ -1,6 +1,6 @@
-import { type Exercise, isLiftExercise, type LiftExercise } from '../../lib/exercises/catalog-rules.ts';
+import { type Exercise, isPlannableExercise, type LiftExercise } from '../../lib/exercises/catalog-rules.ts';
 import { similarExercises } from '../../lib/exercises/substitute-rules.ts';
-import { type SupersetGroup, supersetGroups } from '../../lib/workout/superset-rules.ts';
+import { groupOf, type SupersetGroup } from '../../lib/workout/superset-rules.ts';
 import { type DraftExercise, type LiftDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
 import { canAddSetTo } from '../../lib/workout/exercise-edit-rules.ts';
 import {
@@ -24,7 +24,7 @@ export function liftIdsToRecall(draft: WorkoutDraft | null): string[] {
 }
 
 export function swappableLifts(exercises: readonly Exercise[]): LiftExercise[] {
-  return exercises.filter(isLiftExercise).filter((exercise) => exercise.measure === undefined);
+  return exercises.filter(isPlannableExercise);
 }
 
 export function swapSuggestions(exerciseId: string, lifts: readonly LiftExercise[]): LiftExercise[] {
@@ -49,7 +49,7 @@ export function withPickedExercise(
 }
 
 export function addButtonKey(draft: WorkoutDraft, exerciseIndex: number): string {
-  const group = supersetGroups(draft).find((candidate) => candidate.exerciseIndexes.includes(exerciseIndex));
+  const group = groupOf(draft, exerciseIndex);
   return group === undefined ? draft.exercises[exerciseIndex].clientId : `superset-${group.id}`;
 }
 

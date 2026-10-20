@@ -276,8 +276,8 @@ export function previewXpLabel(preview: SetPreview): string {
   return preview.basis === 'unknown' ? '~?' : `~${formatXp(preview.xp)}`;
 }
 
-export function previewNote(preview: SetPreview, cfg: BalanceConfig = DEFAULT_BALANCE): string {
-  const firstRirWithoutXp = cfg.effectiveRirWindow + 1;
+export function previewNote(preview: SetPreview): string {
+  const firstRirWithoutXp = DEFAULT_BALANCE.effectiveRirWindow + 1;
   if (preview.basis === 'logged' && preview.rir !== null && preview.rir >= firstRirWithoutXp) return 'counts for e1RM';
   if (preview.basis === 'estimated') return `est. RIR ${preview.rir}`;
   if (preview.basis === 'cold_start') return 'first time';

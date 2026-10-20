@@ -11,13 +11,13 @@ The post-workout reveal at `/reveal`: XP per skill, level-ups, gear and challeng
 
 - `RevealScreen.tsx`: the screen and its choreography.
 - `reveal-rules.ts`: pure timeline, skip rules and every text the reveal shows (records, bonuses, challenge outcome, notices). Put new decisions here.
-- `last-summary.ts`: `sessionStorage` memory of the last summary.
+- `../../offline/last-summary.ts`: `sessionStorage` memory of the last summary.
 - The summary types live in `@domain/types.ts` and are produced by `complete-session`.
 
 ## Rules and gotchas
 
 - The summary comes from router state or `recallLastSummary(userId)`, else `fetchSession`. Offline, names come from the saved standing, exercise list and items caches instead of waiting on requests.
-- `last-summary.ts` stores `{ userId, summary }` under `gainscape.last-summary`. Recall returns nothing for another account, so a different sign-in in the same tab never sees it. `forgetLastSummary` clears only when the cached session id is in the list; history delete and edit (`../history/SessionDetailScreen.tsx`) call it so a removed session is not revealed. Keep that coupling when changing keys. A recalled `plannedChallenge` is re-validated with `parsedDraftChallenge`.
+- `offline/last-summary.ts` stores `{ userId, summary }` under `gainscape.last-summary`. Recall returns nothing for another account, so a different sign-in in the same tab never sees it. `forgetLastSummary` clears only when the cached session id is in the list; history delete and edit (`../history/SessionDetailScreen.tsx`) call it so a removed session is not revealed. Keep that coupling when changing keys. A recalled `plannedChallenge` is re-validated with `parsedDraftChallenge`.
 - Choreography: every delay comes from `revealTimeline(revealShape(summary))`, compressed so the loot beat never starts after 1.5 s whatever the skill count. Skip with the floating `Skip` button, a pointer press, Escape, or Enter away from a link, button or field. A skip from the button moves focus to the `Workout complete!` heading.
 - Nothing plays for a history-only save or without a summary: `reveal-still` on `main` turns animations off. It stays on once the choreography settles, so rows that load late appear without animating. Under `prefers-reduced-motion` it starts settled; `e2e/a11y.spec.ts` asserts that.
 - The level-up cue (chime and vibration via `../../lib/platform/celebration-effects.ts`, as the training-device settings allow) primes audio on mount, waits for a suspended context to resume, fires at the peak of the `Level up!` pop and never after a skip.

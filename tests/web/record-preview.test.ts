@@ -173,9 +173,9 @@ describe('becomesRecord', () => {
     const strength = trained('bench');
     const baseline = repMaxes('bench', { 5: 100 });
     const recordsOf = (exercises: LiftDraftExercise[]) => previewRecords(exercises, strength, baseline);
-    expect(becomesRecord(recordsOf(before), before, after, planned.id, strength, baseline)).toBe(true);
-    expect(becomesRecord(recordsOf(after), after, after, planned.id, strength, baseline)).toBe(false);
-    expect(becomesRecord(recordsOf(after), after, before, planned.id, strength, baseline)).toBe(false);
+    expect(becomesRecord(recordsOf(before), before, recordsOf(after), after, planned.id)).toBe(true);
+    expect(becomesRecord(recordsOf(after), after, recordsOf(after), after, planned.id)).toBe(false);
+    expect(becomesRecord(recordsOf(after), after, recordsOf(before), before, planned.id)).toBe(false);
   });
 });
 

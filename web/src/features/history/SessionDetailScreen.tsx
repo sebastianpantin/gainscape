@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
+import { SETS_FULL_TEXT } from '../workout/workout-rules.ts';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import {
   addableExercises,
@@ -31,7 +32,7 @@ import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
-import { forgetLastSummary, recallLastSummary } from '../summary/last-summary.ts';
+import { forgetLastSummary, recallLastSummary } from '../../offline/last-summary.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { HistoryBoutRow, HistoryHoldRow, HistorySetRow } from './HistorySetRow.tsx';
@@ -286,10 +287,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
             type="button"
             onClick={() => {
               const { fresh } = problem;
-              setLoaded(fresh);
               const rebased = rebaseEdit(edit, loaded.original, fresh.original);
+              adopt(fresh);
               setEdit(rebased.edit);
-              setReadOnly(!isSessionEditable(fresh.session, Date.now()));
               setProblem(null);
               setNotice(rebaseNotice(rebased, fresh.original));
             }}
@@ -469,7 +469,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
             onPick={(exercise) => setEdit(addEditExercise(edit, exercise))}
           />
         ) : (
-          <p className="hint">A workout can hold at most {MAX_SETS_PER_SESSION} sets.</p>
+          <p className="hint">{SETS_FULL_TEXT}</p>
         )}
         {roomForSets && !roomForBouts && <p className="hint">Cardio exercises are not offered. {BOUTS_FULL_TEXT}</p>}
         <label className="field notes-field">
