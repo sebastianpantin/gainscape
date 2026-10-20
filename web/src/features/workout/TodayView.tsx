@@ -1,5 +1,4 @@
 import { type ReactNode, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { type ActiveProgram } from '../../lib/programs/program-today-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
@@ -10,12 +9,12 @@ import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
 import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
 import { LevelStat } from './LevelStat.tsx';
 import { LiftGoalsCard } from './LiftGoalsCard.tsx';
-import { PetCompanion } from './PetCompanion.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { ProgramSummary } from './ProgramSummary.tsx';
 import { ProgramToday } from './ProgramToday.tsx';
 import { ThisWeekCard } from './ThisWeekCard.tsx';
-import { greetingFor, nearestLevelUp, nearestLevelUpText } from './today-rules.ts';
+import { greetingFor } from './today-rules.ts';
+import { TrainingHero } from './TrainingHero.tsx';
 import { type useWorkoutStart } from './use-workout-start.ts';
 
 interface TodayViewProps {
@@ -45,7 +44,6 @@ export function TodayView({
 }: TodayViewProps) {
   const startButton = useRef<HTMLButtonElement>(null);
   const now = new Date();
-  const levelNudge = standing.status === 'ready' ? nearestLevelUp(standing.standing.skills) : null;
   return (
     <main className="screen stack">
       <div className="screen-header">
@@ -104,14 +102,7 @@ export function TodayView({
         followingProgram={program.kind !== 'none'}
         onStart={start.startFromDay}
       />
-      <div className="today-row">
-        {levelNudge && (
-          <Link className="level-nudge tap-link" to="/skills">
-            {nearestLevelUpText(levelNudge)}
-          </Link>
-        )}
-        <PetCompanion userId={userId} />
-      </div>
+      <TrainingHero userId={userId} standing={standing} unit={unit} />
       <LiftGoalsCard userId={userId} unit={unit} />
       <FriendActivityStrip userId={userId} />
       {onboarding.open && (

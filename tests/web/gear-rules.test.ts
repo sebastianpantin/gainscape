@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bonusRows,
+  equippedGearLabel,
   type EquippedGear,
   formatGearBonusPercent,
   loadoutBySlot,
@@ -89,5 +90,18 @@ describe('bonusRows', () => {
         SKILLS.filter((skill) => skill.key !== 'legs'),
       ).map((row) => row.skillKey),
     ).toEqual(['back', 'core']);
+  });
+});
+
+describe('equippedGearLabel', () => {
+  it('names the equipped gear and where the link leads', () => {
+    const chalk: EquippedGear = {
+      ...rookieBelt,
+      slot: 'chalk',
+      itemKey: 'grinder_chalk',
+      name: 'Grinder chalk',
+      tier: 'grinder',
+    };
+    expect(equippedGearLabel([rookieBelt, chalk])).toBe('Loadout: Rookie belt and Grinder chalk. Open Items');
   });
 });

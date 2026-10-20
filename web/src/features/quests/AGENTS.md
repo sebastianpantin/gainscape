@@ -19,6 +19,7 @@ The quest board at `/skills/quests`, linked from the Skills tab (a sibling of th
 - Start is enabled only for an available quest while online (`canStartQuest`). Offline the saved log shows with its notice and Start stays disabled with "Connect to start this quest."
 - A successful start announces `quest-started`; a synced workout refreshes the `quests` root through `workout-changed`.
 - A retired quest shows only if it is in progress or completed. Progress only counts workouts finished after the start, which the available card says.
+- The Train home shows the first quest in progress, in catalog order, with its current step and a bar over all steps (`activeQuestLine`); it links here.
 - Requirements are labelled `Met`/`Not met` in text, so colour is not the only cue.
 
 ## Testing

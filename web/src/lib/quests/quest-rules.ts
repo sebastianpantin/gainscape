@@ -199,6 +199,31 @@ export function questStepProgress(step: QuestStep, progress: number, unit: Weigh
   return { text: `${done} / ${formatXp(shownWeight(step.target, unit))} ${unit}`, fraction };
 }
 
+interface ActiveQuestLine {
+  questName: string;
+  stepText: string;
+  progressText: string;
+  fraction: number;
+}
+
+export function activeQuestLine(log: QuestLog, unit: WeightUnit): ActiveQuestLine | null {
+  for (const quest of log.quests) {
+    const progress = log.progress.find((entry) => entry.questId === quest.questId);
+    const step = progress && quest.steps[progress.stepIndex];
+    if (!progress || !step || log.completedQuestIds.includes(quest.questId)) continue;
+    const stepCount = quest.steps.length;
+    const counter = questStepProgress(step, progress.stepProgress, unit);
+    const nameOf = (exerciseId: string) => log.exerciseNames[exerciseId] ?? UNKNOWN_EXERCISE;
+    return {
+      questName: quest.name,
+      stepText: `Step ${progress.stepIndex + 1} of ${stepCount}: ${questStepText(step, nameOf, unit)}`,
+      progressText: counter?.text ?? `${progress.stepIndex} of ${stepCount} steps done`,
+      fraction: (progress.stepIndex + (counter?.fraction ?? 0)) / stepCount,
+    };
+  }
+  return null;
+}
+
 function stepState(index: number, status: QuestStatus, progress: QuestProgress | undefined): StepState {
   if (status === 'completed') return 'done';
   if (progress === undefined) return 'upcoming';

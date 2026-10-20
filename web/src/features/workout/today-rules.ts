@@ -18,6 +18,8 @@ interface NearestLevelUp {
   skillName: string;
   xpToGo: number;
   nextLevel: number;
+  xpIntoLevel: number;
+  levelXp: number;
 }
 
 export function nearestLevelUp(skills: readonly SkillStanding[]): NearestLevelUp | null {
@@ -26,7 +28,13 @@ export function nearestLevelUp(skills: readonly SkillStanding[]): NearestLevelUp
     if (progress.xp <= 0 || progress.nextLevelXp === null) continue;
     const xpToGo = progress.nextLevelXp - progress.xp;
     if (nearest === null || xpToGo < nearest.xpToGo) {
-      nearest = { skillName: skill.name, xpToGo, nextLevel: progress.level + 1 };
+      nearest = {
+        skillName: skill.name,
+        xpToGo,
+        nextLevel: progress.level + 1,
+        xpIntoLevel: progress.xp - progress.levelStartXp,
+        levelXp: progress.nextLevelXp - progress.levelStartXp,
+      };
     }
   }
   return nearest;
@@ -34,6 +42,10 @@ export function nearestLevelUp(skills: readonly SkillStanding[]): NearestLevelUp
 
 export function nearestLevelUpText({ skillName, xpToGo, nextLevel }: NearestLevelUp): string {
   return `${skillName} is ${formatXp(xpToGo)} XP from level ${nextLevel}`;
+}
+
+export function nearestLevelUpValueText({ xpIntoLevel, levelXp }: NearestLevelUp): string {
+  return `${formatXp(xpIntoLevel)} of ${formatXp(levelXp)} XP`;
 }
 
 const DAYS_IN_WEEK = 7;

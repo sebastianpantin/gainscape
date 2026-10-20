@@ -56,6 +56,12 @@ export function loadoutBySlot(slots: readonly EquippedGear[]): LoadoutSlotRow[] 
   }));
 }
 
+const GEAR_LIST = new Intl.ListFormat('en-GB', { type: 'conjunction' });
+
+export function equippedGearLabel(slots: readonly EquippedGear[]): string {
+  return `Loadout: ${GEAR_LIST.format(loadoutBySlot(slots).flatMap((row) => row.gear?.name ?? []))}. Open Items`;
+}
+
 function gearLoadoutOf(slots: readonly EquippedGear[]): GearLoadout {
   return Object.fromEntries(slots.map((equipped) => [equipped.slot, equipped.tier]));
 }

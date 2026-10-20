@@ -6,6 +6,7 @@ import {
   levelCountStart,
   nearestLevelUp,
   nearestLevelUpText,
+  nearestLevelUpValueText,
   streakRiskText,
 } from '../../web/src/features/workout/today-rules.ts';
 
@@ -47,7 +48,14 @@ describe('nearestLevelUp', () => {
   it('picks the trained skill with the fewest XP to its next level', () => {
     const legs = standing('legs', 'Legs', levelProgress(0).nextLevelXp! - 10);
     const chest = standing('chest', 'Chest', 50);
-    expect(nearestLevelUp([chest, legs])).toEqual({ skillName: 'Legs', xpToGo: 10, nextLevel: 2 });
+    const levelTwoXp = levelProgress(0).nextLevelXp!;
+    expect(nearestLevelUp([chest, legs])).toEqual({
+      skillName: 'Legs',
+      xpToGo: 10,
+      nextLevel: 2,
+      xpIntoLevel: levelTwoXp - 10,
+      levelXp: levelTwoXp,
+    });
   });
 
   it('ignores untrained skills', () => {
@@ -61,9 +69,17 @@ describe('nearestLevelUp', () => {
 
 describe('nearestLevelUpText', () => {
   it('names the skill, the XP left and the next level', () => {
-    expect(nearestLevelUpText({ skillName: 'Legs', xpToGo: 1312, nextLevel: 41 })).toBe(
+    expect(nearestLevelUpText({ skillName: 'Legs', xpToGo: 1312, nextLevel: 41, xpIntoLevel: 0, levelXp: 1312 })).toBe(
       'Legs is 1,312 XP from level 41',
     );
+  });
+});
+
+describe('nearestLevelUpValueText', () => {
+  it('reads the XP into the level against the XP the level needs', () => {
+    expect(
+      nearestLevelUpValueText({ skillName: 'Legs', xpToGo: 312, nextLevel: 41, xpIntoLevel: 1000, levelXp: 1312 }),
+    ).toBe('1,000 of 1,312 XP');
   });
 });
 
