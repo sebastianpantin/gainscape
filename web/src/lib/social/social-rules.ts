@@ -315,3 +315,12 @@ export function rankHiscores(
     )
     .map(({ row, value }) => ({ row, value }));
 }
+
+export function uniqueByEvent(items: FeedItem[]): FeedItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.eventId)) return false;
+    seen.add(item.eventId);
+    return true;
+  });
+}

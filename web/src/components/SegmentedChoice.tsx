@@ -3,6 +3,8 @@ interface SegmentedChoiceProps<T> {
   options: readonly { value: T; label: string }[];
   current: T;
   stacked?: boolean;
+  wrapped?: boolean;
+  disabled?: boolean;
   onPick: (value: T) => void;
 }
 
@@ -11,10 +13,16 @@ export function SegmentedChoice<T extends string | number>({
   options,
   current,
   stacked = false,
+  wrapped = false,
+  disabled = false,
   onPick,
 }: SegmentedChoiceProps<T>) {
   return (
-    <div className={stacked ? 'segmented stacked' : 'segmented'} role="radiogroup" aria-label={label}>
+    <div
+      className={stacked ? 'segmented stacked' : wrapped ? 'segmented wrapped' : 'segmented'}
+      role="radiogroup"
+      aria-label={label}
+    >
       {options.map((option) => (
         <button
           key={String(option.value)}
@@ -22,6 +30,7 @@ export function SegmentedChoice<T extends string | number>({
           role="radio"
           aria-checked={current === option.value}
           className={current === option.value ? 'segment active' : 'segment'}
+          disabled={disabled}
           onClick={() => onPick(option.value)}
         >
           {option.label}

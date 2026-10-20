@@ -1,6 +1,6 @@
 import { GLOSSARY } from '../../../lib/ui/glossary.ts';
 import { usePreferences } from '../../../lib/profile/preferences.ts';
-import { type EffortInputMode, type UnitPref, updatePrivateProfile } from '../../../lib/profile/profile.ts';
+import { type EffortInputMode, UNIT_OPTIONS, updatePrivateProfile } from '../../../lib/profile/profile.ts';
 import { useOptimisticProfileSave } from '../use-optimistic-profile-save.ts';
 import { Choice } from './Choice.tsx';
 import { PlateChoices } from './PlateChoices.tsx';
@@ -8,22 +8,17 @@ import { RestChoice } from './RestChoice.tsx';
 import { type SectionProps } from './section-props.ts';
 import { TrainingDeviceChoices } from './TrainingDeviceChoices.tsx';
 
-const UNIT_OPTIONS: { value: UnitPref; label: string }[] = [
-  { value: 'kg', label: 'Kilograms' },
-  { value: 'lb', label: 'Pounds' },
-];
-
 const EFFORT_OPTIONS: { value: EffortInputMode; label: string; hint: string }[] = [
   { value: 'level', label: 'Simple', hint: 'Four taps: easy, hard, near failure, failure.' },
   { value: 'rir', label: 'RIR', hint: GLOSSARY.rir.definition },
   { value: 'rpe', label: 'RPE', hint: GLOSSARY.rpe.definition },
 ];
 
-export function TrainingSection({ userId, profile, onSaved }: SectionProps) {
+export function TrainingSection({ userId, profile, replaceProfile }: SectionProps) {
   const { applyPreferences } = usePreferences();
   const { save, pending, problem } = useOptimisticProfileSave<'unitPref' | 'effortInputMode'>(
     profile,
-    onSaved,
+    replaceProfile,
     (changes) => updatePrivateProfile(userId, changes),
     applyPreferences,
   );

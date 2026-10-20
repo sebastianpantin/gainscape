@@ -4,14 +4,13 @@ import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
-import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import {
   ageFrom,
   BODYWEIGHT_NUDGE_STEP,
   BODYWEIGHT_OFFLINE_TEXT,
   nudgedBodyweightKg,
-  updatePrivateProfile,
 } from '../../lib/profile/profile.ts';
 import { collectionPercentQuery, questPointsQuery } from '../../lib/query/queries.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
@@ -21,6 +20,7 @@ import { BodyweightTrend } from './BodyweightTrend.tsx';
 import { LoadoutPanel } from './LoadoutPanel.tsx';
 import { PrivateTag } from './PrivateTag.tsx';
 import { ProfileCard } from './ProfileCard.tsx';
+import { saveBodyweight } from './save-bodyweight.ts';
 import { useProfile } from './use-profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
 
@@ -40,7 +40,7 @@ function MenuLink({ to, children }: { to: string; children: string }) {
 }
 
 export function ProfileScreen({ userId }: ProfileScreenProps) {
-  const { state, replace, refresh } = useProfile(userId);
+  const { state, refresh } = useProfile(userId);
   const standing = useStanding(userId);
   const collection = useQuery(collectionPercentQuery(userId));
   const questPoints = useQuery(questPointsQuery(userId));
@@ -71,10 +71,8 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
     setSaving(true);
     setProblem(null);
     try {
-      await updatePrivateProfile(userId, { bodyweightKg: draftKg });
-      replace((current) => ({ ...current, bodyweightKg: draftKg }));
+      await saveBodyweight({ userId, bodyweightKg: draftKg, storage: deviceStorage(), queryClient });
       setDraftKg(null);
-      void announceDataChange(queryClient, 'profile-saved');
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your bodyweight.'));
     }

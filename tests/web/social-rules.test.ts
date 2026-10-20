@@ -22,6 +22,7 @@ import {
   sendRequestText,
   skillMetric,
   socialErrorMessage,
+  uniqueByEvent,
 } from '../../web/src/lib/social/social-rules.ts';
 import { OFFLINE_PROBLEM } from '../../web/src/offline/cache-first.ts';
 
@@ -238,6 +239,23 @@ describe('recentFriendActivity', () => {
 
   it('is empty without friend events', () => {
     expect(recentFriendActivity([entry('own', true)], 3)).toEqual([]);
+  });
+});
+
+describe('uniqueByEvent', () => {
+  const entry = (eventId: string, gzCount: number): FeedItem => ({ ...item('pr', bench), eventId, gzCount });
+
+  it('keeps the first of each repeated event in order', () => {
+    const feed = [entry('a', 1), entry('b', 2), entry('a', 3), entry('c', 4), entry('b', 5)];
+    expect(uniqueByEvent(feed).map((event) => [event.eventId, event.gzCount])).toEqual([
+      ['a', 1],
+      ['b', 2],
+      ['c', 4],
+    ]);
+  });
+
+  it('is empty for an empty feed', () => {
+    expect(uniqueByEvent([])).toEqual([]);
   });
 });
 

@@ -1,4 +1,4 @@
-import { type ProgramDefinition, type RoundingMode, type WeightUnit } from '@domain/index.ts';
+import { type ProgramDefinition, type RoundingMode } from '@domain/index.ts';
 import { useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -12,6 +12,7 @@ import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/progr
 import { inputHelpKeys } from '../../lib/ui/term-help-rules.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
+import { UNIT_OPTIONS } from '../../lib/profile/profile.ts';
 import { type EnrollChoices, enrollProgram, forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
 import { enrollChoicesQuery } from '../../lib/query/queries.ts';
 import { type LoadedState, loadedState } from '../../lib/query/query-state-rules.ts';
@@ -54,11 +55,6 @@ type Loaded =
   | { status: 'missing' }
   | { status: 'blocked'; name: string; message: string }
   | { status: 'ready'; definition: ProgramDefinition; name: string; exercises: BindableExercise[] };
-
-const UNIT_OPTIONS: { value: WeightUnit; label: string }[] = [
-  { value: 'kg', label: 'Kilograms' },
-  { value: 'lb', label: 'Pounds' },
-];
 
 const ROUNDING_MODES: { value: RoundingMode; label: string }[] = [
   { value: 'nearest', label: 'Nearest' },

@@ -1,10 +1,11 @@
-import { useEffect, useId, useRef } from 'react';
+import { useId, useRef } from 'react';
+import { useModalDialog } from '../../components/use-modal-dialog.ts';
 import type { Release } from '../../lib/platform/changelog-rules.ts';
 import { ReleaseList } from './ReleaseList.tsx';
 import { useWhatsNew } from './use-whats-new.ts';
 
 function WhatsNewDialog({ releases, onDismiss }: { releases: readonly Release[]; onDismiss: () => void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
+  const dialog = useModalDialog();
   const titleId = useId();
   const dismissed = useRef(false);
 
@@ -13,12 +14,6 @@ function WhatsNewDialog({ releases, onDismiss }: { releases: readonly Release[];
     dismissed.current = true;
     onDismiss();
   }
-
-  useEffect(() => {
-    const element = dialog.current;
-    if (element && !element.open) element.showModal();
-    return () => element?.close();
-  }, []);
 
   return (
     <dialog
