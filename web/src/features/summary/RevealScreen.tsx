@@ -35,7 +35,6 @@ import {
   challengeFailReason,
   challengeHeadline,
   challengeNotAppliedText,
-  describeRecord,
   levelUpCueDelayMs,
   playsReveal,
   type QuestReveal,
@@ -48,6 +47,7 @@ import {
   gainBarLabel,
   xpToNextLevelText,
 } from './reveal-rules.ts';
+import { describeRecord } from '../../lib/workout/record-text-rules.ts';
 
 const TOTAL_COUNT_UP_MS = 900;
 const LEGENDARY_GLOW_AFTER_POP_S = 0.35;

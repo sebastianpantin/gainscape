@@ -57,6 +57,7 @@ describe('export-data', () => {
   });
 
   it("exports the caller's own rows and nobody else's", async () => {
+    await db`update public.profile_private set sex = 'female' where user_id = ${owner.id}`;
     const response = await post('export-data', owner.accessToken, {});
     expect(response.status).toBe(200);
     const exported = response.body;
@@ -64,7 +65,8 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(9);
+    expect(exported.version).toBe(10);
+    expect(exported.privateProfile.sex).toBe('female');
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
     expect(exported.sets).toHaveLength(3);

@@ -43,6 +43,16 @@ import { type QuestLog } from '../quests/quest-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { skillExercisesSeed } from '../progress/skill-map-rules.ts';
 import { loadStanding } from '../progress/standing-data.ts';
+import { loadLootStatsCacheFirst } from '../stats/loot-stats.ts';
+import { loadRecordTimelinePage } from '../stats/pr-timeline.ts';
+import { loadRelativeStrengthCacheFirst } from '../stats/relative-strength.ts';
+import {
+  nextRecordTimelineCursor,
+  RECORD_TIMELINE_PAGE_WORKOUTS,
+  type RecordTimelineCursor,
+} from '../stats/pr-timeline-rules.ts';
+import { loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
+import { loadWeeklyExerciseSetsCacheFirst } from '../stats/volume-history.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
 import { announceDataChange } from './data-changes.ts';
 
@@ -325,6 +335,43 @@ export function questPointsQuery(userId: string) {
   return queryOptions({ ...questsQuery(userId), select: questPointsOf });
 }
 
+export function trainingDaysQuery(userId: string, month: string) {
+  return queryOptions({
+    queryKey: ['training-days', userId, month] as const,
+    queryFn: ({ signal }) => loadTrainingDaysCacheFirst(userId, month, signal),
+  });
+}
+
+export function weeklyExerciseSetsQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['weekly-exercise-sets', userId] as const,
+    queryFn: ({ signal }) => loadWeeklyExerciseSetsCacheFirst(userId, signal),
+  });
+}
+
+export function recordTimelineQuery(userId: string) {
+  return infiniteQueryOptions({
+    queryKey: ['record-timeline', userId] as const,
+    queryFn: ({ pageParam, signal }) => loadRecordTimelinePage(userId, pageParam, signal),
+    initialPageParam: null as RecordTimelineCursor | null,
+    getNextPageParam: (lastPage) => nextRecordTimelineCursor(lastPage.loaded, RECORD_TIMELINE_PAGE_WORKOUTS),
+  });
+}
+
+export function lootStatsQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['loot-stats', userId] as const,
+    queryFn: ({ signal }) => loadLootStatsCacheFirst(userId, signal),
+  });
+}
+
+export function relativeStrengthQuery(userId: string, exerciseId: string) {
+  return queryOptions({
+    queryKey: ['relative-strength', userId, exerciseId] as const,
+    queryFn: ({ signal }) => loadRelativeStrengthCacheFirst(userId, exerciseId, signal),
+  });
+}
+
 export const EVERY_QUERY = [
   profileQuery,
   preferencesQuery,
@@ -359,4 +406,9 @@ export const EVERY_QUERY = [
   lastLoggedWeightsQuery,
   questsQuery,
   questPointsQuery,
+  trainingDaysQuery,
+  weeklyExerciseSetsQuery,
+  recordTimelineQuery,
+  lootStatsQuery,
+  relativeStrengthQuery,
 ] as const;

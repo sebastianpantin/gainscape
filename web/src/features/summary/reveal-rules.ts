@@ -1,12 +1,10 @@
 import { levelProgress } from '@domain/index.ts';
 import { FLOAT_TOLERANCE } from '@domain/math.ts';
-import type { PersonalRecordSummary, QuestProgressSummary, SessionSummary } from '@domain/types.ts';
+import type { QuestProgressSummary, SessionSummary } from '@domain/types.ts';
 import type { DraftChallenge } from '../../offline/draft-format.ts';
-import { describeCardioGains } from '../../lib/workout/cardio-rules.ts';
-import type { Exercise } from '../../lib/exercises/catalog-rules.ts';
-import { formatLoad, formatXp } from '../../lib/format.ts';
+import { formatXp } from '../../lib/format.ts';
 import type { UnitPref } from '../../lib/profile/profile-rules.ts';
-import { type DistanceUnit, distanceUnitFor, formatWeight, HOLD_DISTANCE_UNIT } from '../../lib/units.ts';
+import { formatWeight } from '../../lib/units.ts';
 import {
   type QuestLog,
   questPointsText,
@@ -15,39 +13,6 @@ import {
   questStepText,
   rewardXpTexts,
 } from '../../lib/quests/quest-rules.ts';
-
-interface DescribedRecord {
-  headline: string;
-  previous: string;
-}
-
-function recordDistanceUnit(exercise: Exercise | undefined, unit: UnitPref): DistanceUnit {
-  if (exercise?.modality === 'cardio') return distanceUnitFor(unit, exercise.activity.paceUnit);
-  if (exercise?.measure !== undefined) return HOLD_DISTANCE_UNIT;
-  return distanceUnitFor(unit, 'per_km');
-}
-
-export function describeRecord(
-  record: PersonalRecordSummary,
-  exercise: Exercise | undefined,
-  unit: UnitPref,
-): DescribedRecord {
-  const name = exercise?.name ?? 'Exercise';
-  if (record.kind === 'cardio') {
-    return { headline: `${name}:`, previous: describeCardioGains(record.records, recordDistanceUnit(exercise, unit)) };
-  }
-  if (record.kind === 'bodyweight_reps') {
-    const previous = record.previousReps === null ? 'first record' : `was ${record.previousReps}`;
-    return { headline: `${name}: ${record.reps} reps`, previous: `(${previous})` };
-  }
-  const loadType = exercise?.modality === 'lift' ? exercise.loadType : 'external';
-  const previous =
-    record.previousLoadKg === null ? 'first record' : `was ${formatLoad(record.previousLoadKg, loadType, unit)}`;
-  return {
-    headline: `${name}: ${record.reps}RM ${formatLoad(record.loadKg!, loadType, unit)}`,
-    previous: `(${previous})`,
-  };
-}
 
 export function bonusText(
   label: 'Gear' | 'Challenge',

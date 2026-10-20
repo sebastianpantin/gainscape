@@ -4,6 +4,7 @@ import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { AccountSection } from './settings/AccountSection.tsx';
 import { AppSection } from './settings/AppSection.tsx';
 import { PrivacySection } from './settings/PrivacySection.tsx';
+import { StrengthScoreSection } from './settings/StrengthScoreSection.tsx';
 import { TimezoneSection } from './settings/TimezoneSection.tsx';
 import { TrainingSection } from './settings/TrainingSection.tsx';
 import { WeeklyGoalSection } from './settings/WeeklyGoalSection.tsx';
@@ -30,6 +31,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
       {state.status === 'ready' && (
         <>
           <TrainingSection userId={userId} profile={state.profile} replaceProfile={replace} />
+          <StrengthScoreSection userId={userId} profile={state.profile} replaceProfile={replace} />
           <WeeklyGoalSection />
           <TimezoneSection profile={state.profile} replaceProfile={replace} />
           <PrivacySection userId={userId} profile={state.profile} replaceProfile={replace} />

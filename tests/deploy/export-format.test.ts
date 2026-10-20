@@ -66,6 +66,7 @@ const TOP_LEVEL_KEYS_BY_VERSION: Record<number, readonly string[]> = {
   7: V7_KEYS,
   8: V8_KEYS,
   9: V9_KEYS,
+  10: V9_KEYS,
 };
 
 describe('the data export format', () => {

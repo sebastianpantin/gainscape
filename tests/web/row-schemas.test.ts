@@ -84,7 +84,7 @@ const CASES: SchemaCase[] = [
       rir: '2',
       rir_source: 'logged',
       prescription_ref: null,
-      sessions: { started_at: '2026-10-01T08:00:00Z' },
+      sessions: { started_at: '2026-10-01T08:00:00Z', local_date: '2026-10-01' },
     },
     broken: { rir_source: 'guessed' },
   },
@@ -315,7 +315,7 @@ describe('hold sets, which are lift sets without reps', () => {
       rir: null,
       rir_source: 'default',
       prescription_ref: null,
-      sessions: { started_at: '2026-10-01T08:00:00Z' },
+      sessions: { started_at: '2026-10-01T08:00:00Z', local_date: '2026-10-01' },
     };
     expect(progressSetRowSchema.safeParse(holdSet).success).toBe(true);
     expect(

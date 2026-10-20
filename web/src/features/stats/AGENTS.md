@@ -1,0 +1,44 @@
+# Stats Feature
+
+**Parent context:** `../AGENTS.md`
+**Generated:** 2026-10-20 · **Updated:** 2026-10-20
+
+## Purpose
+
+The Stats screen at `/collection/stats`, linked from the Collection Records tab: every long-range analytics view (training calendar, month compare, volume history, relative strength, PR timeline, loot stats) lives here, on one screen, instead of a sixth bottom tab.
+
+## Map
+
+- `StatsScreen.tsx`: the screen, with a `‹ Collection` back link like the other sub-screens.
+- Training calendar and month compare: `TrainingCalendarTable.tsx` and `MonthCompareTable.tsx` over `../../lib/stats/training-calendar-rules.ts` and `period-compare-rules.ts`. Both read `trainingDaysQuery(userId, month)`, one `training_days` RPC call (migration 059, which adds the `sessions (user_id, local_date)` index) for the shown month and the month before (`trainingDaysRange`).
+- Volume history: `VolumeHistorySection.tsx` over `../../lib/stats/volume-history-rules.ts`. It reads `weeklyExerciseSetsQuery(userId)`, the `weekly_exercise_sets(weeks)` RPC (migration 060, working sets per exercise per Monday week, weeks clamped to 1..52; it starts from the caller's sessions in the window through that index and joins `sets` by `session_id`), and the exercise list for skill shares.
+- Relative strength: `RelativeStrengthSection.tsx` over `../../lib/stats/relative-strength-rules.ts` and `dots-rules.ts`. It reads `profileQuery` (sex, latest bodyweight, time zone) and `collectionQuery` (exercises and current best e1RM from `exercise_maxes`), plus `relativeStrengthQuery(userId, exerciseId)`: the existing `exercise_progress_sets` RPC (with `local_date` since migration 064) and the bodyweight trend for the picked lift, reduced to per-day points before they are cached.
+- PR timeline: `RecentRecordsSection.tsx` (latest five) and `RecordTimelineScreen.tsx` at `/collection/stats/records` (every record by month, `Show more`), both over `RecordTimelineList.tsx` and `../../lib/stats/pr-timeline-rules.ts`. They share `recordTimelineQuery(userId)`, an infinite query over the `personal_record_timeline(before_at, before_id, page_size)` RPC (migration 061).
+- Loot: `LootStatsSection.tsx` over `../../lib/stats/loot-stats-rules.ts`, reading `lootStatsQuery(userId)`, the `loot_stats()` RPC (migration 062). A plain description list, no chart: two totals do not need one.
+- Charts: `../../components/BarChart.tsx` and `LineChart.tsx`, over `../../lib/ui/bar-chart-rules.ts` and `line-chart-rules.ts`. Week (Monday first) and month keys: `../../lib/ui/date-bucket-rules.ts`.
+
+## Rules and gotchas
+
+- Keep the screen thin: each section's decisions go in a pure `lib/**/*-rules.ts` with a unit test.
+- Read history through aggregate RPCs that return one jsonb, never by paging the History list client-side (it embeds every set and pages in 50s).
+- Every Stats query loads through `loadStatCacheFirst` (`../../offline/stats-cache.ts`), so the last answer shows offline with `OFFLINE_STATS_NOTICE`. Its root goes in `workout-changed` and `account-reset` in `query-freshness-rules.ts`.
+- History-only workouts light their day (heat 1 at least) and count as workouts and volume, but add 0 XP. Heat is relative to the best day of the shown month, in four steps.
+- The screen waits for the profile: today, the current month (the Next month limit) and the volume history's current week all come from the profile time zone (`localDateIn`, `weekStartIn`), because `complete-session` stores each workout's `local_date` in the profile time zone at sync, as the weekly goal counts weeks. The device date would put a workout near midnight on the wrong day or week.
+- Days are a plain `table` (caption = month title); each cell's name is a visually hidden label, today has `aria-current="date"`. Next month is disabled at the current month.
+- Volume history counts sets exactly like the Body screen's weekly sets (`muscleVolumeFromExerciseSets`): every non-warm-up set, history-only workouts included, split by skill share. The RPC's current week follows the profile time zone, so its root is also in `timezone-changed`. Muscles are ordered by sets over the 12 weeks, the most trained first and shown by default.
+- The PR timeline flattens the `prs` the server stored in each workout summary (record tables hold only current bests), so edits and deletes show as soon as replay rewrites the summaries. History-only workouts are skipped (their summaries carry no records). A page is up to 20 workouts with records, keyset on (`started_at`, id), so a workout's records never split across pages; only the first page is cache-first, `Show more` needs the network. Each record links to its workout.
+- Loot stats come from `loot_rolls`, which are append-only and survive a workout delete. Totals (workouts, rolls, drops, expected drops = the sum of the stored `chance`, so no formula is duplicated) count the regular rolls of kept workouts only: a PR roll is not a chance at the odds. A hit whose drop (`drops.loot_roll_id`) was revoked after an edit is not a drop. Its roll and chance still count, as do misses on a set removed later: the odds stay those of every regular roll made in a kept workout. The longest dry streak runs over every regular roll, deleted workouts included, in roll order (`created_at`, then `local_date`, `roll_index`), because that is the order `drop_luck` counted them: a late-synced workout's hit ends the streak when it synced, not on its day. The current dry streak is `drop_luck.dry_rolls` of the regular table, as on the luck panel; both refresh on `workout-changed`.
+- Relative strength: each workout's best e1RM (as on the exercise progress screen) divided by the latest bodyweight at or before that day. The day is the session's stored `local_date`, matched to the trend in one merged pass. Workouts before the first bodyweight are skipped, never back-filled with a later weight. One point per day (the best), rounded to 2 decimals. The picker offers logged barbell lifts with external load and an e1RM, squat, bench press and deadlift first. Dumbbell lifts are left out: their weight is logged per dumbbell (the effective load is the entered weight), so a multiple would read half the real load. Its root also refreshes on `profile-saved` (bodyweight) and `exercise-saved`.
+- DOTS is display only (not in the domain): published coefficients, bodyweight clamped to 40-210 kg (male) or 40-150 kg (female), total = current best e1RM of `back_squat` + `barbell_bench_press` + `deadlift`, bodyweight = the profile's latest. It asks for the sex first (link to Settings), then a bodyweight, then names every missing lift.
+- Sums stay in kg; convert only for display with `../../lib/units.ts`.
+- A sub-route (for example a full list) is declared before any `:param` route under `/collection` and added to `SCREEN_TITLES`.
+
+## Testing
+
+- Unit: `tests/web/date-bucket-rules.test.ts`, `bar-chart-rules.test.ts`, `training-days-rules.test.ts`, `training-calendar-rules.test.ts`, `period-compare-rules.test.ts`, `volume-history-rules.test.ts`, `pr-timeline-rules.test.ts`, `loot-stats-rules.test.ts`, `relative-strength-rules.test.ts`, `dots-rules.test.ts` (reference DOTS values), `stats-cache.test.ts`, the title in `route-title-rules.test.ts`.
+- RPC: `supabase/tests/34_training_days.test.sql` (also the `sessions_by_user_local_date` index) and `35_weekly_exercise_sets.test.sql`, `36_personal_record_timeline.test.sql`, `37_loot_stats.test.sql` (pgTAP), `tests/integration/training-days.test.ts`, `weekly-exercise-sets.test.ts`, `personal-record-timeline.test.ts` and `loot-stats.test.ts` (numbers through finish, edit and delete).
+- E2E (stack): `e2e/stats.spec.ts` (opens from Collection, title, focus, back link, axe; a workout lights today, month compare, month buttons, the saved copy offline; volume history for the trained muscle and the muscle picker; a new best in Recent records, offline too, the records timeline and its workout links; loot rolls and drops against the odds; e1RM per bodyweight and the DOTS card asking for the sex, then the missing lifts), `e2e/a11y.spec.ts`.
+
+## Manual Notes
+
+Notes under this heading are written by humans and preserved on regeneration.

@@ -89,6 +89,11 @@ const ProgramEnrollScreen = lazyScreen(
   'ProgramEnrollScreen',
 );
 const ProgramsScreen = lazyScreen(() => import('./features/programs/ProgramsScreen.tsx'), 'ProgramsScreen');
+const StatsScreen = lazyScreen(() => import('./features/stats/StatsScreen.tsx'), 'StatsScreen');
+const RecordTimelineScreen = lazyScreen(
+  () => import('./features/stats/RecordTimelineScreen.tsx'),
+  'RecordTimelineScreen',
+);
 const SkillsScreen = lazyTabScreen(() => import('./features/skills/SkillsScreen.tsx'), 'SkillsScreen');
 const SkillScreen = lazyScreen(() => import('./features/skills/SkillScreen.tsx'), 'SkillScreen');
 const BodyScreen = lazyScreen(() => import('./features/skills/BodyScreen.tsx'), 'BodyScreen');
@@ -223,6 +228,8 @@ function SignedInShell() {
               <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
               <Route path="/collection/history" element={<HistoryScreen userId={userId} />} />
               <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
+              <Route path="/collection/stats" element={<StatsScreen userId={userId} />} />
+              <Route path="/collection/stats/records" element={<RecordTimelineScreen userId={userId} />} />
               <Route path="/friends" element={<FriendsScreen userId={userId} />} />
               <Route path="/friends/hiscores" element={<HiscoresScreen />} />
               <Route path="/friends/:friendId" element={<FriendProfileScreen />} />

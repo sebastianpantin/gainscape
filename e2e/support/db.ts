@@ -53,6 +53,14 @@ export async function heightOf(username: string): Promise<number | null> {
   return row?.height_cm ?? null;
 }
 
+export async function sexOf(username: string): Promise<string | null> {
+  const [row] = await db`
+    select pp.sex
+    from public.profile_private pp join public.profiles p on p.id = pp.user_id
+    where p.username = ${username}`;
+  return row?.sex ?? null;
+}
+
 export async function unitPrefOf(username: string): Promise<string | null> {
   const [row] = await db`
     select pp.unit_pref::text as unit_pref
@@ -117,6 +125,17 @@ export async function activeDropsOfLatestSession(username: string) {
       and d.session_id = (
         select s.id from public.sessions s where s.user_id = p.id order by s.started_at desc limit 1)
     order by d.created_at, d.id`;
+}
+
+export async function regularLootTotals(username: string): Promise<{ rolls: number; drops: number }> {
+  const [row] = await db`
+    select count(*)::int as rolls,
+           (count(*) filter (where r.hit and not exists (
+             select 1 from public.drops d where d.loot_roll_id = r.id and d.revoked_at is not null)))::int as drops
+    from public.loot_rolls r
+    join public.profiles p on p.id = r.user_id
+    where p.username = ${username} and r.kind = 'regular'`;
+  return { rolls: row.rolls, drops: row.drops };
 }
 
 export async function setDryRolls(username: string, dryRolls: number): Promise<void> {

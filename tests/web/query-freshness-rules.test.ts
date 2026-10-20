@@ -128,6 +128,30 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('quests');
   });
 
+  it('refreshes the training calendar and month compare after a workout is finished, edited or deleted', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('training-days');
+  });
+
+  it('refreshes the volume history after a workout changes, and after a time zone change moves its weeks', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('weekly-exercise-sets');
+    expect(QUERY_ROOTS_CHANGED_BY['timezone-changed']).toContain('weekly-exercise-sets');
+  });
+
+  it('refreshes the record timeline after a workout is finished, edited or deleted', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('record-timeline');
+  });
+
+  it('refreshes the loot stats after a workout rolls loot, is edited or deleted, like the luck panel', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('loot-stats');
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('items');
+  });
+
+  it('refreshes relative strength after a workout, a bodyweight save or an exercise edit changes its e1RM or bodyweight', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('relative-strength');
+    expect(QUERY_ROOTS_CHANGED_BY['profile-saved']).toContain('relative-strength');
+    expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toContain('relative-strength');
+  });
+
   it('refreshes every query that holds account data after an account reset', () => {
     const accountRoots = QUERY_ROOTS.filter((root) => !CATALOG_ROOTS.includes(root));
     expect([...QUERY_ROOTS_CHANGED_BY['account-reset']].sort()).toEqual([...new Set(accountRoots)].sort());

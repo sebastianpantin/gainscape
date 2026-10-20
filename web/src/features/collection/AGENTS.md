@@ -5,7 +5,7 @@
 
 ## Purpose
 
-The Collection tab: personal records per exercise (`/collection`), the per-exercise progress screen, the loot inventory with crafting, gear and scroll challenges (`/collection/items`), and the shared `CollectionTabs` (Records, Items, History) that also frames the history screens.
+The Collection tab: personal records per exercise (`/collection`), the per-exercise progress screen, the loot inventory with crafting, gear and scroll challenges (`/collection/items`), the shared `CollectionTabs` (Records, Items, History) that also frames the history screens, and the Records tab's link to Stats (`../stats/`).
 
 ## Map
 

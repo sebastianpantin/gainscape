@@ -3,6 +3,7 @@ import {
   BADGE_COLOR_KEYS,
   EFFORT_INPUT_MODES,
   type Profile,
+  SEXES,
   TRAINING_FOCUSES,
   UNIT_PREFS,
 } from '../../web/src/lib/profile/profile-rules.ts';
@@ -24,6 +25,7 @@ const PROFILE: Profile = {
   bodyweightKg: 82.5,
   heightCm: null,
   birthYear: 1990,
+  sex: 'male',
   unitPref: 'kg',
   effortInputMode: 'rir',
   timezone: 'Europe/Stockholm',
@@ -43,18 +45,27 @@ describe('saved profile', () => {
     expect(profileCache.read(storage, USER_ID)).toBeNull();
   });
 
-  it('accepts every unit, effort mode, training focus and badge colour the app knows', () => {
+  it('accepts every unit, effort mode, training focus, badge colour and sex the app knows', () => {
     const storage = new MemoryStorage();
     const variants: Profile[] = [
       ...UNIT_PREFS.map((unitPref) => ({ ...PROFILE, unitPref })),
       ...EFFORT_INPUT_MODES.map((effortInputMode) => ({ ...PROFILE, effortInputMode })),
       ...TRAINING_FOCUSES.map((trainingFocus) => ({ ...PROFILE, trainingFocus })),
       ...BADGE_COLOR_KEYS.map((badgeColor) => ({ ...PROFILE, badgeColor })),
+      ...[...SEXES, null].map((sex) => ({ ...PROFILE, sex })),
     ];
     for (const variant of variants) {
       profileCache.save(storage, USER_ID, variant);
       expect(profileCache.read(storage, USER_ID)).toEqual(variant);
     }
+  });
+
+  it('reads a profile saved before sex existed as sex not set', () => {
+    const storage = new MemoryStorage();
+    const savedBeforeSex: Partial<Profile> = { ...PROFILE };
+    delete savedBeforeSex.sex;
+    profileCache.save(storage, USER_ID, savedBeforeSex as Profile);
+    expect(profileCache.read(storage, USER_ID)).toEqual({ ...PROFILE, sex: null });
   });
 
   it('patches the bodyweight of the saved profile after it was saved online', () => {

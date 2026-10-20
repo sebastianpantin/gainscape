@@ -1,11 +1,11 @@
 # lib
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-14
+**Generated:** 2026-10-01 · **Updated:** 2026-10-20
 
 ## Purpose
 
-`web/src/lib/` is the web app's non-visual layer. It holds the Supabase client, auth boot and sign-out, typed fetchers and RPC wrappers for every feature, the TanStack Query setup, the per-user device stores, and the pure rule modules all of these use. Decisions live in pure modules that `tests/web/` covers without a stack. I/O modules only fetch and hand the rows to a pure function.
+`web/src/lib/` is the web app's non-visual layer. It holds the Supabase client, auth, typed fetchers and RPC wrappers, the TanStack Query setup, per-user device stores and the pure rules they use. Decisions live in pure modules that `tests/web/` covers without a stack. I/O modules only fetch and hand the rows to a pure function.
 
 ## Map
 
@@ -14,15 +14,16 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `platform/`: the Supabase client, Edge Function calls, auth, `keyedStore`, rate limits, cross-tab channels, online and route-focus hooks, device and celebration effects, and the changelog rules with the last seen release.
 - `query/`: the TanStack Query client, every query definition, freshness and state rules, and `data-changes.ts`.
 - `exercises/`: the exercise catalog and its device cache, custom exercises, exercise notes, search, swap substitutes and repeat keys.
-- `workout/`: live-workout rules and stores: set editing, cardio, effort labels, supersets, warm-ups, plates, rest timer, training device, session timing and baseline, progression hints, the active workout bar.
+- `workout/`: live-workout rules and stores: set editing, cardio, effort labels, supersets, warm-ups, plates, rest timer, training device, session timing and baseline, progression hints, the active workout bar, record text.
 - `programs/`: program persistence, enrollment and every `program-*-rules.ts`.
 - `history/`: past sessions, the history overview and the last session of an exercise.
 - `progress/`: standing, the skill map, recovery, weekly goal, weekly muscle volume, bodyweight trend and exercise progress.
 - `collection/`: items, gear, challenges, the companion pet and the records collection.
 - `profile/`: profile and its view, account actions, preferences and onboarding.
 - `social/`: friends, feed and hiscores.
+- `stats/`: the Stats screen's aggregate RPC reads (cache-first via `../offline/stats-cache.ts`) and their rules, one pair per section of `../features/stats/AGENTS.md`.
 - `quests/`: the quest log (cache-first), `start-quest` and `quest-rules.ts` (board, step and requirement text, start errors).
-- `ui/`: pure helpers behind shared components (number field, count-up, line chart, toast, term help) and `glossary.ts`.
+- `ui/`: pure helpers behind shared components (number field, count-up, charts, toast, term help, week and month keys) and `glossary.ts`.
 - The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`.
 - Start here:
   - `platform/supabase.ts`: the one client.
@@ -41,7 +42,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 ### Boundaries
 
-- Keep the pure/I/O split. Pure modules take their dependencies as arguments (`querySessionPage(client, ...)`, `queryRecentSets(client, since)`, `queryProgressSets(client, ...)`, `queryOwnedPets(client, ...)`, `bootAuth(ports)`, `readCachedExercises(storage, ...)`). That way integration tests can pass their own client and tests can fake time.
+- Keep the pure/I/O split. Pure modules take their dependencies as arguments (`querySessionPage(client, ...)`, `queryRecentSets(client, since)`, `bootAuth(ports)`, `readCachedExercises(storage, ...)`), so integration tests can pass their own client and tests can fake time.
 - Never import `platform/supabase.ts` from a pure module. It reads `window.location` and `import.meta.env` at import time, which breaks plain Vitest runs. Import `SupabaseClient` as a type only.
 - `platform/changelog-rules.ts` must not import any app code, because plain Node loads it for `make changelog-unreleased` and `make deploy`. That is why `whatsNewMayOpen` takes `introPending` as a boolean.
 - `profile/profile.ts` re-exports `profile/profile-rules.ts`; keep that re-export. No other module re-exports, so import from the module that defines the name (`countCollection` from `collection/collection-rules.ts`, not from `collection/collection-data.ts`).
@@ -61,7 +62,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Users never see a raw error code or database text. Every failure maps to a sentence, with a generic fallback (`programErrorText`, `pinProblemText`, the account export and delete messages).
 - `emailChangeProblem` does not use `authErrorMessage` on purpose: `authErrorMessage` would call a 403 an invalid link.
 - A password change re-checks the current password against the email `getUser()` returns now, not a cached one. Only `invalid_credentials` means the password was wrong.
-- Row shapes are hand-written zod `*RowSchema`s (`*Row` is inferred) beside the `*_COLUMNS` strings; update both on a schema change. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a row with a new server value and falls back to its saved copy: ship the client value a release before the server writes it. Numerics may arrive as strings (`numericColumn`); coerce with `Number(...)`.
+- Row shapes are hand-written zod `*RowSchema`s (`*Row` is inferred) beside the `*_COLUMNS` strings; update both on a schema change. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a row with a new server value and falls back to its saved copy: ship the client value a release before the server writes it. String numerics: `numericColumn`, then `Number(...)`.
 
 ### Must stay in sync with SQL
 
@@ -77,7 +78,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Exercise progress and bodyweight trend:
   - `progress/exercise-progress-rules.ts` uses RIR for e1RM only when `rir_source` is `logged`.
   - `progress/plateau-rules.ts` never flags a lift whose latest session a program drove (`prescription_ref`), so it cannot second-guess the program's deloads.
-  - `queryProgressSets` reads the `exercise_progress_sets` RPC (058): one `jsonb` value, which PostgREST's 1000-row `max_rows` does not cap.
+  - `queryProgressSets` reads the `exercise_progress_sets` RPC (058, with each session's `local_date` since 064): one `jsonb` value, which PostgREST's 1000-row `max_rows` does not cap.
   - `progress/bodyweight-trend.ts` reads newest first, so a row cap drops the oldest days.
 - `BODYWEIGHT_LOAD_NOT_ZERO_CODE` and `UNKNOWN_EXERCISE_CODE` (in `workout/exercise-edit-rules.ts`) are mapped by both the finish flow and the history save.
 
@@ -120,13 +121,10 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 ### Browser behaviour
 
-- `useRouteFocusAndTitle` moves focus only when the pathname changes.
-  - It waits up to 3 s for a `main` without `aria-busy`, then polls until the `h1` really has focus.
-  - It leaves focus alone while a `dialog[open]` is showing, or when focus is already inside `main`.
-  - It saves the scroll position per location key, so Back returns to the same place.
+- `useRouteFocusAndTitle` moves focus only on a pathname change: it waits up to 3 s for a `main` without `aria-busy`, polls until the `h1` really has focus, leaves focus alone while a `dialog[open]` shows or focus is inside `main`, and saves scroll per location key so Back returns there.
 - `playTones` plays only if a suspended `AudioContext` resumes within 500 ms, so a frozen page never beeps late. Every device call is guarded with try/catch.
 - `restAlertIsFresh` gives a 5 s grace, so a page that thaws late stays quiet. `claimRestAlert` lets only one tab alert per rest.
-- `platesPerSide` loads the heaviest plates first, like a gym, and falls back to the fewest plates when that fails. It is not greedy.
+- `platesPerSide` loads the heaviest plates first, like a gym, then falls back to the fewest plates; not greedy.
 - React keys for repeated exercises come from `exerciseKeys`; workout cards key by the draft's `clientId`.
 - The enroll form is generated from the template definition, with no code per program. Custom templates bind `x_<exercise hex>` lifts, and a `<lift>Lift` option picks a lift's key. Archived and custom exercises never bind.
 

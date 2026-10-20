@@ -10,7 +10,7 @@ The post-workout reveal at `/reveal`: XP per skill, level-ups, gear and challeng
 ## Map
 
 - `RevealScreen.tsx`: the screen and its choreography.
-- `reveal-rules.ts`: pure timeline, skip rules and every text the reveal shows (records, bonuses, challenge outcome, notices). Put new decisions here.
+- `reveal-rules.ts`: pure timeline, skip rules and every text the reveal shows (bonuses, challenge outcome, notices). Record lines come from `../../lib/workout/record-text-rules.ts`, shared with the Stats PR timeline. Put new decisions here.
 - `../../offline/last-summary.ts`: `sessionStorage` memory of the last summary.
 - The summary types live in `@domain/types.ts` and are produced by `complete-session`.
 
@@ -32,7 +32,7 @@ The post-workout reveal at `/reveal`: XP per skill, level-ups, gear and challeng
 
 ## Testing
 
-- Unit (`make test-web`): `tests/web/reveal-rules.test.ts`, `tests/web/last-summary.test.ts` (storage stubbed with `tests/web/memory-storage.ts`).
+- Unit (`make test-web`): `tests/web/reveal-rules.test.ts`, `record-text-rules.test.ts`, `tests/web/last-summary.test.ts` (storage stubbed with `tests/web/memory-storage.ts`).
 - E2E (stack): `reveal.spec.ts` (skip, cue, loot tap, reduced motion), `loot.spec.ts`, `challenges.spec.ts`, `a11y.spec.ts`, and the flows that finish a workout.
 
 ## Manual Notes

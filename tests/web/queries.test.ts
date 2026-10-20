@@ -109,6 +109,7 @@ describe('profile reads', () => {
     bodyweightKg: 82.5,
     heightCm: null,
     birthYear: null,
+    sex: null,
     unitPref: 'lb',
     effortInputMode: 'rir',
     timezone: 'UTC',

@@ -69,6 +69,7 @@ const PRIVATE_ROW = {
   bodyweight_kg: '82.5',
   height_cm: null,
   birth_year: null,
+  sex: 'female',
   unit_pref: 'kg',
   effort_input_mode: 'level',
   timezone: 'UTC',
@@ -167,6 +168,7 @@ describe('saving screen caches after an online load', () => {
     expect(load.fromCache).toBe(false);
     expect(profileCache.read(storage, USER_ID)).toEqual(load.loaded);
     expect(profileCache.read(storage, USER_ID)?.bodyweightKg).toBe(82.5);
+    expect(load.loaded.sex).toBe('female');
   });
 
   it('keeps the saved profile when the load was cancelled, so an older answer cannot replace a newer edit', async () => {

@@ -40,6 +40,7 @@ const PROFILE: Profile = {
   bodyweightKg: null,
   heightCm: null,
   birthYear: null,
+  sex: null,
   unitPref: 'kg',
   effortInputMode: 'level',
   timezone: 'UTC',
