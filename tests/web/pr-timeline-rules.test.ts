@@ -6,6 +6,7 @@ import {
   recordTimelineMonths,
   type RecordTimelineRow,
   recordTimelineRowsSchema,
+  showMoreRecordsButton,
 } from '../../web/src/lib/stats/pr-timeline-rules.ts';
 
 const base = { equipment: 'barbell', custom: false, archived: false, skillShares: [] };
@@ -103,5 +104,25 @@ describe('nextRecordTimelineCursor', () => {
   it('stops after a page with fewer workouts than asked for', () => {
     expect(nextRecordTimelineCursor(timeline, 4)).toBeUndefined();
     expect(nextRecordTimelineCursor([], 4)).toBeUndefined();
+  });
+});
+
+describe('showMoreRecordsButton', () => {
+  it('is hidden on the last page', () => {
+    expect(showMoreRecordsButton({ hasNextPage: false, isFetchingNextPage: false })).toBeNull();
+  });
+
+  it('offers the next page, also while the loaded pages refresh in the background', () => {
+    expect(showMoreRecordsButton({ hasNextPage: true, isFetchingNextPage: false })).toEqual({
+      label: 'Show more',
+      canFetch: true,
+    });
+  });
+
+  it('cannot ask for the next page again while it is loading', () => {
+    expect(showMoreRecordsButton({ hasNextPage: true, isFetchingNextPage: true })).toEqual({
+      label: 'Loading more…',
+      canFetch: false,
+    });
   });
 });

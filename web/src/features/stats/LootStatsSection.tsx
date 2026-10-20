@@ -33,6 +33,9 @@ export function LootStatsSection({ userId }: { userId: string }) {
       {loaded.status === 'loading' && <ListSkeleton panels={1} />}
       {loaded.status === 'failed' && <ProblemWithRetry problem={loaded.problem} onRetry={lootStats.refetch} />}
       {loaded.status === 'ready' && <LootStatsList stats={loaded.data} />}
+      <p className="muted tiny">
+        Regular loot rolls of the workouts you kept. PR loot is left out, and so is a drop taken back after an edit.
+      </p>
     </section>
   );
 }

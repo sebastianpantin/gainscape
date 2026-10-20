@@ -78,7 +78,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Exercise progress and bodyweight trend:
   - `progress/exercise-progress-rules.ts` uses RIR for e1RM only when `rir_source` is `logged`.
   - `progress/plateau-rules.ts` never flags a lift whose latest session a program drove (`prescription_ref`), so it cannot second-guess the program's deloads.
-  - `queryProgressSets` reads the `exercise_progress_sets` RPC (058): one `jsonb` value, which PostgREST's 1000-row `max_rows` does not cap.
+  - `queryProgressSets` reads the `exercise_progress_sets` RPC (058, with each session's `local_date` since 064): one `jsonb` value, which PostgREST's 1000-row `max_rows` does not cap.
   - `progress/bodyweight-trend.ts` reads newest first, so a row cap drops the oldest days.
 - `BODYWEIGHT_LOAD_NOT_ZERO_CODE` and `UNKNOWN_EXERCISE_CODE` (in `workout/exercise-edit-rules.ts`) are mapped by both the finish flow and the history save.
 

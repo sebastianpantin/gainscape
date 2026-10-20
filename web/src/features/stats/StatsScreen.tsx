@@ -4,12 +4,11 @@ import { Link } from 'react-router-dom';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { todayLocalDate } from '../../lib/progress/lift-goal-rules.ts';
-import { trainingDaysQuery } from '../../lib/query/queries.ts';
+import { profileQuery, trainingDaysQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { monthCompare } from '../../lib/stats/period-compare-rules.ts';
 import { trainingCalendar } from '../../lib/stats/training-calendar-rules.ts';
-import { monthKey, shiftMonth } from '../../lib/ui/date-bucket-rules.ts';
+import { localDateIn, monthKey, shiftMonth } from '../../lib/ui/date-bucket-rules.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
 import { LootStatsSection } from './LootStatsSection.tsx';
@@ -19,8 +18,8 @@ import { RelativeStrengthSection } from './RelativeStrengthSection.tsx';
 import { TrainingCalendarTable } from './TrainingCalendarTable.tsx';
 import { VolumeHistorySection } from './VolumeHistorySection.tsx';
 
-export function StatsScreen({ userId }: { userId: string }) {
-  const today = todayLocalDate(new Date());
+function StatsSections({ userId, timezone, now }: { userId: string; timezone: string; now: number }) {
+  const today = localDateIn(timezone, now);
   const thisMonth = monthKey(today);
   const [month, setMonth] = useState(thisMonth);
   const trainingDays = useQuery(trainingDaysQuery(userId, month));
@@ -30,12 +29,7 @@ export function StatsScreen({ userId }: { userId: string }) {
   const notice = loaded.status === 'ready' ? cacheFirstNotice(loaded.data, OFFLINE_STATS_NOTICE) : null;
 
   return (
-    <main className="screen stack">
-      <Link className="back-link" to="/collection">
-        ‹ Collection
-      </Link>
-      <h1 className="title">Stats</h1>
-      <p className="muted">How your training adds up over weeks and months.</p>
+    <>
       {notice && (
         <p className="notice" role="status">
           {notice}
@@ -68,10 +62,29 @@ export function StatsScreen({ userId }: { userId: string }) {
           <MonthCompareTable compare={monthCompare(month, loaded.data.loaded, unitPref)} />
         </section>
       )}
-      <VolumeHistorySection userId={userId} today={today} />
+      <VolumeHistorySection userId={userId} timezone={timezone} now={now} />
       <RelativeStrengthSection userId={userId} />
       <RecentRecordsSection userId={userId} />
       <LootStatsSection userId={userId} />
+    </>
+  );
+}
+
+export function StatsScreen({ userId }: { userId: string }) {
+  const profile = useQuery(profileQuery(userId));
+  const [openedAt] = useState(() => Date.now());
+  const loaded = loadedState(profile.data?.loaded, profile.error);
+
+  return (
+    <main className="screen stack">
+      <Link className="back-link" to="/collection">
+        ‹ Collection
+      </Link>
+      <h1 className="title">Stats</h1>
+      <p className="muted">How your training adds up over weeks and months.</p>
+      {loaded.status === 'loading' && <ListSkeleton panels={1} />}
+      {loaded.status === 'failed' && <ProblemWithRetry problem={loaded.problem} onRetry={profile.refetch} />}
+      {loaded.status === 'ready' && <StatsSections userId={userId} timezone={loaded.data.timezone} now={openedAt} />}
     </main>
   );
 }

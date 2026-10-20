@@ -6,10 +6,12 @@ security invoker
 set search_path = ''
 as $$
   with kept_workout_rolls as (
-    select r.session_id, r.chance, r.hit
+    select r.session_id, r.chance,
+      r.hit and not exists (
+        select 1 from public.drops d where d.loot_roll_id = r.id and d.revoked_at is not null) as kept_drop
     from public.loot_rolls r
     join public.sessions s on s.id = r.session_id and s.user_id = r.user_id
-    where r.user_id = (select auth.uid())
+    where r.user_id = (select auth.uid()) and r.kind = 'regular'
   ),
   regular_rolls_in_roll_order as (
     select r.hit,
@@ -28,7 +30,7 @@ as $$
   select jsonb_build_object(
     'workouts_with_rolls', (select count(distinct session_id) from kept_workout_rolls),
     'rolls', (select count(*) from kept_workout_rolls),
-    'hits', (select count(*) filter (where hit) from kept_workout_rolls),
+    'drops', (select count(*) filter (where kept_drop) from kept_workout_rolls),
     'expected_drops', (select coalesce(sum(chance), 0) from kept_workout_rolls),
     'longest_dry_streak', (select coalesce(max(length), 0) from dry_streaks),
     'current_dry_streak', coalesce(

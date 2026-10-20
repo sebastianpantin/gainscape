@@ -1,3 +1,5 @@
+create index sessions_by_user_local_date on public.sessions (user_id, local_date);
+
 create function public.training_days(from_day date, to_day date)
 returns jsonb
 language sql

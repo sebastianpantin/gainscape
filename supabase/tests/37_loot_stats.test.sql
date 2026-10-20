@@ -17,6 +17,18 @@ returns void language sql as $$
   where t.key = case add_roll.kind when 'regular' then 'regular' else 'rare' end;
 $$;
 
+create function pg_temp.add_drop(session uuid, roll_index int, revoked boolean)
+returns void language sql as $$
+  insert into public.drops
+    (user_id, loot_roll_id, session_id, set_id, item_id, quantity, source, revoked_at, revoke_reason, revoked_quantity)
+  select r.user_id, r.id, r.session_id, r.set_id, (select i.id from public.items i order by i.key limit 1), 1, r.kind,
+         case when add_drop.revoked then now() end,
+         case when add_drop.revoked then 'set_removed'::public.revoke_reason end,
+         case when add_drop.revoked then 1 end
+  from public.loot_rolls r
+  where r.session_id = add_drop.session and r.kind = 'regular' and r.roll_index = add_drop.roll_index;
+$$;
+
 create function pg_temp.set_dry_rolls(owner uuid, table_key text, dry_rolls int)
 returns void language sql as $$
   insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
@@ -27,6 +39,7 @@ select tests.add_session(:'owner', '2026-10-01 08:00+00') as first \gset
 select tests.add_session(:'owner', '2026-10-02 08:00+00') as second \gset
 select tests.add_session(:'owner', '2026-10-03 08:00+00') as late_synced \gset
 select tests.add_session(:'owner', '2026-10-06 08:00+00') as latest \gset
+select tests.add_session(:'owner', '2026-10-07 08:00+00') as pr_only \gset
 select gen_random_uuid() as deleted \gset
 
 select pg_temp.add_roll(:'owner', :'first', 'regular', '2026-10-01', 0, 0.1, false, '2026-10-01 09:00+00');
@@ -40,6 +53,9 @@ select pg_temp.add_roll(:'owner', :'deleted', 'regular', '2026-10-04', 0, 0.19, 
 select pg_temp.add_roll(:'owner', :'deleted', 'regular', '2026-10-04', 1, 0.22, false, '2026-10-04 09:00+00');
 select pg_temp.add_roll(:'owner', :'late_synced', 'regular', '2026-10-03', 0, 0.25, true, '2026-10-05 09:00+00');
 select pg_temp.add_roll(:'owner', :'latest', 'regular', '2026-10-06', 0, 0.1, false, '2026-10-06 09:00+00');
+select pg_temp.add_roll(:'owner', :'pr_only', 'pr', '2026-10-07', 0, 1, true, '2026-10-07 09:00+00');
+select pg_temp.add_drop(:'first', 2, false);
+select pg_temp.add_drop(:'late_synced', 0, true);
 select pg_temp.set_dry_rolls(:'owner', 'regular', 1);
 select pg_temp.set_dry_rolls(:'owner', 'rare', 9);
 
@@ -64,8 +80,8 @@ select is(
 select tests.authenticate_as(:'owner');
 select is(
   public.loot_stats() - 'longest_dry_streak' - 'current_dry_streak',
-  jsonb_build_object('workouts_with_rolls', 4, 'rolls', 9, 'hits', 3, 'expected_drops', 2.13),
-  'totals count the regular and PR rolls of kept workouts, expecting the sum of their stored chances'
+  jsonb_build_object('workouts_with_rolls', 4, 'rolls', 8, 'drops', 1, 'expected_drops', 1.13),
+  'totals count the regular rolls of kept workouts against the sum of their stored chances, without PR loot or revoked drops'
 );
 select is(
   (public.loot_stats() ->> 'longest_dry_streak')::int,
@@ -83,7 +99,7 @@ select tests.authenticate_as(:'stranger');
 select is(
   public.loot_stats(),
   jsonb_build_object(
-    'workouts_with_rolls', 0, 'rolls', 0, 'hits', 0, 'expected_drops', 0,
+    'workouts_with_rolls', 0, 'rolls', 0, 'drops', 0, 'expected_drops', 0,
     'longest_dry_streak', 0, 'current_dry_streak', 0),
   'a stranger reads none of the owner''s rolls and starts at zero'
 );

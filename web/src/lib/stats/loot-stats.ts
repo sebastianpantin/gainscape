@@ -5,7 +5,7 @@ import { supabase } from '../platform/supabase.ts';
 import { type LootStatsRow, lootStatsRowSchema, queryLootStats } from './loot-stats-rules.ts';
 
 export function loadLootStatsCacheFirst(userId: string, signal: AbortSignal): Promise<CacheFirstLoad<LootStatsRow>> {
-  return loadStatCacheFirst(deviceStorage(), userId, 'loot-stats', lootStatsRowSchema, () =>
+  return loadStatCacheFirst(deviceStorage(), userId, { family: 'loot-stats', entry: '' }, lootStatsRowSchema, () =>
     queryLootStats(supabase, signal),
   );
 }

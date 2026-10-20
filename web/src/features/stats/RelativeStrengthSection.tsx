@@ -6,7 +6,6 @@ import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { type Profile } from '../../lib/profile/profile-rules.ts';
 import { trendDayText } from '../../lib/progress/bodyweight-trend-rules.ts';
-import { sessionProgress } from '../../lib/progress/exercise-progress-rules.ts';
 import { collectionQuery, profileQuery, relativeStrengthQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { competitionBests, dotsCard } from '../../lib/stats/dots-rules.ts';
@@ -14,30 +13,17 @@ import {
   currentMultipleText,
   type RelativeStrengthLift,
   relativeStrengthLifts,
-  relativeStrengthPoints,
   relativeStrengthSeries,
 } from '../../lib/stats/relative-strength-rules.ts';
 import { formatWeight } from '../../lib/units.ts';
 import { type Collection } from '../../lib/collection/collection-data.ts';
 
-function LiftMultipleChart({
-  userId,
-  lift,
-  timezone,
-}: {
-  userId: string;
-  lift: RelativeStrengthLift;
-  timezone: string;
-}) {
+function LiftMultipleChart({ userId, lift }: { userId: string; lift: RelativeStrengthLift }) {
   const relative = useQuery(relativeStrengthQuery(userId, lift.id));
   const loaded = loadedState(relative.data?.loaded, relative.error);
   if (loaded.status === 'loading') return <ListSkeleton panels={1} />;
   if (loaded.status === 'failed') return <ProblemWithRetry problem={loaded.problem} onRetry={relative.refetch} />;
-  const points = relativeStrengthPoints(
-    sessionProgress(loaded.data.sets, 'external'),
-    loaded.data.bodyweights,
-    timezone,
-  );
+  const points = loaded.data;
   return (
     <>
       {points.length > 0 && (
@@ -53,7 +39,7 @@ function LiftMultipleChart({
   );
 }
 
-function LiftPicker({ userId, lifts, timezone }: { userId: string; lifts: RelativeStrengthLift[]; timezone: string }) {
+function LiftPicker({ userId, lifts }: { userId: string; lifts: RelativeStrengthLift[] }) {
   const [chosenId, setChosenId] = useState(lifts[0].id);
   const pickerId = useId();
   const shown = lifts.find((lift) => lift.id === chosenId) ?? lifts[0];
@@ -69,7 +55,7 @@ function LiftPicker({ userId, lifts, timezone }: { userId: string; lifts: Relati
           ))}
         </select>
       </div>
-      <LiftMultipleChart userId={userId} lift={shown} timezone={timezone} />
+      <LiftMultipleChart userId={userId} lift={shown} />
     </>
   );
 }
@@ -135,16 +121,17 @@ export function RelativeStrengthSection({ userId }: { userId: string }) {
       {loaded.status === 'ready' && (
         <>
           {lifts.length === 0 ? (
-            <p className="muted">Log a barbell or dumbbell lift to see its e1RM per bodyweight.</p>
+            <p className="muted">Log a barbell lift to see its e1RM per bodyweight.</p>
           ) : (
-            <LiftPicker userId={userId} lifts={lifts} timezone={loaded.data.profile.timezone} />
+            <LiftPicker userId={userId} lifts={lifts} />
           )}
           <DotsPanel profile={loaded.data.profile} collection={loaded.data.collection} />
         </>
       )}
       <p className="muted tiny">
-        Each workout&apos;s best e1RM divided by the latest bodyweight saved on or before that day. DOTS compares the
-        squat, bench press and deadlift total across bodyweights.
+        Each workout&apos;s best e1RM divided by the latest bodyweight saved on or before that day. Barbell lifts only,
+        since a dumbbell lift is logged per dumbbell. DOTS compares the squat, bench press and deadlift total across
+        bodyweights.
       </p>
     </section>
   );

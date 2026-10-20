@@ -100,6 +100,19 @@ export function nextRecordTimelineCursor(
   return { startedAt: last.started_at, sessionId: last.session_id };
 }
 
+interface NextPageState {
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+}
+
+export function showMoreRecordsButton({
+  hasNextPage,
+  isFetchingNextPage,
+}: NextPageState): { label: string; canFetch: boolean } | null {
+  if (!hasNextPage) return null;
+  return isFetchingNextPage ? { label: 'Loading more…', canFetch: false } : { label: 'Show more', canFetch: true };
+}
+
 export async function queryRecordTimeline(
   client: SupabaseClient,
   before: RecordTimelineCursor | null,

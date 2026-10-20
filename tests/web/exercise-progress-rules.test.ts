@@ -21,7 +21,7 @@ function setRow(changes: Partial<ProgressSetRow> & { session_id: string }): Prog
     rir: null,
     rir_source: 'estimated',
     prescription_ref: null,
-    sessions: { started_at: `2026-10-0${day}T08:00:00Z` },
+    sessions: { started_at: `2026-10-0${day}T08:00:00Z`, local_date: `2026-10-0${day}` },
     ...changes,
   };
 }
@@ -40,6 +40,7 @@ describe('session progress', () => {
       {
         sessionId: 'day-1',
         startedAt: '2026-10-01T08:00:00Z',
+        localDate: '2026-10-01',
         e1rmKg: 111,
         topSetKg: 100,
         topSetReps: 3,
@@ -49,6 +50,7 @@ describe('session progress', () => {
       {
         sessionId: 'day-3',
         startedAt: '2026-10-03T08:00:00Z',
+        localDate: '2026-10-03',
         e1rmKg: 112,
         topSetKg: 105,
         topSetReps: 3,
@@ -128,6 +130,7 @@ describe('plateau sessions', () => {
     {
       sessionId: 'a',
       startedAt: '2026-10-01T12:00:00Z',
+      localDate: '2026-10-01',
       e1rmKg: null,
       topSetKg: 60,
       topSetReps: 12,
@@ -137,6 +140,7 @@ describe('plateau sessions', () => {
     {
       sessionId: 'b',
       startedAt: '2026-10-03T12:00:00Z',
+      localDate: '2026-10-03',
       e1rmKg: 100,
       topSetKg: 90,
       topSetReps: 5,
@@ -163,6 +167,7 @@ describe('progress chart series', () => {
     {
       sessionId: 'a',
       startedAt: '2026-10-01T12:00:00Z',
+      localDate: '2026-10-01',
       e1rmKg: null,
       topSetKg: 60,
       topSetReps: 12,
@@ -172,6 +177,7 @@ describe('progress chart series', () => {
     {
       sessionId: 'b',
       startedAt: '2026-10-03T12:00:00Z',
+      localDate: '2026-10-03',
       e1rmKg: 100,
       topSetKg: 90,
       topSetReps: 5,

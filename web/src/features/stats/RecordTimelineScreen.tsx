@@ -7,7 +7,7 @@ import { messageOf } from '../../lib/error-text.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { exerciseListQuery, recordTimelineQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
-import { NO_RECORDS_TEXT, recordTimelineMonths } from '../../lib/stats/pr-timeline-rules.ts';
+import { NO_RECORDS_TEXT, recordTimelineMonths, showMoreRecordsButton } from '../../lib/stats/pr-timeline-rules.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
 import { RecordTimelineList } from './RecordTimelineList.tsx';
@@ -30,9 +30,10 @@ export function RecordTimelineScreen({ userId }: { userId: string }) {
   );
   const notice = pages?.[0] ? cacheFirstNotice(pages[0], OFFLINE_STATS_NOTICE) : null;
   const retry = () => Promise.all([timeline.refetch(), exercises.refetch()]);
+  const showMoreButton = showMoreRecordsButton(timeline);
 
   async function showMore() {
-    if (timeline.isFetching) return;
+    if (!showMoreButton?.canFetch) return;
     setMoreProblem(null);
     const result = await timeline.fetchNextPage();
     if (result.isError) setMoreProblem(messageOf(result.error, 'Could not load more records.'));
@@ -65,9 +66,9 @@ export function RecordTimelineScreen({ userId }: { userId: string }) {
           {moreProblem}
         </p>
       )}
-      {timeline.hasNextPage && (
-        <button className="button" type="button" disabled={timeline.isFetchingNextPage} onClick={() => void showMore()}>
-          {timeline.isFetchingNextPage ? 'Loading more…' : 'Show more'}
+      {showMoreButton && (
+        <button className="button" type="button" disabled={!showMoreButton.canFetch} onClick={() => void showMore()}>
+          {showMoreButton.label}
         </button>
       )}
     </main>

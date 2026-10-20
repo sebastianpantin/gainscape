@@ -14,8 +14,12 @@ export async function loadTrainingDaysCacheFirst(
   month: string,
   signal: AbortSignal,
 ): Promise<CacheFirstLoad<TrainingSession[]>> {
-  const load = await loadStatCacheFirst(deviceStorage(), userId, `training-days:${month}`, trainingDayRowsSchema, () =>
-    queryTrainingDays(supabase, month, signal),
+  const load = await loadStatCacheFirst(
+    deviceStorage(),
+    userId,
+    { family: 'training-days', entry: month },
+    trainingDayRowsSchema,
+    () => queryTrainingDays(supabase, month, signal),
   );
   return { ...load, loaded: load.loaded.map(trainingSessionOf) };
 }

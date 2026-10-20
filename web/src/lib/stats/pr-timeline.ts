@@ -15,8 +15,12 @@ export async function loadRecordTimelinePage(
   signal: AbortSignal,
 ): Promise<CacheFirstLoad<RecordTimelineRow[]>> {
   if (before === null) {
-    return loadStatCacheFirst(deviceStorage(), userId, 'record-timeline', recordTimelineRowsSchema, () =>
-      queryRecordTimeline(supabase, null, signal),
+    return loadStatCacheFirst(
+      deviceStorage(),
+      userId,
+      { family: 'record-timeline', entry: '' },
+      recordTimelineRowsSchema,
+      () => queryRecordTimeline(supabase, null, signal),
     );
   }
   failFastWhenOffline();

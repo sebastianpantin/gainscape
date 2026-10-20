@@ -3,51 +3,36 @@ import { z } from 'zod';
 import type { ExerciseStrengthView } from '../collection/collection-data.ts';
 import { type Exercise, isLiftExercise } from '../exercises/catalog-rules.ts';
 import { type BodyweightDay } from '../progress/bodyweight-trend-rules.ts';
-import { progressSetRowSchema, type SessionProgress } from '../progress/exercise-progress-rules.ts';
-import { todayLocalDate } from '../progress/lift-goal-rules.ts';
+import { type SessionProgress } from '../progress/exercise-progress-rules.ts';
 import { type ChartSeries } from '../ui/line-chart-rules.ts';
 import { POWERLIFTING_LIFT_KEYS } from './dots-rules.ts';
 
-export const relativeStrengthDataSchema = z.object({
-  sets: z.array(progressSetRowSchema),
-  bodyweights: z.array(z.object({ day: z.string(), bodyweightKg: z.number() })),
-});
+export const relativeStrengthPointsSchema = z.array(z.object({ day: z.string(), multiple: z.number() }));
 
-export type RelativeStrengthData = z.infer<typeof relativeStrengthDataSchema>;
-
-export interface RelativeStrengthPoint {
-  day: string;
-  multiple: number;
-}
+export type RelativeStrengthPoint = z.infer<typeof relativeStrengthPointsSchema>[number];
 
 export interface RelativeStrengthLift {
   id: string;
   name: string;
 }
 
-const RELATIVE_STRENGTH_EQUIPMENT = new Set(['barbell', 'dumbbell']);
-
-export function bodyweightOnDay(trend: readonly BodyweightDay[], day: string): number | null {
-  const inEffect = trend.filter((entry) => entry.day <= day).at(-1);
-  return inEffect?.bodyweightKg ?? null;
-}
-
 export function relativeStrengthPoints(
   sessions: readonly SessionProgress[],
   trend: readonly BodyweightDay[],
-  timezone: string,
 ): RelativeStrengthPoint[] {
   const bestByDay = new Map<string, number>();
-  for (const { startedAt, e1rmKg } of sessions) {
-    const day = todayLocalDate(new Date(startedAt), timezone);
-    const bodyweightKg = bodyweightOnDay(trend, day);
+  const byDay = [...sessions].sort((a, b) => a.localDate.localeCompare(b.localDate));
+  let nextEntry = 0;
+  let bodyweightKg: number | null = null;
+  for (const { localDate, e1rmKg } of byDay) {
+    for (let entry = trend[nextEntry]; entry !== undefined && entry.day <= localDate; entry = trend[++nextEntry]) {
+      bodyweightKg = entry.bodyweightKg;
+    }
     if (e1rmKg === null || bodyweightKg === null) continue;
     const multiple = roundTo(2, e1rmKg / bodyweightKg);
-    bestByDay.set(day, Math.max(bestByDay.get(day) ?? multiple, multiple));
+    bestByDay.set(localDate, Math.max(bestByDay.get(localDate) ?? multiple, multiple));
   }
-  return [...bestByDay.entries()]
-    .map(([day, multiple]) => ({ day, multiple }))
-    .sort((a, b) => a.day.localeCompare(b.day));
+  return [...bestByDay.entries()].map(([day, multiple]) => ({ day, multiple }));
 }
 
 export function relativeStrengthSeries(points: readonly RelativeStrengthPoint[]): ChartSeries[] {
@@ -79,7 +64,7 @@ export function relativeStrengthLifts(
       (exercise) =>
         isLiftExercise(exercise) &&
         exercise.loadType === 'external' &&
-        RELATIVE_STRENGTH_EQUIPMENT.has(exercise.equipment) &&
+        exercise.equipment === 'barbell' &&
         (strengthByExercise.get(exercise.id)?.e1rmKg ?? null) !== null,
     )
     .sort((a, b) => competitionOrder(a) - competitionOrder(b) || a.name.localeCompare(b.name))

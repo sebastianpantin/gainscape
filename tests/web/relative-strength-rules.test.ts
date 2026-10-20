@@ -3,17 +3,17 @@ import type { ExerciseStrengthView } from '../../web/src/lib/collection/collecti
 import type { Exercise, LiftExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { SessionProgress } from '../../web/src/lib/progress/exercise-progress-rules.ts';
 import {
-  bodyweightOnDay,
   currentMultipleText,
   relativeStrengthLifts,
   relativeStrengthPoints,
   relativeStrengthSeries,
 } from '../../web/src/lib/stats/relative-strength-rules.ts';
 
-function session(startedAt: string, e1rmKg: number | null): SessionProgress {
+function session(localDate: string, e1rmKg: number | null, startedAt = `${localDate}T08:00:00Z`): SessionProgress {
   return {
-    sessionId: startedAt,
+    sessionId: `${localDate}-${startedAt}`,
     startedAt,
+    localDate,
     e1rmKg,
     topSetKg: 100,
     topSetReps: 5,
@@ -43,59 +43,52 @@ const trend = [
   { day: '2026-10-10', bodyweightKg: 81 },
 ];
 
-describe('bodyweightOnDay', () => {
-  it('uses the latest bodyweight at or before the day', () => {
-    expect(bodyweightOnDay(trend, '2026-10-01')).toBe(80);
-    expect(bodyweightOnDay(trend, '2026-10-04')).toBe(80);
-    expect(bodyweightOnDay(trend, '2026-10-05')).toBe(82);
-    expect(bodyweightOnDay(trend, '2026-12-31')).toBe(81);
-  });
-
-  it('has no bodyweight before the first entry', () => {
-    expect(bodyweightOnDay(trend, '2026-09-30')).toBeNull();
-    expect(bodyweightOnDay([], '2026-10-01')).toBeNull();
-  });
-});
-
 describe('relativeStrengthPoints', () => {
   it('divides each session e1RM by the bodyweight in effect that day, to two decimals', () => {
-    const points = relativeStrengthPoints(
-      [session('2026-10-02T08:00:00Z', 120), session('2026-10-06T08:00:00Z', 125)],
-      trend,
-      'UTC',
-    );
+    const points = relativeStrengthPoints([session('2026-10-02', 120), session('2026-10-06', 125)], trend);
     expect(points).toEqual([
       { day: '2026-10-02', multiple: 1.5 },
       { day: '2026-10-06', multiple: 1.52 },
     ]);
   });
 
-  it('skips sessions before the first bodyweight and sessions without an e1RM', () => {
-    const points = relativeStrengthPoints(
-      [
-        session('2026-09-29T08:00:00Z', 110),
-        session('2026-10-03T08:00:00Z', null),
-        session('2026-10-11T08:00:00Z', 121.5),
-      ],
-      trend,
-      'UTC',
-    );
-    expect(points).toEqual([{ day: '2026-10-11', multiple: 1.5 }]);
+  it('uses the bodyweight saved on the day itself and the latest one after the last entry', () => {
+    const points = relativeStrengthPoints([session('2026-10-05', 123), session('2026-12-31', 162)], trend);
+    expect(points).toEqual([
+      { day: '2026-10-05', multiple: 1.5 },
+      { day: '2026-12-31', multiple: 2 },
+    ]);
   });
 
-  it('dates a session in the profile time zone', () => {
-    const lateEvening = session('2026-09-30T20:00:00Z', 120);
-    expect(relativeStrengthPoints([lateEvening], trend, 'UTC')).toEqual([]);
-    expect(relativeStrengthPoints([lateEvening], trend, 'Pacific/Auckland')).toEqual([
-      { day: '2026-10-01', multiple: 1.5 },
+  it('skips sessions before the first bodyweight and sessions without an e1RM', () => {
+    const points = relativeStrengthPoints(
+      [session('2026-09-29', 110), session('2026-10-03', null), session('2026-10-11', 121.5)],
+      trend,
+    );
+    expect(points).toEqual([{ day: '2026-10-11', multiple: 1.5 }]);
+    expect(relativeStrengthPoints([session('2026-10-02', 120)], [])).toEqual([]);
+  });
+
+  it('dates a session by its stored local date, not by when it started', () => {
+    const lateEvening = session('2026-10-01', 120, '2026-09-30T20:00:00Z');
+    expect(relativeStrengthPoints([lateEvening], trend)).toEqual([{ day: '2026-10-01', multiple: 1.5 }]);
+  });
+
+  it('matches sessions to bodyweights in day order even when they started out of order', () => {
+    const points = relativeStrengthPoints(
+      [session('2026-10-11', 121.5, '2026-10-10T20:00:00Z'), session('2026-10-02', 120, '2026-10-02T08:00:00Z')],
+      trend,
+    );
+    expect(points).toEqual([
+      { day: '2026-10-02', multiple: 1.5 },
+      { day: '2026-10-11', multiple: 1.5 },
     ]);
   });
 
   it('keeps the best multiple of a day with two sessions', () => {
     const points = relativeStrengthPoints(
-      [session('2026-10-02T08:00:00Z', 100), session('2026-10-02T18:00:00Z', 120)],
+      [session('2026-10-02', 100, '2026-10-02T08:00:00Z'), session('2026-10-02', 120, '2026-10-02T18:00:00Z')],
       trend,
-      'UTC',
     );
     expect(points).toEqual([{ day: '2026-10-02', multiple: 1.5 }]);
   });
@@ -127,7 +120,7 @@ describe('currentMultipleText', () => {
 describe('relativeStrengthLifts', () => {
   const strength = (e1rmKg: number | null): ExerciseStrengthView => ({ e1rmKg, repsCapacity: null });
 
-  it('offers logged barbell and dumbbell lifts with an e1RM, competition lifts first, then by name', () => {
+  it('offers logged barbell lifts with an e1RM, competition lifts first, then by name, but no dumbbell lift, logged per dumbbell', () => {
     const exercises: Exercise[] = [
       lift('barbell_row', 'Barbell Row'),
       lift('deadlift', 'Deadlift'),
@@ -153,7 +146,6 @@ describe('relativeStrengthLifts', () => {
       'Barbell Bench Press',
       'Deadlift',
       'Barbell Row',
-      'Dumbbell Press',
     ]);
   });
 

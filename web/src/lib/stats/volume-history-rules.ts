@@ -12,6 +12,7 @@ import {
 } from '../progress/weekly-volume-rules.ts';
 import { parsedRows } from '../rows.ts';
 import { type ChartBar } from '../ui/bar-chart-rules.ts';
+import { weekStartIn } from '../ui/date-bucket-rules.ts';
 
 const VOLUME_HISTORY_WEEKS = 12;
 
@@ -68,9 +69,10 @@ function nameFromKey(skill: BodySkill): string {
 export function volumeHistory(
   rows: readonly WeeklyExerciseSetRow[],
   exercisesById: ReadonlyMap<string, VolumeExercise>,
-  thisWeek: string,
+  timeZone: string,
+  now: number,
 ): MuscleHistory[] {
-  const weekly = historyWeeks(thisWeek).map((weekStart) => ({
+  const weekly = historyWeeks(weekStartIn(timeZone, now)).map((weekStart) => ({
     weekStart,
     volume: muscleVolumeFromExerciseSets(setsByExerciseInWeek(rows, weekStart), exercisesById),
   }));

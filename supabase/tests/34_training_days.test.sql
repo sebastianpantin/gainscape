@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(10);
 
 select tests.create_user('days_owner') as owner \gset
 select tests.create_user('days_stranger') as stranger \gset
@@ -32,6 +32,10 @@ select pg_temp.add_day_set(:'first', :'owner', 40, 8, true);
 select pg_temp.add_day_set(:'imported', :'owner', 100, 1, false);
 
 select has_function('public', 'training_days', array['date', 'date'], 'training_days exists');
+select has_index(
+  'public', 'sessions', 'sessions_by_user_local_date', array['user_id', 'local_date'],
+  'sessions are indexed by user and local date, so day ranges and week windows skip older workouts'
+);
 select ok(
   has_function_privilege('authenticated', 'public.training_days(date, date)', 'execute')
     and not has_function_privilege('anon', 'public.training_days(date, date)', 'execute')

@@ -127,13 +127,15 @@ export async function activeDropsOfLatestSession(username: string) {
     order by d.created_at, d.id`;
 }
 
-export async function lootRollTotals(username: string): Promise<{ rolls: number; hits: number }> {
+export async function regularLootTotals(username: string): Promise<{ rolls: number; drops: number }> {
   const [row] = await db`
-    select count(*)::int as rolls, (count(*) filter (where r.hit))::int as hits
+    select count(*)::int as rolls,
+           (count(*) filter (where r.hit and not exists (
+             select 1 from public.drops d where d.loot_roll_id = r.id and d.revoked_at is not null)))::int as drops
     from public.loot_rolls r
     join public.profiles p on p.id = r.user_id
-    where p.username = ${username}`;
-  return { rolls: row.rolls, hits: row.hits };
+    where p.username = ${username} and r.kind = 'regular'`;
+  return { rolls: row.rolls, drops: row.drops };
 }
 
 export async function setDryRolls(username: string, dryRolls: number): Promise<void> {

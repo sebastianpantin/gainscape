@@ -12,7 +12,6 @@ import {
   volumeHistory,
   volumeHistoryBars,
 } from '../../lib/stats/volume-history-rules.ts';
-import { weekKey } from '../../lib/ui/date-bucket-rules.ts';
 
 function MuscleVolumeChart({ muscles }: { muscles: readonly MuscleHistory[] }) {
   const [chosenSkill, setChosenSkill] = useState(muscles[0].skill);
@@ -48,7 +47,7 @@ function MuscleVolumeChart({ muscles }: { muscles: readonly MuscleHistory[] }) {
   );
 }
 
-export function VolumeHistorySection({ userId, today }: { userId: string; today: string }) {
+export function VolumeHistorySection({ userId, timezone, now }: { userId: string; timezone: string; now: number }) {
   const weeklySets = useQuery(weeklyExerciseSetsQuery(userId));
   const exercises = useQuery(exerciseListQuery(userId));
   const loaded = loadedState(
@@ -56,7 +55,8 @@ export function VolumeHistorySection({ userId, today }: { userId: string; today:
       ? volumeHistory(
           weeklySets.data.loaded,
           new Map(exercises.data.map((exercise) => [exercise.id, exercise])),
-          weekKey(today),
+          timezone,
+          now,
         )
       : undefined,
     weeklySets.error ?? exercises.error,

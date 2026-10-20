@@ -4,7 +4,7 @@ import { type LootStatsRow, lootStatsRowSchema, lootStatsView } from '../../web/
 const stats: LootStatsRow = {
   workouts_with_rolls: 4,
   rolls: 12,
-  hits: 3,
+  drops: 3,
   expected_drops: 2.4,
   longest_dry_streak: 7,
   current_dry_streak: 1,
@@ -35,22 +35,22 @@ describe('lootStatsView', () => {
 
   it('says whether the drops beat the odds, by how many, or matched them', () => {
     expect(lootStatsView(stats)?.luckText).toBe('Luckier than expected by 0.6 drops.');
-    expect(lootStatsView({ ...stats, hits: 1 })?.luckText).toBe('Unluckier than expected by 1.4 drops.');
-    expect(lootStatsView({ ...stats, hits: 2, expected_drops: 1.9 })?.luckText).toBe(
+    expect(lootStatsView({ ...stats, drops: 1 })?.luckText).toBe('Unluckier than expected by 1.4 drops.');
+    expect(lootStatsView({ ...stats, drops: 2, expected_drops: 1.9 })?.luckText).toBe(
       'Luckier than expected by 0.1 drops.',
     );
-    expect(lootStatsView({ ...stats, hits: 2, expected_drops: 1.96 })?.luckText).toBe('Right on the odds.');
+    expect(lootStatsView({ ...stats, drops: 2, expected_drops: 1.96 })?.luckText).toBe('Right on the odds.');
   });
 
   it('counts one workout and one drop in the singular', () => {
-    expect(lootStatsView({ ...stats, workouts_with_rolls: 1, rolls: 1, hits: 1 })?.entries.slice(0, 2)).toEqual([
+    expect(lootStatsView({ ...stats, workouts_with_rolls: 1, rolls: 1, drops: 1 })?.entries.slice(0, 2)).toEqual([
       { label: 'Loot rolls', value: '1 in 1 workout' },
       { label: 'Drops', value: '1, expected 2.4' },
     ]);
   });
 
   it('keeps the dry streaks when every workout that rolled was deleted', () => {
-    const view = lootStatsView({ ...stats, workouts_with_rolls: 0, rolls: 0, hits: 0, expected_drops: 0 });
+    const view = lootStatsView({ ...stats, workouts_with_rolls: 0, rolls: 0, drops: 0, expected_drops: 0 });
     expect(view?.entries).toEqual([
       { label: 'Loot rolls', value: '0 in 0 workouts' },
       { label: 'Drops', value: '0, expected 0.0' },
@@ -65,7 +65,7 @@ describe('lootStatsView', () => {
       lootStatsView({
         workouts_with_rolls: 0,
         rolls: 0,
-        hits: 0,
+        drops: 0,
         expected_drops: 0,
         longest_dry_streak: 0,
         current_dry_streak: 0,

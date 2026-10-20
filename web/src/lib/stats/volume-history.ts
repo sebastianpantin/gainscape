@@ -12,7 +12,11 @@ export function loadWeeklyExerciseSetsCacheFirst(
   userId: string,
   signal: AbortSignal,
 ): Promise<CacheFirstLoad<WeeklyExerciseSetRow[]>> {
-  return loadStatCacheFirst(deviceStorage(), userId, 'weekly-exercise-sets', weeklyExerciseSetRowsSchema, () =>
-    queryWeeklyExerciseSets(supabase, signal),
+  return loadStatCacheFirst(
+    deviceStorage(),
+    userId,
+    { family: 'weekly-exercise-sets', entry: '' },
+    weeklyExerciseSetRowsSchema,
+    () => queryWeeklyExerciseSets(supabase, signal),
   );
 }

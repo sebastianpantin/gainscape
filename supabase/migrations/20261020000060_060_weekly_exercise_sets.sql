@@ -13,11 +13,11 @@ as $$
   ),
   week_sets as (
     select date_trunc('week', s.local_date::timestamp)::date as week_start, st.exercise_id, count(*)::int as sets
-    from public.sets st
-    join public.sessions s on s.id = st.session_id
-    where st.user_id = (select auth.uid())
-      and not st.is_warmup
+    from public.sessions s
+    join public.sets st on st.session_id = s.id
+    where s.user_id = (select auth.uid())
       and s.local_date >= (select monday from first_week)
+      and not st.is_warmup
     group by 1, 2
   )
   select coalesce(

@@ -39,7 +39,7 @@ export const progressSetRowSchema = z.object({
   rir: numericColumn.nullable(),
   rir_source: z.enum(RIR_SOURCES),
   prescription_ref: z.string().nullable(),
-  sessions: z.object({ started_at: z.string() }),
+  sessions: z.object({ started_at: z.string(), local_date: z.string() }),
 });
 
 export type ProgressSetRow = z.infer<typeof progressSetRowSchema>;
@@ -68,6 +68,7 @@ type MaxRepsRow = z.infer<typeof maxRepsRowSchema>;
 export interface SessionProgress {
   sessionId: string;
   startedAt: string;
+  localDate: string;
   e1rmKg: number | null;
   topSetKg: number;
   topSetReps: number;
@@ -119,6 +120,7 @@ export function sessionProgress(rows: readonly ProgressSetRow[], loadType: LoadT
     bySession.set(row.session_id, {
       sessionId: row.session_id,
       startedAt: row.sessions.started_at,
+      localDate: row.sessions.local_date,
       e1rmKg: higher(seen?.e1rmKg ?? null, e1rmKg),
       topSetKg,
       topSetReps,

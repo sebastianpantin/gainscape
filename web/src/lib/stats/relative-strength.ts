@@ -3,25 +3,29 @@ import { loadStatCacheFirst } from '../../offline/stats-cache.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { supabase } from '../platform/supabase.ts';
 import { fetchBodyweightTrend } from '../progress/bodyweight-trend.ts';
-import { queryProgressSets } from '../progress/exercise-progress-rules.ts';
-import { type RelativeStrengthData, relativeStrengthDataSchema } from './relative-strength-rules.ts';
+import { queryProgressSets, sessionProgress } from '../progress/exercise-progress-rules.ts';
+import {
+  type RelativeStrengthPoint,
+  relativeStrengthPoints,
+  relativeStrengthPointsSchema,
+} from './relative-strength-rules.ts';
 
 export function loadRelativeStrengthCacheFirst(
   userId: string,
   exerciseId: string,
   signal: AbortSignal,
-): Promise<CacheFirstLoad<RelativeStrengthData>> {
+): Promise<CacheFirstLoad<RelativeStrengthPoint[]>> {
   return loadStatCacheFirst(
     deviceStorage(),
     userId,
-    `relative-strength:${exerciseId}`,
-    relativeStrengthDataSchema,
+    { family: 'relative-strength', entry: exerciseId },
+    relativeStrengthPointsSchema,
     async () => {
       const [sets, bodyweights] = await Promise.all([
         queryProgressSets(supabase, exerciseId, signal),
         fetchBodyweightTrend(userId, signal),
       ]);
-      return { sets, bodyweights };
+      return relativeStrengthPoints(sessionProgress(sets, 'external'), bodyweights);
     },
   );
 }

@@ -36,6 +36,8 @@ describe('historyWeeks', () => {
   });
 });
 
+const MONDAY_NOON_UTC = Date.parse('2026-10-19T12:00:00Z');
+
 describe('volumeHistory', () => {
   const rows = [
     row('2026-10-05', 'bench', 4),
@@ -46,7 +48,7 @@ describe('volumeHistory', () => {
   ];
 
   it('splits each week of sets across the muscles each exercise trains and fills empty weeks with zero', () => {
-    const chest = volumeHistory(rows, exercisesById, '2026-10-19').find((muscle) => muscle.skill === 'chest');
+    const chest = volumeHistory(rows, exercisesById, 'UTC', MONDAY_NOON_UTC).find((muscle) => muscle.skill === 'chest');
     expect(chest?.name).toBe('Chest');
     expect(chest?.weeks).toHaveLength(12);
     expect(chest?.weeks.slice(-3)).toEqual([
@@ -59,12 +61,12 @@ describe('volumeHistory', () => {
   });
 
   it('leaves out weeks older than the window and exercises it does not know', () => {
-    const legs = volumeHistory(rows, exercisesById, '2026-10-19').find((muscle) => muscle.skill === 'legs');
+    const legs = volumeHistory(rows, exercisesById, 'UTC', MONDAY_NOON_UTC).find((muscle) => muscle.skill === 'legs');
     expect(legs?.totalSets).toBe(10);
   });
 
   it('puts the most trained muscles first, then the body order, and names untrained muscles from their key', () => {
-    const history = volumeHistory(rows, exercisesById, '2026-10-19');
+    const history = volumeHistory(rows, exercisesById, 'UTC', MONDAY_NOON_UTC);
     expect(history.map((muscle) => muscle.skill)).toEqual([
       'legs',
       'chest',
@@ -76,11 +78,21 @@ describe('volumeHistory', () => {
     ]);
     expect(history.find((muscle) => muscle.skill === 'back')?.name).toBe('Back');
   });
+
+  it('ends on the week of the profile time zone, like the weekly goal, not the device date', () => {
+    const sundayEveningInNewYork = Date.parse('2026-10-19T02:00:00Z');
+    const thisWeekIn = (timeZone: string) =>
+      volumeHistory(rows, exercisesById, timeZone, sundayEveningInNewYork)
+        .find((muscle) => muscle.skill === 'legs')
+        ?.weeks.at(-1);
+    expect(thisWeekIn('Europe/Stockholm')).toEqual({ weekStart: '2026-10-19', sets: 10 });
+    expect(thisWeekIn('America/New_York')).toEqual({ weekStart: '2026-10-12', sets: 0 });
+  });
 });
 
 describe('volumeHistoryBars', () => {
   it('labels each bar with its week start date', () => {
-    const chest = volumeHistory([row('2026-10-19', 'bench', 2)], exercisesById, '2026-10-19')[0];
+    const chest = volumeHistory([row('2026-10-19', 'bench', 2)], exercisesById, 'UTC', MONDAY_NOON_UTC)[0];
     const bars = volumeHistoryBars(chest!);
     expect(bars.at(-1)).toEqual({ label: '19 Oct', value: 1.4 });
     expect(bars[0]).toEqual({ label: '3 Aug', value: 0 });
@@ -92,7 +104,8 @@ describe('thisWeekText', () => {
     const history = volumeHistory(
       [row('2026-10-19', 'squat', 12), row('2026-10-19', 'bench', 2)],
       exercisesById,
-      '2026-10-19',
+      'UTC',
+      MONDAY_NOON_UTC,
     );
     const named = (skill: string) => history.find((muscle) => muscle.skill === skill)!;
     expect(thisWeekText(named('legs'))).toBe('This week: 12 sets · within target');

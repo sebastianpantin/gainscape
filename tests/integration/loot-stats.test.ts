@@ -8,12 +8,14 @@ interface StoredRoll {
   kind: 'regular' | 'pr';
   chance: string;
   hit: boolean;
+  drop_revoked: boolean;
 }
 
 async function storedRollsInRollOrder(userId: string): Promise<StoredRoll[]> {
   return await db<StoredRoll[]>`
     select exists (select 1 from public.sessions s where s.id = r.session_id) as session_kept,
-           r.kind, r.chance::text as chance, r.hit
+           r.kind, r.chance::text as chance, r.hit,
+           exists (select 1 from public.drops d where d.loot_roll_id = r.id and d.revoked_at is not null) as drop_revoked
     from public.loot_rolls r
     where r.user_id = ${userId}
     order by r.created_at, r.local_date, r.roll_index, r.id`;
@@ -37,11 +39,11 @@ async function regularDryRolls(userId: string): Promise<number> {
 }
 
 function lootStatsFromRolls(rolls: readonly StoredRoll[], dryRolls: number, workoutsWithRolls: number): LootStatsRow {
-  const kept = rolls.filter((roll) => roll.session_kept);
+  const kept = rolls.filter((roll) => roll.session_kept && roll.kind === 'regular');
   return {
     workouts_with_rolls: workoutsWithRolls,
     rolls: kept.length,
-    hits: kept.filter((roll) => roll.hit).length,
+    drops: kept.filter((roll) => roll.hit && !roll.drop_revoked).length,
     expected_drops: Number(kept.reduce((sum, roll) => sum + Number(roll.chance), 0).toFixed(5)),
     longest_dry_streak: longestRunOfMisses(rolls),
     current_dry_streak: dryRolls,
@@ -92,7 +94,7 @@ describe('loot stats', () => {
     expect(await lootStatsOf(stranger)).toEqual({
       workouts_with_rolls: 0,
       rolls: 0,
-      hits: 0,
+      drops: 0,
       expected_drops: 0,
       longest_dry_streak: 0,
       current_dry_streak: 0,

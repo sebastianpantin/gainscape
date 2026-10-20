@@ -17,13 +17,19 @@ function mondayOnOrBefore(utcMidnight: number): string {
   return new Date(utcMidnight - daysSinceMonday * MS_PER_DAY).toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
-export function weekStartIn(timeZone: string, now: number): string {
+export function localDateIn(timeZone: string, now: number): string {
   const parts = Object.fromEntries(
     dayFormat(timeZone)
       .formatToParts(now)
       .map(({ type, value }) => [type, value]),
   );
-  return mondayOnOrBefore(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
+  return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)))
+    .toISOString()
+    .slice(0, ISO_DATE_LENGTH);
+}
+
+export function weekStartIn(timeZone: string, now: number): string {
+  return weekKey(localDateIn(timeZone, now));
 }
 
 export function weekKey(localDate: string): string {

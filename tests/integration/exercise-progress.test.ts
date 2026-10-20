@@ -100,6 +100,7 @@ describe('exercise progress sets', () => {
     expect(rows.length).toBeGreaterThan(SERVER_ROW_LIMIT);
     const progress = sessionProgress(rows, 'external');
     expect(progress.map((session) => session.sessionId)).toEqual([...sessionIds].reverse());
+    expect(progress.at(-1)?.localDate).toBe('2026-09-29');
   });
 
   it('reads the prescription of each set, so a program-driven workout is told apart', async () => {

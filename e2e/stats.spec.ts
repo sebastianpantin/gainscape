@@ -1,7 +1,7 @@
 import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
 import { logBench, openTab, register, uniqueUsername } from './support/app.ts';
-import { lootRollTotals, setDryRolls } from './support/db.ts';
+import { regularLootTotals, setDryRolls } from './support/db.ts';
 
 test('Stats opens from Collection, names the page, keeps Collection lit and leads back', async ({ page }) => {
   await register(page, uniqueUsername('stats_nav'));
@@ -140,7 +140,7 @@ test('recent records list a new best, offline too, and the full timeline by mont
   await context.setOffline(false);
 });
 
-test('the loot section counts the rolls and drops of every workout against the odds', async ({ page }) => {
+test('the loot section counts the regular rolls and drops of every workout against the odds', async ({ page }) => {
   const username = uniqueUsername('stats_loot');
   await register(page, username);
   await openTab(page, 'Collection');
@@ -152,13 +152,13 @@ test('the loot section counts the rolls and drops of every workout against the o
   await logBench(page, 60);
   await openTab(page, 'Train');
   await logBench(page, 70);
-  const { rolls, hits } = await lootRollTotals(username);
+  const { rolls, drops } = await regularLootTotals(username);
   await setDryRolls(username, 3);
   await openTab(page, 'Collection');
   await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
 
   await expect(loot.getByText(`${rolls} in 2 workouts`, { exact: true })).toBeVisible();
-  await expect(loot.getByText(new RegExp(`^${hits}, expected \\d+\\.\\d$`))).toBeVisible();
+  await expect(loot.getByText(new RegExp(`^${drops}, expected \\d+\\.\\d$`))).toBeVisible();
   await expect(loot.getByText('Drops per workout', { exact: true })).toBeVisible();
   await expect(loot.getByText('3 loot rolls', { exact: true })).toBeVisible();
   await expect(

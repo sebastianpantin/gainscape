@@ -1,12 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import {
   daysInMonth,
+  localDateIn,
   monthKey,
   monthTitle,
   shiftMonth,
   weekKey,
   weekStartIn,
 } from '../../web/src/lib/ui/date-bucket-rules.ts';
+
+describe('localDateIn', () => {
+  it('is the calendar day in the profile time zone, the day a synced workout is stored on', () => {
+    const sundayEveningInNewYork = Date.parse('2026-10-19T02:00:00Z');
+    expect(localDateIn('America/New_York', sundayEveningInNewYork)).toBe('2026-10-18');
+    expect(localDateIn('Europe/Stockholm', sundayEveningInNewYork)).toBe('2026-10-19');
+    expect(localDateIn('UTC', Date.parse('2026-01-01T00:00:00Z'))).toBe('2026-01-01');
+  });
+
+  it('falls back to UTC for a time zone this device does not know', () => {
+    expect(localDateIn('Mars/Olympus_Mons', Date.parse('2026-10-19T02:00:00Z'))).toBe('2026-10-19');
+  });
+
+  it('starts the week that weekStartIn names', () => {
+    const now = Date.parse('2026-10-19T02:00:00Z');
+    expect(weekKey(localDateIn('America/New_York', now))).toBe(weekStartIn('America/New_York', now));
+  });
+});
 
 describe('weekStartIn', () => {
   it('is the Monday of the current week in the profile time zone', () => {
