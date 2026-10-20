@@ -1,4 +1,4 @@
-export interface RawFunctionAnswer {
+interface RawFunctionAnswer {
   status: number;
   rawBody: string;
 }

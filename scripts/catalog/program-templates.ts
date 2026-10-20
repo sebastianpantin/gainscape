@@ -259,7 +259,7 @@ function issuePath(path: readonly PropertyKey[]): string {
   return path.map(String).join('.');
 }
 
-export function readProgramTemplateSources(dir: string = PROGRAM_TEMPLATES_DIR): ProgramTemplateSource[] {
+function readProgramTemplateSources(dir: string = PROGRAM_TEMPLATES_DIR): ProgramTemplateSource[] {
   return readdirSync(dir)
     .filter((file) => file.endsWith('.yaml'))
     .sort()
@@ -348,7 +348,7 @@ export function renderProgramTemplates(templates: readonly ProgramTemplate[]): s
   return `insert into public.program_templates (key, version, name, definition) values\n${rows.join(',\n')}\non conflict (key, version) do nothing;`;
 }
 
-export const PROGRAM_TEMPLATES_LOCK_PATH = join(import.meta.dirname, '../../catalog/program-templates.lock.json');
+const PROGRAM_TEMPLATES_LOCK_PATH = join(import.meta.dirname, '../../catalog/program-templates.lock.json');
 
 export type ProgramTemplateLock = Readonly<Record<string, string>>;
 
@@ -368,8 +368,8 @@ function lockKey(definition: ProgramDefinition): string {
   return `${definition.key}@${definition.version}`;
 }
 
-export function readProgramTemplateLock(path: string = PROGRAM_TEMPLATES_LOCK_PATH): ProgramTemplateLock {
-  return z.record(z.string(), z.string()).parse(JSON.parse(readFileSync(path, 'utf8')));
+export function readProgramTemplateLock(): ProgramTemplateLock {
+  return z.record(z.string(), z.string()).parse(JSON.parse(readFileSync(PROGRAM_TEMPLATES_LOCK_PATH, 'utf8')));
 }
 
 export function programDefinitionHash(definition: ProgramDefinition): string {
