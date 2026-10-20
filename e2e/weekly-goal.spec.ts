@@ -3,7 +3,7 @@ import { expect, test } from './support/fixtures.ts';
 import { logBench, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
 
 function weeklyGoalCard(page: Page) {
-  return page.getByRole('region', { name: 'Weekly goal' });
+  return page.getByRole('region', { name: 'This week' });
 }
 
 function levelNudge(page: Page) {
@@ -17,7 +17,8 @@ function goalChoice(page: Page, name: string) {
 test('a weekly goal counts workouts on Today and a change waits for next week', async ({ page }) => {
   await register(page, uniqueUsername('goal'));
   await expect(page.getByRole('heading', { level: 1, name: 'Train', exact: true })).toBeVisible();
-  await expect(weeklyGoalCard(page)).toHaveCount(0);
+  await expect(weeklyGoalCard(page)).toContainText('0 workouts this week');
+  await expect(weeklyGoalCard(page)).not.toContainText('streak');
   await expect(levelNudge(page)).toHaveCount(0);
 
   await openFromProfile(page, 'Settings');

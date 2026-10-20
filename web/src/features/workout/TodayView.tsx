@@ -14,9 +14,9 @@ import { PetCompanion } from './PetCompanion.tsx';
 import { ProgramDayStarts } from './ProgramDayStarts.tsx';
 import { ProgramSummary } from './ProgramSummary.tsx';
 import { ProgramToday } from './ProgramToday.tsx';
+import { ThisWeekCard } from './ThisWeekCard.tsx';
 import { greetingFor, nearestLevelUp, nearestLevelUpText } from './today-rules.ts';
 import { type useWorkoutStart } from './use-workout-start.ts';
-import { WeeklyGoalCard } from './WeeklyGoalCard.tsx';
 
 interface TodayViewProps {
   userId: string;
@@ -76,17 +76,7 @@ export function TodayView({
         </p>
       )}
       <InstallCard userId={userId} />
-      <div className="today-row">
-        {levelNudge && (
-          <Link className="level-nudge tap-link" to="/skills">
-            {nearestLevelUpText(levelNudge)}
-          </Link>
-        )}
-        <PetCompanion userId={userId} />
-      </div>
-      <WeeklyGoalCard />
-      <LiftGoalsCard userId={userId} unit={unit} />
-      <FriendActivityStrip userId={userId} />
+      <ThisWeekCard userId={userId} />
       <ProgramSummary userId={userId} program={program} />
       <ProgramToday
         program={program}
@@ -95,12 +85,6 @@ export function TodayView({
         disabled={start.startingDay}
         onStart={start.startFromPrescription}
         onSkip={start.skipProgramDay}
-      />
-      <ProgramDayStarts
-        userId={userId}
-        disabled={start.startingDay}
-        followingProgram={program.kind !== 'none'}
-        onStart={start.startFromDay}
       />
       <button
         ref={startButton}
@@ -114,6 +98,22 @@ export function TodayView({
       <p className="muted" style={{ textAlign: 'center' }}>
         Freestyle: add exercises as you go.
       </p>
+      <ProgramDayStarts
+        userId={userId}
+        disabled={start.startingDay}
+        followingProgram={program.kind !== 'none'}
+        onStart={start.startFromDay}
+      />
+      <div className="today-row">
+        {levelNudge && (
+          <Link className="level-nudge tap-link" to="/skills">
+            {nearestLevelUpText(levelNudge)}
+          </Link>
+        )}
+        <PetCompanion userId={userId} />
+      </div>
+      <LiftGoalsCard userId={userId} unit={unit} />
+      <FriendActivityStrip userId={userId} />
       {onboarding.open && (
         <FirstRunDialog
           userId={userId}

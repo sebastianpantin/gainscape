@@ -17,6 +17,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
   - Screen decisions (picked exercise, swap list, add-button focus key, superset members): `workout-screen-rules.ts`.
   - Lift card decisions (menu, advice, warm-ups, when rest starts): `exercise-card-rules.ts`.
   - Today nudges: `today-rules.ts`.
+  - This week strip: `week-strip-rules.ts`.
   - Last-session chips: `last-set-rules.ts`.
   - Per-set feedback: `set-feedback-rules.ts`.
   - Set menu: `set-menu-rules.ts`.
@@ -77,6 +78,8 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - `Remove exercise` asks first (`removingAsksFirst`) when a set is logged or planned, or sets were added past the starting one, so tidying an unused card stays one tap. Edits to the starting set's values do not count: the draft keeps no baseline to compare with.
 - Holds take no superset, warm-ups, quick fill or swap. Cardio cards keep a plain `Remove` instead of `ExerciseMenu`.
 - At the set limit (`MAX_SETS_PER_SESSION`), or at 4 hours of bouts, the add buttons are disabled and the picker stops offering what will not fit. History edit behaves the same way.
+- Train home order (checked at 360x780, `e2e/train-home.spec.ts`): header, notices, `ThisWeekCard`, the program summary and today's prescription, then `Start workout`, then program days, the progress and highlight cards, lift goals and friends. Start stays in the first screen for a lifter without a program; a program follower starts from the prescription above it. Keep new cards below Start.
+- `ThisWeekCard` is the only streak: the weekly goal's (weeks in a row that met the goal). Its strip reads `trainingDaysQuery` for the current month in the profile time zone (the RPC range includes the month before, so a week that starts there is whole), cache-first, so it shows offline. Without a goal it counts this week's workouts and links to the goal setting.
 - `PetCompanion` uses `ownedPetsQuery`, not `itemsQuery`, so Items and the reveal keep their own cache.
 - `streakRiskText` counts from the server's `weekStart`, which follows the profile timezone, against the device's day. It returns null when the device day falls outside that week (possible near midnight on Sunday).
 - The picker gets only active exercises (`exercisePickerList`), but `exerciseListLoadQuery` saves the archived ones too, because the Exercises screen, program editor and reveal need them offline.
@@ -93,7 +96,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - The domain math is tested in `tests/domain/`.
 - E2E (stack needed, `make e2e`):
   - `drafts`, `multi-tab`, `token-refresh`, `workout-records`, `programs`, `profile` (RPE, pounds), `training-aids`.
-  - `loot`, `weekly-goal`, `supersets`, `challenges`, `custom-exercise`, `notify-prompt`, `active-workout-bar`, `a11y`, `term-help`.
+  - `train-home`, `loot`, `weekly-goal`, `supersets`, `challenges`, `custom-exercise`, `notify-prompt`, `active-workout-bar`, `a11y`, `term-help`.
   - `e2e/pwa/offline.spec.ts` (`make e2e-pwa`).
 
 ## Manual Notes
