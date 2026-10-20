@@ -16,19 +16,19 @@ export interface WorkerPort {
   addEventListener(type: 'statechange', listener: () => void): void;
 }
 
-export interface RegistrationPort {
+interface RegistrationPort {
   waiting: WorkerPort | null;
   installing: WorkerPort | null;
   update(): Promise<unknown>;
   addEventListener(type: 'updatefound', listener: () => void): void;
 }
 
-export interface ContainerPort {
+interface ContainerPort {
   controller: unknown;
   addEventListener(type: 'controllerchange', listener: () => void): void;
 }
 
-export interface ChannelPort {
+interface ChannelPort {
   postMessage(message: unknown): void;
   addEventListener(type: 'message', listener: (event: MessageEvent<unknown>) => void): void;
 }

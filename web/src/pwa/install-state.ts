@@ -32,6 +32,22 @@ export function installCardKey(userId: string): string {
   return `gainscape.install-card.${userId}`;
 }
 
+export function readInstallCard(userId: string): string | null {
+  try {
+    return localStorage.getItem(installCardKey(userId));
+  } catch {
+    return null;
+  }
+}
+
+export function writeInstallCard(userId: string, value: string): void {
+  try {
+    localStorage.setItem(installCardKey(userId), value);
+  } catch {
+    return;
+  }
+}
+
 export function forgetInstallCard(storage: Storage | null, userId: string): void {
   try {
     storage?.removeItem(installCardKey(userId));

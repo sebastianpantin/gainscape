@@ -25,7 +25,7 @@ import { type CatalogItem } from '../../lib/collection/item-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { fetchLatestExerciseList, historyQuery, itemCatalogQuery } from '../../lib/query/queries.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
-import { signOutKeepingDrafts } from '../../offline/sync-workout.ts';
+import { signOutKeepingDrafts } from '../../lib/platform/sign-out.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';

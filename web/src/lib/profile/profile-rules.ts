@@ -1,6 +1,8 @@
 import { MS_PER_DAY } from '@domain/math.ts';
 import { roundTo } from '@domain/math.ts';
+import { z } from 'zod';
 import { CONTROL_CHARACTER, characterCount } from '../names.ts';
+import { nullableNumber, numericColumn } from '../rows.ts';
 import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, parsedDecimal, unitToKg } from '../units.ts';
 
 export const UNIT_PREFS = ['kg', 'lb'] as const;
@@ -62,6 +64,57 @@ export const BADGE_COLORS: Record<BadgeColor, { label: string; fill: string; lig
 
 export const TRAINING_FOCUSES = Object.keys(TRAINING_FOCUS_LABELS) as TrainingFocus[];
 export const BADGE_COLOR_KEYS = Object.keys(BADGE_COLORS) as BadgeColor[];
+
+export const PROFILE_COLUMNS =
+  'username, display_name, bio, training_focus, training_since, badge_color, show_weights, show_bodyweight, created_at';
+export const PROFILE_PRIVATE_COLUMNS =
+  'bodyweight_kg, height_cm, birth_year, unit_pref, effort_input_mode, timezone, timezone_changed_at';
+
+export const profileRowSchema = z.object({
+  username: z.string(),
+  display_name: z.string(),
+  bio: z.string().nullable(),
+  training_focus: z.enum(TRAINING_FOCUSES).nullable(),
+  training_since: z.number().nullable(),
+  badge_color: z.enum(BADGE_COLOR_KEYS),
+  show_weights: z.boolean(),
+  show_bodyweight: z.boolean(),
+  created_at: z.string(),
+});
+
+export const profilePrivateRowSchema = z.object({
+  bodyweight_kg: numericColumn.nullable(),
+  height_cm: numericColumn.nullable(),
+  birth_year: z.number().nullable(),
+  unit_pref: z.enum(UNIT_PREFS),
+  effort_input_mode: z.enum(EFFORT_INPUT_MODES),
+  timezone: z.string(),
+  timezone_changed_at: z.string().nullable(),
+});
+
+export function profileFromRows(
+  publicRow: z.infer<typeof profileRowSchema>,
+  privateRow: z.infer<typeof profilePrivateRowSchema>,
+): Profile {
+  return {
+    username: publicRow.username,
+    displayName: publicRow.display_name,
+    bio: publicRow.bio,
+    trainingFocus: publicRow.training_focus,
+    trainingSince: publicRow.training_since,
+    badgeColor: publicRow.badge_color,
+    showWeights: publicRow.show_weights,
+    showBodyweight: publicRow.show_bodyweight,
+    createdAt: publicRow.created_at,
+    bodyweightKg: nullableNumber(privateRow.bodyweight_kg),
+    heightCm: nullableNumber(privateRow.height_cm),
+    birthYear: privateRow.birth_year,
+    unitPref: privateRow.unit_pref,
+    effortInputMode: privateRow.effort_input_mode,
+    timezone: privateRow.timezone,
+    timezoneChangedAt: privateRow.timezone_changed_at,
+  };
+}
 
 function rangeProblem(raw: string, lowest: number, highest: number, message: string): string | null {
   if (raw.trim() === '') return null;

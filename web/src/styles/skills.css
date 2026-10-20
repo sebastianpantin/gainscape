@@ -193,7 +193,8 @@
 }
 
 .volume-list,
-.volume-contributions {
+.volume-contributions,
+.stored-set-list {
   list-style: none;
   margin: 0;
   padding: 0;

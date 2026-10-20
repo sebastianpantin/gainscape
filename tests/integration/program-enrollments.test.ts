@@ -36,8 +36,8 @@ import {
   savedProgram,
 } from './program-support.ts';
 import { createCustomExercise } from './session-support.ts';
-import type { ProgramTemplateRow } from '../../web/src/lib/programs/program-enroll-rules.ts';
-import type { EnrollmentRow } from '../../web/src/lib/programs/program-facts-rules.ts';
+import { PROGRAM_TEMPLATE_COLUMNS, type ProgramTemplateRow } from '../../web/src/lib/programs/program-enroll-rules.ts';
+import { ENROLLMENT_COLUMNS, type EnrollmentRow } from '../../web/src/lib/programs/program-facts-rules.ts';
 import { followStatus } from '../../web/src/lib/programs/program-follow-rules.ts';
 import {
   PROGRAM_SELECT,
@@ -1077,13 +1077,11 @@ describe('publish_program', () => {
     const { data: programRow } = await user.client.from('programs').select(PROGRAM_SELECT).eq('id', programId).single();
     const { data: templateRows } = await user.client
       .from('program_templates')
-      .select('key, version, name, definition, owner_user_id')
+      .select(PROGRAM_TEMPLATE_COLUMNS)
       .eq('key', template.key);
     const { data: enrollment } = await user.client
       .from('program_enrollments')
-      .select(
-        'id, template_key, template_version, unit, options, lift_bindings, inputs, rounding, started_at, ended_at',
-      )
+      .select(ENROLLMENT_COLUMNS)
       .eq('id', enrollmentId)
       .single();
 

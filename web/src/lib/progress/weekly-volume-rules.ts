@@ -1,4 +1,4 @@
-import { MS_PER_DAY } from '@domain/math.ts';
+import { MS_PER_DAY, roundTo } from '@domain/math.ts';
 import { FULL_SHARE_BASIS_POINTS } from '@domain/index.ts';
 import type { ExerciseSkill } from '../exercises/catalog-rules.ts';
 import { BODY_SKILLS, type BodySkill, isBodySkill } from './recovery-rules.ts';
@@ -47,7 +47,7 @@ export function volumeBarFraction(sets: number): number {
 }
 
 export function volumeSetsText(sets: number): string {
-  return String(Math.round(sets * 10) / 10);
+  return String(roundTo(1, sets));
 }
 
 export function volumeSetsLabel(sets: number): string {

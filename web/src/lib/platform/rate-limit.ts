@@ -1,4 +1,5 @@
 import { SECONDS_PER_MINUTE } from '@domain/cardio.ts';
+import { parsedJson } from '../json-rules.ts';
 
 export const RATE_LIMITED_STATUS = 429;
 export const RATE_LIMITED_CODE = 'rate_limited';
@@ -8,11 +9,7 @@ const LONGEST_WAIT_IN_MINUTES = 90;
 
 export function retryAfterSeconds(details: unknown): number | null {
   if (typeof details === 'string') {
-    try {
-      return retryAfterSeconds(JSON.parse(details));
-    } catch {
-      return null;
-    }
+    return retryAfterSeconds(parsedJson(details));
   }
   if (typeof details !== 'object' || details === null) return null;
   const value = (details as { retryAfterSeconds?: unknown }).retryAfterSeconds;

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { parsedRows } from '../rows.ts';
+import { parsedRow, parsedRows } from '../rows.ts';
 
 export const EXERCISE_NOTE_MAX_LENGTH = 500;
 export const EXERCISE_NOTE_OFFLINE_TEXT = 'Notes can be edited when you are online.';
@@ -54,5 +54,5 @@ export async function saveExerciseNoteWith(
 ): Promise<string | null> {
   const { data, error } = await client.rpc('save_exercise_note', { exercise_id: exerciseId, body });
   if (error) throw error;
-  return data as string | null;
+  return parsedRow(z.string().nullable(), data);
 }

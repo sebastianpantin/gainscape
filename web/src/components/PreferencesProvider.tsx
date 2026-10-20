@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  cachedPreferences,
-  cachePreferences,
   DEFAULT_PREFERENCES,
   pendingLocalPreferences,
   type Preferences,
   PreferencesContext,
+  preferencesCache,
 } from '../lib/profile/preferences.ts';
+import { deviceStorage } from '../lib/platform/keyed-store.ts';
 import { preferencesQuery } from '../lib/query/queries.ts';
 
 interface PreferencesProviderProps {
@@ -17,21 +17,21 @@ interface PreferencesProviderProps {
 
 export function PreferencesProvider({ userId, children }: PreferencesProviderProps) {
   const { data: loaded } = useQuery(preferencesQuery(userId));
-  const [saved] = useState<Preferences>(() => cachedPreferences(userId) ?? DEFAULT_PREFERENCES);
+  const [saved] = useState<Preferences>(() => preferencesCache.read(deviceStorage(), userId) ?? DEFAULT_PREFERENCES);
   const [local, setLocal] = useState<Preferences | null>(null);
   const pending = pendingLocalPreferences(local, loaded);
   if (pending !== local) setLocal(pending);
   const preferences = pending ?? loaded ?? saved;
 
   useEffect(() => {
-    if (loaded && !pending) cachePreferences(userId, loaded);
+    if (loaded && !pending) preferencesCache.save(deviceStorage(), userId, loaded);
   }, [userId, loaded, pending]);
 
   const applyPreferences = useCallback(
     (changes: Partial<Preferences>) => {
       setLocal((current) => {
         const next = { ...(current ?? loaded ?? saved), ...changes };
-        cachePreferences(userId, next);
+        preferencesCache.save(deviceStorage(), userId, next);
         return next;
       });
     },

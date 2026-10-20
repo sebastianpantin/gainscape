@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteMyAccount } from '../../../lib/profile/account.ts';
-import { signOutKeepingDrafts } from '../../../offline/sync-workout.ts';
+import { signOutKeepingDrafts } from '../../../lib/platform/sign-out.ts';
 import { forgetUserDeviceData } from '../../../offline/user-device-data.ts';
 import { ConfirmDialog } from '../../../components/ConfirmDialog.tsx';
 import { forgetOnThisDevice, UNSYNCED_DRAFT_LOSS_TEXT, useDraftLossGuard } from './device-data.ts';
