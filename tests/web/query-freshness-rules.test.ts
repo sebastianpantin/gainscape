@@ -137,6 +137,10 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['timezone-changed']).toContain('weekly-exercise-sets');
   });
 
+  it('refreshes the record timeline after a workout is finished, edited or deleted', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('record-timeline');
+  });
+
   it('refreshes every query that holds account data after an account reset', () => {
     const accountRoots = QUERY_ROOTS.filter((root) => !CATALOG_ROOTS.includes(root));
     expect([...QUERY_ROOTS_CHANGED_BY['account-reset']].sort()).toEqual([...new Set(accountRoots)].sort());

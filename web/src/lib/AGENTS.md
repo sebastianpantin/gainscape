@@ -14,14 +14,14 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `platform/`: the Supabase client, Edge Function calls, auth, `keyedStore`, rate limits, cross-tab channels, online and route-focus hooks, device and celebration effects, and the changelog rules with the last seen release.
 - `query/`: the TanStack Query client, every query definition, freshness and state rules, and `data-changes.ts`.
 - `exercises/`: the exercise catalog and its device cache, custom exercises, exercise notes, search, swap substitutes and repeat keys.
-- `workout/`: live-workout rules and stores: set editing, cardio, effort labels, supersets, warm-ups, plates, rest timer, training device, session timing and baseline, progression hints, the active workout bar.
+- `workout/`: live-workout rules and stores: set editing, cardio, effort labels, supersets, warm-ups, plates, rest timer, training device, session timing and baseline, progression hints, the active workout bar, record text.
 - `programs/`: program persistence, enrollment and every `program-*-rules.ts`.
 - `history/`: past sessions, the history overview and the last session of an exercise.
 - `progress/`: standing, the skill map, recovery, weekly goal, weekly muscle volume, bodyweight trend and exercise progress.
 - `collection/`: items, gear, challenges, the companion pet and the records collection.
 - `profile/`: profile and its view, account actions, preferences and onboarding.
 - `social/`: friends, feed and hiscores.
-- `stats/`: the Stats screen's aggregate RPC reads (cache-first via `../offline/stats-cache.ts`) and their rules (calendar, month compare).
+- `stats/`: the Stats screen's aggregate RPC reads (cache-first via `../offline/stats-cache.ts`) and their rules (calendar, month compare, volume history, PR timeline).
 - `quests/`: the quest log (cache-first), `start-quest` and `quest-rules.ts` (board, step and requirement text, start errors).
 - `ui/`: pure helpers behind shared components (number field, count-up, charts, toast, term help, week and month keys) and `glossary.ts`.
 - The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`.
@@ -42,7 +42,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 ### Boundaries
 
-- Keep the pure/I/O split. Pure modules take their dependencies as arguments (`querySessionPage(client, ...)`, `queryRecentSets(client, since)`, `queryProgressSets(client, ...)`, `queryOwnedPets(client, ...)`, `bootAuth(ports)`, `readCachedExercises(storage, ...)`). That way integration tests can pass their own client and tests can fake time.
+- Keep the pure/I/O split. Pure modules take their dependencies as arguments (`querySessionPage(client, ...)`, `queryRecentSets(client, since)`, `bootAuth(ports)`, `readCachedExercises(storage, ...)`), so integration tests can pass their own client and tests can fake time.
 - Never import `platform/supabase.ts` from a pure module. It reads `window.location` and `import.meta.env` at import time, which breaks plain Vitest runs. Import `SupabaseClient` as a type only.
 - `platform/changelog-rules.ts` must not import any app code, because plain Node loads it for `make changelog-unreleased` and `make deploy`. That is why `whatsNewMayOpen` takes `introPending` as a boolean.
 - `profile/profile.ts` re-exports `profile/profile-rules.ts`; keep that re-export. No other module re-exports, so import from the module that defines the name (`countCollection` from `collection/collection-rules.ts`, not from `collection/collection-data.ts`).
@@ -62,7 +62,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Users never see a raw error code or database text. Every failure maps to a sentence, with a generic fallback (`programErrorText`, `pinProblemText`, the account export and delete messages).
 - `emailChangeProblem` does not use `authErrorMessage` on purpose: `authErrorMessage` would call a 403 an invalid link.
 - A password change re-checks the current password against the email `getUser()` returns now, not a cached one. Only `invalid_credentials` means the password was wrong.
-- Row shapes are hand-written zod `*RowSchema`s (`*Row` is inferred) beside the `*_COLUMNS` strings; update both on a schema change. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a row with a new server value and falls back to its saved copy: ship the client value a release before the server writes it. Numerics may arrive as strings (`numericColumn`); coerce with `Number(...)`.
+- Row shapes are hand-written zod `*RowSchema`s (`*Row` is inferred) beside the `*_COLUMNS` strings; update both on a schema change. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a row with a new server value and falls back to its saved copy: ship the client value a release before the server writes it. String numerics: `numericColumn`, then `Number(...)`.
 
 ### Must stay in sync with SQL
 

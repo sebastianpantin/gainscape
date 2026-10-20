@@ -426,6 +426,7 @@ describe('function execution rights', () => {
       'get_profile',
       'last_logged_sets',
       'list_friends',
+      'personal_record_timeline',
       'publish_program',
       'recent_lift_sets',
       'remove_friend',

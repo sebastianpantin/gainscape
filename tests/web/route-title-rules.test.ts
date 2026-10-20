@@ -30,6 +30,7 @@ describe('routeTitle', () => {
     expect(routeTitle('/collection/items')).toBe('Items · Gainscape');
     expect(routeTitle('/collection/history')).toBe('History · Gainscape');
     expect(routeTitle('/collection/stats')).toBe('Stats · Gainscape');
+    expect(routeTitle('/collection/stats/records')).toBe('Records timeline · Gainscape');
     expect(routeTitle('/friends/hiscores')).toBe('Hiscores · Gainscape');
     expect(routeTitle('/profile/edit')).toBe('Edit profile · Gainscape');
     expect(routeTitle('/profile/preview')).toBe('What friends see · Gainscape');

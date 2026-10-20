@@ -13,6 +13,7 @@ import { monthKey, shiftMonth } from '../../lib/ui/date-bucket-rules.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
 import { MonthCompareTable } from './MonthCompareTable.tsx';
+import { RecentRecordsSection } from './RecentRecordsSection.tsx';
 import { TrainingCalendarTable } from './TrainingCalendarTable.tsx';
 import { VolumeHistorySection } from './VolumeHistorySection.tsx';
 
@@ -66,6 +67,7 @@ export function StatsScreen({ userId }: { userId: string }) {
         </section>
       )}
       <VolumeHistorySection userId={userId} today={today} />
+      <RecentRecordsSection userId={userId} />
     </main>
   );
 }

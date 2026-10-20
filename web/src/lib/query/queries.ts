@@ -43,6 +43,12 @@ import { type QuestLog } from '../quests/quest-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { skillExercisesSeed } from '../progress/skill-map-rules.ts';
 import { loadStanding } from '../progress/standing-data.ts';
+import { loadRecordTimelinePage } from '../stats/pr-timeline.ts';
+import {
+  nextRecordTimelineCursor,
+  RECORD_TIMELINE_PAGE_WORKOUTS,
+  type RecordTimelineCursor,
+} from '../stats/pr-timeline-rules.ts';
 import { loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
 import { loadWeeklyExerciseSetsCacheFirst } from '../stats/volume-history.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
@@ -341,6 +347,15 @@ export function weeklyExerciseSetsQuery(userId: string) {
   });
 }
 
+export function recordTimelineQuery(userId: string) {
+  return infiniteQueryOptions({
+    queryKey: ['record-timeline', userId] as const,
+    queryFn: ({ pageParam, signal }) => loadRecordTimelinePage(userId, pageParam, signal),
+    initialPageParam: null as RecordTimelineCursor | null,
+    getNextPageParam: (lastPage) => nextRecordTimelineCursor(lastPage.loaded, RECORD_TIMELINE_PAGE_WORKOUTS),
+  });
+}
+
 export const EVERY_QUERY = [
   profileQuery,
   preferencesQuery,
@@ -377,4 +392,5 @@ export const EVERY_QUERY = [
   questPointsQuery,
   trainingDaysQuery,
   weeklyExerciseSetsQuery,
+  recordTimelineQuery,
 ] as const;

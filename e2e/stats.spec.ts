@@ -99,3 +99,42 @@ test('volume history charts this week of the trained muscle and switches muscle'
   await expect(history.getByRole('img', { name: /^Legs working sets per week\. / })).toBeVisible();
   await expect(history.getByText('This week: 0 of 10 sets', { exact: true })).toBeVisible();
 });
+
+test('recent records list a new best, offline too, and the full timeline by month opens each workout', async ({
+  page,
+  context,
+}) => {
+  await register(page, uniqueUsername('stats_prs'));
+  await logBench(page, 60);
+  await openTab(page, 'Train');
+  await logBench(page, 70);
+  await openTab(page, 'Collection');
+  await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
+
+  const recent = page.getByRole('region', { name: 'Recent records', exact: true });
+  const record = /^Barbell Bench Press: 5RM 70 kg \(was 60 kg\)/;
+  await expect(recent.getByRole('list', { name: 'Recent records' }).getByRole('link', { name: record })).toBeVisible();
+  await expectNoAxeViolations(page, 'stats recent records');
+
+  await recent.getByRole('link', { name: 'All records', exact: true }).click();
+  await expect(page).toHaveURL(/\/collection\/stats\/records$/);
+  await expect(page).toHaveTitle('Records timeline · Gainscape');
+  await expect(page.getByRole('heading', { level: 1, name: 'Records timeline', exact: true })).toBeFocused();
+  const month = page.getByRole('region', { name: monthTitleOf(0), exact: true });
+  await expect(month.getByRole('link', { name: record })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show more', exact: true })).toHaveCount(0);
+  await expectNoAxeViolations(page, 'records timeline');
+
+  await month.getByRole('link', { name: record }).click();
+  await expect(page).toHaveURL(/\/collection\/history\/[0-9a-f-]+$/);
+  await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
+  await page.goBack();
+  await page.getByRole('main').getByRole('link', { name: '‹ Stats', exact: true }).click();
+  await expect(page).toHaveURL(/\/collection\/stats$/);
+
+  await context.setOffline(true);
+  await openTab(page, 'Collection');
+  await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
+  await expect(recent.getByRole('link', { name: record })).toBeVisible();
+  await context.setOffline(false);
+});
