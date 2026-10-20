@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useId, useRef } from 'react';
+import { type ReactNode, useId } from 'react';
+import { useModalDialog } from './use-modal-dialog.ts';
 
 interface ConfirmDialogProps {
   title: string;
@@ -23,14 +24,8 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const dialog = useRef<HTMLDialogElement>(null);
+  const dialog = useModalDialog();
   const titleId = useId();
-
-  useEffect(() => {
-    const element = dialog.current;
-    if (element && !element.open) element.showModal();
-    return () => element?.close();
-  }, []);
 
   return (
     <dialog

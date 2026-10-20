@@ -20,7 +20,7 @@ import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { useOnboarding } from '../onboarding/use-onboarding.ts';
 import { useActiveProgram } from '../programs/use-active-program.ts';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
-import { recallLastSummary } from '../summary/last-summary.ts';
+import { recallLastSummary } from '../../offline/last-summary.ts';
 import { CardioExerciseCard } from './CardioExerciseCard.tsx';
 import { ChallengeBanner } from './ChallengeBanner.tsx';
 import { liftEquipment } from './exercise-card-rules.ts';
@@ -278,7 +278,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               draft={draft}
               exercise={exercise}
               exerciseIndex={exerciseIndex}
-              cardKey={exercise.clientId}
               previews={previews[exerciseIndex]}
               unit={unitPref}
               note={noteFor(exercise.exerciseId, exercise.name)}
@@ -294,7 +293,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               draft={draft}
               exercise={exercise}
               exerciseIndex={exerciseIndex}
-              cardKey={exercise.clientId}
               previews={previews[exerciseIndex]}
               records={records[exerciseIndex]}
               unit={unitPref}

@@ -20,6 +20,8 @@ export const UPDATE_APP_TEXT = 'Update the app to use this program';
 
 const UNUSABLE_TEMPLATE_TEXT = "This program can't be used right now";
 
+export const PROGRAM_TEMPLATE_COLUMNS = 'key, version, name, definition, owner_user_id';
+
 export const programTemplateRowSchema = z.object({
   key: z.string(),
   version: z.number(),

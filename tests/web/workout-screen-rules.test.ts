@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { draftOf, lift, set } from './draft-fixtures.ts';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 import type { CardioActivity, Exercise, LiftExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
-import type {
-  CardioDraftExercise,
-  DraftSet,
-  LiftDraftExercise,
-  WorkoutDraft,
-} from '../../web/src/offline/draft-format.ts';
+import type { CardioDraftExercise } from '../../web/src/offline/draft-format.ts';
 import { finishCountsOf } from '../../web/src/features/workout/workout-rules.ts';
 import {
   addButtonKey,
@@ -19,24 +15,6 @@ import {
   swapSuggestions,
   withPickedExercise,
 } from '../../web/src/features/workout/workout-screen-rules.ts';
-
-function set(id: string, overrides: Partial<DraftSet> = {}): DraftSet {
-  return { id, weightKg: 100, reps: 5, effort: null, done: false, isWarmup: false, prescription: null, ...overrides };
-}
-
-function lift(exerciseId: string, sets: DraftSet[], overrides: Partial<LiftDraftExercise> = {}): LiftDraftExercise {
-  return {
-    clientId: `card-${exerciseId}`,
-    exerciseId,
-    name: exerciseId,
-    modality: 'lift',
-    loadType: 'external',
-    target: null,
-    supersetId: null,
-    sets,
-    ...overrides,
-  };
-}
 
 const ACTIVITY: CardioActivity = {
   paceUnit: 'per_km',
@@ -54,18 +32,6 @@ function cardio(exerciseId: string): CardioDraftExercise {
     modality: 'cardio',
     activity: ACTIVITY,
     sets: [],
-  };
-}
-
-function draftOf(exercises: WorkoutDraft['exercises'], overrides: Partial<WorkoutDraft> = {}): WorkoutDraft {
-  return {
-    sessionId: 'session',
-    startedAt: '2026-10-01T10:00:00.000Z',
-    finishedAt: null,
-    programDayId: null,
-    programLabel: null,
-    exercises,
-    ...overrides,
   };
 }
 

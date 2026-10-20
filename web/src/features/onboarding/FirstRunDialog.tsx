@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
+import { useModalDialog } from '../../components/use-modal-dialog.ts';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { TIER_COLORS } from '../../lib/collection/item-rules.ts';
@@ -16,12 +17,10 @@ import {
   onboardingStepLabel,
 } from '../../lib/profile/onboarding-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { type Profile, updatePrivateProfile, type UnitPref } from '../../lib/profile/profile.ts';
+import { UNIT_OPTIONS, updatePrivateProfile, type UnitPref } from '../../lib/profile/profile.ts';
 import { templateListEntries } from '../../lib/programs/program-enroll-rules.ts';
-import { profileQuery, programTemplatesQuery } from '../../lib/query/queries.ts';
-import { deviceStorage } from '../../lib/platform/keyed-store.ts';
-import { type CacheFirstLoad } from '../../offline/cache-first.ts';
-import { profileCache } from '../../offline/profile-cache.ts';
+import { programTemplatesQuery } from '../../lib/query/queries.ts';
+import { patchSavedProfile } from '../profile/use-profile.ts';
 
 interface TrainStepProps {
   userId: string;
@@ -32,11 +31,6 @@ interface TrainStepProps {
 interface FirstRunDialogProps extends TrainStepProps {
   onSkip: () => void;
 }
-
-const UNIT_OPTIONS: { value: UnitPref; label: string }[] = [
-  { value: 'kg', label: 'Kilograms' },
-  { value: 'lb', label: 'Pounds' },
-];
 
 function CardIcon({ icon }: { icon: FirstRunCardIcon }) {
   if (icon === 'skill') return <SkillIcon skillKey="legs" />;
@@ -82,17 +76,6 @@ function UnitsStep({ userId }: { userId: string }) {
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const showSavedUnits = (saved: UnitPref) => {
-    const storedProfile = profileCache.read(deviceStorage(), userId);
-    if (storedProfile) profileCache.save(deviceStorage(), userId, { ...storedProfile, unitPref: saved });
-    const { queryKey } = profileQuery(userId);
-    void queryClient.cancelQueries({ queryKey });
-    queryClient.setQueryData<CacheFirstLoad<Profile>>(
-      queryKey,
-      (current) => current && { ...current, loaded: { ...current.loaded, unitPref: saved } },
-    );
-  };
-
   const pick = async (next: UnitPref) => {
     if (saving || next === unitPref) return;
     const previous = unitPref;
@@ -101,7 +84,7 @@ function UnitsStep({ userId }: { userId: string }) {
     applyPreferences({ unitPref: next });
     try {
       await updatePrivateProfile(userId, { unitPref: next });
-      showSavedUnits(next);
+      patchSavedProfile(queryClient, userId, (profile) => ({ ...profile, unitPref: next }));
       void announceDataChange(queryClient, 'profile-saved');
     } catch (error) {
       applyPreferences({ unitPref: previous });
@@ -179,17 +162,11 @@ const STEP_TITLES: Record<OnboardingStep, string> = {
 };
 
 export function FirstRunDialog({ userId, onFinish, onSkip, onFreestyle }: FirstRunDialogProps) {
-  const dialog = useRef<HTMLDialogElement>(null);
+  const dialog = useModalDialog();
   const heading = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const next = nextOnboardingStep(step);
-
-  useEffect(() => {
-    const element = dialog.current;
-    if (element && !element.open) element.showModal();
-    return () => element?.close();
-  }, []);
 
   useEffect(() => {
     heading.current?.focus();

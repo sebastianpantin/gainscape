@@ -12,7 +12,7 @@ Feature-sliced screens of the PWA. Each subdirectory owns one area of the UI (au
 - Routes live only in `web/src/App.tsx`. A new screen needs a lazy import and a `Route` there, a tab or link, and an entry in the every-screen axe test in `e2e/a11y.spec.ts`.
 - Screens that need the signed-in user take a `userId` prop; `WorkoutScreen` is also keyed by it.
 - Put any non-trivial decision in a pure `*-rules.ts` in `../lib/` or a pure `.ts` beside the screen, and unit test it. Keep `.tsx` files thin.
-- Features import each other only for shared widgets (`workout/ExercisePicker`, `workout/SetRow`, `workout/EffortSelector`, `collection/CollectionScreen`'s `CollectionTabs`, `profile/ProfileCard`, `summary/last-summary`). Extend those rather than duplicating.
+- Features import each other only for shared widgets (`workout/ExercisePicker`, `workout/SetRow`, `workout/EffortSelector`, `collection/CollectionScreen`'s `CollectionTabs`, `profile/ProfileCard`). Extend those rather than duplicating.
 - Weights are stored in kg and converted with `../lib/units.ts` only for display and input (`usePreferences()`).
 
 ## Testing

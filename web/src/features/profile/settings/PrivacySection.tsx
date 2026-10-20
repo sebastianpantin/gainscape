@@ -3,10 +3,10 @@ import { updatePublicProfile } from '../../../lib/profile/profile.ts';
 import { useOptimisticProfileSave } from '../use-optimistic-profile-save.ts';
 import { type SectionProps } from './section-props.ts';
 
-export function PrivacySection({ userId, profile, onSaved }: SectionProps) {
+export function PrivacySection({ userId, profile, replaceProfile }: SectionProps) {
   const { save, pending, problem } = useOptimisticProfileSave<'showWeights' | 'showBodyweight'>(
     profile,
-    onSaved,
+    replaceProfile,
     (changes) => updatePublicProfile(userId, changes),
   );
 

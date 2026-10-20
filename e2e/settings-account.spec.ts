@@ -6,7 +6,7 @@ import {
   logBench,
   logExercise,
   openFromProfile,
-  openTab,
+  openHistory,
   readSession,
   readStoredDraft,
   register,
@@ -99,11 +99,6 @@ test('signing out with an unsynced workout asks in a dialog first', async ({ pag
   await warning.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
 });
-
-async function openHistory(page: Page) {
-  await openTab(page, 'Collection');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
-}
 
 test('resetting all data needs RESET typed, wipes the workouts and keeps the account signed in', async ({ page }) => {
   const username = uniqueUsername('st_rst');

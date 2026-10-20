@@ -1,5 +1,6 @@
 import type { LootConfig } from './balance.ts';
 import { roundTo } from './math.ts';
+import { compareStrings } from './ordering.ts';
 import {
   type Catalog,
   type RevokedDrop,
@@ -113,7 +114,7 @@ export function chance(dryRolls: number, cfg: LootConfig): number {
 }
 
 export function pickEntry(table: LootTable, u: number): LootEntry {
-  const entries = [...table.entries].sort((a, b) => (a.itemKey < b.itemKey ? -1 : a.itemKey > b.itemKey ? 1 : 0));
+  const entries = [...table.entries].sort((a, b) => compareStrings(a.itemKey, b.itemKey));
   const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
   const target = Math.floor(u * total);
   let cumulative = 0;

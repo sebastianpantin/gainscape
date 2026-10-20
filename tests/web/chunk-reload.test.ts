@@ -5,13 +5,9 @@ import {
   claimChunkReload,
   reloadOnChunkLoadError,
 } from '../../web/src/pwa/chunk-reload.ts';
-import { MemoryStorage } from './memory-storage.ts';
+import { MemoryStorage, throwingStorage } from './memory-storage.ts';
 
 const NOW = 1_700_000_000_000;
-
-function blocked(): never {
-  throw new Error('blocked');
-}
 
 describe('claimChunkReload', () => {
   it('reloads on the first chunk failure and remembers when', () => {
@@ -39,10 +35,8 @@ describe('claimChunkReload', () => {
   });
 
   it('never reloads when the guard cannot be stored', () => {
-    const readOnly = new MemoryStorage();
-    readOnly.setItem = blocked;
-    const unreadable = new MemoryStorage();
-    unreadable.getItem = blocked;
+    const readOnly = throwingStorage('setItem');
+    const unreadable = throwingStorage('getItem');
     expect(claimChunkReload(null, NOW)).toBe(false);
     expect(claimChunkReload(readOnly, NOW)).toBe(false);
     expect(claimChunkReload(unreadable, NOW)).toBe(false);

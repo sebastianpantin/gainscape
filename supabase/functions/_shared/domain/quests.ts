@@ -10,11 +10,9 @@ import {
 import { levelForXp } from './levels.ts';
 import { FLOAT_TOLERANCE, roundTo } from './math.ts';
 import { levelUpsBetween } from './pipeline.ts';
-import { applyXpGrant } from './replay.ts';
 import {
   type Catalog,
   isLiftSet,
-  isRecord,
   type LevelUp,
   type PersonalRecordSummary,
   type QuestIdentity,
@@ -23,6 +21,8 @@ import {
   type SetResult,
   type StrengthState,
 } from './types.ts';
+import { storedValueReader } from './stored-values.ts';
+import { applyXpGrant } from './xp.ts';
 
 export type QuestStep =
   | { kind: 'workout'; challenge: ChallengeDefinition }
@@ -252,24 +252,13 @@ export function questsAfterSession(
   return { progressed: progressed.map(({ progress }) => progress), completions, skillXp, summary };
 }
 
-function storedRecord(value: unknown, field: string): Record<string, unknown> {
-  if (!isRecord(value)) throw new RangeError(`a stored quest needs an object ${field}`);
-  return value;
-}
-
-function storedArray(value: unknown, field: string): unknown[] {
-  if (!Array.isArray(value)) throw new RangeError(`a stored quest needs an array ${field}`);
-  return value;
-}
-
-function storedString(value: unknown, field: string): string {
-  if (typeof value !== 'string') throw new RangeError(`a stored quest needs a string ${field}`);
-  return value;
-}
-
-function storedNullableString(value: unknown, field: string): string | null {
-  return value === null || value === undefined ? null : storedString(value, field);
-}
+const {
+  record: storedRecord,
+  array: storedArray,
+  string: storedString,
+  nullableString: storedNullableString,
+  volumeMetric: storedVolumeMetric,
+} = storedValueReader('quest');
 
 function storedPositiveNumber(value: unknown, field: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
@@ -288,13 +277,6 @@ function storedWholeNumber(value: unknown, field: string): number {
 function storedLevel(value: unknown): QuestRequiredLevel {
   const level = storedRecord(value, 'required level');
   return { skillId: storedString(level.skillId, 'skillId'), level: storedWholeNumber(level.level, 'level') };
-}
-
-function storedVolumeMetric(value: unknown): VolumeMetric {
-  if (value !== 'reps' && value !== 'kg') {
-    throw new RangeError(`unknown volume metric ${JSON.stringify(value)} in a stored quest`);
-  }
-  return value;
 }
 
 function storedStep(value: unknown): QuestStep {

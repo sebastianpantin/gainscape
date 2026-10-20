@@ -4,7 +4,7 @@ import { type SlotDecl } from '@domain/program-types.ts';
 import { recomputeRelativeSets } from '@domain/program-prescription.ts';
 import { factClock, setReferenceFact } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, resolveAt } from './program-fixtures/follow.ts';
-import { GZCLP, gzclpEnrollment, type GzclpLift } from './program-fixtures/gzclp.ts';
+import { GZCLP, gzclpEnrollment, miss, rounds } from './program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2, JUGGERNAUT_LIFTS, juggernautEnrollment } from './program-fixtures/juggernaut_2.ts';
 import { NSUNS_5DAY, nsunsEnrollment } from './program-fixtures/nsuns_5day.ts';
 import { refOf, refsState, repsOf, weightsOf } from './program-fixtures/prescription-helpers.ts';
@@ -14,14 +14,6 @@ import { STRONGLIFTS_5X5, strongLiftsEnrollment } from './program-fixtures/stron
 function lastChange(state: ProgramState, lift: string): Pick<ReferenceChange, 'var' | 'to' | 'reason'> | undefined {
   const change = state.history.filter((entry) => entry.lift === lift).at(-1);
   return change && { var: change.var, to: change.to, reason: change.reason };
-}
-
-function miss(lift: GzclpLift): DayLog {
-  return { missedLifts: [lift] };
-}
-
-function rounds(firstDayLogs: readonly DayLog[]): DayLog[] {
-  return firstDayLogs.flatMap((log) => [log, {}, {}, {}]);
 }
 
 describe('history reasons of the 1b adjustments', () => {

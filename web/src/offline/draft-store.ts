@@ -11,7 +11,7 @@ import {
   type WorkoutDraft,
 } from './draft-format.ts';
 
-export type PutResult = 'written' | 'stale' | 'synced' | 'discarded' | 'refused_reopen';
+type PutResult = 'written' | 'stale' | 'synced' | 'discarded' | 'refused_reopen';
 
 export interface PutOptions {
   reopen?: boolean;

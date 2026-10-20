@@ -8,6 +8,7 @@ import {
   type LiftSetResult,
   measuresRepsCapacity,
   type SetResult,
+  workingLiftSets,
 } from './types.ts';
 
 const REPS_MODEL_UNIT_LOAD = 1;
@@ -59,7 +60,7 @@ function rirFloorFromLaterSets(
 }
 
 export const checkFatigue: Step = (ctx: SessionContext) => {
-  const workingSets = ctx.sets.filter(isLiftResult).filter((result) => !result.set.isWarmup);
+  const workingSets = workingLiftSets(ctx.sets);
   const sets = ctx.sets.map((result): SetResult => {
     if (!isLiftResult(result) || result.set.isWarmup || result.rirForXp === null) return result;
     const exercise = liftExerciseFor(result.set, ctx.deps.catalog);

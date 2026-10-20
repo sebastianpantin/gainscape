@@ -1,5 +1,13 @@
 export const FLOAT_TOLERANCE = 1e-9;
 
+export const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export const PERCENT = 100;
+
+export function roundHalfUp(value: number): number {
+  return Math.floor(value + 0.5);
+}
+
 export function roundTo(decimals: number, value: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;

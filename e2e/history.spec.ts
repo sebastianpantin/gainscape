@@ -6,6 +6,7 @@ import {
   logExercise,
   openLatestWorkout,
   openSetOptions,
+  openHistory,
   openTab,
   readSession,
   readStoredDraft,
@@ -35,8 +36,7 @@ test(
 
     await logBench(page);
 
-    await openTab(page, 'Collection');
-    await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+    await openHistory(page);
     const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
     await expect(workouts).toHaveCount(1);
     await expect(workouts.first()).toContainText('Editable');
@@ -136,8 +136,7 @@ test('a workout older than the edit window shows as locked in History', async ({
   await logBench(page);
   await backdateSessions(username, 10);
 
-  await openTab(page, 'Collection');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  await openHistory(page);
   const workout = page.getByRole('list', { name: 'Workouts' }).getByRole('link').first();
   await expect(workout).toContainText('Locked');
   await expect(workout).not.toContainText('Editable');
@@ -147,8 +146,7 @@ test('Back from an older workout keeps every loaded page of History and its scro
   const username = uniqueUsername('hist_back');
   await register(page, username);
   await seedWorkouts(username, 55);
-  await openTab(page, 'Collection');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  await openHistory(page);
   const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
   await expect(workouts).toHaveCount(50);
   await workouts.last().scrollIntoViewIfNeeded();
@@ -175,8 +173,7 @@ test('Back after saving an older workout keeps every loaded page of History in v
   await logBench(page);
   await backdateSessions(username, 2);
   await seedWorkouts(username, 54);
-  await openTab(page, 'Collection');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  await openHistory(page);
   const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
   await expect(workouts).toHaveCount(50);
   await workouts.last().scrollIntoViewIfNeeded();
@@ -359,8 +356,7 @@ test('rate the session when finishing, then see its length and RPE on the summar
 
   await expect(page.getByText('<1 min · Session RPE 8')).toBeVisible();
 
-  await openTab(page, 'Collection');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  await openHistory(page);
   const workout = page.getByRole('list', { name: 'Workouts' }).getByRole('link').first();
   await expect(workout).toContainText('1 set · 300 kg volume · <1 min · Session RPE 8');
   await workout.click();

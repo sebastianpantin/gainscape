@@ -67,3 +67,15 @@ export function splitXp(xp: number, shares: readonly OrderedSkillShare[], tieRot
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((part) => ({ skillId: part.skillId, xp: part.xp }));
 }
+
+export function applyXpGrant(
+  skillXp: Readonly<Record<string, number>>,
+  xpBySkill: Readonly<Record<string, number>>,
+  cfg: Pick<BalanceConfig, 'maxXp'>,
+): Record<string, number> {
+  const granted: Record<string, number> = { ...skillXp };
+  for (const [skillId, xp] of Object.entries(xpBySkill)) {
+    granted[skillId] = Math.min(cfg.maxXp, (granted[skillId] ?? 0) + xp);
+  }
+  return granted;
+}

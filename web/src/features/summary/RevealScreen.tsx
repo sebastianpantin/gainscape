@@ -29,14 +29,13 @@ import {
   skillsQuery,
   standingQuery,
 } from '../../lib/query/queries.ts';
-import { recallLastSummary, rememberLastSummary } from './last-summary.ts';
+import { recallLastSummary, rememberLastSummary } from '../../offline/last-summary.ts';
 import {
-  challengeBonusText,
+  bonusText,
   challengeFailReason,
   challengeHeadline,
   challengeNotAppliedText,
   describeRecord,
-  gearBonusText,
   levelUpCueDelayMs,
   playsReveal,
   type QuestReveal,
@@ -418,8 +417,8 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           const gain = summary.xpBySkill[skill.key];
           const levelUp = leveledUp.get(skill.key);
           const xpAfter = xpBySkillId?.get(skill.id);
-          const challengeBonus = challengeBonusText(summary, skill.key);
-          const gearBonus = gearBonusText(summary, skill.key);
+          const challengeBonus = bonusText('Challenge', summary.challengeBonusBySkill, skill.key);
+          const gearBonus = bonusText('Gear', summary.gearBonusBySkill, skill.key);
           return (
             <li
               key={skill.key}

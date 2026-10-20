@@ -41,7 +41,8 @@
   overflow-wrap: anywhere;
 }
 
-.stat-tiles {
+.stat-tiles,
+.body-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-1-5);
@@ -76,12 +77,6 @@
 .public-tag {
   font-size: var(--font-size-xs);
   color: var(--color-xp);
-}
-
-.body-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-1-5);
 }
 
 .body-stat {

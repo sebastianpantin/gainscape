@@ -9,6 +9,9 @@ import {
 } from '@domain/index.ts';
 import { z } from 'zod';
 
+export const ENROLLMENT_COLUMNS =
+  'id, template_key, template_version, unit, options, lift_bindings, inputs, rounding, started_at, ended_at';
+
 export const enrollmentRowSchema = z.object({
   id: z.string(),
   template_key: z.string(),

@@ -3,8 +3,8 @@ import { type LiftDecl, type ProgressionRule, type SlotDecl } from '@domain/prog
 
 const LIFTOSAUR_SS = 'https://www.liftosaur.com/programs/ss1';
 
-export const STARTING_STRENGTH_LIFTS = ['squat', 'bench', 'press', 'deadlift'] as const;
-export type StartingStrengthLift = (typeof STARTING_STRENGTH_LIFTS)[number];
+const STARTING_STRENGTH_LIFTS = ['squat', 'bench', 'press', 'deadlift'] as const;
+type StartingStrengthLift = (typeof STARTING_STRENGTH_LIFTS)[number];
 
 const LIFT_DECLS: LiftDecl[] = [
   { key: 'squat', name: 'Squat', category: 'lower' },
@@ -79,7 +79,7 @@ export const STARTING_STRENGTH: ProgramDefinition = {
   ],
 };
 
-export const STARTING_STRENGTH_DEFAULT_WEIGHTS_KG: Readonly<Record<StartingStrengthLift, number>> = {
+const STARTING_STRENGTH_DEFAULT_WEIGHTS_KG: Readonly<Record<StartingStrengthLift, number>> = {
   squat: 60,
   bench: 50,
   press: 35,

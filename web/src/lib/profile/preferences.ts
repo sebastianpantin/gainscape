@@ -1,4 +1,6 @@
 import { createContext, useContext } from 'react';
+import { parsedJson } from '../json-rules.ts';
+import { keyedStore } from '../platform/keyed-store.ts';
 import { EFFORT_INPUT_MODES, type EffortInputMode, UNIT_PREFS, type UnitPref } from './profile-rules.ts';
 
 export interface Preferences {
@@ -33,8 +35,6 @@ export function pendingLocalPreferences(
   return caughtUp ? null : local;
 }
 
-const CACHE_KEY_PREFIX = 'gainscape.preferences.';
-
 function isPreferences(value: unknown): value is Preferences {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Record<string, unknown>;
@@ -44,28 +44,7 @@ function isPreferences(value: unknown): value is Preferences {
   );
 }
 
-export function cachedPreferences(userId: string): Preferences | null {
-  try {
-    const raw = localStorage.getItem(`${CACHE_KEY_PREFIX}${userId}`);
-    const parsed: unknown = raw ? JSON.parse(raw) : null;
-    return isPreferences(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-export function cachePreferences(userId: string, preferences: Preferences): void {
-  try {
-    localStorage.setItem(`${CACHE_KEY_PREFIX}${userId}`, JSON.stringify(preferences));
-  } catch {
-    return;
-  }
-}
-
-export function forgetCachedPreferences(storage: Storage | null, userId: string): void {
-  try {
-    storage?.removeItem(`${CACHE_KEY_PREFIX}${userId}`);
-  } catch {
-    return;
-  }
-}
+export const preferencesCache = keyedStore<Preferences | null>('gainscape.preferences.', (raw) => {
+  const parsed = parsedJson(raw);
+  return isPreferences(parsed) ? parsed : null;
+});

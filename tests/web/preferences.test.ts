@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cachedPreferences, cachePreferences, pendingLocalPreferences } from '../../web/src/lib/profile/preferences.ts';
+import { pendingLocalPreferences, preferencesCache } from '../../web/src/lib/profile/preferences.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -18,37 +18,37 @@ afterEach(() => {
 
 describe('cached preferences', () => {
   it('round-trips the preferences of one user', () => {
-    cachePreferences(userId, { unitPref: 'lb', effortInputMode: 'rpe' });
-    expect(cachedPreferences(userId)).toEqual({ unitPref: 'lb', effortInputMode: 'rpe' });
-    expect(cachedPreferences('22222222-2222-4222-8222-222222222222')).toBeNull();
+    preferencesCache.save(storage, userId, { unitPref: 'lb', effortInputMode: 'rpe' });
+    expect(preferencesCache.read(storage, userId)).toEqual({ unitPref: 'lb', effortInputMode: 'rpe' });
+    expect(preferencesCache.read(storage, '22222222-2222-4222-8222-222222222222')).toBeNull();
   });
 
   it('accepts every unit and effort mode', () => {
     for (const unitPref of ['kg', 'lb'])
       for (const effortInputMode of ['level', 'rir', 'rpe']) {
         storage.setItem(key, JSON.stringify({ unitPref, effortInputMode }));
-        expect(cachedPreferences(userId)).toEqual({ unitPref, effortInputMode });
+        expect(preferencesCache.read(storage, userId)).toEqual({ unitPref, effortInputMode });
       }
   });
 
   it('rejects anything that is not a preferences record', () => {
     for (const raw of ['null', '"kg"', '{"unitPref":"st","effortInputMode":"level"}', '{"unitPref":"kg"}', '{bad']) {
       storage.setItem(key, raw);
-      expect(cachedPreferences(userId)).toBeNull();
+      expect(preferencesCache.read(storage, userId)).toBeNull();
     }
   });
 
   it('degrades silently when local storage throws', () => {
-    vi.stubGlobal('localStorage', {
+    const blocked = {
       getItem: () => {
         throw new Error('blocked');
       },
       setItem: () => {
         throw new Error('blocked');
       },
-    });
-    expect(() => cachePreferences(userId, { unitPref: 'kg', effortInputMode: 'level' })).not.toThrow();
-    expect(cachedPreferences(userId)).toBeNull();
+    } as unknown as Storage;
+    expect(() => preferencesCache.save(blocked, userId, { unitPref: 'kg', effortInputMode: 'level' })).not.toThrow();
+    expect(preferencesCache.read(blocked, userId)).toBeNull();
   });
 });
 

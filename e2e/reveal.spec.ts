@@ -1,25 +1,9 @@
 import { type Page } from '@playwright/test';
+import { recordVibrations, vibrations } from './support/device.ts';
 import { expect, test } from './support/fixtures.ts';
 import { logBench, logExercise, openTab, register, uniqueUsername } from './support/app.ts';
 
 const LEVEL_UP_VIBRATION = [40, 50, 40, 50, 140];
-
-type VibrationLog = { vibrations: number[][] };
-
-async function recordVibrations(page: Page) {
-  await page.addInitScript(() => {
-    const log = window as unknown as VibrationLog;
-    log.vibrations = [];
-    navigator.vibrate = (pattern: number | Iterable<number>) => {
-      log.vibrations.push(typeof pattern === 'number' ? [pattern] : [...pattern]);
-      return true;
-    };
-  });
-}
-
-function vibrations(page: Page): Promise<number[][]> {
-  return page.evaluate(() => [...(window as unknown as VibrationLog).vibrations]);
-}
 
 type GainBarLog = { gainBarLabels: string[] };
 

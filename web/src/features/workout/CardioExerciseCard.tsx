@@ -13,7 +13,6 @@ interface CardioExerciseCardProps {
   draft: WorkoutDraft;
   exercise: CardioDraftExercise;
   exerciseIndex: number;
-  cardKey: string;
   previews: SetPreview[];
   unit: UnitPref;
   note: ReactNode;
@@ -26,7 +25,6 @@ export function CardioExerciseCard({
   draft,
   exercise,
   exerciseIndex,
-  cardKey,
   previews,
   unit,
   note,
@@ -48,37 +46,34 @@ export function CardioExerciseCard({
       <p className="muted">{`${doneHere}/${exercise.sets.length} bouts`}</p>
       {note}
       <ol className="set-list">
-        {exercise.sets.map((bout, boutIndex) => (
-          <CardioSetRow
-            key={bout.id}
-            boutNumber={boutIndex + 1}
-            bout={bout}
-            paceUnit={exercise.activity.paceUnit}
-            tracksDistance={exercise.activity.tracksDistance}
-            preview={previews[boutIndex]}
-            drop={actions.dropOn(bout.id)}
-            unit={unit}
-            onChange={(changes) =>
-              actions.changeSet(updateBout(draft, exerciseIndex, bout.id, changes), bout.id, {
-                exerciseIndex,
-                setIndex: boutIndex,
-                label: feedbackLabel(exercise.name, 'bout', boutIndex + 1),
-              })
-            }
-            menuRef={actions.focusTarget(bout.id)}
-            onRemove={() => actions.removeSetAt(exerciseIndex, bout.id)}
-            onToggleDone={() =>
-              actions.changeSet(toggleSetDone(draft, exerciseIndex, bout.id), bout.id, {
-                exerciseIndex,
-                setIndex: boutIndex,
-                label: feedbackLabel(exercise.name, 'bout', boutIndex + 1),
-              })
-            }
-          />
-        ))}
+        {exercise.sets.map((bout, boutIndex) => {
+          const place = {
+            exerciseIndex,
+            setIndex: boutIndex,
+            label: feedbackLabel(exercise.name, 'bout', boutIndex + 1),
+          };
+          return (
+            <CardioSetRow
+              key={bout.id}
+              boutNumber={boutIndex + 1}
+              bout={bout}
+              paceUnit={exercise.activity.paceUnit}
+              tracksDistance={exercise.activity.tracksDistance}
+              preview={previews[boutIndex]}
+              drop={actions.dropOn(bout.id)}
+              unit={unit}
+              onChange={(changes) =>
+                actions.changeSet(updateBout(draft, exerciseIndex, bout.id, changes), bout.id, place)
+              }
+              menuRef={actions.focusTarget(bout.id)}
+              onRemove={() => actions.removeSetAt(exerciseIndex, bout.id)}
+              onToggleDone={() => actions.changeSet(toggleSetDone(draft, exerciseIndex, bout.id), bout.id, place)}
+            />
+          );
+        })}
       </ol>
       <button
-        ref={actions.focusTarget(cardKey)}
+        ref={actions.focusTarget(exercise.clientId)}
         className="button dashed"
         type="button"
         disabled={!roomForBout}

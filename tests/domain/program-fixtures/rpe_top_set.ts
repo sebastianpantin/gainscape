@@ -10,14 +10,14 @@ import { type DayDecl, type ProgressionRule } from '@domain/program-types.ts';
 
 const FITNESSVOLT_RTS_CHART = 'https://fitnessvolt.com/rpe-training/guides/tuchscherer-chart-explained/';
 
-export const RPE_LIFTS = ['squat', 'bench', 'deadlift'] as const;
+const RPE_LIFTS = ['squat', 'bench', 'deadlift'] as const;
 export type RpeLift = (typeof RPE_LIFTS)[number];
 
 const NAMES: Readonly<Record<RpeLift, string>> = { squat: 'Squat', bench: 'Bench press', deadlift: 'Deadlift' };
 
-export const TOP_SET_REPS = 3;
-export const TOP_SET_RPE = 8;
-export const FATIGUE_DROP_PCT = 0.95;
+const TOP_SET_REPS = 3;
+const TOP_SET_RPE = 8;
+const FATIGUE_DROP_PCT = 0.95;
 
 function liftDay(lift: RpeLift, index: number): DayDecl {
   const top = `${lift}-top:0`;
@@ -104,7 +104,7 @@ export const RPE_TOP_SET: ProgramDefinition = {
   progression: RPE_LIFTS.map(e1rmRule),
 };
 
-export interface RpeEnrollmentOverrides {
+interface RpeEnrollmentOverrides {
   unit?: WeightUnit;
   e1rms?: Partial<Record<RpeLift, number>>;
   options?: Readonly<Record<string, OptionValue>>;

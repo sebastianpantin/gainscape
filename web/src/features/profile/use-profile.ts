@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { type Profile } from '../../lib/profile/profile.ts';
 import { profileQuery } from '../../lib/query/queries.ts';
@@ -20,20 +20,22 @@ interface ProfileQuery {
   refresh: () => Promise<unknown>;
 }
 
+export function patchSavedProfile(queryClient: QueryClient, userId: string, change: ProfileUpdate): void {
+  const { queryKey } = profileQuery(userId);
+  void queryClient.cancelQueries({ queryKey });
+  const current = queryClient.getQueryData(queryKey);
+  if (current === undefined) return;
+  const profile = typeof change === 'function' ? change(current.loaded) : change;
+  profileCache.save(deviceStorage(), userId, profile);
+  queryClient.setQueryData(queryKey, { ...current, loaded: profile });
+}
+
 export function useProfile(userId: string): ProfileQuery {
   const queryClient = useQueryClient();
   const query = useQuery(profileQuery(userId));
 
   const replace = useCallback(
-    (change: ProfileUpdate) => {
-      const { queryKey } = profileQuery(userId);
-      void queryClient.cancelQueries({ queryKey });
-      const current = queryClient.getQueryData(queryKey);
-      if (current === undefined) return;
-      const profile = typeof change === 'function' ? change(current.loaded) : change;
-      profileCache.save(deviceStorage(), userId, profile);
-      queryClient.setQueryData(queryKey, { ...current, loaded: profile });
-    },
+    (change: ProfileUpdate) => patchSavedProfile(queryClient, userId, change),
     [queryClient, userId],
   );
 

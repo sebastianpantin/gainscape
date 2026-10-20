@@ -233,9 +233,13 @@ export async function logBench(page: Page, weightKg = 60) {
   await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg, reps: 5 }]));
 }
 
-export async function openLatestWorkout(page: Page) {
+export async function openHistory(page: Page) {
   await openTab(page, 'Collection');
   await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+}
+
+export async function openLatestWorkout(page: Page) {
+  await openHistory(page);
   await page.getByRole('list', { name: 'Workouts' }).getByRole('link').first().click();
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
 }

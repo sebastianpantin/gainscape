@@ -69,7 +69,8 @@
   color: var(--color-danger);
 }
 
-.stalled-tag {
+.stalled-tag,
+.history-record-badge {
   flex-shrink: 0;
   padding: 0 var(--space-1);
   font-size: var(--font-size-xs);

@@ -10,30 +10,17 @@ import {
   programFactsFromRows,
 } from '../../web/src/lib/programs/program-facts-rules.ts';
 import { MADCOW_5X5, MADCOW_EXERCISES, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
+import { madcowEnrollmentRow } from './madcow-enrollment-fixture.ts';
 
 const ENROLLMENT_ID = '7a2f0c1e-1111-4111-8111-111111111111';
 const EXPLICIT_ZONE = /(?:Z|[+-]\d{2}:?\d{2})$/;
 
 function enrollmentRow(overrides: Partial<EnrollmentRow> = {}): EnrollmentRow {
-  return {
-    id: ENROLLMENT_ID,
-    template_key: 'madcow_5x5',
-    template_version: 1,
-    unit: 'kg',
-    options: { rampStep: 0.125 },
+  return madcowEnrollmentRow({
     lift_bindings: { ...MADCOW_EXERCISES, situp: null },
-    inputs: {
-      squat: { fiveRm: 100 },
-      bench: { fiveRm: 80 },
-      row: { fiveRm: 70 },
-      press: { fiveRm: 50 },
-      deadlift: { fiveRm: 140 },
-    },
-    rounding: { increment: 2.5, mode: 'nearest', barWeight: 20 },
     started_at: '2026-10-04T18:00:00.000000+00:00',
-    ended_at: null,
     ...overrides,
-  };
+  });
 }
 
 function setRow(overrides: Partial<FactSetRow> = {}): FactSetRow {

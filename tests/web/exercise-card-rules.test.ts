@@ -1,11 +1,11 @@
 import { shownWeight, unitToKg } from '../../web/src/lib/units.ts';
 import { describe, expect, it } from 'vitest';
+import { draftOf, lift, set } from './draft-fixtures.ts';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
 import type { Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { RecentSet } from '../../web/src/lib/history/last-session-rules.ts';
 import { fatigueAdvice, nextWeightHint } from '../../web/src/lib/workout/progression-rules.ts';
 import type { DraftBarbellSetup } from '../../web/src/lib/programs/program-set-rules.ts';
-import type { DraftSet, LiftDraftExercise, WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import {
   EXERCISE_MENU_LABELS,
   exerciseMenuChoices,
@@ -17,35 +17,6 @@ import {
   restStartsAfterChange,
   warmupsToOffer,
 } from '../../web/src/features/workout/exercise-card-rules.ts';
-
-function set(id: string, overrides: Partial<DraftSet> = {}): DraftSet {
-  return { id, weightKg: 100, reps: 5, effort: null, done: false, isWarmup: false, prescription: null, ...overrides };
-}
-
-function lift(exerciseId: string, sets: DraftSet[], overrides: Partial<LiftDraftExercise> = {}): LiftDraftExercise {
-  return {
-    clientId: `card-${exerciseId}`,
-    exerciseId,
-    name: exerciseId,
-    modality: 'lift',
-    loadType: 'external',
-    target: null,
-    supersetId: null,
-    sets,
-    ...overrides,
-  };
-}
-
-function draftOf(exercises: WorkoutDraft['exercises']): WorkoutDraft {
-  return {
-    sessionId: 'session',
-    startedAt: '2026-10-01T10:00:00.000Z',
-    finishedAt: null,
-    programDayId: null,
-    programLabel: null,
-    exercises,
-  };
-}
 
 function catalogLift(id: string, overrides: Partial<Extract<Exercise, { modality: 'lift' }>> = {}): Exercise {
   return {

@@ -1,6 +1,7 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
+import { recordVibrations, takeVibrations, vibrations } from './support/device.ts';
 import {
   finishWorkout,
   logExercise,
@@ -13,27 +14,6 @@ import {
 } from './support/app.ts';
 
 const REST_OVER_VIBRATION = [200, 100, 200];
-
-type VibrationLog = { vibrations: number[][] };
-
-async function recordVibrations(page: Page) {
-  await page.addInitScript(() => {
-    const log = window as unknown as VibrationLog;
-    log.vibrations = [];
-    navigator.vibrate = (pattern: number | Iterable<number>) => {
-      log.vibrations.push(typeof pattern === 'number' ? [pattern] : [...pattern]);
-      return true;
-    };
-  });
-}
-
-function vibrations(page: Page): Promise<number[][]> {
-  return page.evaluate(() => [...(window as unknown as VibrationLog).vibrations]);
-}
-
-async function forgetVibrations(page: Page): Promise<void> {
-  await page.evaluate(() => (window as unknown as VibrationLog).vibrations.splice(0));
-}
 
 function workoutBar(page: Page) {
   return page.getByRole('link', { name: /^Back to workout/ });
@@ -59,7 +39,7 @@ test('an open workout and its rest follow the lifter to other screens, alert the
   await logExercise(page, 'barbell curl', 'Barbell Curl', [{ weightKg: 30, reps: 10 }]);
   await expect(restTimer(page).getByRole('timer', { name: 'Rest remaining' })).toHaveText('1:30');
   await expect(workoutBar(page)).toHaveCount(0);
-  await forgetVibrations(page);
+  await takeVibrations(page);
 
   await openTab(page, 'Skills');
   await expect(skillsList(page)).toBeVisible();

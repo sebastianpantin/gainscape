@@ -18,7 +18,7 @@ const BUILD_MARKER = '.vite/gainscape-build.json';
 const PRODUCTION_MODE = 'production';
 export const KILL_SWITCH_ALLOW_LOCAL_FLAG = 'GAINSCAPE_KILL_SWITCH_ALLOW_LOCAL';
 
-export interface BuildMarker {
+interface BuildMarker {
   mode: string;
   hostedSupabase: boolean;
 }
