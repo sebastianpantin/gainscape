@@ -18,7 +18,6 @@ import {
   inputColumnsWithEffort,
   liftFieldsFromRow,
   setKindOfRow,
-  NO_PRESCRIPTION_SNAPSHOT,
   type PrescriptionSnapshotColumns,
 } from './set-columns.ts';
 
@@ -116,11 +115,23 @@ export async function requireOwnedSession(tx: Transaction, userId: string, sessi
   };
 }
 
-export function isOwnedSessionEditable(session: OwnedSession, now: number): boolean {
+function isOwnedSessionEditable(session: OwnedSession, now: number): boolean {
   return isSessionEditable({ historyOnly: session.historyOnly, startedAt: session.key.startedAt }, now);
 }
 
-export async function loadStoredSets(tx: Transaction, sessionId: string): Promise<StoredSet[]> {
+export function assertEditableAt(session: OwnedSession, ifRevision: number | undefined, now: number): void {
+  if (!isOwnedSessionEditable(session, now)) throw new HttpError(409, 'edit_window_closed');
+  if (ifRevision !== undefined && ifRevision !== session.revision) {
+    throw new HttpError(409, 'revision_conflict', { revision: session.revision });
+  }
+}
+
+export async function loadStoredSetsById(tx: Transaction, sessionId: string) {
+  const storedSets = await loadStoredSets(tx, sessionId);
+  return { storedSets, storedById: new Map(storedSets.map((set) => [set.id, set])) };
+}
+
+async function loadStoredSets(tx: Transaction, sessionId: string): Promise<StoredSet[]> {
   const rows = await tx`
     select id, exercise_id, position, weight_kg, effective_load_kg, reps, is_warmup, effort_input_type, effort_value,
            duration_s, distance_m, interval_work_s, interval_rest_s, interval_rounds
@@ -271,7 +282,7 @@ export async function writeEditedSets(
   if (added.length > 0) {
     const rows = added.map((set) => ({
       ...placeholderSetRow(set, sessionId, userId, cfg),
-      ...(addedSnapshots.get(set.id) ?? NO_PRESCRIPTION_SNAPSHOT),
+      ...addedSnapshots.get(set.id)!,
     }));
     await tx`insert into public.sets ${tx(rows)}`;
   }
@@ -298,10 +309,14 @@ export async function tombstoneSession(tx: Transaction, userId: string, key: Ses
   await tx`delete from public.sessions where id = ${key.id} and user_id = ${userId}`;
 }
 
+export function staleDerivedSession(tx: Transaction, version: number) {
+  return tx`not history_only and derived_balance_version <> ${version}`;
+}
+
 export async function markSessionsDerivedAt(tx: Transaction, userId: string, version: number): Promise<void> {
   await tx`
     update public.sessions set derived_balance_version = ${version}
-    where user_id = ${userId} and not history_only and derived_balance_version <> ${version}`;
+    where user_id = ${userId} and ${staleDerivedSession(tx, version)}`;
 }
 
 export async function insertSession(

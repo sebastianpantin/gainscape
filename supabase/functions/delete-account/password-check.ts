@@ -1,20 +1,14 @@
-import { HttpError, logUnexpectedError } from '../_shared/http.ts';
+import { HttpError } from '../_shared/http.ts';
+import { authServiceFailure, RATE_LIMITED_STATUS } from '../_shared/token-check.ts';
 
 interface SignInError {
   status?: number;
   code?: string;
 }
 
-const TOO_MANY_REQUESTS = 429;
-
 export function passwordMatchesAfterSignIn(error: SignInError | null, signedIn: boolean): boolean {
   if (error === null) return signedIn;
   if (error.code === 'invalid_credentials') return false;
-  if (error.status === TOO_MANY_REQUESTS) throw new HttpError(429, 'auth_rate_limited');
+  if (error.status === RATE_LIMITED_STATUS) throw new HttpError(429, 'auth_rate_limited');
   throw authServiceFailure(error);
-}
-
-export function authServiceFailure(error: unknown): HttpError {
-  logUnexpectedError(error);
-  return new HttpError(503, 'auth_unavailable');
 }

@@ -8,6 +8,7 @@ import {
   type SessionInput,
   type SessionKey,
 } from '../domain/index.ts';
+import { staleDerivedSession } from './sessions.ts';
 import { cardioFieldsFromRow, holdFieldsFromRow, liftFieldsFromRow, setKindOfRow } from './set-columns.ts';
 
 export async function loadReplayableSessions(
@@ -122,7 +123,7 @@ export async function hasStaleDerivedSessions(tx: Transaction, userId: string, v
   const [row] = await tx`
     select exists (
       select 1 from public.sessions
-      where user_id = ${userId} and not history_only and derived_balance_version <> ${version}
+      where user_id = ${userId} and ${staleDerivedSession(tx, version)}
     ) as stale`;
   return row.stale;
 }

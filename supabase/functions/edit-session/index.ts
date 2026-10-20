@@ -15,12 +15,12 @@ import { assertDistinctPrescriptionRefs, type SetPayload } from '../_shared/sess
 import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
 import { deriveEditedSession } from '../_shared/stores/replay.ts';
 import {
+  assertEditableAt,
   assertSetIdsUnused,
   bumpRevision,
-  isOwnedSessionEditable,
   loadPrescriptionRefs,
   loadProfileSettings,
-  loadStoredSets,
+  loadStoredSetsById,
   lockUser,
   requireOwnedSession,
   writeEditedSets,
@@ -48,17 +48,13 @@ async function editSession(userId: string, payload: EditSessionPayload): Promise
     await lockUser(tx, userId);
 
     const session = await requireOwnedSession(tx, userId, payload.sessionId);
-    const storedSets = await loadStoredSets(tx, payload.sessionId);
-    const storedById = new Map(storedSets.map((set) => [set.id, set]));
+    const { storedSets, storedById } = await loadStoredSetsById(tx, payload.sessionId);
     if (isNoOpEdit(payload, session.notes, storedById, DEFAULT_BALANCE)) {
       return { summary: session.summary, revision: session.revision, replayedSessionIds: [], revokedDrops: [] };
     }
     await takeRateLimit(tx, 'session_edit_hour', userId);
 
-    if (!isOwnedSessionEditable(session, Date.now())) throw new HttpError(409, 'edit_window_closed');
-    if (payload.ifRevision !== session.revision) {
-      throw new HttpError(409, 'revision_conflict', { revision: session.revision });
-    }
+    assertEditableAt(session, payload.ifRevision, Date.now());
     assertKindsUnchanged(payload.sets, storedById);
     const addedSets = payload.sets.filter((set) => !storedById.has(set.id));
     assertDistinctPrescriptionRefs(addedSets);
