@@ -1,5 +1,5 @@
 import { expect, test } from './support/fixtures.ts';
-import { logCardio, logWorkout, openSkill, openTab, register, uniqueUsername } from './support/app.ts';
+import { logCardio, logWorkout, openHistory, openSkill, openTab, register, uniqueUsername } from './support/app.ts';
 import { activeDropsOfLatestSession, grantItems } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
 import { db } from '../tests/integration/local-stack.ts';
@@ -73,8 +73,7 @@ test('a skill with no exercises that train it says so', async ({ page }) => {
 test('an empty history offers to start the first workout', async ({ page }) => {
   await register(page, uniqueUsername('es_hist'));
 
-  await openTab(page, 'Collection');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+  await openHistory(page);
   await expect(page.getByText('No workouts yet. Finish one and it shows up here.')).toBeVisible();
   await page.getByRole('main').getByRole('link', { name: 'Start your first workout', exact: true }).click();
 

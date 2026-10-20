@@ -9,6 +9,7 @@ import {
   logExercise,
   logWorkout,
   openFromProfile,
+  openHistory,
   openTab,
   readSession,
   register,
@@ -207,8 +208,7 @@ test.describe('signed-in screens', () => {
     await checkScreen(page, 'reveal (gear bonus)', () =>
       expect(page.getByText(/^Gear bonus \+\d+ XP$/).first()).toBeVisible(),
     );
-    await openTab(page, 'Collection');
-    await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
+    await openHistory(page);
     const workouts = page.getByRole('list', { name: 'Workouts' }).getByRole('link');
     await expect(workouts).toHaveCount(1);
     const sessionPath = await workouts.first().getAttribute('href');

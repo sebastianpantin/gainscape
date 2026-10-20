@@ -20,6 +20,7 @@ import {
   refreshProgramFactsWith,
 } from '../../web/src/offline/program-refresh.ts';
 import { MADCOW_5X5, MADCOW_EXERCISES } from '../domain/program-fixtures/madcow_5x5.ts';
+import { madcowEnrollmentRow } from './madcow-enrollment-fixture.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -33,27 +34,6 @@ const MADCOW_TEMPLATE: ProgramTemplateRow = {
   name: 'Madcow 5x5',
   definition: MADCOW_5X5,
 };
-
-function enrollmentRow(id: string): EnrollmentRow {
-  return {
-    id,
-    template_key: 'madcow_5x5',
-    template_version: 1,
-    unit: 'kg',
-    options: { rampStep: 0.125 },
-    lift_bindings: { ...MADCOW_EXERCISES },
-    inputs: {
-      squat: { fiveRm: 100 },
-      bench: { fiveRm: 80 },
-      row: { fiveRm: 70 },
-      press: { fiveRm: 50 },
-      deadlift: { fiveRm: 140 },
-    },
-    rounding: { increment: 2.5, mode: 'nearest', barWeight: 20 },
-    started_at: '2026-10-04T18:00:00.000Z',
-    ended_at: null,
-  };
-}
 
 function sessionRow(id: string, completedAt: string): LinkedSessionRow {
   return {
@@ -99,7 +79,7 @@ function harness(fetchers: Partial<ProgramFetchers> & Pick<ProgramFetchers, 'enr
     now: () => 1_000,
     fetchers: {
       templates: async () => [MADCOW_TEMPLATE],
-      activeEnrollment: async () => enrollmentRow(FIRST_ID),
+      activeEnrollment: async () => madcowEnrollmentRow({ id: FIRST_ID }),
       ...fetchers,
       enrollmentFacts: (enrollmentId) => {
         factsRequests.push(enrollmentId);
@@ -120,8 +100,10 @@ function serverIds(cache: ProgramCache): string[] {
 
 describe('refreshing the program facts', () => {
   it('merges the fetched sessions into the cache for the enrollment', async () => {
-    const { context } = harness({ enrollmentFacts: async () => factsRows(enrollmentRow(FIRST_ID), [MONDAY]) });
-    const refreshed = await refreshProgramFactsWith(context, enrollmentRow(FIRST_ID));
+    const { context } = harness({
+      enrollmentFacts: async () => factsRows(madcowEnrollmentRow({ id: FIRST_ID }), [MONDAY]),
+    });
+    const refreshed = await refreshProgramFactsWith(context, madcowEnrollmentRow({ id: FIRST_ID }));
     expect(refreshed.facts?.enrollmentId).toBe(FIRST_ID);
     expect(serverIds(refreshed)).toEqual(['session-monday']);
   });
@@ -131,15 +113,18 @@ describe('refreshing the program facts', () => {
     const { context, storage } = harness({
       enrollmentFacts: async () => {
         enrollmentDuringFetch = cachedFor(storage).enrollment?.id;
-        return factsRows(enrollmentRow(SECOND_ID), [MONDAY]);
+        return factsRows(madcowEnrollmentRow({ id: SECOND_ID }), [MONDAY]);
       },
     });
     saveProgramCache(
       storage,
       USER_ID,
-      withEnrollment({ templates: [MADCOW_TEMPLATE], enrollment: null, facts: null }, enrollmentRow(FIRST_ID)),
+      withEnrollment(
+        { templates: [MADCOW_TEMPLATE], enrollment: null, facts: null },
+        madcowEnrollmentRow({ id: FIRST_ID }),
+      ),
     );
-    const refreshed = await refreshProgramFactsWith(context, enrollmentRow(SECOND_ID));
+    const refreshed = await refreshProgramFactsWith(context, madcowEnrollmentRow({ id: SECOND_ID }));
     expect(enrollmentDuringFetch).toBe(SECOND_ID);
     expect(refreshed.facts?.enrollmentId).toBe(SECOND_ID);
     expect(serverIds(refreshed)).toEqual(['session-monday']);
@@ -149,12 +134,12 @@ describe('refreshing the program facts', () => {
     const { context, storage } = harness({
       enrollmentFacts: async () => {
         forgetDeletedProgramSession(storage, USER_ID, 'session-monday');
-        return factsRows(enrollmentRow(FIRST_ID), [MONDAY, WEDNESDAY]);
+        return factsRows(madcowEnrollmentRow({ id: FIRST_ID }), [MONDAY, WEDNESDAY]);
       },
     });
     const start = withEnrollment(
       { templates: [MADCOW_TEMPLATE], enrollment: null, facts: null },
-      enrollmentRow(FIRST_ID),
+      madcowEnrollmentRow({ id: FIRST_ID }),
     );
     const seeded: ProgramCache = {
       ...start,
@@ -172,7 +157,7 @@ describe('refreshing the program facts', () => {
       },
     };
     saveProgramCache(storage, USER_ID, seeded);
-    const refreshed = await refreshProgramFactsWith(context, enrollmentRow(FIRST_ID));
+    const refreshed = await refreshProgramFactsWith(context, madcowEnrollmentRow({ id: FIRST_ID }));
     expect(serverIds(refreshed)).not.toContain('session-monday');
     expect(serverIds(cachedFor(storage))).not.toContain('session-monday');
   });
@@ -180,11 +165,11 @@ describe('refreshing the program facts', () => {
   it('discards the merge when another enrollment started during the fetch', async () => {
     const { context, storage } = harness({
       enrollmentFacts: async () => {
-        saveProgramCache(storage, USER_ID, withEnrollment(cachedFor(storage), enrollmentRow(THIRD_ID)));
-        return factsRows(enrollmentRow(FIRST_ID), [MONDAY]);
+        saveProgramCache(storage, USER_ID, withEnrollment(cachedFor(storage), madcowEnrollmentRow({ id: THIRD_ID })));
+        return factsRows(madcowEnrollmentRow({ id: FIRST_ID }), [MONDAY]);
       },
     });
-    const refreshed = await refreshProgramFactsWith(context, enrollmentRow(FIRST_ID));
+    const refreshed = await refreshProgramFactsWith(context, madcowEnrollmentRow({ id: FIRST_ID }));
     expect(refreshed.enrollment?.id).toBe(THIRD_ID);
     expect(refreshed.facts?.enrollmentId).toBe(THIRD_ID);
     expect(serverIds(refreshed)).toEqual([]);
@@ -195,7 +180,7 @@ describe('refreshing the whole program cache', () => {
   it('marks the cache as refreshed once a refresh has run, even when no enrollment is active', async () => {
     const { context, storage } = harness({
       activeEnrollment: async () => null,
-      enrollmentFacts: async () => factsRows(enrollmentRow(FIRST_ID), []),
+      enrollmentFacts: async () => factsRows(madcowEnrollmentRow({ id: FIRST_ID }), []),
     });
     expect(cachedFor(storage).refreshed).toBeUndefined();
     await refreshProgramCacheWith(context);
@@ -203,7 +188,9 @@ describe('refreshing the whole program cache', () => {
   });
 
   it('stores the fetched templates, the active enrollment and its facts', async () => {
-    const { context, storage } = harness({ enrollmentFacts: async () => factsRows(enrollmentRow(FIRST_ID), [MONDAY]) });
+    const { context, storage } = harness({
+      enrollmentFacts: async () => factsRows(madcowEnrollmentRow({ id: FIRST_ID }), [MONDAY]),
+    });
     await refreshProgramCacheWith(context);
     const cached = cachedFor(storage);
     expect(cached.templates).toEqual([MADCOW_TEMPLATE]);
@@ -214,10 +201,13 @@ describe('refreshing the whole program cache', () => {
   it('clears the enrollment and its facts when it was ended on another device, without fetching facts', async () => {
     const { context, storage, factsRequests } = harness({
       activeEnrollment: async () => null,
-      enrollmentFacts: async () => factsRows(enrollmentRow(FIRST_ID), [MONDAY]),
+      enrollmentFacts: async () => factsRows(madcowEnrollmentRow({ id: FIRST_ID }), [MONDAY]),
     });
     saveProgramCache(storage, USER_ID, {
-      ...withEnrollment({ templates: [MADCOW_TEMPLATE], enrollment: null, facts: null }, enrollmentRow(FIRST_ID)),
+      ...withEnrollment(
+        { templates: [MADCOW_TEMPLATE], enrollment: null, facts: null },
+        madcowEnrollmentRow({ id: FIRST_ID }),
+      ),
     });
     const refreshed = await refreshProgramCacheWith(context);
     expect(refreshed.enrollment).toBeNull();
@@ -231,11 +221,11 @@ describe('refreshing the whole program cache', () => {
       templates: async () => {
         throw new TypeError('Failed to fetch');
       },
-      enrollmentFacts: async () => factsRows(enrollmentRow(FIRST_ID), [MONDAY]),
+      enrollmentFacts: async () => factsRows(madcowEnrollmentRow({ id: FIRST_ID }), [MONDAY]),
     });
     const before: ProgramCache = withEnrollment(
       { templates: [MADCOW_TEMPLATE], enrollment: null, facts: null },
-      enrollmentRow(FIRST_ID),
+      madcowEnrollmentRow({ id: FIRST_ID }),
     );
     saveProgramCache(storage, USER_ID, before);
     await expect(refreshProgramCacheWith(context)).rejects.toThrow('Failed to fetch');

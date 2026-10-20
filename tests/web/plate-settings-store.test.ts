@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PLATE_SETTINGS } from '../../web/src/lib/workout/plate-rules.ts';
 import { readPlateSettings, savePlateSettings } from '../../web/src/lib/workout/plate-settings-store.ts';
-import { MemoryStorage } from './memory-storage.ts';
+import { MemoryStorage, throwingStorage } from './memory-storage.ts';
 
 describe('stored plate settings', () => {
   it('round-trips through storage per user', () => {
@@ -13,13 +13,7 @@ describe('stored plate settings', () => {
   });
 
   it('falls back to the defaults without storage or when storage throws', () => {
-    const throwing = new MemoryStorage();
-    throwing.getItem = () => {
-      throw new Error('blocked');
-    };
-    throwing.setItem = () => {
-      throw new Error('blocked');
-    };
+    const throwing = throwingStorage('getItem', 'setItem');
     expect(readPlateSettings(null, 'user-1')).toEqual(DEFAULT_PLATE_SETTINGS);
     expect(readPlateSettings(throwing, 'user-1')).toEqual(DEFAULT_PLATE_SETTINGS);
     expect(() => savePlateSettings(throwing, 'user-1', DEFAULT_PLATE_SETTINGS)).not.toThrow();

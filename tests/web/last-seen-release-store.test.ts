@@ -4,7 +4,7 @@ import {
   readLastSeenRelease,
   saveLastSeenRelease,
 } from '../../web/src/lib/platform/last-seen-release-store.ts';
-import { MemoryStorage } from './memory-storage.ts';
+import { MemoryStorage, throwingStorage } from './memory-storage.ts';
 
 function blocked(): never {
   throw new Error('blocked');
@@ -20,8 +20,7 @@ describe('stored last seen release', () => {
   });
 
   it('is unavailable without storage or when reading throws', () => {
-    const throwing = new MemoryStorage();
-    throwing.getItem = blocked;
+    const throwing = throwingStorage('getItem');
     expect(readLastSeenRelease(null, 'user-1')).toEqual({ status: 'unavailable' });
     expect(readLastSeenRelease(throwing, 'user-1')).toEqual({ status: 'unavailable' });
     expect(saveLastSeenRelease(null, 'user-1', '1.2.0')).toBe(false);
@@ -36,8 +35,7 @@ describe('stored last seen release', () => {
   });
 
   it('is absent when nothing is stored, even if writes throw', () => {
-    const readOnly = new MemoryStorage();
-    readOnly.setItem = blocked;
+    const readOnly = throwingStorage('setItem');
     expect(readLastSeenRelease(readOnly, 'user-1')).toEqual({ status: 'absent' });
   });
 });

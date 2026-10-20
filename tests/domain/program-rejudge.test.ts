@@ -1,22 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { type ProgramState, programStateAt } from '@domain/index.ts';
-import { sessionFact } from './program-fixtures/facts.ts';
+import { programStateAt } from '@domain/index.ts';
+import { sessionFact, withoutFactIds } from './program-fixtures/facts.ts';
 import { linearDay, linearEnrollment, linearSquatSets } from './program-fixtures/linear_after_session.ts';
 import { refOf } from './program-fixtures/prescription-helpers.ts';
 import { LINEAR_DELOAD_AFTER_SESSION } from './program-fixtures/review-fixtures.ts';
 
 const enrollment = linearEnrollment(100);
-
-function withoutFactIds(state: ProgramState) {
-  return {
-    position: state.position,
-    completedDays: state.completedDays,
-    refs: state.refs,
-    consecutiveMisses: state.consecutiveMisses,
-    days: state.days,
-    history: state.history,
-  };
-}
 
 const missedSession = (id: string, at: string) => sessionFact({ id, at }, linearDay(1, 'a'), linearSquatSets('a', 3));
 const metSession = (id: string, at: string) => sessionFact({ id, at }, linearDay(1, 'a'), linearSquatSets('a'));
