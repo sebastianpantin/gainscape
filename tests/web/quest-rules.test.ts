@@ -389,6 +389,16 @@ describe('activeQuestLine', () => {
     expect(activeQuestLine(log, 'kg')).toMatchObject({ progressText: '1 of 2 steps done', fraction: 0.5 });
   });
 
+  it('skips a completed quest for the next one in progress', () => {
+    const log = questLogFrom(
+      rows({
+        progress: [progress(OPEN_QUEST.id, 0, 3), progress(INITIATION.id, 1, 50)],
+        completions: [{ quest_id: OPEN_QUEST.id, completed_at: '2026-10-02T00:00:00Z', quest_points: 1 }],
+      }),
+    );
+    expect(activeQuestLine(log, 'kg')).toMatchObject({ questName: 'X Marks the Squat' });
+  });
+
   it('has nothing to show without a quest in progress', () => {
     expect(activeQuestLine(questLogFrom(rows()), 'kg')).toBeNull();
     const completed = questLogFrom(
