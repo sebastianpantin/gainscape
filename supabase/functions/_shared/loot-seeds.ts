@@ -3,7 +3,7 @@ import { HttpError } from './http.ts';
 
 const MIN_LOOT_SECRET_LENGTH = 32;
 
-export interface LootSeedRequest {
+interface LootSeedRequest {
   setId: string;
   kind: RollKind;
 }

@@ -57,7 +57,7 @@ import { advanceStage, isRetestPending, retestedStages } from './program-stages.
 import { rpeChartPct } from './rpe-chart.ts';
 import { kgToUnit, shownWeight, type WeightUnit } from './units.ts';
 
-export interface LoggedLoad {
+interface LoggedLoad {
   weightKg: number;
   reps: number;
 }
@@ -179,7 +179,7 @@ function waveIndexOf(definition: ProgramDefinition, position: Position): number 
   return Math.floor((weekContextOf(position).week - 1) / schedule.waveWeeks);
 }
 
-export type FinalDaySets = Readonly<Record<string, readonly FactSet[]>>;
+type FinalDaySets = Readonly<Record<string, readonly FactSet[]>>;
 
 interface FoldContext {
   definition: ProgramDefinition;

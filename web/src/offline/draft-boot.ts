@@ -15,7 +15,7 @@ import { SESSION_STAYS_ON_FALLBACK } from './draft-session.ts';
 const V1_DRAFT_KEY = /^gainscape\.workout-draft\.[0-9a-f-]{36}$/;
 const FORGOTTEN_TOMBSTONE_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
-export interface DraftEnvironment {
+interface DraftEnvironment {
   indexedDB: IDBFactory | undefined;
   storage: Storage;
 }

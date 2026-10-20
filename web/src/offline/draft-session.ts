@@ -40,7 +40,7 @@ export interface DraftChannel {
   onmessage: ((event: MessageEvent<unknown>) => void) | null;
 }
 
-export interface DraftSessionOptions {
+interface DraftSessionOptions {
   userId: string;
   openStore: () => Promise<DraftStore>;
   fallbackStore: () => DraftStore;

@@ -296,7 +296,7 @@ export function strengthHistoryRows(session: SessionKey, sets: readonly SetResul
   }));
 }
 
-export interface CurrentStrength {
+interface CurrentStrength {
   value: number;
   sourceSetId: string | null;
 }

@@ -24,7 +24,7 @@ export interface SkillDef {
   combatWeight: number;
 }
 
-export interface SkillShare {
+interface SkillShare {
   skillId: string;
   shareBasisPoints: number;
 }
@@ -123,7 +123,7 @@ export function isLiftSet(set: SetInput): set is LiftSetInput {
   return set.kind === undefined || set.kind === 'lift';
 }
 
-export function isHoldSet(set: SetInput): set is HoldSetInput {
+function isHoldSet(set: SetInput): set is HoldSetInput {
   return set.kind === 'hold';
 }
 

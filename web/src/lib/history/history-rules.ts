@@ -276,7 +276,7 @@ export function transientReason(outcome: InvokeOutcome<unknown>): string | null 
 
 const AUTOMATIC_RETRIES = 4;
 
-export interface RetriedInvoke<T> {
+interface RetriedInvoke<T> {
   invoke: () => Promise<InvokeOutcome<T>>;
   pause: (ms: number, signal: AbortSignal) => Promise<void>;
   signal: AbortSignal;

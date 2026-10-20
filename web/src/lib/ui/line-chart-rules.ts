@@ -19,18 +19,18 @@ export interface ChartFrame {
   bottom: number;
 }
 
-export interface PlottedPoint extends ChartPoint {
+interface PlottedPoint extends ChartPoint {
   cx: number;
   cy: number;
 }
 
-export interface PlottedSeries {
+interface PlottedSeries {
   name: string;
   path: string;
   dots: PlottedPoint[];
 }
 
-export interface ChartLayout {
+interface ChartLayout {
   series: PlottedSeries[];
   xTicks: { value: number; x: number }[];
   yTicks: { value: number; y: number }[];
@@ -60,7 +60,7 @@ function scale(domainLow: number, domainHigh: number, rangeLow: number, rangeHig
     roundTo(TICK_DECIMALS, rangeLow + ((value - domainLow) / (domainHigh - domainLow)) * (rangeHigh - rangeLow));
 }
 
-export interface ChartScaleOptions {
+interface ChartScaleOptions {
   yTickCount?: number;
   minYStep?: number;
 }

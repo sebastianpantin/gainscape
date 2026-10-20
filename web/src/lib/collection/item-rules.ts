@@ -59,15 +59,15 @@ export interface HeldItem {
   firstObtainedAt: string;
 }
 
-export type HeldItems = ReadonlyMap<string, HeldItem>;
+type HeldItems = ReadonlyMap<string, HeldItem>;
 
-export interface ItemSlot {
+interface ItemSlot {
   item: CatalogItem;
   held: HeldItem | null;
   isNew: boolean;
 }
 
-export interface ItemGroup {
+interface ItemGroup {
   title: 'Gear' | 'Materials' | 'Pets' | 'Scrolls';
   slots: number;
   found: number;
@@ -88,7 +88,7 @@ export const itemRowSchema = z.object({
   sort_order: z.number(),
 });
 
-export type ItemRow = z.infer<typeof itemRowSchema>;
+type ItemRow = z.infer<typeof itemRowSchema>;
 
 export const recipeRowSchema = z.object({
   id: z.string(),
@@ -98,7 +98,7 @@ export const recipeRowSchema = z.object({
   recipe_inputs: z.array(z.object({ item_id: z.string(), quantity: z.number() })),
 });
 
-export type RecipeRow = z.infer<typeof recipeRowSchema>;
+type RecipeRow = z.infer<typeof recipeRowSchema>;
 
 export const inventoryRowSchema = z.object({
   item_id: z.string(),
@@ -106,7 +106,7 @@ export const inventoryRowSchema = z.object({
   first_obtained_at: z.string(),
 });
 
-export type InventoryRow = z.infer<typeof inventoryRowSchema>;
+type InventoryRow = z.infer<typeof inventoryRowSchema>;
 
 export function toCatalogItem(row: ItemRow): CatalogItem {
   return {

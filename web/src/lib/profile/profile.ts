@@ -61,7 +61,7 @@ export function loadProfileCacheFirst(userId: string, signal?: AbortSignal): Pro
   );
 }
 
-export type PublicProfileChanges = Partial<
+type PublicProfileChanges = Partial<
   Pick<
     Profile,
     'displayName' | 'bio' | 'trainingFocus' | 'trainingSince' | 'badgeColor' | 'showWeights' | 'showBodyweight'
@@ -78,7 +78,7 @@ const PUBLIC_COLUMNS: Record<keyof PublicProfileChanges, string> = {
   showBodyweight: 'show_bodyweight',
 };
 
-export type PrivateProfileChanges = Partial<
+type PrivateProfileChanges = Partial<
   Pick<Profile, 'bodyweightKg' | 'heightCm' | 'birthYear' | 'unitPref' | 'effortInputMode'>
 >;
 
@@ -112,7 +112,7 @@ export async function updatePrivateProfile(userId: string, changes: PrivateProfi
   if (error) throw withFriendlyRateLimit(error);
 }
 
-export type TimezoneChangeResult =
+type TimezoneChangeResult =
   | { ok: true }
   | { ok: false; reason: 'too_soon'; nextAllowedAt: string }
   | { ok: false; reason: 'invalid' | 'failed'; message: string };

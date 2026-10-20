@@ -16,9 +16,9 @@ export interface FeedSourceSet {
   effectiveLoadKg: number | null;
 }
 
-export type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop' | 'quest';
+type FeedEventType = 'pr' | 'level_up' | 'level_99' | 'drop' | 'quest';
 
-export interface FeedEventDraft {
+interface FeedEventDraft {
   key: string;
   type: FeedEventType;
   setId: string | null;

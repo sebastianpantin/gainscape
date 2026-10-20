@@ -1,17 +1,17 @@
 export const SET_MENU_GAP_PX = 4;
 
-export interface SetMenuAnchor {
+interface SetMenuAnchor {
   top: number;
   bottom: number;
   right: number;
 }
 
-export interface SetMenuViewport {
+interface SetMenuViewport {
   width: number;
   height: number;
 }
 
-export interface SetMenuPlacement {
+interface SetMenuPlacement {
   top: number | null;
   bottom: number | null;
   right: number;

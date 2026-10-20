@@ -23,7 +23,7 @@ export interface Recipe {
   inputs: readonly RecipeInput[];
 }
 
-export type Inventory = ReadonlyMap<string, number>;
+type Inventory = ReadonlyMap<string, number>;
 
 export function canCraft(recipe: Pick<Recipe, 'inputs'>, inventory: Inventory): boolean {
   return (

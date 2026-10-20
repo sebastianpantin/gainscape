@@ -19,7 +19,7 @@ export const TARGET_REPS_RANGE = { lowest: 1, highest: 100 } as const;
 
 const DEFAULT_TARGET = { targetSets: 3, targetRepsMin: 8, targetRepsMax: 12, progression: { kind: 'none' } } as const;
 
-export type Increment = Record<UnitPref, number>;
+type Increment = Record<UnitPref, number>;
 
 export const INCREMENT_PRESETS: readonly Increment[] = [
   { kg: 1.25, lb: 2.5 },

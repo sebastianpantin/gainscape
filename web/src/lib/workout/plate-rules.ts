@@ -132,7 +132,7 @@ function loadedPlatesLabel(plates: readonly number[], unit: WeightUnit): string 
   return plates.length === 0 ? 'Empty bar' : `${groupedPlates(plates)} ${unit} each side`;
 }
 
-export interface BarbellPlates {
+interface BarbellPlates {
   plates: number[];
   nearest: number | null;
 }
@@ -150,8 +150,8 @@ export function barbellPlatesText(total: number, setup: BarbellSetup, unit: Weig
   return nearest === null ? label : `Nearest ${nearest} ${unit}: ${label}`;
 }
 
-export type PlateTone = 'red' | 'blue' | 'yellow' | 'green' | 'white' | 'steel';
-export type PlateSize = 'full' | 'large' | 'medium' | 'small';
+type PlateTone = 'red' | 'blue' | 'yellow' | 'green' | 'white' | 'steel';
+type PlateSize = 'full' | 'large' | 'medium' | 'small';
 
 const PLATE_TONES: Readonly<Record<WeightUnit, ReadonlyMap<number, PlateTone>>> = {
   kg: new Map([

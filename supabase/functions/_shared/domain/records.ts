@@ -113,7 +113,7 @@ function beatsCardioRecord(
   return value >= previous + minGain - FLOAT_TOLERANCE;
 }
 
-export interface CardioRecordUpdate {
+interface CardioRecordUpdate {
   records: RecordState;
   gains: CardioRecordGain[];
 }
@@ -172,7 +172,7 @@ export function applyHoldToRecords(
   };
 }
 
-export interface RecordUpdate {
+interface RecordUpdate {
   records: RecordState;
   personalRecord: SetPersonalRecord | null;
 }

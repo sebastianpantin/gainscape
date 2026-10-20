@@ -76,7 +76,7 @@ export async function fetchInventory(userId: string): Promise<Map<string, HeldIt
   return toHeldItems(parsedRows(inventoryRowSchema, data));
 }
 
-export interface CraftResult {
+interface CraftResult {
   craftId: string;
   itemId: string;
   quantity: number;

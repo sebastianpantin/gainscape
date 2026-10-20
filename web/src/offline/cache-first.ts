@@ -14,7 +14,7 @@ export function isDeviceOffline(): boolean {
   return typeof navigator !== 'undefined' && navigator.onLine === false;
 }
 
-export type SubscribeOffline = (onOffline: () => void) => () => void;
+type SubscribeOffline = (onOffline: () => void) => () => void;
 
 function subscribeToOfflineEvent(onOffline: () => void): () => void {
   if (typeof window === 'undefined') return () => undefined;
@@ -25,7 +25,7 @@ function subscribeToOfflineEvent(onOffline: () => void): () => void {
 const NETWORK_ERROR_NAMES = new Set(['AbortError', 'TimeoutError', 'OfflineError']);
 const NETWORK_ERROR_MESSAGE = /Failed to fetch|NetworkError|Load failed|AbortError|TimeoutError|aborted/i;
 
-export function isNetworkError(error: unknown): boolean {
+function isNetworkError(error: unknown): boolean {
   const { name, message } = (error ?? {}) as { name?: unknown; message?: unknown };
   return (
     (typeof name === 'string' && NETWORK_ERROR_NAMES.has(name)) ||

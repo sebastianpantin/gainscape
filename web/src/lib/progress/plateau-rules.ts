@@ -19,12 +19,12 @@ export interface PlateauSession {
   programDriven: boolean;
 }
 
-export interface Plateau {
+interface Plateau {
   sinceStartedAt: string;
   sessionsSince: number;
 }
 
-export interface PlateauAdviceInput {
+interface PlateauAdviceInput {
   loadType: LoadType;
   unit: UnitPref;
   recentTopSetKg: number;
@@ -56,7 +56,7 @@ export function plateauOf(sessions: readonly PlateauSession[], now: number): Pla
   return { sinceStartedAt: since.startedAt, sessionsSince };
 }
 
-export interface PlateauTopSet {
+interface PlateauTopSet {
   startedAt: string;
   topSetKg: number;
   topSetReps: number;

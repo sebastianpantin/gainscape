@@ -61,12 +61,12 @@ export interface InputField {
   unit: WeightUnit;
 }
 
-export interface OptionChoice {
+interface OptionChoice {
   value: OptionValue;
   label: string;
 }
 
-export type OptionControl =
+type OptionControl =
   | { kind: 'choice'; key: string; label: string; choices: OptionChoice[]; defaultValue: OptionValue }
   | { kind: 'number'; key: string; label: string; min: number; max: number; defaultValue: number };
 
@@ -80,8 +80,7 @@ export interface EnrollProgramPayload {
   rounding: RoundingSetting;
 }
 
-export type EnrollPayloadResult =
-  { kind: 'ok'; payload: EnrollProgramPayload } | { kind: 'invalid'; problems: string[] };
+type EnrollPayloadResult = { kind: 'ok'; payload: EnrollProgramPayload } | { kind: 'invalid'; problems: string[] };
 
 const SHOWN_REFERENCE_DECIMALS = 2;
 

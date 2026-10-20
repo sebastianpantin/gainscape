@@ -174,7 +174,7 @@ async function writeSkillXp(
     on conflict (user_id, skill_id) do update set xp = excluded.xp, updated_at = now()`;
 }
 
-export interface SyncedSession {
+interface SyncedSession {
   endedAt: string;
   replayed: ReplayedSession;
   catalog: Catalog;

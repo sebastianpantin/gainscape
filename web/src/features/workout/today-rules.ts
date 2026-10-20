@@ -14,7 +14,7 @@ export function levelCountStart(seen: number | null, current: number): number {
   return seen !== null && seen < current ? seen : current;
 }
 
-export interface NearestLevelUp {
+interface NearestLevelUp {
   skillName: string;
   xpToGo: number;
   nextLevel: number;

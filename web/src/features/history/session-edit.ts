@@ -40,13 +40,13 @@ type ExerciseKind =
 
 export type KnownExercise = { name: string } & ExerciseKind;
 
-export type NewExercise = { id: string; name: string } & ExerciseKind;
+type NewExercise = { id: string; name: string } & ExerciseKind;
 
-export type HoldEditExercise = HoldExerciseOf<HoldSet>;
+type HoldEditExercise = HoldExerciseOf<HoldSet>;
 
 export type LiftEditExercise = LiftExerciseOf<LiftSet>;
 
-export interface CardioEditExercise {
+interface CardioEditExercise {
   exerciseId: string;
   name: string;
   modality: 'cardio';
@@ -376,7 +376,7 @@ function grouped(placed: readonly PlacedSet[]): EditExercise[] {
   return exercises;
 }
 
-export interface RebasedEdit {
+interface RebasedEdit {
   edit: SessionEdit;
   droppedSetIds: string[];
 }

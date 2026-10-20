@@ -77,18 +77,18 @@ export function rejectionText(reason: string): string {
     : `The server rejected this workout: ${reason}`;
 }
 
-export interface FinishCounts {
+interface FinishCounts {
   done: number;
   planned: number;
   leftToLifter: number;
 }
 
-export interface FinishChoice {
+interface FinishChoice {
   label: string;
   marksPlannedDone: boolean;
 }
 
-export interface FinishPrompt {
+interface FinishPrompt {
   title: string;
   body: string;
   confirm: FinishChoice;
@@ -131,7 +131,7 @@ export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): Fin
   };
 }
 
-export interface FinishOptions {
+interface FinishOptions {
   sessionId: string;
   loadTypes: ReadonlyMap<string, LoadType>;
   markPlannedDone: boolean;

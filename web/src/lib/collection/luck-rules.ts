@@ -8,9 +8,9 @@ const REGULAR_DROP_TABLE_KEY = 'regular';
 
 const DROP_LUCK_COLUMNS = 'dry_rolls, drop_tables!inner(key)';
 
-export const dropLuckRowSchema = z.object({ dry_rolls: z.number() });
+const dropLuckRowSchema = z.object({ dry_rolls: z.number() });
 
-export type DropLuckRow = z.infer<typeof dropLuckRowSchema>;
+type DropLuckRow = z.infer<typeof dropLuckRowSchema>;
 
 export function dryRollsOf(rows: readonly DropLuckRow[]): number {
   return rows[0]?.dry_rolls ?? 0;
@@ -26,7 +26,7 @@ export async function queryDryRolls(client: SupabaseClient, userId: string): Pro
   return dryRollsOf(parsedRows(dropLuckRowSchema, data));
 }
 
-export interface LuckView {
+interface LuckView {
   chanceText: string;
   chancePercentText: string;
   meterFraction: number;

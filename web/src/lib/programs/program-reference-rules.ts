@@ -24,8 +24,7 @@ export interface SetReferenceEvent {
   value: number;
 }
 
-export type ReferenceEventsResult =
-  { kind: 'ok'; events: SetReferenceEvent[] } | { kind: 'invalid'; problems: string[] };
+type ReferenceEventsResult = { kind: 'ok'; events: SetReferenceEvent[] } | { kind: 'invalid'; problems: string[] };
 
 export function referenceFieldKey(field: Pick<ReferenceField, 'lift' | 'var'>): string {
   return `${field.lift}.${field.var}`;

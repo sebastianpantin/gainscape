@@ -97,7 +97,7 @@ export function effectiveLoadForNewSet(
   return bodyweightKg + set.weightKg;
 }
 
-export interface StoredSetLoad {
+interface StoredSetLoad {
   exerciseId: string;
   weightKg: number;
   effectiveLoadKg: number;

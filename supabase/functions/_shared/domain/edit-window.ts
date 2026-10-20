@@ -6,7 +6,7 @@ export function isWithinEditWindow(startedAt: string, now: number): boolean {
   return Date.parse(startedAt) >= now - EDIT_WINDOW_DAYS * MS_PER_DAY;
 }
 
-export interface EditableSession {
+interface EditableSession {
   historyOnly: boolean;
   startedAt: string;
 }

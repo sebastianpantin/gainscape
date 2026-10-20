@@ -42,7 +42,7 @@ export interface PlannedExercise {
   progression: PlannedProgression;
 }
 
-export interface StartableDay {
+interface StartableDay {
   id: string;
   name: string;
   programName: string;

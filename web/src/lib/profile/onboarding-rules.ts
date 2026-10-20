@@ -5,7 +5,7 @@ export type OnboardingRecord = { status: 'done' } | { status: 'absent' } | { sta
 
 export type TrainingHistory = 'unknown' | 'none' | 'some';
 
-export type OnboardingDecision = 'show' | 'hide' | 'wait' | 'record';
+type OnboardingDecision = 'show' | 'hide' | 'wait' | 'record';
 
 export const ONBOARDING_STEPS = ['welcome', 'units', 'train'] as const;
 
@@ -58,7 +58,7 @@ export function beginnerProgram(entries: readonly TemplateListEntry[]): { key: s
 
 export type FirstRunCardIcon = 'skill' | 'record' | 'loot';
 
-export interface FirstRunCard {
+interface FirstRunCard {
   icon: FirstRunCardIcon;
   title: string;
   text: string;

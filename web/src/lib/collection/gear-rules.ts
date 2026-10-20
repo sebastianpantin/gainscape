@@ -16,13 +16,13 @@ export interface LoadoutView {
   slots: EquippedGear[];
 }
 
-export interface LoadoutSlotRow {
+interface LoadoutSlotRow {
   slot: GearSlot;
   label: string;
   gear: EquippedGear | null;
 }
 
-export interface GearBonusRow {
+interface GearBonusRow {
   skillKey: string;
   skillName: string;
   percent: string;

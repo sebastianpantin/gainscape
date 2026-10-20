@@ -1,6 +1,6 @@
 import { parsedDecimal, type StepDirection, steppedOnGrid, typedNumberWithin } from '../units.ts';
 
-export interface NumberFieldRange {
+interface NumberFieldRange {
   lowest: number;
   highest: number;
   wholeNumber: boolean;
@@ -11,12 +11,12 @@ export interface TypedNumberText {
   value: number;
 }
 
-export interface TypedNumberChange {
+interface TypedNumberChange {
   commit: number | null;
   typed: TypedNumberText;
 }
 
-export interface ShownNumberText {
+interface ShownNumberText {
   text: string;
   matchesValue: boolean;
 }

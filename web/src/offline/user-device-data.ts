@@ -23,7 +23,7 @@ import { questsCache } from './quests-cache.ts';
 import { seenLevelsCache } from './seen-levels-cache.ts';
 import { standingCache } from './standing-cache.ts';
 
-export interface UserDevice {
+interface UserDevice {
   localStorage: Storage;
   sessionStorage: Storage | null;
   draftStore: DraftStore;

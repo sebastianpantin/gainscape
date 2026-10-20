@@ -113,7 +113,7 @@ export function spendCachedScroll(storage: Storage | null, userId: string, chall
   saveItemsCache(storage, userId, { ...cache, inventory });
 }
 
-export interface LiveItems {
+interface LiveItems {
   catalog: ItemCatalog;
   inventory: HeldItem[];
   exercises: readonly Exercise[] | null;

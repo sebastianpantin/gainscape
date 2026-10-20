@@ -1,7 +1,7 @@
 import { pgErrorCode, type sql, type Transaction } from './db.ts';
 import { HttpError } from './http.ts';
 
-export type RateLimitBucket =
+type RateLimitBucket =
   | 'session_create_hour'
   | 'session_create_day'
   | 'session_edit_hour'

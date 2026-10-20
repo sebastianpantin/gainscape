@@ -62,7 +62,7 @@ export interface QuestSessionFacts {
   prs: readonly PersonalRecordSummary[];
 }
 
-export type QuestStartProblem =
+type QuestStartProblem =
   | { kind: 'already_completed' }
   | { kind: 'already_started' }
   | { kind: 'missing_level'; skillId: string; level: number; currentLevel: number }
@@ -70,7 +70,7 @@ export type QuestStartProblem =
 
 export type QuestStatus = 'locked' | 'available' | 'in_progress' | 'completed';
 
-export type QuestAdvance =
+type QuestAdvance =
   { outcome: 'unchanged' } | { outcome: 'progressed'; progress: QuestProgress } | { outcome: 'completed' };
 
 const VOLUME_DECIMALS = 2;
@@ -158,7 +158,7 @@ export function advanceQuest(quest: QuestDefinition, progress: QuestProgress, fa
   return { outcome: 'progressed', progress: { ...progress, stepIndex: nextIndex, stepProgress: 0 } };
 }
 
-export interface QuestSessionInput {
+interface QuestSessionInput {
   quests: readonly QuestDefinition[];
   retiredQuestIds: readonly string[];
   progress: readonly QuestProgress[];
@@ -175,7 +175,7 @@ export interface QuestCompletion {
   levelUps: LevelUp[];
 }
 
-export interface QuestSessionOutcome {
+interface QuestSessionOutcome {
   progressed: QuestProgress[];
   completions: QuestCompletion[];
   skillXp: Record<string, number>;

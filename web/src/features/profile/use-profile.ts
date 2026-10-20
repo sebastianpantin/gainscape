@@ -7,7 +7,7 @@ import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROFILE_NOTICE, profileCache } from '../../offline/profile-cache.ts';
 
-export type ProfileState =
+type ProfileState =
   | { status: 'loading' }
   | { status: 'failed'; problem: string }
   | { status: 'ready'; profile: Profile; notice: string | null };

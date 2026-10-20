@@ -5,9 +5,9 @@ import { shownWeight } from '../../lib/units.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import type { LastLoggedSet } from '../../offline/draft-edits.ts';
 
-export type LastSetDirection = 'up' | 'down' | 'same';
+type LastSetDirection = 'up' | 'down' | 'same';
 
-export interface LastSetDelta {
+interface LastSetDelta {
   direction: LastSetDirection;
   text: string;
   label: string;

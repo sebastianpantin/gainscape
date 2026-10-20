@@ -8,7 +8,7 @@ export const ACTIVATE_MESSAGE = 'gainscape:activate';
 
 export type ShellDecision = 'index' | 'precached' | 'network';
 
-export interface ShellRequest {
+interface ShellRequest {
   method: string;
   url: string;
   mode: string;

@@ -120,7 +120,7 @@ export function loadExercisesCacheFirst(
   });
 }
 
-export interface ExerciseList {
+interface ExerciseList {
   exercises: Exercise[];
   notice: string | null;
   problem: string | null;

@@ -24,7 +24,7 @@ export type SendOutcome =
 export type FinishAttemptResult =
   { kind: 'aborted' } | { kind: 'superseded' } | { kind: 'not_finished' } | { kind: 'sent'; outcome: SendOutcome };
 
-export interface FinishAttempt {
+interface FinishAttempt {
   userId: string;
   sessionId: string;
   store: DraftStore;

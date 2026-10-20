@@ -21,7 +21,7 @@ export interface ProgramFactsCache {
   localAppends: readonly LocalSessionAppend[];
 }
 
-export interface FactsFetchTicket {
+interface FactsFetchTicket {
   enrollmentId: string;
   generation: number;
   startedAt: number;

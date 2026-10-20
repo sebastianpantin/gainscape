@@ -3,7 +3,7 @@ import { KG_PER_LB, type WeightUnit } from './units.ts';
 
 export type RoundingMode = 'nearest' | 'down';
 
-export type LoadRoundingDirection = RoundingMode | 'up';
+type LoadRoundingDirection = RoundingMode | 'up';
 
 export interface RoundingSetting {
   increment: number;

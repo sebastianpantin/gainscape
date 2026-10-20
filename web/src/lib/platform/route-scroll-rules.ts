@@ -1,4 +1,4 @@
-export type NavigationKind = 'PUSH' | 'REPLACE' | 'POP';
+type NavigationKind = 'PUSH' | 'REPLACE' | 'POP';
 
 export function shouldScrollToTop(navigationType: NavigationKind, previousPathname: string, pathname: string): boolean {
   return navigationType !== 'POP' && previousPathname !== pathname;

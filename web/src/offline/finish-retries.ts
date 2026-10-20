@@ -14,14 +14,14 @@ export type SettledFinish =
   | { kind: 'not_finished' }
   | { kind: 'sent'; outcome: Exclude<SendOutcome, { kind: 'retryable' } | { kind: 'wrong_account' }> };
 
-export interface FinishRetryOptions {
+interface FinishRetryOptions {
   attemptOnce: (signal: AbortSignal) => Promise<FinishAttemptResult>;
   retryDelayMs: (attempt: number) => number;
   show: (status: FinishStatus) => void;
   settle: (result: SettledFinish) => Promise<void> | void;
 }
 
-export interface FinishRetries {
+interface FinishRetries {
   onOnline: () => void;
   stop: () => void;
 }

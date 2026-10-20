@@ -15,7 +15,7 @@ interface Loading<T> {
   error: Error | null;
 }
 
-export interface BodyStatusInputs {
+interface BodyStatusInputs {
   recent: Loading<readonly RecentSet[]> & { updatedAt: number };
   exercises: Loading<readonly (VolumeExercise & { id: string; skillShares: readonly SkillShare[] })[]>;
   profile: Loading<{ timezone: string }>;

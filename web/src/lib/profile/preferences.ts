@@ -6,7 +6,7 @@ export interface Preferences {
   effortInputMode: EffortInputMode;
 }
 
-export interface PreferencesValue extends Preferences {
+interface PreferencesValue extends Preferences {
   applyPreferences: (changes: Partial<Preferences>) => void;
 }
 

@@ -1,8 +1,8 @@
 import type { Transaction } from '../db.ts';
 
-export type RebuildScope = 'stale' | 'all';
+type RebuildScope = 'stale' | 'all';
 
-export interface RebuildPage {
+interface RebuildPage {
   userIds: string[];
   next: string | null;
 }

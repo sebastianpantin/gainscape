@@ -12,14 +12,14 @@ import { supabase } from '../platform/supabase.ts';
 
 export const FEED_PAGE_SIZE = 20;
 
-export interface FriendCard {
+interface FriendCard {
   userId: string;
   username: string;
   displayName: string;
   badgeColor: BadgeColor;
 }
 
-export interface SendRequestResult {
+interface SendRequestResult {
   status: SendRequestStatus;
   friend?: FriendCard;
 }
@@ -144,7 +144,7 @@ export async function fetchFeedPage(cursor: FeedCursor | null): Promise<FeedItem
   }));
 }
 
-export type GzResult = { status: 'ok'; eventId: string; given: boolean; gzCount?: number } | { status: 'not_found' };
+type GzResult = { status: 'ok'; eventId: string; given: boolean; gzCount?: number } | { status: 'not_found' };
 
 export function setGz(eventId: string, given: boolean): Promise<GzResult> {
   return call('set_gz', { event_id: eventId, given });

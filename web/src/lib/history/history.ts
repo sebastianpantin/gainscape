@@ -30,14 +30,14 @@ export async function fetchSessionSets(sessionId: string): Promise<StoredSetRow[
   return querySessionSets(supabase, sessionId);
 }
 
-export interface EditSessionResponse {
+interface EditSessionResponse {
   summary: SessionSummary;
   revision: number;
   replayedSessionIds: string[];
   revokedDrops: RevokedDrop[];
 }
 
-export interface DeleteSessionResponse {
+interface DeleteSessionResponse {
   sessionId: string;
   deleted: true;
   replayedSessionIds: string[];

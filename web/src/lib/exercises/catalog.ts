@@ -37,7 +37,7 @@ export async function fetchSkills(): Promise<Skill[]> {
   }));
 }
 
-export interface ExerciseQuery {
+interface ExerciseQuery {
   includeArchived: boolean;
   signal?: AbortSignal;
 }

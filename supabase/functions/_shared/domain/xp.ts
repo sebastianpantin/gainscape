@@ -20,7 +20,7 @@ export function setXp(effectiveRepCount: number, intensityBonus: number, cfg: Ba
   return roundXp(cfg.xpPerEffectiveRep * effectiveRepCount * intensityBonus);
 }
 
-export interface OrderedSkillShare {
+interface OrderedSkillShare {
   skillId: string;
   shareBasisPoints: number;
   sortOrder: number;

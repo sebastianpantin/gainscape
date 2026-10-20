@@ -46,7 +46,7 @@ export interface InsertedSession {
   completedAt: string;
 }
 
-export interface ProfileSettings {
+interface ProfileSettings {
   bodyweightKg: number | null;
   timezone: string;
 }
@@ -92,7 +92,7 @@ export async function findSession(tx: Transaction, sessionId: string): Promise<S
   };
 }
 
-export interface OwnedSession {
+interface OwnedSession {
   key: SessionKey;
   historyOnly: boolean;
   revision: number;
@@ -331,7 +331,7 @@ export async function storedSummary(tx: Transaction, sessionId: string): Promise
   return row.summary;
 }
 
-export interface SummaryPatch {
+interface SummaryPatch {
   id: string;
   patch: Pick<SessionSummary, 'xpBySkill' | 'levelUps' | 'prs'> & {
     gearBonusBySkill: Record<string, number>;

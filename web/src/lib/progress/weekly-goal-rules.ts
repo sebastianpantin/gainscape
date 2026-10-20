@@ -1,6 +1,6 @@
 import { z } from 'zod';
 export const WEEKLY_GOAL_CHOICES = ['off', '1', '2', '3', '4', '5', '6', '7'] as const;
-export type WeeklyGoalChoice = (typeof WEEKLY_GOAL_CHOICES)[number];
+type WeeklyGoalChoice = (typeof WEEKLY_GOAL_CHOICES)[number];
 
 export const weeklyGoalWeekRowSchema = z.object({
   week_start: z.string(),

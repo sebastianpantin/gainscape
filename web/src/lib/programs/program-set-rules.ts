@@ -9,7 +9,7 @@ export interface BarSetting {
   unit: WeightUnit;
 }
 
-export interface ProgramSetMarkers {
+interface ProgramSetMarkers {
   pct: string | null;
   optional: boolean;
   adjusted: boolean;

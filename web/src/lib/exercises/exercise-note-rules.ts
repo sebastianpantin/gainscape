@@ -8,7 +8,7 @@ const EXERCISE_NOTE_COLUMNS = 'exercise_id, body';
 
 const exerciseNoteRowSchema = z.object({ exercise_id: z.string(), body: z.string() });
 
-export type ExerciseNoteRow = z.infer<typeof exerciseNoteRowSchema>;
+type ExerciseNoteRow = z.infer<typeof exerciseNoteRowSchema>;
 
 export type ExerciseNotes = Readonly<Record<string, string>>;
 

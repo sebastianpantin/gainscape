@@ -29,7 +29,7 @@ import {
 } from './program-enroll-rules.ts';
 import { type EnrollmentRow, enrollmentFromRow, isProgramFact } from './program-facts-rules.ts';
 
-export interface DayChoice {
+interface DayChoice {
   position: Position;
   label: string;
   suggested: boolean;

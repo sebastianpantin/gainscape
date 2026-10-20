@@ -60,7 +60,7 @@ export function supersetMembers(draft: WorkoutDraft, group: SupersetGroup): Supe
   });
 }
 
-export interface RemovedSet {
+interface RemovedSet {
   clientId: string;
   index: number;
   set: DraftExercise['sets'][number];

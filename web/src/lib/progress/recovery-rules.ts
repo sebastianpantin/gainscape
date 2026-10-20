@@ -49,7 +49,7 @@ export function hardSetLoad(
 }
 
 export const RIR_SOURCES = ['logged', 'estimated', 'cold_start', 'default'] as const;
-export type RirSource = (typeof RIR_SOURCES)[number];
+type RirSource = (typeof RIR_SOURCES)[number];
 
 export function rirForRecovery(rir: number | string | null, source: RirSource): number {
   if (rir !== null) return Number(rir);

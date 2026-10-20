@@ -55,7 +55,7 @@ export const repMaxRowSchema = z.object({
   sets: recordSessionRefSchema,
 });
 
-export type RepMaxRow = z.infer<typeof repMaxRowSchema>;
+type RepMaxRow = z.infer<typeof repMaxRowSchema>;
 
 export const maxRepsRowSchema = z.object({
   max_reps: z.number(),
@@ -63,7 +63,7 @@ export const maxRepsRowSchema = z.object({
   sets: recordSessionRefSchema,
 });
 
-export type MaxRepsRow = z.infer<typeof maxRepsRowSchema>;
+type MaxRepsRow = z.infer<typeof maxRepsRowSchema>;
 
 export interface SessionProgress {
   sessionId: string;

@@ -11,7 +11,7 @@ const STRAINED_RIR = 1;
 const WEIGHT_DECIMALS = 2;
 const STEP_WITHOUT_BARBELL: Readonly<Record<UnitPref, number>> = { kg: 2.5, lb: 5 };
 
-export interface RepRange {
+interface RepRange {
   repsMin: number;
   repsMax: number;
 }

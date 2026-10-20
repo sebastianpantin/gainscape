@@ -16,7 +16,7 @@ import {
   rewardXpTexts,
 } from '../../lib/quests/quest-rules.ts';
 
-export interface DescribedRecord {
+interface DescribedRecord {
   headline: string;
   previous: string;
 }
@@ -201,7 +201,7 @@ const RISE_S = 0.4;
 const GAIN_FILL_S = 0.6;
 const POP_PEAK_MS = 300;
 
-export interface RevealShape {
+interface RevealShape {
   skillCount: number;
   hasLevelUps: boolean;
   hasRecords: boolean;

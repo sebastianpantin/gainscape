@@ -15,7 +15,7 @@ interface ExerciseTrack {
   latestSessionMax: number | null;
 }
 
-export interface StrengthTracker {
+interface StrengthTracker {
   stateAt(session: SessionKey): StrengthState;
   record(rows: readonly StrengthHistoryRow[]): void;
 }

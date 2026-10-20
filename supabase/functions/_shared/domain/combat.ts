@@ -1,4 +1,4 @@
-export interface WeightedLevel {
+interface WeightedLevel {
   level: number;
   weight: number;
 }

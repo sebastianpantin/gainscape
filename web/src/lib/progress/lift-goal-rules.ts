@@ -8,9 +8,9 @@ import { numericColumn, parsedRows } from '../rows.ts';
 import { highestWeightInUnit, shownWeight, steppedWeight, unitToKg } from '../units.ts';
 import { liftE1rmKg, type RepMaxEntry } from './exercise-progress-rules.ts';
 
-export const LIFT_GOAL_COLUMNS =
+const LIFT_GOAL_COLUMNS =
   'exercise_id, target_kg, reps, target_date, exercises(name, modality, load_type, measure, archived_at)';
-export const GOAL_REP_MAX_COLUMNS = 'exercise_id, reps, load_kg';
+const GOAL_REP_MAX_COLUMNS = 'exercise_id, reps, load_kg';
 
 export const HIGHEST_GOAL_REPS = REP_MAX_SLOT_COUNT;
 const NEW_GOAL_REPS = 5;
@@ -58,7 +58,7 @@ export interface LiftGoalsLoad {
   repMaxes: GoalRepMaxRow[];
 }
 
-export interface LiftGoalStatus {
+interface LiftGoalStatus {
   goal: LiftGoal;
   achieved: boolean;
   bestE1rmKg: number | null;

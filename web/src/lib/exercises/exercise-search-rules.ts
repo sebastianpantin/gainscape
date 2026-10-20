@@ -3,7 +3,7 @@ const NAME_PREFIX = 1;
 const WORD_PREFIXES = 2;
 const INNER_MATCH = 3;
 
-export interface ExerciseSearchResult<T> {
+interface ExerciseSearchResult<T> {
   shown: T[];
   hiddenCount: number;
 }

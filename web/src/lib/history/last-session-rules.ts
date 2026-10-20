@@ -13,7 +13,7 @@ export const recentLiftRowSchema = z.object({
   logged_rir: numericColumn.nullable(),
 });
 
-export type RecentLiftRow = z.infer<typeof recentLiftRowSchema>;
+type RecentLiftRow = z.infer<typeof recentLiftRowSchema>;
 
 export interface RecentSet extends LastLoggedSet {
   loggedRir: number | null;

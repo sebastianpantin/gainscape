@@ -11,7 +11,7 @@ export interface ReplayedSession {
   outputs: SessionOutputs;
 }
 
-export interface ReplayResult {
+interface ReplayResult {
   sessions: ReplayedSession[];
   finalState: UserState;
 }

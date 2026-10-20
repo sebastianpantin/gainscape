@@ -2,7 +2,7 @@ export type ProgramLoadStatus = 'cached' | 'refreshing' | 'failed' | 'none';
 
 export type ProgramRefreshState = 'pending' | 'done' | 'failed';
 
-export interface ProgramLoadInput {
+interface ProgramLoadInput {
   hasCachedEnrollment: boolean;
   refresh: ProgramRefreshState;
 }

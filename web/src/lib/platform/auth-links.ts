@@ -5,7 +5,7 @@ export interface AuthCallback {
   type: AuthCallbackType;
 }
 
-export interface AuthErrorLike {
+interface AuthErrorLike {
   code?: string;
   status?: number;
   message: string;

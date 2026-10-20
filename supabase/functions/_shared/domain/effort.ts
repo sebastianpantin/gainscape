@@ -7,7 +7,7 @@ import {
   type SetKind,
 } from './types.ts';
 
-export interface ResolvedEffort {
+interface ResolvedEffort {
   effortInputType: EffortInputType | null;
   effortValue: number | null;
   loggedRir: number | null;

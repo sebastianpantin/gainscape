@@ -31,7 +31,7 @@ export interface FeedCursor {
   beforeId: string;
 }
 
-export interface FeedText {
+interface FeedText {
   headline: string;
   detail?: string;
 }
@@ -58,7 +58,7 @@ export interface HiscoreRow {
   collectionTotal: number;
 }
 
-export interface HiscoreSkill {
+interface HiscoreSkill {
   key: string;
   combatWeight: number;
 }
@@ -73,7 +73,7 @@ function metricSkillKey(metric: HiscoreMetric): string | null {
   return metric.startsWith('skill:') ? metric.slice('skill:'.length) : null;
 }
 
-export interface RankedHiscore {
+interface RankedHiscore {
   row: HiscoreRow;
   value: number;
 }

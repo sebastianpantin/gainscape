@@ -11,13 +11,13 @@ import {
   type StrengthState,
 } from './types.ts';
 
-export interface ChallengeExercise {
+interface ChallengeExercise {
   exerciseId: string;
   reps: number;
   pct: number | null;
 }
 
-export interface ChallengeGroup {
+interface ChallengeGroup {
   rounds: number;
   exercises: ChallengeExercise[];
 }
