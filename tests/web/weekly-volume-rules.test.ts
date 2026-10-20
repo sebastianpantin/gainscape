@@ -11,8 +11,8 @@ import {
   volumeSetsText,
   VOLUME_BAND_TEXT,
   VOLUME_TARGET,
+  muscleVolumeFromExerciseSets,
   weeklySetsByMuscle,
-  weekStartIn,
 } from '../../web/src/lib/progress/weekly-volume-rules.ts';
 
 const WEEK_START = '2026-10-12';
@@ -71,6 +71,32 @@ describe('weeklySetsByMuscle', () => {
     expect(volume.legs.contributions).toEqual([]);
   });
 
+  it('builds the same volume from per-exercise set counts as from the sets they count', () => {
+    const counts = new Map([
+      ['bench', 10],
+      ['fly', 3],
+      ['run', 4],
+      ['gone', 2],
+    ]);
+    const fromCounts = muscleVolumeFromExerciseSets(counts, EXERCISES);
+    expect(fromCounts.chest).toEqual({
+      sets: 10,
+      band: 'within',
+      contributions: [
+        { exerciseId: 'bench', name: 'Barbell Bench Press', sets: 7 },
+        { exerciseId: 'fly', name: 'Cable Fly', sets: 3 },
+      ],
+    });
+    expect(fromCounts.shoulders.sets).toBe(2);
+    expect(fromCounts).toEqual(
+      weeklySetsByMuscle(
+        [...sets(10, 'bench'), ...sets(3, 'fly'), ...sets(4, 'run'), ...sets(2, 'gone')],
+        EXERCISES,
+        WEEK_START,
+      ),
+    );
+  });
+
   it('keeps every set of a muscle: the total over muscles is the body-skill share of every set', () => {
     const exerciseIds = [...EXERCISES.keys(), 'gone'];
     fc.assert(
@@ -111,30 +137,6 @@ describe('weeklySetsByMuscle', () => {
         },
       ),
     );
-  });
-});
-
-describe('weekStartIn', () => {
-  it('is the Monday of the current week in the profile time zone', () => {
-    expect(weekStartIn('UTC', Date.parse('2026-10-14T12:00:00Z'))).toBe('2026-10-12');
-    expect(weekStartIn('UTC', Date.parse('2026-10-12T00:00:00Z'))).toBe('2026-10-12');
-    expect(weekStartIn('UTC', Date.parse('2026-10-18T23:59:59Z'))).toBe('2026-10-12');
-  });
-
-  it('follows the time zone across midnight on Sunday', () => {
-    const sundayEveningInNewYork = Date.parse('2026-10-19T02:00:00Z');
-    expect(weekStartIn('America/New_York', sundayEveningInNewYork)).toBe('2026-10-12');
-    expect(weekStartIn('Europe/Stockholm', sundayEveningInNewYork)).toBe('2026-10-19');
-  });
-
-  it('falls back to UTC for a time zone this device does not know', () => {
-    const sundayEveningInNewYork = Date.parse('2026-10-19T02:00:00Z');
-    expect(weekStartIn('Mars/Olympus_Mons', sundayEveningInNewYork)).toBe(weekStartIn('UTC', sundayEveningInNewYork));
-  });
-
-  it('crosses a month and a year boundary', () => {
-    expect(weekStartIn('UTC', Date.parse('2026-11-01T10:00:00Z'))).toBe('2026-10-26');
-    expect(weekStartIn('UTC', Date.parse('2027-01-02T10:00:00Z'))).toBe('2026-12-28');
   });
 });
 

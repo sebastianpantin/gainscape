@@ -1,6 +1,7 @@
 import { type LoadedState } from '../query/query-state-rules.ts';
 import { type BodySkill, hardSetLoad, type RecentSet, type SkillShare } from './recovery-rules.ts';
-import { type MuscleVolume, type VolumeExercise, weeklySetsByMuscle, weekStartIn } from './weekly-volume-rules.ts';
+import { weekStartIn } from '../ui/date-bucket-rules.ts';
+import { type MuscleVolume, type VolumeExercise, weeklySetsByMuscle } from './weekly-volume-rules.ts';
 
 export const RECENT_SETS_FAILED_TEXT = "Couldn't load your recent sets and exercises for recovery and weekly sets.";
 export const PROFILE_FAILED_TEXT = "Couldn't load your time zone, so this week's sets can't be counted.";

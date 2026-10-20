@@ -5,14 +5,14 @@
 
 ## Purpose
 
-Small shared UI pieces used across feature screens: icons, the pixel-art sprites and their renderer, form controls (switch, segmented choice, number field), dialogs, skeletons, the error boundary, toasts, the line chart, the body map, jargon help, and the preferences provider.
+Small shared UI pieces used across feature screens: icons, the pixel-art sprites and their renderer, form controls (switch, segmented choice, number field), dialogs, skeletons, the error boundary, toasts, the line and bar charts, the body map, jargon help, and the preferences provider.
 
 ## Map
 
 - `pixel-sprites.ts` is pure sprite data (no React). `scripts/icons/render.ts` also uses it to generate `web/public/icons/*`. `PixelArt.tsx` renders the sprites.
 - `Icon.tsx`: line icons in a `PATHS` record. To add an icon, add a name and its path there.
 - Providers wrapping the app in `App.tsx`: `PreferencesProvider.tsx` (unit and effort mode) and `ToastProvider.tsx` (inside the data router from `createBrowserRouter`). `ScreenErrorBoundary.tsx` wraps the routes.
-- The decisions behind these components live in `../lib/ui/`: `number-field-rules.ts`, `count-up-rules.ts`, `toast-rules.ts`, `line-chart-rules.ts`, `glossary.ts` and `term-help-rules.ts`.
+- The decisions behind these components live in `../lib/ui/`: `number-field-rules.ts`, `count-up-rules.ts`, `toast-rules.ts`, `line-chart-rules.ts`, `bar-chart-rules.ts` (shares the line chart's frame, ticks and styles), `glossary.ts` and `term-help-rules.ts`.
 
 ## Rules and gotchas
 

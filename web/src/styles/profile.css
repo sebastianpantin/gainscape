@@ -176,6 +176,10 @@ button.back-link {
   background: var(--color-rare);
 }
 
+.bar-chart-bar {
+  fill: var(--color-accent);
+}
+
 .line-chart-legend {
   list-style: none;
   margin: 0;

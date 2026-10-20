@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { type CardioRecordCard, cardioRecordCards, holdRecordCards } from '../../lib/workout/cardio-rules.ts';
 import { type Exercise, isCardioExercise, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
@@ -11,6 +12,7 @@ import { collectionQuery } from '../../lib/query/queries.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_COLLECTION_NOTICE } from '../../offline/collection-cache.ts';
 import { EmptyState } from '../../components/EmptyState.tsx';
+import { Icon } from '../../components/Icon.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedNav } from '../../components/SegmentedNav.tsx';
@@ -98,6 +100,14 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     <main className="screen stack">
       <CollectionHeading tab="Records" />
       <CollectionTabs />
+      <ul className="menu-list">
+        <li>
+          <Link className="button" to="/collection/stats">
+            Stats
+            <Icon name="chevron" size={18} />
+          </Link>
+        </li>
+      </ul>
       {problem && (
         <p className="problem" role="alert">
           {problem}
