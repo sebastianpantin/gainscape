@@ -21,7 +21,7 @@ const LIFTVAULT_TM_DEFINITION = 'https://liftvault.com/resources/531-training-ma
 export const FIVE_THREE_ONE_LIFTS = ['squat', 'bench', 'deadlift', 'press'] as const;
 export type FiveThreeOneLift = (typeof FIVE_THREE_ONE_LIFTS)[number];
 
-export const FIVE_THREE_ONE_EXERCISES: Readonly<Record<FiveThreeOneLift, string>> = {
+const FIVE_THREE_ONE_EXERCISES: Readonly<Record<FiveThreeOneLift, string>> = {
   squat: 'squat',
   bench: 'bench',
   deadlift: 'deadlift',
@@ -180,14 +180,14 @@ export const FIVE_THREE_ONE: ProgramDefinition = {
   progression: LIFT_DECLS.map(cycleRule),
 };
 
-export const FIVE_THREE_ONE_DEFAULT_TMS_KG: Readonly<Record<FiveThreeOneLift, number>> = {
+const FIVE_THREE_ONE_DEFAULT_TMS_KG: Readonly<Record<FiveThreeOneLift, number>> = {
   squat: 140,
   bench: 100,
   deadlift: 180,
   press: 60,
 };
 
-export interface FiveThreeOneEnrollmentOverrides {
+interface FiveThreeOneEnrollmentOverrides {
   unit?: WeightUnit;
   options?: Readonly<Record<string, OptionValue>>;
   tms?: Partial<Record<FiveThreeOneLift, number>>;
@@ -259,7 +259,7 @@ export function bbbSets531(lift: FiveThreeOneLift, reps: number): FactSet[] {
   );
 }
 
-export interface CycleScript {
+interface CycleScript {
   lifts?: readonly FiveThreeOneLift[];
   weeks?: readonly number[];
   lastSetReps?: Partial<Record<string, number>>;

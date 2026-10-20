@@ -3,7 +3,7 @@ import { postCompleteSession } from '../../tests/integration/local-stack.ts';
 import { exerciseIdOfKey, skipProgramDayElsewhere } from './db.ts';
 
 export type FiveThreeOneLift = 'squat' | 'bench' | 'deadlift' | 'press';
-export type ProgramPosition = Readonly<Record<string, string | number>>;
+type ProgramPosition = Readonly<Record<string, string | number>>;
 export type LiftBindings = Readonly<Record<string, string | null>>;
 export type SeededEffort =
   { type: 'rpe'; value: number } | { type: 'rir'; value: number } | { type: 'level'; level: 'hard' };
@@ -91,7 +91,7 @@ function payloadSets(bindings: LiftBindings, sets: readonly SeededSet[]) {
   }));
 }
 
-export async function postProgramDay(
+async function postProgramDay(
   accessToken: string,
   enrollmentId: string,
   bindings: LiftBindings,
@@ -159,7 +159,7 @@ function fixedWeightMainSets(lift: FiveThreeOneLift, week: number): SeededSet[] 
   });
 }
 
-export interface SeededSession {
+interface SeededSession {
   enrollmentId: string;
   week: number;
   lift: FiveThreeOneLift;
@@ -188,7 +188,7 @@ export async function seedFiveThreeOneCycleSkippingPress(accessToken: string, en
   }
 }
 
-export type MadcowLift = 'squat' | 'bench' | 'row' | 'press' | 'deadlift';
+type MadcowLift = 'squat' | 'bench' | 'row' | 'press' | 'deadlift';
 type MadcowMondayLift = 'squat' | 'bench' | 'row';
 
 export interface MadcowWeekScript {

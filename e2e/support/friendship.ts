@@ -72,3 +72,7 @@ export async function openFriendProfile(page: Page, friendName: string): Promise
 export function friendsAlert(page: Page): Locator {
   return page.getByRole('main').getByRole('alert');
 }
+
+export function feedItem(page: Page, text: string) {
+  return page.getByRole('list', { name: 'Feed' }).getByRole('listitem').filter({ hasText: text });
+}

@@ -25,3 +25,13 @@ export class MemoryStorage implements Storage {
     this.entries.set(key, String(value));
   }
 }
+
+export function throwingStorage(...methods: ('getItem' | 'setItem' | 'removeItem')[]): MemoryStorage {
+  const storage = new MemoryStorage();
+  for (const method of methods) {
+    storage[method] = () => {
+      throw new Error('blocked');
+    };
+  }
+  return storage;
+}

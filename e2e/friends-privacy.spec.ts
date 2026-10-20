@@ -1,11 +1,7 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
-import { befriend, openFriendProfile, registerWithFriend, showsBodyweight } from './support/friendship.ts';
-
-function feedItem(page: Page, text: string) {
-  return page.getByRole('list', { name: 'Feed' }).getByRole('listitem').filter({ hasText: text });
-}
+import { befriend, feedItem, openFriendProfile, registerWithFriend, showsBodyweight } from './support/friendship.ts';
 
 async function logWeightedDipWithBodyweight(page: Page, addedKg: number, bodyweightKg: number) {
   await openTab(page, 'Train');

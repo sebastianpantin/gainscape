@@ -13,9 +13,6 @@ export async function expectFontsLoaded(page: Page): Promise<void> {
   }, FONT_FAMILIES);
   for (const { family, statuses } of results) {
     expect(statuses.length, family).toBeGreaterThan(0);
-    expect(
-      statuses.every((status) => status === 'loaded'),
-      family,
-    ).toBe(true);
+    expect(statuses, family).toEqual(statuses.map(() => 'loaded'));
   }
 }

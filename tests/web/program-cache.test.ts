@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { type EnrollmentRow } from '../../web/src/lib/programs/program-facts-rules.ts';
 import {
   EMPTY_PROGRAM_CACHE,
   factsOutcomeOf,
@@ -16,7 +15,8 @@ import { startDraftFromPrescription } from '../../web/src/offline/draft-starts.t
 import { emptyProgramFactsCache } from '../../web/src/offline/program-facts-cache.ts';
 import { type SendOutcome } from '../../web/src/offline/finish-lock.ts';
 import { factClock, sessionFact, setReferenceFact } from '../domain/program-fixtures/facts.ts';
-import { MADCOW_5X5, madcowDaySets, MADCOW_EXERCISES, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
+import { MADCOW_5X5, madcowDaySets, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
+import { madcowEnrollmentRow } from './madcow-enrollment-fixture.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -24,33 +24,12 @@ const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
 const ENROLLMENT_ID = '7a2f0c1e-1111-4111-8111-111111111111';
 const NEXT_ENROLLMENT_ID = '7a2f0c1e-2222-4222-8222-222222222222';
 
-function enrollmentRow(id = ENROLLMENT_ID): EnrollmentRow {
-  return {
-    id,
-    template_key: 'madcow_5x5',
-    template_version: 1,
-    unit: 'kg',
-    options: { rampStep: 0.125 },
-    lift_bindings: { ...MADCOW_EXERCISES },
-    inputs: {
-      squat: { fiveRm: 100 },
-      bench: { fiveRm: 80 },
-      row: { fiveRm: 70 },
-      press: { fiveRm: 50 },
-      deadlift: { fiveRm: 140 },
-    },
-    rounding: { increment: 2.5, mode: 'nearest', barWeight: 20 },
-    started_at: '2026-10-04T18:00:00.000Z',
-    ended_at: null,
-  };
-}
-
 const MONDAY = sessionFact(factClock('monday').next(), weekDay(1, 'mon'), madcowDaySets('mon'));
 
 function cacheWithFacts(): ProgramCache {
   return {
     templates: [{ key: 'madcow_5x5', version: 1, name: 'Madcow 5x5', definition: MADCOW_5X5 }],
-    enrollment: enrollmentRow(),
+    enrollment: madcowEnrollmentRow(),
     facts: { ...emptyProgramFactsCache(ENROLLMENT_ID), serverFacts: [MONDAY] },
   };
 }
@@ -131,7 +110,7 @@ describe('reading the program cache', () => {
   });
 
   it('gives the empty cache when the enrollment fails the schema', () => {
-    expect(readRecord({ ...savedRecord(), enrollment: { ...enrollmentRow(), unit: 'stone' } })).toEqual(
+    expect(readRecord({ ...savedRecord(), enrollment: { ...madcowEnrollmentRow(), unit: 'stone' } })).toEqual(
       EMPTY_PROGRAM_CACHE,
     );
   });
@@ -213,11 +192,11 @@ describe('saving the program cache', () => {
 describe('changing the cached enrollment', () => {
   it('keeps the facts when the enrollment id stays the same', () => {
     const cache = cacheWithFacts();
-    expect(withEnrollment(cache, { ...enrollmentRow(), unit: 'lb' }).facts).toBe(cache.facts);
+    expect(withEnrollment(cache, { ...madcowEnrollmentRow(), unit: 'lb' }).facts).toBe(cache.facts);
   });
 
   it('resets the facts for a new enrollment id', () => {
-    expect(withEnrollment(cacheWithFacts(), enrollmentRow(NEXT_ENROLLMENT_ID)).facts).toEqual(
+    expect(withEnrollment(cacheWithFacts(), madcowEnrollmentRow({ id: NEXT_ENROLLMENT_ID })).facts).toEqual(
       emptyProgramFactsCache(NEXT_ENROLLMENT_ID),
     );
   });

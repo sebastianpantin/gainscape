@@ -1,13 +1,13 @@
 import { type ProgramDefinition } from '@domain/index.ts';
 import { type ProgramTemplateRow } from '../../web/src/lib/programs/program-enroll-rules.ts';
 
-export const OWNER_ID = '00000000-0000-4000-8000-000000000100';
+const OWNER_ID = '00000000-0000-4000-8000-000000000100';
 export const PROGRAM_ID = '00000000-0000-4000-8000-000000000200';
 export const SQUAT_ID = '00000000-0000-4000-8000-000000000001';
 export const BENCH_ID = '00000000-0000-4000-8000-000000000002';
 export const ROW_ID = '00000000-0000-4000-8000-000000000003';
 
-export function liftKeyOf(exerciseId: string): string {
+function liftKeyOf(exerciseId: string): string {
   return `x_${exerciseId.replaceAll('-', '')}`;
 }
 

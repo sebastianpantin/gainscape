@@ -2,6 +2,7 @@ import {
   type FactSet,
   type Position,
   type PrescriptionSnapshot,
+  type ProgramState,
   type ReferenceVar,
   type SessionFact,
 } from '@domain/index.ts';
@@ -27,7 +28,7 @@ export function factClock(prefix = 'fact'): FactClock {
   };
 }
 
-export interface SnapshotShape {
+interface SnapshotShape {
   weightKg: number;
   reps: number;
   amrap?: boolean;
@@ -91,4 +92,15 @@ export function skipDayFact(stamp: { id: string; at: string }, position: Positio
 
 export function jumpToFact(stamp: { id: string; at: string }, position: Position): JumpToFact {
   return { kind: 'jump_to', ...stamp, position };
+}
+
+export function withoutFactIds(state: ProgramState) {
+  return {
+    position: state.position,
+    completedDays: state.completedDays,
+    refs: state.refs,
+    consecutiveMisses: state.consecutiveMisses,
+    days: state.days,
+    history: state.history,
+  };
 }

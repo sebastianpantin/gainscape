@@ -280,7 +280,7 @@ describe('advanceQuest', () => {
           const stepProgress = Math.min(done, stepTarget(initiation.steps[stepIndex]) - 1);
           const sets = drafts.map(([steps, reps, isWarmup]) => aSet('squat', steps * 2.5, reps, hard, { isWarmup }));
           const result = advanceQuest(initiation, progressAt(stepIndex, stepProgress), factsFor(sets));
-          if (result.outcome !== 'progressed') return;
+          fc.pre(result.outcome === 'progressed');
           const { progress } = result;
           expect(progress.stepIndex).toBeGreaterThanOrEqual(stepIndex);
           expect(progress.stepIndex).toBeLessThanOrEqual(stepIndex + 1);

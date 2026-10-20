@@ -8,8 +8,8 @@ const STRONGLIFTS_FAILURE = 'https://stronglifts.com/stronglifts-5x5/failure/';
 const STRONGLIFTS_INCREMENTS = 'https://support.stronglifts.com/article/71-increments';
 const TEMPLATE_NAME_IN_CATALOG = 'stronglifts_5x5';
 
-export const STRONGLIFTS_LIFTS = ['squat', 'bench', 'row', 'press', 'deadlift'] as const;
-export type StrongLiftsLift = (typeof STRONGLIFTS_LIFTS)[number];
+const STRONGLIFTS_LIFTS = ['squat', 'bench', 'row', 'press', 'deadlift'] as const;
+type StrongLiftsLift = (typeof STRONGLIFTS_LIFTS)[number];
 
 const LIFT_DECLS: LiftDecl[] = [
   { key: 'squat', name: 'Squat', category: 'lower' },

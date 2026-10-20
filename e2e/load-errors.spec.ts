@@ -5,6 +5,7 @@ import {
   logBench,
   openFromProfile,
   openLoot,
+  openHistory,
   openTab,
   pickExercise,
   register,
@@ -29,11 +30,6 @@ function loadoutPanel(page: Page): Locator {
 
 function workoutLinks(page: Page): Locator {
   return page.getByRole('list', { name: 'Workouts' }).getByRole('link');
-}
-
-async function openHistory(page: Page) {
-  await openTab(page, 'Collection');
-  await page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'History' }).click();
 }
 
 async function registerWithWorkouts(page: Page, prefix: string): Promise<void> {

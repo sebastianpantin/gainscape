@@ -6,6 +6,7 @@ import {
   type WeightUnit,
 } from '@domain/index.ts';
 import { type DayDecl, type ProgressionRule, type SlotDecl } from '@domain/program-types.ts';
+import { type DayLog } from './follow.ts';
 
 const GZCLP_WIKI = 'https://thefitness.wiki/routines/gzclp/';
 const GZCL_ARCHIVE = 'https://thefitness.wiki/reddit-archive/gzcl-method-novice-to-elite/';
@@ -118,7 +119,7 @@ function tierThreeRule(lift: string): ProgressionRule {
   };
 }
 
-export const GZCLP_LIFTS = [
+const GZCLP_LIFTS = [
   'squat-t1',
   'bench-t1',
   'ohp-t1',
@@ -130,7 +131,7 @@ export const GZCLP_LIFTS = [
   'pulldown-t3',
   'row-t3',
 ] as const;
-export type GzclpLift = (typeof GZCLP_LIFTS)[number];
+type GzclpLift = (typeof GZCLP_LIFTS)[number];
 
 const LIFT_NAMES: Readonly<Record<GzclpLift, string>> = {
   'squat-t1': 'Squat T1',
@@ -180,7 +181,7 @@ export const GZCLP: ProgramDefinition = {
   ],
 };
 
-export const GZCLP_EXERCISES: Readonly<Record<GzclpLift, string>> = {
+const GZCLP_EXERCISES: Readonly<Record<GzclpLift, string>> = {
   'squat-t1': 'squat',
   'bench-t1': 'bench',
   'ohp-t1': 'ohp',
@@ -206,7 +207,7 @@ export const GZCLP_DEFAULT_WEIGHTS_KG: Readonly<Record<GzclpLift, number>> = {
   'row-t3': 20,
 };
 
-export interface GzclpEnrollmentOverrides {
+interface GzclpEnrollmentOverrides {
   unit?: WeightUnit;
   weights?: Partial<Record<GzclpLift, number>>;
   rounding?: RoundingSetting;
@@ -223,4 +224,12 @@ export function gzclpEnrollment(overrides: GzclpEnrollmentOverrides = {}): Progr
     inputs: Object.fromEntries(GZCLP_LIFTS.map((lift) => [lift, { workingWeight: weights[lift] }])),
     rounding: overrides.rounding ?? DEFAULT_ROUNDING[unit],
   };
+}
+
+export function miss(lift: GzclpLift): DayLog {
+  return { missedLifts: [lift] };
+}
+
+export function rounds(firstDayLogs: readonly DayLog[]): DayLog[] {
+  return firstDayLogs.flatMap((log) => [log, {}, {}, {}]);
 }

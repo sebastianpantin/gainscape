@@ -3,19 +3,11 @@ import { programStateAt, type ProgramDefinition } from '@domain/index.ts';
 import { type LoggedDay } from '@domain/program-progression.ts';
 import { factClock, sessionFact, setReferenceFact } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, loggedAsPrescribed, resolveAt, resolveNext } from './program-fixtures/follow.ts';
-import { GZCLP, gzclpEnrollment, type GzclpLift } from './program-fixtures/gzclp.ts';
+import { GZCLP, gzclpEnrollment, miss, rounds } from './program-fixtures/gzclp.ts';
 import { refOf, repsOf, weightsOf } from './program-fixtures/prescription-helpers.ts';
 import { kgEnrollment, STAGED_WEEKLY, TWO_AMRAP_SLOTS } from './program-fixtures/review-fixtures.ts';
 
 const kg = gzclpEnrollment();
-
-function miss(lift: GzclpLift): DayLog {
-  return { missedLifts: [lift] };
-}
-
-function rounds(firstDayLogs: readonly DayLog[]): DayLog[] {
-  return firstDayLogs.flatMap((log) => [log, {}, {}, {}]);
-}
 
 const lastStageFail = [miss('squat-t1'), miss('squat-t1'), miss('squat-t1')];
 
