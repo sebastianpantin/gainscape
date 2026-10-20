@@ -441,6 +441,7 @@ describe('function execution rights', () => {
       'set_gz',
       'set_timezone',
       'set_weekly_session_goal',
+      'training_days',
       'unequip_gear',
       'username_available',
       'weekly_goal_weeks',

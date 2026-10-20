@@ -33,6 +33,7 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
     'feed',
     'hiscores',
     'quests',
+    'training-days',
   ],
   'profile-saved': ['profile', 'profile-preview', 'bodyweight-trend', 'feed', 'hiscores'],
   'timezone-changed': ['profile', 'weekly-goal'],
@@ -75,6 +76,7 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
     'training-history',
     'history',
     'quests',
+    'training-days',
   ],
 };
 

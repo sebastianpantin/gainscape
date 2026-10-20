@@ -43,6 +43,7 @@ import { type QuestLog } from '../quests/quest-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { skillExercisesSeed } from '../progress/skill-map-rules.ts';
 import { loadStanding } from '../progress/standing-data.ts';
+import { loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
 import { announceDataChange } from './data-changes.ts';
 
@@ -325,6 +326,13 @@ export function questPointsQuery(userId: string) {
   return queryOptions({ ...questsQuery(userId), select: questPointsOf });
 }
 
+export function trainingDaysQuery(userId: string, month: string) {
+  return queryOptions({
+    queryKey: ['training-days', userId, month] as const,
+    queryFn: ({ signal }) => loadTrainingDaysCacheFirst(userId, month, signal),
+  });
+}
+
 export const EVERY_QUERY = [
   profileQuery,
   preferencesQuery,
@@ -359,4 +367,5 @@ export const EVERY_QUERY = [
   lastLoggedWeightsQuery,
   questsQuery,
   questPointsQuery,
+  trainingDaysQuery,
 ] as const;

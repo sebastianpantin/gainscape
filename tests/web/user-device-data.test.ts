@@ -33,6 +33,7 @@ import { questsCache } from '../../web/src/offline/quests-cache.ts';
 import { companionPetStore } from '../../web/src/lib/collection/companion-pet-store.ts';
 import { seenLevelsCache } from '../../web/src/offline/seen-levels-cache.ts';
 import { standingCache } from '../../web/src/offline/standing-cache.ts';
+import { statsCache } from '../../web/src/offline/stats-cache.ts';
 import { forgetUserDeviceData, forgetUserProgressData } from '../../web/src/offline/user-device-data.ts';
 import { installCardKey } from '../../web/src/pwa/install-state.ts';
 import { workout } from './draft-store.contract.ts';
@@ -109,6 +110,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   standingCache.save(local, userId, { skills: [], xpBySkillId: {} });
   questsCache.save(local, userId, { quests: [], progress: [], completions: [], exerciseNames: {} });
   seenLevelsCache.save(local, userId, { totalLevel: 12, combatLevel: 4 });
+  statsCache.save(local, userId, { 'training-days:2026-10': [] });
   companionPetStore.save(local, userId, 'pet-item');
   local.setItem(installCardKey(userId), 'due');
   await createLocalDraftStore(local).put(userId, 10, workout(`session-of-${userId}`));

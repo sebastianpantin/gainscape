@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { monthKey, weekKey, weekStartIn } from '../../web/src/lib/ui/date-bucket-rules.ts';
+import {
+  daysInMonth,
+  monthKey,
+  monthTitle,
+  shiftMonth,
+  weekKey,
+  weekStartIn,
+} from '../../web/src/lib/ui/date-bucket-rules.ts';
 
 describe('weekStartIn', () => {
   it('is the Monday of the current week in the profile time zone', () => {
@@ -50,5 +57,31 @@ describe('monthKey', () => {
     expect(monthKey('2026-10-01')).toBe('2026-10');
     expect(monthKey('2026-10-31')).toBe('2026-10');
     expect(monthKey('2027-01-02')).toBe('2027-01');
+  });
+});
+
+describe('shiftMonth', () => {
+  it('steps back and forward across a year boundary', () => {
+    expect(shiftMonth('2026-10', -1)).toBe('2026-09');
+    expect(shiftMonth('2026-10', 1)).toBe('2026-11');
+    expect(shiftMonth('2026-01', -1)).toBe('2025-12');
+    expect(shiftMonth('2026-12', 1)).toBe('2027-01');
+    expect(shiftMonth('2026-10', 0)).toBe('2026-10');
+  });
+});
+
+describe('daysInMonth', () => {
+  it('counts the days of a month, leap February included', () => {
+    expect(daysInMonth('2026-10')).toBe(31);
+    expect(daysInMonth('2026-09')).toBe(30);
+    expect(daysInMonth('2026-02')).toBe(28);
+    expect(daysInMonth('2028-02')).toBe(29);
+  });
+});
+
+describe('monthTitle', () => {
+  it('names the month and year', () => {
+    expect(monthTitle('2026-10')).toBe('October 2026');
+    expect(monthTitle('2027-01')).toBe('January 2027');
   });
 });

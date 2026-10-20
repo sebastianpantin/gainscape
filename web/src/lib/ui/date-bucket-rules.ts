@@ -33,3 +33,19 @@ export function weekKey(localDate: string): string {
 export function monthKey(localDate: string): string {
   return localDate.slice(0, ISO_MONTH_LENGTH);
 }
+
+function monthStartUtc(month: string, monthsLater = 0): Date {
+  return new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1 + monthsLater, 1));
+}
+
+export function shiftMonth(month: string, delta: number): string {
+  return monthStartUtc(month, delta).toISOString().slice(0, ISO_MONTH_LENGTH);
+}
+
+export function daysInMonth(month: string): number {
+  return new Date(monthStartUtc(month, 1).getTime() - MS_PER_DAY).getUTCDate();
+}
+
+export function monthTitle(month: string): string {
+  return monthStartUtc(month).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}

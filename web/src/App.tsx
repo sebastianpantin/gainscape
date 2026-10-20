@@ -224,7 +224,7 @@ function SignedInShell() {
               <Route path="/collection/exercises/:exerciseId" element={<ExerciseProgressScreen userId={userId} />} />
               <Route path="/collection/history" element={<HistoryScreen userId={userId} />} />
               <Route path="/collection/history/:sessionId" element={<SessionDetailScreen userId={userId} />} />
-              <Route path="/collection/stats" element={<StatsScreen />} />
+              <Route path="/collection/stats" element={<StatsScreen userId={userId} />} />
               <Route path="/friends" element={<FriendsScreen userId={userId} />} />
               <Route path="/friends/hiscores" element={<HiscoresScreen />} />
               <Route path="/friends/:friendId" element={<FriendProfileScreen />} />

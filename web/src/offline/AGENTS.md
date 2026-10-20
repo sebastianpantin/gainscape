@@ -1,7 +1,7 @@
 # offline
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-14
+**Generated:** 2026-10-01 · **Updated:** 2026-10-20
 
 ## Purpose
 
@@ -18,7 +18,7 @@
 - Per-tab state machine: `draft-session.ts`, wrapped by the thin hook `use-workout-draft.ts` (`useWorkoutDraft`).
 - Finish pipeline: `session-payload.ts` builds the request, `finish-lock.ts` (`attemptFinish`, `sendOutcomeFrom`) sends it, `finish-retries.ts` (`startFinishRetries`) retries it, and `sync-workout.ts` does the real I/O.
 - Device cleanup: `local-drafts.ts` holds the draft checks and forgets across both stores. `user-device-data.ts` has `forgetUserDeviceData` (account deletion) and `forgetUserProgressData` (Reset all data).
-- Screen caches: `*-cache.ts`, each a per-user `Storage` cache, mostly built with `userCache` from `cache-first.ts`. Screens load them through `loadCacheFirstWhenOffline`. Program state is in `program-cache.ts`, `program-facts-cache.ts` (pure facts merge) and `program-refresh.ts`.
+- Screen caches: `*-cache.ts`, each a per-user `Storage` cache, mostly built with `userCache` from `cache-first.ts`. Screens load them through `loadCacheFirstWhenOffline`. Program state is in `program-cache.ts`, `program-facts-cache.ts` (pure facts merge) and `program-refresh.ts`. `stats-cache.ts` keeps every Stats answer in one per-user record keyed by query, capped at `MAX_SAVED_STATS` so browsing months cannot fill storage; `loadStatCacheFirst` saves after each live load.
 
 ## Rules and gotchas
 

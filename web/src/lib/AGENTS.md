@@ -1,11 +1,11 @@
 # lib
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-01 · **Updated:** 2026-10-14
+**Generated:** 2026-10-01 · **Updated:** 2026-10-20
 
 ## Purpose
 
-`web/src/lib/` is the web app's non-visual layer. It holds the Supabase client, auth boot and sign-out, typed fetchers and RPC wrappers for every feature, the TanStack Query setup, the per-user device stores, and the pure rule modules all of these use. Decisions live in pure modules that `tests/web/` covers without a stack. I/O modules only fetch and hand the rows to a pure function.
+`web/src/lib/` is the web app's non-visual layer. It holds the Supabase client, auth, typed fetchers and RPC wrappers, the TanStack Query setup, per-user device stores and the pure rules they use. Decisions live in pure modules that `tests/web/` covers without a stack. I/O modules only fetch and hand the rows to a pure function.
 
 ## Map
 
@@ -21,8 +21,9 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `collection/`: items, gear, challenges, the companion pet and the records collection.
 - `profile/`: profile and its view, account actions, preferences and onboarding.
 - `social/`: friends, feed and hiscores.
+- `stats/`: the Stats screen's aggregate RPC reads (cache-first via `../offline/stats-cache.ts`) and their rules (calendar, month compare).
 - `quests/`: the quest log (cache-first), `start-quest` and `quest-rules.ts` (board, step and requirement text, start errors).
-- `ui/`: pure helpers behind shared components (number field, count-up, line and bar charts, toast, term help, week and month keys) and `glossary.ts`.
+- `ui/`: pure helpers behind shared components (number field, count-up, charts, toast, term help, week and month keys) and `glossary.ts`.
 - The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`.
 - Start here:
   - `platform/supabase.ts`: the one client.
@@ -120,13 +121,10 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 
 ### Browser behaviour
 
-- `useRouteFocusAndTitle` moves focus only when the pathname changes.
-  - It waits up to 3 s for a `main` without `aria-busy`, then polls until the `h1` really has focus.
-  - It leaves focus alone while a `dialog[open]` is showing, or when focus is already inside `main`.
-  - It saves the scroll position per location key, so Back returns to the same place.
+- `useRouteFocusAndTitle` moves focus only on a pathname change: it waits up to 3 s for a `main` without `aria-busy`, polls until the `h1` really has focus, leaves focus alone while a `dialog[open]` shows or focus is inside `main`, and saves scroll per location key so Back returns there.
 - `playTones` plays only if a suspended `AudioContext` resumes within 500 ms, so a frozen page never beeps late. Every device call is guarded with try/catch.
 - `restAlertIsFresh` gives a 5 s grace, so a page that thaws late stays quiet. `claimRestAlert` lets only one tab alert per rest.
-- `platesPerSide` loads the heaviest plates first, like a gym, and falls back to the fewest plates when that fails. It is not greedy.
+- `platesPerSide` loads the heaviest plates first, like a gym, then falls back to the fewest plates; not greedy.
 - React keys for repeated exercises come from `exerciseKeys`; workout cards key by the draft's `clientId`.
 - The enroll form is generated from the template definition, with no code per program. Custom templates bind `x_<exercise hex>` lifts, and a `<lift>Lift` option picks a lift's key. Archived and custom exercises never bind.
 

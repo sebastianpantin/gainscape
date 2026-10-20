@@ -22,6 +22,7 @@ import { programListCache } from './program-list-cache.ts';
 import { questsCache } from './quests-cache.ts';
 import { seenLevelsCache } from './seen-levels-cache.ts';
 import { standingCache } from './standing-cache.ts';
+import { statsCache } from './stats-cache.ts';
 
 interface UserDevice {
   localStorage: Storage;
@@ -42,6 +43,7 @@ export async function forgetUserProgressData(device: UserDevice, userId: string)
   profileCache.forget(storage, userId);
   collectionCache.forget(storage, userId);
   questsCache.forget(storage, userId);
+  statsCache.forget(storage, userId);
   forgetSessionBaseline(storage, userId);
   forgetDismissedSummaries(storage, userId);
   forgetLastSummaryOf(device.sessionStorage, userId);

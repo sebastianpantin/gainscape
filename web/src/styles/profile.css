@@ -203,20 +203,83 @@ button.back-link {
   border: 1px solid var(--color-outline);
 }
 
-.rep-max-table {
+.rep-max-table,
+.stats-table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--font-size-sm);
 }
 
 .rep-max-table th,
-.rep-max-table td {
+.rep-max-table td,
+.stats-table th,
+.stats-table td {
   text-align: left;
   padding: var(--space-1) var(--space-2);
   border-bottom: 1px solid var(--color-panel-border);
 }
 
-.rep-max-table thead th {
+.rep-max-table thead th,
+.stats-table thead th {
   color: var(--color-text-muted);
   font-weight: 500;
+}
+
+.training-calendar {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: var(--space-0-5);
+  font-size: var(--font-size-sm);
+}
+
+.training-calendar caption {
+  font-family: var(--font-display);
+  padding-bottom: var(--space-1);
+}
+
+.training-calendar th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.training-calendar abbr {
+  text-decoration: none;
+}
+
+.calendar-day {
+  height: 36px;
+  text-align: center;
+  color: var(--color-text-muted);
+  background: var(--color-well);
+  border: 1px solid var(--color-outline);
+}
+
+.calendar-day[aria-current='date'] {
+  outline: var(--border-width) solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.calendar-day.heat-1,
+.calendar-day.heat-2,
+.calendar-day.heat-3,
+.calendar-day.heat-4 {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.calendar-day.heat-1 {
+  background: var(--color-xp-dark);
+}
+
+.calendar-day.heat-2 {
+  background: var(--color-xp);
+}
+
+.calendar-day.heat-3 {
+  background: var(--color-xp-light);
+}
+
+.calendar-day.heat-4 {
+  background: var(--color-accent);
 }
