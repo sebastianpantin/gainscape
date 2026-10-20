@@ -1,8 +1,11 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from '../support/fixtures.ts';
 import { finishWorkout, logCardio, logExercise, register, uniqueUsername } from '../support/app.ts';
+import { authStorageKey } from '../../web/src/lib/platform/auth-restore.ts';
+import { localStackStatus } from '../../scripts/local-stack.ts';
 
 const VIOLATION_PREFIX = 'csp-violation:';
+const pagesSessionKey = authStorageKey(localStackStatus().API_URL);
 
 async function collectViolations(page: Page): Promise<string[]> {
   const violations: string[] = [];
@@ -20,7 +23,7 @@ async function collectViolations(page: Page): Promise<string[]> {
 
 test('the Pages build runs a whole workout without a single CSP violation', async ({ page }) => {
   const violations = await collectViolations(page);
-  await register(page, uniqueUsername('csp'));
+  await register(page, uniqueUsername('csp'), pagesSessionKey);
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 5, effort: 'Moderate' }]);
