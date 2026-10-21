@@ -51,12 +51,13 @@ describe('assumedEffort', () => {
     expect(assumedEffort('rpe', 5, levelRir)).toBeNull();
   });
 
-  it('picks the nearest effort level, the easier one on a tie', () => {
+  it('picks the nearest effort level, the harder one on a tie', () => {
     expect(assumedEffort('level', 3, levelRir)).toEqual({ type: 'level', level: 'hard' });
     expect(assumedEffort('level', 0, levelRir)).toEqual({ type: 'level', level: 'failure' });
-    expect(assumedEffort('level', 2, levelRir)).toEqual({ type: 'level', level: 'hard' });
+    expect(assumedEffort('level', 2, levelRir)).toEqual({ type: 'level', level: 'near_failure' });
+    expect(assumedEffort('level', 3.5, levelRir)).toEqual({ type: 'level', level: 'hard' });
     expect(assumedEffort('level', 4, levelRir)).toEqual({ type: 'level', level: 'moderate' });
-    expect(assumedEffort('level', 4.5, levelRir)).toEqual({ type: 'level', level: 'easy' });
+    expect(assumedEffort('level', 4.5, levelRir)).toEqual({ type: 'level', level: 'moderate' });
     expect(assumedEffort('level', 8, levelRir)).toEqual({ type: 'level', level: 'easy' });
   });
 });
