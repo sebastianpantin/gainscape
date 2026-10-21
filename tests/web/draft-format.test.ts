@@ -195,6 +195,22 @@ describe('parseStoredDraft', () => {
     ]);
   });
 
+  it('keeps every effort level, moderate included', () => {
+    const levels = ['easy', 'moderate', 'hard', 'near_failure', 'failure'] as const;
+    const sets = levels.map((level) => ({
+      id: level,
+      weightKg: 60,
+      reps: 8,
+      effort: { type: 'level', level },
+      done: true,
+    }));
+    const draft = { ...workout(), exercises: [{ ...workout().exercises[0], sets }] };
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft }, userId);
+    expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets.map((set) => set.effort)).toEqual(
+      levels.map((level) => ({ type: 'level', level })),
+    );
+  });
+
   describe('superset groups', () => {
     function parsedLifts(exercises: unknown[]): LiftDraftExercise[] {
       const raw = { v: 5, kind: 'draft', userId, updatedAt: 5, draft: { ...workout(), exercises } };

@@ -15,7 +15,8 @@ export const HOUR_MS = 60 * 60 * 1000;
 export const DAY_MS = 24 * HOUR_MS;
 export const TIMEZONE = 'Europe/Stockholm';
 
-export type Effort = { type: 'level'; level: 'hard' | 'easy' | 'near_failure' } | { type: 'rir'; value: number } | null;
+export type Effort =
+  { type: 'level'; level: 'easy' | 'moderate' | 'hard' | 'near_failure' } | { type: 'rir'; value: number } | null;
 
 export interface SetShape {
   id: string;

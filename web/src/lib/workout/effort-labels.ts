@@ -1,10 +1,11 @@
 import type { CardioEffortLevel, EffortInput, EffortLevel } from '@domain/types.ts';
 import type { EffortInputMode } from '../profile/profile-rules.ts';
 
-export const EFFORT_LEVELS: readonly EffortLevel[] = ['easy', 'hard', 'near_failure', 'failure'];
+export const EFFORT_LEVELS: readonly EffortLevel[] = ['easy', 'moderate', 'hard', 'near_failure', 'failure'];
 
 export const EFFORT_LEVEL_LABELS: Record<EffortLevel, string> = {
   easy: 'Easy',
+  moderate: 'Moderate',
   hard: 'Hard',
   near_failure: 'Near fail',
   failure: 'Failure',

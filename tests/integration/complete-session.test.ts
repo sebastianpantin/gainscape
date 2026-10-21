@@ -28,7 +28,7 @@ import {
 } from './local-stack.ts';
 import { aBout, anIntervalBout, asCardioSetInput, type BoutShape } from './session-support.ts';
 
-type EffortLevel = 'hard' | 'near_failure';
+type EffortLevel = 'moderate' | 'hard' | 'near_failure';
 
 function threeSets(exerciseId: string, firstPosition: number, weightKg: number, level: EffortLevel | null) {
   return [0, 1, 2].map((offset) => ({
@@ -606,6 +606,28 @@ describe('complete-session review regressions', () => {
   });
 });
 
+describe('complete-session with effort levels', () => {
+  it('stores a moderate set as RIR 4, between easy and hard', async () => {
+    const user = await createTestUser();
+    const payload = sessionPayload(threeSets(benchId, 0, 60, 'moderate'));
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    const rows = await db`select effort_input_type, effort_value::float, rir::float, rir_source
+      from public.sets where session_id = ${payload.id}`;
+    expect(rows).toEqual(
+      Array.from({ length: 3 }, () => ({ effort_input_type: 'level', effort_value: 4, rir: 4, rir_source: 'logged' })),
+    );
+  });
+
+  it('returns 422 invalid_payload for an effort level it does not know', async () => {
+    const user = await createTestUser();
+    const set = { ...threeSets(benchId, 0, 60, 'hard')[0], effort: { type: 'level', level: 'medium' } };
+    const response = await postCompleteSession(user.accessToken, sessionPayload([set]));
+    expect(response.status, response.rawBody).toBe(422);
+    expect(response.body.error).toBe('invalid_payload');
+  });
+});
+
 describe('complete-session with bodyweight exercises', () => {
   let pullUpId: string;
   let weightedPullUpId: string;
@@ -1005,5 +1027,18 @@ describe('complete-session with hold sets', () => {
     );
     expect([rir.status, rir.body.error]).toEqual([422, 'invalid_payload']);
     expect((await rowCounts(user.id, countedTables)).sessions).toBe(0);
+  });
+
+  it('stores a moderate hold as RIR 4', async () => {
+    const user = await createTestUser();
+    const { pinchId } = await holdExercisesOf(user);
+    const payload = sessionPayload([
+      { ...aHold(pinchId, 0, { durationS: 30 }), effort: { type: 'level' as const, level: 'moderate' as const } },
+    ]);
+    const response = await postCompleteSession(user.accessToken, payload);
+    expect(response.status, response.rawBody).toBe(200);
+    const [row] =
+      await db`select effort_input_type, effort_value::float from public.sets where session_id = ${payload.id}`;
+    expect(row).toEqual({ effort_input_type: 'level', effort_value: 4 });
   });
 });

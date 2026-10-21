@@ -26,14 +26,16 @@ export function parseOr422<T extends z.ZodType>(schema: T, body: unknown): z.out
 
 const liftEffortSchema = z
   .discriminatedUnion('type', [
-    z.object({ type: z.literal('level'), level: z.enum(['easy', 'hard', 'near_failure', 'failure']) }).strict(),
+    z
+      .object({ type: z.literal('level'), level: z.enum(['easy', 'moderate', 'hard', 'near_failure', 'failure']) })
+      .strict(),
     z.object({ type: z.literal('rir'), value: z.number().min(0).max(10).multipleOf(0.5) }).strict(),
     z.object({ type: z.literal('rpe'), value: z.number().min(5).max(10).multipleOf(0.5) }).strict(),
   ])
   .nullable();
 
 const holdEffortSchema = z
-  .object({ type: z.literal('level'), level: z.enum(['easy', 'hard', 'near_failure', 'failure']) })
+  .object({ type: z.literal('level'), level: z.enum(['easy', 'moderate', 'hard', 'near_failure', 'failure']) })
   .strict()
   .nullable();
 

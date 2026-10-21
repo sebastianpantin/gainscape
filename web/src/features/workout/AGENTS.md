@@ -71,6 +71,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - Layout:
   - Live set rows are a compact grid that must fit a 360 px phone. Below 360 px, reps and Done move to a second line and the effort selector takes the full width, so the weight field stays usable at 320 px (`e2e/a11y.spec.ts`).
   - Controls between sets stay 44 px touch targets (`e2e/a11y.spec.ts`).
+  - The five effort levels are a wrapping flex row of 44 px minimum buttons: one line on a stepped lift row from 360 px (its menu sits on the info line so effort gets the full width); at 320 px, and on hold rows that share their line with the menu, the last levels wrap.
   - The effort selector is always the last line of a row. Picking an effort only rates the set: only the Done toggle completes it, and only completing a working set starts the rest (`startsRest`), so rating before or after Done never restarts it.
   - The `~ and new records are previews` note sits below `.finish-bar`, so it never adds sticky height.
   - `ActiveWorkoutBar` is one `--tap-target` tall and never wraps. Screens get extra bottom padding while it shows.

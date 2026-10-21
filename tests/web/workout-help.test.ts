@@ -21,7 +21,7 @@ const BENCH = 'barbell_bench_press';
 const SQUAT = 'back_squat';
 const ROW = 'rowing_machine';
 const MODES: readonly EffortInputMode[] = ['level', 'rir', 'rpe'];
-const LEVELS: readonly EffortLevel[] = ['easy', 'hard', 'near_failure', 'failure'];
+const LEVELS: readonly EffortLevel[] = ['easy', 'moderate', 'hard', 'near_failure', 'failure'];
 
 function liftSet(id: string, overrides: Partial<DraftSet> = {}): DraftSet {
   return { id, weightKg: 60, reps: 5, effort: null, done: false, isWarmup: false, ...overrides };
