@@ -9,8 +9,13 @@ export function WorkoutClock({ startedAt, finishedAt }: { startedAt: string; fin
 
   useEffect(() => {
     if (!clock.ticking) return;
-    const ticker = setInterval(() => setNow(Date.now()), TICK_MS);
-    return () => clearInterval(ticker);
+    const tick = () => setNow(Date.now());
+    const firstTick = setTimeout(tick, 0);
+    const ticker = setInterval(tick, TICK_MS);
+    return () => {
+      clearTimeout(firstTick);
+      clearInterval(ticker);
+    };
   }, [clock.ticking]);
 
   return (

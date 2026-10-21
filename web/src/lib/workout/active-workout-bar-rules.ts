@@ -50,7 +50,8 @@ function elapsedName(elapsedMs: number): string {
 
 export function workoutClock(draft: WorkoutTimes, now: number): { text: string; name: string; ticking: boolean } {
   const elapsedMs = workoutElapsedMs(draft, now);
-  return { text: elapsedClock(elapsedMs), name: elapsedName(elapsedMs), ticking: draft.finishedAt === null };
+  const ticking = draft.finishedAt === null && elapsedMs < MAX_SESSION_DURATION_MS;
+  return { text: elapsedClock(elapsedMs), name: elapsedName(elapsedMs), ticking };
 }
 
 function restParts(restTimer: RestTimer | null, now: number): { text: string; name: string } | null {

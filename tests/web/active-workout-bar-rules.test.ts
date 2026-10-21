@@ -103,12 +103,12 @@ describe('workoutClock', () => {
     });
   });
 
-  it('never runs before the start or past the longest session', () => {
+  it('never runs before the start, and stops at the longest session', () => {
     expect(workoutClock(openDraft, started - seconds(30))).toMatchObject({ text: '0:00' });
     expect(workoutClock(openDraft, started + MAX_SESSION_DURATION_MS + seconds(600))).toMatchObject({
       text: '12:00:00',
       name: 'Elapsed 12 hours',
-      ticking: true,
+      ticking: false,
     });
   });
 
