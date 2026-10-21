@@ -5,6 +5,7 @@ import { TEST_BALANCE } from './fixtures.ts';
 describe('effort', () => {
   it.each([
     ['easy', 5],
+    ['moderate', 4],
     ['hard', 3],
     ['near_failure', 1],
     ['failure', 0],
@@ -23,6 +24,23 @@ describe('effort', () => {
 
   it('reads a stored easy level back from its RIR', () => {
     expect(effortInputFromStored('level', 5, DEFAULT_BALANCE)).toEqual({ type: 'level', level: 'easy' });
+  });
+
+  it.each(['easy', 'moderate', 'hard', 'near_failure', 'failure'] as const)(
+    'reads a stored %s level back from the value it stores',
+    (level) => {
+      const { effortValue } = resolveEffort({ type: 'level', level }, DEFAULT_BALANCE, 'lift');
+      expect(effortInputFromStored('level', effortValue, DEFAULT_BALANCE)).toEqual({ type: 'level', level });
+    },
+  );
+
+  it('earns a moderate set more XP than an easy one and less than a hard one', () => {
+    const xpAt = (level: 'easy' | 'moderate' | 'hard') => {
+      const { loggedRir } = resolveEffort({ type: 'level', level }, DEFAULT_BALANCE, 'lift');
+      return setXp(effectiveReps(8, loggedRir!, false, DEFAULT_BALANCE), 1, DEFAULT_BALANCE);
+    };
+    expect(xpAt('moderate')).toBeGreaterThan(xpAt('easy'));
+    expect(xpAt('moderate')).toBeLessThan(xpAt('hard'));
   });
 
   it('leaves an unrated set without a logged RIR', () => {

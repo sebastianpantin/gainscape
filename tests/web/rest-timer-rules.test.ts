@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { type EffortInput } from '@domain/types.ts';
 import {
   adjustRest,
   COMPOUND_REST_S,
@@ -26,7 +27,6 @@ const setId = 'set-1';
 const benchId = 'bench';
 const curlId = 'curl';
 const hard = { type: 'level', level: 'hard' } as const;
-const nearFailure = { type: 'level', level: 'near_failure' } as const;
 
 describe('rest timer', () => {
   it('starts a rest that ends after the chosen seconds', () => {
@@ -128,26 +128,28 @@ describe('rest timer', () => {
 
   it('starts when a set goes from not done to done', () => {
     const planned = { id: setId, done: false, effort: null };
-    expect(startsRest(planned, { done: true }, null)).toBe(true);
-    expect(startsRest(planned, { done: true }, startRest(now, 90, setId))).toBe(true);
-    expect(startsRest({ ...planned, done: true }, { done: true }, null)).toBe(false);
-    expect(startsRest({ ...planned, done: true }, { done: false }, null)).toBe(false);
-    expect(startsRest(planned, {}, null)).toBe(false);
+    expect(startsRest(planned, { done: true })).toBe(true);
+    expect(startsRest({ ...planned, done: true }, { done: true })).toBe(false);
+    expect(startsRest({ ...planned, done: true }, { done: false })).toBe(false);
+    expect(startsRest(planned, {})).toBe(false);
   });
 
-  it('starts when a done set gets its first effort rating', () => {
-    const logged = { id: setId, done: true, effort: null };
-    expect(startsRest(logged, { effort: hard, done: true }, null)).toBe(true);
-    expect(startsRest(logged, { effort: hard, done: true }, startRest(now, 90, 'set-0'))).toBe(true);
-    expect(startsRest({ ...logged, effort: hard }, { effort: nearFailure, done: true }, null)).toBe(false);
-    expect(startsRest({ ...logged, effort: hard }, { effort: null }, null)).toBe(false);
+  it('never starts on an effort rating, only when the set is done', () => {
+    const planned = { id: setId, done: false, effort: null };
+    const rated = { ...planned, effort: hard };
+    const logged = { ...rated, done: true };
+    const rating: { done?: boolean; effort?: EffortInput } = { effort: hard };
+    const clearing: { done?: boolean; effort?: EffortInput } = { effort: null };
+    expect(startsRest(planned, rating)).toBe(false);
+    expect(startsRest(logged, rating)).toBe(false);
+    expect(startsRest(logged, clearing)).toBe(false);
+    expect(startsRest(rated, { done: true })).toBe(true);
   });
 
   it('never starts for a warm-up set', () => {
     const warmup = { id: setId, done: false, effort: null, isWarmup: true };
-    expect(startsRest(warmup, { done: true }, null)).toBe(false);
-    expect(startsRest({ ...warmup, done: true }, { effort: hard, done: true }, null)).toBe(false);
-    expect(startsRest({ ...warmup, isWarmup: false }, { done: true }, null)).toBe(true);
+    expect(startsRest(warmup, { done: true })).toBe(false);
+    expect(startsRest({ ...warmup, isWarmup: false }, { done: true })).toBe(true);
   });
 
   it('stops the rest a set started when that set becomes a warm-up', () => {
@@ -159,12 +161,6 @@ describe('rest timer', () => {
     expect(stopsRestForWarmup({ ...logged, isWarmup: true }, { isWarmup: false }, startRest(now, 90, setId))).toBe(
       false,
     );
-  });
-
-  it('keeps the rest the same set already started when it is rated', () => {
-    const logged = { id: setId, done: true, effort: null };
-    const adjusted = adjustRest(startRest(now, 90, setId), REST_STEP_S, now);
-    expect(startsRest(logged, { effort: hard, done: true }, adjusted)).toBe(false);
   });
 });
 

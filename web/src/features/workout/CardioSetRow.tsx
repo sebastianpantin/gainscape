@@ -50,10 +50,7 @@ export function CardioSetRow({
           { label: 'Remove bout', accessibleName: `Remove bout ${boutNumber}`, danger: true, onChoose: onRemove },
         ]}
       />
-      <CardioEffortSelector
-        selected={bout.effort}
-        onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}
-      />
+      <CardioEffortSelector selected={bout.effort} onSelect={(effort) => onChange({ effort })} />
     </li>
   );
 }

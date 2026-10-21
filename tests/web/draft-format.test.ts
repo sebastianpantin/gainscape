@@ -20,6 +20,7 @@ import {
   markPlannedSetsDone,
   notDoneSetCount,
   plannedSetsLeftToLifter,
+  ratedNotDoneSetCount,
   removeExercise,
   swapExercise,
   toggleSetDone,
@@ -193,6 +194,22 @@ describe('parseStoredDraft', () => {
       { type: 'rir', value: 2 },
       { type: 'rpe', value: 8.5 },
     ]);
+  });
+
+  it('keeps every effort level, moderate included', () => {
+    const levels = ['easy', 'moderate', 'hard', 'near_failure', 'failure'] as const;
+    const sets = levels.map((level) => ({
+      id: level,
+      weightKg: 60,
+      reps: 8,
+      effort: { type: 'level', level },
+      done: true,
+    }));
+    const draft = { ...workout(), exercises: [{ ...workout().exercises[0], sets }] };
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft }, userId);
+    expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets.map((set) => set.effort)).toEqual(
+      levels.map((level) => ({ type: 'level', level })),
+    );
   });
 
   describe('superset groups', () => {
@@ -523,6 +540,42 @@ describe('cardio drafts', () => {
       ['optional', false],
       ['working', true],
     ]);
+  });
+
+  it('logs a rated 5RM test or optional set, since the rating says it was lifted', () => {
+    const snapshot = { weightKg: 60, reps: 5, minReps: null, amrap: false };
+    const hard = { type: 'level', level: 'hard' } as const;
+    const rated = (id: string, extra: Partial<DraftSet>): DraftSet => ({
+      id,
+      weightKg: 60,
+      reps: 5,
+      effort: hard,
+      done: false,
+      isWarmup: false,
+      ...extra,
+    });
+    const retest = rated('retest', { prescription: { ...snapshot, ref: 't1:retest' } });
+    const optional = rated('optional', {
+      prescription: { ...snapshot, ref: 't3-1' },
+      prescriptionDetail: { pct: null, optional: true },
+    });
+    const bench = workout().exercises[0];
+    if (bench.modality !== 'lift') throw new Error('expected a lift');
+    const draft = workout({ exercises: [{ ...bench, sets: [retest, optional] }] });
+    expect(plannedSetsLeftToLifter(draft)).toBe(0);
+    expect(markPlannedSetsDone(draft).exercises[0].sets.map((set) => set.done)).toEqual([true, true]);
+  });
+
+  it('counts the sets that are rated but not ticked done', () => {
+    const hard = { type: 'level', level: 'hard' } as const;
+    const bench = workout().exercises[0];
+    if (bench.modality !== 'lift') throw new Error('expected a lift');
+    const sets: DraftSet[] = [
+      { id: 'a', weightKg: 60, reps: 5, effort: hard, done: false, isWarmup: false },
+      { id: 'b', weightKg: 60, reps: 5, effort: hard, done: true, isWarmup: false },
+      { id: 'c', weightKg: 60, reps: 5, effort: null, done: false, isWarmup: false },
+    ];
+    expect(ratedNotDoneSetCount(workout({ exercises: [{ ...bench, sets }] }))).toBe(1);
   });
 
   it('leaves cardio exercises alone when checking load types', () => {

@@ -229,7 +229,7 @@ export function fillWorkingSets(draft: WorkoutDraft, exerciseIndex: number, coun
 }
 
 function isLeftToLifter(set: DraftSet | CardioDraftSet | HoldDraftSet): boolean {
-  if ('kind' in set || set.done) return false;
+  if ('kind' in set || set.done || set.effort !== null) return false;
   return Boolean(set.prescriptionDetail?.optional) || (set.prescription ? isRetestRef(set.prescription.ref) : false);
 }
 
@@ -244,6 +244,13 @@ export function markPlannedSetsDone(draft: WorkoutDraft): WorkoutDraft {
       withSets(exercise, (sets) => sets.map((set) => (isLeftToLifter(set) ? set : { ...set, done: true }))),
     ),
   };
+}
+
+export function ratedNotDoneSetCount(draft: WorkoutDraft): number {
+  return draft.exercises.reduce(
+    (count, exercise) => count + exercise.sets.filter((set) => !set.done && set.effort !== null).length,
+    0,
+  );
 }
 
 export function notDoneSetCount(draft: WorkoutDraft): number {

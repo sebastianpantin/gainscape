@@ -36,6 +36,10 @@ test('an open workout and its rest follow the lifter to other screens, alert the
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   await pauseClockNow(page);
+  await expect(page.getByRole('timer', { name: 'Elapsed 0 minutes' })).toHaveText(/^0:0\d$/);
+  await page.clock.runFor(60_000);
+  await expect(page.getByRole('timer', { name: 'Elapsed 1 minute' })).toHaveText(/^1:0\d$/);
+  await expect(page.getByText(/^1:0\d · 0 sets done$/)).toBeVisible();
   await logExercise(page, 'barbell curl', 'Barbell Curl', [{ weightKg: 30, reps: 10 }]);
   await expect(restTimer(page).getByRole('timer', { name: 'Rest remaining' })).toHaveText('1:30');
   await expect(workoutBar(page)).toHaveCount(0);

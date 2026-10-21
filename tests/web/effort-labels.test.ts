@@ -4,12 +4,20 @@ import {
   assumedEffort,
   CARDIO_EFFORT_LABELS,
   EFFORT_LEVEL_LABELS,
+  EFFORT_LEVELS,
   effortLabel,
 } from '../../web/src/lib/workout/effort-labels.ts';
+
+describe('EFFORT_LEVELS', () => {
+  it('orders the levels from easiest to hardest', () => {
+    expect(EFFORT_LEVELS).toEqual(['easy', 'moderate', 'hard', 'near_failure', 'failure']);
+  });
+});
 
 describe('effortLabel', () => {
   it('labels stored effort', () => {
     expect(effortLabel({ type: 'level', level: 'near_failure' })).toBe('Near fail');
+    expect(effortLabel({ type: 'level', level: 'moderate' })).toBe('Moderate');
     expect(effortLabel({ type: 'rpe', value: 8.5 })).toBe('RPE 8.5');
     expect(effortLabel({ type: 'rir', value: 2 })).toBe('RIR 2');
     expect(effortLabel({ type: 'cardio', level: 'moderate' })).toBe('Moderate');
@@ -18,7 +26,13 @@ describe('effortLabel', () => {
   });
 
   it('has a label for every lift and cardio effort level', () => {
-    expect(EFFORT_LEVEL_LABELS).toEqual({ easy: 'Easy', hard: 'Hard', near_failure: 'Near fail', failure: 'Failure' });
+    expect(EFFORT_LEVEL_LABELS).toEqual({
+      easy: 'Easy',
+      moderate: 'Moderate',
+      hard: 'Hard',
+      near_failure: 'Near fail',
+      failure: 'Failure',
+    });
     expect(CARDIO_EFFORT_LABELS).toEqual({ easy: 'Easy', moderate: 'Moderate', hard: 'Hard', max: 'Max' });
   });
 });
@@ -41,7 +55,9 @@ describe('assumedEffort', () => {
     expect(assumedEffort('level', 3, levelRir)).toEqual({ type: 'level', level: 'hard' });
     expect(assumedEffort('level', 0, levelRir)).toEqual({ type: 'level', level: 'failure' });
     expect(assumedEffort('level', 2, levelRir)).toEqual({ type: 'level', level: 'hard' });
-    expect(assumedEffort('level', 4, levelRir)).toEqual({ type: 'level', level: 'easy' });
+    expect(assumedEffort('level', 3.5, levelRir)).toEqual({ type: 'level', level: 'moderate' });
+    expect(assumedEffort('level', 4, levelRir)).toEqual({ type: 'level', level: 'moderate' });
+    expect(assumedEffort('level', 4.5, levelRir)).toEqual({ type: 'level', level: 'easy' });
     expect(assumedEffort('level', 8, levelRir)).toEqual({ type: 'level', level: 'easy' });
   });
 });

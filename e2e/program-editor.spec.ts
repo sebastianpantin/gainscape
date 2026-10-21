@@ -289,7 +289,7 @@ test('delete a program through the confirmation and keep the workout logged from
   await expect(nothingTicked.getByRole('button', { name: 'Finish without them' })).toHaveCount(0);
   await nothingTicked.getByRole('button', { name: 'Cancel' }).click();
   await expect(nothingTicked).toHaveCount(0);
-  await setRow(exerciseCard(page, 'Barbell Bench Press'), 1).getByRole('radio', { name: 'Hard' }).click();
+  await setRow(exerciseCard(page, 'Barbell Bench Press'), 1).getByRole('button', { name: 'Done set 1' }).click();
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await page
     .getByRole('dialog', { name: '17 sets not ticked' })

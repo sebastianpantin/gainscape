@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { activeWorkoutBar, elapsedClock } from '../../web/src/lib/workout/active-workout-bar-rules.ts';
+import { activeWorkoutBar, elapsedClock, workoutClock } from '../../web/src/lib/workout/active-workout-bar-rules.ts';
 import { startRest } from '../../web/src/lib/workout/rest-timer-rules.ts';
+import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
 
 const startedAt = '2026-10-12T10:00:00.000Z';
 const started = Date.parse(startedAt);
@@ -77,5 +78,45 @@ describe('activeWorkoutBar', () => {
       name: 'Back to workout, not saved yet',
     });
     expect(activeWorkoutBar({ pathname: '/', draft: finishedDraft, restTimer, now })).toBeNull();
+  });
+});
+
+describe('workoutClock', () => {
+  it('counts an open workout up to now, naming it in minutes', () => {
+    expect(workoutClock(openDraft, started + seconds(23 * 60 + 41))).toEqual({
+      text: '23:41',
+      name: 'Elapsed 23 minutes',
+      ticking: true,
+    });
+    expect(workoutClock(openDraft, started + seconds(65))).toMatchObject({ text: '1:05', name: 'Elapsed 1 minute' });
+    expect(workoutClock(openDraft, started + seconds(20))).toMatchObject({ text: '0:20', name: 'Elapsed 0 minutes' });
+  });
+
+  it('switches to hours from the first hour on', () => {
+    expect(workoutClock(openDraft, started + seconds(3600 + 125))).toMatchObject({
+      text: '1:02:05',
+      name: 'Elapsed 1 hour 2 minutes',
+    });
+    expect(workoutClock(openDraft, started + seconds(2 * 3600 + 30))).toMatchObject({
+      text: '2:00:30',
+      name: 'Elapsed 2 hours',
+    });
+  });
+
+  it('never runs before the start, and stops at the longest session', () => {
+    expect(workoutClock(openDraft, started - seconds(30))).toMatchObject({ text: '0:00' });
+    expect(workoutClock(openDraft, started + MAX_SESSION_DURATION_MS + seconds(600))).toMatchObject({
+      text: '12:00:00',
+      name: 'Elapsed 12 hours',
+      ticking: false,
+    });
+  });
+
+  it('freezes on the finished duration once the workout is finished', () => {
+    expect(workoutClock(finishedDraft, started + seconds(3 * 3600))).toEqual({
+      text: '40:00',
+      name: 'Elapsed 40 minutes',
+      ticking: false,
+    });
   });
 });

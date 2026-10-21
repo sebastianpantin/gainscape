@@ -91,7 +91,9 @@ test('the rest length comes from settings, can be skipped or turned off, and end
   await expect(restTimer(page)).toHaveCount(0);
 });
 
-test('rating a set keeps the rest it started, and focus stays in the bar when the rest ends', async ({ page }) => {
+test('rating a set starts no rest and keeps the one Done started, and focus stays in the bar when the rest ends', async ({
+  page,
+}) => {
   await page.clock.install();
   await register(page, uniqueUsername('rf'));
   await page.getByRole('button', { name: 'Start workout' }).click();
@@ -101,6 +103,9 @@ test('rating a set keeps the rest it started, and focus stays in the bar when th
   const firstSet = setRow(curl, 1);
 
   const doneFirstSet = curl.getByRole('button', { name: 'Done set 1' });
+  await expect(doneFirstSet).toHaveAttribute('aria-pressed', 'false');
+  await expect(restTimer(page)).toHaveCount(0);
+  await firstSet.getByRole('radio', { name: 'Easy' }).click();
   await expect(doneFirstSet).toHaveAttribute('aria-pressed', 'false');
   await expect(restTimer(page)).toHaveCount(0);
   await doneFirstSet.click();
@@ -144,7 +149,7 @@ test('each lift rests for its own length: compound lifts longer, and an adjusted
   await page.reload();
   await expect(bench.getByText(/Rest 3:15/)).toBeVisible();
   await bench.getByRole('button', { name: '+ Add set' }).click();
-  await setRow(bench, 2).getByRole('radio', { name: 'Hard' }).click();
+  await setRow(bench, 2).getByRole('button', { name: 'Done set 2' }).click();
   await expect(remaining).toHaveText('3:15');
 });
 

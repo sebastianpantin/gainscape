@@ -2,7 +2,7 @@ import type { ChallengeRun } from './challenges.ts';
 import type { GearLoadout } from './gear.ts';
 
 export type LoadType = 'external' | 'bodyweight' | 'bodyweight_plus';
-export type EffortLevel = 'easy' | 'hard' | 'near_failure' | 'failure';
+export type EffortLevel = 'easy' | 'moderate' | 'hard' | 'near_failure' | 'failure';
 export type EffortInputType = 'level' | 'rir' | 'rpe' | 'cardio';
 export type CardioEffortLevel = 'easy' | 'moderate' | 'hard' | 'max';
 export const CARDIO_EFFORT_LEVELS: readonly CardioEffortLevel[] = Object.freeze(['easy', 'moderate', 'hard', 'max']);

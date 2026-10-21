@@ -52,7 +52,7 @@ export const DEFAULT_BALANCE: BalanceConfig = Object.freeze({
   xpPerEffectiveRep: XP_PER_EFFECTIVE_REP,
   effectiveRirWindow: EFFECTIVE_RIR_WINDOW,
   maxXp: 200_000_000,
-  effortLevelRir: Object.freeze({ easy: 5, hard: 3, near_failure: 1, failure: 0 }),
+  effortLevelRir: Object.freeze({ easy: 5, moderate: 4, hard: 3, near_failure: 1, failure: 0 }),
   coldStartXpPerSet: XP_PER_EFFECTIVE_REP,
   coldStartMaxSetsPerExercise: 8,
   coldStartAssumedRir: 2,

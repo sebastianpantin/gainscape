@@ -134,8 +134,8 @@
   grid-template-columns: 20px minmax(0, 1fr) 64px var(--tap-target);
   grid-template-areas:
     'number weight reps done'
-    'info info info info'
-    'effort effort effort menu';
+    'info info info menu'
+    'effort effort effort effort';
   row-gap: var(--space-1);
   align-items: center;
   padding-top: var(--space-2);
@@ -144,9 +144,9 @@
 .set-row.stepped.calculating {
   grid-template-areas:
     'number weight reps done'
-    'info info info info'
+    'info info info menu'
     'calculator calculator calculator calculator'
-    'effort effort effort menu';
+    'effort effort effort effort';
 }
 
 @media (max-width: 359px) {
@@ -677,6 +677,15 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-1);
+}
+
+.effort-selector.level {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.effort-selector.level > .effort-option {
+  flex: 1 0 var(--tap-target);
 }
 
 .effort-option {

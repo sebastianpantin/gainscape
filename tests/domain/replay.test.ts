@@ -68,7 +68,7 @@ const WARMUP_ONLY_EXERCISE = 'ohp';
 const effortArb: fc.Arbitrary<EffortInput> = fc.oneof(
   fc.constant(null),
   fc
-    .constantFrom('easy', 'hard', 'near_failure', 'failure' as const)
+    .constantFrom('easy', 'moderate', 'hard', 'near_failure', 'failure' as const)
     .map((level) => ({ type: 'level', level }) as const),
   fc.integer({ min: 0, max: 20 }).map((halfSteps) => ({ type: 'rir', value: halfSteps / 2 }) as const),
 );

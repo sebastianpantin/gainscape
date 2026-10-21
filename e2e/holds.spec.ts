@@ -9,6 +9,7 @@ test('log a farmers carry to failure, earn Grip and lengthen it from history', a
   await first.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('32');
   await first.getByRole('spinbutton', { name: 'Metres, set 1', exact: true }).fill('40');
   await first.getByRole('radio', { name: 'Failure', exact: true }).click();
+  await first.getByRole('button', { name: 'Done set 1' }).click();
   await expect(first.getByText(/^~[\d,]+$/)).toBeVisible();
   await page.getByRole('button', { name: 'Finish workout' }).click();
 
@@ -39,10 +40,12 @@ test('time a dead hang and a plate pinch in seconds, then see the record chip wh
   const hang = setRow(await addExercise(page, 'dead hang', 'Dead Hang'), 1);
   await hang.getByRole('spinbutton', { name: 'Seconds, set 1', exact: true }).fill('30');
   await hang.getByRole('radio', { name: 'Hard', exact: true }).click();
+  await hang.getByRole('button', { name: 'Done set 1' }).click();
   const pinch = setRow(await addExercise(page, 'plate pinch', 'Plate Pinch'), 1);
   await pinch.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('20');
   await pinch.getByRole('spinbutton', { name: 'Seconds, set 1', exact: true }).fill('25');
   await pinch.getByRole('radio', { name: 'Hard', exact: true }).click();
+  await pinch.getByRole('button', { name: 'Done set 1' }).click();
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await page.getByLabel('Bodyweight (kg)').fill('80');
   await page.getByRole('button', { name: 'Save and finish workout' }).click();
@@ -59,6 +62,7 @@ test('time a dead hang and a plate pinch in seconds, then see the record chip wh
   const recordChip = longerHang.getByRole('img', { name: 'Predicted longest hold: 45 s' });
   await longerHang.getByRole('spinbutton', { name: 'Seconds, set 1', exact: true }).fill('25');
   await longerHang.getByRole('radio', { name: 'Hard', exact: true }).click();
+  await longerHang.getByRole('button', { name: 'Done set 1' }).click();
   await expect(longerHang.getByRole('img', { name: /^Predicted longest hold/ })).toHaveCount(0);
   await longerHang.getByRole('spinbutton', { name: 'Seconds, set 1', exact: true }).fill('45');
   await longerHang.getByRole('radio', { name: 'Failure', exact: true }).click();
