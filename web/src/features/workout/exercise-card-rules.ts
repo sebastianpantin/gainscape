@@ -6,7 +6,7 @@ import type { RecentSessions } from '../../lib/history/last-session-rules.ts';
 import type { UnitPref } from '../../lib/profile/profile.ts';
 import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/workout/progression-rules.ts';
 import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts';
-import { REST_OFF, restClock, type RestTimer, startsRest } from '../../lib/workout/rest-timer-rules.ts';
+import { REST_OFF, restClock, startsRest } from '../../lib/workout/rest-timer-rules.ts';
 import { groupOf, restsAfter } from '../../lib/workout/superset-rules.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
 import {
@@ -216,7 +216,6 @@ export function restStartsAfterChange(
   exerciseIndex: number,
   set: DraftSet,
   changes: Partial<Omit<DraftSet, 'id'>>,
-  timer: RestTimer | null,
 ): boolean {
-  return startsRest(set, changes, timer) && restsAfter(draft, exerciseIndex, set.id);
+  return startsRest(set, changes) && restsAfter(draft, exerciseIndex, set.id);
 }

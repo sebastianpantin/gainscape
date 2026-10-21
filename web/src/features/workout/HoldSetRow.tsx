@@ -111,11 +111,7 @@ export function HoldSetRow({
         name={`Set ${setNumber} options`}
         actions={[{ label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove }]}
       />
-      <EffortSelector
-        mode="level"
-        selected={set.effort}
-        onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}
-      />
+      <EffortSelector mode="level" selected={set.effort} onSelect={(effort) => onChange({ effort })} />
     </li>
   );
 }

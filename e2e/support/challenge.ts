@@ -80,5 +80,6 @@ export async function logDeadliftToFailure(page: Page, weightKg: number) {
   await row.getByRole('spinbutton', { name: /weight in kg, set \d+$/i }).fill(String(weightKg));
   await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('1');
   await row.getByRole('radio', { name: 'Failure' }).click();
+  await row.getByRole('button', { name: 'Done set 1' }).click();
   await finishWorkout(page);
 }

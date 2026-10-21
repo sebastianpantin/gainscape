@@ -27,8 +27,7 @@ export function LiftSetRow({ exercise, exerciseIndex, set, setIndex, lift, doneL
   const compound = lift.equipment.compoundIds.has(exercise.exerciseId);
   const place = { exerciseIndex, setIndex, label: feedbackLabel(exercise.name, 'set', setIndex + 1) };
   const startRestAfter = (changes: Partial<Omit<DraftSet, 'id'>>) => {
-    if (restStartsAfterChange(draft, exerciseIndex, set, changes, rest.timer))
-      rest.start(set.id, exercise.exerciseId, compound);
+    if (restStartsAfterChange(draft, exerciseIndex, set, changes)) rest.start(set.id, exercise.exerciseId, compound);
   };
   return (
     <SetRow

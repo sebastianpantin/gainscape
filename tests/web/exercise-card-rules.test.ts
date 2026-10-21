@@ -218,14 +218,15 @@ describe('restStartsAfterChange', () => {
   ]);
 
   it('starts rest when a set is done, but in a superset only after the round', () => {
-    expect(restStartsAfterChange(draft, 2, set('c1'), { done: true }, null)).toBe(true);
-    expect(restStartsAfterChange(draft, 0, set('a1'), { done: true }, null)).toBe(false);
-    expect(restStartsAfterChange(draft, 1, set('b1'), { done: true }, null)).toBe(true);
+    expect(restStartsAfterChange(draft, 2, set('c1'), { done: true })).toBe(true);
+    expect(restStartsAfterChange(draft, 0, set('a1'), { done: true })).toBe(false);
+    expect(restStartsAfterChange(draft, 1, set('b1'), { done: true })).toBe(true);
   });
 
-  it('does not start rest for a warm-up or a weight change', () => {
-    expect(restStartsAfterChange(draft, 2, set('c1', { isWarmup: true }), { done: true }, null)).toBe(false);
-    expect(restStartsAfterChange(draft, 2, set('c1'), { weightKg: 110 }, null)).toBe(false);
+  it('does not start rest for a warm-up, a weight change or an effort rating', () => {
+    expect(restStartsAfterChange(draft, 2, set('c1', { isWarmup: true }), { done: true })).toBe(false);
+    expect(restStartsAfterChange(draft, 2, set('c1'), { weightKg: 110 })).toBe(false);
+    expect(restStartsAfterChange(draft, 2, set('c1'), { effort: { type: 'level', level: 'hard' } })).toBe(false);
   });
 });
 

@@ -209,6 +209,7 @@ export async function logExercise(
       await row.getByRole('spinbutton', { name: /weight in kg, set \d+$/i }).fill(String(set.weightKg));
     await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill(String(set.reps));
     await row.getByRole('radio', { name: 'Hard' }).click();
+    await row.getByRole('button', { name: `Done set ${index + 1}` }).click();
   }
 }
 
@@ -268,6 +269,7 @@ export async function logCardio(page: Page, search: string, activityName: string
       await row.getByLabel('rest s').fill(String(bout.restS));
     }
     await row.getByRole('radio', { name: bout.effort, exact: true }).click();
+    await row.getByRole('button', { name: `Done bout ${index + 1}` }).click();
   }
 }
 

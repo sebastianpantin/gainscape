@@ -1,5 +1,5 @@
 import { SECONDS_PER_MINUTE } from '@domain/cardio.ts';
-import { type EffortInput, isRecord } from '@domain/types.ts';
+import { isRecord } from '@domain/types.ts';
 import { parsedJson } from '../json-rules.ts';
 
 const MS_PER_SECOND = 1000;
@@ -85,15 +85,8 @@ export function restClock(seconds: number): string {
   return `${minutes}:${String(seconds % SECONDS_PER_MINUTE).padStart(2, '0')}`;
 }
 
-export function startsRest(
-  set: { id: string; done: boolean; effort: EffortInput; isWarmup?: boolean },
-  changes: { done?: boolean; effort?: EffortInput },
-  timer: RestTimer | null,
-): boolean {
-  if (set.isWarmup === true) return false;
-  const becameDone = !set.done && changes.done === true;
-  const firstRated = set.effort === null && changes.effort !== undefined && changes.effort !== null;
-  return becameDone || (firstRated && timer?.setId !== set.id);
+export function startsRest(set: { done: boolean; isWarmup?: boolean }, changes: { done?: boolean }): boolean {
+  return set.isWarmup !== true && !set.done && changes.done === true;
 }
 
 export function stopsRestForWarmup(

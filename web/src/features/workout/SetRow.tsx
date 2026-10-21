@@ -280,7 +280,7 @@ export function SetRow({
         mode={effortMode}
         selected={set.effort}
         assumed={estimatedRir === null ? null : assumedEffort(effortMode, estimatedRir, DEFAULT_BALANCE.effortLevelRir)}
-        onSelect={(effort) => onChange(effort === null ? { effort } : { effort, done: true })}
+        onSelect={(effort) => onChange({ effort })}
       />
       <SetMenu
         buttonRef={menuRef}

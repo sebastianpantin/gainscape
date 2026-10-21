@@ -117,6 +117,7 @@ test('pounds are shown everywhere while kilograms are stored, without false reco
     await row.getByRole('spinbutton', { name: /^Weight in lb, set \d+$/ }).fill('135');
     await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('5');
     await row.getByRole('radio', { name: 'Hard' }).click();
+    await row.getByRole('button', { name: 'Done set 1' }).click();
     await finishWorkout(page);
     await expect(page.getByLabel('New records')).toHaveCount(0);
     await expect.poll(async () => (await latestSetOf(username)).weight_kg, { message: `round ${round}` }).toBe(61.23);
@@ -139,6 +140,7 @@ test('RPE effort is logged as RPE and stored as reps in reserve', async ({ page 
   await row.getByRole('spinbutton', { name: /^Reps, set \d+$/ }).fill('8');
   await expect(row.getByRole('radio', { name: 'Hard' })).toHaveCount(0);
   await row.getByRole('radio', { name: 'RPE 8', exact: true }).click();
+  await row.getByRole('button', { name: 'Done set 1' }).click();
   await finishWorkout(page);
 
   await expect.poll(() => latestSetOf(username)).toMatchObject({ effort_input_type: 'rpe', effort_value: 8, rir: 2 });

@@ -48,7 +48,9 @@ test('copy a template, run a program day with planned sets and finish it', async
 
   const bench = exerciseCard(page, 'Barbell Bench Press');
   await setRow(bench, 1).getByRole('radio', { name: 'Hard' }).click();
-  await setRow(bench, 2).getByRole('radio', { name: 'Hard' }).click();
+  await expect(setRow(bench, 1).getByRole('button', { name: 'Done set 1' })).toHaveAttribute('aria-pressed', 'false');
+  await setRow(bench, 1).getByRole('button', { name: 'Done set 1' }).click();
+  await setRow(bench, 2).getByRole('button', { name: 'Done set 2' }).click();
   await setRow(exerciseCard(page, 'Barbell Row'), 1).getByRole('button', { name: 'Done set 1' }).click();
   const toggled = setRow(bench, 3).getByRole('button', { name: 'Done set 3' });
   await toggled.click();
