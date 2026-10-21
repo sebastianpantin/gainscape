@@ -1,3 +1,10 @@
+- prs: [161]
+  version: 0.18.0
+  date: 2026-10-21
+  title: Warm-up routines
+  items:
+    - Add warm-ups on squat, deadlift, bench and press now lets you pick ramp sets, a short mobility routine for that lift, or both.
+    - Each routine adds four one-minute dynamic stretches above the lift, such as leg swings and hip circles before squats. Tick them done to earn Mobility XP.
 - prs: [157]
   version: 0.17.0
   date: 2026-10-20
