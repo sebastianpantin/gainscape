@@ -1,7 +1,34 @@
+import { type Locator, type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { addExercise, register, setRow, uniqueUsername } from './support/app.ts';
+import { addExercise, exerciseCard, register, setRow, uniqueUsername } from './support/app.ts';
 
 const BENCH = 'Barbell Bench Press';
+const LONG_WORKOUT = [
+  ['bench', BENCH],
+  ['back squat', 'Back Squat'],
+  ['deadlift', 'Deadlift'],
+  ['barbell curl', 'Barbell Curl'],
+  ['dumbbell curl', 'Dumbbell Curl'],
+] as const;
+
+function shownUncovered(element: Locator): Promise<boolean> {
+  return element.evaluate((target) => {
+    const box = target.getBoundingClientRect();
+    const corners = [
+      [box.left + 1, box.top + 1],
+      [box.right - 1, box.top + 1],
+      [box.left + 1, box.bottom - 1],
+      [box.right - 1, box.bottom - 1],
+    ];
+    return corners.every(([x, y]) => target.contains(document.elementFromPoint(x, y)));
+  });
+}
+
+async function scrollTopTo(page: Page, element: Locator, viewportY: number) {
+  const box = await element.boundingBox();
+  if (!box) throw new Error('No layout to scroll');
+  await page.evaluate((by) => window.scrollBy(0, by), box.y - viewportY);
+}
 
 test('weight and reps can be cleared and retyped, with a comma as the decimal separator', async ({ page }) => {
   await register(page, uniqueUsername('fields'));
@@ -112,4 +139,36 @@ test('focusing a filled field selects it, so typing replaces the value, and Ente
   await reps.press('ArrowRight');
   await reps.pressSequentially('0');
   await expect(reps).toHaveValue('60');
+});
+
+test('far down a long workout the clock stays in view, and focusing a reps field never leaves it under the bar', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('sticky'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  for (const [search, name] of LONG_WORKOUT) await addExercise(page, search, name);
+  const clock = page.getByRole('timer', { name: /^Elapsed / });
+  const finish = page.getByRole('button', { name: 'Finish workout' });
+
+  await scrollTopTo(page, exerciseCard(page, 'Dumbbell Curl'), 0);
+  await expect(page.getByRole('heading', { level: 1, name: 'Workout' })).not.toBeInViewport();
+  await expect(clock).toBeInViewport({ ratio: 1 });
+  expect(await shownUncovered(clock)).toBe(true);
+  expect(await shownUncovered(finish)).toBe(true);
+
+  const reps = setRow(exerciseCard(page, 'Deadlift'), 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ });
+  await reps.evaluate((field) => field.scrollIntoView({ block: 'start' }));
+  await reps.focus();
+  expect(await shownUncovered(reps)).toBe(true);
+
+  const behindBar = setRow(exerciseCard(page, 'Back Squat'), 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ });
+  const barTop = (await clock.boundingBox())?.y;
+  if (barTop === undefined) throw new Error('No clock box');
+  await scrollTopTo(page, behindBar, barTop + 8);
+  expect(await shownUncovered(behindBar)).toBe(false);
+  await behindBar.focus();
+  const fieldBox = await behindBar.boundingBox();
+  if (!fieldBox) throw new Error('No field box after focus');
+  expect(fieldBox.y + fieldBox.height).toBeLessThanOrEqual(barTop);
+  expect(await shownUncovered(behindBar)).toBe(true);
 });

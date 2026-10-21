@@ -39,6 +39,7 @@ import { SessionRpeField } from './SessionRpeField.tsx';
 import { TodayView } from './TodayView.tsx';
 import { useExerciseList } from './use-exercise-list.ts';
 import { useExerciseNotes } from './use-exercise-notes.ts';
+import { useFinishBarClearance } from './use-finish-bar-clearance.ts';
 import { useFinishSync } from './use-finish-sync.ts';
 import { useFinishWorkout } from './use-finish-workout.ts';
 import { useLatestBodyweight } from './use-latest-bodyweight.ts';
@@ -98,7 +99,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const focusPickerOnOpen = useRef(false);
   const draftSessionId = draft?.sessionId ?? null;
   const recentSessions = useRecentLiftSessions(`${userId}/${draftSessionId}`, liftIdsToRecall(draft), onlineSignal);
-  useWakeLock(keepAwake, draft !== null && !draft.finishedAt);
+  const workoutOpen = draft !== null && !draft.finishedAt;
+  useWakeLock(keepAwake, workoutOpen);
+  useFinishBarClearance(finishBar, workoutOpen);
 
   const { exercises, loadProblem, listNotice } = useExerciseList(userId);
   const { notes, saveNote } = useExerciseNotes(userId);
@@ -246,10 +249,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </div>
         <div className="live-xp">
           <strong>~{formatXp(donePreviewTotal(previews, draft.exercises))} XP</strong>
-          <span className="muted tiny">
-            <WorkoutClock startedAt={draft.startedAt} finishedAt={draft.finishedAt} /> ·{' '}
-            {formatCount(doneSetCount(draft), 'set')} done
-          </span>
         </div>
       </header>
       <p className="visually-hidden" role="status">
@@ -345,6 +344,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         />
       )}
       <div ref={finishBar} className="finish-bar" tabIndex={-1}>
+        <p className="finish-status">
+          <span className="active-workout-clock">
+            <WorkoutClock startedAt={draft.startedAt} finishedAt={draft.finishedAt} />
+          </span>{' '}
+          · {formatCount(doneSetCount(draft), 'set')} done
+        </p>
         <RestTimerBar
           {...rest}
           focusAfterStop={finishButton}

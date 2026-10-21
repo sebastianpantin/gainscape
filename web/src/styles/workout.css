@@ -713,6 +713,12 @@
   box-shadow: inset 2px 2px 0 var(--color-accent-light);
 }
 
+html:has(.finish-bar) {
+  scroll-padding-bottom: calc(
+    var(--finish-bar-height, 0px) + var(--tab-bar-height) + env(safe-area-inset-bottom) + var(--space-2)
+  );
+}
+
 .finish-bar {
   position: sticky;
   bottom: calc(var(--tab-bar-height) - var(--border-width) + env(safe-area-inset-bottom));
@@ -755,6 +761,12 @@
 
 .finish-bar:focus {
   outline: none;
+}
+
+.finish-status {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .preview-note {

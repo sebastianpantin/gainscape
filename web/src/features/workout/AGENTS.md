@@ -37,7 +37,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
   - `SetMenu.tsx`: the per-row options menu.
   - `SupersetCard.tsx`: presentational; the screen passes `renderCell`.
 - `ActiveWorkoutBar.tsx` is mounted by `App.tsx` on every route except `/` and `/reveal`.
-- `WorkoutClock.tsx`: the header's elapsed time (`workoutClock`, shared with the bar, capped at `MAX_SESSION_DURATION_MS`). It ticks itself once a second so the screen does not re-render; its `timer` name changes once a minute and nothing announces the ticks.
+- `WorkoutClock.tsx`: the elapsed time in the sticky `.finish-bar` status line, so it stays in view on a long workout (`workoutClock`, shared with the bar, capped at `MAX_SESSION_DURATION_MS`). It ticks itself once a second so the screen does not re-render; its `timer` name changes once a minute and nothing announces the ticks.
 
 ## Rules and gotchas
 
@@ -74,6 +74,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
   - The five effort levels are a wrapping flex row of 44 px minimum buttons: one line on a stepped lift row from 360 px (its menu sits on the info line so effort gets the full width); at 320 px, and on hold rows that share their line with the menu, the last levels wrap.
   - The effort selector is always the last line of a row. Picking an effort only rates the set: only the Done toggle completes it, and only completing a working set starts the rest (`startsRest`), so rating before or after Done never restarts it.
   - The `~ and new records are previews` note sits below `.finish-bar`, so it never adds sticky height.
+  - The clock and sets done live in `.finish-bar`, not a sticky header: one bottom bar like `ActiveWorkoutBar`, no top chrome for the keyboard or iOS sticky quirks to fight, one `timer`. `useFinishBarClearance` publishes the bar's height as `--finish-bar-height`, which `scroll-padding-bottom` uses so a focused field never lands under the bar (`e2e/set-fields.spec.ts`).
   - `ActiveWorkoutBar` is one `--tap-target` tall and never wraps. Screens get extra bottom padding while it shows.
 - The number fields (`NumberTextField`, `BoutFields`) keep the typed text while focused, accept a decimal comma, and commit clamped values. Weights are bounded by the domain `MAX_SET_LOAD_KG`.
 - Warm-up ramps (`warmupsToOffer`): a barbell lift ramps from the bar on loadable plates; another external lift (dumbbell, machine, cable) ramps 40/60/80% rounded to the unit's load step, with no bar step; bodyweight and `bodyweight_plus` lifts get one set at the working weight. Any ramp that comes out empty falls back to that single set (deliberate since `9febb3f`).
