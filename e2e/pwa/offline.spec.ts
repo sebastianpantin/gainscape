@@ -225,7 +225,7 @@ test('screens seen online reopen offline at once from their saved data', async (
   await expect(main.getByText(`@${username}`)).toBeVisible();
   await expect(definitionOf(main, 'Collection')).toContainText('%');
   await openFromProfile(page, 'Programs');
-  await expect(main.getByRole('heading', { name: 'Templates' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Build your own' })).toBeVisible();
   await openTab(page, 'Train');
 
   await context.setOffline(true);
@@ -251,7 +251,7 @@ test('screens seen online reopen offline at once from their saved data', async (
   const started = Date.now();
   await page.getByRole('main').getByRole('link', { name: 'Programs', exact: true }).click();
   await expect(main.getByText(OFFLINE_PROGRAMS_NOTICE)).toBeVisible({ timeout: OFFLINE_TAB_BUDGET_MS });
-  await expect(main.getByRole('heading', { name: 'Templates' })).toBeVisible({ timeout: OFFLINE_TAB_BUDGET_MS });
+  await expect(main.getByRole('heading', { name: 'Build your own' })).toBeVisible({ timeout: OFFLINE_TAB_BUDGET_MS });
   noteOpenTime('Programs', started);
   await markOnline();
   await context.setOffline(false);

@@ -6,6 +6,7 @@ import { forgetLastSeenRelease } from '../lib/platform/last-seen-release-store.t
 import { forgetOnboarding } from '../lib/profile/onboarding-store.ts';
 import { forgetPlateSettings } from '../lib/workout/plate-settings-store.ts';
 import { preferencesCache } from '../lib/profile/preferences.ts';
+import { forgetFollowCardDismissal } from '../lib/programs/follow-card-store.ts';
 import { forgetDismissedSummaries } from '../lib/programs/program-summary-store.ts';
 import { forgetRestState } from '../lib/workout/rest-timer-store.ts';
 import { forgetSessionBaseline } from '../lib/workout/session-baseline-store.ts';
@@ -59,6 +60,7 @@ export async function forgetUserDeviceData(device: UserDevice, userId: string): 
   forgetLastSeenRelease(storage, userId);
   forgetOnboarding(storage, userId);
   forgetInstallCard(storage, userId);
+  forgetFollowCardDismissal(storage, userId);
   companionPetStore.forget(storage, userId);
   await forgetUserProgressData(device, userId);
 }

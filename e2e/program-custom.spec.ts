@@ -61,7 +61,7 @@ test('follow your own program: Squat 5×5 adds 2.5 kg after a met workout and ho
   const username = uniqueUsername('pc_follow');
   await register(page, username);
   await createSquatAndBenchProgram(page, PROGRAM);
-  await expect(page.getByRole('region', { name: 'Powerlifting programs' })).not.toContainText(PROGRAM);
+  await expect(page.getByRole('region', { name: 'Follow a program' })).not.toContainText(PROGRAM);
 
   await followAtSquat(page, 100);
   await expect

@@ -24,7 +24,7 @@ import {
   MADCOW_FIVE_RMS_KG,
   markEverySetDone,
   openEnrollForm,
-  powerliftingPrograms,
+  followablePrograms,
   prescribedRows,
   programToday,
   repsIn,
@@ -285,13 +285,13 @@ test('a template with an unknown primitive kind is listed as "Update the app to 
     const username = uniqueUsername('pe_stale');
     await register(page, username);
     await openFromProfile(page, 'Programs');
-    const programs = powerliftingPrograms(page);
+    const programs = followablePrograms(page);
     const stale = programs.getByRole('listitem').filter({ hasText: name });
     await expect(stale).toContainText('Update the app to use this program');
     await expect(stale.getByRole('link')).toHaveCount(0);
     await expect(stale.getByRole('button')).toHaveCount(0);
-    await expect(programs.getByRole('link', { name: 'Use Madcow 5x5', exact: true })).toBeVisible();
-    await expect(programs.getByRole('link', { name: 'Use 5/3/1', exact: true })).toBeVisible();
+    await expect(programs.getByRole('link', { name: 'Follow Madcow 5x5', exact: true })).toBeVisible();
+    await expect(programs.getByRole('link', { name: 'Follow 5/3/1', exact: true })).toBeVisible();
 
     await page.goto(`/programs/enroll/${key}`);
     await expect(page.getByText('Update the app to use this program', { exact: true })).toBeVisible();
