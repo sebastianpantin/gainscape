@@ -159,15 +159,16 @@ describe('supersetMembers', () => {
 });
 
 describe('finishCountsOf', () => {
-  it('counts done, planned and left-to-lifter sets', () => {
+  it('counts done, planned, left-to-lifter and rated sets', () => {
     const draft = draftOf([
       lift('bench', [
         set('a', { done: true }),
         set('b'),
         set('c', { prescriptionDetail: { pct: null, optional: true } }),
+        set('d', { effort: { type: 'level', level: 'hard' } }),
       ]),
     ]);
-    expect(finishCountsOf(draft)).toEqual({ done: 1, planned: 2, leftToLifter: 1 });
+    expect(finishCountsOf(draft)).toEqual({ done: 1, planned: 3, leftToLifter: 1, rated: 1 });
   });
 });
 

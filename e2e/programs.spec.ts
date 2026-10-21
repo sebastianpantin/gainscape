@@ -57,10 +57,13 @@ test('copy a template, run a program day with planned sets and finish it', async
   await expect(toggled).toHaveAttribute('aria-pressed', 'true');
   await toggled.click();
   await expect(toggled).toHaveAttribute('aria-pressed', 'false');
+  await setRow(bench, 3).getByRole('radio', { name: 'Easy' }).click();
   await expect(doneSetButtons(page)).toHaveCount(3);
 
   await page.getByRole('button', { name: 'Finish workout' }).click();
   const confirmation = page.getByRole('dialog', { name: '13 sets not ticked' });
+  await expect(confirmation).toContainText("1 rated set isn't ticked done.");
+  await expect(confirmation.getByRole('button', { name: 'Mark done and finish' })).toHaveClass(/primary/);
   await confirmation.getByRole('button', { name: 'Finish without them' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
 

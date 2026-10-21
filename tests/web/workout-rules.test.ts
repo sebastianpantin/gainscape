@@ -81,11 +81,11 @@ describe('rejectionText', () => {
 
 describe('finishPrompt', () => {
   it('asks nothing when every set is done', () => {
-    expect(finishPrompt({ done: 3, planned: 0, leftToLifter: 0 })).toBeNull();
+    expect(finishPrompt({ done: 3, planned: 0, leftToLifter: 0, rated: 0 })).toBeNull();
   });
 
   it('offers to mark the sets not ticked done or to finish without them', () => {
-    expect(finishPrompt({ done: 2, planned: 1, leftToLifter: 0 })).toEqual({
+    expect(finishPrompt({ done: 2, planned: 1, leftToLifter: 0, rated: 0 })).toEqual({
       title: '1 set not ticked',
       body: 'Log them as done, or keep only the sets you ticked.',
       confirm: { label: 'Mark done and finish', marksPlannedDone: true },
@@ -94,7 +94,7 @@ describe('finishPrompt', () => {
   });
 
   it('only offers marking done when nothing is ticked yet', () => {
-    expect(finishPrompt({ done: 0, planned: 18, leftToLifter: 0 })).toEqual({
+    expect(finishPrompt({ done: 0, planned: 18, leftToLifter: 0, rated: 0 })).toEqual({
       title: '18 sets not ticked',
       body: 'No set is ticked yet. Log them all as done?',
       confirm: { label: 'Mark done and finish', marksPlannedDone: true },
@@ -103,10 +103,10 @@ describe('finishPrompt', () => {
   });
 
   it('says 5RM tests and optional sets stay skipped, and only finishes when nothing else is planned', () => {
-    expect(finishPrompt({ done: 3, planned: 4, leftToLifter: 1 })?.body).toBe(
+    expect(finishPrompt({ done: 3, planned: 4, leftToLifter: 1, rated: 0 })?.body).toBe(
       'Log them as done, or keep only the sets you ticked. 5RM tests and optional sets stay skipped until you log them.',
     );
-    expect(finishPrompt({ done: 3, planned: 2, leftToLifter: 2 })).toEqual({
+    expect(finishPrompt({ done: 3, planned: 2, leftToLifter: 2, rated: 0 })).toEqual({
       title: '2 sets not ticked',
       body: '5RM tests and optional sets stay skipped until you log them.',
       confirm: { label: 'Finish without them', marksPlannedDone: false },
@@ -115,27 +115,41 @@ describe('finishPrompt', () => {
   });
 });
 
+describe('finishPrompt with rated sets', () => {
+  it('names rated sets that are not ticked and still marks them done first', () => {
+    expect(finishPrompt({ done: 2, planned: 3, leftToLifter: 0, rated: 3 })).toEqual({
+      title: '3 sets not ticked',
+      body: "3 rated sets aren't ticked done. Log them as done, or keep only the sets you ticked.",
+      confirm: { label: 'Mark done and finish', marksPlannedDone: true },
+      alternative: { label: 'Finish without them', marksPlannedDone: false },
+    });
+    expect(finishPrompt({ done: 0, planned: 2, leftToLifter: 0, rated: 1 })?.body).toBe(
+      "1 rated set isn't ticked done. No set is ticked yet. Log them all as done?",
+    );
+  });
+});
+
 describe('canFinishWorkout', () => {
   it('needs a done set or a planned set that marking done would log', () => {
-    expect(canFinishWorkout({ done: 0, planned: 3, leftToLifter: 0 })).toBe(true);
-    expect(canFinishWorkout({ done: 1, planned: 1, leftToLifter: 1 })).toBe(true);
-    expect(canFinishWorkout({ done: 0, planned: 1, leftToLifter: 1 })).toBe(false);
-    expect(canFinishWorkout({ done: 0, planned: 0, leftToLifter: 0 })).toBe(false);
+    expect(canFinishWorkout({ done: 0, planned: 3, leftToLifter: 0, rated: 0 })).toBe(true);
+    expect(canFinishWorkout({ done: 1, planned: 1, leftToLifter: 1, rated: 0 })).toBe(true);
+    expect(canFinishWorkout({ done: 0, planned: 1, leftToLifter: 1, rated: 0 })).toBe(false);
+    expect(canFinishWorkout({ done: 0, planned: 0, leftToLifter: 0, rated: 0 })).toBe(false);
   });
 });
 
 describe('finishBlockedText', () => {
   it('asks for an exercise while the workout has no set at all', () => {
-    expect(finishBlockedText({ done: 0, planned: 0, leftToLifter: 0 })).toBe('Add an exercise to finish.');
+    expect(finishBlockedText({ done: 0, planned: 0, leftToLifter: 0, rated: 0 })).toBe('Add an exercise to finish.');
   });
 
   it('asks for a logged set when only 5RM tests or optional sets are left', () => {
-    expect(finishBlockedText({ done: 0, planned: 2, leftToLifter: 2 })).toBe('Log a set to finish.');
+    expect(finishBlockedText({ done: 0, planned: 2, leftToLifter: 2, rated: 0 })).toBe('Log a set to finish.');
   });
 
   it('says nothing once the workout can finish', () => {
-    expect(finishBlockedText({ done: 1, planned: 0, leftToLifter: 0 })).toBeNull();
-    expect(finishBlockedText({ done: 0, planned: 3, leftToLifter: 0 })).toBeNull();
+    expect(finishBlockedText({ done: 1, planned: 0, leftToLifter: 0, rated: 0 })).toBeNull();
+    expect(finishBlockedText({ done: 0, planned: 3, leftToLifter: 0, rated: 0 })).toBeNull();
   });
 });
 

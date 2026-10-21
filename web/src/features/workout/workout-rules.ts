@@ -10,6 +10,7 @@ import {
   doneSetCount,
   markPlannedSetsDone,
   notDoneSetCount,
+  ratedNotDoneSetCount,
   plannedSetsLeftToLifter,
   withCurrentLoadTypes,
 } from '../../offline/draft-edits.ts';
@@ -82,6 +83,7 @@ interface FinishCounts {
   done: number;
   planned: number;
   leftToLifter: number;
+  rated: number;
 }
 
 interface FinishChoice {
@@ -103,7 +105,12 @@ const WITHOUT_THEM: FinishChoice = { label: 'Finish without them', marksPlannedD
 const LEFT_TO_LIFTER_TEXT = '5RM tests and optional sets stay skipped until you log them.';
 
 export function finishCountsOf(draft: WorkoutDraft): FinishCounts {
-  return { done: doneSetCount(draft), planned: notDoneSetCount(draft), leftToLifter: plannedSetsLeftToLifter(draft) };
+  return {
+    done: doneSetCount(draft),
+    planned: notDoneSetCount(draft),
+    leftToLifter: plannedSetsLeftToLifter(draft),
+    rated: ratedNotDoneSetCount(draft),
+  };
 }
 
 export function canFinishWorkout({ done, planned, leftToLifter }: FinishCounts): boolean {
@@ -115,7 +122,12 @@ export function finishBlockedText(counts: FinishCounts): string | null {
   return counts.done + counts.planned === 0 ? 'Add an exercise to finish.' : 'Log a set to finish.';
 }
 
-export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): FinishPrompt | null {
+function ratedNotTickedText(rated: number): string[] {
+  if (rated === 0) return [];
+  return [`${formatCount(rated, 'rated set')} ${rated === 1 ? "isn't" : "aren't"} ticked done.`];
+}
+
+export function finishPrompt({ done, planned, leftToLifter, rated }: FinishCounts): FinishPrompt | null {
   if (planned === 0) return null;
   const title = `${formatCount(planned, 'set')} not ticked`;
   const leftNote = leftToLifter > 0 ? [LEFT_TO_LIFTER_TEXT] : [];
@@ -126,7 +138,7 @@ export function finishPrompt({ done, planned, leftToLifter }: FinishCounts): Fin
     done > 0 ? 'Log them as done, or keep only the sets you ticked.' : 'No set is ticked yet. Log them all as done?';
   return {
     title,
-    body: [choice, ...leftNote].join(' '),
+    body: [...ratedNotTickedText(rated), choice, ...leftNote].join(' '),
     confirm: MARK_DONE,
     alternative: done > 0 ? WITHOUT_THEM : null,
   };
