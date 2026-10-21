@@ -29,6 +29,8 @@ const UI_PREFIXES = ['web/', 'e2e/', 'supabase/functions/', 'supabase/migrations
 
 const UI_EXCLUDED_PREFIXES = ['e2e/pwa/', 'e2e/pages/'];
 
+const UI_EXCLUDED_FILES = ['web/changelog.yaml'];
+
 const UI_FILES = [
   'Makefile',
   'package.json',
@@ -62,7 +64,8 @@ function isBackendInput(path: string): boolean {
 }
 
 function isUiInput(path: string): boolean {
-  if (isDocumentation(path) || UI_EXCLUDED_PREFIXES.some((prefix) => path.startsWith(prefix))) return false;
+  if (isDocumentation(path) || UI_EXCLUDED_FILES.includes(path)) return false;
+  if (UI_EXCLUDED_PREFIXES.some((prefix) => path.startsWith(prefix))) return false;
   return UI_FILES.includes(path) || UI_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 

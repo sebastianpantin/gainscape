@@ -166,8 +166,13 @@ describe('which pull requests run the browser smoke tests', () => {
     'docs/deploy.md',
     '.github/workflows/e2e.yml',
     'eslint.config.js',
+    'web/changelog.yaml',
   ])('skips them for a change only to %s', (path) => {
     expect(needsUi([path])).toBe(false);
+  });
+
+  it('runs them for a changelog entry that ships with a screen change', () => {
+    expect(needsUi(['web/changelog.yaml', 'web/src/features/workout/WorkoutScreen.tsx'])).toBe(true);
   });
 
   it('runs them when the changed paths are unknown', () => {
