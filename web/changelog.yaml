@@ -1,3 +1,9 @@
+- prs: [167]
+  version: 0.19.1
+  date: 2026-10-21
+  title: Workout time always in view
+  items:
+    - The workout time and sets done now sit in the bar at the bottom, next to the rest timer and Finish, so they stay in view while you scroll.
 - prs: [164, 165]
   version: 0.19.0
   date: 2026-10-21
