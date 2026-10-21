@@ -3,14 +3,16 @@ import { type ReactNode, useRef, useState } from 'react';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { dismissFollowCard, isFollowCardDismissed } from '../../lib/programs/follow-card-store.ts';
-import { showsFollowProgramCard } from '../../lib/programs/program-discovery-rules.ts';
+import { featuredPrograms, showsFollowProgramCard } from '../../lib/programs/program-discovery-rules.ts';
+import { templateListEntries } from '../../lib/programs/program-enroll-rules.ts';
 import { type ProgramLoadStatus } from '../../lib/programs/program-status-rules.ts';
 import { type ActiveProgram } from '../../lib/programs/program-today-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
-import { profileQuery, trainingDaysQuery } from '../../lib/query/queries.ts';
+import { profileQuery, programTemplatesQuery, trainingDaysQuery } from '../../lib/query/queries.ts';
 import { localDateIn, monthKey } from '../../lib/ui/date-bucket-rules.ts';
 import { type DraftNotice } from '../../offline/draft-session.ts';
+import { readProgramCache } from '../../offline/program-cache.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
 import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
@@ -55,7 +57,10 @@ export function TodayView({
 }: TodayViewProps) {
   const startButton = useRef<HTMLButtonElement>(null);
   const [followCardDismissed, setFollowCardDismissed] = useState(() => isFollowCardDismissed(deviceStorage(), userId));
-  const followCardShown = showsFollowProgramCard(programLoadStatus, followCardDismissed);
+  const [savedTemplates] = useState(() => readProgramCache(localStorage, userId).templates);
+  const liveTemplates = useQuery(programTemplatesQuery(userId));
+  const featured = featuredPrograms(templateListEntries(liveTemplates.data ?? savedTemplates));
+  const followCardShown = showsFollowProgramCard(programLoadStatus, followCardDismissed, featured);
   const now = new Date();
   const timezone = useQuery(profileQuery(userId)).data?.loaded.timezone;
   const today = timezone === undefined ? null : localDateIn(timezone, now.getTime());
@@ -103,7 +108,7 @@ export function TodayView({
       />
       {followCardShown && (
         <FollowProgramCard
-          userId={userId}
+          programs={featured}
           onDismiss={() => {
             dismissFollowCard(deviceStorage(), userId);
             setFollowCardDismissed(true);

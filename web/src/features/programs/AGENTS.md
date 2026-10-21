@@ -17,7 +17,7 @@ Training programs: list, copy from templates, create and edit own programs (days
 ## Rules and gotchas
 
 - `PlannedExercise` is defined in `../../offline/draft-starts.ts` and is what a started day copies into the draft. Its `progression` is not copied, so adding it needed no draft format bump; changing what the draft stores needs the draft versioning and `tests/web/draft-format.test.ts` updated.
-- `/programs` order: the `You're following <name>` block (only when enrolled), `Follow a program` (catalog templates, `Follow <name>`), `Your programs`, `Build your own` (`Copy and edit <name>`). Both template lists show how often you train, derived from the definition (`templateScheduleText`) or the day count, because templates carry no description. A description would need a catalog and seed change.
+- Both template lists show how often you train, derived from the definition (`templateScheduleText`) or the day count, because templates carry no description. A description would need a catalog and seed change.
 - Only rep lifts are plannable (`isPlannableExercise`): `save_program` plans sets of reps and refuses holds and cardio.
 - Following an own program publishes a snapshot first (`publishForEnroll`), then drops the cached `enrollChoicesQuery` so the enroll screen loads the new version. Publishing and enrolling need a connection and are disabled offline.
 - Editing a followed program shows `You're following an earlier version`. The `followStatus` check passes `null` until the exercise list has loaded (status `undecided`, notice hidden), and uses `loadTypeOf` over the whole exercise list, holds included, so a legacy hold slot clamps like the server. "Use these changes" saves, publishes and opens the enroll form with router state `{ carried }` (unit and current working weights), which then re-follows the same template without the replace dialog.
@@ -28,7 +28,7 @@ Training programs: list, copy from templates, create and edit own programs (days
 - Offline: the program list, templates and exercise list open from saved copies (`../../offline/program-list-cache.ts` and the template caches). `useActiveProgram` skips its refresh offline and uses `offlineRefreshState`, so a user whose cache was refreshed online with no enrollment sees `You're not following a program.`
 - The enroll form lists templates compiled from your own programs via `templateEntry` (so `custom_` keys load) but hides them from the Follow a program list, and shows no Exercises section for them. A template the app cannot run shows "Update the app to use this program" with no link.
 - `ActiveProgramScreen` sends one `adjust_enrollment` `set_reference` per changed field and needs a connection.
-- The Train card's featured keys and visibility (`../../lib/programs/program-discovery-rules.ts`) show it only once the load status is `none` (no flash before the refresh). `Not now` persists per device (`follow-card-store.ts`), cleared on sign-out. While it shows, `ProgramDayStarts` hides its `No programs yet` empty state.
+- The Train `Follow a program` card stays hidden until the load status is `none`, so it never flashes before the refresh, and when no featured template can be followed, and while it shows `ProgramDayStarts` suppresses its empty state. `Not now` is kept per device and cleared only on account deletion; it survives sign-out and Reset all data.
 
 ## Testing
 

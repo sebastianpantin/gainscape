@@ -141,7 +141,7 @@ test('Programs puts the program you follow first, then programs to follow, yours
   await followProgram(page, '5/3/1', FIVE_THREE_ONE_ONE_RMS_KG);
   await openFromProfile(page, 'Programs');
   const active = main.getByRole('region', { name: 'Active program', exact: true });
-  await expect(active).toContainText("You're following 5/3/1");
+  await expect(active.getByRole('heading', { level: 2 })).toHaveText("You're following 5/3/1");
   await expect(main.getByRole('region')).toHaveText([
     /^You're following 5\/3\/1/,
     /^Follow a program/,

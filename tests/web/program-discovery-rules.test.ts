@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   FEATURED_TEMPLATE_KEYS,
   featuredPrograms,
-  followedProgramName,
+  followingText,
   showsFollowProgramCard,
 } from '../../web/src/lib/programs/program-discovery-rules.ts';
 import { type TemplateListEntry, UPDATE_APP_TEXT } from '../../web/src/lib/programs/program-enroll-rules.ts';
@@ -51,33 +51,42 @@ describe('featured programs', () => {
   });
 });
 
+const FEATURED = [{ key: 'gzclp', name: 'GZCLP', schedule: 'Rotates through 2 workouts' }];
+
 describe('follow a program card', () => {
   it('shows once the app knows you follow no program and you have not dismissed it', () => {
-    expect(showsFollowProgramCard('none', false)).toBe(true);
+    expect(showsFollowProgramCard('none', false, FEATURED)).toBe(true);
   });
 
   it('stays hidden after you dismiss it', () => {
-    expect(showsFollowProgramCard('none', true)).toBe(false);
+    expect(showsFollowProgramCard('none', true, FEATURED)).toBe(false);
+  });
+
+  it('stays hidden when there is no featured program to offer', () => {
+    expect(showsFollowProgramCard('none', false, [])).toBe(false);
   });
 
   it('stays hidden while you follow a program, or while the app cannot tell yet', () => {
-    expect(showsFollowProgramCard('cached', false)).toBe(false);
-    expect(showsFollowProgramCard('refreshing', false)).toBe(false);
-    expect(showsFollowProgramCard('failed', false)).toBe(false);
+    expect(showsFollowProgramCard('cached', false, FEATURED)).toBe(false);
+    expect(showsFollowProgramCard('refreshing', false, FEATURED)).toBe(false);
+    expect(showsFollowProgramCard('failed', false, FEATURED)).toBe(false);
   });
 });
 
-describe('followed program name', () => {
+describe('following text', () => {
   it('names the program you follow', () => {
     const ready = { kind: 'ready', name: '5/3/1' } as unknown as ActiveProgram;
-    expect(followedProgramName(ready)).toBe('5/3/1');
-    expect(followedProgramName({ kind: 'needs_update', name: 'Madcow 5x5', message: UPDATE_APP_TEXT })).toBe(
-      'Madcow 5x5',
+    expect(followingText(ready)).toBe("You're following 5/3/1");
+    expect(followingText({ kind: 'needs_update', name: 'Madcow 5x5', message: UPDATE_APP_TEXT })).toBe(
+      "You're following Madcow 5x5",
     );
   });
 
-  it('names nothing when you follow no program or its template is gone', () => {
-    expect(followedProgramName({ kind: 'none' })).toBeNull();
-    expect(followedProgramName({ kind: 'template_missing' } as ActiveProgram)).toBeNull();
+  it('still says you follow a program when its template is gone', () => {
+    expect(followingText({ kind: 'template_missing' } as ActiveProgram)).toBe("You're following a program");
+  });
+
+  it('says nothing when you follow no program', () => {
+    expect(followingText({ kind: 'none' })).toBeNull();
   });
 });

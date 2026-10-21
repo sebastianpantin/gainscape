@@ -14,15 +14,16 @@ import { messageOf } from '../../lib/error-text.ts';
 import { formatCount } from '../../lib/format.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
-import { followedProgramName } from '../../lib/programs/program-discovery-rules.ts';
+import { followingText } from '../../lib/programs/program-discovery-rules.ts';
 import { isEnrolledIn, isFollowing } from '../../lib/programs/program-follow-rules.ts';
+import { activeProgram } from '../../lib/programs/program-today-rules.ts';
 import { programsQuery, publishForEnroll, showChangedPrograms } from '../../lib/query/queries.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
 import { readProgramCache } from '../../offline/program-cache.ts';
+import { cachedProgramFacts } from '../../offline/program-facts-cache.ts';
 import { FollowablePrograms } from './FollowablePrograms.tsx';
-import { useActiveProgram } from './use-active-program.ts';
 
 interface ProgramsScreenProps {
   userId: string;
@@ -49,7 +50,10 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const pendingCopyIds = useRef(new Map<string, string>());
-  const followedName = followedProgramName(useActiveProgram(userId).program);
+  const [following] = useState(() => {
+    const { templates, enrollment, facts } = readProgramCache(localStorage, userId);
+    return followingText(activeProgram(templates, enrollment, facts ? cachedProgramFacts(facts) : []));
+  });
 
   const load = programList.data;
   const programs = load?.loaded ?? savedPrograms;
@@ -138,9 +142,9 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
           {problem}
         </p>
       )}
-      {followedName && (
+      {following && (
         <section className="panel row spread" aria-label="Active program">
-          <span>You're following {followedName}</span>
+          <h2>{following}</h2>
           <Link className="tap-link" to="/programs/active">
             Manage program
           </Link>

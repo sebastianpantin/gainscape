@@ -4,7 +4,7 @@ import { type ActiveProgram } from './program-today-rules.ts';
 
 export const FEATURED_TEMPLATE_KEYS = ['stronglifts_5x5', 'gzclp', 'five_three_one'] as const;
 
-interface FeaturedProgram {
+export interface FeaturedProgram {
   key: string;
   name: string;
   schedule: string;
@@ -19,10 +19,15 @@ export function featuredPrograms(entries: readonly TemplateListEntry[]): Feature
   });
 }
 
-export function showsFollowProgramCard(loadStatus: ProgramLoadStatus, dismissed: boolean): boolean {
-  return loadStatus === 'none' && !dismissed;
+export function showsFollowProgramCard(
+  loadStatus: ProgramLoadStatus,
+  dismissed: boolean,
+  featured: readonly FeaturedProgram[],
+): boolean {
+  return loadStatus === 'none' && !dismissed && featured.length > 0;
 }
 
-export function followedProgramName(program: ActiveProgram): string | null {
-  return program.kind === 'ready' || program.kind === 'needs_update' ? program.name : null;
+export function followingText(program: ActiveProgram): string | null {
+  if (program.kind === 'none') return null;
+  return program.kind === 'template_missing' ? "You're following a program" : `You're following ${program.name}`;
 }

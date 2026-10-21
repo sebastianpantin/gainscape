@@ -1,21 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { featuredPrograms } from '../../lib/programs/program-discovery-rules.ts';
-import { templateListEntries } from '../../lib/programs/program-enroll-rules.ts';
-import { programTemplatesQuery } from '../../lib/query/queries.ts';
-import { readProgramCache } from '../../offline/program-cache.ts';
+import { type FeaturedProgram } from '../../lib/programs/program-discovery-rules.ts';
 
 interface FollowProgramCardProps {
-  userId: string;
+  programs: readonly FeaturedProgram[];
   onDismiss: () => void;
 }
 
-export function FollowProgramCard({ userId, onDismiss }: FollowProgramCardProps) {
+export function FollowProgramCard({ programs, onDismiss }: FollowProgramCardProps) {
   const headingId = useId();
-  const [savedTemplates] = useState(() => readProgramCache(localStorage, userId).templates);
-  const live = useQuery(programTemplatesQuery(userId));
-  const programs = featuredPrograms(templateListEntries(live.data ?? savedTemplates));
 
   return (
     <section className="panel stack" aria-labelledby={headingId}>
