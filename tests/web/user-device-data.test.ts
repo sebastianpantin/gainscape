@@ -13,6 +13,7 @@ import { parsePlateSettings } from '../../web/src/lib/workout/plate-rules.ts';
 import { savePlateSettings } from '../../web/src/lib/workout/plate-settings-store.ts';
 import { preferencesCache } from '../../web/src/lib/profile/preferences.ts';
 import { type Profile } from '../../web/src/lib/profile/profile-rules.ts';
+import { dismissFollowCard } from '../../web/src/lib/programs/follow-card-store.ts';
 import { dismissSummary } from '../../web/src/lib/programs/program-summary-store.ts';
 import { parseRestState } from '../../web/src/lib/workout/rest-timer-rules.ts';
 import { saveRestState } from '../../web/src/lib/workout/rest-timer-store.ts';
@@ -97,6 +98,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   savePlateSettings(local, userId, parsePlateSettings(null));
   preferencesCache.save(local, userId, { unitPref: 'lb', effortInputMode: 'rpe' });
   dismissSummary(local, userId, 'program-a:week-1');
+  dismissFollowCard(local, userId);
   saveRestState(local, userId, parseRestState(null));
   saveSessionBaseline(local, userId, { asOf: '2026-10-05T08:00:00.000Z', strength: {}, records: null });
   saveTrainingDeviceSettings(local, userId, parseTrainingDeviceSettings(null));
@@ -196,6 +198,7 @@ describe('forgetting a user on this device', () => {
     const kept = entriesMentioning(local, LEAVING_USER).map(([key]) => key.replace(LEAVING_USER, '<user>'));
     expect(kept.sort()).toEqual([
       'gainscape.companion-pet.v1.<user>',
+      'gainscape.follow-card.<user>',
       'gainscape.install-card.<user>',
       'gainscape.notify-prompt.<user>',
       'gainscape.onboarding.<user>',

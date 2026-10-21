@@ -78,7 +78,12 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const onlineSignal = useOnlineSignal();
   const queryClient = useQueryClient();
   const standing = useStanding(userId);
-  const { cache: programCache, program: activeProgram, showCache: showProgramCache } = useActiveProgram(userId);
+  const {
+    cache: programCache,
+    program: activeProgram,
+    loadStatus: programLoadStatus,
+    showCache: showProgramCache,
+  } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
   useRestAlert(userId, rest.timer);
   const [keepAwake] = useState(() => readTrainingDeviceSettings(deviceStorage(), userId).keepAwake);
@@ -158,6 +163,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         exercises={exercises}
         unit={unitPref}
         program={activeProgram}
+        programLoadStatus={programLoadStatus}
         start={start}
         onboarding={onboarding}
         onFreestyleFromOnboarding={() => {

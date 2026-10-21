@@ -38,7 +38,7 @@ async function copyTemplate(page: Page, templateName: string) {
   await page
     .getByRole('listitem')
     .filter({ hasText: templateName })
-    .getByRole('button', { name: `Use ${templateName}`, exact: true })
+    .getByRole('button', { name: `Copy and edit ${templateName}`, exact: true })
     .click();
   await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
 }
@@ -314,7 +314,8 @@ test('delete a program through the confirmation and keep the workout logged from
   expect(await setCount(sessionId)).toBe(18);
 
   await openTab(page, 'Train');
-  await expect(page.getByText('No programs yet.')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Follow a program', exact: true })).toBeVisible();
+  await expect(page.getByText('No programs yet.')).toHaveCount(0);
 });
 
 test('a target can be cleared and retyped, and reps min above reps max is explained before saving', async ({

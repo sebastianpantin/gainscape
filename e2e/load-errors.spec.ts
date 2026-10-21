@@ -126,18 +126,18 @@ test('the profile says it could not load the bodyweight trend, and shows it afte
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
-test('Programs says it could not load the powerlifting programs, and lists them after a reload', async ({ page }) => {
+test('Programs says it could not load the programs to follow, and lists them after a reload', async ({ page }) => {
   await failRequests(page, restTable('program_templates'), 'GET');
   await register(page, uniqueUsername('le_templates'));
 
   await openFromProfile(page, 'Programs');
 
-  const powerlifting = page.getByRole('region', { name: 'Powerlifting programs' });
-  await expect(powerlifting.getByRole('alert')).toHaveText("Couldn't load the powerlifting programs");
+  const followable = page.getByRole('region', { name: 'Follow a program' });
+  await expect(followable.getByRole('alert')).toHaveText("Couldn't load the programs to follow");
   await page.unroute(restTable('program_templates'));
   await page.reload();
-  await expect(powerlifting.getByRole('link', { name: /^Use / }).first()).toBeVisible();
-  await expect(powerlifting.getByRole('alert')).toHaveCount(0);
+  await expect(followable.getByRole('link', { name: /^Follow / }).first()).toBeVisible();
+  await expect(followable.getByRole('alert')).toHaveCount(0);
 });
 
 test('Train says it could not load your programs, and shows the program days after a reload', async ({ page }) => {
@@ -147,6 +147,7 @@ test('Train says it could not load your programs, and shows the program days aft
   await expect(page.getByRole('alert')).toHaveText("Couldn't load your programs");
   await page.unroute(restTable('programs'));
   await page.reload();
+  await page.getByRole('button', { name: 'Not now', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Program days' })).toBeVisible();
   await expect(page.getByRole('alert')).toHaveCount(0);
 });

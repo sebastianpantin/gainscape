@@ -58,11 +58,12 @@ test('StrongLifts: Day 1 is 5×5 at the working weights, and finishing it sugges
   await expect(prescribedRows(after, 'Deadlift')).toHaveText(['80 kg × 5']);
 });
 
-test('StrongLifts on Today: Start sits above the collapsed set lists, and the empty "No programs yet" card is gone', async ({
+test('StrongLifts on Today: Start sits above the collapsed set lists, and the Follow a program card is gone', async ({
   page,
 }) => {
   await register(page, uniqueUsername('pt_slt'));
-  await expect(page.getByText(/^No programs yet\./)).toBeVisible();
+  const followCard = page.getByRole('region', { name: 'Follow a program', exact: true });
+  await expect(followCard).toBeVisible();
   await followProgram(page, STRONGLIFTS, {
     'Squat working weight (kg)': 100,
     'Bench press working weight (kg)': 60,
@@ -78,6 +79,7 @@ test('StrongLifts on Today: Start sits above the collapsed set lists, and the em
   const startBox = await start.boundingBox();
   const squatBox = await squat.boundingBox();
   expect(startBox!.y).toBeLessThan(squatBox!.y);
+  await expect(followCard).toHaveCount(0);
   await expect(page.getByText(/^No programs yet/)).toHaveCount(0);
 });
 

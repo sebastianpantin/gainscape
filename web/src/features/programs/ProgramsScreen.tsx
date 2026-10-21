@@ -14,13 +14,16 @@ import { messageOf } from '../../lib/error-text.ts';
 import { formatCount } from '../../lib/format.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
+import { followingText } from '../../lib/programs/program-discovery-rules.ts';
 import { isEnrolledIn, isFollowing } from '../../lib/programs/program-follow-rules.ts';
+import { activeProgram } from '../../lib/programs/program-today-rules.ts';
 import { programsQuery, publishForEnroll, showChangedPrograms } from '../../lib/query/queries.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
 import { readProgramCache } from '../../offline/program-cache.ts';
-import { PowerliftingPrograms } from './PowerliftingPrograms.tsx';
+import { cachedProgramFacts } from '../../offline/program-facts-cache.ts';
+import { FollowablePrograms } from './FollowablePrograms.tsx';
 
 interface ProgramsScreenProps {
   userId: string;
@@ -47,6 +50,10 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const pendingCopyIds = useRef(new Map<string, string>());
+  const [following] = useState(() => {
+    const { templates, enrollment, facts } = readProgramCache(localStorage, userId);
+    return followingText(activeProgram(templates, enrollment, facts ? cachedProgramFacts(facts) : []));
+  });
 
   const load = programList.data;
   const programs = load?.loaded ?? savedPrograms;
@@ -135,6 +142,15 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
           {problem}
         </p>
       )}
+      {following && (
+        <section className="panel row spread" aria-label="Active program">
+          <h2>{following}</h2>
+          <Link className="tap-link" to="/programs/active">
+            Manage program
+          </Link>
+        </section>
+      )}
+      <FollowablePrograms userId={userId} />
       <section className="stack" aria-label="Your programs">
         <h2>Your programs</h2>
         {own.length === 0 && <p className="panel muted">Create a program or copy a template.</p>}
@@ -186,9 +202,8 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
           <p>Past workouts keep their sets.</p>
         </ConfirmDialog>
       )}
-      <PowerliftingPrograms userId={userId} />
-      <section className="stack" aria-label="Templates">
-        <h2>Templates</h2>
+      <section className="stack" aria-label="Build your own">
+        <h2>Build your own</h2>
         <ul className="stack exercise-list">
           {templates(programs).map((template) => (
             <li className="panel row spread" key={template.id}>
@@ -199,7 +214,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
                 </span>
               </span>
               <button className="button" type="button" disabled={busy} onClick={() => copyTemplate(template)}>
-                Use {template.name}
+                Copy and edit {template.name}
               </button>
             </li>
           ))}

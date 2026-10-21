@@ -5,11 +5,11 @@
 
 ## Purpose
 
-Training programs: list, copy from templates, create and edit own programs (days of planned exercises and sets). A program day starts from the Train tab (`workout/ProgramDayStarts.tsx`). Powerlifting programs (Madcow, 5/3/1, ...) and published own programs are followed through an enrollment: an enroll form generated from the template definition, a manage screen for training weights, and a plan screen; today's prescribed workout is on the Train tab (`workout/ProgramToday.tsx`).
+Training programs: list, copy from templates, create and edit own programs (days of planned exercises and sets). A program day starts from the Train tab (`workout/ProgramDayStarts.tsx`). Without an enrollment, Train shows the `Follow a program` card (`workout/FollowProgramCard.tsx`) with the featured templates. Powerlifting programs (Madcow, 5/3/1, ...) and published own programs are followed through an enrollment: an enroll form generated from the template definition, a manage screen for training weights, and a plan screen; today's prescribed workout is on the Train tab (`workout/ProgramToday.tsx`).
 
 ## Map
 
-- Routes: `ProgramsScreen.tsx` (`/programs`, with `PowerliftingPrograms.tsx`), `ProgramEditor.tsx` (`/programs/:programId` and `/programs/new`), `ProgramEnrollScreen.tsx` (`/programs/enroll/:key`), `ActiveProgramScreen.tsx` (`/programs/active`), `ProgramPlanScreen.tsx` (`/programs/active/plan`). `ProgramStatusScreen.tsx` stands in when there is no ready program.
+- Routes: `ProgramsScreen.tsx` (`/programs`, with `FollowablePrograms.tsx`), `ProgramEditor.tsx` (`/programs/:programId` and `/programs/new`), `ProgramEnrollScreen.tsx` (`/programs/enroll/:key`), `ActiveProgramScreen.tsx` (`/programs/active`), `ProgramPlanScreen.tsx` (`/programs/active/plan`). `ProgramStatusScreen.tsx` stands in when there is no ready program.
 - `program-edit.ts`: pure editor logic (day and exercise edits, limits, validation, progression and increments). Put new editor rules here and test them first.
 - `use-active-program.ts`: the followed program from the saved cache; shared with `workout/WorkoutScreen.tsx`.
 - Enrollment and prescription rules live in `../../lib/programs/program-*-rules.ts`; persistence in `../../lib/programs/programs.ts`.
@@ -17,7 +17,7 @@ Training programs: list, copy from templates, create and edit own programs (days
 ## Rules and gotchas
 
 - `PlannedExercise` is defined in `../../offline/draft-starts.ts` and is what a started day copies into the draft. Its `progression` is not copied, so adding it needed no draft format bump; changing what the draft stores needs the draft versioning and `tests/web/draft-format.test.ts` updated.
-- Both template lists (Powerlifting and Templates) label their action `Use <name>` and show how often you train, derived from the definition (`templateScheduleText`) or the day count, because templates carry no description. A description would need a catalog and seed change.
+- Both template lists show how often you train, derived from the definition (`templateScheduleText`) or the day count, because templates carry no description. A description would need a catalog and seed change.
 - Only rep lifts are plannable (`isPlannableExercise`): `save_program` plans sets of reps and refuses holds and cardio.
 - Following an own program publishes a snapshot first (`publishForEnroll`), then drops the cached `enrollChoicesQuery` so the enroll screen loads the new version. Publishing and enrolling need a connection and are disabled offline.
 - Editing a followed program shows `You're following an earlier version`. The `followStatus` check passes `null` until the exercise list has loaded (status `undecided`, notice hidden), and uses `loadTypeOf` over the whole exercise list, holds included, so a legacy hold slot clamps like the server. "Use these changes" saves, publishes and opens the enroll form with router state `{ carried }` (unit and current working weights), which then re-follows the same template without the replace dialog.
@@ -26,8 +26,9 @@ Training programs: list, copy from templates, create and edit own programs (days
 - Validation order before save: `nameIssue`, `exerciseIssue`, `targetIssue`, `progressionIssue`. A Save or Use these changes problem clears on the next edit; a load problem stays.
 - `addDay` names the new day `Day <n>` from the day count plus one, skipping taken names, so removing `Day 1` then adding gives `Day 4`, not a second `Day 3`.
 - Offline: the program list, templates and exercise list open from saved copies (`../../offline/program-list-cache.ts` and the template caches). `useActiveProgram` skips its refresh offline and uses `offlineRefreshState`, so a user whose cache was refreshed online with no enrollment sees `You're not following a program.`
-- The enroll form lists templates compiled from your own programs via `templateEntry` (so `custom_` keys load) but hides them from the Powerlifting list, and shows no Exercises section for them. A template the app cannot run shows "Update the app to use this program" with no link.
+- The enroll form lists templates compiled from your own programs via `templateEntry` (so `custom_` keys load) but hides them from the Follow a program list, and shows no Exercises section for them. A template the app cannot run shows "Update the app to use this program" with no link.
 - `ActiveProgramScreen` sends one `adjust_enrollment` `set_reference` per changed field and needs a connection.
+- The Train `Follow a program` card stays hidden until the load status is `none`, so it never flashes before the refresh, and when no featured template can be followed, and while it shows `ProgramDayStarts` suppresses its empty state. `Not now` is kept per device and cleared only on account deletion; it survives sign-out and Reset all data.
 
 ## Testing
 
