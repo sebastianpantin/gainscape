@@ -40,6 +40,6 @@ export function assumedEffort(
     return rpe < LOWEST_RPE_CHOICE ? null : { type: 'rpe', value: rpe };
   }
   const distance = (level: EffortLevel) => Math.abs(levelRir[level] - rir);
-  const nearest = EFFORT_LEVELS.reduce((best, level) => (distance(level) <= distance(best) ? level : best));
+  const nearest = EFFORT_LEVELS.reduce((best, level) => (distance(level) < distance(best) ? level : best));
   return { type: 'level', level: nearest };
 }
