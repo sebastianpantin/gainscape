@@ -1,3 +1,13 @@
+- prs: [164, 165]
+  version: 0.19.0
+  date: 2026-10-21
+  title: Programs up front, and a clearer workout
+  items:
+    - Train suggests a program to follow when you have none, with StrongLifts 5x5, GZCLP and 5/3/1 one tap away. Not now hides it.
+    - Programs starts with the program you follow, then splits into Follow a program and Build your own.
+    - The workout header shows how long you have been training.
+    - Picking an effort now only rates a set. Tap Done to complete it and start the rest timer. Finish offers to mark rated sets done if you forgot.
+    - A new Moderate effort sits between Easy and Hard.
 - prs: [161]
   version: 0.18.0
   date: 2026-10-21
