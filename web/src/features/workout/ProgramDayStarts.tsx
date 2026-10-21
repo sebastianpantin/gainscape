@@ -10,11 +10,11 @@ import { programLabelFor } from '../../offline/draft-starts.ts';
 interface ProgramDayStartsProps {
   userId: string;
   disabled: boolean;
-  followingProgram: boolean;
+  hideEmptyState: boolean;
   onStart: (program: Program, day: ProgramDay) => void;
 }
 
-export function ProgramDayStarts({ userId, disabled, followingProgram, onStart }: ProgramDayStartsProps) {
+export function ProgramDayStarts({ userId, disabled, hideEmptyState, onStart }: ProgramDayStartsProps) {
   const programList = useQuery(programsQuery(userId));
   const [savedPrograms] = useState(() => cachedPrograms(userId));
   const programs = programList.data?.loaded ?? savedPrograms;
@@ -28,7 +28,7 @@ export function ProgramDayStarts({ userId, disabled, followingProgram, onStart }
     ) : null;
 
   const own = ownPrograms(programs, userId);
-  if (own.length === 0 && followingProgram) return null;
+  if (own.length === 0 && hideEmptyState) return null;
 
   return (
     <div className="panel stack">

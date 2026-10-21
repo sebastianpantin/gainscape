@@ -16,8 +16,8 @@ export const FIVE_THREE_ONE_ONE_RMS_KG: Readonly<Record<string, number>> = {
   'Overhead press 1RM (kg)': 50,
 };
 
-export function powerliftingPrograms(page: Page): Locator {
-  return page.getByRole('region', { name: 'Powerlifting programs', exact: true });
+export function followablePrograms(page: Page): Locator {
+  return page.getByRole('region', { name: 'Follow a program', exact: true });
 }
 
 export function programToday(page: Page, programName: string): Locator {
@@ -67,7 +67,7 @@ export function cycleSummary(page: Page, cycle: number): Locator {
 
 export async function openEnrollForm(page: Page, programName: string): Promise<void> {
   await openFromProfile(page, 'Programs');
-  const templateLink = powerliftingPrograms(page).getByRole('link', { name: `Use ${programName}`, exact: true });
+  const templateLink = followablePrograms(page).getByRole('link', { name: `Follow ${programName}`, exact: true });
   await expect(templateLink).toBeVisible();
   await templateLink.click();
   await expect(page.getByRole('heading', { level: 1, name: `Follow ${programName}`, exact: true })).toBeVisible();

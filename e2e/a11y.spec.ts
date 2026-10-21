@@ -98,7 +98,7 @@ async function createProgram(page: Page): Promise<string> {
   await page
     .getByRole('listitem')
     .filter({ hasText: 'Upper / Lower' })
-    .getByRole('button', { name: 'Use Upper / Lower', exact: true })
+    .getByRole('button', { name: 'Copy and edit Upper / Lower', exact: true })
     .click();
   await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
   await expectNoAxeViolations(page, 'program editor');
@@ -336,8 +336,8 @@ test('the links on Train are 44px tall', async ({ page }) => {
   await logBench(page);
   await openTab(page, 'Train');
   await expect(page.getByRole('link', { name: /^\w[\w ]* is [\d,]+ XP from level \d+$/ })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Copy a template', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Edit programs', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Follow 5/3/1', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'See all programs', exact: true })).toBeVisible();
   await expectTouchTargets(page, ['main a[href]']);
 
   await openEnrollForm(page, '5/3/1');

@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { type ReactNode, useRef } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { dismissFollowCard, isFollowCardDismissed } from '../../lib/programs/follow-card-store.ts';
+import { showsFollowProgramCard } from '../../lib/programs/program-discovery-rules.ts';
+import { type ProgramLoadStatus } from '../../lib/programs/program-status-rules.ts';
 import { type ActiveProgram } from '../../lib/programs/program-today-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
@@ -10,6 +14,7 @@ import { type DraftNotice } from '../../offline/draft-session.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
 import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
+import { FollowProgramCard } from './FollowProgramCard.tsx';
 import { HighlightsCard } from './HighlightsCard.tsx';
 import { LevelStat } from './LevelStat.tsx';
 import { LiftGoalsCard } from './LiftGoalsCard.tsx';
@@ -29,6 +34,7 @@ interface TodayViewProps {
   exercises: Exercise[];
   unit: UnitPref;
   program: ActiveProgram;
+  programLoadStatus: ProgramLoadStatus;
   start: ReturnType<typeof useWorkoutStart>;
   onboarding: { open: boolean; finish: () => void };
   onFreestyleFromOnboarding: () => void;
@@ -42,11 +48,14 @@ export function TodayView({
   exercises,
   unit,
   program,
+  programLoadStatus,
   start,
   onboarding,
   onFreestyleFromOnboarding,
 }: TodayViewProps) {
   const startButton = useRef<HTMLButtonElement>(null);
+  const [followCardDismissed, setFollowCardDismissed] = useState(() => isFollowCardDismissed(deviceStorage(), userId));
+  const followCardShown = showsFollowProgramCard(programLoadStatus, followCardDismissed);
   const now = new Date();
   const timezone = useQuery(profileQuery(userId)).data?.loaded.timezone;
   const today = timezone === undefined ? null : localDateIn(timezone, now.getTime());
@@ -92,6 +101,15 @@ export function TodayView({
         onStart={start.startFromPrescription}
         onSkip={start.skipProgramDay}
       />
+      {followCardShown && (
+        <FollowProgramCard
+          userId={userId}
+          onDismiss={() => {
+            dismissFollowCard(deviceStorage(), userId);
+            setFollowCardDismissed(true);
+          }}
+        />
+      )}
       <button
         ref={startButton}
         className="button primary big"
@@ -107,7 +125,7 @@ export function TodayView({
       <ProgramDayStarts
         userId={userId}
         disabled={start.startingDay}
-        followingProgram={program.kind !== 'none'}
+        hideEmptyState={program.kind !== 'none' || followCardShown}
         onStart={start.startFromDay}
       />
       <TrainingHero userId={userId} standing={standing} unit={unit} />

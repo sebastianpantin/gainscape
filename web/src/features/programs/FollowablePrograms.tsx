@@ -5,11 +5,11 @@ import { templateListEntries, templateScheduleText } from '../../lib/programs/pr
 import { programTemplatesQuery } from '../../lib/query/queries.ts';
 import { readProgramCache } from '../../offline/program-cache.ts';
 
-interface PowerliftingProgramsProps {
+interface FollowableProgramsProps {
   userId: string;
 }
 
-export function PowerliftingPrograms({ userId }: PowerliftingProgramsProps) {
+export function FollowablePrograms({ userId }: FollowableProgramsProps) {
   const [savedTemplates] = useState(() => readProgramCache(localStorage, userId).templates);
   const live = useQuery(programTemplatesQuery(userId));
   const templates = live.data ?? savedTemplates;
@@ -18,11 +18,11 @@ export function PowerliftingPrograms({ userId }: PowerliftingProgramsProps) {
   const entries = templateListEntries(templates);
 
   return (
-    <section className="stack" aria-label="Powerlifting programs">
-      <h2>Powerlifting programs</h2>
+    <section className="stack" aria-label="Follow a program">
+      <h2>Follow a program</h2>
       {failed && entries.length === 0 && (
         <p className="problem" role="alert">
-          Couldn't load the powerlifting programs
+          Couldn't load the programs to follow
         </p>
       )}
       <ul className="stack exercise-list">
@@ -35,7 +35,7 @@ export function PowerliftingPrograms({ userId }: PowerliftingProgramsProps) {
                   <span className="muted">{templateScheduleText(entry.definition)}</span>
                 </span>
                 <Link className="button" to={`/programs/enroll/${entry.key}`}>
-                  Use {entry.name}
+                  Follow {entry.name}
                 </Link>
               </>
             ) : (
