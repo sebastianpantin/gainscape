@@ -6,7 +6,11 @@ select has_column('public', 'exercises', 'tracks_distance', 'exercises record wh
 
 select is(
   (select array_agg(key order by key) from public.exercises where not tracks_distance and owner_user_id is null),
-  array['dynamic_warm_up', 'foam_rolling', 'mobility_flow', 'static_stretching', 'yoga']::text[],
+  array[
+    'arm_circles', 'band_pull_apart', 'cat_cow', 'cossack_squat', 'dynamic_warm_up', 'foam_rolling', 'hip_circles',
+    'inchworm', 'leg_swings', 'mobility_flow', 'open_book_rotation', 'scapular_push_up', 'squat_to_stand',
+    'static_stretching', 'wall_slide', 'worlds_greatest_stretch', 'yoga'
+  ]::text[],
   'the built-in mobility activities track no distance'
 );
 

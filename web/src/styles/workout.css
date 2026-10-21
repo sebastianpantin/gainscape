@@ -906,3 +906,11 @@
   text-decoration: none;
   overflow-wrap: anywhere;
 }
+
+.warmup-choice {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding-block: var(--space-2);
+  text-align: left;
+}

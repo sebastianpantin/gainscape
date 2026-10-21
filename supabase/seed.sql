@@ -249,7 +249,19 @@ insert into public.exercises (id, key, name, modality, load_type, equipment, var
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'static_stretching'), 'static_stretching', 'Static Stretching', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'foam_rolling'), 'foam_rolling', 'Foam Rolling', 'cardio', null, 'other', null, null, 'per_km', 'moderate', null, false, 'reps'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility_flow'), 'mobility_flow', 'Mobility Flow', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
-  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dynamic_warm_up'), 'dynamic_warm_up', 'Dynamic Warm-Up', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps')
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dynamic_warm_up'), 'dynamic_warm_up', 'Dynamic Warm-Up', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'leg_swings'), 'leg_swings', 'Leg Swings', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'hip_circles'), 'hip_circles', 'Hip Circles', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cossack_squat'), 'cossack_squat', 'Cossack Squat', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'squat_to_stand'), 'squat_to_stand', 'Squat-to-Stand', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cat_cow'), 'cat_cow', 'Cat-Cow', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'inchworm'), 'inchworm', 'Inchworm', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'worlds_greatest_stretch'), 'worlds_greatest_stretch', 'World''s Greatest Stretch', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'arm_circles'), 'arm_circles', 'Arm Circles', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'band_pull_apart'), 'band_pull_apart', 'Band Pull-Apart', 'cardio', null, 'other', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'open_book_rotation'), 'open_book_rotation', 'Open Book Rotation', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'scapular_push_up'), 'scapular_push_up', 'Scapular Push-up', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'wall_slide'), 'wall_slide', 'Wall Slide', 'cardio', null, 'bodyweight', null, null, 'per_km', 'moderate', null, false, 'reps')
 on conflict (id) do update set name = excluded.name, modality = excluded.modality, load_type = excluded.load_type, equipment = excluded.equipment, variation_of_id = excluded.variation_of_id, reference_pace_s_per_km = excluded.reference_pace_s_per_km, pace_unit = excluded.pace_unit, max_effort = excluded.max_effort, record_min_distance_m = excluded.record_min_distance_m, tracks_distance = excluded.tracks_distance, measure = excluded.measure, updated_at = now();
 
 delete from public.exercise_skills where exercise_id in (select id from public.exercises where owner_user_id is null);
@@ -751,7 +763,19 @@ insert into public.exercise_skills (exercise_id, skill_id, share_bp) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'static_stretching'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'foam_rolling'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility_flow'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
-  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dynamic_warm_up'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000);
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dynamic_warm_up'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'leg_swings'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'hip_circles'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cossack_squat'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'squat_to_stand'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cat_cow'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'inchworm'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'worlds_greatest_stretch'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'arm_circles'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'band_pull_apart'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'open_book_rotation'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'scapular_push_up'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'wall_slide'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000);
 
 insert into public.programs (id, key, owner_user_id, name) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl'), 'ppl', null, 'Push / Pull / Legs'),

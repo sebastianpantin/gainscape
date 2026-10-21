@@ -2,6 +2,7 @@ import { type Locator } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import {
   addExercise,
+  boutRow,
   exerciseCard,
   finishWorkout,
   logExercise,
@@ -62,6 +63,10 @@ test('warm-ups ramp from the bar to the first working set of a barbell lift', as
   await weightOf(setRow(squat, 1)).fill('100');
 
   await squat.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Warm up for Back Squat' })
+    .getByRole('button', { name: 'Ramp sets', exact: true })
+    .click();
   const rows = setRows(squat);
   await expect(rows).toHaveCount(5);
   for (const [index, [weight, reps]] of [
@@ -78,6 +83,40 @@ test('warm-ups ramp from the bar to the first working set of a barbell lift', as
   }
   await expect(weightOf(setRow(squat, 5))).toHaveValue('100');
   await expect(squat.getByRole('button', { name: '+ Add warm-ups' })).toHaveCount(0);
+  await expect(squat.getByRole('button', { name: '+ Add Squat routine', exact: true })).toBeFocused();
+});
+
+test('the Squat routine adds its four drills above Back Squat as one-minute bouts', async ({ page }) => {
+  await register(page, uniqueUsername('wr'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const squat = await addExercise(page, 'squat', 'Back Squat');
+  await weightOf(setRow(squat, 1)).fill('100');
+
+  await squat.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
+  const choice = page.getByRole('dialog', { name: 'Warm up for Back Squat' });
+  await expect(choice.getByRole('button', { name: 'Ramp sets', exact: true })).toBeVisible();
+  await expect(choice.getByRole('button', { name: 'Both', exact: true })).toBeVisible();
+  const routine = choice.getByRole('button', { name: 'Squat routine', exact: true });
+  await expect(routine).toHaveAccessibleDescription('4 drills · 4 min');
+  await routine.click();
+  await expect(choice).toHaveCount(0);
+  const firstDrill = exerciseCard(page, 'Leg Swings');
+  await expect(firstDrill.getByRole('button', { name: 'Bout 1 options', exact: true })).toBeFocused();
+  await expect(firstDrill.getByRole('heading', { name: 'Leg Swings', exact: true })).toBeInViewport();
+
+  const drills = ['Leg Swings', 'Hip Circles', 'Cossack Squat', 'Squat-to-Stand'];
+  await expect(page.getByRole('heading', { level: 2 })).toContainText([...drills, 'Back Squat']);
+  for (const drill of drills) {
+    const bout = boutRow(exerciseCard(page, drill), 1);
+    await expect(bout.getByLabel('min', { exact: true }), drill).toHaveValue('1');
+    await expect(bout.getByRole('button', { name: 'Done bout 1', exact: true }), drill).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  }
+  await expect(setRows(squat)).toHaveCount(1);
+  await expect(squat.getByRole('button', { name: '+ Add warm-ups', exact: true })).toBeVisible();
+  await expect(squat.getByRole('button', { name: '+ Add Squat routine' })).toHaveCount(0);
 });
 
 test('a lift with no ramp to build still offers one warm-up set to edit', async ({ page }) => {
@@ -86,6 +125,10 @@ test('a lift with no ramp to build still offers one warm-up set to edit', async 
   const squat = await addExercise(page, 'squat', 'Back Squat');
   await weightOf(setRow(squat, 1)).fill('20');
   await squat.getByRole('button', { name: '+ Add warm-ups', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Warm up for Back Squat' })
+    .getByRole('button', { name: 'Ramp sets', exact: true })
+    .click();
   await expect(setRows(squat)).toHaveCount(2);
   await expect(weightOf(setRow(squat, 1))).toHaveValue('20');
   await expect(warmupBadge(setRow(squat, 1))).toBeVisible();
