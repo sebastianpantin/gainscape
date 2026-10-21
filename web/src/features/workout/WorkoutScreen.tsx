@@ -198,6 +198,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   );
   const lift: LiftCardContext = {
     draft,
+    catalog: exercises,
     previews,
     records,
     unit: unitPref,

@@ -1,8 +1,8 @@
 import { shownWeight, unitToKg } from '../../web/src/lib/units.ts';
 import { describe, expect, it } from 'vitest';
-import { draftOf, lift, set } from './draft-fixtures.ts';
+import { cardioExercise, draftOf, lift, set } from './draft-fixtures.ts';
 import { MAX_SETS_PER_SESSION } from '../../supabase/functions/_shared/domain/types.ts';
-import type { Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import type { CardioExercise, Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { RecentSet } from '../../web/src/lib/history/last-session-rules.ts';
 import { fatigueAdvice, nextWeightHint } from '../../web/src/lib/workout/progression-rules.ts';
 import type { DraftBarbellSetup } from '../../web/src/lib/programs/program-set-rules.ts';
@@ -15,7 +15,12 @@ import {
   liftEquipment,
   removingAsksFirst,
   restStartsAfterChange,
+  routineToOffer,
+  warmupButtonLabel,
+  warmupChoiceText,
+  warmupChoices,
   warmupsToOffer,
+  withChosenWarmup,
 } from '../../web/src/features/workout/exercise-card-rules.ts';
 
 function catalogLift(id: string, overrides: Partial<Extract<Exercise, { modality: 'lift' }>> = {}): Exercise {
@@ -219,5 +224,131 @@ describe('restStartsAfterChange', () => {
   it('does not start rest for a warm-up or a weight change', () => {
     expect(restStartsAfterChange(draft, 2, set('c1', { isWarmup: true }), { done: true }, null)).toBe(false);
     expect(restStartsAfterChange(draft, 2, set('c1'), { weightKg: 110 }, null)).toBe(false);
+  });
+});
+
+function catalogDrill(key: string): CardioExercise {
+  return {
+    id: key,
+    key,
+    name: key,
+    equipment: 'bodyweight',
+    custom: false,
+    archived: false,
+    skillShares: [],
+    modality: 'cardio',
+    activity: cardioExercise().activity,
+  };
+}
+
+const squatRoutineOffer = (drillCount: number) => ({
+  routine: { liftKey: 'back_squat', name: 'Squat routine', drillKeys: ['a', 'b', 'c', 'd'] },
+  drills: Array.from({ length: drillCount }, (_, index) => catalogDrill(`drill_${index}`)),
+});
+
+describe('routineToOffer', () => {
+  const squatDrillKeys = ['leg_swings', 'hip_circles', 'cossack_squat', 'squat_to_stand'];
+  const catalog: Exercise[] = [
+    catalogLift('squat', { key: 'back_squat' }),
+    catalogLift('curl', { key: 'dumbbell_curl' }),
+    ...squatDrillKeys.map(catalogDrill),
+  ];
+  const drillCard = (key: string) => cardioExercise({ clientId: `card-${key}`, exerciseId: key, sets: [] });
+
+  it('offers the Squat routine for Back Squat, with its drills in order', () => {
+    const offer = routineToOffer(draftOf([lift('curl', [set('c1')]), lift('squat', [set('s1')])]), 1, catalog);
+    expect(offer?.routine.name).toBe('Squat routine');
+    expect(offer?.drills.map((exercise) => exercise.id)).toEqual(squatDrillKeys);
+  });
+
+  it('offers no routine for a lift without one or a lift missing from the catalog', () => {
+    expect(routineToOffer(draftOf([lift('curl', [set('c1')])]), 0, catalog)).toBeNull();
+    expect(routineToOffer(draftOf([lift('unknown', [set('u1')])]), 0, catalog)).toBeNull();
+  });
+
+  it('does not offer the routine again once its drills sit right above the lift', () => {
+    const added = draftOf([...squatDrillKeys.map(drillCard), lift('squat', [set('s1')])]);
+    expect(routineToOffer(added, 4, catalog)).toBeNull();
+    const elsewhere = draftOf([...squatDrillKeys.map(drillCard), lift('curl', []), lift('squat', [set('s1')])]);
+    expect(routineToOffer(elsewhere, 5, catalog)).not.toBeNull();
+  });
+
+  it('offers no routine whose drills would not fit the set limit or the 4 hours of bouts', () => {
+    const manySets = Array.from({ length: MAX_SETS_PER_SESSION - 3 }, (_, index) => set(`s${index}`));
+    expect(routineToOffer(draftOf([lift('squat', manySets)]), 0, catalog)).toBeNull();
+    const nearlyFourHours = cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 14_400 - 180 }] });
+    expect(routineToOffer(draftOf([nearlyFourHours, lift('squat', [set('s1')])]), 1, catalog)).toBeNull();
+  });
+});
+
+describe('warmupChoices', () => {
+  const offer = squatRoutineOffer(2);
+
+  it('keeps the one-tap ramp for a lift without a routine', () => {
+    expect(warmupChoices(3, null, 10)).toEqual(['ramp']);
+    expect(warmupChoices(0, null, 10)).toEqual([]);
+  });
+
+  it('offers ramp sets, the routine or both for a lift with a routine', () => {
+    expect(warmupChoices(3, offer, 10)).toEqual(['ramp', 'routine', 'both']);
+  });
+
+  it('offers only the routine once the ramp is added, and both only when both fit', () => {
+    expect(warmupChoices(0, offer, 10)).toEqual(['routine']);
+    expect(warmupChoices(3, offer, 4)).toEqual(['ramp', 'routine']);
+  });
+});
+
+describe('warmupButtonLabel', () => {
+  const offer = squatRoutineOffer(4);
+
+  it('names the routine when it is the only warm-up left, otherwise says warm-ups', () => {
+    expect(warmupButtonLabel(['ramp'], null)).toBe('+ Add warm-ups');
+    expect(warmupButtonLabel(['ramp', 'routine', 'both'], offer)).toBe('+ Add warm-ups');
+    expect(warmupButtonLabel(['routine'], offer)).toBe('+ Add Squat routine');
+  });
+});
+
+describe('warmupChoiceText', () => {
+  const offer = squatRoutineOffer(4);
+
+  it('labels each choice and says what it adds', () => {
+    expect(warmupChoiceText('ramp', 4, offer)).toEqual({ label: 'Ramp sets', hint: '4 loaded sets' });
+    expect(warmupChoiceText('ramp', 1, offer)).toEqual({ label: 'Ramp sets', hint: '1 loaded set' });
+    expect(warmupChoiceText('routine', 4, offer)).toEqual({ label: 'Squat routine', hint: '4 drills · 4 min' });
+    expect(warmupChoiceText('both', 4, offer)).toEqual({ label: 'Both', hint: 'The routine, then 4 loaded sets' });
+  });
+});
+
+describe('withChosenWarmup', () => {
+  const draft = draftOf([lift('curl', [set('c1')]), lift('squat', [set('s1')])]);
+  const ramp = [
+    { weightKg: 20, reps: 10 },
+    { weightKg: 60, reps: 3 },
+  ];
+  const offer = squatRoutineOffer(2);
+  const shape = (changed: ReturnType<typeof draftOf>) =>
+    changed.exercises.map((exercise) => [
+      exercise.exerciseId,
+      exercise.sets.map((entry) => ('kind' in entry ? 'bout' : entry.isWarmup ? 'warm-up' : 'working')).join(' '),
+    ]);
+
+  it('adds the ramp sets, the routine drills or both, with the drills above the lift', () => {
+    expect(shape(withChosenWarmup(draft, 1, 'ramp', ramp, offer))).toEqual([
+      ['curl', 'working'],
+      ['squat', 'warm-up warm-up working'],
+    ]);
+    expect(shape(withChosenWarmup(draft, 1, 'routine', ramp, offer))).toEqual([
+      ['curl', 'working'],
+      ['drill_0', 'bout'],
+      ['drill_1', 'bout'],
+      ['squat', 'working'],
+    ]);
+    expect(shape(withChosenWarmup(draft, 1, 'both', ramp, offer))).toEqual([
+      ['curl', 'working'],
+      ['drill_0', 'bout'],
+      ['drill_1', 'bout'],
+      ['squat', 'warm-up warm-up working'],
+    ]);
   });
 });

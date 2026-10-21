@@ -1,5 +1,5 @@
 import { type PrescriptionSnapshot } from '@domain/index.ts';
-import { type Exercise, isPlannableExercise } from '../../lib/exercises/catalog-rules.ts';
+import { type CardioExercise, type Exercise, isPlannableExercise } from '../../lib/exercises/catalog-rules.ts';
 import type { ExerciseStrengthView } from '../../lib/collection/collection-data.ts';
 import { strengthText } from '../../lib/collection/collection-rules.ts';
 import type { RecentSessions } from '../../lib/history/last-session-rules.ts';
@@ -9,9 +9,22 @@ import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts'
 import { REST_OFF, restClock, type RestTimer, startsRest } from '../../lib/workout/rest-timer-rules.ts';
 import { groupOf, restsAfter } from '../../lib/workout/superset-rules.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
+import {
+  routineDrills,
+  routineSummary,
+  type WarmupRoutine,
+  warmupRoutineFor,
+} from '../../lib/workout/warmup-routine-rules.ts';
 import { warmupPlan, type WarmupRamp } from '../../lib/workout/warmup-rules.ts';
 import { type DraftSet, type LiftDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
-import { canSwapExercise, firstWorkingSet, type LastLoggedSet } from '../../offline/draft-edits.ts';
+import {
+  addWarmupSets,
+  canSwapExercise,
+  firstWorkingSet,
+  insertWarmupDrills,
+  type LastLoggedSet,
+  routineDrillsFit,
+} from '../../offline/draft-edits.ts';
 
 export interface LiftEquipment {
   barbellIds: ReadonlySet<string>;
@@ -114,6 +127,72 @@ export function warmupsToOffer(
   );
   if (plan.length > roomForSets) return [];
   return plan.map(({ weight, reps }) => ({ weightKg: unitToKg(weight, unit), reps }));
+}
+
+export interface RoutineOffer {
+  routine: WarmupRoutine;
+  drills: CardioExercise[];
+}
+
+export type WarmupChoice = 'ramp' | 'routine' | 'both';
+
+function sitsRightAbove(draft: WorkoutDraft, exerciseIndex: number, drills: readonly CardioExercise[]): boolean {
+  const above = draft.exercises.slice(Math.max(0, exerciseIndex - drills.length), exerciseIndex);
+  return above.length === drills.length && above.every((exercise, index) => exercise.exerciseId === drills[index].id);
+}
+
+export function routineToOffer(
+  draft: WorkoutDraft,
+  exerciseIndex: number,
+  catalog: readonly Exercise[],
+): RoutineOffer | null {
+  const liftKey = catalog.find((exercise) => exercise.id === draft.exercises[exerciseIndex]?.exerciseId)?.key;
+  const routine = warmupRoutineFor(liftKey);
+  const drills = routine && routineDrills(routine, catalog);
+  if (!routine || !drills) return null;
+  if (sitsRightAbove(draft, exerciseIndex, drills) || !routineDrillsFit(draft, drills.length)) return null;
+  return { routine, drills };
+}
+
+export function warmupChoices(rampSetCount: number, routine: RoutineOffer | null, roomForSets: number): WarmupChoice[] {
+  const choices: WarmupChoice[] = [];
+  if (rampSetCount > 0) choices.push('ramp');
+  if (routine === null) return choices;
+  choices.push('routine');
+  if (rampSetCount > 0 && rampSetCount + routine.drills.length <= roomForSets) choices.push('both');
+  return choices;
+}
+
+export function warmupButtonLabel(choices: readonly WarmupChoice[], routine: RoutineOffer | null): string {
+  return choices.length === 1 && choices[0] === 'routine' && routine
+    ? `+ Add ${routine.routine.name}`
+    : '+ Add warm-ups';
+}
+
+function loadedSetsText(count: number): string {
+  return `${count} loaded ${count === 1 ? 'set' : 'sets'}`;
+}
+
+export function warmupChoiceText(
+  choice: WarmupChoice,
+  rampSetCount: number,
+  routine: RoutineOffer,
+): { label: string; hint: string } {
+  if (choice === 'ramp') return { label: 'Ramp sets', hint: loadedSetsText(rampSetCount) };
+  if (choice === 'routine') return { label: routine.routine.name, hint: routineSummary(routine.routine) };
+  return { label: 'Both', hint: `The routine, then ${loadedSetsText(rampSetCount)}` };
+}
+
+export function withChosenWarmup(
+  draft: WorkoutDraft,
+  exerciseIndex: number,
+  choice: WarmupChoice,
+  rampSets: readonly LastLoggedSet[],
+  routine: RoutineOffer | null,
+): WorkoutDraft {
+  const withRamp = choice === 'routine' ? draft : addWarmupSets(draft, exerciseIndex, rampSets);
+  if (choice === 'ramp' || routine === null) return withRamp;
+  return insertWarmupDrills(withRamp, exerciseIndex, routine.drills);
 }
 
 export function restStartsAfterChange(

@@ -14,6 +14,7 @@ import {
   firstWorkingSet,
   canQuickFill,
   fillWorkingSets,
+  insertWarmupDrills,
   mostQuickFillSets,
   removeExercise,
   seedUntouchedSet,
@@ -409,5 +410,62 @@ describe('the exact shape of what a draft adds, swaps and removes', () => {
   it('removes an exercise and leaves the others as they were', () => {
     const draft = workout();
     expect(removeExercise(draft, 0).exercises).toStrictEqual([draft.exercises[1]]);
+  });
+});
+
+describe('insertWarmupDrills', () => {
+  const activity = cardioExercise().activity;
+  const drills = [
+    { id: 'leg-swings', name: 'Leg Swings', activity },
+    { id: 'hip-circles', name: 'Hip Circles', activity },
+  ];
+
+  it('puts each drill right before the lift as a one-minute bout that is not done yet', () => {
+    const draft = workout();
+    const inserted = insertWarmupDrills(draft, 1, drills);
+    expect(inserted.exercises.map((exercise) => exercise.exerciseId)).toEqual([
+      'bench',
+      'leg-swings',
+      'hip-circles',
+      'row',
+    ]);
+    const drillCards = inserted.exercises.slice(1, 3);
+    expect(
+      drillCards.map((exercise) => [
+        exercise.modality,
+        exercise.name,
+        exercise.sets.map((bout) => ({ ...bout, id: '' })),
+      ]),
+    ).toEqual(
+      drills.map(({ name }) => [
+        'cardio',
+        name,
+        [{ id: '', kind: 'cardio', durationS: 60, distanceM: null, interval: null, effort: null, done: false }],
+      ]),
+    );
+    expect(new Set(inserted.exercises.map((exercise) => exercise.clientId)).size).toBe(4);
+  });
+
+  it('inserts nothing when the drills would not fit the set limit or the 4 hours of bouts', () => {
+    const nearlyFullSets = workout({
+      exercises: [
+        {
+          ...liftsOf(workout())[0],
+          sets: Array.from({ length: MAX_SETS_PER_SESSION - 1 }, (_, index) => ({
+            ...liftsOf(workout())[0].sets[1],
+            id: `s${index}`,
+          })),
+        },
+      ],
+    });
+    expect(insertWarmupDrills(nearlyFullSets, 0, drills)).toBe(nearlyFullSets);
+    const nearlyFourHours = workout({
+      exercises: [
+        cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 14_400 - 60 }] }),
+        ...workout().exercises,
+      ],
+    });
+    expect(insertWarmupDrills(nearlyFourHours, 1, drills)).toBe(nearlyFourHours);
+    expect(insertWarmupDrills(nearlyFourHours, 1, drills.slice(0, 1)).exercises).toHaveLength(4);
   });
 });

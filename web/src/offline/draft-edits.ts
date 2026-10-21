@@ -1,5 +1,6 @@
 import { isRetestRef } from '@domain/index.ts';
-import type { CardioActivity, HoldMeasure, LoadType } from '../lib/exercises/catalog-rules.ts';
+import type { CardioActivity, CardioExercise, HoldMeasure, LoadType } from '../lib/exercises/catalog-rules.ts';
+import { boutSecondsLeft } from '../lib/workout/cardio-rules.ts';
 import {
   addExerciseTo,
   addSetTo,
@@ -11,6 +12,7 @@ import {
   withLoadType,
   withSets,
 } from '../lib/workout/exercise-edit-rules.ts';
+import { ROUTINE_DRILL_DURATION_S } from '../lib/workout/warmup-routine-rules.ts';
 import {
   type CardioDraftExercise,
   type CardioDraftSet,
@@ -107,6 +109,41 @@ export function addWarmupSets(
     }));
     return { ...exercise, sets: [...warmupSets, ...exercise.sets] };
   });
+}
+
+export function routineDrillsFit(draft: WorkoutDraft, drillCount: number): boolean {
+  const bouts = draft.exercises.flatMap((exercise) => (exercise.modality === 'cardio' ? exercise.sets : []));
+  return drillCount <= roomForSets(draft) && drillCount * ROUTINE_DRILL_DURATION_S <= boutSecondsLeft(bouts);
+}
+
+export function insertWarmupDrills(
+  draft: WorkoutDraft,
+  exerciseIndex: number,
+  drills: readonly Pick<CardioExercise, 'id' | 'name' | 'activity'>[],
+): WorkoutDraft {
+  if (!routineDrillsFit(draft, drills.length)) return draft;
+  const drillCards = drills.map(({ id, name, activity }): CardioDraftExercise => ({
+    clientId: crypto.randomUUID(),
+    exerciseId: id,
+    name,
+    modality: 'cardio',
+    activity,
+    sets: [
+      {
+        id: crypto.randomUUID(),
+        kind: 'cardio',
+        durationS: ROUTINE_DRILL_DURATION_S,
+        distanceM: null,
+        interval: null,
+        effort: null,
+        done: false,
+      },
+    ],
+  }));
+  return {
+    ...draft,
+    exercises: [...draft.exercises.slice(0, exerciseIndex), ...drillCards, ...draft.exercises.slice(exerciseIndex)],
+  };
 }
 
 export function firstWorkingSet(exercise: LiftDraftExercise): DraftSet | undefined {

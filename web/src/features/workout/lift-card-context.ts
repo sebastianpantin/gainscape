@@ -20,6 +20,7 @@ interface LiftSwap {
 
 export interface LiftCardContext {
   draft: WorkoutDraft;
+  catalog: readonly Exercise[];
   previews: SetPreview[][];
   records: (PreviewRecord | null)[][];
   unit: UnitPref;
