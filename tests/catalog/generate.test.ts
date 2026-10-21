@@ -122,6 +122,18 @@ describe('catalog generator', () => {
       ['foam_rolling', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
       ['mobility_flow', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
       ['dynamic_warm_up', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['leg_swings', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['hip_circles', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['cossack_squat', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['squat_to_stand', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['cat_cow', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['inchworm', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['worlds_greatest_stretch', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['arm_circles', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['band_pull_apart', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['open_book_rotation', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['scapular_push_up', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
+      ['wall_slide', 'cardio', 'moderate', [{ skill: 'mobility', shareBp: 10000 }]],
     ]);
   });
 

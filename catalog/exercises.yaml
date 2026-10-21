@@ -1229,3 +1229,75 @@
   equipment: bodyweight
   shares: { mobility: 10000 }
   cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: leg_swings
+  name: Leg Swings
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: hip_circles
+  name: Hip Circles
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: cossack_squat
+  name: Cossack Squat
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: squat_to_stand
+  name: Squat-to-Stand
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: cat_cow
+  name: Cat-Cow
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: inchworm
+  name: Inchworm
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: worlds_greatest_stretch
+  name: "World's Greatest Stretch"
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: arm_circles
+  name: Arm Circles
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: band_pull_apart
+  name: Band Pull-Apart
+  modality: cardio
+  equipment: other
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: open_book_rotation
+  name: Open Book Rotation
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: scapular_push_up
+  name: Scapular Push-up
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
+- key: wall_slide
+  name: Wall Slide
+  modality: cardio
+  equipment: bodyweight
+  shares: { mobility: 10000 }
+  cardio: { pace_unit: per_km, max_effort: moderate, distance: false }
