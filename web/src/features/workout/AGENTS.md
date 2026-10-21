@@ -37,6 +37,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
   - `SetMenu.tsx`: the per-row options menu.
   - `SupersetCard.tsx`: presentational; the screen passes `renderCell`.
 - `ActiveWorkoutBar.tsx` is mounted by `App.tsx` on every route except `/` and `/reveal`.
+- `WorkoutClock.tsx`: the header's elapsed time (`workoutClock`, shared with the bar, capped at `MAX_SESSION_DURATION_MS`). It ticks itself once a second so the screen does not re-render; its `timer` name changes once a minute and nothing announces the ticks.
 
 ## Rules and gotchas
 

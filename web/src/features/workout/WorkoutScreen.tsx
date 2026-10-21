@@ -48,6 +48,7 @@ import { useRestTimer } from './use-rest-timer.ts';
 import { useExerciseStrength, useSessionBaseline } from './use-session-strength.ts';
 import { useWakeLock } from './use-wake-lock.ts';
 import { useWorkoutCommands } from './use-workout-commands.ts';
+import { WorkoutClock } from './WorkoutClock.tsx';
 import { useWorkoutPreviews } from './use-workout-previews.ts';
 import { useWorkoutStart } from './use-workout-start.ts';
 import { workoutHelpKeys } from './workout-help.ts';
@@ -239,7 +240,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </div>
         <div className="live-xp">
           <strong>~{formatXp(donePreviewTotal(previews, draft.exercises))} XP</strong>
-          <span className="muted tiny">{formatCount(doneSetCount(draft), 'set')} done</span>
+          <span className="muted tiny">
+            <WorkoutClock startedAt={draft.startedAt} finishedAt={draft.finishedAt} /> ·{' '}
+            {formatCount(doneSetCount(draft), 'set')} done
+          </span>
         </div>
       </header>
       <p className="visually-hidden" role="status">
