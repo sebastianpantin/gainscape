@@ -12,9 +12,11 @@ import { AddSetButton } from './AddSetButton.tsx';
 import {
   isBarbellLift,
   routineToOffer,
+  warmupButtonKey,
   warmupButtonLabel,
   type WarmupChoice,
   warmupChoices,
+  warmupFocusAfter,
   warmupsToOffer,
   withChosenWarmup,
 } from './exercise-card-rules.ts';
@@ -44,13 +46,17 @@ export function LiftExerciseCard({ exercise, exerciseIndex, lift }: LiftExercise
   const quickFillSets = mostQuickFillSets(draft, exerciseIndex);
   const defaultSets = exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS;
   const defaultReps = workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS;
-  const addWarmup = (choice: WarmupChoice) =>
-    actions.changeDraft(withChosenWarmup(draft, exerciseIndex, choice, warmups, routine));
+  const addWarmup = (choice: WarmupChoice) => {
+    const next = withChosenWarmup(draft, exerciseIndex, choice, warmups, routine);
+    actions.focusAfterNextChange(warmupFocusAfter(draft, next, exerciseIndex));
+    actions.changeDraft(next);
+  };
   return (
     <section className="panel stack exercise-card">
       <LiftExerciseIntro exercise={exercise} exerciseIndex={exerciseIndex} lift={lift} />
       {choices.length > 0 && (
         <button
+          ref={actions.focusTarget(warmupButtonKey(exercise.clientId))}
           className="button dashed"
           type="button"
           onClick={() => (choices.length === 1 ? addWarmup(choices[0]) : setChoosingWarmup(true))}

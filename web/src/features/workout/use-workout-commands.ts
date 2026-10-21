@@ -168,6 +168,7 @@ export function useWorkoutCommands({
     removeExerciseAt,
     removeSetAt,
     focusTarget,
+    focusAfterNextChange,
     dropOn,
   };
 

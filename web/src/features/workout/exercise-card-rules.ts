@@ -25,6 +25,7 @@ import {
   type LastLoggedSet,
   routineDrillsFit,
 } from '../../offline/draft-edits.ts';
+import { type PendingFocus } from './use-focus-after-removal.ts';
 
 export interface LiftEquipment {
   barbellIds: ReadonlySet<string>;
@@ -136,9 +137,11 @@ export interface RoutineOffer {
 
 export type WarmupChoice = 'ramp' | 'routine' | 'both';
 
-function sitsRightAbove(draft: WorkoutDraft, exerciseIndex: number, drills: readonly CardioExercise[]): boolean {
-  const above = draft.exercises.slice(Math.max(0, exerciseIndex - drills.length), exerciseIndex);
-  return above.length === drills.length && above.every((exercise, index) => exercise.exerciseId === drills[index].id);
+function cardioRightAbove(draft: WorkoutDraft, exerciseIndex: number): Set<string> {
+  const ids = new Set<string>();
+  for (let index = exerciseIndex - 1; draft.exercises[index]?.modality === 'cardio'; index--)
+    ids.add(draft.exercises[index].exerciseId);
+  return ids;
 }
 
 export function routineToOffer(
@@ -150,7 +153,8 @@ export function routineToOffer(
   const routine = warmupRoutineFor(liftKey);
   const drills = routine && routineDrills(routine, catalog);
   if (!routine || !drills) return null;
-  if (sitsRightAbove(draft, exerciseIndex, drills) || !routineDrillsFit(draft, drills.length)) return null;
+  const above = cardioRightAbove(draft, exerciseIndex);
+  if (drills.some((drill) => above.has(drill.id)) || !routineDrillsFit(draft, drills.length)) return null;
   return { routine, drills };
 }
 
@@ -193,6 +197,18 @@ export function withChosenWarmup(
   const withRamp = choice === 'routine' ? draft : addWarmupSets(draft, exerciseIndex, rampSets);
   if (choice === 'ramp' || routine === null) return withRamp;
   return insertWarmupDrills(withRamp, exerciseIndex, routine.drills);
+}
+
+export function warmupButtonKey(clientId: string): string {
+  return `warmups-${clientId}`;
+}
+
+export function warmupFocusAfter(draft: WorkoutDraft, next: WorkoutDraft, exerciseIndex: number): PendingFocus {
+  const lift = draft.exercises[exerciseIndex];
+  const firstDrill = next.exercises[exerciseIndex];
+  if (firstDrill === undefined || firstDrill.clientId === lift?.clientId)
+    return { setId: null, addKey: warmupButtonKey(lift?.clientId ?? '') };
+  return { setId: firstDrill.sets[0]?.id ?? null, addKey: firstDrill.clientId };
 }
 
 export function restStartsAfterChange(

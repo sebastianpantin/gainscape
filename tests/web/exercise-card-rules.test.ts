@@ -16,10 +16,12 @@ import {
   removingAsksFirst,
   restStartsAfterChange,
   routineToOffer,
+  warmupButtonKey,
   warmupButtonLabel,
   warmupChoiceText,
   warmupChoices,
   warmupsToOffer,
+  warmupFocusAfter,
   withChosenWarmup,
 } from '../../web/src/features/workout/exercise-card-rules.ts';
 
@@ -251,7 +253,8 @@ describe('routineToOffer', () => {
   const catalog: Exercise[] = [
     catalogLift('squat', { key: 'back_squat' }),
     catalogLift('curl', { key: 'dumbbell_curl' }),
-    ...squatDrillKeys.map(catalogDrill),
+    catalogLift('deadlift', { key: 'deadlift' }),
+    ...[...squatDrillKeys, 'cat_cow', 'inchworm', 'worlds_greatest_stretch'].map(catalogDrill),
   ];
   const drillCard = (key: string) => cardioExercise({ clientId: `card-${key}`, exerciseId: key, sets: [] });
 
@@ -271,6 +274,25 @@ describe('routineToOffer', () => {
     expect(routineToOffer(added, 4, catalog)).toBeNull();
     const elsewhere = draftOf([...squatDrillKeys.map(drillCard), lift('curl', []), lift('squat', [set('s1')])]);
     expect(routineToOffer(elsewhere, 5, catalog)).not.toBeNull();
+  });
+
+  it('does not offer the routine while any of its drills sits in the cardio cards right above the lift', () => {
+    const squat = lift('squat', [set('s1')]);
+    const oneRemoved = draftOf([...squatDrillKeys.slice(1).map(drillCard), squat]);
+    expect(routineToOffer(oneRemoved, 3, catalog)).toBeNull();
+    const reordered = draftOf([...[...squatDrillKeys].reverse().map(drillCard), squat]);
+    expect(routineToOffer(reordered, 4, catalog)).toBeNull();
+    const withRunBetween = draftOf([drillCard('leg_swings'), cardioExercise(), squat]);
+    expect(routineToOffer(withRunBetween, 2, catalog)).toBeNull();
+  });
+
+  it('offers a later lift its own routine when a shared drill sits above an earlier lift', () => {
+    const draft = draftOf([
+      ...squatDrillKeys.map(drillCard),
+      lift('squat', [set('s1')]),
+      lift('deadlift', [set('d1')]),
+    ]);
+    expect(routineToOffer(draft, 5, catalog)?.routine.name).toBe('Deadlift routine');
   });
 
   it('offers no routine whose drills would not fit the set limit or the 4 hours of bouts', () => {
@@ -350,5 +372,25 @@ describe('withChosenWarmup', () => {
       ['drill_1', 'bout'],
       ['squat', 'warm-up warm-up working'],
     ]);
+  });
+});
+
+describe('warmupFocusAfter', () => {
+  const draft = draftOf([lift('curl', [set('c1')]), lift('squat', [set('s1')])]);
+  const ramp = [{ weightKg: 20, reps: 10 }];
+  const offer = squatRoutineOffer(2);
+
+  it('focuses the first bout of the first inserted drill', () => {
+    const next = withChosenWarmup(draft, 1, 'both', ramp, offer);
+    const firstDrill = next.exercises[1];
+    expect(warmupFocusAfter(draft, next, 1)).toEqual({ setId: firstDrill.sets[0].id, addKey: firstDrill.clientId });
+  });
+
+  it('keeps focus on the warm-up button of the lift when no drill was inserted', () => {
+    expect(warmupFocusAfter(draft, withChosenWarmup(draft, 1, 'ramp', ramp, offer), 1)).toEqual({
+      setId: null,
+      addKey: warmupButtonKey('card-squat'),
+    });
+    expect(warmupButtonKey('card-squat')).not.toBe('card-squat');
   });
 });

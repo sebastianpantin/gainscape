@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-interface PendingFocus {
+export interface PendingFocus {
   setId: string | null;
   addKey: string;
 }

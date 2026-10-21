@@ -40,12 +40,11 @@ export function WarmupChoiceDialog({
             key={choice}
             className="button warmup-choice"
             type="button"
-            aria-label={label}
             aria-describedby={`${id}-${choice}`}
             onClick={() => onChoose(choice)}
           >
             <strong>{label}</strong>
-            <span id={`${id}-${choice}`} className="hint">
+            <span id={`${id}-${choice}`} className="hint" aria-hidden="true">
               {hint}
             </span>
           </button>
