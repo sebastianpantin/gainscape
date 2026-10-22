@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const TAP_TARGET_PX = 44;
@@ -87,4 +87,17 @@ export async function expectRemoveSetButtonsStandApart(page: Page) {
     return found;
   }, TAP_TARGET_PX);
   expect(crowded, 'remove set buttons with a control beside them').toEqual([]);
+}
+
+export function shownUncovered(element: Locator): Promise<boolean> {
+  return element.evaluate((target) => {
+    const box = target.getBoundingClientRect();
+    const corners = [
+      [box.left + 1, box.top + 1],
+      [box.right - 1, box.top + 1],
+      [box.left + 1, box.bottom - 1],
+      [box.right - 1, box.bottom - 1],
+    ];
+    return corners.every(([x, y]) => target.contains(document.elementFromPoint(x, y)));
+  });
 }
