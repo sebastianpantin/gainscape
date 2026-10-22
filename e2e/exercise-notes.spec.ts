@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { expectNoAxeViolations } from './support/a11y.ts';
+import { expectNoAxeViolations, shownUncovered } from './support/a11y.ts';
 import { addExercise, finishWorkout, logExercise, register, uniqueUsername } from './support/app.ts';
 import { workoutCards } from './support/program-enrollment.ts';
 
@@ -35,6 +35,8 @@ test('an exercise note sticks to the exercise across workouts and is edited inli
   await card.getByRole('button', { name: `Edit note for ${BENCH}` }).click();
   const field = card.getByRole('textbox', { name: `Note for ${BENCH}` });
   await expect(field).toHaveValue('Seat 4\nWide grip');
+  await card.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  await expect.poll(() => shownUncovered(card.getByRole('spinbutton', { name: 'Reps, set 1' }))).toBe(true);
   await expectNoAxeViolations(page, 'exercise note editor');
   await field.fill('Seat 5');
   await card.getByRole('button', { name: 'Cancel' }).click();

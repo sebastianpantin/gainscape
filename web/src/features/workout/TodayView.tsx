@@ -106,15 +106,6 @@ export function TodayView({
         onStart={start.startFromPrescription}
         onSkip={start.skipProgramDay}
       />
-      {followCardShown && (
-        <FollowProgramCard
-          programs={featured}
-          onDismiss={() => {
-            dismissFollowCard(deviceStorage(), userId);
-            setFollowCardDismissed(true);
-          }}
-        />
-      )}
       <button
         ref={startButton}
         className="button primary big"
@@ -127,6 +118,15 @@ export function TodayView({
       <p className="muted" style={{ textAlign: 'center' }}>
         Freestyle: add exercises as you go.
       </p>
+      {followCardShown && (
+        <FollowProgramCard
+          programs={featured}
+          onDismiss={() => {
+            dismissFollowCard(deviceStorage(), userId);
+            setFollowCardDismissed(true);
+          }}
+        />
+      )}
       <ProgramDayStarts
         userId={userId}
         disabled={start.startingDay}

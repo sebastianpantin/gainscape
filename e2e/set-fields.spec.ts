@@ -1,5 +1,6 @@
 import { type Locator, type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
+import { shownUncovered } from './support/a11y.ts';
 import { addExercise, exerciseCard, register, setRow, uniqueUsername } from './support/app.ts';
 
 const BENCH = 'Barbell Bench Press';
@@ -10,19 +11,6 @@ const LONG_WORKOUT = [
   ['barbell curl', 'Barbell Curl'],
   ['dumbbell curl', 'Dumbbell Curl'],
 ] as const;
-
-function shownUncovered(element: Locator): Promise<boolean> {
-  return element.evaluate((target) => {
-    const box = target.getBoundingClientRect();
-    const corners = [
-      [box.left + 1, box.top + 1],
-      [box.right - 1, box.top + 1],
-      [box.left + 1, box.bottom - 1],
-      [box.right - 1, box.bottom - 1],
-    ];
-    return corners.every(([x, y]) => target.contains(document.elementFromPoint(x, y)));
-  });
-}
 
 async function scrollTopTo(page: Page, element: Locator, viewportY: number) {
   const box = await element.boundingBox();
@@ -159,7 +147,7 @@ test('far down a long workout the clock stays in view, and focusing a reps field
   const reps = setRow(exerciseCard(page, 'Deadlift'), 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ });
   await reps.evaluate((field) => field.scrollIntoView({ block: 'start' }));
   await reps.focus();
-  expect(await shownUncovered(reps)).toBe(true);
+  await expect.poll(() => shownUncovered(reps)).toBe(true);
 
   const behindBar = setRow(exerciseCard(page, 'Back Squat'), 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ });
   const barTop = (await clock.boundingBox())?.y;
@@ -167,8 +155,8 @@ test('far down a long workout the clock stays in view, and focusing a reps field
   await scrollTopTo(page, behindBar, barTop + 8);
   expect(await shownUncovered(behindBar)).toBe(false);
   await behindBar.focus();
+  await expect.poll(() => shownUncovered(behindBar)).toBe(true);
   const fieldBox = await behindBar.boundingBox();
   if (!fieldBox) throw new Error('No field box after focus');
   expect(fieldBox.y + fieldBox.height).toBeLessThanOrEqual(barTop);
-  expect(await shownUncovered(behindBar)).toBe(true);
 });
