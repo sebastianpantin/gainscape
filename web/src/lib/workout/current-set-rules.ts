@@ -14,5 +14,7 @@ function setsInTrainingOrder(draft: WorkoutDraft): { id: string; done: boolean }
 }
 
 export function currentSetId(draft: WorkoutDraft): string | null {
-  return setsInTrainingOrder(draft).find((set) => !set.done)?.id ?? null;
+  const sets = setsInTrainingOrder(draft);
+  const afterLastDone = sets.slice(sets.map((set) => set.done).lastIndexOf(true) + 1);
+  return (afterLastDone[0] ?? sets.find((set) => !set.done))?.id ?? null;
 }

@@ -21,8 +21,19 @@ describe('currentSetId', () => {
     expect(currentSetId(draft)).toBe('w1');
   });
 
-  it('stays on an earlier set the user skipped', () => {
-    const draft = draftOf([lift('squat', [set('s1'), set('s2', { done: true })])]);
+  it('moves past a skipped set to the set after the last one done', () => {
+    const draft = draftOf([
+      lift('squat', [set('s1'), set('s2', { done: true }), set('s3')]),
+      lift('bench', [set('b1')]),
+    ]);
+    expect(currentSetId(draft)).toBe('s3');
+  });
+
+  it('comes back to a skipped set once every later set is done', () => {
+    const draft = draftOf([
+      lift('squat', [set('s1'), set('s2', { done: true })]),
+      lift('bench', [set('b1', { done: true })]),
+    ]);
     expect(currentSetId(draft)).toBe('s1');
   });
 
