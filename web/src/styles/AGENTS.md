@@ -46,7 +46,7 @@ The whole visual layer. `tokens.css` defines the design tokens as CSS custom pro
 
 ## Testing
 
-- `tests/web/contrast.test.ts` checks WCAG contrast for every text token on every surface token (`--color-backdrop`, `--color-background`, `--color-background-dots`, `--color-panel`, `--color-panel-shade`, `--color-chrome`, `--color-well`). Body text needs 4.5:1. The secondary tokens (`--color-text-muted`, `--color-text-faint`, `--color-rare`, `--color-danger`) need 5:1. Add a failing case there before changing a colour token (`make test-web`).
+- `tests/web/contrast.test.ts` checks WCAG contrast for every text token on every surface token (`--color-backdrop`, `--color-background`, `--color-background-dots`, `--color-panel`, `--color-panel-current` (the current set row), `--color-panel-shade`, `--color-chrome`, `--color-well`). Body text needs 4.5:1. The secondary tokens (`--color-text-muted`, `--color-text-faint`, `--color-rare`, `--color-danger`) need 5:1. Add a failing case there before changing a colour token (`make test-web`).
 - The stylesheets have no unit test. Axe scans in `e2e/a11y.spec.ts` (`make e2e`, needs the stack) catch layout and accessibility regressions.
 
 ## Manual Notes

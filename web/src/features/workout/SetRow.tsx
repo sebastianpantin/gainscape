@@ -194,7 +194,7 @@ export function SetRow({
   }, [focusDone, onDoneFocused]);
   const calculatorId = useId();
   const amrapBadge = amrapBadgeOf(set.prescription);
-  const marked = markers.length > 0 || barbell !== null;
+  const marked = amrapBadge !== null || markers.length > 0 || barbell !== null;
   const estimatedRir = preview.basis === 'estimated' ? preview.rir : null;
   const rowClass = [
     'set-row',
@@ -210,11 +210,6 @@ export function SetRow({
     <li className={rowClass} aria-label={rowLabel} aria-current={current ? 'step' : undefined}>
       <span className="set-number">
         {setNumber}
-        {amrapBadge && (
-          <span className="amrap-badge" role="img" aria-label={`${amrapBadge}, ${GLOSSARY.amrap.name.toLowerCase()}`}>
-            {amrapBadge}
-          </span>
-        )}
         {set.isWarmup && (
           <span className="warmup-badge" role="img" aria-label="Warm-up">
             W
@@ -236,6 +231,13 @@ export function SetRow({
       <div className="set-info">
         {marked && (
           <span className="set-markers">
+            {amrapBadge && (
+              <span
+                className="amrap-badge"
+                role="img"
+                aria-label={`${GLOSSARY.amrap.term} ${amrapBadge}, ${GLOSSARY.amrap.name.toLowerCase()}`}
+              >{`${GLOSSARY.amrap.term} ${amrapBadge}`}</span>
+            )}
             {markers.map((text) => (
               <span key={text}>{text}</span>
             ))}
