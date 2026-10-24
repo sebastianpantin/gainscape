@@ -48,6 +48,7 @@ interface SetRowProps {
   onToggleDone: () => void;
   doneLabel?: string;
   rowLabel?: string;
+  current: boolean;
   focusDone: boolean;
   onDoneFocused: () => void;
 }
@@ -180,6 +181,7 @@ export function SetRow({
   onToggleDone,
   doneLabel = `Done set ${setNumber}`,
   rowLabel = `Set ${setNumber}`,
+  current,
   focusDone,
   onDoneFocused,
 }: SetRowProps) {
@@ -192,26 +194,22 @@ export function SetRow({
   }, [focusDone, onDoneFocused]);
   const calculatorId = useId();
   const amrapBadge = amrapBadgeOf(set.prescription);
-  const marked = markers.length > 0 || barbell !== null;
+  const marked = amrapBadge !== null || markers.length > 0 || barbell !== null;
   const estimatedRir = preview.basis === 'estimated' ? preview.rir : null;
   const rowClass = [
     'set-row',
     'stepped',
     set.done ? null : 'planned',
+    current ? 'current' : null,
     set.isWarmup ? 'warmup' : null,
     barbell !== null && calculatorOpen ? 'calculating' : null,
   ]
     .filter((name) => name !== null)
     .join(' ');
   return (
-    <li className={rowClass} aria-label={rowLabel}>
+    <li className={rowClass} aria-label={rowLabel} aria-current={current ? 'step' : undefined}>
       <span className="set-number">
         {setNumber}
-        {amrapBadge && (
-          <span className="amrap-badge" role="img" aria-label={`${amrapBadge}, ${GLOSSARY.amrap.name.toLowerCase()}`}>
-            {amrapBadge}
-          </span>
-        )}
         {set.isWarmup && (
           <span className="warmup-badge" role="img" aria-label="Warm-up">
             W
@@ -233,6 +231,13 @@ export function SetRow({
       <div className="set-info">
         {marked && (
           <span className="set-markers">
+            {amrapBadge && (
+              <span
+                className="amrap-badge"
+                role="img"
+                aria-label={`${GLOSSARY.amrap.term} ${amrapBadge}, ${GLOSSARY.amrap.name.toLowerCase()}`}
+              >{`${GLOSSARY.amrap.term} ${amrapBadge}`}</span>
+            )}
             {markers.map((text) => (
               <span key={text}>{text}</span>
             ))}

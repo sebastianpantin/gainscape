@@ -13,6 +13,7 @@ import { useStanding } from '../../lib/progress/standing.ts';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
 import { addableExercises, canAddSetTo } from '../../lib/workout/exercise-edit-rules.ts';
 import { readPlateSettings } from '../../lib/workout/plate-settings-store.ts';
+import { currentSetId } from '../../lib/workout/current-set-rules.ts';
 import { supersetGroups } from '../../lib/workout/superset-rules.ts';
 import { readTrainingDeviceSettings } from '../../lib/workout/training-device-store.ts';
 import { doneSetCount, withSessionRpe } from '../../offline/draft-edits.ts';
@@ -206,6 +207,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       onSave={(body) => saveNote(exerciseId, body)}
     />
   );
+  const currentSet = currentSetId(draft);
   const lift: LiftCardContext = {
     draft,
     catalog: exercises,
@@ -227,6 +229,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     menuActions: commands.menuActions,
     swap: { openKey: commands.swappingKey, lifts: swappableLifts(exercises), swapTo: commands.swapTo },
     focusSetId: commands.focusSetId,
+    currentSetId: currentSet,
     onFocusSet: commands.setFocusSetId,
     note: noteFor,
   };
@@ -293,6 +296,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               note={noteFor(exercise.exerciseId, exercise.name)}
               roomForBout={roomForBout}
               roomForSet={roomForSet}
+              currentSetId={currentSet}
               actions={cardActions}
             />
           );
@@ -308,6 +312,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               unit={unitPref}
               note={noteFor(exercise.exerciseId, exercise.name)}
               roomForSet={roomForSet}
+              currentSetId={currentSet}
               actions={cardActions}
             />
           );

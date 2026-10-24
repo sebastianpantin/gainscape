@@ -34,6 +34,7 @@ const SURFACES = [
   'color-background',
   'color-background-dots',
   'color-panel',
+  'color-panel-current',
   'color-panel-shade',
   'color-chrome',
   'color-well',
