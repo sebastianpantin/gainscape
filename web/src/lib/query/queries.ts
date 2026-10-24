@@ -61,6 +61,7 @@ import { fetchLatestTrainingDate, loadTrainingDaysCacheFirst } from '../stats/tr
 import { loadWeeklyExerciseSetsCacheFirst } from '../stats/volume-history.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
 import { announceDataChange } from './data-changes.ts';
+import { allInOrder } from './settle-rules.ts';
 
 export const FRIENDS_QUERY_PREFIX = ['friends'] as const;
 export const FEED_QUERY_PREFIX = ['feed'] as const;
@@ -209,7 +210,7 @@ export function friendProfileQuery(friendId: string) {
   return queryOptions({
     queryKey: ['friend-profile', friendId] as const,
     queryFn: async (): Promise<FriendProfileLoad | null> => {
-      const [skills, profile, collection] = await Promise.all([
+      const [skills, profile, collection] = await allInOrder([
         fetchSkills(),
         fetchProfileView(friendId),
         fetchCollectionView(friendId),
@@ -224,7 +225,7 @@ export function profilePreviewQuery(userId: string) {
   return queryOptions({
     queryKey: ['profile-preview', userId] as const,
     queryFn: async () => {
-      const [skills, profile] = await Promise.all([fetchSkills(), fetchProfileView(userId)]);
+      const [skills, profile] = await allInOrder([fetchSkills(), fetchProfileView(userId)]);
       if (!profile) throw new Error('Your profile could not be loaded.');
       return { skills, profile };
     },
