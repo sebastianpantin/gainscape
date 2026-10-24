@@ -70,6 +70,7 @@ interface HoldSetRowProps {
   record: PreviewRecord | null;
   drop: ShownSetDrop | null;
   unit: UnitPref;
+  current: boolean;
   onChange: (changes: Partial<Omit<HoldDraftSet, 'id' | 'kind'>>) => void;
   menuRef: Ref<HTMLButtonElement>;
   onRemove: () => void;
@@ -85,13 +86,18 @@ export function HoldSetRow({
   record,
   drop,
   unit,
+  current,
   onChange,
   menuRef,
   onRemove,
   onToggleDone,
 }: HoldSetRowProps) {
   return (
-    <li className={set.done ? 'set-row hold-row' : 'set-row hold-row planned'} aria-label={`Set ${setNumber}`}>
+    <li
+      className={`set-row hold-row${set.done ? '' : ' planned'}${current ? ' current' : ''}`}
+      aria-label={`Set ${setNumber}`}
+      aria-current={current ? 'step' : undefined}
+    >
       <span className="set-number">{setNumber}</span>
       <HoldFields
         set={set}

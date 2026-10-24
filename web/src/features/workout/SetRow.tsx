@@ -48,6 +48,7 @@ interface SetRowProps {
   onToggleDone: () => void;
   doneLabel?: string;
   rowLabel?: string;
+  current: boolean;
   focusDone: boolean;
   onDoneFocused: () => void;
 }
@@ -180,6 +181,7 @@ export function SetRow({
   onToggleDone,
   doneLabel = `Done set ${setNumber}`,
   rowLabel = `Set ${setNumber}`,
+  current,
   focusDone,
   onDoneFocused,
 }: SetRowProps) {
@@ -198,13 +200,14 @@ export function SetRow({
     'set-row',
     'stepped',
     set.done ? null : 'planned',
+    current ? 'current' : null,
     set.isWarmup ? 'warmup' : null,
     barbell !== null && calculatorOpen ? 'calculating' : null,
   ]
     .filter((name) => name !== null)
     .join(' ');
   return (
-    <li className={rowClass} aria-label={rowLabel}>
+    <li className={rowClass} aria-label={rowLabel} aria-current={current ? 'step' : undefined}>
       <span className="set-number">
         {setNumber}
         {amrapBadge && (

@@ -17,6 +17,7 @@ interface CardioSetRowProps {
   preview: SetPreview;
   drop: ShownSetDrop | null;
   unit: UnitPref;
+  current: boolean;
   onChange: (changes: Partial<Omit<CardioDraftSet, 'id' | 'kind'>>) => void;
   menuRef: Ref<HTMLButtonElement>;
   onRemove: () => void;
@@ -31,13 +32,18 @@ export function CardioSetRow({
   preview,
   drop,
   unit,
+  current,
   onChange,
   menuRef,
   onRemove,
   onToggleDone,
 }: CardioSetRowProps) {
   return (
-    <li className={bout.done ? 'set-row bout-row' : 'set-row bout-row planned'} aria-label={`Bout ${boutNumber}`}>
+    <li
+      className={`set-row bout-row${bout.done ? '' : ' planned'}${current ? ' current' : ''}`}
+      aria-label={`Bout ${boutNumber}`}
+      aria-current={current ? 'step' : undefined}
+    >
       <span className="set-number">{boutNumber}</span>
       <BoutFields bout={bout} paceUnit={paceUnit} tracksDistance={tracksDistance} unit={unit} onChange={onChange} />
       <span className={bout.done ? 'set-xp earned' : 'set-xp'}>{previewXpLabel(preview)}</span>

@@ -35,6 +35,7 @@ export interface LiftCardContext {
   menuActions: (exerciseIndex: number) => ExerciseMenuAction[];
   swap: LiftSwap;
   focusSetId: string | null;
+  currentSetId: string | null;
   onFocusSet: (setId: string | null) => void;
   note: (exerciseId: string, exerciseName: string) => ReactNode;
 }
