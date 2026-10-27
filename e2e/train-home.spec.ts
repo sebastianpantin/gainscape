@@ -1,7 +1,15 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
-import { logBench, openTab, register, uniqueUsername } from './support/app.ts';
+import {
+  logBench,
+  logExercise,
+  logWorkout,
+  openFromProfile,
+  openTab,
+  register,
+  uniqueUsername,
+} from './support/app.ts';
 import { activeDropsOfLatestSession, equipGear, grantItems, seedQuestProgress } from './support/db.ts';
 
 test.use({ viewport: { width: 360, height: 780 } });
@@ -108,4 +116,38 @@ test('highlights show the last workout, the latest record and the rarest drop, e
   await expect(highlights.getByRole('link', { name: 'Last workout Today', exact: true })).toBeVisible();
   await expect(highlights.getByRole('link', { name: /^Latest record Barbell Bench Press.* · / })).toBeVisible();
   await context.setOffline(false);
+});
+
+test('highlights show the DOTS score once sex, bodyweight and all three competition lifts are known', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('home_dots'));
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByLabel('Bodyweight (kg)').fill('80');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await openTab(page, 'Train');
+  await logWorkout(page, async () => {
+    await logExercise(page, 'squat', 'Back Squat', [{ weightKg: 100, reps: 5 }]);
+    await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 80, reps: 5 }]);
+    await logExercise(page, 'deadlift', 'Deadlift', [{ weightKg: 120, reps: 5 }]);
+  });
+  await openTab(page, 'Train');
+  const highlights = page.getByRole('region', { name: 'Highlights' });
+  await expect(highlights.getByRole('link', { name: 'Last workout Today', exact: true })).toBeVisible();
+
+  await openFromProfile(page, 'Settings');
+  const male = page.getByRole('radiogroup', { name: 'Sex' }).getByRole('radio', { name: 'Male', exact: true });
+  await male.press('Enter');
+  await expect(male).toHaveAttribute('aria-checked', 'true');
+  await openTab(page, 'Train');
+  const dots = highlights.getByRole('link', { name: /^DOTS score \d+\.\d{2}$/ });
+  await expect(dots).toBeVisible();
+  await expectNoAxeViolations(page, 'train home, DOTS highlight');
+  const score = (await dots.textContent())?.replace('DOTS score', '') ?? '';
+
+  await dots.click();
+  await expect(page).toHaveURL(/\/collection\/stats$/);
+  await expect(page.getByRole('region', { name: 'Relative strength' }).getByText(score, { exact: true })).toBeVisible();
 });

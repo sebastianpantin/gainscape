@@ -1,6 +1,28 @@
 import { describe, expect, it } from 'vitest';
+import type { Collection } from '../../web/src/lib/collection/collection-data.ts';
 import type { LiftExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
-import { competitionBests, dotsCard, dotsScore, POWERLIFTING_LIFT_KEYS } from '../../web/src/lib/stats/dots-rules.ts';
+import {
+  competitionBests,
+  dotsCard,
+  dotsCardFor,
+  dotsHighlightText,
+  dotsScore,
+  POWERLIFTING_LIFT_KEYS,
+} from '../../web/src/lib/stats/dots-rules.ts';
+
+function lift(id: string, key: string | null): LiftExercise {
+  return {
+    id,
+    key,
+    name: id,
+    equipment: 'barbell',
+    modality: 'lift',
+    loadType: 'external',
+    custom: key === null,
+    archived: false,
+    skillShares: [],
+  };
+}
 
 describe('dotsScore', () => {
   it('matches the published DOTS formula for men', () => {
@@ -90,20 +112,6 @@ describe('dotsCard', () => {
 });
 
 describe('competitionBests', () => {
-  function lift(id: string, key: string | null): LiftExercise {
-    return {
-      id,
-      key,
-      name: id,
-      equipment: 'barbell',
-      modality: 'lift',
-      loadType: 'external',
-      custom: key === null,
-      archived: false,
-      skillShares: [],
-    };
-  }
-
   it('maps each catalog lift key to the current best e1RM, ignoring custom exercises without a key', () => {
     const bests = competitionBests(
       [lift('squat-id', 'back_squat'), lift('bench-id', 'barbell_bench_press'), lift('my-squat', null)],
@@ -113,5 +121,53 @@ describe('competitionBests', () => {
       ]),
     );
     expect(bests).toEqual(new Map([['back_squat', 150]]));
+  });
+});
+
+describe('dotsHighlightText', () => {
+  it('shows the score with two decimals once it is ready', () => {
+    expect(dotsHighlightText({ kind: 'ready', totalKg: 485, bodyweightKg: 105, score: 292.5 })).toBe('292.50');
+  });
+
+  it('shows nothing until the score is ready', () => {
+    expect(dotsHighlightText({ kind: 'needs-sex' })).toBeNull();
+    expect(dotsHighlightText({ kind: 'needs-bodyweight' })).toBeNull();
+    expect(dotsHighlightText({ kind: 'missing-lifts', text: 'Log a deadlift to see your DOTS score.' })).toBeNull();
+  });
+});
+
+describe('dotsCardFor', () => {
+  function collectionWith(e1rmKgById: Record<string, number>): Collection {
+    return {
+      exercises: [lift('squat-id', 'back_squat'), lift('bench-id', 'barbell_bench_press'), lift('dead-id', 'deadlift')],
+      data: {
+        repMaxesByExercise: new Map(),
+        maxRepsByExercise: new Map(),
+        strengthByExercise: new Map(
+          Object.entries(e1rmKgById).map(([id, e1rmKg]) => [id, { e1rmKg, repsCapacity: null }]),
+        ),
+        pinnedExerciseIds: [],
+        nextPinPosition: 0,
+        cardioRecords: [],
+      },
+    };
+  }
+
+  it('scores the profile against the collection bests of the three competition lifts', () => {
+    const collection = collectionWith({ 'squat-id': 250, 'bench-id': 150, 'dead-id': 300 });
+    expect(dotsCardFor({ sex: 'male', bodyweightKg: 100 }, collection)).toEqual({
+      kind: 'ready',
+      totalKg: 700,
+      bodyweightKg: 100,
+      score: 430.86,
+    });
+  });
+
+  it('names the lifts the collection has no e1RM for', () => {
+    const collection = collectionWith({ 'bench-id': 150 });
+    expect(dotsCardFor({ sex: 'female', bodyweightKg: 60 }, collection)).toEqual({
+      kind: 'missing-lifts',
+      text: 'Log a squat and a deadlift to see your DOTS score.',
+    });
   });
 });

@@ -8,7 +8,7 @@ import { type Profile } from '../../lib/profile/profile-rules.ts';
 import { trendDayText } from '../../lib/progress/bodyweight-trend-rules.ts';
 import { collectionQuery, profileQuery, relativeStrengthQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
-import { competitionBests, dotsCard } from '../../lib/stats/dots-rules.ts';
+import { dotsCardFor } from '../../lib/stats/dots-rules.ts';
 import {
   currentMultipleText,
   type RelativeStrengthLift,
@@ -61,11 +61,7 @@ function LiftPicker({ userId, lifts }: { userId: string; lifts: RelativeStrength
 }
 
 function DotsPanel({ profile, collection }: { profile: Profile; collection: Collection }) {
-  const card = dotsCard({
-    sex: profile.sex,
-    bodyweightKg: profile.bodyweightKg,
-    bestE1rmKgByKey: competitionBests(collection.exercises, collection.data.strengthByExercise),
-  });
+  const card = dotsCardFor(profile, collection);
   return (
     <div className="stack">
       <h3>DOTS score</h3>
