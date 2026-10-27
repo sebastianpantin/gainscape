@@ -7,6 +7,7 @@ import {
   dotsCardFor,
   dotsLevel,
   dotsScore,
+  dotsTotalKg,
   POWERLIFTING_LIFT_KEYS,
 } from '../../web/src/lib/stats/dots-rules.ts';
 
@@ -60,14 +61,16 @@ describe('dotsScore', () => {
 
 describe('dotsCard', () => {
   const allBests = new Map([
-    ['back_squat', 250],
-    ['barbell_bench_press', 150],
-    ['deadlift', 300],
+    ['back_squat', { exerciseId: 'squat-id', e1rmKg: 250 }],
+    ['barbell_bench_press', { exerciseId: 'bench-id', e1rmKg: 150 }],
+    ['deadlift', { exerciseId: 'dead-id', e1rmKg: 300 }],
   ]);
 
   it('totals the squat, bench press and deadlift bests at the latest bodyweight', () => {
-    expect(dotsCard({ sex: 'male', bodyweightKg: 100, bestE1rmKgByKey: allBests })).toEqual({
+    expect(dotsCard({ sex: 'male', bodyweightKg: 100, bestsByKey: allBests })).toEqual({
       kind: 'ready',
+      sex: 'male',
+      liftIds: ['squat-id', 'bench-id', 'dead-id'],
       totalKg: 700,
       bodyweightKg: 100,
       score: 430.86,
@@ -75,32 +78,36 @@ describe('dotsCard', () => {
   });
 
   it('asks for the sex before anything else', () => {
-    expect(dotsCard({ sex: null, bodyweightKg: null, bestE1rmKgByKey: new Map() })).toEqual({ kind: 'needs-sex' });
+    expect(dotsCard({ sex: null, bodyweightKg: null, bestsByKey: new Map() })).toEqual({ kind: 'needs-sex' });
   });
 
   it('asks for a bodyweight once the sex is set', () => {
-    expect(dotsCard({ sex: 'female', bodyweightKg: null, bestE1rmKgByKey: allBests })).toEqual({
+    expect(dotsCard({ sex: 'female', bodyweightKg: null, bestsByKey: allBests })).toEqual({
       kind: 'needs-bodyweight',
     });
   });
 
   it('names every missing lift in squat, bench press, deadlift order', () => {
     expect(
-      dotsCard({ sex: 'male', bodyweightKg: 80, bestE1rmKgByKey: new Map([['barbell_bench_press', 100]]) }),
+      dotsCard({
+        sex: 'male',
+        bodyweightKg: 80,
+        bestsByKey: new Map([['barbell_bench_press', { exerciseId: 'bench-id', e1rmKg: 100 }]]),
+      }),
     ).toEqual({
       kind: 'missing-lifts',
       text: 'Log a squat and a deadlift to see your DOTS score.',
     });
-    expect(dotsCard({ sex: 'male', bodyweightKg: 80, bestE1rmKgByKey: new Map() })).toMatchObject({
+    expect(dotsCard({ sex: 'male', bodyweightKg: 80, bestsByKey: new Map() })).toMatchObject({
       text: 'Log a squat, a bench press and a deadlift to see your DOTS score.',
     });
     expect(
       dotsCard({
         sex: 'male',
         bodyweightKg: 80,
-        bestE1rmKgByKey: new Map([
-          ['back_squat', 100],
-          ['barbell_bench_press', 80],
+        bestsByKey: new Map([
+          ['back_squat', { exerciseId: 'squat-id', e1rmKg: 100 }],
+          ['barbell_bench_press', { exerciseId: 'bench-id', e1rmKg: 80 }],
         ]),
       }),
     ).toMatchObject({ text: 'Log a deadlift to see your DOTS score.' });
@@ -108,6 +115,13 @@ describe('dotsCard', () => {
 
   it('uses the catalog keys of the competition lifts', () => {
     expect(POWERLIFTING_LIFT_KEYS).toEqual(['back_squat', 'barbell_bench_press', 'deadlift']);
+  });
+});
+
+describe('dotsTotalKg', () => {
+  it('sums the e1RMs to two decimals', () => {
+    expect(dotsTotalKg([116.667, 93.333, 140.004])).toBe(350);
+    expect(dotsTotalKg([100.123, 50.111, 10])).toBe(160.23);
   });
 });
 
@@ -120,14 +134,15 @@ describe('competitionBests', () => {
         ['my-squat', { e1rmKg: 300, repsCapacity: null }],
       ]),
     );
-    expect(bests).toEqual(new Map([['back_squat', 150]]));
+    expect(bests).toEqual(new Map([['back_squat', { exerciseId: 'squat-id', e1rmKg: 150 }]]));
   });
 });
 
 describe('dotsLevel', () => {
   it('rounds the score to a whole level once it is ready', () => {
-    expect(dotsLevel({ kind: 'ready', totalKg: 485, bodyweightKg: 105, score: 292.5 })).toBe(293);
-    expect(dotsLevel({ kind: 'ready', totalKg: 485, bodyweightKg: 105, score: 292.49 })).toBe(292);
+    const ready = { kind: 'ready', sex: 'male', liftIds: ['a', 'b', 'c'], totalKg: 485, bodyweightKg: 105 } as const;
+    expect(dotsLevel({ ...ready, score: 292.5 })).toBe(293);
+    expect(dotsLevel({ ...ready, score: 292.49 })).toBe(292);
   });
 
   it('has no level until the score is ready', () => {
@@ -158,6 +173,8 @@ describe('dotsCardFor', () => {
     const collection = collectionWith({ 'squat-id': 250, 'bench-id': 150, 'dead-id': 300 });
     expect(dotsCardFor({ sex: 'male', bodyweightKg: 100 }, collection)).toEqual({
       kind: 'ready',
+      sex: 'male',
+      liftIds: ['squat-id', 'bench-id', 'dead-id'],
       totalKg: 700,
       bodyweightKg: 100,
       score: 430.86,

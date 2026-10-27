@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import type { Exercise, LiftExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { SessionProgress } from '../../web/src/lib/progress/exercise-progress-rules.ts';
 import { dotsScore } from '../../web/src/lib/stats/dots-rules.ts';
 import {
   dotsHistory,
   dotsHistorySeries,
+  levelRangeText,
   nextLevelText,
-  powerliftingLiftIds,
   STRENGTH_LEVELS,
   strengthLevel,
   strengthLevelMarker,
   strengthMeterLabel,
+  withCurrentPoint,
 } from '../../web/src/lib/stats/strength-level-rules.ts';
 
 function session(localDate: string, e1rmKg: number | null, startedAt = `${localDate}T08:00:00Z`): SessionProgress {
@@ -26,20 +26,6 @@ function session(localDate: string, e1rmKg: number | null, startedAt = `${localD
   };
 }
 
-function lift(id: string, key: string | null): LiftExercise {
-  return {
-    id,
-    key,
-    name: id,
-    equipment: 'barbell',
-    modality: 'lift',
-    loadType: 'external',
-    custom: key === null,
-    archived: false,
-    skillShares: [],
-  };
-}
-
 describe('STRENGTH_LEVELS', () => {
   it('lists the five bands from Beginner to Elite with their lowest DOTS score', () => {
     expect(STRENGTH_LEVELS).toEqual([
@@ -48,6 +34,18 @@ describe('STRENGTH_LEVELS', () => {
       { name: 'Intermediate', fromScore: 275 },
       { name: 'Advanced', fromScore: 350 },
       { name: 'Elite', fromScore: 425 },
+    ]);
+  });
+});
+
+describe('levelRangeText', () => {
+  it('names the scores of each band, the first as below the next band', () => {
+    expect(STRENGTH_LEVELS.map((_, index) => levelRangeText(index))).toEqual([
+      'below 200',
+      '200+',
+      '275+',
+      '350+',
+      '425+',
     ]);
   });
 });
@@ -112,23 +110,6 @@ describe('strengthLevelMarker', () => {
     expect(strengthLevelMarker(-20)).toBe(0);
     expect(strengthLevelMarker(500)).toBe(1);
     expect(strengthLevelMarker(640)).toBe(1);
-  });
-});
-
-describe('powerliftingLiftIds', () => {
-  it('returns the exercise ids of squat, bench press and deadlift in that order', () => {
-    const exercises: Exercise[] = [
-      lift('id-deadlift', 'deadlift'),
-      lift('id-row', 'barbell_row'),
-      lift('id-squat', 'back_squat'),
-      lift('id-custom', null),
-      lift('id-bench', 'barbell_bench_press'),
-    ];
-    expect(powerliftingLiftIds(exercises)).toEqual(['id-squat', 'id-bench', 'id-deadlift']);
-  });
-
-  it('is null when one of the three is not in the list', () => {
-    expect(powerliftingLiftIds([lift('id-squat', 'back_squat'), lift('id-bench', 'barbell_bench_press')])).toBeNull();
   });
 });
 
@@ -224,6 +205,33 @@ describe('dotsHistorySeries', () => {
         name: 'DOTS',
         points: [{ x: Date.parse('2026-10-04T00:00:00Z'), y: dotsScore(420, 80, 'female') }],
       },
+    ]);
+  });
+});
+
+describe('withCurrentPoint', () => {
+  const past = [
+    { day: '2026-10-04', totalKg: 420, bodyweightKg: 80 },
+    { day: '2026-10-12', totalKg: 425, bodyweightKg: 82 },
+  ];
+
+  it('appends today from the current total and bodyweight', () => {
+    expect(withCurrentPoint(past, '2026-10-27', 430, 81)).toEqual([
+      ...past,
+      { day: '2026-10-27', totalKg: 430, bodyweightKg: 81 },
+    ]);
+  });
+
+  it('replaces a point already on today', () => {
+    expect(withCurrentPoint(past, '2026-10-12', 428, 82)).toEqual([
+      past[0],
+      { day: '2026-10-12', totalKg: 428, bodyweightKg: 82 },
+    ]);
+  });
+
+  it('charts today alone without history', () => {
+    expect(withCurrentPoint([], '2026-10-27', 430, 81)).toEqual([
+      { day: '2026-10-27', totalKg: 430, bodyweightKg: 81 },
     ]);
   });
 });

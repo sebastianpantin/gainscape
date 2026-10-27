@@ -1,12 +1,11 @@
 import { roundTo } from '@domain/math.ts';
 import { z } from 'zod';
-import type { Exercise } from '../exercises/catalog-rules.ts';
 import { type Sex } from '../profile/profile-rules.ts';
 import { type BodyweightDay } from '../progress/bodyweight-trend-rules.ts';
 import { type SessionProgress } from '../progress/exercise-progress-rules.ts';
 import { daysBetween } from '../ui/date-bucket-rules.ts';
 import { type ChartSeries } from '../ui/line-chart-rules.ts';
-import { dotsScore, POWERLIFTING_LIFT_KEYS } from './dots-rules.ts';
+import { dotsScore, dotsTotalKg } from './dots-rules.ts';
 
 export const STRENGTH_LEVELS = [
   { name: 'Beginner', fromScore: 0 },
@@ -27,6 +26,11 @@ export interface StrengthLevel {
 
 function levelIndex(score: number): number {
   return Math.max(0, STRENGTH_LEVELS.filter((level) => score >= level.fromScore).length - 1);
+}
+
+export function levelRangeText(index: number): string {
+  const next = STRENGTH_LEVELS[index + 1];
+  return index === 0 && next ? `below ${next.fromScore}` : `${STRENGTH_LEVELS[index].fromScore}+`;
 }
 
 export function strengthLevel(score: number): StrengthLevel {
@@ -52,11 +56,6 @@ export function strengthLevelMarker(score: number): number {
   const to = STRENGTH_LEVELS[index + 1]?.fromScore ?? BAR_TOP_SCORE;
   const insideBand = Math.min(Math.max((score - from) / (to - from), 0), 1);
   return (index + insideBand) / STRENGTH_LEVELS.length;
-}
-
-export function powerliftingLiftIds(exercises: readonly Exercise[]): string[] | null {
-  const ids = POWERLIFTING_LIFT_KEYS.map((key) => exercises.find((exercise) => exercise.key === key)?.id);
-  return ids.every((id) => id !== undefined) ? ids : null;
 }
 
 export const dotsHistorySchema = z.array(z.object({ day: z.string(), totalKg: z.number(), bodyweightKg: z.number() }));
@@ -96,13 +95,19 @@ export function dotsHistory(
   return days.flatMap((day) => {
     const bodyweightKg = bodyweightAsOf(byDay, day);
     const e1rms = lifts.map((sessions) => e1rmAsOf(sessions, day, windowDays));
-    if (bodyweightKg === null || e1rms.some((e1rmKg) => e1rmKg === null)) return [];
-    const totalKg = roundTo(
-      2,
-      e1rms.reduce<number>((sum, e1rmKg) => sum + (e1rmKg ?? 0), 0),
-    );
-    return [{ day, totalKg, bodyweightKg }];
+    const known = e1rms.filter((e1rmKg): e1rmKg is number => e1rmKg !== null);
+    if (bodyweightKg === null || known.length < e1rms.length) return [];
+    return [{ day, totalKg: dotsTotalKg(known), bodyweightKg }];
   });
+}
+
+export function withCurrentPoint(
+  points: readonly DotsHistoryPoint[],
+  today: string,
+  totalKg: number,
+  bodyweightKg: number,
+): DotsHistoryPoint[] {
+  return [...points.filter((point) => point.day !== today), { day: today, totalKg, bodyweightKg }];
 }
 
 export function dotsHistorySeries(points: readonly DotsHistoryPoint[], sex: Sex): ChartSeries[] {

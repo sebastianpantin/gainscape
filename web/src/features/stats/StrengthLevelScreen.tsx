@@ -1,27 +1,32 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LineChart } from '../../components/LineChart.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { type Collection } from '../../lib/collection/collection-data.ts';
-import { type Profile, type Sex } from '../../lib/profile/profile-rules.ts';
+import { type Profile } from '../../lib/profile/profile-rules.ts';
 import { trendDayText } from '../../lib/progress/bodyweight-trend-rules.ts';
 import { collectionQuery, dotsHistoryQuery, profileQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
-import { dotsCardFor } from '../../lib/stats/dots-rules.ts';
+import { type DotsCard, dotsCardFor } from '../../lib/stats/dots-rules.ts';
 import {
   dotsHistorySeries,
+  levelRangeText,
   nextLevelText,
-  powerliftingLiftIds,
   STRENGTH_LEVELS,
   strengthLevel,
   strengthLevelMarker,
   strengthMeterLabel,
+  withCurrentPoint,
 } from '../../lib/stats/strength-level-rules.ts';
+import { localDateIn } from '../../lib/ui/date-bucket-rules.ts';
 import { formatWeight } from '../../lib/units.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
 import { DotsCardMessage } from './DotsCardMessage.tsx';
+
+type ReadyDotsCard = Extract<DotsCard, { kind: 'ready' }>;
 
 function StrengthBar({ score }: { score: number }) {
   return (
@@ -41,15 +46,15 @@ function StrengthLegend() {
         <li key={level.name}>
           <span className={`strength-swatch strength-${level.name.toLowerCase()}`} aria-hidden="true" />
           <span>{level.name}</span>
-          <span className="muted">{index === 0 ? `below ${STRENGTH_LEVELS[1].fromScore}` : `${level.fromScore}+`}</span>
+          <span className="muted">{levelRangeText(index)}</span>
         </li>
       ))}
     </ul>
   );
 }
 
-function DotsHistorySection({ userId, liftIds, sex }: { userId: string; liftIds: string[]; sex: Sex }) {
-  const history = useQuery(dotsHistoryQuery(userId, liftIds));
+function DotsHistorySection({ userId, card, today }: { userId: string; card: ReadyDotsCard; today: string }) {
+  const history = useQuery(dotsHistoryQuery(userId, card.liftIds));
   const loaded = loadedState(history.data, history.error);
   const notice = loaded.status === 'ready' ? cacheFirstNotice(loaded.data, OFFLINE_STATS_NOTICE) : null;
   return (
@@ -62,19 +67,17 @@ function DotsHistorySection({ userId, liftIds, sex }: { userId: string; liftIds:
       )}
       {loaded.status === 'loading' && <ListSkeleton panels={1} />}
       {loaded.status === 'failed' && <ProblemWithRetry problem={loaded.problem} onRetry={history.refetch} />}
-      {loaded.status === 'ready' &&
-        (loaded.data.loaded.length > 0 ? (
-          <LineChart
-            title="DOTS over time"
-            series={dotsHistorySeries(loaded.data.loaded, sex)}
-            formatX={trendDayText}
-            formatY={(value) => `${value}`}
-          />
-        ) : (
-          <p className="muted">
-            Log the squat, bench press and deadlift on or after your first saved bodyweight to chart your DOTS.
-          </p>
-        ))}
+      {loaded.status === 'ready' && (
+        <LineChart
+          title="DOTS over time"
+          series={dotsHistorySeries(
+            withCurrentPoint(loaded.data.loaded, today, card.totalKg, card.bodyweightKg),
+            card.sex,
+          )}
+          formatX={trendDayText}
+          formatY={String}
+        />
+      )}
     </section>
   );
 }
@@ -88,17 +91,17 @@ function StrengthLevelPanels({
   profile: Profile;
   collection: Collection;
 }) {
+  const [openedAt] = useState(() => Date.now());
   const card = dotsCardFor(profile, collection);
-  if (card.kind !== 'ready' || profile.sex === null) {
+  if (card.kind !== 'ready') {
     return (
       <section className="panel stack" aria-labelledby="strength-level-now">
         <h2 id="strength-level-now">Current level</h2>
-        {card.kind !== 'ready' && <DotsCardMessage card={card} />}
+        <DotsCardMessage card={card} />
       </section>
     );
   }
   const level = strengthLevel(card.score);
-  const liftIds = powerliftingLiftIds(collection.exercises);
   return (
     <>
       <section className="panel stack" aria-labelledby="strength-level-now">
@@ -122,7 +125,7 @@ function StrengthLevelPanels({
           </div>
         </dl>
       </section>
-      {liftIds && <DotsHistorySection userId={userId} liftIds={liftIds} sex={profile.sex} />}
+      <DotsHistorySection userId={userId} card={card} today={localDateIn(profile.timezone, openedAt)} />
     </>
   );
 }
@@ -149,7 +152,8 @@ export function StrengthLevelScreen({ userId }: { userId: string }) {
       )}
       <p className="muted tiny">
         Levels are Gainscape&apos;s rough guide bands, not an official scale. DOTS compares the squat, bench press and
-        deadlift total across bodyweights. The chart uses each workout&apos;s best e1RM.
+        deadlift total across bodyweights. The chart takes past days from each workout&apos;s best e1RM and today from
+        your current bests.
       </p>
     </main>
   );

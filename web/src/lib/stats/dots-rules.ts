@@ -39,29 +39,41 @@ const POWERLIFTING_LIFTS = [
 
 export const POWERLIFTING_LIFT_KEYS: readonly string[] = POWERLIFTING_LIFTS.map((lift) => lift.key);
 
+export interface CompetitionBest {
+  exerciseId: string;
+  e1rmKg: number;
+}
+
 export function competitionBests(
   exercises: readonly Exercise[],
   strengthByExercise: ReadonlyMap<string, ExerciseStrengthView>,
-): Map<string, number> {
-  const bests = new Map<string, number>();
+): Map<string, CompetitionBest> {
+  const bests = new Map<string, CompetitionBest>();
   for (const exercise of exercises) {
     const e1rmKg = strengthByExercise.get(exercise.id)?.e1rmKg ?? null;
     if (exercise.key && e1rmKg !== null && POWERLIFTING_LIFT_KEYS.includes(exercise.key))
-      bests.set(exercise.key, e1rmKg);
+      bests.set(exercise.key, { exerciseId: exercise.id, e1rmKg });
   }
   return bests;
+}
+
+export function dotsTotalKg(e1rmsKg: readonly number[]): number {
+  return roundTo(
+    2,
+    e1rmsKg.reduce((sum, e1rmKg) => sum + e1rmKg, 0),
+  );
 }
 
 export type DotsCard =
   | { kind: 'needs-sex' }
   | { kind: 'needs-bodyweight' }
   | { kind: 'missing-lifts'; text: string }
-  | { kind: 'ready'; totalKg: number; bodyweightKg: number; score: number };
+  | { kind: 'ready'; sex: Sex; liftIds: readonly string[]; totalKg: number; bodyweightKg: number; score: number };
 
 interface DotsInputs {
   sex: Sex | null;
   bodyweightKg: number | null;
-  bestE1rmKgByKey: ReadonlyMap<string, number>;
+  bestsByKey: ReadonlyMap<string, CompetitionBest>;
 }
 
 function listed(names: readonly string[]): string {
@@ -70,25 +82,30 @@ function listed(names: readonly string[]): string {
   return `${withArticles.slice(0, -1).join(', ')} and ${withArticles[withArticles.length - 1]}`;
 }
 
-export function dotsCard({ sex, bodyweightKg, bestE1rmKgByKey }: DotsInputs): DotsCard {
+export function dotsCard({ sex, bodyweightKg, bestsByKey }: DotsInputs): DotsCard {
   if (sex === null) return { kind: 'needs-sex' };
   if (bodyweightKg === null) return { kind: 'needs-bodyweight' };
-  const missing = POWERLIFTING_LIFTS.filter((lift) => !bestE1rmKgByKey.has(lift.key)).map((lift) => lift.name);
-  if (missing.length > 0) {
+  const bests = POWERLIFTING_LIFTS.map((lift) => bestsByKey.get(lift.key));
+  if (!bests.every((best) => best !== undefined)) {
+    const missing = POWERLIFTING_LIFTS.filter((_, index) => bests[index] === undefined).map((lift) => lift.name);
     return { kind: 'missing-lifts', text: `Log ${listed(missing)} to see your DOTS score.` };
   }
-  const totalKg = roundTo(
-    2,
-    POWERLIFTING_LIFTS.reduce((sum, lift) => sum + (bestE1rmKgByKey.get(lift.key) ?? 0), 0),
-  );
-  return { kind: 'ready', totalKg, bodyweightKg, score: dotsScore(totalKg, bodyweightKg, sex) };
+  const totalKg = dotsTotalKg(bests.map((best) => best.e1rmKg));
+  return {
+    kind: 'ready',
+    sex,
+    liftIds: bests.map((best) => best.exerciseId),
+    totalKg,
+    bodyweightKg,
+    score: dotsScore(totalKg, bodyweightKg, sex),
+  };
 }
 
 export function dotsCardFor(profile: Pick<Profile, 'sex' | 'bodyweightKg'>, collection: Collection): DotsCard {
   return dotsCard({
     sex: profile.sex,
     bodyweightKg: profile.bodyweightKg,
-    bestE1rmKgByKey: competitionBests(collection.exercises, collection.data.strengthByExercise),
+    bestsByKey: competitionBests(collection.exercises, collection.data.strengthByExercise),
   });
 }
 
