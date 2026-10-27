@@ -1,3 +1,11 @@
+- prs: [169, 172]
+  version: 0.20.0
+  date: 2026-10-27
+  title: DOTS score on Train
+  items:
+    - Highlights on Train now show your DOTS score once you have set your sex and bodyweight and logged a squat, bench press and deadlift. Tap it to open Stats.
+    - Start workout now sits above the Follow a program card.
+    - On iPhone, the field you are typing in no longer hides behind the bar at the bottom of a workout.
 - prs: [167]
   version: 0.19.1
   date: 2026-10-21
