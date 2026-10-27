@@ -37,7 +37,21 @@ const running: Exercise = {
 function data(pinnedExerciseIds: string[]): CollectionData {
   return {
     repMaxesByExercise: new Map([
-      ['bench', [{ loadKg: 100, exact: true }, null, null, null, null, null, null, null, null, null]],
+      [
+        'bench',
+        [
+          { loadKg: 100, exact: true, achievedAt: '2026-10-01T10:00:00Z' },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+        ],
+      ],
     ]),
     maxRepsByExercise: new Map(),
     strengthByExercise: new Map(),
@@ -107,8 +121,8 @@ describe('strengthText', () => {
 describe('collectionDataFrom', () => {
   const rows = {
     repMaxes: [
-      { exercise_id: 'bench', reps: 5, load_kg: '82.50', exact_set_id: 'set-1' },
-      { exercise_id: 'bench', reps: 1, load_kg: 100, exact_set_id: null },
+      { exercise_id: 'bench', reps: 5, load_kg: '82.50', exact_set_id: 'set-1', achieved_at: '2026-10-02T10:00:00Z' },
+      { exercise_id: 'bench', reps: 1, load_kg: 100, exact_set_id: null, achieved_at: '2026-10-03T10:00:00Z' },
     ],
     bodyweightRecords: [{ exercise_id: 'pull_up', max_reps: 12 }],
     strengths: [
@@ -125,8 +139,8 @@ describe('collectionDataFrom', () => {
   it('places rep maxes in their rep slot with numeric loads and exactness', () => {
     const slots = collectionDataFrom(rows).repMaxesByExercise.get('bench');
     expect(slots).toHaveLength(10);
-    expect(slots?.[0]).toEqual({ loadKg: 100, exact: false });
-    expect(slots?.[4]).toEqual({ loadKg: 82.5, exact: true });
+    expect(slots?.[0]).toEqual({ loadKg: 100, exact: false, achievedAt: '2026-10-03T10:00:00Z' });
+    expect(slots?.[4]).toEqual({ loadKg: 82.5, exact: true, achievedAt: '2026-10-02T10:00:00Z' });
     expect(slots?.filter((slot) => slot !== null)).toHaveLength(2);
   });
 

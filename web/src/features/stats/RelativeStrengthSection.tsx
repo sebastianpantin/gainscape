@@ -19,6 +19,7 @@ import {
 import { formatWeight } from '../../lib/units.ts';
 import { type Collection } from '../../lib/collection/collection-data.ts';
 import { DotsCardMessage } from './DotsCardMessage.tsx';
+import { SbdTotalCard } from './SbdTotalCard.tsx';
 
 function LiftMultipleChart({ userId, lift }: { userId: string; lift: RelativeStrengthLift }) {
   const relative = useQuery(relativeStrengthQuery(userId, lift.id));
@@ -115,6 +116,7 @@ export function RelativeStrengthSection({ userId }: { userId: string }) {
       {loaded.status === 'failed' && <ProblemWithRetry problem={loaded.problem} onRetry={retry} />}
       {loaded.status === 'ready' && (
         <>
+          <SbdTotalCard profile={loaded.data.profile} collection={loaded.data.collection} />
           {lifts.length === 0 ? (
             <p className="muted">Log a barbell lift to see its e1RM per bodyweight.</p>
           ) : (

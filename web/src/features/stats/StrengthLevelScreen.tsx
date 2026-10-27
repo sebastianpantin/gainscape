@@ -25,6 +25,7 @@ import { formatWeight } from '../../lib/units.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
 import { DotsCardMessage } from './DotsCardMessage.tsx';
+import { SbdTotalCard } from './SbdTotalCard.tsx';
 
 type ReadyDotsCard = Extract<DotsCard, { kind: 'ready' }>;
 
@@ -125,6 +126,7 @@ function StrengthLevelPanels({
           </div>
         </dl>
       </section>
+      <SbdTotalCard profile={profile} collection={collection} standalone />
       <DotsHistorySection userId={userId} card={card} today={localDateIn(profile.timezone, openedAt)} />
     </>
   );

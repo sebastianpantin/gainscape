@@ -8,7 +8,7 @@ import { nullableNumber } from '../rows.ts';
 import { formatWeight } from '../units.ts';
 
 export const COLLECTION_COLUMNS = {
-  repMaxes: 'exercise_id, reps, load_kg, exact_set_id',
+  repMaxes: 'exercise_id, reps, load_kg, exact_set_id, achieved_at',
   bodyweightRecords: 'exercise_id, max_reps',
   strengths: 'exercise_id, e1rm_kg, reps_capacity',
   pins: 'exercise_id, position',
@@ -22,7 +22,13 @@ export interface StrengthRow {
 }
 
 export interface CollectionRows {
-  repMaxes: { exercise_id: string; reps: number; load_kg: number | string; exact_set_id: string | null }[];
+  repMaxes: {
+    exercise_id: string;
+    reps: number;
+    load_kg: number | string;
+    exact_set_id: string | null;
+    achieved_at: string | null;
+  }[];
   bodyweightRecords: { exercise_id: string; max_reps: number }[];
   strengths: StrengthRow[];
   pins: { exercise_id: string; position: number }[];
@@ -43,7 +49,11 @@ export function collectionDataFrom(rows: CollectionRows): CollectionData {
   const repMaxesByExercise = new Map<string, (RepMaxSlotView | null)[]>();
   for (const row of rows.repMaxes) {
     const slots = repMaxesByExercise.get(row.exercise_id) ?? emptySlots<RepMaxSlotView>();
-    slots[row.reps - 1] = { loadKg: Number(row.load_kg), exact: row.exact_set_id !== null };
+    slots[row.reps - 1] = {
+      loadKg: Number(row.load_kg),
+      exact: row.exact_set_id !== null,
+      achievedAt: row.achieved_at,
+    };
     repMaxesByExercise.set(row.exercise_id, slots);
   }
   return {

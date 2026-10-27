@@ -212,7 +212,15 @@ describe('saving screen caches after an online load', () => {
   it('saves the collection rows with the full exercise list, archived exercises included', async () => {
     server.tables = {
       exercises: [exerciseRow('bench', null), exerciseRow('old-press', '2026-09-01T00:00:00Z')],
-      rep_maxes: [{ exercise_id: 'old-press', reps: 5, load_kg: '60', exact_set_id: 'set-1' }],
+      rep_maxes: [
+        {
+          exercise_id: 'old-press',
+          reps: 5,
+          load_kg: '60',
+          exact_set_id: 'set-1',
+          achieved_at: '2026-10-01T10:00:00Z',
+        },
+      ],
     };
     await loadCollectionCacheFirst(USER_ID);
     const saved = collectionCache.read(storage, USER_ID);
@@ -220,7 +228,9 @@ describe('saving screen caches after an online load', () => {
       ['bench', false],
       ['old-press', true],
     ]);
-    expect(saved?.rows.repMaxes).toEqual([{ exercise_id: 'old-press', reps: 5, load_kg: '60', exact_set_id: 'set-1' }]);
+    expect(saved?.rows.repMaxes).toEqual([
+      { exercise_id: 'old-press', reps: 5, load_kg: '60', exact_set_id: 'set-1', achieved_at: '2026-10-01T10:00:00Z' },
+    ]);
   });
 });
 
