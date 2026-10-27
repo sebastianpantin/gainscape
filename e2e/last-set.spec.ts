@@ -69,3 +69,32 @@ test('each set compares with last session’s set and a planned set fills it in 
     'Last 60×5',
   );
 });
+
+test.describe('on a 360x740 phone', () => {
+  test.use({ viewport: { width: 360, height: 740 } });
+
+  test('a rated top set offers a back-off weight on the next set that fills in one tap', async ({ page }) => {
+    await register(page, uniqueUsername('bo'));
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    const bench = await addExercise(page, 'bench', 'Barbell Bench Press');
+    const first = setRow(bench, 1);
+    const second = setRow(bench, 2);
+    await weightOf(first).fill('100');
+    await repsOf(first).fill('3');
+    await first.getByRole('radio', { name: 'Near fail', exact: true }).click();
+    await first.getByRole('button', { name: 'Done set 1' }).click();
+    await bench.getByRole('button', { name: '+ Add set' }).click();
+
+    const backoff = second.getByRole('button', { name: /^Back-off/ });
+    await expect(backoff).toHaveAccessibleName('Back-off 95 kg × 3, fill set 2');
+    await expect(backoff).toHaveText('Back-off 95 kg × 3');
+    await expect(second.getByRole('button', { name: /^Last time/ })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+
+    await backoff.click();
+    await expect(weightOf(second)).toHaveValue('95');
+    await expect(repsOf(second)).toHaveValue('3');
+    await expect(second.getByRole('button', { name: /^Back-off/ })).toHaveCount(0);
+    await expect(first.getByRole('button', { name: /^Back-off/ })).toHaveCount(0);
+  });
+});

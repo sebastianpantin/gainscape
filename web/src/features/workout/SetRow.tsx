@@ -19,6 +19,8 @@ import { amrapBadgeOf } from '../../lib/programs/program-today-rules.ts';
 import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import type { LastLoggedSet } from '../../offline/draft-edits.ts';
+import { type BackoffSuggestion } from '../../lib/workout/backoff-rules.ts';
+import { BackoffChip } from './BackoffChip.tsx';
 import { EffortSelector } from './EffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
 import { lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './last-set-rules.ts';
@@ -42,6 +44,7 @@ interface SetRowProps {
   markers: readonly string[];
   barbell: { plates: number[]; text: string; setup: DraftBarbellSetup } | null;
   last: LastLoggedSet | null;
+  backoff: BackoffSuggestion | null;
   onChange: (changes: Partial<Omit<DraftSet, 'id'>>) => void;
   menuRef: Ref<HTMLButtonElement>;
   onRemove: () => void;
@@ -174,6 +177,7 @@ export function SetRow({
   markers,
   barbell,
   last,
+  backoff,
   onChange,
   menuRef,
   onRemove,
@@ -191,6 +195,7 @@ export function SetRow({
     onDoneFocused();
   }, [focusDone, onDoneFocused]);
   const calculatorId = useId();
+  const showBackoff = backoff !== null && !(set.weightKg === backoff.weightKg && set.reps === backoff.reps);
   const amrapBadge = amrapBadgeOf(set.prescription);
   const marked = markers.length > 0 || barbell !== null;
   const estimatedRir = preview.basis === 'estimated' ? preview.rir : null;
@@ -254,7 +259,8 @@ export function SetRow({
             )}
           </span>
         )}
-        {last !== null && (
+        {showBackoff && <BackoffChip backoff={backoff} unit={unit} setNumber={setNumber} onFill={onChange} />}
+        {!showBackoff && last !== null && (
           <LastSet last={last} set={set} loadType={loadType} unit={unit} setNumber={setNumber} onChange={onChange} />
         )}
         <span className={set.done ? 'set-xp earned' : 'set-xp'}>

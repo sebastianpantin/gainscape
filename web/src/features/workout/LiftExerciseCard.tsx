@@ -22,6 +22,7 @@ import {
 } from './exercise-card-rules.ts';
 import { type LiftCardContext } from './lift-card-context.ts';
 import { LiftExerciseIntro } from './LiftExerciseIntro.tsx';
+import { backoffSuggestion } from '../../lib/workout/backoff-rules.ts';
 import { LiftSetRow } from './LiftSetRow.tsx';
 import { QuickFill } from './QuickFill.tsx';
 import { WarmupChoiceDialog } from './WarmupChoiceDialog.tsx';
@@ -37,6 +38,7 @@ interface LiftExerciseCardProps {
 
 export function LiftExerciseCard({ exercise, exerciseIndex, lift }: LiftExerciseCardProps) {
   const { draft, actions } = lift;
+  const backoff = backoffSuggestion(exercise, lift.unit);
   const workingSet = firstWorkingSet(exercise);
   const barbell = isBarbellLift(exercise, lift.equipment) ? lift.barbellSetup : null;
   const warmups = warmupsToOffer(exercise, lift.unit, barbell, roomForSets(draft));
@@ -86,6 +88,7 @@ export function LiftExerciseCard({ exercise, exerciseIndex, lift }: LiftExercise
             set={set}
             setIndex={setIndex}
             lift={lift}
+            backoff={backoff}
           />
         ))}
       </ol>
