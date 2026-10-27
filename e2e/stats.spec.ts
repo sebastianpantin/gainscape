@@ -1,6 +1,6 @@
 import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
-import { logBench, openTab, register, uniqueUsername } from './support/app.ts';
+import { definitionOf, logBench, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 import { regularLootTotals, setDryRolls } from './support/db.ts';
 
 test('Stats opens from Collection, names the page, keeps Collection lit and leads back', async ({ page }) => {
@@ -211,4 +211,26 @@ test('relative strength charts e1RM per bodyweight and DOTS asks for the sex, th
   ).toBeVisible();
   await page.getByRole('main').getByRole('link', { name: '‹ Stats', exact: true }).click();
   await expect(page).toHaveURL(/\/collection\/stats$/);
+});
+
+test('the SBD total card shows the estimated and the best lifted total after squat, bench and deadlift', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('stats_sbd'));
+  await logWorkout(page, async () => {
+    await logExercise(page, 'squat', 'Back Squat', [{ weightKg: 100, reps: 1 }]);
+    await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 80, reps: 1 }]);
+    await logExercise(page, 'deadlift', 'Deadlift', [{ weightKg: 120, reps: 1 }]);
+  });
+  await openTab(page, 'Collection');
+  await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
+
+  const total = page.getByRole('region', { name: 'Relative strength' }).getByRole('region', { name: 'Total' });
+  await expect(total.getByText('Estimated total', { exact: true })).toBeVisible();
+  await expect(definitionOf(total, 'Estimated total')).toHaveText(/^\d+(\.\d+)? kg$/);
+  await expect(definitionOf(total, 'Best lifted total')).toHaveText(/^300 kg, oldest lift from \d{4}-\d{2}-\d{2}$/);
+  await expect(definitionOf(total, 'Squat')).toHaveText(/estimated, 100 kg heaviest$/);
+  await expect(definitionOf(total, 'Bench')).toHaveText(/estimated, 80 kg heaviest$/);
+  await expect(definitionOf(total, 'Deadlift')).toHaveText(/estimated, 120 kg heaviest$/);
+  await expectNoAxeViolations(page, 'stats SBD total');
 });

@@ -20,6 +20,7 @@ The Stats screen at `/collection/stats`, linked from the Collection Records tab:
 
 ## Rules and gotchas
 
+- The SBD total card (`SbdTotalCard.tsx`, `sbd-total-rules.ts`) shows two different totals: estimated = the DOTS total (current e1RM, 56-day window), best lifted = the heaviest load lifted per lift (`rep_maxes` reps=1, which covers any rep count since `applyRepMaxSet` fills the lower slots), dated by the oldest of the three. A missing single leaves only the best total empty; a missing lift's e1RM hides both. Only the three `POWERLIFTING_LIFTS` keys count, never pause squats, sumo or custom lifts.
 - Keep the screen thin: each section's decisions go in a pure `lib/**/*-rules.ts` with a unit test.
 - Read history through aggregate RPCs that return one jsonb, never by paging the History list client-side (it embeds every set and pages in 50s).
 - Every Stats query loads through `loadStatCacheFirst` (`../../offline/stats-cache.ts`), so the last answer shows offline with `OFFLINE_STATS_NOTICE`. Its root goes in `workout-changed` and `account-reset` in `query-freshness-rules.ts`.

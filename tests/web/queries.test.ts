@@ -41,7 +41,21 @@ const COLLECTION: Collection = {
   exercises: [BENCH],
   data: {
     repMaxesByExercise: new Map([
-      ['bench', [{ loadKg: 100, exact: true }, null, null, null, null, null, null, null, null, null]],
+      [
+        'bench',
+        [
+          { loadKg: 100, exact: true, achievedAt: '2026-10-01T10:00:00Z' },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+        ],
+      ],
     ]),
     maxRepsByExercise: new Map(),
     strengthByExercise: new Map(),

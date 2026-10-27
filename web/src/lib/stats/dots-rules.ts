@@ -31,7 +31,7 @@ export function dotsScore(totalKg: number, bodyweightKg: number, sex: Sex): numb
   return roundTo(2, (DOTS_SCALE / denominator) * totalKg);
 }
 
-const POWERLIFTING_LIFTS = [
+export const POWERLIFTING_LIFTS = [
   { key: 'back_squat', name: 'squat' },
   { key: 'barbell_bench_press', name: 'bench press' },
   { key: 'deadlift', name: 'deadlift' },
@@ -76,7 +76,7 @@ interface DotsInputs {
   bestsByKey: ReadonlyMap<string, CompetitionBest>;
 }
 
-function listed(names: readonly string[]): string {
+export function listed(names: readonly string[]): string {
   const withArticles = names.map((name) => `a ${name}`);
   if (withArticles.length === 1) return withArticles[0];
   return `${withArticles.slice(0, -1).join(', ')} and ${withArticles[withArticles.length - 1]}`;

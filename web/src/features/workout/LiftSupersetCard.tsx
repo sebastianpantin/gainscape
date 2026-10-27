@@ -1,6 +1,7 @@
 import { addRound, canAddRound, roundRows, type SupersetGroup } from '../../lib/workout/superset-rules.ts';
 import { type LiftCardContext } from './lift-card-context.ts';
 import { LiftExerciseIntro } from './LiftExerciseIntro.tsx';
+import { backoffSuggestion } from '../../lib/workout/backoff-rules.ts';
 import { LiftSetRow } from './LiftSetRow.tsx';
 import { SupersetCard } from './SupersetCard.tsx';
 import { supersetMembers } from './workout-screen-rules.ts';
@@ -13,6 +14,7 @@ interface LiftSupersetCardProps {
 export function LiftSupersetCard({ group, lift }: LiftSupersetCardProps) {
   const { draft, actions } = lift;
   const members = supersetMembers(draft, group);
+  const backoffs = new Map(members.map(({ exercise }) => [exercise.clientId, backoffSuggestion(exercise, lift.unit)]));
   return (
     <SupersetCard
       exerciseNames={members.map(({ exercise }) => exercise.name)}
@@ -36,6 +38,7 @@ export function LiftSupersetCard({ group, lift }: LiftSupersetCardProps) {
             set={member.sets[setIndex]}
             setIndex={setIndex}
             lift={lift}
+            backoff={backoffs.get(member.clientId) ?? null}
             doneLabel={`Done ${member.name} round ${round}`}
             rowLabel={`${member.name}, set ${setIndex + 1}`}
           />

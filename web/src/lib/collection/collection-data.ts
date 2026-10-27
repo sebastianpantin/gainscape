@@ -22,6 +22,7 @@ import { supabase } from '../platform/supabase.ts';
 export interface RepMaxSlotView {
   loadKg: number;
   exact: boolean;
+  achievedAt: string | null;
 }
 
 export type ExerciseStrengthView = { e1rmKg: number | null; repsCapacity: number | null };

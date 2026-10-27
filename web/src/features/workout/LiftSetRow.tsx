@@ -1,4 +1,5 @@
 import { programSetMarkers, programSetMarkerTexts } from '../../lib/programs/program-set-rules.ts';
+import { type BackoffSuggestion } from '../../lib/workout/backoff-rules.ts';
 import { updateSet } from '../../lib/workout/exercise-edit-rules.ts';
 import { barbellPlates, barbellPlatesText } from '../../lib/workout/plate-rules.ts';
 import { stopsRestForWarmup } from '../../lib/workout/rest-timer-rules.ts';
@@ -18,11 +19,21 @@ interface LiftSetRowProps {
   set: DraftSet;
   setIndex: number;
   lift: LiftCardContext;
+  backoff: BackoffSuggestion | null;
   doneLabel?: string;
   rowLabel?: string;
 }
 
-export function LiftSetRow({ exercise, exerciseIndex, set, setIndex, lift, doneLabel, rowLabel }: LiftSetRowProps) {
+export function LiftSetRow({
+  exercise,
+  exerciseIndex,
+  set,
+  setIndex,
+  lift,
+  backoff,
+  doneLabel,
+  rowLabel,
+}: LiftSetRowProps) {
   const { draft, rest, actions, unit, barbellSetup } = lift;
   const compound = lift.equipment.compoundIds.has(exercise.exerciseId);
   const place = { exerciseIndex, setIndex, label: feedbackLabel(exercise.name, 'set', setIndex + 1) };
@@ -49,6 +60,7 @@ export function LiftSetRow({ exercise, exerciseIndex, set, setIndex, lift, doneL
             }
           : null
       }
+      backoff={backoff?.setIndex === setIndex ? backoff : null}
       last={lastSetForRow(exercise.sets, setIndex, lift.recentSessions.get(exercise.exerciseId)?.[0])}
       doneLabel={doneLabel}
       rowLabel={rowLabel}
