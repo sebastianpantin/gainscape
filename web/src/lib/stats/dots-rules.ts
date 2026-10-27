@@ -92,6 +92,6 @@ export function dotsCardFor(profile: Pick<Profile, 'sex' | 'bodyweightKg'>, coll
   });
 }
 
-export function dotsHighlightText(card: DotsCard): string | null {
-  return card.kind === 'ready' ? card.score.toFixed(2) : null;
+export function dotsLevel(card: DotsCard): number | null {
+  return card.kind === 'ready' ? Math.round(card.score) : null;
 }

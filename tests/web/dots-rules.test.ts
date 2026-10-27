@@ -5,7 +5,7 @@ import {
   competitionBests,
   dotsCard,
   dotsCardFor,
-  dotsHighlightText,
+  dotsLevel,
   dotsScore,
   POWERLIFTING_LIFT_KEYS,
 } from '../../web/src/lib/stats/dots-rules.ts';
@@ -124,15 +124,16 @@ describe('competitionBests', () => {
   });
 });
 
-describe('dotsHighlightText', () => {
-  it('shows the score with two decimals once it is ready', () => {
-    expect(dotsHighlightText({ kind: 'ready', totalKg: 485, bodyweightKg: 105, score: 292.5 })).toBe('292.50');
+describe('dotsLevel', () => {
+  it('rounds the score to a whole level once it is ready', () => {
+    expect(dotsLevel({ kind: 'ready', totalKg: 485, bodyweightKg: 105, score: 292.5 })).toBe(293);
+    expect(dotsLevel({ kind: 'ready', totalKg: 485, bodyweightKg: 105, score: 292.49 })).toBe(292);
   });
 
-  it('shows nothing until the score is ready', () => {
-    expect(dotsHighlightText({ kind: 'needs-sex' })).toBeNull();
-    expect(dotsHighlightText({ kind: 'needs-bodyweight' })).toBeNull();
-    expect(dotsHighlightText({ kind: 'missing-lifts', text: 'Log a deadlift to see your DOTS score.' })).toBeNull();
+  it('has no level until the score is ready', () => {
+    expect(dotsLevel({ kind: 'needs-sex' })).toBeNull();
+    expect(dotsLevel({ kind: 'needs-bodyweight' })).toBeNull();
+    expect(dotsLevel({ kind: 'missing-lifts', text: 'Log a deadlift to see your DOTS score.' })).toBeNull();
   });
 });
 

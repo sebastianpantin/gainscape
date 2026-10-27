@@ -4,14 +4,11 @@ import { Link } from 'react-router-dom';
 import { capitalized } from '../../lib/names.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import {
-  collectionQuery,
   exerciseListQuery,
   lastWorkoutDateQuery,
-  profileQuery,
   rarestDropQuery,
   recordTimelineQuery,
 } from '../../lib/query/queries.ts';
-import { dotsCardFor, dotsHighlightText } from '../../lib/stats/dots-rules.ts';
 import { recentRecords } from '../../lib/stats/pr-timeline-rules.ts';
 import { lastWorkoutText, latestTrainedDate } from './highlight-rules.ts';
 
@@ -43,25 +40,15 @@ function useLatestRecordText(userId: string, unit: UnitPref): string | null {
   return latest ? `${latest.text} · ${latest.dateText}` : null;
 }
 
-function useDotsText(userId: string): string | null {
-  const profile = useQuery(profileQuery(userId)).data?.loaded;
-  const scoreable = profile?.sex != null && profile.bodyweightKg != null;
-  const collection = useQuery({ ...collectionQuery(userId), enabled: scoreable }).data?.loaded;
-  if (!profile || !collection) return null;
-  return dotsHighlightText(dotsCardFor(profile, collection));
-}
-
 export function HighlightsCard({ userId, today, trainedDates, unit }: HighlightsCardProps) {
   const headingId = useId();
   const lastWorkout = useLastWorkoutText(userId, today, trainedDates);
   const latestRecord = useLatestRecordText(userId, unit);
   const rarest = useQuery(rarestDropQuery(userId)).data;
-  const dots = useDotsText(userId);
 
   const highlights: Highlight[] = [
     ...(lastWorkout ? [{ label: 'Last workout', text: lastWorkout, to: '/collection/stats' }] : []),
     ...(latestRecord ? [{ label: 'Latest record', text: latestRecord, to: '/collection/stats/records' }] : []),
-    ...(dots ? [{ label: 'DOTS score', text: dots, to: '/collection/stats' }] : []),
     ...(rarest
       ? [
           {
