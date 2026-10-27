@@ -200,7 +200,7 @@ button.back-link {
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 1px solid var(--color-outline);
+  border: var(--border-width) solid var(--color-outline);
 }
 
 .rep-max-table,
@@ -252,7 +252,7 @@ button.back-link {
   text-align: center;
   color: var(--color-text-muted);
   background: var(--color-well);
-  border: 1px solid var(--color-outline);
+  border: var(--border-width) solid var(--color-outline);
 }
 
 .calendar-day[aria-current='date'] {
@@ -282,4 +282,86 @@ button.back-link {
 
 .calendar-day.heat-4 {
   background: var(--color-accent);
+}
+
+.strength-level-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-4xl);
+  color: var(--color-accent);
+  text-shadow: var(--text-shadow);
+}
+
+.strength-bar {
+  position: relative;
+  display: flex;
+  height: var(--space-4);
+  margin: var(--space-2) 0;
+  border: var(--border-width) solid var(--color-outline);
+  box-shadow: var(--bevel-sunken);
+}
+
+.strength-bar-segment {
+  flex: 1;
+}
+
+.strength-bar-segment + .strength-bar-segment {
+  border-left: var(--border-width) solid var(--color-outline);
+}
+
+.strength-bar-marker {
+  position: absolute;
+  top: calc(-1 * var(--space-2));
+  bottom: calc(-1 * var(--space-2));
+  width: var(--space-1);
+  transform: translateX(-50%);
+  background: var(--color-text);
+  border: var(--border-width) solid var(--color-outline);
+}
+
+.strength-beginner {
+  background: var(--color-plate-steel);
+}
+
+.strength-novice {
+  background: var(--color-plate-green);
+}
+
+.strength-intermediate {
+  background: var(--color-plate-blue);
+}
+
+.strength-advanced {
+  background: var(--color-plate-yellow);
+}
+
+.strength-elite {
+  background: var(--color-plate-red);
+}
+
+.strength-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.strength-legend li {
+  display: grid;
+  grid-template-columns: var(--space-3) 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.strength-swatch {
+  width: var(--space-3);
+  height: var(--space-3);
+  border: var(--border-width) solid var(--color-outline);
+}
+
+.strength-figures dd {
+  white-space: nowrap;
 }

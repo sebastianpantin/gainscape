@@ -7,6 +7,7 @@ export const OFFLINE_STATS_NOTICE = 'Offline: showing your saved stats.';
 export const SAVED_STAT_ENTRIES = {
   'training-days': 12,
   'relative-strength': 12,
+  'dots-history': 1,
   'weekly-exercise-sets': 1,
   'record-timeline': 1,
   'loot-stats': 1,

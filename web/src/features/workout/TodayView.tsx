@@ -16,6 +16,7 @@ import { readProgramCache } from '../../offline/program-cache.ts';
 import { InstallCard } from '../../pwa/InstallCard.tsx';
 import { FriendActivityStrip } from '../friends/FriendActivityStrip.tsx';
 import { FirstRunDialog } from '../onboarding/FirstRunDialog.tsx';
+import { DotsStat } from './DotsStat.tsx';
 import { FollowProgramCard } from './FollowProgramCard.tsx';
 import { HighlightsCard } from './HighlightsCard.tsx';
 import { LevelStat } from './LevelStat.tsx';
@@ -76,6 +77,8 @@ export function TodayView({
           </span>
           <h1 className="title">Train</h1>
         </div>
+      </div>
+      <div className="header-stats">
         {standing.status === 'ready' && (
           <LevelStat
             userId={userId}
@@ -83,6 +86,7 @@ export function TodayView({
             combatLevel={standing.standing.combatLevel}
           />
         )}
+        <DotsStat userId={userId} />
       </div>
       {deviceNotices}
       {notice === 'deleted' && (

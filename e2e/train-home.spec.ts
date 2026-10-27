@@ -118,7 +118,7 @@ test('highlights show the last workout, the latest record and the rarest drop, e
   await context.setOffline(false);
 });
 
-test('highlights show the DOTS score once sex, bodyweight and all three competition lifts are known', async ({
+test('the header shows the DOTS level once sex, bodyweight and all three competition lifts are known', async ({
   page,
 }) => {
   await register(page, uniqueUsername('home_dots'));
@@ -134,20 +134,37 @@ test('highlights show the DOTS score once sex, bodyweight and all three competit
     await logExercise(page, 'deadlift', 'Deadlift', [{ weightKg: 120, reps: 5 }]);
   });
   await openTab(page, 'Train');
-  const highlights = page.getByRole('region', { name: 'Highlights' });
-  await expect(highlights.getByRole('link', { name: 'Last workout Today', exact: true })).toBeVisible();
+  const dots = page.getByRole('main').getByRole('link', { name: /^DOTS \d+$/ });
+  await expect(page.getByRole('link', { name: /^Total level \d+ Combat \d+$/ })).toBeVisible();
+  await expect(dots).toHaveCount(0);
 
   await openFromProfile(page, 'Settings');
   const male = page.getByRole('radiogroup', { name: 'Sex' }).getByRole('radio', { name: 'Male', exact: true });
   await male.press('Enter');
   await expect(male).toHaveAttribute('aria-checked', 'true');
   await openTab(page, 'Train');
-  const dots = highlights.getByRole('link', { name: /^DOTS score \d+\.\d{2}$/ });
   await expect(dots).toBeVisible();
-  await expectNoAxeViolations(page, 'train home, DOTS highlight');
-  const score = (await dots.textContent())?.replace('DOTS score', '') ?? '';
+  const highlights = page.getByRole('region', { name: 'Highlights' });
+  await expect(highlights.getByRole('link', { name: 'Last workout Today', exact: true })).toBeVisible();
+  await expect(highlights.getByRole('link', { name: /DOTS/ })).toHaveCount(0);
+  await expectNoAxeViolations(page, 'train home, DOTS level');
+  const level = Number((await dots.textContent())?.replace('DOTS', ''));
 
   await dots.click();
-  await expect(page).toHaveURL(/\/collection\/stats$/);
-  await expect(page.getByRole('region', { name: 'Relative strength' }).getByText(score, { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/collection\/stats\/strength-level$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Strength level', exact: true })).toBeVisible();
+  const current = page.getByRole('region', { name: 'Current level' });
+  const score = current.locator('dt:text-is("DOTS") + dd');
+  await expect(score).toBeVisible();
+  const exactScore = Number(await score.textContent());
+  expect(Math.round(exactScore)).toBe(level);
+  await expect(current.getByRole('paragraph').filter({ hasText: /^Novice$/ })).toBeVisible();
+  await expect(
+    current.getByRole('img', { name: `Strength level Novice, DOTS ${exactScore.toFixed(2)}` }),
+  ).toBeVisible();
+  await expect(current.getByText(/^\d+\.\d\d points to Intermediate$/)).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'DOTS over time' }).getByRole('img', { name: /^DOTS over time\./ }),
+  ).toBeVisible();
+  await expectNoAxeViolations(page, 'strength level');
 });

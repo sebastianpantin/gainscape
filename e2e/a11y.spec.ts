@@ -225,6 +225,7 @@ test.describe('signed-in screens', () => {
       ['/collection/history', 'Collection: History'],
       ['/collection/stats', 'Stats'],
       ['/collection/stats/records', 'Records timeline'],
+      ['/collection/stats/strength-level', 'Strength level'],
       [sessionPath!, null],
       [progressPath!, 'Barbell Bench Press'],
     ]);

@@ -9,6 +9,7 @@ import { trendDayText } from '../../lib/progress/bodyweight-trend-rules.ts';
 import { collectionQuery, profileQuery, relativeStrengthQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { dotsCardFor } from '../../lib/stats/dots-rules.ts';
+import { strengthLevel } from '../../lib/stats/strength-level-rules.ts';
 import {
   currentMultipleText,
   type RelativeStrengthLift,
@@ -17,6 +18,7 @@ import {
 } from '../../lib/stats/relative-strength-rules.ts';
 import { formatWeight } from '../../lib/units.ts';
 import { type Collection } from '../../lib/collection/collection-data.ts';
+import { DotsCardMessage } from './DotsCardMessage.tsx';
 
 function LiftMultipleChart({ userId, lift }: { userId: string; lift: RelativeStrengthLift }) {
   const relative = useQuery(relativeStrengthQuery(userId, lift.id));
@@ -65,19 +67,13 @@ function DotsPanel({ profile, collection }: { profile: Profile; collection: Coll
   return (
     <div className="stack">
       <h3>DOTS score</h3>
-      {card.kind === 'needs-sex' && (
-        <p className="muted">
-          Set your sex in <Link to="/profile/settings">Settings</Link> to see your DOTS score.
-        </p>
-      )}
-      {card.kind === 'needs-bodyweight' && (
-        <p className="muted">
-          Save your bodyweight in <Link to="/profile/edit">Edit profile</Link> to see your DOTS score.
-        </p>
-      )}
-      {card.kind === 'missing-lifts' && <p className="muted">{card.text}</p>}
+      {card.kind !== 'ready' && <DotsCardMessage card={card} />}
       {card.kind === 'ready' && (
         <dl className="stack">
+          <div className="row spread">
+            <dt>Strength level</dt>
+            <dd>{strengthLevel(card.score).name}</dd>
+          </div>
           <div className="row spread">
             <dt>DOTS</dt>
             <dd>{card.score.toFixed(2)}</dd>
@@ -92,6 +88,9 @@ function DotsPanel({ profile, collection }: { profile: Profile; collection: Coll
           </div>
         </dl>
       )}
+      <Link className="button" to="/collection/stats/strength-level">
+        Strength level
+      </Link>
     </div>
   );
 }

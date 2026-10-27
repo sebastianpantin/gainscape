@@ -154,6 +154,12 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toContain('relative-strength');
   });
 
+  it('refreshes the DOTS history after a workout, a bodyweight save or an exercise edit', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('dots-history');
+    expect(QUERY_ROOTS_CHANGED_BY['profile-saved']).toContain('dots-history');
+    expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toContain('dots-history');
+  });
+
   it('refreshes every query that holds account data after an account reset', () => {
     const accountRoots = QUERY_ROOTS.filter((root) => !CATALOG_ROOTS.includes(root));
     expect([...QUERY_ROOTS_CHANGED_BY['account-reset']].sort()).toEqual([...new Set(accountRoots)].sort());
