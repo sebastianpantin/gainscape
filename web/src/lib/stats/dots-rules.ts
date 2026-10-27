@@ -1,7 +1,7 @@
 import { roundTo } from '@domain/math.ts';
-import type { ExerciseStrengthView } from '../collection/collection-data.ts';
+import type { Collection, ExerciseStrengthView } from '../collection/collection-data.ts';
 import type { Exercise } from '../exercises/catalog-rules.ts';
-import { type Sex } from '../profile/profile-rules.ts';
+import { type Profile, type Sex } from '../profile/profile-rules.ts';
 
 interface DotsCurve {
   coefficients: readonly [number, number, number, number, number];
@@ -82,4 +82,16 @@ export function dotsCard({ sex, bodyweightKg, bestE1rmKgByKey }: DotsInputs): Do
     POWERLIFTING_LIFTS.reduce((sum, lift) => sum + (bestE1rmKgByKey.get(lift.key) ?? 0), 0),
   );
   return { kind: 'ready', totalKg, bodyweightKg, score: dotsScore(totalKg, bodyweightKg, sex) };
+}
+
+export function dotsCardFor(profile: Pick<Profile, 'sex' | 'bodyweightKg'>, collection: Collection): DotsCard {
+  return dotsCard({
+    sex: profile.sex,
+    bodyweightKg: profile.bodyweightKg,
+    bestE1rmKgByKey: competitionBests(collection.exercises, collection.data.strengthByExercise),
+  });
+}
+
+export function dotsHighlightText(card: DotsCard): string | null {
+  return card.kind === 'ready' ? card.score.toFixed(2) : null;
 }
