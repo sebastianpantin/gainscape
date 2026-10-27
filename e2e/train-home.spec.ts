@@ -151,8 +151,20 @@ test('the header shows the DOTS level once sex, bodyweight and all three competi
   const level = Number((await dots.textContent())?.replace('DOTS', ''));
 
   await dots.click();
-  await expect(page).toHaveURL(/\/collection\/stats$/);
-  const score = page.getByRole('region', { name: 'Relative strength' }).locator('dt:text-is("DOTS") + dd');
+  await expect(page).toHaveURL(/\/collection\/stats\/strength-level$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Strength level', exact: true })).toBeVisible();
+  const current = page.getByRole('region', { name: 'Current level' });
+  const score = current.locator('dt:text-is("DOTS") + dd');
   await expect(score).toBeVisible();
-  expect(Math.round(Number(await score.textContent()))).toBe(level);
+  const exactScore = Number(await score.textContent());
+  expect(Math.round(exactScore)).toBe(level);
+  await expect(current.getByRole('paragraph').filter({ hasText: /^Novice$/ })).toBeVisible();
+  await expect(
+    current.getByRole('img', { name: `Strength level Novice, DOTS ${exactScore.toFixed(2)}` }),
+  ).toBeVisible();
+  await expect(current.getByText(/^\d+\.\d\d points to Intermediate$/)).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'DOTS over time' }).getByRole('img', { name: /^DOTS over time\./ }),
+  ).toBeVisible();
+  await expectNoAxeViolations(page, 'strength level');
 });

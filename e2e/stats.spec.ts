@@ -200,4 +200,15 @@ test('relative strength charts e1RM per bodyweight and DOTS asks for the sex, th
   await page.getByRole('main').getByRole('link', { name: 'Stats', exact: true }).click();
   await expect(relative.getByText('Log a squat and a deadlift to see your DOTS score.', { exact: true })).toBeVisible();
   await expectNoAxeViolations(page, 'stats DOTS');
+  await relative.getByRole('link', { name: 'Strength level', exact: true }).click();
+  await expect(page).toHaveURL(/\/collection\/stats\/strength-level$/);
+  await expect(page).toHaveTitle('Strength level · Gainscape');
+  await expect(page.getByRole('heading', { level: 1, name: 'Strength level', exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole('region', { name: 'Current level' })
+      .getByText('Log a squat and a deadlift to see your DOTS score.', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('main').getByRole('link', { name: '‹ Stats', exact: true }).click();
+  await expect(page).toHaveURL(/\/collection\/stats$/);
 });

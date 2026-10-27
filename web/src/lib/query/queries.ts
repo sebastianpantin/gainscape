@@ -49,6 +49,7 @@ import { type QuestLog } from '../quests/quest-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { skillExercisesSeed } from '../progress/skill-map-rules.ts';
 import { loadStanding } from '../progress/standing-data.ts';
+import { loadDotsHistoryCacheFirst } from '../stats/dots-history.ts';
 import { loadLootStatsCacheFirst } from '../stats/loot-stats.ts';
 import { loadRecordTimelinePage } from '../stats/pr-timeline.ts';
 import { loadRelativeStrengthCacheFirst } from '../stats/relative-strength.ts';
@@ -392,6 +393,13 @@ export function relativeStrengthQuery(userId: string, exerciseId: string) {
   });
 }
 
+export function dotsHistoryQuery(userId: string, liftIds: readonly string[]) {
+  return queryOptions({
+    queryKey: ['dots-history', userId, ...liftIds] as const,
+    queryFn: ({ signal }) => loadDotsHistoryCacheFirst(userId, liftIds, signal),
+  });
+}
+
 export const EVERY_QUERY = [
   profileQuery,
   preferencesQuery,
@@ -433,4 +441,5 @@ export const EVERY_QUERY = [
   recordTimelineQuery,
   lootStatsQuery,
   relativeStrengthQuery,
+  dotsHistoryQuery,
 ] as const;

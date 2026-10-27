@@ -15,7 +15,7 @@ export function DotsStat({ userId }: { userId: string }) {
   const level = useDotsLevel(userId);
   if (level === null) return null;
   return (
-    <Link className="header-stat" to="/collection/stats">
+    <Link className="header-stat" to="/collection/stats/strength-level">
       <span className="header-stat-part">
         <span className="muted tiny">DOTS</span> <strong>{level}</strong>
       </span>
