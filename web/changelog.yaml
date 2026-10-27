@@ -1,3 +1,10 @@
+- prs: [174]
+  version: 0.21.0
+  date: 2026-10-27
+  title: Your strength level
+  items:
+    - Your DOTS score now sits next to Total level and Combat at the top of Train, instead of in Highlights.
+    - A new Strength level page shows your level from Beginner to Elite on a coloured bar, how many points you need for the next one, and your DOTS score over time. Tap DOTS on Train, or Strength level on Stats, to open it.
 - prs: [169, 172]
   version: 0.20.0
   date: 2026-10-27
