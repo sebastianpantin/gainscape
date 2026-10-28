@@ -8,6 +8,7 @@ import { capitalized } from '../names.ts';
 import { z } from 'zod';
 import { parsedJson } from '../json-rules.ts';
 import { parsedRow, parsedRows } from '../rows.ts';
+import { TOKEN_COLORS } from '../ui/token-colors.ts';
 
 export const ITEM_KINDS = ['gear', 'material', 'pet', 'scroll'] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
@@ -24,15 +25,15 @@ export const INVENTORY_COLUMNS = 'item_id,quantity,first_obtained_at';
 export const TIER_COLORS: Record<ItemTier, string> = {
   rookie: '#8a7d66',
   grinder: '#a9b4bd',
-  tempered: '#7fd46a',
+  tempered: TOKEN_COLORS.xp,
   forged: '#e0823d',
-  titan: '#6fa8dc',
+  titan: TOKEN_COLORS['art-rare'],
   mythic: '#b784e0',
-  ascendant: '#ffb000',
+  ascendant: TOKEN_COLORS.accent,
 };
 
-const UNTIERED_COLOR = '#d8c8a8';
-export const LOCKED_COLOR = '#5c4f3d';
+const UNTIERED_COLOR = TOKEN_COLORS.parchment;
+export const LOCKED_COLOR = TOKEN_COLORS['panel-border'];
 
 export interface CatalogItem {
   id: string;

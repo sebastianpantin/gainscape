@@ -48,8 +48,8 @@
     var(--tab-bar-height) + env(safe-area-inset-bottom) + max(var(--tap-target), var(--finish-bar-height, 0px)) +
       var(--space-3)
   );
-  left: var(--space-4);
-  right: var(--space-4);
+  left: calc(var(--space-4) + env(safe-area-inset-left));
+  right: calc(var(--space-4) + env(safe-area-inset-right));
   z-index: 25;
   display: flex;
   justify-content: center;
@@ -220,7 +220,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1-5);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .recovery-legend li {
@@ -248,7 +248,7 @@
 
 .segment {
   font: inherit;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   background: transparent;
   cursor: pointer;
   display: flex;
@@ -269,8 +269,10 @@
   grid-auto-flow: row;
 }
 
-.segment:hover {
-  color: var(--color-text);
+@media (hover: hover) {
+  .segment:hover {
+    color: var(--color-text);
+  }
 }
 
 .segment.active {
@@ -299,7 +301,7 @@
   padding: var(--space-2) var(--space-3);
   background: var(--color-well);
   border: var(--border-width) dashed var(--color-accent);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .app-banner {
@@ -314,7 +316,7 @@
   padding: var(--space-2) var(--space-4);
   background: var(--color-chrome);
   border-bottom: var(--border-width) solid var(--color-outline);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   text-align: center;
 }
 
@@ -377,7 +379,8 @@
   background: var(--color-chrome);
   border-top: var(--border-width) solid var(--color-outline);
   box-shadow: inset 0 2px 0 var(--color-panel-shade);
-  padding: var(--space-1) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
+  padding: var(--space-1) calc(var(--space-2) + env(safe-area-inset-right))
+    calc(var(--space-2) + env(safe-area-inset-bottom)) calc(var(--space-2) + env(safe-area-inset-left));
   z-index: 10;
 }
 
@@ -393,8 +396,10 @@
   font-size: var(--font-size-2xs);
 }
 
-.tab:hover {
-  color: var(--color-text);
+@media (hover: hover) {
+  .tab:hover {
+    color: var(--color-text);
+  }
 }
 
 .tab.active {
@@ -419,14 +424,16 @@
   border-top: var(--border-width) solid var(--color-outline);
   box-shadow: inset 0 2px 0 var(--color-panel-highlight);
   color: var(--color-text);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   text-decoration: none;
   z-index: 10;
 }
 
-.active-workout-bar:hover {
-  color: var(--color-text);
-  background: var(--color-panel-border);
+@media (hover: hover) {
+  .active-workout-bar:hover {
+    color: var(--color-text);
+    background: var(--color-panel-border);
+  }
 }
 
 .active-workout-status {
@@ -451,7 +458,9 @@
 }
 
 body:has(.active-workout-bar) .screen {
-  padding-bottom: calc(96px + var(--tap-target) + var(--space-3) + env(safe-area-inset-bottom));
+  padding-bottom: calc(
+    var(--tab-bar-height) + var(--space-6) + var(--tap-target) + var(--space-3) + env(safe-area-inset-bottom)
+  );
 }
 
 .auth-screen {
@@ -481,7 +490,7 @@ body:has(.active-workout-bar) .screen {
 
 .brand p {
   color: var(--color-parchment);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .day-list,

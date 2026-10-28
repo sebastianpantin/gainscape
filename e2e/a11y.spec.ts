@@ -1,6 +1,11 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { expectNoAxeViolations, expectRemoveSetButtonsStandApart, expectTouchTargets } from './support/a11y.ts';
+import {
+  EVERY_CONTROL,
+  expectNoAxeViolations,
+  expectRemoveSetButtonsStandApart,
+  expectTouchTargets,
+} from './support/a11y.ts';
 import {
   emailOf,
   exerciseCard,
@@ -44,13 +49,11 @@ import {
 } from './support/program-enrollment.ts';
 import { seedFiveThreeOneCycleSkippingPress } from './support/program-seed.ts';
 
-const TAB_BAR = ['.tab-bar a[href]'];
-
 async function checkScreen(page: Page, screen: string, ready: () => Promise<void>) {
   await ready();
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expectNoAxeViolations(page, screen);
-  if ((await page.locator('.tab-bar').count()) > 0) await expectTouchTargets(page, TAB_BAR);
+  await expectTouchTargets(page, EVERY_CONTROL);
 }
 
 async function checkEffortTargets(page: Page) {
@@ -329,6 +332,21 @@ test.describe('signed-in screens', () => {
     await signOut(page);
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   });
+});
+
+test('the design gallery has no serious axe violations', async ({ page }) => {
+  await register(page, uniqueUsername('a11y_ds'));
+  await page.goto('/design');
+  await checkScreen(page, 'design gallery', async () => {
+    await expect(page.getByRole('heading', { level: 1, name: 'Design', exact: true })).toBeVisible();
+    await expect(page.getByRole('listitem', { name: 'Set 2' })).toBeVisible();
+  });
+});
+
+test('the page declares a dark colour scheme to the browser', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute('content', 'dark');
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe('dark');
 });
 
 test('the links on Train are 44px tall', async ({ page }) => {

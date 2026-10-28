@@ -30,7 +30,7 @@ export function ExerciseRecordCard({
   return (
     <section className="panel stack">
       <header className="row spread">
-        <span className="stack" style={{ gap: 2 }}>
+        <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
           <h2>{exercise.name}</h2>
           {exerciseLabels(exercise) && <span className="muted">{exerciseLabels(exercise)}</span>}
         </span>

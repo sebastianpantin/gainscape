@@ -150,14 +150,14 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
           <h2 id="about-heading">About you</h2>
           <span className="public-tag">Friends see this</span>
         </div>
-        <div className="row" style={{ gap: 12 }}>
+        <div className="row" style={{ gap: 'var(--space-3)' }}>
           <ProfileBadge
             color={badgeColor}
             initials={initialsFor(displayName || profile.displayName, profile.username)}
           />
-          <div className="stack" style={{ gap: 6 }}>
+          <div className="stack" style={{ gap: 'var(--space-1-5)' }}>
             <span className="field">Badge color</span>
-            <div className="row wrap" role="radiogroup" aria-label="Badge color" style={{ gap: 6 }}>
+            <div className="row wrap" role="radiogroup" aria-label="Badge color" style={{ gap: 'var(--space-1-5)' }}>
               {BADGE_ORDER.map((color) => (
                 <button
                   key={color}
@@ -253,8 +253,8 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
             />
           </label>
         ) : (
-          <fieldset className="stack" style={{ border: 0, padding: 0, gap: 6 }}>
-            <legend className="field" style={{ marginBottom: 6 }}>
+          <fieldset className="stack" style={{ border: 0, padding: 0, gap: 'var(--space-1-5)' }}>
+            <legend className="field" style={{ marginBottom: 'var(--space-1-5)' }}>
               Height
             </legend>
             <div className="row">
@@ -327,7 +327,7 @@ export function EditProfileScreen({ userId }: EditProfileScreenProps) {
   const { state, refresh } = useProfile(userId);
   return (
     <main className="screen stack">
-      <div className="stack" style={{ gap: 4 }}>
+      <div className="stack" style={{ gap: 'var(--space-1)' }}>
         <Link className="back-link" to="/profile">
           ‹ Profile
         </Link>

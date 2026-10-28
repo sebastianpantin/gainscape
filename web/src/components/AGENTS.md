@@ -26,7 +26,7 @@ Small shared UI pieces used across feature screens: icons, the pixel-art sprites
 - `ScreenSkeleton` renders an `aria-busy` `main`, which route focus waits on, and a visually hidden "Loading…" status that e2e waits on. Keep both.
 - `ScreenErrorBoundary` catches a lazy chunk that fails to load and resets when the pathname changes.
 - `useUnsavedChangesGuard(dirty)` (`UnsavedChangesGuard.tsx`) needs the data router for `useBlocker`. Render its `prompt`, and call `allowLeaving()` right before navigating away after a successful save or delete, or the prompt blocks it. While dirty it also adds a `beforeunload` prompt for a reload or a closed tab; `allowLeaving()` skips that too.
-- `ScreenProblem` and `ProblemWithRetry` are the load-failure view with Try again; a screen keeps its `h1`. Failed actions stay inline alerts, not a full-screen problem.
+- When to use each state and dialog component: `../../../docs/design-system.md` (the `/design` route renders them). Failed actions stay inline alerts.
 - `ConfirmDialog` uses a native `<dialog>` with `showModal` (keeps focus inside, Escape cancels). Use it instead of `window.confirm`.
 - `TermHelp`:
   - It uses a native `popover="auto"`, shown in the top layer and pinned to the top edge, so opening it shifts nothing and it stays clear of the finish bar and tab bar. The button is hidden where `:popover-open` is unsupported.

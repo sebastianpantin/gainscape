@@ -5,14 +5,22 @@ export function DotsCardMessage({ card }: { card: Exclude<DotsCard, { kind: 'rea
   if (card.kind === 'needs-sex') {
     return (
       <p className="muted">
-        Set your sex in <Link to="/profile/settings">Settings</Link> to see your DOTS score.
+        Set your sex in{' '}
+        <Link className="tap-link" to="/profile/settings">
+          Settings
+        </Link>{' '}
+        to see your DOTS score.
       </p>
     );
   }
   if (card.kind === 'needs-bodyweight') {
     return (
       <p className="muted">
-        Save your bodyweight in <Link to="/profile/edit">Edit profile</Link> to see your DOTS score.
+        Save your bodyweight in{' '}
+        <Link className="tap-link" to="/profile/edit">
+          Edit profile
+        </Link>{' '}
+        to see your DOTS score.
       </p>
     );
   }

@@ -221,7 +221,7 @@ function ItemDetail({
           Crafted!
         </p>
       )}
-      <span className="stack" style={{ gap: 2 }}>
+      <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
         <span className="muted tiny">{kindLabel(item)}</span>
         <h2 className="accent-text">
           {item.name}

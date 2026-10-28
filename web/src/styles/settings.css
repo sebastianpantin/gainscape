@@ -32,16 +32,10 @@
   cursor: pointer;
   background: var(--color-well);
   border: var(--border-width) solid var(--color-outline);
-  box-shadow: var(--bevel-sunken);
 }
 
 .switch[aria-checked='true'] {
   background: var(--color-xp);
-}
-
-.switch:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .switch-knob {
@@ -57,11 +51,6 @@
 .switch[aria-checked='true'] .switch-knob {
   left: 35px;
   background: var(--color-text);
-}
-
-.segment:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
 }
 
 .danger-outline {
@@ -90,7 +79,7 @@
   padding: 0;
   cursor: pointer;
   border: var(--border-width) solid var(--color-outline);
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: inset 2px 2px 0 var(--color-bevel-light);
 }
 
 .swatch-button[aria-checked='true'] {

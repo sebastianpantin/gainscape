@@ -103,7 +103,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
           <PrivateTag />
         </div>
         <div className="well row">
-          <dl className="stack" style={{ gap: 2, flexGrow: 1 }}>
+          <dl className="stack" style={{ gap: 'var(--space-0-5)', flexGrow: 1 }}>
             <dt className="muted tiny">Bodyweight</dt>
             <dd className="pixel" style={{ fontSize: '1.6rem', fontWeight: 500 }}>
               {shownKg === null ? 'Not set' : formatWeight(shownKg, unitPref)}

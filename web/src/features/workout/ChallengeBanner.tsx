@@ -26,7 +26,7 @@ export function ChallengeBanner({ draft, challenge, exercises, unit, onDiscard }
       <h2>Challenge: {challenge.name}</h2>
       <span className="muted">{challengeSummaryText(definition, nameOf, unit)}</span>
       {definition.kind === 'volume' && definition.metric === 'kg' && (
-        <p className="stack" style={{ gap: 2 }}>
+        <p className="stack" style={{ gap: 'var(--space-0-5)' }}>
           <span>{challengeVolumeText(draft, definition.target, unit)}</span>
           <span className="muted tiny">Only the weight you load counts, never your bodyweight.</span>
         </p>

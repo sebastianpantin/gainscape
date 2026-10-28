@@ -70,7 +70,7 @@ export function TodayView({
   return (
     <main className="screen stack">
       <div className="screen-header">
-        <div className="stack" style={{ gap: 4 }}>
+        <div className="stack" style={{ gap: 'var(--space-1)' }}>
           <span className="muted">
             {greetingFor(now.getHours())} ·{' '}
             {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}

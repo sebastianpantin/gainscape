@@ -32,6 +32,7 @@ const SCREEN_TITLES: readonly (readonly [pattern: string, screen: string])[] = [
   ['/programs/active/plan', 'Program plan'],
   ['/programs/new', 'New program'],
   ['/programs/:programId', 'Edit program'],
+  ['/design', 'Design'],
 ];
 
 export const SCREEN_PATHS: readonly string[] = SCREEN_TITLES.map(([pattern]) => pattern);

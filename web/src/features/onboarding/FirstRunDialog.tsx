@@ -59,7 +59,7 @@ function WelcomeStep() {
             <span className="first-run-card-icon">
               <CardIcon icon={card.icon} />
             </span>
-            <span className="stack" style={{ gap: 2 }}>
+            <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
               <strong className="first-run-card-title">{card.title}</strong>
               <span className="muted tiny">{card.text}</span>
             </span>

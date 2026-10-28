@@ -210,7 +210,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
           const key = inputFieldKey(field.lift);
           const hinted = weightHint !== null && field.kind === 'workingWeight';
           return (
-            <div className="stack" key={field.lift} style={{ gap: 6 }}>
+            <div className="stack" key={field.lift} style={{ gap: 'var(--space-1-5)' }}>
               {field.kinds.length > 1 && (
                 <SegmentedChoice
                   label={`${liftName(definition, field.lift)} input`}
@@ -248,7 +248,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
               <div
                 className="stack"
                 key={control.key}
-                style={{ gap: 6 }}
+                style={{ gap: 'var(--space-1-5)' }}
                 tabIndex={-1}
                 {...fieldA11y(optionFieldKey(control.key))}
               >
@@ -269,7 +269,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
                 />
               </div>
             ) : (
-              <div className="stack" key={control.key} style={{ gap: 6 }}>
+              <div className="stack" key={control.key} style={{ gap: 'var(--space-1-5)' }}>
                 <label className="field">
                   {control.label}
                   <input

@@ -18,7 +18,7 @@ export function BodyScreen({ userId }: BodyScreenProps) {
     return (
       <ScreenProblem
         heading={
-          <div className="stack" style={{ gap: 4 }}>
+          <div className="stack" style={{ gap: 'var(--space-1)' }}>
             <BackToSkills />
             <h1 className="title">Body</h1>
           </div>
@@ -35,7 +35,7 @@ export function BodyScreen({ userId }: BodyScreenProps) {
 
   return (
     <main className="screen stack">
-      <div className="stack" style={{ gap: 4 }}>
+      <div className="stack" style={{ gap: 'var(--space-1)' }}>
         <BackToSkills />
         <h1 className="title">Body</h1>
       </div>

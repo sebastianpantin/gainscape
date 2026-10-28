@@ -69,7 +69,7 @@ export function EffortSelector({ mode, selected, assumed = null, retapClears = t
             aria-checked={checked}
             aria-label={option.accessibleName === option.label ? undefined : option.accessibleName}
             aria-description={isAssumed ? 'Assumed from your strength' : undefined}
-            className={`effort-option ${checked ? 'selected' : ''} ${isAssumed ? 'assumed' : ''}`}
+            className={isAssumed ? 'button chip assumed' : 'button chip'}
             onClick={() => {
               if (!checked) onSelect(option.effort);
               else if (retapClears) onSelect(null);

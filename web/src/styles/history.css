@@ -50,7 +50,7 @@
   color: var(--color-text-muted);
 }
 
-.history-set-row .warmup-toggle.selected {
+.history-set-row .warmup-toggle[aria-pressed='true'] {
   color: var(--color-ink);
 }
 

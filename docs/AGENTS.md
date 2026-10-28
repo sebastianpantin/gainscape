@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Human-facing operations documentation. `deploy.md` is the runbook for the invite-only test environment (secrets, abuse limits, setup, changelog before deploy, `make deploy`, testers, incidents, backups, rotation). `production-auth.md` is the checklist for what a hosted project needs before real users sign up. `game-mechanics.md` explains the game rules for contributors and names constants instead of quoting them, so it does not drift from `balance.ts`. Nothing here is applied automatically.
+Human-facing operations documentation. `deploy.md` is the runbook for the invite-only test environment (secrets, abuse limits, setup, changelog before deploy, `make deploy`, testers, incidents, backups, rotation). `production-auth.md` is the checklist for what a hosted project needs before real users sign up. `design-system.md` states the UI rules and the guards behind them. `game-mechanics.md` explains the game rules for contributors and names constants instead of quoting them, so it does not drift from `balance.ts`. Nothing here is applied automatically.
 
 ## Rules and gotchas
 

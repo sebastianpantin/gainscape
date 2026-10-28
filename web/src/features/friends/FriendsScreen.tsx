@@ -63,7 +63,7 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
         </span>
       ) : (
         <button
-          className="button gz-button"
+          className="button toggle gz-button"
           type="button"
           aria-pressed={item.gzGiven}
           aria-busy={pending}

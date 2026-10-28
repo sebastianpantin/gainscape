@@ -207,7 +207,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
         <ul className="stack exercise-list">
           {templates(programs).map((template) => (
             <li className="panel row spread" key={template.id}>
-              <span className="stack" style={{ gap: 2 }}>
+              <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
                 <span>{template.name}</span>
                 <span className="muted">
                   {formatCount(template.days.length, 'workout')} · {daySummary(template)}

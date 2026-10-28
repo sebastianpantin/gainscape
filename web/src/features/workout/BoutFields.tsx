@@ -168,7 +168,7 @@ export function BoutModeToggle({ boutNumber, bout, onChange }: BoutModeTogglePro
           type="button"
           role="radio"
           aria-checked={mode === current}
-          className={`effort-option ${mode === current ? 'selected' : ''}`}
+          className="button chip"
           onClick={() => onChange(boutModeChanges(bout, mode))}
         >
           {label}

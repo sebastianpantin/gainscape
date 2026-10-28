@@ -57,7 +57,7 @@ export function AccountSection({
   return (
     <section className="panel stack" aria-labelledby="account-heading">
       <h2 id="account-heading">Account</h2>
-      <dl className="well stack" style={{ gap: 2 }}>
+      <dl className="well stack" style={{ gap: 'var(--space-0-5)' }}>
         <dt className="muted tiny">Email</dt>
         <dd>{email ?? '—'}</dd>
       </dl>

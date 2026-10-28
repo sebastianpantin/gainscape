@@ -21,6 +21,18 @@ const BETWEEN_SET_CONTROLS = [
   '.gz-button',
 ];
 
+export const EVERY_CONTROL = [
+  'button',
+  'a[href]',
+  '[role=button]',
+  '[role=radio]',
+  '[role=switch]',
+  'summary',
+  'input',
+  'select',
+];
+const NOT_A_HIT_TARGET = '.visually-hidden';
+
 export async function expectNoAxeViolations(page: Page, screen: string): Promise<void> {
   await page.evaluate(() =>
     Promise.allSettled(
@@ -43,7 +55,7 @@ export async function expectNoAxeViolations(page: Page, screen: string): Promise
 
 export async function expectTouchTargets(page: Page, selectors: readonly string[] = BETWEEN_SET_CONTROLS) {
   const { checked, undersized } = await page.evaluate(
-    ({ selectors, minimum }) => {
+    ({ selectors, minimum, exempt }) => {
       let checked = 0;
       const found: string[] = [];
       for (const selector of selectors) {
@@ -51,6 +63,7 @@ export async function expectTouchTargets(page: Page, selectors: readonly string[
           const box = element.getBoundingClientRect();
           if (box.width === 0 && box.height === 0) continue;
           if (getComputedStyle(element).visibility === 'hidden') continue;
+          if (element.closest(exempt)) continue;
           checked++;
           const hit = element.closest('label')?.getBoundingClientRect() ?? box;
           if (hit.width < minimum || hit.height < minimum) {
@@ -61,7 +74,7 @@ export async function expectTouchTargets(page: Page, selectors: readonly string[
       }
       return { checked, undersized: found };
     },
-    { selectors, minimum: TAP_TARGET_PX },
+    { selectors, minimum: TAP_TARGET_PX, exempt: NOT_A_HIT_TARGET },
   );
   expect(checked, 'controls checked for 44x44').toBeGreaterThan(0);
   expect(undersized, 'controls under 44x44').toEqual([]);

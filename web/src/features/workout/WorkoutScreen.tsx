@@ -299,7 +299,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   return (
     <main className="screen stack">
       <header className="workout-header">
-        <div className="stack" style={{ gap: 4 }}>
+        <div className="stack" style={{ gap: 'var(--space-1)' }}>
           {draft.programLabel && <span className="muted">{draft.programLabel}</span>}
           <h1 className="title">Workout</h1>
         </div>

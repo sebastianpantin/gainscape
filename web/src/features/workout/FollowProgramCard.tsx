@@ -16,7 +16,7 @@ export function FollowProgramCard({ programs, onDismiss }: FollowProgramCardProp
       <ul className="stack exercise-list">
         {programs.map((program) => (
           <li className="row spread" key={program.key}>
-            <span className="stack" style={{ gap: 2 }}>
+            <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
               <span>{program.name}</span>
               <span className="muted tiny">{program.schedule}</span>
             </span>

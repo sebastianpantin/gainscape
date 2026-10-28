@@ -61,7 +61,7 @@ export function SkillScreen({ userId }: SkillScreenProps) {
     return (
       <ScreenProblem
         heading={
-          <div className="stack" style={{ gap: 4 }}>
+          <div className="stack" style={{ gap: 'var(--space-1)' }}>
             <BackToSkills />
             <h1 className="title">Skill</h1>
           </div>
@@ -89,7 +89,7 @@ export function SkillScreen({ userId }: SkillScreenProps) {
   const { skill, progress } = picked;
   return (
     <main className="screen stack">
-      <div className="stack" style={{ gap: 4 }}>
+      <div className="stack" style={{ gap: 'var(--space-1)' }}>
         <BackToSkills />
         <h1 className="title">{skill.name}</h1>
       </div>

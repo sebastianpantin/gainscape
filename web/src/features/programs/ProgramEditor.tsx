@@ -182,7 +182,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
 
   return (
     <main className="screen stack">
-      <div className="stack" style={{ gap: 4 }}>
+      <div className="stack" style={{ gap: 'var(--space-1)' }}>
         <button className="back-link" type="button" disabled={saving} onClick={() => void navigate('/programs')}>
           Cancel
         </button>

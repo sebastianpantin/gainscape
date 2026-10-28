@@ -188,7 +188,7 @@ function TimedRecordSection({ id, title, cards }: TimedRecordSectionProps) {
       <span className="muted tiny">Only you can see these.</span>
       <ul className="stored-set-list">
         {cards.map((card) => (
-          <li key={card.exerciseId} className="stack" style={{ gap: 2 }}>
+          <li key={card.exerciseId} className="stack" style={{ gap: 'var(--space-0-5)' }}>
             <strong>{card.name}</strong>
             <span>{card.lines.join(' · ')}</span>
           </li>

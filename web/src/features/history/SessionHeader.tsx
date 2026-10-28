@@ -20,7 +20,7 @@ export function SessionHeader({ session, backTo }: { session: SessionDetail; bac
         ‹ History
       </Link>
       <header className="workout-header">
-        <div className="stack" style={{ gap: 4 }}>
+        <div className="stack" style={{ gap: 'var(--space-1)' }}>
           <span className="muted">{formatSessionDate(session.localDate)}</span>
           <h1 className="title">Workout</h1>
           {timingText && <span className="muted tiny">{timingText}</span>}

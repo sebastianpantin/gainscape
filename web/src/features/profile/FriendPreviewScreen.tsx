@@ -74,7 +74,7 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
 
   return (
     <main className="screen stack">
-      <div className="stack" style={{ gap: 4 }}>
+      <div className="stack" style={{ gap: 'var(--space-1)' }}>
         <Link className="back-link" to="/profile">
           ‹ Profile
         </Link>

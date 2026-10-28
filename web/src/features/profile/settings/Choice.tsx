@@ -16,7 +16,7 @@ export function Choice<T extends string>({
   onPick: (value: T) => void;
 }) {
   return (
-    <div className="stack" style={{ gap: 6 }}>
+    <div className="stack" style={{ gap: 'var(--space-1-5)' }}>
       <span className="field">{label}</span>
       <SegmentedChoice
         label={label}

@@ -57,7 +57,7 @@ export function ProgramDayStarts({ userId, disabled, hideEmptyState, onStart }: 
                   disabled={disabled}
                   onClick={() => onStart(program, day)}
                 >
-                  <span className="stack" style={{ gap: 2 }}>
+                  <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
                     <span>{programLabelFor(program.name, day.name)}</span>
                     <span className="muted tiny">{formatCount(day.exercises.length, 'exercise')}</span>
                   </span>

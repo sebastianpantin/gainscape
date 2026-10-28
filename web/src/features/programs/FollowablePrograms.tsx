@@ -30,7 +30,7 @@ export function FollowablePrograms({ userId }: FollowableProgramsProps) {
           <li className="panel row spread" key={entry.key}>
             {entry.kind === 'enrollable' ? (
               <>
-                <span className="stack" style={{ gap: 2 }}>
+                <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
                   <span>{entry.name}</span>
                   <span className="muted">{templateScheduleText(entry.definition)}</span>
                 </span>

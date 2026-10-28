@@ -20,7 +20,6 @@
   cursor: pointer;
   background: var(--color-well);
   border: var(--border-width) solid var(--color-outline);
-  box-shadow: var(--bevel-sunken);
 }
 
 .item-slot.rarity-rare,
@@ -50,7 +49,7 @@
   left: var(--space-1);
   font-family: var(--font-display);
   font-size: var(--font-size-xs);
-  color: var(--color-focus);
+  color: var(--color-accent-light);
   text-shadow: 1px 1px 0 var(--color-bevel);
 }
 
@@ -58,7 +57,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1-5);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .have-enough {

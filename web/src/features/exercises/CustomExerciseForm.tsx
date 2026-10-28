@@ -116,7 +116,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
                 type="button"
                 role="radio"
                 aria-checked={option === modality}
-                className={`effort-option ${option === modality ? 'selected' : ''}`}
+                className="button chip"
                 onClick={() => setModality(option)}
               >
                 {MODALITY_LABELS[option]}

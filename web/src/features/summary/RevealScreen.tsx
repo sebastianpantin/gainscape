@@ -485,7 +485,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
             return (
               <li key={`${record.exerciseId}-${index}`}>
                 <TrophyIcon />
-                <span className="stack" style={{ gap: 2 }}>
+                <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
                   <span className="muted tiny">New record</span>
                   <span>
                     <span className="pixel">{described.headline}</span>{' '}

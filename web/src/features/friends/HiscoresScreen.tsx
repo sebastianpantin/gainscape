@@ -49,7 +49,7 @@ export function HiscoresScreen() {
                 type="button"
                 role="radio"
                 aria-checked={metric === entry.key}
-                className={`effort-option ${metric === entry.key ? 'selected' : ''}`}
+                className="button chip"
                 onClick={() => setMetric(entry.key)}
               >
                 {entry.label}
