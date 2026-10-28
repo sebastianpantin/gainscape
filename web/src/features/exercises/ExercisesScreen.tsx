@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import {
   OFFLINE_EXERCISES_NOTICE,
@@ -23,7 +23,9 @@ interface ExercisesScreenProps {
 
 export function ExercisesScreen({ userId }: ExercisesScreenProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const fromWorkout = searchParams.get('from') === 'workout';
   const exerciseList = useQuery(exerciseListLoadQuery(userId));
   const liveSkills = useQuery(skillsQuery);
   const [savedSkills] = useState(() => standingCache.read(deviceStorage(), userId)?.skills ?? null);
@@ -43,6 +45,7 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
   const problem = actionProblem ?? (load ? null : (exerciseList.error?.message ?? null));
 
   const closeForm = () => {
+    if (fromWorkout) return navigate('/', { replace: true });
     setEditing({ kind: 'none' });
     if (searchParams.has('new')) setSearchParams({}, { replace: true });
   };
@@ -97,8 +100,10 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
           key={editing.kind === 'edit' ? editing.exercise.id : 'new'}
           exercise={editing.kind === 'edit' ? editing.exercise : null}
           skills={skills ?? []}
-          onSaved={() => {
+          onSaved={(exerciseId) => {
             void announceDataChange(queryClient, 'exercise-saved');
+            if (fromWorkout && editing.kind === 'new')
+              return navigate('/', { replace: true, state: { addExerciseId: exerciseId } });
             closeForm();
           }}
           onCancel={closeForm}

@@ -25,16 +25,12 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `quests/`: the quest log (cache-first), `start-quest` and `quest-rules.ts` (board, step and requirement text, start errors).
 - `ui/`: pure helpers behind shared components (number field, count-up, charts, toast, term help, week and month keys) and `glossary.ts`.
 - The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`.
-- Start here:
-  - `platform/supabase.ts`: the one client.
-  - `platform/use-auth-session.ts` over `platform/auth-restore.ts`: auth boot, offline fallback; `platform/sign-out.ts`: sign-out.
-  - `platform/function-client.ts` over `platform/function-client-rules.ts`: `invokeAsOwner` for Edge Functions.
-  - `query/query-client.ts`, `query/queries.ts`, `query/query-freshness-rules.ts` and `query/data-changes.ts`: the server data cache and its invalidation.
-- `*-rules.ts` files are pure. These are pure too, without the suffix: `units.ts`, `format.ts`, `workout/effort-labels.ts`, `error-text.ts`, `names.ts`, `platform/rate-limit.ts`, `platform/auth-links.ts`, `platform/auth-restore.ts`, `exercises/catalog-cache.ts`, `exercises/exercise-note-cache.ts`, `ui/glossary.ts`, `reorder.ts`, `rows.ts`.
-- A `<feature>.ts` beside a `<feature>-rules.ts` is the I/O half (catalog, history, items, social, profile, standing, skill-map, last-session, exercise-progress, bodyweight-trend, weekly-goal, recovery, onboarding, exercise-notes). Other I/O modules: `progress/standing-data.ts`, `programs/programs.ts`, `programs/program-enrollment.ts`, `collection/collection-data.ts`, `exercises/custom-exercises.ts`, `profile/account.ts`.
+- Start here: `platform/supabase.ts` (the one client), `platform/use-auth-session.ts` (auth boot), `platform/function-client.ts` (`invokeAsOwner`) and `query/` (the server data cache and its invalidation).
+- `*-rules.ts` files are pure, and so are a few small modules without the suffix (`units.ts`, `format.ts`, `error-text.ts`, `names.ts`, the caches); `tests/web/` covers them without a stack.
+- A `<feature>.ts` beside a `<feature>-rules.ts` is the I/O half.
 - `*-store.ts`: per-user settings kept only in this device's `localStorage`, never synced.
-- `programs/program-*-rules.ts`: following a program (enroll form, Train cards, plan, references, skip, set markers, rollover summary, follow status, facts, error text). The program engine itself is `@domain/program-*.ts`.
-- Only these use React: the contexts in `profile/preferences.ts` and `ui/toast.ts`, and the hooks in `progress/standing.ts`, `skill-map.ts`, `use-lift-goals.ts`, `platform/use-auth-session.ts`, `platform/use-online.ts`, `platform/use-route-focus.ts` and `query/data-changes.ts`.
+- `programs/program-*-rules.ts` cover following a program; the program engine itself is `@domain/program-*.ts`.
+- Only the contexts and `use*` hooks use React; everything else stays framework-free.
 - `ui/glossary.ts` is the only home of jargon help text (`TermHelp`, the Settings effort hints, the first-run cards).
 - `platform/device-effects.ts` and `platform/celebration-effects.ts`: audio, vibration and reduced motion. They are I/O only. `e2e/reveal.spec.ts` covers only the level-up cue; the loot and craft fanfares have no automated coverage.
 

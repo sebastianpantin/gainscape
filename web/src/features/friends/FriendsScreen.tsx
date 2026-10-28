@@ -306,9 +306,9 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
             <h2 id="feed-heading">Feed</h2>
             {feed.length === 0 && <p className="muted">No posts yet. Add friends, or log a personal record (PR).</p>}
             {feed.length > 0 && (
-              <p className="row muted tiny">
+              <div className="row muted tiny">
                 Tap gz to congratulate a friend <TermHelp glossaryKey="gz" />
-              </p>
+              </div>
             )}
             {feed.length > 0 && (
               <ul className="feed" aria-label="Feed">

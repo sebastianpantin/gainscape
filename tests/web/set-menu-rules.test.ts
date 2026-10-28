@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  clearEffortAction,
   rowToFocusAfterRemoving,
   SET_MENU_GAP_PX,
   setMenuPlacement,
@@ -57,5 +58,16 @@ describe('rowToFocusAfterRemoving', () => {
   it('has no row to move to when the only row is removed or the row is unknown', () => {
     expect(rowToFocusAfterRemoving(['a'], 'a')).toBeNull();
     expect(rowToFocusAfterRemoving(['a', 'b'], 'z')).toBeNull();
+  });
+});
+
+describe('clearEffortAction', () => {
+  const clear = () => undefined;
+
+  it('offers Clear effort only on a rated set', () => {
+    expect(clearEffortAction({ type: 'level', level: 'hard' }, 2, clear)).toEqual([
+      { label: 'Clear effort', accessibleName: 'Clear effort set 2', onChoose: clear },
+    ]);
+    expect(clearEffortAction(null, 2, clear)).toEqual([]);
   });
 });

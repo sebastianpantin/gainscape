@@ -499,11 +499,11 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       )}
       {questReveal && <QuestPanel reveal={questReveal} delayS={timeline.lootDelayS} />}
       <LootPanel userId={userId} drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />
-      <Link className="button primary big" to="/skills">
-        See skills
-      </Link>
-      <Link className="button" to="/">
+      <Link className="button primary big" to="/">
         Done
+      </Link>
+      <Link className="button" to="/skills">
+        See skills
       </Link>
     </main>
   );

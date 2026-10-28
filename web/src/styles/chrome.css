@@ -44,7 +44,10 @@
 
 .toast-region {
   position: fixed;
-  bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + var(--tap-target) + var(--space-3));
+  bottom: calc(
+    var(--tab-bar-height) + env(safe-area-inset-bottom) + max(var(--tap-target), var(--finish-bar-height, 0px)) +
+      var(--space-3)
+  );
   left: var(--space-4);
   right: var(--space-4);
   z-index: 25;

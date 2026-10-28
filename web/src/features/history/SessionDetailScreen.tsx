@@ -348,7 +348,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       )}
       {busy.kind !== 'idle' && busy.retrying && (
         <p className="notice" role="status">
-          Couldn't reach the server ({busy.retrying}). Retrying…
+          Couldn't reach the server. Retrying…
         </p>
       )}
       {problemPanel}

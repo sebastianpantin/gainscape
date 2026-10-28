@@ -39,9 +39,9 @@ export function HiscoresScreen() {
       {(!skills || !rows) && !problem && <p>Loading…</p>}
       {skills && rows && (
         <>
-          <p className="row muted">
+          <div className="row muted">
             Rank yourself against your friends <TermHelp glossaryKey="hiscores" />
-          </p>
+          </div>
           <div className="metric-grid" role="radiogroup" aria-label="Rank by">
             {metrics.map((entry) => (
               <button

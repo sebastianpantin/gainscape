@@ -139,3 +139,18 @@ test('each skill on the reveal says how much XP is left to its next level, and t
   );
   await expect(page.getByText(/^Duration (<1 min|\d+ min)$/)).toBeVisible();
 });
+
+test('the reveal ends with Done as the main action and See skills beside it', async ({ page }) => {
+  await register(page, uniqueUsername('rv_done'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+
+  const done = page.getByRole('link', { name: 'Done', exact: true });
+  const seeSkills = page.getByRole('link', { name: 'See skills', exact: true });
+  await expect(done).toHaveClass(/\bprimary\b/);
+  await expect(seeSkills).not.toHaveClass(/\bprimary\b/);
+  await done.click();
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+});

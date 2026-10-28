@@ -10,34 +10,13 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 ## Map
 
 - Entry point: `WorkoutScreen.tsx`. It composes: it calls the hooks, builds the `LiftCardContext` and renders `TodayView` (no draft), `SavingWorkoutView` (finished or syncing), `LiftExerciseCard`, `LiftSupersetCard`, `CardioExerciseCard`, `HoldExerciseCard` and `ChallengeBanner`. Each data effect and each group of commands lives in its own `use-*.ts` hook, called in a fixed order before the loading early return, so the hooks take a nullable draft.
-- Commands: `use-workout-commands.ts` (add, remove, swap, superset menu, set changes with feedback, discard) and `use-finish-workout.ts` (load type check, the planned-sets prompt, finish). `use-workout-previews.ts` holds the XP and record previews and builds set feedback. Per-workout state goes through `useSessionState`, which resets when `sessionId` changes.
+- Commands: `use-workout-commands.ts` and `use-finish-workout.ts`; `use-workout-previews.ts` builds the XP and record previews and set feedback. Per-workout state goes through `useSessionState`, which resets when `sessionId` changes.
 - Lift cards: `LiftExerciseCard.tsx` (one lift), `LiftSupersetCard.tsx` (a group, around `SupersetCard`), both built from `LiftExerciseIntro.tsx` and `LiftSetRow.tsx`. They read everything from one `LiftCardContext` prop (`lift-card-context.ts`), as the cardio and hold cards read `ExerciseCardActions`.
-- Pure rules, each tested in `tests/web/<name>.test.ts`:
-  - Finish text, counts and steps: `workout-rules.ts`.
-  - Screen decisions (picked exercise, swap list, add-button focus key, superset members): `workout-screen-rules.ts`.
-  - Lift card decisions (menu, advice, warm-ups, when rest starts): `exercise-card-rules.ts`.
-  - Today nudges: `today-rules.ts`.
-  - This week strip: `week-strip-rules.ts`.
-  - Highlights: `highlight-rules.ts`.
-  - Last-session chips: `last-set-rules.ts`.
-  - Per-set feedback: `set-feedback-rules.ts`.
-  - Set menu: `set-menu-rules.ts`.
-  - Help row keys: `workout-help.ts`.
-  - XP preview: `xp-preview.ts`.
-  - Record preview: `record-preview.ts`.
-- Hooks:
-  - `use-finish-sync.ts`: a thin adapter over `offline/finish-retries.ts` and `finish-lock.ts`.
-  - `use-rest-timer.ts` with `RestTimerBar.tsx` and `NotifyPrompt.tsx`.
-  - `use-rest-alert.ts` with `rest-alert-effects.ts`.
-  - `use-wake-lock.ts` and `use-recent-lift-sessions.ts`.
-- Row components:
-  - `SetRow.tsx` for lifts. It exports `WeightField`/`RepsField`, which history reuses.
-  - `HoldSetRow.tsx` for holds. It exports `HoldFields`, which history reuses.
-  - `CardioSetRow.tsx` with `BoutFields.tsx` for cardio. History reuses `BoutFields`.
-  - `SetMenu.tsx`: the per-row options menu.
-  - `SupersetCard.tsx`: presentational; the screen passes `renderCell`.
+- Pure rules: `*-rules.ts`, `workout-help.ts`, `xp-preview.ts` and `record-preview.ts`, each tested in `tests/web/<name>.test.ts`. `workout-rules.ts` holds the finish and saving text, counts and steps.
+- Hooks are `use-*.ts`. `use-finish-sync.ts` is a thin adapter over `offline/finish-retries.ts` and `finish-lock.ts`.
+- Rows: `SetRow.tsx` (lifts), `HoldSetRow.tsx`, `CardioSetRow.tsx` with `BoutFields.tsx`; history reuses their field exports. `SupersetCard.tsx` is presentational (the screen passes `renderCell`).
 - `ActiveWorkoutBar.tsx` is mounted by `App.tsx` on every route except `/` and `/reveal`.
-- `WorkoutClock.tsx`: the elapsed time in the sticky `.finish-bar` status line, so it stays in view on a long workout (`workoutClock`, shared with the bar, capped at `MAX_SESSION_DURATION_MS`). It ticks itself once a second so the screen does not re-render; its `timer` name changes once a minute and nothing announces the ticks.
+- `WorkoutClock.tsx` (the elapsed time in `.finish-bar`) ticks itself once a second so the screen does not re-render; its `timer` name changes once a minute and nothing announces the ticks.
 
 ## Rules and gotchas
 
@@ -48,6 +27,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - Cards are keyed by the draft exercise's stable `clientId`, and so is the open Swap picker. Removing an identical exercise then leaves the others in place.
 - The Swap picker lists up to 6 similar lifts until the user types (`similarExercises`): a shared top skill only (ties count), lifts that share a name word other than a setup word such as `barbell` or `seated` first, then by skill-share overlap. There is no movement-pattern field, so the name stands in for one.
 - A replaced draft does not remount the screen. All per-workout state therefore resets when `sessionId` changes (`useSessionState`): the finish problem, Swap picker, focus, discard and remove confirms, strength views and the `useRecentLiftSessions` scope.
+- Finish waits `FINISH_WINDOW_MS` after the persisted `finishedAt` before the first send (`finishSyncDelayMs`), so tabs and reloads agree and a close in the wait syncs on the next open. Only during the wait the saving view offers Save now and Keep training (a reopen). Back to editing stays `stalled`-only: in `syncing` a send may be in flight and a reopen would race the commit. Only DEV builds honour the `gainscape.finish-window-ms` override (e2e: 0).
 - `finishDraft` runs inside `updateDraft`. It leaves another session or an already finished draft alone. When a load type changed, it returns the draft unfinished with `changedNames`.
 - `setFeedback` passes `preview`, `record` and `becameRecord` as thunks, so typing into a set costs no preview work. Feedback fires only on the not-done to done transition. Add set and a picked exercise create sets that are not done yet, prefilled from the last set or the last session, so the lifter logs each one with Done and gets its drop and rest, like a program set; Finish counts them as sets not ticked, names the rated ones apart (a rating means it was lifted), and Mark done and finish also logs a rated 5RM test or optional set. The `role="status"` text is keyed by the drop count, so re-logging the same set announces again.
 - `workoutHelpKeys` reads only session-stable inputs, never set efforts, done flags, values or previews, so logging never adds or removes the help row. A fast-check property enforces this.
@@ -59,7 +39,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
   - State lives in `../../lib/workout/rest-timer-store.ts`. Re-read it before every write; tabs follow it through the `storage` event.
   - `RestTimerBar` ticks itself every 250 ms so the screen does not re-render.
   - It stays one mounted `section` so focus survives adjusting and the rest running out.
-  - Skip and Dismiss move focus to Finish, or to `.finish-bar` (`tabIndex={-1}`) while Finish is disabled.
+  - Skip and Dismiss focus the next unticked Done (after the last ticked, else from the top), else Finish, else `.finish-bar` (`tabIndex={-1}`).
 - Rest-end alerts:
   - One alert per rest across tabs and screens: a Web Lock plus `claimRestAlert` on `endsAt`.
   - No alert when the page thaws more than 5 s late.
@@ -73,7 +53,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
   - Live set rows are a compact grid that must fit a 360 px phone. Below 360 px, reps and Done move to a second line and the effort selector takes the full width, so the weight field stays usable at 320 px (`e2e/a11y.spec.ts`).
   - Controls between sets stay 44 px touch targets (`e2e/a11y.spec.ts`).
   - The five effort levels are a wrapping flex row of 44 px minimum buttons: one line on a stepped lift row from 360 px (its menu sits on the info line so effort gets the full width); at 320 px, and on hold rows that share their line with the menu, the last levels wrap.
-  - The effort selector is always the last line of a row. Picking an effort only rates the set: only the Done toggle completes it, and only completing a working set starts the rest (`startsRest`), so rating before or after Done never restarts it.
+  - The effort selector is always the last line of a row. A second tap keeps the effort; the set menu clears it (history rows still clear on a second tap). Picking an effort only rates the set: only the Done toggle completes it, and only completing a working set starts the rest (`startsRest`), so rating before or after Done never restarts it.
   - The `~ and new records are previews` note sits below `.finish-bar`, so it never adds sticky height.
   - The clock and sets done live in `.finish-bar`, not a sticky header: one bottom bar like `ActiveWorkoutBar`, no top chrome for the keyboard or iOS sticky quirks to fight, one `timer`. `useFinishBarClearance` publishes the bar's height as `--finish-bar-height`, which `scroll-padding-bottom` uses so a focused field never lands under the bar. WebKit ignores `scroll-padding` when focus scrolls, so the hook also scrolls a focused field clear of the bar on `focusin` (`scrollToClearFinishBar`, `e2e/set-fields.spec.ts` on WebKit).
   - `ActiveWorkoutBar` is one `--tap-target` tall and never wraps. Screens get extra bottom padding while it shows.
@@ -87,25 +67,18 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - Train home order (checked at 360x780, `e2e/train-home.spec.ts`): header, notices, `ThisWeekCard`, the program summary and today's prescription, then `Start workout`, then the Follow a program card and program days, the progress and highlight cards, lift goals and friends. Start stays in the first screen for a lifter without a program; a program follower starts from the prescription above it. Keep new cards below Start.
 - `ThisWeekCard` is the only streak: the weekly goal's (weeks in a row that met the goal). `TodayView` reads `trainingDaysQuery` once for the strip and the highlights: this month in the profile time zone (the RPC range includes the month before, so a week that starts there is whole), cache-first. While it loads, the card keeps an `aria-hidden` letter strip so nothing below shifts. Decisions live in `thisWeekView`.
 - `HighlightsCard` rows each hide without data, and the card with them, so a new account never sees it. Last workout: those training days, or `lastWorkoutDateQuery` (one `sessions` row) only when they hold none. Latest record: the first `recordTimelineQuery` page; the exercise list loads only once it holds a record. Rarest drop: the `rarest_recent_drop` RPC ranks the last 30 days on the server; online only.
-- The stat row under the title holds `LevelStat` (Total level and Combat, to Skills) and `DotsStat` (to the Strength level page), label above value; beside the title it wrapped at 360 px. DOTS reads as a level, so it sits there as a whole number, not in Highlights: `dotsCardFor` and `dotsLevel` from `lib/stats/dots-rules.ts`, the same card as Stats, hidden until ready. The collection (a network fetch online) loads only once the profile holds a sex and a bodyweight.
-- `TrainingHero` (the `Your progress` card) shows the companion pet, the equipped gear (icon = slot sprite in the tier colour, from `loadoutQuery`), an XP bar for the skill nearest its next level and the first quest in progress (`activeQuestLine`). It hides when none of them has data, so a new account does not see an empty card. `useCompanionPet` uses `ownedPetsQuery`, not `itemsQuery`, so Items and the reveal keep their own cache.
+- The stat row under the title holds `LevelStat` and `DotsStat`, label above value (beside the title it wrapped at 360 px). DOTS reads as a level, so it sits there as a whole number, not in Highlights, hidden until ready. The collection (a network fetch online) loads only once the profile holds a sex and a bodyweight.
+- `TrainingHero` (`Your progress`) hides when none of its parts has data, so a new account sees no empty card. `useCompanionPet` uses `ownedPetsQuery`, not `itemsQuery`, so Items and the reveal keep their own cache.
 - `streakRiskText` compares the server's `weekStart` with the profile-timezone day from `TodayView`, never the device day; it returns null when that day is outside the week.
 - The picker gets only active exercises (`exercisePickerList`), but `exerciseListLoadQuery` saves the archived ones too, because the Exercises screen, program editor and reveal need them offline.
+- `Create custom exercise` (`/exercises?new=1&from=workout`) returns to `/` with `addExerciseId` in route state; the screen adds it once the list holds it.
 - `Discard workout` is left out on a challenge draft, whose banner has its own discard. Discarding a challenge keeps the scroll.
 - `BodyweightPrompt` answers save through `../profile/save-bodyweight.ts`, the same path as session detail.
 
 ## Testing
 
-- Unit (`make test-web`): `tests/web/<module>.test.ts` for each rules file above. The rules this screen drives are covered in:
-  - `superset-rules`, `challenge-rules`, `warmup-rules`, `plate-rules`, `plate-settings-store`.
-  - `session-baseline` (the strength and record baseline as of the draft start).
-  - `active-workout-bar-rules`, `rest-timer-rules`, `program-today-rules`.
-  - The offline draft and finish tests listed in `../../offline/AGENTS.md`.
-- The domain math is tested in `tests/domain/`.
-- E2E (stack needed, `make e2e`):
-  - `drafts`, `multi-tab`, `token-refresh`, `workout-records`, `programs`, `profile` (RPE, pounds), `training-aids`.
-  - `train-home`, `loot`, `weekly-goal`, `supersets`, `challenges`, `custom-exercise`, `notify-prompt`, `active-workout-bar`, `a11y`, `term-help`.
-  - `e2e/pwa/offline.spec.ts` (`make e2e-pwa`).
+- Unit (`make test-web`): `tests/web/<module>.test.ts` for each rules file here and in `../../lib/workout/`; the offline draft and finish tests are listed in `../../offline/AGENTS.md`. Domain math: `tests/domain/`.
+- E2E (`make e2e`): `drafts`, `multi-tab`, `workout-chrome` (360 px chrome), `rest-timer`, `set-menu`, `set-fields`, `a11y`, and the other workout flow specs; `e2e/pwa/offline.spec.ts` (`make e2e-pwa`).
 
 ## Manual Notes
 

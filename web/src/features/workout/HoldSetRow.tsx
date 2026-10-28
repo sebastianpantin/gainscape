@@ -8,6 +8,7 @@ import type { HoldDraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
 import { SetMenu } from './SetMenu.tsx';
+import { clearEffortAction } from './set-menu-rules.ts';
 import { WeightField } from './SetRow.tsx';
 import { type PreviewRecord } from './record-preview.ts';
 import { RecordChip } from './RecordChip.tsx';
@@ -109,9 +110,17 @@ export function HoldSetRow({
       <SetMenu
         buttonRef={menuRef}
         name={`Set ${setNumber} options`}
-        actions={[{ label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove }]}
+        actions={[
+          ...clearEffortAction(set.effort, setNumber, () => onChange({ effort: null })),
+          { label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove },
+        ]}
       />
-      <EffortSelector mode="level" selected={set.effort} onSelect={(effort) => onChange({ effort })} />
+      <EffortSelector
+        mode="level"
+        selected={set.effort}
+        retapClears={false}
+        onSelect={(effort) => onChange({ effort })}
+      />
     </li>
   );
 }

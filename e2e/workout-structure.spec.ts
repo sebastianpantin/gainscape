@@ -177,3 +177,19 @@ test('the exercise picker lists names left-aligned above their details and says 
   await search.fill('');
   await expect(page.getByText('No exercises match', { exact: false })).toHaveCount(0);
 });
+
+test('Enter in the exercise search adds the top match, focuses its card and announces it', async ({ page }) => {
+  await register(page, uniqueUsername('pick_enter'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const search = page.getByLabel('Search exercises');
+  await search.fill('bench press');
+  const topMatch = page.locator('.picker-results').getByRole('button').first();
+  const topName = (await topMatch.locator('span').first().innerText()).trim();
+
+  await search.press('Enter');
+  const heading = page.getByRole('heading', { name: topName, exact: true });
+  await expect(heading).toBeVisible();
+  await expect(heading).toBeFocused();
+  await expect(page.getByRole('status').filter({ hasText: `${topName} added` })).toHaveText(`${topName} added`);
+  await expect(search).toHaveValue('');
+});

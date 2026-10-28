@@ -746,9 +746,7 @@ describe('session detail texts', () => {
     expect(failureText({ kind: 'wrong_account' }, 'delete')).toBe(
       'You are signed in as someone else in another tab. Reload the app.',
     );
-    expect(failureText({ kind: 'retry', reason: 'offline' }, 'save')).toBe(
-      "Couldn't reach the server (offline). Try again.",
-    );
+    expect(failureText({ kind: 'retry', reason: 'offline' }, 'save')).toBe("Couldn't reach the server. Try again.");
     expect(failureText({ kind: 'rate_limited', retryAfterSeconds: 120 }, 'save')).toBe(
       'Too many changes. Try again in 2 min.',
     );
@@ -756,7 +754,7 @@ describe('session detail texts', () => {
       'Too many changes. Try again in a few minutes.',
     );
     expect(failureText({ kind: 'bug', code: 'invalid_payload' }, 'delete')).toBe(
-      "Couldn't delete this workout: invalid_payload",
+      "Couldn't delete this workout. Reload the app and try again.",
     );
     expect(failureText({ kind: 'revision_conflict' }, 'delete')).toBe(
       'This workout was changed on another device. Check the latest version, then delete it again if you still want to.',

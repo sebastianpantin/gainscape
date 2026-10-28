@@ -1,3 +1,5 @@
+import type { EffortInput } from '@domain/types.ts';
+
 export const SET_MENU_GAP_PX = 4;
 
 interface SetMenuAnchor {
@@ -33,4 +35,14 @@ export function rowToFocusAfterRemoving(rowIds: readonly string[], removedId: st
   const index = rowIds.indexOf(removedId);
   if (index === -1) return null;
   return rowIds[index + 1] ?? rowIds[index - 1] ?? null;
+}
+
+interface ClearEffortAction {
+  label: string;
+  accessibleName: string;
+  onChoose: () => void;
+}
+
+export function clearEffortAction(effort: EffortInput, setNumber: number, onChoose: () => void): ClearEffortAction[] {
+  return effort === null ? [] : [{ label: 'Clear effort', accessibleName: `Clear effort set ${setNumber}`, onChoose }];
 }

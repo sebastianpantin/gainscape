@@ -3,10 +3,14 @@ import {
   canFinishWorkout,
   finishBlockedText,
   deviceSaveProblemText,
+  FINISH_WINDOW_MS,
   finishDraft,
+  finishSyncDelayMs,
+  finishWindowMs,
   finishPrompt,
   loadTypeChangedText,
   rejectionText,
+  savingAtRisk,
   stalledSyncText,
   challengeStartNoticeText,
   startNoticeText,
@@ -19,8 +23,13 @@ import type { WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 describe('syncProblemText', () => {
   it('names the network problem, says retries run while Train is open and that the workout is kept', () => {
     expect(syncProblemText('offline', 2_000)).toBe(
-      "Couldn't reach the server (offline). Retrying while Train is open — your workout is saved on this device.",
+      "Couldn't reach the server. Retrying while Train is open — your workout is saved on this device.",
     );
+  });
+
+  it('never shows the raw problem code', () => {
+    for (const code of ['offline', 'Failed to fetch', 'internal_error', 'storage_error'])
+      expect(syncProblemText(code, 2_000)).not.toContain(code);
   });
 
   it('says when a long sync limit wait ends', () => {
@@ -39,7 +48,7 @@ describe('syncProblemText', () => {
 describe('stalledSyncText', () => {
   it('says the server keeps failing and that the workout is kept', () => {
     expect(stalledSyncText('internal_error')).toBe(
-      "The server keeps failing to save this workout (internal_error). It's saved on this device; try again later.",
+      "The server keeps failing to save this workout. It's saved on this device; try again later.",
     );
   });
 
@@ -74,8 +83,10 @@ describe('rejectionText', () => {
     );
   });
 
-  it('shows any other rejection reason', () => {
-    expect(rejectionText('invalid_payload')).toBe('The server rejected this workout: invalid_payload');
+  it('explains any other rejection in words, without the code', () => {
+    expect(rejectionText('invalid_payload')).toBe(
+      "The server couldn't accept this workout. Go back to editing to check it, or discard it.",
+    );
   });
 });
 
@@ -84,12 +95,12 @@ describe('finishPrompt', () => {
     expect(finishPrompt({ done: 3, planned: 0, leftToLifter: 0, rated: 0 })).toBeNull();
   });
 
-  it('offers to mark the sets not ticked done or to finish without them', () => {
+  it('makes finishing without the sets not ticked the default once a set is ticked', () => {
     expect(finishPrompt({ done: 2, planned: 1, leftToLifter: 0, rated: 0 })).toEqual({
       title: '1 set not ticked',
       body: 'Log them as done, or keep only the sets you ticked.',
-      confirm: { label: 'Mark done and finish', marksPlannedDone: true },
-      alternative: { label: 'Finish without them', marksPlannedDone: false },
+      confirm: { label: 'Finish without them', marksPlannedDone: false },
+      alternative: { label: 'Mark done and finish', marksPlannedDone: true },
     });
   });
 
@@ -161,7 +172,51 @@ describe('deviceSaveProblemText', () => {
   });
 
   it('says a change could not be saved when every store failed', () => {
-    expect(deviceSaveProblemText('unsaved')).toBe("Couldn't save on this device");
+    expect(deviceSaveProblemText('unsaved')).toBe(
+      "Couldn't save your latest change on this device. Retry, and keep this tab open until it saves.",
+    );
+  });
+});
+
+describe('savingAtRisk', () => {
+  it('holds only when a change could not be saved anywhere', () => {
+    expect(savingAtRisk('unsaved')).toBe(true);
+    expect(savingAtRisk('unreadable')).toBe(false);
+    expect(savingAtRisk(null)).toBe(false);
+  });
+});
+
+describe('finishSyncDelayMs', () => {
+  const finishedAt = Date.parse('2026-10-28T10:00:00Z');
+
+  it('waits the rest of the window after the finish', () => {
+    expect(finishSyncDelayMs(finishedAt, finishedAt + 1_500, 5_000)).toBe(3_500);
+  });
+
+  it('sends at once when the window has passed', () => {
+    expect(finishSyncDelayMs(finishedAt, finishedAt + 9_000, 5_000)).toBe(0);
+    expect(finishSyncDelayMs(finishedAt, finishedAt, 0)).toBe(0);
+  });
+
+  it('never waits longer than the window when the clock is behind the finish', () => {
+    expect(finishSyncDelayMs(finishedAt, finishedAt - 60_000, 5_000)).toBe(5_000);
+  });
+});
+
+describe('finishWindowMs', () => {
+  it('is five seconds in a production build, whatever the override says', () => {
+    expect(FINISH_WINDOW_MS).toBe(5_000);
+    expect(finishWindowMs('0', false)).toBe(5_000);
+    expect(finishWindowMs(null, false)).toBe(5_000);
+  });
+
+  it('honours a whole, non-negative override in a development build', () => {
+    expect(finishWindowMs('0', true)).toBe(0);
+    expect(finishWindowMs('1200', true)).toBe(1_200);
+  });
+
+  it('ignores a missing or unreadable override in a development build', () => {
+    for (const override of [null, '', 'soon', '-5', '1.5']) expect(finishWindowMs(override, true)).toBe(5_000);
   });
 });
 

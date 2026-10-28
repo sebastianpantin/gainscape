@@ -71,3 +71,40 @@ test('a stale edit after the other tab synced does not resurrect the draft', asy
   await expect(benchHeading(second)).toHaveCount(0);
   await expect.poll(() => sessionCount(username)).toBe(1);
 });
+
+test.describe('the moment after Finish in two tabs', () => {
+  const FINISH_WINDOW_MS = 5_000;
+  test.use({ finishWindowMs: FINISH_WINDOW_MS });
+
+  test('Keep training in the other tab reopens the workout in both and sends nothing', async ({ context, page }) => {
+    const username = uniqueUsername('mt_kt');
+    await register(page, username);
+    const second = await context.newPage();
+    await second.goto('/');
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+    await expect(benchHeading(second)).toBeVisible();
+    const completeSessionRequests: string[] = [];
+    context.on('request', (request) => {
+      if (request.url().includes('/functions/v1/complete-session')) completeSessionRequests.push(request.method());
+    });
+
+    await page.getByRole('button', { name: 'Finish workout' }).click();
+    await expect(second.getByRole('button', { name: 'Save now' })).toBeVisible();
+    await second.getByRole('button', { name: 'Keep training' }).click();
+    await expect(benchHeading(page)).toBeVisible();
+    await expect(benchHeading(second)).toBeVisible();
+    const lateSend = context
+      .waitForEvent('request', {
+        predicate: (request) => request.url().includes('/functions/v1/complete-session'),
+        timeout: FINISH_WINDOW_MS * 2,
+      })
+      .then(
+        () => true,
+        () => false,
+      );
+    expect(await lateSend).toBe(false);
+    expect(completeSessionRequests).toEqual([]);
+    expect(await sessionCount(username)).toBe(0);
+  });
+});

@@ -29,6 +29,8 @@ Isolation and fixtures:
 
 - Every spec registers its own user with a unique name (a prefix plus `Date.now().toString(36)`, passed to `register`). Never share users or rely on prior data.
 - Import `test` and `expect` from `support/fixtures.ts`, never from `@playwright/test` (types still come from there). Its `context` and `newPerson` fixtures fail a test on any uncaught `pageerror`, checked before the contexts close so the trace is kept. On WebKit it ignores "... due to access control checks." errors, which WebKit raises for fetches a reload or navigation cancels.
+- The fixtures also fail a test on React's DOM-nesting `console.error` ("cannot be a descendant of", "cannot contain a nested"), which only the dev server prints.
+- The `finishWindowMs` option (default 0) writes the finish-window override before every load, which only DEV builds honour, so Finish syncs at once; a spec about the wait after Finish sets `test.use({ finishWindowMs: 5000 })`. Production suites (`pwa/`, `pages/`) get the real 5 s window.
 - With `serviceWorkers: 'block'` the fixture makes `navigator.serviceWorker.register` reject, like a browser with service workers disabled, because Playwright's block resolves it with `undefined`.
 - Two users or devices: call `newPerson()` once per person; it closes every context it opened, even on failure. Never call `browser.newContext()` directly. Two tabs: `context.newPage()`.
 - `register` creates a confirmed account through the admin API with the browser's time zone, signs in with supabase-js in Node and writes that session and the first-run intro flag into `localStorage` through a one-shot init script before the first load, because the sign-in form costs every test a page load. To see the intro or drive the form use `registerWithoutSigningIn` plus `submitSignIn`; `auth.spec.ts` and the other sign-in specs keep the form covered. Only `auth.spec.ts` and `registration.spec.ts` drive the sign-up form (`submitRegistration`).
@@ -41,7 +43,7 @@ Selectors (no test ids: ESLint fails on `getByTestId` here and on `data-testid` 
 
 - Locate by role and accessible name (`getByRole`, `getByLabel`, then `getByText`), so tests double as accessibility checks. When a value has no role or name, give it one in the app.
 - Label and value pairs are `<dl>`; read a value with `definitionOf(scope, term)`.
-- Workout rows are list items named `Set N` and `Bout N` (`<exercise>, set N` inside a superset round). Use `setRow`, `setRows`, `boutRow` inside `exerciseCard(page, name)`, never `li.set-row` or `.nth()`. A done set is a pressed `Done set N` button. Warm-up toggle and Remove are in the row's options menu (`openSetOptions`).
+- Workout rows are list items named `Set N` and `Bout N` (`<exercise>, set N` inside a superset round). Use `setRow`, `setRows`, `boutRow` inside `exerciseCard(page, name)`, never `li.set-row` or `.nth()`. A done set is a pressed `Done set N` button. Warm-up toggle, Clear effort and Remove are in the row's options menu (`openSetOptions`).
 - A computed total that changes on screen is a named `<output>` (`getByRole('status', { name: 'Workout XP' })`).
 - Toasts: assert exact text inside a `status`, because the toast region is always present.
 - Plain text (bio, detail line) is matched with `getByText(text, { exact: true })` inside its named region.

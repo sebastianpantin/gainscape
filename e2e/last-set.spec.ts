@@ -1,4 +1,5 @@
 import { type Locator } from '@playwright/test';
+import { expectTouchTargets } from './support/a11y.ts';
 import { expect, test } from './support/fixtures.ts';
 import {
   addExercise,
@@ -39,6 +40,7 @@ test('each set compares with last session’s set and a planned set fills it in 
   await expect(first.getByRole('button', { name: 'Last time 60 kg × 5, fill set 1', exact: true })).toHaveText(
     'Last 60×5',
   );
+  await expectTouchTargets(page, ['li.set-row button.last-set']);
   await doneFirst.click();
   await expect(first.getByRole('img', { name: 'Same as last time', exact: true })).toHaveText('= last');
   await bench.getByRole('button', { name: '+ Add set' }).click();

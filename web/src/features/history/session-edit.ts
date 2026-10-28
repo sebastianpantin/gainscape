@@ -480,13 +480,13 @@ export function failureText(action: FailureAction, verb: 'save' | 'delete'): str
     case 'wrong_account':
       return 'You are signed in as someone else in another tab. Reload the app.';
     case 'retry':
-      return `Couldn't reach the server (${action.reason}). Try again.`;
+      return "Couldn't reach the server. Try again.";
     case 'rate_limited':
       return `Too many changes. ${tryAgainIn(action.retryAfterSeconds)}`;
     case 'revision_conflict':
       return `This workout was changed on another device. Check the latest version, then ${verb} it again if you still want to.`;
     case 'bug':
-      return `Couldn't ${verb} this workout: ${action.code}`;
+      return `Couldn't ${verb} this workout. Reload the app and try again.`;
     default:
       return `Couldn't ${verb} this workout: ${action.kind}`;
   }

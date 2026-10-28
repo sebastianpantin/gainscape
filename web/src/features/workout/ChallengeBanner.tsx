@@ -42,9 +42,9 @@ export function ChallengeBanner({ draft, challenge, exercises, unit, onDiscard }
           onConfirm={onDiscard}
           onCancel={() => setConfirmingDiscard(false)}
         >
-          <p className="row">
+          <div className="row">
             Your scroll is kept until a challenge workout is saved. <TermHelp glossaryKey="scroll" />
-          </p>
+          </div>
         </ConfirmDialog>
       )}
     </section>

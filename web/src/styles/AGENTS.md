@@ -36,7 +36,7 @@ The whole visual layer. `tokens.css` defines the design tokens as CSS custom pro
 - Full-width chrome honours `env(safe-area-inset-*)`, as `body`, `.screen` and the licenses page do.
 - `html` sets `touch-action: manipulation` to stop double-tap zoom. `html, body` set `overscroll-behavior-y: none`, so a workout never pull-to-refreshes or bounces. The tap highlight stays, because buttons have no `:active` style.
 - `.route-view`'s `route-enter` is an opacity-only fade. A transform would make it the containing block of its `position: fixed` children.
-- `.toast-region` sits fixed above the tab bar, the active workout bar slot and the safe area, with `z-index: 25` and `pointer-events: none`.
+- `.toast-region` sits fixed above the tab bar, the safe area and the taller of the active workout bar slot and the measured `--finish-bar-height`, with `z-index: 25` and `pointer-events: none`.
 - `.reveal-still` turns off the reveal's `rise`, `pop` and `gain-added` animations once the reveal is skipped or settled.
 - Put every new animation inside the existing `prefers-reduced-motion: reduce` block in `motion.css`, which `app.css` imports last.
 - Class names are the contract with the TSX in `../components/`, `../features/` and `../pwa/`. Rename them in both places and check `e2e/` selectors that use class names.

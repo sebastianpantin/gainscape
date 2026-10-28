@@ -27,6 +27,7 @@ import { lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './las
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
 import { SetMenu } from './SetMenu.tsx';
+import { clearEffortAction } from './set-menu-rules.ts';
 import { type PreviewRecord } from './record-preview.ts';
 import { RecordChip } from './RecordChip.tsx';
 import type { ShownSetDrop } from './set-feedback-rules.ts';
@@ -118,9 +119,10 @@ interface RepsFieldProps {
   reps: number;
   onChange: (reps: number) => void;
   setNumber: number;
+  onDone?: () => void;
 }
 
-export function RepsField({ reps, onChange, setNumber }: RepsFieldProps) {
+export function RepsField({ reps, onChange, setNumber, onDone }: RepsFieldProps) {
   return (
     <NumberTextField
       label="reps"
@@ -131,6 +133,7 @@ export function RepsField({ reps, onChange, setNumber }: RepsFieldProps) {
       wholeNumber
       lastInGroup
       onCommit={onChange}
+      onDone={onDone}
     />
   );
 }
@@ -232,7 +235,12 @@ export function SetRow({
         withStepper
       />
       <div className="reps-field">
-        <RepsField reps={set.reps} onChange={(reps) => onChange({ reps })} setNumber={setNumber} />
+        <RepsField
+          reps={set.reps}
+          onChange={(reps) => onChange({ reps })}
+          setNumber={setNumber}
+          onDone={() => doneButton.current?.focus()}
+        />
       </div>
       <DoneToggle done={set.done} label={doneLabel} drop={drop} onToggle={onToggleDone} buttonRef={doneButton} />
       <div className="set-info">
@@ -286,6 +294,7 @@ export function SetRow({
         mode={effortMode}
         selected={set.effort}
         assumed={estimatedRir === null ? null : assumedEffort(effortMode, estimatedRir, DEFAULT_BALANCE.effortLevelRir)}
+        retapClears={false}
         onSelect={(effort) => onChange({ effort })}
       />
       <SetMenu
@@ -298,6 +307,7 @@ export function SetRow({
             pressed: set.isWarmup,
             onChoose: () => onChange({ isWarmup: !set.isWarmup }),
           },
+          ...clearEffortAction(set.effort, setNumber, () => onChange({ effort: null })),
           { label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove },
         ]}
       />

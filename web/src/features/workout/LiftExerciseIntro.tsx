@@ -25,7 +25,7 @@ export function LiftExerciseIntro({ exercise, exerciseIndex, lift }: LiftExercis
   return (
     <>
       <header>
-        <h2>{exercise.name}</h2>
+        <h2 tabIndex={-1}>{exercise.name}</h2>
         <span className="row">
           <ExerciseProgressLink exerciseId={exercise.exerciseId} exerciseName={exercise.name} />
           <ExerciseMenu exerciseName={exercise.name} actions={lift.menuActions(exerciseIndex)} />

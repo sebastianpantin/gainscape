@@ -1,6 +1,7 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { definitionOf, logBench, logCardio, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
+import { expectTouchTargets } from './support/a11y.ts';
 import { feedItem } from './support/friendship.ts';
 
 async function logRun(page: Page, minutes: number, distance: number) {
@@ -46,6 +47,10 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await expect(pr).toBeVisible();
   await expect(pr).toContainText(`${bobName} @${bobName}`);
   await expect(alice.getByRole('button', { name: 'What does gz mean?', exact: true })).toBeVisible();
+  const phoneViewport = alice.viewportSize()!;
+  await alice.setViewportSize({ width: 320, height: 640 });
+  await expectTouchTargets(alice);
+  await alice.setViewportSize(phoneViewport);
   const gzSaved = alice.waitForResponse((response) => response.url().includes('/rpc/set_gz') && response.ok());
   await pr.getByRole('button', { name: /^Congratulate \(gz\) / }).click();
   await gzSaved;

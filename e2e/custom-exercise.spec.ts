@@ -106,3 +106,19 @@ test('create and log a custom cardio exercise', async ({ page }) => {
   await expect(xp).toContainText('Endurance');
   await expect(xp).toContainText('Agility');
 });
+
+test('a custom exercise created from a workout comes back added to that workout', async ({ page }) => {
+  await register(page, uniqueUsername('cx_wk'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await page.getByRole('link', { name: 'Create custom exercise' }).click();
+  await page.getByLabel('Name').fill('Landmine Press');
+  await page.getByLabel('Load type').selectOption('external');
+  await page.getByLabel('Equipment').selectOption('other');
+  await page.getByLabel('Shoulders').fill('100');
+  await page.getByRole('button', { name: 'Save exercise' }).click();
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Workout', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Landmine Press', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Landmine Press', exact: true })).toHaveCount(1);
+});

@@ -18,6 +18,7 @@ const BETWEEN_SET_CONTROLS = [
   '.bodyweight-prompt button',
   'button.term-help',
   '.term-help-panel button',
+  '.gz-button',
 ];
 
 export async function expectNoAxeViolations(page: Page, screen: string): Promise<void> {

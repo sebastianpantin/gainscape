@@ -33,7 +33,7 @@ const LOAD_TYPE_LABELS: Record<LoadType, string> = {
 interface CustomExerciseFormProps {
   exercise: Exercise | null;
   skills: Skill[];
-  onSaved: () => void;
+  onSaved: (exerciseId: string) => void;
   onCancel: () => void;
 }
 
@@ -91,7 +91,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
         equipment,
         shares: shares!,
       });
-      onSaved();
+      onSaved(id);
     } catch (error) {
       setProblem(messageOf(error, 'Could not save the exercise.'));
       setSaving(false);

@@ -47,7 +47,7 @@ export function challengeStartNoticeText(outcome: StartOutcome): string | null {
 
 export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
   if (lastProblem !== RATE_LIMITED_CODE) {
-    return `Couldn't reach the server (${lastProblem}). Retrying while Train is open — your workout is saved on this device.`;
+    return "Couldn't reach the server. Retrying while Train is open — your workout is saved on this device.";
   }
   if (waitMs !== undefined && waitMs > LONG_SYNC_WAIT_MS) {
     return `Sync limit reached; this workout will sync in ${waitText(waitMs / MS_PER_SECOND)}. It's saved on this device.`;
@@ -59,24 +59,41 @@ export function stalledSyncText(reason: string): string {
   if (reason === WRONG_ACCOUNT_REASON) {
     return "You are signed in as someone else in another tab. Reload the app to save this workout. It's saved on this device.";
   }
-  return `The server keeps failing to save this workout (${reason}). It's saved on this device; try again later.`;
+  return "The server keeps failing to save this workout. It's saved on this device; try again later.";
 }
 
 const DEVICE_SAVE_PROBLEM_TEXT: Readonly<Record<DraftSaveProblem, string>> = {
   unreadable:
     "Couldn't read saved workouts on this device. Reload the app to try again; new changes are still saved here.",
-  unsaved: "Couldn't save on this device",
+  unsaved: "Couldn't save your latest change on this device. Retry, and keep this tab open until it saves.",
 };
 
 export function deviceSaveProblemText(problem: DraftSaveProblem): string {
   return DEVICE_SAVE_PROBLEM_TEXT[problem];
 }
 
+export function savingAtRisk(problem: DraftSaveProblem | null): boolean {
+  return problem === 'unsaved';
+}
+
+export const FINISH_WINDOW_MS = 5_000;
+export const FINISH_HOLD_TEXT = 'Saving your workout in a few seconds.';
+export const FINISH_WINDOW_OVERRIDE_KEY = 'gainscape.finish-window-ms';
+
+export function finishWindowMs(override: string | null, honourOverride: boolean): number {
+  if (!honourOverride || override === null || !/^\d+$/.test(override)) return FINISH_WINDOW_MS;
+  return Number(override);
+}
+
+export function finishSyncDelayMs(finishedAt: number, now: number, windowMs: number): number {
+  return Math.min(windowMs, Math.max(0, finishedAt + windowMs - now));
+}
+
 export function rejectionText(reason: string): string {
   if (Object.hasOwn(TIMING_REJECTION_TEXT, reason)) return TIMING_REJECTION_TEXT[reason];
   return EXERCISE_CHANGED_REASONS.has(reason)
     ? 'Load type of an exercise changed; check the weights'
-    : `The server rejected this workout: ${reason}`;
+    : "The server couldn't accept this workout. Go back to editing to check it, or discard it.";
 }
 
 interface FinishCounts {
@@ -136,12 +153,10 @@ export function finishPrompt({ done, planned, leftToLifter, rated }: FinishCount
   }
   const choice =
     done > 0 ? 'Log them as done, or keep only the sets you ticked.' : 'No set is ticked yet. Log them all as done?';
-  return {
-    title,
-    body: [...ratedNotTickedText(rated), choice, ...leftNote].join(' '),
-    confirm: MARK_DONE,
-    alternative: done > 0 ? WITHOUT_THEM : null,
-  };
+  const body = [...ratedNotTickedText(rated), choice, ...leftNote].join(' ');
+  if (done === 0) return { title, body, confirm: MARK_DONE, alternative: null };
+  if (rated === 0) return { title, body, confirm: WITHOUT_THEM, alternative: MARK_DONE };
+  return { title, body, confirm: MARK_DONE, alternative: WITHOUT_THEM };
 }
 
 interface FinishOptions {

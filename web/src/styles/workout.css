@@ -136,7 +136,7 @@
     'number weight reps done'
     'info info info menu'
     'effort effort effort effort';
-  row-gap: var(--space-1);
+  row-gap: var(--space-2);
   align-items: center;
   padding-top: var(--space-2);
 }
@@ -737,7 +737,7 @@ html:has(.finish-bar) {
 .finish-bar:has(> .rest-timer) {
   flex-flow: row wrap;
   align-items: center;
-  padding-block: var(--space-2);
+  padding-block: var(--space-1);
 }
 
 .finish-bar:has(> .rest-timer) > * {
@@ -746,7 +746,7 @@ html:has(.finish-bar) {
 
 .finish-bar:has(> .rest-timer) > .rest-timer {
   position: static;
-  flex: 1 1 15rem;
+  flex: 1 1 auto;
 }
 
 .finish-bar:has(> .rest-timer) .rest-progress {
@@ -754,9 +754,18 @@ html:has(.finish-bar) {
 }
 
 .finish-bar:has(> .rest-timer) > .button.big {
-  flex: 1 1 7rem;
+  flex: 0 1 auto;
   min-height: var(--tap-target);
   font-size: var(--font-size-md);
+}
+
+.finish-bar:has(> .rest-timer) .finish-word {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .finish-bar:focus {
@@ -765,6 +774,7 @@ html:has(.finish-bar) {
 
 .finish-status {
   font-size: var(--font-size-sm);
+  line-height: 1.2;
   color: var(--color-text-muted);
   white-space: nowrap;
 }
