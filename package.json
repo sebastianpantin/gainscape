@@ -38,7 +38,7 @@
     "supabase": "^2.121.0",
     "typescript": "~6.0.0",
     "typescript-eslint": "^8.70.1",
-    "vite": "^8.3.1",
+    "vite": "^8.3.4",
     "vitest": "^5.0.2",
     "wrangler": "4.151.0",
     "yaml": "^2.9.1"
