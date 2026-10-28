@@ -23,7 +23,7 @@ export function TimezoneSection({ profile, replaceProfile }: Omit<SectionProps, 
   return (
     <section className="panel stack" aria-labelledby="time-heading">
       <h2 id="time-heading">Time zone</h2>
-      <dl className="stack" style={{ gap: 2 }}>
+      <dl className="stack" style={{ gap: 'var(--space-0-5)' }}>
         <dt className="muted tiny">Current</dt>
         <dd>{profile.timezone}</dd>
       </dl>

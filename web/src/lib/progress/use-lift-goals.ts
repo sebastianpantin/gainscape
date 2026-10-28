@@ -8,6 +8,7 @@ export function useLiftGoals(userId: string) {
   return {
     statuses: load.data && liftGoalStatuses(load.data.goals, load.data.repMaxes, profile?.bodyweightKg ?? null),
     error: load.error,
+    retry: load.refetch,
     today: todayLocalDate(new Date(), profile?.timezone),
   };
 }

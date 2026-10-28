@@ -18,7 +18,9 @@ import {
   removeFriend,
 } from '../../lib/social/social.ts';
 import { slotsByReps } from '../collection/record-slots.ts';
+import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { RecordSlots } from '../collection/RecordSlots.tsx';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { ProfileWithTopSkills } from '../profile/ProfileWithTopSkills.tsx';
@@ -90,13 +92,9 @@ function FriendProfile({ friendId }: { friendId: string }) {
       <Link className="back-link" to="/friends">
         ‹ Friends
       </Link>
-      {state.status === 'loading' && <p>Loading…</p>}
-      {state.status === 'failed' && (
-        <>
-          <h1 className="title">Friend profile</h1>
-          <ProblemWithRetry problem={state.problem} onRetry={view.refetch} />
-        </>
-      )}
+      {(state.status === 'loading' || state.status === 'failed') && <h1 className="title">Friend profile</h1>}
+      {state.status === 'loading' && <ListSkeleton />}
+      {state.status === 'failed' && <ProblemWithRetry problem={state.problem} onRetry={view.refetch} />}
       {state.status === 'missing' && (
         <section className="panel stack">
           <h1 className="title">Not available</h1>
@@ -132,27 +130,30 @@ function FriendProfile({ friendId }: { friendId: string }) {
           </section>
           {state.profile.relation === 'friend' && (
             <section className="panel stack">
+              <button className="button danger" type="button" onClick={() => setConfirming(true)}>
+                Remove friend
+              </button>
+            </section>
+          )}
+          {confirming && (
+            <ConfirmDialog
+              title={`Remove ${state.profile.displayName} from your friends?`}
+              confirmLabel="Remove for good"
+              cancelLabel="Keep friend"
+              busy={removing}
+              danger
+              onConfirm={() => void remove()}
+              onCancel={() => {
+                setConfirming(false);
+                setProblem(null);
+              }}
+            >
               {problem && (
                 <p className="problem" role="alert">
                   {problem}
                 </p>
               )}
-              {confirming ? (
-                <>
-                  <p>Remove {state.profile.displayName} from your friends?</p>
-                  <button className="button danger" type="button" disabled={removing} onClick={remove}>
-                    Remove for good
-                  </button>
-                  <button className="button" type="button" onClick={() => setConfirming(false)}>
-                    Keep friend
-                  </button>
-                </>
-              ) : (
-                <button className="button danger" type="button" onClick={() => setConfirming(true)}>
-                  Remove friend
-                </button>
-              )}
-            </section>
+            </ConfirmDialog>
           )}
         </>
       )}

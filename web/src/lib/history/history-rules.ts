@@ -163,6 +163,20 @@ export function withoutHistorySession<Pages extends { pages: { id: string }[][] 
   return loaded && { ...loaded, pages: loaded.pages.map((page) => page.filter((session) => session.id !== sessionId)) };
 }
 
+interface NamedProgram {
+  name: string;
+  days: readonly { id: string; name: string }[];
+}
+
+export function programDayLabel(programs: readonly NamedProgram[], programDayId: string | null): string | null {
+  if (programDayId === null) return null;
+  for (const program of programs) {
+    const day = program.days.find(({ id }) => id === programDayId);
+    if (day) return `${program.name} — ${day.name}`;
+  }
+  return null;
+}
+
 export function isUuid(value: string): boolean {
   return UUID_PATTERN.test(value);
 }

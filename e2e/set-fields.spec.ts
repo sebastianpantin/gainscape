@@ -97,7 +97,7 @@ test('a field flags text that is not the saved value and steps with the arrow ke
   await expect(reps).toHaveValue('2');
 });
 
-test('focusing a filled field selects it, so typing replaces the value, and Enter moves on or stays put on the last field', async ({
+test('focusing a filled field selects it, so typing replaces the value, and Enter moves on to reps, then Done', async ({
   page,
 }) => {
   await register(page, uniqueUsername('fields'));
@@ -119,9 +119,8 @@ test('focusing a filled field selects it, so typing replaces the value, and Ente
   await reps.pressSequentially('6');
   await expect(reps).toHaveValue('6');
   await reps.press('Enter');
-  await expect(reps).toBeFocused();
+  await expect(row.getByRole('button', { name: 'Done set 1', exact: true })).toBeFocused();
   await expect(reps).toHaveValue('6');
-  await reps.blur();
 
   await reps.click();
   await reps.press('ArrowRight');

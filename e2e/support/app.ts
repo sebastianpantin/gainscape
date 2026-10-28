@@ -109,7 +109,7 @@ export async function openTab(page: Page, tab: Tab) {
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: tab, exact: true }).click();
 }
 
-export async function openFromProfile(page: Page, name: 'Programs' | 'Exercises' | 'Settings') {
+export async function openFromProfile(page: Page, name: 'Programs' | 'Custom exercises' | 'Settings') {
   await openTab(page, 'Profile');
   await page.getByRole('main').getByRole('link', { name, exact: true }).click();
 }
@@ -213,9 +213,14 @@ export async function logExercise(
   }
 }
 
+const PRODUCTION_FINISH_WINDOW_MS = 5_000;
+const SYNC_AFTER_FINISH_WINDOW_MS = 10_000;
+
 export async function finishWorkout(page: Page) {
   await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible({
+    timeout: PRODUCTION_FINISH_WINDOW_MS + SYNC_AFTER_FINISH_WINDOW_MS,
+  });
 }
 
 export async function openLoot(page: Page): Promise<Locator> {

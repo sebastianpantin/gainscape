@@ -48,7 +48,7 @@ export function HistorySetRow({
       </span>
       <button
         type="button"
-        className={`button done-toggle warmup-toggle ${set.isWarmup ? 'selected' : ''}`}
+        className="button toggle done-toggle warmup-toggle"
         aria-pressed={set.isWarmup}
         aria-label={`Warm-up set ${setNumber}`}
         onClick={() => onChange({ isWarmup: !set.isWarmup })}

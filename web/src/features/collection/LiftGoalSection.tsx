@@ -2,6 +2,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
+import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { type LiftExercise } from '../../lib/exercises/catalog-rules.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
@@ -31,7 +33,7 @@ export function LiftGoalSection({ userId, exercise, repMaxes }: LiftGoalSectionP
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { unitPref } = usePreferences();
-  const { statuses, error, today } = useLiftGoals(userId);
+  const { statuses, error, retry, today } = useLiftGoals(userId);
   const [editing, setEditing] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -61,7 +63,11 @@ export function LiftGoalSection({ userId, exercise, repMaxes }: LiftGoalSectionP
     <section className="panel stack" aria-labelledby="goal-heading">
       <h2 id="goal-heading">Goal</h2>
       {statuses === undefined ? (
-        <p className="muted">{error ? messageOf(error, 'Could not load your goal.') : 'Loading…'}</p>
+        error ? (
+          <ProblemWithRetry problem={messageOf(error, 'Could not load your goal.')} onRetry={retry} />
+        ) : (
+          <ListSkeleton panels={1} />
+        )
       ) : editing ? (
         <LiftGoalForm
           initial={liftGoalDraft(status?.goal ?? null, repMaxes, unitPref)}

@@ -75,7 +75,7 @@ test('the rest length comes from settings, can be skipped or turned off, and end
   await expect(remaining).toHaveText('2:45');
   await restTimer(page).getByRole('button', { name: 'Skip rest' }).click();
   await expect(restTimer(page)).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Finish workout' })).toBeFocused();
+  await expect(bench.getByRole('button', { name: 'Done set 1' })).toBeFocused();
   await bench.getByRole('button', { name: 'Done set 1' }).click();
   await expect(restTimer(page).getByRole('timer', { name: 'Rest remaining' })).toHaveText('2:45');
 
@@ -89,6 +89,29 @@ test('the rest length comes from settings, can be skipped or turned off, and end
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await expect(bench.getByRole('button', { name: 'Done set 1' })).toHaveAttribute('aria-pressed', 'true');
   await expect(restTimer(page)).toHaveCount(0);
+});
+
+test('Skip rest moves focus to the next set to log, and to Finish once none is left', async ({ page }) => {
+  await page.clock.install();
+  await register(page, uniqueUsername('rk'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await pauseClockNow(page);
+  const curl = await addExercise(page, 'barbell curl', 'Barbell Curl');
+  await curl.getByRole('button', { name: '+ Add set' }).click();
+  await setRow(curl, 1)
+    .getByRole('spinbutton', { name: /^Reps, set \d+$/ })
+    .fill('10');
+  await setRow(curl, 2)
+    .getByRole('spinbutton', { name: /^Reps, set \d+$/ })
+    .fill('10');
+
+  await curl.getByRole('button', { name: 'Done set 1' }).click();
+  await restTimer(page).getByRole('button', { name: 'Skip rest' }).click();
+  await expect(curl.getByRole('button', { name: 'Done set 2' })).toBeFocused();
+
+  await curl.getByRole('button', { name: 'Done set 2' }).click();
+  await restTimer(page).getByRole('button', { name: 'Skip rest' }).click();
+  await expect(page.getByRole('button', { name: 'Finish workout' })).toBeFocused();
 });
 
 test('rating a set starts no rest and keeps the one Done started, and focus stays in the bar when the rest ends', async ({

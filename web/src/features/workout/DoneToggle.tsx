@@ -16,7 +16,7 @@ export function DoneToggle({ done, label, drop, onToggle, buttonRef }: DoneToggl
       <button
         ref={buttonRef}
         type="button"
-        className={`button done-toggle ${done ? 'selected' : ''}`}
+        className="button toggle done-toggle"
         aria-pressed={done}
         aria-label={label}
         onClick={onToggle}

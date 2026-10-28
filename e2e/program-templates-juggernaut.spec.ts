@@ -39,8 +39,8 @@ test('enroll in Juggernaut in kg and see the 10s accumulation as 5×10 at 60% of
   const squat = workoutCards(page, 'Back Squat');
   await expect.poll(() => weightsIn(squat)).toEqual(['60', '60', '60', '60', '60']);
   await expect.poll(() => repsIn(squat)).toEqual(['10', '10', '10', '10', '10']);
-  await expect(setRow(squat, 5).getByText('10+', { exact: true })).toBeVisible();
-  await expect(setRow(squat, 1).getByText('10+', { exact: true })).toHaveCount(0);
+  await expect(setRow(squat, 5).getByText('AMRAP 10+', { exact: true })).toBeVisible();
+  await expect(setRow(squat, 1).getByText('AMRAP 10+', { exact: true })).toHaveCount(0);
 });
 
 test('a kg Juggernaut enrollment is not offered the lb-only fine per-rep increment, an lb one is', async ({ page }) => {

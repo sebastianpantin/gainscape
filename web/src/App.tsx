@@ -101,6 +101,9 @@ const BodyScreen = lazyScreen(() => import('./features/skills/BodyScreen.tsx'), 
 const QuestsScreen = lazyScreen(() => import('./features/quests/QuestsScreen.tsx'), 'QuestsScreen');
 const RevealScreen = lazyScreen(() => import('./features/summary/RevealScreen.tsx'), 'RevealScreen');
 const WhatsNewScreen = lazyScreen(() => import('./features/whats-new/WhatsNewScreen.tsx'), 'WhatsNewScreen');
+const DesignScreen = import.meta.env.DEV
+  ? lazyScreen(() => import('./features/design/DesignScreen.tsx'), 'DesignScreen')
+  : null;
 
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Train', icon: 'train' },
@@ -247,6 +250,7 @@ function SignedInShell() {
               <Route path="/programs/active/plan" element={<ProgramPlanScreen userId={userId} />} />
               <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
               <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
+              {DesignScreen && <Route path="/design" element={<DesignScreen />} />}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </RouteView>

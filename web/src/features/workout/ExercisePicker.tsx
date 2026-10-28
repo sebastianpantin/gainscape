@@ -35,19 +35,16 @@ export function ExercisePicker({
   );
 
   const searching = searchWords(query).length > 0;
+  const pick = (exercise: Exercise) => {
+    onPick(exercise);
+    setQuery('');
+  };
 
   const resultRow = (exercise: Exercise) => {
     const detail = pickerRowDetail(exercise);
     return (
       <li key={exercise.id}>
-        <button
-          type="button"
-          className="button list-item picker-row"
-          onClick={() => {
-            onPick(exercise);
-            setQuery('');
-          }}
-        >
+        <button type="button" className="button list-item picker-row" onClick={() => pick(exercise)}>
           <span>{exercise.name}</span>{' '}
           <span className="muted picker-detail">
             {detail.skills === null ? detail.kind : `${detail.kind} · ${detail.skills}`}
@@ -67,6 +64,12 @@ export function ExercisePicker({
           placeholder={placeholder}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            const topMatch = matches[0];
+            if (event.key !== 'Enter' || topMatch === undefined) return;
+            event.preventDefault();
+            pick(topMatch);
+          }}
           aria-label="Search exercises"
         />
       </span>

@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
-import { Link } from 'react-router-dom';
+import { BackLink } from '../../components/BackLink.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { type PlanDay, planStatusText, programPlan } from '../../lib/programs/program-plan-rules.ts';
 import { exerciseListQuery } from '../../lib/query/queries.ts';
+import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { PrescriptionCards } from './PrescriptionCards.tsx';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';
@@ -30,7 +33,7 @@ export function ProgramPlanScreen({ userId }: ProgramPlanScreenProps) {
   const { unitPref } = usePreferences();
   const lastLogged = useLastLoggedWeights(program);
   const exerciseList = useQuery(exerciseListQuery(userId));
-  const exercises = exerciseList.data ?? [];
+  const exercises = loadedState(exerciseList.data, exerciseList.error);
 
   if (program.kind !== 'ready')
     return (
@@ -40,21 +43,34 @@ export function ProgramPlanScreen({ userId }: ProgramPlanScreenProps) {
       />
     );
 
+  const heading = (
+    <>
+      <BackLink parent="/programs/active" />
+      <h1 className="title">{program.name} plan</h1>
+    </>
+  );
+  if (exercises.status === 'failed')
+    return <ScreenProblem heading={heading} problem={exercises.problem} onRetry={exerciseList.refetch} />;
+  if (exercises.status === 'loading')
+    return (
+      <main className="screen stack">
+        {heading}
+        <ListSkeleton />
+      </main>
+    );
+
   const plan = programPlan({
     definition: program.definition,
     enrollment: program.enrollment,
     state: program.state,
     unit: unitPref,
-    exerciseNames: new Map(exercises.map((exercise) => [exercise.id, exercise.name])),
+    exerciseNames: new Map(exercises.data.map((exercise) => [exercise.id, exercise.name])),
     lastLogged,
   });
 
   return (
     <main className="screen stack">
-      <h1 className="title">{program.name} plan</h1>
-      <Link to="/programs/active" className="tiny">
-        Back to {program.name}
-      </Link>
+      {heading}
       <h2>{plan.title}</h2>
       {plan.days.map((day) => (
         <PlanDaySection key={JSON.stringify(day.position)} day={day} />

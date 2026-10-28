@@ -15,6 +15,7 @@ import {
   uniqueUsername,
 } from './support/app.ts';
 import { activeEnrollmentOf, unitPrefOf } from './support/db.ts';
+import { restTable } from './support/network.ts';
 
 function firstRun(page: Page) {
   return page.getByRole('dialog');
@@ -57,6 +58,40 @@ test('a new user sees what they earn, picks pounds and starts an empty workout',
   await expect(page.getByRole('searchbox', { name: 'Search exercises' })).toBeFocused();
   await addExercise(page, 'bench', 'Barbell Bench Press');
   await expect(setRow(page, 1).getByRole('spinbutton', { name: /^Weight in lb, set \d+$/ })).toBeVisible();
+});
+
+test.describe('on a 360x740 phone', () => {
+  test.use({ viewport: { width: 360, height: 740 } });
+
+  test('the intro keeps Next in view, Back returns a step and the programs load behind a skeleton', async ({
+    page,
+  }) => {
+    let releaseTemplates: (value: unknown) => void = () => undefined;
+    const templatesHeld = new Promise((resolve) => (releaseTemplates = resolve));
+    await page.route(restTable('program_templates'), async (route) => {
+      await templatesHeld;
+      await route.fallback();
+    });
+    await signInAsNewUser(page, 'ob_small');
+    const dialog = firstRun(page);
+    const next = dialog.getByRole('button', { name: 'Next', exact: true });
+
+    await expect(next).toBeInViewport({ ratio: 1 });
+    await next.click();
+    await expect(next).toBeInViewport({ ratio: 1 });
+    await dialog.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(dialog.getByRole('heading', { name: 'Welcome to Gainscape' })).toBeFocused();
+    await expect(dialog.getByRole('button', { name: 'Back', exact: true })).toHaveCount(0);
+
+    await next.click();
+    await next.click();
+    await expect(dialog.getByRole('heading', { name: 'How do you want to train?' })).toBeFocused();
+    await expect(dialog.getByRole('status').getByText('Loading…', { exact: true })).toBeAttached();
+    releaseTemplates(null);
+    await expect(dialog.getByRole('link', { name: 'Follow StrongLifts 5x5', exact: true })).toBeVisible();
+    await expect(dialog.getByText('Loading…', { exact: true })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Back', exact: true })).toBeInViewport({ ratio: 1 });
+  });
 });
 
 test('pounds picked in the intro show in Settings at once, also after the profile was loaded first', async ({

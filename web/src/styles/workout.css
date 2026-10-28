@@ -19,7 +19,7 @@
 .live-xp output {
   white-space: nowrap;
   font-family: var(--font-display);
-  font-size: var(--font-size-3xl);
+  font-size: var(--font-size-2xl);
   font-weight: 500;
   color: var(--color-xp);
   text-shadow: var(--text-shadow);
@@ -136,7 +136,7 @@
     'number weight reps done'
     'info info info menu'
     'effort effort effort effort';
-  row-gap: var(--space-1);
+  row-gap: var(--space-2);
   align-items: center;
   padding-top: var(--space-2);
 }
@@ -243,9 +243,11 @@
   border-radius: var(--radius);
 }
 
-.last-set:hover > .last-set-chip {
-  color: var(--color-text);
-  border-color: var(--color-accent);
+@media (hover: hover) {
+  .last-set:hover > .last-set-chip {
+    color: var(--color-text);
+    border-color: var(--color-accent);
+  }
 }
 
 .last-delta {
@@ -313,7 +315,7 @@
   min-height: var(--tap-target);
   padding: 0 var(--space-2);
   font: inherit;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   text-align: left;
   color: var(--color-text);
   background: none;
@@ -321,8 +323,10 @@
   cursor: pointer;
 }
 
-.set-menu-action:hover {
-  background: var(--color-panel-shade);
+@media (hover: hover) {
+  .set-menu-action:hover {
+    background: var(--color-panel-shade);
+  }
 }
 
 .set-menu-action.danger {
@@ -370,7 +374,7 @@
 
 .plate-marker {
   font: inherit;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text);
   background: none;
   border: 0;
@@ -581,7 +585,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .compact-field {
@@ -625,20 +629,6 @@
 .done-toggle {
   min-width: var(--tap-target);
   padding: 0;
-  background: var(--color-well);
-  color: var(--color-panel-border);
-  box-shadow: var(--bevel-sunken);
-}
-
-.done-toggle.selected {
-  background: var(--color-xp);
-  color: var(--color-ink);
-  box-shadow: inset 2px 2px 0 var(--color-xp-light);
-}
-
-.done-toggle.selected:hover {
-  background: var(--color-xp);
-  color: var(--color-ink);
 }
 
 .set-row > .xp-drop {
@@ -680,14 +670,13 @@
   grid-area: effort;
 }
 
-.set-row .effort-option {
+.set-row .chip {
   padding: 0 var(--space-0-5);
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
 
-.effort-selector,
-.metric-grid {
+.effort-selector {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-1);
@@ -698,33 +687,8 @@
   flex-wrap: wrap;
 }
 
-.effort-selector.level > .effort-option {
+.effort-selector.level > .chip {
   flex: 1 0 var(--tap-target);
-}
-
-.effort-option {
-  font: inherit;
-  font-size: var(--font-size-xs);
-  min-height: var(--tap-target);
-  background: var(--color-background);
-  color: var(--color-text-muted);
-  border: var(--border-width) solid var(--color-panel-border);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.effort-option.assumed {
-  border-style: dashed;
-  border-color: var(--color-accent);
-  color: var(--color-text);
-}
-
-.effort-option.selected {
-  background: var(--color-accent);
-  color: var(--color-ink);
-  border-color: var(--color-outline);
-  font-weight: 600;
-  box-shadow: inset 2px 2px 0 var(--color-accent-light);
 }
 
 html:has(.finish-bar) {
@@ -751,7 +715,7 @@ html:has(.finish-bar) {
 .finish-bar:has(> .rest-timer) {
   flex-flow: row wrap;
   align-items: center;
-  padding-block: var(--space-2);
+  padding-block: var(--space-1);
 }
 
 .finish-bar:has(> .rest-timer) > * {
@@ -760,7 +724,7 @@ html:has(.finish-bar) {
 
 .finish-bar:has(> .rest-timer) > .rest-timer {
   position: static;
-  flex: 1 1 15rem;
+  flex: 1 1 auto;
 }
 
 .finish-bar:has(> .rest-timer) .rest-progress {
@@ -768,17 +732,32 @@ html:has(.finish-bar) {
 }
 
 .finish-bar:has(> .rest-timer) > .button.big {
-  flex: 1 1 7rem;
+  flex: 0 1 auto;
   min-height: var(--tap-target);
   font-size: var(--font-size-md);
 }
 
-.finish-bar:focus {
+.finish-bar:has(> .rest-timer) .finish-word {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.finish-bar:focus:not(:focus-visible) {
   outline: none;
 }
 
+.finish-bar:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -3px;
+}
+
 .finish-status {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
+  line-height: 1.2;
   color: var(--color-text-muted);
   white-space: nowrap;
 }
@@ -839,7 +818,7 @@ html:has(.finish-bar) {
 .notify-prompt p {
   flex: 1 1 12rem;
   margin: 0;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .rest-progress {
@@ -893,7 +872,7 @@ html:has(.finish-bar) {
 }
 
 .picker-detail {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .picker-suggestions-heading {

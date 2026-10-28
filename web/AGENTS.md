@@ -9,15 +9,15 @@ The React 19 PWA and its Vite root. Source lives in `src/`, static assets in `pu
 
 ## Map
 
-- `vite.config.ts`: root, `resolve.tsconfigPaths` for `@domain`, the `/sb` proxy to the local Supabase API (for both `server` and `preview`; the PWA e2e suite runs on preview), the service worker plugin, the `__CHANGELOG__` and `__APP_BUILD__` defines, and vendor chunk groups.
+- `vite.config.ts`: root, the `/sb` proxy to the local Supabase API (for both `server` and `preview`; the PWA e2e suite runs on preview), the service worker plugin, the `__CHANGELOG__` and `__APP_BUILD__` defines, and vendor chunk groups.
 - `changelog.yaml`: release history shown in the app, newest first; each entry's `prs` lists covered PR numbers and is kept out of the bundle. The app version is the newest entry (`APP_VERSION`); there is no other version constant.
-- `index.html`, `.env.development`.
+- `index.html`, `.env.development`. UI rules: `../docs/design-system.md`; `/design` is DEV-only (`e2e/pages/dev-only.spec.ts`).
 
 ## Rules and gotchas
 
 - `src/zod-config.ts` joins the `vendor-zod` chunk so `jitless` is set as soon as zod loads, before any chunk can trip zod's `new Function` probe against the Pages CSP (`e2e/pages/csp.spec.ts`). Keep it in that chunk group.
-- `.env.development` holds the local CLI stack's publishable key, the same for every local install. `VITE_SUPABASE_URL` is deliberately unset locally so the client uses the `/sb` proxy. Never commit a hosted URL or key; production values come from the build environment (`../docs/production-auth.md`).
-- `@vitejs/plugin-basic-ssl` is skipped when `GAINSCAPE_PLAIN_HTTP` is set (PWA e2e serves plain http).
+- `.env.development` holds the local CLI stack's publishable key, the same for every install. `VITE_SUPABASE_URL` stays unset locally, so the client uses the `/sb` proxy. Never commit a hosted URL or key; production values come from the build environment (`../docs/production-auth.md`).
+- `GAINSCAPE_PLAIN_HTTP` skips `@vitejs/plugin-basic-ssl` (PWA e2e serves plain http).
 - `sw.js` exists only after `vite build`; the dev server registers no worker.
 - `vite.config.ts` reads `changelog.yaml` once at startup: restart `make dev` after editing it. `src/lib/platform/changelog-rules.ts` validates it on every build, and `make deploy` refuses until every user-facing merged PR is in some entry's `prs`.
 - A new build-time constant is declared in both `src/vite-env.d.ts` and `vite.config.ts`.
@@ -28,7 +28,7 @@ The React 19 PWA and its Vite root. Source lives in `src/`, static assets in `pu
 
 ## Testing
 
-- No unit test for `vite.config.ts`. `make e2e` and `make e2e-pwa` exercise it; a change to the production build output belongs in `e2e/pwa/` or `e2e/pages/`. The stack is required.
+- `vite.config.ts` has no unit test; `make e2e` and `make e2e-pwa` exercise it. Production build output is tested in `e2e/pwa/` or `e2e/pages/` (stack).
 
 ## Manual Notes
 

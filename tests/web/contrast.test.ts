@@ -1,33 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-
-const tokensCss = readFileSync(join(import.meta.dirname, '../../web/src/styles/tokens.css'), 'utf8');
-const tokens = new Map(
-  [...tokensCss.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-f]{3,6});/gi)].map((match) => [match[1], match[2]]),
-);
-
-function token(name: string): string {
-  const value = tokens.get(name);
-  if (!value) throw new Error(`tokens.css has no --${name}`);
-  return value;
-}
-
-function channels(hex: string): number[] {
-  const digits = hex.slice(1);
-  const full = digits.length === 3 ? [...digits].map((digit) => digit + digit).join('') : digits;
-  return [0, 2, 4].map((start) => parseInt(full.slice(start, start + 2), 16) / 255);
-}
-
-function luminance(hex: string): number {
-  const [r, g, b] = channels(hex).map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function contrast(first: string, second: string): number {
-  const [lighter, darker] = [luminance(first), luminance(second)].sort((a, b) => b - a);
-  return (lighter + 0.05) / (darker + 0.05);
-}
+import { contrast, CONTROL_GLYPH_MINIMUM, CONTROL_GLYPHS, CONTROL_SURFACES, token } from './token-contrast.ts';
 
 const SURFACES = [
   'color-backdrop',
@@ -69,6 +41,18 @@ const pairs: [string, string, number][] = [
 describe('colour contrast', () => {
   it.each(pairs)('--%s on --%s reaches %d:1', (foreground, background, minimum) => {
     expect(contrast(token(foreground), token(background))).toBeGreaterThanOrEqual(minimum);
+  });
+
+  it.each(CONTROL_GLYPHS.flatMap((glyph) => CONTROL_SURFACES.map((surface) => [glyph, surface])))(
+    'control glyph --%s on --%s reaches 3:1',
+    (glyph, surface) => {
+      expect(contrast(token(glyph), token(surface))).toBeGreaterThanOrEqual(CONTROL_GLYPH_MINIMUM);
+    },
+  );
+
+  it('keeps --color-panel-border out of the control glyphs, because it fails 3:1 on --color-well', () => {
+    expect(CONTROL_GLYPHS).not.toContain('color-panel-border');
+    expect(contrast(token('color-panel-border'), token('color-well'))).toBeLessThan(CONTROL_GLYPH_MINIMUM);
   });
 
   it('computes the WCAG ratio', () => {

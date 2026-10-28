@@ -26,7 +26,7 @@ export function PlateChoices({ userId, unit }: { userId: string; unit: UnitPref 
           {`Enter a bar weight above 0 and up to ${HEAVIEST_BAR_OR_PLATE} ${unit}. Using ${setup.barWeight} ${unit}.`}
         </span>
       )}
-      <div className="stack" style={{ gap: 6 }}>
+      <div className="stack" style={{ gap: 'var(--space-1-5)' }}>
         <span className="field" id={platesLabelId}>{`Plates you have (${unit})`}</span>
         <div className="segmented plate-choices" role="group" aria-labelledby={platesLabelId}>
           {PLATE_CHOICES[unit].map((plate) => {

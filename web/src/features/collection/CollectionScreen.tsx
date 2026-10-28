@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { type CardioRecordCard, cardioRecordCards, holdRecordCards } from '../../lib/workout/cardio-rules.ts';
 import { type Exercise, isCardioExercise, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
@@ -12,7 +11,6 @@ import { collectionQuery } from '../../lib/query/queries.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_COLLECTION_NOTICE } from '../../offline/collection-cache.ts';
 import { EmptyState } from '../../components/EmptyState.tsx';
-import { Icon } from '../../components/Icon.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedNav } from '../../components/SegmentedNav.tsx';
@@ -34,6 +32,7 @@ export function CollectionTabs() {
         { to: '/collection', label: 'Records' },
         { to: '/collection/items', label: 'Items' },
         { to: '/collection/history', label: 'History' },
+        { to: '/collection/stats', label: 'Stats' },
       ]}
     />
   );
@@ -100,14 +99,6 @@ export function CollectionScreen({ userId }: CollectionScreenProps) {
     <main className="screen stack">
       <CollectionHeading tab="Records" />
       <CollectionTabs />
-      <ul className="menu-list">
-        <li>
-          <Link className="button" to="/collection/stats">
-            Stats
-            <Icon name="chevron" size={18} />
-          </Link>
-        </li>
-      </ul>
       {problem && (
         <p className="problem" role="alert">
           {problem}
@@ -188,7 +179,7 @@ function TimedRecordSection({ id, title, cards }: TimedRecordSectionProps) {
       <span className="muted tiny">Only you can see these.</span>
       <ul className="stored-set-list">
         {cards.map((card) => (
-          <li key={card.exerciseId} className="stack" style={{ gap: 2 }}>
+          <li key={card.exerciseId} className="stack" style={{ gap: 'var(--space-0-5)' }}>
             <strong>{card.name}</strong>
             <span>{card.lines.join(' · ')}</span>
           </li>

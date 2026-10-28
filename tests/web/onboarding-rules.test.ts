@@ -6,6 +6,7 @@ import {
   nextOnboardingStep,
   ONBOARDING_STEPS,
   onboardingDecision,
+  previousOnboardingStep,
   onboardingStepLabel,
   trainingHistoryNow,
   trainingHistoryOf,
@@ -71,6 +72,12 @@ describe('onboarding steps', () => {
     expect(nextOnboardingStep('welcome')).toBe('units');
     expect(nextOnboardingStep('units')).toBe('train');
     expect(nextOnboardingStep('train')).toBeNull();
+  });
+
+  it('steps back from how to train to units to welcome', () => {
+    expect(previousOnboardingStep('train')).toBe('units');
+    expect(previousOnboardingStep('units')).toBe('welcome');
+    expect(previousOnboardingStep('welcome')).toBeNull();
   });
 
   it('labels each step with its position', () => {

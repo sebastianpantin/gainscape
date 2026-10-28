@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
 import {
   authCallbackUrl,
@@ -125,6 +125,12 @@ export function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [keptWorkout, setKeptWorkout] = useState(false);
   const resend = useResend(email);
+  const passwordHintId = useId();
+  const sentHeading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (mode === 'check-email' || mode === 'reset-sent') sentHeading.current?.focus();
+  }, [mode]);
 
   useEffect(() => {
     let active = true;
@@ -188,7 +194,9 @@ export function AuthScreen() {
       )}
       {mode === 'check-email' && (
         <section className="panel stack">
-          <h2 className="accent-text">Check your email</h2>
+          <h2 className="accent-text" ref={sentHeading} tabIndex={-1}>
+            Check your email
+          </h2>
           <p>
             We sent a confirmation link to <b>{email}</b>.
           </p>
@@ -198,7 +206,9 @@ export function AuthScreen() {
       )}
       {mode === 'reset-sent' && (
         <section className="panel stack">
-          <h2 className="accent-text">Check your email</h2>
+          <h2 className="accent-text" ref={sentHeading} tabIndex={-1}>
+            Check your email
+          </h2>
           <p role="status">If an account exists for {email}, we sent a reset link.</p>
           {backToSignIn}
         </section>
@@ -213,7 +223,7 @@ export function AuthScreen() {
               Username
               <input
                 value={username}
-                onChange={(event) => setUsername(event.target.value)}
+                onChange={(event) => setUsername(event.target.value.toLowerCase())}
                 pattern={USERNAME_PATTERN}
                 title={USERNAME_HINT}
                 autoCapitalize="none"
@@ -242,9 +252,15 @@ export function AuthScreen() {
                 onChange={(event) => setPassword(event.target.value)}
                 minLength={MINIMUM_PASSWORD_LENGTH}
                 autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                aria-describedby={mode === 'register' ? passwordHintId : undefined}
                 required
               />
             </label>
+          )}
+          {mode === 'register' && (
+            <p className="hint" id={passwordHintId}>
+              At least {MINIMUM_PASSWORD_LENGTH} characters.
+            </p>
           )}
           {problem && (
             <p className="problem" role="alert">

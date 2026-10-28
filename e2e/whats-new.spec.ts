@@ -111,6 +111,10 @@ async function openReleaseHistory(page: Page) {
 }
 
 async function expectEveryReleaseInOrder(page: Page) {
+  await page
+    .getByRole('main')
+    .getByText(/^Show \d+ older releases?$/)
+    .click();
   await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(
     RELEASES.map((release) => release.title),
   );

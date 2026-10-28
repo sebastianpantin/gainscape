@@ -5,8 +5,13 @@ export function useModalDialog() {
 
   useEffect(() => {
     const element = dialog.current;
+    const opener = document.activeElement;
     if (element && !element.open) element.showModal();
-    return () => element?.close();
+    return () => {
+      element?.close();
+      const focusLost = document.activeElement === document.body || element?.contains(document.activeElement);
+      if (focusLost && opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
   }, []);
 
   return dialog;

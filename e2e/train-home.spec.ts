@@ -1,15 +1,7 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
-import {
-  logBench,
-  logExercise,
-  logWorkout,
-  openFromProfile,
-  openTab,
-  register,
-  uniqueUsername,
-} from './support/app.ts';
+import { logBench, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 import { activeDropsOfLatestSession, equipGear, grantItems, seedQuestProgress } from './support/db.ts';
 
 test.use({ viewport: { width: 360, height: 780 } });
@@ -45,7 +37,7 @@ test('the week strip lights today after a workout, opens Stats and stays offline
 
   await weekStrip(page).click();
   await expect(page).toHaveURL(/\/collection\/stats$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Stats', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection: Stats', exact: true })).toBeVisible();
 
   await context.setOffline(true);
   await openTab(page, 'Train');
@@ -123,7 +115,7 @@ test('the header shows the DOTS level once sex, bodyweight and all three competi
 }) => {
   await register(page, uniqueUsername('home_dots'));
   await openTab(page, 'Profile');
-  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
   await page.getByLabel('Bodyweight (kg)').fill('80');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page).toHaveURL(/\/profile$/);
@@ -138,10 +130,13 @@ test('the header shows the DOTS level once sex, bodyweight and all three competi
   await expect(page.getByRole('link', { name: /^Total level \d+ Combat \d+$/ })).toBeVisible();
   await expect(dots).toHaveCount(0);
 
-  await openFromProfile(page, 'Settings');
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
   const male = page.getByRole('radiogroup', { name: 'Sex' }).getByRole('radio', { name: 'Male', exact: true });
   await male.press('Enter');
   await expect(male).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page).toHaveURL(/\/profile$/);
   await openTab(page, 'Train');
   await expect(dots).toBeVisible();
   const highlights = page.getByRole('region', { name: 'Highlights' });

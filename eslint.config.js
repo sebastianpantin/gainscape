@@ -21,6 +21,31 @@ const noComments = {
   },
 };
 
+const NO_TEST_IDS = [
+  {
+    selector: "JSXAttribute[name.name='data-testid']",
+    message: 'Give the element a role and an accessible name instead of a test id.',
+  },
+  {
+    selector: "Property[key.value='data-testid']",
+    message: 'Give the element a role and an accessible name instead of a test id.',
+  },
+];
+
+const NO_NUMERIC_STYLE = {
+  selector:
+    "JSXAttribute[name.name='style'] Property[value.type='Literal'][value.value=type(number)][value.value!=0]:not([key.name=/^(flex|flexGrow|flexShrink|fontWeight|opacity|order|zIndex)$/])",
+  message: 'Use a spacing token (var(--space-*)) or a stylesheet class instead of a raw pixel number in style.',
+};
+
+const BARE_LOADING_TEXT_MESSAGE =
+  'Use ScreenSkeleton or ListSkeleton instead of a bare "Loading…" text (docs/design-system.md).';
+
+const NO_BARE_LOADING_TEXT = [
+  { selector: 'JSXText[value=/^\\s*Loading(…|\\.\\.\\.)\\s*$/]', message: BARE_LOADING_TEXT_MESSAGE },
+  { selector: 'Literal[value=/^Loading(…|\\.\\.\\.)$/]', message: BARE_LOADING_TEXT_MESSAGE },
+];
+
 export default tseslint.config(
   {
     ignores: ['node_modules/', 'web/dist/', 'test-results/', 'playwright-report/', 'supabase/.temp/', '.wrangler/'],
@@ -64,17 +89,13 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "JSXAttribute[name.name='data-testid']",
-          message: 'Give the element a role and an accessible name instead of a test id.',
-        },
-        {
-          selector: "Property[key.value='data-testid']",
-          message: 'Give the element a role and an accessible name instead of a test id.',
-        },
-      ],
+      'no-restricted-syntax': ['error', ...NO_TEST_IDS],
+    },
+  },
+  {
+    files: ['web/src/features/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': ['error', ...NO_TEST_IDS, NO_NUMERIC_STYLE, ...NO_BARE_LOADING_TEXT],
     },
   },
   {

@@ -18,7 +18,7 @@ export function CardioEffortSelector({ selected, onSelect }: CardioEffortSelecto
             type="button"
             role="radio"
             aria-checked={checked}
-            className={`effort-option ${checked ? 'selected' : ''}`}
+            className="button chip"
             onClick={() => onSelect(checked ? null : { type: 'cardio', level })}
           >
             {CARDIO_EFFORT_LABELS[level]}

@@ -38,7 +38,7 @@ export function CardioExerciseCard({
   return (
     <section className="panel stack exercise-card">
       <header>
-        <h2>{exercise.name}</h2>
+        <h2 tabIndex={-1}>{exercise.name}</h2>
         <span className="row">
           <button className="button link" type="button" onClick={() => actions.removeExerciseAt(exerciseIndex)}>
             Remove

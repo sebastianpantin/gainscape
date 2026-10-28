@@ -104,8 +104,11 @@ export interface QuestCard {
 interface QuestGroup {
   status: QuestStatus;
   title: string;
+  folded: boolean;
   cards: QuestCard[];
 }
+
+const FOLDED_STATUSES: ReadonlySet<QuestStatus> = new Set(['locked', 'completed']);
 
 const GROUP_TITLES: readonly (readonly [QuestStatus, string])[] = [
   ['in_progress', 'In progress'],
@@ -314,7 +317,7 @@ export function questBoard(
   });
   return GROUP_TITLES.flatMap(([status, title]) => {
     const grouped = cards.filter((card) => card.status === status);
-    return grouped.length === 0 ? [] : [{ status, title, cards: grouped }];
+    return grouped.length === 0 ? [] : [{ status, title, folded: FOLDED_STATUSES.has(status), cards: grouped }];
   });
 }
 

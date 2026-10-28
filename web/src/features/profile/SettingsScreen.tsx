@@ -3,8 +3,6 @@ import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { AccountSection } from './settings/AccountSection.tsx';
 import { AppSection } from './settings/AppSection.tsx';
-import { PrivacySection } from './settings/PrivacySection.tsx';
-import { StrengthScoreSection } from './settings/StrengthScoreSection.tsx';
 import { TimezoneSection } from './settings/TimezoneSection.tsx';
 import { TrainingSection } from './settings/TrainingSection.tsx';
 import { WeeklyGoalSection } from './settings/WeeklyGoalSection.tsx';
@@ -20,7 +18,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
 
   return (
     <main className="screen stack">
-      <div className="stack" style={{ gap: 4 }}>
+      <div className="stack" style={{ gap: 'var(--space-1)' }}>
         <Link className="back-link" to="/profile">
           ‹ Profile
         </Link>
@@ -31,10 +29,15 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
       {state.status === 'ready' && (
         <>
           <TrainingSection userId={userId} profile={state.profile} replaceProfile={replace} />
-          <StrengthScoreSection userId={userId} profile={state.profile} replaceProfile={replace} />
           <WeeklyGoalSection />
           <TimezoneSection profile={state.profile} replaceProfile={replace} />
-          <PrivacySection userId={userId} profile={state.profile} replaceProfile={replace} />
+          <section className="panel stack" aria-labelledby="privacy-heading">
+            <h2 id="privacy-heading">Privacy</h2>
+            <Link className="button" to="/profile/preview">
+              What friends see
+            </Link>
+            <span className="hint">Choose whether friends see your weights and bodyweight.</span>
+          </section>
         </>
       )}
       <AppSection />

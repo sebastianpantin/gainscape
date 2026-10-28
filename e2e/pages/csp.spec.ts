@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from '../support/fixtures.ts';
-import { finishWorkout, logCardio, logExercise, register, uniqueUsername } from '../support/app.ts';
+import { logCardio, logExercise, register, uniqueUsername } from '../support/app.ts';
 import { authStorageKey } from '../../web/src/lib/platform/auth-restore.ts';
 import { localStackStatus } from '../../scripts/local-stack.ts';
 
@@ -27,7 +27,9 @@ test('the Pages build runs a whole workout without a single CSP violation', asyn
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
   await logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 5, effort: 'Moderate' }]);
-  await finishWorkout(page);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await page.getByRole('button', { name: 'Save now' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
   await page.goto('/skills');
   await expect(page.getByRole('heading', { level: 1, name: 'Skills' })).toBeVisible();
   expect(violations).toEqual([]);

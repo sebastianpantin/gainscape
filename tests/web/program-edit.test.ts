@@ -20,6 +20,7 @@ import {
   newProgramDoc,
   removeDay,
   removePlannedExercise,
+  restoreDay,
   renameDay,
   targetIssue,
   trimmedDoc,
@@ -128,6 +129,15 @@ describe('day changes', () => {
     expect(renameDay(doc, 1, 'Legs').days.map((day) => day.name)).toEqual(['Upper', 'Legs']);
     expect(moveDay(doc, 1, -1).days.map((day) => day.id)).toEqual(['day-b', 'day-a']);
     expect(removeDay(doc, 0).days.map((day) => day.id)).toEqual(['day-b']);
+  });
+
+  it('puts a removed day back where it was, keeping edits made since', () => {
+    const removed = doc.days[0];
+    const renamedAfter = renameDay(removeDay(doc, 0), 0, 'Legs');
+    expect(restoreDay(renamedAfter, 0, removed).days.map((day) => [day.id, day.name])).toEqual([
+      ['day-a', 'Upper'],
+      ['day-b', 'Legs'],
+    ]);
   });
 
   it('adds a numbered empty day up to the limit', () => {

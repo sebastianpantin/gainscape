@@ -25,13 +25,14 @@ const SCREEN_TITLES: readonly (readonly [pattern: string, screen: string])[] = [
   ['/profile/preview', 'What friends see'],
   ['/profile/settings', 'Settings'],
   ['/profile/settings/whats-new', "What's new"],
-  ['/exercises', 'Exercises'],
+  ['/exercises', 'Custom exercises'],
   ['/programs', 'Programs'],
   ['/programs/enroll/:key', 'Follow program'],
   ['/programs/active', 'Program'],
   ['/programs/active/plan', 'Program plan'],
   ['/programs/new', 'New program'],
   ['/programs/:programId', 'Edit program'],
+  ['/design', 'Design'],
 ];
 
 export const SCREEN_PATHS: readonly string[] = SCREEN_TITLES.map(([pattern]) => pattern);

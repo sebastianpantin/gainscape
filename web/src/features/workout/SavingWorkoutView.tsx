@@ -4,12 +4,14 @@ import { RATE_LIMITED_CODE } from '../../lib/platform/rate-limit.ts';
 import { type FinishStatus } from '../../offline/finish-retries.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { DiscardWorkoutDialog } from './DiscardWorkoutDialog.tsx';
-import { rejectionText, stalledSyncText, syncProblemText } from './workout-rules.ts';
+import { FINISH_HOLD_TEXT, rejectionText, stalledSyncText, syncProblemText } from './workout-rules.ts';
 
 interface SavingWorkoutViewProps {
   deviceNotices: ReactNode;
   finishStatus: FinishStatus;
+  holding: boolean;
   unit: UnitPref;
+  onSaveNow: () => void;
   onRetryNow: () => void;
   onBackToEditing: () => void;
   onSaveBodyweight: (bodyweightKg: number) => Promise<void>;
@@ -19,7 +21,9 @@ interface SavingWorkoutViewProps {
 export function SavingWorkoutView({
   deviceNotices,
   finishStatus,
+  holding,
   unit,
+  onSaveNow,
   onRetryNow,
   onBackToEditing,
   onSaveBodyweight,
@@ -30,7 +34,18 @@ export function SavingWorkoutView({
     <main className="screen stack">
       <h1 className="title">Saving workout…</h1>
       {deviceNotices}
-      {finishStatus.kind === 'syncing' && (
+      {holding && (
+        <div className="panel stack">
+          <p role="status">{FINISH_HOLD_TEXT}</p>
+          <button className="button primary" type="button" onClick={onSaveNow}>
+            Save now
+          </button>
+          <button className="button" type="button" onClick={onBackToEditing}>
+            Keep training
+          </button>
+        </div>
+      )}
+      {!holding && finishStatus.kind === 'syncing' && (
         <div className="panel stack" role="status">
           <p>
             {finishStatus.lastProblem

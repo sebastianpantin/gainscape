@@ -26,6 +26,7 @@ import {
   optionalNumber,
   type Profile,
   sameHeightInput,
+  type Sex,
   saveProblemText,
   TRAINING_FOCUS_LABELS,
   type TrainingFocus,
@@ -35,6 +36,7 @@ import {
 } from '../../lib/profile/profile.ts';
 import { shownWeight } from '../../lib/units.ts';
 import { PrivateTag } from './PrivateTag.tsx';
+import { Choice } from './settings/Choice.tsx';
 import { ProfileBadge } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
 
@@ -44,6 +46,14 @@ interface EditProfileScreenProps {
 
 const BADGE_ORDER = Object.keys(BADGE_COLORS) as BadgeColor[];
 const FOCUS_ORDER = Object.keys(TRAINING_FOCUS_LABELS) as TrainingFocus[];
+type SexChoice = Sex | 'unset';
+
+const SEX_OPTIONS: { value: SexChoice; label: string }[] = [
+  { value: 'unset', label: 'Not set' },
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+];
+
 const CHECKED_FIELDS = ['displayName', 'bio', 'trainingSince', 'bodyweight', 'height', 'birthYear'] as const;
 type CheckedField = (typeof CHECKED_FIELDS)[number];
 
@@ -69,6 +79,7 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
   const [bodyweight, setBodyweight] = useState(initialBodyweight);
   const [height, setHeight] = useState<HeightInput>(initialHeightInput);
   const [birthYear, setBirthYear] = useState(profile.birthYear?.toString() ?? '');
+  const [sex, setSex] = useState<SexChoice>(profile.sex ?? 'unset');
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [touched, setTouched] = useState<ReadonlySet<CheckedField>>(new Set());
@@ -103,7 +114,8 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
       badgeColor !== profile.badgeColor ||
       bodyweight !== initialBodyweight ||
       !sameHeightInput(height, initialHeightInput, unitPref) ||
-      birthYear !== (profile.birthYear?.toString() ?? ''),
+      birthYear !== (profile.birthYear?.toString() ?? '') ||
+      sex !== (profile.sex ?? 'unset'),
   );
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -125,7 +137,11 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
         trainingSince: optionalNumber(trainingSince),
         badgeColor,
       });
-      await updatePrivateProfile(userId, { heightCm, birthYear: optionalNumber(birthYear) });
+      await updatePrivateProfile(userId, {
+        heightCm,
+        birthYear: optionalNumber(birthYear),
+        sex: sex === 'unset' ? null : sex,
+      });
       const typedKg = bodyweightKgFromInput(bodyweight, unitPref);
       if (typedKg !== null) {
         const unchanged =
@@ -150,14 +166,14 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
           <h2 id="about-heading">About you</h2>
           <span className="public-tag">Friends see this</span>
         </div>
-        <div className="row" style={{ gap: 12 }}>
+        <div className="row" style={{ gap: 'var(--space-3)' }}>
           <ProfileBadge
             color={badgeColor}
             initials={initialsFor(displayName || profile.displayName, profile.username)}
           />
-          <div className="stack" style={{ gap: 6 }}>
+          <div className="stack" style={{ gap: 'var(--space-1-5)' }}>
             <span className="field">Badge color</span>
-            <div className="row wrap" role="radiogroup" aria-label="Badge color" style={{ gap: 6 }}>
+            <div className="row wrap" role="radiogroup" aria-label="Badge color" style={{ gap: 'var(--space-1-5)' }}>
               {BADGE_ORDER.map((color) => (
                 <button
                   key={color}
@@ -253,8 +269,8 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
             />
           </label>
         ) : (
-          <fieldset className="stack" style={{ border: 0, padding: 0, gap: 6 }}>
-            <legend className="field" style={{ marginBottom: 6 }}>
+          <fieldset className="stack" style={{ border: 0, padding: 0, gap: 'var(--space-1-5)' }}>
+            <legend className="field" style={{ marginBottom: 'var(--space-1-5)' }}>
               Height
             </legend>
             <div className="row">
@@ -300,6 +316,11 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
         </label>
         {fieldProblem('birthYear')}
         <span className="hint">Height and age never change your XP. They are only shown to you.</span>
+        <Choice label="Sex" options={SEX_OPTIONS} current={sex} disabled={saving} onPick={setSex} />
+        <span className="hint">
+          Used only for your DOTS score on Stats, which compares lifters of different bodyweights. Never shown to
+          anyone.
+        </span>
       </section>
 
       {problem && (
@@ -327,7 +348,7 @@ export function EditProfileScreen({ userId }: EditProfileScreenProps) {
   const { state, refresh } = useProfile(userId);
   return (
     <main className="screen stack">
-      <div className="stack" style={{ gap: 4 }}>
+      <div className="stack" style={{ gap: 'var(--space-1)' }}>
         <Link className="back-link" to="/profile">
           ‹ Profile
         </Link>

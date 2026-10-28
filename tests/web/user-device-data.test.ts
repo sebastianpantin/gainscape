@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHUNK_RELOAD_KEY } from '../../web/src/pwa/chunk-reload.ts';
+import { FINISH_WINDOW_OVERRIDE_KEY } from '../../web/src/features/workout/workout-rules.ts';
 import { rememberLastSummary } from '../../web/src/offline/last-summary.ts';
 import { saveCachedExercises } from '../../web/src/lib/exercises/catalog-cache.ts';
 import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
@@ -51,7 +52,7 @@ const NAMES_THAT_ARE_NOT_STORAGE_KEYS = new Set([
   'gainscape.data-changes',
   'gainscape.finish.',
 ]);
-const DEVICE_KEYS_WITHOUT_USER_DATA = new Set([CHUNK_RELOAD_KEY]);
+const DEVICE_KEYS_WITHOUT_USER_DATA = new Set([CHUNK_RELOAD_KEY, FINISH_WINDOW_OVERRIDE_KEY]);
 
 const EXERCISE: Exercise = {
   id: 'bench',

@@ -11,6 +11,7 @@ import {
   feedBadge,
   feedBadgeKind,
   feedText,
+  friendHandle,
   friendsLoadProblem,
   type FriendRow,
   relativeTime,
@@ -45,6 +46,8 @@ interface FeedEntryProps {
 function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
   const { unitPref } = usePreferences();
   const text = feedText(item, unitPref);
+  const handle = friendHandle(item.displayName, item.username);
+  const author = handle ? `${item.displayName} ${handle}` : item.displayName;
   return (
     <li className="panel feed-item">
       <span className={`feed-badge ${feedBadgeKind(item)}`} aria-hidden="true">
@@ -52,7 +55,7 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
       </span>
       <div className="feed-body">
         <span className="muted tiny">
-          {item.isOwn ? 'You' : `${item.displayName} @${item.username}`} · {relativeTime(item.occurredAt)}
+          {item.isOwn ? 'You' : author} · {relativeTime(item.occurredAt)}
         </span>
         <span className="pixel">{text.headline}</span>
         {text.detail && <span className="muted tiny">{text.detail}</span>}
@@ -63,12 +66,12 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
         </span>
       ) : (
         <button
-          className="button gz-button"
+          className="button toggle gz-button"
           type="button"
           aria-pressed={item.gzGiven}
           aria-busy={pending}
           disabled={pending}
-          aria-label={`${item.gzGiven ? 'Remove your gz from' : 'Congratulate (gz)'} ${item.displayName} @${item.username}, ${item.gzCount} so far`}
+          aria-label={`${item.gzGiven ? 'Remove your gz from' : 'Congratulate (gz)'} ${author}, ${item.gzCount} so far`}
           onClick={() => onToggleGz(item)}
         >
           <span className="pixel">gz</span>
@@ -280,7 +283,13 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
                 {outgoing.map((friend) => (
                   <li className="row spread" key={friend.userId}>
                     <span>{friend.username}</span>
-                    <button className="button link" type="button" disabled={busy} onClick={() => cancel(friend)}>
+                    <button
+                      className="button link"
+                      type="button"
+                      aria-label={`Cancel request to ${friend.username}`}
+                      disabled={busy}
+                      onClick={() => cancel(friend)}
+                    >
                       Cancel
                     </button>
                   </li>
@@ -291,14 +300,17 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
           {accepted.length > 0 && (
             <section className="panel stack" aria-labelledby="friends-heading">
               <h2 id="friends-heading">Friends</h2>
-              <ul className="menu-list" aria-label="Friends list">
-                {accepted.map((friend) => (
-                  <li key={friend.userId}>
-                    <Link className="button" to={`/friends/${friend.userId}`}>
-                      {friend.displayName} <span className="muted">@{friend.username}</span>
-                    </Link>
-                  </li>
-                ))}
+              <ul className="menu-list friend-list" aria-label="Friends list">
+                {accepted.map((friend) => {
+                  const handle = friendHandle(friend.displayName, friend.username);
+                  return (
+                    <li key={friend.userId}>
+                      <Link className="button" to={`/friends/${friend.userId}`}>
+                        {friend.displayName} {handle && <span className="muted">{handle}</span>}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}
@@ -306,9 +318,9 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
             <h2 id="feed-heading">Feed</h2>
             {feed.length === 0 && <p className="muted">No posts yet. Add friends, or log a personal record (PR).</p>}
             {feed.length > 0 && (
-              <p className="row muted tiny">
+              <div className="row muted tiny">
                 Tap gz to congratulate a friend <TermHelp glossaryKey="gz" />
-              </p>
+              </div>
             )}
             {feed.length > 0 && (
               <ul className="feed" aria-label="Feed">

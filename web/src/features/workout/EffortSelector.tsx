@@ -45,10 +45,11 @@ interface EffortSelectorProps {
   mode: EffortInputMode;
   selected: EffortInput;
   assumed?: EffortInput;
+  retapClears?: boolean;
   onSelect: (effort: EffortInput) => void;
 }
 
-export function EffortSelector({ mode, selected, assumed = null, onSelect }: EffortSelectorProps) {
+export function EffortSelector({ mode, selected, assumed = null, retapClears = true, onSelect }: EffortSelectorProps) {
   const shownMode = selected === null || selected.type === 'cardio' ? mode : selected.type;
   return (
     <div className={`effort-selector ${shownMode}`} role="radiogroup" aria-label={GROUP_LABELS[shownMode]}>
@@ -68,8 +69,11 @@ export function EffortSelector({ mode, selected, assumed = null, onSelect }: Eff
             aria-checked={checked}
             aria-label={option.accessibleName === option.label ? undefined : option.accessibleName}
             aria-description={isAssumed ? 'Assumed from your strength' : undefined}
-            className={`effort-option ${checked ? 'selected' : ''} ${isAssumed ? 'assumed' : ''}`}
-            onClick={() => onSelect(checked ? null : option.effort)}
+            className={isAssumed ? 'button chip assumed' : 'button chip'}
+            onClick={() => {
+              if (!checked) onSelect(option.effort);
+              else if (retapClears) onSelect(null);
+            }}
           >
             {option.label}
           </button>

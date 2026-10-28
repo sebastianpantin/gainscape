@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Feature-sliced screens of the PWA. Each subdirectory owns one area of the UI (auth, collection, exercises, friends, history, onboarding, profile, programs, quests, skills, stats, summary, what's new, workout) and has its own `AGENTS.md`. Screens are React components named `*Screen`, exported by name and mounted by `web/src/App.tsx`. Data access, formatting and decisions live in `../lib/`, `../offline/` and the shared domain, so feature files stay mostly wiring and markup.
+Feature-sliced screens of the PWA. Each subdirectory owns one area of the UI (auth, collection, design (DEV-only gallery), exercises, friends, history, onboarding, profile, programs, quests, skills, stats, summary, what's new, workout) and has its own `AGENTS.md`. Screens are `*Screen` components mounted by `web/src/App.tsx`. Data access, formatting and decisions live in `../lib/`, `../offline/` and the shared domain, so feature files stay mostly wiring and markup.
 
 ## Rules and gotchas
 

@@ -5,7 +5,7 @@ import type { RestTimerControls } from './use-rest-timer.ts';
 const TICK_MS = 250;
 
 interface RestTimerBarProps extends RestTimerControls {
-  focusAfterStop: RefObject<HTMLButtonElement | null>;
+  focusAfterStop: () => HTMLElement | null;
   focusFallback: RefObject<HTMLElement | null>;
   prompt?: (moveFocusOn: () => void) => ReactNode;
 }
@@ -33,8 +33,8 @@ export function RestTimerBar({
   if (view.kind === 'idle') return null;
   const resting = view.kind === 'resting';
   const moveFocusOn = () => {
-    const next = focusAfterStop.current;
-    if (next && !next.disabled) next.focus();
+    const next = focusAfterStop();
+    if (next) next.focus();
     else focusFallback.current?.focus();
   };
   const stopAndFocus = () => {
@@ -88,7 +88,13 @@ export function RestTimerBar({
           +{REST_STEP_S}
         </button>
         <button className="button" type="button" onClick={stopAndFocus}>
-          {resting ? 'Skip rest' : 'Dismiss'}
+          {resting ? (
+            <>
+              Skip<span className="visually-hidden"> rest</span>
+            </>
+          ) : (
+            'Dismiss'
+          )}
         </button>
       </section>
     </>

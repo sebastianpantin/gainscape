@@ -20,15 +20,18 @@ import {
 import { exerciseKeys } from '../../lib/exercises/exercise-key-rules.ts';
 import { formatXp } from '../../lib/format.ts';
 import { deleteSession, editSession } from '../../lib/history/history.ts';
-import { isUuid, withoutHistorySession } from '../../lib/history/history-rules.ts';
+import { isUuid, programDayLabel, withoutHistorySession } from '../../lib/history/history-rules.ts';
 import { type CatalogItem } from '../../lib/collection/item-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { fetchLatestExerciseList, historyQuery, itemCatalogQuery } from '../../lib/query/queries.ts';
+import { fetchLatestExerciseList, historyQuery, itemCatalogQuery, programsQuery } from '../../lib/query/queries.ts';
+import { useToast } from '../../lib/ui/toast.ts';
+import { type Program } from '../../lib/programs/programs.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../lib/platform/sign-out.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
@@ -66,6 +69,7 @@ import { StoredExerciseList } from './StoredExerciseList.tsx';
 const HISTORY_PATH = '/collection/history';
 const MAX_NOTES_LENGTH = 2000;
 const NO_ITEMS: readonly CatalogItem[] = [];
+const NO_PROGRAMS: readonly Program[] = [];
 
 const LATER_LOOT_NOTE = "Later workouts' PR loot may be recalculated.";
 
@@ -95,6 +99,9 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
   const items = useQuery(itemCatalogQuery(userId)).data?.loaded.items ?? NO_ITEMS;
+  const programs = useQuery(programsQuery(userId)).data?.loaded ?? NO_PROGRAMS;
+  const { showToast } = useToast();
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const unsaved = useUnsavedChangesGuard(
     !readOnly && loaded !== null && edit !== null && hasChanges(edit, loaded.original),
@@ -156,12 +163,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         }}
       />
     );
-  if (!loaded || !edit)
-    return (
-      <main className="screen">
-        <p>Loading…</p>
-      </main>
-    );
+  if (!loaded || !edit) return <ScreenSkeleton title="Workout" />;
 
   const editor = () =>
     createSessionEditor<Loaded>({
@@ -255,7 +257,23 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     else setEdit(removeEditSet(edit, removal.exerciseIndex, removal.setId));
   };
 
-  const header = <SessionHeader session={session} backTo={HISTORY_PATH} />;
+  const header = (
+    <SessionHeader
+      session={session}
+      programLabel={programDayLabel(programs, session.programDayId)}
+      backTo={HISTORY_PATH}
+      headingRef={headingRef}
+    />
+  );
+
+  const undoChanges = () => {
+    const undone = edit;
+    setEdit(loaded.original);
+    setProblem(null);
+    setNotice(null);
+    headingRef.current?.focus();
+    showToast('Changes undone.', { label: 'Undo', onAct: () => setEdit(undone) });
+  };
 
   const problemPanel = problem && (
     <>
@@ -348,7 +366,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       )}
       {busy.kind !== 'idle' && busy.retrying && (
         <p className="notice" role="status">
-          Couldn't reach the server ({busy.retrying}). Retrying…
+          Couldn't reach the server. Retrying…
         </p>
       )}
       {problemPanel}
@@ -494,16 +512,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         {busy.kind === 'saving' ? 'Saving…' : 'Save changes'}
       </button>
       {changed && (
-        <button
-          className="button"
-          type="button"
-          disabled={working || askingBodyweight}
-          onClick={() => {
-            setEdit(loaded.original);
-            setProblem(null);
-            setNotice(null);
-          }}
-        >
+        <button className="button" type="button" disabled={working || askingBodyweight} onClick={undoChanges}>
           Undo my changes
         </button>
       )}
@@ -522,29 +531,30 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         </ConfirmDialog>
       )}
       <section className="danger-zone">
-        {confirmingDelete ? (
-          <>
-            <p>Delete this workout? This can't be undone. XP and records are recalculated without it.</p>
-            {deleteWarning && <p>{deleteWarning}</p>}
-            <p>{LATER_LOOT_NOTE}</p>
-            <button className="button danger" type="button" disabled={working} onClick={() => void remove()}>
-              {busy.kind === 'deleting' ? 'Deleting…' : 'Delete for good'}
-            </button>
-            <button className="button" type="button" disabled={working} onClick={() => setConfirmingDelete(false)}>
-              Keep workout
-            </button>
-          </>
-        ) : (
-          <button
-            className="button danger-outline"
-            type="button"
-            disabled={working}
-            onClick={() => setConfirmingDelete(true)}
-          >
-            Delete workout
-          </button>
-        )}
+        <button
+          className="button danger-outline"
+          type="button"
+          disabled={working}
+          onClick={() => setConfirmingDelete(true)}
+        >
+          Delete workout
+        </button>
       </section>
+      {confirmingDelete && (
+        <ConfirmDialog
+          title="Delete this workout?"
+          confirmLabel={busy.kind === 'deleting' ? 'Deleting…' : 'Delete for good'}
+          cancelLabel="Keep workout"
+          busy={working}
+          danger
+          onConfirm={() => void remove()}
+          onCancel={() => setConfirmingDelete(false)}
+        >
+          <p>This can't be undone. XP and records are recalculated without it.</p>
+          {deleteWarning && <p>{deleteWarning}</p>}
+          <p>{LATER_LOOT_NOTE}</p>
+        </ConfirmDialog>
+      )}
       {unsaved.prompt}
     </main>
   );

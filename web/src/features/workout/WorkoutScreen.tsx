@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useId, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useId, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
@@ -48,13 +48,14 @@ import { useRecentLiftSessions } from './use-recent-lift-sessions.ts';
 import { useRestAlert } from './use-rest-alert.ts';
 import { useRestTimer } from './use-rest-timer.ts';
 import { useExerciseStrength, useSessionBaseline } from './use-session-strength.ts';
+import { useSessionState } from './use-session-state.ts';
 import { useWakeLock } from './use-wake-lock.ts';
 import { useWorkoutCommands } from './use-workout-commands.ts';
 import { WorkoutClock } from './WorkoutClock.tsx';
 import { useWorkoutPreviews } from './use-workout-previews.ts';
 import { useWorkoutStart } from './use-workout-start.ts';
 import { workoutHelpKeys } from './workout-help.ts';
-import { deviceSaveProblemText, SETS_FULL_TEXT, WAITING_DRAFT_TEXT } from './workout-rules.ts';
+import { deviceSaveProblemText, savingAtRisk, SETS_FULL_TEXT, WAITING_DRAFT_TEXT } from './workout-rules.ts';
 import { liftIdsToRecall, swappableLifts } from './workout-screen-rules.ts';
 import { donePreviewTotal } from './xp-preview.ts';
 
@@ -62,8 +63,22 @@ interface WorkoutScreenProps {
   userId: string;
 }
 
+function exerciseIdToAdd(state: unknown): string | null {
+  if (typeof state !== 'object' || state === null || !('addExerciseId' in state)) return null;
+  return typeof state.addExerciseId === 'string' ? state.addExerciseId : null;
+}
+
+function nextSetToLog(scope: ParentNode | null | undefined): HTMLButtonElement | null {
+  const toggles = [...(scope?.querySelectorAll<HTMLButtonElement>('button.done-toggle') ?? [])];
+  const ticked = toggles.map((toggle) => toggle.getAttribute('aria-pressed') === 'true');
+  const afterLastTicked = toggles.slice(ticked.lastIndexOf(true) + 1);
+  const unticked = (toggle: HTMLButtonElement) => toggle.getAttribute('aria-pressed') === 'false';
+  return afterLastTicked.find(unticked) ?? toggles.find(unticked) ?? null;
+}
+
 export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     state,
     store,
@@ -99,10 +114,27 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const onboarding = useOnboarding(userId, draft !== null);
   const focusPickerOnOpen = useRef(false);
   const draftSessionId = draft?.sessionId ?? null;
+  const pickCount = useRef(0);
+  const [pickedExercise, setPickedExercise] = useSessionState<{ name: string; key: number } | null>(
+    draftSessionId,
+    null,
+  );
   const recentSessions = useRecentLiftSessions(`${userId}/${draftSessionId}`, liftIdsToRecall(draft), onlineSignal);
   const workoutOpen = draft !== null && !draft.finishedAt;
   useWakeLock(keepAwake, workoutOpen);
   useFinishBarClearance(finishBar, workoutOpen);
+  const changesAtRisk = savingAtRisk(saveProblem);
+  useEffect(() => {
+    if (!changesAtRisk) return;
+    const holdPage = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', holdPage);
+    return () => window.removeEventListener('beforeunload', holdPage);
+  }, [changesAtRisk]);
+  useEffect(() => {
+    if (pickedExercise === null) return;
+    const headings = finishBar.current?.parentElement?.querySelectorAll<HTMLElement>('.exercise-card > header > h2');
+    headings?.[headings.length - 1]?.focus();
+  }, [pickedExercise]);
 
   const { exercises, loadProblem, listNotice } = useExerciseList(userId);
   const { notes, saveNote } = useExerciseNotes(userId);
@@ -124,9 +156,24 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     feedbackFor,
     stopRest: rest.stop,
   });
+  const exerciseToAdd = exerciseIdToAdd(location.state);
+  const addedForLocation = useRef<string | null>(null);
+  useEffect(() => {
+    if (exerciseToAdd === null || !workoutOpen || addedForLocation.current === location.key) return;
+    const added = addableExercises(draft, exercises).find((exercise) => exercise.id === exerciseToAdd);
+    if (added === undefined && exercises.every((exercise) => exercise.id !== exerciseToAdd)) return;
+    addedForLocation.current = location.key;
+    if (added !== undefined) void commands.addPicked(added);
+    void navigate('/', { replace: true, state: null });
+  }, [exerciseToAdd, workoutOpen, location.key, draft, exercises, commands, navigate]);
   const finishing = useFinishWorkout({ userId, draft, exercises, updateDraft, stopRest: rest.stop });
 
-  const { status: finishStatus, retryNow } = useFinishSync({
+  const {
+    status: finishStatus,
+    holding,
+    retryNow,
+    saveNow,
+  } = useFinishSync({
     userId,
     draft,
     store,
@@ -145,9 +192,16 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const deviceNotices = (
     <>
       {saveProblem && (
-        <p className="problem" role="alert">
-          {deviceSaveProblemText(saveProblem)}
-        </p>
+        <div className="stack">
+          <p className="problem" role="alert">
+            {deviceSaveProblemText(saveProblem)}
+          </p>
+          {changesAtRisk && draft && (
+            <button className="button" type="button" onClick={() => changeDraft(draft)}>
+              Retry
+            </button>
+          )}
+        </div>
       )}
       {waitingDraft && draft && (
         <p className="notice" role="status">
@@ -184,7 +238,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       <SavingWorkoutView
         deviceNotices={deviceNotices}
         finishStatus={finishStatus}
+        holding={holding}
         unit={unitPref}
+        onSaveNow={saveNow}
         onRetryNow={retryNow}
         onBackToEditing={() => changeDraft({ ...draft, finishedAt: null }, { reopen: true })}
         onSaveBodyweight={async (bodyweightKg) => {
@@ -246,7 +302,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   return (
     <main className="screen stack">
       <header className="workout-header">
-        <div className="stack" style={{ gap: 4 }}>
+        <div className="stack" style={{ gap: 'var(--space-1)' }}>
           {draft.programLabel && <span className="muted">{draft.programLabel}</span>}
           <h1 className="title">Workout</h1>
         </div>
@@ -256,6 +312,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       </header>
       <p className="visually-hidden" role="status">
         {commands.announcement && <span key={commands.announcement.key}>{commands.announcement.text}</span>}
+      </p>
+      <p className="visually-hidden" role="status">
+        {pickedExercise && <span key={pickedExercise.key}>{pickedExercise.name} added</span>}
       </p>
       {deviceNotices}
       {draft.challenge && (
@@ -328,7 +387,11 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       {roomForSet ? (
         <ExercisePicker
           exercises={addableExercises(draft, exercises)}
-          onPick={(exercise) => void commands.addPicked(exercise)}
+          onPick={(exercise) => {
+            void commands.addPicked(exercise);
+            pickCount.current += 1;
+            setPickedExercise({ name: exercise.name, key: pickCount.current });
+          }}
           searchRef={(search) => {
             if (!search || !focusPickerOnOpen.current) return;
             focusPickerOnOpen.current = false;
@@ -339,7 +402,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <p className="hint">{SETS_FULL_TEXT}</p>
       )}
       {roomForSet && !roomForBout && <p className="hint">Cardio exercises are not offered. {BOUTS_FULL_TEXT}</p>}
-      <Link className="button link" to="/exercises?new=1">
+      <Link className="button link" to="/exercises?new=1&from=workout">
         Create custom exercise
       </Link>
       {draft.exercises.length > 0 && (
@@ -357,7 +420,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </p>
         <RestTimerBar
           {...rest}
-          focusAfterStop={finishButton}
+          focusAfterStop={() => {
+            const finish = finishButton.current;
+            return nextSetToLog(finishBar.current?.parentElement) ?? (finish && !finish.disabled ? finish : null);
+          }}
           focusFallback={finishBar}
           prompt={(moveFocusOn) => <NotifyPrompt userId={userId} onAnswered={moveFocusOn} />}
         />
@@ -379,7 +445,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           aria-describedby={finishing.blockedText ? finishBlockedId : undefined}
           onClick={finishing.finish}
         >
-          Finish workout
+          Finish<span className="finish-word"> workout</span>
         </button>
       </div>
       <p className="muted tiny preview-note">~ and new records are previews, confirmed when the workout syncs.</p>
@@ -411,7 +477,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           confirmLabel={prompt.confirm.label}
           alternative={
             prompt.alternative
-              ? { label: prompt.alternative.label, onChoose: () => finishing.completeFinish(false) }
+              ? {
+                  label: prompt.alternative.label,
+                  onChoose: () => finishing.completeFinish(!prompt.confirm.marksPlannedDone),
+                }
               : undefined
           }
           onConfirm={() => finishing.completeFinish(prompt.confirm.marksPlannedDone)}

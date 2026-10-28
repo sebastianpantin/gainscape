@@ -18,7 +18,20 @@ const BETWEEN_SET_CONTROLS = [
   '.bodyweight-prompt button',
   'button.term-help',
   '.term-help-panel button',
+  '.gz-button',
 ];
+
+export const EVERY_CONTROL = [
+  'button',
+  'a[href]',
+  '[role=button]',
+  '[role=radio]',
+  '[role=switch]',
+  'summary',
+  'input',
+  'select',
+];
+const NOT_A_HIT_TARGET = '.visually-hidden';
 
 export async function expectNoAxeViolations(page: Page, screen: string): Promise<void> {
   await page.evaluate(() =>
@@ -42,7 +55,7 @@ export async function expectNoAxeViolations(page: Page, screen: string): Promise
 
 export async function expectTouchTargets(page: Page, selectors: readonly string[] = BETWEEN_SET_CONTROLS) {
   const { checked, undersized } = await page.evaluate(
-    ({ selectors, minimum }) => {
+    ({ selectors, minimum, exempt }) => {
       let checked = 0;
       const found: string[] = [];
       for (const selector of selectors) {
@@ -50,6 +63,7 @@ export async function expectTouchTargets(page: Page, selectors: readonly string[
           const box = element.getBoundingClientRect();
           if (box.width === 0 && box.height === 0) continue;
           if (getComputedStyle(element).visibility === 'hidden') continue;
+          if (element.closest(exempt)) continue;
           checked++;
           const hit = element.closest('label')?.getBoundingClientRect() ?? box;
           if (hit.width < minimum || hit.height < minimum) {
@@ -60,7 +74,7 @@ export async function expectTouchTargets(page: Page, selectors: readonly string[
       }
       return { checked, undersized: found };
     },
-    { selectors, minimum: TAP_TARGET_PX },
+    { selectors, minimum: TAP_TARGET_PX, exempt: NOT_A_HIT_TARGET },
   );
   expect(checked, 'controls checked for 44x44').toBeGreaterThan(0);
   expect(undersized, 'controls under 44x44').toEqual([]);
@@ -87,6 +101,34 @@ export async function expectRemoveSetButtonsStandApart(page: Page) {
     return found;
   }, TAP_TARGET_PX);
   expect(crowded, 'remove set buttons with a control beside them').toEqual([]);
+}
+
+export async function expectUniqueButtonNamesInLists(page: Page) {
+  const repeated = await page.evaluate(() => {
+    const nameOf = (button: HTMLElement) => {
+      const labelledBy = button.getAttribute('aria-labelledby');
+      const label = labelledBy
+        ? labelledBy
+            .split(/\s+/)
+            .map((id) => document.getElementById(id)?.textContent ?? '')
+            .join(' ')
+        : (button.getAttribute('aria-label') ?? button.textContent ?? '');
+      return label.replace(/\s+/g, ' ').trim();
+    };
+    const found: string[] = [];
+    for (const list of document.querySelectorAll<HTMLElement>('ul, ol, [role=list]')) {
+      const seen = new Set<string>();
+      for (const button of list.querySelectorAll<HTMLElement>('button:not([role=radio]), [role=button], a.button')) {
+        if (button.closest('ul, ol, [role=list]') !== list) continue;
+        if (button.getClientRects().length === 0) continue;
+        const name = nameOf(button);
+        if (seen.has(name)) found.push(`"${name}" in ${list.getAttribute('aria-label') ?? list.className}`);
+        seen.add(name);
+      }
+    }
+    return found;
+  });
+  expect(repeated, 'buttons in one list that share an accessible name').toEqual([]);
 }
 
 export function shownUncovered(element: Locator): Promise<boolean> {

@@ -10,18 +10,18 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 
 - `Makefile`: entry point for every workflow: stack, dev server, checks, every test layer, codegen.
 - `package.json`: npm dependencies only; every workflow runs through a `make` target.
-- `eslint.config.js`: ESLint flat config, including the custom `gainscape/no-comments` rule, the test id bans for `web/src` and `e2e/`, the domain purity globals ban and the `__CHANGELOG__` global ban.
+- `eslint.config.js`: ESLint flat config, including the custom `gainscape/no-comments` rule, the test id bans, the numeric `style` ban in `web/src/features`, the domain purity globals ban and the `__CHANGELOG__` global ban.
 - `tsconfig.json`: solution file for editors and Vite; `make typecheck` runs each referenced config, so `tsc` fails on a global from the wrong environment. `tsconfig.web.json`: `web/src` with DOM and no Node types. `tsconfig.domain.json`: the domain with neither DOM nor Node. `tsconfig.node.json`: scripts, tests, e2e, `web/build` and the root configs with Node and DOM (tests and e2e drive DOM code). Shared options and the `@domain/*` path alias live in `tsconfig.base.json`.
 - `tsconfig.sw.json`: separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`.
 - `vitest.config.ts`: Vitest projects (`@domain` resolves through `resolve.tsconfigPaths`): `unit` (balance, catalog, deploy, domain, web; parallel), `integration` (4 workers in parallel), then `integration-serial` (files that touch global state, and timing benchmarks, one at a time).
 - `playwright.config.ts`: E2E against the `vite web` dev server (https, service workers blocked); projects `chromium` (Pixel 7, `make e2e`) and `webkit` (iPhone 14, `make e2e-webkit`); shared CI settings in `e2e/support/run-settings.ts`.
 - `playwright.pwa.config.ts`: PWA E2E against `vite preview` over plain http with service workers allowed.
 - `playwright.pages.config.ts`: Pages E2E: builds with `scripts/deploy/build-pages.ts` against the local stack and serves `web/dist` with `wrangler pages dev`.
-- `.prettierrc.json`: Prettier: single quotes, width 120, trailing commas.
+- `docs/design-system.md`: UI rules and their reasons (tokens, buttons, screen states, touch); dev-only gallery at `/design`.
 - `.gitleaks.toml`: gitleaks rules for `make secrets-scan`: default rules plus allowlists for Supabase's public local-demo keys and the `stronglifts_5x5` template key in the catalog templates and seed.
 - `.claude/skills/changelog/SKILL.md`: the skill behind "write the changelog": lists uncovered user-facing PRs with `make changelog-unreleased`, writes the next entry of `web/changelog.yaml` and opens a PR.
-- `scripts/docs/agents-size.ts`: `make docs-check` (part of `make check`) fails when a tracked `AGENTS.md` is over 16 KiB, so these files stay readable in one pass, and warns over 12 KiB so trimming starts before a change is blocked.
-- `README.md`: human-facing run instructions, command table, PWA, loot secret and auth notes.
+- `scripts/docs/agents-size.ts`: `make docs-check` (part of `make check`) fails when a tracked `AGENTS.md` is over 16 KiB, and warns over 12 KiB so trimming starts early.
+- `README.md`: human-facing run instructions, commands, PWA and auth notes.
 - `.github/workflows/ci.yml`: CI on every pull request: `changes` (`make ci-changes`, Node only), then in parallel `checks` (no stack; only `make format-check docs-check secrets-scan` for a documentation-only PR, otherwise `make check`, `make test-unit` and `make build`), `backend` (integration, pgTAP; skipped when `ci-changes` finds no backend input) and `smoke` (`make e2e-smoke`, the `@smoke` e2e tests; skipped when `ci-changes` finds no UI input).
 - `.github/workflows/e2e.yml`: nightly and manual `e2e` workflow (sharded chromium and webkit, e2e-pwa, e2e-pages), started by hand with `gh workflow run e2e.yml --ref <branch>`.
 

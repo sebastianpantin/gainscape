@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { measuresRepsCapacity } from '@domain/types.ts';
+import { BackLink } from '../../components/BackLink.tsx';
 import { LineChart } from '../../components/LineChart.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { TermHelp } from '../../components/TermHelp.tsx';
 import { messageOf } from '../../lib/error-text.ts';
 import { type ExerciseProgress } from '../../lib/progress/exercise-progress.ts';
@@ -25,26 +28,18 @@ interface ExerciseProgressScreenProps {
 }
 
 type Loaded =
-  { kind: 'loading' } | { kind: 'problem'; message: string } | { kind: 'ready'; progress: ExerciseProgress };
+  | { kind: 'loading' }
+  | { kind: 'missing' }
+  | { kind: 'problem'; message: string }
+  | { kind: 'ready'; progress: ExerciseProgress };
 
 const MISSING_EXERCISE = "This exercise isn't available.";
 
 function loadedOf(progress: ExerciseProgress | null | undefined, error: Error | null): Loaded {
   if (progress) return { kind: 'ready', progress };
-  if (progress === null) return { kind: 'problem', message: MISSING_EXERCISE };
+  if (progress === null) return { kind: 'missing' };
   if (error) return { kind: 'problem', message: messageOf(error, 'Could not load progress.') };
   return { kind: 'loading' };
-}
-
-function BackButton() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const cameFromApp = location.key !== 'default';
-  return (
-    <button type="button" className="back-link" onClick={() => (cameFromApp ? navigate(-1) : navigate('/collection'))}>
-      ‹ Back
-    </button>
-  );
 }
 
 export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) {
@@ -54,19 +49,30 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
   const [openedAt] = useState(Date.now);
   const loaded = loadedOf(progress.data, progress.isFetching ? null : progress.error);
 
-  if (loaded.kind !== 'ready')
+  const placeholderHeading = (
+    <>
+      <BackLink parent="/collection" />
+      <h1 className="title">Exercise progress</h1>
+    </>
+  );
+  if (loaded.kind === 'loading')
     return (
       <main className="screen stack">
-        <BackButton />
-        {loaded.kind === 'loading' ? (
-          <p>Loading…</p>
-        ) : (
-          <p className="problem" role="alert">
-            {loaded.message}
-          </p>
-        )}
+        {placeholderHeading}
+        <ListSkeleton />
       </main>
     );
+  if (loaded.kind === 'missing')
+    return (
+      <main className="screen stack">
+        {placeholderHeading}
+        <p className="problem" role="alert">
+          {MISSING_EXERCISE}
+        </p>
+      </main>
+    );
+  if (loaded.kind === 'problem')
+    return <ScreenProblem heading={placeholderHeading} problem={loaded.message} onRetry={progress.refetch} />;
 
   const { exercise, sessions, repMaxes, maxReps } = loaded.progress;
   const repsOnly = measuresRepsCapacity(exercise.loadType);
@@ -78,7 +84,7 @@ export function ExerciseProgressScreen({ userId }: ExerciseProgressScreenProps) 
 
   return (
     <main className="screen stack">
-      <BackButton />
+      <BackLink parent="/collection" />
       <div className="row">
         <h1 className="title">{exercise.name}</h1>
         {plateau && <span className="stalled-tag">Stalled</span>}

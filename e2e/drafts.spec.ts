@@ -1,3 +1,4 @@
+import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import {
   breakIndexedDbOpen,
@@ -60,7 +61,7 @@ test('a workout the server keeps failing on stops retrying and syncs on a manual
     });
   });
   await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('alert')).toHaveText(/The server keeps failing to save this workout \(internal_error\)/, {
+  await expect(page.getByRole('alert')).toHaveText(/The server keeps failing to save this workout\./, {
     timeout: 30_000,
   });
   const attemptsWhenStalled = failedAttempts;
@@ -179,7 +180,9 @@ test('a workout the server rejects is discarded only after a confirm', async ({ 
       : route.continue(),
   );
   await page.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(page.getByRole('alert')).toHaveText('The server rejected this workout: invalid_payload');
+  await expect(page.getByRole('alert')).toHaveText(
+    "The server couldn't accept this workout. Go back to editing to check it, or discard it.",
+  );
 
   await page.getByRole('button', { name: 'Discard workout' }).click();
   const dialog = page.getByRole('dialog', { name: 'Discard this workout?' });
@@ -192,4 +195,68 @@ test('a workout the server rejects is discarded only after a confirm', async ({ 
   await dialog.getByRole('button', { name: 'Discard workout' }).click();
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
   expect(await sessionCount(username)).toBe(0);
+});
+
+test.describe('the moment after Finish', () => {
+  const FINISH_WINDOW_MS = 5_000;
+  test.use({ finishWindowMs: FINISH_WINDOW_MS });
+
+  async function finishWithRequestLog(page: Page): Promise<{ finishedAt: number; sentAt: number[] }> {
+    const sentAt: number[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/functions/v1/complete-session') && request.method() === 'POST')
+        sentAt.push(Date.now());
+    });
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+    const finishedAt = Date.now();
+    await page.getByRole('button', { name: 'Finish workout' }).click();
+    return { finishedAt, sentAt };
+  }
+
+  test('Keep training reopens the workout and sends nothing', async ({ page }) => {
+    const username = uniqueUsername('dr_kt');
+    await register(page, username);
+    const { sentAt } = await finishWithRequestLog(page);
+    await expect(page.getByRole('heading', { name: 'Saving workout…' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save now' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Keep training' }).click();
+    await expect(page.getByRole('heading', { name: 'Barbell Bench Press', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Finish workout' })).toBeVisible();
+    const lateSend = page.waitForRequest(completeSession, { timeout: FINISH_WINDOW_MS + LATE_REQUEST_GRACE_MS }).then(
+      () => true,
+      () => false,
+    );
+    expect(await lateSend).toBe(false);
+    expect(sentAt).toEqual([]);
+    expect(await sessionCount(username)).toBe(0);
+  });
+
+  test('Save now sends the workout at once', async ({ page }) => {
+    const username = uniqueUsername('dr_sn');
+    await register(page, username);
+    const { finishedAt, sentAt } = await finishWithRequestLog(page);
+    await page.getByRole('button', { name: 'Save now' }).click();
+    await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+    expect(sentAt).toHaveLength(1);
+    expect(sentAt[0]! - finishedAt).toBeLessThan(FINISH_WINDOW_MS);
+    await expect.poll(() => sessionCount(username)).toBe(1);
+  });
+
+  test('a reload during the wait sends once the rest of it has passed', async ({ page }) => {
+    const username = uniqueUsername('dr_rw');
+    await register(page, username);
+    const { finishedAt, sentAt } = await finishWithRequestLog(page);
+    await expect(page.getByRole('button', { name: 'Save now' })).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Saving workout…' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible({
+      timeout: FINISH_WINDOW_MS * 3,
+    });
+    expect(sentAt).toHaveLength(1);
+    expect(sentAt[0]! - finishedAt).toBeGreaterThanOrEqual(FINISH_WINDOW_MS - LATE_REQUEST_GRACE_MS);
+    await expect.poll(() => sessionCount(username)).toBe(1);
+  });
 });

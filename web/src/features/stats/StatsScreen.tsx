@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
@@ -11,6 +10,8 @@ import { trainingCalendar } from '../../lib/stats/training-calendar-rules.ts';
 import { localDateIn, monthKey, shiftMonth } from '../../lib/ui/date-bucket-rules.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
+import { CollectionTabs } from '../collection/CollectionScreen.tsx';
+import { CollectionHeading } from '../collection/CollectionHeading.tsx';
 import { LootStatsSection } from './LootStatsSection.tsx';
 import { MonthCompareTable } from './MonthCompareTable.tsx';
 import { RecentRecordsSection } from './RecentRecordsSection.tsx';
@@ -77,10 +78,8 @@ export function StatsScreen({ userId }: { userId: string }) {
 
   return (
     <main className="screen stack">
-      <Link className="back-link" to="/collection">
-        ‹ Collection
-      </Link>
-      <h1 className="title">Stats</h1>
+      <CollectionHeading tab="Stats" />
+      <CollectionTabs />
       <p className="muted">How your training adds up over weeks and months.</p>
       {loaded.status === 'loading' && <ListSkeleton panels={1} />}
       {loaded.status === 'failed' && <ProblemWithRetry problem={loaded.problem} onRetry={profile.refetch} />}

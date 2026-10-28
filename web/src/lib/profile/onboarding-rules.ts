@@ -47,6 +47,10 @@ export function nextOnboardingStep(step: OnboardingStep): OnboardingStep | null 
   return ONBOARDING_STEPS[ONBOARDING_STEPS.indexOf(step) + 1] ?? null;
 }
 
+export function previousOnboardingStep(step: OnboardingStep): OnboardingStep | null {
+  return ONBOARDING_STEPS[ONBOARDING_STEPS.indexOf(step) - 1] ?? null;
+}
+
 export function onboardingStepLabel(step: OnboardingStep): string {
   return `Step ${ONBOARDING_STEPS.indexOf(step) + 1} of ${ONBOARDING_STEPS.length}`;
 }

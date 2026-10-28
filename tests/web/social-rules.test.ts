@@ -13,6 +13,7 @@ import {
   feedBadgeKind,
   feedCursor,
   feedText,
+  friendHandle,
   friendsLoadProblem,
   type HiscoreRow,
   rankHiscores,
@@ -412,5 +413,16 @@ describe('withFriendlyRateLimit', () => {
     expect(limited.message).toBe('Too many changes in a short time. Try again in 2 hours.');
     const other = { code: '42501', message: 'permission denied' };
     expect(withFriendlyRateLimit(other)).toBe(other);
+  });
+});
+
+describe('friendHandle', () => {
+  it('shows the username after a display name that differs from it', () => {
+    expect(friendHandle('Iron Otter', 'otter_99')).toBe('@otter_99');
+  });
+
+  it('hides the username when the display name only repeats it', () => {
+    expect(friendHandle('otter_99', 'otter_99')).toBeNull();
+    expect(friendHandle(' Otter_99 ', 'otter_99')).toBeNull();
   });
 });

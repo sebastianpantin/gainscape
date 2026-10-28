@@ -109,7 +109,19 @@ describe('thisWeekText', () => {
     );
     const named = (skill: string) => history.find((muscle) => muscle.skill === skill)!;
     expect(thisWeekText(named('legs'))).toBe('This week: 12 sets · within target');
-    expect(thisWeekText(named('chest'))).toBe('This week: 1.4 of 10 sets');
+    expect(thisWeekText(named('chest'))).toBe('This week: 1 of 10 sets');
     expect(thisWeekText(named('back'))).toBe('This week: 0 of 10 sets');
+  });
+
+  it('rounds the share-weighted sets to a whole number and reads the band from the rounded count', () => {
+    const history = volumeHistory(
+      [row('2026-10-19', 'bench', 14), row('2026-10-19', 'squat', 3)],
+      exercisesById,
+      'UTC',
+      MONDAY_NOON_UTC,
+    );
+    const named = (skill: string) => history.find((muscle) => muscle.skill === skill)!;
+    expect(thisWeekText(named('chest'))).toBe('This week: 10 sets · within target');
+    expect(thisWeekText(named('arms'))).toBe('This week: 4 of 10 sets');
   });
 });

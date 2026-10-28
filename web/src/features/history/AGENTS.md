@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Past workouts under the Collection tab: a paged session list (`/collection/history`) and a detail screen (`/collection/history/:sessionId`) where a recent session can be edited or deleted. Edits go to the server, which recomputes XP, records and loot.
+Past workouts in the Collection tab: a paged session list (`/collection/history`) and a detail screen (`/collection/history/:sessionId`) where a recent one can be edited or deleted. Edits go to the server, which recomputes XP, records and loot.
 
 ## Map
 
@@ -24,7 +24,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 - The list uses `useInfiniteQuery(historyQuery(userId))`, so loaded pages and scroll survive Back from a workout. Loading more waits while any fetch runs so it never cancels a refresh. The detail screen drops a deleted workout from the cached pages. After a failed page load only the `Load more` button retries. List items keep normal rendering, not `content-visibility: auto`: Back rebuilds the list, so its estimated item heights would move the restored scroll position off the workout.
 - Save: an accepted save makes the sent sets the new original at the new revision before the refresh, so a failed refresh keeps Save disabled and Undo cannot write old values back. Per-set XP labels compare against `xpBasis`, the sets the stored XP belongs to.
 - The `Workout XP` total includes the gear bonus; per-set labels show `xp_awarded`, the base XP.
-- Delete sends the loaded revision as `ifRevision`; on `revision_conflict` it loads the latest version and asks again. A concurrent edit is rebased (`rebaseEdit`) with a notice.
+- Delete asks in a `ConfirmDialog`, sends the loaded revision as `ifRevision`; on `revision_conflict` it loads the latest version and asks again. A concurrent edit is rebased (`rebaseEdit`) with a notice.
 - `set_id_conflict`: give the clashing sets new ids and resend, at most twice. `bodyweight_load_not_zero`: reset bodyweight loads from the latest exercises. Nothing changes once the abort signal fires.
 - `summariesToForget` includes any remembered summary when a save was retried, because a retry after a lost reply gets the no-op answer with empty `replayedSessionIds` and `revokedDrops`. Deleting or syncing must call `forgetLastSummary` so the reveal never shows a removed session.
 - In edit mode a lift's `Progress` link hides while there are unsaved changes, so leaving cannot drop edits.
@@ -32,7 +32,7 @@ Past workouts under the Collection tab: a paged session list (`/collection/histo
 - Limits match the live draft: `canAddSetTo` caps sets and 4 hours of bouts; the picker then stops offering cardio.
 - Swaps stay within one kind; a hold only swaps for a hold of the same measure. Swapping bouts onto an activity without distance tracking clears their distances. A row with `durationS` is a bout; a row with a weight and no reps or counted work is a hold.
 - Warm-up rows are muted (`warmup` class) in both the read-only list and the edit rows, and always keep a non-colour cue: the ` · warm-up` text in the read-only list and the pressed `Warm-up set N` toggle (visible text `Warm-up`) when editing.
-- Removing a set that is saved on the server asks first in a `ConfirmDialog` (`removingSetAsksFirst`); a set added in this edit goes straight away, since nothing is lost until Save and Undo my changes still restores it.
+- Removing a set that is saved on the server asks first in a `ConfirmDialog` (`removingSetAsksFirst`); a set added in this edit goes at once; Undo my changes restores it, its toast's Undo the edits.
 - An edit never changes the session length or RPE.
 - Handle failures through `failureAction` and `failureText`, not ad hoc branches. New set ids come from `withNewSetIds`.
 

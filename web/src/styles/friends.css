@@ -64,31 +64,37 @@
   overflow-wrap: anywhere;
 }
 
-.gz-button {
+.friend-list .button {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  column-gap: var(--space-2);
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+
+.gz-count {
+  flex-shrink: 0;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 48px;
+  color: var(--color-text-muted);
+}
+
+.button.gz-button {
+  flex-shrink: 0;
   flex-direction: column;
   gap: 0;
   align-self: center;
   width: 48px;
   min-height: 48px;
   padding: 0;
-  background: var(--color-well);
   color: var(--color-parchment);
-  box-shadow: var(--bevel-sunken);
 }
 
 .gz-button .pixel {
   font-size: var(--font-size-md);
-}
-
-.gz-button[aria-pressed='true'],
-.gz-button[aria-pressed='true']:hover {
-  background: var(--color-xp);
-  color: var(--color-ink);
-  box-shadow: inset 2px 2px 0 var(--color-xp-light);
-}
-
-.metric-grid .effort-option {
-  font-size: var(--font-size-xs);
 }
 
 .hiscores {
@@ -127,7 +133,11 @@
 
 .hiscore-name {
   flex-grow: 1;
-  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--font-size-xs);
+  color: inherit;
 }
 
 .hiscore-value {

@@ -19,6 +19,7 @@ interface NumberTextFieldProps {
   step?: number;
   lastInGroup?: boolean;
   onCommit: (value: number) => void;
+  onDone?: () => void;
 }
 
 function focusFieldAfter(input: HTMLInputElement) {
@@ -38,6 +39,7 @@ export function NumberTextField({
   step = 1,
   lastInGroup = false,
   onCommit,
+  onDone,
 }: NumberTextFieldProps) {
   const [typed, setTyped] = useState<TypedNumberText | null>(null);
   const keepSelectionOnMouseUp = useRef(false);
@@ -81,8 +83,11 @@ export function NumberTextField({
             keepSelectionOnMouseUp.current = false;
             if (event.key === 'Enter') {
               event.preventDefault();
-              if (enterKeyHint === 'done') setTyped(null);
-              else focusFieldAfter(event.currentTarget);
+              if (enterKeyHint === 'next') focusFieldAfter(event.currentTarget);
+              else {
+                setTyped(null);
+                if (shown.matchesValue) onDone?.();
+              }
               return;
             }
             const direction = stepDirectionForKey(event.key);

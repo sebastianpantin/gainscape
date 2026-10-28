@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useId, useState } from 'react';
 import { MOBILITY_SKILL_KEY } from '@domain/cardio.ts';
 import {
   EQUIPMENT,
@@ -18,6 +18,8 @@ import {
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import { mixedSoloShareText, percentsFromShares, shareTotal, sharesToSave, skillsForModality } from './share-form.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { FieldProblem } from '../../components/FieldProblem.tsx';
+import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 
 const NAME_MAX_LENGTH = 60;
 
@@ -33,7 +35,7 @@ const LOAD_TYPE_LABELS: Record<LoadType, string> = {
 interface CustomExerciseFormProps {
   exercise: Exercise | null;
   skills: Skill[];
-  onSaved: () => void;
+  onSaved: (exerciseId: string) => void;
   onCancel: () => void;
 }
 
@@ -49,6 +51,9 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
   const [loading, setLoading] = useState(exercise !== null);
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const nameProblemId = useId();
+  const totalId = useId();
+  const soloProblemId = useId();
 
   useEffect(() => {
     if (!exercise) return;
@@ -76,6 +81,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
   const shares = sharesToSave(shareForm);
   const nameIssue = nameProblem(name, NAME_MAX_LENGTH);
   const canSave = !loading && !saving && nameIssue === null && shares !== null;
+  const shownNameIssue = name !== '' ? nameIssue : null;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -91,7 +97,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
         equipment,
         shares: shares!,
       });
-      onSaved();
+      onSaved(id);
     } catch (error) {
       setProblem(messageOf(error, 'Could not save the exercise.'));
       setSaving(false);
@@ -103,26 +109,25 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
       <h2>{exercise ? `Edit ${exercise.name}` : 'New custom exercise'}</h2>
       <label className="field">
         Name
-        <input value={name} maxLength={NAME_MAX_LENGTH} onChange={(event) => setName(event.target.value)} required />
+        <input
+          value={name}
+          maxLength={NAME_MAX_LENGTH}
+          onChange={(event) => setName(event.target.value)}
+          aria-invalid={shownNameIssue !== null || undefined}
+          aria-describedby={shownNameIssue ? nameProblemId : undefined}
+          required
+        />
       </label>
-      {name !== '' && nameIssue && <p className="problem">{nameIssue}</p>}
+      <FieldProblem id={nameProblemId} problem={shownNameIssue} />
       {exercise === null && (
         <div className="field">
           Kind
-          <div className="choice-pair" role="radiogroup" aria-label="Kind">
-            {MODALITIES.map((option) => (
-              <button
-                key={option}
-                type="button"
-                role="radio"
-                aria-checked={option === modality}
-                className={`effort-option ${option === modality ? 'selected' : ''}`}
-                onClick={() => setModality(option)}
-              >
-                {MODALITY_LABELS[option]}
-              </button>
-            ))}
-          </div>
+          <SegmentedChoice
+            label="Kind"
+            options={MODALITIES.map((option) => ({ value: option, label: MODALITY_LABELS[option] }))}
+            current={modality}
+            onPick={setModality}
+          />
         </div>
       )}
       {modality === 'lift' && (
@@ -152,7 +157,12 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
           {modality === 'lift' ? 'Load type and skill shares are' : 'Skill shares are'} locked after logging.
         </p>
       )}
-      <fieldset className="stack" disabled={locked}>
+      <fieldset
+        className="stack"
+        disabled={locked}
+        aria-invalid={shares === null || undefined}
+        aria-describedby={soloShareProblem ? `${totalId} ${soloProblemId}` : totalId}
+      >
         <legend>Skill shares (%)</legend>
         {offeredSkills.map((skill) => (
           <label className="compact-field" key={skill.id}>
@@ -169,8 +179,10 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
           </label>
         ))}
       </fieldset>
-      <p className={shares !== null ? '' : 'problem'}>Total: {total}%</p>
-      {soloShareProblem && <p className="problem">{soloShareProblem}</p>}
+      <p className={shares !== null ? '' : 'problem'} id={totalId}>
+        Total: {total}%
+      </p>
+      <FieldProblem id={soloProblemId} problem={soloShareProblem} />
       {problem && (
         <p className="problem" role="alert">
           {problem}

@@ -12,10 +12,11 @@ const STEP_STATE_LABELS: Record<StepState, string> = { done: 'Done', current: 'N
 interface QuestCardProps {
   card: QuestCardView;
   offline: boolean;
+  primary: boolean;
   onStart: () => Promise<string | null>;
 }
 
-export function QuestCard({ card, offline, onStart }: QuestCardProps) {
+export function QuestCard({ card, offline, primary, onStart }: QuestCardProps) {
   const [starting, setStarting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const { quest, status } = card;
@@ -67,15 +68,16 @@ export function QuestCard({ card, offline, onStart }: QuestCardProps) {
       {status === 'available' && (
         <>
           <button
-            className="button primary"
+            className={primary ? 'button primary' : 'button'}
             type="button"
+            aria-label={`Start ${quest.name}`}
+            aria-busy={starting}
             disabled={!canStartQuest(status, offline) || starting}
             onClick={() => void start()}
           >
-            {starting ? 'Starting…' : `Start ${quest.name}`}
+            {starting ? 'Starting…' : 'Start'}
           </button>
           {offline && <p className="muted tiny">Connect to start this quest.</p>}
-          {!offline && <p className="muted tiny">Only workouts you finish after starting count.</p>}
         </>
       )}
       {problem && (

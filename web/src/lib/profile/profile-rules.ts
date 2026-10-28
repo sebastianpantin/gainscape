@@ -3,6 +3,7 @@ import { roundTo } from '@domain/math.ts';
 import { z } from 'zod';
 import { CONTROL_CHARACTER, characterCount } from '../names.ts';
 import { nullableNumber, numericColumn } from '../rows.ts';
+import { TOKEN_COLORS } from '../ui/token-colors.ts';
 import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, parsedDecimal, unitToKg } from '../units.ts';
 
 export const UNIT_PREFS = ['kg', 'lb'] as const;
@@ -58,9 +59,14 @@ export const TRAINING_FOCUS_LABELS: Record<TrainingFocus, string> = {
 };
 
 export const BADGE_COLORS: Record<BadgeColor, { label: string; fill: string; light: string; dark: string }> = {
-  gold: { label: 'Gold', fill: '#ffb000', light: '#ffd166', dark: '#b87d00' },
-  blue: { label: 'Blue', fill: '#6fa8dc', light: '#a9cbea', dark: '#3f6f99' },
-  green: { label: 'Green', fill: '#7fd46a', light: '#b5f0a4', dark: '#4e8f3f' },
+  gold: {
+    label: 'Gold',
+    fill: TOKEN_COLORS.accent,
+    light: TOKEN_COLORS['accent-light'],
+    dark: TOKEN_COLORS['accent-dark'],
+  },
+  blue: { label: 'Blue', fill: TOKEN_COLORS['art-rare'], light: '#a9cbea', dark: '#3f6f99' },
+  green: { label: 'Green', fill: TOKEN_COLORS.xp, light: TOKEN_COLORS['xp-light'], dark: TOKEN_COLORS['xp-dark'] },
   rust: { label: 'Rust', fill: '#e0823d', light: '#f0ab78', dark: '#9c5220' },
   stone: { label: 'Stone', fill: '#a9b4bd', light: '#d2d9de', dark: '#6f7a83' },
 };

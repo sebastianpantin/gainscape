@@ -1,6 +1,12 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { expectNoAxeViolations, expectRemoveSetButtonsStandApart, expectTouchTargets } from './support/a11y.ts';
+import {
+  EVERY_CONTROL,
+  expectNoAxeViolations,
+  expectRemoveSetButtonsStandApart,
+  expectTouchTargets,
+  expectUniqueButtonNamesInLists,
+} from './support/a11y.ts';
 import {
   emailOf,
   exerciseCard,
@@ -44,13 +50,12 @@ import {
 } from './support/program-enrollment.ts';
 import { seedFiveThreeOneCycleSkippingPress } from './support/program-seed.ts';
 
-const TAB_BAR = ['.tab-bar a[href]'];
-
 async function checkScreen(page: Page, screen: string, ready: () => Promise<void>) {
   await ready();
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expectNoAxeViolations(page, screen);
-  if ((await page.locator('.tab-bar').count()) > 0) await expectTouchTargets(page, TAB_BAR);
+  await expectTouchTargets(page, EVERY_CONTROL);
+  await expectUniqueButtonNamesInLists(page);
 }
 
 async function checkEffortTargets(page: Page) {
@@ -93,8 +98,24 @@ async function befriend(friend: Page, page: Page, username: string): Promise<str
   return friendName;
 }
 
-async function createProgram(page: Page): Promise<string> {
+async function copyTemplate(page: Page, templateName: string) {
   await openFromProfile(page, 'Programs');
+  await page.getByRole('button', { name: `Copy and edit ${templateName}`, exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
+}
+
+async function createCustomExercise(page: Page, name: string) {
+  await page.getByRole('button', { name: 'New custom exercise' }).click();
+  await page.getByLabel('Name').fill(name);
+  await page.getByLabel('Chest').fill('100');
+  await page.getByRole('button', { name: 'Save exercise' }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: name })).toBeVisible();
+}
+
+async function createProgram(page: Page): Promise<string> {
+  await copyTemplate(page, 'Full Body 2x');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Your programs' })).toBeVisible();
   await page
     .getByRole('listitem')
     .filter({ hasText: 'Upper / Lower' })
@@ -223,7 +244,7 @@ test.describe('signed-in screens', () => {
       ['/collection', 'Collection: Records'],
       ['/collection/items', 'Collection: Items'],
       ['/collection/history', 'Collection: History'],
-      ['/collection/stats', 'Stats'],
+      ['/collection/stats', 'Collection: Stats'],
       ['/collection/stats/records', 'Records timeline'],
       ['/collection/stats/strength-level', 'Strength level'],
       [sessionPath!, null],
@@ -307,9 +328,12 @@ test.describe('signed-in screens', () => {
     test.setTimeout(240_000);
     await register(page, uniqueUsername('a11y_set'));
     const programPath = await createProgram(page);
+    await openFromProfile(page, 'Custom exercises');
+    await createCustomExercise(page, 'Landmine Press');
+    await createCustomExercise(page, 'Cable Fly');
 
     await checkScreens(page, [
-      ['/exercises', 'Exercises'],
+      ['/exercises', 'Custom exercises'],
       ['/programs', 'Programs'],
       [programPath, null],
       ['/profile/settings/whats-new', "What's new"],
@@ -329,6 +353,21 @@ test.describe('signed-in screens', () => {
     await signOut(page);
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   });
+});
+
+test('the design gallery has no serious axe violations', async ({ page }) => {
+  await register(page, uniqueUsername('a11y_ds'));
+  await page.goto('/design');
+  await checkScreen(page, 'design gallery', async () => {
+    await expect(page.getByRole('heading', { level: 1, name: 'Design', exact: true })).toBeVisible();
+    await expect(page.getByRole('listitem', { name: 'Set 2' })).toBeVisible();
+  });
+});
+
+test('the page declares a dark colour scheme to the browser', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute('content', 'dark');
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe('dark');
 });
 
 test('the links on Train are 44px tall', async ({ page }) => {
@@ -432,6 +471,17 @@ test.describe('on a 320x640 phone', () => {
     for (const tab of await tabs.all()) {
       const overflow = await tab.evaluate((link) => link.scrollWidth - link.clientWidth);
       expect(overflow, await tab.innerText()).toBeLessThanOrEqual(0);
+    }
+  });
+
+  test('every Collection segment label, Stats included, fits inside its segment', async ({ page }) => {
+    await register(page, uniqueUsername('a11y_320c'));
+    await openTab(page, 'Collection');
+    const segments = page.getByRole('navigation', { name: 'Collection' }).getByRole('link');
+    await expect(segments).toHaveText(['Records', 'Items', 'History', 'Stats']);
+    for (const segment of await segments.all()) {
+      const overflow = await segment.evaluate((link) => link.scrollWidth - link.clientWidth);
+      expect(overflow, await segment.innerText()).toBeLessThanOrEqual(0);
     }
   });
 

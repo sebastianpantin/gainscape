@@ -6,11 +6,20 @@ import {
   EFFORT_LEVEL_LABELS,
   EFFORT_LEVELS,
   effortLabel,
+  SIMPLE_EFFORT_HINT,
 } from '../../web/src/lib/workout/effort-labels.ts';
 
 describe('EFFORT_LEVELS', () => {
   it('orders the levels from easiest to hardest', () => {
     expect(EFFORT_LEVELS).toEqual(['easy', 'moderate', 'hard', 'near_failure', 'failure']);
+  });
+});
+
+describe('SIMPLE_EFFORT_HINT', () => {
+  it('names every option the Simple effort selector offers', () => {
+    for (const level of EFFORT_LEVELS) {
+      expect(SIMPLE_EFFORT_HINT.toLowerCase()).toContain(EFFORT_LEVEL_LABELS[level].toLowerCase());
+    }
   });
 });
 

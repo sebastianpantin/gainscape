@@ -26,10 +26,32 @@ async function openChestExercises(page: Page) {
   return page.getByRole('list', { name: 'Exercises that train Chest' }).getByRole('listitem');
 }
 
+test('the custom exercise form marks a bad name and a share total that is not 100% on the fields', async ({ page }) => {
+  await register(page, uniqueUsername('cx_inv'));
+  await openFromProfile(page, 'Custom exercises');
+  await page.getByRole('button', { name: 'New custom exercise' }).click();
+
+  const name = page.getByLabel('Name');
+  await name.fill('Bad\u0007name');
+  await page.getByLabel('Chest').fill('50');
+  await name.press('Enter');
+  await expect(name).toHaveAttribute('aria-invalid', 'true');
+  await expect(name).toHaveAccessibleDescription("Names can't contain control characters.");
+  const shares = page.getByRole('group', { name: 'Skill shares (%)' });
+  await expect(shares).toHaveAttribute('aria-invalid', 'true');
+  await expect(shares).toHaveAccessibleDescription('Total: 50%');
+
+  await name.fill('Landmine Press');
+  await page.getByLabel('Chest').fill('100');
+  await expect(name).not.toHaveAttribute('aria-invalid');
+  await expect(shares).not.toHaveAttribute('aria-invalid');
+  await expect(page.getByRole('button', { name: 'Save exercise' })).toBeEnabled();
+});
+
 test('create, log, record, pin, reorder and archive a custom exercise', async ({ page }) => {
   await register(page, uniqueUsername('cx'));
 
-  await openFromProfile(page, 'Exercises');
+  await openFromProfile(page, 'Custom exercises');
   await page.getByRole('button', { name: 'New custom exercise' }).click();
   await expect(page.getByLabel('Chest')).toBeVisible();
   await expect(page.getByLabel('Endurance')).toHaveCount(0);
@@ -62,7 +84,7 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
   await page.reload();
   await expect(collectionHeadings(page)).toHaveText(['Landmine Press', 'Back Squat']);
 
-  await openFromProfile(page, 'Exercises');
+  await openFromProfile(page, 'Custom exercises');
   await page
     .getByRole('listitem')
     .filter({ hasText: 'Landmine Press' })
@@ -85,9 +107,12 @@ test('create, log, record, pin, reorder and archive a custom exercise', async ({
 test('create and log a custom cardio exercise', async ({ page }) => {
   await register(page, uniqueUsername('cxc'));
 
-  await openFromProfile(page, 'Exercises');
+  await openFromProfile(page, 'Custom exercises');
   await page.getByRole('button', { name: 'New custom exercise' }).click();
-  await page.getByRole('radiogroup', { name: 'Kind' }).getByRole('radio', { name: 'Cardio' }).click();
+  const kind = page.getByRole('radiogroup', { name: 'Kind' });
+  await kind.getByRole('radio', { name: 'Lift', checked: true }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(kind.getByRole('radio', { name: 'Cardio', checked: true })).toBeFocused();
   await expect(page.getByLabel('Load type')).toHaveCount(0);
   await expect(page.getByLabel('Chest')).toHaveCount(0);
   await page.getByLabel('Name').fill('Assault Bike');
@@ -105,4 +130,20 @@ test('create and log a custom cardio exercise', async ({ page }) => {
   const xp = page.getByLabel('XP gained');
   await expect(xp).toContainText('Endurance');
   await expect(xp).toContainText('Agility');
+});
+
+test('a custom exercise created from a workout comes back added to that workout', async ({ page }) => {
+  await register(page, uniqueUsername('cx_wk'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await page.getByRole('link', { name: 'Create custom exercise' }).click();
+  await page.getByLabel('Name').fill('Landmine Press');
+  await page.getByLabel('Load type').selectOption('external');
+  await page.getByLabel('Equipment').selectOption('other');
+  await page.getByLabel('Shoulders').fill('100');
+  await page.getByRole('button', { name: 'Save exercise' }).click();
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Workout', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Landmine Press', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Landmine Press', exact: true })).toHaveCount(1);
 });

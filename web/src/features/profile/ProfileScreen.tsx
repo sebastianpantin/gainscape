@@ -103,7 +103,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
           <PrivateTag />
         </div>
         <div className="well row">
-          <dl className="stack" style={{ gap: 2, flexGrow: 1 }}>
+          <dl className="stack" style={{ gap: 'var(--space-0-5)', flexGrow: 1 }}>
             <dt className="muted tiny">Bodyweight</dt>
             <dd className="pixel" style={{ fontSize: '1.6rem', fontWeight: 500 }}>
               {shownKg === null ? 'Not set' : formatWeight(shownKg, unitPref)}
@@ -182,11 +182,11 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         <BodyweightTrend userId={userId} unit={unitPref} />
       </section>
       <ul className="menu-list">
-        <MenuLink to="/profile/edit">Edit profile &amp; body</MenuLink>
+        <MenuLink to="/profile/edit">Edit profile</MenuLink>
         <MenuLink to="/profile/settings">Settings</MenuLink>
         <MenuLink to="/profile/preview">Preview what friends see</MenuLink>
         <MenuLink to="/programs">Programs</MenuLink>
-        <MenuLink to="/exercises">Exercises</MenuLink>
+        <MenuLink to="/exercises">Custom exercises</MenuLink>
       </ul>
     </main>
   );

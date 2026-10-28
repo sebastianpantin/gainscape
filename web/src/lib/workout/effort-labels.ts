@@ -11,6 +11,8 @@ export const EFFORT_LEVEL_LABELS: Record<EffortLevel, string> = {
   failure: 'Failure',
 };
 
+export const SIMPLE_EFFORT_HINT = `One tap: ${EFFORT_LEVELS.map((level) => EFFORT_LEVEL_LABELS[level]).join(', ')}.`;
+
 export const CARDIO_EFFORT_LABELS: Record<CardioEffortLevel, string> = {
   easy: 'Easy',
   moderate: 'Moderate',

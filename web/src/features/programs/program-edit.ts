@@ -64,6 +64,10 @@ export function removeDay(doc: ProgramDoc, dayIndex: number): ProgramDoc {
   return { ...doc, days: doc.days.filter((_, index) => index !== dayIndex) };
 }
 
+export function restoreDay(doc: ProgramDoc, dayIndex: number, day: EditorDay): ProgramDoc {
+  return { ...doc, days: [...doc.days.slice(0, dayIndex), day, ...doc.days.slice(dayIndex)] };
+}
+
 export function canAddDay(doc: ProgramDoc): boolean {
   return doc.days.length < MAX_DAYS;
 }

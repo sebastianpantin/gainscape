@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import {
   OFFLINE_EXERCISES_NOTICE,
@@ -8,6 +8,9 @@ import {
 } from '../../lib/exercises/catalog-cache.ts';
 import { type Exercise, exerciseLabels } from '../../lib/exercises/catalog-rules.ts';
 import { setCustomExerciseArchived } from '../../lib/exercises/custom-exercises.ts';
+import { BackLink } from '../../components/BackLink.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { CustomExerciseForm } from './CustomExerciseForm.tsx';
 import { messageOf } from '../../lib/error-text.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
@@ -23,7 +26,9 @@ interface ExercisesScreenProps {
 
 export function ExercisesScreen({ userId }: ExercisesScreenProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const fromWorkout = searchParams.get('from') === 'workout';
   const exerciseList = useQuery(exerciseListLoadQuery(userId));
   const liveSkills = useQuery(skillsQuery);
   const [savedSkills] = useState(() => standingCache.read(deviceStorage(), userId)?.skills ?? null);
@@ -43,6 +48,7 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
   const problem = actionProblem ?? (load ? null : (exerciseList.error?.message ?? null));
 
   const closeForm = () => {
+    if (fromWorkout) return navigate('/', { replace: true });
     setEditing({ kind: 'none' });
     if (searchParams.has('new')) setSearchParams({}, { replace: true });
   };
@@ -57,16 +63,20 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
     }
   };
 
+  const heading = (
+    <>
+      <BackLink parent="/profile" />
+      <h1 className="title">Custom exercises</h1>
+    </>
+  );
+
   if (!exercises)
-    return (
-      <main className="screen">
-        {problem ? (
-          <p className="problem" role="alert">
-            {problem}
-          </p>
-        ) : (
-          <p>Loading…</p>
-        )}
+    return problem ? (
+      <ScreenProblem heading={heading} problem={problem} onRetry={exerciseList.refetch} />
+    ) : (
+      <main className="screen stack">
+        {heading}
+        <ListSkeleton />
       </main>
     );
 
@@ -74,10 +84,7 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
 
   return (
     <main className="screen stack">
-      <Link className="back-link" to="/profile">
-        ‹ Profile
-      </Link>
-      <h1 className="title">Exercises</h1>
+      {heading}
       {savedNotice && (
         <p className="notice" role="status">
           {savedNotice}
@@ -97,8 +104,10 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
           key={editing.kind === 'edit' ? editing.exercise.id : 'new'}
           exercise={editing.kind === 'edit' ? editing.exercise : null}
           skills={skills ?? []}
-          onSaved={() => {
+          onSaved={(exerciseId) => {
             void announceDataChange(queryClient, 'exercise-saved');
+            if (fromWorkout && editing.kind === 'new')
+              return navigate('/', { replace: true, state: { addExerciseId: exerciseId } });
             closeForm();
           }}
           onCancel={closeForm}
@@ -116,10 +125,20 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
               {exercise.name} <span className="muted">{exerciseLabels(exercise)}</span>
             </span>
             <span className="row">
-              <button className="button link" type="button" onClick={() => setEditing({ kind: 'edit', exercise })}>
+              <button
+                className="button link"
+                type="button"
+                aria-label={`Edit ${exercise.name}`}
+                onClick={() => setEditing({ kind: 'edit', exercise })}
+              >
                 Edit
               </button>
-              <button className="button link" type="button" onClick={() => setArchived(exercise, !exercise.archived)}>
+              <button
+                className="button link"
+                type="button"
+                aria-label={`${exercise.archived ? 'Unarchive' : 'Archive'} ${exercise.name}`}
+                onClick={() => setArchived(exercise, !exercise.archived)}
+              >
                 {exercise.archived ? 'Unarchive' : 'Archive'}
               </button>
             </span>

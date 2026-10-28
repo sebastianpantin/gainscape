@@ -101,7 +101,7 @@ test('Follow on your own program is disabled offline and says it needs a connect
   await register(page, uniqueUsername('pc_off'));
   await createSquatAndBenchProgram(page, PROGRAM);
   await openFromProfile(page, 'Programs');
-  const follow = ownProgram(page, PROGRAM).getByRole('button', { name: 'Follow', exact: true });
+  const follow = ownProgram(page, PROGRAM).getByRole('button', { name: `Follow ${PROGRAM}`, exact: true });
   await expect(follow).toBeEnabled();
 
   await context.setOffline(true);

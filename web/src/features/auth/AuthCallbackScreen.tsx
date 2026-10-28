@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
 import { LogoMark } from '../../components/PixelArt.tsx';
+import { FieldProblem } from '../../components/FieldProblem.tsx';
 import {
   type AuthCallback,
   authErrorMessage,
@@ -71,7 +72,10 @@ function PasswordFields({
   onPassword: (value: string) => void;
   onRepeat: (value: string) => void;
 }) {
-  const problem = passwordProblem(password);
+  const passwordProblemId = useId();
+  const repeatProblemId = useId();
+  const problem = password.length > 0 ? passwordProblem(password) : null;
+  const repeatProblem = repeat.length > 0 && repeat !== password ? "The passwords don't match." : null;
   return (
     <>
       <label className="field">
@@ -82,6 +86,8 @@ function PasswordFields({
           minLength={MINIMUM_PASSWORD_LENGTH}
           value={password}
           onChange={(event) => onPassword(event.target.value)}
+          aria-invalid={problem !== null || undefined}
+          aria-describedby={problem ? passwordProblemId : undefined}
           required
         />
       </label>
@@ -93,11 +99,15 @@ function PasswordFields({
           minLength={MINIMUM_PASSWORD_LENGTH}
           value={repeat}
           onChange={(event) => onRepeat(event.target.value)}
+          aria-invalid={repeatProblem !== null || undefined}
+          aria-describedby={repeatProblem ? repeatProblemId : undefined}
           required
         />
       </label>
-      {password.length > 0 && problem && <p className="problem">{problem}</p>}
-      {repeat.length > 0 && repeat !== password && <p className="problem">The passwords don't match.</p>}
+      <div role="status">
+        <FieldProblem id={passwordProblemId} problem={problem} />
+        <FieldProblem id={repeatProblemId} problem={repeatProblem} />
+      </div>
     </>
   );
 }

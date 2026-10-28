@@ -20,6 +20,12 @@ function questCard(page: Page | Locator, name: string) {
   return page.getByRole('article', { name, exact: true });
 }
 
+async function unfold(page: Page, title: string) {
+  await group(page, title)
+    .getByText(new RegExp(`^Show \\d+ ${title.toLowerCase()} quests?$`))
+    .click();
+}
+
 test('start a quest, finish it with a workout and see it on the reveal, the profile and the feed', async ({ page }) => {
   const username = uniqueUsername('quest');
   await register(page, username);
@@ -27,6 +33,8 @@ test('start a quest, finish it with a workout and see it on the reveal, the prof
 
   await expect(definitionOf(page.getByRole('main'), 'Quest points')).toHaveText('0');
   await expect(questCard(group(page, 'Available'), INITIATION)).toBeVisible();
+  await expect(questCard(group(page, 'Locked'), HEAVY_SINGLE)).toBeHidden();
+  await unfold(page, 'Locked');
   const locked = questCard(group(page, 'Locked'), HEAVY_SINGLE);
   await expect(locked.getByRole('list', { name: 'Requirements' })).toContainText('Not met Legs level 15 (now 1)');
   await expect(locked.getByRole('list', { name: 'Requirements' })).toContainText(`Not met Complete ${INITIATION}`);
@@ -53,6 +61,7 @@ test('start a quest, finish it with a workout and see it on the reveal, the prof
   await expect(reveal.getByRole('list', { name: 'Level ups from quests' })).toContainText('Legs');
 
   await reveal.getByRole('link', { name: 'See quests' }).click();
+  await unfold(page, 'Completed');
   await expect(questCard(group(page, 'Completed'), INITIATION)).toBeVisible();
   await expect(definitionOf(page.getByRole('main'), 'Quest points')).toHaveText('1');
 

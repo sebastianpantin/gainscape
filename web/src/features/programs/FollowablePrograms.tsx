@@ -30,12 +30,12 @@ export function FollowablePrograms({ userId }: FollowableProgramsProps) {
           <li className="panel row spread" key={entry.key}>
             {entry.kind === 'enrollable' ? (
               <>
-                <span className="stack" style={{ gap: 2 }}>
+                <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
                   <span>{entry.name}</span>
                   <span className="muted">{templateScheduleText(entry.definition)}</span>
                 </span>
-                <Link className="button" to={`/programs/enroll/${entry.key}`}>
-                  Follow {entry.name}
+                <Link className="button" to={`/programs/enroll/${entry.key}`} aria-label={`Follow ${entry.name}`}>
+                  Follow
                 </Link>
               </>
             ) : (

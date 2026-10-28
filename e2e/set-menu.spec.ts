@@ -71,3 +71,22 @@ test('a removed set comes back where it was with Undo', async ({ page }) => {
   await expect(optionsButton(card, 2)).toBeFocused();
   await expect(toast).toHaveCount(0);
 });
+
+test('tapping the chosen effort again keeps it, and the set menu clears it', async ({ page }) => {
+  await register(page, uniqueUsername('menu_effort'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const card = await addExercise(page, 'bench', BENCH);
+  const row = setRow(card, 1);
+  const hard = row.getByRole('radio', { name: 'Hard' });
+
+  await hard.click();
+  await expect(hard).toHaveAttribute('aria-checked', 'true');
+  await hard.click();
+  await expect(hard).toHaveAttribute('aria-checked', 'true');
+
+  await openSetOptions(row, 1);
+  await row.getByRole('button', { name: 'Clear effort set 1', exact: true }).click();
+  await expect(hard).toHaveAttribute('aria-checked', 'false');
+  await openSetOptions(row, 1);
+  await expect(row.getByRole('button', { name: 'Clear effort set 1', exact: true })).toHaveCount(0);
+});

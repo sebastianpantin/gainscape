@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
+import { formatCount } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
@@ -40,6 +41,7 @@ export function QuestsScreen({ userId }: QuestsScreenProps) {
   const skillXp = Object.fromEntries(standing.standing.skills.map(({ skill, progress }) => [skill.id, progress.xp]));
   const board = questBoard(log, skills, skillXp, unitPref);
   const notice = cacheFirstNotice(loaded.data, OFFLINE_QUESTS_NOTICE);
+  const firstAvailableId = board.find((group) => group.status === 'available')?.cards[0]?.quest.questId;
   const names = {
     skillName: (skillId: string) => skills.find((skill) => skill.id === skillId)?.name ?? 'a skill',
     questName: (questId: string) => log.quests.find((quest) => quest.questId === questId)?.name ?? 'another quest',
@@ -72,18 +74,40 @@ export function QuestsScreen({ userId }: QuestsScreenProps) {
         </dd>
       </dl>
       {board.length === 0 && <p className="panel muted">No quests yet.</p>}
-      {board.map((group) => (
-        <section className="stack" key={group.status} aria-labelledby={`quests-${group.status}`}>
-          <h2 id={`quests-${group.status}`}>{group.title}</h2>
+      {board.map((group) => {
+        const cards = (
           <ul className="quest-cards">
             {group.cards.map((card) => (
               <li key={card.quest.questId}>
-                <QuestCard card={card} offline={offline} onStart={() => start(card.quest)} />
+                <QuestCard
+                  card={card}
+                  offline={offline}
+                  primary={card.quest.questId === firstAvailableId}
+                  onStart={() => start(card.quest)}
+                />
               </li>
             ))}
           </ul>
-        </section>
-      ))}
+        );
+        return (
+          <section className="stack" key={group.status} aria-labelledby={`quests-${group.status}`}>
+            <h2 id={`quests-${group.status}`}>{group.title}</h2>
+            {group.status === 'available' && !offline && (
+              <p className="muted tiny">Only workouts you finish after starting a quest count toward it.</p>
+            )}
+            {group.folded ? (
+              <details>
+                <summary className="button">
+                  Show {formatCount(group.cards.length, `${group.title.toLowerCase()} quest`)}
+                </summary>
+                {cards}
+              </details>
+            ) : (
+              cards
+            )}
+          </section>
+        );
+      })}
       <p className="muted tiny">
         Finish a quest for quest points and bonus XP. Every workout moves your started quests along.
       </p>

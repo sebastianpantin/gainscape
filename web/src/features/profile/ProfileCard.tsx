@@ -68,9 +68,9 @@ export function ProfileCard({
   const NameHeading = nameIsPageTitle ? 'h1' : 'h2';
   return (
     <section className="panel stack profile-card" aria-label="Profile">
-      <div className="row" style={{ gap: 14 }}>
+      <div className="row" style={{ gap: 'var(--space-3)' }}>
         <ProfileBadge named color={profile.badgeColor} initials={initialsFor(profile.displayName, profile.username)} />
-        <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+        <div className="stack" style={{ gap: 'var(--space-0-5)', minWidth: 0 }}>
           <NameHeading className="profile-name">{profile.displayName}</NameHeading>
           <span className="muted">@{profile.username}</span>
           <span className="tiny">{detailLine(profile)}</span>

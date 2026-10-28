@@ -49,6 +49,21 @@ test('register and confirm through the emailed link', { tag: '@smoke' }, async (
   await expect(page).toHaveURL(/\/$/);
 });
 
+test('the sign-up form states the password rule, lowercases the username and focuses the next heading', async ({
+  page,
+}) => {
+  const username = uniqueUsername('au_fm');
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New here? Create an account' }).click();
+  await expect(page.getByLabel('Password')).toHaveAccessibleDescription('At least 12 characters.');
+  await page.getByLabel('Username').fill(username.toUpperCase());
+  await expect(page.getByLabel('Username')).toHaveValue(username);
+  await page.getByLabel('Email').fill(emailOf(username));
+  await page.getByLabel('Password').fill(TEST_PASSWORD);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeFocused();
+});
+
 test('an unconfirmed sign-in offers to resend the link', async ({ page }) => {
   const username = uniqueUsername('au_rs');
   await submitRegistration(page, username);
@@ -78,9 +93,17 @@ test('forgot password sends a reset link that sets a new password', async ({ pag
   const since = new Date();
   await page.getByRole('button', { name: 'Send reset link' }).click();
   await expect(page.getByText(`If an account exists for ${email}, we sent a reset link.`)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeFocused();
 
   await page.goto(await linkTo(email, RECOVERY_SUBJECT, since));
   await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeVisible();
+  const newPassword = page.getByLabel('New password', { exact: true });
+  await newPassword.fill('short');
+  await expect(newPassword).toHaveAttribute('aria-invalid', 'true');
+  await expect(newPassword).toHaveAccessibleDescription('Use at least 12 characters.');
+  await page.getByLabel('Repeat new password').fill('different');
+  await expect(page.getByLabel('Repeat new password')).toHaveAccessibleDescription("The passwords don't match.");
+  await expect(page.getByRole('status').getByText('Use at least 12 characters.', { exact: true })).toBeVisible();
   await choosePassword(page, 'a-reset-password');
   await page.getByRole('button', { name: 'Set new password' }).click();
   await expect(page.getByText('Password changed.')).toBeVisible();

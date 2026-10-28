@@ -485,7 +485,7 @@ export function RevealScreen({ userId }: RevealScreenProps) {
             return (
               <li key={`${record.exerciseId}-${index}`}>
                 <TrophyIcon />
-                <span className="stack" style={{ gap: 2 }}>
+                <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
                   <span className="muted tiny">New record</span>
                   <span>
                     <span className="pixel">{described.headline}</span>{' '}
@@ -499,11 +499,11 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       )}
       {questReveal && <QuestPanel reveal={questReveal} delayS={timeline.lootDelayS} />}
       <LootPanel userId={userId} drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />
-      <Link className="button primary big" to="/skills">
-        See skills
-      </Link>
-      <Link className="button" to="/">
+      <Link className="button primary big" to="/">
         Done
+      </Link>
+      <Link className="button" to="/skills">
+        See skills
       </Link>
     </main>
   );
