@@ -64,6 +64,7 @@ export function LiftSetRow({
       last={lastSetForRow(exercise.sets, setIndex, lift.recentSessions.get(exercise.exerciseId)?.[0])}
       doneLabel={doneLabel}
       rowLabel={rowLabel}
+      current={lift.currentSetId === set.id}
       focusDone={lift.focusSetId === set.id}
       onDoneFocused={() => lift.onFocusSet(null)}
       onChange={(changes) => {

@@ -77,6 +77,7 @@ function SampleSetRows() {
             setNumber={index + 1}
             loadType="external"
             set={set}
+            current={set.id === sets.find((candidate) => !candidate.done)?.id}
             preview={{ xp: 42, basis: set.done ? 'logged' : 'estimated', rir: 2 }}
             record={null}
             drop={null}

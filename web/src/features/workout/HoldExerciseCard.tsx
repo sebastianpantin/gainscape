@@ -19,6 +19,7 @@ interface HoldExerciseCardProps {
   unit: UnitPref;
   note: ReactNode;
   roomForSet: boolean;
+  currentSetId: string | null;
   actions: ExerciseCardActions;
 }
 
@@ -31,6 +32,7 @@ export function HoldExerciseCard({
   unit,
   note,
   roomForSet,
+  currentSetId,
   actions,
 }: HoldExerciseCardProps) {
   const doneHere = exercise.sets.filter((set) => set.done).length;
@@ -54,6 +56,7 @@ export function HoldExerciseCard({
               key={set.id}
               setNumber={setIndex + 1}
               set={set}
+              current={currentSetId === set.id}
               measure={exercise.measure}
               loadType={exercise.loadType}
               preview={previews[setIndex]}

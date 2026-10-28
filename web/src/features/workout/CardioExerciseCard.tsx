@@ -18,6 +18,7 @@ interface CardioExerciseCardProps {
   note: ReactNode;
   roomForBout: boolean;
   roomForSet: boolean;
+  currentSetId: string | null;
   actions: ExerciseCardActions;
 }
 
@@ -30,6 +31,7 @@ export function CardioExerciseCard({
   note,
   roomForBout,
   roomForSet,
+  currentSetId,
   actions,
 }: CardioExerciseCardProps) {
   const doneHere = exercise.sets.filter((set) => set.done).length;
@@ -57,6 +59,7 @@ export function CardioExerciseCard({
               key={bout.id}
               boutNumber={boutIndex + 1}
               bout={bout}
+              current={currentSetId === bout.id}
               paceUnit={exercise.activity.paceUnit}
               tracksDistance={exercise.activity.tracksDistance}
               preview={previews[boutIndex]}

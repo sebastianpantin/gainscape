@@ -359,6 +359,19 @@
   color: var(--color-text-faint);
 }
 
+.set-row.current {
+  margin-inline: calc(-1 * var(--space-2));
+  margin-bottom: calc(-1 * var(--space-2));
+  padding-inline: var(--space-2);
+  padding-bottom: var(--space-2);
+  background: var(--color-panel-current);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.set-row.current > .set-number {
+  color: var(--color-accent);
+}
+
 .plate-marker {
   font: inherit;
   font-size: var(--font-size-xs);
@@ -558,10 +571,11 @@
 }
 
 .amrap-badge {
-  display: block;
-  font-family: var(--font-family);
-  font-size: var(--font-size-xs);
-  color: var(--color-accent-light);
+  padding: 0 var(--space-1);
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--color-ink);
+  background: var(--color-accent);
 }
 
 .prescription-list {

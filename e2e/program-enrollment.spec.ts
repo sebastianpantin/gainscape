@@ -204,9 +204,9 @@ test('enroll in 5/3/1 with BBB, start with the "5+" badge and 5×10 rows, finish
   const [main, bbb] = [workoutCards(page, 'Back Squat').first(), workoutCards(page, 'Back Squat').last()];
   await expect(workoutCards(page, 'Back Squat')).toHaveCount(2);
   await expect.poll(() => weightsIn(main)).toEqual(['57.5', '67.5', '77.5']);
-  await expect(setRow(main, 3).getByText('5+', { exact: true })).toBeVisible();
-  await expect(setRow(main, 1).getByText('5+', { exact: true })).toHaveCount(0);
-  await expect(setRow(main, 2).getByText('5+', { exact: true })).toHaveCount(0);
+  await expect(setRow(main, 3).getByText('AMRAP 5+', { exact: true })).toBeVisible();
+  await expect(setRow(main, 1).getByText('AMRAP 5+', { exact: true })).toHaveCount(0);
+  await expect(setRow(main, 2).getByText('AMRAP 5+', { exact: true })).toHaveCount(0);
   await expect.poll(() => weightsIn(bbb)).toEqual(['45', '45', '45', '45', '45']);
   await expect.poll(() => repsIn(bbb)).toEqual(['10', '10', '10', '10', '10']);
 
