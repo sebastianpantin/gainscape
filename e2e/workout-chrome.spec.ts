@@ -1,6 +1,7 @@
 import { type Locator } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import {
+  addExercise,
   exerciseCard,
   logExercise,
   openSetOptions,
@@ -72,3 +73,34 @@ test('the undo toast sits clear of the finish bar while a rest runs', async ({ p
   const finishBar = await boxOf(page.locator('.finish-bar'));
   expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(finishBar.y);
 });
+
+for (const viewport of [
+  { width: 390, height: 664 },
+  { width: 360, height: 740 },
+]) {
+  test.describe(`on a ${viewport.width}x${viewport.height} phone`, () => {
+    test.use({ viewport });
+
+    test('each set Done leaves that set effort chips above the finish bar', async ({ page }) => {
+      const bench = 'Barbell Bench Press';
+      await register(page, uniqueUsername('chrome_effort'));
+      await page.getByRole('button', { name: 'Start workout' }).click();
+      const card = await addExercise(page, 'bench', bench);
+      for (let added = 1; added < 4; added++) await card.getByRole('button', { name: '+ Add set' }).click();
+
+      for (let setNumber = 1; setNumber <= 4; setNumber++) {
+        const row = setRow(card, setNumber);
+        await row.getByRole('button', { name: `Done set ${setNumber}`, exact: true }).click();
+        await expect(restTimer(page).getByRole('timer', { name: 'Rest remaining' })).toBeVisible();
+        const effort = row.getByRole('radiogroup', { name: 'Effort' });
+        await expect
+          .poll(async () => {
+            const chips = await boxOf(effort);
+            const finishBar = await boxOf(page.locator('.finish-bar'));
+            return finishBar.y - (chips.y + chips.height);
+          }, `set ${setNumber} effort chips clear the finish bar`)
+          .toBeGreaterThanOrEqual(0);
+      }
+    });
+  });
+}
