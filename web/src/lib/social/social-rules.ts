@@ -101,6 +101,10 @@ export function friendsLoadProblem(problem: string, offline: boolean): string {
   return offline ? OFFLINE_PROBLEM : problem;
 }
 
+export function friendHandle(displayName: string, username: string): string | null {
+  return displayName.trim().toLowerCase() === username ? null : `@${username}`;
+}
+
 export function requestedUsername(raw: string): string {
   return raw.trim().replace(/^@/, '').toLowerCase();
 }

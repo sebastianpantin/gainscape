@@ -205,6 +205,40 @@ test('a fixed weight keeps the rep range and says when the weight is set', async
     .toMatchObject({ target_reps_min: 5, target_reps_max: 8, progression: 'fixed', increment_kg: null });
 });
 
+test('saving a program with an empty name marks the name fields and links the problem to them', async ({ page }) => {
+  await register(page, uniqueUsername('pe_inv'));
+  await copyTemplate(page, 'Full Body 2x');
+
+  const programName = page.getByLabel('Program name');
+  await programName.fill('');
+  await day(page, 2).getByLabel('Day name').fill(' ');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(programName).toHaveAttribute('aria-invalid', 'true');
+  await expect(programName).toHaveAccessibleDescription('Enter a name.');
+  await expect(day(page, 2).getByLabel('Day name')).toHaveAttribute('aria-invalid', 'true');
+  await expect(day(page, 2).getByLabel('Day name')).toHaveAccessibleDescription('Enter a name.');
+  await expect(day(page, 1).getByLabel('Day name')).not.toHaveAttribute('aria-invalid');
+  await expect(programName).toBeFocused();
+
+  await programName.fill('My FB');
+  await expect(programName).not.toHaveAttribute('aria-invalid');
+});
+
+test('removing a day acts at once, moves focus to the next day and offers an undo', async ({ page }) => {
+  await register(page, uniqueUsername('pe_undo'));
+  await copyTemplate(page, 'Full Body 2x');
+  await page.getByRole('button', { name: '+ Add day' }).click();
+
+  await day(page, 1).getByRole('button', { name: 'Remove day Day A', exact: true }).click();
+  await expect(day(page, 3)).toHaveCount(0);
+  await expect(day(page, 1).getByLabel('Day name')).toHaveValue('Day B');
+  await expect(day(page, 1).getByRole('button', { name: 'Remove day Day B', exact: true })).toBeFocused();
+
+  await page.getByRole('status').getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(day(page, 1).getByLabel('Day name')).toHaveValue('Day A');
+  await expect(day(page, 3)).toBeVisible();
+});
+
 test('add, rename, reorder and remove days and exercises, then edit the saved program again', async ({ page }) => {
   const username = uniqueUsername('pe');
   await register(page, username);
@@ -223,12 +257,12 @@ test('add, rename, reorder and remove days and exercises, then edit the saved pr
   await addedDeadlift.getByLabel('Reps min').fill('3');
   await addedDeadlift.getByLabel('Reps max').fill('5');
 
-  await day(page, 3).getByRole('button', { name: 'Up', exact: true }).click();
+  await day(page, 3).getByRole('button', { name: 'Move Day C up', exact: true }).click();
   await expect(day(page, 2).getByLabel('Day name')).toHaveValue('Day C');
-  await day(page, 1).getByRole('button', { name: 'Remove day', exact: true }).click();
+  await day(page, 1).getByRole('button', { name: 'Remove day Day A', exact: true }).click();
   await expect(day(page, 3)).toHaveCount(0);
-  await expect(day(page, 1).getByRole('button', { name: 'Up', exact: true })).toBeDisabled();
-  await expect(day(page, 2).getByRole('button', { name: 'Down', exact: true })).toBeDisabled();
+  await expect(day(page, 1).getByRole('button', { name: 'Move Day C up', exact: true })).toBeDisabled();
+  await expect(day(page, 2).getByRole('button', { name: 'Move Day B down', exact: true })).toBeDisabled();
 
   await day(page, 2).getByRole('button', { name: 'Move Pull-up up' }).click();
   await day(page, 2).getByRole('button', { name: 'Remove Hanging Leg Raise' }).click();
@@ -252,7 +286,7 @@ test('add, rename, reorder and remove days and exercises, then edit the saved pr
   await expect(plannedExercises(page, 2)).toHaveCount(4);
 
   await page.getByLabel('Program name').fill('My FB 2');
-  await day(page, 2).getByRole('button', { name: 'Up', exact: true }).click();
+  await day(page, 2).getByRole('button', { name: 'Move Day B up', exact: true }).click();
   await expect(day(page, 2).getByLabel('Day name')).toHaveValue('Day C');
   await plannedExercise(page, 2, 'Deadlift').getByLabel('Reps max').fill('8');
   await page.getByRole('button', { name: 'Save', exact: true }).click();

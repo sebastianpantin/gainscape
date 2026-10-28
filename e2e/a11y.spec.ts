@@ -5,6 +5,7 @@ import {
   expectNoAxeViolations,
   expectRemoveSetButtonsStandApart,
   expectTouchTargets,
+  expectUniqueButtonNamesInLists,
 } from './support/a11y.ts';
 import {
   emailOf,
@@ -54,6 +55,7 @@ async function checkScreen(page: Page, screen: string, ready: () => Promise<void
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expectNoAxeViolations(page, screen);
   await expectTouchTargets(page, EVERY_CONTROL);
+  await expectUniqueButtonNamesInLists(page);
 }
 
 async function checkEffortTargets(page: Page) {
@@ -96,8 +98,24 @@ async function befriend(friend: Page, page: Page, username: string): Promise<str
   return friendName;
 }
 
-async function createProgram(page: Page): Promise<string> {
+async function copyTemplate(page: Page, templateName: string) {
   await openFromProfile(page, 'Programs');
+  await page.getByRole('button', { name: `Copy and edit ${templateName}`, exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Edit program' })).toBeVisible();
+}
+
+async function createCustomExercise(page: Page, name: string) {
+  await page.getByRole('button', { name: 'New custom exercise' }).click();
+  await page.getByLabel('Name').fill(name);
+  await page.getByLabel('Chest').fill('100');
+  await page.getByRole('button', { name: 'Save exercise' }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: name })).toBeVisible();
+}
+
+async function createProgram(page: Page): Promise<string> {
+  await copyTemplate(page, 'Full Body 2x');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Your programs' })).toBeVisible();
   await page
     .getByRole('listitem')
     .filter({ hasText: 'Upper / Lower' })
@@ -310,6 +328,9 @@ test.describe('signed-in screens', () => {
     test.setTimeout(240_000);
     await register(page, uniqueUsername('a11y_set'));
     const programPath = await createProgram(page);
+    await openFromProfile(page, 'Custom exercises');
+    await createCustomExercise(page, 'Landmine Press');
+    await createCustomExercise(page, 'Cable Fly');
 
     await checkScreens(page, [
       ['/exercises', 'Custom exercises'],

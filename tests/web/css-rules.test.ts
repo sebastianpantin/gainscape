@@ -171,6 +171,12 @@ describe('stylesheet rules', () => {
     for (const colour of colours) expect(CONTROL_GLYPHS).toContain(colour);
   });
 
+  it('gives a disabled primary button its own flat look, so a disabled main action reads as unavailable', () => {
+    const disabledPrimary = rulesFor('.button.primary:disabled');
+    expect(disabledPrimary.flatMap((rule) => declarations(rule, 'background'))).toHaveLength(1);
+    expect(disabledPrimary.flatMap((rule) => declarations(rule, 'box-shadow')).map((d) => d.value)).toEqual(['none']);
+  });
+
   it(`keeps the bevelled control styles to ${MAX_CONTROL_BEVELS} rules, so buttons share .button modifiers`, () => {
     const bevelled = areaRules
       .filter(({ rule }) => declarations(rule, 'box-shadow').some((declaration) => isBevel(declaration.value)))

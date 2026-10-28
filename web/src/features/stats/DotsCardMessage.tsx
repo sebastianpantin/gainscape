@@ -6,8 +6,8 @@ export function DotsCardMessage({ card }: { card: Exclude<DotsCard, { kind: 'rea
     return (
       <p className="muted">
         Set your sex in{' '}
-        <Link className="tap-link" to="/profile/settings">
-          Settings
+        <Link className="tap-link" to="/profile/edit">
+          Edit profile
         </Link>{' '}
         to see your DOTS score.
       </p>

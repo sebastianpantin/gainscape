@@ -34,8 +34,8 @@ export function FollowablePrograms({ userId }: FollowableProgramsProps) {
                   <span>{entry.name}</span>
                   <span className="muted">{templateScheduleText(entry.definition)}</span>
                 </span>
-                <Link className="button" to={`/programs/enroll/${entry.key}`}>
-                  Follow {entry.name}
+                <Link className="button" to={`/programs/enroll/${entry.key}`} aria-label={`Follow ${entry.name}`}>
+                  Follow
                 </Link>
               </>
             ) : (

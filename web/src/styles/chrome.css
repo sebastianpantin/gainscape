@@ -283,17 +283,6 @@
   box-shadow: inset 2px 2px 0 var(--color-panel-border-highlight);
 }
 
-.sample-note {
-  padding: var(--space-2) var(--space-3);
-  border: var(--border-width) dashed var(--color-rare);
-  color: var(--color-parchment);
-  font-size: var(--font-size-xs);
-}
-
-.sample-note strong {
-  color: var(--color-rare);
-}
-
 .notice {
   display: flex;
   align-items: center;

@@ -45,6 +45,10 @@ export async function accountRowCount(username: string): Promise<number> {
   return row.count;
 }
 
+export async function setDisplayName(username: string, displayName: string): Promise<void> {
+  await db`update public.profiles set display_name = ${displayName} where username = ${username}`;
+}
+
 export async function heightOf(username: string): Promise<number | null> {
   const [row] = await db`
     select pp.height_cm::float as height_cm

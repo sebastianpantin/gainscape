@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { logExercise, openFromProfile, openTab, register, uniqueUsername } from './support/app.ts';
+import { logExercise, openTab, register, uniqueUsername } from './support/app.ts';
 import { befriend, feedItem, openFriendProfile, registerWithFriend, showsBodyweight } from './support/friendship.ts';
 
 async function logWeightedDipWithBodyweight(page: Page, addedKg: number, bodyweightKg: number) {
@@ -19,7 +19,8 @@ async function logWeightedDipWithBodyweight(page: Page, addedKg: number, bodywei
 }
 
 async function setShowBodyweight(page: Page, username: string, shown: boolean) {
-  await openFromProfile(page, 'Settings');
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Preview what friends see' }).click();
   const toggle = page.getByRole('switch', { name: 'Show my bodyweight to friends' });
   await expect(toggle).toHaveAttribute('aria-checked', String(!shown));
   await toggle.click();

@@ -5,7 +5,7 @@
 
 ## Purpose
 
-The Profile tab and everything under it: the user's own profile card and stats (`/profile`), editing profile fields (`/profile/edit`), previewing what friends see with the public/private switches (`/profile/preview`), and Settings (`/profile/settings`). Settings covers units, effort mode, sex (for the DOTS score on Stats), time zone, weekly goal, device-only training choices, email and password, PWA install and update, data export, reset, sign-out and account deletion.
+The Profile tab and everything under it: the user's own profile card and stats (`/profile`), editing profile fields (`/profile/edit`), previewing what friends see with the privacy switches (`/profile/preview`; Settings links there), and Settings (`/profile/settings`). Settings covers units, effort mode, time zone, weekly goal, device-only training choices, email and password, PWA install and update, data export, reset, sign-out and account deletion.
 
 ## Map
 
@@ -37,7 +37,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
 - `ProfileBadge` is `aria-hidden` unless `named`, which only the card sets. `nameIsPageTitle` makes the name the page `h1`; the friend profile uses it.
 - `FriendPreviewScreen` mirrors `../friends/FriendProfileScreen.tsx`. Keep the two in step.
 - `ProfileScreen` reads the collection percent through a `select` over the shared `['collection', userId]` query, so it shares the Collection tab's cache.
-- Sex (`male`, `female` or `null` for Not set) is private and used only by the Stats DOTS card. `settings/StrengthScoreSection.tsx` saves it optimistically like the other private fields. The saved profile cache reads an older copy without it as Not set.
+- Sex (`male`, `female` or `null` for Not set) is private and used only by the Stats DOTS card. Edit profile › Body saves it with the form. The saved profile cache reads an older copy without it as Not set.
 - The time zone can change once, then must wait 7 days (`nextTimezoneChangeAt`). A weekly goal change takes effect from a later week (`goalSettingHint`).
 - Device-only settings never go through the profile save:
   - Rest timer: `../../lib/workout/rest-timer-store.ts`.

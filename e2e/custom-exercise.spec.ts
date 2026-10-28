@@ -26,6 +26,28 @@ async function openChestExercises(page: Page) {
   return page.getByRole('list', { name: 'Exercises that train Chest' }).getByRole('listitem');
 }
 
+test('the custom exercise form marks a bad name and a share total that is not 100% on the fields', async ({ page }) => {
+  await register(page, uniqueUsername('cx_inv'));
+  await openFromProfile(page, 'Custom exercises');
+  await page.getByRole('button', { name: 'New custom exercise' }).click();
+
+  const name = page.getByLabel('Name');
+  await name.fill('Bad\u0007name');
+  await page.getByLabel('Chest').fill('50');
+  await name.press('Enter');
+  await expect(name).toHaveAttribute('aria-invalid', 'true');
+  await expect(name).toHaveAccessibleDescription("Names can't contain control characters.");
+  const shares = page.getByRole('group', { name: 'Skill shares (%)' });
+  await expect(shares).toHaveAttribute('aria-invalid', 'true');
+  await expect(shares).toHaveAccessibleDescription('Total: 50%');
+
+  await name.fill('Landmine Press');
+  await page.getByLabel('Chest').fill('100');
+  await expect(name).not.toHaveAttribute('aria-invalid');
+  await expect(shares).not.toHaveAttribute('aria-invalid');
+  await expect(page.getByRole('button', { name: 'Save exercise' })).toBeEnabled();
+});
+
 test('create, log, record, pin, reorder and archive a custom exercise', async ({ page }) => {
   await register(page, uniqueUsername('cx'));
 
@@ -87,7 +109,10 @@ test('create and log a custom cardio exercise', async ({ page }) => {
 
   await openFromProfile(page, 'Custom exercises');
   await page.getByRole('button', { name: 'New custom exercise' }).click();
-  await page.getByRole('radiogroup', { name: 'Kind' }).getByRole('radio', { name: 'Cardio' }).click();
+  const kind = page.getByRole('radiogroup', { name: 'Kind' });
+  await kind.getByRole('radio', { name: 'Lift', checked: true }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(kind.getByRole('radio', { name: 'Cardio', checked: true })).toBeFocused();
   await expect(page.getByLabel('Load type')).toHaveCount(0);
   await expect(page.getByLabel('Chest')).toHaveCount(0);
   await page.getByLabel('Name').fill('Assault Bike');

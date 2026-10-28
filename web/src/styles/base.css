@@ -255,6 +255,19 @@ a {
   color: var(--color-accent-light);
 }
 
+.first-run-actions {
+  position: sticky;
+  bottom: calc(-1 * var(--space-3));
+  margin: 0 calc(-1 * var(--space-3)) calc(-1 * var(--space-3));
+  padding: var(--space-3);
+  background: var(--color-panel);
+  border-top: var(--border-width) solid var(--color-outline);
+}
+
+.first-run-actions > .button {
+  flex: 1;
+}
+
 .first-run-browse {
   align-self: flex-start;
   padding: 0;
@@ -528,6 +541,12 @@ summary:focus-visible {
   .button.primary:hover {
     background: var(--color-accent-hover);
   }
+}
+
+.button.primary:disabled {
+  background: var(--color-chrome);
+  color: var(--color-text-muted);
+  box-shadow: none;
 }
 
 .button.big {

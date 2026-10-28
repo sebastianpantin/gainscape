@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ItemIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { useModalDialog } from '../../components/use-modal-dialog.ts';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { messageOf } from '../../lib/error-text.ts';
@@ -15,6 +16,7 @@ import {
   ONBOARDING_STEPS,
   type OnboardingStep,
   onboardingStepLabel,
+  previousOnboardingStep,
 } from '../../lib/profile/onboarding-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { UNIT_OPTIONS, updatePrivateProfile, type UnitPref } from '../../lib/profile/profile.ts';
@@ -121,7 +123,9 @@ function TrainStep({ userId, onFinish, onFreestyle }: TrainStepProps) {
       <p>Follow a plan that sets your weights, or log whatever you lift today.</p>
       <section className="first-run-choice stack" aria-labelledby="first-run-program">
         <h3 id="first-run-program">Follow a program</h3>
-        {program ? (
+        {templates.isPending ? (
+          <ListSkeleton panels={1} />
+        ) : program ? (
           <>
             <p className="muted tiny">
               {program.name} is a classic beginner plan: three full-body workouts a week, adding weight as you go.
@@ -167,6 +171,7 @@ export function FirstRunDialog({ userId, onFinish, onSkip, onFreestyle }: FirstR
   const titleId = useId();
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const next = nextOnboardingStep(step);
+  const previous = previousOnboardingStep(step);
 
   useEffect(() => {
     heading.current?.focus();
@@ -199,11 +204,18 @@ export function FirstRunDialog({ userId, onFinish, onSkip, onFreestyle }: FirstR
         {step === 'units' && <UnitsStep userId={userId} />}
         {step === 'train' && <TrainStep userId={userId} onFinish={onFinish} onFreestyle={onFreestyle} />}
       </div>
-      {next && (
-        <button className="button primary" type="button" onClick={() => setStep(next)}>
-          Next
-        </button>
-      )}
+      <div className="row first-run-actions">
+        {previous && (
+          <button className="button" type="button" onClick={() => setStep(previous)}>
+            Back
+          </button>
+        )}
+        {next && (
+          <button className="button primary" type="button" onClick={() => setStep(next)}>
+            Next
+          </button>
+        )}
+      </div>
     </dialog>
   );
 }

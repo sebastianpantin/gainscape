@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Helpers shared by the Playwright specs: user flows (register, sign in, navigate, log sets and bouts, finish), browser storage access for drafts, direct database setup and checks, Mailpit access, accessibility and font assertions, PWA build manipulation, and the stack guard both Playwright configs call. These files are not specs and have no tests of their own; every spec exercises them.
+Helpers shared by the Playwright specs: user flows (register, sign in, navigate, log sets and bouts, finish), browser storage access for drafts, direct database setup and checks, Mailpit access, accessibility and font assertions, PWA build manipulation, and the stack guard both Playwright configs call. These are not specs and have no tests of their own; the specs exercise them.
 
 ## Map
 
@@ -13,9 +13,9 @@ Helpers shared by the Playwright specs: user flows (register, sign in, navigate,
 - `app.ts`: UI flows and locators (`register`, `signIn`, `logExercise`, `logCardio`, `finishWorkout`, `exerciseCard`, `setRow`, `boutRow`, `skillCard`, `openSkill`, `openBody`, ...) plus raw draft and auth storage helpers.
 - `db.ts`: direct SQL and admin API for setup and assertions (accounts, sessions, items, programs, quest progress, rate limits).
 - Feature helpers: `challenge.ts` (scroll challenge), `program-enrollment.ts` and `program-seed.ts` (programs; the seed posts through `complete-session`), `friendship.ts`, `network.ts` (`failRequests` injects a PostgREST-shaped 500), `mailbox.ts`.
-- Assertions: `a11y.ts` (axe, WCAG A/AA, fails on serious or critical; 44 px touch targets), `fonts.ts`.
+- Assertions: `a11y.ts` (axe: serious or critical fail; 44 px targets; unique button names per list), `fonts.ts`.
 - `pwa.ts`: PWA specs only; reads and mutates the built `web/dist`.
-- `run-settings.ts`: CI and local settings shared by the three Playwright configs. `stack-guard.ts`: see below.
+- `run-settings.ts`: CI and local settings the three Playwright configs share. `stack-guard.ts`: see below.
 
 ## Rules and gotchas
 

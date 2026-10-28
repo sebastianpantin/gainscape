@@ -68,6 +68,35 @@ test(
   },
 );
 
+test('the workout page is titled by its date, undoing edits offers an undo and deleting asks in a dialog', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('hist_ttl'));
+  await logBench(page);
+  await openLatestWorkout(page);
+
+  const today = await page.evaluate(() =>
+    new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
+  );
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(today);
+
+  const reps = setRow(page, 1).getByRole('spinbutton', { name: /^Reps, set \d+$/ });
+  await reps.fill('8');
+  await page.getByRole('button', { name: 'Undo my changes' }).click();
+  await expect(reps).toHaveValue('5');
+  await expect(page.locator('body')).not.toBeFocused();
+  await page.getByRole('status').getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(reps).toHaveValue('8');
+  await page.getByRole('button', { name: 'Undo my changes' }).click();
+
+  await page.getByRole('button', { name: 'Delete workout' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Delete this workout?', exact: true });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Keep workout', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Delete workout' })).toBeFocused();
+});
+
 test('removing a saved set from a workout asks first, and a set added in the edit goes straight away', async ({
   page,
 }) => {

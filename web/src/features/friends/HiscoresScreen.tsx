@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '../../components/EmptyState.tsx';
+import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { hiscoresQuery, skillsQuery } from '../../lib/query/queries.ts';
@@ -47,20 +48,13 @@ export function HiscoresScreen() {
           <div className="row muted">
             Rank yourself against your friends <TermHelp glossaryKey="hiscores" />
           </div>
-          <div className="metric-grid" role="radiogroup" aria-label="Rank by">
-            {metrics.map((entry) => (
-              <button
-                key={entry.key}
-                type="button"
-                role="radio"
-                aria-checked={metric === entry.key}
-                className="button chip"
-                onClick={() => setMetric(entry.key)}
-              >
-                {entry.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedChoice
+            label="Rank by"
+            options={metrics.map((entry) => ({ value: entry.key, label: entry.label }))}
+            current={metric}
+            wrapped
+            onPick={setMetric}
+          />
           <ol className="panel hiscores" aria-label={`Ranked by ${metricLabel}`}>
             {ranked.map(({ row, value }, index) => (
               <li className={row.isSelf ? 'hiscore-row me' : 'hiscore-row'} key={row.userId}>

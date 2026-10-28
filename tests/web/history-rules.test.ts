@@ -4,6 +4,7 @@ import {
   invokeWithRetries,
   parseSessionDetailRow,
   parseSessionPageRows,
+  programDayLabel,
   withoutHistorySession,
 } from '../../web/src/lib/history/history-rules.ts';
 
@@ -164,5 +165,27 @@ describe('withoutHistorySession', () => {
   it('leaves the pages alone when the workout is not loaded, and an empty cache empty', () => {
     expect(withoutHistorySession(pages, 'z')).toEqual(pages);
     expect(withoutHistorySession(undefined, 'a')).toBeUndefined();
+  });
+});
+
+describe('programDayLabel', () => {
+  const programs = [
+    {
+      name: 'Upper / Lower',
+      days: [
+        { id: 'upper-id', name: 'Upper' },
+        { id: 'lower-id', name: 'Lower' },
+      ],
+    },
+    { name: 'Full Body 2x', days: [{ id: 'a-id', name: 'Day A' }] },
+  ];
+
+  it('names the program and day a workout was started from', () => {
+    expect(programDayLabel(programs, 'lower-id')).toBe('Upper / Lower — Lower');
+  });
+
+  it('gives nothing for a free workout or a day that no longer exists', () => {
+    expect(programDayLabel(programs, null)).toBeNull();
+    expect(programDayLabel(programs, 'deleted-id')).toBeNull();
   });
 });

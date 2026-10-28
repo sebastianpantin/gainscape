@@ -159,6 +159,8 @@ export async function createSquatAndBenchProgram(page: Page, programName: string
 
 export async function openOwnProgramFollowForm(page: Page, programName: string): Promise<void> {
   await openFromProfile(page, 'Programs');
-  await ownProgram(page, programName).getByRole('button', { name: 'Follow', exact: true }).click();
+  await ownProgram(page, programName)
+    .getByRole('button', { name: `Follow ${programName}`, exact: true })
+    .click();
   await expect(page.getByRole('heading', { level: 1, name: `Follow ${programName}`, exact: true })).toBeVisible();
 }

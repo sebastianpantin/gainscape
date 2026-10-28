@@ -21,6 +21,6 @@ test('load more reveals older friend posts beyond the first feed page', async ({
 
   await expect(posts).toHaveCount(SEEDED_LEVELS.length);
   await expect(posts.last()).toContainText(levelUpHeadline(oldest));
-  await expect(posts.last()).toContainText(`${bobName} @${bobName}`);
+  await expect(posts.last()).toContainText(`${bobName} · `);
   await expect(page.getByRole('button', { name: 'Load more' })).toHaveCount(0);
 });

@@ -20,8 +20,8 @@ export function FollowProgramCard({ programs, onDismiss }: FollowProgramCardProp
               <span>{program.name}</span>
               <span className="muted tiny">{program.schedule}</span>
             </span>
-            <Link className="button" to={`/programs/enroll/${program.key}`}>
-              Follow {program.name}
+            <Link className="button" to={`/programs/enroll/${program.key}`} aria-label={`Follow ${program.name}`}>
+              Follow
             </Link>
           </li>
         ))}

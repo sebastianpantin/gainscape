@@ -70,10 +70,12 @@ export function QuestCard({ card, offline, primary, onStart }: QuestCardProps) {
           <button
             className={primary ? 'button primary' : 'button'}
             type="button"
+            aria-label={`Start ${quest.name}`}
+            aria-busy={starting}
             disabled={!canStartQuest(status, offline) || starting}
             onClick={() => void start()}
           >
-            {starting ? 'Starting…' : `Start ${quest.name}`}
+            {starting ? 'Starting…' : 'Start'}
           </button>
           {offline && <p className="muted tiny">Connect to start this quest.</p>}
         </>

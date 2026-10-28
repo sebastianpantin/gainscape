@@ -103,6 +103,34 @@ export async function expectRemoveSetButtonsStandApart(page: Page) {
   expect(crowded, 'remove set buttons with a control beside them').toEqual([]);
 }
 
+export async function expectUniqueButtonNamesInLists(page: Page) {
+  const repeated = await page.evaluate(() => {
+    const nameOf = (button: HTMLElement) => {
+      const labelledBy = button.getAttribute('aria-labelledby');
+      const label = labelledBy
+        ? labelledBy
+            .split(/\s+/)
+            .map((id) => document.getElementById(id)?.textContent ?? '')
+            .join(' ')
+        : (button.getAttribute('aria-label') ?? button.textContent ?? '');
+      return label.replace(/\s+/g, ' ').trim();
+    };
+    const found: string[] = [];
+    for (const list of document.querySelectorAll<HTMLElement>('ul, ol, [role=list]')) {
+      const seen = new Set<string>();
+      for (const button of list.querySelectorAll<HTMLElement>('button:not([role=radio]), [role=button], a.button')) {
+        if (button.closest('ul, ol, [role=list]') !== list) continue;
+        if (button.getClientRects().length === 0) continue;
+        const name = nameOf(button);
+        if (seen.has(name)) found.push(`"${name}" in ${list.getAttribute('aria-label') ?? list.className}`);
+        seen.add(name);
+      }
+    }
+    return found;
+  });
+  expect(repeated, 'buttons in one list that share an accessible name').toEqual([]);
+}
+
 export function shownUncovered(element: Locator): Promise<boolean> {
   return element.evaluate((target) => {
     const box = target.getBoundingClientRect();

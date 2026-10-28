@@ -1,4 +1,5 @@
 import { GLOSSARY } from '../../../lib/ui/glossary.ts';
+import { SIMPLE_EFFORT_HINT } from '../../../lib/workout/effort-labels.ts';
 import { usePreferences } from '../../../lib/profile/preferences.ts';
 import { type EffortInputMode, UNIT_OPTIONS, updatePrivateProfile } from '../../../lib/profile/profile.ts';
 import { useOptimisticProfileSave } from '../use-optimistic-profile-save.ts';
@@ -9,7 +10,7 @@ import { type SectionProps } from './section-props.ts';
 import { TrainingDeviceChoices } from './TrainingDeviceChoices.tsx';
 
 const EFFORT_OPTIONS: { value: EffortInputMode; label: string; hint: string }[] = [
-  { value: 'level', label: 'Simple', hint: 'Four taps: easy, hard, near failure, failure.' },
+  { value: 'level', label: 'Simple', hint: SIMPLE_EFFORT_HINT },
   { value: 'rir', label: 'RIR', hint: GLOSSARY.rir.definition },
   { value: 'rpe', label: 'RPE', hint: GLOSSARY.rpe.definition },
 ];

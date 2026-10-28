@@ -2,16 +2,17 @@ import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import {
   definitionOf,
+  emailOf,
   logBench,
   logCardio,
   logWorkout,
-  openFromProfile,
   openTab,
   register,
   uniqueUsername,
 } from './support/app.ts';
 import { expectTouchTargets } from './support/a11y.ts';
-import { feedItem } from './support/friendship.ts';
+import { createConfirmedAccount, setDisplayName } from './support/db.ts';
+import { befriend, feedItem, registerWithFriend } from './support/friendship.ts';
 
 async function logRun(page: Page, minutes: number, distance: number) {
   await openTab(page, 'Train');
@@ -65,7 +66,8 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await friendActivity.getByRole('link', { name: 'See all' }).click();
   const pr = feedItem(alice, 'New 5RM Barbell Bench Press: 80 kg');
   await expect(pr).toBeVisible();
-  await expect(pr).toContainText(`${bobName} @${bobName}`);
+  await expect(pr).toContainText(`${bobName} · `);
+  await expect(pr).not.toContainText(`@${bobName}`);
   await expect(alice.getByRole('button', { name: 'What does gz mean?', exact: true })).toBeVisible();
   const phoneViewport = alice.viewportSize()!;
   await alice.setViewportSize({ width: 320, height: 640 });
@@ -81,7 +83,8 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await expect(ownPr.getByLabel('1 gz')).toBeVisible();
   await expect(ownPr.getByRole('button')).toHaveCount(0);
 
-  await openFromProfile(bob, 'Settings');
+  await openTab(bob, 'Profile');
+  await bob.getByRole('link', { name: 'Preview what friends see' }).click();
   const showWeights = bob.getByRole('switch', { name: 'Show my weights to friends' });
   await showWeights.click();
   await expect(showWeights).toHaveAttribute('aria-checked', 'false');
@@ -97,6 +100,12 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
 
   await alice.getByRole('navigation', { name: 'Friends' }).getByRole('link', { name: 'Hiscores' }).click();
   await expect(alice.getByRole('button', { name: 'What are hiscores?', exact: true })).toBeVisible();
+  const rankBy = alice.getByRole('radiogroup', { name: 'Rank by' });
+  await rankBy.getByRole('radio', { name: 'Total', checked: true }).focus();
+  await alice.keyboard.press('ArrowRight');
+  await expect(rankBy.getByRole('radio', { name: 'Combat', checked: true })).toBeFocused();
+  await alice.keyboard.press('ArrowLeft');
+  await expect(rankBy.getByRole('radio', { name: 'Total', checked: true })).toBeFocused();
   await alice.getByRole('radio', { name: 'Chest' }).click();
   const ranking = alice.getByRole('list', { name: 'Ranked by Chest' }).getByRole('listitem');
   await expect(ranking).toHaveCount(2);
@@ -126,4 +135,27 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await alice.getByRole('link', { name: 'Preview what friends see' }).click();
   await expect(definitionOf(alice, 'Total')).toHaveText(total ?? '');
   await expect(definitionOf(alice, 'Collection')).toHaveText(collection ?? '');
+});
+
+test.describe('on a 360 px phone', () => {
+  test.use({ viewport: { width: 360, height: 740 } });
+
+  test('the friends list wraps a long name, hides a handle equal to the name and never scrolls sideways', async ({
+    page,
+  }) => {
+    const { aliceName, bobName } = await registerWithFriend(page, 'wrap');
+    const carolName = uniqueUsername('wrap_c');
+    await createConfirmedAccount(emailOf(carolName), carolName, 'UTC');
+    await befriend(aliceName, carolName);
+    const longName = 'Supercalifragilisticexpialidocious_Lift';
+    await setDisplayName(bobName, longName);
+
+    await openTab(page, 'Friends');
+    const friends = page.getByRole('list', { name: 'Friends list' });
+    await expect(friends.getByRole('link', { name: `${longName} @${bobName}`, exact: true })).toBeVisible();
+    await expect(friends.getByRole('link', { name: carolName, exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(
+      0,
+    );
+  });
 });

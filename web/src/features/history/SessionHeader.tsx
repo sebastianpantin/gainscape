@@ -1,3 +1,4 @@
+import { type Ref } from 'react';
 import { Link } from 'react-router-dom';
 import {
   formatCount,
@@ -10,7 +11,14 @@ import {
 import { type SessionDetail } from '../../lib/history/history-rules.ts';
 import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
 
-export function SessionHeader({ session, backTo }: { session: SessionDetail; backTo: string }) {
+interface SessionHeaderProps {
+  session: SessionDetail;
+  programLabel: string | null;
+  backTo: string;
+  headingRef: Ref<HTMLHeadingElement>;
+}
+
+export function SessionHeader({ session, programLabel, backTo, headingRef }: SessionHeaderProps) {
   const timingText = sessionTimingParts(session).join(' · ');
   const gearBonus = session.historyOnly ? 0 : sessionGearBonus(session.summary);
   const challengeBonus = session.historyOnly ? 0 : sessionChallengeBonus(session.summary);
@@ -21,8 +29,10 @@ export function SessionHeader({ session, backTo }: { session: SessionDetail; bac
       </Link>
       <header className="workout-header">
         <div className="stack" style={{ gap: 'var(--space-1)' }}>
-          <span className="muted">{formatSessionDate(session.localDate)}</span>
-          <h1 className="title">Workout</h1>
+          <span className="muted">{programLabel ?? 'Workout'}</span>
+          <h1 className="title" ref={headingRef} tabIndex={-1}>
+            {formatSessionDate(session.localDate)}
+          </h1>
           {timingText && <span className="muted tiny">{timingText}</span>}
         </div>
         <div className="live-xp">

@@ -40,7 +40,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 2, name: username, exact: true })).toBeVisible();
   await expect(definitionOf(page, 'Bodyweight')).toHaveText('Not set');
 
-  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
   await page.getByLabel('Display name').fill('Iron Otter');
   await expect(page.getByRole('img', { name: /badge$/ })).toHaveCount(0);
   await page.getByLabel('Bio').fill('Chasing a 200 kg squat.');
@@ -77,15 +77,15 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await expect(definitionOf(page, 'Bodyweight')).toHaveText('82.5 kg');
 
   await openFromProfile(page, 'Settings');
+  await expect(page.getByRole('switch')).toHaveCount(0);
+  await page.getByRole('region', { name: 'Privacy' }).getByRole('link', { name: 'What friends see' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'What friends see' })).toBeVisible();
   const showWeights = page.getByRole('switch', { name: 'Show my weights to friends' });
   await expect(showWeights).toHaveAttribute('aria-checked', 'true');
   await showWeights.click();
   await expect(showWeights).toHaveAttribute('aria-checked', 'false');
   await page.reload();
   await expect(showWeights).toHaveAttribute('aria-checked', 'false');
-
-  await openTab(page, 'Profile');
-  await page.getByRole('link', { name: 'Preview what friends see' }).click();
   await expect(
     page.getByRole('region', { name: 'How your records appear' }).getByText('New 8RM Back Squat', { exact: true }),
   ).toBeVisible();
@@ -96,7 +96,7 @@ test('edit every profile field and see it on the profile', async ({ page }) => {
   await pickSetting(page, 'Weight units', 'Pounds');
   await openTab(page, 'Profile');
   await expect(definitionOf(page, 'Height')).toHaveText('5 ft 11 in');
-  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
   await expect(page.getByLabel('Height feet')).toHaveValue('5');
   await page.getByLabel('Bio').fill('Only the bio changed.');
   await page.getByRole('button', { name: 'Save' }).click();
@@ -146,20 +146,26 @@ test('RPE effort is logged as RPE and stored as reps in reserve', async ({ page 
   await expect.poll(() => latestSetOf(username)).toMatchObject({ effort_input_type: 'rpe', effort_value: 8, rir: 2 });
 });
 
-test('sex for the strength score saves, stays after a reload and can be cleared', async ({ page }) => {
+test('sex for the strength score saves from Edit profile, stays after a reload and can be cleared', async ({
+  page,
+}) => {
   const username = uniqueUsername('e2e_sex');
   await register(page, username);
-  await openFromProfile(page, 'Settings');
-  const sex = page.getByRole('radiogroup', { name: 'Sex' });
+  await openTab(page, 'Profile');
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
+  const sex = page.getByRole('region', { name: 'Body' }).getByRole('radiogroup', { name: 'Sex' });
   await expect(sex.getByRole('radio', { name: 'Not set' })).toHaveAttribute('aria-checked', 'true');
 
   await sex.getByRole('radio', { name: 'Female' }).click();
   await expect(sex.getByRole('radio', { name: 'Female' })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page).toHaveURL(/\/profile$/);
   await expect.poll(() => sexOf(username)).toBe('female');
-  await page.reload();
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
   await expect(sex.getByRole('radio', { name: 'Female' })).toHaveAttribute('aria-checked', 'true');
 
   await sex.getByRole('radio', { name: 'Not set' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => sexOf(username)).toBeNull();
 });
 
@@ -224,7 +230,7 @@ test('change password, export data and delete the account', async ({ page }) => 
 test('leaving Edit profile with a change asks first, and Save leaves without asking', async ({ page }) => {
   await register(page, uniqueUsername('pf_leave'));
   await openTab(page, 'Profile');
-  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
   const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
   await page.getByLabel('Display name').fill('Half Typed');
 
@@ -238,7 +244,7 @@ test('leaving Edit profile with a change asks first, and Save leaves without ask
   await expect(page).toHaveURL(/\/profile$/);
   await expect(profileCard(page)).not.toContainText('Half Typed');
 
-  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
   await page.getByLabel('Display name').fill('Saved Name');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page).toHaveURL(/\/profile$/);
@@ -249,7 +255,7 @@ test('leaving Edit profile with a change asks first, and Save leaves without ask
 test('closing the tab with an unsaved Edit profile change asks first, and not once it is saved', async ({ page }) => {
   await register(page, uniqueUsername('pf_unload'));
   await openTab(page, 'Profile');
-  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
   await page.getByLabel('Display name').fill('Half Typed');
 
   const dialogTypes: string[] = [];
@@ -274,7 +280,7 @@ test('Edit profile shows a field problem only after leaving the field or saving,
 }) => {
   await register(page, uniqueUsername('pf_valid'));
   await openTab(page, 'Profile');
-  await page.getByRole('link', { name: 'Edit profile & body' }).click();
+  await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
   const trainingSince = page.getByLabel('Training since');
   const birthYear = page.getByLabel('Birth year (optional)');
 

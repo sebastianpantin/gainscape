@@ -18,7 +18,8 @@ The rules every screen follows, with the reason for each. Tooling enforces the o
 - One disabled style: `opacity: 0.5` and `cursor: not-allowed` for `.button`, `.segment` and `.switch`.
 - New bespoke bevelled controls count against a cap of 10 control bevel rules. **(guard)** Add a modifier to `.button` instead.
 - One primary per screen. A second important action is a default `.button`.
-- Visible labels stay short ("Edit", "Remove"); a repeated action in a list gets a contextual `aria-label` ("Edit Upper / Lower") so screen reader users can tell rows apart.
+- Visible labels stay short ("Edit", "Remove"); a repeated action in a list gets a contextual `aria-label` ("Edit Upper / Lower") so screen reader users can tell rows apart. **(guard: `expectUniqueButtonNamesInLists` in `e2e/support/a11y.ts`, run on every screen of the axe loop: no two buttons or button-styled links in one list share a name; radio options are exempt because the radiogroup names them)**
+- A disabled primary turns flat and grey (`.button.primary:disabled`), so a disabled main action never looks ready. **(guard: `css-rules.test.ts`)**
 
 ## Screen states
 
@@ -33,7 +34,7 @@ The rules every screen follows, with the reason for each. Tooling enforces the o
 - Reversible (remove a set, undo edits, remove a day): act at once and show an undo toast.
 - Irreversible (delete a workout, remove a friend, delete the account): `ConfirmDialog`, with the danger button as the confirm.
 - Never swap a button inline into a second "Are you sure?" button: it moves the target under the finger.
-- After the action, focus moves to a sensible element (the list, the next row, the heading), never to `<body>`.
+- After the action, focus moves to a sensible element (the list, the next row, the heading), never to `<body>`. `ConfirmDialog` hands focus back to the button that opened it; an undo toast's action restores what was removed.
 
 ## Navigation
 
@@ -44,6 +45,8 @@ The rules every screen follows, with the reason for each. Tooling enforces the o
 
 - A field with a problem sets `aria-invalid` and links its `FieldProblem` text with `aria-describedby`.
 - Constraints are stated before the user types ("At least 12 characters"), not only after a failed submit.
+- A Save that finds problems focuses the first invalid field.
+- One choice among a few is a `SegmentedChoice` (`role="radiogroup"`): one tab stop, arrow keys move and pick. `.button.chip` stays for the effort and bout choices inside a set row.
 - Inputs are 16px (`--font-size-md`) so iOS does not zoom on focus.
 
 ## Touch
@@ -56,5 +59,6 @@ The rules every screen follows, with the reason for each. Tooling enforces the o
 
 ## Vocabulary
 
-- One term per concept, the same in headings, buttons, toasts and `route-title-rules.ts`: a workout, a set, effort, Finish, Custom exercises, Program.
+- One term per concept, the same in headings, buttons, toasts and `route-title-rules.ts`: a workout, a set, effort, Finish, Custom exercises, Program, Edit profile.
+- A handle (`@username`) shows only when it differs from the display name.
 - Game terms the user may not know get a `TermHelp` button from the glossary (`web/src/lib/ui/glossary.ts`).

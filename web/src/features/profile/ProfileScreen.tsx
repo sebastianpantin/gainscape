@@ -182,7 +182,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         <BodyweightTrend userId={userId} unit={unitPref} />
       </section>
       <ul className="menu-list">
-        <MenuLink to="/profile/edit">Edit profile &amp; body</MenuLink>
+        <MenuLink to="/profile/edit">Edit profile</MenuLink>
         <MenuLink to="/profile/settings">Settings</MenuLink>
         <MenuLink to="/profile/preview">Preview what friends see</MenuLink>
         <MenuLink to="/programs">Programs</MenuLink>

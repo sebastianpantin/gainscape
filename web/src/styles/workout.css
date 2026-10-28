@@ -662,8 +662,7 @@
   line-height: 1.1;
 }
 
-.effort-selector,
-.metric-grid {
+.effort-selector {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-1);

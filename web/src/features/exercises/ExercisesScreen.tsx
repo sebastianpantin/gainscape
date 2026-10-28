@@ -125,10 +125,20 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
               {exercise.name} <span className="muted">{exerciseLabels(exercise)}</span>
             </span>
             <span className="row">
-              <button className="button link" type="button" onClick={() => setEditing({ kind: 'edit', exercise })}>
+              <button
+                className="button link"
+                type="button"
+                aria-label={`Edit ${exercise.name}`}
+                onClick={() => setEditing({ kind: 'edit', exercise })}
+              >
                 Edit
               </button>
-              <button className="button link" type="button" onClick={() => setArchived(exercise, !exercise.archived)}>
+              <button
+                className="button link"
+                type="button"
+                aria-label={`${exercise.archived ? 'Unarchive' : 'Archive'} ${exercise.name}`}
+                onClick={() => setArchived(exercise, !exercise.archived)}
+              >
                 {exercise.archived ? 'Unarchive' : 'Archive'}
               </button>
             </span>

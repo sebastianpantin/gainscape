@@ -173,16 +173,22 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
                 <button
                   className="button link"
                   type="button"
+                  aria-label={`Follow ${program.name}`}
                   aria-describedby={offline ? offlineId : undefined}
                   disabled={busy || offline}
                   onClick={() => void follow(program)}
                 >
                   Follow
                 </button>
-                <Link className="button link" to={`/programs/${program.id}`}>
+                <Link className="button link" to={`/programs/${program.id}`} aria-label={`Edit ${program.name}`}>
                   Edit
                 </Link>
-                <button className="button link" type="button" onClick={() => askToRemove(program)}>
+                <button
+                  className="button link"
+                  type="button"
+                  aria-label={`Delete ${program.name}`}
+                  onClick={() => askToRemove(program)}
+                >
                   Delete
                 </button>
               </span>
@@ -217,8 +223,14 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
                   {formatCount(template.days.length, 'workout')} · {daySummary(template)}
                 </span>
               </span>
-              <button className="button" type="button" disabled={busy} onClick={() => copyTemplate(template)}>
-                Copy and edit {template.name}
+              <button
+                className="button"
+                type="button"
+                aria-label={`Copy and edit ${template.name}`}
+                disabled={busy}
+                onClick={() => copyTemplate(template)}
+              >
+                Copy and edit
               </button>
             </li>
           ))}
