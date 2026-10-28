@@ -160,3 +160,25 @@ test('far down a long workout the clock stays in view, and focusing a reps field
   if (!fieldBox) throw new Error('No field box after focus');
   expect(fieldBox.y + fieldBox.height).toBeLessThanOrEqual(barTop);
 });
+
+test('the next set to do is marked as the current step, past a skipped set', async ({ page }) => {
+  await register(page, uniqueUsername('fields'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const card = await addExercise(page, 'bench', BENCH);
+  await page.getByRole('button', { name: '+ Add set' }).click();
+  await page.getByRole('button', { name: '+ Add set' }).click();
+  const [first, second, third] = [setRow(card, 1), setRow(card, 2), setRow(card, 3)];
+  const current = card.locator('[aria-current="step"]');
+  await expect(first).toHaveAttribute('aria-current', 'step');
+  await expect(current).toHaveCount(1);
+
+  await second.getByRole('button', { name: 'Done set 2' }).click();
+  await expect(third).toHaveAttribute('aria-current', 'step');
+  await expect(current).toHaveCount(1);
+
+  await third.getByRole('button', { name: 'Done set 3' }).click();
+  await expect(first).toHaveAttribute('aria-current', 'step');
+
+  await first.getByRole('button', { name: 'Done set 1' }).click();
+  await expect(current).toHaveCount(0);
+});

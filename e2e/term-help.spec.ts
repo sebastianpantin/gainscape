@@ -10,6 +10,7 @@ import {
   openFromProfile,
   openTab,
   register,
+  setRow,
   uniqueUsername,
 } from './support/app.ts';
 import {
@@ -208,7 +209,11 @@ test('an AMRAP set names its badge and explains AMRAP', async ({ page }) => {
   await programToday(page, '5/3/1').getByRole('button', { name: 'Start: 5/3/1 — C1 W1 Day 1', exact: true }).click();
 
   const squat = workoutCards(page, 'Back Squat').first();
-  await expect(squat.getByRole('img', { name: '5+, as many reps as possible' })).toBeVisible();
+  const amrapSet = setRow(squat, 3);
+  await expect(amrapSet.getByRole('img', { name: 'AMRAP 5+, as many reps as possible', exact: true })).toHaveText(
+    'AMRAP 5+',
+  );
+  await expect(setRow(squat, 2).getByText('AMRAP')).toHaveCount(0);
   const help = helpButton(page, GLOSSARY.amrap.question);
   await help.click();
   await expect((await panelOf(page, help)).getByText(GLOSSARY.amrap.definition, { exact: true })).toBeVisible();
