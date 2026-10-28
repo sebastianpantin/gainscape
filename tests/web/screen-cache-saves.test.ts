@@ -11,7 +11,8 @@ vi.mock('../../web/src/lib/platform/supabase.ts', () => {
   function query(table: string) {
     let single = false;
     const builder: Record<string, unknown> = {};
-    for (const method of ['select', 'eq', 'in', 'is', 'order', 'limit', 'abortSignal']) builder[method] = () => builder;
+    for (const method of ['select', 'eq', 'in', 'is', 'order', 'limit', 'abortSignal', 'retry'])
+      builder[method] = () => builder;
     builder.single = () => {
       single = true;
       return builder;

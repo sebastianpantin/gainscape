@@ -226,7 +226,7 @@ test.describe('signed-in screens', () => {
       ['/collection', 'Collection: Records'],
       ['/collection/items', 'Collection: Items'],
       ['/collection/history', 'Collection: History'],
-      ['/collection/stats', 'Stats'],
+      ['/collection/stats', 'Collection: Stats'],
       ['/collection/stats/records', 'Records timeline'],
       ['/collection/stats/strength-level', 'Strength level'],
       [sessionPath!, null],
@@ -312,7 +312,7 @@ test.describe('signed-in screens', () => {
     const programPath = await createProgram(page);
 
     await checkScreens(page, [
-      ['/exercises', 'Exercises'],
+      ['/exercises', 'Custom exercises'],
       ['/programs', 'Programs'],
       [programPath, null],
       ['/profile/settings/whats-new', "What's new"],
@@ -450,6 +450,17 @@ test.describe('on a 320x640 phone', () => {
     for (const tab of await tabs.all()) {
       const overflow = await tab.evaluate((link) => link.scrollWidth - link.clientWidth);
       expect(overflow, await tab.innerText()).toBeLessThanOrEqual(0);
+    }
+  });
+
+  test('every Collection segment label, Stats included, fits inside its segment', async ({ page }) => {
+    await register(page, uniqueUsername('a11y_320c'));
+    await openTab(page, 'Collection');
+    const segments = page.getByRole('navigation', { name: 'Collection' }).getByRole('link');
+    await expect(segments).toHaveText(['Records', 'Items', 'History', 'Stats']);
+    for (const segment of await segments.all()) {
+      const overflow = await segment.evaluate((link) => link.scrollWidth - link.clientWidth);
+      expect(overflow, await segment.innerText()).toBeLessThanOrEqual(0);
     }
   });
 

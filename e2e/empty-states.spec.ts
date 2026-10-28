@@ -34,9 +34,9 @@ test('every item slot is locked as not found yet before the first drop', async (
 
   await openItems(page);
 
-  const lockedSlots = page.getByRole('main').getByRole('button', { name: NOT_FOUND_SLOT, exact: true });
+  const lockedSlots = page.getByRole('main').getByRole('img', { name: NOT_FOUND_SLOT, exact: true });
   await expect(lockedSlots).toHaveCount(await catalogItemCount());
-  await expect(lockedSlots.first()).toBeDisabled();
+  await expect(page.getByRole('main').getByRole('button', { name: NOT_FOUND_SLOT })).toHaveCount(0);
   await expect(page.getByText(`0/${await gearItemCount()} found`)).toBeVisible();
   await expect(page.getByText('Hard sets can drop items. Finish a workout to find your first one.')).toBeVisible();
 });
@@ -50,10 +50,30 @@ test('a found item replaces its locked slot', async ({ page }) => {
 
   const main = page.getByRole('main');
   await expect(main.getByRole('button', { name: 'Rookie belt', exact: true })).toBeEnabled();
-  await expect(main.getByRole('button', { name: NOT_FOUND_SLOT, exact: true })).toHaveCount(
+  await expect(main.getByRole('img', { name: NOT_FOUND_SLOT, exact: true })).toHaveCount(
     (await catalogItemCount()) - 1,
   );
   await expect(page.getByText(`1/${await gearItemCount()} found`)).toBeVisible();
+});
+
+test('picking an item scrolls its details into view and moves focus to their heading', async ({ page }) => {
+  const username = uniqueUsername('es_pick');
+  await register(page, username);
+  await grantItems(username, { rookie_belt: 1, grinder_scraps: 8 });
+  await openItems(page);
+  const details = page.getByRole('region', { name: 'Item details' });
+  await page.getByRole('main').getByRole('button', { name: 'Rookie belt', exact: true }).click();
+  await expect(details.getByRole('heading', { level: 2, name: 'Rookie belt' })).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+
+  await page
+    .getByRole('main')
+    .getByRole('button', { name: /^Grinder scraps/ })
+    .click();
+
+  const heading = details.getByRole('heading', { level: 2, name: /^Grinder scraps/ });
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport();
 });
 
 test('a skill with no exercises that train it says so', async ({ page }) => {

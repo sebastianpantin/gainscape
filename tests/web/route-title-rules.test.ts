@@ -37,7 +37,7 @@ describe('routeTitle', () => {
     expect(routeTitle('/profile/preview')).toBe('What friends see · Gainscape');
     expect(routeTitle('/profile/settings')).toBe('Settings · Gainscape');
     expect(routeTitle('/profile/settings/whats-new')).toBe("What's new · Gainscape");
-    expect(routeTitle('/exercises')).toBe('Exercises · Gainscape');
+    expect(routeTitle('/exercises')).toBe('Custom exercises · Gainscape');
     expect(routeTitle('/programs')).toBe('Programs · Gainscape');
     expect(routeTitle('/programs/active')).toBe('Program · Gainscape');
     expect(routeTitle('/programs/active/plan')).toBe('Program plan · Gainscape');

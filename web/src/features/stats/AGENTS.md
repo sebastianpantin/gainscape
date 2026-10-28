@@ -5,11 +5,11 @@
 
 ## Purpose
 
-The Stats screen at `/collection/stats`, linked from the Collection Records tab: every long-range analytics view (training calendar, month compare, volume history, relative strength, PR timeline, loot stats) lives here, on one screen, instead of a sixth bottom tab.
+The Stats screen at `/collection/stats`, a Collection segment: every long-range analytics view (training calendar, month compare, volume history, relative strength, PR timeline, loot stats) lives here, on one screen, instead of a sixth bottom tab.
 
 ## Map
 
-- `StatsScreen.tsx`: the screen, with a `‹ Collection` back link like the other sub-screens.
+- `StatsScreen.tsx`: the screen, under `CollectionTabs` like Items and History.
 - Training calendar and month compare: `TrainingCalendarTable.tsx` and `MonthCompareTable.tsx` over `../../lib/stats/training-calendar-rules.ts` and `period-compare-rules.ts`. Both read `trainingDaysQuery(userId, month)`, one `training_days` RPC call (migration 059, which adds the `sessions (user_id, local_date)` index) for the shown month and the month before (`trainingDaysRange`).
 - Volume history: `VolumeHistorySection.tsx` over `../../lib/stats/volume-history-rules.ts`. It reads `weeklyExerciseSetsQuery(userId)`, the `weekly_exercise_sets(weeks)` RPC (migration 060, working sets per exercise per Monday week, weeks clamped to 1..52; it starts from the caller's sessions in the window through that index and joins `sets` by `session_id`), and the exercise list for skill shares.
 - Relative strength: `RelativeStrengthSection.tsx` over `../../lib/stats/relative-strength-rules.ts` and `dots-rules.ts`. It reads `profileQuery` (sex, latest bodyweight, time zone) and `collectionQuery` (exercises and current best e1RM from `exercise_maxes`), plus `relativeStrengthQuery(userId, exerciseId)`: the existing `exercise_progress_sets` RPC (with `local_date` since migration 064) and the bodyweight trend for the picked lift, reduced to per-day points before they are cached.
@@ -41,7 +41,7 @@ The Stats screen at `/collection/stats`, linked from the Collection Records tab:
 
 - Unit: `tests/web/date-bucket-rules.test.ts`, `bar-chart-rules.test.ts`, `training-days-rules.test.ts`, `training-calendar-rules.test.ts`, `period-compare-rules.test.ts`, `volume-history-rules.test.ts`, `pr-timeline-rules.test.ts`, `loot-stats-rules.test.ts`, `relative-strength-rules.test.ts`, `dots-rules.test.ts` (reference DOTS values), `strength-level-rules.test.ts`, `stats-cache.test.ts`, the title in `route-title-rules.test.ts`.
 - RPC: `supabase/tests/34_training_days.test.sql` (also the `sessions_by_user_local_date` index) and `35_weekly_exercise_sets.test.sql`, `36_personal_record_timeline.test.sql`, `37_loot_stats.test.sql` (pgTAP), `tests/integration/training-days.test.ts`, `weekly-exercise-sets.test.ts`, `personal-record-timeline.test.ts` and `loot-stats.test.ts` (numbers through finish, edit and delete).
-- E2E (stack): `e2e/stats.spec.ts` (opens from Collection, title, focus, back link, axe; a workout lights today, month compare, month buttons, the saved copy offline; volume history for the trained muscle and the muscle picker; a new best in Recent records, offline too, the records timeline and its workout links; loot rolls and drops against the odds; e1RM per bodyweight and the DOTS card asking for the sex, then the missing lifts, and its link to Strength level); `e2e/train-home.spec.ts` (the header DOTS opens Strength level with the matching score), `e2e/a11y.spec.ts`.
+- E2E (stack): `e2e/stats.spec.ts` (a Collection segment, title, focus, axe; a workout lights today, month compare, month buttons, the saved copy offline; volume history for the trained muscle and the muscle picker; a new best in Recent records, offline too, the records timeline and its workout links; loot rolls and drops against the odds; e1RM per bodyweight and the DOTS card asking for the sex, then the missing lifts, and its link to Strength level); `e2e/train-home.spec.ts` (the header DOTS opens Strength level with the matching score), `e2e/a11y.spec.ts`.
 
 ## Manual Notes
 

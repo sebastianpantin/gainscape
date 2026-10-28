@@ -22,10 +22,11 @@ The rules every screen follows, with the reason for each. Tooling enforces the o
 
 ## Screen states
 
-- Loading: `ScreenSkeleton` for a whole screen, `ListSkeleton` inside a screen whose heading is already known. Never a bare "Loading…" paragraph.
+- Loading: `ScreenSkeleton` for a whole screen, `ListSkeleton` inside a screen or section whose heading is already known. Never a bare "Loading…" text. **(guard: ESLint `no-restricted-syntax` in `web/src/features`)** A status that names what is loading inside a flow that is already on screen ("Loading loot…" in the reveal, "Loading more…" on a Load more button) is not a screen state and stays.
 - Load failure: `ScreenProblem` for a whole screen, `ProblemWithRetry` for a section. Both have "Try again".
 - The `h1` renders in every state (loading, failed, empty, loaded), so route focus and the page title always find it.
-- Empty: `EmptyState` with one next step.
+- Empty: `EmptyState` with one next step (`to` picks where it leads, such as "Add a friend" on Hiscores).
+- Long screens fold what the user rarely needs (locked and completed quests, releases older than the latest two) into a `<details>` whose `summary` says what it holds, so the page stays short on a phone.
 
 ## Destructive actions
 
@@ -36,7 +37,7 @@ The rules every screen follows, with the reason for each. Tooling enforces the o
 
 ## Navigation
 
-- A child screen's way back is the shared `BackLink`: `navigate(-1)` when the previous entry is inside the app, the parent route otherwise, so a deep link never loops back to itself.
+- A child screen's way back is the shared `BackLink` (`web/src/components/BackLink.tsx`, labelled "‹ Back"): `navigate(-1)` when the previous entry is inside the app, the parent route otherwise, so Back never pushes a screen you came from and a deep link still has a way out. A screen with tabs or segments (Collection's Records, Items, History, Stats) has no back link.
 - Screen titles come from `web/src/lib/platform/route-title-rules.ts`; a new route needs an entry there (unit test).
 
 ## Forms

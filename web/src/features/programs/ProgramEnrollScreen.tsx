@@ -2,8 +2,11 @@ import { type ProgramDefinition, type RoundingMode } from '@domain/index.ts';
 import { useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { BackLink } from '../../components/BackLink.tsx';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { FieldProblem } from '../../components/FieldProblem.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
@@ -100,15 +103,20 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const [confirmingReplace, setConfirmingReplace] = useState<EnrollProgramPayload | null>(null);
   const [enrolledRow] = useState(() => readProgramCache(localStorage, userId).enrollment);
 
-  if (loaded.status === 'loading' || loaded.status === 'failed' || loaded.status === 'missing')
+  const heading = (name: string | null) => (
+    <>
+      <BackLink parent="/programs" />
+      <h1 className="title">{name === null ? 'Follow program' : `Follow ${name}`}</h1>
+    </>
+  );
+
+  if (loaded.status === 'failed')
+    return <ScreenProblem heading={heading(null)} problem={loaded.problem} onRetry={choices.refetch} />;
+  if (loaded.status === 'loading' || loaded.status === 'missing')
     return (
       <main className="screen stack">
-        {loaded.status === 'loading' && <p>Loading…</p>}
-        {loaded.status === 'failed' && (
-          <p className="problem" role="alert">
-            {loaded.problem}
-          </p>
-        )}
+        {heading(null)}
+        {loaded.status === 'loading' && <ListSkeleton />}
         {loaded.status === 'missing' && <p className="problem">This program doesn't exist.</p>}
       </main>
     );
@@ -116,10 +124,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   if (loaded.status === 'blocked')
     return (
       <main className="screen stack">
-        <Link className="back-link" to="/programs">
-          ‹ Programs
-        </Link>
-        <h1 className="title">Follow {loaded.name}</h1>
+        {heading(loaded.name)}
         <p className="panel muted">{loaded.message}</p>
       </main>
     );
@@ -184,10 +189,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
 
   return (
     <main className="screen stack">
-      <Link className="back-link" to="/programs">
-        ‹ Programs
-      </Link>
-      <h1 className="title">Follow {name}</h1>
+      {heading(name)}
       <div className="panel stack">
         <span className="field">Unit</span>
         <SegmentedChoice

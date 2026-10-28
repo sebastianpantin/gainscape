@@ -45,7 +45,7 @@ test('the week strip lights today after a workout, opens Stats and stays offline
 
   await weekStrip(page).click();
   await expect(page).toHaveURL(/\/collection\/stats$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Stats', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection: Stats', exact: true })).toBeVisible();
 
   await context.setOffline(true);
   await openTab(page, 'Train');

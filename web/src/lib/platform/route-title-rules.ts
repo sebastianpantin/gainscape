@@ -25,7 +25,7 @@ const SCREEN_TITLES: readonly (readonly [pattern: string, screen: string])[] = [
   ['/profile/preview', 'What friends see'],
   ['/profile/settings', 'Settings'],
   ['/profile/settings/whats-new', "What's new"],
-  ['/exercises', 'Exercises'],
+  ['/exercises', 'Custom exercises'],
   ['/programs', 'Programs'],
   ['/programs/enroll/:key', 'Follow program'],
   ['/programs/active', 'Program'],

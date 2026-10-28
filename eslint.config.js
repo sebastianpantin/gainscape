@@ -38,6 +38,14 @@ const NO_NUMERIC_STYLE = {
   message: 'Use a spacing token (var(--space-*)) or a stylesheet class instead of a raw pixel number in style.',
 };
 
+const BARE_LOADING_TEXT_MESSAGE =
+  'Use ScreenSkeleton or ListSkeleton instead of a bare "Loading…" text (docs/design-system.md).';
+
+const NO_BARE_LOADING_TEXT = [
+  { selector: 'JSXText[value=/^\\s*Loading(…|\\.\\.\\.)\\s*$/]', message: BARE_LOADING_TEXT_MESSAGE },
+  { selector: 'Literal[value=/^Loading(…|\\.\\.\\.)$/]', message: BARE_LOADING_TEXT_MESSAGE },
+];
+
 export default tseslint.config(
   {
     ignores: ['node_modules/', 'web/dist/', 'test-results/', 'playwright-report/', 'supabase/.temp/', '.wrangler/'],
@@ -87,7 +95,7 @@ export default tseslint.config(
   {
     files: ['web/src/features/**/*.tsx'],
     rules: {
-      'no-restricted-syntax': ['error', ...NO_TEST_IDS, NO_NUMERIC_STYLE],
+      'no-restricted-syntax': ['error', ...NO_TEST_IDS, NO_NUMERIC_STYLE, ...NO_BARE_LOADING_TEXT],
     },
   },
   {

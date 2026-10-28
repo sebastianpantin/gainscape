@@ -1,7 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { BackLink } from '../../components/BackLink.tsx';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import {
   cachedPrograms,
   copyProgram,
@@ -111,16 +114,20 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
     setBusy(false);
   };
 
+  const heading = (
+    <>
+      <BackLink parent="/profile" />
+      <h1 className="title">Programs</h1>
+    </>
+  );
+
   if (!programs)
-    return (
-      <main className="screen">
-        {problem ? (
-          <p className="problem" role="alert">
-            {problem}
-          </p>
-        ) : (
-          <p>Loading…</p>
-        )}
+    return problem ? (
+      <ScreenProblem heading={heading} problem={problem} onRetry={programList.refetch} />
+    ) : (
+      <main className="screen stack">
+        {heading}
+        <ListSkeleton />
       </main>
     );
 
@@ -128,10 +135,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
 
   return (
     <main className="screen stack">
-      <Link className="back-link" to="/profile">
-        ‹ Profile
-      </Link>
-      <h1 className="title">Programs</h1>
+      {heading}
       {savedNotice && (
         <p className="notice" role="status">
           {savedNotice}

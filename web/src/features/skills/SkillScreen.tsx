@@ -3,14 +3,12 @@ import { useId } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
-import { ScreenProblem } from '../../components/ScreenProblem.tsx';
-import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
-import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
+import { ProblemWithRetry, ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton, ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { formatXp } from '../../lib/format.ts';
-import { type LoadedState } from '../../lib/query/query-state-rules.ts';
 import { isBodySkill } from '../../lib/progress/recovery-rules.ts';
 import { exercisesTrainingSkill } from '../../lib/progress/skill-map-rules.ts';
-import { useSkillMapExercises } from '../../lib/progress/skill-map.ts';
+import { type SkillMapExercises, useSkillMapExercises } from '../../lib/progress/skill-map.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { BackToSkills } from './BackToSkills.tsx';
 import { MuscleStatus } from './MuscleStatus.tsx';
@@ -27,17 +25,12 @@ function combatCopy(combatWeight: number): string {
 interface SkillExercisesProps {
   skillKey: string;
   skillName: string;
-  exercises: LoadedState<Exercise[]>;
+  exercises: SkillMapExercises;
 }
 
 function SkillExercises({ skillKey, skillName, exercises }: SkillExercisesProps) {
-  if (exercises.status === 'loading') return <p role="status">Loading…</p>;
-  if (exercises.status === 'failed')
-    return (
-      <p className="problem" role="alert">
-        {exercises.problem}
-      </p>
-    );
+  if (exercises.status === 'loading') return <ListSkeleton panels={1} />;
+  if (exercises.status === 'failed') return <ProblemWithRetry problem={exercises.problem} onRetry={exercises.retry} />;
   const entries = exercisesTrainingSkill(exercises.data, skillKey);
   if (entries.length === 0) return <p className="muted">No exercises train {skillName} yet.</p>;
   return (

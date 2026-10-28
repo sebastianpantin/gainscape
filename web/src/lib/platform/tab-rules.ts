@@ -1,7 +1,7 @@
 const TRAIN_TAB = '/';
 const PROFILE_TAB = '/profile';
-const OPENED_FROM_TRAIN = ['/programs/active'];
-const OPENED_FROM_PROFILE = ['/programs', '/exercises'];
+const OPENED_FROM_TRAIN = ['/programs'];
+const OPENED_FROM_PROFILE = ['/exercises'];
 
 function isWithin(pathname: string, root: string): boolean {
   return pathname === root || pathname.startsWith(`${root}/`);

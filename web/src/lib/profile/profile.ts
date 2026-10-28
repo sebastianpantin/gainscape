@@ -17,8 +17,8 @@ export * from './profile-rules.ts';
 
 export async function fetchProfile(userId: string): Promise<Profile> {
   const [publicPart, privatePart] = await Promise.all([
-    supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId).single(),
-    supabase.from('profile_private').select(PROFILE_PRIVATE_COLUMNS).eq('user_id', userId).single(),
+    supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId).single().retry(false),
+    supabase.from('profile_private').select(PROFILE_PRIVATE_COLUMNS).eq('user_id', userId).single().retry(false),
   ]);
   if (publicPart.error) throw publicPart.error;
   if (privatePart.error) throw privatePart.error;

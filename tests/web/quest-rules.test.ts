@@ -205,6 +205,12 @@ describe('questBoard', () => {
       ['Locked', ['The Restless Squat']],
       ['Completed', ['Done Quest']],
     ]);
+    expect(board.map((group) => [group.title, group.folded])).toEqual([
+      ['In progress', false],
+      ['Available', false],
+      ['Locked', true],
+      ['Completed', true],
+    ]);
   });
 
   it('shows each requirement against your level and finished quests', () => {

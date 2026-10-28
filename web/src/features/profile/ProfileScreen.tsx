@@ -186,7 +186,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         <MenuLink to="/profile/settings">Settings</MenuLink>
         <MenuLink to="/profile/preview">Preview what friends see</MenuLink>
         <MenuLink to="/programs">Programs</MenuLink>
-        <MenuLink to="/exercises">Exercises</MenuLink>
+        <MenuLink to="/exercises">Custom exercises</MenuLink>
       </ul>
     </main>
   );

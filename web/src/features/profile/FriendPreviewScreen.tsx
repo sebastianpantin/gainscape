@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { Switch } from '../../components/Switch.tsx';
 import type { Skill } from '../../lib/exercises/catalog-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
@@ -71,6 +72,7 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
   const { state, replace, refresh } = useProfile(userId);
   const preview = useQuery(profilePreviewQuery(userId));
   const view = loadedState(preview.data, preview.isFetching ? null : preview.error);
+  const problem = state.status === 'failed' ? state.problem : view.status === 'failed' ? view.problem : null;
 
   return (
     <main className="screen stack">
@@ -80,9 +82,15 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
         </Link>
         <h1 className="title">What friends see</h1>
       </div>
-      {(state.status === 'loading' || (state.status === 'ready' && view.status === 'loading')) && <p>Loading…</p>}
-      {state.status === 'failed' && <ProblemWithRetry problem={state.problem} onRetry={refresh} />}
-      {view.status === 'failed' && <ProblemWithRetry problem={view.problem} onRetry={preview.refetch} />}
+      {(state.status === 'loading' || (state.status === 'ready' && view.status === 'loading')) && <ListSkeleton />}
+      {problem !== null && (
+        <ProblemWithRetry
+          problem={problem}
+          onRetry={() =>
+            Promise.all([state.status === 'failed' && refresh(), view.status === 'failed' && preview.refetch()])
+          }
+        />
+      )}
       {state.status === 'ready' && view.status === 'ready' && (
         <PreviewOfProfile userId={userId} profile={state.profile} replace={replace} view={view.data} />
       )}

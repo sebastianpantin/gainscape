@@ -94,7 +94,7 @@ export function volumeHistoryBars(muscle: MuscleHistory): ChartBar[] {
 }
 
 export function thisWeekText(muscle: MuscleHistory): string {
-  const sets = muscle.weeks.at(-1)?.sets ?? 0;
+  const sets = Math.round(muscle.weeks.at(-1)?.sets ?? 0);
   const bandText = VOLUME_BAND_TEXT[volumeBand(sets)];
   return `This week: ${volumeAmountText(sets)}${bandText ? ` · ${bandText}` : ''}`;
 }

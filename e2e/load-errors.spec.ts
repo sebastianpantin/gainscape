@@ -17,6 +17,7 @@ import {
 import { builtInExerciseId, grantItems, seedWorkouts } from './support/db.ts';
 import { openItems } from './support/challenge.ts';
 import { failRequests, restTable, rpc } from './support/network.ts';
+import { followProgram, MADCOW_FIVE_RMS_KG } from './support/program-enrollment.ts';
 
 const HISTORY_PAGE_SIZE = 50;
 const SEEDED_WORKOUTS = HISTORY_PAGE_SIZE + 5;
@@ -100,17 +101,74 @@ test('equipping gear that fails says so, and equipping again works', async ({ pa
   await expect(details.getByRole('alert')).toHaveCount(0);
 });
 
-test('the exercise progress screen says it could not load progress, and loads after a reload', async ({ page }) => {
+test('the exercise progress screen keeps a heading when progress fails, and Try again loads it', async ({ page }) => {
   await register(page, uniqueUsername('le_progress'));
   await failRequests(page, restTable('rep_maxes'), 'GET');
 
   await page.goto(`/collection/exercises/${await builtInExerciseId('barbell_bench_press')}`);
 
+  await expect(page.getByRole('heading', { name: 'Exercise progress', level: 1 })).toBeVisible();
   await expect(page.getByRole('alert')).toHaveText('Could not load progress.');
   await page.unroute(restTable('rep_maxes'));
-  await page.reload();
+  await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('heading', { name: 'Barbell Bench Press', level: 1 })).toBeVisible();
   await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('the lift goal says it could not load the goal, and Try again shows it', async ({ page }) => {
+  await register(page, uniqueUsername('le_goal'));
+  await failRequests(page, restTable('lift_goals'), 'GET');
+
+  await page.goto(`/collection/exercises/${await builtInExerciseId('barbell_bench_press')}`);
+
+  const goal = page.getByRole('region', { name: 'Goal', exact: true });
+  await expect(goal.getByRole('alert')).toHaveText('Could not load your goal.');
+  await page.unroute(restTable('lift_goals'));
+  await goal.getByRole('button', { name: 'Try again' }).click();
+  await expect(goal.getByRole('button', { name: 'Set a goal' })).toBeVisible();
+  await expect(goal.getByRole('alert')).toHaveCount(0);
+});
+
+test('the program plan waits for the exercise names, and Try again loads them', async ({ page }) => {
+  await register(page, uniqueUsername('le_plan'));
+  await followProgram(page, 'Madcow 5x5', MADCOW_FIVE_RMS_KG);
+  await failRequests(page, restTable('exercises'), 'GET');
+  await page.addInitScript(() => {
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith('gainscape.exercises.') || key.startsWith('gainscape.collection.'))
+        localStorage.removeItem(key);
+  });
+
+  await page.goto('/programs/active/plan');
+
+  await expect(page.getByRole('heading', { name: 'Madcow 5x5 plan', level: 1 })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveText('injected failure');
+  await expect(page.getByText('Unknown exercise')).toHaveCount(0);
+  await page.unroute(restTable('exercises'));
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('heading', { name: 'Back Squat' }).first()).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+const STATS_PROBLEM_WITHIN_MS = 10_000;
+
+test('Stats says it cannot connect within 10 seconds when the network is down, and Try again loads it', async ({
+  page,
+}) => {
+  await register(page, uniqueUsername('le_stats'));
+  await page.route(EVERY_TABLE, (route) => route.abort('connectionrefused'));
+
+  await page.goto('/collection/stats');
+
+  await expect(page.getByRole('heading', { name: 'Collection: Stats', level: 1 })).toBeVisible();
+  await expect(page.getByRole('alert').first()).toBeVisible({ timeout: STATS_PROBLEM_WITHIN_MS });
+  await expect(page.getByRole('button', { name: 'Try again' }).first()).toBeVisible({
+    timeout: STATS_PROBLEM_WITHIN_MS,
+  });
+  await page.unroute(EVERY_TABLE);
+  await page.getByRole('button', { name: 'Try again' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Training calendar' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Month compare' })).toBeVisible();
 });
 
 test('the profile says it could not load the bodyweight trend, and shows it after a reload', async ({ page }) => {
@@ -270,6 +328,37 @@ const SCREENS_THAT_RETRY_A_FAILED_LOAD: {
     path: `/collection/history/${MISSING_ID}`,
     heading: 'Workout',
     loaded: (page) => page.getByText('That workout is no longer there.'),
+  },
+  { path: '/programs', heading: 'Programs', loaded: (page) => page.getByRole('heading', { name: 'Your programs' }) },
+  {
+    path: `/programs/${MISSING_ID}`,
+    heading: 'Edit program',
+    loaded: (page) => page.getByText("This program doesn't exist."),
+  },
+  {
+    path: '/programs/enroll/stronglifts_5x5',
+    heading: 'Follow program',
+    loaded: (page) => page.getByRole('heading', { name: 'Follow StrongLifts 5x5', level: 1 }),
+  },
+  {
+    path: '/exercises',
+    heading: 'Custom exercises',
+    loaded: (page) => page.getByRole('button', { name: 'New custom exercise' }),
+  },
+  {
+    path: '/collection/items',
+    heading: 'Collection: Items',
+    loaded: (page) => page.getByText('Hard sets can drop items. Finish a workout to find your first one.'),
+  },
+  {
+    path: '/friends/hiscores',
+    heading: 'Friends',
+    loaded: (page) => page.getByRole('main').getByRole('link', { name: 'Add a friend', exact: true }),
+  },
+  {
+    path: '/profile/preview',
+    heading: 'What friends see',
+    loaded: (page) => page.getByRole('heading', { name: 'How your records appear' }),
   },
 ];
 

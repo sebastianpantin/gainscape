@@ -2,9 +2,11 @@ import { canCraft, recipeFor } from '@domain/crafting.ts';
 import { DEFAULT_ROUNDING } from '@domain/index.ts';
 import type { StrengthState } from '@domain/types.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '../../components/EmptyState.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ItemIcon } from '../../components/PixelArt.tsx';
 import {
   type CatalogChallenge,
@@ -135,6 +137,7 @@ interface ItemDetailProps {
   offline: boolean;
   draftOpen: boolean | null;
   justCrafted: boolean;
+  pickedByTap: boolean;
   shownOnToday: boolean | null;
   onShowOnToday: () => void;
   onCraftStarted: () => void;
@@ -155,6 +158,7 @@ function ItemDetail({
   offline,
   draftOpen,
   justCrafted,
+  pickedByTap,
   shownOnToday,
   onShowOnToday,
   onCraftStarted,
@@ -167,6 +171,13 @@ function ItemDetail({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const offlineId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    const heading = headingRef.current;
+    if (!pickedByTap || !heading) return;
+    heading.focus({ preventScroll: true });
+    heading.scrollIntoView({ block: 'start' });
+  }, [pickedByTap]);
   const { showToast } = useToast();
   const nameOf = itemNameLookup(catalog.items, 'Unknown item');
   const recipe = recipeFor(item.id, catalog.recipes, tiersOf(catalog.items));
@@ -223,7 +234,7 @@ function ItemDetail({
       )}
       <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
         <span className="muted tiny">{kindLabel(item)}</span>
-        <h2 className="accent-text">
+        <h2 className="accent-text" ref={headingRef} tabIndex={-1}>
           {item.name}
           {showsQuantity(item, { quantity }) && ` ×${quantity}`}
         </h2>
@@ -305,6 +316,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [craftedId, setCraftedId] = useState<string | null>(null);
+  const [pickedByTap, setPickedByTap] = useState(false);
   const [chosenPetId, setChosenPetId] = useState(() => companionPetStore.read(deviceStorage(), userId));
   const { showToast } = useToast();
   const [refetchProblem, setRefetchProblem] = useState<string | null>(null);
@@ -388,18 +400,20 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
 
   if (loadProblem)
     return (
-      <main className="screen stack">
-        {header}
-        <p className="problem" role="alert">
-          {loadProblem}
-        </p>
-      </main>
+      <ScreenProblem
+        heading={header}
+        problem={loadProblem}
+        onRetry={async () => {
+          setRefetchProblem(null);
+          await items.refetch();
+        }}
+      />
     );
   if (!catalog)
     return (
       <main className="screen stack">
         {header}
-        <p>Loading…</p>
+        <ListSkeleton />
       </main>
     );
 
@@ -440,6 +454,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
                     aria-label={showsQuantity(item, entry) ? `${item.name} ×${entry.quantity}` : item.name}
                     onClick={() => {
                       setPickedId(item.id);
+                      setPickedByTap(true);
                       setCraftedId(null);
                     }}
                   >
@@ -449,9 +464,9 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
                 </li>
               ) : (
                 <li key={item.id}>
-                  <button type="button" className="item-slot" aria-label="Not found yet" disabled>
+                  <span className="item-slot locked" role="img" aria-label="Not found yet">
                     <ItemIcon kind="locked" color={LOCKED_COLOR} />
-                  </button>
+                  </span>
                 </li>
               ),
             )}
@@ -473,6 +488,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           offline={offline}
           draftOpen={draftOpen}
           justCrafted={picked.id === craftedId}
+          pickedByTap={pickedByTap}
           shownOnToday={picked.kind === 'pet' ? companionPet(catalog.items, held, chosenPetId)?.id === picked.id : null}
           onShowOnToday={() => {
             companionPetStore.save(deviceStorage(), userId, picked.id);
@@ -488,6 +504,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
             const fanfare = rarity ? fanfareFor([rarity]) : null;
             celebrate(userId, fanfare ? FANFARE_CELEBRATIONS[fanfare] : CRAFTED_CELEBRATION);
             await refreshAfterCraft();
+            setPickedByTap(false);
             setPickedId(itemId);
             setCraftedId(itemId);
           }}

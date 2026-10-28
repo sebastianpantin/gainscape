@@ -3,7 +3,9 @@ import { expectNoAxeViolations } from './support/a11y.ts';
 import { definitionOf, logBench, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 import { regularLootTotals, setDryRolls } from './support/db.ts';
 
-test('Stats opens from Collection, names the page, keeps Collection lit and leads back', async ({ page }) => {
+test('Stats is a Collection segment: it names the page, keeps Collection lit and leads back to Records', async ({
+  page,
+}) => {
   await register(page, uniqueUsername('stats_nav'));
   await openTab(page, 'Collection');
 
@@ -11,13 +13,19 @@ test('Stats opens from Collection, names the page, keeps Collection lit and lead
 
   await expect(page).toHaveURL(/\/collection\/stats$/);
   await expect(page).toHaveTitle('Stats · Gainscape');
-  await expect(page.getByRole('heading', { level: 1, name: 'Stats', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { level: 1, name: 'Collection: Stats', exact: true })).toBeFocused();
   await expect(
     page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Collection', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
+  await expect(
+    page.getByRole('navigation', { name: 'Collection' }).getByRole('link', { name: 'Stats', exact: true }),
+  ).toHaveAttribute('aria-current', 'page');
   await expectNoAxeViolations(page, 'stats');
 
-  await page.getByRole('main').getByRole('link', { name: '‹ Collection', exact: true }).click();
+  await page
+    .getByRole('navigation', { name: 'Collection' })
+    .getByRole('link', { name: 'Records', exact: true })
+    .click();
   await expect(page).toHaveURL(/\/collection$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Collection: Records', exact: true })).toBeVisible();
 });
@@ -92,7 +100,7 @@ test('volume history charts this week of the trained muscle and switches muscle'
   await expect(history.getByRole('img', { name: /^Chest working sets per week\. / })).toHaveAccessibleName(
     new RegExp(`, ${thisWeekLabel()} 0\\.7\\.$`),
   );
-  await expect(history.getByText('This week: 0.7 of 10 sets', { exact: true })).toBeVisible();
+  await expect(history.getByText('This week: 1 of 10 sets', { exact: true })).toBeVisible();
   await expect(history.getByText(/target is 10 to 20 sets a week per muscle/)).toBeVisible();
   await expectNoAxeViolations(page, 'stats volume history');
 

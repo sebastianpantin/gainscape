@@ -1,5 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { EmptyState } from '../../components/EmptyState.tsx';
+import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { hiscoresQuery, skillsQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { type HiscoreMetric, rankHiscores, skillMetric } from '../../lib/social/social-rules.ts';
@@ -32,12 +36,13 @@ export function HiscoresScreen() {
       <h1 className="title">Friends</h1>
       <FriendsTabs />
       {problem && (
-        <p className="problem" role="alert">
-          {problem}
-        </p>
+        <ProblemWithRetry problem={problem} onRetry={() => Promise.all([skillsLoad.refetch(), hiscores.refetch()])} />
       )}
-      {(!skills || !rows) && !problem && <p>Loading…</p>}
-      {skills && rows && (
+      {load.status === 'loading' && <ListSkeleton panels={1} />}
+      {rows && rows.length <= 1 && (
+        <EmptyState text="Add friends to rank yourself against them." startLabel="Add a friend" to="/friends" />
+      )}
+      {skills && rows && rows.length > 1 && (
         <>
           <div className="row muted">
             Rank yourself against your friends <TermHelp glossaryKey="hiscores" />
@@ -60,7 +65,9 @@ export function HiscoresScreen() {
             {ranked.map(({ row, value }, index) => (
               <li className={row.isSelf ? 'hiscore-row me' : 'hiscore-row'} key={row.userId}>
                 <span className="hiscore-rank">{index + 1}</span>
-                <span className="hiscore-name">{row.isSelf ? `${row.username} (you)` : row.username}</span>
+                <Link className="hiscore-name" to={row.isSelf ? '/profile' : `/friends/${row.userId}`}>
+                  {row.isSelf ? `${row.username} (you)` : row.username}
+                </Link>
                 <span className="hiscore-value">{metric === 'collection' ? `${value}%` : value}</span>
               </li>
             ))}

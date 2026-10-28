@@ -6,7 +6,10 @@ import { exerciseLabels, isLiftExercise, isPlannableExercise } from '../../lib/e
 import { cachedPrograms, type ProgramDoc, saveProgram } from '../../lib/programs/programs.ts';
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/programs/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
+import { BackLink } from '../../components/BackLink.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
+import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
@@ -102,22 +105,28 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     (exercises ? null : exerciseList.error?.message) ??
     null;
 
+  const heading = (
+    <div className="stack" style={{ gap: 'var(--space-1)' }}>
+      <BackLink parent="/programs" label="Cancel" disabled={saving} />
+      <h1 className="title">{creating ? 'New program' : 'Edit program'}</h1>
+    </div>
+  );
+  const retryLoad = () => Promise.all([programList.refetch(), exerciseList.refetch()]);
+
   if (missing)
     return (
-      <main className="screen">
+      <main className="screen stack">
+        {heading}
         <p className="panel">This program doesn't exist.</p>
       </main>
     );
   if (!doc)
-    return (
-      <main className="screen">
-        {loadProblem ? (
-          <p className="problem" role="alert">
-            {loadProblem}
-          </p>
-        ) : (
-          <p>Loading…</p>
-        )}
+    return loadProblem ? (
+      <ScreenProblem heading={heading} problem={loadProblem} onRetry={retryLoad} />
+    ) : (
+      <main className="screen stack">
+        {heading}
+        <ListSkeleton />
       </main>
     );
 
@@ -182,12 +191,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
 
   return (
     <main className="screen stack">
-      <div className="stack" style={{ gap: 'var(--space-1)' }}>
-        <button className="back-link" type="button" disabled={saving} onClick={() => void navigate('/programs')}>
-          Cancel
-        </button>
-        <h1 className="title">{creating ? 'New program' : 'Edit program'}</h1>
-      </div>
+      {heading}
       {outdated && (
         <section className="panel stack" aria-label="Followed version">
           <p>You're following an earlier version</p>

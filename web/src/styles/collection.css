@@ -38,7 +38,7 @@
   border-color: var(--color-accent);
 }
 
-.item-slot:disabled {
+.item-slot.locked {
   cursor: default;
   background: var(--color-panel-shade);
 }

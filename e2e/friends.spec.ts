@@ -1,6 +1,15 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { definitionOf, logBench, logCardio, logWorkout, openFromProfile, openTab, register } from './support/app.ts';
+import {
+  definitionOf,
+  logBench,
+  logCardio,
+  logWorkout,
+  openFromProfile,
+  openTab,
+  register,
+  uniqueUsername,
+} from './support/app.ts';
 import { expectTouchTargets } from './support/a11y.ts';
 import { feedItem } from './support/friendship.ts';
 
@@ -8,6 +17,17 @@ async function logRun(page: Page, minutes: number, distance: number) {
   await openTab(page, 'Train');
   await logWorkout(page, () => logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]));
 }
+
+test('Hiscores without friends says so and leads to adding one', async ({ page }) => {
+  await register(page, uniqueUsername('fr_hi_empty'));
+  await page.goto('/friends/hiscores');
+
+  await expect(page.getByText('Add friends to rank yourself against them.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'Rank by' })).toHaveCount(0);
+  await page.getByRole('main').getByRole('link', { name: 'Add a friend', exact: true }).click();
+  await expect(page).toHaveURL(/\/friends$/);
+  await expect(page.getByLabel('Add a friend by exact username')).toBeVisible();
+});
 
 test('friends: request, feed with gz and hidden weights, hiscores, profile and removal', async ({ newPerson }) => {
   const stamp = Date.now().toString(36);
@@ -82,6 +102,9 @@ test('friends: request, feed with gz and hidden weights, hiscores, profile and r
   await expect(ranking).toHaveCount(2);
   await expect(ranking.nth(0)).toContainText(bobName);
   await expect(ranking.nth(1)).toContainText(`${aliceName} (you)`);
+  await ranking.nth(0).getByRole('link', { name: bobName }).click();
+  await expect(alice.getByRole('heading', { level: 1, name: bobName, exact: true })).toBeVisible();
+  await alice.goBack();
 
   await alice.getByRole('navigation', { name: 'Friends' }).getByRole('link', { name: 'Feed' }).click();
   await alice

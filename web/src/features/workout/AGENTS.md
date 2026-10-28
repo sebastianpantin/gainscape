@@ -70,7 +70,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - The stat row under the title holds `LevelStat` and `DotsStat`, label above value (beside the title it wrapped at 360 px). DOTS reads as a level, so it sits there as a whole number, not in Highlights, hidden until ready. The collection (a network fetch online) loads only once the profile holds a sex and a bodyweight.
 - `TrainingHero` (`Your progress`) hides when none of its parts has data, so a new account sees no empty card. `useCompanionPet` uses `ownedPetsQuery`, not `itemsQuery`, so Items and the reveal keep their own cache.
 - `streakRiskText` compares the server's `weekStart` with the profile-timezone day from `TodayView`, never the device day; it returns null when that day is outside the week.
-- The picker gets only active exercises (`exercisePickerList`), but `exerciseListLoadQuery` saves the archived ones too, because the Exercises screen, program editor and reveal need them offline.
+- The picker gets only active exercises (`exercisePickerList`), but `exerciseListLoadQuery` saves the archived ones too, because Custom exercises, the program editor and reveal need them offline.
 - `Create custom exercise` (`/exercises?new=1&from=workout`) returns to `/` with `addExerciseId` in route state; the screen adds it once the list holds it.
 - `Discard workout` is left out on a challenge draft, whose banner has its own discard. Discarding a challenge keeps the scroll.
 - `BodyweightPrompt` answers save through `../profile/save-bodyweight.ts`, the same path as session detail.

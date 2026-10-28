@@ -109,7 +109,7 @@ export async function openTab(page: Page, tab: Tab) {
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: tab, exact: true }).click();
 }
 
-export async function openFromProfile(page: Page, name: 'Programs' | 'Exercises' | 'Settings') {
+export async function openFromProfile(page: Page, name: 'Programs' | 'Custom exercises' | 'Settings') {
   await openTab(page, 'Profile');
   await page.getByRole('main').getByRole('link', { name, exact: true }).click();
 }

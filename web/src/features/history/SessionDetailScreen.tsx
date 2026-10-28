@@ -29,6 +29,7 @@ import { signOutKeepingDrafts } from '../../lib/platform/sign-out.ts';
 import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
+import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
@@ -156,12 +157,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         }}
       />
     );
-  if (!loaded || !edit)
-    return (
-      <main className="screen">
-        <p>Loading…</p>
-      </main>
-    );
+  if (!loaded || !edit) return <ScreenSkeleton title="Workout" />;
 
   const editor = () =>
     createSessionEditor<Loaded>({
