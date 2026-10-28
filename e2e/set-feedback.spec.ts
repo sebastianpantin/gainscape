@@ -29,7 +29,6 @@ test('marking a set done drops its XP and announces it with the exercise name, a
   await expect(done).toHaveAttribute('aria-pressed', 'true');
   await expect(announcement).toHaveText(LOGGED);
   expect(await takeVibrations(page)).toEqual([[12]]);
-  await row.evaluate((element) => element.scrollIntoView({ block: 'nearest' }));
   await expectNoAxeViolations(page, 'workout after a set is logged');
 
   const firstAnnouncement = await announcement.locator('span').elementHandle();

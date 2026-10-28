@@ -31,6 +31,7 @@ import { clearEffortAction } from './set-menu-rules.ts';
 import { type PreviewRecord } from './record-preview.ts';
 import { RecordChip } from './RecordChip.tsx';
 import type { ShownSetDrop } from './set-feedback-rules.ts';
+import { useRowClearOfFinishBarAfterDone } from './use-finish-bar-clearance.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface SetRowProps {
@@ -194,6 +195,7 @@ export function SetRow({
 }: SetRowProps) {
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const doneButton = useRef<HTMLButtonElement>(null);
+  const row = useRowClearOfFinishBarAfterDone(drop?.key);
   useEffect(() => {
     if (!focusDone) return;
     doneButton.current?.focus();
@@ -215,7 +217,7 @@ export function SetRow({
     .filter((name) => name !== null)
     .join(' ');
   return (
-    <li className={rowClass} aria-label={rowLabel} aria-current={current ? 'step' : undefined}>
+    <li ref={row} className={rowClass} aria-label={rowLabel} aria-current={current ? 'step' : undefined}>
       <span className="set-number">
         {setNumber}
         {set.isWarmup && (

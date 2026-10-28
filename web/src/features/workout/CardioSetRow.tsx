@@ -6,6 +6,7 @@ import { BoutFields, BoutModeToggle } from './BoutFields.tsx';
 import { CardioEffortSelector } from './CardioEffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
 import { SetMenu } from './SetMenu.tsx';
+import { useRowClearOfFinishBarAfterDone } from './use-finish-bar-clearance.ts';
 import type { ShownSetDrop } from './set-feedback-rules.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
@@ -38,8 +39,10 @@ export function CardioSetRow({
   onRemove,
   onToggleDone,
 }: CardioSetRowProps) {
+  const row = useRowClearOfFinishBarAfterDone(drop?.key);
   return (
     <li
+      ref={row}
       className={`set-row bout-row${bout.done ? '' : ' planned'}${current ? ' current' : ''}`}
       aria-label={`Bout ${boutNumber}`}
       aria-current={current ? 'step' : undefined}

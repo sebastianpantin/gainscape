@@ -1,8 +1,8 @@
-import { type RefObject, useEffect } from 'react';
+import { type RefObject, useEffect, useRef } from 'react';
 import { scrollToClearFinishBar } from '../../lib/workout/finish-bar-clearance-rules.ts';
 
 const FINISH_BAR_HEIGHT = '--finish-bar-height';
-const FOCUS_GAP_PX = 8;
+const CLEARANCE_GAP_PX = 8;
 const TEXT_ENTRY = 'input:not([type=checkbox], [type=radio], [type=button], [type=submit]), textarea';
 
 export function useFinishBarClearance(finishBar: RefObject<HTMLElement | null>, workoutOpen: boolean): void {
@@ -26,7 +26,7 @@ export function useFinishBarClearance(finishBar: RefObject<HTMLElement | null>, 
         const distance = scrollToClearFinishBar(
           field.getBoundingClientRect(),
           bar.getBoundingClientRect().top,
-          FOCUS_GAP_PX,
+          CLEARANCE_GAP_PX,
         );
         if (distance > 0) window.scrollBy({ top: distance });
       });
@@ -39,4 +39,26 @@ export function useFinishBarClearance(finishBar: RefObject<HTMLElement | null>, 
       root.style.removeProperty(FINISH_BAR_HEIGHT);
     };
   }, [finishBar, workoutOpen]);
+}
+
+export function useRowClearOfFinishBarAfterDone(dropKey: number | undefined): RefObject<HTMLLIElement | null> {
+  const row = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (dropKey === undefined) return;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const element = row.current;
+        const bar = element?.closest('main')?.querySelector('.finish-bar');
+        if (!element || !bar) return;
+        const distance = scrollToClearFinishBar(
+          element.getBoundingClientRect(),
+          bar.getBoundingClientRect().top,
+          CLEARANCE_GAP_PX,
+        );
+        if (distance > 0) window.scrollBy({ top: distance });
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [dropKey]);
+  return row;
 }

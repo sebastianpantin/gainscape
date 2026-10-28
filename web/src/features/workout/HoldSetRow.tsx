@@ -8,6 +8,7 @@ import type { HoldDraftSet } from '../../offline/draft-format.ts';
 import { EffortSelector } from './EffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
 import { SetMenu } from './SetMenu.tsx';
+import { useRowClearOfFinishBarAfterDone } from './use-finish-bar-clearance.ts';
 import { clearEffortAction } from './set-menu-rules.ts';
 import { WeightField } from './SetRow.tsx';
 import { type PreviewRecord } from './record-preview.ts';
@@ -93,8 +94,10 @@ export function HoldSetRow({
   onRemove,
   onToggleDone,
 }: HoldSetRowProps) {
+  const row = useRowClearOfFinishBarAfterDone(drop?.key);
   return (
     <li
+      ref={row}
       className={`set-row hold-row${set.done ? '' : ' planned'}${current ? ' current' : ''}`}
       aria-label={`Set ${setNumber}`}
       aria-current={current ? 'step' : undefined}
