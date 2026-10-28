@@ -1,3 +1,14 @@
+- prs: [170, 178]
+  version: 0.23.0
+  date: 2026-10-28
+  title: Safer finish and easier to find
+  items:
+    - The set you are on now stands out on the workout screen, and an AMRAP set shows an AMRAP chip.
+    - After you tap Finish workout you get five seconds to keep training before it saves. Tap Save now to save at once.
+    - Skip rest now takes you to your next set, and Enter in the search adds the top exercise. Tapping a picked effort again no longer clears it; use the set menu instead.
+    - Stats is now a tab in Collection, and Programs belong to Train. Quests and What's new fold away older and locked entries.
+    - Screens that fail to load keep their title and offer Try again. Deleting a workout or removing a friend asks first, and Undo my changes and Remove day can be undone.
+    - Sign-up says how long your password must be, and sex now sits with your bodyweight in Edit profile.
 - prs: [176]
   version: 0.22.0
   date: 2026-10-27
