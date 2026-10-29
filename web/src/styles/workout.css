@@ -645,7 +645,7 @@
   animation: xp-drop 800ms ease-out forwards;
 }
 
-.done-toggle.confirming {
+.done-toggle.confirming > svg {
   animation: done-confirm 220ms ease-out;
 }
 
