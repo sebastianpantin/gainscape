@@ -1,6 +1,7 @@
 import { type Exercise, isLiftExercise } from '../../lib/exercises/catalog-rules.ts';
 import { firstSetFromLastSession } from '../../lib/history/last-session-rules.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { celebrate, RECORD_CELEBRATION } from '../../lib/platform/celebration-effects.ts';
 import { vibrate } from '../../lib/platform/device-effects.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { removeSet } from '../../lib/workout/exercise-edit-rules.ts';
@@ -67,9 +68,10 @@ export function useWorkoutCommands({
 
   const changeSet = (next: WorkoutDraft, setId: string, place: SetPlace) => {
     if (draft === null) return;
-    const vibrateOn = readTrainingDeviceSettings(deviceStorage(), userId).vibrate;
-    const feedback = feedbackFor({ previous: draft, next, setId, place, vibrate: vibrateOn });
+    const { vibrate: vibrateOn, sound } = readTrainingDeviceSettings(deviceStorage(), userId);
+    const feedback = feedbackFor({ previous: draft, next, setId, place, vibrate: vibrateOn, sound });
     if (feedback.vibrationMs) vibrate(feedback.vibrationMs);
+    if (feedback.celebratesRecord) celebrate(userId, RECORD_CELEBRATION);
     if (feedback.drop) showDrop(feedback.drop, setId);
     changeDraft(next);
   };

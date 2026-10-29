@@ -3,7 +3,6 @@ import { type PreviewRecord, recordChipLabel } from './record-preview.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 export const SET_DONE_VIBRATION_MS: readonly number[] = Object.freeze([12]);
-export const NEW_RECORD_VIBRATION_MS: readonly number[] = Object.freeze([60, 40, 60]);
 export const XP_DROP_MS = 900;
 
 export interface SetFeedbackInput {
@@ -14,6 +13,7 @@ export interface SetFeedbackInput {
   record: () => PreviewRecord | null;
   becameRecord: () => boolean;
   vibrate: boolean;
+  sound: boolean;
 }
 
 export interface SetDrop {
@@ -30,6 +30,7 @@ export interface ShownSetDrop extends SetDrop {
 export interface SetFeedback {
   drop: SetDrop | null;
   vibrationMs: readonly number[] | null;
+  celebratesRecord: boolean;
 }
 
 export function feedbackLabel(exerciseName: string, row: 'set' | 'bout', rowNumber: number): string {
@@ -56,7 +57,8 @@ function setDrop(label: string, preview: SetPreview, record: PreviewRecord | nul
 export function setFeedback(input: SetFeedbackInput): SetFeedback {
   const logged = !input.wasDone && input.isDone;
   const drop = logged ? setDrop(input.label, input.preview(), input.record()) : null;
-  if (!input.vibrate || !input.isDone) return { drop, vibrationMs: null };
-  if (input.becameRecord()) return { drop, vibrationMs: NEW_RECORD_VIBRATION_MS };
-  return { drop, vibrationMs: logged ? SET_DONE_VIBRATION_MS : null };
+  if (!input.isDone) return { drop, vibrationMs: null, celebratesRecord: false };
+  const anyCue = input.vibrate || input.sound;
+  if (anyCue && input.becameRecord()) return { drop, vibrationMs: null, celebratesRecord: true };
+  return { drop, vibrationMs: logged && input.vibrate ? SET_DONE_VIBRATION_MS : null, celebratesRecord: false };
 }

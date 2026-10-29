@@ -20,6 +20,7 @@ interface SetChange {
   setId: string;
   place: SetPlace;
   vibrate: boolean;
+  sound: boolean;
 }
 
 export interface WorkoutPreviews {
@@ -52,7 +53,7 @@ export function useWorkoutPreviews({
     [draftExercises, previewStrength, recordBaseline],
   );
 
-  const feedbackFor = ({ previous, next, setId, place, vibrate }: SetChange) => {
+  const feedbackFor = ({ previous, next, setId, place, vibrate, sound }: SetChange) => {
     const { exerciseIndex, setIndex } = place;
     let computedRecords: (PreviewRecord | null)[][] | null = null;
     const recordsAfter = () => (computedRecords ??= previewRecords(next.exercises, previewStrength, recordBaseline));
@@ -64,6 +65,7 @@ export function useWorkoutPreviews({
       record: () => recordsAfter()[exerciseIndex][setIndex],
       becameRecord: () => becomesRecord(records, previous.exercises, recordsAfter(), next.exercises, setId),
       vibrate,
+      sound,
     });
   };
 
