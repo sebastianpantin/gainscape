@@ -52,6 +52,16 @@ export const CRAFTED_CELEBRATION: Celebration = {
   vibrationMs: [25, 115, 25, 135, 60],
 };
 
+export const RECORD_CELEBRATION: Celebration = {
+  tones: [
+    { frequencyHz: 988, startS: 0, lengthS: 0.06 },
+    { frequencyHz: 1319, startS: 0.08, lengthS: 0.1 },
+  ],
+  volume: 0.07,
+  wave: 'triangle',
+  vibrationMs: [40, 40, 60],
+};
+
 export function primeCelebrationAudio(userId: string): void {
   if (readTrainingDeviceSettings(deviceStorage(), userId).sound) primeAudio();
 }

@@ -16,12 +16,12 @@ export function DoneToggle({ done, label, drop, onToggle, buttonRef }: DoneToggl
       <button
         ref={buttonRef}
         type="button"
-        className="button toggle done-toggle"
+        className={drop && done ? 'button toggle done-toggle confirming' : 'button toggle done-toggle'}
         aria-pressed={done}
         aria-label={label}
         onClick={onToggle}
       >
-        <Icon name="check" size={20} strokeWidth={3} />
+        <Icon key={drop?.key} name="check" size={20} strokeWidth={3} />
       </button>
       {drop?.xpText && (
         <span key={drop.key} className="xp-drop" aria-hidden="true">

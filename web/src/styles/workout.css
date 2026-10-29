@@ -645,6 +645,22 @@
   animation: xp-drop 800ms ease-out forwards;
 }
 
+.done-toggle.confirming > svg {
+  animation: done-confirm 220ms ease-out;
+}
+
+@keyframes done-confirm {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.86);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .set-xp .record-chip.pulse {
   animation: pop 450ms ease-out;
 }

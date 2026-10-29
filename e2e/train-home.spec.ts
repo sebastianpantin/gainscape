@@ -57,7 +57,7 @@ test('the progress card shows the pet, the gear, the XP to the next level and th
   await openTab(page, 'Train');
 
   const hero = page.getByRole('region', { name: 'Your progress' });
-  await expect(hero.getByRole('link', { name: 'Spotter Pup, your companion' })).toBeVisible();
+  await expect(hero.getByRole('link', { name: 'Spotter Pup, your companion, excited' })).toBeVisible();
   await expect(hero.getByRole('link', { name: 'Loadout: Rookie belt. Open Items' })).toBeVisible();
   await expect(hero.getByRole('link', { name: /^\w[\w ]* is [\d,]+ XP from level \d+$/ })).toBeVisible();
   await expect(hero.getByRole('progressbar', { name: /^\w[\w ]* XP to level \d+$/ })).toHaveAttribute(
@@ -143,6 +143,7 @@ test('the header shows the DOTS level once sex, bodyweight and all three competi
   await expect(highlights.getByRole('link', { name: 'Last workout Today', exact: true })).toBeVisible();
   await expect(highlights.getByRole('link', { name: /DOTS/ })).toHaveCount(0);
   await expectNoAxeViolations(page, 'train home, DOTS level');
+  await expect(dots.locator('.visually-hidden')).toHaveCount(0);
   const level = Number((await dots.textContent())?.replace('DOTS', ''));
 
   await dots.click();

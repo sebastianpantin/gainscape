@@ -1,12 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CountUp } from '../../components/CountUp.tsx';
-import { prefersReducedMotion } from '../../lib/platform/device-effects.ts';
-import { deviceStorage } from '../../lib/platform/keyed-store.ts';
-import { seenLevelsCache } from '../../offline/seen-levels-cache.ts';
-import { levelCountStart } from './today-rules.ts';
-
-const LEVEL_COUNT_MS = 1200;
+import { ShownNumber } from '../../components/ShownNumber.tsx';
+import { useCountUp } from '../../lib/ui/use-count-up.ts';
 
 interface LevelStatProps {
   userId: string;
@@ -15,48 +9,23 @@ interface LevelStatProps {
 }
 
 export function LevelStat({ userId, totalLevel, combatLevel }: LevelStatProps) {
-  const [seen] = useState(() => seenLevelsCache.read(deviceStorage(), userId));
-  const [reducedMotion] = useState(prefersReducedMotion);
-  const totalFrom = levelCountStart(seen?.totalLevel ?? null, totalLevel);
-  const combatFrom = levelCountStart(seen?.combatLevel ?? null, combatLevel);
-  const rose = !reducedMotion && (totalFrom < totalLevel || combatFrom < combatLevel);
-
-  useEffect(() => {
-    const remember = () => seenLevelsCache.save(deviceStorage(), userId, { totalLevel, combatLevel });
-    if (!rose) {
-      remember();
-      return;
-    }
-    const afterCount = setTimeout(remember, LEVEL_COUNT_MS);
-    return () => clearTimeout(afterCount);
-  }, [userId, totalLevel, combatLevel, rose]);
+  const total = useCountUp(userId, 'total-level', totalLevel);
+  const combat = useCountUp(userId, 'combat-level', combatLevel);
+  const rose = total.rose || combat.rose;
+  const glowRun = `${totalLevel}-${combatLevel}`;
 
   return (
     <Link className={rose ? 'header-stat level-rose' : 'header-stat'} to="/skills">
       <span className="header-stat-part">
         <span className="muted tiny">Total level</span>{' '}
-        <strong>
-          <CountUp
-            key={`${totalFrom}:${totalLevel}`}
-            value={totalLevel}
-            from={totalFrom}
-            durationMs={LEVEL_COUNT_MS}
-            animate={rose}
-            format={String}
-          />
+        <strong key={glowRun}>
+          <ShownNumber shown={total.shown} value={totalLevel} />
         </strong>
       </span>
       <span className="header-stat-part">
         <span className="muted tiny">Combat</span>{' '}
-        <strong>
-          <CountUp
-            key={`${combatFrom}:${combatLevel}`}
-            value={combatLevel}
-            from={combatFrom}
-            durationMs={LEVEL_COUNT_MS}
-            animate={rose}
-            format={String}
-          />
+        <strong key={glowRun}>
+          <ShownNumber shown={combat.shown} value={combatLevel} />
         </strong>
       </span>
     </Link>

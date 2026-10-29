@@ -47,5 +47,5 @@ test('marking a set done drops its XP and announces it with the exercise name, a
     /^Barbell Bench Press, set 1 logged, about [\d,]+ XP\. Predicted new 5 rep max$/,
   );
   await expect(row).toContainText('New 5RM!');
-  expect(await takeVibrations(page)).toEqual([[60, 40, 60]]);
+  expect(await takeVibrations(page)).toEqual([[40, 40, 60]]);
 });

@@ -3,6 +3,7 @@ import { forgetCachedExercises } from '../lib/exercises/catalog-cache.ts';
 import { companionPetStore } from '../lib/collection/companion-pet-store.ts';
 import { forgetCachedExerciseNotes } from '../lib/exercises/exercise-note-cache.ts';
 import { forgetLastSeenRelease } from '../lib/platform/last-seen-release-store.ts';
+import { forgetLastSeenNumbers } from '../lib/ui/last-seen-number-store.ts';
 import { forgetOnboarding } from '../lib/profile/onboarding-store.ts';
 import { forgetPlateSettings } from '../lib/workout/plate-settings-store.ts';
 import { preferencesCache } from '../lib/profile/preferences.ts';
@@ -21,7 +22,6 @@ import { profileCache } from './profile-cache.ts';
 import { forgetProgramCache } from './program-cache.ts';
 import { programListCache } from './program-list-cache.ts';
 import { questsCache } from './quests-cache.ts';
-import { seenLevelsCache } from './seen-levels-cache.ts';
 import { standingCache } from './standing-cache.ts';
 import { forgetStatsCache } from './stats-cache.ts';
 
@@ -40,7 +40,7 @@ export async function forgetUserProgressData(device: UserDevice, userId: string)
   forgetItemsCache(storage, userId);
   programListCache.forget(storage, userId);
   standingCache.forget(storage, userId);
-  seenLevelsCache.forget(storage, userId);
+  forgetLastSeenNumbers(storage, userId);
   profileCache.forget(storage, userId);
   collectionCache.forget(storage, userId);
   questsCache.forget(storage, userId);

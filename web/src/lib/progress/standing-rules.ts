@@ -1,5 +1,6 @@
 import { combatLevel, levelProgress, type LevelProgress, totalLevel } from '@domain/index.ts';
 import type { Skill } from '../exercises/catalog-rules.ts';
+import { formatXp } from '../format.ts';
 
 export interface SkillStanding {
   skill: Skill;
@@ -34,4 +35,9 @@ export function standingFrom(skills: Skill[], xpBySkillId: Map<string, number>):
       standings.map((standing) => ({ level: standing.progress.level, weight: standing.skill.combatWeight })),
     ),
   };
+}
+
+export function skillXpText(xp: number): string {
+  const { level, nextLevelXp } = levelProgress(xp);
+  return nextLevelXp === null ? `${formatXp(xp)} XP` : `${formatXp(nextLevelXp - xp)} XP to ${level + 1}`;
 }

@@ -10,12 +10,10 @@ export function greetingFor(hour: number): string {
   return 'Late one tonight';
 }
 
-export function levelCountStart(seen: number | null, current: number): number {
-  return seen !== null && seen < current ? seen : current;
-}
-
-interface NearestLevelUp {
+export interface NearestLevelUp {
+  skillKey: string;
   skillName: string;
+  xp: number;
   xpToGo: number;
   nextLevel: number;
   xpIntoLevel: number;
@@ -29,7 +27,9 @@ export function nearestLevelUp(skills: readonly SkillStanding[]): NearestLevelUp
     const xpToGo = progress.nextLevelXp - progress.xp;
     if (nearest === null || xpToGo < nearest.xpToGo) {
       nearest = {
+        skillKey: skill.key,
         skillName: skill.name,
+        xp: progress.xp,
         xpToGo,
         nextLevel: progress.level + 1,
         xpIntoLevel: progress.xp - progress.levelStartXp,

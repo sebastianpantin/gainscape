@@ -1,15 +1,72 @@
+import { levelProgress } from '@domain/index.ts';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
+import { ShownNumber } from '../../components/ShownNumber.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
 import { bodySummaryText } from '../../lib/progress/body-summary-rules.ts';
+import { type SkillStanding, skillXpText } from '../../lib/progress/standing-rules.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { readyData } from '../../lib/query/query-state-rules.ts';
-import { formatXp } from '../../lib/format.ts';
 import { TermHelp } from '../../components/TermHelp.tsx';
+import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
+import { useCountUp } from '../../lib/ui/use-count-up.ts';
 import { useBodyStatus } from './body-status.ts';
+
+function SkillCard({ userId, skillStanding: { skill, progress } }: { userId: string; skillStanding: SkillStanding }) {
+  const shownXp = useCountUp(userId, skillXpMetric(skill.key), progress.xp).shown;
+  const shown = levelProgress(shownXp);
+  return (
+    <li>
+      <Link className="skill-card" to={`/skills/${skill.key}`}>
+        <span className="skill-card-top">
+          <span className="row">
+            <SkillIcon skillKey={skill.key} />
+            <span className="skill-name">{skill.name}</span>
+          </span>
+          <span className="skill-level">
+            <ShownNumber shown={shown.level} value={progress.level} />
+          </span>
+        </span>
+        <ProgressBar
+          fraction={progress.fractionToNextLevel}
+          shownFraction={shown.fractionToNextLevel}
+          label={`${skill.name} progress to next level`}
+        />
+        <span className="muted tiny">
+          <ShownNumber shown={shownXp} value={progress.xp} format={skillXpText} />
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+function LevelTotals({ userId, totalLevel, combatLevel }: { userId: string; totalLevel: number; combatLevel: number }) {
+  const total = useCountUp(userId, 'total-level', totalLevel);
+  const combat = useCountUp(userId, 'combat-level', combatLevel);
+  return (
+    <div className="standing totals">
+      <div className="panel">
+        <span className="muted row">
+          Total level <TermHelp glossaryKey="totalLevel" />
+        </span>
+        <strong>
+          <ShownNumber shown={total.shown} value={totalLevel} />
+        </strong>
+      </div>
+      <div className="panel">
+        <span className="muted row">
+          Combat level <TermHelp glossaryKey="combatLevel" />
+        </span>
+        <strong>
+          <ShownNumber shown={combat.shown} value={combatLevel} />
+        </strong>
+      </div>
+    </div>
+  );
+}
 
 interface SkillsScreenProps {
   userId: string;
@@ -34,20 +91,7 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
           {state.notice}
         </p>
       )}
-      <div className="standing totals">
-        <div className="panel">
-          <span className="muted row">
-            Total level <TermHelp glossaryKey="totalLevel" />
-          </span>
-          <strong>{standing.totalLevel}</strong>
-        </div>
-        <div className="panel">
-          <span className="muted row">
-            Combat level <TermHelp glossaryKey="combatLevel" />
-          </span>
-          <strong>{standing.combatLevel}</strong>
-        </div>
-      </div>
+      <LevelTotals userId={userId} totalLevel={standing.totalLevel} combatLevel={standing.combatLevel} />
       <ul className="menu-list">
         <li>
           <Link className="button" to="/skills/quests">
@@ -66,24 +110,8 @@ export function SkillsScreen({ userId }: SkillsScreenProps) {
         </li>
       </ul>
       <ul className="skill-grid" aria-label="Skill levels">
-        {standing.skills.map(({ skill, progress }) => (
-          <li key={skill.id}>
-            <Link className="skill-card" to={`/skills/${skill.key}`}>
-              <span className="skill-card-top">
-                <span className="row">
-                  <SkillIcon skillKey={skill.key} />
-                  <span className="skill-name">{skill.name}</span>
-                </span>
-                <span className="skill-level">{progress.level}</span>
-              </span>
-              <ProgressBar fraction={progress.fractionToNextLevel} label={`${skill.name} progress to next level`} />
-              <span className="muted tiny">
-                {progress.nextLevelXp === null
-                  ? `${formatXp(progress.xp)} XP`
-                  : `${formatXp(progress.nextLevelXp - progress.xp)} XP to ${progress.level + 1}`}
-              </span>
-            </Link>
-          </li>
+        {standing.skills.map((skillStanding) => (
+          <SkillCard key={skillStanding.skill.id} userId={userId} skillStanding={skillStanding} />
         ))}
       </ul>
     </main>

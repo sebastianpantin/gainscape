@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   feedbackLabel,
-  NEW_RECORD_VIBRATION_MS,
   SET_DONE_VIBRATION_MS,
   setFeedback,
   type SetFeedbackInput,
@@ -26,6 +25,7 @@ function input(overrides: Partial<FeedbackValues> = {}): SetFeedbackInput {
     record: null,
     becameRecord: false,
     vibrate: true,
+    sound: true,
     ...overrides,
   };
   return {
@@ -41,6 +41,7 @@ describe('setFeedback', () => {
     expect(setFeedback(input())).toEqual({
       drop: { xpText: '+~45 XP', record: false, announcement: 'Set 2 logged, about 45 XP' },
       vibrationMs: SET_DONE_VIBRATION_MS,
+      celebratesRecord: false,
     });
   });
 
@@ -48,40 +49,71 @@ describe('setFeedback', () => {
     expect(SET_DONE_VIBRATION_MS.reduce((sum, ms) => sum + ms, 0)).toBeLessThanOrEqual(15);
   });
 
-  it('pulses the record and uses the record buzz when the logged set is a new record', () => {
+  it('pulses the record and celebrates instead of the plain buzz when the logged set is a new record', () => {
     expect(setFeedback(input({ record: FIVE_REP_MAX, becameRecord: true }))).toEqual({
       drop: {
         xpText: '+~45 XP',
         record: true,
         announcement: 'Set 2 logged, about 45 XP. Predicted new 5 rep max',
       },
-      vibrationMs: NEW_RECORD_VIBRATION_MS,
+      vibrationMs: null,
+      celebratesRecord: true,
     });
   });
 
   it('gives no feedback when a set is undone', () => {
-    expect(setFeedback(input({ wasDone: true, isDone: false }))).toEqual({ drop: null, vibrationMs: null });
+    expect(setFeedback(input({ wasDone: true, isDone: false }))).toEqual({
+      drop: null,
+      vibrationMs: null,
+      celebratesRecord: false,
+    });
   });
 
   it('gives no drop when a done set is only edited', () => {
-    expect(setFeedback(input({ wasDone: true, isDone: true }))).toEqual({ drop: null, vibrationMs: null });
+    expect(setFeedback(input({ wasDone: true, isDone: true }))).toEqual({
+      drop: null,
+      vibrationMs: null,
+      celebratesRecord: false,
+    });
   });
 
-  it('still buzzes for a record reached by editing a done set', () => {
+  it('still celebrates a record reached by editing a done set', () => {
     expect(setFeedback(input({ wasDone: true, record: FIVE_REP_MAX, becameRecord: true }))).toEqual({
       drop: null,
-      vibrationMs: NEW_RECORD_VIBRATION_MS,
+      vibrationMs: null,
+      celebratesRecord: true,
     });
   });
 
   it('stays silent on a planned set that is edited but not done', () => {
-    expect(setFeedback(input({ isDone: false }))).toEqual({ drop: null, vibrationMs: null });
+    expect(setFeedback(input({ isDone: false }))).toEqual({
+      drop: null,
+      vibrationMs: null,
+      celebratesRecord: false,
+    });
   });
 
   it('never vibrates when vibration is switched off', () => {
     expect(setFeedback(input({ vibrate: false })).vibrationMs).toBeNull();
     expect(setFeedback(input({ vibrate: false, record: FIVE_REP_MAX, becameRecord: true })).vibrationMs).toBeNull();
     expect(setFeedback(input({ vibrate: false })).drop?.xpText).toBe('+~45 XP');
+  });
+
+  it('still celebrates a new record with sound alone', () => {
+    const soundOnly = input({ vibrate: false, record: FIVE_REP_MAX, becameRecord: true });
+    expect(setFeedback(soundOnly).celebratesRecord).toBe(true);
+  });
+
+  it('skips the celebration but keeps the record pulse when every cue is switched off', () => {
+    const quiet = setFeedback(input({ vibrate: false, sound: false, record: FIVE_REP_MAX, becameRecord: true }));
+    expect(quiet.celebratesRecord).toBe(false);
+    expect(quiet.drop?.record).toBe(true);
+  });
+
+  it('celebrates only the change that makes the record, not a later edit to a set that already held it', () => {
+    expect(setFeedback(input({ wasDone: true, record: FIVE_REP_MAX, becameRecord: false })).celebratesRecord).toBe(
+      false,
+    );
   });
 
   it('announces without a floating number when the XP is unknown', () => {
@@ -128,13 +160,16 @@ describe('setFeedback', () => {
     expect(typing.becameRecord).not.toHaveBeenCalled();
   });
 
-  it('only checks for a new record when a done set is edited, and only with vibration on', () => {
+  it('only checks for a new record when a done set is edited, and only with a cue on', () => {
     const editing = input({ wasDone: true });
     setFeedback(editing);
     expect(editing.preview).not.toHaveBeenCalled();
     expect(editing.record).not.toHaveBeenCalled();
     expect(editing.becameRecord).toHaveBeenCalledOnce();
-    const silent = input({ wasDone: true, vibrate: false });
+    const soundOnly = input({ wasDone: true, vibrate: false });
+    setFeedback(soundOnly);
+    expect(soundOnly.becameRecord).toHaveBeenCalledOnce();
+    const silent = input({ wasDone: true, vibrate: false, sound: false });
     setFeedback(silent);
     expect(silent.becameRecord).not.toHaveBeenCalled();
   });

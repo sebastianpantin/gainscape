@@ -172,6 +172,30 @@
   animation: pet-bob 1.8s steps(2, jump-none) infinite;
 }
 
+.pet-companion.excited .pet-companion-art {
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-accent) 70%, transparent));
+  animation: pet-hop 0.8s steps(2, jump-none) infinite;
+}
+
+.pet-companion.sleepy .pet-companion-art {
+  position: relative;
+  filter: brightness(0.75) saturate(0.6);
+  rotate: -8deg;
+  animation-duration: 3.6s;
+}
+
+.pet-companion.sleepy .pet-companion-art::after {
+  content: 'z';
+  content: 'z' / '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  animation: pet-doze 3.6s steps(2, jump-none) infinite;
+}
+
 .body-map {
   display: flex;
   justify-content: center;

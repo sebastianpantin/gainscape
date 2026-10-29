@@ -2,10 +2,15 @@ interface ProgressBarProps {
   fraction: number;
   label: string;
   valueText?: string;
+  shownFraction?: number;
 }
 
-export function ProgressBar({ fraction, label, valueText }: ProgressBarProps) {
-  const percent = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
+function percentOf(fraction: number): number {
+  return Math.round(Math.min(1, Math.max(0, fraction)) * 100);
+}
+
+export function ProgressBar({ fraction, label, valueText, shownFraction = fraction }: ProgressBarProps) {
+  const percent = percentOf(fraction);
   return (
     <div
       className="progress-bar"
@@ -16,7 +21,7 @@ export function ProgressBar({ fraction, label, valueText }: ProgressBarProps) {
       aria-valuenow={percent}
       aria-valuetext={valueText}
     >
-      <div className="progress-fill" style={{ width: `${percent}%` }} />
+      <div className="progress-fill" style={{ width: `${percentOf(shownFraction)}%` }} />
     </div>
   );
 }

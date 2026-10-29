@@ -21,7 +21,7 @@ Shared UI pieces for feature screens: icons, pixel-art sprites and their rendere
 - Sprite hex values are the only colour literals outside `styles/tokens.css`, and they must be colours listed in `tokens.css` (`tests/web/pixel-sprites.test.ts`). Everything else gets its colour from token classes.
 - Decorative SVGs are `aria-hidden`; put the meaningful label on the surrounding element.
 - `BodyMap` colour is the only state cue in the figure, so the screen must also list the names (`RecoveryPanel`).
-- `CountUp` hides the animated text from assistive tech (`aria-hidden`) and puts the final value in a visually hidden span, so screen readers never read the running count.
+- `CountUp` and `ShownNumber` hide the animated text from assistive tech (`aria-hidden`) and put the final value in a visually hidden span, so screen readers and e2e names never read the running count. `ProgressBar`'s `shownFraction` moves only the fill; `aria-valuenow` and `aria-valuetext` stay on the real value.
 - `ToastProvider` always renders the `toast-region` (`role="status"`, `aria-live="polite"`), so screen readers register it before the first toast. Because of that, an e2e `getByRole('status')` also matches it: assert exact text inside a status, not the whole status.
 - `ScreenSkeleton` renders an `aria-busy` `main`, which route focus waits on, and a visually hidden "Loading…" status that e2e waits on. Keep both.
 - `ScreenErrorBoundary` catches a lazy chunk that fails to load and resets when the pathname changes.

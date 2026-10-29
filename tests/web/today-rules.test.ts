@@ -4,7 +4,6 @@ import { localDateIn } from '../../web/src/lib/ui/date-bucket-rules.ts';
 import type { Skill } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   greetingFor,
-  levelCountStart,
   nearestLevelUp,
   nearestLevelUpText,
   nearestLevelUpValueText,
@@ -33,25 +32,15 @@ describe('greetingFor', () => {
   });
 });
 
-describe('levelCountStart', () => {
-  it('counts up from the level last seen on this device', () => {
-    expect(levelCountStart(31, 34)).toBe(31);
-  });
-
-  it('shows the level at once when nothing was seen yet or it did not rise', () => {
-    expect(levelCountStart(null, 34)).toBe(34);
-    expect(levelCountStart(34, 34)).toBe(34);
-    expect(levelCountStart(40, 34)).toBe(34);
-  });
-});
-
 describe('nearestLevelUp', () => {
   it('picks the trained skill with the fewest XP to its next level', () => {
     const legs = standing('legs', 'Legs', levelProgress(0).nextLevelXp! - 10);
     const chest = standing('chest', 'Chest', 50);
     const levelTwoXp = levelProgress(0).nextLevelXp!;
     expect(nearestLevelUp([chest, legs])).toEqual({
+      skillKey: 'legs',
       skillName: 'Legs',
+      xp: levelTwoXp - 10,
       xpToGo: 10,
       nextLevel: 2,
       xpIntoLevel: levelTwoXp - 10,
@@ -70,16 +59,32 @@ describe('nearestLevelUp', () => {
 
 describe('nearestLevelUpText', () => {
   it('names the skill, the XP left and the next level', () => {
-    expect(nearestLevelUpText({ skillName: 'Legs', xpToGo: 1312, nextLevel: 41, xpIntoLevel: 0, levelXp: 1312 })).toBe(
-      'Legs is 1,312 XP from level 41',
-    );
+    expect(
+      nearestLevelUpText({
+        skillKey: 'legs',
+        skillName: 'Legs',
+        xp: 1000,
+        xpToGo: 1312,
+        nextLevel: 41,
+        xpIntoLevel: 0,
+        levelXp: 1312,
+      }),
+    ).toBe('Legs is 1,312 XP from level 41');
   });
 });
 
 describe('nearestLevelUpValueText', () => {
   it('reads the XP into the level against the XP the level needs', () => {
     expect(
-      nearestLevelUpValueText({ skillName: 'Legs', xpToGo: 312, nextLevel: 41, xpIntoLevel: 1000, levelXp: 1312 }),
+      nearestLevelUpValueText({
+        skillKey: 'legs',
+        skillName: 'Legs',
+        xp: 1000,
+        xpToGo: 312,
+        nextLevel: 41,
+        xpIntoLevel: 1000,
+        levelXp: 1312,
+      }),
     ).toBe('1,000 of 1,312 XP');
   });
 });

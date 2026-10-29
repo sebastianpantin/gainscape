@@ -1,3 +1,4 @@
+import { levelProgress } from '@domain/index.ts';
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
@@ -9,9 +10,12 @@ import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
 import { loadoutQuery, questsQuery } from '../../lib/query/queries.ts';
 import { activeQuestLine } from '../../lib/quests/quest-rules.ts';
+import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
+import { useCountUp } from '../../lib/ui/use-count-up.ts';
 import { PetCompanion } from './PetCompanion.tsx';
 import { useCompanionPet } from './use-companion-pet.ts';
-import { nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
+import { usePetMood } from './use-pet-mood.ts';
+import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
 
 const GEAR_ICON_SIZE = 28;
 
@@ -25,15 +29,39 @@ function EquippedGearLink({ slots }: { slots: readonly EquippedGear[] }) {
   );
 }
 
+function LevelUpBar({ userId, levelUp }: { userId: string; levelUp: NearestLevelUp }) {
+  const { shown } = useCountUp(userId, skillXpMetric(levelUp.skillKey), levelUp.xp);
+  const valueText = nearestLevelUpValueText(levelUp);
+  return (
+    <div className="stack hero-bar">
+      <Link className="tap-link" to="/skills">
+        {nearestLevelUpText(levelUp)}
+      </Link>
+      <ProgressBar
+        fraction={levelUp.xpIntoLevel / levelUp.levelXp}
+        shownFraction={levelProgress(shown).fractionToNextLevel}
+        label={`${levelUp.skillName} XP to level ${levelUp.nextLevel}`}
+        valueText={valueText}
+      />
+      <span className="muted tiny" aria-hidden="true">
+        {valueText}
+      </span>
+    </div>
+  );
+}
+
 interface TrainingHeroProps {
   userId: string;
   standing: StandingState;
   unit: UnitPref;
+  today: string | null;
+  trainedDates: readonly string[] | undefined;
 }
 
-export function TrainingHero({ userId, standing, unit }: TrainingHeroProps) {
+export function TrainingHero({ userId, standing, unit, today, trainedDates }: TrainingHeroProps) {
   const headingId = useId();
   const pet = useCompanionPet(userId);
+  const mood = usePetMood(userId, today, trainedDates);
   const equipped = useQuery(loadoutQuery(userId)).data?.slots ?? [];
   const questLog = useQuery(questsQuery(userId)).data?.loaded;
   const quest = questLog ? activeQuestLine(questLog, unit) : null;
@@ -48,26 +76,12 @@ export function TrainingHero({ userId, standing, unit }: TrainingHeroProps) {
       </h2>
       {hasCharacter && (
         <div className="hero-character">
-          {pet && <PetCompanion pet={pet} />}
+          {pet && <PetCompanion pet={pet} mood={mood} />}
           {equipped.length > 0 && <EquippedGearLink slots={equipped} />}
         </div>
       )}
       <div className="stack hero-progress">
-        {levelUp && (
-          <div className="stack hero-bar">
-            <Link className="tap-link" to="/skills">
-              {nearestLevelUpText(levelUp)}
-            </Link>
-            <ProgressBar
-              fraction={levelUp.xpIntoLevel / levelUp.levelXp}
-              label={`${levelUp.skillName} XP to level ${levelUp.nextLevel}`}
-              valueText={nearestLevelUpValueText(levelUp)}
-            />
-            <span className="muted tiny" aria-hidden="true">
-              {nearestLevelUpValueText(levelUp)}
-            </span>
-          </div>
-        )}
+        {levelUp && <LevelUpBar userId={userId} levelUp={levelUp} />}
         {quest && (
           <div className="stack hero-bar">
             <Link className="tap-link" to="/skills/quests">

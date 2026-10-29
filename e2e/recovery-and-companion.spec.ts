@@ -8,8 +8,8 @@ function recovery(page: Page) {
   return page.getByRole('region', { name: 'Recovery' });
 }
 
-function companion(page: Page, name: string) {
-  return page.getByRole('link', { name: `${name}, your companion` });
+function companion(page: Page, name: string, mood = 'sleepy') {
+  return page.getByRole('link', { name: `${name}, your companion, ${mood}` });
 }
 
 test('the Body page shows which muscles a recent workout trained', async ({ page }) => {
@@ -35,7 +35,7 @@ test('the Body page shows which muscles a recent workout trained', async ({ page
 test('the newest pet follows you on Today until you pick another one', async ({ page }) => {
   const username = uniqueUsername('pet');
   await register(page, username);
-  await expect(page.getByRole('link', { name: /your companion$/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /your companion/ })).toHaveCount(0);
 
   await grantItems(username, { spotter_pup: 1 });
   await page.reload();
