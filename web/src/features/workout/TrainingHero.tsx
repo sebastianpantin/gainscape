@@ -14,6 +14,7 @@ import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
 import { useCountUp } from '../../lib/ui/use-count-up.ts';
 import { PetCompanion } from './PetCompanion.tsx';
 import { useCompanionPet } from './use-companion-pet.ts';
+import { usePetMood } from './use-pet-mood.ts';
 import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
 
 const GEAR_ICON_SIZE = 28;
@@ -53,11 +54,14 @@ interface TrainingHeroProps {
   userId: string;
   standing: StandingState;
   unit: UnitPref;
+  today: string | null;
+  trainedDates: readonly string[] | undefined;
 }
 
-export function TrainingHero({ userId, standing, unit }: TrainingHeroProps) {
+export function TrainingHero({ userId, standing, unit, today, trainedDates }: TrainingHeroProps) {
   const headingId = useId();
   const pet = useCompanionPet(userId);
+  const mood = usePetMood(userId, today, trainedDates);
   const equipped = useQuery(loadoutQuery(userId)).data?.slots ?? [];
   const questLog = useQuery(questsQuery(userId)).data?.loaded;
   const quest = questLog ? activeQuestLine(questLog, unit) : null;
@@ -72,7 +76,7 @@ export function TrainingHero({ userId, standing, unit }: TrainingHeroProps) {
       </h2>
       {hasCharacter && (
         <div className="hero-character">
-          {pet && <PetCompanion pet={pet} />}
+          {pet && <PetCompanion pet={pet} mood={mood} />}
           {equipped.length > 0 && <EquippedGearLink slots={equipped} />}
         </div>
       )}

@@ -137,7 +137,7 @@ export function TodayView({
         hideEmptyState={program.kind !== 'none' || followCardShown}
         onStart={start.startFromDay}
       />
-      <TrainingHero userId={userId} standing={standing} unit={unit} />
+      <TrainingHero userId={userId} standing={standing} unit={unit} today={today} trainedDates={trainedDates} />
       <HighlightsCard userId={userId} today={today} trainedDates={trainedDates} unit={unit} />
       <LiftGoalsCard userId={userId} unit={unit} />
       <FriendActivityStrip userId={userId} />
