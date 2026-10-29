@@ -45,9 +45,10 @@ export function useCountUp(userId: string, metric: string, value: number): SeenC
       remember();
       return;
     }
-    const startedAt = performance.now();
+    let startedAt: number | undefined;
     let request = 0;
     const tick = (now: number) => {
+      startedAt ??= now;
       const elapsed = now - startedAt;
       setFrame((current) => (current.run === run ? { run, elapsedMs: elapsed } : current));
       if (elapsed < COUNT_UP_MS) request = requestAnimationFrame(tick);

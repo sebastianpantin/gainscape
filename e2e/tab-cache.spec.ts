@@ -44,7 +44,7 @@ function chestCard(page: Page) {
 async function chestCardText(page: Page): Promise<string> {
   await openTab(page, 'Skills');
   await expect(chestCard(page)).toBeVisible();
-  await expect(chestCard(page).locator('.skill-level [aria-hidden="true"]')).toHaveCount(0);
+  await expect(chestCard(page).locator('.visually-hidden')).toHaveCount(0);
   return (await chestCard(page).textContent()) ?? '';
 }
 

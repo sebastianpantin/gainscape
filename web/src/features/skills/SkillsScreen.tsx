@@ -7,17 +7,17 @@ import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { ShownNumber } from '../../components/ShownNumber.tsx';
 import { SkillIcon } from '../../components/PixelArt.tsx';
 import { bodySummaryText } from '../../lib/progress/body-summary-rules.ts';
-import { type SkillStanding } from '../../lib/progress/standing-rules.ts';
+import { type SkillStanding, skillXpText } from '../../lib/progress/standing-rules.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { readyData } from '../../lib/query/query-state-rules.ts';
-import { formatXp } from '../../lib/format.ts';
 import { TermHelp } from '../../components/TermHelp.tsx';
 import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
 import { useCountUp } from '../../lib/ui/use-count-up.ts';
 import { useBodyStatus } from './body-status.ts';
 
 function SkillCard({ userId, skillStanding: { skill, progress } }: { userId: string; skillStanding: SkillStanding }) {
-  const shown = levelProgress(useCountUp(userId, skillXpMetric(skill.key), progress.xp).shown);
+  const shownXp = useCountUp(userId, skillXpMetric(skill.key), progress.xp).shown;
+  const shown = levelProgress(shownXp);
   return (
     <li>
       <Link className="skill-card" to={`/skills/${skill.key}`}>
@@ -36,9 +36,7 @@ function SkillCard({ userId, skillStanding: { skill, progress } }: { userId: str
           label={`${skill.name} progress to next level`}
         />
         <span className="muted tiny">
-          {progress.nextLevelXp === null
-            ? `${formatXp(progress.xp)} XP`
-            : `${formatXp(progress.nextLevelXp - progress.xp)} XP to ${progress.level + 1}`}
+          <ShownNumber shown={shownXp} value={progress.xp} format={skillXpText} />
         </span>
       </Link>
     </li>

@@ -143,6 +143,7 @@ test('the header shows the DOTS level once sex, bodyweight and all three competi
   await expect(highlights.getByRole('link', { name: 'Last workout Today', exact: true })).toBeVisible();
   await expect(highlights.getByRole('link', { name: /DOTS/ })).toHaveCount(0);
   await expectNoAxeViolations(page, 'train home, DOTS level');
+  await expect(dots.locator('.visually-hidden')).toHaveCount(0);
   const level = Number((await dots.textContent())?.replace('DOTS', ''));
 
   await dots.click();

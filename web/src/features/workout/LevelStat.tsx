@@ -12,18 +12,19 @@ export function LevelStat({ userId, totalLevel, combatLevel }: LevelStatProps) {
   const total = useCountUp(userId, 'total-level', totalLevel);
   const combat = useCountUp(userId, 'combat-level', combatLevel);
   const rose = total.rose || combat.rose;
+  const glowRun = `${totalLevel}-${combatLevel}`;
 
   return (
     <Link className={rose ? 'header-stat level-rose' : 'header-stat'} to="/skills">
       <span className="header-stat-part">
         <span className="muted tiny">Total level</span>{' '}
-        <strong>
+        <strong key={glowRun}>
           <ShownNumber shown={total.shown} value={totalLevel} />
         </strong>
       </span>
       <span className="header-stat-part">
         <span className="muted tiny">Combat</span>{' '}
-        <strong>
+        <strong key={glowRun}>
           <ShownNumber shown={combat.shown} value={combatLevel} />
         </strong>
       </span>

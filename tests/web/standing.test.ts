@@ -1,7 +1,7 @@
-import { combatLevel, levelForXp, xpForLevel } from '@domain/index.ts';
+import { combatLevel, levelForXp, MAX_LEVEL, xpForLevel } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
 import type { Skill } from '../../web/src/lib/exercises/catalog-rules.ts';
-import { monogramFor, standingFrom } from '../../web/src/lib/progress/standing-rules.ts';
+import { monogramFor, skillXpText, standingFrom } from '../../web/src/lib/progress/standing-rules.ts';
 
 const skills: Skill[] = [
   { id: 'chest-id', key: 'chest', name: 'Chest', sortOrder: 1, combatWeight: 1, modality: 'lift' },
@@ -48,5 +48,16 @@ describe('standingFrom', () => {
         { level: 40, weight: 0 },
       ]),
     );
+  });
+});
+
+describe('skillXpText', () => {
+  it('names the XP left to the level that XP is on, so a counting card reads true', () => {
+    expect(skillXpText(xpForLevel(10))).toBe(`${(xpForLevel(11) - xpForLevel(10)).toLocaleString('en-US')} XP to 11`);
+    expect(skillXpText(xpForLevel(11) - 1)).toBe('1 XP to 11');
+  });
+
+  it('shows the XP itself at the top level', () => {
+    expect(skillXpText(xpForLevel(MAX_LEVEL) + 5)).toBe(`${(xpForLevel(MAX_LEVEL) + 5).toLocaleString('en-US')} XP`);
   });
 });

@@ -41,6 +41,30 @@ describe('last seen numbers', () => {
     expect(() => forgetLastSeenNumbers(blocked, 'user-1')).not.toThrow();
   });
 
+  it('writes nothing when the number is already the one saved', () => {
+    const storage = new MemoryStorage();
+    saveLastSeenNumber(storage, 'user-1', 'dots', 12);
+    const writes: string[] = [];
+    storage.setItem = (key) => writes.push(key);
+    storage.removeItem = (key) => writes.push(key);
+    saveLastSeenNumber(storage, 'user-1', 'dots', 12);
+    expect(writes).toEqual([]);
+  });
+
+  it('touches the retired seen levels key only while it exists', () => {
+    const storage = new MemoryStorage();
+    const removed: string[] = [];
+    const removeItem = storage.removeItem.bind(storage);
+    storage.removeItem = (key) => {
+      removed.push(key);
+      removeItem(key);
+    };
+    storage.setItem(RETIRED_SEEN_LEVELS_KEY, JSON.stringify({ userId: 'user-1', value: {} }));
+    saveLastSeenNumber(storage, 'user-1', 'dots', 12);
+    saveLastSeenNumber(storage, 'user-1', 'dots', 13);
+    expect(removed).toEqual([RETIRED_SEEN_LEVELS_KEY]);
+  });
+
   it('removes the retired seen levels key on save and on forget', () => {
     const storage = new MemoryStorage();
     storage.setItem(RETIRED_SEEN_LEVELS_KEY, JSON.stringify({ userId: 'user-1', value: {} }));
