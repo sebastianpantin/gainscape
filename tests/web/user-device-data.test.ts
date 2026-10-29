@@ -9,6 +9,7 @@ import { saveCachedExercises } from '../../web/src/lib/exercises/catalog-cache.t
 import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { saveCachedExerciseNotes } from '../../web/src/lib/exercises/exercise-note-cache.ts';
 import { saveLastSeenRelease } from '../../web/src/lib/platform/last-seen-release-store.ts';
+import { saveLastSeenNumber } from '../../web/src/lib/ui/last-seen-number-store.ts';
 import { saveOnboardingDone } from '../../web/src/lib/profile/onboarding-store.ts';
 import { parsePlateSettings } from '../../web/src/lib/workout/plate-rules.ts';
 import { savePlateSettings } from '../../web/src/lib/workout/plate-settings-store.ts';
@@ -33,7 +34,6 @@ import { EMPTY_PROGRAM_CACHE, saveProgramCache } from '../../web/src/offline/pro
 import { programListCache } from '../../web/src/offline/program-list-cache.ts';
 import { questsCache } from '../../web/src/offline/quests-cache.ts';
 import { companionPetStore } from '../../web/src/lib/collection/companion-pet-store.ts';
-import { seenLevelsCache } from '../../web/src/offline/seen-levels-cache.ts';
 import { standingCache } from '../../web/src/offline/standing-cache.ts';
 import { STAT_FAMILIES, statFamilyCache } from '../../web/src/offline/stats-cache.ts';
 import { forgetUserDeviceData, forgetUserProgressData } from '../../web/src/offline/user-device-data.ts';
@@ -112,7 +112,8 @@ async function writeEveryStore(userId: string): Promise<void> {
   programListCache.save(local, userId, []);
   standingCache.save(local, userId, { skills: [], xpBySkillId: {} });
   questsCache.save(local, userId, { quests: [], progress: [], completions: [], exerciseNames: {} });
-  seenLevelsCache.save(local, userId, { totalLevel: 12, combatLevel: 4 });
+  saveLastSeenNumber(local, userId, 'total-level', 12);
+  local.setItem(`gainscape.seen-levels.v1.${userId}`, JSON.stringify({ userId, value: { totalLevel: 12 } }));
   for (const family of STAT_FAMILIES) statFamilyCache(family).save(local, userId, { entry: [] });
   local.setItem(`gainscape.stats.v1.${userId}`, JSON.stringify({ userId, value: {} }));
   companionPetStore.save(local, userId, 'pet-item');

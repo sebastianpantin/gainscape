@@ -1,3 +1,4 @@
+import { levelProgress } from '@domain/index.ts';
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
@@ -9,9 +10,11 @@ import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
 import { loadoutQuery, questsQuery } from '../../lib/query/queries.ts';
 import { activeQuestLine } from '../../lib/quests/quest-rules.ts';
+import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
+import { useCountUp } from '../../lib/ui/use-count-up.ts';
 import { PetCompanion } from './PetCompanion.tsx';
 import { useCompanionPet } from './use-companion-pet.ts';
-import { nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
+import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
 
 const GEAR_ICON_SIZE = 28;
 
@@ -22,6 +25,27 @@ function EquippedGearLink({ slots }: { slots: readonly EquippedGear[] }) {
         <ItemIcon key={gear.slot} kind={gear.slot} color={colorFor(gear)} size={GEAR_ICON_SIZE} />
       ))}
     </Link>
+  );
+}
+
+function LevelUpBar({ userId, levelUp }: { userId: string; levelUp: NearestLevelUp }) {
+  const { shown } = useCountUp(userId, skillXpMetric(levelUp.skillKey), levelUp.xp);
+  const valueText = nearestLevelUpValueText(levelUp);
+  return (
+    <div className="stack hero-bar">
+      <Link className="tap-link" to="/skills">
+        {nearestLevelUpText(levelUp)}
+      </Link>
+      <ProgressBar
+        fraction={levelUp.xpIntoLevel / levelUp.levelXp}
+        shownFraction={levelProgress(shown).fractionToNextLevel}
+        label={`${levelUp.skillName} XP to level ${levelUp.nextLevel}`}
+        valueText={valueText}
+      />
+      <span className="muted tiny" aria-hidden="true">
+        {valueText}
+      </span>
+    </div>
   );
 }
 
@@ -53,21 +77,7 @@ export function TrainingHero({ userId, standing, unit }: TrainingHeroProps) {
         </div>
       )}
       <div className="stack hero-progress">
-        {levelUp && (
-          <div className="stack hero-bar">
-            <Link className="tap-link" to="/skills">
-              {nearestLevelUpText(levelUp)}
-            </Link>
-            <ProgressBar
-              fraction={levelUp.xpIntoLevel / levelUp.levelXp}
-              label={`${levelUp.skillName} XP to level ${levelUp.nextLevel}`}
-              valueText={nearestLevelUpValueText(levelUp)}
-            />
-            <span className="muted tiny" aria-hidden="true">
-              {nearestLevelUpValueText(levelUp)}
-            </span>
-          </div>
-        )}
+        {levelUp && <LevelUpBar userId={userId} levelUp={levelUp} />}
         {quest && (
           <div className="stack hero-bar">
             <Link className="tap-link" to="/skills/quests">

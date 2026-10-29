@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { countUpValue } from '../lib/ui/count-up-rules.ts';
+import { ShownNumber } from './ShownNumber.tsx';
 
 interface CountUpProps {
   value: number;
@@ -26,10 +27,5 @@ export function CountUp({ value, from = 0, durationMs, animate, format }: CountU
   }, [animate, durationMs]);
 
   if (!animate || elapsedMs >= durationMs) return format(value);
-  return (
-    <>
-      <span aria-hidden="true">{format(countUpValue(value, elapsedMs, durationMs, from))}</span>
-      <span className="visually-hidden">{format(value)}</span>
-    </>
-  );
+  return <ShownNumber shown={countUpValue(value, elapsedMs, durationMs, from)} value={value} format={format} />;
 }

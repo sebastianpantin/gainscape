@@ -112,6 +112,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
   - Blocked storage reads as the defaults, and `deviceStorage()` returns null.
   - `readOnboarding` and `readLastSeenRelease` write the value back to tell `absent` from `unavailable`.
   - A blocked notify prompt counts as answered, so the prompt never nags.
+- `ui/use-count-up.ts` counts a number up from the value this device last showed (`ui/last-seen-number-store.ts`, one record per user keyed by metric; skill XP is shared by the Train hero and the Skills cards). A first view, a drop and reduced motion jump straight to the value, so a new device never counts from zero. The value is saved only once the count ends, so a screen left mid-count counts again next time.
 - Only `exerciseListLoadQuery` reads and writes the exercise cache (`loadExercisesCacheFirst`); imperative code uses `fetchQuery` or `fetchLatestExerciseList`. The cache holds every exercise, archived ones included. Every reader that wants the training list applies `activeExercises`. A cached activity without `tracksDistance` reads as true.
 - Offline, fetchers fail at once (`failFastWhenOffline`, `OfflineError`), and cache-first loaders show the saved copy without sending a request. `useOnlineSignal` (`platform/use-online.ts`) gives loaders a reconnect counter to reload on.
 
