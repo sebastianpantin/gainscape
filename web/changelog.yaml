@@ -1,3 +1,9 @@
+- prs: [182]
+  version: 0.23.1
+  date: 2026-10-29
+  title: Effort chips in view
+  items:
+    - On smaller phones, tapping Done now scrolls the set up so you can rate its effort without the bar at the bottom covering it.
 - prs: [170, 178]
   version: 0.23.0
   date: 2026-10-28
