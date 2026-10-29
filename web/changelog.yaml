@@ -1,3 +1,11 @@
+- prs: [184]
+  version: 0.24.0
+  date: 2026-10-29
+  title: A livelier app
+  items:
+    - A set that beats your best now plays a quiet chirp, and the Done check mark gives a little press when you log a set.
+    - Your levels, DOTS and XP bars count up from where you last saw them, so you can watch your progress grow.
+    - Your companion pet reacts to your training. It is excited on days you train and gets sleepy after four days without a workout.
 - prs: [182]
   version: 0.23.1
   date: 2026-10-29
