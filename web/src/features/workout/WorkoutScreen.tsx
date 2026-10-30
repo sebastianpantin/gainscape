@@ -254,6 +254,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   }
 
   const roomForSet = canAddSetTo(draft, 'lift');
+  const addable = addableExercises(draft, exercises);
   const roomForBout = canAddSetTo(draft, 'cardio');
   const { cardActions } = commands;
   const noteFor = (exerciseId: string, exerciseName: string) => (
@@ -387,8 +388,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       })}
       {roomForSet ? (
         <ExercisePicker
-          exercises={addableExercises(draft, exercises)}
-          suggestions={draft.exercises.length === 0 ? popularExercises(addableExercises(draft, exercises)) : []}
+          exercises={addable}
+          suggestions={draft.exercises.length === 0 ? popularExercises(addable) : []}
           suggestionsHeading="Popular exercises"
           onPick={(exercise) => {
             void commands.addPicked(exercise);
