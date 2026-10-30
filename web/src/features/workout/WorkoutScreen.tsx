@@ -239,6 +239,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         deviceNotices={deviceNotices}
         finishStatus={finishStatus}
         holding={holding}
+        atRisk={changesAtRisk}
         unit={unitPref}
         onSaveNow={saveNow}
         onRetryNow={retryNow}
