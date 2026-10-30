@@ -11,6 +11,7 @@ import { usePreferences } from '../../lib/profile/preferences.ts';
 import { barbellSetupFor, draftBar } from '../../lib/programs/program-set-rules.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
+import { popularExercises } from '../../lib/exercises/popular-exercise-rules.ts';
 import { addableExercises, canAddSetTo } from '../../lib/workout/exercise-edit-rules.ts';
 import { readPlateSettings } from '../../lib/workout/plate-settings-store.ts';
 import { currentSetId } from '../../lib/workout/current-set-rules.ts';
@@ -253,6 +254,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   }
 
   const roomForSet = canAddSetTo(draft, 'lift');
+  const addable = addableExercises(draft, exercises);
   const roomForBout = canAddSetTo(draft, 'cardio');
   const { cardActions } = commands;
   const noteFor = (exerciseId: string, exerciseName: string) => (
@@ -386,7 +388,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       })}
       {roomForSet ? (
         <ExercisePicker
-          exercises={addableExercises(draft, exercises)}
+          exercises={addable}
+          suggestions={draft.exercises.length === 0 ? popularExercises(addable) : []}
+          suggestionsHeading="Popular exercises"
           onPick={(exercise) => {
             void commands.addPicked(exercise);
             pickCount.current += 1;
