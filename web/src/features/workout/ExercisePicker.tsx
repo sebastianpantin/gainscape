@@ -15,6 +15,7 @@ interface ExercisePickerProps {
   placeholder?: string;
   searchRef?: Ref<HTMLInputElement>;
   suggestions?: Exercise[];
+  suggestionsHeading?: string;
 }
 
 const MAX_MATCHES_SHOWN = 12;
@@ -25,6 +26,7 @@ export function ExercisePicker({
   placeholder = 'Add exercise…',
   searchRef,
   suggestions = [],
+  suggestionsHeading = 'Similar exercises',
 }: ExercisePickerProps) {
   const [query, setQuery] = useState('');
   const suggestionsHeadingId = useId();
@@ -77,7 +79,7 @@ export function ExercisePicker({
       {!searching && suggestions.length > 0 && (
         <section aria-labelledby={suggestionsHeadingId}>
           <h3 id={suggestionsHeadingId} className="muted tiny picker-suggestions-heading">
-            Similar exercises
+            {suggestionsHeading}
           </h3>
           <ul className="picker-results">{suggestions.map(resultRow)}</ul>
         </section>
