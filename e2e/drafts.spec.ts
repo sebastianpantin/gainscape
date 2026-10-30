@@ -17,6 +17,9 @@ import { sessionCount, sessionRow } from './support/db.ts';
 const completeSession = '**/functions/v1/complete-session';
 const LONGEST_RETRY_WAIT_MS = 30_000;
 const LATE_REQUEST_GRACE_MS = 1_000;
+const RECONNECT_SYNC_TIMEOUT_MS = LONGEST_RETRY_WAIT_MS + 15_000;
+const OFFLINE_SYNC_TEXT =
+  "You're offline. Your workout syncs when you're back online, here or the next time you open Train. You can close the app meanwhile.";
 
 test('a finished workout survives an outage and a reload', { tag: '@smoke' }, async ({ page }) => {
   const username = uniqueUsername('dr_a');
@@ -53,16 +56,13 @@ test('a workout finished offline says it is saved on the device and syncs once b
   await context.setOffline(true);
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Saved on this device' })).toBeVisible();
-  await expect(
-    page.getByText(
-      "You're offline. Your workout is saved on this device and syncs once you're back online and open Train. You can close the app meanwhile.",
-      { exact: true },
-    ),
-  ).toBeVisible();
+  await expect(page.getByRole('main').getByText(OFFLINE_SYNC_TEXT, { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Retry now' })).toHaveCount(0);
 
   await context.setOffline(false);
-  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible({
+    timeout: RECONNECT_SYNC_TIMEOUT_MS,
+  });
   await expect.poll(() => sessionCount(username)).toBe(1);
 });
 
