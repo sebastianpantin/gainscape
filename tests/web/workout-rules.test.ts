@@ -9,8 +9,11 @@ import {
   finishWindowMs,
   finishPrompt,
   loadTypeChangedText,
+  OFFLINE_SYNC_TEXT,
   rejectionText,
   savingAtRisk,
+  savingTitle,
+  syncingStatus,
   stalledSyncText,
   challengeStartNoticeText,
   startNoticeText,
@@ -321,5 +324,80 @@ describe('finishDraft', () => {
     expect(finishDraft(draft(), { ...options, sessionId: 'other' })).toEqual({ draft: draft(), changedNames: [] });
     const finished = { ...draft(), finishedAt: startedAt };
     expect(finishDraft(finished, options)).toEqual({ draft: finished, changedNames: [] });
+  });
+});
+
+describe('the saving screen', () => {
+  const syncing = { kind: 'syncing', attempt: 1, lastProblem: null } as const;
+  const offlineSyncing = { ...syncing, lastProblem: 'offline' } as const;
+  const calm = { holding: false, offline: false, atRisk: false };
+
+  describe('title', () => {
+    it('says saving during the wait after Finish, even offline', () => {
+      expect(savingTitle({ ...calm, status: { kind: 'idle' }, holding: true, offline: true })).toBe('Saving workout…');
+    });
+
+    it('says saving while a send is on its way online', () => {
+      expect(savingTitle({ ...calm, status: syncing })).toBe('Saving workout…');
+      expect(savingTitle({ ...calm, status: offlineSyncing })).toBe('Saving workout…');
+    });
+
+    it('says the workout is saved on the device while offline', () => {
+      expect(savingTitle({ ...calm, status: offlineSyncing, offline: true })).toBe('Saved on this device');
+    });
+
+    it('never says saved on the device while the device save failed', () => {
+      expect(savingTitle({ ...calm, status: offlineSyncing, offline: true, atRisk: true })).toBe('Saving workout…');
+    });
+
+    it('says the save failed once retries stalled or the server rejected the workout, online or not', () => {
+      expect(savingTitle({ ...calm, status: { kind: 'stalled', reason: 'internal_error' } })).toBe(
+        "Couldn't save workout",
+      );
+      expect(savingTitle({ ...calm, status: { kind: 'stalled', reason: 'internal_error' }, offline: true })).toBe(
+        "Couldn't save workout",
+      );
+      expect(savingTitle({ ...calm, status: { kind: 'rejected', reason: 'invalid_payload' } })).toBe(
+        "Couldn't save workout",
+      );
+    });
+
+    it('asks for one more thing when the server needs a bodyweight', () => {
+      expect(savingTitle({ ...calm, status: { kind: 'rejected', reason: 'bodyweight_required' } })).toBe(
+        'One more thing',
+      );
+    });
+  });
+
+  describe('sync status', () => {
+    it('says it is sending before any problem', () => {
+      expect(syncingStatus({ ...calm, status: syncing })).toEqual({ text: 'Sending your workout…', retry: false });
+    });
+
+    it('names a network problem online and offers Retry now', () => {
+      expect(syncingStatus({ ...calm, status: offlineSyncing })).toEqual({
+        text: syncProblemText('offline', undefined),
+        retry: true,
+      });
+    });
+
+    it('says the workout waits for a connection offline, without Retry now or repeating the offline banner', () => {
+      const status = syncingStatus({ ...calm, status: offlineSyncing, offline: true });
+      expect(status).toEqual({ text: OFFLINE_SYNC_TEXT, retry: false });
+      expect(status.text).not.toContain('saved on this device');
+    });
+
+    it('never tells the user to close the app while the device save failed', () => {
+      const status = syncingStatus({ ...calm, status: offlineSyncing, offline: true, atRisk: true });
+      expect(status.text).not.toContain('close the app');
+    });
+
+    it('keeps the sync limit wait while offline, because reconnecting does not lift it', () => {
+      const limited = { ...syncing, lastProblem: 'rate_limited', waitMs: 5 * 60_000 };
+      expect(syncingStatus({ ...calm, status: limited, offline: true })).toEqual({
+        text: syncProblemText('rate_limited', 5 * 60_000),
+        retry: false,
+      });
+    });
   });
 });

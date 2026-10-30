@@ -1,15 +1,16 @@
 import { type ReactNode, useState } from 'react';
 import { type UnitPref } from '../../lib/profile/profile.ts';
-import { RATE_LIMITED_CODE } from '../../lib/platform/rate-limit.ts';
+import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { type FinishStatus } from '../../offline/finish-retries.ts';
 import { BodyweightPrompt } from './BodyweightPrompt.tsx';
 import { DiscardWorkoutDialog } from './DiscardWorkoutDialog.tsx';
-import { FINISH_HOLD_TEXT, rejectionText, stalledSyncText, syncProblemText } from './workout-rules.ts';
+import { FINISH_HOLD_TEXT, rejectionText, savingTitle, stalledSyncText, syncingStatus } from './workout-rules.ts';
 
 interface SavingWorkoutViewProps {
   deviceNotices: ReactNode;
   finishStatus: FinishStatus;
   holding: boolean;
+  atRisk: boolean;
   unit: UnitPref;
   onSaveNow: () => void;
   onRetryNow: () => void;
@@ -22,6 +23,7 @@ export function SavingWorkoutView({
   deviceNotices,
   finishStatus,
   holding,
+  atRisk,
   unit,
   onSaveNow,
   onRetryNow,
@@ -30,9 +32,11 @@ export function SavingWorkoutView({
   onDiscard,
 }: SavingWorkoutViewProps) {
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const saving = { status: finishStatus, holding, offline: useIsOffline(), atRisk };
+  const syncing = syncingStatus(saving);
   return (
     <main className="screen stack">
-      <h1 className="title">Saving workout…</h1>
+      <h1 className="title">{savingTitle(saving)}</h1>
       {deviceNotices}
       {holding && (
         <div className="panel stack">
@@ -46,13 +50,9 @@ export function SavingWorkoutView({
         </div>
       )}
       {!holding && finishStatus.kind === 'syncing' && (
-        <div className="panel stack" role="status">
-          <p>
-            {finishStatus.lastProblem
-              ? syncProblemText(finishStatus.lastProblem, finishStatus.waitMs)
-              : 'Sending your workout…'}
-          </p>
-          {finishStatus.lastProblem && finishStatus.lastProblem !== RATE_LIMITED_CODE && (
+        <div className="panel stack">
+          <p role="status">{syncing.text}</p>
+          {syncing.retry && (
             <button className="button" type="button" onClick={onRetryNow}>
               Retry now
             </button>

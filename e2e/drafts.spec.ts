@@ -17,6 +17,9 @@ import { sessionCount, sessionRow } from './support/db.ts';
 const completeSession = '**/functions/v1/complete-session';
 const LONGEST_RETRY_WAIT_MS = 30_000;
 const LATE_REQUEST_GRACE_MS = 1_000;
+const RECONNECT_SYNC_TIMEOUT_MS = LONGEST_RETRY_WAIT_MS + 15_000;
+const OFFLINE_SYNC_TEXT =
+  "You're offline. Your workout syncs when you're back online, here or the next time you open Train. You can close the app meanwhile.";
 
 test('a finished workout survives an outage and a reload', { tag: '@smoke' }, async ({ page }) => {
   const username = uniqueUsername('dr_a');
@@ -39,6 +42,28 @@ test('a finished workout survives an outage and a reload', { tag: '@smoke' }, as
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
   await expect.poll(() => sessionCount(username)).toBe(1);
   await expect.poll(() => sessionRow(stored!.draft!.sessionId)).not.toBeNull();
+});
+
+test('a workout finished offline says it is saved on the device and syncs once back online', async ({
+  page,
+  context,
+}) => {
+  const username = uniqueUsername('dr_off');
+  await register(page, username);
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+
+  await context.setOffline(true);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Saved on this device' })).toBeVisible();
+  await expect(page.getByRole('main').getByText(OFFLINE_SYNC_TEXT, { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry now' })).toHaveCount(0);
+
+  await context.setOffline(false);
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible({
+    timeout: RECONNECT_SYNC_TIMEOUT_MS,
+  });
+  await expect.poll(() => sessionCount(username)).toBe(1);
 });
 
 test('a workout the server keeps failing on stops retrying and syncs on a manual retry', async ({ page }) => {
@@ -189,7 +214,7 @@ test('a workout the server rejects is discarded only after a confirm', async ({ 
   await expect(dialog).toContainText('Your logged sets will be lost.');
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Saving workout…' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: "Couldn't save workout" })).toBeVisible();
 
   await page.getByRole('button', { name: 'Discard workout' }).click();
   await dialog.getByRole('button', { name: 'Discard workout' }).click();
