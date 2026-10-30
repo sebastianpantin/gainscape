@@ -41,6 +41,31 @@ test('a finished workout survives an outage and a reload', { tag: '@smoke' }, as
   await expect.poll(() => sessionRow(stored!.draft!.sessionId)).not.toBeNull();
 });
 
+test('a workout finished offline says it is saved on the device and syncs once back online', async ({
+  page,
+  context,
+}) => {
+  const username = uniqueUsername('dr_off');
+  await register(page, username);
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+
+  await context.setOffline(true);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Saved on this device' })).toBeVisible();
+  await expect(
+    page.getByText(
+      "You're offline. Your workout is saved on this device and syncs once you're back online and open Train. You can close the app meanwhile.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry now' })).toHaveCount(0);
+
+  await context.setOffline(false);
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible({ timeout: 45_000 });
+  await expect.poll(() => sessionCount(username)).toBe(1);
+});
+
 test('a workout the server keeps failing on stops retrying and syncs on a manual retry', async ({ page }) => {
   const username = uniqueUsername('dr_s');
   await page.clock.install();
@@ -189,7 +214,7 @@ test('a workout the server rejects is discarded only after a confirm', async ({ 
   await expect(dialog).toContainText('Your logged sets will be lost.');
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Saving workout…' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: "Couldn't save workout" })).toBeVisible();
 
   await page.getByRole('button', { name: 'Discard workout' }).click();
   await dialog.getByRole('button', { name: 'Discard workout' }).click();

@@ -9,8 +9,10 @@ import {
   finishWindowMs,
   finishPrompt,
   loadTypeChangedText,
+  OFFLINE_SYNC_TEXT,
   rejectionText,
   savingAtRisk,
+  savingTitle,
   stalledSyncText,
   challengeStartNoticeText,
   startNoticeText,
@@ -321,5 +323,39 @@ describe('finishDraft', () => {
     expect(finishDraft(draft(), { ...options, sessionId: 'other' })).toEqual({ draft: draft(), changedNames: [] });
     const finished = { ...draft(), finishedAt: startedAt };
     expect(finishDraft(finished, options)).toEqual({ draft: finished, changedNames: [] });
+  });
+});
+
+describe('savingTitle', () => {
+  const syncing = { kind: 'syncing', attempt: 1, lastProblem: null } as const;
+
+  it('says saving during the wait after Finish, even offline', () => {
+    expect(savingTitle({ kind: 'idle' }, true, true)).toBe('Saving workout…');
+  });
+
+  it('says saving while a send is on its way online', () => {
+    expect(savingTitle(syncing, false, false)).toBe('Saving workout…');
+    expect(savingTitle({ ...syncing, lastProblem: 'offline' }, false, false)).toBe('Saving workout…');
+  });
+
+  it('says the workout is saved on the device while offline', () => {
+    expect(savingTitle({ ...syncing, lastProblem: 'offline' }, false, true)).toBe('Saved on this device');
+  });
+
+  it('says the save failed once retries stalled or the server rejected the workout', () => {
+    expect(savingTitle({ kind: 'stalled', reason: 'internal_error' }, false, false)).toBe("Couldn't save workout");
+    expect(savingTitle({ kind: 'rejected', reason: 'invalid_payload' }, false, false)).toBe("Couldn't save workout");
+  });
+
+  it('asks for one more thing when the server needs a bodyweight', () => {
+    expect(savingTitle({ kind: 'rejected', reason: 'bodyweight_required' }, false, false)).toBe('One more thing');
+  });
+});
+
+describe('OFFLINE_SYNC_TEXT', () => {
+  it('says the workout is kept, when it syncs and that the app may close', () => {
+    expect(OFFLINE_SYNC_TEXT).toBe(
+      "You're offline. Your workout is saved on this device and syncs once you're back online and open Train. You can close the app meanwhile.",
+    );
   });
 });
