@@ -158,3 +158,22 @@ test('skipping a day offline is disabled with the offline text', async ({ contex
   await expect(today.getByText(SKIP_OFFLINE_TEXT, { exact: true })).toHaveCount(0);
   await expect(skip).toBeEnabled();
 });
+
+test('Train has one primary start: the program day while following, the freestyle start otherwise', async ({
+  page,
+}) => {
+  const primaryButtons = page.getByRole('main').locator('.button.primary');
+  const freestyleStart = page.getByRole('button', { name: 'Start workout', exact: true });
+  await register(page, uniqueUsername('pt_primary'));
+  await expect(freestyleStart).toHaveClass(/\bprimary\b/);
+  await expect(primaryButtons).toHaveCount(1);
+
+  await followProgram(page, MADCOW, MADCOW_FIVE_RMS_KG);
+  const dayStart = programToday(page, MADCOW).getByRole('button', {
+    name: `Start: ${MADCOW} — W1 Day 1`,
+    exact: true,
+  });
+  await expect(dayStart).toHaveClass(/\bprimary\b/);
+  await expect(freestyleStart).not.toHaveClass(/\bprimary\b/);
+  await expect(primaryButtons).toHaveCount(1);
+});

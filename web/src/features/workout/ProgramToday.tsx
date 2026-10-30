@@ -16,6 +16,7 @@ import { useIsOffline } from '../../lib/platform/use-online.ts';
 import {
   type ActiveProgram,
   dayChoices,
+  offersProgramDay,
   pickedDay,
   positionLabel,
   prescriptionCards,
@@ -58,9 +59,9 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
       </section>
     );
 
+  if (!offersProgramDay(program)) return null;
   const { definition, enrollment, state, name } = program;
   const choices = dayChoices(definition, state);
-  if (choices.length === 0) return null;
   const position = pickedDay(choices, picked);
   const chosenLabel = positionLabel(definition, position);
   const slots = resolvePrescription(definition, enrollment, state, position, lastLogged);

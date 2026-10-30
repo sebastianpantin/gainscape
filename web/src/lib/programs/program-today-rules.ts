@@ -160,6 +160,10 @@ export type ActiveProgram =
       state: ProgramState;
     };
 
+export function offersProgramDay(program: ActiveProgram): boolean {
+  return program.kind === 'ready' && dayChoices(program.definition, program.state).length > 0;
+}
+
 function usableFacts(definition: ProgramDefinition, facts: readonly unknown[]): ProgramFact[] {
   return facts.filter(
     (fact): fact is ProgramFact =>

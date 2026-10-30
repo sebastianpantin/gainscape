@@ -2,7 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { type ProgramFact } from '@domain/index.ts';
 import { type ProgramTemplateRow } from '../../web/src/lib/programs/program-enroll-rules.ts';
-import { activeProgram } from '../../web/src/lib/programs/program-today-rules.ts';
+import { activeProgram, offersProgramDay } from '../../web/src/lib/programs/program-today-rules.ts';
 import { factClock, sessionFact } from '../domain/program-fixtures/facts.ts';
 import { MADCOW_5X5, madcowDaySets, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
 import { madcowEnrollmentRow } from './madcow-enrollment-fixture.ts';
@@ -97,5 +97,27 @@ describe('the active program with malformed facts', () => {
       }),
       { numRuns: 300 },
     );
+  });
+});
+
+describe('whether the program offers a day to start', () => {
+  it('offers none without an enrollment', () => {
+    expect(offersProgramDay(activeProgram([MADCOW_TEMPLATE], null, []))).toBe(false);
+  });
+
+  it('offers none while the template is missing or needs an app update', () => {
+    expect(offersProgramDay(activeProgram([], madcowEnrollmentRow(), []))).toBe(false);
+    expect(offersProgramDay({ kind: 'needs_update', name: 'Madcow 5x5', message: 'Update the app' })).toBe(false);
+  });
+
+  it('offers the next day of a ready program', () => {
+    expect(offersProgramDay(activeProgram([MADCOW_TEMPLATE], madcowEnrollmentRow(), []))).toBe(true);
+  });
+
+  it('offers none when every day of the current week is already done', () => {
+    const program = activeProgram([MADCOW_TEMPLATE], madcowEnrollmentRow(), []);
+    if (program.kind !== 'ready') throw new Error(`expected ready, got ${program.kind}`);
+    const everyDay = MADCOW_5X5.schedule.days.map((day) => day.key);
+    expect(offersProgramDay({ ...program, state: { ...program.state, completedDays: everyDay } })).toBe(false);
   });
 });
