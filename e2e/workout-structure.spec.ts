@@ -193,3 +193,19 @@ test('Enter in the exercise search adds the top match, focuses its card and anno
   await expect(page.getByRole('status').filter({ hasText: `${topName} added` })).toHaveText(`${topName} added`);
   await expect(search).toHaveValue('');
 });
+
+test('an empty workout offers popular exercises until the first one is added', async ({ page }) => {
+  await register(page, uniqueUsername('popular'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const popular = page.getByRole('main').getByRole('region', { name: 'Popular exercises' });
+  await expect(popular.getByRole('button', { name: /^Back Squat\b/ })).toBeVisible();
+  await expect(popular.getByRole('button', { name: /^Barbell Bench Press\b/ })).toBeVisible();
+
+  await page.getByRole('searchbox', { name: 'Search exercises' }).fill('dead');
+  await expect(popular).toHaveCount(0);
+  await page.getByRole('searchbox', { name: 'Search exercises' }).fill('');
+
+  await popular.getByRole('button', { name: /^Back Squat\b/ }).click();
+  await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText([SQUAT]);
+  await expect(popular).toHaveCount(0);
+});
