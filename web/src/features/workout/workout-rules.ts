@@ -6,6 +6,7 @@ import { formatCount } from '../../lib/format.ts';
 import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { finishedAtFor } from '../../lib/workout/session-timing-rules.ts';
 import { type WorkoutDraft } from '../../offline/draft-format.ts';
+import { type FinishStatus } from '../../offline/finish-retries.ts';
 import {
   doneSetCount,
   markPlannedSetsDone,
@@ -53,6 +54,17 @@ export function syncProblemText(lastProblem: string, waitMs: number | undefined)
     return `Sync limit reached; this workout will sync in ${waitText(waitMs / MS_PER_SECOND)}. It's saved on this device.`;
   }
   return "Sync limit reached; retrying shortly. It's saved on this device.";
+}
+
+export const OFFLINE_SYNC_TEXT =
+  "You're offline. Your workout is saved on this device and syncs once you're back online and open Train. You can close the app meanwhile.";
+
+export function savingTitle(status: FinishStatus, holding: boolean, offline: boolean): string {
+  if (holding) return 'Saving workout…';
+  if (status.kind === 'rejected' && status.reason === 'bodyweight_required') return 'One more thing';
+  if (status.kind === 'rejected' || status.kind === 'stalled') return "Couldn't save workout";
+  if (status.kind === 'syncing' && offline) return 'Saved on this device';
+  return 'Saving workout…';
 }
 
 export function stalledSyncText(reason: string): string {
