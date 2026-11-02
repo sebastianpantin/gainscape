@@ -4,7 +4,6 @@ import {
   type Catalog,
   DEFAULT_BALANCE,
   effectiveLoadForNewSet,
-  effectiveReps,
   epley,
   type ExerciseStrength,
   intensityBonus,
@@ -68,6 +67,12 @@ function xpPreviews(
   return previewDraft(exercises, { isBuiltIn, strength, bodyweightKg, recordBaseline: null }).previews;
 }
 
+const RATED_NOTE = 'Effort counts toward 1RM estimate';
+
+function draftNotes(sets: DraftSet[]): string[] {
+  return xpPreviews([exercise('bench', sets)], builtIn, strengthOf([['bench', epley(100, 6)]]))[0].map(previewNote);
+}
+
 function totalXp(previews: ReturnType<typeof xpPreviews>): number {
   return previews.flat().reduce((sum, preview) => sum + preview.xp, 0);
 }
@@ -88,15 +93,15 @@ describe('previewDraft XP', () => {
     );
     const alone = xpPreviews([exercise('bench', [working])], builtIn, strength);
     expect(withWarmups[0].slice(0, 2)).toEqual([
-      { xp: 0, basis: 'warmup', rir: null },
-      { xp: 0, basis: 'warmup', rir: null },
+      { xp: 0, basis: 'warmup', estimatedRirForXp: null },
+      { xp: 0, basis: 'warmup', estimatedRirForXp: null },
     ]);
     expect(withWarmups[0][2]).toEqual(alone[0][0]);
   });
 
   it('previews an unrated warm-up set as a warm-up before strength has loaded', () => {
     const previews = xpPreviews([exercise('bench', [warmupSet(20, 10)])], builtIn, null);
-    expect(previews[0][0]).toEqual({ xp: 0, basis: 'warmup', rir: null });
+    expect(previews[0][0]).toEqual({ xp: 0, basis: 'warmup', estimatedRirForXp: null });
   });
 
   it('previews the rep-based intensity bonus for a logged set', () => {
@@ -107,7 +112,7 @@ describe('previewDraft XP', () => {
       strengthOf([['bench', e1rmKg]]),
     );
     const expected = setXp(6, intensityBonus(6, 100, e1rmKg, DEFAULT_BALANCE), DEFAULT_BALANCE);
-    expect(previews[0][0]).toMatchObject({ xp: expected, basis: 'logged', rir: 0 });
+    expect(previews[0][0]).toMatchObject({ xp: expected, basis: 'logged', estimatedRirForXp: 0 });
   });
 
   it('pays cold-start XP for at most 8 sets of a first-time exercise', () => {
@@ -161,7 +166,7 @@ describe('previewDraft XP', () => {
 
   it('marks unrated sets unknown until strength has loaded', () => {
     const previews = xpPreviews([exercise('bench', [draftSet(60, 8, null)])], builtIn, null);
-    expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', rir: null });
+    expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', estimatedRirForXp: null });
   });
 
   it('pays nothing for an unrated set on a custom exercise the first time', () => {
@@ -176,7 +181,7 @@ describe('previewDraft XP', () => {
       strengthOf([]),
       80,
     );
-    expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', rir: null });
+    expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', estimatedRirForXp: null });
   });
 
   it('previews a bodyweight set against reps capacity', () => {
@@ -185,7 +190,7 @@ describe('previewDraft XP', () => {
       builtIn,
       strengthOf([['pull-up', 12]]),
     );
-    expect(previews[0][0]).toMatchObject({ basis: 'estimated', rir: 4 });
+    expect(previews[0][0]).toMatchObject({ basis: 'estimated', estimatedRirForXp: 4 });
   });
 
   it('sums done sets the same way the server awards them across exercises', () => {
@@ -205,7 +210,11 @@ describe('previewDraft XP', () => {
   });
   it('pays cold-start XP for an exercise trained before without an e1RM', () => {
     const previews = xpPreviews([exercise('curl', [draftSet(20, 15, null)])], builtIn, strengthOf([['curl', null]]));
-    expect(previews[0][0]).toEqual({ basis: 'unrated', xp: DEFAULT_BALANCE.coldStartXpPerSet, rir: null });
+    expect(previews[0][0]).toEqual({
+      basis: 'unrated',
+      xp: DEFAULT_BALANCE.coldStartXpPerSet,
+      estimatedRirForXp: null,
+    });
   });
 
   it('estimates from the session best when only an expired e1RM is known', () => {
@@ -215,7 +224,7 @@ describe('previewDraft XP', () => {
       builtIn,
       strength,
     );
-    expect(previews[0][1]).toMatchObject({ basis: 'estimated', rir: 2 });
+    expect(previews[0][1]).toMatchObject({ basis: 'estimated', estimatedRirForXp: 2 });
   });
 
   it('adds bodyweight to a weighted bodyweight exercise', () => {
@@ -225,7 +234,7 @@ describe('previewDraft XP', () => {
       strengthOf([['dip', epley(80, 8)]]),
       80,
     );
-    expect(previews[0][0]).toMatchObject({ basis: 'logged', rir: 0 });
+    expect(previews[0][0]).toMatchObject({ basis: 'logged', estimatedRirForXp: 0 });
     expect(previews[0][0].xp).toBeGreaterThan(0);
   });
 
@@ -235,12 +244,12 @@ describe('previewDraft XP', () => {
       builtIn,
       strengthOf([]),
     );
-    expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', rir: null });
+    expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', estimatedRirForXp: null });
   });
 
   it('marks a set with a weight that is not a number unknown', () => {
     const previews = xpPreviews([exercise('bench', [draftSet(Number.NaN, 5, failure)])], builtIn, strengthOf([]));
-    expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', rir: null });
+    expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', estimatedRirForXp: null });
   });
 
   it('awards the same XP as the server pipeline for the done sets', () => {
@@ -445,45 +454,51 @@ describe('previewDraft XP with cardio', () => {
 
 describe('preview labels', () => {
   it('shows an unknown preview as ~? and any other as ~XP', () => {
-    expect(previewXpLabel({ xp: 0, basis: 'unknown', rir: null })).toBe('~?');
-    expect(previewXpLabel({ xp: 1234, basis: 'logged', rir: 2 })).toBe('~1,234');
-    expect(previewXpLabel({ xp: 0, basis: 'cold_start', rir: null })).toBe('~0');
+    expect(previewXpLabel({ xp: 0, basis: 'unknown', estimatedRirForXp: null })).toBe('~?');
+    expect(previewXpLabel({ xp: 1234, basis: 'logged', estimatedRirForXp: 2 })).toBe('~1,234');
+    expect(previewXpLabel({ xp: 0, basis: 'cold_start', estimatedRirForXp: null })).toBe('~0');
   });
 
-  it('notes a logged set too far from failure to earn XP as counting for e1RM', () => {
-    const noXpRir = DEFAULT_BALANCE.effectiveRirWindow + 1;
-    expect(previewNote({ xp: 0, basis: 'logged', rir: noXpRir })).toBe('counts for e1RM');
-    expect(previewNote({ xp: 0, basis: 'logged', rir: noXpRir + 1 })).toBe('counts for e1RM');
-    expect(previewNote({ xp: 165, basis: 'logged', rir: noXpRir - 1 })).toBe('');
-    expect(previewNote({ xp: 0, basis: 'logged', rir: null })).toBe('');
+  it('notes the Estimated RIR of a blank set and adds for a rated set that its Effort counts toward the 1RM estimate', () => {
+    expect(draftNotes([draftSet(100, 3, null)])).toEqual(['est. RIR 3']);
+    expect(draftNotes([draftSet(100, 3, { type: 'rir', value: 1 })])).toEqual([`est. RIR 3 · ${RATED_NOTE}`]);
+  });
+
+  it('notes the RIR the XP came from once later sets raise the estimate', () => {
+    const later = draftSet(100, 9, failure);
+    expect(draftNotes([draftSet(100, 3, null), later])[0]).toBe('est. RIR 5');
+    expect(draftNotes([draftSet(100, 3, { type: 'rir', value: 1 }), later])[0]).toBe(`est. RIR 5 · ${RATED_NOTE}`);
+  });
+
+  it('notes a rated first-time set as counting toward the 1RM estimate and a blank one as a first time', () => {
+    const firstTime = xpPreviews(
+      [exercise('bench', [draftSet(100, 3, failure), draftSet(100, 3, null)])],
+      builtIn,
+      strengthOf([]),
+    );
+    expect(firstTime[0].map(previewNote)).toEqual([RATED_NOTE, 'first time']);
   });
 
   it('notes a warm-up preview as a warm-up', () => {
-    expect(previewXpLabel({ xp: 0, basis: 'warmup', rir: null })).toBe('~0');
-    expect(previewNote({ xp: 0, basis: 'warmup', rir: null })).toBe('warm-up');
+    expect(previewXpLabel({ xp: 0, basis: 'warmup', estimatedRirForXp: null })).toBe('~0');
+    expect(previewNote({ xp: 0, basis: 'warmup', estimatedRirForXp: null })).toBe('warm-up');
   });
 
   it('shows the flat XP of an unrated set that has no estimate and notes it as unrated', () => {
-    expect(previewXpLabel({ xp: 165, basis: 'unrated', rir: null })).toBe('~165');
-    expect(previewNote({ xp: 165, basis: 'unrated', rir: null })).toBe('unrated');
+    expect(previewXpLabel({ xp: 165, basis: 'unrated', estimatedRirForXp: null })).toBe('~165');
+    expect(previewNote({ xp: 165, basis: 'unrated', estimatedRirForXp: null })).toBe('unrated');
   });
 
   it('notes estimated, first-time and unknown previews', () => {
-    expect(previewNote({ xp: 300, basis: 'estimated', rir: 2.5 })).toBe('est. RIR 2.5');
-    expect(previewNote({ xp: 165, basis: 'cold_start', rir: null })).toBe('first time');
-    expect(previewNote({ xp: 0, basis: 'unknown', rir: null })).toBe('');
-  });
-
-  it('earns no XP exactly from the RIR that is noted as counting for e1RM', () => {
-    const noXpRir = DEFAULT_BALANCE.effectiveRirWindow + 1;
-    expect(setXp(effectiveReps(10, noXpRir, false, DEFAULT_BALANCE), 1, DEFAULT_BALANCE)).toBe(0);
-    expect(setXp(effectiveReps(10, noXpRir - 1, false, DEFAULT_BALANCE), 1, DEFAULT_BALANCE)).toBeGreaterThan(0);
+    expect(previewNote({ xp: 300, basis: 'estimated', estimatedRirForXp: 2.5 })).toBe('est. RIR 2.5');
+    expect(previewNote({ xp: 165, basis: 'cold_start', estimatedRirForXp: null })).toBe('first time');
+    expect(previewNote({ xp: 0, basis: 'unknown', estimatedRirForXp: null })).toBe('');
   });
 });
 
 describe('donePreviewTotal', () => {
   it('adds up the previews of done sets and bouts only', () => {
-    const preview = (xp: number) => ({ xp, basis: 'logged' as const, rir: 2 });
+    const preview = (xp: number) => ({ xp, basis: 'logged' as const, estimatedRirForXp: 2 });
     const exercises = [{ sets: [{ done: true }, { done: false }] }, { sets: [{ done: true }, { done: true }] }];
     expect(
       donePreviewTotal(

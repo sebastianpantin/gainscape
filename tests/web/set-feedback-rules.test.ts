@@ -21,7 +21,7 @@ function input(overrides: Partial<FeedbackValues> = {}): SetFeedbackInput {
     label: 'Set 2',
     wasDone: false,
     isDone: true,
-    preview: { xp: 45, basis: 'logged', rir: 2 },
+    preview: { xp: 45, basis: 'logged', estimatedRirForXp: 2 },
     record: null,
     becameRecord: false,
     vibrate: true,
@@ -117,7 +117,7 @@ describe('setFeedback', () => {
   });
 
   it('announces without a floating number when the XP is unknown', () => {
-    expect(setFeedback(input({ preview: { xp: 0, basis: 'unknown', rir: null } })).drop).toEqual({
+    expect(setFeedback(input({ preview: { xp: 0, basis: 'unknown', estimatedRirForXp: null } })).drop).toEqual({
       xpText: null,
       record: false,
       announcement: 'Set 2 logged',
@@ -125,7 +125,7 @@ describe('setFeedback', () => {
   });
 
   it('announces a warm-up without a floating number', () => {
-    expect(setFeedback(input({ preview: { xp: 0, basis: 'warmup', rir: null } })).drop).toEqual({
+    expect(setFeedback(input({ preview: { xp: 0, basis: 'warmup', estimatedRirForXp: null } })).drop).toEqual({
       xpText: null,
       record: false,
       announcement: 'Set 2 logged, warm-up',
@@ -133,7 +133,7 @@ describe('setFeedback', () => {
   });
 
   it('announces a set past the effort window without a floating number', () => {
-    expect(setFeedback(input({ preview: { xp: 0, basis: 'logged', rir: 5 } })).drop).toEqual({
+    expect(setFeedback(input({ preview: { xp: 0, basis: 'logged', estimatedRirForXp: 5 } })).drop).toEqual({
       xpText: null,
       record: false,
       announcement: 'Set 2 logged, no XP',
