@@ -1,7 +1,7 @@
-import { evaluateNumber } from '@domain/program-eval.ts';
 import { z } from 'zod';
 import {
   DEFAULT_ROUNDING,
+  evaluateNumber,
   type InputKind,
   MAX_REFERENCE_VALUE,
   type OptionDecl,

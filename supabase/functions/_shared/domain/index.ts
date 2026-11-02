@@ -32,19 +32,22 @@ export { DEFAULT_ROUNDING, type RoundingMode, type RoundingSetting, roundLoad } 
 export { rpeChartPct } from './rpe-chart.ts';
 export {
   type InputKind,
-  type Load,
+  type LastLoggedWeights,
   type OptionDecl,
   type OptionValue,
+  type PrescriptionSnapshot,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ReferenceVar,
 } from './program-types.ts';
+export { evaluateNumber } from './program-eval.ts';
 export { MAX_REFERENCE_VALUE, parseProgramDefinition, validateProgramDefinition } from './program-validate.ts';
 export {
   availableDays,
   comparePositions,
+  compareWeeks,
   type CyclePosition,
-  firstPosition,
+  dayOf,
   isCyclePosition,
   isPositionInSchedule,
   isRotationPosition,
@@ -53,12 +56,10 @@ export {
   upcomingDays,
   type WeeklyPosition,
 } from './program-schedule.ts';
+export { isRetestRef } from './program-day.ts';
 export {
-  isRetestRef,
-  type LastLoggedWeights,
   type PrescribedExercise,
   type PrescribedSet,
-  type PrescriptionSnapshot,
   type ResolvedSlot,
   resolvePrescription,
 } from './program-prescription.ts';

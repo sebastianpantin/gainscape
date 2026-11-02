@@ -6,7 +6,7 @@ import {
   type ReferenceVar,
   type ResolvedSlot,
 } from '@domain/index.ts';
-import { type ReferenceState } from '@domain/program-prescription.ts';
+import { type ReferenceState } from '@domain/program-types.ts';
 import { type RuleKey } from '@domain/program-state.ts';
 
 export function slotOf(resolved: readonly ResolvedSlot[], slotId: string): PrescribedExercise {

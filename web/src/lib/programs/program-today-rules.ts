@@ -1,4 +1,5 @@
 import {
+  dayOf,
   availableDays,
   parseProgramDefinition,
   type ProgramEnrollment,
@@ -6,7 +7,6 @@ import {
   type ProgramState,
   programStateAt,
   isCyclePosition,
-  isPositionInSchedule,
   isRetestRef,
   isRotationPosition,
   type Position,
@@ -19,7 +19,6 @@ import {
   shownWeight,
   type WeightUnit,
 } from '@domain/index.ts';
-import { dayOf } from '@domain/program-schedule.ts';
 import {
   enrolledTemplate,
   liftName,
@@ -160,13 +159,6 @@ export type ActiveProgram =
       state: ProgramState;
     };
 
-function usableFacts(definition: ProgramDefinition, facts: readonly unknown[]): ProgramFact[] {
-  return facts.filter(
-    (fact): fact is ProgramFact =>
-      isProgramFact(fact) && (fact.kind === 'set_reference' || isPositionInSchedule(definition, fact.position)),
-  );
-}
-
 export function activeProgram(
   templates: readonly ProgramTemplateRow[],
   enrollmentRow: EnrollmentRow | null,
@@ -184,6 +176,6 @@ export function activeProgram(
     templateKey: template.key,
     definition: parsed.definition,
     enrollment,
-    state: programStateAt(parsed.definition, enrollment, usableFacts(parsed.definition, facts)),
+    state: programStateAt(parsed.definition, enrollment, facts.filter(isProgramFact)),
   };
 }

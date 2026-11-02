@@ -1,6 +1,5 @@
 import { MAX_RPE } from './effort.ts';
-import { halfIncrementKg, roundPrescribedLoad, type RoundingSetting } from './load-rounding.ts';
-import { FLOAT_TOLERANCE } from './math.ts';
+import { roundPrescribedLoad } from './load-rounding.ts';
 import { compareStrings } from './ordering.ts';
 import {
   type Adjustment,
@@ -9,45 +8,43 @@ import {
   type ProgressionRule,
   type IncrementByAmount,
   type IncrementByPct,
-  type SlotDecl,
-  type StageRetest,
+  type ReferenceVar,
 } from './program-types.ts';
+import {
+  combinedVerdict,
+  dayStagesOf,
+  isRetestRef,
+  isSetMet,
+  type Judgement,
+  judgedDaySets,
+  judgeRule,
+  liftVerdicts,
+  parseSetRef,
+  type RetestAttempt,
+  retestAttemptsOf,
+} from './program-day.ts';
 import {
   evaluateAmount,
   evaluateNumber,
   isBarbellLift,
-  parseSetRef,
+  numberContext,
   type NumberContext,
   stageRetestOf,
 } from './program-eval.ts';
 import {
-  isRetestRef,
-  isSlotActive,
-  numberContext,
-  type PrescriptionSnapshot,
-  prescribedStageIndex,
-  requiredSetIndices,
-  RETEST_REPS,
-  retestRefOf,
-  type StageIndices,
-  stageIndexOf,
-  weekContextOf,
-} from './program-prescription.ts';
-import {
   compareWeeks,
   dayIndexOf,
-  dayOf,
   isCyclePosition,
   isPositionInSchedule,
   isRotationPosition,
   nextWeek,
   type Position,
   positionAt,
+  weekContextOf,
 } from './program-schedule.ts';
 import {
   type DayRecord,
   type FactSet,
-  type LiftOutcome,
   type ProgramFact,
   type ProgramState,
   type ReferenceChangeReason,
@@ -57,109 +54,7 @@ import {
 } from './program-state.ts';
 import { advanceStage, isRetestPending, retestedStages } from './program-stages.ts';
 import { rpeChartPct } from './rpe-chart.ts';
-import { kgToUnit, shownWeight, type WeightUnit } from './units.ts';
-
-interface LoggedLoad {
-  weightKg: number;
-  reps: number;
-}
-
-export function isSetMet(
-  logged: LoggedLoad,
-  snapshot: PrescriptionSnapshot,
-  rounding: RoundingSetting,
-  unit: WeightUnit,
-): boolean {
-  const lightestMetKg = snapshot.weightKg - halfIncrementKg(rounding, unit) - FLOAT_TOLERANCE;
-  const repsNeeded = snapshot.amrap ? (snapshot.minReps ?? snapshot.reps) : snapshot.reps;
-  return logged.weightKg >= lightestMetKg && logged.reps >= repsNeeded;
-}
-
-function judgedSlotsOf(
-  definition: ProgramDefinition,
-  enrollment: ProgramEnrollment,
-  rule: ProgressionRule,
-  position: Position,
-): SlotDecl[] {
-  const day = dayOf(definition, position);
-  if (!day) return [];
-  if (rule.judgedWeeks && !isRotationPosition(position) && !rule.judgedWeeks.includes(position.week)) return [];
-  return day.slots.filter(
-    (slot) =>
-      slot.lift === rule.lift &&
-      rule.judgedSlots.includes(slot.id) &&
-      isSlotActive(definition, enrollment, slot, position),
-  );
-}
-
-function setsForSlot(sets: readonly FactSet[], slot: SlotDecl, exerciseId: string | null | undefined): FactSet[] {
-  return sets.filter(
-    (set) =>
-      set.prescription !== null &&
-      set.exerciseId === exerciseId &&
-      parseSetRef(set.prescription.ref)?.slotId === slot.id,
-  );
-}
-
-function combinedOutcome(a: LiftOutcome, b: LiftOutcome): LiftOutcome {
-  if (a === 'missed' || b === 'missed') return 'missed';
-  return a === 'met' || b === 'met' ? 'met' : 'neutral';
-}
-
-function ruleOutcomeAt(
-  definition: ProgramDefinition,
-  enrollment: ProgramEnrollment,
-  rule: ProgressionRule,
-  position: Position,
-  sets: readonly FactSet[],
-  stages: StageIndices,
-): LiftOutcome {
-  const exerciseId = enrollment.bindings[rule.lift];
-  const judged = judgedSlotsOf(definition, enrollment, rule, position).flatMap((slot) => {
-    const candidates = setsForSlot(sets, slot, exerciseId);
-    const prescribedStages =
-      slot.scheme.kind === 'stages'
-        ? { ...stages, [slot.lift]: prescribedStageIndex(slot.scheme, candidates, stages, slot.lift) }
-        : stages;
-    const required = requiredSetIndices(definition, enrollment, slot, position, prescribedStages);
-    if (required === null) return [];
-    const { judgedSetIndexes } = rule;
-    const judgedRequired = judgedSetIndexes ? required.filter((index) => judgedSetIndexes.includes(index)) : required;
-    return [{ slot, required: judgedRequired, candidates }];
-  });
-  if (judged.length === 0) return 'neutral';
-  if (judged.every(({ candidates }) => candidates.length === 0)) return 'neutral';
-  const allMet = judged.every(({ slot, required, candidates }) =>
-    required.every((index) =>
-      candidates.some(
-        (set) =>
-          set.prescription?.ref === `${slot.id}:${index}` &&
-          isSetMet(set, set.prescription, enrollment.rounding, enrollment.unit),
-      ),
-    ),
-  );
-  return allMet ? 'met' : 'missed';
-}
-
-export interface LoggedDay {
-  position: Position;
-  sets: readonly FactSet[];
-  stages: StageIndices;
-}
-
-export function liftOutcomes(
-  definition: ProgramDefinition,
-  enrollment: ProgramEnrollment,
-  { position, sets, stages }: LoggedDay,
-): Readonly<Record<string, LiftOutcome>> {
-  const outcomes: Record<string, LiftOutcome> = {};
-  for (const rule of definition.progression) {
-    if (judgedSlotsOf(definition, enrollment, rule, position).length === 0) continue;
-    const outcome = ruleOutcomeAt(definition, enrollment, rule, position, sets, stages);
-    outcomes[rule.lift] = rule.lift in outcomes ? combinedOutcome(outcomes[rule.lift], outcome) : outcome;
-  }
-  return outcomes;
-}
+import { kgToUnit, shownWeight } from './units.ts';
 
 function absoluteWeek(definition: ProgramDefinition, position: Position): number {
   const { week, cycle } = weekContextOf(position);
@@ -304,43 +199,22 @@ function applyAdjustment(
   });
 }
 
-interface Judgement {
-  outcome: LiftOutcome;
-  sets: readonly FactSet[];
-}
-
-function judgementAt(
-  context: FoldContext,
-  rule: ProgressionRule,
-  position: Position,
-  sets: readonly FactSet[],
-  stages: StageIndices,
-): Judgement {
-  const { definition, enrollment } = context;
-  return {
-    outcome: ruleOutcomeAt(definition, enrollment, rule, position, sets, stages),
-    sets: judgedSlotsOf(definition, enrollment, rule, position).flatMap((slot) =>
-      setsForSlot(sets, slot, enrollment.bindings[rule.lift]),
-    ),
-  };
-}
-
 function applyOutcome(
   context: FoldContext,
   state: ProgramState,
   rule: ProgressionRule,
-  { outcome, sets }: Judgement,
+  { verdict, sets }: Judgement,
   position: Position,
 ): ProgramState {
-  if (outcome === 'neutral') return state;
+  if (verdict === 'neutral') return state;
   const key = ruleKeyOf(rule);
-  const misses = outcome === 'met' ? 0 : (state.consecutiveMisses[key] ?? 0) + 1;
-  const adjustments = [...(outcome === 'met' ? rule.onMet : rule.onMiss), ...(rule.always ?? [])];
+  const misses = verdict === 'met' ? 0 : (state.consecutiveMisses[key] ?? 0) + 1;
+  const adjustments = [...(verdict === 'met' ? rule.onMet : rule.onMiss), ...(rule.always ?? [])];
   const adjusted = adjustments.reduce<ProgramState>(
     (next, adjustment) => applyAdjustment(context, next, rule, adjustment, position, sets),
     { ...state, consecutiveMisses: { ...state.consecutiveMisses, [key]: misses } },
   );
-  if (outcome !== 'met') return adjusted;
+  if (verdict !== 'met') return adjusted;
   return { ...adjusted, successes: { ...adjusted.successes, [key]: (adjusted.successes[key] ?? 0) + 1 } };
 }
 
@@ -350,15 +224,23 @@ function scopeJudgement(
   rule: ProgressionRule,
   scope: readonly Position[],
 ): Judgement {
+  const { definition, enrollment } = context;
   return scope
     .map((position) => findRecord(state, position))
     .filter((record): record is DayRecord => record?.status === 'completed')
     .reduce<Judgement>(
       (judgement, record) => {
-        const day = judgementAt(context, rule, record.position, record.judgedSets, record.stages ?? state.stages);
-        return { outcome: combinedOutcome(judgement.outcome, day.outcome), sets: [...judgement.sets, ...day.sets] };
+        const day = judgeRule(
+          definition,
+          enrollment,
+          rule,
+          record.position,
+          record.judgedSets,
+          record.stages ?? state.stages,
+        );
+        return { verdict: combinedVerdict(judgement.verdict, day.verdict), sets: [...judgement.sets, ...day.sets] };
       },
-      { outcome: 'neutral', sets: [] },
+      { verdict: 'neutral', sets: [] },
     );
 }
 
@@ -493,53 +375,13 @@ function isBetterSet(context: FoldContext, candidate: FactSet, current: FactSet)
   return candidate.weightKg > current.weightKg;
 }
 
-function heaviestSet(sets: readonly FactSet[]): FactSet | undefined {
-  return sets.reduce<FactSet | undefined>(
-    (best, set) => (best === undefined || set.weightKg > best.weightKg ? set : best),
-    undefined,
-  );
-}
-
-function retestAttemptOf(sets: readonly FactSet[], slot: SlotDecl, exerciseId: string | null | undefined): FactSet[] {
-  const ref = retestRefOf(slot.id);
-  const exerciseSets = sets.filter((set) => set.exerciseId === exerciseId);
-  const retestSet = exerciseSets.find((set) => set.prescription?.ref === ref);
-  if (!retestSet) return [];
-  const best = heaviestSet(
-    exerciseSets.filter((set) => (set === retestSet || set.prescription === null) && set.reps >= RETEST_REPS),
-  );
-  return best ? [{ ...best, prescription: retestSet.prescription }] : [];
-}
-
-function judgedSetsOf(context: FoldContext, position: Position, sets: readonly FactSet[]): FactSet[] {
-  const { definition, enrollment } = context;
-  return definition.progression.flatMap((rule) =>
-    judgedSlotsOf(definition, enrollment, rule, position).flatMap((slot) => {
-      const exerciseId = enrollment.bindings[slot.lift];
-      const judged = setsForSlot(sets, slot, exerciseId);
-      return stageRetestOf(rule) ? [...judged, ...retestAttemptOf(sets, slot, exerciseId)] : judged;
-    }),
-  );
-}
-
-function retestedFromSession(
-  context: FoldContext,
-  state: ProgramState,
-  rule: ProgressionRule,
-  retest: StageRetest,
-  position: Position,
-  judgedSets: readonly FactSet[],
-): ProgramState {
-  const { definition, enrollment } = context;
-  const refs = judgedSlotsOf(definition, enrollment, rule, position).map((slot) => retestRefOf(slot.id));
-  const attempt = heaviestSet(judgedSets.filter((set) => set.prescription && refs.includes(set.prescription.ref)));
-  if (!attempt) return state;
-  const value = shownWeight(attempt.weightKg, enrollment.unit);
+function retested(context: FoldContext, state: ProgramState, attempt: RetestAttempt, position: Position): ProgramState {
+  const value = shownWeight(attempt.weightKg, context.enrollment.unit);
   if (value <= 0) return state;
   return retestedStages(
-    definition,
-    setReference(state, rule.lift, retest.from, value, 'adjustment', position),
-    { lift: rule.lift, var: retest.from, value },
+    context.definition,
+    setReference(state, attempt.lift, attempt.from, value, 'adjustment', position),
+    { lift: attempt.lift, var: attempt.from, value },
     position,
   );
 }
@@ -554,14 +396,6 @@ function mergeBestSets(context: FoldContext, existing: readonly FactSet[], incom
   return [...bestByRef.entries()].sort(([a], [b]) => compareStrings(a, b)).map(([, set]) => set);
 }
 
-function dayStagesOf(definition: ProgramDefinition, state: ProgramState, position: Position): StageIndices {
-  return Object.fromEntries(
-    (dayOf(definition, position)?.slots ?? []).flatMap((slot) =>
-      slot.scheme.kind === 'stages' ? [[slot.lift, stageIndexOf(slot.scheme, state.stages, slot.lift)]] : [],
-    ),
-  );
-}
-
 function recordDay(
   context: FoldContext,
   state: ProgramState,
@@ -574,21 +408,35 @@ function recordDay(
   const { definition, enrollment } = context;
   const judgedSets =
     context.finalSets?.[recordKey(state.epoch, position)] ??
-    mergeBestSets(context, [], judgedSetsOf(context, position, sets));
-  const stages = dayStagesOf(definition, state, position);
-  const outcomes = liftOutcomes(definition, enrollment, { position, sets: judgedSets, stages });
+    mergeBestSets(context, [], judgedDaySets(definition, enrollment, position, sets));
+  const stages = dayStagesOf(definition, state.stages, position);
+  const outcomes = liftVerdicts(definition, enrollment, { position, sets: judgedSets, stages });
   const record: DayRecord = { epoch: state.epoch, position, status: 'completed', outcomes, judgedSets, stages };
-  return definition.progression
+  const retests = retestAttemptsOf(definition, enrollment, state, position, judgedSets);
+  const retestOf = (lift: string, variable: ReferenceVar) =>
+    retests.find((attempt) => attempt.lift === lift && attempt.from === variable);
+  const afterRules = definition.progression
     .filter((rule) => rule.trigger === 'afterSession')
     .reduce(
       (next, rule) => {
         const retest = stageRetestOf(rule);
-        return retest && isRetestPending(next, rule.lift, retest.from)
-          ? retestedFromSession(context, next, rule, retest, position, judgedSets)
-          : applyOutcome(context, next, rule, judgementAt(context, rule, position, judgedSets, stages), position);
+        if (retest && isRetestPending(next, rule.lift, retest.from)) {
+          const attempt = retestOf(rule.lift, retest.from);
+          return attempt ? retested(context, next, attempt, position) : next;
+        }
+        return applyOutcome(
+          context,
+          next,
+          rule,
+          judgeRule(definition, enrollment, rule, position, judgedSets, stages),
+          position,
+        );
       },
       withRecords(state, [record]),
     );
+  return retests
+    .filter((attempt) => isRetestPending(afterRules, attempt.lift, attempt.from))
+    .reduce((next, attempt) => retested(context, next, attempt, position), afterRules);
 }
 
 function applyDayFact(
@@ -670,7 +518,11 @@ export function finalDaySets(
     if (fact.kind === 'jump_to') epoch += 1;
     if (fact.kind !== 'session') continue;
     const key = recordKey(epoch, fact.position);
-    finalSets[key] = mergeBestSets(context, finalSets[key] ?? [], judgedSetsOf(context, fact.position, fact.sets));
+    finalSets[key] = mergeBestSets(
+      context,
+      finalSets[key] ?? [],
+      judgedDaySets(definition, enrollment, fact.position, fact.sets),
+    );
   }
   return finalSets;
 }

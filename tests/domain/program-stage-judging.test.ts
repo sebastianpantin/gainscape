@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { programStateAt, type ProgramDefinition } from '@domain/index.ts';
-import { type LoggedDay } from '@domain/program-progression.ts';
+import { type LoggedDay } from '@domain/program-day.ts';
 import { factClock, sessionFact, setReferenceFact } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, loggedAsPrescribed, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import { GZCLP, gzclpEnrollment, miss, rounds } from './program-fixtures/gzclp.ts';

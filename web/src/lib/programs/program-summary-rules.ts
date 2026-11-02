@@ -1,4 +1,5 @@
 import {
+  compareWeeks,
   type CyclePosition,
   isCyclePosition,
   isRotationPosition,
@@ -9,7 +10,6 @@ import {
   type ReferenceChange,
   type WeeklyPosition,
 } from '@domain/index.ts';
-import { compareWeeks } from '@domain/program-schedule.ts';
 import { liftName, REFERENCE_VAR_LABELS, shownReference } from './program-enroll-rules.ts';
 import { referenceFieldKey } from './program-reference-rules.ts';
 import { weekLabel } from './program-today-rules.ts';

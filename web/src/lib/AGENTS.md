@@ -29,7 +29,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `*-rules.ts` files are pure, and so are a few small modules without the suffix (`units.ts`, `format.ts`, `error-text.ts`, `names.ts`, the caches); `tests/web/` covers them without a stack.
 - A `<feature>.ts` beside a `<feature>-rules.ts` is the I/O half.
 - `*-store.ts`: per-user settings kept only in this device's `localStorage`, never synced.
-- `programs/program-*-rules.ts` cover following a program; the program engine itself is `@domain/program-*.ts`.
+- `programs/program-*-rules.ts` cover following a program; the program engine itself is `@domain/program-*.ts`, imported only through `@domain/index.ts`.
 - Only the contexts and `use*` hooks use React; everything else stays framework-free.
 - `ui/glossary.ts` is the only home of jargon help text (`TermHelp`, the Settings effort hints, the first-run cards).
 - `platform/device-effects.ts` and `platform/celebration-effects.ts`: audio, vibration and reduced motion. They are I/O only. `e2e/reveal.spec.ts` covers only the level-up cue; the loot and craft fanfares have no automated coverage.

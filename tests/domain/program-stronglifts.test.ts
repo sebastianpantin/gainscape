@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { availableDays, firstPosition, programStateAt, upcomingDays } from '@domain/index.ts';
-import { dayKeyOf, nextPosition } from '@domain/program-schedule.ts';
+import { availableDays, programStateAt, upcomingDays } from '@domain/index.ts';
+import { dayKeyOf, firstPosition, nextPosition } from '@domain/program-schedule.ts';
 import { factClock, skipDayFact } from './program-fixtures/facts.ts';
 import { asPrescribed, type DayLog, followProgram, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import { missesOf, refOf, refsState, repsOf, slotIdsOf, weightsOf } from './program-fixtures/prescription-helpers.ts';

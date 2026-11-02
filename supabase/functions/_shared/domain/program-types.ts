@@ -376,3 +376,43 @@ export type ParsedProgramDefinition =
   | { kind: 'ok'; definition: ProgramDefinition }
   | { kind: 'unsupported'; unknownKinds: string[]; unsupportedKinds: string[] }
   | { kind: 'invalid'; errors: string[] };
+
+export type StageIndices = Readonly<Record<string, number>>;
+
+export type PendingRetests = Readonly<Record<string, ReferenceVar>>;
+
+export interface ReferenceState {
+  refs: ProgramReferences;
+  stages?: StageIndices;
+  pendingRetests?: PendingRetests;
+}
+
+export type LastLoggedWeights = Readonly<Record<string, number>>;
+
+export interface PrescriptionSnapshot {
+  ref: string;
+  weightKg: number;
+  reps: number;
+  minReps: number | null;
+  amrap: boolean;
+}
+
+export interface SetShape {
+  reps: number | null;
+  maxReps: number | null;
+  load: Load;
+  amrap: boolean;
+  minReps: number | null;
+  optional: boolean;
+}
+
+export interface DaySet {
+  ref: string;
+  shape: SetShape;
+  judgeable: boolean;
+}
+
+export type DaySlot =
+  | { kind: 'sets'; slot: SlotDecl; sets: DaySet[] }
+  | { kind: 'retest'; slot: SlotDecl; ref: string; from: ReferenceVar; load: Load }
+  | { kind: 'unsupported'; slot: SlotDecl; primitive: string };

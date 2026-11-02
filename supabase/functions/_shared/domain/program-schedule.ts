@@ -31,6 +31,16 @@ export function isRotationPosition(position: Position): position is RotationPosi
   return 'index' in position;
 }
 
+interface WeekContext {
+  week: number;
+  cycle: number;
+}
+
+export function weekContextOf(position: Position): WeekContext {
+  if (isRotationPosition(position)) return { week: 1, cycle: 1 };
+  return { week: position.week, cycle: isCyclePosition(position) ? position.cycle : 1 };
+}
+
 export function dayKeyOf(definition: ProgramDefinition, position: Position): string {
   if (!isRotationPosition(position)) return position.day;
   const days = definition.schedule.days;

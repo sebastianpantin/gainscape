@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type ProgramEnrollment, programStateAt, resolvePrescription } from '@domain/index.ts';
-import { type ReferenceState } from '@domain/program-prescription.ts';
+import { type ReferenceState } from '@domain/program-types.ts';
 import { initialProgramState } from '@domain/program-state.ts';
 import { factClock, sessionFact, setReferenceFact, unprescribedSet } from './program-fixtures/facts.ts';
 import {
