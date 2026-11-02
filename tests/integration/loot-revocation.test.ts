@@ -241,10 +241,10 @@ describe('edit-session', () => {
     expect((await dropRow(drop.dropId)).revoke_reason).toBe('no_longer_qualifies');
   });
 
-  it('revokes both drops of a set changed to beyond the effort window', async () => {
+  it('revokes both drops of a set changed to a weight too light for an effective rep', async () => {
     const user = await freshUser();
     const { payload, prSet, regular, pr, other } = await prSessionWithDrops(user);
-    const response = await editSession(user, payload, [{ ...prSet, effort: beyondEffortWindow }, payload.sets[1]]);
+    const response = await editSession(user, payload, [{ ...prSet, weightKg: 30 }, payload.sets[1]]);
     expect(response.body.revokedDrops?.map((drop) => [drop.dropId, drop.source])).toEqual([
       [regular.dropId, 'regular'],
       [pr.dropId, 'pr'],
