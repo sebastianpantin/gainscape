@@ -28,8 +28,8 @@ export function Switch({ label, hint, checked, disabled = false, onChange }: Swi
         aria-checked={checked}
         aria-labelledby={labelId}
         aria-describedby={hint ? hintId : undefined}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
+        aria-disabled={disabled || undefined}
+        onClick={() => !disabled && onChange(!checked)}
       >
         <span className="switch-knob" />
       </button>
