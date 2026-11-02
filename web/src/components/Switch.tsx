@@ -11,6 +11,9 @@ interface SwitchProps {
 export function Switch({ label, hint, checked, disabled = false, onChange }: SwitchProps) {
   const labelId = useId();
   const hintId = useId();
+  const toggle = () => {
+    if (!disabled) onChange(!checked);
+  };
   return (
     <div className="switch-row">
       <div className="switch-text">
@@ -29,7 +32,7 @@ export function Switch({ label, hint, checked, disabled = false, onChange }: Swi
         aria-labelledby={labelId}
         aria-describedby={hint ? hintId : undefined}
         aria-disabled={disabled || undefined}
-        onClick={() => !disabled && onChange(!checked)}
+        onClick={toggle}
       >
         <span className="switch-knob" />
       </button>

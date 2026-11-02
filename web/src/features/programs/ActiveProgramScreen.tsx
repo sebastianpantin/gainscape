@@ -15,6 +15,7 @@ import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';
+import { DecimalInput } from '../../components/DecimalInput.tsx';
 
 interface ActiveProgramScreenProps {
   userId: string;
@@ -97,11 +98,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
             return (
               <label className="field" key={key}>
                 {field.label}
-                <input
-                  type="text"
-                  role="spinbutton"
-                  inputMode="decimal"
-                  autoComplete="off"
+                <DecimalInput
                   value={edited[key] ?? (field.value === null ? '' : String(field.value))}
                   onChange={(event) => setEdited({ ...edited, [key]: event.target.value })}
                 />

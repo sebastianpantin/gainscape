@@ -1,6 +1,7 @@
 import { roundTo } from '@domain/math.ts';
 import { CARDIO_BOUNDS, SECONDS_PER_MINUTE } from '@domain/cardio.ts';
 import { useState } from 'react';
+import { DecimalInput } from '../../components/DecimalInput.tsx';
 import type { PaceUnit } from '../../lib/exercises/catalog-rules.ts';
 import {
   type BoutMode,
@@ -49,13 +50,10 @@ function BoundedNumberField({
   return (
     <label className="compact-field">
       {label}
-      <input
-        type="text"
-        role="spinbutton"
+      <DecimalInput
         inputMode={inputMode}
-        autoComplete="off"
-        aria-valuemin={min}
-        aria-valuemax={max}
+        lowest={min}
+        highest={max}
         aria-valuenow={value ?? undefined}
         value={typed ?? (value === null ? '' : String(value))}
         onChange={(event) => {

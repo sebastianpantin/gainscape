@@ -6,5 +6,5 @@ export function useGoBack(parent: string): () => void {
   const navigate = useNavigate();
   const location = useLocation();
   const cameFromApp = location.key !== OPENED_WITHOUT_APP_HISTORY;
-  return () => void (cameFromApp ? navigate(-1) : navigate(parent));
+  return () => void (cameFromApp ? navigate(-1) : navigate(parent, { replace: true }));
 }

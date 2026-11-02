@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react';
 import { bodyweightInUnitProblem, bodyweightKgFromInput, type UnitPref } from '../../lib/profile/profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { DecimalInput } from '../../components/DecimalInput.tsx';
 
 interface BodyweightPromptProps {
   unit: UnitPref;
@@ -32,15 +33,7 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
       <p>Bodyweight exercises count your bodyweight as the load. It stays private.</p>
       <label className="field">
         Bodyweight ({unit})
-        <input
-          type="text"
-          role="spinbutton"
-          inputMode="decimal"
-          autoComplete="off"
-          value={bodyweight}
-          onChange={(event) => setBodyweight(event.target.value)}
-          required
-        />
+        <DecimalInput value={bodyweight} onChange={(event) => setBodyweight(event.target.value)} required />
       </label>
       {problem && (
         <p className="problem" role="alert">
