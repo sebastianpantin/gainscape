@@ -76,7 +76,7 @@ export const QUERY_ROOTS_CHANGED_BY: Record<DataChange, readonly string[]> = {
   ],
   'weekly-goal-saved': ['weekly-goal'],
   'lift-goals-saved': ['lift-goals'],
-  'pins-changed': ['collection'],
+  'pins-changed': ['collection', 'profile-preview'],
   'quest-started': ['quests'],
   'programs-changed': ['programs'],
   'account-reset': [
@@ -119,7 +119,7 @@ const ROOTS_THE_WRITING_TAB_UPDATES_ITSELF: Partial<Record<DataChange, readonly 
   'timezone-changed': ['profile'],
   'gear-changed': ['items'],
   'weekly-goal-saved': ['weekly-goal'],
-  'pins-changed': ['collection'],
+  'pins-changed': ['collection', 'profile-preview'],
 };
 
 export type ChangeOrigin = 'this-tab' | 'other-tab';

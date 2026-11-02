@@ -105,6 +105,10 @@ describe('QUERY_ROOTS_CHANGED_BY', () => {
     expect(QUERY_ROOTS_CHANGED_BY['pins-changed']).toContain('collection');
   });
 
+  it('refreshes the What friends see preview after pinning, because pinned lifts count toward its Collection share', () => {
+    expect(QUERY_ROOTS_CHANGED_BY['pins-changed']).toContain('profile-preview');
+  });
+
   it('refreshes every exercise list and the Collection tab after a custom exercise is saved or archived', () => {
     expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toEqual(
       expect.arrayContaining(['exercises', 'collection', 'enroll-choices', 'exercise-progress', 'history']),
