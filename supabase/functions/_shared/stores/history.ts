@@ -1,15 +1,38 @@
-import { isoTimestamp, nullableNumber, type Transaction } from '../db.ts';
+import { isoTimestamp, type Transaction } from '../db.ts';
 import {
   type BalanceConfig,
   challengeRunFromStored,
+  decodeStoredSet,
   effortInputFromStored,
   gearLoadoutFromStored,
   type RecordHistoryRow,
   type SessionInput,
   type SessionKey,
+  type SetInput,
+  type StoredSet,
+  STORED_SET_COLUMNS,
+  type StoredSetColumnRow,
+  storedSetColumnsOf,
 } from '../domain/index.ts';
 import { staleDerivedSession } from './sessions.ts';
-import { cardioFieldsFromRow, holdFieldsFromRow, liftFieldsFromRow, setKindOfRow } from './set-columns.ts';
+
+const JOINED_SET_COLUMNS = STORED_SET_COLUMNS.map((column) => `st.${column}`);
+
+function replayableSet(stored: StoredSet, cfg: BalanceConfig): SetInput {
+  const identity = { id: stored.id, exerciseId: stored.exerciseId, position: stored.position };
+  const effort = effortInputFromStored(stored.effortInputType, stored.effortValue, cfg);
+  if (stored.kind === 'cardio') {
+    const { durationS, distanceM, interval } = stored;
+    return { ...identity, kind: 'cardio', durationS, distanceM, interval, effort };
+  }
+  const recordedEffectiveLoadKg = stored.effectiveLoadKg;
+  if (stored.kind === 'hold') {
+    const { weightKg, durationS, distanceM } = stored;
+    return { ...identity, kind: 'hold', weightKg, durationS, distanceM, effort, recordedEffectiveLoadKg };
+  }
+  const { weightKg, reps, isWarmup } = stored;
+  return { ...identity, weightKg, reps, isWarmup, effort, recordedEffectiveLoadKg };
+}
 
 export async function loadReplayableSessions(
   tx: Transaction,
@@ -18,9 +41,7 @@ export async function loadReplayableSessions(
   cfg: BalanceConfig,
 ): Promise<SessionInput[]> {
   const rows = await tx`
-    select s.id as session_id, s.started_at, s.gear_loadout, s.challenge, st.id as set_id, st.exercise_id, st.position, st.weight_kg,
-           st.effective_load_kg, st.reps, st.is_warmup, st.effort_input_type, st.effort_value, st.duration_s,
-           st.distance_m, st.interval_work_s, st.interval_rest_s, st.interval_rounds
+    select s.id as session_id, s.started_at, s.gear_loadout, s.challenge, ${tx(JOINED_SET_COLUMNS)}
     from public.sessions s
     join public.sets st on st.session_id = s.id
     where s.user_id = ${userId} and not s.history_only
@@ -36,17 +57,7 @@ export async function loadReplayableSessions(
       gearLoadout: gearLoadoutFromStored(row.gear_loadout),
       challenge: challengeRunFromStored(row.challenge),
     };
-    const identity = { id: row.set_id, exerciseId: row.exercise_id, position: row.position };
-    const effort = effortInputFromStored(row.effort_input_type, nullableNumber(row.effort_value), cfg);
-    const recordedEffectiveLoadKg = Number(row.effective_load_kg);
-    const kind = setKindOfRow(row);
-    session.sets.push(
-      kind === 'lift'
-        ? { ...identity, ...liftFieldsFromRow(row), effort, recordedEffectiveLoadKg }
-        : kind === 'hold'
-          ? { ...identity, kind: 'hold', ...holdFieldsFromRow(row), effort, recordedEffectiveLoadKg }
-          : { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row), effort },
-    );
+    session.sets.push(replayableSet(decodeStoredSet(storedSetColumnsOf(row as StoredSetColumnRow)), cfg));
     sessions.set(row.session_id, session);
   }
   return [...sessions.values()];
@@ -59,9 +70,7 @@ export async function loadRecordHistory(
   before: SessionKey,
 ): Promise<RecordHistoryRow[]> {
   const rows = await tx`
-    select st.exercise_id, s.id as session_id, s.started_at, st.id as set_id, st.position, st.weight_kg, st.reps,
-           st.effective_load_kg,
-           st.duration_s, st.distance_m, st.interval_work_s, st.interval_rest_s, st.interval_rounds
+    select s.id as session_id, s.started_at, ${tx(JOINED_SET_COLUMNS)}
     from public.sets st
     join public.sessions s on s.id = st.session_id
     where s.user_id = ${userId}
@@ -70,19 +79,20 @@ export async function loadRecordHistory(
       and st.exercise_id = any(${exerciseIds as string[]}::uuid[])
       and (s.started_at, s.id) < (${before.startedAt}::timestamptz, ${before.id}::uuid)`;
   return rows.map((row): RecordHistoryRow => {
+    const stored = decodeStoredSet(storedSetColumnsOf(row as StoredSetColumnRow));
     const identity = {
-      exerciseId: row.exercise_id,
+      exerciseId: stored.exerciseId,
       session: { id: row.session_id, startedAt: isoTimestamp(row.started_at) },
-      setId: row.set_id,
-      position: row.position,
+      setId: stored.id,
+      position: stored.position,
     };
-    const kind = setKindOfRow(row);
-    if (kind === 'lift') return { ...identity, weightKg: Number(row.weight_kg), reps: row.reps };
-    if (kind === 'hold') {
-      const { durationS, distanceM } = holdFieldsFromRow(row);
-      return { ...identity, kind: 'hold', effectiveLoadKg: Number(row.effective_load_kg), durationS, distanceM };
+    if (stored.kind === 'lift') return { ...identity, weightKg: stored.weightKg, reps: stored.reps };
+    if (stored.kind === 'hold') {
+      const { effectiveLoadKg, durationS, distanceM } = stored;
+      return { ...identity, kind: 'hold', effectiveLoadKg, durationS, distanceM };
     }
-    return { ...identity, kind: 'cardio', ...cardioFieldsFromRow(row) };
+    const { durationS, distanceM, interval } = stored;
+    return { ...identity, kind: 'cardio', durationS, distanceM, interval };
   });
 }
 

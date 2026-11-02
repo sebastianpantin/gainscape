@@ -1,3 +1,9 @@
+import {
+  STORED_SET_COLUMNS,
+  type StoredSetColumnRow,
+  type StoredSetColumns,
+  storedSetColumnsOf,
+} from '@domain/set-codec.ts';
 import type { CardioInterval, EffortInput, EffortInputType, RirSource, SessionSummary } from '@domain/types.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
@@ -12,8 +18,16 @@ const SESSION_COLUMNS =
   'id,started_at,ended_at,session_rpe,local_date,history_only,revision,program_day_id,notes,summary';
 const SESSION_PAGE_COLUMNS = `${SESSION_COLUMNS},sets(position,is_warmup,effective_load_kg,reps,exercises(name))`;
 const SESSION_DETAIL_COLUMNS = `${SESSION_COLUMNS},sets(count)`;
-const SET_COLUMNS =
-  'id,exercise_id,position,weight_kg,effective_load_kg,reps,is_warmup,effort_input_type,effort_value,rir,rir_source,rir_flagged,e1rm_before_kg,effective_reps,xp_awarded,duration_s,distance_m,interval_work_s,interval_rest_s,interval_rounds,counted_work_s,pace_flagged';
+const SET_COLUMNS = [
+  ...STORED_SET_COLUMNS,
+  'rir',
+  'rir_source',
+  'rir_flagged',
+  'e1rm_before_kg',
+  'effective_reps',
+  'xp_awarded',
+  'pace_flagged',
+].join(',');
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface SessionDetail {
@@ -34,28 +48,13 @@ export interface HistorySession extends SessionDetail {
   overviewSets: OverviewSet[];
 }
 
-export interface StoredSetRow {
-  id: string;
-  exerciseId: string;
-  position: number;
-  weightKg: number | null;
-  effectiveLoadKg: number | null;
-  reps: number | null;
-  isWarmup: boolean;
-  effortInputType: EffortInputType | null;
-  effortValue: number | null;
+export interface StoredSetRow extends StoredSetColumns {
   rir: number | null;
   rirSource: RirSource;
   rirFlagged: boolean;
   e1rmBeforeKg: number | null;
   effectiveReps: number;
   xpAwarded: number;
-  durationS: number | null;
-  distanceM: number | null;
-  intervalWorkS: number | null;
-  intervalRestS: number | null;
-  intervalRounds: number | null;
-  countedWorkS: number | null;
   paceFlagged: boolean;
 }
 
@@ -129,7 +128,7 @@ const sessionDetailRowSchema = sessionColumnsSchema.extend({
 
 const EFFORT_INPUT_TYPES = ['level', 'rir', 'rpe', 'cardio'] as const satisfies readonly EffortInputType[];
 
-const setRowSchema = z.object({
+const storedSetColumnsSchema = z.object({
   id: z.string(),
   exercise_id: z.string(),
   position: z.number(),
@@ -139,18 +138,21 @@ const setRowSchema = z.object({
   is_warmup: z.boolean(),
   effort_input_type: z.enum(EFFORT_INPUT_TYPES).nullable(),
   effort_value: numericColumn.nullable(),
-  rir: numericColumn.nullable(),
-  rir_source: z.enum(RIR_SOURCES),
-  rir_flagged: z.boolean(),
-  e1rm_before_kg: numericColumn.nullable(),
-  effective_reps: z.number(),
-  xp_awarded: z.number(),
   duration_s: z.number().nullable(),
   distance_m: numericColumn.nullable(),
   interval_work_s: z.number().nullable(),
   interval_rest_s: z.number().nullable(),
   interval_rounds: z.number().nullable(),
   counted_work_s: z.number().nullable(),
+}) satisfies z.ZodType<StoredSetColumnRow>;
+
+const setRowSchema = storedSetColumnsSchema.extend({
+  rir: numericColumn.nullable(),
+  rir_source: z.enum(RIR_SOURCES),
+  rir_flagged: z.boolean(),
+  e1rm_before_kg: numericColumn.nullable(),
+  effective_reps: z.number(),
+  xp_awarded: z.number(),
   pace_flagged: z.boolean(),
 });
 
@@ -224,27 +226,13 @@ export function parseSessionDetailRow(data: unknown): SessionDetail {
 
 function toStoredSet(row: SetRow): StoredSetRow {
   return {
-    id: row.id,
-    exerciseId: row.exercise_id,
-    position: row.position,
-    weightKg: nullableNumber(row.weight_kg),
-    effectiveLoadKg: nullableNumber(row.effective_load_kg),
-    reps: row.reps,
-    isWarmup: row.is_warmup,
-    effortInputType: row.effort_input_type,
-    effortValue: nullableNumber(row.effort_value),
+    ...storedSetColumnsOf(row),
     rir: nullableNumber(row.rir),
     rirSource: row.rir_source,
     rirFlagged: row.rir_flagged,
     e1rmBeforeKg: nullableNumber(row.e1rm_before_kg),
     effectiveReps: row.effective_reps,
     xpAwarded: row.xp_awarded,
-    durationS: row.duration_s,
-    distanceM: nullableNumber(row.distance_m),
-    intervalWorkS: row.interval_work_s,
-    intervalRestS: row.interval_rest_s,
-    intervalRounds: row.interval_rounds,
-    countedWorkS: row.counted_work_s,
     paceFlagged: row.pace_flagged,
   };
 }
