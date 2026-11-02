@@ -49,3 +49,65 @@ _Avoid_: computed fields, results
 **Record**:
 A personal best the server awards on a set: a rep max, most reps, or a best Cardio or Hold.
 _Avoid_: PR (in prose), best set
+
+## Programs
+
+**Program template**:
+A named training program (5/3/1, GZCLP, Madcow, ...) written as data: its lifts, inputs, schedule, days and rules.
+_Avoid_: program definition (in prose; `ProgramDefinition` is its type), plan
+
+**Enrollment**:
+One user following one Program template, with the template's lifts bound to exercises and the starting inputs they entered.
+_Avoid_: subscription, active program (in prose)
+
+**Position**:
+A place in a Program template's schedule: a cycle, week and day, a plain week and day, or an index in a rotation of days.
+_Avoid_: step, cursor (the cursor is the next Position in Program state)
+
+**Day**:
+The training day a Program template schedules at a Position, made of Slots.
+_Avoid_: workout, session (a Day is scheduled, a Session is logged)
+
+**Slot**:
+One exercise entry in a Day: a lift with a set scheme and the rules that judge it.
+_Avoid_: exercise (the exercise is what the Slot's lift is bound to)
+
+**Prescription**:
+The sets a Day asks for at a Position, worked out from the Program state, with loads, reps and set references.
+_Avoid_: plan, target, program sets
+
+**Snapshot**:
+The Prescription of one set, copied onto the set when it is logged, so the set is judged against what the user was shown.
+_Avoid_: prescription copy, target
+
+**Program fact**:
+An event the Program state is folded from: a Session linked to a Position, a skipped day, a jump, or a reference the user set by hand.
+_Avoid_: program event, program log
+
+**Program state**:
+Where an Enrollment stands: the next Position, reference weights, Stages, pending Retests and miss counters. It is never stored; it is folded from the Program facts in order every time.
+_Avoid_: progress, saved state
+
+**Reference**:
+A weight a Program template's loads are worked out from, such as a training max or a working weight. Rules change it; the user can also set it by hand.
+_Avoid_: base weight, max (unless the template calls it that)
+
+**Judge**:
+To compare logged sets against what was asked of them and give a Verdict. The program judge compares a Day's logged sets with its Prescription; the challenge judge compares a Session's sets with its challenge snapshot.
+_Avoid_: grade, score, evaluate
+
+**Verdict**:
+The result of a Judge. For a Slot it is met, missed or neutral; for a challenge it is passed or failed.
+_Avoid_: outcome, result
+
+**Rule**:
+What a Verdict does to a Slot's Reference, Stage or counters: increment, hold, reset, deload, advance a Stage, or adjust from AMRAP reps.
+_Avoid_: progression step, policy
+
+**Stage**:
+One of an ordered list of set schemes a Slot steps through when it misses, as in GZCLP.
+_Avoid_: level, phase
+
+**Retest**:
+A single heavy set a Slot asks for after its last Stage fails, which resets its Reference from the reps done.
+_Avoid_: test set, max-out
