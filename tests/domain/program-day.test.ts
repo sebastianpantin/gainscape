@@ -21,6 +21,7 @@ import { LINEAR_AFTER_SESSION, linearEnrollment } from './program-fixtures/linea
 import { MADCOW_5X5, madcowEnrollment } from './program-fixtures/madcow_5x5.ts';
 import { NSUNS_5DAY, nsunsEnrollment } from './program-fixtures/nsuns_5day.ts';
 import { broken, refOf } from './program-fixtures/prescription-helpers.ts';
+import { type ProgressionRule, type SlotDecl } from '@domain/program-types.ts';
 import { kgEnrollment, STAGED_WEEKLY } from './program-fixtures/review-fixtures.ts';
 import { RPE_TOP_SET, rpeEnrollment } from './program-fixtures/rpe_top_set.ts';
 import { SMOLOV_JR, smolovJrEnrollment } from './program-fixtures/smolov_jr.ts';
@@ -129,6 +130,59 @@ describe('a prescribed retest is judged whatever its rule is scoped to', () => {
     expect(retested.state.pendingRetests).toEqual({});
     expect(retested.state.stages.bench).toBe(0);
     expect(refOf(retested.state, 'bench', 'fiveRm')).toBeGreaterThan(0);
+  });
+});
+
+describe('the day a Retest is logged', () => {
+  const benchEnrollment = kgEnrollment('enrollment-staged', { bench: { workingWeight: 100 } }, { bench: 'bench' });
+  const failedWeeks: DayLog[] = Array.from({ length: 3 }, (): DayLog[] => [{}, { missedLifts: ['bench'] }]).flat();
+  const extraBench: SlotDecl = {
+    id: 'b-extra',
+    lift: 'bench',
+    role: 'assistance',
+    scheme: { kind: 'repeat', count: 1, reps: 5, load: { kind: 'pct', pct: 0.5, of: 'workingWeight' } },
+  };
+
+  function retestDay(definition: ProgramDefinition) {
+    const clock = factClock();
+    const failed = followProgram(definition, benchEnrollment, clock, failedWeeks);
+    expect(failed.state.pendingRetests).toEqual({ bench: 'fiveRm' });
+    return followProgram(definition, benchEnrollment, clock, [{}, {}], failed.facts).state;
+  }
+
+  function withExtraSlot(mutate: (copy: ProgramDefinition) => void): ProgramDefinition {
+    const definition = broken(STAGED_WEEKLY, (copy) => {
+      copy.schedule.days[1].slots.push(extraBench);
+      mutate(copy);
+    });
+    expect(validateProgramDefinition(definition)).toEqual([]);
+    return definition;
+  }
+
+  it('does not also judge the Retest rule on its other Slots', () => {
+    const control = retestDay(withExtraSlot(() => undefined));
+    const state = retestDay(withExtraSlot((copy) => copy.progression[1].judgedSlots.push('b-extra')));
+
+    expect(state.stages).toEqual(control.stages);
+    expect(state.consecutiveMisses).toEqual(control.consecutiveMisses);
+    expect(state.refs).toEqual(control.refs);
+  });
+
+  it('applies the Retest where its rule sits among the after-session rules', () => {
+    const ruleBeforeRetest = (onMet: ProgressionRule['onMet']) => (copy: ProgramDefinition) => {
+      copy.progression.splice(1, 0, {
+        lift: 'bench',
+        var: 'workingWeight',
+        trigger: 'afterSession',
+        judgedSlots: ['b-extra'],
+        onMet,
+        onMiss: [{ kind: 'hold' }],
+      });
+    };
+    const control = retestDay(withExtraSlot(ruleBeforeRetest([{ kind: 'hold' }])));
+    const state = retestDay(withExtraSlot(ruleBeforeRetest([{ kind: 'increment', by: { kg: 5, lb: 10 } }])));
+
+    expect(refOf(state, 'bench', 'workingWeight')).toBe(refOf(control, 'bench', 'workingWeight'));
   });
 });
 

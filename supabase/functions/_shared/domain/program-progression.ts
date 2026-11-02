@@ -8,6 +8,7 @@ import {
   type ProgressionRule,
   type IncrementByAmount,
   type IncrementByPct,
+  type ReferenceVar,
 } from './program-types.ts';
 import {
   combinedVerdict,
@@ -412,23 +413,30 @@ function recordDay(
   const outcomes = liftVerdicts(definition, enrollment, { position, sets: judgedSets, stages });
   const record: DayRecord = { epoch: state.epoch, position, status: 'completed', outcomes, judgedSets, stages };
   const retests = retestAttemptsOf(definition, enrollment, state, position, judgedSets);
-  const afterRetests = retests.reduce(
-    (next, attempt) => retested(context, next, attempt, position),
-    withRecords(state, [record]),
-  );
-  return definition.progression
+  const retestOf = (lift: string, variable: ReferenceVar) =>
+    retests.find((attempt) => attempt.lift === lift && attempt.from === variable);
+  const afterRules = definition.progression
     .filter((rule) => rule.trigger === 'afterSession')
-    .reduce((next, rule) => {
-      const retest = stageRetestOf(rule);
-      if (retest && isRetestPending(next, rule.lift, retest.from)) return next;
-      return applyOutcome(
-        context,
-        next,
-        rule,
-        judgeRule(definition, enrollment, rule, position, judgedSets, stages),
-        position,
-      );
-    }, afterRetests);
+    .reduce(
+      (next, rule) => {
+        const retest = stageRetestOf(rule);
+        if (retest && isRetestPending(next, rule.lift, retest.from)) {
+          const attempt = retestOf(rule.lift, retest.from);
+          return attempt ? retested(context, next, attempt, position) : next;
+        }
+        return applyOutcome(
+          context,
+          next,
+          rule,
+          judgeRule(definition, enrollment, rule, position, judgedSets, stages),
+          position,
+        );
+      },
+      withRecords(state, [record]),
+    );
+  return retests
+    .filter((attempt) => isRetestPending(afterRules, attempt.lift, attempt.from))
+    .reduce((next, attempt) => retested(context, next, attempt, position), afterRules);
 }
 
 function applyDayFact(
