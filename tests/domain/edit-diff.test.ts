@@ -63,6 +63,11 @@ describe('sameSet', () => {
     expect(sameSet(bout, storedBout, DEFAULT_BALANCE)).toBe(true);
   });
 
+  it('compares weights at the two decimals the database stores', () => {
+    expect(sameSet({ ...lift, weightKg: 60.004 }, storedLift, DEFAULT_BALANCE)).toBe(true);
+    expect(sameSet({ ...lift, weightKg: 60.01 }, storedLift, DEFAULT_BALANCE)).toBe(false);
+  });
+
   it('reads a lift set without a kind as a lift', () => {
     expect(sameSet({ ...lift, kind: undefined }, storedLift, DEFAULT_BALANCE)).toBe(true);
   });

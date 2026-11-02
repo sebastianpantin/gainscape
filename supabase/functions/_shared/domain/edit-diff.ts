@@ -1,39 +1,7 @@
 import type { BalanceConfig } from './balance.ts';
 import { resolveEffort } from './effort.ts';
-import { type CardioInterval, type EffortInputType, type SetInput, setKind } from './types.ts';
-
-interface StoredSetBase {
-  id: string;
-  exerciseId: string;
-  position: number;
-  effortInputType: EffortInputType | null;
-  effortValue: number | null;
-}
-
-export interface StoredLiftSet extends StoredSetBase {
-  kind: 'lift';
-  weightKg: number;
-  effectiveLoadKg: number;
-  reps: number;
-  isWarmup: boolean;
-}
-
-export interface StoredCardioSet extends StoredSetBase {
-  kind: 'cardio';
-  durationS: number;
-  distanceM: number | null;
-  interval: CardioInterval | null;
-}
-
-export interface StoredHoldSet extends StoredSetBase {
-  kind: 'hold';
-  weightKg: number;
-  effectiveLoadKg: number;
-  durationS: number | null;
-  distanceM: number | null;
-}
-
-export type StoredSet = StoredLiftSet | StoredCardioSet | StoredHoldSet;
+import { type StoredSet, storedWeightKg } from './set-codec.ts';
+import { type SetInput, setKind } from './types.ts';
 
 function sameExerciseAndValues(requested: SetInput, stored: StoredSet, cfg: BalanceConfig): boolean {
   const effort = resolveEffort(requested.effort, cfg, setKind(requested));
@@ -43,7 +11,7 @@ function sameExerciseAndValues(requested: SetInput, stored: StoredSet, cfg: Bala
     return (
       requested.kind === 'hold' &&
       stored.kind === 'hold' &&
-      requested.weightKg === stored.weightKg &&
+      storedWeightKg(requested.weightKg) === storedWeightKg(stored.weightKg) &&
       requested.durationS === stored.durationS &&
       requested.distanceM === stored.distanceM
     );
@@ -60,7 +28,9 @@ function sameExerciseAndValues(requested: SetInput, stored: StoredSet, cfg: Bala
     );
   }
   return (
-    requested.weightKg === stored.weightKg && requested.reps === stored.reps && requested.isWarmup === stored.isWarmup
+    storedWeightKg(requested.weightKg) === storedWeightKg(stored.weightKg) &&
+    requested.reps === stored.reps &&
+    requested.isWarmup === stored.isWarmup
   );
 }
 

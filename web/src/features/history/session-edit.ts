@@ -1,7 +1,7 @@
 import { DEFAULT_BALANCE } from '@domain/balance.ts';
 import { effortInputFromStored } from '@domain/effort.ts';
-import { roundTo } from '@domain/math.ts';
-import type { CardioInterval, DropSummary } from '@domain/types.ts';
+import { decodeStoredSet, storedWeightKg } from '@domain/set-codec.ts';
+import type { DropSummary } from '@domain/types.ts';
 import type { CardioActivity, HoldMeasure, LoadType, PaceUnit } from '../../lib/exercises/catalog-rules.ts';
 import { formatLoad } from '../../lib/format.ts';
 import type { InvokeOutcome } from '../../lib/platform/function-client-rules.ts';
@@ -77,56 +77,51 @@ const UNKNOWN_EXERCISE_NAME = 'Unknown exercise';
 const UNKNOWN_EXERCISE_LOAD_TYPE: LoadType = 'external';
 const UNKNOWN_EXERCISE_PACE_UNIT: PaceUnit = 'per_km';
 
-function storedInterval(row: StoredSetRow): CardioInterval | null {
-  const { intervalWorkS: workS, intervalRestS: restS, intervalRounds: rounds } = row;
-  return workS === null || restS === null || rounds === null ? null : { workS, restS, rounds };
-}
-
 function placedFromRow(row: StoredSetRow, known: KnownExercise | undefined): PlacedSet {
   const name = known?.name ?? UNKNOWN_EXERCISE_NAME;
-  const effort = effortInputFromStored(row.effortInputType, row.effortValue, DEFAULT_BALANCE);
-  if (row.reps === null && row.weightKg !== null && row.countedWorkS === null) {
-    const measure: HoldMeasure = row.durationS !== null ? 'time' : 'distance';
-    const loadType = known !== undefined && known.modality !== 'cardio' ? known.loadType : UNKNOWN_EXERCISE_LOAD_TYPE;
+  const stored = decodeStoredSet(row);
+  const effort = effortInputFromStored(stored.effortInputType, stored.effortValue, DEFAULT_BALANCE);
+  const loadType = known !== undefined && known.modality !== 'cardio' ? known.loadType : UNKNOWN_EXERCISE_LOAD_TYPE;
+  if (stored.kind === 'hold') {
+    const measure: HoldMeasure = stored.durationS !== null ? 'time' : 'distance';
     return {
       modality: 'hold',
-      header: { exerciseId: row.exerciseId, name, modality: 'hold', measure, loadType },
+      header: { exerciseId: stored.exerciseId, name, modality: 'hold', measure, loadType },
       set: {
-        id: row.id,
+        id: stored.id,
         kind: 'hold',
-        weightKg: roundTo(2, row.weightKg),
-        durationS: row.durationS,
-        distanceM: row.distanceM,
+        weightKg: storedWeightKg(stored.weightKg),
+        durationS: stored.durationS,
+        distanceM: stored.distanceM,
         effort,
       },
     };
   }
-  if (row.durationS !== null) {
+  if (stored.kind === 'cardio') {
     const activity = known?.modality === 'cardio' ? known.activity : null;
     const paceUnit = activity?.paceUnit ?? UNKNOWN_EXERCISE_PACE_UNIT;
     const tracksDistance = activity?.tracksDistance ?? true;
     return {
       modality: 'cardio',
-      header: { exerciseId: row.exerciseId, name, modality: 'cardio', paceUnit, tracksDistance },
+      header: { exerciseId: stored.exerciseId, name, modality: 'cardio', paceUnit, tracksDistance },
       set: {
-        id: row.id,
+        id: stored.id,
         kind: 'cardio',
-        durationS: row.durationS,
-        distanceM: row.distanceM,
-        interval: storedInterval(row),
+        durationS: stored.durationS,
+        distanceM: stored.distanceM,
+        interval: stored.interval,
         effort,
       },
     };
   }
-  const loadType = known !== undefined && known.modality !== 'cardio' ? known.loadType : UNKNOWN_EXERCISE_LOAD_TYPE;
   return {
     modality: 'lift',
-    header: { exerciseId: row.exerciseId, name, modality: 'lift', loadType },
+    header: { exerciseId: stored.exerciseId, name, modality: 'lift', loadType },
     set: {
-      id: row.id,
-      weightKg: roundTo(2, row.weightKg ?? 0),
-      reps: row.reps ?? 0,
-      isWarmup: row.isWarmup,
+      id: stored.id,
+      weightKg: storedWeightKg(stored.weightKg),
+      reps: stored.reps,
+      isWarmup: stored.isWarmup,
       effort,
     },
   };
@@ -149,7 +144,7 @@ function setPayload(placed: PlacedSet, position: number): EditSessionPayload['se
       return boutPayload(placed.set, placed.header.exerciseId, position);
     case 'hold':
       return holdPayload(
-        { ...placed.set, weightKg: roundTo(2, placed.set.weightKg) },
+        { ...placed.set, weightKg: storedWeightKg(placed.set.weightKg) },
         placed.header.exerciseId,
         position,
       );
@@ -158,7 +153,7 @@ function setPayload(placed: PlacedSet, position: number): EditSessionPayload['se
         id: placed.set.id,
         exerciseId: placed.header.exerciseId,
         position,
-        weightKg: roundTo(2, placed.set.weightKg),
+        weightKg: storedWeightKg(placed.set.weightKg),
         reps: placed.set.reps,
         isWarmup: placed.set.isWarmup,
         effort: placed.set.effort,
@@ -293,7 +288,7 @@ const HOLD_FIELDS = ['weightKg', 'durationS', 'distanceM', 'effort'] as const;
 
 function comparableField<S extends object>(set: S, field: keyof S): string {
   const value = set[field];
-  return JSON.stringify(field === 'weightKg' && typeof value === 'number' ? roundTo(2, value) : value);
+  return JSON.stringify(field === 'weightKg' && typeof value === 'number' ? storedWeightKg(value) : value);
 }
 
 function changedFields<S extends object, F extends keyof S>(mine: S, before: S, fields: readonly F[]): F[] {

@@ -2,6 +2,7 @@ import { isoTimestamp, type JsonValue, nullableNumber, type Transaction } from '
 import {
   type BalanceConfig,
   type ChallengeRun,
+  decodeStoredSet,
   type ChallengeSummary,
   type GearLoadout,
   isSessionEditable,
@@ -9,17 +10,13 @@ import {
   type SessionSummary,
   setKind,
   type StoredSet,
+  STORED_SET_COLUMNS,
+  type StoredSetColumnRow,
+  storedSetColumnsOf,
   type WritableSet,
 } from '../domain/index.ts';
 import { HttpError } from '../http.ts';
-import {
-  cardioFieldsFromRow,
-  holdFieldsFromRow,
-  inputColumnsWithEffort,
-  liftFieldsFromRow,
-  setKindOfRow,
-  type PrescriptionSnapshotColumns,
-} from './set-columns.ts';
+import { inputColumnsWithEffort, type PrescriptionSnapshotColumns } from './set-columns.ts';
 
 export interface SessionTiming {
   startedAt: string;
@@ -133,24 +130,8 @@ export async function loadStoredSetsById(tx: Transaction, sessionId: string) {
 
 async function loadStoredSets(tx: Transaction, sessionId: string): Promise<StoredSet[]> {
   const rows = await tx`
-    select id, exercise_id, position, weight_kg, effective_load_kg, reps, is_warmup, effort_input_type, effort_value,
-           duration_s, distance_m, interval_work_s, interval_rest_s, interval_rounds
-    from public.sets where session_id = ${sessionId} order by position`;
-  return rows.map((row): StoredSet => {
-    const base = {
-      id: row.id,
-      exerciseId: row.exercise_id,
-      position: row.position,
-      effortInputType: row.effort_input_type,
-      effortValue: nullableNumber(row.effort_value),
-    };
-    const kind = setKindOfRow(row);
-    if (kind === 'cardio') return { ...base, kind: 'cardio', ...cardioFieldsFromRow(row) };
-    if (kind === 'hold') {
-      return { ...base, kind: 'hold', ...holdFieldsFromRow(row), effectiveLoadKg: Number(row.effective_load_kg) };
-    }
-    return { ...base, kind: 'lift', ...liftFieldsFromRow(row), effectiveLoadKg: Number(row.effective_load_kg) };
-  });
+    select ${tx([...STORED_SET_COLUMNS])} from public.sets where session_id = ${sessionId} order by position`;
+  return rows.map((row) => decodeStoredSet(storedSetColumnsOf(row as StoredSetColumnRow)));
 }
 
 export async function tombstoneOwner(tx: Transaction, sessionId: string): Promise<string | null> {
