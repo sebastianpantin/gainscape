@@ -88,6 +88,7 @@ export function parseChangelog(raw: unknown): ChangelogEntry[] {
   if (!Array.isArray(raw) || raw.length === 0) throw new ChangelogError(['changelog must be a non-empty list']);
   const problems: string[] = [];
   const coveredBy = new Map<number, number>();
+  const titledBy = new Map<string, number>();
   let above: ChangelogEntry | null = null;
   raw.forEach((candidate: unknown, index) => {
     const label = `entry ${index + 1}`;
@@ -105,6 +106,10 @@ export function parseChangelog(raw: unknown): ChangelogEntry[] {
       if (earlier !== undefined) problems.push(`${label}: prs #${pr} is already in entry ${earlier}`);
       else coveredBy.set(pr, index + 1);
     }
+    const titled = titledBy.get(entry.title);
+    if (titled !== undefined)
+      problems.push(`${label}: title ${JSON.stringify(entry.title)} is already entry ${titled}`);
+    else titledBy.set(entry.title, index + 1);
     if (above && fields.length === 0) problems.push(...orderProblems(entry, above, label));
     above = fields.length === 0 ? entry : null;
   });

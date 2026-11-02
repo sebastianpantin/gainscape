@@ -1,7 +1,7 @@
 - prs: [184]
   version: 0.24.0
   date: 2026-10-29
-  title: A livelier app
+  title: Chirps, count-ups and a moody pet
   items:
     - A set that beats your best now plays a quiet chirp, and the Done check mark gives a little press when you log a set.
     - Your levels, DOTS and XP bars count up from where you last saw them, so you can watch your progress grow.

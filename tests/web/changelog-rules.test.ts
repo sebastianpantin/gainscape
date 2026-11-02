@@ -94,6 +94,10 @@ describe('parsing the changelog', () => {
     expectProblem(withEntry(1, { title: '  ' }), 2, 'title');
   });
 
+  it('rejects a title another release already uses, since the sheet names releases by title', () => {
+    expectProblem(withEntry(0, { title: 'Plates' }), 2, 'title');
+  });
+
   it.each([['2026-02-30'], ['2026-13-01'], ['2026-12-32'], ['2026-1-5'], [20261020], ['']])(
     'rejects date %j',
     (date) => {
