@@ -1,3 +1,13 @@
+- prs: [195, 196, 198, 201]
+  version: 0.25.0
+  date: 2026-11-02
+  title: Honest effort, same XP
+  items:
+    - Once the app knows your strength on a lift, a set's XP comes from how hard the app estimates it was. Rating your effort honestly or leaving it blank earns the same XP, and your rating still sharpens your 1RM estimate.
+    - Picking Easy on a light set no longer counts against you, so warm-ups and back-off sets keep their full XP.
+    - Each set now shows the estimated reps in reserve its XP comes from. Your past workouts are recounted the same way, so some XP and levels may move a little.
+    - A run, ride or row that beats your best distance, pace or time now shows a record chip before you finish.
+    - In custom programs, a retest no longer stays pending after you log it, and sets with open reps or a last-used weight no longer count as missed.
 - prs: [184, 191, 192, 193]
   version: 0.24.0
   date: 2026-10-29
