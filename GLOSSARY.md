@@ -46,6 +46,26 @@ _Avoid_: raw values, user data
 What the server computes for a set from its Input values and the history before it, such as XP, effective reps and record candidates. They are recomputed after every Edit.
 _Avoid_: computed fields, results
 
+**Effort**:
+How hard the lifter says a set was, logged as an effort level, reps in reserve (RIR) or RPE. The top of each scale means "5 or more in reserve". Effort is optional; it counts toward the 1RM estimate and, on a first-time lift, decides XP.
+_Avoid_: rating, difficulty, intensity
+
+**1RM estimate**:
+The heaviest single rep the server believes the lifter can do on a lift, worked out from their recent sets. A lift has none until its first session is done.
+_Avoid_: max, PR, e1RM (in prose)
+
+**Estimated RIR**:
+The reps in reserve the server predicts for a set from its load and the 1RM estimate, lowered by fatigue from earlier sets in the Session. Once a lift has a 1RM estimate, XP comes from the Estimated RIR, whether or not Effort was logged.
+_Avoid_: predicted effort, assumed RIR
+
+**Effective reps**:
+The reps of a set close enough to failure to earn XP and qualify for loot.
+_Avoid_: hard reps, counted reps
+
+**Flag**:
+The mark on a set whose Effort claims it was harder than the Estimated RIR allows, so the 1RM estimate uses the estimate's floor instead of the claim. A Flag never changes XP, and the top of the Effort scale is never Flagged.
+_Avoid_: cheat, penalty, untrusted set
+
 **Record**:
 A personal best the server awards on a set: a rep max, most reps, or a best Cardio or Hold.
 _Avoid_: PR (in prose), best set
