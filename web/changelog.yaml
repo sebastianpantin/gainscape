@@ -1,3 +1,13 @@
+- prs: [203]
+  version: 0.25.1
+  date: 2026-11-02
+  title: Commas count
+  items:
+    - Numbers with a decimal comma, like 5,5 km or 102,5 kg, now save as 5.5 and 102.5 everywhere, including cardio, the plate calculator, programs and your bodyweight.
+    - A set with no weight on an exercise that needs weight no longer counts as a record. Old records like that are cleared when your history is recounted.
+    - After you save a program, Back on Programs takes you to your profile instead of reopening the editor.
+    - Changing a setting with the keyboard keeps focus on the choice you picked.
+    - Pinning a lift now updates the Collection share in What friends see right away.
 - prs: [195, 196, 198, 201]
   version: 0.25.0
   date: 2026-11-02
