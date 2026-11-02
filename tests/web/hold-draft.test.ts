@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BALANCE, MAX_SETS_PER_SESSION } from '@domain/index.ts';
-import { previewSession } from '../../web/src/features/workout/xp-preview.ts';
+import { previewDraft, type PreviewContext } from '../../web/src/features/workout/xp-preview.ts';
 import { toExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   draftRecord,
@@ -12,6 +12,13 @@ import { addHoldExercise, addSet, toggleSetDone } from '../../web/src/offline/dr
 import { startDraft } from '../../web/src/offline/draft-starts.ts';
 import { removeSet, updateHoldSet } from '../../web/src/lib/workout/exercise-edit-rules.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
+
+const HOLD_PREVIEW_CONTEXT: PreviewContext = {
+  isBuiltIn: () => true,
+  strength: {},
+  bodyweightKg: null,
+  recordBaseline: null,
+};
 
 const userId = 'user-1';
 
@@ -104,10 +111,17 @@ describe('hold drafts', () => {
     const draft = withCarry();
     const [set] = holdOf(draft).sets;
     const failed = updateHoldSet(draft, 0, set.id, { distanceM: 50, effort: { type: 'level', level: 'failure' } });
-    const [[preview]] = previewSession(failed.exercises, () => true, {});
+    const [[preview]] = previewDraft(failed.exercises, {
+      isBuiltIn: () => true,
+      strength: {},
+      bodyweightKg: null,
+      recordBaseline: null,
+    }).previews;
     expect(preview).toMatchObject({ xp: 6 * DEFAULT_BALANCE.xpPerEffectiveRep, basis: 'logged' });
     const unrated = updateHoldSet(draft, 0, set.id, { distanceM: 50 });
-    expect(previewSession(unrated.exercises, () => true, {})[0][0].xp).toBe(3 * DEFAULT_BALANCE.xpPerEffectiveRep);
+    expect(previewDraft(unrated.exercises, HOLD_PREVIEW_CONTEXT).previews[0][0].xp).toBe(
+      3 * DEFAULT_BALANCE.xpPerEffectiveRep,
+    );
   });
 });
 

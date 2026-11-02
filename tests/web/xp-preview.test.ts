@@ -21,8 +21,8 @@ import type {
 } from '../../web/src/offline/draft-format.ts';
 import {
   donePreviewTotal,
+  previewDraft,
   previewNote,
-  previewSession,
   previewXpLabel,
 } from '../../web/src/features/workout/xp-preview.ts';
 
@@ -59,29 +59,34 @@ function strengthOf(entries: [string, number | null][]): Record<string, Exercise
 
 const builtIn = () => true;
 
-function totalXp(previews: ReturnType<typeof previewSession>): number {
+function xpPreviews(
+  exercises: readonly DraftExercise[],
+  isBuiltIn: (exerciseId: string) => boolean,
+  strength: Record<string, ExerciseStrength> | null,
+  bodyweightKg: number | null = null,
+) {
+  return previewDraft(exercises, { isBuiltIn, strength, bodyweightKg, recordBaseline: null }).previews;
+}
+
+function totalXp(previews: ReturnType<typeof xpPreviews>): number {
   return previews.flat().reduce((sum, preview) => sum + preview.xp, 0);
 }
 
-describe('previewSession', () => {
+describe('previewDraft XP', () => {
   it('previews no XP for a zero external load', () => {
-    const previews = previewSession(
-      [exercise('bench', [draftSet(0, 6, failure)])],
-      builtIn,
-      strengthOf([['bench', 100]]),
-    );
+    const previews = xpPreviews([exercise('bench', [draftSet(0, 6, failure)])], builtIn, strengthOf([['bench', 100]]));
     expect(previews[0][0].xp).toBe(0);
   });
 
   it('previews no XP for a warm-up set and leaves the working sets after it unchanged', () => {
     const strength = strengthOf([['bench', epley(100, 6)]]);
     const working = draftSet(100, 6, failure);
-    const withWarmups = previewSession(
+    const withWarmups = xpPreviews(
       [exercise('bench', [warmupSet(20, 10), warmupSet(60, 3, false), working])],
       builtIn,
       strength,
     );
-    const alone = previewSession([exercise('bench', [working])], builtIn, strength);
+    const alone = xpPreviews([exercise('bench', [working])], builtIn, strength);
     expect(withWarmups[0].slice(0, 2)).toEqual([
       { xp: 0, basis: 'warmup', rir: null },
       { xp: 0, basis: 'warmup', rir: null },
@@ -90,13 +95,13 @@ describe('previewSession', () => {
   });
 
   it('previews an unrated warm-up set as a warm-up before strength has loaded', () => {
-    const previews = previewSession([exercise('bench', [warmupSet(20, 10)])], builtIn, null);
+    const previews = xpPreviews([exercise('bench', [warmupSet(20, 10)])], builtIn, null);
     expect(previews[0][0]).toEqual({ xp: 0, basis: 'warmup', rir: null });
   });
 
   it('previews the rep-based intensity bonus for a logged set', () => {
     const e1rmKg = epley(100, 6);
-    const previews = previewSession(
+    const previews = xpPreviews(
       [exercise('bench', [draftSet(100, 6, failure)])],
       builtIn,
       strengthOf([['bench', e1rmKg]]),
@@ -107,7 +112,7 @@ describe('previewSession', () => {
 
   it('pays cold-start XP for at most 8 sets of a first-time exercise', () => {
     const sets = Array.from({ length: 10 }, () => draftSet(60, 8, null));
-    const previews = previewSession([exercise('bench', sets)], builtIn, strengthOf([]));
+    const previews = xpPreviews([exercise('bench', sets)], builtIn, strengthOf([]));
     expect(previews[0].map((preview) => preview.xp)).toEqual([
       ...Array.from({ length: 8 }, () => DEFAULT_BALANCE.coldStartXpPerSet),
       0,
@@ -118,16 +123,12 @@ describe('previewSession', () => {
 
   it('lowers the XP of repeated sets that all claim failure', () => {
     const sets = Array.from({ length: 10 }, () => draftSet(100, 6, failure));
-    const previews = previewSession([exercise('bench', sets)], builtIn, strengthOf([['bench', epley(100, 6)]]));
+    const previews = xpPreviews([exercise('bench', sets)], builtIn, strengthOf([['bench', epley(100, 6)]]));
     expect(previews[0][0].xp).toBeLessThan(previews[0][9].xp);
   });
 
   it('gives a flagged claim no intensity bonus', () => {
-    const previews = previewSession(
-      [exercise('bench', [draftSet(80, 3, failure)])],
-      builtIn,
-      strengthOf([['bench', 100]]),
-    );
+    const previews = xpPreviews([exercise('bench', [draftSet(80, 3, failure)])], builtIn, strengthOf([['bench', 100]]));
     expect(previews[0][0].xp).toBe(setXp(3, 1, DEFAULT_BALANCE));
   });
 
@@ -135,19 +136,19 @@ describe('previewSession', () => {
     const done = draftSet(100, 6, failure);
     const planned = Array.from({ length: 9 }, () => draftSet(100, 6, failure, false));
     const strength = strengthOf([['bench', epley(100, 6)]]);
-    const alone = previewSession([exercise('bench', [done])], builtIn, strength);
-    const withPlanned = previewSession([exercise('bench', [done, ...planned])], builtIn, strength);
+    const alone = xpPreviews([exercise('bench', [done])], builtIn, strength);
+    const withPlanned = xpPreviews([exercise('bench', [done, ...planned])], builtIn, strength);
     expect(withPlanned[0][0].xp).toBe(alone[0][0].xp);
   });
 
   it('previews a planned set as if it were done', () => {
     const strength = strengthOf([['bench', 120]]);
-    const previews = previewSession(
+    const previews = xpPreviews(
       [exercise('bench', [draftSet(100, 5, null), draftSet(100, 5, null, false)])],
       builtIn,
       strength,
     );
-    const bothDone = previewSession(
+    const bothDone = xpPreviews(
       [exercise('bench', [draftSet(100, 5, null), draftSet(100, 5, null)])],
       builtIn,
       strength,
@@ -156,17 +157,17 @@ describe('previewSession', () => {
   });
 
   it('marks unrated sets unknown until strength has loaded', () => {
-    const previews = previewSession([exercise('bench', [draftSet(60, 8, null)])], builtIn, null);
+    const previews = xpPreviews([exercise('bench', [draftSet(60, 8, null)])], builtIn, null);
     expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', rir: null });
   });
 
   it('pays nothing for an unrated set on a custom exercise the first time', () => {
-    const previews = previewSession([exercise('mine', [draftSet(60, 8, null)])], () => false, strengthOf([]));
+    const previews = xpPreviews([exercise('mine', [draftSet(60, 8, null)])], () => false, strengthOf([]));
     expect(previews[0][0].xp).toBe(0);
   });
 
   it('marks a pure bodyweight set with added load unknown instead of throwing', () => {
-    const previews = previewSession(
+    const previews = xpPreviews(
       [exercise('pull-up', [draftSet(10, 8, failure)], 'bodyweight')],
       builtIn,
       strengthOf([]),
@@ -176,7 +177,7 @@ describe('previewSession', () => {
   });
 
   it('previews a bodyweight set against reps capacity', () => {
-    const previews = previewSession(
+    const previews = xpPreviews(
       [exercise('pull-up', [draftSet(0, 8, null)], 'bodyweight')],
       builtIn,
       strengthOf([['pull-up', 12]]),
@@ -185,7 +186,7 @@ describe('previewSession', () => {
   });
 
   it('sums done sets the same way the server awards them across exercises', () => {
-    const previews = previewSession(
+    const previews = xpPreviews(
       [
         exercise('bench', [draftSet(100, 6, failure), draftSet(100, 5, failure)]),
         exercise('squat', [draftSet(140, 5, { type: 'rir', value: 2 })]),
@@ -200,17 +201,13 @@ describe('previewSession', () => {
     expect(previews.map((sets) => sets.length)).toEqual([2, 1]);
   });
   it('pays cold-start XP for an exercise trained before without an e1RM', () => {
-    const previews = previewSession(
-      [exercise('curl', [draftSet(20, 15, null)])],
-      builtIn,
-      strengthOf([['curl', null]]),
-    );
+    const previews = xpPreviews([exercise('curl', [draftSet(20, 15, null)])], builtIn, strengthOf([['curl', null]]));
     expect(previews[0][0]).toEqual({ basis: 'unrated', xp: DEFAULT_BALANCE.coldStartXpPerSet, rir: null });
   });
 
   it('estimates from the session best when only an expired e1RM is known', () => {
     const strength = { bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true } };
-    const previews = previewSession(
+    const previews = xpPreviews(
       [exercise('bench', [draftSet(80, 5, { type: 'level', level: 'hard' }), draftSet(80, 5, null)])],
       builtIn,
       strength,
@@ -219,7 +216,7 @@ describe('previewSession', () => {
   });
 
   it('adds bodyweight to a weighted bodyweight exercise', () => {
-    const previews = previewSession(
+    const previews = xpPreviews(
       [exercise('dip', [draftSet(0, 8, failure)], 'bodyweight_plus')],
       builtIn,
       strengthOf([['dip', epley(80, 8)]]),
@@ -230,7 +227,7 @@ describe('previewSession', () => {
   });
 
   it('marks a weighted bodyweight set unknown without a bodyweight', () => {
-    const previews = previewSession(
+    const previews = xpPreviews(
       [exercise('dip', [draftSet(10, 8, failure)], 'bodyweight_plus')],
       builtIn,
       strengthOf([]),
@@ -239,7 +236,7 @@ describe('previewSession', () => {
   });
 
   it('marks a set with a weight that is not a number unknown', () => {
-    const previews = previewSession([exercise('bench', [draftSet(Number.NaN, 5, failure)])], builtIn, strengthOf([]));
+    const previews = xpPreviews([exercise('bench', [draftSet(Number.NaN, 5, failure)])], builtIn, strengthOf([]));
     expect(previews[0][0]).toEqual({ xp: 0, basis: 'unknown', rir: null });
   });
 
@@ -287,7 +284,7 @@ describe('previewSession', () => {
       DEFAULT_BALANCE,
       { catalog, strength },
     );
-    const previews = previewSession(draft, builtIn, strength, 80);
+    const previews = xpPreviews(draft, builtIn, strength, 80);
     expect(previews.flat().map((preview) => preview.xp)).toEqual(server.outputs.sets.map((result) => result.xp));
   });
 });
@@ -383,26 +380,26 @@ function serverXp(draft: CardioDraftExercise[]): number[] {
   return server.outputs.sets.map((result) => result.xp);
 }
 
-describe('previewSession with cardio', () => {
+describe('previewDraft XP with cardio', () => {
   it('pays a split activity the XP the server awards to both skills', () => {
     const draft = [
       cardio('rowing-intervals', rowingIntervals, [
         bout({ interval: { workS: 60, restS: 60, rounds: 10 }, effort: { type: 'cardio', level: 'hard' } }),
       ]),
     ];
-    const previews = previewSession(draft, builtIn, null);
+    const previews = xpPreviews(draft, builtIn, null);
     expect(previews[0][0]).toMatchObject({ xp: serverXp(draft)[0], basis: 'logged' });
     expect(previews[0][0].xp).toBeGreaterThan(0);
   });
 
   it('applies the pace bonus and the steady factor like the server', () => {
     const draft = [cardio('run', running, [bout({ distanceM: 6000, effort: { type: 'cardio', level: 'moderate' } })])];
-    expect(previewSession(draft, builtIn, null)[0].map((preview) => preview.xp)).toEqual(serverXp(draft));
+    expect(xpPreviews(draft, builtIn, null)[0].map((preview) => preview.xp)).toEqual(serverXp(draft));
   });
 
   it('stops paying once the bouts pass the 180 counted minutes of a session', () => {
     const draft = [cardio('run', running, [bout({ durationS: 7200 }), bout({ durationS: 7200 })])];
-    const previews = previewSession(draft, builtIn, null)[0].map((preview) => preview.xp);
+    const previews = xpPreviews(draft, builtIn, null)[0].map((preview) => preview.xp);
     expect(previews).toEqual(serverXp(draft));
     expect(previews[1]).toBe(previews[0] / 2);
   });
@@ -410,35 +407,35 @@ describe('previewSession with cardio', () => {
   it('caps a walking bout logged hard at moderate', () => {
     const hard = [cardio('walk', walking, [bout({ effort: { type: 'cardio', level: 'hard' } })])];
     const moderate = [cardio('walk', walking, [bout({ effort: { type: 'cardio', level: 'moderate' } })])];
-    expect(previewSession(hard, builtIn, null)[0][0].xp).toBe(serverXp(hard)[0]);
-    expect(previewSession(hard, builtIn, null)[0][0].xp).toBe(previewSession(moderate, builtIn, null)[0][0].xp);
+    expect(xpPreviews(hard, builtIn, null)[0][0].xp).toBe(serverXp(hard)[0]);
+    expect(xpPreviews(hard, builtIn, null)[0][0].xp).toBe(xpPreviews(moderate, builtIn, null)[0][0].xp);
   });
 
   it('previews a planned bout after the done bouts', () => {
     const done = bout({ durationS: 10_000 });
     const planned = bout({ durationS: 1800, done: false });
     const draft = [cardio('run', running, [done, planned])];
-    const previews = previewSession(draft, builtIn, null)[0];
+    const previews = xpPreviews(draft, builtIn, null)[0];
     const plannedAsDone = serverXp([cardio('run', running, [done, { ...planned, done: true }])])[1];
     expect(previews[1].xp).toBe(plannedAsDone);
   });
 
   it('previews no XP for an activity without shares', () => {
     const draft = [cardio('mystery', { ...running, shares: [] }, [bout()])];
-    expect(previewSession(draft, builtIn, null)[0][0]).toMatchObject({ xp: 0, basis: 'logged' });
+    expect(xpPreviews(draft, builtIn, null)[0][0]).toMatchObject({ xp: 0, basis: 'logged' });
   });
 
   it('marks a bout outside the server bounds unknown instead of throwing', () => {
     const draft = [cardio('run', running, [bout({ durationS: 30 }), bout({ durationS: Number.NaN })])];
-    expect(previewSession(draft, builtIn, null)[0].map((preview) => preview.basis)).toEqual(['unknown', 'unknown']);
+    expect(xpPreviews(draft, builtIn, null)[0].map((preview) => preview.basis)).toEqual(['unknown', 'unknown']);
   });
 
   it('leaves lift previews unchanged next to cardio bouts', () => {
     const strength = strengthOf([['bench', epley(100, 6)]]);
     const lifts = [exercise('bench', [draftSet(100, 6, failure), draftSet(100, 6, null, false)])];
     const mixed: DraftExercise[] = [cardio('run', running, [bout()]), ...lifts, cardio('walk', walking, [bout()])];
-    const alone = previewSession(lifts, builtIn, strength);
-    const together = previewSession(mixed, builtIn, strength);
+    const alone = xpPreviews(lifts, builtIn, strength);
+    const together = xpPreviews(mixed, builtIn, strength);
     expect(together[1]).toEqual(alone[0]);
   });
 });

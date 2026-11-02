@@ -4,6 +4,7 @@ import type { LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { type RecordBaseline } from '../../web/src/lib/workout/session-baseline-rules.ts';
 import type {
   CardioDraftExercise,
+  DraftExercise,
   DraftSet,
   HoldDraftExercise,
   HoldDraftSet,
@@ -11,13 +12,21 @@ import type {
 } from '../../web/src/offline/draft-format.ts';
 import {
   becomesRecord,
-  previewRecords,
   recordChipLabel,
   recordChipText,
   recordForSet,
 } from '../../web/src/features/workout/record-preview.ts';
+import { previewDraft } from '../../web/src/features/workout/xp-preview.ts';
 
 const NO_RECORD_BASELINE: RecordBaseline = Object.freeze({ repMaxKg: {}, maxReps: {} });
+
+function recordPreviews(
+  exercises: readonly DraftExercise[],
+  strength: Record<string, ExerciseStrength> | null,
+  recordBaseline: RecordBaseline | null,
+) {
+  return previewDraft(exercises, { isBuiltIn: () => true, strength, bodyweightKg: null, recordBaseline }).records;
+}
 
 let setCounter = 0;
 
@@ -52,9 +61,9 @@ function repMaxes(exerciseId: string, loadsByReps: Record<number, number>): Reco
   return { repMaxKg: { [exerciseId]: slots }, maxReps: {} };
 }
 
-describe('previewRecords', () => {
+describe('previewDraft records', () => {
   it('predicts a new rep max when a done set beats the slot for its reps', () => {
-    const records = previewRecords(
+    const records = recordPreviews(
       [exercise('bench', [draftSet(102.5, 5)])],
       trained('bench'),
       repMaxes('bench', { 5: 100 }),
@@ -64,14 +73,14 @@ describe('previewRecords', () => {
 
   it('does not count a tie or a gain below the minimum record gain', () => {
     const baseline = repMaxes('bench', { 5: 100 });
-    const tied = previewRecords([exercise('bench', [draftSet(100, 5)])], trained('bench'), baseline);
-    const tiny = previewRecords([exercise('bench', [draftSet(100.5, 5)])], trained('bench'), baseline);
+    const tied = recordPreviews([exercise('bench', [draftSet(100, 5)])], trained('bench'), baseline);
+    const tiny = recordPreviews([exercise('bench', [draftSet(100.5, 5)])], trained('bench'), baseline);
     expect(tied).toEqual([[null]]);
     expect(tiny).toEqual([[null]]);
   });
 
   it('names the highest rep slot a set improves', () => {
-    const records = previewRecords(
+    const records = recordPreviews(
       [exercise('bench', [draftSet(90, 8)])],
       trained('bench'),
       repMaxes('bench', { 5: 100, 6: 95, 7: 88, 8: 85 }),
@@ -83,7 +92,7 @@ describe('previewRecords', () => {
     const warmup = { ...draftSet(200, 5), isWarmup: true };
     const planned = draftSet(200, 5, false);
     const noReps = draftSet(200, 0);
-    const records = previewRecords(
+    const records = recordPreviews(
       [exercise('bench', [warmup, planned, noReps])],
       trained('bench'),
       repMaxes('bench', { 5: 100 }),
@@ -93,21 +102,21 @@ describe('previewRecords', () => {
 
   it('predicts no record for an exercise without a prior session or before strength has loaded', () => {
     const sets = [exercise('bench', [draftSet(200, 5)])];
-    expect(previewRecords(sets, trained(), NO_RECORD_BASELINE)).toEqual([[null]]);
-    expect(previewRecords(sets, null, NO_RECORD_BASELINE)).toEqual([[null]]);
+    expect(recordPreviews(sets, trained(), NO_RECORD_BASELINE)).toEqual([[null]]);
+    expect(recordPreviews(sets, null, NO_RECORD_BASELINE)).toEqual([[null]]);
   });
 
   it('predicts nothing before the records have loaded', () => {
-    expect(previewRecords([exercise('bench', [draftSet(200, 5)])], trained('bench'), null)).toEqual([[null]]);
+    expect(recordPreviews([exercise('bench', [draftSet(200, 5)])], trained('bench'), null)).toEqual([[null]]);
   });
 
   it('fills an empty slot of a trained exercise', () => {
-    const records = previewRecords([exercise('bench', [draftSet(60, 3)])], trained('bench'), NO_RECORD_BASELINE);
+    const records = recordPreviews([exercise('bench', [draftSet(60, 3)])], trained('bench'), NO_RECORD_BASELINE);
     expect(records[0][0]).toEqual({ kind: 'rep_max', reps: 3, loadKg: 60, previousLoadKg: null });
   });
 
   it('lets an earlier set in the session raise the bar for a later one', () => {
-    const records = previewRecords(
+    const records = recordPreviews(
       [exercise('bench', [draftSet(105, 5), draftSet(105, 5), draftSet(110, 5)])],
       trained('bench'),
       repMaxes('bench', { 5: 100 }),
@@ -117,7 +126,7 @@ describe('previewRecords', () => {
 
   it('predicts a reps record for a bodyweight exercise only when it beats the most reps', () => {
     const baseline: RecordBaseline = { repMaxKg: {}, maxReps: { pullup: 12 } };
-    const records = previewRecords(
+    const records = recordPreviews(
       [exercise('pullup', [draftSet(0, 12), draftSet(0, 13)], 'bodyweight')],
       trained('pullup'),
       baseline,
@@ -126,12 +135,20 @@ describe('previewRecords', () => {
   });
 
   it('tracks rep maxes of added weight for a weighted bodyweight exercise', () => {
-    const records = previewRecords(
+    const dips = [exercise('dip', [draftSet(20, 5)], 'bodyweight_plus')];
+    const recordBaseline = repMaxes('dip', { 5: 15 });
+    const context = { isBuiltIn: () => true, strength: trained('dip'), recordBaseline };
+    const records = previewDraft(dips, { ...context, bodyweightKg: 80 }).records;
+    expect(records[0][0]).toEqual({ kind: 'rep_max', reps: 5, loadKg: 20, previousLoadKg: 15 });
+  });
+
+  it('predicts no record for a weighted bodyweight set until the bodyweight is known, as the server cannot score it', () => {
+    const records = recordPreviews(
       [exercise('dip', [draftSet(20, 5)], 'bodyweight_plus')],
       trained('dip'),
       repMaxes('dip', { 5: 15 }),
     );
-    expect(records[0][0]).toEqual({ kind: 'rep_max', reps: 5, loadKg: 20, previousLoadKg: 15 });
+    expect(records).toEqual([[null]]);
   });
 
   it('keeps a cardio exercise in place without records', () => {
@@ -145,7 +162,7 @@ describe('previewRecords', () => {
         { id: 'bout-1', kind: 'cardio', durationS: 600, distanceM: 2000, interval: null, effort: null, done: true },
       ],
     };
-    const records = previewRecords(
+    const records = recordPreviews(
       [cardio, exercise('bench', [draftSet(110, 5)])],
       trained('bench'),
       repMaxes('bench', { 5: 100 }),
@@ -159,7 +176,7 @@ describe('recordForSet', () => {
   it('finds the predicted record of a set by id', () => {
     const set = draftSet(110, 5);
     const exercises = [exercise('bench', [draftSet(60, 5, false), set])];
-    const records = previewRecords(exercises, trained('bench'), repMaxes('bench', { 5: 100 }));
+    const records = recordPreviews(exercises, trained('bench'), repMaxes('bench', { 5: 100 }));
     expect(recordForSet(records, exercises, set.id)).toMatchObject({ kind: 'rep_max', reps: 5 });
     expect(recordForSet(records, exercises, 'missing')).toBeNull();
   });
@@ -172,7 +189,7 @@ describe('becomesRecord', () => {
     const after = [exercise('bench', [{ ...planned, done: true }])];
     const strength = trained('bench');
     const baseline = repMaxes('bench', { 5: 100 });
-    const recordsOf = (exercises: LiftDraftExercise[]) => previewRecords(exercises, strength, baseline);
+    const recordsOf = (exercises: LiftDraftExercise[]) => recordPreviews(exercises, strength, baseline);
     expect(becomesRecord(recordsOf(before), before, recordsOf(after), after, planned.id)).toBe(true);
     expect(becomesRecord(recordsOf(after), after, recordsOf(after), after, planned.id)).toBe(false);
     expect(becomesRecord(recordsOf(after), after, recordsOf(before), before, planned.id)).toBe(false);
@@ -219,15 +236,15 @@ function holdBaseline(exerciseId: string, best: { duration?: number; distance?: 
   return { repMaxKg: {}, maxReps: {}, cardioBest: { [exerciseId]: best } };
 }
 
-describe('previewRecords for holds', () => {
+describe('previewDraft records for holds', () => {
   it('predicts the longest hold and the farthest carry once the load reaches the 20 kg floor', () => {
-    const pinch = previewRecords(
+    const pinch = recordPreviews(
       [holdExercise('pinch', 'time', 'external', [holdSet(20, { durationS: 45 })])],
       null,
       holdBaseline('pinch', { duration: 30 }),
     );
     expect(pinch).toEqual([[{ kind: 'hold', gain: { kind: 'duration', value: 45, previous: 30 } }]]);
-    const carry = previewRecords(
+    const carry = recordPreviews(
       [holdExercise('carry', 'distance', 'external', [holdSet(24, { distanceM: 60 })])],
       null,
       holdBaseline('carry', { distance: 40 }),
@@ -236,7 +253,7 @@ describe('previewRecords for holds', () => {
   });
 
   it('predicts no record for an external-load hold under the floor', () => {
-    const records = previewRecords(
+    const records = recordPreviews(
       [holdExercise('pinch', 'time', 'external', [holdSet(15, { durationS: 90 })])],
       null,
       holdBaseline('pinch', { duration: 30 }),
@@ -245,7 +262,7 @@ describe('previewRecords for holds', () => {
   });
 
   it('counts a bodyweight hang at any added load', () => {
-    const records = previewRecords(
+    const records = recordPreviews(
       [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 31 })])],
       null,
       holdBaseline('hang', { duration: 30 }),
@@ -254,12 +271,12 @@ describe('previewRecords for holds', () => {
   });
 
   it('needs a gain of at least 1 s or 1 m', () => {
-    const hang = previewRecords(
+    const hang = recordPreviews(
       [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 30 })])],
       null,
       holdBaseline('hang', { duration: 30 }),
     );
-    const carry = previewRecords(
+    const carry = recordPreviews(
       [
         holdExercise('carry', 'distance', 'external', [
           holdSet(24, { distanceM: 40.5 }),
@@ -275,14 +292,14 @@ describe('previewRecords for holds', () => {
 
   it('predicts no record for a first hold, a planned hold or before the records have loaded', () => {
     const first = [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 60 })])];
-    expect(previewRecords(first, null, NO_RECORD_BASELINE)).toEqual([[null]]);
-    expect(previewRecords(first, null, null)).toEqual([[null]]);
+    expect(recordPreviews(first, null, NO_RECORD_BASELINE)).toEqual([[null]]);
+    expect(recordPreviews(first, null, null)).toEqual([[null]]);
     const planned = [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 60 }, false)])];
-    expect(previewRecords(planned, null, holdBaseline('hang', { duration: 30 }))).toEqual([[null]]);
+    expect(recordPreviews(planned, null, holdBaseline('hang', { duration: 30 }))).toEqual([[null]]);
   });
 
   it('lets an earlier hold raise the bar for a later one', () => {
-    const records = previewRecords(
+    const records = recordPreviews(
       [holdExercise('hang', 'time', 'bodyweight', [holdSet(0, { durationS: 40 }), holdSet(0, { durationS: 40 })])],
       null,
       holdBaseline('hang', { duration: 30 }),

@@ -16,6 +16,10 @@ _Avoid_: workout (when you mean the stored record), log
 A change to the sets of a Session after it was accepted; it makes the server recompute what the Session and every later Session earned.
 _Avoid_: update, correction
 
+**Preview**:
+The XP and Records the app estimates for a Draft's sets before the server accepts it. Only a hint; the server decides.
+_Avoid_: estimate, prediction
+
 ## Sets
 
 **Set kind**:
@@ -41,3 +45,7 @@ _Avoid_: raw values, user data
 **Derived values**:
 What the server computes for a set from its Input values and the history before it, such as XP, effective reps and record candidates. They are recomputed after every Edit.
 _Avoid_: computed fields, results
+
+**Record**:
+A personal best the server awards on a set: a rep max, most reps, or a best Cardio or Hold.
+_Avoid_: PR (in prose), best set
