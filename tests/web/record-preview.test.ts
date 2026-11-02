@@ -196,6 +196,25 @@ describe('becomesRecord', () => {
   });
 });
 
+describe('cardio record chips', () => {
+  const distance = { kind: 'distance' as const, value: 6000, previous: 4000 };
+  const pace = { kind: 'pace' as const, value: 300, previous: 330 };
+  const duration = { kind: 'duration' as const, value: 1800, previous: 1500 };
+
+  it('names a single best', () => {
+    expect(recordChipText({ kind: 'cardio', gains: [distance] })).toBe('Farthest!');
+    expect(recordChipText({ kind: 'cardio', gains: [pace] })).toBe('Fastest pace!');
+    expect(recordChipText({ kind: 'cardio', gains: [duration] })).toBe('Longest!');
+  });
+
+  it('counts several bests as new bests and names each in the label', () => {
+    const record = { kind: 'cardio' as const, gains: [distance, pace, duration] };
+    expect(recordChipText(record)).toBe('New bests!');
+    expect(recordChipLabel(record)).toBe('Predicted best distance, pace and time');
+    expect(recordChipLabel({ kind: 'cardio', gains: [pace] })).toBe('Predicted best pace');
+  });
+});
+
 describe('recordChipText', () => {
   it('names the rep max or the reps record', () => {
     expect(recordChipText({ kind: 'rep_max', reps: 5, loadKg: 100, previousLoadKg: 95 })).toBe('New 5RM!');

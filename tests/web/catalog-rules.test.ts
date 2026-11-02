@@ -23,6 +23,7 @@ function row(overrides: Partial<ExerciseRow>): ExerciseRow {
     pace_unit: null,
     max_effort: null,
     tracks_distance: true,
+    record_min_distance_m: null,
     exercise_skills: [],
     ...overrides,
   };
@@ -85,6 +86,7 @@ describe('toExercise', () => {
           reference_pace_s_per_km: 330,
           pace_unit: 'per_km',
           max_effort: 'hard',
+          record_min_distance_m: 1000,
           exercise_skills: [
             { share_bp: 3000, skills: { key: 'endurance', name: 'Endurance' } },
             { share_bp: 7000, skills: { key: 'legs', name: 'Legs' } },
@@ -104,6 +106,7 @@ describe('toExercise', () => {
         referencePaceSPerKm: 330,
         maxEffort: 'hard',
         tracksDistance: true,
+        recordMinDistanceM: 1000,
         shares: [
           { skillKey: 'endurance', shareBasisPoints: 3000 },
           { skillKey: 'legs', shareBasisPoints: 7000 },

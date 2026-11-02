@@ -1,5 +1,6 @@
 import {
   type CardioRecordGain,
+  type CardioRecordKind,
   type CardioRecords,
   NO_RECORDS,
   type RecordState,
@@ -13,7 +14,8 @@ import { HOLD_DISTANCE_UNIT } from '../../lib/units.ts';
 import type { DraftExercise } from '../../offline/draft-format.ts';
 
 export type HoldRecordPreview = { kind: 'hold'; gain: CardioRecordGain };
-export type PreviewRecord = SetPersonalRecord | HoldRecordPreview;
+export type CardioRecordPreview = { kind: 'cardio'; gains: CardioRecordGain[] };
+export type PreviewRecord = SetPersonalRecord | HoldRecordPreview | CardioRecordPreview;
 
 const PREVIEW_ACHIEVED_AT = '1970-01-01T00:00:00.000Z';
 const BASELINE_SET_ID = 'baseline';
@@ -48,7 +50,11 @@ export function recordStateFrom(baseline: RecordBaseline): RecordState {
 }
 
 export function recordOfResult(result: SetResult | undefined): PreviewRecord | null {
-  if (result === undefined || result.cardio !== null) return null;
+  if (result === undefined) return null;
+  if (result.cardio !== null) {
+    const { records } = result.cardio;
+    return records.length === 0 ? null : { kind: 'cardio', gains: records };
+  }
   const [gain] = result.holdRecords ?? [];
   return gain === undefined ? result.personalRecord : { kind: 'hold', gain };
 }
@@ -80,12 +86,26 @@ function holdRecordName(record: HoldRecordPreview): string {
   return record.gain.kind === 'distance' ? 'farthest carry' : 'longest hold';
 }
 
+const CARDIO_BEST_TEXT: Record<CardioRecordKind, string> = {
+  distance: 'Farthest!',
+  pace: 'Fastest pace!',
+  duration: 'Longest!',
+};
+
+const CARDIO_BEST_NAME: Record<CardioRecordKind, string> = { distance: 'distance', pace: 'pace', duration: 'time' };
+
+const BEST_LIST = new Intl.ListFormat('en-GB', { type: 'conjunction' });
+
 export function recordChipText(record: PreviewRecord): string {
+  if (record.kind === 'cardio')
+    return record.gains.length === 1 ? CARDIO_BEST_TEXT[record.gains[0].kind] : 'New bests!';
   if (record.kind === 'hold') return `${capitalized(holdRecordName(record))}!`;
   return record.kind === 'rep_max' ? `New ${record.reps}RM!` : 'Most reps!';
 }
 
 export function recordChipLabel(record: PreviewRecord): string {
+  if (record.kind === 'cardio')
+    return `Predicted best ${BEST_LIST.format(record.gains.map((gain) => CARDIO_BEST_NAME[gain.kind]))}`;
   if (record.kind === 'hold') {
     return `Predicted ${holdRecordName(record)}: ${formatCardioRecord(record.gain.kind, record.gain.value, HOLD_DISTANCE_UNIT)}`;
   }

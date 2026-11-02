@@ -29,6 +29,7 @@ export interface CardioActivity {
   referencePaceSPerKm: number | null;
   maxEffort: CardioEffortLevel;
   tracksDistance: boolean;
+  recordMinDistanceM?: number | null;
   shares: ActivityShare[];
 }
 
@@ -83,7 +84,7 @@ export function isCardioExercise(exercise: Exercise): exercise is CardioExercise
 }
 
 export const EXERCISE_COLUMNS =
-  'id, key, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, tracks_distance, measure, exercise_skills(share_bp, skills(key, name))';
+  'id, key, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, tracks_distance, record_min_distance_m, measure, exercise_skills(share_bp, skills(key, name))';
 
 export const exerciseRowSchema = z.object({
   id: z.string(),
@@ -98,6 +99,7 @@ export const exerciseRowSchema = z.object({
   pace_unit: z.enum(PACE_UNITS).nullable(),
   max_effort: z.enum(CARDIO_EFFORT_LEVELS).nullable(),
   tracks_distance: z.boolean(),
+  record_min_distance_m: z.number().nullable(),
   measure: z.enum(['reps', 'time', 'distance']).optional(),
   exercise_skills: z.array(
     z.object({ share_bp: z.number(), skills: z.object({ key: z.string(), name: z.string() }).nullable() }),
@@ -151,6 +153,7 @@ export function toExercise(row: ExerciseRow): Exercise {
       referencePaceSPerKm: row.reference_pace_s_per_km,
       maxEffort: row.max_effort ?? 'max',
       tracksDistance: row.tracks_distance,
+      recordMinDistanceM: row.record_min_distance_m,
       shares: row.exercise_skills.flatMap((share) =>
         share.skills ? [{ skillKey: share.skills.key, shareBasisPoints: share.share_bp }] : [],
       ),

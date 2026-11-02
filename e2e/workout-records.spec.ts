@@ -1,8 +1,10 @@
 import { expect, test } from './support/fixtures.ts';
 import {
+  boutRow,
   definitionOf,
   exactRepMaxes,
   exerciseCard,
+  finishWorkout,
   logCardio,
   logExercise,
   logWorkout,
@@ -60,13 +62,17 @@ test('bodyweight prompt, live record chips, records and the collection log', { t
 
 test('cardio records on the reveal and in the collection log', async ({ page }) => {
   await register(page, uniqueUsername('cr'));
-  for (const [minutes, distance] of [
-    [30, 5],
-    [36, 6],
-  ]) {
-    await openTab(page, 'Train');
-    await logWorkout(page, () => logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]));
-  }
+  await openTab(page, 'Train');
+  await logWorkout(page, () =>
+    logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 5, effort: 'Moderate' }]),
+  );
+  await openTab(page, 'Train');
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logCardio(page, 'running', 'Running', [{ minutes: 36, distance: 6, effort: 'Moderate' }]);
+  const bout = boutRow(exerciseCard(page, 'Running'), 1);
+  await expect(bout).toContainText('New bests!');
+  await expect(bout.getByRole('img', { name: 'Predicted best distance and time' })).toBeVisible();
+  await finishWorkout(page);
   await expect(page.getByLabel('New records')).toContainText('Running: 6 km (was 5 km) · 36 min (was 30 min)');
 
   await openTab(page, 'Collection');

@@ -68,6 +68,7 @@ const CASES: SchemaCase[] = [
       pace_unit: null,
       max_effort: null,
       tracks_distance: false,
+      record_min_distance_m: null,
       measure: 'reps',
       exercise_skills: [{ share_bp: 7000, skills: { key: 'chest', name: 'Chest' } }],
     },

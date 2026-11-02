@@ -350,6 +350,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
               exercise={exercise}
               exerciseIndex={exerciseIndex}
               previews={previews[exerciseIndex]}
+              records={records[exerciseIndex]}
               unit={unitPref}
               note={noteFor(exercise.exerciseId, exercise.name)}
               roomForBout={roomForBout}

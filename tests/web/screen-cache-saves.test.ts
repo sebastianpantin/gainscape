@@ -140,6 +140,7 @@ function exerciseRow(id: string, archivedAt: string | null) {
     pace_unit: null,
     max_effort: null,
     tracks_distance: true,
+    record_min_distance_m: null,
     exercise_skills: [],
   };
 }

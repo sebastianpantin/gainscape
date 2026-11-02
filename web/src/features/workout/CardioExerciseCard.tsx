@@ -7,12 +7,14 @@ import { addSet, toggleSetDone } from '../../offline/draft-edits.ts';
 import { CardioSetRow } from './CardioSetRow.tsx';
 import { type ExerciseCardActions } from './exercise-card-actions.ts';
 import { feedbackLabel } from './set-feedback-rules.ts';
+import { type PreviewRecord } from './record-preview.ts';
 import { type SetPreview } from './xp-preview.ts';
 
 interface CardioExerciseCardProps {
   exercise: CardioDraftExercise;
   exerciseIndex: number;
   previews: SetPreview[];
+  records: (PreviewRecord | null)[];
   unit: UnitPref;
   note: ReactNode;
   roomForBout: boolean;
@@ -25,6 +27,7 @@ export function CardioExerciseCard({
   exercise,
   exerciseIndex,
   previews,
+  records,
   unit,
   note,
   roomForBout,
@@ -61,6 +64,7 @@ export function CardioExerciseCard({
               paceUnit={exercise.activity.paceUnit}
               tracksDistance={exercise.activity.tracksDistance}
               preview={previews[boutIndex]}
+              record={records[boutIndex]}
               drop={actions.dropOn(bout.id)}
               unit={unit}
               onChange={(changes) =>
