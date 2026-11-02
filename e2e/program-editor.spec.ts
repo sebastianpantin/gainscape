@@ -69,6 +69,22 @@ test('create a program from scratch, add Squat 5×5, save, it lists under Your p
   await expect.poll(() => planLines(username, 'Squat Focus')).toEqual(['Day 1 back_squat 5×5-5']);
 });
 
+test('Back after saving a new program returns to Profile, not to the editor', async ({ page }) => {
+  await register(page, uniqueUsername('pn_back'));
+  await openFromProfile(page, 'Programs');
+  await page.getByRole('button', { name: 'New program' }).click();
+  await page.getByLabel('Program name').fill('Back Test');
+  await day(page, 1).getByLabel('Search exercises').fill('Back Squat');
+  await day(page, 1)
+    .getByRole('button', { name: /^Back Squat\b/ })
+    .click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(ownProgram(page, 'Back Test')).toBeVisible();
+
+  await page.getByRole('button', { name: '‹ Back', exact: true }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+});
+
 test('cancel a new program: leaves at once when untouched, asks before discarding a change', async ({ page }) => {
   const username = uniqueUsername('pc');
   await register(page, username);

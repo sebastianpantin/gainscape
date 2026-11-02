@@ -7,6 +7,7 @@ import { cachedPrograms, type ProgramDoc, saveProgram } from '../../lib/programs
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/programs/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { BackLink } from '../../components/BackLink.tsx';
+import { useGoBack } from '../../lib/ui/use-go-back.ts';
 import { FieldProblem } from '../../components/FieldProblem.tsx';
 import { nameProblem } from '../../lib/names.ts';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
@@ -77,6 +78,7 @@ interface ProgramEditorProps {
 export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) {
   const { programId = '' } = useParams();
   const navigate = useNavigate();
+  const leaveEditor = useGoBack('/programs');
   const queryClient = useQueryClient();
   const [doc, setDoc] = useState<ProgramDoc | null>(() =>
     creating
@@ -192,7 +194,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
       await saveProgram(userId, trimmedDoc(doc));
       showChangedPrograms(queryClient, userId);
       unsaved.allowLeaving();
-      void navigate('/programs');
+      leaveEditor();
     } catch (error) {
       setProblem({ text: messageOf(error, 'Could not save the program.'), shownFor: doc });
       setSaving(false);

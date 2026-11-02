@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/ui/use-go-back.ts';
 
 interface BackLinkProps {
   parent: string;
@@ -6,19 +6,10 @@ interface BackLinkProps {
   disabled?: boolean;
 }
 
-const OPENED_WITHOUT_APP_HISTORY = 'default';
-
 export function BackLink({ parent, label = '‹ Back', disabled = false }: BackLinkProps) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const cameFromApp = location.key !== OPENED_WITHOUT_APP_HISTORY;
+  const goBack = useGoBack(parent);
   return (
-    <button
-      type="button"
-      className="back-link"
-      disabled={disabled}
-      onClick={() => void (cameFromApp ? navigate(-1) : navigate(parent))}
-    >
+    <button type="button" className="back-link" disabled={disabled} onClick={goBack}>
       {label}
     </button>
   );
