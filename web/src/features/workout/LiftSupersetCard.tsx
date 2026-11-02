@@ -45,7 +45,7 @@ export function LiftSupersetCard({ group, lift }: LiftSupersetCardProps) {
         );
       }}
       canAddRound={canAddRound(draft, group)}
-      onAddRound={() => actions.changeDraft(addRound(draft, group))}
+      onAddRound={() => actions.edit((latest) => addRound(latest, group))}
       addRoundRef={actions.focusTarget(`superset-${group.id}`)}
     />
   );

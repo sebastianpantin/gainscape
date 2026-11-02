@@ -49,9 +49,11 @@ export function LiftExerciseCard({ exercise, exerciseIndex, lift }: LiftExercise
   const defaultSets = exercise.target?.sets ?? DEFAULT_QUICK_FILL_SETS;
   const defaultReps = workingSet?.reps ?? DEFAULT_QUICK_FILL_REPS;
   const addWarmup = (choice: WarmupChoice) => {
-    const next = withChosenWarmup(draft, exerciseIndex, choice, warmups, routine);
-    actions.focusAfterNextChange(warmupFocusAfter(draft, next, exerciseIndex));
-    actions.changeDraft(next);
+    actions.edit((latest) => {
+      const next = withChosenWarmup(latest, exerciseIndex, choice, warmups, routine);
+      if (next !== latest) actions.focusAfterNextChange(warmupFocusAfter(latest, next, exerciseIndex));
+      return next;
+    });
   };
   return (
     <section className="panel stack exercise-card">
@@ -95,7 +97,7 @@ export function LiftExerciseCard({ exercise, exerciseIndex, lift }: LiftExercise
       <AddSetButton
         buttonRef={actions.focusTarget(exercise.clientId)}
         roomForSet={lift.roomForSet}
-        onAdd={() => actions.changeDraft(addSet(draft, exerciseIndex))}
+        onAdd={() => actions.edit((latest) => addSet(latest, exerciseIndex))}
       />
       {canQuickFill(exercise) && quickFillSets > 0 && (
         <QuickFill
@@ -103,7 +105,7 @@ export function LiftExerciseCard({ exercise, exerciseIndex, lift }: LiftExercise
           defaultSets={defaultSets}
           mostSets={quickFillSets}
           defaultReps={defaultReps}
-          onFill={(sets, reps) => actions.changeDraft(fillWorkingSets(draft, exerciseIndex, sets, reps))}
+          onFill={(sets, reps) => actions.edit((latest) => fillWorkingSets(latest, exerciseIndex, sets, reps))}
         />
       )}
     </section>

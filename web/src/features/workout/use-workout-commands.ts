@@ -10,7 +10,8 @@ import { readTrainingDeviceSettings } from '../../lib/workout/training-device-st
 import { type WorkoutDraft } from '../../offline/draft-format.ts';
 import { removeExercise, seedUntouchedSet, swapExercise } from '../../offline/draft-edits.ts';
 import { type WorkoutDraftHandle } from '../../offline/use-workout-draft.ts';
-import { type ExerciseCardActions, type SetPlace } from './exercise-card-actions.ts';
+import { draftEditCommands } from './draft-edit-commands.ts';
+import { type ExerciseCardActions } from './exercise-card-actions.ts';
 import {
   EXERCISE_MENU_LABELS,
   type ExerciseMenuChoice,
@@ -35,7 +36,7 @@ import {
 interface WorkoutCommandsOptions {
   userId: string;
   draft: WorkoutDraft | null;
-  draftActions: Pick<WorkoutDraftHandle, 'changeDraft' | 'updateDraft' | 'discardDraft'>;
+  draftActions: Pick<WorkoutDraftHandle, 'updateDraft' | 'discardDraft'>;
   recentSessions: RecentLiftSessions;
   feedbackFor: WorkoutPreviews['feedbackFor'];
   stopRest: () => void;
@@ -44,7 +45,7 @@ interface WorkoutCommandsOptions {
 export function useWorkoutCommands({
   userId,
   draft,
-  draftActions: { changeDraft, updateDraft, discardDraft },
+  draftActions: { updateDraft, discardDraft },
   recentSessions,
   feedbackFor,
   stopRest,
@@ -62,19 +63,16 @@ export function useWorkoutCommands({
   if (swappingKey !== null && !cardKeys.includes(swappingKey)) setSwappingKey(null);
   if (confirmingRemoveKey !== null && !cardKeys.includes(confirmingRemoveKey)) setConfirmingRemoveKey(null);
 
-  const edit = (change: (current: WorkoutDraft) => WorkoutDraft) => {
-    if (draft !== null) changeDraft(change(draft));
-  };
-
-  const changeSet = (next: WorkoutDraft, setId: string, place: SetPlace) => {
-    if (draft === null) return;
-    const { vibrate: vibrateOn, sound } = readTrainingDeviceSettings(deviceStorage(), userId);
-    const feedback = feedbackFor({ previous: draft, next, setId, place, vibrate: vibrateOn, sound });
-    if (feedback.vibrationMs) vibrate(feedback.vibrationMs);
-    if (feedback.celebratesRecord) celebrate(userId, RECORD_CELEBRATION);
-    if (feedback.drop) showDrop(feedback.drop, setId);
-    changeDraft(next);
-  };
+  const { edit, editSet } = draftEditCommands({
+    updateDraft,
+    onSetEdited: (change) => {
+      const { vibrate: vibrates, sound } = readTrainingDeviceSettings(deviceStorage(), userId);
+      const feedback = feedbackFor({ ...change, vibrate: vibrates, sound });
+      if (feedback.vibrationMs) vibrate(feedback.vibrationMs);
+      if (feedback.celebratesRecord) celebrate(userId, RECORD_CELEBRATION);
+      if (feedback.drop) showDrop(feedback.drop, change.setId);
+    },
+  });
 
   const removeExerciseAt = (exerciseIndex: number) => edit((current) => removeExercise(current, exerciseIndex));
 
@@ -87,7 +85,7 @@ export function useWorkoutCommands({
       ),
       addKey: addButtonKey(draft, exerciseIndex),
     });
-    changeDraft(removeSet(draft, exerciseIndex, setId));
+    edit((latest) => removeSet(latest, exerciseIndex, setId));
     const removed = removedSetAt(draft, exerciseIndex, setId);
     if (removed === null) return;
     showToast(removedSetText(draft.exercises[exerciseIndex], removed.index), {
@@ -100,15 +98,13 @@ export function useWorkoutCommands({
   };
 
   const addPicked = async (exercise: Exercise) => {
-    if (draft === null) return;
-    const exerciseIndex = draft.exercises.length;
     const known = recentSessions.byExercise.has(exercise.id);
     const firstSet = isLiftExercise(exercise)
       ? firstSetFromLastSession(recentSessions.byExercise.get(exercise.id)?.[0], exercise.loadType)
       : undefined;
-    const added = withPickedExercise(draft, exercise, firstSet);
-    changeDraft(added);
-    if (!isLiftExercise(exercise) || exercise.measure !== undefined) return;
+    const added = updateDraft((latest) => withPickedExercise(latest, exercise, firstSet));
+    if (added === null || !isLiftExercise(exercise) || exercise.measure !== undefined) return;
+    const exerciseIndex = added.exercises.length - 1;
     const addedExercise = added.exercises[exerciseIndex];
     const original = addedExercise?.modality === 'lift' ? addedExercise.sets[0] : undefined;
     if (known || original === undefined) return;
@@ -120,9 +116,8 @@ export function useWorkoutCommands({
     setSwappingKey(swappingKey === cardKeys[exerciseIndex] ? null : cardKeys[exerciseIndex]);
 
   const swapTo = (exerciseIndex: number, replacement: Exercise) => {
-    if (draft === null || !isLiftExercise(replacement)) return;
-    const swapped = swapExercise(draft, exerciseIndex, replacement);
-    if (swapped) changeDraft(swapped);
+    if (!isLiftExercise(replacement)) return;
+    edit((latest) => swapExercise(latest, exerciseIndex, replacement));
     setSwappingKey(null);
   };
 
@@ -165,8 +160,8 @@ export function useWorkoutCommands({
   };
 
   const cardActions: ExerciseCardActions = {
-    changeDraft,
-    changeSet,
+    edit,
+    editSet,
     removeExerciseAt,
     removeSetAt,
     focusTarget,

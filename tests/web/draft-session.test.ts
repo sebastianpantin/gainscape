@@ -217,6 +217,16 @@ describe('draft session', () => {
     expect(await store.get(userId)).toMatchObject({ draft: { finishedAt, exercises: [{ sets: [{ reps: 9 }] }] } });
   });
 
+  it('reopens a finished draft through updateDraft only when asked to', async () => {
+    const store = createLocalDraftStore(new MemoryStorage());
+    const { session } = sessionOver(store);
+    await session.ready;
+    session.changeDraft({ ...withReps(workout('session-a'), 5), finishedAt });
+    session.updateDraft((latest) => ({ ...latest, finishedAt: null }), { reopen: true });
+    await session.flush();
+    expect(await store.get(userId)).toMatchObject({ draft: { finishedAt: null } });
+  });
+
   it('tells other tabs about a discard so they drop the draft without a saved-elsewhere notice', async () => {
     const store = createLocalDraftStore(new MemoryStorage());
     const openChannel = channelHub();

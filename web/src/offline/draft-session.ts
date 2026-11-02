@@ -49,11 +49,13 @@ interface DraftSessionOptions {
   requestPersistence?: () => void;
 }
 
+export type DraftUpdate = (current: WorkoutDraft) => WorkoutDraft | null;
+
 export interface DraftSession {
   snapshot: () => DraftSnapshot;
   ready: Promise<void>;
   changeDraft: (next: WorkoutDraft, options?: PutOptions) => void;
-  updateDraft: (update: (current: WorkoutDraft) => WorkoutDraft | null) => WorkoutDraft | null;
+  updateDraft: (update: DraftUpdate, options?: PutOptions) => WorkoutDraft | null;
   startWorkout: (fresh: () => WorkoutDraft) => Promise<StartOutcome>;
   discardDraft: (sessionId: string) => void;
   markSynced: (sessionId: string, change?: SyncedChange) => Promise<void>;
@@ -244,11 +246,11 @@ export function createDraftSession({
     });
   };
 
-  const updateDraft = (update: (current: WorkoutDraft) => WorkoutDraft | null) => {
+  const updateDraft = (update: DraftUpdate, options?: PutOptions) => {
     const current = currentDraft();
     if (!current) return null;
     const next = update(current);
-    if (next && next !== current) changeDraft(next);
+    if (next && next !== current) changeDraft(next, options);
     return next;
   };
 

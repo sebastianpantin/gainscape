@@ -1,4 +1,4 @@
-import { type WorkoutDraft } from '../../offline/draft-format.ts';
+import { type DraftUpdate } from '../../offline/draft-session.ts';
 import { type ShownSetDrop } from './set-feedback-rules.ts';
 import { type PendingFocus } from './use-focus-after-removal.ts';
 
@@ -9,8 +9,8 @@ export interface SetPlace {
 }
 
 export interface ExerciseCardActions {
-  changeDraft: (next: WorkoutDraft) => void;
-  changeSet: (next: WorkoutDraft, setId: string, place: SetPlace) => void;
+  edit: (update: DraftUpdate) => unknown;
+  editSet: (setId: string, place: SetPlace, update: DraftUpdate) => void;
   removeExerciseAt: (exerciseIndex: number) => void;
   removeSetAt: (exerciseIndex: number, setId: string) => void;
   focusTarget: (key: string) => (button: HTMLButtonElement | null) => void;
