@@ -1,6 +1,5 @@
 import { type FormEvent, useState } from 'react';
-import { bodyweightRangeInUnit, type UnitPref } from '../../lib/profile/profile.ts';
-import { unitToKg } from '../../lib/units.ts';
+import { bodyweightInUnitProblem, bodyweightKgFromInput, type UnitPref } from '../../lib/profile/profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
 
 interface BodyweightPromptProps {
@@ -13,14 +12,15 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
   const [bodyweight, setBodyweight] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const { lowest, highest } = bodyweightRangeInUnit(unit);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    const rangeProblem = bodyweightInUnitProblem(bodyweight, unit);
+    if (rangeProblem) return setProblem(rangeProblem);
     setSaving(true);
     setProblem(null);
     try {
-      await onSave(unitToKg(Number(bodyweight), unit));
+      await onSave(bodyweightKgFromInput(bodyweight, unit)!);
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your bodyweight.'));
       setSaving(false);
@@ -33,11 +33,10 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
       <label className="field">
         Bodyweight ({unit})
         <input
-          type="number"
+          type="text"
+          role="spinbutton"
           inputMode="decimal"
-          min={lowest}
-          max={highest}
-          step={0.1}
+          autoComplete="off"
           value={bodyweight}
           onChange={(event) => setBodyweight(event.target.value)}
           required

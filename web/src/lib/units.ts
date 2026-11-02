@@ -94,10 +94,6 @@ export function shownDistance(distanceM: number, unit: DistanceUnit): number {
   return roundTo(SHOWN_DISTANCE_DECIMALS[unit], distanceInUnit(distanceM, unit));
 }
 
-export function distanceInputStep(unit: DistanceUnit): number {
-  return 10 ** -SHOWN_DISTANCE_DECIMALS[unit];
-}
-
 export function formatDistance(distanceM: number, unit: DistanceUnit): string {
   return `${shownDistance(distanceM, unit)} ${unit}`;
 }

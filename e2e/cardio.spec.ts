@@ -49,6 +49,26 @@ test('log a run, intervals and a lift in one workout, then edit the run distance
     ]);
 });
 
+test('a comma decimal distance and duration read as decimals: 5,5 km in 32,5 min', async ({ page }) => {
+  await register(page, uniqueUsername('cdcomma'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logCardio(page, 'running', 'Running', [{ minutes: 30, distance: 5, effort: 'Moderate' }]);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+
+  await openLatestWorkout(page);
+  const run = exerciseCard(page, 'Running');
+  await run.getByLabel('km', { exact: true }).fill('5,5');
+  await run.getByLabel('min', { exact: true }).fill('32,5');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Changes saved.')).toBeVisible();
+
+  const sessionId = page.url().split('/').at(-1)!;
+  await expect
+    .poll(() => boutsOf(sessionId))
+    .toEqual([{ duration_s: 1950, distance_m: 5500, interval_rounds: null, effort_value: 2 }]);
+});
+
 test('a pound user logs distance in miles', async ({ page }) => {
   const username = uniqueUsername('cdlb');
   await register(page, username);

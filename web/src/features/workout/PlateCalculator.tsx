@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { barbellPlatesText, nearestLoadable } from '../../lib/workout/plate-rules.ts';
 import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts';
 import type { UnitPref } from '../../lib/profile/profile.ts';
-import { highestWeightInUnit, shownWeight, unitToKg, WEIGHT_INPUT_STEP } from '../../lib/units.ts';
+import { highestWeightInUnit, parsedDecimal, shownWeight, unitToKg } from '../../lib/units.ts';
 
 interface PlateCalculatorProps {
   id: string;
@@ -18,8 +18,8 @@ export function PlateCalculator({ id, setNumber, setup, highestLoadKg, unit, wei
   const shown = shownWeight(weightKg, unit);
   const highest = highestWeightInUnit(highestLoadKg, unit);
   const [targetText, setTargetText] = useState(() => String(shown));
-  const target = Number(targetText);
-  const validTarget = targetText.trim() !== '' && Number.isFinite(target) && target >= 0 && target <= highest;
+  const target = parsedDecimal(targetText) ?? Number.NaN;
+  const validTarget = target >= 0 && target <= highest;
   const nearest = validTarget ? nearestLoadable(target, setup.barWeight, setup.plates) : null;
   const usable = nearest !== null && nearest <= highest;
   const barText = setup.barFromProgram
@@ -30,11 +30,10 @@ export function PlateCalculator({ id, setNumber, setup, highestLoadKg, unit, wei
       <label className="compact-field">
         Target {unit}
         <input
-          type="number"
+          type="text"
+          role="spinbutton"
           inputMode="decimal"
-          min={0}
-          max={highest}
-          step={WEIGHT_INPUT_STEP}
+          autoComplete="off"
           value={targetText}
           onChange={(event) => setTargetText(event.target.value)}
         />

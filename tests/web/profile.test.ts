@@ -100,6 +100,7 @@ describe('edit profile inputs', () => {
     expect(optionalNumber('')).toBeNull();
     expect(optionalNumber('  ')).toBeNull();
     expect(optionalNumber('72.5')).toBe(72.5);
+    expect(optionalNumber('5,5')).toBe(5.5);
     expect(optionalNumber('abc')).toBeNaN();
   });
 

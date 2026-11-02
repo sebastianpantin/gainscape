@@ -224,10 +224,10 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
               <label className="field">
                 {field.label}
                 <input
-                  type="number"
+                  type="text"
+                  role="spinbutton"
                   inputMode="decimal"
-                  min={0}
-                  step="any"
+                  autoComplete="off"
                   placeholder={hinted ? `e.g. ${roundingText.barWeight}` : undefined}
                   {...fieldA11y(key, hinted ? weightHintId : undefined)}
                   value={form.inputValues[field.lift] ?? ''}
@@ -275,11 +275,10 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
                 <label className="field">
                   {control.label}
                   <input
-                    type="number"
+                    type="text"
+                    role="spinbutton"
                     inputMode="decimal"
-                    min={control.min}
-                    max={control.max}
-                    step={0.01}
+                    autoComplete="off"
                     {...fieldA11y(optionFieldKey(control.key))}
                     value={form.optionText?.[control.key] ?? String(control.defaultValue)}
                     onChange={(event) =>
@@ -334,10 +333,10 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
         <label className="field">
           {roundingIncrementLabel(form.unit)}
           <input
-            type="number"
+            type="text"
+            role="spinbutton"
             inputMode="decimal"
-            min={0}
-            step="any"
+            autoComplete="off"
             {...fieldA11y('increment')}
             value={roundingText.increment}
             onChange={(event) => change({ roundingText: { ...roundingText, increment: event.target.value } })}
@@ -354,10 +353,10 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
         <label className="field">
           {barWeightLabel(form.unit)}
           <input
-            type="number"
+            type="text"
+            role="spinbutton"
             inputMode="decimal"
-            min={0}
-            step="any"
+            autoComplete="off"
             {...fieldA11y('barWeight')}
             value={roundingText.barWeight}
             onChange={(event) => change({ roundingText: { ...roundingText, barWeight: event.target.value } })}

@@ -199,7 +199,7 @@ export function formatDay(date: Date): string {
 }
 
 export function optionalNumber(raw: string): number | null {
-  return raw.trim() === '' ? null : Number(raw);
+  return raw.trim() === '' ? null : (parsedDecimal(raw) ?? Number.NaN);
 }
 
 export function bodyweightRangeInUnit(unit: UnitPref): { lowest: number; highest: number } {

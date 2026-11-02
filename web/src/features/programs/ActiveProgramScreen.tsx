@@ -98,10 +98,10 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
               <label className="field" key={key}>
                 {field.label}
                 <input
-                  type="number"
+                  type="text"
+                  role="spinbutton"
                   inputMode="decimal"
-                  min={0}
-                  step="any"
+                  autoComplete="off"
                   value={edited[key] ?? (field.value === null ? '' : String(field.value))}
                   onChange={(event) => setEdited({ ...edited, [key]: event.target.value })}
                 />
