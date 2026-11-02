@@ -190,7 +190,7 @@ describe('queryRootsToInvalidate', () => {
     expect(queryRootsToInvalidate('profile-saved', 'this-tab')).not.toContain('profile');
     expect(queryRootsToInvalidate('profile-saved', 'this-tab')).toContain('profile-preview');
     expect(queryRootsToInvalidate('weekly-goal-saved', 'this-tab')).toEqual([]);
-    expect(queryRootsToInvalidate('pins-changed', 'this-tab')).toEqual([]);
+    expect(queryRootsToInvalidate('pins-changed', 'this-tab')).toEqual(['profile-preview']);
   });
 
   it('refreshes everything the change touched in another tab', () => {

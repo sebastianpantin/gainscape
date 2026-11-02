@@ -129,8 +129,8 @@ export function profileFromRows(
 
 function rangeProblem(raw: string, lowest: number, highest: number, message: string): string | null {
   if (raw.trim() === '') return null;
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value < lowest || value > highest) return message;
+  const value = parsedDecimal(raw);
+  if (value === null || value < lowest || value > highest) return message;
   return null;
 }
 
@@ -148,7 +148,7 @@ export function latestBirthYear(now = new Date()): number {
 }
 
 export function birthYearProblem(raw: string, now = new Date()): string | null {
-  if (raw.trim() !== '' && !Number.isInteger(Number(raw))) return 'Enter a year like 1990.';
+  if (raw.trim() !== '' && !Number.isInteger(optionalNumber(raw))) return 'Enter a year like 1990.';
   return rangeProblem(
     raw,
     EARLIEST_BIRTH_YEAR,
@@ -158,7 +158,7 @@ export function birthYearProblem(raw: string, now = new Date()): string | null {
 }
 
 export function trainingSinceProblem(raw: string, now = new Date()): string | null {
-  if (raw.trim() !== '' && !Number.isInteger(Number(raw))) return 'Enter a year like 2019.';
+  if (raw.trim() !== '' && !Number.isInteger(optionalNumber(raw))) return 'Enter a year like 2019.';
   return rangeProblem(
     raw,
     EARLIEST_TRAINING_YEAR,

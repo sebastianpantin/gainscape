@@ -119,7 +119,7 @@ const ROOTS_THE_WRITING_TAB_UPDATES_ITSELF: Partial<Record<DataChange, readonly 
   'timezone-changed': ['profile'],
   'gear-changed': ['items'],
   'weekly-goal-saved': ['weekly-goal'],
-  'pins-changed': ['collection', 'profile-preview'],
+  'pins-changed': ['collection'],
 };
 
 export type ChangeOrigin = 'this-tab' | 'other-tab';

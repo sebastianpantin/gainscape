@@ -16,12 +16,14 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    const bodyweightKg = bodyweightKgFromInput(bodyweight, unit);
+    if (bodyweightKg === null) return setProblem('Enter your bodyweight.');
     const rangeProblem = bodyweightInUnitProblem(bodyweight, unit);
     if (rangeProblem) return setProblem(rangeProblem);
     setSaving(true);
     setProblem(null);
     try {
-      await onSave(bodyweightKgFromInput(bodyweight, unit)!);
+      await onSave(bodyweightKg);
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your bodyweight.'));
       setSaving(false);
