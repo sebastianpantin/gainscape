@@ -15,6 +15,7 @@ import {
 } from '@domain/index.ts';
 import { formatCount } from '../format.ts';
 import { capitalized } from '../names.ts';
+import { parsedDecimal } from '../units.ts';
 
 export const UPDATE_APP_TEXT = 'Update the app to use this program';
 
@@ -369,10 +370,8 @@ type ParsedNumber = { kind: 'ok'; value: number } | { kind: 'problem'; problem: 
 function parsedNumber(label: string, raw: string, isAllowed: (value: number) => boolean, rule: string): ParsedNumber {
   const text = raw.trim();
   if (text === '') return { kind: 'problem', problem: `Enter ${label}` };
-  const value = Number(text);
-  return Number.isFinite(value) && isAllowed(value)
-    ? { kind: 'ok', value }
-    : { kind: 'problem', problem: `${label} ${rule}` };
+  const value = parsedDecimal(text);
+  return value !== null && isAllowed(value) ? { kind: 'ok', value } : { kind: 'problem', problem: `${label} ${rule}` };
 }
 
 export function roundingTextOf(form: EnrollForm): { increment: string; barWeight: string } {
@@ -504,9 +503,8 @@ function previewedValue(definition: ProgramDefinition, form: EnrollForm, lift: s
 }
 
 export function referencePreview(definition: ProgramDefinition, form: EnrollForm, lift: string): string | null {
-  const raw = (form.inputValues[lift] ?? '').trim();
-  const value = Number(raw);
-  if (raw === '' || !Number.isFinite(value) || value <= 0) return null;
+  const value = parsedDecimal(form.inputValues[lift] ?? '');
+  if (value === null || value <= 0) return null;
   const preview = previewedValue(definition, form, lift, value);
   if (!preview) return null;
   return `${capitalized(REFERENCE_VAR_LABELS[preview.variable])} ${shownReference(preview.value)} ${form.unit}`;
@@ -520,7 +518,7 @@ export function enrollPayload(definition: ProgramDefinition, form: EnrollForm): 
   }
   const inputs: Record<string, Partial<Record<InputKind, number>>> = {};
   for (const field of inputFields(definition, form))
-    inputs[field.lift] = { [field.kind]: Number((form.inputValues[field.lift] ?? '').trim()) };
+    inputs[field.lift] = { [field.kind]: parsedDecimal(form.inputValues[field.lift] ?? '')! };
   const options: Record<string, OptionValue> = { ...form.options };
   for (const [key, parsed] of Object.entries(numberOptionsOf(definition, form)))
     if (parsed.kind === 'ok') options[key] = parsed.value;

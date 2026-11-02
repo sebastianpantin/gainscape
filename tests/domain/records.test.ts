@@ -47,6 +47,25 @@ describe('rep-max records', () => {
     ]);
   });
 
+  it('ignores a 0 kg set of an external-load lift, which lifts nothing and earns no XP', () => {
+    const { sessions, finalState } = replay([aSet('bench', 100, 5, hard)], [aSet('bench', 0, 10, hard)]);
+    expect(sessions[1].outputs.prs).toEqual([]);
+    expect(finalState.records!.repMaxes.bench.slice(5)).toEqual([null, null, null, null, null]);
+  });
+
+  it('keeps a 0 kg set out of records rebuilt from history', () => {
+    const session = (day: number) => ({ id: `s${day}`, startedAt: new Date(firstDay + day * DAY_MS).toISOString() });
+    const records = recordsFromHistory(
+      [
+        { exerciseId: 'bench', session: session(0), setId: 'a', position: 0, weightKg: 100, reps: 5 },
+        { exerciseId: 'bench', session: session(1), setId: 'b', position: 0, weightKg: 0, reps: 10 },
+      ],
+      catalog,
+      TEST_BALANCE,
+    );
+    expect(records.repMaxes.bench.slice(5)).toEqual([null, null, null, null, null]);
+  });
+
   it('improves slots 1–3 with a heavier triple and reports one 3RM record', () => {
     const { sessions, finalState } = replay(
       [aSet('bench', 90, 5, hard)],

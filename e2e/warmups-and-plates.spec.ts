@@ -219,4 +219,6 @@ test('the plate calculator of a set breaks a target weight into plates and uses 
   await expect(weightOf(firstSet)).toHaveValue('60');
   await expect(firstSet.getByText('20 kg each side', { exact: true })).toBeVisible();
   await expect(calculator.getByRole('button', { name: 'Use 60 kg', exact: true })).toBeDisabled();
+  await target.fill('102,5');
+  await expect(calculator.getByRole('status')).toHaveText('25 + 15 + 1.25 kg each side');
 });

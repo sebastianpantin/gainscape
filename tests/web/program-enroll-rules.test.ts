@@ -711,6 +711,12 @@ describe('the enroll form keeps raw text for every number field', () => {
     });
   });
 
+  it('reads a comma decimal the way a Swedish keyboard types it: 102,5 and 2,5 are 102.5 and 2.5', () => {
+    const payload = payloadOf(withRoundingText(madcowForm('kg', ['102,5', '80', '70', '50', '140']), '2,5', '20'));
+    expect(payload.inputs.squat).toEqual({ fiveRm: 102.5 });
+    expect(payload.rounding.increment).toBe(2.5);
+  });
+
   it('reads 2.5 typed into a cleared 5RM field as 2.5', () => {
     expect(payloadOf(madcowForm('kg', ['2.5', '80', '70', '50', '140'])).inputs.squat).toEqual({ fiveRm: 2.5 });
   });

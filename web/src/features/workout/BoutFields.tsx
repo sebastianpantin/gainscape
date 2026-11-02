@@ -1,6 +1,7 @@
 import { roundTo } from '@domain/math.ts';
 import { CARDIO_BOUNDS, SECONDS_PER_MINUTE } from '@domain/cardio.ts';
 import { useState } from 'react';
+import { DecimalInput } from '../../components/DecimalInput.tsx';
 import type { PaceUnit } from '../../lib/exercises/catalog-rules.ts';
 import {
   type BoutMode,
@@ -11,7 +12,7 @@ import {
 } from '../../lib/workout/cardio-rules.ts';
 import type { UnitPref } from '../../lib/profile/profile.ts';
 import { optionalNumber } from '../../lib/profile/profile-rules.ts';
-import { distanceInputStep, distanceUnitFor, shownDistance } from '../../lib/units.ts';
+import { distanceUnitFor, shownDistance } from '../../lib/units.ts';
 import type { BoutValues } from '../../lib/workout/exercise-edit-rules.ts';
 
 const SHOWN_MINUTE_DECIMALS = 1;
@@ -21,7 +22,6 @@ interface BoundedNumberFieldProps {
   value: number | null;
   min: number;
   max: number;
-  step: number;
   inputMode: 'numeric' | 'decimal';
   emptyAllowed?: boolean;
   onCommit: (value: number | null, settled: boolean) => void;
@@ -32,7 +32,6 @@ function BoundedNumberField({
   value,
   min,
   max,
-  step,
   inputMode,
   emptyAllowed = false,
   onCommit,
@@ -51,12 +50,11 @@ function BoundedNumberField({
   return (
     <label className="compact-field">
       {label}
-      <input
-        type="number"
+      <DecimalInput
         inputMode={inputMode}
-        min={min}
-        max={max}
-        step={step}
+        lowest={min}
+        highest={max}
+        aria-valuenow={value ?? undefined}
         value={typed ?? (value === null ? '' : String(value))}
         onChange={(event) => {
           setTyped(event.target.value);
@@ -94,7 +92,6 @@ export function BoutFields({ bout, paceUnit, tracksDistance, unit, onChange }: B
           value={roundTo(SHOWN_MINUTE_DECIMALS, bout.durationS / SECONDS_PER_MINUTE)}
           min={CARDIO_BOUNDS.steadyDurationS.min / SECONDS_PER_MINUTE}
           max={CARDIO_BOUNDS.steadyDurationS.max / SECONDS_PER_MINUTE}
-          step={1}
           inputMode="decimal"
           onCommit={(minutes) =>
             minutes !== null && onChange({ durationS: clampedSteadyDurationS(minutes * SECONDS_PER_MINUTE) })
@@ -107,7 +104,6 @@ export function BoutFields({ bout, paceUnit, tracksDistance, unit, onChange }: B
             value={interval.rounds}
             min={CARDIO_BOUNDS.intervalRounds.min}
             max={CARDIO_BOUNDS.intervalRounds.max}
-            step={1}
             inputMode="numeric"
             onCommit={(rounds, settled) => rounds !== null && changeInterval({ rounds }, settled)}
           />
@@ -116,7 +112,6 @@ export function BoutFields({ bout, paceUnit, tracksDistance, unit, onChange }: B
             value={interval.workS}
             min={CARDIO_BOUNDS.intervalWorkS.min}
             max={CARDIO_BOUNDS.intervalWorkS.max}
-            step={5}
             inputMode="numeric"
             onCommit={(workS, settled) => workS !== null && changeInterval({ workS }, settled)}
           />
@@ -125,7 +120,6 @@ export function BoutFields({ bout, paceUnit, tracksDistance, unit, onChange }: B
             value={interval.restS}
             min={CARDIO_BOUNDS.intervalRestS.min}
             max={CARDIO_BOUNDS.intervalRestS.max}
-            step={5}
             inputMode="numeric"
             onCommit={(restS, settled) => restS !== null && changeInterval({ restS }, settled)}
           />
@@ -137,7 +131,6 @@ export function BoutFields({ bout, paceUnit, tracksDistance, unit, onChange }: B
           value={bout.distanceM === null ? null : shownDistance(bout.distanceM, distanceUnit)}
           min={0}
           max={shownDistance(CARDIO_BOUNDS.distanceM.max, distanceUnit)}
-          step={distanceInputStep(distanceUnit)}
           inputMode="decimal"
           emptyAllowed
           onCommit={(distance) => onChange({ distanceM: distanceFromInput(distance, distanceUnit) })}

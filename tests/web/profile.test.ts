@@ -100,6 +100,12 @@ describe('edit profile inputs', () => {
     expect(optionalNumber('')).toBeNull();
     expect(optionalNumber('  ')).toBeNull();
     expect(optionalNumber('72.5')).toBe(72.5);
+    expect(optionalNumber('5,5')).toBe(5.5);
+  });
+
+  it('validates the same text the save reads: a plus sign is refused, a comma height is read', () => {
+    expect(birthYearProblem('+1990', new Date('2026-11-02T12:00:00Z'))).toBe('Enter a year like 1990.');
+    expect(heightProblem('180,5')).toBeNull();
     expect(optionalNumber('abc')).toBeNaN();
   });
 

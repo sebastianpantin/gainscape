@@ -47,6 +47,7 @@ import {
 } from '../../lib/programs/program-enroll-rules.ts';
 import { carriedFollowOf, carriedInputs } from '../../lib/programs/program-follow-rules.ts';
 import { readProgramCache } from '../../offline/program-cache.ts';
+import { DecimalInput } from '../../components/DecimalInput.tsx';
 
 interface ProgramEnrollScreenProps {
   userId: string;
@@ -223,11 +224,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
               )}
               <label className="field">
                 {field.label}
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step="any"
+                <DecimalInput
                   placeholder={hinted ? `e.g. ${roundingText.barWeight}` : undefined}
                   {...fieldA11y(key, hinted ? weightHintId : undefined)}
                   value={form.inputValues[field.lift] ?? ''}
@@ -274,12 +271,9 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
               <div className="stack" key={control.key} style={{ gap: 'var(--space-1-5)' }}>
                 <label className="field">
                   {control.label}
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={control.min}
-                    max={control.max}
-                    step={0.01}
+                  <DecimalInput
+                    lowest={control.min}
+                    highest={control.max}
                     {...fieldA11y(optionFieldKey(control.key))}
                     value={form.optionText?.[control.key] ?? String(control.defaultValue)}
                     onChange={(event) =>
@@ -333,11 +327,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
         <h2>Rounding</h2>
         <label className="field">
           {roundingIncrementLabel(form.unit)}
-          <input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="any"
+          <DecimalInput
             {...fieldA11y('increment')}
             value={roundingText.increment}
             onChange={(event) => change({ roundingText: { ...roundingText, increment: event.target.value } })}
@@ -353,11 +343,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
         />
         <label className="field">
           {barWeightLabel(form.unit)}
-          <input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="any"
+          <DecimalInput
             {...fieldA11y('barWeight')}
             value={roundingText.barWeight}
             onChange={(event) => change({ roundingText: { ...roundingText, barWeight: event.target.value } })}

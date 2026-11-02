@@ -23,11 +23,15 @@ export function SegmentedChoice<T extends string | number>({
   const checkedIndex = options.findIndex((option) => option.value === current);
   const tabStop = checkedIndex === -1 ? 0 : checkedIndex;
 
+  const pick = (value: T) => {
+    if (!disabled) onPick(value);
+  };
+
   const moveWithArrows = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const next = arrowedIndex(event.key, index, options.length);
-    if (next === null) return;
+    if (next === null || disabled) return;
     event.preventDefault();
-    onPick(options[next].value);
+    pick(options[next].value);
     (event.currentTarget.parentElement?.children[next] as HTMLElement | undefined)?.focus();
   };
 
@@ -45,8 +49,8 @@ export function SegmentedChoice<T extends string | number>({
           aria-checked={current === option.value}
           tabIndex={index === tabStop ? 0 : -1}
           className={current === option.value ? 'segment active' : 'segment'}
-          disabled={disabled}
-          onClick={() => onPick(option.value)}
+          aria-disabled={disabled || undefined}
+          onClick={() => pick(option.value)}
           onKeyDown={(event) => moveWithArrows(event, index)}
         >
           {option.label}

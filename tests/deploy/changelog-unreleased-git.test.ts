@@ -1,26 +1,9 @@
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { findUnreleased } from '../../scripts/changelog/unreleased.ts';
-
-const GIT_IDENTITY = [
-  '-c',
-  'user.name=Changelog Test',
-  '-c',
-  'user.email=changelog-test@example.com',
-  '-c',
-  'commit.gpgsign=false',
-  '-c',
-  'core.hooksPath=/dev/null',
-  '-c',
-  'init.defaultBranch=main',
-];
-
-function gitEnvironment(): NodeJS.ProcessEnv {
-  return Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')));
-}
+import { git, writeRepoFile } from './git-repo.ts';
 
 function changelogYaml(prs: readonly number[]): string {
   return `- prs: [${prs.join(', ')}]\n  version: 0.1.0\n  date: 2026-10-09\n  title: Baseline\n  items:\n    - First release.\n`;
@@ -30,18 +13,9 @@ describe('finding unreleased pull requests in a real repository', () => {
   let workspace: string;
   let repo: string;
 
-  function git(cwd: string, ...args: string[]): string {
-    return execFileSync('git', [...GIT_IDENTITY, ...args], { cwd, encoding: 'utf8', env: gitEnvironment() });
-  }
-
-  function writeRepoFile(path: string, content: string): void {
-    mkdirSync(join(repo, path, '..'), { recursive: true });
-    writeFileSync(join(repo, path), content);
-  }
-
   function mergePullRequest(number: number, branch: string, title: string, path: string, content: string): void {
     git(repo, 'switch', '--quiet', '-c', branch);
-    writeRepoFile(path, content);
+    writeRepoFile(repo, path, content);
     git(repo, 'add', '.');
     git(repo, 'commit', '--quiet', '-m', title);
     git(repo, 'switch', '--quiet', 'main');
@@ -63,7 +37,7 @@ describe('finding unreleased pull requests in a real repository', () => {
     repo = join(workspace, 'repo');
     mkdirSync(repo);
     git(repo, 'init', '--quiet');
-    writeRepoFile('README.md', 'test repository\n');
+    writeRepoFile(repo, 'README.md', 'test repository\n');
     git(repo, 'add', '.');
     git(repo, 'commit', '--quiet', '-m', 'Initial commit');
     mergePullRequest(1, 'changelog', 'Add changelog', 'web/changelog.yaml', changelogYaml([]));
@@ -104,7 +78,7 @@ describe('finding unreleased pull requests in a real repository', () => {
   });
 
   it('lists nothing once an entry covers the pull request', () => {
-    writeRepoFile('web/changelog.yaml', changelogYaml([2]));
+    writeRepoFile(repo, 'web/changelog.yaml', changelogYaml([2]));
     git(repo, 'commit', '--quiet', '-am', 'Changelog: cover #2');
     const unreleased = findUnreleased(repo);
     expect(unreleased.uncovered).toEqual([]);
@@ -113,7 +87,7 @@ describe('finding unreleased pull requests in a real repository', () => {
   });
 
   it('blocks a direct commit that changes the app until a changelog change comes after it', () => {
-    writeRepoFile('web/src/b.ts', 'export const b = 1;\n');
+    writeRepoFile(repo, 'web/src/b.ts', 'export const b = 1;\n');
     git(repo, 'add', '.');
     git(repo, 'commit', '--quiet', '-m', 'Add b from a rebase merge');
     const blocked = findUnreleased(repo);
@@ -121,7 +95,7 @@ describe('finding unreleased pull requests in a real repository', () => {
       { subject: 'Add b from a rebase merge', files: ['web/src/b.ts'] },
     ]);
     expect(blocked.direct.map((commit) => commit.subject)).toEqual(['Changelog: cover #2']);
-    writeRepoFile('web/changelog.yaml', changelogYaml([2]).replace('First release.', 'Adds b.'));
+    writeRepoFile(repo, 'web/changelog.yaml', changelogYaml([2]).replace('First release.', 'Adds b.'));
     git(repo, 'commit', '--quiet', '-am', 'Changelog: cover b');
     expect(findUnreleased(repo).uncoveredDirect).toEqual([]);
   });

@@ -112,6 +112,13 @@ describe('reference events', () => {
     });
   });
 
+  it('reads a comma decimal training max: 102,5 is 102.5', () => {
+    expect(referenceEvents(fiveThreeOneFields(), { 'squat.tm': '102,5' })).toEqual({
+      kind: 'ok',
+      events: [{ kind: 'set_reference', lift: 'squat', var: 'tm', value: 102.5 }],
+    });
+  });
+
   it('sends a set_reference for a 5RM entered into the pending empty field', () => {
     expect(referenceEvents(pendingSquatT1Fields(), { 'squat-t1.fiveRm': '110' })).toEqual({
       kind: 'ok',

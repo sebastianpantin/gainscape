@@ -78,7 +78,10 @@ test('a bodyweight exercise charts its most reps and shows its reps record', asy
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'pull-up', 'Pull-up', [{ reps: 8 }, { reps: 10 }]);
   await page.getByRole('button', { name: 'Finish workout' }).click();
-  await page.getByLabel('Bodyweight (kg)').fill('80');
+  await page.getByLabel('Bodyweight (kg)').fill('   ');
+  await page.getByRole('button', { name: 'Save and finish workout' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Enter your bodyweight.');
+  await page.getByLabel('Bodyweight (kg)').fill('80,5');
   await page.getByRole('button', { name: 'Save and finish workout' }).click();
   await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
 

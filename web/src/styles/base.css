@@ -522,8 +522,8 @@ summary:focus-visible {
 
 .button:disabled,
 .button[aria-disabled='true'],
-.segment:disabled,
-.switch:disabled {
+.segment[aria-disabled='true'],
+.switch[aria-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
 }

@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react';
-import { bodyweightRangeInUnit, type UnitPref } from '../../lib/profile/profile.ts';
-import { unitToKg } from '../../lib/units.ts';
+import { bodyweightInUnitProblem, bodyweightKgFromInput, type UnitPref } from '../../lib/profile/profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
+import { DecimalInput } from '../../components/DecimalInput.tsx';
 
 interface BodyweightPromptProps {
   unit: UnitPref;
@@ -13,14 +13,17 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
   const [bodyweight, setBodyweight] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const { lowest, highest } = bodyweightRangeInUnit(unit);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    const bodyweightKg = bodyweightKgFromInput(bodyweight, unit);
+    if (bodyweightKg === null) return setProblem('Enter your bodyweight.');
+    const rangeProblem = bodyweightInUnitProblem(bodyweight, unit);
+    if (rangeProblem) return setProblem(rangeProblem);
     setSaving(true);
     setProblem(null);
     try {
-      await onSave(unitToKg(Number(bodyweight), unit));
+      await onSave(bodyweightKg);
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your bodyweight.'));
       setSaving(false);
@@ -32,16 +35,7 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
       <p>Bodyweight exercises count your bodyweight as the load. It stays private.</p>
       <label className="field">
         Bodyweight ({unit})
-        <input
-          type="number"
-          inputMode="decimal"
-          min={lowest}
-          max={highest}
-          step={0.1}
-          value={bodyweight}
-          onChange={(event) => setBodyweight(event.target.value)}
-          required
-        />
+        <DecimalInput value={bodyweight} onChange={(event) => setBodyweight(event.target.value)} required />
       </label>
       {problem && (
         <p className="problem" role="alert">
