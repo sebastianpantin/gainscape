@@ -8,7 +8,6 @@ import {
   type ProgressionRule,
   type IncrementByAmount,
   type IncrementByPct,
-  type StageIndices,
 } from './program-types.ts';
 import {
   combinedVerdict,
@@ -199,16 +198,6 @@ function applyAdjustment(
   });
 }
 
-function judgementAt(
-  context: FoldContext,
-  rule: ProgressionRule,
-  position: Position,
-  sets: readonly FactSet[],
-  stages: StageIndices,
-): Judgement {
-  return judgeRule(context.definition, context.enrollment, rule, position, sets, stages);
-}
-
 function applyOutcome(
   context: FoldContext,
   state: ProgramState,
@@ -234,12 +223,20 @@ function scopeJudgement(
   rule: ProgressionRule,
   scope: readonly Position[],
 ): Judgement {
+  const { definition, enrollment } = context;
   return scope
     .map((position) => findRecord(state, position))
     .filter((record): record is DayRecord => record?.status === 'completed')
     .reduce<Judgement>(
       (judgement, record) => {
-        const day = judgementAt(context, rule, record.position, record.judgedSets, record.stages ?? state.stages);
+        const day = judgeRule(
+          definition,
+          enrollment,
+          rule,
+          record.position,
+          record.judgedSets,
+          record.stages ?? state.stages,
+        );
         return { verdict: combinedVerdict(judgement.verdict, day.verdict), sets: [...judgement.sets, ...day.sets] };
       },
       { verdict: 'neutral', sets: [] },
@@ -424,7 +421,13 @@ function recordDay(
     .reduce((next, rule) => {
       const retest = stageRetestOf(rule);
       if (retest && isRetestPending(next, rule.lift, retest.from)) return next;
-      return applyOutcome(context, next, rule, judgementAt(context, rule, position, judgedSets, stages), position);
+      return applyOutcome(
+        context,
+        next,
+        rule,
+        judgeRule(definition, enrollment, rule, position, judgedSets, stages),
+        position,
+      );
     }, afterRetests);
 }
 

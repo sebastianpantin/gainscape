@@ -1,20 +1,18 @@
 import { roundPrescribedLoad } from './load-rounding.ts';
 import { roundTo } from './math.ts';
 import {
+  type DaySet,
   type DaySlot,
   type LastLoggedWeights,
   type Load,
   type NumberExpr,
-  type PendingRetests,
   type PrescriptionSnapshot,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramReferences,
   type ReferenceState,
-  type SetShape,
   type SlotDecl,
   type SlotRole,
-  type StageIndices,
 } from './program-types.ts';
 import { declaredLoadOf, parseSetRef, setRefOf, prescribeDay, prescribeSlot, RETEST_REPS } from './program-day.ts';
 import { evaluateAmount, evaluateNumber, findSlot, isBarbellLift, numberContext } from './program-eval.ts';
@@ -60,9 +58,7 @@ const MAX_REFERENCE_DEPTH = 8;
 interface ResolveContext {
   definition: ProgramDefinition;
   enrollment: ProgramEnrollment;
-  refs: ProgramReferences;
-  stages: StageIndices | undefined;
-  pendingRetests: PendingRetests | undefined;
+  state: ReferenceState;
   position: Position;
   lastLogged: LastLoggedWeights;
 }
@@ -71,7 +67,6 @@ interface ResolvedLoad {
   weight: number | null;
   weightKg: number | null;
   pct: number | null;
-  snapshotted: boolean;
 }
 
 type LoadResult = { kind: 'load'; load: ResolvedLoad } | { kind: 'unsupported'; primitive: string };
@@ -83,12 +78,12 @@ function prescribedLoad(
   pct: number,
 ): LoadResult {
   if (unroundedInEnrollmentUnit === undefined) {
-    return { kind: 'load', load: { weight: null, weightKg: null, pct, snapshotted: false } };
+    return { kind: 'load', load: { weight: null, weightKg: null, pct } };
   }
   const weight = roundPrescribedLoad(unroundedInEnrollmentUnit, context.enrollment.rounding, onBar);
   return {
     kind: 'load',
-    load: { weight, weightKg: unitToKg(weight, context.enrollment.unit), pct, snapshotted: true },
+    load: { weight, weightKg: unitToKg(weight, context.enrollment.unit), pct },
   };
 }
 
@@ -114,14 +109,14 @@ function referencedSlotSets(
   position = context.position,
 ): SlotSetsResult {
   if (!slot || depth >= MAX_REFERENCE_DEPTH) return { kind: 'unsupported', primitive };
-  const daySlot = prescribeSlot(context.definition, context.enrollment, context, position, slot);
+  const daySlot = prescribeSlot(context.definition, context.enrollment, context.state, position, slot);
   return resolveSlotSets({ ...context, position }, daySlot, depth + 1);
 }
 
 function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index: number, depth: number): LoadResult {
   const { definition, enrollment, position } = context;
   const referenceInEnrollmentUnit = (variable: string, lift = slot.lift) =>
-    context.refs[lift]?.[variable as keyof ProgramReferences[string]];
+    context.state.refs[lift]?.[variable as keyof ProgramReferences[string]];
   const numbers = numberContext(definition, enrollment, position);
   const onBar = isBarbellLift(definition, slot.lift);
   switch (load.kind) {
@@ -165,7 +160,7 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
       if (!set) return { kind: 'unsupported', primitive: load.kind };
       return {
         kind: 'load',
-        load: { weight: set.weight, weightKg: set.weightKg, pct: set.pct, snapshotted: set.weightKg !== null },
+        load: { weight: set.weight, weightKg: set.weightKg, pct: set.pct },
       };
     }
     case 'pctOfSet': {
@@ -184,11 +179,10 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
     case 'lastLogged': {
       const exerciseId = enrollment.bindings[slot.lift];
       const kg = exerciseId ? context.lastLogged[exerciseId] : undefined;
-      if (kg === undefined)
-        return { kind: 'load', load: { weight: null, weightKg: null, pct: null, snapshotted: false } };
+      if (kg === undefined) return { kind: 'load', load: { weight: null, weightKg: null, pct: null } };
       return {
         kind: 'load',
-        load: { weight: shownWeight(kg, enrollment.unit), weightKg: kg, pct: null, snapshotted: false },
+        load: { weight: shownWeight(kg, enrollment.unit), weightKg: kg, pct: null },
       };
     }
   }
@@ -228,18 +222,14 @@ function resolveSlotSets(context: ResolveContext, daySlot: DaySlot, depth: numbe
       for (const [index, set] of daySlot.sets.entries()) {
         const result = resolveLoad(context, daySlot.slot, set.shape.load, index, depth);
         if (result.kind === 'unsupported') return result;
-        sets.push(prescribedSet(set.ref, set.shape, result.load));
+        sets.push(prescribedSet(set, result.load));
       }
       return { kind: 'sets', sets };
     }
   }
 }
 
-function prescribedSet(
-  ref: string,
-  shape: SetShape,
-  { weight, weightKg, pct, snapshotted }: ResolvedLoad,
-): PrescribedSet {
+function prescribedSet({ ref, shape, judgeable }: DaySet, { weight, weightKg, pct }: ResolvedLoad): PrescribedSet {
   return {
     ref,
     weight,
@@ -251,7 +241,7 @@ function prescribedSet(
     amrap: shape.amrap,
     optional: shape.optional,
     snapshot:
-      snapshotted && weightKg !== null && shape.reps !== null
+      judgeable && weightKg !== null && shape.reps !== null
         ? { ref, weightKg, reps: shape.reps, minReps: shape.minReps, amrap: shape.amrap }
         : null,
   };
@@ -267,9 +257,7 @@ export function resolvePrescription(
   const context: ResolveContext = {
     definition,
     enrollment,
-    refs: state.refs,
-    stages: state.stages,
-    pendingRetests: state.pendingRetests,
+    state,
     position,
     lastLogged,
   };

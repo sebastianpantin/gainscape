@@ -31,7 +31,7 @@ export function isRotationPosition(position: Position): position is RotationPosi
   return 'index' in position;
 }
 
-export interface WeekContext {
+interface WeekContext {
   week: number;
   cycle: number;
 }

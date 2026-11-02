@@ -409,7 +409,7 @@ export interface SetShape {
 export interface DaySet {
   ref: string;
   shape: SetShape;
-  required: boolean;
+  judgeable: boolean;
 }
 
 export type DaySlot =

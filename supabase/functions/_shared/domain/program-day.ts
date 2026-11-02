@@ -4,11 +4,11 @@ import {
   type DaySet,
   type DaySlot,
   type Load,
-  type PendingRetests,
   type PrescriptionSnapshot,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgressionRule,
+  type ReferenceState,
   type ReferenceVar,
   type SetShape,
   type SlotDecl,
@@ -50,12 +50,9 @@ export function isRetestRef(ref: string): boolean {
   return ref.endsWith(RETEST_REF_SUFFIX);
 }
 
-export interface DayState {
-  stages?: StageIndices;
-  pendingRetests?: PendingRetests;
-}
+type DayState = Pick<ReferenceState, 'stages' | 'pendingRetests'>;
 
-export function isSlotActive(
+function isSlotActive(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
   slot: SlotDecl,
@@ -115,78 +112,64 @@ function minRepsFor(amrap: boolean, minReps: number | undefined, reps: number | 
   return amrap ? (minReps ?? reps) : null;
 }
 
-type ShapesResult = { kind: 'shapes'; shapes: SetShape[] } | { kind: 'unsupported'; primitive: string };
-
 function setShapes(
   definition: ProgramDefinition,
   enrollment: ProgramEnrollment,
   slot: SlotDecl,
   position: Position,
   stages: StageIndices | undefined,
-): ShapesResult {
+): SetShape[] | null {
   const scheme = slot.scheme;
   switch (scheme.kind) {
     case 'sets':
-      return {
-        kind: 'shapes',
-        shapes: scheme.sets.map((set) => ({
-          reps: set.reps,
-          maxReps: set.maxReps ?? null,
-          load: set.load,
-          amrap: set.amrap ?? false,
-          minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
-          optional: set.optional ?? false,
-        })),
-      };
+      return scheme.sets.map((set) => ({
+        reps: set.reps,
+        maxReps: set.maxReps ?? null,
+        load: set.load,
+        amrap: set.amrap ?? false,
+        minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
+        optional: set.optional ?? false,
+      }));
     case 'repeat': {
       const count = evaluateNumber(scheme.count, numberContext(definition, enrollment, position));
-      return {
-        kind: 'shapes',
-        shapes: Array.from({ length: count }, (_, index) => {
-          const amrap = (scheme.amrapLast ?? false) && index === count - 1;
-          return {
-            reps: scheme.reps,
-            maxReps: scheme.maxReps ?? null,
-            load: scheme.load,
-            amrap,
-            minReps: minRepsFor(amrap, scheme.minReps, scheme.reps),
-            optional: scheme.optional ?? false,
-          };
-        }),
-      };
+      return Array.from({ length: count }, (_, index) => {
+        const amrap = (scheme.amrapLast ?? false) && index === count - 1;
+        return {
+          reps: scheme.reps,
+          maxReps: scheme.maxReps ?? null,
+          load: scheme.load,
+          amrap,
+          minReps: minRepsFor(amrap, scheme.minReps, scheme.reps),
+          optional: scheme.optional ?? false,
+        };
+      });
     }
     case 'weekTable': {
       const row = definition.weekTables?.[scheme.table]?.[weekContextOf(position).week - 1];
-      if (!row) return { kind: 'unsupported', primitive: 'weekTable' };
-      return {
-        kind: 'shapes',
-        shapes: row.sets.map((set) => ({
-          reps: set.reps,
-          maxReps: null,
-          load: { kind: 'pct', pct: set.pct, of: scheme.of },
-          amrap: set.amrap ?? false,
-          minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
-          optional: false,
-        })),
-      };
+      if (!row) return null;
+      return row.sets.map((set) => ({
+        reps: set.reps,
+        maxReps: null,
+        load: { kind: 'pct', pct: set.pct, of: scheme.of },
+        amrap: set.amrap ?? false,
+        minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
+        optional: false,
+      }));
     }
     case 'stages': {
       const stage = scheme.stages[stageIndexOf(scheme, stages, slot.lift)];
-      if (!stage) return { kind: 'unsupported', primitive: scheme.kind };
-      return {
-        kind: 'shapes',
-        shapes: Array.from({ length: stage.sets }, (_, index) => {
-          const amrap = stage.amrapLast && index === stage.sets - 1;
-          return {
-            reps: stage.reps,
-            maxReps: null,
-            load: scheme.load,
-            amrap,
-            minReps: minRepsFor(amrap, undefined, stage.reps),
-            optional: false,
-          };
-        }),
-      };
+      if (!stage) return null;
+      return Array.from({ length: stage.sets }, (_, index) => {
+        const amrap = stage.amrapLast && index === stage.sets - 1;
+        return {
+          reps: stage.reps,
+          maxReps: null,
+          load: scheme.load,
+          amrap,
+          minReps: amrap ? stage.reps : null,
+          optional: false,
+        };
+      });
     }
   }
 }
@@ -207,16 +190,17 @@ export function prescribeSlot(
   position: Position,
   slot: SlotDecl,
 ): DaySlot {
-  const retest = slot.scheme.kind === 'stages' ? dueRetestOf(definition, slot, state) : null;
-  if (retest !== null && slot.scheme.kind === 'stages') {
-    return { kind: 'retest', slot, ref: retestRefOf(slot.id), from: retest, load: slot.scheme.load };
+  if (slot.scheme.kind === 'stages') {
+    const retest = dueRetestOf(definition, slot, state);
+    if (retest !== null)
+      return { kind: 'retest', slot, ref: retestRefOf(slot.id), from: retest, load: slot.scheme.load };
   }
   const shapes = setShapes(definition, enrollment, slot, position, state.stages);
-  if (shapes.kind === 'unsupported') return { kind: 'unsupported', slot, primitive: shapes.primitive };
-  const sets = shapes.shapes.map((shape, index): DaySet => ({
+  if (shapes === null) return { kind: 'unsupported', slot, primitive: slot.scheme.kind };
+  const sets = shapes.map((shape, index): DaySet => ({
     ref: setRefOf(slot.id, index),
     shape,
-    required: !shape.optional && shape.reps !== null && isSnapshotLoad(definition, shape.load),
+    judgeable: shape.reps !== null && isSnapshotLoad(definition, shape.load),
   }));
   return { kind: 'sets', slot, sets };
 }
@@ -332,7 +316,7 @@ export function judgeRule(
     if (prescribed.kind !== 'sets') return [];
     const { judgedSetIndexes } = rule;
     const required = prescribed.sets.filter(
-      (set, index) => set.required && (!judgedSetIndexes || judgedSetIndexes.includes(index)),
+      (set, index) => set.judgeable && !set.shape.optional && (!judgedSetIndexes || judgedSetIndexes.includes(index)),
     );
     return required.length === 0 ? [] : [{ required, candidates }];
   });
@@ -418,6 +402,7 @@ export function retestAttemptsOf(
   position: Position,
   sets: readonly FactSet[],
 ): RetestAttempt[] {
+  if (Object.keys(state.pendingRetests ?? {}).length === 0) return [];
   const attempts = new Map<string, RetestAttempt>();
   for (const daySlot of prescribeDay(definition, enrollment, state, position)) {
     if (daySlot.kind !== 'retest') continue;

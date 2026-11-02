@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  comparePositions,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramFact,
@@ -8,7 +9,8 @@ import {
   type ResolvedSlot,
   validateProgramDefinition,
 } from '@domain/index.ts';
-import { catalogDefinitions, catalogEnrollment } from './program-fixtures/catalog.ts';
+import { loadProgramTemplates } from '../../scripts/catalog/program-templates.ts';
+import { catalogEnrollment } from './program-fixtures/catalog.ts';
 import { factClock, sessionFact } from './program-fixtures/facts.ts';
 import { type DayLog, followProgram, loggedAsPrescribed, resolveNext } from './program-fixtures/follow.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from './program-fixtures/five_three_one.ts';
@@ -41,7 +43,7 @@ const programs: [string, ProgramDefinition, ProgramEnrollment][] = [
   ['fixture starting_strength', STARTING_STRENGTH, startingStrengthEnrollment()],
   ['fixture stronglifts_5x5', STRONGLIFTS_5X5, strongLiftsEnrollment()],
   ['fixture texas_method', TEXAS_METHOD, texasEnrollment()],
-  ...catalogDefinitions().map(({ file, definition }): [string, ProgramDefinition, ProgramEnrollment] => [
+  ...loadProgramTemplates().map(({ file, definition }): [string, ProgramDefinition, ProgramEnrollment] => [
     `catalog ${file}`,
     definition,
     catalogEnrollment(definition),
@@ -54,9 +56,9 @@ function requiredOnly(resolved: readonly ResolvedSlot[]): ResolvedSlot[] {
   );
 }
 
-function dayRecordOf(state: ProgramState, before: ProgramState) {
+function dayRecordOf(definition: ProgramDefinition, state: ProgramState, before: ProgramState) {
   return state.days.find(
-    (record) => record.epoch === before.epoch && JSON.stringify(record.position) === JSON.stringify(before.position),
+    (record) => record.epoch === before.epoch && comparePositions(definition, record.position, before.position) === 0,
   );
 }
 
@@ -75,9 +77,9 @@ function setbacksWhenFollowed(
       sessionFact(clock.next(), before.position, loggedAsPrescribed(pick(resolveNext(definition, enrollment, before)))),
     );
     const after = programStateAt(definition, enrollment, facts);
-    const missed = Object.entries(dayRecordOf(after, before)?.outcomes ?? {}).filter(
-      ([, outcome]) => outcome === 'missed',
-    );
+    const record = dayRecordOf(definition, after, before);
+    if (!record) setbacks.push(`${where} left no day record`);
+    const missed = Object.entries(record?.outcomes ?? {}).filter(([, outcome]) => outcome === 'missed');
     setbacks.push(...missed.map(([lift]) => `${where} missed ${lift}`));
     const counted = Object.entries(after.consecutiveMisses).filter(([, misses]) => (misses ?? 0) > 0);
     setbacks.push(...counted.map(([rule]) => `${where} counted a miss for ${rule}`));
