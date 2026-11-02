@@ -139,6 +139,7 @@ describe('hold exercises in the catalog', () => {
       pace_unit: null,
       max_effort: null,
       tracks_distance: true,
+      record_min_distance_m: null,
       exercise_skills: [],
     };
     expect(toExercise({ ...base, measure: 'distance' })).toMatchObject({ modality: 'lift', measure: 'distance' });

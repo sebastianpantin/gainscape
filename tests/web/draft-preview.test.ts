@@ -64,17 +64,18 @@ const running: CardioActivity = {
   referencePaceSPerKm: 360,
   maxEffort: 'max',
   tracksDistance: true,
+  recordMinDistanceM: 1000,
   shares: [{ skillKey: 'endurance', shareBasisPoints: 10_000 }],
 };
 
-function run(distanceM: number): CardioDraftExercise {
+function run(distanceM: number, activity: CardioActivity = running): CardioDraftExercise {
   setCounter += 1;
   return {
     clientId: 'card-run',
     exerciseId: 'run',
     name: 'run',
     modality: 'cardio',
-    activity: running,
+    activity,
     sets: [
       {
         id: `bout-${setCounter}`,
@@ -96,7 +97,7 @@ const trained: Record<string, ExerciseStrength> = Object.fromEntries(
 const baseline: RecordBaseline = {
   repMaxKg: { bench: [110, 105, 100, 97.5, 95, null, null, null, null, null] },
   maxReps: { 'pull-up': 10 },
-  cardioBest: { pinch: { duration: 30 }, run: { distance: 4000 } },
+  cardioBest: { pinch: { duration: 30 }, run: { distance: 4000, pace: 330, duration: 1500 } },
 };
 
 function context(overrides: Partial<PreviewContext> = {}): PreviewContext {
@@ -162,6 +163,43 @@ function serverRecords(exercises: readonly (LiftDraftExercise | HoldDraftExercis
   return new Map(outputs.sets.map((result) => [result.set.id, recordOf(result)]));
 }
 
+function serverCardioGains(exercise: CardioDraftExercise) {
+  const [bout] = exercise.sets;
+  const catalog: Catalog = {
+    skills: [{ id: 'endurance', key: 'endurance', sortOrder: 0, combatWeight: 0 }],
+    exercises: new Map([
+      [
+        exercise.exerciseId,
+        {
+          id: exercise.exerciseId,
+          modality: 'cardio',
+          builtIn: true,
+          shares: [{ skillId: 'endurance', shareBasisPoints: 10_000 }],
+          cardio: {
+            paceUnit: running.paceUnit,
+            referencePaceSPerKm: running.referencePaceSPerKm,
+            maxEffort: running.maxEffort,
+            recordMinDistanceM: running.recordMinDistanceM ?? null,
+            tracksDistance: running.tracksDistance,
+          },
+        },
+      ],
+    ]),
+  };
+  const { kind, id, durationS, distanceM, interval, effort } = bout;
+  const { outputs } = processSession(
+    { skillXp: {}, bodyweightKg: BODYWEIGHT_KG, records: recordStateFrom(baseline) },
+    {
+      id: 'server',
+      startedAt: '2026-10-01T10:00:00.000Z',
+      sets: [{ kind, id, exerciseId: exercise.exerciseId, position: 0, durationS, distanceM, interval, effort }],
+    },
+    DEFAULT_BALANCE,
+    { catalog, strength: trained },
+  );
+  return outputs.sets[0].cardio?.records;
+}
+
 function recordOf(result: SetResult): PreviewRecord | null {
   const [gain] = result.holdRecords ?? [];
   if (gain !== undefined) return { kind: 'hold', gain };
@@ -210,7 +248,26 @@ describe('previewDraft', () => {
     expect(previewDraft([badEffort], context()).records).toEqual([[null]]);
   });
 
-  it('leaves cardio bests out of the preview', () => {
-    expect(previewDraft([run(6000)], context()).records).toEqual([[null]]);
+  it('predicts the cardio bests the server awards for a bout', () => {
+    const bout = run(6000);
+    const [[record]] = previewDraft([bout], context()).records;
+    expect(record).toEqual({ kind: 'cardio', gains: serverCardioGains(bout) });
+    expect(record?.kind === 'cardio' && record.gains.map((gain) => gain.kind)).toEqual([
+      'distance',
+      'pace',
+      'duration',
+    ]);
+  });
+
+  it('predicts no pace best for a bout shorter than the activity’s record distance', () => {
+    const [[record]] = previewDraft([run(800)], context()).records;
+    expect(record?.kind === 'cardio' && record.gains.map((gain) => gain.kind)).not.toContain('pace');
+  });
+
+  it('predicts no pace best for an activity from a draft saved before the record distance was known', () => {
+    const savedBefore: CardioActivity = { ...running };
+    delete savedBefore.recordMinDistanceM;
+    const [[record]] = previewDraft([run(6000, savedBefore)], context()).records;
+    expect(record?.kind === 'cardio' && record.gains.map((gain) => gain.kind)).toEqual(['distance', 'duration']);
   });
 });

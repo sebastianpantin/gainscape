@@ -139,6 +139,18 @@ describe('exercise list cache', () => {
     expect(readCachedExercises(storage, userId)?.[2]).toMatchObject({ activity: { tracksDistance: true } });
   });
 
+  it('still reads a cardio entry saved before the record distance was cached', () => {
+    const storage = new MemoryStorage();
+    saveCachedExercises(storage, userId, exercises);
+    const raw = JSON.parse(storage.getItem(exerciseCacheKey(userId))!);
+    for (const entry of raw.exercises) if (entry.activity) delete entry.activity.recordMinDistanceM;
+    storage.setItem(exerciseCacheKey(userId), JSON.stringify(raw));
+    expect(readCachedExercises(storage, userId)?.[2]).toMatchObject({
+      modality: 'cardio',
+      activity: { tracksDistance: true },
+    });
+  });
+
   it('rejects an entry with a malformed skill share', () => {
     const storage = new MemoryStorage();
     saveCachedExercises(storage, userId, exercises);

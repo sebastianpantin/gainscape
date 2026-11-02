@@ -40,6 +40,7 @@ export const cachedExerciseSchema = z.discriminatedUnion('modality', [
       referencePaceSPerKm: z.number().nullable(),
       maxEffort: z.enum(CARDIO_EFFORT_LEVELS),
       tracksDistance: z.boolean().default(true),
+      recordMinDistanceM: z.number().nullable().optional(),
       shares: z.array(z.object({ skillKey: z.string(), shareBasisPoints: z.number() })),
     }),
   }),
