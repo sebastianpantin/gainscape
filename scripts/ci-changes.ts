@@ -85,9 +85,9 @@ export function changedPathsOutput(changedPaths: readonly string[]): string {
   return `code=${needsCode(changedPaths)}\nbackend=${needsBackend(changedPaths)}\nui=${needsUi(changedPaths)}\n`;
 }
 
-function changedSince(base: string): string[] {
+export function changedSince(base: string, cwd = process.cwd()): string[] {
   try {
-    return execFileSync('git', ['diff', '--name-only', base, 'HEAD'], { encoding: 'utf8' })
+    return execFileSync('git', ['diff', '--name-only', '--no-renames', base, 'HEAD'], { cwd, encoding: 'utf8' })
       .split('\n')
       .filter((path) => path !== '');
   } catch {
