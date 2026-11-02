@@ -29,13 +29,20 @@ flowchart TD
 
 Owning modules: `effort.ts`, `strength.ts`.
 
-Every lift set gets its effort, as reps in reserve (RIR), from one of three sources:
+Every lift set can carry an Effort the lifter logs: an effort level (mapped by `effortLevelRir`), a RIR, or an RPE (RIR = 10 − RPE). Separately, once a lift has a 1RM estimate, the engine predicts an Estimated RIR from the load and the in-session fatigued estimate. The set records which source it used (`rirSource`: logged, estimated or cold start).
 
-- **Logged:** an effort level (mapped by `effortLevelRir`), a RIR, or an RPE (RIR = 10 − RPE).
-- **Estimated:** predicted from the load and your strength estimate.
-- **Cold start:** no estimate yet, or the first session with the lift. An unrated set earns a flat `coldStartXpPerSet`, for up to `coldStartMaxSetsPerExercise` sets per built-in exercise per session. These sets have no RIR.
+**XP comes from the Estimated RIR whenever one exists.** A set's XP RIR is the Estimated RIR whether Effort is logged or blank. Logged Effort never changes XP on such a set. Why: when XP followed logged Effort, an honest Moderate on a top set earned less than leaving it blank, and over-claiming failure earned more. With XP tied to the estimate, blank and honest earn the same, and over-claiming earns nothing extra, so XP stays fair between friends.
 
-A logged RIR is trusted only so far. If it claims more effort than the estimate minus `rirTrustMargin`, the set is flagged: XP and strength use that trust floor, and the intensity bonus is dropped. Claiming failure on every set gains nothing beyond that margin.
+**A first-time lift keeps the logged Effort.** With no 1RM estimate yet (the first session with the lift, or no estimate available), only the lifter knows how hard the set was:
+
+- Logged Effort earns full XP from its RIR.
+- A blank set is cold start: it earns a flat `coldStartXpPerSet`, for up to `coldStartMaxSetsPerExercise` sets per built-in exercise per session, and no loot. It has no RIR.
+
+**Logged Effort feeds the 1RM estimate.** A logged RIR is credited for strength up to `maxRirForStrength`. If it claims more effort than the Estimated RIR minus `rirTrustMargin`, the set is Flagged, and the strength step uses that trust floor instead of the claim. A Flag only limits strength credit: it never touches XP and the set keeps its intensity bonus. Why: the Flag is not shown anywhere in the app, so its only visible effect used to be a silently lost bonus.
+
+**The top of the Effort scale means "5 or more".** A logged RIR at or above `maxRirForStrength` (Easy, RIR 6+, RPE 5 or lower) is never Flagged and counts as `maxRirForStrength` for strength. Why: warm-ups and back-off sets often sit far from failure, so the easiest option used to count as an over-claim on most light sets.
+
+## XP
 
 ## XP
 
@@ -70,9 +77,9 @@ Each lift tracks an estimated one-rep max (e1RM) with the Epley formula on load 
 - Current e1RM is the best estimate from the last `e1rmWindowDays`, else the best from your latest session with that lift.
 - Sets beyond `epleyMaxRepsToFailure` reps to failure give no estimate.
 - One session raises the estimate by at most `maxStrengthGainPerSession`.
-- An estimated RIR raises strength only when the set beats the prediction.
+- An Estimated RIR raises strength only when the set beats the prediction. A logged Effort counts toward it, within the Flag limit above.
 
-Fatigue lives inside one session. Each hard set lowers expected strength by `fatiguePerHardSet`, scaled by closeness to failure, and later estimates use the lowered value. It also works backwards: if a later set proves an earlier set's RIR was too low (beyond `fatigueToleranceReps`), the earlier RIR is raised and a logged claim is flagged.
+Fatigue lives inside one session. Each hard set lowers expected strength by `fatiguePerHardSet`, scaled by closeness to failure, and later estimates use the lowered value. It also works backwards: if a later set proves an earlier set's RIR was too low (beyond `fatigueToleranceReps`), the earlier set's XP RIR is raised to that floor, and a logged claim below it is Flagged under the same rule as above (never at the top of the Effort scale).
 
 ## Personal records
 
@@ -87,7 +94,7 @@ The first session with an exercise is a baseline: it fills slots but reports no 
 
 Owning modules: `loot.ts`, `rng.ts`, `../loot-seeds.ts`. Constants: `DEFAULT_LOOT`.
 
-- **Regular roll:** needs `minEffectiveReps`, or for cardio `minSteadyCardioWorkS` or `minIntervalCardioWorkS` of work. Capped at `regularRollsPerDay` per local day. The chance starts at `baseChance` and rises by `badLuckStep` per miss up to `maxChance`; a hit resets it. This bad-luck counter carries across days.
+- **Regular roll:** needs `minEffectiveReps` (counted from the XP RIR, so from the Estimated RIR once one exists), or for cardio `minSteadyCardioWorkS` or `minIntervalCardioWorkS` of work. Capped at `regularRollsPerDay` per local day. The chance starts at `baseChance` and rises by `badLuckStep` per miss up to `maxChance`; a hit resets it. This bad-luck counter carries across days.
 - **PR roll:** a qualifying set that sets a record on a built-in exercise also gets a guaranteed rare drop, up to `prRollsPerDay`.
 
 A hit picks a weighted entry from `catalog/drop_tables.yaml` and a quantity in its range. The rare table holds challenge scrolls, pets, Grinder-tier gear and higher-tier scraps.
@@ -147,7 +154,8 @@ Before changing a rule, read `supabase/functions/_shared/domain/AGENTS.md` and `
 
 - **e1RM:** estimated one-rep max.
 - **Effective reps:** reps near enough to failure to earn XP.
-- **Flagged set:** a set whose logged effort the engine did not believe.
+- **Estimated RIR:** the RIR the engine predicts from the load and the 1RM estimate; it sets XP once it exists.
+- **Flagged set:** a set whose logged Effort claims more than the estimate allows; only its strength credit is limited.
 - **History-only session:** stored for the record, with no rewards.
 - **RIR / RPE:** reps in reserve; rate of perceived exertion.
 - **Scroll:** a rare drop that unlocks one challenge run.
