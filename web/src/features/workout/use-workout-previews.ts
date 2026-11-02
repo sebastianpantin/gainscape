@@ -65,7 +65,14 @@ export function useWorkoutPreviews({
       isDone: next.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
       preview: () => previewAfter().previews[exerciseIndex][setIndex],
       record: () => previewAfter().records[exerciseIndex][setIndex],
-      becameRecord: () => becomesRecord(records, previous.exercises, previewAfter().records, next.exercises, setId),
+      becameRecord: () =>
+        becomesRecord(
+          previewOf(previous.exercises).records,
+          previous.exercises,
+          previewAfter().records,
+          next.exercises,
+          setId,
+        ),
       vibrate,
       sound,
     });

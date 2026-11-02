@@ -203,6 +203,13 @@ describe('previewDraft', () => {
     expect(previewDraft(planned, context()).records).toEqual([[null]]);
   });
 
+  it('predicts no record for a set the server would refuse', () => {
+    const tooLongHold = hold('pinch', [holdSet(24, 3601)]);
+    const badEffort = lift('bench', 'external', [liftSet(120, 5, { effort: { type: 'rir', value: -1 } })]);
+    expect(previewDraft([tooLongHold], context()).records).toEqual([[null]]);
+    expect(previewDraft([badEffort], context()).records).toEqual([[null]]);
+  });
+
   it('leaves cardio bests out of the preview', () => {
     expect(previewDraft([run(6000)], context()).records).toEqual([[null]]);
   });
