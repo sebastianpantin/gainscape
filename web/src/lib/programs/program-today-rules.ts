@@ -1,4 +1,5 @@
 import {
+  dayOf,
   availableDays,
   parseProgramDefinition,
   type ProgramEnrollment,
@@ -19,7 +20,6 @@ import {
   shownWeight,
   type WeightUnit,
 } from '@domain/index.ts';
-import { dayOf } from '@domain/program-schedule.ts';
 import {
   enrolledTemplate,
   liftName,

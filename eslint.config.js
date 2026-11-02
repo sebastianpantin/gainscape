@@ -73,6 +73,23 @@ export default tseslint.config(
     },
   },
   {
+    files: ['web/src/**/*.{ts,tsx}', 'scripts/**/*.{ts,mjs}', 'supabase/functions/**/*.ts'],
+    ignores: ['supabase/functions/_shared/domain/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '(^@domain/|/domain/)(program-|prescription-snapshot)',
+              message: 'Import the program engine through @domain/index.ts (or domain/index.ts) only.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['web/src/**/*.{ts,tsx}', 'tests/**/*.ts', 'e2e/**/*.ts'],
     ignores: ['web/src/features/whats-new/changelog-data.ts'],
     rules: {

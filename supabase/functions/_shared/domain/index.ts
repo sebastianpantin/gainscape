@@ -33,7 +33,6 @@ export { rpeChartPct } from './rpe-chart.ts';
 export {
   type InputKind,
   type LastLoggedWeights,
-  type Load,
   type OptionDecl,
   type OptionValue,
   type PrescriptionSnapshot,
@@ -41,12 +40,14 @@ export {
   type ProgramEnrollment,
   type ReferenceVar,
 } from './program-types.ts';
+export { evaluateNumber } from './program-eval.ts';
 export { MAX_REFERENCE_VALUE, parseProgramDefinition, validateProgramDefinition } from './program-validate.ts';
 export {
   availableDays,
   comparePositions,
+  compareWeeks,
   type CyclePosition,
-  firstPosition,
+  dayOf,
   isCyclePosition,
   isPositionInSchedule,
   isRotationPosition,

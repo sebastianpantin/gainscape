@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  availableDays,
-  comparePositions,
-  firstPosition,
-  isPositionInSchedule,
-  programStateAt,
-  upcomingDays,
-} from '@domain/index.ts';
-import { nextPosition } from '@domain/program-schedule.ts';
+import { availableDays, comparePositions, isPositionInSchedule, programStateAt, upcomingDays } from '@domain/index.ts';
+import { firstPosition, nextPosition } from '@domain/program-schedule.ts';
 import { factClock, sessionFact, skipDayFact } from './program-fixtures/facts.ts';
 import {
   cyclePosition,

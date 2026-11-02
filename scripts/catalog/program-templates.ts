@@ -3,8 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
-import { type ProgramDefinition } from '../../supabase/functions/_shared/domain/program-types.ts';
-import { validateProgramDefinition } from '../../supabase/functions/_shared/domain/program-validate.ts';
+import { type ProgramDefinition, validateProgramDefinition } from '../../supabase/functions/_shared/domain/index.ts';
 import { CatalogValidationError } from './validate.ts';
 
 export const PROGRAM_TEMPLATES_DIR = join(import.meta.dirname, '../../catalog/program-templates');
