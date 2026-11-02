@@ -199,6 +199,7 @@ export function applySetToRecords(
     };
   }
 
+  if (loadType === 'external' && set.weightKg <= 0) return { records, personalRecord: null };
   const before = records.repMaxes[set.exerciseId] ?? emptyRepMaxSlots();
   const { slots, improvedReps } = applyRepMaxSet(before, set, achievedAt, cfg);
   const slotsUnchanged =
