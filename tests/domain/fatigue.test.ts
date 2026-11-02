@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { epley, type ExerciseStrength, processSession, type SessionInput } from '@domain/index.ts';
-import { aBout, aSet, catalog, failure, TEST_BALANCE } from './fixtures.ts';
+import { aBout, aSet, catalog, easy, failure, TEST_BALANCE } from './fixtures.ts';
 
 function runSets(
   sets: SessionInput['sets'],
@@ -107,6 +107,33 @@ describe('fatigue check', () => {
     );
     expect(withZeroLoad[0]).toMatchObject({ rirFlagged: false, rirForXp: 0 });
     expect(withZeroLoad[0]).toEqual({ ...withoutZeroLoad[0], set: withZeroLoad[0].set });
+  });
+
+  it('raises an Easy set that a later set shows was easier without flagging it', () => {
+    const [easySet] = runSets([aSet('bench', 60, 5, easy), aSet('bench', 100, 6, failure)], known('bench', 70));
+    expect(easySet.rirFlagged).toBe(false);
+    expect(easySet.rirForXp).toBeGreaterThan(5);
+  });
+
+  it('flags a logged RIR below both the floor a later set raises it to and the top of the Effort scale', () => {
+    const claimed = aSet('bench', 60, 5, { type: 'rir', value: 1 });
+    const [alone] = runSets([claimed], known('bench', 70));
+    const [judged] = runSets([claimed, aSet('bench', 100, 6, failure)], known('bench', 70));
+    expect(alone.rirFlagged).toBe(false);
+    expect(judged).toMatchObject({ rir: 1, rirFlagged: true });
+    expect(judged.rirForXp).toBeGreaterThan(TEST_BALANCE.maxRirForStrength);
+  });
+
+  it('raises the XP RIR of a rated set from later sets as it does for a blank one', () => {
+    const rated = runSets(
+      repeated(10, () => aSet('bench', 100, 6, failure)),
+      known('bench', epley(100, 6)),
+    );
+    const blank = runSets(
+      repeated(10, () => aSet('bench', 100, 6, null)),
+      known('bench', epley(100, 6)),
+    );
+    expect(rated.map((result) => result.xp)).toEqual(blank.map((result) => result.xp));
   });
 
   it('ignores warm-ups', () => {

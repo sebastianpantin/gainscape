@@ -256,6 +256,25 @@ test('an unrated set outlines the effort the app assumes from your strength unti
   await expect(row.getByRole('radio', { name: 'Hard' })).toHaveAccessibleDescription('');
 });
 
+test.describe('on a 360x740 phone', () => {
+  test.use({ viewport: { width: 360, height: 740 } });
+
+  test('a rated set says its effort counts toward the 1RM estimate without widening the page', async ({ page }) => {
+    await register(page, uniqueUsername('re'));
+    await logBench(page);
+    await openTab(page, 'Train');
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await addExercise(page, 'bench', 'Barbell Bench Press');
+    const row = setRow(page, 1);
+    await expect(row.getByRole('spinbutton', { name: 'Weight in kg, set 1' })).toHaveValue('60');
+    await row.getByRole('radio', { name: 'Hard' }).click();
+    await row.getByRole('button', { name: 'Done set 1' }).click();
+
+    await expect(row.getByText('est. RIR 3 · Effort counts toward 1RM estimate')).toBeVisible();
+    expect(await page.evaluate(() => window.innerWidth)).toBe(360);
+  });
+});
+
 test('a lift fills to sets × reps in one go, every set done', async ({ page }) => {
   await register(page, uniqueUsername('qf'));
   await page.getByRole('button', { name: 'Start workout' }).click();

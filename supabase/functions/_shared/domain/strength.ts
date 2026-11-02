@@ -1,4 +1,5 @@
 import type { BalanceConfig } from './balance.ts';
+import { overclaimsEffort } from './effort.ts';
 import { liftExerciseFor } from './exercise-lookup.ts';
 import { fatigueAfterSet, fatiguedStrength } from './fatigue.ts';
 import { FLOAT_TOLERANCE, loadRatioAtFailure, MS_PER_DAY, repsAtFailure, roundTo } from './math.ts';
@@ -113,12 +114,10 @@ interface ExerciseSessionProgress {
   coldStartSetsPaid: number;
 }
 
-interface StrengthDecision {
-  rir: number | null;
-  rirSource: SetResult['rirSource'];
-  rirForXp: number | null;
-  rirFlagged: boolean;
-  coldStartXp: number;
+interface StrengthDecision extends Pick<
+  SetResult,
+  'rir' | 'rirSource' | 'rirForXp' | 'hasEstimatedRir' | 'rirFlagged' | 'coldStartXp'
+> {
   rirUsedForStrength: number | null;
 }
 
@@ -150,24 +149,28 @@ function decideEffort(
   const estimated = estimateFor(result, exercise, fatiguedBefore);
   const logged = result.rir;
 
+  const estimatedForXp = isBaselineSession ? null : estimated;
+
   if (logged !== null) {
     const trustFloor = estimated === null ? null : estimated - cfg.rirTrustMargin;
-    const claimsImplausibleEffort = trustFloor !== null && logged < trustFloor;
+    const claimsImplausibleEffort = trustFloor !== null && overclaimsEffort(logged, trustFloor, cfg);
     return {
       rir: logged,
       rirSource: 'logged',
-      rirForXp: claimsImplausibleEffort ? trustFloor : logged,
+      rirForXp: estimatedForXp ?? logged,
+      hasEstimatedRir: estimatedForXp !== null,
       rirFlagged: claimsImplausibleEffort,
       coldStartXp: 0,
       rirUsedForStrength: claimsImplausibleEffort ? trustFloor : Math.min(logged, cfg.maxRirForStrength),
     };
   }
 
-  if (isBaselineSession || estimated === null) {
+  if (estimatedForXp === null) {
     return {
       rir: null,
       rirSource: 'cold_start',
       rirForXp: null,
+      hasEstimatedRir: false,
       rirFlagged: false,
       coldStartXp: coldStartPayable ? cfg.coldStartXpPerSet : 0,
       rirUsedForStrength: cfg.coldStartAssumedRir,
@@ -178,6 +181,7 @@ function decideEffort(
     rir: estimated,
     rirSource: 'estimated',
     rirForXp: estimated,
+    hasEstimatedRir: true,
     rirFlagged: false,
     coldStartXp: 0,
     rirUsedForStrength: beatsPrediction(result, exercise, strengthBefore!) ? 0 : null,
@@ -263,15 +267,15 @@ export const trackStrength: Step = (ctx: SessionContext) => {
     });
 
     const repsModel = measuresRepsCapacity(exercise.loadType);
-    const bonus =
-      repsModel || decision.rirFlagged
-        ? 1
-        : intensityBonus(result.set.reps, result.effectiveLoadKg, strengthBefore ?? candidate, ctx.cfg);
+    const bonus = repsModel
+      ? 1
+      : intensityBonus(result.set.reps, result.effectiveLoadKg, strengthBefore ?? candidate, ctx.cfg);
     return {
       ...result,
       rir: decision.rir,
       rirSource: decision.rirSource,
       rirForXp: decision.rirForXp,
+      hasEstimatedRir: decision.hasEstimatedRir,
       rirFlagged: decision.rirFlagged,
       coldStartXp: decision.coldStartXp,
       intensityBonus: bonus,

@@ -205,7 +205,7 @@ export function SetRow({
   const showBackoff = backoff !== null && !(set.weightKg === backoff.weightKg && set.reps === backoff.reps);
   const amrapBadge = amrapBadgeOf(set.prescription);
   const marked = amrapBadge !== null || markers.length > 0 || barbell !== null;
-  const estimatedRir = preview.basis === 'estimated' ? preview.rir : null;
+  const estimatedRir = preview.basis === 'estimated' ? preview.estimatedRirForXp : null;
   const rowClass = [
     'set-row',
     'stepped',

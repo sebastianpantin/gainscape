@@ -33,16 +33,16 @@ import type {
   LiftDraftExercise,
 } from '../../offline/draft-format.ts';
 
-export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'unrated' | 'warmup' | 'unknown';
+export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'unrated' | 'warmup' | 'cardio_or_hold' | 'unknown';
 
 export interface SetPreview {
   xp: number;
   basis: PreviewBasis;
-  rir: number | null;
+  estimatedRirForXp: number | null;
 }
 
-const UNKNOWN_PREVIEW: SetPreview = Object.freeze({ xp: 0, basis: 'unknown', rir: null });
-const WARMUP_PREVIEW: SetPreview = Object.freeze({ xp: 0, basis: 'warmup', rir: null });
+const UNKNOWN_PREVIEW: SetPreview = Object.freeze({ xp: 0, basis: 'unknown', estimatedRirForXp: null });
+const WARMUP_PREVIEW: SetPreview = Object.freeze({ xp: 0, basis: 'warmup', estimatedRirForXp: null });
 const PREVIEW_SKILL_ID = 'preview';
 const PREVIEW_SESSION_ID = 'preview';
 const PREVIEW_STARTED_AT = '1970-01-01T00:00:00.000Z';
@@ -232,10 +232,13 @@ function placeSets(
 }
 
 function toPreview(result: SetResult, hasPriorSession: boolean): SetPreview {
-  if (result.cardio !== null || result.set.kind === 'hold') return { xp: result.xp, basis: 'logged', rir: null };
-  if (result.rirSource === 'logged') return { xp: result.xp, basis: 'logged', rir: result.rir };
-  if (result.rirSource === 'estimated') return { xp: result.xp, basis: 'estimated', rir: result.rir };
-  return { xp: result.xp, basis: hasPriorSession ? 'unrated' : 'cold_start', rir: null };
+  if (result.cardio !== null || result.set.kind === 'hold') {
+    return { xp: result.xp, basis: 'cardio_or_hold', estimatedRirForXp: null };
+  }
+  const estimatedRirForXp = result.hasEstimatedRir ? result.rirForXp : null;
+  if (result.rirSource === 'logged') return { xp: result.xp, basis: 'logged', estimatedRirForXp };
+  if (result.rirSource === 'estimated') return { xp: result.xp, basis: 'estimated', estimatedRirForXp };
+  return { xp: result.xp, basis: hasPriorSession ? 'unrated' : 'cold_start', estimatedRirForXp: null };
 }
 
 export interface PreviewContext {
@@ -294,10 +297,12 @@ export function previewXpLabel(preview: SetPreview): string {
   return preview.basis === 'unknown' ? '~?' : `~${formatXp(preview.xp)}`;
 }
 
+const RATED_NOTE = 'Effort counts toward 1RM estimate';
+
 export function previewNote(preview: SetPreview): string {
-  const firstRirWithoutXp = DEFAULT_BALANCE.effectiveRirWindow + 1;
-  if (preview.basis === 'logged' && preview.rir !== null && preview.rir >= firstRirWithoutXp) return 'counts for e1RM';
-  if (preview.basis === 'estimated') return `est. RIR ${preview.rir}`;
+  const estimate = preview.estimatedRirForXp === null ? null : `est. RIR ${preview.estimatedRirForXp}`;
+  if (preview.basis === 'logged') return estimate === null ? RATED_NOTE : `${estimate} · ${RATED_NOTE}`;
+  if (preview.basis === 'estimated' && estimate !== null) return estimate;
   if (preview.basis === 'cold_start') return 'first time';
   if (preview.basis === 'unrated') return 'unrated';
   if (preview.basis === 'warmup') return 'warm-up';

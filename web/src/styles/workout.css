@@ -220,6 +220,7 @@
   flex-direction: row;
   align-items: baseline;
   gap: var(--space-1);
+  min-width: 0;
   margin-left: auto;
   padding-bottom: 0;
 }
@@ -614,6 +615,8 @@
 .set-xp .tiny {
   font-family: var(--font-family);
   color: var(--color-text-muted);
+  text-align: right;
+  white-space: normal;
 }
 
 .set-xp .record-chip {

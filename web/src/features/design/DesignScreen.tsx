@@ -78,7 +78,7 @@ function SampleSetRows() {
             loadType="external"
             set={set}
             current={set.id === sets.find((candidate) => !candidate.done)?.id}
-            preview={{ xp: 42, basis: set.done ? 'logged' : 'estimated', rir: 2 }}
+            preview={{ xp: 42, basis: set.done ? 'logged' : 'estimated', estimatedRirForXp: 2 }}
             record={null}
             drop={null}
             unit="kg"

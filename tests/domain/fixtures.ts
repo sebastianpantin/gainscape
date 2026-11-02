@@ -253,6 +253,8 @@ export function aHold(
   };
 }
 
+export const easy = { type: 'level', level: 'easy' } as const;
+export const moderate = { type: 'level', level: 'moderate' } as const;
 export const hard = { type: 'level', level: 'hard' } as const;
 export const nearFailure = { type: 'level', level: 'near_failure' } as const;
 export const failure = { type: 'level', level: 'failure' } as const;

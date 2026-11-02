@@ -49,6 +49,10 @@ export function resolveEffort(input: EffortInput, cfg: BalanceConfig, kind: SetK
   }
 }
 
+export function overclaimsEffort(loggedRir: number, rirFloor: number, cfg: BalanceConfig): boolean {
+  return loggedRir < Math.min(rirFloor, cfg.maxRirForStrength);
+}
+
 export function effortInputFromStored(
   effortInputType: EffortInputType | null,
   effortValue: number | null,

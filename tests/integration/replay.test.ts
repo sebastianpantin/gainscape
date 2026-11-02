@@ -83,7 +83,7 @@ describe('out-of-order sync', () => {
 
     const [row] = await db`
       select e1rm_before_kg::float, e1rm_candidate_kg::float, xp_awarded from public.sets where id = ${late.sets[0].id}`;
-    expect(row).toEqual({ e1rm_before_kg: 74, e1rm_candidate_kg: 81.4, xp_awarded: 626 });
+    expect(row).toEqual({ e1rm_before_kg: 74, e1rm_candidate_kg: 81.4, xp_awarded: 1043 });
     const [max] =
       await db`select e1rm_kg::float from public.exercise_maxes where user_id = ${user.id} and exercise_id = ${benchId}`;
     expect(max.e1rm_kg).toBe(81.4);
@@ -385,7 +385,7 @@ describe('replay guards', () => {
     const dropOnRemovedSet = await grantDrop(user.id, first.id, randomUUID(), 'forged_scraps', 2, 'pr');
 
     await staleAndCorrupted(user.id);
-    const edited = await editSession(user, second, [{ ...second.sets[0], weightKg: 75 }]);
+    const edited = await editSession(user, second, [{ ...second.sets[0], weightKg: 62.5 }]);
     expect(edited.body.replayedSessionIds).toEqual([second.id, third.id, fourth.id]);
     expect(edited.body.revokedDrops).toEqual([]);
 

@@ -29,13 +29,18 @@ flowchart TD
 
 Owning modules: `effort.ts`, `strength.ts`.
 
-Every lift set gets its effort, as reps in reserve (RIR), from one of three sources:
+Every lift set can carry an Effort the lifter logs: an effort level (mapped by `effortLevelRir`), a RIR, or an RPE (RIR = 10 − RPE). Separately, once a lift has a 1RM estimate, the engine predicts an Estimated RIR from the load and the in-session fatigued estimate. The set records which source it used (`rirSource`: logged, estimated or cold start).
 
-- **Logged:** an effort level (mapped by `effortLevelRir`), a RIR, or an RPE (RIR = 10 − RPE).
-- **Estimated:** predicted from the load and your strength estimate.
-- **Cold start:** no estimate yet, or the first session with the lift. An unrated set earns a flat `coldStartXpPerSet`, for up to `coldStartMaxSetsPerExercise` sets per built-in exercise per session. These sets have no RIR.
+**XP comes from the Estimated RIR whenever one exists.** A set's XP RIR is the Estimated RIR whether Effort is logged or blank. Logged Effort never changes XP on such a set. Why: when XP followed logged Effort, an honest Moderate on a top set earned less than leaving it blank, and over-claiming failure earned more. With XP tied to the estimate, blank and honest earn the same, and over-claiming earns nothing extra, so XP stays fair between friends.
 
-A logged RIR is trusted only so far. If it claims more effort than the estimate minus `rirTrustMargin`, the set is flagged: XP and strength use that trust floor, and the intensity bonus is dropped. Claiming failure on every set gains nothing beyond that margin.
+**A first-time lift keeps the logged Effort.** With no 1RM estimate yet (the first session with the lift, or no estimate available), only the lifter knows how hard the set was:
+
+- Logged Effort earns full XP from its RIR.
+- A blank set is cold start: it earns a flat `coldStartXpPerSet`, for up to `coldStartMaxSetsPerExercise` sets per built-in exercise per session, and no loot. It has no RIR.
+
+**Logged Effort feeds the 1RM estimate.** A logged RIR is credited for strength up to `maxRirForStrength`. If it claims more effort than the Estimated RIR minus `rirTrustMargin`, the set is Flagged, and the strength step uses that trust floor instead of the claim. A Flag only limits strength credit: it never touches XP and the set keeps its intensity bonus. Why: the Flag is not shown anywhere in the app, so its only visible effect used to be a silently lost bonus.
+
+**The top of the Effort scale means "5 or more".** A logged RIR at or above `maxRirForStrength` (Easy, RIR 6+, RPE 5 or lower) is never Flagged and counts as `maxRirForStrength` for strength. Why: warm-ups and back-off sets often sit far from failure, so the easiest option used to count as an over-claim on most light sets.
 
 ## XP
 
@@ -49,7 +54,7 @@ set XP         = round(xpPerEffectiveRep × effective reps × intensity bonus)
 ```
 
 - Warm-ups earn nothing. `xpPerEffectiveRep` is the main pacing lever.
-- The intensity bonus rewards heavy sets. It starts once the load passes `intensityBonusStart` of your e1RM and grows with the intensity the rep count implies, up to `intensityBonusMax` at `intensityBonusFull`.
+- The intensity bonus rewards heavy sets. It starts once the load passes `intensityBonusStart` of your 1RM estimate and grows with the intensity the rep count implies, up to `intensityBonusMax` at `intensityBonusFull`.
 - An exercise's `shares` (basis points summing to 10,000, in `catalog/exercises.yaml`) split its XP across skills. `splitXp` uses largest remainder, so XP stays a whole number and the parts add up.
 - Holds and carries become rep equivalents (`holdSecondsPerRep`, `carryMetresPerRep`), take an effort level only, and get no cold start or intensity bonus.
 - Cardio earns `cardioXpPerWorkMinute` per counted work minute, scaled by the skill share, `cardioEffortFactor`, `cardioSteadyFactor` for steady bouts, and a pace bonus against the exercise's reference pace (up to `paceBonusMax`; a pace beyond `paceImplausibleRatio` is flagged). Counted minutes per session are capped by `cardioMaxCountedMinutesPerSession`, with a separate `mobilityMaxCountedMinutesPerSession` pool.
@@ -65,14 +70,14 @@ Levels follow the OSRS XP table up to `MAX_LEVEL`. The XP per level roughly doub
 
 Owning modules: `strength.ts`, `fatigue.ts`.
 
-Each lift tracks an estimated one-rep max (e1RM) with the Epley formula on load and reps to failure (reps + RIR). Pure bodyweight lifts track max reps instead.
+Each lift tracks a 1RM estimate (estimated one-rep max) with the Epley formula on load and reps to failure (reps + RIR). Pure bodyweight lifts track max reps instead.
 
-- Current e1RM is the best estimate from the last `e1rmWindowDays`, else the best from your latest session with that lift.
+- The current 1RM estimate is the best one from the last `e1rmWindowDays`, else the best from your latest session with that lift.
 - Sets beyond `epleyMaxRepsToFailure` reps to failure give no estimate.
 - One session raises the estimate by at most `maxStrengthGainPerSession`.
-- An estimated RIR raises strength only when the set beats the prediction.
+- An Estimated RIR raises strength only when the set beats the prediction. A logged Effort counts toward it, within the Flag limit above.
 
-Fatigue lives inside one session. Each hard set lowers expected strength by `fatiguePerHardSet`, scaled by closeness to failure, and later estimates use the lowered value. It also works backwards: if a later set proves an earlier set's RIR was too low (beyond `fatigueToleranceReps`), the earlier RIR is raised and a logged claim is flagged.
+Fatigue lives inside one session. Each hard set lowers expected strength by `fatiguePerHardSet`, scaled by closeness to failure, and later estimates use the lowered value. It also works backwards: if a later set proves an earlier set's RIR was too low (beyond `fatigueToleranceReps`), the earlier set's XP RIR is raised to that floor, and a logged claim below it is Flagged under the same rule as above (never at the top of the Effort scale).
 
 ## Personal records
 
@@ -87,7 +92,7 @@ The first session with an exercise is a baseline: it fills slots but reports no 
 
 Owning modules: `loot.ts`, `rng.ts`, `../loot-seeds.ts`. Constants: `DEFAULT_LOOT`.
 
-- **Regular roll:** needs `minEffectiveReps`, or for cardio `minSteadyCardioWorkS` or `minIntervalCardioWorkS` of work. Capped at `regularRollsPerDay` per local day. The chance starts at `baseChance` and rises by `badLuckStep` per miss up to `maxChance`; a hit resets it. This bad-luck counter carries across days.
+- **Regular roll:** needs `minEffectiveReps` (counted from the XP RIR, so from the Estimated RIR once one exists), or for cardio `minSteadyCardioWorkS` or `minIntervalCardioWorkS` of work. Capped at `regularRollsPerDay` per local day. The chance starts at `baseChance` and rises by `badLuckStep` per miss up to `maxChance`; a hit resets it. This bad-luck counter carries across days.
 - **PR roll:** a qualifying set that sets a record on a built-in exercise also gets a guaranteed rare drop, up to `prRollsPerDay`.
 
 A hit picks a weighted entry from `catalog/drop_tables.yaml` and a quantity in its range. The rare table holds challenge scrolls, pets, Grinder-tier gear and higher-tier scraps.
@@ -108,7 +113,7 @@ Gear has slots (`GEAR_SLOTS`) and tiers (`ITEM_TIERS`). Each slot boosts a few s
 
 Owning modules: `challenges.ts`, `quests.ts`; data in `catalog/challenges.yaml` and `catalog/quests.yaml`.
 
-A scroll runs one challenge: supersets of reps (optionally at a percentage of e1RM) or a volume target. The scroll is spent at sync, pass or fail, and the server snapshots the definition and your e1RM. The verdict uses only that snapshot and the sets, so replays stay stable. A pass adds `challengeBonusPercent` of base XP.
+A scroll runs one challenge: supersets of reps (optionally at a percentage of the 1RM estimate) or a volume target. The scroll is spent at sync, pass or fail, and the server snapshots the definition and your 1RM estimate. The verdict uses only that snapshot and the sets, so replays stay stable. A pass adds `challengeBonusPercent` of base XP.
 
 A quest has required levels and quests, steps (a challenge workout, a volume target, a record, or a number of sessions) and an XP reward. You start one with `start-quest`. A session counts only if it ended after the start, and advances at most one step. Progress moves only when `complete-session` syncs a scored session; edits, deletes and rebuilds never touch it. The reward is an XP grant anchored at a session, re-applied there on every replay.
 
@@ -145,9 +150,8 @@ Before changing a rule, read `supabase/functions/_shared/domain/AGENTS.md` and `
 
 ## Glossary
 
-- **e1RM:** estimated one-rep max.
-- **Effective reps:** reps near enough to failure to earn XP.
-- **Flagged set:** a set whose logged effort the engine did not believe.
+Effort, 1RM estimate, Estimated RIR, Effective reps and Flag are defined in [`GLOSSARY.md`](../GLOSSARY.md). Terms only this page uses:
+
 - **History-only session:** stored for the record, with no rewards.
 - **RIR / RPE:** reps in reserve; rate of perceived exertion.
 - **Scroll:** a rare drop that unlocks one challenge run.
