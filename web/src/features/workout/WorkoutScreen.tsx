@@ -151,7 +151,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const commands = useWorkoutCommands({
     userId,
     draft,
-    draftActions: { changeDraft, updateDraft, discardDraft },
+    draftActions: { updateDraft, discardDraft },
     recentSessions,
     feedbackFor,
     stopRest: rest.stop,
@@ -242,7 +242,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         unit={unitPref}
         onSaveNow={saveNow}
         onRetryNow={retryNow}
-        onBackToEditing={() => changeDraft({ ...draft, finishedAt: null }, { reopen: true })}
+        onBackToEditing={() => updateDraft((latest) => ({ ...latest, finishedAt: null }), { reopen: true })}
         onSaveBodyweight={async (bodyweightKg) => {
           await saveBodyweight({ userId, bodyweightKg, storage: deviceStorage(), queryClient });
           retryNow();
@@ -347,7 +347,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           return (
             <CardioExerciseCard
               key={exercise.clientId}
-              draft={draft}
               exercise={exercise}
               exerciseIndex={exerciseIndex}
               previews={previews[exerciseIndex]}
@@ -363,7 +362,6 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
           return (
             <HoldExerciseCard
               key={exercise.clientId}
-              draft={draft}
               exercise={exercise}
               exerciseIndex={exerciseIndex}
               previews={previews[exerciseIndex]}
@@ -408,7 +406,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       {draft.exercises.length > 0 && (
         <SessionRpeField
           sessionRpe={draft.sessionRpe ?? null}
-          onChange={(sessionRpe) => changeDraft(withSessionRpe(draft, sessionRpe))}
+          onChange={(sessionRpe) => updateDraft((latest) => withSessionRpe(latest, sessionRpe))}
         />
       )}
       <div ref={finishBar} className="finish-bar" tabIndex={-1}>

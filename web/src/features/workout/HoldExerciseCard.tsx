@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { updateHoldSet } from '../../lib/workout/exercise-edit-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
-import { type HoldDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
+import { type HoldDraftExercise } from '../../offline/draft-format.ts';
 import { addSet, toggleSetDone } from '../../offline/draft-edits.ts';
 import { AddSetButton } from './AddSetButton.tsx';
 import { type ExerciseCardActions } from './exercise-card-actions.ts';
@@ -11,7 +11,6 @@ import { feedbackLabel } from './set-feedback-rules.ts';
 import { type SetPreview } from './xp-preview.ts';
 
 interface HoldExerciseCardProps {
-  draft: WorkoutDraft;
   exercise: HoldDraftExercise;
   exerciseIndex: number;
   previews: SetPreview[];
@@ -24,7 +23,6 @@ interface HoldExerciseCardProps {
 }
 
 export function HoldExerciseCard({
-  draft,
   exercise,
   exerciseIndex,
   previews,
@@ -64,11 +62,13 @@ export function HoldExerciseCard({
               drop={actions.dropOn(set.id)}
               unit={unit}
               onChange={(changes) =>
-                actions.changeSet(updateHoldSet(draft, exerciseIndex, set.id, changes), set.id, place)
+                actions.editSet(set.id, place, (latest) => updateHoldSet(latest, exerciseIndex, set.id, changes))
               }
               menuRef={actions.focusTarget(set.id)}
               onRemove={() => actions.removeSetAt(exerciseIndex, set.id)}
-              onToggleDone={() => actions.changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id, place)}
+              onToggleDone={() =>
+                actions.editSet(set.id, place, (latest) => toggleSetDone(latest, exerciseIndex, set.id))
+              }
             />
           );
         })}
@@ -76,7 +76,7 @@ export function HoldExerciseCard({
       <AddSetButton
         buttonRef={actions.focusTarget(exercise.clientId)}
         roomForSet={roomForSet}
-        onAdd={() => actions.changeDraft(addSet(draft, exerciseIndex))}
+        onAdd={() => actions.edit((latest) => addSet(latest, exerciseIndex))}
       />
     </section>
   );

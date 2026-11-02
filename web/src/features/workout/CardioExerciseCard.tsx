@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
 import { updateBout } from '../../lib/workout/exercise-edit-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
-import { type CardioDraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
+import { type CardioDraftExercise } from '../../offline/draft-format.ts';
 import { addSet, toggleSetDone } from '../../offline/draft-edits.ts';
 import { CardioSetRow } from './CardioSetRow.tsx';
 import { type ExerciseCardActions } from './exercise-card-actions.ts';
@@ -10,7 +10,6 @@ import { feedbackLabel } from './set-feedback-rules.ts';
 import { type SetPreview } from './xp-preview.ts';
 
 interface CardioExerciseCardProps {
-  draft: WorkoutDraft;
   exercise: CardioDraftExercise;
   exerciseIndex: number;
   previews: SetPreview[];
@@ -23,7 +22,6 @@ interface CardioExerciseCardProps {
 }
 
 export function CardioExerciseCard({
-  draft,
   exercise,
   exerciseIndex,
   previews,
@@ -66,11 +64,13 @@ export function CardioExerciseCard({
               drop={actions.dropOn(bout.id)}
               unit={unit}
               onChange={(changes) =>
-                actions.changeSet(updateBout(draft, exerciseIndex, bout.id, changes), bout.id, place)
+                actions.editSet(bout.id, place, (latest) => updateBout(latest, exerciseIndex, bout.id, changes))
               }
               menuRef={actions.focusTarget(bout.id)}
               onRemove={() => actions.removeSetAt(exerciseIndex, bout.id)}
-              onToggleDone={() => actions.changeSet(toggleSetDone(draft, exerciseIndex, bout.id), bout.id, place)}
+              onToggleDone={() =>
+                actions.editSet(bout.id, place, (latest) => toggleSetDone(latest, exerciseIndex, bout.id))
+              }
             />
           );
         })}
@@ -80,7 +80,7 @@ export function CardioExerciseCard({
         className="button dashed"
         type="button"
         disabled={!roomForBout}
-        onClick={() => actions.changeDraft(addSet(draft, exerciseIndex))}
+        onClick={() => actions.edit((latest) => addSet(latest, exerciseIndex))}
       >
         + Add bout
       </button>

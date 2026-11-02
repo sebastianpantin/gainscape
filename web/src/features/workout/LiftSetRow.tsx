@@ -70,14 +70,14 @@ export function LiftSetRow({
       onChange={(changes) => {
         startRestAfter(changes);
         if (stopsRestForWarmup(set, changes, rest.timer)) rest.stop();
-        actions.changeSet(updateSet(draft, exerciseIndex, set.id, changes), set.id, place);
+        actions.editSet(set.id, place, (latest) => updateSet(latest, exerciseIndex, set.id, changes));
       }}
       menuRef={actions.focusTarget(set.id)}
       onRemove={() => actions.removeSetAt(exerciseIndex, set.id)}
       onToggleDone={() => {
         startRestAfter({ done: !set.done });
         lift.onFocusSet(set.done ? null : (nextInRound(draft, exerciseIndex, set.id)?.setId ?? null));
-        actions.changeSet(toggleSetDone(draft, exerciseIndex, set.id), set.id, place);
+        actions.editSet(set.id, place, (latest) => toggleSetDone(latest, exerciseIndex, set.id));
       }}
     />
   );

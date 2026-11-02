@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { type SessionBaseline } from '../../lib/workout/session-baseline-rules.ts';
-import { type DraftExercise, type WorkoutDraft } from '../../offline/draft-format.ts';
-import { type SetPlace } from './exercise-card-actions.ts';
+import { type DraftExercise } from '../../offline/draft-format.ts';
+import { type SetEditChange } from './draft-edit-commands.ts';
 import { becomesRecord, type PreviewRecord, previewRecords } from './record-preview.ts';
 import { type SetFeedback, setFeedback } from './set-feedback-rules.ts';
 import { previewSession, type SetPreview } from './xp-preview.ts';
@@ -14,11 +14,7 @@ interface WorkoutPreviewsOptions {
   bodyweightKg: number | null;
 }
 
-interface SetChange {
-  previous: WorkoutDraft;
-  next: WorkoutDraft;
-  setId: string;
-  place: SetPlace;
+interface SetChange extends SetEditChange {
   vibrate: boolean;
   sound: boolean;
 }
