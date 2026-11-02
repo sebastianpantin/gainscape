@@ -11,6 +11,7 @@ import {
   type HoldSetInput,
   type LiftExerciseDef,
   type LiftSetInput,
+  NO_RECORDS,
   processSession,
   resolveEffort,
   type SetInput,
@@ -19,6 +20,8 @@ import {
   type StrengthState,
 } from '@domain/index.ts';
 import { isLoggableBout } from '../../lib/workout/cardio-rules.ts';
+import { type RecordBaseline } from '../../lib/workout/session-baseline-rules.ts';
+import { type PreviewRecord, recordOfResult, recordStateFrom } from './record-preview.ts';
 import { formatXp } from '../../lib/format.ts';
 import type {
   CardioDraftExercise,
@@ -235,32 +238,41 @@ function toPreview(result: SetResult, hasPriorSession: boolean): SetPreview {
   return { xp: result.xp, basis: hasPriorSession ? 'unrated' : 'cold_start', rir: null };
 }
 
-export function previewSession(
+export interface PreviewContext {
+  isBuiltIn: (exerciseId: string) => boolean;
+  strength: StrengthState | null;
+  bodyweightKg: number | null;
+  recordBaseline: RecordBaseline | null;
+  cfg?: BalanceConfig;
+}
+
+export interface DraftPreview {
+  previews: SetPreview[][];
+  records: (PreviewRecord | null)[][];
+}
+
+export function previewDraft(
   exercises: readonly DraftExercise[],
-  isBuiltIn: (exerciseId: string) => boolean,
-  strength: StrengthState | null,
-  bodyweightKg: number | null = null,
-  cfg: BalanceConfig = DEFAULT_BALANCE,
-): SetPreview[][] {
+  { isBuiltIn, strength, bodyweightKg, recordBaseline, cfg = DEFAULT_BALANCE }: PreviewContext,
+): DraftPreview {
   const definitions = new Map(
     exercises.map((exercise) => [exercise.exerciseId, previewDefinition(exercise, isBuiltIn(exercise.exerciseId))]),
   );
   const catalog: Catalog = { skills: previewSkills(exercises), exercises: definitions };
   const placed = placeSets(exercises, isBuiltIn, strength, bodyweightKg, cfg);
   const doneInputs = placed.flat().flatMap((entry) => (entry.done && entry.input ? [entry.input] : []));
-
-  const resultsFor = (inputs: SetInput[]): Map<string, SetResult> => {
+  const resultsFor = (inputs: SetInput[], records = NO_RECORDS): Map<string, SetResult> => {
     const { outputs } = processSession(
-      { skillXp: {}, bodyweightKg },
+      { skillXp: {}, bodyweightKg, records },
       { id: PREVIEW_SESSION_ID, startedAt: PREVIEW_STARTED_AT, sets: inputs },
       cfg,
       { catalog, strength: strength ?? {} },
     );
     return new Map(outputs.sets.map((result) => [result.set.id, result]));
   };
-  const doneResults = resultsFor(doneInputs);
+  const doneResults = resultsFor(doneInputs, recordBaseline === null ? NO_RECORDS : recordStateFrom(recordBaseline));
 
-  return placed.map((sets) =>
+  const previews = placed.map((sets) =>
     sets.map((entry) => {
       if (entry.warmup) return WARMUP_PREVIEW;
       if (entry.input === null || (strength === null && entry.unrated)) return UNKNOWN_PREVIEW;
@@ -270,6 +282,12 @@ export function previewSession(
       return result ? toPreview(result, entry.hasPriorSession) : UNKNOWN_PREVIEW;
     }),
   );
+  const previewRecords = placed.map((sets) =>
+    sets.map((entry) =>
+      recordBaseline !== null && entry.done && entry.input ? recordOfResult(doneResults.get(entry.input.id)) : null,
+    ),
+  );
+  return { previews, records: previewRecords };
 }
 
 export function previewXpLabel(preview: SetPreview): string {

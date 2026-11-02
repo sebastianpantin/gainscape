@@ -1,11 +1,24 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { type SessionBaseline } from '../../lib/workout/session-baseline-rules.ts';
 import { type DraftExercise } from '../../offline/draft-format.ts';
 import { type SetEditChange } from './draft-edit-commands.ts';
-import { becomesRecord, type PreviewRecord, previewRecords } from './record-preview.ts';
+import { becomesRecord, type PreviewRecord } from './record-preview.ts';
 import { type SetFeedback, setFeedback } from './set-feedback-rules.ts';
-import { previewSession, type SetPreview } from './xp-preview.ts';
+import { type DraftPreview, previewDraft, type PreviewContext, type SetPreview } from './xp-preview.ts';
+
+const NO_PREVIEW: DraftPreview = { previews: [], records: [] };
+
+function rememberingPreviewer(context: PreviewContext): (list: readonly DraftExercise[]) => DraftPreview {
+  const previewed = new WeakMap<readonly DraftExercise[], DraftPreview>();
+  return (list) => {
+    const known = previewed.get(list);
+    if (known) return known;
+    const preview = previewDraft(list, context);
+    previewed.set(list, preview);
+    return preview;
+  };
+}
 
 interface WorkoutPreviewsOptions {
   exercises: readonly Exercise[];
@@ -31,35 +44,28 @@ export function useWorkoutPreviews({
   baseline,
   bodyweightKg,
 }: WorkoutPreviewsOptions): WorkoutPreviews {
-  const previewStrength = baseline?.strength ?? null;
+  const strength = baseline?.strength ?? null;
   const recordBaseline = baseline?.records ?? null;
-  const previewsOf = useCallback(
-    (list: readonly DraftExercise[]) => {
-      const customIds = new Set(exercises.filter((exercise) => exercise.custom).map((exercise) => exercise.id));
-      return previewSession(list, (exerciseId) => !customIds.has(exerciseId), previewStrength, bodyweightKg);
-    },
-    [exercises, previewStrength, bodyweightKg],
-  );
-  const previews = useMemo(
-    () => (draftExercises === null ? [] : previewsOf(draftExercises)),
-    [draftExercises, previewsOf],
-  );
-  const records = useMemo(
-    () => (draftExercises === null ? [] : previewRecords(draftExercises, previewStrength, recordBaseline)),
-    [draftExercises, previewStrength, recordBaseline],
+  const previewOf = useMemo(() => {
+    const customIds = new Set(exercises.filter((exercise) => exercise.custom).map((exercise) => exercise.id));
+    const isBuiltIn = (exerciseId: string) => !customIds.has(exerciseId);
+    return rememberingPreviewer({ isBuiltIn, strength, bodyweightKg, recordBaseline });
+  }, [exercises, strength, bodyweightKg, recordBaseline]);
+  const { previews, records } = useMemo(
+    () => (draftExercises === null ? NO_PREVIEW : previewOf(draftExercises)),
+    [draftExercises, previewOf],
   );
 
   const feedbackFor = ({ previous, next, setId, place, vibrate, sound }: SetChange) => {
     const { exerciseIndex, setIndex } = place;
-    let computedRecords: (PreviewRecord | null)[][] | null = null;
-    const recordsAfter = () => (computedRecords ??= previewRecords(next.exercises, previewStrength, recordBaseline));
+    const previewAfter = () => previewOf(next.exercises);
     return setFeedback({
       label: place.label,
       wasDone: previous.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
       isDone: next.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
-      preview: () => previewsOf(next.exercises)[exerciseIndex][setIndex],
-      record: () => recordsAfter()[exerciseIndex][setIndex],
-      becameRecord: () => becomesRecord(records, previous.exercises, recordsAfter(), next.exercises, setId),
+      preview: () => previewAfter().previews[exerciseIndex][setIndex],
+      record: () => previewAfter().records[exerciseIndex][setIndex],
+      becameRecord: () => becomesRecord(records, previous.exercises, previewAfter().records, next.exercises, setId),
       vibrate,
       sound,
     });
