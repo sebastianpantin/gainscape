@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   currentStrength,
   effectiveReps,
+  type EffortInput,
   epley,
   estimateRir,
   type ExerciseStrength,
@@ -16,7 +17,7 @@ import {
   strengthStateAt,
   type StrengthHistoryRow,
 } from '@domain/index.ts';
-import { aSet, catalog, DAY_MS, failure, freshUser, hard, TEST_BALANCE } from './fixtures.ts';
+import { aSet, catalog, DAY_MS, easy, failure, freshUser, hard, moderate, TEST_BALANCE } from './fixtures.ts';
 
 const sessionStart = '2026-09-28T10:00:00.000Z';
 
@@ -129,9 +130,9 @@ describe('intensity bonus', () => {
     expect(honest.intensityBonus).toBeGreaterThan(1);
   });
 
-  it('is neutral for a flagged set', () => {
+  it('keeps the bonus on a flagged set', () => {
     const [result] = runSets([aSet('bench', 80, 3, failure)], knownStrength('bench', 100));
-    expect(result).toMatchObject({ rirFlagged: true, intensityBonus: 1 });
+    expect(result).toMatchObject({ rirFlagged: true, intensityBonus: 1.28125 });
   });
 });
 
@@ -164,9 +165,9 @@ describe('effort resolution with a known e1RM', () => {
     );
   });
 
-  it('caps XP for implausibly low logged RIR and flags the set', () => {
+  it('pays XP from the estimate for an implausibly low logged RIR and flags the set', () => {
     const [result] = runSets([aSet('bench', 80, 3, failure)], knownStrength('bench', 100));
-    expect(result).toMatchObject({ rir: 0, rirSource: 'logged', rirForXp: 2, rirFlagged: true });
+    expect(result).toMatchObject({ rir: 0, rirSource: 'logged', rirForXp: 5, estimatedRir: 5, rirFlagged: true });
   });
 
   it('trusts logged RIR within the margin', () => {
@@ -214,6 +215,86 @@ describe('effort resolution with a known e1RM', () => {
   it('gives no estimate and no candidate for a zero load', () => {
     const [result] = runSets([aSet('bench', 0, 10, null)], knownStrength('bench', 100));
     expect(result).toMatchObject({ rir: null, rirSource: 'cold_start', xp: 0, e1rmCandidateKg: null });
+  });
+});
+
+describe('XP from the estimated RIR', () => {
+  const blankAndRated = (
+    weightKg: number,
+    reps: number,
+    effort: EffortInput,
+    strength = knownStrength('squat', 110),
+  ) => {
+    const [blank] = runSets([aSet('squat', weightKg, reps, null)], strength);
+    const [rated] = runSets([aSet('squat', weightKg, reps, effort)], strength);
+    return { blank, rated };
+  };
+
+  it('pays an honest Moderate on a top set the XP of its estimate', () => {
+    const { blank, rated } = blankAndRated(90, 5, moderate);
+    expect(rated).toMatchObject({ rir: 4, rirSource: 'logged', rirForXp: 2, estimatedRir: 2, rirFlagged: false });
+    expect([rated.effectiveReps, rated.xp]).toEqual([blank.effectiveReps, blank.xp]);
+    expect(rated.xp).toBeGreaterThan(0);
+  });
+
+  it('pays an over-claimed failure no more than its estimate', () => {
+    const { blank, rated } = blankAndRated(70, 5, failure);
+    expect(rated).toMatchObject({ rirSource: 'logged', rirForXp: blank.rirForXp, rirFlagged: true });
+    expect([rated.effectiveReps, rated.xp]).toEqual([blank.effectiveReps, blank.xp]);
+  });
+
+  it('pays a rated set the same XP as the same set left blank once an estimate exists', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 4, max: 40 }).map((steps) => steps * 2.5),
+        fc.integer({ min: 1, max: 15 }),
+        fc.oneof(
+          fc
+            .constantFrom('easy', 'moderate', 'hard', 'near_failure', 'failure' as const)
+            .map((level) => ({ type: 'level', level }) as const),
+          fc.integer({ min: 0, max: 20 }).map((halfSteps) => ({ type: 'rir', value: halfSteps / 2 }) as const),
+          fc.integer({ min: 10, max: 20 }).map((halfSteps) => ({ type: 'rpe', value: halfSteps / 2 }) as const),
+        ),
+        (weightKg, reps, effort) => {
+          const { blank, rated } = blankAndRated(weightKg, reps, effort);
+          expect([rated.rirForXp, rated.effectiveReps, rated.intensityBonus, rated.xp]).toEqual([
+            blank.rirForXp,
+            blank.effectiveReps,
+            blank.intensityBonus,
+            blank.xp,
+          ]);
+        },
+      ),
+    );
+  });
+
+  it('pays a first-time lift its logged Effort in full, even once a set has given it an estimate', () => {
+    const results = runSets([aSet('bench', 100, 5, hard), aSet('bench', 60, 5, moderate)]);
+    expect(results.map((result) => [result.rirSource, result.rirForXp, result.estimatedRir])).toEqual([
+      ['logged', 3, null],
+      ['logged', 4, null],
+    ]);
+    expect(results[1].xp).toBeGreaterThan(0);
+  });
+
+  it('pays a first-time lift left blank the flat cold-start XP', () => {
+    const [result] = runSets([aSet('bench', 100, 5, null)]);
+    expect(result).toMatchObject({ rirSource: 'cold_start', rirForXp: null, estimatedRir: null, xp: 10 });
+  });
+
+  it.each([
+    ['Easy', easy],
+    ['RIR 6+', { type: 'rir', value: 6 } as const],
+    ['RPE 5', { type: 'rpe', value: 5 } as const],
+  ])('never flags %s on a light set', (_label, effort) => {
+    const [result] = runSets([aSet('bench', 50, 5, effort)], knownStrength('bench', 100));
+    expect(result).toMatchObject({ rirFlagged: false, e1rmCandidateKg: epley(50, 10) });
+  });
+
+  it('builds the higher e1RM candidate from a logged RIR 4 on 90 × 5', () => {
+    const { blank, rated } = blankAndRated(90, 5, { type: 'rir', value: 4 });
+    expect(blank.e1rmCandidateKg).toBeNull();
+    expect(rated.e1rmCandidateKg).toBe(epley(90, 9));
   });
 });
 
@@ -378,7 +459,7 @@ describe('strength state at a session', () => {
     const [result] = runSets([aSet('bench', 75, 5, { type: 'rir', value: 2 })], {
       bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true },
     });
-    expect(result).toMatchObject({ rirFlagged: true, rirForXp: 3, e1rmCandidateKg: epley(75, 8) });
+    expect(result).toMatchObject({ rirFlagged: true, rirForXp: 6, e1rmCandidateKg: epley(75, 8) });
   });
 });
 

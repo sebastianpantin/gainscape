@@ -127,9 +127,12 @@ describe('previewDraft XP', () => {
     expect(previews[0][0].xp).toBeLessThan(previews[0][9].xp);
   });
 
-  it('gives a flagged claim no intensity bonus', () => {
-    const previews = xpPreviews([exercise('bench', [draftSet(80, 3, failure)])], builtIn, strengthOf([['bench', 100]]));
-    expect(previews[0][0].xp).toBe(setXp(3, 1, DEFAULT_BALANCE));
+  it('pays a flagged claim the XP of the same set left blank', () => {
+    const strength = strengthOf([['bench', 100]]);
+    const [[claimed]] = xpPreviews([exercise('bench', [draftSet(80, 3, failure)])], builtIn, strength);
+    const [[blank]] = xpPreviews([exercise('bench', [draftSet(80, 3, null)])], builtIn, strength);
+    expect(claimed.xp).toBe(blank.xp);
+    expect(claimed.xp).toBe(setXp(1, 1.3, DEFAULT_BALANCE));
   });
 
   it('lets only done sets affect the XP of done sets', () => {

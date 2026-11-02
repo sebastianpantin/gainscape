@@ -63,6 +63,7 @@ function liftResult(
     rir: null,
     rirSource: 'cold_start',
     rirForXp: null,
+    estimatedRir: null,
     rirFlagged: false,
     intensityBonus: 1,
     coldStartXp: 0,

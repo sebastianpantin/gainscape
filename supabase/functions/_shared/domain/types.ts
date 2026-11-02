@@ -233,6 +233,7 @@ export interface SetResult {
   rir: number | null;
   rirSource: RirSource;
   rirForXp: number | null;
+  estimatedRir: number | null;
   rirFlagged: boolean;
   intensityBonus: number;
   coldStartXp: number;

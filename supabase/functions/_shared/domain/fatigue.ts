@@ -1,4 +1,5 @@
 import type { BalanceConfig } from './balance.ts';
+import { overclaimsEffort } from './effort.ts';
 import { liftExerciseFor } from './exercise-lookup.ts';
 import { FLOAT_TOLERANCE, loadRatioAtFailure, repsAtFailure } from './math.ts';
 import type { SessionContext, Step } from './pipeline.ts';
@@ -73,7 +74,9 @@ export const checkFatigue: Step = (ctx: SessionContext) => {
     return {
       ...result,
       rirForXp: floor,
-      rirFlagged: result.rirSource === 'logged' || result.rirFlagged,
+      rirFlagged:
+        result.rirFlagged ||
+        (result.rirSource === 'logged' && result.rir !== null && overclaimsEffort(result.rir, floor, ctx.cfg)),
       intensityBonus: 1,
     };
   });

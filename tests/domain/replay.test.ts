@@ -26,6 +26,7 @@ import {
   type StrengthHistoryRow,
   xpForLevel,
 } from '@domain/index.ts';
+import { fiveThreeOneHistory } from './five-three-one-history.ts';
 import { aSet, catalog as fixtureCatalog, DAY_MS, hard, HOUR_MS, nearFailure, TEST_BALANCE } from './fixtures.ts';
 
 const cfg = DEFAULT_BALANCE;
@@ -627,5 +628,29 @@ describe('replayHistory with XP grants', () => {
       }),
       { numRuns: 100 },
     );
+  });
+});
+
+describe('replaying a 5/3/1 history under XP from the estimated RIR', () => {
+  const replayedFiveThreeOne = replayHistory(fiveThreeOneHistory, catalog, cfg).sessions;
+
+  it('keeps the first-week XP and moves the second week to the estimates', () => {
+    const liftXpBySession = replayedFiveThreeOne.map((entry) => [
+      entry.session.id,
+      entry.outputs.sets.reduce((sum, result) => sum + result.xp, 0),
+    ]);
+    expect(liftXpBySession).toEqual([
+      ['w1-squat', 1128],
+      ['w1-bench', 925],
+      ['w1-fsl', 0],
+      ['w2-squat', 1252],
+      ['w2-bench', 1002],
+      ['w2-fsl', 0],
+    ]);
+  });
+
+  it('flags none of the Easy sets on the second-week light day', () => {
+    const lightDay = replayedFiveThreeOne.find((entry) => entry.session.id === 'w2-fsl')!;
+    expect(lightDay.outputs.sets.map((result) => result.rirFlagged)).toEqual(Array.from({ length: 6 }, () => false));
   });
 });

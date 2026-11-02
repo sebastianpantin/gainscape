@@ -153,6 +153,7 @@ function effectiveLoadKg(
 const UNSCORED_RESULT_FIELDS = Object.freeze({
   rir: null,
   rirForXp: null,
+  estimatedRir: null,
   rirFlagged: false,
   intensityBonus: 1,
   coldStartXp: 0,
