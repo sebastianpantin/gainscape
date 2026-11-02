@@ -4,10 +4,11 @@ import {
   type ProgramReferences,
   type ProgressionRule,
   type ProgressionTrigger,
+  type PrescriptionSnapshot,
   type ReferenceVar,
+  type StageIndices,
 } from './program-types.ts';
 import { evaluateNumber } from './program-eval.ts';
-import { type PrescriptionSnapshot, type StageIndices } from './program-prescription.ts';
 import { firstPosition, type Position, type ScheduleCursor } from './program-schedule.ts';
 import { type EffortInputType } from './types.ts';
 
@@ -51,7 +52,7 @@ export interface JumpToFact extends FactBase {
 
 export type ProgramFact = SessionFact | SetReferenceFact | SkipDayFact | JumpToFact;
 
-export type LiftOutcome = 'met' | 'missed' | 'neutral';
+export type Verdict = 'met' | 'missed' | 'neutral';
 
 export type ReferenceChangeReason = 'increment' | 'tmReset' | 'set_reference' | 'adjustment';
 
@@ -68,7 +69,7 @@ export interface DayRecord {
   epoch: number;
   position: Position;
   status: 'completed' | 'skipped';
-  outcomes: Readonly<Record<string, LiftOutcome>>;
+  outcomes: Readonly<Record<string, Verdict>>;
   judgedSets: readonly FactSet[];
   stages?: Readonly<Record<string, number>>;
 }

@@ -7,7 +7,8 @@ import {
   type ProgramState,
   programStateAt,
 } from '@domain/index.ts';
-import { advanceProgram, isSetMet, liftOutcomes } from '@domain/program-progression.ts';
+import { isSetMet, liftVerdicts } from '@domain/program-day.ts';
+import { advanceProgram } from '@domain/program-progression.ts';
 import { initialProgramState, orderFacts } from '@domain/program-state.ts';
 import {
   factClock,
@@ -115,14 +116,14 @@ describe('isSetMet (assumption 7: weight ≥ snapshot − half increment, reps �
   });
 });
 
-describe('liftOutcomes (judged against snapshots on each lift judged slots)', () => {
+describe('liftVerdicts (judged against snapshots on each lift judged slots)', () => {
   const monday = (sets: FactSet[]) => ({
     ...sessionFact({ id: 's-1', at: '2026-10-05T06:00:00.000Z' }, weekDay(4, 'mon'), sets),
     stages: {},
   });
 
   it('judges squat, bench and row on Monday', () => {
-    expect(liftOutcomes(MADCOW_5X5, madcow, monday(madcowDaySets('mon')))).toEqual({
+    expect(liftVerdicts(MADCOW_5X5, madcow, monday(madcowDaySets('mon')))).toEqual({
       squat: 'met',
       bench: 'met',
       row: 'met',
@@ -134,11 +135,11 @@ describe('liftOutcomes (judged against snapshots on each lift judged slots)', ()
       ...sessionFact({ id: 's-2', at: '2026-10-07T06:00:00.000Z' }, weekDay(4, 'wed'), madcowDaySets('wed')),
       stages: {},
     };
-    expect(liftOutcomes(MADCOW_5X5, madcow, wednesday)).toEqual({ press: 'met', deadlift: 'met' });
+    expect(liftVerdicts(MADCOW_5X5, madcow, wednesday)).toEqual({ press: 'met', deadlift: 'met' });
   });
 
   it('misses a lift when its top set is one rep short', () => {
-    const outcomes = liftOutcomes(MADCOW_5X5, madcow, monday(madcowDaySets('mon', { mondayTopReps: { squat: 4 } })));
+    const outcomes = liftVerdicts(MADCOW_5X5, madcow, monday(madcowDaySets('mon', { mondayTopReps: { squat: 4 } })));
     expect(outcomes.squat).toBe('missed');
     expect(outcomes.bench).toBe('met');
   });
@@ -146,26 +147,26 @@ describe('liftOutcomes (judged against snapshots on each lift judged slots)', ()
   it('misses a lift when a required set is not logged (4 of 5 sets)', () => {
     const fourSets = rampSets('mon-squat', 'squat', 5).slice(0, 4);
     const sets = [...fourSets, ...rampSets('mon-bench', 'bench', 5), ...rampSets('mon-row', 'row', 5)];
-    expect(liftOutcomes(MADCOW_5X5, madcow, monday(sets)).squat).toBe('missed');
+    expect(liftVerdicts(MADCOW_5X5, madcow, monday(sets)).squat).toBe('missed');
   });
 
   it('ignores sets with no snapshot: an extra 3-rep squat set leaves the squat met', () => {
     const sets = [...madcowDaySets('mon'), unprescribedSet('squat', 60, 3)];
-    expect(liftOutcomes(MADCOW_5X5, madcow, monday(sets)).squat).toBe('met');
+    expect(liftVerdicts(MADCOW_5X5, madcow, monday(sets)).squat).toBe('met');
   });
 
   it('ignores refs whose bound exercise differs: all squat sets logged as front squat make the squat neutral', () => {
     const sets = madcowDaySets('mon').map((set) =>
       set.exerciseId === 'squat' ? { ...set, exerciseId: 'front-squat' } : set,
     );
-    expect(liftOutcomes(MADCOW_5X5, madcow, monday(sets)).squat).toBe('neutral');
+    expect(liftVerdicts(MADCOW_5X5, madcow, monday(sets)).squat).toBe('neutral');
   });
 
   it('ignores a mismatched top set, so the remaining 4 sets are a miss', () => {
     const sets = madcowDaySets('mon').map((set) =>
       set.prescription?.ref === 'mon-squat:4' ? { ...set, exerciseId: 'front-squat' } : set,
     );
-    expect(liftOutcomes(MADCOW_5X5, madcow, monday(sets)).squat).toBe('missed');
+    expect(liftVerdicts(MADCOW_5X5, madcow, monday(sets)).squat).toBe('missed');
   });
 
   it('ignores refs from another day: Friday squat refs in a Monday session leave the squat neutral', () => {
@@ -173,18 +174,18 @@ describe('liftOutcomes (judged against snapshots on each lift judged slots)', ()
       setAsPrescribed('squat', `fri-squat:${index}`, { weightKg: 80, reps: 5 }),
     );
     const sets = [...fridayRefs, ...rampSets('mon-bench', 'bench', 5), ...rampSets('mon-row', 'row', 5)];
-    expect(liftOutcomes(MADCOW_5X5, madcow, monday(sets)).squat).toBe('neutral');
+    expect(liftVerdicts(MADCOW_5X5, madcow, monday(sets)).squat).toBe('neutral');
   });
 
   it('treats a lift with no logged sets on its judged day as neutral', () => {
     const sets = [...rampSets('mon-bench', 'bench', 5), ...rampSets('mon-row', 'row', 5)];
-    expect(liftOutcomes(MADCOW_5X5, madcow, monday(sets)).squat).toBe('neutral');
+    expect(liftVerdicts(MADCOW_5X5, madcow, monday(sets)).squat).toBe('neutral');
   });
 
   it('judges a set against its snapshot, not the current prescription: 80 × 5 at an 80 kg snapshot is met', () => {
     const sets = madcowDaySets('mon');
     expect(sets.every((set) => set.prescription?.weightKg === 80)).toBe(true);
-    expect(liftOutcomes(MADCOW_5X5, madcow, monday(sets)).squat).toBe('met');
+    expect(liftVerdicts(MADCOW_5X5, madcow, monday(sets)).squat).toBe('met');
   });
 });
 

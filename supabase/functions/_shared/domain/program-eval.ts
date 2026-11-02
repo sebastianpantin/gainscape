@@ -2,11 +2,13 @@ import {
   type NumberExpr,
   type OptionValue,
   type ProgramDefinition,
+  type ProgramEnrollment,
   type ProgressionRule,
   type SlotDecl,
   type StageRetest,
   type UnitAmountExpr,
 } from './program-types.ts';
+import { type Position, weekContextOf } from './program-schedule.ts';
 import { type WeightUnit } from './units.ts';
 
 export function stageRetestOf(rule: ProgressionRule): StageRetest | null {
@@ -20,6 +22,14 @@ export interface NumberContext {
   definition: ProgramDefinition;
   options: Readonly<Record<string, OptionValue>>;
   cycle: number;
+}
+
+export function numberContext(
+  definition: ProgramDefinition,
+  enrollment: ProgramEnrollment,
+  position: Position,
+): NumberContext {
+  return { definition, options: enrollment.options, cycle: weekContextOf(position).cycle };
 }
 
 export function optionValue(
@@ -41,19 +51,6 @@ export function evaluateAmount(expr: UnitAmountExpr, unit: WeightUnit, context: 
   if ('kg' in expr) return expr[unit];
   const chosen = optionValue(context.definition, context.options, expr.option);
   return expr.cases[String(chosen)][unit];
-}
-
-interface SetRef {
-  slotId: string;
-  index: number;
-}
-
-export function parseSetRef(ref: string): SetRef | null {
-  const separator = ref.lastIndexOf(':');
-  if (separator <= 0) return null;
-  const index = Number(ref.slice(separator + 1));
-  if (!Number.isInteger(index) || index < 0) return null;
-  return { slotId: ref.slice(0, separator), index };
 }
 
 export function isBarbellLift(definition: ProgramDefinition, lift: string): boolean {

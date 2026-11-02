@@ -1,5 +1,5 @@
 import { isWholeNumberBetween, roundTo } from './math.ts';
-import { type PrescriptionSnapshot } from './program-prescription.ts';
+import { type PrescriptionSnapshot } from './program-types.ts';
 import { isRecord } from './types.ts';
 
 const SNAPSHOT_BOUNDS = Object.freeze({

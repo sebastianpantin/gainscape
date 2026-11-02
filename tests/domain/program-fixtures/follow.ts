@@ -10,7 +10,7 @@ import {
   resolvePrescription,
   type ResolvedSlot,
 } from '@domain/index.ts';
-import { type ReferenceState } from '@domain/program-prescription.ts';
+import { type ReferenceState } from '@domain/program-types.ts';
 import { type FactClock, sessionFact, skipDayFact } from './facts.ts';
 
 export interface LoggedEffort {

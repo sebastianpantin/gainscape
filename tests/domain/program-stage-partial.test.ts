@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type FactSet, programStateAt } from '@domain/index.ts';
-import { type ReferenceState } from '@domain/program-prescription.ts';
+import { type ReferenceState } from '@domain/program-types.ts';
 import { factClock, sessionFact } from './program-fixtures/facts.ts';
 import { followProgram, loggedAsPrescribed, resolveAt } from './program-fixtures/follow.ts';
 import { GZCLP, gzclpEnrollment } from './program-fixtures/gzclp.ts';

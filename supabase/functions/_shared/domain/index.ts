@@ -32,9 +32,11 @@ export { DEFAULT_ROUNDING, type RoundingMode, type RoundingSetting, roundLoad } 
 export { rpeChartPct } from './rpe-chart.ts';
 export {
   type InputKind,
+  type LastLoggedWeights,
   type Load,
   type OptionDecl,
   type OptionValue,
+  type PrescriptionSnapshot,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ReferenceVar,
@@ -53,12 +55,10 @@ export {
   upcomingDays,
   type WeeklyPosition,
 } from './program-schedule.ts';
+export { isRetestRef } from './program-day.ts';
 export {
-  isRetestRef,
-  type LastLoggedWeights,
   type PrescribedExercise,
   type PrescribedSet,
-  type PrescriptionSnapshot,
   type ResolvedSlot,
   resolvePrescription,
 } from './program-prescription.ts';

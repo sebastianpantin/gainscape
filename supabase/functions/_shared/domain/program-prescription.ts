@@ -1,38 +1,26 @@
 import { roundPrescribedLoad } from './load-rounding.ts';
 import { roundTo } from './math.ts';
 import {
+  type DaySlot,
+  type LastLoggedWeights,
   type Load,
   type NumberExpr,
+  type PendingRetests,
+  type PrescriptionSnapshot,
   type ProgramDefinition,
   type ProgramEnrollment,
   type ProgramReferences,
-  type ReferenceVar,
+  type ReferenceState,
+  type SetShape,
   type SlotDecl,
   type SlotRole,
-  type StageDecl,
-  type StageScheme,
+  type StageIndices,
 } from './program-types.ts';
-import {
-  evaluateAmount,
-  evaluateNumber,
-  findSlot,
-  isBarbellLift,
-  type NumberContext,
-  optionValue,
-  parseSetRef,
-  stageRetestOf,
-} from './program-eval.ts';
-import { dayOf, isCyclePosition, isRotationPosition, type Position, positionAt } from './program-schedule.ts';
+import { declaredLoadOf, parseSetRef, setRefOf, prescribeDay, prescribeSlot, RETEST_REPS } from './program-day.ts';
+import { evaluateAmount, evaluateNumber, findSlot, isBarbellLift, numberContext } from './program-eval.ts';
+import { type Position, positionAt, weekContextOf } from './program-schedule.ts';
 import { rpeChartPct } from './rpe-chart.ts';
 import { shownWeight, unitToKg } from './units.ts';
-
-export interface PrescriptionSnapshot {
-  ref: string;
-  weightKg: number;
-  reps: number;
-  minReps: number | null;
-  amrap: boolean;
-}
 
 export interface PrescribedSet {
   ref: string;
@@ -66,221 +54,8 @@ export interface UnsupportedPrescription {
 
 export type ResolvedSlot = PrescribedExercise | UnsupportedPrescription;
 
-export type LastLoggedWeights = Readonly<Record<string, number>>;
-
-export type StageIndices = Readonly<Record<string, number>>;
-
-type PendingRetests = Readonly<Record<string, ReferenceVar>>;
-
-export interface ReferenceState {
-  refs: ProgramReferences;
-  stages?: StageIndices;
-  pendingRetests?: PendingRetests;
-}
-
-export const RETEST_REPS = 5;
-const RETEST_REF_SUFFIX = ':retest';
-
-export function retestRefOf(slotId: string): string {
-  return `${slotId}${RETEST_REF_SUFFIX}`;
-}
-
-export function isRetestRef(ref: string): boolean {
-  return ref.endsWith(RETEST_REF_SUFFIX);
-}
-
-function isRetestDue(
-  definition: ProgramDefinition,
-  slot: SlotDecl,
-  pendingRetests: PendingRetests | undefined,
-): boolean {
-  const pending = pendingRetests?.[slot.lift];
-  if (pending === undefined) return false;
-  return definition.progression.some(
-    (rule) => rule.lift === slot.lift && rule.judgedSlots.includes(slot.id) && stageRetestOf(rule)?.from === pending,
-  );
-}
-
-function retestSet(slotId: string, suggestedWeightKg: number | null): PrescribedSet {
-  const ref = retestRefOf(slotId);
-  return {
-    ref,
-    weight: null,
-    weightKg: null,
-    pct: null,
-    reps: RETEST_REPS,
-    maxReps: null,
-    minReps: null,
-    amrap: false,
-    optional: false,
-    suggestedWeightKg,
-    snapshot: { ref, weightKg: 0, reps: RETEST_REPS, minReps: null, amrap: false },
-  };
-}
-
 const RAMP_PCT_DECIMALS = 6;
 const MAX_REFERENCE_DEPTH = 8;
-
-interface WeekContext {
-  week: number;
-  cycle: number;
-}
-
-export function weekContextOf(position: Position): WeekContext {
-  if (isRotationPosition(position)) return { week: 1, cycle: 1 };
-  return { week: position.week, cycle: isCyclePosition(position) ? position.cycle : 1 };
-}
-
-export function numberContext(
-  definition: ProgramDefinition,
-  enrollment: ProgramEnrollment,
-  position: Position,
-): NumberContext {
-  return { definition, options: enrollment.options, cycle: weekContextOf(position).cycle };
-}
-
-export function isSlotActive(
-  definition: ProgramDefinition,
-  enrollment: ProgramEnrollment,
-  slot: SlotDecl,
-  position: Position,
-): boolean {
-  if (!enrollment.bindings[slot.lift]) return false;
-  if (slot.weeks && !slot.weeks.includes(weekContextOf(position).week)) return false;
-  return (slot.when ?? []).every(
-    (condition) => optionValue(definition, enrollment.options, condition.option) === condition.equals,
-  );
-}
-
-interface SetShape {
-  reps: number | null;
-  maxReps: number | null;
-  load: Load;
-  amrap: boolean;
-  minReps: number | null;
-  optional: boolean;
-}
-
-type ShapesResult = { kind: 'shapes'; shapes: SetShape[] } | { kind: 'unsupported'; primitive: string };
-
-function minRepsFor(amrap: boolean, minReps: number | undefined, reps: number | null): number | null {
-  return amrap ? (minReps ?? reps) : null;
-}
-
-export function stageIndexOf(scheme: StageScheme, stages: StageIndices | undefined, lift: string): number {
-  return Math.min(Math.max(stages?.[lift] ?? 0, 0), scheme.stages.length - 1);
-}
-
-function matchesStage(stage: StageDecl, snapshot: PrescriptionSnapshot): boolean {
-  const index = parseSetRef(snapshot.ref)?.index ?? -1;
-  const amrap = stage.amrapLast && index === stage.sets - 1;
-  return (
-    index >= 0 &&
-    index < stage.sets &&
-    snapshot.reps === stage.reps &&
-    snapshot.amrap === amrap &&
-    snapshot.minReps === (amrap ? stage.reps : null)
-  );
-}
-
-export function prescribedStageIndex(
-  scheme: StageScheme,
-  loggedSets: readonly { prescription: PrescriptionSnapshot | null }[],
-  dayStages: StageIndices | undefined,
-  lift: string,
-): number {
-  const snapshots = loggedSets.flatMap((set) => (set.prescription ? [set.prescription] : []));
-  const matching = scheme.stages.flatMap((stage, index) =>
-    snapshots.length > 0 && snapshots.every((snapshot) => matchesStage(stage, snapshot)) ? [index] : [],
-  );
-  return matching.length === 1 ? matching[0] : stageIndexOf(scheme, dayStages, lift);
-}
-
-function setShapes(
-  definition: ProgramDefinition,
-  enrollment: ProgramEnrollment,
-  slot: SlotDecl,
-  position: Position,
-  stages: StageIndices | undefined,
-): ShapesResult {
-  const scheme = slot.scheme;
-  switch (scheme.kind) {
-    case 'sets':
-      return {
-        kind: 'shapes',
-        shapes: scheme.sets.map((set) => ({
-          reps: set.reps,
-          maxReps: set.maxReps ?? null,
-          load: set.load,
-          amrap: set.amrap ?? false,
-          minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
-          optional: set.optional ?? false,
-        })),
-      };
-    case 'repeat': {
-      const count = evaluateNumber(scheme.count, numberContext(definition, enrollment, position));
-      return {
-        kind: 'shapes',
-        shapes: Array.from({ length: count }, (_, index) => {
-          const amrap = (scheme.amrapLast ?? false) && index === count - 1;
-          return {
-            reps: scheme.reps,
-            maxReps: scheme.maxReps ?? null,
-            load: scheme.load,
-            amrap,
-            minReps: minRepsFor(amrap, scheme.minReps, scheme.reps),
-            optional: scheme.optional ?? false,
-          };
-        }),
-      };
-    }
-    case 'weekTable': {
-      const row = definition.weekTables?.[scheme.table]?.[weekContextOf(position).week - 1];
-      if (!row) return { kind: 'unsupported', primitive: 'weekTable' };
-      return {
-        kind: 'shapes',
-        shapes: row.sets.map((set) => ({
-          reps: set.reps,
-          maxReps: null,
-          load: { kind: 'pct', pct: set.pct, of: scheme.of },
-          amrap: set.amrap ?? false,
-          minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
-          optional: false,
-        })),
-      };
-    }
-    case 'stages': {
-      const stage = scheme.stages[stageIndexOf(scheme, stages, slot.lift)];
-      if (!stage) return { kind: 'unsupported', primitive: scheme.kind };
-      return {
-        kind: 'shapes',
-        shapes: Array.from({ length: stage.sets }, (_, index) => {
-          const amrap = stage.amrapLast && index === stage.sets - 1;
-          return {
-            reps: stage.reps,
-            maxReps: null,
-            load: scheme.load,
-            amrap,
-            minReps: minRepsFor(amrap, undefined, stage.reps),
-            optional: false,
-          };
-        }),
-      };
-    }
-  }
-}
-
-export function requiredSetIndices(
-  definition: ProgramDefinition,
-  enrollment: ProgramEnrollment,
-  slot: SlotDecl,
-  position: Position,
-  stages?: StageIndices,
-): number[] | null {
-  const result = setShapes(definition, enrollment, slot, position, stages);
-  if (result.kind === 'unsupported') return null;
-  return result.shapes.flatMap((shape, index) => (shape.optional ? [] : [index]));
-}
 
 interface ResolveContext {
   definition: ProgramDefinition;
@@ -339,7 +114,8 @@ function referencedSlotSets(
   position = context.position,
 ): SlotSetsResult {
   if (!slot || depth >= MAX_REFERENCE_DEPTH) return { kind: 'unsupported', primitive };
-  return resolveSlotSets({ ...context, position }, slot, depth + 1);
+  const daySlot = prescribeSlot(context.definition, context.enrollment, context, position, slot);
+  return resolveSlotSets({ ...context, position }, daySlot, depth + 1);
 }
 
 function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index: number, depth: number): LoadResult {
@@ -420,20 +196,43 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
 
 type SlotSetsResult = { kind: 'sets'; sets: PrescribedSet[] } | { kind: 'unsupported'; primitive: string };
 
-function resolveSlotSets(context: ResolveContext, slot: SlotDecl, depth: number): SlotSetsResult {
-  if (slot.scheme.kind === 'stages' && isRetestDue(context.definition, slot, context.pendingRetests)) {
-    const stageLoad = resolveLoad(context, slot, slot.scheme.load, 0, depth);
-    return { kind: 'sets', sets: [retestSet(slot.id, stageLoad.kind === 'load' ? stageLoad.load.weightKg : null)] };
+function retestSet(ref: string, suggestedWeightKg: number | null): PrescribedSet {
+  return {
+    ref,
+    weight: null,
+    weightKg: null,
+    pct: null,
+    reps: RETEST_REPS,
+    maxReps: null,
+    minReps: null,
+    amrap: false,
+    optional: false,
+    suggestedWeightKg,
+    snapshot: { ref, weightKg: 0, reps: RETEST_REPS, minReps: null, amrap: false },
+  };
+}
+
+function resolveSlotSets(context: ResolveContext, daySlot: DaySlot, depth: number): SlotSetsResult {
+  switch (daySlot.kind) {
+    case 'unsupported':
+      return { kind: 'unsupported', primitive: daySlot.primitive };
+    case 'retest': {
+      const stageLoad = resolveLoad(context, daySlot.slot, daySlot.load, 0, depth);
+      return {
+        kind: 'sets',
+        sets: [retestSet(daySlot.ref, stageLoad.kind === 'load' ? stageLoad.load.weightKg : null)],
+      };
+    }
+    case 'sets': {
+      const sets: PrescribedSet[] = [];
+      for (const [index, set] of daySlot.sets.entries()) {
+        const result = resolveLoad(context, daySlot.slot, set.shape.load, index, depth);
+        if (result.kind === 'unsupported') return result;
+        sets.push(prescribedSet(set.ref, set.shape, result.load));
+      }
+      return { kind: 'sets', sets };
+    }
   }
-  const shapes = setShapes(context.definition, context.enrollment, slot, context.position, context.stages);
-  if (shapes.kind === 'unsupported') return shapes;
-  const sets: PrescribedSet[] = [];
-  for (const [index, shape] of shapes.shapes.entries()) {
-    const result = resolveLoad(context, slot, shape.load, index, depth);
-    if (result.kind === 'unsupported') return result;
-    sets.push(prescribedSet(`${slot.id}:${index}`, shape, result.load));
-  }
-  return { kind: 'sets', sets };
 }
 
 function prescribedSet(
@@ -465,9 +264,6 @@ export function resolvePrescription(
   position: Position,
   lastLogged: LastLoggedWeights,
 ): ResolvedSlot[] {
-  if (definition.schedule.days.length === 0) return [];
-  const day = dayOf(definition, position);
-  if (!day) return [];
   const context: ResolveContext = {
     definition,
     enrollment,
@@ -477,41 +273,27 @@ export function resolvePrescription(
     position,
     lastLogged,
   };
-  return day.slots
-    .filter((slot) => isSlotActive(definition, enrollment, slot, position))
-    .map((slot): ResolvedSlot => {
-      const result = resolveSlotSets(context, slot, 0);
-      if (result.kind === 'unsupported') {
-        return { kind: 'unsupported', slotId: slot.id, lift: slot.lift, primitive: result.primitive };
-      }
-      return {
-        kind: 'exercise',
-        slotId: slot.id,
-        lift: slot.lift,
-        exerciseId: enrollment.bindings[slot.lift] as string,
-        role: slot.role,
-        sets: result.sets,
-      };
-    });
-}
-
-function declaredLoadOf(slot: SlotDecl | undefined, index: number): Load | undefined {
-  const scheme = slot?.scheme;
-  switch (scheme?.kind) {
-    case 'sets':
-      return scheme.sets[index]?.load;
-    case 'repeat':
-    case 'stages':
-      return scheme.load;
-    default:
-      return undefined;
-  }
+  return prescribeDay(definition, enrollment, state, position).map((daySlot): ResolvedSlot => {
+    const { slot } = daySlot;
+    const result = resolveSlotSets(context, daySlot, 0);
+    if (result.kind === 'unsupported') {
+      return { kind: 'unsupported', slotId: slot.id, lift: slot.lift, primitive: result.primitive };
+    }
+    return {
+      kind: 'exercise',
+      slotId: slot.id,
+      lift: slot.lift,
+      exerciseId: enrollment.bindings[slot.lift] as string,
+      role: slot.role,
+      sets: result.sets,
+    };
+  });
 }
 
 function relativeBaseOf(load: Load | undefined): { ref: string; pct: NumberExpr } | null {
   if (load?.kind === 'sameAs') return { ref: load.ref, pct: 1 };
   if (load?.kind === 'pctOfSet') return { ref: load.ref, pct: load.pct };
-  if (load?.kind === 'pctOfSlot') return { ref: `${load.slot}:${load.idx}`, pct: load.pct };
+  if (load?.kind === 'pctOfSlot') return { ref: setRefOf(load.slot, load.idx), pct: load.pct };
   return null;
 }
 
