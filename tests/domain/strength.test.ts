@@ -167,7 +167,7 @@ describe('effort resolution with a known e1RM', () => {
 
   it('pays XP from the estimate for an implausibly low logged RIR and flags the set', () => {
     const [result] = runSets([aSet('bench', 80, 3, failure)], knownStrength('bench', 100));
-    expect(result).toMatchObject({ rir: 0, rirSource: 'logged', rirForXp: 5, estimatedRir: 5, rirFlagged: true });
+    expect(result).toMatchObject({ rir: 0, rirSource: 'logged', rirForXp: 5, hasEstimatedRir: true, rirFlagged: true });
   });
 
   it('trusts logged RIR within the margin', () => {
@@ -232,7 +232,7 @@ describe('XP from the estimated RIR', () => {
 
   it('pays an honest Moderate on a top set the XP of its estimate', () => {
     const { blank, rated } = blankAndRated(90, 5, moderate);
-    expect(rated).toMatchObject({ rir: 4, rirSource: 'logged', rirForXp: 2, estimatedRir: 2, rirFlagged: false });
+    expect(rated).toMatchObject({ rir: 4, rirSource: 'logged', rirForXp: 2, hasEstimatedRir: true, rirFlagged: false });
     expect([rated.effectiveReps, rated.xp]).toEqual([blank.effectiveReps, blank.xp]);
     expect(rated.xp).toBeGreaterThan(0);
   });
@@ -270,16 +270,16 @@ describe('XP from the estimated RIR', () => {
 
   it('pays a first-time lift its logged Effort in full, even once a set has given it an estimate', () => {
     const results = runSets([aSet('bench', 100, 5, hard), aSet('bench', 60, 5, moderate)]);
-    expect(results.map((result) => [result.rirSource, result.rirForXp, result.estimatedRir])).toEqual([
-      ['logged', 3, null],
-      ['logged', 4, null],
+    expect(results.map((result) => [result.rirSource, result.rirForXp, result.hasEstimatedRir])).toEqual([
+      ['logged', 3, false],
+      ['logged', 4, false],
     ]);
     expect(results[1].xp).toBeGreaterThan(0);
   });
 
   it('pays a first-time lift left blank the flat cold-start XP', () => {
     const [result] = runSets([aSet('bench', 100, 5, null)]);
-    expect(result).toMatchObject({ rirSource: 'cold_start', rirForXp: null, estimatedRir: null, xp: 10 });
+    expect(result).toMatchObject({ rirSource: 'cold_start', rirForXp: null, hasEstimatedRir: false, xp: 10 });
   });
 
   it.each([
@@ -291,7 +291,7 @@ describe('XP from the estimated RIR', () => {
     expect(result).toMatchObject({ rirFlagged: false, e1rmCandidateKg: epley(50, 10) });
   });
 
-  it('builds the higher e1RM candidate from a logged RIR 4 on 90 × 5', () => {
+  it('builds the higher 1RM estimate candidate from a logged RIR 4 on 90 × 5', () => {
     const { blank, rated } = blankAndRated(90, 5, { type: 'rir', value: 4 });
     expect(blank.e1rmCandidateKg).toBeNull();
     expect(rated.e1rmCandidateKg).toBe(epley(90, 9));

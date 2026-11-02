@@ -11,7 +11,7 @@ Fast, stack-free tests of the pure game engine in `supabase/functions/_shared/do
 
 - Test files are named after the domain module they cover (`xp.test.ts` for `domain/xp.ts`, `loot.test.ts` for `domain/loot.ts`). `describe` blocks are named after the exported function or rule under test.
 - `program-*.test.ts`: the program engine. Per-template goldens in kg and lb (`program-531`, `program-madcow`, `program-gzclp`, ...), definition and validation (`program-definition`, `program-validation*`, `program-expressiveness`: every kept program validates, parses and resolves a full cycle), state folding, fact ordering, epochs, late facts and re-judging.
-- `fixtures.ts`: `TEST_BALANCE`, a small catalog, `aSet`, `aBout`, effort constants, `freshUser`. `loot-fixtures.ts`: loot tables and deterministic RNGs (`scriptedRng`, `fixedRngFor`).
+- `fixtures.ts`: `TEST_BALANCE`, a small catalog, `aSet`, `aBout`, effort constants, `freshUser`. `loot-fixtures.ts`: loot tables and deterministic RNGs (`scriptedRng`, `fixedRngFor`). `effort-xp-history.ts`: a two-week logged 5/3/1 history (rated and Easy sets) that `replay.test.ts` replays to pin XP from the Estimated RIR; it is session input, not a program definition.
 - `program-fixtures/`: one definition and enrollment per kept program, plus `follow.ts` (`followProgram` logs each next day as prescribed) and `prescription-helpers.ts` (`broken` mutates a definition for validation tests). `five_three_one.ts` and `madcow_5x5.ts` equal the catalog YAML. `ci-changes` treats this directory as backend input.
 - Cross-module cases live where the stacking happens: challenge plus gear bonus stacking and caps are in `pipeline.test.ts`; a challenge verdict surviving an edit is in `replay.test.ts`.
 

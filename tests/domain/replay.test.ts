@@ -26,7 +26,7 @@ import {
   type StrengthHistoryRow,
   xpForLevel,
 } from '@domain/index.ts';
-import { fiveThreeOneHistory } from './five-three-one-history.ts';
+import { effortXpHistory } from './effort-xp-history.ts';
 import { aSet, catalog as fixtureCatalog, DAY_MS, hard, HOUR_MS, nearFailure, TEST_BALANCE } from './fixtures.ts';
 
 const cfg = DEFAULT_BALANCE;
@@ -632,9 +632,9 @@ describe('replayHistory with XP grants', () => {
 });
 
 describe('replaying a 5/3/1 history under XP from the estimated RIR', () => {
-  const replayedFiveThreeOne = replayHistory(fiveThreeOneHistory, catalog, cfg).sessions;
+  const replayedFiveThreeOne = replayHistory(effortXpHistory, catalog, cfg).sessions;
 
-  it('keeps the first-week XP and moves the second week to the estimates', () => {
+  it('pays the first week from the logged Effort and the second week from the estimates', () => {
     const liftXpBySession = replayedFiveThreeOne.map((entry) => [
       entry.session.id,
       entry.outputs.sets.reduce((sum, result) => sum + result.xp, 0),

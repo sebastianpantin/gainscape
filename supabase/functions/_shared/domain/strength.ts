@@ -114,13 +114,10 @@ interface ExerciseSessionProgress {
   coldStartSetsPaid: number;
 }
 
-interface StrengthDecision {
-  rir: number | null;
-  rirSource: SetResult['rirSource'];
-  rirForXp: number | null;
-  estimatedRir: number | null;
-  rirFlagged: boolean;
-  coldStartXp: number;
+interface StrengthDecision extends Pick<
+  SetResult,
+  'rir' | 'rirSource' | 'rirForXp' | 'hasEstimatedRir' | 'rirFlagged' | 'coldStartXp'
+> {
   rirUsedForStrength: number | null;
 }
 
@@ -161,7 +158,7 @@ function decideEffort(
       rir: logged,
       rirSource: 'logged',
       rirForXp: estimatedForXp ?? logged,
-      estimatedRir: estimatedForXp,
+      hasEstimatedRir: estimatedForXp !== null,
       rirFlagged: claimsImplausibleEffort,
       coldStartXp: 0,
       rirUsedForStrength: claimsImplausibleEffort ? trustFloor : Math.min(logged, cfg.maxRirForStrength),
@@ -173,7 +170,7 @@ function decideEffort(
       rir: null,
       rirSource: 'cold_start',
       rirForXp: null,
-      estimatedRir: null,
+      hasEstimatedRir: false,
       rirFlagged: false,
       coldStartXp: coldStartPayable ? cfg.coldStartXpPerSet : 0,
       rirUsedForStrength: cfg.coldStartAssumedRir,
@@ -184,7 +181,7 @@ function decideEffort(
     rir: estimated,
     rirSource: 'estimated',
     rirForXp: estimated,
-    estimatedRir: estimated,
+    hasEstimatedRir: true,
     rirFlagged: false,
     coldStartXp: 0,
     rirUsedForStrength: beatsPrediction(result, exercise, strengthBefore!) ? 0 : null,
@@ -278,7 +275,7 @@ export const trackStrength: Step = (ctx: SessionContext) => {
       rir: decision.rir,
       rirSource: decision.rirSource,
       rirForXp: decision.rirForXp,
-      estimatedRir: decision.estimatedRir,
+      hasEstimatedRir: decision.hasEstimatedRir,
       rirFlagged: decision.rirFlagged,
       coldStartXp: decision.coldStartXp,
       intensityBonus: bonus,

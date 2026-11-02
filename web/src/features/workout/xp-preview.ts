@@ -33,7 +33,7 @@ import type {
   LiftDraftExercise,
 } from '../../offline/draft-format.ts';
 
-export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'unrated' | 'warmup' | 'unknown';
+export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'unrated' | 'warmup' | 'cardio_or_hold' | 'unknown';
 
 export interface SetPreview {
   xp: number;
@@ -232,10 +232,11 @@ function placeSets(
 }
 
 function toPreview(result: SetResult, hasPriorSession: boolean): SetPreview {
-  const estimatedRirForXp = result.estimatedRir === null ? null : result.rirForXp;
-  if (result.cardio !== null || result.set.kind === 'hold' || result.rirSource === 'logged') {
-    return { xp: result.xp, basis: 'logged', estimatedRirForXp };
+  if (result.cardio !== null || result.set.kind === 'hold') {
+    return { xp: result.xp, basis: 'cardio_or_hold', estimatedRirForXp: null };
   }
+  const estimatedRirForXp = result.hasEstimatedRir ? result.rirForXp : null;
+  if (result.rirSource === 'logged') return { xp: result.xp, basis: 'logged', estimatedRirForXp };
   if (result.rirSource === 'estimated') return { xp: result.xp, basis: 'estimated', estimatedRirForXp };
   return { xp: result.xp, basis: hasPriorSession ? 'unrated' : 'cold_start', estimatedRirForXp: null };
 }

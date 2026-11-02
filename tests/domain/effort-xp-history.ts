@@ -24,7 +24,7 @@ function session(id: string, startedAt: string, lines: readonly SetLine[]): Sess
 const warmups = (exerciseId: string, loads: readonly number[]): SetLine[] =>
   loads.map((weightKg) => [exerciseId, weightKg, 5, easy, true]);
 
-export const fiveThreeOneHistory: readonly SessionInput[] = [
+export const effortXpHistory: readonly SessionInput[] = [
   session('w1-squat', '2026-09-07T17:00:00.000Z', [
     ...warmups('squat', [40, 50, 60]),
     ['squat', 70, 5, moderate],

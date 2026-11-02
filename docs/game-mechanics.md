@@ -44,8 +44,6 @@ Every lift set can carry an Effort the lifter logs: an effort level (mapped by `
 
 ## XP
 
-## XP
-
 Owning modules: `xp.ts`, `cardio.ts`, `pipeline.ts`.
 
 Only reps near failure count. Effective reps are the reps inside the last `effectiveRirWindow` + 1 before failure:
@@ -56,7 +54,7 @@ set XP         = round(xpPerEffectiveRep × effective reps × intensity bonus)
 ```
 
 - Warm-ups earn nothing. `xpPerEffectiveRep` is the main pacing lever.
-- The intensity bonus rewards heavy sets. It starts once the load passes `intensityBonusStart` of your e1RM and grows with the intensity the rep count implies, up to `intensityBonusMax` at `intensityBonusFull`.
+- The intensity bonus rewards heavy sets. It starts once the load passes `intensityBonusStart` of your 1RM estimate and grows with the intensity the rep count implies, up to `intensityBonusMax` at `intensityBonusFull`.
 - An exercise's `shares` (basis points summing to 10,000, in `catalog/exercises.yaml`) split its XP across skills. `splitXp` uses largest remainder, so XP stays a whole number and the parts add up.
 - Holds and carries become rep equivalents (`holdSecondsPerRep`, `carryMetresPerRep`), take an effort level only, and get no cold start or intensity bonus.
 - Cardio earns `cardioXpPerWorkMinute` per counted work minute, scaled by the skill share, `cardioEffortFactor`, `cardioSteadyFactor` for steady bouts, and a pace bonus against the exercise's reference pace (up to `paceBonusMax`; a pace beyond `paceImplausibleRatio` is flagged). Counted minutes per session are capped by `cardioMaxCountedMinutesPerSession`, with a separate `mobilityMaxCountedMinutesPerSession` pool.
@@ -72,9 +70,9 @@ Levels follow the OSRS XP table up to `MAX_LEVEL`. The XP per level roughly doub
 
 Owning modules: `strength.ts`, `fatigue.ts`.
 
-Each lift tracks an estimated one-rep max (e1RM) with the Epley formula on load and reps to failure (reps + RIR). Pure bodyweight lifts track max reps instead.
+Each lift tracks a 1RM estimate (estimated one-rep max) with the Epley formula on load and reps to failure (reps + RIR). Pure bodyweight lifts track max reps instead.
 
-- Current e1RM is the best estimate from the last `e1rmWindowDays`, else the best from your latest session with that lift.
+- The current 1RM estimate is the best one from the last `e1rmWindowDays`, else the best from your latest session with that lift.
 - Sets beyond `epleyMaxRepsToFailure` reps to failure give no estimate.
 - One session raises the estimate by at most `maxStrengthGainPerSession`.
 - An Estimated RIR raises strength only when the set beats the prediction. A logged Effort counts toward it, within the Flag limit above.
@@ -115,7 +113,7 @@ Gear has slots (`GEAR_SLOTS`) and tiers (`ITEM_TIERS`). Each slot boosts a few s
 
 Owning modules: `challenges.ts`, `quests.ts`; data in `catalog/challenges.yaml` and `catalog/quests.yaml`.
 
-A scroll runs one challenge: supersets of reps (optionally at a percentage of e1RM) or a volume target. The scroll is spent at sync, pass or fail, and the server snapshots the definition and your e1RM. The verdict uses only that snapshot and the sets, so replays stay stable. A pass adds `challengeBonusPercent` of base XP.
+A scroll runs one challenge: supersets of reps (optionally at a percentage of the 1RM estimate) or a volume target. The scroll is spent at sync, pass or fail, and the server snapshots the definition and your 1RM estimate. The verdict uses only that snapshot and the sets, so replays stay stable. A pass adds `challengeBonusPercent` of base XP.
 
 A quest has required levels and quests, steps (a challenge workout, a volume target, a record, or a number of sessions) and an XP reward. You start one with `start-quest`. A session counts only if it ended after the start, and advances at most one step. Progress moves only when `complete-session` syncs a scored session; edits, deletes and rebuilds never touch it. The reward is an XP grant anchored at a session, re-applied there on every replay.
 
@@ -152,10 +150,8 @@ Before changing a rule, read `supabase/functions/_shared/domain/AGENTS.md` and `
 
 ## Glossary
 
-- **e1RM:** estimated one-rep max.
-- **Effective reps:** reps near enough to failure to earn XP.
-- **Estimated RIR:** the RIR the engine predicts from the load and the 1RM estimate; it sets XP once it exists.
-- **Flagged set:** a set whose logged Effort claims more than the estimate allows; only its strength credit is limited.
+Effort, 1RM estimate, Estimated RIR, Effective reps and Flag are defined in [`GLOSSARY.md`](../GLOSSARY.md). Terms only this page uses:
+
 - **History-only session:** stored for the record, with no rewards.
 - **RIR / RPE:** reps in reserve; rate of perceived exertion.
 - **Scroll:** a rare drop that unlocks one challenge run.

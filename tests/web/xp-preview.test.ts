@@ -16,6 +16,7 @@ import type {
   CardioDraftSet,
   DraftExercise,
   DraftSet,
+  HoldDraftExercise,
   LiftDraftExercise,
 } from '../../web/src/offline/draft-format.ts';
 import {
@@ -400,7 +401,7 @@ describe('previewDraft XP with cardio', () => {
       ]),
     ];
     const previews = xpPreviews(draft, builtIn, null);
-    expect(previews[0][0]).toMatchObject({ xp: serverXp(draft)[0], basis: 'logged' });
+    expect(previews[0][0]).toMatchObject({ xp: serverXp(draft)[0], basis: 'cardio_or_hold' });
     expect(previews[0][0].xp).toBeGreaterThan(0);
   });
 
@@ -434,7 +435,7 @@ describe('previewDraft XP with cardio', () => {
 
   it('previews no XP for an activity without shares', () => {
     const draft = [cardio('mystery', { ...running, shares: [] }, [bout()])];
-    expect(xpPreviews(draft, builtIn, null)[0][0]).toMatchObject({ xp: 0, basis: 'logged' });
+    expect(xpPreviews(draft, builtIn, null)[0][0]).toMatchObject({ xp: 0, basis: 'cardio_or_hold' });
   });
 
   it('marks a bout outside the server bounds unknown instead of throwing', () => {
@@ -449,6 +450,23 @@ describe('previewDraft XP with cardio', () => {
     const alone = xpPreviews(lifts, builtIn, strength);
     const together = xpPreviews(mixed, builtIn, strength);
     expect(together[1]).toEqual(alone[0]);
+  });
+});
+
+describe('previewDraft notes for cardio and holds', () => {
+  it('notes nothing about the 1RM estimate for a rated bout or a rated hold', () => {
+    const plank: HoldDraftExercise = {
+      clientId: 'card-plank',
+      exerciseId: 'plank',
+      name: 'plank',
+      modality: 'hold',
+      measure: 'time',
+      loadType: 'external',
+      sets: [{ id: 'hold-1', kind: 'hold', weightKg: 10, durationS: 60, distanceM: null, effort: failure, done: true }],
+    };
+    const draft = [cardio('run', running, [bout({ effort: { type: 'cardio', level: 'hard' } })]), plank];
+    const previews = xpPreviews(draft, builtIn, null);
+    expect(previews.flat().map(previewNote)).toEqual(['', '']);
   });
 });
 

@@ -115,6 +115,15 @@ describe('fatigue check', () => {
     expect(easySet.rirForXp).toBeGreaterThan(5);
   });
 
+  it('flags a logged RIR below both the floor a later set raises it to and the top of the Effort scale', () => {
+    const claimed = aSet('bench', 60, 5, { type: 'rir', value: 1 });
+    const [alone] = runSets([claimed], known('bench', 70));
+    const [judged] = runSets([claimed, aSet('bench', 100, 6, failure)], known('bench', 70));
+    expect(alone.rirFlagged).toBe(false);
+    expect(judged).toMatchObject({ rir: 1, rirFlagged: true });
+    expect(judged.rirForXp).toBeGreaterThan(TEST_BALANCE.maxRirForStrength);
+  });
+
   it('raises the XP RIR of a rated set from later sets as it does for a blank one', () => {
     const rated = runSets(
       repeated(10, () => aSet('bench', 100, 6, failure)),

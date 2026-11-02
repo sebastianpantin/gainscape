@@ -117,7 +117,7 @@ describe('hold drafts', () => {
       bodyweightKg: null,
       recordBaseline: null,
     }).previews;
-    expect(preview).toMatchObject({ xp: 6 * DEFAULT_BALANCE.xpPerEffectiveRep, basis: 'logged' });
+    expect(preview).toMatchObject({ xp: 6 * DEFAULT_BALANCE.xpPerEffectiveRep, basis: 'cardio_or_hold' });
     const unrated = updateHoldSet(draft, 0, set.id, { distanceM: 50 });
     expect(previewDraft(unrated.exercises, HOLD_PREVIEW_CONTEXT).previews[0][0].xp).toBe(
       3 * DEFAULT_BALANCE.xpPerEffectiveRep,
