@@ -5,6 +5,7 @@ import { MADCOW_5X5, madcowEnrollment, weekDay } from '../domain/program-fixture
 import { addExercise, insertWarmupDrills, removeExercise, toggleSetDone } from '../../web/src/offline/draft-edits.ts';
 import {
   canAddSecondDay,
+  dayDrafts,
   draftTitle,
   exerciseDay,
   restoreSecondDay,
@@ -200,5 +201,47 @@ describe('stored second Day', () => {
     );
     expect(parsed?.kind === 'draft' && parsed.draft.secondDay).toBeUndefined();
     expect(parsed?.kind === 'draft' && secondDayCount(parsed.draft)).toBe(0);
+  });
+});
+
+describe('dayDrafts', () => {
+  it('gives each synced Day its own Draft and sync result, so each becomes its own Program fact', () => {
+    const both = mondayAndWednesday();
+    const days = dayDrafts(both, {
+      kind: 'synced',
+      summary: {
+        programLinked: true,
+        completedAt: 'first-at',
+        days: [
+          { sessionId: both.sessionId, programLinked: true, completedAt: 'first-at' },
+          { sessionId: SECOND_SESSION_ID, programLinked: false, completedAt: 'second-at' },
+        ],
+      },
+    });
+    expect(days.map(({ draft, outcome }) => [draft.sessionId, draft.program?.position, outcome.summary])).toEqual([
+      [both.sessionId, weekDay(1, 'mon'), { programLinked: true, completedAt: 'first-at' }],
+      [SECOND_SESSION_ID, weekDay(1, 'wed'), { programLinked: false, completedAt: 'second-at' }],
+    ]);
+    expect(days[0].draft.exercises.every((exercise) => !exercise.inSecondDay)).toBe(true);
+    expect(days[1].draft.exercises.every((exercise) => exercise.inSecondDay)).toBe(true);
+  });
+
+  it('keeps a one-Day Draft as it is', () => {
+    const draft = monday();
+    const outcome = { kind: 'synced' as const, summary: { programLinked: true, completedAt: 'at' } };
+    expect(dayDrafts(draft, outcome)).toEqual([{ draft, outcome }]);
+  });
+
+  it('leaves out a Day the server did not store', () => {
+    const both = mondayAndWednesday();
+    const days = dayDrafts(both, {
+      kind: 'synced',
+      summary: {
+        programLinked: true,
+        completedAt: 'at',
+        days: [{ sessionId: SECOND_SESSION_ID, programLinked: true, completedAt: 'at' }],
+      },
+    });
+    expect(days.map(({ draft }) => draft.sessionId)).toEqual([SECOND_SESSION_ID]);
   });
 });

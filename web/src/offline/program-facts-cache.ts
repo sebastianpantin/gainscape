@@ -29,7 +29,11 @@ interface FactsFetchTicket {
 
 export interface FinishOutcomeForFacts {
   kind: 'synced';
-  summary: { programLinked: boolean; completedAt: string };
+  summary: {
+    programLinked: boolean;
+    completedAt: string;
+    days?: readonly { sessionId: string; programLinked: boolean; completedAt: string }[];
+  };
 }
 
 export function emptyProgramFactsCache(enrollmentId: string): ProgramFactsCache {

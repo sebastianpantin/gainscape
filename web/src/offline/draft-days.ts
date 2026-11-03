@@ -67,3 +67,40 @@ export function draftTitle(draft: WorkoutDraft): string | null {
   if (firstDay.length === 0 || secondProgram !== programName) return `${first} + ${second}`;
   return `${first} + ${secondDay.join(LABEL_SEPARATOR)}`;
 }
+
+interface SyncedDay {
+  sessionId: string;
+  programLinked: boolean;
+  completedAt: string;
+}
+
+interface SyncedDays {
+  kind: 'synced';
+  summary: { programLinked: boolean; completedAt: string; days?: readonly SyncedDay[] };
+}
+
+interface SyncedDayDraft {
+  draft: WorkoutDraft;
+  outcome: { kind: 'synced'; summary: { programLinked: boolean; completedAt: string } };
+}
+
+function draftOfDay(draft: WorkoutDraft, day: DraftDay): WorkoutDraft {
+  const inDay = draft.exercises.filter((exercise) => (exercise.inSecondDay === true) === (day === 'second'));
+  if (day === 'first' || draft.secondDay == null) return { ...draft, secondDay: null, exercises: inDay };
+  const { sessionId, program, programLabel } = draft.secondDay;
+  return { ...draft, sessionId, program, programLabel, secondDay: null, exercises: inDay };
+}
+
+export function dayDrafts(draft: WorkoutDraft, outcome: SyncedDays): SyncedDayDraft[] {
+  const { days } = outcome.summary;
+  if (draft.secondDay == null || days === undefined)
+    return [{ draft, outcome: { kind: 'synced', summary: outcome.summary } }];
+  const byId = new Map(days.map((day) => [day.sessionId, day]));
+  return (['first', 'second'] as const).flatMap((day) => {
+    const dayDraft = draftOfDay(draft, day);
+    const synced = byId.get(dayDraft.sessionId);
+    if (synced === undefined) return [];
+    const { programLinked, completedAt } = synced;
+    return [{ draft: dayDraft, outcome: { kind: 'synced' as const, summary: { programLinked, completedAt } } }];
+  });
+}
