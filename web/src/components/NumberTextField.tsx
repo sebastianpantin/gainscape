@@ -18,6 +18,7 @@ interface NumberTextFieldProps {
   wholeNumber?: boolean;
   step?: number;
   lastInGroup?: boolean;
+  describedBy?: string;
   onCommit: (value: number) => void;
   onDone?: () => void;
 }
@@ -38,6 +39,7 @@ export function NumberTextField({
   wholeNumber = false,
   step = 1,
   lastInGroup = false,
+  describedBy,
   onCommit,
   onDone,
 }: NumberTextFieldProps) {
@@ -62,7 +64,9 @@ export function NumberTextField({
           aria-valuemax={highest}
           aria-valuenow={value}
           aria-invalid={shown.matchesValue ? undefined : true}
-          aria-describedby={shown.matchesValue ? undefined : savedAsId}
+          aria-describedby={
+            [describedBy, shown.matchesValue ? undefined : savedAsId].filter(Boolean).join(' ') || undefined
+          }
           value={shown.text}
           onFocus={(event) => {
             keepSelectionOnMouseUp.current = true;

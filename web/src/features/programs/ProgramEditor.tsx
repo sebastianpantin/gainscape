@@ -45,6 +45,7 @@ import {
   progressionIssue,
   removeDay,
   removePlannedExercise,
+  restorePlannedExercise,
   renameDay,
   restoreDay,
   targetIssue,
@@ -163,6 +164,15 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     showToast(`${dayLabel} removed.`, {
       label: 'Undo',
       onAct: () => setDoc((current) => current && restoreDay(current, dayIndex, removed)),
+    });
+  };
+  const removeExerciseAt = (dayIndex: number, exerciseIndex: number, name: string) => {
+    const dayId = doc.days[dayIndex].id;
+    const removed = doc.days[dayIndex].exercises[exerciseIndex];
+    setDoc(removePlannedExercise(doc, dayIndex, exerciseIndex));
+    showToast(`${name} removed.`, {
+      label: 'Undo',
+      onAct: () => setDoc((current) => current && restorePlannedExercise(current, dayId, exerciseIndex, removed)),
     });
   };
   const changeAt = (dayIndex: number, exerciseIndex: number, changes: Partial<PlannedExercise>) =>
@@ -335,7 +345,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
                           className="button link"
                           type="button"
                           aria-label={`Remove ${name}`}
-                          onClick={() => setDoc(removePlannedExercise(doc, dayIndex, exerciseIndex))}
+                          onClick={() => removeExerciseAt(dayIndex, exerciseIndex, name)}
                         >
                           Remove
                         </button>

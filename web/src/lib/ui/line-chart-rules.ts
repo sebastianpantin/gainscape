@@ -106,3 +106,8 @@ export function chartSummary(series: readonly ChartSeries[], formatY: (y: number
   const parts = series.flatMap((line) => seriesSummary(line, formatY) ?? []);
   return parts.length === 0 ? 'No data yet.' : parts.join(' ');
 }
+
+export function latestValueText({ points }: ChartSeries, formatY: (y: number) => string): string | null {
+  const last = points.at(-1);
+  return last ? formatY(last.y) : null;
+}

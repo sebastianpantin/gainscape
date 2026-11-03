@@ -41,6 +41,25 @@ test('a finished workout survives an outage and a reload', { tag: '@smoke' }, as
   await expect.poll(() => sessionRow(stored!.draft!.sessionId)).not.toBeNull();
 });
 
+test('a workout waiting for the server can go back to editing', async ({ page }) => {
+  const username = uniqueUsername('dr_back');
+  await register(page, username);
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]);
+
+  let outage = true;
+  await page.route(completeSession, (route) => (outage ? route.abort() : route.continue()));
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByText(/Couldn't reach the server/)).toBeVisible();
+  await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Finish workout' })).toBeVisible();
+
+  outage = false;
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toBeVisible();
+  await expect.poll(() => sessionCount(username)).toBe(1);
+});
+
 test('a workout the server keeps failing on stops retrying and syncs on a manual retry', async ({ page }) => {
   const username = uniqueUsername('dr_s');
   await page.clock.install();

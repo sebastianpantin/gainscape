@@ -2,7 +2,7 @@ import { isSessionEditable } from '@domain/edit-window.ts';
 import { MAX_SETS_PER_SESSION } from '@domain/types.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
 import { SETS_FULL_TEXT } from '../workout/workout-rules.ts';
 import { announceDataChange } from '../../lib/query/data-changes.ts';
@@ -63,10 +63,10 @@ import {
   type SessionEditorChange,
   type SessionProblem,
 } from './session-editor.ts';
-import { SessionHeader } from './SessionHeader.tsx';
+import { HISTORY_PATH, SessionHeader } from './SessionHeader.tsx';
 import { StoredExerciseList } from './StoredExerciseList.tsx';
+import { BackLink } from '../../components/BackLink.tsx';
 
-const HISTORY_PATH = '/collection/history';
 const MAX_NOTES_LENGTH = 2000;
 const NO_ITEMS: readonly CatalogItem[] = [];
 const NO_PROGRAMS: readonly Program[] = [];
@@ -150,9 +150,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       <ScreenProblem
         heading={
           <>
-            <Link className="back-link" to={HISTORY_PATH}>
-              ‹ History
-            </Link>
+            <BackLink parent={HISTORY_PATH} />
             <h1 className="title">Workout</h1>
           </>
         }
@@ -261,7 +259,6 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
     <SessionHeader
       session={session}
       programLabel={programDayLabel(programs, session.programDayId)}
-      backTo={HISTORY_PATH}
       headingRef={headingRef}
     />
   );
@@ -543,9 +540,11 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
       {confirmingDelete && (
         <ConfirmDialog
           title="Delete this workout?"
-          confirmLabel={busy.kind === 'deleting' ? 'Deleting…' : 'Delete for good'}
+          confirmLabel="Delete for good"
+          busyLabel="Deleting…"
           cancelLabel="Keep workout"
-          busy={working}
+          busy={busy.kind === 'deleting'}
+          disabled={working}
           danger
           onConfirm={() => void remove()}
           onCancel={() => setConfirmingDelete(false)}

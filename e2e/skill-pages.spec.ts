@@ -54,7 +54,7 @@ test('a body skill card opens its page with level, recovery, this week’s sets 
   await expect(counted).toContainText('Barbell Bench Press');
   await expect(page.getByRole('list', { name: 'Exercises that train Chest' })).toContainText('Barbell Bench Press 70%');
 
-  await page.getByRole('main').getByRole('link', { name: '‹ Skills', exact: true }).click();
+  await page.getByRole('main').getByRole('button', { name: '‹ Back', exact: true }).click();
   await expect(heading(page, 'Skills')).toBeVisible();
 });
 
@@ -132,5 +132,5 @@ test('a skill page that cannot load the skills says so under a heading', async (
   await page.goto('/skills/chest');
   await expect(heading(page, 'Skill')).toBeVisible();
   await expect(page.getByRole('main').getByRole('alert')).toBeVisible();
-  await expect(page.getByRole('main').getByRole('link', { name: '‹ Skills', exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('button', { name: '‹ Back', exact: true })).toBeVisible();
 });

@@ -17,6 +17,11 @@ import { openDraftStoreOrFallback } from '../../offline/draft-boot.ts';
 type Mode = 'sign-in' | 'register' | 'check-email' | 'forgot' | 'reset-sent';
 
 const SIGNUP_TRIGGER_FAILURE = 'Database error saving new user';
+const FORM_TITLES: Record<'sign-in' | 'register' | 'forgot', { heading: string; submit: string; busy: string }> = {
+  'sign-in': { heading: 'Sign in', submit: 'Sign in', busy: 'Signing in…' },
+  register: { heading: 'Create account', submit: 'Create account', busy: 'Creating account…' },
+  forgot: { heading: 'Reset password', submit: 'Send reset link', busy: 'Sending…' },
+};
 const MILLISECONDS_PER_SECOND = 1000;
 
 const emailRedirectTo = () => authCallbackUrl(window.location.origin);
@@ -126,10 +131,14 @@ export function AuthScreen() {
   const [keptWorkout, setKeptWorkout] = useState(false);
   const resend = useResend(email);
   const passwordHintId = useId();
-  const sentHeading = useRef<HTMLHeadingElement>(null);
+  const usernameHintId = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  const shownMode = useRef(mode);
 
   useEffect(() => {
-    if (mode === 'check-email' || mode === 'reset-sent') sentHeading.current?.focus();
+    if (shownMode.current === mode) return;
+    shownMode.current = mode;
+    heading.current?.focus();
   }, [mode]);
 
   useEffect(() => {
@@ -146,6 +155,7 @@ export function AuthScreen() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
+    setProblem(null);
     setUnconfirmed(false);
     if (mode === 'register') {
       const outcome = await register(username.toLowerCase(), email, password);
@@ -194,7 +204,7 @@ export function AuthScreen() {
       )}
       {mode === 'check-email' && (
         <section className="panel stack">
-          <h2 className="accent-text" ref={sentHeading} tabIndex={-1}>
+          <h2 className="accent-text" ref={heading} tabIndex={-1}>
             Check your email
           </h2>
           <p>
@@ -206,7 +216,7 @@ export function AuthScreen() {
       )}
       {mode === 'reset-sent' && (
         <section className="panel stack">
-          <h2 className="accent-text" ref={sentHeading} tabIndex={-1}>
+          <h2 className="accent-text" ref={heading} tabIndex={-1}>
             Check your email
           </h2>
           <p role="status">If an account exists for {email}, we sent a reset link.</p>
@@ -215,8 +225,8 @@ export function AuthScreen() {
       )}
       {(mode === 'sign-in' || mode === 'register' || mode === 'forgot') && (
         <form className="panel stack" onSubmit={submit}>
-          <h2 className="accent-text">
-            {mode === 'sign-in' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Reset password'}
+          <h2 className="accent-text" ref={heading} tabIndex={-1}>
+            {FORM_TITLES[mode].heading}
           </h2>
           {mode === 'register' && (
             <label className="field">
@@ -228,10 +238,15 @@ export function AuthScreen() {
                 title={USERNAME_HINT}
                 autoCapitalize="none"
                 autoComplete="username"
+                aria-describedby={usernameHintId}
                 required
               />
-              <span className="hint">3–20 characters: a–z, 0–9 and _. Friends find you by it.</span>
             </label>
+          )}
+          {mode === 'register' && (
+            <p className="hint" id={usernameHintId}>
+              3–20 characters: a–z, 0–9 and _. Friends find you by it.
+            </p>
           )}
           <label className="field">
             Email
@@ -269,7 +284,7 @@ export function AuthScreen() {
           )}
           {unconfirmed && <ResendButton resend={resend} />}
           <button className="button primary big" type="submit" disabled={busy}>
-            {mode === 'sign-in' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Send reset link'}
+            {busy ? FORM_TITLES[mode].busy : FORM_TITLES[mode].submit}
           </button>
           {mode === 'sign-in' && (
             <>

@@ -1,4 +1,10 @@
-import { type ChartFrame, chartLayout, type ChartSeries, chartSummary } from '../lib/ui/line-chart-rules.ts';
+import {
+  type ChartFrame,
+  chartLayout,
+  type ChartSeries,
+  chartSummary,
+  latestValueText,
+} from '../lib/ui/line-chart-rules.ts';
 
 interface LineChartProps {
   title: string;
@@ -50,12 +56,16 @@ export function LineChart({ title, series, formatX, formatY, minYStep }: LineCha
       </svg>
       <figcaption>
         <ul className="line-chart-legend">
-          {series.map((line, index) => (
-            <li key={line.name}>
-              <span className={`line-chart-swatch series-${index}`} aria-hidden="true" />
-              {line.name}
-            </li>
-          ))}
+          {series.map((line, index) => {
+            const latest = latestValueText(line, formatY);
+            return (
+              <li key={line.name}>
+                <span className={`line-chart-swatch series-${index}`} aria-hidden="true" />
+                {line.name}
+                {latest && <strong>{latest}</strong>}
+              </li>
+            );
+          })}
         </ul>
       </figcaption>
     </figure>

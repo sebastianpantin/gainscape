@@ -16,6 +16,7 @@ import { useToast } from '../../lib/ui/toast.ts';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
 import { useActiveProgram } from './use-active-program.ts';
 import { DecimalInput } from '../../components/DecimalInput.tsx';
+import { BackLink } from '../../components/BackLink.tsx';
 
 interface ActiveProgramScreenProps {
   userId: string;
@@ -77,9 +78,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
 
   return (
     <main className="screen stack">
-      <Link className="back-link" to="/">
-        ‹ Train
-      </Link>
+      <BackLink parent="/" />
       <h1 className="title">{title}</h1>
       {program.kind === 'ready' ? (
         <Link className="standalone-link" to="/programs/active/plan">
@@ -133,6 +132,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
           confirmLabel="Stop following"
           danger
           busy={busy}
+          busyLabel="Stopping…"
           onConfirm={stop}
           onCancel={() => setConfirmingStop(false)}
         >

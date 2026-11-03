@@ -43,9 +43,11 @@ test('a done set starts a rest that counts down, adjusts, survives a reload and 
   await expect(remaining).toHaveText('1:00');
   await page.reload();
   await expect(remaining).toHaveText('1:00');
+  const restStatus = restTimer(page).getByRole('status');
+  await expect(restStatus).toHaveText('');
 
   await page.clock.runFor(60_000);
-  await expect(restTimer(page).getByRole('status')).toHaveText('Rest over');
+  await expect(restStatus).toHaveText('Rest over');
   const overBy = restTimer(page).getByRole('timer', { name: 'Rest over by' });
   await expect(overBy).toHaveText('+0:00');
   await page.clock.runFor(32_000);

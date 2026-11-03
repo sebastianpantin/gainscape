@@ -1,5 +1,4 @@
 import { type Ref } from 'react';
-import { Link } from 'react-router-dom';
 import {
   formatCount,
   formatSessionDate,
@@ -10,23 +9,23 @@ import {
 } from '../../lib/format.ts';
 import { type SessionDetail } from '../../lib/history/history-rules.ts';
 import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
+import { BackLink } from '../../components/BackLink.tsx';
+
+export const HISTORY_PATH = '/collection/history';
 
 interface SessionHeaderProps {
   session: SessionDetail;
   programLabel: string | null;
-  backTo: string;
   headingRef: Ref<HTMLHeadingElement>;
 }
 
-export function SessionHeader({ session, programLabel, backTo, headingRef }: SessionHeaderProps) {
+export function SessionHeader({ session, programLabel, headingRef }: SessionHeaderProps) {
   const timingText = sessionTimingParts(session).join(' · ');
   const gearBonus = session.historyOnly ? 0 : sessionGearBonus(session.summary);
   const challengeBonus = session.historyOnly ? 0 : sessionChallengeBonus(session.summary);
   return (
     <>
-      <Link className="back-link" to={backTo}>
-        ‹ History
-      </Link>
+      <BackLink parent={HISTORY_PATH} />
       <header className="workout-header">
         <div className="stack" style={{ gap: 'var(--space-1)' }}>
           <span className="muted">{programLabel ?? 'Workout'}</span>

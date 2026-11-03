@@ -235,7 +235,7 @@ test('Settings lists every release, also offline', async ({ context, page }) => 
     for (const item of release.items) await expect(page.getByText(item, { exact: true })).toBeVisible();
 
   await context.setOffline(true);
-  await page.getByRole('link', { name: '‹ Settings' }).click();
+  await page.getByRole('button', { name: '‹ Back', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
   await openReleaseHistory(page);
   await expectEveryReleaseInOrder(page);

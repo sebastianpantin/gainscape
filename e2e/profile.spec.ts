@@ -239,7 +239,7 @@ test('leaving Edit profile with a change asks first, and Save leaves without ask
   await expect(confirmation).toHaveCount(0);
   await expect(page.getByLabel('Display name')).toHaveValue('Half Typed');
 
-  await page.getByRole('link', { name: '‹ Profile' }).click();
+  await page.getByRole('button', { name: '‹ Back', exact: true }).click();
   await confirmation.getByRole('button', { name: 'Discard changes' }).click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(profileCard(page)).not.toContainText('Half Typed');

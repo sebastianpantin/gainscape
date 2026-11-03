@@ -1,9 +1,5 @@
-import { Link } from 'react-router-dom';
+import { BackLink } from '../../components/BackLink.tsx';
 
 export function BackToSkills() {
-  return (
-    <Link className="back-link" to="/skills">
-      ‹ Skills
-    </Link>
-  );
+  return <BackLink parent="/skills" />;
 }

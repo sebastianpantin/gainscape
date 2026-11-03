@@ -494,6 +494,13 @@
   grid-area: done;
 }
 
+.set-info > .set-check {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+}
+
 .stepper-field {
   display: grid;
   grid-template-columns: var(--tap-target) minmax(0, 1fr) var(--tap-target);

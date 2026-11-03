@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  implausibleChangeText,
   lastSetChangesFor,
   lastSetDelta,
   lastSetForRow,
@@ -132,5 +133,39 @@ describe('lastSetDelta', () => {
     expect(lastSetDelta({ weightKg: 0, reps: 11 }, { weightKg: 0, reps: 10 }, 'bodyweight', 'kg').text).toBe(
       '▲ +1 rep',
     );
+  });
+});
+
+describe('implausibleChangeText', () => {
+  const last = { weightKg: 100, reps: 5 };
+
+  it('asks to check a weight more than half again as heavy as last time', () => {
+    expect(implausibleChangeText({ weightKg: 1000, reps: 5 }, last, 'external', 'kg')).toBe(
+      'Much heavier than last time (100 kg). Check the weight?',
+    );
+    expect(implausibleChangeText({ weightKg: 150, reps: 5 }, last, 'external', 'kg')).toBeNull();
+  });
+
+  it('shows the last weight in the chosen unit', () => {
+    expect(implausibleChangeText({ weightKg: 300, reps: 5 }, last, 'external', 'lb')).toBe(
+      'Much heavier than last time (220.5 lb). Check the weight?',
+    );
+  });
+
+  it('asks to check at least double the reps and five more than last time', () => {
+    expect(implausibleChangeText({ weightKg: 100, reps: 50 }, last, 'external', 'kg')).toBe(
+      'Many more reps than last time (5). Check the reps?',
+    );
+    expect(implausibleChangeText({ weightKg: 100, reps: 9 }, last, 'external', 'kg')).toBeNull();
+    expect(implausibleChangeText({ weightKg: 100, reps: 10 }, { weightKg: 100, reps: 3 }, 'external', 'kg')).toBe(
+      'Many more reps than last time (3). Check the reps?',
+    );
+  });
+
+  it('ignores the weight of a bodyweight lift and a last set without load', () => {
+    expect(implausibleChangeText({ weightKg: 500, reps: 5 }, last, 'bodyweight', 'kg')).toBeNull();
+    expect(
+      implausibleChangeText({ weightKg: 40, reps: 5 }, { weightKg: 0, reps: 5 }, 'bodyweight_plus', 'kg'),
+    ).toBeNull();
   });
 });

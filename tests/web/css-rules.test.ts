@@ -25,6 +25,7 @@ const BEVELLED_SURFACES = new Set([
   '.first-run-pip.lit',
   '.term-help-panel:popover-open',
   'input, select',
+  "input[aria-invalid='true']",
   '.notes-field textarea',
   '.toast',
   '.monogram',
@@ -183,6 +184,35 @@ describe('stylesheet rules', () => {
       .map(({ rule }) => oneLine(rule.selector))
       .filter((selector) => !BEVELLED_SURFACES.has(selector));
     expect(bevelled.length, bevelled.join('\n')).toBeLessThanOrEqual(MAX_CONTROL_BEVELS);
+  });
+
+  it('marks the active tab with more than a colour change, so it reads without colour vision', () => {
+    const cues = rulesFor('.tab.active')
+      .flatMap((rule) => declarations(rule))
+      .filter((declaration) => declaration.prop !== 'color');
+    expect(cues.length).toBeGreaterThan(0);
+  });
+
+  it('keeps the input border on an invalid field and rings it in --color-danger-fill', () => {
+    const invalid = rulesFor("input[aria-invalid='true']").flatMap((rule) => declarations(rule));
+    expect(invalid.filter((declaration) => declaration.prop.startsWith('border'))).toEqual([]);
+    expect(invalid.find((declaration) => declaration.prop === 'box-shadow')?.value).toContain(
+      'var(--color-danger-fill)',
+    );
+  });
+
+  it.each(['.button.dashed', '.button.chip'])('draws the %s border in --color-control-border', (selector) => {
+    const borders = rulesFor(selector)
+      .flatMap((rule) => declarations(rule))
+      .filter((declaration) => /^border(-color)?$/.test(declaration.prop))
+      .map((declaration) => declaration.value);
+    expect(borders.length).toBeGreaterThan(0);
+    for (const border of borders) expect(border).toContain('var(--color-control-border)');
+  });
+
+  it('draws the second chart series legend swatch dashed, like its line', () => {
+    const swatch = rulesFor('.line-chart-swatch.series-1').flatMap((rule) => declarations(rule));
+    expect(swatch.map((declaration) => declaration.value).join(' ')).toContain('dashed');
   });
 
   it('keeps adjacent type-scale steps at least 8% apart, so no two sizes look the same', () => {

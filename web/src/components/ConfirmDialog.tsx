@@ -6,6 +6,8 @@ interface ConfirmDialogProps {
   confirmLabel: string;
   cancelLabel?: string;
   busy?: boolean;
+  busyLabel?: string;
+  disabled?: boolean;
   danger?: boolean;
   children?: ReactNode;
   alternative?: { label: string; onChoose: () => void };
@@ -18,6 +20,8 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel = 'Cancel',
   busy = false,
+  busyLabel,
+  disabled = false,
   danger = false,
   children,
   alternative,
@@ -25,6 +29,7 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const dialog = useModalDialog();
+  const blocked = busy || disabled;
   const titleId = useId();
 
   return (
@@ -44,17 +49,17 @@ export function ConfirmDialog({
           {cancelLabel}
         </button>
         {alternative && (
-          <button className="button" type="button" disabled={busy} onClick={alternative.onChoose}>
+          <button className="button" type="button" disabled={blocked} onClick={alternative.onChoose}>
             {alternative.label}
           </button>
         )}
         <button
           className={danger ? 'button danger' : 'button primary'}
           type="button"
-          disabled={busy}
+          disabled={blocked}
           onClick={onConfirm}
         >
-          {confirmLabel}
+          {busy && busyLabel ? busyLabel : confirmLabel}
         </button>
       </div>
     </dialog>

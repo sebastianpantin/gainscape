@@ -1,5 +1,4 @@
-import { type KeyboardEvent } from 'react';
-import { arrowedIndex } from '../lib/ui/radio-group-rules.ts';
+import { moveRadioWithArrows } from './radio-arrows.ts';
 
 interface SegmentedChoiceProps<T> {
   label: string;
@@ -27,14 +26,6 @@ export function SegmentedChoice<T extends string | number>({
     if (!disabled) onPick(value);
   };
 
-  const moveWithArrows = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const next = arrowedIndex(event.key, index, options.length);
-    if (next === null || disabled) return;
-    event.preventDefault();
-    pick(options[next].value);
-    (event.currentTarget.parentElement?.children[next] as HTMLElement | undefined)?.focus();
-  };
-
   return (
     <div
       className={stacked ? 'segmented stacked' : wrapped ? 'segmented wrapped' : 'segmented'}
@@ -51,7 +42,9 @@ export function SegmentedChoice<T extends string | number>({
           className={current === option.value ? 'segment active' : 'segment'}
           aria-disabled={disabled || undefined}
           onClick={() => pick(option.value)}
-          onKeyDown={(event) => moveWithArrows(event, index)}
+          onKeyDown={(event) => {
+            if (!disabled) moveRadioWithArrows(event, index, options.length, (next) => pick(options[next].value));
+          }}
         >
           {option.label}
         </button>

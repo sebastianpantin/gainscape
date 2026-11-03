@@ -20,6 +20,7 @@ import {
   newProgramDoc,
   removeDay,
   removePlannedExercise,
+  restorePlannedExercise,
   restoreDay,
   renameDay,
   targetIssue,
@@ -161,6 +162,22 @@ describe('day changes', () => {
 });
 
 describe('planned exercise changes', () => {
+  it('puts a removed exercise back in its day, even after the day moved', () => {
+    const removed = doc.days[0].exercises[0];
+    const movedAfter = moveDay(removePlannedExercise(doc, 0, 0), 0, 1);
+    const restored = restorePlannedExercise(movedAfter, 'day-a', 0, removed);
+    expect(restored.days.map((day) => [day.id, day.exercises.map((e) => e.exerciseId)])).toEqual([
+      ['day-b', ['squat']],
+      ['day-a', ['bench', 'row']],
+    ]);
+  });
+
+  it('leaves the program alone when the exercise day is gone', () => {
+    const removed = doc.days[0].exercises[0];
+    const withoutDay = removeDay(removePlannedExercise(doc, 0, 0), 0);
+    expect(restorePlannedExercise(withoutDay, 'day-a', 0, removed)).toBe(withoutDay);
+  });
+
   it('changes the targets of one planned exercise only', () => {
     const changed = changePlannedExercise(doc, 0, 1, { targetSets: 5 });
     expect(changed.days[0].exercises.map((exercise) => exercise.targetSets)).toEqual([3, 5]);

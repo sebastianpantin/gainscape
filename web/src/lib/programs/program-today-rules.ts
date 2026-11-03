@@ -179,3 +179,7 @@ export function activeProgram(
     state: programStateAt(parsed.definition, enrollment, facts.filter(isProgramFact)),
   };
 }
+
+export function hasProgramDayToStart(program: ActiveProgram): boolean {
+  return program.kind === 'ready' && dayChoices(program.definition, program.state).length > 0;
+}

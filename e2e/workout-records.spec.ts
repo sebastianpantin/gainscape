@@ -40,6 +40,7 @@ test('bodyweight prompt, live record chips, records and the collection log', { t
   await page.getByRole('button', { name: 'Finish workout' }).click();
 
   const records = page.getByLabel('New records');
+  await expect(page.getByRole('heading', { level: 2, name: 'New records', exact: true })).toBeVisible();
   await expect(records).toContainText('Barbell Bench Press: 5RM 70 kg (was 60 kg)');
   await expect(records).toContainText('Pull-up: 10 reps (was 8)');
 

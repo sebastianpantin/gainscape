@@ -145,7 +145,7 @@ describe('fillWorkingSets', () => {
   };
   const freshBench = () => {
     const lift = liftAt(workout(), 0);
-    return workout({ exercises: [{ ...lift, sets: [lift.sets[0]] }] });
+    return workout({ exercises: [{ ...lift, sets: [{ ...lift.sets[0], done: false }] }] });
   };
 
   it('turns a fresh lift into the count of done sets at its weight and the reps', () => {
@@ -156,6 +156,18 @@ describe('fillWorkingSets', () => {
       { id: expect.any(String), weightKg: 60, reps: 5, done: true, effort: null },
     ]);
     expect(new Set(filled.sets.map((set) => set.id)).size).toBe(3);
+  });
+
+  it('keeps a set already ticked done as logged', () => {
+    const lift = liftAt(workout(), 0);
+    const logged = { ...lift.sets[0], reps: 5, done: true };
+    const draft = workout({ exercises: [{ ...lift, sets: [logged] }] });
+    const sets = liftAt(fillWorkingSets(draft, 0, 3, 8), 0).sets;
+    expect(sets[0]).toEqual(logged);
+    expect(sets.slice(1).map(({ reps, done }) => [reps, done])).toEqual([
+      [8, true],
+      [8, true],
+    ]);
   });
 
   it('leaves warm-ups alone and starts an empty lift at the default weight', () => {

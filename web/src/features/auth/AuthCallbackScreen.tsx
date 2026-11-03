@@ -24,6 +24,11 @@ type Step =
   | { kind: 'email-changed' }
   | { kind: 'failed'; problem: string };
 
+const SUBMIT_LABELS: Record<'choose-password' | 'new-password', string> = {
+  'choose-password': 'Save and continue',
+  'new-password': 'Set new password',
+};
+
 const USERNAME_PROBLEMS: Record<string, string> = {
   taken: 'That username is taken.',
   invalid: 'Use 3–20 characters: a–z, 0–9 and _.',
@@ -72,10 +77,14 @@ function PasswordFields({
   onPassword: (value: string) => void;
   onRepeat: (value: string) => void;
 }) {
+  const passwordHintId = useId();
   const passwordProblemId = useId();
   const repeatProblemId = useId();
-  const problem = password.length > 0 ? passwordProblem(password) : null;
-  const repeatProblem = repeat.length > 0 && repeat !== password ? "The passwords don't match." : null;
+  const [passwordLeft, setPasswordLeft] = useState(false);
+  const [repeatLeft, setRepeatLeft] = useState(false);
+  const problem = passwordLeft && password.length > 0 ? passwordProblem(password) : null;
+  const repeatTyped = repeatLeft || (password.length > 0 && repeat.length >= password.length);
+  const repeatProblem = repeatTyped && repeat.length > 0 && repeat !== password ? "The passwords don't match." : null;
   return (
     <>
       <label className="field">
@@ -86,11 +95,17 @@ function PasswordFields({
           minLength={MINIMUM_PASSWORD_LENGTH}
           value={password}
           onChange={(event) => onPassword(event.target.value)}
+          onBlur={() => setPasswordLeft(true)}
           aria-invalid={problem !== null || undefined}
-          aria-describedby={problem ? passwordProblemId : undefined}
+          aria-describedby={problem ? passwordProblemId : passwordHintId}
           required
         />
       </label>
+      {!problem && (
+        <p className="hint" id={passwordHintId}>
+          At least {MINIMUM_PASSWORD_LENGTH} characters.
+        </p>
+      )}
       <label className="field">
         Repeat new password
         <input
@@ -99,6 +114,7 @@ function PasswordFields({
           minLength={MINIMUM_PASSWORD_LENGTH}
           value={repeat}
           onChange={(event) => onRepeat(event.target.value)}
+          onBlur={() => setRepeatLeft(true)}
           aria-invalid={repeatProblem !== null || undefined}
           aria-describedby={repeatProblem ? repeatProblemId : undefined}
           required
@@ -119,6 +135,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
   const [username, setUsername] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const usernameHintId = useId();
   const started = useRef(false);
   const queryClient = useQueryClient();
 
@@ -212,7 +229,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
           {step.kind === 'choose-password' && (
             <>
               <p>
-                Your username is <b>{step.username}</b>. Choose a password to finish.
+                Your username is <b>{step.username}</b>. To make sure this account is yours, set its password again.
               </p>
               <label className="field">
                 Username
@@ -223,12 +240,13 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
                   title={USERNAME_HINT}
                   autoCapitalize="none"
                   autoComplete="username"
+                  aria-describedby={usernameHintId}
                   required
                 />
-                <span className="hint">
-                  Not the name you picked? Change it now. Friends find you by it, and later it can't be changed.
-                </span>
               </label>
+              <p className="hint" id={usernameHintId}>
+                Not the name you picked? Change it now. Friends find you by it, and later it can't be changed.
+              </p>
             </>
           )}
           <PasswordFields password={password} repeat={repeat} onPassword={setPassword} onRepeat={setRepeat} />
@@ -238,7 +256,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
             </p>
           )}
           <button className="button primary big" type="submit" disabled={busy || !passwordReady}>
-            {step.kind === 'choose-password' ? 'Save and continue' : 'Set new password'}
+            {busy ? 'Saving…' : SUBMIT_LABELS[step.kind]}
           </button>
           <button className="button link" type="button" onClick={finish}>
             Not now
