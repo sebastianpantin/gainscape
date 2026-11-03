@@ -73,3 +73,4 @@ export {
   type SessionFact,
 } from './program-state.ts';
 export { programStateAt } from './program-fold.ts';
+export * from './session-days.ts';

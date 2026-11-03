@@ -10,5 +10,5 @@ A lifter can add a second Day of the same Enrollment to a Draft started from a D
 ## Consequences
 
 - The second Session's id is chosen when the Day is added, so a resubmitted Finish is idempotent for both Sessions.
-- Both Sessions share the Draft's start, end, notes and session RPE, count as two workouts but one training day, and earn without fatigue from the other Day's sets.
+- Both Sessions share the Draft's end, notes and session RPE; the second starts 1 ms after the first so replay and Program facts always order it after the first Day. They count as two workouts but one training day, and earn without fatigue from the other Day's sets.
 - The server must be deployed before a web build that sends a second Day.
