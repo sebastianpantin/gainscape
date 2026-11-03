@@ -3,7 +3,7 @@ import { type FormEvent, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { initialsFor } from '../../lib/profile/profile.ts';
-import { feedQuery, friendsQuery } from '../../lib/query/queries.ts';
+import { feedQuery, friendsQuery, profileQuery } from '../../lib/query/queries.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { removeFriend, respondToFriendRequest, sendFriendRequest, setGz } from '../../lib/social/social.ts';
 import {
@@ -84,6 +84,31 @@ function FeedEntry({ item, pending, onToggleGz }: FeedEntryProps) {
 
 interface FriendsScreenProps {
   userId: string;
+}
+
+function OwnUsername({ userId }: { userId: string }) {
+  const profile = useQuery(profileQuery(userId));
+  const { showToast } = useToast();
+  const username = profile.data?.loaded.username;
+  if (!username) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(username);
+      showToast('Username copied.');
+    } catch {
+      showToast(`Couldn't copy. Your username is ${username}.`);
+    }
+  };
+  return (
+    <p className="row wrap hint">
+      <span>
+        Friends add you by your username: <strong>{username}</strong>
+      </span>
+      <button className="button link" type="button" aria-label="Copy your username" onClick={() => void copy()}>
+        Copy
+      </button>
+    </p>
+  );
 }
 
 export function FriendsScreen({ userId }: FriendsScreenProps) {
@@ -276,6 +301,7 @@ export function FriendsScreen({ userId }: FriendsScreenProps) {
             </button>
           </form>
           <FieldProblem id={usernameProblemId} problem={usernameMissing ? 'Enter a username.' : null} />
+          <OwnUsername userId={userId} />
           {outgoing.length > 0 && (
             <section className="panel stack" aria-labelledby="outgoing-heading">
               <h2 id="outgoing-heading">Sent requests</h2>

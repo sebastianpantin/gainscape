@@ -23,7 +23,7 @@ import { type BackoffSuggestion } from '../../lib/workout/backoff-rules.ts';
 import { BackoffChip } from './BackoffChip.tsx';
 import { EffortSelector } from './EffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
-import { lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './last-set-rules.ts';
+import { implausibleChangeText, lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './last-set-rules.ts';
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
 import { SetMenu } from './SetMenu.tsx';
@@ -87,9 +87,18 @@ interface WeightFieldProps {
   onChange: (weightKg: number) => void;
   setNumber: number;
   withStepper?: boolean;
+  describedBy?: string;
 }
 
-export function WeightField({ loadType, weightKg, unit, onChange, setNumber, withStepper = false }: WeightFieldProps) {
+export function WeightField({
+  loadType,
+  weightKg,
+  unit,
+  onChange,
+  setNumber,
+  withStepper = false,
+  describedBy,
+}: WeightFieldProps) {
   if (loadType === 'bodyweight') return <span className="compact-field set-number weight-field">bodyweight</span>;
   const shown = shownWeight(weightKg, unit);
   const highest = highestWeightInUnit(MAX_SET_LOAD_KG, unit);
@@ -101,6 +110,7 @@ export function WeightField({ loadType, weightKg, unit, onChange, setNumber, wit
       lowest={0}
       highest={highest}
       step={WEIGHT_STEPPER_STEP[unit]}
+      describedBy={describedBy}
       onCommit={(typed) => onChange(unitToKg(typed, unit))}
     />
   );
@@ -122,9 +132,10 @@ interface RepsFieldProps {
   onChange: (reps: number) => void;
   setNumber: number;
   onDone?: () => void;
+  describedBy?: string;
 }
 
-export function RepsField({ reps, onChange, setNumber, onDone }: RepsFieldProps) {
+export function RepsField({ reps, onChange, setNumber, onDone, describedBy }: RepsFieldProps) {
   return (
     <NumberTextField
       label="reps"
@@ -134,6 +145,7 @@ export function RepsField({ reps, onChange, setNumber, onDone }: RepsFieldProps)
       highest={HIGHEST_REPS}
       wholeNumber
       lastInGroup
+      describedBy={describedBy}
       onCommit={onChange}
       onDone={onDone}
     />
@@ -202,6 +214,8 @@ export function SetRow({
     onDoneFocused();
   }, [focusDone, onDoneFocused]);
   const calculatorId = useId();
+  const checkId = useId();
+  const checkText = last === null ? null : implausibleChangeText(set, last, loadType, unit);
   const showBackoff = backoff !== null && !(set.weightKg === backoff.weightKg && set.reps === backoff.reps);
   const amrapBadge = amrapBadgeOf(set.prescription);
   const marked = amrapBadge !== null || markers.length > 0 || barbell !== null;
@@ -233,6 +247,7 @@ export function SetRow({
         onChange={(weightKg) => onChange({ weightKg })}
         setNumber={setNumber}
         withStepper
+        describedBy={checkText ? checkId : undefined}
       />
       <div className="reps-field">
         <RepsField
@@ -240,10 +255,16 @@ export function SetRow({
           onChange={(reps) => onChange({ reps })}
           setNumber={setNumber}
           onDone={() => doneButton.current?.focus()}
+          describedBy={checkText ? checkId : undefined}
         />
       </div>
       <DoneToggle done={set.done} label={doneLabel} drop={drop} onToggle={onToggleDone} buttonRef={doneButton} />
       <div className="set-info">
+        {checkText && (
+          <p className="set-check" id={checkId}>
+            {checkText}
+          </p>
+        )}
         {marked && (
           <span className="set-markers">
             {amrapBadge && (

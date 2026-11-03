@@ -6,7 +6,7 @@ The rules every screen follows, with the reason for each. Tooling enforces the o
 
 - Colours, spacing and type sizes are CSS custom properties in `web/src/styles/tokens.css`. Area stylesheets use `var(--…)` only. **(guard: `tests/web/css-rules.test.ts`)** Why: one palette keeps contrast checkable and lets a colour change land in one place.
 - Roles: `--color-background`/`--color-panel`/`--color-well`/`--color-chrome` are surfaces; `--color-text`, `-muted`, `-faint` are text; `--color-accent` is the one action colour; `--color-xp` means progress or done; `--color-danger` means loss; `--color-focus` is only the focus ring **(guard)**, so a "today" marker or a count never looks focused (use `--color-accent-light`); `--color-scrim` is every dialog backdrop; `--color-bevel-light` is the highlight edge on a coloured swatch.
-- Text tokens pass WCAG on every surface, and control glyphs (icons inside a control, such as the unticked Done check) pass 3:1 on the control surfaces. **(guard: `tests/web/contrast.test.ts`)** `--color-panel-border` is a border colour, never a glyph, because it fails 3:1 on `--color-well`.
+- Text tokens pass WCAG on every surface, and control glyphs (icons inside a control, such as the unticked Done check) pass 3:1 on the control surfaces. **(guard: `tests/web/contrast.test.ts`)** `--color-panel-border` is a border colour, never a glyph, because it fails 3:1 on `--color-well`. A control's own edge (dashed add buttons, chips) uses `--color-control-border`, which reaches 3:1 on every control surface.
 - Type scale: `--font-size-2xs` (12px, decorative captions only), `xs` (13px, the floor for data text and every button), `md`, `lg`, `xl`, `2xl`, `3xl`. Adjacent steps are at least 8% apart so two sizes never look accidentally alike. **(guard)** Display numbers use the short list of one-off sizes in `css-rules.test.ts`; nothing renders below 12px, chart labels included.
 - Spacing: `--space-0-5` (2px) to `--space-6` (24px). TSX in `web/src/features` never passes a raw pixel number in `style`. **(guard: ESLint `no-restricted-syntax`)** Why: one rhythm across screens, and a stylesheet change reaches every screen.
 - The page declares `color-scheme: dark` on `:root` and in `<meta name="color-scheme">` **(guard: unit and e2e)**, so native controls, scrollbars and autofill match the dark palette.
@@ -31,14 +31,14 @@ The rules every screen follows, with the reason for each. Tooling enforces the o
 
 ## Destructive actions
 
-- Reversible (remove a set, undo edits, remove a day): act at once and show an undo toast.
+- Reversible (remove a set, undo edits, remove a day or a planned exercise): act at once and show an undo toast. Toasts stack (up to three), so a second removal keeps the first one's Undo. An undo toast raised from the keyboard waits for Undo or Dismiss instead of timing out, so a keyboard user can tab to it.
 - Irreversible (delete a workout, remove a friend, delete the account): `ConfirmDialog`, with the danger button as the confirm.
 - Never swap a button inline into a second "Are you sure?" button: it moves the target under the finger.
 - After the action, focus moves to a sensible element (the list, the next row, the heading), never to `<body>`. `ConfirmDialog` hands focus back to the button that opened it; an undo toast's action restores what was removed.
 
 ## Navigation
 
-- A child screen's way back is the shared `BackLink` (`web/src/components/BackLink.tsx`, labelled "‹ Back"): `navigate(-1)` when the previous entry is inside the app, the parent route otherwise, so Back never pushes a screen you came from and a deep link still has a way out. A screen with tabs or segments (Collection's Records, Items, History, Stats) has no back link.
+- A child screen's way back is the shared `BackLink` (`web/src/components/BackLink.tsx`, labelled "‹ Back"): `navigate(-1)` when the previous entry is inside the app, the parent route otherwise, so Back never pushes a screen you came from and a deep link still has a way out. A screen with tabs or segments (Collection's Records, Items, History, Stats) has no back link. **(guard: ESLint bans a `Link` with `className="back-link"` in features)**
 - Screen titles come from `web/src/lib/platform/route-title-rules.ts`; a new route needs an entry there (unit test).
 
 ## Forms

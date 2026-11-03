@@ -46,6 +46,9 @@ export function RestTimerBar({
     <>
       {prompt?.(moveFocusOn)}
       <section className={resting ? 'rest-timer' : 'rest-timer over'} aria-label="Rest timer">
+        <span className="visually-hidden" role="status">
+          {resting ? '' : 'Rest over'}
+        </span>
         {resting ? (
           <span className="rest-reading" key="resting">
             <span className="rest-label">Rest</span>
@@ -55,7 +58,7 @@ export function RestTimerBar({
           </span>
         ) : (
           <span className="rest-reading" key="over">
-            <span className="rest-label" role="status">
+            <span className="rest-label" aria-hidden="true">
               Rest over
             </span>
             <span className="rest-clock" role="timer" aria-label="Rest over by">

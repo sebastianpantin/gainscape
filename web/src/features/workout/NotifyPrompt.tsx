@@ -45,7 +45,7 @@ export function NotifyPrompt({ userId, onAnswered }: NotifyPromptProps) {
     <section className="notify-prompt" aria-label="Rest notifications">
       <p>Get a buzz when rest ends, even with the screen locked?</p>
       <span className="row">
-        <button className="button primary" type="button" onClick={() => void turnOn()}>
+        <button className="button" type="button" onClick={() => void turnOn()}>
           Turn on
         </button>
         <button className="button" type="button" onClick={answer}>

@@ -45,7 +45,10 @@ export function challengeStartNoticeText(outcome: StartOutcome): string | null {
     : null;
 }
 
-export function syncProblemText(lastProblem: string, waitMs: number | undefined): string {
+export function syncProblemText(lastProblem: string, waitMs: number | undefined, offline = false): string {
+  if (lastProblem !== RATE_LIMITED_CODE && offline) {
+    return "You're offline. This workout is saved on this device and syncs when you reconnect.";
+  }
   if (lastProblem !== RATE_LIMITED_CODE) {
     return "Couldn't reach the server. Retrying while Train is open — your workout is saved on this device.";
   }

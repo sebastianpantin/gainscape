@@ -101,11 +101,11 @@ function useRevealPlayback(
         event.target instanceof Element && event.target.closest(INTERACTIVE_ELEMENTS) !== null;
       if (skipsRevealOnKey({ key: event.key, onInteractiveElement })) skip();
     };
-    document.addEventListener('pointerdown', skip);
+    document.addEventListener('click', skip);
     document.addEventListener('keydown', skipOnKey);
     return () => {
       clearTimeout(settle);
-      document.removeEventListener('pointerdown', skip);
+      document.removeEventListener('click', skip);
       document.removeEventListener('keydown', skipOnKey);
     };
   }, [plays, phase, settledAfterMs, skip]);
@@ -412,46 +412,49 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           {failReason && <p className="muted">{failReason}</p>}
         </section>
       )}
-      <ul className="panel reveal-list" aria-label="XP gained">
-        {skillsWithXp.map((skill, index) => {
-          const gain = summary.xpBySkill[skill.key];
-          const levelUp = leveledUp.get(skill.key);
-          const xpAfter = xpBySkillId?.get(skill.id);
-          const challengeBonus = bonusText('Challenge', summary.challengeBonusBySkill, skill.key);
-          const gearBonus = bonusText('Gear', summary.gearBonusBySkill, skill.key);
-          return (
-            <li
-              key={skill.key}
-              className="skill-gain rise"
-              style={{ animationDelay: `${timeline.skillDelaysS[index] ?? 0}s` }}
-            >
-              <SkillIcon skillKey={skill.key} />
-              <div className="skill-gain-body">
-                <div className="row spread">
-                  <span>
-                    {skill.name}: <strong>+{formatXp(gain)} XP</strong>
-                  </span>
-                  {levelUp ? (
-                    <span className="accent-text tiny">lvl {levelUp.to} ▲</span>
-                  ) : (
-                    xpAfter !== undefined && <span className="muted tiny">lvl {levelProgress(xpAfter).level}</span>
+      <section className="panel stack">
+        <h2>XP gained</h2>
+        <ul className="reveal-list" aria-label="XP gained">
+          {skillsWithXp.map((skill, index) => {
+            const gain = summary.xpBySkill[skill.key];
+            const levelUp = leveledUp.get(skill.key);
+            const xpAfter = xpBySkillId?.get(skill.id);
+            const challengeBonus = bonusText('Challenge', summary.challengeBonusBySkill, skill.key);
+            const gearBonus = bonusText('Gear', summary.gearBonusBySkill, skill.key);
+            return (
+              <li
+                key={skill.key}
+                className="skill-gain rise"
+                style={{ animationDelay: `${timeline.skillDelaysS[index] ?? 0}s` }}
+              >
+                <SkillIcon skillKey={skill.key} />
+                <div className="skill-gain-body">
+                  <div className="row spread">
+                    <span>
+                      {skill.name}: <strong>+{formatXp(gain)} XP</strong>
+                    </span>
+                    {levelUp ? (
+                      <span className="accent-text tiny">lvl {levelUp.to} ▲</span>
+                    ) : (
+                      xpAfter !== undefined && <span className="muted tiny">lvl {levelProgress(xpAfter).level}</span>
+                    )}
+                  </div>
+                  {challengeBonus && <span className="muted tiny">{challengeBonus}</span>}
+                  {gearBonus && <span className="muted tiny">{gearBonus}</span>}
+                  {xpAfter !== undefined && (
+                    <GainBar
+                      skillName={skill.name}
+                      xpAfter={xpAfter}
+                      gain={gain}
+                      delaySeconds={timeline.barDelaysS[index] ?? 0}
+                    />
                   )}
                 </div>
-                {challengeBonus && <span className="muted tiny">{challengeBonus}</span>}
-                {gearBonus && <span className="muted tiny">{gearBonus}</span>}
-                {xpAfter !== undefined && (
-                  <GainBar
-                    skillName={skill.name}
-                    xpAfter={xpAfter}
-                    gain={gain}
-                    delaySeconds={timeline.barDelaysS[index] ?? 0}
-                  />
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
       {summary.levelUps.length > 0 && (
         <section className="panel stack level-ups pop" style={{ animationDelay: `${timeline.levelUpDelayS ?? 0}s` }}>
           <h2 className="row">
@@ -471,31 +474,30 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         </section>
       )}
       {summary.prs.length > 0 && (
-        <ul
-          className="panel record-list rise"
-          aria-label="New records"
-          style={{ animationDelay: `${timeline.recordsDelayS ?? 0}s` }}
-        >
-          {summary.prs.map((record, index) => {
-            const described = describeRecord(
-              record,
-              exercises.find((exercise) => exercise.id === record.exerciseId),
-              unitPref,
-            );
-            return (
-              <li key={`${record.exerciseId}-${index}`}>
-                <TrophyIcon />
-                <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
-                  <span className="muted tiny">New record</span>
-                  <span>
-                    <span className="pixel">{described.headline}</span>{' '}
-                    <span className="muted">{described.previous}</span>
+        <section className="panel stack rise" style={{ animationDelay: `${timeline.recordsDelayS ?? 0}s` }}>
+          <h2>New records</h2>
+          <ul className="record-list" aria-label="New records">
+            {summary.prs.map((record, index) => {
+              const described = describeRecord(
+                record,
+                exercises.find((exercise) => exercise.id === record.exerciseId),
+                unitPref,
+              );
+              return (
+                <li key={`${record.exerciseId}-${index}`}>
+                  <TrophyIcon />
+                  <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
+                    <span className="muted tiny">New record</span>
+                    <span>
+                      <span className="pixel">{described.headline}</span>{' '}
+                      <span className="muted">{described.previous}</span>
+                    </span>
                   </span>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
       {questReveal && <QuestPanel reveal={questReveal} delayS={timeline.lootDelayS} />}
       <LootPanel userId={userId} drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />

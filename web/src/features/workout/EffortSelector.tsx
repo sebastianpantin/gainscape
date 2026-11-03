@@ -1,5 +1,7 @@
 import type { EffortInput } from '@domain/types.ts';
+import { type KeyboardEvent } from 'react';
 import type { EffortInputMode } from '../../lib/profile/profile.ts';
+import { arrowedIndex } from '../../lib/ui/radio-group-rules.ts';
 import { EFFORT_LEVEL_LABELS, EFFORT_LEVELS } from '../../lib/workout/effort-labels.ts';
 
 interface EffortOption {
@@ -51,6 +53,19 @@ interface EffortSelectorProps {
 
 export function EffortSelector({ mode, selected, assumed = null, retapClears = true, onSelect }: EffortSelectorProps) {
   const shownMode = selected === null || selected.type === 'cardio' ? mode : selected.type;
+  const options = OPTIONS[shownMode];
+  const checkedIndex = options.findIndex((option) => sameEffort(selected, option.effort));
+  const assumedIndex = options.findIndex((option) => sameEffort(assumed, option.effort));
+  const tabStop = Math.max(0, checkedIndex === -1 ? assumedIndex : checkedIndex);
+
+  const moveWithArrows = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const next = arrowedIndex(event.key, index, options.length);
+    if (next === null) return;
+    event.preventDefault();
+    onSelect(options[next].effort);
+    event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
+  };
+
   return (
     <div className={`effort-selector ${shownMode}`} role="radiogroup" aria-label={GROUP_LABELS[shownMode]}>
       {shownMode !== 'level' && (
@@ -58,7 +73,7 @@ export function EffortSelector({ mode, selected, assumed = null, retapClears = t
           {shownMode === 'rir' ? 'RIR' : 'RPE'}
         </span>
       )}
-      {OPTIONS[shownMode].map((option) => {
+      {options.map((option, index) => {
         const checked = sameEffort(selected, option.effort);
         const isAssumed = selected === null && sameEffort(assumed, option.effort);
         return (
@@ -70,6 +85,8 @@ export function EffortSelector({ mode, selected, assumed = null, retapClears = t
             aria-label={option.accessibleName === option.label ? undefined : option.accessibleName}
             aria-description={isAssumed ? 'Assumed from your strength' : undefined}
             className={isAssumed ? 'button chip assumed' : 'button chip'}
+            tabIndex={index === tabStop ? 0 : -1}
+            onKeyDown={(event) => moveWithArrows(event, index)}
             onClick={() => {
               if (!checked) onSelect(option.effort);
               else if (retapClears) onSelect(null);

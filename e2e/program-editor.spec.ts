@@ -255,6 +255,23 @@ test('removing a day acts at once, moves focus to the next day and offers an und
   await expect(day(page, 3)).toBeVisible();
 });
 
+test('removing a planned exercise acts at once and offers an undo', async ({ page }) => {
+  await register(page, uniqueUsername('pe_ex_undo'));
+  await copyTemplate(page, 'Full Body 2x');
+  const before = await plannedExercises(page, 1).count();
+  const first = plannedExercises(page, 1).first();
+  const name = (await first.getByRole('button', { name: /^Remove / }).getAttribute('aria-label'))!.replace(
+    'Remove ',
+    '',
+  );
+
+  await first.getByRole('button', { name: `Remove ${name}`, exact: true }).click();
+  await expect(plannedExercises(page, 1)).toHaveCount(before - 1);
+  await page.getByRole('status').getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(plannedExercises(page, 1)).toHaveCount(before);
+  await expect(plannedExercises(page, 1).first()).toContainText(name);
+});
+
 test('add, rename, reorder and remove days and exercises, then edit the saved program again', async ({ page }) => {
   const username = uniqueUsername('pe');
   await register(page, username);

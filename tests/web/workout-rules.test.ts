@@ -27,6 +27,12 @@ describe('syncProblemText', () => {
     );
   });
 
+  it('says the device is offline and that the workout syncs on reconnect', () => {
+    expect(syncProblemText('offline', 2_000, true)).toBe(
+      "You're offline. This workout is saved on this device and syncs when you reconnect.",
+    );
+  });
+
   it('never shows the raw problem code', () => {
     for (const code of ['offline', 'Failed to fetch', 'internal_error', 'storage_error'])
       expect(syncProblemText(code, 2_000)).not.toContain(code);

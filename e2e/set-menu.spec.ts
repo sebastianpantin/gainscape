@@ -107,6 +107,25 @@ test('a set removed from the keyboard keeps its Undo until dismissed', async ({ 
   await expect(page.getByRole('status').getByText(`Removed set 2 of ${BENCH}.`)).toHaveCount(0);
 });
 
+test('effort chips are one tab stop that arrow keys move through', async ({ page }) => {
+  await register(page, uniqueUsername('menu_effort_keys'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const card = await addExercise(page, 'bench', BENCH);
+  const effort = setRow(card, 1).getByRole('radiogroup', { name: 'Effort' });
+  const hard = effort.getByRole('radio', { name: 'Hard' });
+  const nearFail = effort.getByRole('radio', { name: 'Near fail' });
+
+  await hard.click();
+  await expect(effort.locator('[tabindex="0"]')).toHaveCount(1);
+  await expect(hard).toHaveAttribute('tabindex', '0');
+  await hard.press('ArrowRight');
+  await expect(nearFail).toHaveAttribute('aria-checked', 'true');
+  await expect(nearFail).toBeFocused();
+  await nearFail.press('ArrowLeft');
+  await expect(hard).toHaveAttribute('aria-checked', 'true');
+  await expect(hard).toBeFocused();
+});
+
 test('tapping the chosen effort again keeps it, and the set menu clears it', async ({ page }) => {
   await register(page, uniqueUsername('menu_effort'));
   await page.getByRole('button', { name: 'Start workout' }).click();

@@ -20,6 +20,22 @@ function repsOf(row: Locator): Locator {
   return row.getByRole('spinbutton', { name: /^Reps, set \d+$/ });
 }
 
+test('a weight far above last time asks to be checked', async ({ page }) => {
+  await register(page, uniqueUsername('ls_check'));
+  await logWorkout(page, () => logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 60, reps: 5 }]));
+
+  await openTab(page, 'Train');
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const bench = await addExercise(page, 'bench', 'Barbell Bench Press');
+  const first = setRow(bench, 1);
+  const warning = 'Much heavier than last time (60 kg). Check the weight?';
+  await weightOf(first).fill('600');
+  await expect(first.getByText(warning, { exact: true })).toBeVisible();
+  await expect(weightOf(first)).toHaveAccessibleDescription(warning);
+  await weightOf(first).fill('65');
+  await expect(first.getByText(warning, { exact: true })).toHaveCount(0);
+});
+
 test('each set compares with last session’s set and a planned set fills it in one tap', async ({ page }) => {
   await register(page, uniqueUsername('ls'));
   await logWorkout(page, () =>

@@ -145,6 +145,20 @@ export function removePlannedExercise(doc: ProgramDoc, dayIndex: number, exercis
   }));
 }
 
+export function restorePlannedExercise(
+  doc: ProgramDoc,
+  dayId: string,
+  exerciseIndex: number,
+  planned: PlannedExercise,
+): ProgramDoc {
+  const dayIndex = doc.days.findIndex((day) => day.id === dayId);
+  if (dayIndex === -1) return doc;
+  return updateDayAt(doc, dayIndex, (day) => ({
+    ...day,
+    exercises: [...day.exercises.slice(0, exerciseIndex), planned, ...day.exercises.slice(exerciseIndex)],
+  }));
+}
+
 export function addPlannedExercise(doc: ProgramDoc, dayIndex: number, exerciseId: string): ProgramDoc {
   return updateDayAt(doc, dayIndex, (day) => ({
     ...day,

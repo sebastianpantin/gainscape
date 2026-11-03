@@ -212,7 +212,7 @@ export function fillWorkingSets(draft: WorkoutDraft, exerciseIndex: number, coun
   return updateExerciseAt(draft, exerciseIndex, (exercise) => {
     if (exercise.modality !== 'lift' || !canQuickFill(exercise)) return exercise;
     const workingSets = exercise.sets.filter((set) => !set.isWarmup);
-    const filled = exercise.sets.map((set) => (set.isWarmup ? set : { ...set, reps, done: true }));
+    const filled = exercise.sets.map((set) => (set.isWarmup || set.done ? set : { ...set, reps, done: true }));
     const { weightKg } = nextSetValues(workingSets.at(-1), exercise.loadType);
     const addedCount = Math.min(roomForSets(draft), Math.max(0, count - workingSets.length));
     const added = Array.from({ length: addedCount }, (): DraftSet => ({
