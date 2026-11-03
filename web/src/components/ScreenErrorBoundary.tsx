@@ -2,24 +2,24 @@ import { Component, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface BoundaryProps {
-  pathname: string;
+  locationKey: string;
   children: ReactNode;
 }
 
 interface BoundaryState {
   failed: boolean;
-  pathname: string;
+  locationKey: string;
 }
 
 class PathErrorBoundary extends Component<BoundaryProps, BoundaryState> {
-  state: BoundaryState = { failed: false, pathname: this.props.pathname };
+  state: BoundaryState = { failed: false, locationKey: this.props.locationKey };
 
   static getDerivedStateFromError(): Partial<BoundaryState> {
     return { failed: true };
   }
 
   static getDerivedStateFromProps(props: BoundaryProps, state: BoundaryState): BoundaryState | null {
-    return props.pathname === state.pathname ? null : { failed: false, pathname: props.pathname };
+    return props.locationKey === state.locationKey ? null : { failed: false, locationKey: props.locationKey };
   }
 
   render() {
@@ -45,6 +45,6 @@ export function ScreenLoadProblem() {
 }
 
 export function ScreenErrorBoundary({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
-  return <PathErrorBoundary pathname={pathname}>{children}</PathErrorBoundary>;
+  const { key: locationKey } = useLocation();
+  return <PathErrorBoundary locationKey={locationKey}>{children}</PathErrorBoundary>;
 }

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { addToast, MAX_SHOWN_TOASTS, type ShownToast, toastDurationMs } from '../../web/src/lib/ui/toast-rules.ts';
+import {
+  addToast,
+  MAX_SHOWN_TOASTS,
+  type ShownToast,
+  toastDurationMs,
+  toastsAfterLeaving,
+} from '../../web/src/lib/ui/toast-rules.ts';
 
 function toast(id: number, withAction: boolean): ShownToast {
   return {
@@ -46,5 +52,17 @@ describe('addToast', () => {
     expect(next).toHaveLength(MAX_SHOWN_TOASTS);
     expect(next[0].id).toBe(2);
     expect(next.at(-1)?.id).toBe(MAX_SHOWN_TOASTS + 1);
+  });
+});
+
+describe('toastsAfterLeaving', () => {
+  it('drops toasts whose action belongs to the screen left behind and keeps plain messages', () => {
+    const plain = toast(1, false);
+    expect(toastsAfterLeaving([plain, toast(2, true)])).toEqual([plain]);
+  });
+
+  it('keeps the same list when nothing changes', () => {
+    const shown = [toast(1, false)];
+    expect(toastsAfterLeaving(shown)).toBe(shown);
   });
 });

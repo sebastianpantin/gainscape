@@ -1,6 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type ToastAction, ToastContext } from '../lib/ui/toast.ts';
-import { addToast, type ShownToast, toastDurationMs } from '../lib/ui/toast-rules.ts';
+import { useLocation } from 'react-router-dom';
+import { addToast, type ShownToast, toastDurationMs, toastsAfterLeaving } from '../lib/ui/toast-rules.ts';
 import { useLastInputWasKeyboard } from '../lib/ui/use-last-input-was-keyboard.ts';
 
 interface ToastItemProps {
@@ -32,6 +33,7 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
         <button
           className="button link"
           type="button"
+          aria-label={`${action.label}: ${text}`}
           onClick={() => {
             action.onAct();
             onClose(id);
@@ -41,7 +43,7 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
         </button>
       )}
       {duration === null && (
-        <button className="button link" type="button" onClick={() => onClose(id)}>
+        <button className="button link" type="button" aria-label={`Dismiss: ${text}`} onClick={() => onClose(id)}>
           Dismiss
         </button>
       )}
@@ -70,6 +72,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const dismissToast = useCallback(() => setShown([]), []);
   const closeToast = useCallback((id: number) => setShown((current) => current.filter((toast) => toast.id !== id)), []);
   const toasts = useMemo(() => ({ showToast, dismissToast }), [showToast, dismissToast]);
+  const { pathname } = useLocation();
+  const shownOn = useRef(pathname);
+
+  useEffect(() => {
+    if (shownOn.current === pathname) return;
+    shownOn.current = pathname;
+    setShown(toastsAfterLeaving);
+  }, [pathname]);
 
   return (
     <ToastContext.Provider value={toasts}>

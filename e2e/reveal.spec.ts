@@ -12,7 +12,7 @@ async function recordGainBarLabels(page: Page): Promise<void> {
     const log = window as unknown as GainBarLog;
     log.gainBarLabels = [];
     const record = () => {
-      const label = document.querySelector('[aria-label="XP gained"] [role="img"]')?.getAttribute('aria-label');
+      const label = document.querySelector('.reveal-list [role="img"]')?.getAttribute('aria-label');
       if (label && log.gainBarLabels.at(-1) !== label) log.gainBarLabels.push(label);
     };
     new MutationObserver(record).observe(document.body, {

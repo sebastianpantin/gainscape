@@ -85,7 +85,10 @@ test('the workout page is titled by its date, undoing edits offers an undo and d
   await page.getByRole('button', { name: 'Undo my changes' }).click();
   await expect(reps).toHaveValue('5');
   await expect(page.locator('body')).not.toBeFocused();
-  await page.getByRole('status').getByRole('button', { name: 'Undo', exact: true }).click();
+  await page
+    .getByRole('status')
+    .getByRole('button', { name: /^Undo: / })
+    .click();
   await expect(reps).toHaveValue('8');
   await page.getByRole('button', { name: 'Undo my changes' }).click();
 
@@ -290,6 +293,9 @@ test('re-finishing a workout that was already saved shows the summary and says t
 
   await page.getByRole('link', { name: 'Open this workout' }).click();
   await expect(page).toHaveURL(new RegExp(`/collection/history/${sessionId}$`));
+  await page.getByRole('button', { name: '‹ Back', exact: true }).click();
+  await expect(page).not.toHaveURL(/\/reveal$/);
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toHaveCount(0);
 });
 
 test('a save that races an edit from another device keeps both changes after review', async ({ page }) => {

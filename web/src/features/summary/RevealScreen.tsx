@@ -349,7 +349,11 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const unappliedNotice = unappliedText && (
     <p className="notice" role="status">
       {unappliedText}{' '}
-      {!summary.historyOnly && <Link to={`/collection/history/${summary.sessionId}`}>Open this workout</Link>}
+      {!summary.historyOnly && (
+        <Link to={`/collection/history/${summary.sessionId}`} replace>
+          Open this workout
+        </Link>
+      )}
     </p>
   );
 

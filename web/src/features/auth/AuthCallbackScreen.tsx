@@ -83,7 +83,8 @@ function PasswordFields({
   const [passwordLeft, setPasswordLeft] = useState(false);
   const [repeatLeft, setRepeatLeft] = useState(false);
   const problem = passwordLeft && password.length > 0 ? passwordProblem(password) : null;
-  const repeatProblem = repeatLeft && repeat.length > 0 && repeat !== password ? "The passwords don't match." : null;
+  const repeatTyped = repeatLeft || (password.length > 0 && repeat.length >= password.length);
+  const repeatProblem = repeatTyped && repeat.length > 0 && repeat !== password ? "The passwords don't match." : null;
   return (
     <>
       <label className="field">

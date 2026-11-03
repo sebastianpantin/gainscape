@@ -23,3 +23,7 @@ export function toastDurationMs(text: string, hasAction = false, raisedFromKeybo
 export function addToast(shown: readonly ShownToast[], next: ShownToast): ShownToast[] {
   return [...shown.filter((toast) => toast.action !== null), next].slice(-MAX_SHOWN_TOASTS);
 }
+
+export function toastsAfterLeaving(shown: ShownToast[]): ShownToast[] {
+  return shown.some((toast) => toast.action !== null) ? shown.filter((toast) => toast.action === null) : shown;
+}
