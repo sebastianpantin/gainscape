@@ -216,6 +216,7 @@ export function SetRow({
   const calculatorId = useId();
   const checkId = useId();
   const checkText = last === null ? null : implausibleChangeText(set, last, loadType, unit);
+  const checkDescribedBy = checkText ? checkId : undefined;
   const showBackoff = backoff !== null && !(set.weightKg === backoff.weightKg && set.reps === backoff.reps);
   const amrapBadge = amrapBadgeOf(set.prescription);
   const marked = amrapBadge !== null || markers.length > 0 || barbell !== null;
@@ -247,7 +248,7 @@ export function SetRow({
         onChange={(weightKg) => onChange({ weightKg })}
         setNumber={setNumber}
         withStepper
-        describedBy={checkText ? checkId : undefined}
+        describedBy={checkDescribedBy}
       />
       <div className="reps-field">
         <RepsField
@@ -255,7 +256,7 @@ export function SetRow({
           onChange={(reps) => onChange({ reps })}
           setNumber={setNumber}
           onDone={() => doneButton.current?.focus()}
-          describedBy={checkText ? checkId : undefined}
+          describedBy={checkDescribedBy}
         />
       </div>
       <DoneToggle done={set.done} label={doneLabel} drop={drop} onToggle={onToggleDone} buttonRef={doneButton} />

@@ -1,7 +1,7 @@
 import { type UseQueryResult, useQuery } from '@tanstack/react-query';
 import { levelProgress } from '@domain/index.ts';
 import type { DropSummary } from '@domain/types.ts';
-import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CountUp } from '../../components/CountUp.tsx';
 import { ItemIcon, LevelUpIcon, LootChestIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
@@ -307,6 +307,8 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const sessionId = summary?.sessionId;
   const timeline = revealTimeline(revealShape(summary));
   const title = useRef<HTMLHeadingElement>(null);
+  const xpHeadingId = useId();
+  const recordsHeadingId = useId();
   const { phase, skip } = useRevealPlayback(userId, timeline, title, playsReveal(summary));
 
   useEffect(() => {
@@ -413,8 +415,8 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         </section>
       )}
       <section className="panel stack">
-        <h2>XP gained</h2>
-        <ul className="reveal-list" aria-label="XP gained">
+        <h2 id={xpHeadingId}>XP gained</h2>
+        <ul className="reveal-list" aria-labelledby={xpHeadingId}>
           {skillsWithXp.map((skill, index) => {
             const gain = summary.xpBySkill[skill.key];
             const levelUp = leveledUp.get(skill.key);
@@ -475,8 +477,8 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       )}
       {summary.prs.length > 0 && (
         <section className="panel stack rise" style={{ animationDelay: `${timeline.recordsDelayS ?? 0}s` }}>
-          <h2>New records</h2>
-          <ul className="record-list" aria-label="New records">
+          <h2 id={recordsHeadingId}>New records</h2>
+          <ul className="record-list" aria-labelledby={recordsHeadingId}>
             {summary.prs.map((record, index) => {
               const described = describeRecord(
                 record,

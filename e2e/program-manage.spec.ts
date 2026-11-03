@@ -1,4 +1,5 @@
 import { expect, test } from './support/fixtures.ts';
+import { holdRequests, rpc } from './support/network.ts';
 import { nativeDialogsOf, openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentOf } from './support/db.ts';
 import {
@@ -136,12 +137,7 @@ test('stop following a program through an in-app confirmation dialog', async ({ 
   await expect(dialog).toHaveCount(0);
   await expect.poll(() => activeEnrollmentOf(username)).not.toBeNull();
 
-  let release: () => void = () => undefined;
-  const held = new Promise<void>((resolve) => (release = resolve));
-  await page.route('**/rest/v1/rpc/end_enrollment', async (route) => {
-    await held;
-    await route.continue();
-  });
+  const release = await holdRequests(page, rpc('end_enrollment'));
   await stopFollowing.click();
   await dialog.getByRole('button', { name: 'Stop following', exact: true }).click();
   await expect(dialog.getByRole('button', { name: 'Stopping…', exact: true })).toBeDisabled();

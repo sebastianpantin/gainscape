@@ -1,7 +1,6 @@
 import type { EffortInput } from '@domain/types.ts';
-import { type KeyboardEvent } from 'react';
 import type { EffortInputMode } from '../../lib/profile/profile.ts';
-import { arrowedIndex } from '../../lib/ui/radio-group-rules.ts';
+import { moveRadioWithArrows } from '../../components/radio-arrows.ts';
 import { EFFORT_LEVEL_LABELS, EFFORT_LEVELS } from '../../lib/workout/effort-labels.ts';
 
 interface EffortOption {
@@ -58,14 +57,6 @@ export function EffortSelector({ mode, selected, assumed = null, retapClears = t
   const assumedIndex = options.findIndex((option) => sameEffort(assumed, option.effort));
   const tabStop = Math.max(0, checkedIndex === -1 ? assumedIndex : checkedIndex);
 
-  const moveWithArrows = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const next = arrowedIndex(event.key, index, options.length);
-    if (next === null) return;
-    event.preventDefault();
-    onSelect(options[next].effort);
-    event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
-  };
-
   return (
     <div className={`effort-selector ${shownMode}`} role="radiogroup" aria-label={GROUP_LABELS[shownMode]}>
       {shownMode !== 'level' && (
@@ -86,7 +77,9 @@ export function EffortSelector({ mode, selected, assumed = null, retapClears = t
             aria-description={isAssumed ? 'Assumed from your strength' : undefined}
             className={isAssumed ? 'button chip assumed' : 'button chip'}
             tabIndex={index === tabStop ? 0 : -1}
-            onKeyDown={(event) => moveWithArrows(event, index)}
+            onKeyDown={(event) =>
+              moveRadioWithArrows(event, index, options.length, (next) => onSelect(options[next].effort))
+            }
             onClick={() => {
               if (!checked) onSelect(option.effort);
               else if (retapClears) onSelect(null);

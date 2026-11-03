@@ -24,6 +24,11 @@ type Step =
   | { kind: 'email-changed' }
   | { kind: 'failed'; problem: string };
 
+const SUBMIT_LABELS: Record<'choose-password' | 'new-password', string> = {
+  'choose-password': 'Save and continue',
+  'new-password': 'Set new password',
+};
+
 const USERNAME_PROBLEMS: Record<string, string> = {
   taken: 'That username is taken.',
   invalid: 'Use 3–20 characters: a–z, 0–9 and _.',
@@ -250,7 +255,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
             </p>
           )}
           <button className="button primary big" type="submit" disabled={busy || !passwordReady}>
-            {busy ? 'Saving…' : step.kind === 'choose-password' ? 'Save and continue' : 'Set new password'}
+            {busy ? 'Saving…' : SUBMIT_LABELS[step.kind]}
           </button>
           <button className="button link" type="button" onClick={finish}>
             Not now

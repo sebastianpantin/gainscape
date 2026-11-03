@@ -22,7 +22,7 @@ import type { WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 
 describe('syncProblemText', () => {
   it('names the network problem, says retries run while Train is open and that the workout is kept', () => {
-    expect(syncProblemText('offline', 2_000)).toBe(
+    expect(syncProblemText('offline', 2_000, false)).toBe(
       "Couldn't reach the server. Retrying while Train is open — your workout is saved on this device.",
     );
   });
@@ -35,19 +35,19 @@ describe('syncProblemText', () => {
 
   it('never shows the raw problem code', () => {
     for (const code of ['offline', 'Failed to fetch', 'internal_error', 'storage_error'])
-      expect(syncProblemText(code, 2_000)).not.toContain(code);
+      expect(syncProblemText(code, 2_000, false)).not.toContain(code);
   });
 
   it('says when a long sync limit wait ends', () => {
-    expect(syncProblemText('rate_limited', 5 * 60_000)).toBe(
+    expect(syncProblemText('rate_limited', 5 * 60_000, false)).toBe(
       "Sync limit reached; this workout will sync in 5 min. It's saved on this device.",
     );
   });
 
   it('says a short or unknown sync limit wait retries shortly', () => {
     const shortly = "Sync limit reached; retrying shortly. It's saved on this device.";
-    expect(syncProblemText('rate_limited', 60_000)).toBe(shortly);
-    expect(syncProblemText('rate_limited', undefined)).toBe(shortly);
+    expect(syncProblemText('rate_limited', 60_000, false)).toBe(shortly);
+    expect(syncProblemText('rate_limited', undefined, false)).toBe(shortly);
   });
 });
 

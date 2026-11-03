@@ -6,7 +6,7 @@ function toast(id: number, withAction: boolean): ShownToast {
     id,
     text: `Toast ${id}`,
     action: withAction ? { label: 'Undo', onAct: () => undefined } : null,
-    heldForKeyboard: false,
+    raisedFromKeyboard: false,
   };
 }
 

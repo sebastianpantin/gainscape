@@ -139,7 +139,9 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
         <ConfirmDialog
           title={skipDialogTitle(definition, position)}
           confirmLabel={SKIP_CONFIRM_LABEL}
-          busy={skipping || offline}
+          busy={skipping}
+          busyLabel="Skipping…"
+          disabled={offline}
           onConfirm={skip}
           onCancel={() => setConfirmingSkip(false)}
         />

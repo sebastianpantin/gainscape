@@ -11,7 +11,7 @@ export interface ShownToast {
   id: number;
   text: string;
   action: ToastAction | null;
-  heldForKeyboard: boolean;
+  raisedFromKeyboard: boolean;
 }
 
 export function toastDurationMs(text: string, hasAction = false, raisedFromKeyboard = false): number | null {

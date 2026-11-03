@@ -1,21 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type ToastAction, ToastContext } from '../lib/ui/toast.ts';
 import { addToast, type ShownToast, toastDurationMs } from '../lib/ui/toast-rules.ts';
-
-function useLastInputWasKeyboard() {
-  const keyboard = useRef(false);
-  useEffect(() => {
-    const fromKeyboard = () => (keyboard.current = true);
-    const fromPointer = () => (keyboard.current = false);
-    document.addEventListener('keydown', fromKeyboard, true);
-    document.addEventListener('pointerdown', fromPointer, true);
-    return () => {
-      document.removeEventListener('keydown', fromKeyboard, true);
-      document.removeEventListener('pointerdown', fromPointer, true);
-    };
-  }, []);
-  return keyboard;
-}
+import { useLastInputWasKeyboard } from '../lib/ui/use-last-input-was-keyboard.ts';
 
 interface ToastItemProps {
   toast: ShownToast;
@@ -24,8 +10,8 @@ interface ToastItemProps {
 
 function ToastItem({ toast, onClose }: ToastItemProps) {
   const [held, setHeld] = useState(false);
-  const { id, text, action, heldForKeyboard } = toast;
-  const duration = toastDurationMs(text, action !== null, heldForKeyboard);
+  const { id, text, action, raisedFromKeyboard } = toast;
+  const duration = toastDurationMs(text, action !== null, raisedFromKeyboard);
 
   useEffect(() => {
     if (held || duration === null) return;
@@ -71,7 +57,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback(
     (text: string, action?: ToastAction) => {
       lastId.current += 1;
-      const next = { id: lastId.current, text, action: action ?? null, heldForKeyboard: lastInputWasKeyboard.current };
+      const next = {
+        id: lastId.current,
+        text,
+        action: action ?? null,
+        raisedFromKeyboard: lastInputWasKeyboard.current,
+      };
       setShown((current) => addToast(current, next));
     },
     [lastInputWasKeyboard],

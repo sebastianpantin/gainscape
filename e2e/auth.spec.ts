@@ -1,5 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
+import { holdRequests } from './support/network.ts';
 import {
   definitionOf,
   emailOf,
@@ -85,12 +86,7 @@ test('signing in shows that it is working and clears the last problem', async ({
   await submitSignIn(page, emailOf(username), 'not-the-password');
   await expect(page.getByText('Wrong email or password.')).toBeVisible();
 
-  let release: () => void = () => undefined;
-  const held = new Promise<void>((resolve) => (release = resolve));
-  await page.route('**/auth/v1/token**', async (route) => {
-    await held;
-    await route.continue();
-  });
+  const release = await holdRequests(page, /\/auth\/v1\/token/);
   await page.getByLabel('Password').fill(TEST_PASSWORD);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Signing in…', exact: true })).toBeDisabled();

@@ -87,9 +87,8 @@ interface FriendsScreenProps {
 }
 
 function OwnUsername({ userId }: { userId: string }) {
-  const profile = useQuery(profileQuery(userId));
+  const { data: username } = useQuery({ ...profileQuery(userId), select: ({ loaded }) => loaded.username });
   const { showToast } = useToast();
-  const username = profile.data?.loaded.username;
   if (!username) return null;
   const copy = async () => {
     try {

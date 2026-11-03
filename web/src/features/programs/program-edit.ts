@@ -2,7 +2,7 @@ import { type LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { nameProblem, trimmedName } from '../../lib/names.ts';
 import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import type { Program, ProgramDoc } from '../../lib/programs/programs.ts';
-import { moved } from '../../lib/reorder.ts';
+import { insertedAt, moved } from '../../lib/reorder.ts';
 import { KG_PER_LB } from '../../lib/units.ts';
 import { roundTo } from '@domain/math.ts';
 import type { PlannedExercise, ProgressionKind } from '../../offline/draft-starts.ts';
@@ -65,7 +65,7 @@ export function removeDay(doc: ProgramDoc, dayIndex: number): ProgramDoc {
 }
 
 export function restoreDay(doc: ProgramDoc, dayIndex: number, day: EditorDay): ProgramDoc {
-  return { ...doc, days: [...doc.days.slice(0, dayIndex), day, ...doc.days.slice(dayIndex)] };
+  return { ...doc, days: insertedAt(doc.days, dayIndex, day) };
 }
 
 export function canAddDay(doc: ProgramDoc): boolean {
@@ -155,7 +155,7 @@ export function restorePlannedExercise(
   if (dayIndex === -1) return doc;
   return updateDayAt(doc, dayIndex, (day) => ({
     ...day,
-    exercises: [...day.exercises.slice(0, exerciseIndex), planned, ...day.exercises.slice(exerciseIndex)],
+    exercises: insertedAt(day.exercises, exerciseIndex, planned),
   }));
 }
 
