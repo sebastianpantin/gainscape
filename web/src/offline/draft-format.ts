@@ -77,6 +77,7 @@ export interface DraftSecondDay {
   sessionId: string;
   program: DraftProgram;
   programLabel: string;
+  sent?: true;
 }
 
 export interface DraftChallenge {

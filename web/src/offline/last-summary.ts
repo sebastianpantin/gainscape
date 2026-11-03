@@ -51,10 +51,15 @@ export function recallLastSummary(userId: string): RememberedSummary | null {
   }
 }
 
+export function summarySessionIds(summary: Pick<RememberedSummary, 'sessionId' | 'days'>): string[] {
+  return [...new Set([summary.sessionId, ...(summary.days ?? []).map((day) => day.sessionId)])];
+}
+
 export function forgetLastSummary(sessionIds: readonly string[]): void {
   try {
-    const cachedSessionId = rememberedEntry()?.summary?.sessionId;
-    if (cachedSessionId && sessionIds.includes(cachedSessionId)) sessionStorage.removeItem(LAST_SUMMARY_KEY);
+    const cached = rememberedEntry()?.summary;
+    if (cached && summarySessionIds(cached).some((id) => sessionIds.includes(id)))
+      sessionStorage.removeItem(LAST_SUMMARY_KEY);
   } catch {
     return;
   }

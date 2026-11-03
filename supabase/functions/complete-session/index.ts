@@ -214,10 +214,18 @@ function combinedResponse(responses: readonly CompleteSessionResponse[]): Comple
 async function completeSession(userId: string, payload: CompleteSessionPayload): Promise<CompleteSessionResponse> {
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId);
+    const days = dayPayloads(payload);
+    if (days.length === 1) {
+      const response = await completeDay(tx, userId, days[0], null);
+      return payload.secondDay === null ? response : combinedResponse([response]);
+    }
     const responses: CompleteSessionResponse[] = [];
-    for (const day of dayPayloads(payload))
+    for (const day of days) {
+      if ((await tombstoneOwner(tx, day.id)) === userId) continue;
       responses.push(await completeDay(tx, userId, day, responses.at(-1)?.completedAt ?? null));
-    return payload.secondDay === null ? responses[0] : combinedResponse(responses);
+    }
+    if (responses.length === 0) throw new HttpError(410, 'session_deleted');
+    return combinedResponse(responses);
   });
 }
 

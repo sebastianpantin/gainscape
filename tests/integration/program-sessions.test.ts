@@ -599,6 +599,32 @@ describe('complete-session with a second Day', () => {
     expect(response.body.days?.map((day: { programLinked: boolean }) => day.programLinked)).toEqual([true, false]);
   });
 
+  it('answers a resubmit after one Day was deleted with the Day that is left', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, mondaySquatSets(), [pressSet(0, 40, prescribed('wed-press:0', 40))]);
+    const first = await postCompleteSession(user.accessToken, payload);
+    expect(first.status, first.rawBody).toBe(200);
+    const deleted = await postFunction('delete-session', user.accessToken, { sessionId: payload.secondDay.id });
+    expect(deleted.status, deleted.rawBody).toBe(200);
+
+    const retry = await postCompleteSession(user.accessToken, payload);
+
+    expect(retry.status, retry.rawBody).toBe(200);
+    expect(retry.body.days?.map((day) => day.sessionId)).toEqual([payload.id]);
+  });
+
+  it('still answers 410 when every Day was deleted', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, mondaySquatSets(), [pressSet(0, 40, prescribed('wed-press:0', 40))]);
+    expect((await postCompleteSession(user.accessToken, payload)).status).toBe(200);
+    for (const sessionId of [payload.id, payload.secondDay.id])
+      expect((await postFunction('delete-session', user.accessToken, { sessionId })).status).toBe(200);
+
+    expect((await postCompleteSession(user.accessToken, payload)).status).toBe(410);
+  });
+
   it('returns 422 when the second Day reuses the first Session id', async () => {
     const user = await createTestUser();
     const enrollmentId = await enrollInMadcow(user);

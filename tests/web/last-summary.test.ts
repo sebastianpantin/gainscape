@@ -1,6 +1,11 @@
 import type { SessionSummary } from '@domain/types.ts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { forgetLastSummary, recallLastSummary, rememberLastSummary } from '../../web/src/offline/last-summary.ts';
+import {
+  forgetLastSummary,
+  recallLastSummary,
+  rememberLastSummary,
+  summarySessionIds,
+} from '../../web/src/offline/last-summary.ts';
 import { MemoryStorage } from './memory-storage.ts';
 
 const summary = {
@@ -76,6 +81,36 @@ describe('last summary', () => {
     expect(recallLastSummary(userId)).toEqual(summary);
     forgetLastSummary(['session-b', 'session-a']);
     expect(recallLastSummary(userId)).toBeNull();
+  });
+
+  it('forgets a summary of two Days when either Session is listed', () => {
+    const days = [
+      { sessionId: 'session-a', programLinked: true, completedAt: 'a' },
+      { sessionId: 'session-b', programLinked: true, completedAt: 'b' },
+    ];
+    rememberLastSummary(userId, { ...summary, days });
+    forgetLastSummary(['session-b']);
+    expect(recallLastSummary(userId)).toBeNull();
+  });
+
+  it('lists every Session a summary covers', () => {
+    expect(summarySessionIds(summary)).toEqual(['session-a']);
+    expect(
+      summarySessionIds({
+        ...summary,
+        sessionId: 'session-b',
+        days: [{ sessionId: 'session-b', programLinked: true, completedAt: 'b' }],
+      }),
+    ).toEqual(['session-b']);
+    expect(
+      summarySessionIds({
+        ...summary,
+        days: [
+          { sessionId: 'session-a', programLinked: true, completedAt: 'a' },
+          { sessionId: 'session-c', programLinked: true, completedAt: 'c' },
+        ],
+      }),
+    ).toEqual(['session-a', 'session-c']);
   });
 
   it('forgets a listed session whichever account remembered it', () => {

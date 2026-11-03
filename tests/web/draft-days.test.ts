@@ -5,6 +5,7 @@ import { MADCOW_5X5, madcowEnrollment, weekDay } from '../domain/program-fixture
 import { addExercise, insertWarmupDrills, removeExercise, toggleSetDone } from '../../web/src/offline/draft-edits.ts';
 import {
   canAddSecondDay,
+  canRemoveSecondDay,
   dayDrafts,
   dayNameOf,
   labelledDays,
@@ -288,5 +289,35 @@ describe('supersets across Days', () => {
     );
     const kept = parsed?.kind === 'draft' ? parsed.draft.exercises : [];
     expect(kept.filter((exercise) => exercise.modality === 'lift' && exercise.supersetId === 'across')).toEqual([]);
+  });
+});
+
+describe('guards on the second Day', () => {
+  it('keeps a second Day that was already sent to the server', () => {
+    const sent = { ...mondayAndWednesday(), secondDay: { ...mondayAndWednesday().secondDay!, sent: true as const } };
+    expect(withoutSecondDay(sent).removed).toBeNull();
+    expect(canRemoveSecondDay(sent)).toBe(false);
+    expect(canRemoveSecondDay(mondayAndWednesday())).toBe(true);
+  });
+
+  it('restores a removed Day only into the Draft it came from', () => {
+    const removed = withoutSecondDay(mondayAndWednesday());
+    const other = { ...removed.draft, sessionId: 'another-draft' };
+    expect(restoreSecondDay(other, removed.removed!)).toBe(other);
+    const freestyle = { ...removed.draft, program: null };
+    expect(restoreSecondDay(freestyle, removed.removed!)).toBe(freestyle);
+  });
+
+  it('refuses a Day whose sets do not fit in the workout', () => {
+    const full = {
+      ...monday(),
+      exercises: [
+        {
+          ...monday().exercises[0],
+          sets: Array.from({ length: 199 }, (_, index) => ({ ...monday().exercises[0].sets[0], id: `s${index}` })),
+        },
+      ],
+    } as WorkoutDraft;
+    expect(withSecondDay(full, WEDNESDAY, catalog, SECOND_SESSION_ID).draft).toBe(full);
   });
 });

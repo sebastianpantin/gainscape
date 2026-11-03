@@ -9,10 +9,12 @@ import {
 } from './draft-starts.ts';
 import { type DraftExercise, type DraftSecondDay, type WorkoutDraft } from './draft-format.ts';
 import { type SavedDay } from './last-summary.ts';
+import { roomForSets } from '../lib/workout/exercise-edit-rules.ts';
 
 export type DraftDay = 'first' | 'second';
 
 export interface RemovedSecondDay {
+  fromSessionId: string;
   secondDay: DraftSecondDay;
   exercises: DraftExercise[];
 }
@@ -44,6 +46,8 @@ export function withSecondDay(
   )
     return { draft, skippedExerciseIds: [] };
   const { exercises, skippedExerciseIds } = prescribedDayExercises(day, exercisesById);
+  if (exercises.reduce((count, exercise) => count + exercise.sets.length, 0) > roomForSets(draft))
+    return { draft, skippedExerciseIds: [] };
   return {
     draft: {
       ...draft,
@@ -62,16 +66,21 @@ function exercisesOf(draft: WorkoutDraft, day: DraftDay): DraftExercise[] {
   return draft.exercises.filter((exercise) => isInSecondDay(exercise) === (day === 'second'));
 }
 
+export function canRemoveSecondDay(draft: WorkoutDraft): boolean {
+  return draft.secondDay != null && draft.secondDay.sent !== true && draft.finishedAt === null;
+}
+
 export function withoutSecondDay(draft: WorkoutDraft): { draft: WorkoutDraft; removed: RemovedSecondDay | null } {
-  if (draft.secondDay == null) return { draft, removed: null };
+  if (!canRemoveSecondDay(draft) || draft.secondDay == null) return { draft, removed: null };
   return {
     draft: { ...draft, secondDay: null, exercises: exercisesOf(draft, 'first') },
-    removed: { secondDay: draft.secondDay, exercises: exercisesOf(draft, 'second') },
+    removed: { fromSessionId: draft.sessionId, secondDay: draft.secondDay, exercises: exercisesOf(draft, 'second') },
   };
 }
 
 export function restoreSecondDay(draft: WorkoutDraft, removed: RemovedSecondDay): WorkoutDraft {
-  if (draft.secondDay != null || draft.finishedAt !== null) return draft;
+  if (draft.sessionId !== removed.fromSessionId || !canAddSecondDay(draft)) return draft;
+  if (draft.program?.enrollmentId !== removed.secondDay.program.enrollmentId) return draft;
   return { ...draft, secondDay: removed.secondDay, exercises: [...draft.exercises, ...removed.exercises] };
 }
 

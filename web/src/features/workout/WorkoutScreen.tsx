@@ -21,7 +21,7 @@ import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { useOnboarding } from '../onboarding/use-onboarding.ts';
 import { useActiveProgram } from '../programs/use-active-program.ts';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
-import { recallLastSummary } from '../../offline/last-summary.ts';
+import { recallLastSummary, summarySessionIds } from '../../offline/last-summary.ts';
 import { CardioExerciseCard } from './CardioExerciseCard.tsx';
 import { ChallengeBanner } from './ChallengeBanner.tsx';
 import { liftEquipment } from './exercise-card-rules.ts';
@@ -55,7 +55,14 @@ import { WorkoutClock } from './WorkoutClock.tsx';
 import { AddProgramDay } from './AddProgramDay.tsx';
 import { useProgramDays } from './use-program-days.ts';
 import { type DraftExercise } from '../../offline/draft-format.ts';
-import { canAddSecondDay, type DraftDay, dayNameOf, draftTitle, exerciseDay } from '../../offline/draft-days.ts';
+import {
+  canAddSecondDay,
+  canRemoveSecondDay,
+  type DraftDay,
+  dayNameOf,
+  draftTitle,
+  exerciseDay,
+} from '../../offline/draft-days.ts';
 import { useWorkoutPreviews } from './use-workout-previews.ts';
 import { useWorkoutStart } from './use-workout-start.ts';
 import { workoutHelpKeys } from './workout-help.ts';
@@ -186,7 +193,8 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     markSynced,
     onSynced: (summary) => navigate('/reveal', { state: summary }),
     onSuperseded: (sessionId) => {
-      if (recallLastSummary(userId)?.sessionId === sessionId) navigate('/reveal');
+      const remembered = recallLastSummary(userId);
+      if (remembered && summarySessionIds(remembered).includes(sessionId)) navigate('/reveal');
       else void reload();
     },
     onDeleted: () => void reload('deleted'),
@@ -398,14 +406,16 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       {secondDayName !== null && (
         <div className="row spread">
           <h2>{secondDayName}</h2>
-          <button
-            className="button link"
-            type="button"
-            aria-label={`Remove ${secondDayName}`}
-            onClick={programDays.removeSecondDay}
-          >
-            Remove day
-          </button>
+          {canRemoveSecondDay(draft) && (
+            <button
+              className="button link"
+              type="button"
+              aria-label={`Remove ${secondDayName}`}
+              onClick={programDays.removeSecondDay}
+            >
+              Remove day
+            </button>
+          )}
         </div>
       )}
       {exercisesOfDay('second')}

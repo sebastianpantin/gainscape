@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
-import { finishWorkout, openTab, register, uniqueUsername } from './support/app.ts';
-import { sessionCount } from './support/db.ts';
+import { finishWorkout, logExercise, logWorkout, openLoot, openTab, register, uniqueUsername } from './support/app.ts';
+import { activeDropCount, sessionCount } from './support/db.ts';
 import {
   dayPicker,
   followProgram,
@@ -12,8 +12,12 @@ import {
 
 const MADCOW = 'Madcow 5x5';
 
-async function startMadcowMonday(page: Page, username: string): Promise<void> {
+async function startMadcowMonday(page: Page, username: string, before?: () => Promise<void>): Promise<void> {
   await register(page, username);
+  if (before) {
+    await logWorkout(page, before);
+    await openTab(page, 'Train');
+  }
   await followProgram(page, MADCOW, MADCOW_FIVE_RMS_KG);
   await programToday(page, MADCOW)
     .getByRole('button', { name: `Start: ${MADCOW} — W1 Day 1`, exact: true })
@@ -32,7 +36,9 @@ async function addWednesday(page: Page): Promise<void> {
 
 test('a program workout takes a second open day and saves one workout per day', async ({ page }) => {
   const username = uniqueUsername('two_days');
-  await startMadcowMonday(page, username);
+  await startMadcowMonday(page, username, () =>
+    logExercise(page, 'overhead', 'Overhead Press', [{ weightKg: 20, reps: 5 }]),
+  );
   await addWednesday(page);
 
   const main = page.getByRole('main');
@@ -44,7 +50,17 @@ test('a program workout takes a second open day and saves one workout per day', 
   await finishWorkout(page);
   await expect(page.getByRole('link', { name: 'Open W1 Day 1', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open W1 Day 2', exact: true })).toBeVisible();
-  await expect.poll(() => sessionCount(username)).toBe(2);
+  await expect.poll(() => sessionCount(username)).toBe(3);
+  const sessionIds = await Promise.all(
+    ['Open W1 Day 1', 'Open W1 Day 2'].map(async (name) =>
+      (await page.getByRole('link', { name, exact: true }).getAttribute('href'))!.split('/').at(-1)!,
+    ),
+  );
+  const dropsPerDay = await Promise.all(sessionIds.map((id) => activeDropCount(id)));
+  expect(dropsPerDay[1]).toBeGreaterThan(0);
+  await page.reload();
+  const loot = await openLoot(page);
+  await expect(loot.getByRole('listitem')).toHaveCount(dropsPerDay[0] + dropsPerDay[1]);
 
   await openTab(page, 'Train');
   const days = dayPicker(programToday(page, MADCOW));
