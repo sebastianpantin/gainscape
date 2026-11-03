@@ -6,6 +6,7 @@ interface ConfirmDialogProps {
   confirmLabel: string;
   cancelLabel?: string;
   busy?: boolean;
+  busyLabel?: string;
   danger?: boolean;
   children?: ReactNode;
   alternative?: { label: string; onChoose: () => void };
@@ -18,6 +19,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel = 'Cancel',
   busy = false,
+  busyLabel,
   danger = false,
   children,
   alternative,
@@ -54,7 +56,7 @@ export function ConfirmDialog({
           disabled={busy}
           onClick={onConfirm}
         >
-          {confirmLabel}
+          {busy && busyLabel ? busyLabel : confirmLabel}
         </button>
       </div>
     </dialog>

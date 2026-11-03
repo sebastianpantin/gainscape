@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chartLayout, chartSummary, niceTicks } from '../../web/src/lib/ui/line-chart-rules.ts';
+import { chartLayout, chartSummary, latestValueText, niceTicks } from '../../web/src/lib/ui/line-chart-rules.ts';
 
 const FRAME = { width: 200, height: 100, left: 20, right: 10, top: 10, bottom: 20 };
 
@@ -112,5 +112,28 @@ describe('chart summary', () => {
 
   it('leaves out a series with no points', () => {
     expect(chartSummary([{ name: 'e1RM', points: [] }], kg)).toBe('No data yet.');
+  });
+});
+
+describe('latest value text', () => {
+  const kg = (value: number) => `${value} kg`;
+
+  it('shows the last point of a series, so a sighted reader gets the current value', () => {
+    expect(
+      latestValueText(
+        {
+          name: 'e1RM',
+          points: [
+            { x: 0, y: 70 },
+            { x: 2, y: 85 },
+          ],
+        },
+        kg,
+      ),
+    ).toBe('85 kg');
+  });
+
+  it('shows nothing for a series with no points', () => {
+    expect(latestValueText({ name: 'e1RM', points: [] }, kg)).toBeNull();
   });
 });

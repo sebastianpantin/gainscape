@@ -36,6 +36,8 @@ const pairs: [string, string, number][] = [
   ['color-focus', 'color-background', 3],
   ['color-focus', 'color-panel', 3],
   ['color-input-border', 'color-parchment', 3],
+  ...SURFACES.map((surface): [string, string, number] => ['color-danger-fill', surface, 3]),
+  ...CONTROL_SURFACES.map((surface): [string, string, number] => ['color-control-border', surface, 3]),
 ];
 
 describe('colour contrast', () => {

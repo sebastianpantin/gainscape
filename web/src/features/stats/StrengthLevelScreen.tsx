@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { LineChart } from '../../components/LineChart.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
@@ -26,6 +25,7 @@ import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
 import { DotsCardMessage } from './DotsCardMessage.tsx';
 import { SbdTotalCard } from './SbdTotalCard.tsx';
+import { BackLink } from '../../components/BackLink.tsx';
 
 type ReadyDotsCard = Extract<DotsCard, { kind: 'ready' }>;
 
@@ -143,9 +143,7 @@ export function StrengthLevelScreen({ userId }: { userId: string }) {
 
   return (
     <main className="screen stack">
-      <Link className="back-link" to="/collection/stats">
-        ‹ Stats
-      </Link>
+      <BackLink parent="/collection/stats" />
       <h1 className="title">Strength level</h1>
       {loaded.status === 'loading' && <ListSkeleton />}
       {loaded.status === 'failed' && <ProblemWithRetry problem={loaded.problem} onRetry={retry} />}

@@ -66,7 +66,7 @@ test('keeping a friend after asking to remove them leaves the friendship in plac
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Remove friend' })).toBeFocused();
   await expect.poll(() => friendshipStatus(aliceName, bobName)).toBe('accepted');
-  await page.getByRole('link', { name: '‹ Friends' }).click();
+  await page.getByRole('button', { name: '‹ Back', exact: true }).click();
   await expect(page.getByRole('list', { name: 'Friends list' })).toContainText(bobName);
 });
 

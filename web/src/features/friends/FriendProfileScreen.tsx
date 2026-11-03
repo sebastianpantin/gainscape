@@ -25,6 +25,7 @@ import { RecordSlots } from '../collection/RecordSlots.tsx';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { ProfileWithTopSkills } from '../profile/ProfileWithTopSkills.tsx';
 import { messageOf } from '../../lib/error-text.ts';
+import { BackLink } from '../../components/BackLink.tsx';
 
 type ViewState =
   | { status: 'loading' }
@@ -89,9 +90,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
 
   return (
     <main className="screen stack">
-      <Link className="back-link" to="/friends">
-        ‹ Friends
-      </Link>
+      <BackLink parent="/friends" />
       {(state.status === 'loading' || state.status === 'failed') && <h1 className="title">Friend profile</h1>}
       {state.status === 'loading' && <ListSkeleton />}
       {state.status === 'failed' && <ProblemWithRetry problem={state.problem} onRetry={view.refetch} />}
@@ -141,6 +140,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
               confirmLabel="Remove for good"
               cancelLabel="Keep friend"
               busy={removing}
+              busyLabel="Removing…"
               danger
               onConfirm={() => void remove()}
               onCancel={() => {

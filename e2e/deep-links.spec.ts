@@ -34,6 +34,7 @@ test('an unknown path redirects a signed-in user to the Train screen', async ({ 
 
   await expect(page).toHaveURL(homeUrl(page));
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  await expect(page.getByRole('status').getByText("That page doesn't exist, so here is Train.")).toBeVisible();
 });
 
 test('an unknown path asks a signed-out visitor to sign in, then lands on the Train screen', async ({ page }) => {
@@ -188,6 +189,6 @@ test('Quests leads back to Skills', async ({ page }) => {
   await register(page, uniqueUsername('dl_quest'));
   await page.goto('/skills/quests');
   await expect(page.getByRole('heading', { level: 1, name: 'Quests', exact: true })).toBeVisible();
-  await page.getByRole('main').getByRole('link', { name: '‹ Skills', exact: true }).click();
+  await page.getByRole('main').getByRole('button', { name: '‹ Back', exact: true }).click();
   await expect(page).toHaveURL(/\/skills$/);
 });

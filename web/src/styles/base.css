@@ -418,7 +418,9 @@ a {
 }
 
 input[aria-invalid='true'] {
-  border-color: var(--color-danger);
+  box-shadow:
+    inset 2px 2px 0 var(--color-parchment-shade),
+    0 0 0 var(--border-width) var(--color-danger-fill);
 }
 
 .disclosure > summary {
@@ -590,7 +592,7 @@ summary:focus-visible {
 .button.dashed {
   background: transparent;
   color: var(--color-accent);
-  border: var(--border-width) dashed var(--color-panel-border);
+  border: var(--border-width) dashed var(--color-control-border);
   box-shadow: none;
 }
 
@@ -621,7 +623,7 @@ summary:focus-visible {
   padding: 0 var(--space-1-5);
   background: var(--color-background);
   color: var(--color-text-muted);
-  border-color: var(--color-panel-border);
+  border-color: var(--color-control-border);
   box-shadow: none;
 }
 

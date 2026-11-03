@@ -72,6 +72,41 @@ test('a removed set comes back where it was with Undo', async ({ page }) => {
   await expect(toast).toHaveCount(0);
 });
 
+test('two sets removed in a row each keep their Undo', async ({ page }) => {
+  await register(page, uniqueUsername('menu_two_undo'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const card = await addExercise(page, 'bench', BENCH);
+  await card.getByRole('button', { name: '+ Add set' }).click();
+  await card.getByRole('button', { name: '+ Add set' }).click();
+
+  await removeSet(card, 3);
+  await removeSet(card, 2);
+  await expect(setRows(card)).toHaveCount(1);
+  const undos = page.getByRole('status').getByRole('button', { name: 'Undo', exact: true });
+  await expect(undos).toHaveCount(2);
+
+  await undos.first().click();
+  await expect(setRows(card)).toHaveCount(2);
+  await undos.first().click();
+  await expect(setRows(card)).toHaveCount(3);
+});
+
+test('a set removed from the keyboard keeps its Undo until dismissed', async ({ page }) => {
+  await register(page, uniqueUsername('menu_key_undo'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  const card = await addExercise(page, 'bench', BENCH);
+  await card.getByRole('button', { name: '+ Add set' }).click();
+
+  await optionsButton(card, 2).press('Enter');
+  await setRow(card, 2).getByRole('button', { name: 'Remove set 2', exact: true }).press('Enter');
+  await expect(setRows(card)).toHaveCount(1);
+  const toasts = page.getByRole('status').filter({ hasText: `Removed set 2 of ${BENCH}.` });
+  await expect(toasts.getByRole('button', { name: 'Undo', exact: true })).toBeVisible();
+
+  await toasts.getByRole('button', { name: 'Dismiss', exact: true }).click();
+  await expect(page.getByRole('status').getByText(`Removed set 2 of ${BENCH}.`)).toHaveCount(0);
+});
+
 test('tapping the chosen effort again keeps it, and the set menu clears it', async ({ page }) => {
   await register(page, uniqueUsername('menu_effort'));
   await page.getByRole('button', { name: 'Start workout' }).click();

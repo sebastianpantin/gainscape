@@ -125,7 +125,7 @@ test('stop following a program through an in-app confirmation dialog', async ({ 
   const nativeDialogs = nativeDialogsOf(page);
   await followProgram(page, '5/3/1', FIVE_THREE_ONE_ONE_RMS_KG);
   await openManageProgram(page, '5/3/1');
-  await expect(page.getByRole('main').getByRole('link', { name: '‹ Train', exact: true })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('main').getByRole('button', { name: '‹ Back', exact: true })).toBeVisible();
 
   const stopFollowing = page.getByRole('button', { name: 'Stop following', exact: true });
   await expect(stopFollowing).toBeVisible();
@@ -136,8 +136,16 @@ test('stop following a program through an in-app confirmation dialog', async ({ 
   await expect(dialog).toHaveCount(0);
   await expect.poll(() => activeEnrollmentOf(username)).not.toBeNull();
 
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route('**/rest/v1/rpc/end_enrollment', async (route) => {
+    await held;
+    await route.continue();
+  });
   await stopFollowing.click();
   await dialog.getByRole('button', { name: 'Stop following', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Stopping…', exact: true })).toBeDisabled();
+  release();
   await expect(dialog).toHaveCount(0);
   await expect.poll(() => activeEnrollmentOf(username)).toBeNull();
   await openTab(page, 'Train');

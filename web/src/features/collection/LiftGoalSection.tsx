@@ -123,6 +123,7 @@ export function LiftGoalSection({ userId, exercise, repMaxes }: LiftGoalSectionP
           confirmLabel="Remove"
           danger
           busy={busy}
+          busyLabel="Removing…"
           onConfirm={() => void write(() => removeLiftGoal(exercise.id), 'Goal removed', 'Could not remove your goal.')}
           onCancel={() => setConfirmingRemove(false)}
         >

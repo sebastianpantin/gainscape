@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 interface BoundaryProps {
   pathname: string;
@@ -30,12 +30,16 @@ class PathErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 export function ScreenLoadProblem() {
   return (
     <main className="screen stack">
+      <h1 className="title">Something went wrong</h1>
       <p className="problem" role="alert">
         Couldn't load this screen
       </p>
       <button className="button primary" type="button" onClick={() => window.location.reload()}>
         Reload
       </button>
+      <Link className="button" to="/">
+        Go to Train
+      </Link>
     </main>
   );
 }
