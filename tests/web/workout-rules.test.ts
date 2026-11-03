@@ -297,6 +297,20 @@ describe('finishDraft', () => {
   });
   const options = { sessionId: 'session', loadTypes: new Map(), markPlannedDone: false, now };
 
+  it('marks a second Day as sent, so it can no longer be removed', () => {
+    const withDay = {
+      ...draft(),
+      program: { enrollmentId: 'e', position: { week: 1, day: 'mon' }, templateKey: 't' },
+      secondDay: {
+        sessionId: 'second',
+        program: { enrollmentId: 'e', position: { week: 1, day: 'wed' }, templateKey: 't' },
+        programLabel: 'P — Wed',
+      },
+    };
+    expect(finishDraft(withDay, options).draft.secondDay?.sent).toBe(true);
+    expect(finishDraft(draft(), options).draft.secondDay).toBeUndefined();
+  });
+
   it('stamps the finish time and keeps planned sets as they are', () => {
     const { draft: finished, changedNames } = finishDraft(draft(), options);
     expect(changedNames).toEqual([]);

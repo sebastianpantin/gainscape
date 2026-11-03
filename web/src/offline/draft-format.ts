@@ -41,12 +41,14 @@ export interface CardioDraftSet extends BoutSet {
 
 export interface LiftDraftExercise extends LiftExerciseOf<DraftSet> {
   clientId: string;
+  inSecondDay?: boolean;
   target: DraftTarget | null;
   supersetId?: string | null;
 }
 
 export interface CardioDraftExercise {
   clientId: string;
+  inSecondDay?: boolean;
   exerciseId: string;
   name: string;
   modality: 'cardio';
@@ -60,6 +62,7 @@ export interface HoldDraftSet extends HoldSet {
 
 export interface HoldDraftExercise extends HoldExerciseOf<HoldDraftSet> {
   clientId: string;
+  inSecondDay?: boolean;
 }
 
 export type DraftExercise = LiftDraftExercise | CardioDraftExercise | HoldDraftExercise;
@@ -68,6 +71,13 @@ export interface DraftProgram {
   enrollmentId: string;
   position: Position;
   templateKey: string;
+}
+
+export interface DraftSecondDay {
+  sessionId: string;
+  program: DraftProgram;
+  programLabel: string;
+  sent?: true;
 }
 
 export interface DraftChallenge {
@@ -84,6 +94,7 @@ export interface WorkoutDraft {
   programDayId: string | null;
   programLabel: string | null;
   program?: DraftProgram | null;
+  secondDay?: DraftSecondDay | null;
   challenge?: DraftChallenge | null;
   sessionRpe?: number | null;
   exercises: DraftExercise[];
@@ -165,6 +176,15 @@ function isDraftProgram(value: unknown): value is DraftProgram {
   );
 }
 
+function isDraftSecondDay(value: unknown): value is DraftSecondDay {
+  return (
+    isRecord(value) &&
+    typeof value.sessionId === 'string' &&
+    isDraftProgram(value.program) &&
+    typeof value.programLabel === 'string'
+  );
+}
+
 function withNormalisedEffort(set: Record<string, unknown>, fromV2: boolean): Record<string, unknown> {
   if (fromV2 && !('effort' in set)) {
     const { effortLevel, ...rest } = set;
@@ -233,7 +253,11 @@ function validSupersetIds(exercises: readonly DraftExercise[]): Set<string> {
     const id = supersetIdOf(exercise);
     if (id === null) return;
     const runs = runLengths.get(id) ?? [];
-    const continuesRun = index > 0 && supersetIdOf(exercises[index - 1]) === id;
+    const previous = exercises[index - 1];
+    const continuesRun =
+      previous !== undefined &&
+      supersetIdOf(previous) === id &&
+      (previous.inSecondDay === true) === (exercise.inSecondDay === true);
     if (continuesRun) runs[runs.length - 1] += 1;
     else runs.push(1);
     runLengths.set(id, runs);
@@ -253,13 +277,26 @@ export function withValidSupersets(exercises: DraftExercise[]): DraftExercise[] 
   });
 }
 
+function omitted<Value extends object>(value: Value, key: keyof Value): Value {
+  return Object.fromEntries(Object.entries(value).filter(([name]) => name !== key)) as Value;
+}
+
+function withDayOf(exercise: DraftExercise, hasSecondDay: boolean): DraftExercise {
+  return hasSecondDay && exercise.inSecondDay === true ? exercise : omitted(exercise, 'inSecondDay');
+}
+
 function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {
+  const program = isDraftProgram(draft.program) ? draft.program : null;
+  const secondDay = program !== null && isDraftSecondDay(draft.secondDay) ? draft.secondDay : null;
   return {
-    ...withUsableSessionRpe(draft),
-    program: isDraftProgram(draft.program) ? draft.program : null,
+    ...omitted(withUsableSessionRpe(draft), 'secondDay'),
+    ...(secondDay === null ? {} : { secondDay }),
+    program,
     challenge: parsedDraftChallenge(draft.challenge),
     exercises: withValidSupersets(
-      draft.exercises.map((exercise, index) => normalisedExercise(exercise, index, fromV2) as DraftExercise),
+      draft.exercises.map((exercise, index) =>
+        withDayOf(normalisedExercise(exercise, index, fromV2) as DraftExercise, secondDay !== null),
+      ),
     ),
   };
 }

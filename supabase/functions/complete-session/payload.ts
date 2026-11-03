@@ -1,5 +1,11 @@
 import { z } from 'npm:zod@4.6.5';
-import { implausibleTiming, isRecord, MAX_SETS_PER_SESSION, storableSnapshot } from '../_shared/domain/index.ts';
+import {
+  implausibleTiming,
+  isRecord,
+  MAX_SETS_PER_SESSION,
+  splitSetsByDay,
+  storableSnapshot,
+} from '../_shared/domain/index.ts';
 import { HttpError } from '../_shared/http.ts';
 import {
   assertDistinctSetIdsAndPositions,
@@ -48,13 +54,45 @@ const sessionSchema = z.object({
   sessionRpe: z.number().int().min(1).max(10).nullable().default(null),
   programDayId: lowerUuid.nullable().default(null),
   program: z.unknown().default(null).transform(programLinkOrNull),
+  secondDay: z
+    .object({
+      id: lowerUuid,
+      program: z.unknown().default(null).transform(programLinkOrNull),
+      setIds: z.array(lowerUuid).max(MAX_SETS_PER_SESSION),
+    })
+    .strict()
+    .nullable()
+    .default(null),
   challenge: z.object({ challengeId: lowerUuid }).strict().nullable().default(null),
   sets: z.array(setSchema).min(1).max(MAX_SETS_PER_SESSION),
 });
 
 export type CompleteSessionPayload = z.infer<typeof sessionSchema>;
 
-export function assertPlausibleTiming(payload: CompleteSessionPayload, now: Date): void {
+const SECOND_DAY_START_OFFSET_MS = 1;
+
+export type DayPayload = Omit<CompleteSessionPayload, 'secondDay'>;
+
+export function dayPayloads(payload: CompleteSessionPayload): DayPayload[] {
+  const { secondDay, ...firstDay } = payload;
+  if (secondDay === null) return [firstDay];
+  const { first, second } = splitSetsByDay(payload.sets, secondDay.setIds);
+  const days: DayPayload[] = [
+    { ...firstDay, sets: first },
+    {
+      ...firstDay,
+      id: secondDay.id,
+      startedAt: new Date(Date.parse(firstDay.startedAt) + SECOND_DAY_START_OFFSET_MS).toISOString(),
+      program: secondDay.program,
+      programDayId: null,
+      challenge: null,
+      sets: second,
+    },
+  ];
+  return days.filter((day) => day.sets.length > 0);
+}
+
+export function assertPlausibleTiming(payload: Pick<DayPayload, 'startedAt' | 'endedAt'>, now: Date): void {
   const reason = implausibleTiming(payload.startedAt, payload.endedAt, now.getTime());
   if (reason !== null) throw new HttpError(422, reason);
 }
@@ -63,6 +101,7 @@ export function parseCompleteSessionPayload(body: unknown): CompleteSessionPaylo
   const { body: bodyWithoutPrescriptions, prescriptions } = withoutPrescriptions(body);
   const payload = parseOr422(sessionSchema, bodyWithoutPrescriptions);
   assertDistinctSetIdsAndPositions(payload.sets);
+  if (payload.secondDay?.id === payload.id) throw new HttpError(422, 'second_day_session_id');
   return {
     ...payload,
     sets: payload.sets.map((set, index) =>

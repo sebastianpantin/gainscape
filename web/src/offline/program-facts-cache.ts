@@ -8,6 +8,7 @@ import {
   storableSnapshots,
 } from '@domain/index.ts';
 import { type WorkoutDraft } from './draft-format.ts';
+import { type SavedDay } from './last-summary.ts';
 
 interface LocalSessionAppend {
   fact: SessionFact;
@@ -29,7 +30,11 @@ interface FactsFetchTicket {
 
 export interface FinishOutcomeForFacts {
   kind: 'synced';
-  summary: { programLinked: boolean; completedAt: string };
+  summary: {
+    programLinked: boolean;
+    completedAt: string;
+    days?: readonly SavedDay[];
+  };
 }
 
 export function emptyProgramFactsCache(enrollmentId: string): ProgramFactsCache {

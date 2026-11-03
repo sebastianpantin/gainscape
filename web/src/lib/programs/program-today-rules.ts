@@ -9,11 +9,13 @@ import {
   isCyclePosition,
   isRetestRef,
   isRotationPosition,
+  type LastLoggedWeights,
   type Position,
   type PrescribedExercise,
   type PrescribedSet,
   type PrescriptionSnapshot,
   type ProgramDefinition,
+  resolvePrescription,
   type ResolvedSlot,
   type ScheduleCursor,
   shownWeight,
@@ -66,7 +68,7 @@ export function dayChoices(definition: ProgramDefinition, cursor: ScheduleCursor
   }));
 }
 
-function samePosition(a: Position, b: Position): boolean {
+export function samePosition(a: Position, b: Position): boolean {
   const aKeys = Object.keys(a);
   const bKeys = new Set(Object.keys(b));
   return (
@@ -177,6 +179,33 @@ export function activeProgram(
     definition: parsed.definition,
     enrollment,
     state: programStateAt(parsed.definition, enrollment, facts.filter(isProgramFact)),
+  };
+}
+
+type ReadyProgram = Extract<ActiveProgram, { kind: 'ready' }>;
+
+interface DayLink {
+  enrollmentId: string;
+  position: Position;
+}
+
+export function secondDayChoices(program: ActiveProgram, link: DayLink | null): DayChoice[] {
+  if (program.kind !== 'ready' || link === null || link.enrollmentId !== program.enrollment.id) return [];
+  const others = dayChoices(program.definition, program.state).filter(
+    (choice) => !samePosition(choice.position, link.position),
+  );
+  return others.map((choice, index) => ({ ...choice, suggested: index === 0 }));
+}
+
+export function dayStartFrom(program: ReadyProgram, position: Position, lastLogged: LastLoggedWeights) {
+  const slots = resolvePrescription(program.definition, program.enrollment, program.state, position, lastLogged);
+  return {
+    enrollmentId: program.enrollment.id,
+    templateKey: program.templateKey,
+    programName: program.name,
+    dayName: positionLabel(program.definition, position),
+    position,
+    exercises: slots.filter((slot): slot is PrescribedExercise => slot.kind === 'exercise'),
   };
 }
 

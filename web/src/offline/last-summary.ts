@@ -7,7 +7,16 @@ export interface PlannedChallenge {
   plannedChallenge?: DraftChallenge | null;
 }
 
-type RememberedSummary = SessionSummary & RememberedTiming & PlannedChallenge & { storedContentDiffers?: true };
+export interface SavedDay {
+  sessionId: string;
+  programLinked: boolean;
+  completedAt: string;
+  label?: string;
+}
+
+type RememberedSummary = SessionSummary &
+  RememberedTiming &
+  PlannedChallenge & { storedContentDiffers?: true; days?: SavedDay[] };
 
 const LAST_SUMMARY_KEY = 'gainscape.last-summary';
 
@@ -42,10 +51,15 @@ export function recallLastSummary(userId: string): RememberedSummary | null {
   }
 }
 
+export function summarySessionIds(summary: Pick<RememberedSummary, 'sessionId' | 'days'>): string[] {
+  return [...new Set([summary.sessionId, ...(summary.days ?? []).map((day) => day.sessionId)])];
+}
+
 export function forgetLastSummary(sessionIds: readonly string[]): void {
   try {
-    const cachedSessionId = rememberedEntry()?.summary?.sessionId;
-    if (cachedSessionId && sessionIds.includes(cachedSessionId)) sessionStorage.removeItem(LAST_SUMMARY_KEY);
+    const cached = rememberedEntry()?.summary;
+    if (cached && summarySessionIds(cached).some((id) => sessionIds.includes(id)))
+      sessionStorage.removeItem(LAST_SUMMARY_KEY);
   } catch {
     return;
   }

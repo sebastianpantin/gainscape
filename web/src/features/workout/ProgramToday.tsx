@@ -16,6 +16,7 @@ import { useIsOffline } from '../../lib/platform/use-online.ts';
 import {
   type ActiveProgram,
   dayChoices,
+  dayStartFrom,
   pickedDay,
   positionLabel,
   prescriptionCards,
@@ -104,16 +105,7 @@ export function ProgramToday({ program, exercises, unit, disabled, onStart, onSk
         className="button primary big"
         type="button"
         disabled={disabled}
-        onClick={() =>
-          onStart({
-            enrollmentId: enrollment.id,
-            templateKey: program.templateKey,
-            programName: name,
-            dayName: chosenLabel,
-            position,
-            exercises: slots.flatMap((slot) => (slot.kind === 'exercise' ? [slot] : [])),
-          })
-        }
+        onClick={() => onStart(dayStartFrom(program, position, lastLogged))}
       >
         {startLabel(name, definition, position)}
       </button>

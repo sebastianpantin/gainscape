@@ -5,6 +5,7 @@ import {
   DEFAULT_BALANCE,
   historyOnlySummary,
   isNoOpEdit,
+  mergedSummaries,
   pendingSummary,
   planNewSession,
   type SessionSummary,
@@ -42,13 +43,15 @@ import {
   type PrescriptionSnapshotColumns,
   prescriptionSnapshotsBySetId,
 } from '../_shared/stores/set-columns.ts';
-import { assertPlausibleTiming, type CompleteSessionPayload, parseCompleteSessionPayload } from './payload.ts';
+import {
+  assertPlausibleTiming,
+  type CompleteSessionPayload,
+  type DayPayload,
+  dayPayloads,
+  parseCompleteSessionPayload,
+} from './payload.ts';
 
-async function resubmissionDiffers(
-  tx: Transaction,
-  stored: StoredSession,
-  payload: CompleteSessionPayload,
-): Promise<boolean> {
+async function resubmissionDiffers(tx: Transaction, stored: StoredSession, payload: DayPayload): Promise<boolean> {
   if (payload.sessionRpe !== stored.sessionRpe) return true;
   const { storedById } = await loadStoredSetsById(tx, payload.id);
   return !isNoOpEdit(payload, stored.notes, storedById, DEFAULT_BALANCE);
@@ -56,7 +59,14 @@ async function resubmissionDiffers(
 
 type SnapshotsBySetId = ReadonlyMap<string, PrescriptionSnapshotColumns>;
 
+interface CompletedDay {
+  sessionId: string;
+  programLinked: boolean;
+  completedAt: string;
+}
+
 interface CompleteSessionResponse extends SessionSummary, SessionTiming {
+  days?: CompletedDay[];
   programLinked: boolean;
   completedAt: string;
   storedContentDiffers?: true;
@@ -110,11 +120,7 @@ async function storeAndReplay(
   return { summary: await storedSummary(tx, session.id), completedAt };
 }
 
-async function claimedChallenge(
-  tx: Transaction,
-  userId: string,
-  payload: CompleteSessionPayload,
-): Promise<ChallengeRun | null> {
+async function claimedChallenge(tx: Transaction, userId: string, payload: DayPayload): Promise<ChallengeRun | null> {
   if (payload.challenge === null) return null;
   const key = { id: payload.id, startedAt: payload.startedAt };
   return await claimChallengeRun(tx, userId, payload.challenge.challengeId, key, DEFAULT_BALANCE);
@@ -125,65 +131,101 @@ function responseFor(stored: InsertedSession, timing: SessionTiming, programLink
   return { ...stored.summary, programLinked, completedAt: stored.completedAt, startedAt, endedAt, sessionRpe };
 }
 
+async function completeDay(
+  tx: Transaction,
+  userId: string,
+  payload: DayPayload,
+  completedAfter: string | null,
+): Promise<CompleteSessionResponse> {
+  const existing = await findSession(tx, payload.id);
+  if (existing && existing.userId !== userId) throw new HttpError(409, 'session_id_conflict');
+  if (existing) {
+    const stored = responseFor(existing, existing, existing.programLinked);
+    return (await resubmissionDiffers(tx, existing, payload)) ? { ...stored, storedContentDiffers: true } : stored;
+  }
+  const deletedBy = await tombstoneOwner(tx, payload.id);
+  if (deletedBy === userId) throw new HttpError(410, 'session_deleted');
+  if (deletedBy !== null) throw new HttpError(409, 'session_id_conflict');
+  await takeRateLimit(tx, 'session_create_hour', userId);
+  await takeRateLimit(tx, 'session_create_day', userId);
+
+  const now = new Date();
+  assertPlausibleTiming(payload, now);
+  const [, catalog, profile, programLink, programDayId, gearLoadout] = await Promise.all([
+    assertSetIdsUnused(
+      tx,
+      payload.sets.map((set) => set.id),
+    ),
+    loadKnownCatalog(tx, userId, payload.sets),
+    loadProfileSettings(tx, userId),
+    linkedProgram(tx, userId, payload.program),
+    ownedProgramDayId(tx, userId, payload.programDayId),
+    loadEquippedLoadout(tx, userId),
+  ]);
+  const plan = planNewSession(payload, catalog, profile.bodyweightKg, now.getTime(), DEFAULT_BALANCE);
+  const snapshots = prescriptionSnapshotsBySetId(payload.sets, () => programLink !== null);
+  const row: NewSessionRow = {
+    id: payload.id,
+    userId,
+    programDayId,
+    programLink,
+    startedAt: payload.startedAt,
+    endedAt: payload.endedAt,
+    timezone: profile.timezone,
+    historyOnly: false,
+    balanceVersion: DEFAULT_BALANCE.version,
+    summary: pendingSummary(payload.id),
+    notes: payload.notes,
+    sessionRpe: payload.sessionRpe,
+    gearLoadout,
+    challenge: null,
+    completedAfter,
+  };
+
+  const stored =
+    plan.mode === 'scored'
+      ? await storeAndReplay(
+          tx,
+          { ...row, challenge: await claimedChallenge(tx, userId, payload) },
+          plan.session,
+          snapshots,
+          catalog,
+        )
+      : await storeHistoryOnly(tx, row, plan.sets, snapshots);
+  return responseFor(stored, row, programLink !== null);
+}
+
+function combinedResponse(responses: readonly CompleteSessionResponse[]): CompleteSessionResponse {
+  const [first, ...rest] = responses;
+  const merged = rest.reduce<SessionSummary>((summary, next) => mergedSummaries(summary, next), first);
+  const differs = responses.some((response) => response.storedContentDiffers);
+  return {
+    ...merged,
+    programLinked: first.programLinked,
+    completedAt: first.completedAt,
+    startedAt: first.startedAt,
+    endedAt: first.endedAt,
+    sessionRpe: first.sessionRpe,
+    ...(differs ? { storedContentDiffers: true } : {}),
+    days: responses.map(({ sessionId, programLinked, completedAt }) => ({ sessionId, programLinked, completedAt })),
+  };
+}
+
 async function completeSession(userId: string, payload: CompleteSessionPayload): Promise<CompleteSessionResponse> {
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId);
-
-    const existing = await findSession(tx, payload.id);
-    if (existing && existing.userId !== userId) throw new HttpError(409, 'session_id_conflict');
-    if (existing) {
-      const stored = responseFor(existing, existing, existing.programLinked);
-      return (await resubmissionDiffers(tx, existing, payload)) ? { ...stored, storedContentDiffers: true } : stored;
+    const days = dayPayloads(payload);
+    if (days.length === 1) {
+      const response = await completeDay(tx, userId, days[0], null);
+      return payload.secondDay === null ? response : combinedResponse([response]);
     }
-    const deletedBy = await tombstoneOwner(tx, payload.id);
-    if (deletedBy === userId) throw new HttpError(410, 'session_deleted');
-    if (deletedBy !== null) throw new HttpError(409, 'session_id_conflict');
-    await takeRateLimit(tx, 'session_create_hour', userId);
-    await takeRateLimit(tx, 'session_create_day', userId);
-
-    const now = new Date();
-    assertPlausibleTiming(payload, now);
-    const [, catalog, profile, programLink, programDayId, gearLoadout] = await Promise.all([
-      assertSetIdsUnused(
-        tx,
-        payload.sets.map((set) => set.id),
-      ),
-      loadKnownCatalog(tx, userId, payload.sets),
-      loadProfileSettings(tx, userId),
-      linkedProgram(tx, userId, payload.program),
-      ownedProgramDayId(tx, userId, payload.programDayId),
-      loadEquippedLoadout(tx, userId),
-    ]);
-    const plan = planNewSession(payload, catalog, profile.bodyweightKg, now.getTime(), DEFAULT_BALANCE);
-    const snapshots = prescriptionSnapshotsBySetId(payload.sets, () => programLink !== null);
-    const row: NewSessionRow = {
-      id: payload.id,
-      userId,
-      programDayId,
-      programLink,
-      startedAt: payload.startedAt,
-      endedAt: payload.endedAt,
-      timezone: profile.timezone,
-      historyOnly: false,
-      balanceVersion: DEFAULT_BALANCE.version,
-      summary: pendingSummary(payload.id),
-      notes: payload.notes,
-      sessionRpe: payload.sessionRpe,
-      gearLoadout,
-      challenge: null,
-    };
-
-    const stored =
-      plan.mode === 'scored'
-        ? await storeAndReplay(
-            tx,
-            { ...row, challenge: await claimedChallenge(tx, userId, payload) },
-            plan.session,
-            snapshots,
-            catalog,
-          )
-        : await storeHistoryOnly(tx, row, plan.sets, snapshots);
-    return responseFor(stored, row, programLink !== null);
+    const responses: CompleteSessionResponse[] = [];
+    for (const day of days) {
+      if ((await tombstoneOwner(tx, day.id)) === userId) continue;
+      responses.push(await completeDay(tx, userId, day, responses.at(-1)?.completedAt ?? null));
+    }
+    if (responses.length === 0) throw new HttpError(410, 'session_deleted');
+    return combinedResponse(responses);
   });
 }
 

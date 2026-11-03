@@ -471,6 +471,174 @@ describe('complete-session with a program link', () => {
   });
 });
 
+const WEDNESDAY_WEEK_1 = { week: 1, day: 'wed' };
+
+function pressSet(position: number, weightKg: number, prescription: PrescriptionBody | null): ProgramSetBody {
+  return { ...squatSet(position, weightKg, prescription), exerciseId: exerciseIds.overhead_press };
+}
+
+async function storedXpBySkill(sessionId: string): Promise<Record<string, number>> {
+  const [row] = await db`select summary from public.sessions where id = ${sessionId}`;
+  return (row.summary as { xpBySkill: Record<string, number> }).xpBySkill;
+}
+
+function twoDayPayload(enrollmentId: string, firstDay: ProgramSetBody[], secondDay: ProgramSetBody[]) {
+  const sets = [...firstDay, ...secondDay].map((set, position) => ({ ...set, position }));
+  return {
+    ...linkedPayload(sets, { enrollmentId, position: MONDAY_WEEK_1 }),
+    secondDay: {
+      id: randomUUID(),
+      program: { enrollmentId, position: WEDNESDAY_WEEK_1 },
+      setIds: secondDay.map((set) => set.id),
+    },
+  };
+}
+
+describe('complete-session with a second Day', () => {
+  it('stores one linked Session per Day with its own sets, the first Day first', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, mondaySquatSets(), [pressSet(0, 40, prescribed('wed-press:0', 40))]);
+
+    const response = await postCompleteSession(user.accessToken, payload);
+
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.sessionId).toBe(payload.id);
+    expect(response.body.days).toEqual([
+      { sessionId: payload.id, programLinked: true, completedAt: expect.any(String) },
+      { sessionId: payload.secondDay.id, programLinked: true, completedAt: expect.any(String) },
+    ]);
+    expect(await sessionRow(payload.id)).toMatchObject({
+      enrollment_id: enrollmentId,
+      program_position: MONDAY_WEEK_1,
+    });
+    expect(await sessionRow(payload.secondDay.id)).toMatchObject({
+      enrollment_id: enrollmentId,
+      program_position: WEDNESDAY_WEEK_1,
+    });
+    expect((await snapshotsOf(payload.id)).map((set) => set.prescription_ref)).toEqual([
+      'mon-squat:0',
+      'mon-squat:1',
+      'mon-squat:2',
+    ]);
+    expect(await snapshotsOf(payload.secondDay.id)).toEqual([
+      {
+        ...noSnapshot(0),
+        prescription_ref: 'wed-press:0',
+        prescribed_weight_kg: 40,
+        prescribed_reps: 5,
+        prescribed_amrap: false,
+      },
+    ]);
+    const facts = await linkedFacts(user, enrollmentId);
+    expect(facts.sessions.map((session) => session.id)).toEqual([payload.id, payload.secondDay.id]);
+    const [firstRow] = await db`select started_at from public.sessions where id = ${payload.id}`;
+    const [secondRow] = await db`select started_at from public.sessions where id = ${payload.secondDay.id}`;
+    expect(secondRow.started_at.getTime() - firstRow.started_at.getTime()).toBe(1);
+  });
+
+  it('adds both Days to one summary', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, mondaySquatSets(), [pressSet(0, 40, prescribed('wed-press:0', 40))]);
+
+    const response = await postCompleteSession(user.accessToken, payload);
+
+    expect(response.status, response.rawBody).toBe(200);
+    const first = await storedXpBySkill(payload.id);
+    const second = await storedXpBySkill(payload.secondDay.id);
+    const skills = [...new Set([...Object.keys(first), ...Object.keys(second)])];
+    expect(Object.keys(second).length).toBeGreaterThan(0);
+    expect(response.body.xpBySkill).toEqual(
+      Object.fromEntries(skills.map((skill) => [skill, (first[skill] ?? 0) + (second[skill] ?? 0)])),
+    );
+  });
+
+  it('answers a resubmit with the same summary and writes nothing more', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, mondaySquatSets(), [pressSet(0, 40, prescribed('wed-press:0', 40))]);
+    const first = await postCompleteSession(user.accessToken, payload);
+    expect(first.status, first.rawBody).toBe(200);
+    const before = await rowCounts(user.id, ['sessions', 'sets', 'set_skill_xp']);
+
+    const retry = await postCompleteSession(user.accessToken, payload);
+
+    expect(retry.status, retry.rawBody).toBe(200);
+    expect(retry.body).toEqual(first.body);
+    expect(await rowCounts(user.id, ['sessions', 'sets', 'set_skill_xp'])).toEqual(before);
+  });
+
+  it('stores only the Day that has sets when the other has none', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, [], [pressSet(0, 40, prescribed('wed-press:0', 40))]);
+
+    const response = await postCompleteSession(user.accessToken, payload);
+
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.sessionId).toBe(payload.secondDay.id);
+    expect(await sessionRow(payload.id)).toBeUndefined();
+    expect(await sessionRow(payload.secondDay.id)).toMatchObject({ program_position: WEDNESDAY_WEEK_1 });
+    const retry = await postCompleteSession(user.accessToken, payload);
+    expect(retry.body).toEqual(response.body);
+  });
+
+  it('stores the second Day unlinked when its link is bad and keeps the first linked', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, mondaySquatSets(), [pressSet(0, 40, prescribed('wed-press:0', 40))]);
+    const bad = {
+      ...payload,
+      secondDay: { ...payload.secondDay, program: { enrollmentId: randomUUID(), position: WEDNESDAY_WEEK_1 } },
+    };
+
+    const response = await postCompleteSession(user.accessToken, bad);
+
+    expect(response.status, response.rawBody).toBe(200);
+    expect(response.body.days?.map((day: { programLinked: boolean }) => day.programLinked)).toEqual([true, false]);
+  });
+
+  it('answers a resubmit after one Day was deleted with the Day that is left', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, mondaySquatSets(), [pressSet(0, 40, prescribed('wed-press:0', 40))]);
+    const first = await postCompleteSession(user.accessToken, payload);
+    expect(first.status, first.rawBody).toBe(200);
+    const deleted = await postFunction('delete-session', user.accessToken, { sessionId: payload.secondDay.id });
+    expect(deleted.status, deleted.rawBody).toBe(200);
+
+    const retry = await postCompleteSession(user.accessToken, payload);
+
+    expect(retry.status, retry.rawBody).toBe(200);
+    expect(retry.body.days?.map((day) => day.sessionId)).toEqual([payload.id]);
+  });
+
+  it('still answers 410 when every Day was deleted', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, mondaySquatSets(), [pressSet(0, 40, prescribed('wed-press:0', 40))]);
+    expect((await postCompleteSession(user.accessToken, payload)).status).toBe(200);
+    for (const sessionId of [payload.id, payload.secondDay.id])
+      expect((await postFunction('delete-session', user.accessToken, { sessionId })).status).toBe(200);
+
+    expect((await postCompleteSession(user.accessToken, payload)).status).toBe(410);
+  });
+
+  it('returns 422 when the second Day reuses the first Session id', async () => {
+    const user = await createTestUser();
+    const enrollmentId = await enrollInMadcow(user);
+    const payload = twoDayPayload(enrollmentId, mondaySquatSets(), [pressSet(0, 40, null)]);
+
+    const response = await postCompleteSession(user.accessToken, {
+      ...payload,
+      secondDay: { ...payload.secondDay, id: payload.id },
+    });
+
+    expect(response.status, response.rawBody).toBe(422);
+  });
+});
+
 describe('complete-session resubmits of a linked session', () => {
   it('returns the stored completedAt and programLinked and writes nothing more', async () => {
     const user = await createTestUser();

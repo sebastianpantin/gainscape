@@ -29,7 +29,7 @@ import {
   skillsQuery,
   standingQuery,
 } from '../../lib/query/queries.ts';
-import { recallLastSummary, rememberLastSummary } from '../../offline/last-summary.ts';
+import { recallLastSummary, rememberLastSummary, summarySessionIds } from '../../offline/last-summary.ts';
 import {
   bonusText,
   challengeFailReason,
@@ -315,23 +315,24 @@ export function RevealScreen({ userId }: RevealScreenProps) {
     if (sessionId) markInstallCardDue(userId);
   }, [sessionId, userId]);
 
+  const savedSessionIds = summary ? summarySessionIds(summary).join(' ') : '';
   useEffect(() => {
-    if (!sessionId) return;
+    if (!savedSessionIds) return;
     let active = true;
-    fetchSession(sessionId).then(
+    Promise.all(savedSessionIds.split(' ').map((id) => fetchSession(id))).then(
       (stored) => {
-        if (!active || !stored) return;
-        setFreshDrops(stored.summary.drops ?? []);
+        if (!active || stored.some((session) => !session)) return;
+        const drops = stored.flatMap((session) => session?.summary.drops ?? []);
+        setFreshDrops(drops);
         const cached = recallLastSummary(userId);
-        if (cached?.sessionId === sessionId)
-          rememberLastSummary(userId, { ...cached, drops: stored.summary.drops ?? [] });
+        if (cached && cached.sessionId === sessionId) rememberLastSummary(userId, { ...cached, drops });
       },
       () => undefined,
     );
     return () => {
       active = false;
     };
-  }, [sessionId, userId]);
+  }, [savedSessionIds, sessionId, userId]);
 
   if (!summary) {
     return (
@@ -507,6 +508,17 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       )}
       {questReveal && <QuestPanel reveal={questReveal} delayS={timeline.lootDelayS} />}
       <LootPanel userId={userId} drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />
+      {summary.days && summary.days.length > 1 && (
+        <ul className="menu-list" aria-label="Workouts saved">
+          {summary.days.map((day) => (
+            <li key={day.sessionId}>
+              <Link className="button" to={`/collection/history/${day.sessionId}`}>
+                Open {day.label ?? 'workout'}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
       <Link className="button primary big" to="/">
         Done
       </Link>

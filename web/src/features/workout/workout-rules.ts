@@ -177,7 +177,15 @@ export function finishDraft(
   const checked = withCurrentLoadTypes(latest, loadTypes);
   if (checked.changedNames.length > 0) return checked;
   const logged = markPlannedDone ? markPlannedSetsDone(checked.draft) : checked.draft;
-  return { draft: { ...logged, finishedAt: finishedAtFor(logged.startedAt, now) }, changedNames: [] };
+  const secondDay = logged.secondDay == null ? logged.secondDay : { ...logged.secondDay, sent: true as const };
+  return {
+    draft: {
+      ...logged,
+      ...(secondDay === undefined ? {} : { secondDay }),
+      finishedAt: finishedAtFor(logged.startedAt, now),
+    },
+    changedNames: [],
+  };
 }
 
 export function loadTypeChangedText(changedNames: readonly string[]): string {

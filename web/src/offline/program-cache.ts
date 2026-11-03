@@ -103,7 +103,10 @@ export function forgetDeletedProgramSession(storage: Storage, userId: string, se
 
 export function factsOutcomeOf(outcome: SendOutcome): FinishOutcomeForFacts | null {
   if (outcome.kind !== 'synced') return null;
-  const { programLinked, completedAt } = outcome.summary;
+  const { programLinked, completedAt, days } = outcome.summary;
   if (typeof programLinked !== 'boolean' || typeof completedAt !== 'string') return null;
-  return { kind: 'synced', summary: { programLinked, completedAt } };
+  return {
+    kind: 'synced',
+    summary: days === undefined ? { programLinked, completedAt } : { programLinked, completedAt, days },
+  };
 }

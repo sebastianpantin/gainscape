@@ -59,6 +59,7 @@ export interface NewSessionRow extends SessionTiming {
   notes: string | null;
   gearLoadout: GearLoadout;
   challenge: ChallengeRun | null;
+  completedAfter?: string | null;
 }
 
 export async function lockUser(
@@ -309,14 +310,17 @@ export async function insertSession(
   const [inserted] = await tx`
     insert into public.sessions
       (id, user_id, program_day_id, enrollment_id, program_position, started_at, ended_at, local_date, timezone,
-       history_only, balance_version, derived_balance_version, summary, notes, session_rpe, gear_loadout, challenge)
+       history_only, balance_version, derived_balance_version, summary, notes, session_rpe, gear_loadout, challenge,
+       completed_at)
     values
       (${row.id}, ${row.userId}, ${row.programDayId}, ${row.programLink?.enrollmentId ?? null}, ${programPosition},
        ${row.startedAt}, ${row.endedAt}, (${row.startedAt}::timestamptz at time zone ${row.timezone})::date,
        ${row.timezone}, ${row.historyOnly}, ${row.balanceVersion}, ${row.balanceVersion},
        ${tx.json(row.summary as unknown as JsonValue)}, ${row.notes}, ${row.sessionRpe},
        ${tx.json(row.gearLoadout as JsonValue)},
-       ${row.challenge === null ? null : tx.json(row.challenge as unknown as JsonValue)})
+       ${row.challenge === null ? null : tx.json(row.challenge as unknown as JsonValue)},
+       greatest(date_trunc('milliseconds', now()),
+                ${row.completedAfter ?? null}::timestamptz + interval '1 millisecond'))
     returning summary, completed_at`;
   await tx`insert into public.sets ${tx(setRows)}`;
   return { summary: inserted.summary, completedAt: isoTimestamp(inserted.completed_at) };
