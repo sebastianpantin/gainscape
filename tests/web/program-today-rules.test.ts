@@ -11,7 +11,9 @@ import {
 import {
   amrapBadgeOf,
   dayChoices,
+  dayStartFrom,
   pickedDay,
+  secondDayChoices,
   positionLabel,
   type PrescriptionCard,
   prescriptionCards,
@@ -310,5 +312,57 @@ describe('AMRAP badge on a logged set', () => {
     expect(amrapBadgeOf(snapshot('mon-squat:4', { weightKg: 92.5, reps: 5 }))).toBeNull();
     expect(amrapBadgeOf(null)).toBeNull();
     expect(amrapBadgeOf(undefined)).toBeNull();
+  });
+});
+
+describe('secondDayChoices', () => {
+  const enrollment = madcowEnrollment();
+  const program = {
+    kind: 'ready' as const,
+    name: 'Madcow 5x5',
+    templateKey: 'madcow_5x5',
+    definition: MADCOW_5X5,
+    enrollment,
+    state: programStateAt(MADCOW_5X5, enrollment, []),
+  };
+
+  it('offers the other open Days of the Draft Enrollment, the first one suggested', () => {
+    const choices = secondDayChoices(program, { enrollmentId: enrollment.id, position: weekDay(1, 'mon') });
+    expect(choices.map((choice) => [choice.position, choice.suggested])).toEqual([
+      [weekDay(1, 'wed'), true],
+      [weekDay(1, 'fri'), false],
+    ]);
+  });
+
+  it('offers nothing for another Enrollment, a Draft without a Day or no program', () => {
+    expect(secondDayChoices(program, { enrollmentId: 'other', position: weekDay(1, 'mon') })).toEqual([]);
+    expect(secondDayChoices(program, null)).toEqual([]);
+    expect(secondDayChoices({ kind: 'none' }, { enrollmentId: enrollment.id, position: weekDay(1, 'mon') })).toEqual(
+      [],
+    );
+  });
+});
+
+describe('dayStartFrom', () => {
+  it('builds the start of a Day with its prescribed exercises', () => {
+    const enrollment = madcowEnrollment();
+    const program = {
+      kind: 'ready' as const,
+      name: 'Madcow 5x5',
+      templateKey: 'madcow_5x5',
+      definition: MADCOW_5X5,
+      enrollment,
+      state: programStateAt(MADCOW_5X5, enrollment, []),
+    };
+    const start = dayStartFrom(program, weekDay(1, 'wed'), {});
+    expect(start).toMatchObject({
+      enrollmentId: enrollment.id,
+      templateKey: 'madcow_5x5',
+      programName: 'Madcow 5x5',
+      dayName: positionLabel(MADCOW_5X5, weekDay(1, 'wed')),
+      position: weekDay(1, 'wed'),
+    });
+    expect(start.exercises.length).toBeGreaterThan(0);
+    expect(start.exercises.every((slot) => slot.kind === 'exercise')).toBe(true);
   });
 });

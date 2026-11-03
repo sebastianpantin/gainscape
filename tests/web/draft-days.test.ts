@@ -6,6 +6,8 @@ import { addExercise, insertWarmupDrills, removeExercise, toggleSetDone } from '
 import {
   canAddSecondDay,
   dayDrafts,
+  dayNameOf,
+  labelledDays,
   draftTitle,
   exerciseDay,
   restoreSecondDay,
@@ -243,5 +245,26 @@ describe('dayDrafts', () => {
       },
     });
     expect(days.map(({ draft }) => draft.sessionId)).toEqual([SECOND_SESSION_ID]);
+  });
+});
+
+describe('dayNameOf', () => {
+  it('takes the Day part of a program label', () => {
+    expect(dayNameOf('Madcow 5x5 — W1 Day 2')).toBe('W1 Day 2');
+    expect(dayNameOf('Push day')).toBe('Push day');
+  });
+});
+
+describe('labelledDays', () => {
+  it('names each synced Session after its Day', () => {
+    const both = mondayAndWednesday();
+    const synced = [
+      { sessionId: both.sessionId, programLinked: true, completedAt: 'a' },
+      { sessionId: SECOND_SESSION_ID, programLinked: true, completedAt: 'b' },
+    ];
+    expect(labelledDays(both, synced).map((day) => [day.sessionId, day.label])).toEqual([
+      [both.sessionId, 'W1 Day 1'],
+      [SECOND_SESSION_ID, 'W1 Day 2'],
+    ]);
   });
 });

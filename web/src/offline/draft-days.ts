@@ -58,6 +58,11 @@ export function restoreSecondDay(draft: WorkoutDraft, removed: RemovedSecondDay)
   return { ...draft, secondDay: removed.secondDay, exercises: [...draft.exercises, ...removed.exercises] };
 }
 
+export function dayNameOf(programLabel: string): string {
+  const [, ...dayName] = programLabel.split(LABEL_SEPARATOR);
+  return dayName.length === 0 ? programLabel : dayName.join(LABEL_SEPARATOR);
+}
+
 export function draftTitle(draft: WorkoutDraft): string | null {
   const first = draft.programLabel;
   const second = draft.secondDay?.programLabel;
@@ -103,4 +108,15 @@ export function dayDrafts(draft: WorkoutDraft, outcome: SyncedDays): SyncedDayDr
     const { programLinked, completedAt } = synced;
     return [{ draft: dayDraft, outcome: { kind: 'synced' as const, summary: { programLinked, completedAt } } }];
   });
+}
+
+export function labelledDays<Day extends SyncedDay>(
+  draft: WorkoutDraft,
+  days: readonly Day[],
+): (Day & { label: string })[] {
+  const labels = new Map([
+    [draft.sessionId, draft.programLabel],
+    [draft.secondDay?.sessionId, draft.secondDay?.programLabel ?? null],
+  ]);
+  return days.map((day) => ({ ...day, label: dayNameOf(labels.get(day.sessionId) ?? 'Workout') }));
 }

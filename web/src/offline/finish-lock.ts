@@ -11,7 +11,7 @@ export interface CompletedSessionSummary extends SessionSummary, RememberedTimin
   programLinked?: boolean;
   completedAt?: string;
   storedContentDiffers?: true;
-  days?: { sessionId: string; programLinked: boolean; completedAt: string }[];
+  days?: { sessionId: string; programLinked: boolean; completedAt: string; label?: string }[];
 }
 
 export type SendOutcome =

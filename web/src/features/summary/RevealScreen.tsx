@@ -499,6 +499,17 @@ export function RevealScreen({ userId }: RevealScreenProps) {
       )}
       {questReveal && <QuestPanel reveal={questReveal} delayS={timeline.lootDelayS} />}
       <LootPanel userId={userId} drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />
+      {summary.days && summary.days.length > 1 && (
+        <ul className="menu-list" aria-label="Workouts saved">
+          {summary.days.map((day) => (
+            <li key={day.sessionId}>
+              <Link className="button" to={`/collection/history/${day.sessionId}`}>
+                Open {day.label ?? 'workout'}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
       <Link className="button primary big" to="/">
         Done
       </Link>

@@ -52,6 +52,10 @@ import { useSessionState } from './use-session-state.ts';
 import { useWakeLock } from './use-wake-lock.ts';
 import { useWorkoutCommands } from './use-workout-commands.ts';
 import { WorkoutClock } from './WorkoutClock.tsx';
+import { AddProgramDay } from './AddProgramDay.tsx';
+import { useProgramDays } from './use-program-days.ts';
+import { type DraftExercise } from '../../offline/draft-format.ts';
+import { canAddSecondDay, type DraftDay, dayNameOf, draftTitle, exerciseDay } from '../../offline/draft-days.ts';
 import { useWorkoutPreviews } from './use-workout-previews.ts';
 import { useWorkoutStart } from './use-workout-start.ts';
 import { workoutHelpKeys } from './workout-help.ts';
@@ -167,6 +171,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     void navigate('/', { replace: true, state: null });
   }, [exerciseToAdd, workoutOpen, location.key, draft, exercises, commands, navigate]);
   const finishing = useFinishWorkout({ userId, draft, exercises, updateDraft, stopRest: rest.stop });
+  const programDays = useProgramDays(draft, exercises, updateDraft);
 
   const {
     status: finishStatus,
@@ -290,6 +295,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     note: noteFor,
   };
   const groups = supersetGroups(draft);
+  const title = draftTitle(draft);
   const prompt = finishing.prompt;
 
   const helpKeys = workoutHelpKeys({
@@ -299,11 +305,55 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     challenge: draft.challenge?.definition ?? null,
   });
 
+  const renderCard = (exercise: DraftExercise, exerciseIndex: number) => {
+    if (exercise.modality === 'cardio')
+      return (
+        <CardioExerciseCard
+          key={exercise.clientId}
+          exercise={exercise}
+          exerciseIndex={exerciseIndex}
+          previews={previews[exerciseIndex]}
+          records={records[exerciseIndex]}
+          unit={unitPref}
+          note={noteFor(exercise.exerciseId, exercise.name)}
+          roomForBout={roomForBout}
+          roomForSet={roomForSet}
+          currentSetId={currentSet}
+          actions={cardActions}
+        />
+      );
+    if (exercise.modality === 'hold')
+      return (
+        <HoldExerciseCard
+          key={exercise.clientId}
+          exercise={exercise}
+          exerciseIndex={exerciseIndex}
+          previews={previews[exerciseIndex]}
+          records={records[exerciseIndex]}
+          unit={unitPref}
+          note={noteFor(exercise.exerciseId, exercise.name)}
+          roomForSet={roomForSet}
+          currentSetId={currentSet}
+          actions={cardActions}
+        />
+      );
+    const group = groups.find((candidate) => candidate.exerciseIndexes.includes(exerciseIndex));
+    if (group !== undefined)
+      return group.exerciseIndexes[0] === exerciseIndex ? (
+        <LiftSupersetCard key={`superset-${group.id}`} group={group} lift={lift} />
+      ) : null;
+    return <LiftExerciseCard key={exercise.clientId} exercise={exercise} exerciseIndex={exerciseIndex} lift={lift} />;
+  };
+  const exercisesOfDay = (day: DraftDay) =>
+    draft.exercises.flatMap((exercise, exerciseIndex) =>
+      exerciseDay(draft, exerciseIndex) === day ? [renderCard(exercise, exerciseIndex)] : [],
+    );
+
   return (
     <main className="screen stack">
       <header className="workout-header">
         <div className="stack" style={{ gap: 'var(--space-1)' }}>
-          {draft.programLabel && <span className="muted">{draft.programLabel}</span>}
+          {title && <span className="muted">{title}</span>}
           <h1 className="title">Workout</h1>
         </div>
         <div className="live-xp">
@@ -342,47 +392,22 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         </p>
       )}
       <TermHelpRow keys={helpKeys} />
-      {draft.exercises.map((exercise, exerciseIndex) => {
-        if (exercise.modality === 'cardio')
-          return (
-            <CardioExerciseCard
-              key={exercise.clientId}
-              exercise={exercise}
-              exerciseIndex={exerciseIndex}
-              previews={previews[exerciseIndex]}
-              records={records[exerciseIndex]}
-              unit={unitPref}
-              note={noteFor(exercise.exerciseId, exercise.name)}
-              roomForBout={roomForBout}
-              roomForSet={roomForSet}
-              currentSetId={currentSet}
-              actions={cardActions}
-            />
-          );
-        if (exercise.modality === 'hold')
-          return (
-            <HoldExerciseCard
-              key={exercise.clientId}
-              exercise={exercise}
-              exerciseIndex={exerciseIndex}
-              previews={previews[exerciseIndex]}
-              records={records[exerciseIndex]}
-              unit={unitPref}
-              note={noteFor(exercise.exerciseId, exercise.name)}
-              roomForSet={roomForSet}
-              currentSetId={currentSet}
-              actions={cardActions}
-            />
-          );
-        const group = groups.find((candidate) => candidate.exerciseIndexes.includes(exerciseIndex));
-        if (group !== undefined)
-          return group.exerciseIndexes[0] === exerciseIndex ? (
-            <LiftSupersetCard key={`superset-${group.id}`} group={group} lift={lift} />
-          ) : null;
-        return (
-          <LiftExerciseCard key={exercise.clientId} exercise={exercise} exerciseIndex={exerciseIndex} lift={lift} />
-        );
-      })}
+      {draft.secondDay && draft.programLabel && <h2>{dayNameOf(draft.programLabel)}</h2>}
+      {exercisesOfDay('first')}
+      {draft.secondDay && (
+        <div className="row spread">
+          <h2>{dayNameOf(draft.secondDay.programLabel)}</h2>
+          <button
+            className="button link"
+            type="button"
+            aria-label={`Remove ${dayNameOf(draft.secondDay.programLabel)}`}
+            onClick={programDays.removeSecondDay}
+          >
+            Remove day
+          </button>
+        </div>
+      )}
+      {exercisesOfDay('second')}
       {roomForSet ? (
         <ExercisePicker
           exercises={addableExercises(draft, exercises)}
@@ -401,6 +426,9 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
         <p className="hint">{SETS_FULL_TEXT}</p>
       )}
       {roomForSet && !roomForBout && <p className="hint">Cardio exercises are not offered. {BOUTS_FULL_TEXT}</p>}
+      {roomForSet && draft.program && canAddSecondDay(draft) && (
+        <AddProgramDay program={activeProgram} link={draft.program} onAdd={programDays.addDay} />
+      )}
       <Link className="button link" to="/exercises?new=1&from=workout">
         Create custom exercise
       </Link>

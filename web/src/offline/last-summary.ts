@@ -7,7 +7,14 @@ export interface PlannedChallenge {
   plannedChallenge?: DraftChallenge | null;
 }
 
-type RememberedSummary = SessionSummary & RememberedTiming & PlannedChallenge & { storedContentDiffers?: true };
+interface SavedDay {
+  sessionId: string;
+  label?: string;
+}
+
+type RememberedSummary = SessionSummary &
+  RememberedTiming &
+  PlannedChallenge & { storedContentDiffers?: true; days?: SavedDay[] };
 
 const LAST_SUMMARY_KEY = 'gainscape.last-summary';
 

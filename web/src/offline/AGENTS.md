@@ -96,6 +96,10 @@
 - `sync-workout.ts` and `use-workout-draft.ts` have no unit tests. E2E covers them: `e2e/drafts.spec.ts`, `e2e/multi-tab.spec.ts`, `e2e/challenges.spec.ts` and `e2e/pwa/*.spec.ts` (`make e2e`, `make e2e-pwa`).
 - A payload change also needs an integration test against `complete-session` in `tests/integration/`.
 
+## Second Day
+
+- `draft-days.ts`: a Draft started from a Day can take one more Day (`secondDay`, exercises marked `inSecondDay`, exercises added later join it). The payload lists the second Day's set ids; after sync `dayDrafts` turns each stored Day into its own local Program fact. See ADR 0001.
+
 ## Manual Notes
 
 Notes under this heading are written by humans and preserved on regeneration.
