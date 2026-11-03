@@ -12,7 +12,13 @@ import type { LoadType } from '../lib/exercises/catalog-rules.ts';
 import { type CatalogChallenge, challengeLoadKg } from '../lib/collection/challenge-rules.ts';
 import { defaultWeightKg, STARTING_REPS } from '../lib/workout/exercise-edit-rules.ts';
 import { type LastLoggedSet } from './draft-edits.ts';
-import { type DraftExercise, type LiftDraftExercise, withValidSupersets, type WorkoutDraft } from './draft-format.ts';
+import {
+  type DraftExercise,
+  type DraftProgram,
+  type LiftDraftExercise,
+  withValidSupersets,
+  type WorkoutDraft,
+} from './draft-format.ts';
 
 const CHALLENGE_REPS_PER_SET = 10;
 
@@ -53,8 +59,14 @@ export type CatalogEntry = { name: string; archived: boolean } & (
   { modality?: 'lift'; loadType: LoadType; equipment?: string } | { modality: 'cardio' }
 );
 
+export const LABEL_SEPARATOR = ' — ';
+
 export function programLabelFor(programName: string, dayName: string): string {
-  return `${programName} — ${dayName}`;
+  return `${programName}${LABEL_SEPARATOR}${dayName}`;
+}
+
+export function draftProgramOf(day: PrescribedDayStart): DraftProgram {
+  return { enrollmentId: day.enrollmentId, position: day.position, templateKey: day.templateKey };
 }
 
 type LiftCatalogEntry = Extract<CatalogEntry, { loadType: LoadType }>;
@@ -165,7 +177,7 @@ export function startDraftFromPrescription(
       finishedAt: null,
       programDayId: null,
       programLabel: programLabelFor(day.programName, day.dayName),
-      program: { enrollmentId: day.enrollmentId, position: day.position, templateKey: day.templateKey },
+      program: draftProgramOf(day),
       challenge: null,
       exercises,
     },

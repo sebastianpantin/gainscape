@@ -296,6 +296,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   };
   const groups = supersetGroups(draft);
   const title = draftTitle(draft);
+  const secondDayName = draft.secondDay ? dayNameOf(draft.secondDay.programLabel) : null;
   const prompt = finishing.prompt;
 
   const helpKeys = workoutHelpKeys({
@@ -394,13 +395,13 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
       <TermHelpRow keys={helpKeys} />
       {draft.secondDay && draft.programLabel && <h2>{dayNameOf(draft.programLabel)}</h2>}
       {exercisesOfDay('first')}
-      {draft.secondDay && (
+      {secondDayName !== null && (
         <div className="row spread">
-          <h2>{dayNameOf(draft.secondDay.programLabel)}</h2>
+          <h2>{secondDayName}</h2>
           <button
             className="button link"
             type="button"
-            aria-label={`Remove ${dayNameOf(draft.secondDay.programLabel)}`}
+            aria-label={`Remove ${secondDayName}`}
             onClick={programDays.removeSecondDay}
           >
             Remove day

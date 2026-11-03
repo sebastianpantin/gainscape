@@ -51,21 +51,20 @@ function mergedQuests(
   };
 }
 
-function withoutUndefined<Value extends object>(value: Value): Value {
-  return Object.fromEntries(Object.entries(value).filter(([, field]) => field !== undefined)) as Value;
-}
-
 export function mergedSummaries(first: SessionSummary, second: SessionSummary): SessionSummary {
-  return withoutUndefined({
+  const gearBonusBySkill = addedBySkill(first.gearBonusBySkill, second.gearBonusBySkill);
+  const challengeBonusBySkill = addedBySkill(first.challengeBonusBySkill, second.challengeBonusBySkill);
+  const quests = mergedQuests(first.quests, second.quests);
+  return {
     sessionId: first.sessionId,
     xpBySkill: addedBySkill(first.xpBySkill, second.xpBySkill) ?? {},
     levelUps: joinedLevelUps(first.levelUps, second.levelUps),
     prs: [...first.prs, ...second.prs],
     drops: [...first.drops, ...second.drops],
-    gearBonusBySkill: addedBySkill(first.gearBonusBySkill, second.gearBonusBySkill),
-    challenge: first.challenge ?? second.challenge,
-    challengeBonusBySkill: addedBySkill(first.challengeBonusBySkill, second.challengeBonusBySkill),
-    quests: mergedQuests(first.quests, second.quests),
-    historyOnly: first.historyOnly && second.historyOnly ? true : undefined,
-  });
+    ...(gearBonusBySkill ? { gearBonusBySkill } : {}),
+    ...(first.challenge !== undefined ? { challenge: first.challenge } : {}),
+    ...(challengeBonusBySkill ? { challengeBonusBySkill } : {}),
+    ...(quests ? { quests } : {}),
+    ...(first.historyOnly && second.historyOnly ? { historyOnly: true as const } : {}),
+  };
 }

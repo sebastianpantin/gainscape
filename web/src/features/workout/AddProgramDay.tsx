@@ -12,24 +12,18 @@ import { type DraftProgram } from '../../offline/draft-format.ts';
 import { type PrescribedDayStart } from '../../offline/draft-starts.ts';
 import { useLastLoggedWeights } from '../programs/use-last-logged-weights.ts';
 
-interface AddProgramDayProps {
-  program: ActiveProgram;
-  link: DraftProgram;
+type ReadyProgram = Extract<ActiveProgram, { kind: 'ready' }>;
+
+interface DayPanelProps {
+  program: ReadyProgram;
+  choices: ReturnType<typeof secondDayChoices>;
   onAdd: (day: PrescribedDayStart) => void;
+  onClose: () => void;
 }
 
-export function AddProgramDay({ program, link, onAdd }: AddProgramDayProps) {
-  const [open, setOpen] = useState(false);
+function DayPanel({ program, choices, onAdd, onClose }: DayPanelProps) {
   const [picked, setPicked] = useState<Position | null>(null);
   const lastLogged = useLastLoggedWeights(program);
-  const choices = secondDayChoices(program, link);
-  if (program.kind !== 'ready' || choices.length === 0) return null;
-  if (!open)
-    return (
-      <button className="button dashed" type="button" onClick={() => setOpen(true)}>
-        + Add a program day
-      </button>
-    );
   const position = pickedDay(choices, picked);
   const label = positionLabel(program.definition, position);
   return (
@@ -47,15 +41,32 @@ export function AddProgramDay({ program, link, onAdd }: AddProgramDayProps) {
         type="button"
         onClick={() => {
           onAdd(dayStartFrom(program, position, lastLogged));
-          setOpen(false);
-          setPicked(null);
+          onClose();
         }}
       >
         Add {label}
       </button>
-      <button className="button" type="button" onClick={() => setOpen(false)}>
+      <button className="button" type="button" onClick={onClose}>
         Cancel
       </button>
     </section>
+  );
+}
+
+interface AddProgramDayProps {
+  program: ActiveProgram;
+  link: DraftProgram;
+  onAdd: (day: PrescribedDayStart) => void;
+}
+
+export function AddProgramDay({ program, link, onAdd }: AddProgramDayProps) {
+  const [open, setOpen] = useState(false);
+  const choices = secondDayChoices(program, link);
+  if (program.kind !== 'ready' || choices.length === 0) return null;
+  if (open) return <DayPanel program={program} choices={choices} onAdd={onAdd} onClose={() => setOpen(false)} />;
+  return (
+    <button className="button dashed" type="button" onClick={() => setOpen(true)}>
+      + Add a program day
+    </button>
   );
 }

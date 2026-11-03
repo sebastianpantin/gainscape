@@ -274,3 +274,19 @@ describe('labelledDays', () => {
     ]);
   });
 });
+
+describe('supersets across Days', () => {
+  it('drops a stored superset that spans both Days', () => {
+    const both = mondayAndWednesday();
+    const boundary = both.exercises.findIndex((_, index) => exerciseDay(both, index) === 'second');
+    const exercises = both.exercises.map((exercise, index) =>
+      index === boundary - 1 || index === boundary ? { ...exercise, supersetId: 'across' } : exercise,
+    );
+    const parsed = parseStoredDraft(
+      { v: 5, kind: 'draft', userId, updatedAt: 1, draft: { ...both, exercises } },
+      userId,
+    );
+    const kept = parsed?.kind === 'draft' ? parsed.draft.exercises : [];
+    expect(kept.filter((exercise) => exercise.modality === 'lift' && exercise.supersetId === 'across')).toEqual([]);
+  });
+});

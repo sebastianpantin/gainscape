@@ -8,6 +8,7 @@ import {
   storableSnapshots,
 } from '@domain/index.ts';
 import { type WorkoutDraft } from './draft-format.ts';
+import { type SavedDay } from './last-summary.ts';
 
 interface LocalSessionAppend {
   fact: SessionFact;
@@ -32,7 +33,7 @@ export interface FinishOutcomeForFacts {
   summary: {
     programLinked: boolean;
     completedAt: string;
-    days?: readonly { sessionId: string; programLinked: boolean; completedAt: string }[];
+    days?: readonly SavedDay[];
   };
 }
 

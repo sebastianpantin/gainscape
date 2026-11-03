@@ -252,7 +252,11 @@ function validSupersetIds(exercises: readonly DraftExercise[]): Set<string> {
     const id = supersetIdOf(exercise);
     if (id === null) return;
     const runs = runLengths.get(id) ?? [];
-    const continuesRun = index > 0 && supersetIdOf(exercises[index - 1]) === id;
+    const previous = exercises[index - 1];
+    const continuesRun =
+      previous !== undefined &&
+      supersetIdOf(previous) === id &&
+      (previous.inSecondDay === true) === (exercise.inSecondDay === true);
     if (continuesRun) runs[runs.length - 1] += 1;
     else runs.push(1);
     runLengths.set(id, runs);

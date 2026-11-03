@@ -7,8 +7,10 @@ export interface PlannedChallenge {
   plannedChallenge?: DraftChallenge | null;
 }
 
-interface SavedDay {
+export interface SavedDay {
   sessionId: string;
+  programLinked: boolean;
+  completedAt: string;
   label?: string;
 }
 

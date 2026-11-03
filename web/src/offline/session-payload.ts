@@ -1,5 +1,6 @@
 import type { BoutValues, HoldValues } from '../lib/workout/exercise-edit-rules.ts';
-import type { DraftExercise, DraftSet, WorkoutDraft } from './draft-format.ts';
+import { isInSecondDay } from './draft-days.ts';
+import type { DraftExercise, DraftProgram, DraftSet, WorkoutDraft } from './draft-format.ts';
 
 export function boutPayload(bout: BoutValues & { id: string }, exerciseId: string, position: number) {
   const { id, distanceM, interval, effort } = bout;
@@ -29,35 +30,32 @@ export function holdPayload(set: HoldValues & { id: string }, exerciseId: string
 
 type SetPayload = ReturnType<typeof boutPayload> | ReturnType<typeof liftPayload> | ReturnType<typeof holdPayload>;
 
-function doneSetsOf(exercise: DraftExercise, firstPosition: number): SetPayload[] {
-  let position = firstPosition;
+function doneSetsOf(exercise: DraftExercise, nextPosition: () => number): SetPayload[] {
   if (exercise.modality === 'cardio')
-    return exercise.sets.filter((bout) => bout.done).map((bout) => boutPayload(bout, exercise.exerciseId, position++));
+    return exercise.sets
+      .filter((bout) => bout.done)
+      .map((bout) => boutPayload(bout, exercise.exerciseId, nextPosition()));
   if (exercise.modality === 'hold')
-    return exercise.sets.filter((set) => set.done).map((set) => holdPayload(set, exercise.exerciseId, position++));
-  return exercise.sets.filter((set) => set.done).map((set) => liftPayload(set, exercise.exerciseId, position++));
+    return exercise.sets.filter((set) => set.done).map((set) => holdPayload(set, exercise.exerciseId, nextPosition()));
+  return exercise.sets.filter((set) => set.done).map((set) => liftPayload(set, exercise.exerciseId, nextPosition()));
 }
 
-function secondDayPayload(draft: WorkoutDraft, sets: readonly SetPayload[]) {
+function programPayloadOf(program: DraftProgram) {
+  return { enrollmentId: program.enrollmentId, position: program.position };
+}
+
+function secondDayPayload(draft: WorkoutDraft) {
   const { secondDay } = draft;
   if (secondDay == null) return null;
-  const secondDaySetIds = new Set(
-    draft.exercises
-      .filter((exercise) => exercise.inSecondDay)
-      .flatMap((exercise) => exercise.sets.map((set) => set.id)),
-  );
-  return {
-    id: secondDay.sessionId,
-    program: { enrollmentId: secondDay.program.enrollmentId, position: secondDay.program.position },
-    setIds: sets.map((set) => set.id).filter((id) => secondDaySetIds.has(id)),
-  };
+  const doneSetIds = draft.exercises
+    .filter(isInSecondDay)
+    .flatMap((exercise) => exercise.sets.flatMap((set) => (set.done ? [set.id] : [])));
+  return { id: secondDay.sessionId, program: programPayloadOf(secondDay.program), setIds: doneSetIds };
 }
 
 export function completeSessionPayload(draft: WorkoutDraft) {
-  const sets = draft.exercises.reduce<SetPayload[]>(
-    (done, exercise) => [...done, ...doneSetsOf(exercise, done.length)],
-    [],
-  );
+  let position = 0;
+  const sets = draft.exercises.flatMap((exercise) => doneSetsOf(exercise, () => position++));
   return {
     id: draft.sessionId,
     startedAt: draft.startedAt,
@@ -65,8 +63,8 @@ export function completeSessionPayload(draft: WorkoutDraft) {
     notes: null,
     sessionRpe: draft.sessionRpe ?? null,
     programDayId: draft.programDayId,
-    program: draft.program ? { enrollmentId: draft.program.enrollmentId, position: draft.program.position } : null,
-    secondDay: secondDayPayload(draft, sets),
+    program: draft.program ? programPayloadOf(draft.program) : null,
+    secondDay: secondDayPayload(draft),
     challenge: draft.challenge ? { challengeId: draft.challenge.challengeId } : null,
     sets,
   };

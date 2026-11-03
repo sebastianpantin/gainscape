@@ -68,7 +68,7 @@ export function dayChoices(definition: ProgramDefinition, cursor: ScheduleCursor
   }));
 }
 
-function samePosition(a: Position, b: Position): boolean {
+export function samePosition(a: Position, b: Position): boolean {
   const aKeys = Object.keys(a);
   const bKeys = new Set(Object.keys(b));
   return (

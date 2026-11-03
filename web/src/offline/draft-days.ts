@@ -1,5 +1,14 @@
-import { type CatalogEntry, prescribedDayExercises, type PrescribedDayStart, programLabelFor } from './draft-starts.ts';
+import { samePosition } from '../lib/programs/program-today-rules.ts';
+import {
+  type CatalogEntry,
+  draftProgramOf,
+  LABEL_SEPARATOR,
+  prescribedDayExercises,
+  type PrescribedDayStart,
+  programLabelFor,
+} from './draft-starts.ts';
 import { type DraftExercise, type DraftSecondDay, type WorkoutDraft } from './draft-format.ts';
+import { type SavedDay } from './last-summary.ts';
 
 export type DraftDay = 'first' | 'second';
 
@@ -8,18 +17,17 @@ export interface RemovedSecondDay {
   exercises: DraftExercise[];
 }
 
-const LABEL_SEPARATOR = ' — ';
+export function isInSecondDay(exercise: DraftExercise): boolean {
+  return exercise.inSecondDay === true;
+}
 
 export function canAddSecondDay(draft: WorkoutDraft): boolean {
   return draft.program != null && draft.secondDay == null && draft.challenge == null && draft.finishedAt === null;
 }
 
 export function exerciseDay(draft: WorkoutDraft, exerciseIndex: number): DraftDay {
-  return draft.secondDay != null && draft.exercises[exerciseIndex]?.inSecondDay === true ? 'second' : 'first';
-}
-
-function samePosition(draft: WorkoutDraft, day: PrescribedDayStart): boolean {
-  return JSON.stringify(draft.program?.position) === JSON.stringify(day.position);
+  const exercise = draft.exercises[exerciseIndex];
+  return draft.secondDay != null && exercise !== undefined && isInSecondDay(exercise) ? 'second' : 'first';
 }
 
 export function withSecondDay(
@@ -28,7 +36,12 @@ export function withSecondDay(
   exercisesById: ReadonlyMap<string, CatalogEntry>,
   sessionId: string,
 ): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
-  if (!canAddSecondDay(draft) || draft.program?.enrollmentId !== day.enrollmentId || samePosition(draft, day))
+  const { program } = draft;
+  if (
+    !canAddSecondDay(draft) ||
+    program?.enrollmentId !== day.enrollmentId ||
+    samePosition(program.position, day.position)
+  )
     return { draft, skippedExerciseIds: [] };
   const { exercises, skippedExerciseIds } = prescribedDayExercises(day, exercisesById);
   return {
@@ -36,7 +49,7 @@ export function withSecondDay(
       ...draft,
       secondDay: {
         sessionId,
-        program: { enrollmentId: day.enrollmentId, position: day.position, templateKey: day.templateKey },
+        program: draftProgramOf(day),
         programLabel: programLabelFor(day.programName, day.dayName),
       },
       exercises: [...draft.exercises, ...exercises.map((exercise) => ({ ...exercise, inSecondDay: true }))],
@@ -45,11 +58,15 @@ export function withSecondDay(
   };
 }
 
+function exercisesOf(draft: WorkoutDraft, day: DraftDay): DraftExercise[] {
+  return draft.exercises.filter((exercise) => isInSecondDay(exercise) === (day === 'second'));
+}
+
 export function withoutSecondDay(draft: WorkoutDraft): { draft: WorkoutDraft; removed: RemovedSecondDay | null } {
   if (draft.secondDay == null) return { draft, removed: null };
   return {
-    draft: { ...draft, secondDay: null, exercises: draft.exercises.filter((exercise) => !exercise.inSecondDay) },
-    removed: { secondDay: draft.secondDay, exercises: draft.exercises.filter((exercise) => exercise.inSecondDay) },
+    draft: { ...draft, secondDay: null, exercises: exercisesOf(draft, 'first') },
+    removed: { secondDay: draft.secondDay, exercises: exercisesOf(draft, 'second') },
   };
 }
 
@@ -67,21 +84,22 @@ export function draftTitle(draft: WorkoutDraft): string | null {
   const first = draft.programLabel;
   const second = draft.secondDay?.programLabel;
   if (first === null || second === undefined) return first;
-  const [programName, ...firstDay] = first.split(LABEL_SEPARATOR);
-  const [secondProgram, ...secondDay] = second.split(LABEL_SEPARATOR);
-  if (firstDay.length === 0 || secondProgram !== programName) return `${first} + ${second}`;
-  return `${first} + ${secondDay.join(LABEL_SEPARATOR)}`;
+  const sameProgram = first.split(LABEL_SEPARATOR)[0] === second.split(LABEL_SEPARATOR)[0];
+  return `${first} + ${sameProgram ? dayNameOf(second) : second}`;
 }
 
-interface SyncedDay {
-  sessionId: string;
-  programLinked: boolean;
-  completedAt: string;
+function draftsByDay(draft: WorkoutDraft): WorkoutDraft[] {
+  if (draft.secondDay == null) return [draft];
+  const { sessionId, program, programLabel } = draft.secondDay;
+  return [
+    { ...draft, secondDay: null, exercises: exercisesOf(draft, 'first') },
+    { ...draft, sessionId, program, programLabel, secondDay: null, exercises: exercisesOf(draft, 'second') },
+  ];
 }
 
-interface SyncedDays {
+interface SyncedOutcome {
   kind: 'synced';
-  summary: { programLinked: boolean; completedAt: string; days?: readonly SyncedDay[] };
+  summary: { programLinked: boolean; completedAt: string; days?: readonly SavedDay[] };
 }
 
 interface SyncedDayDraft {
@@ -89,20 +107,12 @@ interface SyncedDayDraft {
   outcome: { kind: 'synced'; summary: { programLinked: boolean; completedAt: string } };
 }
 
-function draftOfDay(draft: WorkoutDraft, day: DraftDay): WorkoutDraft {
-  const inDay = draft.exercises.filter((exercise) => (exercise.inSecondDay === true) === (day === 'second'));
-  if (day === 'first' || draft.secondDay == null) return { ...draft, secondDay: null, exercises: inDay };
-  const { sessionId, program, programLabel } = draft.secondDay;
-  return { ...draft, sessionId, program, programLabel, secondDay: null, exercises: inDay };
-}
-
-export function dayDrafts(draft: WorkoutDraft, outcome: SyncedDays): SyncedDayDraft[] {
+export function dayDrafts(draft: WorkoutDraft, outcome: SyncedOutcome): SyncedDayDraft[] {
   const { days } = outcome.summary;
   if (draft.secondDay == null || days === undefined)
     return [{ draft, outcome: { kind: 'synced', summary: outcome.summary } }];
   const byId = new Map(days.map((day) => [day.sessionId, day]));
-  return (['first', 'second'] as const).flatMap((day) => {
-    const dayDraft = draftOfDay(draft, day);
+  return draftsByDay(draft).flatMap((dayDraft) => {
     const synced = byId.get(dayDraft.sessionId);
     if (synced === undefined) return [];
     const { programLinked, completedAt } = synced;
@@ -110,13 +120,7 @@ export function dayDrafts(draft: WorkoutDraft, outcome: SyncedDays): SyncedDayDr
   });
 }
 
-export function labelledDays<Day extends SyncedDay>(
-  draft: WorkoutDraft,
-  days: readonly Day[],
-): (Day & { label: string })[] {
-  const labels = new Map([
-    [draft.sessionId, draft.programLabel],
-    [draft.secondDay?.sessionId, draft.secondDay?.programLabel ?? null],
-  ]);
+export function labelledDays(draft: WorkoutDraft, days: readonly SavedDay[]): SavedDay[] {
+  const labels = new Map(draftsByDay(draft).map((dayDraft) => [dayDraft.sessionId, dayDraft.programLabel]));
   return days.map((day) => ({ ...day, label: dayNameOf(labels.get(day.sessionId) ?? 'Workout') }));
 }

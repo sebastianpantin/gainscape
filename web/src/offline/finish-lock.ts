@@ -2,7 +2,7 @@ import type { SessionSummary } from '@domain/types.ts';
 import type { InvokeOutcome } from '../lib/platform/function-client-rules.ts';
 import type { RememberedTiming } from '../lib/workout/session-timing-rules.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds } from '../lib/platform/rate-limit.ts';
-import { type PlannedChallenge, rememberLastSummary } from './last-summary.ts';
+import { type PlannedChallenge, rememberLastSummary, type SavedDay } from './last-summary.ts';
 import { storedSessionId, type WorkoutDraft } from './draft-format.ts';
 import type { SyncedChange } from './draft-session.ts';
 import type { DraftStore } from './draft-store.ts';
@@ -11,7 +11,7 @@ export interface CompletedSessionSummary extends SessionSummary, RememberedTimin
   programLinked?: boolean;
   completedAt?: string;
   storedContentDiffers?: true;
-  days?: { sessionId: string; programLinked: boolean; completedAt: string; label?: string }[];
+  days?: SavedDay[];
 }
 
 export type SendOutcome =
