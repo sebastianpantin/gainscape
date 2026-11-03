@@ -1,3 +1,14 @@
+- prs: [205, 206]
+  version: 0.26.0
+  date: 2026-11-03
+  title: Two days, one workout
+  items:
+    - Doing two program days back to back? Add the next open day to the workout you're in. Each day keeps its own heading, and Finish saves one workout per day, so your program moves on for both.
+    - A weight or rep count far above last time now asks you to check it before it becomes a record.
+    - Finishing offline says you're offline and lets you go back to editing. Rest over is now announced to screen readers.
+    - Removing two sets in a row keeps both Undo buttons. Removing a planned exercise in the program editor can be undone too.
+    - The active tab, fields with a problem and add buttons are easier to see, and every Back button returns to where you came from.
+    - Friends shows your own username with a Copy button, and Stats explains e1RM.
 - prs: [203]
   version: 0.25.1
   date: 2026-11-02
