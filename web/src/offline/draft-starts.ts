@@ -133,28 +133,31 @@ export interface PrescribedDayStart {
   exercises: readonly PrescribedExercise[];
 }
 
+export function prescribedDayExercises(
+  day: PrescribedDayStart,
+  exercisesById: ReadonlyMap<string, CatalogEntry>,
+): { exercises: DraftExercise[]; skippedExerciseIds: string[] } {
+  return liftDraftExercises(day.exercises, exercisesById, (prescribed, exercise) => ({
+    target: null,
+    sets: prescribed.sets.map((set) => ({
+      id: crypto.randomUUID(),
+      weightKg: set.weightKg ?? set.suggestedWeightKg ?? defaultWeightKg(exercise.loadType),
+      reps: set.reps ?? STARTING_REPS,
+      effort: null,
+      done: false,
+      isWarmup: false,
+      prescription: set.snapshot,
+      prescriptionDetail: { pct: set.pct, optional: set.optional },
+    })),
+  }));
+}
+
 export function startDraftFromPrescription(
   day: PrescribedDayStart,
   exercisesById: ReadonlyMap<string, CatalogEntry>,
   now: Date,
 ): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
-  const { exercises, skippedExerciseIds } = liftDraftExercises(
-    day.exercises,
-    exercisesById,
-    (prescribed, exercise) => ({
-      target: null,
-      sets: prescribed.sets.map((set) => ({
-        id: crypto.randomUUID(),
-        weightKg: set.weightKg ?? set.suggestedWeightKg ?? defaultWeightKg(exercise.loadType),
-        reps: set.reps ?? STARTING_REPS,
-        effort: null,
-        done: false,
-        isWarmup: false,
-        prescription: set.snapshot,
-        prescriptionDetail: { pct: set.pct, optional: set.optional },
-      })),
-    }),
-  );
+  const { exercises, skippedExerciseIds } = prescribedDayExercises(day, exercisesById);
   return {
     draft: {
       sessionId: crypto.randomUUID(),

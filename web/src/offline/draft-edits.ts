@@ -34,6 +34,10 @@ export function withSessionRpe(draft: WorkoutDraft, sessionRpe: number | null): 
   return { ...draft, sessionRpe };
 }
 
+function appendExercise(draft: WorkoutDraft, added: DraftExercise): WorkoutDraft {
+  return addExerciseTo(draft, draft.secondDay == null ? added : { ...added, inSecondDay: true });
+}
+
 export function addExercise(draft: WorkoutDraft, exerciseId: string, name: string, loadType: LoadType): WorkoutDraft {
   const added: LiftDraftExercise = {
     clientId: crypto.randomUUID(),
@@ -44,7 +48,7 @@ export function addExercise(draft: WorkoutDraft, exerciseId: string, name: strin
     target: null,
     sets: [],
   };
-  return addExerciseTo(draft, added);
+  return appendExercise(draft, added);
 }
 
 export function addCardioExercise(
@@ -61,7 +65,7 @@ export function addCardioExercise(
     activity,
     sets: [],
   };
-  return addExerciseTo(draft, added);
+  return appendExercise(draft, added);
 }
 
 export function addHoldExercise(
@@ -80,7 +84,7 @@ export function addHoldExercise(
     loadType,
     sets: [],
   };
-  return addExerciseTo(draft, added);
+  return appendExercise(draft, added);
 }
 
 export function removeExercise(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
@@ -122,7 +126,9 @@ export function insertWarmupDrills(
   drills: readonly Pick<CardioExercise, 'id' | 'name' | 'activity'>[],
 ): WorkoutDraft {
   if (!routineDrillsFit(draft, drills.length)) return draft;
+  const inSecondDay = draft.exercises[exerciseIndex]?.inSecondDay === true;
   const drillCards = drills.map(({ id, name, activity }): CardioDraftExercise => ({
+    ...(inSecondDay ? { inSecondDay } : {}),
     clientId: crypto.randomUUID(),
     exerciseId: id,
     name,
