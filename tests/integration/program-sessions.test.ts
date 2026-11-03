@@ -596,7 +596,7 @@ describe('complete-session with a second Day', () => {
     const response = await postCompleteSession(user.accessToken, bad);
 
     expect(response.status, response.rawBody).toBe(200);
-    expect(response.body.days.map((day: { programLinked: boolean }) => day.programLinked)).toEqual([true, false]);
+    expect(response.body.days?.map((day: { programLinked: boolean }) => day.programLinked)).toEqual([true, false]);
   });
 
   it('returns 422 when the second Day reuses the first Session id', async () => {

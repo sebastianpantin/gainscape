@@ -114,8 +114,14 @@ describe('withSecondDay', () => {
     const drill = {
       id: 'jog',
       name: 'Jog',
-      activity: { paceUnit: 'per_km', referencePaceSPerKm: 360, maxEffort: 'max', tracksDistance: true, shares: [] },
-    } as const;
+      activity: {
+        paceUnit: 'per_km' as const,
+        referencePaceSPerKm: 360,
+        maxEffort: 'max' as const,
+        tracksDistance: true,
+        shares: [],
+      },
+    };
     const withDrill = insertWarmupDrills(both, firstOfSecondDay, [drill]);
     expect(exerciseDay(withDrill, firstOfSecondDay)).toBe('second');
     expect(exerciseDay(withDrill, firstOfSecondDay - 1)).toBe('first');
@@ -128,7 +134,7 @@ describe('withoutSecondDay and restoreSecondDay', () => {
     const removed = withoutSecondDay(both);
     expect(removed.draft.secondDay).toBeNull();
     expect(removed.draft.exercises).toHaveLength(both.exercises.length - secondDayCount(both));
-    const restored = restoreSecondDay(removed.draft, removed.removed);
+    const restored = restoreSecondDay(removed.draft, removed.removed!);
     expect(restored.secondDay).toEqual(both.secondDay);
     expect(restored.exercises.map((exercise) => exercise.clientId)).toEqual(
       both.exercises.map((exercise) => exercise.clientId),
@@ -138,7 +144,7 @@ describe('withoutSecondDay and restoreSecondDay', () => {
   it('does not restore over a second Day added since', () => {
     const removed = withoutSecondDay(mondayAndWednesday());
     const readded = withSecondDay(removed.draft, WEDNESDAY, catalog, 'another').draft;
-    expect(restoreSecondDay(readded, removed.removed)).toBe(readded);
+    expect(restoreSecondDay(readded, removed.removed!)).toBe(readded);
   });
 });
 

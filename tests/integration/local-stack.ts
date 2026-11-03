@@ -107,6 +107,7 @@ interface FunctionResponseBody extends Partial<SessionSummary> {
   deleted?: boolean;
   programLinked?: boolean;
   completedAt?: string;
+  days?: { sessionId: string; programLinked: boolean; completedAt: string }[];
   error?: string;
   details?: unknown;
 }
