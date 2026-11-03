@@ -5,7 +5,7 @@ A strength-training logger where logged sets earn XP, levels, records and loot. 
 ## Workouts
 
 **Draft**:
-A workout being logged on the device and not yet accepted by the server. It lives offline until it syncs.
+A workout being logged on the device and not yet accepted by the server. It lives offline until it syncs. A Draft started from a Day can take one more Day of the same Enrollment; it becomes one Session per Day when it syncs.
 _Avoid_: pending session, local session
 
 **Session**:
